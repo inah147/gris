@@ -8,9 +8,10 @@
  "engine": "InnoDB",
  "field_order": [
   "tipo_arquivo",
-  "arquivo",
+  "area",
   "column_break_fepc",
   "ano_referencia",
+  "arquivo",
   "column_break_gzup",
   "semestre_referencia",
   "section_break_ltxr",
@@ -85,6 +86,12 @@
    "fieldtype": "Data",
    "hidden": 1,
    "label": "Title"
+  },
+  {
+   "fieldname": "area",
+   "fieldtype": "Link",
+   "label": "Area",
+   "options": "Unidade Organizacional"
   }
  ],
  "grid_page_length": 50,
@@ -92,7 +99,7 @@
  "index_web_pages_for_search": 1,
  "is_published_field": "publicado",
  "links": [],
- "modified": "2025-09-05 09:42:37.521941",
+ "modified": "2025-09-05 19:34:30.209043",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Transparencia",

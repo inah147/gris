@@ -1,0 +1,47 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-09-04 12:54:34.535321",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "data_de_ingresso",
+  "column_break_roke",
+  "data_de_desligamento"
+ ],
+ "fields": [
+  {
+   "fieldname": "column_break_roke",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_in_quick_entry": 1,
+   "fieldname": "data_de_ingresso",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Data de Ingresso",
+   "reqd": 1
+  },
+  {
+   "allow_in_quick_entry": 1,
+   "fieldname": "data_de_desligamento",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Data de Desligamento"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-09-04 13:10:40.343140",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Historico no Grupo",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

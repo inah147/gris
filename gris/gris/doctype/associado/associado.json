@@ -1,0 +1,446 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "field:cpf",
+ "creation": "2025-09-03 22:12:20.214447",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "informacioes_basicas_tab",
+  "informacoes_pessoais_section",
+  "nome_completo",
+  "sexo",
+  "religiao",
+  "cpf",
+  "column_break_yuek",
+  "data_de_nascimento",
+  "etnia",
+  "estado_civil",
+  "informacoes_de_registro_section",
+  "status",
+  "validade_registro",
+  "tipo_registro",
+  "column_break_fjby",
+  "status_no_grupo",
+  "anos_afastamento",
+  "registro",
+  "registro_isento",
+  "informacoes_de_contato_section",
+  "email",
+  "telefone",
+  "column_break_uugq",
+  "id_escoteiros",
+  "endereco_section",
+  "cep_residencia",
+  "column_break_xpkd",
+  "numero_residencia",
+  "section_break_emvb",
+  "historico_no_grupo",
+  "responsaveis_tab",
+  "informacoes_sobre_responsaveis_legais_section",
+  "pais_divorciados",
+  "column_break_zfwz",
+  "tipo_guarda",
+  "primeiro_responsavel_section",
+  "nome_responsavel_1",
+  "telefone_responsavel_1",
+  "guardiao_legal_responsavel_1",
+  "column_break_lkah",
+  "estado_civil_responsavel_1",
+  "email_responsavel_1",
+  "cpf_responsavel_1",
+  "segundo_respons\u00e1vel_section",
+  "nome_responsavel_2",
+  "telefone_responsavel_2",
+  "guardiao_legal_responsavel_2",
+  "column_break_mpjo",
+  "estado_civil_responsavel_2",
+  "email_responsavel_2",
+  "cpf_responsavel_2",
+  "funcoes_tab",
+  "categoria",
+  "ramo",
+  "area",
+  "column_break_xleh",
+  "funcao",
+  "secao",
+  "eleito"
+ ],
+ "fields": [
+  {
+   "fieldname": "nome_completo",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome Completo",
+   "reqd": 1
+  },
+  {
+   "fieldname": "data_de_nascimento",
+   "fieldtype": "Date",
+   "label": "Data de nascimento",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sexo",
+   "fieldtype": "Select",
+   "label": "Sexo",
+   "options": "Feminino\nMasculino"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "informacoes_pessoais_section",
+   "fieldtype": "Section Break",
+   "label": "Informa\u00e7\u00f5es Pessoais"
+  },
+  {
+   "fieldname": "column_break_yuek",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "etnia",
+   "fieldtype": "Select",
+   "label": "Etnia",
+   "options": "Amarela\nBranca\nInd\u00edgena\nParda\nPreta\nN\u00e3o desejo informar"
+  },
+  {
+   "fieldname": "religiao",
+   "fieldtype": "Data",
+   "label": "Religi\u00e3o"
+  },
+  {
+   "fieldname": "estado_civil",
+   "fieldtype": "Data",
+   "label": "Estado Civil"
+  },
+  {
+   "fieldname": "column_break_xpkd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "E-mail pessoal"
+  },
+  {
+   "fieldname": "column_break_uugq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "id_escoteiros",
+   "fieldtype": "Data",
+   "label": "id@escoteiros"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "endereco_section",
+   "fieldtype": "Section Break",
+   "label": "Endere\u00e7o"
+  },
+  {
+   "fieldname": "cep_residencia",
+   "fieldtype": "Data",
+   "label": "CEP"
+  },
+  {
+   "fieldname": "numero_residencia",
+   "fieldtype": "Int",
+   "label": "N\u00famero",
+   "non_negative": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "informacoes_de_contato_section",
+   "fieldtype": "Section Break",
+   "label": "Informa\u00e7\u00f5es de Contato"
+  },
+  {
+   "fieldname": "telefone",
+   "fieldtype": "Phone",
+   "label": "Telefone"
+  },
+  {
+   "fieldname": "informacioes_basicas_tab",
+   "fieldtype": "Tab Break",
+   "label": "Informa\u00e7\u00f5es B\u00e1sicas"
+  },
+  {
+   "fieldname": "registro",
+   "fieldtype": "Data",
+   "label": "Registro",
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break_fjby",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status do registro",
+   "options": "V\u00e1lido\nVencido\nDesconhecido"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "informacoes_de_registro_section",
+   "fieldtype": "Section Break",
+   "label": "Informa\u00e7\u00f5es de Registro"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "fieldname": "anos_afastamento",
+   "fieldtype": "Int",
+   "label": "Anos de afastamento",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "validade_registro",
+   "fieldtype": "Date",
+   "label": "Validade"
+  },
+  {
+   "fieldname": "ramo",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Ramo",
+   "options": "N\u00e3o se aplica\nFilhotes\nLobinho\nEscoteiro\nS\u00eanior\nPioneiro"
+  },
+  {
+   "fieldname": "categoria",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Categoria",
+   "options": "Benefici\u00e1rio\nBenem\u00e9rito/Honor\u00edfico\nContribuinte\nDirigente\nEscotista\nBenem\u00e9rito\nHonor\u00edfico\nPais/Respons\u00e1veis\nClube da Flor de Lis\nColaboradores\nProfissional Escoteiro"
+  },
+  {
+   "fieldname": "funcao",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Fun\u00e7\u00e3o"
+  },
+  {
+   "default": "N\u00e3o",
+   "fieldname": "registro_isento",
+   "fieldtype": "Select",
+   "label": "Registro Isento",
+   "options": "N\u00e3o\nSim"
+  },
+  {
+   "default": "N\u00e3o",
+   "fieldname": "pais_divorciados",
+   "fieldtype": "Select",
+   "label": "Pais divorciados",
+   "options": "N\u00e3o\nSim"
+  },
+  {
+   "fieldname": "column_break_zfwz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "tipo_guarda",
+   "fieldtype": "Select",
+   "label": "Tipo de guarda",
+   "options": "-\nCompartilhada\nUnilateral\nAlternada\nNidal"
+  },
+  {
+   "fieldname": "nome_responsavel_1",
+   "fieldtype": "Data",
+   "label": "Nome Primeiro Respons\u00e1vel"
+  },
+  {
+   "fieldname": "telefone_responsavel_1",
+   "fieldtype": "Phone",
+   "label": "Telefone Primeiro Respons\u00e1vel"
+  },
+  {
+   "default": "0",
+   "fieldname": "guardiao_legal_responsavel_1",
+   "fieldtype": "Check",
+   "label": " Primeiro Respons\u00e1vel \u00e9 guardi\u00e3o legal"
+  },
+  {
+   "fieldname": "column_break_lkah",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "estado_civil_responsavel_1",
+   "fieldtype": "Data",
+   "label": "Estado civil Primeiro Respons\u00e1vel"
+  },
+  {
+   "default": "1",
+   "fieldname": "cpf_responsavel_1",
+   "fieldtype": "Data",
+   "label": "CPF Primeiro Respons\u00e1vel"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "informacoes_sobre_responsaveis_legais_section",
+   "fieldtype": "Section Break",
+   "label": "Informa\u00e7\u00f5es sobre respons\u00e1veis legais"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "primeiro_responsavel_section",
+   "fieldtype": "Section Break",
+   "label": "Primeiro Respons\u00e1vel"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "segundo_respons\u00e1vel_section",
+   "fieldtype": "Section Break",
+   "label": "Segundo Respons\u00e1vel"
+  },
+  {
+   "fieldname": "nome_responsavel_2",
+   "fieldtype": "Data",
+   "label": "Nome Segundo Respons\u00e1vel"
+  },
+  {
+   "fieldname": "telefone_responsavel_2",
+   "fieldtype": "Phone",
+   "label": "Telefone Segundo Respons\u00e1vel"
+  },
+  {
+   "default": "0",
+   "fieldname": "guardiao_legal_responsavel_2",
+   "fieldtype": "Check",
+   "label": " Segundo Respons\u00e1vel \u00e9 guardi\u00e3o legal"
+  },
+  {
+   "fieldname": "column_break_mpjo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "estado_civil_responsavel_2",
+   "fieldtype": "Data",
+   "label": "Estado civil Segundo Respons\u00e1vel"
+  },
+  {
+   "fieldname": "email_responsavel_2",
+   "fieldtype": "Data",
+   "label": "E-mail Segundo Respons\u00e1vel"
+  },
+  {
+   "default": "1",
+   "fieldname": "cpf_responsavel_2",
+   "fieldtype": "Data",
+   "label": "CPF Segundo Respons\u00e1vel"
+  },
+  {
+   "fieldname": "tipo_registro",
+   "fieldtype": "Select",
+   "label": "Tipo de Registro",
+   "options": "Definitivo\nProvis\u00f3rio"
+  },
+  {
+   "fieldname": "section_break_emvb",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "historico_no_grupo",
+   "fieldtype": "Table",
+   "label": "Hist\u00f3rico no grupo",
+   "options": "Historico no Grupo"
+  },
+  {
+   "fieldname": "area",
+   "fieldtype": "Link",
+   "label": "\u00c1rea",
+   "options": "Unidade Organizacional"
+  },
+  {
+   "default": "N\u00e3o",
+   "fieldname": "eleito",
+   "fieldtype": "Select",
+   "label": "Eleito",
+   "options": "Sim\nN\u00e3o"
+  },
+  {
+   "fieldname": "column_break_xleh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Ativo",
+   "fieldname": "status_no_grupo",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status no grupo",
+   "options": "Ativo\nInativo"
+  },
+  {
+   "fieldname": "cpf",
+   "fieldtype": "Data",
+   "label": "CPF",
+   "unique": 1
+  },
+  {
+   "fieldname": "responsaveis_tab",
+   "fieldtype": "Tab Break",
+   "label": "Respons\u00e1veis"
+  },
+  {
+   "fieldname": "funcoes_tab",
+   "fieldtype": "Tab Break",
+   "label": "Fun\u00e7\u00f5es"
+  },
+  {
+   "fieldname": "email_responsavel_1",
+   "fieldtype": "Data",
+   "label": "E-mail Primeiro Respons\u00e1vel"
+  },
+  {
+   "fieldname": "secao",
+   "fieldtype": "Data",
+   "label": "Se\u00e7\u00e3o"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-09-05 07:48:15.910246",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Associado",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "ASC",
+ "states": [
+  {
+   "color": "Green",
+   "title": "V\u00e1lido"
+  },
+  {
+   "color": "Orange",
+   "title": "Vencido"
+  },
+  {
+   "color": "Gray",
+   "title": "Desconhecido"
+  }
+ ],
+ "title_field": "nome_completo"
+}

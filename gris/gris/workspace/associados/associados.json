@@ -1,0 +1,38 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"cYFV45F9Uc\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Associados</span>\",\"col\":12}},{\"id\":\"hrit9RjP73\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Lista de Associados\",\"col\":3}}]",
+ "creation": "2025-09-05 07:51:18.914902",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "share",
+ "idx": 0,
+ "indicator_color": "blue",
+ "is_hidden": 0,
+ "label": "Associados",
+ "links": [],
+ "modified": "2025-09-05 07:56:15.095088",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Associados",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 28.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Lista de Associados",
+   "link_to": "Associado",
+   "stats_filter": "[[\"Associado\",\"status\",\"=\",\"V\u00e1lido\",false]]",
+   "type": "DocType"
+  }
+ ],
+ "title": "Associados"
+}

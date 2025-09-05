@@ -1,5 +1,73 @@
 {% extends "templates/web.html" %}
 
 {% block page_content %}
+<div class="container col-xxl-8 px-4 py-5">
+    <div class="row flex-lg-row-reverse align-items-center g-5 py-5">
+        <div class="col-10 col-sm-8 col-lg-6">
+            <img src="/files/Prancheta 1 cópia 10.png" class="d-block mx-lg-auto img-fluid" alt="Bootstrap Themes" width="700" height="500" loading="lazy">
+        </div>
+        <div class="col-lg-6">
+            <h1 class="display-5 fw-bold lh-1 mb-3">Portal de Transparência</h1>
+            <p class="lead">Grupo Escoteiro Professora Inah de Mello - 147/SP</p>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                <button type="button" class="btn btn-primary btn-lg px-4 me-md-2">Primary</button>
+                <button type="button" class="btn btn-outline-secondary btn-lg px-4">Default</button>
+            </div>
+        </div>
+    </div>
+</div>
 
+<!-- Seletor de ano -->
+<div class="container my-4">
+    <form method="get">
+        <div class="row justify-content-center">
+            <div class="col-md-4">
+                <label for="ano_referencia" class="form-label">Escolha o Ano</label>
+                <select id="ano_referencia" name="ano_referencia" class="form-select" onchange="this.form.submit()">
+                    {% for ano in years %}
+                        <option value="{{ ano }}" {% if ano == ano_selecionado %}selected{% endif %}>{{ ano }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Seção Administrativo -->
+<div class="container my-5">
+    <h2 class="mb-4">Administrativo</h2>
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for arquivo in administrativos %}
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">{{ arquivo.nome }}</h5>
+                    <div class="mt-auto">
+                        <a href="{{ arquivo.link }}" target="_blank" class="btn btn-primary">Abrir Arquivo</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Seção Financeiro -->
+<div class="container my-5">
+    <h2 class="mb-4">Financeiro</h2>
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for arquivo in financeiros %}
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">{{ arquivo.nome }}</h5>
+                    <div class="mt-auto">
+                        <a href="{{ arquivo.link }}" target="_blank" class="btn btn-primary">Abrir Arquivo</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
 {% endblock %}

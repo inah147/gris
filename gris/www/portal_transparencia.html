@@ -4,46 +4,30 @@
 <div class="container col-xxl-8 px-4 py-5">
     <div class="row flex-lg-row-reverse align-items-center g-5 py-5">
         <div class="col-10 col-sm-8 col-lg-6">
-            <img src="/files/Prancheta 1 cópia 10.png" class="d-block mx-lg-auto img-fluid" alt="Bootstrap Themes" width="700" height="500" loading="lazy">
+            <img src="{{ logo }}" class="d-block mx-lg-auto img-fluid" alt="Bootstrap Themes" width="700" height="500" loading="lazy">
         </div>
         <div class="col-lg-6">
             <h1 class="display-5 fw-bold lh-1 mb-3">Portal de Transparência</h1>
-            <p class="lead">Grupo Escoteiro Professora Inah de Mello - 147/SP</p>
-            <div class="d-grid gap-2 d-md-flex justify-content-md-start">
-                <button type="button" class="btn btn-primary btn-lg px-4 me-md-2">Primary</button>
-                <button type="button" class="btn btn-outline-secondary btn-lg px-4">Default</button>
+            <p class="lead">{{subtitle}}</p>
+            <div class="d-grid gap-3 d-md-flex justify-content-md-start">
+                <button type="button" class="btn btn-primary btn-lg px-4 me-md-4" onclick="document.getElementById('documentos-gerais').scrollIntoView({behavior: 'smooth'})">Documentos Gerais</button>
+                <button type="button" class="btn btn-outline-secondary btn-lg px-4" onclick="document.getElementById('documentos-anuais').scrollIntoView({behavior: 'smooth'})">Documentos Anuais</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Seletor de ano -->
-<div class="container my-4">
-    <form method="get">
-        <div class="row justify-content-center">
-            <div class="col-md-4">
-                <label for="ano_referencia" class="form-label">Escolha o Ano</label>
-                <select id="ano_referencia" name="ano_referencia" class="form-select" onchange="this.form.submit()">
-                    {% for ano in years %}
-                        <option value="{{ ano }}" {% if ano == ano_selecionado %}selected{% endif %}>{{ ano }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-    </form>
-</div>
-
-<!-- Seção Administrativo -->
-<div class="container my-5">
-    <h2 class="mb-4">Administrativo</h2>
-    <div class="row row-cols-1 row-cols-md-3 g-4">
-        {% for arquivo in administrativos %}
+{% if documentos_gerais %}
+<div class="container my-5" id="documentos-gerais">
+    <h2 class="fw-bold mb-4">Documentos Gerais</h2>
+    <div class="row row-cols-1 row-cols-md-3 g-4 mb-5">
+        {% for doc in documentos_gerais %}
         <div class="col">
             <div class="card h-100">
                 <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">{{ arquivo.nome }}</h5>
+                    <h6 class="card-title">{{ doc.nome }}</h6>
                     <div class="mt-auto">
-                        <a href="{{ arquivo.link }}" target="_blank" class="btn btn-primary">Abrir Arquivo</a>
+                        <a href="{{ doc.arquivo }}" target="_blank" class="btn btn-primary">Abrir Arquivo</a>
                     </div>
                 </div>
             </div>
@@ -51,23 +35,74 @@
         {% endfor %}
     </div>
 </div>
+{% endif %}
 
-<!-- Seção Financeiro -->
-<div class="container my-5">
-    <h2 class="mb-4">Financeiro</h2>
-    <div class="row row-cols-1 row-cols-md-3 g-4">
-        {% for arquivo in financeiros %}
-        <div class="col">
-            <div class="card h-100">
-                <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">{{ arquivo.nome }}</h5>
-                    <div class="mt-auto">
-                        <a href="{{ arquivo.link }}" target="_blank" class="btn btn-primary">Abrir Arquivo</a>
-                    </div>
+<div class="container my-5" id="documentos-anuais">
+    <h2 class="fw-bold mb-4">Documentos Anuais</h2>
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <label for="ano_referencia" class="form-label fw-bold mb-2">Escolha o Ano</label>
+                    <!-- Removido o input-group-text (quadrado cinza) -->
+                    <select id="ano_referencia" name="ano_referencia" class="form-select" onchange="carregarArquivos(this.value)">
+                        {% for ano in years %}
+                            <option value="{{ ano }}" {% if ano == ano_selecionado %}selected{% endif %}>{{ ano }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
             </div>
         </div>
-        {% endfor %}
+    </div>
+    <div id="areas-container">
+        <!-- Seções dinâmicas via JS -->
     </div>
 </div>
+
+<script>
+function carregarArquivos(ano) {
+    fetch('/api/method/gris.api.transparencia.get_arquivos_por_ano?ano_referencia=' + ano)
+        .then(response => response.json())
+        .then(data => {
+            atualizarAreas(data.message.areas);
+        });
+}
+
+function atualizarAreas(areas) {
+    const container = document.getElementById('areas-container');
+    container.innerHTML = '';
+    if (!areas || Object.keys(areas).length === 0) {
+        container.innerHTML = '<div class="row"><div class="col"><p>Nenhum arquivo encontrado.</p></div></div>';
+        return;
+    }
+    Object.entries(areas).forEach(([area, arquivos]) => {
+        let cards = '';
+        arquivos.forEach(arq => {
+            cards += `
+                <div class="col">
+                    <div class="card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <h6 class="card-title">${arq.title}</h6>
+                            <div class="mt-auto">
+                                <a href="${arq.arquivo}" target="_blank" class="btn btn-primary">Abrir Arquivo</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML += `
+            <h4 class="fw-bold mb-3">${area}</h4>
+            <div class="row row-cols-1 row-cols-md-3 g-4 mb-5">
+                ${cards}
+            </div>
+        `;
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const ano = document.getElementById('ano_referencia').value;
+    carregarArquivos(ano);
+});
+</script>
 {% endblock %}

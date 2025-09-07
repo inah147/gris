@@ -1,0 +1,37 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"5v81V6oWKZ\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Configura\u00e7\u00f5es</span>\",\"col\":12}},{\"id\":\"EsTfM8yjZH\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Definicao Da Uel\",\"col\":3}}]",
+ "creation": "2025-09-07 10:18:31.190067",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "tool",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Configura\u00e7\u00f5es",
+ "links": [],
+ "modified": "2025-09-07 10:20:00.821833",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Configura\u00e7\u00f5es",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 29.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Definicao Da Uel",
+   "link_to": "Definicao da UEL",
+   "type": "DocType"
+  }
+ ],
+ "title": "Configura\u00e7\u00f5es"
+}

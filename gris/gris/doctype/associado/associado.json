@@ -352,14 +352,16 @@
    "fieldname": "area",
    "fieldtype": "Link",
    "label": "\u00c1rea",
-   "options": "Unidade Organizacional"
+   "options": "Unidade Organizacional",
+   "permlevel": 2
   },
   {
    "default": "N\u00e3o",
    "fieldname": "eleito",
    "fieldtype": "Select",
    "label": "Eleito",
-   "options": "Sim\nN\u00e3o"
+   "options": "Sim\nN\u00e3o",
+   "permlevel": 2
   },
   {
    "fieldname": "column_break_xleh",
@@ -404,7 +406,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-05 07:48:15.910246",
+ "modified": "2025-09-08 13:22:26.154037",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Associado",
@@ -420,6 +422,41 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "permlevel": 2,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de Adultos",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de Adultos",
+   "share": 1
+  },
+  {
+   "read": 1,
+   "role": "Gestor de Associados"
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "permlevel": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de Associados",
    "share": 1,
    "write": 1
   }

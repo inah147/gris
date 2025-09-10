@@ -1,0 +1,99 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Role Profile",
+  "modified": "2025-09-08 13:30:55.416800",
+  "name": "Dirigente",
+  "role_profile": "Dirigente",
+  "roles": [
+   {
+    "parent": "Dirigente",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Gestor de Adultos"
+   },
+   {
+    "parent": "Dirigente",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Gestor da UEL"
+   },
+   {
+    "parent": "Dirigente",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Acesso ao Desk"
+   },
+   {
+    "parent": "Dirigente",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Gestor de Associados"
+   }
+  ]
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Role Profile",
+  "modified": "2025-09-09 07:33:43.267413",
+  "name": "Diretoria Eleita",
+  "role_profile": "Diretoria Eleita",
+  "roles": [
+   {
+    "parent": "Diretoria Eleita",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Gestor de Adultos"
+   },
+   {
+    "parent": "Diretoria Eleita",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Gestor da UEL"
+   },
+   {
+    "parent": "Diretoria Eleita",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Acesso ao Desk"
+   },
+   {
+    "parent": "Diretoria Eleita",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Gestor de Associados"
+   }
+  ]
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Role Profile",
+  "modified": "2025-09-09 07:50:22.647391",
+  "name": "Beneficiário",
+  "role_profile": "Beneficiário",
+  "roles": []
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Role Profile",
+  "modified": "2025-09-09 13:16:36.623041",
+  "name": "Assistente",
+  "role_profile": "Assistente",
+  "roles": [
+   {
+    "parent": "Assistente",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Gestor de Associados"
+   }
+  ]
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Role Profile",
+  "modified": "2025-09-09 22:40:04.022930",
+  "name": "Guest",
+  "role_profile": "Guest",
+  "roles": []
+ }
+]

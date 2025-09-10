@@ -41,7 +41,6 @@ function update_responsaveis_tab_properties(frm) {
             idade--;
         }
     }
-    console.log("Idade calculada:", idade);
 
     const maior_de_idade = idade > 18;
 

@@ -13,6 +13,7 @@
   "logo",
   "column_break_wxzy",
   "regiao",
+  "site",
   "section_break_ltuy",
   "cnpj",
   "column_break_nmpf",
@@ -135,6 +136,11 @@
    "fieldname": "cnae",
    "fieldtype": "Data",
    "label": "CNAE"
+  },
+  {
+   "fieldname": "site",
+   "fieldtype": "Data",
+   "label": "Site"
   }
  ],
  "grid_page_length": 50,
@@ -142,7 +148,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-09-07 09:07:24.165804",
+ "modified": "2025-09-07 21:51:23.073993",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Definicao da UEL",

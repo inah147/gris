@@ -148,23 +148,24 @@ app_license = "mit"
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"gris.tasks.all"
-# 	],
-# 	"daily": [
-# 		"gris.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"gris.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"gris.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"gris.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"Cron": {"0 5 * * *": ["gris.api.users.user_manager.manage_associate_users"]}
+	# "all": [
+	# 	"gris.tasks.all"
+	# ],
+	# "daily": [
+	# 	"gris.tasks.daily"
+	# ],
+	# "hourly": [
+	# 	"gris.tasks.hourly"
+	# ],
+	# "weekly": [
+	# 	"gris.tasks.weekly"
+	# ],
+	# "monthly": [
+	# 	"gris.tasks.monthly"
+	# ],
+}
 
 # Testing
 # -------
@@ -242,3 +243,12 @@ app_license = "mit"
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
+
+# Fixtures
+# --------
+
+fixtures = [
+	{
+		"dt": "Role Profile",
+	}
+]

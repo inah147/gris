@@ -1,10 +1,14 @@
 import frappe
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_arquivos_por_ano(ano_referencia):
+	# Conteúdo público: ignora permissões para permitir acesso a Guest
 	arquivos = frappe.get_all(
-		"Transparencia", fields=["title", "arquivo", "area"], filters={"ano_referencia": ano_referencia}
+		"Transparencia",
+		fields=["title", "arquivo", "area"],
+		filters={"ano_referencia": ano_referencia},
+		ignore_permissions=True,
 	)
 	areas = {}
 	for arq in arquivos:

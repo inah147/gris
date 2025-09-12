@@ -1,30 +1,34 @@
 import frappe
 
+from gris.api.portal_cache_utils import get_transparency_years_cached, get_uel_cached
+
 
 def get_context(context):
-	years = frappe.get_all(
-		"Transparencia", fields=["ano_referencia"], distinct=True, order_by="ano_referencia desc"
-	)
-	context.years = [row.ano_referencia for row in years if row.ano_referencia]
+	"""Página de transparência totalmente pública (Guest permitido)."""
 
-	# Captura o ano selecionado do formulário HTML
+	# Lista anos (conteúdo público) usando cache controlado
+	context.years = get_transparency_years_cached()
+
+	# Ano selecionado (querystring)
 	ano_selecionado = frappe.form_dict.get("ano_referencia")
 	context.ano_selecionado = ano_selecionado
-
-	# Se nenhum ano foi selecionado, usa o mais recente como padrão
 	if not ano_selecionado and context.years:
-		ano_selecionado = context.years[0]
-		context.ano_selecionado = ano_selecionado
+		context.ano_selecionado = context.years[0]
 
-	# Recupera logo do single DocType
-	uel_def = frappe.get_doc("Definicao da UEL")
-	context.logo = uel_def.logo
+	# Dados institucionais (tentar ignorar permissões, fallback se falhar)
+	uel_data = get_uel_cached()
+	if uel_data:
+		context.logo = uel_data.get("logo")
+		context.subtitle = f"{uel_data.get('tipo_uel', '')} {uel_data.get('nome_da_uel', '')} - {uel_data.get('numeral', '')}/{uel_data.get('regiao', '')}".strip()
+		publicos = [
+			{"nome": d.get("nome_do_documento", "Documento"), "arquivo": d.get("arquivo")}
+			for d in (uel_data.get("documentos") or [])
+			if d.get("publico")
+		]
+		context.documentos_gerais = publicos or None
+	else:
+		context.logo = None
+		context.subtitle = ""
+		context.documentos_gerais = None
 
-	# Define subtitulo
-	context.subtitle = f"{uel_def.tipo_uel} {uel_def.nome_da_uel} - {uel_def.numeral}/{uel_def.regiao}"
-
-	# Recupera documentos públicos da child table
-	documentos_publicos = [
-		{"nome": doc.nome_do_documento, "arquivo": doc.arquivo} for doc in uel_def.documentos if doc.publico
-	]
-	context.documentos_gerais = documentos_publicos if documentos_publicos else None
+	return context

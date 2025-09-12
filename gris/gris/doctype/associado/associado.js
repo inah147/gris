@@ -67,7 +67,9 @@ function set_fields_read_only(frm) {
         "guardiao_legal_responsavel_2",
         "eleito",
         "area",
-        "historico_no_grupo"
+        "historico_no_grupo",
+        "route",
+        "cpf"
     ];
 
     // Percorre todos os campos do formulário

@@ -1,0 +1,44 @@
+/* Estilos específicos da página Lista de Associados */
+
+/* Força os rótulos acima dos campos e uniformiza o visual */
+.filters .form-label { display:block; margin-bottom:.25rem; }
+.filters .form-select,
+.filters .form-control {
+  width:100%;
+  height: calc(2.25rem + 2px);
+  padding: .47rem .75rem;
+  border: 1px solid var(--bs-border-color, #ced4da);
+  border-radius: .375rem;
+  background-color: #fff;
+}
+/* Aparência consistente em navegadores */
+.filters .form-select { -webkit-appearance: none; appearance: none; }
+
+/* Espaço extra entre linhas já garantido por gy-4; este fallback ajuda em temas diferentes */
+.filters { row-gap: 1.25rem; }
+
+/* Desktop: filtros fixos no topo ao rolar */
+@media (min-width: 768px){
+  #assoc-filters {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #fff;
+    border-bottom: 1px solid rgba(0,0,0,.05);
+  }
+}
+
+/* Layout da listagem: badges abaixo no mobile, à direita no desktop */
+.list-group-item .d-flex { gap: .5rem; }
+@media (min-width: 768px){
+  .list-group-item .d-flex { gap: .5rem; }
+}
+
+/* Badges customizados */
+.badge-status-valido { background:#70EF8E; color:#203c32; }
+.badge-status-vencido { background:#e55e10; color:#3a2f00; }
+.badge-status-desconhecido { background:#6c757d; color:#fff; }
+.badge-ramo { background:#1D2756; color:#eefcff; }
+.badge-categoria { background:#0d6efd; color:#fff; }
+/* Nova variante outline para categoria (borda com cor do badge de ramo) */
+.badge-categoria-outline { background:transparent; color:#1D2756; border:1px solid #1D2756; }

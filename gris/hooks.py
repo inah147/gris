@@ -252,3 +252,13 @@ fixtures = [
 		"dt": "Role Profile",
 	}
 ]
+
+# Contexto global para o site (sidebar centralizada)
+# website_context = {
+# 	"associados_subitems": [
+# 		{"label": "Visão Geral", "href": "/associados"},
+# 		{"label": "Lista de Associados", "href": "/app/associado"},
+# 		{"label": "Novo Associado", "href": "/app/associado/new"},
+# 		{"label": "Relatório Ativos", "href": "/app/query-report/Associados Ativos"},
+# 	]
+# }

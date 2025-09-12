@@ -1,0 +1,329 @@
+{% extends "templates/base.html" %}
+
+{#
+  NOVA NAVBAR / SIDEBAR (Simples e fácil de manter)
+  Requisitos:
+    - Logo vindo de frappe.get_doc("Definicao da UEL").logo
+    - Itens: Início (/inicio) e Associados (/associados)
+    - "Associados" é colapsável e contém (por enquanto) só "Visão Geral"
+    - Sem ícones/setas: diferença de nível por indentação
+    - Item ativo com destaque diferente do hover
+
+  Uso: páginas devem definir opcionalmente active_link (ex: '/associados' ou '/inicio').
+  Caso não defina, tenta usar path atual.
+#}
+
+{% set current_path = active_link or ('/' ~ path) %}
+{% set uel = frappe.get_doc('Definicao da UEL') %}
+
+{# Macro para ícones lineares coerentes com o restante da UI #}
+{% macro nav_icon(label) %}
+  {% set l = (label or '')|lower %}
+  {% if 'início' in l or 'inicio' in l %}
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.2 12 4l9 7.2"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+  {% elif 'visão' in l or 'visao' in l or 'geral' in l %}
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3.5"/></svg>
+  {% elif 'lista' in l %}
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>
+  {% else %}
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h7l5 5v13H6z"/><path d="M13 3v6h5"/></svg>
+  {% endif %}
+{% endmacro %}
+
+{# Remover completamente banner, navbar e footer padrão do Frappe #}
+{% block banner %}{% endblock %}
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="fx-layout d-flex">
+  <nav class="fx-shell border-end bg-white d-none d-md-flex flex-column">
+    <div class="fx-menu-scroll">
+      <ul class="fx-sidebar m-0 p-0">
+        <li class="fx-logo">
+          {% if uel.logo %}
+            <a href="/inicio"><img src="{{ uel.logo }}" alt="Logo"></a>
+          {% else %}<span class="fw-semibold small">Portal</span>{% endif %}
+        </li>
+        {# Dynamic items from context.sidebar_items #}
+        {% for item in sidebar_items or [] %}
+          {% if item.children %}
+            {% set group_open = current_path.startswith(item.path) %}
+            <li class="fx-group {% if group_open %}open{% endif %}" data-group>
+              <button type="button" class="fx-item fx-toggle {% if group_open %}is-active{% endif %}" data-toggle>{{ item.label }}</button>
+              <ul class="fx-sub {% if group_open %}open-auto{% endif %}">
+                {% for child in item.children %}
+                  <li>
+                    <a href="{{ child.path }}" class="fx-sub-item {% if current_path == child.path %}is-active{% endif %}">{{ child.label }}</a>
+                  </li>
+                {% endfor %}
+              </ul>
+            </li>
+          {% else %}
+            <li>
+              <a href="{{ item.path }}" class="fx-item {% if current_path == item.path %}is-active{% endif %}">{{ item.label }}</a>
+            </li>
+          {% endif %}
+        {% endfor %}
+        {% block extra_sidebar %}{% endblock %}
+      </ul>
+    </div>
+    {% if user_display_name %}
+    <div class="fx-user-block">
+      <div class="fx-user" id="fx-user">
+        <button type="button" class="fx-user-btn" id="fx-user-btn" aria-haspopup="true" aria-expanded="false">
+          <span class="fx-avatar">{{ user_initial }}</span>
+          <span class="fx-user-name" title="{{ user_display_name }}">{{ user_display_name }}</span>
+          <span class="fx-caret" aria-hidden="true"></span>
+        </button>
+        <div class="fx-user-menu" id="fx-user-menu" role="menu" aria-hidden="true">
+          <button type="button" class="fx-user-action" data-action="logout">Desconectar</button>
+          {% if is_system_manager %}
+          <a href="/app" class="fx-user-action" role="menuitem">Admin</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </nav>
+  <main class="fx-main flex-grow-1 p-0">
+    <!-- Topbar Mobile -->
+  <div class="fxm-topbar d-md-none d-flex align-items-center justify-content-end px-3 py-2 bg-white fixed-top" style="z-index:1050;">
+      <div class="fxm-logo-wrap">
+        {% if uel.logo %}
+          <a href="/inicio" class="d-inline-block"><img src="{{ uel.logo }}" alt="Logo" class="fxm-logo-mobile"></a>
+        {% else %}
+          <a href="/inicio" class="fw-semibold text-decoration-none fxm-logo-text">Portal</a>
+        {% endif %}
+      </div>
+      {% if user_display_name %}
+      <div class="fxm-user-mini fx-user ms-2" id="fxm-user">
+        <button type="button" class="fxm-user-btn" id="fxm-user-btn" aria-haspopup="true" aria-expanded="false" aria-label="Menu do usuário">
+          <span class="fx-avatar fx-avatar-sm">{{ user_initial }}</span>
+        </button>
+        <div class="fx-user-menu" id="fxm-user-menu" role="menu" aria-hidden="true">
+          <button type="button" class="fx-user-action" data-action="logout">Desconectar</button>
+          {% if is_system_manager %}<a href="/app" class="fx-user-action" role="menuitem">Admin</a>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    <!-- Bottom Navigation Mobile -->
+    <nav class="fxm-bottom-nav d-md-none" aria-label="Navegação móvel">
+      <div class="fxm-bottom-wrapper">
+        <a href="/inicio" class="fxm-bottom-home {% if current_path == '/inicio' %}active{% endif %}" aria-label="Início">
+          <span class="fxm-icon">{{ nav_icon('Início')|safe }}</span>
+          <span class="fxm-label">Início</span>
+        </a>
+        <div class="fxm-bottom-scroll" role="tablist">
+          {% for child in current_group_children or [] %}
+            <a href="{{ child.path }}" class="fxm-bottom-link {% if current_path == child.path %}active{% endif %}" title="{{ child.label }}" role="tab">
+              <span class="fxm-icon">{{ nav_icon(child.label)|safe }}</span>
+              <span class="fxm-label">{{ child.label }}</span>
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+    </nav>
+    <div class="p-4">
+      {% if access_denied %}
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <h2 class="h6 mb-2">Acesso negado</h2>
+            <p class="mb-0 text-muted small">Você não tem permissão para visualizar esta página.</p>
+          </div>
+        </div>
+      {% else %}
+        {% block page_header %}{% endblock %}
+        {% block main %}{% endblock %}
+      {% endif %}
+    </div>
+  <!-- Spacer para evitar sobreposição da bottom nav no final do scroll (mobile) -->
+  <div class="fxm-bottom-spacer d-md-none"></div>
+  </main>
+</div>
+{% endblock %}
+
+{% block style %}
+{{ super() }}
+<style>
+  html, body { min-height: 100%; background: #f8f9fa; }
+  :root { --fx-topbar-height:56px; --fx-bottom-nav-height:64px; }
+  .fx-layout { min-height: 100vh; background: var(--gray-50); }
+  .fx-shell { width:240px; padding:0.75rem 0.75rem 0.75rem; position: fixed; top: 0; left: 0; bottom: 0; height: 100vh; }
+  .fx-shell.d-md-flex { display:flex; }
+  .fx-menu-scroll { flex:1 1 auto; overflow-y:auto; padding-bottom:1rem; }
+  .fx-user-block { flex:0 0 auto; padding-top:.5rem; border-top:1px solid rgba(0,0,0,.07); }
+  .fx-user-block .fx-user { position:relative; margin-top:.35rem; }
+  .fx-user-menu { bottom:52px; }
+  .fx-sidebar { list-style:none; }
+  .fx-logo { text-align:center; padding:0.5rem 0.5rem 1rem; }
+  .fx-logo img { max-height:110px; object-fit:contain; }
+  .fx-item, .fx-sub-item, .fx-toggle { display:flex; align-items:center; width:100%; gap:.5rem; background:none; border:0; text-align:left; padding:.55rem .85rem; border-radius:6px; color:#334155; font-weight:500; text-decoration:none; cursor:pointer; transition:background .15s, color .15s; font-size:14px; }
+  .fx-item:hover, .fx-sub-item:hover, .fx-toggle:hover { background:#f1f5f9; }
+  .fx-item.is-active, .fx-toggle.is-active { background:rgba(13,77,145,.12); color:#0d4d91; font-weight:600; }
+  .fx-sub { list-style:none; margin:4px 0 0 0; padding:0 0 0 .5rem; overflow:hidden; height:0; transition:height .22s ease; }
+  .fx-sub.open-auto { height:auto; }
+  .fx-sub-item { font-weight:400; font-size:13px; padding:.4rem 1.25rem .4rem 1.9rem; position:relative; margin-bottom:3px; }
+  .fx-sub-item:last-child { margin-bottom:0; }
+  .fx-sub-item::before { content:''; position:absolute; left:1.05rem; top:50%; width:6px; height:6px; background:#94a3b8; border-radius:50%; transform:translateY(-50%); }
+  .fx-sub-item.is-active { background:rgba(13,77,145,.18); color:#0d4d91; font-weight:600; }
+  .fx-sub-item.is-active::before { background:#0d6efd; }
+  /* Espaçamento entre itens raiz */
+  .fx-sidebar > li:not(.fx-logo) { margin-bottom:6px; }
+  .fx-sidebar > li:last-child { margin-bottom:0; }
+  .fx-group.open > .fx-toggle { background:#e0f0ff; color:#0d4d91; }
+  .fx-toggle::after { content:''; margin-left:auto; width:6px; height:6px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(45deg); transition:transform .2s; }
+  .fx-group.open > .fx-toggle::after { transform:rotate(135deg); }
+  .fx-main { background:#f8f9fa; min-height: 100vh; padding-bottom: 24px; }
+  /* Perfil usuário */
+  .fx-user { position:relative; }
+  .fx-user-btn { width:100%; background:#f1f5f9; border:0; display:flex; align-items:center; gap:.6rem; padding:.55rem .75rem; border-radius:8px; font-size:13px; font-weight:500; color:#334155; cursor:pointer; text-align:left; }
+  .fx-user-btn:hover { background:#e2e8f0; }
+  .fx-avatar { width:34px; height:34px; border-radius:50%; background:#0d4d91; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:15px; }
+  .fx-user-name { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .fx-caret { width:8px; height:8px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(45deg); margin-left:auto; opacity:.65; transition:transform .18s; }
+  .fx-user.open .fx-caret { transform:rotate(225deg); }
+  .fx-user-menu { position:absolute; left:0; right:0; bottom:52px; background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:10px; box-shadow:0 12px 28px -8px rgba(0,0,0,.2); padding:.4rem; display:none; flex-direction:column; gap:.25rem; animation:fadeSlide .18s ease; }
+  .fx-user.open .fx-user-menu { display:flex; }
+  .fx-user-action { background:#fff; border:0; width:100%; text-align:left; padding:.55rem .65rem; border-radius:6px; font-size:13px; color:#334155; text-decoration:none; cursor:pointer; }
+  .fx-user-action:hover { background:#f1f5f9; }
+  .fx-user-action:active { background:#e2e8f0; }
+  @keyframes fadeSlide { from { opacity:0; transform:translateY(6px);} to { opacity:1; transform:translateY(0);} }
+  @media (max-width: 767.98px){
+    .fx-shell { display:none !important; }
+    /* Compensa a topbar fixa (sobreposição) */
+  .fx-main { padding-top: var(--fx-topbar-height) !important; padding-bottom: calc(var(--fx-bottom-nav-height) + 12px); }
+    .fxm-topbar { border-bottom: 0 !important; }
+    /* Bottom nav */
+  .fxm-bottom-nav { position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid rgba(0,0,0,.08); box-shadow:0 -4px 12px -6px rgba(0,0,0,.12); z-index:1050; }
+  .fxm-bottom-wrapper { display:flex; height:var(--fx-bottom-nav-height); }
+  .fxm-bottom-home { flex:0 0 78px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; text-decoration:none; font-size:11px; color:#475569; font-weight:500; border-right:1px solid rgba(0,0,0,.05); position:relative; }
+  .fxm-bottom-scroll { flex:1 1 auto; display:flex; overflow-x:auto; -webkit-overflow-scrolling:touch; gap:2px; padding:4px 4px 0; scrollbar-width:none; }
+  .fxm-bottom-scroll::-webkit-scrollbar { display:none; }
+  .fxm-bottom-link { flex:0 0 auto; min-width:86px; padding:4px 6px 0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-decoration:none; font-size:11px; color:#475569; font-weight:500; position:relative; }
+  .fxm-bottom-link .fxm-icon, .fxm-bottom-home .fxm-icon { line-height:1; }
+  .fxm-bottom-link .fxm-icon svg, .fxm-bottom-home .fxm-icon svg { width:20px; height:20px; display:block; stroke:currentColor; stroke-width:1.8; fill:none; vector-effect:non-scaling-stroke; }
+  .fxm-bottom-link.active, .fxm-bottom-home.active { color:#0d4d91; font-weight:600; }
+  .fxm-bottom-link.active::after, .fxm-bottom-home.active::after { content:''; position:absolute; top:0; left:22%; right:22%; height:3px; border-radius:0 0 3px 3px; background:#0d4d91; }
+  .fx-avatar-sm { width:36px; height:36px; font-size:15px; }
+  .fxm-logo-mobile { max-height:44px; object-fit:contain; }
+  .fxm-topbar { position:fixed; left:0; right:0; }
+  .fxm-logo-wrap { position:absolute; left:50%; top:50%; transform:translate(-50%, -50%); display:flex; align-items:center; }
+  .fxm-logo-text { font-size:1rem; font-weight:600; }
+  /* Mobile user menu override positioning */
+  .fxm-topbar { position:fixed; left:0; right:0; }
+  .fxm-topbar .fx-user { position:relative; }
+  .fxm-topbar .fx-user-menu { top:calc(100% + 8px); bottom:auto; left:auto; right:0; }
+  .fxm-user-btn { background:#f1f5f9; border:0; padding:4px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .fxm-user-btn:active, .fxm-user-btn:hover { background:#e2e8f0; }
+  }
+  @media (min-width: 768px){
+    .fx-main { margin-left: 240px; }
+  }
+  @media (max-width: 767.98px){
+  .fxm-bottom-link svg, .fxm-bottom-home svg { transition:stroke .18s, transform .2s; }
+  .fxm-bottom-link:active svg, .fxm-bottom-home:active svg { transform:scale(.9); }
+  .fxm-bottom-link.active svg, .fxm-bottom-home.active svg { stroke:#0d4d91; }
+  /* Espaçador final */
+  .fxm-bottom-spacer { height: calc(var(--fx-bottom-nav-height) + 32px); }
+  /* Garantir padding interno adicional no container principal */
+  .fx-main > .p-4 { padding-bottom: calc(var(--fx-bottom-nav-height) + 48px) !important; }
+}
+</style>
+{% block extra_style %}{% endblock %}
+{% endblock %}
+
+{% block script %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Ajusta variável de altura da topbar dinamicamente
+  const topbarEl = document.querySelector('.fxm-topbar');
+  const bottomNavEl = document.querySelector('.fxm-bottom-nav');
+  function syncTopbarHeight(){
+    if(!topbarEl) return; const h = topbarEl.offsetHeight; if(h){ document.documentElement.style.setProperty('--fx-topbar-height', h + 'px'); }
+  }
+  function syncBottomHeight(){
+    if(!bottomNavEl) return; const h = bottomNavEl.offsetHeight; if(h){ document.documentElement.style.setProperty('--fx-bottom-nav-height', h + 'px'); }
+  }
+  syncTopbarHeight();
+  syncBottomHeight();
+  window.addEventListener('resize', () => { if(window.innerWidth < 768) syncTopbarHeight(); });
+  window.addEventListener('resize', () => { if(window.innerWidth < 768) syncBottomHeight(); });
+  document.querySelectorAll('[data-group]').forEach(group => {
+    const btn = group.querySelector('[data-toggle]');
+    const sub = group.querySelector('.fx-sub');
+    if(!btn || !sub) return;
+    // Se já vem aberto por rota, garantir height auto
+    if(group.classList.contains('open')) { sub.style.height = 'auto'; }
+    btn.addEventListener('click', (e) => {
+      const open = group.classList.contains('open');
+      if(!open){
+        e.preventDefault();
+        group.classList.add('open');
+        sub.style.height = sub.scrollHeight + 'px';
+        sub.addEventListener('transitionend', () => { if(group.classList.contains('open')) sub.style.height = 'auto'; }, { once:true });
+      } else {
+        // recolher
+        if(sub.style.height === 'auto') sub.style.height = sub.scrollHeight + 'px';
+        requestAnimationFrame(() => { sub.style.height = '0px'; });
+        group.classList.remove('open');
+      }
+    });
+  });
+});
+</script>
+<script>
+(function(){
+  const root = document.getElementById('fx-user');
+  const btn = document.getElementById('fx-user-btn');
+  if(!root || !btn) return;
+  btn.addEventListener('click', () => {
+    root.classList.toggle('open');
+    const expanded = root.classList.contains('open');
+    btn.setAttribute('aria-expanded', expanded ? 'true':'false');
+  });
+  document.addEventListener('click', (e)=>{
+    if(!root.contains(e.target)) root.classList.remove('open');
+  });
+  // Ações
+  root.querySelectorAll('.fx-user-action[data-action="logout"]').forEach(el => {
+    el.addEventListener('click', () => {
+      frappe.call({ method: 'logout', callback: () => { window.location.href = '/login'; } });
+    });
+  });
+})();
+</script>
+<script>
+// Mobile user menu (reuse desktop logic but separate IDs)
+(function(){
+  const mobileRoot = document.getElementById('fxm-user');
+  const mobileBtn = document.getElementById('fxm-user-btn');
+  if(mobileRoot && mobileBtn){
+    mobileBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      mobileRoot.classList.toggle('open');
+      mobileBtn.setAttribute('aria-expanded', mobileRoot.classList.contains('open') ? 'true':'false');
+    });
+    document.addEventListener('click', (e)=>{
+      if(!mobileRoot.contains(e.target)) mobileRoot.classList.remove('open');
+    });
+    mobileRoot.querySelectorAll('.fx-user-action[data-action="logout"]').forEach(el => {
+      el.addEventListener('click', () => {
+        frappe.call({ method: 'logout', callback: () => { window.location.href = '/login'; } });
+      });
+    });
+  }
+})();
+</script>
+<script>
+window.addEventListener('load', ()=>{
+  const bn = document.querySelector('.fxm-bottom-nav');
+  if(bn){
+    const h = bn.offsetHeight; if(h){ document.documentElement.style.setProperty('--fx-bottom-nav-height', h + 'px'); }
+  }
+});
+</script>
+{% block extra_script %}{% endblock %}
+{% endblock %}

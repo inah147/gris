@@ -1,0 +1,91 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Associados{% endblock %}
+
+{# Configura dados da sidebar específicos desta página #}
+{% set active_link = '/associados' %}
+{% set sidebar_title = 'Associados' %}
+{% set sidebar_sections = [] %}
+
+
+{% block main %}
+  <div class="row g-4 mb-4">
+    <div class="col-12 col-md-4">
+      <div class="stats-small card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted small">Total</span>
+            <span class="text-muted small">Hoje</span>
+          </div>
+          <h2 class="h4 mb-0" id="stat-total">--</h2>
+          <small class="text-success" id="stat-today">+0</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="stats-small card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted small">Ativos</span>
+            <span class="text-muted small">%</span>
+          </div>
+            <h2 class="h4 mb-0" id="stat-active">--</h2>
+            <small class="text-primary" id="stat-active-rate">--%</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="stats-small card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted small">Inativos</span>
+            <span class="text-muted small">%</span>
+          </div>
+          <h2 class="h4 mb-0" id="stat-inactive">--</h2>
+          <small class="text-danger" id="stat-inactive-rate">--%</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-5">
+    <div class="card-body p-4">
+      <p class="lead mb-1">Bem-vindo ao módulo de associados.</p>
+      <p class="text-muted mb-0">Use o menu lateral para navegar entre as funcionalidades.</p>
+    </div>
+  </div>
+
+  <section class="mb-5">
+    <h2 class="h5 mb-3">Ações Rápidas</h2>
+    <div class="list-group shadow-sm">
+      <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="/app/associado/new">
+        <span>Criar novo associado</span>
+        <i class="fa fa-arrow-right small opacity-50"></i>
+      </a>
+      <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="/app/query-report/Associados Ativos">
+        <span>Relatório de Associados Ativos</span>
+        <i class="fa fa-arrow-right small opacity-50"></i>
+      </a>
+    </div>
+  </section>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+  frappe.ready(async () => {
+    try {
+      const r = await frappe.call({ method: 'frappe.client.get_list', args: { doctype: 'Associado', fields: ['name','status_no_grupo'], limit_page_length: 5000 } });
+      const rows = r.message || [];
+      const total = rows.length;
+      const ativos = rows.filter(x => x.status_no_grupo === 'Ativo').length;
+      const inativos = total - ativos;
+      const pct = (p,w) => w ? ((p/w)*100).toFixed(0) : 0;
+      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-active').textContent = ativos;
+      document.getElementById('stat-inactive').textContent = inativos;
+      document.getElementById('stat-active-rate').textContent = pct(ativos,total)+"%";
+      document.getElementById('stat-inactive-rate').textContent = pct(inativos,total)+"%";
+    } catch(e) { console.warn('Erro estatísticas associados', e); }
+  });
+</script>
+{% endblock %}

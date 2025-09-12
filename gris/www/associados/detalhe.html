@@ -1,0 +1,166 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Associado{% endblock %}
+{% set active_link = '/associados' %}
+
+{% block page_header %}
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <div>
+      <h1 class="h5 mb-1">Associado</h1>
+    </div>
+  <div class="d-flex align-items-center assoc-header-actions">
+      <button type="button" id="btn-salvar" class="btn btn-sm btn-primary d-none">Salvar</button>
+      <button type="button" id="btn-afastar" class="btn btn-sm btn-outline-warning d-none">Afastar associado</button>
+      <a href="/associados/lista" class="btn btn-sm btn-outline-secondary">Voltar à lista</a>
+    </div>
+  </div>
+{% endblock %}
+
+{% block main %}
+  {% if not_found %}
+    <div class="alert alert-warning">{{ missing_reason or 'Registro não encontrado.' }}</div>
+  {% else %}
+    <div id="assoc-flags" data-name="{{ associado.name }}" data-has-open="{{ 1 if has_open_historico else 0 }}" data-can-edit="{{ 1 if can_edit_member else 0 }}" hidden></div>
+    <!-- Seção 1 -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+  <div class="row g-3 assoc-head-row align-items-start">
+          <div class="col-12 col-lg-5">
+            <h2 class="h5 mb-1 primary-id">{{ head_nome }}</h2>
+            <div class="text-muted small">Registro: {{ head_registro }}</div>
+          </div>
+          <div class="col-6 col-lg-2">
+            <div class="small text-muted mb-1">Tipo</div>
+            <span class="badge {{ head_tipo_registro_class }}">{{ head_tipo_registro }}</span>
+          </div>
+          <div class="col-6 col-lg-2">
+            <div class="small text-muted mb-1">Status</div>
+            <span class="badge {{ head_status_class }}">{{ head_status }}</span>
+          </div>
+          <div class="col-6 col-lg-3">
+            <div class="small text-muted mb-1">Validade</div>
+            <div class="fw-semibold">{{ head_validade }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulário principal (remoção das seções 'Dados do Associado' e 'Contato') -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <form class="assoc-form" onsubmit="return false;">
+          <!-- Reordenado: Dados de Registro vem antes de Responsáveis -->
+          <div class="assoc-section" data-section>
+            <button type="button" class="assoc-section-toggle" data-toggle-section>
+              <span>Dados de Registro</span><span class="caret"></span>
+            </button>
+            <div class="assoc-section-body show">
+              <div class="row g-3">
+                {% for f in group_registro %}
+                  {% if f.fieldname == 'eleito' and associado.funcao not in ['Diretor','Diretor Presidente'] %}
+                    {# oculto #}
+                  {% else %}
+                  <div class="col-md-4 col-sm-6">
+                    <label class="form-label small text-muted">{{ f.label|e }}</label>
+                    {% if f.fieldtype == 'Select' %}
+                      <div class="fx-select">
+                        <select class="form-select form-select-sm" name="{{ f.fieldname }}" {% if not f.editable %}disabled{% endif %}>
+                          <option value=""></option>
+                          {% for opt in f.options %}
+                            <option value="{{ opt|e }}" {% if opt == f.value %}selected{% endif %}>{{ opt|e }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                    {% elif f.fieldtype == 'Date' %}
+                      <input type="date" class="form-control form-control-sm" name="{{ f.fieldname }}" value="{{ f.value or '' }}" {% if not f.editable %}readonly disabled{% endif %}>
+                    {% elif f.fieldtype == 'Check' %}
+                      <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="{{ f.fieldname }}" {% if f.value %}checked{% endif %} {% if not f.editable %}disabled{% endif %}>
+                      </div>
+                    {% else %}
+                      <input type="text" class="form-control form-control-sm" name="{{ f.fieldname }}" value="{{ f.value or '' }}" {% if not f.editable %}readonly disabled{% endif %}>
+                    {% endif %}
+                  </div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          {% if is_beneficiario %}
+          <div class="assoc-section" data-section>
+            <button type="button" class="assoc-section-toggle" data-toggle-section>
+              <span>Responsáveis</span><span class="caret"></span>
+            </button>
+            <div class="assoc-section-body show">
+              <div class="row g-3">
+                {% for f in group_responsaveis %}
+                  {% set is_guardian_flag = f.fieldname in ['guardiao_legal_responsavel_1','guardiao_legal_responsavel_2'] %}
+                  {% if is_guardian_flag %}
+                  <div class="col-md-4 col-sm-6" data-guardian-field {% if not show_guardian_toggles %}style="display:none;"{% endif %}>
+                  {% else %}
+                  <div class="col-md-4 col-sm-6">
+                  {% endif %}
+                    <label class="form-label small text-muted">{{ f.label }}</label>
+                    {% if f.fieldtype == 'Check' %}
+                      <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="{{ f.fieldname }}" {% if f.value %}checked{% endif %} {% if not f.editable %}disabled{% endif %}>
+                      </div>
+                    {% elif f.fieldtype == 'Select' %}
+                      <div class="fx-select">
+                        <select class="form-select form-select-sm" name="{{ f.fieldname }}" {% if not f.editable %}disabled{% endif %}>
+                          <option value=""></option>
+                          {% for opt in f.options %}
+                            <option value="{{ opt }}" {% if opt == f.value %}selected{% endif %}>{{ opt }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                    {% else %}
+                      <input type="text" class="form-control form-control-sm" name="{{ f.fieldname }}" value="{{ f.value or '' }}" {% if not f.editable %}readonly disabled{% endif %}>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+        </form>
+      </div>
+    </div>
+
+    <!-- Seção 3 - Histórico (Tabela simples) -->
+    <div class="card border-0 shadow-sm mb-4 assoc-history-card">
+      <div class="card-body py-4">
+        <h3 class="h6 text-uppercase text-muted assoc-history-title mb-3">Histórico no Grupo</h3>
+        {% if historico_no_grupo_rows %}
+          <div class="table-responsive-sm">
+            <table class="table table-sm mb-0 assoc-history-basic">
+              <thead>
+                <tr>
+                  <th scope="col">Ingresso</th>
+                  <th scope="col">Desligamento</th>
+                </tr>
+              </thead>
+              <tbody>
+              {% for r in historico_no_grupo_rows %}
+                {% set aberto = (not r.desligamento) %}
+                <tr>
+                  <td data-label="Ingresso">{{ r.ingresso or '—' }}</td>
+                  <td data-label="Desligamento">{{ r.desligamento or '—' }}</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="text-muted small">Nenhum histórico registrado.</div>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}
+
+{# CSS & JS now auto-loaded via detalhe.css and detalhe.js in same folder (Frappe convention) #}
+{% block extra_style %}{% endblock %}
+{% block extra_script %}{% endblock %}

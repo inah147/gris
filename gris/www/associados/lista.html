@@ -1,0 +1,67 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Lista de Associados{% endblock %}
+
+{% set active_link = '/associados/lista' %}
+{% set sidebar_title = 'Associados' %}
+{% set sidebar_sections = [] %}
+
+{% block main %}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <!-- <h1 class="h5 mb-3">Lista de Associados</h1> -->
+  <form id="assoc-filters" class="row gx-3 gy-4 mb-3 filters">
+        <div class="col-12 col-md-4">
+          <label class="form-label small text-muted">Nome</label>
+          <input type="text" class="form-control" id="f-nome" placeholder="Buscar por nome...">
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <label class="form-label small text-muted">Categoria</label>
+          <select id="f-categoria" class="form-select">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <label class="form-label small text-muted">Ramo</label>
+          <select id="f-ramo" class="form-select">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <label class="form-label small text-muted">Seção</label>
+          <select id="f-secao" class="form-select">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <label class="form-label small text-muted">Função</label>
+          <select id="f-funcao" class="form-select">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <label class="form-label small text-muted">Área</label>
+          <select id="f-area" class="form-select">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+          <label class="form-label small text-muted">Status do registro</label>
+          <select id="f-status" class="form-select">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        
+        <div class="col-12 d-flex gap-2">
+          <button type="submit" class="btn btn-primary">Aplicar filtros</button>
+          <button type="button" id="btn-reset" class="btn btn-outline-secondary">Limpar</button>
+        </div>
+      </form>
+
+      <div id="assoc-list" class="list-group list-group-flush">
+        <div class="list-group-item text-muted">Carregando...</div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+

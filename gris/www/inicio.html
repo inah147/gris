@@ -1,0 +1,44 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Início{% endblock %}
+
+{% set active_link = '/inicio' %}
+
+{% block page_header %}
+  <div class="mb-4 d-flex align-items-center justify-content-between">
+    <h1 class="h3 mb-0">Início</h1>
+  </div>
+{% endblock %}
+
+{% block main %}
+  <div class="mb-4">
+    <p class="lead mb-1">Bem-vindo ao Gris, {{ user_display_name }}!</p>
+    <p class="text-muted mb-0 small">Selecione um módulo abaixo.</p>
+  </div>
+
+  <div class="inicio-cards row g-3">
+    {% if can_associados %}
+      <div class="inicio-col col-12 col-sm-6 col-lg-4">
+        <div class="inicio-card h-100">
+          <h2>Associados</h2>
+          <p>Gerencie o cadastro e situação dos associados.</p>
+          <a href="/associados" class="btn btn-primary btn-sm">Abrir</a>
+        </div>
+      </div>
+    {% endif %}
+    {% if can_transparencia %}
+      <div class="inicio-col col-12 col-sm-6 col-lg-4">
+        <div class="inicio-card h-100">
+          <h2>Transparência</h2>
+          <p>Acesse documentos e informações públicas.</p>
+          <a href="/portal_transparencia" class="btn btn-primary btn-sm">Abrir</a>
+        </div>
+      </div>
+    {% endif %}
+    {% if not can_associados and not can_transparencia %}
+      <div class="col-12">
+        <div class="alert alert-info mb-0">Nenhuma seção disponível para o seu perfil.</div>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

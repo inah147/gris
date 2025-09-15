@@ -15,17 +15,41 @@
     document.head.appendChild(s);
   });
 
+  let currentChartInstance = null;
   frappe.ready(async () => {
+    const form = document.getElementById('assoc-dashboard-filters');
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await refreshDashboard(getFormFilters(form));
+      });
+      form.addEventListener('reset', async (e) => {
+        // pequeno delay para reset efetivar
+        setTimeout(() => refreshDashboard({}), 0);
+      });
+    }
+    await refreshDashboard({});
+  });
+
+  function getFormFilters(form){
+    const fd = new FormData(form);
+    const filters = {};
+    ['categoria','ramo','secao','funcao'].forEach(k=>{ const v = (fd.get(k)||'').trim(); if(v) filters[k]=v; });
+    return filters;
+  }
+
+  async function refreshDashboard(filters){
     try {
       await ensureCharts();
-      const r = await frappe.call({ method: 'gris.www.associados.index.get_associados_dashboard' });
+      setLoadingState();
+      const r = await frappe.call({ method: 'gris.www.associados.index.get_associados_dashboard', args: filters });
       const data = r.message || {};
       updateCards(data.cards);
       renderRamoCategoriaChart(data.chart);
-    } catch (e) {
-      console.warn('Erro dashboard associados', e);
+    } catch(e){
+      console.warn('Erro ao atualizar dashboard', e);
     }
-  });
+  }
 
   function updateCards(cards={}) {
     if (!cards.ativos) return;
@@ -71,7 +95,11 @@
       });
     }
 
-  const chart = new frappe.Chart(target, {
+    if (currentChartInstance && currentChartInstance.parent === target) {
+      // limpar área
+      target.innerHTML = '';
+    }
+    const chart = new frappe.Chart(target, {
       title: 'Associados Ativos por Ramo e Categoria',
       type: 'bar',
       data: chartData,
@@ -89,9 +117,7 @@
         formatTooltipY: d => d + ' associados'
       }
     });
-    if (typeof currentChartInstance !== 'undefined') {
-      currentChartInstance = chart;
-    }
+    currentChartInstance = chart;
     // Reposiciona tooltip para não vazar viewport
     const root = target.querySelector('svg');
     if (root) {
@@ -100,6 +126,18 @@
       });
       observer.observe(target, { subtree: true, childList: true, attributes: true });
     }
+  }
+
+  function setLoadingState(){
+    setText('card-ativos-total','--');
+    setText('card-ativos-benef','--');
+    setText('card-ativos-adultos','--');
+    setText('card-ativos-outros','--');
+    setText('card-reg-valido-total','--'); setText('card-reg-valido-pct','--%');
+    setText('card-reg-vencido-total','--'); setText('card-reg-vencido-pct','--%');
+    setText('card-reg-isento-total','--'); setText('card-reg-isento-pct','--%');
+    const chartTarget = document.getElementById('chart-ramos-categorias');
+    if (chartTarget) chartTarget.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
   }
 })();
 

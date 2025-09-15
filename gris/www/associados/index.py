@@ -27,11 +27,40 @@ def get_context(context):
 	context.active_link = "/associados"
 	enrich_context(context, "/associados")
 	context.ramos_order = RAMOS_ORDER
+
+	# --- Filtros dinâmicos ---
+	# Buscar valores distintos presentes na base (apenas associados ativos para coerência)
+	# Nota: campos funcao e secao são Data (texto livre); removemos vazios e ordenamos alfabeticamente.
+	# Para Select (categoria, ramo) usamos valores distintos existentes para refletir a realidade.
+	rows = frappe.db.sql(
+		"""
+		SELECT DISTINCT
+			NULLIF(ramo,'') AS ramo,
+			NULLIF(categoria,'') AS categoria,
+			NULLIF(secao,'') AS secao,
+			NULLIF(funcao,'') AS funcao
+		FROM `tabAssociado`
+		WHERE status_no_grupo='Ativo'
+		""",
+		as_dict=True,
+	)
+
+	def collect(key):
+		vals = sorted({r.get(key) for r in rows if r.get(key)})
+		return vals
+
+	context.filter_ramos = [r for r in RAMOS_ORDER if r != "Não se aplica" and r in collect("ramo")] + (
+		["Não se aplica"] if "Não se aplica" in collect("ramo") else []
+	)
+	context.filter_categorias = collect("categoria")
+	context.filter_secoes = collect("secao")
+	context.filter_funcoes = collect("funcao")
+
 	return context
 
 
 @frappe.whitelist()
-def get_associados_dashboard():
+def get_associados_dashboard(categoria=None, ramo=None, secao=None, funcao=None):
 	"""Retorna estatísticas para cards + dados de gráfico (ativos por ramo e categoria).
 
 	Novas métricas:
@@ -45,8 +74,24 @@ def get_associados_dashboard():
 	Percentuais sempre relativos a ativos_total (evitar divisão por zero).
 	"""
 
+	filters = ["status_no_grupo='Ativo'"]
+	params = {}
+	if categoria:
+		filters.append("categoria=%(categoria)s")
+		params["categoria"] = categoria
+	if ramo:
+		filters.append("ramo=%(ramo)s")
+		params["ramo"] = ramo
+	if secao:
+		filters.append("secao=%(secao)s")
+		params["secao"] = secao
+	if funcao:
+		filters.append("funcao=%(funcao)s")
+		params["funcao"] = funcao
+	where_clause = " AND ".join(filters)
+
 	stats_card = frappe.db.sql(
-		"""
+		f"""
 		SELECT
 			SUM(CASE WHEN status_no_grupo='Ativo' THEN 1 ELSE 0 END) AS ativos_total,
 			SUM(CASE WHEN status_no_grupo='Ativo' AND categoria='Beneficiário' THEN 1 ELSE 0 END) AS ativos_beneficiarios,
@@ -55,7 +100,9 @@ def get_associados_dashboard():
 			SUM(CASE WHEN status_no_grupo='Ativo' AND status='Vencido' THEN 1 ELSE 0 END) AS registro_vencido,
 			SUM(CASE WHEN status_no_grupo='Ativo' AND IFNULL(registro_isento,'Não')='Sim' THEN 1 ELSE 0 END) AS registro_isento
 		FROM `tabAssociado`
+		WHERE {where_clause}
 		""",
+		params,
 		as_dict=True,
 	)[0]
 
@@ -71,12 +118,13 @@ def get_associados_dashboard():
 		return round((v / ativos_total) * 100, 1) if ativos_total else 0
 
 	rows = frappe.db.sql(
-		"""
+		f"""
 		SELECT ramo, categoria, COUNT(*) AS total
 		FROM `tabAssociado`
-		WHERE status_no_grupo='Ativo'
+		WHERE {where_clause}
 		GROUP BY ramo, categoria
 		""",
+		params,
 		as_dict=True,
 	)
 

@@ -192,6 +192,97 @@ def get_associados_dashboard(categoria=None, ramo=None, secao=None, funcao=None)
 				venc_map[r.tipo_registro][index_month[r.yyyymm]] = r.total
 		venc_datasets = [{"name": t, "chartType": "bar", "values": venc_map[t]} for t in tipos]
 
+		# --- Gráfico 3: Série temporal de ativos (últimos 12 meses) ---
+		# Usa doctype "Metrica Mensal de Associados" (campos mes_referencia, qt_ativos_uel)
+		# Considera os últimos 12 meses incluindo o mês atual; se faltarem meses, completa com 0.
+
+		monthly_labels = []
+		monthly_values = []
+		monthly_novos_values = []
+		monthly_evasao_values = []
+		monthly_evasao_rate_values = []
+		try:
+			# Recupera registros ordenados por mes_referencia asc dos últimos 12 meses
+			rows_monthly = frappe.db.sql(
+				"""
+					SELECT mes_referencia, qt_ativos_uel, qt_novos, qt_evasao
+					FROM `tabMetrica Mensal de Associados`
+					WHERE mes_referencia >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 11 MONTH)
+					ORDER BY mes_referencia ASC
+				""",
+				as_dict=True,
+			)
+			# Mapa por AAAA-MM
+			# Monta sequência contínua de 12 meses
+			today = frappe.utils.getdate()
+			start_month = frappe.utils.add_months(frappe.utils.getdate(f"{today.year}-{today.month}-01"), -11)
+			month_cursor = start_month
+			rows_map_ativos = {}
+			rows_map_novos = {}
+			rows_map_evasao = {}
+			for r in rows_monthly:
+				if not r.mes_referencia:
+					continue
+				key = r.mes_referencia.strftime("%Y-%m")
+				rows_map_ativos[key] = int(r.qt_ativos_uel or 0)
+				rows_map_novos[key] = int(r.qt_novos or 0)
+				rows_map_evasao[key] = int(r.qt_evasao or 0)
+			PT_BR_MONTHS = [
+				"jan",
+				"fev",
+				"mar",
+				"abr",
+				"mai",
+				"jun",
+				"jul",
+				"ago",
+				"set",
+				"out",
+				"nov",
+				"dez",
+			]
+			for _i in range(12):
+				key = month_cursor.strftime("%Y-%m")
+				val_ativos = rows_map_ativos.get(key, 0)
+				val_novos = rows_map_novos.get(key, 0)
+				val_evasao = rows_map_evasao.get(key, 0)
+				base = val_ativos + val_evasao
+				rate = round((val_evasao / base) * 100, 2) if base else 0
+				label = f"{PT_BR_MONTHS[month_cursor.month - 1]} {month_cursor.year}"
+				monthly_labels.append(label)
+				monthly_values.append(val_ativos)
+				monthly_novos_values.append(val_novos)
+				monthly_evasao_values.append(val_evasao)
+				monthly_evasao_rate_values.append(rate)
+				month_cursor = frappe.utils.add_months(month_cursor, 1)
+		except Exception:
+			# Em caso de erro (doctype inexistente, etc.), retorna vazio
+			monthly_labels = []
+			monthly_values = []
+			monthly_novos_values = []
+			monthly_evasao_values = []
+			monthly_evasao_rate_values = []
+
+		chart_ativos_mensal = None
+		chart_novos_mensal = None
+		chart_evasao_mensal = None
+		if monthly_labels:
+			chart_ativos_mensal = {
+				"labels": monthly_labels,
+				"datasets": [{"name": _("Ativos"), "chartType": "line", "values": monthly_values}],
+			}
+			chart_novos_mensal = {
+				"labels": monthly_labels,
+				"datasets": [{"name": _("Novos"), "chartType": "bar", "values": monthly_novos_values}],
+			}
+			chart_evasao_mensal = {
+				"labels": monthly_labels,
+				"datasets": [
+					{"name": _("Evasão"), "chartType": "bar", "values": monthly_evasao_values},
+					{"name": _("Taxa Evasão (%)"), "chartType": "line", "values": monthly_evasao_rate_values},
+				],
+			}
+
 	return {
 		"cards": {
 			"ativos": {
@@ -207,4 +298,7 @@ def get_associados_dashboard(categoria=None, ramo=None, secao=None, funcao=None)
 		},
 		"chart": {"labels": RAMOS_ORDER, "datasets": datasets},
 		"chart_vencimentos": {"labels": month_labels, "datasets": venc_datasets},
+		"chart_ativos_mensal": chart_ativos_mensal,
+		"chart_novos_mensal": locals().get("chart_novos_mensal"),
+		"chart_evasao_mensal": locals().get("chart_evasao_mensal"),
 	}

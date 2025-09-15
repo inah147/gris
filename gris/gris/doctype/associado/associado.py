@@ -63,6 +63,20 @@ class Associado(Document):
 		if self.cpf_responsavel_2:
 			self.cpf_responsavel_2 = hashlib.md5(self.cpf_responsavel_2.encode("utf-8")).hexdigest()
 
+	def _serialize_hist(self, rows):
+		"""Serializa linhas do histórico em tuplas (ingresso, desligamento) para comparação.
+
+		Ignora linhas totalmente vazias (sem ingresso e sem desligamento).
+		"""
+		return [
+			(
+				getattr(r, "data_de_ingresso", None),
+				getattr(r, "data_de_desligamento", None),
+			)
+			for r in (rows or [])
+			if (getattr(r, "data_de_ingresso", None) or getattr(r, "data_de_desligamento", None))
+		]
+
 	def validate(self):
 		self._set_status()
 
@@ -94,6 +108,11 @@ class Associado(Document):
 		self.flags.old_funcao_categoria = old_funcao_categoria
 		self.flags.new_funcao_categoria = new_funcao_categoria
 
+		# --- Detecta alteração no child table historico_no_grupo ---
+		old_hist = self._serialize_hist(getattr(old_doc, "historico_no_grupo", []) if old_doc else [])
+		new_hist = self._serialize_hist(getattr(self, "historico_no_grupo", []))
+		self.flags.historico_no_grupo_changed = old_hist != new_hist
+
 	def after_insert(self):
 		log = _assoc_logger()
 		log.info(f"[ENQUEUE CREATE] {self.name}")
@@ -124,3 +143,12 @@ class Associado(Document):
 			new_funcao_categoria=getattr(self.flags, "new_funcao_categoria", None),
 			enqueue_after_commit=True,
 		)
+		# Se houve alteração no histórico, atualiza série temporal de associados
+		if self.flags.get("historico_no_grupo_changed"):
+			log.info(f"[ENQUEUE METRICS] {self.name} historico_no_grupo modificado")
+			frappe.enqueue(
+				"gris.api.users.user_metrics.update_associates_time_series",
+				job_name="update_associates_time_series",
+				queue="default",
+				enqueue_after_commit=True,
+			)

@@ -5,18 +5,59 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "section_break_gzg2"
+  "m\u00eas_e_dados_categ\u00f3ricos_section",
+  "mes_referencia",
+  "column_break_dizu",
+  "agrega\u00e7\u00f5es_section",
+  "qt_ativos_uel",
+  "qt_evasao",
+  "column_break_cohl",
+  "qt_novos"
  ],
  "fields": [
   {
-   "fieldname": "section_break_gzg2",
-   "fieldtype": "Section Break"
+   "fieldname": "m\u00eas_e_dados_categ\u00f3ricos_section",
+   "fieldtype": "Section Break",
+   "label": "M\u00eas e Dados Categ\u00f3ricos"
+  },
+  {
+   "fieldname": "mes_referencia",
+   "fieldtype": "Date",
+   "label": "M\u00eas de refer\u00eancia"
+  },
+  {
+   "fieldname": "column_break_dizu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "agrega\u00e7\u00f5es_section",
+   "fieldtype": "Section Break",
+   "label": "Agrega\u00e7\u00f5es"
+  },
+  {
+   "fieldname": "qt_ativos_uel",
+   "fieldtype": "Int",
+   "label": "Quantidade de associados ativos na UEL"
+  },
+  {
+   "fieldname": "qt_evasao",
+   "fieldtype": "Int",
+   "label": "Quantidade de associados que sa\u00edram da UEL"
+  },
+  {
+   "fieldname": "column_break_cohl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "qt_novos",
+   "fieldtype": "Int",
+   "label": "Quantidade de novos associados"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-15 12:32:15.519574",
+ "modified": "2025-09-15 18:42:21.487570",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Metrica Mensal de Associados",
@@ -38,5 +79,6 @@
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "mes_referencia"
 }

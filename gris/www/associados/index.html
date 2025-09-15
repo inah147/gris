@@ -134,6 +134,34 @@
       </div>
     </div>
   </div>
+  <div class="row g-4 mb-4" id="charts-row-2">
+    <div class="col-12 col-xl-6">
+      <div class="card border-0 shadow-sm chart-card h-100">
+        <div class="card-body">
+          <h6 class="text-muted small fw-semibold mb-3">Ativos (Últimos 12 meses)</h6>
+          <div id="chart-ativos-mensal" class="chart-area" style="min-height:320px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-xl-6">
+      <div class="card border-0 shadow-sm chart-card h-100">
+        <div class="card-body">
+          <h6 class="text-muted small fw-semibold mb-3">Novos Associados (Últimos 12 meses)</h6>
+          <div id="chart-novos-mensal" class="chart-area" style="min-height:320px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row g-4 mb-4" id="charts-row-3">
+    <div class="col-12 col-xl-6">
+      <div class="card border-0 shadow-sm chart-card h-100 position-relative" id="card-evasao-wrapper">
+        <div class="card-body">
+          <h6 class="text-muted small fw-semibold mb-3">Evasão (Últimos 12 meses)</h6>
+          <div id="chart-evasao-mensal" class="chart-area" style="min-height:320px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 {% endblock %}
 
 {% block extra_script %}

@@ -17,6 +17,9 @@
 
   let currentChartInstance = null;
   let currentVencChart = null;
+  let currentAtivosMensalChart = null;
+  let currentNovosMensalChart = null;
+  let currentEvasaoMensalChart = null;
   frappe.ready(async () => {
     const form = document.getElementById('assoc-dashboard-filters');
     if (form) {
@@ -46,8 +49,11 @@
       const r = await frappe.call({ method: 'gris.www.associados.index.get_associados_dashboard', args: filters });
       const data = r.message || {};
       updateCards(data.cards);
-      renderRamoCategoriaChart(data.chart);
-      renderVencimentosRegistroChart(data.chart_vencimentos);
+  renderRamoCategoriaChart(data.chart);
+  renderVencimentosRegistroChart(data.chart_vencimentos);
+  renderAtivosMensalChart(data.chart_ativos_mensal);
+  renderNovosMensalChart(data.chart_novos_mensal);
+  renderEvasaoMensalChart(data.chart_evasao_mensal);
     } catch(e){
       console.warn('Erro ao atualizar dashboard', e);
     }
@@ -148,6 +154,12 @@
     if (chartTarget) chartTarget.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
     const vencTarget = document.getElementById('chart-vencimentos-registro');
     if (vencTarget) vencTarget.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
+  const mensalTarget = document.getElementById('chart-ativos-mensal');
+  if (mensalTarget) mensalTarget.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
+  const novosTarget = document.getElementById('chart-novos-mensal');
+  if (novosTarget) novosTarget.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
+  const evasaoTarget = document.getElementById('chart-evasao-mensal');
+  if (evasaoTarget) evasaoTarget.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
   }
 
   function renderVencimentosRegistroChart(chartData){
@@ -167,10 +179,112 @@
       barOptions: { stacked: true, spaceRatio: 0.4 },
       axisOptions: { xAxisMode:'tick', xIsSeries:false, shortenYAxisNumbers:1 },
       tooltipOptions: { formatTooltipY: d => d + ' associados' }
-    });
+  });
     currentVencChart = chart;
     if (isMobile) rotateXAxisLabels(target, -35);
   }
+
+  function renderAtivosMensalChart(chartData){
+    const target = document.getElementById('chart-ativos-mensal');
+    if(!target) return;
+    if(!chartData || !chartData.labels || !chartData.labels.length){
+      target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados para os últimos 12 meses.</div>';
+      return;
+    }
+    if (currentAtivosMensalChart && currentAtivosMensalChart.parent === target) target.innerHTML='';
+    const isMobile = window.innerWidth < 640;
+    const chart = new frappe.Chart(target, {
+      title: 'Ativos (Últimos 12 meses)',
+      type: 'line',
+      data: chartData,
+      height: isMobile ? 300 : 320,
+      lineOptions: { regionFill: 1, hideDots: 0 },
+      axisOptions: { xAxisMode:'tick', xIsSeries:false, shortenYAxisNumbers:1 },
+      tooltipOptions: { formatTooltipY: d => d + ' ativos' }
+    });
+    currentAtivosMensalChart = chart;
+    if (isMobile) rotateXAxisLabels(target, -35);
+  }
+
+  function renderNovosMensalChart(chartData){
+    const target = document.getElementById('chart-novos-mensal');
+    if(!target) return;
+    if(!chartData || !chartData.labels || !chartData.labels.length){
+      target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados para os últimos 12 meses.</div>';
+      return;
+    }
+    if (currentNovosMensalChart && currentNovosMensalChart.parent === target) target.innerHTML='';
+    const isMobile = window.innerWidth < 640;
+    const chart = new frappe.Chart(target, {
+      title: 'Novos Associados (Últimos 12 meses)',
+      type: 'bar',
+      data: chartData,
+      height: isMobile ? 300 : 320,
+      barOptions: { stacked: false, spaceRatio: 0.4 },
+      axisOptions: { xAxisMode:'tick', xIsSeries:false, shortenYAxisNumbers:1 },
+      tooltipOptions: { formatTooltipY: d => d + ' novos' }
+    });
+    currentNovosMensalChart = chart;
+    if (isMobile) rotateXAxisLabels(target, -35);
+  }
+
+  function renderEvasaoMensalChart(chartData){
+    const target = document.getElementById('chart-evasao-mensal');
+    if(!target) return;
+    if(!chartData || !chartData.labels || !chartData.labels.length){
+      target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados para os últimos 12 meses.</div>';
+      return;
+    }
+    if (currentEvasaoMensalChart && currentEvasaoMensalChart.parent === target) target.innerHTML='';
+    const isMobile = window.innerWidth < 640;
+    // Espera datasets: [ {name: Evasão, chartType: bar}, {name: Taxa Evasão (%), chartType: line} ]
+    // Normalização: escala taxa (%) para faixa 0..max(evasão) para sobrepor a mesma Y.
+    try {
+      const dsEvasao = chartData.datasets.find(d => /Evasão$/i.test(d.name));
+      const dsRate = chartData.datasets.find(d => /Taxa Evasão/i.test(d.name));
+      if (dsEvasao && dsRate) {
+        const evasaoValues = dsEvasao.values.slice();
+        const rateOriginal = dsRate.values.slice(); // percentuais originais
+        const maxBar = Math.max(...evasaoValues, 0);
+        // Evita divisão por zero; se sem barras, mantém linha em zeros
+        const scale = maxBar > 0 ? maxBar / 100 : 0;
+        const normalizedRates = rateOriginal.map(v => scale ? +(v * scale).toFixed(2) : 0);
+        // Substitui valores da linha pela versão normalizada
+        dsRate.values = normalizedRates;
+        // Guarda originais em propriedades auxiliares para tooltip
+        dsRate._original_percentages = rateOriginal;
+        dsRate._normalized = true;
+      }
+    } catch(e) { console.warn('Falha ao normalizar taxa evasão', e); }
+
+    const chart = new frappe.Chart(target, {
+      title: 'Evasão (Últimos 12 meses)',
+      type: 'axis-mixed',
+      data: chartData,
+      height: isMobile ? 300 : 320,
+      barOptions: { stacked: false, spaceRatio: 0.4 },
+      lineOptions: { regionFill: 0, hideDots: 0 },
+      axisOptions: { xAxisMode:'tick', xIsSeries:false, shortenYAxisNumbers:1 },
+      tooltipOptions: { 
+        formatTooltipY: (val, opts) => {
+          // opts.datasetIndex, opts.index (frappe-charts passa contexto)
+          if (opts && chartData && chartData.datasets) {
+            const ds = chartData.datasets[opts.datasetIndex];
+            if (ds && ds._normalized && Array.isArray(ds._original_percentages)) {
+              const original = ds._original_percentages[opts.index];
+              if (original != null) return original + '%';
+            }
+          }
+          // Caso contrário é a barra (evasão absoluta)
+          return val + '';
+        }
+      }
+    });
+    currentEvasaoMensalChart = chart;
+    if (isMobile) rotateXAxisLabels(target, -35);
+  }
+
+  // Reposition logic removido: gráfico tem card próprio agora
 
   function rotateXAxisLabels(container, angle){
     // Aguarda próximo frame para garantir que o SVG e eixos existam

@@ -1,0 +1,27 @@
+/* components.css - estilos compartilhados e reutilizáveis */
+
+/* ----- Filtros Padrao Dashboard/Listas ----- */
+.filter-bar { display:flex; flex-wrap:wrap; gap:.85rem 1.25rem; align-items:flex-start; }
+.filter-bar .filter-field { width:210px; max-width:100%; display:flex; flex-direction:column; }
+.filter-bar .filter-field label { margin-bottom:.25rem; font-weight:500; letter-spacing:.2px; }
+.filter-bar .filter-actions { display:flex; gap:.5rem; padding-top:1.3rem; }
+@media (max-width:576px){
+  .filter-bar { gap:.9rem .75rem; }
+  .filter-bar .filter-field, .filter-bar .filter-actions { width:100%; }
+  .filter-bar .filter-actions { padding-top:.25rem; }
+}
+
+/* Aparência dos selects pequenos padronizada */
+.select-sm, .filter-bar select.form-select-sm { height: calc(2.1rem + 2px); padding:.35rem .9rem .35rem .75rem; border-radius:.375rem; border:1px solid var(--bs-border-color,#d0d7de); background:#fff linear-gradient(180deg,#ffffff,#f8f9fa); font-size:.8rem; line-height:1.2; box-shadow:0 1px 1px rgba(0,0,0,.04); transition:.15s ease; }
+.select-sm:focus, .filter-bar select.form-select-sm:focus { border-color:#6ca3ff; box-shadow:0 0 0 2px rgba(13,110,253,.15); outline:0; }
+.select-sm:hover, .filter-bar select.form-select-sm:hover { border-color:#b4c0ce; }
+.select-sm:active, .filter-bar select.form-select-sm:active { background:#f1f4f8; }
+
+/* Setas custom para selects */
+.filter-bar { --icon-select: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 8 10 14 16 8'/%3E%3C/svg%3E"); }
+.filter-bar select.form-select-sm { -webkit-appearance:none; appearance:none; background-image:var(--icon-select); background-repeat:no-repeat; background-position:right .75rem center; background-size:14px 14px; padding-right:2.25rem; }
+@media (max-width:768px){ .filter-bar select.form-select-sm { font-size:.78rem; } }
+
+/* Utilitários adicionais (podem ser expandidos futuramente) */
+.u-shadow-sm { box-shadow:0 1px 2px rgba(0,0,0,.04); }
+.u-card-clean { border:0; box-shadow:0 1px 2px rgba(0,0,0,.05); }

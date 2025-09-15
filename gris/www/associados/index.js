@@ -16,6 +16,7 @@
   });
 
   let currentChartInstance = null;
+  let currentVencChart = null;
   frappe.ready(async () => {
     const form = document.getElementById('assoc-dashboard-filters');
     if (form) {
@@ -46,6 +47,7 @@
       const data = r.message || {};
       updateCards(data.cards);
       renderRamoCategoriaChart(data.chart);
+      renderVencimentosRegistroChart(data.chart_vencimentos);
     } catch(e){
       console.warn('Erro ao atualizar dashboard', e);
     }
@@ -69,6 +71,10 @@
     if (cards.registro_isento) {
       setText('card-reg-isento-total', cards.registro_isento.total);
       setText('card-reg-isento-pct', formatPct(cards.registro_isento.pct));
+    }
+    if (cards.registro_provisorio) {
+      setText('card-reg-provisorio-total', cards.registro_provisorio.total);
+      setText('card-reg-provisorio-pct', formatPct(cards.registro_provisorio.pct));
     }
   }
 
@@ -118,6 +124,7 @@
       }
     });
     currentChartInstance = chart;
+  if (isMobile) rotateXAxisLabels(target, -35);
     // Reposiciona tooltip para não vazar viewport
     const root = target.querySelector('svg');
     if (root) {
@@ -136,8 +143,57 @@
     setText('card-reg-valido-total','--'); setText('card-reg-valido-pct','--%');
     setText('card-reg-vencido-total','--'); setText('card-reg-vencido-pct','--%');
     setText('card-reg-isento-total','--'); setText('card-reg-isento-pct','--%');
+  setText('card-reg-provisorio-total','--'); setText('card-reg-provisorio-pct','--%');
     const chartTarget = document.getElementById('chart-ramos-categorias');
     if (chartTarget) chartTarget.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
+    const vencTarget = document.getElementById('chart-vencimentos-registro');
+    if (vencTarget) vencTarget.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
+  }
+
+  function renderVencimentosRegistroChart(chartData){
+    const target = document.getElementById('chart-vencimentos-registro');
+    if(!target) return;
+    if(!chartData || !chartData.labels || !chartData.labels.length){
+      target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados para os próximos 6 meses.</div>';
+      return;
+    }
+    if (currentVencChart && currentVencChart.parent === target) target.innerHTML='';
+    const isMobile = window.innerWidth < 640;
+    const chart = new frappe.Chart(target, {
+      title: 'Vencimento de Registro (Próximos 6 meses)',
+      type: 'bar',
+      data: chartData,
+      height: isMobile ? 300 : 320,
+      barOptions: { stacked: true, spaceRatio: 0.4 },
+      axisOptions: { xAxisMode:'tick', xIsSeries:false, shortenYAxisNumbers:1 },
+      tooltipOptions: { formatTooltipY: d => d + ' associados' }
+    });
+    currentVencChart = chart;
+    if (isMobile) rotateXAxisLabels(target, -35);
+  }
+
+  function rotateXAxisLabels(container, angle){
+    // Aguarda próximo frame para garantir que o SVG e eixos existam
+    requestAnimationFrame(()=>{
+      const svg = container.querySelector('svg');
+      if(!svg) return;
+      // Seleciona textos dos ticks do eixo X (estrutura típica do frappe-charts)
+      const tickTexts = svg.querySelectorAll('.x.axis text, .x-axis text, .chart-axis.x text');
+      tickTexts.forEach(txt => {
+        // Evita aplicar múltiplas vezes
+        if (txt.__rotated) return;
+        txt.__rotated = true;
+        // Define origem e âncora para manter legibilidade
+        txt.setAttribute('text-anchor','end');
+        const x = txt.getAttribute('x') || 0;
+        const y = txt.getAttribute('y') || 0;
+        txt.setAttribute('transform', `translate(0,0) rotate(${angle} ${x} ${y})`);
+        // Ajusta leve subida para não cortar
+        const dy = parseFloat(txt.getAttribute('dy') || 0);
+        txt.setAttribute('dy', (dy + 2));
+        txt.style.fontSize = '10px';
+      });
+    });
   }
 })();
 

@@ -11,7 +11,7 @@
 {% block main %}
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-body py-3">
-      <form id="assoc-dashboard-filters" class="filters-grid mb-0">
+  <form id="assoc-dashboard-filters" class="filter-bar mb-0">
         <div class="filter-field">
           <label class="form-label small text-muted mb-1">Categoria</label>
           <select name="categoria" class="form-select form-select-sm">
@@ -56,7 +56,7 @@
     </div>
   </div>
   <div class="row g-4 mb-4" id="cards-metricas">
-    <div class="col-12 col-lg-3">
+    <div class="col-12 col-lg-2 col-xl-2">
       <div class="card h-100 shadow-sm border-0">
         <div class="card-body py-3">
           <p class="text-uppercase small text-muted fw-semibold mb-1">Ativos</p>
@@ -71,7 +71,7 @@
         </div>
       </div>
     </div>
-    <div class="col-12 col-lg-3">
+    <div class="col-12 col-lg-2 col-xl-2">
       <div class="card h-100 shadow-sm border-0">
         <div class="card-body py-3">
           <p class="text-uppercase small text-muted fw-semibold mb-1">Registro Válido</p>
@@ -82,7 +82,7 @@
         </div>
       </div>
     </div>
-    <div class="col-12 col-lg-3">
+    <div class="col-12 col-lg-2 col-xl-2">
       <div class="card h-100 shadow-sm border-0">
         <div class="card-body py-3">
           <p class="text-uppercase small text-muted fw-semibold mb-1">Vencidos</p>
@@ -93,7 +93,7 @@
         </div>
       </div>
     </div>
-    <div class="col-12 col-lg-3">
+    <div class="col-12 col-lg-2 col-xl-2">
       <div class="card h-100 shadow-sm border-0">
         <div class="card-body py-3">
           <p class="text-uppercase small text-muted fw-semibold mb-1">Isentos</p>
@@ -104,74 +104,45 @@
         </div>
       </div>
     </div>
+    <div class="col-12 col-lg-2 col-xl-2">
+      <div class="card h-100 shadow-sm border-0">
+        <div class="card-body py-3">
+          <p class="text-uppercase small text-muted fw-semibold mb-1">Provisórios</p>
+          <div class="d-flex align-items-baseline gap-2 mb-1">
+            <span class="display-6 mb-0 fw-semibold" id="card-reg-provisorio-total">--</span>
+            <span class="text-warning fw-semibold" id="card-reg-provisorio-pct">--%</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="card border-0 shadow-sm chart-card">
-    <div class="card-body">
-      <div id="chart-ramos-categorias" class="chart-area" style="min-height:320px"></div>
+  <div class="row g-4 mb-4" id="charts-row">
+    <div class="col-12 col-xl-6">
+      <div class="card border-0 shadow-sm chart-card h-100">
+        <div class="card-body">
+          <h6 class="text-muted small fw-semibold mb-3">Ativos por Ramo e Categoria</h6>
+          <div id="chart-ramos-categorias" class="chart-area" style="min-height:320px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-xl-6">
+      <div class="card border-0 shadow-sm chart-card h-100">
+        <div class="card-body">
+          <h6 class="text-muted small fw-semibold mb-3">Vencimento de Registro (Próximos 6 meses)</h6>
+          <div id="chart-vencimentos-registro" class="chart-area" style="min-height:320px"></div>
+        </div>
+      </div>
     </div>
   </div>
 {% endblock %}
 
 {% block extra_script %}
-<!-- CSS do frappe-charts para identidade visual -->
+<!-- CSS do frappe-charts e componentes compartilhados -->
 <link rel="stylesheet" href="/assets/frappe/node_modules/frappe-charts/dist/frappe-charts.min.css">
+<link rel="stylesheet" href="/assets/gris/css/components.css">
 <style>
-  /* --- Filtros Dashboard --- */
-  /* Layout dos filtros (flex para controle mais preciso no desktop) */
-  .filters-grid { 
-    display:flex; 
-    flex-wrap:wrap; 
-    gap:.85rem 1.25rem; 
-    align-items:flex-start; /* garante labels sempre no topo */
-  }
-  .filters-grid .filter-field { 
-    width:210px; 
-    max-width:100%;
-    display:flex;
-    flex-direction:column; /* label em cima sempre */
-  }
-  .filters-grid .filter-actions { 
-    display:flex; 
-    gap:.5rem; 
-    padding-top:1.3rem; /* alinha botões com base dos selects */
-  }
-  /* Labels ligeiramente mais próximos do select */
-  .filters-grid .filter-field label { margin-bottom:.25rem !important; }
-  /* Mobile: cada filtro ocupa linha inteira */
-  @media (max-width: 576px){
-    .filters-grid { gap:.9rem .75rem; }
-    .filters-grid .filter-field { width:100%; }
-    .filters-grid .filter-actions { width:100%; }
-  }
-  /* Filtros topo - visual */
-  #assoc-dashboard-filters .form-select-sm {
-    height: calc(2.1rem + 2px);
-    padding: .35rem .9rem .35rem .75rem;
-    border-radius: .375rem; /* alinhado aos botões padrão */
-    border:1px solid var(--bs-border-color,#d0d7de);
-    background:#fff linear-gradient(180deg,#ffffff,#f8f9fa);
-    font-size:.8rem;
-    line-height:1.2;
-    box-shadow:0 1px 1px rgba(0,0,0,.04);
-    transition:.15s ease;
-    position:relative;
-  }
-  /* Espaço extra para não colidir com seta custom */
-  #assoc-dashboard-filters select.form-select-sm { padding-right:2.25rem; }
-  #assoc-dashboard-filters .form-select-sm:focus {
-    border-color:#6ca3ff;
-    box-shadow:0 0 0 2px rgba(13,110,253,.15);
-    outline:0;
-  }
-  #assoc-dashboard-filters .form-select-sm:hover { border-color:#b4c0ce; }
-  #assoc-dashboard-filters .form-select-sm:active { background:#f1f4f8; }
-  #assoc-dashboard-filters label { font-weight:500; letter-spacing:.2px; }
-  #assoc-dashboard-filters { --icon-select: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 8 10 14 16 8'/%3E%3C/svg%3E"); }
-  #assoc-dashboard-filters select.form-select-sm { background-image: var(--icon-select); background-repeat:no-repeat; background-position:right .75rem center; background-size:14px 14px; }
-  #assoc-dashboard-filters select.form-select-sm { -webkit-appearance: none; appearance: none; }
-  @media (max-width: 768px){
-    #assoc-dashboard-filters .form-select-sm { font-size:.78rem; }
-  }
+  /* Ajustes específicos desta página (estilos base vindos de components.css) */
+  #assoc-dashboard-filters { margin-top:.15rem; }
   .chart-card .chart-container { overflow: visible; }
   .chart-card .graph-svg-tip { z-index: 50; max-width: calc(100vw - 24px); white-space: normal; overflow-wrap:anywhere; word-break:break-word; }
   /* Simplificado: labels nativos mantidos; tooltip adaptativa */
@@ -192,6 +163,8 @@
     .chart-card .graph-svg-tip ul.data-point-list { flex-direction: column !important; align-items: stretch; }
     .chart-card .graph-svg-tip ul.data-point-list li { min-width:auto !important; width:100%; padding:4px 8px; }
     .chart-card .graph-svg-tip ul.data-point-list li + li { border-top:1px solid var(--border-color, #e5e7eb); }
+  /* Mais espaço entre os dois gráficos empilhados */
+  #charts-row > .col-12 + .col-12 { margin-top: 1.5rem; }
   }
 </style>
 {# index.js da página cuidará da lógica #}

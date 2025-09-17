@@ -250,7 +250,26 @@ scheduler_events = {
 fixtures = [
 	{
 		"dt": "Role Profile",
-	}
+	},
+	{
+		"dt": "Role",
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"Editor de Parecer",
+					"Gestor Contribuição Mensal",
+					"Gestor de Adultos",
+					"Gestor de Associados",
+					"Gestor Financeiro",
+					"Visualizador Associados",
+					"Visualizador Contribuição Mensal",
+					"Visualizador Financeiro",
+				],
+			]
+		],
+	},
 ]
 
 # Contexto global para o site (sidebar centralizada)

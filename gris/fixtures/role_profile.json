@@ -2,7 +2,7 @@
  {
   "docstatus": 0,
   "doctype": "Role Profile",
-  "modified": "2025-09-08 13:30:55.416800",
+  "modified": "2025-09-16 22:09:49.310013",
   "name": "Dirigente",
   "role_profile": "Dirigente",
   "roles": [
@@ -10,32 +10,26 @@
     "parent": "Dirigente",
     "parentfield": "roles",
     "parenttype": "Role Profile",
-    "role": "Gestor de Adultos"
+    "role": "Visualizador Associados"
    },
    {
     "parent": "Dirigente",
     "parentfield": "roles",
     "parenttype": "Role Profile",
-    "role": "Gestor da UEL"
+    "role": "Visualizador Contribuição Mensal"
    },
    {
     "parent": "Dirigente",
     "parentfield": "roles",
     "parenttype": "Role Profile",
-    "role": "Acesso ao Desk"
-   },
-   {
-    "parent": "Dirigente",
-    "parentfield": "roles",
-    "parenttype": "Role Profile",
-    "role": "Gestor de Associados"
+    "role": "Visualizador Financeiro"
    }
   ]
  },
  {
   "docstatus": 0,
   "doctype": "Role Profile",
-  "modified": "2025-09-09 07:33:43.267413",
+  "modified": "2025-09-16 22:10:50.765225",
   "name": "Diretoria Eleita",
   "role_profile": "Diretoria Eleita",
   "roles": [
@@ -49,19 +43,13 @@
     "parent": "Diretoria Eleita",
     "parentfield": "roles",
     "parenttype": "Role Profile",
-    "role": "Gestor da UEL"
-   },
-   {
-    "parent": "Diretoria Eleita",
-    "parentfield": "roles",
-    "parenttype": "Role Profile",
-    "role": "Acesso ao Desk"
-   },
-   {
-    "parent": "Diretoria Eleita",
-    "parentfield": "roles",
-    "parenttype": "Role Profile",
     "role": "Gestor de Associados"
+   },
+   {
+    "parent": "Diretoria Eleita",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Gestor Financeiro"
    }
   ]
  },
@@ -76,7 +64,7 @@
  {
   "docstatus": 0,
   "doctype": "Role Profile",
-  "modified": "2025-09-09 13:16:36.623041",
+  "modified": "2025-09-16 22:06:58.913437",
   "name": "Assistente",
   "role_profile": "Assistente",
   "roles": [
@@ -84,7 +72,13 @@
     "parent": "Assistente",
     "parentfield": "roles",
     "parenttype": "Role Profile",
-    "role": "Gestor de Associados"
+    "role": "Visualizador Financeiro"
+   },
+   {
+    "parent": "Assistente",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Associados"
    }
   ]
  },
@@ -95,5 +89,86 @@
   "name": "Guest",
   "role_profile": "Guest",
   "roles": []
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Role Profile",
+  "modified": "2025-09-16 22:05:31.100758",
+  "name": "Comissão Fiscal",
+  "role_profile": "Comissão Fiscal",
+  "roles": [
+   {
+    "parent": "Comissão Fiscal",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Editor de Parecer"
+   },
+   {
+    "parent": "Comissão Fiscal",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Financeiro"
+   },
+   {
+    "parent": "Comissão Fiscal",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Contribuição Mensal"
+   }
+  ]
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Role Profile",
+  "modified": "2025-09-16 22:06:24.437116",
+  "name": "Gestor Financeiro",
+  "role_profile": "Gestor Financeiro",
+  "roles": [
+   {
+    "parent": "Gestor Financeiro",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Gestor Financeiro"
+   },
+   {
+    "parent": "Gestor Financeiro",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Gestor Contribuição Mensal"
+   }
+  ]
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Role Profile",
+  "modified": "2025-09-16 22:07:54.551242",
+  "name": "Chefe de Seção",
+  "role_profile": "Chefe de Seção",
+  "roles": [
+   {
+    "parent": "Chefe de Seção",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Gestor de Associados"
+   },
+   {
+    "parent": "Chefe de Seção",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Associados"
+   },
+   {
+    "parent": "Chefe de Seção",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Financeiro"
+   },
+   {
+    "parent": "Chefe de Seção",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Contribuição Mensal"
+   }
+  ]
  }
 ]

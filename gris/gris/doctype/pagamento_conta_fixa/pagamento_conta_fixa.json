@@ -1,0 +1,107 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-09-16 21:50:45.582549",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "conta",
+  "status",
+  "column_break_jzsy",
+  "mes_referencia",
+  "titulo"
+ ],
+ "fields": [
+  {
+   "fieldname": "conta",
+   "fieldtype": "Link",
+   "label": "Conta",
+   "options": "Conta Fixa",
+   "reqd": 1
+  },
+  {
+   "fieldname": "mes_referencia",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "M\u00eas de Refer\u00eancia",
+   "reqd": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Pago\nEm Aberto\nAtrasado",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_jzsy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "titulo",
+   "fieldtype": "Data",
+   "is_virtual": 1,
+   "label": "T\u00edtulo"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-09-16 22:17:39.494585",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Pagamento Conta Fixa",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor Financeiro",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Visualizador Financeiro",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [
+  {
+   "color": "Blue",
+   "title": "Em Aberto"
+  },
+  {
+   "color": "Green",
+   "title": "Pago"
+  },
+  {
+   "color": "Red",
+   "title": "Atrasado"
+  }
+ ]
+}

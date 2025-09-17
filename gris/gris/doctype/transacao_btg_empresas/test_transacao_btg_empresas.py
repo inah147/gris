@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestInstituicaoFinanceira(FrappeTestCase):
+class TestTransacaoBTGEmpresas(FrappeTestCase):
 	pass

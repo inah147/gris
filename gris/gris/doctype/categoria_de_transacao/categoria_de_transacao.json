@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "field:nome",
  "creation": "2025-09-16 21:16:41.829247",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -15,7 +16,8 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Nome",
-   "reqd": 1
+   "reqd": 1,
+   "unique": 1
   },
   {
    "fieldname": "column_break_snqv",
@@ -32,10 +34,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-16 22:12:14.993612",
+ "modified": "2025-09-17 13:20:38.294243",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Categoria de Transacao",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -75,5 +78,6 @@
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "nome"
 }

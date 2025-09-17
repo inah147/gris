@@ -272,6 +272,18 @@ fixtures = [
 			]
 		],
 	},
+	{
+		"dt": "Carteira",
+	},
+	{
+		"dt": "Instituicao Financeira",
+	},
+	{
+		"dt": "Centro de Custo",
+	},
+	{
+		"dt": "Categoria de Transacao",
+	},
 ]
 
 # Contexto global para o site (sidebar centralizada)

@@ -20,12 +20,6 @@
    "reqd": 1
   },
   {
-   "fieldname": "m\u00eas_de_refer\u00eancia",
-   "fieldtype": "Date",
-   "label": "M\u00eas de Refer\u00eancia",
-   "reqd": 1
-  },
-  {
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
@@ -35,14 +29,20 @@
   {
    "fieldname": "column_break_ybpx",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "m\u00eas_de_refer\u00eancia",
+   "fieldtype": "Date",
+   "label": "M\u00eas de Refer\u00eancia",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-16 22:39:17.600899",
+ "modified": "2025-09-18 07:34:27.340787",
  "modified_by": "Administrator",
- "module": "Gris",
+ "module": "Financeiro",
  "name": "Pagamento Contribuicao Mensal",
  "owner": "Administrator",
  "permissions": [

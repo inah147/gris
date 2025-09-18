@@ -1,31 +1,56 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:nome",
- "creation": "2025-09-16 21:35:57.236908",
+ "creation": "2025-09-16 21:46:45.927483",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "nome"
+  "descricao",
+  "valor",
+  "column_break_pumk",
+  "dia_vencimento",
+  "ativa"
  ],
  "fields": [
   {
-   "fieldname": "nome",
+   "fieldname": "descricao",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Nome",
-   "reqd": 1,
-   "unique": 1
+   "label": "Descri\u00e7\u00e3o",
+   "reqd": 1
+  },
+  {
+   "fieldname": "valor",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Valor",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_pumk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "dia_vencimento",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Dia de vencimento",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "ativa",
+   "fieldtype": "Check",
+   "label": "Ativa"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-16 22:12:59.217835",
+ "modified": "2025-09-18 07:33:47.520366",
  "modified_by": "Administrator",
- "module": "Gris",
- "name": "Instituicao Financeira",
- "naming_rule": "By fieldname",
+ "module": "Financeiro",
+ "name": "Conta Fixa",
  "owner": "Administrator",
  "permissions": [
   {
@@ -65,5 +90,6 @@
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "descricao"
 }

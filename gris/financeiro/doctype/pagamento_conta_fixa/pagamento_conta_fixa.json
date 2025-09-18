@@ -20,13 +20,6 @@
    "reqd": 1
   },
   {
-   "fieldname": "mes_referencia",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "M\u00eas de Refer\u00eancia",
-   "reqd": 1
-  },
-  {
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
@@ -38,6 +31,13 @@
    "fieldtype": "Column Break"
   },
   {
+   "fieldname": "mes_referencia",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "M\u00eas de Refer\u00eancia",
+   "reqd": 1
+  },
+  {
    "fieldname": "titulo",
    "fieldtype": "Data",
    "is_virtual": 1,
@@ -47,9 +47,9 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-16 22:17:39.494585",
+ "modified": "2025-09-18 07:34:00.341808",
  "modified_by": "Administrator",
- "module": "Gris",
+ "module": "Financeiro",
  "name": "Pagamento Conta Fixa",
  "owner": "Administrator",
  "permissions": [

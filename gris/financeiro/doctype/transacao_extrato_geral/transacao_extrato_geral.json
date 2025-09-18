@@ -1,0 +1,214 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:id",
+ "creation": "2025-09-17 08:58:10.200080",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "timestamp_transacao",
+  "column_break_sodz",
+  "data_transacao",
+  "dados_transacao",
+  "descricao",
+  "valor",
+  "debito_credito",
+  "origem",
+  "instituicao",
+  "observa\u00e7\u00f5es",
+  "column_break_hljl",
+  "descricao_reduzida",
+  "valor_absoluto",
+  "metodo",
+  "destino",
+  "carteira",
+  "id",
+  "section_break_vgdk",
+  "categoria",
+  "fixo_variavel",
+  "conta_fixa",
+  "beneficiario",
+  "column_break_ufvr",
+  "centro_de_custo",
+  "ordinaria_extraordinaria",
+  "repasse_entre_contas",
+  "transacao_revisada"
+ ],
+ "fields": [
+  {
+   "fieldname": "dados_transacao",
+   "fieldtype": "Section Break",
+   "label": "Dados da Transa\u00e7\u00e3o"
+  },
+  {
+   "fieldname": "descricao",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Descri\u00e7\u00e3o"
+  },
+  {
+   "fieldname": "descricao_reduzida",
+   "fieldtype": "Data",
+   "label": "Descri\u00e7\u00e3o Reduzida"
+  },
+  {
+   "fieldname": "debito_credito",
+   "fieldtype": "Select",
+   "label": "D\u00e9bito ou Cr\u00e9dito",
+   "options": "Cr\u00e9dito\nD\u00e9bito"
+  },
+  {
+   "fieldname": "id",
+   "fieldtype": "Data",
+   "label": "id",
+   "unique": 1
+  },
+  {
+   "fieldname": "origem",
+   "fieldtype": "Data",
+   "label": "Origem"
+  },
+  {
+   "fieldname": "destino",
+   "fieldtype": "Data",
+   "label": "Destino"
+  },
+  {
+   "fieldname": "carteira",
+   "fieldtype": "Link",
+   "label": "Carteira",
+   "options": "Carteira"
+  },
+  {
+   "fieldname": "column_break_hljl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "valor",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Valor"
+  },
+  {
+   "fieldname": "valor_absoluto",
+   "fieldtype": "Currency",
+   "label": "Valor Absoluto"
+  },
+  {
+   "fieldname": "data_transacao",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Data"
+  },
+  {
+   "fieldname": "timestamp_transacao",
+   "fieldtype": "Datetime",
+   "label": "Timestamp da transa\u00e7\u00e3o"
+  },
+  {
+   "fieldname": "metodo",
+   "fieldtype": "Select",
+   "label": "M\u00e9todo",
+   "options": "Pix\nCart\u00e3o\nBoleto"
+  },
+  {
+   "fieldname": "instituicao",
+   "fieldtype": "Link",
+   "label": "Institui\u00e7\u00e3o",
+   "options": "Instituicao Financeira"
+  },
+  {
+   "fieldname": "section_break_vgdk",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "categoria",
+   "fieldtype": "Link",
+   "label": "Categoria",
+   "options": "Categoria de Transacao"
+  },
+  {
+   "fieldname": "fixo_variavel",
+   "fieldtype": "Select",
+   "label": "Valor Fixo ou Vari\u00e1vel",
+   "options": "Fixo\nVari\u00e1vel"
+  },
+  {
+   "fieldname": "conta_fixa",
+   "fieldtype": "Link",
+   "label": "Conta Fixa",
+   "options": "Conta Fixa"
+  },
+  {
+   "fieldname": "beneficiario",
+   "fieldtype": "Link",
+   "label": "Benefici\u00e1rio da Contribui\u00e7\u00e3o Mensal",
+   "mandatory_depends_on": "doc.categoria == \"Contribui\u00e7\u00e3o Mensal\";",
+   "options": "Associado"
+  },
+  {
+   "fieldname": "column_break_ufvr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "centro_de_custo",
+   "fieldtype": "Link",
+   "label": "Centro de Custo",
+   "options": "Centro de Custo"
+  },
+  {
+   "fieldname": "ordinaria_extraordinaria",
+   "fieldtype": "Select",
+   "label": "Transa\u00e7\u00e3o Ordin\u00e1ria ou Exraordin\u00e1ria",
+   "options": "Ordin\u00e1ria\nExtraordin\u00e1ria"
+  },
+  {
+   "default": "0",
+   "fieldname": "repasse_entre_contas",
+   "fieldtype": "Check",
+   "label": "Repasse entre contas"
+  },
+  {
+   "default": "0",
+   "fieldname": "transacao_revisada",
+   "fieldtype": "Check",
+   "label": "Transa\u00e7\u00e3o revisada"
+  },
+  {
+   "fieldname": "column_break_sodz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "observa\u00e7\u00f5es",
+   "fieldtype": "Small Text",
+   "label": "Observa\u00e7\u00f5es"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-09-18 09:17:13.102021",
+ "modified_by": "Administrator",
+ "module": "Financeiro",
+ "name": "Transacao Extrato Geral",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

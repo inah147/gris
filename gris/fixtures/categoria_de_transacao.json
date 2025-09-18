@@ -1,0 +1,18 @@
+[
+ {
+  "desscrição": "Doação recebida",
+  "docstatus": 0,
+  "doctype": "Categoria de Transacao",
+  "modified": "2025-09-17 21:54:51.352363",
+  "name": "Doação",
+  "nome": "Doação"
+ },
+ {
+  "desscrição": "Contribuição mensal recebida de um beneficiário",
+  "docstatus": 0,
+  "doctype": "Categoria de Transacao",
+  "modified": "2025-09-17 21:58:25.607907",
+  "name": "Contribuição Mensal",
+  "nome": "Contribuição Mensal"
+ }
+]

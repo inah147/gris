@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "field:nome",
  "creation": "2025-09-16 21:42:20.700529",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -59,7 +60,8 @@
   {
    "fieldname": "nome",
    "fieldtype": "Data",
-   "label": "Nome"
+   "label": "Nome",
+   "unique": 1
   },
   {
    "fieldname": "descricao",
@@ -81,10 +83,11 @@
  "index_web_pages_for_search": 1,
  "is_tree": 1,
  "links": [],
- "modified": "2025-09-16 22:14:29.848667",
+ "modified": "2025-09-17 19:42:56.336383",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Centro de Custo",
+ "naming_rule": "By fieldname",
  "nsm_parent_field": "parent_centro_de_custo",
  "owner": "Administrator",
  "permissions": [

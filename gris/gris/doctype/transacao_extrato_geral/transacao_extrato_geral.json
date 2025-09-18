@@ -13,12 +13,13 @@
   "id",
   "origem",
   "destino",
+  "carteira",
   "column_break_hljl",
   "valor",
   "valor_absoluto",
   "data_transacao",
   "timestamp_transacao",
-  "m\u00e9todo",
+  "metodo",
   "instituicao",
   "section_break_vgdk",
   "categoria",
@@ -28,7 +29,8 @@
   "column_break_ufvr",
   "centro_de_custo",
   "ordinaria_extraordinaria",
-  "repasse_entre_contas"
+  "repasse_entre_contas",
+  "transacao_revisada"
  ],
  "fields": [
   {
@@ -39,6 +41,7 @@
   {
    "fieldname": "data_transacao",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "Data"
   },
   {
@@ -62,6 +65,7 @@
   {
    "fieldname": "valor",
    "fieldtype": "Currency",
+   "in_list_view": 1,
    "label": "Valor"
   },
   {
@@ -108,12 +112,6 @@
    "options": "Cr\u00e9dito\nD\u00e9bito"
   },
   {
-   "fieldname": "m\u00e9todo",
-   "fieldtype": "Select",
-   "label": "M\u00e9todo",
-   "options": "Pix\nCart\u00e3o\nBoleto"
-  },
-  {
    "fieldname": "ordinaria_extraordinaria",
    "fieldtype": "Select",
    "label": "Transa\u00e7\u00e3o Ordin\u00e1ria ou Exraordin\u00e1ria",
@@ -154,12 +152,30 @@
   {
    "fieldname": "column_break_ufvr",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "metodo",
+   "fieldtype": "Select",
+   "label": "M\u00e9todo",
+   "options": "Pix\nCart\u00e3o\nBoleto"
+  },
+  {
+   "default": "0",
+   "fieldname": "transacao_revisada",
+   "fieldtype": "Check",
+   "label": "Transa\u00e7\u00e3o revisada"
+  },
+  {
+   "fieldname": "carteira",
+   "fieldtype": "Link",
+   "label": "Carteira",
+   "options": "Carteira"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-17 13:38:01.398329",
+ "modified": "2025-09-17 21:32:12.766209",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Transacao Extrato Geral",

@@ -15,6 +15,10 @@
 
 {% set current_path = active_link or ('/' ~ path) %}
 {% set uel = frappe.get_doc('Definicao da UEL') %}
+{# Flags para bottom nav estática (mobile) #}
+{% set active_inicio = current_path.startswith('/inicio') or (current_path == '/') %}
+{% set active_financeiro = current_path.startswith('/financeiro') %}
+{% set active_associados = current_path.startswith('/associados') %}
 
 {# Macro para ícones lineares coerentes com o restante da UI #}
 {% macro nav_icon(label) %}
@@ -37,7 +41,7 @@
 
 {% block content %}
 <div class="fx-layout d-flex">
-  <nav class="fx-shell border-end bg-white d-none d-md-flex flex-column">
+  <nav class="fx-shell border-end bg-white flex-column fx-desktop-only">
     <div class="fx-menu-scroll">
       <ul class="fx-sidebar m-0 p-0">
         <li class="fx-logo">
@@ -88,7 +92,7 @@
   </nav>
   <main class="fx-main flex-grow-1 p-0">
     <!-- Topbar Mobile -->
-  <div class="fxm-topbar d-md-none d-flex align-items-center justify-content-end px-3 py-2 bg-white fixed-top" style="z-index:1050;">
+  <div class="fxm-topbar fx-mobile-only d-flex align-items-center justify-content-end px-3 py-2 bg-white fixed-top" style="z-index:1050;">
       <div class="fxm-logo-wrap">
         {% if uel.logo %}
           <a href="/inicio" class="d-inline-block"><img src="{{ uel.logo }}" alt="Logo" class="fxm-logo-mobile"></a>
@@ -108,21 +112,50 @@
       </div>
       {% endif %}
     </div>
-    <!-- Bottom Navigation Mobile -->
-    <nav class="fxm-bottom-nav d-md-none" aria-label="Navegação móvel">
-      <div class="fxm-bottom-wrapper">
-        <a href="/inicio" class="fxm-bottom-home {% if current_path == '/inicio' %}active{% endif %}" aria-label="Início">
-          <span class="fxm-icon">{{ nav_icon('Início')|safe }}</span>
-          <span class="fxm-label">Início</span>
+    <!-- Bottom Navigation Mobile (Estática) -->
+  <nav class="fxm-bottom-nav fx-mobile-only" aria-label="Navegação principal móvel">
+      <div class="fxm-bottom-fab" role="tablist">
+        <a href="/inicio" class="fxm-b-item {% if active_inicio %}active{% endif %}" aria-label="Ir para Início" role="tab">
+          <span class="fxm-b-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+              <!-- Mesmo desenho: contorno (icon-line) e preenchido (icon-fill) -->
+              <path class="icon-fill" d="M9 16.9999H15M3 14.5999V12.1301C3 10.9814 3 10.407 3.14805 9.87807C3.2792 9.40953 3.49473 8.96886 3.78405 8.57768C4.11067 8.13608 4.56404 7.78346 5.47078 7.07822L8.07078 5.056C9.47608 3.96298 10.1787 3.41648 10.9546 3.2064C11.6392 3.02104 12.3608 3.02104 13.0454 3.2064C13.8213 3.41648 14.5239 3.96299 15.9292 5.056L18.5292 7.07822C19.436 7.78346 19.8893 8.13608 20.2159 8.57768C20.5053 8.96886 20.7208 9.40953 20.8519 9.87807C21 10.407 21 10.9814 21 12.1301V14.5999C21 16.8401 21 17.9603 20.564 18.8159C20.1805 19.5685 19.5686 20.1805 18.816 20.564C17.9603 20.9999 16.8402 20.9999 14.6 20.9999H9.4C7.15979 20.9999 6.03969 20.9999 5.18404 20.564C4.43139 20.1805 3.81947 19.5685 3.43597 18.8159C3 17.9603 3 16.8401 3 14.5999Z"/>
+              <path class="icon-line" d="M9 16.9999H15M3 14.5999V12.1301C3 10.9814 3 10.407 3.14805 9.87807C3.2792 9.40953 3.49473 8.96886 3.78405 8.57768C4.11067 8.13608 4.56404 7.78346 5.47078 7.07822L8.07078 5.056C9.47608 3.96298 10.1787 3.41648 10.9546 3.2064C11.6392 3.02104 12.3608 3.02104 13.0454 3.2064C13.8213 3.41648 14.5239 3.96299 15.9292 5.056L18.5292 7.07822C19.436 7.78346 19.8893 8.13608 20.2159 8.57768C20.5053 8.96886 20.7208 9.40953 20.8519 9.87807C21 10.407 21 10.9814 21 12.1301V14.5999C21 16.8401 21 17.9603 20.564 18.8159C20.1805 19.5685 19.5686 20.1805 18.816 20.564C17.9603 20.9999 16.8402 20.9999 14.6 20.9999H9.4C7.15979 20.9999 6.03969 20.9999 5.18404 20.564C4.43139 20.1805 3.81947 19.5685 3.43597 18.8159C3 17.9603 3 16.8401 3 14.5999Z"/>
+            </svg>
+          </span>
+          <span class="fxm-b-label">Início</span>
         </a>
-        <div class="fxm-bottom-scroll" role="tablist">
-          {% for child in current_group_children or [] %}
-            <a href="{{ child.path }}" class="fxm-bottom-link {% if current_path == child.path %}active{% endif %}" title="{{ child.label }}" role="tab">
-              <span class="fxm-icon">{{ nav_icon(child.label)|safe }}</span>
-              <span class="fxm-label">{{ child.label }}</span>
-            </a>
-          {% endfor %}
-        </div>
+        <a href="/financeiro/index.html" class="fxm-b-item {% if active_financeiro %}active{% endif %}" aria-label="Ir para Financeiro" role="tab">
+          <span class="fxm-b-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+              <!-- Filled wallet rounded -->
+              <path class="icon-line" d="M2 14C2 10.2288 2 8.34315 3.17157 7.17157C4.34315 6 6.22876 6 10 6H14C17.7712 6 19.6569 6 20.8284 7.17157C22 8.34315 22 10.2288 22 14C22 17.7712 22 19.6569 20.8284 20.8284C19.6569 22 17.7712 22 14 22H10C6.22876 22 4.34315 22 3.17157 20.8284C2 19.6569 2 17.7712 2 14Z"/>
+              <path class="icon-line" d="M16 6C16 4.11438 16 3.17157 15.4142 2.58579C14.8284 2 13.8856 2 12 2C10.1144 2 9.17157 2 8.58579 2.58579C8 3.17157 8 4.11438 8 6"/>
+              <path class="icon-line" d="M12 17.3333C13.1046 17.3333 14 16.5871 14 15.6667C14 14.7462 13.1046 14 12 14C10.8954 14 10 13.2538 10 12.3333C10 11.4129 10.8954 10.6667 12 10.6667M12 17.3333C10.8954 17.3333 10 16.5871 10 15.6667M12 17.3333V18M12 10V10.6667M12 10.6667C13.1046 10.6667 14 11.4129 14 12.3333"/>
+              
+              <path class="icon-fill" d="M2 14C2 10.2288 2 8.34315 3.17157 7.17157C4.34315 6 6.22876 6 10 6H14C17.7712 6 19.6569 6 20.8284 7.17157C22 8.34315 22 10.2288 22 14C22 17.7712 22 19.6569 20.8284 20.8284C19.6569 22 17.7712 22 14 22H10C6.22876 22 4.34315 22 3.17157 20.8284C2 19.6569 2 17.7712 2 14Z"/>
+              <path class="icon-fill" d="M16 6C16 4.11438 16 3.17157 15.4142 2.58579C14.8284 2 13.8856 2 12 2C10.1144 2 9.17157 2 8.58579 2.58579C8 3.17157 8 4.11438 8 6"/>
+              <path class="icon-fill" d="M12 17.3333C13.1046 17.3333 14 16.5871 14 15.6667C14 14.7462 13.1046 14 12 14C10.8954 14 10 13.2538 10 12.3333C10 11.4129 10.8954 10.6667 12 10.6667M12 17.3333C10.8954 17.3333 10 16.5871 10 15.6667M12 17.3333V18M12 10V10.6667M12 10.6667C13.1046 10.6667 14 11.4129 14 12.3333"/>
+              
+              
+
+            </svg>
+          </span>
+          <span class="fxm-b-label">Financeiro</span>
+        </a>
+        <a href="/associados/index.html" class="fxm-b-item {% if active_associados %}active{% endif %}" aria-label="Ir para Associados" role="tab">
+          <span class="fxm-b-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+              <!-- Filled user rounded -->
+              <path class="icon-fill" d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"/>
+              <path class="icon-fill" d="M12.0002 14.5C6.99016 14.5 2.91016 17.86 2.91016 22C2.91016 22.28 3.13016 22.5 3.41016 22.5H20.5902C20.8702 22.5 21.0902 22.28 21.0902 22C21.0902 17.86 17.0102 14.5 12.0002 14.5Z"/>
+              <!-- Outline -->
+              <path class="icon-line" d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"/>
+              <path class="icon-line" d="M12.0002 14.5C6.99016 14.5 2.91016 17.86 2.91016 22C2.91016 22.28 3.13016 22.5 3.41016 22.5H20.5902C20.8702 22.5 21.0902 22.28 21.0902 22C21.0902 17.86 17.0102 14.5 12.0002 14.5Z"/>
+            </svg>
+          </span>
+          <span class="fxm-b-label">Associados</span>
+        </a>
       </div>
     </nav>
     <div class="p-4">
@@ -139,7 +172,7 @@
       {% endif %}
     </div>
   <!-- Spacer para evitar sobreposição da bottom nav no final do scroll (mobile) -->
-  <div class="fxm-bottom-spacer d-md-none"></div>
+  <div class="fxm-bottom-spacer fx-mobile-only"></div>
   </main>
 </div>
 {% endblock %}
@@ -151,7 +184,9 @@
   :root { --fx-topbar-height:56px; --fx-bottom-nav-height:64px; }
   .fx-layout { min-height: 100vh; background: var(--gray-50); }
   .fx-shell { width:240px; padding:0.75rem 0.75rem 0.75rem; position: fixed; top: 0; left: 0; bottom: 0; height: 100vh; }
-  .fx-shell.d-md-flex { display:flex; }
+  /* Visibility control via custom classes (avoid Bootstrap utilities to prevent cascade issues) */
+  .fx-desktop-only { display:block; }
+  .fx-mobile-only { display:none; }
   .fx-menu-scroll { flex:1 1 auto; overflow-y:auto; padding-bottom:1rem; }
   .fx-user-block { flex:0 0 auto; padding-top:.5rem; border-top:1px solid rgba(0,0,0,.07); }
   .fx-user-block .fx-user { position:relative; margin-top:.35rem; }
@@ -190,46 +225,61 @@
   .fx-user-action:hover { background:#f1f5f9; }
   .fx-user-action:active { background:#e2e8f0; }
   @keyframes fadeSlide { from { opacity:0; transform:translateY(6px);} to { opacity:1; transform:translateY(0);} }
+  /* ===== Desktop default: sidebar visível, elementos móveis ocultos ===== */
+  .fx-shell { display:flex; }
+  .fxm-topbar, .fxm-bottom-nav, .fxm-bottom-spacer { display:none; }
+  .fx-main { margin-left:240px; padding-top:0 !important; }
+
+  /* ===== Mobile (<768px) ===== */
   @media (max-width: 767.98px){
+    .fx-desktop-only { display:none !important; }
+    .fx-mobile-only { display:block !important; }
     .fx-shell { display:none !important; }
-    /* Compensa a topbar fixa (sobreposição) */
-  .fx-main { padding-top: var(--fx-topbar-height) !important; padding-bottom: calc(var(--fx-bottom-nav-height) + 12px); }
-    .fxm-topbar { border-bottom: 0 !important; }
-    /* Bottom nav */
-  .fxm-bottom-nav { position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid rgba(0,0,0,.08); box-shadow:0 -4px 12px -6px rgba(0,0,0,.12); z-index:1050; }
-  .fxm-bottom-wrapper { display:flex; height:var(--fx-bottom-nav-height); }
-  .fxm-bottom-home { flex:0 0 78px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; text-decoration:none; font-size:11px; color:#475569; font-weight:500; border-right:1px solid rgba(0,0,0,.05); position:relative; }
-  .fxm-bottom-scroll { flex:1 1 auto; display:flex; overflow-x:auto; -webkit-overflow-scrolling:touch; gap:2px; padding:4px 4px 0; scrollbar-width:none; }
-  .fxm-bottom-scroll::-webkit-scrollbar { display:none; }
-  .fxm-bottom-link { flex:0 0 auto; min-width:86px; padding:4px 6px 0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-decoration:none; font-size:11px; color:#475569; font-weight:500; position:relative; }
-  .fxm-bottom-link .fxm-icon, .fxm-bottom-home .fxm-icon { line-height:1; }
-  .fxm-bottom-link .fxm-icon svg, .fxm-bottom-home .fxm-icon svg { width:20px; height:20px; display:block; stroke:currentColor; stroke-width:1.8; fill:none; vector-effect:non-scaling-stroke; }
-  .fxm-bottom-link.active, .fxm-bottom-home.active { color:#0d4d91; font-weight:600; }
-  .fxm-bottom-link.active::after, .fxm-bottom-home.active::after { content:''; position:absolute; top:0; left:22%; right:22%; height:3px; border-radius:0 0 3px 3px; background:#0d4d91; }
-  .fx-avatar-sm { width:36px; height:36px; font-size:15px; }
-  .fxm-logo-mobile { max-height:44px; object-fit:contain; }
-  .fxm-topbar { position:fixed; left:0; right:0; }
-  .fxm-logo-wrap { position:absolute; left:50%; top:50%; transform:translate(-50%, -50%); display:flex; align-items:center; }
-  .fxm-logo-text { font-size:1rem; font-weight:600; }
-  /* Mobile user menu override positioning */
-  .fxm-topbar { position:fixed; left:0; right:0; }
-  .fxm-topbar .fx-user { position:relative; }
-  .fxm-topbar .fx-user-menu { top:calc(100% + 8px); bottom:auto; left:auto; right:0; }
-  .fxm-user-btn { background:#f1f5f9; border:0; padding:4px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
-  .fxm-user-btn:active, .fxm-user-btn:hover { background:#e2e8f0; }
+    .fxm-topbar { display:flex !important; position:fixed; top:0; left:0; right:0; border-bottom:0; }
+    .fx-main { margin-left:0; padding-top:var(--fx-topbar-height) !important; padding-bottom: calc(var(--fx-bottom-nav-height) + 12px); }
+    .fxm-bottom-nav, .fxm-bottom-spacer { display:block !important; }
+    /* Floating 3-item bottom bar */
+    .fxm-bottom-nav { pointer-events:none; position:fixed; bottom:18px; left:0; right:0; z-index:1050; padding:0 18px; }
+    .fxm-bottom-fab { pointer-events:auto; margin:0 auto; background:#fff; border-radius:40px; width:100%; max-width:620px; display:flex; justify-content:space-between; align-items:stretch; padding:8px 16px 10px; gap:6px; box-shadow:0 8px 24px -10px rgba(0,0,0,.25),0 2px 6px -2px rgba(0,0,0,.16); border:1px solid rgba(0,0,0,.05); }
+    .fxm-b-item { flex:1 1 0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-decoration:none; color:#5a6776; font-size:11px; font-weight:500; position:relative; border-radius:28px; padding:4px 2px 0; transition:color .18s, background .22s; }
+    .fxm-b-item:hover { background:rgba(13,77,145,.05); }
+    .fxm-b-item:focus-visible { outline:2px solid #0d69d5; outline-offset:2px; }
+    .fxm-b-icon { width:38px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:18px; position:relative; }
+    .fxm-b-icon svg { width:24px; height:24px; display:block; stroke:currentColor; stroke-width:1.7; fill:none; transition:stroke .18s, transform .22s; }
+    .fxm-b-item.active { color:#0d4d91; font-weight:600; }
+    .fxm-b-item.active .fxm-b-icon svg { stroke:#0d4d91; }
+    .fxm-b-icon .icon-fill { display:none; fill:#0d4d91; stroke:none; }
+    .fxm-b-icon .icon-line { stroke:currentColor; fill:none; }
+    .fxm-b-icon .icon-fill-door { display:none; fill:#0b4b89; }
+    .fxm-b-icon .door-line { stroke:currentColor; }
+    .fxm-b-item.active .icon-fill { display:block; }
+    .fxm-b-item.active .icon-line { display:none; }
+    .fxm-b-item.active .icon-fill-door { display:block; }
+    .fxm-b-item.active .door-line { display:none; }
+    .fxm-b-label { margin-top:2px; letter-spacing:.2px; line-height:1.1; }
+    .fxm-b-item:active .fxm-b-icon { transform:scale(.9); }
+    .fx-avatar-sm { width:36px; height:36px; font-size:15px; }
+    .fxm-logo-mobile { max-height:44px; object-fit:contain; }
+    .fxm-logo-wrap { position:absolute; left:50%; top:50%; transform:translate(-50%, -50%); display:flex; align-items:center; }
+    .fxm-logo-text { font-size:1rem; font-weight:600; }
+    .fxm-topbar .fx-user { position:relative; }
+    .fxm-topbar .fx-user-menu { top:calc(100% + 8px); bottom:auto; left:auto; right:0; }
+    .fxm-user-btn { background:#f1f5f9; border:0; padding:4px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+    .fxm-user-btn:active, .fxm-user-btn:hover { background:#e2e8f0; }
+    .fxm-bottom-spacer { height: calc(var(--fx-bottom-nav-height) + 4px); }
+    .fx-main > .p-4 { padding-bottom: calc(var(--fx-bottom-nav-height) + 28px) !important; }
   }
+  @media (max-width:420px){
+    .fxm-bottom-nav { padding:0 10px; bottom:14px; }
+    .fxm-bottom-fab { padding:6px 12px 8px; }
+    .fxm-b-icon { width:34px; height:30px; }
+  }
+  /* Hard desktop reaffirmation (in case of earlier overrides) */
   @media (min-width: 768px){
-    .fx-main { margin-left: 240px; }
+    .fx-shell { display:flex !important; }
+    .fxm-topbar, .fxm-bottom-nav, .fxm-bottom-fab, .fxm-bottom-spacer { display:none !important; }
+    .fx-main { margin-left:240px !important; padding-top:0 !important; }
   }
-  @media (max-width: 767.98px){
-  .fxm-bottom-link svg, .fxm-bottom-home svg { transition:stroke .18s, transform .2s; }
-  .fxm-bottom-link:active svg, .fxm-bottom-home:active svg { transform:scale(.9); }
-  .fxm-bottom-link.active svg, .fxm-bottom-home.active svg { stroke:#0d4d91; }
-  /* Espaçador final */
-  .fxm-bottom-spacer { height: calc(var(--fx-bottom-nav-height) + 32px); }
-  /* Garantir padding interno adicional no container principal */
-  .fx-main > .p-4 { padding-bottom: calc(var(--fx-bottom-nav-height) + 48px) !important; }
-}
 </style>
 {% block extra_style %}{% endblock %}
 {% endblock %}

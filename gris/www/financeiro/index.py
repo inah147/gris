@@ -21,6 +21,6 @@ def get_context(context):
 			context.sidebar_title = "Portal"
 	else:
 		context.sidebar_title = "Portal"
-	context.active_link = "/associados"
-	enrich_context(context, "/associados")
+	context.active_link = "/financeiro"
+	enrich_context(context, "/financeiro")
 	return context

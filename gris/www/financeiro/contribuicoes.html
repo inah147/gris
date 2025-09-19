@@ -11,6 +11,53 @@
 {% endblock %}
 
 {% block main %}
-
+  {% set ordem = ["Aguardar","Atrasado","Em Aberto","Pago"] %}
+  <div class="contribuicoes-wrapper">
+    {% for status in ordem %}
+      {% set lista = contribuicoes.get(status) if contribuicoes else [] %}
+      <div class="status-bloco mb-5">
+        <h2 class="h5 mb-3">{{ status }} <small class="text-muted">({{ lista|length }})</small></h2>
+        <div class="cards row g-3">
+          {% if lista and lista|length > 0 %}
+            {% for assoc in lista %}
+              <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                <div class="assoc-card status-{{ status|lower|replace(' ', '-') }} h-100 p-3 border rounded shadow-sm">
+                  <div class="assoc-header mb-2">
+                    <strong class="d-block text-truncate" title="{{ assoc.nome }}">{{ assoc.nome }}</strong>
+                  </div>
+                  <dl class="mb-0 small assoc-body">
+                    {% if assoc.valor_contribuicao %}
+                      <dt class="fw-normal">Valor</dt>
+                      <dd class="mb-1">{{ frappe.utils.fmt_money(assoc.valor_contribuicao) }}</dd>
+                    {% endif %}
+                    <dt class="fw-normal">Pagas</dt>
+                    <dd class="mb-1">{{ assoc.qt_contribuicoes_pagas }}</dd>
+                    {% if assoc.qt_contribuicoes_atrasadas %}
+                      <dt class="fw-normal text-danger">Atrasadas</dt>
+                      <dd class="mb-1 text-danger">{{ assoc.qt_contribuicoes_atrasadas }}</dd>
+                    {% endif %}
+                    {% if assoc.inicio_do_pagamento %}
+                      <dt class="fw-normal">Início</dt>
+                      <dd class="mb-0">{{ assoc.inicio_do_pagamento }}</dd>
+                    {% endif %}
+                  </dl>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="col-12">
+              <p class="text-muted fst-italic small mb-0">Nenhum associado neste status.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  <style>
+    .assoc-card.status-aguardar { border-color: #6c757d !important; }
+    .assoc-card.status-atrasado { border-color: #dc3545 !important; }
+    .assoc-card.status-em-aberto { border-color: #ffc107 !important; }
+    .assoc-card.status-pago { border-color: #198754 !important; }
+  </style>
 {% endblock %}
 

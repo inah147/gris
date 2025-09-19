@@ -18,8 +18,21 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 		"label": "Associados",
 		"path": "/associados",
 		"children": [
-			{"label": "Visão Geral", "path": "/associados"},
+			{"label": "Visão Geral", "path": "/associados/dashboard"},
 			{"label": "Lista de Associados", "path": "/associados/lista"},
+		],
+	},
+	{
+		"label": "Financeiro",
+		"path": "/financeiro",
+		"children": [
+			{"label": "Visão Geral", "path": "/financeiro/dashboard"},
+			{"label": "Contribuições Mensais", "path": "/financeiro/contribuicoes"},
+			{"label": "Contas e Carteiras", "path": "/financeiro/contas"},
+			{"label": "Extrato", "path": "/financeiro/extrato"},
+			{"label": "Despesas Mensais", "path": "/financeiro/despesas"},
+			{"label": "Demonstrativo", "path": "/financeiro/dre"},
+			{"label": "Pareceres", "path": "/financeiro/pareceres"},
 		],
 	},
 	{"label": "Transparência", "path": "/portal_transparencia"},
@@ -31,6 +44,7 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 PAGE_ROLES: dict[str, list[str]] = {
 	"/inicio": ["All"],
 	"/associados": ["Gestor de Associados", "Visualizador Associados"],
+	"/associados/dashboard": ["Gestor de Associados", "Visualizador Associados"],
 	"/associados/lista": ["Gestor de Associados", "Visualizador Associados"],
 	"/associados/detalhe": ["Gestor de Associados", "Visualizador Associados"],
 	"/portal_transparencia": ["Public"],  # totalmente público

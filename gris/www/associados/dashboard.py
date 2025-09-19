@@ -19,13 +19,13 @@ RAMOS_ORDER = [
 def get_context(context):
 	# Bloqueio para usuários não autenticados
 	if frappe.session.user == "Guest":
-		frappe.local.flags.redirect_location = "/login?redirect_to=/associados"
+		frappe.local.flags.redirect_location = "/login?redirect_to=/associados/dashboard"
 		raise frappe.Redirect
 	# Logo e título
 	uel_data = get_uel_cached()
 	context.portal_logo = uel_data.get("logo") if uel_data else None
-	context.active_link = "/associados"
-	enrich_context(context, "/associados")
+	context.active_link = "/associados/dashboard"
+	enrich_context(context, "/associados/dashboard")
 	context.ramos_order = RAMOS_ORDER
 
 	# --- Filtros dinâmicos ---

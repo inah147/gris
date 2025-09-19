@@ -1,0 +1,80 @@
+{# Mobile Bottom Bar Include #}
+<style>
+  :root {
+    --bottom-bar-height: 68px;
+    --bb-bg: #ffffff;
+    --bb-active: #2563ff; /* azul */
+    --bb-icon: #8aa0b5; /* cinza azulado */
+    --bb-shadow: 0 4px 12px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+    --radius-pill: 34px;
+  }
+  body { padding-bottom: var(--bottom-bar-height); }
+  .bottom-bar-wrapper { position: fixed; left:0; right:0; bottom:16px; display:flex; justify-content:center; pointer-events:none; z-index: 1040; }
+  .bottom-bar { pointer-events:auto; background:var(--bb-bg); height:var(--bottom-bar-height); min-width:280px; width:min(92%,560px); display:flex; align-items:center; justify-content:space-around; border-radius:var(--radius-pill); box-shadow:var(--bb-shadow); padding:0 8px; }
+  .bb-item { flex:1 1 0; text-align:center; text-decoration:none; color:var(--bb-icon); font-size:11px; font-weight:500; display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 0 8px; position:relative; -webkit-tap-highlight-color:transparent; border-radius:16px; }
+  .bb-item:focus-visible { outline:2px solid var(--bb-active); outline-offset:4px; border-radius:12px; }
+  .bb-item svg { width:26px; height:26px; stroke:currentColor; }
+  .bb-item.active { color:#fff; }
+  .bb-item.active::before { content:""; position:absolute; inset:4px 10px 4px 10px; background:var(--bb-active); border-radius:14px; z-index:-1; box-shadow:0 4px 10px -2px rgba(37,99,255,.45); }
+  .bb-item.active svg { stroke:#fff; }
+  @media (max-width:480px){ .bb-item span { font-size:10px; } }
+  @media (min-width:1024px){ .bottom-bar-wrapper { display:none; } body { padding-bottom:0; } }
+</style>
+<div class="bottom-bar-wrapper" role="presentation">
+  <nav class="bottom-bar" aria-label="Navegação principal">
+    <a class="bb-item" id="nav-financeiro" href="/financeiro" aria-label="Financeiro">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 2v20"/>
+        <path d="M17 6.5c0-2-2.2-3.5-5-3.5s-5 1.5-5 3.5 2.2 3.5 5 3.5 5 1.5 5 3.5-2.2 3.5-5 3.5-5-1.5-5-3.5"/>
+      </svg>
+      <span>Financeiro</span>
+    </a>
+    <a class="bb-item" id="nav-inicio" href="/inicio" aria-label="Início">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 10.5 12 3l9 7.5"/>
+        <path d="M5 10v10h14V10"/>
+      </svg>
+      <span>Início</span>
+    </a>
+    <a class="bb-item" id="nav-associados" href="/associados" aria-label="Associados">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 12c2.8 0 5-2.2 5-5s-2.2-5-5-5-5 2.2-5 5 2.2 5 5 5Z"/>
+        <path d="M4 22c0-4.4 3.6-8 8-8s8 3.6 8 8"/>
+      </svg>
+      <span>Associados</span>
+    </a>
+  </nav>
+</div>
+<script>
+(function(){
+  const map = [
+    { id: 'nav-financeiro', path: '/financeiro' },
+    { id: 'nav-inicio', path: '/inicio' },
+    { id: 'nav-associados', path: '/associados' }
+  ];
+  const current = location.pathname.replace(/\/$/, '');
+  let matched = false;
+  map.forEach(item => {
+    const el = document.getElementById(item.id);
+    if(!el) return;
+    const p = item.path.replace(/\/$/, '');
+    if(current === p){
+      el.classList.add('active');
+      el.setAttribute('aria-current','page');
+      matched = true;
+    } else {
+      el.classList.remove('active');
+      el.removeAttribute('aria-current');
+    }
+  });
+  if(!matched){
+    if(current.startsWith('/financeiro')){
+      const el = document.getElementById('nav-financeiro');
+      if(el){ el.classList.add('active'); el.setAttribute('aria-current','page'); }
+    } else if(current.startsWith('/associados')){
+      const el = document.getElementById('nav-associados');
+      if(el){ el.classList.add('active'); el.setAttribute('aria-current','page'); }
+    }
+  }
+})();
+</script>

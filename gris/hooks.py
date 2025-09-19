@@ -149,7 +149,7 @@ app_license = "mit"
 # ---------------
 
 scheduler_events = {
-	"Cron": {"0 5 * * *": ["gris.api.users.user_manager.manage_associate_users"]}
+	"Cron": {"0 5 * * *": ["gris.api.users.user_manager.manage_associate_users"]},
 	# "all": [
 	# 	"gris.tasks.all"
 	# ],
@@ -162,9 +162,7 @@ scheduler_events = {
 	# "weekly": [
 	# 	"gris.tasks.weekly"
 	# ],
-	# "monthly": [
-	# 	"gris.tasks.monthly"
-	# ],
+	"monthly": ["gris.api.financeiro.pagamentos_mensais.gerar_pagamentos_mensais"],
 }
 
 # Testing

@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"5v81V6oWKZ\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Configura\u00e7\u00f5es</span>\",\"col\":12}},{\"id\":\"EsTfM8yjZH\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Definicao Da Uel\",\"col\":3}}]",
+ "content": "[{\"id\":\"5v81V6oWKZ\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Configura\u00e7\u00f5es</span>\",\"col\":12}},{\"id\":\"5MURehvsxe\",\"type\":\"card\",\"data\":{\"card_name\":\"Financeiro\",\"col\":4}},{\"id\":\"VZFDdRNGVw\",\"type\":\"card\",\"data\":{\"card_name\":\"Geral\",\"col\":4}}]",
  "creation": "2025-09-07 10:18:31.190067",
  "custom_blocks": [],
  "docstatus": 0,
@@ -12,8 +12,47 @@
  "indicator_color": "green",
  "is_hidden": 0,
  "label": "Configura\u00e7\u00f5es",
- "links": [],
- "modified": "2025-09-07 10:20:00.821833",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Financeiro",
+   "link_count": 1,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Configuracoes Contribuicao Mensal",
+   "link_count": 0,
+   "link_to": "Configuracoes Contribuicao Mensal",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Geral",
+   "link_count": 1,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Definicao da UEL",
+   "link_count": 0,
+   "link_to": "Definicao da UEL",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2025-09-19 07:31:55.591939",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Configura\u00e7\u00f5es",
@@ -23,15 +62,7 @@
  "public": 1,
  "quick_lists": [],
  "roles": [],
- "sequence_id": 29.0,
- "shortcuts": [
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Definicao Da Uel",
-   "link_to": "Definicao da UEL",
-   "type": "DocType"
-  }
- ],
+ "sequence_id": 8.0,
+ "shortcuts": [],
  "title": "Configura\u00e7\u00f5es"
 }

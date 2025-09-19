@@ -8,7 +8,8 @@
   "associado",
   "status",
   "column_break_ybpx",
-  "m\u00eas_de_refer\u00eancia"
+  "mes_de_referencia",
+  "valor"
  ],
  "fields": [
   {
@@ -31,16 +32,24 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "m\u00eas_de_refer\u00eancia",
+   "fieldname": "mes_de_referencia",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "M\u00eas de Refer\u00eancia",
+   "reqd": 1
+  },
+  {
+   "fieldname": "valor",
+   "fieldtype": "Currency",
+   "label": "Valor",
+   "non_negative": 1,
    "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-18 07:34:27.340787",
+ "modified": "2025-09-19 07:57:03.641989",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Pagamento Contribuicao Mensal",
@@ -96,5 +105,6 @@
    "color": "Red",
    "title": "Atrasado"
   }
- ]
+ ],
+ "title_field": "associado"
 }

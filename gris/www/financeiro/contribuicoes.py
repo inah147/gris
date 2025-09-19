@@ -87,15 +87,15 @@ def _get_pagamentos_por_associado(associados):
 	pagamentos = frappe.get_all(
 		"Pagamento Contribuicao Mensal",
 		filters={"associado": ["in", associados]},
-		fields=["name", "associado", "mês_de_referência", "status"],
-		order_by="`mês_de_referência` desc",
+		fields=["name", "associado", "mes_de_referencia", "status"],
+		order_by="mes_de_referencia desc",
 	)
 	mapa = {}
 	for p in pagamentos:
 		lista = mapa.setdefault(p["associado"], [])
 		lista.append(
 			{
-				"mes_de_referencia": p.get("mês_de_referência"),
+				"mes_de_referencia": p.get("mes_de_referencia"),
 				"status": p.get("status"),
 			}
 		)

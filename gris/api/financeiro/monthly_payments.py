@@ -12,8 +12,10 @@ def _assert_manager_role():
 
 
 def _assert_doc_permission(doctype: str, docname: str, perm_type: str = "write"):
-	# Usa API padrão de permissão do Frappe
-	if not frappe.has_permission(doctype, perm_type=perm_type, doc=docname):
+	# Frappe has_permission params: doctype, ptype="read|write|submit|...", doc=doc_obj_or_name
+	# Em algumas versões aceita docname/doc; garantimos doc carregado para avaliação fiel
+	doc = frappe.get_doc(doctype, docname)
+	if not frappe.has_permission(doctype, ptype=perm_type, doc=doc):
 		raise frappe.PermissionError(f"Sem permissão {perm_type} em {doctype} {docname}")
 
 

@@ -53,6 +53,9 @@ def get_context(context):
 		inicio_date = getdate(inicio) if inicio else None
 		pagamentos = pagamentos_map.get(b["name"], [])
 		status_geral = _calcular_status_geral(b, inicio_date, pagamentos, hoje)
+		# Dados de cobrança só expostos a gestores
+		email_cobranca = b.get("email_cobranca") if context.can_manage_contributions else None
+		telefone_cobranca = b.get("telefone_cobranca") if context.can_manage_contributions else None
 		item = {
 			"nome": b.get("nome_completo"),
 			"id": b.get("name"),
@@ -65,8 +68,8 @@ def get_context(context):
 			"pagamentos": pagamentos,
 			"status_no_grupo": b.get("status_no_grupo"),
 			"status_cobranca": b.get("status_cobranca"),
-			"email_cobranca": b.get("email_cobranca"),
-			"telefone_cobranca": b.get("telefone_cobranca"),
+			"email_cobranca": email_cobranca,
+			"telefone_cobranca": telefone_cobranca,
 		}
 		# Usa setdefault para evitar KeyError caso apareça status não listado
 		agrupado.setdefault(status_geral, []).append(item)

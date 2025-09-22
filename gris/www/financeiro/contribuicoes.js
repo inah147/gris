@@ -5,8 +5,10 @@ function mostrarDetalhes(btn){
   document.getElementById('detalheTitulo').textContent = data.nome;
   document.getElementById('detalheValor').textContent = frappe._.fmt_money ? frappe._.fmt_money(data.valor_contribuicao || 0) : (data.valor_contribuicao || 0);
   // Preenche dados de cobrança
-  document.getElementById('emailCobranca').textContent = data.email_cobranca || '—';
-  document.getElementById('foneCobranca').textContent = data.telefone_cobranca || '—';
+  const emailSpan = document.getElementById('emailCobranca');
+  const foneSpan = document.getElementById('foneCobranca');
+  if(emailSpan) emailSpan.textContent = data.email_cobranca || '—';
+  if(foneSpan) foneSpan.textContent = data.telefone_cobranca || '—';
   const tbody = document.getElementById('detalhePagamentos');
   tbody.innerHTML='';
   (data.pagamentos || []).forEach(p => {

@@ -71,6 +71,7 @@
               </div>
             </div>
           </div>
+          {% if can_manage_contributions %}
           <div id="cobrancaContainer" class="mb-3" data-manage-only="1">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
               <div class="flex-grow-1">
@@ -78,12 +79,11 @@
                 <div><strong>Telefone Cobrança:</strong> <span id="foneCobranca"></span></div>
               </div>
               <div id="acoesCobranca">
-                {% if can_manage_contributions %}
                 <button id="btnEditarCobranca" class="btn btn-sm btn-outline-secondary" onclick="editarCobranca()">Editar Cobrança</button>
-                {% endif %}
               </div>
             </div>
           </div>
+          {% endif %}
           <div id="cadastroContainer" class="mb-3 d-none" data-manage-only="1">
             {% if can_manage_contributions %}
             <button id="btnCadastroRealizado" class="btn btn-success" onclick="cadastroRealizado()">Cadastro Realizado</button>

@@ -37,8 +37,16 @@ def _get_users():
 
 
 def _get_user(email):
-	user = frappe.get_doc("User", email)
-	return user
+	"""Return User doc or None if email is falsy or user doesn't exist."""
+	if not email:
+		return None
+	try:
+		return frappe.get_doc("User", email)
+	except frappe.DoesNotExistError:
+		return None
+	except Exception:
+		# swallow unexpected errors and return None to keep caller defensive
+		return None
 
 
 def _is_valid_associate(associate):
@@ -152,8 +160,13 @@ def update_associate_user(associate_name, old_funcao_categoria=None, new_funcao_
 
 		associate = frappe.get_doc("Associado", associate_name)
 
+		if not associate.id_escoteiros:
+			log.info(f"[UPDATE] skip associate_name={associate_name} reason=missing id_escoteiros")
+			return
+
 		user = _get_user(associate.id_escoteiros)
 		if not user:
+			log.info(f"[UPDATE] skip associate_name={associate_name} reason=user not found")
 			return
 
 		# Ativar / desativar conforme validade

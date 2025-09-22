@@ -46,11 +46,11 @@ function update_responsaveis_tab_properties(frm) {
 
     // Define obrigatoriedade dos campos
     const campos = [
-        "nome_responsavel_1",
-        "estado_civil_responsavel_1",
-        "telefone_responsavel_1",
-        "email_responsavel_1",
-        "cpf_responsavel_1"
+        // "nome_responsavel_1",
+        // "estado_civil_responsavel_1",
+        // "telefone_responsavel_1",
+        // "email_responsavel_1",
+        // "cpf_responsavel_1"
     ];
     campos.forEach(campo => {
         frm.set_df_property(campo, "reqd", !maior_de_idade);

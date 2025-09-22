@@ -430,10 +430,10 @@
    "label": "Contribui\u00e7\u00e3o Mensal"
   },
   {
-   "default": "60",
    "fieldname": "valor_contribuicao",
    "fieldtype": "Currency",
    "label": "Valor da Contribui\u00e7\u00e3o Mensal",
+   "options": "60",
    "permlevel": 3,
    "precision": "2"
   },
@@ -489,7 +489,7 @@
  ],
  "grid_page_length": 50,
  "links": [],
- "modified": "2025-09-19 09:04:27.605527",
+ "modified": "2025-09-21 09:09:58.438438",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Associado",

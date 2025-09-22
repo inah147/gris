@@ -6,7 +6,8 @@ from gris.api.portal_cache_utils import get_uel_cached
 
 no_cache = 1
 
-STATUS_KEYS = ["Aguardar", "Atrasado", "Em Aberto", "Pago"]
+# Ordem de exibição incluindo novos status "Cadastrar" e "Cancelar"
+STATUS_KEYS = ["Cadastrar", "Cancelar", "Aguardar", "Atrasado", "Em Aberto", "Pago"]
 
 
 def get_context(context):
@@ -35,23 +36,27 @@ def get_context(context):
 	hoje = getdate(nowdate())
 
 	for b in beneficiarios:
-		inicio = b.get("início_do_pagamento") or b.get("in\u00edcio_do_pagamento")
+		inicio = b.get("inicio_do_pagamento")
 		inicio_date = getdate(inicio) if inicio else None
 		pagamentos = pagamentos_map.get(b["name"], [])
-		status_geral = _calcular_status_geral(
-			inicio_date, b.get("qt_contribuicoes_atrasadas") or 0, pagamentos, hoje
-		)
+		status_geral = _calcular_status_geral(b, inicio_date, pagamentos, hoje)
 		item = {
 			"nome": b.get("nome_completo"),
 			"id": b.get("name"),
-			"inicio_do_pagamento": inicio_date,
+			# manter como string para ser serializável em JSON no template
+			"inicio_do_pagamento": inicio_date.isoformat() if inicio_date else None,
 			"valor_contribuicao": b.get("valor_contribuicao"),
 			"qt_contribuicoes_pagas": b.get("qt_contribuicoes_pagas") or 0,
 			"qt_contribuicoes_atrasadas": b.get("qt_contribuicoes_atrasadas") or 0,
 			"status_geral": status_geral,
 			"pagamentos": pagamentos,
+			"status_no_grupo": b.get("status_no_grupo"),
+			"status_cobranca": b.get("status_cobranca"),
+			"email_cobranca": b.get("email_cobranca"),
+			"telefone_cobranca": b.get("telefone_cobranca"),
 		}
-		agrupado[status_geral].append(item)
+		# Usa setdefault para evitar KeyError caso apareça status não listado
+		agrupado.setdefault(status_geral, []).append(item)
 
 	context.contribuicoes = agrupado
 	context.titulo = "Contribuições Mensais"
@@ -64,21 +69,34 @@ def _get_beneficiarios():
 	campos = [
 		"name",
 		"nome_completo",
-		"`início_do_pagamento`",
+		"inicio_do_pagamento",
 		"valor_contribuicao",
 		"qt_contribuicoes_pagas",
 		"qt_contribuicoes_atrasadas",
+		"status_no_grupo",
+		"status_cobranca",
+		"email_cobranca",
+		"telefone_cobranca",
 	]
-	beneficiarios = frappe.get_all(
+	# Buscamos Beneficiário ativos e também os Inativos com cobrança ativa (para status 'Cancelar')
+	beneficiarios_ativos = frappe.get_all(
+		"Associado",
+		filters={"status_no_grupo": "Ativo", "categoria": "Beneficiário"},
+		fields=campos,
+		order_by="nome_completo asc",
+	)
+	beneficiarios_cancelar = frappe.get_all(
 		"Associado",
 		filters={
-			"status_no_grupo": "Ativo",
+			"status_no_grupo": "Inativo",
+			"status_cobranca": "Ativo",
 			"categoria": "Beneficiário",
 		},
 		fields=campos,
 		order_by="nome_completo asc",
 	)
-	return beneficiarios
+	# Unimos listas (simples, nomes distintos por naming rule cpf)
+	return beneficiarios_ativos + beneficiarios_cancelar
 
 
 def _get_pagamentos_por_associado(associados):
@@ -87,7 +105,7 @@ def _get_pagamentos_por_associado(associados):
 	pagamentos = frappe.get_all(
 		"Pagamento Contribuicao Mensal",
 		filters={"associado": ["in", associados]},
-		fields=["name", "associado", "mes_de_referencia", "status"],
+		fields=["name", "associado", "mes_de_referencia", "status", "valor"],
 		order_by="mes_de_referencia desc",
 	)
 	mapa = {}
@@ -95,17 +113,34 @@ def _get_pagamentos_por_associado(associados):
 		lista = mapa.setdefault(p["associado"], [])
 		lista.append(
 			{
-				"mes_de_referencia": p.get("mes_de_referencia"),
+				"name": p.get("name"),
+				# garantir serialização segura
+				"mes_de_referencia": (
+					p.get("mes_de_referencia").isoformat()
+					if getattr(p.get("mes_de_referencia"), "isoformat", None)
+					else p.get("mes_de_referencia")
+				),
 				"status": p.get("status"),
+				"valor": (float(p.get("valor")) if p.get("valor") is not None else None),
 			}
 		)
 	return mapa
 
 
-def _calcular_status_geral(inicio, qt_atrasadas, pagamentos, hoje):
+def _calcular_status_geral(assoc_row, inicio, pagamentos, hoje):
+	# Nova regra: Inativo + status_cobranca=Ativo => Cancelar
+	if assoc_row.get("status_no_grupo") == "Inativo" and assoc_row.get("status_cobranca") == "Ativo":
+		return "Cancelar"
+	if (
+		assoc_row.get("status_no_grupo") == "Ativo"
+		and assoc_row.get("status_cobranca") == "Inativo"
+		and inicio <= hoje
+	):
+		return "Cadastrar"
+	qt_atrasadas = assoc_row.get("qt_contribuicoes_atrasadas") or 0
 	if inicio and inicio > hoje:
 		return "Aguardar"
-	if (qt_atrasadas or 0) > 0:
+	if qt_atrasadas > 0:
 		return "Atrasado"
 	for p in pagamentos:
 		if p.get("status") == "Em Aberto":

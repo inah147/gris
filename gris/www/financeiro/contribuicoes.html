@@ -5,59 +5,431 @@
 {% set active_link = '/financeiro/contribuicoes' %}
 
 {% block page_header %}
-  <div class="mb-4 d-flex align-items-center justify-content-between">
-    <h1 class="h3 mb-0">Contribuições Mensais</h1>
+  <div class="mb-3">
+    <h1 class="h3 mb-2">Contribuições Mensais</h1>
+    <div style="max-width:320px;">
+      <input type="text" id="filtroAssociado" class="form-control form-control-sm" placeholder="Filtrar por nome..." oninput="aplicarFiltroAssociado()" />
+    </div>
   </div>
 {% endblock %}
 
 {% block main %}
-  {% set ordem = ["Aguardar","Atrasado","Em Aberto","Pago"] %}
+  {% set ordem = ["Cadastrar","Cancelar","Aguardar","Atrasado","Em Aberto","Pago"] %}
   <div class="contribuicoes-wrapper">
     {% for status in ordem %}
-      {% set lista = contribuicoes.get(status) if contribuicoes else [] %}
-      <div class="status-bloco mb-5">
-        <h2 class="h5 mb-3">{{ status }} <small class="text-muted">({{ lista|length }})</small></h2>
-        <div class="cards row g-3">
-          {% if lista and lista|length > 0 %}
+      {% set lista = (contribuicoes.get(status) or []) if contribuicoes else [] %}
+      {% if lista|length > 0 %}
+        {% set status_id = 'status-' + (status | replace(' ', '-') | lower) %}
+        <div class="status-bloco mb-5" id="{{ status_id }}" data-status="{{ status }}">
+          <h2 class="h5 mb-3">{{ status }} <small class="text-muted">({{ lista|length }})</small></h2>
+          <div class="row g-3 gy-4 card-gap assoc-list" data-total="{{ lista|length }}">
             {% for assoc in lista %}
-              <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                <div class="assoc-card status-{{ status|lower|replace(' ', '-') }} h-100 p-3 border rounded shadow-sm">
-                  <div class="assoc-header mb-2">
-                    <strong class="d-block text-truncate" title="{{ assoc.nome }}">{{ assoc.nome }}</strong>
+              {% set page = (loop.index0 // 12) + 1 %}
+              <div class="col-12 col-sm-6 col-md-4 col-lg-3 card-gap assoc-card-col" data-page="{{ page }}">
+                <div class="assoc-card h-100 p-3 border rounded shadow-sm d-flex flex-column">
+                  <strong class="d-block text-truncate mb-2" title="{{ assoc.nome }}">{{ assoc.nome }}</strong>
+                  <div class="mt-auto">
+                    <button class="btn btn-sm btn-dark px-3"
+                      data-assoc='{{ assoc | tojson }}'
+                      onclick="mostrarDetalhes(this)">Detalhes</button>
                   </div>
-                  <dl class="mb-0 small assoc-body">
-                    {% if assoc.valor_contribuicao %}
-                      <dt class="fw-normal">Valor</dt>
-                      <dd class="mb-1">{{ frappe.utils.fmt_money(assoc.valor_contribuicao) }}</dd>
-                    {% endif %}
-                    <dt class="fw-normal">Pagas</dt>
-                    <dd class="mb-1">{{ assoc.qt_contribuicoes_pagas }}</dd>
-                    {% if assoc.qt_contribuicoes_atrasadas %}
-                      <dt class="fw-normal text-danger">Atrasadas</dt>
-                      <dd class="mb-1 text-danger">{{ assoc.qt_contribuicoes_atrasadas }}</dd>
-                    {% endif %}
-                    {% if assoc.inicio_do_pagamento %}
-                      <dt class="fw-normal">Início</dt>
-                      <dd class="mb-0">{{ assoc.inicio_do_pagamento }}</dd>
-                    {% endif %}
-                  </dl>
                 </div>
               </div>
             {% endfor %}
-          {% else %}
-            <div class="col-12">
-              <p class="text-muted fst-italic small mb-0">Nenhum associado neste status.</p>
-            </div>
-          {% endif %}
+          </div>
+          <div class="status-pagination mt-2" data-status-pag="{{ status }}"></div>
         </div>
-      </div>
+      {% endif %}
     {% endfor %}
   </div>
+  <div id="detalheModal" class="modal d-none" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="detalheTitulo"></h5>
+          <div id="cancelarContainer" class="ms-3 d-none">
+            <button id="btnCadastroCancelado" class="btn btn-danger btn-sm" onclick="cadastroCancelado()">Cadastro Cancelado</button>
+          </div>
+          <!-- <button type="button" class="btn-close" aria-label="Close" onclick="fecharDetalhes()"></button> -->
+        </div>
+        <div class="modal-body">
+          <div class="d-flex align-items-center justify-content-between mb-3 w-100">
+            <div class="me-3 flex-grow-1" id="valorContainer">
+              <strong>Valor Atual:</strong> R$ <span id="detalheValor"></span>
+            </div>
+            <!-- <span id="detalheStatus" class="badge bg-secondary"></span> -->
+            <div class="ms-auto ml-auto text-end">
+              <div id="acoesValor">
+                <button id="btnAlterarValor" class="btn btn-sm btn-outline-secondary" onclick="alterarValor()">Alterar Valor</button>
+              </div>
+            </div>
+          </div>
+          <div id="cobrancaContainer" class="mb-3">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+              <div class="flex-grow-1">
+                <div><strong>E-mail Cobrança:</strong> <span id="emailCobranca"></span></div>
+                <div><strong>Telefone Cobrança:</strong> <span id="foneCobranca"></span></div>
+              </div>
+              <div id="acoesCobranca">
+                <button id="btnEditarCobranca" class="btn btn-sm btn-outline-secondary" onclick="editarCobranca()">Editar Cobrança</button>
+              </div>
+            </div>
+          </div>
+          <div id="cadastroContainer" class="mb-3 d-none">
+            <button id="btnCadastroRealizado" class="btn btn-success" onclick="cadastroRealizado()">Cadastro Realizado</button>
+          </div>
+          <div id="tabelaPagamentosContainer" class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Mês Referência</th>
+                  <th>Status</th>
+                  <th class="text-end">Valor</th>
+                </tr>
+              </thead>
+              <tbody id="detalhePagamentos"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="fecharDetalhes()">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
   <style>
-    .assoc-card.status-aguardar { border-color: #6c757d !important; }
-    .assoc-card.status-atrasado { border-color: #dc3545 !important; }
-    .assoc-card.status-em-aberto { border-color: #ffc107 !important; }
-    .assoc-card.status-pago { border-color: #198754 !important; }
+    .modal { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,.4); z-index: 1050; }
+    .modal:not(.d-none) { display:block; }
+    .assoc-card { transition: box-shadow .15s ease; }
+    .assoc-card:hover { box-shadow: 0 .25rem .75rem rgba(0,0,0,.08); }
+    .card-gap { row-gap:1rem; }
+  .status-pagination .page-link { cursor:pointer; }
+  .status-pagination .active > .page-link { z-index:2; }
+  .filter-hidden { display:none !important; }
   </style>
+  <script>
+    let assocAtual = null;
+    function mostrarDetalhes(btn){
+      const data = JSON.parse(btn.getAttribute('data-assoc'));
+      assocAtual = data; // guardar para edição
+      document.getElementById('detalheTitulo').textContent = data.nome;
+      document.getElementById('detalheValor').textContent = frappe._.fmt_money ? frappe._.fmt_money(data.valor_contribuicao || 0) : (data.valor_contribuicao || 0);
+  // Preenche dados de cobrança
+  document.getElementById('emailCobranca').textContent = data.email_cobranca || '—';
+  document.getElementById('foneCobranca').textContent = data.telefone_cobranca || '—';
+      // document.getElementById('detalheStatus').textContent = data.status_geral;
+      // document.getElementById('detalheStatus').className = 'badge bg-' + mapBadge(data.status_geral);
+      const tbody = document.getElementById('detalhePagamentos');
+      tbody.innerHTML='';
+      (data.pagamentos || []).forEach(p => {
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-pag-id', p.name || '');
+        let valorCell;
+        if(p.status !== 'Pago') {
+          valorCell = `<td><div class="d-flex align-items-center justify-content-between gap-2"><span>${p.valor ?? ''}</span><button class="btn btn-xs btn-success" onclick="marcarComoPago(this)" data-pag-id="${p.name}">Pago</button></div></td>`;
+        } else {
+          valorCell = `<td class="text-end">${p.valor ?? ''}</td>`;
+        }
+        tr.innerHTML = `<td>${p.mes_de_referencia || ''}</td><td><span class="badge bg-${mapBadge(p.status)} status-badge">${p.status}</span></td>${valorCell}`;
+        tbody.appendChild(tr);
+      });
+      // Exibir botão de cadastro se status for Cadastrar
+      const cadastroContainer = document.getElementById('cadastroContainer');
+      const tabelaPagamentosContainer = document.getElementById('tabelaPagamentosContainer');
+      if(data.status_geral === 'Cadastrar') {
+        cadastroContainer.classList.remove('d-none');
+        tabelaPagamentosContainer.classList.add('d-none');
+      } else {
+        cadastroContainer.classList.add('d-none');
+        tabelaPagamentosContainer.classList.remove('d-none');
+      }
+      // Exibir botão de cancelamento se status for Cancelar
+      const cancelarContainer = document.getElementById('cancelarContainer');
+      if(data.status_geral === 'Cancelar') {
+        cancelarContainer.classList.remove('d-none');
+      } else {
+        cancelarContainer.classList.add('d-none');
+      }
+      document.getElementById('detalheModal').classList.remove('d-none');
+    }
+    function fecharDetalhes(){
+      document.getElementById('detalheModal').classList.add('d-none');
+    }
+    function mapBadge(status){
+      switch(status){
+        case 'Cadastrar': return 'info';
+        case 'Cancelar': return 'dark';
+        case 'Aguardar': return 'secondary';
+        case 'Atrasado': return 'danger';
+        case 'Em Aberto': return 'warning';
+        case 'Pago': return 'success';
+        default: return 'secondary';
+      }
+    }
+    function alterarValor(){
+      if(!assocAtual) return;
+      const container = document.getElementById('valorContainer');
+      const acoes = document.getElementById('acoesValor');
+      if(container.querySelector('input')) return; // já em edição
+      const valorAtual = assocAtual.valor_contribuicao || 0;
+      container.innerHTML = `<strong>Novo Valor:</strong> R$ <input type="number" min="0" step="0.01" id="inputNovoValor" class="form-control form-control-sm d-inline-block" style="width:140px;" value="${valorAtual}" />`;
+      acoes.innerHTML = `
+        <button class="btn btn-sm btn-success me-1" onclick="salvarNovoValor()">Salvar</button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="cancelarEdicaoValor()">Cancelar</button>
+      `;
+    }
+
+    function cancelarEdicaoValor(){
+      if(!assocAtual) return;
+      const container = document.getElementById('valorContainer');
+      const acoes = document.getElementById('acoesValor');
+      container.innerHTML = `<strong>Valor Atual:</strong> R$ <span id="detalheValor">${frappe._.fmt_money ? frappe._.fmt_money(assocAtual.valor_contribuicao || 0) : (assocAtual.valor_contribuicao || 0)}</span>`;
+      acoes.innerHTML = `<button id="btnAlterarValor" class="btn btn-sm btn-outline-secondary" onclick="alterarValor()">Alterar Valor</button>`;
+    }
+
+    function salvarNovoValor(){
+      if(!assocAtual) return;
+      const input = document.getElementById('inputNovoValor');
+      if(!input) return;
+      const novoValor = parseFloat(input.value);
+      if(isNaN(novoValor) || novoValor < 0){
+        frappe.msgprint('Informe um valor válido.');
+        return;
+      }
+      frappe.call({
+        method: 'gris.api.financeiro.monthly_payments.update_contribution_value',
+        args: { associate_id: assocAtual.id, new_value: novoValor },
+        freeze: true,
+        callback: function(r){
+          if(r.message && r.message.ok){
+            assocAtual.valor_contribuicao = r.message.valor;
+            cancelarEdicaoValor();
+            // Atualiza valor visível
+            document.getElementById('detalheValor').textContent = frappe._.fmt_money ? frappe._.fmt_money(assocAtual.valor_contribuicao) : assocAtual.valor_contribuicao;
+            frappe.show_alert({message:'Valor atualizado', indicator:'green'});
+          }
+        },
+        error: function(err){
+          frappe.msgprint('Erro ao salvar valor.');
+        }
+      });
+    }
+
+    // Paginação por status
+    document.addEventListener('DOMContentLoaded', () => {
+      initStatusPagination();
+    });
+
+    function initStatusPagination(){
+      const blocks = document.querySelectorAll('.status-bloco');
+      blocks.forEach(block => {
+        rebuildPaginationForBlock(block);
+      });
+    }
+
+    function rebuildPaginationForBlock(block){
+      if(!block) return;
+      const pagContainer = block.querySelector('.status-pagination');
+      if(pagContainer) pagContainer.innerHTML='';
+      const list = block.querySelector('.assoc-list');
+      if(!list) return;
+      // considerar somente cards visíveis (não filtrados)
+      const visibleCards = Array.from(list.querySelectorAll('.assoc-card-col')).filter(c => !c.classList.contains('filter-hidden'));
+      // Reatribuir data-page sequencial aos visíveis
+      visibleCards.forEach((c, idx) => c.setAttribute('data-page', Math.floor(idx/12)+1));
+      // Esconder todos antes de mostrar página 1
+      list.querySelectorAll('.assoc-card-col').forEach(c => c.classList.add('d-none'));
+      if(visibleCards.length === 0) return;
+      visibleCards.forEach(c => c.classList.remove('d-none'));
+      const pages = Math.ceil(visibleCards.length / 12);
+      if(pages > 1){
+        renderPaginationControls(pagContainer, pages, 1, block.id);
+        showStatusPage(block.id, 1);
+      } else if(pagContainer){
+        pagContainer.innerHTML='';
+      }
+    }
+
+    function renderPaginationControls(container, totalPages, current, statusBlockId){
+      const ul = document.createElement('ul');
+      ul.className = 'pagination pagination-sm mb-0';
+      // helper para item
+      const addItem = (label, page, disabled=false, active=false) => {
+        const li = document.createElement('li');
+        li.className = 'page-item' + (disabled? ' disabled':'') + (active? ' active':'');
+        const a = document.createElement('a');
+        a.className = 'page-link';
+        a.textContent = label;
+        if(!disabled && !active){
+          a.addEventListener('click', () => {
+            showStatusPage(statusBlockId, page);
+            // reconstruir controles para refletir página atual
+            container.innerHTML='';
+            renderPaginationControls(container, totalPages, page, statusBlockId);
+          });
+        }
+        li.appendChild(a);
+        ul.appendChild(li);
+      };
+      addItem('«', 1, current===1);
+      addItem('‹', current-1, current===1);
+      // janela de páginas (máx 5 visíveis)
+      const windowSize = 5;
+      let start = Math.max(1, current - Math.floor(windowSize/2));
+      let end = start + windowSize -1;
+      if(end > totalPages){
+        end = totalPages;
+        start = Math.max(1, end - windowSize +1);
+      }
+      for(let p = start; p<=end; p++) addItem(String(p), p, false, p===current);
+      addItem('›', current+1, current===totalPages);
+      addItem('»', totalPages, current===totalPages);
+      container.appendChild(ul);
+    }
+ 
+    function showStatusPage(statusBlockId, page){
+      const block = document.getElementById(statusBlockId);
+      if(!block) return;
+      const cards = block.querySelectorAll('.assoc-card-col');
+      cards.forEach(c => {
+        const p = parseInt(c.getAttribute('data-page'));
+        if(p === page){
+          c.classList.remove('d-none');
+        } else {
+          c.classList.add('d-none');
+        }
+      });
+    }
+
+    function aplicarFiltroAssociado(){
+      const termo = (document.getElementById('filtroAssociado')?.value || '').trim().toLowerCase();
+      const blocks = document.querySelectorAll('.status-bloco');
+      blocks.forEach(block => {
+        const cards = block.querySelectorAll('.assoc-card-col');
+        cards.forEach(card => {
+          const nomeEl = card.querySelector('strong');
+          const nome = (nomeEl?.getAttribute('title') || nomeEl?.textContent || '').toLowerCase();
+          if(!termo || nome.includes(termo)){
+            card.classList.remove('filter-hidden');
+          } else {
+            card.classList.add('filter-hidden');
+          }
+        });
+        rebuildPaginationForBlock(block);
+      });
+    }
+
+    function marcarComoPago(btn){
+      const pagId = btn.getAttribute('data-pag-id');
+      if(!pagId) return;
+      frappe.call({
+        method: 'gris.api.financeiro.monthly_payments.mark_payment_as_paid',
+        args: { payment_id: pagId },
+        freeze: true,
+        callback: function(r){
+          if(r.message && r.message.ok){
+            const tr = btn.closest('tr');
+            if(tr){
+              const badge = tr.querySelector('.status-badge');
+              if(badge){
+                badge.textContent = 'Pago';
+                badge.className = 'badge bg-success status-badge';
+              }
+              // remove botão
+              btn.remove();
+            }
+            frappe.show_alert({message:'Pagamento marcado como Pago', indicator:'green'});
+          }
+        },
+        error: function(){
+          frappe.msgprint('Erro ao marcar pagamento.');
+        }
+      });
+    }
+    function cadastroRealizado(){
+      if(!assocAtual) return;
+      frappe.call({
+        method: 'gris.api.financeiro.monthly_payments.activate_billing_status',
+        args: { associate_id: assocAtual.id },
+        freeze: true,
+        callback: function(r){
+          if(r.message && r.message.ok){
+            assocAtual.status_cobranca = 'Ativo';
+            // Atualizar UI: esconder botão e mostrar mensagem rápida
+            document.getElementById('cadastroContainer').classList.add('d-none');
+            frappe.show_alert({message:'Status de cobrança ativado', indicator:'green'});
+            fecharDetalhes();
+            // Opcional: poderia mover card de grupo atual para outro dependendo da lógica futura
+          }
+        },
+        error: function(){
+          frappe.msgprint('Erro ao atualizar status de cobrança.');
+        }
+      });
+    }
+    function cadastroCancelado(){
+      if(!assocAtual) return;
+      frappe.call({
+        method: 'gris.api.financeiro.monthly_payments.deactivate_billing_status',
+        args: { associate_id: assocAtual.id },
+        freeze: true,
+        callback: function(r){
+          if(r.message && r.message.ok){
+            assocAtual.status_cobranca = 'Inativo';
+            frappe.show_alert({message:'Status de cobrança inativado', indicator:'orange'});
+            fecharDetalhes();
+          }
+        },
+        error: function(){
+          frappe.msgprint('Erro ao inativar status de cobrança.');
+        }
+      });
+    }
+    function editarCobranca(){
+      if(!assocAtual) return;
+      const container = document.getElementById('cobrancaContainer');
+      const acoes = document.getElementById('acoesCobranca');
+      if(container.querySelector('input')) return; // já em edição
+      const email = assocAtual.email_cobranca || '';
+      const fone = assocAtual.telefone_cobranca || '';
+      container.querySelector('#emailCobranca').innerHTML = `<input type="email" id="inputEmailCobranca" class="form-control form-control-sm" style="max-width:280px;" value="${email}" placeholder="email@exemplo.com" />`;
+      container.querySelector('#foneCobranca').innerHTML = `<input type="text" id="inputFoneCobranca" class="form-control form-control-sm" style="max-width:180px;" value="${fone}" placeholder="(xx) xxxxx-xxxx" />`;
+      acoes.innerHTML = `
+        <button class="btn btn-sm btn-success me-1" onclick="salvarDadosCobranca()">Salvar</button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="cancelarEdicaoCobranca()">Cancelar</button>
+      `;
+    }
+    function cancelarEdicaoCobranca(){
+      if(!assocAtual) return;
+      const emailSpan = document.getElementById('emailCobranca');
+      const foneSpan = document.getElementById('foneCobranca');
+      emailSpan.textContent = assocAtual.email_cobranca || '—';
+      foneSpan.textContent = assocAtual.telefone_cobranca || '—';
+      document.getElementById('acoesCobranca').innerHTML = `<button id="btnEditarCobranca" class="btn btn-sm btn-outline-secondary" onclick="editarCobranca()">Editar Cobrança</button>`;
+    }
+    function salvarDadosCobranca(){
+      if(!assocAtual) return;
+      const emailInput = document.getElementById('inputEmailCobranca');
+      const foneInput = document.getElementById('inputFoneCobranca');
+      const email = emailInput ? emailInput.value.trim() : '';
+      const phone = foneInput ? foneInput.value.trim() : '';
+      frappe.call({
+        method: 'gris.api.financeiro.monthly_payments.update_billing_contacts',
+        args: { associate_id: assocAtual.id, email: email, phone: phone },
+        freeze: true,
+        callback: function(r){
+          if(r.message && r.message.ok){
+            assocAtual.email_cobranca = r.message.email;
+            assocAtual.telefone_cobranca = r.message.phone;
+            cancelarEdicaoCobranca();
+            frappe.show_alert({message:'Dados de cobrança atualizados', indicator:'green'});
+          }
+        },
+        error: function(){
+          frappe.msgprint('Erro ao salvar dados de cobrança.');
+        }
+      });
+    }
+  </script>
 {% endblock %}
 

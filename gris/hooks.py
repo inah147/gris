@@ -153,16 +153,14 @@ scheduler_events = {
 	# "all": [
 	# 	"gris.tasks.all"
 	# ],
-	# "daily": [
-	# 	"gris.tasks.daily"
-	# ],
+	"daily": ["gris.api.financeiro.monthly_payments.update_status_monthly_payment"],
 	# "hourly": [
 	# 	"gris.tasks.hourly"
 	# ],
 	# "weekly": [
 	# 	"gris.tasks.weekly"
 	# ],
-	"monthly": ["gris.api.financeiro.pagamentos_mensais.gerar_pagamentos_mensais"],
+	"monthly": ["gris.api.financeiro.monthly_payments.generate_monthly_payments"],
 }
 
 # Testing

@@ -2,6 +2,20 @@ import datetime
 
 import frappe
 
+REQUIRED_MANAGER_ROLE = "Gestor Contribuição Mensal"
+
+
+def _assert_manager_role():
+	roles = frappe.get_roles(frappe.session.user)
+	if REQUIRED_MANAGER_ROLE not in roles:
+		raise frappe.PermissionError("Requer acesso Gestor Contribuição Mensal para esta ação.")
+
+
+def _assert_doc_permission(doctype: str, docname: str, perm_type: str = "write"):
+	# Usa API padrão de permissão do Frappe
+	if not frappe.has_permission(doctype, perm_type=perm_type, doc=docname):
+		raise frappe.PermissionError(f"Sem permissão {perm_type} em {doctype} {docname}")
+
 
 def _first_day_of_month(date: datetime.date | None = None) -> datetime.date:
 	date = date or datetime.date.today()
@@ -60,6 +74,7 @@ def generate_monthly_payments():
 @frappe.whitelist()
 def update_contribution_value(associate_id: str, new_value: float):
 	"""Update Associate.valor_contribuicao."""
+	_assert_manager_role()
 	if not associate_id:
 		raise frappe.ValidationError("Parameter 'associate_id' is required")
 	try:
@@ -70,6 +85,7 @@ def update_contribution_value(associate_id: str, new_value: float):
 		raise frappe.ValidationError("Value cannot be negative")
 
 	doc = frappe.get_doc("Associado", associate_id)
+	_assert_doc_permission("Associado", associate_id, perm_type="write")
 	doc.valor_contribuicao = new_value_f
 	doc.save(ignore_permissions=False)
 	frappe.db.commit()
@@ -79,9 +95,11 @@ def update_contribution_value(associate_id: str, new_value: float):
 @frappe.whitelist()
 def mark_payment_as_paid(payment_id: str):
 	"""Mark payment record as 'Pago'."""
+	_assert_manager_role()
 	if not payment_id:
 		raise frappe.ValidationError("Parameter 'payment_id' is required")
 	doc = frappe.get_doc("Pagamento Contribuicao Mensal", payment_id)
+	_assert_doc_permission("Pagamento Contribuicao Mensal", payment_id, perm_type="write")
 	if doc.status == "Pago":
 		return {"ok": True, "status": doc.status}
 	doc.status = "Pago"
@@ -96,9 +114,11 @@ def activate_billing_status(associate_id: str):
 
 	Returns JSON { ok: True, previous: <old_status>, current: 'Ativo' }
 	"""
+	_assert_manager_role()
 	if not associate_id:
 		raise frappe.ValidationError("Parameter 'associate_id' is required")
 	assoc = frappe.get_doc("Associado", associate_id)
+	_assert_doc_permission("Associado", associate_id, perm_type="write")
 	prev = assoc.get("status_cobranca")
 	if prev == "Ativo":
 		return {"ok": True, "previous": prev, "current": prev}
@@ -114,9 +134,11 @@ def deactivate_billing_status(associate_id: str):
 
 	Returns JSON { ok: True, previous: <old_status>, current: 'Inativo' }
 	"""
+	_assert_manager_role()
 	if not associate_id:
 		raise frappe.ValidationError("Parameter 'associate_id' is required")
 	assoc = frappe.get_doc("Associado", associate_id)
+	_assert_doc_permission("Associado", associate_id, perm_type="write")
 	prev = assoc.get("status_cobranca")
 	if prev == "Inativo":
 		return {"ok": True, "previous": prev, "current": prev}
@@ -132,9 +154,11 @@ def update_billing_contacts(associate_id: str, email: str | None = None, phone: 
 
 	Returns { ok: True, email: <value>, phone: <value> }
 	"""
+	_assert_manager_role()
 	if not associate_id:
 		raise frappe.ValidationError("Parameter 'associate_id' is required")
 	assoc = frappe.get_doc("Associado", associate_id)
+	_assert_doc_permission("Associado", associate_id, perm_type="write")
 	# Basic sanitation (strip). Further validation (email format) could be added.
 	if email is not None:
 		assoc.email_cobranca = (email or "").strip() or None

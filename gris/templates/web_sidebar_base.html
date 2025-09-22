@@ -1,4 +1,8 @@
 {% extends "templates/base.html" %}
+{% block head_include %}
+  {{ super() }}
+  <link rel="stylesheet" href="/assets/gris/css/components.css">
+{% endblock %}
 
 {#
   NOVA NAVBAR / SIDEBAR (Simples e fácil de manter)

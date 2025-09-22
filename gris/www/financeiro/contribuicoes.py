@@ -12,8 +12,17 @@ STATUS_KEYS = ["Cadastrar", "Cancelar", "Aguardar", "Atrasado", "Em Aberto", "Pa
 
 def get_context(context):
 	# Bloqueio para usuários não autenticados
+	enrich_context(context, "/financeiro/contribuicoes")
+
 	if frappe.session.user == "Guest":
-		frappe.local.flags.redirect_location = "/login?redirect_to=/financeiro/contribuicoes"
+		frappe.local.flags.redirect_location = "/login?redirect_to=/financeiro"
+		raise frappe.Redirect
+
+	# Se o usuário está autenticado mas não possui uma das roles exigidas em
+	# PAGE_ROLES (portal_access.PAGE_ROLES["/financeiro/contribuicoes"]) lançamos
+	# PermissionError ao invés de redirecionar para login (melhor UX e evita loop).
+	if context.access_denied:
+		frappe.local.flags.redirect_location = "/403"
 		raise frappe.Redirect
 
 	# Recupera logo e define para sidebar
@@ -28,6 +37,10 @@ def get_context(context):
 		context.sidebar_title = "Portal"
 
 	context.active_link = "/financeiro/contribuicoes"
+
+	# Flag de permissão de gestão (usada no front para exibir botões de ação)
+	roles = frappe.get_roles()
+	context.can_manage_contributions = "Gestor Contribuição Mensal" in roles
 
 	# Dados de contribuições
 	beneficiarios = _get_beneficiarios()
@@ -61,7 +74,6 @@ def get_context(context):
 	context.contribuicoes = agrupado
 	context.titulo = "Contribuições Mensais"
 
-	enrich_context(context, "/financeiro/contribuicoes")
 	return context
 
 

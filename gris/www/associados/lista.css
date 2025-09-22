@@ -13,11 +13,4 @@
   .list-group-item .d-flex { gap: .5rem; }
 }
 
-/* Badges customizados */
-.badge-status-valido { background:#70EF8E; color:#203c32; }
-.badge-status-vencido { background:#e55e10; color:#3a2f00; }
-.badge-status-desconhecido { background:#6c757d; color:#fff; }
-.badge-ramo { background:#1D2756; color:#eefcff; }
-.badge-categoria { background:#0d6efd; color:#fff; }
-/* Nova variante outline para categoria (borda com cor do badge de ramo) */
-.badge-categoria-outline { background:transparent; color:#1D2756; border:1px solid #1D2756; }
+/* Badges agora centralizados em public/css/components.css */

@@ -43,13 +43,25 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 #   "Public" = acessível inclusive para Guest (sem login)
 PAGE_ROLES: dict[str, list[str]] = {
 	"/inicio": ["All"],
-	"/associados": ["Gestor de Associados", "Visualizador Associados"],
-	"/associados/dashboard": ["Gestor de Associados", "Visualizador Associados"],
+	"/403": ["All"],
+	"/associados": [
+		"Gestor de Associados",
+		"Visualizador Associados",
+		"Visualizador de Métricas de Associados",
+	],
+	"/associados/dashboard": [
+		"Gestor de Associados",
+		"Visualizador Associados",
+		"Visualizador de Métricas de Associados",
+	],
 	"/associados/lista": ["Gestor de Associados", "Visualizador Associados"],
 	"/associados/detalhe": ["Gestor de Associados", "Visualizador Associados"],
 	"/financeiro/contribuicoes": ["Gestor Contribuição Mensal", "Visualizador Contribuição Mensal"],
 	"/portal_transparencia": ["Public"],  # totalmente público
 }
+
+# Páginas marcadas como "estritas": mesmo System Manager deve ter uma das roles listadas.
+STRICT_PORTAL_PAGES = {"/financeiro/contribuicoes"}
 
 
 def _get_user_roles(user: str | None = None) -> list[str]:
@@ -63,7 +75,7 @@ def _get_user_roles(user: str | None = None) -> list[str]:
 def user_has_access(path: str, user: str | None = None, roles: Iterable[str] | None = None) -> bool:
 	roles = list(roles) if roles else _get_user_roles(user)
 	allowed = PAGE_ROLES.get(path)
-	if "System Manager" in roles:
+	if "System Manager" in roles and (path not in STRICT_PORTAL_PAGES):
 		return True
 	if not allowed:
 		# Página não mapeada => permitir (fail open) para não quebrar páginas novas

@@ -12,9 +12,9 @@ frappe.ready(() => {
   const selSecao = document.getElementById('f-secao');
 
   function statusBadgeClass(s){
-    if(s === 'Válido') return 'badge-status-valido';
-    if(s === 'Vencido') return 'badge-status-vencido';
-    return 'badge-status-desconhecido';
+    if(s === 'Válido') return 'fx-badge fx-badge-status-valido';
+    if(s === 'Vencido') return 'fx-badge fx-badge-status-vencido';
+    return 'fx-badge fx-badge-status-desconhecido';
   }
 
   function render(rows){
@@ -29,15 +29,15 @@ frappe.ready(() => {
       const ramo = row.ramo ? frappe.utils.escape_html(row.ramo) : '';
       const categoria = row.categoria ? frappe.utils.escape_html(row.categoria) : '';
   // Badges de ramo e categoria (agora ambos, se existirem)
-  const ramoBadge = (ramo && ramo !== 'Não se aplica') ? `<span class="badge badge-ramo">${ramo}</span>` : '';
-  const categoriaBadge = categoria ? `<span class="badge badge-categoria-outline">${categoria}</span>` : '';
+  const ramoBadge = (ramo && ramo !== 'Não se aplica') ? `<span class="fx-badge fx-badge-ramo">${ramo}</span>` : '';
+  const categoriaBadge = categoria ? `<span class="fx-badge fx-badge-categoria-outline">${categoria}</span>` : '';
       const link = `/associados/detalhe?name=${encodeURIComponent(row.name)}`;
       return `
         <a href="${link}" class="list-group-item list-group-item-action" data-name="${row.name}">
           <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-2">
             <div class="flex-grow-1">
               <div class="fw-semibold">${nome}</div>
-              <div class="text-muted small d-flex align-items-center flex-wrap gap-2">Registro: ${registro}<span class="badge ${statusBadgeClass(status)}">${status}</span></div>
+              <div class="text-muted small d-flex align-items-center flex-wrap gap-2">Registro: ${registro}<span class="${statusBadgeClass(status)}">${status}</span></div>
             </div>
             <div class="d-flex gap-3 align-items-center mt-2 mt-md-0">
               ${categoriaBadge}${ramoBadge}

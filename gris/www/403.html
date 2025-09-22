@@ -1,0 +1,21 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Acesso Negado{% endblock %}
+
+{% set active_link = none %}
+
+{% block page_header %}
+  <div class="mb-4 d-flex align-items-center justify-content-between">
+    <h1 class="h3 mb-0">Acesso Negado</h1>
+  </div>
+{% endblock %}
+
+{% block main %}
+  <div class="alert alert-danger">
+    <strong>Permissão insuficiente.</strong> Você não tem acesso ao conteúdo solicitado.
+  </div>
+  <p class="mb-3">Se você acredita que deveria ter acesso, entre em contato com o administrador e informe a página que tentou abrir.</p>
+  <div class="d-flex gap-2">
+    <a href="/inicio" class="btn btn-primary btn-sm">Voltar ao Início</a>
+  </div>
+{% endblock %}

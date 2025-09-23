@@ -37,7 +37,7 @@
   --g-secondary-bg:#6c757d; --g-secondary-color:#ffffff;
   --g-neutral-bg:#64748b; --g-neutral-color:#ffffff;
   --g-dark-bg:#1D2756; --g-dark-color:#eefcff;
-  --g-purple-bg:#6f42c1; --g-purple-color:#ffffff;
+  --g-purple-bg:#ede3fd; --g-purple-color:#6918ff;
   --g-accent-bg:#1D2756; --g-accent-color:#eefcff; /* usado p/ Ramo/Categoria outline */
   --g-inactive-bg:#adb5bd; --g-inactive-color:#2a2f33;
 }
@@ -65,7 +65,7 @@
 .g-badge--outline.g-badge--success { color:var(--g-success-bg); border-color:var(--g-success-bg); }
 .g-badge--outline.g-badge--danger { color:var(--g-danger-bg); border-color:var(--g-danger-bg); }
 .g-badge--outline.g-badge--info { color:var(--g-info-bg); border-color:var(--g-info-bg); }
-.g-badge--outline.g-badge--primary { color:var(--g-primary-bg); border-color:var(--g-primary-bg); }
+.g-badge--outline.g-badge--primary { color:var(--g-primary-color); border-color:var(--g-primary-color); }
 .g-badge--outline.g-badge--secondary { color:var(--g-secondary-bg); border-color:var(--g-secondary-bg); }
 .g-badge--outline.g-badge--dark { color:var(--g-dark-bg); border-color:var(--g-dark-bg); }
 .g-badge--outline.g-badge--purple { color:var(--g-purple-bg); border-color:var(--g-purple-bg); }

@@ -10,7 +10,7 @@
   "descricao",
   "centro_de_custo",
   "column_break_yrub",
-  "institui\u00e7\u00e3o_financeira",
+  "instituicao_financeira",
   "responsavel",
   "chave_pix",
   "section_break_vqge",
@@ -33,13 +33,6 @@
   {
    "fieldname": "column_break_yrub",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "institui\u00e7\u00e3o_financeira",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Institui\u00e7\u00e3o Financeira",
-   "options": "Instituicao Financeira"
   },
   {
    "fieldname": "responsavel",
@@ -75,12 +68,19 @@
    "fieldtype": "Link",
    "label": "Centro de Custo",
    "options": "Centro de Custo"
+  },
+  {
+   "fieldname": "instituicao_financeira",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Institui\u00e7\u00e3o Financeira",
+   "options": "Instituicao Financeira"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-18 08:08:19.274449",
+ "modified": "2025-09-23 07:59:01.162402",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Carteira",

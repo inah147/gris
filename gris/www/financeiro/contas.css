@@ -1,0 +1,10 @@
+/* Estilos extraídos de contas.html */
+.g-centered-modal.show { display:flex !important; align-items:center; justify-content:center; padding:clamp(0.75rem,4vh,2rem) 1rem; }
+.g-centered-modal .modal-dialog { margin:0; width:100%; max-width:900px; }
+#novaInstituicaoModal.g-centered-modal .modal-dialog { max-width:480px; }
+.g-centered-modal .modal-content { width:100%; max-height:calc(100vh - (env(safe-area-inset-top,0px) + env(safe-area-inset-bottom,0px) + 2rem)); overflow:auto; }
+@media (max-width:575.98px){
+  .g-centered-modal.show { align-items:flex-start; padding:calc(env(safe-area-inset-top,0px) + 1rem) 0.75rem calc(env(safe-area-inset-bottom,0px) + 1rem); }
+  .g-centered-modal .modal-dialog { max-width:100%; }
+  .g-centered-modal .modal-content { border-radius:12px; }
+}

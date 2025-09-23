@@ -14,9 +14,13 @@
     <div class="card-body">
       <h2 class="h5 mb-3 d-flex align-items-center gap-2">{{ conta.descricao }}</h2>
       <div class="d-flex flex-wrap gap-2 mb-4">
-        <span class="fx-badge fx-badge-{{ 'ativa' if conta.ativa else 'inativa' }}">{{ 'Ativa' if conta.ativa else 'Inativa' }}</span>
-        <span class="fx-badge fx-badge-{{ 'temporaria' if conta.despesa_temporaria else 'continua' }}">{{ 'Temporária' if conta.despesa_temporaria else 'Contínua' }}</span>
-        <span class="fx-badge fx-badge-{{ conta.status.lower().replace(' ', '') if conta.status else 'desconhecido' }}">{{ conta.status }}</span>
+        <span class="g-badge g-badge--{{ 'primary' if conta.ativa else 'inactive' }}">{{ 'Ativa' if conta.ativa else 'Inativa' }}</span>
+        <span class="g-badge g-badge--{{ 'purple' if conta.despesa_temporaria else 'primary' }}">{{ 'Temporária' if conta.despesa_temporaria else 'Contínua' }}</span>
+        {% if conta.status %}
+          {% set status_slug = conta.status.lower().replace(' ', '') %}
+          {% set variant = 'success' if status_slug == 'pago' else ('danger' if status_slug == 'atrasado' else ('warning' if status_slug == 'emaberto' else ('secondary' if status_slug == 'aguardar' else 'neutral'))) %}
+          <span class="g-badge g-badge--{{ variant }}">{{ conta.status }}</span>
+        {% endif %}
       </div>
       <dl class="row mb-0">
         <dt class="col-sm-3">Valor</dt>

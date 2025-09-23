@@ -12,9 +12,9 @@ frappe.ready(() => {
   const selSecao = document.getElementById('f-secao');
 
   function statusBadgeClass(s){
-    if(s === 'Válido') return 'fx-badge fx-badge-status-valido';
-    if(s === 'Vencido') return 'fx-badge fx-badge-status-vencido';
-    return 'fx-badge fx-badge-status-desconhecido';
+    if(s === 'Válido') return 'g-badge g-badge--success';
+    if(s === 'Vencido') return 'g-badge g-badge--warning';
+    return 'g-badge g-badge--secondary';
   }
 
   function render(rows){
@@ -29,8 +29,8 @@ frappe.ready(() => {
       const ramo = row.ramo ? frappe.utils.escape_html(row.ramo) : '';
       const categoria = row.categoria ? frappe.utils.escape_html(row.categoria) : '';
   // Badges de ramo e categoria (agora ambos, se existirem)
-  const ramoBadge = (ramo && ramo !== 'Não se aplica') ? `<span class="fx-badge fx-badge-ramo">${ramo}</span>` : '';
-  const categoriaBadge = categoria ? `<span class="fx-badge fx-badge-categoria-outline">${categoria}</span>` : '';
+  const ramoBadge = (ramo && ramo !== 'Não se aplica') ? `<span class="g-badge g-badge--dark">${ramo}</span>` : '';
+  const categoriaBadge = categoria ? `<span class="g-badge g-badge--accent g-badge--outline">${categoria}</span>` : '';
       const link = `/associados/detalhe?name=${encodeURIComponent(row.name)}`;
       return `
         <a href="${link}" class="list-group-item list-group-item-action" data-name="${row.name}">

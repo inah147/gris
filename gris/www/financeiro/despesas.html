@@ -27,9 +27,11 @@
                   <div class="d-flex flex-wrap gap-2 mb-3">
                     {% if conta.status %}
                       {% set status_slug = conta.status.lower().replace(' ', '') %}
-                      <span class="fx-badge fx-badge-{{ status_slug if status_slug in ['pago','atrasado','emaberto','aguardar'] else 'desconhecido' }}">{{ conta.status }}</span>
+                      {# Mapeia status para variantes padronizadas #}
+                      {% set variant = 'success' if status_slug == 'pago' else ('danger' if status_slug == 'atrasado' else ('warning' if status_slug == 'emaberto' else ('secondary' if status_slug == 'aguardar' else 'neutral'))) %}
+                      <span class="g-badge g-badge--{{ variant }}">{{ conta.status }}</span>
                     {% endif %}
-                    <span class="fx-badge fx-badge-{{ 'ativa' if conta.ativa else 'inativa' }}">{{ 'Ativa' if conta.ativa else 'Inativa' }}</span>
+                    <span class="g-badge g-badge--{{ 'primary' if conta.ativa else 'inactive' }}">{{ 'Ativa' if conta.ativa else 'Inativa' }}</span>
                   </div>
                   <div class="mt-auto d-flex justify-content-between align-items-center">
                     <strong>R$ {{ '%.2f'| format(conta.valor|float) }}</strong>
@@ -68,9 +70,10 @@
                   <div class="d-flex flex-wrap gap-2 mb-3">
                     {% if conta.status %}
                       {% set status_slug = conta.status.lower().replace(' ', '') %}
-                      <span class="fx-badge fx-badge-{{ status_slug if status_slug in ['pago','atrasado','emaberto','aguardar'] else 'desconhecido' }}">{{ conta.status }}</span>
+                      {% set variant = 'success' if status_slug == 'pago' else ('danger' if status_slug == 'atrasado' else ('warning' if status_slug == 'emaberto' else ('secondary' if status_slug == 'aguardar' else 'neutral'))) %}
+                      <span class="g-badge g-badge--{{ variant }}">{{ conta.status }}</span>
                     {% endif %}
-                    <span class="fx-badge fx-badge-{{ 'ativa' if conta.ativa else 'inativa' }}">{{ 'Ativa' if conta.ativa else 'Inativa' }}</span>
+                    <span class="g-badge g-badge--{{ 'primary' if conta.ativa else 'inactive' }}">{{ 'Ativa' if conta.ativa else 'Inativa' }}</span>
                   </div>
                   <div class="mt-auto d-flex justify-content-between align-items-center">
                     <strong>R$ {{ '%.2f'| format(conta.valor|float) }}</strong>

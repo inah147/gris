@@ -271,17 +271,21 @@
 		return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 	}
 
+	function mapStatusVariant(slug){
+		if(slug === 'pago') return 'success';
+		if(slug === 'atrasado') return 'danger';
+		if(slug === 'emaberto') return 'warning';
+		if(slug === 'aguardar') return 'secondary';
+		return 'neutral';
+	}
 	function buildBadges(data) {
 		const badges = [];
-		// Status
 		if (data.status) {
 			const slug = data.status.toLowerCase().replace(/\s+/g, '');
-			badges.push(`<span class="fx-badge fx-badge-${['pago','atrasado','emaberto','aguardar'].includes(slug) ? slug : 'desconhecido'}">${data.status}</span>`);
+			badges.push(`<span class="g-badge g-badge--${mapStatusVariant(slug)}">${data.status}</span>`);
 		}
-		// Ativa
-		badges.push(`<span class="fx-badge fx-badge-${data.ativa ? 'ativa' : 'inativa'}">${data.ativa ? 'Ativa' : 'Inativa'}</span>`);
-		// Tipo
-		badges.push(`<span class="fx-badge fx-badge-${data.temporaria ? 'temporaria' : 'continua'}">${data.temporaria ? 'Temporária' : 'Contínua'}</span>`);
+		badges.push(`<span class="g-badge g-badge--${data.ativa ? 'primary' : 'inactive'}">${data.ativa ? 'Ativa' : 'Inativa'}</span>`);
+		badges.push(`<span class="g-badge g-badge--${data.temporaria ? 'purple' : 'primary'}">${data.temporaria ? 'Temporária' : 'Contínua'}</span>`);
 		return badges.join('');
 	}
 
@@ -346,7 +350,7 @@
 					const tr = document.createElement('tr');
 					const statusSlug = (p.status || '').toLowerCase().replace(/\s+/g,'');
 					const isPago = statusSlug === 'pago';
-					const badgeHtml = `<span class="fx-badge fx-badge-${['pago','atrasado','emaberto','aguardar'].includes(statusSlug)?statusSlug:'desconhecido'} me-2">${p.status}</span>`;
+					const badgeHtml = `<span class="g-badge g-badge--${mapStatusVariant(statusSlug)} me-2">${p.status}</span>`;
 					let actionHtml = '';
 					if (!isPago && canEdit) {
 						actionHtml = `<button type="button" class="btn btn-xs btn-success pay-btn" data-pagamento="${p.name}">Pago</button>`;
@@ -379,9 +383,9 @@
 							const td = btn.parentElement;
 							btn.remove();
 							// replace badge to Pago
-							const badge = td.querySelector('.fx-badge');
+							const badge = td.querySelector('.g-badge');
 							if (badge) {
-								badge.className = 'fx-badge fx-badge-pago me-2';
+								badge.className = 'g-badge g-badge--success me-2';
 								badge.textContent = 'Pago';
 							}
 						}

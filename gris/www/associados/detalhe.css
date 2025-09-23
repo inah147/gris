@@ -1,21 +1,5 @@
 /* detalhe.css - estilos específicos da página detalhe do Associado */
-:root {
-  --badge-status-valid-bg:#198754; /* Válido */
-  --badge-status-valid-color:#ffffff;
-  --badge-status-vencido-bg:#facc15; /* Vencido */
-  --badge-status-vencido-color:#1e293b;
-  --badge-tipo-definitivo-bg:#0d4d91; /* Definitivo */
-  --badge-tipo-definitivo-color:#ffffff;
-  --badge-tipo-provisorio-bg:#38bdf8; /* Provisório */
-  --badge-tipo-provisorio-color:#1e293b;
-  --badge-generic-bg:#64748b; /* Genérico / fallback */
-  --badge-generic-color:#ffffff;
-}
-.badge.bg-success { background:var(--badge-status-valid-bg)!important; color:var(--badge-status-valid-color)!important; }
-.badge.bg-warning { background:var(--badge-status-vencido-bg)!important; color:var(--badge-status-vencido-color)!important; }
-.badge.bg-primary { background:var(--badge-tipo-definitivo-bg)!important; color:var(--badge-tipo-definitivo-color)!important; }
-.badge.bg-info { background:var(--badge-tipo-provisorio-bg)!important; color:var(--badge-tipo-provisorio-color)!important; }
-.badge.bg-secondary { background:var(--badge-generic-bg)!important; color:var(--badge-generic-color)!important; }
+/* Badges migrados para components.css (g-badge). Removidos estilos específicos antigos. */
 
 .assoc-form { --gap:1rem; }
 .assoc-section { border:1px solid #e2e8f0; border-radius:10px; margin-bottom:1rem; overflow:hidden; background:#fff; }

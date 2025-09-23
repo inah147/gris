@@ -168,17 +168,17 @@ def get_context(context):
 
 def _status_badge_class(status):
 	status = (status or "").lower()
-	if status == "válido" or status == "valido":
-		return "bg-success"
+	if status in {"válido", "valido"}:
+		return "g-badge--success"
 	if status == "vencido":
-		return "bg-warning text-dark"
-	return "bg-secondary"
+		return "g-badge--warning"
+	return "g-badge--secondary"
 
 
 def _tipo_registro_badge_class(tipo):
 	tipo = (tipo or "").lower()
 	if tipo == "definitivo":
-		return "bg-primary"
-	if tipo == "provisório" or tipo == "provisorio":
-		return "bg-info text-dark"
-	return "bg-secondary"
+		return "g-badge--primary"
+	if tipo in {"provisório", "provisorio"}:
+		return "g-badge--info"
+	return "g-badge--secondary"

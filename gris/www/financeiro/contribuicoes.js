@@ -22,7 +22,7 @@ function mostrarDetalhes(btn){
         valorCell = `<td class="text-end">${p.valor ?? ''}</td>`;
       }
     } else { valorCell = `<td class="text-end">${p.valor ?? ''}</td>`; }
-    tr.innerHTML = `<td>${p.mes_de_referencia || ''}</td><td><span class="badge bg-${mapBadge(p.status)} status-badge">${p.status}</span></td>${valorCell}`;
+  tr.innerHTML = `<td>${p.mes_de_referencia || ''}</td><td><span class="g-badge g-badge--${mapBadge(p.status)} status-badge">${p.status}</span></td>${valorCell}`;
     tbody.appendChild(tr);
   });
   // Exibir botão de cadastro se status for Cadastrar
@@ -60,13 +60,14 @@ function fecharDetalhes(){
 }
 function mapBadge(status){
   switch(status){
-    case 'Cadastrar': return 'info';
-    case 'Cancelar': return 'dark';
-    case 'Aguardar': return 'secondary';
-    case 'Atrasado': return 'danger';
-    case 'Em Aberto': return 'warning';
-    case 'Pago': return 'success';
-    default: return 'secondary';
+  case 'Cadastrar': return 'info';
+  case 'Cancelar': return 'dark';
+  case 'Aguardar': return 'secondary';
+  case 'Atrasado': return 'danger';
+  case 'Em Aberto': return 'warning';
+  case 'Pago': return 'success';
+  default: return 'secondary';
+  tr.innerHTML = `<td>${p.mes_de_referencia || ''}</td><td><span class="g-badge g-badge--${mapBadge(p.status)} status-badge">${p.status}</span></td>${valorCell}`;
   }
 }
 function alterarValor(){
@@ -209,7 +210,7 @@ function marcarComoPago(btn){
           const badge = tr.querySelector('.status-badge');
           if(badge){
             badge.textContent = 'Pago';
-            badge.className = 'badge bg-success status-badge';
+            badge.className = 'g-badge g-badge--success status-badge';
           }
           btn.remove();
         }

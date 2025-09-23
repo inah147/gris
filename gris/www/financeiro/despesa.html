@@ -1,0 +1,35 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% block title %}Despesa - {{ conta.descricao }}{% endblock %}
+{% set active_link = '/financeiro/despesas' %}
+
+{% block page_header %}
+  <div class="mb-4 d-flex align-items-center justify-content-between">
+    <h1 class="h4 mb-0">Despesa</h1>
+    <a href="/financeiro/despesas" class="btn btn-sm btn-outline-secondary">Voltar</a>
+  </div>
+{% endblock %}
+
+{% block main %}
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h2 class="h5 mb-3 d-flex align-items-center gap-2">{{ conta.descricao }}</h2>
+      <div class="d-flex flex-wrap gap-2 mb-4">
+        <span class="fx-badge fx-badge-{{ 'ativa' if conta.ativa else 'inativa' }}">{{ 'Ativa' if conta.ativa else 'Inativa' }}</span>
+        <span class="fx-badge fx-badge-{{ 'temporaria' if conta.despesa_temporaria else 'continua' }}">{{ 'Temporária' if conta.despesa_temporaria else 'Contínua' }}</span>
+        <span class="fx-badge fx-badge-{{ conta.status.lower().replace(' ', '') if conta.status else 'desconhecido' }}">{{ conta.status }}</span>
+      </div>
+      <dl class="row mb-0">
+        <dt class="col-sm-3">Valor</dt>
+        <dd class="col-sm-9">R$ {{ '%.2f'| format(conta.valor|float) }}</dd>
+        <dt class="col-sm-3">Dia de Vencimento</dt>
+        <dd class="col-sm-9">{{ conta.dia_vencimento }}</dd>
+        {% if conta.despesa_temporaria %}
+          <dt class="col-sm-3">Início</dt>
+          <dd class="col-sm-9">{{ conta.data_inicio or '-' }}</dd>
+          <dt class="col-sm-3">Término</dt>
+          <dd class="col-sm-9">{{ conta.data_termino or '-' }}</dd>
+        {% endif %}
+      </dl>
+    </div>
+  </div>
+{% endblock %}

@@ -160,7 +160,10 @@ scheduler_events = {
 	# "weekly": [
 	# 	"gris.tasks.weekly"
 	# ],
-	"monthly": ["gris.api.financeiro.monthly_payments.generate_monthly_payments"],
+	"monthly": [
+		"gris.api.financeiro.monthly_payments.generate_monthly_payments",
+		"gris.api.financeiro.conta_fixa.generate_monthly_fixed_payments",
+	],
 }
 
 # Testing

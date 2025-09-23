@@ -93,7 +93,7 @@
 .badge.bg-success { background:var(--badge-pago-bg)!important; color:var(--badge-pago-color)!important; }
 
 /* Prefixo padronizado para badges (migração progressiva) */
-.fx-badge { font-weight:500; letter-spacing:.25px; border-radius:14px; padding:.35rem .6rem; font-size:.65rem; line-height:1; display:inline-block; }
+.fx-badge { font-weight:500; letter-spacing:.25px; border-radius:12px; padding:.25rem .5rem; font-size:.6rem; line-height:1; display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; }
 .fx-badge-status-valido { background:var(--badge-status-valido-bg); color:var(--badge-status-valido-color); }
 .fx-badge-status-vencido { background:var(--badge-status-vencido-bg); color:var(--badge-status-vencido-color); }
 .fx-badge-status-desconhecido { background:var(--badge-status-desconhecido-bg); color:var(--badge-status-desconhecido-color); }
@@ -107,6 +107,14 @@
 .fx-badge-atrasado { background:var(--badge-atrasado-bg); color:var(--badge-atrasado-color); }
 .fx-badge-emaberto { background:var(--badge-emaberto-bg); color:var(--badge-emaberto-color); }
 .fx-badge-pago { background:var(--badge-pago-bg); color:var(--badge-pago-color); }
+/* Estado ativo/inativo de contas fixas */
+.fx-badge-ativa { background:#0d6efd; color:#fff; }
+.fx-badge-inativa { background:#adb5bd; color:#2a2f33; }
+/* Tipo de despesa */
+.fx-badge-temporaria { background:#6f42c1; color:#fff; }
+.fx-badge-continua { background:#0d4d91; color:#fff; }
+/* Backdrop suave para modal de despesas (tom alinhado a contribuições) */
+.modal-backdrop.modal-backdrop-soft { background:rgba(0,0,0,.35); }
 
 /* Utilitário para badges outline genérico se necessário */
 .badge-outline { background:transparent; color:currentColor; border:1px solid currentColor; }

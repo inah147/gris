@@ -41,6 +41,7 @@ def get_transparency_years_cached(ttl: int = 300):
 		rows = frappe.get_all(
 			"Transparencia",
 			fields=["ano_referencia"],
+			filters={"publicado": 1},
 			distinct=True,
 			order_by="ano_referencia desc",
 			ignore_permissions=True,

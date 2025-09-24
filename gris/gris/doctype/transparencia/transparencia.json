@@ -13,7 +13,7 @@
   "ano_referencia",
   "arquivo",
   "column_break_gzup",
-  "semestre_referencia",
+  "trimestre_referencia",
   "section_break_ltxr",
   "publicado",
   "data_de_atualiza\u00e7\u00e3o",
@@ -25,7 +25,7 @@
    "fieldname": "tipo_arquivo",
    "fieldtype": "Select",
    "label": "Tipo de Arquivo",
-   "options": "Parecer semestral da comiss\u00e3o fiscal\nParecer anual da comiss\u00e3o fiscal\nCertificado de funcionamento\nCertificado de grupo padr\u00e3o\nCertid\u00e3o negativa de d\u00edvidas\nCertid\u00e3o negativa de tributos federais\nConsulta \u00e0 regularidade do empregador",
+   "options": "Parecer trimestral da comiss\u00e3o fiscal\nParecer anual da comiss\u00e3o fiscal\nCertificado de funcionamento\nCertificado de grupo padr\u00e3o\nCertid\u00e3o negativa de d\u00edvidas\nCertid\u00e3o negativa de tributos federais\nConsulta \u00e0 regularidade do empregador",
    "reqd": 1
   },
   {
@@ -66,14 +66,6 @@
    "label": "Route"
   },
   {
-   "fieldname": "semestre_referencia",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Semestre de Refer\u00eancia",
-   "non_negative": 1,
-   "options": "1\n2\n3\n4"
-  },
-  {
    "fieldname": "section_break_ltxr",
    "fieldtype": "Section Break"
   },
@@ -92,6 +84,14 @@
    "fieldtype": "Link",
    "label": "Area",
    "options": "Unidade Organizacional"
+  },
+  {
+   "fieldname": "trimestre_referencia",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Trimestre de Refer\u00eancia",
+   "non_negative": 1,
+   "options": "1\n2\n3\n4"
   }
  ],
  "grid_page_length": 50,
@@ -99,7 +99,7 @@
  "index_web_pages_for_search": 1,
  "is_published_field": "publicado",
  "links": [],
- "modified": "2025-09-05 19:34:30.209043",
+ "modified": "2025-09-23 13:38:04.499133",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Transparencia",

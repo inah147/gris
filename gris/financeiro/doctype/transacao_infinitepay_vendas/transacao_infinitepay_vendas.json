@@ -1,0 +1,130 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:nsu",
+ "creation": "2025-09-23 19:47:45.410477",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "data_hora",
+  "meio_meio",
+  "meio_bandeira",
+  "meio_parcelas",
+  "tipo_origem",
+  "tipo_dados_adicionais",
+  "identificador",
+  "status",
+  "valor",
+  "valor_liquido",
+  "taxa_aplicada",
+  "taxa_aplicada_perc",
+  "plano",
+  "nsu",
+  "origem_nome"
+ ],
+ "fields": [
+  {
+   "fieldname": "data_hora",
+   "fieldtype": "Datetime",
+   "label": "Data e hora"
+  },
+  {
+   "fieldname": "meio_meio",
+   "fieldtype": "Data",
+   "label": "Meio - Meio"
+  },
+  {
+   "fieldname": "meio_bandeira",
+   "fieldtype": "Data",
+   "label": "Meio - Bandeira"
+  },
+  {
+   "fieldname": "meio_parcelas",
+   "fieldtype": "Data",
+   "label": "Meio - Parcelas"
+  },
+  {
+   "fieldname": "tipo_origem",
+   "fieldtype": "Data",
+   "label": "Tipo - Origem"
+  },
+  {
+   "fieldname": "tipo_dados_adicionais",
+   "fieldtype": "Data",
+   "label": "Tipo - Dados adicionais"
+  },
+  {
+   "fieldname": "identificador",
+   "fieldtype": "Data",
+   "label": "Identificador"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Data",
+   "label": "Status"
+  },
+  {
+   "fieldname": "valor",
+   "fieldtype": "Currency",
+   "label": "Valor (R$)"
+  },
+  {
+   "fieldname": "valor_liquido",
+   "fieldtype": "Currency",
+   "label": "L\u00edquido (R$)"
+  },
+  {
+   "fieldname": "taxa_aplicada",
+   "fieldtype": "Currency",
+   "label": "Taxa Aplicada - Valor(R$)"
+  },
+  {
+   "fieldname": "taxa_aplicada_perc",
+   "fieldtype": "Float",
+   "label": "Taxa Aplicada - Valor(%)"
+  },
+  {
+   "fieldname": "plano",
+   "fieldtype": "Data",
+   "label": "Plano"
+  },
+  {
+   "fieldname": "nsu",
+   "fieldtype": "Data",
+   "label": "NSU",
+   "unique": 1
+  },
+  {
+   "fieldname": "origem_nome",
+   "fieldtype": "Data",
+   "label": "Origem - Nome"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-09-23 20:01:08.651166",
+ "modified_by": "Administrator",
+ "module": "Financeiro",
+ "name": "Transacao Infinitepay vendas",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

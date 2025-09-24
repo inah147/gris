@@ -7,7 +7,7 @@ def get_arquivos_por_ano(ano_referencia):
 	arquivos = frappe.get_all(
 		"Transparencia",
 		fields=["title", "arquivo", "area"],
-		filters={"ano_referencia": ano_referencia},
+		filters={"ano_referencia": ano_referencia, "publicado": 1},
 		ignore_permissions=True,
 	)
 	areas = {}

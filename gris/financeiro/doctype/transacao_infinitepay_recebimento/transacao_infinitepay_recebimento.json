@@ -1,0 +1,133 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-09-23 20:03:31.428065",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "infinite_id",
+  "origem",
+  "data_venda",
+  "autorizacao",
+  "bandeira",
+  "tipo",
+  "valor",
+  "total_parcelas",
+  "numero_parcela",
+  "valor_parcela",
+  "valor_parcela_liquido",
+  "valor_parcela_recebido",
+  "status",
+  "data_deposito",
+  "numero_liquidacao",
+  "antecipada"
+ ],
+ "fields": [
+  {
+   "fieldname": "infinite_id",
+   "fieldtype": "Data",
+   "label": "Infinite ID"
+  },
+  {
+   "fieldname": "origem",
+   "fieldtype": "Data",
+   "label": "Origem"
+  },
+  {
+   "fieldname": "data_venda",
+   "fieldtype": "Datetime",
+   "label": "Data da Venda"
+  },
+  {
+   "fieldname": "autorizacao",
+   "fieldtype": "Data",
+   "label": "Autoriza\u00e7\u00e3o"
+  },
+  {
+   "fieldname": "bandeira",
+   "fieldtype": "Data",
+   "label": "Bandeira"
+  },
+  {
+   "fieldname": "tipo",
+   "fieldtype": "Data",
+   "label": "Tipo"
+  },
+  {
+   "fieldname": "valor",
+   "fieldtype": "Currency",
+   "label": "Valor (R$)"
+  },
+  {
+   "fieldname": "total_parcelas",
+   "fieldtype": "Int",
+   "label": "Total de parcelas"
+  },
+  {
+   "fieldname": "numero_parcela",
+   "fieldtype": "Int",
+   "label": "N\u00b0 da Parcela"
+  },
+  {
+   "fieldname": "valor_parcela",
+   "fieldtype": "Currency",
+   "label": "Valor da parcela (R$)"
+  },
+  {
+   "fieldname": "valor_parcela_liquido",
+   "fieldtype": "Currency",
+   "label": "L\u00edquido (R$)"
+  },
+  {
+   "fieldname": "valor_parcela_recebido",
+   "fieldtype": "Currency",
+   "label": "Recebido (R$)"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Data",
+   "label": "Status"
+  },
+  {
+   "fieldname": "data_deposito",
+   "fieldtype": "Date",
+   "label": "Data do Dep\u00f3sito"
+  },
+  {
+   "fieldname": "numero_liquidacao",
+   "fieldtype": "Data",
+   "label": "N\u00famero \u00fanico de liquida\u00e7\u00e3o (NuLiquid)"
+  },
+  {
+   "fieldname": "antecipada",
+   "fieldtype": "Data",
+   "label": "Antecipada"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-09-23 20:09:05.456599",
+ "modified_by": "Administrator",
+ "module": "Financeiro",
+ "name": "Transacao Infinitepay recebimento",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

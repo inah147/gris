@@ -1,0 +1,6 @@
+/* Styles specific to pareceres page (minimal; leveraging global components) */
+.parecer-card .card-body { gap:.25rem; }
+.parecer-card:hover { box-shadow:0 2px 6px rgba(0,0,0,.07); transition:.15s ease; }
+
+/* Space between modal action buttons (container uses generic d-flex) */
+.modal-footer .d-flex > .btn + .btn { margin-left: .5rem; }

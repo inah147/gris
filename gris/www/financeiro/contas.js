@@ -1,3 +1,100 @@
+// Função para enviar os arquivos ao backend
+// Mostra botão de conciliação após upload dos três arquivos
+function checkShowConciliarBtn(){
+  const btn = document.getElementById('btnConciliarInfinitepay');
+  if(window._extratoFileUrl && window._vendasFileUrl && window._recebimentosFileUrl){
+    btn.classList.remove('d-none');
+    btn.disabled = false;
+  }else{
+    btn.classList.add('d-none');
+    btn.disabled = true;
+  }
+}
+
+window._extratoFileUrl = null;
+window._vendasFileUrl = null;
+window._recebimentosFileUrl = null;
+
+window.enviarArquivosImportados = function(){
+  if(!window._extratoFileUrl || !window._vendasFileUrl || !window._recebimentosFileUrl){
+    frappe.msgprint('Faça o upload dos três arquivos antes de enviar.');
+    return;
+  }
+  frappe.call({
+    method: 'gris.www.financeiro.contas.process_uploaded_files',
+    args: {
+      extrato_file_url: window._extratoFileUrl,
+      vendas_file_url: window._vendasFileUrl,
+      recebimentos_file_url: window._recebimentosFileUrl
+    },
+    callback: function(r){
+      if(r && r.exc){
+        console.error('Erro process_uploaded_files', r.exc);
+        frappe.msgprint('Erro ao processar: ver console.');
+      }else{
+        console.debug('Resposta process_uploaded_files', r);
+        frappe.msgprint(r.message || 'Arquivos enviados e processados!');
+      }
+    }
+  });
+};
+
+// Chama checkShowConciliarBtn após cada upload
+function setupUploader(btnId, nomeId, checkId, allowedExt){
+  document.addEventListener('click', function(e){
+    if(e.target && e.target.id === btnId){
+      console.debug('[Infinitepay Upload] Click on', btnId);
+      // Adiciona atributo 'accept' ao botão de upload
+      const btn = document.getElementById(btnId);
+      if(btn){
+        btn.setAttribute('accept', allowedExt.map(ext => '.' + ext).join(','));
+      }
+      if(typeof frappe === 'undefined' || !frappe.ui || !frappe.ui.FileUploader){
+        frappe.msgprint('Uploader indisponível.');
+        return;
+      }
+      new frappe.ui.FileUploader({
+        allow_multiple: false,
+        restrictions: {
+          allowed_file_extensions: allowedExt,
+          max_number_of_files: 1
+        },
+        is_private: 0,
+        options: ['Local'], // Apenas arquivos do computador
+        on_success(file){
+          console.debug('[Infinitepay Upload] Sucesso', btnId, file);
+          const nomeSpan = document.getElementById(nomeId);
+          const checkSpan = document.getElementById(checkId);
+          if(nomeSpan){ nomeSpan.textContent = file.file_name || file.name; nomeSpan.classList.remove('d-none'); }
+          if(checkSpan){ checkSpan.classList.remove('d-none'); }
+          // Salva file_url globalmente para envio ao backend
+          if(btnId === 'uploadExtratoBtn') window._extratoFileUrl = file.file_url;
+          if(btnId === 'uploadVendasBtn') window._vendasFileUrl = file.file_url;
+          if(btnId === 'uploadRecebimentosBtn') window._recebimentosFileUrl = file.file_url;
+          console.debug('[Infinitepay Upload] URLs atuais', {
+            extrato: window._extratoFileUrl,
+            vendas: window._vendasFileUrl,
+            recebimentos: window._recebimentosFileUrl
+          });
+          checkShowConciliarBtn();
+        }
+      });
+    }
+  });
+}
+// Adicione no HTML do modal de importação Infinitepay:
+// <button id="btnConciliarInfinitepay" class="btn btn-success d-none mt-3" onclick="enviarArquivosImportados()">Realizar Conciliação</button>
+  // Evita inicializar uploaders na página dedicada de importação, onde há script próprio
+  const isImportInfinitepayPage = typeof window !== 'undefined' && window.location && window.location.pathname && window.location.pathname.startsWith('/financeiro/import_intinitepay');
+  if(!isImportInfinitepayPage){
+    // Extrato: só .ofx
+    setupUploader('uploadExtratoBtn','nomeExtratoInfinitepay','checkExtratoInfinitepay',['ofx']);
+    // Vendas: só .csv
+    setupUploader('uploadVendasBtn','nomeVendasInfinitepay','checkVendasInfinitepay',['csv']);
+    // Recebimentos: só .csv
+    setupUploader('uploadRecebimentosBtn','nomeRecebimentosInfinitepay','checkRecebimentosInfinitepay',['csv']);
+  }
+// JS extraído de contas.html
 // JS extraído de contas.html
 (function(){
   function qs(id){return document.getElementById(id);}    
@@ -95,7 +192,31 @@
     qs('carteiraModalDescricao').textContent = updates.descricao || 'Sem descrição.';
     setEditMode(false);
   }
+  window.fecharImportarDadosModal = function(){
+    const m = document.getElementById('importarDadosModal');
+    if(!m) return;
+    m.classList.add('d-none');
+    m.classList.remove('show');
+    m.style.display = 'none';
+    document.body.classList.remove('modal-open');
+    document.querySelectorAll('[data-modal-backdrop="1"]').forEach(b=>b.remove());
+  };
+
   document.addEventListener('click', function(e){
+    // Abrir página de importação (Infinitepay) ao invés de modal
+    if(e.target.classList.contains('importar-dados-btn')){
+      const nome = (e.target.dataset.nome || '').trim().toLowerCase();
+      if(nome === 'infinitepay'){
+        window.location.href = '/financeiro/import_intinitepay';
+        return;
+      }
+      if(nome === 'portão 3' || nome === 'portao 3'){
+        window.location.href = '/financeiro/import_portao3';
+        return;
+      }
+      frappe.msgprint('Funcionalidade em construção.');
+      return;
+    }
     if(e.target.matches('[data-modal-backdrop="1"]')){
       ['carteiraDetalheModal','novaInstituicaoModal','novaCarteiraModal'].forEach(id=>{ const m=qs(id); if(m && m.classList.contains('show')){ if(id==='carteiraDetalheModal') fecharCarteiraModal(); else if(id==='novaInstituicaoModal') fecharNovaInstituicaoModal(); else if(id==='novaCarteiraModal') fecharNovaCarteiraModal(); }});
       return;

@@ -1,6 +1,6 @@
 {% extends "templates/web_sidebar_base.html" %}
 
-{% block title %}Início{% endblock %}
+{% block title %}Carteiras e Contas{% endblock %}
 
 {% set active_link = '/financeiro/contas' %}
 
@@ -23,12 +23,55 @@
   <div id="listaContas" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-3 gy-5">
         {% for conta in contas %}
       <div class="col mb-2">
-            <div class="card h-100 shadow-sm">
-              <div class="card-body d-flex align-items-center justify-content-center text-center p-3">
-                <span class="fw-semibold" title="{{ conta.display_name }}">{{ conta.display_name }}</span>
+        <div class="card h-100 shadow-sm">
+          <div class="card-body d-flex flex-column align-items-center justify-content-center text-center p-3">
+            <span class="fw-semibold mb-2" title="{{ conta.display_name }}">{{ conta.display_name }}</span>
+            <button type="button" class="btn btn-sm btn-outline-primary importar-dados-btn mt-2" data-nome="{{ conta.display_name }}">Importar dados</button>
+          </div>
+        </div>
+      </div>
+  <!-- Modal Importar Dados Instituição -->
+  <div id="importarDadosModal" class="modal d-none" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title mb-0" id="importarDadosModalTitulo"></h5>
+        </div>
+        <div class="modal-body">
+          <div id="importarDadosModalConteudo">
+            <div class="mb-3" id="importarDadosDefault">Funcionalidade em construção</div>
+            <div class="mb-3 d-none" id="importarInfinitepayUploads">
+              <h6 class="fw-bold mb-3">Importar Arquivos</h6>
+              <div class="d-flex flex-column gap-3">
+                <div class="mb-2">
+                  <span>Upload de extrato (.ofx)</span><br />
+                  <button type="button" id="uploadExtratoBtn" class="btn btn-outline-secondary btn-sm mt-2">Selecionar Arquivo</button>
+                  <span id="nomeExtratoInfinitepay" class="ms-2 small text-muted d-none"></span>
+                  <span id="checkExtratoInfinitepay" class="ms-2 text-success d-none">&#10003;</span>
+                </div>
+                <div class="mb-2">
+                  <span>Upload de relatório de vendas (.csv)</span><br />
+                  <button type="button" id="uploadVendasBtn" class="btn btn-outline-secondary btn-sm mt-2">Selecionar Arquivo</button>
+                  <span id="nomeVendasInfinitepay" class="ms-2 small text-muted d-none"></span>
+                  <span id="checkVendasInfinitepay" class="ms-2 text-success d-none">&#10003;</span>
+                </div>
+                <div class="mb-2">
+                  <span>Upload de relatório de recebimentos (.csv)</span><br />
+                  <button type="button" id="uploadRecebimentosBtn" class="btn btn-outline-secondary btn-sm mt-2">Selecionar Arquivo</button>
+                  <span id="nomeRecebimentosInfinitepay" class="ms-2 small text-muted d-none"></span>
+                  <span id="checkRecebimentosInfinitepay" class="ms-2 text-success d-none">&#10003;</span>
+                </div>
+                <button id="btnConciliarInfinitepay" class="btn btn-success d-none mt-3" onclick="enviarArquivosImportados()">Realizar Conciliação</button>
               </div>
             </div>
           </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" onclick="fecharImportarDadosModal()">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
         {% endfor %}
       </div>
       {% else %}

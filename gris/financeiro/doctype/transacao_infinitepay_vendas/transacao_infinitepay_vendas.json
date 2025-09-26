@@ -1,7 +1,8 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
- "autoname": "field:nsu",
+ "autoname": "field:infinite_id",
  "creation": "2025-09-23 19:47:45.410477",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -19,8 +20,8 @@
   "taxa_aplicada",
   "taxa_aplicada_perc",
   "plano",
-  "nsu",
-  "origem_nome"
+  "origem_nome",
+  "infinite_id"
  ],
  "fields": [
   {
@@ -81,7 +82,7 @@
   {
    "fieldname": "taxa_aplicada_perc",
    "fieldtype": "Float",
-   "label": "Taxa Aplicada - Valor(%)"
+   "label": "Taxa Aplicada - Aplicada(%)"
   },
   {
    "fieldname": "plano",
@@ -89,21 +90,21 @@
    "label": "Plano"
   },
   {
-   "fieldname": "nsu",
-   "fieldtype": "Data",
-   "label": "NSU",
-   "unique": 1
-  },
-  {
    "fieldname": "origem_nome",
    "fieldtype": "Data",
    "label": "Origem - Nome"
+  },
+  {
+   "fieldname": "infinite_id",
+   "fieldtype": "Data",
+   "label": "Infinite ID",
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-23 20:01:08.651166",
+ "modified": "2025-09-24 22:18:05.147114",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Transacao Infinitepay vendas",

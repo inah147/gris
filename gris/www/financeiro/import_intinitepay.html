@@ -1,0 +1,58 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Importação de dados - Infinitepay{% endblock %}
+
+{% set active_link = '/financeiro/contas' %}
+
+{% block page_header %}
+  <div class="mb-4 d-flex align-items-center justify-content-between">
+    <h1 class="h3 mb-0">Importação de dados - Infinitepay</h1>
+    <a href="/financeiro/contas" class="btn btn-outline-secondary btn-sm">Voltar</a>
+  </div>
+{% endblock %}
+
+{% block main %}
+
+  {% if not can_reconcile_intinitepay %}
+  <div class="alert alert-warning d-flex align-items-center" role="alert">
+    <span class="me-2">🔒</span>
+    <div>Você não tem permissão para realizar a conciliação ou enviar arquivos para estes doctypes.</div>
+  </div>
+  {% endif %}
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h6 class="fw-bold mb-3">Importar Arquivos</h6>
+      <div class="d-flex flex-column gap-3">
+        <div class="mb-2">
+          <span>Upload de extrato (.ofx)</span><br />
+          <button type="button" id="uploadExtratoBtn" class="btn btn-outline-secondary btn-sm mt-2" {% if not can_reconcile_intinitepay %}disabled{% endif %}>Selecionar Arquivo</button>
+          <span id="nomeExtratoInfinitepay" class="ms-2 small text-muted d-none"></span>
+          <span id="checkExtratoInfinitepay" class="ms-2 text-success d-none">&#10003;</span>
+        </div>
+        <div class="mb-2">
+          <span>Upload de relatório de vendas (.csv)</span><br />
+          <button type="button" id="uploadVendasBtn" class="btn btn-outline-secondary btn-sm mt-2" {% if not can_reconcile_intinitepay %}disabled{% endif %}>Selecionar Arquivo</button>
+          <span id="nomeVendasInfinitepay" class="ms-2 small text-muted d-none"></span>
+          <span id="checkVendasInfinitepay" class="ms-2 text-success d-none">&#10003;</span>
+        </div>
+        <div class="mb-2">
+          <span>Upload de relatório de recebimentos (.csv)</span><br />
+          <button type="button" id="uploadRecebimentosBtn" class="btn btn-outline-secondary btn-sm mt-2" {% if not can_reconcile_intinitepay %}disabled{% endif %}>Selecionar Arquivo</button>
+          <span id="nomeRecebimentosInfinitepay" class="ms-2 small text-muted d-none"></span>
+          <span id="checkRecebimentosInfinitepay" class="ms-2 text-success d-none">&#10003;</span>
+        </div>
+  <button id="btnConciliarInfinitepay" class="btn btn-success d-none mt-3" onclick="enviarArquivosImportados()" {% if not can_reconcile_intinitepay %}disabled{% endif %}>Realizar Conciliação</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resultados da importação: 4 cards (um por Doctype) + card de erros -->
+  <div id="ip-results" class="mt-3">
+    <div id="ip-stat-cards" class="row g-3 d-none"></div>
+    <div id="ip-errors-card" class="d-none"></div>
+  </div>
+
+  <link rel="stylesheet" href="/assets/gris/css/components.css">
+  <script src="/financeiro/import_intinitepay.js"></script>
+{% endblock %}

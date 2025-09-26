@@ -7,8 +7,10 @@
  "engine": "InnoDB",
  "field_order": [
   "timestamp_transacao",
+  "data_deposito",
   "column_break_sodz",
   "data_transacao",
+  "numero_liquidacao",
   "dados_transacao",
   "descricao",
   "valor",
@@ -109,7 +111,7 @@
    "fieldname": "metodo",
    "fieldtype": "Select",
    "label": "M\u00e9todo",
-   "options": "Pix\nCart\u00e3o\nBoleto"
+   "options": "Pix\nCart\u00e3o\nBoleto\nDep\u00f3sito de vendas\nTranfer\u00eancia entre carteiras\nN\u00e3o mapeada"
   },
   {
    "fieldname": "instituicao",
@@ -182,12 +184,22 @@
    "fieldname": "observa\u00e7\u00f5es",
    "fieldtype": "Small Text",
    "label": "Observa\u00e7\u00f5es"
+  },
+  {
+   "fieldname": "data_deposito",
+   "fieldtype": "Datetime",
+   "label": "Data de Dep\u00f3sito"
+  },
+  {
+   "fieldname": "numero_liquidacao",
+   "fieldtype": "Data",
+   "label": "N\u00famero de liquida\u00e7\u00e3o"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-18 09:17:13.102021",
+ "modified": "2025-09-26 13:06:00.380387",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Transacao Extrato Geral",

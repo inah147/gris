@@ -1,27 +1,25 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
+ "autoname": "field:id",
  "creation": "2025-09-23 18:48:36.983370",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "data_transacao",
-  "hora_transacao",
   "tipo_transacao",
   "nome_transacao",
   "detalhe",
-  "valor"
+  "valor",
+  "id",
+  "tipo"
  ],
  "fields": [
   {
    "fieldname": "data_transacao",
-   "fieldtype": "Date",
+   "fieldtype": "Datetime",
    "label": "Data"
-  },
-  {
-   "fieldname": "hora_transacao",
-   "fieldtype": "Time",
-   "label": "Hora"
   },
   {
    "fieldname": "tipo_transacao",
@@ -42,15 +40,27 @@
    "fieldname": "valor",
    "fieldtype": "Currency",
    "label": "Valor"
+  },
+  {
+   "fieldname": "id",
+   "fieldtype": "Data",
+   "label": "ID",
+   "unique": 1
+  },
+  {
+   "fieldname": "tipo",
+   "fieldtype": "Data",
+   "label": "Tipo"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-23 19:47:10.963570",
+ "modified": "2025-09-24 22:14:44.104339",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Transacao Infinitepay extrato",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

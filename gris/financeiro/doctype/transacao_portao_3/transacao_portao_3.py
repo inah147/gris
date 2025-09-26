@@ -73,7 +73,6 @@ class TransacaoPortao3(Document):
 		)
 
 		tx_hash = hashlib.md5(tx_id.encode("utf-8")).hexdigest()
-
 		self.id = f"Portao3-{tx_hash}"
 
 		# parse date
@@ -90,24 +89,37 @@ class TransacaoPortao3(Document):
 		else:
 			is_internal_tx = 0
 
-		tx = frappe.get_doc(
-			{
-				"doctype": "Transacao Extrato Geral",
-				"id": self.id,
-				"data_transacao": self.data_transacao,
-				"timestamp_transacao": self.timestamp,
-				"descricao": self.descricao,
-				"valor": self.valor,
-				"valor_absoluto": abs(self.valor),
-				"debito_credito": self.entrada_saida.capitalize(),
-				"metodo": self.tipo.capitalize(),
-				"origem": self._get_source(),
-				"destino": self._get_destination(),
-				"instituicao": "Portão 3",
-				"centro_de_custo": self._get_centro_de_custo(),
-				"carteira": self.carteira,
-				"repasse_entre_contas": is_internal_tx,
-			}
-		)
-		tx.insert()
+		stats = {"extrato_inseridos": 0, "extrato_repetidos": 0, "extrato_erros": 0}
+		try:
+			if frappe.db.exists("Transacao Extrato Geral", {"id": self.id}):
+				stats["extrato_repetidos"] += 1
+			else:
+				tx = frappe.get_doc(
+					{
+						"doctype": "Transacao Extrato Geral",
+						"id": self.id,
+						"data_transacao": self.data_transacao,
+						"timestamp_transacao": self.timestamp,
+						"descricao": self.descricao,
+						"valor": self.valor,
+						"valor_absoluto": abs(self.valor),
+						"debito_credito": str(self.entrada_saida).capitalize()
+						if self.entrada_saida
+						else "Desconhecido",
+						"metodo": str(self.tipo).capitalize() if self.tipo else "Desconhecido",
+						"origem": self._get_source(),
+						"destino": self._get_destination(),
+						"instituicao": "Portão 3",
+						"centro_de_custo": self._get_centro_de_custo(),
+						"carteira": self.carteira,
+						"repasse_entre_contas": is_internal_tx,
+					}
+				)
+				tx.insert()
+				stats["extrato_inseridos"] += 1
+		except Exception as e:
+			stats["extrato_erros"] += 1
+			frappe.log_error(str(e), "Importação Transacao Extrato Geral")
+		# Opcional: loga estatísticas no Error Log
+		frappe.log_error(str(stats), "Stats Transacao Extrato Geral")
 		pass

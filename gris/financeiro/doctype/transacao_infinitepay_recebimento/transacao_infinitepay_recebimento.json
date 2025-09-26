@@ -1,6 +1,8 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
+ "autoname": "field:id",
  "creation": "2025-09-23 20:03:31.428065",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -20,7 +22,8 @@
   "status",
   "data_deposito",
   "numero_liquidacao",
-  "antecipada"
+  "antecipada",
+  "id"
  ],
  "fields": [
   {
@@ -102,15 +105,22 @@
    "fieldname": "antecipada",
    "fieldtype": "Data",
    "label": "Antecipada"
+  },
+  {
+   "fieldname": "id",
+   "fieldtype": "Data",
+   "label": "ID",
+   "unique": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-23 20:09:05.456599",
+ "modified": "2025-09-24 20:22:46.301394",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Transacao Infinitepay recebimento",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

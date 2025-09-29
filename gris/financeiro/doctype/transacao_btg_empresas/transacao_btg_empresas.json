@@ -12,7 +12,7 @@
   "id",
   "column_break_flyj",
   "valor",
-  "saldo"
+  "tipo"
  ],
  "fields": [
   {
@@ -48,17 +48,15 @@
    "reqd": 1
   },
   {
-   "fieldname": "saldo",
-   "fieldtype": "Currency",
-   "in_list_view": 1,
-   "label": "Saldo",
-   "reqd": 1
+   "fieldname": "tipo",
+   "fieldtype": "Data",
+   "label": "Tipo"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-18 07:34:50.841395",
+ "modified": "2025-09-29 13:12:06.342286",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Transacao BTG Empresas",

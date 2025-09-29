@@ -1,0 +1,4 @@
+/* Custom styles for BTG Empresas import page */
+#btg-results { margin-top: 2rem; }
+#btg-stat-card { margin-bottom: 1rem; }
+#btg-errors-card { color: #b94a48; }

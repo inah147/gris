@@ -1,0 +1,35 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Importação de dados - BTG Empresas{% endblock %}
+
+{% set active_link = '/financeiro/contas' %}
+
+{% block page_header %}
+  <div class="mb-4 d-flex align-items-center justify-content-between">
+    <h1 class="h3 mb-0">Importação de dados - BTG Empresas</h1>
+    <a href="/financeiro/contas" class="btn btn-outline-secondary btn-sm">Voltar</a>
+  </div>
+{% endblock %}
+
+{% block main %}
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h6 class="fw-bold mb-3">Importar Extrato BTG Empresas</h6>
+      <div class="d-flex flex-column gap-3">
+        <div class="mb-2">
+          <span>Upload de extrato (.ofx)</span><br />
+          <button type="button" id="uploadBtgBtn" class="btn btn-outline-secondary btn-sm mt-2">Selecionar Arquivo</button>
+          <span id="nomeBtg" class="ms-2 small text-muted d-none"></span>
+          <span id="checkBtg" class="ms-2 text-success d-none">&#10003;</span>
+        </div>
+        <button id="btnConciliarBtg" class="btn btn-success d-none mt-3" onclick="sendBtgFile()">Realizar Conciliação</button>
+      </div>
+    </div>
+  </div>
+  <div id="btg-results" class="mt-3">
+    <div id="btg-stat-card" class="row g-3 d-none"></div>
+    <div id="btg-errors-card" class="d-none"></div>
+  </div>
+  <link rel="stylesheet" href="/assets/gris/css/components.css">
+  <script src="/financeiro/import_btg_empresas.js"></script>
+{% endblock %}

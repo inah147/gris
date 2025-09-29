@@ -203,7 +203,7 @@ function setupUploader(btnId, nomeId, checkId, allowedExt){
   };
 
   document.addEventListener('click', function(e){
-    // Abrir página de importação (Infinitepay) ao invés de modal
+    // Abrir página de importação (Infinitepay, Portão 3, BTG Empresas) ao invés de modal
     if(e.target.classList.contains('importar-dados-btn')){
       const nome = (e.target.dataset.nome || '').trim().toLowerCase();
       if(nome === 'infinitepay'){
@@ -212,6 +212,10 @@ function setupUploader(btnId, nomeId, checkId, allowedExt){
       }
       if(nome === 'portão 3' || nome === 'portao 3'){
         window.location.href = '/financeiro/import_portao3';
+        return;
+      }
+      if(nome === 'btg empresas' || nome === 'btgempresas' || nome === 'btg'){
+        window.location.href = '/financeiro/import_btg_empresas';
         return;
       }
       frappe.msgprint('Funcionalidade em construção.');

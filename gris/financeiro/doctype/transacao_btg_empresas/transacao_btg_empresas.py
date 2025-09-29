@@ -9,13 +9,6 @@ from frappe.model.document import Document
 
 
 class TransacaoBTGEmpresas(Document):
-	def before_insert(self):
-		tx_id = f"{self.data_transacao}{self.valor}{self.saldo}{self.descricao}"
-
-		tx_hash = hashlib.md5(tx_id.encode("utf-8")).hexdigest()
-
-		self.id = f"BTGEmpresas-{tx_hash}"
-
 	def after_insert(self):
 		# get method
 		method = None
@@ -34,11 +27,23 @@ class TransacaoBTGEmpresas(Document):
 			if m:
 				source = self.descricao[m.end() :].strip() or None
 
+		if self.descricao in (
+			"Crédito na Conta Corrente",
+			"Resgate Conta Remunerada",
+			"Aplicação Conta Remunerada",
+			"Débito na Conta Corrente",
+		):
+			is_internal_tx = 1
+		else:
+			is_internal_tx = 0
+
 		tx = frappe.get_doc(
 			{
 				"doctype": "Transacao Extrato Geral",
 				"id": self.id,
+				"timestamp_transacao": self.data_transacao,
 				"data_transacao": self.data_transacao,
+				"data_deposito": self.data_transacao,
 				"descricao": self.descricao,
 				"valor": self.valor,
 				"valor_absoluto": abs(self.valor),
@@ -49,6 +54,7 @@ class TransacaoBTGEmpresas(Document):
 				"instituicao": "BTG Empresas",
 				"centro_de_custo": "Presidência",
 				"carteira": "BTG Empresas",
+				"repasse_entre_contas": is_internal_tx,
 			}
 		)
 		tx.insert()

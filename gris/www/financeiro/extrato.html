@@ -11,5 +11,181 @@
 {% endblock %}
 
 {% block main %}
-  
+  <form method="get" class="filter-bar mb-4">
+    <div class="filter-field">
+      <label class="form-label small text-muted">Data início</label>
+      <input type="date" name="data_inicio" class="form-control form-control-sm" value="{{ filtros_ativos.data_inicio or '' }}">
+    </div>
+    <div class="filter-field">
+      <label class="form-label small text-muted">Data fim</label>
+      <input type="date" name="data_fim" class="form-control form-control-sm" value="{{ filtros_ativos.data_fim or '' }}">
+    </div>
+    <div class="filter-field">
+      <label class="form-label small text-muted">Instituição</label>
+      <select name="instituicao" class="form-select form-select-sm">
+        <option value=""></option>
+        {% for op in opcoes_instituicao %}
+          <option value="{{ op }}" {% if filtros_ativos.instituicao==op %}selected{% endif %}>{{ op }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label class="form-label small text-muted">Carteira</label>
+      <select name="carteira" class="form-select form-select-sm">
+        <option value=""></option>
+        {% for op in opcoes_carteira %}
+          <option value="{{ op }}" {% if filtros_ativos.carteira==op %}selected{% endif %}>{{ op }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label class="form-label small text-muted">Categoria</label>
+      <select name="categoria" class="form-select form-select-sm">
+        <option value=""></option>
+        {% for op in opcoes_categoria %}
+          <option value="{{ op }}" {% if filtros_ativos.categoria==op %}selected{% endif %}>{{ op }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label class="form-label small text-muted">Centro de custo</label>
+      <select name="centro_de_custo" class="form-select form-select-sm">
+        <option value=""></option>
+        {% for op in opcoes_centro_de_custo %}
+          <option value="{{ op }}" {% if filtros_ativos.centro_de_custo==op %}selected{% endif %}>{{ op }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label class="form-label small text-muted">Fixo/Variável</label>
+      <select name="fixo_variavel" class="form-select form-select-sm">
+        <option value=""></option>
+        <option value="Fixo" {% if filtros_ativos.fixo_variavel=='Fixo' %}selected{% endif %}>Fixo</option>
+        <option value="Variável" {% if filtros_ativos.fixo_variavel=='Variável' %}selected{% endif %}>Variável</option>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label class="form-label small text-muted">Ordinária/Extraordinária</label>
+      <select name="ordinaria_extraordinaria" class="form-select form-select-sm">
+        <option value=""></option>
+        <option value="Ordinária" {% if filtros_ativos.ordinaria_extraordinaria=='Ordinária' %}selected{% endif %}>Ordinária</option>
+        <option value="Extraordinária" {% if filtros_ativos.ordinaria_extraordinaria=='Extraordinária' %}selected{% endif %}>Extraordinária</option>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label class="form-label small text-muted">Conta fixa</label>
+      <select name="conta_fixa" class="form-select form-select-sm">
+        <option value=""></option>
+        {% for op in opcoes_conta_fixa %}
+          <option value="{{ op }}" {% if filtros_ativos.conta_fixa==op %}selected{% endif %}>{{ op }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label class="form-label small text-muted">Repasse entre contas</label>
+      <select name="repasse_entre_contas" class="form-select form-select-sm">
+        <option value=""></option>
+        <option value="1" {% if filtros_ativos.repasse_entre_contas=='1' %}selected{% endif %}>Sim</option>
+        <option value="0" {% if filtros_ativos.repasse_entre_contas=='0' %}selected{% endif %}>Não</option>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label class="form-label small text-muted">Transação revisada</label>
+      <select name="transacao_revisada" class="form-select form-select-sm">
+        <option value=""></option>
+        <option value="1" {% if filtros_ativos.transacao_revisada=='1' %}selected{% endif %}>Sim</option>
+        <option value="0" {% if filtros_ativos.transacao_revisada=='0' %}selected{% endif %}>Não</option>
+      </select>
+    </div>
+    <div class="filter-actions">
+      <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+    </div>
+  </form>
+  <div class="g-extrato-list mt-4">
+    {% for transacao in transacoes %}
+      <div class="g-extrato-card mb-3 p-3">
+        <div class="d-flex align-items-stretch">
+          <div class="g-extrato-circle-col d-flex flex-column justify-content-center align-items-center me-3">
+            {% if transacao.transacao_revisada %}
+              <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#70EF8E;"></span>
+            {% else %}
+              <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#1D2756;"></span>
+            {% endif %}
+          </div>
+          <div class="flex-grow-1">
+            <div class="fw-semibold">{{ transacao.timestamp_transacao or "-" }}</div>
+            <div class="fw-bold text-primary mb-1" style="font-size:1.1em;">R$ {{ '{:,.2f}'.format(transacao.valor|float).replace(',', 'X').replace('.', ',').replace('X', '.') if transacao.valor is not none else '-' }}</div>
+            <div class="mb-1">{{ transacao.descricao or "-" }}</div>
+            <div class="d-flex flex-wrap gap-1">
+              {% if transacao.instituicao %}
+                {% set inst = transacao.instituicao.lower() %}
+                {% if 'btg empresas' in inst %}
+                  <span class="g-badge g-badge--primary g-badge--small" title="Instituição Financeira">{{ transacao.instituicao }}</span>
+                {% elif 'btg investimentos' in inst %}
+                  <span class="g-badge g-badge--primary g-badge--small g-badge--outline" title="Instituição Financeira">{{ transacao.instituicao }}</span>
+                {% elif 'portão 3' in inst or 'portao 3' in inst %}
+                  <span class="g-badge g-badge--purple g-badge--small" title="Instituição Financeira">{{ transacao.instituicao }}</span>
+                {% elif 'inifinitepay' in inst or 'infinitepay' in inst %}
+                  <span class="g-badge g-badge--success g-badge--small" title="Instituição Financeira">{{ transacao.instituicao }}</span>
+                {% elif 'pagbank' in inst %}
+                  <span class="g-badge g-badge--warning g-badge--small" title="Instituição Financeira">{{ transacao.instituicao }}</span>
+                {% else %}
+                  <span class="g-badge g-badge--neutral g-badge--small" title="Instituição Financeira">{{ transacao.instituicao }}</span>
+                {% endif %}
+              {% endif %}
+              {% if transacao.carteira %}
+                <span class="g-badge g-badge--secondary g-badge--small" title="Carteira">{{ transacao.carteira }}</span>
+              {% endif %}
+              {% if transacao.centro_de_custo %}
+                <span class="g-badge g-badge--info g-badge--small" title="Centro de Custo">{{ transacao.centro_de_custo }}</span>
+              {% endif %}
+              {% if transacao.categoria %}
+                <span class="g-badge g-badge--accent g-badge--small" title="Categoria">{{ transacao.categoria }}</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="ms-2 d-flex align-items-center">
+            <a href="/financeiro/detalhe_extrato?name={{ transacao.name }}" class="btn btn-outline-primary btn-sm extrato-detalhes-btn">Detalhes</a>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="text-center text-muted">Nenhuma transação encontrada.</div>
+    {% endfor %}
+  </div>
+  {% if paginacao and paginacao.total > paginacao.tamanho_pagina %}
+    <div id="extrato-pagination" class="mt-4 d-flex justify-content-center"
+      data-total="{{ paginacao.total }}"
+      data-page="{{ paginacao.pagina_atual }}"
+      data-pagesize="{{ paginacao.tamanho_pagina }}"></div>
+    <script src="/financeiro/extrato.js"></script>
+  {% endif %}
+
+<style>
+  .g-extrato-list {
+    background: #f6f7fa;
+    padding: 0;
+  }
+  .g-extrato-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px 0 rgba(0,0,0,0.04);
+    font-size: inherit;
+    /* padding já aplicado via p-3 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .g-extrato-circle-col {
+    min-width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  @media (max-width: 600px) {
+    .g-extrato-card {
+      padding: 1rem !important;
+    }
+  }
+</style>
 {% endblock %}

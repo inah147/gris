@@ -14,11 +14,6 @@
   <div class="row mb-5">
     <div class="col-12">
       <h2 class="h5 mb-2">Contas</h2>
-      {% if can_create_instituicao %}
-      <div class="mb-3">
-        <button type="button" id="btnNovaInstituicao" class="btn btn-sm btn-primary">Adicionar Instituição</button>
-      </div>
-      {% endif %}
       {% if contas %}
   <div id="listaContas" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-3 gy-5">
         {% for conta in contas %}

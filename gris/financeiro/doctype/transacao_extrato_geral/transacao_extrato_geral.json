@@ -130,6 +130,7 @@
    "options": "Categoria de Transacao"
   },
   {
+   "default": "Vari\u00e1vel",
    "fieldname": "fixo_variavel",
    "fieldtype": "Select",
    "label": "Valor Fixo ou Vari\u00e1vel",
@@ -159,6 +160,7 @@
    "options": "Centro de Custo"
   },
   {
+   "default": "Extraordin\u00e1ria",
    "fieldname": "ordinaria_extraordinaria",
    "fieldtype": "Select",
    "label": "Transa\u00e7\u00e3o Ordin\u00e1ria ou Exraordin\u00e1ria",
@@ -199,7 +201,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-26 13:06:00.380387",
+ "modified": "2025-09-29 13:40:58.400477",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Transacao Extrato Geral",

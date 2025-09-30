@@ -1,3 +1,5 @@
+no_cache = 1
+
 import frappe
 
 from gris.api.portal_access import enrich_context, user_has_access
@@ -7,10 +9,25 @@ no_cache = 1
 
 
 def get_context(context):
+	# Buscar opções únicas para os filtros dropdown
+	def get_distinct(field):
+		return [
+			r[field]
+			for r in frappe.get_all("Transacao Extrato Geral", fields=[field], distinct=True, order_by=field)
+			if r[field]
+		]
+
+	context.opcoes_instituicao = get_distinct("instituicao")
+	context.opcoes_carteira = get_distinct("carteira")
+	context.opcoes_categoria = get_distinct("categoria")
+	context.opcoes_centro_de_custo = get_distinct("centro_de_custo")
+	context.opcoes_conta_fixa = get_distinct("conta_fixa")
+
 	# Bloqueio para usuários não autenticados
 	if frappe.session.user == "Guest":
 		frappe.local.flags.redirect_location = "/login?redirect_to=/financeiro/extrato"
 		raise frappe.Redirect
+
 	# Recupera logo e define para sidebar
 	uel_data = get_uel_cached()
 	if uel_data:
@@ -23,4 +40,79 @@ def get_context(context):
 		context.sidebar_title = "Portal"
 	context.active_link = "/financeiro/extrato"
 	enrich_context(context, "/financeiro/extrato")
+
+	# Filtros vindos da query string
+	filters = {}
+	request_args = frappe.local.form_dict or {}
+
+	# Paginação
+	try:
+		page = int(request_args.get("page", 1))
+		if page < 1:
+			page = 1
+	except Exception:
+		page = 1
+	page_size = 50
+	offset = (page - 1) * page_size
+
+	if request_args.get("data_inicio"):
+		filters["data_deposito"] = [">=", request_args["data_inicio"]]
+	if request_args.get("data_fim"):
+		filters["data_deposito"] = filters.get("data_deposito", [])
+		if filters["data_deposito"]:
+			filters["data_deposito"] = [filters["data_deposito"], ["<=", request_args["data_fim"]]]
+		else:
+			filters["data_deposito"] = ["<=", request_args["data_fim"]]
+
+	for campo in [
+		"instituicao",
+		"carteira",
+		"categoria",
+		"centro_de_custo",
+		"fixo_variavel",
+		"ordinaria_extraordinaria",
+		"conta_fixa",
+		"repasse_entre_contas",
+		"transacao_revisada",
+	]:
+		valor = request_args.get(campo)
+		if valor not in (None, "", "null"):
+			filters[campo] = valor
+
+	# Buscar total de transações para paginação
+	total_transacoes = frappe.db.count("Transacao Extrato Geral", filters=filters)
+
+	transacoes = frappe.get_all(
+		"Transacao Extrato Geral",
+		fields=[
+			"name",
+			"transacao_revisada",
+			"timestamp_transacao",
+			"valor",
+			"descricao",
+			"instituicao",
+			"carteira",
+			"centro_de_custo",
+			"categoria",
+			"fixo_variavel",
+			"ordinaria_extraordinaria",
+			"conta_fixa",
+			"repasse_entre_contas",
+			"data_deposito",
+		],
+		filters=filters,
+		order_by="timestamp_transacao desc",
+		limit=page_size,
+		start=offset,
+	)
+	context.transacoes = transacoes
+	context.filtros_ativos = request_args
+	context.paginacao = {
+		"pagina_atual": page,
+		"tamanho_pagina": page_size,
+		"total": total_transacoes,
+		"tem_proxima": offset + page_size < total_transacoes,
+		"tem_anterior": page > 1,
+	}
+
 	return context

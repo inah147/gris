@@ -1,0 +1,115 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Demonstrativo Financeiro{% endblock %}
+
+{% set active_link = '/financeiro' %}
+
+{% block page_header %}
+  <div class="mb-4 d-flex align-items-center justify-content-between">
+    <h1 class="h3 mb-0">Demonstrativo Financeiro</h1>
+  </div>
+{% endblock %}
+
+{% block main %}
+  <div class="demonstrativo-page-scope">
+  <div class="mb-3">
+    <div class="d-flex">
+      <div class="me-auto">
+        <form id="demonstrativo-filter" method="get" class="d-flex align-items-start">
+          <div class="demonstrativo-filter-left">
+            <label for="ano" class="small text-muted mb-1 d-block">Ano</label>
+            <div class="fx-select">
+              <select id="ano" name="ano" class="form-select form-select-sm">
+                {% for y in demonstrativo.year_options %}
+                  <option value="{{ y }}" {% if y == demonstrativo.year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0 p-3">
+    <div class="demonstrativo-scroll-x">
+      <link rel="stylesheet" href="/financeiro/demonstrativo.css">
+      <table class="table table-sm table-borderless demonstrativo-table">
+        <thead>
+          <tr>
+            <th>Categoria / Mês</th>
+            {% for m in demonstrativo.months %}
+              <th class="text-end">{{ m.label }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Saldo inicial -->
+          <tr class="table-secondary font-weight-bold">
+            <td>Saldo Inicial (R$)</td>
+            {% for m in demonstrativo.months %}
+              <td class="text-end">{{ '%.2f' % (demonstrativo.saldo_inicial.get(m.key) or 0) }}</td>
+            {% endfor %}
+          </tr>
+
+          <!-- Entradas -->
+          <tr class="table-success font-weight-bold">
+            <td colspan="{{ demonstrativo.months | length + 1 }}">Entradas (Créditos)</td>
+          </tr>
+          {% for cat in demonstrativo.entradas_cats %}
+            <tr>
+              <td class="ps-4">{{ cat }}</td>
+              {% for m in demonstrativo.months %}
+                <td class="text-end">{{ '%.2f' % (demonstrativo.data.entradas.get(cat, {}).get(m.key) or 0) }}</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+          <tr class="table-success font-weight-bold">
+            <td>Total Entradas</td>
+            {% for m in demonstrativo.months %}
+              <td class="text-end">{{ '%.2f' % (demonstrativo.month_totals.entradas.get(m.key) or 0) }}</td>
+            {% endfor %}
+          </tr>
+
+          <!-- Saídas -->
+          <tr class="table-danger font-weight-bold">
+            <td colspan="{{ demonstrativo.months | length + 1 }}">Saídas (Débitos)</td>
+          </tr>
+          {% for cat in demonstrativo.saidas_cats %}
+            <tr>
+              <td class="ps-4">{{ cat }}</td>
+              {% for m in demonstrativo.months %}
+                <td class="text-end">{{ '%.2f' % (demonstrativo.data.saidas.get(cat, {}).get(m.key) or 0) }}</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+          <tr class="table-danger font-weight-bold">
+            <td>Total Saídas</td>
+            {% for m in demonstrativo.months %}
+              <td class="text-end">{{ '%.2f' % (demonstrativo.month_totals.saidas.get(m.key) or 0) }}</td>
+            {% endfor %}
+          </tr>
+
+          <!-- Resultado do mês -->
+          <tr class="table-light font-weight-bold">
+            <td>Resultado do Mês (Entradas - Saídas)</td>
+            {% for m in demonstrativo.months %}
+              {% set entr = demonstrativo.month_totals.entradas.get(m.key) or 0 %}
+              {% set said = demonstrativo.month_totals.saidas.get(m.key) or 0 %}
+              <td class="text-end">{{ '%.2f' % (entr - said) }}</td>
+            {% endfor %}
+          </tr>
+
+          <!-- Saldo Final -->
+          <tr class="table-secondary font-weight-bold">
+            <td>Saldo Final (R$)</td>
+            {% for m in demonstrativo.months %}
+              <td class="text-end">{{ '%.2f' % (demonstrativo.saldo_final.get(m.key) or 0) }}</td>
+            {% endfor %}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  </div>
+{% endblock %}

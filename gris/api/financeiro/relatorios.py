@@ -240,7 +240,7 @@ def export_relatorio_contabil(data_inicio=None, data_fim=None):
 									cell.value = float(saldo_val)
 									# apply currency number format so Excel displays as number with two decimals
 									try:
-										cell.number_format = '#,##0.00'
+										cell.number_format = "#,##0.00"
 									except Exception:
 										pass
 								except Exception:
@@ -264,7 +264,10 @@ def export_relatorio_contabil(data_inicio=None, data_fim=None):
 	light_fill = PatternFill(start_color="FFF7F7F7", end_color="FFF7F7F7", fill_type="solid")
 
 	# prepare last known saldos per institution (start with saldos_iniciais)
-	last_saldos = {inst: (saldos_iniciais.get(inst) if saldos_iniciais.get(inst) is not None else 0.0) for inst in instituicoes_nomes}
+	last_saldos = {
+		inst: (saldos_iniciais.get(inst) if saldos_iniciais.get(inst) is not None else 0.0)
+		for inst in instituicoes_nomes
+	}
 	for ri, r in enumerate(rows, start=start_row):
 		# data_deposito pode estar em string
 		dt = r.get("data_deposito")
@@ -290,7 +293,7 @@ def export_relatorio_contabil(data_inicio=None, data_fim=None):
 		val_num = r.get("valor_absoluto") or 0
 		cell_val = ws.cell(row=ri, column=data_base_col + 4, value=val_num)
 		try:
-			cell_val.number_format = '#,##0.00'
+			cell_val.number_format = "#,##0.00"
 		except Exception:
 			pass
 
@@ -319,7 +322,7 @@ def export_relatorio_contabil(data_inicio=None, data_fim=None):
 				else:
 					cell_dyn = ws.cell(row=ri, column=col_idx, value=carry)
 					try:
-						cell_dyn.number_format = '#,##0.00'
+						cell_dyn.number_format = "#,##0.00"
 					except Exception:
 						pass
 			else:
@@ -330,7 +333,7 @@ def export_relatorio_contabil(data_inicio=None, data_fim=None):
 					num = val
 				cell_dyn = ws.cell(row=ri, column=col_idx, value=num)
 				try:
-					cell_dyn.number_format = '#,##0.00'
+					cell_dyn.number_format = "#,##0.00"
 				except Exception:
 					pass
 				# update last known saldo if numeric

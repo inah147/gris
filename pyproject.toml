@@ -12,6 +12,7 @@ dependencies = [
     "pandas",
     "dateparser",
     "ofxparse",
+    "openpyxl",
     "numpy"
 ]
 

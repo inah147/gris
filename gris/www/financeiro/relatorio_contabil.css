@@ -25,7 +25,7 @@ main.fx-main { min-width: 0; }
 	font-size: 0.98em;
 	border-bottom: 2px solid #e2e8f0 !important;
 }
-#relatorio-contabil-tabela tbody tr:nth-child(even) { background: #f8fafc; }
+#relatorio-contabil-tabela tbody tr:nth-child(even) { background: #f0f5fa; }
 #relatorio-contabil-tabela tbody tr:nth-child(odd)  { background: #fff; }
 
 /* card-specific small paddings to replace inline styles */

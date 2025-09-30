@@ -24,11 +24,14 @@
     <div class="col-auto">
       <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
     </div>
+    <div class="col-auto">
+      <button type="button" id="export-xlsx" class="btn btn-outline-secondary btn-sm">Exportar XLSX</button>
+    </div>
   </form>
   <div class="card shadow-sm border-0 rel-cont-card">
     <div class="card-body rel-cont-body">
   <div class="relatorio-contabil-scroll-x">
-            <link rel="stylesheet" href="/assets/gris/css/financeiro/relatorio_contabil.css">
+            <link rel="stylesheet" href="/financeiro/relatorio_contabil.css">
     <table class="table table-sm align-middle" id="relatorio-contabil-tabela">
               <thead class="table-light">
                 <tr>
@@ -75,4 +78,9 @@
       </tbody>
   </table>
   </div>
+{% endblock %}
+
+{% block script %}
+{{ super() }}
+<script src="/financeiro/relatorio_contabil.js"></script>
 {% endblock %}

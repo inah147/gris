@@ -9,7 +9,7 @@ no_cache = 1
 def get_context(context):
 	# Bloqueio para usuários não autenticados
 	if frappe.session.user == "Guest":
-		frappe.local.flags.redirect_location = "/login?redirect_to=/financeiro/dre"
+		frappe.local.flags.redirect_location = "/login?redirect_to=/financeiro/relatorios"
 		raise frappe.Redirect
 	# Recupera logo e define para sidebar
 	uel_data = get_uel_cached()
@@ -21,6 +21,6 @@ def get_context(context):
 			context.sidebar_title = "Portal"
 	else:
 		context.sidebar_title = "Portal"
-	context.active_link = "/financeiro/dre"
-	enrich_context(context, "/financeiro/dre")
+	context.active_link = "/financeiro/relatorios"
+	enrich_context(context, "/financeiro/relatorios")
 	return context

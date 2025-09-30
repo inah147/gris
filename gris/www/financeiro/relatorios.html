@@ -1,0 +1,35 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+<link rel="stylesheet" href="/assets/gris/financeiro/relatorios.css">
+
+{% block title %}Relatórios Financeiros{% endblock %}
+
+{% set active_link = '/financeiro/relatorios' %}
+
+{% block page_header %}
+  <div class="mb-4 d-flex align-items-center justify-content-between">
+    <h1 class="h3 mb-0">Relatórios Financeiros</h1>
+  </div>
+{% endblock %}
+
+{% block main %}
+  <div class="mb-4">
+    <p class="text-muted mb-0 small">Escolha o relatório desejado.</p>
+  </div>
+  <div class="inicio-cards row g-3">
+    <div class="inicio-col col-12 col-sm-6 col-lg-4">
+      <div class="inicio-card h-100">
+        <h2>Relatório Contábil</h2>
+        <p>Visualize informações contábeis detalhadas.</p>
+  <a href="/financeiro/relatorio_contabil" class="btn btn-primary btn-sm">Acessar</a>
+      </div>
+    </div>
+    <div class="inicio-col col-12 col-sm-6 col-lg-4">
+      <div class="inicio-card h-100">
+        <h2>Demonstrativo Financeiro</h2>
+        <p>Acompanhe o demonstrativo financeiro da organização.</p>
+        <a href="#" class="btn btn-primary btn-sm" onclick="alert('Funcionalidade não implementada ainda.')">Acessar</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}

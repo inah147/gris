@@ -1,0 +1,20 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Relatório Contábil{% endblock %}
+
+{% set active_link = '/financeiro/relatorios' %}
+
+{% block page_header %}
+  <div class="mb-4 d-flex align-items-center justify-content-between">
+    <h1 class="h3 mb-0">Relatório Contábil</h1>
+  </div>
+{% endblock %}
+
+{% block main %}
+  <div class="mb-4">
+    <p class="text-muted mb-0 small">Aqui você poderá visualizar o relatório contábil detalhado. Implemente os filtros e a tabela de dados conforme necessário.</p>
+  </div>
+  <div class="relatorio-contabil-container">
+    <!-- Conteúdo do relatório contábil será implementado aqui -->
+  </div>
+{% endblock %}

@@ -31,7 +31,7 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 			{"label": "Contas e Carteiras", "path": "/financeiro/contas"},
 			{"label": "Extrato", "path": "/financeiro/extrato"},
 			{"label": "Despesas Mensais", "path": "/financeiro/despesas"},
-			{"label": "Demonstrativo", "path": "/financeiro/dre"},
+			{"label": "Relatórios", "path": "/financeiro/relatorios"},
 			{"label": "Pareceres", "path": "/financeiro/pareceres"},
 		],
 	},

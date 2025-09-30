@@ -30,6 +30,7 @@
   "fixo_variavel",
   "conta_fixa",
   "beneficiario",
+  "nome_atividade",
   "column_break_ufvr",
   "centro_de_custo",
   "ordinaria_extraordinaria",
@@ -196,12 +197,17 @@
    "fieldname": "numero_liquidacao",
    "fieldtype": "Data",
    "label": "N\u00famero de liquida\u00e7\u00e3o"
+  },
+  {
+   "fieldname": "nome_atividade",
+   "fieldtype": "Data",
+   "label": "Nome da atividade"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-29 13:40:58.400477",
+ "modified": "2025-09-30 09:10:41.748066",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Transacao Extrato Geral",

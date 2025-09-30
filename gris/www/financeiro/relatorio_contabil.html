@@ -11,10 +11,68 @@
 {% endblock %}
 
 {% block main %}
-  <div class="mb-4">
-    <p class="text-muted mb-0 small">Aqui você poderá visualizar o relatório contábil detalhado. Implemente os filtros e a tabela de dados conforme necessário.</p>
-  </div>
-  <div class="relatorio-contabil-container">
-    <!-- Conteúdo do relatório contábil será implementado aqui -->
+<div class="relatorio-contabil-page-scope">
+  <form method="get" class="row g-3 align-items-end mb-4">
+    <div class="col-auto">
+      <label for="data_inicio" class="form-label mb-0">Data de início</label>
+      <input type="date" class="form-control form-control-sm" id="data_inicio" name="data_inicio" value="{{ data_inicio or '' }}">
+    </div>
+    <div class="col-auto">
+      <label for="data_fim" class="form-label mb-0">Data de término</label>
+      <input type="date" class="form-control form-control-sm" id="data_fim" name="data_fim" value="{{ data_fim or '' }}">
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+    </div>
+  </form>
+  <div class="card shadow-sm border-0 rel-cont-card">
+    <div class="card-body rel-cont-body">
+  <div class="relatorio-contabil-scroll-x">
+            <link rel="stylesheet" href="/assets/gris/css/financeiro/relatorio_contabil.css">
+    <table class="table table-sm align-middle" id="relatorio-contabil-tabela">
+              <thead class="table-light">
+                <tr>
+                  <th>Data</th>
+                  <th>Instituição</th>
+                  <th>Carteira</th>
+                  <th>Centro de Custo</th>
+                  <th>Valor</th>
+                  <th>Tipo</th>
+                  <th>Descrição</th>
+                  <th>Categoria</th>
+                  <th>Atividade</th>
+                  <th>Observações</th>
+                  {% for inst in instituicoes %}
+                    <th>{{ inst }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+        {# Exemplo de lógica: saldos = dict com saldo de cada instituição, inicializado antes do loop #}
+        {% set saldos = dict() %}
+        {% for inst in instituicoes %}
+          {% set _ = saldos.update({inst: 0}) %}
+        {% endfor %}
+        {% for t in transacoes %}
+          <tr>
+            <td>{{ t.data_deposito or '-' }}</td>
+            <td>{{ t.instituicao or '-' }}</td>
+            <td>{{ t.carteira or '-' }}</td>
+            <td>{{ t.centro_de_custo or '-' }}</td>
+            <td>{{ '{:,.2f}'.format(t.valor_absoluto|float).replace(',', 'X').replace('.', ',').replace('X', '.') if t.valor_absoluto is not none else '-' }}</td>
+            <td>{{ t.debito_credito or '-' }}</td>
+            <td>{{ t.descricao or '-' }}</td>
+            <td>{{ t.categoria or '-' }}</td>
+            <td>{{ t.nome_atividade or '-' }}</td>
+            <td>{{ t['observa\u00e7\u00f5es'] or '-' }}</td>
+            {% for inst in instituicoes %}
+              <td>
+                {{ '{:,.2f}'.format(t[inst]|float).replace(',', 'X').replace('.', ',').replace('X', '.') if t[inst] is not none else '-' }}
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+  </table>
   </div>
 {% endblock %}

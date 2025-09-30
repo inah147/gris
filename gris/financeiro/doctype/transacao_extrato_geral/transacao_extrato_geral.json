@@ -17,7 +17,7 @@
   "debito_credito",
   "origem",
   "instituicao",
-  "observa\u00e7\u00f5es",
+  "observacoes",
   "column_break_hljl",
   "descricao_reduzida",
   "valor_absoluto",
@@ -184,11 +184,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "observa\u00e7\u00f5es",
-   "fieldtype": "Small Text",
-   "label": "Observa\u00e7\u00f5es"
-  },
-  {
    "fieldname": "data_deposito",
    "fieldtype": "Datetime",
    "label": "Data de Dep\u00f3sito"
@@ -202,12 +197,17 @@
    "fieldname": "nome_atividade",
    "fieldtype": "Data",
    "label": "Nome da atividade"
+  },
+  {
+   "fieldname": "observacoes",
+   "fieldtype": "Small Text",
+   "label": "Observa\u00e7\u00f5es"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-30 09:10:41.748066",
+ "modified": "2025-09-30 09:28:47.880469",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Transacao Extrato Geral",

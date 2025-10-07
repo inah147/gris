@@ -58,8 +58,8 @@ def get_context(context):
 
 	trans = frappe.get_all(
 		"Transacao Extrato Geral",
-		fields=["data_deposito", "categoria", "valor_absoluto", "debito_credito"],
-		filters=[["data_deposito", ">=", start], ["data_deposito", "<=", end]],
+		fields=["data_deposito", "categoria", "valor_absoluto", "debito_credito", "instituicao", "carteira"],
+		filters=[["data_deposito", ">=", start], ["data_deposito", "<=", end], ["metodo", "!=", "Dinheiro"]],
 		limit_page_length=0,
 	)
 
@@ -104,18 +104,11 @@ def get_context(context):
 	# get total before year
 	pre_tx = frappe.get_all(
 		"Transacao Extrato Geral",
-		fields=["valor_absoluto", "debito_credito", "data_deposito"],
-		filters={"data_deposito": ["<", start]},
+		fields=["SUM(valor) as total"],
+		filters={"data_deposito": ["<", start], "metodo": ["!=", "Dinheiro"]},
 		limit_page_length=0,
 	)
-
-	total_before = 0.0
-	for t in pre_tx:
-		v = t.get("valor_absoluto") or 0.0
-		if t.get("debito_credito") == "Crédito":
-			total_before += v
-		else:
-			total_before -= v
+	total_before = pre_tx[0].get("total") or 0.0 if pre_tx else 0.0
 
 	# now build month-by-month balances
 	saldo_inicial = {}

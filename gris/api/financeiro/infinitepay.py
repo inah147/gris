@@ -1,4 +1,5 @@
 import ast
+import hashlib
 import re
 import unicodedata
 from typing import Optional
@@ -66,6 +67,14 @@ def _parse_date(date_str):
 	return dt
 
 
+def _generate_infinite_id_money(row):
+	if row["meio_meio"] == "Dinheiro":
+		concat_str = f"{row['data_hora']}{row['meio_meio']}{row['tipo_dados_adicionais']}{row['identificador']}{row['valor']}"
+		md5_hash = hashlib.md5(concat_str.encode("utf-8")).hexdigest()
+		return f"infinitepay-dinheiro-{md5_hash}"
+	return row["infinite_id"]
+
+
 @frappe.whitelist()
 def get_infinitepay_sales_df(file_path: str, filter_dt: str | None = None):
 	df = pd.read_csv(file_path)
@@ -96,6 +105,7 @@ def get_infinitepay_sales_df(file_path: str, filter_dt: str | None = None):
 		}
 	)
 	df = df[df["status"] == "Aprovada"]
+	df["infinite_id"] = df.apply(_generate_infinite_id_money, axis=1)
 
 	if filter_dt:
 		df = df[df["date"] >= filter_dt]
@@ -183,23 +193,61 @@ def get_infinitepay_receipts_df(file_path: str, filter_dt: str | None = None) ->
 
 
 @frappe.whitelist()
-def bank_reconcilliation(df_receipts, df_sales):
-	df_receipts_agg = (
-		df_receipts.groupby("infinite_id").agg(
-			data_deposito=("data_deposito", "min"),
-			num_liquidacao=("numero_liquidacao", "min"),
-		)
-	).reset_index()
+def bank_reconcilliation(df_bank_statement, df_receipts, df_sales):
+	# Agrega df_receipts por infinite_id
+	df_receipts_agg = df_receipts.groupby("infinite_id", as_index=False).agg(
+		data_deposito=("data_deposito", "min"), num_liquidacao=("numero_liquidacao", "min")
+	)
 
+	# Enriquece df_sales com dados agregados dos receipts
 	df_enrich = pd.merge(df_sales, df_receipts_agg, on="infinite_id", how="left")
-	df_enrich["data_deposito"] = np.where(
-		df_enrich["meio_meio"] != "Pix", df_enrich["data_deposito"], df_enrich["data_hora"].dt.date
-	)
-
 	df_enrich["type"] = "credit"
+	df_enrich = df_enrich[df_enrich["meio_meio"] != "Pix"].copy()
+	df_enrich["conciliado"] = 0
 
-	df_enrich["conciliado"] = np.where(
-		df_enrich["meio_meio"] == "Pix", 1, np.where(df_enrich["data_deposito"].isna(), 0, 1)
+	cols = [
+		"data_hora",
+		"meio_meio",
+		"origem_nome",
+		"valor_liquido",
+		"type",
+		"infinite_id",
+		"data_deposito",
+		"num_liquidacao",
+		"tipo_origem",
+	]
+	df_enrich = df_enrich[cols]
+
+	# Filtro e padronização das colunas de df_bank_statement
+	df_bank_statement = df_bank_statement[
+		df_bank_statement["type"].eq("debit") | df_bank_statement["transaction_type"].isin(["PIX", "Outro"])
+	].copy()
+
+	df_bank_statement = df_bank_statement.rename(
+		columns={
+			"date": "data_hora",
+			"name": "descricao",
+			"value": "valor_liquido",
+			"transaction_type": "meio_meio",
+			"fitid": "infinite_id",
+		}
 	)
 
-	return df_enrich
+	df_bank_statement["data_deposito"] = df_bank_statement["data_hora"]
+	df_bank_statement["num_liquidacao"] = None
+	df_bank_statement["tipo_origem"] = "Débito na conta"
+
+	# Remove prefixo "Pix " e preenche origem_nome para débito
+	df_bank_statement["origem_nome"] = df_bank_statement["descricao"].str.replace(r"^Pix ", "", regex=True)
+	mask_debit = df_bank_statement["type"] == "debit"
+	df_bank_statement.loc[mask_debit, "origem_nome"] = (
+		"GRUPO ESCOTEIRO PROFESSORA INAH DE MELO N 147. - INFINITEPAY"
+	)
+
+	df_bank_statement = df_bank_statement[cols]
+
+	# Junta e ajusta tipos
+	df_final = pd.concat([df_bank_statement, df_enrich], ignore_index=True)
+	df_final["valor_liquido"] = df_final["valor_liquido"].astype(float)
+
+	return df_final

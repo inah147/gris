@@ -1,4 +1,5 @@
 import os
+from urllib.parse import urlparse
 
 import frappe
 from frappe.utils import fmt_money, formatdate
@@ -27,8 +28,10 @@ def _get_method_infinitepay(method):
 		return "Depósito de vendas"
 	if mu == "BOLETO":
 		return "Boleto"
-	if m in ("Crédito", "Débito"):
+	if mu in ("CRÉDITO", "DÉBITO"):
 		return "Cartão"
+	if mu in ("DINHEIRO"):
+		return "Dinheiro"
 	return "Outro"
 
 
@@ -137,7 +140,8 @@ def process_uploaded_files(extrato_file_url, vendas_file_url, recebimentos_file_
 		df_extrato = get_infinitepay_bank_statement_df(extrato_path)
 		df_vendas = get_infinitepay_sales_df(vendas_path)
 		df_recebimentos = get_infinitepay_receipts_df(recebimentos_path)
-		df_geral = bank_reconcilliation(df_recebimentos, df_vendas)
+		# Ordem correta: extrato (bank_statement), recebimentos (receipts), vendas (sales)
+		df_geral = bank_reconcilliation(df_extrato, df_recebimentos, df_vendas)
 
 		# Estatísticas de inserção
 		stats = {
@@ -189,58 +193,6 @@ def process_uploaded_files(extrato_file_url, vendas_file_url, recebimentos_file_
 			except Exception as e:
 				stats["extrato"]["failed"] += 1
 				_capture_error("extrato", row.get("fitid") or row.get("name") or "sem-id", e)
-
-			# Também inserir no Extrato Geral para débitos
-			if row.get("type") == "debit":
-				stats["geral"]["total"] += 1
-				try:
-					iat = _get_inner_account_transfer_infinitepay(row.get("name"))
-					filters_geral = {}
-					if row.get("fitid"):
-						filters_geral = {"id": row.get("fitid")}
-					if filters_geral and frappe.db.exists("Transacao Extrato Geral", filters_geral):
-						stats["geral"]["skipped_exist"] += 1
-					else:
-						doc_eg = frappe.get_doc(
-							{
-								"doctype": "Transacao Extrato Geral",
-								"timestamp_transacao": nv(row.get("date")),
-								"data_transacao": (
-									nv(row.get("date")).date()
-									if hasattr(nv(row.get("date")), "date")
-									else None
-								),
-								"descricao": s(row.get("name")),
-								"valor": nv(row.get("value")),
-								"valor_absoluto": abs_or_none(row.get("value")),
-								"debito_credito": (
-									"Crédito" if s(row.get("type")).lower() == "credit" else "Débito"
-								),
-								"origem": "GRUPO ESCOTEIRO PROFESSORA INAH DE MELO N 147. - INFINITEPAY",
-								"instituicao": "Infinitepay",
-								"observações": None,
-								"descricao_reduzida": s(row.get("name")),
-								"metodo": _get_method_infinitepay(s(row.get("transaction_type"))),
-								"destino": None,
-								"carteira": "Infinitepay",
-								"id": s(row.get("fitid")),
-								"categoria": iat["categoria"],
-								"fixo_variavel": "Variável",
-								"conta_fixa": None,
-								"beneficiario": None,
-								"centro_de_custo": None,
-								"ordinaria_extraordinaria": "Extraordinária",
-								"data_deposito": nv(row.get("data_hora")),
-								"numero_liquidacao": None,
-								"repasse_entre_contas": iat["repasse_entre_contas"],
-								"transacao_revisada": 0,
-							}
-						)
-						doc_eg.insert(ignore_permissions=False)
-						stats["geral"]["inserted"] += 1
-				except Exception as e:
-					stats["geral"]["failed"] += 1
-					_capture_error("geral", row.get("fitid") or row.get("name") or "sem-id", e)
 
 		# Insere linhas das vendas (todos os campos)
 		for _, row in df_vendas.iterrows():

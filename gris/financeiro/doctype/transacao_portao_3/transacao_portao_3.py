@@ -99,6 +99,7 @@ class TransacaoPortao3(Document):
 						"doctype": "Transacao Extrato Geral",
 						"id": self.id,
 						"data_transacao": self.data_transacao,
+						"data_deposito": self.data_transacao,
 						"timestamp_transacao": self.timestamp,
 						"descricao": self.descricao,
 						"valor": self.valor,

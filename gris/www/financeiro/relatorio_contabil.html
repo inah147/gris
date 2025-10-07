@@ -62,7 +62,7 @@
             <td>{{ t.instituicao or '-' }}</td>
             <td>{{ t.carteira or '-' }}</td>
             <td>{{ t.centro_de_custo or '-' }}</td>
-            <td>{{ '{:,.2f}'.format(t.valor_absoluto|float).replace(',', 'X').replace('.', ',').replace('X', '.') if t.valor_absoluto is not none else '-' }}</td>
+            <td>{{ 'R$ ' + '{:,.2f}'.format(t.valor_absoluto|float).replace(',', 'X').replace('.', ',').replace('X', '.') if t.valor_absoluto is not none else '-' }}</td>
             <td>{{ t.debito_credito or '-' }}</td>
             <td>{{ t.descricao or '-' }}</td>
             <td>{{ t.categoria or '-' }}</td>
@@ -70,7 +70,7 @@
             <td>{{ t['observa\u00e7\u00f5es'] or '-' }}</td>
             {% for inst in instituicoes %}
               <td>
-                {{ '{:,.2f}'.format(t[inst]|float).replace(',', 'X').replace('.', ',').replace('X', '.') if t[inst] is not none else '-' }}
+                {{ 'R$ ' + '{:,.2f}'.format(t[inst]|float).replace(',', 'X').replace('.', ',').replace('X', '.') if t[inst] is not none else '-' }}
               </td>
             {% endfor %}
           </tr>

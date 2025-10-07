@@ -35,6 +35,8 @@ def export_relatorio_contabil(data_inicio=None, data_fim=None):
 		filters.append(["Transacao Extrato Geral", "data_deposito", ">=", data_inicio])
 	if data_fim:
 		filters.append(["Transacao Extrato Geral", "data_deposito", "<=", data_fim])
+	# Excluir método Dinheiro no período
+	filters.append(["Transacao Extrato Geral", "metodo", "!=", "Dinheiro"])
 
 	# obter transacoes
 	transacoes = frappe.get_all(
@@ -50,36 +52,52 @@ def export_relatorio_contabil(data_inicio=None, data_fim=None):
 			"categoria",
 			"nome_atividade",
 			"observacoes",
+			"metodo",
 		],
 		filters=filters,
 		order_by="data_deposito asc",
+		limit_page_length=0,
 	)
 
-	# garantir objetos simples
+	# garantir objetos simples e filtrar cash por segurança
 	rows = [dict(t) for t in transacoes]
+	if rows:
+		# remover metodo 'dinheiro' case-insensitive/trim
+		rows = [r for r in rows if str(r.get("metodo") or "").strip().lower() != "dinheiro"]
+		# fallback: remover descrições iniciando com 'Pagamento em Dinheiro'
+		rows = [
+			r
+			for r in rows
+			if not str(r.get("descricao") or "").strip().lower().startswith("pagamento em dinheiro")
+		]
 
-	# calcular saldos iniciais (dia anterior a data_inicio)
+	# calcular saldos iniciais (dia anterior a data_inicio), excluindo 'Dinheiro'
 	saldos_iniciais = {inst: 0.0 for inst in instituicoes_nomes}
 	if data_inicio:
 		try:
 			dt = datetime.strptime(data_inicio, "%Y-%m-%d")
 			dia_anterior = (dt - timedelta(days=1)).strftime("%Y-%m-%d")
-			for inst in instituicoes_nomes:
-				saldo = 0.0
-				anteriores = frappe.get_all(
-					"Transacao Extrato Geral",
-					fields=["valor_absoluto", "debito_credito"],
-					filters={"instituicao": inst, "data_deposito": ["<=", dia_anterior]},
-				)
-				for t in anteriores:
-					v = t.get("valor_absoluto") or 0.0
-					if t.get("debito_credito") == "Crédito":
-						saldo += v
-					elif t.get("debito_credito") == "Débito":
-						saldo -= v
-				saldos_iniciais[inst] = saldo
+			res = frappe.db.sql(
+				"""
+				SELECT instituicao,
+				       SUM(CASE WHEN debito_credito = 'Crédito' THEN COALESCE(valor_absoluto,0)
+				                WHEN debito_credito = 'Débito' THEN -COALESCE(valor_absoluto,0)
+				                ELSE 0 END) AS saldo
+				FROM `tabTransacao Extrato Geral`
+				WHERE data_deposito <= %(dia)s
+				  AND (metodo IS NULL OR LOWER(TRIM(metodo)) <> 'dinheiro')
+				  AND NOT (LOWER(TRIM(COALESCE(descricao, ''))) LIKE 'pagamento em dinheiro%')
+				GROUP BY instituicao
+				""",
+				{"dia": dia_anterior},
+				as_dict=True,
+			)
+			for row in res:
+				inst = row.get("instituicao")
+				if inst in saldos_iniciais:
+					saldos_iniciais[inst] = float(row.get("saldo") or 0.0)
 		except Exception:
-			# se parsing falhar, manter zeros
+			# se parsing ou SQL falhar, manter zeros
 			pass
 
 	# calcular saldos por linha

@@ -94,7 +94,7 @@ def process_uploaded_file_portao3(file_url):
 						"doctype": "Transacao Portao 3",
 						"id": tx_id,
 						"timestamp": row.get("Date"),
-						"data": row.get("Date").date(),
+						"data_transacao": row.get("Date").date(),
 						"tipo": row.get("Tipo"),
 						"valor": row.get("Valor"),
 						"descricao": row.get("Descrição"),

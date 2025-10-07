@@ -55,14 +55,15 @@ def get_context(context):
 	page_size = 50
 	offset = (page - 1) * page_size
 
-	if request_args.get("data_inicio"):
-		filters["data_deposito"] = [">=", request_args["data_inicio"]]
-	if request_args.get("data_fim"):
-		filters["data_deposito"] = filters.get("data_deposito", [])
-		if filters["data_deposito"]:
-			filters["data_deposito"] = [filters["data_deposito"], ["<=", request_args["data_fim"]]]
-		else:
-			filters["data_deposito"] = ["<=", request_args["data_fim"]]
+	# Filtro de data: usar chaves distintas para evitar estrutura inválida
+	data_inicio = request_args.get("data_inicio")
+	data_fim = request_args.get("data_fim")
+	if data_inicio and data_fim:
+		filters["data_deposito"] = ["between", [data_inicio, data_fim]]
+	elif data_inicio:
+		filters["data_deposito"] = [">=", data_inicio]
+	elif data_fim:
+		filters["data_deposito"] = ["<=", data_fim]
 
 	for campo in [
 		"instituicao",

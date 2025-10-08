@@ -72,7 +72,7 @@
 		if (!el) return;
 		el.textContent = '--';
 		try {
-			const resp = await frappe.call({ method: 'gris.www.financeiro.dashboard.get_inadimplencia_historica_6m' });
+			const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_inadimplencia_historica_12m' });
 			const data = resp.message || resp || {};
 			if (typeof data.percent === 'number') {
 				el.textContent = data.percent.toFixed(2).replace('.', ',') + '%';
@@ -89,7 +89,7 @@
 
 	async function fetchData(extraArgs){
 		const args = Object.assign({}, currentFilters, extraArgs||{});
-		const r = await frappe.call({ method: 'gris.www.financeiro.dashboard.get_entradas_saidas_mensal', args });
+		const r = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_entradas_saidas_mensal', args });
 		return r.message || {};
 	}
 
@@ -153,7 +153,7 @@
 		if (!entradasCreditoTipoChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
 		// Remover ordinaria_extraordinaria do filtro (cada tipo vira dataset)
 		const { ordinaria_extraordinaria, ...filtersSemTipo } = currentFilters;
-		const resp = await frappe.call({ method: 'gris.www.financeiro.dashboard.get_entradas_credito_mensal_por_tipo', args: filtersSemTipo });
+		const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_entradas_credito_mensal_por_tipo', args: filtersSemTipo });
 		const msg = resp.message || resp;
 		const payload = msg || {};
 		if (!payload.labels || !payload.labels.length){
@@ -195,7 +195,7 @@
 		if (!entradasCreditoCentroChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
 		// Remover centro_de_custo do filtro (cada centro vira dataset)
 		const { centro_de_custo, ...filtersSemCentro } = currentFilters;
-		const resp = await frappe.call({ method: 'gris.www.financeiro.dashboard.get_entradas_credito_mensal_por_centro_custo', args: filtersSemCentro });
+		const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_entradas_credito_mensal_por_centro_custo', args: filtersSemCentro });
 		const msg = resp.message || resp;
 		const payload = msg || {};
 		if (!payload.labels || !payload.labels.length){
@@ -312,7 +312,7 @@
 		const target = document.getElementById('chart-entradas-credito-mensal');
 		if (!target) return;
 		if (!entradasCreditoChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
-		const data = await frappe.call({ method: 'gris.www.financeiro.dashboard.get_entradas_credito_mensal', args: currentFilters });
+		const data = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_entradas_credito_mensal', args: currentFilters });
 		const msg = data.message || data; // compat
 		const payload = msg || {};
 		if (!payload.labels || !payload.labels.length){
@@ -382,7 +382,7 @@
 		if (!entradasCreditoCategoriaChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
 		// Remover categoria do filtro (cada categoria vira dataset)
 		const { categoria, ...filtersSemCategoria } = currentFilters;
-		const resp = await frappe.call({ method: 'gris.www.financeiro.dashboard.get_entradas_credito_mensal_por_categoria', args: filtersSemCategoria });
+		const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_entradas_credito_mensal_por_categoria', args: filtersSemCategoria });
 		const msg = resp.message || resp;
 		const payload = msg || {};
 		if (!payload.labels || !payload.labels.length){
@@ -448,7 +448,7 @@
 		const target = document.getElementById('chart-saidas-debito-mensal');
 		if (!target) return;
 		if (!saidasDebitoChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
-		const data = await frappe.call({ method: 'gris.www.financeiro.dashboard.get_saidas_debito_mensal', args: currentFilters });
+		const data = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_saidas_debito_mensal', args: currentFilters });
 		const payload = data.message || data || {};
 		if (!payload.labels || !payload.labels.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
 		const ds = payload.datasets && payload.datasets[0];
@@ -481,7 +481,7 @@
 		if (!target) return;
 		if (!saidasDebitoCategoriaChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
 		const { categoria, ...filtersSemCategoria } = currentFilters;
-		const resp = await frappe.call({ method: 'gris.www.financeiro.dashboard.get_saidas_debito_mensal_por_categoria', args: filtersSemCategoria });
+		const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_saidas_debito_mensal_por_categoria', args: filtersSemCategoria });
 		const payload = resp.message || resp || {};
 		if (!payload.labels || !payload.labels.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
 		if (!payload.datasets || !payload.datasets.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
@@ -515,7 +515,7 @@
 		if (!target) return;
 		if (!saidasDebitoCentroChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
 		const { centro_de_custo, ...filtersSemCentro } = currentFilters;
-		const resp = await frappe.call({ method: 'gris.www.financeiro.dashboard.get_saidas_debito_mensal_por_centro_custo', args: filtersSemCentro });
+		const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_saidas_debito_mensal_por_centro_custo', args: filtersSemCentro });
 		const payload = resp.message || resp || {};
 		if (!payload.labels || !payload.labels.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
 		if (!payload.datasets || !payload.datasets.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
@@ -549,7 +549,7 @@
 		if (!target) return;
 		if (!saidasDebitoTipoChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
 		const { ordinaria_extraordinaria, ...filtersSemTipo } = currentFilters;
-		const resp = await frappe.call({ method: 'gris.www.financeiro.dashboard.get_saidas_debito_mensal_por_tipo', args: filtersSemTipo });
+		const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_saidas_debito_mensal_por_tipo', args: filtersSemTipo });
 		const payload = resp.message || resp || {};
 		if (!payload.labels || !payload.labels.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
 		if (!payload.datasets || !payload.datasets.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
@@ -583,7 +583,7 @@
 		const target = document.getElementById('chart-contribuicoes-status-mensal');
 		if (!target) return;
 		if (!contribStatusChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
-		const resp = await frappe.call({ method: 'gris.www.financeiro.dashboard.get_contribuicoes_mensais_por_status' });
+		const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_contribuicoes_mensais_por_status' });
 		const payload = resp.message || resp || {};
 		if (!payload.labels || !payload.labels.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
 		if (!payload.datasets || !payload.datasets.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
@@ -619,7 +619,7 @@
 		const target = document.getElementById('chart-contribuicoes-inadimplencia-mensal');
 		if (!target) return;
 		if (!contribInadimplenciaChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
-		const resp = await frappe.call({ method: 'gris.www.financeiro.dashboard.get_contribuicoes_mensais_inadimplencia' });
+		const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_contribuicoes_mensais_inadimplencia' });
 		const payload = resp.message || resp || {};
 		if (!payload.labels || !payload.labels.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
 		const ds = payload.datasets && payload.datasets[0];

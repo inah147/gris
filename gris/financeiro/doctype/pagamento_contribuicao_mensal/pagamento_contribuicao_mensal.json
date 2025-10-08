@@ -7,6 +7,7 @@
  "field_order": [
   "associado",
   "status",
+  "atrasou",
   "column_break_ybpx",
   "mes_de_referencia",
   "valor"
@@ -44,12 +45,18 @@
    "label": "Valor",
    "non_negative": 1,
    "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "atrasou",
+   "fieldtype": "Check",
+   "label": "Atrasou no m\u00eas"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-19 07:57:03.641989",
+ "modified": "2025-10-08 12:49:12.451669",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Pagamento Contribuicao Mensal",

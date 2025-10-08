@@ -1,0 +1,11 @@
+/* Estilos específicos do dashboard financeiro */
+
+/* Espaçamento vertical adicional em telas pequenas para os cards */
+@media (max-width: 768px) {
+  #fin-cards-row-1 > [class*='col-'] { 
+    margin-bottom: 1.15rem;
+  }
+  #fin-cards-row-1 { 
+    margin-bottom: .25rem; 
+  }
+}

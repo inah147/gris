@@ -11,11 +11,35 @@ document.addEventListener('DOMContentLoaded', function() {
 		'fixo_variavel',
 		'ordinaria_extraordinaria',
 		'conta_fixa',
-		'beneficiario_contribuicao_mensal',
+		'beneficiario',
 		'observacoes',
 		'repasse_entre_contas',
 		'transacao_revisada'
 	];
+
+	// Função para mostrar/ocultar campo de beneficiário baseado na categoria
+	function toggleBeneficiarioField() {
+		const categoriaSelect = document.querySelector('[name="categoria"]');
+		const beneficiarioContainer = document.getElementById('beneficiario-field-container');
+		
+		if (categoriaSelect && beneficiarioContainer) {
+			const categoria = categoriaSelect.value;
+			if (categoria === 'Contribuição Mensal') {
+				beneficiarioContainer.style.display = '';
+			} else {
+				beneficiarioContainer.style.display = 'none';
+			}
+		}
+	}
+
+	// Executa ao carregar a página
+	toggleBeneficiarioField();
+
+	// Adiciona listener no campo categoria
+	const categoriaSelect = document.querySelector('[name="categoria"]');
+	if (categoriaSelect) {
+		categoriaSelect.addEventListener('change', toggleBeneficiarioField);
+	}
 
 	// Seleciona todos os campos editáveis na página (não só dentro do form)
 	function getFieldElement(field) {

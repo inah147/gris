@@ -155,14 +155,14 @@
                   </div>
                 </div>
               </div>
-              <div class="col-md-4">
+              <div class="col-md-4" id="beneficiario-field-container">
                 <div class="filter-field">
                   <label class="form-label small text-muted">Beneficiário da contribuição mensal</label>
                   <div class="fx-select">
-                    <select name="beneficiario_contribuicao_mensal" class="form-select form-select-sm">
+                    <select name="beneficiario" class="form-select form-select-sm">
                       <option value=""></option>
                       {% for op in opcoes_beneficiario %}
-                        <option value="{{ op.name }}" {% if doc.beneficiario_contribuicao_mensal==op.name %}selected{% endif %}>{{ op.nome_completo }}</option>
+                        <option value="{{ op.name }}" {% if doc.beneficiario==op.name %}selected{% endif %}>{{ op.nome_completo }}</option>
                       {% endfor %}
                     </select>
                   </div>

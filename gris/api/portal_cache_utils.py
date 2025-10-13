@@ -16,7 +16,9 @@ def make_file_public(file_url: str) -> str:
 
 		# Se não encontrou, tenta buscar pelo nome (pode estar como /files/nome.ext)
 		if not file_doc and file_url.startswith("/"):
-			files = frappe.get_all("File", filters={"file_url": ["like", f"%{file_url.split('/')[-1]}%"]}, limit=1)
+			files = frappe.get_all(
+				"File", filters={"file_url": ["like", f"%{file_url.split('/')[-1]}%"]}, limit=1
+			)
 			if files:
 				file_doc = frappe.get_doc("File", files[0].name, ignore_permissions=True)
 
@@ -65,7 +67,9 @@ def get_uel_cached(ttl: int = 300) -> dict:
 				{
 					"publico": getattr(d, "publico", False),
 					"nome_do_documento": getattr(d, "nome_do_documento", "Documento"),
-					"arquivo": make_file_public(getattr(d, "arquivo", None)) if getattr(d, "publico", False) else getattr(d, "arquivo", None),
+					"arquivo": make_file_public(getattr(d, "arquivo", None))
+					if getattr(d, "publico", False)
+					else getattr(d, "arquivo", None),
 				}
 				for d in (getattr(uel, "documentos", []) or [])
 			],

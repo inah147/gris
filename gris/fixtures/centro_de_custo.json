@@ -16,9 +16,58 @@
   "docstatus": 0,
   "doctype": "Centro de Custo",
   "is_group": 1,
+  "modified": "2025-09-17 19:49:49.995305",
+  "name": "Presidência",
+  "nome": "Presidência",
+  "old_parent": "Unidade Escoteira Local",
+  "parent_centro_de_custo": "Unidade Escoteira Local",
+  "responsavel": null
+ },
+ {
+  "descricao": null,
+  "docstatus": 0,
+  "doctype": "Centro de Custo",
+  "is_group": 1,
   "modified": "2025-09-17 19:44:04.335876",
   "name": "Métodos Educativos",
   "nome": "Métodos Educativos",
+  "old_parent": "Unidade Escoteira Local",
+  "parent_centro_de_custo": "Unidade Escoteira Local",
+  "responsavel": null
+ },
+ {
+  "descricao": null,
+  "docstatus": 0,
+  "doctype": "Centro de Custo",
+  "is_group": 1,
+  "modified": "2025-09-17 19:44:24.935392",
+  "name": "Programa Educativo",
+  "nome": "Programa Educativo",
+  "old_parent": "Métodos Educativos",
+  "parent_centro_de_custo": "Métodos Educativos",
+  "responsavel": null
+ },
+
+ {
+  "descricao": null,
+  "docstatus": 0,
+  "doctype": "Centro de Custo",
+  "is_group": 1,
+  "modified": "2025-09-17 19:48:22.151086",
+  "name": "Administração",
+  "nome": "Administração",
+  "old_parent": "Unidade Escoteira Local",
+  "parent_centro_de_custo": "Unidade Escoteira Local",
+  "responsavel": null
+ },
+ {
+  "descricao": null,
+  "docstatus": 0,
+  "doctype": "Centro de Custo",
+  "is_group": 1,
+  "modified": "2025-09-17 19:48:45.897124",
+  "name": "Financeiro",
+  "nome": "Financeiro",
   "old_parent": "Unidade Escoteira Local",
   "parent_centro_de_custo": "Unidade Escoteira Local",
   "responsavel": null
@@ -45,30 +94,6 @@
   "nome": "Ramo Pioneiro",
   "old_parent": "Programa Educativo",
   "parent_centro_de_custo": "Programa Educativo",
-  "responsavel": null
- },
- {
-  "descricao": null,
-  "docstatus": 0,
-  "doctype": "Centro de Custo",
-  "is_group": 1,
-  "modified": "2025-09-17 19:48:22.151086",
-  "name": "Administração",
-  "nome": "Administração",
-  "old_parent": "Unidade Escoteira Local",
-  "parent_centro_de_custo": "Unidade Escoteira Local",
-  "responsavel": null
- },
- {
-  "descricao": null,
-  "docstatus": 0,
-  "doctype": "Centro de Custo",
-  "is_group": 1,
-  "modified": "2025-09-17 19:48:45.897124",
-  "name": "Financeiro",
-  "nome": "Financeiro",
-  "old_parent": "Unidade Escoteira Local",
-  "parent_centro_de_custo": "Unidade Escoteira Local",
   "responsavel": null
  },
  {
@@ -147,18 +172,6 @@
   "descricao": null,
   "docstatus": 0,
   "doctype": "Centro de Custo",
-  "is_group": 1,
-  "modified": "2025-09-17 19:44:24.935392",
-  "name": "Programa Educativo",
-  "nome": "Programa Educativo",
-  "old_parent": "Métodos Educativos",
-  "parent_centro_de_custo": "Métodos Educativos",
-  "responsavel": null
- },
- {
-  "descricao": null,
-  "docstatus": 0,
-  "doctype": "Centro de Custo",
   "is_group": 0,
   "modified": "2025-09-17 19:46:23.355164",
   "name": "Ramo Sênior",
@@ -177,18 +190,6 @@
   "nome": "Ramo Lobinho",
   "old_parent": "Programa Educativo",
   "parent_centro_de_custo": "Programa Educativo",
-  "responsavel": null
- },
- {
-  "descricao": null,
-  "docstatus": 0,
-  "doctype": "Centro de Custo",
-  "is_group": 1,
-  "modified": "2025-09-17 19:49:49.995305",
-  "name": "Presidência",
-  "nome": "Presidência",
-  "old_parent": "Unidade Escoteira Local",
-  "parent_centro_de_custo": "Unidade Escoteira Local",
   "responsavel": null
  }
 ]

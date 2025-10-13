@@ -46,7 +46,7 @@ def _distinct_list(field: str) -> list:
 
 def get_context(context):
 	if frappe.session.user == "Guest":
-		frappe.local.flags.redirect_location = "/login?redirect_to=/financeiro/dashboard"
+		frappe.local.flags.redirect_location = "/login?redirect-to=/financeiro/dashboard"
 		raise frappe.Redirect
 
 	uel_data = get_uel_cached()

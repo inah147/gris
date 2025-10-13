@@ -12,7 +12,7 @@ def get_context(context):
 	# Param name (docname da Conta Fixa)
 	conta_name = frappe.form_dict.get("name") or frappe.form_dict.get("id")
 	if frappe.session.user == "Guest":
-		frappe.local.flags.redirect_location = "/login?redirect_to=/financeiro/despesas"
+		frappe.local.flags.redirect_location = "/login?redirect-to=/financeiro/despesas"
 		raise frappe.Redirect
 	enrich_context(context, "/financeiro/despesas")
 	context.active_link = "/financeiro/despesas"

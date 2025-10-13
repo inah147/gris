@@ -15,7 +15,7 @@ def get_context(context):
 	enrich_context(context, "/financeiro/contribuicoes")
 
 	if frappe.session.user == "Guest":
-		frappe.local.flags.redirect_location = "/login?redirect_to=/financeiro"
+		frappe.local.flags.redirect_location = "/login?redirect-to=/financeiro"
 		raise frappe.Redirect
 
 	# Se o usuário está autenticado mas não possui uma das roles exigidas em

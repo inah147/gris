@@ -9,7 +9,7 @@ no_cache = 1
 def get_context(context):
 	# Exibe página 403 apenas para usuários autenticados; se Guest manda logar
 	if frappe.session.user == "Guest":
-		frappe.local.flags.redirect_location = "/login?redirect_to=/inicio"
+		frappe.local.flags.redirect_location = "/login?redirect-to=/inicio"
 		raise frappe.Redirect
 
 	# Sidebar e contexto padrão

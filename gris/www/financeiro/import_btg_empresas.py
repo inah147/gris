@@ -12,7 +12,7 @@ from gris.api.portal_cache_utils import get_uel_cached
 def get_context(context):
 	# Bloqueia usuários não autenticados
 	if frappe.session.user == "Guest":
-		frappe.local.flags.redirect_location = "/login?redirect_to=/inicio"
+		frappe.local.flags.redirect_location = "/login?redirect-to=/inicio"
 		raise frappe.Redirect
 
 	# Logo e título lateral

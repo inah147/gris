@@ -10,7 +10,7 @@ no_cache = 1
 def get_context(context):
 	# Bloqueio para usuários não autenticados
 	if frappe.session.user == "Guest":
-		frappe.local.flags.redirect_location = "/login?redirect_to=/financeiro/relatorios"
+		frappe.local.flags.redirect_location = "/login?redirect-to=/financeiro/relatorios"
 		raise frappe.Redirect
 
 	# Recupera logo e define para sidebar

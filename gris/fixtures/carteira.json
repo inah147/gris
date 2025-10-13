@@ -11,7 +11,7 @@
   "name": "Ramo Pioneiro",
   "nome": "Ramo Pioneiro",
   "responsavel": null,
-  "saldo": 45.0
+  "saldo": 0.0
  },
  {
   "centro_de_custo": "Ramo Filhotes",
@@ -81,7 +81,7 @@
   "name": "Lojinha",
   "nome": "Lojinha",
   "responsavel": null,
-  "saldo": 720.2
+  "saldo": 0.0
  },
  {
   "centro_de_custo": null,
@@ -109,7 +109,7 @@
   "name": "Gestao de Adultos",
   "nome": "Gestao de Adultos",
   "responsavel": null,
-  "saldo": 3693.04
+  "saldo": 0.0
  },
  {
   "centro_de_custo": "Presidência",
@@ -123,7 +123,7 @@
   "name": "Cantina",
   "nome": "Cantina",
   "responsavel": null,
-  "saldo": 1390.5
+  "saldo": 0.0
  },
  {
   "centro_de_custo": "Ramo Escoteiro",
@@ -137,7 +137,7 @@
   "name": "Ramo Escoteiro",
   "nome": "Ramo Escoteiro",
   "responsavel": null,
-  "saldo": 591.37
+  "saldo": 0.0
  },
  {
   "centro_de_custo": "Presidência",
@@ -165,7 +165,7 @@
   "name": "Manutencao",
   "nome": "Manutencao",
   "responsavel": null,
-  "saldo": 367.52
+  "saldo": 0.0
  },
  {
   "centro_de_custo": "Ramo Sênior",
@@ -179,7 +179,7 @@
   "name": "Ramo Senior",
   "nome": "Ramo Senior",
   "responsavel": null,
-  "saldo": 826.69
+  "saldo": 0.0
  },
  {
   "centro_de_custo": "Ramo Lobinho",
@@ -193,7 +193,7 @@
   "name": "Ramo Lobinho",
   "nome": "Ramo Lobinho",
   "responsavel": null,
-  "saldo": 515.25
+  "saldo": 0.0
  },
  {
   "centro_de_custo": "Presidência",
@@ -207,7 +207,7 @@
   "name": "Conta empresarial",
   "nome": "Conta empresarial",
   "responsavel": "caio.ferreira@escoteiros.org.br",
-  "saldo": 19683.52
+  "saldo": 0.0
  },
  {
   "centro_de_custo": "Programa Educativo",

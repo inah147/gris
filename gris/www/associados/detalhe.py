@@ -10,7 +10,7 @@ def get_context(context):
 	if frappe.session.user == "Guest":
 		# Sanitiza redirect_to para evitar open redirect
 		redirect_path = "/associados/detalhe"
-		frappe.local.flags.redirect_location = f"/login?redirect_to={redirect_path}"
+		frappe.local.flags.redirect_location = f"/login?redirect-to={redirect_path}"
 		raise frappe.Redirect
 
 	name = frappe.form_dict.get("name")

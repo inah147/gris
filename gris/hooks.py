@@ -57,7 +57,7 @@ app_license = "mit"
 # ----------
 
 # application home page (will override Website Settings)
-# home_page = "login"
+home_page = "/inicio"
 
 # website user home page (by Role)
 # role_home_page = {
@@ -287,6 +287,7 @@ fixtures = [
 		"dt": "Unidade Organizacional",
 	},
 ]
+
 
 # Contexto global para o site (sidebar centralizada)
 # website_context = {

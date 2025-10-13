@@ -25,5 +25,6 @@ def get_context(context):
 	enrich_context(context, "/inicio")
 	# Flags para controlar exibição de cards na página inicial
 	context.can_associados = user_has_access("/associados")
+	context.can_financeiro = user_has_access("/financeiro")
 	context.can_transparencia = user_has_access("/portal_transparencia")
 	return context

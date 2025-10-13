@@ -1,6 +1,6 @@
 import frappe
 
-from gris.api.portal_access import enrich_context, user_has_access
+from gris.api.portal_access import enrich_context
 from gris.api.portal_cache_utils import get_uel_cached
 
 no_cache = 1
@@ -9,7 +9,7 @@ no_cache = 1
 def get_context(context):
 	# Bloqueio para usuários não autenticados
 	if frappe.session.user == "Guest":
-		frappe.local.flags.redirect_location = "/login?redirect_to=/inicio"
+		frappe.local.flags.redirect_location = "/login?redirect_to=/financeiro"
 		raise frappe.Redirect
 	# Recupera logo e define para sidebar
 	uel_data = get_uel_cached()

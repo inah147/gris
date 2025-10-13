@@ -1,15 +1,83 @@
 {% extends "templates/web_sidebar_base.html" %}
 
-{% block title %}Início{% endblock %}
+{% block title %}Financeiro{% endblock %}
 
+{# Configura dados da sidebar específicos desta página #}
 {% set active_link = '/financeiro' %}
+{% set sidebar_title = 'Financeiro' %}
+{% set sidebar_sections = [] %}
 
-{% block page_header %}
-  <div class="mb-4 d-flex align-items-center justify-content-between">
-    <h1 class="h3 mb-0">Início</h1>
-  </div>
-{% endblock %}
 
 {% block main %}
+  <div class="mb-4">
+    <p class="lead mb-1">Área Financeira</p>
+    <p class="text-muted mb-0 small">Escolha a funcionalidade desejada.</p>
+  </div>
+  <div class="inicio-cards row g-3">
+    <div class="inicio-col col-12 col-sm-6 col-lg-4">
+      <div class="inicio-card h-100">
+        <h2>Dashboard</h2>
+        <p>Visão geral financeira com gráficos e indicadores.</p>
+        <a href="/financeiro/dashboard" class="btn btn-primary btn-sm">Abrir</a>
+      </div>
+    </div>
+
+    <div class="inicio-col col-12 col-sm-6 col-lg-4">
+      <div class="inicio-card h-100">
+        <h2>Extrato Geral</h2>
+        <p>Consulta de transações e movimentações bancárias.</p>
+        <a href="/financeiro/extrato" class="btn btn-primary btn-sm">Abrir</a>
+      </div>
+    </div>
+
+    <div class="inicio-col col-12 col-sm-6 col-lg-4">
+      <div class="inicio-card h-100">
+        <h2>Contas</h2>
+        <p>Gestão de contas bancárias e carteiras.</p>
+        <a href="/financeiro/contas" class="btn btn-primary btn-sm">Abrir</a>
+      </div>
+    </div>
+
+    <div class="inicio-col col-12 col-sm-6 col-lg-4">
+      <div class="inicio-card h-100">
+        <h2>Contribuições</h2>
+        <p>Acompanhamento de contribuições mensais.</p>
+        <a href="/financeiro/contribuicoes" class="btn btn-primary btn-sm">Abrir</a>
+      </div>
+    </div>
+
+    <div class="inicio-col col-12 col-sm-6 col-lg-4">
+      <div class="inicio-card h-100">
+        <h2>Despesas</h2>
+        <p>Registro e consulta de despesas da UEL.</p>
+        <a href="/financeiro/despesas" class="btn btn-primary btn-sm">Abrir</a>
+      </div>
+    </div>
+
+    <div class="inicio-col col-12 col-sm-6 col-lg-4">
+      <div class="inicio-card h-100">
+        <h2>Demonstrativo</h2>
+        <p>Demonstrativos financeiros e relatórios contábeis.</p>
+        <a href="/financeiro/demonstrativo" class="btn btn-primary btn-sm">Abrir</a>
+      </div>
+    </div>
+
+    <div class="inicio-col col-12 col-sm-6 col-lg-4">
+      <div class="inicio-card h-100">
+        <h2>Pareceres</h2>
+        <p>Pareceres do Conselho Fiscal.</p>
+        <a href="/financeiro/pareceres" class="btn btn-primary btn-sm">Abrir</a>
+      </div>
+    </div>
+
+    <div class="inicio-col col-12 col-sm-6 col-lg-4">
+      <div class="inicio-card h-100">
+        <h2>Relatórios</h2>
+        <p>Relatórios financeiros diversos.</p>
+        <a href="/financeiro/relatorios" class="btn btn-primary btn-sm">Abrir</a>
+      </div>
+    </div>
+  </div>
+
   
 {% endblock %}

@@ -27,7 +27,18 @@
         </div>
       </div>
     {% endif %}
-    {% if can_transparencia %}
+
+    {% if can_associados %}
+      <div class="inicio-col col-12 col-sm-6 col-lg-4">
+        <div class="inicio-card h-100">
+          <h2>Financeiro</h2>
+          <p>Gerencie e acompanha as finanças da UEL.</p>
+          <a href="/financeiro" class="btn btn-primary btn-sm">Abrir</a>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if can_financeiro %}
       <div class="inicio-col col-12 col-sm-6 col-lg-4">
         <div class="inicio-card h-100">
           <h2>Transparência</h2>

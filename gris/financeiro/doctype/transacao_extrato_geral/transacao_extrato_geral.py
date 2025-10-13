@@ -11,8 +11,6 @@ class TransacaoExtratoGeral(Document):
 			# 1. Somar o valor de cada transação da carteira no Transacao Extrato Geral
 			#    Regra: excluir "Dinheiro" apenas quando a instituição da carteira for Infinitepay
 			inst = frappe.db.get_value("Carteira", self.carteira, "instituicao_financeira") or ""
-			if not inst:
-				inst = frappe.db.get_value("Carteira", self.carteira, "instituicao") or ""
 			apply_cash_filter = "infinitepay" in inst.lower()
 
 			_filters = {"carteira": self.carteira}

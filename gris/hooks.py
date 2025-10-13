@@ -283,6 +283,9 @@ fixtures = [
 	{
 		"dt": "Categoria de Transacao",
 	},
+	{
+		"dt": "Unidade Organizacional",
+	},
 ]
 
 # Contexto global para o site (sidebar centralizada)

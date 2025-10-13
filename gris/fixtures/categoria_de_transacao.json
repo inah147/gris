@@ -8,6 +8,14 @@
   "nome": "Doação"
  },
  {
+  "desscrição": "Categoria utilizada para indicar que a transação se trata de uma transferência entre contas do grupo, e não uma receita ou despesa. ",
+  "docstatus": 0,
+  "doctype": "Categoria de Transacao",
+  "modified": "2025-09-24 23:08:55.279393",
+  "name": "Transferência entre Contas",
+  "nome": "Transferência entre Contas"
+ },
+ {
   "desscrição": "Contribuição mensal recebida de um beneficiário",
   "docstatus": 0,
   "doctype": "Categoria de Transacao",

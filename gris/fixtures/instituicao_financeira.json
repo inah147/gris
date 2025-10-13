@@ -2,20 +2,6 @@
  {
   "docstatus": 0,
   "doctype": "Instituicao Financeira",
-  "modified": "2025-09-17 13:38:27.275914",
-  "name": "Inifinitepay",
-  "nome": "Inifinitepay"
- },
- {
-  "docstatus": 0,
-  "doctype": "Instituicao Financeira",
-  "modified": "2025-09-17 13:38:35.942583",
-  "name": "Portão 3",
-  "nome": "Portão 3"
- },
- {
-  "docstatus": 0,
-  "doctype": "Instituicao Financeira",
   "modified": "2025-09-17 13:38:56.104509",
   "name": "BTG Investimentos",
   "nome": "BTG Investimentos"
@@ -33,5 +19,19 @@
   "modified": "2025-09-17 21:21:49.509076",
   "name": "BTG Empresas",
   "nome": "BTG Empresas"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Instituicao Financeira",
+  "modified": "2025-09-17 13:38:35.942583",
+  "name": "Portão 3",
+  "nome": "Portão 3"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Instituicao Financeira",
+  "modified": "2025-09-17 13:38:27.275914",
+  "name": "Infinitepay",
+  "nome": "Infinitepay"
  }
 ]

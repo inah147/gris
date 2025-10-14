@@ -16,6 +16,20 @@
  {
   "docstatus": 0,
   "doctype": "Instituicao Financeira",
+  "modified": "2025-10-14 07:24:11.330122",
+  "name": "Espécie",
+  "nome": "Espécie"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Instituicao Financeira",
+  "modified": "2025-10-14 07:24:02.571634",
+  "name": "Sicredi",
+  "nome": "Sicredi"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Instituicao Financeira",
   "modified": "2025-09-17 21:21:49.509076",
   "name": "BTG Empresas",
   "nome": "BTG Empresas"

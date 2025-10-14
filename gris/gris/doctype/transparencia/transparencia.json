@@ -99,7 +99,8 @@
  "index_web_pages_for_search": 1,
  "is_published_field": "publicado",
  "links": [],
- "modified": "2025-09-23 13:38:04.499133",
+ "make_attachments_public": 1,
+ "modified": "2025-10-14 07:02:09.985404",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Transparencia",
@@ -126,5 +127,6 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "title_field": "title"
+ "title_field": "title",
+ "track_changes": 1
 }

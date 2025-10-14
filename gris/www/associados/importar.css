@@ -1,0 +1,93 @@
+/* Estilos para página de importação de associados */
+
+/* Grid de 5 colunas para os cards de resultado */
+@media (min-width: 992px) {
+  .col-lg-2dot4 {
+    flex: 0 0 auto;
+    width: 20%;
+  }
+}
+
+#file-info {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#loading-indicator {
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+#loading-indicator .spinner-border {
+  width: 3rem;
+  height: 3rem;
+  border-width: 0.3em;
+}
+
+/* Garantir que nenhum texto apareça dentro do spinner */
+#loading-indicator .spinner-border * {
+  display: none !important;
+}
+
+#results-grid .card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#results-grid .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Aumentar espaçamento vertical entre cards no mobile */
+#results-grid > [class*="col-"] {
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 767px) {
+  #results-grid > [class*="col-"] {
+    margin-bottom: 1.5rem;
+  }
+}
+
+#errors-container {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#errors-list ul {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-left: 1.5rem;
+}
+
+.btn {
+  transition: all 0.2s ease;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}

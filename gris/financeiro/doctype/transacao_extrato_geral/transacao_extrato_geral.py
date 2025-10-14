@@ -33,7 +33,9 @@ class TransacaoExtratoGeral(Document):
 	def _update_pagamento_contribuicao_mensal(self):
 		"""Atualiza o status de Pagamento Contribuicao Mensal quando beneficiario é preenchido."""
 		# Log para debug
-		frappe.logger().info(f"_update_pagamento_contribuicao_mensal chamado. beneficiario={self.beneficiario}, data_transacao={self.data_transacao}")
+		frappe.logger().info(
+			f"_update_pagamento_contribuicao_mensal chamado. beneficiario={self.beneficiario}, data_transacao={self.data_transacao}"
+		)
 
 		if not self.beneficiario or not self.data_transacao:
 			frappe.logger().info("Retornando: beneficiario ou data_transacao está vazio")
@@ -48,7 +50,9 @@ class TransacaoExtratoGeral(Document):
 			# Primeiro dia do mês da transação
 			mes_referencia = data.replace(day=1)
 
-			frappe.logger().info(f"Buscando pagamento para associado={self.beneficiario}, mes_referencia={mes_referencia}")
+			frappe.logger().info(
+				f"Buscando pagamento para associado={self.beneficiario}, mes_referencia={mes_referencia}"
+			)
 
 			# Busca o registro de Pagamento Contribuicao Mensal
 			pagamentos = frappe.get_all(
@@ -79,7 +83,9 @@ class TransacaoExtratoGeral(Document):
 				else:
 					frappe.logger().info("Pagamento já estava como Pago")
 			else:
-				frappe.logger().warning(f"Nenhum pagamento encontrado para {self.beneficiario} no mês {mes_referencia}")
+				frappe.logger().warning(
+					f"Nenhum pagamento encontrado para {self.beneficiario} no mês {mes_referencia}"
+				)
 		else:
 			frappe.logger().info("Beneficiário não mudou ou está vazio")
 

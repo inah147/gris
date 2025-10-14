@@ -16,6 +16,46 @@
   "nome": "Transferência entre Contas"
  },
  {
+  "desscrição": "Transações não mapeadas",
+  "docstatus": 0,
+  "doctype": "Categoria de Transacao",
+  "modified": "2025-10-14 07:26:04.076678",
+  "name": "Outros",
+  "nome": "Outros"
+ },
+ {
+  "desscrição": "Valores gastos nas contas mensais da UEL",
+  "docstatus": 0,
+  "doctype": "Categoria de Transacao",
+  "modified": "2025-10-14 07:26:53.215209",
+  "name": "Contas Ordinárias",
+  "nome": "Contas Ordinárias"
+ },
+ {
+  "desscrição": "Valores relacionados às festas organizadas pela UEL",
+  "docstatus": 0,
+  "doctype": "Categoria de Transacao",
+  "modified": "2025-10-14 07:27:13.379452",
+  "name": "Festas",
+  "nome": "Festas"
+ },
+ {
+  "desscrição": "valores relacionados à manutenção da UEL",
+  "docstatus": 0,
+  "doctype": "Categoria de Transacao",
+  "modified": "2025-10-14 07:27:29.693429",
+  "name": "Manutenção",
+  "nome": "Manutenção"
+ },
+ {
+  "desscrição": "Valores provenientes de rendimentos de aplicações",
+  "docstatus": 0,
+  "doctype": "Categoria de Transacao",
+  "modified": "2025-10-14 07:27:49.278424",
+  "name": "Rendimentos",
+  "nome": "Rendimentos"
+ },
+ {
   "desscrição": "Contribuição mensal recebida de um beneficiário",
   "docstatus": 0,
   "doctype": "Categoria de Transacao",

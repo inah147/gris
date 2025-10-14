@@ -1,5 +1,14 @@
 [
  {
+  "area": "Presidência",
+  "descrição": null,
+  "docstatus": 0,
+  "doctype": "Unidade Organizacional",
+  "modified": "2025-10-13 19:08:07.445033",
+  "name": "Presidência",
+  "responde_para": null
+ },
+ {
   "area": "Financeiro",
   "descrição": null,
   "docstatus": 0,

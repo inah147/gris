@@ -13,7 +13,8 @@ dependencies = [
     "dateparser",
     "ofxparse",
     "openpyxl",
-    "numpy"
+    "numpy",
+    "pdfplumber"
 ]
 
 [build-system]

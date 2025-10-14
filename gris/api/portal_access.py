@@ -20,6 +20,7 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 		"children": [
 			{"label": "Visão Geral", "path": "/associados/dashboard"},
 			{"label": "Lista de Associados", "path": "/associados/lista"},
+			{"label": "Importar Associados", "path": "/associados/importar"},
 		],
 	},
 	{
@@ -56,6 +57,7 @@ PAGE_ROLES: dict[str, list[str]] = {
 	],
 	"/associados/lista": ["Gestor de Associados", "Visualizador Associados"],
 	"/associados/detalhe": ["Gestor de Associados", "Visualizador Associados"],
+	"/associados/importar": ["Gestor de Associados"],
 	"/financeiro/contribuicoes": ["Gestor Contribuição Mensal", "Visualizador Contribuição Mensal"],
 	"/portal_transparencia": ["Public"],  # totalmente público
 }

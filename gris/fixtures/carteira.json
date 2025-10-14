@@ -11,7 +11,7 @@
   "name": "Ramo Pioneiro",
   "nome": "Ramo Pioneiro",
   "responsavel": null,
-  "saldo": 0.0
+  "saldo": 41294.0
  },
  {
   "centro_de_custo": "Ramo Filhotes",
@@ -53,7 +53,7 @@
   "name": "PagBank",
   "nome": "PagBank",
   "responsavel": "caio.ferreira@escoteiros.org.br",
-  "saldo": 0.0
+  "saldo": 301973.17997
  },
  {
   "centro_de_custo": null,
@@ -67,7 +67,7 @@
   "name": "Sicredi",
   "nome": "Sicredi",
   "responsavel": null,
-  "saldo": 0.0
+  "saldo": 215248.70555
  },
  {
   "centro_de_custo": null,
@@ -81,7 +81,7 @@
   "name": "Espécie",
   "nome": "Espécie",
   "responsavel": null,
-  "saldo": 0.0
+  "saldo": 34033.0
  },
  {
   "centro_de_custo": "Presidência",
@@ -95,7 +95,7 @@
   "name": "Festas",
   "nome": "Festas",
   "responsavel": "henrique.stivali@escoteiros.org.br",
-  "saldo": 0.0
+  "saldo": 739104.06862
  },
  {
   "centro_de_custo": "Presidência",
@@ -109,7 +109,7 @@
   "name": "Lojinha",
   "nome": "Lojinha",
   "responsavel": null,
-  "saldo": 0.0
+  "saldo": 4915.0
  },
  {
   "centro_de_custo": null,
@@ -137,7 +137,7 @@
   "name": "Gestao de Adultos",
   "nome": "Gestao de Adultos",
   "responsavel": null,
-  "saldo": 0.0
+  "saldo": 41224.25927
  },
  {
   "centro_de_custo": "Presidência",
@@ -151,7 +151,7 @@
   "name": "Cantina",
   "nome": "Cantina",
   "responsavel": null,
-  "saldo": 0.0
+  "saldo": 443272.0
  },
  {
   "centro_de_custo": "Ramo Escoteiro",
@@ -165,7 +165,7 @@
   "name": "Ramo Escoteiro",
   "nome": "Ramo Escoteiro",
   "responsavel": null,
-  "saldo": 0.0
+  "saldo": 129816.0
  },
  {
   "centro_de_custo": "Presidência",
@@ -179,7 +179,7 @@
   "name": "Cozinha",
   "nome": "Cozinha",
   "responsavel": null,
-  "saldo": 0.0
+  "saldo": 249684.0
  },
  {
   "centro_de_custo": "Manutenção",
@@ -193,7 +193,7 @@
   "name": "Manutencao",
   "nome": "Manutencao",
   "responsavel": null,
-  "saldo": 0.0
+  "saldo": 166336.4
  },
  {
   "centro_de_custo": "Ramo Sênior",
@@ -207,7 +207,7 @@
   "name": "Ramo Senior",
   "nome": "Ramo Senior",
   "responsavel": null,
-  "saldo": 0.0
+  "saldo": 145363.43
  },
  {
   "centro_de_custo": "Ramo Lobinho",
@@ -221,7 +221,7 @@
   "name": "Ramo Lobinho",
   "nome": "Ramo Lobinho",
   "responsavel": null,
-  "saldo": 0.0
+  "saldo": 125220.909
  },
  {
   "centro_de_custo": "Presidência",
@@ -235,7 +235,7 @@
   "name": "Conta empresarial",
   "nome": "Conta empresarial",
   "responsavel": "caio.ferreira@escoteiros.org.br",
-  "saldo": 0.0
+  "saldo": 1463310.7584
  },
  {
   "centro_de_custo": "Programa Educativo",
@@ -249,7 +249,7 @@
   "name": "Programa Educativo",
   "nome": "Programa Educativo",
   "responsavel": null,
-  "saldo": 0.0
+  "saldo": 15921.52414
  },
  {
   "centro_de_custo": "Presidência",
@@ -263,6 +263,6 @@
   "name": "Infinitepay",
   "nome": "Infinitepay",
   "responsavel": null,
-  "saldo": 0.0
+  "saldo": 2211387.40768
  }
 ]

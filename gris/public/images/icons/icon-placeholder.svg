@@ -1,0 +1,15 @@
+<!-- SVG placeholder icon - substitua pelos seus ícones PNG reais -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#4C51BF"/>
+  
+  <!-- Logo text -->
+  <text x="256" y="280" font-family="Arial, sans-serif" font-size="180" font-weight="bold" fill="white" text-anchor="middle">
+    GRIS
+  </text>
+  
+  <!-- Subtitle -->
+  <text x="256" y="340" font-family="Arial, sans-serif" font-size="36" fill="#E0E7FF" text-anchor="middle">
+    Gestão Escoteira
+  </text>
+</svg>

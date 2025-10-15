@@ -26,14 +26,17 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/gris/css/gris.css"
-# app_include_js = "/assets/gris/js/gris.js"
+app_include_js = "/assets/gris/js/pwa-init.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/gris/css/gris.css"
-# web_include_js = "/assets/gris/js/gris.js"
+web_include_js = "/assets/gris/js/pwa-init.js"
 
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "gris/public/scss/website"
+
+# PWA: Use custom base template with PWA meta tags
+base_template = "templates/base.html"
 
 # include js, css files in header of web form
 # webform_include_js = {"doctype": "public/js/doctype.js"}

@@ -47,6 +47,7 @@ def _extract_scout_info(record: str) -> dict | None:
 			"Celular_responsavel": "",
 			"Email_responsavel": "",
 			"CPF_responsavel": "",
+			"id_escoteiro": "",
 		}
 
 		patterns = {
@@ -69,6 +70,7 @@ def _extract_scout_info(record: str) -> dict | None:
 			"Sexo": r"Sexo:\s*([^\n\t]+)",
 			"Raca_ou_Cor": r"Raça ou Cor:\s*([^\n\t]+)",
 			"Validade_Registro": r"Validade Registro:\s*([^\n\t]+)",
+			"id_escoteiro": r"id@escoteiro:\s*([^\n\t]+)",
 		}
 
 		for field, pattern in patterns.items():
@@ -193,6 +195,7 @@ def parse_associates_report(path_pdf: str) -> dict:
 				"categoria": row.get("Categoria_1_Funcao", "").strip(),
 				"funcao": row.get("Funcao_1_Funcao", "").strip(),
 				"ramo": _parse_ramo(row.get("Ramo_1_Funcao", "")),
+				"id_escoteiros": row.get("id_escoteiro", "").strip(),
 			}
 
 			# Adicionar dados do responsável se existirem

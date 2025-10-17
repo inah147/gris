@@ -105,12 +105,27 @@
       frappe.msgprint('Faça o upload do arquivo antes de enviar.');
       return;
     }
+
+    const loadingIndicator = document.getElementById('portao3-loading-indicator');
+    const btnConciliar = document.getElementById('btnConciliarPortao3');
+    const resultsDiv = document.getElementById('portao3-results');
+
+    // Show loading, hide results, disable button
+    if (loadingIndicator) loadingIndicator.classList.remove('d-none');
+    if (btnConciliar) btnConciliar.disabled = true;
+    if (resultsDiv) resultsDiv.classList.add('d-none');
+
     frappe.call({
       method: 'gris.www.financeiro.import_portao3.process_uploaded_file_portao3',
       args: {
         file_url: window._portao3FileUrl,
       },
       callback: function (r) {
+        // Hide loading, enable button, show results
+        if (loadingIndicator) loadingIndicator.classList.add('d-none');
+        if (btnConciliar) btnConciliar.disabled = false;
+        if (resultsDiv) resultsDiv.classList.remove('d-none');
+
         if (r && r.exc) {
           console.error('Erro process_uploaded_file_portao3', r.exc);
           frappe.msgprint('Erro ao processar: ver console.');

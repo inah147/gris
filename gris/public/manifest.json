@@ -4,7 +4,7 @@
   "description": "App base para gestão complementar de Unidades Escoteiras Locais",
   "start_url": "/inicio",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#FFF9F0",
   "theme_color": "#FFF9F0",
   "orientation": "portrait-primary",
   "icons": [

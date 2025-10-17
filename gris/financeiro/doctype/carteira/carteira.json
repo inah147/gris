@@ -15,6 +15,7 @@
   "chave_pix",
   "section_break_vqge",
   "saldo",
+  "saldo_inicial",
   "column_break_meee",
   "data_atualizacao"
  ],
@@ -75,12 +76,18 @@
    "in_list_view": 1,
    "label": "Institui\u00e7\u00e3o Financeira",
    "options": "Instituicao Financeira"
+  },
+  {
+   "default": "0",
+   "fieldname": "saldo_inicial",
+   "fieldtype": "Currency",
+   "label": "Saldo inicial"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-23 07:59:01.162402",
+ "modified": "2025-10-17 07:53:06.546065",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Carteira",

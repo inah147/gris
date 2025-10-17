@@ -20,6 +20,15 @@ window.enviarArquivosImportados = function(){
     frappe.msgprint('Faça o upload dos três arquivos antes de enviar.');
     return;
   }
+
+  const loadingIndicator = document.getElementById('contas-infinitepay-loading-indicator');
+  const btnConciliar = document.getElementById('btnConciliarInfinitepay');
+  const uploadsDiv = document.getElementById('importarInfinitepayUploads');
+
+  // Show loading, disable button
+  if (loadingIndicator) loadingIndicator.classList.remove('d-none');
+  if (btnConciliar) btnConciliar.disabled = true;
+
   frappe.call({
     method: 'gris.www.financeiro.contas.process_uploaded_files',
     args: {
@@ -28,12 +37,17 @@ window.enviarArquivosImportados = function(){
       recebimentos_file_url: window._recebimentosFileUrl
     },
     callback: function(r){
+      // Hide loading, enable button
+      if (loadingIndicator) loadingIndicator.classList.add('d-none');
+      if (btnConciliar) btnConciliar.disabled = false;
+
       if(r && r.exc){
         console.error('Erro process_uploaded_files', r.exc);
         frappe.msgprint('Erro ao processar: ver console.');
       }else{
         console.debug('Resposta process_uploaded_files', r);
         frappe.msgprint(r.message || 'Arquivos enviados e processados!');
+        frappe.show_alert({ message: 'Conciliação concluída', indicator: 'green' }, 5);
       }
     }
   });

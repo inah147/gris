@@ -56,6 +56,7 @@ def get_context(context):
 			"instituicao",
 			"carteira",
 			"centro_de_custo",
+			"valor",
 			"valor_absoluto",
 			"debito_credito",
 			"descricao",
@@ -74,47 +75,62 @@ def get_context(context):
 	transacoes_dict = [dict(t) for t in transacoes]
 	df = pd.DataFrame(transacoes_dict)
 
-	# Buscar saldo inicial de cada instituição no dia anterior à data_inicio
+	# Buscar saldo inicial de cada instituição somando o campo saldo_inicial de todas as carteiras
 	from datetime import datetime, timedelta
 
+	# Buscar saldos iniciais = saldo_inicial das carteiras + transações anteriores ao período
 	saldos_iniciais = {inst: 0.0 for inst in instituicoes_nomes}
-	if data_inicio:
-		try:
-			data_inicio_dt = datetime.strptime(data_inicio, "%Y-%m-%d")
-			rows = frappe.db.sql(
-				"""
-				SELECT instituicao,
-				       SUM(valor) AS saldo
-				FROM `tabTransacao Extrato Geral`
-				WHERE data_deposito < %(data_inicio_dt)s
-				  AND (metodo IS NULL OR LOWER(TRIM(metodo)) <> 'dinheiro')
-				GROUP BY instituicao
-				""",
-				{"data_inicio_dt": data_inicio_dt},
-				as_dict=True,
-			)
-			for r in rows:
-				inst = r.get("instituicao")
-				if inst in saldos_iniciais:
-					saldos_iniciais[inst] = float(r.get("saldo") or 0.0)
-		except Exception:
-			pass
+
+	# 1. Somar saldo_inicial de todas as carteiras por instituição
+	try:
+		rows = frappe.db.sql(
+			"""
+			SELECT instituicao_financeira,
+			       SUM(COALESCE(saldo_inicial, 0)) AS saldo
+			FROM `tabCarteira`
+			GROUP BY instituicao_financeira
+			""",
+			as_dict=True,
+		)
+		for r in rows:
+			inst = r.get("instituicao_financeira")
+			if inst in saldos_iniciais:
+				saldos_iniciais[inst] = float(r.get("saldo") or 0.0)
+	except Exception:
+		pass
+
+	# 2. Somar transações anteriores ao data_inicio
+	try:
+		transacoes_anteriores = frappe.get_all(
+			"Transacao Extrato Geral",
+			fields=["instituicao", "valor"],
+			filters=[["data_deposito", "<", data_inicio], ["metodo", "!=", "Dinheiro"]],
+			limit_page_length=0,
+		)
+		for t in transacoes_anteriores:
+			inst = t.get("instituicao")
+			if inst in saldos_iniciais:
+				valor = t.get("valor") or 0.0
+				saldos_iniciais[inst] += valor
+	except Exception:
+		pass
 
 	# Inicializar colunas de saldo
 	for inst in instituicoes_nomes:
 		df[inst] = 0.0
 
-	# Calcular saldo incremental por instituição
+	# Calcular saldo incremental por instituição - usar campo 'valor' que já tem o sinal correto
 	saldos = saldos_iniciais.copy()
 	for idx, row in df.iterrows():
-		for inst in instituicoes_nomes:
-			if row["instituicao"] == inst:
-				valor = row["valor_absoluto"] or 0.0
-				if row["debito_credito"] == "Crédito":
-					saldos[inst] += valor
-				elif row["debito_credito"] == "Débito":
-					saldos[inst] -= valor
-			df.at[idx, inst] = saldos[inst]
+		inst = row["instituicao"]
+		if inst in saldos:
+			valor = row["valor"] or 0.0
+			# valor já vem com sinal correto: positivo para Crédito, negativo para Débito
+			saldos[inst] += valor
+
+		# preencher saldo de TODAS as instituições em cada linha
+		for inst_name in instituicoes_nomes:
+			df.at[idx, inst_name] = saldos.get(inst_name)
 
 	# Converter para dicionário para o template
 	context.transacoes = df.to_dict(orient="records")

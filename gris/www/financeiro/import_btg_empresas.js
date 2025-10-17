@@ -99,12 +99,27 @@
       frappe.msgprint('Selecione um arquivo antes de enviar.');
       return;
     }
+
+    const loadingIndicator = document.getElementById('btg-loading-indicator');
+    const btnConciliar = document.getElementById('btnConciliarBtg');
+    const resultsDiv = document.getElementById('btg-results');
+
+    // Show loading, hide results, disable button
+    if (loadingIndicator) loadingIndicator.classList.remove('d-none');
+    if (btnConciliar) btnConciliar.disabled = true;
+    if (resultsDiv) resultsDiv.classList.add('d-none');
+
     frappe.call({
       method: 'gris.www.financeiro.import_btg_empresas.process_uploaded_btg_file',
       args: {
         file_url: window._btgFileUrl
       },
       callback: function (r) {
+        // Hide loading, enable button, show results
+        if (loadingIndicator) loadingIndicator.classList.add('d-none');
+        if (btnConciliar) btnConciliar.disabled = false;
+        if (resultsDiv) resultsDiv.classList.remove('d-none');
+
         if (r && r.exc) {
           console.error('Erro process_uploaded_btg_file', r.exc);
           frappe.msgprint('Erro ao processar: ver console.');

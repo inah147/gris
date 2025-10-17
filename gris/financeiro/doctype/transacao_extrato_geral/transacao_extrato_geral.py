@@ -24,10 +24,16 @@ class TransacaoExtratoGeral(Document):
 				fieldname=["sum(valor) as total"],
 				as_dict=True,
 			)
-			total_valor = total["total"] if total and total["total"] else 0
+			total_transacoes = total["total"] if total and total["total"] else 0
 
-			# 2. Atualizar o saldo da carteira no doctype Carteira
-			frappe.db.set_value("Carteira", self.carteira, "saldo", total_valor)
+			# 2. Buscar o saldo inicial da carteira
+			saldo_inicial = frappe.db.get_value("Carteira", self.carteira, "saldo_inicial") or 0
+
+			# 3. Saldo atual = soma das transações + saldo inicial
+			saldo_atual = total_transacoes + saldo_inicial
+
+			# 4. Atualizar o saldo da carteira no doctype Carteira
+			frappe.db.set_value("Carteira", self.carteira, "saldo", saldo_atual)
 			frappe.db.commit()
 
 	def _update_pagamento_contribuicao_mensal(self):

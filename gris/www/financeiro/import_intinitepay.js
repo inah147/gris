@@ -133,6 +133,16 @@
       frappe.msgprint('Faça o upload dos três arquivos antes de enviar.');
       return;
     }
+
+    const loadingIndicator = document.getElementById('infinitepay-loading-indicator');
+    const btnConciliar = document.getElementById('btnConciliarInfinitepay');
+    const resultsDiv = document.getElementById('ip-results');
+
+    // Show loading, hide results, disable button
+    if (loadingIndicator) loadingIndicator.classList.remove('d-none');
+    if (btnConciliar) btnConciliar.disabled = true;
+    if (resultsDiv) resultsDiv.classList.add('d-none');
+
     frappe.call({
       method: 'gris.www.financeiro.contas.process_uploaded_files',
       args: {
@@ -141,6 +151,11 @@
         recebimentos_file_url: window._recebimentosFileUrl,
       },
       callback: function (r) {
+        // Hide loading, enable button, show results
+        if (loadingIndicator) loadingIndicator.classList.add('d-none');
+        if (btnConciliar) btnConciliar.disabled = false;
+        if (resultsDiv) resultsDiv.classList.remove('d-none');
+
         if (r && r.exc) {
           console.error('Erro process_uploaded_files', r.exc);
           frappe.msgprint('Erro ao processar: ver console.');

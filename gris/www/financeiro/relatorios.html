@@ -1,35 +1,61 @@
 {% extends "templates/web_sidebar_base.html" %}
 
-<link rel="stylesheet" href="/assets/gris/financeiro/relatorios.css">
-
 {% block title %}Relatórios Financeiros{% endblock %}
 
 {% set active_link = '/financeiro/relatorios' %}
 
+{% block head_include %}
+  <link rel="stylesheet" href="/inicio.css">
+{% endblock %}
+
 {% block page_header %}
-  <div class="mb-4 d-flex align-items-center justify-content-between">
-    <h1 class="h3 mb-0">Relatórios Financeiros</h1>
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Relatórios Financeiros</h1>
+      <p class="page-header__subtitle">Acesse relatórios contábeis e demonstrativos.</p>
+    </div>
   </div>
 {% endblock %}
 
 {% block main %}
-  <div class="mb-4">
-    <p class="text-muted mb-0 small">Escolha o relatório desejado.</p>
-  </div>
-  <div class="inicio-cards row g-3">
-    <div class="inicio-col col-12 col-sm-6 col-lg-4">
-      <div class="inicio-card h-100">
-        <h2>Relatório Contábil</h2>
-        <p>Visualize informações contábeis detalhadas.</p>
-  <a href="/financeiro/relatorio_contabil" class="btn btn-primary btn-sm">Acessar</a>
+  <div class="inicio-cards-grid">
+    <a href="/financeiro/relatorio_contabil" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
+      <div class="inicio-card__icon inicio-card__icon--success">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
       </div>
-    </div>
-    <div class="inicio-col col-12 col-sm-6 col-lg-4">
-      <div class="inicio-card h-100">
-        <h2>Demonstrativo Financeiro</h2>
-        <p>Acompanhe o demonstrativo financeiro da organização.</p>
-  <a href="/financeiro/demonstrativo" class="btn btn-primary btn-sm">Acessar</a>
+      <div class="inicio-card__content">
+        <h2 class="inicio-card__title">Relatório Contábil</h2>
+        <p class="inicio-card__description">Informações contábeis detalhadas</p>
       </div>
-    </div>
+      <div class="inicio-card__arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </div>
+    </a>
+
+    <a href="/financeiro/demonstrativo" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
+      <div class="inicio-card__icon inicio-card__icon--success">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+          <polyline points="13 2 13 9 20 9"></polyline>
+        </svg>
+      </div>
+      <div class="inicio-card__content">
+        <h2 class="inicio-card__title">Demonstrativo Financeiro</h2>
+        <p class="inicio-card__description">Demonstrativo consolidado da organização</p>
+      </div>
+      <div class="inicio-card__arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </div>
+    </a>
   </div>
 {% endblock %}

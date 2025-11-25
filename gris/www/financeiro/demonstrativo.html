@@ -5,111 +5,134 @@
 {% set active_link = '/financeiro' %}
 
 {% block page_header %}
-  <div class="mb-4 d-flex align-items-center justify-content-between">
-    <h1 class="h3 mb-0">Demonstrativo Financeiro</h1>
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Demonstrativo Financeiro</h1>
+      <p class="page-header__subtitle">Relatórios financeiros consolidados por período.</p>
+    </div>
   </div>
 {% endblock %}
 
 {% block main %}
-  <div class="demonstrativo-page-scope">
-  <div class="mb-3">
-    <div class="d-flex">
-      <div class="me-auto">
-        <form id="demonstrativo-filter" method="get" class="d-flex align-items-start">
-          <div class="demonstrativo-filter-left">
-            <label for="ano" class="small text-muted mb-1 d-block">Ano</label>
-            <div class="fx-select">
-              <select id="ano" name="ano" class="form-select form-select-sm">
-                {% for y in demonstrativo.year_options %}
-                  <option value="{{ y }}" {% if y == demonstrativo.year %}selected{% endif %}>{{ y }}</option>
-                {% endfor %}
-              </select>
-            </div>
-          </div>
-        </form>
-      </div>
+  <!-- Filtro -->
+  <div class="card-modern mb-4">
+    <div class="card-modern__body card-modern__body--compact">
+      <form id="demonstrativo-filter" method="get" class="filter-bar mb-0">
+        <div class="filter-field">
+          <label for="ano" class="form-label-modern small">Ano</label>
+          <select id="ano" name="ano" class="form-input-modern form-input-modern--sm" onchange="this.form.submit()">
+            {% for y in demonstrativo.year_options %}
+              <option value="{{ y }}" {% if y == demonstrativo.year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </form>
     </div>
   </div>
 
-  <div class="card shadow-sm border-0 p-3">
-    <div class="demonstrativo-scroll-x">
-      <link rel="stylesheet" href="/financeiro/demonstrativo.css">
-      <table class="table table-sm table-borderless demonstrativo-table">
+  <!-- Tabela Demonstrativo -->
+  <div class="card-modern">
+    <div class="card-modern__header">
+      <div>
+        <h3 class="card-modern__title">Demonstrativo {{ demonstrativo.year }}</h3>
+        <p class="card-modern__subtitle">Movimentação financeira mensal consolidada</p>
+      </div>
+    </div>
+    <div class="card-modern__body" style="padding: 0; overflow-x: auto;">
+      <table class="demonstrativo-table">
         <thead>
           <tr>
-            <th>Categoria / Mês</th>
+            <th class="demonstrativo-table__header">Categoria</th>
             {% for m in demonstrativo.months %}
-              <th class="text-end">{{ m.label }}</th>
+              <th class="demonstrativo-table__header demonstrativo-table__header--number">{{ m.label }}</th>
             {% endfor %}
           </tr>
         </thead>
         <tbody>
           <!-- Saldo inicial -->
-          <tr class="table-secondary font-weight-bold">
-            <td>Saldo Inicial (R$)</td>
+          <tr class="demonstrativo-table__row--highlight">
+            <td class="demonstrativo-table__cell demonstrativo-table__cell--bold">Saldo Inicial</td>
             {% for m in demonstrativo.months %}
-              <td class="text-end">{{ '%.2f' % (demonstrativo.saldo_inicial.get(m.key) or 0) }}</td>
+              <td class="demonstrativo-table__cell demonstrativo-table__cell--number demonstrativo-table__cell--bold">
+                R$ {{ '{:,.2f}'.format(demonstrativo.saldo_inicial.get(m.key) or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}
+              </td>
             {% endfor %}
           </tr>
 
           <!-- Entradas -->
-          <tr class="table-success font-weight-bold">
-            <td colspan="{{ demonstrativo.months | length + 1 }}">Entradas (Créditos)</td>
+          <tr class="demonstrativo-table__row--section demonstrativo-table__row--success">
+            <td colspan="{{ demonstrativo.months | length + 1 }}" class="demonstrativo-table__section">
+              <span class="demonstrativo-table__section-icon">↑</span> Entradas (Créditos)
+            </td>
           </tr>
           {% for cat in demonstrativo.entradas_cats %}
-            <tr>
-              <td class="ps-4">{{ cat }}</td>
+            <tr class="demonstrativo-table__row--data">
+              <td class="demonstrativo-table__cell demonstrativo-table__cell--indent">{{ cat }}</td>
               {% for m in demonstrativo.months %}
-                <td class="text-end">{{ '%.2f' % (demonstrativo.data.entradas.get(cat, {}).get(m.key) or 0) }}</td>
+                <td class="demonstrativo-table__cell demonstrativo-table__cell--number">
+                  {{ '{:,.2f}'.format(demonstrativo.data.entradas.get(cat, {}).get(m.key) or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}
+                </td>
               {% endfor %}
             </tr>
           {% endfor %}
-          <tr class="table-success font-weight-bold">
-            <td>Total Entradas</td>
+          <tr class="demonstrativo-table__row--subtotal demonstrativo-table__row--success-total">
+            <td class="demonstrativo-table__cell demonstrativo-table__cell--bold">Total Entradas</td>
             {% for m in demonstrativo.months %}
-              <td class="text-end">{{ '%.2f' % (demonstrativo.month_totals.entradas.get(m.key) or 0) }}</td>
+              <td class="demonstrativo-table__cell demonstrativo-table__cell--number demonstrativo-table__cell--bold">
+                R$ {{ '{:,.2f}'.format(demonstrativo.month_totals.entradas.get(m.key) or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}
+              </td>
             {% endfor %}
           </tr>
 
           <!-- Saídas -->
-          <tr class="table-danger font-weight-bold">
-            <td colspan="{{ demonstrativo.months | length + 1 }}">Saídas (Débitos)</td>
+          <tr class="demonstrativo-table__row--section demonstrativo-table__row--danger">
+            <td colspan="{{ demonstrativo.months | length + 1 }}" class="demonstrativo-table__section">
+              <span class="demonstrativo-table__section-icon">↓</span> Saídas (Débitos)
+            </td>
           </tr>
           {% for cat in demonstrativo.saidas_cats %}
-            <tr>
-              <td class="ps-4">{{ cat }}</td>
+            <tr class="demonstrativo-table__row--data">
+              <td class="demonstrativo-table__cell demonstrativo-table__cell--indent">{{ cat }}</td>
               {% for m in demonstrativo.months %}
-                <td class="text-end">{{ '%.2f' % (demonstrativo.data.saidas.get(cat, {}).get(m.key) or 0) }}</td>
+                <td class="demonstrativo-table__cell demonstrativo-table__cell--number">
+                  {{ '{:,.2f}'.format(demonstrativo.data.saidas.get(cat, {}).get(m.key) or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}
+                </td>
               {% endfor %}
             </tr>
           {% endfor %}
-          <tr class="table-danger font-weight-bold">
-            <td>Total Saídas</td>
+          <tr class="demonstrativo-table__row--subtotal demonstrativo-table__row--danger-total">
+            <td class="demonstrativo-table__cell demonstrativo-table__cell--bold">Total Saídas</td>
             {% for m in demonstrativo.months %}
-              <td class="text-end">{{ '%.2f' % (demonstrativo.month_totals.saidas.get(m.key) or 0) }}</td>
+              <td class="demonstrativo-table__cell demonstrativo-table__cell--number demonstrativo-table__cell--bold">
+                R$ {{ '{:,.2f}'.format(demonstrativo.month_totals.saidas.get(m.key) or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}
+              </td>
             {% endfor %}
           </tr>
 
           <!-- Resultado do mês -->
-          <tr class="table-light font-weight-bold">
-            <td>Resultado do Mês (Entradas - Saídas)</td>
+          <tr class="demonstrativo-table__row--result">
+            <td class="demonstrativo-table__cell demonstrativo-table__cell--bold">Resultado do Mês</td>
             {% for m in demonstrativo.months %}
               {% set entr = demonstrativo.month_totals.entradas.get(m.key) or 0 %}
               {% set said = demonstrativo.month_totals.saidas.get(m.key) or 0 %}
-              <td class="text-end">{{ '%.2f' % (entr - said) }}</td>
+              {% set resultado = entr - said %}
+              <td class="demonstrativo-table__cell demonstrativo-table__cell--number demonstrativo-table__cell--bold {% if resultado >= 0 %}demonstrativo-table__cell--positive{% else %}demonstrativo-table__cell--negative{% endif %}">
+                R$ {{ '{:,.2f}'.format(resultado).replace(',', 'X').replace('.', ',').replace('X', '.') }}
+              </td>
             {% endfor %}
           </tr>
 
           <!-- Saldo Final -->
-          <tr class="table-secondary font-weight-bold">
-            <td>Saldo Final (R$)</td>
+          <tr class="demonstrativo-table__row--highlight demonstrativo-table__row--final">
+            <td class="demonstrativo-table__cell demonstrativo-table__cell--bold">Saldo Final</td>
             {% for m in demonstrativo.months %}
-              <td class="text-end">{{ '%.2f' % (demonstrativo.saldo_final.get(m.key) or 0) }}</td>
+              <td class="demonstrativo-table__cell demonstrativo-table__cell--number demonstrativo-table__cell--bold">
+                R$ {{ '{:,.2f}'.format(demonstrativo.saldo_final.get(m.key) or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}
+              </td>
             {% endfor %}
           </tr>
         </tbody>
       </table>
     </div>
-  </div>
   </div>
 {% endblock %}

@@ -1,16 +1,71 @@
 /* Estilos específicos da página Lista de Associados */
 
-/* Filtros agora usam .filter-bar (ver components.css) */
-
-/* Desktop: filtros fixos no topo ao rolar */
-@media (min-width: 768px){
-  #assoc-filters { position: sticky; top: 0; z-index: 10; background:#fff; border-bottom:1px solid rgba(0,0,0,.05); }
+/* Ajustes na lista de associados */
+#assoc-list.data-list {
+  margin: 0;
 }
 
-/* Layout da listagem: badges abaixo no mobile, à direita no desktop */
-.list-group-item .d-flex { gap: .5rem; }
-@media (min-width: 768px){
-  .list-group-item .d-flex { gap: .5rem; }
+#assoc-list .data-list__item {
+  border-bottom: var(--border-width) solid var(--border-color);
 }
 
-/* Badges agora centralizados em public/css/components.css */
+#assoc-list .data-list__item:last-child {
+  border-bottom: none;
+}
+
+/* Empty state quando não há resultados */
+#assoc-list.empty {
+  padding: var(--space-4xl) var(--space-xl);
+  text-align: center;
+}
+
+/* Loading state */
+#assoc-list .loading-container {
+  padding: var(--space-4xl) var(--space-xl);
+}
+
+/* Badges info no item */
+.assoc-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+}
+
+@media (min-width: 768px) {
+  .assoc-badges {
+    margin-top: 0;
+    margin-left: auto;
+  }
+}
+
+/* Info adicional do associado */
+.assoc-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.assoc-info__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+@media (min-width: 768px) {
+  .assoc-info {
+    flex-direction: row;
+    gap: var(--space-md);
+  }
+  
+  .assoc-info__item::before {
+    content: "•";
+    color: var(--text-muted);
+  }
+  
+  .assoc-info__item:first-child::before {
+    display: none;
+  }
+}

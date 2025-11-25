@@ -1,103 +1,32 @@
-/* Custom select identity (copiado de associados/detalhe.css) */
-.extrato-detalhe-section .fx-select { position:relative; display:block; }
-.extrato-detalhe-section .fx-select select.form-select-sm {
-  background:#fff
-    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3e%3cpath fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M2 3.5l3 3 3-3'/%3e%3c/svg%3e")
-    no-repeat right .55rem center;
-  background-size:10px 10px;
-  border:1px solid #d0d7e2;
-  padding:.4rem 1.55rem .4rem .65rem;
-  font-weight:500;
-  color:#334155;
-  line-height:1.2;
-  border-radius:8px;
-  appearance:none; -webkit-appearance:none; -moz-appearance:none;
-  box-shadow:0 1px 0 rgba(0,0,0,.02);
-  transition:background .15s, border-color .15s, box-shadow .15s;
-  width:100%;
-}
-.extrato-detalhe-section .fx-select select.form-select-sm:hover:not(:disabled){ border-color:#b4c0ce; }
-.extrato-detalhe-section .fx-select select.form-select-sm:focus{
-  outline:none; border-color:#0d4d91; box-shadow:0 0 0 3px rgba(13,77,145,.15);
-  background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3e%3cpath fill='none' stroke='%230d4d91' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M2 3.5l3 3 3-3'/%3e%3c/svg%3e");
-}
-.extrato-detalhe-section .fx-select select.form-select-sm:disabled {
-  background:#f1f5f9
-    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3e%3cpath fill='none' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M2 3.5l3 3 3-3'/%3e%3c/svg%3e") no-repeat right .55rem center;
-  background-size:10px 10px;
-  color:#64748b;
-}
-/* Ícone de lápis nos campos editáveis usando wrapper */
-.input-editable-wrapper {
-  position: relative;
-}
-.input-editable-wrapper input:not([readonly]):not([type=hidden]),
-.input-editable-wrapper textarea:not([readonly]) {
-  padding-right: 2.2rem;
-}
-.input-editable-wrapper input:not([readonly]):not([type=hidden])::after,
-.input-editable-wrapper textarea:not([readonly])::after {
-  content: '';
-  display: block;
-  position: absolute;
-  top: 50%;
-  right: 0.8rem;
-  width: 1.1rem;
-  height: 1.1rem;
-  background: url('data:image/svg+xml;utf8,<svg fill="none" height="20" viewBox="0 0 20 20" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M13.5 3.5L16.5 6.5M3 17L7.5 16.5L16.5 7.5C17.0523 6.94772 17.0523 6.05228 16.5 5.5L14.5 3.5C13.9477 2.94772 13.0523 2.94772 12.5 3.5L3.5 12.5L3 17Z" stroke="%23999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>') no-repeat center center;
-  background-size: 1.1rem 1.1rem;
-  transform: translateY(-50%);
-  pointer-events: none;
-  opacity: 0.7;
-}
-.row .col-md-6, .row .col-12 {
-  position: relative;
-}
-/* Campos readonly com texto mais claro */
-input[readonly], textarea[readonly], input:disabled, textarea:disabled {
-  color: #adb5bd !important;
-  background-color: #f8f9fa;
-  opacity: 1;
-}
-/* CSS customizado para página de detalhe de extrato */
+/* 
+ * Detalhe Extrato - CSS Customizado
+ * Usa components.css como base - adicione apenas estilos específicos se necessário
+ */
 
-.extrato-detalhe-container {
-  width: 100%;
-  margin: 0;
-  padding: 2rem 1.5rem;
-}
-
-.extrato-detalhe-section h5 {
-  font-weight: bold;
-  color: #222;
-}
-
-.extrato-card {
-  background: #fff;
-  border-radius: 18px;
-  box-shadow: 0 4px 16px 0 rgba(0,0,0,0.10);
-  padding: 2rem 1.5rem;
-  margin-bottom: 2.5rem;
-  border: 1px solid #ececec;
-  transition: box-shadow 0.2s;
-}
-
-.extrato-card:not(:last-child) {
-  margin-bottom: 2.5rem;
-}
-
-.extrato-card:hover {
-  box-shadow: 0 8px 24px 0 rgba(0,0,0,0.13);
-}
-
-@media (max-width: 700px) {
-  .extrato-card {
-    padding: 1rem 0.3rem;
-    border-radius: 0.7rem;
-    box-shadow: 0 2px 8px 0 rgba(0,0,0,0.08);
+/* Fix para mobile - evita que selects ultrapassem a tela */
+@media (max-width: 768px) {
+  select.form-input-modern {
+    max-width: 100%;
+    width: 100%;
   }
-  .extrato-detalhe-container {
-    padding: 1rem 0.3rem;
-    border-radius: 0.7rem;
+  
+  .card-modern {
+    overflow: visible;
+  }
+  
+  /* Garante que nada ultrapasse a largura da viewport */
+  body, html {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+  
+  .row {
+    margin-left: 0;
+    margin-right: 0;
+  }
+  
+  .row > * {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
 }

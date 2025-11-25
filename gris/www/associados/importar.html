@@ -6,70 +6,91 @@
 {% set sidebar_title = 'Associados' %}
 {% set sidebar_sections = [] %}
 
-{% block main %}
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-body">
-      <h1 class="h5 mb-3">Importar Associados</h1>
-      <p class="text-muted mb-4">
-        Faça upload de um arquivo PDF com o relatório de associados para atualizar ou inserir novos registros no sistema.
-      </p>
+{% block page_header %}
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Importar Associados</h1>
+      <p class="page-header__subtitle">Faça upload de um arquivo PDF com o relatório de associados</p>
+    </div>
+  </div>
+{% endblock %}
 
+{% block main %}
+  <div class="card-modern mb-4">
+    <div class="card-modern__body">
       <!-- Upload Section -->
-      <div class="mb-4">
-        <h2 class="h6 mb-3">1. Selecione o arquivo PDF</h2>
+      <div class="form-group-modern mb-4">
+        <h2 style="font-size: var(--text-lg); font-weight: var(--font-semibold); margin-bottom: var(--space-md); color: var(--text-primary);">1. Selecione o arquivo PDF</h2>
         <button 
           type="button" 
           id="uploadPdfBtn" 
-          class="btn btn-outline-primary"
+          class="btn-modern btn-modern--outline"
         >
-          <i class="fa fa-upload me-2"></i>Selecionar Arquivo PDF
+          <svg class="btn-modern__icon" viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          Selecionar Arquivo PDF
         </button>
         
         <div id="file-info" class="mt-3 d-none">
-          <div class="alert alert-success d-flex align-items-center">
-            <i class="fa fa-check-circle me-2"></i>
-            <div>
-              <strong>Arquivo carregado:</strong>
-              <span id="file-name" class="ms-2"></span>
+          <div class="alert-modern alert-modern--success">
+            <svg class="alert-modern__icon" viewBox="0 0 24 24">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <div class="alert-modern__content">
+              <p class="alert-modern__description">
+                <strong>Arquivo carregado:</strong>
+                <span id="file-name" class="ms-2"></span>
+              </p>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Import Button -->
-      <div class="mb-4">
-        <h2 class="h6 mb-3">2. Iniciar importação</h2>
+      <div class="form-group-modern mb-4">
+        <h2 style="font-size: var(--text-lg); font-weight: var(--font-semibold); margin-bottom: var(--space-md); color: var(--text-primary);">2. Iniciar importação</h2>
         <button 
           type="button" 
           id="btnImportar" 
-          class="btn btn-primary d-none"
+          class="btn-modern d-none"
           disabled
         >
-          <i class="fa fa-refresh me-2"></i>Atualizar Associados
+          <svg class="btn-modern__icon" viewBox="0 0 24 24">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+          </svg>
+          Atualizar Associados
         </button>
       </div>
 
       <!-- Results Section -->
       <div id="import-results" class="d-none">
-        <h2 class="h6 mb-3">Resultados da Importação</h2>
+        <h2 style="font-size: var(--text-lg); font-weight: var(--font-semibold); margin-bottom: var(--space-md); color: var(--text-primary);">Resultados da Importação</h2>
         <div id="results-grid" class="row g-3 gy-4"></div>
         
         <div id="errors-container" class="mt-3 d-none">
-          <div class="card border-danger">
-            <div class="card-body">
-              <h3 class="h6 text-danger mb-3">
-                <i class="fa fa-exclamation-triangle me-2"></i>Erros Encontrados
-              </h3>
-              <div id="errors-list" class="small"></div>
+          <div class="alert-modern alert-modern--danger">
+            <svg class="alert-modern__icon" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <div class="alert-modern__content">
+              <h3 class="alert-modern__title">Erros Encontrados</h3>
+              <div id="errors-list" class="alert-modern__description" style="font-size: var(--text-sm);"></div>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Loading Indicator -->
-      <div id="loading-indicator" class="text-center py-5 d-none">
-        <div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>
-        <p class="text-muted fw-semibold">Processando importação... Isso pode levar alguns minutos.</p>
+      <div id="loading-indicator" class="loading-container d-none">
+        <div class="loading-spinner loading-spinner--lg"></div>
+        <p class="loading-text" style="font-weight: var(--font-semibold);">Processando importação... Isso pode levar alguns minutos.</p>
       </div>
     </div>
   </div>

@@ -5,10 +5,13 @@
 {% set active_link = '/financeiro/contribuicoes' %}
 
 {% block page_header %}
-  <div class="mb-3">
-    <h1 class="h3 mb-2">Contribuições Mensais</h1>
-    <div style="max-width:320px;">
-      <input type="text" id="filtroAssociado" class="form-control form-control-sm" placeholder="Filtrar por nome..." oninput="aplicarFiltroAssociado()" />
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Contribuições Mensais</h1>
+      <p class="page-header__subtitle">Acompanhe o status das contribuições dos associados.</p>
+    </div>
+    <div class="page-header__actions">
+      <input type="text" id="filtroAssociado" class="form-input-modern form-input-modern--sm" style="max-width:320px;" placeholder="Filtrar por nome..." oninput="aplicarFiltroAssociado()" />
     </div>
   </div>
 {% endblock %}
@@ -24,40 +27,43 @@
       {% if lista|length > 0 %}
         {% set status_id = 'status-' + (status | replace(' ', '-') | lower) %}
         <div class="status-bloco mb-5" id="{{ status_id }}" data-status="{{ status }}">
-          <h2 class="h5 mb-3">{{ status }} <small class="text-muted">({{ lista|length }})</small></h2>
-          <div class="row g-3 gy-4 card-gap assoc-list" data-total="{{ lista|length }}">
+          <h2 class="h5 mb-3 fw-semibold">{{ status }} <small class="text-muted">({{ lista|length }})</small></h2>
+          <div class="row gx-3 gy-4 assoc-list" data-total="{{ lista|length }}">
             {% for assoc in lista %}
               {% set page = (loop.index0 // 12) + 1 %}
-              <div class="col-12 col-sm-6 col-md-4 col-lg-3 card-gap assoc-card-col" data-page="{{ page }}">
-                <div class="assoc-card h-100 p-3 border rounded shadow-sm d-flex flex-column">
-                  <strong class="d-block text-truncate mb-2" title="{{ assoc.nome }}">{{ assoc.nome }}</strong>
-                  <div class="mt-auto">
-                    <button class="btn btn-sm btn-dark px-3"
-                      data-assoc='{{ assoc | tojson }}'
-                      onclick="mostrarDetalhes(this)">Detalhes</button>
+              <div class="col-12 col-sm-6 col-md-4 col-lg-3 assoc-card-col" data-page="{{ page }}">
+                <div class="card-modern" style="height: 100%;">
+                  <div class="card-modern__body d-flex flex-column" style="min-height: 100px;">
+                    <strong class="d-block mb-3" style="overflow-wrap: break-word; word-break: break-word; white-space: normal; line-height: 1.4;" title="{{ assoc.nome }}">{{ assoc.nome }}</strong>
+                    <div class="mt-auto">
+                      <button class="btn-modern btn-modern--outline btn-modern--sm"
+                        data-assoc='{{ assoc | tojson }}'
+                        onclick="mostrarDetalhes(this)">Detalhes</button>
+                    </div>
                   </div>
                 </div>
               </div>
             {% endfor %}
           </div>
-          <div class="status-pagination mt-2" data-status-pag="{{ status }}"></div>
+          <div class="status-pagination mt-3" data-status-pag="{{ status }}"></div>
         </div>
       {% endif %}
     {% endfor %}
   </div>
-  <div id="detalheModal" class="modal d-none" tabindex="-1">
+  <div id="detalheModal" class="modal-modern" style="display: none;">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="detalheTitulo"></h5>
-          {% if can_manage_contributions %}
-          <div id="cancelarContainer" class="ms-3 d-none">
-            <button id="btnCadastroCancelado" class="btn btn-danger btn-sm" onclick="cadastroCancelado()">Cadastro Cancelado</button>
+      <div class="modal-modern__content">
+        <div class="modal-modern__header">
+          <div class="d-flex align-items-center justify-content-between w-100">
+            <h5 class="modal-modern__title" id="detalheTitulo"></h5>
+            {% if can_manage_contributions %}
+            <div id="cancelarContainer" class="d-none">
+              <button id="btnCadastroCancelado" class="btn-modern btn-modern--danger btn-modern--sm" onclick="cadastroCancelado()">Cadastro Cancelado</button>
+            </div>
+            {% endif %}
           </div>
-          {% endif %}
-          <!-- <button type="button" class="btn-close" aria-label="Close" onclick="fecharDetalhes()"></button> -->
         </div>
-        <div class="modal-body">
+        <div class="modal-modern__body">
           <div class="d-flex align-items-center justify-content-between mb-3 w-100">
             <div class="me-3 flex-grow-1" id="valorContainer">
               <strong>Valor Atual:</strong> R$ <span id="detalheValor"></span>
@@ -66,7 +72,7 @@
             <div class="ms-auto ml-auto text-end">
               <div id="acoesValor">
                 {% if can_manage_contributions %}
-                <button id="btnAlterarValor" class="btn btn-sm btn-outline-secondary" onclick="alterarValor()">Alterar Valor</button>
+                <button id="btnAlterarValor" class="btn-modern btn-modern--outline btn-modern--sm" onclick="alterarValor()">Alterar Valor</button>
                 {% endif %}
               </div>
             </div>
@@ -79,14 +85,14 @@
                 <div><strong>Telefone Cobrança:</strong> <span id="foneCobranca"></span></div>
               </div>
               <div id="acoesCobranca">
-                <button id="btnEditarCobranca" class="btn btn-sm btn-outline-secondary" onclick="editarCobranca()">Editar Cobrança</button>
+                <button id="btnEditarCobranca" class="btn-modern btn-modern--outline btn-modern--sm" onclick="editarCobranca()">Editar Cobrança</button>
               </div>
             </div>
           </div>
           {% endif %}
           <div id="cadastroContainer" class="mb-3 d-none" data-manage-only="1">
             {% if can_manage_contributions %}
-            <button id="btnCadastroRealizado" class="btn btn-success" onclick="cadastroRealizado()">Cadastro Realizado</button>
+            <button id="btnCadastroRealizado" class="btn-modern btn-modern--success" onclick="cadastroRealizado()">Cadastro Realizado</button>
             {% endif %}
           </div>
           <div id="tabelaPagamentosContainer" class="table-responsive">
@@ -102,8 +108,8 @@
             </table>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="fecharDetalhes()">Fechar</button>
+        <div class="modal-modern__footer">
+          <button type="button" class="btn-modern btn-modern--ghost" onclick="fecharDetalhes()">Fechar</button>
         </div>
       </div>
     </div>

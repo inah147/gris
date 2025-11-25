@@ -6,63 +6,107 @@
 {% set sidebar_title = 'Associados' %}
 {% set sidebar_sections = [] %}
 
-{% block main %}
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-body">
-      <!-- <h1 class="h5 mb-3">Lista de Associados</h1> -->
-  <form id="assoc-filters" class="filter-bar mb-3">
-    <div class="filter-field" style="width:260px">
-      <label class="form-label small text-muted">Nome</label>
-      <input type="text" class="form-control form-control-sm" id="f-nome" placeholder="Buscar por nome...">
-    </div>
-    <div class="filter-field">
-      <label class="form-label small text-muted">Categoria</label>
-      <select id="f-categoria" class="form-select form-select-sm">
-        <option value="">Todas</option>
-      </select>
-    </div>
-    <div class="filter-field">
-      <label class="form-label small text-muted">Ramo</label>
-      <select id="f-ramo" class="form-select form-select-sm">
-        <option value="">Todos</option>
-      </select>
-    </div>
-    <div class="filter-field">
-      <label class="form-label small text-muted">Seção</label>
-      <select id="f-secao" class="form-select form-select-sm">
-        <option value="">Todas</option>
-      </select>
-    </div>
-    <div class="filter-field">
-      <label class="form-label small text-muted">Função</label>
-      <select id="f-funcao" class="form-select form-select-sm">
-        <option value="">Todas</option>
-      </select>
-    </div>
-    <div class="filter-field">
-      <label class="form-label small text-muted">Área</label>
-      <select id="f-area" class="form-select form-select-sm">
-        <option value="">Todas</option>
-      </select>
-    </div>
-    <div class="filter-field">
-      <label class="form-label small text-muted">Status do registro</label>
-      <select id="f-status" class="form-select form-select-sm">
-        <option value="">Todos</option>
-      </select>
-    </div>
-    <div class="filter-actions">
-      <button type="submit" class="btn btn-primary btn-sm">Aplicar</button>
-      <button type="button" id="btn-reset" class="btn btn-outline-secondary btn-sm">Limpar</button>
-    </div>
-  </form>
-
-      <div id="assoc-list" class="list-group list-group-flush">
-        <div class="list-group-item text-muted">Carregando...</div>
-      </div>
+{% block page_header %}
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Lista de Associados</h1>
+      <p class="page-header__subtitle">Consulte e gerencie todos os associados cadastrados</p>
     </div>
   </div>
 {% endblock %}
 
-{% block extra_script %}{% endblock %}
+{% block main %}
+  <div class="card-modern mb-4">
+    <div class="card-modern__body card-modern__body--compact">
+      <form id="assoc-filters" class="filter-bar mb-0">
+        <div class="filter-field" style="width:260px">
+          <label class="form-label-modern">Nome</label>
+          <input type="text" class="form-input-modern form-input-modern--sm" id="f-nome" placeholder="Buscar por nome...">
+        </div>
+        <div class="filter-field">
+          <label class="form-label-modern">Categoria</label>
+          <select id="f-categoria" class="form-input-modern form-input-modern--sm">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label class="form-label-modern">Ramo</label>
+          <select id="f-ramo" class="form-input-modern form-input-modern--sm">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label class="form-label-modern">Seção</label>
+          <select id="f-secao" class="form-input-modern form-input-modern--sm">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label class="form-label-modern">Função</label>
+          <select id="f-funcao" class="form-input-modern form-input-modern--sm">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label class="form-label-modern">Área</label>
+          <select id="f-area" class="form-input-modern form-input-modern--sm">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label class="form-label-modern">Status</label>
+          <select id="f-status" class="form-input-modern form-input-modern--sm">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label class="form-label-modern">Status no Grupo</label>
+          <select id="f-status-grupo" class="form-input-modern form-input-modern--sm">
+            <option value="">Todos</option>
+            <option value="Ativo" selected>Ativo</option>
+            <option value="Afastado">Afastado</option>
+            <option value="Inativo">Inativo</option>
+          </select>
+        </div>
+        <div class="filter-actions">
+          <button type="submit" class="btn-modern btn-modern--primary btn-modern--sm">Aplicar</button>
+          <button type="button" id="btn-reset" class="btn-modern btn-modern--outline btn-modern--sm">Limpar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card-modern">
+    <div class="table-responsive">
+      <table class="data-table" id="associadosTable">
+        <thead>
+          <tr>
+            <th style="width: 40px;"></th>
+            <th>Nome</th>
+            <th style="width: 150px;">Nº Registro</th>
+            <th style="width: 150px;">Categoria</th>
+            <th style="width: 130px;">Ramo</th>
+            <th style="width: 130px;">Seção</th>
+            <th style="width: 150px;">Função</th>
+            <th style="width: 130px;">Área</th>
+          </tr>
+        </thead>
+        <tbody id="assoc-list">
+          <tr>
+            <td colspan="8">
+              <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <span class="loading-text">Carregando associados...</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_script %}
+<script src="/associados/lista.js"></script>
+{% endblock %}
 

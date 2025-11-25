@@ -1,3 +1,71 @@
+/* Contas Grid */
+.contas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-lg);
+}
+
+@media (max-width: 768px) {
+  .contas-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--space-md);
+  }
+}
+
+@media (max-width: 576px) {
+  .contas-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.conta-card {
+  min-height: 120px;
+  transition: all var(--transition-base);
+}
+
+.conta-card .card-modern__body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.conta-card .importar-dados-btn {
+  margin-top: auto;
+}
+
+.conta-card:hover {
+  transform: translateY(-4px);
+}
+
+/* Carteiras Grid */
+.carteiras-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-lg);
+}
+
+@media (max-width: 768px) {
+  .carteiras-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--space-md);
+  }
+}
+
+@media (max-width: 576px) {
+  .carteiras-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Section Title */
+.section-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-md) 0;
+}
+
+/* Modal Styles */
 #importarDadosModal .modal-dialog {
   position: fixed;
   left: 50%;
@@ -8,6 +76,7 @@
   margin: 0;
   z-index: 1055;
 }
+
 #importarDadosModal.g-centered-modal .modal-dialog {
   max-width: 480px;
   margin: auto;
@@ -17,17 +86,41 @@
   transform: translate(-50%, -50%);
   z-index: 1055;
 }
-#importarDadosModal.g-centered-modal .modal-dialog {
-  max-width: 480px;
-  margin: auto;
+
+.g-centered-modal.show { 
+  display: flex !important; 
+  align-items: center; 
+  justify-content: center; 
+  padding: clamp(0.75rem, 4vh, 2rem) 1rem; 
 }
-/* Estilos extraídos de contas.html */
-.g-centered-modal.show { display:flex !important; align-items:center; justify-content:center; padding:clamp(0.75rem,4vh,2rem) 1rem; }
-.g-centered-modal .modal-dialog { margin:0; width:100%; max-width:900px; }
-#novaInstituicaoModal.g-centered-modal .modal-dialog { max-width:480px; }
-.g-centered-modal .modal-content { width:100%; max-height:calc(100vh - (env(safe-area-inset-top,0px) + env(safe-area-inset-bottom,0px) + 2rem)); overflow:auto; }
-@media (max-width:575.98px){
-  .g-centered-modal.show { align-items:flex-start; padding:calc(env(safe-area-inset-top,0px) + 1rem) 0.75rem calc(env(safe-area-inset-bottom,0px) + 1rem); }
-  .g-centered-modal .modal-dialog { max-width:100%; }
-  .g-centered-modal .modal-content { border-radius:12px; }
+
+.g-centered-modal .modal-dialog { 
+  margin: 0; 
+  width: 100%; 
+  max-width: 900px; 
+}
+
+#novaInstituicaoModal.g-centered-modal .modal-dialog { 
+  max-width: 480px; 
+}
+
+.g-centered-modal .modal-content { 
+  width: 100%; 
+  max-height: calc(100vh - (env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px) + 2rem)); 
+  overflow: auto; 
+}
+
+@media (max-width: 575.98px) {
+  .g-centered-modal.show { 
+    align-items: flex-start; 
+    padding: calc(env(safe-area-inset-top, 0px) + 1rem) 0.75rem calc(env(safe-area-inset-bottom, 0px) + 1rem); 
+  }
+  
+  .g-centered-modal .modal-dialog { 
+    max-width: 100%; 
+  }
+  
+  .g-centered-modal .modal-content { 
+    border-radius: 12px; 
+  }
 }

@@ -2,14 +2,14 @@
 	function buildModal() {
 		if (document.getElementById('modalDespesa')) return;
 		const modalHtml = `
-		<div id="modalDespesa" class="modal d-none" tabindex="-1">
-			<div class="modal-dialog modal-dialog-centered">
-				<div class="modal-content">
-					<div class="modal-header">
-						<h5 class="modal-title" id="despesaTitulo"></h5>
+		<div id="modalDespesa" class="modal-modern d-none" tabindex="-1">
+			<div class="modal-dialog">
+				<div class="modal-modern__content">
+					<div class="modal-modern__header">
+						<h5 class="modal-modern__title" id="despesaTitulo"></h5>
 						
 					</div>
-					<div class="modal-body">
+					<div class="modal-modern__body">
 						<div class="d-flex flex-wrap gap-2 mb-3" id="despesaBadges"></div>
 						<dl class="row mb-3" id="despesaDados"></dl>
 						<div id="historicoPagamentos" class="border-top pt-3 d-none">
@@ -29,49 +29,49 @@
 							</div>
 						</div>
 						<form id="despesaEditForm" class="d-none">
-							<div class="mb-2">
-								<label class="form-label mb-1">Descrição</label>
-								<input type="text" name="descricao" class="form-control form-control-sm" required />
+							<div class="mb-3">
+								<label class="form-label-modern">Descrição</label>
+								<input type="text" name="descricao" class="form-input-modern" required />
 							</div>
-							<div class="row g-2">
+							<div class="row g-3">
 								<div class="col-6">
-									<label class="form-label mb-1">Valor (R$)</label>
-									<input type="number" step="0.01" name="valor" class="form-control form-control-sm" required />
+									<label class="form-label-modern">Valor (R$)</label>
+									<input type="number" step="0.01" name="valor" class="form-input-modern" required />
 								</div>
 								<div class="col-6">
-									<label class="form-label mb-1">Dia Venc.</label>
-									<input type="number" min="1" max="31" name="dia_vencimento" class="form-control form-control-sm" required />
+									<label class="form-label-modern">Dia Vencimento</label>
+									<input type="number" min="1" max="31" name="dia_vencimento" class="form-input-modern" required />
 								</div>
 							</div>
-							<div class="mt-2" id="checksRow">
-								<div class="form-check form-check-inline me-4 align-middle m-0">
+							<div class="mt-3" id="checksRow">
+								<div class="form-check form-check-inline me-4">
 									<input class="form-check-input" type="checkbox" name="ativa" id="editAtiva" />
 									<label class="form-check-label" for="editAtiva">Ativa</label>
 								</div>
-								<div class="form-check form-check-inline align-middle m-0">
+								<div class="form-check form-check-inline">
 									<input class="form-check-input" type="checkbox" name="temporaria" id="editTemporaria" />
 									<label class="form-check-label" for="editTemporaria">Despesa Temporária</label>
 								</div>
 							</div>
-							<div id="temporariaDatas" class="row g-2 mt-1 d-none">
+							<div id="temporariaDatas" class="row g-3 mt-2 d-none">
 								<div class="col-6">
-									<label class="form-label mb-1" for="field_data_inicio">Início</label>
-									<input id="field_data_inicio" type="date" name="data_inicio" class="form-control form-control-sm" />
+									<label class="form-label-modern" for="field_data_inicio">Data Início</label>
+									<input id="field_data_inicio" type="date" name="data_inicio" class="form-input-modern" />
 								</div>
 								<div class="col-6">
-									<label class="form-label mb-1" for="field_data_termino">Término</label>
-									<input id="field_data_termino" type="date" name="data_termino" class="form-control form-control-sm" />
+									<label class="form-label-modern" for="field_data_termino">Data Término</label>
+									<input id="field_data_termino" type="date" name="data_termino" class="form-input-modern" />
 								</div>
 							</div>
 						</form>
 					</div>
-					<div class="modal-footer">
+					<div class="modal-modern__footer">
 						<div class="me-auto" id="editButtons" style="display:none">
-							<button type="button" class="btn btn-sm btn-outline-primary" data-action="edit">Editar</button>
-							<button type="button" class="btn btn-sm btn-success d-none" data-action="save">Salvar</button>
-							<button type="button" class="btn btn-sm btn-outline-secondary d-none" data-action="cancel-edit">Cancelar</button>
+							<button type="button" class="btn-modern btn-modern--primary btn-modern--sm" data-action="edit">Editar</button>
+							<button type="button" class="btn-modern btn-modern--success btn-modern--sm d-none" data-action="save">Salvar</button>
+							<button type="button" class="btn-modern btn-modern--ghost btn-modern--sm d-none" data-action="cancel-edit">Cancelar</button>
 						</div>
-						<button type="button" class="btn btn-secondary" data-action="close">Fechar</button>
+						<button type="button" class="btn-modern btn-modern--ghost" data-action="close">Fechar</button>
 					</div>
 				</div>
 			</div>
@@ -91,53 +91,53 @@
 	function buildCreateModal(){
 		if(document.getElementById('modalNovaDespesa')) return;
 		const html = `
-		<div id="modalNovaDespesa" class="modal d-none" tabindex="-1">
-			<div class="modal-dialog modal-dialog-centered">
-				<div class="modal-content">
-					<div class="modal-header">
-						<h5 class="modal-title">Nova Despesa</h5>
+		<div id="modalNovaDespesa" class="modal-modern d-none" tabindex="-1">
+			<div class="modal-dialog">
+				<div class="modal-modern__content">
+					<div class="modal-modern__header">
+						<h5 class="modal-modern__title">Nova Despesa</h5>
 					</div>
-					<div class="modal-body">
+					<div class="modal-modern__body">
 						<form id="novaDespesaForm">
-							<div class="mb-2">
-								<label class="form-label mb-1">Descrição</label>
-								<input type="text" name="descricao" class="form-control form-control-sm" required />
+							<div class="mb-3">
+								<label class="form-label-modern">Descrição</label>
+								<input type="text" name="descricao" class="form-input-modern" required />
 							</div>
-							<div class="row g-2">
+							<div class="row g-3">
 								<div class="col-6">
-									<label class="form-label mb-1">Valor (R$)</label>
-									<input type="number" step="0.01" name="valor" class="form-control form-control-sm" required />
+									<label class="form-label-modern">Valor (R$)</label>
+									<input type="number" step="0.01" name="valor" class="form-input-modern" required />
 								</div>
 								<div class="col-6">
-									<label class="form-label mb-1">Dia Venc.</label>
-									<input type="number" min="1" max="31" name="dia_vencimento" class="form-control form-control-sm" required />
+									<label class="form-label-modern">Dia Vencimento</label>
+									<input type="number" min="1" max="31" name="dia_vencimento" class="form-input-modern" required />
 								</div>
 							</div>
-							<div class="mt-2" id="novaChecksRow">
-								<div class="form-check form-check-inline me-4 align-middle m-0">
+							<div class="mt-3" id="novaChecksRow">
+								<div class="form-check form-check-inline me-4">
 									<input class="form-check-input" type="checkbox" name="ativa" id="novaAtiva" checked />
 									<label class="form-check-label" for="novaAtiva">Ativa</label>
 								</div>
-								<div class="form-check form-check-inline align-middle m-0">
+								<div class="form-check form-check-inline">
 									<input class="form-check-input" type="checkbox" name="temporaria" id="novaTemporaria" />
 									<label class="form-check-label" for="novaTemporaria">Despesa Temporária</label>
 								</div>
 							</div>
-							<div id="novaTemporariaDatas" class="row g-2 mt-1 d-none">
+							<div id="novaTemporariaDatas" class="row g-3 mt-2 d-none">
 								<div class="col-6">
-									<label class="form-label mb-1" for="nova_data_inicio">Início</label>
-									<input id="nova_data_inicio" type="date" name="data_inicio" class="form-control form-control-sm" />
+									<label class="form-label-modern" for="nova_data_inicio">Data Início</label>
+									<input id="nova_data_inicio" type="date" name="data_inicio" class="form-input-modern" />
 								</div>
 								<div class="col-6">
-									<label class="form-label mb-1" for="nova_data_termino">Término</label>
-									<input id="nova_data_termino" type="date" name="data_termino" class="form-control form-control-sm" />
+									<label class="form-label-modern" for="nova_data_termino">Data Término</label>
+									<input id="nova_data_termino" type="date" name="data_termino" class="form-input-modern" />
 								</div>
 							</div>
 						</form>
 					</div>
-					<div class="modal-footer">
-						<button type="button" class="btn btn-secondary" data-action="close-nova">Fechar</button>
-						<button type="button" class="btn btn-primary" data-action="save-nova">Salvar</button>
+					<div class="modal-modern__footer">
+						<button type="button" class="btn-modern btn-modern--ghost" data-action="close-nova">Cancelar</button>
+						<button type="button" class="btn-modern btn-modern--primary" data-action="save-nova">Salvar</button>
 					</div>
 				</div>
 			</div>
@@ -154,12 +154,19 @@
 	function showCreateModal(){
 		buildCreateModal();
 		const modal = document.getElementById('modalNovaDespesa');
+		if (!modal) return;
+		
+		// Remove backdrop anterior se existir
+		const oldBackdrop = document.getElementById('modalNovaDespesaBackdrop');
+		if (oldBackdrop) oldBackdrop.remove();
+		
 		modal.classList.remove('d-none');
 		modal.classList.add('show');
-		modal.style.display = 'block';
+		modal.style.display = 'flex';
 		document.body.classList.add('modal-open');
+		
 		const backdrop = document.createElement('div');
-		backdrop.className = 'modal-backdrop fade show modal-backdrop-soft';
+		backdrop.className = 'modal-backdrop fade show';
 		backdrop.id = 'modalNovaDespesaBackdrop';
 		document.body.appendChild(backdrop);
 	}
@@ -167,13 +174,20 @@
 	function hideCreateModal(){
 		const modal = document.getElementById('modalNovaDespesa');
 		if(!modal) return;
+		
 		modal.classList.add('d-none');
 		modal.classList.remove('show');
 		modal.style.display = 'none';
+		
+		// Remove backdrop específico
 		const backdrop = document.getElementById('modalNovaDespesaBackdrop');
 		if(backdrop) backdrop.remove();
+		
+		// Fallback: limpa backdrops órfãos se não houver outro modal aberto
 		if(!document.getElementById('modalDespesa')?.classList.contains('show')){
 			document.body.classList.remove('modal-open');
+			// Remove qualquer backdrop órfão
+			document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
 		}
 	}
 
@@ -245,12 +259,18 @@
 	function showModal() {
 		const modal = document.getElementById('modalDespesa');
 		if (!modal) return;
+		
+		// Remove backdrop anterior se existir
+		const oldBackdrop = document.getElementById('modalDespesaBackdrop');
+		if (oldBackdrop) oldBackdrop.remove();
+		
 		modal.classList.remove('d-none');
 		modal.classList.add('show');
-		modal.style.display = 'block';
+		modal.style.display = 'flex';
 		document.body.classList.add('modal-open');
+		
 		const backdrop = document.createElement('div');
-		backdrop.className = 'modal-backdrop fade show modal-backdrop-soft';
+		backdrop.className = 'modal-backdrop fade show';
 		backdrop.id = 'modalDespesaBackdrop';
 		document.body.appendChild(backdrop);
 	}
@@ -258,12 +278,18 @@
 	function hideModal() {
 		const modal = document.getElementById('modalDespesa');
 		if (!modal) return;
+		
 		modal.classList.add('d-none');
 		modal.classList.remove('show');
 		modal.style.display = 'none';
 		document.body.classList.remove('modal-open');
+		
+		// Remove todos os backdrops relacionados
 		const backdrop = document.getElementById('modalDespesaBackdrop');
 		if (backdrop) backdrop.remove();
+		
+		// Fallback: remove qualquer backdrop órfão
+		document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
 	}
 
 	function formatCurrency(v) {
@@ -290,7 +316,15 @@
 	}
 
 	function openDespesa(btn) {
+		console.log('→ openDespesa chamado para:', btn.getAttribute('data-name'));
 		buildModal();
+		
+		// Limpa conteúdo anterior
+		const historicoTabela = document.querySelector('#historicoTabela tbody');
+		if (historicoTabela) historicoTabela.innerHTML = '';
+		const historicoPag = document.getElementById('historicoPagamentos');
+		if (historicoPag) historicoPag.classList.add('d-none');
+		
 		const data = {
 			name: btn.getAttribute('data-name'),
 			descricao: btn.getAttribute('data-descricao'),
@@ -327,24 +361,49 @@
 		loadHistorico(data.name);
 	}
 
+	let loadingHistorico = false;
+	
 	function loadHistorico(contaName){
+		// Previne chamadas múltiplas simultâneas
+		if (loadingHistorico) {
+			console.warn('loadHistorico já está executando, ignorando chamada duplicada');
+			return;
+		}
+		loadingHistorico = true;
+		
 		const wrap = document.getElementById('historicoPagamentos');
 		const tabela = document.querySelector('#historicoTabela tbody');
 		const vazio = document.getElementById('historicoVazio');
 		const canEdit = (document.getElementById('financeiro-perms')?.dataset.canEdit === '1');
+		
 		wrap.classList.remove('d-none');
 		vazio.textContent = 'Carregando...';
+		vazio.classList.remove('d-none');
 		tabela.innerHTML = '';
+		
+		// Remove event listeners antigos
+		document.querySelectorAll('#historicoTabela .pay-btn').forEach(btn => {
+			btn.replaceWith(btn.cloneNode(true));
+		});
+		
 		frappe.call({
 			method: 'gris.api.financeiro.conta_fixa.get_pagamentos_conta',
 			args: { conta: contaName, limit: 12 },
 			callback: r => {
+				loadingHistorico = false;
 				const dados = (r && r.message) || [];
+				
+				console.log(`✓ Recebidos ${dados.length} pagamentos:`, dados);
+				
 				if(!dados.length){
 					vazio.textContent = 'Nenhum pagamento encontrado.';
 					return;
 				}
 				vazio.classList.add('d-none');
+				
+				// Limpa novamente antes de popular (segurança extra)
+				tabela.innerHTML = '';
+				
 				const frag = document.createDocumentFragment();
 				dados.forEach(p => {
 					const tr = document.createElement('tr');
@@ -363,7 +422,12 @@
 					frag.appendChild(tr);
 				});
 				tabela.appendChild(frag);
+				console.log(`✓ Adicionadas ${dados.length} linhas na tabela`);
+				
 				if (canEdit) attachPayHandlers();
+			},
+			error: () => {
+				loadingHistorico = false;
 			}
 		});
 	}
@@ -513,17 +577,32 @@
 		});
 	}
 
+	let initialized = false;
+	
 	function init() {
-		document.querySelectorAll('.detalhes-conta-btn').forEach(btn => {
+		if (initialized) {
+			console.warn('⚠ init() já foi executado, ignorando');
+			return;
+		}
+		initialized = true;
+		console.log('✓ Inicializando despesas.js');
+		
+		const buttons = document.querySelectorAll('.detalhes-conta-btn');
+		console.log(`→ Encontrados ${buttons.length} botões de detalhes`);
+		
+		buttons.forEach((btn, index) => {
 			btn.addEventListener('click', () => openDespesa(btn));
 		});
+		
 		const novaBtn = document.getElementById('btnNovaDespesa');
 		if(novaBtn){
 			novaBtn.addEventListener('click', showCreateModal);
 		}
 		document.addEventListener('keydown', e => {
-			if (e.key === 'Escape') hideModal();
-			if (e.key === 'Escape') hideCreateModal();
+			if (e.key === 'Escape') {
+				hideModal();
+				hideCreateModal();
+			}
 		});
 	}
 	if (document.readyState === 'loading') {

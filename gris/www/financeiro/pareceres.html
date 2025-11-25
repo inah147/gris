@@ -5,161 +5,186 @@
 {% set active_link = '/financeiro/pareceres' %}
 
 {% block page_header %}
-  <div class="mb-4 d-flex align-items-center justify-content-between">
-  <h1 class="h3 mb-0">Pareceres</h1>
-  </div>
-  {% if can_edit_pareceres %}
-  <div class="mb-4">
-    <button id="addParecerBtn" type="button" class="btn btn-primary">Adicionar Parecer</button>
-  </div>
-  {% endif %}
-  <div class="mb-4">
-    <div class="row g-2 align-items-end">
-      <div class="col-auto">
-        <label for="parecerYearFilter" class="form-label mb-1">Filtrar por Ano</label>
-        <select id="parecerYearFilter" class="form-select form-select-sm">
-          <option value="">Todos</option>
-          {% for y in parecer_years %}
-            <option value="{{ y }}">{{ y }}</option>
-          {% endfor %}
-        </select>
-      </div>
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Pareceres</h1>
+      <p class="page-header__subtitle">Documentos e pareceres financeiros da instituição</p>
     </div>
+    {% if can_edit_pareceres %}
+    <div class="page-header__actions">
+      <button id="addParecerBtn" type="button" class="btn-modern btn-modern--primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        Adicionar Parecer
+      </button>
+    </div>
+    {% endif %}
   </div>
 {% endblock %}
 
 {% block main %}
-  <div class="row mb-5">
-    <div class="col-12">
-      <h2 class="h5 mb-3">Pareceres Anuais</h2>
-      {% if annual_parecers %}
-      <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3" id="annualParecers">
-        {% for p in annual_parecers %}
-        <div class="col">
-              <div class="card h-100 shadow-sm parecer-card" data-name="{{ p.name }}" data-tipo="{{ p.tipo_arquivo }}" data-period="{{ p.period }}" data-published="{{ 1 if p.published else 0 }}" data-area="{{ p.area or '' }}" data-ano="{{ p.ano_referencia or '' }}" data-semestre="{{ p.semestre_referencia or '' }}" data-file="{{ p.arquivo or '' }}">
-            <div class="card-body d-flex flex-column p-3">
-              <h6 class="mb-1 fw-semibold text-truncate" title="{{ p.tipo_arquivo }}">{{ p.tipo_arquivo }}</h6>
-              <div class="text-muted small mb-2">{{ p.period }}</div>
-              <div class="mt-auto d-flex justify-content-between align-items-center">
-                <span class="g-badge g-badge--small {{ 'g-badge--success' if p.published else 'g-badge--inactive' }}">{{ 'Publicado' if p.published else 'Rascunho' }}</span>
-        <button type="button" class="btn btn-sm btn-dark px-3 parecer-details-btn">Detalhes</button>
-              </div>
-            </div>
-          </div>
+  <!-- Filtro de Ano -->
+  <div class="card-modern mb-4">
+    <div class="card-modern__body card-modern__body--compact">
+      <div class="filter-bar mb-0">
+        <div class="filter-field">
+          <label for="parecerYearFilter" class="form-label-modern small">Filtrar por ano</label>
+          <select id="parecerYearFilter" class="form-input-modern form-input-modern--sm">
+            <option value="">Todos os anos</option>
+            {% for y in parecer_years %}
+              <option value="{{ y }}">{{ y }}</option>
+            {% endfor %}
+          </select>
         </div>
-        {% endfor %}
       </div>
-      {% else %}
-        <div class="text-muted small">Nenhum parecer anual.</div>
-      {% endif %}
     </div>
   </div>
 
-  <div class="row mb-5">
-    <div class="col-12">
-  <h2 class="h5 mb-3">Pareceres Trimestrais</h2>
-  {% if quarterly_parecers %}
-  <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3" id="quarterlyParecers">
-    {% for p in quarterly_parecers %}
+  <!-- Pareceres Anuais -->
+  <div class="mb-5">
+    <h2 class="section-title mb-3">Pareceres Anuais</h2>
+    {% if annual_parecers %}
+      <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3" id="annualParecers">
+        {% for p in annual_parecers %}
         <div class="col">
-      <div class="card h-100 shadow-sm parecer-card" data-name="{{ p.name }}" data-tipo="{{ p.tipo_arquivo }}" data-period="{{ p.period }}" data-published="{{ 1 if p.published else 0 }}" data-area="{{ p.area or '' }}" data-ano="{{ p.ano_referencia or '' }}" data-trimestre="{{ p.trimestre_referencia or '' }}" data-file="{{ p.arquivo or '' }}">
-            <div class="card-body d-flex flex-column p-3">
+          <div class="card-modern parecer-card" style="height: 100%;" data-name="{{ p.name }}" data-tipo="{{ p.tipo_arquivo }}" data-period="{{ p.period }}" data-published="{{ 1 if p.published else 0 }}" data-area="{{ p.area or '' }}" data-ano="{{ p.ano_referencia or '' }}" data-semestre="{{ p.semestre_referencia or '' }}" data-file="{{ p.arquivo or '' }}">
+            <div class="card-modern__body d-flex flex-column">
               <h6 class="mb-1 fw-semibold text-truncate" title="{{ p.tipo_arquivo }}">{{ p.tipo_arquivo }}</h6>
-              <div class="text-muted small mb-2">{{ p.period }}</div>
-              <div class="mt-auto d-flex justify-content-between align-items-center">
+              <div class="text-muted small mb-3">{{ p.period }}</div>
+              <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
                 <span class="g-badge g-badge--small {{ 'g-badge--success' if p.published else 'g-badge--inactive' }}">{{ 'Publicado' if p.published else 'Rascunho' }}</span>
-        <button type="button" class="btn btn-sm btn-dark px-3 parecer-details-btn">Detalhes</button>
+                <button type="button" class="btn-modern btn-modern--primary btn-modern--sm parecer-details-btn">Detalhes</button>
               </div>
             </div>
           </div>
         </div>
         {% endfor %}
       </div>
-      {% else %}
-    <div class="text-muted small">Nenhum parecer trimestral.</div>
-      {% endif %}
-    </div>
+    {% else %}
+      <div class="text-muted small">Nenhum parecer anual.</div>
+    {% endif %}
+  </div>
+
+  <!-- Pareceres Trimestrais -->
+  <div class="mb-5">
+    <h2 class="section-title mb-3">Pareceres Trimestrais</h2>
+    {% if quarterly_parecers %}
+      <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3" id="quarterlyParecers">
+        {% for p in quarterly_parecers %}
+        <div class="col">
+          <div class="card-modern parecer-card" style="height: 100%;" data-name="{{ p.name }}" data-tipo="{{ p.tipo_arquivo }}" data-period="{{ p.period }}" data-published="{{ 1 if p.published else 0 }}" data-area="{{ p.area or '' }}" data-ano="{{ p.ano_referencia or '' }}" data-trimestre="{{ p.trimestre_referencia or '' }}" data-file="{{ p.arquivo or '' }}">
+            <div class="card-modern__body d-flex flex-column">
+              <h6 class="mb-1 fw-semibold text-truncate" title="{{ p.tipo_arquivo }}">{{ p.tipo_arquivo }}</h6>
+              <div class="text-muted small mb-3">{{ p.period }}</div>
+              <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+                <span class="g-badge g-badge--small {{ 'g-badge--success' if p.published else 'g-badge--inactive' }}">{{ 'Publicado' if p.published else 'Rascunho' }}</span>
+                <button type="button" class="btn-modern btn-modern--primary btn-modern--sm parecer-details-btn">Detalhes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="text-muted small">Nenhum parecer trimestral.</div>
+    {% endif %}
   </div>
 {% endblock %}
 
 {% block base_scripts %}
 {{ super() }}
-<div id="parecerDetailModal" class="modal d-none" tabindex="-1">
+<div id="parecerDetailModal" class="modal-modern d-none" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title d-flex align-items-center gap-2" id="parecerModalTitle"></h5>
-        <div id="parecerModalBadge" class="ms-2"></div>
+    <div class="modal-modern__content">
+      <div class="modal-modern__header">
+        <h5 class="modal-modern__title mb-0" id="parecerModalTitle"></h5>
+        <div id="parecerModalBadge"></div>
       </div>
-      <div class="modal-body">
-        <div class="row g-3 mb-2">
+      <div class="modal-modern__body">
+        <div class="row g-3">
           <div class="col-12 col-md-6">
-            <div><strong>Ano Referência:</strong> <span id="parecerModalAno">—</span></div>
-            <div id="parecerModalTrimestreRow" class="mt-2 d-none"><strong>Trimestre Referência:</strong> <span id="parecerModalTrimestre">—</span></div>
+            <div class="mb-3">
+              <span class="form-label-modern d-block">Ano Referência</span>
+              <span class="text-muted" id="parecerModalAno">—</span>
+            </div>
+            <div id="parecerModalTrimestreRow" class="d-none">
+              <span class="form-label-modern d-block">Trimestre Referência</span>
+              <span class="text-muted" id="parecerModalTrimestre">—</span>
+            </div>
           </div>
           <div class="col-12 col-md-6">
-            <div><strong>Área:</strong> <span id="parecerModalArea">—</span></div>
+            <span class="form-label-modern d-block">Área</span>
+            <span class="text-muted" id="parecerModalArea">—</span>
           </div>
         </div>
       </div>
-      <div class="modal-footer justify-content-between flex-wrap gap-2">
-        <div class="d-flex gap-2 flex-wrap align-items-center">
-          <a id="parecerModalFileBtn" class="btn btn-primary" href="#" target="_blank" rel="noopener" style="display:none;">Abrir Arquivo</a>
+      <div class="modal-modern__footer" style="justify-content: space-between;">
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+          <a id="parecerModalFileBtn" class="btn-modern btn-modern--primary" href="#" target="_blank" rel="noopener" style="display:none;">Abrir Arquivo</a>
           {% if can_edit_pareceres %}
-          <button type="button" id="parecerPublishBtn" class="btn btn-success d-none">Publicar</button>
-          <button type="button" id="parecerUnpublishBtn" class="btn btn-warning d-none">Despublicar</button>
-          <button type="button" id="parecerDeleteBtn" class="btn btn-danger d-none">Apagar</button>
+          <button type="button" id="parecerPublishBtn" class="btn-modern btn-modern--success d-none">Publicar</button>
+          <button type="button" id="parecerUnpublishBtn" class="btn-modern btn-modern--outline d-none">Despublicar</button>
+          <button type="button" id="parecerDeleteBtn" class="btn-modern btn-modern--danger d-none">Apagar</button>
           {% endif %}
         </div>
-        <button type="button" class="btn btn-secondary" onclick="closeParecerModal()">Fechar</button>
+        <button type="button" class="btn-modern btn-modern--ghost" onclick="closeParecerModal()">Fechar</button>
       </div>
     </div>
   </div>
 </div>
 
 {% if can_edit_pareceres %}
-<div id="parecerAddModal" class="modal d-none" tabindex="-1">
+<div id="parecerAddModal" class="modal-modern d-none" tabindex="-1">
   <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Novo Parecer</h5>
+    <div class="modal-modern__content">
+      <div class="modal-modern__header">
+        <h5 class="modal-modern__title">Novo Parecer</h5>
       </div>
-      <div class="modal-body">
+      <div class="modal-modern__body">
         <form id="parecerAddForm" onsubmit="return false;">
-          <div class="mb-3">
-            <label class="form-label">Tipo <span class="text-danger">*</span></label>
-            <select id="addParecerTipo" class="form-select" required>
+          <div class="form-group-modern">
+            <label for="addParecerTipo" class="form-label-modern form-label-modern--required">Tipo</label>
+            <select id="addParecerTipo" class="form-input-modern" required>
               <option value="">Selecione...</option>
               <option value="trimestral">Trimestral</option>
               <option value="anual">Anual</option>
             </select>
           </div>
-          <div class="mb-3">
-            <label class="form-label">Ano <span class="text-danger">*</span></label>
-            <input id="addParecerAno" type="number" class="form-control" min="2000" max="2100" required />
+          <div class="form-group-modern">
+            <label for="addParecerAno" class="form-label-modern form-label-modern--required">Ano</label>
+            <input id="addParecerAno" type="number" class="form-input-modern" min="2000" max="2100" value="2025" placeholder="Ex: 2024" required />
           </div>
-          <div class="mb-3 d-none" id="addParecerTrimestreGroup">
-            <label class="form-label">Trimestre</label>
-            <select id="addParecerTrimestre" class="form-select">
+          <div class="form-group-modern d-none" id="addParecerTrimestreGroup">
+            <label for="addParecerTrimestre" class="form-label-modern">Trimestre</label>
+            <select id="addParecerTrimestre" class="form-input-modern">
               <option value="">Selecione...</option>
-              <option value="1">1º</option>
-              <option value="2">2º</option>
-              <option value="3">3º</option>
-              <option value="4">4º</option>
+              <option value="1">1º Trimestre</option>
+              <option value="2">2º Trimestre</option>
+              <option value="3">3º Trimestre</option>
+              <option value="4">4º Trimestre</option>
             </select>
           </div>
-          <div class="mb-3">
-            <label class="form-label">Arquivo <span class="text-danger">*</span></label>
+          <div class="form-group-modern">
+            <label class="form-label-modern form-label-modern--required">Arquivo</label>
             <div class="d-flex align-items-center gap-2 flex-wrap">
-              <button type="button" id="addParecerArquivoBtn" class="btn btn-outline-secondary btn-sm">Selecionar Arquivo</button>
-              <span id="addParecerArquivoNameWrapper" class="text-muted d-none">Selecionado: <strong id="addParecerArquivoName"></strong></span>
+              <button type="button" id="addParecerArquivoBtn" class="btn-modern btn-modern--outline btn-modern--sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                </svg>
+                Selecionar Arquivo
+              </button>
+              <span id="addParecerArquivoNameWrapper" class="text-muted small d-none">
+                <strong id="addParecerArquivoName"></strong>
+              </span>
             </div>
+            <span class="form-helper-text">Formatos aceitos: PDF, DOC, DOCX</span>
           </div>
         </form>
       </div>
-      <div class="modal-footer justify-content-between">
-        <button type="button" class="btn btn-secondary" id="addParecerCancelBtn">Cancelar</button>
-        <button type="button" class="btn btn-primary" id="addParecerSaveBtn">Salvar</button>
+      <div class="modal-modern__footer justify-content-between">
+        <button type="button" class="btn-modern btn-modern--ghost" id="addParecerCancelBtn">Cancelar</button>
+        <button type="button" class="btn-modern btn-modern--primary" id="addParecerSaveBtn">Salvar Parecer</button>
       </div>
     </div>
   </div>

@@ -44,7 +44,22 @@ function mostrarDetalhes(btn){
       cancelarContainer.classList.add('d-none');
     }
   }
-  document.getElementById('detalheModal').classList.remove('d-none');
+  
+  // Mostra o modal e adiciona backdrop
+  const modal = document.getElementById('detalheModal');
+  modal.style.display = 'flex';
+  modal.classList.add('show');
+  
+  // Cria backdrop
+  let backdrop = document.getElementById('modalBackdrop');
+  if (!backdrop) {
+    backdrop = document.createElement('div');
+    backdrop.id = 'modalBackdrop';
+    backdrop.className = 'modal-backdrop fade show';
+    backdrop.onclick = fecharDetalhes;
+    document.body.appendChild(backdrop);
+  }
+  document.body.classList.add('modal-open');
 
   // Esconde elementos marcados manage-only se não tiver permissão
   if(!window.canManageContrib){
@@ -56,7 +71,16 @@ function mostrarDetalhes(btn){
   }
 }
 function fecharDetalhes(){
-  document.getElementById('detalheModal').classList.add('d-none');
+  const modal = document.getElementById('detalheModal');
+  modal.style.display = 'none';
+  modal.classList.remove('show');
+  
+  // Remove backdrop
+  const backdrop = document.getElementById('modalBackdrop');
+  if (backdrop) {
+    backdrop.remove();
+  }
+  document.body.classList.remove('modal-open');
 }
 function mapBadge(status){
   switch(status){
@@ -77,10 +101,15 @@ function alterarValor(){
   const acoes = document.getElementById('acoesValor');
   if(container.querySelector('input')) return; // já em edição
   const valorAtual = assocAtual.valor_contribuicao || 0;
-  container.innerHTML = `<strong>Novo Valor:</strong> R$ <input type="number" min="0" step="0.01" id="inputNovoValor" class="form-control form-control-sm d-inline-block" style="width:140px;" value="${valorAtual}" />`;
+  container.innerHTML = `
+    <div class="form-group-modern" style="margin-bottom: 0;">
+      <label class="form-label-modern">Novo Valor (R$)</label>
+      <input type="number" min="0" step="0.01" id="inputNovoValor" class="form-input-modern form-input-modern--sm" style="max-width:180px;" value="${valorAtual}" />
+    </div>
+  `;
   acoes.innerHTML = `
-    <button class="btn btn-sm btn-success me-1" onclick="salvarNovoValor()">Salvar</button>
-    <button class="btn btn-sm btn-outline-secondary" onclick="cancelarEdicaoValor()">Cancelar</button>
+    <button class="btn-modern btn-modern--success btn-modern--sm me-1" onclick="salvarNovoValor()">Salvar</button>
+    <button class="btn-modern btn-modern--outline btn-modern--sm" onclick="cancelarEdicaoValor()">Cancelar</button>
   `;
 }
 function cancelarEdicaoValor(){
@@ -88,7 +117,7 @@ function cancelarEdicaoValor(){
   const container = document.getElementById('valorContainer');
   const acoes = document.getElementById('acoesValor');
   container.innerHTML = `<strong>Valor Atual:</strong> R$ <span id="detalheValor">${frappe._.fmt_money ? frappe._.fmt_money(assocAtual.valor_contribuicao || 0) : (assocAtual.valor_contribuicao || 0)}</span>`;
-  acoes.innerHTML = `<button id="btnAlterarValor" class="btn btn-sm btn-outline-secondary" onclick="alterarValor()">Alterar Valor</button>`;
+  acoes.innerHTML = `<button id="btnAlterarValor" class="btn-modern btn-modern--outline btn-modern--sm" onclick="alterarValor()">Alterar Valor</button>`;
 }
 function salvarNovoValor(){
   if(!assocAtual) return;
@@ -263,11 +292,21 @@ function editarCobranca(){
   if(container.querySelector('input')) return; // já em edição
   const email = assocAtual.email_cobranca || '';
   const fone = assocAtual.telefone_cobranca || '';
-  container.querySelector('#emailCobranca').innerHTML = `<input type="email" id="inputEmailCobranca" class="form-control form-control-sm" style="max-width:280px;" value="${email}" placeholder="email@exemplo.com" />`;
-  container.querySelector('#foneCobranca').innerHTML = `<input type="text" id="inputFoneCobranca" class="form-control form-control-sm" style="max-width:180px;" value="${fone}" placeholder="(xx) xxxxx-xxxx" />`;
+  container.querySelector('#emailCobranca').innerHTML = `
+    <div class="form-group-modern" style="margin-bottom: 0;">
+      <label class="form-label-modern">E-mail</label>
+      <input type="email" id="inputEmailCobranca" class="form-input-modern form-input-modern--sm" style="max-width:280px;" value="${email}" placeholder="email@exemplo.com" />
+    </div>
+  `;
+  container.querySelector('#foneCobranca').innerHTML = `
+    <div class="form-group-modern" style="margin-bottom: 0;">
+      <label class="form-label-modern">Telefone</label>
+      <input type="text" id="inputFoneCobranca" class="form-input-modern form-input-modern--sm" style="max-width:180px;" value="${fone}" placeholder="(xx) xxxxx-xxxx" />
+    </div>
+  `;
   acoes.innerHTML = `
-    <button class="btn btn-sm btn-success me-1" onclick="salvarDadosCobranca()">Salvar</button>
-    <button class="btn btn-sm btn-outline-secondary" onclick="cancelarEdicaoCobranca()">Cancelar</button>
+    <button class="btn-modern btn-modern--success btn-modern--sm me-1" onclick="salvarDadosCobranca()">Salvar</button>
+    <button class="btn-modern btn-modern--outline btn-modern--sm" onclick="cancelarEdicaoCobranca()">Cancelar</button>
   `;
 }
 function cancelarEdicaoCobranca(){
@@ -276,7 +315,7 @@ function cancelarEdicaoCobranca(){
   const foneSpan = document.getElementById('foneCobranca');
   emailSpan.textContent = assocAtual.email_cobranca || '—';
   foneSpan.textContent = assocAtual.telefone_cobranca || '—';
-  document.getElementById('acoesCobranca').innerHTML = `<button id="btnEditarCobranca" class="btn btn-sm btn-outline-secondary" onclick="editarCobranca()">Editar Cobrança</button>`;
+  document.getElementById('acoesCobranca').innerHTML = `<button id="btnEditarCobranca" class="btn-modern btn-modern--outline btn-modern--sm" onclick="editarCobranca()">Editar Cobrança</button>`;
 }
 function salvarDadosCobranca(){
   if(!window.canManageContrib){ frappe.msgprint('Sem permissão para salvar.'); return; }

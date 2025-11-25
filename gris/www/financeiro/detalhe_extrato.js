@@ -1,44 +1,58 @@
 document.addEventListener('DOMContentLoaded', function() {
 	const btnSalvar = document.getElementById('btn-salvar-extrato');
+	const footerSalvar = document.getElementById('footer-salvar');
 	let initialData = {};
 
 	// Lista de campos editáveis
 	const editableFields = [
-		'descricao_reduzida',
 		'descricao',
+		'descricao_reduzida',
 		'categoria',
 		'centro_de_custo',
-		'fixo_variavel',
 		'ordinaria_extraordinaria',
 		'conta_fixa',
 		'beneficiario',
-		'observacoes',
 		'repasse_entre_contas',
-		'transacao_revisada'
+		'transacao_revisada',
+		'observacoes'
 	];
 
-	// Função para mostrar/ocultar campo de beneficiário baseado na categoria
-	function toggleBeneficiarioField() {
+	// Função para mostrar/ocultar campos baseado na categoria
+	function toggleConditionalFields() {
 		const categoriaSelect = document.querySelector('[name="categoria"]');
 		const beneficiarioContainer = document.getElementById('beneficiario-field-container');
+		const contaFixaContainer = document.getElementById('conta-fixa-field-container');
 		
-		if (categoriaSelect && beneficiarioContainer) {
+		if (categoriaSelect) {
 			const categoria = categoriaSelect.value;
-			if (categoria === 'Contribuição Mensal') {
-				beneficiarioContainer.style.display = '';
-			} else {
-				beneficiarioContainer.style.display = 'none';
+			
+			// Campo Beneficiário: só aparece se categoria = "Contribuição Mensal"
+			if (beneficiarioContainer) {
+				if (categoria === 'Contribuição Mensal') {
+					beneficiarioContainer.style.display = '';
+				} else {
+					beneficiarioContainer.style.display = 'none';
+				}
+			}
+			
+			// Campo Conta Fixa: só aparece se categoria = "Contas Ordinárias"
+			if (contaFixaContainer) {
+				if (categoria === 'Contas Ordinárias') {
+					contaFixaContainer.style.display = '';
+				} else {
+					contaFixaContainer.style.display = 'none';
+				}
 			}
 		}
 	}
 
 	// Executa ao carregar a página
-	toggleBeneficiarioField();
+	toggleConditionalFields();
 
 	// Adiciona listener no campo categoria
 	const categoriaSelect = document.querySelector('[name="categoria"]');
 	if (categoriaSelect) {
-		categoriaSelect.addEventListener('change', toggleBeneficiarioField);
+		categoriaSelect.addEventListener('change', toggleConditionalFields);
 	}
 
 	// Seleciona todos os campos editáveis na página (não só dentro do form)
@@ -76,7 +90,11 @@ document.addEventListener('DOMContentLoaded', function() {
 					break;
 				}
 			}
-			btnSalvar.classList.toggle('d-none', !changed);
+			if (changed) {
+				footerSalvar.style.display = 'flex';
+			} else {
+				footerSalvar.style.display = 'none';
+			}
 		});
 		// Para checkbox, também escuta 'change'
 		if (el.type === 'checkbox') {
@@ -89,7 +107,11 @@ document.addEventListener('DOMContentLoaded', function() {
 						break;
 					}
 				}
-				btnSalvar.classList.toggle('d-none', !changed);
+				if (changed) {
+					footerSalvar.style.display = 'flex';
+				} else {
+					footerSalvar.style.display = 'none';
+				}
 			});
 		}
 	});
@@ -122,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
 						callback: function(res) {
 							if (!res.exc) {
 								initialData = getFormData();
-								btnSalvar.classList.add('d-none');
+								footerSalvar.style.display = 'none';
 								frappe.show_alert('Alterações salvas com sucesso!');
 							} else {
 								frappe.show_alert({message: 'Erro ao salvar: ' + res.exc, indicator: 'red'});

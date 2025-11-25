@@ -91,6 +91,7 @@ def get_context(context):
 			"timestamp_transacao",
 			"valor",
 			"descricao",
+			"descricao_reduzida",
 			"instituicao",
 			"carteira",
 			"centro_de_custo",

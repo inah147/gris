@@ -110,8 +110,14 @@ def _get_beneficiarios():
 		fields=campos,
 		order_by="nome_completo asc",
 	)
-	# Unimos listas (simples, nomes distintos por naming rule cpf)
-	return beneficiarios_ativos + beneficiarios_cancelar
+	# Unimos listas removendo duplicatas baseadas no ID (name)
+	ids_vistos = set()
+	resultado = []
+	for b in beneficiarios_ativos + beneficiarios_cancelar:
+		if b["name"] not in ids_vistos:
+			ids_vistos.add(b["name"])
+			resultado.append(b)
+	return resultado
 
 
 def _get_pagamentos_por_associado(associados):

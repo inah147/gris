@@ -1,34 +1,106 @@
-/* Styles for Relatório Contábil (page-scoped) */
-.relatorio-contabil-page-scope { width: 100%; overflow-x: visible; }
-main.fx-main { min-width: 0; }
-.relatorio-contabil-page-scope .fx-main,
-.relatorio-contabil-page-scope .fx-main > .p-4,
-.relatorio-contabil-page-scope .card,
-.relatorio-contabil-page-scope .card-body { min-width: 0; box-sizing: border-box; }
+/**
+ * Relatório Contábil - CSS Moderno
+ * Tabela de transações detalhadas com múltiplas instituições
+ */
 
-.relatorio-contabil-scroll-x { display:block; position:relative; overflow-x: auto !important; -webkit-overflow-scrolling: touch; min-width: 0; }
-
-#relatorio-contabil-tabela th, #relatorio-contabil-tabela td { white-space: nowrap; border: none !important; }
-
-#relatorio-contabil-tabela {
-	display: inline-table !important;
-	width: max-content !important;
-	min-width: 900px;
-	border-collapse: collapse;
-	table-layout: auto !important;
-	margin: 0;
+/* Tabela Relatório Contábil - Estrutura BEM */
+.relatorio-contabil-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm, 0.875rem);
+  background: white;
+  min-width: 1200px; /* Garante largura mínima para scroll horizontal */
 }
 
-#relatorio-contabil-tabela thead th {
-	background: #f3f6fa;
-	font-weight: 600;
-	font-size: 0.98em;
-	border-bottom: 2px solid #e2e8f0 !important;
+/* Header */
+.relatorio-contabil-table__header {
+  padding: 1rem;
+  text-align: left;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--font-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary, #64748b);
+  background-color: var(--bg-hover, #f8fafc);
+  border-bottom: 2px solid var(--border-color, #e2e8f0);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
-#relatorio-contabil-tabela tbody tr:nth-child(even) { background: #f0f5fa; }
-#relatorio-contabil-tabela tbody tr:nth-child(odd)  { background: #fff; }
 
-/* card-specific small paddings to replace inline styles */
-.rel-cont-card { background: #fff; }
-.rel-cont-body { padding: 0.5rem; }
-.relatorio-contabil-scroll-x { width: 100%; max-width: 100%; }
+.relatorio-contabil-table__header--number {
+  text-align: right;
+}
+
+/* Células */
+.relatorio-contabil-table__cell {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  color: var(--text-primary, #1e293b);
+  white-space: nowrap;
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.relatorio-contabil-table__cell--number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 0.8125rem;
+}
+
+/* Linhas - alternância de cores */
+.relatorio-contabil-table__row:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+.relatorio-contabil-table__row:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+.relatorio-contabil-table__row:hover {
+  background-color: #f1f5f9;
+  transition: background-color 0.15s ease;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .relatorio-contabil-table {
+    font-size: var(--text-xs, 0.75rem);
+    min-width: 1000px;
+  }
+  
+  .relatorio-contabil-table__header,
+  .relatorio-contabil-table__cell {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .relatorio-contabil-table__cell--number {
+    font-size: 0.75rem;
+  }
+}
+
+/* Scroll horizontal suave */
+.card-modern__body {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Customização do scrollbar */
+.card-modern__body::-webkit-scrollbar {
+  height: 8px;
+}
+
+.card-modern__body::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.card-modern__body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.card-modern__body::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

@@ -7,59 +7,111 @@ frappe.ready(() => {
   const selCategoria = document.getElementById('f-categoria');
   const selRamo = document.getElementById('f-ramo');
   const selStatus = document.getElementById('f-status');
+  const selStatusGrupo = document.getElementById('f-status-grupo');
   const selFuncao = document.getElementById('f-funcao');
   const selArea = document.getElementById('f-area');
   const selSecao = document.getElementById('f-secao');
 
-  function statusBadgeClass(s){
-    if(s === 'Válido') return 'g-badge g-badge--success';
-    if(s === 'Vencido') return 'g-badge g-badge--warning';
-    return 'g-badge g-badge--secondary';
+  function getStatusIndicator(status){
+    // status: Válido (verde), Vencido (vermelho), próximo de vencer (amarelo)
+    if(status === 'Válido') {
+      return `<span class="status-indicator status-indicator--active" title="Registro válido">
+        <span class="status-indicator__dot"></span>
+      </span>`;
+    }
+    if(status === 'Vencido') {
+      return `<span class="status-indicator status-indicator--danger" title="Registro vencido">
+        <span class="status-indicator__dot"></span>
+      </span>`;
+    }
+    // Para "Vence em breve" ou outros status de alerta
+    return `<span class="status-indicator status-indicator--warning" title="Atenção necessária">
+      <span class="status-indicator__dot"></span>
+    </span>`;
   }
 
   function render(rows){
     if(!rows.length){
-      listEl.innerHTML = '<div class="list-group-item text-muted">Nenhum associado encontrado.</div>';
+      listEl.innerHTML = `
+        <tr>
+          <td colspan="8">
+            <div class="empty-state" style="border: none; margin: 2rem 0;">
+              <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M16 16s-1.5-2-4-2-4 2-4 2M9 9h.01M15 9h.01"></path>
+              </svg>
+              <h3 class="empty-state__title">Nenhum associado encontrado</h3>
+              <p class="empty-state__description">Tente ajustar os filtros acima</p>
+            </div>
+          </td>
+        </tr>`;
       return;
     }
-  listEl.innerHTML = rows.map(row => {
+    listEl.innerHTML = rows.map(row => {
       const nome = frappe.utils.escape_html(row.nome_completo || row.name || '—');
       const registro = frappe.utils.escape_html(row.registro || '—');
-      const status = frappe.utils.escape_html(row.status || 'Desconhecido');
+      const status = row.status || 'Desconhecido';
       const ramo = row.ramo ? frappe.utils.escape_html(row.ramo) : '';
       const categoria = row.categoria ? frappe.utils.escape_html(row.categoria) : '';
-  // Badges de ramo e categoria (agora ambos, se existirem)
-  const ramoBadge = (ramo && ramo !== 'Não se aplica') ? `<span class="g-badge g-badge--dark">${ramo}</span>` : '';
-  const categoriaBadge = categoria ? `<span class="g-badge g-badge--accent g-badge--outline">${categoria}</span>` : '';
+      const funcao = row.funcao ? frappe.utils.escape_html(row.funcao) : '';
+      const area = row.area ? frappe.utils.escape_html(row.area) : '';
+      const secao = row.secao ? frappe.utils.escape_html(row.secao) : '';
       const link = `/associados/detalhe?name=${encodeURIComponent(row.name)}`;
+      
       return `
-        <a href="${link}" class="list-group-item list-group-item-action" data-name="${row.name}">
-          <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-2">
-            <div class="flex-grow-1">
-              <div class="fw-semibold">${nome}</div>
-              <div class="text-muted small d-flex align-items-center flex-wrap gap-2">Registro: ${registro}<span class="${statusBadgeClass(status)}">${status}</span></div>
+        <tr class="clickable" onclick="window.location.href='${link}'" style="cursor: pointer;">
+          <td style="text-align: center;">
+            ${getStatusIndicator(status)}
+          </td>
+          <td>
+            <div style="font-weight: 500; color: var(--text-primary);">
+              ${nome}
             </div>
-            <div class="d-flex gap-3 align-items-center mt-2 mt-md-0">
-              ${categoriaBadge}${ramoBadge}
-            </div>
-          </div>
-        </a>`;
+          </td>
+          <td>
+            <span style="font-size: 0.875rem; color: var(--text-secondary);">${registro}</span>
+          </td>
+          <td>
+            ${categoria ? `<span class="g-badge g-badge--accent g-badge--small g-badge--outline">${categoria}</span>` : '<span style="color: var(--text-muted); font-size: 0.75rem;">—</span>'}
+          </td>
+          <td>
+            ${(ramo && ramo !== 'Não se aplica') ? `<span class="g-badge g-badge--dark g-badge--small">${ramo}</span>` : '<span style="color: var(--text-muted); font-size: 0.75rem;">—</span>'}
+          </td>
+          <td>
+            ${secao ? `<span class="g-badge g-badge--secondary g-badge--small">${secao}</span>` : '<span style="color: var(--text-muted); font-size: 0.75rem;">—</span>'}
+          </td>
+          <td>
+            ${funcao ? `<span class="g-badge g-badge--primary g-badge--small g-badge--outline">${funcao}</span>` : '<span style="color: var(--text-muted); font-size: 0.75rem;">—</span>'}
+          </td>
+          <td>
+            ${area ? `<span class="g-badge g-badge--info g-badge--small g-badge--outline">${area}</span>` : '<span style="color: var(--text-muted); font-size: 0.75rem;">—</span>'}
+          </td>
+        </tr>`;
     }).join('');
   }
 
   async function fetchList(){
-    listEl.innerHTML = '<div class="list-group-item text-muted">Carregando...</div>';
+    listEl.innerHTML = `
+      <tr>
+        <td colspan="8">
+          <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <span class="loading-text">Carregando associados...</span>
+          </div>
+        </td>
+      </tr>`;
     const nome = document.getElementById('f-nome').value.trim();
-  const categoria = document.getElementById('f-categoria').value;
+    const categoria = document.getElementById('f-categoria').value;
     const funcao = document.getElementById('f-funcao').value;
     const area = document.getElementById('f-area').value;
     const secao = document.getElementById('f-secao').value;
     const ramo = document.getElementById('f-ramo').value;
     const status = document.getElementById('f-status').value;
+    const statusGrupo = document.getElementById('f-status-grupo').value;
 
     const filters = [];
-  // Mostrar apenas associados com status_no_grupo = 'Ativo'
-  filters.push(["Associado","status_no_grupo","=","Ativo"]);
+    // Filtro de status no grupo (padrão: Ativo)
+    if(statusGrupo) filters.push(["Associado","status_no_grupo","=",statusGrupo]);
     if(nome) filters.push(["Associado","nome_completo","like","%"+nome+"%"]);
     if(categoria) filters.push(["Associado","categoria","=",categoria]);
     if(funcao) filters.push(["Associado","funcao","=",funcao]);
@@ -82,7 +134,15 @@ frappe.ready(() => {
       render(r.message || []);
     } catch (e) {
       console.warn('Erro ao carregar lista de associados', e);
-      listEl.innerHTML = '<div class="list-group-item text-danger">Erro ao carregar a lista.</div>';
+      listEl.innerHTML = `
+        <tr>
+          <td colspan="8">
+            <div class="empty-state" style="border: none; margin: 2rem 0;">
+              <h3 class="empty-state__title" style="color: var(--color-danger);">Erro ao carregar a lista</h3>
+              <p class="empty-state__description">Tente recarregar a página</p>
+            </div>
+          </td>
+        </tr>`;
     }
   }
 

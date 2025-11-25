@@ -10,8 +10,8 @@
 {% endblock %}
 
 {% block main %}
-  <div class="card shadow-sm mb-4">
-    <div class="card-body">
+  <div class="card-modern mb-4">
+    <div class="card-modern__body">
       <h2 class="h5 mb-3 d-flex align-items-center gap-2">{{ conta.descricao }}</h2>
       <div class="d-flex flex-wrap gap-2 mb-4">
         <span class="g-badge g-badge--{{ 'primary' if conta.ativa else 'inactive' }}">{{ 'Ativa' if conta.ativa else 'Inativa' }}</span>

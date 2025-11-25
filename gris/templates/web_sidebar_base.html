@@ -2,6 +2,44 @@
 {% block head_include %}
   {{ super() }}
   <link rel="stylesheet" href="/assets/gris/css/components.css">
+  <style>
+    /* Estilos críticos do page-header com máxima prioridade */
+    .page-header {
+      margin: 0 0 var(--space-lg, 1.5rem) 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      border-bottom: none !important;
+      display: flex !important;
+      align-items: flex-start !important;
+      justify-content: space-between !important;
+      gap: var(--space-md, 1rem) !important;
+      flex-wrap: wrap !important;
+      background: transparent !important;
+    }
+    .page-header__content {
+      flex: 1;
+      min-width: 0;
+    }
+    .page-header__title {
+      font-size: var(--text-3xl, 1.875rem);
+      font-weight: var(--font-bold, 700);
+      color: var(--text-primary, #1a202c);
+      margin: 0 0 var(--space-xs, 0.5rem) 0;
+      line-height: var(--leading-tight, 1.25);
+    }
+    .page-header__subtitle {
+      font-size: var(--text-base, 1rem);
+      color: var(--text-secondary, #718096);
+      margin: 0;
+      line-height: var(--leading-normal, 1.5);
+    }
+    .page-header__actions {
+      display: flex;
+      gap: var(--space-sm, 0.75rem);
+      align-items: center;
+      flex-wrap: wrap;
+    }
+  </style>
 {% endblock %}
 
 {#
@@ -44,7 +82,7 @@
 {% block footer %}{% endblock %}
 
 {% block content %}
-<div class="fx-layout d-flex">
+<div class="fx-layout">
   <nav class="fx-shell border-end bg-white flex-column fx-desktop-only">
     <div class="fx-menu-scroll">
       <ul class="fx-sidebar m-0 p-0">
@@ -94,10 +132,10 @@
     </div>
     {% endif %}
   </nav>
-  <main class="fx-main flex-grow-1 p-0">
-    <!-- Topbar Mobile -->
+  
+  <!-- Topbar Mobile -->
   <div class="fxm-topbar fx-mobile-only d-flex align-items-center justify-content-end px-3 py-2 bg-white fixed-top" style="z-index:1050;">
-      <div class="fxm-logo-wrap">
+    <div class="fxm-logo-wrap">
         {% if uel.logo %}
           <a href="/inicio" class="d-inline-block"><img src="{{ uel.logo }}" alt="Logo" class="fxm-logo-mobile"></a>
         {% else %}
@@ -115,10 +153,11 @@
         </div>
       </div>
       {% endif %}
-    </div>
-    <!-- Bottom Navigation Mobile (Estática) -->
+  </div>
+  
+  <!-- Bottom Navigation Mobile (Estática) -->
   <nav class="fxm-bottom-nav fx-mobile-only" aria-label="Navegação principal móvel">
-      <div class="fxm-bottom-fab" role="tablist">
+    <div class="fxm-bottom-fab" role="tablist">
         <a href="/inicio" class="fxm-b-item {% if active_inicio %}active{% endif %}" aria-label="Ir para Início" role="tab">
           <span class="fxm-b-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
@@ -161,22 +200,31 @@
           <span class="fxm-b-label">Associados</span>
         </a>
       </div>
-    </nav>
-    <div class="p-4">
+  </nav>
+  
+  <main class="fx-main">
+    <div class="page-container">
       {% if access_denied %}
-        <div class="card border-0 shadow-sm">
-          <div class="card-body">
+        <div class="card-modern">
+          <div class="card-modern__body">
             <h2 class="h6 mb-2">Acesso negado</h2>
             <p class="mb-0 text-muted small">Você não tem permissão para visualizar esta página.</p>
           </div>
         </div>
       {% else %}
-        {% block page_header %}{% endblock %}
+        {% block page_header %}
+        <div class="page-header">
+          <div class="page-header__content">
+            <h1 class="page-header__title">{{ title or "Página" }}</h1>
+            <p class="page-header__subtitle">Bem-vindo à página.</p>
+          </div>
+        </div>
+        {% endblock %}
         {% block main %}{% endblock %}
       {% endif %}
     </div>
-  <!-- Spacer para evitar sobreposição da bottom nav no final do scroll (mobile) -->
-  <div class="fxm-bottom-spacer fx-mobile-only"></div>
+    <!-- Spacer para evitar sobreposição da bottom nav no final do scroll (mobile) -->
+    <div class="fxm-bottom-spacer fx-mobile-only"></div>
   </main>
 </div>
 {% endblock %}
@@ -184,13 +232,32 @@
 {% block style %}
 {{ super() }}
 <style>
-  html, body { min-height: 100%; background: #f8f9fa; }
+  html, body { min-height: 100%; background: #f8f9fa; margin: 0; padding: 0; }
   :root { --fx-topbar-height:56px; --fx-bottom-nav-height:64px; }
-  .fx-layout { min-height: 100vh; background: var(--gray-50); }
-  .fx-shell { width:240px; padding:0.75rem 0.75rem 0.75rem; position: fixed; top: 0; left: 0; bottom: 0; height: 100vh; }
+  
+  /* Layout container */
+  .fx-layout { 
+    display: flex;
+    min-height: 100vh;
+    background: #f8f9fa;
+  }
+  
+  /* Sidebar fixo */
+  .fx-shell { 
+    width: 240px;
+    padding: 0.75rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 1000;
+  }
+  
   /* Visibility control via custom classes (avoid Bootstrap utilities to prevent cascade issues) */
-  .fx-desktop-only { display:block; }
-  .fx-mobile-only { display:none; }
+  .fx-desktop-only { display: flex; }
+  .fx-mobile-only { display: none; }
   .fx-menu-scroll { flex:1 1 auto; overflow-y:auto; padding-bottom:1rem; }
   .fx-user-block { flex:0 0 auto; padding-top:.5rem; border-top:1px solid rgba(0,0,0,.07); }
   .fx-user-block .fx-user { position:relative; margin-top:.35rem; }
@@ -214,7 +281,31 @@
   .fx-group.open > .fx-toggle { background:#e0f0ff; color:#0d4d91; }
   .fx-toggle::after { content:''; margin-left:auto; width:6px; height:6px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(45deg); transition:transform .2s; }
   .fx-group.open > .fx-toggle::after { transform:rotate(135deg); }
-  .fx-main { background:#f8f9fa; min-height: 100vh; padding-bottom: 24px; }
+  
+  /* Main content area */
+  .fx-main { 
+    flex: 1;
+    margin-left: 240px;
+    background: #f8f9fa;
+    min-height: 100vh;
+    width: calc(100% - 240px);
+    padding: 0;
+  }
+  
+  /* Page Container - Standardized padding for all pages */
+  .page-container { 
+    padding: var(--space-lg, 1.5rem) var(--space-xl, 2rem);
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  @media (max-width: 768px) {
+    .page-container {
+      padding: var(--space-md, 1rem);
+    }
+  }
+  
   /* Perfil usuário */
   .fx-user { position:relative; }
   .fx-user-btn { width:100%; background:#f1f5f9; border:0; display:flex; align-items:center; gap:.6rem; padding:.55rem .75rem; border-radius:8px; font-size:13px; font-weight:500; color:#334155; cursor:pointer; text-align:left; }
@@ -229,19 +320,22 @@
   .fx-user-action:hover { background:#f1f5f9; }
   .fx-user-action:active { background:#e2e8f0; }
   @keyframes fadeSlide { from { opacity:0; transform:translateY(6px);} to { opacity:1; transform:translateY(0);} }
-  /* ===== Desktop default: sidebar visível, elementos móveis ocultos ===== */
-  .fx-shell { display:flex; }
-  .fxm-topbar, .fxm-bottom-nav, .fxm-bottom-spacer { display:none; }
-  .fx-main { margin-left:240px; padding-top:0 !important; }
-
   /* ===== Mobile (<768px) ===== */
   @media (max-width: 767.98px){
-    .fx-desktop-only { display:none !important; }
-    .fx-mobile-only { display:block !important; }
-    .fx-shell { display:none !important; }
-    .fxm-topbar { display:flex !important; position:fixed; top:0; left:0; right:0; border-bottom:0; }
-    .fx-main { margin-left:0; padding-top:var(--fx-topbar-height) !important; padding-bottom: calc(var(--fx-bottom-nav-height) + 12px); }
-    .fxm-bottom-nav, .fxm-bottom-spacer { display:block !important; }
+    .fx-layout {
+      flex-direction: column;
+    }
+    .fx-desktop-only { display: none !important; }
+    .fx-mobile-only { display: block !important; }
+    .fx-shell { display: none !important; }
+    .fxm-topbar { display: flex !important; position: fixed; top: 0; left: 0; right: 0; border-bottom: 0; z-index: 1000; }
+    .fx-main { 
+      margin-left: 0;
+      width: 100%;
+      padding-top: var(--fx-topbar-height) !important;
+      padding-bottom: calc(var(--fx-bottom-nav-height) + 12px);
+    }
+    .fxm-bottom-nav, .fxm-bottom-spacer { display: block !important; }
     /* Floating 3-item bottom bar */
     .fxm-bottom-nav { pointer-events:none; position:fixed; bottom:18px; left:0; right:0; z-index:1050; padding:0 18px; }
     .fxm-bottom-fab { pointer-events:auto; margin:0 auto; background:#fff; border-radius:40px; width:100%; max-width:620px; display:flex; justify-content:space-between; align-items:stretch; padding:8px 16px 10px; gap:6px; box-shadow:0 8px 24px -10px rgba(0,0,0,.25),0 2px 6px -2px rgba(0,0,0,.16); border:1px solid rgba(0,0,0,.05); }
@@ -280,9 +374,13 @@
   }
   /* Hard desktop reaffirmation (in case of earlier overrides) */
   @media (min-width: 768px){
-    .fx-shell { display:flex !important; }
-    .fxm-topbar, .fxm-bottom-nav, .fxm-bottom-fab, .fxm-bottom-spacer { display:none !important; }
-    .fx-main { margin-left:240px !important; padding-top:0 !important; }
+    .fx-shell { display: flex !important; }
+    .fxm-topbar, .fxm-bottom-nav, .fxm-bottom-fab, .fxm-bottom-spacer { display: none !important; }
+    .fx-main { 
+      margin-left: 240px !important;
+      width: calc(100% - 240px) !important;
+      padding-top: 0 !important;
+    }
   }
 </style>
 {% block extra_style %}{% endblock %}

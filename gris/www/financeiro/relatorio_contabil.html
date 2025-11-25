@@ -5,78 +5,86 @@
 {% set active_link = '/financeiro/relatorios' %}
 
 {% block page_header %}
-  <div class="mb-4 d-flex align-items-center justify-content-between">
-    <h1 class="h3 mb-0">Relatório Contábil</h1>
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Relatório Contábil</h1>
+      <p class="page-header__subtitle">Transações detalhadas por instituição e período</p>
+    </div>
   </div>
 {% endblock %}
 
 {% block main %}
-<div class="relatorio-contabil-page-scope">
-  <form method="get" class="row g-3 align-items-end mb-4">
-    <div class="col-auto">
-      <label for="data_inicio" class="form-label mb-0">Data de início</label>
-      <input type="date" class="form-control form-control-sm" id="data_inicio" name="data_inicio" value="{{ data_inicio or '' }}">
+<link rel="stylesheet" href="/financeiro/relatorio_contabil.css">
+
+  <div class="card-modern mb-4">
+    <div class="card-modern__body card-modern__body--compact">
+      <form method="get" class="filter-bar mb-0">
+        <div class="filter-field">
+          <label for="data_inicio" class="form-label-modern small">Data de início</label>
+          <input type="date" class="form-input-modern form-input-modern--sm" id="data_inicio" name="data_inicio" value="{{ data_inicio or '' }}">
+        </div>
+        <div class="filter-field">
+          <label for="data_fim" class="form-label-modern small">Data de término</label>
+          <input type="date" class="form-input-modern form-input-modern--sm" id="data_fim" name="data_fim" value="{{ data_fim or '' }}">
+        </div>
+        <div class="filter-actions">
+          <button type="submit" class="btn-modern btn-modern--primary btn-modern--sm">Filtrar</button>
+          <button type="button" id="export-xlsx" class="btn-modern btn-modern--outline btn-modern--sm">Exportar XLSX</button>
+        </div>
+      </form>
     </div>
-    <div class="col-auto">
-      <label for="data_fim" class="form-label mb-0">Data de término</label>
-      <input type="date" class="form-control form-control-sm" id="data_fim" name="data_fim" value="{{ data_fim or '' }}">
-    </div>
-    <div class="col-auto">
-      <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
-    </div>
-    <div class="col-auto">
-      <button type="button" id="export-xlsx" class="btn btn-outline-secondary btn-sm">Exportar XLSX</button>
-    </div>
-  </form>
-  <div class="card shadow-sm border-0 rel-cont-card">
-    <div class="card-body rel-cont-body">
-  <div class="relatorio-contabil-scroll-x">
-            <link rel="stylesheet" href="/financeiro/relatorio_contabil.css">
-    <table class="table table-sm align-middle" id="relatorio-contabil-tabela">
-              <thead class="table-light">
-                <tr>
-                  <th>Data</th>
-                  <th>Instituição</th>
-                  <th>Carteira</th>
-                  <th>Centro de Custo</th>
-                  <th>Valor</th>
-                  <th>Tipo</th>
-                  <th>Descrição</th>
-                  <th>Categoria</th>
-                  <th>Atividade</th>
-                  <th>Observações</th>
-                  {% for inst in instituicoes %}
-                    <th>{{ inst }}</th>
-                  {% endfor %}
-                </tr>
-              </thead>
-              <tbody>
-        {# Exemplo de lógica: saldos = dict com saldo de cada instituição, inicializado antes do loop #}
-        {% set saldos = dict() %}
-        {% for inst in instituicoes %}
-          {% set _ = saldos.update({inst: 0}) %}
-        {% endfor %}
-        {% for t in transacoes %}
+  </div>
+
+  <div class="card-modern">
+    <div class="card-modern__body" style="padding: 0; overflow-x: auto;">
+      <table class="relatorio-contabil-table" id="relatorio-contabil-tabela">
+        <thead>
           <tr>
-            <td>{{ t.data_deposito or '-' }}</td>
-            <td>{{ t.instituicao or '-' }}</td>
-            <td>{{ t.carteira or '-' }}</td>
-            <td>{{ t.centro_de_custo or '-' }}</td>
-            <td>{{ 'R$ ' + '{:,.2f}'.format(t.valor_absoluto|float).replace(',', 'X').replace('.', ',').replace('X', '.') if t.valor_absoluto is not none else '-' }}</td>
-            <td>{{ t.debito_credito or '-' }}</td>
-            <td>{{ t.descricao or '-' }}</td>
-            <td>{{ t.categoria or '-' }}</td>
-            <td>{{ t.nome_atividade or '-' }}</td>
-            <td>{{ t['observa\u00e7\u00f5es'] or '-' }}</td>
+            <th class="relatorio-contabil-table__header">Data</th>
+            <th class="relatorio-contabil-table__header">Instituição</th>
+            <th class="relatorio-contabil-table__header">Carteira</th>
+            <th class="relatorio-contabil-table__header">Centro de Custo</th>
+            <th class="relatorio-contabil-table__header relatorio-contabil-table__header--number">Valor</th>
+            <th class="relatorio-contabil-table__header">Tipo</th>
+            <th class="relatorio-contabil-table__header">Descrição</th>
+            <th class="relatorio-contabil-table__header">Categoria</th>
+            <th class="relatorio-contabil-table__header">Atividade</th>
+            <th class="relatorio-contabil-table__header">Observações</th>
             {% for inst in instituicoes %}
-              <td>
-                {{ 'R$ ' + '{:,.2f}'.format(t[inst]|float).replace(',', 'X').replace('.', ',').replace('X', '.') if t[inst] is not none else '-' }}
-              </td>
+              <th class="relatorio-contabil-table__header relatorio-contabil-table__header--number">{{ inst }}</th>
             {% endfor %}
           </tr>
-        {% endfor %}
-      </tbody>
-  </table>
+        </thead>
+        <tbody>
+          {# Exemplo de lógica: saldos = dict com saldo de cada instituição, inicializado antes do loop #}
+          {% set saldos = dict() %}
+          {% for inst in instituicoes %}
+            {% set _ = saldos.update({inst: 0}) %}
+          {% endfor %}
+          {% for t in transacoes %}
+            <tr class="relatorio-contabil-table__row">
+              <td class="relatorio-contabil-table__cell">{{ t.data_deposito or '-' }}</td>
+              <td class="relatorio-contabil-table__cell">{{ t.instituicao or '-' }}</td>
+              <td class="relatorio-contabil-table__cell">{{ t.carteira or '-' }}</td>
+              <td class="relatorio-contabil-table__cell">{{ t.centro_de_custo or '-' }}</td>
+              <td class="relatorio-contabil-table__cell relatorio-contabil-table__cell--number">
+                {{ 'R$ ' + '{:,.2f}'.format(t.valor_absoluto|float).replace(',', 'X').replace('.', ',').replace('X', '.') if t.valor_absoluto is not none else '-' }}
+              </td>
+              <td class="relatorio-contabil-table__cell">{{ t.debito_credito or '-' }}</td>
+              <td class="relatorio-contabil-table__cell">{{ t.descricao or '-' }}</td>
+              <td class="relatorio-contabil-table__cell">{{ t.categoria or '-' }}</td>
+              <td class="relatorio-contabil-table__cell">{{ t.nome_atividade or '-' }}</td>
+              <td class="relatorio-contabil-table__cell">{{ t['observa\u00e7\u00f5es'] or '-' }}</td>
+              {% for inst in instituicoes %}
+                <td class="relatorio-contabil-table__cell relatorio-contabil-table__cell--number">
+                  {{ 'R$ ' + '{:,.2f}'.format(t[inst]|float).replace(',', 'X').replace('.', ',').replace('X', '.') if t[inst] is not none else '-' }}
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 {% endblock %}
 

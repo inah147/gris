@@ -4,11 +4,25 @@
 
 {% set active_link = '/financeiro/despesas' %}
 
+{% block head_include %}
+<link rel="stylesheet" href="/assets/gris/css/components.css">
+{% endblock %}
+
 {% block page_header %}
-  <div class="mb-3">
-    <h1 class="h3 mb-2">Despesas Mensais</h1>
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Despesas Mensais</h1>
+      <p class="page-header__subtitle">Gerencie despesas contínuas e temporárias.</p>
+    </div>
     {% if can_edit_financeiro %}
-      <button id="btnNovaDespesa" class="btn btn-sm btn-primary">Nova Despesa</button>
+      <div class="page-header__actions">
+        <button id="btnNovaDespesa" class="btn-modern btn-modern--primary btn-modern--sm">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          Nova Despesa
+        </button>
+      </div>
     {% endif %}
   </div>
 {% endblock %}
@@ -16,26 +30,25 @@
 {% block main %}
   <div class="despesas-wrapper">
     <div class="mb-5">
-      <h2 class="h5 mb-3">Despesas Contínuas</h2>
+      <h2 class="h5 mb-3 fw-semibold">Despesas Contínuas</h2>
       {% if contas_continuas and contas_continuas|length %}
-  <div class="row g-3 gy-4">
+        <div class="row g-3">
           {% for conta in contas_continuas %}
-            <div class="col-12 col-md-6 col-lg-4 mb-4">
-              <div class="card h-100 shadow-sm">
-                <div class="card-body d-flex flex-column">
-                  <h5 class="card-title mb-1" title="{{ conta.descricao }}">{{ conta.descricao }}</h5>
+            <div class="col-12 col-md-6 col-lg-4">
+              <div class="card-modern" style="height: 100%;">
+                <div class="card-modern__body d-flex flex-column">
+                  <h5 class="fw-semibold mb-2" title="{{ conta.descricao }}">{{ conta.descricao }}</h5>
                   <div class="d-flex flex-wrap gap-2 mb-3">
                     {% if conta.status %}
                       {% set status_slug = conta.status.lower().replace(' ', '') %}
-                      {# Mapeia status para variantes padronizadas #}
                       {% set variant = 'success' if status_slug == 'pago' else ('danger' if status_slug == 'atrasado' else ('warning' if status_slug == 'emaberto' else ('secondary' if status_slug == 'aguardar' else 'neutral'))) %}
                       <span class="g-badge g-badge--{{ variant }}">{{ conta.status }}</span>
                     {% endif %}
                     <span class="g-badge g-badge--{{ 'primary' if conta.ativa else 'inactive' }}">{{ 'Ativa' if conta.ativa else 'Inativa' }}</span>
                   </div>
-                  <div class="mt-auto d-flex justify-content-between align-items-center">
-                    <strong>R$ {{ '%.2f'| format(conta.valor|float) }}</strong>
-                    <button class="btn btn-sm btn-outline-secondary detalhes-conta-btn"
+                  <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+                    <strong class="fs-5">R$ {{ '%.2f'| format(conta.valor|float) }}</strong>
+                    <button class="btn-modern btn-modern--outline btn-modern--sm detalhes-conta-btn"
                       data-name="{{ conta.name }}"
                       data-descricao="{{ conta.descricao }}"
                       data-valor="{{ conta.valor }}"
@@ -54,19 +67,21 @@
           {% endfor %}
         </div>
       {% else %}
-        <div class="text-muted small">Nenhuma despesa contínua cadastrada.</div>
+        <div class="empty-state empty-state--compact">
+          <p class="empty-state__message">Nenhuma despesa contínua cadastrada</p>
+        </div>
       {% endif %}
     </div>
 
     <div class="mb-3">
-      <h2 class="h5 mb-3">Despesas Temporárias</h2>
+      <h2 class="h5 mb-3 fw-semibold">Despesas Temporárias</h2>
       {% if contas_temporarias and contas_temporarias|length %}
-  <div class="row g-3 gy-4">
+        <div class="row g-3">
           {% for conta in contas_temporarias %}
-            <div class="col-12 col-md-6 col-lg-4 mb-4">
-              <div class="card h-100 border-warning-subtle shadow-sm">
-                <div class="card-body d-flex flex-column">
-                  <h5 class="card-title mb-1" title="{{ conta.descricao }}">{{ conta.descricao }}</h5>
+            <div class="col-12 col-md-6 col-lg-4">
+              <div class="card-modern" style="height: 100%; border-left: 3px solid var(--color-warning);">
+                <div class="card-modern__body d-flex flex-column">
+                  <h5 class="fw-semibold mb-2" title="{{ conta.descricao }}">{{ conta.descricao }}</h5>
                   <div class="d-flex flex-wrap gap-2 mb-3">
                     {% if conta.status %}
                       {% set status_slug = conta.status.lower().replace(' ', '') %}
@@ -75,9 +90,9 @@
                     {% endif %}
                     <span class="g-badge g-badge--{{ 'primary' if conta.ativa else 'inactive' }}">{{ 'Ativa' if conta.ativa else 'Inativa' }}</span>
                   </div>
-                  <div class="mt-auto d-flex justify-content-between align-items-center">
-                    <strong>R$ {{ '%.2f'| format(conta.valor|float) }}</strong>
-                    <button class="btn btn-sm btn-outline-secondary detalhes-conta-btn"
+                  <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+                    <strong class="fs-5">R$ {{ '%.2f'| format(conta.valor|float) }}</strong>
+                    <button class="btn-modern btn-modern--outline btn-modern--sm detalhes-conta-btn"
                       data-name="{{ conta.name }}"
                       data-descricao="{{ conta.descricao }}"
                       data-valor="{{ conta.valor }}"
@@ -96,9 +111,15 @@
           {% endfor %}
         </div>
       {% else %}
-        <div class="text-muted small">Nenhuma despesa temporária cadastrada.</div>
+        <div class="empty-state empty-state--compact">
+          <p class="empty-state__message">Nenhuma despesa temporária cadastrada</p>
+        </div>
       {% endif %}
     </div>
     <div id="financeiro-perms" data-can-edit="{{ 1 if can_edit_financeiro else 0 }}" class="d-none"></div>
   </div>
+{% endblock %}
+
+{% block extra_script %}
+<script src="/financeiro/despesas.js"></script>
 {% endblock %}

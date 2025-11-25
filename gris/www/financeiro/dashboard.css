@@ -1,11 +1,34 @@
 /* Estilos específicos do dashboard financeiro */
 
-/* Espaçamento vertical adicional em telas pequenas para os cards */
+/* Metrics Grid */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-lg);
+}
+
 @media (max-width: 768px) {
-  #fin-cards-row-1 > [class*='col-'] { 
-    margin-bottom: 1.15rem;
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
   }
-  #fin-cards-row-1 { 
-    margin-bottom: .25rem; 
+}
+
+@media (max-width: 576px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
   }
+}
+
+/* Chart improvements */
+.chart-card .chart-container { 
+  overflow: visible; 
+}
+
+.chart-card .graph-svg-tip { 
+  z-index: 50; 
+  max-width: calc(100vw - 24px); 
+  white-space: normal; 
+  overflow-wrap: anywhere; 
+  word-break: break-word; 
 }

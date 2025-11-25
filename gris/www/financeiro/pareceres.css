@@ -1,6 +1,32 @@
-/* Styles specific to pareceres page (minimal; leveraging global components) */
-.parecer-card .card-body { gap:.25rem; }
-.parecer-card:hover { box-shadow:0 2px 6px rgba(0,0,0,.07); transition:.15s ease; }
+/**
+ * Pareceres - CSS Moderno
+ * Página de documentos e pareceres financeiros
+ */
 
-/* Space between modal action buttons (container uses generic d-flex) */
-.modal-footer .d-flex > .btn + .btn { margin-left: .5rem; }
+/* Títulos de seção */
+.section-title {
+  font-size: 1.125rem;
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-primary, #1e293b);
+  margin-bottom: 1rem;
+}
+
+/* Cards de parecer */
+.parecer-card {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.parecer-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.parecer-card .card-modern__body {
+  gap: 0.25rem;
+}
+
+/* Modal actions */
+.modal-footer .d-flex > .btn + .btn {
+  margin-left: 0.5rem;
+}

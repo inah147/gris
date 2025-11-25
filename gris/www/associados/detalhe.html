@@ -1,161 +1,218 @@
 {% extends "templates/web_sidebar_base.html" %}
 
-{% block title %}Associado{% endblock %}
+{% block title %}Associado - Detalhes{% endblock %}
 {% set active_link = '/associados' %}
 
 {% block page_header %}
-  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-    <div>
-      <h1 class="h5 mb-1">Associado</h1>
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Detalhes do Associado</h1>
+      <p class="page-header__subtitle">Visualize e edite informações do associado.</p>
     </div>
-    <div class="d-flex align-items-center assoc-header-actions">
-      <button type="button" id="btn-salvar" class="btn btn-sm btn-primary d-none">Salvar</button>
-      <button type="button" id="btn-afastar" class="btn btn-sm btn-outline-warning d-none">Afastar associado</button>
-      <a href="/associados/lista" class="btn btn-sm btn-outline-secondary">Voltar à lista</a>
+    <div class="page-header__actions">
+      <button type="button" id="btn-salvar" class="btn-modern btn-modern--primary btn-modern--sm d-none">Salvar</button>
+      <button type="button" id="btn-afastar" class="btn-modern btn-modern--outline btn-modern--sm d-none" style="border-color: var(--color-warning); color: var(--color-warning);">Afastar</button>
+      <a href="/associados/lista" class="btn-modern btn-modern--ghost btn-modern--sm">Voltar</a>
     </div>
   </div>
 {% endblock %}
 
 {% block main %}
   {% if not_found %}
-    <div class="alert alert-warning">{{ missing_reason or 'Registro não encontrado.' }}</div>
+    <div class="alert-modern alert-modern--warning">
+      <svg class="alert-modern__icon" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 8v4M12 16h.01"/>
+      </svg>
+      <div class="alert-modern__content">
+        <p class="alert-modern__description">{{ missing_reason or 'Registro não encontrado.' }}</p>
+      </div>
+    </div>
   {% else %}
     <div id="assoc-flags" data-name="{{ associado.name }}" data-has-open="{{ 1 if has_open_historico else 0 }}" data-can-edit="{{ 1 if can_edit_member else 0 }}" hidden></div>
-    <!-- Seção 1 -->
-    <div class="card border-0 shadow-sm mb-4">
-      <div class="card-body">
-  <div class="row g-3 assoc-head-row align-items-start">
+    
+    <!-- Card de Cabeçalho com informações principais -->
+    <div class="card-modern mb-4">
+      <div class="card-modern__body">
+        <div class="row g-3 align-items-start">
           <div class="col-12 col-lg-5">
-            <h2 class="h5 mb-1 primary-id">{{ head_nome }}</h2>
-            <div class="text-muted small">Registro: {{ head_registro }}</div>
+            <h2 style="font-size: var(--text-xl); font-weight: var(--font-semibold); margin: 0 0 var(--space-xs) 0; color: var(--text-primary);">{{ head_nome }}</h2>
+            <div style="font-size: var(--text-sm); color: var(--text-secondary);">Registro: {{ head_registro }}</div>
           </div>
           <div class="col-6 col-lg-2">
-            <div class="small text-muted mb-1">Tipo</div>
+            <div style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: var(--space-xs);">Tipo</div>
             <span class="g-badge {{ head_tipo_registro_class }}">{{ head_tipo_registro }}</span>
           </div>
           <div class="col-6 col-lg-2">
-            <div class="small text-muted mb-1">Status</div>
+            <div style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: var(--space-xs);">Status</div>
             <span class="g-badge {{ head_status_class }}">{{ head_status }}</span>
           </div>
           <div class="col-6 col-lg-3">
-            <div class="small text-muted mb-1">Validade</div>
-            <div class="fw-semibold">{{ head_validade }}</div>
+            <div style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: var(--space-xs);">Validade</div>
+            <div style="font-weight: var(--font-semibold);">{{ head_validade }}</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Formulário principal (remoção das seções 'Dados do Associado' e 'Contato') -->
-    <div class="card border-0 shadow-sm mb-4">
-      <div class="card-body">
-        <form class="assoc-form" onsubmit="return false;">
-          <!-- Reordenado: Dados de Registro vem antes de Responsáveis -->
-          <div class="assoc-section" data-section>
-            <button type="button" class="assoc-section-toggle" data-toggle-section>
-              <span>Dados de Registro</span><span class="caret"></span>
-            </button>
-            <div class="assoc-section-body show">
-              <div class="row g-3">
-                {% for f in group_registro %}
-                  {% if f.fieldname == 'eleito' and associado.funcao not in ['Diretor','Diretor Presidente'] %}
-                    {# oculto #}
-                  {% else %}
-                  <div class="col-md-4 col-sm-6">
-                    <label class="form-label small text-muted">{{ f.label|e }}</label>
-                    {% if f.fieldtype == 'Select' %}
-                      <div class="fx-select">
-                        <select class="form-select form-select-sm" name="{{ f.fieldname }}" {% if not f.editable %}disabled{% endif %}>
-                          <option value=""></option>
-                          {% for opt in f.options %}
-                            <option value="{{ opt|e }}" {% if opt == f.value %}selected{% endif %}>{{ opt|e }}</option>
-                          {% endfor %}
-                        </select>
-                      </div>
-                    {% elif f.fieldtype == 'Date' %}
-                      <input type="date" class="form-control form-control-sm" name="{{ f.fieldname }}" value="{{ f.value or '' }}" {% if not f.editable %}readonly disabled{% endif %}>
-                    {% elif f.fieldtype == 'Check' %}
-                      <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="{{ f.fieldname }}" {% if f.value %}checked{% endif %} {% if not f.editable %}disabled{% endif %}>
-                      </div>
-                    {% else %}
-                      <input type="text" class="form-control form-control-sm" name="{{ f.fieldname }}" value="{{ f.value or '' }}" {% if not f.editable %}readonly disabled{% endif %}>
-                    {% endif %}
-                  </div>
-                  {% endif %}
-                {% endfor %}
-              </div>
+    <!-- Dados de Registro -->
+    <div class="card-modern mb-4">
+      <div class="card-modern__header">
+        <h3 class="card-modern__title">Dados de Registro</h3>
+        <p class="card-modern__subtitle">Informações do registro do associado</p>
+      </div>
+      <div class="card-modern__body">
+        <div class="row g-3">
+          {% for f in group_registro %}
+            {% if f.fieldname == 'eleito' and associado.funcao not in ['Diretor','Diretor Presidente'] %}
+              {# oculto #}
+            {% else %}
+            <div class="col-12 col-md-6">
+              {% if f.fieldtype == 'Check' %}
+                <div class="form-check" style="padding-top: 0.5rem;">
+                  <input class="form-check-input" type="checkbox" id="check_{{ f.fieldname }}" name="{{ f.fieldname }}" {% if f.value %}checked{% endif %} {% if not f.editable %}disabled{% endif %}>
+                  <label class="form-check-label" for="check_{{ f.fieldname }}" style="font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--text-primary);">
+                    {{ f.label|e }}
+                  </label>
+                </div>
+              {% else %}
+                <label class="form-label-modern">{{ f.label|e }}</label>
+                {% if f.fieldtype == 'Select' %}
+                  <select class="form-input-modern form-input-modern--sm" name="{{ f.fieldname }}" {% if not f.editable %}disabled{% endif %}>
+                    <option value=""></option>
+                    {% for opt in f.options %}
+                      <option value="{{ opt|e }}" {% if opt == f.value %}selected{% endif %}>{{ opt|e }}</option>
+                    {% endfor %}
+                  </select>
+                {% elif f.fieldtype == 'Date' %}
+                  <input type="date" class="form-input-modern form-input-modern--sm" name="{{ f.fieldname }}" value="{{ f.value or '' }}" {% if not f.editable %}readonly disabled{% endif %}>
+                {% else %}
+                  <input type="text" class="form-input-modern form-input-modern--sm" name="{{ f.fieldname }}" value="{{ f.value or '' }}" {% if not f.editable %}readonly disabled{% endif %}>
+                {% endif %}
+              {% endif %}
             </div>
-          </div>
-
-          {% if is_beneficiario %}
-          <div class="assoc-section" data-section>
-            <button type="button" class="assoc-section-toggle" data-toggle-section>
-              <span>Responsáveis</span><span class="caret"></span>
-            </button>
-            <div class="assoc-section-body show">
-              <div class="row g-3">
-                {% for f in group_responsaveis %}
-                  {% set is_guardian_flag = f.fieldname in ['guardiao_legal_responsavel_1','guardiao_legal_responsavel_2'] %}
-                  {% if is_guardian_flag %}
-                  <div class="col-md-4 col-sm-6" data-guardian-field {% if not show_guardian_toggles %}style="display:none;"{% endif %}>
-                  {% else %}
-                  <div class="col-md-4 col-sm-6">
-                  {% endif %}
-                    <label class="form-label small text-muted">{{ f.label }}</label>
-                    {% if f.fieldtype == 'Check' %}
-                      <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="{{ f.fieldname }}" {% if f.value %}checked{% endif %} {% if not f.editable %}disabled{% endif %}>
-                      </div>
-                    {% elif f.fieldtype == 'Select' %}
-                      <div class="fx-select">
-                        <select class="form-select form-select-sm" name="{{ f.fieldname }}" {% if not f.editable %}disabled{% endif %}>
-                          <option value=""></option>
-                          {% for opt in f.options %}
-                            <option value="{{ opt }}" {% if opt == f.value %}selected{% endif %}>{{ opt }}</option>
-                          {% endfor %}
-                        </select>
-                      </div>
-                    {% else %}
-                      <input type="text" class="form-control form-control-sm" name="{{ f.fieldname }}" value="{{ f.value or '' }}" {% if not f.editable %}readonly disabled{% endif %}>
-                    {% endif %}
-                  </div>
-                {% endfor %}
-              </div>
-            </div>
-          </div>
-          {% endif %}
-
+            {% endif %}
+          {% endfor %}
+        </div>
         </form>
       </div>
     </div>
 
-    <!-- Seção 3 - Histórico (Tabela simples) -->
-    <div class="card border-0 shadow-sm mb-4 assoc-history-card">
-      <div class="card-body py-4">
-        <h3 class="h6 text-uppercase text-muted assoc-history-title mb-3">Histórico no Grupo</h3>
+    {% if is_beneficiario %}
+    <!-- Responsáveis -->
+    <div class="card-modern mb-4">
+      <div class="card-modern__header">
+        <h3 class="card-modern__title">Responsáveis</h3>
+        <p class="card-modern__subtitle">Informações dos responsáveis pelo beneficiário</p>
+      </div>
+      <div class="card-modern__body">
+        <div class="row g-3">
+          {% for f in group_responsaveis %}
+            {% set is_guardian_flag = f.fieldname in ['guardiao_legal_responsavel_1','guardiao_legal_responsavel_2'] %}
+            {% if is_guardian_flag %}
+            <div class="col-12 col-md-6" data-guardian-field {% if not show_guardian_toggles %}style="display:none;"{% endif %}>
+            {% else %}
+            <div class="col-12 col-md-6">
+            {% endif %}
+              {% if f.fieldtype == 'Check' %}
+                <div class="form-check" style="padding-top: 0.5rem;">
+                  <input class="form-check-input" type="checkbox" id="check_{{ f.fieldname }}" name="{{ f.fieldname }}" {% if f.value %}checked{% endif %} {% if not f.editable %}disabled{% endif %}>
+                  <label class="form-check-label" for="check_{{ f.fieldname }}" style="font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--text-primary);">
+                    {{ f.label }}
+                  </label>
+                </div>
+              {% else %}
+                <label class="form-label-modern">{{ f.label }}</label>
+                {% if f.fieldtype == 'Select' %}
+                  <select class="form-input-modern form-input-modern--sm" name="{{ f.fieldname }}" {% if not f.editable %}disabled{% endif %}>
+                    <option value=""></option>
+                    {% for opt in f.options %}
+                      <option value="{{ opt }}" {% if opt == f.value %}selected{% endif %}>{{ opt }}</option>
+                    {% endfor %}
+                  </select>
+                {% else %}
+                  <input type="text" class="form-input-modern form-input-modern--sm" name="{{ f.fieldname }}" value="{{ f.value or '' }}" {% if not f.editable %}readonly disabled{% endif %}>
+                {% endif %}
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Histórico no Grupo -->
+    <div class="card-modern mb-4">
+      <div class="card-modern__header">
+        <div>
+          <h3 class="card-modern__title">Histórico no Grupo</h3>
+          <p class="card-modern__subtitle">Períodos de atividade do associado</p>
+        </div>
+        {% if can_edit_member %}
+        <button type="button" id="btn-edit-historico" class="btn-modern btn-modern--outline btn-modern--sm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Gerenciar
+        </button>
+        {% endif %}
+      </div>
+      <div class="card-modern__body" style="padding: 0;">
         {% if historico_no_grupo_rows %}
-          <div class="table-responsive-sm">
-            <table class="table table-sm mb-0 assoc-history-basic">
+          <div class="table-responsive">
+            <table class="data-table">
               <thead>
                 <tr>
-                  <th scope="col">Ingresso</th>
-                  <th scope="col">Desligamento</th>
+                  <th>Ingresso</th>
+                  <th>Desligamento</th>
                 </tr>
               </thead>
               <tbody>
               {% for r in historico_no_grupo_rows %}
-                {% set aberto = (not r.desligamento) %}
                 <tr>
-                  <td data-label="Ingresso">{{ r.ingresso or '—' }}</td>
-                  <td data-label="Desligamento">{{ r.desligamento or '—' }}</td>
+                  <td>{{ r.ingresso or '—' }}</td>
+                  <td>{{ r.desligamento or '—' }}</td>
                 </tr>
               {% endfor %}
               </tbody>
             </table>
           </div>
         {% else %}
-          <div class="text-muted small">Nenhum histórico registrado.</div>
+          <div style="padding: var(--space-lg); text-align: center; color: var(--text-muted); font-size: var(--text-sm);">
+            Nenhum histórico registrado.
+          </div>
         {% endif %}
+      </div>
+    </div>
+
+    <!-- Modal de Gerenciamento de Histórico -->
+    <div class="modal-backdrop" id="modalHistoricoBackdrop" style="display: none;"></div>
+    <div class="modal-modern" id="modalHistorico" tabindex="-1" style="display: none;">
+      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-modern__content">
+          <div class="modal-modern__header">
+            <h5 class="modal-modern__title">Gerenciar Histórico no Grupo</h5>
+          </div>
+          <div class="modal-modern__body">
+            <div id="historico-list">
+              <!-- Lista de históricos será inserida aqui -->
+            </div>
+            <div style="margin-top: var(--space-lg);">
+              <button type="button" id="btn-add-historico" class="btn-modern btn-modern--primary btn-modern--sm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Adicionar Período
+              </button>
+            </div>
+          </div>
+          <div class="modal-modern__footer">
+            <button type="button" class="btn-modern btn-modern--ghost btn-modern--sm" data-dismiss-historico>Fechar</button>
+            <button type="button" id="btn-save-historico" class="btn-modern btn-modern--primary btn-modern--sm">Salvar Alterações</button>
+          </div>
+        </div>
       </div>
     </div>
   {% endif %}

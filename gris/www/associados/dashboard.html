@@ -7,11 +7,19 @@
 {% set sidebar_title = 'Visão Geral' %}
 {% set sidebar_sections = [] %}
 
+{% block page_header %}
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Dashboard de Associados</h1>
+      <p class="page-header__subtitle">Visão geral dos associados ativos e suas estatísticas.</p>
+    </div>
+  </div>
+{% endblock %}
 
 {% block main %}
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-body py-3">
-  <form id="assoc-dashboard-filters" class="filter-bar mb-0">
+  <div class="card-modern mb-4">
+    <div class="card-modern__body card-modern__body--compact">
+      <form id="assoc-dashboard-filters" class="filter-bar mb-0">
         <div class="filter-field">
           <label class="form-label small text-muted mb-1">Categoria</label>
           <select name="categoria" class="form-select form-select-sm">
@@ -31,8 +39,8 @@
           </select>
         </div>
         <div class="filter-field">
-          <label class="form-label small text-muted mb-1">Seção</label>
-          <select name="secao" class="form-select form-select-sm">
+          <label class="form-label-modern">Seção</label>
+          <select name="secao" class="form-input-modern form-input-modern--sm">
             <option value="">Todas</option>
             {% for s in filter_secoes %}
               <option value="{{ s }}">{{ s }}</option>
@@ -40,8 +48,8 @@
           </select>
         </div>
         <div class="filter-field">
-          <label class="form-label small text-muted mb-1">Função</label>
-          <select name="funcao" class="form-select form-select-sm">
+          <label class="form-label-modern">Função</label>
+          <select name="funcao" class="form-input-modern form-input-modern--sm">
             <option value="">Todas</option>
             {% for f in filter_funcoes %}
               <option value="{{ f }}">{{ f }}</option>
@@ -49,114 +57,108 @@
           </select>
         </div>
         <div class="filter-actions d-flex gap-2">
-          <button type="submit" class="btn btn-primary btn-sm flex-shrink-0">Aplicar</button>
-          <button type="reset" class="btn btn-outline-secondary btn-sm flex-shrink-0">Limpar</button>
+          <button type="submit" class="btn-modern btn-modern--sm">Aplicar</button>
+          <button type="reset" class="btn-modern btn-modern--outline btn-modern--sm">Limpar</button>
         </div>
       </form>
     </div>
   </div>
-  <div class="row g-4 mb-4" id="cards-metricas">
-    <div class="col-12 col-lg-2 col-xl-2">
-      <div class="card h-100 shadow-sm border-0">
-        <div class="card-body py-3">
-          <p class="text-uppercase small text-muted fw-semibold mb-1">Ativos</p>
-          <div class="d-flex align-items-baseline gap-2 mb-1">
-            <span class="display-6 mb-0 fw-semibold" id="card-ativos-total">--</span>
-          </div>
-          <div class="small lh-sm text-muted" id="card-ativos-breakdown">
-            <div><span id="card-ativos-benef">--</span> benef.</div>
-            <div><span id="card-ativos-adultos">--</span> adultos</div>
-            <div><span id="card-ativos-outros">--</span> outros</div>
-          </div>
-        </div>
+  <div class="metrics-grid mb-4" id="cards-metricas">
+    <div class="card-metric">
+      <span class="card-metric__label">Ativos</span>
+      <div class="card-metric__value" id="card-ativos-total">--</div>
+      <div class="card-metric__description" id="card-ativos-breakdown" style="font-size: 0.75rem; line-height: 1.4;">
+        <div><span id="card-ativos-benef">--</span> benef.</div>
+        <div><span id="card-ativos-adultos">--</span> adultos</div>
+        <div><span id="card-ativos-outros">--</span> outros</div>
       </div>
     </div>
-    <div class="col-12 col-lg-2 col-xl-2">
-      <div class="card h-100 shadow-sm border-0">
-        <div class="card-body py-3">
-          <p class="text-uppercase small text-muted fw-semibold mb-1">Registro Válido</p>
-          <div class="d-flex align-items-baseline gap-2 mb-1">
-            <span class="display-6 mb-0 fw-semibold" id="card-reg-valido-total">--</span>
-            <span class="text-success fw-semibold" id="card-reg-valido-pct">--%</span>
-          </div>
-        </div>
+    
+    <div class="card-metric">
+      <span class="card-metric__label">Registro Válido</span>
+      <div class="d-flex align-items-baseline gap-2">
+        <div class="card-metric__value" id="card-reg-valido-total">--</div>
+        <span class="card-metric__change card-metric__change--positive" id="card-reg-valido-pct">--%</span>
       </div>
     </div>
-    <div class="col-12 col-lg-2 col-xl-2">
-      <div class="card h-100 shadow-sm border-0">
-        <div class="card-body py-3">
-          <p class="text-uppercase small text-muted fw-semibold mb-1">Vencidos</p>
-          <div class="d-flex align-items-baseline gap-2 mb-1">
-            <span class="display-6 mb-0 fw-semibold" id="card-reg-vencido-total">--</span>
-            <span class="text-danger fw-semibold" id="card-reg-vencido-pct">--%</span>
-          </div>
-        </div>
+    
+    <div class="card-metric">
+      <span class="card-metric__label">Vencidos</span>
+      <div class="d-flex align-items-baseline gap-2">
+        <div class="card-metric__value" id="card-reg-vencido-total">--</div>
+        <span class="card-metric__change card-metric__change--negative" id="card-reg-vencido-pct">--%</span>
       </div>
     </div>
-    <div class="col-12 col-lg-2 col-xl-2">
-      <div class="card h-100 shadow-sm border-0">
-        <div class="card-body py-3">
-          <p class="text-uppercase small text-muted fw-semibold mb-1">Isentos</p>
-          <div class="d-flex align-items-baseline gap-2 mb-1">
-            <span class="display-6 mb-0 fw-semibold" id="card-reg-isento-total">--</span>
-            <span class="text-primary fw-semibold" id="card-reg-isento-pct">--%</span>
-          </div>
-        </div>
+    
+    <div class="card-metric">
+      <span class="card-metric__label">Isentos</span>
+      <div class="d-flex align-items-baseline gap-2">
+        <div class="card-metric__value" id="card-reg-isento-total">--</div>
+        <span class="card-metric__change" id="card-reg-isento-pct" style="color: var(--color-primary);">--%</span>
       </div>
     </div>
-    <div class="col-12 col-lg-2 col-xl-2">
-      <div class="card h-100 shadow-sm border-0">
-        <div class="card-body py-3">
-          <p class="text-uppercase small text-muted fw-semibold mb-1">Provisórios</p>
-          <div class="d-flex align-items-baseline gap-2 mb-1">
-            <span class="display-6 mb-0 fw-semibold" id="card-reg-provisorio-total">--</span>
-            <span class="text-warning fw-semibold" id="card-reg-provisorio-pct">--%</span>
-          </div>
-        </div>
+    
+    <div class="card-metric">
+      <span class="card-metric__label">Provisórios</span>
+      <div class="d-flex align-items-baseline gap-2">
+        <div class="card-metric__value" id="card-reg-provisorio-total">--</div>
+        <span class="card-metric__change" id="card-reg-provisorio-pct" style="color: var(--color-warning);">--%</span>
       </div>
     </div>
   </div>
   <div class="row g-4 mb-4" id="charts-row">
     <div class="col-12 col-xl-6">
-      <div class="card border-0 shadow-sm chart-card h-100">
-        <div class="card-body">
-          <h6 class="text-muted small fw-semibold mb-3">Ativos por Ramo e Categoria</h6>
+      <div class="card-modern chart-card h-100">
+        <div class="card-modern__header card-modern__header--no-border">
+          <h3 class="card-modern__title" style="font-size: var(--text-base);">Ativos por Ramo e Categoria</h3>
+        </div>
+        <div class="card-modern__body">
           <div id="chart-ramos-categorias" class="chart-area" style="min-height:320px"></div>
         </div>
       </div>
     </div>
     <div class="col-12 col-xl-6">
-      <div class="card border-0 shadow-sm chart-card h-100">
-        <div class="card-body">
-          <h6 class="text-muted small fw-semibold mb-3">Vencimento de Registro (Próximos 6 meses)</h6>
+      <div class="card-modern chart-card h-100">
+        <div class="card-modern__header card-modern__header--no-border">
+          <h3 class="card-modern__title" style="font-size: var(--text-base);">Vencimento de Registro (Próximos 6 meses)</h3>
+        </div>
+        <div class="card-modern__body">
           <div id="chart-vencimentos-registro" class="chart-area" style="min-height:320px"></div>
         </div>
       </div>
     </div>
   </div>
+  
   <div class="row g-4 mb-4" id="charts-row-2">
     <div class="col-12 col-xl-6">
-      <div class="card border-0 shadow-sm chart-card h-100">
-        <div class="card-body">
-          <h6 class="text-muted small fw-semibold mb-3">Ativos (Últimos 12 meses)</h6>
+      <div class="card-modern chart-card h-100">
+        <div class="card-modern__header card-modern__header--no-border">
+          <h3 class="card-modern__title" style="font-size: var(--text-base);">Ativos (Últimos 12 meses)</h3>
+        </div>
+        <div class="card-modern__body">
           <div id="chart-ativos-mensal" class="chart-area" style="min-height:320px"></div>
         </div>
       </div>
     </div>
     <div class="col-12 col-xl-6">
-      <div class="card border-0 shadow-sm chart-card h-100">
-        <div class="card-body">
-          <h6 class="text-muted small fw-semibold mb-3">Novos Associados (Últimos 12 meses)</h6>
+      <div class="card-modern chart-card h-100">
+        <div class="card-modern__header card-modern__header--no-border">
+          <h3 class="card-modern__title" style="font-size: var(--text-base);">Novos Associados (Últimos 12 meses)</h3>
+        </div>
+        <div class="card-modern__body">
           <div id="chart-novos-mensal" class="chart-area" style="min-height:320px"></div>
         </div>
       </div>
     </div>
   </div>
+  
   <div class="row g-4 mb-4" id="charts-row-3">
     <div class="col-12 col-xl-6">
-      <div class="card border-0 shadow-sm chart-card h-100 position-relative" id="card-evasao-wrapper">
-        <div class="card-body">
-          <h6 class="text-muted small fw-semibold mb-3">Evasão (Últimos 12 meses)</h6>
+      <div class="card-modern chart-card h-100 position-relative" id="card-evasao-wrapper">
+        <div class="card-modern__header card-modern__header--no-border">
+          <h3 class="card-modern__title" style="font-size: var(--text-base);">Evasão (Últimos 12 meses)</h3>
+        </div>
+        <div class="card-modern__body">
           <div id="chart-evasao-mensal" class="chart-area" style="min-height:320px"></div>
         </div>
       </div>
@@ -164,36 +166,65 @@
   </div>
 {% endblock %}
 
-{% block extra_script %}
-<!-- CSS do frappe-charts e componentes compartilhados -->
+{% block extra_style %}
 <link rel="stylesheet" href="/assets/frappe/node_modules/frappe-charts/dist/frappe-charts.min.css">
-<link rel="stylesheet" href="/assets/gris/css/components.css">
 <style>
-  /* Ajustes específicos desta página (estilos base vindos de components.css) */
-  #assoc-dashboard-filters { margin-top:.15rem; }
+  /* Metrics Grid */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-lg);
+  }
+  
+  @media (max-width: 768px) {
+    .metrics-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-md);
+    }
+  }
+  
+  @media (max-width: 576px) {
+    .metrics-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  /* Chart improvements */
   .chart-card .chart-container { overflow: visible; }
-  .chart-card .graph-svg-tip { z-index: 50; max-width: calc(100vw - 24px); white-space: normal; overflow-wrap:anywhere; word-break:break-word; }
-  /* Simplificado: labels nativos mantidos; tooltip adaptativa */
-  #cards-metricas .card { min-height: 160px; }
-  #cards-metricas .display-6 { font-size: 2.25rem; }
-  #cards-metricas #card-ativos-breakdown div { display:flex; justify-content:space-between; }
-  #cards-metricas #card-ativos-breakdown span { font-weight:500; }
+  .chart-card .graph-svg-tip { 
+    z-index: 50; 
+    max-width: calc(100vw - 24px); 
+    white-space: normal; 
+    overflow-wrap: anywhere; 
+    word-break: break-word; 
+  }
+  
+  #card-ativos-breakdown div { 
+    display: flex; 
+    justify-content: space-between; 
+  }
+  
+  #card-ativos-breakdown span { 
+    font-weight: 500; 
+  }
+  
   /* Espaço maior entre número e percentual */
   #cards-metricas .card .d-flex.align-items-baseline.gap-2 { gap: 0.75rem !important; }
+  
   /* Margem vertical entre cards no mobile */
   @media (max-width: 768px) { 
     #cards-metricas .col-12 { margin-bottom: 1rem; }
     #cards-metricas .display-6 { font-size:1.9rem; }
   }
+  
   /* Tooltip vertical no mobile */
   @media (max-width: 640px) {
     .chart-card .graph-svg-tip { text-align: left; }
     .chart-card .graph-svg-tip ul.data-point-list { flex-direction: column !important; align-items: stretch; }
     .chart-card .graph-svg-tip ul.data-point-list li { min-width:auto !important; width:100%; padding:4px 8px; }
     .chart-card .graph-svg-tip ul.data-point-list li + li { border-top:1px solid var(--border-color, #e5e7eb); }
-  /* Mais espaço entre os dois gráficos empilhados */
-  #charts-row > .col-12 + .col-12 { margin-top: 1.5rem; }
+    /* Mais espaço entre os dois gráficos empilhados */
+    #charts-row > .col-12 + .col-12 { margin-top: 1.5rem; }
   }
 </style>
-{# index.js da página cuidará da lógica #}
 {% endblock %}

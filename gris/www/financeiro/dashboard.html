@@ -1,21 +1,25 @@
 {% extends "templates/web_sidebar_base.html" %}
 
-{% block title %}Visão Geral{% endblock %}
+{% block title %}Financeiro - Visão Geral{% endblock %}
 
 {% set active_link = '/financeiro/dashboard' %}
 
 {% block page_header %}
-
-  
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Financeiro - Visão Geral</h1>
+      <p class="page-header__subtitle">Acompanhe métricas e movimentações financeiras</p>
+    </div>
+  </div>
 {% endblock %}
 
 {% block main %}
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-body py-3">
+  <div class="card-modern mb-4">
+    <div class="card-modern__body card-modern__body--compact">
       <form id="fin-dashboard-filters" class="filter-bar mb-0">
         <div class="filter-field">
-          <label class="form-label small text-muted mb-1">Categoria</label>
-          <select name="categoria" class="form-select form-select-sm">
+          <label class="form-label-modern">Categoria</label>
+          <select name="categoria" class="form-input-modern form-input-modern--sm">
             <option value="">Todas</option>
             {% for c in filter_categorias %}
               <option value="{{ c }}">{{ c }}</option>
@@ -23,8 +27,8 @@
           </select>
         </div>
         <div class="filter-field">
-          <label class="form-label small text-muted mb-1">Instituição</label>
-          <select name="instituicao" class="form-select form-select-sm">
+          <label class="form-label-modern">Instituição</label>
+          <select name="instituicao" class="form-input-modern form-input-modern--sm">
             <option value="">Todas</option>
             {% for i in filter_instituicoes %}
               <option value="{{ i }}">{{ i }}</option>
@@ -32,8 +36,8 @@
           </select>
         </div>
         <div class="filter-field">
-          <label class="form-label small text-muted mb-1">Carteira</label>
-          <select name="carteira" class="form-select form-select-sm">
+          <label class="form-label-modern">Carteira</label>
+          <select name="carteira" class="form-input-modern form-input-modern--sm">
             <option value="">Todas</option>
             {% for ct in filter_carteiras %}
               <option value="{{ ct }}">{{ ct }}</option>
@@ -41,8 +45,8 @@
           </select>
         </div>
         <div class="filter-field">
-          <label class="form-label small text-muted mb-1">Centro de Custo</label>
-          <select name="centro_de_custo" class="form-select form-select-sm">
+          <label class="form-label-modern">Centro de Custo</label>
+          <select name="centro_de_custo" class="form-input-modern form-input-modern--sm">
             <option value="">Todos</option>
             {% for cc in filter_centros_custo %}
               <option value="{{ cc }}">{{ cc }}</option>
@@ -50,190 +54,239 @@
           </select>
         </div>
         <div class="filter-field">
-          <label class="form-label small text-muted mb-1">Tipo Transação</label>
-          <select name="ordinaria_extraordinaria" class="form-select form-select-sm">
+          <label class="form-label-modern">Tipo</label>
+          <select name="ordinaria_extraordinaria" class="form-input-modern form-input-modern--sm">
             <option value="">Todas</option>
             <option value="Ordinária">Ordinária</option>
             <option value="Extraordinária">Extraordinária</option>
           </select>
         </div>
         <div class="filter-actions d-flex gap-2">
-          <button type="submit" class="btn btn-primary btn-sm flex-shrink-0">Aplicar</button>
-          <button type="reset" class="btn btn-outline-secondary btn-sm flex-shrink-0">Limpar</button>
+          <button type="submit" class="btn-modern btn-modern--sm">Aplicar</button>
+          <button type="reset" class="btn-modern btn-modern--outline btn-modern--sm">Limpar</button>
         </div>
       </form>
     </div>
   </div>
-  <div class="row g-4 mb-4" id="fin-cards-row-1">
-    <div class="col-12 col-sm-6 col-lg-3">
-      <div class="card h-100 shadow-sm border-0">
-        <div class="card-body py-3 d-flex flex-column justify-content-between">
-          <p class="text-uppercase small text-muted fw-semibold mb-1">Total em Conta</p>
-          <div class="d-flex align-items-baseline gap-2 mb-1">
-            <span class="display-6 mb-0 fw-semibold" id="card-total-conta">{{ total_amount_fmt or 'R$ 0,00' }}</span>
+  <div class="metrics-grid mb-4" id="fin-cards-row-1">
+    <div class="card-metric">
+      <span class="card-metric__label">Total em Conta</span>
+      <div class="card-metric__value" id="card-total-conta">{{ total_amount_fmt or 'R$ 0,00' }}</div>
+      <div class="card-metric__description">Saldo líquido (Créditos - Débitos)</div>
+    </div>
+    
+    <div class="card-metric">
+      <span class="card-metric__label">Reserva de Emergência</span>
+      <div class="card-metric__value text-muted" id="card-reserva-emergencia">--</div>
+      <div class="card-metric__description">Não implementado</div>
+    </div>
+    
+    <div class="card-metric">
+      <span class="card-metric__label">Inadimplência Histórica</span>
+      <div class="card-metric__value" id="card-inadimplencia">--</div>
+      <div class="card-metric__description" id="card-inadimplencia-desc">Últimos 12 meses</div>
+    </div>
+  </div>
+
+  <h2 class="section-title">Entradas e Saídas</h2>
+  
+  <div class="row g-4 mb-4" id="fin-row-entradas-saidas">
+    <div class="col-12 col-lg-6">
+      <div class="card-modern chart-card h-100">
+        <div class="card-modern__header card-modern__header--no-border">
+          <h3 class="card-modern__title" style="font-size: var(--text-base);">Entradas x Saídas (12 meses)</h3>
+        </div>
+        <div class="card-modern__body">
+          <div id="chart-entradas-saidas-mensal" style="min-height:320px;">
+            <div class="loading-container">
+              <div class="loading-spinner"></div>
+              <span class="loading-text">Carregando...</span>
+            </div>
           </div>
-          <div class="small text-muted">Saldo líquido (Créditos - Débitos)</div>
         </div>
       </div>
     </div>
-    <div class="col-12 col-sm-6 col-lg-3">
-      <div class="card h-100 shadow-sm border-0">
-        <div class="card-body py-3 d-flex flex-column justify-content-between">
-          <p class="text-uppercase small text-muted fw-semibold mb-1">Reserva de Emergência</p>
-          <div class="d-flex align-items-baseline gap-2 mb-1">
-            <span class="display-6 mb-0 fw-semibold text-muted" id="card-reserva-emergencia">--</span>
+    <div class="col-12 col-lg-6">
+      <div class="card-modern chart-card h-100">
+        <div class="card-modern__header card-modern__header--no-border">
+          <h3 class="card-modern__title" style="font-size: var(--text-base);">Resultado Mensal (Entradas - Saídas)</h3>
+        </div>
+        <div class="card-modern__body">
+          <div id="chart-resultado-mensal" style="min-height:320px;">
+            <div class="loading-container">
+              <div class="loading-spinner"></div>
+              <span class="loading-text">Carregando...</span>
+            </div>
           </div>
-          <div class="small text-muted">Não implementado</div>
         </div>
       </div>
     </div>
-    <div class="col-12 col-sm-6 col-lg-3">
-      <div class="card h-100 shadow-sm border-0">
-        <div class="card-body py-3 d-flex flex-column justify-content-between">
-          <p class="text-uppercase small text-muted fw-semibold mb-1">Inadimplência Histórica</p>
-          <div class="d-flex align-items-baseline gap-2 mb-1">
-              <span class="display-6 mb-0 fw-semibold" id="card-inadimplencia">--</span>
+  </div>
+  
+  <h2 class="section-title">Entradas</h2>
+  
+  <div class="row g-4 mb-4" id="fin-row-entradas-creditos">
+    <div class="col-12 col-lg-6">
+      <div class="card-modern chart-card h-100">
+        <div class="card-modern__header card-modern__header--no-border">
+          <h3 class="card-modern__title" style="font-size: var(--text-base);">Entradas (Crédito) - Últimos 12 meses</h3>
+        </div>
+        <div class="card-modern__body">
+          <div id="chart-entradas-credito-mensal" style="min-height:320px;">
+            <div class="loading-container">
+              <div class="loading-spinner"></div>
+              <span class="loading-text">Carregando...</span>
+            </div>
           </div>
-            <div class="small text-muted" id="card-inadimplencia-desc">Últimos 12 meses</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-6">
+      <div class="card-modern chart-card h-100">
+        <div class="card-modern__header card-modern__header--no-border">
+          <h3 class="card-modern__title" style="font-size: var(--text-base);">Entradas por Categoria - Empilhado</h3>
+        </div>
+        <div class="card-modern__body">
+          <div id="chart-entradas-credito-categoria-mensal" style="min-height:320px;">
+            <div class="loading-container">
+              <div class="loading-spinner"></div>
+              <span class="loading-text">Carregando...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="row g-4 mb-4" id="fin-row-entradas-centros">
+    <div class="col-12 col-lg-6">
+      <div class="card-modern chart-card h-100">
+        <div class="card-modern__header card-modern__header--no-border">
+          <h3 class="card-modern__title" style="font-size: var(--text-base);">Entradas por Centro de Custo - Empilhado</h3>
+        </div>
+        <div class="card-modern__body">
+          <div id="chart-entradas-credito-centro-mensal" style="min-height:360px;">
+            <div class="loading-container">
+              <div class="loading-spinner"></div>
+              <span class="loading-text">Carregando...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-6">
+      <div class="card-modern chart-card h-100">
+        <div class="card-modern__header card-modern__header--no-border">
+          <h3 class="card-modern__title" style="font-size: var(--text-base);">Entradas por Tipo - Empilhado</h3>
+        </div>
+        <div class="card-modern__body">
+          <div id="chart-entradas-credito-tipo-mensal" style="min-height:360px;">
+            <div class="loading-container">
+              <div class="loading-spinner"></div>
+              <span class="loading-text">Carregando...</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="mt-2">
-    <h2 class="h5 mb-3">Entradas e Saídas</h2>
-    <div class="row g-4 mb-4" id="fin-row-entradas-saidas">
-      <div class="col-12 col-lg-6">
-        <div class="card shadow-sm border-0 h-100">
-          <div class="card-body py-3">
-            <p class="text-uppercase small text-muted fw-semibold mb-2">Entradas x Saídas (12 meses)</p>
-            <div id="chart-entradas-saidas-mensal" style="min-height:320px;">
-              <div class="text-muted small px-2 pt-3">Carregando...</div>
-            </div>
-          </div>
+  <h2 class="section-title">Saídas</h2>
+  
+  <div class="row g-4 mb-4" id="fin-row-saidas-debitos">
+    <div class="col-12 col-lg-6">
+      <div class="card-modern chart-card h-100">
+        <div class="card-modern__header card-modern__header--no-border">
+          <h3 class="card-modern__title" style="font-size: var(--text-base);">Saídas (Débito) - Últimos 12 meses</h3>
         </div>
-      </div>
-      <div class="col-12 col-lg-6">
-        <div class="card shadow-sm border-0 h-100">
-          <div class="card-body py-3">
-            <p class="text-uppercase small text-muted fw-semibold mb-2">Resultado Mensal (Entradas - Saídas)</p>
-            <div id="chart-resultado-mensal" style="min-height:320px;">
-              <div class="text-muted small px-2 pt-3">Carregando...</div>
+        <div class="card-modern__body">
+          <div id="chart-saidas-debito-mensal" style="min-height:320px;">
+            <div class="loading-container">
+              <div class="loading-spinner"></div>
+              <span class="loading-text">Carregando...</span>
             </div>
           </div>
         </div>
       </div>
     </div>
-    <h2 class="h5 mb-3">Entradas</h2>
-    <div class="row g-4 mb-4" id="fin-row-entradas-creditos">
-      <div class="col-12 col-lg-6">
-        <div class="card shadow-sm border-0 h-100">
-          <div class="card-body py-3">
-            <p class="text-uppercase small text-muted fw-semibold mb-2">Entradas (Crédito) - Últimos 12 meses</p>
-            <div id="chart-entradas-credito-mensal" style="min-height:320px;">
-              <div class="text-muted small px-2 pt-3">Carregando...</div>
-            </div>
-          </div>
+    <div class="col-12 col-lg-6">
+      <div class="card-modern chart-card h-100">
+        <div class="card-modern__header card-modern__header--no-border">
+          <h3 class="card-modern__title" style="font-size: var(--text-base);">Saídas por Categoria - Empilhado</h3>
         </div>
-      </div>
-      <div class="col-12 col-lg-6">
-        <div class="card shadow-sm border-0 h-100">
-          <div class="card-body py-3">
-            <p class="text-uppercase small text-muted fw-semibold mb-2">Entradas por Categoria (Crédito) - Empilhado</p>
-            <div id="chart-entradas-credito-categoria-mensal" style="min-height:320px;">
-              <div class="text-muted small px-2 pt-3">Carregando...</div>
+        <div class="card-modern__body">
+          <div id="chart-saidas-debito-categoria-mensal" style="min-height:320px;">
+            <div class="loading-container">
+              <div class="loading-spinner"></div>
+              <span class="loading-text">Carregando...</span>
             </div>
           </div>
         </div>
       </div>
     </div>
-    <div class="row g-4 mb-4" id="fin-row-entradas-centros">
-      <div class="col-12 col-lg-6">
-        <div class="card shadow-sm border-0 h-100">
-          <div class="card-body py-3">
-            <p class="text-uppercase small text-muted fw-semibold mb-2">Entradas por Centro de Custo (Crédito) - Empilhado</p>
-            <div id="chart-entradas-credito-centro-mensal" style="min-height:360px;">
-              <div class="text-muted small px-2 pt-3">Carregando...</div>
-            </div>
-          </div>
+  </div>
+  
+  <div class="row g-4 mb-4" id="fin-row-saidas-centros">
+    <div class="col-12 col-lg-6">
+      <div class="card-modern chart-card h-100">
+        <div class="card-modern__header card-modern__header--no-border">
+          <h3 class="card-modern__title" style="font-size: var(--text-base);">Saídas por Centro de Custo - Empilhado</h3>
         </div>
-      </div>
-      <div class="col-12 col-lg-6">
-        <div class="card shadow-sm border-0 h-100">
-          <div class="card-body py-3">
-            <p class="text-uppercase small text-muted fw-semibold mb-2">Entradas por Tipo (Crédito) - Empilhado</p>
-            <div id="chart-entradas-credito-tipo-mensal" style="min-height:360px;">
-              <div class="text-muted small px-2 pt-3">Carregando...</div>
+        <div class="card-modern__body">
+          <div id="chart-saidas-debito-centro-mensal" style="min-height:360px;">
+            <div class="loading-container">
+              <div class="loading-spinner"></div>
+              <span class="loading-text">Carregando...</span>
             </div>
           </div>
         </div>
       </div>
     </div>
+    <div class="col-12 col-lg-6">
+      <div class="card-modern chart-card h-100">
+        <div class="card-modern__header card-modern__header--no-border">
+          <h3 class="card-modern__title" style="font-size: var(--text-base);">Saídas por Tipo - Empilhado</h3>
+        </div>
+        <div class="card-modern__body">
+          <div id="chart-saidas-debito-tipo-mensal" style="min-height:360px;">
+            <div class="loading-container">
+              <div class="loading-spinner"></div>
+              <span class="loading-text">Carregando...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <h2 class="h5 mb-3" style="margin-top:6rem;">Saídas</h2>
-    <div class="row g-4 mb-4" id="fin-row-saidas-debitos">
-      <div class="col-12 col-lg-6">
-        <div class="card shadow-sm border-0 h-100">
-          <div class="card-body py-3">
-            <p class="text-uppercase small text-muted fw-semibold mb-2">Saídas (Débito) - Últimos 12 meses</p>
-            <div id="chart-saidas-debito-mensal" style="min-height:320px;">
-              <div class="text-muted small px-2 pt-3">Carregando...</div>
-            </div>
-          </div>
+  <h2 id="fin-section-contribuicoes" class="section-title">Contribuições Mensais</h2>
+  
+  <div class="row g-4 mb-5" id="fin-row-contribuicoes-status">
+    <div class="col-12 col-lg-6">
+      <div class="card-modern chart-card h-100">
+        <div class="card-modern__header card-modern__header--no-border">
+          <h3 class="card-modern__title" style="font-size: var(--text-base);">Contribuições por Status (Qtd) - Empilhado</h3>
         </div>
-      </div>
-      <div class="col-12 col-lg-6">
-        <div class="card shadow-sm border-0 h-100">
-          <div class="card-body py-3">
-            <p class="text-uppercase small text-muted fw-semibold mb-2">Saídas por Categoria (Débito) - Empilhado</p>
-            <div id="chart-saidas-debito-categoria-mensal" style="min-height:320px;">
-              <div class="text-muted small px-2 pt-3">Carregando...</div>
+        <div class="card-modern__body">
+          <div id="chart-contribuicoes-status-mensal" style="min-height:360px;">
+            <div class="loading-container">
+              <div class="loading-spinner"></div>
+              <span class="loading-text">Carregando...</span>
             </div>
           </div>
         </div>
       </div>
     </div>
-    <div class="row g-4 mb-4" id="fin-row-saidas-centros">
-      <div class="col-12 col-lg-6">
-        <div class="card shadow-sm border-0 h-100">
-          <div class="card-body py-3">
-            <p class="text-uppercase small text-muted fw-semibold mb-2">Saídas por Centro de Custo (Débito) - Empilhado</p>
-            <div id="chart-saidas-debito-centro-mensal" style="min-height:360px;">
-              <div class="text-muted small px-2 pt-3">Carregando...</div>
-            </div>
-          </div>
+    <div class="col-12 col-lg-6">
+      <div class="card-modern chart-card h-100">
+        <div class="card-modern__header card-modern__header--no-border">
+          <h3 class="card-modern__title" style="font-size: var(--text-base);">% Inadimplência (Atrasado / Total)</h3>
         </div>
-      </div>
-      <div class="col-12 col-lg-6">
-        <div class="card shadow-sm border-0 h-100">
-          <div class="card-body py-3">
-            <p class="text-uppercase small text-muted fw-semibold mb-2">Saídas por Tipo (Débito) - Empilhado</p>
-            <div id="chart-saidas-debito-tipo-mensal" style="min-height:360px;">
-              <div class="text-muted small px-2 pt-3">Carregando...</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <h2 class="h5 mb-3" id="fin-section-contribuicoes" style="margin-top:6rem;">Contribuições mensais</h2>
-    <div class="row g-4 mb-5" id="fin-row-contribuicoes-status">
-      <div class="col-12 col-lg-6">
-        <div class="card shadow-sm border-0 h-100">
-          <div class="card-body py-3">
-            <p class="text-uppercase small text-muted fw-semibold mb-2">Contribuições Mensais por Status (Qtd) - Empilhado</p>
-            <div id="chart-contribuicoes-status-mensal" style="min-height:360px;">
-              <div class="text-muted small px-2 pt-3">Carregando...</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-12 col-lg-6">
-        <div class="card shadow-sm border-0 h-100">
-          <div class="card-body py-3">
-            <p class="text-uppercase small text-muted fw-semibold mb-2">% Inadimplência (Atrasado / Total)</p>
-            <div id="chart-contribuicoes-inadimplencia-mensal" style="min-height:360px;">
-              <div class="text-muted small px-2 pt-3">Carregando...</div>
+        <div class="card-modern__body">
+          <div id="chart-contribuicoes-inadimplencia-mensal" style="min-height:360px;">
+            <div class="loading-container">
+              <div class="loading-spinner"></div>
+              <span class="loading-text">Carregando...</span>
             </div>
           </div>
         </div>
@@ -246,4 +299,15 @@
 <!-- CSS do frappe-charts e componentes compartilhados -->
 <link rel="stylesheet" href="/assets/frappe/node_modules/frappe-charts/dist/frappe-charts.min.css">
 <link rel="stylesheet" href="/assets/gris/css/components.css">
+<style>
+  .section-title {
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+    margin: var(--space-3xl) 0 var(--space-lg) 0;
+  }
+  .section-title:first-of-type {
+    margin-top: 0;
+  }
+</style>
 {% endblock %}

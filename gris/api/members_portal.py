@@ -102,3 +102,70 @@ def set_member_leave(name: str):
 	except frappe.PermissionError:
 		return {"success": False, "message": "Permission denied saving leave"}
 	return {"success": True, "desligamento": applied_date}
+
+
+@frappe.whitelist()  # type: ignore[misc]
+def get_member_history(name: str):
+	"""Get history records for a member."""
+	_ensure_logged_in()
+	try:
+		doc = frappe.get_doc("Associado", name)
+	except frappe.DoesNotExistError:
+		frappe.throw("Member not found", frappe.DoesNotExistError)
+
+	if not _can_edit(doc):
+		frappe.throw("No permission to view", frappe.PermissionError)
+
+	history = []
+	for row in doc.get("historico_no_grupo") or []:
+		history.append(
+			{
+				"ingresso": row.data_de_ingresso,
+				"desligamento": row.data_de_desligamento,
+			}
+		)
+
+	return {"success": True, "history": history}
+
+
+@frappe.whitelist()  # type: ignore[misc]
+def update_member_history(name: str, history: str):
+	"""Update history records for a member."""
+	_ensure_logged_in()
+	try:
+		doc = frappe.get_doc("Associado", name)
+	except frappe.DoesNotExistError:
+		frappe.throw("Member not found", frappe.DoesNotExistError)
+
+	if not _can_edit(doc):
+		frappe.throw("No permission to edit", frappe.PermissionError)
+
+	import json
+
+	history_data = json.loads(history)
+
+	# Clear existing history
+	doc.historico_no_grupo = []
+
+	# Add new history records
+	for item in history_data:
+		if not item.get("ingresso"):
+			return {"success": False, "message": "All records must have ingresso date"}
+
+		doc.append(
+			"historico_no_grupo",
+			{
+				"data_de_ingresso": item.get("ingresso"),
+				"data_de_desligamento": item.get("desligamento") or None,
+			},
+		)
+
+	try:
+		doc.save()
+		frappe.db.commit()
+	except frappe.PermissionError:
+		return {"success": False, "message": "Permission denied saving history"}
+	except Exception as e:
+		return {"success": False, "message": str(e)}
+
+	return {"success": True}

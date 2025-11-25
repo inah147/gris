@@ -6,3 +6,7 @@
 .status-pagination .page-link { cursor:pointer; }
 .status-pagination .active > .page-link { z-index:2; }
 .filter-hidden { display:none !important; }
+
+.assoc-card-col {
+  margin-bottom: 1.5rem !important;
+}

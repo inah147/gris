@@ -1,239 +1,174 @@
 {% extends "templates/web_sidebar_base.html" %}
 
-{% block title %}Detalhe de transação{% endblock %}
+{% block title %}Detalhe da Transação{% endblock %}
 
 {% set active_link = '/financeiro/extrato' %}
 
 {% block page_header %}
-  <div class="mb-4 d-flex align-items-center justify-content-between">
-    <h1 class="h3 mb-0">Detalhe de transação</h1>
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Detalhe da Transação</h1>
+      <p class="page-header__subtitle">Visualize e edite os dados da transação financeira.</p>
+    </div>
+    <div class="page-header__actions">
+      <a href="/financeiro/extrato" class="btn-modern btn-modern--outline btn-modern--sm">Voltar ao Extrato</a>
+    </div>
   </div>
 {% endblock %}
 
 {% block main %}
-  <div class="extrato-detalhe-container">
-    <div class="d-flex justify-content-between align-items-center mb-2" style="min-height:48px;">
-      <a href="/financeiro/extrato" class="btn btn-outline-secondary">Voltar ao extrato</a>
-      <button type="button" id="btn-salvar-extrato" class="btn btn-primary d-none">Salvar</button>
+  <!-- Dados da Transação (Somente Leitura) -->
+  <div class="card-modern mb-4">
+    <div class="card-modern__header">
+      <h3 class="card-modern__title">Dados da Transação</h3>
+      <p class="card-modern__subtitle">Informações básicas da movimentação financeira</p>
     </div>
-    <div class="card border-0 shadow-sm mb-4">
-      <div class="card-body">
-        <section class="extrato-detalhe-section">
-          <h5 class="mb-3">Dados da transação</h5>
-          <div class="row g-3">
-        <div class="col-md-6">
-          <label class="form-label">Timestamp</label>
-          <input type="text" class="form-control" value="{{ doc.timestamp_transacao or '-' }}" readonly>
+    <div class="card-modern__body">
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <label class="form-label-modern">Timestamp</label>
+          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.timestamp_transacao or '-' }}" readonly>
         </div>
-        <div class="col-md-6">
-          <label class="form-label">Data da transação</label>
-          <input type="text" class="form-control" value="{{ doc.data or '-' }}" readonly>
+        <div class="col-12 col-md-6">
+          <label class="form-label-modern">Data da Transação</label>
+          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.data or '-' }}" readonly>
         </div>
-        <div class="col-md-6">
-          <label class="form-label">Data de depósito</label>
-          <input type="text" class="form-control" value="{{ doc.data_deposito or '-' }}" readonly>
+        <div class="col-12 col-md-6">
+          <label class="form-label-modern">Data de Depósito</label>
+          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.data_deposito or '-' }}" readonly>
         </div>
-        <div class="col-md-6">
-          <label class="form-label">ID</label>
-          <input type="text" class="form-control" value="{{ doc.name or '-' }}" readonly>
+        <div class="col-12 col-md-6">
+          <label class="form-label-modern">ID</label>
+          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.name or '-' }}" readonly>
         </div>
-        <div class="col-md-6">
-          <label class="form-label">Número de liquidação</label>
-          <input type="text" class="form-control" value="{{ doc.numero_liquidacao or '-' }}" readonly>
+        <div class="col-12 col-md-6">
+          <label class="form-label-modern">Número de Liquidação</label>
+          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.numero_liquidacao or '-' }}" readonly>
         </div>
-  <div class="col-md-6">
-          <label class="form-label">Descrição</label>
-          <input type="text" class="form-control" name="descricao" value="{{ doc.descricao or '' }}">
+        <div class="col-12 col-md-6">
+          <label class="form-label-modern">Valor</label>
+          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.valor or '-' }}" readonly>
         </div>
-  <div class="col-md-6">
-          <label class="form-label">Descrição reduzida</label>
-          <input type="text" class="form-control" name="descricao_reduzida" value="{{ doc.descricao_reduzida or '' }}">
+        <div class="col-12 col-md-6">
+          <label class="form-label-modern">Débito ou Crédito</label>
+          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.debito_credito or '-' }}" readonly>
         </div>
-        <div class="col-md-6">
-          <label class="form-label">Valor</label>
-          <input type="text" class="form-control" value="{{ doc.valor or '-' }}" readonly>
+        <div class="col-12 col-md-6">
+          <label class="form-label-modern">Método</label>
+          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.metodo or '-' }}" readonly>
         </div>
-        <div class="col-md-6">
-          <label class="form-label">Débito ou crédito</label>
-          <input type="text" class="form-control" value="{{ doc.debito_credito or '-' }}" readonly>
+        <div class="col-12 col-md-6">
+          <label class="form-label-modern">Origem</label>
+          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.origem or '-' }}" readonly>
         </div>
-        <div class="col-md-6">
-          <label class="form-label">Método</label>
-          <input type="text" class="form-control" value="{{ doc.metodo or '-' }}" readonly>
+        <div class="col-12 col-md-6">
+          <label class="form-label-modern">Destino</label>
+          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.destino or '-' }}" readonly>
         </div>
-        <div class="col-md-6">
-          <label class="form-label">Origem</label>
-          <input type="text" class="form-control" value="{{ doc.origem or '-' }}" readonly>
+        <div class="col-12 col-md-6">
+          <label class="form-label-modern">Instituição</label>
+          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.instituicao or '-' }}" readonly>
         </div>
-        <div class="col-md-6">
-          <label class="form-label">Destino</label>
-          <input type="text" class="form-control" value="{{ doc.destino or '-' }}" readonly>
+        <div class="col-12 col-md-6">
+          <label class="form-label-modern">Carteira</label>
+          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.carteira or '-' }}" readonly>
         </div>
-        <div class="col-md-6">
-          <label class="form-label">Instituição</label>
-          <input type="text" class="form-control" value="{{ doc.instituicao or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Carteira</label>
-          <input type="text" class="form-control" value="{{ doc.carteira or '-' }}" readonly>
-        </div>
-      </div>
-        </section>
-      </div>
-    </div>
-    <div class="card border-0 shadow-sm mb-4">
-      <div class="card-body">
-        <section class="extrato-detalhe-section">
-          <h5 class="mb-3">Dados complementares</h5>
-          <form id="extrato-complementar-form">
-            <button type="button" id="btn-salvar-extrato" class="btn btn-primary d-none mb-3" style="float:right;">Salvar</button>
-            <div class="row g-3">
-              <!-- Primeira linha -->
-              <div class="col-md-4">
-                <div class="filter-field">
-                  <label class="form-label small text-muted">Categoria</label>
-                  <div class="fx-select">
-                    <select name="categoria" class="form-select form-select-sm">
-                      <option value=""></option>
-                      {% for op in opcoes_categoria %}
-                        <option value="{{ op }}" {% if doc.categoria==op %}selected{% endif %}>{{ op }}</option>
-                      {% endfor %}
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="filter-field">
-                  <label class="form-label small text-muted">Centro de custo</label>
-                  <div class="fx-select">
-                    <select name="centro_de_custo" class="form-select form-select-sm">
-                      <option value=""></option>
-                      {% for op in opcoes_centro_de_custo %}
-                        <option value="{{ op }}" {% if doc.centro_de_custo==op %}selected{% endif %}>{{ op }}</option>
-                      {% endfor %}
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="filter-field">
-                  <label class="form-label small text-muted">Fixo/Variável</label>
-                  <div class="fx-select">
-                    <select name="fixo_variavel" class="form-select form-select-sm">
-                      <option value=""></option>
-                      <option value="Fixo" {% if doc.fixo_variavel=='Fixo' %}selected{% endif %}>Fixo</option>
-                      <option value="Variável" {% if doc.fixo_variavel=='Variável' %}selected{% endif %}>Variável</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="row g-3 mt-1">
-              <!-- Segunda linha -->
-              <div class="col-md-4">
-                <div class="filter-field">
-                  <label class="form-label small text-muted">Ordinária/Extraordinária</label>
-                  <div class="fx-select">
-                    <select name="ordinaria_extraordinaria" class="form-select form-select-sm">
-                      <option value=""></option>
-                      <option value="Ordinária" {% if doc.ordinaria_extraordinaria=='Ordinária' %}selected{% endif %}>Ordinária</option>
-                      <option value="Extraordinária" {% if doc.ordinaria_extraordinaria=='Extraordinária' %}selected{% endif %}>Extraordinária</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="filter-field">
-                  <label class="form-label small text-muted">Conta fixa</label>
-                  <div class="fx-select">
-                    <select name="conta_fixa" class="form-select form-select-sm">
-                      <option value=""></option>
-                      {% for op in opcoes_conta_fixa %}
-                        <option value="{{ op }}" {% if doc.conta_fixa==op %}selected{% endif %}>{{ op }}</option>
-                      {% endfor %}
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-4" id="beneficiario-field-container">
-                <div class="filter-field">
-                  <label class="form-label small text-muted">Beneficiário da contribuição mensal</label>
-                  <div class="fx-select">
-                    <select name="beneficiario" class="form-select form-select-sm">
-                      <option value=""></option>
-                      {% for op in opcoes_beneficiario %}
-                        <option value="{{ op.name }}" {% if doc.beneficiario==op.name %}selected{% endif %}>{{ op.nome_completo }}</option>
-                      {% endfor %}
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="row g-3 mt-1">
-              <!-- Terceira linha -->
-              <div class="col-md-6 d-flex align-items-center" style="min-height: 56px;">
-                <div class="form-check ms-2">
-                  <input type="checkbox" id="repasse_entre_contas" name="repasse_entre_contas" value="1" class="form-check-input" {% if doc.repasse_entre_contas in ['1', 1, true] %}checked{% endif %}>
-                  <label for="repasse_entre_contas" class="form-check-label small text-muted ms-2">Repasse entre contas</label>
-                </div>
-              </div>
-              <div class="col-md-6 d-flex align-items-center" style="min-height: 56px;">
-                <div class="form-check ms-2">
-                  <input type="checkbox" id="transacao_revisada" name="transacao_revisada" value="1" class="form-check-input" {% if doc.transacao_revisada in ['1', 1, true] %}checked{% endif %}>
-                  <label for="transacao_revisada" class="form-check-label small text-muted ms-2">Transação revisada</label>
-                </div>
-              </div>
-            </div>
-            <div class="row g-3 mt-1">
-              <!-- Última linha -->
-              <div class="col-12">
-                <label class="form-label">Observações</label>
-                <textarea class="form-control" name="observacoes" rows="2">{{ doc.observacoes or '' }}</textarea>
-              </div>
-            </div>
-          </form>
-        </section>
       </div>
     </div>
   </div>
-{% endblock %}
+  <!-- Formulário de Edição -->
+  <div class="card-modern mb-4">
+    <div class="card-modern__header">
+      <h3 class="card-modern__title">Dados Editáveis</h3>
+      <p class="card-modern__subtitle">Edite as informações complementares da transação</p>
+    </div>
+    <div class="card-modern__body">
+      <form id="extrato-complementar-form">
+        <div class="row g-3">
+          <!-- Descrição e Descrição Reduzida -->
+          <div class="col-12 col-md-6">
+            <label class="form-label-modern">Descrição</label>
+            <input type="text" class="form-input-modern form-input-modern--sm" name="descricao" value="{{ doc.descricao or '' }}">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label-modern">Descrição Reduzida</label>
+            <input type="text" class="form-input-modern form-input-modern--sm" name="descricao_reduzida" value="{{ doc.descricao_reduzida or '' }}">
+          </div>
 
-<style>
-  .extrato-detalhe-container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 2rem 1.5rem;
-  }
-  .extrato-detalhe-section h5 {
-    font-weight: bold;
-    color: #222;
-  }
-  .extrato-card {
-    background: #fff;
-    border-radius: 18px;
-    box-shadow: 0 4px 16px 0 rgba(0,0,0,0.10);
-    padding: 2rem 1.5rem;
-    margin-bottom: 2.5rem;
-    border: 1px solid #ececec;
-    transition: box-shadow 0.2s;
-  }
-  .extrato-card:not(:last-child) {
-    margin-bottom: 2.5rem;
-  }
-  .extrato-card:hover {
-    box-shadow: 0 8px 24px 0 rgba(0,0,0,0.13);
-  }
-  @media (max-width: 700px) {
-    .extrato-card {
-      padding: 1rem 0.3rem;
-      border-radius: 0.7rem;
-      box-shadow: 0 2px 8px 0 rgba(0,0,0,0.08);
-    }
-  }
-  @media (max-width: 700px) {
-    .extrato-detalhe-container {
-      padding: 1rem 0.3rem;
-      border-radius: 0.7rem;
-    }
-  }
-</style>
+          <!-- Categoria e Centro de Custo -->
+          <div class="col-12 col-md-6">
+            <label class="form-label-modern">Categoria</label>
+            <select name="categoria" class="form-input-modern form-input-modern--sm">
+              <option value=""></option>
+              {% for op in opcoes_categoria %}
+                <option value="{{ op }}" {% if doc.categoria==op %}selected{% endif %}>{{ op }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label-modern">Centro de Custo</label>
+            <select name="centro_de_custo" class="form-input-modern form-input-modern--sm">
+              <option value=""></option>
+              {% for op in opcoes_centro_de_custo %}
+                <option value="{{ op }}" {% if doc.centro_de_custo==op %}selected{% endif %}>{{ op }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Ordinária/Extraordinária e Conta Fixa -->
+          <div class="col-12 col-md-6">
+            <label class="form-label-modern">Ordinária/Extraordinária</label>
+            <select name="ordinaria_extraordinaria" class="form-input-modern form-input-modern--sm">
+              <option value=""></option>
+              <option value="Ordinária" {% if doc.ordinaria_extraordinaria=='Ordinária' %}selected{% endif %}>Ordinária</option>
+              <option value="Extraordinária" {% if doc.ordinaria_extraordinaria=='Extraordinária' %}selected{% endif %}>Extraordinária</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-6" id="conta-fixa-field-container">
+            <label class="form-label-modern">Conta Fixa</label>
+            <select name="conta_fixa" class="form-input-modern form-input-modern--sm">
+              <option value=""></option>
+              {% for op in opcoes_conta_fixa %}
+                <option value="{{ op }}" {% if doc.conta_fixa==op %}selected{% endif %}>{{ op }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Beneficiário -->
+          <div class="col-12" id="beneficiario-field-container">
+            <label class="form-label-modern">Beneficiário da Contribuição Mensal</label>
+            <select name="beneficiario" class="form-input-modern form-input-modern--sm">
+              <option value=""></option>
+              {% for op in opcoes_beneficiario %}
+                <option value="{{ op.name }}" {% if doc.beneficiario==op.name %}selected{% endif %}>{{ op.nome_completo }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Observações -->
+          <div class="col-12">
+            <label class="form-label-modern">Observações</label>
+            <textarea class="form-input-modern form-input-modern--sm" name="observacoes" rows="3">{{ doc.observacoes or '' }}</textarea>
+          </div>
+
+          <!-- Checkboxes -->
+          <div class="col-12 col-md-6">
+            <div class="form-check" style="padding-top: 0.5rem;">
+              <input type="checkbox" id="repasse_entre_contas" name="repasse_entre_contas" value="1" class="form-check-input" {% if doc.repasse_entre_contas in ['1', 1, true] %}checked{% endif %}>
+              <label for="repasse_entre_contas" class="form-check-label" style="font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--text-primary);">Repasse entre Contas</label>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="form-check" style="padding-top: 0.5rem;">
+              <input type="checkbox" id="transacao_revisada" name="transacao_revisada" value="1" class="form-check-input" {% if doc.transacao_revisada in ['1', 1, true] %}checked{% endif %}>
+              <label for="transacao_revisada" class="form-check-label" style="font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--text-primary);">Transação Revisada</label>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="card-modern__footer" id="footer-salvar" style="display: none;">
+      <button type="button" id="btn-salvar-extrato" class="btn-modern btn-modern--primary btn-modern--sm">Salvar</button>
+    </div>
+  </div>
+{% endblock %}

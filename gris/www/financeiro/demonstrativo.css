@@ -1,81 +1,197 @@
-/* Styles for Demonstrativo Financeiro */
-main.fx-main { min-width: 0; }
-.demonstrativo-table th,
-.demonstrativo-table td {
-  border: 1px solid #e9ecef;
-  padding: 6px 8px;
-}
-.demonstrativo-table thead th {
-  background: #f8f9fa;
-  font-weight: 600;
-}
-.demonstrativo-table .table-success td,
-.demonstrativo-table .table-success th {
-  background: #e6f4ea;
-}
-.demonstrativo-table .table-danger td,
-.demonstrativo-table .table-danger th {
-  background: #fdecea;
-}
-.demonstrativo-table .table-secondary td,
-.demonstrativo-table .table-secondary th {
-  background: #eef3f7;
+/**
+ * Demonstrativo Financeiro - CSS Moderno
+ * Segue padrões de components.css
+ */
+
+/* Tabela Demonstrativo - Estrutura BEM */
+.demonstrativo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm, 0.875rem);
+  background: white;
 }
 
-/* Page-scope wrapper to prevent page-level horizontal scroll and allow the
-  table to scroll internally inside the card (matches relatorio_contabil behavior) */
-.demonstrativo-page-scope { width: 100%; overflow-x: visible; }
-.demonstrativo-page-scope .fx-main,
-.demonstrativo-page-scope .fx-main > .p-4,
-.demonstrativo-page-scope .card,
-.demonstrativo-page-scope .card > .p-3,
-.demonstrativo-page-scope .card > .demonstrativo-scroll-x,
-.demonstrativo-page-scope .demonstrativo-scroll-x { min-width: 0; box-sizing: border-box; }
-
-.demonstrativo-scroll-x { display: block; position: relative; overflow-x: auto !important; -webkit-overflow-scrolling: touch; min-width: 0; width: 100%; max-width: 100%; padding: 0.5rem; box-sizing: border-box; }
-
-/* Make table occupy full card width but allow internal horizontal scrolling when content is larger.
-  We keep inline-table behavior for intrinsic width but set a min-width of 100% so it expands to fill the card. */
-.demonstrativo-table { display: inline-table !important; width: max-content !important; min-width: 100%; border-collapse: collapse; table-layout: auto !important; margin: 0; }
-
-.demonstrativo-table th, .demonstrativo-table td { white-space: nowrap; }
-
-/* match other pages: remove explicit border for shadow-only cards if present */
-.card.border-0 {
-  border: 0 !important;
+/* Header */
+.demonstrativo-table__header {
+  padding: 1rem;
+  text-align: left;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: var(--font-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary, #64748b);
+  background-color: var(--bg-hover, #f8fafc);
+  border-bottom: 2px solid var(--border-color, #e2e8f0);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
-/* fx-select spacing used across pages */
-.fx-select { display: inline-block; min-width: 160px; position: relative; }
-.fx-select select.form-select-sm {
-  background:#fff
-    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3e%3cpath fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M2 3.5l3 3 3-3'/%3e%3c/svg%3e")
-    no-repeat right .55rem center;
-  background-size:10px 10px;
-  border:1px solid #d0d7e2;
-  padding:.4rem 1.55rem .4rem .65rem;
-  font-weight:500;
-  color:#334155;
-  line-height:1.2;
-  border-radius:8px;
-  appearance:none; -webkit-appearance:none; -moz-appearance:none;
-  box-shadow:0 1px 0 rgba(0,0,0,.02);
-  transition:background .15s, border-color .15s, box-shadow .15s;
-  width:100%;
-}
-.fx-select select.form-select-sm:hover:not(:disabled){ border-color:#b4c0ce; }
-.fx-select select.form-select-sm:focus{
-  outline:none; border-color:#0d4d91; box-shadow:0 0 0 3px rgba(13,77,145,.15);
-  background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3e%3cpath fill='none' stroke='%230d4d91' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M2 3.5l3 3 3-3'/%3e%3c/svg%3e");
-}
-.fx-select select.form-select-sm:disabled {
-  background:#f1f5f9
-    url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3e%3cpath fill='none' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M2 3.5l3 3 3-3'/%3e%3c/svg%3e") no-repeat right .55rem center;
-  background-size:10px 10px;
-  color:#64748b;
+.demonstrativo-table__header--number {
+  text-align: right;
 }
 
-/* left-aligned stacked label for the filter */
-.demonstrativo-filter-left { display: inline-block; min-width: 160px; }
-.demonstrativo-filter-left .fx-select { margin-top: 0; }
-.demonstrativo-filter-left label { display: block; }
+/* Células */
+.demonstrativo-table__cell {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  color: var(--text-primary, #1e293b);
+  white-space: nowrap;
+}
+
+.demonstrativo-table__cell--number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 0.8125rem;
+}
+
+.demonstrativo-table__cell--bold {
+  font-weight: var(--font-semibold, 600);
+}
+
+.demonstrativo-table__cell--indent {
+  padding-left: 2rem;
+}
+
+/* Linhas especiais */
+.demonstrativo-table__row--highlight {
+  background-color: #f1f5f9;
+}
+
+.demonstrativo-table__row--final {
+  background-color: #e0e7ff;
+  border-top: 2px solid var(--border-color, #e2e8f0);
+}
+
+/* Seções (Entradas/Saídas) */
+.demonstrativo-table__row--section {
+  background-color: #f8fafc;
+  border-top: 2px solid var(--border-color, #e2e8f0);
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.demonstrativo-table__section {
+  padding: 0.875rem 1rem;
+  font-weight: var(--font-semibold, 600);
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--text-primary, #1e293b);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.demonstrativo-table__section-icon {
+  display: inline-block;
+  width: 1.5rem;
+  height: 1.5rem;
+  line-height: 1.5rem;
+  text-align: center;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.demonstrativo-table__row--success .demonstrativo-table__section {
+  color: #059669;
+}
+
+.demonstrativo-table__row--success .demonstrativo-table__section-icon {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+.demonstrativo-table__row--danger .demonstrativo-table__section {
+  color: #dc2626;
+}
+
+.demonstrativo-table__row--danger .demonstrativo-table__section-icon {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+/* Totais */
+.demonstrativo-table__row--subtotal {
+  background-color: #fafafa;
+  border-top: 1px solid var(--border-color, #e2e8f0);
+}
+
+.demonstrativo-table__row--success-total {
+  background-color: #f0fdf4;
+}
+
+.demonstrativo-table__row--danger-total {
+  background-color: #fef2f2;
+}
+
+/* Resultado */
+.demonstrativo-table__row--result {
+  background-color: #fffbeb;
+  border-top: 2px solid var(--border-color, #e2e8f0);
+}
+
+.demonstrativo-table__cell--positive {
+  color: #059669;
+  font-weight: var(--font-semibold, 600);
+}
+
+.demonstrativo-table__cell--negative {
+  color: #dc2626;
+  font-weight: var(--font-semibold, 600);
+}
+
+/* Linhas de dados */
+.demonstrativo-table__row--data:hover {
+  background-color: #f8fafc;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .demonstrativo-table {
+    font-size: var(--text-xs, 0.75rem);
+  }
+  
+  .demonstrativo-table__header,
+  .demonstrativo-table__cell {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .demonstrativo-table__cell--indent {
+    padding-left: 1.25rem;
+  }
+  
+  .demonstrativo-table__cell--number {
+    font-size: 0.75rem;
+  }
+  
+  .demonstrativo-table__section {
+    font-size: var(--text-xs, 0.75rem);
+    padding: 0.625rem 0.75rem;
+  }
+}
+
+/* Scroll horizontal suave */
+.card-modern__body {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Efeito de borda no scroll */
+.card-modern__body::-webkit-scrollbar {
+  height: 8px;
+}
+
+.card-modern__body::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.card-modern__body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.card-modern__body::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

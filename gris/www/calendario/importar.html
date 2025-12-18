@@ -1,0 +1,99 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Importar Calendário{% endblock %}
+
+{% set active_link = '/calendario/importar' %}
+{% set sidebar_title = 'Calendário' %}
+{% set sidebar_sections = [] %}
+
+{% block page_header %}
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Importar Calendário</h1>
+      <p class="page-header__subtitle">Faça upload de um arquivo PDF com o calendário de atividades</p>
+    </div>
+  </div>
+{% endblock %}
+
+{% block main %}
+  <div class="card-modern mb-4">
+    <div class="card-modern__body">
+      <!-- Upload Section -->
+      <div class="form-group-modern mb-4">
+        <h2 style="font-size: var(--text-lg); font-weight: var(--font-semibold); margin-bottom: var(--space-md); color: var(--text-primary);">1. Selecione o arquivo PDF</h2>
+        <button 
+          type="button" 
+          id="uploadPdfBtn" 
+          class="btn-modern btn-modern--outline"
+        >
+          <svg class="btn-modern__icon" viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          Selecionar Arquivo PDF
+        </button>
+        
+        <div id="file-info" class="mt-3 d-none">
+          <div class="alert-modern alert-modern--success">
+            <svg class="alert-modern__icon" viewBox="0 0 24 24">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <div class="alert-modern__content">
+              <p class="alert-modern__description">
+                <strong>Arquivo carregado:</strong>
+                <span id="file-name" class="ms-2"></span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Import Button -->
+      <div class="form-group-modern mb-4">
+        <h2 style="font-size: var(--text-lg); font-weight: var(--font-semibold); margin-bottom: var(--space-md); color: var(--text-primary);">2. Iniciar importação</h2>
+        <button 
+          type="button" 
+          id="btnImportar" 
+          class="btn-modern d-none"
+          disabled
+        >
+          <svg class="btn-modern__icon" viewBox="0 0 24 24">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+          </svg>
+          Importar Calendário
+        </button>
+      </div>
+
+      <!-- Results Section -->
+      <div id="import-results" class="d-none">
+        <h2 style="font-size: var(--text-lg); font-weight: var(--font-semibold); margin-bottom: var(--space-md); color: var(--text-primary);">Resultados da Importação</h2>
+        <div id="results-grid" class="row g-3 gy-4"></div>
+        
+        <div id="errors-container" class="mt-3 d-none">
+          <div class="alert-modern alert-modern--danger">
+            <svg class="alert-modern__icon" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <div class="alert-modern__content">
+              <h3 class="alert-modern__title">Erros Encontrados</h3>
+              <div id="errors-list" class="alert-modern__description" style="font-size: var(--text-sm);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading Indicator -->
+      <div id="loading-indicator" class="loading-container d-none">
+        <div class="loading-spinner loading-spinner--lg"></div>
+        <p class="loading-text" style="font-weight: var(--font-semibold);">Processando importação... Isso pode levar alguns minutos.</p>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_script %}{% endblock %}

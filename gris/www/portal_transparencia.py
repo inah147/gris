@@ -6,6 +6,9 @@ from gris.api.portal_cache_utils import get_transparency_years_cached, get_uel_c
 def get_context(context):
 	"""Página de transparência totalmente pública (Guest permitido)."""
 
+	# Inclui CSS customizado
+	context.style = "/assets/gris/css/portal_transparencia.css"
+
 	# Lista anos (conteúdo público) usando cache controlado
 	context.years = get_transparency_years_cached()
 

@@ -36,6 +36,14 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 			{"label": "Pareceres", "path": "/financeiro/pareceres"},
 		],
 	},
+	{
+		"label": "Calendário",
+		"path": "/calendario",
+		"children": [
+			{"label": "Acessar Calendário", "path": "/calendario/visualizar"},
+			{"label": "Importar Calendário", "path": "/calendario/importar"},
+		],
+	},
 	{"label": "Transparência", "path": "/portal_transparencia"},
 ]
 
@@ -60,6 +68,9 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/associados/importar": ["Gestor de Associados"],
 	"/financeiro/contribuicoes": ["Gestor Contribuição Mensal", "Visualizador Contribuição Mensal"],
 	"/portal_transparencia": ["Public"],  # totalmente público
+	"/calendario": ["All"],
+	"/calendario/visualizar": ["All"],
+	"/calendario/importar": ["All"],
 }
 
 # Páginas marcadas como "estritas": mesmo System Manager deve ter uma das roles listadas.

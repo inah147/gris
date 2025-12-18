@@ -304,3 +304,22 @@ def _parse_ramo(ramo_str: str) -> str:
 		"pioneiro": "Pioneiro",
 	}
 	return mapping.get(ramo, "Não se aplica")
+
+
+def converter_mes_para_numero(mes_nome):
+	"""Converte nome do mês para número"""
+	meses = {
+		"janeiro": "01",
+		"fevereiro": "02",
+		"março": "03",
+		"abril": "04",
+		"maio": "05",
+		"junho": "06",
+		"julho": "07",
+		"agosto": "08",
+		"setembro": "09",
+		"outubro": "10",
+		"novembro": "11",
+		"dezembro": "12",
+	}
+	return meses.get(mes_nome.lower(), "")

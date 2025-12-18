@@ -18,18 +18,31 @@
 </div>
 
 {% if documentos_gerais %}
-<div class="container my-5" id="documentos-gerais">
-    <h2 class="fw-bold mb-4">Documentos Gerais</h2>
-    <div class="row row-cols-1 row-cols-md-3 g-4 mb-5">
+<div class="container my-5 transparency-section" id="documentos-gerais">
+    <h2 class="transparency-section__title">Documentos Gerais</h2>
+    <div class="transparency-grid">
         {% for doc in documentos_gerais %}
-        <div class="col">
-            <div class="card-modern h-100">
-                <div class="card-modern__body d-flex flex-column">
-                    <h6 class="card-title">{{ doc.nome }}</h6>
-                    <div class="mt-auto">
-                        <a href="{{ doc.arquivo }}" target="_blank" class="btn btn-primary">Abrir Arquivo</a>
-                    </div>
-                </div>
+        <div class="doc-card">
+            <div class="doc-card__icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+            </div>
+            <div class="doc-card__content">
+                <h3 class="doc-card__title">{{ doc.nome }}</h3>
+            </div>
+            <div class="doc-card__footer">
+                <a href="{{ doc.arquivo }}" target="_blank" class="btn btn-primary btn-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                    Abrir Arquivo
+                </a>
             </div>
         </div>
         {% endfor %}
@@ -37,23 +50,20 @@
 </div>
 {% endif %}
 
-<div class="container my-5" id="documentos-anuais">
-    <h2 class="fw-bold mb-4">Documentos Anuais</h2>
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card-modern">
-                <div class="card-modern__body">
-                    <label for="ano_referencia" class="form-label fw-bold mb-2">Escolha o Ano</label>
-                    <!-- Removido o input-group-text (quadrado cinza) -->
-                    <select id="ano_referencia" name="ano_referencia" class="form-select" onchange="carregarArquivos(this.value)">
-                        {% for ano in years %}
-                            <option value="{{ ano }}" {% if ano == ano_selecionado %}selected{% endif %}>{{ ano }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
+<div class="container my-5 transparency-section" id="documentos-anuais">
+    <h2 class="transparency-section__title">Documentos Anuais</h2>
+    
+    <div class="year-filter">
+        <div class="year-filter__field">
+            <label for="ano_referencia" class="form-label fw-bold mb-2">Ano de Referência</label>
+            <select id="ano_referencia" name="ano_referencia" class="form-select" onchange="carregarArquivos(this.value)">
+                {% for ano in years %}
+                <option value="{{ ano }}" {% if ano == ano_selecionado %}selected{% endif %}>{{ ano }}</option>
+                {% endfor %}
+            </select>
         </div>
     </div>
+    
     <div id="areas-container">
         <!-- Seções dinâmicas via JS -->
     </div>
@@ -72,29 +82,52 @@ function atualizarAreas(areas) {
     const container = document.getElementById('areas-container');
     container.innerHTML = '';
     if (!areas || Object.keys(areas).length === 0) {
-        container.innerHTML = '<div class="row"><div class="col"><p>Nenhum arquivo encontrado.</p></div></div>';
+        container.innerHTML = `
+            <div class="empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                    <polyline points="13 2 13 9 20 9"></polyline>
+                </svg>
+                <p>Nenhum documento encontrado para este ano.</p>
+            </div>
+        `;
         return;
     }
     Object.entries(areas).forEach(([area, arquivos]) => {
         let cards = '';
         arquivos.forEach(arq => {
             cards += `
-                <div class="col">
-                    <div class="card-modern h-100">
-                        <div class="card-modern__body d-flex flex-column">
-                            <h6 class="card-title">${arq.title}</h6>
-                            <div class="mt-auto">
-                                <a href="${arq.arquivo}" target="_blank" class="btn btn-primary">Abrir Arquivo</a>
-                            </div>
-                        </div>
+                <div class="doc-card">
+                    <div class="doc-card__icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                    </div>
+                    <div class="doc-card__content">
+                        <h3 class="doc-card__title">${arq.title}</h3>
+                    </div>
+                    <div class="doc-card__footer">
+                        <a href="${arq.arquivo}" target="_blank" class="btn btn-primary btn-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                <polyline points="15 3 21 3 21 9"></polyline>
+                                <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                            Abrir Arquivo
+                        </a>
                     </div>
                 </div>
             `;
         });
         container.innerHTML += `
-            <h4 class="fw-bold mb-3">${area}</h4>
-            <div class="row row-cols-1 row-cols-md-3 g-4 mb-5">
-                ${cards}
+            <div class="doc-area">
+                <h3 class="doc-area__title">${area}</h3>
+                <div class="transparency-grid">
+                    ${cards}
+                </div>
             </div>
         `;
     });

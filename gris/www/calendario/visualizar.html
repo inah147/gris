@@ -1,0 +1,153 @@
+{% extends "gris/templates/web_sidebar_base.html" %}
+
+{% block title %}Calendário{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="visualizar.css">
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <div class="page-header__content">
+        <h1 class="page-header__title">Calendário de Atividades</h1>
+        <p class="page-header__subtitle">Visualize as atividades programadas para o ano.</p>
+    </div>
+    <div class="page-header__actions">
+        <a href="/calendario/simulacao_calendario" class="btn-modern btn-modern--primary">
+            Simular
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="calendar-page-container">
+    <div class="card-modern mb-4">
+        <div class="card-modern__body card-modern__body--compact">
+            <div class="filter-bar mb-0">
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;" class="mb-3">
+                    <div class="filter-field">
+                        <label class="form-label-modern">Ano</label>
+                        <select id="year-filter" class="form-input-modern form-input-modern--sm" style="min-width: 100px;">
+                            {% for y in available_years %}
+                            <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-field">
+                        <label class="form-label-modern">Mês</label>
+                        <select id="month-filter" class="form-input-modern form-input-modern--sm" style="min-width: 150px;">
+                            <option value="">Todos</option>
+                            <option value="01">Janeiro</option>
+                            <option value="02">Fevereiro</option>
+                            <option value="03">Março</option>
+                            <option value="04">Abril</option>
+                            <option value="05">Maio</option>
+                            <option value="06">Junho</option>
+                            <option value="07">Julho</option>
+                            <option value="08">Agosto</option>
+                            <option value="09">Setembro</option>
+                            <option value="10">Outubro</option>
+                            <option value="11">Novembro</option>
+                            <option value="12">Dezembro</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filter-field" style="width: 100%; max-width: none;">
+                    <label class="form-label-modern">Filtrar por Seção</label>
+                    <div class="section-filter-options">
+                        <label class="filter-option all-option">
+                            <input type="checkbox" id="filter-all" checked>
+                            <span>Todas</span>
+                        </label>
+                        {% for section in sections %}
+                        <label class="filter-option">
+                            <input type="checkbox" name="section-filter" value="{{ section }}" checked>
+                            <span>{{ section }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="filter-field mt-3" style="width: 100%; max-width: none; border-top: 1px solid var(--border-color); padding-top: var(--space-sm);">
+                    <label class="filter-option">
+                        <input type="checkbox" id="show-empty-days" checked>
+                        <span>Mostrar dias sem atividade</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="calendar-scroll-container">
+        <table class="calendar-table">
+            <thead>
+                <tr>
+                    <th class="col-date sticky-col">
+                        <div class="th-content">Data</div>
+                    </th>
+                    {% for section in sections %}
+                    <th class="col-section" data-section="{{ section }}">
+                        <div class="th-content">{{ section }}</div>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in calendar_rows %}
+                {% if row.is_new_month %}
+                <tr class="month-separator-row" data-month="{{ row.month_num }}">
+                    <td colspan="{{ 1 + sections|length }}" class="month-separator-cell">
+                        <span class="month-separator-label">{{ row.month_full }}</span>
+                    </td>
+                </tr>
+                {% endif %}
+                <tr class="calendar-row {% if row.is_weekend %}is-weekend{% endif %} {% if row.has_activity %}has-activity{% endif %}" data-date="{{ row.date_str }}">
+                    <td class="col-date sticky-col">
+                        <div class="date-cell-content">
+                            <span class="day-number">{{ row.day }}</span>
+                            <div class="date-meta">
+                                <span class="weekday-name">{{ row.weekday }}</span>
+                                <span class="month-name">{{ row.month }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    {% for section in sections %}
+                    <td class="col-activity" data-section="{{ section }}">
+                        {% if row.activities[section] %}
+                            <div class="activities-list">
+                            {% for event in row.activities[section] %}
+                                <div class="activity-card ramo-{{ section_classes[section] }} {% if not event.is_start %}is-continued-top{% endif %} {% if not event.is_end %}is-continued-bottom{% endif %}" data-event-id="{{ event.name }}">
+                                    <div class="activity-body">
+                                        {% if event.is_start %}
+                                        <div class="activity-title">{{ event.atividade }}</div>
+                                        {% if event.local %}
+                                        <div class="activity-location">
+                                            <i class="fa fa-map-marker"></i> {{ event.local }}
+                                        </div>
+                                        {% endif %}
+                                        {% else %}
+                                        <!-- Placeholder for continued event to maintain height/structure if needed, or just empty -->
+                                        <div class="activity-continuation-marker"></div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            </div>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+{{ super() }}
+<script src="visualizar.js"></script>
+{% endblock %}

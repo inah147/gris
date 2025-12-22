@@ -1,0 +1,385 @@
+/* visualizar.css */
+
+.calendar-page-container {
+    width: 100%;
+    overflow-x: hidden;
+}
+
+/* Filter Bar Customization */
+.section-filter-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    margin-top: var(--space-xs);
+}
+
+.filter-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    user-select: none;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    transition: background-color 0.2s;
+}
+
+.filter-option:hover {
+    color: var(--color-primary);
+    background-color: var(--bg-hover);
+}
+
+.filter-option input[type="checkbox"] {
+    accent-color: var(--color-primary);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    margin: 0;
+}
+
+.all-option {
+    font-weight: var(--font-semibold);
+    color: var(--color-primary);
+}
+
+/* Scroll container for the table */
+.calendar-scroll-container {
+    overflow: auto;
+    max-height: calc(100vh - 150px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+    position: relative;
+}
+
+.calendar-table {
+    width: auto;
+    min-width: 100%;
+    table-layout: fixed;
+    border-collapse: separate; /* Needed for sticky */
+    border-spacing: 0;
+}
+
+.col-section {
+    width: 250px;
+}
+
+.calendar-table th,
+.calendar-table td {
+    padding: var(--space-sm);
+    border-bottom: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    vertical-align: top;
+}
+
+.calendar-table th:last-child,
+.calendar-table td:last-child {
+    border-right: none;
+}
+
+/* Sticky Header */
+.calendar-table thead th {
+    position: sticky;
+    top: 0;
+    background-color: var(--color-primary-light);
+    color: var(--color-primary);
+    font-weight: var(--font-bold);
+    z-index: 1000;
+    text-align: left;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    height: 50px;
+}
+
+.th-content {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+/* Sticky First Column (Date) */
+.sticky-col {
+    position: sticky;
+    left: 0;
+    background-color: var(--bg-card);
+    z-index: 5;
+    border-right: 2px solid var(--border-color);
+    width: 100px;
+    min-width: 100px;
+    max-width: 100px;
+}
+
+.calendar-table thead th.sticky-col {
+    z-index: 1005; /* Higher than other headers and other sticky cols */
+    background-color: var(--color-primary-light);
+    border-right: 2px solid var(--border-color);
+}
+
+/* Date Cell Styling */
+.date-cell-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    height: 100%;
+    min-height: 40px;
+}
+
+.day-number {
+    font-size: var(--text-xl);
+    font-weight: var(--font-bold);
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.date-meta {
+    display: flex;
+    flex-direction: column;
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-top: 2px;
+    font-weight: var(--font-medium);
+}
+
+/* Weekday Styling (Inverted) */
+.calendar-row:not(.is-weekend) {
+    background-color: var(--bg-hover);
+}
+
+.calendar-row:not(.is-weekend) .sticky-col {
+    background-color: var(--bg-hover);
+}
+
+/* Weekend Styling (Inverted) */
+.calendar-row.is-weekend {
+    background-color: var(--bg-card);
+}
+
+.calendar-row.is-weekend .sticky-col {
+    background-color: var(--bg-card);
+}
+
+/* Activity Card */
+.col-activity {
+    padding: 0 !important; /* Remove padding to allow cards to touch edges */
+    vertical-align: top;
+    height: 1px; /* Trick to allow children to inherit full row height */
+}
+
+.activities-list {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%; /* Fill the cell height */
+    padding: 0 4px; /* Inner padding so cards don't touch horizontal edges */
+    box-sizing: border-box;
+}
+
+.activity-card {
+    background-color: var(--color-primary-lighter);
+    padding: var(--space-xs);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    box-shadow: var(--shadow-xs);
+    /* Delay z-index transition on mouse leave to prevent flickering */
+    transition: transform 0.2s, box-shadow 0.2s, z-index 0s linear 0.2s;
+    margin-bottom: var(--space-xs); /* Default gap between distinct events */
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+.activity-card:first-child {
+    margin-top: var(--space-xs);
+}
+
+/* Ramo Colors */
+/* Lobinho - Amarelo */
+.activity-card.ramo-lobinho {
+    background-color: var(--color-warning-lighter);
+    border: 1px solid color-mix(in srgb, var(--color-warning), transparent 60%);
+}
+
+/* Escoteiro - Verde */
+.activity-card.ramo-escoteiro {
+    background-color: var(--color-success-lighter);
+    border: 1px solid color-mix(in srgb, var(--color-success), transparent 60%);
+}
+
+/* Sênior - Grená */
+.activity-card.ramo-senior {
+    background-color: #f8e6ec; /* Fundo rosado frio para diferenciar do vermelho */
+    border: 1px solid color-mix(in srgb, #4a001f, transparent 60%);
+}
+
+/* Pioneiro - Vermelho */
+.activity-card.ramo-pioneiro {
+    background-color: var(--color-danger-lighter);
+    border: 1px solid color-mix(in srgb, var(--color-danger), transparent 60%);
+}
+
+/* Filhotes - Laranja */
+.activity-card.ramo-filhotes {
+    background-color: #FFFBEB; /* Light Orange */
+    border: 1px solid color-mix(in srgb, #F59E0B, transparent 60%);
+}
+
+/* Diretoria/Outros - Azul (Default) */
+.activity-card.ramo-diretoria,
+.activity-card.ramo-default {
+    background-color: var(--color-primary-lighter);
+    border: 1px solid color-mix(in srgb, var(--color-primary), transparent 60%);
+}
+
+/* Continued Event Styles */
+.activity-card.is-continued-bottom {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: none;
+    margin-bottom: -1px !important; /* Cover the 1px border */
+    padding-bottom: var(--space-xs);
+    z-index: 2; /* Sit on top of the next row's border */
+    box-shadow: none; /* Remove shadow at bottom to blend */
+    flex-grow: 1; /* Stretch to fill empty space in the cell */
+}
+
+.activity-card.is-continued-top {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-top: none;
+    margin-top: -1px !important; /* Pull up to meet previous card */
+    padding-top: var(--space-xs);
+    box-shadow: none; /* Remove shadow at top */
+    flex-grow: 1;
+}
+
+.activity-card.is-continued-top.is-continued-bottom {
+    border-radius: 0;
+    border-top: none;
+    border-bottom: none;
+    margin-top: -1px !important;
+    margin-bottom: -1px !important;
+    padding-top: var(--space-xs);
+    padding-bottom: var(--space-xs);
+}
+
+.activity-continuation-marker {
+    height: 10px; /* Minimal height for continuation segments */
+}
+
+.activity-card:hover,
+.activity-card.is-hovered {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    z-index: 100; /* Bring to front on hover */
+    filter: brightness(0.95);
+    cursor: pointer;
+    /* Instant z-index change on hover enter */
+    transition: transform 0.2s, box-shadow 0.2s, z-index 0s;
+}
+
+
+.activity-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.activity-time {
+    font-weight: var(--font-bold);
+    font-size: var(--text-xs);
+    color: var(--color-primary);
+    background: rgba(255,255,255,0.5);
+    padding: 0 4px;
+    border-radius: 4px;
+}
+
+.activity-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.activity-title {
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+    line-height: var(--leading-tight);
+}
+
+.activity-location {
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Hover effects */
+.calendar-row:hover td:not(.sticky-col) {
+    background-color: var(--color-info-lighter);
+}
+
+.calendar-row.is-today td {
+    background-color: var(--color-warning-light) !important;
+}
+
+.calendar-row.is-today .sticky-col {
+    background-color: var(--color-warning-light) !important;
+    border-right-color: var(--color-warning);
+}
+
+/* Month Separator */
+.month-separator-row {
+    background-color: var(--color-primary-light);
+}
+
+.month-separator-cell {
+    padding: var(--space-sm) var(--space-md);
+    font-weight: var(--font-bold);
+    color: var(--color-primary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    position: sticky;
+    left: 0;
+    z-index: 8; /* Between normal sticky col (5) and header (10) */
+    border-bottom: 2px solid var(--color-primary);
+}
+
+/* Print styles */
+@media print {
+    .calendar-page-container {
+        padding: 0;
+        background: white;
+    }
+    
+    .calendar-scroll-container {
+        overflow: visible;
+        max-height: none;
+        border: none;
+        box-shadow: none;
+    }
+    
+    .calendar-page-header button {
+        display: none;
+    }
+    
+    .sticky-col, .calendar-table thead th {
+        position: static;
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+    
+    .calendar-table th, .calendar-table td {
+        border: 1px solid #ddd;
+    }
+    
+    .activity-card {
+        border: 1px solid #ccc;
+        background: #f9f9f9 !important;
+        -webkit-print-color-adjust: exact;
+    }
+}

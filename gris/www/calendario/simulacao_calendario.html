@@ -1,0 +1,308 @@
+{% extends "gris/templates/web_sidebar_base.html" %}
+
+{% block title %}Simulação de Calendário{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="simulacao_calendario.css">
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <div class="page-header__content">
+        <h1 class="page-header__title">Simulação de Calendário</h1>
+        <p class="page-header__subtitle">Visualize as atividades simuladas para o ano.</p>
+    </div>
+    <div class="page-header__actions" style="display: flex; gap: 1rem;">
+        <button id="btn-new-event" class="btn-modern btn-modern--primary">
+            Novo Evento
+        </button>
+        <a href="/calendario/visualizar" class="btn-modern btn-modern--outline">
+            Voltar
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="calendar-page-container">
+    {% if not has_data %}
+    <div class="card-modern" style="max-width: 600px; margin: 4rem auto; text-align: center; padding: 3rem;">
+        <h2 style="margin-bottom: 1rem; color: var(--text-color);">Nenhuma simulação encontrada para {{ year }}</h2>
+        <p style="margin-bottom: 2rem; color: var(--text-muted);">Você pode iniciar uma simulação copiando dados de um ano existente do calendário oficial.</p>
+        
+        <div style="display: flex; gap: 1rem; justify-content: center; align-items: flex-end;">
+            <div class="filter-field" style="text-align: left;">
+                <label class="form-label-modern" for="source-year">Copiar do ano:</label>
+                <select id="source-year" class="form-input-modern" style="min-width: 150px;">
+                    {% for y in source_years %}
+                    <option value="{{ y }}">{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button id="btn-copy-data" class="btn-modern btn-modern--primary" data-target-year="{{ year }}">
+                Copiar Dados
+            </button>
+        </div>
+    </div>
+    {% else %}
+    <div class="card-modern mb-4">
+        <div class="card-modern__body card-modern__body--compact">
+            <div class="filter-bar mb-0">
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;" class="mb-3">
+                    <div class="filter-field">
+                        <label class="form-label-modern">Ano</label>
+                        <select id="year-filter" class="form-input-modern form-input-modern--sm" style="min-width: 100px;">
+                            {% for y in available_years %}
+                            <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-field">
+                        <label class="form-label-modern">Mês</label>
+                        <select id="month-filter" class="form-input-modern form-input-modern--sm" style="min-width: 150px;">
+                            <option value="">Todos</option>
+                            <option value="01">Janeiro</option>
+                            <option value="02">Fevereiro</option>
+                            <option value="03">Março</option>
+                            <option value="04">Abril</option>
+                            <option value="05">Maio</option>
+                            <option value="06">Junho</option>
+                            <option value="07">Julho</option>
+                            <option value="08">Agosto</option>
+                            <option value="09">Setembro</option>
+                            <option value="10">Outubro</option>
+                            <option value="11">Novembro</option>
+                            <option value="12">Dezembro</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filter-field" style="width: 100%; max-width: none;">
+                    <label class="form-label-modern">Filtrar por Seção</label>
+                    <div class="section-filter-options">
+                        <label class="filter-option all-option">
+                            <input type="checkbox" id="filter-all" checked>
+                            <span>Todas</span>
+                        </label>
+                        {% for section in sections %}
+                        <label class="filter-option">
+                            <input type="checkbox" name="section-filter" value="{{ section }}" checked>
+                            <span>{{ section }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="filter-field mt-3" style="width: 100%; max-width: none; border-top: 1px solid var(--border-color); padding-top: var(--space-sm);">
+                    <label class="filter-option">
+                        <input type="checkbox" id="show-empty-days" checked>
+                        <span>Mostrar dias sem atividade</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="calendar-scroll-container">
+        <table class="calendar-table">
+            <thead>
+                <tr>
+                    <th class="col-date sticky-col">
+                        <div class="th-content">Data</div>
+                    </th>
+                    {% for section in sections %}
+                    <th class="col-section" data-section="{{ section }}">
+                        <div class="th-content">{{ section }}</div>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in calendar_rows %}
+                {% if row.is_new_month %}
+                <tr class="month-separator-row" data-month="{{ row.month_num }}">
+                    <td colspan="{{ 1 + sections|length }}" class="month-separator-cell">
+                        <span class="month-separator-label">{{ row.month_full }}</span>
+                    </td>
+                </tr>
+                {% endif %}
+                <tr class="calendar-row {% if row.is_weekend %}is-weekend{% endif %} {% if row.has_activity %}has-activity{% endif %}" data-date="{{ row.date_str }}">
+                    <td class="col-date sticky-col">
+                        <div class="date-cell-content">
+                            <span class="day-number">{{ row.day }}</span>
+                            <div class="date-meta">
+                                <span class="weekday-name">{{ row.weekday }}</span>
+                                <span class="month-name">{{ row.month }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    {% for section in sections %}
+                    <td class="col-activity" data-section="{{ section }}">
+                        {% if row.activities[section] %}
+                            <div class="activities-list">
+                            {% for event in row.activities[section] %}
+                                {% if event %}
+                                <div class="activity-card ramo-{{ section_classes[section] }} {% if not event.is_start %}is-continued-top{% endif %} {% if not event.is_end %}is-continued-bottom{% endif %}" 
+                                     data-event-id="{{ event.name }}"
+                                     data-atividade="{{ event.atividade }}"
+                                     data-inicio="{{ event.inicio }}"
+                                     data-termino="{{ event.termino }}"
+                                     data-secao="{{ event.secao }}"
+                                     data-local="{{ event.local or '' }}">
+                                    <div class="activity-body">
+                                        {% if event.is_start %}
+                                        <div class="activity-title">
+                                            {{ event.atividade }}
+                                            {% if event.is_official %}
+                                            <i class="fa fa-check-circle" title="Evento Oficial" style="margin-left: 4px; opacity: 0.8;"></i>
+                                            {% endif %}
+                                        </div>
+                                        {% if event.local %}
+                                        <div class="activity-location">
+                                            <i class="fa fa-map-marker"></i> {{ event.local }}
+                                        </div>
+                                        {% endif %}
+                                        {% else %}
+                                        <!-- Placeholder for continued event to maintain height/structure if needed, or just empty -->
+                                        <div class="activity-continuation-marker"></div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div class="activity-spacer"></div>
+                                {% endif %}
+                            {% endfor %}
+                            </div>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if non_official_events %}
+    <div class="card-modern" style="margin-top: 2rem;">
+        <div class="card-modern__header">
+            <h3 class="card-modern__title">Eventos Não Oficiais (Simulados)</h3>
+        </div>
+        <div class="card-modern__body">
+            <div style="overflow-x: auto;">
+                <table class="table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background-color: var(--bg-light); text-align: left;">
+                            <th style="padding: 0.75rem; border-bottom: 2px solid var(--border-color);">Atividade</th>
+                            <th style="padding: 0.75rem; border-bottom: 2px solid var(--border-color);">Início</th>
+                            <th style="padding: 0.75rem; border-bottom: 2px solid var(--border-color);">Término</th>
+                            <th style="padding: 0.75rem; border-bottom: 2px solid var(--border-color);">Seções</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in non_official_events %}
+                        <tr>
+                            <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color);">{{ event.atividade }}</td>
+                            <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color);">{{ event.inicio }}</td>
+                            <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color);">{{ event.termino }}</td>
+                            <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color);">{{ event.secoes }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% endif %}
+</div>
+
+<!-- Modal de Nova Atividade -->
+<div id="new-activity-modal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Nova Atividade</h3>
+            <button class="modal-close" id="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label-modern">Atividade</label>
+                <input type="text" id="modal-atividade" class="form-input-modern" placeholder="Nome da atividade">
+            </div>
+            <div class="form-group">
+                <label class="form-label-modern">Data Início</label>
+                <input type="date" id="modal-inicio" class="form-input-modern">
+            </div>
+            <div class="form-group">
+                <label class="form-label-modern">Data Término</label>
+                <input type="date" id="modal-termino" class="form-input-modern">
+            </div>
+            <div class="form-group">
+                <label class="form-label-modern">Seções</label>
+                <div class="checkbox-list" id="modal-secoes-list">
+                    {% for section in all_sections %}
+                    <label class="checkbox-item">
+                        <input type="checkbox" value="{{ section }}" name="modal-secao">
+                        <span>{{ section }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modern btn-modern--outline" id="cancel-modal">Cancelar</button>
+            <button class="btn-modern btn-modern--primary" id="save-modal">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Edição de Atividade -->
+<div id="edit-activity-modal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Editar Atividade</h3>
+            <button class="modal-close" id="close-edit-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="edit-event-id">
+            <div class="form-group">
+                <label class="form-label-modern">Atividade</label>
+                <input type="text" id="edit-atividade" class="form-input-modern">
+            </div>
+            <div class="form-group">
+                <label class="form-label-modern">Data Início</label>
+                <input type="date" id="edit-inicio" class="form-input-modern">
+            </div>
+            <div class="form-group">
+                <label class="form-label-modern">Data Término</label>
+                <input type="date" id="edit-termino" class="form-input-modern">
+            </div>
+            <div class="form-group">
+                <label class="form-label-modern">Seção</label>
+                <select id="edit-secao" class="form-input-modern">
+                    {% for section in all_sections %}
+                    <option value="{{ section }}">{{ section }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label-modern">Local</label>
+                <input type="text" id="edit-local" class="form-input-modern">
+            </div>
+        </div>
+        <div class="modal-footer" style="justify-content: space-between;">
+            <button class="btn-modern btn-modern--danger" id="delete-edit-modal" style="background-color: var(--color-danger); color: white; border: none;">Excluir</button>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn-modern btn-modern--outline" id="cancel-edit-modal">Cancelar</button>
+                <button class="btn-modern btn-modern--primary" id="save-edit-modal">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+{{ super() }}
+<script src="simulacao_calendario.js"></script>
+{% endblock %}

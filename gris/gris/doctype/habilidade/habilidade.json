@@ -1,0 +1,40 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:",
+ "creation": "2025-12-22 13:32:24.440316",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "habilidade",
+  "responsavel"
+ ],
+ "fields": [
+  {
+   "fieldname": "habilidade",
+   "fieldtype": "Data",
+   "label": "Habilidade"
+  },
+  {
+   "fieldname": "responsavel",
+   "fieldtype": "Link",
+   "label": "Respons\u00e1vel",
+   "options": "Responsavel"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-12-22 18:14:05.676116",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Habilidade",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

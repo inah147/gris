@@ -1,0 +1,343 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-12-22 10:46:47.143269",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "dados_do_associado_tab",
+  "informacoes_pessoais",
+  "nome_completo",
+  "data_de_nascimento",
+  "etnia",
+  "sexo",
+  "estrangeiro",
+  "pais_nascimento",
+  "uf_de_nascimento",
+  "cidade_de_nascimento",
+  "rg",
+  "orgao_expedidor",
+  "cpf",
+  "estado_civil",
+  "religiao",
+  "informacoes_profissionais_academicas",
+  "escolaridade",
+  "profissao",
+  "local_de_trabalho",
+  "endereco_e_dados_de_contato",
+  "cep",
+  "endereco",
+  "numero",
+  "complemento",
+  "estado",
+  "cidade",
+  "bairro",
+  "email",
+  "celular",
+  "telefone_secundario",
+  "fluxo_de_registro_tab",
+  "status",
+  "ramo",
+  "tipo_de_registro",
+  "etapas_do_fluxo_section",
+  "visita_agendada",
+  "primeira_visita_realizada",
+  "dados_para_registro_enviados",
+  "registro_criado_no_paxtu",
+  "registro_provisorio_pago",
+  "registro_provisorio_efetivado",
+  "pesquisa_de_novos_associados_respondida",
+  "ficha_medica_preenchida",
+  "id_escoteiros_criado",
+  "registro_definitivo_pago",
+  "registro_definitivo_efetivado",
+  "reuniao_de_acolhida_realizada"
+ ],
+ "fields": [
+  {
+   "fieldname": "nome_completo",
+   "fieldtype": "Data",
+   "label": "Nome Completo"
+  },
+  {
+   "fieldname": "data_de_nascimento",
+   "fieldtype": "Date",
+   "label": "Data de nascimento"
+  },
+  {
+   "fieldname": "etnia",
+   "fieldtype": "Select",
+   "label": "Etnia",
+   "options": "Amarela\nBranca\nInd\u00edgena\nParda\nPreta\nN\u00e2o desejo informar"
+  },
+  {
+   "fieldname": "sexo",
+   "fieldtype": "Select",
+   "label": "Sexo",
+   "options": "Femin\u00ednio\nMasculino"
+  },
+  {
+   "default": "0",
+   "fieldname": "estrangeiro",
+   "fieldtype": "Check",
+   "label": "\u00c9 estrangeiro?"
+  },
+  {
+   "fieldname": "pais_nascimento",
+   "fieldtype": "Data",
+   "label": "Pa\u00eds de nascimento"
+  },
+  {
+   "fieldname": "uf_de_nascimento",
+   "fieldtype": "Select",
+   "label": "UF de nascimento",
+   "options": "AC\nAL\nAP\nAM\nBA\nCE\nDF\nES\nGO\nMA\nMT\nMS\nMG\nPA\nPB\nPR\nPE\nPI\nRJ\nRN\nRS\nRO\nRR\nSC\nSP\nSE\nTO"
+  },
+  {
+   "fieldname": "cidade_de_nascimento",
+   "fieldtype": "Data",
+   "label": "Cidade de nascimento"
+  },
+  {
+   "fieldname": "rg",
+   "fieldtype": "Data",
+   "label": "RG"
+  },
+  {
+   "fieldname": "orgao_expedidor",
+   "fieldtype": "Data",
+   "label": "\u00d3rg\u00e3o expedidor"
+  },
+  {
+   "fieldname": "cpf",
+   "fieldtype": "Data",
+   "label": "CPF"
+  },
+  {
+   "fieldname": "estado_civil",
+   "fieldtype": "Select",
+   "label": "Estado civil",
+   "options": "N\u00e3o informado\nSolteiro(a)\nCasado(a)\nDivorciado(a)\nVi\u00favo(a)"
+  },
+  {
+   "fieldname": "dados_do_associado_tab",
+   "fieldtype": "Tab Break",
+   "label": "Dados do Associado"
+  },
+  {
+   "fieldname": "informacoes_pessoais",
+   "fieldtype": "Section Break",
+   "label": "Informa\u00e7\u00f5es Pessoais"
+  },
+  {
+   "fieldname": "religiao",
+   "fieldtype": "Select",
+   "label": "Religi\u00e3o",
+   "options": "N\u00e3o desejo informar\nAnglicana\nAfro-Brasileira\nBudismo\nCat\u00f3lica\nEsp\u00edrita\nEspiritualista\nEvang\u00e9lico/Petencostal\nHinduismo\nIsl\u00e2mica\nJuda\u00edsmo\nMessi\u00e2nica\nM\u00f3rmom (Jesus Cristo dos Santos dos \u00daltimos Dias)\nProtestante\nTestemunha de Jeov\u00e1\nTradi\u00e7\u00f5es Esot\u00e9ricas\nTradi\u00e7\u00f5es Ind\u00edgenas\nXinto\u00edsmo\nSem Religi\u00e3o"
+  },
+  {
+   "fieldname": "informacoes_profissionais_academicas",
+   "fieldtype": "Section Break",
+   "label": "Informa\u00e7\u00f5es Profissionais e acad\u00eamicas"
+  },
+  {
+   "fieldname": "escolaridade",
+   "fieldtype": "Select",
+   "label": "Escolaridade",
+   "options": "Ensino fundamental incompleto\nEnsino fundamental completo\nEnsino m\u00e9dio incompleto\nEnsino m\u00e9dio completo\nEncino superior incompleto\nEnsino superior completo\nEspecializa\u00e7\u00e3o completa\nEspecializa\u00e7\u00e3o incompleta\nMestrado incompleto\nMestrado completo\nDoutorado incompleto\nDoutorado completo\nP\u00f3s doutorado incompleto\nP\u00f3s doutorado completo"
+  },
+  {
+   "fieldname": "profissao",
+   "fieldtype": "Data",
+   "label": "Profiss\u00e3o"
+  },
+  {
+   "fieldname": "local_de_trabalho",
+   "fieldtype": "Data",
+   "label": "Local de trabalho"
+  },
+  {
+   "fieldname": "endereco_e_dados_de_contato",
+   "fieldtype": "Section Break",
+   "label": "Endere\u00e7o e dados de contato"
+  },
+  {
+   "fieldname": "cep",
+   "fieldtype": "Data",
+   "label": "CEP"
+  },
+  {
+   "fieldname": "endereco",
+   "fieldtype": "Data",
+   "label": "Endere\u00e7o"
+  },
+  {
+   "fieldname": "numero",
+   "fieldtype": "Int",
+   "label": "N\u00famero"
+  },
+  {
+   "fieldname": "complemento",
+   "fieldtype": "Data",
+   "label": "Complemento"
+  },
+  {
+   "fieldname": "estado",
+   "fieldtype": "Select",
+   "label": "Estado",
+   "options": "AC\nAL\nAP\nAM\nBA\nCE\nDF\nES\nGO\nMA\nMT\nMS\nMG\nPA\nPB\nPR\nPE\nPI\nRJ\nRN\nRS\nRO\nRR\nSC\nSP\nSE\nTO"
+  },
+  {
+   "fieldname": "cidade",
+   "fieldtype": "Data",
+   "label": "Cidade"
+  },
+  {
+   "fieldname": "bairro",
+   "fieldtype": "Data",
+   "label": "Bairro"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email"
+  },
+  {
+   "fieldname": "celular",
+   "fieldtype": "Phone",
+   "label": "Celular"
+  },
+  {
+   "fieldname": "telefone_secundario",
+   "fieldtype": "Phone",
+   "label": "Telefone secund\u00e1rio"
+  },
+  {
+   "fieldname": "fluxo_de_registro_tab",
+   "fieldtype": "Tab Break",
+   "label": "Fluxo de registro"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Novo Contato\nConversa Inicial\nVisita Agendada\nAguardar Dados\nFazer Registro\nAcompanhamento\nFila de espera"
+  },
+  {
+   "fieldname": "ramo",
+   "fieldtype": "Select",
+   "label": "Ramo",
+   "options": "Filhotes\nLobinho\nEscoteiro\nS\u00eanior\nPioneiro"
+  },
+  {
+   "fieldname": "tipo_de_registro",
+   "fieldtype": "Select",
+   "label": "Tipo de registro",
+   "options": "Provis\u00f3rio\nDefinitivo"
+  },
+  {
+   "fieldname": "etapas_do_fluxo_section",
+   "fieldtype": "Section Break",
+   "label": "Etapas do fluxo"
+  },
+  {
+   "default": "0",
+   "fieldname": "visita_agendada",
+   "fieldtype": "Check",
+   "label": "Visita agendada"
+  },
+  {
+   "default": "0",
+   "fieldname": "primeira_visita_realizada",
+   "fieldtype": "Check",
+   "label": "Primeira visita realizada"
+  },
+  {
+   "default": "0",
+   "fieldname": "dados_para_registro_enviados",
+   "fieldtype": "Check",
+   "label": "Dados para registro enviados"
+  },
+  {
+   "default": "0",
+   "fieldname": "pesquisa_de_novos_associados_respondida",
+   "fieldtype": "Check",
+   "label": "Pesquisa de novos associados respondida"
+  },
+  {
+   "default": "0",
+   "fieldname": "registro_definitivo_pago",
+   "fieldtype": "Check",
+   "label": "Registro definitivo pago"
+  },
+  {
+   "default": "0",
+   "fieldname": "registro_definitivo_efetivado",
+   "fieldtype": "Check",
+   "label": "Registro definitivo efetivado"
+  },
+  {
+   "default": "0",
+   "fieldname": "registro_criado_no_paxtu",
+   "fieldtype": "Check",
+   "label": "Registro criado no paxtu"
+  },
+  {
+   "default": "0",
+   "fieldname": "registro_provisorio_pago",
+   "fieldtype": "Check",
+   "label": "Registro provis\u00f3rio pago"
+  },
+  {
+   "default": "0",
+   "fieldname": "registro_provisorio_efetivado",
+   "fieldtype": "Check",
+   "label": "Registro provis\u00f3rio efetivado"
+  },
+  {
+   "default": "0",
+   "fieldname": "ficha_medica_preenchida",
+   "fieldtype": "Check",
+   "label": "Ficha m\u00e9dica preenchida"
+  },
+  {
+   "default": "0",
+   "fieldname": "id_escoteiros_criado",
+   "fieldtype": "Check",
+   "label": "id@escoteiros criado"
+  },
+  {
+   "default": "0",
+   "fieldname": "reuniao_de_acolhida_realizada",
+   "fieldtype": "Check",
+   "label": "Reuni\u00e3o de acolhida realizada"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-12-22 18:35:38.673502",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Novo Associado",
+ "naming_rule": "By script",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

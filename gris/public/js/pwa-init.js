@@ -63,6 +63,24 @@
   });
 
   function showInstallPromotion() {
+    // 1. Não mostrar para visitantes (Guest)
+    if (!frappe.session || frappe.session.user === 'Guest') {
+      return;
+    }
+
+    // 2. Não mostrar em páginas públicas específicas, mesmo se logado
+    const publicPaths = [
+      '/manifestacao_interesse',
+      '/login',
+      '/password',
+      '/third_party_apps',
+      '/landing'
+    ];
+    
+    if (publicPaths.some(path => window.location.pathname.startsWith(path))) {
+      return;
+    }
+
     // Adiciona um banner ou botão para instalar o app
     if (frappe && frappe.show_alert) {
       const installButton = `

@@ -1,0 +1,110 @@
+.manifestacao-wrapper .info-section h3 {
+    color: var(--text-color);
+    margin-bottom: 1.5rem;
+}
+
+.manifestacao-wrapper .video-container .ratio {
+    background-color: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+}
+
+.manifestacao-wrapper .card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.08);
+}
+
+/* Disabled Tab Style */
+.nav-tabs .nav-link.disabled {
+    color: #adb5bd; /* Lighter gray */
+    background-color: transparent;
+    border-color: transparent;
+    cursor: not-allowed;
+}
+
+/* Stepper Styles */
+.stepper-wrapper {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.stepper-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.stepper-item::before {
+  position: absolute;
+  content: "";
+  border-bottom: 2px solid #e9ecef;
+  width: 100%;
+  top: 20px;
+  left: -50%;
+  z-index: 2;
+}
+
+.stepper-item::after {
+  position: absolute;
+  content: "";
+  border-bottom: 2px solid #e9ecef;
+  width: 100%;
+  top: 20px;
+  left: 50%;
+  z-index: 2;
+}
+
+.stepper-item .step-counter {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e9ecef;
+  margin-bottom: 6px;
+  color: #6c757d;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.stepper-item.active .step-counter {
+  background-color: #007bff; /* Bootstrap primary */
+  color: #fff;
+}
+
+.stepper-item.completed .step-counter {
+  background-color: #28a745; /* Bootstrap success */
+  color: #fff;
+}
+
+.stepper-item.completed::after {
+  position: absolute;
+  content: "";
+  border-bottom: 2px solid #28a745;
+  width: 100%;
+  top: 20px;
+  left: 50%;
+  z-index: 3;
+}
+
+.stepper-item:first-child::before {
+  content: none;
+}
+.stepper-item:last-child::after {
+  content: none;
+}
+
+.step-name {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-weight: 500;
+    line-height: 1.2;
+}
+

@@ -1,86 +1,123 @@
-{% extends "templates/web_sidebar_base.html" %}
+{% extends "templates/web_sidebar_base.html" %} {% block title %}Associados{% endblock %} {#
+Configura dados da sidebar específicos desta página #} {% set active_link = '/associados' %} {% set
+sidebar_title = 'Associados' %} {% set sidebar_sections = [] %} {% block head_include %} {{ super()
+}} {% endblock %} {% block page_header %}
+<div class="page-header">
+	<div class="page-header__content">
+		<h1 class="page-header__title">Associados</h1>
+		<p class="page-header__subtitle">Gerencie o cadastro e situação dos associados.</p>
+	</div>
+</div>
+{% endblock %} {% block main %}
+<div class="inicio-cards-grid">
+	<a
+		href="/associados/dashboard"
+		class="inicio-card inicio-card--nav card-modern card-modern--clickable"
+	>
+		<div class="inicio-card__icon">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<rect x="3" y="3" width="7" height="7"></rect>
+				<rect x="14" y="3" width="7" height="7"></rect>
+				<rect x="14" y="14" width="7" height="7"></rect>
+				<rect x="3" y="14" width="7" height="7"></rect>
+			</svg>
+		</div>
+		<div class="inicio-card__content">
+			<h2 class="inicio-card__title">Visão Geral</h2>
+			<p class="inicio-card__description">Dashboard com métricas e indicadores</p>
+		</div>
+		<div class="inicio-card__arrow">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M5 12h14M12 5l7 7-7 7" />
+			</svg>
+		</div>
+	</a>
 
-{% block title %}Associados{% endblock %}
+	<a
+		href="/associados/lista"
+		class="inicio-card inicio-card--nav card-modern card-modern--clickable"
+	>
+		<div class="inicio-card__icon">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+				<circle cx="8.5" cy="7" r="4"></circle>
+				<path d="M20 8v6M23 11h-6"></path>
+			</svg>
+		</div>
+		<div class="inicio-card__content">
+			<h2 class="inicio-card__title">Lista de Associados</h2>
+			<p class="inicio-card__description">Consulte todos os associados cadastrados</p>
+		</div>
+		<div class="inicio-card__arrow">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M5 12h14M12 5l7 7-7 7" />
+			</svg>
+		</div>
+	</a>
 
-{# Configura dados da sidebar específicos desta página #}
-{% set active_link = '/associados' %}
-{% set sidebar_title = 'Associados' %}
-{% set sidebar_sections = [] %}
+	<a
+		href="/associados/importar"
+		class="inicio-card inicio-card--nav card-modern card-modern--clickable"
+	>
+		<div class="inicio-card__icon">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+				<polyline points="17 8 12 3 7 8"></polyline>
+				<line x1="12" y1="3" x2="12" y2="15"></line>
+			</svg>
+		</div>
+		<div class="inicio-card__content">
+			<h2 class="inicio-card__title">Importar Associados</h2>
+			<p class="inicio-card__description">Importar ou atualizar dados via PDF</p>
+		</div>
+		<div class="inicio-card__arrow">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M5 12h14M12 5l7 7-7 7" />
+			</svg>
+		</div>
+	</a>
+</div>
 
-{% block head_include %}
-  <link rel="stylesheet" href="/inicio.css">
 {% endblock %}
-
-{% block page_header %}
-  <div class="page-header">
-    <div class="page-header__content">
-      <h1 class="page-header__title">Associados</h1>
-      <p class="page-header__subtitle">Gerencie o cadastro e situação dos associados.</p>
-    </div>
-  </div>
-{% endblock %}
-
-{% block main %}
-  <div class="inicio-cards-grid">
-    <a href="/associados/dashboard" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
-      <div class="inicio-card__icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="7"></rect>
-          <rect x="14" y="3" width="7" height="7"></rect>
-          <rect x="14" y="14" width="7" height="7"></rect>
-          <rect x="3" y="14" width="7" height="7"></rect>
-        </svg>
-      </div>
-      <div class="inicio-card__content">
-        <h2 class="inicio-card__title">Visão Geral</h2>
-        <p class="inicio-card__description">Dashboard com métricas e indicadores</p>
-      </div>
-      <div class="inicio-card__arrow">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
-      </div>
-    </a>
-
-    <a href="/associados/lista" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
-      <div class="inicio-card__icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-          <circle cx="8.5" cy="7" r="4"></circle>
-          <path d="M20 8v6M23 11h-6"></path>
-        </svg>
-      </div>
-      <div class="inicio-card__content">
-        <h2 class="inicio-card__title">Lista de Associados</h2>
-        <p class="inicio-card__description">Consulte todos os associados cadastrados</p>
-      </div>
-      <div class="inicio-card__arrow">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
-      </div>
-    </a>
-
-    <a href="/associados/importar" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
-      <div class="inicio-card__icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="17 8 12 3 7 8"></polyline>
-          <line x1="12" y1="3" x2="12" y2="15"></line>
-        </svg>
-      </div>
-      <div class="inicio-card__content">
-        <h2 class="inicio-card__title">Importar Associados</h2>
-        <p class="inicio-card__description">Importar ou atualizar dados via PDF</p>
-      </div>
-      <div class="inicio-card__arrow">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
-      </div>
-    </a>
-  </div>
-
-  
-{% endblock %}
-

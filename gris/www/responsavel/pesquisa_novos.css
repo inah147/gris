@@ -1,0 +1,58 @@
+/* Alert Modern Styles */
+.alert-modern {
+	display: flex;
+	gap: 0.75rem;
+	padding: 1rem;
+	border-radius: 0.5rem;
+	border: 1px solid transparent;
+	margin-bottom: 1rem;
+}
+.alert-modern--info {
+	background-color: #eff6ff;
+	border-color: #dbeafe;
+	color: #1e40af;
+}
+.alert-modern__icon {
+	width: 1.5rem;
+	height: 1.5rem;
+	flex-shrink: 0;
+}
+.alert-modern__content {
+	flex: 1;
+}
+.alert-modern__description {
+	margin: 0;
+	font-size: 0.875rem;
+	line-height: 1.5rem;
+}
+
+/* NPS Styles */
+.nps-option {
+	cursor: pointer;
+}
+.nps-option input {
+	display: none;
+}
+.nps-circle {
+	width: 40px;
+	height: 40px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	border: 1px solid var(--border-color, #e2e8f0);
+	color: var(--text-secondary, #64748b);
+	font-weight: 500;
+	transition: all 0.2s;
+	background-color: white;
+}
+.nps-option input:checked + .nps-circle {
+	background-color: var(--color-primary, #2563eb);
+	color: white;
+	border-color: var(--color-primary, #2563eb);
+}
+.nps-option:hover input:not(:checked):not(:disabled) + .nps-circle {
+	background-color: #f8fafc;
+	border-color: var(--color-primary, #2563eb);
+	color: var(--color-primary, #2563eb);
+}

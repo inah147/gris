@@ -1,0 +1,434 @@
+/*
+ * CARDS COMPONENT
+ * Cards de navegação e exibição de documentos
+ */
+
+/* ========================================
+   NAVIGATION CARD - Card de Navegação (Início)
+   ======================================== */
+
+.inicio-cards-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+	gap: var(--space-lg, 1.5rem);
+	width: 100%;
+}
+
+@media (max-width: 576px) {
+	.inicio-cards-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+.inicio-card {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: var(--space-lg, 1.5rem);
+	padding: var(--space-lg, 1.5rem);
+	text-decoration: none;
+	position: relative;
+	overflow: hidden;
+	background-color: var(--bg-card, #ffffff);
+	border: var(--border-width, 1px) solid var(--border-color, #e2e8f0);
+	border-radius: var(--radius-lg, 0.75rem);
+	box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.1));
+	transition: all var(--transition-base, 0.2s);
+}
+
+.inicio-card::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 4px;
+	height: 100%;
+	background: var(--color-primary);
+	transform: scaleY(0);
+	transform-origin: top;
+	transition: transform var(--transition-base);
+}
+
+.inicio-card:hover::before {
+	transform: scaleY(1);
+}
+
+.inicio-card:hover {
+	box-shadow: var(--shadow-card-hover, 0 4px 12px rgba(0, 0, 0, 0.15));
+	transform: translateY(-2px);
+	border-color: var(--color-primary, #0d4d91);
+	text-decoration: none;
+}
+
+.inicio-card__icon {
+	width: 56px;
+	height: 56px;
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--color-primary-light);
+	border-radius: var(--radius-lg);
+	color: var(--color-primary);
+	transition: all var(--transition-base);
+}
+
+.inicio-card__icon svg {
+	width: 28px;
+	height: 28px;
+}
+
+.inicio-card__icon--success {
+	background: var(--color-success-light);
+	color: var(--color-success);
+}
+
+.inicio-card__icon--info {
+	background: var(--color-info-light);
+	color: var(--color-info-active);
+}
+
+.inicio-card__icon--warning {
+	background: var(--color-warning-light, #fff7ed);
+	color: var(--color-warning, #c05621);
+}
+
+.inicio-card__icon--purple {
+	background: var(--color-purple-light, #f3e8ff);
+	color: var(--color-purple, #7e22ce);
+}
+
+.inicio-card__icon--pink {
+	background: var(--color-pink-light, #fce7f3);
+	color: var(--color-pink, #db2777);
+}
+
+.inicio-card:hover .inicio-card__icon {
+	transform: scale(1.1) rotate(5deg);
+}
+
+.inicio-card__content {
+	flex: 1;
+	min-width: 0;
+}
+
+.inicio-card__title {
+	font-size: var(--text-xl);
+	font-weight: var(--font-semibold);
+	color: var(--text-primary);
+	margin: 0 0 var(--space-xs) 0;
+	line-height: var(--leading-tight);
+}
+
+.inicio-card__description {
+	font-size: var(--text-sm);
+	color: var(--text-secondary);
+	margin: 0;
+	line-height: var(--leading-relaxed);
+}
+
+.inicio-card__arrow {
+	width: 24px;
+	height: 24px;
+	flex-shrink: 0;
+	color: var(--color-primary);
+	opacity: 0;
+	transform: translateX(-8px);
+	transition: all var(--transition-base);
+}
+
+.inicio-card__arrow svg {
+	width: 100%;
+	height: 100%;
+}
+
+.inicio-card:hover .inicio-card__arrow {
+	opacity: 1;
+	transform: translateX(0);
+}
+
+.inicio-card--nav::before {
+	display: none;
+}
+
+@media (max-width: 768px) {
+	.inicio-card {
+		padding: var(--space-lg, 1.5rem);
+	}
+
+	.inicio-card__icon {
+		width: 48px;
+		height: 48px;
+	}
+
+	.inicio-card__icon svg {
+		width: 24px;
+		height: 24px;
+	}
+
+	.inicio-card__title {
+		font-size: var(--text-lg);
+	}
+
+	.inicio-card__arrow {
+		display: block;
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+@media (max-width: 576px) {
+	.inicio-card {
+		padding: var(--space-md, 1rem);
+		gap: var(--space-md, 1rem);
+	}
+
+	.inicio-card__icon {
+		width: 40px;
+		height: 40px;
+	}
+
+	.inicio-card__icon svg {
+		width: 20px;
+		height: 20px;
+	}
+}
+
+/* ========================================
+   DOCUMENT CARD - Card de Documento (Portal Transparência)
+   ======================================== */
+
+.doc-card {
+	background: var(--bg-card, #ffffff);
+	border: var(--border-width, 1px) solid var(--border-color, #e2e8f0);
+	border-radius: var(--radius-lg, 8px);
+	padding: var(--space-lg, 1.5rem);
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-md, 1rem);
+	transition: all 0.2s ease;
+	box-shadow: var(--shadow-card, 0 1px 3px 0 rgb(0 0 0 / 0.1));
+	height: 100%;
+}
+
+.doc-card:hover {
+	box-shadow: var(--shadow-card-hover, 0 4px 12px rgba(0, 0, 0, 0.15));
+	transform: translateY(-2px);
+	border-color: var(--color-primary, #0d4d91);
+}
+
+.doc-card__icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 56px;
+	height: 56px;
+	border-radius: var(--radius-lg, 8px);
+	background: var(--color-primary-light, #dbeafe);
+	color: var(--color-primary, #1e40af);
+	flex-shrink: 0;
+	transition: all 0.2s ease;
+}
+
+.doc-card:hover .doc-card__icon {
+	transform: scale(1.1) rotate(5deg);
+}
+
+.doc-card__icon svg {
+	width: 28px;
+	height: 28px;
+}
+
+.doc-card__content {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.doc-card__title {
+	font-size: var(--text-base, 1rem);
+	font-weight: var(--font-semibold, 600);
+	color: var(--text-primary, #1e293b);
+	line-height: var(--leading-snug, 1.4);
+	margin: 0;
+}
+
+.doc-card__footer {
+	display: flex;
+	gap: 0.5rem;
+	margin-top: auto;
+}
+
+/* ========================================
+   CARDS - Sistema de Cards Modernos
+   ======================================== */
+
+.card-modern {
+	background-color: var(--bg-card);
+	border: var(--border-width) solid var(--border-color);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-card);
+	overflow: hidden;
+	transition: all var(--transition-base);
+}
+
+.card-modern--flat {
+	box-shadow: none;
+}
+
+.card-modern--clickable {
+	cursor: pointer;
+}
+
+.card-modern--clickable:hover {
+	box-shadow: var(--shadow-card-hover);
+	transform: translateY(-2px);
+	border-color: var(--color-primary);
+}
+
+.card-modern--clickable:active {
+	transform: translateY(0);
+}
+
+.card-modern__header {
+	padding: var(--space-lg) var(--space-lg) var(--space-md);
+	border-bottom: var(--border-width) solid var(--border-color);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-md);
+}
+
+.card-modern__header--no-border {
+	border-bottom: none;
+}
+
+.card-modern__title {
+	font-size: var(--text-lg);
+	font-weight: var(--font-semibold);
+	color: var(--text-primary);
+	margin: 0;
+	line-height: var(--leading-tight);
+}
+
+.card-modern__subtitle {
+	font-size: var(--text-sm);
+	color: var(--text-secondary);
+	margin: var(--space-xs) 0 0;
+}
+
+.card-modern__actions {
+	display: flex;
+	gap: var(--space-sm);
+	align-items: center;
+}
+
+.card-modern__body {
+	padding: var(--space-lg);
+}
+
+.card-modern__body--compact {
+	padding: var(--space-md);
+}
+
+.card-modern__footer {
+	padding: var(--space-md) var(--space-lg);
+	border-top: var(--border-width) solid var(--border-color);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-md);
+	background-color: var(--bg-hover);
+}
+
+.card-modern__footer--no-bg {
+	background-color: transparent;
+}
+
+/* Metric Card (para dashboards) */
+.card-metric {
+	background-color: var(--bg-card);
+	border: var(--border-width) solid var(--border-color);
+	border-radius: var(--radius-lg);
+	padding: var(--space-lg);
+	box-shadow: var(--shadow-card);
+	transition: all var(--transition-base);
+}
+
+.card-metric:hover {
+	box-shadow: var(--shadow-md);
+}
+
+.card-metric__label {
+	font-size: var(--text-xs);
+	font-weight: var(--font-semibold);
+	text-transform: uppercase;
+	color: var(--text-muted);
+	letter-spacing: var(--tracking-wide);
+	margin-bottom: var(--space-xs);
+	display: block;
+}
+
+.card-metric__value {
+	font-size: var(--text-3xl);
+	font-weight: var(--font-bold);
+	color: var(--text-primary);
+	line-height: var(--leading-tight);
+	margin-bottom: var(--space-xs);
+}
+
+.card-metric__change {
+	font-size: var(--text-sm);
+	font-weight: var(--font-medium);
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-xs);
+}
+
+.card-metric__change--positive {
+	color: var(--color-success);
+}
+
+.card-metric__change--negative {
+	color: var(--color-danger);
+}
+
+.card-metric__description {
+	font-size: var(--text-sm);
+	color: var(--text-secondary);
+	margin-top: var(--space-sm);
+}
+
+/* ========================================
+   SPECIALIZED CARDS
+   ======================================== */
+
+/* Conta Card */
+.conta-card {
+	min-height: 120px;
+	transition: all var(--transition-base);
+}
+
+.conta-card .card-modern__body {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
+.conta-card:hover {
+	transform: translateY(-4px);
+}
+
+/* Chart Card */
+.chart-card .chart-container {
+	overflow: visible;
+}
+
+.chart-card .graph-svg-tip {
+	z-index: 50;
+	max-width: calc(100vw - 24px);
+	white-space: normal;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+}

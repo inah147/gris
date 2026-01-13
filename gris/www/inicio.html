@@ -1,161 +1,230 @@
-{% extends "templates/web_sidebar_base.html" %}
-
-{% block title %}Início{% endblock %}
-
-{% set active_link = '/inicio' %}
-
-{% block head_include %}
-  <link rel="stylesheet" href="/inicio.css">
-{% endblock %}
-
-{% block page_header %}
-  <div class="page-header">
-    <div class="page-header__content">
-      <h1 class="page-header__title">Bem-vindo, {{ user_display_name }}!</h1>
-      <p class="page-header__subtitle">Selecione um módulo abaixo para começar.</p>
-    </div>
-  </div>
-{% endblock %}
-
-{% block main %}
-  <div class="inicio-cards-grid">
-    {% if can_associados %}
-      <a href="/associados" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
-        <div class="inicio-card__icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-          </svg>
-        </div>
-        <div class="inicio-card__content">
-          <h2 class="inicio-card__title">Associados</h2>
-          <p class="inicio-card__description">Gerencie o cadastro e situação dos associados.</p>
-        </div>
-        <div class="inicio-card__arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </div>
-      </a>
-    {% endif %}
-
-    {% if can_recepcao %}
-      <a href="/recepcao" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
-        <div class="inicio-card__icon inicio-card__icon--pink">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-            <circle cx="8.5" cy="7" r="4"></circle>
-            <line x1="20" y1="8" x2="20" y2="14"></line>
-            <line x1="23" y1="11" x2="17" y2="11"></line>
-          </svg>
-        </div>
-        <div class="inicio-card__content">
-          <h2 class="inicio-card__title">Novos Associados</h2>
-          <p class="inicio-card__description">Recepção e cadastro de novos associados.</p>
-        </div>
-        <div class="inicio-card__arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </div>
-      </a>
-    {% endif %}
-
-    {% if can_financeiro %}
-      <a href="/financeiro" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
-        <div class="inicio-card__icon inicio-card__icon--success">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-          </svg>
-        </div>
-        <div class="inicio-card__content">
-          <h2 class="inicio-card__title">Financeiro</h2>
-          <p class="inicio-card__description">Gerencie e acompanhe as finanças da UEL.</p>
-        </div>
-        <div class="inicio-card__arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </div>
-      </a>
-    {% endif %}
-
-    {% if can_transparencia %}
-      <a href="/portal_transparencia" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
-        <div class="inicio-card__icon inicio-card__icon--info">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
-            <polyline points="10 9 9 9 8 9"></polyline>
-          </svg>
-        </div>
-        <div class="inicio-card__content">
-          <h2 class="inicio-card__title">Transparência</h2>
-          <p class="inicio-card__description">Acesse documentos e informações públicas.</p>
-        </div>
-        <div class="inicio-card__arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </div>
-      </a>
-    {% endif %}
-
-    {% if can_calendario %}
-      <a href="/calendario" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
-        <div class="inicio-card__icon inicio-card__icon--warning">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
-          </svg>
-        </div>
-        <div class="inicio-card__content">
-          <h2 class="inicio-card__title">Calendário</h2>
-          <p class="inicio-card__description">Acesse e gerencie o calendário de eventos.</p>
-        </div>
-        <div class="inicio-card__arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </div>
-      </a>
-    {% endif %}
-
-    {% if can_responsavel %}
-      <a href="/responsavel" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
-        <div class="inicio-card__icon inicio-card__icon--purple">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
-          </svg>
-        </div>
-        <div class="inicio-card__content">
-          <h2 class="inicio-card__title">Painel do Responsável</h2>
-          <p class="inicio-card__description">Gerencie seus dados e beneficiários.</p>
-        </div>
-        <div class="inicio-card__arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </div>
-      </a>
-    {% endif %}
-    
-    {% if not can_associados and not can_financeiro and not can_transparencia and not can_calendario and not can_responsavel %}
-      <div class="empty-state">
-        <svg class="empty-state__icon" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M12 16v-4M12 8h.01"/>
-        </svg>
-        <h3 class="empty-state__title">Nenhum módulo disponível</h3>
-        <p class="empty-state__description">Você não tem permissão para acessar nenhum módulo. Entre em contato com o administrador do sistema.</p>
-      </div>
-    {% endif %}
-  </div>
+{% extends "templates/web_sidebar_base.html" %} {% block title %}Início{% endblock %} {% set
+active_link = '/inicio' %} {% block head_include %} {{ super() }} {% endblock %} {% block
+page_header %}
+<div class="page-header">
+	<div class="page-header__content">
+		<h1 class="page-header__title">Bem-vindo, {{ user_display_name }}!</h1>
+		<p class="page-header__subtitle">Selecione um módulo abaixo para começar.</p>
+	</div>
+</div>
+{% endblock %} {% block main %}
+<div class="inicio-cards-grid">
+	{% if can_associados %}
+	<a href="/associados" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
+		<div class="inicio-card__icon">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+				<circle cx="9" cy="7" r="4"></circle>
+				<path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+				<path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+			</svg>
+		</div>
+		<div class="inicio-card__content">
+			<h2 class="inicio-card__title">Associados</h2>
+			<p class="inicio-card__description">Gerencie o cadastro e situação dos associados.</p>
+		</div>
+		<div class="inicio-card__arrow">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M5 12h14M12 5l7 7-7 7" />
+			</svg>
+		</div>
+	</a>
+	{% endif %} {% if can_recepcao %}
+	<a href="/recepcao" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
+		<div class="inicio-card__icon inicio-card__icon--pink">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+				<circle cx="8.5" cy="7" r="4"></circle>
+				<line x1="20" y1="8" x2="20" y2="14"></line>
+				<line x1="23" y1="11" x2="17" y2="11"></line>
+			</svg>
+		</div>
+		<div class="inicio-card__content">
+			<h2 class="inicio-card__title">Novos Associados</h2>
+			<p class="inicio-card__description">Recepção e cadastro de novos associados.</p>
+		</div>
+		<div class="inicio-card__arrow">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M5 12h14M12 5l7 7-7 7" />
+			</svg>
+		</div>
+	</a>
+	{% endif %} {% if can_financeiro %}
+	<a href="/financeiro" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
+		<div class="inicio-card__icon inicio-card__icon--success">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+			</svg>
+		</div>
+		<div class="inicio-card__content">
+			<h2 class="inicio-card__title">Financeiro</h2>
+			<p class="inicio-card__description">Gerencie e acompanhe as finanças da UEL.</p>
+		</div>
+		<div class="inicio-card__arrow">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M5 12h14M12 5l7 7-7 7" />
+			</svg>
+		</div>
+	</a>
+	{% endif %} {% if can_transparencia %}
+	<a
+		href="/portal_transparencia"
+		class="inicio-card inicio-card--nav card-modern card-modern--clickable"
+	>
+		<div class="inicio-card__icon inicio-card__icon--info">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+				<polyline points="14 2 14 8 20 8"></polyline>
+				<line x1="16" y1="13" x2="8" y2="13"></line>
+				<line x1="16" y1="17" x2="8" y2="17"></line>
+				<polyline points="10 9 9 9 8 9"></polyline>
+			</svg>
+		</div>
+		<div class="inicio-card__content">
+			<h2 class="inicio-card__title">Transparência</h2>
+			<p class="inicio-card__description">Acesse documentos e informações públicas.</p>
+		</div>
+		<div class="inicio-card__arrow">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M5 12h14M12 5l7 7-7 7" />
+			</svg>
+		</div>
+	</a>
+	{% endif %} {% if can_calendario %}
+	<a href="/calendario" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
+		<div class="inicio-card__icon inicio-card__icon--warning">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+				<line x1="16" y1="2" x2="16" y2="6"></line>
+				<line x1="8" y1="2" x2="8" y2="6"></line>
+				<line x1="3" y1="10" x2="21" y2="10"></line>
+			</svg>
+		</div>
+		<div class="inicio-card__content">
+			<h2 class="inicio-card__title">Calendário</h2>
+			<p class="inicio-card__description">Acesse e gerencie o calendário de eventos.</p>
+		</div>
+		<div class="inicio-card__arrow">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M5 12h14M12 5l7 7-7 7" />
+			</svg>
+		</div>
+	</a>
+	{% endif %} {% if can_responsavel %}
+	<a href="/responsavel" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
+		<div class="inicio-card__icon inicio-card__icon--purple">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+				<circle cx="12" cy="7" r="4"></circle>
+			</svg>
+		</div>
+		<div class="inicio-card__content">
+			<h2 class="inicio-card__title">Painel do Responsável</h2>
+			<p class="inicio-card__description">Gerencie seus dados e beneficiários.</p>
+		</div>
+		<div class="inicio-card__arrow">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M5 12h14M12 5l7 7-7 7" />
+			</svg>
+		</div>
+	</a>
+	{% endif %} {% if not can_associados and not can_financeiro and not can_transparencia and not
+	can_calendario and not can_responsavel %}
+	<div class="empty-state">
+		<svg class="empty-state__icon" viewBox="0 0 24 24">
+			<circle cx="12" cy="12" r="10" />
+			<path d="M12 16v-4M12 8h.01" />
+		</svg>
+		<h3 class="empty-state__title">Nenhum módulo disponível</h3>
+		<p class="empty-state__description">
+			Você não tem permissão para acessar nenhum módulo. Entre em contato com o administrador
+			do sistema.
+		</p>
+	</div>
+	{% endif %}
+</div>
 {% endblock %}

@@ -1,163 +1,239 @@
-{% extends "templates/web_sidebar_base.html" %}
-
-{% block title %}Fila de Espera - Recepção{% endblock %}
-
-{% block head_include %}
-    <link rel="stylesheet" href="/assets/gris/css/components.css">
-    <link rel="stylesheet" href="/recepcao/fila_espera.css">
-    <link rel="stylesheet" href="/assets/frappe/node_modules/frappe-charts/dist/frappe-charts.min.css">
-    <script src="/assets/frappe/node_modules/frappe-charts/dist/frappe-charts.umd.js"></script>
-{% endblock %}
-
-{% block page_header %}
+{% extends "templates/web_sidebar_base.html" %} {% block title %}Fila de Espera - Recepção{%
+endblock %} {% block head_include %} {{ super() }}
+<link rel="stylesheet" href="/recepcao/fila_espera.css" />
+<link
+	rel="stylesheet"
+	href="/assets/frappe/node_modules/frappe-charts/dist/frappe-charts.min.css"
+/>
+<script src="/assets/frappe/node_modules/frappe-charts/dist/frappe-charts.umd.js"></script>
+{% endblock %} {% block page_header %}
 <div class="page-header">
-    <div class="page-header__content">
-        <h1 class="page-header__title">Fila de Espera</h1>
-        <p class="page-header__subtitle">Acompanhe a fila de espera por ramo.</p>
-    </div>
+	<div class="page-header__content">
+		<h1 class="page-header__title">Fila de Espera</h1>
+		<p class="page-header__subtitle">Acompanhe a fila de espera por ramo.</p>
+	</div>
 </div>
-{% endblock %}
-
-{% block main %}
+{% endblock %} {% block main %}
 <div class="kanban-container">
-    {% for ramo in kanban_columns %}
-    <div class="kanban-column" data-ramo="{{ ramo }}">
-        <div class="kanban-column__header">
-            <div>
-                <h3 class="kanban-column__title">{{ ramo }}</h3>
-                <small class="text-muted" style="font-size: 0.75rem; display: flex; align-items: center; gap: 4px; margin-top: 2px;">
-                    {{ vagas_por_ramo[ramo].disponiveis }} vagas disponíveis
-                    <span style="cursor: pointer; display: inline-flex; align-items: center;"
-                       data-ramo="{{ ramo }}"
-                       data-limite="{{ vagas_por_ramo[ramo].limite }}"
-                       data-ativos="{{ vagas_por_ramo[ramo].ativos }}"
-                       data-novos="{{ vagas_por_ramo[ramo].novos }}"
-                       data-saindo="{{ vagas_por_ramo[ramo].saindo }}"
-                       data-disponiveis="{{ vagas_por_ramo[ramo].disponiveis }}"
-                       data-chart-labels='{{ vagas_por_ramo[ramo].chart_labels | tojson }}'
-                       data-chart-values='{{ vagas_por_ramo[ramo].chart_values | tojson }}'
-                       onclick="openVagasModal(this)">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="16" x2="12" y2="12"></line>
-                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                        </svg>
-                    </span>
-                </small>
-            </div>
-            <span class="g-badge g-badge--secondary">{{ kanban_data[ramo]|length }}</span>
-        </div>
-        <div class="kanban-column__body">
-            {% for card in kanban_data[ramo] %}
-            <div class="kanban-card card-modern" 
-                 data-id="{{ card.name }}" 
-                 data-associado="{{ card.associado }}"
-                 data-nome="{{ card.nome_completo }}"
-                 data-responsavel="{{ card.responsavel_nome }}"
-                 data-ramo="{{ ramo }}"
-                 data-posicao="{{ card.posicao }}"
-                 data-previsao="{{ card.previsao }}"
-                 data-data-inclusao="{{ card.dt_inclusao_fila.strftime('%d/%m/%Y') }}">
-                <div class="kanban-card__top">
-                    <span class="g-badge g-badge--primary">#{{ card.posicao }}</span>
-                </div>
-                <div class="kanban-card__main">
-                    <h4 class="kanban-card__title">{{ card.nome_completo }}</h4>
-                    <p class="kanban-card__subtitle">{{ card.responsavel_nome }}</p>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endfor %}
+	{% for ramo in kanban_columns %}
+	<div class="kanban-column" data-ramo="{{ ramo }}">
+		<div class="kanban-column__header">
+			<div>
+				<h3 class="kanban-column__title">{{ ramo }}</h3>
+				<small
+					class="text-muted"
+					style="
+						font-size: 0.75rem;
+						display: flex;
+						align-items: center;
+						gap: 4px;
+						margin-top: 2px;
+					"
+				>
+					{{ vagas_por_ramo[ramo].disponiveis }} vagas disponíveis
+					<span
+						style="cursor: pointer; display: inline-flex; align-items: center"
+						data-ramo="{{ ramo }}"
+						data-limite="{{ vagas_por_ramo[ramo].limite }}"
+						data-ativos="{{ vagas_por_ramo[ramo].ativos }}"
+						data-novos="{{ vagas_por_ramo[ramo].novos }}"
+						data-saindo="{{ vagas_por_ramo[ramo].saindo }}"
+						data-disponiveis="{{ vagas_por_ramo[ramo].disponiveis }}"
+						data-chart-labels="{{ vagas_por_ramo[ramo].chart_labels | tojson }}"
+						data-chart-values="{{ vagas_por_ramo[ramo].chart_values | tojson }}"
+						onclick="openVagasModal(this)"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="14"
+							height="14"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						>
+							<circle cx="12" cy="12" r="10"></circle>
+							<line x1="12" y1="16" x2="12" y2="12"></line>
+							<line x1="12" y1="8" x2="12.01" y2="8"></line>
+						</svg>
+					</span>
+				</small>
+			</div>
+			<span class="g-badge g-badge--secondary">{{ kanban_data[ramo]|length }}</span>
+		</div>
+		<div class="kanban-column__body">
+			{% for card in kanban_data[ramo] %}
+			<div
+				class="kanban-card card-modern"
+				data-id="{{ card.name }}"
+				data-associado="{{ card.associado }}"
+				data-nome="{{ card.nome_completo }}"
+				data-responsavel="{{ card.responsavel_nome }}"
+				data-ramo="{{ ramo }}"
+				data-posicao="{{ card.posicao }}"
+				data-previsao="{{ card.previsao }}"
+				data-data-inclusao="{{ card.dt_inclusao_fila.strftime('%d/%m/%Y') }}"
+			>
+				<div class="kanban-card__top">
+					<span class="g-badge g-badge--primary">#{{ card.posicao }}</span>
+				</div>
+				<div class="kanban-card__main">
+					<h4 class="kanban-card__title">{{ card.nome_completo }}</h4>
+					<p class="kanban-card__subtitle">{{ card.responsavel_nome }}</p>
+				</div>
+			</div>
+			{% endfor %}
+		</div>
+	</div>
+	{% endfor %}
 </div>
 
 <!-- Modal Fila de Espera -->
 <div class="modal-modern d-none" id="modalFilaEspera" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-modern__content">
-            <div class="modal-modern__header">
-                <h5 class="modal-modern__title">Detalhes da Fila de Espera</h5>
-            </div>
-            <div class="modal-modern__body">
-                <div class="info-group">
-                    <label class="info-label">Associado</label>
-                    <div class="info-value" id="modalAssociadoNome"></div>
-                </div>
-                <div class="info-group">
-                    <label class="info-label">Responsável</label>
-                    <div class="info-value" id="modalResponsavelNome"></div>
-                </div>
-                <div class="info-group">
-                    <label class="info-label">Posição na Fila</label>
-                    <div class="info-value" id="modalPosicao"></div>
-                </div>
-                <div class="info-group">
-                    <label class="info-label">Previsão de Chamada</label>
-                    <div class="info-value" id="modalPrevisao"></div>
-                </div>
-                <div class="info-group">
-                    <label class="info-label">Data de Inclusão</label>
-                    <div class="info-value" id="modalDataInclusao"></div>
-                </div>
-                
-                <div class="modal-actions-vertical">
-                    <button class="btn-modern btn-modern--primary w-100" onclick="chamarAssociado()">
-                        Chamar
-                    </button>
-                    <button class="btn-modern btn-modern--outline w-100" onclick="openFicha()">
-                        Abrir Ficha
-                    </button>
-                    <button class="btn-modern btn-modern--outline w-100" onclick="registrarDesistencia()">
-                        Desistência
-                    </button>
-                </div>
-            </div>
-            <div class="modal-modern__footer">
-                <button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>Fechar</button>
-            </div>
-        </div>
-    </div>
+	<div class="modal-dialog">
+		<div class="modal-modern__content">
+			<div class="modal-modern__header">
+				<h5 class="modal-modern__title">Detalhes da Fila de Espera</h5>
+			</div>
+			<div class="modal-modern__body">
+				<div class="info-group">
+					<label class="info-label">Associado</label>
+					<div class="info-value" id="modalAssociadoNome"></div>
+				</div>
+				<div class="info-group">
+					<label class="info-label">Responsável</label>
+					<div class="info-value" id="modalResponsavelNome"></div>
+				</div>
+				<div class="info-group">
+					<label class="info-label">Posição na Fila</label>
+					<div class="info-value" id="modalPosicao"></div>
+				</div>
+				<div class="info-group">
+					<label class="info-label">Previsão de Chamada</label>
+					<div class="info-value" id="modalPrevisao"></div>
+				</div>
+				<div class="info-group">
+					<label class="info-label">Data de Inclusão</label>
+					<div class="info-value" id="modalDataInclusao"></div>
+				</div>
+
+				<div class="modal-actions-vertical">
+					<button
+						class="btn-modern btn-modern--primary w-100"
+						onclick="chamarAssociado()"
+					>
+						Chamar
+					</button>
+					<button class="btn-modern btn-modern--outline w-100" onclick="openFicha()">
+						Abrir Ficha
+					</button>
+					<button
+						class="btn-modern btn-modern--outline w-100"
+						onclick="registrarDesistencia()"
+					>
+						Desistência
+					</button>
+				</div>
+			</div>
+			<div class="modal-modern__footer">
+				<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>
+					Fechar
+				</button>
+			</div>
+		</div>
+	</div>
 </div>
 
 <!-- Modal Detalhes Vagas -->
 <div class="modal-modern d-none" id="modalVagas" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-modern__content">
-            <div class="modal-modern__header">
-                <h5 class="modal-modern__title">Cálculo de Vagas - <span id="modalVagasRamo"></span></h5>
-            </div>
-            <div class="modal-modern__body">
-                <div class="info-group" style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 8px;">
-                    <span class="text-muted">Limite de vagas no ramo</span>
-                    <span class="font-weight-bold" id="vagasLimite"></span>
-                </div>
-                <div class="info-group" style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 8px;">
-                    <span class="text-muted">(-) Associados ativos</span>
-                    <span class="font-weight-bold" id="vagasAtivos"></span>
-                </div>
-                <div class="info-group" style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 8px;">
-                    <span class="text-muted">(-) Novos associados (em processo)</span>
-                    <span class="font-weight-bold" id="vagasNovos"></span>
-                </div>
-                <div class="info-group" style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 8px;">
-                    <span class="text-muted">(+) Atingindo idade limite (6 meses)</span>
-                    <span class="font-weight-bold" id="vagasSaindo"></span>
-                </div>
-                <div class="info-group" style="display: flex; justify-content: space-between; margin-top: 16px; font-size: 1.1em;">
-                    <span class="font-weight-bold">Total Disponível</span>
-                    <span class="font-weight-bold" id="vagasDisponiveis" style="color: var(--color-primary);"></span>
-                </div>
-                
-                <div id="vagasChartContainer" style="margin-top: 24px;">
-                    <h6 style="margin-bottom: 12px; font-weight: 600;">Previsão de Vagas (Próximos 12 meses)</h6>
-                    <div id="vagasChart" style="min-height: 250px;"></div>
-                </div>
-            </div>
-            <div class="modal-modern__footer">
-                <button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>Fechar</button>
-            </div>
-        </div>
-    </div>
+	<div class="modal-dialog">
+		<div class="modal-modern__content">
+			<div class="modal-modern__header">
+				<h5 class="modal-modern__title">
+					Cálculo de Vagas - <span id="modalVagasRamo"></span>
+				</h5>
+			</div>
+			<div class="modal-modern__body">
+				<div
+					class="info-group"
+					style="
+						display: flex;
+						justify-content: space-between;
+						border-bottom: 1px solid #eee;
+						padding-bottom: 8px;
+					"
+				>
+					<span class="text-muted">Limite de vagas no ramo</span>
+					<span class="font-weight-bold" id="vagasLimite"></span>
+				</div>
+				<div
+					class="info-group"
+					style="
+						display: flex;
+						justify-content: space-between;
+						border-bottom: 1px solid #eee;
+						padding-bottom: 8px;
+					"
+				>
+					<span class="text-muted">(-) Associados ativos</span>
+					<span class="font-weight-bold" id="vagasAtivos"></span>
+				</div>
+				<div
+					class="info-group"
+					style="
+						display: flex;
+						justify-content: space-between;
+						border-bottom: 1px solid #eee;
+						padding-bottom: 8px;
+					"
+				>
+					<span class="text-muted">(-) Novos associados (em processo)</span>
+					<span class="font-weight-bold" id="vagasNovos"></span>
+				</div>
+				<div
+					class="info-group"
+					style="
+						display: flex;
+						justify-content: space-between;
+						border-bottom: 1px solid #eee;
+						padding-bottom: 8px;
+					"
+				>
+					<span class="text-muted">(+) Atingindo idade limite (6 meses)</span>
+					<span class="font-weight-bold" id="vagasSaindo"></span>
+				</div>
+				<div
+					class="info-group"
+					style="
+						display: flex;
+						justify-content: space-between;
+						margin-top: 16px;
+						font-size: 1.1em;
+					"
+				>
+					<span class="font-weight-bold">Total Disponível</span>
+					<span
+						class="font-weight-bold"
+						id="vagasDisponiveis"
+						style="color: var(--color-primary)"
+					></span>
+				</div>
+
+				<div id="vagasChartContainer" style="margin-top: 24px">
+					<h6 style="margin-bottom: 12px; font-weight: 600">
+						Previsão de Vagas (Próximos 12 meses)
+					</h6>
+					<div id="vagasChart" style="min-height: 250px"></div>
+				</div>
+			</div>
+			<div class="modal-modern__footer">
+				<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>
+					Fechar
+				</button>
+			</div>
+		</div>
+	</div>
 </div>
 {% endblock %}

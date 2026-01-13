@@ -1,428 +1,609 @@
-{% extends "templates/web_sidebar_base.html" %}
-
-{% block title %}Visão Geral - Recepção{% endblock %}
-
-{% block head_include %}
-    <link rel="stylesheet" href="/assets/gris/css/components.css">
-    <link rel="stylesheet" href="/recepcao/visao_geral.css">
-{% endblock %}
-
-{% block page_header %}
+{% extends "templates/web_sidebar_base.html" %} {% block title %}Visão Geral - Recepção{% endblock
+%} {% block head_include %} {{ super() }}
+<link rel="stylesheet" href="/recepcao/visao_geral.css" />
+{% endblock %} {% block page_header %}
 <div class="page-header">
-    <div class="page-header__content">
-        <h1 class="page-header__title">Visão Geral</h1>
-        <p class="page-header__subtitle">Acompanhe o fluxo de novos associados.</p>
-    </div>
+	<div class="page-header__content">
+		<h1 class="page-header__title">Visão Geral</h1>
+		<p class="page-header__subtitle">Acompanhe o fluxo de novos associados.</p>
+	</div>
 </div>
-{% endblock %}
-
-{% block main %}
+{% endblock %} {% block main %}
 <div class="kanban-container">
-    {% for status in kanban_columns %}
-    <div class="kanban-column" data-status="{{ status }}">
-        <div class="kanban-column__header">
-            <h3 class="kanban-column__title">
-                {% if status == 'Aguardar Dados' %}
-                    Aguardando dados
-                {% else %}
-                    {{ status }}
-                {% endif %}
-            </h3>
-            <span class="g-badge g-badge--secondary">{{ kanban_data[status]|length }}</span>
-        </div>
-        <div class="kanban-column__body">
-            {% for card in kanban_data[status] %}
-            <div class="kanban-card card-modern" 
-                 data-id="{{ card.name }}" 
-                 data-status="{{ status }}"
-                 data-responsavel="{{ card.responsavel_recepcao or '' }}"
-                 data-nome="{{ card.nome_completo }}"
-                 data-responsavel-associado="{{ card.responsavel_associado or '' }}"
-                 data-ramo="{{ card.ramo or '' }}"
-                 data-visita-data="{{ card.visita_data or '' }}"
-                 data-visita-confirmada="{{ 1 if card.visita_confirmada else 0 }}"
-                 data-steps="{{ card.steps_json|e }}">
-                <div class="kanban-card__top">
-                    {% if card.ramo %}
-                    <span class="g-badge g-badge--{{ card.ramo_class }}">{{ card.ramo }}</span>
-                    {% endif %}
-                    {% if card.visita_confirmada %}
-                    <span class="g-badge g-badge--success" style="margin-left: 4px;">Visita Confirmada</span>
-                    {% endif %}
-                </div>
-                <div class="kanban-card__main">
-                    <h4 class="kanban-card__title">{{ card.nome_completo }}</h4>
-                    {% if card.responsavel_associado %}
-                    <p class="kanban-card__subtitle">{{ card.responsavel_associado }}</p>
-                    {% endif %}
-                    <div class="kanban-card__separator"></div>
-                    <div class="kanban-card__meta">
-                        <div class="kanban-card__avatar" title="{{ card.recepcao_name }}">
-                            {{ card.recepcao_name[:1] }}
-                        </div>
-                        <span>{{ card.recepcao_name }}</span>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endfor %}
+	{% for status in kanban_columns %}
+	<div class="kanban-column" data-status="{{ status }}">
+		<div class="kanban-column__header">
+			<h3 class="kanban-column__title">
+				{% if status == 'Aguardar Dados' %} Aguardando dados {% else %} {{ status }} {%
+				endif %}
+			</h3>
+			<span class="g-badge g-badge--secondary">{{ kanban_data[status]|length }}</span>
+		</div>
+		<div class="kanban-column__body">
+			{% for card in kanban_data[status] %}
+			<div
+				class="kanban-card card-modern"
+				data-id="{{ card.name }}"
+				data-status="{{ status }}"
+				data-responsavel="{{ card.responsavel_recepcao or '' }}"
+				data-nome="{{ card.nome_completo }}"
+				data-responsavel-associado="{{ card.responsavel_associado or '' }}"
+				data-ramo="{{ card.ramo or '' }}"
+				data-visita-data="{{ card.visita_data or '' }}"
+				data-visita-confirmada="{{ 1 if card.visita_confirmada else 0 }}"
+				data-steps="{{ card.steps_json|e }}"
+			>
+				<div class="kanban-card__top">
+					{% if card.ramo %}
+					<span class="g-badge g-badge--{{ card.ramo_class }}">{{ card.ramo }}</span>
+					{% endif %} {% if card.visita_confirmada %}
+					<span class="g-badge g-badge--success" style="margin-left: 4px"
+						>Visita Confirmada</span
+					>
+					{% endif %}
+				</div>
+				<div class="kanban-card__main">
+					<h4 class="kanban-card__title">{{ card.nome_completo }}</h4>
+					{% if card.responsavel_associado %}
+					<p class="kanban-card__subtitle">{{ card.responsavel_associado }}</p>
+					{% endif %}
+					<div class="kanban-card__separator"></div>
+					<div class="kanban-card__meta">
+						<div class="kanban-card__avatar" title="{{ card.recepcao_name }}">
+							{{ card.recepcao_name[:1] }}
+						</div>
+						<span>{{ card.recepcao_name }}</span>
+					</div>
+				</div>
+			</div>
+			{% endfor %}
+		</div>
+	</div>
+	{% endfor %}
 </div>
 
 <!-- Modal Novo Contato -->
 <div class="modal-modern d-none" id="modalNovoContato" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-modern__content">
-            <div class="modal-modern__header">
-                <h5 class="modal-modern__title">Novo Contato</h5>
-            </div>
-            <div class="modal-modern__body">
-                <div class="info-group">
-                    <label class="info-label">Associado</label>
-                    <div class="info-value" id="modalAssociadoNome"></div>
-                </div>
-                <div class="info-group">
-                    <label class="info-label">Responsável</label>
-                    <div class="info-value" id="modalResponsavelNome"></div>
-                </div>
-                <div class="info-group">
-                    <label class="info-label">Ramo</label>
-                    <div class="info-value" id="modalRamo"></div>
-                </div>
-                <div class="form-group-modern">
-                    <label class="form-label-modern" for="responsavelRecepcao">Responsável pela Recepção</label>
-                    <select class="form-input-modern" id="responsavelRecepcao">
-                        <option value="">Selecione...</option>
-                        {% for user in recepcao_users %}
-                        <option value="{{ user.name }}">{{ user.full_name }}</option>
-                        {% endfor %}
-                    </select>
-                    <p class="form-helper-text">Selecione quem será o responsável por este novo associado.</p>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-modern btn-modern--primary" id="btnMoverConversa" disabled onclick="moverParaConversaInicial()">
-                        Mover para Conversa Inicial
-                    </button>
-                    <button type="button" class="btn-modern btn-modern--outline" onclick="openFicha()">Abrir Ficha</button>
-                </div>
-            </div>
-            <div class="modal-modern__footer">
-                <button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>Fechar</button>
-            </div>
-        </div>
-    </div>
+	<div class="modal-dialog">
+		<div class="modal-modern__content">
+			<div class="modal-modern__header">
+				<h5 class="modal-modern__title">Novo Contato</h5>
+			</div>
+			<div class="modal-modern__body">
+				<div class="info-group">
+					<label class="info-label">Associado</label>
+					<div class="info-value" id="modalAssociadoNome"></div>
+				</div>
+				<div class="info-group">
+					<label class="info-label">Responsável</label>
+					<div class="info-value" id="modalResponsavelNome"></div>
+				</div>
+				<div class="info-group">
+					<label class="info-label">Ramo</label>
+					<div class="info-value" id="modalRamo"></div>
+				</div>
+				<div class="form-group-modern">
+					<label class="form-label-modern" for="responsavelRecepcao"
+						>Responsável pela Recepção</label
+					>
+					<select class="form-input-modern" id="responsavelRecepcao">
+						<option value="">Selecione...</option>
+						{% for user in recepcao_users %}
+						<option value="{{ user.name }}">{{ user.full_name }}</option>
+						{% endfor %}
+					</select>
+					<p class="form-helper-text">
+						Selecione quem será o responsável por este novo associado.
+					</p>
+				</div>
+				<div class="modal-actions">
+					<button
+						type="button"
+						class="btn-modern btn-modern--primary"
+						id="btnMoverConversa"
+						disabled
+						onclick="moverParaConversaInicial()"
+					>
+						Mover para Conversa Inicial
+					</button>
+					<button
+						type="button"
+						class="btn-modern btn-modern--outline"
+						onclick="openFicha()"
+					>
+						Abrir Ficha
+					</button>
+				</div>
+			</div>
+			<div class="modal-modern__footer">
+				<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>
+					Fechar
+				</button>
+			</div>
+		</div>
+	</div>
 </div>
 
 <!-- Modal Conversa Inicial -->
 <div class="modal-modern d-none" id="modalConversaInicial" tabindex="-1">
-    <div class="modal-dialog modal-dialog-scrollable">
-        <div class="modal-modern__content">
-            <div class="modal-modern__header">
-                <h5 class="modal-modern__title">Conversa Inicial</h5>
-            </div>
-            <div class="modal-modern__body">
-                <div class="info-group">
-                    <label class="info-label">Associado</label>
-                    <div class="info-value" id="ci_associado_nome"></div>
-                </div>
-                <div class="info-group">
-                    <label class="info-label">Responsável</label>
-                    <div class="info-value" id="ci_responsavel_nome"></div>
-                </div>
-                <div class="form-group-modern">
-                    <label class="form-label-modern" for="ci_ramo">Ramo</label>
-                    <select class="form-input-modern" id="ci_ramo">
-                        <option value="Filhotes">Filhotes</option>
-                        <option value="Lobinho">Lobinho</option>
-                        <option value="Escoteiro">Escoteiro</option>
-                        <option value="Sênior">Sênior</option>
-                        <option value="Pioneiro">Pioneiro</option>
-                    </select>
-                </div>
-                <div class="form-group-modern">
-                    <label class="form-label-modern" for="ci_responsavel_acompanhamento">Responsável pelo Acompanhamento</label>
-                    <select class="form-input-modern" id="ci_responsavel_acompanhamento">
-                        <option value="">Selecione...</option>
-                        {% for user in recepcao_users %}
-                        <option value="{{ user.name }}">{{ user.full_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                <div class="modal-actions-vertical">
-                    <button type="button" class="btn-modern btn-modern--primary" onclick="openAgendarVisita()">Agendar Visita</button>
-                    <button type="button" class="btn-modern btn-modern--outline" onclick="openFicha()">Abrir Ficha</button>
-                    <button type="button" class="btn-modern btn-modern--outline" onclick="registrarDesistencia()">Desistência</button>
-                    <button type="button" class="btn-modern btn-modern--outline" onclick="enviarFilaEspera()">Enviar para Fila de Espera</button>
-                </div>
-            </div>
-            <div class="modal-modern__footer">
-                <button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>Fechar</button>
-            </div>
-        </div>
-    </div>
+	<div class="modal-dialog modal-dialog-scrollable">
+		<div class="modal-modern__content">
+			<div class="modal-modern__header">
+				<h5 class="modal-modern__title">Conversa Inicial</h5>
+			</div>
+			<div class="modal-modern__body">
+				<div class="info-group">
+					<label class="info-label">Associado</label>
+					<div class="info-value" id="ci_associado_nome"></div>
+				</div>
+				<div class="info-group">
+					<label class="info-label">Responsável</label>
+					<div class="info-value" id="ci_responsavel_nome"></div>
+				</div>
+				<div class="form-group-modern">
+					<label class="form-label-modern" for="ci_ramo">Ramo</label>
+					<select class="form-input-modern" id="ci_ramo">
+						<option value="Filhotes">Filhotes</option>
+						<option value="Lobinho">Lobinho</option>
+						<option value="Escoteiro">Escoteiro</option>
+						<option value="Sênior">Sênior</option>
+						<option value="Pioneiro">Pioneiro</option>
+					</select>
+				</div>
+				<div class="form-group-modern">
+					<label class="form-label-modern" for="ci_responsavel_acompanhamento"
+						>Responsável pelo Acompanhamento</label
+					>
+					<select class="form-input-modern" id="ci_responsavel_acompanhamento">
+						<option value="">Selecione...</option>
+						{% for user in recepcao_users %}
+						<option value="{{ user.name }}">{{ user.full_name }}</option>
+						{% endfor %}
+					</select>
+				</div>
+
+				<div class="modal-actions-vertical">
+					<button
+						type="button"
+						class="btn-modern btn-modern--primary"
+						onclick="openAgendarVisita()"
+					>
+						Agendar Visita
+					</button>
+					<button
+						type="button"
+						class="btn-modern btn-modern--outline"
+						onclick="openFicha()"
+					>
+						Abrir Ficha
+					</button>
+					<button
+						type="button"
+						class="btn-modern btn-modern--outline"
+						onclick="registrarDesistencia()"
+					>
+						Desistência
+					</button>
+					<button
+						type="button"
+						class="btn-modern btn-modern--outline"
+						onclick="enviarFilaEspera()"
+					>
+						Enviar para Fila de Espera
+					</button>
+				</div>
+			</div>
+			<div class="modal-modern__footer">
+				<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>
+					Fechar
+				</button>
+			</div>
+		</div>
+	</div>
 </div>
 
 <!-- Modal Agendar Visita -->
 <div class="modal-modern d-none" id="modalAgendarVisita" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-modern__content">
-            <div class="modal-modern__header">
-                <h5 class="modal-modern__title">Agendar Visita</h5>
-            </div>
-            <div class="modal-modern__body">
-                <div class="form-group-modern">
-                    <label class="form-label-modern">Data Disponível</label>
-                    <select class="form-input-modern" id="av_data">
-                        <option value="">Carregando...</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-modern__footer">
-                <button type="button" class="btn-modern btn-modern--ghost" onclick="closeAgendarVisita()">Cancelar</button>
-                <button type="button" class="btn-modern btn-modern--primary" onclick="confirmarAgendamento()">Confirmar</button>
-            </div>
-        </div>
-    </div>
+	<div class="modal-dialog">
+		<div class="modal-modern__content">
+			<div class="modal-modern__header">
+				<h5 class="modal-modern__title">Agendar Visita</h5>
+			</div>
+			<div class="modal-modern__body">
+				<div class="form-group-modern">
+					<label class="form-label-modern">Data Disponível</label>
+					<select class="form-input-modern" id="av_data">
+						<option value="">Carregando...</option>
+					</select>
+				</div>
+			</div>
+			<div class="modal-modern__footer">
+				<button
+					type="button"
+					class="btn-modern btn-modern--ghost"
+					onclick="closeAgendarVisita()"
+				>
+					Cancelar
+				</button>
+				<button
+					type="button"
+					class="btn-modern btn-modern--primary"
+					onclick="confirmarAgendamento()"
+				>
+					Confirmar
+				</button>
+			</div>
+		</div>
+	</div>
 </div>
 
 <!-- Modal Confirmar Desistência -->
 <div class="modal-modern d-none" id="modalConfirmarDesistencia" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-modern__content">
-            <div class="modal-modern__header">
-                <h5 class="modal-modern__title">Confirmar Desistência</h5>
-            </div>
-            <div class="modal-modern__body">
-                <div class="alert-modern alert-modern--warning mb-3">
-                    <div class="alert-modern__content">
-                        <p class="mb-0">Tem certeza que deseja registrar a desistência deste associado? Esta ação não pode ser desfeita.</p>
-                    </div>
-                </div>
-                <p class="text-muted mb-3">Ao confirmar, o registro do Novo Associado será excluído. Se o responsável não tiver outros vínculos, seu cadastro também será removido.</p>
-                <div class="form-group-modern">
-                    <label class="form-label-modern">Motivo da Desistência</label>
-                    <textarea class="form-input-modern" id="cd_motivo" rows="3" placeholder="Informe o motivo..."></textarea>
-                </div>
-            </div>
-            <div class="modal-modern__footer">
-                <button type="button" class="btn-modern btn-modern--ghost" onclick="closeConfirmarDesistencia()">Cancelar</button>
-                <button type="button" class="btn-modern btn-modern--danger" onclick="confirmarDesistencia()">Confirmar Desistência</button>
-            </div>
-        </div>
-    </div>
+	<div class="modal-dialog">
+		<div class="modal-modern__content">
+			<div class="modal-modern__header">
+				<h5 class="modal-modern__title">Confirmar Desistência</h5>
+			</div>
+			<div class="modal-modern__body">
+				<div class="alert-modern alert-modern--warning mb-3">
+					<div class="alert-modern__content">
+						<p class="mb-0">
+							Tem certeza que deseja registrar a desistência deste associado? Esta
+							ação não pode ser desfeita.
+						</p>
+					</div>
+				</div>
+				<p class="text-muted mb-3">
+					Ao confirmar, o registro do Novo Associado será excluído. Se o responsável não
+					tiver outros vínculos, seu cadastro também será removido.
+				</p>
+				<div class="form-group-modern">
+					<label class="form-label-modern">Motivo da Desistência</label>
+					<textarea
+						class="form-input-modern"
+						id="cd_motivo"
+						rows="3"
+						placeholder="Informe o motivo..."
+					></textarea>
+				</div>
+			</div>
+			<div class="modal-modern__footer">
+				<button
+					type="button"
+					class="btn-modern btn-modern--ghost"
+					onclick="closeConfirmarDesistencia()"
+				>
+					Cancelar
+				</button>
+				<button
+					type="button"
+					class="btn-modern btn-modern--danger"
+					onclick="confirmarDesistencia()"
+				>
+					Confirmar Desistência
+				</button>
+			</div>
+		</div>
+	</div>
 </div>
 
 <!-- Modal Confirmar Fila de Espera -->
 <div class="modal-modern d-none" id="modalConfirmarFilaEspera" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-modern__content">
-            <div class="modal-modern__header">
-                <h5 class="modal-modern__title">Confirmar Fila de Espera</h5>
-            </div>
-            <div class="modal-modern__body">
-                <p>Deseja enviar este associado para a Fila de Espera?</p>
-            </div>
-            <div class="modal-modern__footer">
-                <button type="button" class="btn-modern btn-modern--ghost" onclick="closeConfirmarFilaEspera()">Cancelar</button>
-                <button type="button" class="btn-modern btn-modern--primary" onclick="confirmarFilaEspera()">Confirmar</button>
-            </div>
-        </div>
-    </div>
+	<div class="modal-dialog">
+		<div class="modal-modern__content">
+			<div class="modal-modern__header">
+				<h5 class="modal-modern__title">Confirmar Fila de Espera</h5>
+			</div>
+			<div class="modal-modern__body">
+				<p>Deseja enviar este associado para a Fila de Espera?</p>
+			</div>
+			<div class="modal-modern__footer">
+				<button
+					type="button"
+					class="btn-modern btn-modern--ghost"
+					onclick="closeConfirmarFilaEspera()"
+				>
+					Cancelar
+				</button>
+				<button
+					type="button"
+					class="btn-modern btn-modern--primary"
+					onclick="confirmarFilaEspera()"
+				>
+					Confirmar
+				</button>
+			</div>
+		</div>
+	</div>
 </div>
 
 <!-- Modal Visita Agendada -->
 <div class="modal-modern d-none" id="modalVisitaAgendada" tabindex="-1">
-    <div class="modal-dialog modal-dialog-scrollable">
-        <div class="modal-modern__content">
-            <div class="modal-modern__header">
-                <h5 class="modal-modern__title">Visita Agendada</h5>
-            </div>
-            <div class="modal-modern__body">
-                <div class="info-group">
-                    <label class="info-label">Associado</label>
-                    <div class="info-value" id="va_associado_nome"></div>
-                </div>
-                <div class="info-group">
-                    <label class="info-label">Responsável</label>
-                    <div class="info-value" id="va_responsavel_nome"></div>
-                </div>
+	<div class="modal-dialog modal-dialog-scrollable">
+		<div class="modal-modern__content">
+			<div class="modal-modern__header">
+				<h5 class="modal-modern__title">Visita Agendada</h5>
+			</div>
+			<div class="modal-modern__body">
+				<div class="info-group">
+					<label class="info-label">Associado</label>
+					<div class="info-value" id="va_associado_nome"></div>
+				</div>
+				<div class="info-group">
+					<label class="info-label">Responsável</label>
+					<div class="info-value" id="va_responsavel_nome"></div>
+				</div>
 
-                <div class="info-group">
-                    <label class="info-label">Data da Visita</label>
-                    <div class="info-value" id="va_data_visita"></div>
-                </div>
+				<div class="info-group">
+					<label class="info-label">Data da Visita</label>
+					<div class="info-value" id="va_data_visita"></div>
+				</div>
 
-                <div class="info-group">
-                    <label class="info-label">Status da Visita</label>
-                    <div class="info-value" id="va_status_visita"></div>
-                </div>
-                
-                <div class="form-group-modern">
-                    <label class="form-label-modern" for="va_responsavel_recepcao">Responsável pela Recepção</label>
-                    <select class="form-input-modern" id="va_responsavel_recepcao">
-                        <option value="">Selecione...</option>
-                        {% for user in recepcao_users %}
-                        <option value="{{ user.name }}">{{ user.full_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
+				<div class="info-group">
+					<label class="info-label">Status da Visita</label>
+					<div class="info-value" id="va_status_visita"></div>
+				</div>
 
-                <div class="form-group-modern">
-                    <label class="form-label-modern" for="va_ramo">Ramo</label>
-                    <select class="form-input-modern" id="va_ramo">
-                        <option value="Filhotes">Filhotes</option>
-                        <option value="Lobinho">Lobinho</option>
-                        <option value="Escoteiro">Escoteiro</option>
-                        <option value="Sênior">Sênior</option>
-                        <option value="Pioneiro">Pioneiro</option>
-                    </select>
-                </div>
-                
-                <div class="modal-actions-vertical">
-                    <button type="button" class="btn-modern btn-modern--primary" id="btnConfirmarVisita" onclick="confirmarVisitaRealizada()">Confirmar Visita</button>
-                    <button type="button" class="btn-modern btn-modern--warning d-none" id="btnRemoverConfirmacao" onclick="removerConfirmacaoVisita()">Remover Confirmação</button>
-                    <button type="button" class="btn-modern btn-modern--primary" onclick="registrarRecepcaoRealizada()">Recepção Realizada</button>
-                    <button type="button" class="btn-modern btn-modern--outline" onclick="openAgendarVisita()">Reagendar Visita</button>
-                    <button type="button" class="btn-modern btn-modern--outline" onclick="openFicha()">Abrir Ficha</button>
-                    <button type="button" class="btn-modern btn-modern--outline" onclick="registrarDesistencia()">Desistência</button>
-                </div>
-            </div>
-            <div class="modal-modern__footer">
-                <button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>Fechar</button>
-            </div>
-        </div>
-    </div>
+				<div class="form-group-modern">
+					<label class="form-label-modern" for="va_responsavel_recepcao"
+						>Responsável pela Recepção</label
+					>
+					<select class="form-input-modern" id="va_responsavel_recepcao">
+						<option value="">Selecione...</option>
+						{% for user in recepcao_users %}
+						<option value="{{ user.name }}">{{ user.full_name }}</option>
+						{% endfor %}
+					</select>
+				</div>
+
+				<div class="form-group-modern">
+					<label class="form-label-modern" for="va_ramo">Ramo</label>
+					<select class="form-input-modern" id="va_ramo">
+						<option value="Filhotes">Filhotes</option>
+						<option value="Lobinho">Lobinho</option>
+						<option value="Escoteiro">Escoteiro</option>
+						<option value="Sênior">Sênior</option>
+						<option value="Pioneiro">Pioneiro</option>
+					</select>
+				</div>
+
+				<div class="modal-actions-vertical">
+					<button
+						type="button"
+						class="btn-modern btn-modern--primary"
+						id="btnConfirmarVisita"
+						onclick="confirmarVisitaRealizada()"
+					>
+						Confirmar Visita
+					</button>
+					<button
+						type="button"
+						class="btn-modern btn-modern--warning d-none"
+						id="btnRemoverConfirmacao"
+						onclick="removerConfirmacaoVisita()"
+					>
+						Remover Confirmação
+					</button>
+					<button
+						type="button"
+						class="btn-modern btn-modern--primary"
+						onclick="registrarRecepcaoRealizada()"
+					>
+						Recepção Realizada
+					</button>
+					<button
+						type="button"
+						class="btn-modern btn-modern--outline"
+						onclick="openAgendarVisita()"
+					>
+						Reagendar Visita
+					</button>
+					<button
+						type="button"
+						class="btn-modern btn-modern--outline"
+						onclick="openFicha()"
+					>
+						Abrir Ficha
+					</button>
+					<button
+						type="button"
+						class="btn-modern btn-modern--outline"
+						onclick="registrarDesistencia()"
+					>
+						Desistência
+					</button>
+				</div>
+			</div>
+			<div class="modal-modern__footer">
+				<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>
+					Fechar
+				</button>
+			</div>
+		</div>
+	</div>
 </div>
 
 <!-- Modal Aguardar Dados -->
 <div class="modal-modern d-none" id="modalAguardarDados" tabindex="-1">
-    <div class="modal-dialog modal-dialog-scrollable">
-        <div class="modal-modern__content">
-            <div class="modal-modern__header">
-                <h5 class="modal-modern__title">Aguardando Dados</h5>
-            </div>
-            <div class="modal-modern__body">
-                <div class="info-group">
-                    <label class="info-label">Associado</label>
-                    <div class="info-value" id="ad_associado_nome"></div>
-                </div>
-                <div class="info-group">
-                    <label class="info-label">Responsável</label>
-                    <div class="info-value" id="ad_responsavel_nome"></div>
-                </div>
-                
-                <div class="form-group-modern">
-                    <label class="form-label-modern" for="ad_responsavel_recepcao">Responsável pela Recepção</label>
-                    <select class="form-input-modern" id="ad_responsavel_recepcao">
-                        <option value="">Selecione...</option>
-                        {% for user in recepcao_users %}
-                        <option value="{{ user.name }}">{{ user.full_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
+	<div class="modal-dialog modal-dialog-scrollable">
+		<div class="modal-modern__content">
+			<div class="modal-modern__header">
+				<h5 class="modal-modern__title">Aguardando Dados</h5>
+			</div>
+			<div class="modal-modern__body">
+				<div class="info-group">
+					<label class="info-label">Associado</label>
+					<div class="info-value" id="ad_associado_nome"></div>
+				</div>
+				<div class="info-group">
+					<label class="info-label">Responsável</label>
+					<div class="info-value" id="ad_responsavel_nome"></div>
+				</div>
 
-                <div class="timeline-container" id="ad_timeline">
-                    <!-- Timeline items will be injected here -->
-                </div>
-                
-                <div class="modal-actions-vertical mt-4">
-                    <button type="button" class="btn-modern btn-modern--outline" onclick="openFicha()">Abrir Ficha</button>
-                    <button type="button" class="btn-modern btn-modern--outline" onclick="registrarDesistencia()">Desistência</button>
-                </div>
-            </div>
-            <div class="modal-modern__footer">
-                <button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>Fechar</button>
-            </div>
-        </div>
-    </div>
+				<div class="form-group-modern">
+					<label class="form-label-modern" for="ad_responsavel_recepcao"
+						>Responsável pela Recepção</label
+					>
+					<select class="form-input-modern" id="ad_responsavel_recepcao">
+						<option value="">Selecione...</option>
+						{% for user in recepcao_users %}
+						<option value="{{ user.name }}">{{ user.full_name }}</option>
+						{% endfor %}
+					</select>
+				</div>
+
+				<div class="timeline-container" id="ad_timeline">
+					<!-- Timeline items will be injected here -->
+				</div>
+
+				<div class="modal-actions-vertical mt-4">
+					<button
+						type="button"
+						class="btn-modern btn-modern--outline"
+						onclick="openFicha()"
+					>
+						Abrir Ficha
+					</button>
+					<button
+						type="button"
+						class="btn-modern btn-modern--outline"
+						onclick="registrarDesistencia()"
+					>
+						Desistência
+					</button>
+				</div>
+			</div>
+			<div class="modal-modern__footer">
+				<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>
+					Fechar
+				</button>
+			</div>
+		</div>
+	</div>
 </div>
 
 <!-- Modal Fazer Registro -->
 <div class="modal-modern d-none" id="modalFazerRegistro" tabindex="-1">
-    <div class="modal-dialog modal-dialog-scrollable">
-        <div class="modal-modern__content">
-            <div class="modal-modern__header">
-                <h5 class="modal-modern__title">Fazer Registro</h5>
-            </div>
-            <div class="modal-modern__body">
-                <div class="info-group">
-                    <label class="info-label">Associado</label>
-                    <div class="info-value" id="fr_associado_nome"></div>
-                </div>
-                <div class="info-group">
-                    <label class="info-label">Responsável</label>
-                    <div class="info-value" id="fr_responsavel_nome"></div>
-                </div>
-                
-                <div class="form-group-modern">
-                    <label class="form-label-modern" for="fr_responsavel_recepcao">Responsável pela Recepção</label>
-                    <select class="form-input-modern" id="fr_responsavel_recepcao">
-                        <option value="">Selecione...</option>
-                        {% for user in recepcao_users %}
-                        <option value="{{ user.name }}">{{ user.full_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
+	<div class="modal-dialog modal-dialog-scrollable">
+		<div class="modal-modern__content">
+			<div class="modal-modern__header">
+				<h5 class="modal-modern__title">Fazer Registro</h5>
+			</div>
+			<div class="modal-modern__body">
+				<div class="info-group">
+					<label class="info-label">Associado</label>
+					<div class="info-value" id="fr_associado_nome"></div>
+				</div>
+				<div class="info-group">
+					<label class="info-label">Responsável</label>
+					<div class="info-value" id="fr_responsavel_nome"></div>
+				</div>
 
-                <div class="timeline-container" id="fr_timeline">
-                    <!-- Timeline items will be injected here -->
-                </div>
-                
-                <div class="modal-actions-vertical mt-4">
-                    <button type="button" class="btn-modern btn-modern--primary" onclick="confirmarRegistroCriado()">Registro Criado no Paxtu</button>
-                    <button type="button" class="btn-modern btn-modern--outline" onclick="openFicha()">Abrir Ficha</button>
-                    <button type="button" class="btn-modern btn-modern--outline" onclick="registrarDesistencia()">Desistência</button>
-                </div>
-            </div>
-            <div class="modal-modern__footer">
-                <button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>Fechar</button>
-            </div>
-        </div>
-    </div>
+				<div class="form-group-modern">
+					<label class="form-label-modern" for="fr_responsavel_recepcao"
+						>Responsável pela Recepção</label
+					>
+					<select class="form-input-modern" id="fr_responsavel_recepcao">
+						<option value="">Selecione...</option>
+						{% for user in recepcao_users %}
+						<option value="{{ user.name }}">{{ user.full_name }}</option>
+						{% endfor %}
+					</select>
+				</div>
+
+				<div class="timeline-container" id="fr_timeline">
+					<!-- Timeline items will be injected here -->
+				</div>
+
+				<div class="modal-actions-vertical mt-4">
+					<button
+						type="button"
+						class="btn-modern btn-modern--primary"
+						onclick="confirmarRegistroCriado()"
+					>
+						Registro Criado no Paxtu
+					</button>
+					<button
+						type="button"
+						class="btn-modern btn-modern--outline"
+						onclick="openFicha()"
+					>
+						Abrir Ficha
+					</button>
+					<button
+						type="button"
+						class="btn-modern btn-modern--outline"
+						onclick="registrarDesistencia()"
+					>
+						Desistência
+					</button>
+				</div>
+			</div>
+			<div class="modal-modern__footer">
+				<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>
+					Fechar
+				</button>
+			</div>
+		</div>
+	</div>
 </div>
 
 <!-- Modal Acompanhamento -->
 <div class="modal-modern d-none" id="modalAcompanhamento" tabindex="-1">
-    <div class="modal-dialog modal-dialog-scrollable">
-        <div class="modal-modern__content">
-            <div class="modal-modern__header">
-                <h5 class="modal-modern__title">Acompanhamento</h5>
-            </div>
-            <div class="modal-modern__body">
-                <div class="info-group">
-                    <label class="info-label">Associado</label>
-                    <div class="info-value" id="ac_associado_nome"></div>
-                </div>
-                <div class="info-group">
-                    <label class="info-label">Responsável</label>
-                    <div class="info-value" id="ac_responsavel_nome"></div>
-                </div>
-                
-                <div class="form-group-modern">
-                    <label class="form-label-modern" for="ac_responsavel_recepcao">Responsável pela Recepção</label>
-                    <select class="form-input-modern" id="ac_responsavel_recepcao">
-                        <option value="">Selecione...</option>
-                        {% for user in recepcao_users %}
-                        <option value="{{ user.name }}">{{ user.full_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
+	<div class="modal-dialog modal-dialog-scrollable">
+		<div class="modal-modern__content">
+			<div class="modal-modern__header">
+				<h5 class="modal-modern__title">Acompanhamento</h5>
+			</div>
+			<div class="modal-modern__body">
+				<div class="info-group">
+					<label class="info-label">Associado</label>
+					<div class="info-value" id="ac_associado_nome"></div>
+				</div>
+				<div class="info-group">
+					<label class="info-label">Responsável</label>
+					<div class="info-value" id="ac_responsavel_nome"></div>
+				</div>
 
-                <div class="timeline-container" id="ac_timeline">
-                    <!-- Timeline items will be injected here -->
-                </div>
-                
-                <div class="modal-actions-vertical mt-4">
-                    <button type="button" class="btn-modern btn-modern--outline" onclick="openFicha()">Abrir Ficha</button>
-                    <button type="button" class="btn-modern btn-modern--outline" onclick="registrarDesistencia()">Desistência</button>
-                </div>
-            </div>
-            <div class="modal-modern__footer">
-                <button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>Fechar</button>
-            </div>
-        </div>
-    </div>
+				<div class="form-group-modern">
+					<label class="form-label-modern" for="ac_responsavel_recepcao"
+						>Responsável pela Recepção</label
+					>
+					<select class="form-input-modern" id="ac_responsavel_recepcao">
+						<option value="">Selecione...</option>
+						{% for user in recepcao_users %}
+						<option value="{{ user.name }}">{{ user.full_name }}</option>
+						{% endfor %}
+					</select>
+				</div>
+
+				<div class="timeline-container" id="ac_timeline">
+					<!-- Timeline items will be injected here -->
+				</div>
+
+				<div class="modal-actions-vertical mt-4">
+					<button
+						type="button"
+						class="btn-modern btn-modern--outline"
+						onclick="openFicha()"
+					>
+						Abrir Ficha
+					</button>
+					<button
+						type="button"
+						class="btn-modern btn-modern--outline"
+						onclick="registrarDesistencia()"
+					>
+						Desistência
+					</button>
+				</div>
+			</div>
+			<div class="modal-modern__footer">
+				<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>
+					Fechar
+				</button>
+			</div>
+		</div>
+	</div>
 </div>
 {% endblock %}

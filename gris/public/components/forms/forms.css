@@ -1,0 +1,170 @@
+/* ========================================
+   FORM - Formulários Modernos
+   ======================================== */
+
+.form-group-modern {
+	margin-bottom: var(--space-lg);
+}
+
+.form-label-modern {
+	display: block;
+	font-size: var(--text-sm);
+	font-weight: var(--font-medium);
+	color: var(--text-primary);
+	margin-bottom: var(--space-xs);
+	letter-spacing: var(--tracking-normal);
+}
+
+.form-label-modern--required::after {
+	content: " *";
+	color: var(--color-danger);
+}
+
+.form-input-modern {
+	display: block;
+	width: 100%;
+	padding: var(--input-padding-y) var(--input-padding-x);
+	font-size: var(--text-sm);
+	line-height: var(--leading-normal);
+	color: var(--text-primary);
+	background-color: var(--input-bg);
+	border: var(--border-width) solid var(--input-border);
+	border-radius: var(--radius-md);
+	transition: all var(--transition-fast);
+	height: var(--input-height);
+}
+
+.form-input-modern:focus {
+	outline: none;
+	border-color: var(--input-border-focus);
+	box-shadow: 0 0 0 3px rgba(13, 77, 145, 0.1);
+}
+
+.form-input-modern:disabled {
+	background-color: var(--bg-hover);
+	color: var(--text-disabled);
+	cursor: not-allowed;
+}
+
+.form-input-modern::placeholder {
+	color: var(--input-placeholder);
+}
+
+/* Input sizes */
+.form-input-modern--sm {
+	height: var(--input-height-sm);
+	padding: calc(var(--input-padding-y) * 0.75) calc(var(--input-padding-x) * 0.85);
+	font-size: var(--text-xs);
+}
+
+.form-input-modern--lg {
+	height: var(--input-height-lg);
+	padding: calc(var(--input-padding-y) * 1.25) calc(var(--input-padding-x) * 1.15);
+	font-size: var(--text-base);
+}
+
+/* Error state */
+.form-input-modern--error {
+	border-color: var(--color-danger);
+}
+
+.form-input-modern--error:focus {
+	box-shadow: 0 0 0 3px rgba(181, 42, 42, 0.1);
+}
+
+/* Success state */
+.form-input-modern--success {
+	border-color: var(--color-success);
+}
+
+.form-input-modern--success:focus {
+	box-shadow: 0 0 0 3px rgba(0, 211, 49, 0.1);
+}
+
+.form-helper-text {
+	font-size: var(--text-xs);
+	color: var(--text-secondary);
+	margin-top: var(--space-xs);
+	display: block;
+}
+
+.form-error-text {
+	font-size: var(--text-xs);
+	color: var(--color-danger);
+	margin-top: var(--space-xs);
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+}
+
+.form-success-text {
+	font-size: var(--text-xs);
+	color: var(--color-success);
+	margin-top: var(--space-xs);
+	display: flex;
+	align-items: center;
+	gap: var(--space-xs);
+}
+
+/* Textarea */
+textarea.form-input-modern {
+	height: auto;
+	min-height: 100px;
+	resize: vertical;
+}
+
+/* Select */
+select.form-input-modern {
+	appearance: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 0.75rem center;
+	background-size: 16px;
+	padding-right: 2.5rem;
+}
+
+/* ========================================
+   FILTER BAR - Barra de Filtros
+   ======================================== */
+
+.filter-bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: var(--space-md);
+	padding-bottom: var(--space-xs);
+}
+
+.filter-field {
+	display: flex;
+	flex-direction: column;
+	min-width: 140px;
+}
+
+.filter-field label {
+	margin-bottom: 4px; /* Slight override for tighter spacing in filters */
+}
+
+.filter-actions {
+	display: flex;
+	gap: var(--space-sm);
+	margin-left: auto;
+}
+
+@media (max-width: 768px) {
+	.filter-bar {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.filter-field {
+		width: 100% !important;
+	}
+
+	.filter-actions {
+		margin-left: 0;
+		margin-top: var(--space-md);
+		width: 100%;
+		justify-content: flex-end;
+	}
+}

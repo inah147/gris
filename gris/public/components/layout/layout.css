@@ -1,0 +1,207 @@
+/* ========================================
+   PAGE HEADER - Cabeçalhos de Página
+   ======================================== */
+
+.page-header {
+	margin: 0 0 var(--space-lg) 0 !important;
+	padding: 0 !important;
+	border: none !important;
+	display: flex !important;
+	align-items: flex-start !important;
+	justify-content: space-between !important;
+	gap: var(--space-md) !important;
+	flex-wrap: wrap !important;
+}
+
+.page-header__content {
+	flex: 1;
+	min-width: 0;
+}
+
+.page-header__title {
+	font-size: var(--text-3xl);
+	font-weight: var(--font-bold);
+	color: var(--text-primary);
+	margin: 0 0 var(--space-xs) 0;
+	line-height: var(--leading-tight);
+}
+
+.page-header__subtitle {
+	font-size: var(--text-base);
+	color: var(--text-secondary);
+	margin: 0;
+	line-height: var(--leading-normal);
+}
+
+.page-header__actions {
+	display: flex;
+	gap: var(--space-sm);
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+	.page-header {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.page-header__actions {
+		width: 100%;
+	}
+
+	.page-header__title {
+		font-size: var(--text-2xl);
+	}
+}
+
+/* ========================================
+   FILTROS - Barra de Filtros (melhorado)
+   ======================================== */
+
+/* ----- Filtros Padrao Dashboard/Listas ----- */
+.filter-bar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.85rem 1.25rem;
+	align-items: flex-start;
+}
+.filter-bar .filter-field {
+	width: 210px;
+	max-width: 100%;
+	display: flex;
+	flex-direction: column;
+}
+.filter-bar .filter-field label {
+	margin-bottom: 0.25rem;
+	font-weight: 500;
+	letter-spacing: 0.2px;
+}
+.filter-bar .filter-actions {
+	display: flex;
+	gap: 0.5rem;
+	padding-top: 1.3rem;
+}
+@media (max-width: 576px) {
+	.filter-bar {
+		gap: 0.9rem 0.75rem;
+	}
+	.filter-bar .filter-field,
+	.filter-bar .filter-actions {
+		width: 100%;
+	}
+	.filter-bar .filter-actions {
+		padding-top: 0.25rem;
+	}
+}
+
+/* Aparência dos selects pequenos padronizada */
+.select-sm,
+.filter-bar select.form-select-sm {
+	height: calc(2.1rem + 2px);
+	padding: 0.35rem 0.9rem 0.35rem 0.75rem;
+	border-radius: 0.375rem;
+	border: 1px solid var(--bs-border-color, #d0d7de);
+	background: #fff linear-gradient(180deg, #ffffff, #f8f9fa);
+	font-size: 0.8rem;
+	line-height: 1.2;
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+	transition: 0.15s ease;
+}
+.select-sm:focus,
+.filter-bar select.form-select-sm:focus {
+	border-color: #6ca3ff;
+	box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.15);
+	outline: 0;
+}
+.select-sm:hover,
+.filter-bar select.form-select-sm:hover {
+	border-color: #b4c0ce;
+}
+.select-sm:active,
+.filter-bar select.form-select-sm:active {
+	background: #f1f4f8;
+}
+
+/* Setas custom para selects */
+.filter-bar {
+	--icon-select: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 8 10 14 16 8'/%3E%3C/svg%3E");
+}
+.filter-bar select.form-select-sm {
+	-webkit-appearance: none;
+	appearance: none;
+	background-image: var(--icon-select);
+	background-repeat: no-repeat;
+	background-position: right 0.75rem center;
+	background-size: 14px 14px;
+	padding-right: 2.25rem;
+}
+@media (max-width: 768px) {
+	.filter-bar select.form-select-sm {
+		font-size: 0.78rem;
+	}
+}
+
+/* Utilitários adicionais (podem ser expandidos futuramente) */
+.u-shadow-sm {
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.u-card-clean {
+	border: 0;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* ========================================
+   GRIDS - Sistemas de Grid
+   ======================================== */
+
+.metrics-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: var(--space-lg);
+}
+
+.cards-grid-sm {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: var(--space-lg);
+}
+
+@media (max-width: 768px) {
+	.metrics-grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: var(--space-md);
+	}
+	.cards-grid-sm {
+		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+		gap: var(--space-md);
+	}
+}
+
+@media (max-width: 576px) {
+	.metrics-grid {
+		grid-template-columns: 1fr;
+	}
+	.cards-grid-sm {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+.cards-grid-md {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: var(--space-lg);
+}
+
+@media (max-width: 768px) {
+	.cards-grid-md {
+		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+		gap: var(--space-md);
+	}
+}
+
+@media (max-width: 576px) {
+	.cards-grid-md {
+		grid-template-columns: 1fr;
+	}
+}

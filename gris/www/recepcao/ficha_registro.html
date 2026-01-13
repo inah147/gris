@@ -1,345 +1,670 @@
-{% extends "templates/web_sidebar_base.html" %}
-
-{% block title %}Ficha de Registro - {{ doc.nome_completo }}{% endblock %}
-
-{% block head_include %}
-    <link rel="stylesheet" href="/assets/gris/css/components.css">
-    <link rel="stylesheet" href="/recepcao/ficha_registro.css">
-{% endblock %}
-
-{% block page_header %}
+{% extends "templates/web_sidebar_base.html" %} {% block title %}Ficha de Registro - {{
+doc.nome_completo }}{% endblock %} {% block head_include %} {{ super() }}
+<link rel="stylesheet" href="/recepcao/ficha_registro.css" />
+{% endblock %} {% block page_header %}
 <div class="page-header">
-    <div class="page-header__content">
-        <h1 class="page-header__title">Ficha de Registro</h1>
-        <p class="page-header__subtitle">{{ doc.nome_completo }}</p>
-    </div>
-    <div class="page-header__actions">
-        <a href="/recepcao/visao_geral" class="btn-modern btn-modern--ghost btn-modern--sm">Voltar</a>
-    </div>
+	<div class="page-header__content">
+		<h1 class="page-header__title">Ficha de Registro</h1>
+		<p class="page-header__subtitle">{{ doc.nome_completo }}</p>
+	</div>
+	<div class="page-header__actions">
+		<a href="/recepcao/visao_geral" class="btn-modern btn-modern--ghost btn-modern--sm"
+			>Voltar</a
+		>
+	</div>
 </div>
-{% endblock %}
-
-{% block main %}
-{% if not_found %}
+{% endblock %} {% block main %} {% if not_found %}
 <div class="alert-modern alert-modern--warning">
-    <div class="alert-modern__content">
-        <p class="alert-modern__description">{{ missing_reason or 'Registro não encontrado.' }}</p>
-    </div>
+	<div class="alert-modern__content">
+		<p class="alert-modern__description">{{ missing_reason or 'Registro não encontrado.' }}</p>
+	</div>
 </div>
 {% else %}
 
 <!-- Header Info -->
 <div class="card-modern mb-4">
-    <div class="card-modern__body">
-        <div class="row g-3 align-items-start">
-            <div class="col-12 col-lg-5">
-                <h2 style="font-size: var(--text-xl); font-weight: var(--font-semibold); margin: 0;">{{ doc.nome_completo }}</h2>
-            </div>
-            <div class="col-6 col-lg-2">
-                <div style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 0.25rem;">Status</div>
-                <span class="g-badge g-badge--primary">{{ doc.status }}</span>
-            </div>
-            <div class="col-6 col-lg-2">
-                <div style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 0.25rem;">Ramo</div>
-                <span class="g-badge g-badge--secondary">{{ doc.ramo or 'Sem Ramo' }}</span>
-            </div>
-            <div class="col-6 col-lg-3">
-                <div style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 0.25rem;">Tipo</div>
-                <span class="g-badge g-badge--info">{{ doc.tipo_de_registro or 'Tipo não def.' }}</span>
-            </div>
-        </div>
-    </div>
+	<div class="card-modern__body">
+		<div class="row g-3 align-items-start">
+			<div class="col-12 col-lg-5">
+				<h2
+					style="font-size: var(--text-xl); font-weight: var(--font-semibold); margin: 0"
+				>
+					{{ doc.nome_completo }}
+				</h2>
+			</div>
+			<div class="col-6 col-lg-2">
+				<div
+					style="
+						font-size: var(--text-xs);
+						color: var(--text-muted);
+						margin-bottom: 0.25rem;
+					"
+				>
+					Status
+				</div>
+				<span class="g-badge g-badge--primary">{{ doc.status }}</span>
+			</div>
+			<div class="col-6 col-lg-2">
+				<div
+					style="
+						font-size: var(--text-xs);
+						color: var(--text-muted);
+						margin-bottom: 0.25rem;
+					"
+				>
+					Ramo
+				</div>
+				<span class="g-badge g-badge--secondary">{{ doc.ramo or 'Sem Ramo' }}</span>
+			</div>
+			<div class="col-6 col-lg-3">
+				<div
+					style="
+						font-size: var(--text-xs);
+						color: var(--text-muted);
+						margin-bottom: 0.25rem;
+					"
+				>
+					Tipo
+				</div>
+				<span class="g-badge g-badge--info"
+					>{{ doc.tipo_de_registro or 'Tipo não def.' }}</span
+				>
+			</div>
+		</div>
+	</div>
 </div>
 
 <!-- Fluxo de Registro Infographic -->
 <div class="card-modern mb-4">
-    <div class="card-modern__header">
-        <h3 class="card-modern__title">Fluxo de Registro</h3>
-    </div>
-    <div class="card-modern__body">
-        <div class="flow-steps-container">
-            {% for step in flow_steps %}
-            <div class="flow-step {{ 'done' if step.done else '' }} {{ 'overdue' if step.is_overdue else '' }}">
-                <div class="flow-step__icon">
-                    {% if step.done %}
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    {% elif step.is_overdue %}
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                    {% else %}
-                    <span style="font-size: 10px;">{{ loop.index }}</span>
-                    {% endif %}
-                </div>
-                <div class="flow-step__label">{{ step.label }}</div>
-                {% if step.estimated_date and not step.done %}
-                <div class="flow-step__date {{ 'text-overdue' if step.is_overdue else '' }}">
-                    {{ 'Em atraso: ' if step.is_overdue else 'Previsto: ' }} {{ step.estimated_date }}
-                </div>
-                {% endif %}
-            </div>
-            {% endfor %}
-        </div>
-    </div>
+	<div class="card-modern__header">
+		<h3 class="card-modern__title">Fluxo de Registro</h3>
+	</div>
+	<div class="card-modern__body">
+		<div class="flow-steps-container">
+			{% for step in flow_steps %}
+			<div
+				class="flow-step {{ 'done' if step.done else '' }} {{ 'overdue' if step.is_overdue else '' }}"
+			>
+				<div class="flow-step__icon">
+					{% if step.done %}
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="3"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<polyline points="20 6 9 17 4 12"></polyline>
+					</svg>
+					{% elif step.is_overdue %}
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="3"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<path
+							d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+						></path>
+						<line x1="12" y1="9" x2="12" y2="13"></line>
+						<line x1="12" y1="17" x2="12.01" y2="17"></line>
+					</svg>
+					{% else %}
+					<span style="font-size: 10px">{{ loop.index }}</span>
+					{% endif %}
+				</div>
+				<div class="flow-step__label">{{ step.label }}</div>
+				{% if step.estimated_date and not step.done %}
+				<div class="flow-step__date {{ 'text-overdue' if step.is_overdue else '' }}">
+					{{ 'Em atraso: ' if step.is_overdue else 'Previsto: ' }} {{ step.estimated_date
+					}}
+				</div>
+				{% endif %}
+			</div>
+			{% endfor %}
+		</div>
+	</div>
 </div>
 
 <!-- Dados do Associado -->
 <div class="card-modern mb-4">
-    <div class="card-modern__header">
-        <h3 class="card-modern__title">Dados do Associado</h3>
-        <p class="card-modern__subtitle">Informações Pessoais</p>
-    </div>
-    <div class="card-modern__body">
-        <div class="row g-3">
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">Data de Nascimento</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ frappe.format_date(doc.data_de_nascimento, 'dd/MM/yyyy') if doc.data_de_nascimento else '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">Sexo</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.sexo or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">Etnia</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.etnia or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">CPF</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.cpf or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">RG</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.rg or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">Órgão Expedidor</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.orgao_expedidor or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">Estado Civil</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.estado_civil or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">Religião</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.religiao or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">Nacionalidade</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ 'Estrangeiro' if doc.estrangeiro else 'Brasileiro' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">Cidade de Nascimento</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.cidade_de_nascimento or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">UF de Nascimento</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.uf_de_nascimento or '-' }}" readonly disabled>
-            </div>
-        </div>
-    </div>
+	<div class="card-modern__header">
+		<h3 class="card-modern__title">Dados do Associado</h3>
+		<p class="card-modern__subtitle">Informações Pessoais</p>
+	</div>
+	<div class="card-modern__body">
+		<div class="row g-3">
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">Data de Nascimento</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ frappe.format_date(doc.data_de_nascimento, 'dd/MM/yyyy') if doc.data_de_nascimento else '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">Sexo</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.sexo or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">Etnia</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.etnia or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">CPF</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.cpf or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">RG</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.rg or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">Órgão Expedidor</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.orgao_expedidor or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">Estado Civil</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.estado_civil or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">Religião</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.religiao or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">Nacionalidade</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ 'Estrangeiro' if doc.estrangeiro else 'Brasileiro' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">Cidade de Nascimento</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.cidade_de_nascimento or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">UF de Nascimento</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.uf_de_nascimento or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+		</div>
+	</div>
 </div>
 
 <div class="card-modern mb-4">
-    <div class="card-modern__header">
-        <h3 class="card-modern__title">Endereço e Contato</h3>
-    </div>
-    <div class="card-modern__body">
-        <div class="row g-3">
-            <div class="col-12 col-md-6">
-                <label class="form-label-modern">Endereço</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.endereco or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-2">
-                <label class="form-label-modern">Número</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.numero or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">Complemento</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.complemento or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">Bairro</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.bairro or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">Cidade</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.cidade or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">Estado</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.estado or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">CEP</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.cep or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">Email</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.email or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">Celular</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.celular or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">Tel. Secundário</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.telefone_secundario or '-' }}" readonly disabled>
-            </div>
-        </div>
-    </div>
+	<div class="card-modern__header">
+		<h3 class="card-modern__title">Endereço e Contato</h3>
+	</div>
+	<div class="card-modern__body">
+		<div class="row g-3">
+			<div class="col-12 col-md-6">
+				<label class="form-label-modern">Endereço</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.endereco or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-2">
+				<label class="form-label-modern">Número</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.numero or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">Complemento</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.complemento or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">Bairro</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.bairro or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">Cidade</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.cidade or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">Estado</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.estado or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">CEP</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.cep or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">Email</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.email or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">Celular</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.celular or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">Tel. Secundário</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.telefone_secundario or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+		</div>
+	</div>
 </div>
 
 <div class="card-modern mb-4">
-    <div class="card-modern__header">
-        <h3 class="card-modern__title">Profissional / Acadêmico</h3>
-    </div>
-    <div class="card-modern__body">
-        <div class="row g-3">
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">Escolaridade</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.escolaridade or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">Profissão</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.profissao or '-' }}" readonly disabled>
-            </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label-modern">Local de Trabalho</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.local_de_trabalho or '-' }}" readonly disabled>
-            </div>
-        </div>
-    </div>
+	<div class="card-modern__header">
+		<h3 class="card-modern__title">Profissional / Acadêmico</h3>
+	</div>
+	<div class="card-modern__body">
+		<div class="row g-3">
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">Escolaridade</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.escolaridade or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">Profissão</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.profissao or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-4">
+				<label class="form-label-modern">Local de Trabalho</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.local_de_trabalho or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+		</div>
+	</div>
 </div>
 
 <!-- Responsáveis -->
 {% if responsaveis %}
 <div class="card-modern mb-4">
-    <div class="card-modern__header">
-        <h3 class="card-modern__title">Responsáveis</h3>
-    </div>
-    <div class="card-modern__body">
-        <div class="row g-3">
-            {% for item in responsaveis %}
-            <div class="col-12">
-                <div class="responsavel-card {{ 'primary' if item.is_primary else '' }}">
-                    <div class="responsavel-card__header">
-                        <div class="responsavel-card__title">{{ item.doc.nome_completo }}</div>
-                        {% if item.is_primary %}
-                        <div class="responsavel-card__badge">1º Responsável</div>
-                        {% endif %}
-                    </div>
-                    <div class="card-modern__body">
-                        <h4 class="card-modern__subtitle mb-3">Dados Pessoais</h4>
-                        <div class="row g-3 mb-4">
-                            <div class="col-12 col-md-3">
-                                <label class="form-label-modern">CPF</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.doc.cpf or '-' }}" readonly disabled>
-                            </div>
-                            <div class="col-12 col-md-3">
-                                <label class="form-label-modern">RG</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.doc.rg or '-' }}" readonly disabled>
-                            </div>
-                            <div class="col-12 col-md-3">
-                                <label class="form-label-modern">Órgão Expedidor</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.doc.orgao_expedidor or '-' }}" readonly disabled>
-                            </div>
-                            <div class="col-12 col-md-3">
-                                <label class="form-label-modern">Data de Nascimento</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ frappe.format_date(item.doc.data_de_nascimento, 'dd/MM/yyyy') if item.doc.data_de_nascimento else '-' }}" readonly disabled>
-                            </div>
-                            <div class="col-12 col-md-3">
-                                <label class="form-label-modern">Sexo</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.doc.sexo or '-' }}" readonly disabled>
-                            </div>
-                            <div class="col-12 col-md-3">
-                                <label class="form-label-modern">Estado Civil</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.doc.estado_civil or '-' }}" readonly disabled>
-                            </div>
-                        </div>
+	<div class="card-modern__header">
+		<h3 class="card-modern__title">Responsáveis</h3>
+	</div>
+	<div class="card-modern__body">
+		<div class="row g-3">
+			{% for item in responsaveis %}
+			<div class="col-12">
+				<div class="responsavel-card {{ 'primary' if item.is_primary else '' }}">
+					<div class="responsavel-card__header">
+						<div class="responsavel-card__title">{{ item.doc.nome_completo }}</div>
+						{% if item.is_primary %}
+						<div class="responsavel-card__badge">1º Responsável</div>
+						{% endif %}
+					</div>
+					<div class="card-modern__body">
+						<h4 class="card-modern__subtitle mb-3">Dados Pessoais</h4>
+						<div class="row g-3 mb-4">
+							<div class="col-12 col-md-3">
+								<label class="form-label-modern">CPF</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.doc.cpf or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							<div class="col-12 col-md-3">
+								<label class="form-label-modern">RG</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.doc.rg or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							<div class="col-12 col-md-3">
+								<label class="form-label-modern">Órgão Expedidor</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.doc.orgao_expedidor or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							<div class="col-12 col-md-3">
+								<label class="form-label-modern">Data de Nascimento</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ frappe.format_date(item.doc.data_de_nascimento, 'dd/MM/yyyy') if item.doc.data_de_nascimento else '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							<div class="col-12 col-md-3">
+								<label class="form-label-modern">Sexo</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.doc.sexo or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							<div class="col-12 col-md-3">
+								<label class="form-label-modern">Estado Civil</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.doc.estado_civil or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+						</div>
 
-                        <h4 class="card-modern__subtitle mb-3">Profissional / Acadêmico</h4>
-                        <div class="row g-3 mb-4">
-                            <div class="col-12 col-md-4">
-                                <label class="form-label-modern">Escolaridade</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.doc.escolaridade or '-' }}" readonly disabled>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label-modern">Profissão</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.doc.get('profissão') or '-' }}" readonly disabled>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label-modern">Local de Trabalho</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.doc.local_de_trabalho or '-' }}" readonly disabled>
-                            </div>
-                        </div>
+						<h4 class="card-modern__subtitle mb-3">Profissional / Acadêmico</h4>
+						<div class="row g-3 mb-4">
+							<div class="col-12 col-md-4">
+								<label class="form-label-modern">Escolaridade</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.doc.escolaridade or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							<div class="col-12 col-md-4">
+								<label class="form-label-modern">Profissão</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.doc.get('profissão') or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							<div class="col-12 col-md-4">
+								<label class="form-label-modern">Local de Trabalho</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.doc.local_de_trabalho or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+						</div>
 
-                        <h4 class="card-modern__subtitle mb-3">Endereço e Contato</h4>
-                        <div class="row g-3 mb-4">
-                            <div class="col-12 col-md-6">
-                                <label class="form-label-modern">Endereço</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.doc.get('endereço') or '-' }}" readonly disabled>
-                            </div>
-                            <div class="col-12 col-md-2">
-                                <label class="form-label-modern">Número</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.doc.get('número') or '-' }}" readonly disabled>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label-modern">Complemento</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.doc.complemento or '-' }}" readonly disabled>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label-modern">Bairro</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.doc.bairro or '-' }}" readonly disabled>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label-modern">Cidade</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.doc.cidade or '-' }}" readonly disabled>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label-modern">Estado</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.doc.estado or '-' }}" readonly disabled>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label-modern">CEP</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.doc.cep or '-' }}" readonly disabled>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label-modern">Email</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.doc.email or '-' }}" readonly disabled>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label-modern">Celular</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.doc.celular or '-' }}" readonly disabled>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label-modern">Tel. Secundário</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.doc.get('telefone_secundario') or '-' }}" readonly disabled>
-                            </div>
-                        </div>
+						<h4 class="card-modern__subtitle mb-3">Endereço e Contato</h4>
+						<div class="row g-3 mb-4">
+							<div class="col-12 col-md-6">
+								<label class="form-label-modern">Endereço</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.doc.get('endereço') or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							<div class="col-12 col-md-2">
+								<label class="form-label-modern">Número</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.doc.get('número') or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							<div class="col-12 col-md-4">
+								<label class="form-label-modern">Complemento</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.doc.complemento or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							<div class="col-12 col-md-4">
+								<label class="form-label-modern">Bairro</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.doc.bairro or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							<div class="col-12 col-md-4">
+								<label class="form-label-modern">Cidade</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.doc.cidade or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							<div class="col-12 col-md-4">
+								<label class="form-label-modern">Estado</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.doc.estado or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							<div class="col-12 col-md-4">
+								<label class="form-label-modern">CEP</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.doc.cep or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							<div class="col-12 col-md-4">
+								<label class="form-label-modern">Email</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.doc.email or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							<div class="col-12 col-md-4">
+								<label class="form-label-modern">Celular</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.doc.celular or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							<div class="col-12 col-md-4">
+								<label class="form-label-modern">Tel. Secundário</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.doc.get('telefone_secundario') or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+						</div>
 
-                        <h4 class="card-modern__subtitle mb-3">Vínculo</h4>
-                        <div class="row g-3">
-                            <div class="col-12 col-md-4">
-                                <label class="form-label-modern">Guardião Legal?</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ 'Sim' if item.vinculo.é_guardiao_legal else 'Não' }}" readonly disabled>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label-modern">Pais Divorciados?</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ 'Sim' if item.vinculo.pais_divorciados else 'Não' }}" readonly disabled>
-                            </div>
-                            {% if item.vinculo.pais_divorciados %}
-                            <div class="col-12 col-md-4">
-                                <label class="form-label-modern">Tipo de Guarda</label>
-                                <input type="text" class="form-input-modern form-input-modern--sm" value="{{ item.vinculo.tipo_guarda or '-' }}" readonly disabled>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
+						<h4 class="card-modern__subtitle mb-3">Vínculo</h4>
+						<div class="row g-3">
+							<div class="col-12 col-md-4">
+								<label class="form-label-modern">Guardião Legal?</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ 'Sim' if item.vinculo.é_guardiao_legal else 'Não' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							<div class="col-12 col-md-4">
+								<label class="form-label-modern">Pais Divorciados?</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ 'Sim' if item.vinculo.pais_divorciados else 'Não' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							{% if item.vinculo.pais_divorciados %}
+							<div class="col-12 col-md-4">
+								<label class="form-label-modern">Tipo de Guarda</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ item.vinculo.tipo_guarda or '-' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							{% endif %}
+						</div>
+					</div>
+				</div>
+			</div>
+			{% endfor %}
+		</div>
+	</div>
 </div>
-{% endif %}
-
-{% endif %}
-{% endblock %}
+{% endif %} {% endif %} {% endblock %}

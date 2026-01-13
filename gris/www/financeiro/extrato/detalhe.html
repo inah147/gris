@@ -1,139 +1,227 @@
-{% extends "templates/web_sidebar_base.html" %}
-
-{% block title %}Detalhe de transação{% endblock %}
-
-{% set active_link = '/financeiro/extrato' %}
-
-{% block page_header %}
-  <div class="mb-4 d-flex align-items-center justify-content-between">
-    <h1 class="h3 mb-0">Detalhe de transação</h1>
-  </div>
+{% extends "templates/web_sidebar_base.html" %} {% block title %}Detalhe de transação{% endblock %}
+{% set active_link = '/financeiro/extrato' %} {% block page_header %}
+<div class="mb-4 d-flex align-items-center justify-content-between">
+	<h1 class="h3 mb-0">Detalhe de transação</h1>
+</div>
+{% endblock %} {% block main %}
+<div>
+	<div class="card-modern mb-4">
+		<div class="card-modern__body">
+			<h5 class="card-modern__title mb-3">Dados da transação</h5>
+			<div class="row g-3">
+				<div class="col-md-6">
+					<label class="form-label">Timestamp</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.timestamp_transacao or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Data da transação</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.data or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Data de depósito</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.data_deposito or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">ID</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.name or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Número de liquidação</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.numero_liquidacao or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Descrição</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.descricao or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Descrição reduzida</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.descricao_reduzida or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Valor</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.valor or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Débito ou crédito</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.debito_credito or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Método</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.metodo or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Origem</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.origem or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Destino</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.destino or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Instituição</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.instituicao or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Carteira</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.carteira or '-' }}"
+						readonly
+					/>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="card-modern mb-4">
+		<div class="card-modern__body">
+			<h5 class="card-modern__title mb-3">Dados complementares</h5>
+			<div class="row g-3">
+				<div class="col-md-6">
+					<label class="form-label">Categoria</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.categoria or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Centro de custo</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.centro_de_custo or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Valor fixo ou variável</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.fixo_variavel or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Transação ordinária ou extraordinária</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.ordinaria_extraordinaria or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Conta fixa</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.conta_fixa or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Beneficiário da contribuição mensal</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ doc.beneficiario_contribuicao_mensal or '-' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Repasse entre contas</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ 'Sim' if doc.repasse_entre_contas else 'Não' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-md-6">
+					<label class="form-label">Transação revisada</label>
+					<input
+						type="text"
+						class="form-control"
+						value="{{ 'Sim' if doc.transacao_revisada else 'Não' }}"
+						readonly
+					/>
+				</div>
+				<div class="col-12">
+					<label class="form-label">Observações</label>
+					<textarea class="form-control" rows="2" readonly>
+{{ doc.observacoes or '-' }}</textarea
+					>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
 {% endblock %}
-
-{% block main %}
-  <div class="extrato-detalhe-container">
-    <section class="extrato-detalhe-section mb-4">
-      <h5 class="mb-3">Dados da transação</h5>
-      <div class="row g-3">
-        <div class="col-md-6">
-          <label class="form-label">Timestamp</label>
-          <input type="text" class="form-control" value="{{ doc.timestamp_transacao or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Data da transação</label>
-          <input type="text" class="form-control" value="{{ doc.data or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Data de depósito</label>
-          <input type="text" class="form-control" value="{{ doc.data_deposito or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">ID</label>
-          <input type="text" class="form-control" value="{{ doc.name or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Número de liquidação</label>
-          <input type="text" class="form-control" value="{{ doc.numero_liquidacao or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Descrição</label>
-          <input type="text" class="form-control" value="{{ doc.descricao or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Descrição reduzida</label>
-          <input type="text" class="form-control" value="{{ doc.descricao_reduzida or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Valor</label>
-          <input type="text" class="form-control" value="{{ doc.valor or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Débito ou crédito</label>
-          <input type="text" class="form-control" value="{{ doc.debito_credito or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Método</label>
-          <input type="text" class="form-control" value="{{ doc.metodo or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Origem</label>
-          <input type="text" class="form-control" value="{{ doc.origem or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Destino</label>
-          <input type="text" class="form-control" value="{{ doc.destino or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Instituição</label>
-          <input type="text" class="form-control" value="{{ doc.instituicao or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Carteira</label>
-          <input type="text" class="form-control" value="{{ doc.carteira or '-' }}" readonly>
-        </div>
-      </div>
-    </section>
-    <section class="extrato-detalhe-section mb-4">
-      <h5 class="mb-3">Dados complementares</h5>
-      <div class="row g-3">
-        <div class="col-md-6">
-          <label class="form-label">Categoria</label>
-          <input type="text" class="form-control" value="{{ doc.categoria or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Centro de custo</label>
-          <input type="text" class="form-control" value="{{ doc.centro_de_custo or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Valor fixo ou variável</label>
-          <input type="text" class="form-control" value="{{ doc.fixo_variavel or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Transação ordinária ou extraordinária</label>
-          <input type="text" class="form-control" value="{{ doc.ordinaria_extraordinaria or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Conta fixa</label>
-          <input type="text" class="form-control" value="{{ doc.conta_fixa or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Beneficiário da contribuição mensal</label>
-          <input type="text" class="form-control" value="{{ doc.beneficiario_contribuicao_mensal or '-' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Repasse entre contas</label>
-          <input type="text" class="form-control" value="{{ 'Sim' if doc.repasse_entre_contas else 'Não' }}" readonly>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Transação revisada</label>
-          <input type="text" class="form-control" value="{{ 'Sim' if doc.transacao_revisada else 'Não' }}" readonly>
-        </div>
-        <div class="col-12">
-          <label class="form-label">Observações</label>
-          <textarea class="form-control" rows="2" readonly>{{ doc.observacoes or '-' }}</textarea>
-        </div>
-      </div>
-    </section>
-  </div>
-{% endblock %}
-
-<style>
-  .extrato-detalhe-container {
-    max-width: 900px;
-    margin: 0 auto;
-    background: #fff;
-    border-radius: 16px;
-    box-shadow: 0 2px 8px 0 rgba(0,0,0,0.04);
-    padding: 2rem 1.5rem;
-  }
-  .extrato-detalhe-section h5 {
-    font-weight: bold;
-    color: #222;
-  }
-  @media (max-width: 700px) {
-    .extrato-detalhe-container {
-      padding: 1rem 0.3rem;
-      border-radius: 0.7rem;
-    }
-  }
-</style>

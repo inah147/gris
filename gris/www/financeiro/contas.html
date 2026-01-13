@@ -1,324 +1,556 @@
-{% extends "templates/web_sidebar_base.html" %}
-
-{% block title %}Carteiras e Contas{% endblock %}
-
-{% set active_link = '/financeiro/contas' %}
-
-{% block head_include %}
-<link rel="stylesheet" href="/assets/gris/css/components.css">
-<link rel="stylesheet" href="/financeiro/contas.css">
-{% endblock %}
-
+{% extends "templates/web_sidebar_base.html" %} {% block title %}Carteiras e Contas{% endblock %}
+{% set active_link = '/financeiro/contas' %} {% block head_include %} {{ super() }} {% endblock %}
 {% block page_header %}
-  <div class="page-header">
-    <div class="page-header__content">
-      <h1 class="page-header__title">Contas e Carteiras</h1>
-      <p class="page-header__subtitle">Gerencie instituições financeiras e carteiras da UEL.</p>
-    </div>
-  </div>
-{% endblock %}
+<div class="page-header">
+	<div class="page-header__content">
+		<h1 class="page-header__title">Contas e Carteiras</h1>
+		<p class="page-header__subtitle">Gerencie instituições financeiras e carteiras da UEL.</p>
+	</div>
+</div>
+{% endblock %} {% block main %}
+<div class="mb-5">
+	<h2 class="section-title">Instituições Financeiras</h2>
+	{% if contas %}
+	<div id="listaContas" class="cards-grid-sm">
+		{% for conta in contas %}
+		<div class="card-modern card-modern--clickable conta-card">
+			<div
+				class="card-modern__body"
+				style="
+					text-align: center;
+					display: flex;
+					flex-direction: column;
+					align-items: center;
+					justify-content: center;
+					padding: var(--space-lg);
+				"
+			>
+				<span
+					style="font-weight: var(--font-semibold); margin-bottom: var(--space-md)"
+					title="{{ conta.display_name }}"
+					>{{ conta.display_name }}</span
+				>
+				<button
+					type="button"
+					class="btn-modern btn-modern--outline btn-modern--sm importar-dados-btn"
+					data-nome="{{ conta.display_name }}"
+				>
+					Importar dados
+				</button>
+			</div>
+		</div>
+		{% endfor %}
+	</div>
+	{% else %}
+	<div class="empty-state">
+		<svg class="empty-state__icon" viewBox="0 0 24 24">
+			<rect x="3" y="8" width="18" height="12" rx="2"></rect>
+			<path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"></path>
+		</svg>
+		<h3 class="empty-state__title">Nenhuma conta cadastrada</h3>
+		<p class="empty-state__description">Adicione uma instituição financeira para começar</p>
+	</div>
+	{% endif %}
+</div>
+<!-- Modal Importar Dados Instituição -->
+<div id="importarDadosModal" class="modal-modern d-none" tabindex="-1">
+	<div class="modal-dialog">
+		<div class="modal-modern__content">
+			<div class="modal-modern__header">
+				<h5 class="modal-modern__title" id="importarDadosModalTitulo"></h5>
+			</div>
+			<div class="modal-modern__body">
+				<div id="importarDadosModalConteudo">
+					<div class="mb-3" id="importarDadosDefault">
+						<div class="alert-modern alert-modern--info">
+							Funcionalidade em construção
+						</div>
+					</div>
+					<div class="mb-3 d-none" id="importarInfinitepayUploads">
+						<h6 class="fw-semibold mb-3">Importar Arquivos</h6>
+						<div class="d-flex flex-column gap-3">
+							<div class="mb-2">
+								<label class="form-label-modern">Upload de extrato (.ofx)</label>
+								<button
+									type="button"
+									id="uploadExtratoBtn"
+									class="btn-modern btn-modern--outline btn-modern--sm mt-2"
+								>
+									<svg
+										width="14"
+										height="14"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+									>
+										<path
+											d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"
+										/>
+									</svg>
+									Selecionar Arquivo
+								</button>
+								<span
+									id="nomeExtratoInfinitepay"
+									class="ms-2 small text-muted d-none"
+								></span>
+								<span id="checkExtratoInfinitepay" class="ms-2 text-success d-none"
+									>✓</span
+								>
+							</div>
+							<div class="mb-2">
+								<label class="form-label-modern"
+									>Upload de relatório de vendas (.csv)</label
+								>
+								<button
+									type="button"
+									id="uploadVendasBtn"
+									class="btn-modern btn-modern--outline btn-modern--sm mt-2"
+								>
+									<svg
+										width="14"
+										height="14"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+									>
+										<path
+											d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"
+										/>
+									</svg>
+									Selecionar Arquivo
+								</button>
+								<span
+									id="nomeVendasInfinitepay"
+									class="ms-2 small text-muted d-none"
+								></span>
+								<span id="checkVendasInfinitepay" class="ms-2 text-success d-none"
+									>✓</span
+								>
+							</div>
+							<div class="mb-2">
+								<label class="form-label-modern"
+									>Upload de relatório de recebimentos (.csv)</label
+								>
+								<button
+									type="button"
+									id="uploadRecebimentosBtn"
+									class="btn-modern btn-modern--outline btn-modern--sm mt-2"
+								>
+									<svg
+										width="14"
+										height="14"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+									>
+										<path
+											d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"
+										/>
+									</svg>
+									Selecionar Arquivo
+								</button>
+								<span
+									id="nomeRecebimentosInfinitepay"
+									class="ms-2 small text-muted d-none"
+								></span>
+								<span
+									id="checkRecebimentosInfinitepay"
+									class="ms-2 text-success d-none"
+									>✓</span
+								>
+							</div>
+							<button
+								id="btnConciliarInfinitepay"
+								class="btn-modern btn-modern--success d-none mt-3"
+								onclick="enviarArquivosImportados()"
+							>
+								Realizar Conciliação
+							</button>
+						</div>
 
-{% block main %}
-  <div class="mb-5">
-    <h2 class="section-title">Instituições Financeiras</h2>
-    {% if contas %}
-      <div id="listaContas" class="contas-grid">
-        {% for conta in contas %}
-          <div class="card-modern card-modern--clickable conta-card">
-            <div class="card-modern__body" style="text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--space-lg);">
-              <span style="font-weight: var(--font-semibold); margin-bottom: var(--space-md);" title="{{ conta.display_name }}">{{ conta.display_name }}</span>
-              <button type="button" class="btn-modern btn-modern--outline btn-modern--sm importar-dados-btn" data-nome="{{ conta.display_name }}">Importar dados</button>
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="empty-state">
-        <svg class="empty-state__icon" viewBox="0 0 24 24">
-          <rect x="3" y="8" width="18" height="12" rx="2"></rect>
-          <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"></path>
-        </svg>
-        <h3 class="empty-state__title">Nenhuma conta cadastrada</h3>
-        <p class="empty-state__description">Adicione uma instituição financeira para começar</p>
-      </div>
-    {% endif %}
-  </div>
-  <!-- Modal Importar Dados Instituição -->
-  <div id="importarDadosModal" class="modal-modern d-none" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-modern__content">
-        <div class="modal-modern__header">
-          <h5 class="modal-modern__title" id="importarDadosModalTitulo"></h5>
-        </div>
-        <div class="modal-modern__body">
-          <div id="importarDadosModalConteudo">
-            <div class="mb-3" id="importarDadosDefault">
-              <div class="alert-modern alert-modern--info">
-                Funcionalidade em construção
-              </div>
-            </div>
-            <div class="mb-3 d-none" id="importarInfinitepayUploads">
-              <h6 class="fw-semibold mb-3">Importar Arquivos</h6>
-              <div class="d-flex flex-column gap-3">
-                <div class="mb-2">
-                  <label class="form-label-modern">Upload de extrato (.ofx)</label>
-                  <button type="button" id="uploadExtratoBtn" class="btn-modern btn-modern--outline btn-modern--sm mt-2">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
-                    </svg>
-                    Selecionar Arquivo
-                  </button>
-                  <span id="nomeExtratoInfinitepay" class="ms-2 small text-muted d-none"></span>
-                  <span id="checkExtratoInfinitepay" class="ms-2 text-success d-none">✓</span>
-                </div>
-                <div class="mb-2">
-                  <label class="form-label-modern">Upload de relatório de vendas (.csv)</label>
-                  <button type="button" id="uploadVendasBtn" class="btn-modern btn-modern--outline btn-modern--sm mt-2">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
-                    </svg>
-                    Selecionar Arquivo
-                  </button>
-                  <span id="nomeVendasInfinitepay" class="ms-2 small text-muted d-none"></span>
-                  <span id="checkVendasInfinitepay" class="ms-2 text-success d-none">✓</span>
-                </div>
-                <div class="mb-2">
-                  <label class="form-label-modern">Upload de relatório de recebimentos (.csv)</label>
-                  <button type="button" id="uploadRecebimentosBtn" class="btn-modern btn-modern--outline btn-modern--sm mt-2">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
-                    </svg>
-                    Selecionar Arquivo
-                  </button>
-                  <span id="nomeRecebimentosInfinitepay" class="ms-2 small text-muted d-none"></span>
-                  <span id="checkRecebimentosInfinitepay" class="ms-2 text-success d-none">✓</span>
-                </div>
-                <button id="btnConciliarInfinitepay" class="btn-modern btn-modern--success d-none mt-3" onclick="enviarArquivosImportados()">Realizar Conciliação</button>
-              </div>
+						<!-- Loading Indicator -->
+						<div
+							id="contas-infinitepay-loading-indicator"
+							class="text-center py-4 d-none"
+						>
+							<div
+								class="spinner-border text-primary mb-3"
+								role="status"
+								aria-hidden="true"
+							></div>
+							<p class="text-muted fw-semibold">
+								Processando conciliação... Isso pode levar alguns minutos.
+							</p>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="modal-modern__footer">
+				<button
+					type="button"
+					class="btn-modern btn-modern--ghost"
+					onclick="fecharImportarDadosModal()"
+				>
+					Fechar
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
 
-              <!-- Loading Indicator -->
-              <div id="contas-infinitepay-loading-indicator" class="text-center py-4 d-none">
-                <div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>
-                <p class="text-muted fw-semibold">Processando conciliação... Isso pode levar alguns minutos.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-modern__footer">
-          <button type="button" class="btn-modern btn-modern--ghost" onclick="fecharImportarDadosModal()">Fechar</button>
-        </div>
-      </div>
-    </div>
-  </div>
+<div class="mb-5">
+	<div class="d-flex align-items-center justify-content-between mb-3">
+		<h2 class="section-title mb-0">Carteiras</h2>
+		{% if can_create_carteira %}
+		<button
+			type="button"
+			id="btnNovaCarteira"
+			class="btn-modern btn-modern--primary btn-modern--sm"
+		>
+			<svg
+				width="14"
+				height="14"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+			>
+				<path d="M12 5v14M5 12h14" />
+			</svg>
+			Adicionar Carteira
+		</button>
+		{% endif %}
+	</div>
+	{% if carteiras %}
+	<div class="cards-grid-md">
+		{% for carteira in carteiras %}
+		<div class="card-modern">
+			<div class="card-modern__body">
+				<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+					<h6
+						class="fw-semibold mb-0"
+						style="color: var(--text-primary)"
+						title="{{ carteira.display_name }}"
+					>
+						{{ carteira.display_name }}
+					</h6>
+					{% if carteira.instituicao_financeira %}
+					<span
+						class="{{ carteira.instituicao_badge_classes }}"
+						title="Instituição Financeira"
+						>{{ carteira.instituicao_financeira }}</span
+					>
+					{% else %}
+					<span
+						class="badge-modern badge-modern--secondary badge-modern--sm"
+						title="Sem instituição"
+						>—</span
+					>
+					{% endif %}
+				</div>
+				<div class="mb-1 small" style="color: var(--text-secondary)">Saldo</div>
+				<div
+					class="fw-semibold mb-3"
+					style="font-size: var(--text-lg); color: var(--text-primary)"
+				>
+					{{ carteira.saldo_formatado }}
+				</div>
+				<div
+					class="d-flex justify-content-between align-items-center gap-2 flex-wrap"
+					style="margin-top: auto"
+				>
+					<div class="small" style="color: var(--text-secondary)">
+						<span>Atualização:</span>
+						<span
+							>{% if carteira.data_atualizacao_formatada %}{{
+							carteira.data_atualizacao_formatada }}{% else %}—{% endif %}</span
+						>
+					</div>
+					<button
+						type="button"
+						class="btn-modern btn-modern--outline btn-modern--sm carteira-detalhes-btn"
+						data-name="{{ carteira.name }}"
+						data-nome="{{ carteira.display_name }}"
+						data-instituicao="{{ carteira.instituicao_financeira or '' }}"
+						data-instituicao-classes="{{ carteira.instituicao_badge_classes }}"
+						data-descricao="{{ carteira.descricao | e }}"
+						data-responsavel="{{ carteira.responsavel }}"
+						data-chave-pix="{{ carteira.chave_pix }}"
+						data-centro-custo="{{ carteira.centro_de_custo }}"
+						data-saldo="{{ carteira.saldo_formatado }}"
+						data-data-atualizacao="{{ carteira.data_atualizacao_formatada or '' }}"
+					>
+						Detalhes
+					</button>
+				</div>
+			</div>
+		</div>
+		{% endfor %}
+	</div>
+	{% else %}
+	<div class="empty-state">
+		<svg class="empty-state__icon" viewBox="0 0 24 24">
+			<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+			<path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+			<path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
+		</svg>
+		<h3 class="empty-state__title">Nenhuma carteira cadastrada</h3>
+		<p class="empty-state__description">Adicione uma carteira para começar</p>
+	</div>
+	{% endif %}
+</div>
 
-  <div class="mb-5">
-    <div class="d-flex align-items-center justify-content-between mb-3">
-      <h2 class="section-title mb-0">Carteiras</h2>
-      {% if can_create_carteira %}
-        <button type="button" id="btnNovaCarteira" class="btn-modern btn-modern--primary btn-modern--sm">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
-          Adicionar Carteira
-        </button>
-      {% endif %}
-    </div>
-    {% if carteiras %}
-      <div class="carteiras-grid">
-        {% for carteira in carteiras %}
-          <div class="card-modern">
-            <div class="card-modern__body">
-              <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
-                <h6 class="fw-semibold mb-0" style="color: var(--text-primary);" title="{{ carteira.display_name }}">{{ carteira.display_name }}</h6>
-                {% if carteira.instituicao_financeira %}
-                  <span class="{{ carteira.instituicao_badge_classes }}" title="Instituição Financeira">{{ carteira.instituicao_financeira }}</span>
-                {% else %}
-                  <span class="badge-modern badge-modern--secondary badge-modern--sm" title="Sem instituição">—</span>
-                {% endif %}
-              </div>
-              <div class="mb-1 small" style="color: var(--text-secondary);">Saldo</div>
-              <div class="fw-semibold mb-3" style="font-size: var(--text-lg); color: var(--text-primary);">{{ carteira.saldo_formatado }}</div>
-              <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap" style="margin-top: auto;">
-                <div class="small" style="color: var(--text-secondary);">
-                  <span>Atualização:</span>
-                  <span>{% if carteira.data_atualizacao_formatada %}{{ carteira.data_atualizacao_formatada }}{% else %}—{% endif %}</span>
-                </div>
-                <button type="button"
-                  class="btn-modern btn-modern--outline btn-modern--sm carteira-detalhes-btn"
-                  data-name="{{ carteira.name }}"
-                  data-nome="{{ carteira.display_name }}"
-                  data-instituicao="{{ carteira.instituicao_financeira or '' }}"
-                  data-instituicao-classes="{{ carteira.instituicao_badge_classes }}"
-                  data-descricao="{{ carteira.descricao | e }}"
-                  data-responsavel="{{ carteira.responsavel }}"
-                  data-chave-pix="{{ carteira.chave_pix }}"
-                  data-centro-custo="{{ carteira.centro_de_custo }}"
-                  data-saldo="{{ carteira.saldo_formatado }}"
-                  data-data-atualizacao="{{ carteira.data_atualizacao_formatada or '' }}"
-                >Detalhes</button>
-              </div>
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="empty-state">
-        <svg class="empty-state__icon" viewBox="0 0 24 24">
-          <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
-          <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
-          <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
-        </svg>
-        <h3 class="empty-state__title">Nenhuma carteira cadastrada</h3>
-        <p class="empty-state__description">Adicione uma carteira para começar</p>
-      </div>
-    {% endif %}
-  </div>
+<div id="carteiraDetalheModal" class="modal-modern d-none" tabindex="-1">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<div class="modal-modern__content">
+			<div class="modal-modern__header">
+				<h5
+					class="modal-modern__title d-flex align-items-center gap-2"
+					id="carteiraModalTitulo"
+				></h5>
+				<div class="mb-2" id="carteiraModalBadgeRow">
+					<span id="carteiraModalInstituicao"></span>
+				</div>
+			</div>
+			<div class="modal-modern__body">
+				<div class="text-muted small mb-3" id="carteiraModalDescricao"></div>
+				<div class="row g-3">
+					<div class="col-12 col-md-6">
+						<div>
+							<strong>Responsável:</strong>
+							<span id="carteiraModalResponsavel"></span>
+						</div>
+						<div>
+							<strong>Centro de Custo:</strong>
+							<span id="carteiraModalCentro"></span>
+						</div>
+						<div><strong>Chave PIX:</strong> <span id="carteiraModalPix"></span></div>
+					</div>
+					<div class="col-12 col-md-6">
+						<div><strong>Saldo:</strong> <span id="carteiraModalSaldo"></span></div>
+						<div>
+							<strong>Data Atualização:</strong> <span id="carteiraModalData"></span>
+						</div>
+					</div>
+				</div>
+				<hr class="my-4" />
+				<div id="carteiraEdicaoWrapper">
+					<div class="d-flex gap-2 mb-3">
+						<button
+							type="button"
+							id="btnEditarCarteira"
+							class="btn-modern btn-modern--primary btn-modern--sm"
+						>
+							Editar
+						</button>
+						<button
+							type="button"
+							id="btnSalvarCarteira"
+							class="btn-modern btn-modern--success btn-modern--sm d-none"
+						>
+							Salvar
+						</button>
+						<button
+							type="button"
+							id="btnCancelarEdicaoCarteira"
+							class="btn-modern btn-modern--outline btn-modern--sm d-none"
+						>
+							Cancelar
+						</button>
+					</div>
+					<div id="carteiraEdicaoCampos" class="row g-3 d-none">
+						<div class="col-12 col-md-6">
+							<div class="mb-3">
+								<label class="form-label-modern" for="carteiraInputResponsavel"
+									>Responsável</label
+								>
+								<select id="carteiraInputResponsavel" class="form-input-modern">
+									<option value="">Carregando...</option>
+								</select>
+							</div>
+							<div class="mb-3">
+								<label class="form-label-modern" for="carteiraInputCentro"
+									>Centro de Custo</label
+								>
+								<select id="carteiraInputCentro" class="form-input-modern">
+									<option value="">Carregando...</option>
+								</select>
+							</div>
+							<div class="mb-3">
+								<label class="form-label-modern" for="carteiraInputPix"
+									>Chave PIX</label
+								>
+								<input
+									id="carteiraInputPix"
+									type="text"
+									class="form-input-modern"
+									placeholder="Chave PIX"
+								/>
+							</div>
+						</div>
+						<div class="col-12 col-md-6">
+							<div class="mb-3">
+								<label class="form-label-modern" for="carteiraInputDescricao"
+									>Descrição</label
+								>
+								<textarea
+									id="carteiraInputDescricao"
+									class="form-input-modern"
+									rows="6"
+									placeholder="Descrição..."
+								></textarea>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="modal-modern__footer">
+				<button
+					type="button"
+					class="btn-modern btn-modern--ghost"
+					onclick="fecharCarteiraModal()"
+				>
+					Fechar
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+<!-- Modal Nova Instituição Financeira -->
+<div id="novaInstituicaoModal" class="modal-modern d-none" tabindex="-1">
+	<div class="modal-dialog">
+		<div class="modal-modern__content">
+			<div class="modal-modern__header">
+				<h5 class="modal-modern__title">Nova Instituição Financeira</h5>
+			</div>
+			<div class="modal-modern__body">
+				<div class="mb-3">
+					<label class="form-label-modern">Nome</label>
+					<input
+						type="text"
+						class="form-input-modern"
+						id="novaInstituicaoNome"
+						placeholder="Ex: BTG Empresas"
+					/>
+				</div>
+			</div>
+			<div class="modal-modern__footer">
+				<button
+					type="button"
+					class="btn-modern btn-modern--ghost"
+					onclick="fecharNovaInstituicaoModal()"
+				>
+					Cancelar
+				</button>
+				<button
+					type="button"
+					class="btn-modern btn-modern--primary"
+					id="btnSalvarInstituicao"
+				>
+					Salvar
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
 
-  <div id="carteiraDetalheModal" class="modal-modern d-none" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-      <div class="modal-modern__content">
-        <div class="modal-modern__header">
-          <h5 class="modal-modern__title d-flex align-items-center gap-2" id="carteiraModalTitulo"></h5>
-          <div class="mb-2" id="carteiraModalBadgeRow">
-            <span id="carteiraModalInstituicao"></span>
-          </div>
-        </div>
-        <div class="modal-modern__body">
-          
-          <div class="text-muted small mb-3" id="carteiraModalDescricao"></div>
-          <div class="row g-3">
-            <div class="col-12 col-md-6">
-              <div><strong>Responsável:</strong> <span id="carteiraModalResponsavel"></span></div>
-              <div><strong>Centro de Custo:</strong> <span id="carteiraModalCentro"></span></div>
-              <div><strong>Chave PIX:</strong> <span id="carteiraModalPix"></span></div>
-            </div>
-            <div class="col-12 col-md-6">
-              <div><strong>Saldo:</strong> <span id="carteiraModalSaldo"></span></div>
-              <div><strong>Data Atualização:</strong> <span id="carteiraModalData"></span></div>
-            </div>
-          </div>
-          <hr class="my-4" />
-            <div id="carteiraEdicaoWrapper">
-            <div class="d-flex gap-2 mb-3">
-              <button type="button" id="btnEditarCarteira" class="btn-modern btn-modern--primary btn-modern--sm">Editar</button>
-              <button type="button" id="btnSalvarCarteira" class="btn-modern btn-modern--success btn-modern--sm d-none">Salvar</button>
-              <button type="button" id="btnCancelarEdicaoCarteira" class="btn-modern btn-modern--outline btn-modern--sm d-none">Cancelar</button>
-            </div>
-            <div id="carteiraEdicaoCampos" class="row g-3 d-none">
-              <div class="col-12 col-md-6">
-                <div class="mb-3">
-                  <label class="form-label-modern" for="carteiraInputResponsavel">Responsável</label>
-                  <select id="carteiraInputResponsavel" class="form-input-modern">
-                    <option value="">Carregando...</option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label-modern" for="carteiraInputCentro">Centro de Custo</label>
-                  <select id="carteiraInputCentro" class="form-input-modern">
-                    <option value="">Carregando...</option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label-modern" for="carteiraInputPix">Chave PIX</label>
-                  <input id="carteiraInputPix" type="text" class="form-input-modern" placeholder="Chave PIX" />
-                </div>
-              </div>
-              <div class="col-12 col-md-6">
-                <div class="mb-3">
-                  <label class="form-label-modern" for="carteiraInputDescricao">Descrição</label>
-                  <textarea id="carteiraInputDescricao" class="form-input-modern" rows="6" placeholder="Descrição..."></textarea>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-modern__footer">
-          <button type="button" class="btn-modern btn-modern--ghost" onclick="fecharCarteiraModal()">Fechar</button>
-        </div>
-      </div>
-    </div>
-  </div>  <!-- Modal Nova Instituição Financeira -->
-  <div id="novaInstituicaoModal" class="modal-modern d-none" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-modern__content">
-        <div class="modal-modern__header">
-          <h5 class="modal-modern__title">Nova Instituição Financeira</h5>
-        </div>
-        <div class="modal-modern__body">
-          <div class="mb-3">
-            <label class="form-label-modern">Nome</label>
-            <input type="text" class="form-input-modern" id="novaInstituicaoNome" placeholder="Ex: BTG Empresas" />
-          </div>
-        </div>
-        <div class="modal-modern__footer">
-          <button type="button" class="btn-modern btn-modern--ghost" onclick="fecharNovaInstituicaoModal()">Cancelar</button>
-          <button type="button" class="btn-modern btn-modern--primary" id="btnSalvarInstituicao">Salvar</button>
-        </div>
-      </div>
-    </div>
-  </div>
+<!-- Modal Nova Carteira -->
+<div id="novaCarteiraModal" class="modal-modern d-none" tabindex="-1">
+	<div class="modal-dialog modal-lg">
+		<div class="modal-modern__content">
+			<div class="modal-modern__header">
+				<h5 class="modal-modern__title">Nova Carteira</h5>
+			</div>
+			<div class="modal-modern__body">
+				<form id="formNovaCarteira" onsubmit="return false;">
+					<div class="row g-3">
+						<div class="col-12 col-md-6">
+							<div class="mb-3">
+								<label class="form-label-modern"
+									>Nome <span class="text-danger">*</span></label
+								>
+								<input
+									type="text"
+									id="nc_nome"
+									class="form-input-modern"
+									required
+								/>
+							</div>
+							<div class="mb-3">
+								<label class="form-label-modern"
+									>Instituição Financeira
+									<span class="text-danger">*</span></label
+								>
+								<select id="nc_instituicao" class="form-input-modern" required>
+									<option value="">Selecione...</option>
+									{% for c in contas %}
+									<option value="{{ c.display_name }}">
+										{{ c.display_name }}
+									</option>
+									{% endfor %}
+								</select>
+							</div>
+							<div class="mb-3">
+								<label class="form-label-modern"
+									>Responsável <span class="text-danger">*</span></label
+								>
+								<select id="nc_responsavel" class="form-input-modern" required>
+									<option value="">Carregando...</option>
+								</select>
+							</div>
+						</div>
+						<div class="col-12 col-md-6">
+							<div class="mb-3">
+								<label class="form-label-modern"
+									>Centro de Custo <span class="text-danger">*</span></label
+								>
+								<select id="nc_centro" class="form-input-modern" required>
+									<option value="">Carregando...</option>
+								</select>
+							</div>
+							<div class="mb-3">
+								<label class="form-label-modern">Chave PIX</label>
+								<input type="text" id="nc_pix" class="form-input-modern" />
+							</div>
+							<div class="mb-3">
+								<label class="form-label-modern"
+									>Descrição <span class="text-danger">*</span></label
+								>
+								<textarea
+									id="nc_descricao"
+									class="form-input-modern"
+									rows="3"
+									required
+								></textarea>
+							</div>
+						</div>
+					</div>
+				</form>
+				<div class="small text-muted">Campos marcados com * são obrigatórios.</div>
+			</div>
+			<div class="modal-modern__footer">
+				<button
+					type="button"
+					class="btn-modern btn-modern--ghost"
+					onclick="fecharNovaCarteiraModal()"
+				>
+					Cancelar
+				</button>
+				<button
+					type="button"
+					class="btn-modern btn-modern--primary"
+					id="btnSalvarCarteiraNova"
+				>
+					Salvar
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
 
-  <!-- Modal Nova Carteira -->
-  <div id="novaCarteiraModal" class="modal-modern d-none" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-modern__content">
-        <div class="modal-modern__header">
-          <h5 class="modal-modern__title">Nova Carteira</h5>
-        </div>
-        <div class="modal-modern__body">
-          <form id="formNovaCarteira" onsubmit="return false;">
-            <div class="row g-3">
-              <div class="col-12 col-md-6">
-                <div class="mb-3">
-                  <label class="form-label-modern">Nome <span class="text-danger">*</span></label>
-                  <input type="text" id="nc_nome" class="form-input-modern" required />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label-modern">Instituição Financeira <span class="text-danger">*</span></label>
-                  <select id="nc_instituicao" class="form-input-modern" required>
-                    <option value="">Selecione...</option>
-                    {% for c in contas %}
-                      <option value="{{ c.display_name }}">{{ c.display_name }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label-modern">Responsável <span class="text-danger">*</span></label>
-                  <select id="nc_responsavel" class="form-input-modern" required>
-                    <option value="">Carregando...</option>
-                  </select>
-                </div>
-              </div>
-              <div class="col-12 col-md-6">
-                <div class="mb-3">
-                  <label class="form-label-modern">Centro de Custo <span class="text-danger">*</span></label>
-                  <select id="nc_centro" class="form-input-modern" required>
-                    <option value="">Carregando...</option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label-modern">Chave PIX</label>
-                  <input type="text" id="nc_pix" class="form-input-modern" />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label-modern">Descrição <span class="text-danger">*</span></label>
-                  <textarea id="nc_descricao" class="form-input-modern" rows="3" required></textarea>
-                </div>
-              </div>
-            </div>
-          </form>
-          <div class="small text-muted">Campos marcados com * são obrigatórios.</div>
-        </div>
-        <div class="modal-modern__footer">
-          <button type="button" class="btn-modern btn-modern--ghost" onclick="fecharNovaCarteiraModal()">Cancelar</button>
-          <button type="button" class="btn-modern btn-modern--primary" id="btnSalvarCarteiraNova">Salvar</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-{% endblock %}
-
-{% block extra_script %}
+{% endblock %} {% block extra_script %}
 <script src="/financeiro/contas.js"></script>
 {% endblock %}

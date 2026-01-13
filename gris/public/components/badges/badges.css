@@ -1,0 +1,221 @@
+/* ========================================
+   BADGES - Sistema de Badges
+   ======================================== */
+
+/* ----- Badges Padronizados (Sistema Único) ----- */
+:root {
+	/* Paleta (pode ser ajustada conforme identidade visual) */
+	--g-success-bg: #dbffe3;
+	--g-success-color: #00d331;
+	--g-warning-bg: #fff8dd;
+	--g-warning-color: #dfb600;
+	--g-danger-bg: #fff0f0;
+	--g-danger-color: #b52a2a;
+	--g-info-bg: #0dcaf0;
+	--g-info-color: #05252d;
+	--g-primary-bg: #edf6fd;
+	--g-primary-color: #0070cc;
+	--g-secondary-bg: #6c757d;
+	--g-secondary-color: #ffffff;
+	--g-neutral-bg: #64748b;
+	--g-neutral-color: #ffffff;
+	--g-dark-bg: #1d2756;
+	--g-dark-color: #eefcff;
+	--g-purple-bg: #ede3fd;
+	--g-purple-color: #6918ff;
+	--g-accent-bg: #1d2756;
+	--g-accent-color: #eefcff; /* usado p/ Ramo/Categoria outline */
+	--g-inactive-bg: #adb5bd;
+	--g-inactive-color: #2a2f33;
+}
+
+/* Base */
+.g-badge {
+	--_bg: var(--g-neutral-bg);
+	--_color: var(--g-neutral-color);
+	background: var(--_bg);
+	color: var(--_color);
+	font-weight: 600;
+	letter-spacing: 0.25px;
+	border-radius: 12px;
+	padding: 0.3rem 0.55rem;
+	font-size: 0.6rem;
+	line-height: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	white-space: nowrap;
+	gap: 0.25rem;
+}
+.g-badge--outline {
+	background: transparent;
+	color: var(--_bg);
+	border: 1px solid var(--_bg);
+}
+.g-badge svg {
+	width: 0.65rem;
+	height: 0.65rem;
+	stroke: currentColor;
+	stroke-width: 2;
+}
+
+/* Variantes (apenas definem tokens locais) */
+.g-badge--success {
+	--_bg: var(--g-success-bg);
+	--_color: var(--g-success-color);
+}
+.g-badge--warning {
+	--_bg: var(--g-warning-bg);
+	--_color: var(--g-warning-color);
+}
+.g-badge--danger {
+	--_bg: var(--g-danger-bg);
+	--_color: var(--g-danger-color);
+}
+.g-badge--info {
+	--_bg: var(--g-info-bg);
+	--_color: var(--g-info-color);
+}
+.g-badge--primary {
+	--_bg: var(--g-primary-bg);
+	--_color: var(--g-primary-color);
+}
+.g-badge--secondary {
+	--_bg: var(--g-secondary-bg);
+	--_color: var(--g-secondary-color);
+}
+.g-badge--neutral {
+	--_bg: var(--g-neutral-bg);
+	--_color: var(--g-neutral-color);
+}
+.g-badge--dark {
+	--_bg: var(--g-dark-bg);
+	--_color: var(--g-dark-color);
+}
+.g-badge--purple {
+	--_bg: var(--g-purple-bg);
+	--_color: var(--g-purple-color);
+}
+.g-badge--accent {
+	--_bg: var(--g-accent-bg);
+	--_color: var(--g-accent-color);
+}
+.g-badge--inactive {
+	--_bg: var(--g-inactive-bg);
+	--_color: var(--g-inactive-color);
+}
+
+/* Quando outline a cor do texto/borda deve ser a cor base; já tratado no base usando --_bg */
+.g-badge--outline.g-badge--warning {
+	color: var(--g-warning-bg);
+	border-color: var(--g-warning-bg);
+}
+.g-badge--outline.g-badge--success {
+	color: var(--g-success-bg);
+	border-color: var(--g-success-bg);
+}
+.g-badge--outline.g-badge--danger {
+	color: var(--g-danger-bg);
+	border-color: var(--g-danger-bg);
+}
+.g-badge--outline.g-badge--info {
+	color: var(--g-info-bg);
+	border-color: var(--g-info-bg);
+}
+.g-badge--outline.g-badge--primary {
+	color: var(--g-primary-color);
+	border-color: var(--g-primary-color);
+}
+.g-badge--outline.g-badge--secondary {
+	color: var(--g-secondary-bg);
+	border-color: var(--g-secondary-bg);
+}
+.g-badge--outline.g-badge--dark {
+	color: var(--g-dark-bg);
+	border-color: var(--g-dark-bg);
+}
+.g-badge--outline.g-badge--purple {
+	color: var(--g-purple-bg);
+	border-color: var(--g-purple-bg);
+}
+.g-badge--outline.g-badge--accent {
+	color: var(--g-accent-bg);
+	border-color: var(--g-accent-bg);
+}
+.g-badge--outline.g-badge--neutral {
+	color: var(--g-neutral-bg);
+	border-color: var(--g-neutral-bg);
+}
+.g-badge--outline.g-badge--inactive {
+	color: var(--g-inactive-bg);
+	border-color: var(--g-inactive-bg);
+}
+
+/* Utilidades rápidas sem precisar criar variantes novas */
+.g-badge--small {
+	font-size: 0.55rem;
+	padding: 0.25rem 0.45rem;
+}
+.g-badge--lg {
+	font-size: 0.7rem;
+	padding: 0.4rem 0.7rem;
+}
+
+/* Backdrop suave para modal de despesas (mantido) */
+.modal-backdrop.modal-backdrop-soft {
+	background: rgba(0, 0, 0, 0.35);
+}
+
+/* ========================================
+   BADGE STATUS - Indicadores de Status
+   ======================================== */
+
+.status-indicator {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-xs);
+	font-size: var(--text-sm);
+	font-weight: var(--font-medium);
+}
+
+.status-indicator__dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+.status-indicator--active .status-indicator__dot {
+	background-color: var(--color-success);
+	box-shadow: 0 0 0 3px var(--color-success-light);
+}
+
+.status-indicator--inactive .status-indicator__dot {
+	background-color: var(--text-muted);
+	box-shadow: 0 0 0 3px var(--bg-hover);
+}
+
+.status-indicator--warning .status-indicator__dot {
+	background-color: var(--color-warning);
+	box-shadow: 0 0 0 3px var(--color-warning-light);
+}
+
+.status-indicator--danger .status-indicator__dot {
+	background-color: var(--color-danger);
+	box-shadow: 0 0 0 3px var(--color-danger-light);
+}
+
+/* Pulsing animation */
+.status-indicator--pulsing .status-indicator__dot {
+	animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.5;
+	}
+}

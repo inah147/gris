@@ -1,0 +1,171 @@
+/* ========================================
+   BUTTONS - Sistema de Botões Modernos
+   ======================================== */
+
+.btn-modern {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-sm);
+	padding: var(--btn-padding-y) var(--btn-padding-x);
+	font-size: var(--text-sm);
+	font-weight: var(--font-semibold);
+	line-height: var(--leading-tight);
+	text-decoration: none;
+	text-align: center;
+	white-space: nowrap;
+	vertical-align: middle;
+	cursor: pointer;
+	user-select: none;
+	border: var(--border-width) solid transparent;
+	border-radius: var(--radius-md);
+	transition: all var(--transition-fast);
+	background-color: var(--color-primary);
+	color: var(--text-on-primary);
+	box-shadow: var(--shadow-button);
+}
+
+.btn-modern:hover {
+	background-color: var(--color-primary-hover);
+	box-shadow: var(--shadow-sm);
+	transform: translateY(-1px);
+}
+
+.btn-modern:active {
+	background-color: var(--color-primary-active);
+	transform: translateY(0);
+	box-shadow: none;
+}
+
+.btn-modern:focus-visible {
+	outline: 2px solid var(--color-primary);
+	outline-offset: 2px;
+}
+
+.btn-modern:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+/* Secondary Button */
+.btn-modern--secondary {
+	background-color: var(--color-secondary);
+	color: var(--text-on-dark);
+}
+
+.btn-modern--secondary:hover {
+	background-color: var(--color-secondary-hover);
+}
+
+.btn-modern--secondary:active {
+	background-color: var(--color-secondary-active);
+}
+
+/* Outline Button */
+.btn-modern--outline {
+	background-color: transparent;
+	color: var(--color-primary);
+	border-color: var(--color-primary);
+	box-shadow: none;
+}
+
+.btn-modern--outline:hover {
+	background-color: var(--color-primary-light);
+	border-color: var(--color-primary-hover);
+	color: var(--color-primary-hover);
+}
+
+.btn-modern--outline:active {
+	background-color: var(--color-primary-lighter);
+}
+
+/* Ghost Button */
+.btn-modern--ghost {
+	background-color: transparent;
+	color: var(--color-primary);
+	box-shadow: none;
+	border-color: transparent;
+}
+
+.btn-modern--ghost:hover {
+	background-color: var(--bg-hover);
+}
+
+.btn-modern--ghost:active {
+	background-color: var(--bg-active);
+}
+
+/* Danger Button */
+.btn-modern--danger {
+	background-color: var(--color-danger);
+	color: var(--text-on-dark);
+}
+
+.btn-modern--danger:hover {
+	background-color: var(--color-danger-hover);
+}
+
+.btn-modern--danger:active {
+	background-color: var(--color-danger-active);
+}
+
+/* Success Button */
+.btn-modern--success {
+	background-color: var(--color-success);
+	color: var(--text-on-dark);
+}
+
+.btn-modern--success:hover {
+	background-color: var(--color-success-hover);
+}
+
+/* Button Sizes */
+.btn-modern--sm {
+	padding: var(--btn-padding-y-sm) var(--btn-padding-x-sm);
+	font-size: var(--text-xs);
+	height: var(--btn-height-sm);
+}
+
+.btn-modern--lg {
+	padding: var(--btn-padding-y-lg) var(--btn-padding-x-lg);
+	font-size: var(--text-base);
+	height: var(--btn-height-lg);
+}
+
+/* Button with icon */
+.btn-modern__icon {
+	width: 1rem;
+	height: 1rem;
+	stroke: currentColor;
+	stroke-width: 2;
+	fill: none;
+}
+
+/* Loading state */
+.btn-modern--loading {
+	position: relative;
+	color: transparent;
+	pointer-events: none;
+}
+
+.btn-modern--loading::after {
+	content: "";
+	position: absolute;
+	width: 1rem;
+	height: 1rem;
+	top: 50%;
+	left: 50%;
+	margin-left: -0.5rem;
+	margin-top: -0.5rem;
+	border: 2px solid transparent;
+	border-top-color: currentColor;
+	border-radius: 50%;
+	animation: btn-spin 0.6s linear infinite;
+}
+
+@keyframes btn-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}

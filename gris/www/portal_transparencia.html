@@ -1,5 +1,11 @@
 {% extends "templates/web.html" %}
 
+{% block head_include %}
+  {{ super() }}
+  <link rel="stylesheet" href="/assets/gris/css/design-system.css">
+  <link rel="stylesheet" href="/assets/gris/css/components.css">
+{% endblock %}
+
 {% block page_content %}
 <div class="container col-xxl-8 px-4 py-5">
     <div class="row flex-lg-row-reverse align-items-center g-5 py-5">
@@ -52,7 +58,7 @@
 
 <div class="container my-5 transparency-section" id="documentos-anuais">
     <h2 class="transparency-section__title">Documentos Anuais</h2>
-    
+
     <div class="year-filter">
         <div class="year-filter__field">
             <label for="ano_referencia" class="form-label fw-bold mb-2">Ano de Referência</label>
@@ -63,7 +69,7 @@
             </select>
         </div>
     </div>
-    
+
     <div id="areas-container">
         <!-- Seções dinâmicas via JS -->
     </div>

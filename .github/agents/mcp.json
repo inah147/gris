@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "frappe-db": {
+      "command": "python",
+      "args": ["-m", "mcp_frappe_server"],
+      "env": {
+        "FRAPPE_APP_PATH": "${workspaceFolder}"
+      },
+      "disabled": false
+    },
+    "frappe-file-system": {
+      "command": "python",
+      "args": ["-m", "mcp_fs_server"],
+      "env": {
+        "FS_ROOT": "${workspaceFolder}/apps"
+      },
+      "disabled": false
+    },
+    "frappe-git": {
+      "command": "python",
+      "args": ["-m", "mcp_git_server"],
+      "env": {
+        "GIT_ROOT": "${workspaceFolder}"
+      },
+      "disabled": false
+    }
+  }
+}

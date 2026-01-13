@@ -1,0 +1,48 @@
+.data-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+	gap: 1.5rem;
+}
+
+.data-item {
+	margin-bottom: 0.5rem;
+}
+
+.data-label {
+	font-size: 0.75rem;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--text-secondary, #64748b);
+	font-weight: 600;
+	margin-bottom: 0.25rem;
+	display: block;
+}
+
+.data-value {
+	font-size: 1rem;
+	color: var(--text-primary, #334155);
+	font-weight: 500;
+}
+
+/* .habilidade-tag {
+	font-size: 0.85rem;
+	padding: 0.5em 0.85em;
+	border-radius: 50px;
+	font-weight: 500;
+	background-color: var(--color-primary-light, #e0f2fe) !important;
+	color: var(--color-primary, #0284c7) !important;
+} */
+
+.habilidade-tag .remove-habilidade {
+	opacity: 0.6;
+	transition: opacity 0.2s;
+}
+
+.habilidade-tag .remove-habilidade:hover {
+	opacity: 1;
+}
+
+#habilidades-container {
+	background-color: var(--bg-page, #f8f9fa) !important;
+	border-color: var(--border-color, #e2e8f0) !important;
+}

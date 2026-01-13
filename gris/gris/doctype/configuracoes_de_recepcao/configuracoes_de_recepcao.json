@@ -1,0 +1,113 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-01-07 08:56:22.557904",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "dados_para_registro_enviados",
+  "registro_criado_no_paxtu",
+  "registro_provisorio_pago",
+  "registro_provisorio_efetivado",
+  "pesquisa_de_novos_associados_respondida",
+  "ficha_medica_preenchida",
+  "id_escoteiros_criado",
+  "registro_definitivo_pago",
+  "registro_definitivo_efetivado",
+  "reuniao_de_acolhida_realizada",
+  "intervalo_provisorio_definitivo"
+ ],
+ "fields": [
+  {
+   "default": "7",
+   "fieldname": "dados_para_registro_enviados",
+   "fieldtype": "Int",
+   "label": "Dados para registro enviados"
+  },
+  {
+   "default": "1",
+   "fieldname": "registro_criado_no_paxtu",
+   "fieldtype": "Int",
+   "label": "Registro criado no paxtu"
+  },
+  {
+   "fieldname": "pesquisa_de_novos_associados_respondida",
+   "fieldtype": "Int",
+   "label": "Pesquisa de novos associados respondida",
+   "options": "1"
+  },
+  {
+   "default": "1",
+   "fieldname": "registro_definitivo_pago",
+   "fieldtype": "Int",
+   "label": "Registro definitivo pago"
+  },
+  {
+   "default": "7",
+   "fieldname": "registro_definitivo_efetivado",
+   "fieldtype": "Int",
+   "label": "Registro definitivo efetivado"
+  },
+  {
+   "default": "1",
+   "fieldname": "registro_provisorio_pago",
+   "fieldtype": "Int",
+   "label": "Registro provis\u00f3rio pago"
+  },
+  {
+   "default": "3",
+   "fieldname": "ficha_medica_preenchida",
+   "fieldtype": "Int",
+   "label": "Ficha m\u00e9dica preenchida"
+  },
+  {
+   "default": "2",
+   "fieldname": "id_escoteiros_criado",
+   "fieldtype": "Int",
+   "label": "id@escoteiros criado"
+  },
+  {
+   "default": "30",
+   "fieldname": "intervalo_provisorio_definitivo",
+   "fieldtype": "Int",
+   "label": "Intervalo entre registro provis\u00f3rio e definitivo"
+  },
+  {
+   "default": "7",
+   "fieldname": "registro_provisorio_efetivado",
+   "fieldtype": "Int",
+   "label": "Registro provis\u00f3rio efetivado"
+  },
+  {
+   "default": "7",
+   "fieldname": "reuniao_de_acolhida_realizada",
+   "fieldtype": "Int",
+   "label": "Reuni\u00e3o de acolhida realizada"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-01-13 08:25:50.674064",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Configuracoes de Recepcao",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

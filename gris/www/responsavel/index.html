@@ -1,0 +1,82 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Painel do Responsável{% endblock %}
+
+{% set active_link = '/responsavel' %}
+{% set sidebar_title = 'Painel do Responsável' %}
+
+{% block head_include %}
+  <link rel="stylesheet" href="/inicio.css">
+{% endblock %}
+
+{% block page_header %}
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Painel do Responsável</h1>
+      <p class="page-header__subtitle">Gerencie seus dados e beneficiários.</p>
+    </div>
+  </div>
+{% endblock %}
+
+{% block main %}
+  <div class="inicio-cards-grid">
+    <a href="/responsavel/meus_dados" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
+      <div class="inicio-card__icon inicio-card__icon--purple">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+      </div>
+      <div class="inicio-card__content">
+        <h2 class="inicio-card__title">Meus dados</h2>
+        <p class="inicio-card__description">Visualize e edite seus dados cadastrais</p>
+      </div>
+      <div class="inicio-card__arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </div>
+    </a>
+
+    <a href="/responsavel/beneficiarios" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
+      <div class="inicio-card__icon inicio-card__icon--purple">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+      </div>
+      <div class="inicio-card__content">
+        <h2 class="inicio-card__title">Beneficiários</h2>
+        <p class="inicio-card__description">Gerencie os beneficiários vinculados</p>
+      </div>
+      <div class="inicio-card__arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </div>
+    </a>
+
+    <a href="/responsavel/pesquisa_novos" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
+      <div class="inicio-card__icon inicio-card__icon--purple">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+      </div>
+      <div class="inicio-card__content">
+        <h2 class="inicio-card__title">Pesquisa de Novos Associados</h2>
+        <p class="inicio-card__description">Responda à pesquisa de satisfação</p>
+      </div>
+      <div class="inicio-card__arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </div>
+    </a>
+  </div>
+{% endblock %}

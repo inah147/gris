@@ -1,0 +1,165 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Beneficiários{% endblock %}
+
+{% block head_include %}
+  {{ super() }}
+  <link rel="stylesheet" href="/responsavel/beneficiarios.css">
+{% endblock %}
+
+{% block page_header %}
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Beneficiários</h1>
+      <p class="page-header__subtitle">Gerencie os beneficiários vinculados ao seu cadastro.</p>
+    </div>
+  </div>
+{% endblock %}
+
+{% block main %}
+<div class="beneficiarios-container">
+
+	{% if visit_info %}
+	<div class="card-modern mb-5" style="background-color: #f8fbff; border: 1px solid #bfdbfe; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); border-radius: 16px; overflow: hidden;">
+		<div class="card-modern__body visit-card-body">
+			<div style="flex-shrink: 0;">
+				<div style="background-color: #dbeafe; color: #2563eb; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.1);">
+					<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+				</div>
+			</div>
+			<div class="visit-card-content">
+				<h3 class="h5 mb-2" style="color: #1e3a8a; font-weight: 700; font-size: 1.25rem;">Visita Agendada!</h3>
+				<p class="mb-4" style="color: #475569; font-size: 1.05rem; line-height: 1.5;">Você tem uma visita agendada para o dia <strong style="color: #2563eb;">{{ visit_info.formatted_date }}</strong>.</p>
+				
+				<div class="visit-card-actions">
+					<button class="btn-modern btn-modern--sm btn-modern--primary" id="btn-reagendar-visita" style="box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);">Reagendar</button>
+					<button class="btn-modern btn-modern--sm" id="btn-cancelar-visita" style="background: white; border: 1px solid #cbd5e1; color: #64748b; padding: 0.5rem 1rem; font-weight: 500; transition: all 0.2s;">Cancelar agendamento</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	{% endif %}
+	
+	<!-- Section 1: Beneficiários Registrados -->
+	<section class="mb-5">
+		<h2 class="section-title">Beneficiários Registrados</h2>
+		{% if beneficiarios_registrados %}
+			<div class="grid-cards">
+				{% for b in beneficiarios_registrados %}
+				<div class="card-modern card-modern--clickable" onclick="window.location.href='/associados/detalhe?name={{ b.name }}'">
+					<div class="card-modern__body">
+						<div class="d-flex justify-content-between align-items-start mb-3">
+							<h3 class="card-modern__title mb-0" style="font-size: 1.1rem;">{{ b.nome_completo }}</h3>
+							<span class="g-badge {{ b.status_class }}">{{ b.status }}</span>
+						</div>
+						<div class="info-grid">
+							<div class="info-item">
+								<span class="info-label">Registro</span>
+								<span class="info-value">{{ b.registro or '—' }}</span>
+							</div>
+							<div class="info-item">
+								<span class="info-label">Validade</span>
+								<span class="info-value">{{ b.validade_registro or '—' }}</span>
+							</div>
+							<div class="info-item" style="grid-column: span 2;">
+								<span class="info-label">Ramo</span>
+								<span class="info-value">{{ b.ramo or '—' }}</span>
+							</div>
+						</div>
+					</div>
+				</div>
+				{% endfor %}
+			</div>
+		{% else %}
+			<div class="alert alert-info">Nenhum beneficiário registrado encontrado.</div>
+		{% endif %}
+	</section>
+
+	<!-- Section 2: Beneficiários em processo de integração -->
+	<section>
+		<div class="d-flex justify-content-between align-items-center mb-3">
+			<h2 class="section-title mb-0">Beneficiários em processo de integração</h2>
+			{% if show_schedule_button %}
+				<button class="btn-modern btn-modern--primary" id="btn-agendar-visita">
+					Agendar Visita
+				</button>
+			{% endif %}
+		</div>
+		
+		{% if beneficiarios_integracao %}
+			<div class="grid-cards">
+				{% for b in beneficiarios_integracao %}
+				<div class="card-modern">
+					<div class="card-modern__body">
+						<div class="mb-4">
+							<h3 class="card-modern__title mb-1" style="font-size: 1.1rem;">{{ b.nome_completo }}</h3>
+							<div class="text-muted small mb-3">{{ b.ramo or 'Ramo não definido' }}</div>
+							
+							{% if b.primeira_visita_realizada %}
+							<a href="/responsavel/registro?novo_associado={{ b.name }}" class="btn-modern btn-modern--sm btn-modern--primary">
+								{% if b.registro_criado_no_paxtu %}
+									Visualizar Dados
+								{% elif b.status == 'Fazer Registro' %}
+									Editar Dados
+								{% else %}
+									Preencher Registro
+								{% endif %}
+							</a>
+							{% endif %}
+						</div>
+						
+						<div class="timeline-container">
+							{% for step in b.steps %}
+							<div class="timeline-item {% if step.completed %}completed{% elif step.is_overdue %}overdue{% endif %}">
+								<div class="timeline-marker"></div>
+								<div class="timeline-content">
+									<span class="timeline-label">{{ step.label }}</span>
+									{% if step.estimated_date and not step.completed %}
+									<div class="timeline-date {{ 'text-overdue' if step.is_overdue else '' }}">
+										{{ 'Em atraso: ' if step.is_overdue else 'Previsto: ' }} {{ step.estimated_date }}
+									</div>
+									{% endif %}
+								</div>
+							</div>
+							{% endfor %}
+						</div>
+					</div>
+				</div>
+				{% endfor %}
+			</div>
+		{% else %}
+			<div class="text-muted p-3 border rounded bg-light text-center">
+				Nenhum beneficiário em processo de integração.
+			</div>
+		{% endif %}
+	</section>
+
+	<!-- Modal Agendamento -->
+	<div class="modal-backdrop" id="modalAgendamentoBackdrop" style="display: none;"></div>
+	<div class="modal-modern" id="modalAgendamento" tabindex="-1" style="display: none;">
+		<div class="modal-dialog">
+			<div class="modal-modern__content">
+				<div class="modal-modern__header">
+					<h5 class="modal-modern__title">Agendar Visita</h5>
+				</div>
+				<div class="modal-modern__body">
+					<p class="text-muted mb-3">Selecione uma data disponível para realizar a visita:</p>
+					<div id="dates-list" class="list-group">
+						<!-- Dates will be injected here -->
+						<div class="text-center p-3">Carregando datas...</div>
+					</div>
+				</div>
+				<div class="modal-modern__footer">
+					<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>Cancelar</button>
+					<button type="button" class="btn-modern btn-modern--primary" id="btn-confirmar-agendamento" disabled>Confirmar</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="/responsavel/beneficiarios.js"></script>
+{% endblock %}

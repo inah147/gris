@@ -28,4 +28,6 @@ def get_context(context):
 	context.can_financeiro = user_has_access("/financeiro")
 	context.can_transparencia = user_has_access("/portal_transparencia")
 	context.can_calendario = user_has_access("/calendario")
+	context.can_responsavel = user_has_access("/responsavel")
+	context.can_recepcao = user_has_access("/recepcao")
 	return context

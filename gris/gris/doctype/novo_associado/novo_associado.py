@@ -9,7 +9,7 @@ from frappe.model.document import Document
 
 
 class NovoAssociado(Document):
-	def before_insert(self):
+	def autoname(self):
 		if self.cpf:
 			cpf_clean = re.sub(r"\D", "", self.cpf)
 			self.name = hashlib.md5(cpf_clean.encode("utf-8")).hexdigest()

@@ -1,0 +1,23 @@
+/* inicio.css - estilos específicos da página Início */
+
+.inicio-cards { --gap:1.25rem; }
+.inicio-card { position:relative; border:1px solid #e2e8f0; border-radius:14px; background:#fff; padding:.9rem .95rem .95rem; display:flex; flex-direction:column; gap:.55rem; box-shadow:0 1px 2px rgba(0,0,0,.04); transition:.18s; }
+.inicio-card:hover { border-color:#3c84c1; box-shadow:0 2px 6px -1px rgba(60,132,193,.25),0 1px 3px rgba(0,0,0,.06); }
+.inicio-card:active { transform:translateY(1px); }
+.inicio-card h2 { font-size:.65rem; letter-spacing:.5px; font-weight:600; text-transform:uppercase; color:#64748b; margin:0; }
+.inicio-card p { font-size:.78rem; line-height:1.25; color:#334155; margin:0; flex-grow:1; }
+.inicio-card .btn { align-self:flex-start; font-size:.65rem; padding:.38rem .7rem .42rem; letter-spacing:.3px; }
+
+/* Grid refinado */
+@media (min-width:576px){
+  .inicio-cards > [class*='col-'] { flex:0 0 50%; max-width:50%; }
+}
+@media (min-width:992px){
+  .inicio-cards > [class*='col-'] { flex:0 0 33.333%; max-width:33.333%; }
+}
+
+/* Mobile: duas colunas */
+@media (max-width:575.98px){
+  .inicio-cards { display:flex; flex-wrap:wrap; margin:0 -0.5rem; }
+  .inicio-cards > .inicio-col { width:50%; padding:0 .5rem 1rem; }
+}

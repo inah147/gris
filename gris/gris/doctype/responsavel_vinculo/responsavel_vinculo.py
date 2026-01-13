@@ -2,8 +2,15 @@
 # For license information, please see license.txt
 
 # import frappe
+import hashlib
+
 from frappe.model.document import Document
 
 
 class ResponsavelVinculo(Document):
-	pass
+	def autoname(self):
+		self.name = (
+			(self.responsavel or "")
+			+ (self.beneficiario_associado or "")
+			+ (self.beneficiario_novo_associado or "")
+		)

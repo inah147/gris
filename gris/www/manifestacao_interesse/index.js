@@ -3,9 +3,36 @@ frappe.ready(function() {
     // CPF Masking
     // Removed initial binding here as it is handled by applyMasks() and addJovem()
     
-    // Phone Masking (Simple numbers only enforcement visually, though validation handles it)
+    // Phone Masking
+    function applyPhoneMask() {
+        const ddi = $('#pais_celular_responsavel').val();
+        const phoneInput = $('#celular_responsavel');
+        let value = phoneInput.val().replace(/\D/g, '');
+
+        if (ddi === '55') {
+            if (value.length > 11) value = value.slice(0, 11);
+            
+            if (value.length > 10) {
+                // (XX) X XXXX-XXXX
+                value = value.replace(/^(\d{2})(\d{1})(\d{4})(\d{4}).*/, '($1) $2 $3-$4');
+            } else if (value.length > 6) {
+                // (XX) XXXX-XXXX
+                value = value.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+            } else if (value.length > 2) {
+                value = value.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
+            }
+        }
+        phoneInput.val(value);
+    }
+
     $('#celular_responsavel').on('input', function() {
+        applyPhoneMask();
+    });
+
+    // Country Code Masking
+    $('#pais_celular_responsavel').on('input', function() {
         this.value = this.value.replace(/\D/g, '');
+        applyPhoneMask(); // Re-apply phone mask if country changes
     });
 
     // Dynamic Jovem Forms
@@ -134,7 +161,16 @@ frappe.ready(function() {
 
             // Validate Phone
             const phoneField = $('#celular_responsavel');
-            if (!/^\d+$/.test(phoneField.val())) {
+            const countryField = $('#pais_celular_responsavel');
+            
+            // Validate Country Code (must have digits)
+            if (!/^\d{1,4}$/.test(countryField.val())) {
+                countryField.addClass('is-invalid');
+                isValid = false;
+            }
+
+            // Validate Phone (must have digits)
+            if (!/\d+/.test(phoneField.val())) {
                 phoneField.addClass('is-invalid');
                 isValid = false;
             }
@@ -249,7 +285,7 @@ frappe.ready(function() {
             // Populate Summary
             $('#summary_nome_responsavel').text($('#nome_responsavel').val());
             $('#summary_email_responsavel').text($('#email_responsavel').val());
-            $('#summary_celular_responsavel').text($('#celular_responsavel').val());
+            $('#summary_celular_responsavel').text('+' + $('#pais_celular_responsavel').val() + ' ' + $('#celular_responsavel').val());
             $('#summary_cpf_responsavel').text($('#cpf_responsavel').val());
             
             const summaryJovensContainer = $('#summary-jovens-container');
@@ -324,7 +360,12 @@ frappe.ready(function() {
         // Collect Responsavel Data
         data['nome_responsavel'] = $('#nome_responsavel').val();
         data['email_responsavel'] = $('#email_responsavel').val();
-        data['celular_responsavel'] = $('#celular_responsavel').val();
+        
+        // Construct full phone number: +DDI + Phone (digits only)
+        const ddi = $('#pais_celular_responsavel').val();
+        const phone = $('#celular_responsavel').val().replace(/\D/g, '');
+        data['celular_responsavel'] = '+' + ddi + phone;
+        
         data['cpf_responsavel'] = $('#cpf_responsavel').val();
 
         // Collect Jovens Data
@@ -340,7 +381,7 @@ frappe.ready(function() {
         data['jovens'] = JSON.stringify(jovens);
 
         frappe.call({
-            method: 'gris.gris.www.manifestacao_interesse.index.submit_interest',
+            method: 'gris.www.manifestacao_interesse.index.submit_interest',
             args: data,
             freeze: true,
             freeze_message: 'Enviando...',
@@ -356,7 +397,7 @@ frappe.ready(function() {
                     
                     // Update Stepper
                     $('#step-1').removeClass('active').addClass('completed');
-                    $('#step-1 .step-counter').html('<i class="fa fa-check"></i>');
+                    // $('#step-1 .step-counter').html('<i class="fa fa-check"></i>'); // Keep number 1
                     $('#step-2').addClass('active');
                     
                 } else {

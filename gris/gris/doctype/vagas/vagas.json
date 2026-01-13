@@ -1,0 +1,206 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-12-31 17:12:00.890080",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "ramo_filhotes_section",
+  "limite_de_vagas_filhotes",
+  "idade_minima_filhotes",
+  "idade_maxima_filhotes",
+  "idade_transicao_filhotes",
+  "ramo_lobinho_section",
+  "limite_de_vagas_lobinho",
+  "idade_minima_lobinho",
+  "idade_maxima_lobinho",
+  "idade_transicao_lobinho",
+  "ramo_escoteiro_section",
+  "limite_de_vagas_escoteiro",
+  "idade_minima_escoteiro",
+  "idade_maxima_escoteiro",
+  "idade_transicao_escoteiro",
+  "ramo_s\u00eanior_section",
+  "limite_de_vagas_senior",
+  "idade_minima_senior",
+  "idade_maxima_senior",
+  "idade_transicao_senior",
+  "ramo_pioneiro_section",
+  "limite_de_vagas_pioneiro",
+  "idade_minima_pioneiro",
+  "idade_maxima_pioneiro",
+  "idade_transicao_pioneiro"
+ ],
+ "fields": [
+  {
+   "fieldname": "ramo_filhotes_section",
+   "fieldtype": "Section Break",
+   "label": "Ramo Filhotes"
+  },
+  {
+   "default": "10",
+   "fieldname": "limite_de_vagas_filhotes",
+   "fieldtype": "Int",
+   "label": "Limite de vagas ramo Filhotes"
+  },
+  {
+   "default": "5",
+   "fieldname": "idade_minima_filhotes",
+   "fieldtype": "Int",
+   "label": "Idade M\u00ednima Ramo Filhotes"
+  },
+  {
+   "default": "7",
+   "fieldname": "idade_maxima_filhotes",
+   "fieldtype": "Int",
+   "label": "Idade M\u00e1xima Ramo FIlhotes"
+  },
+  {
+   "default": "6,5",
+   "fieldname": "idade_transicao_filhotes",
+   "fieldtype": "Float",
+   "label": "Idade de Transi\u00e7\u00e3o Ramo Filhotes"
+  },
+  {
+   "fieldname": "ramo_lobinho_section",
+   "fieldtype": "Section Break",
+   "label": "Ramo Lobinho"
+  },
+  {
+   "default": "24",
+   "fieldname": "limite_de_vagas_lobinho",
+   "fieldtype": "Int",
+   "label": "Limite de vagas ramo Lobinho"
+  },
+  {
+   "default": "7",
+   "fieldname": "idade_minima_lobinho",
+   "fieldtype": "Int",
+   "label": "Idade M\u00ednima Ramo Lobinho"
+  },
+  {
+   "default": "11",
+   "fieldname": "idade_maxima_lobinho",
+   "fieldtype": "Int",
+   "label": "Idade M\u00e1xima Ramo Lobinho"
+  },
+  {
+   "default": "10,5",
+   "fieldname": "idade_transicao_lobinho",
+   "fieldtype": "Float",
+   "label": "Idade de Transi\u00e7\u00e3o Ramo Lobinho"
+  },
+  {
+   "fieldname": "ramo_escoteiro_section",
+   "fieldtype": "Section Break",
+   "label": "Ramo Escoteiro"
+  },
+  {
+   "default": "32",
+   "fieldname": "limite_de_vagas_escoteiro",
+   "fieldtype": "Int",
+   "label": "Limite de vagas ramo Escoteiro"
+  },
+  {
+   "default": "11",
+   "fieldname": "idade_minima_escoteiro",
+   "fieldtype": "Int",
+   "label": "Idade M\u00ednima Ramo Escoteiro"
+  },
+  {
+   "default": "15",
+   "fieldname": "idade_maxima_escoteiro",
+   "fieldtype": "Int",
+   "label": "Idade M\u00e1xima Ramo Escoteiro"
+  },
+  {
+   "default": "14,5",
+   "fieldname": "idade_transicao_escoteiro",
+   "fieldtype": "Float",
+   "label": "Idade de Transi\u00e7\u00e3o Ramo Escoteiro"
+  },
+  {
+   "fieldname": "ramo_s\u00eanior_section",
+   "fieldtype": "Section Break",
+   "label": "Ramo S\u00eanior"
+  },
+  {
+   "default": "32",
+   "fieldname": "limite_de_vagas_senior",
+   "fieldtype": "Int",
+   "label": "Limite de vagas ramo S\u00eanior"
+  },
+  {
+   "default": "15",
+   "fieldname": "idade_minima_senior",
+   "fieldtype": "Int",
+   "label": "Idade M\u00ednima Ramo S\u00eanior"
+  },
+  {
+   "default": "18",
+   "fieldname": "idade_maxima_senior",
+   "fieldtype": "Int",
+   "label": "Idade M\u00e1xima Ramo S\u00eanior"
+  },
+  {
+   "default": "17,5",
+   "fieldname": "idade_transicao_senior",
+   "fieldtype": "Float",
+   "label": "Idade de Transi\u00e7\u00e3o Ramo S\u00eanior"
+  },
+  {
+   "fieldname": "ramo_pioneiro_section",
+   "fieldtype": "Section Break",
+   "label": "Ramo Pioneiro"
+  },
+  {
+   "default": "100",
+   "fieldname": "limite_de_vagas_pioneiro",
+   "fieldtype": "Int",
+   "label": "Limite de vagas Ramo Pioneiro"
+  },
+  {
+   "default": "18",
+   "fieldname": "idade_minima_pioneiro",
+   "fieldtype": "Int",
+   "label": "Idade M\u00ednima Ramo Pioneiro"
+  },
+  {
+   "default": "22",
+   "fieldname": "idade_maxima_pioneiro",
+   "fieldtype": "Int",
+   "label": "Idade M\u00e1xima Ramo Pioneiro"
+  },
+  {
+   "default": "21,5",
+   "fieldname": "idade_transicao_pioneiro",
+   "fieldtype": "Float",
+   "label": "Idade de Transi\u00e7\u00e3o Ramo Pioneiro"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-12-31 17:35:58.053916",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Vagas",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

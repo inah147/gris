@@ -1,0 +1,244 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Agenda de Visitas{% endblock %}
+
+{% block head_include %}
+  {{ super() }}
+  <link rel="stylesheet" href="/inicio.css">
+  <link rel="stylesheet" href="/recepcao/agenda_visitas.css">
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <div class="page-header__content">
+        <h1 class="page-header__title">Agenda de Visitas</h1>
+        <p class="page-header__subtitle">Consulte e agende visitas para novos associados.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="calendar-page-container">
+    <div class="d-flex justify-content-end mb-3">
+        <button class="btn-modern btn-modern--primary" onclick="openScheduleModal()">
+            <i class="fa fa-plus"></i> Agendar Visita
+        </button>
+    </div>
+    <div class="card-modern mb-4">
+        <div class="card-modern__body card-modern__body--compact">
+            <div class="filter-bar mb-0">
+                <div class="filter-field" style="width: 100%; max-width: none;">
+                    <label class="form-label-modern">Filtrar por Ramo</label>
+                    <div class="section-filter-options">
+                        <label class="filter-option all-option">
+                            <input type="checkbox" id="filter-all" checked>
+                            <span>Todos</span>
+                        </label>
+                        {% for section in sections %}
+                        <label class="filter-option">
+                            <input type="checkbox" name="section-filter" value="{{ section }}" checked>
+                            <span>{{ section }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="filter-field mt-3" style="width: 100%; max-width: none; border-top: 1px solid var(--border-color); padding-top: var(--space-sm);">
+                    <label class="filter-option">
+                        <input type="checkbox" id="show-empty-days" checked>
+                        <span>Mostrar dias sem atividade</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="calendar-scroll-container">
+        <table class="calendar-table">
+            <thead>
+                <tr>
+                    <th class="col-date sticky-col">
+                        <div class="th-content">Data</div>
+                    </th>
+                    {% for section in sections %}
+                    <th class="col-section" data-section="{{ section }}">
+                        <div class="th-content">{{ section }}</div>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in calendar_rows %}
+                {% if row.is_new_month %}
+                <tr class="month-separator-row" data-month="{{ row.month_num }}">
+                    <td colspan="{{ 1 + sections|length }}" class="month-separator-cell">
+                        <span class="month-separator-label">{{ row.month_full }}</span>
+                    </td>
+                </tr>
+                {% endif %}
+                <tr class="calendar-row {% if row.is_weekend %}is-weekend{% endif %} {% if row.has_activity %}has-activity{% endif %}" data-date="{{ row.date_str }}">
+                    <td class="col-date sticky-col">
+                        <div class="date-cell-content">
+                            <span class="day-number">{{ row.day }}</span>
+                            <div class="date-meta">
+                                <span class="weekday-name">{{ row.weekday }}</span>
+                                <span class="month-name">{{ row.month }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    {% for section in sections %}
+                    <td class="col-activity" data-section="{{ section }}">
+                        {% if row.activities[section] %}
+                            <div class="activities-list">
+                            {% for event in row.activities[section] %}
+                                {% if event.type == 'visit' %}
+                                    <div class="activity-card visit-card {% if event.confirmed %}visit-confirmed{% endif %}" 
+                                         data-event-id="{{ event.id }}"
+                                         data-jovem="{{ event.jovem }}"
+                                         data-name="{{ event.title }}"
+                                         data-age="{{ event.subtitle }}"
+                                         data-confirmed="{{ event.confirmed }}">
+                                        <div class="activity-body">
+                                            <div class="activity-title">{{ event.title }}</div>
+                                            <div class="activity-location">
+                                                <i class="fa fa-child"></i> {{ event.subtitle }}
+                                            </div>
+                                        </div>
+                                        {% if event.confirmed %}
+                                        <i class="fa fa-check visit-status-icon" title="Confirmada"></i>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <div class="activity-card unavailable-card {% if not event.is_start %}is-continued-top{% endif %} {% if not event.is_end %}is-continued-bottom{% endif %}" data-event-id="{{ event.id }}">
+                                        <div class="activity-body">
+                                            {% if event.is_start %}
+                                            <div class="activity-title">Indisponível</div>
+                                            <div class="activity-location">
+                                                {{ event.subtitle }}
+                                            </div>
+                                            {% else %}
+                                            <div class="activity-continuation-marker"></div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                            </div>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Visit Modal -->
+<div class="modal-backdrop" id="visit-modal-backdrop" style="display: none;"></div>
+<div class="modal-modern" id="visit-modal" tabindex="-1" style="display: none;">
+    <div class="modal-dialog">
+        <div class="modal-modern__content">
+            <div class="modal-modern__header">
+                <h5 class="modal-modern__title">Detalhes da Visita</h5>
+            </div>
+            <div class="modal-modern__body">
+                <div class="visit-details">
+                    <div class="text-center mb-4">
+                        <h4 id="modal-child-name" class="mb-1" style="color: var(--color-primary); font-weight: 700;"></h4>
+                        <div id="modal-child-age" class="text-muted small"></div>
+                    </div>
+                    
+                    <div class="detail-item mb-3" id="modal-status-container" style="display: none; justify-content: center; border: none;">
+                        <div class="g-badge g-badge--success px-3 py-2">
+                            <i class="fa fa-check-circle mr-1"></i> Visita Confirmada
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-modern__footer" style="flex-direction: column; align-items: stretch;">
+                <button id="btn-confirm" class="btn-modern btn-modern--primary w-100">
+                    <i class="fa fa-check"></i> Confirmar Visita
+                </button>
+
+                <button id="btn-unconfirm" class="btn-modern btn-modern--warning w-100" style="display: none;">
+                    <i class="fa fa-undo"></i> Remover Confirmação
+                </button>
+                
+                <button id="btn-reschedule" class="btn-modern btn-modern--outline w-100">
+                    <i class="fa fa-calendar"></i> Reagendar
+                </button>
+                
+                <a id="btn-open-file" href="#" class="btn-modern btn-modern--outline w-100">
+                    <i class="fa fa-file-text-o"></i> Abrir Ficha
+                </a>
+                
+                <button id="btn-cancel" class="btn-modern btn-modern--danger w-100">
+                    <i class="fa fa-trash"></i> Cancelar Visita
+                </button>
+
+                <button type="button" class="btn-modern btn-modern--ghost w-100 mt-2" onclick="closeVisitModal()">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reschedule Modal -->
+<div class="modal-backdrop" id="reschedule-modal-backdrop" style="display: none; z-index: 1060;"></div>
+<div class="modal-modern" id="reschedule-modal" tabindex="-1" style="display: none; z-index: 1070;">
+    <div class="modal-dialog">
+        <div class="modal-modern__content">
+            <div class="modal-modern__header">
+                <h5 class="modal-modern__title">Reagendar Visita</h5>
+            </div>
+            <div class="modal-modern__body">
+                <p class="text-muted mb-3">Selecione uma nova data disponível:</p>
+                <div id="reschedule-dates-list" class="list-group">
+                    <!-- Dates will be injected here -->
+                    <div class="text-center p-3">Carregando datas...</div>
+                </div>
+            </div>
+            <div class="modal-modern__footer">
+                <button type="button" class="btn-modern btn-modern--ghost" onclick="closeRescheduleModal()">Cancelar</button>
+                <button type="button" class="btn-modern btn-modern--primary" id="btn-save-reschedule" disabled>Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Schedule Modal -->
+<div class="modal-backdrop" id="schedule-modal-backdrop" style="display: none; z-index: 1060;"></div>
+<div class="modal-modern" id="schedule-modal" tabindex="-1" style="display: none; z-index: 1070;">
+    <div class="modal-dialog">
+        <div class="modal-modern__content">
+            <div class="modal-modern__header">
+                <h5 class="modal-modern__title">Agendar Visita</h5>
+            </div>
+            <div class="modal-modern__body">
+                <div class="form-group mb-3">
+                    <label class="form-label-modern">Novo Associado</label>
+                    <select id="schedule-associate" class="form-input-modern">
+                        <option value="">Carregando...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label-modern">Data</label>
+                    <select id="schedule-date" class="form-input-modern" disabled>
+                        <option value="">Selecione um associado primeiro</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-modern__footer">
+                <button type="button" class="btn-modern btn-modern--ghost" onclick="closeScheduleModal()">Cancelar</button>
+                <button type="button" class="btn-modern btn-modern--primary" onclick="confirmSchedule()">Agendar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script src="/recepcao/agenda_visitas.js"></script>
+{% endblock %}

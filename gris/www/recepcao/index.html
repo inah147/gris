@@ -1,0 +1,86 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Novos Associados{% endblock %}
+
+{# Configura dados da sidebar específicos desta página #}
+{% set active_link = '/recepcao' %}
+{% set sidebar_title = 'Novos Associados' %}
+{% set sidebar_sections = [] %}
+
+{% block head_include %}
+  <link rel="stylesheet" href="/inicio.css">
+  <link rel="stylesheet" href="/recepcao/index.css">
+{% endblock %}
+
+{% block page_header %}
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Novos Associados</h1>
+      <p class="page-header__subtitle">Recepção e cadastro de novos associados.</p>
+    </div>
+  </div>
+{% endblock %}
+
+{% block main %}
+  <div class="inicio-cards-grid">
+    <a href="/recepcao/visao_geral" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
+      <div class="inicio-card__icon inicio-card__icon--pink">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+      </div>
+      <div class="inicio-card__content">
+        <h2 class="inicio-card__title">Visão Geral</h2>
+        <p class="inicio-card__description">Dashboard com métricas e indicadores</p>
+      </div>
+      <div class="inicio-card__arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </div>
+    </a>
+
+    <a href="/recepcao/agenda_visitas" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
+      <div class="inicio-card__icon inicio-card__icon--pink">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+      </div>
+      <div class="inicio-card__content">
+        <h2 class="inicio-card__title">Agenda de Visitas</h2>
+        <p class="inicio-card__description">Consulte e agende visitas</p>
+      </div>
+      <div class="inicio-card__arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </div>
+    </a>
+
+    <a href="/recepcao/fila_espera" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
+      <div class="inicio-card__icon inicio-card__icon--pink">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+      </div>
+      <div class="inicio-card__content">
+        <h2 class="inicio-card__title">Fila de espera</h2>
+        <p class="inicio-card__description">Gerencie a fila de espera</p>
+      </div>
+      <div class="inicio-card__arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </div>
+    </a>
+  </div>
+{% endblock %}

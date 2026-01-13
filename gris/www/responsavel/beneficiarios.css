@@ -1,0 +1,201 @@
+.grid-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+	gap: 1.5rem;
+}
+
+.section-title {
+	font-size: 1.25rem;
+	font-weight: 600;
+	color: var(--text-primary, #334155);
+	margin-bottom: 1rem;
+}
+
+.info-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.75rem;
+	margin-top: 1rem;
+}
+
+.info-item {
+	display: flex;
+	flex-direction: column;
+}
+
+.info-label {
+	font-size: 0.75rem;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--text-secondary, #64748b);
+	font-weight: 600;
+	margin-bottom: 0.25rem;
+}
+
+.info-value {
+	font-size: 0.9rem;
+	color: var(--text-primary, #334155);
+	font-weight: 500;
+}
+
+/* Timeline Styles */
+.timeline-container {
+	position: relative;
+	padding-left: 0.5rem;
+}
+
+.timeline-item {
+	position: relative;
+	padding-bottom: 1.5rem;
+	padding-left: 1.5rem;
+	border-left: 2px solid #e2e8f0;
+}
+
+.timeline-item:last-child {
+	border-left-color: transparent;
+	padding-bottom: 0;
+}
+
+.timeline-marker {
+	position: absolute;
+	left: -7px;
+	top: 0.25rem;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background-color: #fff;
+	border: 2px solid #cbd5e1;
+	transition: all 0.3s ease;
+	z-index: 1;
+}
+
+.timeline-content {
+	position: relative;
+	top: 0;
+}
+
+.timeline-label {
+	font-size: 0.9rem;
+	color: #64748b;
+	font-weight: 500;
+}
+
+/* Completed State */
+.timeline-item.completed .timeline-marker {
+	background-color: var(--color-primary, #0284c7);
+	border-color: var(--color-primary, #0284c7);
+}
+
+.timeline-item.completed .timeline-label {
+	color: var(--text-primary, #334155);
+	font-weight: 600;
+}
+
+.timeline-item.completed {
+	border-left-color: var(--color-primary, #0284c7);
+}
+
+/* Timeline Dates */
+.timeline-date {
+	font-size: 0.8rem;
+	color: #94a3b8;
+	font-weight: 400;
+	margin-top: 2px;
+}
+
+/* Overdue State */
+.timeline-item.overdue .timeline-marker {
+	background-color: #fffbeb; /* amber-50 */
+	border-color: #d97706; /* amber-600 */
+}
+
+.timeline-item.overdue .timeline-label {
+    color: #b45309; /* amber-700 */
+}
+
+.timeline-date.text-overdue {
+    color: #b45309; /* amber-700 */
+    font-weight: 600;
+}
+
+/* Modal Styles */
+.list-group-item {
+	position: relative;
+	display: block;
+	padding: 0.75rem 1.25rem;
+	background-color: #fff;
+	border: 1px solid rgba(0,0,0,.125);
+	width: 100%;
+	text-align: left;
+	cursor: pointer;
+}
+
+.list-group-item:first-child {
+	border-top-left-radius: 0.25rem;
+	border-top-right-radius: 0.25rem;
+}
+
+.list-group-item:last-child {
+	border-bottom-left-radius: 0.25rem;
+	border-bottom-right-radius: 0.25rem;
+}
+
+.list-group-item-action:hover, .list-group-item-action:focus {
+	z-index: 1;
+	color: #495057;
+	text-decoration: none;
+	background-color: #f8f9fa;
+}
+
+.list-group-item.active {
+	z-index: 2;
+	color: #fff;
+	background-color: var(--color-primary, #0284c7);
+	border-color: var(--color-primary, #0284c7);
+}
+
+.list-group-item + .list-group-item {
+	border-top-width: 0;
+}
+
+/* Visit Card Responsive Styles */
+.visit-card-body {
+	display: flex;
+	align-items: flex-start;
+	padding: 2rem;
+	gap: 2rem;
+}
+
+.visit-card-content {
+	flex-grow: 1;
+	margin-top: -4px;
+}
+
+.visit-card-actions {
+	display: flex;
+	gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+	.visit-card-body {
+		flex-direction: column;
+		padding: 1.5rem;
+		gap: 1.5rem;
+	}
+
+	.visit-card-content {
+		margin-top: 0;
+		width: 100%;
+	}
+	
+	.visit-card-actions {
+		flex-direction: column;
+		width: 100%;
+		gap: 1rem;
+	}
+	
+	.visit-card-actions .btn-modern {
+		width: 100%;
+		justify-content: center;
+	}
+}

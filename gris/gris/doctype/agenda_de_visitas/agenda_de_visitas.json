@@ -1,0 +1,64 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-12-23 16:07:07.580688",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "jovem",
+  "data_da_visita",
+  "visita_confirmada",
+  "ramo"
+ ],
+ "fields": [
+  {
+   "fieldname": "jovem",
+   "fieldtype": "Link",
+   "label": "Jovem",
+   "options": "Novo Associado"
+  },
+  {
+   "fieldname": "data_da_visita",
+   "fieldtype": "Date",
+   "label": "Data da visita"
+  },
+  {
+   "default": "0",
+   "fieldname": "visita_confirmada",
+   "fieldtype": "Check",
+   "label": "Visita confirmada"
+  },
+  {
+   "fieldname": "ramo",
+   "fieldtype": "Select",
+   "label": "Ramo",
+   "options": "Filhotes\nLobinho\nEscoteiro\nS\u00eanior\nPioneiro"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-12-23 16:07:58.631460",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Agenda de Visitas",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

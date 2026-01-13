@@ -1,5 +1,9 @@
+import hashlib
+import json
+
 import frappe
 from frappe import _
+from frappe.utils import now
 
 from gris.api.portal_cache_utils import get_uel_cached
 
@@ -40,22 +44,101 @@ def submit_interest(
 		user.mobile_no = celular_responsavel
 		user.enabled = 1
 		user.send_welcome_email = 1
+		user.append("roles", {"role": "Responsavel"})
 		user.insert(ignore_permissions=True)
 
-		# Process Jovens data if needed
-		# import json
-		# if isinstance(jovens, str):
-		# 	jovens_list = json.loads(jovens)
-		# 	for jovem in jovens_list:
-		# 		# Create records for each youth...
-		# 		pass
+		# Create or Get Responsavel
+		responsavel_doc = None
+		# Check existence by CPF since ID generation is handled by DocType
+		existing_responsavel = frappe.db.exists("Responsavel", {"cpf": cpf_responsavel})
+
+		if existing_responsavel:
+			responsavel_doc = frappe.get_doc("Responsavel", existing_responsavel)
+		else:
+			responsavel_doc = frappe.get_doc(
+				{
+					"doctype": "Responsavel",
+					"nome_completo": nome_responsavel,
+					"email": email_responsavel,
+					"celular": celular_responsavel,
+					"cpf": cpf_responsavel,
+				}
+			)
+			responsavel_doc.insert(ignore_permissions=True)
+
+		# Process Jovens data
+		jovens_list = []
+		if isinstance(jovens, str):
+			jovens_list = json.loads(jovens)
+		else:
+			jovens_list = jovens
+
+		for jovem in jovens_list:
+			# Create Resposta Manifestacao de Interesse
+			resposta = frappe.get_doc(
+				{
+					"doctype": "Resposta Manifestacao de Interesse",
+					"nome_do_responsavel": hashlib.md5(nome_responsavel.encode("utf-8")).hexdigest(),
+					"email_do_responsavel": hashlib.md5(email_responsavel.encode("utf-8")).hexdigest(),
+					"celular_do_responsavel": hashlib.md5(celular_responsavel.encode("utf-8")).hexdigest(),
+					"cpf_do_responsavel": hashlib.md5(cpf_responsavel.encode("utf-8")).hexdigest(),
+					"nome_do_jovem": hashlib.md5(jovem.get("nome_jovem", "").encode("utf-8")).hexdigest(),
+					"data_de_nascimento_do_jovem": hashlib.md5(
+						jovem.get("data_nascimento_jovem", "").encode("utf-8")
+					).hexdigest(),
+					"cpf_do_jovem": hashlib.md5(jovem.get("cpf_jovem", "").encode("utf-8")).hexdigest(),
+					"data_e_horario_de_resposta": now(),
+					"dados_confirmados": 1,
+					"aceite_lgpd": 1,
+				}
+			)
+			resposta.insert(ignore_permissions=True)
+
+			# Create or Get Novo Associado
+			novo_associado_doc = None
+			cpf_jovem = jovem.get("cpf_jovem")
+			if cpf_jovem:
+				existing_jovem = frappe.db.exists("Novo Associado", {"cpf": cpf_jovem})
+				if existing_jovem:
+					novo_associado_doc = frappe.get_doc("Novo Associado", existing_jovem)
+				else:
+					novo_associado_doc = frappe.get_doc(
+						{
+							"doctype": "Novo Associado",
+							"nome_completo": jovem.get("nome_jovem"),
+							"data_de_nascimento": jovem.get("data_nascimento_jovem"),
+							"cpf": cpf_jovem,
+						}
+					)
+					novo_associado_doc.insert(ignore_permissions=True)
+
+			# Create Responsavel Vinculo
+			if responsavel_doc and novo_associado_doc:
+				# Check existence by link fields
+				existing_vinculo = frappe.db.exists(
+					"Responsavel Vinculo",
+					{
+						"responsavel": responsavel_doc.name,
+						"beneficiario_novo_associado": novo_associado_doc.name,
+					},
+				)
+
+				if not existing_vinculo:
+					vinculo = frappe.get_doc(
+						{
+							"doctype": "Responsavel Vinculo",
+							"responsavel": responsavel_doc.name,
+							"beneficiario_novo_associado": novo_associado_doc.name,
+						}
+					)
+					vinculo.insert(ignore_permissions=True)
 
 		return {
 			"status": "success",
 			"message": "Sua manifestação de interesse foi registrada com sucesso! Um usuário foi criado para você. Verifique seu e-mail para definir sua senha e acessar o sistema.",
 		}
 	except Exception as e:
-		frappe.log_error(f"Error in submit_interest: {e!s}")
+		frappe.log_error("Erro Manifestacao Interesse", f"Error in submit_interest: {e!s}")
 		return {
 			"status": "error",
 			"message": "Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente.",

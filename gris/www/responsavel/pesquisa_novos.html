@@ -1,0 +1,151 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Pesquisa de Novos Associados{% endblock %}
+
+{% block page_header %}
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Pesquisa de Novos Associados</h1>
+      <p class="page-header__subtitle">Queremos saber mais sobre você e sua experiência conosco.</p>
+    </div>
+  </div>
+{% endblock %}
+
+{% block main %}
+<div class="card-modern">
+    <div class="card-modern__body">
+        {% if is_read_only %}
+        <div class="alert-modern alert-modern--info mb-4">
+            <svg class="alert-modern__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <div class="alert-modern__content">
+                <p class="alert-modern__description">Você já respondeu a esta pesquisa. Obrigado!</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <form id="survey-form" class="space-y-4">
+            <div class="row g-3">
+                <!-- Como conheceu o Movimento -->
+                <div class="col-12">
+                    <label class="form-label-modern">Como você conheceu o Movimento Escoteiro?</label>
+                    <select name="como_conheceu_movimento" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>
+                        <option value="">Selecione...</option>
+                        {% set options = ["Através de um amigo", "Através de reportagens na televisão ou rádio", "Através de filmes e séries", "Através de redes sociais"] %}
+                        {% for opt in options %}
+                        <option value="{{ opt }}" {% if survey.como_conheceu_movimento == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Como conheceu o Grupo -->
+                <div class="col-12">
+                    <label class="form-label-modern">Como você conheceu o nosso grupo escoteiro?</label>
+                    <select name="como_voce_conheceu_grupo" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>
+                        <option value="">Selecione...</option>
+                        {% set options = ["Através de um amigo", "Através de reportagens na televisão ou rádio", "Através de redes sociais"] %}
+                        {% for opt in options %}
+                        <option value="{{ opt }}" {% if survey.como_você_conheceu_o_nosso_grupo_escoteiro == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Visão sobre o Movimento -->
+                <div class="col-12">
+                    <label class="form-label-modern">Qual sua visão sobre o que é o Movimento Escoteiro?</label>
+                    <textarea name="visao_sobre_movimento" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.visao_sobre_movimento or '' }}</textarea>
+                </div>
+
+                <!-- O que espera encontrar -->
+                <div class="col-12">
+                    <label class="form-label-modern">O que espera encontrar no Movimento?</label>
+                    <textarea name="espera_encontrar_movimento" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.espera_encontrar_movimento or '' }}</textarea>
+                </div>
+
+                <!-- O que chamou atenção -->
+                <div class="col-12">
+                    <label class="form-label-modern">O que mais te chamou atenção e fez escolher o nosso grupo escoteiro dentre os demais?</label>
+                    <textarea name="chamou_atencao_uel" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.chamou_atencao_uel or '' }}</textarea>
+                </div>
+
+                <!-- NPS Recepção -->
+                <div class="col-12">
+                    <label class="form-label-modern">Quanto você gostou do processo de recepção no grupo escoteiro? (0 a 10)</label>
+                    <div class="d-flex flex-wrap gap-4 py-2">
+                        {% for i in range(11) %}
+                        <label class="nps-option">
+                            <input type="radio" name="nps_recepcao" value="{{ i }}" class="sr-only peer" {% if is_read_only and survey.nps_recepcao|int == i %}checked{% elif is_read_only %}disabled{% endif %}>
+                            <div class="nps-circle {% if is_read_only %}cursor-default{% endif %}">
+                                {{ i }}
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Pontos Fortes -->
+                <div class="col-12">
+                    <label class="form-label-modern">O que mais gostou no processo de recepção de novas famílias?</label>
+                    <textarea name="pontos_fortes_recepcao" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.pontos_fortes_recepcao or '' }}</textarea>
+                </div>
+
+                <!-- Melhorias -->
+                <div class="col-12">
+                    <label class="form-label-modern">Tem algo que acredita que podemos melhorar no processo de recepção de novas famílias?</label>
+                    <textarea name="melhoria_recepcao" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.melhoria_recepcao or '' }}</textarea>
+                </div>
+            </div>
+
+            {% if not is_read_only %}
+            <div class="mt-4 pt-2 border-top">
+                <button type="submit" class="btn-modern btn-modern--primary">
+                    Enviar Pesquisa
+                </button>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block style %}
+{{ super() }}
+<style>
+    .nps-option {
+        cursor: pointer;
+    }
+    .nps-option input {
+        display: none;
+    }
+    .nps-circle {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        border: 1px solid var(--border-color, #e2e8f0);
+        color: var(--text-secondary, #64748b);
+        font-weight: 500;
+        transition: all 0.2s;
+        background-color: white;
+    }
+    .nps-option input:checked + .nps-circle {
+        background-color: var(--color-primary, #2563eb);
+        color: white;
+        border-color: var(--color-primary, #2563eb);
+    }
+    .nps-option:hover input:not(:checked):not(:disabled) + .nps-circle {
+        background-color: #f8fafc;
+        border-color: var(--color-primary, #2563eb);
+        color: var(--color-primary, #2563eb);
+    }
+</style>
+{% endblock %}
+
+{% block script %}
+<script src="/responsavel/pesquisa_novos.js"></script>
+{% endblock %}

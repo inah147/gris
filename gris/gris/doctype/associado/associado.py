@@ -80,7 +80,62 @@ class Associado(Document):
 	def validate(self):
 		self._set_status()
 
+	def _handle_novo_associado_pre(self):
+		if not self.cpf:
+			return
+
+		clean_cpf = re.sub(r"\D", "", self.cpf)
+		na_name = hashlib.md5(clean_cpf.encode("utf-8")).hexdigest()
+
+		if not frappe.db.exists("Novo Associado", na_name):
+			return
+
+		self.flags.linked_novo_associado = na_name
+
+		# Busca data da visita
+		data_visita = frappe.db.get_value(
+			"Agenda de Visitas", {"jovem": na_name, "visita_confirmada": 1}, "data_da_visita"
+		)
+
+		if data_visita:
+			self.append("historico_no_grupo", {"data_de_ingresso": data_visita})
+
+	def _handle_novo_associado_post(self):
+		na_name = self.flags.linked_novo_associado
+		if not na_name:
+			return
+
+		try:
+			na_doc = frappe.get_doc("Novo Associado", na_name)
+		except frappe.DoesNotExistError:
+			return
+
+		dirty = False
+
+		if na_doc.status != "Acompanhamento":
+			na_doc.status = "Acompanhamento"
+			dirty = True
+
+		if self.tipo_registro == "Provisório":
+			if not na_doc.registro_provisorio_efetivado:
+				na_doc.registro_provisorio_efetivado = 1
+				dirty = True
+			if not na_doc.registro_provisorio_pago:
+				na_doc.registro_provisorio_pago = 1
+				dirty = True
+		elif self.tipo_registro == "Definitivo":
+			if not na_doc.registro_definitivo_efetivado:
+				na_doc.registro_definitivo_efetivado = 1
+				dirty = True
+			if not na_doc.registro_definitivo_pago:
+				na_doc.registro_definitivo_pago = 1
+				dirty = True
+
+		if dirty:
+			na_doc.save(ignore_permissions=True)
+
 	def before_insert(self):
+		self._handle_novo_associado_pre()
 		self._anonymize_cpfs()
 		if self.registro:
 			self.registro = self.registro.replace(" ", "")
@@ -114,6 +169,7 @@ class Associado(Document):
 		self.flags.historico_no_grupo_changed = old_hist != new_hist
 
 	def after_insert(self):
+		self._handle_novo_associado_post()
 		log = _assoc_logger()
 		log.info(f"[ENQUEUE CREATE] {self.name}")
 		frappe.enqueue(

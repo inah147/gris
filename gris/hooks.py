@@ -156,7 +156,11 @@ scheduler_events = {
 	# "all": [
 	# 	"gris.tasks.all"
 	# ],
-	"daily": ["gris.api.financeiro.monthly_payments.update_status_monthly_payment"],
+	"daily": [
+		"gris.api.financeiro.monthly_payments.update_status_monthly_payment",
+		"gris.api.atualizar_ramo_fila_espera.atualizar_ramo_fila_espera",
+		"gris.api.update_waiting_list_branch.update_waiting_list_branch",
+	],
 	# "hourly": [
 	# 	"gris.tasks.hourly"
 	# ],

@@ -1,0 +1,50 @@
+/* registro.css - Custom styles for registro page */
+
+/* Responsavel Card */
+.responsavel-card {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    background: var(--bg-surface);
+    height: 100%;
+}
+
+.responsavel-card.primary {
+    border-color: var(--color-primary);
+    background-color: var(--bg-subtle);
+}
+
+.responsavel-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-sm);
+}
+
+.responsavel-card__title {
+    font-weight: var(--font-semibold);
+    font-size: var(--text-md);
+}
+
+.responsavel-card__badge {
+    font-size: var(--text-xs);
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--color-primary);
+    color: white;
+}
+
+/* Override disabled input styles for better visibility */
+.form-input-modern:disabled,
+.form-input-modern[readonly] {
+    color: var(--text-primary, #1f2937) !important;
+    opacity: 1 !important; /* Fix for iOS/Safari */
+    -webkit-text-fill-color: var(--text-primary, #1f2937) !important;
+    background-color: var(--bg-subtle, #f8fafc);
+    border-color: var(--border-color, #e2e8f0);
+}
+
+/* Spacing between responsible cards */
+.responsavel-wrapper:not(:last-child) {
+    margin-bottom: 3rem;
+}

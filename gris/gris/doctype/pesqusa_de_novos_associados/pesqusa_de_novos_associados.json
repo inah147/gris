@@ -1,0 +1,104 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:responsavel",
+ "creation": "2026-01-02 08:55:20.726105",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "responsavel",
+  "como_conheceu_movimento",
+  "como_voc\u00ea_conheceu_o_nosso_grupo_escoteiro",
+  "visao_sobre_movimento",
+  "espera_encontrar_movimento",
+  "chamou_atencao_uel",
+  "nps_recepcao",
+  "pontos_fortes_recepcao",
+  "melhoria_recepcao",
+  "data_resposta"
+ ],
+ "fields": [
+  {
+   "fieldname": "responsavel",
+   "fieldtype": "Link",
+   "label": "Respons\u00e1vel Legal",
+   "options": "Responsavel",
+   "unique": 1
+  },
+  {
+   "fieldname": "como_conheceu_movimento",
+   "fieldtype": "Select",
+   "label": "Como voc\u00ea conheceu o Movimento Escoteiro",
+   "options": "Atrav\u00e9s de um amigo\nAtrav\u00e9s de reportagens na televis\u00e3o ou r\u00e1dio\nAtrav\u00e9s de filmes e s\u00e9ries\nAtrav\u00e9s de redes sociais"
+  },
+  {
+   "fieldname": "como_voc\u00ea_conheceu_o_nosso_grupo_escoteiro",
+   "fieldtype": "Select",
+   "label": "Como voc\u00ea conheceu o nosso grupo escoteiro?",
+   "options": "Atrav\u00e9s de um amigo\nAtrav\u00e9s de reportagens na televis\u00e3o ou r\u00e1dio\nAtrav\u00e9s de redes sociais"
+  },
+  {
+   "fieldname": "visao_sobre_movimento",
+   "fieldtype": "Small Text",
+   "label": "Qual sua vis\u00e3o sobre o que \u00e9 o Movimento Escoteiro?"
+  },
+  {
+   "fieldname": "espera_encontrar_movimento",
+   "fieldtype": "Small Text",
+   "label": "O que espera encontrar no Movimento?"
+  },
+  {
+   "fieldname": "chamou_atencao_uel",
+   "fieldtype": "Small Text",
+   "label": "O que mais te chamou aten\u00e7\u00e3o e fez escolher o nosso grupo escoteiro dentre os demais?"
+  },
+  {
+   "fieldname": "nps_recepcao",
+   "fieldtype": "Select",
+   "label": "Quanto voc\u00ea gostou do processo de recep\u00e7\u00e3o no grupo escoteiro?",
+   "options": "0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10"
+  },
+  {
+   "fieldname": "pontos_fortes_recepcao",
+   "fieldtype": "Small Text",
+   "label": "O que mais gostou no processo de recp\u00e7\u00e3o de novas fam\u00edlias?"
+  },
+  {
+   "fieldname": "melhoria_recepcao",
+   "fieldtype": "Small Text",
+   "label": "Tem algo que acredita que podemos melhorar no processo de recep\u00e7\u00e3o de novas fam\u00edlias?"
+  },
+  {
+   "fieldname": "data_resposta",
+   "fieldtype": "Date",
+   "label": "Data de resosta"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-01-02 19:01:31.636770",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Pesqusa de Novos Associados",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

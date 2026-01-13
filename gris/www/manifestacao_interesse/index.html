@@ -91,8 +91,13 @@
                                         <div class="row">
                                             <div class="col-md-6 mb-3">
                                                 <label for="celular_responsavel" class="form-label">Celular <span class="text-danger">*</span></label>
-                                                <input type="tel" class="form-control" id="celular_responsavel" name="celular_responsavel" required placeholder="Somente números">
-                                                <div class="invalid-feedback">Por favor, insira somente números.</div>
+                                                <div class="input-group">
+                                                    <span class="input-group-text" id="basic-addon1">+</span>
+                                                    <input type="text" class="form-control text-center" id="pais_celular_responsavel" value="55" placeholder="55" style="max-width: 70px;" maxlength="4" aria-label="Código do País">
+                                                    <input type="tel" class="form-control" id="celular_responsavel" name="celular_responsavel" required placeholder="DDD + Número">
+                                                    <div class="invalid-feedback">Por favor, insira um número válido com DDD.</div>
+                                                </div>
+                                                <div class="form-text text-muted">Código 55 é o padrão do Brasil. Se for outro país, altere apenas os números.</div>
                                             </div>
                                             <div class="col-md-6 mb-3">
                                                 <label for="cpf_responsavel" class="form-label">CPF <span class="text-danger">*</span></label>

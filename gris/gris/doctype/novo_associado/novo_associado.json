@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2025-12-22 10:46:47.143269",
+ "creation": "2025-12-31 14:10:34.772518",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -39,6 +39,7 @@
   "status",
   "ramo",
   "tipo_de_registro",
+  "responsavel_recepcao",
   "etapas_do_fluxo_section",
   "visita_agendada",
   "primeira_visita_realizada",
@@ -204,12 +205,12 @@
   },
   {
    "fieldname": "celular",
-   "fieldtype": "Phone",
+   "fieldtype": "Data",
    "label": "Celular"
   },
   {
    "fieldname": "telefone_secundario",
-   "fieldtype": "Phone",
+   "fieldtype": "Data",
    "label": "Telefone secund\u00e1rio"
   },
   {
@@ -221,7 +222,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Novo Contato\nConversa Inicial\nVisita Agendada\nAguardar Dados\nFazer Registro\nAcompanhamento\nFila de espera"
+   "options": "Novo Contato\nConversa Inicial\nVisita Agendada\nAguardar Dados\nFazer Registro\nAcompanhamento\nFila de espera\nConclu\u00eddo"
   },
   {
    "fieldname": "ramo",
@@ -311,12 +312,18 @@
    "fieldname": "reuniao_de_acolhida_realizada",
    "fieldtype": "Check",
    "label": "Reuni\u00e3o de acolhida realizada"
+  },
+  {
+   "fieldname": "responsavel_recepcao",
+   "fieldtype": "Link",
+   "label": "Respons\u00e1vel pela recep\u00e7\u00e3o",
+   "options": "User"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-22 18:35:38.673502",
+ "modified": "2026-01-07 08:27:26.412935",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Novo Associado",
@@ -339,5 +346,6 @@
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "nome_completo"
 }

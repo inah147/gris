@@ -1,0 +1,88 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Respostas da Pesquisa{% endblock %}
+
+{% block page_header %}
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Respostas da Pesquisa</h1>
+      <p class="page-header__subtitle">Acompanhe a satisfação dos novos associados</p>
+    </div>
+  </div>
+{% endblock %}
+
+{% block main %}
+  <div class="card-modern mb-4">
+    <div class="card-modern__header d-flex justify-content-between align-items-center">
+        <h3 class="card-modern__title">Evolução do NPS</h3>
+        <div class="d-flex gap-2" role="group">
+            <button type="button" class="btn-modern btn-modern--sm btn-modern--primary" id="btn-period-monthly">Mensal</button>
+            <button type="button" class="btn-modern btn-modern--sm btn-modern--outline" id="btn-period-weekly">Semanal</button>
+        </div>
+    </div>
+    <div class="card-modern__body">
+        <div id="nps-chart"></div>
+    </div>
+  </div>
+
+  <div class="card-modern mb-4">
+    <div class="card-modern__body card-modern__body--compact">
+        <div class="filter-bar mb-0">
+             <div class="filter-field" style="width:100%">
+                <label class="form-label-modern">Buscar</label>
+                <input type="text" class="form-input-modern form-input-modern--sm" id="f-search" placeholder="Buscar por responsável...">
+             </div>
+        </div>
+    </div>
+  </div>
+
+  <div class="card-modern">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Responsável</th>
+            <th>Data</th>
+            <th>NPS</th>
+            <th style="width: 100px;">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="survey-list">
+            <tr>
+                <td colspan="4" class="text-center text-muted p-4">Carregando...</td>
+            </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-backdrop" id="detail-modal-backdrop" style="display: none;"></div>
+  <div class="modal-modern" id="detail-modal" tabindex="-1" style="display: none;">
+      <div class="modal-dialog modal-lg modal-dialog-scrollable w-100" style="max-width: 800px;">
+        <div class="modal-modern__content">
+          <div class="modal-modern__header">
+            <h5 class="modal-modern__title">Detalhes da Resposta</h5>
+            <button type="button" class="btn-close" data-modal-close>×</button>
+          </div>
+          <div class="modal-modern__body" id="modal-body-content">
+             <!-- Content -->
+          </div>
+          <div class="modal-modern__footer">
+            <button type="button" class="btn-modern btn-modern--ghost btn-modern--sm" data-modal-close>Fechar</button>
+          </div>
+        </div>
+      </div>
+  </div>
+{% endblock %}
+
+{% block head_include %}
+  {{ super() }}
+  <link rel="stylesheet" href="/assets/frappe/node_modules/frappe-charts/dist/frappe-charts.min.css">
+  <script src="/assets/frappe/node_modules/frappe-charts/dist/frappe-charts.umd.js"></script>
+  <link rel="stylesheet" href="/recepcao/pesquisa_novos_respostas.css">
+{% endblock %}
+
+{% block extra_script %}
+<script src="/recepcao/pesquisa_novos_respostas.js"></script>
+{% endblock %}

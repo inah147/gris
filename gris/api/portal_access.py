@@ -24,6 +24,16 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 		],
 	},
 	{
+		"label": "Novos Associados",
+		"path": "/recepcao",
+		"children": [
+			{"label": "Visão Geral", "path": "/recepcao/visao_geral"},
+			{"label": "Agenda de Visitas", "path": "/recepcao/agenda_visitas"},
+			{"label": "Fila de espera", "path": "/recepcao/fila_espera"},
+			{"label": "Respostas da Pesquisa", "path": "/recepcao/pesquisa_novos_respostas"},
+		],
+	},
+	{
 		"label": "Financeiro",
 		"path": "/financeiro",
 		"children": [
@@ -44,6 +54,15 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 			{"label": "Importar Calendário", "path": "/calendario/importar"},
 		],
 	},
+	{
+		"label": "Painel do Responsável",
+		"path": "/responsavel",
+		"children": [
+			{"label": "Meus dados", "path": "/responsavel/meus_dados"},
+			{"label": "Beneficiários", "path": "/responsavel/beneficiarios"},
+			{"label": "Pesquisa de Novos Associados", "path": "/responsavel/pesquisa_novos"},
+		],
+	},
 	{"label": "Transparência", "path": "/portal_transparencia"},
 ]
 
@@ -53,6 +72,10 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 PAGE_ROLES: dict[str, list[str]] = {
 	"/inicio": ["All"],
 	"/403": ["All"],
+	"/responsavel": ["Responsavel"],
+	"/responsavel/meus_dados": ["Responsavel"],
+	"/responsavel/beneficiarios": ["Responsavel"],
+	"/responsavel/pesquisa_novos": ["Responsavel"],
 	"/associados": [
 		"Gestor de Associados",
 		"Visualizador Associados",
@@ -66,6 +89,12 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/associados/lista": ["Gestor de Associados", "Visualizador Associados"],
 	"/associados/detalhe": ["Gestor de Associados", "Visualizador Associados"],
 	"/associados/importar": ["Gestor de Associados"],
+	"/recepcao": ["Recepcao"],
+	"/recepcao/visao_geral": ["Recepcao"],
+	"/recepcao/ficha_registro": ["Recepcao"],
+	"/recepcao/agenda_visitas": ["Recepcao"],
+	"/recepcao/fila_espera": ["Recepcao"],
+	"/recepcao/pesquisa_novos_respostas": ["Recepcao"],
 	"/financeiro/contribuicoes": ["Gestor Contribuição Mensal", "Visualizador Contribuição Mensal"],
 	"/portal_transparencia": ["Public"],  # totalmente público
 	"/calendario": ["All"],
@@ -74,7 +103,13 @@ PAGE_ROLES: dict[str, list[str]] = {
 }
 
 # Páginas marcadas como "estritas": mesmo System Manager deve ter uma das roles listadas.
-STRICT_PORTAL_PAGES = {"/financeiro/contribuicoes"}
+STRICT_PORTAL_PAGES = {
+	"/financeiro/contribuicoes",
+	"/responsavel",
+	"/responsavel/meus_dados",
+	"/responsavel/beneficiarios",
+	"/responsavel/pesquisa_novos",
+}
 
 
 def _get_user_roles(user: str | None = None) -> list[str]:

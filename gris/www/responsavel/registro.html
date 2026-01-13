@@ -1,0 +1,471 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Registro de Novo Associado{% endblock %}
+{% set active_link = '/responsavel/beneficiarios' %}
+{% set read_only = novo_associado.registro_criado_no_paxtu %}
+
+{% block head_include %}
+  {{ super() }}
+{% endblock %}
+
+{% block page_header %}
+  <div class="page-header">
+    <div class="page-header__content">
+      <h1 class="page-header__title">Registro de Novo Associado</h1>
+      <p class="page-header__subtitle">
+        {% if read_only %}
+            Visualização dos dados do registro.
+        {% else %}
+            Preencha os dados para o registro do novo associado.
+        {% endif %}
+      </p>
+    </div>
+    <div class="page-header__actions">
+        <a href="/responsavel/beneficiarios" class="btn-modern btn-modern--ghost btn-modern--sm">Voltar</a>
+    </div>
+  </div>
+{% endblock %}
+
+{% block main %}
+<div class="container-fluid p-0">
+    {% if read_only %}
+    <div class="alert-modern alert-modern--info mb-4">
+        <div class="alert-modern__icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        </div>
+        <div class="alert-modern__content">
+            <h4 class="alert-modern__title">Modo de Visualização</h4>
+            <p class="alert-modern__description">O registro já foi criado no Paxtu, portanto os dados não podem mais ser alterados por aqui. Caso necessite de correções, entre em contato com a secretaria.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <form id="registro-form">
+        <input type="hidden" name="name" value="{{ novo_associado.name }}">
+        
+        <!-- Dados do Associado -->
+        <div class="card-modern mb-4">
+            <div class="card-modern__header">
+                <h3 class="card-modern__title">Dados do Associado</h3>
+            </div>
+            <div class="card-modern__body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label for="nome_completo" class="form-label-modern">Nome Completo <span class="text-danger">*</span></label>
+                        <input type="text" class="form-input-modern" id="nome_completo" name="nome_completo" value="{{ novo_associado.nome_completo or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="data_de_nascimento" class="form-label-modern">Data de Nascimento <span class="text-danger">*</span></label>
+                        <input type="date" class="form-input-modern" id="data_de_nascimento" name="data_de_nascimento" value="{{ novo_associado.data_de_nascimento or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="etnia" class="form-label-modern">Etnia <span class="text-danger">*</span></label>
+                        <select class="form-input-modern" id="etnia" name="etnia">
+                            <option value="">Selecione...</option>
+                            {% for opt in options.etnia %}
+                            <option value="{{ opt }}" {% if novo_associado.etnia == opt %}selected{% endif %}>{{ opt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="sexo" class="form-label-modern">Sexo <span class="text-danger">*</span></label>
+                        <select class="form-input-modern" id="sexo" name="sexo">
+                            <option value="">Selecione...</option>
+                            {% for opt in options.sexo %}
+                            <option value="{{ opt }}" {% if novo_associado.sexo == opt %}selected{% endif %}>{{ opt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 d-flex align-items-center">
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="estrangeiro" name="estrangeiro" {% if novo_associado.estrangeiro %}checked{% endif %}>
+                            <label class="form-check-label" for="estrangeiro">
+                                É estrangeiro?
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="pais_nascimento" class="form-label-modern">País de Nascimento <span class="text-danger">*</span></label>
+                        <input type="text" class="form-input-modern" id="pais_nascimento" name="pais_nascimento" value="{{ novo_associado.pais_nascimento or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="uf_de_nascimento" class="form-label-modern">UF de Nascimento <span class="text-danger">*</span></label>
+                        <select class="form-input-modern" id="uf_de_nascimento" name="uf_de_nascimento">
+                            <option value="">Selecione...</option>
+                            {% for opt in options.uf_de_nascimento %}
+                            <option value="{{ opt }}" {% if novo_associado.uf_de_nascimento == opt %}selected{% endif %}>{{ opt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="cidade_de_nascimento" class="form-label-modern">Cidade de Nascimento <span class="text-danger">*</span></label>
+                        <input type="text" class="form-input-modern" id="cidade_de_nascimento" name="cidade_de_nascimento" value="{{ novo_associado.cidade_de_nascimento or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="rg" class="form-label-modern">RG <span class="text-danger">*</span></label>
+                        <input type="text" class="form-input-modern" id="rg" name="rg" value="{{ novo_associado.rg or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="orgao_expedidor" class="form-label-modern">Órgão Expedidor <span class="text-danger">*</span></label>
+                        <input type="text" class="form-input-modern" id="orgao_expedidor" name="orgao_expedidor" value="{{ novo_associado.orgao_expedidor or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="cpf" class="form-label-modern">CPF <span class="text-danger">*</span></label>
+                        <input type="text" class="form-input-modern" id="cpf" name="cpf" value="{{ novo_associado.cpf or '' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="estado_civil" class="form-label-modern">Estado Civil <span class="text-danger">*</span></label>
+                        <select class="form-input-modern" id="estado_civil" name="estado_civil">
+                            <option value="">Selecione...</option>
+                            {% for opt in options.estado_civil %}
+                            <option value="{{ opt }}" {% if novo_associado.estado_civil == opt %}selected{% endif %}>{{ opt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="religiao" class="form-label-modern">Religião <span class="text-danger">*</span></label>
+                        <select class="form-input-modern" id="religiao" name="religiao">
+                            <option value="">Selecione...</option>
+                            {% for opt in options.religiao %}
+                            <option value="{{ opt }}" {% if novo_associado.religiao == opt %}selected{% endif %}>{{ opt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informações Profissionais e Acadêmicas -->
+        <div class="card-modern mb-4">
+            <div class="card-modern__header">
+                <h3 class="card-modern__title">Informações Profissionais e Acadêmicas</h3>
+            </div>
+            <div class="card-modern__body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="escolaridade" class="form-label-modern">Escolaridade <span class="text-danger">*</span></label>
+                        <select class="form-input-modern" id="escolaridade" name="escolaridade">
+                            <option value="">Selecione...</option>
+                            {% for opt in options.escolaridade %}
+                            <option value="{{ opt }}" {% if novo_associado.escolaridade == opt %}selected{% endif %}>{{ opt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="profissao" class="form-label-modern">Profissão</label>
+                        <input type="text" class="form-input-modern" id="profissao" name="profissao" value="{{ novo_associado.profissao or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="local_de_trabalho" class="form-label-modern">Local de Trabalho</label>
+                        <input type="text" class="form-input-modern" id="local_de_trabalho" name="local_de_trabalho" value="{{ novo_associado.local_de_trabalho or '' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Endereço e Dados de Contato -->
+        <div class="card-modern mb-4">
+            <div class="card-modern__header">
+                <h3 class="card-modern__title">Endereço e Dados de Contato</h3>
+            </div>
+            <div class="card-modern__body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="cep" class="form-label-modern">CEP <span class="text-danger">*</span></label>
+                        <input type="text" class="form-input-modern" id="cep" name="cep" value="{{ novo_associado.cep or '' }}">
+                    </div>
+                    <div class="col-md-8">
+                        <label for="endereco" class="form-label-modern">Endereço <span class="text-danger">*</span></label>
+                        <input type="text" class="form-input-modern" id="endereco" name="endereco" value="{{ novo_associado.endereco or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="numero" class="form-label-modern">Número <span class="text-danger">*</span></label>
+                        <input type="number" class="form-input-modern" id="numero" name="numero" value="{{ novo_associado.numero or '' }}">
+                    </div>
+                    <div class="col-md-8">
+                        <label for="complemento" class="form-label-modern">Complemento</label>
+                        <input type="text" class="form-input-modern" id="complemento" name="complemento" value="{{ novo_associado.complemento or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="estado" class="form-label-modern">Estado <span class="text-danger">*</span></label>
+                        <select class="form-input-modern" id="estado" name="estado">
+                            <option value="">Selecione...</option>
+                            {% for opt in options.estado %}
+                            <option value="{{ opt }}" {% if novo_associado.estado == opt %}selected{% endif %}>{{ opt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="cidade" class="form-label-modern">Cidade <span class="text-danger">*</span></label>
+                        <input type="text" class="form-input-modern" id="cidade" name="cidade" value="{{ novo_associado.cidade or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="bairro" class="form-label-modern">Bairro <span class="text-danger">*</span></label>
+                        <input type="text" class="form-input-modern" id="bairro" name="bairro" value="{{ novo_associado.bairro or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="email" class="form-label-modern">Email <span class="text-danger">*</span></label>
+                        <input type="email" class="form-input-modern" id="email" name="email" value="{{ novo_associado.email or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="celular" class="form-label-modern">Celular <span class="text-danger">*</span></label>
+                        <input type="text" class="form-input-modern" id="celular" name="celular" value="{{ novo_associado.celular or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="telefone_secundario" class="form-label-modern">Telefone Secundário</label>
+                        <input type="text" class="form-input-modern" id="telefone_secundario" name="telefone_secundario" value="{{ novo_associado.telefone_secundario or '' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informações Familiares -->
+        <div class="card-modern mb-4">
+            <div class="card-modern__header">
+                <h3 class="card-modern__title">Informações Familiares</h3>
+            </div>
+            <div class="card-modern__body">
+                <div class="row g-3">
+                    <div class="col-md-6 d-flex align-items-center">
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="pais_divorciados" name="pais_divorciados" {% if family_info.pais_divorciados %}checked{% endif %}>
+                            <label class="form-check-label" for="pais_divorciados">
+                                Pais Divorciados?
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-center">
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="somente_um_responsavel" name="somente_um_responsavel">
+                            <label class="form-check-label" for="somente_um_responsavel">
+                                Somente um responsável legal
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6" id="tipo_guarda_container" style="display: none;">
+                        <label for="tipo_guarda" class="form-label-modern">Tipo de Guarda</label>
+                        <select class="form-input-modern" id="tipo_guarda" name="tipo_guarda">
+                            <option value="">Selecione...</option>
+                            <option value="Compartilhada" {% if family_info.tipo_guarda == 'Compartilhada' %}selected{% endif %}>Compartilhada</option>
+                            <option value="Unilateral" {% if family_info.tipo_guarda == 'Unilateral' %}selected{% endif %}>Unilateral</option>
+                            <option value="Alternada" {% if family_info.tipo_guarda == 'Alternada' %}selected{% endif %}>Alternada</option>
+                            <option value="Nidal" {% if family_info.tipo_guarda == 'Nidal' %}selected{% endif %}>Nidal</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Responsáveis -->
+        {% if responsaveis %}
+        <div class="card-modern mb-4">
+            <div class="card-modern__header">
+                <h3 class="card-modern__title">Responsáveis</h3>
+            </div>
+            <div class="card-modern__body">
+                <div class="row g-5" id="responsaveis-list">
+                    {% for item in responsaveis %}
+                    <div class="col-12 responsavel-wrapper">
+                        <div class="responsavel-card {{ 'primary' if item.is_primary else '' }}" data-responsavel-id="{{ item.doc.name or '' }}">
+                            <div class="responsavel-card__header">
+                                <div class="responsavel-card__title">{{ item.doc.nome_completo or 'Novo Responsável' }}</div>
+                                {% if item.is_primary %}
+                                <div class="responsavel-card__badge">1º Responsável</div>
+                                {% endif %}
+                            </div>
+                            <div class="card-modern__body">
+                                <h4 class="card-modern__subtitle mb-3">Dados Pessoais</h4>
+                                <div class="row g-3 mb-4">
+                                    <div class="col-12 col-md-3">
+                                        <label class="form-label-modern">Nome Completo <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="nome_completo" value="{{ item.doc.nome_completo or '' }}">
+                                    </div>
+                                    <div class="col-12 col-md-3">
+                                        <label class="form-label-modern">CPF <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="cpf" value="{{ item.doc.cpf or '' }}">
+                                    </div>
+                                    <div class="col-12 col-md-3">
+                                        <label class="form-label-modern">RG <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="rg" value="{{ item.doc.rg or '' }}">
+                                    </div>
+                                    <div class="col-12 col-md-3">
+                                        <label class="form-label-modern">Órgão Expedidor <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="orgao_expedidor" value="{{ item.doc.orgao_expedidor or '' }}">
+                                    </div>
+                                    <div class="col-12 col-md-3">
+                                        <label class="form-label-modern">Data de Nascimento <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-input-modern form-input-modern--sm" data-fieldname="data_de_nascimento" value="{{ item.doc.data_de_nascimento or '' }}">
+                                    </div>
+                                    <div class="col-12 col-md-3">
+                                        <label class="form-label-modern">Sexo <span class="text-danger">*</span></label>
+                                        <select class="form-input-modern form-input-modern--sm" data-fieldname="sexo">
+                                            <option value="">Selecione...</option>
+                                            {% for opt in options.sexo %}
+                                            <option value="{{ opt }}" {% if item.doc.sexo == opt %}selected{% endif %}>{{ opt }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-3">
+                                        <label class="form-label-modern">Estado Civil <span class="text-danger">*</span></label>
+                                        <select class="form-input-modern form-input-modern--sm" data-fieldname="estado_civil">
+                                            <option value="">Selecione...</option>
+                                            {% for opt in options.estado_civil %}
+                                            <option value="{{ opt }}" {% if item.doc.estado_civil == opt %}selected{% endif %}>{{ opt }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <h4 class="card-modern__subtitle mb-3">Profissional / Acadêmico</h4>
+                                <div class="row g-3 mb-4">
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label-modern">Escolaridade <span class="text-danger">*</span></label>
+                                        <select class="form-input-modern form-input-modern--sm" data-fieldname="escolaridade">
+                                            <option value="">Selecione...</option>
+                                            {% for opt in options.escolaridade %}
+                                            <option value="{{ opt }}" {% if item.doc.escolaridade == opt %}selected{% endif %}>{{ opt }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label-modern">Profissão <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="profissao" value="{{ item.doc.get('profissão') or '' }}">
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label-modern">Local de Trabalho <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="local_de_trabalho" value="{{ item.doc.local_de_trabalho or '' }}">
+                                    </div>
+                                </div>
+
+                                <h4 class="card-modern__subtitle mb-3">Endereço e Contato</h4>
+                                <div class="row g-3 mb-4">
+                                    <div class="col-12">
+                                        <div class="form-check">
+                                            <input class="form-check-input same-address-check" type="checkbox">
+                                            <label class="form-check-label">
+                                                Mesmo endereço do jovem
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label-modern">Endereço <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="endereco" value="{{ item.doc.get('endereço') or '' }}">
+                                    </div>
+                                    <div class="col-12 col-md-2">
+                                        <label class="form-label-modern">Número <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="numero" value="{{ item.doc.get('número') or '' }}">
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label-modern">Complemento</label>
+                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="complemento" value="{{ item.doc.complemento or '' }}">
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label-modern">Bairro <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="bairro" value="{{ item.doc.bairro or '' }}">
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label-modern">Cidade <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="cidade" value="{{ item.doc.cidade or '' }}">
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label-modern">Estado <span class="text-danger">*</span></label>
+                                        <select class="form-input-modern form-input-modern--sm" data-fieldname="estado">
+                                            <option value="">Selecione...</option>
+                                            {% for opt in options.estado %}
+                                            <option value="{{ opt }}" {% if item.doc.estado == opt %}selected{% endif %}>{{ opt }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label-modern">CEP <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="cep" value="{{ item.doc.cep or '' }}">
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label-modern">Email <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="email" value="{{ item.doc.email or '' }}">
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label-modern">Celular <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="celular" value="{{ item.doc.celular or '' }}">
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label-modern">Tel. Secundário</label>
+                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="telefone_secundario" value="{{ item.doc.telefone_secundario or '' }}">
+                                    </div>
+                                </div>
+
+                                <h4 class="card-modern__subtitle mb-3">Vínculo</h4>
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-4">
+                                        <div class="form-check mt-2">
+                                            <input class="form-check-input guardiao-legal-check" type="checkbox" data-fieldname="é_guardiao_legal" {% if item.vinculo.é_guardiao_legal %}checked{% endif %} disabled>
+                                            <label class="form-check-label">
+                                                É Guardião Legal?
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+            </div>
+        </div>
+        {% endif %}
+
+        {% if not read_only %}
+        <div class="d-flex justify-content-end mb-5">
+            <button type="submit" class="btn-modern btn-modern--primary btn-modern--lg">Salvar Alterações</button>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+{% if read_only %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('registro-form');
+        const inputs = form.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            input.disabled = true;
+        });
+    });
+</script>
+{% endif %}
+
+<!-- Confirmation Modal -->
+<div class="modal-modern fade" id="confirmationModal" tabindex="-1" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-modern__content">
+            <div class="modal-modern__header">
+                <h5 class="modal-modern__title">Confirmar Dados</h5>
+            </div>
+            <div class="modal-modern__body">
+                <div id="confirmation-summary">
+                    <!-- Content will be injected via JS -->
+                </div>
+
+                <div class="mt-4 p-3 bg-light border rounded">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="confirm-data-check">
+                        <label class="form-check-label fw-bold" for="confirm-data-check">
+                            Confirmo que todos os dados estão corretos, especialmente os CPFs e Datas de Nascimento do associado e dos responsáveis.
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-modern__footer">
+                <button type="button" class="btn-modern btn-modern--secondary" data-bs-dismiss="modal">Voltar para edição</button>
+                <button type="button" class="btn-modern btn-modern--primary" id="btn-confirm-save" disabled>Salvar Definitivamente</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Backdrop -->
+<div class="modal-backdrop fade" id="confirmationModalBackdrop" style="display: none;"></div>
+{% endblock %}
+
+

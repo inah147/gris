@@ -81,6 +81,16 @@
   color: var(--color-warning, #c05621);
 }
 
+.inicio-card__icon--purple {
+  background: var(--color-purple-light, #f3e8ff);
+  color: var(--color-purple, #7e22ce);
+}
+
+.inicio-card__icon--pink {
+  background: var(--color-pink-light, #fce7f3);
+  color: var(--color-pink, #db2777);
+}
+
 .inicio-card:hover .inicio-card__icon {
   transform: scale(1.1) rotate(5deg);
 }

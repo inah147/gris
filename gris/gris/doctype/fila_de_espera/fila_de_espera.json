@@ -1,0 +1,57 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-12-24 09:09:29.131034",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "associado",
+  "ramo",
+  "dt_inclusao_fila"
+ ],
+ "fields": [
+  {
+   "fieldname": "associado",
+   "fieldtype": "Link",
+   "label": "Associado",
+   "options": "Novo Associado"
+  },
+  {
+   "fieldname": "ramo",
+   "fieldtype": "Select",
+   "label": "Ramo",
+   "options": "Filhotes\nLobinho\nEscoteiro\nS\u00eanior\nPioneiro"
+  },
+  {
+   "fieldname": "dt_inclusao_fila",
+   "fieldtype": "Datetime",
+   "label": "Data de inclus\u00e3o na fila de espera"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-12-24 09:45:04.881633",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Fila de Espera",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

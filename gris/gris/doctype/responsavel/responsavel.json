@@ -58,7 +58,7 @@
    "fieldname": "estado_civil",
    "fieldtype": "Select",
    "label": "Estado Civil",
-   "options": "-\nCompartilhada\nUnilateral\nAlternada\nNidal"
+   "options": "N\u00e3o informado\nSolteiro(a)\nCasado(a)\nDivorciado(a)\nVi\u00favo(a)"
   },
   {
    "fieldname": "cpf",
@@ -123,12 +123,12 @@
   },
   {
    "fieldname": "celular",
-   "fieldtype": "Phone",
+   "fieldtype": "Data",
    "label": "Celular"
   },
   {
-   "fieldname": "telefone_secund\u00e1rio",
-   "fieldtype": "Phone",
+   "fieldname": "telefone_secundario",
+   "fieldtype": "Data",
    "label": "Telefone secund\u00e1rio"
   },
   {
@@ -172,7 +172,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-22 13:38:52.987123",
+ "modified": "2025-12-31 13:51:05.119041",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Responsavel",
@@ -194,5 +194,6 @@
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "nome_completo"
 }

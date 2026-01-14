@@ -17,32 +17,81 @@ def update_novo_associado(name, responsavel_recepcao=None, status=None, ramo=Non
 
 
 @frappe.whitelist()
-def processar_desistencia(novo_associado_name, motivo):
+def processar_desistencia(novo_associado_name, motivo=None):
 	# 1. Get Novo Associado
 	if not frappe.db.exists("Novo Associado", novo_associado_name):
 		return
 
-	# 2. Find Responsavel Vinculo
+	novo_associado = frappe.get_doc("Novo Associado", novo_associado_name)
+	cpf = novo_associado.cpf
+
+	# 2. Delete scheduled visits
+	frappe.db.delete("Agenda de Visitas", {"jovem": novo_associado_name})
+
+	# 3. Handle Associado (Anonimizar + Desligamento context)
+	# Check if effective
+	is_effective = (
+		novo_associado.registro_provisorio_efetivado
+		or novo_associado.registro_definitivo_efetivado
+	)
+
+	if is_effective and cpf:
+		# Try to find Associado by Name (CPF)
+		associado_name = cpf
+		if frappe.db.exists("Associado", associado_name):
+			assoc_doc = frappe.get_doc("Associado", associado_name)
+
+			# Anonimize fields
+			fields_to_anonymize = [
+				"nome_completo",
+				"email",
+				"telefone",
+				"cep_residencia",
+				"numero_residencia",
+				"nome_responsavel_1",
+				"cpf_responsavel_1",
+				"email_responsavel_1",
+				"telefone_responsavel_1",
+				"nome_responsavel_2",
+				"cpf_responsavel_2",
+				"email_responsavel_2",
+				"telefone_responsavel_2",
+				"religiao",
+				"etnia"
+			]
+
+			for field in fields_to_anonymize:
+				if assoc_doc.meta.has_field(field):
+					assoc_doc.set(field, "ANONIMIZADO")
+
+			# Historico de Desligamento
+			has_open_history = False
+			if assoc_doc.historico_no_grupo:
+				for row in assoc_doc.historico_no_grupo:
+					if not row.data_de_desligamento:
+						row.data_de_desligamento = today()
+						has_open_history = True
+						break
+
+			assoc_doc.save(ignore_permissions=True)
+
+	# 4. Find and Clean Responsavel Vinculo
 	vinculos = frappe.get_all(
 		"Responsavel Vinculo",
 		filters={"beneficiario_novo_associado": novo_associado_name},
 		fields=["name", "responsavel"],
 	)
 
-	# 3. Delete Novo Associado
-	frappe.delete_doc("Novo Associado", novo_associado_name)
-
-	# 4. Process Responsavel
 	for vinculo in vinculos:
 		responsavel_id = vinculo.responsavel
 
 		# Delete the link
 		frappe.delete_doc("Responsavel Vinculo", vinculo.name)
 
-		# Check if Responsavel has other links
-		other_links = frappe.get_all("Responsavel Vinculo", filters={"responsavel": responsavel_id}, limit=1)
+		# Check if Responsavel has other links (Vinculo)
+		other_links_count = frappe.db.count("Responsavel Vinculo", {"responsavel": responsavel_id})
 
-		if not other_links:
+		if other_links_count == 0:
 			# No other links, delete Responsavel and User
 			if frappe.db.exists("Responsavel", responsavel_id):
 				responsavel_doc = frappe.get_doc("Responsavel", responsavel_id)
@@ -52,6 +101,12 @@ def processar_desistencia(novo_associado_name, motivo):
 
 				if user_email and frappe.db.exists("User", user_email):
 					frappe.delete_doc("User", user_email)
+
+	# 5. Cleanup Fila de Espera (if any)
+	frappe.db.delete("Fila de Espera", {"associado": novo_associado_name})
+
+	# 6. Delete Novo Associado
+	frappe.delete_doc("Novo Associado", novo_associado_name)
 
 	return {"status": "success"}
 

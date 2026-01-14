@@ -2,6 +2,7 @@ import frappe
 from frappe.utils import add_months, getdate, today
 
 from gris.api.portal_access import enrich_context
+from gris.api.recepcao import processar_desistencia
 
 
 def get_context(context):
@@ -214,7 +215,7 @@ def chamar_associado(fila_id):
 
 
 @frappe.whitelist()
-def registrar_desistencia(fila_id, motivo):
+def registrar_desistencia(fila_id, motivo=None):
 	if not fila_id:
 		frappe.throw("ID da fila não fornecido")
 
@@ -222,21 +223,11 @@ def registrar_desistencia(fila_id, motivo):
 	if not fila_item.associado:
 		frappe.throw("Associado não encontrado na fila")
 
-	# Update Novo Associado status to 'Desistência'
-	# Note: Assuming 'motivo_desistencia' field exists or we just log it in comments/timeline
-	# If the field doesn't exist, this might fail. Let's check if we can add a comment instead if field fails.
-	# For now, let's try to set status only if we are unsure about the field,
-	# but the user asked for "Desistência" button which implies recording it.
-	# I'll try to set status.
+	# Process withdrawal using the shared API
+	processar_desistencia(fila_item.associado, motivo=motivo)
 
-	frappe.db.set_value("Novo Associado", fila_item.associado, "status", "Desistência")
-
-	# Add a comment to the Novo Associado document with the reason
-	frappe.get_doc("Novo Associado", fila_item.associado).add_comment(
-		"Comment", f"Desistência registrada na fila de espera. Motivo: {motivo}"
-	)
-
-	# Remove from Fila de Espera
-	frappe.delete_doc("Fila de Espera", fila_id)
+	# Ensure Fila de Espera is gone (processar_desistencia handles it, but just in case)
+	if frappe.db.exists("Fila de Espera", fila_id):
+		frappe.delete_doc("Fila de Espera", fila_id)
 
 	return "Ok"

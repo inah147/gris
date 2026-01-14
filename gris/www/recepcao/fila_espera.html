@@ -146,6 +146,47 @@ endblock %} {% block head_include %} {{ super() }}
 	</div>
 </div>
 
+<!-- Modal Confirmar Desistência -->
+<div class="modal-modern d-none" id="modalConfirmarDesistencia" tabindex="-1">
+	<div class="modal-dialog">
+		<div class="modal-modern__content">
+			<div class="modal-modern__header">
+				<h5 class="modal-modern__title">Confirmar Desistência</h5>
+			</div>
+			<div class="modal-modern__body">
+				<div class="alert-modern alert-modern--warning mb-3">
+					<div class="alert-modern__content">
+						<p class="mb-0">
+							Tem certeza que deseja registrar a desistência deste associado? Esta
+							ação não pode ser desfeita.
+						</p>
+					</div>
+				</div>
+				<p class="text-muted mb-3">
+					Ao confirmar, o registro do Novo Associado será excluído. Se o responsável não
+					tiver outros vínculos, seu cadastro também será removido.
+				</p>
+			</div>
+			<div class="modal-modern__footer">
+				<button
+					type="button"
+					class="btn-modern btn-modern--ghost"
+					onclick="closeConfirmarDesistencia()"
+				>
+					Cancelar
+				</button>
+				<button
+					type="button"
+					class="btn-modern btn-modern--danger"
+					onclick="confirmarDesistencia()"
+				>
+					Confirmar Desistência
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
 <!-- Modal Detalhes Vagas -->
 <div class="modal-modern d-none" id="modalVagas" tabindex="-1">
 	<div class="modal-dialog">

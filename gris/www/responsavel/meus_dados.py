@@ -47,6 +47,9 @@ def get_context(context):
 		context.o_que_gosta = responsavel.o_que_gosta_de_fazer_no_dia_a_dia
 		context.habilidades_list = [h.habilidade for h in responsavel.habilidades]
 
+	# Fetch all existing Habilidades for autocomplete
+	context.all_habilidades = frappe.get_all("Habilidade", pluck="name", order_by="name asc")
+
 	context.sidebar_title = "Painel do Responsável"
 	context.active_link = "/responsavel/meus_dados"
 	enrich_context(context, "/responsavel/meus_dados")
@@ -71,7 +74,20 @@ def update_meus_dados(o_que_gosta_de_fazer_no_dia_a_dia, habilidades):
 
 	doc.set("habilidades", [])
 	for hab in habilidades_list:
-		doc.append("habilidades", {"habilidade": hab})
+		if not frappe.db.exists("Habilidade", hab):
+			try:
+				new_hab = frappe.get_doc({
+					"doctype": "Habilidade",
+					"habilidade": hab
+				})
+				new_hab.insert(ignore_permissions=True)
+			except Exception:
+				# Fallback or ignore if creation fails (e.g. permission or duplicate handled by exists)
+				pass
 
-	doc.save()
+		# Only append if it exists now
+		if frappe.db.exists("Habilidade", hab):
+			doc.append("habilidades", {"habilidade": hab})
+
+	doc.save(ignore_permissions=True)
 	return "Dados atualizados com sucesso."

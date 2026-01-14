@@ -11,6 +11,11 @@ def get_context(context):
 	if frappe.session.user == "Guest":
 		frappe.local.flags.redirect_location = "/login?redirect-to=/financeiro"
 		raise frappe.Redirect
+
+	roles = frappe.get_roles(frappe.session.user)
+	if not any(role in roles for role in ["Visualizador Financeiro", "Gestor Financeiro", "System Manager"]):
+		frappe.throw("Você não tem permissão para acessar esta página.", frappe.PermissionError)
+
 	# Recupera logo e define para sidebar
 	uel_data = get_uel_cached()
 	if uel_data:

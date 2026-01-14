@@ -11,6 +11,11 @@ def get_context(context):
 	if frappe.session.user == "Guest":
 		frappe.local.flags.redirect_location = "/login?redirect-to=/calendario/importar"
 		raise frappe.Redirect
+
+	roles = frappe.get_roles(frappe.session.user)
+	if "Gestor Calendario" not in roles and "System Manager" not in roles:
+		frappe.throw("Acesso permitido apenas para Gestor de Calendário.", frappe.PermissionError)
+
 	# Enrich + permissão
 	enrich_context(context, "/calendario/importar")
 	if context.access_denied:

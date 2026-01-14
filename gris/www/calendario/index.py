@@ -9,6 +9,10 @@ def get_context(context):
 		frappe.local.flags.redirect_location = "/login?redirect-to=/calendario"
 		raise frappe.Redirect
 
+	roles = frappe.get_roles(frappe.session.user)
+	if not any(role in roles for role in ["Visualizador Calendario", "Gestor Calendario", "System Manager"]):
+		frappe.throw("Você não tem permissão para acessar esta página.", frappe.PermissionError)
+
 	uel_data = get_uel_cached()
 	if uel_data:
 		context.portal_logo = uel_data.get("logo")

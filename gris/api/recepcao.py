@@ -69,7 +69,7 @@ def processar_desistencia(novo_associado_name, motivo=None):
 			if assoc_doc.historico_no_grupo:
 				for row in assoc_doc.historico_no_grupo:
 					if not row.data_de_desligamento:
-						row.data_de_desligamento = today()
+						row.data_de_desligamento = frappe.utils.today()
 						has_open_history = True
 						break
 

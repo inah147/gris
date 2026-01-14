@@ -3,7 +3,7 @@ active_link = '/inicio' %} {% block head_include %} {{ super() }} {% endblock %}
 page_header %}
 <div class="page-header">
 	<div class="page-header__content">
-		<h1 class="page-header__title">Bem-vindo, {{ user_display_name }}!</h1>
+		<h1 class="page-header__title">Bem-vindo, {{ user_display_name.split(' ')[0] }}!</h1>
 		<p class="page-header__subtitle">Selecione um módulo abaixo para começar.</p>
 	</div>
 </div>

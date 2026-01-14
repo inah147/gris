@@ -11,6 +11,8 @@ from collections.abc import Iterable
 
 import frappe
 
+from gris.api.portal_cache_utils import get_uel_cached
+
 # Sidebar logical structure (order preserved)
 SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 	{"label": "Início", "path": "/inicio"},
@@ -95,11 +97,19 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/recepcao/agenda_visitas": ["Recepcao"],
 	"/recepcao/fila_espera": ["Recepcao"],
 	"/recepcao/pesquisa_novos_respostas": ["Recepcao"],
+	"/financeiro": ["Visualizador Financeiro", "Gestor Financeiro"],
+	"/financeiro/dashboard": ["Visualizador Financeiro", "Gestor Financeiro"],
 	"/financeiro/contribuicoes": ["Gestor Contribuição Mensal", "Visualizador Contribuição Mensal"],
+	"/financeiro/contas": ["Visualizador Financeiro", "Gestor Financeiro"],
+	"/financeiro/extrato": ["Visualizador Financeiro", "Gestor Financeiro"],
+	"/financeiro/despesas": ["Visualizador Financeiro", "Gestor Financeiro"],
+	"/financeiro/relatorios": ["Visualizador Financeiro", "Gestor Financeiro"],
+	"/financeiro/pareceres": ["Visualizador Financeiro", "Gestor Financeiro"],
 	"/portal_transparencia": ["Public"],  # totalmente público
-	"/calendario": ["All"],
-	"/calendario/visualizar": ["All"],
-	"/calendario/importar": ["All"],
+	"/calendario": ["Visualizador Calendario", "Gestor Calendario"],
+	"/calendario/visualizar": ["Visualizador Calendario", "Gestor Calendario"],
+	"/calendario/importar": ["Gestor Calendario"],
+	"/calendario/simulacao_calendario": ["Gestor Calendario"],
 }
 
 # Páginas marcadas como "estritas": mesmo System Manager deve ter uma das roles listadas.
@@ -164,6 +174,10 @@ def enrich_context(context, current_path: str):
 	context.sidebar_items = sidebar_items
 	context.access_denied = not user_has_access(current_path)
 
+	# Permissions for mobile bottom nav
+	context.has_financeiro_access = user_has_access("/financeiro")
+	context.has_associados_access = user_has_access("/associados")
+
 	# Descobrir filhos do grupo atual (para navegação móvel simplificada)
 	current_children: list[dict[str, object]] = []
 	for item in sidebar_items:
@@ -173,6 +187,16 @@ def enrich_context(context, current_path: str):
 			current_children = children  # type: ignore[assignment]
 			break
 	context.current_group_children = current_children
+
+	# UEL Info (Logo and Title) - Centralized
+	if not context.get("portal_logo"):
+		uel_data = get_uel_cached()
+		if uel_data:
+			context.portal_logo = uel_data.get("logo")
+			if not context.get("sidebar_title") and uel_data.get("nome_da_uel"):
+				context.sidebar_title = f"{uel_data.get('tipo_uel')} {uel_data.get('nome_da_uel')}"
+	if not context.get("sidebar_title"):
+		context.sidebar_title = "Portal"
 
 	# Informações do usuário
 	user = frappe.session.user

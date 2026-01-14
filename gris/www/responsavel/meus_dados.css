@@ -24,15 +24,6 @@
 	font-weight: 500;
 }
 
-/* .habilidade-tag {
-	font-size: 0.85rem;
-	padding: 0.5em 0.85em;
-	border-radius: 50px;
-	font-weight: 500;
-	background-color: var(--color-primary-light, #e0f2fe) !important;
-	color: var(--color-primary, #0284c7) !important;
-} */
-
 .habilidade-tag .remove-habilidade {
 	opacity: 0.6;
 	transition: opacity 0.2s;
@@ -45,4 +36,17 @@
 #habilidades-container {
 	background-color: var(--bg-page, #f8f9fa) !important;
 	border-color: var(--border-color, #e2e8f0) !important;
+}
+
+/* Fix for input group with modern components */
+.input-group .form-input-modern {
+	border-top-right-radius: 0;
+	border-bottom-right-radius: 0;
+	flex: 1 1 auto;
+	width: 1%;
+}
+
+.input-group .btn-modern {
+	border-top-left-radius: 0;
+	border-bottom-left-radius: 0;
 }

@@ -15,6 +15,10 @@ def get_context(context):
 	if not user_has_access("/recepcao"):
 		frappe.throw("Você não tem permissão para acessar esta página.", frappe.PermissionError)
 
+	roles = frappe.get_roles(frappe.session.user)
+	if "Recepcao" not in roles and "System Manager" not in roles:
+		frappe.throw("Acesso permitido apenas para Recepção.", frappe.PermissionError)
+
 	# Recupera logo e define para sidebar
 	uel_data = get_uel_cached()
 	if uel_data:

@@ -14,6 +14,7 @@
   "column_break_wxzy",
   "regiao",
   "site",
+  "telefone",
   "section_break_ltuy",
   "cnpj",
   "column_break_nmpf",
@@ -26,6 +27,12 @@
   "cep",
   "column_break_qupn",
   "complemento",
+  "atividades_section",
+  "dia_de_atividade",
+  "column_break_smws",
+  "hor\u00e1rio_de_in\u00edcio",
+  "column_break_pfkz",
+  "hor\u00e1rio_de_t\u00e9rmino",
   "documentos_section",
   "documentos"
  ],
@@ -141,6 +148,40 @@
    "fieldname": "site",
    "fieldtype": "Data",
    "label": "Site"
+  },
+  {
+   "fieldname": "telefone",
+   "fieldtype": "Phone",
+   "label": "Telefone"
+  },
+  {
+   "fieldname": "atividades_section",
+   "fieldtype": "Section Break",
+   "label": "Atividades"
+  },
+  {
+   "fieldname": "dia_de_atividade",
+   "fieldtype": "Select",
+   "label": "Dia de atividade",
+   "options": "Domingo\nSegunda\nTer\u00e7a\nQuarta\nQuinta\nSexta\nS\u00e1bado"
+  },
+  {
+   "fieldname": "column_break_smws",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "hor\u00e1rio_de_in\u00edcio",
+   "fieldtype": "Time",
+   "label": "Hor\u00e1rio de in\u00edcio"
+  },
+  {
+   "fieldname": "column_break_pfkz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "hor\u00e1rio_de_t\u00e9rmino",
+   "fieldtype": "Time",
+   "label": "Hor\u00e1rio de t\u00e9rmino"
   }
  ],
  "grid_page_length": 50,
@@ -148,7 +189,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-09-07 21:51:23.073993",
+ "modified": "2026-01-14 12:58:20.302811",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Definicao da UEL",

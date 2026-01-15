@@ -114,7 +114,13 @@ def _define_role_profile(associate):
 
 
 @frappe.whitelist()
-def create_associate_user(associate):
+def create_associate_user(associate=None, associate_name=None):
+	if associate_name and not associate:
+		associate = frappe.get_doc("Associado", associate_name)
+
+	if not associate:
+		return
+
 	role_profile = _define_role_profile(associate)
 
 	if associate.registro and associate.id_escoteiros:

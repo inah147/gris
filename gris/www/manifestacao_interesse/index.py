@@ -1,4 +1,4 @@
-import hashlib
+import html
 import json
 
 import frappe
@@ -43,9 +43,12 @@ def submit_interest(
 		user.first_name = nome_responsavel
 		user.mobile_no = celular_responsavel
 		user.enabled = 1
-		user.send_welcome_email = 1
+		user.send_welcome_email = 0
 		user.append("roles", {"role": "Responsavel"})
 		user.insert(ignore_permissions=True)
+
+		# Send welcome email manually to suppress "Welcome email sent" message
+		user.send_welcome_mail_to_user()
 
 		# Create or Get Responsavel
 		responsavel_doc = None
@@ -73,26 +76,26 @@ def submit_interest(
 		else:
 			jovens_list = jovens
 
+		last_resposta = None
 		for jovem in jovens_list:
 			# Create Resposta Manifestacao de Interesse
 			resposta = frappe.get_doc(
 				{
 					"doctype": "Resposta Manifestacao de Interesse",
-					"nome_do_responsavel": hashlib.md5(nome_responsavel.encode("utf-8")).hexdigest(),
-					"email_do_responsavel": hashlib.md5(email_responsavel.encode("utf-8")).hexdigest(),
-					"celular_do_responsavel": hashlib.md5(celular_responsavel.encode("utf-8")).hexdigest(),
-					"cpf_do_responsavel": hashlib.md5(cpf_responsavel.encode("utf-8")).hexdigest(),
-					"nome_do_jovem": hashlib.md5(jovem.get("nome_jovem", "").encode("utf-8")).hexdigest(),
-					"data_de_nascimento_do_jovem": hashlib.md5(
-						jovem.get("data_nascimento_jovem", "").encode("utf-8")
-					).hexdigest(),
-					"cpf_do_jovem": hashlib.md5(jovem.get("cpf_jovem", "").encode("utf-8")).hexdigest(),
+					"nome_do_responsavel": nome_responsavel,
+					"email_do_responsavel": email_responsavel,
+					"celular_do_responsavel": celular_responsavel,
+					"cpf_do_responsavel": cpf_responsavel,
+					"nome_do_jovem": jovem.get("nome_jovem", ""),
+					"data_de_nascimento_do_jovem": jovem.get("data_nascimento_jovem", ""),
+					"cpf_do_jovem": jovem.get("cpf_jovem", ""),
 					"data_e_horario_de_resposta": now(),
 					"dados_confirmados": 1,
 					"aceite_lgpd": 1,
 				}
 			)
 			resposta.insert(ignore_permissions=True)
+			last_resposta = resposta
 
 			# Create or Get Novo Associado
 			novo_associado_doc = None
@@ -132,6 +135,22 @@ def submit_interest(
 						}
 					)
 					vinculo.insert(ignore_permissions=True)
+
+		if last_resposta:
+			try:
+				email_template = frappe.get_doc("Email Template", "Confirmacao Manifestacao Interesse")
+				context = {"doc": last_resposta}
+
+				# Fix potential HTML entities in Jinja logic if loaded from JSON
+				template_content = email_template.response.replace("&gt;", ">").replace("&lt;", "<")
+
+				message = frappe.render_template(template_content, context)
+				subject = frappe.render_template(email_template.subject, context)
+
+				frappe.sendmail(recipients=[email_responsavel], subject=subject, message=message, now=True)
+				frappe.log_error("DEBUG EMAIL SUCCESS", f"Email sent to {email_responsavel}")
+			except Exception as e:
+				frappe.log_error("DEBUG EMAIL ERROR", str(e))
 
 		return {
 			"status": "success",

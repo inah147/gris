@@ -86,7 +86,7 @@ home_page = "/inicio"
 # ------------
 
 # before_install = "gris.install.before_install"
-# after_install = "gris.install.after_install"
+after_install = "gris.install.after_install"
 
 # Uninstallation
 # ------------
@@ -274,6 +274,9 @@ fixtures = [
 					"Visualizador Financeiro",
 					"Gestor da UEL",
 					"Acesso ao Desk",
+					"Visualizador Calendario",
+					"Gestor Calendario",
+					"Recepcao",
 				],
 			]
 		],
@@ -292,6 +295,9 @@ fixtures = [
 	},
 	{
 		"dt": "Unidade Organizacional",
+	},
+	{
+		"dt": "Email Template",
 	},
 ]
 

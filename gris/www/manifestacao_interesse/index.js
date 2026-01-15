@@ -380,26 +380,56 @@ frappe.ready(function() {
         });
         data['jovens'] = JSON.stringify(jovens);
 
+        // Custom loading dialog
+        let loadingDialog = new frappe.ui.Dialog({
+            title: 'Processando solicitação...',
+            indicators: false, // Hide standard indicators if not needed
+            primary_action: null // No buttons
+        });
+        
+        loadingDialog.$body.html(`
+            <div class="text-center" style="padding: 20px;">
+                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                </div>
+                <p class="mt-3 text-muted">Aguarde, estamos processando sua solicitação enviando os e-mails de confirmação...</p>
+            </div>
+        `);
+        
+        loadingDialog.show();
+        // Prevent closing by clicking outside
+        loadingDialog.$wrapper.data('bs.modal')._config.backdrop = 'static';
+        loadingDialog.$wrapper.data('bs.modal')._config.keyboard = false;
+
         frappe.call({
             method: 'gris.www.manifestacao_interesse.index.submit_interest',
             args: data,
-            freeze: true,
-            freeze_message: 'Enviando...',
+            // freeze: true,  <-- Removing standard freeze
+            // freeze_message: 'Enviando...',
             callback: function(r) {
+                loadingDialog.hide();
                 if (r.message && r.message.status === 'success') {
                     $('#interest-form').slideUp();
                     $('#form-message').html(`
-                        <div class="alert alert-success">
-                            <h4 class="alert-heading">Sucesso!</h4>
-                            <p>${r.message.message}</p>
+                        <div class="text-center py-5">
+                             <div class="mb-4">
+                                <div style="width: 80px; height: 80px; background: #dbfbe6; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto; color: #28a745; font-size: 40px;">
+                                    ✓
+                                </div>
+                            </div>
+                            <h2 class="mb-3">Sucesso!</h2>
+                            <p class="lead mb-4" style="font-size: 1.1rem; color: #6c757d;">${r.message.message}</p>
                         </div>
                     `).fadeIn();
                     
                     // Update Stepper
                     $('#step-1').removeClass('active').addClass('completed');
-                    // $('#step-1 .step-counter').html('<i class="fa fa-check"></i>'); // Keep number 1
                     $('#step-2').addClass('active');
                     
+                    // Scroll to message
+                     $('html, body').animate({
+                        scrollTop: $("#form-message").offset().top - 100
+                    }, 500);
+
                 } else {
                     frappe.msgprint({
                         title: 'Erro',
@@ -409,6 +439,7 @@ frappe.ready(function() {
                 }
             },
             error: function(r) {
+                loadingDialog.hide();
                 frappe.msgprint({
                     title: 'Erro',
                     indicator: 'red',

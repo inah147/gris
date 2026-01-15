@@ -126,6 +126,7 @@ def update_novo_associado(novo_associado_name, data, responsaveis_data=None):
 
 	# Allowed fields to update
 	allowed_fields = [
+		"tipo_de_registro",
 		"nome_completo",
 		"data_de_nascimento",
 		"etnia",

@@ -1,11 +1,13 @@
-{% extends "templates/web_sidebar_base.html" %} {% block title %}Ficha de Registro - {{
-doc.nome_completo }}{% endblock %} {% block head_include %} {{ super() }}
+{% extends "templates/web_sidebar_base.html" %} {% block title %}Ficha de Registro{% if doc %} - {{
+doc.nome_completo }}{% endif %}{% endblock %} {% block head_include %} {{ super() }}
 <link rel="stylesheet" href="/recepcao/ficha_registro.css" />
 {% endblock %} {% block page_header %}
 <div class="page-header">
 	<div class="page-header__content">
 		<h1 class="page-header__title">Ficha de Registro</h1>
+		{% if doc %}
 		<p class="page-header__subtitle">{{ doc.nome_completo }}</p>
+		{% endif %}
 	</div>
 	<div class="page-header__actions">
 		<a href="/recepcao/visao_geral" class="btn-modern btn-modern--ghost btn-modern--sm"

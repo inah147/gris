@@ -31,8 +31,7 @@ def processar_desistencia(novo_associado_name, motivo=None):
 	# 3. Handle Associado (Anonimizar + Desligamento context)
 	# Check if effective
 	is_effective = (
-		novo_associado.registro_provisorio_efetivado
-		or novo_associado.registro_definitivo_efetivado
+		novo_associado.registro_provisorio_efetivado or novo_associado.registro_definitivo_efetivado
 	)
 
 	if is_effective and cpf:
@@ -57,7 +56,7 @@ def processar_desistencia(novo_associado_name, motivo=None):
 				"email_responsavel_2",
 				"telefone_responsavel_2",
 				"religiao",
-				"etnia"
+				"etnia",
 			]
 
 			for field in fields_to_anonymize:
@@ -86,27 +85,35 @@ def processar_desistencia(novo_associado_name, motivo=None):
 		responsavel_id = vinculo.responsavel
 
 		# Delete the link
-		frappe.delete_doc("Responsavel Vinculo", vinculo.name)
+		frappe.delete_doc("Responsavel Vinculo", vinculo.name, ignore_permissions=True)
 
 		# Check if Responsavel has other links (Vinculo)
 		other_links_count = frappe.db.count("Responsavel Vinculo", {"responsavel": responsavel_id})
 
 		if other_links_count == 0:
+			# Check if Responsavel has Survey Answer
+			# Note: Doctype has a typo 'Pesqusa' which is correct in the system
+			if frappe.db.exists("Pesqusa de Novos Associados", {"responsavel": responsavel_id}):
+				# Unlink Responsavel from Survey to keep the survey data but allow user deletion
+				frappe.db.set_value(
+					"Pesqusa de Novos Associados", {"responsavel": responsavel_id}, "responsavel", None
+				)
+
 			# No other links, delete Responsavel and User
 			if frappe.db.exists("Responsavel", responsavel_id):
 				responsavel_doc = frappe.get_doc("Responsavel", responsavel_id)
 				user_email = responsavel_doc.email
 
-				frappe.delete_doc("Responsavel", responsavel_id)
+				frappe.delete_doc("Responsavel", responsavel_id, ignore_permissions=True)
 
 				if user_email and frappe.db.exists("User", user_email):
-					frappe.delete_doc("User", user_email)
+					frappe.delete_doc("User", user_email, ignore_permissions=True)
 
 	# 5. Cleanup Fila de Espera (if any)
 	frappe.db.delete("Fila de Espera", {"associado": novo_associado_name})
 
 	# 6. Delete Novo Associado
-	frappe.delete_doc("Novo Associado", novo_associado_name)
+	frappe.delete_doc("Novo Associado", novo_associado_name, ignore_permissions=True)
 
 	return {"status": "success"}
 

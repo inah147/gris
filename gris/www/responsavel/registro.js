@@ -159,7 +159,11 @@ frappe.ready(function() {
         const fields = ['cep', 'endereco', 'numero', 'complemento', 'bairro', 'cidade', 'estado'];
         fields.forEach(field => {
             const mainVal = $(`#${field}`).val();
-            card.find(`[data-fieldname="${field}"]`).val(mainVal);
+            const $target = card.find(`[data-fieldname="${field}"]`);
+            $target.val(mainVal);
+            if (mainVal) {
+                $target.removeClass('is-invalid');
+            }
         });
     }
 
@@ -187,7 +191,11 @@ frappe.ready(function() {
             $('.same-address-check:checked').each(function() {
                 const card = $(this).closest('.responsavel-card');
                 const mainVal = $(`#${field}`).val();
-                card.find(`[data-fieldname="${field}"]`).val(mainVal);
+                const $target = card.find(`[data-fieldname="${field}"]`);
+                $target.val(mainVal);
+                if (mainVal) {
+                    $target.removeClass('is-invalid');
+                }
             });
         });
     });
@@ -199,6 +207,11 @@ frappe.ready(function() {
     $(document).on('input', 'input[data-fieldname="nome_completo"]', function() {
         const val = $(this).val();
         $(this).closest('.responsavel-card').find('.responsavel-card__title').text(val || 'Novo Responsável');
+    });
+
+    // Remove invalid class on input
+    $(document).on('input change', '.is-invalid', function() {
+        $(this).removeClass('is-invalid');
     });
 
     // --- Form Submission ---
@@ -383,8 +396,8 @@ frappe.ready(function() {
             responsaveis_data.push(respData);
         });
 
-        // Show Confirmation Modal instead of saving directly
-        showConfirmationModal(novo_associado_name, form_data, responsaveis_data, $btn, btnText);
+        // Open Type Selection Modal first instead of Confirmation directly
+        openTipoRegistroModal(novo_associado_name, form_data, responsaveis_data, $btn, btnText);
     });
 
     // --- Modal Logic ---
@@ -425,15 +438,18 @@ frappe.ready(function() {
     function showConfirmationModal(novo_associado_name, form_data, responsaveis_data, $btn, btnText) {
         const summaryContainer = document.getElementById('confirmation-summary');
         const confirmCheck = document.getElementById('confirm-data-check');
+        const confirmImageCheck = document.getElementById('confirm-image-check');
         const confirmBtn = document.getElementById('btn-confirm-save');
 
         // Reset state
         confirmCheck.checked = false;
+        confirmImageCheck.checked = false;
         confirmBtn.disabled = true;
         $btn.prop('disabled', false).text(btnText); // Reset main button
 
         function formatLabel(key) {
             const labelMap = {
+                'tipo_de_registro': 'Tipo de Registro',
                 'nome_completo': 'Nome Completo',
                 'data_de_nascimento': 'Data de Nascimento',
                 'pais_nascimento': 'País de Nascimento',
@@ -483,7 +499,7 @@ frappe.ready(function() {
                     <div class="row g-2 mb-4">`;
         
         const mainFieldsOrder = [
-            'nome_completo', 'cpf', 'rg', 'data_de_nascimento', 'email', 'celular',
+            'tipo_de_registro', 'nome_completo', 'cpf', 'rg', 'data_de_nascimento', 'email', 'celular',
             'cep', 'endereco', 'numero', 'complemento', 'bairro', 'cidade', 'estado'
         ];
         
@@ -539,9 +555,12 @@ frappe.ready(function() {
         summaryContainer.innerHTML = html;
 
         // Event Listeners
-        confirmCheck.onchange = function() {
-            confirmBtn.disabled = !this.checked;
+        const updateConfirmButton = function() {
+            confirmBtn.disabled = !(confirmCheck.checked && confirmImageCheck.checked);
         };
+
+        confirmCheck.onchange = updateConfirmButton;
+        confirmImageCheck.onchange = updateConfirmButton;
 
         confirmBtn.onclick = function() {
             closeModal();
@@ -577,4 +596,77 @@ frappe.ready(function() {
 
         openModal();
     }
+
+    // --- Tipo Registro Modal Logic ---
+    const $modalTipoWrapper = $('#modalTipoRegistro');
+    // Re-use backdrop for simplicity or handle separately. 
+    // Since existing modal logic handles backdrop manually, we should follow or adapt.
+    // The existing openModal logic is a bit manual ($backdrop.css...), let's check it.
+
+    function openTipoRegistroModal(novo_associado_name, form_data, responsaveis_data, $btn, btnText) {
+        const $modal = $('#modalTipoRegistro');
+        const $backdrop = $('#confirmationModalBackdrop'); // Reusing the backdrop
+        
+        // Reset state
+        $('.registro-option-card').removeClass('selected');
+        $('#selected-tipo-registro').val('');
+        $('#btn-confirm-tipo-registro').prop('disabled', true);
+        
+        $modal.css('display', 'flex');
+        $backdrop.css('display', 'block');
+        // Force reflow
+        $modal[0].offsetHeight;
+        
+        $modal.addClass('show');
+        $backdrop.addClass('show');
+        $('body').addClass('modal-open');
+
+        // Setup Confirm Handler (Continuar)
+        $('#btn-confirm-tipo-registro').off('click').on('click', function() {
+            const selectedType = $('#selected-tipo-registro').val();
+            
+            // Add type to form_data
+            form_data['tipo_de_registro'] = selectedType;
+
+            // Close this modal
+            $modal.removeClass('show');
+            setTimeout(() => {
+                $modal.css('display', 'none');
+                // Don't hide backdrop yet because we will open next modal immediately
+                
+                // Open Confirmation Modal
+                showConfirmationModal(novo_associado_name, form_data, responsaveis_data, $btn, btnText);
+            }, 300);
+        });
+
+        // Close handlers specific to this modal if needed
+         $modal.find('[data-bs-dismiss="modal"]').off('click').on('click', function() {
+            closeTipoModal();
+            // Reset main button
+            $btn.prop('disabled', false).text(btnText);
+         });
+    }
+
+    function closeTipoModal() {
+        const $modal = $('#modalTipoRegistro');
+        const $backdrop = $('#confirmationModalBackdrop');
+        $modal.removeClass('show');
+        $backdrop.removeClass('show');
+        $('body').removeClass('modal-open');
+        setTimeout(() => {
+            $modal.css('display', 'none');
+            $backdrop.css('display', 'none');
+        }, 300);
+    }
+
+    // Option Selection Logic
+    $('.registro-option-card').on('click', function() {
+        $('.registro-option-card').removeClass('selected');
+        $(this).addClass('selected');
+        
+        const value = $(this).data('value');
+        $('#selected-tipo-registro').val(value);
+        $('#btn-confirm-tipo-registro').prop('disabled', false);
+    });
+
 });

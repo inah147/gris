@@ -1,3 +1,4 @@
+import hashlib
 import os
 import re
 
@@ -133,6 +134,16 @@ def _values_differ(current_value, new_value) -> bool:
 	return str(current).strip() != str(new).strip()
 
 
+def _normalize_phone(phone: str) -> str:
+	"""Normaliza telefone para formato +55"""
+	if not phone:
+		return ""
+	num = re.sub(r"\D", "", phone)
+	if not num:
+		return ""
+	return f"+55{num}" if not num.startswith("55") else f"+{num}"
+
+
 @frappe.whitelist()
 def parse_associates_report(path_pdf: str) -> dict:
 	"""
@@ -176,18 +187,37 @@ def parse_associates_report(path_pdf: str) -> dict:
 				results["error_details"].append(f"Linha {idx + 1}: CPF não encontrado")
 				continue
 
+			# Calcular hash do CPF para busca (padrao do doctype Associado)
+			cpf_hash = hashlib.md5(cpf.encode("utf-8")).hexdigest()
+
 			# Verificar se o associado já existe (buscar pelo CPF como filtro)
-			existing_docs = frappe.get_all("Associado", filters={"cpf": cpf}, limit=1)
+			# Também deve buscar pelo nome, já que o ID é baseado no nome/hash
+			filters = {"cpf": cpf_hash}
+			existing_docs = frappe.get_all("Associado", filters=filters, limit=1)
+
+			registro_ueb = row.get("Registro", "").strip()
+			if not existing_docs and registro_ueb:
+				# Tentar buscar pelo registro UEB se não achou por CPF
+				existing_docs = frappe.get_all("Associado", filters={"registro": registro_ueb}, limit=1)
+
 			existing = len(existing_docs) > 0
 
 			# Mapear campos do PDF para o doctype Associado
+			# Mantemos CPF cru no associate_data para que o save() do doctype gere o hash corretamente
+			nome_completo = row.get("Nome", "").strip()
+			if nome_completo:
+				nome_completo = nome_completo.title()
+
+			telefone = row.get("Celular", "").strip() or row.get("Fone_Residencial", "").strip()
+			telefone = _normalize_phone(telefone)
+
 			associate_data = {
 				"doctype": "Associado",
 				"cpf": cpf,
-				"nome_completo": row.get("Nome", "").strip(),
+				"nome_completo": nome_completo,
 				"registro": row.get("Registro", "").strip(),
 				"email": row.get("Email", "").strip(),
-				"telefone": row.get("Celular", "").strip() or row.get("Fone_Residencial", "").strip(),
+				"telefone": telefone,
 				"data_de_nascimento": _parse_date(row.get("Data_Nascimento", "")),
 				"sexo": _parse_sexo(row.get("Sexo", "")),
 				"etnia": _parse_etnia(row.get("Raca_ou_Cor", "")),
@@ -200,11 +230,20 @@ def parse_associates_report(path_pdf: str) -> dict:
 
 			# Adicionar dados do responsável se existirem
 			if row.get("Nome_responsavel"):
+				nome_resp = row.get("Nome_responsavel", "").strip()
+				if nome_resp:
+					nome_resp = nome_resp.title()
+
+				tel_resp = (
+					row.get("Celular_responsavel", "").strip()
+					or row.get("Telefone_Residencial_responsavel", "").strip()
+				)
+				tel_resp = _normalize_phone(tel_resp)
+
 				associate_data.update(
 					{
-						"nome_responsavel_1": row.get("Nome_responsavel", "").strip(),
-						"telefone_responsavel_1": row.get("Celular_responsavel", "").strip()
-						or row.get("Telefone_Residencial_responsavel", "").strip(),
+						"nome_responsavel_1": nome_resp,
+						"telefone_responsavel_1": tel_resp,
 						"email_responsavel_1": row.get("Email_responsavel", "").strip(),
 						"cpf_responsavel_1": row.get("CPF_responsavel", "").strip(),
 					}
@@ -218,6 +257,18 @@ def parse_associates_report(path_pdf: str) -> dict:
 				for key, value in associate_data.items():
 					if key != "doctype" and value:  # Apenas verificar campos com valor
 						current_value = getattr(doc, key, None)
+
+						# Special handling for CPF comparison (stored as hash vs input as raw)
+						if key == "cpf":
+							if current_value == cpf_hash:
+								continue  # Hash matches raw input, no change
+
+						# Special handling for CPF Responsavel comparison
+						if key == "cpf_responsavel_1" and value:
+							resp_hash = hashlib.md5(value.encode("utf-8")).hexdigest()
+							if current_value == resp_hash:
+								continue
+
 						# Comparar valores, considerando None e string vazia como equivalentes
 						if _values_differ(current_value, value):
 							setattr(doc, key, value)
@@ -230,22 +281,67 @@ def parse_associates_report(path_pdf: str) -> dict:
 					# Registro já existe e não tem alterações
 					results["skipped"] += 1
 			else:
-				# Criar novo registro
-				doc = frappe.get_doc(associate_data)
-				doc.insert()
-				results["created"] += 1
+				try:
+					# Criar novo registro
+					doc = frappe.get_doc(associate_data)
+					doc.insert()
+					results["created"] += 1
+				except frappe.DuplicateEntryError:
+					# Se falhar por nome duplicado mas não achou por CPF/Registro, tenta recuperar e atualizar
+					# O nome é autogerado? Se sim, pode ser colisão. Se for manual, usuário mandou.
+					# Vamos tentar encontrar o doc que causou conflito
+					frappe.clear_messages()
 
-		except frappe.DuplicateEntryError:
-			# Duplicata detectada - verificar se realmente não tem alterações
-			results["skipped"] += 1
+					# Se a chave primária foi definida manualmente ou é um campo unico que colidiu
+					# Tentamos buscar pelo nome que seria gerado
+					temp_doc = frappe.get_doc(associate_data)
+					# set_new_name normally runs on insert, but we can try to guess or search
+					# Assumindo que o erro é Duplicate Name
+
+					# Se realmente for duplicata de nome e não achamos antes,
+					# pode ser que o CPF estava diferente ou em branco no banco
+					# Vamos tentar achar pelo nome completo se possível, ou apenas logar
+					dup_candidates = frappe.get_all(
+						"Associado", filters={"nome_completo": associate_data.get("nome_completo")}, limit=1
+					)
+
+					if dup_candidates:
+						doc = frappe.get_doc("Associado", dup_candidates[0].name)
+						# Repetir lógica de update
+						has_changes = False
+						for key, value in associate_data.items():
+							if key != "doctype" and value:
+								current_value = getattr(doc, key, None)
+
+								# Special handling for CPF comparison (stored as hash vs input as raw)
+								if key == "cpf":
+									if current_value == cpf_hash:
+										continue  # Hash matches raw input, no change
+
+								# Special handling for CPF Responsavel comparison
+								if key == "cpf_responsavel_1" and value:
+									resp_hash = hashlib.md5(value.encode("utf-8")).hexdigest()
+									if current_value == resp_hash:
+										continue
+
+								if _values_differ(current_value, value):
+									setattr(doc, key, value)
+									has_changes = True
+
+						if has_changes:
+							doc.save()
+							results["updated"] += 1
+						else:
+							results["skipped"] += 1
+					else:
+						# Se não achou candidato, então é um erro real de chave
+						raise
+
 		except Exception as e:
+			frappe.log_error(f"Erro importação linha {idx + 1}", str(e))
 			results["errors"] += 1
-			error_msg = f"CPF {cpf or 'desconhecido'}: {type(e).__name__}"
+			error_msg = f"CPF {cpf or 'desconhecido'}: {e!s}"
 			results["error_details"].append(f"Linha {idx + 1} - {error_msg}")
-			# Log de erro mais curto para não exceder o limite
-			frappe.log_error(
-				title=f"Import Error: {error_msg[:100]}", message=f"Linha {idx + 1}\nCPF: {cpf}\nErro: {e!s}"
-			)
 
 	# Commit das alterações
 	frappe.db.commit()

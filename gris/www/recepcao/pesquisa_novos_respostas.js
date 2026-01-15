@@ -1,5 +1,5 @@
-let npsChart;
-let currentPeriod = 'monthly';
+var npsChart;
+var currentPeriod = 'monthly';
 
 frappe.ready(function() {
     loadSurveys();
@@ -49,9 +49,10 @@ function renderTable(data) {
     }
 
     data.forEach(row => {
+        const responsavelDisplay = row.responsavel_nome || row.responsavel || "Desistência";
         const tr = $(`
             <tr>
-                <td>${row.responsavel_nome || row.responsavel}</td>
+                <td>${responsavelDisplay}</td>
                 <td>${row.creation_formatted}</td>
                 <td><span class="badge-nps nps-${getNpsClass(row.nps_recepcao)}">${row.nps_recepcao}</span></td>
                 <td>
@@ -94,7 +95,7 @@ function renderModal(data) {
     let html = `
         <div class="mb-4">
             <h6 class="text-muted mb-2 text-uppercase small fw-bold">Responsável</h6>
-            <p class="fw-bold mb-0" style="font-size: 1.1rem;">${s.responsavel_nome || s.responsavel}</p>
+            <p class="fw-bold mb-0" style="font-size: 1.1rem;">${s.responsavel_nome || s.responsavel || "Desistência"}</p>
         </div>
         
         <div class="mb-4">
@@ -171,6 +172,11 @@ function loadNpsChart() {
 }
 
 function renderChart(data) {
+    if (!data || !data.labels || data.labels.length === 0) {
+        $('#nps-chart').html('<div class="text-muted text-center p-4">Sem dados para o período selecionado.</div>');
+        return;
+    }
+
     if (!frappe.Chart && window['frappe-charts'] && window['frappe-charts'].Chart) {
         frappe.Chart = window['frappe-charts'].Chart;
     }

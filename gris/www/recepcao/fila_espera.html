@@ -39,8 +39,8 @@ endblock %} {% block head_include %} {{ super() }}
 						data-novos="{{ vagas_por_ramo[ramo].novos }}"
 						data-saindo="{{ vagas_por_ramo[ramo].saindo }}"
 						data-disponiveis="{{ vagas_por_ramo[ramo].disponiveis }}"
-						data-chart-labels="{{ vagas_por_ramo[ramo].chart_labels | tojson }}"
-						data-chart-values="{{ vagas_por_ramo[ramo].chart_values | tojson }}"
+						data-chart-labels='{{ vagas_por_ramo[ramo].chart_labels | tojson }}'
+						data-chart-values='{{ vagas_por_ramo[ramo].chart_values | tojson }}'
 						onclick="openVagasModal(this)"
 					>
 						<svg

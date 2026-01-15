@@ -448,10 +448,16 @@
                 </div>
 
                 <div class="mt-4 p-3 bg-light border rounded">
-                    <div class="form-check">
+                    <div class="form-check mb-2">
                         <input class="form-check-input" type="checkbox" id="confirm-data-check">
                         <label class="form-check-label fw-bold" for="confirm-data-check">
                             Confirmo que todos os dados estão corretos, especialmente os CPFs e Datas de Nascimento do associado e dos responsáveis.
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="confirm-image-check">
+                        <label class="form-check-label" for="confirm-image-check">
+                            Estou ciente e autorizo o uso de imagem conforme os termos: <a href="https://www.escoteiros.org.br/wp-content/themes/escoteiros-theme/files/autorizacao.pdf" target="_blank" class="text-primary text-decoration-underline">Termo de Autorização de Uso de Imagem</a>.
                         </label>
                     </div>
                 </div>
@@ -466,6 +472,51 @@
 
 <!-- Backdrop -->
 <div class="modal-backdrop fade" id="confirmationModalBackdrop" style="display: none;"></div>
+
+<!-- Modal Tipo de Registro -->
+<div class="modal-modern fade" id="modalTipoRegistro" tabindex="-1" style="display: none;">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-modern__content">
+            <div class="modal-modern__header">
+                <h5 class="modal-modern__title">Escolha o Tipo de Registro</h5>
+            </div>
+            <div class="modal-modern__body">
+                <p class="text-muted mb-4 text-center">Selecione uma das opções abaixo para prosseguir com o registro:</p>
+                
+                <div class="row g-4 justify-content-center">
+                    <div class="col-md-5">
+                        <div class="registro-option-card" data-value="Provisório">
+                            <div class="card-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            </div>
+                            <h4>Registro Provisório</h4>
+                            <p>Válido por 30. Ideal para quem está começando e quer conhecer melhor o movimento antes de fazer o registro definitivo.</p>
+                            <div class="selection-indicator"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="registro-option-card" data-value="Definitivo">
+                            <div class="card-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                            </div>
+                            <h4>Registro Definitivo</h4>
+                            <p>Registro anual válido por 12 meses. Ideal para quem já tem certeza que vai continuar.</p>
+                            <div class="selection-indicator"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <input type="hidden" id="selected-tipo-registro" value="">
+
+            </div>
+            <div class="modal-modern__footer">
+                <button type="button" class="btn-modern btn-modern--ghost" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn-modern btn-modern--primary" id="btn-confirm-tipo-registro" disabled>Continuar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 

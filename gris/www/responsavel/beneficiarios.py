@@ -155,16 +155,22 @@ def get_context(context):
 	# Check for existing scheduled visit
 	visit_info = None
 	if novo_associado_names:
-		agenda = frappe.get_all(
-			"Agenda de Visitas",
-			filters={"jovem": ["in", novo_associado_names], "data_da_visita": [">=", today()]},
-			fields=["name", "data_da_visita"],
-			order_by="data_da_visita asc",
-			limit=1,
-		)
-		if agenda:
-			visit_info = agenda[0]
-			visit_info.formatted_date = frappe.format_value(visit_info.data_da_visita, {"fieldtype": "Date"})
+		# Check if any beneficiary is in 'Visita Agendada' status
+		has_scheduled_status = any(b.status == "Visita Agendada" for b in beneficiarios_integracao)
+
+		if has_scheduled_status:
+			agenda = frappe.get_all(
+				"Agenda de Visitas",
+				filters={"jovem": ["in", novo_associado_names], "data_da_visita": [">=", today()]},
+				fields=["name", "data_da_visita"],
+				order_by="data_da_visita asc",
+				limit=1,
+			)
+			if agenda:
+				visit_info = agenda[0]
+				visit_info.formatted_date = frappe.format_value(
+					visit_info.data_da_visita, {"fieldtype": "Date"}
+				)
 
 	context.visit_info = visit_info
 	context.beneficiarios_registrados = beneficiarios_registrados

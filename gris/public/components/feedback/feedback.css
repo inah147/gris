@@ -3,3 +3,72 @@
  * 
  * Styles for alerts, toasts, and feedback messages.
  */
+
+/* ========================================
+   ALERTS
+   ======================================== */
+
+.alert-modern {
+    display: flex;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    margin-bottom: var(--space-md);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+}
+
+.alert-modern__icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.alert-modern__content {
+    flex: 1;
+    min-width: 0;
+}
+
+.alert-modern__title {
+    font-weight: var(--font-bold);
+    margin-bottom: var(--space-xs);
+    font-size: var(--text-base);
+}
+
+.alert-modern__description {
+    margin: 0;
+}
+
+/* Success */
+.alert-modern--success {
+    background-color: var(--color-success-lighter);
+    border-color: var(--color-success-light);
+    color: var(--color-success-active);
+}
+
+/* Info */
+.alert-modern--info {
+    background-color: var(--color-info-lighter);
+    border-color: var(--color-info-light);
+    color: var(--color-info-active);
+}
+
+/* Warning */
+.alert-modern--warning {
+    background-color: var(--color-warning-lighter);
+    border-color: var(--color-warning-light);
+    color: var(--color-warning-active);
+}
+
+/* Danger */
+.alert-modern--danger {
+    background-color: var(--color-danger-lighter);
+    border-color: var(--color-danger-light);
+    color: var(--color-danger-active);
+}

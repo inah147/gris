@@ -48,3 +48,63 @@
 .responsavel-wrapper:not(:last-child) {
     margin-bottom: 3rem;
 }
+
+/* Tipo de Registro Selection */
+.registro-option-card {
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    height: 100%;
+    position: relative;
+    background: #fff;
+}
+
+.registro-option-card:hover {
+    border-color: var(--color-primary-light, #93c5fd);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.registro-option-card.selected {
+    border-color: var(--color-primary);
+    background-color: var(--bg-subtle);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.registro-option-card .card-icon {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    transition: color 0.2s;
+}
+
+.registro-option-card.selected .card-icon {
+    color: var(--color-primary);
+}
+
+.registro-option-card h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.registro-option-card p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0;
+    line-height: 1.4;
+}
+
+/* Validation Styles */
+.form-input-modern.is-invalid {
+    border-color: #dc2626 !important; /* Red-600 */
+}
+
+.form-input-modern.is-invalid:focus {
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.1) !important;
+}
+

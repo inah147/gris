@@ -169,7 +169,7 @@ function initModal() {
             
             document.getElementById('modal-child-name').textContent = name;
             document.getElementById('modal-child-age').textContent = age;
-            document.getElementById('btn-open-file').href = `/recepcao/ficha_registro?jovem=${jovemId}`;
+            document.getElementById('btn-open-file').href = `/recepcao/ficha_registro?name=${jovemId}`;
             
             const statusContainer = document.getElementById('modal-status-container');
             const btnConfirm = document.getElementById('btn-confirm');

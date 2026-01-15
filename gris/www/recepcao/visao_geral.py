@@ -1,9 +1,30 @@
+import hashlib
 import json
+import re
 
 import frappe
 from frappe.utils import add_days, format_date, getdate
 
 from gris.api.portal_access import enrich_context
+
+STEPS_DEF = [
+	{"field": "visita_agendada", "label": "Visita Agendada"},
+	{"field": "primeira_visita_realizada", "label": "Primeira Visita Realizada"},
+	{"field": "dados_para_registro_enviados", "label": "Dados Enviados"},
+	{"field": "registro_criado_no_paxtu", "label": "Registro no Paxtu"},
+	{"field": "registro_provisorio_pago", "label": "Registro Provisório Pago", "conditional": True},
+	{
+		"field": "registro_provisorio_efetivado",
+		"label": "Registro Provisório Efetivado",
+		"conditional": True,
+	},
+	{"field": "pesquisa_de_novos_associados_respondida", "label": "Pesquisa Respondida"},
+	{"field": "ficha_medica_preenchida", "label": "Ficha Médica"},
+	{"field": "id_escoteiros_criado", "label": "ID Escoteiros Criado"},
+	{"field": "registro_definitivo_pago", "label": "Registro Definitivo Pago"},
+	{"field": "registro_definitivo_efetivado", "label": "Registro Definitivo Efetivado"},
+	{"field": "reuniao_de_acolhida_realizada", "label": "Reunião de Acolhida"},
+]
 
 
 def get_context(context):
@@ -116,24 +137,7 @@ def get_context(context):
 	}
 
 	# Steps definition for infographic
-	steps_def = [
-		{"field": "visita_agendada", "label": "Visita Agendada"},
-		{"field": "primeira_visita_realizada", "label": "Primeira Visita Realizada"},
-		{"field": "dados_para_registro_enviados", "label": "Dados Enviados"},
-		{"field": "registro_criado_no_paxtu", "label": "Registro no Paxtu"},
-		{"field": "registro_provisorio_pago", "label": "Registro Provisório Pago", "conditional": True},
-		{
-			"field": "registro_provisorio_efetivado",
-			"label": "Registro Provisório Efetivado",
-			"conditional": True,
-		},
-		{"field": "pesquisa_de_novos_associados_respondida", "label": "Pesquisa Respondida"},
-		{"field": "ficha_medica_preenchida", "label": "Ficha Médica"},
-		{"field": "id_escoteiros_criado", "label": "ID Escoteiros Criado"},
-		{"field": "registro_definitivo_pago", "label": "Registro Definitivo Pago"},
-		{"field": "registro_definitivo_efetivado", "label": "Registro Definitivo Efetivado"},
-		{"field": "reuniao_de_acolhida_realizada", "label": "Reunião de Acolhida"},
-	]
+	steps_def = STEPS_DEF
 
 	# Group by status
 	kanban_data = {status: [] for status in statuses}
@@ -250,24 +254,84 @@ def update_step_status(novo_associado_name, field, value):
 		frappe.throw("Novo Associado não especificado.")
 
 	# Validate field against allowed steps
-	allowed_fields = [
-		"visita_agendada",
-		"primeira_visita_realizada",
-		"dados_para_registro_enviados",
-		"registro_criado_no_paxtu",
-		"registro_provisorio_pago",
-		"registro_provisorio_efetivado",
-		"pesquisa_de_novos_associados_respondida",
-		"ficha_medica_preenchida",
-		"id_escoteiros_criado",
-		"registro_definitivo_pago",
-		"registro_definitivo_efetivado",
-		"reuniao_de_acolhida_realizada",
-	]
+	allowed_fields = [s["field"] for s in STEPS_DEF]
 
 	if field not in allowed_fields:
 		frappe.throw("Campo inválido.")
 
-	frappe.db.set_value("Novo Associado", novo_associado_name, field, int(value))
+	doc = frappe.get_doc("Novo Associado", novo_associado_name)
+	doc.set(field, int(value))
+
+	doc.save()
 
 	return "Status atualizado com sucesso."
+
+
+@frappe.whitelist()
+def finalizar_processo_recepcao(novo_associado_name):
+	if not novo_associado_name:
+		frappe.throw("Novo Associado não especificado.")
+
+	na_doc = frappe.get_doc("Novo Associado", novo_associado_name)
+
+	# Find Associado by hashed CPF (as name)
+	if not na_doc.cpf:
+		frappe.throw("Novo Associado sem CPF. Não é possível vincular ao Associado.")
+
+	cpf_clean = re.sub(r"\D", "", na_doc.cpf)
+	associado_name = hashlib.md5(cpf_clean.encode("utf-8")).hexdigest()
+
+	if not frappe.db.exists("Associado", associado_name):
+		frappe.throw(
+			f"Associado com name/hash {associado_name} (CPF {na_doc.cpf}) não encontrado. Certifique-se de que o registro foi criado."
+		)
+
+	# Update Responsavel Vinculo
+	links = frappe.get_all("Responsavel Vinculo", filters={"beneficiario_novo_associado": na_doc.name})
+	responsavel_ids = []
+
+	for link in links:
+		link_doc = frappe.get_doc("Responsavel Vinculo", link.name)
+		link_doc.beneficiario_novo_associado = None
+		link_doc.beneficiario_associado = associado_name
+		link_doc.save(ignore_permissions=True)
+		if link_doc.responsavel:
+			responsavel_ids.append(link_doc.responsavel)
+
+	# Anonymize Responsavel
+	fields_to_keep = [
+		"o_que_gosta_de_fazer_no_dia_a_dia",
+		"habilidades",
+		"nome_completo",
+		"informacoes_pessoais_section",  # Keep section breaks to avoid UI issues
+		"hobbies_e_interesses_section",
+		"informacoes_profissionais_e_academicas_section",
+		"endereco_e_dados_de_contato_section",
+	]
+
+	# Get all fields of Responsavel
+	meta = frappe.get_meta("Responsavel")
+	fields_to_clear = []
+	for field in meta.fields:
+		if field.fieldname not in fields_to_keep and field.fieldtype not in [
+			"Section Break",
+			"Column Break",
+			"Tab Break",
+			"Table MultiSelect",
+		]:
+			fields_to_clear.append(field.fieldname)
+
+	for resp_id in set(responsavel_ids):
+		resp_doc = frappe.get_doc("Responsavel", resp_id)
+		for field in fields_to_clear:
+			# Clear value
+			resp_doc.set(field, None)
+		resp_doc.save(ignore_permissions=True)
+
+	# Delete Agenda de Visitas records linked to this Novo Associado
+	frappe.db.delete("Agenda de Visitas", {"jovem": na_doc.name})
+
+	# Delete Novo Associado
+	frappe.delete_doc("Novo Associado", na_doc.name, ignore_permissions=True)
+
+	return "Recepção finalizada com sucesso."

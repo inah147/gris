@@ -513,6 +513,13 @@ function openAguardarDadosModal(id, responsavel, nome, responsavelAssociado, ste
 	if (steps && steps.length > 0) {
 		steps.forEach((step) => {
 			const completedClass = step.completed ? "completed" : "";
+			const fieldName = step.field;
+			const clickAttr =
+				!step.completed && fieldName
+					? `onclick="toggleStep('${fieldName}', this)" style="cursor: pointer;"`
+					: "";
+			const hoverClass = !step.completed && fieldName ? "step-clickable" : "";
+
 			let labelHtml = step.label;
 
 			// Overdue check
@@ -532,10 +539,15 @@ function openAguardarDadosModal(id, responsavel, nome, responsavelAssociado, ste
 				labelHtml += ` <span class="${dateClass}">(${dateLabel}: ${step.estimated_date})${iconHtml}</span>`;
 			}
 			const html = `
-                <div class="timeline-item ${completedClass} ${itemExtraClass}">
+                <div class="timeline-item ${completedClass} ${itemExtraClass} ${hoverClass}" ${clickAttr}>
                     <div class="timeline-marker"></div>
                     <div class="timeline-content">
                         <span class="timeline-label">${labelHtml}</span>
+                        ${
+							!step.completed
+								? '<small class="d-block text-muted" style="font-size: 0.75rem;">Clique para marcar como concluído</small>'
+								: ""
+						}
                     </div>
                 </div>
             `;
@@ -578,6 +590,13 @@ function openFazerRegistroModal(id, responsavel, nome, responsavelAssociado, ste
 	if (steps && steps.length > 0) {
 		steps.forEach((step) => {
 			const completedClass = step.completed ? "completed" : "";
+			const fieldName = step.field;
+			const clickAttr =
+				!step.completed && fieldName
+					? `onclick="toggleStep('${fieldName}', this)" style="cursor: pointer;"`
+					: "";
+			const hoverClass = !step.completed && fieldName ? "step-clickable" : "";
+			
 			let labelHtml = step.label;
 
 			// Overdue check
@@ -597,10 +616,15 @@ function openFazerRegistroModal(id, responsavel, nome, responsavelAssociado, ste
 				labelHtml += ` <span class="${dateClass}">(${dateLabel}: ${step.estimated_date})${iconHtml}</span>`;
 			}
 			const html = `
-                <div class="timeline-item ${completedClass} ${itemExtraClass}">
+                <div class="timeline-item ${completedClass} ${itemExtraClass} ${hoverClass}" ${clickAttr}>
                     <div class="timeline-marker"></div>
                     <div class="timeline-content">
                         <span class="timeline-label">${labelHtml}</span>
+                        ${
+							!step.completed
+								? '<small class="d-block text-muted" style="font-size: 0.75rem;">Clique para marcar como concluído</small>'
+								: ""
+						}
                     </div>
                 </div>
             `;
@@ -662,7 +686,10 @@ function openAcompanhamentoModal(id, responsavel, nome, responsavelAssociado, st
 	}
 
 	if (steps && steps.length > 0) {
+		let allCompleted = true;
+
 		steps.forEach((step) => {
+			if (!step.completed) allCompleted = false;
 			const completedClass = step.completed ? "completed" : "";
 			// Backend now sends 'field' in the step object
 			const fieldName = step.field;
@@ -708,6 +735,27 @@ function openAcompanhamentoModal(id, responsavel, nome, responsavelAssociado, st
             `;
 			timelineContainer.append(html);
 		});
+
+		// Check if we need to show the Finalize button
+		const modalActions = $("#modalAcompanhamento .modal-actions-vertical");
+		// Remove existing finish button if persists (though modal content is static usually, better safe)
+		modalActions.find("#btnFinalizarRecepcao").remove();
+
+		if (allCompleted) {
+			const finishBtn = `
+				<button 
+					type="button" 
+					class="btn-modern btn-modern--success" 
+					id="btnFinalizarRecepcao"
+					onclick="finalizarRecepcao()"
+					style="margin-bottom: 0.5rem;"
+				>
+					Finalizar Recepção
+				</button>
+			`;
+			modalActions.prepend(finishBtn);
+		}
+
 	} else {
 		timelineContainer.html('<p class="text-muted">Nenhuma etapa encontrada.</p>');
 	}
@@ -752,6 +800,31 @@ function toggleStep(field, element) {
 	});
 }
 
+function finalizarRecepcao() {
+	if (!currentCardId) return;
+
+	frappe.confirm(
+		"Tem certeza? Isso vinculará o Responsável ao Associado, anonimizará os dados do Responsável e excluirá o Novo Associado.",
+		() => {
+			frappe.call({
+				method: "gris.www.recepcao.visao_geral.finalizar_processo_recepcao",
+				args: {
+					novo_associado_name: currentCardId,
+				},
+				freeze: true,
+				freeze_message: "Finalizando...",
+				callback: function (r) {
+					if (!r.exc) {
+						frappe.show_alert({ message: "Recepção finalizada com sucesso!", indicator: "green" });
+						closeModal();
+						setTimeout(() => window.location.reload(), 1000);
+					}
+				},
+			});
+		}
+	);
+}
+
 // Expose functions to global scope for onclick handlers
 window.moverParaConversaInicial = moverParaConversaInicial;
 window.openFicha = openFicha;
@@ -768,3 +841,4 @@ window.closeConfirmarFilaEspera = closeConfirmarFilaEspera;
 window.confirmarFilaEspera = confirmarFilaEspera;
 window.removerConfirmacaoVisita = removerConfirmacaoVisita;
 window.registrarRecepcaoRealizada = registrarRecepcaoRealizada;
+window.finalizarRecepcao = finalizarRecepcao;

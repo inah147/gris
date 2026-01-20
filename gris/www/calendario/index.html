@@ -9,6 +9,7 @@ active_link = '/calendario' %} {% set sidebar_title = 'Calendário' %} {% set si
 </div>
 {% endblock %} {% block main %}
 <div class="inicio-cards-grid">
+	{% if false %}
 	<a
 		href="/calendario/importar"
 		class="inicio-card inicio-card--nav card-modern card-modern--clickable"
@@ -44,6 +45,7 @@ active_link = '/calendario' %} {% set sidebar_title = 'Calendário' %} {% set si
 			</svg>
 		</div>
 	</a>
+	{% endif %}
 
 	<a
 		href="/calendario/visualizar"

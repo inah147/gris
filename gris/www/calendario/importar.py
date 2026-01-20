@@ -7,6 +7,8 @@ no_cache = 1
 
 
 def get_context(context):
+	frappe.throw("Página indisponível", frappe.PageDoesNotExistError)
+
 	# Bloqueio para usuários não autenticados
 	if frappe.session.user == "Guest":
 		frappe.local.flags.redirect_location = "/login?redirect-to=/calendario/importar"

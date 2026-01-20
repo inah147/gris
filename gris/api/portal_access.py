@@ -53,7 +53,6 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 		"path": "/calendario",
 		"children": [
 			{"label": "Acessar Calendário", "path": "/calendario/visualizar"},
-			{"label": "Importar Calendário", "path": "/calendario/importar"},
 		],
 	},
 	{

@@ -1,0 +1,125 @@
+    function renderDifferences(diffs) {
+        tbody.innerHTML = diffs.map((diff, index) => {
+            // Determine display source (Simulated has priority for metadata unless it's removed)
+            const doc = diff.simulated || diff.official;
+            const title = `${doc.atividade} (${doc.secao})`;
+            
+            let dateInfo = doc.inicio + " - " + doc.termino;
+            try {
+                if (frappe.datetime && frappe.datetime.str_to_user) {
+                     // Simple formatting if available
+                     const d1 = frappe.datetime.str_to_user(doc.inicio);
+                     const d2 = frappe.datetime.str_to_user(doc.termino);
+                     dateInfo = `${d1} - ${d2}`;
+                }
+            } catch(e) {}
+
+            let statusHtml = '';
+            let actionHtml = '';
+
+            const groupName = 'recon-' + index;
+
+            // Common Radio Buttons Structure
+            // Option 1: Ignore/Keep Status Quo
+            // Option 2: Apply Change (Add/Update/Delete)
+
+            if (diff.type === 'added') {
+                statusHtml = `<div style="font-size: 0.8em; margin-top: 4px;"><span class="text-success">Novo na Simulação</span></div>`;
+                actionHtml = `
+                    <td class="text-center p-2">
+                        <label class="reconcile-card">
+                            <input type="radio" name="${groupName}" value="ignore" checked>
+                            <span>Não Incluir</span>
+                        </label>
+                    </td>
+                    <td class="text-center p-2">
+                         <label class="reconcile-card reconcile-card--success">
+                            <input type="radio" name="${groupName}" value="apply">
+                            <span class="text-success">Adicionar</span>
+                        </label>
+                    </td>
+                `;
+            } else if (diff.type === 'removed') {
+                statusHtml = `<div style="font-size: 0.8em; margin-top: 4px;"><span class="text-danger">Excluído na Simulação</span></div>`;
+                actionHtml = `
+                    <td class="text-center p-2">
+                        <label class="reconcile-card">
+                            <input type="radio" name="${groupName}" value="ignore" checked>
+                            <span class="text-primary">Manter Oficial</span>
+                        </label>
+                    </td>
+                    <td class="text-center p-2">
+                         <label class="reconcile-card reconcile-card--danger">
+                            <input type="radio" name="${groupName}" value="apply">
+                            <span class="text-danger">Excluir</span>
+                        </label>
+                    </td>
+                `;
+            } else if (diff.type === 'modified') {
+                const diffList = diff.diffs.join(", ");
+                statusHtml = `<div style="font-size: 0.8em; margin-top: 4px;"><span class="text-primary">Alterado: ${diffList}</span></div>`;
+                actionHtml = `
+                    <td class="text-center p-2">
+                        <label class="reconcile-card">
+                            <input type="radio" name="${groupName}" value="ignore" checked>
+                            <span class="text-muted">Ignorar</span>
+                        </label>
+                    </td>
+                    <td class="text-center p-2">
+                         <label class="reconcile-card reconcile-card--primary">
+                            <input type="radio" name="${groupName}" value="apply">
+                            <span class="text-primary">Atualizar</span>
+                        </label>
+                    </td>
+                `;
+            }
+
+            return `
+                <tr>
+                    <td>
+                        <div style="font-weight: 600;">${title}</div>
+                        <div style="font-size: 0.85em; color: var(--text-muted);">${dateInfo}</div>
+                        ${statusHtml}
+                        <div style="font-size: 0.7em; color: #999; margin-top: 2px;">ID: ${diff.key}</div>
+                    </td>
+                    ${actionHtml}
+                </tr>`;
+        }).join('');
+        
+        btnConfirm.onclick = () => {
+            const actions = [];
+            diffs.forEach((diff, index) => {
+                const groupName = 'recon-' + index;
+                const selected = document.querySelector(`input[name="${groupName}"]:checked`).value;
+                
+                if (selected === 'apply') {
+                    if (diff.type === 'added') {
+                        actions.push({
+                            action: 'add',
+                            doc: diff.simulated,
+                            sim_name: diff.key
+                        });
+                    } else if (diff.type === 'removed') {
+                        actions.push({
+                            action: 'delete',
+                            name: diff.key
+                        });
+                    } else if (diff.type === 'modified') {
+                        actions.push({
+                            action: 'update',
+                            name: diff.key,
+                            doc: diff.simulated,
+                            sim_name: diff.key
+                        });
+                    }
+                }
+            });
+
+            if (actions.length === 0) {
+                frappe.msgprint('Nenhuma alteração selecionada para aplicação.');
+                return;
+            }
+
+            submitReconciliation(actions);
+        };
+    }

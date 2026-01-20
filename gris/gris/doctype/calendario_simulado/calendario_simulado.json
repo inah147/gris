@@ -1,7 +1,6 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:{atividade}{inicio}{termino}{secao}",
  "creation": "2025-12-18 19:11:51.633438",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -10,7 +9,10 @@
   "inicio",
   "termino",
   "secao",
-  "local"
+  "local",
+  "nivel",
+  "conciliado",
+  "sem_atividade"
  ],
  "fields": [
   {
@@ -37,16 +39,33 @@
    "fieldname": "local",
    "fieldtype": "Data",
    "label": "Local"
+  },
+  {
+   "fieldname": "nivel",
+   "fieldtype": "Select",
+   "label": "N\u00edvel",
+   "options": "Local\nRegional\nNacional\nInteramericano\nMundial"
+  },
+  {
+   "default": "0",
+   "fieldname": "conciliado",
+   "fieldtype": "Check",
+   "label": "Conciliado"
+  },
+  {
+   "default": "0",
+   "fieldname": "sem_atividade",
+   "fieldtype": "Check",
+   "label": "Sem Atividade"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-18 19:16:34.914830",
+ "modified": "2026-01-16 09:32:46.120953",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Calendario Simulado",
- "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {

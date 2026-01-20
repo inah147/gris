@@ -14,6 +14,16 @@
         <p class="page-header__subtitle">Visualize as atividades simuladas para o ano.</p>
     </div>
     <div class="page-header__actions" style="display: flex; gap: 1rem;">
+        {% if can_simulate %}
+        <button id="btn-reconcile" class="btn-modern btn-modern--primary">
+            <svg class="btn-modern__icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6"></path>
+                <path d="M1 20v-6h6"></path>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+            Conciliar
+        </button>
+        {% endif %}
         <button id="btn-new-event" class="btn-modern btn-modern--primary">
             Novo Evento
         </button>
@@ -42,6 +52,9 @@
             </div>
             <button id="btn-copy-data" class="btn-modern btn-modern--primary" data-target-year="{{ year }}">
                 Copiar Dados
+            </button>
+            <button id="btn-start-empty" class="btn-modern btn-modern--outline" data-target-year="{{ year }}">
+                Começar do Zero
             </button>
         </div>
     </div>
@@ -135,6 +148,15 @@
                                 <span class="weekday-name">{{ row.weekday }}</span>
                                 <span class="month-name">{{ row.month }}</span>
                             </div>
+                            {% if row.holiday %}
+                            <div class="holiday-indicator" 
+                                 data-holiday-name="{{ row.holiday.nome }}" 
+                                 data-holiday-type="{{ row.holiday.tipo }}" 
+                                 data-holiday-desc="{{ row.holiday.descricao }}">
+                                 <i class="fa fa-star holiday-icon" title="Feriado"></i>
+                                 <span class="holiday-label">Feriado</span>
+                            </div>
+                            {% endif %}
                         </div>
                     </td>
                     {% for section in sections %}
@@ -143,13 +165,14 @@
                             <div class="activities-list">
                             {% for event in row.activities[section] %}
                                 {% if event %}
-                                <div class="activity-card ramo-{{ section_classes[section] }} {% if not event.is_start %}is-continued-top{% endif %} {% if not event.is_end %}is-continued-bottom{% endif %}" 
+                                <div class="activity-card ramo-{{ section_classes[section] }} {% if not event.is_start %}is-continued-top{% endif %} {% if not event.is_end %}is-continued-bottom{% endif %} {% if event.sem_atividade %}is-no-activity{% endif %}" 
                                      data-event-id="{{ event.name }}"
                                      data-atividade="{{ event.atividade }}"
                                      data-inicio="{{ event.inicio }}"
                                      data-termino="{{ event.termino }}"
                                      data-secao="{{ event.secao }}"
-                                     data-local="{{ event.local or '' }}">
+                                     data-local="{{ event.local or '' }}"
+                                     data-nivel="{{ event.nivel or '' }}">
                                     <div class="activity-body">
                                         {% if event.is_start %}
                                         <div class="activity-title">
@@ -239,6 +262,24 @@
                 <input type="date" id="modal-termino" class="form-input-modern">
             </div>
             <div class="form-group">
+                <label class="filter-option" style="margin-top: 0.5rem;">
+                    <input type="checkbox" id="modal-sem-atividade">
+                    <span style="font-weight: 500;">Sem Atividade</span>
+                </label>
+            </div>
+            <div class="form-group">
+                <label class="form-label-modern">Local</label>
+                <input type="text" id="modal-local" class="form-input-modern" placeholder="Local">
+            </div>
+            <div class="form-group">
+                <label class="form-label-modern">Nível</label>
+                <select id="modal-nivel" class="form-input-modern">
+                    {% for option in nivel_options %}
+                    <option value="{{ option }}">{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
                 <label class="form-label-modern">Seções</label>
                 <div class="checkbox-list" id="modal-secoes-list">
                     {% for section in all_sections %}
@@ -290,6 +331,14 @@
                 <label class="form-label-modern">Local</label>
                 <input type="text" id="edit-local" class="form-input-modern">
             </div>
+            <div class="form-group">
+                <label class="form-label-modern">Nível</label>
+                <select id="edit-nivel" class="form-input-modern">
+                    {% for option in nivel_options %}
+                    <option value="{{ option }}">{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
         </div>
         <div class="modal-footer" style="justify-content: space-between;">
             <button class="btn-modern btn-modern--danger" id="delete-edit-modal" style="background-color: var(--color-danger); color: white; border: none;">Excluir</button>
@@ -297,6 +346,102 @@
                 <button class="btn-modern btn-modern--outline" id="cancel-edit-modal">Cancelar</button>
                 <button class="btn-modern btn-modern--primary" id="save-edit-modal">Salvar</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reconciliation Modal -->
+<div id="reconcile-modal" class="modal-modern d-none">
+    <div class="modal-modern__content modal-modern__content--lg" style="max-width: 800px;">
+        <div class="modal-modern__header">
+            <h3 class="modal-modern__title">Conciliar Calendário</h3>
+        </div>
+        <div class="modal-modern__body">
+            <p style="margin-bottom: 2rem;">Selecione a ação para cada diferença encontrada entre o calendário oficial e a simulação.</p>
+            
+            <div id="reconcile-loading" class="text-center py-4 d-none" style="text-align: center; padding: 2rem;">
+                <div class="loading-spinner"></div>
+                <p>Analisando diferenças...</p>
+            </div>
+
+            <div id="reconcile-empty" class="alert-modern alert-modern--success d-none">
+                <div class="alert-modern__content">
+                     Calendário sincronizado! Não foram encontradas diferenças.
+                </div>
+            </div>
+
+            <div id="reconcile-list" class="reconcile-list d-none">
+                <table class="table-modern" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%">Evento</th>
+                            <th class="text-center" style="width: 30%">Oficial</th>
+                            <th class="text-center" style="width: 30%">Simulação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reconcile-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-modern__footer" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+            <div>
+                <button type="button" id="btn-select-all-apply" class="btn-modern btn-modern--primary" style="font-weight: 500;">
+                    <i class="fa fa-check-double"></i> Selecionar Todos
+                </button>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button type="button" class="btn-modern btn-modern--outline close-modal">Cancelar</button>
+                <button type="button" id="btn-confirm-reconcile" class="btn-modern btn-modern--primary" disabled>
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="modal-modern__backdrop close-modal"></div>
+</div>
+
+<!-- Success Modal -->
+<div id="success-modal" class="modal-modern d-none">
+    <div class="modal-modern__content" style="max-width: 400px; text-align: center; border-radius: 24px !important; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+        <div class="modal-modern__body" style="padding: 2.5rem 2rem;">
+            <div style="width: 60px; height: 60px; background-color: var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+            </div>
+            <h3 class="modal-modern__title" style="margin-bottom: 0.5rem; font-size: 1.5rem;">Sucesso!</h3>
+            <p id="success-message" style="color: var(--text-muted); margin-bottom: 2rem;">As alterações foram aplicadas com sucesso pelo sistema de conciliação.</p>
+            <button type="button" id="btn-success-ok" class="btn-modern btn-modern--primary" style="width: 100%;">
+                Entendi
+            </button>
+        </div>
+    </div>
+    <div class="modal-modern__backdrop"></div>
+</div>
+
+<!-- Modal de Feriado -->
+<div id="holiday-modal" class="modal-modern d-none">
+    <div class="modal-modern__backdrop close-modal"></div>
+    <div class="modal-modern__content">
+        <div class="modal-modern__header">
+            <h3 class="modal-modern__title">
+                <i class="fa fa-calendar-check-o" style="margin-right: 8px;"></i>
+                Detalhes do Feriado
+            </h3>
+        </div>
+        <div class="modal-modern__body">
+            <h2 id="holiday-modal-name" style="margin: 0 0 1rem 0; font-size: 1.5rem; color: var(--text-color);"></h2>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <span id="holiday-modal-type" style="padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;"></span>
+            </div>
+
+            <div class="holiday-desc-box" style="background: var(--bg-light); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                <p id="holiday-modal-desc" style="margin: 0; color: var(--text-color); line-height: 1.6;"></p>
+            </div>
+        </div>
+        <div class="modal-modern__footer">
+            <button type="button" class="btn-modern btn-modern--primary close-modal">Entendi</button>
         </div>
     </div>
 </div>

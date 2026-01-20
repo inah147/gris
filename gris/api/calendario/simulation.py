@@ -62,7 +62,7 @@ def copy_calendar_data(source_year, target_year):
 
 
 @frappe.whitelist()
-def create_simulation_event(atividade, inicio, termino, secoes, local=None):
+def create_simulation_event(atividade, inicio, termino, secoes, local=None, nivel=None, sem_atividade=0):
 	if isinstance(secoes, str):
 		secoes = frappe.parse_json(secoes)
 
@@ -79,6 +79,8 @@ def create_simulation_event(atividade, inicio, termino, secoes, local=None):
 				"termino": termino,
 				"secao": secao,
 				"local": local,
+				"nivel": nivel,
+				"sem_atividade": sem_atividade,
 			}
 		)
 		doc.insert()
@@ -105,13 +107,14 @@ def create_simulation_event(atividade, inicio, termino, secoes, local=None):
 
 
 @frappe.whitelist()
-def update_simulation_event(event_id, atividade, inicio, termino, secao, local=None):
+def update_simulation_event(event_id, atividade, inicio, termino, secao, local=None, nivel=None):
 	doc = frappe.get_doc("Calendario Simulado", event_id)
 	doc.atividade = atividade
 	doc.inicio = inicio
 	doc.termino = termino
 	doc.secao = secao
 	doc.local = local
+	doc.nivel = nivel
 	doc.save()
 	return {"success": True, "message": "Evento atualizado com sucesso."}
 

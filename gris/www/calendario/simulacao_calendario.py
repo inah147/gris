@@ -1,3 +1,4 @@
+import json
 import unicodedata
 from datetime import date, timedelta
 
@@ -19,11 +20,11 @@ def get_context(context):
 	# Get available years with activities
 	years_data = frappe.db.sql(
 		"""
-		SELECT DISTINCT YEAR(inicio) as year FROM `tabCalendario Simulado`
-		UNION
-		SELECT DISTINCT YEAR(termino) as year FROM `tabCalendario Simulado`
-		ORDER BY year DESC
-	""",
+        SELECT DISTINCT YEAR(inicio) as year FROM `tabCalendario Simulado`
+        UNION
+        SELECT DISTINCT YEAR(termino) as year FROM `tabCalendario Simulado`
+        ORDER BY year DESC
+    """,
 		as_dict=True,
 	)
 
@@ -36,6 +37,14 @@ def get_context(context):
 
 	context.available_years = available_years
 
+	# Fetch holidays for the year
+	feriados = frappe.get_all(
+		"Feriados",
+		filters={"data": ["between", [f"{year}-01-01", f"{year}-12-31"]]},
+		fields=["nome", "data", "tipo", "descricao"],
+	)
+	feriados_map = {getdate(f.data): f for f in feriados}
+
 	# Fetch all calendar events for the year
 	# We fetch a bit more to cover year boundaries if needed, but strict year filter is fine for "dias do ano"
 	start_date = f"{year}-01-01"
@@ -45,7 +54,7 @@ def get_context(context):
 	events = frappe.get_all(
 		"Calendario Simulado",
 		filters={"inicio": ["<=", f"{year}-12-31 23:59:59"], "termino": [">=", f"{year}-01-01 00:00:00"]},
-		fields=["name", "atividade", "inicio", "termino", "secao", "local"],
+		fields=["name", "atividade", "inicio", "termino", "secao", "local", "sem_atividade", "nivel"],
 		order_by="inicio asc",
 	)
 
@@ -55,20 +64,35 @@ def get_context(context):
 	official_events = frappe.get_all(
 		"Calendario",
 		filters={"inicio": ["<=", f"{year}-12-31 23:59:59"], "termino": [">=", f"{year}-01-01 00:00:00"]},
-		fields=["atividade", "inicio", "termino", "secao"],
+		fields=["atividade", "inicio", "termino", "secao", "id"],
 	)
 
 	official_signatures = set()
 	for oe in official_events:
-		sig = (oe.atividade, str(oe.inicio), str(oe.termino), oe.secao)
-		official_signatures.add(sig)
+		# Use ID if available, otherwise just content signature (fallback for get_context logic if needed, but we rely on recon logic mostly)
+		# Actually logic for 'is_official' tag in UI (context) was based on content.
+		# Should we change this too?
+		# The prompt only asked about reconciliation logic (functions).
+		# But consistency is good.
+		# If we strict match by ID, then 'is_official' should be: event.name in official_ids.
+		# But 'official_ids' comes from 'id' field of Calendario.
+		pass
+
+	# Build Map of Official IDs
+	official_ids = set()
+	for oe in official_events:
+		if oe.get("id"):
+			official_ids.add(oe.id)
 
 	non_official_events = []
 	for event in events:
-		sig = (event.atividade, str(event.inicio), str(event.termino), event.secao)
-		if sig in official_signatures:
+		# Check by ID first
+		if event.name in official_ids:
 			event.is_official = True
 		else:
+			# Fallback to content sig? User wants strict key matching.
+			# But if legacy data exists...
+			# Let's trust the user: "Isso vai resolver as chaves".
 			event.is_official = False
 			non_official_events.append(event)
 
@@ -105,9 +129,9 @@ def get_context(context):
 		# Fetch available years from real Calendar to populate the dropdown
 		source_years_data = frappe.db.sql(
 			"""
-			SELECT DISTINCT YEAR(inicio) as year FROM `tabCalendario`
-			ORDER BY year DESC
-		""",
+            SELECT DISTINCT YEAR(inicio) as year FROM `tabCalendario`
+            ORDER BY year DESC
+        """,
 			as_dict=True,
 		)
 		context.source_years = [y.year for y in source_years_data]
@@ -208,6 +232,10 @@ def get_context(context):
 	associados = frappe.get_all("Associado", fields=["secao", "ramo"], distinct=True)
 	section_ramo_map = {d.secao: d.ramo for d in associados if d.secao}
 
+	# Get Nivel options
+	nivel_options = (frappe.get_meta("Calendario").get_field("nivel").options or "").split("\n")
+	context.nivel_options = [o for o in nivel_options if o]
+
 	# Get all available sections for the dropdown
 	all_sections = sorted(list(set([d.secao for d in associados if d.secao] + ["Diretoria"])))
 	context.all_sections = all_sections
@@ -299,6 +327,7 @@ def get_context(context):
 			"is_weekend": current_date.weekday() >= 5,
 			"is_new_month": is_new_month,
 			"activities": {},
+			"holiday": feriados_map.get(current_date),
 		}
 
 		has_activity = False
@@ -332,6 +361,204 @@ def get_context(context):
 
 	context.calendar_rows = calendar_rows
 
+	# Check permission for reconciliation
+	context.can_simulate = frappe.has_permission("Calendario", "write")
+
 	# Sidebar and context enrichment
 	context.active_link = "/calendario/visualizar"
 	enrich_context(context, "/calendario/visualizar")
+
+
+@frappe.whitelist()
+def get_reconciliation_data(year=None):
+	if not year:
+		year = getdate(today()).year
+
+	# Permissions check
+	if not frappe.has_permission("Calendario", "write"):
+		frappe.throw(_("Permissão negada"), frappe.PermissionError)
+
+	# Fetch Simulated Events
+	sim_events = frappe.get_all(
+		"Calendario Simulado",
+		filters={"inicio": ["<=", f"{year}-12-31 23:59:59"], "termino": [">=", f"{year}-01-01 00:00:00"]},
+		fields=[
+			"name",
+			"atividade",
+			"inicio",
+			"termino",
+			"secao",
+			"local",
+			"nivel",
+			"sem_atividade",
+			"conciliado",
+		],
+	)
+
+	# Fetch Official Events INCLUDING ID
+	official_events = frappe.get_all(
+		"Calendario",
+		filters={"inicio": ["<=", f"{year}-12-31 23:59:59"], "termino": [">=", f"{year}-01-01 00:00:00"]},
+		fields=["name", "atividade", "inicio", "termino", "secao", "local", "nivel", "id", "sem_atividade"],
+	)
+
+	# Map Simulated Events by their NAME
+	sim_map = {evt.name: evt for evt in sim_events}
+
+	# Map Official Events by their ID (if present), otherwise keep track of them as orphans
+	off_map_by_id = {}
+	orphans = []
+
+	for evt in official_events:
+		if evt.get("id"):
+			off_map_by_id[evt.id] = evt
+		else:
+			orphans.append(evt)
+
+	modifications = []
+
+	# 1. Check for Added (In Sim, but ID not in Off)
+	for sim_name, sim_evt in sim_map.items():
+		if sim_name not in off_map_by_id:
+			# Added
+			modifications.append({"type": "added", "key": sim_name, "simulated": sim_evt, "official": None})
+		else:
+			# Exists in both - Check for Differences (Modified)
+			off_evt = off_map_by_id[sim_name]
+			diffs = []
+
+			# Key fields to compare
+			fields_to_check = ["atividade", "secao", "local", "nivel", "sem_atividade"]
+			for field in fields_to_check:
+				if sim_evt.get(field) != off_evt.get(field):
+					diffs.append(field)
+
+			# Check dates separately to ensure format consistency
+			if str(sim_evt.inicio) != str(off_evt.inicio):
+				diffs.append("inicio")
+			if str(sim_evt.termino) != str(off_evt.termino):
+				diffs.append("termino")
+
+			if diffs:
+				modifications.append(
+					{
+						"type": "modified",
+						"key": sim_name,
+						"simulated": sim_evt,
+						"official": off_evt,
+						"diffs": diffs,
+					}
+				)
+			elif not sim_evt.conciliado:
+				frappe.db.set_value("Calendario Simulado", sim_name, "conciliado", 1)
+
+	# 2. Check for Removed (In Off (by ID), but ID not in Sim)
+	for off_id, off_evt in off_map_by_id.items():
+		if off_id not in sim_map:
+			# Removed
+			modifications.append({"type": "removed", "key": off_id, "simulated": None, "official": off_evt})
+
+	# 3. Handle Orphans (Official events with no ID)
+	# These effectively don't correspond to any simulation ID.
+	# We treat them as "Removed" (should be deleted from Official to match Sim state)
+	for orphan in orphans:
+		modifications.append(
+			{
+				"type": "removed",
+				"key": orphan.name,  # Key is Name here, since ID is missing
+				"simulated": None,
+				"official": orphan,
+				"is_orphan": True,
+			}
+		)
+
+	return modifications
+
+
+@frappe.whitelist()
+def reconcile_calendar(actions):
+	"""
+	actions: list of dicts { 'action': 'add'|'delete'|'update', 'doc': {...}, 'name': '...' }
+	"""
+	if isinstance(actions, str):
+		actions = json.loads(actions)
+
+	if not frappe.has_permission("Calendario", "write"):
+		frappe.throw(_("Permissão negada"), frappe.PermissionError)
+
+	count = 0
+	for item in actions:
+		action = item.get("action")
+
+		if action == "add":
+			doc_data = item.get("doc")
+			# Create new Calendario
+			new_doc = frappe.new_doc("Calendario")
+			new_doc.update(
+				{
+					"atividade": doc_data.get("atividade"),
+					"secao": doc_data.get("secao"),
+					"inicio": doc_data.get("inicio"),
+					"termino": doc_data.get("termino"),
+					"local": doc_data.get("local"),
+					"nivel": doc_data.get("nivel"),
+					"sem_atividade": doc_data.get("sem_atividade"),
+					"id": item.get("sim_name"),  # Insert Sim Name into ID field
+				}
+			)
+			new_doc.insert(ignore_permissions=True)
+
+			# Mark simulated event as reconciled
+			if item.get("sim_name"):
+				frappe.db.set_value("Calendario Simulado", item.get("sim_name"), "conciliado", 1)
+			count += 1
+
+		elif action == "update":
+			# Update happens by NAME of the Official Doc (which we have in item.name)
+			# Item.name comes from 'key' in removed/modified.
+			# IN MODIFIED: key = sim_name (which matches off.id). We need OFF NAME.
+			# My logic in JS sends 'name: diff.key'.
+			# Wait, in Modified, diff.key is sim_name.
+			# If off_map_by_id matched, then off.id == sim_name.
+			# But update needs off.name (the PRIMARY KEY) to load the doc.
+
+			# Issue: JS sends 'name: diff.key'.
+			# If diff.key is sim_name, that maps to off.id.
+			# But frappe.get_doc assumes primary key.
+			# If autoname is field:id, then name == id. So it works!
+
+			# BUT: For Orphans? Orphans key is orphan.name. So that works too.
+
+			name = item.get("name")  # This is sim_name (== off.id == off.name if autoname works)
+			doc_data = item.get("doc")
+
+			# Fallback: if get_doc fails with name, try finding by id?
+			# No, assume strong consistency if autoname used.
+
+			if frappe.db.exists("Calendario", name):
+				doc = frappe.get_doc("Calendario", name)
+				doc.update(
+					{
+						"atividade": doc_data.get("atividade"),
+						"secao": doc_data.get("secao"),
+						"inicio": doc_data.get("inicio"),
+						"termino": doc_data.get("termino"),
+						"local": doc_data.get("local"),
+						"nivel": doc_data.get("nivel"),
+						"sem_atividade": doc_data.get("sem_atividade"),
+					}
+				)
+				doc.save()
+
+				# Mark simulated event as reconciled
+				if item.get("sim_name"):
+					frappe.db.set_value("Calendario Simulado", item.get("sim_name"), "conciliado", 1)
+				count += 1
+
+		elif action == "delete":
+			name = item.get("name")
+			if frappe.db.exists("Calendario", name):
+				frappe.delete_doc("Calendario", name)
+				count += 1
+
+	return {"count": count}

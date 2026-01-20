@@ -168,3 +168,49 @@ select.form-input-modern {
 		justify-content: flex-end;
 	}
 }
+
+/* Checkbox & Radio */
+.form-checkbox-modern,
+.form-radio-modern {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-block;
+    vertical-align: middle;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: var(--border-width) solid var(--input-border);
+    background-color: var(--input-bg);
+    cursor: pointer;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    transition: all var(--transition-fast);
+	margin-top: -2px; /* Alignment tweak */
+}
+
+.form-checkbox-modern {
+    border-radius: var(--radius-sm);
+}
+
+.form-radio-modern {
+    border-radius: 50%;
+}
+
+.form-checkbox-modern:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10l3 3l6-6'/%3e%3c/svg%3e");
+}
+
+.form-radio-modern:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='2' fill='%23fff'/%3e%3c/svg%3e");
+}
+
+.form-checkbox-modern:focus,
+.form-radio-modern:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(13, 77, 145, 0.2);
+    border-color: var(--input-border-focus);
+}

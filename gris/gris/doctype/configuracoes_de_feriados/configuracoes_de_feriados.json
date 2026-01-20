@@ -1,0 +1,54 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-01-16 12:55:30.127069",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "api_de_feriados_section",
+  "feriadosapi_key",
+  "codigo_municipio_ibge"
+ ],
+ "fields": [
+  {
+   "fieldname": "feriadosapi_key",
+   "fieldtype": "Data",
+   "label": "FeriadosAPI Key"
+  },
+  {
+   "fieldname": "api_de_feriados_section",
+   "fieldtype": "Section Break",
+   "label": "Api de feriados"
+  },
+  {
+   "fieldname": "codigo_municipio_ibge",
+   "fieldtype": "Data",
+   "label": "C\u00f3digo do munic\u00edpio no IBGE"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-01-16 13:02:44.286277",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Configuracoes de Feriados",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

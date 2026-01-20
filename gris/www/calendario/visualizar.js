@@ -2,6 +2,7 @@ frappe.ready(function() {
     scrollToToday();
     initFilters();
     initHoverEffects();
+    initViewModal();
 });
 
 function scrollToToday() {
@@ -209,3 +210,143 @@ function initHoverEffects() {
         });
     });
 }
+
+function initViewModal() {
+    const modal = document.getElementById('view-activity-modal');
+    if (!modal) return;
+
+    // Use .close-modal class for closing (buttons and backdrop)
+    const closeElements = modal.querySelectorAll('.close-modal');
+    
+    function closeModal() {
+        modal.classList.add('d-none');
+        document.body.style.overflow = '';
+    }
+    
+    closeElements.forEach(el => el.addEventListener('click', closeModal));
+    
+    // Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('d-none')) {
+            closeModal();
+        }
+    });
+
+    // Delegate click on activity cards
+    document.addEventListener('click', function(e) {
+        const card = e.target.closest('.activity-card');
+        if (card) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const ds = card.dataset;
+
+            // Populate Modal Fields (checking existence to avoid errors)
+            const setField = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val || '-';
+            };
+
+            setField('view-modal-atividade', ds.atividade);
+            setField('view-modal-inicio', ds.inicio);
+            setField('view-modal-termino', ds.termino);
+            
+            const hStart = ds.horaInicio || '';
+            const hEnd = ds.horaTermino || '';
+            let timeStr = '-';
+            if (hStart || hEnd) {
+                 timeStr = `${hStart} - ${hEnd}`;
+            }
+            setField('view-modal-hora', timeStr);
+            
+            setField('view-modal-nivel', ds.nivel);
+            setField('view-modal-local', ds.local);
+            setField('view-modal-secao', ds.secao);
+            
+            // Sem atividade badge
+            const semAtividadeGroup = document.getElementById('view-modal-sem-atividade-group');
+            if (semAtividadeGroup) {
+                if (ds.semAtividade === '1') {
+                    semAtividadeGroup.classList.remove('d-none');
+                } else {
+                    semAtividadeGroup.classList.add('d-none');
+                }
+            }
+
+            // Show Modal
+            modal.classList.remove('d-none');
+            document.body.style.overflow = 'hidden';
+        }
+    });
+}
+
+// Holiday Modal Logic
+frappe.ready(function() {
+    initHolidayModal();
+});
+
+function initHolidayModal() {
+    const modal = document.getElementById('holiday-modal');
+    if (!modal) return;
+
+    // Move modal to body to ensure it's not clipped by containers with overflow:hidden
+    // or trapped in stacking contexts
+    document.body.appendChild(modal);
+
+    const closeElements = modal.querySelectorAll('.close-modal');
+    
+    function closeModal() {
+        modal.classList.add('d-none');
+        document.body.style.overflow = '';
+    }
+    
+    closeElements.forEach(el => el.addEventListener('click', closeModal));
+    
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('d-none')) {
+            closeModal();
+        }
+    });
+
+    // Delegated click handler for holidays
+    document.addEventListener('click', function(e) {
+        const holidayBtn = e.target.closest('.holiday-indicator');
+        if (holidayBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            openHolidayModal(holidayBtn); // Pass the element here!
+        }
+    });
+}
+
+function openHolidayModal(element) {
+    const name = element.getAttribute("data-holiday-name");
+    const type = element.getAttribute("data-holiday-type");
+    const desc = element.getAttribute("data-holiday-desc");
+
+    const modal = document.getElementById("holiday-modal");
+    const nameEl = document.getElementById("holiday-modal-name");
+    const typeEl = document.getElementById("holiday-modal-type");
+    const descEl = document.getElementById("holiday-modal-desc");
+
+    if (modal && nameEl && typeEl && descEl) {
+        nameEl.textContent = name || "Feriado";
+        typeEl.textContent = type || "Geral";
+        
+        // Reset classes and apply type logic
+        typeEl.className = "holiday-type-tag";
+        typeEl.setAttribute("data-type", type);
+        
+        descEl.textContent = desc || "Sem descrição disponível.";
+        
+        // Remove d-none first
+        modal.classList.remove("d-none");
+        
+        // Ensure z-index is correct (hardcode inline just in case)
+        modal.style.zIndex = '9999';
+        modal.style.display = 'flex'; // Force flex display
+        
+        document.body.style.overflow = 'hidden';
+    }
+}
+

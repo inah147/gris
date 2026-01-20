@@ -3,9 +3,11 @@ frappe.ready(function() {
     initFilters();
     initHoverEffects();
     initCopyData();
+    initStartEmpty();
     initModal();
     initCellClick();
     initEditModal();
+    initReconciliation();
 });
 
 function scrollToToday() {
@@ -262,6 +264,19 @@ function initCopyData() {
     }
 }
 
+function initStartEmpty() {
+    const startBtn = document.getElementById('btn-start-empty');
+    if (startBtn) {
+        startBtn.addEventListener('click', function() {
+            const targetYear = this.getAttribute('data-target-year');
+            const url = new URL(window.location.href);
+            url.searchParams.set('year', targetYear);
+            url.searchParams.set('start_empty', '1');
+            window.location.href = url.toString();
+        });
+    }
+}
+
 function initModal() {
     const modal = document.getElementById('new-activity-modal');
     const closeBtn = document.getElementById('close-modal');
@@ -270,6 +285,25 @@ function initModal() {
     const newEventBtn = document.getElementById('btn-new-event');
 
     if (!modal) return;
+
+    // Sem Atividade Toggle Logic
+    const semAtividadeCheck = document.getElementById('modal-sem-atividade');
+    if (semAtividadeCheck) {
+        semAtividadeCheck.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            const localInput = document.getElementById('modal-local');
+            const nivelInput = document.getElementById('modal-nivel');
+            
+            if (localInput) {
+                localInput.disabled = isChecked;
+                if (isChecked) localInput.value = '';
+            }
+            if (nivelInput) {
+                nivelInput.disabled = isChecked;
+                if (isChecked) nivelInput.value = 'Local';
+            }
+        });
+    }
 
     if (newEventBtn) {
         newEventBtn.addEventListener('click', () => {
@@ -289,6 +323,22 @@ function initModal() {
             if (inicioInput) inicioInput.value = todayStr;
             if (terminoInput) terminoInput.value = todayStr;
             
+            // Reset new fields
+            const localInput = document.getElementById('modal-local');
+            if (localInput) {
+                localInput.value = '';
+                localInput.disabled = false;
+            }
+
+            const nivelInput = document.getElementById('modal-nivel');
+            if (nivelInput) {
+                nivelInput.value = 'Local';
+                nivelInput.disabled = false;
+            }
+            
+            const semAtividadeInput = document.getElementById('modal-sem-atividade');
+            if (semAtividadeInput) semAtividadeInput.checked = false;
+
             // Uncheck all sections
             document.querySelectorAll('input[name="modal-secao"]').forEach(cb => cb.checked = false);
 
@@ -316,6 +366,10 @@ function initModal() {
         const secoesCheckboxes = document.querySelectorAll('input[name="modal-secao"]:checked');
         const secoes = Array.from(secoesCheckboxes).map(cb => cb.value);
 
+        const local = document.getElementById('modal-local').value;
+        const nivel = document.getElementById('modal-nivel').value;
+        const semAtividade = document.getElementById('modal-sem-atividade').checked ? 1 : 0;
+
         if (!atividade || !inicioDate || !terminoDate || secoes.length === 0) {
             frappe.msgprint('Por favor, preencha todos os campos obrigatórios.');
             return;
@@ -331,6 +385,9 @@ function initModal() {
                 atividade: atividade,
                 inicio: inicio,
                 termino: termino,
+                local: local,
+                nivel: nivel,
+                sem_atividade: semAtividade,
                 secoes: JSON.stringify(secoes)
             },
             freeze: true,
@@ -424,6 +481,7 @@ function initEditModal() {
             const termino = card.getAttribute('data-termino');
             const secao = card.getAttribute('data-secao');
             const local = card.getAttribute('data-local');
+            const nivel = card.getAttribute('data-nivel');
 
             document.getElementById('edit-event-id').value = eventId;
             document.getElementById('edit-atividade').value = atividade;
@@ -434,6 +492,9 @@ function initEditModal() {
             
             document.getElementById('edit-secao').value = secao;
             document.getElementById('edit-local').value = local;
+            // Check if element exists before setting (in case modal HTML update didn't propagate or cached)
+            const nivelEl = document.getElementById('edit-nivel');
+            if (nivelEl) nivelEl.value = nivel || "";
 
             modal.classList.add('is-open');
         }
@@ -446,6 +507,7 @@ function initEditModal() {
         const terminoDate = document.getElementById('edit-termino').value;
         const secao = document.getElementById('edit-secao').value;
         const local = document.getElementById('edit-local').value;
+        const nivel = document.getElementById('edit-nivel') ? document.getElementById('edit-nivel').value : "";
 
         if (!atividade || !inicioDate || !terminoDate || !secao) {
             frappe.msgprint('Por favor, preencha todos os campos obrigatórios.');
@@ -464,7 +526,8 @@ function initEditModal() {
                 inicio: inicio,
                 termino: termino,
                 secao: secao,
-                local: local
+                local: local,
+                nivel: nivel
             },
             freeze: true,
             freeze_message: "Atualizando...",
@@ -486,6 +549,7 @@ function initEditModal() {
 
     deleteBtn.addEventListener('click', () => {
         const eventId = document.getElementById('edit-event-id').value;
+        closeModal();
         
         frappe.confirm('Tem certeza que deseja excluir este evento?', () => {
             frappe.call({
@@ -498,7 +562,6 @@ function initEditModal() {
                 callback: function(r) {
                     if (r.message && r.message.success) {
                         frappe.show_alert({message: r.message.message, indicator: 'green'});
-                        closeModal();
                         setTimeout(() => window.location.reload(), 1000);
                     } else {
                         frappe.msgprint({
@@ -509,6 +572,9 @@ function initEditModal() {
                     }
                 }
             });
+        }, () => {
+            // Re-open modal if cancelled
+            modal.classList.add('is-open');
         });
     });
 }
@@ -601,3 +667,314 @@ function addEventToTable(event) {
         currentDate.setDate(currentDate.getDate() + 1);
     }
 }
+
+function initReconciliation() {
+    const btnReconcile = document.getElementById('btn-reconcile');
+    const modal = document.getElementById('reconcile-modal');
+    if (!btnReconcile || !modal) return;
+
+    const loading = document.getElementById('reconcile-loading');
+    const empty = document.getElementById('reconcile-empty');
+    const list = document.getElementById('reconcile-list');
+    const tbody = document.getElementById('reconcile-tbody');
+    const btnConfirm = document.getElementById('btn-confirm-reconcile');
+    const closeBtns = modal.querySelectorAll('.close-modal');
+
+    // Close logic
+    closeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            modal.classList.add('d-none');
+        });
+    });
+
+    // Open logic
+    btnReconcile.addEventListener('click', () => {
+         modal.classList.remove('d-none');
+         fetchDifferences();
+    });
+
+    function fetchDifferences() {
+        loading.classList.remove('d-none');
+        empty.classList.add('d-none');
+        list.classList.add('d-none');
+        btnConfirm.disabled = true;
+        tbody.innerHTML = '';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const year = urlParams.get('year') || new Date().getFullYear();
+
+        frappe.call({
+            method: 'gris.www.calendario.simulacao_calendario.get_reconciliation_data',
+            args: { year: year },
+            callback: function(r) {
+                loading.classList.add('d-none');
+                if (r.message && r.message.length > 0) {
+                    renderDifferences(r.message);
+                    list.classList.remove('d-none');
+                    btnConfirm.disabled = false;
+                } else {
+                    empty.classList.remove('d-none');
+                }
+            }
+        });
+    }
+
+        function renderDifferences(diffs) {
+        tbody.innerHTML = diffs.map((diff, index) => {
+            // Determine display source (Simulated has priority for metadata unless it's removed)
+            const doc = diff.simulated || diff.official;
+            const title = `${doc.atividade} (${doc.secao})`;
+            
+            let dateInfo = "";
+            try {
+                if (frappe.datetime && frappe.datetime.str_to_user) {
+                     // Show only Date
+                     const splitDate = (val) => {
+                        if(!val) return "";
+                        return val.split(" ")[0];
+                     }
+                     const d1 = frappe.datetime.str_to_user(splitDate(doc.inicio));
+                     const d2 = frappe.datetime.str_to_user(splitDate(doc.termino));
+                     
+                     if (d1 === d2) {
+                        dateInfo = d1;
+                     } else {
+                        dateInfo = `${d1} - ${d2}`;
+                     }
+                } else {
+                     dateInfo = doc.inicio.split(" ")[0];
+                }
+            } catch(e) {
+                 dateInfo = doc.inicio;
+            }
+
+            let statusHtml = '';
+            let actionHtml = '';
+
+            const groupName = 'recon-' + index;
+
+            // Common Radio Buttons Structure
+            // Option 1: Ignore/Keep Status Quo
+            // Option 2: Apply Change (Add/Update/Delete)
+
+            if (diff.type === 'added') {
+                statusHtml = `<div style="font-size: 0.8em; margin-top: 4px;"><span class="text-success">Novo na Simulação</span></div>`;
+                actionHtml = `
+                    <td class="text-center p-2">
+                        <label class="reconcile-card">
+                            <input type="radio" name="${groupName}" value="ignore" checked>
+                            <span>Não Incluir</span>
+                        </label>
+                    </td>
+                    <td class="text-center p-2">
+                         <label class="reconcile-card reconcile-card--success">
+                            <input type="radio" name="${groupName}" value="apply">
+                            <span class="text-success">Adicionar</span>
+                        </label>
+                    </td>
+                `;
+            } else if (diff.type === 'removed') {
+                statusHtml = `<div style="font-size: 0.8em; margin-top: 4px;"><span class="text-danger">Excluído na Simulação</span></div>`;
+                actionHtml = `
+                    <td class="text-center p-2">
+                        <label class="reconcile-card">
+                            <input type="radio" name="${groupName}" value="ignore" checked>
+                            <span class="text-primary">Manter Oficial</span>
+                        </label>
+                    </td>
+                    <td class="text-center p-2">
+                         <label class="reconcile-card reconcile-card--danger">
+                            <input type="radio" name="${groupName}" value="apply">
+                            <span class="text-danger">Excluir</span>
+                        </label>
+                    </td>
+                `;
+            } else if (diff.type === 'modified') {
+                const unscrub = (str) => {
+                     if (frappe.model && frappe.model.unscrub) return frappe.model.unscrub(str);
+                     return str.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                };
+                const changes = diff.diffs.map(field => {
+                    const oldVal = diff.official[field] !== undefined && diff.official[field] !== null ? diff.official[field] : '<i class="text-muted">Vazio</i>';
+                    const newVal = diff.simulated[field] !== undefined && diff.simulated[field] !== null ? diff.simulated[field] : '<i class="text-muted">Vazio</i>';
+                    return `<div style="margin-top:2px;">
+                        <strong>${unscrub(field)}</strong>: 
+                        <s class="text-muted">${oldVal}</s> 
+                        <i class="fa fa-arrow-right" style="font-size:10px; margin:0 4px;"></i> 
+                        <span class="text-primary">${newVal}</span>
+                    </div>`;
+                }).join("");
+                
+                statusHtml = `<div style="font-size: 0.8em; margin-top: 4px; display: flex; flex-direction: column;">${changes}</div>`;
+                
+                actionHtml = `
+                    <td class="text-center p-2">
+                        <label class="reconcile-card">
+                            <input type="radio" name="${groupName}" value="ignore" checked>
+                            <span class="text-muted">Ignorar</span>
+                        </label>
+                    </td>
+                    <td class="text-center p-2">
+                         <label class="reconcile-card reconcile-card--primary">
+                            <input type="radio" name="${groupName}" value="apply">
+                            <span class="text-primary">Atualizar</span>
+                        </label>
+                    </td>
+                `;
+            }
+
+            return `
+                <tr>
+                    <td>
+                        <div style="font-weight: 600;">${title}</div>
+                        <div style="font-size: 0.85em; color: var(--text-muted);">${dateInfo}</div>
+                        ${statusHtml}
+                        <div style="font-size: 0.7em; color: #999; margin-top: 2px;">ID: ${diff.key}</div>
+                    </td>
+                    ${actionHtml}
+                </tr>`;
+        }).join('');
+        
+        const btnSelectAll = document.getElementById('btn-select-all-apply');
+        if (btnSelectAll) {
+            btnSelectAll.onclick = () => {
+                const inputs = tbody.querySelectorAll('input[value="apply"]');
+                inputs.forEach(input => input.checked = true);
+            };
+        }
+
+        btnConfirm.onclick = () => {
+            const actions = [];
+            diffs.forEach((diff, index) => {
+                const groupName = 'recon-' + index;
+                const selected = document.querySelector(`input[name="${groupName}"]:checked`).value;
+                
+                if (selected === 'apply') {
+                    if (diff.type === 'added') {
+                        actions.push({
+                            action: 'add',
+                            doc: diff.simulated,
+                            sim_name: diff.key
+                        });
+                    } else if (diff.type === 'removed') {
+                        actions.push({
+                            action: 'delete',
+                            name: diff.key
+                        });
+                    } else if (diff.type === 'modified') {
+                        actions.push({
+                            action: 'update',
+                            name: diff.key,
+                            doc: diff.simulated,
+                            sim_name: diff.key
+                        });
+                    }
+                }
+            });
+
+            if (actions.length === 0) {
+                frappe.msgprint('Nenhuma alteração selecionada para aplicação.');
+                return;
+            }
+
+            submitReconciliation(actions);
+        };
+    }
+}
+
+function submitReconciliation(actions) {
+    frappe.call({
+        method: 'gris.www.calendario.simulacao_calendario.reconcile_calendar',
+        args: { actions: JSON.stringify(actions) },
+        freeze: true,
+        freeze_message: 'Aplicando alterações...',
+        callback: function(r) {
+            if (r.message && r.message.count !== undefined) {
+                // Close reconcilation modal
+                const reconcileModal = document.getElementById('reconcile-modal');
+                reconcileModal.classList.add('d-none');
+                
+                // Open success modal
+                const successModal = document.getElementById('success-modal');
+                const successMsg = document.getElementById('success-message');
+                const successBtn = document.getElementById('btn-success-ok');
+                
+                successMsg.innerText = `${r.message.count} alterações aplicadas com sucesso.`;
+                successModal.classList.remove('d-none');
+                
+                successBtn.onclick = function() {
+                    window.location.reload();
+                };
+            }
+        }
+    });
+}
+
+// Holiday Modal Logic
+frappe.ready(function() {
+    initHolidayModal();
+});
+
+function initHolidayModal() {
+    const modal = document.getElementById('holiday-modal');
+    if (!modal) return;
+
+    // Move modal to body to ensure it's not clipped
+    document.body.appendChild(modal);
+
+    const closeElements = modal.querySelectorAll('.close-modal');
+    
+    function closeModal() {
+        modal.classList.add('d-none');
+        document.body.style.overflow = '';
+    }
+    
+    closeElements.forEach(el => el.addEventListener('click', closeModal));
+    
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('d-none')) {
+            closeModal();
+        }
+    });
+
+    // Delegated click handler for holidays
+    document.addEventListener('click', function(e) {
+        const holidayBtn = e.target.closest('.holiday-indicator');
+        if (holidayBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            openHolidayModal(holidayBtn);
+        }
+    });
+}
+
+function openHolidayModal(element) {
+    const name = element.getAttribute("data-holiday-name");
+    const type = element.getAttribute("data-holiday-type");
+    const desc = element.getAttribute("data-holiday-desc");
+
+    const modal = document.getElementById("holiday-modal");
+    const nameEl = document.getElementById("holiday-modal-name");
+    const typeEl = document.getElementById("holiday-modal-type");
+    const descEl = document.getElementById("holiday-modal-desc");
+
+    if (modal && nameEl && typeEl && descEl) {
+        nameEl.textContent = name || "Feriado";
+        typeEl.textContent = type || "Geral";
+        
+        // Reset classes and apply type logic
+        typeEl.className = "holiday-type-tag";
+        typeEl.setAttribute("data-type", type);
+        
+        descEl.textContent = desc || "Sem descrição disponível.";
+        
+        modal.classList.remove("d-none");
+        
+        // Force visual update
+        modal.style.zIndex = '9999';
+        modal.style.display = 'flex';
+        
+        document.body.style.overflow = 'hidden';
+    }
+}
+

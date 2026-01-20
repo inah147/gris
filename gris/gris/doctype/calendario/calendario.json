@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:{atividade}{inicio}{termino}{secao}",
+ "autoname": "field:id",
  "creation": "2025-12-16 18:58:36.886679",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -10,7 +10,10 @@
   "inicio",
   "termino",
   "secao",
-  "local"
+  "local",
+  "nivel",
+  "id",
+  "sem_atividade"
  ],
  "fields": [
   {
@@ -37,16 +40,34 @@
    "fieldname": "secao",
    "fieldtype": "Data",
    "label": "Se\u00e7\u00e3o"
+  },
+  {
+   "fieldname": "nivel",
+   "fieldtype": "Select",
+   "label": "N\u00edvel",
+   "options": "Local\nRegional\nNacional\nInteramericano\nMundial"
+  },
+  {
+   "fieldname": "id",
+   "fieldtype": "Data",
+   "label": "id",
+   "unique": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "sem_atividade",
+   "fieldtype": "Check",
+   "label": "Sem Atividade"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-12-18 13:21:43.082045",
+ "modified": "2026-01-16 11:15:02.254152",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Calendario",
- "naming_rule": "Expression",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

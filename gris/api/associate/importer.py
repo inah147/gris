@@ -49,6 +49,7 @@ def _extract_scout_info(record: str) -> dict | None:
 			"Email_responsavel": "",
 			"CPF_responsavel": "",
 			"id_escoteiro": "",
+			"Secao": "",
 		}
 
 		patterns = {
@@ -71,7 +72,7 @@ def _extract_scout_info(record: str) -> dict | None:
 			"Sexo": r"Sexo:\s*([^\n\t]+)",
 			"Raca_ou_Cor": r"Raça ou Cor:\s*([^\n\t]+)",
 			"Validade_Registro": r"Validade Registro:\s*([^\n\t]+)",
-			"id_escoteiro": r"id@escoteiro:\s*([^\n\t]+)",
+			"Secao": r"Secao:\s*([^\n\t]+)",
 		}
 
 		for field, pattern in patterns.items():
@@ -224,6 +225,7 @@ def parse_associates_report(path_pdf: str) -> dict:
 				"validade_registro": _parse_date(row.get("Validade_Registro", "")),
 				"categoria": row.get("Categoria_1_Funcao", "").strip(),
 				"funcao": row.get("Funcao_1_Funcao", "").strip(),
+				"secao": row.get("Secao", "").strip(),
 				"ramo": _parse_ramo(row.get("Ramo_1_Funcao", "")),
 				"id_escoteiros": row.get("id_escoteiro", "").strip(),
 			}

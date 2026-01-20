@@ -114,6 +114,15 @@
                                 <span class="weekday-name">{{ row.weekday }}</span>
                                 <span class="month-name">{{ row.month }}</span>
                             </div>
+                            {% if row.holiday %}
+                            <div class="holiday-indicator" 
+                                 data-holiday-name="{{ row.holiday.nome }}" 
+                                 data-holiday-type="{{ row.holiday.tipo }}" 
+                                 data-holiday-desc="{{ row.holiday.descricao }}">
+                                 <i class="fa fa-star holiday-icon" title="Feriado"></i>
+                                 <span class="holiday-label">Feriado</span>
+                            </div>
+                            {% endif %}
                         </div>
                     </td>
                     {% for section in sections %}
@@ -121,11 +130,21 @@
                         {% if row.activities[section] %}
                             <div class="activities-list">
                             {% for event in row.activities[section] %}
-                                <div class="activity-card ramo-{{ section_classes[section] }} {% if not event.is_start %}is-continued-top{% endif %} {% if not event.is_end %}is-continued-bottom{% endif %}" data-event-id="{{ event.name }}">
+                                <div class="activity-card ramo-{{ section_classes[section] }} {% if not event.is_start %}is-continued-top{% endif %} {% if not event.is_end %}is-continued-bottom{% endif %} {% if event.sem_atividade %}is-no-activity{% endif %}" 
+                                     data-event-id="{{ event.name }}"
+                                     data-atividade="{{ event.atividade }}"
+                                     data-inicio="{{ event.inicio_fmt }}"
+                                     data-termino="{{ event.termino_fmt }}"
+                                     data-hora-inicio="{{ event.hora_inicio }}"
+                                     data-hora-termino="{{ event.hora_termino }}"
+                                     data-secao="{{ event.secao }}"
+                                     data-local="{{ event.local or '' }}"
+                                     data-nivel="{{ event.nivel or '' }}"
+                                     data-sem-atividade="{{ 1 if event.sem_atividade else 0 }}">
                                     <div class="activity-body">
                                         {% if event.is_start %}
                                         <div class="activity-title">{{ event.atividade }}</div>
-                                        {% if event.local %}
+                                        {% if event.local and not event.sem_atividade %}
                                         <div class="activity-location">
                                             <i class="fa fa-map-marker"></i> {{ event.local }}
                                         </div>
@@ -145,6 +164,86 @@
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+    
+    <!-- Modal de Visualização de Atividade -->
+    <div id="view-activity-modal" class="modal-modern d-none">
+        <div class="modal-modern__backdrop close-modal"></div>
+        <div class="modal-modern__content">
+            <div class="modal-modern__header">
+                <h3 class="modal-modern__title">Detalhes da Atividade</h3>
+            </div>
+            <div class="modal-modern__body">
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.25rem; font-weight: 600;">Atividade</label>
+                    <div id="view-modal-atividade" style="font-weight: 600; font-size: 1.1rem; color: var(--text-primary);"></div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.25rem; font-weight: 600;">Data Início</label>
+                        <div id="view-modal-inicio" style="color: var(--text-primary);"></div>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.25rem; font-weight: 600;">Data Término</label>
+                        <div id="view-modal-termino" style="color: var(--text-primary);"></div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                     <div>
+                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.25rem; font-weight: 600;">Horário</label>
+                        <div id="view-modal-hora" style="color: var(--text-primary);"></div>
+                    </div>
+                     <div id="view-modal-nivel-group">
+                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.25rem; font-weight: 600;">Nível</label>
+                        <div id="view-modal-nivel" style="color: var(--text-primary);"></div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.25rem; font-weight: 600;">Local</label>
+                    <div id="view-modal-local" style="color: var(--text-primary);"></div>
+                </div>
+                 <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.25rem; font-weight: 600;">Seção</label>
+                    <div id="view-modal-secao" style="color: var(--text-primary);"></div>
+                </div>
+                
+                 <div id="view-modal-sem-atividade-group" class="d-none" style="margin-top: 1rem;">
+                    <div style="background-color: var(--color-warning-lighter); color: var(--color-warning-dark); padding: 0.5rem 1rem; border-radius: var(--radius-sm); display: inline-block; font-size: 0.875rem; font-weight: 500;">
+                        <i class="fa fa-info-circle" style="margin-right: 4px;"></i> Dia sem atividade
+                    </div>
+                </div>
+            </div>
+            <div class="modal-modern__footer" style="display: flex; justify-content: flex-end;">
+                <button type="button" class="btn-modern btn-modern--outline close-modal">Fechar</button>
+            </div>
+    <!-- Modal de Feriado -->
+    <div id="holiday-modal" class="modal-modern d-none">
+        <div class="modal-modern__backdrop close-modal"></div>
+        <div class="modal-modern__content">
+            <div class="modal-modern__header">
+                <h3 class="modal-modern__title">
+                    <i class="fa fa-calendar-check-o" style="margin-right: 8px;"></i>
+                    Detalhes do Feriado
+                </h3>
+            </div>
+            <div class="modal-modern__body">
+                <h2 id="holiday-modal-name" style="margin: 0 0 1rem 0; font-size: 1.5rem; color: var(--text-color);"></h2>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <span id="holiday-modal-type" style="padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;"></span>
+                </div>
+
+                <div class="holiday-desc-box" style="background: var(--bg-light); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <p id="holiday-modal-desc" style="margin: 0; color: var(--text-color); line-height: 1.6;"></p>
+                </div>
+            </div>
+            <div class="modal-modern__footer">
+                <button type="button" class="btn-modern btn-modern--primary close-modal">Entendi</button>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

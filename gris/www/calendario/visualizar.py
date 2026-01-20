@@ -42,6 +42,14 @@ def get_context(context):
 
 	context.available_years = available_years
 
+	# Fetch holidays for the year
+	feriados = frappe.get_all(
+		"Feriados",
+		filters={"data": ["between", [f"{year}-01-01", f"{year}-12-31"]]},
+		fields=["nome", "data", "tipo", "descricao"],
+	)
+	feriados_map = {getdate(f.data): f for f in feriados}
+
 	# Fetch all calendar events for the year
 	# We fetch a bit more to cover year boundaries if needed, but strict year filter is fine for "dias do ano"
 	start_date = f"{year}-01-01"
@@ -51,7 +59,7 @@ def get_context(context):
 	events = frappe.get_all(
 		"Calendario",
 		filters={"inicio": ["<=", f"{year}-12-31 23:59:59"], "termino": [">=", f"{year}-01-01 00:00:00"]},
-		fields=["name", "atividade", "inicio", "termino", "secao", "local"],
+		fields=["name", "atividade", "inicio", "termino", "secao", "local", "nivel", "sem_atividade"],
 		order_by="inicio asc",
 	)
 
@@ -79,6 +87,12 @@ def get_context(context):
 			event_display = event.copy()
 			event_display["is_start"] = current == event_start
 			event_display["is_end"] = current == event_end
+
+			# Helper fields for template data attributes
+			event_display["inicio_fmt"] = format_date(event.inicio)
+			event_display["termino_fmt"] = format_date(event.termino)
+			event_display["hora_inicio"] = event.inicio.strftime("%H:%M") if event.inicio else ""
+			event_display["hora_termino"] = event.termino.strftime("%H:%M") if event.termino else ""
 
 			events_by_date_section[key].append(event_display)
 			current += timedelta(days=1)
@@ -174,6 +188,7 @@ def get_context(context):
 			"is_weekend": current_date.weekday() >= 5,
 			"is_new_month": is_new_month,
 			"activities": {},
+			"holiday": feriados_map.get(current_date),
 		}
 
 		has_activity = False

@@ -20,7 +20,7 @@
 										<tr>
 											<th style="width:120px">Mês</th>
 											<th>Status</th>
-											<th class="text-end" style="width:80px">Ação</th>
+											<th>Valor</th>
 										</tr>
 									</thead>
 									<tbody></tbody>
@@ -118,9 +118,13 @@
 									<input class="form-check-input" type="checkbox" name="ativa" id="novaAtiva" checked />
 									<label class="form-check-label" for="novaAtiva">Ativa</label>
 								</div>
-								<div class="form-check form-check-inline">
+								<div class="form-check form-check-inline me-4">
 									<input class="form-check-input" type="checkbox" name="temporaria" id="novaTemporaria" />
 									<label class="form-check-label" for="novaTemporaria">Despesa Temporária</label>
+								</div>
+								<div class="form-check form-check-inline">
+									<input class="form-check-input" type="checkbox" name="cobrar_mes_atual" id="novaCobrarMesAtual" />
+									<label class="form-check-label" for="novaCobrarMesAtual">Cobrar mês atual</label>
 								</div>
 							</div>
 							<div id="novaTemporariaDatas" class="row g-3 mt-2 d-none">
@@ -243,6 +247,7 @@
 				dia_vencimento: form.dia_vencimento.value,
 				ativa: form.ativa.checked ? 1 : 0,
 				despesa_temporaria: form.temporaria.checked ? 1 : 0,
+				cobrar_mes_atual: form.cobrar_mes_atual.checked ? 1 : 0,
 				data_inicio: form.temporaria.checked ? form.data_inicio.value : '',
 				data_termino: form.temporaria.checked ? form.data_termino.value : ''
 			},
@@ -342,7 +347,7 @@
 		document.getElementById('despesaBadges').innerHTML = buildBadges(data);
 		const dl = document.getElementById('despesaDados');
 		let html = '';
-		html += `<dt class="col-sm-4">Valor</dt><dd class="col-sm-8">${formatCurrency(data.valor)}</dd>`;
+		html += `<dt class="col-sm-4">Valor Base</dt><dd class="col-sm-8">${formatCurrency(data.valor)}</dd>`;
 		html += `<dt class="col-sm-4">Dia Vencimento</dt><dd class="col-sm-8">${data.dia}</dd>`;
 		if (data.temporaria) {
 			html += `<dt class="col-sm-4">Início</dt><dd class="col-sm-8">${data.inicio || '-'} </dd>`;
@@ -410,21 +415,16 @@
 					const statusSlug = (p.status || '').toLowerCase().replace(/\s+/g,'');
 					const isPago = statusSlug === 'pago';
 					const badgeHtml = `<span class="g-badge g-badge--${mapStatusVariant(statusSlug)} me-2">${p.status}</span>`;
-					let actionHtml = '';
-					if (!isPago && canEdit) {
-						actionHtml = `<button type="button" class="btn btn-xs btn-success pay-btn" data-pagamento="${p.name}">Pago</button>`;
-					}
+					
 					tr.innerHTML = `
 						<td class="text-nowrap">${p.mes_format || p.mes_referencia || ''}</td>
 						<td>${badgeHtml}</td>
-						<td class="text-end">${actionHtml}</td>
+						<td>${formatCurrency(p.valor)}</td>
 					`;
 					frag.appendChild(tr);
 				});
 				tabela.appendChild(frag);
 				console.log(`✓ Adicionadas ${dados.length} linhas na tabela`);
-				
-				if (canEdit) attachPayHandlers();
 			},
 			error: () => {
 				loadingHistorico = false;

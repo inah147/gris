@@ -8,6 +8,7 @@
  "field_order": [
   "conta",
   "status",
+  "valor",
   "column_break_jzsy",
   "mes_referencia",
   "titulo"
@@ -44,12 +45,17 @@
    "is_virtual": 1,
    "label": "T\u00edtulo",
    "unique": 1
+  },
+  {
+   "fieldname": "valor",
+   "fieldtype": "Currency",
+   "label": "Valor"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-22 17:59:25.558593",
+ "modified": "2026-01-20 22:26:22.303453",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Pagamento Conta Fixa",

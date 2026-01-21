@@ -98,8 +98,40 @@ class TransacaoExtratoGeral(Document):
 	def after_insert(self):
 		self._update_wallet()
 
+	def _update_pagamento_conta_fixa(self):
+		"""Atualiza o status de Pagamento Conta Fixa quando conta_fixa é preenchido."""
+		if not self.conta_fixa or not self.data_transacao:
+			return
+
+		if self.has_value_changed("conta_fixa") and self.conta_fixa:
+			data = getdate(self.data_transacao)
+			mes_referencia = data.replace(day=1)
+
+			pagamentos = frappe.get_all(
+				"Pagamento Conta Fixa",
+				filters={
+					"conta": self.conta_fixa,
+					"mes_referencia": mes_referencia,
+				},
+				limit=1,
+			)
+
+			if pagamentos:
+				pagamento = frappe.get_doc("Pagamento Conta Fixa", pagamentos[0].name)
+				# Update status and value
+				if pagamento.status != "Pago" or pagamento.valor != abs(self.valor):
+					pagamento.status = "Pago"
+					pagamento.valor = abs(self.valor)
+					pagamento.save(ignore_permissions=True)
+					frappe.db.commit()
+					frappe.msgprint(
+						f"Pagamento de conta fixa atualizado para Pago no mês {mes_referencia.strftime('%m/%Y')}",
+						alert=True,
+					)
+
 	def on_update(self):
 		self._update_pagamento_contribuicao_mensal()
+		self._update_pagamento_conta_fixa()
 
 	def after_update(self):
 		self._update_wallet()

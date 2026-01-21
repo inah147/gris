@@ -74,4 +74,39 @@ def get_context(context):
 		return context
 
 	context.doc = doc
+
+	# Filtrar contas fixas já pagas no mês
+	if doc.data_transacao:
+		from frappe.utils import getdate
+
+		data_t = getdate(doc.data_transacao)
+		mes_ref = data_t.replace(day=1)
+
+		# 1. Encontrar pagamentos que já foram realizados (Pago) neste mês
+		# ou estão vinculados a outras transações (independente se o pagamento estivesse 'Em Aberto',
+		# se já tem transação vinculada, não deve aparecer de novo)
+
+		# Vamos pela abordagem de transações já existentes no mês:
+		# Encontrar todas as transações deste mês que têm conta_fixa preenchido
+		primeiro_dia = mes_ref
+		import calendar
+		ultimo_dia = mes_ref.replace(day=calendar.monthrange(mes_ref.year, mes_ref.month)[1])
+
+		used_accounts = frappe.get_all(
+			"Transacao Extrato Geral",
+			filters={
+				"data_transacao": ["between", [primeiro_dia, ultimo_dia]],
+				"conta_fixa": ["is", "set"],
+				"name": ["!=", doc.name]  # Excluir a própria transação
+			},
+			pluck="conta_fixa"
+		)
+
+		# Remover das opções
+		if used_accounts:
+			# context.opcoes_conta_fixa é uma lista de strings (names)
+			context.opcoes_conta_fixa = [
+				op for op in context.opcoes_conta_fixa if op not in used_accounts
+			]
+
 	return context

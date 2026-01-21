@@ -11,7 +11,7 @@
   "name": "Ramo Pioneiro",
   "nome": "Ramo Pioneiro",
   "responsavel": null,
-  "saldo": 41294.0,
+  "saldo": 0.0,
   "saldo_inicial": 0.0
  },
  {
@@ -55,8 +55,8 @@
   "modified": "2025-10-14 07:56:06.368256",
   "name": "PagBank",
   "nome": "PagBank",
-  "responsavel": "caio.ferreira@escoteiros.org.br",
-  "saldo": 301973.17997,
+  "responsavel": null,
+  "saldo": 0.0,
   "saldo_inicial": 0.0
  },
  {
@@ -71,7 +71,7 @@
   "name": "Sicredi",
   "nome": "Sicredi",
   "responsavel": null,
-  "saldo": 215248.70555,
+  "saldo": 0.0,
   "saldo_inicial": 0.0
  },
  {
@@ -86,7 +86,7 @@
   "name": "Espécie",
   "nome": "Espécie",
   "responsavel": null,
-  "saldo": 34033.0,
+  "saldo": 0.0,
   "saldo_inicial": 0.0
  },
  {
@@ -100,8 +100,8 @@
   "modified": "2025-10-14 07:56:04.821213",
   "name": "Festas",
   "nome": "Festas",
-  "responsavel": "henrique.stivali@escoteiros.org.br",
-  "saldo": 739104.06862,
+  "responsavel": null,
+  "saldo": 0.0,
   "saldo_inicial": 0.0
  },
  {
@@ -116,7 +116,7 @@
   "name": "Lojinha",
   "nome": "Lojinha",
   "responsavel": null,
-  "saldo": 4915.0,
+  "saldo": 0.0,
   "saldo_inicial": 0.0
  },
  {
@@ -146,7 +146,7 @@
   "name": "Gestao de Adultos",
   "nome": "Gestao de Adultos",
   "responsavel": null,
-  "saldo": 41224.25927,
+  "saldo": 0.0,
   "saldo_inicial": 0.0
  },
  {
@@ -161,7 +161,7 @@
   "name": "Cantina",
   "nome": "Cantina",
   "responsavel": null,
-  "saldo": 443272.0,
+  "saldo": 0.0,
   "saldo_inicial": 0.0
  },
  {
@@ -176,7 +176,7 @@
   "name": "Ramo Escoteiro",
   "nome": "Ramo Escoteiro",
   "responsavel": null,
-  "saldo": 129816.0,
+  "saldo": 0.0,
   "saldo_inicial": 0.0
  },
  {
@@ -191,7 +191,7 @@
   "name": "Cozinha",
   "nome": "Cozinha",
   "responsavel": null,
-  "saldo": 249684.0,
+  "saldo": 0.0,
   "saldo_inicial": 0.0
  },
  {
@@ -206,7 +206,7 @@
   "name": "Manutencao",
   "nome": "Manutencao",
   "responsavel": null,
-  "saldo": 166336.4,
+  "saldo": 0.0,
   "saldo_inicial": 0.0
  },
  {
@@ -221,7 +221,7 @@
   "name": "Ramo Senior",
   "nome": "Ramo Senior",
   "responsavel": null,
-  "saldo": 145363.43,
+  "saldo": 0.0,
   "saldo_inicial": 0.0
  },
  {
@@ -236,7 +236,7 @@
   "name": "Ramo Lobinho",
   "nome": "Ramo Lobinho",
   "responsavel": null,
-  "saldo": 125220.909,
+  "saldo": 0.0,
   "saldo_inicial": 0.0
  },
  {
@@ -250,8 +250,8 @@
   "modified": "2025-10-14 07:56:06.074009",
   "name": "Conta empresarial",
   "nome": "Conta empresarial",
-  "responsavel": "caio.ferreira@escoteiros.org.br",
-  "saldo": 1463310.7584,
+  "responsavel": null,
+  "saldo": 0.0,
   "saldo_inicial": 0.0
  },
  {
@@ -266,7 +266,7 @@
   "name": "Programa Educativo",
   "nome": "Programa Educativo",
   "responsavel": null,
-  "saldo": 15921.52414,
+  "saldo": 0.0,
   "saldo_inicial": 0.0
  },
  {
@@ -281,7 +281,7 @@
   "name": "Infinitepay",
   "nome": "Infinitepay",
   "responsavel": null,
-  "saldo": 2211387.40768,
+  "saldo": 0.0,
   "saldo_inicial": 0.0
  }
 ]

@@ -148,7 +148,7 @@ def get_pagamentos_conta(conta: str, limit: int = 12):
 	res = frappe.get_all(
 		"Pagamento Conta Fixa",
 		filters={"conta": conta},
-		fields=["name", "mes_referencia", "status"],
+		fields=["name", "mes_referencia", "status", "valor"],
 		order_by="mes_referencia DESC",
 		limit=limit,
 	)
@@ -185,6 +185,7 @@ def create_conta_fixa(
 	dia_vencimento: int,
 	ativa: int = 1,
 	despesa_temporaria: int = 0,
+	cobrar_mes_atual: int = 0,
 	data_inicio: str | None = None,
 	data_termino: str | None = None,
 ):
@@ -224,5 +225,18 @@ def create_conta_fixa(
 		}
 	)
 	doc.insert(ignore_permissions=False)
+
+	if int(cobrar_mes_atual) and doc.ativa:
+		today = date.today()
+		status = "Atrasado" if today.day > doc.dia_vencimento else "Em Aberto"
+		frappe.get_doc(
+			{
+				"doctype": "Pagamento Conta Fixa",
+				"conta": doc.name,
+				"mes_referencia": today.replace(day=1),
+				"status": status,
+			}
+		).insert(ignore_permissions=True)
+
 	frappe.db.commit()
 	return {"ok": True, "name": doc.name}

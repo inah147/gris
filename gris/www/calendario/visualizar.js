@@ -3,7 +3,38 @@ frappe.ready(function() {
     initFilters();
     initHoverEffects();
     initViewModal();
+    initExport();
 });
+
+function initExport() {
+    const btnExport = document.getElementById('btn-export-calendar');
+    if (btnExport) {
+        btnExport.addEventListener('click', function() {
+            const yearFilter = document.getElementById('year-filter');
+            const monthFilter = document.getElementById('month-filter');
+            const showEmptyDaysCheckbox = document.getElementById('show-empty-days');
+            const sectionCheckboxes = document.querySelectorAll('input[name="section-filter"]');
+            
+            const year = yearFilter ? yearFilter.value : new Date().getFullYear();
+            const month = monthFilter ? monthFilter.value : '';
+            const showEmptyDays = showEmptyDaysCheckbox ? (showEmptyDaysCheckbox.checked ? 1 : 0) : 1;
+            
+            const selectedSections = Array.from(sectionCheckboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
+            
+            // Build Query Params
+            const params = new URLSearchParams({
+                year: year,
+                month: month,
+                show_empty_days: showEmptyDays,
+                sections: JSON.stringify(selectedSections)
+            });
+                
+            window.open(`/api/method/gris.www.calendario.visualizar.export_calendar?${params.toString()}`, '_blank');
+        });
+    }
+}
 
 function scrollToToday() {
     const today = new Date();

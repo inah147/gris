@@ -1,13 +1,14 @@
 import frappe
 from frappe.utils import getdate, today
 
+
 def update_waiting_list_branch():
 	"""
 	Update the branch of each associate in the Waiting List according to the transition age.
 	If the branch is changed, also update in Novo Associado.
 	"""
 	vagas_settings = frappe.get_single("Vagas")
-	ramos = [
+	branches = [
 		("Filhotes", float(vagas_settings.idade_transicao_filhotes)),
 		("Lobinho", float(vagas_settings.idade_transicao_lobinho)),
 		("Escoteiro", float(vagas_settings.idade_transicao_escoteiro)),
@@ -28,16 +29,16 @@ def update_waiting_list_branch():
 			continue
 		birth = getdate(assoc[0])
 		today_dt = getdate(today())
-		anos = today_dt.year - birth.year
-		meses = today_dt.month - birth.month
+		years = today_dt.year - birth.year
+		months = today_dt.month - birth.month
 		if today_dt.day < birth.day:
-			meses -= 1
-		if meses < 0:
-			anos -= 1
-			meses += 12
-		idade_decimal = anos + meses/12
-		for idx, (branch_name, transition_age) in enumerate(ramos):
-			if idx == len(ramos)-1 or idade_decimal < ramos[idx+1][1]:
+			months -= 1
+		if months < 0:
+			years -= 1
+			months += 12
+		decimal_age = years + months / 12
+		for idx, (branch_name, transition_age) in enumerate(branches):
+			if idx == len(branches) - 1 or decimal_age < branches[idx + 1][1]:
 				if item.ramo != branch_name:
 					frappe.db.set_value("Fila de Espera", item.name, "ramo", branch_name)
 					frappe.db.set_value("Novo Associado", item.associado, "ramo", branch_name)

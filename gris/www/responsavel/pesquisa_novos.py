@@ -22,7 +22,7 @@ def get_context(context):
 
 	if survey_name:
 		context.is_read_only = True
-		context.survey = frappe.get_doc("Pesqusa de Novos Associados", survey_name)
+		context.survey = frappe.get_doc("Pesqusa de Novos Associados", survey_name).as_dict()
 
 	context.sidebar_title = "Painel do Responsável"
 	context.active_link = "/responsavel/pesquisa_novos"

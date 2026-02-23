@@ -40,7 +40,7 @@
             <option value="">Selecione...</option>
             {% set options = ["Através de um amigo", "Através de reportagens na televisão ou rádio", "Através de filmes e séries", "Através de redes sociais"] %}
             {% for opt in options %}
-            <option value="{{ opt }}" {% if survey.como_conheceu_movimento == opt %}selected{% endif %}>{{ opt }}</option>
+            <option value="{{ opt }}" {% if survey.get('como_conheceu_movimento') == opt %}selected{% endif %}>{{ opt }}</option>
             {% endfor %}
           </select>
         </div>
@@ -52,7 +52,7 @@
             <option value="">Selecione...</option>
             {% set options = ["Através de um amigo", "Através de reportagens na televisão ou rádio", "Através de redes sociais"] %}
             {% for opt in options %}
-            <option value="{{ opt }}" {% if survey.como_você_conheceu_o_nosso_grupo_escoteiro == opt %}selected{% endif %}>{{ opt }}</option>
+            <option value="{{ opt }}" {% if survey.get('como_você_conheceu_o_nosso_grupo_escoteiro') == opt %}selected{% endif %}>{{ opt }}</option>
             {% endfor %}
           </select>
         </div>
@@ -60,19 +60,19 @@
         <!-- Visão sobre o Movimento -->
         <div class="col-12">
           <label class="form-label-modern">Qual sua visão sobre o que é o Movimento Escoteiro?</label>
-          <textarea name="visao_sobre_movimento" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.visao_sobre_movimento or '' }}</textarea>
+          <textarea name="visao_sobre_movimento" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.get('visao_sobre_movimento') or '' }}</textarea>
         </div>
 
         <!-- O que espera encontrar -->
         <div class="col-12">
           <label class="form-label-modern">O que espera encontrar no Movimento?</label>
-          <textarea name="espera_encontrar_movimento" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.espera_encontrar_movimento or '' }}</textarea>
+          <textarea name="espera_encontrar_movimento" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.get('espera_encontrar_movimento') or '' }}</textarea>
         </div>
 
         <!-- O que chamou atenção -->
         <div class="col-12">
           <label class="form-label-modern">O que mais te chamou atenção e fez escolher o nosso grupo escoteiro dentre os demais?</label>
-          <textarea name="chamou_atencao_uel" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.chamou_atencao_uel or '' }}</textarea>
+          <textarea name="chamou_atencao_uel" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.get('chamou_atencao_uel') or '' }}</textarea>
         </div>
 
         <!-- NPS Recepção -->
@@ -81,7 +81,7 @@
           <div class="d-flex flex-wrap gap-4 py-2">
             {% for i in range(11) %}
             <label class="nps-option">
-              <input type="radio" name="nps_recepcao" value="{{ i }}" class="sr-only peer" {% if is_read_only and survey.nps_recepcao|int == i %}checked{% elif is_read_only %}disabled{% endif %}>
+              <input type="radio" name="nps_recepcao" value="{{ i }}" class="sr-only peer" {% if survey.get('nps_recepcao')|int == i %}checked{% endif %} {% if is_read_only %}disabled{% endif %}>
               <div class="nps-circle {% if is_read_only %}cursor-default{% endif %}">
                 {{ i }}
               </div>
@@ -93,13 +93,13 @@
         <!-- Pontos Fortes -->
         <div class="col-12">
           <label class="form-label-modern">O que mais gostou no processo de recepção de novas famílias?</label>
-          <textarea name="pontos_fortes_recepcao" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.pontos_fortes_recepcao or '' }}</textarea>
+          <textarea name="pontos_fortes_recepcao" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.get('pontos_fortes_recepcao') or '' }}</textarea>
         </div>
 
         <!-- Melhorias -->
         <div class="col-12">
           <label class="form-label-modern">Tem algo que acredita que podemos melhorar no processo de recepção de novas famílias?</label>
-          <textarea name="melhoria_recepcao" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.melhoria_recepcao or '' }}</textarea>
+          <textarea name="melhoria_recepcao" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.get('melhoria_recepcao') or '' }}</textarea>
         </div>
       </div>
 

@@ -1,0 +1,27 @@
+.env
+.git
+*.log
+*.pid
+*.sock
+.DS_Store
+.vscode/
+*.pyc
+__pycache__/
+node_modules/
+*.egg-info/
+dist/
+build/
+
+# Old Docker files (deprecated)
+Dockerfile
+docker-compose.yml
+deploy/
+
+# Docker volumes
+mariadb-data/
+redis-cache-data/
+redis-queue-data/
+redis-socketio-data/
+frappe-sites/
+frappe-logs/
+nginx-logs/

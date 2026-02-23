@@ -72,6 +72,7 @@ def _extract_scout_info(record: str) -> dict | None:
 			"Sexo": r"Sexo:\s*([^\n\t]+)",
 			"Raca_ou_Cor": r"Raça ou Cor:\s*([^\n\t]+)",
 			"Validade_Registro": r"Validade Registro:\s*([^\n\t]+)",
+			"id_escoteiro": r"(?:id\s*@\s*escoteiros?|id\s+escoteiros?)\s*:\s*([^\s\n\t]+@escoteiros\.org\.br)",
 			"Secao": r"Secao:\s*([^\n\t]+)",
 		}
 

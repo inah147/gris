@@ -9,6 +9,9 @@ from gris.api.portal_access import enrich_context, user_has_access
 
 
 def get_context(context):
+	# Disable cache to always show fresh data
+	context.no_cache = 1
+
 	# Permission check
 	if not user_has_access("/recepcao"):
 		frappe.throw("Você não tem permissão para acessar esta página.", frappe.PermissionError)

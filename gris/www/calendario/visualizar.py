@@ -13,6 +13,9 @@ from gris.api.portal_access import enrich_context
 
 
 def get_context(context):
+	# Disable cache to always show fresh data
+	context.no_cache = 1
+
 	roles = frappe.get_roles(frappe.session.user)
 	if not any(role in roles for role in ["Visualizador Calendario", "Gestor Calendario", "System Manager"]):
 		frappe.throw("Você não tem permissão para acessar esta página.", frappe.PermissionError)

@@ -28,6 +28,9 @@ STEPS_DEF = [
 
 
 def get_context(context):
+	# Disable cache to always show fresh data
+	context.no_cache = 1
+
 	context.active_link = "/recepcao"
 	enrich_context(context, "/recepcao")
 

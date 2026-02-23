@@ -1,24 +1,29 @@
-{% extends "templates/web.html" %}
+{% extends "templates/portal_clean.html" %}
 
-{% block head_include %}
+{% block head %}
   {{ super() }}
-  <link rel="stylesheet" href="/assets/gris/css/design-system.css">
-  <link rel="stylesheet" href="/assets/gris/css/components.css">
+  <style>
+    .portal-clean-page {
+      min-height: 100vh;
+      background: #ffffff;
+    }
+  </style>
 {% endblock %}
 
 {% block page_content %}
-<div class="container col-xxl-8 px-4 py-5">
-    <div class="row flex-lg-row-reverse align-items-center g-5 py-5">
-        <div class="col-10 col-sm-8 col-lg-6">
-            <img src="{{ logo }}" class="d-block mx-lg-auto img-fluid" alt="Bootstrap Themes" width="700" height="500" loading="lazy">
-        </div>
-        <div class="col-lg-6">
-            <h1 class="display-5 fw-bold lh-1 mb-3">Portal de Transparência</h1>
-            <p class="lead">{{subtitle}}</p>
-            <!-- <div class="d-grid gap-3 d-md-flex justify-content-md-start">
-                <button type="button" class="btn btn-primary btn-lg px-4 me-md-4" onclick="document.getElementById('documentos-gerais').scrollIntoView({behavior: 'smooth'})">Documentos Gerais</button>
-                <button type="button" class="btn btn-outline-secondary btn-lg px-4" onclick="document.getElementById('documentos-anuais').scrollIntoView({behavior: 'smooth'})">Documentos Anuais</button>
-            </div> -->
+<!-- Hero Section -->
+<div class="transparency-hero">
+    <div class="container col-xxl-8 px-4 py-5">
+        <div class="row flex-lg-row-reverse align-items-center justify-content-center g-5 py-5">
+            <div class="col-12 col-sm-10 col-lg-6 text-center">
+                {% if logo %}
+                <img src="{{ logo }}" class="d-block mx-auto img-fluid mb-4 mb-lg-0" alt="Logo" style="max-height: 400px; width: auto;" loading="lazy">
+                {% endif %}
+            </div>
+            <div class="col-12 col-lg-6 text-center">
+                <h1 class="display-4 mb-3" style="color: #1D2755; font-weight: 900;">Portal de Transparência</h1>
+                <p class="lead" style="color: var(--text-secondary);">{{ subtitle or 'Acesso público a documentos e informações institucionais' }}</p>
+            </div>
         </div>
     </div>
 </div>
@@ -55,6 +60,11 @@
     </div>
 </div>
 {% endif %}
+
+<!-- Separador entre seções -->
+<div class="container my-5 separator-section">
+    <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 3rem 0;">
+</div>
 
 <div class="container my-5 transparency-section" id="documentos-anuais">
     <h2 class="transparency-section__title">Documentos Anuais</h2>
@@ -144,4 +154,7 @@ document.addEventListener('DOMContentLoaded', function() {
     carregarArquivos(ano);
 });
 </script>
+
+<!-- Espaço de rodapé -->
+<div style="height: 4rem;"></div>
 {% endblock %}

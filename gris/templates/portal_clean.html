@@ -1,0 +1,39 @@
+{% extends "frappe/templates/base.html" %}
+
+{# Template limpo sem navbar e footer para páginas públicas #}
+
+{% block head %}
+{{ super() }}
+<!-- Design System GRIS -->
+<link rel="stylesheet" href="/assets/gris/css/design-system.css">
+<link rel="stylesheet" href="/assets/gris/css/components.css">
+<style>
+	/* Remove margens padrões do body */
+	body {
+		margin: 0;
+		padding: 0;
+		background: #ffffff;
+		font-family: var(--font-sans);
+		color: var(--text-primary);
+	}
+	
+	.portal-clean-page {
+		min-height: 100vh;
+		width: 100%;
+		background: #ffffff;
+	}
+</style>
+{% endblock %}
+
+{# Remove navbar #}
+{% block navbar %}{% endblock %}
+
+{# Remove footer #}
+{% block footer %}{% endblock %}
+
+{# Conteúdo da página #}
+{% block content %}
+<div class="portal-clean-page">
+	{% block page_content %}{% endblock %}
+</div>
+{% endblock %}

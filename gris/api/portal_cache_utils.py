@@ -50,12 +50,25 @@ def get_uel_cached(ttl: int = 300) -> dict:
 		uel = frappe.get_single("Definicao da UEL")
 
 		logo_url = getattr(uel, "logo", None)
-		frappe.logger().info(f"Logo original do banco: {logo_url}")
 
 		# Torna o logo público se existir
 		if logo_url:
 			logo_url = make_file_public(logo_url)
-			frappe.logger().info(f"Logo após make_file_public: {logo_url}")
+
+		# Busca documentos da child table
+		documentos_list = []
+		for d in getattr(uel, "documentos", []) or []:
+			doc_dict = {
+				"publico": getattr(d, "publico", 0),  # 0 ou 1 (int)
+				"nome_do_documento": getattr(d, "nome_do_documento", "Documento"),
+				"arquivo": getattr(d, "arquivo", None),
+			}
+
+			# Torna arquivo público se marcado como público
+			if doc_dict["publico"] and doc_dict["arquivo"]:
+				doc_dict["arquivo"] = make_file_public(doc_dict["arquivo"])
+
+			documentos_list.append(doc_dict)
 
 		data = {
 			"logo": logo_url,
@@ -63,17 +76,9 @@ def get_uel_cached(ttl: int = 300) -> dict:
 			"nome_da_uel": getattr(uel, "nome_da_uel", ""),
 			"numeral": getattr(uel, "numeral", ""),
 			"regiao": getattr(uel, "regiao", ""),
-			"documentos": [
-				{
-					"publico": getattr(d, "publico", False),
-					"nome_do_documento": getattr(d, "nome_do_documento", "Documento"),
-					"arquivo": make_file_public(getattr(d, "arquivo", None))
-					if getattr(d, "publico", False)
-					else getattr(d, "arquivo", None),
-				}
-				for d in (getattr(uel, "documentos", []) or [])
-			],
+			"documentos": documentos_list,
 		}
+
 	except Exception as e:
 		frappe.logger().error(f"Erro ao buscar Definicao da UEL: {e!s}")
 		data = {}

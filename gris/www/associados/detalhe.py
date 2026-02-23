@@ -162,6 +162,15 @@ def get_context(context):
 		user_roles = set()
 	context.can_edit_member = "Gestor de Associados" in user_roles
 
+	id_escoteiros = (doc.id_escoteiros or "").strip().lower()
+	has_desk_access = "Acesso ao Desk" in user_roles
+	is_valid_registration = (doc.status or "").strip().lower() in {"válido", "valido"}
+	has_valid_id_escoteiros = bool(id_escoteiros) and id_escoteiros.endswith("@escoteiros.org.br")
+	user_already_exists = bool(has_valid_id_escoteiros and frappe.db.exists("User", id_escoteiros))
+	context.can_create_associate_user = bool(
+		has_desk_access and is_valid_registration and has_valid_id_escoteiros and not user_already_exists
+	)
+
 	context.associado = doc
 	return context
 

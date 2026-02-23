@@ -1,0 +1,43 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-23 19:08:14.674142",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "criar_usuarios"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "fieldname": "criar_usuarios",
+   "fieldtype": "Check",
+   "label": "Criar usu\u00e1rios ao importar associados"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-02-23 19:12:30.674194",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Configuracoes de Associados",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

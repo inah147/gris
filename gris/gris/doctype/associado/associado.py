@@ -4,6 +4,7 @@ import re
 
 import frappe
 from frappe.model.document import Document
+from frappe.utils import cint
 
 
 def _assoc_logger():
@@ -170,6 +171,8 @@ class Associado(Document):
 
 	def after_insert(self):
 		self._handle_novo_associado_post()
+		if cint(frappe.db.get_single_value("Configuracoes de Associados", "criar_usuarios")) != 1:
+			return
 		log = _assoc_logger()
 		log.info(f"[ENQUEUE CREATE] {self.name}")
 		frappe.enqueue(

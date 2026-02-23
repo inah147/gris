@@ -1,10 +1,23 @@
 import uuid
 
 import frappe
+from frappe.utils import cint
 
 
 def _logger():
 	return frappe.logger("associate_user", allow_site=True, file_count=10)
+
+
+def _should_auto_create_users() -> bool:
+	"""Retorna se a criação automática de usuários para associados está habilitada."""
+	return cint(frappe.db.get_single_value("Configuracoes de Associados", "criar_usuarios")) == 1
+
+
+def _has_desk_access(user: str) -> bool:
+	if not user or user == "Guest":
+		return False
+
+	return "Acesso ao Desk" in frappe.get_roles(user)
 
 
 # 1. Recuperar lista de associados
@@ -114,11 +127,17 @@ def _define_role_profile(associate):
 
 
 @frappe.whitelist()
-def create_associate_user(associate=None, associate_name=None):
+def create_associate_user(associate=None, associate_name=None, force=False):
 	if associate_name and not associate:
 		associate = frappe.get_doc("Associado", associate_name)
 
 	if not associate:
+		return
+
+	if not force and not _should_auto_create_users():
+		_logger().info(
+			f"[CREATE] skip associate_name={getattr(associate, 'name', None)} reason=auto create disabled"
+		)
 		return
 
 	role_profile = _define_role_profile(associate)
@@ -141,6 +160,114 @@ def create_associate_user(associate=None, associate_name=None):
 			}
 		)
 		user.insert()
+
+
+@frappe.whitelist()
+def create_missing_associate_users():
+	user = frappe.session.user if getattr(frappe.local, "session", None) else "Guest"
+	if not _has_desk_access(user):
+		frappe.throw("Sem permissão para criar usuários de associados.", frappe.PermissionError)
+
+	associates = _get_associados()
+	associate_emails = {
+		(associate.id_escoteiros or "").strip().lower()
+		for associate in associates
+		if (associate.id_escoteiros or "").strip()
+	}
+
+	existing_users = set()
+	if associate_emails:
+		existing_users = {
+			user_doc.name.lower()
+			for user_doc in frappe.get_all(
+				"User", filters={"name": ["in", list(associate_emails)]}, fields=["name"]
+			)
+		}
+
+	results = {
+		"total_associates": len(associates),
+		"created": 0,
+		"skipped_existing_user": 0,
+		"skipped_invalid_status": 0,
+		"skipped_invalid_domain": 0,
+		"skipped_missing_data": 0,
+		"errors": 0,
+	}
+
+	log = _logger()
+	for associate in associates:
+		email = (associate.id_escoteiros or "").strip().lower()
+
+		if not email:
+			results["skipped_missing_data"] += 1
+			continue
+
+		if not email.endswith("@escoteiros.org.br"):
+			results["skipped_invalid_domain"] += 1
+			continue
+
+		if not _is_valid_associate(associate):
+			results["skipped_invalid_status"] += 1
+			continue
+
+		if not associate.registro or not associate.nome_completo:
+			results["skipped_missing_data"] += 1
+			continue
+
+		if email in existing_users:
+			results["skipped_existing_user"] += 1
+			continue
+
+		try:
+			associate.id_escoteiros = email
+			create_associate_user(associate=associate, force=True)
+			results["created"] += 1
+			existing_users.add(email)
+		except Exception:
+			results["errors"] += 1
+			tb = frappe.get_traceback()
+			frappe.log_error(tb, f"create_missing_associate_users:{associate.name}")
+			log.error(f"[CREATE BATCH] exception associate_name={associate.name}\n{tb}")
+
+	return results
+
+
+@frappe.whitelist()
+def create_associate_user_manually(associate_name):
+	user = frappe.session.user if getattr(frappe.local, "session", None) else "Guest"
+	if not _has_desk_access(user):
+		frappe.throw("Sem permissão para criar usuários de associados.", frappe.PermissionError)
+
+	if not associate_name:
+		frappe.throw("Associado não informado.")
+
+	associate = frappe.get_doc("Associado", associate_name)
+	email = (associate.id_escoteiros or "").strip().lower()
+
+	if not email:
+		frappe.throw("Associado sem ID Escoteiros informado.")
+
+	if not email.endswith("@escoteiros.org.br"):
+		frappe.throw("ID Escoteiros inválido. Use um e-mail @escoteiros.org.br.")
+
+	if not _is_valid_associate(associate):
+		frappe.throw("Associado com registro inválido para criação de usuário.")
+
+	if not associate.registro or not associate.nome_completo:
+		frappe.throw("Dados incompletos do associado para criação de usuário.")
+
+	if frappe.db.exists("User", email):
+		return {"created": 0, "already_exists": 1, "email": email}
+
+	try:
+		associate.id_escoteiros = email
+		create_associate_user(associate=associate, force=True)
+		return {"created": 1, "already_exists": 0, "email": email}
+	except Exception:
+		tb = frappe.get_traceback()
+		frappe.log_error(tb, f"create_associate_user_manually:{associate_name}")
+		_logger().error(f"[CREATE SINGLE] exception associate_name={associate_name}\n{tb}")
+		raise
 
 
 @frappe.whitelist()

@@ -19,6 +19,7 @@ def get_context(context):
 	# Logo
 	uel_data = get_uel_cached()
 	context.portal_logo = uel_data.get("logo") if uel_data else None
+	context.can_create_associate_users = "Acesso ao Desk" in frappe.get_roles(frappe.session.user)
 	# Link ativo
 	context.active_link = "/associados/lista"
 	return context

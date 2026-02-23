@@ -4,6 +4,14 @@ frappe.ready(() => {
   const listEl = document.getElementById('assoc-list');
   const form = document.getElementById('assoc-filters');
   const resetBtn = document.getElementById('btn-reset');
+  const createUsersBtn = document.getElementById('btn-create-users');
+  const confirmModal = document.getElementById('modalCreateUsersConfirm');
+  const confirmBackdrop = document.getElementById('modalCreateUsersConfirmBackdrop');
+  const resultModal = document.getElementById('modalCreateUsersResult');
+  const resultBackdrop = document.getElementById('modalCreateUsersResultBackdrop');
+  const confirmCreateUsersBtn = document.getElementById('btn-confirm-create-users');
+  const resultTitle = document.getElementById('create-users-result-title');
+  const resultBody = document.getElementById('create-users-result-body');
   const selCategoria = document.getElementById('f-categoria');
   const selRamo = document.getElementById('f-ramo');
   const selStatus = document.getElementById('f-status');
@@ -191,8 +199,106 @@ frappe.ready(() => {
     } catch(e){ console.warn('Erro ao carregar opções dinâmicas', e); }
   }
 
+  function openModal(modal, backdrop) {
+    if (!modal || !backdrop) return;
+    backdrop.style.display = 'block';
+    modal.style.display = 'flex';
+    setTimeout(() => {
+      backdrop.classList.add('show');
+      modal.classList.add('show');
+    }, 10);
+    document.body.classList.add('modal-open');
+  }
+
+  function closeModal(modal, backdrop) {
+    if (!modal || !backdrop) return;
+    modal.classList.remove('show');
+    backdrop.classList.remove('show');
+    setTimeout(() => {
+      modal.style.display = 'none';
+      backdrop.style.display = 'none';
+      if (!document.querySelector('.modal-modern.show')) {
+        document.body.classList.remove('modal-open');
+      }
+    }, 250);
+  }
+
+  function renderResultModal(result, failed = false) {
+    if (!resultModal || !resultBackdrop || !resultBody || !resultTitle) return;
+
+    resultTitle.textContent = failed ? 'Erro ao criar usuários' : 'Criação de usuários concluída';
+
+    if (failed) {
+      resultBody.innerHTML = '<p style="margin: 0; color: var(--text-secondary);">Não foi possível concluir a criação dos usuários pendentes.</p>';
+      openModal(resultModal, resultBackdrop);
+      return;
+    }
+
+    resultBody.innerHTML = [
+      `<div style="display: grid; gap: 0.5rem; color: var(--text-secondary);">`,
+      `<div>Associados analisados: <strong>${result.total_associates || 0}</strong></div>`,
+      `<div>Criados: <strong>${result.created || 0}</strong></div>`,
+      `<div>Ignorados (usuário já existe): <strong>${result.skipped_existing_user || 0}</strong></div>`,
+      `<div>Ignorados (status inválido): <strong>${result.skipped_invalid_status || 0}</strong></div>`,
+      `<div>Ignorados (domínio inválido): <strong>${result.skipped_invalid_domain || 0}</strong></div>`,
+      `<div>Ignorados (dados incompletos): <strong>${result.skipped_missing_data || 0}</strong></div>`,
+      `<div>Erros: <strong>${result.errors || 0}</strong></div>`,
+      `</div>`
+    ].join('');
+
+    openModal(resultModal, resultBackdrop);
+  }
+
   form.addEventListener('submit', (e)=>{ e.preventDefault(); fetchList(); });
   resetBtn.addEventListener('click', ()=>{ form.reset(); fetchList(); });
+
+  if (createUsersBtn) {
+    createUsersBtn.onclick = () => openModal(confirmModal, confirmBackdrop);
+
+    confirmModal?.querySelectorAll('[data-dismiss-create-users-confirm]').forEach(btn => {
+      btn.addEventListener('click', () => closeModal(confirmModal, confirmBackdrop));
+    });
+
+    confirmBackdrop?.addEventListener('click', () => closeModal(confirmModal, confirmBackdrop));
+
+    resultModal?.querySelectorAll('[data-dismiss-create-users-result]').forEach(btn => {
+      btn.addEventListener('click', () => closeModal(resultModal, resultBackdrop));
+    });
+
+    resultBackdrop?.addEventListener('click', () => closeModal(resultModal, resultBackdrop));
+
+    if (confirmCreateUsersBtn) {
+      confirmCreateUsersBtn.onclick = async () => {
+        const originalConfirmText = confirmCreateUsersBtn.textContent;
+        const originalButtonText = createUsersBtn.textContent;
+
+        confirmCreateUsersBtn.disabled = true;
+        confirmCreateUsersBtn.textContent = 'Processando...';
+        createUsersBtn.disabled = true;
+        createUsersBtn.textContent = 'Processando...';
+
+        try {
+          const response = await frappe.call({
+            method: 'gris.api.users.user_manager.create_missing_associate_users'
+          });
+
+          closeModal(confirmModal, confirmBackdrop);
+          renderResultModal(response.message || {});
+          fetchList();
+        } catch (error) {
+          console.warn('Erro ao criar usuários pendentes', error);
+          closeModal(confirmModal, confirmBackdrop);
+          renderResultModal({}, true);
+        } finally {
+          confirmCreateUsersBtn.disabled = false;
+          confirmCreateUsersBtn.textContent = originalConfirmText;
+          createUsersBtn.disabled = false;
+          createUsersBtn.textContent = originalButtonText;
+        }
+      };
+    }
+  }
+
   // Popular selects e carregar a lista
   populateDynamicFilters().then(fetchList);
 });

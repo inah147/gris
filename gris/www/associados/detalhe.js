@@ -6,6 +6,7 @@
     const changed = {}; // field -> value
     const saveBtn = document.getElementById('btn-salvar');
     const afastarBtn = document.getElementById('btn-afastar');
+    const createUserBtn = document.getElementById('btn-criar-usuario');
     const flagsEl = document.getElementById('assoc-flags');
     const associadoName = flagsEl?.dataset.name || '';
     const CAN_EDIT = flagsEl?.dataset.canEdit === '1';
@@ -52,6 +53,112 @@
     function notify(msg, cls='info'){
       if(window.frappe?.show_alert){ frappe.show_alert({message: msg, indicator: cls}); }
       else { console.log(msg); }
+    }
+
+    const createUserConfirmModal = document.getElementById('modalCreateUserConfirm');
+    const createUserConfirmBackdrop = document.getElementById('modalCreateUserConfirmBackdrop');
+    const createUserResultModal = document.getElementById('modalCreateUserResult');
+    const createUserResultBackdrop = document.getElementById('modalCreateUserResultBackdrop');
+    const confirmCreateUserBtn = document.getElementById('btn-confirm-create-user');
+    const createUserResultTitle = document.getElementById('create-user-result-title');
+    const createUserResultBody = document.getElementById('create-user-result-body');
+
+    function openModal(modal, backdrop) {
+      if (!modal || !backdrop) return;
+      backdrop.style.display = 'block';
+      modal.style.display = 'flex';
+      setTimeout(() => {
+        backdrop.classList.add('show');
+        modal.classList.add('show');
+      }, 10);
+      document.body.classList.add('modal-open');
+    }
+
+    function closeModal(modal, backdrop) {
+      if (!modal || !backdrop) return;
+      modal.classList.remove('show');
+      backdrop.classList.remove('show');
+      setTimeout(() => {
+        modal.style.display = 'none';
+        backdrop.style.display = 'none';
+        if (!document.querySelector('.modal-modern.show')) {
+          document.body.classList.remove('modal-open');
+        }
+      }, 250);
+    }
+
+    function showCreateUserResult(title, bodyHtml) {
+      if (!createUserResultModal || !createUserResultBackdrop || !createUserResultTitle || !createUserResultBody) {
+        return;
+      }
+      createUserResultTitle.textContent = title;
+      createUserResultBody.innerHTML = bodyHtml;
+      openModal(createUserResultModal, createUserResultBackdrop);
+    }
+
+    if (createUserBtn) {
+      createUserBtn.onclick = () => openModal(createUserConfirmModal, createUserConfirmBackdrop);
+
+      createUserConfirmModal?.querySelectorAll('[data-dismiss-create-user-confirm]').forEach(btn => {
+        btn.addEventListener('click', () => closeModal(createUserConfirmModal, createUserConfirmBackdrop));
+      });
+
+      createUserConfirmBackdrop?.addEventListener('click', () => closeModal(createUserConfirmModal, createUserConfirmBackdrop));
+
+      createUserResultModal?.querySelectorAll('[data-dismiss-create-user-result]').forEach(btn => {
+        btn.addEventListener('click', () => closeModal(createUserResultModal, createUserResultBackdrop));
+      });
+
+      createUserResultBackdrop?.addEventListener('click', () => closeModal(createUserResultModal, createUserResultBackdrop));
+
+      if (confirmCreateUserBtn) {
+        confirmCreateUserBtn.onclick = async () => {
+          const originalConfirmText = confirmCreateUserBtn.textContent;
+          const originalButtonText = createUserBtn.textContent;
+
+          confirmCreateUserBtn.disabled = true;
+          confirmCreateUserBtn.textContent = 'Processando...';
+          createUserBtn.disabled = true;
+          createUserBtn.textContent = 'Processando...';
+
+          try {
+            const response = await frappe.call({
+              method: 'gris.api.users.user_manager.create_associate_user_manually',
+              args: { associate_name: associadoName }
+            });
+
+            closeModal(createUserConfirmModal, createUserConfirmBackdrop);
+
+            const result = response.message || {};
+            if (result.created) {
+              showCreateUserResult(
+                'Usuário criado com sucesso',
+                `<p style="margin: 0; color: var(--text-secondary);">Usuário criado para <strong>${frappe.utils.escape_html(result.email || '')}</strong>.</p>`
+              );
+              createUserBtn.remove();
+            } else {
+              showCreateUserResult(
+                'Usuário já existente',
+                `<p style="margin: 0; color: var(--text-secondary);">Já existe usuário para <strong>${frappe.utils.escape_html(result.email || '')}</strong>.</p>`
+              );
+              createUserBtn.remove();
+            }
+          } catch (error) {
+            closeModal(createUserConfirmModal, createUserConfirmBackdrop);
+            showCreateUserResult(
+              'Erro ao criar usuário',
+              '<p style="margin: 0; color: var(--text-secondary);">Não foi possível concluir a criação do usuário deste associado.</p>'
+            );
+          } finally {
+            confirmCreateUserBtn.disabled = false;
+            confirmCreateUserBtn.textContent = originalConfirmText;
+            if (document.getElementById('btn-criar-usuario')) {
+              createUserBtn.disabled = false;
+              createUserBtn.textContent = originalButtonText;
+            }
+          }
+        };
+      }
     }
 
     saveBtn?.addEventListener('click', () => {

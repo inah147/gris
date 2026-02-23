@@ -69,6 +69,9 @@
           </select>
         </div>
         <div class="filter-actions">
+          {% if can_create_associate_users %}
+            <button type="button" id="btn-create-users" class="btn-modern btn-modern--outline btn-modern--sm">Criar usuários pendentes</button>
+          {% endif %}
           <button type="submit" class="btn-modern btn-modern--primary btn-modern--sm">Aplicar</button>
           <button type="button" id="btn-reset" class="btn-modern btn-modern--outline btn-modern--sm">Limpar</button>
         </div>
@@ -104,6 +107,43 @@
       </table>
     </div>
   </div>
+
+  {% if can_create_associate_users %}
+    <div class="modal-backdrop" id="modalCreateUsersConfirmBackdrop" style="display: none;"></div>
+    <div class="modal-modern" id="modalCreateUsersConfirm" tabindex="-1" style="display: none;">
+      <div class="modal-dialog">
+        <div class="modal-modern__content">
+          <div class="modal-modern__header">
+            <h5 class="modal-modern__title">Criar usuários pendentes</h5>
+          </div>
+          <div class="modal-modern__body">
+            <p style="margin: 0; color: var(--text-secondary);">
+              Deseja criar usuários para associados válidos com id@escoteiros que ainda não possuem usuário?
+            </p>
+          </div>
+          <div class="modal-modern__footer">
+            <button type="button" class="btn-modern btn-modern--ghost btn-modern--sm" data-dismiss-create-users-confirm>Cancelar</button>
+            <button type="button" id="btn-confirm-create-users" class="btn-modern btn-modern--primary btn-modern--sm">Confirmar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="modalCreateUsersResultBackdrop" style="display: none;"></div>
+    <div class="modal-modern" id="modalCreateUsersResult" tabindex="-1" style="display: none;">
+      <div class="modal-dialog">
+        <div class="modal-modern__content">
+          <div class="modal-modern__header">
+            <h5 class="modal-modern__title" id="create-users-result-title">Resultado</h5>
+          </div>
+          <div class="modal-modern__body" id="create-users-result-body"></div>
+          <div class="modal-modern__footer">
+            <button type="button" class="btn-modern btn-modern--primary btn-modern--sm" data-dismiss-create-users-result>Fechar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
 {% endblock %}
 
 {% block extra_script %}

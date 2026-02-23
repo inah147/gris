@@ -12,6 +12,9 @@
     <div class="page-header__actions">
       <button type="button" id="btn-salvar" class="btn-modern btn-modern--primary btn-modern--sm d-none">Salvar</button>
       <button type="button" id="btn-afastar" class="btn-modern btn-modern--outline btn-modern--sm d-none" style="border-color: var(--color-warning); color: var(--color-warning);">Afastar</button>
+      {% if can_create_associate_user %}
+      <button type="button" id="btn-criar-usuario" class="btn-modern btn-modern--outline btn-modern--sm">Criar usuário</button>
+      {% endif %}
       <a href="/associados/lista" class="btn-modern btn-modern--ghost btn-modern--sm">Voltar</a>
     </div>
   </div>
@@ -215,6 +218,43 @@
         </div>
       </div>
     </div>
+
+    {% if can_create_associate_user %}
+    <div class="modal-backdrop" id="modalCreateUserConfirmBackdrop" style="display: none;"></div>
+    <div class="modal-modern" id="modalCreateUserConfirm" tabindex="-1" style="display: none;">
+      <div class="modal-dialog">
+        <div class="modal-modern__content">
+          <div class="modal-modern__header">
+            <h5 class="modal-modern__title">Criar usuário do associado</h5>
+          </div>
+          <div class="modal-modern__body">
+            <p style="margin: 0; color: var(--text-secondary);">
+              Deseja criar o usuário para este associado usando o ID Escoteiros informado?
+            </p>
+          </div>
+          <div class="modal-modern__footer">
+            <button type="button" class="btn-modern btn-modern--ghost btn-modern--sm" data-dismiss-create-user-confirm>Cancelar</button>
+            <button type="button" id="btn-confirm-create-user" class="btn-modern btn-modern--primary btn-modern--sm">Confirmar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="modalCreateUserResultBackdrop" style="display: none;"></div>
+    <div class="modal-modern" id="modalCreateUserResult" tabindex="-1" style="display: none;">
+      <div class="modal-dialog">
+        <div class="modal-modern__content">
+          <div class="modal-modern__header">
+            <h5 class="modal-modern__title" id="create-user-result-title">Resultado</h5>
+          </div>
+          <div class="modal-modern__body" id="create-user-result-body"></div>
+          <div class="modal-modern__footer">
+            <button type="button" class="btn-modern btn-modern--primary btn-modern--sm" data-dismiss-create-user-result>Fechar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
   {% endif %}
 {% endblock %}
 

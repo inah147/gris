@@ -181,9 +181,10 @@ scheduler_events = {
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "gris.event.get_events"
-# }
+override_whitelisted_methods = {
+	"frappe.core.doctype.user.user.update_password": "gris.api.auth.update_password",
+	# "frappe.desk.doctype.event.event.get_events": "gris.event.get_events"
+}
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
@@ -203,7 +204,7 @@ scheduler_events = {
 
 # Request Events
 # ----------------
-# before_request = ["gris.utils.before_request"]
+before_request = ["gris.api.auth.enforce_no_desk_redirect"]
 # after_request = ["gris.utils.after_request"]
 
 # Job Events

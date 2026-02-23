@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import add_days, format_date, getdate
+from frappe.utils import add_days, format_date, format_datetime, get_fullname, getdate, strip_html
 
 from gris.api.portal_access import enrich_context
 
@@ -141,5 +141,32 @@ def get_context(context):
 		steps_data.append(step_info)
 
 	context.flow_steps = steps_data
+
+	# Comentários internos (usando Comment)
+	comments = frappe.get_all(
+		"Comment",
+		filters={
+			"reference_doctype": "Novo Associado",
+			"reference_name": name,
+			"comment_type": "Comment",
+		},
+		fields=["name", "content", "owner", "creation"],
+		order_by="creation desc",
+		limit=50,
+	)
+
+	context.comments = [
+		{
+			"name": c.name,
+			"content_text": strip_html((c.content or "").replace("</p>", "\n").replace("<br>", "\n")),
+			"owner": c.owner,
+			"owner_fullname": get_fullname(c.owner),
+			"creation": format_datetime(c.creation, "dd/MM/yyyy HH:mm"),
+		}
+		for c in comments
+	]
+	context.comments_count = len(comments)
+	context.can_add_comments = doc.has_permission("write")
+	context.current_user = frappe.session.user
 
 	return context

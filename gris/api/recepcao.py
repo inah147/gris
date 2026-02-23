@@ -1,4 +1,6 @@
 import frappe
+from frappe import _
+from frappe.utils import format_datetime, get_fullname, strip_html
 
 
 @frappe.whitelist()
@@ -192,3 +194,86 @@ def registrar_recepcao_realizada(novo_associado_name):
 	doc.save()
 
 	return {"status": "success"}
+
+
+@frappe.whitelist()
+def adicionar_comentario(novo_associado_name: str, content: str):
+	"""Cria um Comment vinculado ao Novo Associado para uso interno da recepção."""
+	if frappe.session.user == "Guest":
+		frappe.throw(_("Você precisa estar autenticado."), frappe.PermissionError)
+
+	if not novo_associado_name:
+		frappe.throw(_("Informe o registro do associado."))
+
+	content = (content or "").strip()
+	if not content:
+		frappe.throw(_("O comentário não pode estar vazio."))
+
+	# Verifica se o registro existe e se o usuário tem permissão de escrita
+	doc = frappe.get_doc("Novo Associado", novo_associado_name)
+	if not doc.has_permission("write"):
+		frappe.throw(_("Você não tem permissão para comentar."), frappe.PermissionError)
+
+	comment = frappe.get_doc(
+		{
+			"doctype": "Comment",
+			"comment_type": "Comment",
+			"reference_doctype": "Novo Associado",
+			"reference_name": novo_associado_name,
+			"content": content,
+		}
+	)
+	comment.insert()
+
+	clean_text = strip_html((content or "").replace("</p>", "\n").replace("<br>", "\n"))
+
+	return {
+		"name": comment.name,
+		"content": comment.content,
+		"content_text": clean_text,
+		"owner": comment.owner,
+		"owner_fullname": get_fullname(comment.owner),
+		"creation": format_datetime(comment.creation, "dd/MM/yyyy HH:mm"),
+	}
+
+
+@frappe.whitelist()
+def editar_comentario(comment_name: str, content: str):
+	"""Edita um comentário existente se o usuário for dono ou tiver permissão de escrita no registro."""
+	if frappe.session.user == "Guest":
+		frappe.throw(_("Você precisa estar autenticado."), frappe.PermissionError)
+
+	content = (content or "").strip()
+	if not content:
+		frappe.throw(_("O comentário não pode estar vazio."))
+
+	if not comment_name:
+		frappe.throw(_("Comentário inválido."))
+
+	comment = frappe.get_doc("Comment", comment_name)
+	if comment.reference_doctype != "Novo Associado":
+		frappe.throw(_("Edição não permitida."), frappe.PermissionError)
+
+	ref_name = comment.reference_name
+	if not ref_name or not frappe.db.exists("Novo Associado", ref_name):
+		frappe.throw(_("Registro relacionado não encontrado."))
+
+	ref_doc = frappe.get_doc("Novo Associado", ref_name)
+
+	# Pode editar se for dono ou tiver permissão de escrita no Doc
+	if comment.owner != frappe.session.user and not ref_doc.has_permission("write"):
+		frappe.throw(_("Você não tem permissão para editar este comentário."), frappe.PermissionError)
+
+	comment.content = content
+	comment.save()
+
+	clean_text = strip_html((content or "").replace("</p>", "\n").replace("<br>", "\n"))
+
+	return {
+		"name": comment.name,
+		"content": comment.content,
+		"content_text": clean_text,
+		"owner": comment.owner,
+		"owner_fullname": get_fullname(comment.owner),
+		"creation": format_datetime(comment.creation, "dd/MM/yyyy HH:mm"),
+	}

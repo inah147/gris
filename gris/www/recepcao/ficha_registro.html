@@ -10,9 +10,24 @@ doc.nome_completo }}{% endif %}{% endblock %} {% block head_include %} {{ super(
 		{% endif %}
 	</div>
 	<div class="page-header__actions">
-		<a href="/recepcao/visao_geral" class="btn-modern btn-modern--ghost btn-modern--sm"
-			>Voltar</a
-		>
+			<button
+				id="comment-modal-open"
+				class="btn-modern btn-modern--ghost btn-modern--sm"
+				type="button"
+				style="display: inline-flex; align-items: center; gap: 0.35rem"
+			>
+				<span>Observações</span>
+				<span
+					id="comment-count"
+					class="g-badge g-badge--secondary"
+					style="min-width: 1.75rem; justify-content: center"
+				>
+					{{ comments_count or 0 }}
+				</span>
+			</button>
+			<a href="/recepcao/visao_geral" class="btn-modern btn-modern--ghost btn-modern--sm"
+				>Voltar</a
+			>
 	</div>
 </div>
 {% endblock %} {% block main %} {% if not_found %}
@@ -132,6 +147,90 @@ doc.nome_completo }}{% endif %}{% endblock %} {% block head_include %} {{ super(
 			</div>
 			{% endfor %}
 		</div>
+	</div>
+</div>
+
+<div id="comment-modal" class="comment-modal" aria-hidden="true">
+	<div class="comment-modal__backdrop" data-close="comment-modal"></div>
+	<div class="comment-modal__dialog" role="dialog" aria-modal="true" aria-label="Observações">
+		<div class="comment-modal__header">
+			<div style="display: flex; align-items: center; gap: 0.5rem">
+				<h3 style="margin: 0">Observações</h3>
+				<span class="g-badge g-badge--secondary" id="comment-count-modal">{{ comments_count or 0 }}</span>
+			</div>
+		</div>
+		<div class="comment-modal__body">
+			{% if can_add_comments %}
+			<form id="comment-form" data-docname="{{ doc.name }}" class="comment-form" style="margin-bottom: 1rem">
+				<label class="form-label-modern" for="comment-text" style="margin-bottom: 0.35rem">Novo comentário</label>
+				<textarea
+					id="comment-text"
+					class="form-input-modern"
+					rows="2"
+					placeholder="Escreva um comentário..."
+					required
+				></textarea>
+				<div class="d-flex" style="gap: 0.5rem; margin-top: 0.35rem; align-items: center">
+					<button
+						type="submit"
+						id="comment-submit"
+						class="btn-modern btn-modern--primary btn-modern--sm"
+					>
+						Adicionar
+					</button>
+					<button
+						type="button"
+						id="comment-cancel-edit"
+						class="btn-modern btn-modern--ghost btn-modern--sm"
+						style="display: none"
+					>
+						Cancelar edição
+					</button>
+					<span id="comment-error" style="color: var(--danger-600); display: none"></span>
+				</div>
+			</form>
+			{% endif %}
+			<div id="comment-list" class="comment-list">
+				{% if comments and comments|length > 0 %}
+					{% for c in comments %}
+					<div class="comment-item" data-comment-name="{{ c.name }}">
+							<div class="comment-item__avatar">
+								<span>{{ c.owner_fullname[0]|upper }}</span>
+							</div>
+							<div class="comment-item__body">
+								<div class="comment-item__meta">
+									<div class="comment-item__meta-left">
+										<span class="comment-item__author">{{ c.owner_fullname }}</span>
+										<span class="comment-item__dot">•</span>
+										<span class="comment-item__date">{{ c.creation }}</span>
+									</div>
+									{% if can_add_comments and c.owner == current_user %}
+									<button
+										type="button"
+										class="comment-item__edit btn-modern btn-modern--ghost btn-modern--xs"
+										data-comment-name="{{ c.name }}"
+										data-comment-content="{{ c.content_text | escape }}"
+									>
+										Editar
+									</button>
+									{% endif %}
+								</div>
+								<div class="comment-item__content">{{ c.content_text | escape | replace('\n', '<br>') | safe }}</div>
+							</div>
+					</div>
+					{% endfor %}
+				{% else %}
+				<p class="text-muted" id="comment-empty" style="margin: 0">Nenhum comentário ainda.</p>
+				{% endif %}
+			</div>
+		</div>
+			<div class="comment-modal__footer">
+				<div class="comment-modal__footer-actions">
+					<button type="button" class="btn-modern btn-modern--ghost btn-modern--sm" data-close="comment-modal">
+						Fechar
+					</button>
+				</div>
+			</div>
 	</div>
 </div>
 

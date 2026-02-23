@@ -36,7 +36,7 @@ frappe.ready(() => {
         <tr>
           <td colspan="8">
             <div class="empty-state" style="border: none; margin: 2rem 0;">
-              <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 64px; height: 64px; margin-bottom: 1rem; color: var(--text-muted);">
                 <circle cx="12" cy="12" r="10"></circle>
                 <path d="M16 16s-1.5-2-4-2-4 2-4 2M9 9h.01M15 9h.01"></path>
               </svg>

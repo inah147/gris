@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"5v81V6oWKZ\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Configura\u00e7\u00f5es</span>\",\"col\":12}},{\"id\":\"5MURehvsxe\",\"type\":\"card\",\"data\":{\"card_name\":\"Financeiro\",\"col\":4}},{\"id\":\"VZFDdRNGVw\",\"type\":\"card\",\"data\":{\"card_name\":\"Geral\",\"col\":4}}]",
+ "content": "[{\"id\":\"5v81V6oWKZ\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Configura\u00e7\u00f5es</span>\",\"col\":12}},{\"id\":\"VZFDdRNGVw\",\"type\":\"card\",\"data\":{\"card_name\":\"Geral\",\"col\":4}},{\"id\":\"5MURehvsxe\",\"type\":\"card\",\"data\":{\"card_name\":\"Financeiro\",\"col\":4}},{\"id\":\"ZAu1xHtYKv\",\"type\":\"card\",\"data\":{\"card_name\":\"Recep\u00e7\u00e3o\",\"col\":4}},{\"id\":\"YHi2vbvuYr\",\"type\":\"card\",\"data\":{\"card_name\":\"Calend\u00e1rio\",\"col\":4}}]",
  "creation": "2025-09-07 10:18:31.190067",
  "custom_blocks": [],
  "docstatus": 0,
@@ -50,9 +50,57 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Calend\u00e1rio",
+   "link_count": 1,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Configuracoes de Feriados",
+   "link_count": 0,
+   "link_to": "Configuracoes de Feriados",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Recep\u00e7\u00e3o",
+   "link_count": 2,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Configuracoes de Recepcao",
+   "link_count": 0,
+   "link_to": "Configuracoes de Recepcao",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Vagas",
+   "link_count": 0,
+   "link_to": "Vagas",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2025-09-19 07:31:55.591939",
+ "modified": "2026-02-23 08:13:32.758969",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Configura\u00e7\u00f5es",

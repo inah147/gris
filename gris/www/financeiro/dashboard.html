@@ -309,5 +309,11 @@
   .section-title:first-of-type {
     margin-top: 0;
   }
+  @media (max-width: 640px) {
+    /* Espaço entre cards quando empilham no mobile */
+    [id^="fin-row-"] > .col-12 + .col-12 {
+      margin-top: 1.5rem;
+    }
+  }
 </style>
 {% endblock %}

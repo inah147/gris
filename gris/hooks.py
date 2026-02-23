@@ -277,6 +277,7 @@ fixtures = [
 					"Visualizador Calendario",
 					"Gestor Calendario",
 					"Recepcao",
+					"Responsavel",
 				],
 			]
 		],

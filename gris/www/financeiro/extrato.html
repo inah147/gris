@@ -185,6 +185,9 @@
             <th style="width: 40px;"></th>
             <th style="width: 120px;">Data/Hora</th>
             <th>Descrição Reduzida</th>
+            {% if can_view_full_description %}
+            <th>Descrição</th>
+            {% endif %}
             <th style="width: 120px; text-align: right;">Valor</th>
             <th style="width: 150px;">Instituição</th>
             <th style="width: 130px;">Carteira</th>
@@ -222,6 +225,13 @@
                   {{ (transacao.descricao_reduzida[:45] + '...') if transacao.descricao_reduzida and transacao.descricao_reduzida|length > 45 else (transacao.descricao_reduzida or "-") }}
                 </div>
               </td>
+              {% if can_view_full_description %}
+              <td onclick="rowClick('{{ transacao.name }}');" style="cursor: pointer;">
+                <div style="font-weight: 500; color: var(--text-primary);">
+                  {{ (transacao.descricao[:70] + '...') if transacao.descricao and transacao.descricao|length > 70 else (transacao.descricao or "-") }}
+                </div>
+              </td>
+              {% endif %}
               <td style="text-align: right;" onclick="rowClick('{{ transacao.name }}');" style="cursor: pointer;">
                 <span style="font-weight: 600; font-size: 0.875rem; color: var(--text-primary); white-space: nowrap;">
                   R$ {{ '{:,.2f}'.format(transacao.valor|float).replace(',', 'X').replace('.', ',').replace('X', '.') if transacao.valor is not none else '-' }}
@@ -271,7 +281,7 @@
             </tr>
           {% else %}
             <tr>
-              <td colspan="9">
+              <td colspan="{{ 10 if can_view_full_description else 9 }}">
                 <div class="empty-state" style="border: none; margin: 2rem 0;">
                   <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 64px; height: 64px; margin-bottom: 1rem; color: var(--text-muted);">
                     <circle cx="12" cy="12" r="10"></circle>

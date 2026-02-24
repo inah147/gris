@@ -30,7 +30,7 @@ set active_link = '/financeiro/despesas' %} {% block page_header %}
 		{% if contas_continuas and contas_continuas|length %}
 		<div class="row g-3">
 			{% for conta in contas_continuas %}
-			<div class="col-12 col-md-6 col-lg-4">
+			<div class="col-12 col-md-6 col-lg-4 mb-3 mb-md-0">
 				<div class="card-modern" style="height: 100%">
 					<div class="card-modern__body d-flex flex-column">
 						<h5 class="fw-semibold mb-2" title="{{ conta.descricao }}">
@@ -87,7 +87,7 @@ set active_link = '/financeiro/despesas' %} {% block page_header %}
 		{% if contas_temporarias and contas_temporarias|length %}
 		<div class="row g-3">
 			{% for conta in contas_temporarias %}
-			<div class="col-12 col-md-6 col-lg-4">
+			<div class="col-12 col-md-6 col-lg-4 mb-3 mb-md-0">
 				<div
 					class="card-modern"
 					style="height: 100%; border-left: 3px solid var(--color-warning)"

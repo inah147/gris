@@ -17,10 +17,17 @@ def get_context(context):
 			if r[field]
 		]
 
+	def get_master_options(doctype, field="name", order_by="name"):
+		return [
+			r[field]
+			for r in frappe.get_all(doctype, fields=[field], order_by=order_by)
+			if r.get(field)
+		]
+
 	context.opcoes_instituicao = get_distinct("instituicao")
 	context.opcoes_carteira = get_distinct("carteira")
-	context.opcoes_categoria = get_distinct("categoria")
-	context.opcoes_centro_de_custo = get_distinct("centro_de_custo")
+	context.opcoes_categoria = get_master_options("Categoria de Transacao")
+	context.opcoes_centro_de_custo = get_master_options("Centro de Custo")
 	context.opcoes_conta_fixa = get_distinct("conta_fixa")
 
 	# Bloqueio para usuários não autenticados
@@ -40,6 +47,8 @@ def get_context(context):
 		context.sidebar_title = "Portal"
 	context.active_link = "/financeiro/extrato"
 	enrich_context(context, "/financeiro/extrato")
+	roles = frappe.get_roles()
+	context.can_view_full_description = "Gestor Financeiro" in roles
 
 	# Filtros vindos da query string
 	filters = {}
@@ -83,25 +92,28 @@ def get_context(context):
 	# Buscar total de transações para paginação
 	total_transacoes = frappe.db.count("Transacao Extrato Geral", filters=filters)
 
+	fields = [
+		"name",
+		"transacao_revisada",
+		"timestamp_transacao",
+		"valor",
+		"descricao_reduzida",
+		"instituicao",
+		"carteira",
+		"centro_de_custo",
+		"categoria",
+		"fixo_variavel",
+		"ordinaria_extraordinaria",
+		"conta_fixa",
+		"repasse_entre_contas",
+		"data_deposito",
+	]
+	if context.can_view_full_description:
+		fields.insert(4, "descricao")
+
 	transacoes = frappe.get_all(
 		"Transacao Extrato Geral",
-		fields=[
-			"name",
-			"transacao_revisada",
-			"timestamp_transacao",
-			"valor",
-			"descricao",
-			"descricao_reduzida",
-			"instituicao",
-			"carteira",
-			"centro_de_custo",
-			"categoria",
-			"fixo_variavel",
-			"ordinaria_extraordinaria",
-			"conta_fixa",
-			"repasse_entre_contas",
-			"data_deposito",
-		],
+		fields=fields,
 		filters=filters,
 		order_by="timestamp_transacao desc",
 		limit=page_size,

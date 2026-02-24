@@ -176,6 +176,7 @@ def enrich_context(context, current_path: str):
 	# Permissions for mobile bottom nav
 	context.has_financeiro_access = user_has_access("/financeiro")
 	context.has_associados_access = user_has_access("/associados")
+	context.has_calendario_access = user_has_access("/calendario")
 
 	# Descobrir filhos do grupo atual (para navegação móvel simplificada)
 	current_children: list[dict[str, object]] = []

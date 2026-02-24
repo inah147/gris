@@ -46,7 +46,8 @@ opcionalmente active_link (ex: '/associados' ou '/inicio'). Caso não defina, te
 #} {% set current_path = active_link or ('/' ~ path) %} {# Flags para bottom nav estática (mobile)
 #} {% set active_inicio = current_path.startswith('/inicio') or (current_path == '/') %} {% set
 active_financeiro = current_path.startswith('/financeiro') %} {% set active_associados =
-current_path.startswith('/associados') %} {# Macro para ícones lineares coerentes com o restante da
+current_path.startswith('/associados') %} {% set active_calendario =
+current_path.startswith('/calendario') %} {# Macro para ícones lineares coerentes com o restante da
 UI #} {% macro nav_icon(label) %} {% set l = (label or '')|lower %} {% if 'início' in l or 'inicio'
 in l %}
 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -285,6 +286,27 @@ block content %}
 					</svg>
 				</span>
 				<span class="fxm-b-label">Associados</span>
+			</a>
+			{% endif %} {% if has_calendario_access %}
+			<a
+				href="/calendario"
+				class="fxm-b-item {% if active_calendario %}active{% endif %}"
+				aria-label="Ir para Calendário"
+				role="tab"
+			>
+				<span class="fxm-b-icon" aria-hidden="true">
+					<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+						<rect class="icon-fill" x="3" y="4" width="18" height="18" rx="2" ry="2" />
+						<line class="icon-fill" x1="16" y1="2" x2="16" y2="6" />
+						<line class="icon-fill" x1="8" y1="2" x2="8" y2="6" />
+						<line class="icon-fill" x1="3" y1="10" x2="21" y2="10" />
+						<rect class="icon-line" x="3" y="4" width="18" height="18" rx="2" ry="2" />
+						<line class="icon-line" x1="16" y1="2" x2="16" y2="6" />
+						<line class="icon-line" x1="8" y1="2" x2="8" y2="6" />
+						<line class="icon-line" x1="3" y1="10" x2="21" y2="10" />
+					</svg>
+				</span>
+				<span class="fxm-b-label">Calendário</span>
 			</a>
 			{% endif %}
 		</div>
@@ -622,6 +644,10 @@ block content %}
 			left: 0;
 			right: 0;
 			border-bottom: 0;
+			border-bottom-left-radius: 12px;
+			border-bottom-right-radius: 12px;
+			overflow: hidden;
+			box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.25), 0 2px 6px -2px rgba(0, 0, 0, 0.16);
 			z-index: 1000;
 		}
 		.fx-main {
@@ -705,11 +731,12 @@ block content %}
 		}
 		.fxm-b-item.active .fxm-b-icon svg {
 			stroke: #0d4d91;
+			stroke-width: 2.25;
 		}
 		.fxm-b-icon .icon-fill {
 			display: none;
-			fill: #0d4d91;
-			stroke: none;
+			fill: none;
+			stroke: currentColor;
 		}
 		.fxm-b-icon .icon-line {
 			stroke: currentColor;
@@ -717,22 +744,23 @@ block content %}
 		}
 		.fxm-b-icon .icon-fill-door {
 			display: none;
-			fill: #0b4b89;
+			fill: none;
+			stroke: currentColor;
 		}
 		.fxm-b-icon .door-line {
 			stroke: currentColor;
 		}
 		.fxm-b-item.active .icon-fill {
-			display: block;
+			display: none;
 		}
 		.fxm-b-item.active .icon-line {
-			display: none;
-		}
-		.fxm-b-item.active .icon-fill-door {
 			display: block;
 		}
-		.fxm-b-item.active .door-line {
+		.fxm-b-item.active .icon-fill-door {
 			display: none;
+		}
+		.fxm-b-item.active .door-line {
+			display: block;
 		}
 		.fxm-b-label {
 			margin-top: 2px;

@@ -247,9 +247,25 @@
     margin-top: var(--space-lg);
 }
 
+@media (max-width: 768px) {
+    #modalNovoContato .modal-actions {
+        flex-direction: column;
+    }
+
+    #modalNovoContato .modal-actions .btn-modern {
+        width: 100%;
+    }
+}
+
 .modal-actions-vertical {
     display: flex;
     flex-direction: column;
     gap: 12px;
     margin-top: 24px;
+}
+
+body.modal-open .fxm-topbar,
+body.modal-open .fxm-bottom-nav,
+body.modal-open .fxm-bottom-fab {
+    z-index: 1030 !important;
 }

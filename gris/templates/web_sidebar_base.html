@@ -155,22 +155,11 @@ block content %}
 
 	<!-- Topbar Mobile -->
 	<div
-		class="fxm-topbar fx-mobile-only d-flex align-items-center justify-content-end px-3 py-2 bg-white fixed-top"
+		class="fxm-topbar fx-mobile-only d-flex align-items-center justify-content-between px-3 py-2 bg-white fixed-top"
 		style="z-index: 1050"
 	>
-		<div class="fxm-logo-wrap">
-			{% if portal_logo %}
-			<a href="/inicio" class="d-inline-block"
-				><img src="{{ portal_logo }}" alt="Logo" class="fxm-logo-mobile"
-			/></a>
-			{% else %}
-			<a href="/inicio" class="fw-semibold text-decoration-none fxm-logo-text"
-				>{{ sidebar_title or 'Portal' }}</a
-			>
-			{% endif %}
-		</div>
 		{% if user_display_name %}
-		<div class="fxm-user-mini fx-user ms-2" id="fxm-user">
+		<div class="fxm-user-mini fx-user" id="fxm-user">
 			<button
 				type="button"
 				class="fxm-user-btn"
@@ -191,6 +180,24 @@ block content %}
 			</div>
 		</div>
 		{% endif %}
+
+		<div class="fxm-logo-wrap">
+			<a href="/inicio" class="d-inline-block"
+				><span class="fxm-logo-center-text">GRIS</span></a
+			>
+		</div>
+
+		<div class="fxm-right-logo-wrap">
+			{% if portal_logo %}
+			<a href="/inicio" class="d-inline-block"
+				><img src="{{ portal_logo }}" alt="Logo Grupo Escoteiro" class="fxm-logo-right"
+			/></a>
+			{% else %}
+			<a href="/inicio" class="fw-semibold text-decoration-none fxm-logo-text"
+				>{{ sidebar_title or 'Portal' }}</a
+			>
+			{% endif %}
+		</div>
 	</div>
 
 	<!-- Bottom Navigation Mobile (Estática) -->
@@ -217,7 +224,59 @@ block content %}
 				</span>
 				<span class="fxm-b-label">Início</span>
 			</a>
-			{% if has_financeiro_access %}
+			{% if has_calendario_access %}
+			<a
+				href="/calendario"
+				class="fxm-b-item {% if active_calendario %}active{% endif %}"
+				aria-label="Ir para Calendário"
+				role="tab"
+			>
+				<span class="fxm-b-icon" aria-hidden="true">
+					<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+						<rect class="icon-fill" x="3" y="4" width="18" height="18" rx="2" ry="2" />
+						<line class="icon-fill" x1="16" y1="2" x2="16" y2="6" />
+						<line class="icon-fill" x1="8" y1="2" x2="8" y2="6" />
+						<line class="icon-fill" x1="3" y1="10" x2="21" y2="10" />
+						<rect class="icon-line" x="3" y="4" width="18" height="18" rx="2" ry="2" />
+						<line class="icon-line" x1="16" y1="2" x2="16" y2="6" />
+						<line class="icon-line" x1="8" y1="2" x2="8" y2="6" />
+						<line class="icon-line" x1="3" y1="10" x2="21" y2="10" />
+					</svg>
+				</span>
+				<span class="fxm-b-label">Calendário</span>
+			</a>
+			{% endif %} {% if has_associados_access %}
+			<a
+				href="/associados"
+				class="fxm-b-item {% if active_associados %}active{% endif %}"
+				aria-label="Ir para Associados"
+				role="tab"
+			>
+				<span class="fxm-b-icon" aria-hidden="true">
+					<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+						<!-- Filled user rounded -->
+						<path
+							class="icon-fill"
+							d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"
+						/>
+						<path
+							class="icon-fill"
+							d="M12.0002 14.5C6.99016 14.5 2.91016 17.86 2.91016 22C2.91016 22.28 3.13016 22.5 3.41016 22.5H20.5902C20.8702 22.5 21.0902 22.28 21.0902 22C21.0902 17.86 17.0102 14.5 12.0002 14.5Z"
+						/>
+						<!-- Outline -->
+						<path
+							class="icon-line"
+							d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"
+						/>
+						<path
+							class="icon-line"
+							d="M12.0002 14.5C6.99016 14.5 2.91016 17.86 2.91016 22C2.91016 22.28 3.13016 22.5 3.41016 22.5H20.5902C20.8702 22.5 21.0902 22.28 21.0902 22C21.0902 17.86 17.0102 14.5 12.0002 14.5Z"
+						/>
+					</svg>
+				</span>
+				<span class="fxm-b-label">Associados</span>
+			</a>
+			{% endif %} {% if has_financeiro_access %}
 			<a
 				href="/financeiro"
 				class="fxm-b-item {% if active_financeiro %}active{% endif %}"
@@ -255,58 +314,6 @@ block content %}
 					</svg>
 				</span>
 				<span class="fxm-b-label">Financeiro</span>
-			</a>
-			{% endif %} {% if has_associados_access %}
-			<a
-				href="/associados"
-				class="fxm-b-item {% if active_associados %}active{% endif %}"
-				aria-label="Ir para Associados"
-				role="tab"
-			>
-				<span class="fxm-b-icon" aria-hidden="true">
-					<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
-						<!-- Filled user rounded -->
-						<path
-							class="icon-fill"
-							d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"
-						/>
-						<path
-							class="icon-fill"
-							d="M12.0002 14.5C6.99016 14.5 2.91016 17.86 2.91016 22C2.91016 22.28 3.13016 22.5 3.41016 22.5H20.5902C20.8702 22.5 21.0902 22.28 21.0902 22C21.0902 17.86 17.0102 14.5 12.0002 14.5Z"
-						/>
-						<!-- Outline -->
-						<path
-							class="icon-line"
-							d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"
-						/>
-						<path
-							class="icon-line"
-							d="M12.0002 14.5C6.99016 14.5 2.91016 17.86 2.91016 22C2.91016 22.28 3.13016 22.5 3.41016 22.5H20.5902C20.8702 22.5 21.0902 22.28 21.0902 22C21.0902 17.86 17.0102 14.5 12.0002 14.5Z"
-						/>
-					</svg>
-				</span>
-				<span class="fxm-b-label">Associados</span>
-			</a>
-			{% endif %} {% if has_calendario_access %}
-			<a
-				href="/calendario"
-				class="fxm-b-item {% if active_calendario %}active{% endif %}"
-				aria-label="Ir para Calendário"
-				role="tab"
-			>
-				<span class="fxm-b-icon" aria-hidden="true">
-					<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
-						<rect class="icon-fill" x="3" y="4" width="18" height="18" rx="2" ry="2" />
-						<line class="icon-fill" x1="16" y1="2" x2="16" y2="6" />
-						<line class="icon-fill" x1="8" y1="2" x2="8" y2="6" />
-						<line class="icon-fill" x1="3" y1="10" x2="21" y2="10" />
-						<rect class="icon-line" x="3" y="4" width="18" height="18" rx="2" ry="2" />
-						<line class="icon-line" x1="16" y1="2" x2="16" y2="6" />
-						<line class="icon-line" x1="8" y1="2" x2="8" y2="6" />
-						<line class="icon-line" x1="3" y1="10" x2="21" y2="10" />
-					</svg>
-				</span>
-				<span class="fxm-b-label">Calendário</span>
 			</a>
 			{% endif %}
 		</div>
@@ -643,12 +650,14 @@ block content %}
 			top: 0;
 			left: 0;
 			right: 0;
-			border-bottom: 0;
+			border-bottom: 1px solid rgba(15, 23, 42, 0.06);
 			border-bottom-left-radius: 12px;
 			border-bottom-right-radius: 12px;
-			overflow: hidden;
+			overflow: visible;
 			box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.25), 0 2px 6px -2px rgba(0, 0, 0, 0.16);
 			z-index: 1000;
+			padding-left: 18px !important;
+			padding-right: 18px !important;
 		}
 		.fx-main {
 			margin-left: 0;
@@ -779,6 +788,25 @@ block content %}
 			max-height: 44px;
 			object-fit: contain;
 		}
+		.fxm-logo-center {
+			height: 34px;
+			width: 34px;
+			object-fit: contain;
+			display: block;
+		}
+		.fxm-logo-center-text {
+			font-size: 1.05rem;
+			font-weight: 800;
+			letter-spacing: 0.1em;
+			color: inherit;
+			line-height: 1;
+		}
+		.fxm-logo-right {
+			max-height: 34px;
+			object-fit: contain;
+			display: block;
+			opacity: 0.9;
+		}
 		.fxm-logo-wrap {
 			position: absolute;
 			left: 50%;
@@ -786,6 +814,20 @@ block content %}
 			transform: translate(-50%, -50%);
 			display: flex;
 			align-items: center;
+		}
+		.fxm-right-logo-wrap {
+			display: flex;
+			align-items: center;
+			justify-content: flex-end;
+			min-width: 38px;
+			min-height: 38px;
+		}
+		.fxm-user-mini {
+			display: flex;
+			align-items: center;
+			justify-content: flex-start;
+			min-width: 38px;
+			min-height: 38px;
 		}
 		.fxm-logo-text {
 			font-size: 1rem;
@@ -797,8 +839,10 @@ block content %}
 		.fxm-topbar .fx-user-menu {
 			top: calc(100% + 8px);
 			bottom: auto;
-			left: auto;
-			right: 0;
+			left: 0;
+			right: auto;
+			max-width: calc(100vw - 36px);
+			z-index: 1060;
 		}
 		.fxm-user-btn {
 			background: #f1f5f9;
@@ -808,10 +852,22 @@ block content %}
 			display: flex;
 			align-items: center;
 			justify-content: center;
+			transition: transform 0.12s ease, background-color 0.18s ease;
 		}
 		.fxm-user-btn:active,
 		.fxm-user-btn:hover {
 			background: #e2e8f0;
+		}
+		.fxm-user-btn:active {
+			transform: scale(0.98);
+		}
+		.fxm-right-logo-wrap a,
+		.fxm-logo-wrap a {
+			transition: transform 0.12s ease;
+		}
+		.fxm-right-logo-wrap a:active,
+		.fxm-logo-wrap a:active {
+			transform: scale(0.98);
 		}
 		.fxm-bottom-spacer {
 			height: calc(var(--fx-bottom-nav-height) + 4px);

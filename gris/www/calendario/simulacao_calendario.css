@@ -685,3 +685,101 @@
 .holiday-type-tag[data-type*="Municipal"] { background: #DCFCE7; color: #15803D; }
 .holiday-type-tag[data-type*="Facultativo"] { background: #FFEDD5; color: #C2410C; }
 
+@media (max-width: 768px) {
+    #reconcile-modal {
+        padding: 0.5rem;
+    }
+
+    #reconcile-modal .modal-modern__content--lg {
+        max-width: calc(100vw - 1rem) !important;
+    }
+
+    #reconcile-modal .modal-modern__header,
+    #reconcile-modal .modal-modern__body,
+    #reconcile-modal .modal-modern__footer {
+        padding: 1rem;
+    }
+
+    #reconcile-modal .modal-modern__body > p {
+        margin-bottom: 1rem !important;
+    }
+
+    #reconcile-modal .reconcile-list {
+        max-height: 52vh;
+        overflow: auto;
+    }
+
+    #reconcile-modal .table-modern th,
+    #reconcile-modal .table-modern td {
+        padding: 0.5rem 0.35rem;
+        vertical-align: top;
+    }
+
+    #reconcile-modal .table-modern th:nth-child(1),
+    #reconcile-modal .table-modern td:nth-child(1) {
+        width: 48% !important;
+    }
+
+    #reconcile-modal .table-modern th:nth-child(2),
+    #reconcile-modal .table-modern td:nth-child(2),
+    #reconcile-modal .table-modern th:nth-child(3),
+    #reconcile-modal .table-modern td:nth-child(3) {
+        width: 26% !important;
+    }
+
+    #reconcile-modal .reconcile-card {
+        min-height: 38px;
+        padding: 0.5rem 0.45rem;
+        border-radius: var(--radius-sm);
+        gap: 0.25rem;
+    }
+
+    #reconcile-modal .reconcile-card span {
+        font-size: var(--text-sm);
+        line-height: var(--leading-tight);
+        text-align: center;
+        display: block;
+    }
+
+    #reconcile-modal .modal-modern__footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 0.75rem;
+    }
+
+    #reconcile-modal .modal-modern__footer > div {
+        width: 100%;
+    }
+
+    #reconcile-modal #btn-select-all-apply {
+        width: 100%;
+        justify-content: center;
+    }
+
+    #reconcile-modal .modal-modern__footer > div:last-child {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem !important;
+    }
+}
+
+@media (max-width: 420px) {
+    #reconcile-modal .modal-modern__title {
+        font-size: 1.1rem;
+    }
+
+    #reconcile-modal .table-modern th,
+    #reconcile-modal .table-modern td {
+        padding: 0.45rem 0.3rem;
+    }
+
+    #reconcile-modal .reconcile-card {
+        min-height: 34px;
+        padding: 0.4rem 0.35rem;
+    }
+
+    #reconcile-modal .reconcile-card span {
+        font-size: 0.8rem;
+    }
+}
+

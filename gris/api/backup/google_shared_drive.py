@@ -50,13 +50,15 @@ def diagnose_destination_folder():
 
 	drive = _get_google_drive_service()
 	folder = _execute_with_retry(
-		lambda: drive.files()
-		.get(
-			fileId=settings.backup_folder_id,
-			fields="id,name,driveId,mimeType",
-			supportsAllDrives=True,
+		lambda: (
+			drive.files()
+			.get(
+				fileId=settings.backup_folder_id,
+				fields="id,name,driveId,mimeType",
+				supportsAllDrives=True,
+			)
+			.execute()
 		)
-		.execute()
 	)
 
 	return {
@@ -165,9 +167,7 @@ def _get_google_drive_service():
 	missing = [key for key in required_keys if not service_account_info.get(key)]
 	if missing:
 		raise frappe.ValidationError(
-			_("Chave JSON da Service Account incompleta. Campos ausentes: {0}").format(
-				", ".join(missing)
-			)
+			_("Chave JSON da Service Account incompleta. Campos ausentes: {0}").format(", ".join(missing))
 		)
 
 	credentials = service_account.Credentials.from_service_account_info(
@@ -180,13 +180,15 @@ def _get_google_drive_service():
 
 def _validate_destination_folder(drive, settings):
 	folder = _execute_with_retry(
-		lambda: drive.files()
-		.get(
-			fileId=settings.backup_folder_id,
-			fields="id,name,mimeType,driveId",
-			supportsAllDrives=True,
+		lambda: (
+			drive.files()
+			.get(
+				fileId=settings.backup_folder_id,
+				fields="id,name,mimeType,driveId",
+				supportsAllDrives=True,
+			)
+			.execute()
 		)
-		.execute()
 	)
 
 	if folder.get("mimeType") != "application/vnd.google-apps.folder":
@@ -216,18 +218,20 @@ def _create_snapshot_folder(drive, settings):
 	snapshot_name = f"{frappe.local.site}-backup-{timestamp}"
 
 	return _execute_with_retry(
-		lambda: drive.files()
-		.create(
-			body={
-				"name": snapshot_name,
-				"mimeType": "application/vnd.google-apps.folder",
-				"parents": [settings.backup_folder_id],
-				"description": f"Snapshot de backup Frappe ({frappe.local.site})",
-			},
-			fields="id,name,createdTime",
-			supportsAllDrives=True,
+		lambda: (
+			drive.files()
+			.create(
+				body={
+					"name": snapshot_name,
+					"mimeType": "application/vnd.google-apps.folder",
+					"parents": [settings.backup_folder_id],
+					"description": f"Snapshot de backup Frappe ({frappe.local.site})",
+				},
+				fields="id,name,createdTime",
+				supportsAllDrives=True,
+			)
+			.execute()
 		)
-		.execute()
 	)
 
 
@@ -258,9 +262,7 @@ def _upload_file_to_shared_drive(drive, settings, backup_path, parent_folder_id)
 
 
 def _apply_retention_policy(drive, settings):
-	cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
-		days=settings.retention_days
-	)
+	cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=settings.retention_days)
 	page_token = None
 	deleted = 0
 
@@ -349,9 +351,7 @@ def _validate_uploaded_checksum(local_path, remote_md5, file_name):
 			hash_md5.update(chunk)
 
 	if hash_md5.hexdigest() != remote_md5:
-		raise frappe.ValidationError(
-			_("Checksum divergente apos upload do arquivo: {0}").format(file_name)
-		)
+		raise frappe.ValidationError(_("Checksum divergente apos upload do arquivo: {0}").format(file_name))
 
 
 def _execute_with_retry(operation):
@@ -377,10 +377,6 @@ def _send_notification(settings, success, message):
 	if success and not settings.notify_on_success:
 		return
 
-	subject = (
-		_("[Backup] Shared Drive - Sucesso")
-		if success
-		else _("[Backup] Shared Drive - Falha")
-	)
+	subject = _("[Backup] Shared Drive - Sucesso") if success else _("[Backup] Shared Drive - Falha")
 
 	frappe.sendmail(recipients=recipients, subject=subject, message=message, delayed=False)

@@ -679,6 +679,23 @@ block content %}
 			z-index: 1050;
 			padding: 0 18px;
 		}
+		body::after {
+			content: "";
+			position: fixed;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			height: 58px;
+			background: linear-gradient(
+				to top,
+				rgba(31, 58, 92, 0.34) 0%,
+				rgba(45, 76, 112, 0.18) 38%,
+				rgba(74, 108, 146, 0.06) 68%,
+				rgba(15, 23, 42, 0) 100%
+			);
+			pointer-events: none;
+			z-index: 1040;
+		}
 		.fxm-bottom-fab {
 			pointer-events: auto;
 			margin: 0 auto;
@@ -877,6 +894,9 @@ block content %}
 		}
 	}
 	@media (max-width: 420px) {
+		body::after {
+			height: 50px;
+		}
 		.fxm-bottom-nav {
 			padding: 0 10px;
 			bottom: 14px;

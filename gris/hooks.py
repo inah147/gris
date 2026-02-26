@@ -160,6 +160,7 @@ scheduler_events = {
 		"gris.api.financeiro.monthly_payments.update_status_monthly_payment",
 		"gris.api.new_members.waiting_list.update_waiting_list_branch",
 		"gris.api.calendario.sync_feriados.sync_feriados",
+		"gris.api.backup.google_shared_drive.enqueue_daily_backup",
 	],
 	# "hourly": [
 	# 	"gris.tasks.hourly"

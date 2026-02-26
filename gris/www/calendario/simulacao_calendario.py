@@ -10,6 +10,9 @@ from gris.api.portal_access import enrich_context
 
 
 def get_context(context):
+	# Disable cache to always show fresh data
+	context.no_cache = 1
+
 	try:
 		year = int(frappe.form_dict.year)
 	except (ValueError, TypeError):

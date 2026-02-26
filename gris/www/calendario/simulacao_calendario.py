@@ -61,7 +61,8 @@ def get_context(context):
 		order_by="inicio asc",
 	)
 
-	context.has_data = bool(events)
+	start_empty = str(frappe.form_dict.get("start_empty") or "").lower() in ("1", "true", "yes")
+	context.has_data = bool(events) or start_empty
 
 	# Check against official calendar
 	official_events = frappe.get_all(
@@ -259,8 +260,8 @@ def get_context(context):
 	sorted_sections = sorted(list(sections), key=get_section_sort_key)
 
 	if not sorted_sections:
-		# If no events, at least show Diretoria? Or just empty.
-		sorted_sections = ["Diretoria"]
+		# If no events, show all known sections from Associado (plus Diretoria)
+		sorted_sections = sorted(all_sections, key=get_section_sort_key)
 
 	context.sections = sorted_sections
 

@@ -99,6 +99,13 @@ def get_context(context):
 		"pais_divorciados",
 	}
 
+	area_options = frappe.get_all(
+		"Unidade Organizacional",
+		fields=["area"],
+		pluck="area",
+		order_by="area asc",
+	)
+
 	def build_field(fieldname):
 		df = df_map.get(fieldname)
 		if not df:
@@ -110,13 +117,20 @@ def get_context(context):
 		value = doc.get(fieldname)
 		# Mostrar mesmo nulo
 		disp = frappe.format_value(value, df.as_dict()) if value not in (None, "") else ""
-		opts = (df.options or "").split("\n") if df.fieldtype == "Select" and df.options else []
+		if fieldname == "area":
+			opts = area_options[:]
+			if value and value not in opts:
+				opts.append(value)
+			fieldtype = "Select"
+		else:
+			opts = (df.options or "").split("\n") if df.fieldtype == "Select" and df.options else []
+			fieldtype = df.fieldtype
 		return {
 			"fieldname": fieldname,
 			"label": df.label or fieldname,
 			"value": value if value not in (None,) else "",
 			"display": disp,
-			"fieldtype": df.fieldtype,
+			"fieldtype": fieldtype,
 			"options": opts,
 			"editable": fieldname in editable,
 		}

@@ -138,3 +138,12 @@
     gap: 12px;
     margin-top: 24px;
 }
+
+/* Ensure backdrop overlays fixed top/bottom page bars on this screen */
+.modal-backdrop {
+    z-index: 2000;
+}
+
+.modal-modern {
+    z-index: 2010;
+}

@@ -71,7 +71,9 @@ def get_context(context):
 
 		# Active associates in the ramo
 		associados_ativos = frappe.get_all(
-			"Associado", filters={"ramo": ramo, "status_no_grupo": "Ativo"}, fields=["data_de_nascimento"]
+			"Associado",
+			filters={"ramo": ramo, "status_no_grupo": "Ativo", "categoria": "Beneficiário"},
+			fields=["data_de_nascimento"],
 		)
 		ativos = len(associados_ativos)
 

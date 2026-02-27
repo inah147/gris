@@ -25,7 +25,16 @@ def _get_total_amount() -> float:
 			filters={"metodo": ["!=", "Dinheiro"]},
 			limit_page_length=0,
 		)
-		return pre_tx[0].get("total") or 0.0 if pre_tx else 0.0
+		total_extrato = pre_tx[0].get("total") or 0.0 if pre_tx else 0.0
+
+		pre_carteiras = frappe.get_all(
+			"Carteira",
+			fields=["SUM(saldo_inicial) as total"],
+			limit_page_length=0,
+		)
+		total_saldo_inicial = pre_carteiras[0].get("total") or 0.0 if pre_carteiras else 0.0
+
+		return float(total_extrato) + float(total_saldo_inicial)
 	except Exception:
 		return 0.0
 

@@ -37,23 +37,23 @@
 {% block main %}
 <div class="calendar-page-container">
     {% if not has_data %}
-    <div class="card-modern" style="max-width: 600px; margin: 4rem auto; text-align: center; padding: 3rem;">
-        <h2 style="margin-bottom: 1rem; color: var(--text-color);">Nenhuma simulação encontrada para {{ year }}</h2>
-        <p style="margin-bottom: 2rem; color: var(--text-muted);">Você pode iniciar uma simulação copiando dados de um ano existente do calendário oficial.</p>
+    <div class="card-modern empty-state-card">
+        <h2 class="empty-state-title">Nenhuma simulação encontrada para {{ year }}</h2>
+        <p class="empty-state-subtitle">Você pode iniciar uma simulação copiando dados de um ano existente do calendário oficial.</p>
         
-        <div style="display: flex; gap: 1rem; justify-content: center; align-items: flex-end;">
-            <div class="filter-field" style="text-align: left;">
+        <div class="empty-state-actions">
+            <div class="filter-field empty-state-year-field">
                 <label class="form-label-modern" for="source-year">Copiar do ano:</label>
-                <select id="source-year" class="form-input-modern" style="min-width: 150px;">
+                <select id="source-year" class="form-input-modern empty-state-select">
                     {% for y in source_years %}
                     <option value="{{ y }}">{{ y }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <button id="btn-copy-data" class="btn-modern btn-modern--primary" data-target-year="{{ year }}">
+            <button id="btn-copy-data" class="btn-modern btn-modern--primary empty-state-btn" data-target-year="{{ year }}">
                 Copiar Dados
             </button>
-            <button id="btn-start-empty" class="btn-modern btn-modern--outline" data-target-year="{{ year }}">
+            <button id="btn-start-empty" class="btn-modern btn-modern--outline empty-state-btn" data-target-year="{{ year }}">
                 Começar do Zero
             </button>
         </div>

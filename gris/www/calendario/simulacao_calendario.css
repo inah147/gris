@@ -5,6 +5,38 @@
     overflow-x: hidden;
 }
 
+.empty-state-card {
+    max-width: 600px;
+    margin: 4rem auto;
+    text-align: center;
+    padding: 3rem;
+}
+
+.empty-state-title {
+    margin-bottom: 1rem;
+    color: var(--text-color);
+}
+
+.empty-state-subtitle {
+    margin-bottom: 2rem;
+    color: var(--text-muted);
+}
+
+.empty-state-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+.empty-state-year-field {
+    text-align: left;
+}
+
+.empty-state-select {
+    min-width: 150px;
+}
+
 /* Filter Bar Customization */
 .section-filter-options {
     display: flex;
@@ -686,6 +718,27 @@
 .holiday-type-tag[data-type*="Facultativo"] { background: #FFEDD5; color: #C2410C; }
 
 @media (max-width: 768px) {
+    .empty-state-card {
+        margin: 1.5rem auto;
+        padding: 1.25rem;
+    }
+
+    .empty-state-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .empty-state-year-field {
+        width: 100%;
+        max-width: none;
+    }
+
+    .empty-state-select,
+    .empty-state-btn {
+        width: 100%;
+        min-width: 0;
+    }
+
     #reconcile-modal {
         padding: 0.5rem;
     }

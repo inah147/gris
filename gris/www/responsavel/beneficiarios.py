@@ -3,6 +3,8 @@ from frappe.utils import add_days, getdate, today
 
 from gris.api.portal_access import enrich_context
 
+no_cache = 1
+
 
 def get_context(context):
 	if frappe.session.user == "Guest":

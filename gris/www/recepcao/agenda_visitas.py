@@ -7,6 +7,8 @@ from frappe.utils import add_days, date_diff, format_date, getdate, today
 
 from gris.api.portal_access import enrich_context, user_has_access
 
+no_cache = 1
+
 
 def get_context(context):
 	# Disable cache to always show fresh data

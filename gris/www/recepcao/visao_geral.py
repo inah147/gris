@@ -7,6 +7,8 @@ from frappe.utils import add_days, format_date, getdate
 
 from gris.api.portal_access import enrich_context
 
+no_cache = 1
+
 STEPS_DEF = [
 	{"field": "visita_agendada", "label": "Visita Agendada"},
 	{"field": "primeira_visita_realizada", "label": "Primeira Visita Realizada"},

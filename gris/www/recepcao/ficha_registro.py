@@ -4,6 +4,8 @@ from frappe.utils import add_days, format_date, format_datetime, get_fullname, g
 
 from gris.api.portal_access import enrich_context
 
+no_cache = 1
+
 
 def get_context(context):
 	# Ensure user is logged in (or handle permissions as needed)

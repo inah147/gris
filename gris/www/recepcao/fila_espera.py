@@ -4,6 +4,8 @@ from frappe.utils import add_months, getdate, today
 from gris.api.portal_access import enrich_context
 from gris.api.recepcao import processar_desistencia
 
+no_cache = 1
+
 
 def get_context(context):
 	context.active_link = "/recepcao"

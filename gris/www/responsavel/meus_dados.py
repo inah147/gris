@@ -4,6 +4,8 @@ import frappe
 
 from gris.api.portal_access import enrich_context, user_has_access
 
+no_cache = 1
+
 
 def get_context(context):
 	if frappe.session.user == "Guest":

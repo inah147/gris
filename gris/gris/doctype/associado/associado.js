@@ -69,7 +69,8 @@ function set_fields_read_only(frm) {
         "area",
         "historico_no_grupo",
         "route",
-        "cpf"
+        "cpf",
+        "status_cobranca"
     ];
 
     // Percorre todos os campos do formulário

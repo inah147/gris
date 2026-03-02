@@ -1,4 +1,5 @@
 import json
+import re
 
 import frappe
 from frappe.utils import cint
@@ -126,6 +127,21 @@ def update_novo_associado(novo_associado_name, data, responsaveis_data=None):
 	guarda_unilateral = cint(data.get("guarda_unilateral", 0))
 	data["guarda_unilateral"] = guarda_unilateral
 
+	email_cobranca = (data.get("email_cobranca") or "").strip()
+	telefone_cobranca = data.get("telefone_cobranca") or ""
+
+	if not email_cobranca:
+		frappe.throw("Email de cobrança é obrigatório.")
+
+	if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", email_cobranca):
+		frappe.throw("Email de cobrança inválido.")
+
+	phone_digits = "".join(filter(str.isdigit, str(telefone_cobranca)))
+	if len(phone_digits) < 10:
+		frappe.throw("Telefone de cobrança inválido.")
+
+	data["email_cobranca"] = email_cobranca
+
 	# Allowed fields to update
 	allowed_fields = [
 		"tipo_de_registro",
@@ -155,12 +171,14 @@ def update_novo_associado(novo_associado_name, data, responsaveis_data=None):
 		"email",
 		"celular",
 		"telefone_secundario",
+		"email_cobranca",
+		"telefone_cobranca",
 	]
 
 	for field in allowed_fields:
 		if field in data:
 			val = data[field]
-			if field in ["celular", "telefone_secundario"]:
+			if field in ["celular", "telefone_secundario", "telefone_cobranca"]:
 				val = format_phone(val)
 			doc.set(field, val)
 

@@ -219,6 +219,25 @@
             </div>
         </div>
 
+        <!-- Dados de Cobrança -->
+        <div class="card-modern mb-4">
+            <div class="card-modern__header">
+                <h3 class="card-modern__title">Dados de Cobrança</h3>
+            </div>
+            <div class="card-modern__body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="email_cobranca" class="form-label-modern">Email de Cobrança <span class="text-danger">*</span></label>
+                        <input type="email" class="form-input-modern" id="email_cobranca" name="email_cobranca" value="{{ novo_associado.email_cobranca or '' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="telefone_cobranca" class="form-label-modern">Telefone de Cobrança <span class="text-danger">*</span></label>
+                        <input type="text" class="form-input-modern" id="telefone_cobranca" name="telefone_cobranca" value="{{ novo_associado.telefone_cobranca or '' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Informações Familiares -->
         <div class="card-modern mb-4">
             <div class="card-modern__header">

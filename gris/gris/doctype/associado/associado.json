@@ -481,6 +481,7 @@
    "permlevel": 3
   },
   {
+   "default": "Inativo",
    "fieldname": "status_cobranca",
    "fieldtype": "Select",
    "label": "Status da cobran\u00e7a",
@@ -489,7 +490,7 @@
  ],
  "grid_page_length": 50,
  "links": [],
- "modified": "2025-10-14 07:02:48.848760",
+ "modified": "2026-03-02 10:58:31.864943",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Associado",

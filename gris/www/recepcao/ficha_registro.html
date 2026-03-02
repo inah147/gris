@@ -506,6 +506,36 @@ doc.nome_completo }}{% endif %}{% endblock %} {% block head_include %} {{ super(
 	</div>
 </div>
 
+<div class="card-modern mb-4">
+	<div class="card-modern__header">
+		<h3 class="card-modern__title">Dados de Cobrança</h3>
+	</div>
+	<div class="card-modern__body">
+		<div class="row g-3">
+			<div class="col-12 col-md-6">
+				<label class="form-label-modern">Email de Cobrança</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.email_cobranca or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+			<div class="col-12 col-md-6">
+				<label class="form-label-modern">Telefone de Cobrança</label>
+				<input
+					type="text"
+					class="form-input-modern form-input-modern--sm"
+					value="{{ doc.telefone_cobranca or '-' }}"
+					readonly
+					disabled
+				/>
+			</div>
+		</div>
+	</div>
+</div>
+
 <!-- Responsáveis -->
 {% if responsaveis %}
 <div class="card-modern mb-4">

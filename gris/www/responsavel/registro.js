@@ -81,7 +81,7 @@ frappe.ready(function() {
         applyCPFMask($(this));
     });
 
-    $('#celular, #telefone_secundario').on('input', function() {
+    $('#celular, #telefone_secundario, #telefone_cobranca').on('input', function() {
         applyPhoneMask($(this));
     });
 
@@ -228,7 +228,8 @@ frappe.ready(function() {
             'nome_completo', 'data_de_nascimento', 'etnia', 'sexo', 
             'pais_nascimento', 'uf_de_nascimento', 'cidade_de_nascimento',
             'rg', 'orgao_expedidor', 'cpf', 'estado_civil', 'religiao', 'escolaridade',
-            'cep', 'endereco', 'numero', 'bairro', 'estado', 'cidade', 'email', 'celular'
+            'cep', 'endereco', 'numero', 'bairro', 'estado', 'cidade', 'email', 'celular',
+            'email_cobranca', 'telefone_cobranca'
         ];
 
         novoAssociadoMandatory.forEach(fieldId => {
@@ -302,6 +303,18 @@ frappe.ready(function() {
             isValid = false;
         }
 
+        // Validate Billing Email
+        const emailCobrancaField = $('#email_cobranca');
+        if (emailCobrancaField.val() && !validateEmail(emailCobrancaField.val())) {
+            emailCobrancaField.addClass('is-invalid');
+            frappe.msgprint({
+                title: 'Erro de Validação',
+                indicator: 'red',
+                message: 'Email de cobrança inválido.'
+            });
+            isValid = false;
+        }
+
         // Validate Phone (Main)
         const celularField = $('#celular');
         const celularVal = celularField.val().replace(/\D/g, '');
@@ -311,6 +324,19 @@ frappe.ready(function() {
                 title: 'Erro de Validação',
                 indicator: 'red',
                 message: 'Celular do Associado inválido.'
+            });
+            isValid = false;
+        }
+
+        // Validate Billing Phone
+        const telefoneCobrancaField = $('#telefone_cobranca');
+        const telefoneCobrancaVal = telefoneCobrancaField.val().replace(/\D/g, '');
+        if (telefoneCobrancaVal && telefoneCobrancaVal.length < 10) {
+            telefoneCobrancaField.addClass('is-invalid');
+            frappe.msgprint({
+                title: 'Erro de Validação',
+                indicator: 'red',
+                message: 'Telefone de cobrança inválido.'
             });
             isValid = false;
         }
@@ -488,6 +514,8 @@ frappe.ready(function() {
                 'uf': 'UF',
                 'email': 'Email',
                 'celular': 'Celular',
+                'email_cobranca': 'Email de Cobrança',
+                'telefone_cobranca': 'Telefone de Cobrança',
                 'endereco': 'Endereço',
                 'numero': 'Número',
                 'complemento': 'Complemento',
@@ -519,6 +547,7 @@ frappe.ready(function() {
         
         const mainFieldsOrder = [
             'tipo_de_registro', 'nome_completo', 'cpf', 'rg', 'data_de_nascimento', 'email', 'celular',
+            'email_cobranca', 'telefone_cobranca',
             'cep', 'endereco', 'numero', 'complemento', 'bairro', 'cidade', 'estado'
         ];
         

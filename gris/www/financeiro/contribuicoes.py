@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import getdate, nowdate
+from frappe.utils import add_days, getdate, nowdate
 
 from gris.api.portal_access import enrich_context
 from gris.api.portal_cache_utils import get_uel_cached
@@ -50,7 +50,7 @@ def get_context(context):
 
 	for b in beneficiarios:
 		inicio = b.get("inicio_do_pagamento")
-		inicio_date = getdate(inicio) if inicio else None
+		inicio_date = getdate(inicio) if inicio else getdate("1999-01-01")
 		pagamentos = pagamentos_map.get(b["name"], [])
 		status_geral = _calcular_status_geral(b, inicio_date, pagamentos, hoje)
 		# Dados de cobrança só expostos a gestores
@@ -60,7 +60,7 @@ def get_context(context):
 			"nome": b.get("nome_completo"),
 			"id": b.get("name"),
 			# manter como string para ser serializável em JSON no template
-			"inicio_do_pagamento": inicio_date.isoformat() if inicio_date else None,
+			"inicio_do_pagamento": inicio_date.isoformat(),
 			"valor_contribuicao": b.get("valor_contribuicao"),
 			"qt_contribuicoes_pagas": b.get("qt_contribuicoes_pagas") or 0,
 			"qt_contribuicoes_atrasadas": b.get("qt_contribuicoes_atrasadas") or 0,
@@ -152,10 +152,12 @@ def _calcular_status_geral(assoc_row, inicio, pagamentos, hoje):
 	# Nova regra: Inativo + status_cobranca=Ativo => Cancelar
 	if assoc_row.get("status_no_grupo") == "Inativo" and assoc_row.get("status_cobranca") == "Ativo":
 		return "Cancelar"
+	janela_cadastro = add_days(inicio, -30) if inicio else None
 	if (
 		assoc_row.get("status_no_grupo") == "Ativo"
 		and assoc_row.get("status_cobranca") == "Inativo"
-		and inicio <= hoje
+		and janela_cadastro
+		and hoje >= janela_cadastro
 	):
 		return "Cadastrar"
 	qt_atrasadas = assoc_row.get("qt_contribuicoes_atrasadas") or 0

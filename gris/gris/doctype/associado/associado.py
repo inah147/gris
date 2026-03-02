@@ -16,6 +16,9 @@ class Associado(Document):
 		if self.telefone:
 			num = re.sub(r"\D", "", self.telefone)
 			self.telefone = f"+55{num}" if not num.startswith("55") else f"+{num}"
+		if self.telefone_cobranca:
+			num = re.sub(r"\D", "", self.telefone_cobranca)
+			self.telefone_cobranca = f"+55{num}" if not num.startswith("55") else f"+{num}"
 		if self.telefone_responsavel_1:
 			num = re.sub(r"\D", "", self.telefone_responsavel_1)
 			self.telefone_responsavel_1 = f"+55{num}" if not num.startswith("55") else f"+{num}"
@@ -92,6 +95,15 @@ class Associado(Document):
 			return
 
 		self.flags.linked_novo_associado = na_name
+
+		na_cobranca = frappe.db.get_value(
+			"Novo Associado", na_name, ["email_cobranca", "telefone_cobranca"], as_dict=True
+		)
+		if na_cobranca:
+			if na_cobranca.get("email_cobranca"):
+				self.email_cobranca = na_cobranca.get("email_cobranca")
+			if na_cobranca.get("telefone_cobranca"):
+				self.telefone_cobranca = na_cobranca.get("telefone_cobranca")
 
 		# Busca data da visita
 		data_visita = frappe.db.get_value(

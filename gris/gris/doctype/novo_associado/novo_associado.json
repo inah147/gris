@@ -35,6 +35,10 @@
   "email",
   "celular",
   "telefone_secundario",
+  "dados_de_cobranca_section",
+    "email_cobranca",
+  "column_break_dados_cobranca",
+    "telefone_cobranca",
   "fluxo_de_registro_tab",
   "status",
   "ramo",
@@ -213,6 +217,27 @@
    "fieldtype": "Data",
    "label": "Telefone secund\u00e1rio"
   },
+  {
+   "fieldname": "dados_de_cobranca_section",
+   "fieldtype": "Section Break",
+   "label": "Dados de Cobran\u00e7a"
+  },
+    {
+     "fieldname": "email_cobranca",
+     "fieldtype": "Data",
+     "label": "Email de cobran\u00e7a",
+     "reqd": 1
+    },
+  {
+   "fieldname": "column_break_dados_cobranca",
+   "fieldtype": "Column Break"
+  },
+    {
+     "fieldname": "telefone_cobranca",
+     "fieldtype": "Data",
+     "label": "Telefone de cobran\u00e7a",
+     "reqd": 1
+    },
   {
    "fieldname": "fluxo_de_registro_tab",
    "fieldtype": "Tab Break",

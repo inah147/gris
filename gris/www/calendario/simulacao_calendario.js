@@ -10,6 +10,49 @@ frappe.ready(function() {
     initReconciliation();
 });
 
+function applySemAtividadeState(checkboxEl, localEl, nivelEl) {
+    const isSemAtividade = checkboxEl ? checkboxEl.checked : false;
+    if (localEl) {
+        localEl.disabled = isSemAtividade;
+        if (isSemAtividade) localEl.value = '';
+    }
+    if (nivelEl) {
+        nivelEl.disabled = isSemAtividade;
+        if (isSemAtividade) nivelEl.value = 'Local';
+    }
+}
+
+function applyAberturaGeralState(checkboxEl, atividadeEl) {
+    const isAberturaGeral = checkboxEl ? checkboxEl.checked : false;
+    if (!atividadeEl) return;
+
+    if (isAberturaGeral) {
+        atividadeEl.value = 'Abertura Geral';
+        atividadeEl.disabled = true;
+        return;
+    }
+
+    atividadeEl.disabled = false;
+}
+
+function setupMutualExclusion(primaryCheckbox, secondaryCheckbox) {
+    if (!primaryCheckbox || !secondaryCheckbox) return;
+
+    primaryCheckbox.addEventListener('change', () => {
+        if (primaryCheckbox.checked) {
+            secondaryCheckbox.checked = false;
+            secondaryCheckbox.dispatchEvent(new Event('change'));
+        }
+    });
+
+    secondaryCheckbox.addEventListener('change', () => {
+        if (secondaryCheckbox.checked) {
+            primaryCheckbox.checked = false;
+            primaryCheckbox.dispatchEvent(new Event('change'));
+        }
+    });
+}
+
 function scrollToToday() {
     const today = new Date();
     const year = today.getFullYear();
@@ -286,22 +329,22 @@ function initModal() {
 
     if (!modal) return;
 
-    // Sem Atividade Toggle Logic
     const semAtividadeCheck = document.getElementById('modal-sem-atividade');
+    const aberturaGeralCheck = document.getElementById('modal-abertura-geral');
+    const atividadeInput = document.getElementById('modal-atividade');
+    const localInput = document.getElementById('modal-local');
+    const nivelInput = document.getElementById('modal-nivel');
+
+    setupMutualExclusion(semAtividadeCheck, aberturaGeralCheck);
+
     if (semAtividadeCheck) {
-        semAtividadeCheck.addEventListener('change', (e) => {
-            const isChecked = e.target.checked;
-            const localInput = document.getElementById('modal-local');
-            const nivelInput = document.getElementById('modal-nivel');
-            
-            if (localInput) {
-                localInput.disabled = isChecked;
-                if (isChecked) localInput.value = '';
-            }
-            if (nivelInput) {
-                nivelInput.disabled = isChecked;
-                if (isChecked) nivelInput.value = 'Local';
-            }
+        semAtividadeCheck.addEventListener('change', () => {
+            applySemAtividadeState(semAtividadeCheck, localInput, nivelInput);
+        });
+    }
+    if (aberturaGeralCheck) {
+        aberturaGeralCheck.addEventListener('change', () => {
+            applyAberturaGeralState(aberturaGeralCheck, atividadeInput);
         });
     }
 
@@ -324,13 +367,11 @@ function initModal() {
             if (terminoInput) terminoInput.value = todayStr;
             
             // Reset new fields
-            const localInput = document.getElementById('modal-local');
             if (localInput) {
                 localInput.value = '';
                 localInput.disabled = false;
             }
 
-            const nivelInput = document.getElementById('modal-nivel');
             if (nivelInput) {
                 nivelInput.value = 'Local';
                 nivelInput.disabled = false;
@@ -338,6 +379,11 @@ function initModal() {
             
             const semAtividadeInput = document.getElementById('modal-sem-atividade');
             if (semAtividadeInput) semAtividadeInput.checked = false;
+            const aberturaGeralInput = document.getElementById('modal-abertura-geral');
+            if (aberturaGeralInput) aberturaGeralInput.checked = false;
+
+            applySemAtividadeState(semAtividadeInput, localInput, nivelInput);
+            applyAberturaGeralState(aberturaGeralInput, atividadeInput);
 
             // Uncheck all sections
             document.querySelectorAll('input[name="modal-secao"]').forEach(cb => cb.checked = false);
@@ -369,6 +415,7 @@ function initModal() {
         const local = document.getElementById('modal-local').value;
         const nivel = document.getElementById('modal-nivel').value;
         const semAtividade = document.getElementById('modal-sem-atividade').checked ? 1 : 0;
+        const aberturaGeral = document.getElementById('modal-abertura-geral').checked ? 1 : 0;
 
         if (!atividade || !inicioDate || !terminoDate || secoes.length === 0) {
             frappe.msgprint('Por favor, preencha todos os campos obrigatórios.');
@@ -388,6 +435,7 @@ function initModal() {
                 local: local,
                 nivel: nivel,
                 sem_atividade: semAtividade,
+                abertura_geral: aberturaGeral,
                 secoes: JSON.stringify(secoes)
             },
             freeze: true,
@@ -399,8 +447,6 @@ function initModal() {
                     
                     if (r.message.events && Array.isArray(r.message.events)) {
                         r.message.events.forEach(event => addEventToTable(event));
-                    } else {
-                        setTimeout(() => window.location.reload(), 1000);
                     }
                 } else {
                     frappe.msgprint({
@@ -442,6 +488,18 @@ function initCellClick() {
                 cb.checked = (cb.value === section);
             });
 
+            const semAtividadeInput = document.getElementById('modal-sem-atividade');
+            const aberturaGeralInput = document.getElementById('modal-abertura-geral');
+            const localInput = document.getElementById('modal-local');
+            const nivelInput = document.getElementById('modal-nivel');
+
+            if (semAtividadeInput) semAtividadeInput.checked = false;
+            if (aberturaGeralInput) aberturaGeralInput.checked = false;
+            if (localInput) localInput.value = '';
+            if (nivelInput) nivelInput.value = 'Local';
+            applySemAtividadeState(semAtividadeInput, localInput, nivelInput);
+            applyAberturaGeralState(aberturaGeralInput, document.getElementById('modal-atividade'));
+
             modal.classList.add('is-open');
         });
     });
@@ -454,8 +512,25 @@ function initEditModal() {
     const cancelBtn = document.getElementById('cancel-edit-modal');
     const saveBtn = document.getElementById('save-edit-modal');
     const deleteBtn = document.getElementById('delete-edit-modal');
+    const semAtividadeCheck = document.getElementById('edit-sem-atividade');
+    const aberturaGeralCheck = document.getElementById('edit-abertura-geral');
+    const atividadeInput = document.getElementById('edit-atividade');
+    const localInput = document.getElementById('edit-local');
+    const nivelInput = document.getElementById('edit-nivel');
 
     if (!modal) return;
+
+    setupMutualExclusion(semAtividadeCheck, aberturaGeralCheck);
+    if (semAtividadeCheck) {
+        semAtividadeCheck.addEventListener('change', () => {
+            applySemAtividadeState(semAtividadeCheck, localInput, nivelInput);
+        });
+    }
+    if (aberturaGeralCheck) {
+        aberturaGeralCheck.addEventListener('change', () => {
+            applyAberturaGeralState(aberturaGeralCheck, atividadeInput);
+        });
+    }
 
     function closeModal() {
         modal.classList.remove('is-open');
@@ -482,6 +557,8 @@ function initEditModal() {
             const secao = card.getAttribute('data-secao');
             const local = card.getAttribute('data-local');
             const nivel = card.getAttribute('data-nivel');
+            const semAtividade = card.getAttribute('data-sem-atividade') === '1';
+            const aberturaGeral = card.getAttribute('data-abertura-geral') === '1';
 
             document.getElementById('edit-event-id').value = eventId;
             document.getElementById('edit-atividade').value = atividade;
@@ -495,6 +572,10 @@ function initEditModal() {
             // Check if element exists before setting (in case modal HTML update didn't propagate or cached)
             const nivelEl = document.getElementById('edit-nivel');
             if (nivelEl) nivelEl.value = nivel || "";
+            if (semAtividadeCheck) semAtividadeCheck.checked = semAtividade;
+            if (aberturaGeralCheck) aberturaGeralCheck.checked = aberturaGeral;
+            applySemAtividadeState(semAtividadeCheck, localInput, nivelInput);
+            applyAberturaGeralState(aberturaGeralCheck, atividadeInput);
 
             modal.classList.add('is-open');
         }
@@ -508,6 +589,8 @@ function initEditModal() {
         const secao = document.getElementById('edit-secao').value;
         const local = document.getElementById('edit-local').value;
         const nivel = document.getElementById('edit-nivel') ? document.getElementById('edit-nivel').value : "";
+        const semAtividade = document.getElementById('edit-sem-atividade').checked ? 1 : 0;
+        const aberturaGeral = document.getElementById('edit-abertura-geral').checked ? 1 : 0;
 
         if (!atividade || !inicioDate || !terminoDate || !secao) {
             frappe.msgprint('Por favor, preencha todos os campos obrigatórios.');
@@ -527,7 +610,9 @@ function initEditModal() {
                 termino: termino,
                 secao: secao,
                 local: local,
-                nivel: nivel
+                nivel: nivel,
+                sem_atividade: semAtividade,
+                abertura_geral: aberturaGeral
             },
             freeze: true,
             freeze_message: "Atualizando...",
@@ -535,7 +620,11 @@ function initEditModal() {
                 if (r.message && r.message.success) {
                     frappe.show_alert({message: r.message.message, indicator: 'green'});
                     closeModal();
-                    setTimeout(() => window.location.reload(), 1000);
+
+                    removeEventFromTable(eventId);
+                    if (r.message.event) {
+                        addEventToTable(r.message.event);
+                    }
                 } else {
                     frappe.msgprint({
                         title: __('Erro'),
@@ -562,7 +651,7 @@ function initEditModal() {
                 callback: function(r) {
                     if (r.message && r.message.success) {
                         frappe.show_alert({message: r.message.message, indicator: 'green'});
-                        setTimeout(() => window.location.reload(), 1000);
+                        removeEventFromTable(eventId);
                     } else {
                         frappe.msgprint({
                             title: __('Erro'),
@@ -602,12 +691,13 @@ function addEventToTable(event) {
         
         const row = document.querySelector(`tr[data-date="${dateStr}"]`);
         if (row) {
+            row.classList.add('has-activity');
             const cell = row.querySelector(`td[data-section="${section}"]`);
             if (cell) {
-                let container = cell.querySelector('.activity-container');
+                let container = cell.querySelector('.activities-list');
                 if (!container) {
                     container = document.createElement('div');
-                    container.className = 'activity-container';
+                    container.className = 'activities-list';
                     cell.appendChild(container);
                 }
                 
@@ -633,6 +723,12 @@ function addEventToTable(event) {
                 card.setAttribute('data-termino', event.termino);
                 card.setAttribute('data-secao', event.secao);
                 card.setAttribute('data-local', event.local || '');
+                card.setAttribute('data-nivel', event.nivel || '');
+                card.setAttribute('data-sem-atividade', event.sem_atividade ? '1' : '0');
+                card.setAttribute('data-abertura-geral', event.abertura_geral ? '1' : '0');
+                if (event.sem_atividade) {
+                    card.classList.add('is-no-activity');
+                }
                 
                 // Style for dynamic insertion
                 card.style.flex = '1 1 0';
@@ -666,6 +762,26 @@ function addEventToTable(event) {
         
         currentDate.setDate(currentDate.getDate() + 1);
     }
+}
+
+function removeEventFromTable(eventId) {
+    if (!eventId) return;
+
+    const cards = document.querySelectorAll(`.activity-card[data-event-id="${eventId}"]`);
+    cards.forEach(card => {
+        const row = card.closest('.calendar-row');
+        const container = card.parentElement;
+
+        card.remove();
+
+        if (container && container.classList.contains('activities-list') && !container.querySelector('.activity-card')) {
+            container.remove();
+        }
+
+        if (row && !row.querySelector('.activity-card')) {
+            row.classList.remove('has-activity');
+        }
+    });
 }
 
 function initReconciliation() {

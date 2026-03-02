@@ -13,15 +13,19 @@ import frappe
 
 from gris.api.portal_cache_utils import get_transparency_years_cached, get_uel_cached
 
+no_cache = 1
+
 
 def get_context(context):
 	"""Página de transparência totalmente pública (Guest permitido)."""
 
+	context.no_cache = 1
+
 	# Inclui CSS customizado da página
 	context.style = "/assets/gris/css/portal_transparencia.css"
 
-	# Lista anos (conteúdo público) usando cache controlado
-	context.years = get_transparency_years_cached()
+	# Lista anos (conteúdo público) sem cache para atualização imediata
+	context.years = get_transparency_years_cached(use_cache=False)
 
 	# Ano selecionado (querystring)
 	ano_selecionado = frappe.form_dict.get("ano_referencia")
@@ -30,7 +34,7 @@ def get_context(context):
 		context.ano_selecionado = context.years[0]
 
 	# Dados institucionais (tentar ignorar permissões, fallback se falhar)
-	uel_data = get_uel_cached()
+	uel_data = get_uel_cached(use_cache=False)
 
 	if uel_data:
 		context.logo = uel_data.get("logo")

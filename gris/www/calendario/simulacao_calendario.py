@@ -4,7 +4,7 @@ from datetime import date, timedelta
 
 import frappe
 from frappe import _
-from frappe.utils import format_date, getdate, today
+from frappe.utils import cint, format_date, getdate, today
 
 from gris.api.portal_access import enrich_context
 
@@ -57,7 +57,17 @@ def get_context(context):
 	events = frappe.get_all(
 		"Calendario Simulado",
 		filters={"inicio": ["<=", f"{year}-12-31 23:59:59"], "termino": [">=", f"{year}-01-01 00:00:00"]},
-		fields=["name", "atividade", "inicio", "termino", "secao", "local", "sem_atividade", "nivel"],
+		fields=[
+			"name",
+			"atividade",
+			"inicio",
+			"termino",
+			"secao",
+			"local",
+			"sem_atividade",
+			"abertura_geral",
+			"nivel",
+		],
 		order_by="inicio asc",
 	)
 
@@ -70,17 +80,6 @@ def get_context(context):
 		filters={"inicio": ["<=", f"{year}-12-31 23:59:59"], "termino": [">=", f"{year}-01-01 00:00:00"]},
 		fields=["atividade", "inicio", "termino", "secao", "id"],
 	)
-
-	official_signatures = set()
-	for oe in official_events:
-		# Use ID if available, otherwise just content signature (fallback for get_context logic if needed, but we rely on recon logic mostly)
-		# Actually logic for 'is_official' tag in UI (context) was based on content.
-		# Should we change this too?
-		# The prompt only asked about reconciliation logic (functions).
-		# But consistency is good.
-		# If we strict match by ID, then 'is_official' should be: event.name in official_ids.
-		# But 'official_ids' comes from 'id' field of Calendario.
-		pass
 
 	# Build Map of Official IDs
 	official_ids = set()
@@ -153,7 +152,7 @@ def get_context(context):
 		events_by_section[section].append(event)
 
 	# Process lanes and clusters per section
-	for section, section_events in events_by_section.items():
+	for _section, section_events in events_by_section.items():
 		# Sort by start date
 		section_events.sort(key=lambda x: x.inicio)
 
@@ -373,6 +372,11 @@ def get_context(context):
 	enrich_context(context, "/calendario/visualizar")
 
 
+def _validate_activity_flags(sem_atividade, abertura_geral):
+	if cint(sem_atividade) and cint(abertura_geral):
+		frappe.throw(_("'Sem Atividade' e 'Abertura Geral' não podem ser marcados ao mesmo tempo."))
+
+
 @frappe.whitelist()
 def get_reconciliation_data(year=None):
 	if not year:
@@ -395,6 +399,7 @@ def get_reconciliation_data(year=None):
 			"local",
 			"nivel",
 			"sem_atividade",
+			"abertura_geral",
 			"conciliado",
 		],
 	)
@@ -403,7 +408,18 @@ def get_reconciliation_data(year=None):
 	official_events = frappe.get_all(
 		"Calendario",
 		filters={"inicio": ["<=", f"{year}-12-31 23:59:59"], "termino": [">=", f"{year}-01-01 00:00:00"]},
-		fields=["name", "atividade", "inicio", "termino", "secao", "local", "nivel", "id", "sem_atividade"],
+		fields=[
+			"name",
+			"atividade",
+			"inicio",
+			"termino",
+			"secao",
+			"local",
+			"nivel",
+			"id",
+			"sem_atividade",
+			"abertura_geral",
+		],
 	)
 
 	# Map Simulated Events by their NAME
@@ -432,7 +448,7 @@ def get_reconciliation_data(year=None):
 			diffs = []
 
 			# Key fields to compare
-			fields_to_check = ["atividade", "secao", "local", "nivel", "sem_atividade"]
+			fields_to_check = ["atividade", "secao", "local", "nivel", "sem_atividade", "abertura_geral"]
 			for field in fields_to_check:
 				if sim_evt.get(field) != off_evt.get(field):
 					diffs.append(field)
@@ -496,6 +512,7 @@ def reconcile_calendar(actions):
 
 		if action == "add":
 			doc_data = item.get("doc")
+			_validate_activity_flags(doc_data.get("sem_atividade"), doc_data.get("abertura_geral"))
 			# Create new Calendario
 			new_doc = frappe.new_doc("Calendario")
 			new_doc.update(
@@ -507,6 +524,7 @@ def reconcile_calendar(actions):
 					"local": doc_data.get("local"),
 					"nivel": doc_data.get("nivel"),
 					"sem_atividade": doc_data.get("sem_atividade"),
+					"abertura_geral": doc_data.get("abertura_geral"),
 					"id": item.get("sim_name"),  # Insert Sim Name into ID field
 				}
 			)
@@ -535,6 +553,7 @@ def reconcile_calendar(actions):
 
 			name = item.get("name")  # This is sim_name (== off.id == off.name if autoname works)
 			doc_data = item.get("doc")
+			_validate_activity_flags(doc_data.get("sem_atividade"), doc_data.get("abertura_geral"))
 
 			# Fallback: if get_doc fails with name, try finding by id?
 			# No, assume strong consistency if autoname used.
@@ -550,6 +569,7 @@ def reconcile_calendar(actions):
 						"local": doc_data.get("local"),
 						"nivel": doc_data.get("nivel"),
 						"sem_atividade": doc_data.get("sem_atividade"),
+						"abertura_geral": doc_data.get("abertura_geral"),
 					}
 				)
 				doc.save()

@@ -12,7 +12,8 @@
   "local",
   "nivel",
   "conciliado",
-  "sem_atividade"
+    "sem_atividade",
+    "abertura_geral"
  ],
  "fields": [
   {
@@ -57,6 +58,12 @@
    "fieldname": "sem_atividade",
    "fieldtype": "Check",
    "label": "Sem Atividade"
+    },
+    {
+     "default": "0",
+     "fieldname": "abertura_geral",
+     "fieldtype": "Check",
+     "label": "Abertura Geral"
   }
  ],
  "grid_page_length": 50,

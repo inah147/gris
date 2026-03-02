@@ -3,7 +3,7 @@ from datetime import date, timedelta
 
 import frappe
 from frappe import _
-from frappe.utils import add_days, date_diff, format_date, getdate, today
+from frappe.utils import add_days, cint, date_diff, format_date, getdate, today
 
 from gris.api.portal_access import enrich_context, user_has_access
 
@@ -262,7 +262,28 @@ def cancel_visit(visit_name):
 
 @frappe.whitelist()
 def reschedule_visit(visit_name, new_date):
+	visit = frappe.get_doc("Agenda de Visitas", visit_name)
+	if not _is_date_available_for_ramo(visit.ramo, new_date):
+		frappe.throw(_("A data selecionada não está disponível para o ramo da visita."))
+
 	frappe.db.set_value("Agenda de Visitas", visit_name, "data_da_visita", new_date)
+
+
+def _get_sections_by_ramos(ramos):
+	valid_ramos = {ramo for ramo in (ramos or []) if ramo}
+	if not valid_ramos:
+		return set()
+
+	rows = frappe.get_all(
+		"Associado",
+		filters={"ramo": ["in", list(valid_ramos)], "secao": ["is", "set"]},
+		fields=["secao", "ramo"],
+		distinct=True,
+	)
+
+	sections = {row.secao for row in rows if row.secao}
+	sections.update(valid_ramos)
+	return sections
 
 
 def _get_available_dates(ramo):
@@ -280,21 +301,25 @@ def _get_available_dates(ramo):
 	if not saturdays:
 		return []
 
+	target_sections = _get_sections_by_ramos({ramo})
+
 	# Check calendar for activities that would BLOCK the visit
-	# We check for activities of the specific Ramo or Global (no section)
+	# Bloqueia somente atividades de seções do mesmo ramo (exceto abertura geral)
 	activities = frappe.get_all(
 		"Calendario",
 		filters={
 			"inicio": ["<=", end_date],
 			"termino": [">=", start_date],
 		},
-		fields=["inicio", "termino", "secao"],
+		fields=["inicio", "termino", "secao", "abertura_geral"],
 	)
 
 	blocked_dates = set()
 	for act in activities:
-		# If activity is for another section, it doesn't block us
-		if act.secao and act.secao != ramo:
+		if cint(act.abertura_geral):
+			continue
+
+		if not act.secao or act.secao not in target_sections:
 			continue
 
 		act_start = getdate(act.inicio)
@@ -314,6 +339,15 @@ def _get_available_dates(ramo):
 	]
 
 	return available_dates
+
+
+def _is_date_available_for_ramo(ramo, date_value):
+	if not ramo or not date_value:
+		return False
+
+	target_date = getdate(date_value).strftime("%Y-%m-%d")
+	available_dates = _get_available_dates(ramo)
+	return any(item.get("value") == target_date for item in available_dates)
 
 
 @frappe.whitelist()
@@ -355,6 +389,8 @@ def schedule_visit(associate, date):
 
 	# Get associate details for Ramo
 	associate_doc = frappe.get_doc("Novo Associado", associate)
+	if not _is_date_available_for_ramo(associate_doc.ramo, date):
+		frappe.throw(_("A data selecionada não está disponível para o ramo do associado."))
 
 	# Create Visit
 	visit = frappe.get_doc(

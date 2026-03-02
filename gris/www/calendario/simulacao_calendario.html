@@ -172,7 +172,9 @@
                                      data-termino="{{ event.termino }}"
                                      data-secao="{{ event.secao }}"
                                      data-local="{{ event.local or '' }}"
-                                     data-nivel="{{ event.nivel or '' }}">
+                                      data-nivel="{{ event.nivel or '' }}"
+                                      data-sem-atividade="{{ event.sem_atividade or 0 }}"
+                                      data-abertura-geral="{{ event.abertura_geral or 0 }}">
                                     <div class="activity-body">
                                         {% if event.is_start %}
                                         <div class="activity-title">
@@ -268,6 +270,12 @@
                 </label>
             </div>
             <div class="form-group">
+                <label class="filter-option" style="margin-top: 0.5rem;">
+                    <input type="checkbox" id="modal-abertura-geral">
+                    <span style="font-weight: 500;">Abertura Geral</span>
+                </label>
+            </div>
+            <div class="form-group">
                 <label class="form-label-modern">Local</label>
                 <input type="text" id="modal-local" class="form-input-modern" placeholder="Local">
             </div>
@@ -318,6 +326,18 @@
             <div class="form-group">
                 <label class="form-label-modern">Data Término</label>
                 <input type="date" id="edit-termino" class="form-input-modern">
+            </div>
+            <div class="form-group">
+                <label class="filter-option" style="margin-top: 0.5rem;">
+                    <input type="checkbox" id="edit-sem-atividade">
+                    <span style="font-weight: 500;">Sem Atividade</span>
+                </label>
+            </div>
+            <div class="form-group">
+                <label class="filter-option" style="margin-top: 0.5rem;">
+                    <input type="checkbox" id="edit-abertura-geral">
+                    <span style="font-weight: 500;">Abertura Geral</span>
+                </label>
             </div>
             <div class="form-group">
                 <label class="form-label-modern">Seção</label>

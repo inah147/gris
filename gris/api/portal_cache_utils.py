@@ -39,12 +39,13 @@ def make_file_public(file_url: str) -> str:
 		return file_url
 
 
-def get_uel_cached(ttl: int = 300) -> dict:
-	cache = frappe.cache()
+def get_uel_cached(ttl: int = 300, use_cache: bool = True) -> dict:
+	cache = frappe.cache() if use_cache else None
 	key = "uel_cached_v3"  # Mudou para v3 - Single DocType
-	data = cache.get_value(key)
-	if data:
-		return data
+	if use_cache:
+		data = cache.get_value(key)
+		if data:
+			return data
 	try:
 		# Single DocType - usa get_single ao invés de get_all
 		uel = frappe.get_single("Definicao da UEL")
@@ -82,17 +83,19 @@ def get_uel_cached(ttl: int = 300) -> dict:
 	except Exception as e:
 		frappe.logger().error(f"Erro ao buscar Definicao da UEL: {e!s}")
 		data = {}
-	cache.set_value(key, data, expires_in_sec=ttl)
+	if use_cache:
+		cache.set_value(key, data, expires_in_sec=ttl)
 	return data
 
 
-def get_transparency_years_cached(ttl: int = 300):
+def get_transparency_years_cached(ttl: int = 300, use_cache: bool = True):
 	"""Public list of available transparency years (cached)."""
-	cache = frappe.cache()
+	cache = frappe.cache() if use_cache else None
 	key = "transparency_years_v1"
-	years = cache.get_value(key)
-	if years:
-		return years
+	if use_cache:
+		years = cache.get_value(key)
+		if years:
+			return years
 	try:
 		rows = frappe.get_all(
 			"Transparencia",
@@ -105,5 +108,6 @@ def get_transparency_years_cached(ttl: int = 300):
 		years = [r.ano_referencia for r in rows if r.ano_referencia]
 	except Exception:
 		years = []
-	cache.set_value(key, years, expires_in_sec=ttl)
+	if use_cache:
+		cache.set_value(key, years, expires_in_sec=ttl)
 	return years

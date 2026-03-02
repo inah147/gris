@@ -1,9 +1,56 @@
 import frappe
-from frappe.utils import add_days, getdate, today
+from frappe.utils import add_days, cint, getdate, today
 
 from gris.api.portal_access import enrich_context
 
 no_cache = 1
+
+
+def _get_sections_by_ramos(ramos):
+	valid_ramos = {ramo for ramo in (ramos or []) if ramo}
+	if not valid_ramos:
+		return set()
+
+	rows = frappe.get_all(
+		"Associado",
+		filters={"ramo": ["in", list(valid_ramos)], "secao": ["is", "set"]},
+		fields=["secao", "ramo"],
+		distinct=True,
+	)
+
+	sections = {row.secao for row in rows if row.secao}
+	sections.update(valid_ramos)
+	return sections
+
+
+def _is_date_available_for_ramo(ramo, date_value):
+	if not ramo or not date_value:
+		return False
+
+	start_date = getdate(today())
+	end_date = add_days(start_date, 60)
+	target_date = getdate(date_value)
+
+	if target_date < start_date or target_date > end_date or target_date.weekday() != 5:
+		return False
+
+	target_sections = _get_sections_by_ramos({ramo})
+	if not target_sections:
+		return True
+
+	activities = frappe.get_all(
+		"Calendario",
+		filters={"inicio": ["<=", target_date], "termino": [">=", target_date]},
+		fields=["secao", "abertura_geral"],
+	)
+
+	for act in activities:
+		if cint(act.abertura_geral):
+			continue
+		if act.secao and act.secao in target_sections:
+			return False
+
+	return True
 
 
 def get_context(context):
@@ -204,8 +251,13 @@ def get_available_visit_dates():
 	if not novo_associado_names:
 		return []
 
-	# Get their ramos to check for conflicts (optional, but good practice)
-	# For now, we assume ANY activity in calendar blocks the date as per instruction "não tem nenhuma atividade"
+	beneficiaries = frappe.get_all(
+		"Novo Associado",
+		filters={"name": ["in", novo_associado_names], "visita_agendada": 0},
+		fields=["ramo"],
+	)
+	target_ramos = {row.ramo for row in beneficiaries if row.ramo}
+	target_sections = _get_sections_by_ramos(target_ramos)
 
 	start_date = getdate(today())
 	end_date = add_days(start_date, 60)
@@ -227,11 +279,20 @@ def get_available_visit_dates():
 	activities = frappe.get_all(
 		"Calendario",
 		filters={"inicio": ["<=", end_date], "termino": [">=", start_date]},
-		fields=["inicio", "termino", "secao"],
+		fields=["inicio", "termino", "secao", "abertura_geral"],
 	)
 
 	blocked_dates = set()
 	for act in activities:
+		if cint(act.abertura_geral):
+			continue
+
+		if not target_sections:
+			continue
+
+		if not act.secao or act.secao not in target_sections:
+			continue
+
 		# Check which saturdays fall within this activity
 		act_start = getdate(act.inicio)
 		act_end = getdate(act.termino)
@@ -278,6 +339,10 @@ def schedule_visit(date):
 
 	if not beneficiaries:
 		frappe.throw("Todos os beneficiários já possuem visita agendada.")
+
+	for b in beneficiaries:
+		if not _is_date_available_for_ramo(b.ramo, date):
+			frappe.throw("A data selecionada não está disponível para o ramo do beneficiário.")
 
 	# Create Agenda de Visitas for each
 	for b in beneficiaries:

@@ -1,7 +1,8 @@
 import unicodedata
 
 import frappe
-from frappe.utils import getdate
+from frappe import _
+from frappe.utils import cint, getdate
 
 
 def get_ramo_class(secao):
@@ -15,6 +16,11 @@ def get_ramo_class(secao):
 	return f"ramo-{normalized}"
 
 
+def _validate_activity_flags(sem_atividade, abertura_geral):
+	if cint(sem_atividade) and cint(abertura_geral):
+		frappe.throw(_("'Sem Atividade' e 'Abertura Geral' não podem ser marcados ao mesmo tempo."))
+
+
 @frappe.whitelist()
 def copy_calendar_data(source_year, target_year):
 	source_year = int(source_year)
@@ -24,7 +30,7 @@ def copy_calendar_data(source_year, target_year):
 	events = frappe.get_all(
 		"Calendario",
 		filters={"inicio": ["between", [f"{source_year}-01-01", f"{source_year}-12-31"]]},
-		fields=["atividade", "inicio", "termino", "secao", "local"],
+		fields=["atividade", "inicio", "termino", "secao", "local", "nivel", "sem_atividade", "abertura_geral"],
 	)
 
 	if not events:
@@ -53,6 +59,9 @@ def copy_calendar_data(source_year, target_year):
 				"termino": new_end,
 				"secao": event.secao,
 				"local": event.local,
+				"nivel": event.nivel,
+				"sem_atividade": cint(event.sem_atividade),
+				"abertura_geral": cint(event.abertura_geral),
 			}
 		)
 		doc.insert()
@@ -62,9 +71,22 @@ def copy_calendar_data(source_year, target_year):
 
 
 @frappe.whitelist()
-def create_simulation_event(atividade, inicio, termino, secoes, local=None, nivel=None, sem_atividade=0):
+def create_simulation_event(
+	atividade,
+	inicio,
+	termino,
+	secoes,
+	local=None,
+	nivel=None,
+	sem_atividade=0,
+	abertura_geral=0,
+):
 	if isinstance(secoes, str):
 		secoes = frappe.parse_json(secoes)
+
+	sem_atividade = cint(sem_atividade)
+	abertura_geral = cint(abertura_geral)
+	_validate_activity_flags(sem_atividade, abertura_geral)
 
 	if not secoes:
 		return {"success": False, "message": "Selecione pelo menos uma seção."}
@@ -81,6 +103,7 @@ def create_simulation_event(atividade, inicio, termino, secoes, local=None, nive
 				"local": local,
 				"nivel": nivel,
 				"sem_atividade": sem_atividade,
+				"abertura_geral": abertura_geral,
 			}
 		)
 		doc.insert()
@@ -95,6 +118,9 @@ def create_simulation_event(atividade, inicio, termino, secoes, local=None, nive
 				"termino": str(doc.termino),
 				"secao": doc.secao,
 				"local": doc.local,
+				"nivel": doc.nivel,
+				"sem_atividade": cint(doc.sem_atividade),
+				"abertura_geral": cint(doc.abertura_geral),
 				"ramo_class": ramo_class,
 			}
 		)
@@ -107,7 +133,21 @@ def create_simulation_event(atividade, inicio, termino, secoes, local=None, nive
 
 
 @frappe.whitelist()
-def update_simulation_event(event_id, atividade, inicio, termino, secao, local=None, nivel=None):
+def update_simulation_event(
+	event_id,
+	atividade,
+	inicio,
+	termino,
+	secao,
+	local=None,
+	nivel=None,
+	sem_atividade=0,
+	abertura_geral=0,
+):
+	sem_atividade = cint(sem_atividade)
+	abertura_geral = cint(abertura_geral)
+	_validate_activity_flags(sem_atividade, abertura_geral)
+
 	doc = frappe.get_doc("Calendario Simulado", event_id)
 	doc.atividade = atividade
 	doc.inicio = inicio
@@ -115,8 +155,28 @@ def update_simulation_event(event_id, atividade, inicio, termino, secao, local=N
 	doc.secao = secao
 	doc.local = local
 	doc.nivel = nivel
+	doc.sem_atividade = sem_atividade
+	doc.abertura_geral = abertura_geral
 	doc.save()
-	return {"success": True, "message": "Evento atualizado com sucesso."}
+
+	ramo_class = get_ramo_class(doc.secao)
+
+	return {
+		"success": True,
+		"message": "Evento atualizado com sucesso.",
+		"event": {
+			"name": doc.name,
+			"atividade": doc.atividade,
+			"inicio": str(doc.inicio),
+			"termino": str(doc.termino),
+			"secao": doc.secao,
+			"local": doc.local,
+			"nivel": doc.nivel,
+			"sem_atividade": cint(doc.sem_atividade),
+			"abertura_geral": cint(doc.abertura_geral),
+			"ramo_class": ramo_class,
+		},
+	}
 
 
 @frappe.whitelist()

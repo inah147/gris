@@ -1,0 +1,27 @@
+{
+  "success": [
+    "Dados salvos com sucesso.",
+    "Alterações aplicadas."
+  ],
+  "error": [
+    "Não foi possível concluir a operação. Tente novamente.",
+    "Houve um problema ao processar sua solicitação. Verifique os dados e tente novamente."
+  ],
+  "empty_state": [
+    "Nenhum resultado encontrado para este filtro.",
+    "Ainda não há itens aqui."
+  ],
+  "confirm": [
+    "Deseja realmente continuar?",
+    "Deseja realmente excluir este item? Esta ação não pode ser desfeita."
+  ],
+  "session": [
+    "Sua sessão expirou. Entre novamente para continuar."
+  ],
+  "cta": [
+    "Salvar",
+    "Continuar",
+    "Tentar novamente",
+    "Voltar"
+  ]
+}

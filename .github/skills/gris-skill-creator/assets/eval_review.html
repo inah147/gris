@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Revisão de Eval - __SKILL_NAME_PLACEHOLDER__</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; vertical-align: top; }
+    th { background: #f4f4f4; }
+    textarea { width: 100%; min-height: 72px; }
+    .controls { margin: 12px 0; display: flex; gap: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Revisão de Eval: __SKILL_NAME_PLACEHOLDER__</h1>
+  <p><strong>Descrição atual:</strong> __SKILL_DESCRIPTION_PLACEHOLDER__</p>
+
+  <div class="controls">
+    <button onclick="addRow()">+ Adicionar</button>
+    <button onclick="exportJson()">Exportar JSON</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Query</th>
+        <th>Should Trigger</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <script>
+    const EVAL_DATA = __EVAL_DATA_PLACEHOLDER__;
+    let items = [...EVAL_DATA];
+
+    function render() {
+      const tbody = document.getElementById('rows');
+      tbody.innerHTML = '';
+      items.forEach((item, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><textarea onchange="updateQuery(${idx}, this.value)">${(item.query || '').replace(/</g,'&lt;')}</textarea></td>
+          <td>
+            <label>
+              <input type="checkbox" ${item.should_trigger ? 'checked' : ''} onchange="updateTrigger(${idx}, this.checked)">
+              ${item.should_trigger ? 'Sim' : 'Não'}
+            </label>
+          </td>
+          <td><button onclick="removeRow(${idx})">Remover</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateQuery(idx, value) { items[idx].query = value; }
+    function updateTrigger(idx, value) { items[idx].should_trigger = value; render(); }
+    function removeRow(idx) { items.splice(idx, 1); render(); }
+    function addRow() { items.push({ query: '', should_trigger: true }); render(); }
+
+    function exportJson() {
+      const clean = items.filter(i => (i.query || '').trim()).map(i => ({
+        query: i.query.trim(),
+        should_trigger: !!i.should_trigger
+      }));
+      const blob = new Blob([JSON.stringify(clean, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'eval_set.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    render();
+  </script>
+</body>
+</html>

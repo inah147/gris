@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GRIS Skill Review</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .tabs { display: flex; gap: 8px; margin: 12px 0; }
+    .tab-btn { padding: 8px 12px; border: 1px solid #ddd; background: #f7f7f7; cursor: pointer; }
+    .tab-btn.active { background: #fff; border-bottom: 2px solid #000; }
+    .hidden { display: none; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    pre { white-space: pre-wrap; max-height: 320px; overflow: auto; }
+    textarea { width: 100%; min-height: 90px; }
+    .toolbar { display: flex; gap: 8px; margin-top: 10px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #f5f5f5; }
+    details { margin-top: 8px; }
+    .pill { padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+    .ok { background: #e7f7e7; }
+    .ko { background: #fde9e9; }
+  </style>
+</head>
+<body>
+  <h1>Review: <span id="skill-name"></span></h1>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-outputs-btn" onclick="setTab('outputs')">Outputs</button>
+    <button class="tab-btn" id="tab-benchmark-btn" onclick="setTab('benchmark')">Benchmark</button>
+  </div>
+
+  <div id="tab-outputs">
+    <div id="progress"></div>
+    <div class="card">
+      <h3>Prompt</h3>
+      <div><strong>Eval:</strong> <span id="eval-name"></span></div>
+      <div><strong>Configuração:</strong> <span id="eval-config"></span></div>
+      <pre id="prompt"></pre>
+    </div>
+    <div class="card">
+      <h3>Outputs</h3>
+      <div id="outputs"></div>
+      <details>
+        <summary>Output anterior (iteração passada)</summary>
+        <div id="previous-outputs"></div>
+      </details>
+    </div>
+    <div class="card">
+      <h3>Formal Grades</h3>
+      <div id="grading"></div>
+      <details>
+        <summary>Grades da iteração anterior</summary>
+        <div id="previous-grading"></div>
+      </details>
+    </div>
+    <div class="card">
+      <h3>Feedback</h3>
+      <textarea id="feedback" placeholder="Seu feedback para esta execução..."></textarea>
+      <details>
+        <summary>Feedback anterior</summary>
+        <pre id="previous-feedback"></pre>
+      </details>
+    </div>
+    <div class="toolbar">
+      <button onclick="prevRun()">Anterior</button>
+      <button onclick="nextRun()">Próximo</button>
+      <button onclick="downloadFeedback()">Baixar feedback.json</button>
+    </div>
+  </div>
+
+  <div id="tab-benchmark" class="hidden">
+    <div class="card">
+      <h3>Resumo</h3>
+      <div id="benchmark-summary"></div>
+    </div>
+    <div class="card">
+      <h3>Runs</h3>
+      <div id="benchmark-runs"></div>
+    </div>
+  </div>
+
+  <script>
+    const EMBEDDED_DATA = {"skill_name": "gris-skill-creator", "runs": [{"id": "eval-1-with_skill", "prompt": "Crie uma nova skill para implementação de páginas de portal em Frappe (www), incluindo critérios de segurança, chamadas assíncronas e checklist de validação final.", "eval_name": "criar-skill-portal-frappe", "configuration": "with_skill", "outputs": [], "grading": {"expectations": [{"text": "Gerar SKILL.md com frontmatter válido (name e description)", "passed": false, "evidence": "PREENCHER"}, {"text": "Incluir seção de when-to-use/Quando usar com gatilhos explícitos", "passed": false, "evidence": "PREENCHER"}, {"text": "Incluir critérios de segurança/permissão para contexto Frappe", "passed": false, "evidence": "PREENCHER"}, {"text": "Não depender de instruções fora do escopo do pedido", "passed": false, "evidence": "PREENCHER"}], "summary": {"passed": 0, "failed": 4, "total": 4, "pass_rate": 0.0}}, "previous": {"outputs": [], "grading": {}}, "previous_feedback": ""}, {"id": "eval-1-without_skill", "prompt": "Crie uma nova skill para implementação de páginas de portal em Frappe (www), incluindo critérios de segurança, chamadas assíncronas e checklist de validação final.", "eval_name": "criar-skill-portal-frappe", "configuration": "without_skill", "outputs": [], "grading": {"expectations": [{"text": "Gerar SKILL.md com frontmatter válido (name e description)", "passed": false, "evidence": "PREENCHER"}, {"text": "Incluir seção de when-to-use/Quando usar com gatilhos explícitos", "passed": false, "evidence": "PREENCHER"}, {"text": "Incluir critérios de segurança/permissão para contexto Frappe", "passed": false, "evidence": "PREENCHER"}, {"text": "Não depender de instruções fora do escopo do pedido", "passed": false, "evidence": "PREENCHER"}], "summary": {"passed": 0, "failed": 4, "total": 4, "pass_rate": 0.0}}, "previous": {"outputs": [], "grading": {}}, "previous_feedback": ""}, {"id": "eval-2-with_skill", "prompt": "Tenho uma skill existente com descrição fraca e pouca clareza de fluxo. Reestruture para reduzir ambiguidades e melhorar ativação, sem overengineering.", "eval_name": "melhorar-skill-existente", "configuration": "with_skill", "outputs": [], "grading": {"expectations": [{"text": "Melhorar descrição do frontmatter com contextos de ativação", "passed": false, "evidence": "PREENCHER"}, {"text": "Adicionar ou reforçar progressive disclosure", "passed": false, "evidence": "PREENCHER"}, {"text": "Manter conteúdo em PT-BR e orientado ao uso prático", "passed": false, "evidence": "PREENCHER"}], "summary": {"passed": 0, "failed": 3, "total": 3, "pass_rate": 0.0}}, "previous": {"outputs": [], "grading": {}}, "previous_feedback": ""}, {"id": "eval-2-without_skill", "prompt": "Tenho uma skill existente com descrição fraca e pouca clareza de fluxo. Reestruture para reduzir ambiguidades e melhorar ativação, sem overengineering.", "eval_name": "melhorar-skill-existente", "configuration": "without_skill", "outputs": [], "grading": {"expectations": [{"text": "Melhorar descrição do frontmatter com contextos de ativação", "passed": false, "evidence": "PREENCHER"}, {"text": "Adicionar ou reforçar progressive disclosure", "passed": false, "evidence": "PREENCHER"}, {"text": "Manter conteúdo em PT-BR e orientado ao uso prático", "passed": false, "evidence": "PREENCHER"}], "summary": {"passed": 0, "failed": 3, "total": 3, "pass_rate": 0.0}}, "previous": {"outputs": [], "grading": {}}, "previous_feedback": ""}, {"id": "eval-3-with_skill", "prompt": "Estruture a avaliação de uma skill recém-criada com grading.json, benchmark.json e revisão humana via viewer estático.", "eval_name": "configurar-avaliacao-e-viewer", "configuration": "with_skill", "outputs": [], "grading": {"expectations": [{"text": "Criar metadados de avaliação coerentes com references/schemas.md", "passed": false, "evidence": "PREENCHER"}, {"text": "Gerar benchmark agregável por configuração", "passed": false, "evidence": "PREENCHER"}, {"text": "Indicar como gerar review.html com eval-viewer/generate_review.py", "passed": false, "evidence": "PREENCHER"}], "summary": {"passed": 0, "failed": 3, "total": 3, "pass_rate": 0.0}}, "previous": {"outputs": [], "grading": {}}, "previous_feedback": ""}, {"id": "eval-3-without_skill", "prompt": "Estruture a avaliação de uma skill recém-criada com grading.json, benchmark.json e revisão humana via viewer estático.", "eval_name": "configurar-avaliacao-e-viewer", "configuration": "without_skill", "outputs": [], "grading": {"expectations": [{"text": "Criar metadados de avaliação coerentes com references/schemas.md", "passed": false, "evidence": "PREENCHER"}, {"text": "Gerar benchmark agregável por configuração", "passed": false, "evidence": "PREENCHER"}, {"text": "Indicar como gerar review.html com eval-viewer/generate_review.py", "passed": false, "evidence": "PREENCHER"}], "summary": {"passed": 0, "failed": 3, "total": 3, "pass_rate": 0.0}}, "previous": {"outputs": [], "grading": {}}, "previous_feedback": ""}], "benchmark": {"metadata": {"skill_name": "gris-skill-creator", "timestamp": "2026-03-02T11:19:50.429017+00:00", "configs": ["with_skill", "without_skill"], "runs_count": 6}, "runs": [{"run_id": "eval-1-with_skill", "eval_id": 1, "eval_name": "criar-skill-portal-frappe", "configuration": "with_skill", "summary": {"passed": 0, "failed": 4, "total": 4, "pass_rate": 0.0, "time_seconds": 0.0, "tokens": 0}, "expectations": [{"text": "Gerar SKILL.md com frontmatter válido (name e description)", "passed": false, "evidence": "PREENCHER"}, {"text": "Incluir seção de when-to-use/Quando usar com gatilhos explícitos", "passed": false, "evidence": "PREENCHER"}, {"text": "Incluir critérios de segurança/permissão para contexto Frappe", "passed": false, "evidence": "PREENCHER"}, {"text": "Não depender de instruções fora do escopo do pedido", "passed": false, "evidence": "PREENCHER"}], "notes": ["Template inicial: atualizar após grading real."]}, {"run_id": "eval-1-without_skill", "eval_id": 1, "eval_name": "criar-skill-portal-frappe", "configuration": "without_skill", "summary": {"passed": 0, "failed": 4, "total": 4, "pass_rate": 0.0, "time_seconds": 0.0, "tokens": 0}, "expectations": [{"text": "Gerar SKILL.md com frontmatter válido (name e description)", "passed": false, "evidence": "PREENCHER"}, {"text": "Incluir seção de when-to-use/Quando usar com gatilhos explícitos", "passed": false, "evidence": "PREENCHER"}, {"text": "Incluir critérios de segurança/permissão para contexto Frappe", "passed": false, "evidence": "PREENCHER"}, {"text": "Não depender de instruções fora do escopo do pedido", "passed": false, "evidence": "PREENCHER"}], "notes": ["Template inicial: atualizar após grading real."]}, {"run_id": "eval-2-with_skill", "eval_id": 2, "eval_name": "melhorar-skill-existente", "configuration": "with_skill", "summary": {"passed": 0, "failed": 3, "total": 3, "pass_rate": 0.0, "time_seconds": 0.0, "tokens": 0}, "expectations": [{"text": "Melhorar descrição do frontmatter com contextos de ativação", "passed": false, "evidence": "PREENCHER"}, {"text": "Adicionar ou reforçar progressive disclosure", "passed": false, "evidence": "PREENCHER"}, {"text": "Manter conteúdo em PT-BR e orientado ao uso prático", "passed": false, "evidence": "PREENCHER"}], "notes": ["Template inicial: atualizar após grading real."]}, {"run_id": "eval-2-without_skill", "eval_id": 2, "eval_name": "melhorar-skill-existente", "configuration": "without_skill", "summary": {"passed": 0, "failed": 3, "total": 3, "pass_rate": 0.0, "time_seconds": 0.0, "tokens": 0}, "expectations": [{"text": "Melhorar descrição do frontmatter com contextos de ativação", "passed": false, "evidence": "PREENCHER"}, {"text": "Adicionar ou reforçar progressive disclosure", "passed": false, "evidence": "PREENCHER"}, {"text": "Manter conteúdo em PT-BR e orientado ao uso prático", "passed": false, "evidence": "PREENCHER"}], "notes": ["Template inicial: atualizar após grading real."]}, {"run_id": "eval-3-with_skill", "eval_id": 3, "eval_name": "configurar-avaliacao-e-viewer", "configuration": "with_skill", "summary": {"passed": 0, "failed": 3, "total": 3, "pass_rate": 0.0, "time_seconds": 0.0, "tokens": 0}, "expectations": [{"text": "Criar metadados de avaliação coerentes com references/schemas.md", "passed": false, "evidence": "PREENCHER"}, {"text": "Gerar benchmark agregável por configuração", "passed": false, "evidence": "PREENCHER"}, {"text": "Indicar como gerar review.html com eval-viewer/generate_review.py", "passed": false, "evidence": "PREENCHER"}], "notes": ["Template inicial: atualizar após grading real."]}, {"run_id": "eval-3-without_skill", "eval_id": 3, "eval_name": "configurar-avaliacao-e-viewer", "configuration": "without_skill", "summary": {"passed": 0, "failed": 3, "total": 3, "pass_rate": 0.0, "time_seconds": 0.0, "tokens": 0}, "expectations": [{"text": "Criar metadados de avaliação coerentes com references/schemas.md", "passed": false, "evidence": "PREENCHER"}, {"text": "Gerar benchmark agregável por configuração", "passed": false, "evidence": "PREENCHER"}, {"text": "Indicar como gerar review.html com eval-viewer/generate_review.py", "passed": false, "evidence": "PREENCHER"}], "notes": ["Template inicial: atualizar após grading real."]}], "run_summary": {"with_skill": {"pass_rate": {"mean": 0.0, "min": 0.0, "max": 0.0}, "time_seconds": {"mean": 0.0, "min": 0.0, "max": 0.0}, "tokens": {"mean": 0.0, "min": 0, "max": 0}}, "without_skill": {"pass_rate": {"mean": 0.0, "min": 0.0, "max": 0.0}, "time_seconds": {"mean": 0.0, "min": 0.0, "max": 0.0}, "tokens": {"mean": 0.0, "min": 0, "max": 0}}, "delta": {"pass_rate": 0.0, "time_seconds": 0.0, "tokens": 0}}, "analysis_notes": []}};
+    let idx = 0;
+    const feedback = {};
+
+    function setTab(tab) {
+      const isOutputs = tab === 'outputs';
+      document.getElementById('tab-outputs').classList.toggle('hidden', !isOutputs);
+      document.getElementById('tab-benchmark').classList.toggle('hidden', isOutputs);
+      document.getElementById('tab-outputs-btn').classList.toggle('active', isOutputs);
+      document.getElementById('tab-benchmark-btn').classList.toggle('active', !isOutputs);
+    }
+
+    function renderOutputs(nodeId, files) {
+      const target = document.getElementById(nodeId);
+      target.innerHTML = '';
+      if (!files || files.length === 0) {
+        target.innerHTML = '<em>Sem arquivos de saída.</em>';
+        return;
+      }
+
+      files.forEach(f => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        if (f.type === 'text') {
+          div.innerHTML = `<strong>${escapeHtml(f.name)}</strong><pre>${escapeHtml(f.content || '')}</pre>`;
+        } else {
+          div.innerHTML = `<strong>${escapeHtml(f.name)}</strong><p>Arquivo não textual (inspecione no workspace).</p>`;
+        }
+        target.appendChild(div);
+      });
+    }
+
+    function renderGrading(nodeId, grading) {
+      const target = document.getElementById(nodeId);
+      target.innerHTML = '';
+
+      const expectations = (grading && grading.expectations) || [];
+      const summary = (grading && grading.summary) || {};
+
+      if (!expectations.length) {
+        target.innerHTML = '<em>Sem grading para este run.</em>';
+        return;
+      }
+
+      const summaryEl = document.createElement('div');
+      summaryEl.innerHTML = `<strong>Resumo:</strong> passed=${summary.passed ?? 0}, failed=${summary.failed ?? 0}, total=${summary.total ?? 0}, pass_rate=${summary.pass_rate ?? 0}`;
+      target.appendChild(summaryEl);
+
+      const table = document.createElement('table');
+      table.innerHTML = '<thead><tr><th>Critério</th><th>Status</th><th>Evidência</th></tr></thead>';
+      const tbody = document.createElement('tbody');
+      expectations.forEach(item => {
+        const tr = document.createElement('tr');
+        const status = item.passed ? 'PASS' : 'FAIL';
+        const klass = item.passed ? 'pill ok' : 'pill ko';
+        tr.innerHTML = `
+          <td>${escapeHtml(item.text || '')}</td>
+          <td><span class="${klass}">${status}</span></td>
+          <td>${escapeHtml(item.evidence || '')}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      target.appendChild(table);
+    }
+
+    function renderBenchmark() {
+      const benchmark = EMBEDDED_DATA.benchmark;
+      const summaryNode = document.getElementById('benchmark-summary');
+      const runsNode = document.getElementById('benchmark-runs');
+
+      if (!benchmark) {
+        summaryNode.innerHTML = '<em>benchmark.json não informado/encontrado.</em>';
+        runsNode.innerHTML = '';
+        return;
+      }
+
+      const metadata = benchmark.metadata || {};
+      const runSummary = benchmark.run_summary || {};
+
+      summaryNode.innerHTML = `
+        <div><strong>Skill:</strong> ${escapeHtml(String(metadata.skill_name || EMBEDDED_DATA.skill_name))}</div>
+        <div><strong>Timestamp:</strong> ${escapeHtml(String(metadata.timestamp || ''))}</div>
+        <div><strong>Configs:</strong> ${escapeHtml(JSON.stringify(metadata.configs || []))}</div>
+        <div><strong>Runs:</strong> ${escapeHtml(String(metadata.runs_count || 0))}</div>
+        <pre>${escapeHtml(JSON.stringify(runSummary, null, 2))}</pre>
+      `;
+
+      const runs = benchmark.runs || [];
+      if (!runs.length) {
+        runsNode.innerHTML = '<em>Sem runs no benchmark.</em>';
+        return;
+      }
+
+      const table = document.createElement('table');
+      table.innerHTML = '<thead><tr><th>Run</th><th>Eval</th><th>Config</th><th>Pass rate</th><th>Tempo (s)</th><th>Tokens</th></tr></thead>';
+      const tbody = document.createElement('tbody');
+
+      runs.forEach(run => {
+        const tr = document.createElement('tr');
+        const summary = run.summary || {};
+        tr.innerHTML = `
+          <td>${escapeHtml(run.run_id || '')}</td>
+          <td>${escapeHtml(String(run.eval_name || run.eval_id || ''))}</td>
+          <td>${escapeHtml(String(run.configuration || ''))}</td>
+          <td>${escapeHtml(String(summary.pass_rate ?? ''))}</td>
+          <td>${escapeHtml(String(summary.time_seconds ?? ''))}</td>
+          <td>${escapeHtml(String(summary.tokens ?? ''))}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      runsNode.innerHTML = '';
+      runsNode.appendChild(table);
+    }
+
+    function render() {
+      const run = EMBEDDED_DATA.runs[idx];
+      document.getElementById('skill-name').textContent = EMBEDDED_DATA.skill_name;
+      document.getElementById('progress').textContent = `${idx + 1} de ${EMBEDDED_DATA.runs.length}`;
+      document.getElementById('eval-name').textContent = run.eval_name || '-';
+      document.getElementById('eval-config').textContent = run.configuration || '-';
+      document.getElementById('prompt').textContent = run.prompt || '(sem prompt)';
+      document.getElementById('feedback').value = feedback[run.id] || '';
+      document.getElementById('previous-feedback').textContent = run.previous_feedback || '(sem feedback anterior)';
+
+      renderOutputs('outputs', run.outputs || []);
+      renderOutputs('previous-outputs', (run.previous && run.previous.outputs) || []);
+      renderGrading('grading', run.grading || {});
+      renderGrading('previous-grading', (run.previous && run.previous.grading) || {});
+    }
+
+    function escapeHtml(s) {
+      return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+    }
+
+    function saveCurrent() {
+      const run = EMBEDDED_DATA.runs[idx];
+      feedback[run.id] = document.getElementById('feedback').value;
+    }
+
+    function prevRun() { saveCurrent(); if (idx > 0) idx--; render(); }
+    function nextRun() { saveCurrent(); if (idx < EMBEDDED_DATA.runs.length - 1) idx++; render(); }
+
+    function downloadFeedback() {
+      saveCurrent();
+      const reviews = EMBEDDED_DATA.runs.map(r => ({
+        run_id: r.id,
+        feedback: feedback[r.id] || '',
+        timestamp: new Date().toISOString()
+      }));
+      const payload = { reviews, status: 'complete' };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'feedback.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    renderBenchmark();
+    render();
+  </script>
+</body>
+</html>

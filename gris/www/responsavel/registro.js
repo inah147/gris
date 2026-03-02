@@ -97,22 +97,16 @@ frappe.ready(function() {
     // --- Family Info Logic ---
 
     function toggleFamilyInfo() {
-        const isDivorced = $('#pais_divorciados').is(':checked');
         const onlyOne = $('#somente_um_responsavel').is(':checked');
-
-        // Pais Divorciados logic
-        if (isDivorced) {
-            $('#tipo_guarda_container').show();
-        } else {
-            $('#tipo_guarda_container').hide();
-            $('#tipo_guarda').val(''); // Reset value
-        }
 
         // Somente um responsavel logic
         if (onlyOne) {
             // Hide all except first
             $('.responsavel-wrapper').each(function(index) {
-                if (index > 0) $(this).hide();
+                if (index > 0) {
+                    $(this).hide();
+                    $(this).find('.guardiao-legal-check').prop('checked', false);
+                }
             });
         } else {
             // Show all
@@ -123,32 +117,34 @@ frappe.ready(function() {
     }
 
     function toggleGuardiaoLegal() {
-        const tipoGuarda = $('#tipo_guarda').val();
-        const isUnilateral = tipoGuarda === 'Unilateral';
-        
-        $('.guardiao-legal-check').each(function() {
-            const container = $(this).closest('.col-12'); // The column containing the checkbox
-            const sectionTitle = container.closest('.card-modern__body').find('h4:contains("Vínculo")');
-
-            if (isUnilateral) {
-                $(this).prop('disabled', false);
-                container.show();
-                sectionTitle.show();
-            } else {
-                $(this).prop('disabled', true).prop('checked', false);
-                container.hide();
-                sectionTitle.hide();
-            }
+        const isUnilateral = $('#guarda_unilateral').is(':checked');
+        const checks = $('.guardiao-legal-check');
+        const containers = $('.guardiao-legal-container');
+        const sectionTitle = $('.responsavel-card .card-modern__subtitle').filter(function() {
+            return $(this).text().trim() === 'Vínculo';
         });
+
+        if (isUnilateral) {
+            containers.show();
+            sectionTitle.show();
+            checks.prop('disabled', false);
+            if (checks.filter(':checked').length !== 1) {
+                checks.prop('checked', false);
+                checks.first().prop('checked', true);
+            }
+        } else {
+            checks.prop('checked', true).prop('disabled', true);
+            containers.hide();
+            sectionTitle.hide();
+        }
     }
 
-    $('#pais_divorciados').on('change', toggleFamilyInfo);
+    $('#guarda_unilateral').on('change', toggleGuardiaoLegal);
     $('#somente_um_responsavel').on('change', toggleFamilyInfo);
-    $('#tipo_guarda').on('change', toggleGuardiaoLegal);
 
     // Enforce single selection for Legal Guardian
     $(document).on('change', '.guardiao-legal-check', function() {
-        if ($(this).is(':checked')) {
+        if ($('#guarda_unilateral').is(':checked') && $(this).is(':checked')) {
             $('.guardiao-legal-check').not(this).prop('checked', false);
         }
     });
@@ -369,7 +365,7 @@ frappe.ready(function() {
 
         // Handle checkboxes explicitly
         form_data['estrangeiro'] = $('#estrangeiro').is(':checked') ? 1 : 0;
-        form_data['pais_divorciados'] = $('#pais_divorciados').is(':checked') ? 1 : 0;
+        form_data['guarda_unilateral'] = $('#guarda_unilateral').is(':checked') ? 1 : 0;
 
         let novo_associado_name = form_data['name'];
         delete form_data['name'];
@@ -395,6 +391,30 @@ frappe.ready(function() {
             
             responsaveis_data.push(respData);
         });
+
+        const isUnilateral = form_data['guarda_unilateral'] === 1;
+        const visibleChecks = $('.responsavel-wrapper:visible .guardiao-legal-check');
+        const checksToValidate = visibleChecks.length ? visibleChecks : $('.guardiao-legal-check');
+
+        if (isUnilateral) {
+            const checkedCount = checksToValidate.filter(':checked').length;
+            if (checkedCount !== 1) {
+                frappe.msgprint({
+                    title: 'Validação de Guarda',
+                    indicator: 'red',
+                    message: 'Com guarda unilateral, exatamente um responsável deve ser marcado como guardião legal.'
+                });
+                $btn.prop('disabled', false).text(btnText);
+                return;
+            }
+        } else {
+            $('.guardiao-legal-check').prop('checked', true);
+            responsaveis_data.forEach(resp => {
+                if (resp.nome_completo || resp.cpf || resp.name) {
+                    resp['é_guardiao_legal'] = 1;
+                }
+            });
+        }
 
         // Open Type Selection Modal first instead of Confirmation directly
         openTipoRegistroModal(novo_associado_name, form_data, responsaveis_data, $btn, btnText);
@@ -458,8 +478,7 @@ frappe.ready(function() {
                 'orgao_expedidor': 'Órgão Expedidor',
                 'estado_civil': 'Estado Civil',
                 'telefone_secundario': 'Telefone Secundário',
-                'pais_divorciados': 'Pais Divorciados',
-                'tipo_guarda': 'Tipo de Guarda',
+                'guarda_unilateral': 'Guarda Unilateral',
                 'somente_um_responsavel': 'Somente um Responsável',
                 'local_de_trabalho': 'Local de Trabalho',
                 'é_guardiao_legal': 'É Guardião Legal',

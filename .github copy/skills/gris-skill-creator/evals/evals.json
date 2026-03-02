@@ -1,0 +1,42 @@
+{
+  "skill_name": "gris-skill-creator",
+  "evals": [
+    {
+      "id": 1,
+      "name": "criar-skill-portal-frappe",
+      "prompt": "Crie uma nova skill para implementação de páginas de portal em Frappe (www), incluindo critérios de segurança, chamadas assíncronas e checklist de validação final.",
+      "expected_output": "Estrutura completa da skill com SKILL.md em PT-BR, fluxo operacional claro e referências para portal Frappe.",
+      "files": [],
+      "expectations": [
+        "Gerar SKILL.md com frontmatter válido (name e description)",
+        "Incluir seção de when-to-use/Quando usar com gatilhos explícitos",
+        "Incluir critérios de segurança/permissão para contexto Frappe",
+        "Não depender de instruções fora do escopo do pedido"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "melhorar-skill-existente",
+      "prompt": "Tenho uma skill existente com descrição fraca e pouca clareza de fluxo. Reestruture para reduzir ambiguidades e melhorar ativação, sem overengineering.",
+      "expected_output": "Atualização de SKILL.md com triggering mais claro, progressive disclosure e checklist de entrega.",
+      "files": [],
+      "expectations": [
+        "Melhorar descrição do frontmatter com contextos de ativação",
+        "Adicionar ou reforçar progressive disclosure",
+        "Manter conteúdo em PT-BR e orientado ao uso prático"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "configurar-avaliacao-e-viewer",
+      "prompt": "Estruture a avaliação de uma skill recém-criada com grading.json, benchmark.json e revisão humana via viewer estático.",
+      "expected_output": "Workspace de iteração com contratos de arquivos respeitados e comando de geração de review.html.",
+      "files": [],
+      "expectations": [
+        "Criar metadados de avaliação coerentes com references/schemas.md",
+        "Gerar benchmark agregável por configuração",
+        "Indicar como gerar review.html com eval-viewer/generate_review.py"
+      ]
+    }
+  ]
+}

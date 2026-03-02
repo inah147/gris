@@ -1,0 +1,12 @@
+{
+  "eval_id": 1,
+  "eval_name": "criar-skill-portal-frappe",
+  "prompt": "Crie uma nova skill para implementação de páginas de portal em Frappe (www), incluindo critérios de segurança, chamadas assíncronas e checklist de validação final.",
+  "expectations": [
+    "Gerar SKILL.md com frontmatter válido (name e description)",
+    "Incluir seção de when-to-use/Quando usar com gatilhos explícitos",
+    "Incluir critérios de segurança/permissão para contexto Frappe",
+    "Não depender de instruções fora do escopo do pedido"
+  ],
+  "configuration": "with_skill"
+}

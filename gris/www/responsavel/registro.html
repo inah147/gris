@@ -228,9 +228,9 @@
                 <div class="row g-3">
                     <div class="col-md-6 d-flex align-items-center">
                         <div class="form-check mt-2">
-                            <input class="form-check-input" type="checkbox" id="pais_divorciados" name="pais_divorciados" {% if family_info.pais_divorciados %}checked{% endif %}>
-                            <label class="form-check-label" for="pais_divorciados">
-                                Pais Divorciados?
+                            <input class="form-check-input" type="checkbox" id="guarda_unilateral" name="guarda_unilateral" {% if family_info.guarda_unilateral %}checked{% endif %}>
+                            <label class="form-check-label" for="guarda_unilateral">
+                                A guarda do jovem é unilateral?
                             </label>
                         </div>
                     </div>
@@ -241,16 +241,6 @@
                                 Somente um responsável legal
                             </label>
                         </div>
-                    </div>
-                    <div class="col-md-6" id="tipo_guarda_container" style="display: none;">
-                        <label for="tipo_guarda" class="form-label-modern">Tipo de Guarda</label>
-                        <select class="form-input-modern" id="tipo_guarda" name="tipo_guarda">
-                            <option value="">Selecione...</option>
-                            <option value="Compartilhada" {% if family_info.tipo_guarda == 'Compartilhada' %}selected{% endif %}>Compartilhada</option>
-                            <option value="Unilateral" {% if family_info.tipo_guarda == 'Unilateral' %}selected{% endif %}>Unilateral</option>
-                            <option value="Alternada" {% if family_info.tipo_guarda == 'Alternada' %}selected{% endif %}>Alternada</option>
-                            <option value="Nidal" {% if family_info.tipo_guarda == 'Nidal' %}selected{% endif %}>Nidal</option>
-                        </select>
                     </div>
                 </div>
             </div>
@@ -266,12 +256,9 @@
                 <div class="row g-5" id="responsaveis-list">
                     {% for item in responsaveis %}
                     <div class="col-12 responsavel-wrapper">
-                        <div class="responsavel-card {{ 'primary' if item.is_primary else '' }}" data-responsavel-id="{{ item.doc.name or '' }}">
+                        <div class="responsavel-card" data-responsavel-id="{{ item.doc.name or '' }}">
                             <div class="responsavel-card__header">
                                 <div class="responsavel-card__title">{{ item.doc.nome_completo or 'Novo Responsável' }}</div>
-                                {% if item.is_primary %}
-                                <div class="responsavel-card__badge">1º Responsável</div>
-                                {% endif %}
                             </div>
                             <div class="card-modern__body">
                                 <h4 class="card-modern__subtitle mb-3">Dados Pessoais</h4>
@@ -396,9 +383,9 @@
 
                                 <h4 class="card-modern__subtitle mb-3">Vínculo</h4>
                                 <div class="row g-3">
-                                    <div class="col-12 col-md-4">
+                                    <div class="col-12 col-md-4 guardiao-legal-container">
                                         <div class="form-check mt-2">
-                                            <input class="form-check-input guardiao-legal-check" type="checkbox" data-fieldname="é_guardiao_legal" {% if item.vinculo.é_guardiao_legal %}checked{% endif %} disabled>
+                                            <input class="form-check-input guardiao-legal-check" type="checkbox" data-fieldname="é_guardiao_legal" {% if item.vinculo.é_guardiao_legal %}checked{% endif %}>
                                             <label class="form-check-label">
                                                 É Guardião Legal?
                                             </label>

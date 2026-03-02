@@ -729,6 +729,16 @@ doc.nome_completo }}{% endif %}{% endblock %} {% block head_include %} {{ super(
 						<h4 class="card-modern__subtitle mb-3">Vínculo</h4>
 						<div class="row g-3">
 							<div class="col-12 col-md-4">
+								<label class="form-label-modern">Guarda Unilateral?</label>
+								<input
+									type="text"
+									class="form-input-modern form-input-modern--sm"
+									value="{{ 'Sim' if guarda_unilateral else 'Não' }}"
+									readonly
+									disabled
+								/>
+							</div>
+							<div class="col-12 col-md-4">
 								<label class="form-label-modern">Guardião Legal?</label>
 								<input
 									type="text"
@@ -738,28 +748,6 @@ doc.nome_completo }}{% endif %}{% endblock %} {% block head_include %} {{ super(
 									disabled
 								/>
 							</div>
-							<div class="col-12 col-md-4">
-								<label class="form-label-modern">Pais Divorciados?</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ 'Sim' if item.vinculo.pais_divorciados else 'Não' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							{% if item.vinculo.pais_divorciados %}
-							<div class="col-12 col-md-4">
-								<label class="form-label-modern">Tipo de Guarda</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.vinculo.tipo_guarda or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							{% endif %}
 						</div>
 					</div>
 				</div>

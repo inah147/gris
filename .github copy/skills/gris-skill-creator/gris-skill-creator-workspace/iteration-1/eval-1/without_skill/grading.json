@@ -1,0 +1,33 @@
+{
+  "expectations": [
+    {
+      "text": "Gerar SKILL.md com frontmatter válido (name e description)",
+      "passed": false,
+      "evidence": "PREENCHER"
+    },
+    {
+      "text": "Incluir seção de when-to-use/Quando usar com gatilhos explícitos",
+      "passed": false,
+      "evidence": "PREENCHER"
+    },
+    {
+      "text": "Incluir critérios de segurança/permissão para contexto Frappe",
+      "passed": false,
+      "evidence": "PREENCHER"
+    },
+    {
+      "text": "Não depender de instruções fora do escopo do pedido",
+      "passed": false,
+      "evidence": "PREENCHER"
+    }
+  ],
+  "summary": {
+    "passed": 0,
+    "failed": 4,
+    "total": 4,
+    "pass_rate": 0.0
+  },
+  "notes": [
+    "Template inicial: atualizar após grading real."
+  ]
+}

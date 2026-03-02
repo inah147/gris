@@ -8,6 +8,7 @@
   "responsavel",
   "beneficiario_associado",
   "beneficiario_novo_associado",
+  "guarda_unilateral",
   "pais_divorciados",
   "tipo_guarda",
   "\u00e9_guardiao_legal",
@@ -22,13 +23,21 @@
   },
   {
    "default": "0",
+   "fieldname": "guarda_unilateral",
+   "fieldtype": "Check",
+   "label": "Guarda unilateral"
+  },
+  {
+   "default": "0",
    "fieldname": "pais_divorciados",
    "fieldtype": "Check",
+    "hidden": 1,
    "label": "Pais divorciados"
   },
   {
    "fieldname": "tipo_guarda",
    "fieldtype": "Select",
+    "hidden": 1,
    "label": "Tipo de Guarda",
    "options": "-\nCompartilhada\nUnilateral\nAlternada\nNidal"
   },
@@ -54,6 +63,7 @@
    "default": "0",
    "fieldname": "primeiro_responsavel",
    "fieldtype": "Check",
+    "hidden": 1,
    "label": "\u00c9 primeiro respons\u00e1vel"
   }
  ],

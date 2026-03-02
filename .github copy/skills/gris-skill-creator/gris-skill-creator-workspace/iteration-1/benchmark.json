@@ -1,0 +1,269 @@
+{
+  "metadata": {
+    "skill_name": "gris-skill-creator",
+    "timestamp": "2026-03-02T11:19:50.429017+00:00",
+    "configs": [
+      "with_skill",
+      "without_skill"
+    ],
+    "runs_count": 6
+  },
+  "runs": [
+    {
+      "run_id": "eval-1-with_skill",
+      "eval_id": 1,
+      "eval_name": "criar-skill-portal-frappe",
+      "configuration": "with_skill",
+      "summary": {
+        "passed": 0,
+        "failed": 4,
+        "total": 4,
+        "pass_rate": 0.0,
+        "time_seconds": 0.0,
+        "tokens": 0
+      },
+      "expectations": [
+        {
+          "text": "Gerar SKILL.md com frontmatter válido (name e description)",
+          "passed": false,
+          "evidence": "PREENCHER"
+        },
+        {
+          "text": "Incluir seção de when-to-use/Quando usar com gatilhos explícitos",
+          "passed": false,
+          "evidence": "PREENCHER"
+        },
+        {
+          "text": "Incluir critérios de segurança/permissão para contexto Frappe",
+          "passed": false,
+          "evidence": "PREENCHER"
+        },
+        {
+          "text": "Não depender de instruções fora do escopo do pedido",
+          "passed": false,
+          "evidence": "PREENCHER"
+        }
+      ],
+      "notes": [
+        "Template inicial: atualizar após grading real."
+      ]
+    },
+    {
+      "run_id": "eval-1-without_skill",
+      "eval_id": 1,
+      "eval_name": "criar-skill-portal-frappe",
+      "configuration": "without_skill",
+      "summary": {
+        "passed": 0,
+        "failed": 4,
+        "total": 4,
+        "pass_rate": 0.0,
+        "time_seconds": 0.0,
+        "tokens": 0
+      },
+      "expectations": [
+        {
+          "text": "Gerar SKILL.md com frontmatter válido (name e description)",
+          "passed": false,
+          "evidence": "PREENCHER"
+        },
+        {
+          "text": "Incluir seção de when-to-use/Quando usar com gatilhos explícitos",
+          "passed": false,
+          "evidence": "PREENCHER"
+        },
+        {
+          "text": "Incluir critérios de segurança/permissão para contexto Frappe",
+          "passed": false,
+          "evidence": "PREENCHER"
+        },
+        {
+          "text": "Não depender de instruções fora do escopo do pedido",
+          "passed": false,
+          "evidence": "PREENCHER"
+        }
+      ],
+      "notes": [
+        "Template inicial: atualizar após grading real."
+      ]
+    },
+    {
+      "run_id": "eval-2-with_skill",
+      "eval_id": 2,
+      "eval_name": "melhorar-skill-existente",
+      "configuration": "with_skill",
+      "summary": {
+        "passed": 0,
+        "failed": 3,
+        "total": 3,
+        "pass_rate": 0.0,
+        "time_seconds": 0.0,
+        "tokens": 0
+      },
+      "expectations": [
+        {
+          "text": "Melhorar descrição do frontmatter com contextos de ativação",
+          "passed": false,
+          "evidence": "PREENCHER"
+        },
+        {
+          "text": "Adicionar ou reforçar progressive disclosure",
+          "passed": false,
+          "evidence": "PREENCHER"
+        },
+        {
+          "text": "Manter conteúdo em PT-BR e orientado ao uso prático",
+          "passed": false,
+          "evidence": "PREENCHER"
+        }
+      ],
+      "notes": [
+        "Template inicial: atualizar após grading real."
+      ]
+    },
+    {
+      "run_id": "eval-2-without_skill",
+      "eval_id": 2,
+      "eval_name": "melhorar-skill-existente",
+      "configuration": "without_skill",
+      "summary": {
+        "passed": 0,
+        "failed": 3,
+        "total": 3,
+        "pass_rate": 0.0,
+        "time_seconds": 0.0,
+        "tokens": 0
+      },
+      "expectations": [
+        {
+          "text": "Melhorar descrição do frontmatter com contextos de ativação",
+          "passed": false,
+          "evidence": "PREENCHER"
+        },
+        {
+          "text": "Adicionar ou reforçar progressive disclosure",
+          "passed": false,
+          "evidence": "PREENCHER"
+        },
+        {
+          "text": "Manter conteúdo em PT-BR e orientado ao uso prático",
+          "passed": false,
+          "evidence": "PREENCHER"
+        }
+      ],
+      "notes": [
+        "Template inicial: atualizar após grading real."
+      ]
+    },
+    {
+      "run_id": "eval-3-with_skill",
+      "eval_id": 3,
+      "eval_name": "configurar-avaliacao-e-viewer",
+      "configuration": "with_skill",
+      "summary": {
+        "passed": 0,
+        "failed": 3,
+        "total": 3,
+        "pass_rate": 0.0,
+        "time_seconds": 0.0,
+        "tokens": 0
+      },
+      "expectations": [
+        {
+          "text": "Criar metadados de avaliação coerentes com references/schemas.md",
+          "passed": false,
+          "evidence": "PREENCHER"
+        },
+        {
+          "text": "Gerar benchmark agregável por configuração",
+          "passed": false,
+          "evidence": "PREENCHER"
+        },
+        {
+          "text": "Indicar como gerar review.html com eval-viewer/generate_review.py",
+          "passed": false,
+          "evidence": "PREENCHER"
+        }
+      ],
+      "notes": [
+        "Template inicial: atualizar após grading real."
+      ]
+    },
+    {
+      "run_id": "eval-3-without_skill",
+      "eval_id": 3,
+      "eval_name": "configurar-avaliacao-e-viewer",
+      "configuration": "without_skill",
+      "summary": {
+        "passed": 0,
+        "failed": 3,
+        "total": 3,
+        "pass_rate": 0.0,
+        "time_seconds": 0.0,
+        "tokens": 0
+      },
+      "expectations": [
+        {
+          "text": "Criar metadados de avaliação coerentes com references/schemas.md",
+          "passed": false,
+          "evidence": "PREENCHER"
+        },
+        {
+          "text": "Gerar benchmark agregável por configuração",
+          "passed": false,
+          "evidence": "PREENCHER"
+        },
+        {
+          "text": "Indicar como gerar review.html com eval-viewer/generate_review.py",
+          "passed": false,
+          "evidence": "PREENCHER"
+        }
+      ],
+      "notes": [
+        "Template inicial: atualizar após grading real."
+      ]
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "time_seconds": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "tokens": {
+        "mean": 0.0,
+        "min": 0,
+        "max": 0
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "time_seconds": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "tokens": {
+        "mean": 0.0,
+        "min": 0,
+        "max": 0
+      }
+    },
+    "delta": {
+      "pass_rate": 0.0,
+      "time_seconds": 0.0,
+      "tokens": 0
+    }
+  },
+  "analysis_notes": []
+}

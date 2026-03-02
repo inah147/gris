@@ -1,0 +1,57 @@
+{
+  "skill_name": "frappe-api-design",
+  "evals": [
+    {
+      "id": 1,
+      "name": "criar-rpc-com-autorizacao",
+      "prompt": "Crie um método @frappe.whitelist para atualizar o status de um DocType, garantindo validação de permissão antes da mutação e resposta padronizada.",
+      "expected_output": "Implementação RPC com validação backend de autorização, mutação segura e retorno consistente de sucesso/erro.",
+      "files": [],
+      "expectations": [
+        "Definir contrato de entrada e saída de forma explícita",
+        "Validar permissão no backend antes de salvar",
+        "Padronizar resposta com formato previsível",
+        "Evitar instruções inseguras como ignore_permissions=True sem contexto"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "revisar-endpoint-publico",
+      "prompt": "Revise um endpoint marcado com allow_guest=True e proponha ajustes para reduzir risco, mantendo a funcionalidade pública exigida.",
+      "expected_output": "Revisão de segurança com critérios objetivos para uso de allow_guest=True e reforço de validações de entrada/limitação de escopo.",
+      "files": [],
+      "expectations": [
+        "Explicar quando allow_guest=True é aceitável",
+        "Adicionar validações explícitas para endpoint público",
+        "Diferenciar operação pública de operações que exigem autenticação",
+        "Não sugerir abertura indevida de acesso"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "padronizar-resposta-e-erros",
+      "prompt": "Padronize o contrato de respostas de uma API Frappe para sucesso e falha, com códigos de erro estáveis para integração externa.",
+      "expected_output": "Definição de envelope consistente de resposta, incluindo payload de sucesso e estrutura de erro acionável sem vazamento sensível.",
+      "files": [],
+      "expectations": [
+        "Fornecer padrão de sucesso e padrão de erro consistentes",
+        "Usar códigos de erro estáveis para clientes",
+        "Manter mensagens claras e sem detalhes internos sensíveis",
+        "Distinguir erro de validação de erro de permissão"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "revisao-performance-listagem",
+      "prompt": "Avalie uma API de listagem sem paginação e com possível N+1, e reestruture para atender boas práticas de performance no Frappe.",
+      "expected_output": "Plano ou implementação com paginação, filtros controlados e redução de consultas redundantes.",
+      "files": [],
+      "expectations": [
+        "Aplicar limit_start e limit_page_length em listagens",
+        "Revisar risco de N+1 e sugerir consulta mais eficiente",
+        "Evitar SQL não parametrizado",
+        "Preservar contrato estável para consumidores"
+      ]
+    }
+  ]
+}

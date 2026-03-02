@@ -1,0 +1,11 @@
+{
+  "eval_id": 2,
+  "eval_name": "melhorar-skill-existente",
+  "prompt": "Tenho uma skill existente com descrição fraca e pouca clareza de fluxo. Reestruture para reduzir ambiguidades e melhorar ativação, sem overengineering.",
+  "expectations": [
+    "Melhorar descrição do frontmatter com contextos de ativação",
+    "Adicionar ou reforçar progressive disclosure",
+    "Manter conteúdo em PT-BR e orientado ao uso prático"
+  ],
+  "configuration": "without_skill"
+}

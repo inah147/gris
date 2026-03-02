@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GRIS Skill Review</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .tabs { display: flex; gap: 8px; margin: 12px 0; }
+    .tab-btn { padding: 8px 12px; border: 1px solid #ddd; background: #f7f7f7; cursor: pointer; }
+    .tab-btn.active { background: #fff; border-bottom: 2px solid #000; }
+    .hidden { display: none; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    pre { white-space: pre-wrap; max-height: 320px; overflow: auto; }
+    textarea { width: 100%; min-height: 90px; }
+    .toolbar { display: flex; gap: 8px; margin-top: 10px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #f5f5f5; }
+    details { margin-top: 8px; }
+    .pill { padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+    .ok { background: #e7f7e7; }
+    .ko { background: #fde9e9; }
+  </style>
+</head>
+<body>
+  <h1>Review: <span id="skill-name"></span></h1>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-outputs-btn" onclick="setTab('outputs')">Outputs</button>
+    <button class="tab-btn" id="tab-benchmark-btn" onclick="setTab('benchmark')">Benchmark</button>
+  </div>
+
+  <div id="tab-outputs">
+    <div id="progress"></div>
+    <div class="card">
+      <h3>Prompt</h3>
+      <div><strong>Eval:</strong> <span id="eval-name"></span></div>
+      <div><strong>Configuração:</strong> <span id="eval-config"></span></div>
+      <pre id="prompt"></pre>
+    </div>
+    <div class="card">
+      <h3>Outputs</h3>
+      <div id="outputs"></div>
+      <details>
+        <summary>Output anterior (iteração passada)</summary>
+        <div id="previous-outputs"></div>
+      </details>
+    </div>
+    <div class="card">
+      <h3>Formal Grades</h3>
+      <div id="grading"></div>
+      <details>
+        <summary>Grades da iteração anterior</summary>
+        <div id="previous-grading"></div>
+      </details>
+    </div>
+    <div class="card">
+      <h3>Feedback</h3>
+      <textarea id="feedback" placeholder="Seu feedback para esta execução..."></textarea>
+      <details>
+        <summary>Feedback anterior</summary>
+        <pre id="previous-feedback"></pre>
+      </details>
+    </div>
+    <div class="toolbar">
+      <button onclick="prevRun()">Anterior</button>
+      <button onclick="nextRun()">Próximo</button>
+      <button onclick="downloadFeedback()">Baixar feedback.json</button>
+    </div>
+  </div>
+
+  <div id="tab-benchmark" class="hidden">
+    <div class="card">
+      <h3>Resumo</h3>
+      <div id="benchmark-summary"></div>
+    </div>
+    <div class="card">
+      <h3>Runs</h3>
+      <div id="benchmark-runs"></div>
+    </div>
+  </div>
+
+  <script>
+    /*__EMBEDDED_DATA__*/
+    let idx = 0;
+    const feedback = {};
+
+    function setTab(tab) {
+      const isOutputs = tab === 'outputs';
+      document.getElementById('tab-outputs').classList.toggle('hidden', !isOutputs);
+      document.getElementById('tab-benchmark').classList.toggle('hidden', isOutputs);
+      document.getElementById('tab-outputs-btn').classList.toggle('active', isOutputs);
+      document.getElementById('tab-benchmark-btn').classList.toggle('active', !isOutputs);
+    }
+
+    function renderOutputs(nodeId, files) {
+      const target = document.getElementById(nodeId);
+      target.innerHTML = '';
+      if (!files || files.length === 0) {
+        target.innerHTML = '<em>Sem arquivos de saída.</em>';
+        return;
+      }
+
+      files.forEach(f => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        if (f.type === 'text') {
+          div.innerHTML = `<strong>${escapeHtml(f.name)}</strong><pre>${escapeHtml(f.content || '')}</pre>`;
+        } else {
+          div.innerHTML = `<strong>${escapeHtml(f.name)}</strong><p>Arquivo não textual (inspecione no workspace).</p>`;
+        }
+        target.appendChild(div);
+      });
+    }
+
+    function renderGrading(nodeId, grading) {
+      const target = document.getElementById(nodeId);
+      target.innerHTML = '';
+
+      const expectations = (grading && grading.expectations) || [];
+      const summary = (grading && grading.summary) || {};
+
+      if (!expectations.length) {
+        target.innerHTML = '<em>Sem grading para este run.</em>';
+        return;
+      }
+
+      const summaryEl = document.createElement('div');
+      summaryEl.innerHTML = `<strong>Resumo:</strong> passed=${summary.passed ?? 0}, failed=${summary.failed ?? 0}, total=${summary.total ?? 0}, pass_rate=${summary.pass_rate ?? 0}`;
+      target.appendChild(summaryEl);
+
+      const table = document.createElement('table');
+      table.innerHTML = '<thead><tr><th>Critério</th><th>Status</th><th>Evidência</th></tr></thead>';
+      const tbody = document.createElement('tbody');
+      expectations.forEach(item => {
+        const tr = document.createElement('tr');
+        const status = item.passed ? 'PASS' : 'FAIL';
+        const klass = item.passed ? 'pill ok' : 'pill ko';
+        tr.innerHTML = `
+          <td>${escapeHtml(item.text || '')}</td>
+          <td><span class="${klass}">${status}</span></td>
+          <td>${escapeHtml(item.evidence || '')}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      target.appendChild(table);
+    }
+
+    function renderBenchmark() {
+      const benchmark = EMBEDDED_DATA.benchmark;
+      const summaryNode = document.getElementById('benchmark-summary');
+      const runsNode = document.getElementById('benchmark-runs');
+
+      if (!benchmark) {
+        summaryNode.innerHTML = '<em>benchmark.json não informado/encontrado.</em>';
+        runsNode.innerHTML = '';
+        return;
+      }
+
+      const metadata = benchmark.metadata || {};
+      const runSummary = benchmark.run_summary || {};
+
+      summaryNode.innerHTML = `
+        <div><strong>Skill:</strong> ${escapeHtml(String(metadata.skill_name || EMBEDDED_DATA.skill_name))}</div>
+        <div><strong>Timestamp:</strong> ${escapeHtml(String(metadata.timestamp || ''))}</div>
+        <div><strong>Configs:</strong> ${escapeHtml(JSON.stringify(metadata.configs || []))}</div>
+        <div><strong>Runs:</strong> ${escapeHtml(String(metadata.runs_count || 0))}</div>
+        <pre>${escapeHtml(JSON.stringify(runSummary, null, 2))}</pre>
+      `;
+
+      const runs = benchmark.runs || [];
+      if (!runs.length) {
+        runsNode.innerHTML = '<em>Sem runs no benchmark.</em>';
+        return;
+      }
+
+      const table = document.createElement('table');
+      table.innerHTML = '<thead><tr><th>Run</th><th>Eval</th><th>Config</th><th>Pass rate</th><th>Tempo (s)</th><th>Tokens</th></tr></thead>';
+      const tbody = document.createElement('tbody');
+
+      runs.forEach(run => {
+        const tr = document.createElement('tr');
+        const summary = run.summary || {};
+        tr.innerHTML = `
+          <td>${escapeHtml(run.run_id || '')}</td>
+          <td>${escapeHtml(String(run.eval_name || run.eval_id || ''))}</td>
+          <td>${escapeHtml(String(run.configuration || ''))}</td>
+          <td>${escapeHtml(String(summary.pass_rate ?? ''))}</td>
+          <td>${escapeHtml(String(summary.time_seconds ?? ''))}</td>
+          <td>${escapeHtml(String(summary.tokens ?? ''))}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      runsNode.innerHTML = '';
+      runsNode.appendChild(table);
+    }
+
+    function render() {
+      const run = EMBEDDED_DATA.runs[idx];
+      document.getElementById('skill-name').textContent = EMBEDDED_DATA.skill_name;
+      document.getElementById('progress').textContent = `${idx + 1} de ${EMBEDDED_DATA.runs.length}`;
+      document.getElementById('eval-name').textContent = run.eval_name || '-';
+      document.getElementById('eval-config').textContent = run.configuration || '-';
+      document.getElementById('prompt').textContent = run.prompt || '(sem prompt)';
+      document.getElementById('feedback').value = feedback[run.id] || '';
+      document.getElementById('previous-feedback').textContent = run.previous_feedback || '(sem feedback anterior)';
+
+      renderOutputs('outputs', run.outputs || []);
+      renderOutputs('previous-outputs', (run.previous && run.previous.outputs) || []);
+      renderGrading('grading', run.grading || {});
+      renderGrading('previous-grading', (run.previous && run.previous.grading) || {});
+    }
+
+    function escapeHtml(s) {
+      return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+    }
+
+    function saveCurrent() {
+      const run = EMBEDDED_DATA.runs[idx];
+      feedback[run.id] = document.getElementById('feedback').value;
+    }
+
+    function prevRun() { saveCurrent(); if (idx > 0) idx--; render(); }
+    function nextRun() { saveCurrent(); if (idx < EMBEDDED_DATA.runs.length - 1) idx++; render(); }
+
+    function downloadFeedback() {
+      saveCurrent();
+      const reviews = EMBEDDED_DATA.runs.map(r => ({
+        run_id: r.id,
+        feedback: feedback[r.id] || '',
+        timestamp: new Date().toISOString()
+      }));
+      const payload = { reviews, status: 'complete' };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'feedback.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    renderBenchmark();
+    render();
+  </script>
+</body>
+</html>

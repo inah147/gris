@@ -1,0 +1,11 @@
+{
+  "eval_id": 3,
+  "eval_name": "configurar-avaliacao-e-viewer",
+  "prompt": "Estruture a avaliação de uma skill recém-criada com grading.json, benchmark.json e revisão humana via viewer estático.",
+  "expectations": [
+    "Criar metadados de avaliação coerentes com references/schemas.md",
+    "Gerar benchmark agregável por configuração",
+    "Indicar como gerar review.html com eval-viewer/generate_review.py"
+  ],
+  "configuration": "without_skill"
+}

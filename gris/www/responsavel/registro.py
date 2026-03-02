@@ -1,6 +1,7 @@
 import json
 
 import frappe
+from frappe.utils import cint
 
 from gris.api.portal_access import enrich_context
 
@@ -42,24 +43,22 @@ def get_context(context):
 	)
 
 	responsaveis = []
-	family_info = {"pais_divorciados": 0, "tipo_guarda": ""}
+	family_info = {"guarda_unilateral": 0}
 
 	for v in vinculos:
 		# Capture family info from the first link (assuming they are synced)
 		if not responsaveis:
-			family_info["pais_divorciados"] = v.pais_divorciados
-			family_info["tipo_guarda"] = v.tipo_guarda
+			family_info["guarda_unilateral"] = cint(v.guarda_unilateral)
 
 		if v.responsavel:
 			resp_doc = frappe.get_doc("Responsavel", v.responsavel)
-			responsaveis.append({"vinculo": v, "doc": resp_doc, "is_primary": v.primeiro_responsavel})
+			responsaveis.append({"vinculo": v, "doc": resp_doc})
 
-	# Sort so primary is first
-	responsaveis.sort(key=lambda x: x["is_primary"], reverse=True)
+	responsaveis.sort(key=lambda x: (x["doc"].nome_completo or ""))
 
 	# Ensure at least 2 items for the UI
 	while len(responsaveis) < 2:
-		responsaveis.append({"vinculo": {}, "doc": {}, "is_primary": False, "is_placeholder": True})
+		responsaveis.append({"vinculo": {}, "doc": {}, "is_placeholder": True})
 
 	context.responsaveis = responsaveis
 	context.family_info = family_info
@@ -124,6 +123,9 @@ def update_novo_associado(novo_associado_name, data, responsaveis_data=None):
 	if isinstance(data, str):
 		data = json.loads(data)
 
+	guarda_unilateral = cint(data.get("guarda_unilateral", 0))
+	data["guarda_unilateral"] = guarda_unilateral
+
 	# Allowed fields to update
 	allowed_fields = [
 		"tipo_de_registro",
@@ -169,21 +171,13 @@ def update_novo_associado(novo_associado_name, data, responsaveis_data=None):
 	doc.save(ignore_permissions=True)
 
 	# Update Family Info on ALL Links (Responsavel Vinculo)
-	# These fields are "global" for the associate's family context
-	family_info = {}
-	if "pais_divorciados" in data:
-		family_info["pais_divorciados"] = data["pais_divorciados"]
-	if "tipo_guarda" in data:
-		family_info["tipo_guarda"] = data["tipo_guarda"]
-
-	if family_info:
-		vinculos = frappe.get_all(
-			"Responsavel Vinculo",
-			filters={"beneficiario_novo_associado": novo_associado_name},
-			fields=["name"],
-		)
-		for v in vinculos:
-			frappe.db.set_value("Responsavel Vinculo", v.name, family_info)
+	vinculos = frappe.get_all(
+		"Responsavel Vinculo",
+		filters={"beneficiario_novo_associado": novo_associado_name},
+		fields=["name"],
+	)
+	for v in vinculos:
+		frappe.db.set_value("Responsavel Vinculo", v.name, "guarda_unilateral", guarda_unilateral)
 
 	# Update Responsibles
 	if responsaveis_data:
@@ -245,11 +239,7 @@ def update_novo_associado(novo_associado_name, data, responsaveis_data=None):
 				new_link = frappe.new_doc("Responsavel Vinculo")
 				new_link.beneficiario_novo_associado = novo_associado_name
 				new_link.responsavel = resp_id
-				# Set family info
-				if "pais_divorciados" in data:
-					new_link.pais_divorciados = data["pais_divorciados"]
-				if "tipo_guarda" in data:
-					new_link.tipo_guarda = data["tipo_guarda"]
+				new_link.guarda_unilateral = guarda_unilateral
 
 				# Set specific link info
 				if "é_guardiao_legal" in resp_item:
@@ -314,5 +304,20 @@ def update_novo_associado(novo_associado_name, data, responsaveis_data=None):
 						resp_doc.set(target_field, val)
 
 				resp_doc.save(ignore_permissions=True)
+
+	all_vinculos = frappe.get_all(
+		"Responsavel Vinculo",
+		filters={"beneficiario_novo_associado": novo_associado_name},
+		fields=["name", "\u00e9_guardiao_legal"],
+	)
+
+	if guarda_unilateral:
+		guardioes = [v for v in all_vinculos if cint(v.get("\u00e9_guardiao_legal")) == 1]
+		if len(guardioes) != 1:
+			frappe.throw("Com guarda unilateral, exatamente um responsável deve ser marcado como guardião legal.")
+	else:
+		for v in all_vinculos:
+			if cint(v.get("\u00e9_guardiao_legal")) != 1:
+				frappe.db.set_value("Responsavel Vinculo", v.name, "\u00e9_guardiao_legal", 1)
 
 	return {"status": "success"}

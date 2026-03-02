@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import add_days, format_date, format_datetime, get_fullname, getdate, strip_html
+from frappe.utils import add_days, cint, format_date, format_datetime, get_fullname, getdate, strip_html
 
 from gris.api.portal_access import enrich_context
 
@@ -60,13 +60,13 @@ def get_context(context):
 	)
 
 	responsaveis = []
+	context.guarda_unilateral = cint(vinculos[0].guarda_unilateral) if vinculos else 0
 	for v in vinculos:
 		if v.responsavel:
 			resp_doc = frappe.get_doc("Responsavel", v.responsavel)
-			responsaveis.append({"vinculo": v, "doc": resp_doc, "is_primary": v.primeiro_responsavel})
+			responsaveis.append({"vinculo": v, "doc": resp_doc})
 
-	# Sort so primary is first
-	responsaveis.sort(key=lambda x: x["is_primary"], reverse=True)
+	responsaveis.sort(key=lambda x: (x["doc"].nome_completo or ""))
 	context.responsaveis = responsaveis
 
 	# Flow steps for infographic

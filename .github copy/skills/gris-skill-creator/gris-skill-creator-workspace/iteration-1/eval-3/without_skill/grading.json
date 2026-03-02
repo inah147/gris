@@ -1,0 +1,28 @@
+{
+  "expectations": [
+    {
+      "text": "Criar metadados de avaliação coerentes com references/schemas.md",
+      "passed": false,
+      "evidence": "PREENCHER"
+    },
+    {
+      "text": "Gerar benchmark agregável por configuração",
+      "passed": false,
+      "evidence": "PREENCHER"
+    },
+    {
+      "text": "Indicar como gerar review.html com eval-viewer/generate_review.py",
+      "passed": false,
+      "evidence": "PREENCHER"
+    }
+  ],
+  "summary": {
+    "passed": 0,
+    "failed": 3,
+    "total": 3,
+    "pass_rate": 0.0
+  },
+  "notes": [
+    "Template inicial: atualizar após grading real."
+  ]
+}

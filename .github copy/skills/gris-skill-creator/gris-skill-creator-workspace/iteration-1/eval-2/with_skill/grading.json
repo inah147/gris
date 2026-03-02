@@ -1,0 +1,28 @@
+{
+  "expectations": [
+    {
+      "text": "Melhorar descrição do frontmatter com contextos de ativação",
+      "passed": false,
+      "evidence": "PREENCHER"
+    },
+    {
+      "text": "Adicionar ou reforçar progressive disclosure",
+      "passed": false,
+      "evidence": "PREENCHER"
+    },
+    {
+      "text": "Manter conteúdo em PT-BR e orientado ao uso prático",
+      "passed": false,
+      "evidence": "PREENCHER"
+    }
+  ],
+  "summary": {
+    "passed": 0,
+    "failed": 3,
+    "total": 3,
+    "pass_rate": 0.0
+  },
+  "notes": [
+    "Template inicial: atualizar após grading real."
+  ]
+}

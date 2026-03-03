@@ -82,6 +82,7 @@ head_include %} {{ super() }} {% endblock %} {% block page_header %}
 		</div>
 	</a>
 
+	{% if can_access_pesquisa_novos %}
 	<a
 		href="/responsavel/pesquisa_novos"
 		class="inicio-card inicio-card--nav card-modern card-modern--clickable"
@@ -119,5 +120,6 @@ head_include %} {{ super() }} {% endblock %} {% block page_header %}
 			</svg>
 		</div>
 	</a>
+	{% endif %}
 </div>
 {% endblock %}

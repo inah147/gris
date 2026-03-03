@@ -140,7 +140,7 @@
    "fieldname": "escolaridade",
    "fieldtype": "Select",
    "label": "Escolaridade",
-   "options": "Ensino fundamental incompleto\nEnsino fundamental completo\nEnsino m\u00e9dio incompleto\nEnsino m\u00e9dio completo\nEncino superior incompleto\nEnsino superior completo\nEspecializa\u00e7\u00e3o completa\nEspecializa\u00e7\u00e3o incompleta\nMestrado incompleto\nMestrado completo\nDoutorado incompleto\nDoutorado completo\nP\u00f3s doutorado incompleto\nP\u00f3s doutorado completo"
+   "options": "Ensino fundamental incompleto\nEnsino fundamental completo\nEnsino m\u00e9dio incompleto\nEnsino m\u00e9dio completo\nEnsino superior incompleto\nEnsino superior completo\nEspecializa\u00e7\u00e3o completa\nEspecializa\u00e7\u00e3o incompleta\nMestrado incompleto\nMestrado completo\nDoutorado incompleto\nDoutorado completo\nP\u00f3s doutorado incompleto\nP\u00f3s doutorado completo"
   },
   {
    "fieldname": "profiss\u00e3o",
@@ -172,7 +172,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-14 21:43:14.742345",
+ "modified": "2026-03-03 13:42:13.695388",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Responsavel",

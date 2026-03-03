@@ -129,9 +129,47 @@ def _get_user_roles(user: str | None = None) -> list[str]:
 		return []
 
 
+def _get_responsavel_name(user: str | None = None) -> str | None:
+	user = user or frappe.session.user
+	if not user or user == "Guest":
+		return None
+
+	responsavel_name = frappe.db.get_value("Responsavel", {"email": user}, "name")
+	if responsavel_name:
+		return str(responsavel_name)
+
+	associado_name = frappe.db.get_value("Associado", {"id_escoteiros": user}, "name")
+	if not associado_name:
+		return None
+
+	associado_cpf_hash = frappe.db.get_value("Associado", associado_name, "cpf")
+	if associado_cpf_hash and frappe.db.exists("Responsavel", associado_cpf_hash):
+		return str(associado_cpf_hash)
+
+	vinculado = frappe.db.get_value(
+		"Responsavel Vinculo", {"beneficiario_associado": associado_name}, "responsavel"
+	)
+	return str(vinculado) if vinculado else None
+
+
+def _has_beneficiario_em_integracao(user: str | None = None) -> bool:
+	responsavel_name = _get_responsavel_name(user)
+	if not responsavel_name:
+		return False
+
+	return bool(
+		frappe.db.exists(
+			"Responsavel Vinculo",
+			{"responsavel": responsavel_name, "beneficiario_novo_associado": ["is", "set"]},
+		)
+	)
+
+
 def user_has_access(path: str, user: str | None = None, roles: Iterable[str] | None = None) -> bool:
 	roles = list(roles) if roles else _get_user_roles(user)
 	allowed = PAGE_ROLES.get(path)
+	if path == "/responsavel/pesquisa_novos" and not _has_beneficiario_em_integracao(user):
+		return False
 	if "System Manager" in roles and (path not in STRICT_PORTAL_PAGES):
 		return True
 	if not allowed:

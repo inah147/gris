@@ -6,6 +6,29 @@ from gris.api.portal_access import enrich_context
 no_cache = 1
 
 
+def _get_responsavel_name(user):
+	if not user or user == "Guest":
+		return None
+
+	responsavel_name = frappe.db.get_value("Responsavel", {"email": user}, "name")
+	if responsavel_name:
+		return responsavel_name
+
+	# Fallback para contas com login id@escoteiros associadas a um registro no doctype Associado
+	associado_name = frappe.db.get_value("Associado", {"id_escoteiros": user}, "name")
+	if not associado_name:
+		return None
+
+	associado_cpf_hash = frappe.db.get_value("Associado", associado_name, "cpf")
+	if associado_cpf_hash and frappe.db.exists("Responsavel", associado_cpf_hash):
+		return associado_cpf_hash
+
+	# Último fallback: tentar via vínculo já existente do associado
+	return frappe.db.get_value(
+		"Responsavel Vinculo", {"beneficiario_associado": associado_name}, "responsavel"
+	)
+
+
 def _get_sections_by_ramos(ramos):
 	valid_ramos = {ramo for ramo in (ramos or []) if ramo}
 	if not valid_ramos:
@@ -59,7 +82,7 @@ def get_context(context):
 		raise frappe.Redirect
 
 	user = frappe.session.user
-	responsavel_name = frappe.db.get_value("Responsavel", {"email": user}, "name")
+	responsavel_name = _get_responsavel_name(user)
 
 	if not responsavel_name:
 		context.beneficiarios_registrados = []
@@ -236,7 +259,7 @@ def get_context(context):
 @frappe.whitelist()
 def get_available_visit_dates():
 	user = frappe.session.user
-	responsavel_name = frappe.db.get_value("Responsavel", {"email": user}, "name")
+	responsavel_name = _get_responsavel_name(user)
 	if not responsavel_name:
 		return []
 
@@ -316,7 +339,7 @@ def get_available_visit_dates():
 @frappe.whitelist()
 def schedule_visit(date):
 	user = frappe.session.user
-	responsavel_name = frappe.db.get_value("Responsavel", {"email": user}, "name")
+	responsavel_name = _get_responsavel_name(user)
 	if not responsavel_name:
 		frappe.throw("Responsável não encontrado.")
 
@@ -366,7 +389,7 @@ def schedule_visit(date):
 @frappe.whitelist()
 def cancel_visit():
 	user = frappe.session.user
-	responsavel_name = frappe.db.get_value("Responsavel", {"email": user}, "name")
+	responsavel_name = _get_responsavel_name(user)
 	if not responsavel_name:
 		frappe.throw("Responsável não encontrado.")
 

@@ -84,6 +84,10 @@
       { label: 'Criados', value: data.created || 0, color: 'success' },
       { label: 'Atualizados', value: data.updated || 0, color: 'info' },
       { label: 'Sem Alteração', value: data.skipped || 0, color: 'secondary' },
+      { label: 'Responsáveis Criados', value: data.responsavel_created || 0, color: 'success' },
+      { label: 'Responsáveis Atualizados', value: data.responsavel_updated || 0, color: 'info' },
+      { label: 'Vínculos Criados', value: data.vinculo_created || 0, color: 'success' },
+      { label: 'Vínculos Atualizados', value: data.vinculo_updated || 0, color: 'info' },
       { label: 'Erros', value: data.errors || 0, color: 'danger' },
     ];
 

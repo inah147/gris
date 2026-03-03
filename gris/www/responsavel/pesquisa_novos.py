@@ -1,6 +1,27 @@
 import frappe
 
-from gris.api.portal_access import enrich_context
+from gris.api.portal_access import enrich_context, user_has_access
+
+
+def _get_responsavel_name(user):
+	if not user or user == "Guest":
+		return None
+
+	responsavel_name = frappe.db.get_value("Responsavel", {"email": user}, "name")
+	if responsavel_name:
+		return responsavel_name
+
+	associado_name = frappe.db.get_value("Associado", {"id_escoteiros": user}, "name")
+	if not associado_name:
+		return None
+
+	associado_cpf_hash = frappe.db.get_value("Associado", associado_name, "cpf")
+	if associado_cpf_hash and frappe.db.exists("Responsavel", associado_cpf_hash):
+		return associado_cpf_hash
+
+	return frappe.db.get_value(
+		"Responsavel Vinculo", {"beneficiario_associado": associado_name}, "responsavel"
+	)
 
 
 def get_context(context):
@@ -8,8 +29,12 @@ def get_context(context):
 		frappe.local.flags.redirect_location = "/login?redirect-to=/responsavel/pesquisa_novos"
 		raise frappe.Redirect
 
+	if not user_has_access("/responsavel/pesquisa_novos"):
+		frappe.local.flags.redirect_location = "/responsavel"
+		raise frappe.Redirect
+
 	user = frappe.session.user
-	responsavel_name = frappe.db.get_value("Responsavel", {"email": user}, "name")
+	responsavel_name = _get_responsavel_name(user)
 
 	if not responsavel_name:
 		frappe.throw("Responsável não encontrado para este usuário.")
@@ -36,8 +61,14 @@ def submit_survey(data):
 	if frappe.session.user == "Guest":
 		frappe.throw("Não autorizado")
 
+	if not user_has_access("/responsavel/pesquisa_novos"):
+		frappe.throw(
+			"Pesquisa disponível apenas para responsáveis com beneficiários em processo de integração.",
+			frappe.PermissionError,
+		)
+
 	user = frappe.session.user
-	responsavel_name = frappe.db.get_value("Responsavel", {"email": user}, "name")
+	responsavel_name = _get_responsavel_name(user)
 
 	if not responsavel_name:
 		frappe.throw("Responsável não encontrado.")

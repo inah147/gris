@@ -13,6 +13,7 @@ def get_context(context):
 
 	context.sidebar_title = "Painel do Responsável"
 	context.active_link = "/responsavel"
+	context.can_access_pesquisa_novos = user_has_access("/responsavel/pesquisa_novos")
 
 	enrich_context(context, "/responsavel")
 

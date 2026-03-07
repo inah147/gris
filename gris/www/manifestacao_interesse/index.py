@@ -36,7 +36,37 @@ def submit_interest(
 			"message": "Já existe um usuário com este e-mail. Por favor, faça login para acompanhar seu processo.",
 		}
 
+	core_savepoint = None
 	try:
+		jovens_list = []
+		if isinstance(jovens, str):
+			jovens_list = json.loads(jovens)
+		else:
+			jovens_list = jovens or []
+
+		last_resposta = None
+		for jovem in jovens_list:
+			resposta = frappe.get_doc(
+				{
+					"doctype": "Resposta Manifestacao de Interesse",
+					"nome_do_responsavel": nome_responsavel,
+					"email_do_responsavel": email_responsavel,
+					"celular_do_responsavel": celular_responsavel,
+					"cpf_do_responsavel": cpf_responsavel,
+					"nome_do_jovem": jovem.get("nome_jovem", ""),
+					"data_de_nascimento_do_jovem": jovem.get("data_nascimento_jovem", ""),
+					"cpf_do_jovem": jovem.get("cpf_jovem", ""),
+					"data_e_horario_de_resposta": now(),
+					"dados_confirmados": 1,
+					"aceite_lgpd": 1,
+				}
+			)
+			resposta.insert(ignore_permissions=True)
+			last_resposta = resposta
+
+		core_savepoint = f"manifestacao_core_{frappe.generate_hash(length=8)}"
+		frappe.db.savepoint(core_savepoint)
+
 		# Create User
 		user = frappe.new_doc("User")
 		user.email = email_responsavel
@@ -46,9 +76,6 @@ def submit_interest(
 		user.send_welcome_email = 0
 		user.append("roles", {"role": "Responsavel"})
 		user.insert(ignore_permissions=True)
-
-		# Send welcome email manually to suppress "Welcome email sent" message
-		user.send_welcome_mail_to_user()
 
 		# Create or Get Responsavel
 		responsavel_doc = None
@@ -70,33 +97,7 @@ def submit_interest(
 			responsavel_doc.insert(ignore_permissions=True)
 
 		# Process Jovens data
-		jovens_list = []
-		if isinstance(jovens, str):
-			jovens_list = json.loads(jovens)
-		else:
-			jovens_list = jovens
-
-		last_resposta = None
 		for jovem in jovens_list:
-			# Create Resposta Manifestacao de Interesse
-			resposta = frappe.get_doc(
-				{
-					"doctype": "Resposta Manifestacao de Interesse",
-					"nome_do_responsavel": nome_responsavel,
-					"email_do_responsavel": email_responsavel,
-					"celular_do_responsavel": celular_responsavel,
-					"cpf_do_responsavel": cpf_responsavel,
-					"nome_do_jovem": jovem.get("nome_jovem", ""),
-					"data_de_nascimento_do_jovem": jovem.get("data_nascimento_jovem", ""),
-					"cpf_do_jovem": jovem.get("cpf_jovem", ""),
-					"data_e_horario_de_resposta": now(),
-					"dados_confirmados": 1,
-					"aceite_lgpd": 1,
-				}
-			)
-			resposta.insert(ignore_permissions=True)
-			last_resposta = resposta
-
 			# Create or Get Novo Associado
 			novo_associado_doc = None
 			cpf_jovem = jovem.get("cpf_jovem")
@@ -136,6 +137,12 @@ def submit_interest(
 					)
 					vinculo.insert(ignore_permissions=True)
 
+		# Send welcome email manually to suppress "Welcome email sent" message
+		try:
+			user.send_welcome_mail_to_user()
+		except Exception as e:
+			frappe.log_error("Erro envio welcome mail", f"Error sending welcome mail to {email_responsavel}: {e!s}")
+
 		if last_resposta:
 			try:
 				email_template = frappe.get_doc("Email Template", "Confirmacao Manifestacao Interesse")
@@ -157,6 +164,8 @@ def submit_interest(
 			"message": "Sua manifestação de interesse foi registrada com sucesso! Um usuário foi criado para você. Verifique seu e-mail para definir sua senha e acessar o sistema.",
 		}
 	except Exception as e:
+		if core_savepoint:
+			frappe.db.rollback(save_point=core_savepoint)
 		frappe.log_error("Erro Manifestacao Interesse", f"Error in submit_interest: {e!s}")
 		return {
 			"status": "error",

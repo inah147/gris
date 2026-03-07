@@ -225,8 +225,7 @@
     {
      "fieldname": "email_cobranca",
      "fieldtype": "Data",
-     "label": "Email de cobran\u00e7a",
-     "reqd": 1
+      "label": "Email de cobran\u00e7a"
     },
   {
    "fieldname": "column_break_dados_cobranca",
@@ -235,8 +234,7 @@
     {
      "fieldname": "telefone_cobranca",
      "fieldtype": "Data",
-     "label": "Telefone de cobran\u00e7a",
-     "reqd": 1
+      "label": "Telefone de cobran\u00e7a"
     },
   {
    "fieldname": "fluxo_de_registro_tab",

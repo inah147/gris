@@ -141,7 +141,9 @@ def submit_interest(
 		try:
 			user.send_welcome_mail_to_user()
 		except Exception as e:
-			frappe.log_error("Erro envio welcome mail", f"Error sending welcome mail to {email_responsavel}: {e!s}")
+			frappe.log_error(
+				"Erro envio welcome mail", f"Error sending welcome mail to {email_responsavel}: {e!s}"
+			)
 
 		if last_resposta:
 			try:

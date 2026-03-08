@@ -32,6 +32,10 @@
 
   setGrisFavicon();
 
+  if (window.location.pathname === '/login' || window.location.pathname.startsWith('/login/')) {
+    document.body.classList.add('gris-login-page');
+  }
+
   // Verifica se o browser suporta Service Workers
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

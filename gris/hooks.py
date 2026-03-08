@@ -29,7 +29,7 @@ app_license = "mit"
 app_include_js = "/assets/gris/js/pwa-init.js"
 
 # include js, css files in header of web template
-# web_include_css = "/assets/gris/css/gris.css"
+web_include_css = "/assets/gris/css/login-page.css"
 web_include_js = "/assets/gris/js/pwa-init.js"
 
 # include custom scss in every website theme (without file extension ".scss")

@@ -1,0 +1,62 @@
+.gris-login-page .page-card {
+	max-width: 430px;
+	padding: 1.75rem 2rem 1.5rem;
+	border: 1px solid var(--border-color);
+	border-radius: 0.75rem;
+	box-shadow: none;
+}
+
+.gris-login-page .login-content,
+.gris-login-page .for-login {
+	padding-top: 1.5rem;
+}
+
+.gris-login-page .page-card-head {
+	margin-bottom: 1rem;
+}
+
+.gris-login-page .page-card-head > img,
+.gris-login-page .page-card-head .app-logo,
+.gris-login-page .page-card-head .login-logo,
+.gris-login-page .page-card-head .brand-logo,
+.gris-login-page .page-card-head .frappe-logo {
+	display: none !important;
+}
+
+.gris-login-page .page-card-head::before {
+	content: "";
+	display: block;
+	width: 64px;
+	height: 64px;
+	margin: 0 auto 0.75rem;
+	background: url("/assets/gris/images/icons/ios/180.png") center center / contain no-repeat;
+}
+
+.gris-login-page .page-card .form-group {
+	margin-bottom: 0.75rem;
+}
+
+.gris-login-page .page-card .form-control {
+	min-height: 2.625rem;
+}
+
+.gris-login-page .page-card .btn.btn-primary {
+	min-height: 2.75rem;
+	font-weight: 600;
+}
+
+.gris-login-page .page-card .btn,
+.gris-login-page .page-card .form-control {
+	border-radius: 0.5rem;
+}
+
+@media (max-width: 576px) {
+	.gris-login-page .page-card {
+		padding: 1.25rem 1rem 1rem;
+	}
+
+	.gris-login-page .page-card-head::before {
+		width: 56px;
+		height: 56px;
+	}
+}

@@ -1,9 +1,15 @@
+.gris-login-page {
+	--gris-login-primary: #0C4160;
+	--gris-login-primary-hover: #0D4566;
+	--gris-login-primary-active: #0B405F;
+}
+
 .gris-login-page .page-card {
 	max-width: 430px;
 	padding: 1.75rem 2rem 1.5rem;
-	border: 1px solid var(--border-color);
+	border: 1px solid rgba(12, 65, 96, 0.22);
 	border-radius: 0.75rem;
-	box-shadow: none;
+	box-shadow: 0 10px 24px -16px rgba(12, 65, 96, 0.35);
 }
 
 .gris-login-page .login-content,
@@ -40,14 +46,36 @@
 	min-height: 2.625rem;
 }
 
+.gris-login-page .page-card .form-control:focus {
+	border-color: var(--gris-login-primary);
+	box-shadow: 0 0 0 0.2rem rgba(12, 65, 96, 0.18);
+}
+
 .gris-login-page .page-card .btn.btn-primary {
 	min-height: 2.75rem;
 	font-weight: 600;
+	background-color: var(--gris-login-primary);
+	border-color: var(--gris-login-primary);
+}
+
+.gris-login-page .page-card .btn.btn-primary:hover,
+.gris-login-page .page-card .btn.btn-primary:focus {
+	background-color: var(--gris-login-primary-hover);
+	border-color: var(--gris-login-primary-hover);
+}
+
+.gris-login-page .page-card .btn.btn-primary:active {
+	background-color: var(--gris-login-primary-active);
+	border-color: var(--gris-login-primary-active);
 }
 
 .gris-login-page .page-card .btn,
 .gris-login-page .page-card .form-control {
 	border-radius: 0.5rem;
+}
+
+.gris-login-page .page-card a {
+	color: var(--gris-login-primary);
 }
 
 @media (max-width: 576px) {

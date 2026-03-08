@@ -2,6 +2,36 @@
 (function() {
   'use strict';
 
+  function setGrisFavicon() {
+    const head = document.head || document.getElementsByTagName('head')[0];
+    if (!head) {
+      return;
+    }
+
+    const icons = [
+      { rel: 'shortcut icon', href: '/assets/gris/images/icons/ios/32.png', type: 'image/png' },
+      { rel: 'icon', href: '/assets/gris/images/icons/ios/16.png', type: 'image/png', sizes: '16x16' },
+      { rel: 'icon', href: '/assets/gris/images/icons/ios/32.png', type: 'image/png', sizes: '32x32' }
+    ];
+
+    head.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach((link) => {
+      link.remove();
+    });
+
+    icons.forEach((icon) => {
+      const link = document.createElement('link');
+      link.rel = icon.rel;
+      link.href = icon.href;
+      link.type = icon.type;
+      if (icon.sizes) {
+        link.sizes = icon.sizes;
+      }
+      head.appendChild(link);
+    });
+  }
+
+  setGrisFavicon();
+
   // Verifica se o browser suporta Service Workers
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

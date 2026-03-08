@@ -1,0 +1,54 @@
+name: Deploy to Azure VM
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy via SSH
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Execute deploy script on VM
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.AZURE_VM_HOST }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.AZURE_VM_SSH_KEY }}
+          port: ${{ secrets.AZURE_VM_SSH_PORT || 22 }}
+          script_stop: true
+          command_timeout: 50m
+          script: |
+            set -euo pipefail
+
+            cd /home/gris-user/gris
+            git fetch --no-tags origin main:refs/remotes/origin/main
+            git reset --hard origin/main
+
+            APPS_JSON_BASE64=$(base64 -w 0 apps.json)
+            export APPS_JSON_BASE64
+
+            docker build --no-cache \
+              --build-arg=FRAPPE_BRANCH=version-15 \
+              --build-arg=APPS_JSON_BASE64=$APPS_JSON_BASE64 \
+              --tag=gris:latest \
+              --file=Containerfile .
+
+            docker compose up -d
+            docker compose exec backend bench --site gris.local migrate
+            docker compose exec backend bench --site gris.local clear-cache
+            docker compose exec backend bench --site gris.local clear-website-cache
+            docker compose exec redis-cache redis-cli FLUSHALL
+            docker compose exec backend bench build --app gris --force
+            docker compose restart
+
+            docker compose down
+            docker compose up -d

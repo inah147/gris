@@ -30,8 +30,8 @@ jobs:
             set -euo pipefail
 
             cd /home/gris-user/gris
-            git fetch --no-tags origin main:refs/remotes/origin/main
-            git reset --hard origin/main
+            git fetch --no-tags origin main
+            git reset --hard FETCH_HEAD
 
             APPS_JSON_BASE64=$(base64 -w 0 apps.json)
             export APPS_JSON_BASE64

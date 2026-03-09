@@ -1,0 +1,50 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-09 11:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "pergunta",
+  "resposta",
+  "motivo_do_alerta"
+ ],
+ "fields": [
+  {
+   "fieldname": "pergunta",
+   "fieldtype": "Long Text",
+   "in_list_view": 1,
+   "label": "Pergunta",
+   "read_only": 1
+  },
+  {
+   "fieldname": "resposta",
+   "fieldtype": "Long Text",
+   "in_list_view": 1,
+   "label": "Resposta",
+   "read_only": 1
+  },
+  {
+   "fieldname": "motivo_do_alerta",
+   "fieldtype": "Long Text",
+   "in_list_view": 1,
+   "label": "Por que gera alerta",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-03-09 11:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gestão de Adultos",
+ "name": "Alerta Entrevista por Competencias",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

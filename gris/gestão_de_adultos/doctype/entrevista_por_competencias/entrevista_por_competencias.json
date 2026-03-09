@@ -1,0 +1,486 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:ENT-COMP-{#####}",
+ "creation": "2026-03-09 08:23:51.684194",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "secao_dados_iniciais",
+  "associado",
+  "funcao_atual",
+  "profissao",
+  "formacao",
+  "hobbies_e_interesses",
+  "motivo_da_entrevista",
+  "secao_competencias_essenciais",
+  "q_ce_1",
+  "obs_q_ce_1",
+  "q_ce_2",
+  "obs_q_ce_2",
+  "q_ce_3",
+  "obs_q_ce_3",
+  "q_ce_4",
+  "obs_q_ce_4",
+  "q_ce_5",
+  "obs_q_ce_5",
+  "secao_dirigente_institucional",
+  "q_di_1",
+  "obs_q_di_1",
+  "q_di_2",
+  "obs_q_di_2",
+  "q_di_3",
+  "obs_q_di_3",
+  "q_di_4",
+  "obs_q_di_4",
+  "q_di_5",
+  "obs_q_di_5",
+  "q_di_6",
+  "obs_q_di_6",
+  "q_di_7",
+  "obs_q_di_7",
+  "q_di_8",
+  "obs_q_di_8",
+  "secao_escotista",
+  "q_es_1",
+  "obs_q_es_1",
+  "q_es_2",
+  "obs_q_es_2",
+  "q_es_3",
+  "obs_q_es_3",
+  "q_es_4",
+  "obs_q_es_4",
+  "q_es_5",
+  "obs_q_es_5",
+  "q_es_6",
+  "obs_q_es_6",
+  "q_es_7",
+  "obs_q_es_7",
+  "q_es_8",
+  "obs_q_es_8",
+  "q_es_9",
+  "obs_q_es_9",
+  "q_es_10",
+  "obs_q_es_10",
+  "q_es_11",
+  "obs_q_es_11",
+  "secao_pontuacoes",
+  "pontuacao_dirigente_administrativo_financeiro",
+  "pontuacao_dirigente_gestao_institucional",
+  "pontuacao_dirigente_metodos_educativos",
+  "pontuacao_ramo_lobinho",
+  "pontuacao_ramo_escoteiro",
+  "pontuacao_ramo_senior",
+  "pontuacao_ramo_pioneiro",
+  "resumo",
+  "alertas",
+  "data_da_ultima_atualizacao",
+  "observacoes"
+ ],
+ "fields": [
+  {
+   "fieldname": "secao_dados_iniciais",
+   "fieldtype": "Section Break",
+   "label": "Dados iniciais"
+  },
+  {
+   "fieldname": "associado",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Associado",
+   "options": "Associado",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "funcao_atual",
+   "fieldtype": "Data",
+   "label": "Função atual"
+  },
+  {
+   "fieldname": "profissao",
+   "fieldtype": "Data",
+   "label": "Profissão"
+  },
+  {
+   "fieldname": "formacao",
+   "fieldtype": "Data",
+   "label": "Formação"
+  },
+  {
+   "fieldname": "hobbies_e_interesses",
+   "fieldtype": "Small Text",
+   "label": "Hobbies e interesses"
+  },
+  {
+   "fieldname": "motivo_da_entrevista",
+   "fieldtype": "Select",
+   "label": "Motivo da entrevista",
+   "options": "Ingresso\nRetorno\nPermanência\nAlteração de função"
+  },
+  {
+   "fieldname": "secao_competencias_essenciais",
+   "fieldtype": "Section Break",
+   "label": "Competências Essenciais"
+  },
+  {
+   "fieldname": "q_ce_1",
+   "fieldtype": "Select",
+    "label": "Pergunta CE 1"
+  },
+  {
+   "fieldname": "obs_q_ce_1",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_ce_2",
+   "fieldtype": "Select",
+    "label": "Pergunta CE 2"
+  },
+  {
+   "fieldname": "obs_q_ce_2",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_ce_3",
+   "fieldtype": "Select",
+    "label": "Pergunta CE 3"
+  },
+  {
+   "fieldname": "obs_q_ce_3",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_ce_4",
+   "fieldtype": "Select",
+    "label": "Pergunta CE 4"
+  },
+  {
+   "fieldname": "obs_q_ce_4",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_ce_5",
+   "fieldtype": "Select",
+    "label": "Pergunta CE 5"
+  },
+  {
+   "fieldname": "obs_q_ce_5",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "secao_dirigente_institucional",
+   "fieldtype": "Section Break",
+   "label": "Dirigente Institucional"
+  },
+  {
+   "fieldname": "q_di_1",
+   "fieldtype": "Select",
+    "label": "Pergunta DI 1"
+  },
+  {
+   "fieldname": "obs_q_di_1",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_di_2",
+   "fieldtype": "Select",
+    "label": "Pergunta DI 2"
+  },
+  {
+   "fieldname": "obs_q_di_2",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_di_3",
+   "fieldtype": "Select",
+    "label": "Pergunta DI 3"
+  },
+  {
+   "fieldname": "obs_q_di_3",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_di_4",
+   "fieldtype": "Select",
+    "label": "Pergunta DI 4"
+  },
+  {
+   "fieldname": "obs_q_di_4",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_di_5",
+   "fieldtype": "Select",
+    "label": "Pergunta DI 5"
+  },
+  {
+   "fieldname": "obs_q_di_5",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_di_6",
+   "fieldtype": "Select",
+    "label": "Pergunta DI 6"
+  },
+  {
+   "fieldname": "obs_q_di_6",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_di_7",
+   "fieldtype": "Select",
+    "label": "Pergunta DI 7"
+  },
+  {
+   "fieldname": "obs_q_di_7",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_di_8",
+   "fieldtype": "Select",
+    "label": "Pergunta DI 8"
+  },
+  {
+   "fieldname": "obs_q_di_8",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "secao_escotista",
+   "fieldtype": "Section Break",
+   "label": "Escotista"
+  },
+  {
+   "fieldname": "q_es_1",
+   "fieldtype": "Select",
+    "label": "Pergunta ES 1"
+  },
+  {
+   "fieldname": "obs_q_es_1",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_es_2",
+   "fieldtype": "Select",
+    "label": "Pergunta ES 2"
+  },
+  {
+   "fieldname": "obs_q_es_2",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_es_3",
+   "fieldtype": "Select",
+    "label": "Pergunta ES 3"
+  },
+  {
+   "fieldname": "obs_q_es_3",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_es_4",
+   "fieldtype": "Select",
+    "label": "Pergunta ES 4"
+  },
+  {
+   "fieldname": "obs_q_es_4",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_es_5",
+   "fieldtype": "Select",
+    "label": "Pergunta ES 5"
+  },
+  {
+   "fieldname": "obs_q_es_5",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_es_6",
+   "fieldtype": "Select",
+    "label": "Pergunta ES 6"
+  },
+  {
+   "fieldname": "obs_q_es_6",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_es_7",
+   "fieldtype": "Select",
+    "label": "Pergunta ES 7"
+  },
+  {
+   "fieldname": "obs_q_es_7",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_es_8",
+   "fieldtype": "Select",
+    "label": "Pergunta ES 8"
+  },
+  {
+   "fieldname": "obs_q_es_8",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_es_9",
+   "fieldtype": "Select",
+    "label": "Pergunta ES 9"
+  },
+  {
+   "fieldname": "obs_q_es_9",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_es_10",
+   "fieldtype": "Select",
+    "label": "Pergunta ES 10"
+  },
+  {
+   "fieldname": "obs_q_es_10",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "q_es_11",
+   "fieldtype": "Select",
+    "label": "Pergunta ES 11"
+  },
+  {
+   "fieldname": "obs_q_es_11",
+   "fieldtype": "Small Text",
+   "label": "Observações da resposta"
+  },
+  {
+   "fieldname": "secao_pontuacoes",
+   "fieldtype": "Section Break",
+   "label": "Pontuações"
+  },
+  {
+   "fieldname": "pontuacao_dirigente_administrativo_financeiro",
+   "fieldtype": "Int",
+   "label": "Pontuação Dirigente Administrativo Financeiro",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pontuacao_dirigente_gestao_institucional",
+   "fieldtype": "Int",
+   "label": "Pontuação Dirigente Gestão Institucional",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pontuacao_dirigente_metodos_educativos",
+   "fieldtype": "Int",
+   "label": "Pontuação Dirigente Métodos Educativos",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pontuacao_ramo_lobinho",
+   "fieldtype": "Int",
+   "label": "Pontuação Ramo Lobinho",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pontuacao_ramo_escoteiro",
+   "fieldtype": "Int",
+   "label": "Pontuação Ramo Escoteiro",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pontuacao_ramo_senior",
+   "fieldtype": "Int",
+   "label": "Pontuação Ramo Sênior",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pontuacao_ramo_pioneiro",
+   "fieldtype": "Int",
+   "label": "Pontuação Ramo Pioneiro",
+   "read_only": 1
+  },
+  {
+   "fieldname": "resumo",
+   "fieldtype": "Long Text",
+   "label": "Resumo",
+   "read_only": 1
+  },
+  {
+   "fieldname": "alertas",
+   "fieldtype": "Table",
+   "label": "Alertas",
+   "options": "Alerta Entrevista por Competencias",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_da_ultima_atualizacao",
+   "fieldtype": "Datetime",
+   "label": "Data da última atualização",
+   "read_only": 1
+  },
+  {
+   "fieldname": "observacoes",
+   "fieldtype": "Long Text",
+   "label": "Observações"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-09 08:23:51.684194",
+ "modified_by": "Administrator",
+ "module": "Gestão de Adultos",
+ "name": "Entrevista por Competencias",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de Adultos",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

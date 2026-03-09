@@ -1,0 +1,131 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "hash",
+ "creation": "2026-03-09 11:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "id_origem",
+  "pergunta",
+  "resposta",
+  "alerta",
+  "motivo_do_alerta",
+  "pontuacao_dirigente_administrativo_financeiro",
+  "pontuacao_dirigente_gestao_institucional",
+  "pontuacao_dirigente_metodos_educativos",
+  "pontuacao_ramo_lobinho",
+  "pontuacao_ramo_escoteiro",
+  "pontuacao_ramo_senior",
+  "pontuacao_ramo_pioneiro"
+ ],
+ "fields": [
+  {
+   "fieldname": "id_origem",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "ID",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "pergunta",
+   "fieldtype": "Long Text",
+   "in_list_view": 1,
+   "label": "Pergunta",
+   "reqd": 1
+  },
+  {
+   "fieldname": "resposta",
+   "fieldtype": "Long Text",
+   "in_list_view": 1,
+   "label": "Resposta",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "alerta",
+   "fieldtype": "Check",
+   "label": "Alerta"
+  },
+  {
+   "fieldname": "motivo_do_alerta",
+   "fieldtype": "Long Text",
+   "label": "Motivo do alerta"
+  },
+  {
+   "fieldname": "pontuacao_dirigente_administrativo_financeiro",
+   "fieldtype": "Int",
+   "label": "Pontuação Dirigente Administrativo Financeiro"
+  },
+  {
+   "fieldname": "pontuacao_dirigente_gestao_institucional",
+   "fieldtype": "Int",
+   "label": "Pontuação Dirigente Gestão Institucional"
+  },
+  {
+   "fieldname": "pontuacao_dirigente_metodos_educativos",
+   "fieldtype": "Int",
+   "label": "Pontuação Dirigente Métodos Educativos"
+  },
+  {
+   "fieldname": "pontuacao_ramo_lobinho",
+   "fieldtype": "Int",
+   "label": "Pontuação Ramo Lobinho"
+  },
+  {
+   "fieldname": "pontuacao_ramo_escoteiro",
+   "fieldtype": "Int",
+   "label": "Pontuação Ramo Escoteiro"
+  },
+  {
+   "fieldname": "pontuacao_ramo_senior",
+   "fieldtype": "Int",
+   "label": "Pontuação Ramo Sênior"
+  },
+  {
+   "fieldname": "pontuacao_ramo_pioneiro",
+   "fieldtype": "Int",
+   "label": "Pontuação Ramo Pioneiro"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-09 11:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gestão de Adultos",
+ "name": "Mapeamento de perguntas e respostas da entrevista",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de Adultos",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "id_origem"
+}

@@ -30,4 +30,5 @@ def get_context(context):
 	context.can_calendario = user_has_access("/calendario")
 	context.can_responsavel = user_has_access("/responsavel")
 	context.can_recepcao = user_has_access("/recepcao")
+	context.can_gestao_adultos = user_has_access("/gestao_adultos")
 	return context

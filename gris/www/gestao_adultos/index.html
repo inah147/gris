@@ -1,0 +1,59 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Gestão de Adultos{% endblock %}
+
+{% set active_link = '/gestao_adultos' %}
+
+{% block head_include %}
+	{{ super() }}
+{% endblock %}
+
+{% block page_header %}
+	<div class="page-header">
+		<div class="page-header__content">
+			<h1 class="page-header__title">Gestão de Adultos</h1>
+			<p class="page-header__subtitle">Informações sobre os adultos da UEL e seu desenvolvimento</p>
+		</div>
+	</div>
+{% endblock %}
+
+{% block main %}
+	<div class="inicio-cards-grid">
+		<a
+			href="/gestao_adultos/entrevista_competencias"
+			class="inicio-card inicio-card--nav card-modern card-modern--clickable"
+		>
+			<div class="inicio-card__icon inicio-card__icon--warning">
+				<svg
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<path d="M9 3h6"></path>
+					<path d="M8 6h8"></path>
+					<path d="M7 6l-2 4v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8l-2-4"></path>
+					<path d="M9 10h6v6H9z"></path>
+				</svg>
+			</div>
+			<div class="inicio-card__content">
+				<h2 class="inicio-card__title">Entrevistas</h2>
+				<p class="inicio-card__description">Gerencie entrevistas por competências dos adultos</p>
+			</div>
+			<div class="inicio-card__arrow">
+				<svg
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<path d="M5 12h14M12 5l7 7-7 7" />
+				</svg>
+			</div>
+		</a>
+	</div>
+{% endblock %}

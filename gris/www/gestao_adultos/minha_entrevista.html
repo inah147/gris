@@ -1,0 +1,46 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Minha Entrevista{% endblock %}
+
+{% set active_link = '/gestao_adultos/minha_entrevista' %}
+
+{% block page_header %}
+	<div class="page-header">
+		<div class="page-header__content">
+			<h1 class="page-header__title">Minha Entrevista por Competências</h1>
+			<p class="page-header__subtitle">Visualização das respostas e observações</p>
+		</div>
+	</div>
+{% endblock %}
+
+{% block main %}
+	<div id="minha-entrevista-root" data-entrevista-name="{{ entrevista_name or '' }}"></div>
+
+	<div class="card-modern mb-4">
+		<div class="card-modern__body" id="associado-container"></div>
+	</div>
+
+	<div class="card-modern mb-4">
+		<div class="card-modern__body" id="dados-iniciais-container"></div>
+	</div>
+
+	<div id="secoes-perguntas"></div>
+
+	<div class="modal-modern-backdrop" id="modal-observacao-backdrop" style="display:none;"></div>
+	<div class="modal-modern" id="modal-observacao" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-observacao-title">
+		<div class="modal-modern__dialog">
+			<div class="modal-modern__content">
+				<div class="modal-modern__header">
+					<h5 class="modal-modern__title" id="modal-observacao-title">Observação da resposta</h5>
+				</div>
+				<div class="modal-modern__body">
+					<div id="modal-observacao-pergunta" class="mb-2 fw-semibold"></div>
+					<div id="modal-observacao-mensagem" class="text-muted"></div>
+				</div>
+				<div class="modal-modern__footer">
+					<button type="button" class="btn-modern" id="ok-modal-observacao">Entendi</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock %}

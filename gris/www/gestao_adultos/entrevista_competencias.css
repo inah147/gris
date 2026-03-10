@@ -3,3 +3,19 @@
 	color: var(--text-muted);
 	padding: 2rem 1rem;
 }
+
+#modal-associado-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: var(--z-modal-backdrop);
+	background: var(--bg-overlay-light);
+}
+
+#modal-associado {
+	position: fixed;
+	inset: 0;
+	z-index: var(--z-modal);
+	align-items: center;
+	justify-content: center;
+	padding: var(--space-md);
+}

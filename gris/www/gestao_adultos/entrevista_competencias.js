@@ -8,7 +8,6 @@ frappe.ready(() => {
 	const modal = document.getElementById("modal-associado");
 	const backdrop = document.getElementById("modal-associado-backdrop");
 	const selectNovoAssociado = document.getElementById("novo-associado");
-	const btnFecharModal = document.getElementById("fechar-modal-associado");
 	const btnCancelarModal = document.getElementById("cancelar-modal-associado");
 	const btnConfirmarModal = document.getElementById("confirmar-modal-associado");
 
@@ -114,7 +113,6 @@ frappe.ready(() => {
 
 	btnFiltrar?.addEventListener("click", carregarEntrevistas);
 	btnNova?.addEventListener("click", openModal);
-	btnFecharModal?.addEventListener("click", closeModal);
 	btnCancelarModal?.addEventListener("click", closeModal);
 	backdrop?.addEventListener("click", closeModal);
 	btnConfirmarModal?.addEventListener("click", abrirOuCriarEntrevista);

@@ -5,17 +5,23 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "fluxo_de_registro_section",
   "dados_para_registro_enviados",
-  "registro_criado_no_paxtu",
   "registro_provisorio_pago",
-  "registro_provisorio_efetivado",
   "pesquisa_de_novos_associados_respondida",
-  "ficha_medica_preenchida",
   "id_escoteiros_criado",
-  "registro_definitivo_pago",
   "registro_definitivo_efetivado",
+  "intervalo_provisorio_definitivo",
+  "column_break_lndt",
+  "registro_criado_no_paxtu",
+  "registro_provisorio_efetivado",
+  "ficha_medica_preenchida",
+  "registro_definitivo_pago",
   "reuniao_de_acolhida_realizada",
-  "intervalo_provisorio_definitivo"
+  "valores_de_registro_section",
+  "valor_registro_provisorio",
+  "column_break_qwxy",
+  "valor_registro_definitivo"
  ],
  "fields": [
   {
@@ -83,13 +89,41 @@
    "fieldname": "reuniao_de_acolhida_realizada",
    "fieldtype": "Int",
    "label": "Reuni\u00e3o de acolhida realizada"
+  },
+  {
+   "fieldname": "fluxo_de_registro_section",
+   "fieldtype": "Section Break",
+   "label": "Fluxo de registro"
+  },
+  {
+   "fieldname": "column_break_lndt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "valores_de_registro_section",
+   "fieldtype": "Section Break",
+   "label": "Valores de registro"
+  },
+  {
+   "fieldname": "column_break_qwxy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "valor_registro_provisorio",
+   "fieldtype": "Currency",
+   "label": "Registro Provis\u00f3rio"
+  },
+  {
+   "fieldname": "valor_registro_definitivo",
+   "fieldtype": "Currency",
+   "label": "Registro Definitivo"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-01-13 08:25:50.674064",
+ "modified": "2026-03-10 12:52:24.282669",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Configuracoes de Recepcao",

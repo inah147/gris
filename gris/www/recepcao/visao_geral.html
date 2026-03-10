@@ -32,6 +32,9 @@
 				data-visita-data="{{ card.visita_data or '' }}"
 				data-visita-confirmada="{{ 1 if card.visita_confirmada else 0 }}"
 				data-steps="{{ card.steps_json|e }}"
+				data-whatsapp-contatos="{{ card.whatsapp_contatos_json|e }}"
+				data-whatsapp-disponivel="{{ 1 if card.whatsapp_disponivel else 0 }}"
+				data-whatsapp-motivo="{{ card.whatsapp_motivo_indisponivel or '' }}"
 			>
 				<div class="kanban-card__top">
 					{% if card.ramo %}
@@ -60,6 +63,37 @@
 		</div>
 	</div>
 	{% endfor %}
+</div>
+
+<!-- Modal Escolher Responsável para WhatsApp -->
+<div class="modal-modern d-none" id="modalEscolherResponsavelWhatsapp" tabindex="-1">
+	<div class="modal-dialog">
+		<div class="modal-modern__content">
+			<div class="modal-modern__header">
+				<h5 class="modal-modern__title">Falar com responsável</h5>
+			</div>
+			<div class="modal-modern__body">
+				<div class="form-group-modern">
+					<label class="form-label-modern" for="whatsappContatoSelect">Responsável</label>
+					<select class="form-input-modern" id="whatsappContatoSelect">
+						<option value="">Selecione...</option>
+					</select>
+				</div>
+			</div>
+			<div class="modal-modern__footer">
+				<button
+					type="button"
+					class="btn-modern btn-modern--ghost"
+					onclick="closeEscolherResponsavelWhatsapp()"
+				>
+					Cancelar
+				</button>
+				<button type="button" class="btn-modern btn-modern--primary" id="btnAbrirWhatsappContato">
+					<i class="fa fa-whatsapp mr-1" aria-hidden="true"></i> Conversar no WhatsApp
+				</button>
+			</div>
+		</div>
+	</div>
 </div>
 
 <!-- Modal Novo Contato -->
@@ -97,6 +131,13 @@
 					</p>
 				</div>
 				<div class="modal-actions">
+					<button
+						type="button"
+						class="btn-modern btn-modern--outline js-whatsapp-modal-btn"
+						onclick="falarComResponsavelAtual()"
+					>
+						<i class="fa fa-whatsapp mr-1" aria-hidden="true"></i> Falar com responsável
+					</button>
 					<button
 						type="button"
 						class="btn-modern btn-modern--primary"
@@ -163,6 +204,13 @@
 				</div>
 
 				<div class="modal-actions-vertical">
+					<button
+						type="button"
+						class="btn-modern btn-modern--outline js-whatsapp-modal-btn"
+						onclick="falarComResponsavelAtual()"
+					>
+						<i class="fa fa-whatsapp mr-1" aria-hidden="true"></i> Falar com responsável
+					</button>
 					<button
 						type="button"
 						class="btn-modern btn-modern--primary"
@@ -361,6 +409,13 @@
 				<div class="modal-actions-vertical">
 					<button
 						type="button"
+						class="btn-modern btn-modern--outline js-whatsapp-modal-btn"
+						onclick="falarComResponsavelAtual()"
+					>
+						<i class="fa fa-whatsapp mr-1" aria-hidden="true"></i> Falar com responsável
+					</button>
+					<button
+						type="button"
 						class="btn-modern btn-modern--primary"
 						id="btnConfirmarVisita"
 						onclick="confirmarVisitaRealizada()"
@@ -450,6 +505,13 @@
 				<div class="modal-actions-vertical mt-4">
 					<button
 						type="button"
+						class="btn-modern btn-modern--outline js-whatsapp-modal-btn"
+						onclick="falarComResponsavelAtual()"
+					>
+						<i class="fa fa-whatsapp mr-1" aria-hidden="true"></i> Falar com responsável
+					</button>
+					<button
+						type="button"
 						class="btn-modern btn-modern--outline"
 						onclick="openFicha()"
 					>
@@ -507,6 +569,13 @@
 				</div>
 
 				<div class="modal-actions-vertical mt-4">
+					<button
+						type="button"
+						class="btn-modern btn-modern--outline js-whatsapp-modal-btn"
+						onclick="falarComResponsavelAtual()"
+					>
+						<i class="fa fa-whatsapp mr-1" aria-hidden="true"></i> Falar com responsável
+					</button>
 					<button
 						type="button"
 						class="btn-modern btn-modern--primary"
@@ -573,6 +642,13 @@
 				</div>
 
 				<div class="modal-actions-vertical mt-4">
+					<button
+						type="button"
+						class="btn-modern btn-modern--outline js-whatsapp-modal-btn"
+						onclick="falarComResponsavelAtual()"
+					>
+						<i class="fa fa-whatsapp mr-1" aria-hidden="true"></i> Falar com responsável
+					</button>
 					<button
 						type="button"
 						class="btn-modern btn-modern--outline"

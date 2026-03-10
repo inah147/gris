@@ -41,9 +41,10 @@ Restrições obrigatórias:
 - A palavra "Recomendação" deve estar em negrito, exatamente como no formato obrigatório.
 - Não escrever "Análise:"; o texto analítico deve vir diretamente na linha seguinte.
 - Mantenha tom profissional, direto e objetivo.
-- Jamais utilize linguagem pejorativa ou desmotivadora, mesmo que haja pontos de atenção.
-- NUNCA recomende funções que tenham pontos de alerta
+- Jamais utilize linguagem pejorativa, mesmo que haja pontos de atenção.
+- NUNCA recomende funções que tenham pontos de alerta.
 - NUNCA chame a pessoa de candidato. Sempre se refira a pessoa como voluntário.
+- Se todas as funções tiverem pontos de alerta, indique para não ser escoteiro.
 """.strip()
 
 

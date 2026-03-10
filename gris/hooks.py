@@ -302,6 +302,9 @@ fixtures = [
 	{
 		"dt": "Email Template",
 	},
+	{
+		"dt": "Mapeamento de perguntas e respostas da entrevista",
+	},
 ]
 
 

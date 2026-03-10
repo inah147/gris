@@ -1,0 +1,95 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Respostas da Entrevista{% endblock %}
+
+{% set active_link = '/gestao_adultos/entrevista_competencias' %}
+
+{% block page_header %}
+	<div class="page-header">
+		<div class="page-header__content">
+			<h1 class="page-header__title">Respostas da Entrevista</h1>
+			<p class="page-header__subtitle">Registro e análise de competências por associado</p>
+		</div>
+	</div>
+{% endblock %}
+
+{% block main %}
+	<div class="d-flex flex-wrap gap-2 justify-content-end mb-3">
+		<button type="button" id="btn-editar" class="btn-modern btn-modern--outline">Editar</button>
+		<button type="button" id="btn-cancelar" class="btn-modern btn-modern--outline me-2" style="display:none;">Cancelar</button>
+		<button type="button" id="btn-salvar" class="btn-modern">Salvar</button>
+	</div>
+
+	<div class="card-modern mb-4">
+		<div class="card-modern__body" id="associado-container"></div>
+	</div>
+
+	<div class="card-modern mb-4">
+		<div class="card-modern__body" id="dados-iniciais-container"></div>
+	</div>
+
+	<div id="secoes-perguntas"></div>
+
+	<div id="resultado-leitura">
+		<div class="card-modern mt-4">
+			<div class="card-modern__header">
+				<h3 class="card-modern__title">Pontuações</h3>
+			</div>
+			<div class="card-modern__body">
+				<div id="grafico-pontuacoes" style="min-height:320px;"></div>
+			</div>
+		</div>
+
+		<div class="card-modern mt-4">
+			<div class="card-modern__header">
+				<h3 class="card-modern__title">Alertas por categoria</h3>
+			</div>
+			<div class="card-modern__body" id="lista-alertas"></div>
+		</div>
+
+		<div class="card-modern mt-4">
+			<div class="card-modern__header">
+				<h3 class="card-modern__title">Resumo</h3>
+			</div>
+			<div class="card-modern__body">
+				<div id="campo-resumo" class="resumo-markdown text-muted"></div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal-modern-backdrop" id="modal-alerta-backdrop" style="display:none;"></div>
+	<div class="modal-modern" id="modal-alerta" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-alerta-title">
+		<div class="modal-modern__dialog">
+			<div class="modal-modern__content">
+				<div class="modal-modern__header">
+					<h5 class="modal-modern__title" id="modal-alerta-title">Motivo do alerta</h5>
+				</div>
+				<div class="modal-modern__body">
+					<div id="modal-alerta-mensagem" class="text-muted"></div>
+				</div>
+				<div class="modal-modern__footer">
+					<button type="button" class="btn-modern" id="ok-modal-alerta">Entendi</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal-modern-backdrop" id="modal-observacao-backdrop" style="display:none;"></div>
+	<div class="modal-modern" id="modal-observacao" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-observacao-title">
+		<div class="modal-modern__dialog">
+			<div class="modal-modern__content">
+				<div class="modal-modern__header">
+					<h5 class="modal-modern__title" id="modal-observacao-title">Observação da resposta</h5>
+				</div>
+				<div class="modal-modern__body">
+					<div id="modal-observacao-pergunta" class="mb-2 fw-semibold"></div>
+					<div id="modal-observacao-mensagem" class="text-muted"></div>
+				</div>
+				<div class="modal-modern__footer">
+					<button type="button" class="btn-modern" id="ok-modal-observacao">Entendi</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock %}
+

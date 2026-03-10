@@ -142,6 +142,40 @@ page_header %}
 			</svg>
 		</div>
 	</a>
+	{% endif %} {% if can_gestao_adultos %}
+	<a href="/gestao_adultos" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
+		<div class="inicio-card__icon inicio-card__icon--warning">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M9 3h6"></path>
+				<path d="M8 6h8"></path>
+				<path d="M7 6l-2 4v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8l-2-4"></path>
+				<path d="M9 10h6v6H9z"></path>
+			</svg>
+		</div>
+		<div class="inicio-card__content">
+			<h2 class="inicio-card__title">Gestão de Adultos</h2>
+			<p class="inicio-card__description">Informações sobre os adultos da UEL</p>
+		</div>
+		<div class="inicio-card__arrow">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M5 12h14M12 5l7 7-7 7" />
+			</svg>
+		</div>
+	</a>
 	{% endif %} {% if can_responsavel %}
 	<a href="/responsavel" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
 		<div class="inicio-card__icon inicio-card__icon--purple">
@@ -213,7 +247,7 @@ page_header %}
 		</div>
 	</a>
 	{% endif %} {% if not can_associados and not can_financeiro and not can_transparencia and not
-	can_calendario and not can_responsavel %}
+	can_calendario and not can_responsavel and not can_recepcao and not can_gestao_adultos %}
 	<div class="empty-state">
 		<svg class="empty-state__icon" viewBox="0 0 24 24">
 			<circle cx="12" cy="12" r="10" />

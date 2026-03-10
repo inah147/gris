@@ -1,0 +1,73 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Entrevistas por Competências{% endblock %}
+
+{% set active_link = '/gestao_adultos/entrevista_competencias' %}
+
+{% block page_header %}
+	<div class="page-header">
+		<div class="page-header__content">
+			<h1 class="page-header__title">Entrevistas por Competências</h1>
+			<p class="page-header__subtitle">Gerencie as entrevistas realizadas na Gestão de Adultos</p>
+		</div>
+	</div>
+{% endblock %}
+
+{% block main %}
+	<div class="mb-4 d-flex justify-content-end">
+		<button type="button" id="btn-nova-entrevista" class="btn-modern btn-modern--outline">Adicionar entrevista</button>
+	</div>
+
+	<div class="card-modern mb-4">
+		<div class="card-modern__body card-modern__body--compact">
+			<div class="row g-3 align-items-end">
+				<div class="col-12 col-md-9">
+					<label for="filtro-associado" class="form-label-modern">Filtrar por associado</label>
+					<input id="filtro-associado" class="form-input-modern" list="filtro-associado-list" placeholder="Digite o nome ou código do associado" />
+					<datalist id="filtro-associado-list"></datalist>
+				</div>
+				<div class="col-12 col-md-3 d-flex gap-2 justify-content-md-end">
+					<button type="button" id="btn-filtrar" class="btn-modern">Aplicar</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="card-modern">
+		<div class="card-modern__body">
+			<div class="table-responsive">
+				<table class="table table-hover align-middle mb-0">
+					<thead>
+						<tr>
+							<th>Associado</th>
+							<th>Última atualização</th>
+							<th class="text-end">Ações</th>
+						</tr>
+					</thead>
+					<tbody id="lista-entrevistas"></tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal-modern-backdrop" id="modal-associado-backdrop" style="display:none;"></div>
+	<div class="modal-modern" id="modal-associado" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-associado-title">
+		<div class="modal-modern__dialog">
+			<div class="modal-modern__content">
+				<div class="modal-modern__header">
+					<h5 class="modal-modern__title" id="modal-associado-title">Selecionar associado para entrevista</h5>
+				</div>
+				<div class="modal-modern__body">
+					<label for="novo-associado" class="form-label-modern">Associado (apenas maiores de 18 anos)</label>
+					<select id="novo-associado" class="form-input-modern">
+						<option value="">Selecione</option>
+					</select>
+				</div>
+				<div class="modal-modern__footer">
+					<button type="button" class="btn-modern btn-modern--outline" id="cancelar-modal-associado">Cancelar</button>
+					<button type="button" class="btn-modern" id="confirmar-modal-associado">Abrir entrevista</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock %}

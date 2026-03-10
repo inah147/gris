@@ -56,6 +56,14 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 		],
 	},
 	{
+		"label": "Gestão de Adultos",
+		"path": "/gestao_adultos",
+		"children": [
+			{"label": "Minha Entrevista", "path": "/gestao_adultos/minha_entrevista"},
+			{"label": "Entrevistas", "path": "/gestao_adultos/entrevista_competencias"},
+		],
+	},
+	{
 		"label": "Painel do Responsável",
 		"path": "/responsavel",
 		"children": [
@@ -109,6 +117,10 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/calendario/visualizar": ["Visualizador Calendario", "Gestor Calendario"],
 	"/calendario/importar": ["Gestor Calendario"],
 	"/calendario/simulacao_calendario": ["Gestor Calendario"],
+	"/gestao_adultos": ["Gestor de Adultos"],
+	"/gestao_adultos/entrevista_competencias": ["Gestor de Adultos"],
+	"/gestao_adultos/respostas_entrevista": ["Gestor de Adultos"],
+	"/gestao_adultos/minha_entrevista": ["All"],
 }
 
 # Páginas marcadas como "estritas": mesmo System Manager deve ter uma das roles listadas.
@@ -165,6 +177,18 @@ def _has_beneficiario_em_integracao(user: str | None = None) -> bool:
 	)
 
 
+def _has_minha_entrevista(user: str | None = None) -> bool:
+	user = user or frappe.session.user
+	if not user or user == "Guest":
+		return False
+
+	associado_name = frappe.db.get_value("Associado", {"id_escoteiros": user}, "name")
+	if not associado_name:
+		return False
+
+	return bool(frappe.db.exists("Entrevista por Competencias", {"associado": associado_name}))
+
+
 def user_has_access(path: str, user: str | None = None, roles: Iterable[str] | None = None) -> bool:
 	roles = list(roles) if roles else _get_user_roles(user)
 	allowed = PAGE_ROLES.get(path)
@@ -183,13 +207,19 @@ def user_has_access(path: str, user: str | None = None, roles: Iterable[str] | N
 
 
 @frappe.whitelist()
-def _filter_items(items: list[dict[str, object]], roles: list[str]) -> list[dict[str, object]]:
+def _filter_items(
+	items: list[dict[str, object]],
+	roles: list[str],
+	has_minha_entrevista: bool,
+) -> list[dict[str, object]]:
 	filtered: list[dict[str, object]] = []
 	for item in items:
 		path = item.get("path")  # type: ignore[arg-type]
+		if path == "/gestao_adultos/minha_entrevista" and not has_minha_entrevista:
+			continue
 		children = item.get("children") or []
 		has_access = user_has_access(path, roles=roles) if path else False
-		filtered_children = _filter_items(children, roles) if children else []
+		filtered_children = _filter_items(children, roles, has_minha_entrevista) if children else []
 		if has_access or filtered_children:
 			new_item = {k: v for k, v in item.items() if k != "children"}
 			if filtered_children:
@@ -201,7 +231,8 @@ def _filter_items(items: list[dict[str, object]], roles: list[str]) -> list[dict
 @frappe.whitelist()
 def build_sidebar(user: str | None = None) -> list[dict[str, object]]:
 	roles = _get_user_roles(user)
-	return _filter_items(SIDEBAR_STRUCTURE, roles)
+	has_minha_entrevista = _has_minha_entrevista(user)
+	return _filter_items(SIDEBAR_STRUCTURE, roles, has_minha_entrevista)
 
 
 @frappe.whitelist()

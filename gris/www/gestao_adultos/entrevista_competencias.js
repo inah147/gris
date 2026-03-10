@@ -55,7 +55,7 @@ frappe.ready(() => {
 					<tr>
 						<td>${associado}</td>
 						<td>${frappe.utils.escape_html(dataAtualizacao)}</td>
-						<td class="text-end">
+						<td style="text-align: right;">
 							<a class="btn-modern btn-modern--sm" href="/gestao_adultos/respostas_entrevista?name=${encodeURIComponent(row.name)}">Abrir</a>
 						</td>
 					</tr>
@@ -73,7 +73,15 @@ frappe.ready(() => {
 	}
 
 	async function carregarEntrevistas() {
-		tbody.innerHTML = `<tr class="empty-row"><td colspan="3">Carregando...</td></tr>`;
+		tbody.innerHTML = `
+			<tr>
+				<td colspan="3">
+					<div class="loading-container">
+						<div class="loading-spinner"></div>
+						<span class="loading-text">Carregando entrevistas...</span>
+					</div>
+				</td>
+			</tr>`;
 		const termo = (filtroAssociado.value || "").trim().toLowerCase();
 		const response = await frappe.call({
 			method: "gris.api.gestao_adultos.listar_entrevistas",

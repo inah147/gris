@@ -34,19 +34,26 @@
 	</div>
 
 	<div class="card-modern">
-		<div class="card-modern__body">
-			<div class="table-responsive">
-				<table class="table table-hover align-middle mb-0">
-					<thead>
-						<tr>
-							<th>Associado</th>
-							<th>Última atualização</th>
-							<th class="text-end">Ações</th>
-						</tr>
-					</thead>
-					<tbody id="lista-entrevistas"></tbody>
-				</table>
-			</div>
+		<div class="table-responsive">
+			<table class="data-table" id="entrevistasTable">
+				<thead>
+					<tr>
+						<th>Associado</th>
+						<th style="width: 220px;">Última atualização</th>
+						<th style="width: 140px; text-align: right;">Ações</th>
+					</tr>
+				</thead>
+				<tbody id="lista-entrevistas">
+					<tr>
+						<td colspan="3">
+							<div class="loading-container">
+								<div class="loading-spinner"></div>
+								<span class="loading-text">Carregando entrevistas...</span>
+							</div>
+						</td>
+					</tr>
+				</tbody>
+			</table>
 		</div>
 	</div>
 

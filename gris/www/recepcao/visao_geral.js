@@ -1,10 +1,14 @@
 let currentCardId = null;
 let previousModalId = null;
+let currentWhatsappContatos = [];
+let currentCardElement = null;
+let whatsappSourceModalId = null;
 
 frappe.ready(function () {
 	// Add click event to cards
 	$(".kanban-card").on("click", function (e) {
 		e.preventDefault();
+		currentCardElement = $(this);
 		const id = $(this).data("id");
 		const status = $(this).data("status");
 		const responsavel = $(this).data("responsavel");
@@ -136,10 +140,33 @@ frappe.ready(function () {
 			closeModal();
 		}
 	});
+
+	$("#btnAbrirWhatsappContato").on("click", function () {
+		const selectedValue = $("#whatsappContatoSelect").val();
+
+		if (selectedValue === null || selectedValue === "") {
+			frappe.msgprint("Selecione um responsável.");
+			return;
+		}
+
+		const selectedIndex = Number(selectedValue);
+		const selectedContato =
+			currentWhatsappContatos[selectedIndex] ||
+			currentWhatsappContatos.find((_, index) => String(index) === String(selectedValue));
+
+		if (!selectedContato) {
+			frappe.msgprint("Selecione um responsável.");
+			return;
+		}
+
+		openWhatsapp(selectedContato.telefone);
+		closeEscolherResponsavelWhatsapp();
+	});
 });
 
 function openModal(id, responsavel, nome, responsavelAssociado, ramo) {
 	currentCardId = id;
+	updateWhatsappButtonState();
 	$("#modalAssociadoNome").text(nome);
 	$("#modalResponsavelNome").text(responsavelAssociado || "-");
 	$("#modalRamo").text(ramo || "-");
@@ -166,6 +193,7 @@ function openModal(id, responsavel, nome, responsavelAssociado, ramo) {
 
 function openConversaInicialModal(id, responsavel, nome, responsavelAssociado, ramo) {
 	currentCardId = id;
+	updateWhatsappButtonState();
 	$("#ci_associado_nome").text(nome);
 	$("#ci_responsavel_nome").text(responsavelAssociado || "-");
 	$("#ci_ramo").val(ramo);
@@ -186,6 +214,125 @@ function closeModal() {
 	$("body").removeClass("modal-open");
 	$(".modal-backdrop").remove();
 	currentCardId = null;
+	currentWhatsappContatos = [];
+	currentCardElement = null;
+	whatsappSourceModalId = null;
+}
+
+function updateWhatsappButtonState() {
+	if (!currentCardElement) {
+		return;
+	}
+
+	const disponivel = parseInt(currentCardElement.data("whatsapp-disponivel"), 10) === 1;
+	const motivo = currentCardElement.data("whatsapp-motivo") || "Sem telefone de responsável para contato.";
+
+	$(".js-whatsapp-modal-btn").prop("disabled", !disponivel).attr("title", disponivel ? "" : motivo);
+}
+
+function falarComResponsavelAtual() {
+	if (!currentCardElement) {
+		frappe.msgprint("Nenhum associado selecionado.");
+		return;
+	}
+
+	const disponivel = parseInt(currentCardElement.data("whatsapp-disponivel"), 10) === 1;
+	const motivo = currentCardElement.data("whatsapp-motivo");
+
+	if (!disponivel) {
+		frappe.msgprint(motivo || "Sem telefone de responsável para contato.");
+		return;
+	}
+
+	let contatos = currentCardElement.data("whatsapp-contatos") || [];
+
+	if (typeof contatos === "string") {
+		try {
+			contatos = JSON.parse(contatos);
+		} catch (err) {
+			contatos = [];
+		}
+	}
+
+	contatos = normalizeWhatsappContatos(contatos);
+
+	if (contatos.length === 0) {
+		frappe.msgprint("Sem telefone de responsável para contato.");
+		return;
+	}
+
+	if (contatos.length === 1) {
+		openWhatsapp(contatos[0].telefone);
+		return;
+	}
+
+	openEscolherResponsavelWhatsapp(contatos);
+}
+
+function normalizeWhatsappContatos(contatos) {
+	if (Array.isArray(contatos)) {
+		return contatos.filter((contato) => contato && contato.telefone);
+	}
+
+	if (contatos && typeof contatos === "object") {
+		return Object.values(contatos).filter((contato) => contato && contato.telefone);
+	}
+
+	return [];
+}
+
+function openWhatsapp(phone) {
+	const numero = String(phone || "").replace(/\D/g, "");
+
+	if (!numero) {
+		frappe.msgprint("Telefone do responsável inválido.");
+		return;
+	}
+
+	window.open(`https://wa.me/${numero}`, "_blank", "noopener,noreferrer");
+}
+
+function openEscolherResponsavelWhatsapp(contatos) {
+	currentWhatsappContatos = normalizeWhatsappContatos(contatos);
+
+	const currentOpenModal = $(".modal-modern.show").not("#modalEscolherResponsavelWhatsapp").first();
+	whatsappSourceModalId = currentOpenModal.length ? currentOpenModal.attr("id") : null;
+
+	if (whatsappSourceModalId) {
+		$(`#${whatsappSourceModalId}`).removeClass("show").addClass("d-none");
+	}
+
+	const select = $("#whatsappContatoSelect");
+	select.empty();
+	select.append('<option value="">Selecione...</option>');
+
+	currentWhatsappContatos.forEach((contato, index) => {
+		const label = contato.is_guardiao_legal
+			? `${contato.nome} (Responsável legal)`
+			: contato.nome;
+		select.append(`<option value="${String(index)}">${label}</option>`);
+	});
+
+	const modal = $("#modalEscolherResponsavelWhatsapp");
+	modal.removeClass("d-none");
+	modal.addClass("show");
+	$("body").addClass("modal-open");
+
+	if ($(".modal-backdrop").length === 0) {
+		$('<div class="modal-backdrop fade show"></div>').appendTo(document.body);
+	}
+}
+
+function closeEscolherResponsavelWhatsapp() {
+	const modal = $("#modalEscolherResponsavelWhatsapp");
+	modal.removeClass("show").addClass("d-none");
+
+	if (whatsappSourceModalId) {
+		$(`#${whatsappSourceModalId}`).removeClass("d-none").addClass("show");
+	}
+
+	currentWhatsappContatos = [];
+	whatsappSourceModalId = null;
 }
 
 function saveResponsavel(id, responsavel) {
@@ -378,6 +525,7 @@ function openVisitaAgendadaModal(
 	visitaConfirmada
 ) {
 	currentCardId = id;
+	updateWhatsappButtonState();
 	$("#va_associado_nome").text(nome);
 	$("#va_responsavel_nome").text(responsavelAssociado || "-");
 	$("#va_ramo").val(ramo);
@@ -483,6 +631,7 @@ function confirmarFilaEspera() {
 
 function openAguardarDadosModal(id, responsavel, nome, responsavelAssociado, steps) {
 	currentCardId = id;
+	updateWhatsappButtonState();
 	$("#ad_associado_nome").text(nome);
 	$("#ad_responsavel_nome").text(responsavelAssociado || "-");
 	$("#ad_responsavel_recepcao").val(responsavel);
@@ -569,6 +718,7 @@ function openAguardarDadosModal(id, responsavel, nome, responsavelAssociado, ste
 
 function openFazerRegistroModal(id, responsavel, nome, responsavelAssociado, steps) {
 	currentCardId = id;
+	updateWhatsappButtonState();
 	$("#fr_associado_nome").text(nome);
 	$("#fr_responsavel_nome").text(responsavelAssociado || "-");
 	$("#fr_responsavel_recepcao").val(responsavel);
@@ -667,6 +817,7 @@ function confirmarRegistroCriado() {
 
 function openAcompanhamentoModal(id, responsavel, nome, responsavelAssociado, steps) {
 	currentCardId = id;
+	updateWhatsappButtonState();
 	$("#ac_associado_nome").text(nome);
 	$("#ac_responsavel_nome").text(responsavelAssociado || "-");
 	$("#ac_responsavel_recepcao").val(responsavel);
@@ -842,3 +993,5 @@ window.confirmarFilaEspera = confirmarFilaEspera;
 window.removerConfirmacaoVisita = removerConfirmacaoVisita;
 window.registrarRecepcaoRealizada = registrarRecepcaoRealizada;
 window.finalizarRecepcao = finalizarRecepcao;
+window.falarComResponsavelAtual = falarComResponsavelAtual;
+window.closeEscolherResponsavelWhatsapp = closeEscolherResponsavelWhatsapp;

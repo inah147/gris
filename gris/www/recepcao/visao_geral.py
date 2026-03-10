@@ -29,6 +29,27 @@ STEPS_DEF = [
 ]
 
 
+def _normalize_whatsapp_phone(phone):
+	if not phone:
+		return None
+
+	cleaned = re.sub(r"\D", "", str(phone))
+	if not cleaned:
+		return None
+
+	if cleaned.startswith("55"):
+		normalized = cleaned
+	elif len(cleaned) in {10, 11}:
+		normalized = f"55{cleaned}"
+	else:
+		normalized = cleaned
+
+	if len(normalized) < 12:
+		return None
+
+	return normalized
+
+
 def get_context(context):
 	# Disable cache to always show fresh data
 	context.no_cache = 1
@@ -77,7 +98,8 @@ def get_context(context):
 		"tipo_de_registro",
 		"visita_agendada",
 		"primeira_visita_realizada",
-	] + list(field_interval_map.keys())
+		*field_interval_map.keys(),
+	]
 
 	novos_associados = frappe.get_all(
 		"Novo Associado",
@@ -102,28 +124,74 @@ def get_context(context):
 			if v.jovem not in visits_map:
 				visits_map[v.jovem] = v
 
-	# Fetch Responsavel Vinculo
+	# Fetch Responsavel Vinculo + contatos WhatsApp
 	responsavel_map = {}
+	whatsapp_contatos_map = {}
 	if names:
 		links = frappe.get_all(
 			"Responsavel Vinculo",
 			filters={"beneficiario_novo_associado": ["in", names]},
-			fields=["beneficiario_novo_associado", "responsavel"],
+			fields=["beneficiario_novo_associado", "responsavel", "é_guardiao_legal", "primeiro_responsavel"],
 		)
 
-		# Collect Responsavel IDs to fetch names
-		resp_ids = set(l.responsavel for l in links)
-		resp_names_map = {}
+		resp_ids = {l.get("responsavel") for l in links if l.get("responsavel")}
+		resp_info_map = {}
 		if resp_ids:
 			resps = frappe.get_all(
-				"Responsavel", filters={"name": ["in", list(resp_ids)]}, fields=["name", "nome_completo"]
+				"Responsavel",
+				filters={"name": ["in", list(resp_ids)]},
+				fields=["name", "nome_completo", "celular", "telefone_secundario"],
 			)
-			resp_names_map = {r.name: r.nome_completo for r in resps}
+			resp_info_map = {r.name: r for r in resps}
 
-		for l in links:
-			# Just taking the first one found
-			if l.beneficiario_novo_associado not in responsavel_map:
-				responsavel_map[l.beneficiario_novo_associado] = resp_names_map.get(l.responsavel)
+		links_by_associado = {}
+		for link in links:
+			associado_name = link.get("beneficiario_novo_associado")
+			if not associado_name:
+				continue
+			links_by_associado.setdefault(associado_name, []).append(link)
+
+		for associado_name, associado_links in links_by_associado.items():
+			ordered_links = sorted(
+				associado_links,
+				key=lambda link: (
+					1 if link.get("é_guardiao_legal") else 0,
+					1 if link.get("primeiro_responsavel") else 0,
+				),
+				reverse=True,
+			)
+
+			contatos = []
+			seen_responsaveis = set()
+
+			for link in ordered_links:
+				responsavel_id = link.get("responsavel")
+				if not responsavel_id or responsavel_id in seen_responsaveis:
+					continue
+
+				resp_info = resp_info_map.get(responsavel_id)
+				if not resp_info:
+					continue
+
+				if associado_name not in responsavel_map:
+					responsavel_map[associado_name] = resp_info.get("nome_completo")
+
+				phone = resp_info.get("celular") or resp_info.get("telefone_secundario")
+				normalized_phone = _normalize_whatsapp_phone(phone)
+
+				if normalized_phone:
+					contatos.append(
+						{
+							"responsavel": responsavel_id,
+							"nome": resp_info.get("nome_completo") or responsavel_id,
+							"telefone": normalized_phone,
+							"is_guardiao_legal": bool(link.get("é_guardiao_legal")),
+						}
+					)
+
+				seen_responsaveis.add(responsavel_id)
+
+			whatsapp_contatos_map[associado_name] = contatos
 
 	# Fetch User Names
 	user_names_map = {}
@@ -207,6 +275,14 @@ def get_context(context):
 
 			# Get Responsavel pelo Associado
 			associado.responsavel_associado = responsavel_map.get(associado.name)
+
+			# WhatsApp contacts
+			associado.whatsapp_contatos = whatsapp_contatos_map.get(associado.name, [])
+			associado.whatsapp_contatos_json = json.dumps(associado.whatsapp_contatos, default=str)
+			associado.whatsapp_disponivel = bool(associado.whatsapp_contatos)
+			associado.whatsapp_motivo_indisponivel = (
+				None if associado.whatsapp_disponivel else "Sem telefone de responsável"
+			)
 
 			# Visit info
 			associado.visita_confirmada = bool(visit_rec.visita_confirmada) if visit_rec else False

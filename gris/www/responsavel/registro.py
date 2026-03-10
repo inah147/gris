@@ -7,6 +7,12 @@ from frappe.utils import cint
 from gris.api.portal_access import enrich_context
 
 
+def _format_currency_brl(value):
+	amount = float(value or 0)
+	formatted = f"{amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+	return f"R$ {formatted}"
+
+
 def get_context(context):
 	# Get current user
 	user = frappe.session.user
@@ -70,6 +76,17 @@ def get_context(context):
 	for field in meta.fields:
 		if field.fieldtype == "Select" and field.options:
 			context.options[field.fieldname] = field.options.split("\n")
+
+	try:
+		config = frappe.get_doc("Configuracoes de Recepcao")
+		context.valor_registro_provisorio = config.get("valor_registro_provisorio")
+		context.valor_registro_definitivo = config.get("valor_registro_definitivo")
+	except frappe.DoesNotExistError:
+		context.valor_registro_provisorio = 0
+		context.valor_registro_definitivo = 0
+
+	context.valor_registro_provisorio_fmt = _format_currency_brl(context.valor_registro_provisorio)
+	context.valor_registro_definitivo_fmt = _format_currency_brl(context.valor_registro_definitivo)
 
 	# Sidebar context
 	context.sidebar_title = "Painel do Responsável"

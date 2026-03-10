@@ -19,9 +19,9 @@
   "registro_definitivo_pago",
   "reuniao_de_acolhida_realizada",
   "valores_de_registro_section",
-  "registro_provisorio",
+  "valor_registro_provisorio",
   "column_break_qwxy",
-  "registro_definitivo"
+  "valor_registro_definitivo"
  ],
  "fields": [
   {
@@ -109,21 +109,21 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "registro_definitivo",
-   "fieldtype": "Currency",
-   "label": "Registro Definitivo"
-  },
-  {
-   "fieldname": "registro_provisorio",
+   "fieldname": "valor_registro_provisorio",
    "fieldtype": "Currency",
    "label": "Registro Provis\u00f3rio"
+  },
+  {
+   "fieldname": "valor_registro_definitivo",
+   "fieldtype": "Currency",
+   "label": "Registro Definitivo"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-03-10 09:04:33.181337",
+ "modified": "2026-03-10 12:52:24.282669",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Configuracoes de Recepcao",

@@ -7,6 +7,18 @@ from frappe.utils import getdate
 
 
 class TransacaoExtratoGeral(Document):
+	TRANSFER_CATEGORIES = (
+		"Transferência entre Contas",
+		"Transferência entre Carteiras",
+	)
+
+	def _sync_repasse_entre_contas_with_categoria(self):
+		categoria = (self.categoria or "").strip()
+		self.repasse_entre_contas = 1 if categoria in self.TRANSFER_CATEGORIES else 0
+
+	def validate(self):
+		self._sync_repasse_entre_contas_with_categoria()
+
 	def _update_wallet(self):
 		if self.carteira:
 			# 1. Somar o valor de cada transação da carteira no Transacao Extrato Geral

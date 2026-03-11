@@ -152,14 +152,6 @@
           </select>
         </div>
         <div class="col-md-6">
-          <label class="form-label-modern">Repasse entre Contas</label>
-          <select id="batch_repasse_entre_contas" class="form-input-modern form-input-modern--sm">
-            <option value="">Não alterar</option>
-            <option value="1">Sim</option>
-            <option value="0">Não</option>
-          </select>
-        </div>
-        <div class="col-md-6">
           <label class="form-label-modern">Transação Revisada</label>
           <select id="batch_transacao_revisada" class="form-input-modern form-input-modern--sm">
             <option value="">Não alterar</option>
@@ -362,14 +354,12 @@ function salvarEdicaoLote() {
   const categoria = document.getElementById('batch_categoria').value;
   const centroCusto = document.getElementById('batch_centro_de_custo').value;
   const ordinaria = document.getElementById('batch_ordinaria_extraordinaria').value;
-  const repasse = document.getElementById('batch_repasse_entre_contas').value;
   const revisada = document.getElementById('batch_transacao_revisada').value;
   
   if (descricao) updates.descricao_reduzida = descricao;
   if (categoria) updates.categoria = categoria;
   if (centroCusto) updates.centro_de_custo = centroCusto;
   if (ordinaria) updates.ordinaria_extraordinaria = ordinaria;
-  if (repasse) updates.repasse_entre_contas = parseInt(repasse);
   if (revisada) updates.transacao_revisada = parseInt(revisada);
   
   if (Object.keys(updates).length === 0) {

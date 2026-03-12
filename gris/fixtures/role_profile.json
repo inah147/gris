@@ -2,7 +2,7 @@
  {
   "docstatus": 0,
   "doctype": "Role Profile",
-  "modified": "2025-09-16 22:09:49.310013",
+  "modified": "2026-03-11 22:12:13.063514",
   "name": "Dirigente",
   "role_profile": "Dirigente",
   "roles": [
@@ -23,13 +23,19 @@
     "parentfield": "roles",
     "parenttype": "Role Profile",
     "role": "Visualizador Financeiro"
+   },
+   {
+    "parent": "Dirigente",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Calendario"
    }
   ]
  },
  {
   "docstatus": 0,
   "doctype": "Role Profile",
-  "modified": "2025-09-16 22:10:50.765225",
+  "modified": "2026-03-11 22:11:38.593760",
   "name": "Diretoria Eleita",
   "role_profile": "Diretoria Eleita",
   "roles": [
@@ -50,21 +56,70 @@
     "parentfield": "roles",
     "parenttype": "Role Profile",
     "role": "Gestor Financeiro"
+   },
+   {
+    "parent": "Diretoria Eleita",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Associados"
+   },
+   {
+    "parent": "Diretoria Eleita",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Calendario"
+   },
+   {
+    "parent": "Diretoria Eleita",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Contribuição Mensal"
+   },
+   {
+    "parent": "Diretoria Eleita",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Financeiro"
+   },
+   {
+    "parent": "Diretoria Eleita",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Gestor da UEL"
+   },
+   {
+    "parent": "Diretoria Eleita",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Recepcao"
    }
   ]
  },
  {
   "docstatus": 0,
   "doctype": "Role Profile",
-  "modified": "2025-09-09 07:50:22.647391",
+  "modified": "2026-03-11 22:14:35.978557",
   "name": "Beneficiário",
   "role_profile": "Beneficiário",
-  "roles": []
+  "roles": [
+   {
+    "parent": "Beneficiário",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Calendario"
+   },
+   {
+    "parent": "Beneficiário",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Financeiro"
+   }
+  ]
  },
  {
   "docstatus": 0,
   "doctype": "Role Profile",
-  "modified": "2025-09-16 22:06:58.913437",
+  "modified": "2026-03-11 22:13:02.893916",
   "name": "Assistente",
   "role_profile": "Assistente",
   "roles": [
@@ -79,13 +134,19 @@
     "parentfield": "roles",
     "parenttype": "Role Profile",
     "role": "Visualizador Associados"
+   },
+   {
+    "parent": "Assistente",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Calendario"
    }
   ]
  },
  {
   "docstatus": 0,
   "doctype": "Role Profile",
-  "modified": "2025-09-09 22:40:04.022930",
+  "modified": "2026-03-11 22:10:47.170341",
   "name": "Guest",
   "role_profile": "Guest",
   "roles": []
@@ -93,7 +154,7 @@
  {
   "docstatus": 0,
   "doctype": "Role Profile",
-  "modified": "2025-09-16 22:05:31.100758",
+  "modified": "2026-03-11 22:14:20.520392",
   "name": "Comissão Fiscal",
   "role_profile": "Comissão Fiscal",
   "roles": [
@@ -114,13 +175,25 @@
     "parentfield": "roles",
     "parenttype": "Role Profile",
     "role": "Visualizador Contribuição Mensal"
+   },
+   {
+    "parent": "Comissão Fiscal",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Calendario"
+   },
+   {
+    "parent": "Comissão Fiscal",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Associados"
    }
   ]
  },
  {
   "docstatus": 0,
   "doctype": "Role Profile",
-  "modified": "2025-09-16 22:06:24.437116",
+  "modified": "2026-03-11 22:14:03.570567",
   "name": "Gestor Financeiro",
   "role_profile": "Gestor Financeiro",
   "roles": [
@@ -135,13 +208,43 @@
     "parentfield": "roles",
     "parenttype": "Role Profile",
     "role": "Gestor Contribuição Mensal"
+   },
+   {
+    "parent": "Gestor Financeiro",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Financeiro"
+   },
+   {
+    "parent": "Gestor Financeiro",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Calendario"
+   },
+   {
+    "parent": "Gestor Financeiro",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Contribuição Mensal"
+   },
+   {
+    "parent": "Gestor Financeiro",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Associados"
+   },
+   {
+    "parent": "Gestor Financeiro",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Gestor de Associados"
    }
   ]
  },
  {
   "docstatus": 0,
   "doctype": "Role Profile",
-  "modified": "2025-09-16 22:07:54.551242",
+  "modified": "2026-03-11 22:12:41.839522",
   "name": "Chefe de Seção",
   "role_profile": "Chefe de Seção",
   "roles": [
@@ -168,6 +271,18 @@
     "parentfield": "roles",
     "parenttype": "Role Profile",
     "role": "Visualizador Contribuição Mensal"
+   },
+   {
+    "parent": "Chefe de Seção",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador Calendario"
+   },
+   {
+    "parent": "Chefe de Seção",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Recepcao"
    }
   ]
  }

@@ -93,4 +93,5 @@ def get_context(context):
 	context.parecer_years = sorted(years, reverse=True)
 	# Permission flag for showing edit controls
 	context.can_edit_pareceres = frappe.has_permission("Transparencia", ptype="write")
+	context.can_delete_pareceres = frappe.has_permission("Transparencia", ptype="delete")
 	return context

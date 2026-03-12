@@ -83,11 +83,11 @@ class TransacaoPortao3(Document):
 		self.data_transacao = dt.date()
 
 	def after_insert(self):
-		# is repasse
-		if self.tipo == "TRANFERÊNCIA ENTRE CARTEIRAS":
-			is_internal_tx = 1
-		else:
-			is_internal_tx = 0
+		tipo_normalizado = (self.tipo or "").strip().upper()
+		is_internal_tx = (
+			1 if tipo_normalizado in ("TRANFERÊNCIA ENTRE CARTEIRAS", "TRANSFERÊNCIA ENTRE CARTEIRAS") else 0
+		)
+		categoria = "Transferência entre Carteiras" if is_internal_tx else None
 
 		stats = {"extrato_inseridos": 0, "extrato_repetidos": 0, "extrato_erros": 0}
 		try:
@@ -113,6 +113,7 @@ class TransacaoPortao3(Document):
 						"instituicao": "Portão 3",
 						"centro_de_custo": self._get_centro_de_custo(),
 						"carteira": self.carteira,
+						"categoria": categoria,
 						"repasse_entre_contas": is_internal_tx,
 					}
 				)

@@ -1,4 +1,9 @@
 document.addEventListener('DOMContentLoaded', function() {
+	const TRANSFER_CATEGORIES = new Set([
+		'Transferência entre Contas',
+		'Transferência entre Carteiras'
+	]);
+
 	const btnSalvar = document.getElementById('btn-salvar-extrato');
 	const footerSalvar = document.getElementById('footer-salvar');
 	let initialData = {};
@@ -22,9 +27,11 @@ document.addEventListener('DOMContentLoaded', function() {
 		const categoriaSelect = document.querySelector('[name="categoria"]');
 		const beneficiarioContainer = document.getElementById('beneficiario-field-container');
 		const contaFixaContainer = document.getElementById('conta-fixa-field-container');
+		const repasseEntreContas = document.getElementById('repasse_entre_contas');
 		
 		if (categoriaSelect) {
 			const categoria = categoriaSelect.value;
+			const isTransferCategory = TRANSFER_CATEGORIES.has(categoria);
 			
 			// Campo Beneficiário: só aparece se categoria = "Contribuição Mensal"
 			if (beneficiarioContainer) {
@@ -42,6 +49,11 @@ document.addEventListener('DOMContentLoaded', function() {
 				} else {
 					contaFixaContainer.style.display = 'none';
 				}
+			}
+
+			if (repasseEntreContas) {
+				repasseEntreContas.checked = isTransferCategory;
+				repasseEntreContas.disabled = true;
 			}
 		}
 	}
@@ -72,6 +84,18 @@ document.addEventListener('DOMContentLoaded', function() {
 			}
 		});
 		return data;
+	}
+
+	function normalizeDocname(value) {
+		if (!value) {
+			return '';
+		}
+		const raw = String(value);
+		try {
+			return raw.includes('%') ? decodeURIComponent(raw) : raw;
+		} catch (e) {
+			return raw;
+		}
 	}
 
 	// Salva o estado inicial
@@ -121,7 +145,10 @@ document.addEventListener('DOMContentLoaded', function() {
 		btnSalvar.disabled = true;
 		btnSalvar.textContent = 'Salvando...';
 		const data = getFormData();
-		const docname = (window.frappe && frappe.form_dict && frappe.form_dict.name) || (window.location.search.match(/name=([^&]+)/) || [])[1];
+		const qsDocname = new URLSearchParams(window.location.search).get('name');
+		const docname = normalizeDocname(
+			(window.frappe && frappe.form_dict && frappe.form_dict.name) || qsDocname
+		);
 		if (!docname) {
 			alert('ID do documento não encontrado.');
 			btnSalvar.disabled = false;

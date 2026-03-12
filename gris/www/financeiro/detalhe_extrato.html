@@ -154,8 +154,8 @@
           <!-- Checkboxes -->
           <div class="col-12 col-md-6">
             <div class="form-check" style="padding-top: 0.5rem;">
-              <input type="checkbox" id="repasse_entre_contas" name="repasse_entre_contas" value="1" class="form-check-input" {% if doc.repasse_entre_contas in ['1', 1, true] %}checked{% endif %}>
-              <label for="repasse_entre_contas" class="form-check-label" style="font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--text-primary);">Repasse entre Contas</label>
+              <input type="checkbox" id="repasse_entre_contas" name="repasse_entre_contas" value="1" class="form-check-input" disabled title="Campo calculado automaticamente pela categoria" {% if doc.repasse_entre_contas in ['1', 1, true] %}checked{% endif %}>
+              <label for="repasse_entre_contas" class="form-check-label" style="font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--text-primary);">Repasse entre Contas (automático)</label>
             </div>
           </div>
           <div class="col-12 col-md-6">

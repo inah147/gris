@@ -38,7 +38,6 @@ def batch_update_transactions(transaction_ids, updates):
 		"categoria",
 		"centro_de_custo",
 		"ordinaria_extraordinaria",
-		"repasse_entre_contas",
 		"transacao_revisada",
 	]
 

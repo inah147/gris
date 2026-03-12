@@ -37,6 +37,8 @@ class TransacaoBTGEmpresas(Document):
 		else:
 			is_internal_tx = 0
 
+		categoria = "Transferência entre Contas" if is_internal_tx else None
+
 		tx = frappe.get_doc(
 			{
 				"doctype": "Transacao Extrato Geral",
@@ -54,6 +56,7 @@ class TransacaoBTGEmpresas(Document):
 				"instituicao": "BTG Empresas",
 				"centro_de_custo": "Presidência",
 				"carteira": "BTG Empresas",
+				"categoria": categoria,
 				"repasse_entre_contas": is_internal_tx,
 			}
 		)

@@ -195,11 +195,11 @@
               </td>
               <td style="text-align: center;" onclick="rowClick('{{ transacao.name }}');" style="cursor: pointer;">
                 {% if transacao.transacao_revisada %}
-                  <span class="status-indicator status-indicator--active" title="Transação revisada">
+                  <span class="status-indicator status-indicator--reviewed" title="Transação revisada">
                     <span class="status-indicator__dot"></span>
                   </span>
                 {% else %}
-                  <span class="status-indicator status-indicator--warning" title="Aguardando revisão">
+                  <span class="status-indicator status-indicator--pending-review" title="Aguardando revisão">
                     <span class="status-indicator__dot"></span>
                   </span>
                 {% endif %}

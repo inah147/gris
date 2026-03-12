@@ -1,0 +1,17 @@
+/* Indicadores de revisao no extrato com paleta colorblind-safe (Okabe-Ito). */
+:root {
+  --extrato-status-reviewed: #0072B2;
+  --extrato-status-reviewed-ring: rgba(0, 114, 178, 0.22);
+  --extrato-status-pending-review: #E69F00;
+  --extrato-status-pending-review-ring: rgba(230, 159, 0, 0.24);
+}
+
+.status-indicator--reviewed .status-indicator__dot {
+  background-color: var(--extrato-status-reviewed);
+  box-shadow: 0 0 0 3px var(--extrato-status-reviewed-ring);
+}
+
+.status-indicator--pending-review .status-indicator__dot {
+  background-color: var(--extrato-status-pending-review);
+  box-shadow: 0 0 0 3px var(--extrato-status-pending-review-ring);
+}

@@ -1,645 +1,655 @@
-// Dashboard Financeiro - gráficos Entradas x Saídas (barras) e Resultado (linha) separados
-(async function(){
-	const ensureCharts = () => new Promise((resolve, reject) => {
-		if (window.frappe && frappe.Chart) return resolve();
-		const s = document.createElement('script');
-		s.src = '/assets/frappe/node_modules/frappe-charts/dist/frappe-charts.umd.js';
-		s.onload = () => {
-			try { const ns = window['frappe-charts']; if (ns && ns.Chart) frappe.Chart = ns.Chart; } catch(e) {}
-			if (frappe.Chart) return resolve();
-			reject(new Error('frappe.Chart não disponível.'));
-		};
-		s.onerror = () => reject(new Error('Falha ao carregar frappe-charts.'));
-		document.head.appendChild(s);
-	});
+// Dashboard Financeiro - visualizacoes com Apache ECharts
+(async function () {
+  const CHART_COLORS = ['#0072B2', '#E69F00', '#009E73', '#D55E00', '#56B4E9', '#CC79A7', '#F0E442', '#000000'];
+  const chartIds = [
+    'chart-entradas-saidas-mensal',
+    'chart-resultado-mensal',
+    'chart-entradas-credito-mensal',
+    'chart-entradas-credito-categoria-mensal',
+    'chart-entradas-credito-centro-mensal',
+    'chart-entradas-credito-tipo-mensal',
+    'chart-saidas-debito-mensal',
+    'chart-saidas-debito-categoria-mensal',
+    'chart-saidas-debito-centro-mensal',
+    'chart-saidas-debito-tipo-mensal',
+    'chart-contribuicoes-status-mensal',
+    'chart-contribuicoes-inadimplencia-mensal',
+  ];
 
-	let entradasSaidasChart = null;
-	let resultadoChart = null;
-	// Removidos gráficos separados Ordinárias / Extraordinárias (uso agora filtro global)
-	let entradasCreditoChart = null;
-	let currentFilters = {}; // {categoria, instituicao, carteira, centro_de_custo}
+  let currentFilters = {};
 
-	frappe.ready(async () => {
-		const form = document.getElementById('fin-dashboard-filters');
-		if (form){
-			form.addEventListener('submit', async (e) => {
-				e.preventDefault();
-				currentFilters = getFormFilters(form);
-				await refreshCharts();
-			});
-			form.addEventListener('reset', async () => {
-				setTimeout(async () => { currentFilters = {}; await refreshCharts(); }, 0);
-			});
-		}
-		await refreshCharts();
-	});
+  const ensureEcharts = () =>
+    new Promise((resolve, reject) => {
+      if (window.echarts) {
+        resolve();
+        return;
+      }
 
-	function getFormFilters(form){
-		const fd = new FormData(form);
-		const out = {};
-		['categoria','instituicao','carteira','centro_de_custo','ordinaria_extraordinaria'].forEach(k=>{
-			const v = (fd.get(k)||'').trim();
-			if (v) out[k]=v;
-		});
-		return out;
-	}
+      const existing = document.querySelector('script[data-gris-echarts="1"]');
+      if (existing) {
+        existing.addEventListener('load', () => (window.echarts ? resolve() : reject(new Error('ECharts não disponível'))), {
+          once: true,
+        });
+        existing.addEventListener('error', () => reject(new Error('Falha ao carregar ECharts')), { once: true });
+        return;
+      }
 
-	async function refreshCharts(){
-		try {
-			await ensureCharts();
-			await atualizarCardInadimplencia();
-			await renderEntradasSaidas();
-			await renderResultado();
-			await renderEntradasCredito();
-			await renderEntradasCreditoCategoria();
-			await renderEntradasCreditoCentro();
-			await renderEntradasCreditoTipo();
-			await renderSaidasDebito();
-			await renderSaidasDebitoCategoria();
-			await renderSaidasDebitoCentro();
-			await renderSaidasDebitoTipo();
-			await renderContribuicoesMensaisStatus();
-			await renderContribuicoesMensaisInadimplencia();
-		} catch(e){
-			console.warn('Erro ao atualizar gráficos', e);
-		}
-	}
+      const script = document.createElement('script');
+      script.dataset.grisEcharts = '1';
+      script.src = '/assets/gris/vendor/echarts/echarts.min.js';
+      script.onload = () => {
+        if (window.echarts) resolve();
+        else reject(new Error('ECharts não disponível'));
+      };
+      script.onerror = () => reject(new Error('Falha ao carregar ECharts'));
+      document.head.appendChild(script);
+    });
 
-	// Atualiza card Inadimplência Histórica (últimos 6 meses)
-	async function atualizarCardInadimplencia(){
-		const el = document.getElementById('card-inadimplencia');
-		const desc = document.getElementById('card-inadimplencia-desc');
-		if (!el) return;
-		el.textContent = '--';
-		try {
-			const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_inadimplencia_historica_12m' });
-			const data = resp.message || resp || {};
-			if (typeof data.percent === 'number') {
-				el.textContent = data.percent.toFixed(2).replace('.', ',') + '%';
-				if (desc && typeof data.atrasado === 'number' && typeof data.total === 'number') {
-					desc.textContent = `Últimos 12 meses • ${data.atrasado}/${data.total} associados`; // distintos
-				}
-			} else {
-				el.textContent = '0,00%';
-			}
-		} catch(e){
-			el.textContent = 'Erro';
-		}
-	}
+  function isMobile() {
+    return window.innerWidth < 640;
+  }
 
-	async function fetchData(extraArgs){
-		const args = Object.assign({}, currentFilters, extraArgs||{});
-		const r = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_entradas_saidas_mensal', args });
-		return r.message || {};
-	}
+  function getFormFilters(form) {
+    const fd = new FormData(form);
+    const out = {};
+    ['categoria', 'instituicao', 'carteira', 'centro_de_custo', 'ordinaria_extraordinaria'].forEach((k) => {
+      const v = (fd.get(k) || '').trim();
+      if (v) out[k] = v;
+    });
+    return out;
+  }
 
-	async function renderEntradasSaidas(){
-		const target = document.getElementById('chart-entradas-saidas-mensal');
-		if (!target) return;
-		if (!entradasSaidasChart) {
-			// primeira carga
-			target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
-		}
-		const data = await fetchData();
-		if (!data.labels || !data.labels.length){
-			target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>';
-			return;
-		}
-		// Remover dataset Resultado desta coleção para este gráfico
-		const onlyBars = {
-			labels: data.labels.slice(),
-			datasets: data.datasets.filter(d => !/Resultado/i.test(d.name))
-		};
-		const isMobile = window.innerWidth < 640;
-		if (!entradasSaidasChart) {
-			// cria
-			target.innerHTML = '';
-			entradasSaidasChart = new frappe.Chart(target, {
-				title: 'Entradas x Saídas (Últimos 12 meses)',
-				type: 'bar',
-				data: onlyBars,
-				height: isMobile ? 300 : 320,
-				barOptions: { stacked: false, spaceRatio: 0.4 },
-				axisOptions: { xAxisMode: 'tick', xIsSeries: false, shortenYAxisNumbers: 1 },
-				tooltipOptions: { formatTooltipY: d => 'R$ ' + formatNumberBR(d) }
-			});
-			if (isMobile) rotateXAxisLabels(target, -35);
-		} else {
-			// atualiza datasets e relança draw
-			try {
-				entradasSaidasChart.data = onlyBars; // atribui novo objeto
-				if (typeof entradasSaidasChart.draw === 'function') entradasSaidasChart.draw();
-			} catch(e){
-				console.warn('Falha ao atualizar gráfico, recriando...', e);
-				try { target.innerHTML=''; } catch(_){}
-				entradasSaidasChart = new frappe.Chart(target, {
-					title: 'Entradas x Saídas (Últimos 12 meses)',
-					type: 'bar',
-					data: onlyBars,
-					height: isMobile ? 300 : 320,
-					barOptions: { stacked: false, spaceRatio: 0.4 },
-					axisOptions: { xAxisMode: 'tick', xIsSeries: false, shortenYAxisNumbers: 1 },
-					tooltipOptions: { formatTooltipY: d => 'R$ ' + formatNumberBR(d) }
-				});
-				if (isMobile) rotateXAxisLabels(target, -35);
-			}
-		}
-	}
+  function parseNumber(value) {
+    const n = typeof value === 'number' ? value : parseFloat(value || 0);
+    return Number.isFinite(n) ? n : 0;
+  }
 
-	let entradasCreditoTipoChart = null;
-	async function renderEntradasCreditoTipo(){
-		const target = document.getElementById('chart-entradas-credito-tipo-mensal');
-		if (!target) return;
-		if (!entradasCreditoTipoChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
-		// Remover ordinaria_extraordinaria do filtro (cada tipo vira dataset)
-		const { ordinaria_extraordinaria, ...filtersSemTipo } = currentFilters;
-		const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_entradas_credito_mensal_por_tipo', args: filtersSemTipo });
-		const msg = resp.message || resp;
-		const payload = msg || {};
-		if (!payload.labels || !payload.labels.length){
-			target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>';
-			return;
-		}
-		if (!payload.datasets || !payload.datasets.length){
-			target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>';
-			return;
-		}
-		const palette = ['#0d9488','#dc2626','#6366f1','#f59e0b'];
-		payload.datasets.forEach((ds,i)=>{ ds.color = palette[i % palette.length]; });
-		const stackedData = { labels: payload.labels.slice(), datasets: payload.datasets };
-		const isMobile = window.innerWidth < 640;
-		try {
-			if (!entradasCreditoTipoChart){
-				target.innerHTML = '';
-				entradasCreditoTipoChart = new frappe.Chart(target, {
-					title: 'Entradas por Tipo (Crédito) - Empilhado',
-					type: 'bar',
-					data: stackedData,
-					height: isMobile ? 340 : 360,
-					barOptions: { stacked: true, spaceRatio: 0.4 },
-					axisOptions: { xAxisMode: 'tick', xIsSeries: false, shortenYAxisNumbers: 1 },
-					tooltipOptions: { formatTooltipY: d => 'R$ ' + formatNumberBR(d) }
-				});
-				if (isMobile) rotateXAxisLabels(target, -35);
-			} else {
-				entradasCreditoTipoChart.data = stackedData;
-				if (typeof entradasCreditoTipoChart.draw === 'function') entradasCreditoTipoChart.draw();
-			}
-		} catch(e){ console.warn('Falha gráfico Entradas Tipo', e); }
-	}
+  function formatCurrency(value) {
+    return parseNumber(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
 
-	let entradasCreditoCentroChart = null;
-	async function renderEntradasCreditoCentro(){
-		const target = document.getElementById('chart-entradas-credito-centro-mensal');
-		if (!target) return;
-		if (!entradasCreditoCentroChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
-		// Remover centro_de_custo do filtro (cada centro vira dataset)
-		const { centro_de_custo, ...filtersSemCentro } = currentFilters;
-		const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_entradas_credito_mensal_por_centro_custo', args: filtersSemCentro });
-		const msg = resp.message || resp;
-		const payload = msg || {};
-		if (!payload.labels || !payload.labels.length){
-			target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>';
-			return;
-		}
-		if (!payload.datasets || !payload.datasets.length){
-			target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>';
-			return;
-		}
-		const palette = ['#2563eb','#059669','#db2777','#d97706','#10b981','#7c3aed','#0ea5e9','#dc2626','#f59e0b','#0891b2'];
-		payload.datasets.forEach((ds,i)=>{ ds.color = palette[i % palette.length]; });
-		const stackedData = { labels: payload.labels.slice(), datasets: payload.datasets };
-		const isMobile = window.innerWidth < 640;
-		try {
-			if (!entradasCreditoCentroChart){
-				target.innerHTML = '';
-				entradasCreditoCentroChart = new frappe.Chart(target, {
-					title: 'Entradas por Centro de Custo (Crédito) - Empilhado',
-					type: 'bar',
-					data: stackedData,
-					height: isMobile ? 340 : 360,
-					barOptions: { stacked: true, spaceRatio: 0.4 },
-					axisOptions: { xAxisMode: 'tick', xIsSeries: false, shortenYAxisNumbers: 1 },
-					tooltipOptions: { formatTooltipY: d => 'R$ ' + formatNumberBR(d) }
-				});
-				if (isMobile) rotateXAxisLabels(target, -35);
-			} else {
-				entradasCreditoCentroChart.data = stackedData;
-				if (typeof entradasCreditoCentroChart.draw === 'function') entradasCreditoCentroChart.draw();
-			}
-		} catch(e){ console.warn('Falha gráfico Entradas Centro Custo', e); }
-	}
+  function formatNumber(value) {
+    return parseNumber(value).toLocaleString('pt-BR');
+  }
 
-	async function renderResultado(){
-		const target = document.getElementById('chart-resultado-mensal');
-		if (!target) return;
-		// Sempre recriar para evitar estados internos inconsistentes após filtros
-		target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
-		const data = await fetchData();
-		if (!data.labels || !data.labels.length){
-			target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>';
-			return;
-		}
-		const dsResultado = data.datasets.find(d => /Resultado/i.test(d.name));
-		if (!dsResultado){
-			target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados de resultado.</div>';
-			return;
-		}
-		// Coerção explícita para números (evita string -> path invisível)
-		const coercedVals = (dsResultado.values || []).map(v => typeof v === 'number' ? v : parseFloat(v)||0);
-		const allZero = coercedVals.every(v => v === 0);
-		const cleanResultado = { name: dsResultado.name || 'Resultado', values: coercedVals, color: '#2563eb' };
-		const lineData = { labels: data.labels.slice(), datasets: [ cleanResultado ], yMarkers: [ { label: 'Zero', value: 0, options: { labelPos: 'left' } } ] };
-		const isMobile = window.innerWidth < 640;
-		// Recriação sempre
-		target.innerHTML = '';
-		resultadoChart = new frappe.Chart(target, {
-			title: 'Resultado Mensal (Entradas - Saídas)',
-			type: 'line',
-			data: lineData,
-			height: isMobile ? 300 : 320,
-			lineOptions: { regionFill: 1, hideDots: false, dotSize: 5 },
-			axisOptions: { xAxisMode: 'tick', xIsSeries: false, shortenYAxisNumbers: 1 },
-			tooltipOptions: { formatTooltipY: d => 'R$ ' + formatNumberBR(d) }
-		});
-		if (isMobile) rotateXAxisLabels(target, -35);
-		// Se todos os valores forem zero, adiciona aviso sutil e evita impressão de linha invisível branca
-		if (allZero) {
-			const note = document.createElement('div');
-			note.className = 'small text-muted mt-1';
-			note.textContent = 'Sem variação (todos os meses = 0)';
-			target.appendChild(note);
-		}
-		// Fallback: se por algum motivo o path não renderizar, desenha pontos manualmente
-		requestAnimationFrame(()=>{
-			const svg = target.querySelector('svg');
-			if (!svg) return;
-			const existingPath = svg.querySelector('path.line-graph-path, .chart-lines path');
-			if (existingPath) return; // linha presente
-			try {
-				// calcular escala aproximada a partir de y e largura do gráfico
-				const yAxisTicks = svg.querySelectorAll('.y.axis text, .chart-axis.y text');
-				let minY = 0, maxY = 0;
-				const vals = coercedVals;
-				if (vals.length){
-					minY = Math.min(...vals);
-					maxY = Math.max(...vals);
-					if (minY === maxY) { maxY = minY + 1; }
-				}
-				const plotArea = svg.querySelector('g.chart-group') || svg;
-				const bbox = plotArea.getBBox();
-				const h = bbox.height || 1;
-				const w = bbox.width || 1;
-				coercedVals.forEach((v,i)=>{
-					const cx = bbox.x + (w * (i/(coercedVals.length-1 || 1)));
-					const ratio = (v - minY)/(maxY - minY);
-					const cy = bbox.y + (h - h*ratio);
-					const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
-					circle.setAttribute('cx', cx);
-					circle.setAttribute('cy', cy);
-					circle.setAttribute('r', 3.5);
-					circle.setAttribute('fill', '#2563eb');
-					circle.setAttribute('stroke', 'white');
-					circle.setAttribute('stroke-width', '1');
-					plotArea.appendChild(circle);
-				});
-			} catch(err){ console.warn('Fallback dots erro', err); }
-		});
-	}
+  function formatPercent(value, digits = 2) {
+    return `${parseNumber(value).toFixed(digits).replace('.', ',')}%`;
+  }
 
+  function axisLabelConfig() {
+    return {
+      interval: 0,
+      rotate: isMobile() ? 35 : 0,
+      hideOverlap: true,
+      fontSize: isMobile() ? 10 : 12,
+    };
+  }
 
-	async function renderEntradasCredito(){
-		const target = document.getElementById('chart-entradas-credito-mensal');
-		if (!target) return;
-		if (!entradasCreditoChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
-		const data = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_entradas_credito_mensal', args: currentFilters });
-		const msg = data.message || data; // compat
-		const payload = msg || {};
-		if (!payload.labels || !payload.labels.length){
-			target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>';
-			return;
-		}
-		// Espera dataset único linha
-		const ds = payload.datasets && payload.datasets[0];
-		if (!ds){
-			target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>';
-			return;
-		}
-		const coercedVals = (ds.values||[]).map(v => typeof v==='number'? v: parseFloat(v)||0);
-		// Cálculo média e desvio padrão (populacional)
-		let mean = 0, std = 0;
-		if (coercedVals.length){
-			let sample = coercedVals.slice();
-			if (sample.length > 2){
-				// remove um menor e um maior (apenas uma ocorrência cada)
-				const minVal = Math.min(...sample);
-				const maxVal = Math.max(...sample);
-				let removedMin = false, removedMax = false;
-				sample = sample.filter(v=>{
-					if (!removedMin && v === minVal){ removedMin = true; return false; }
-					if (!removedMax && v === maxVal){ removedMax = true; return false; }
-					return true;
-				});
-			}
-			if (sample.length){
-				mean = sample.reduce((a,b)=>a+b,0)/sample.length;
-				const varPop = sample.reduce((a,b)=>a+Math.pow(b-mean,2),0)/sample.length;
-				std = Math.sqrt(varPop);
-			}
-		}
-		let lower = mean - std;
-		let upper = mean + std;
-		if (std === 0){ // todos iguais: criar banda mínima para visualização opcional
-			lower = mean - (mean!==0 ? Math.abs(mean)*0.05 : 0.01);
-			upper = mean + (mean!==0 ? Math.abs(mean)*0.05 : 0.01);
-		}
-		const lineData = { 
-			labels: payload.labels.slice(), 
-			datasets: [ { name: ds.name || 'Entradas (Crédito)', values: coercedVals, color: '#0d9488' } ], 
-			yRegions: [ { label: 'Variação', start: lower, end: upper, options: { labelPos: 'right' } } ]
-		};
-		const isMobile = window.innerWidth < 640;
-		try {
-			if (entradasCreditoChart){ entradasCreditoChart = null; }
-			target.innerHTML = '';
-			entradasCreditoChart = new frappe.Chart(target, {
-				title: 'Entradas (Crédito) - Últimos 12 meses',
-				type: 'line',
-				data: lineData,
-				height: isMobile ? 300 : 320,
-				lineOptions: { regionFill: 1, hideDots: false, dotSize: 4 },
-				axisOptions: { xAxisMode: 'tick', xIsSeries: false, shortenYAxisNumbers: 1 },
-				tooltipOptions: { formatTooltipY: d => 'R$ ' + formatNumberBR(d) }
-			});
-			if (isMobile) rotateXAxisLabels(target, -35);
-		} catch(e){ console.warn('Falha gráfico Entradas Crédito', e); }
-	}
+  function baseOption({ yAxisName = '', gridTop = 58, legendTop = 4, axisPointer = 'shadow' } = {}) {
+    return {
+      aria: { enabled: true },
+      color: CHART_COLORS,
+      animationDuration: 400,
+      animationDurationUpdate: 250,
+      tooltip: {
+        trigger: 'axis',
+        confine: true,
+        className: 'echarts-tooltip-modern',
+        axisPointer: { type: axisPointer },
+      },
+      legend: {
+        type: 'scroll',
+        top: legendTop,
+      },
+      grid: {
+        top: gridTop,
+        left: 14,
+        right: 14,
+        bottom: isMobile() ? 66 : 38,
+        containLabel: true,
+      },
+      xAxis: {
+        type: 'category',
+        axisTick: { alignWithLabel: true },
+        axisLabel: axisLabelConfig(),
+      },
+      yAxis: {
+        type: 'value',
+        name: yAxisName,
+      },
+    };
+  }
 
-	let entradasCreditoCategoriaChart = null;
-	async function renderEntradasCreditoCategoria(){
-		const target = document.getElementById('chart-entradas-credito-categoria-mensal');
-		if (!target) return;
-		if (!entradasCreditoCategoriaChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
-		// Remover categoria do filtro (cada categoria vira dataset)
-		const { categoria, ...filtersSemCategoria } = currentFilters;
-		const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_entradas_credito_mensal_por_categoria', args: filtersSemCategoria });
-		const msg = resp.message || resp;
-		const payload = msg || {};
-		if (!payload.labels || !payload.labels.length){
-			target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>';
-			return;
-		}
-		if (!payload.datasets || !payload.datasets.length){
-			target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>';
-			return;
-		}
-		const palette = ['#1d4ed8','#0d9488','#9333ea','#dc2626','#f59e0b','#16a34a','#6d28d9','#0891b2','#7c3aed','#ea580c'];
-		payload.datasets.forEach((ds,i)=>{ ds.color = palette[i % palette.length]; });
-		const stackedData = { labels: payload.labels.slice(), datasets: payload.datasets };
-		const isMobile = window.innerWidth < 640;
-		try {
-			if (!entradasCreditoCategoriaChart){
-				target.innerHTML = '';
-				entradasCreditoCategoriaChart = new frappe.Chart(target, {
-					title: 'Entradas por Categoria (Crédito) - Empilhado',
-					type: 'bar',
-					data: stackedData,
-					height: isMobile ? 300 : 320,
-					barOptions: { stacked: true, spaceRatio: 0.4 },
-					axisOptions: { xAxisMode: 'tick', xIsSeries: false, shortenYAxisNumbers: 1 },
-					tooltipOptions: { formatTooltipY: d => 'R$ ' + formatNumberBR(d) }
-				});
-				if (isMobile) rotateXAxisLabels(target, -35);
-			} else {
-				entradasCreditoCategoriaChart.data = stackedData;
-				if (typeof entradasCreditoCategoriaChart.draw === 'function') entradasCreditoCategoriaChart.draw();
-			}
-		} catch(e){ console.warn('Falha gráfico Entradas Categoria', e); }
-	}
+  function getChart(id) {
+    const target = document.getElementById(id);
+    if (!target || !window.echarts) return null;
+    const existing = window.echarts.getInstanceByDom(target);
+    if (existing) return existing;
+    target.innerHTML = '';
+    return window.echarts.init(target);
+  }
 
-	function formatNumberBR(v){
-		try { return parseFloat(v).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); } catch(e){ return v; }
-	}
+  function disposeChart(id) {
+    const target = document.getElementById(id);
+    if (!target || !window.echarts) return;
+    const existing = window.echarts.getInstanceByDom(target);
+    if (existing) existing.dispose();
+  }
 
-// formatTooltip removido (cada gráfico tem seu próprio tooltip simples)
+  function setChartMessage(id, text) {
+    disposeChart(id);
+    const target = document.getElementById(id);
+    if (target) target.innerHTML = `<div class="text-muted small px-2 pt-3">${text}</div>`;
+  }
 
-	function rotateXAxisLabels(container, angle){
-		requestAnimationFrame(()=>{
-			const svg = container.querySelector('svg');
-			if(!svg) return;
-			const ticks = svg.querySelectorAll('.x.axis text, .x-axis text, .chart-axis.x text');
-			ticks.forEach(txt => {
-				if (txt.__rotated) return;
-				txt.__rotated = true;
-				txt.setAttribute('text-anchor','end');
-				const x = txt.getAttribute('x') || 0;
-				const y = txt.getAttribute('y') || 0;
-				txt.setAttribute('transform', `translate(0,0) rotate(${angle} ${x} ${y})`);
-				const dy = parseFloat(txt.getAttribute('dy') || 0);
-				txt.setAttribute('dy', (dy + 2));
-				txt.style.fontSize = '10px';
-			});
-		});
-	}
+  function setAllLoading() {
+    chartIds.forEach((id) => setChartMessage(id, 'Carregando...'));
+  }
 
-	// ================= Saídas (Débito) =================
-	let saidasDebitoChart = null;
-	async function renderSaidasDebito(){
-		const target = document.getElementById('chart-saidas-debito-mensal');
-		if (!target) return;
-		if (!saidasDebitoChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
-		const data = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_saidas_debito_mensal', args: currentFilters });
-		const payload = data.message || data || {};
-		if (!payload.labels || !payload.labels.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
-		const ds = payload.datasets && payload.datasets[0];
-		if (!ds){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
-		const coercedVals = (ds.values||[]).map(v=> typeof v==='number'? v: parseFloat(v)||0);
-		// média e desvio para banda
-		let mean=0,std=0; if (coercedVals.length){ let sample = coercedVals.slice(); if (sample.length>2){ const minVal=Math.min(...sample); const maxVal=Math.max(...sample); let removedMin=false,removedMax=false; sample = sample.filter(v=>{ if(!removedMin && v===minVal){removedMin=true; return false;} if(!removedMax && v===maxVal){removedMax=true; return false;} return true; }); } if (sample.length){ mean = sample.reduce((a,b)=>a+b,0)/sample.length; const varPop = sample.reduce((a,b)=>a+Math.pow(b-mean,2),0)/sample.length; std = Math.sqrt(varPop);} }
-		let lower = mean - std, upper = mean + std; if (std===0){ lower = mean - (mean!==0? Math.abs(mean)*0.05:0.01); upper = mean + (mean!==0? Math.abs(mean)*0.05:0.01); }
-		const lineData = { labels: payload.labels.slice(), datasets: [ { name: 'Saídas (Débito)', values: coercedVals, color: '#dc2626' } ], yRegions: [ { label: 'Variação', start: lower, end: upper, options: { labelPos: 'right' } } ] };
-		const isMobile = window.innerWidth < 640;
-		try {
-			if (saidasDebitoChart){ saidasDebitoChart = null; }
-			target.innerHTML = '';
-			saidasDebitoChart = new frappe.Chart(target, {
-				title: 'Saídas (Débito) - Últimos 12 meses',
-				type: 'line',
-				data: lineData,
-				height: isMobile ? 300 : 320,
-				lineOptions: { regionFill: 1, hideDots: false, dotSize: 4 },
-				axisOptions: { xAxisMode: 'tick', xIsSeries: false, shortenYAxisNumbers: 1 },
-				tooltipOptions: { formatTooltipY: d => 'R$ ' + formatNumberBR(d) }
-			});
-			if (isMobile) rotateXAxisLabels(target, -35);
-		} catch(e){ console.warn('Falha gráfico Saídas Débito', e); }
-	}
+  function computeBand(values) {
+    const coerced = (values || []).map(parseNumber);
+    let sample = coerced.slice();
 
-	let saidasDebitoCategoriaChart = null;
-	async function renderSaidasDebitoCategoria(){
-		const target = document.getElementById('chart-saidas-debito-categoria-mensal');
-		if (!target) return;
-		if (!saidasDebitoCategoriaChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
-		const { categoria, ...filtersSemCategoria } = currentFilters;
-		const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_saidas_debito_mensal_por_categoria', args: filtersSemCategoria });
-		const payload = resp.message || resp || {};
-		if (!payload.labels || !payload.labels.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
-		if (!payload.datasets || !payload.datasets.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
-		const palette = ['#dc2626','#b91c1c','#ef4444','#f87171','#991b1b','#fb923c','#f59e0b','#ea580c','#d97706','#7f1d1d'];
-		payload.datasets.forEach((ds,i)=>{ ds.color = palette[i % palette.length]; });
-		const stackedData = { labels: payload.labels.slice(), datasets: payload.datasets };
-		const isMobile = window.innerWidth < 640;
-		try {
-			if (!saidasDebitoCategoriaChart){
-				target.innerHTML='';
-				saidasDebitoCategoriaChart = new frappe.Chart(target, {
-					title: 'Saídas por Categoria (Débito) - Empilhado',
-					type: 'bar',
-					data: stackedData,
-					height: isMobile ? 300 : 320,
-					barOptions: { stacked: true, spaceRatio: 0.4 },
-					axisOptions: { xAxisMode: 'tick', xIsSeries: false, shortenYAxisNumbers: 1 },
-					tooltipOptions: { formatTooltipY: d => 'R$ ' + formatNumberBR(d) }
-				});
-				if (isMobile) rotateXAxisLabels(target, -35);
-			} else {
-				saidasDebitoCategoriaChart.data = stackedData;
-				if (typeof saidasDebitoCategoriaChart.draw === 'function') saidasDebitoCategoriaChart.draw();
-			}
-		} catch(e){ console.warn('Falha gráfico Saídas Categoria', e); }
-	}
+    if (sample.length > 2) {
+      const minVal = Math.min(...sample);
+      const maxVal = Math.max(...sample);
+      let removedMin = false;
+      let removedMax = false;
+      sample = sample.filter((v) => {
+        if (!removedMin && v === minVal) {
+          removedMin = true;
+          return false;
+        }
+        if (!removedMax && v === maxVal) {
+          removedMax = true;
+          return false;
+        }
+        return true;
+      });
+    }
 
-	let saidasDebitoCentroChart = null;
-	async function renderSaidasDebitoCentro(){
-		const target = document.getElementById('chart-saidas-debito-centro-mensal');
-		if (!target) return;
-		if (!saidasDebitoCentroChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
-		const { centro_de_custo, ...filtersSemCentro } = currentFilters;
-		const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_saidas_debito_mensal_por_centro_custo', args: filtersSemCentro });
-		const payload = resp.message || resp || {};
-		if (!payload.labels || !payload.labels.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
-		if (!payload.datasets || !payload.datasets.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
-		const palette = ['#dc2626','#991b1b','#ef4444','#fb923c','#f59e0b','#b91c1c','#ea580c','#d97706','#f87171','#7f1d1d'];
-		payload.datasets.forEach((ds,i)=>{ ds.color = palette[i % palette.length]; });
-		const stackedData = { labels: payload.labels.slice(), datasets: payload.datasets };
-		const isMobile = window.innerWidth < 640;
-		try {
-			if (!saidasDebitoCentroChart){
-				target.innerHTML='';
-				saidasDebitoCentroChart = new frappe.Chart(target, {
-					title: 'Saídas por Centro de Custo (Débito) - Empilhado',
-					type: 'bar',
-					data: stackedData,
-					height: isMobile ? 340 : 360,
-					barOptions: { stacked: true, spaceRatio: 0.4 },
-					axisOptions: { xAxisMode: 'tick', xIsSeries: false, shortenYAxisNumbers: 1 },
-					tooltipOptions: { formatTooltipY: d => 'R$ ' + formatNumberBR(d) }
-				});
-				if (isMobile) rotateXAxisLabels(target, -35);
-			} else {
-				saidasDebitoCentroChart.data = stackedData;
-				if (typeof saidasDebitoCentroChart.draw === 'function') saidasDebitoCentroChart.draw();
-			}
-		} catch(e){ console.warn('Falha gráfico Saídas Centro', e); }
-	}
+    let mean = 0;
+    let std = 0;
+    if (sample.length) {
+      mean = sample.reduce((acc, v) => acc + v, 0) / sample.length;
+      const variance = sample.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / sample.length;
+      std = Math.sqrt(variance);
+    }
 
-	let saidasDebitoTipoChart = null;
-	async function renderSaidasDebitoTipo(){
-		const target = document.getElementById('chart-saidas-debito-tipo-mensal');
-		if (!target) return;
-		if (!saidasDebitoTipoChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
-		const { ordinaria_extraordinaria, ...filtersSemTipo } = currentFilters;
-		const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_saidas_debito_mensal_por_tipo', args: filtersSemTipo });
-		const payload = resp.message || resp || {};
-		if (!payload.labels || !payload.labels.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
-		if (!payload.datasets || !payload.datasets.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
-		const palette = ['#dc2626','#7f1d1d','#f87171'];
-		payload.datasets.forEach((ds,i)=>{ ds.color = palette[i % palette.length]; });
-		const stackedData = { labels: payload.labels.slice(), datasets: payload.datasets };
-		const isMobile = window.innerWidth < 640;
-		try {
-			if (!saidasDebitoTipoChart){
-				target.innerHTML='';
-				saidasDebitoTipoChart = new frappe.Chart(target, {
-					title: 'Saídas por Tipo (Débito) - Empilhado',
-					type: 'bar',
-					data: stackedData,
-					height: isMobile ? 340 : 360,
-					barOptions: { stacked: true, spaceRatio: 0.4 },
-					axisOptions: { xAxisMode: 'tick', xIsSeries: false, shortenYAxisNumbers: 1 },
-					tooltipOptions: { formatTooltipY: d => 'R$ ' + formatNumberBR(d) }
-				});
-				if (isMobile) rotateXAxisLabels(target, -35);
-			} else {
-				saidasDebitoTipoChart.data = stackedData;
-				if (typeof saidasDebitoTipoChart.draw === 'function') saidasDebitoTipoChart.draw();
-			}
-		} catch(e){ console.warn('Falha gráfico Saídas Tipo', e); }
-	}
+    let lower = mean - std;
+    let upper = mean + std;
+    if (std === 0) {
+      const delta = mean !== 0 ? Math.abs(mean) * 0.05 : 0.01;
+      lower = mean - delta;
+      upper = mean + delta;
+    }
 
-	// ================= Contribuições Mensais =================
-	let contribStatusChart = null;
-	async function renderContribuicoesMensaisStatus(){
-		const target = document.getElementById('chart-contribuicoes-status-mensal');
-		if (!target) return;
-		if (!contribStatusChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
-		const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_contribuicoes_mensais_por_status' });
-		const payload = resp.message || resp || {};
-		if (!payload.labels || !payload.labels.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
-		if (!payload.datasets || !payload.datasets.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
-		// Paleta consistente por status comuns
-		const colorMap = { 'Em Aberto':'#6366f1','Pago':'#16a34a','Atrasado':'#dc2626','Cancelado':'#6b7280','Sem Status':'#9ca3af' };
-		payload.datasets.forEach(ds=>{ ds.color = colorMap[ds.name] || '#0ea5e9'; });
-		const stackedData = { labels: payload.labels.slice(), datasets: payload.datasets };
-		const isMobile = window.innerWidth < 640;
-		try {
-			if (!contribStatusChart){
-				target.innerHTML = '';
-				contribStatusChart = new frappe.Chart(target, {
-					title: 'Contribuições Mensais por Status - Empilhado',
-					type: 'bar',
-					data: stackedData,
-					height: isMobile ? 340 : 360,
-					barOptions: { stacked: true, spaceRatio: 0.4 },
-					axisOptions: { xAxisMode: 'tick', xIsSeries: false, shortenYAxisNumbers: 1 },
-					tooltipOptions: { formatTooltipY: d => d + ' contrib.' }
-				});
-				if (isMobile) rotateXAxisLabels(target, -35);
-			} else {
-				contribStatusChart.data = stackedData;
-				if (typeof contribStatusChart.draw === 'function') contribStatusChart.draw();
-			}
-		} catch(e){ console.warn('Falha gráfico Contribuições Status', e); }
-	}
+    return { values: coerced, mean, lower, upper };
+  }
 
+  async function atualizarCardInadimplencia() {
+    const el = document.getElementById('card-inadimplencia');
+    const desc = document.getElementById('card-inadimplencia-desc');
+    if (!el) return;
+    el.textContent = '--';
 
-	// === Inadimplência (%) ===
-	let contribInadimplenciaChart = null;
-	async function renderContribuicoesMensaisInadimplencia(){
-		const target = document.getElementById('chart-contribuicoes-inadimplencia-mensal');
-		if (!target) return;
-		if (!contribInadimplenciaChart) target.innerHTML = '<div class="text-muted small px-2 pt-3">Carregando...</div>';
-		const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_contribuicoes_mensais_inadimplencia' });
-		const payload = resp.message || resp || {};
-		if (!payload.labels || !payload.labels.length){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
-		const ds = payload.datasets && payload.datasets[0];
-		if (!ds){ target.innerHTML = '<div class="text-muted small px-2 pt-3">Sem dados.</div>'; return; }
-		ds.color = '#6366f1';
-		const data = { labels: payload.labels.slice(), datasets: [ ds ] };
-		try {
-			// recria sempre (pequeno e simples)
-			target.innerHTML='';
-			const isMobile = window.innerWidth < 640;
-			contribInadimplenciaChart = new frappe.Chart(target, {
-				title: 'Inadimplência (%)',
-				type: 'line',
-				data,
-				height: isMobile ? 340 : 360,
-				lineOptions: { regionFill: 1, hideDots: false, dotSize: 4 },
-				axisOptions: { xAxisMode: 'tick', xIsSeries: false, shortenYAxisNumbers: 1, yAxisMode: 'span' },
-				tooltipOptions: { formatTooltipY: d => parseFloat(d).toFixed(2).replace('.',',') + '%' }
-			});
-			if (isMobile) rotateXAxisLabels(target, -35);
-		} catch(e){ console.warn('Falha gráfico Inadimplência', e); }
-	}
+    try {
+      const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_inadimplencia_historica_12m' });
+      const data = resp.message || resp || {};
+
+      if (typeof data.percent === 'number') {
+        el.textContent = formatPercent(data.percent, 2);
+        if (desc && typeof data.atrasado === 'number' && typeof data.total === 'number') {
+          desc.textContent = `Últimos 12 meses • ${data.atrasado}/${data.total} associados`;
+        }
+      } else {
+        el.textContent = '0,00%';
+      }
+    } catch (e) {
+      el.textContent = 'Erro';
+    }
+  }
+
+  async function fetchData(extraArgs) {
+    const args = Object.assign({}, currentFilters, extraArgs || {});
+    const r = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_entradas_saidas_mensal', args });
+    return r.message || {};
+  }
+
+  function renderMoneyStackedBar({ id, labels, datasets, yAxisName, emptyMessage, stackKey, colorMap }) {
+    if (!labels || !labels.length || !datasets || !datasets.length) {
+      setChartMessage(id, emptyMessage || 'Sem dados.');
+      return;
+    }
+
+    const chart = getChart(id);
+    if (!chart) return;
+
+    chart.setOption(
+      {
+        ...baseOption({ yAxisName }),
+        xAxis: { ...baseOption().xAxis, data: labels },
+        tooltip: {
+          ...baseOption().tooltip,
+          formatter: (params) => {
+            const rows = params
+              .map((item) => `${item.marker}${item.seriesName}: <strong>${formatCurrency(item.value)}</strong>`)
+              .join('<br/>');
+            return `<strong>${params[0]?.axisValue || ''}</strong><br/>${rows}`;
+          },
+        },
+        series: datasets.map((ds) => ({
+          name: ds.name,
+          type: 'bar',
+          stack: stackKey || null,
+          barMaxWidth: 34,
+          itemStyle: colorMap?.[ds.name] ? { color: colorMap[ds.name] } : undefined,
+          emphasis: { focus: 'series' },
+          data: (ds.values || []).map(parseNumber),
+        })),
+      },
+      true,
+    );
+  }
+
+  function renderMoneyLineWithBand({ id, labels, seriesName, values, color, yAxisName, emptyMessage }) {
+    if (!labels || !labels.length || !values || !values.length) {
+      setChartMessage(id, emptyMessage || 'Sem dados.');
+      return;
+    }
+
+    const chart = getChart(id);
+    if (!chart) return;
+
+    const { values: coerced, mean, lower, upper } = computeBand(values);
+
+    chart.setOption(
+      {
+        ...baseOption({ yAxisName, axisPointer: 'line' }),
+        xAxis: { ...baseOption().xAxis, data: labels },
+        tooltip: {
+          ...baseOption().tooltip,
+          axisPointer: { type: 'line' },
+          formatter: (params) => {
+            const item = params[0];
+            if (!item) return '';
+            return `<strong>${item.axisValue}</strong><br/>${item.marker}${seriesName}: <strong>${formatCurrency(item.value)}</strong>`;
+          },
+        },
+        series: [
+          {
+            name: seriesName,
+            type: 'line',
+            symbol: 'circle',
+            symbolSize: 7,
+            smooth: 0.25,
+            lineStyle: { width: 3, type: 'solid' },
+            itemStyle: { color },
+            areaStyle: { opacity: 0.1 },
+            markArea: {
+              itemStyle: { color: 'rgba(0, 114, 178, 0.08)' },
+              data: [[{ yAxis: lower }, { yAxis: upper }]],
+            },
+            markLine: {
+              symbol: 'none',
+              lineStyle: { type: 'dashed', color: '#000000' },
+              data: [{ yAxis: mean, name: 'Média' }],
+            },
+            data: coerced,
+          },
+        ],
+      },
+      true,
+    );
+  }
+
+  async function renderEntradasSaidas() {
+    const data = await fetchData();
+    if (!data.labels || !data.labels.length) {
+      setChartMessage('chart-entradas-saidas-mensal', 'Sem dados.');
+      return;
+    }
+
+    const onlyBars = {
+      labels: data.labels.slice(),
+      datasets: (data.datasets || []).filter((d) => !/Resultado/i.test(d.name || '')),
+    };
+
+    renderMoneyStackedBar({
+      id: 'chart-entradas-saidas-mensal',
+      labels: onlyBars.labels,
+      datasets: onlyBars.datasets,
+      yAxisName: 'Valor (R$)',
+      emptyMessage: 'Sem dados.',
+      stackKey: null,
+    });
+  }
+
+  async function renderResultado() {
+    const data = await fetchData();
+    if (!data.labels || !data.labels.length) {
+      setChartMessage('chart-resultado-mensal', 'Sem dados.');
+      return;
+    }
+
+    const dsResultado = (data.datasets || []).find((d) => /Resultado/i.test(d.name || ''));
+    if (!dsResultado) {
+      setChartMessage('chart-resultado-mensal', 'Sem dados de resultado.');
+      return;
+    }
+
+    const chart = getChart('chart-resultado-mensal');
+    if (!chart) return;
+    const coerced = (dsResultado.values || []).map(parseNumber);
+
+    chart.setOption(
+      {
+        ...baseOption({ yAxisName: 'Resultado (R$)', axisPointer: 'line' }),
+        xAxis: { ...baseOption().xAxis, data: data.labels.slice() },
+        tooltip: {
+          ...baseOption().tooltip,
+          axisPointer: { type: 'line' },
+          formatter: (params) => {
+            const item = params[0];
+            if (!item) return '';
+            return `<strong>${item.axisValue}</strong><br/>${item.marker}${dsResultado.name || 'Resultado'}: <strong>${formatCurrency(item.value)}</strong>`;
+          },
+        },
+        series: [
+          {
+            name: dsResultado.name || 'Resultado',
+            type: 'line',
+            symbol: 'triangle',
+            symbolSize: 8,
+            smooth: 0.2,
+            lineStyle: { width: 3, type: 'solid' },
+            itemStyle: { color: '#0072B2' },
+            areaStyle: { opacity: 0.08 },
+            markLine: {
+              symbol: 'none',
+              lineStyle: { type: 'dashed', color: '#000000' },
+              data: [{ yAxis: 0, name: 'Zero' }],
+            },
+            data: coerced,
+          },
+        ],
+      },
+      true,
+    );
+  }
+
+  async function renderEntradasCredito() {
+    const data = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_entradas_credito_mensal', args: currentFilters });
+    const payload = data.message || data || {};
+    const ds = (payload.datasets || [])[0];
+
+    renderMoneyLineWithBand({
+      id: 'chart-entradas-credito-mensal',
+      labels: payload.labels,
+      values: ds?.values,
+      seriesName: ds?.name || 'Entradas (Crédito)',
+      color: '#009E73',
+      yAxisName: 'Valor (R$)',
+      emptyMessage: 'Sem dados.',
+    });
+  }
+
+  async function renderEntradasCreditoCategoria() {
+    const { categoria, ...filtersSemCategoria } = currentFilters;
+    const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_entradas_credito_mensal_por_categoria', args: filtersSemCategoria });
+    const payload = resp.message || resp || {};
+
+    renderMoneyStackedBar({
+      id: 'chart-entradas-credito-categoria-mensal',
+      labels: payload.labels,
+      datasets: payload.datasets,
+      yAxisName: 'Valor (R$)',
+      emptyMessage: 'Sem dados.',
+      stackKey: 'entradas_categoria',
+    });
+  }
+
+  async function renderEntradasCreditoCentro() {
+    const { centro_de_custo, ...filtersSemCentro } = currentFilters;
+    const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_entradas_credito_mensal_por_centro_custo', args: filtersSemCentro });
+    const payload = resp.message || resp || {};
+
+    renderMoneyStackedBar({
+      id: 'chart-entradas-credito-centro-mensal',
+      labels: payload.labels,
+      datasets: payload.datasets,
+      yAxisName: 'Valor (R$)',
+      emptyMessage: 'Sem dados.',
+      stackKey: 'entradas_centro',
+    });
+  }
+
+  async function renderEntradasCreditoTipo() {
+    const { ordinaria_extraordinaria, ...filtersSemTipo } = currentFilters;
+    const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_entradas_credito_mensal_por_tipo', args: filtersSemTipo });
+    const payload = resp.message || resp || {};
+
+    renderMoneyStackedBar({
+      id: 'chart-entradas-credito-tipo-mensal',
+      labels: payload.labels,
+      datasets: payload.datasets,
+      yAxisName: 'Valor (R$)',
+      emptyMessage: 'Sem dados.',
+      stackKey: 'entradas_tipo',
+    });
+  }
+
+  async function renderSaidasDebito() {
+    const data = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_saidas_debito_mensal', args: currentFilters });
+    const payload = data.message || data || {};
+    const ds = (payload.datasets || [])[0];
+
+    renderMoneyLineWithBand({
+      id: 'chart-saidas-debito-mensal',
+      labels: payload.labels,
+      values: ds?.values,
+      seriesName: ds?.name || 'Saídas (Débito)',
+      color: '#D55E00',
+      yAxisName: 'Valor (R$)',
+      emptyMessage: 'Sem dados.',
+    });
+  }
+
+  async function renderSaidasDebitoCategoria() {
+    const { categoria, ...filtersSemCategoria } = currentFilters;
+    const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_saidas_debito_mensal_por_categoria', args: filtersSemCategoria });
+    const payload = resp.message || resp || {};
+
+    renderMoneyStackedBar({
+      id: 'chart-saidas-debito-categoria-mensal',
+      labels: payload.labels,
+      datasets: payload.datasets,
+      yAxisName: 'Valor (R$)',
+      emptyMessage: 'Sem dados.',
+      stackKey: 'saidas_categoria',
+    });
+  }
+
+  async function renderSaidasDebitoCentro() {
+    const { centro_de_custo, ...filtersSemCentro } = currentFilters;
+    const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_saidas_debito_mensal_por_centro_custo', args: filtersSemCentro });
+    const payload = resp.message || resp || {};
+
+    renderMoneyStackedBar({
+      id: 'chart-saidas-debito-centro-mensal',
+      labels: payload.labels,
+      datasets: payload.datasets,
+      yAxisName: 'Valor (R$)',
+      emptyMessage: 'Sem dados.',
+      stackKey: 'saidas_centro',
+    });
+  }
+
+  async function renderSaidasDebitoTipo() {
+    const { ordinaria_extraordinaria, ...filtersSemTipo } = currentFilters;
+    const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_saidas_debito_mensal_por_tipo', args: filtersSemTipo });
+    const payload = resp.message || resp || {};
+
+    renderMoneyStackedBar({
+      id: 'chart-saidas-debito-tipo-mensal',
+      labels: payload.labels,
+      datasets: payload.datasets,
+      yAxisName: 'Valor (R$)',
+      emptyMessage: 'Sem dados.',
+      stackKey: 'saidas_tipo',
+    });
+  }
+
+  async function renderContribuicoesMensaisStatus() {
+    const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_contribuicoes_mensais_por_status' });
+    const payload = resp.message || resp || {};
+    const colorMap = {
+      'Em Aberto': '#E69F00',
+      Pago: '#009E73',
+      Atrasado: '#D55E00',
+      Cancelado: '#000000',
+      'Sem Status': '#56B4E9',
+    };
+
+    if (!payload.labels || !payload.labels.length || !payload.datasets || !payload.datasets.length) {
+      setChartMessage('chart-contribuicoes-status-mensal', 'Sem dados.');
+      return;
+    }
+
+    const chart = getChart('chart-contribuicoes-status-mensal');
+    if (!chart) return;
+
+    chart.setOption(
+      {
+        ...baseOption({ yAxisName: 'Quantidade' }),
+        xAxis: { ...baseOption().xAxis, data: payload.labels.slice() },
+        tooltip: {
+          ...baseOption().tooltip,
+          formatter: (params) => {
+            const rows = params
+              .map((item) => `${item.marker}${item.seriesName}: <strong>${formatNumber(item.value)}</strong> contrib.`)
+              .join('<br/>');
+            return `<strong>${params[0]?.axisValue || ''}</strong><br/>${rows}`;
+          },
+        },
+        series: payload.datasets.map((ds) => ({
+          name: ds.name,
+          type: 'bar',
+          stack: 'status',
+          barMaxWidth: 34,
+          itemStyle: { color: colorMap[ds.name] || '#0072B2' },
+          emphasis: { focus: 'series' },
+          data: (ds.values || []).map(parseNumber),
+        })),
+      },
+      true,
+    );
+  }
+
+  async function renderContribuicoesMensaisInadimplencia() {
+    const resp = await frappe.call({ method: 'gris.api.financeiro.dashboard.get_contribuicoes_mensais_inadimplencia' });
+    const payload = resp.message || resp || {};
+    const ds = (payload.datasets || [])[0];
+
+    if (!payload.labels || !payload.labels.length || !ds) {
+      setChartMessage('chart-contribuicoes-inadimplencia-mensal', 'Sem dados.');
+      return;
+    }
+
+    const chart = getChart('chart-contribuicoes-inadimplencia-mensal');
+    if (!chart) return;
+
+    chart.setOption(
+      {
+        ...baseOption({ yAxisName: 'Inadimplência (%)', axisPointer: 'line' }),
+        xAxis: { ...baseOption().xAxis, data: payload.labels.slice() },
+        yAxis: {
+          type: 'value',
+          name: 'Inadimplência (%)',
+          min: 0,
+          max: 100,
+          axisLabel: { formatter: (v) => `${v}%` },
+        },
+        tooltip: {
+          ...baseOption().tooltip,
+          axisPointer: { type: 'line' },
+          formatter: (params) => {
+            const item = params[0];
+            if (!item) return '';
+            return `<strong>${item.axisValue}</strong><br/>${item.marker}${ds.name || 'Inadimplência'}: <strong>${formatPercent(item.value, 2)}</strong>`;
+          },
+        },
+        series: [
+          {
+            name: ds.name || 'Inadimplência',
+            type: 'line',
+            symbol: 'triangle',
+            symbolSize: 8,
+            smooth: 0.25,
+            lineStyle: { width: 3, type: 'dashed' },
+            itemStyle: { color: '#CC79A7' },
+            areaStyle: { opacity: 0.08 },
+            data: (ds.values || []).map(parseNumber),
+          },
+        ],
+      },
+      true,
+    );
+  }
+
+  async function refreshCharts() {
+    try {
+      await ensureEcharts();
+      setAllLoading();
+      await atualizarCardInadimplencia();
+      await renderEntradasSaidas();
+      await renderResultado();
+      await renderEntradasCredito();
+      await renderEntradasCreditoCategoria();
+      await renderEntradasCreditoCentro();
+      await renderEntradasCreditoTipo();
+      await renderSaidasDebito();
+      await renderSaidasDebitoCategoria();
+      await renderSaidasDebitoCentro();
+      await renderSaidasDebitoTipo();
+      await renderContribuicoesMensaisStatus();
+      await renderContribuicoesMensaisInadimplencia();
+    } catch (e) {
+      console.warn('Erro ao atualizar gráficos', e);
+      chartIds.forEach((id) => setChartMessage(id, 'Erro ao carregar gráfico.'));
+    }
+  }
+
+  function bindResize() {
+    window.addEventListener('resize', () => {
+      if (!window.echarts) return;
+      chartIds.forEach((id) => {
+        const target = document.getElementById(id);
+        if (!target) return;
+        const chart = window.echarts.getInstanceByDom(target);
+        if (chart) chart.resize();
+      });
+    });
+  }
+
+  frappe.ready(async () => {
+    const form = document.getElementById('fin-dashboard-filters');
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        currentFilters = getFormFilters(form);
+        await refreshCharts();
+      });
+
+      form.addEventListener('reset', () => {
+        setTimeout(async () => {
+          currentFilters = {};
+          await refreshCharts();
+        }, 0);
+      });
+    }
+
+    bindResize();
+    await refreshCharts();
+  });
 })();

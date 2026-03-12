@@ -296,10 +296,21 @@
 {% endblock %}
 
 {% block extra_script %}
-<!-- CSS do frappe-charts e componentes compartilhados -->
-<link rel="stylesheet" href="/assets/frappe/node_modules/frappe-charts/dist/frappe-charts.min.css">
+<!-- Componentes compartilhados -->
 <link rel="stylesheet" href="/assets/gris/css/components.css">
 <style>
+  [id^="chart-"] {
+    width: 100%;
+  }
+
+  .echarts-tooltip-modern {
+    max-width: calc(100vw - 24px);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    text-align: left;
+  }
+
   .section-title {
     font-size: var(--text-lg);
     font-weight: var(--font-semibold);

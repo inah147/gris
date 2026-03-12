@@ -120,7 +120,7 @@ def _define_role_profile(associate):
 		role_profile = "Dirigente"
 
 	if associate.categoria == "Escotista":
-		if associate.funcao in ["Assistente"]:
+		if associate.funcao in ["Assistente", "Chefe de Seção"]:
 			role_profile = associate.funcao
 
 	return role_profile

@@ -125,7 +125,9 @@
           {% if can_edit_pareceres %}
           <button type="button" id="parecerPublishBtn" class="btn-modern btn-modern--success d-none">Publicar</button>
           <button type="button" id="parecerUnpublishBtn" class="btn-modern btn-modern--outline d-none">Despublicar</button>
+          {% if can_delete_pareceres %}
           <button type="button" id="parecerDeleteBtn" class="btn-modern btn-modern--danger d-none">Apagar</button>
+          {% endif %}
           {% endif %}
         </div>
         <button type="button" class="btn-modern btn-modern--ghost" onclick="closeParecerModal()">Fechar</button>

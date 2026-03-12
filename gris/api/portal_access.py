@@ -111,7 +111,7 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/financeiro/extrato": ["Visualizador Financeiro", "Gestor Financeiro"],
 	"/financeiro/despesas": ["Visualizador Financeiro", "Gestor Financeiro"],
 	"/financeiro/relatorios": ["Visualizador Financeiro", "Gestor Financeiro"],
-	"/financeiro/pareceres": ["Visualizador Financeiro", "Gestor Financeiro"],
+	"/financeiro/pareceres": ["Visualizador Financeiro", "Gestor Financeiro", "Editor de Parecer"],
 	"/portal_transparencia": ["Public"],  # totalmente público
 	"/calendario": ["Visualizador Calendario", "Gestor Calendario"],
 	"/calendario/visualizar": ["Visualizador Calendario", "Gestor Calendario"],

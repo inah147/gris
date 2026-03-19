@@ -163,7 +163,7 @@ services:
       - evolution-instances:/evolution/instances
     environment:
       - SERVER_URL=https://${EVOLUTION_DOMAIN:-evolution.gepim.com.br}
-      - SERVER_TYPE=https
+      - SERVER_TYPE=http
       - SERVER_PORT=8080
       - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY:?Set EVOLUTION_API_KEY in .env}
       - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true

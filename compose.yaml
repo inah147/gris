@@ -163,26 +163,28 @@ services:
       - evolution-instances:/evolution/instances
     environment:
       - SERVER_URL=https://${EVOLUTION_DOMAIN:-evolution.gepim.com.br}
-      - SERVER_TYPE=http
+      - SERVER_TYPE=https
       - SERVER_PORT=8080
       - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY:?Set EVOLUTION_API_KEY in .env}
       - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
       - LANGUAGE=pt-BR
-      - CONFIG_SESSION_PHONE_CLIENT=GRIS
+      - CONFIG_SESSION_PHONE_CLIENT=Chrome
       - CONFIG_SESSION_PHONE_NAME=Chrome
+      - CONFIG_SESSION_PHONE_VERSION=2.3000.1033773198
       - DATABASE_PROVIDER=postgresql
       - DATABASE_CONNECTION_URI=postgresql://${EVOLUTION_PG_USER:-evolution}:${EVOLUTION_PG_PASSWORD:-evolution}@evolution-postgres:5432/${EVOLUTION_PG_DB:-evolution}?schema=public
       - DATABASE_CONNECTION_CLIENT_NAME=gris_evolution
       - DATABASE_SAVE_DATA_INSTANCE=true
       - DATABASE_SAVE_DATA_NEW_MESSAGE=true
       - DATABASE_SAVE_MESSAGE_UPDATE=true
-      - DATABASE_SAVE_DATA_CONTACTS=true
-      - DATABASE_SAVE_DATA_CHATS=true
-      - DATABASE_SAVE_DATA_LABELS=true
-      - CACHE_REDIS_ENABLED=true
+      - DATABASE_SAVE_DATA_CONTACTS=false
+      - DATABASE_SAVE_DATA_CHATS=false
+      - DATABASE_SAVE_DATA_LABELS=false
+      - DATABASE_SAVE_DATA_HISTORIC=false
+      - CACHE_REDIS_ENABLED=false
       - CACHE_REDIS_URI=redis://evolution-redis:6379/0
       - CACHE_REDIS_PREFIX_KEY=gris_evolution
-      - CACHE_LOCAL_ENABLED=false
+      - CACHE_LOCAL_ENABLED=true
       - DEL_INSTANCE=false
       - LOG_LEVEL=ERROR,WARN
       - LOG_COLOR=true

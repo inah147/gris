@@ -1,3 +1,7 @@
 gris.gepim.com.br {
 	reverse_proxy frontend:8080
 }
+
+evolution.gepim.com.br {
+	reverse_proxy evolution-api:8080
+}

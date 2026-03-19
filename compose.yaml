@@ -111,6 +111,7 @@ services:
       - caddy-config:/config
     depends_on:
       - frontend
+      - evolution-api
 
   # --- Infrastructure ---
 
@@ -142,6 +143,89 @@ services:
     volumes:
       - redis-queue-data:/data
 
+  # --- Evolution API (WhatsApp) ---
+  # Reference: https://github.com/EvolutionAPI/evolution-api
+
+  evolution-api:
+    image: evoapicloud/evolution-api:v2.2.3
+    restart: unless-stopped
+    depends_on:
+      - evolution-redis
+      - evolution-postgres
+    volumes:
+      - evolution-instances:/evolution/instances
+    environment:
+      - SERVER_URL=https://${EVOLUTION_DOMAIN:-evolution.gepim.com.br}
+      - SERVER_TYPE=http
+      - SERVER_PORT=8080
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY:?Set EVOLUTION_API_KEY in .env}
+      - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
+      - LANGUAGE=pt-BR
+      - CONFIG_SESSION_PHONE_CLIENT=GRIS
+      - CONFIG_SESSION_PHONE_NAME=Chrome
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://${EVOLUTION_PG_USER:-evolution}:${EVOLUTION_PG_PASSWORD:-evolution}@evolution-postgres:5432/${EVOLUTION_PG_DB:-evolution}?schema=public
+      - DATABASE_CONNECTION_CLIENT_NAME=gris_evolution
+      - DATABASE_SAVE_DATA_INSTANCE=true
+      - DATABASE_SAVE_DATA_NEW_MESSAGE=true
+      - DATABASE_SAVE_MESSAGE_UPDATE=true
+      - DATABASE_SAVE_DATA_CONTACTS=true
+      - DATABASE_SAVE_DATA_CHATS=true
+      - DATABASE_SAVE_DATA_LABELS=true
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://evolution-redis:6379/0
+      - CACHE_REDIS_PREFIX_KEY=gris_evolution
+      - CACHE_LOCAL_ENABLED=false
+      - DEL_INSTANCE=false
+      - LOG_LEVEL=ERROR,WARN
+      - LOG_COLOR=true
+      - LOG_BAILEYS=error
+      - CORS_ORIGIN=*
+      - CORS_METHODS=GET,POST,PUT,DELETE
+      - CORS_CREDENTIALS=true
+      - TELEMETRY_ENABLED=false
+      - WEBHOOK_GLOBAL_ENABLED=false
+      - RABBITMQ_ENABLED=false
+      - WEBSOCKET_ENABLED=false
+      - SQS_ENABLED=false
+      - TYPEBOT_ENABLED=false
+      - CHATWOOT_ENABLED=false
+      - OPENAI_ENABLED=false
+      - DIFY_ENABLED=false
+      - N8N_ENABLED=false
+      - EVOAI_ENABLED=false
+      - S3_ENABLED=false
+      - QRCODE_LIMIT=30
+    expose:
+      - "8080"
+
+  evolution-redis:
+    image: redis:6.2-alpine
+    restart: unless-stopped
+    command: redis-server --port 6379 --appendonly yes
+    volumes:
+      - evolution-redis-data:/data
+    expose:
+      - "6379"
+
+  evolution-postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${EVOLUTION_PG_DB:-evolution}
+      POSTGRES_USER: ${EVOLUTION_PG_USER:-evolution}
+      POSTGRES_PASSWORD: ${EVOLUTION_PG_PASSWORD:-evolution}
+    command:
+      - postgres
+      - -c
+      - max_connections=200
+      - -c
+      - listen_addresses=*
+    volumes:
+      - evolution-pg-data:/var/lib/postgresql/data
+    expose:
+      - "5432"
+
 volumes:
   db-data:
   redis-queue-data:
@@ -149,3 +233,6 @@ volumes:
   logs:
   caddy-data:
   caddy-config:
+  evolution-instances:
+  evolution-redis-data:
+  evolution-pg-data:

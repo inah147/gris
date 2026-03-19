@@ -1,0 +1,78 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-18 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "nome_drive",
+  "drive_id",
+  "conceder_a_todos",
+    "permissao_padrao_beneficiario",
+    "permissao_padrao_adulto_voluntario",
+  "ativo"
+ ],
+ "fields": [
+  {
+   "fieldname": "nome_drive",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome do drive",
+   "reqd": 1
+  },
+  {
+   "fieldname": "drive_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Drive ID",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "conceder_a_todos",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Conceder a todos"
+  },
+  {
+    "default": "reader",
+    "fieldname": "permissao_padrao_beneficiario",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+    "label": "Permissão padrão beneficiário",
+    "options": "reader\nwriter",
+    "reqd": 1
+  },
+  {
+    "default": "writer",
+    "fieldname": "permissao_padrao_adulto_voluntario",
+    "fieldtype": "Select",
+    "in_list_view": 1,
+    "label": "Permissão padrão adulto voluntário",
+   "options": "reader\nwriter",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "ativo",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Ativo"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-03-18 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Drives Compartilhados Workspace",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -175,6 +175,8 @@ class Associado(Document):
 		new_funcao_categoria = f"{self.funcao} - {self.categoria}" if self.funcao and self.categoria else None
 		self.flags.old_funcao_categoria = old_funcao_categoria
 		self.flags.new_funcao_categoria = new_funcao_categoria
+		self.flags.old_status_no_grupo = getattr(old_doc, "status_no_grupo", None) if old_doc else None
+		self.flags.status_no_grupo_changed = self.flags.old_status_no_grupo != self.status_no_grupo
 
 		# --- Detecta alteração no child table historico_no_grupo ---
 		old_hist = self._serialize_hist(getattr(old_doc, "historico_no_grupo", []) if old_doc else [])
@@ -184,16 +186,26 @@ class Associado(Document):
 	def after_insert(self):
 		self._handle_novo_associado_post()
 		if cint(frappe.db.get_single_value("Configuracoes de Associados", "criar_usuarios")) != 1:
-			return
-		log = _assoc_logger()
-		log.info(f"[ENQUEUE CREATE] {self.name}")
-		frappe.enqueue(
-			"gris.api.users.user_manager.create_associate_user",
-			job_name=f"create_associate_user:{self.name}",
-			queue="default",
-			associate_name=self.name,
-			enqueue_after_commit=True,
-		)
+			pass
+		else:
+			log = _assoc_logger()
+			log.info(f"[ENQUEUE CREATE] {self.name}")
+			frappe.enqueue(
+				"gris.api.users.user_manager.create_associate_user",
+				job_name=f"create_associate_user:{self.name}",
+				queue="default",
+				associate_name=self.name,
+				enqueue_after_commit=True,
+			)
+
+		if self.status_no_grupo == "Ativo" and self.id_escoteiros:
+			frappe.enqueue(
+				"gris.api.google_workspace.access_manager.sync_global_access_for_associate",
+				job_name=f"sync_google_workspace_global_access:{self.name}",
+				queue="default",
+				associate_name=self.name,
+				enqueue_after_commit=True,
+			)
 
 	def on_update(self):
 		# Ignora primeira criação: after_insert já tratou
@@ -221,5 +233,23 @@ class Associado(Document):
 				"gris.api.users.user_metrics.update_associates_time_series",
 				job_name="update_associates_time_series",
 				queue="default",
+				enqueue_after_commit=True,
+			)
+
+		if self.status_no_grupo == "Ativo" and self.id_escoteiros:
+			frappe.enqueue(
+				"gris.api.google_workspace.access_manager.sync_global_access_for_associate",
+				job_name=f"sync_google_workspace_global_access:{self.name}",
+				queue="default",
+				associate_name=self.name,
+				enqueue_after_commit=True,
+			)
+
+		if self.flags.get("status_no_grupo_changed") and self.status_no_grupo == "Inativo":
+			frappe.enqueue(
+				"gris.api.google_workspace.access_manager.revoke_all_access_for_associate",
+				job_name=f"revoke_google_workspace_access:{self.name}",
+				queue="default",
+				associate_name=self.name,
 				enqueue_after_commit=True,
 			)

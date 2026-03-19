@@ -193,7 +193,9 @@ services:
       - TELEMETRY_ENABLED=false
       - WEBHOOK_GLOBAL_ENABLED=false
       - RABBITMQ_ENABLED=false
-      - WEBSOCKET_ENABLED=false
+      - WEBSOCKET_ENABLED=true
+      - WEBSOCKET_GLOBAL_EVENTS=true
+      - WEBSOCKET_ALLOWED_HOSTS=*
       - SQS_ENABLED=false
       - TYPEBOT_ENABLED=false
       - CHATWOOT_ENABLED=false

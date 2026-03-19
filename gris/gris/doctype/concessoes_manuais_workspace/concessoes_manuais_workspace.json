@@ -1,0 +1,103 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-18 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "associado",
+  "email_institucional",
+    "drive",
+  "drive_id",
+  "tipo_acesso",
+  "concedido_em",
+  "expira_em",
+  "ativo",
+  "observacao"
+ ],
+ "fields": [
+  {
+   "fieldname": "associado",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Associado",
+   "options": "Associado",
+   "reqd": 1
+  },
+  {
+   "fieldname": "email_institucional",
+    "fetch_from": "associado.id_escoteiros",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "ID Escoteiros",
+   "options": "Email",
+    "read_only": 1,
+   "reqd": 1
+  },
+  {
+    "fieldname": "drive",
+    "fieldtype": "Select",
+    "in_list_view": 1,
+    "label": "Drive",
+    "options": "",
+    "reqd": 1
+  },
+  {
+   "fieldname": "drive_id",
+    "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Drive ID",
+    "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "default": "reader",
+   "fieldname": "tipo_acesso",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Tipo de acesso",
+   "options": "reader\nwriter",
+   "reqd": 1
+  },
+  {
+   "fieldname": "concedido_em",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Concedido em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "expira_em",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Expira em"
+  },
+  {
+   "default": "1",
+   "fieldname": "ativo",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Ativo"
+  },
+  {
+   "fieldname": "observacao",
+   "fieldtype": "Small Text",
+   "label": "Observação"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-03-18 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Concessoes Manuais Workspace",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

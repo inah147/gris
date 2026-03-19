@@ -1,0 +1,128 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-18 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "habilitar_integracao",
+  "dominio_institucional",
+  "dias_expiracao_acesso_restrito",
+    "governanca_arquivos",
+  "section_break_credentials",
+  "service_account_json",
+  "section_break_drives",
+  "drives_compartilhados",
+  "section_break_manual",
+  "concessoes_manuais",
+  "section_break_observabilidade",
+  "ultimo_sync_em",
+  "ultimo_erro"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "fieldname": "habilitar_integracao",
+   "fieldtype": "Check",
+   "label": "Habilitar integração com Google Workspace"
+  },
+  {
+   "default": "escoteiros.org.br",
+   "fieldname": "dominio_institucional",
+   "fieldtype": "Data",
+   "label": "Domínio institucional",
+   "reqd": 1
+  },
+  {
+   "default": "365",
+   "fieldname": "dias_expiracao_acesso_restrito",
+   "fieldtype": "Int",
+   "label": "Dias para expiração de acesso restrito",
+   "non_negative": 1,
+   "reqd": 1
+  },
+    {
+     "fieldname": "governanca_arquivos",
+     "fieldtype": "HTML",
+     "label": "Preservação de arquivos",
+     "options": "<div style='padding:8px;border-left:4px solid #7c8c9a;background:#f7f8fa'>Configure os Shared Drives no Google Workspace para manter os arquivos no drive mesmo quando acessos forem removidos ou contas forem inativadas.</div>"
+    },
+  {
+   "fieldname": "section_break_credentials",
+   "fieldtype": "Section Break",
+   "label": "Credenciais"
+  },
+  {
+   "description": "Cole aqui o JSON completo da Service Account com permissão de gerenciar membros dos Shared Drives.",
+   "fieldname": "service_account_json",
+   "fieldtype": "Password",
+   "label": "Service Account JSON",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_drives",
+   "fieldtype": "Section Break",
+   "label": "Drives Compartilhados"
+  },
+  {
+   "fieldname": "drives_compartilhados",
+   "fieldtype": "Table",
+   "label": "Drives Compartilhados",
+   "options": "Drives Compartilhados Workspace",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_manual",
+   "fieldtype": "Section Break",
+   "label": "Concessões Manuais"
+  },
+  {
+   "fieldname": "concessoes_manuais",
+   "fieldtype": "Table",
+   "label": "Concessões Manuais",
+   "options": "Concessoes Manuais Workspace"
+  },
+  {
+   "fieldname": "section_break_observabilidade",
+   "fieldtype": "Section Break",
+   "label": "Observabilidade"
+  },
+  {
+   "fieldname": "ultimo_sync_em",
+   "fieldtype": "Datetime",
+   "label": "Último sync em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ultimo_erro",
+   "fieldtype": "Small Text",
+   "label": "Último erro",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-03-18 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Configuracoes Google Workspace",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

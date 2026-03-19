@@ -161,6 +161,9 @@ scheduler_events = {
 		"gris.api.new_members.waiting_list.update_waiting_list_branch",
 		"gris.api.calendario.sync_feriados.sync_feriados",
 		"gris.api.backup.google_shared_drive.enqueue_daily_backup",
+		"gris.api.google_workspace.access_manager.enqueue_daily_global_access_sync",
+		"gris.api.google_workspace.access_manager.enqueue_daily_restricted_access_cleanup",
+		"gris.api.google_workspace.access_manager.enqueue_daily_inactive_access_cleanup",
 	],
 	# "hourly": [
 	# 	"gris.tasks.hourly"

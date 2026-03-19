@@ -112,6 +112,7 @@ services:
     depends_on:
       - frontend
       - evolution-api
+      - evolution-manager
 
   # --- Infrastructure ---
 
@@ -145,6 +146,12 @@ services:
 
   # --- Evolution API (WhatsApp) ---
   # Reference: https://github.com/EvolutionAPI/evolution-api
+
+  evolution-manager:
+    image: evoapicloud/evolution-manager:latest
+    restart: unless-stopped
+    expose:
+      - "80"
 
   evolution-api:
     image: evoapicloud/evolution-api:v2.2.3
@@ -196,6 +203,8 @@ services:
       - EVOAI_ENABLED=false
       - S3_ENABLED=false
       - QRCODE_LIMIT=30
+      - SWAGGER_ENABLED=true
+      - SWAGGER_AUTHENTICATION=true
     expose:
       - "8080"
 

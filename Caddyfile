@@ -5,3 +5,7 @@ gris.gepim.com.br {
 evolution.gepim.com.br {
 	reverse_proxy evolution-api:8080
 }
+
+manager.gepim.com.br {
+	reverse_proxy evolution-manager:80
+}

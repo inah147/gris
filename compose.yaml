@@ -239,6 +239,63 @@ services:
     expose:
       - "5432"
 
+  # --- Outline (Wiki / Knowledge Base) ---
+  # Reference: https://www.getoutline.com/
+
+  outline:
+    image: docker.getoutline.com/outlinewiki/outline:0.82.0
+    restart: unless-stopped
+    depends_on:
+      outline-postgres:
+        condition: service_healthy
+      outline-redis:
+        condition: service_started
+    volumes:
+      - outline-data:/var/lib/outline/data
+    environment:
+      - NODE_ENV=production
+      - SECRET_KEY=${OUTLINE_SECRET_KEY:?Set OUTLINE_SECRET_KEY in .env}
+      - UTILS_SECRET=${OUTLINE_UTILS_SECRET:?Set OUTLINE_UTILS_SECRET in .env}
+      - DATABASE_URL=postgres://${OUTLINE_PG_USER:-outline}:${OUTLINE_PG_PASSWORD:-outline}@outline-postgres:5432/${OUTLINE_PG_DB:-outline}
+      - PGSSLMODE=disable
+      - REDIS_URL=redis://outline-redis:6379
+      - URL=https://${OUTLINE_DOMAIN:-outline.gepim.com.br}
+      - PORT=3000
+      - FILE_STORAGE=local
+      - FILE_STORAGE_LOCAL_ROOT_DIR=/var/lib/outline/data
+      - FILE_STORAGE_UPLOAD_MAX_SIZE=26214400
+      - GOOGLE_CLIENT_ID=${OUTLINE_GOOGLE_CLIENT_ID:?Set OUTLINE_GOOGLE_CLIENT_ID in .env}
+      - GOOGLE_CLIENT_SECRET=${OUTLINE_GOOGLE_CLIENT_SECRET:?Set OUTLINE_GOOGLE_CLIENT_SECRET in .env}
+      - FORCE_HTTPS=false
+      - LOG_LEVEL=info
+      - DEFAULT_LANGUAGE=pt_BR
+      - COLLABORATION_URL=
+    expose:
+      - "3000"
+
+  outline-postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${OUTLINE_PG_USER:-outline} -d ${OUTLINE_PG_DB:-outline}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    environment:
+      POSTGRES_DB: ${OUTLINE_PG_DB:-outline}
+      POSTGRES_USER: ${OUTLINE_PG_USER:-outline}
+      POSTGRES_PASSWORD: ${OUTLINE_PG_PASSWORD:-outline}
+    volumes:
+      - outline-pg-data:/var/lib/postgresql/data
+    expose:
+      - "5432"
+
+  outline-redis:
+    image: redis:6.2-alpine
+    restart: unless-stopped
+    expose:
+      - "6379"
+
 volumes:
   db-data:
   redis-queue-data:
@@ -249,3 +306,6 @@ volumes:
   evolution-instances:
   evolution-redis-data:
   evolution-pg-data:
+  outline-data:
+  outline-pg-data:
+  outline-redis-data:

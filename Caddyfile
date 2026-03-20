@@ -9,3 +9,7 @@ evolution.gepim.com.br {
 manager.gepim.com.br {
 	reverse_proxy evolution-manager:80
 }
+
+outline.gepim.com.br {
+	reverse_proxy outline:3000
+}

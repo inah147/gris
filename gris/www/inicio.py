@@ -31,4 +31,5 @@ def get_context(context):
 	context.can_responsavel = user_has_access("/responsavel")
 	context.can_recepcao = user_has_access("/recepcao")
 	context.can_gestao_adultos = user_has_access("/gestao_adultos")
+	context.can_projetos = user_has_access("/projetos")
 	return context

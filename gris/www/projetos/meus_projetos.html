@@ -1,0 +1,48 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% block title %}Meus Projetos{% endblock %}
+{% set active_link = '/projetos/meus_projetos' %}
+
+{% block head_include %}
+{{ super() }}
+<link rel="stylesheet" href="/projetos/visao_geral.css" />
+<link rel="stylesheet" href="/projetos/meus_projetos.css" />
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+	<div class="page-header__content">
+		<h1 class="page-header__title">Meus projetos</h1>
+		<p class="page-header__subtitle">Projetos em que você atua como coordenador, equipe, padrinho ou envolvido.</p>
+	</div>
+</div>
+{% endblock %}
+
+{% block main %}
+{% if meus_projetos %}
+<div class="meus-projetos-grid">
+	{% for card in meus_projetos %}
+	<div class="kanban-card card-modern">
+		<div class="kanban-card__top">
+			<span class="g-badge g-badge--info">{{ card.status_label }}</span>
+		</div>
+		<div class="kanban-card__main">
+			<h4 class="kanban-card__title">{{ card.titulo }}</h4>
+			<p class="kanban-card__subtitle">Coordenador: {{ card.coordenador }}</p>
+		</div>
+	</div>
+	{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+	<svg class="empty-state__icon" viewBox="0 0 24 24">
+		<path d="M3 7h18"></path>
+		<path d="M3 12h18"></path>
+		<path d="M3 17h18"></path>
+		<path d="M7 3v18"></path>
+		<path d="M17 3v18"></path>
+	</svg>
+	<h3 class="empty-state__title">Nenhum projeto vinculado</h3>
+	<p class="empty-state__description">Você ainda não possui projetos vinculados ao seu perfil.</p>
+</div>
+{% endif %}
+{% endblock %}

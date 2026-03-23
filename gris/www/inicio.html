@@ -108,6 +108,39 @@ page_header %}
 			</svg>
 		</div>
 	</a>
+	{% endif %} {% if can_projetos %}
+	<a href="/projetos" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
+		<div class="inicio-card__icon inicio-card__icon--info">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M9 18h6"></path>
+				<path d="M10 22h4"></path>
+				<path d="M12 2a7 7 0 0 0-4 12.75c.5.4 1 1.15 1 2.25h6c0-1.1.5-1.85 1-2.25A7 7 0 0 0 12 2z"></path>
+			</svg>
+		</div>
+		<div class="inicio-card__content">
+			<h2 class="inicio-card__title">Portal de Projetos</h2>
+			<p class="inicio-card__description">Acompanhe os projetos e seus status.</p>
+		</div>
+		<div class="inicio-card__arrow">
+			<svg
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			>
+				<path d="M5 12h14M12 5l7 7-7 7" />
+			</svg>
+		</div>
+	</a>
 	{% endif %} {% if can_recepcao %}
 	<a href="/recepcao" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
 		<div class="inicio-card__icon inicio-card__icon--pink">
@@ -247,7 +280,8 @@ page_header %}
 		</div>
 	</a>
 	{% endif %} {% if not can_associados and not can_financeiro and not can_transparencia and not
-	can_calendario and not can_responsavel and not can_recepcao and not can_gestao_adultos %}
+	can_calendario and not can_responsavel and not can_recepcao and not can_gestao_adultos and not
+	can_projetos %}
 	<div class="empty-state">
 		<svg class="empty-state__icon" viewBox="0 0 24 24">
 			<circle cx="12" cy="12" r="10" />

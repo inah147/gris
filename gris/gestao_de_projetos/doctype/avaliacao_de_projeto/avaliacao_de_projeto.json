@@ -1,0 +1,149 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "format:AV-PROJ-{#####}",
+ "creation": "2026-03-20 00:00:00.000000",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "projeto",
+  "avaliacoes_individuais",
+  "avaliacao_geral",
+  "satisfacao_dos_participantes",
+  "objetivos_atingidos",
+  "o_que_funcionou_bem_na_dinamica_da_equipe",
+  "o_que_nao_funcionou_na_dinamica_da_equipe",
+  "maior_aprendizado_gerado",
+  "impacto_gerado_para_comunidade",
+  "pontos_positivos_adicionais",
+  "pontos_de_melhoria_adicionais",
+  "resumo_avaliacoes_individuais",
+  "resumo_avaliacao_completa"
+ ],
+ "fields": [
+    {
+     "fieldname": "projeto",
+     "fieldtype": "Link",
+     "in_list_view": 1,
+     "label": "Projeto",
+     "options": "Projeto",
+     "reqd": 1
+    },
+  {
+   "fieldname": "avaliacoes_individuais",
+   "fieldtype": "Table",
+   "label": "Avaliacao individual",
+   "options": "Avaliacao Individual Projeto"
+  },
+  {
+   "fieldname": "avaliacao_geral",
+   "fieldtype": "Float",
+   "label": "Avaliacao geral",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "satisfacao_dos_participantes",
+   "fieldtype": "Float",
+   "label": "Satisfacao dos participantes",
+   "precision": "4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "objetivos_atingidos",
+   "fieldtype": "Table",
+   "label": "Os objetivos foram atingidos?",
+   "options": "Objetivo Atingido Projeto",
+   "reqd": 1
+  },
+  {
+   "fieldname": "o_que_funcionou_bem_na_dinamica_da_equipe",
+   "fieldtype": "Small Text",
+   "label": "O que funcionou bem na dinamica da equipe?",
+   "reqd": 1
+  },
+  {
+   "fieldname": "o_que_nao_funcionou_na_dinamica_da_equipe",
+   "fieldtype": "Small Text",
+   "label": "O que nao funcionou na dinamica da equipe?",
+   "reqd": 1
+  },
+  {
+   "fieldname": "maior_aprendizado_gerado",
+   "fieldtype": "Small Text",
+   "label": "Qual foi o maior aprendizado gerado?",
+   "reqd": 1
+  },
+  {
+   "fieldname": "impacto_gerado_para_comunidade",
+   "fieldtype": "Small Text",
+   "label": "Qual o impacto gerado para a comunidade?",
+   "reqd": 1
+  },
+  {
+   "fieldname": "pontos_positivos_adicionais",
+   "fieldtype": "Small Text",
+   "label": "Pontos positivos adicionais"
+  },
+  {
+   "fieldname": "pontos_de_melhoria_adicionais",
+   "fieldtype": "Small Text",
+   "label": "Pontos de melhoria adicionais"
+  },
+  {
+   "fieldname": "resumo_avaliacoes_individuais",
+   "fieldtype": "Small Text",
+   "label": "Resumo das avaliacoes individuais"
+  },
+  {
+   "fieldname": "resumo_avaliacao_completa",
+   "fieldtype": "Small Text",
+   "label": "Resumo da avaliacao completa"
+  }
+ ],
+ "grid_page_length": 20,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-20 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gestao de Projetos",
+ "name": "Avaliacao de Projeto",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Editor de projetos",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Visualizador de projetos"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "projeto"
+}

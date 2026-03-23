@@ -1,0 +1,73 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-20 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "avaliador",
+  "resultado_projeto",
+  "satisfacao_colaboracao",
+  "objetivos_atingidos",
+  "muito_bom",
+  "pontos_melhoria"
+ ],
+ "fields": [
+  {
+   "fieldname": "avaliador",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Avaliador",
+   "reqd": 1
+  },
+  {
+   "fieldname": "resultado_projeto",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Como voce avalia o resultado do projeto?",
+   "options": "0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10",
+   "reqd": 1
+  },
+  {
+   "fieldname": "satisfacao_colaboracao",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Quao satisfeito voce ficou em colaborar com o projeto?",
+   "options": "0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10",
+   "reqd": 1
+  },
+  {
+   "fieldname": "objetivos_atingidos",
+   "fieldtype": "Small Text",
+   "label": "O projeto atingiu os objetivos?",
+   "reqd": 1
+  },
+  {
+   "fieldname": "muito_bom",
+   "fieldtype": "Small Text",
+   "label": "O que voce considera que foi muito bom?",
+   "reqd": 1
+  },
+  {
+   "fieldname": "pontos_melhoria",
+   "fieldtype": "Small Text",
+   "label": "Quais sao os pontos de melhoria que voce enxerga?",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 20,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-03-20 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gestao de Projetos",
+ "name": "Avaliacao Individual Projeto",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

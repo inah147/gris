@@ -1,0 +1,138 @@
+[
+ {
+  "codigo": "ODS 01",
+  "descricao": "Acabar com a pobreza em todas as suas formas, garantindo proteção social, acesso a serviços básicos e oportunidades de desenvolvimento para pessoas em situação de vulnerabilidade. Exemplos: programas de transferência de renda, qualificação profissional e apoio ao empreendedorismo local.",
+  "docstatus": 0,
+  "doctype": "ODS Projeto",
+  "name": "ODS 01",
+  "titulo": "Erradicação da Pobreza"
+ },
+ {
+  "codigo": "ODS 02",
+  "descricao": "Erradicar a fome, promover segurança alimentar e nutrição adequada, e fortalecer uma agricultura sustentável, resiliente e inclusiva para pequenos produtores. Exemplos: hortas comunitárias, combate ao desperdício de alimentos e compras públicas da agricultura familiar.",
+  "docstatus": 0,
+  "doctype": "ODS Projeto",
+  "name": "ODS 02",
+  "titulo": "Fome Zero e Agricultura Sustentável"
+ },
+ {
+  "codigo": "ODS 03",
+  "descricao": "Assegurar uma vida saudável e promover o bem-estar para todas as idades, com foco em prevenção, acesso a serviços de saúde de qualidade e redução de desigualdades em saúde. Exemplos: campanhas de vacinação, saúde mental na comunidade e promoção de atividade física.",
+  "docstatus": 0,
+  "doctype": "ODS Projeto",
+  "name": "ODS 03",
+  "titulo": "Saúde e Bem-Estar"
+ },
+ {
+  "codigo": "ODS 04",
+  "descricao": "Garantir educação inclusiva, equitativa e de qualidade, promovendo oportunidades de aprendizagem ao longo da vida, com desenvolvimento de competências cidadãs e profissionais. Exemplos: reforço escolar, alfabetização de jovens e adultos e formação em competências digitais.",
+  "docstatus": 0,
+  "doctype": "ODS Projeto",
+  "name": "ODS 04",
+  "titulo": "Educação de Qualidade"
+ },
+ {
+  "codigo": "ODS 05",
+  "descricao": "Alcançar a igualdade de gênero e empoderar todas as mulheres e meninas, eliminando discriminações e violências e ampliando participação, liderança e autonomia. Exemplos: protocolos de prevenção a assédio, liderança feminina e apoio à autonomia econômica de mulheres.",
+  "docstatus": 0,
+  "doctype": "ODS Projeto",
+  "name": "ODS 05",
+  "titulo": "Igualdade de Gênero"
+ },
+ {
+  "codigo": "ODS 06",
+  "descricao": "Garantir disponibilidade e gestão sustentável da água e do saneamento para todos, incluindo acesso universal à água potável segura e tratamento adequado de esgoto. Exemplos: reuso de água, educação para consumo consciente e melhorias de saneamento em áreas vulneráveis.",
+  "docstatus": 0,
+  "doctype": "ODS Projeto",
+  "name": "ODS 06",
+  "titulo": "Água Potável e Saneamento"
+ },
+ {
+  "codigo": "ODS 07",
+  "descricao": "Assegurar acesso confiável, sustentável e moderno à energia, ampliando eficiência energética e uso de fontes renováveis em comunidades e organizações. Exemplos: instalação de energia solar, troca de iluminação por LED e monitoramento de consumo energético.",
+  "docstatus": 0,
+  "doctype": "ODS Projeto",
+  "name": "ODS 07",
+  "titulo": "Energia Limpa e Acessível"
+ },
+ {
+  "codigo": "ODS 08",
+  "descricao": "Promover crescimento econômico sustentado, inclusivo e sustentável, com trabalho decente para todos, direitos trabalhistas respeitados e ambientes produtivos seguros. Exemplos: formação para empregabilidade, incentivo à economia local e boas práticas de segurança no trabalho.",
+  "docstatus": 0,
+  "doctype": "ODS Projeto",
+  "name": "ODS 08",
+  "titulo": "Trabalho Decente e Crescimento Econômico"
+ },
+ {
+  "codigo": "ODS 09",
+  "descricao": "Construir infraestruturas resilientes, promover industrialização sustentável e fomentar inovação, ciência e tecnologia para aumentar competitividade e impacto social positivo. Exemplos: laboratórios de inovação, modernização de processos e projetos de conectividade em regiões periféricas.",
+  "docstatus": 0,
+  "doctype": "ODS Projeto",
+  "name": "ODS 09",
+  "titulo": "Indústria, Inovação e Infraestrutura"
+ },
+ {
+  "codigo": "ODS 10",
+  "descricao": "Reduzir desigualdades dentro dos países e entre eles, promovendo inclusão social, econômica e política de todos, sem deixar grupos vulneráveis para trás. Exemplos: acessibilidade universal, bolsas para grupos sub-representados e políticas de inclusão territorial.",
+  "docstatus": 0,
+  "doctype": "ODS Projeto",
+  "name": "ODS 10",
+  "titulo": "Redução das Desigualdades"
+ },
+ {
+  "codigo": "ODS 11",
+  "descricao": "Tornar cidades e comunidades inclusivas, seguras, resilientes e sustentáveis, com mobilidade adequada, planejamento urbano responsável e acesso a espaços públicos de qualidade. Exemplos: urbanismo tático, mobilidade ativa e recuperação de espaços públicos para convívio comunitário.",
+  "docstatus": 0,
+  "doctype": "ODS Projeto",
+  "name": "ODS 11",
+  "titulo": "Cidades e Comunidades Sustentáveis"
+ },
+ {
+  "codigo": "ODS 12",
+  "descricao": "Assegurar padrões de produção e consumo sustentáveis, reduzindo desperdícios, incentivando economia circular e promovendo uso eficiente de recursos naturais. Exemplos: coleta seletiva, logística reversa e compras sustentáveis com critérios socioambientais.",
+  "docstatus": 0,
+  "doctype": "ODS Projeto",
+  "name": "ODS 12",
+  "titulo": "Consumo e Produção Responsáveis"
+ },
+ {
+  "codigo": "ODS 13",
+  "descricao": "Adotar medidas urgentes para combater a mudança do clima e seus impactos, fortalecendo mitigação, adaptação e educação ambiental em todos os níveis. Exemplos: inventário de emissões, planos de adaptação local e projetos de reflorestamento urbano.",
+  "docstatus": 0,
+  "doctype": "ODS Projeto",
+  "name": "ODS 13",
+  "titulo": "Ação Contra a Mudança Global do Clima"
+ },
+ {
+  "codigo": "ODS 14",
+  "descricao": "Conservar e usar de forma sustentável os oceanos, mares e recursos marinhos, prevenindo poluição e protegendo ecossistemas costeiros e biodiversidade aquática. Exemplos: mutirões de limpeza de rios e praias, educação contra plástico descartável e monitoramento de ecossistemas aquáticos.",
+  "docstatus": 0,
+  "doctype": "ODS Projeto",
+  "name": "ODS 14",
+  "titulo": "Vida na Água"
+ },
+ {
+  "codigo": "ODS 15",
+  "descricao": "Proteger, recuperar e promover o uso sustentável dos ecossistemas terrestres, combatendo desmatamento, degradação do solo e perda de biodiversidade. Exemplos: restauração de áreas degradadas, corredores ecológicos e proteção de nascentes.",
+  "docstatus": 0,
+  "doctype": "ODS Projeto",
+  "name": "ODS 15",
+  "titulo": "Vida Terrestre"
+ },
+ {
+  "codigo": "ODS 16",
+  "descricao": "Promover sociedades pacíficas e inclusivas, com acesso à justiça para todos e instituições eficazes, responsáveis, transparentes e participativas. Exemplos: formação em cultura de paz, canais de participação social e práticas de transparência institucional.",
+  "docstatus": 0,
+  "doctype": "ODS Projeto",
+  "name": "ODS 16",
+  "titulo": "Paz, Justiça e Instituições Eficazes"
+ },
+ {
+  "codigo": "ODS 17",
+  "descricao": "Fortalecer os meios de implementação e revitalizar parcerias globais para o desenvolvimento sustentável, articulando governo, sociedade civil, empresas e academia. Exemplos: redes colaborativas multissetoriais, captação conjunta de recursos e compartilhamento de indicadores e boas práticas.",
+  "docstatus": 0,
+  "doctype": "ODS Projeto",
+  "name": "ODS 17",
+  "titulo": "Parcerias e Meios de Implementação"
+ }
+]

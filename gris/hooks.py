@@ -270,11 +270,13 @@ fixtures = [
 				"in",
 				[
 					"Editor de Parecer",
+					"Editor de projetos",
 					"Gestor Contribuição Mensal",
 					"Gestor de Adultos",
 					"Gestor de Associados",
 					"Gestor Financeiro",
 					"Visualizador Associados",
+					"Visualizador de projetos",
 					"Visualizador Contribuição Mensal",
 					"Visualizador Financeiro",
 					"Gestor da UEL",
@@ -307,6 +309,9 @@ fixtures = [
 	},
 	{
 		"dt": "Mapeamento de perguntas e respostas da entrevista",
+	},
+	{
+		"dt": "ODS Projeto",
 	},
 ]
 

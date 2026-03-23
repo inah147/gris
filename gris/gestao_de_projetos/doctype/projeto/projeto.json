@@ -1,0 +1,243 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "format:PROJ-{#####}",
+ "creation": "2026-03-20 00:00:00",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "dados_gerais_tab",
+  "dados_gerais_section",
+  "nome_do_projeto",
+  "coordenador",
+  "status",
+  "reunioes",
+  "tarefas",
+  "outros_envolvidos",
+  "termo_de_abertura_tab",
+  "termo_abertura_section",
+  "data_de_inicio",
+  "data_de_termino",
+  "equipe_de_interesse",
+  "tipo_padrinho_ou_orientador",
+  "padrinho_associado",
+  "padrinho_responsavel",
+  "justificativa",
+  "objetivos",
+  "alinhamento_com_escotismo",
+  "ods",
+  "competencias",
+  "especialidade",
+  "cronograma",
+  "recursos",
+  "riscos",
+  "observacoes_e_comentarios",
+  "avaliacao_tap"
+ ],
+ "fields": [
+  {
+   "fieldname": "dados_gerais_tab",
+   "fieldtype": "Tab Break",
+   "label": "Dados gerais"
+  },
+  {
+   "fieldname": "dados_gerais_section",
+   "fieldtype": "Section Break",
+   "label": "Dados gerais"
+  },
+  {
+   "fieldname": "nome_do_projeto",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome do projeto",
+   "reqd": 1
+  },
+  {
+   "fieldname": "coordenador",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Coordenador",
+   "options": "Associado",
+   "reqd": 1
+  },
+  {
+   "default": "Rascunho",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Rascunho\nEm aprovacao\nAprovado\nEm execucao\nConcluido"
+  },
+  {
+   "fieldname": "reunioes",
+   "fieldtype": "Table",
+   "label": "Reunioes",
+   "options": "Reuniao de Projeto"
+  },
+  {
+   "fieldname": "tarefas",
+   "fieldtype": "Table",
+   "label": "Tarefas",
+   "options": "Gestao de Tarefas"
+  },
+  {
+   "fieldname": "outros_envolvidos",
+   "fieldtype": "Table",
+   "label": "Outros envolvidos",
+   "options": "Outro Envolvido Projeto"
+  },
+  {
+   "fieldname": "termo_de_abertura_tab",
+   "fieldtype": "Tab Break",
+   "label": "Termo de abertura de projeto"
+  },
+  {
+   "fieldname": "termo_abertura_section",
+   "fieldtype": "Section Break",
+   "label": "Termo de abertura de projeto"
+  },
+  {
+   "fieldname": "data_de_inicio",
+   "fieldtype": "Date",
+   "label": "Data de inicio"
+  },
+  {
+   "fieldname": "data_de_termino",
+   "fieldtype": "Date",
+   "label": "Data de termino"
+  },
+  {
+   "fieldname": "equipe_de_interesse",
+   "fieldtype": "Table",
+   "label": "Equipe de interesse",
+   "options": "Equipe de Interesse Projeto"
+  },
+  {
+   "default": "Associado",
+   "fieldname": "tipo_padrinho_ou_orientador",
+   "fieldtype": "Select",
+   "label": "Tipo",
+   "options": "Associado\nResponsavel"
+  },
+  {
+   "depends_on": "eval:doc.tipo_padrinho_ou_orientador=='Associado'",
+   "fieldname": "padrinho_associado",
+   "fieldtype": "Link",
+   "label": "Padrinho associado",
+   "options": "Associado"
+  },
+  {
+   "depends_on": "eval:doc.tipo_padrinho_ou_orientador=='Responsavel'",
+   "fieldname": "padrinho_responsavel",
+   "fieldtype": "Link",
+   "label": "Padrinho responsavel",
+   "options": "Responsavel"
+  },
+  {
+   "fieldname": "justificativa",
+   "fieldtype": "Small Text",
+   "label": "Justificativa"
+  },
+  {
+   "fieldname": "objetivos",
+   "fieldtype": "Table",
+   "label": "Objetivos",
+   "options": "Objetivo de Projeto"
+  },
+  {
+   "fieldname": "alinhamento_com_escotismo",
+   "fieldtype": "Small Text",
+   "label": "Alinhamento com o escotismo"
+  },
+  {
+   "fieldname": "ods",
+   "fieldtype": "Table MultiSelect",
+   "label": "ODS",
+   "options": "Projeto ODS",
+   "reqd": 1
+  },
+  {
+   "fieldname": "competencias",
+   "fieldtype": "Small Text",
+   "label": "Competencias"
+  },
+  {
+   "fieldname": "especialidade",
+   "fieldtype": "Data",
+   "label": "Especialidade"
+  },
+  {
+   "fieldname": "cronograma",
+   "fieldtype": "Table",
+   "label": "Cronograma",
+   "options": "Cronograma de Projeto"
+  },
+  {
+   "fieldname": "recursos",
+   "fieldtype": "Table",
+   "label": "Recursos",
+   "options": "Recurso de Projeto"
+  },
+  {
+   "fieldname": "riscos",
+   "fieldtype": "Table",
+   "label": "Riscos",
+   "options": "Risco de Projeto"
+  },
+  {
+   "fieldname": "observacoes_e_comentarios",
+   "fieldtype": "Small Text",
+   "label": "Observacoes e comentarios"
+  },
+  {
+   "fieldname": "avaliacao_tap",
+   "fieldtype": "Text",
+   "label": "Avalia\u00e7\u00e3o do TAP"
+  }
+ ],
+ "grid_page_length": 20,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-23 19:31:22.402388",
+ "modified_by": "Administrator",
+ "module": "Gestao de Projetos",
+ "name": "Projeto",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Editor de projetos",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Visualizador de projetos"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "nome_do_projeto"
+}

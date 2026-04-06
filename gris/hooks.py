@@ -152,7 +152,10 @@ after_install = "gris.install.after_install"
 # ---------------
 
 scheduler_events = {
-	"Cron": {"0 5 * * *": ["gris.api.users.user_manager.manage_associate_users"]},
+	"cron": {
+		"0 3 * * *": ["gris.gestao_de_projetos.doctype.projeto.projeto.validar_tarefas_atrasadas_madrugada"],
+		"0 5 * * *": ["gris.api.users.user_manager.manage_associate_users"],
+	},
 	# "all": [
 	# 	"gris.tasks.all"
 	# ],
@@ -271,11 +274,13 @@ fixtures = [
 				"in",
 				[
 					"Editor de Parecer",
+					"Editor de projetos",
 					"Gestor Contribuição Mensal",
 					"Gestor de Adultos",
 					"Gestor de Associados",
 					"Gestor Financeiro",
 					"Visualizador Associados",
+					"Visualizador de projetos",
 					"Visualizador Contribuição Mensal",
 					"Visualizador Financeiro",
 					"Gestor da UEL",
@@ -308,6 +313,9 @@ fixtures = [
 	},
 	{
 		"dt": "Mapeamento de perguntas e respostas da entrevista",
+	},
+	{
+		"dt": "ODS Projeto",
 	},
 ]
 

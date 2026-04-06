@@ -1,0 +1,47 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% block title %}Todos os Projetos{% endblock %}
+{% set active_link = '/projetos/visao_geral' %}
+
+{% block head_include %}
+{{ super() }}
+<link rel="stylesheet" href="/projetos/visao_geral.css" />
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+	<div class="page-header__content">
+		<h1 class="page-header__title">Todos os projetos</h1>
+		<p class="page-header__subtitle">Acompanhe os projetos agrupados por status.</p>
+	</div>
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="kanban-container">
+	{% for status in kanban_columns %}
+	<div class="kanban-column" data-status="{{ status }}">
+		<div class="kanban-column__header">
+			<h3 class="kanban-column__title">{{ status_labels[status] }}</h3>
+			<span class="g-badge g-badge--secondary">{{ kanban_data[status]|length }}</span>
+		</div>
+		<div class="kanban-column__body">
+			{% for card in kanban_data[status] %}
+			<div
+				class="kanban-card card-modern{% if status == 'Rascunho' %} kanban-card--editable{% elif status == 'Em aprovacao' %} kanban-card--approval{% elif status == 'Aprovado' %} kanban-card--approved{% endif %}"
+				data-project-name="{{ card.name }}"
+				data-status="{{ status }}"
+			>
+				<div class="kanban-card__top">
+					<span class="g-badge g-badge--info">{{ card.status_label }}</span>
+				</div>
+				<div class="kanban-card__main">
+					<h4 class="kanban-card__title">{{ card.titulo }}</h4>
+					<p class="kanban-card__subtitle">Coordenador: {{ card.coordenador }}</p>
+				</div>
+			</div>
+			{% endfor %}
+		</div>
+	</div>
+	{% endfor %}
+</div>
+{% endblock %}

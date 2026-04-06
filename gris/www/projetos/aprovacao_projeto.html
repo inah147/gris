@@ -1,0 +1,256 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% block title %}Aprovação de projeto{% endblock %}
+{% set active_link = '/projetos/visao_geral' %}
+
+{% block head_include %}
+{{ super() }}
+<link rel="stylesheet" href="/projetos/aprovacao_projeto.css" />
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <div class="page-header__content">
+        <h1 class="page-header__title">Aprovação de projeto</h1>
+        <p class="page-header__subtitle">Leitura completa do TAP com decisão por etapa.</p>
+    </div>
+    <div class="page-header__actions">
+        <button type="button" id="btnCancelarProjeto" class="btn-modern btn-modern--danger btn-modern--sm">Cancelar projeto</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="approval-shell card-modern">
+    <input type="hidden" id="projetoName" value="{{ projeto_name or '' }}" />
+
+    <div id="approvalAlert" class="alert-modern d-none"></div>
+
+    <section class="card-modern flow-card">
+        <div class="card-modern__header">
+            <h3 class="card-modern__title">Fluxo de aprovação</h3>
+            <p class="card-modern__subtitle">Etapas obrigatórias para concluir a aprovação do projeto.</p>
+        </div>
+        <div class="card-modern__body">
+            <div id="approvalFlow" class="approval-flow" aria-live="polite"></div>
+        </div>
+    </section>
+
+    <section class="card-modern action-card">
+        <div class="card-modern__header">
+            <h3 class="card-modern__title">Decisão do aprovador</h3>
+            <p id="approvalDecisionHint" class="card-modern__subtitle">Carregando elegibilidade da etapa atual...</p>
+        </div>
+        <div class="card-modern__body">
+            <div class="approval-actions">
+                <button type="button" id="btnAprovarEtapa" class="btn-modern btn-modern--primary btn-modern--sm">Aprovar etapa</button>
+                <button type="button" id="btnSolicitarAlteracoes" class="btn-modern btn-modern--outline btn-modern--sm">Solicitar alterações</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header">
+            <h3 class="card-modern__title">Dados gerais</h3>
+        </div>
+        <div class="card-modern__body">
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label class="form-label-modern">Título do projeto</label>
+                    <input id="view_nome_do_projeto" type="text" class="form-input-modern form-input-modern--sm" readonly disabled />
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label-modern">Status</label>
+                    <input id="view_status" type="text" class="form-input-modern form-input-modern--sm" readonly disabled />
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label-modern">Coordenador</label>
+                    <input id="view_coordenador" type="text" class="form-input-modern form-input-modern--sm" readonly disabled />
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label-modern">Padrinho</label>
+                    <input id="view_padrinho_nome" type="text" class="form-input-modern form-input-modern--sm" readonly disabled />
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label-modern">Data de início</label>
+                    <input id="view_data_de_inicio" type="text" class="form-input-modern form-input-modern--sm" readonly disabled />
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label-modern">Data de término</label>
+                    <input id="view_data_de_termino" type="text" class="form-input-modern form-input-modern--sm" readonly disabled />
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header">
+            <h3 class="card-modern__title">Detalhamento</h3>
+        </div>
+        <div class="card-modern__body">
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label-modern">Descrição e justificativa</label>
+                    <textarea id="view_justificativa" class="form-input-modern form-input-modern--sm" rows="4" readonly disabled></textarea>
+                </div>
+                <div class="col-12">
+                    <label class="form-label-modern">Alinhamento com o escotismo</label>
+                    <textarea id="view_alinhamento_com_escotismo" class="form-input-modern form-input-modern--sm" rows="4" readonly disabled></textarea>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header"><h3 class="card-modern__title">Equipe de interesse</h3></div>
+        <div class="card-modern__body">
+            <div class="table-responsive">
+                <table class="data-table projeto-table">
+                    <thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Função</th></tr></thead>
+                    <tbody id="view_rows_equipe"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header"><h3 class="card-modern__title">Objetivos</h3></div>
+        <div class="card-modern__body">
+            <div class="table-responsive">
+                <table class="data-table projeto-table">
+                    <thead><tr><th>Objetivo</th><th>Métrica de sucesso</th></tr></thead>
+                    <tbody id="view_rows_objetivos"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header"><h3 class="card-modern__title">Impacto</h3></div>
+        <div class="card-modern__body">
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label class="form-label-modern">Competências e blocos</label>
+                    <textarea id="view_competencias" class="form-input-modern form-input-modern--sm" rows="3" readonly disabled></textarea>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label-modern">Especialidade</label>
+                    <textarea id="view_especialidade" class="form-input-modern form-input-modern--sm" rows="3" readonly disabled></textarea>
+                </div>
+            </div>
+            <div class="table-responsive mt-sm">
+                <table class="data-table projeto-table">
+                    <thead><tr><th>ODS</th></tr></thead>
+                    <tbody id="view_rows_ods"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header"><h3 class="card-modern__title">Cronograma</h3></div>
+        <div class="card-modern__body">
+            <div class="gantt-card" aria-live="polite">
+                <div class="gantt-card__header">
+                    <h4 class="gantt-card__title">Visualização Gantt</h4>
+                    <p class="gantt-card__subtitle">Linha do tempo de atividades do projeto.</p>
+                </div>
+                <div id="view_cronograma_gantt" class="cronograma-gantt"></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header"><h3 class="card-modern__title">Recursos</h3></div>
+        <div class="card-modern__body">
+            <div class="table-responsive">
+                <table class="data-table projeto-table"><thead><tr><th>Recurso</th></tr></thead><tbody id="view_rows_recursos"></tbody></table>
+            </div>
+        </div>
+    </section>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header"><h3 class="card-modern__title">Riscos</h3></div>
+        <div class="card-modern__body">
+            <div class="table-responsive">
+                <table class="data-table projeto-table"><thead><tr><th>Risco</th><th>Mitigação</th></tr></thead><tbody id="view_rows_riscos"></tbody></table>
+            </div>
+        </div>
+    </section>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header"><h3 class="card-modern__title">Observações e comentários</h3></div>
+        <div class="card-modern__body">
+            <textarea id="view_observacoes_e_comentarios" class="form-input-modern form-input-modern--sm" rows="3" readonly disabled></textarea>
+        </div>
+    </section>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header"><h3 class="card-modern__title">Revisão do TAP por IA</h3></div>
+        <div class="card-modern__body"><div id="view_avaliacao_tap" class="readonly-markdown">-</div></div>
+    </section>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header"><h3 class="card-modern__title">Histórico de revisão</h3></div>
+        <div class="card-modern__body">
+            <div class="table-responsive">
+                <table class="data-table projeto-table">
+                    <thead><tr><th>Aprovador</th><th>Etapa</th><th>Tipo</th><th>Data</th><th>Comentário</th><th>Resolvido</th></tr></thead>
+                    <tbody id="view_rows_revisoes"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div id="aprovarEtapaModal" class="info-modal d-none" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="aprovarEtapaModalTitle">
+    <div class="info-modal__backdrop" data-close-aprovar-etapa></div>
+    <div class="info-modal__panel" role="document">
+        <div class="info-modal__header">
+            <h4 id="aprovarEtapaModalTitle" class="info-modal__title">Confirmar aprovação</h4>
+            <button type="button" class="info-modal__close" data-close-aprovar-etapa aria-label="Fechar">×</button>
+        </div>
+        <div class="info-modal__body">
+            <p>Deseja confirmar a aprovação desta etapa?</p>
+        </div>
+        <div class="approval-modal-footer">
+            <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-close-aprovar-etapa>Cancelar</button>
+            <button type="button" id="btnConfirmarAprovarEtapa" class="btn-modern btn-modern--primary btn-modern--sm">Confirmar aprovação</button>
+        </div>
+    </div>
+</div>
+
+<div id="alteracoesModal" class="info-modal d-none" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="alteracoesModalTitle">
+    <div class="info-modal__backdrop" data-close-alteracoes></div>
+    <div class="info-modal__panel" role="document">
+        <div class="info-modal__header">
+            <h4 id="alteracoesModalTitle" class="info-modal__title">Solicitar alterações</h4>
+            <button type="button" class="info-modal__close" data-close-alteracoes aria-label="Fechar">×</button>
+        </div>
+        <div class="info-modal__body">
+            <label for="alteracoesInput" class="form-label-modern">Descreva os ajustes necessários *</label>
+            <textarea id="alteracoesInput" class="form-input-modern" rows="5" placeholder="Descreva de forma objetiva o que precisa ser alterado no projeto."></textarea>
+        </div>
+        <div class="approval-modal-footer">
+            <button type="button" id="btnCancelarAlteracoes" class="btn-modern btn-modern--outline btn-modern--sm" data-close-alteracoes>Cancelar</button>
+            <button type="button" id="btnConfirmarAlteracoes" class="btn-modern btn-modern--primary btn-modern--sm">Enviar solicitação</button>
+        </div>
+    </div>
+</div>
+
+<div id="cancelarProjetoModal" class="info-modal d-none" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="cancelarProjetoModalTitle">
+    <div class="info-modal__backdrop" data-close-cancelar-projeto></div>
+    <div class="info-modal__panel" role="document">
+        <div class="info-modal__header">
+            <h4 id="cancelarProjetoModalTitle" class="info-modal__title">Cancelar projeto</h4>
+            <button type="button" class="info-modal__close" data-close-cancelar-projeto aria-label="Fechar">×</button>
+        </div>
+        <div class="info-modal__body">
+            <p>Deseja realmente cancelar este projeto? Após confirmar, o status será alterado para Cancelado.</p>
+        </div>
+        <div class="approval-modal-footer">
+            <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-close-cancelar-projeto>Voltar</button>
+            <button type="button" id="btnConfirmarCancelarProjeto" class="btn-modern btn-modern--danger btn-modern--sm">Confirmar cancelamento</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

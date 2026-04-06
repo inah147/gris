@@ -381,6 +381,7 @@
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
+ "show_title_field_in_link": 1,
  "states": [],
  "title_field": "nome_completo"
 }

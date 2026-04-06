@@ -18,6 +18,7 @@
   {
    "fieldname": "beneficiario_associado",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Benefici\u00e1rio Associado",
    "options": "Associado"
   },
@@ -44,12 +45,14 @@
   {
    "fieldname": "responsavel",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Respons\u00e1vel",
    "options": "Responsavel"
   },
   {
    "fieldname": "beneficiario_novo_associado",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Benefici\u00e1rio Novo Associado",
    "options": "Novo Associado"
   },

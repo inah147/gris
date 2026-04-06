@@ -21,6 +21,7 @@
   "data_de_inicio",
   "data_de_termino",
   "equipe_de_interesse",
+    "aprovadores",
   "tipo_padrinho_ou_orientador",
   "padrinho_associado",
   "padrinho_responsavel",
@@ -33,6 +34,7 @@
   "cronograma",
   "recursos",
   "riscos",
+  "comentarios_revisao_aprovacao",
   "observacoes_e_comentarios",
   "avaliacao_tap"
  ],
@@ -68,7 +70,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Rascunho\nEm aprovacao\nAprovado\nEm execucao\nConcluido"
+   "options": "Rascunho\nEm aprovacao\nAprovado\nEm execucao\nConcluido\nCancelado"
   },
   {
    "fieldname": "reunioes",
@@ -114,6 +116,12 @@
    "label": "Equipe de interesse",
    "options": "Equipe de Interesse Projeto"
   },
+    {
+     "fieldname": "aprovadores",
+     "fieldtype": "Table",
+     "label": "Aprovadores",
+     "options": "Aprovador Projeto"
+    },
   {
    "default": "Associado",
    "fieldname": "tipo_padrinho_ou_orientador",
@@ -165,7 +173,7 @@
   },
   {
    "fieldname": "especialidade",
-   "fieldtype": "Data",
+   "fieldtype": "Small Text",
    "label": "Especialidade"
   },
   {
@@ -187,6 +195,12 @@
    "options": "Risco de Projeto"
   },
   {
+   "fieldname": "comentarios_revisao_aprovacao",
+   "fieldtype": "Table",
+   "label": "Coment\u00e1rios de revis\u00e3o de aprova\u00e7\u00e3o",
+   "options": "Comentario Revisao Projeto"
+  },
+  {
    "fieldname": "observacoes_e_comentarios",
    "fieldtype": "Small Text",
    "label": "Observacoes e comentarios"
@@ -200,10 +214,11 @@
  "grid_page_length": 20,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-23 19:31:22.402388",
+ "modified": "2026-04-01 20:12:21.974645",
  "modified_by": "Administrator",
  "module": "Gestao de Projetos",
  "name": "Projeto",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {

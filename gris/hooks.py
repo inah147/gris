@@ -152,7 +152,10 @@ after_install = "gris.install.after_install"
 # ---------------
 
 scheduler_events = {
-	"Cron": {"0 5 * * *": ["gris.api.users.user_manager.manage_associate_users"]},
+	"cron": {
+		"0 3 * * *": ["gris.gestao_de_projetos.doctype.projeto.projeto.validar_tarefas_atrasadas_madrugada"],
+		"0 5 * * *": ["gris.api.users.user_manager.manage_associate_users"],
+	},
 	# "all": [
 	# 	"gris.tasks.all"
 	# ],

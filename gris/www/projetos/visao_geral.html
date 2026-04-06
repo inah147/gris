@@ -26,7 +26,11 @@
 		</div>
 		<div class="kanban-column__body">
 			{% for card in kanban_data[status] %}
-			<div class="kanban-card card-modern">
+			<div
+				class="kanban-card card-modern{% if status == 'Rascunho' %} kanban-card--editable{% elif status == 'Em aprovacao' %} kanban-card--approval{% elif status == 'Aprovado' %} kanban-card--approved{% endif %}"
+				data-project-name="{{ card.name }}"
+				data-status="{{ status }}"
+			>
 				<div class="kanban-card__top">
 					<span class="g-badge g-badge--info">{{ card.status_label }}</span>
 				</div>

@@ -3,12 +3,13 @@
  "allow_import": 1,
  "allow_rename": 1,
  "autoname": "format:AV-PROJ-{#####}",
- "creation": "2026-03-20 00:00:00.000000",
+ "creation": "2026-03-20 00:00:00",
  "default_view": "List",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "projeto",
+  "status",
   "avaliacoes_individuais",
   "avaliacao_geral",
   "satisfacao_dos_participantes",
@@ -23,14 +24,22 @@
   "resumo_avaliacao_completa"
  ],
  "fields": [
-    {
-     "fieldname": "projeto",
-     "fieldtype": "Link",
-     "in_list_view": 1,
-     "label": "Projeto",
-     "options": "Projeto",
-     "reqd": 1
-    },
+  {
+   "fieldname": "projeto",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Projeto",
+   "options": "Projeto",
+   "reqd": 1
+  },
+  {
+   "default": "Em andamento",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Em andamento\nAvaliacoes individuais concluidas\nConcluida"
+  },
   {
    "fieldname": "avaliacoes_individuais",
    "fieldtype": "Table",
@@ -55,32 +64,27 @@
    "fieldname": "objetivos_atingidos",
    "fieldtype": "Table",
    "label": "Os objetivos foram atingidos?",
-   "options": "Objetivo Atingido Projeto",
-   "reqd": 1
+   "options": "Objetivo Atingido Projeto"
   },
   {
    "fieldname": "o_que_funcionou_bem_na_dinamica_da_equipe",
    "fieldtype": "Small Text",
-   "label": "O que funcionou bem na dinamica da equipe?",
-   "reqd": 1
+   "label": "O que funcionou bem na dinamica da equipe?"
   },
   {
    "fieldname": "o_que_nao_funcionou_na_dinamica_da_equipe",
    "fieldtype": "Small Text",
-   "label": "O que nao funcionou na dinamica da equipe?",
-   "reqd": 1
+   "label": "O que nao funcionou na dinamica da equipe?"
   },
   {
    "fieldname": "maior_aprendizado_gerado",
    "fieldtype": "Small Text",
-   "label": "Qual foi o maior aprendizado gerado?",
-   "reqd": 1
+   "label": "Qual foi o maior aprendizado gerado?"
   },
   {
    "fieldname": "impacto_gerado_para_comunidade",
    "fieldtype": "Small Text",
-   "label": "Qual o impacto gerado para a comunidade?",
-   "reqd": 1
+   "label": "Qual o impacto gerado para a comunidade?"
   },
   {
    "fieldname": "pontos_positivos_adicionais",
@@ -106,7 +110,7 @@
  "grid_page_length": 20,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-20 00:00:00.000000",
+ "modified": "2026-04-02 09:07:47.719987",
  "modified_by": "Administrator",
  "module": "Gestao de Projetos",
  "name": "Avaliacao de Projeto",

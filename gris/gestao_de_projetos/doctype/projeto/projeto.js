@@ -86,7 +86,7 @@ frappe.ui.form.on("Outro Envolvido Projeto", {
 frappe.ui.form.on("Equipe de Interesse Projeto", {
   tipo_pessoa(frm, cdt, cdn) {
     const row = locals[cdt][cdn];
-    if (row.tipo_pessoa === "Nome livre") {
+    if (row.tipo_pessoa === "Outro") {
       set_child_value(frm, cdt, cdn, {
         associado: "",
         responsavel: "",

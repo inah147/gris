@@ -1,0 +1,490 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% block title %}Cadastrar novo projeto{% endblock %}
+{% set active_link = '/projetos/cadastrar_novo_projeto' %}
+
+{% block head_include %}
+{{ super() }}
+<link rel="stylesheet" href="/projetos/cadastrar_novo_projeto.css" />
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <div class="page-header__content">
+        <h1 class="page-header__title">Cadastrar novo projeto</h1>
+        <p class="page-header__subtitle">Preencha os dados gerais do projeto.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="projeto-form-shell card-modern">
+    <input type="hidden" id="projetoName" value="{{ projeto_name or '' }}" />
+
+    <div id="pendingReviewBanner" class="pending-review-banner d-none">
+        <button type="button" id="btnPendenciasRevisao" class="btn-modern btn-modern--secondary btn-modern--sm">
+            Ver comentários de revisão
+        </button>
+        <span id="pendingReviewCount" class="pending-review-banner__count"></span>
+    </div>
+
+    <div id="formAlert" class="alert-modern d-none"></div>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header">
+            <h3 class="card-modern__title">Dados gerais</h3>
+            <p class="card-modern__subtitle">Informações iniciais do projeto.</p>
+        </div>
+        <div class="card-modern__body">
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label for="nome_do_projeto" class="form-label-modern">Título do projeto *</label>
+                    <input id="nome_do_projeto" type="text" class="form-input-modern form-input-modern--sm" placeholder="Digite o título do projeto" />
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="coordenador" class="form-label-modern">Coordenador *</label>
+                    <select id="coordenador" class="form-input-modern form-input-modern--sm"></select>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label for="data_de_inicio" class="form-label-modern">Data de início</label>
+                    <input id="data_de_inicio" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" autocomplete="off" class="form-input-modern form-input-modern--sm" />
+                </div>
+                <div class="col-12 col-md-3">
+                    <label for="data_de_termino" class="form-label-modern">Data de término</label>
+                    <input id="data_de_termino" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" autocomplete="off" class="form-input-modern form-input-modern--sm" />
+                </div>
+                <div class="col-12 col-md-3">
+                    <label for="tipo_padrinho_ou_orientador" class="form-label-modern">Tipo do padrinho/orientador *</label>
+                    <select id="tipo_padrinho_ou_orientador" class="form-input-modern form-input-modern--sm">
+                        <option value="Associado">Associado</option>
+                        <option value="Responsavel">Responsável</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-3" id="fieldPadrinhoAssociado">
+                    <label for="padrinho_associado" class="form-label-modern">Padrinho associado *</label>
+                    <select id="padrinho_associado" class="form-input-modern form-input-modern--sm"></select>
+                </div>
+                <div class="col-12 col-md-3 d-none" id="fieldPadrinhoResponsavel">
+                    <label for="padrinho_responsavel" class="form-label-modern">Padrinho responsável *</label>
+                    <select id="padrinho_responsavel" class="form-input-modern form-input-modern--sm"></select>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <section class="card-modern form-card form-card--aprovadores">
+        <div class="card-modern__header">
+            <h3 class="card-modern__title">Aprovadores *</h3>
+            <p class="card-modern__subtitle">Diretores presidentes entram por padrão e podem ser removidos. Padrinho/orientador é obrigatório e não pode ser removido.</p>
+        </div>
+        <div class="card-modern__body">
+            <div class="table-box" data-table="aprovadores">
+                <div class="equipe-builder">
+                    <div class="filter-field">
+                        <label for="aprovador_tipo_pessoa" class="form-label-modern">Tipo</label>
+                        <select id="aprovador_tipo_pessoa" class="form-input-modern form-input-modern--sm">
+                            <option value="Associado">Associado</option>
+                            <option value="Responsavel">Responsável</option>
+                        </select>
+                    </div>
+                    <div class="filter-field" id="aprovador_field_associado">
+                        <label for="aprovador_associado" class="form-label-modern">Associado</label>
+                        <select id="aprovador_associado" class="form-input-modern form-input-modern--sm"></select>
+                    </div>
+                    <div class="filter-field d-none" id="aprovador_field_responsavel">
+                        <label for="aprovador_responsavel" class="form-label-modern">Responsável</label>
+                        <select id="aprovador_responsavel" class="form-input-modern form-input-modern--sm"></select>
+                    </div>
+                    <div class="filter-field">
+                        <label for="aprovador_nome" class="form-label-modern">Nome</label>
+                        <input id="aprovador_nome" type="text" class="form-input-modern form-input-modern--sm" readonly />
+                    </div>
+                    <div class="filter-field">
+                        <label for="aprovador_email" class="form-label-modern">Email</label>
+                        <input id="aprovador_email" type="text" class="form-input-modern form-input-modern--sm" readonly />
+                    </div>
+                    <div class="filter-field">
+                        <label for="aprovador_telefone" class="form-label-modern">Telefone</label>
+                        <input id="aprovador_telefone" type="text" class="form-input-modern form-input-modern--sm" readonly />
+                    </div>
+                    <div class="equipe-builder__actions">
+                        <button type="button" id="btnAdicionarAprovador" class="btn-modern btn-modern--outline btn-modern--sm">Adicionar aprovador</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table projeto-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Email</th>
+                                <th>Telefone</th>
+                                <th>Origem</th>
+                                <th style="width: 72px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rows_aprovadores"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header">
+            <h3 class="card-modern__title">Detalhamento</h3>
+            <p class="card-modern__subtitle">Descrição do projeto e alinhamento com o escotismo.</p>
+        </div>
+        <div class="card-modern__body">
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="label-with-help">
+                        <label for="justificativa" class="form-label-modern">Descrição e Justificativa *</label>
+                        <button type="button" class="info-trigger info-trigger--field" data-info-key="justificativa" aria-label="Ajuda sobre descrição e justificativa" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
+                    </div>
+                    <textarea id="justificativa" class="form-input-modern form-input-modern--sm" rows="3"></textarea>
+                </div>
+                <div class="col-12">
+                    <div class="label-with-help">
+                        <label for="alinhamento_com_escotismo" class="form-label-modern">Como o projeto se alinha com o escotismo? *</label>
+                        <button type="button" class="info-trigger info-trigger--field" data-info-key="alinhamento_com_escotismo" aria-label="Ajuda sobre alinhamento com o escotismo" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
+                    </div>
+                    <textarea id="alinhamento_com_escotismo" class="form-input-modern form-input-modern--sm" rows="3"></textarea>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header">
+            <div class="card-title-with-help">
+                <h3 class="card-modern__title">Equipe de interesse *</h3>
+                <button type="button" class="info-trigger info-trigger--card" data-info-key="equipe_de_interesse" aria-label="Ajuda sobre equipe de interesse" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
+            </div>
+            <p class="card-modern__subtitle">Adicione os participantes e função de cada um.</p>
+        </div>
+        <div class="card-modern__body">
+            <div class="table-box" data-table="equipe_de_interesse">
+            <div class="equipe-builder">
+                <div class="filter-field">
+                    <label for="equipe_tipo_pessoa" class="form-label-modern">Tipo</label>
+                    <select id="equipe_tipo_pessoa" class="form-input-modern form-input-modern--sm">
+                        <option value="Associado">Associado</option>
+                        <option value="Responsavel">Responsável</option>
+                        <option value="Outro">Outro</option>
+                    </select>
+                </div>
+                <div class="filter-field" id="equipe_field_associado">
+                    <label for="equipe_associado" class="form-label-modern">Associado</label>
+                    <select id="equipe_associado" class="form-input-modern form-input-modern--sm"></select>
+                </div>
+                <div class="filter-field d-none" id="equipe_field_responsavel">
+                    <label for="equipe_responsavel" class="form-label-modern">Responsável</label>
+                    <select id="equipe_responsavel" class="form-input-modern form-input-modern--sm"></select>
+                </div>
+                <div class="filter-field">
+                    <label for="equipe_nome" class="form-label-modern">Nome</label>
+                    <input id="equipe_nome" type="text" class="form-input-modern form-input-modern--sm" />
+                </div>
+                <div class="filter-field">
+                    <label for="equipe_email" class="form-label-modern">Email</label>
+                    <input id="equipe_email" type="text" class="form-input-modern form-input-modern--sm" />
+                </div>
+                <div class="filter-field">
+                    <label for="equipe_telefone" class="form-label-modern">Telefone</label>
+                    <input id="equipe_telefone" type="text" class="form-input-modern form-input-modern--sm" />
+                </div>
+                <div class="filter-field">
+                    <label for="equipe_funcao" class="form-label-modern">Função</label>
+                    <input id="equipe_funcao" type="text" class="form-input-modern form-input-modern--sm" />
+                </div>
+                <div class="equipe-builder__actions">
+                    <button type="button" id="btnAdicionarEquipe" class="btn-modern btn-modern--outline btn-modern--sm">Adicionar na tabela</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="data-table projeto-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Telefone</th>
+                            <th>Função</th>
+                            <th style="width: 72px;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rows_equipe_de_interesse"></tbody>
+                </table>
+            </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header">
+            <div class="card-title-with-help">
+                <h3 class="card-modern__title">Objetivos *</h3>
+                <button type="button" class="info-trigger info-trigger--card" data-info-key="objetivos" aria-label="Ajuda sobre objetivos" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
+            </div>
+        </div>
+        <div class="card-modern__body">
+            <div class="table-box" data-table="objetivos">
+                <div class="table-responsive">
+                    <table class="data-table projeto-table">
+                        <thead>
+                            <tr>
+                                <th>Objetivo</th>
+                                <th>Métrica de sucesso</th>
+                                <th style="width: 72px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rows_objetivos"></tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="table-footer-cell">
+                                    <button type="button" class="btn-add-row-footer" data-add-row="objetivos" aria-label="Adicionar objetivo">Nova Linha</button>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header">
+            <h3 class="card-modern__title">Impacto</h3>
+            <p class="card-modern__subtitle">Competências, especialidades e relação com os Objetivos de Desenvolvimento Sustentável.</p>
+        </div>
+        <div class="card-modern__body">
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-md-6">
+                    <div class="label-with-help">
+                        <label for="competencias" class="form-label-modern">Competências e Blocos de Aprendizagem</label>
+                        <button type="button" class="info-trigger info-trigger--field" data-info-key="competencias" aria-label="Ajuda sobre competências e blocos de aprendizagem" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
+                    </div>
+                    <input id="competencias" type="text" class="form-input-modern form-input-modern--sm" placeholder="Descreva as competências e blocos" />
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="label-with-help">
+                        <label for="especialidade" class="form-label-modern">Especialidades</label>
+                        <button type="button" class="info-trigger info-trigger--field" data-info-key="especialidade" aria-label="Ajuda sobre especialidades" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
+                    </div>
+                    <input id="especialidade" type="text" class="form-input-modern form-input-modern--sm" placeholder="Digite a especialidade" />
+                </div>
+            </div>
+            <div class="table-box" data-table="ods">
+                <div class="table-responsive">
+                    <table class="data-table projeto-table">
+                        <thead>
+                            <tr>
+                                <th>
+                                    <div class="table-th-actions">
+                                        <span>ODS</span>
+                                        <button type="button" class="info-trigger info-trigger--table" data-info-key="ods" aria-label="Ajuda sobre ODS" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
+                                    </div>
+                                </th>
+                                <th style="width: 72px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rows_ods"></tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2" class="table-footer-cell">
+                                    <button type="button" class="btn-add-row-footer" data-add-row="ods" aria-label="Adicionar ODS">Nova Linha</button>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header">
+            <div class="card-title-with-help">
+                <h3 class="card-modern__title">Cronograma *</h3>
+                <button type="button" class="info-trigger info-trigger--card" data-info-key="cronograma" aria-label="Ajuda sobre cronograma" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
+            </div>
+        </div>
+        <div class="card-modern__body">
+            <div class="table-box" data-table="cronograma">
+                <div class="table-responsive">
+                    <table class="data-table projeto-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 38px;"></th>
+                                <th>Data inicial</th>
+                                <th>Data final</th>
+                                <th>Tarefa</th>
+                                <th style="width: 72px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rows_cronograma"></tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="5" class="table-footer-cell">
+                                    <button type="button" class="btn-add-row-footer" data-add-row="cronograma" aria-label="Adicionar tarefa no cronograma">Nova Linha</button>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <div class="gantt-card" aria-live="polite">
+                    <div class="gantt-card__header">
+                        <h4 class="gantt-card__title">Visualização Gantt</h4>
+                        <p class="gantt-card__subtitle">Arraste as extremidades para ajustar datas e arraste a barra para cima/baixo para reorganizar.</p>
+                    </div>
+                    <div id="cronogramaGantt" class="cronograma-gantt"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header">
+            <div class="card-title-with-help">
+                <h3 class="card-modern__title">Recursos *</h3>
+                <button type="button" class="info-trigger info-trigger--card" data-info-key="recursos" aria-label="Ajuda sobre recursos" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
+            </div>
+        </div>
+        <div class="card-modern__body">
+            <div class="table-box" data-table="recursos">
+                <div class="table-responsive">
+                    <table class="data-table projeto-table">
+                        <thead>
+                            <tr>
+                                <th>Recurso</th>
+                                <th style="width: 72px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rows_recursos"></tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2" class="table-footer-cell">
+                                    <button type="button" class="btn-add-row-footer" data-add-row="recursos" aria-label="Adicionar recurso">Nova Linha</button>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header">
+            <div class="card-title-with-help">
+                <h3 class="card-modern__title">Riscos *</h3>
+                <button type="button" class="info-trigger info-trigger--card" data-info-key="riscos" aria-label="Ajuda sobre riscos" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
+            </div>
+        </div>
+        <div class="card-modern__body">
+            <div class="table-box" data-table="riscos">
+                <div class="table-responsive">
+                    <table class="data-table projeto-table">
+                        <thead>
+                            <tr>
+                                <th>Risco</th>
+                                <th>Mitigação</th>
+                                <th style="width: 72px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rows_riscos"></tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="table-footer-cell">
+                                    <button type="button" class="btn-add-row-footer" data-add-row="riscos" aria-label="Adicionar risco">Nova Linha</button>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <section class="card-modern form-card">
+        <div class="card-modern__header">
+            <h3 class="card-modern__title">Observações e comentários</h3>
+        </div>
+        <div class="card-modern__body">
+            <label for="observacoes_e_comentarios" class="form-label-modern">Observações e comentários</label>
+            <textarea id="observacoes_e_comentarios" class="form-input-modern form-input-modern--sm" rows="3"></textarea>
+        </div>
+    </section>
+
+    <section id="avaliacaoSection" class="card-modern form-card d-none">
+        <div class="card-modern__header">
+            <h3 class="card-modern__title">Revisão do TAP por IA</h3>
+        </div>
+        <div class="card-modern__body">
+            <label for="avaliacao_tap_markdown" class="form-label-modern">Resultado da avaliação</label>
+            <div id="avaliacao_tap_markdown" class="avaliacao-markdown form-input-modern form-input-modern--sm" aria-live="polite"></div>
+        </div>
+    </section>
+
+    <div id="infoModal" class="info-modal d-none" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="infoModalTitle">
+        <div class="info-modal__backdrop" data-info-close></div>
+        <div class="info-modal__panel" role="document">
+            <div class="info-modal__header">
+                <h4 id="infoModalTitle" class="info-modal__title"></h4>
+                <button type="button" class="info-modal__close" data-info-close aria-label="Fechar">×</button>
+            </div>
+            <div id="infoModalBody" class="info-modal__body"></div>
+        </div>
+    </div>
+
+    <div id="pendingReviewModal" class="info-modal d-none" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="pendingReviewModalTitle">
+        <div class="info-modal__backdrop" data-pending-review-close></div>
+        <div class="info-modal__panel" role="document">
+            <div class="info-modal__header">
+                <h4 id="pendingReviewModalTitle" class="info-modal__title">Comentários de revisão pendentes</h4>
+                <button type="button" class="info-modal__close" data-pending-review-close aria-label="Fechar">×</button>
+            </div>
+            <div class="info-modal__body">
+                <div class="table-responsive">
+                    <table class="data-table projeto-table">
+                        <thead>
+                            <tr>
+                                <th>Aprovador</th>
+                                <th>Etapa</th>
+                                <th>Comentário</th>
+                                <th>Data</th>
+                                <th style="width: 110px;">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rows_pending_review_comments"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="submitConfirmModal" class="info-modal d-none" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="submitConfirmModalTitle">
+        <div class="info-modal__backdrop" data-submit-confirm-close></div>
+        <div class="info-modal__panel" role="document">
+            <div class="info-modal__header">
+                <h4 id="submitConfirmModalTitle" class="info-modal__title">Confirmar submissão</h4>
+                <button type="button" class="info-modal__close" data-submit-confirm-close aria-label="Fechar">×</button>
+            </div>
+            <div class="info-modal__body">
+                <p>Deseja submeter este projeto para aprovação agora?</p>
+            </div>
+            <div class="confirm-modal-footer">
+                <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-submit-confirm-close>Cancelar</button>
+                <button type="button" id="btnConfirmSubmitProjeto" class="btn-modern btn-modern--primary btn-modern--sm">Confirmar submissão</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <button type="button" id="btnSalvarRascunho" class="btn-modern btn-modern--outline btn-modern--sm">Salvar rascunho</button>
+        <button type="button" id="btnSubmeter" class="btn-modern btn-modern--primary btn-modern--sm">Submeter</button>
+        <button type="button" id="btnAvaliacaoIA" class="btn-modern btn-modern--secondary btn-modern--sm">Revisão por IA</button>
+    </div>
+</div>
+{% endblock %}

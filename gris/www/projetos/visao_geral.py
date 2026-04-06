@@ -5,13 +5,14 @@ from gris.api.portal_cache_utils import get_uel_cached
 
 no_cache = 1
 
-PROJECT_STATUSES = ["Rascunho", "Em aprovacao", "Aprovado", "Em execucao", "Concluido"]
+PROJECT_STATUSES = ["Rascunho", "Em aprovacao", "Aprovado", "Em execucao", "Concluido", "Cancelado"]
 STATUS_LABELS = {
 	"Rascunho": "Rascunho",
 	"Em aprovacao": "Em aprovação",
 	"Aprovado": "Aprovado",
 	"Em execucao": "Em execução",
 	"Concluido": "Concluído",
+	"Cancelado": "Cancelado",
 }
 
 

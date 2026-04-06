@@ -69,7 +69,7 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 		"children": [
 			{"label": "Todos os projetos", "path": "/projetos/visao_geral"},
 			{"label": "Meus projetos", "path": "/projetos/meus_projetos"},
-			{"label": "Cadastrar novo projeto", "path": "/projetos?acao=cadastrar"},
+			{"label": "Cadastrar novo projeto", "path": "/projetos/cadastrar_novo_projeto"},
 		],
 	},
 	{
@@ -133,6 +133,9 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/projetos": ["Visualizador de projetos", "Editor de projetos"],
 	"/projetos/visao_geral": ["Visualizador de projetos", "Editor de projetos"],
 	"/projetos/meus_projetos": ["Visualizador de projetos", "Editor de projetos"],
+	"/projetos/cadastrar_novo_projeto": ["Editor de projetos"],
+	"/projetos/projeto": ["Visualizador de projetos", "Editor de projetos"],
+	"/projetos/aprovacao_projeto": ["Visualizador de projetos", "Editor de projetos"],
 }
 
 # Páginas marcadas como "estritas": mesmo System Manager deve ter uma das roles listadas.

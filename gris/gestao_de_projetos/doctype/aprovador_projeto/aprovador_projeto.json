@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2026-03-20 00:00:00.000000",
+ "creation": "2026-04-06 00:00:00.000000",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
@@ -12,16 +12,17 @@
   "nome",
   "email",
   "telefone",
-  "funcao"
+  "origem_regra",
+  "permite_remover"
  ],
  "fields": [
   {
-    "default": "Outro",
+   "default": "Associado",
    "fieldname": "tipo_pessoa",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Tipo de pessoa",
-    "options": "Associado\nResponsavel\nOutro",
+   "options": "Associado\nResponsavel",
    "reqd": 1
   },
   {
@@ -50,29 +51,41 @@
   {
    "fieldname": "email",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Email",
    "reqd": 1
   },
   {
    "fieldname": "telefone",
    "fieldtype": "Phone",
+   "in_list_view": 1,
    "label": "Telefone",
    "reqd": 1
   },
   {
-   "fieldname": "funcao",
-   "fieldtype": "Data",
-   "label": "Funcao"
+   "default": "manual",
+   "fieldname": "origem_regra",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Origem",
+    "options": "manual\ndiretor_presidente\npadrinho_orientador\nchefe_secao"
+  },
+  {
+   "default": "1",
+   "fieldname": "permite_remover",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Permite remover"
   }
  ],
  "grid_page_length": 20,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-20 00:00:00.000000",
+ "modified": "2026-04-06 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gestao de Projetos",
- "name": "Equipe de Interesse Projeto",
+ "name": "Aprovador Projeto",
  "owner": "Administrator",
  "permissions": [],
  "row_format": "Dynamic",

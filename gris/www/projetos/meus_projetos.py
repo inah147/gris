@@ -11,6 +11,7 @@ STATUS_LABELS = {
 	"Aprovado": "Aprovado",
 	"Em execucao": "Em execução",
 	"Concluido": "Concluído",
+	"Cancelado": "Cancelado",
 }
 
 
@@ -52,7 +53,9 @@ def _get_related_project_names(
 
 	if associado_name:
 		project_names.update(frappe.get_all("Projeto", filters={"coordenador": associado_name}, pluck="name"))
-		project_names.update(frappe.get_all("Projeto", filters={"padrinho_associado": associado_name}, pluck="name"))
+		project_names.update(
+			frappe.get_all("Projeto", filters={"padrinho_associado": associado_name}, pluck="name")
+		)
 		project_names.update(
 			frappe.get_all(
 				"Equipe de Interesse Projeto",

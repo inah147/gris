@@ -2661,7 +2661,7 @@
                 if (a.avaliacao_concluida) {
                     html += '<button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-ver-avaliacao-idx="' + a.idx + '">Ver detalhes</button>';
                 } else if (data.can_edit_general) {
-                    html += '<button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-reenviar-idx="' + a.idx + '">Reenviar e-mail</button>';
+                    html += '<button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-reenviar-idx="' + a.idx + '">Reenviar e-mail e WhatsApp</button>';
                 }
                 html += '</div></div>';
             });
@@ -2811,22 +2811,22 @@
         }
 
         try {
-            await callApi(METHODS.reenviarEmailAvaliacao, {
+            var result = await callApi(METHODS.reenviarEmailAvaliacao, {
                 projeto_name: state.projetoName,
                 avaliador_idx: avaliadorIdx,
             });
             if (btn) {
-                btn.textContent = "E-mail reenviado!";
+                btn.textContent = result && result.whatsapp_sent ? "Convite reenviado!" : "E-mail reenviado";
                 setTimeout(function () {
                     btn.disabled = false;
-                    btn.textContent = "Reenviar e-mail";
+                    btn.textContent = "Reenviar e-mail e WhatsApp";
                 }, 3000);
             }
         } catch (err) {
-            showAlert(err.message || "Falha ao reenviar e-mail.", "error");
+            showAlert(err.message || "Falha ao reenviar convite.", "error");
             if (btn) {
                 btn.disabled = false;
-                btn.textContent = "Reenviar e-mail";
+                btn.textContent = "Reenviar e-mail e WhatsApp";
             }
         }
     }

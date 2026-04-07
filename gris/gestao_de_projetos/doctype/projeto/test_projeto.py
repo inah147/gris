@@ -330,3 +330,363 @@ class TestProjeto(FrappeTestCase):
 			self.assertEqual(chefes, ["CHEFE-ESCOTEIRO"])
 		finally:
 			projeto_module.frappe.get_all = original_get_all
+
+	def test_current_stage_pending_approvers_excludes_already_approved(self):
+		original_lookup = _patch_person_payload_lookup()
+		try:
+			doc = _DummyDoc(
+				{
+					"tipo_padrinho_ou_orientador": "Associado",
+					"padrinho_associado": "SPONSOR-1",
+					"aprovadores": [
+						frappe._dict(
+							{
+								"tipo_pessoa": "Associado",
+								"associado": "SPONSOR-1",
+								"origem_regra": "padrinho_orientador",
+								"permite_remover": 0,
+							}
+						),
+						frappe._dict(
+							{
+								"tipo_pessoa": "Associado",
+								"associado": "ASSOC-2",
+								"origem_regra": "manual",
+								"permite_remover": 1,
+							}
+						),
+						frappe._dict(
+							{
+								"tipo_pessoa": "Associado",
+								"associado": "DIR-1",
+								"origem_regra": "diretor_presidente",
+								"permite_remover": 1,
+							}
+						),
+					],
+					"comentarios_revisao_aprovacao": [
+						frappe._dict(
+							{
+								"tipo_revisao": "Aprovacao",
+								"etapa_aprovacao": projeto_module.STAGE_APROVADORES_INICIAIS,
+								"aprovador": "Associado:SPONSOR-1",
+								"aprovador_tipo": "Associado",
+								"aprovador_associado": "SPONSOR-1",
+							}
+						)
+					],
+				}
+			)
+
+			pipeline = projeto_module._build_approval_pipeline(doc)
+			current_stage, pending = projeto_module._get_current_stage_pending_approvers(doc, pipeline)
+
+			self.assertEqual(current_stage["key"], projeto_module.STAGE_APROVADORES_INICIAIS)
+			self.assertEqual({row.get("key") for row in pending}, {"Associado:ASSOC-2"})
+		finally:
+			projeto_module._get_person_payload_by_type = original_lookup
+
+	def test_enviar_emails_avaliacao_dispara_whatsapp_com_mesmo_link(self):
+		original_sendmail = projeto_module.frappe.sendmail
+		original_get_url = projeto_module.frappe.utils.get_url
+		original_whatsapp = projeto_module._send_whatsapp_notification
+
+		enviados_email: list[dict] = []
+		enviados_whatsapp: list[dict] = []
+
+		def fake_sendmail(**kwargs):
+			enviados_email.append(kwargs)
+
+		def fake_get_url(*args, **kwargs):
+			return "https://gris.local"
+
+		def fake_send_whatsapp(numero: str, mensagem: str, *, contexto: str) -> bool:
+			enviados_whatsapp.append(
+				{
+					"numero": numero,
+					"mensagem": mensagem,
+					"contexto": contexto,
+				}
+			)
+			return True
+
+		projeto_module.frappe.sendmail = fake_sendmail
+		projeto_module.frappe.utils.get_url = fake_get_url
+		projeto_module._send_whatsapp_notification = fake_send_whatsapp
+
+		try:
+			projeto_doc = frappe._dict({"name": "PROJ-0001", "nome_do_projeto": "Projeto Teste"})
+			avaliacao_doc = frappe._dict(
+				{
+					"avaliacoes_individuais": [
+						frappe._dict(
+							{
+								"email": "ana@example.com",
+								"token": "tok-123",
+								"avaliador": "Ana",
+							}
+						)
+					]
+				}
+			)
+
+			reviewers = [{"nome": "Ana", "email": "ana@example.com", "telefone": "11999990000"}]
+
+			projeto_module._enviar_emails_avaliacao(projeto_doc, avaliacao_doc, reviewers)
+
+			self.assertEqual(len(enviados_email), 1)
+			self.assertEqual(len(enviados_whatsapp), 1)
+			self.assertEqual(enviados_whatsapp[0]["numero"], "11999990000")
+			self.assertIn("mesmo link enviado por e-mail", enviados_whatsapp[0]["mensagem"])
+			self.assertIn("tok-123", enviados_whatsapp[0]["mensagem"])
+		finally:
+			projeto_module.frappe.sendmail = original_sendmail
+			projeto_module.frappe.utils.get_url = original_get_url
+			projeto_module._send_whatsapp_notification = original_whatsapp
+
+	def test_reenviar_avaliacao_individual_envia_email_e_whatsapp(self):
+		original_sendmail = projeto_module.frappe.sendmail
+		original_get_url = projeto_module.frappe.utils.get_url
+		original_whatsapp = projeto_module._send_whatsapp_notification
+		original_get_reviewers = projeto_module._get_all_reviewer_data
+
+		enviados_email: list[dict] = []
+		enviados_whatsapp: list[dict] = []
+
+		def fake_sendmail(**kwargs):
+			enviados_email.append(kwargs)
+
+		def fake_get_url(*args, **kwargs):
+			return "https://gris.local"
+
+		def fake_send_whatsapp(numero: str, mensagem: str, *, contexto: str) -> bool:
+			enviados_whatsapp.append(
+				{
+					"numero": numero,
+					"mensagem": mensagem,
+					"contexto": contexto,
+				}
+			)
+			return True
+
+		def fake_get_reviewers(_projeto_doc):
+			return [{"nome": "Ana Silva", "email": "ana@example.com", "telefone": "11999990000"}]
+
+		projeto_module.frappe.sendmail = fake_sendmail
+		projeto_module.frappe.utils.get_url = fake_get_url
+		projeto_module._send_whatsapp_notification = fake_send_whatsapp
+		projeto_module._get_all_reviewer_data = fake_get_reviewers
+
+		try:
+			projeto_doc = frappe._dict({"name": "PROJ-0001", "nome_do_projeto": "Projeto Teste"})
+			row = frappe._dict(
+				{
+					"email": "ana@example.com",
+					"token": "tok-abc",
+					"avaliador": "Ana Silva",
+				}
+			)
+
+			result = projeto_module._enviar_email_avaliacao_individual(projeto_doc, row)
+
+			self.assertEqual(len(enviados_email), 1)
+			self.assertEqual(len(enviados_whatsapp), 1)
+			self.assertEqual(enviados_whatsapp[0]["numero"], "11999990000")
+			self.assertIn("tok-abc", enviados_whatsapp[0]["mensagem"])
+			self.assertTrue(result["email_sent"])
+			self.assertTrue(result["whatsapp_sent"])
+		finally:
+			projeto_module.frappe.sendmail = original_sendmail
+			projeto_module.frappe.utils.get_url = original_get_url
+			projeto_module._send_whatsapp_notification = original_whatsapp
+			projeto_module._get_all_reviewer_data = original_get_reviewers
+
+	def test_notificacao_entrada_aprovacao_envia_somente_etapa_atual(self):
+		original_get_doc = projeto_module.frappe.get_doc
+		original_build_pipeline = projeto_module._build_approval_pipeline
+		original_pending = projeto_module._get_current_stage_pending_approvers
+		original_link = projeto_module._build_project_portal_link
+		original_whatsapp = projeto_module._send_whatsapp_project_button_notification
+		original_coordinator_payload = projeto_module._get_associado_payload_loose
+
+		enviados: list[dict] = []
+		doc = frappe._dict(
+			{
+				"name": "PROJ-0002",
+				"status": projeto_module.STATUS_EM_APROVACAO,
+				"nome_do_projeto": "Projeto A",
+				"coordenador": "COORD-1",
+			}
+		)
+
+		def fake_get_doc(doctype: str, name: str):
+			if doctype == "Projeto" and name == doc.name:
+				return doc
+			return original_get_doc(doctype, name)
+
+		def fake_build_pipeline(_doc):
+			return [{"key": "aprovadores_iniciais", "label": "Etapa inicial", "approvers": []}]
+
+		def fake_pending(_doc, _pipeline):
+			return (
+				{"key": "aprovadores_iniciais", "label": "Etapa inicial"},
+				[
+					{"nome": "Aprovador 1", "telefone": "11988887777"},
+					{"nome": "Aprovador sem telefone", "telefone": ""},
+				],
+			)
+
+		def fake_link(path: str, projeto_name: str) -> str:
+			self.assertEqual(path, "/projetos/aprovacao_projeto")
+			self.assertEqual(projeto_name, "PROJ-0002")
+			return "https://gris.local/projetos/aprovacao_projeto?projeto=PROJ-0002"
+
+		def fake_send_whatsapp(
+			numero: str,
+			*,
+			titulo: str,
+			descricao: str,
+			link: str,
+			contexto: str,
+		) -> bool:
+			enviados.append(
+				{
+					"numero": numero,
+					"titulo": titulo,
+					"descricao": descricao,
+					"link": link,
+					"contexto": contexto,
+				}
+			)
+			return True
+
+		def fake_coordinator_payload(_name: str):
+			return {"nome": "Coord", "email": "coord@example.com", "telefone": "11900000000"}
+
+		projeto_module.frappe.get_doc = fake_get_doc
+		projeto_module._build_approval_pipeline = fake_build_pipeline
+		projeto_module._get_current_stage_pending_approvers = fake_pending
+		projeto_module._build_project_portal_link = fake_link
+		projeto_module._send_whatsapp_project_button_notification = fake_send_whatsapp
+		projeto_module._get_associado_payload_loose = fake_coordinator_payload
+
+		try:
+			projeto_module.enviar_notificacao_whatsapp_entrada_aprovacao("PROJ-0002")
+			self.assertEqual(len(enviados), 1)
+			self.assertEqual(enviados[0]["numero"], "11988887777")
+			self.assertEqual(enviados[0]["titulo"], "Aprovacao de Projeto")
+			self.assertIn("Ola, Aprovador!", enviados[0]["descricao"])
+			self.assertIn("Um novo projeto foi enviado para aprovacao", enviados[0]["descricao"])
+			self.assertIn("**Projeto**: Projeto A", enviados[0]["descricao"])
+			self.assertIn("**Etapa**: Etapa inicial", enviados[0]["descricao"])
+			self.assertIn("PROJ-0002", enviados[0]["link"])
+		finally:
+			projeto_module.frappe.get_doc = original_get_doc
+			projeto_module._build_approval_pipeline = original_build_pipeline
+			projeto_module._get_current_stage_pending_approvers = original_pending
+			projeto_module._build_project_portal_link = original_link
+			projeto_module._send_whatsapp_project_button_notification = original_whatsapp
+			projeto_module._get_associado_payload_loose = original_coordinator_payload
+
+	def test_aprovar_projeto_etapa_dispara_notificacao_imediata_da_proxima_etapa(self):
+		original_require_access = projeto_module._require_project_read_access
+		original_get_doc = projeto_module.frappe.get_doc
+		original_build_pipeline = projeto_module._build_approval_pipeline
+		original_get_current_stage = projeto_module._get_current_approval_stage
+		original_get_stage_user = projeto_module._get_stage_user_approver
+		original_get_approved_map = projeto_module._get_approved_keys_by_stage
+		original_append_review = projeto_module._append_review_row
+		original_enqueue = projeto_module._enqueue_project_whatsapp_job
+
+		enqueued: list[dict] = []
+
+		class _ApprovalDoc:
+			def __init__(self):
+				self.name = "PROJ-APP-01"
+				self.status = projeto_module.STATUS_EM_APROVACAO
+				self._saved = False
+
+			def has_permission(self, permission):
+				return permission == "read"
+
+			def get(self, key):
+				if key == "status":
+					return self.status
+				return None
+
+			def save(self, ignore_permissions=False):
+				self._saved = True
+
+		doc = _ApprovalDoc()
+
+		current_stage = {
+			"key": projeto_module.STAGE_APROVADORES_INICIAIS,
+			"label": "Etapa inicial",
+			"approvers": [{"key": "Associado:CAIO"}],
+		}
+		next_stage = {
+			"key": projeto_module.STAGE_DIRETOR,
+			"label": "Diretor Presidente",
+			"approvers": [{"key": "Associado:IURI"}],
+		}
+
+		calls = {"current_stage": 0}
+
+		def fake_require_access():
+			return "approver@example.com"
+
+		def fake_get_doc(doctype: str, name: str):
+			if doctype == "Projeto" and name == doc.name:
+				return doc
+			return original_get_doc(doctype, name)
+
+		def fake_build_pipeline(_doc):
+			return [current_stage, next_stage]
+
+		def fake_get_current_stage(_doc, _pipeline):
+			calls["current_stage"] += 1
+			if calls["current_stage"] == 1:
+				return current_stage
+			return next_stage
+
+		def fake_get_stage_user(_user, _stage):
+			return {"key": "Associado:CAIO", "tipo_pessoa": "Associado", "associado": "CAIO"}
+
+		def fake_get_approved_map(_doc):
+			return {}
+
+		def fake_append_review(*args, **kwargs):
+			return None
+
+		def fake_enqueue(method: str, **kwargs):
+			enqueued.append({"method": method, "kwargs": kwargs})
+
+		projeto_module._require_project_read_access = fake_require_access
+		projeto_module.frappe.get_doc = fake_get_doc
+		projeto_module._build_approval_pipeline = fake_build_pipeline
+		projeto_module._get_current_approval_stage = fake_get_current_stage
+		projeto_module._get_stage_user_approver = fake_get_stage_user
+		projeto_module._get_approved_keys_by_stage = fake_get_approved_map
+		projeto_module._append_review_row = fake_append_review
+		projeto_module._enqueue_project_whatsapp_job = fake_enqueue
+
+		try:
+			result = projeto_module.aprovar_projeto_etapa(doc.name)
+			self.assertTrue(doc._saved)
+			self.assertEqual(result["status"], projeto_module.STATUS_EM_APROVACAO)
+			self.assertEqual(result["proximo_passo"], "Diretor Presidente")
+			self.assertEqual(len(enqueued), 1)
+			self.assertEqual(
+				enqueued[0]["method"],
+				"gris.gestao_de_projetos.doctype.projeto.projeto.enviar_notificacao_whatsapp_avanco_etapa_aprovacao",
+			)
+			self.assertEqual(enqueued[0]["kwargs"]["projeto_name"], doc.name)
+		finally:
+			projeto_module._require_project_read_access = original_require_access
+			projeto_module.frappe.get_doc = original_get_doc
+			projeto_module._build_approval_pipeline = original_build_pipeline
+			projeto_module._get_current_approval_stage = original_get_current_stage
+			projeto_module._get_stage_user_approver = original_get_stage_user
+			projeto_module._get_approved_keys_by_stage = original_get_approved_map
+			projeto_module._append_review_row = original_append_review
+			projeto_module._enqueue_project_whatsapp_job = original_enqueue

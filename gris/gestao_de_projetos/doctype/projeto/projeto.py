@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import unicodedata
 from typing import Any
+from urllib.parse import quote
 
 import frappe
 from frappe import _
@@ -12,6 +13,7 @@ from frappe.utils import cint, get_datetime, get_fullname, getdate, now_datetime
 from gris.gestao_de_projetos.doctype.avaliacao_de_projeto.avaliacao_de_projeto import (
 	_get_all_reviewer_data,
 )
+from gris.utils.whatsapp import enviar_mensagem_formatada, enviar_texto
 
 
 def _is_beneficiario_categoria(categoria: str | None) -> bool:
@@ -1099,6 +1101,345 @@ def _serialize_pipeline(doc: Document, user: str) -> dict[str, Any]:
 	}
 
 
+def _build_project_portal_link(path: str, projeto_name: str) -> str:
+	encoded_name = quote((projeto_name or "").strip())
+	return frappe.utils.get_url(f"{path}?projeto={encoded_name}")
+
+
+def _send_whatsapp_notification(
+	numero: str,
+	mensagem: str,
+	*,
+	contexto: str,
+	enqueue: bool = True,
+) -> bool:
+	telefone = (numero or "").strip()
+	if not telefone or not mensagem:
+		return False
+
+	try:
+		enviar_texto(telefone, mensagem, enqueue=enqueue)
+		return True
+	except Exception:
+		frappe.log_error(
+			message=frappe.get_traceback(),
+			title=f"Falha ao enviar WhatsApp ({contexto})",
+		)
+		return False
+
+
+def _send_whatsapp_project_button_notification(
+	numero: str,
+	*,
+	titulo: str,
+	descricao: str,
+	link: str,
+	contexto: str,
+) -> bool:
+	telefone = (numero or "").strip()
+	if not telefone or not titulo or not descricao or not link:
+		return False
+
+	button_label = "Clique para abrir projeto"
+	botoes = [
+		{
+			"type": "url",
+			"displayText": button_label,
+			"url": link,
+		}
+	]
+
+	try:
+		enviar_mensagem_formatada(
+			telefone,
+			titulo=titulo,
+			descricao=descricao,
+			footer="GRIS",
+			botoes=botoes,
+			enqueue=False,
+		)
+		return True
+	except Exception:
+		frappe.log_error(
+			message=frappe.get_traceback(),
+			title=f"Falha ao enviar WhatsApp com botão ({contexto})",
+		)
+
+	fallback_message = f"{titulo}\n\n{descricao}\n\n{button_label}: {link}"
+	return _send_whatsapp_notification(
+		telefone,
+		fallback_message,
+		contexto=f"{contexto}:fallback",
+		enqueue=False,
+	)
+
+
+def _enqueue_project_whatsapp_job(method: str, **kwargs) -> None:
+	try:
+		frappe.enqueue(
+			method=method,
+			queue="short",
+			timeout=180,
+			enqueue_after_commit=True,
+			**kwargs,
+		)
+	except Exception:
+		frappe.log_error(
+			message=frappe.get_traceback(),
+			title=f"Falha ao enfileirar job de WhatsApp ({method})",
+		)
+
+
+def _get_current_stage_pending_approvers(
+	doc: Document, pipeline: list[dict[str, Any]]
+) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
+	current_stage = _get_current_approval_stage(doc, pipeline)
+	if not current_stage:
+		return None, []
+
+	approved_map = _get_approved_keys_by_stage(doc)
+	stage_key = current_stage.get("key") or ""
+	approved_keys = approved_map.get(stage_key, set())
+
+	pending: list[dict[str, Any]] = []
+	for approver in current_stage.get("approvers") or []:
+		approver_key = (approver.get("key") or "").strip()
+		if approver_key and approver_key in approved_keys:
+			continue
+		pending.append(approver)
+
+	return current_stage, pending
+
+
+def _get_coordinator_notification_contact(doc: Document) -> dict[str, str] | None:
+	coordenador = (doc.get("coordenador") or "").strip()
+	if not coordenador:
+		return None
+
+	payload = _get_associado_payload_loose(coordenador)
+	telefone = (payload.get("telefone") or "").strip()
+	if not telefone:
+		return None
+	nome = (payload.get("nome") or coordenador).strip()
+	primeiro_nome = _get_first_name(nome, fallback=coordenador)
+
+	return {
+		"nome": primeiro_nome,
+		"telefone": telefone,
+	}
+
+
+def _build_reviewers_phone_map(reviewers: list[dict[str, str]] | None) -> dict[tuple[str, str], str]:
+	phone_map: dict[tuple[str, str], str] = {}
+
+	for reviewer in reviewers or []:
+		nome = (reviewer.get("nome") or "").strip().lower()
+		email = (reviewer.get("email") or "").strip().lower()
+		telefone = (reviewer.get("telefone") or "").strip()
+		if not telefone:
+			continue
+
+		if email:
+			phone_map[("email", email)] = telefone
+		if nome and ("nome", nome) not in phone_map:
+			phone_map[("nome", nome)] = telefone
+
+	return phone_map
+
+
+def _get_first_name(nome_completo: str, fallback: str = "") -> str:
+	nome = (nome_completo or "").strip()
+	if not nome:
+		return (fallback or "").strip()
+	return nome.split()[0]
+
+
+def _build_approval_request_description(primeiro_nome: str, projeto_titulo: str, etapa_label: str) -> str:
+	return (
+		f"Oi, {primeiro_nome}!\n\n"
+		"Um novo projeto foi enviado para aprovação e sua aprovação foi solicitada.\n\n"
+		f"*Projeto*: {projeto_titulo}\n"
+		f"*Etapa*: {etapa_label}"
+	)
+
+
+def enviar_notificacao_whatsapp_entrada_aprovacao(projeto_name: str) -> None:
+	if not projeto_name:
+		return
+
+	doc = frappe.get_doc("Projeto", projeto_name)
+	if doc.get("status") != STATUS_EM_APROVACAO:
+		return
+
+	pipeline = _build_approval_pipeline(doc)
+	current_stage, pending_approvers = _get_current_stage_pending_approvers(doc, pipeline)
+	if not current_stage or not pending_approvers:
+		return
+
+	projeto_titulo = (doc.get("nome_do_projeto") or "").strip() or doc.name
+	link = _build_project_portal_link("/projetos/aprovacao_projeto", doc.name)
+	etapa_label = (current_stage.get("label") or "").strip() or _("Etapa atual")
+
+	for approver in pending_approvers:
+		numero = (approver.get("telefone") or "").strip()
+		if not numero:
+			continue
+
+		nome = (
+			approver.get("nome") or approver.get("associado") or approver.get("responsavel") or ""
+		).strip() or _("Aprovador")
+		primeiro_nome = _get_first_name(nome, fallback=str(_("Aprovador")))
+		descricao = _build_approval_request_description(primeiro_nome, projeto_titulo, etapa_label)
+		_send_whatsapp_project_button_notification(
+			numero,
+			titulo="*Aprovacao de Projeto*",
+			descricao=descricao,
+			link=link,
+			contexto=f"entrada_aprovacao:{doc.name}",
+		)
+
+
+def enviar_notificacao_whatsapp_avanco_etapa_aprovacao(projeto_name: str) -> None:
+	if not projeto_name:
+		return
+
+	doc = frappe.get_doc("Projeto", projeto_name)
+	if doc.get("status") != STATUS_EM_APROVACAO:
+		return
+
+	pipeline = _build_approval_pipeline(doc)
+	current_stage, pending_approvers = _get_current_stage_pending_approvers(doc, pipeline)
+	if not current_stage or not pending_approvers:
+		return
+
+	projeto_titulo = (doc.get("nome_do_projeto") or "").strip() or doc.name
+	link = _build_project_portal_link("/projetos/aprovacao_projeto", doc.name)
+	etapa_label = (current_stage.get("label") or "").strip() or _("Etapa atual")
+
+	for approver in pending_approvers:
+		numero = (approver.get("telefone") or "").strip()
+		if not numero:
+			continue
+
+		nome = (
+			approver.get("nome") or approver.get("associado") or approver.get("responsavel") or ""
+		).strip() or _("Aprovador")
+		primeiro_nome = _get_first_name(nome, fallback=str(_("Aprovador")))
+		descricao = _build_approval_request_description(primeiro_nome, projeto_titulo, etapa_label)
+		_send_whatsapp_project_button_notification(
+			numero,
+			titulo="*Sua aprovação foi solicitada*",
+			descricao=descricao,
+			link=link,
+			contexto=f"avanco_etapa_aprovacao:{doc.name}",
+		)
+
+
+def enviar_notificacao_whatsapp_projeto_aprovado(projeto_name: str) -> None:
+	if not projeto_name:
+		return
+
+	doc = frappe.get_doc("Projeto", projeto_name)
+	contact = _get_coordinator_notification_contact(doc)
+	if not contact:
+		return
+
+	projeto_titulo = (doc.get("nome_do_projeto") or "").strip() or doc.name
+	link = _build_project_portal_link("/projetos/projeto_aprovado", doc.name)
+	mensagem = (
+		f"Oi, {contact['nome']}!\n\nO projeto *{projeto_titulo}* foi aprovado.\n\nAcesse os detalhes: {link}"
+	)
+	_send_whatsapp_notification(contact["telefone"], mensagem, contexto=f"projeto_aprovado:{doc.name}")
+
+
+def enviar_notificacao_whatsapp_alteracoes_solicitadas(projeto_name: str, comentarios: str = "") -> None:
+	if not projeto_name:
+		return
+
+	doc = frappe.get_doc("Projeto", projeto_name)
+	contact = _get_coordinator_notification_contact(doc)
+	if not contact:
+		return
+
+	projeto_titulo = (doc.get("nome_do_projeto") or "").strip() or doc.name
+	comentarios_resumo = " ".join((comentarios or "").strip().split())
+	if len(comentarios_resumo) > 180:
+		comentarios_resumo = f"{comentarios_resumo[:177]}..."
+
+	link = _build_project_portal_link("/projetos/cadastrar_novo_projeto", doc.name)
+	mensagem = (
+		f"Ola, {contact['nome']}!\n\n"
+		f'Foram solicitadas alteracoes no projeto "{projeto_titulo}".\n'
+		f"Comentario: {comentarios_resumo or '-'}\n\n"
+		f"Acesse o projeto: {link}"
+	)
+	_send_whatsapp_notification(
+		contact["telefone"],
+		mensagem,
+		contexto=f"alteracoes_solicitadas:{doc.name}",
+	)
+
+
+def enviar_lembretes_whatsapp_aprovacao_projetos() -> None:
+	logger = frappe.logger("projetos_whatsapp", allow_site=True)
+	projetos = frappe.get_all(
+		"Projeto",
+		filters={"status": STATUS_EM_APROVACAO},
+		fields=["name"],
+		limit_page_length=500,
+	)
+	if not projetos:
+		return
+
+	total_enviadas = 0
+	for row in projetos:
+		projeto_name = (row.get("name") or "").strip()
+		if not projeto_name:
+			continue
+
+		try:
+			doc = frappe.get_doc("Projeto", projeto_name)
+			pipeline = _build_approval_pipeline(doc)
+			current_stage, pending_approvers = _get_current_stage_pending_approvers(doc, pipeline)
+			if not current_stage or not pending_approvers:
+				continue
+
+			projeto_titulo = (doc.get("nome_do_projeto") or "").strip() or doc.name
+			etapa_label = (current_stage.get("label") or "").strip() or _("Etapa atual")
+			link = _build_project_portal_link("/projetos/aprovacao_projeto", doc.name)
+
+			for approver in pending_approvers:
+				numero = (approver.get("telefone") or "").strip()
+				if not numero:
+					continue
+
+				nome = (
+					approver.get("nome") or approver.get("associado") or approver.get("responsavel") or ""
+				).strip() or _("Aprovador")
+				primeiro_nome = _get_first_name(nome, fallback=str(_("Aprovador")))
+				descricao = (
+					f"Oi, {primeiro_nome}!\n\n"
+					f"Lembrete diário de aprovação pendente.\n"
+					f"Projeto: {projeto_titulo}\n"
+					f"Etapa atual: {etapa_label}"
+				)
+				if _send_whatsapp_project_button_notification(
+					numero,
+					titulo="*Lembrete de Aprovação*",
+					descricao=descricao,
+					link=link,
+					contexto=f"lembrete_aprovacao:{doc.name}",
+				):
+					total_enviadas += 1
+		except Exception:
+			frappe.log_error(
+				message=frappe.get_traceback(),
+				title=f"Falha no lembrete de aprovacao via WhatsApp ({projeto_name})",
+			)
+
+	logger.info(f"Lembretes de aprovacao enviados via WhatsApp: {total_enviadas}")
+
+
 def _require_authenticated_user() -> str:
 	if frappe.session.user == "Guest":
 		frappe.throw(_("Você precisa estar logado para executar esta ação."), frappe.PermissionError)
@@ -1717,6 +2058,10 @@ def submeter_projeto(payload: str | dict[str, Any], projeto_name: str | None = N
 	doc.status = STATUS_EM_APROVACAO
 	doc.flags.portal_draft_save = False
 	doc.save()
+	_enqueue_project_whatsapp_job(
+		"gris.gestao_de_projetos.doctype.projeto.projeto.enviar_notificacao_whatsapp_entrada_aprovacao",
+		projeto_name=doc.name,
+	)
 
 	return {
 		"ok": True,
@@ -1777,11 +2122,23 @@ def aprovar_projeto_etapa(projeto_name: str) -> dict[str, Any]:
 	)
 
 	next_stage = _get_current_approval_stage(doc, pipeline)
+	has_stage_advanced = bool(next_stage and (next_stage.get("key") or "") != stage_key)
+	is_final_approval = not next_stage
 	if not next_stage:
 		doc.status = STATUS_APROVADO
 
 	# A autorização é determinada pela elegibilidade da etapa atual, não por permissão de write do DocType.
 	doc.save(ignore_permissions=True)
+	if is_final_approval:
+		_enqueue_project_whatsapp_job(
+			"gris.gestao_de_projetos.doctype.projeto.projeto.enviar_notificacao_whatsapp_projeto_aprovado",
+			projeto_name=doc.name,
+		)
+	elif has_stage_advanced:
+		_enqueue_project_whatsapp_job(
+			"gris.gestao_de_projetos.doctype.projeto.projeto.enviar_notificacao_whatsapp_avanco_etapa_aprovacao",
+			projeto_name=doc.name,
+		)
 
 	return {
 		"ok": True,
@@ -1827,6 +2184,11 @@ def solicitar_alteracoes_projeto(projeto_name: str, comentarios: str) -> dict[st
 	doc.flags.portal_draft_save = True
 	# A autorização é determinada pela elegibilidade da etapa atual, não por permissão de write do DocType.
 	doc.save(ignore_permissions=True)
+	_enqueue_project_whatsapp_job(
+		"gris.gestao_de_projetos.doctype.projeto.projeto.enviar_notificacao_whatsapp_alteracoes_solicitadas",
+		projeto_name=doc.name,
+		comentarios=comentarios,
+	)
 
 	return {
 		"ok": True,
@@ -2467,7 +2829,7 @@ def iniciar_avaliacao_projeto(projeto_name: str) -> dict[str, Any]:
 
 	avaliacao_doc.insert(ignore_permissions=True)
 
-	_enviar_emails_avaliacao(doc, avaliacao_doc)
+	_enviar_emails_avaliacao(doc, avaliacao_doc, reviewers)
 
 	return {
 		"ok": True,
@@ -2475,15 +2837,19 @@ def iniciar_avaliacao_projeto(projeto_name: str) -> dict[str, Any]:
 	}
 
 
-def _enviar_emails_avaliacao(projeto_doc, avaliacao_doc) -> None:
+def _enviar_emails_avaliacao(
+	projeto_doc, avaliacao_doc, reviewers: list[dict[str, str]] | None = None
+) -> None:
 	"""Envia email de convite para cada avaliador."""
 	projeto_titulo = (projeto_doc.get("nome_do_projeto") or "").strip() or projeto_doc.name
 	site_url = frappe.utils.get_url()
+	reviewer_phone_map = _build_reviewers_phone_map(reviewers)
 
 	for row in avaliacao_doc.avaliacoes_individuais or []:
 		email = (row.email or "").strip()
 		token = (row.token or "").strip()
 		nome = (row.avaliador or "").strip()
+		primeiro_nome = _get_first_name(nome, fallback="avaliador")
 		if not email or not token:
 			continue
 
@@ -2523,14 +2889,32 @@ def _enviar_emails_avaliacao(projeto_doc, avaliacao_doc) -> None:
 				title=f"Falha ao enviar email de avaliação para {email}",
 			)
 
+		telefone = reviewer_phone_map.get(("email", email.lower())) or reviewer_phone_map.get(
+			("nome", nome.lower())
+		)
+		if telefone:
+			whatsapp_message = (
+				f"Oi, {primeiro_nome}!\n\n"
+				f"Chegou o momento de avaliar o projeto *{projeto_titulo}*! "
+				f"Para isso, basta acessar o link abaixo e preencher sua avaliação:\n{link}\n\n"
+				f"Ahh, este é o mesmo link enviado por e-mail, então não precisa se preocupar em responder duas vezes, combinado?\n\n"
+				"Obrigado por contribuir para melhorar nossos projetos!"
+			)
+			_send_whatsapp_notification(
+				telefone,
+				whatsapp_message,
+				contexto=f"avaliacao_projeto:{projeto_doc.name}:{email}",
+			)
 
-def _enviar_email_avaliacao_individual(projeto_doc, row) -> None:
-	"""Reenvia email de convite para um avaliador específico."""
+
+def _enviar_email_avaliacao_individual(projeto_doc, row) -> dict[str, bool]:
+	"""Reenvia convite individual por email e, quando disponível, por WhatsApp."""
 	projeto_titulo = (projeto_doc.get("nome_do_projeto") or "").strip() or projeto_doc.name
 	site_url = frappe.utils.get_url()
 	email = (row.email or "").strip()
 	token = (row.token or "").strip()
 	nome = (row.avaliador or "").strip()
+	primeiro_nome = _get_first_name(nome, fallback="avaliador")
 
 	if not email or not token:
 		frappe.throw(_("Avaliador sem email ou token."))
@@ -2563,10 +2947,32 @@ def _enviar_email_avaliacao_individual(projeto_doc, row) -> None:
 		now=True,
 	)
 
+	reviewers = _get_all_reviewer_data(projeto_doc)
+	reviewer_phone_map = _build_reviewers_phone_map(reviewers)
+	telefone = reviewer_phone_map.get(("email", email.lower())) or reviewer_phone_map.get(
+		("nome", nome.lower())
+	)
+	if not telefone:
+		return {"email_sent": True, "whatsapp_sent": False}
+
+	whatsapp_message = (
+		f"Oi, {primeiro_nome}!\n\n"
+		f"Este é um lembrete para avaliar o projeto *{projeto_titulo}*. "
+		f"Acesse o link para preencher sua avaliação:\n{link}\n\n"
+		"Obrigado por contribuir para melhorar nossos projetos!"
+	)
+	whatsapp_sent = _send_whatsapp_notification(
+		telefone,
+		whatsapp_message,
+		contexto=f"reenviar_avaliacao_projeto:{projeto_doc.name}:{email}",
+	)
+
+	return {"email_sent": True, "whatsapp_sent": bool(whatsapp_sent)}
+
 
 @frappe.whitelist()
 def reenviar_email_avaliacao(projeto_name: str, avaliador_idx: int) -> dict[str, Any]:
-	"""Reenvia email de convite para um avaliador que ainda não respondeu."""
+	"""Reenvia convite de avaliação (email e WhatsApp) para avaliador pendente."""
 	user = _require_project_editor_access()
 	if not projeto_name:
 		frappe.throw(_("Projeto não informado."))
@@ -2574,7 +2980,7 @@ def reenviar_email_avaliacao(projeto_name: str, avaliador_idx: int) -> dict[str,
 	doc = frappe.get_doc("Projeto", projeto_name)
 	if not _is_user_coordinator(user, doc):
 		frappe.throw(
-			_("Somente o coordenador do projeto pode reenviar emails de avaliação."),
+			_("Somente o coordenador do projeto pode reenviar convites de avaliação."),
 			frappe.PermissionError,
 		)
 
@@ -2595,9 +3001,13 @@ def reenviar_email_avaliacao(projeto_name: str, avaliador_idx: int) -> dict[str,
 	if cint(target.avaliacao_concluida):
 		frappe.throw(_("Este avaliador já respondeu a avaliação."))
 
-	_enviar_email_avaliacao_individual(doc, target)
+	resultado_envio = _enviar_email_avaliacao_individual(doc, target)
 
-	return {"ok": True}
+	return {
+		"ok": True,
+		"email_sent": bool(resultado_envio.get("email_sent")),
+		"whatsapp_sent": bool(resultado_envio.get("whatsapp_sent")),
+	}
 
 
 @frappe.whitelist()

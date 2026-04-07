@@ -2,7 +2,7 @@
  {
   "docstatus": 0,
   "doctype": "Role Profile",
-  "modified": "2026-03-11 22:12:13.063514",
+  "modified": "2026-04-07 07:23:02.862609",
   "name": "Dirigente",
   "role_profile": "Dirigente",
   "roles": [
@@ -29,13 +29,25 @@
     "parentfield": "roles",
     "parenttype": "Role Profile",
     "role": "Visualizador Calendario"
+   },
+   {
+    "parent": "Dirigente",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador de projetos"
+   },
+   {
+    "parent": "Dirigente",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Editor de projetos"
    }
   ]
  },
  {
   "docstatus": 0,
   "doctype": "Role Profile",
-  "modified": "2026-03-11 22:11:38.593760",
+  "modified": "2026-04-07 07:23:10.450697",
   "name": "Diretoria Eleita",
   "role_profile": "Diretoria Eleita",
   "roles": [
@@ -92,13 +104,25 @@
     "parentfield": "roles",
     "parenttype": "Role Profile",
     "role": "Recepcao"
+   },
+   {
+    "parent": "Diretoria Eleita",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador de projetos"
+   },
+   {
+    "parent": "Diretoria Eleita",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Editor de projetos"
    }
   ]
  },
  {
   "docstatus": 0,
   "doctype": "Role Profile",
-  "modified": "2026-03-11 22:14:35.978557",
+  "modified": "2026-04-07 07:22:12.858089",
   "name": "Beneficiário",
   "role_profile": "Beneficiário",
   "roles": [
@@ -113,13 +137,25 @@
     "parentfield": "roles",
     "parenttype": "Role Profile",
     "role": "Visualizador Financeiro"
+   },
+   {
+    "parent": "Beneficiário",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador de projetos"
+   },
+   {
+    "parent": "Beneficiário",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Editor de projetos"
    }
   ]
  },
  {
   "docstatus": 0,
   "doctype": "Role Profile",
-  "modified": "2026-03-11 22:13:02.893916",
+  "modified": "2026-04-07 07:22:39.543786",
   "name": "Assistente",
   "role_profile": "Assistente",
   "roles": [
@@ -140,6 +176,18 @@
     "parentfield": "roles",
     "parenttype": "Role Profile",
     "role": "Visualizador Calendario"
+   },
+   {
+    "parent": "Assistente",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador de projetos"
+   },
+   {
+    "parent": "Assistente",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Editor de projetos"
    }
   ]
  },
@@ -154,7 +202,7 @@
  {
   "docstatus": 0,
   "doctype": "Role Profile",
-  "modified": "2026-03-11 22:14:20.520392",
+  "modified": "2026-04-07 07:22:21.688827",
   "name": "Comissão Fiscal",
   "role_profile": "Comissão Fiscal",
   "roles": [
@@ -187,13 +235,25 @@
     "parentfield": "roles",
     "parenttype": "Role Profile",
     "role": "Visualizador Associados"
+   },
+   {
+    "parent": "Comissão Fiscal",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador de projetos"
+   },
+   {
+    "parent": "Comissão Fiscal",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Editor de projetos"
    }
   ]
  },
  {
   "docstatus": 0,
   "doctype": "Role Profile",
-  "modified": "2026-03-11 22:14:03.570567",
+  "modified": "2026-04-07 07:22:31.750034",
   "name": "Gestor Financeiro",
   "role_profile": "Gestor Financeiro",
   "roles": [
@@ -238,13 +298,25 @@
     "parentfield": "roles",
     "parenttype": "Role Profile",
     "role": "Gestor de Associados"
+   },
+   {
+    "parent": "Gestor Financeiro",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador de projetos"
+   },
+   {
+    "parent": "Gestor Financeiro",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Editor de projetos"
    }
   ]
  },
  {
   "docstatus": 0,
   "doctype": "Role Profile",
-  "modified": "2026-03-11 22:12:41.839522",
+  "modified": "2026-04-07 07:22:54.473706",
   "name": "Chefe de Seção",
   "role_profile": "Chefe de Seção",
   "roles": [
@@ -283,6 +355,18 @@
     "parentfield": "roles",
     "parenttype": "Role Profile",
     "role": "Recepcao"
+   },
+   {
+    "parent": "Chefe de Seção",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Visualizador de projetos"
+   },
+   {
+    "parent": "Chefe de Seção",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Editor de projetos"
    }
   ]
  }

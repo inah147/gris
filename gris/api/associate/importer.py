@@ -232,8 +232,13 @@ def _upsert_responsavel(payload: dict) -> tuple[str | None, str]:
 	return new_resp.name, "created"
 
 
-def _upsert_responsavel_vinculo(responsavel_name: str, associado_name: str) -> str:
-	"""Retorna action em {created, updated, skipped}."""
+def _upsert_responsavel_vinculo(responsavel_name: str, associado_name: str, cpf_raw: str = "") -> str:
+	"""Retorna action em {created, updated, skipped}.
+
+	Se já existir um vínculo entre o responsável e o Novo Associado correspondente
+	(criado na recepção), atualiza o vínculo existente adicionando o Associado.
+	"""
+	# 1. Buscar vínculo já ligado ao Associado
 	existing_link_name = frappe.db.get_value(
 		"Responsavel Vinculo",
 		{"responsavel": responsavel_name, "beneficiario_associado": associado_name},
@@ -246,6 +251,24 @@ def _upsert_responsavel_vinculo(responsavel_name: str, associado_name: str) -> s
 			return "updated"
 		return "skipped"
 
+	# 2. Buscar vínculo existente via Novo Associado (criado na recepção)
+	if cpf_raw:
+		cpf_clean = re.sub(r"\D", "", cpf_raw)
+		na_name = hashlib.md5(cpf_clean.encode("utf-8")).hexdigest()
+		na_link_name = frappe.db.get_value(
+			"Responsavel Vinculo",
+			{"responsavel": responsavel_name, "beneficiario_novo_associado": na_name},
+			"name",
+		)
+		if na_link_name:
+			frappe.db.set_value(
+				"Responsavel Vinculo",
+				na_link_name,
+				{"beneficiario_associado": associado_name, "é_guardiao_legal": 1},
+			)
+			return "updated"
+
+	# 3. Criar novo vínculo
 	new_link = frappe.new_doc("Responsavel Vinculo")
 	new_link.responsavel = responsavel_name
 	new_link.beneficiario_associado = associado_name
@@ -502,7 +525,7 @@ def parse_associates_report(path_pdf: str) -> dict:
 						results[f"responsavel_{responsavel_action}"] += 1
 
 						if responsavel_name:
-							vinculo_action = _upsert_responsavel_vinculo(responsavel_name, associado_name)
+							vinculo_action = _upsert_responsavel_vinculo(responsavel_name, associado_name, cpf)
 							results[f"vinculo_{vinculo_action}"] += 1
 						else:
 							results["vinculo_skipped"] += 1

@@ -96,7 +96,20 @@ def run_daily_backup():
 			)
 			uploaded_files.append(uploaded)
 
-		deleted_count = _apply_retention_policy(drive, settings)
+		retention_summary = _new_retention_summary()
+		try:
+			retention_summary = _apply_retention_policy(drive, settings)
+		except Exception:
+			retention_summary["warning"] = _(
+				"Retencao nao foi concluida. Verifique Error Log para detalhes."
+			)
+			retention_traceback = frappe.get_traceback()
+			frappe.log_error(retention_traceback, "Shared Drive Retention Failure")
+			logger.warning(
+				"Retencao com falha no Shared Drive. site=%s warning=%s",
+				frappe.local.site,
+				retention_summary["warning"],
+			)
 
 		frappe.db.set_single_value(
 			SETTINGS_DOCTYPE,
@@ -108,18 +121,34 @@ def run_daily_backup():
 		frappe.db.commit()
 
 		logger.info(
-			"Backup concluido no Shared Drive. site=%s snapshot=%s uploaded=%s deleted=%s",
+			"Backup concluido no Shared Drive. site=%s snapshot=%s uploaded=%s deleted=%s already_missing=%s retention_failed=%s",
 			frappe.local.site,
 			snapshot_folder["name"],
 			len(uploaded_files),
-			deleted_count,
+			retention_summary["deleted_count"],
+			retention_summary["already_missing_count"],
+			retention_summary["failed_count"],
 		)
+
+		notification_message = _(
+			"Backup concluido com sucesso. Snapshot: {0}. Arquivos enviados: {1}. "
+			"Snapshots removidos por retencao: {2}. Snapshots ja ausentes: {3}. "
+			"Falhas na retencao: {4}."
+		).format(
+			snapshot_folder["name"],
+			len(uploaded_files),
+			retention_summary["deleted_count"],
+			retention_summary["already_missing_count"],
+			retention_summary["failed_count"],
+		)
+
+		if retention_summary.get("warning"):
+			notification_message = f"{notification_message} {retention_summary['warning']}"
+
 		_send_notification(
 			settings,
 			success=True,
-			message=_(
-				"Backup concluido com sucesso. Snapshot: {0}. Arquivos enviados: {1}. Snapshots removidos por retencao: {2}."
-			).format(snapshot_folder["name"], len(uploaded_files), deleted_count),
+			message=notification_message,
 		)
 	except Exception:
 		error_message = frappe.get_traceback()
@@ -264,7 +293,8 @@ def _upload_file_to_shared_drive(drive, settings, backup_path, parent_folder_id)
 def _apply_retention_policy(drive, settings):
 	cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=settings.retention_days)
 	page_token = None
-	deleted = 0
+	summary = _new_retention_summary()
+	logger = frappe.logger("shared_drive_backup")
 
 	while True:
 		params = {
@@ -293,16 +323,102 @@ def _apply_retention_policy(drive, settings):
 			if not created_time or created_time >= cutoff:
 				continue
 
-			_execute_with_retry(
-				lambda fid=file_info["id"]: drive.files().delete(fileId=fid, supportsAllDrives=True).execute()
+			delete_result = _delete_snapshot_folder(drive, file_info)
+			if delete_result["status"] == "deleted":
+				summary["deleted_count"] += 1
+				continue
+
+			if delete_result["status"] == "already_missing":
+				summary["already_missing_count"] += 1
+				logger.info(
+					"Snapshot de retencao ja ausente no Shared Drive. site=%s snapshot=%s id=%s",
+					frappe.local.site,
+					file_info.get("name"),
+					file_info.get("id"),
+				)
+				continue
+
+			summary["failed_count"] += 1
+			summary["failures"].append(
+				{
+					"folder_id": file_info.get("id"),
+					"folder_name": file_info.get("name"),
+					"status_code": delete_result.get("status_code"),
+				}
 			)
-			deleted += 1
+			logger.warning(
+				"Falha ao remover snapshot de retencao. site=%s snapshot=%s id=%s status=%s",
+				frappe.local.site,
+				file_info.get("name"),
+				file_info.get("id"),
+				delete_result.get("status_code"),
+			)
 
 		page_token = response.get("nextPageToken")
 		if not page_token:
 			break
 
-	return deleted
+	summary["warning"] = _build_retention_warning(summary)
+	return summary
+
+
+def _delete_snapshot_folder(drive, file_info):
+	folder_id = file_info.get("id")
+	if not folder_id:
+		return {
+			"status": "failed",
+			"status_code": None,
+		}
+
+	try:
+		_execute_with_retry(
+			lambda fid=folder_id: drive.files().delete(fileId=fid, supportsAllDrives=True).execute()
+		)
+		return {
+			"status": "deleted",
+			"status_code": None,
+		}
+	except HttpError as exc:
+		status_code = _get_http_status_code(exc)
+		if status_code == 404:
+			return {
+				"status": "already_missing",
+				"status_code": status_code,
+			}
+
+		return {
+			"status": "failed",
+			"status_code": status_code,
+		}
+	except Exception:
+		return {
+			"status": "failed",
+			"status_code": None,
+		}
+
+
+def _new_retention_summary():
+	return {
+		"deleted_count": 0,
+		"already_missing_count": 0,
+		"failed_count": 0,
+		"failures": [],
+		"warning": "",
+	}
+
+
+def _build_retention_warning(summary):
+	if summary.get("failed_count"):
+		return _(
+			"Retencao executada com avisos. Nao foi possivel remover {0} snapshot(s)."
+		).format(summary["failed_count"])
+
+	if summary.get("already_missing_count"):
+		return _("Retencao encontrou {0} snapshot(s) ja ausente(s).").format(
+			summary["already_missing_count"]
+		)
+
+	return ""
 
 
 def _is_snapshot_folder(folder_name):
@@ -359,11 +475,15 @@ def _execute_with_retry(operation):
 		try:
 			return operation()
 		except HttpError as exc:
-			status_code = getattr(exc, "status_code", None) or getattr(exc.resp, "status", None)
+			status_code = _get_http_status_code(exc)
 			if status_code not in RETRYABLE_STATUS_CODES or attempt == MAX_RETRIES - 1:
 				raise
 
 			time.sleep(2**attempt)
+
+
+def _get_http_status_code(exc):
+	return getattr(exc, "status_code", None) or getattr(exc.resp, "status", None)
 
 
 def _send_notification(settings, success, message):

@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 import re
 import unicodedata
@@ -253,6 +254,39 @@ def _upsert_responsavel_vinculo(responsavel_name: str, associado_name: str) -> s
 	return "created"
 
 
+def _registrar_log_importacao(path_pdf: str, results: dict) -> None:
+	"""Persiste uma linha de log com o resultado da importação de associados."""
+	resumo = {
+		"total": results.get("total", 0),
+		"created": results.get("created", 0),
+		"updated": results.get("updated", 0),
+		"skipped": results.get("skipped", 0),
+		"errors": results.get("errors", 0),
+		"error_details": results.get("error_details", []),
+		"responsavel_created": results.get("responsavel_created", 0),
+		"responsavel_updated": results.get("responsavel_updated", 0),
+		"responsavel_skipped": results.get("responsavel_skipped", 0),
+		"vinculo_created": results.get("vinculo_created", 0),
+		"vinculo_updated": results.get("vinculo_updated", 0),
+		"vinculo_skipped": results.get("vinculo_skipped", 0),
+	}
+
+	log_doc = frappe.get_doc(
+		{
+			"doctype": "Log Importacao de Associados",
+			"arquivo_origem": path_pdf,
+			"sucesso": 1 if int(results.get("errors", 0) or 0) == 0 else 0,
+			"total_registros": int(results.get("total", 0) or 0),
+			"registros_criados": int(results.get("created", 0) or 0),
+			"registros_atualizados": int(results.get("updated", 0) or 0),
+			"registros_sem_alteracao": int(results.get("skipped", 0) or 0),
+			"total_erros": int(results.get("errors", 0) or 0),
+			"detalhes_resultado": json.dumps(resumo, ensure_ascii=False),
+		}
+	)
+	log_doc.insert()
+
+
 @frappe.whitelist()
 def parse_associates_report(path_pdf: str) -> dict:
 	"""
@@ -487,6 +521,7 @@ def parse_associates_report(path_pdf: str) -> dict:
 			results["error_details"].append(f"Linha {idx + 1} - {error_msg}")
 
 	# Commit das alterações
+	_registrar_log_importacao(path_pdf, results)
 	frappe.db.commit()
 
 	return results

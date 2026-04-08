@@ -156,7 +156,8 @@ scheduler_events = {
 		"0 3 * * *": ["gris.gestao_de_projetos.doctype.projeto.projeto.validar_tarefas_atrasadas_madrugada"],
 		"0 5 * * *": ["gris.api.users.user_manager.manage_associate_users"],
 		"0 9 * * *": [
-			"gris.gestao_de_projetos.doctype.projeto.projeto.enviar_lembretes_whatsapp_aprovacao_projetos"
+			"gris.gestao_de_projetos.doctype.projeto.projeto.enviar_lembretes_whatsapp_aprovacao_projetos",
+			"gris.api.associados_notificacoes.enviar_lembrete_atualizacao_associados",
 		],
 	},
 	# "all": [

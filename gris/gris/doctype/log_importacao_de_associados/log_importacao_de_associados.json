@@ -1,0 +1,112 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "hash",
+ "creation": "2026-04-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "data_importacao",
+  "arquivo_origem",
+  "sucesso",
+  "total_registros",
+  "registros_criados",
+  "registros_atualizados",
+  "registros_sem_alteracao",
+  "total_erros",
+  "detalhes_resultado"
+ ],
+ "fields": [
+  {
+   "default": "Now",
+   "fieldname": "data_importacao",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Data da Importacao",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "arquivo_origem",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Arquivo de Origem",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sucesso",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Sucesso",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_registros",
+   "fieldtype": "Int",
+   "label": "Total de Registros",
+   "read_only": 1
+  },
+  {
+   "fieldname": "registros_criados",
+   "fieldtype": "Int",
+   "label": "Registros Criados",
+   "read_only": 1
+  },
+  {
+   "fieldname": "registros_atualizados",
+   "fieldtype": "Int",
+   "label": "Registros Atualizados",
+   "read_only": 1
+  },
+  {
+   "fieldname": "registros_sem_alteracao",
+   "fieldtype": "Int",
+   "label": "Registros sem Alteracao",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_erros",
+   "fieldtype": "Int",
+   "label": "Total de Erros",
+   "read_only": 1
+  },
+  {
+   "fieldname": "detalhes_resultado",
+   "fieldtype": "Long Text",
+   "label": "Detalhes do Resultado",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-04-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Log Importacao de Associados",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Gestor de Associados"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "data_importacao"
+}

@@ -58,8 +58,21 @@ def get_context(context):
 
 	trans = frappe.get_all(
 		"Transacao Extrato Geral",
-		fields=["data_deposito", "categoria", "valor_absoluto", "debito_credito", "instituicao", "carteira"],
-		filters=[["data_deposito", ">=", start], ["data_deposito", "<=", end], ["metodo", "!=", "Dinheiro"]],
+		fields=[
+			"data_deposito",
+			"categoria",
+			"valor_absoluto",
+			"debito_credito",
+			"instituicao",
+			"carteira",
+			"ordinaria_extraordinaria",
+		],
+		filters=[
+			["data_deposito", ">=", start],
+			["data_deposito", "<=", end],
+			["metodo", "!=", "Dinheiro"],
+			["repasse_entre_contas", "=", 0],
+		],
 		limit_page_length=0,
 	)
 
@@ -69,6 +82,10 @@ def get_context(context):
 
 	# month totals
 	month_totals = {"entradas": {m["key"]: 0.0 for m in months}, "saidas": {m["key"]: 0.0 for m in months}}
+	month_totals_ordinarias = {
+		"entradas": {m["key"]: 0.0 for m in months},
+		"saidas": {m["key"]: 0.0 for m in months},
+	}
 
 	for t in trans:
 		date = t.get("data_deposito")
@@ -91,6 +108,9 @@ def get_context(context):
 		data[sec][cat][m] += val
 		month_totals[sec][m] += val
 
+		if t.get("ordinaria_extraordinaria") == "Ordinária":
+			month_totals_ordinarias[sec][m] += val
+
 	# compute saldo inicial per month: saldo inicial month 1 = sum of transactions before year start
 	# then saldo inicial for month N = saldo final month N-1
 	# saldo final month = saldo inicial + (entradas - saidas)
@@ -105,7 +125,7 @@ def get_context(context):
 	pre_tx = frappe.get_all(
 		"Transacao Extrato Geral",
 		fields=["SUM(valor) as total"],
-		filters={"data_deposito": ["<", start], "metodo": ["!=", "Dinheiro"]},
+		filters={"data_deposito": ["<", start], "metodo": ["!=", "Dinheiro"], "repasse_entre_contas": 0},
 		limit_page_length=0,
 	)
 	total_before = pre_tx[0].get("total") or 0.0 if pre_tx else 0.0
@@ -154,6 +174,7 @@ def get_context(context):
 		"saidas_cats": saidas_cats,
 		"data": data,
 		"month_totals": month_totals,
+		"month_totals_ordinarias": month_totals_ordinarias,
 		"saldo_inicial": saldo_inicial,
 		"saldo_final": saldo_final,
 		"year_options": year_options,

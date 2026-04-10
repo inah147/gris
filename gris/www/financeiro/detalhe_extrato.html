@@ -83,6 +83,24 @@
       <p class="card-modern__subtitle">Edite as informações complementares da transação</p>
     </div>
     <div class="card-modern__body">
+      {% if sugestoes_contribuicao %}
+      <div class="alert-modern alert-modern--info mb-4" id="banner-sugestao-contribuicao">
+        <svg class="alert-modern__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <div class="alert-modern__content">
+          <p class="alert-modern__title">Possível contribuição mensal</p>
+          <p class="alert-modern__description">Esta transação parece ser a contribuição mensal de:</p>
+          <ul style="margin: 0.5rem 0 0; padding-left: 1.25rem;">
+            {% for s in sugestoes_contribuicao %}
+            <li>{{ s.nome_completo }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% endif %}
       <form id="extrato-complementar-form">
         <div class="row g-3">
           <!-- Descrição e Descrição Reduzida -->

@@ -61,6 +61,20 @@ document.addEventListener('DOMContentLoaded', function() {
 	// Executa ao carregar a página
 	toggleConditionalFields();
 
+	// Toggle do banner de sugestão de contribuição mensal
+	function toggleBannerSugestao() {
+		const banner = document.getElementById('banner-sugestao-contribuicao');
+		if (!banner) return;
+		const revisada = document.getElementById('transacao_revisada');
+		banner.style.display = (revisada && revisada.checked) ? 'none' : '';
+	}
+	toggleBannerSugestao();
+
+	const revisadaCheckbox = document.getElementById('transacao_revisada');
+	if (revisadaCheckbox) {
+		revisadaCheckbox.addEventListener('change', toggleBannerSugestao);
+	}
+
 	// Adiciona listener no campo categoria
 	const categoriaSelect = document.querySelector('[name="categoria"]');
 	if (categoriaSelect) {

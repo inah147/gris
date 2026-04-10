@@ -531,30 +531,20 @@ def get_contribuicoes_mensais_por_status():
 def get_contribuicoes_mensais_inadimplencia():
 	months, labels, min_day, next_month = _build_month_sequence()
 	query = """
-		SELECT base.ym, COALESCE(a.atrasados, 0) AS atrasados, base.total_associados
-		FROM (
-		  SELECT DATE_FORMAT(mes_de_referencia, '%%Y-%%m') AS ym,
-		         COUNT(DISTINCT associado) AS total_associados
-		  FROM `tabPagamento Contribuicao Mensal`
-		  WHERE mes_de_referencia >= %(min_day)s AND mes_de_referencia < %(next_month)s
-		  GROUP BY ym
-		) base
-		LEFT JOIN (
-		  SELECT DATE_FORMAT(mes_de_referencia, '%%Y-%%m') AS ym,
-		         COUNT(DISTINCT associado) AS atrasados
-		  FROM `tabPagamento Contribuicao Mensal`
-		  WHERE mes_de_referencia >= %(min_day)s AND mes_de_referencia < %(next_month)s
-		    AND COALESCE(atrasou,0) = 1
-		  GROUP BY ym
-		) a ON a.ym = base.ym
+		SELECT DATE_FORMAT(mes_de_referencia, '%%Y-%%m') AS ym,
+		       COUNT(name) AS total,
+		       SUM(CASE WHEN status = 'Atrasado' THEN 1 ELSE 0 END) AS atrasados
+		FROM `tabPagamento Contribuicao Mensal`
+		WHERE mes_de_referencia >= %(min_day)s AND mes_de_referencia < %(next_month)s
+		GROUP BY ym
 	"""
 	rows = frappe.db.sql(query, {"min_day": min_day, "next_month": next_month}, as_dict=True)
 	row_map = {r.ym: r for r in rows}
 	values = []
 	for m in months:
 		row = row_map.get(m.strftime("%Y-%m"))
-		if row and row.total_associados:
-			pct = (float(row.atrasados or 0) / float(row.total_associados)) * 100.0
+		if row and row.total:
+			pct = (float(row.atrasados or 0) / float(row.total)) * 100.0
 		else:
 			pct = 0.0
 		values.append(round(pct, 2))
@@ -572,7 +562,8 @@ def get_inadimplencia_historica_12m():  # Renomeado de *_6m mantendo 12 meses
 		  (SELECT COUNT(DISTINCT associado) FROM `tabPagamento Contribuicao Mensal`
 		    WHERE mes_de_referencia >= %(min_day)s AND mes_de_referencia < %(next_month)s) AS total_associados,
 		  (SELECT COUNT(DISTINCT associado) FROM `tabPagamento Contribuicao Mensal`
-		    WHERE mes_de_referencia >= %(min_day)s AND mes_de_referencia < %(next_month)s AND COALESCE(atrasou,0)=1) AS atrasados
+		    WHERE mes_de_referencia >= %(min_day)s AND mes_de_referencia < %(next_month)s
+		      AND status = 'Atrasado') AS atrasados
 	"""
 	row = frappe.db.sql(query, {"min_day": min_day, "next_month": next_month}, as_dict=True)
 	total_ass = float(row[0].total_associados) if row and row[0].total_associados else 0.0

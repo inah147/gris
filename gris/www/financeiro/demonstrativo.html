@@ -122,6 +122,19 @@
             {% endfor %}
           </tr>
 
+          <!-- Resultado Ordinário -->
+          <tr class="demonstrativo-table__row--result">
+            <td class="demonstrativo-table__cell demonstrativo-table__cell--bold">Resultado Ordinário</td>
+            {% for m in demonstrativo.months %}
+              {% set entr_ord = demonstrativo.month_totals_ordinarias.entradas.get(m.key) or 0 %}
+              {% set said_ord = demonstrativo.month_totals_ordinarias.saidas.get(m.key) or 0 %}
+              {% set resultado_ord = entr_ord - said_ord %}
+              <td class="demonstrativo-table__cell demonstrativo-table__cell--number demonstrativo-table__cell--bold {% if resultado_ord >= 0 %}demonstrativo-table__cell--positive{% else %}demonstrativo-table__cell--negative{% endif %}">
+                R$ {{ '{:,.2f}'.format(resultado_ord).replace(',', 'X').replace('.', ',').replace('X', '.') }}
+              </td>
+            {% endfor %}
+          </tr>
+
           <!-- Saldo Final -->
           <tr class="demonstrativo-table__row--highlight demonstrativo-table__row--final">
             <td class="demonstrativo-table__cell demonstrativo-table__cell--bold">Saldo Final</td>

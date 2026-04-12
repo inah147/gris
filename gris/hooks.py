@@ -279,10 +279,12 @@ fixtures = [
 				[
 					"Editor de Parecer",
 					"Editor de projetos",
+					"Equipe de Metodos",
 					"Gestor Contribuição Mensal",
 					"Gestor de Adultos",
 					"Gestor de Associados",
 					"Gestor Financeiro",
+					"Gestor de Metodos",
 					"Visualizador Associados",
 					"Visualizador de projetos",
 					"Visualizador Contribuição Mensal",

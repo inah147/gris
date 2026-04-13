@@ -1,0 +1,37 @@
+{
+ "actions": [],
+ "creation": "2026-04-13 12:37:25.132155",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "handle"
+ ],
+ "fields": [
+  {
+   "fieldname": "handle",
+   "fieldtype": "Data",
+   "label": "Handle",
+   "reqd": 1,
+   "description": "Sua InfiniteTag (nome de usu\u00e1rio no App InfinitePay), sem o s\u00edmbolo $ do in\u00edcio"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-04-13 12:38:25.975032",
+ "modified_by": "Administrator",
+ "module": "Financeiro",
+ "name": "Configuracao infinitepay",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,239 @@
+{
+ "actions": [],
+ "autoname": "field:order_nsu",
+ "creation": "2026-04-13 12:39:42.009925",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_dados_pedido",
+  "order_nsu",
+  "status",
+  "column_break_pedido",
+  "link_pagamento",
+  "section_itens",
+  "itens",
+  "section_redirecionamento",
+  "redirect_url",
+  "section_cliente",
+  "customer_name",
+  "customer_email",
+  "column_break_cliente",
+  "customer_phone",
+  "section_endereco",
+  "address_cep",
+  "address_street",
+  "address_neighborhood",
+  "column_break_endereco",
+  "address_number",
+  "address_complement",
+  "section_pagamento",
+  "invoice_slug",
+  "amount",
+  "paid_amount",
+  "column_break_pagamento",
+  "installments",
+  "capture_method",
+  "transaction_nsu",
+  "receipt_url"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_dados_pedido",
+   "fieldtype": "Section Break",
+   "label": "Dados do Pedido"
+  },
+  {
+   "fieldname": "order_nsu",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Order NSU",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "Pendente",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Pendente\nPago\nErro",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_pedido",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "link_pagamento",
+   "fieldtype": "Small Text",
+   "label": "Link de Pagamento",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_itens",
+   "fieldtype": "Section Break",
+   "label": "Itens"
+  },
+  {
+   "fieldname": "itens",
+   "fieldtype": "Table",
+   "label": "Itens",
+   "options": "Item Cobranca Infinitepay",
+   "reqd": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_redirecionamento",
+   "fieldtype": "Section Break",
+   "label": "Redirecionamento (Opcional)"
+  },
+  {
+   "fieldname": "redirect_url",
+   "fieldtype": "Data",
+   "label": "URL de Redirecionamento",
+   "options": "URL"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_cliente",
+   "fieldtype": "Section Break",
+   "label": "Dados do Cliente (Opcional)"
+  },
+  {
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "label": "Nome do Cliente"
+  },
+  {
+   "fieldname": "customer_email",
+   "fieldtype": "Data",
+   "label": "E-mail do Cliente",
+   "options": "Email"
+  },
+  {
+   "fieldname": "column_break_cliente",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "customer_phone",
+   "fieldtype": "Data",
+   "label": "Telefone do Cliente",
+   "options": "Phone"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_endereco",
+   "fieldtype": "Section Break",
+   "label": "Endere\u00e7o de Entrega (Opcional)"
+  },
+  {
+   "fieldname": "address_cep",
+   "fieldtype": "Data",
+   "label": "CEP"
+  },
+  {
+   "fieldname": "address_street",
+   "fieldtype": "Data",
+   "label": "Rua"
+  },
+  {
+   "fieldname": "address_neighborhood",
+   "fieldtype": "Data",
+   "label": "Bairro"
+  },
+  {
+   "fieldname": "column_break_endereco",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "address_number",
+   "fieldtype": "Data",
+   "label": "N\u00famero"
+  },
+  {
+   "fieldname": "address_complement",
+   "fieldtype": "Data",
+   "label": "Complemento"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_pagamento",
+   "fieldtype": "Section Break",
+   "label": "Dados do Pagamento (via Webhook)"
+  },
+  {
+   "fieldname": "invoice_slug",
+   "fieldtype": "Data",
+   "label": "Invoice Slug",
+   "read_only": 1
+  },
+  {
+   "description": "Valor em centavos",
+   "fieldname": "amount",
+   "fieldtype": "Int",
+   "label": "Valor (centavos)",
+   "read_only": 1
+  },
+  {
+   "description": "Valor pago em centavos",
+   "fieldname": "paid_amount",
+   "fieldtype": "Int",
+   "label": "Valor Pago (centavos)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_pagamento",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "installments",
+   "fieldtype": "Int",
+   "label": "Parcelas",
+   "read_only": 1
+  },
+  {
+   "description": "credit_card ou pix",
+   "fieldname": "capture_method",
+   "fieldtype": "Data",
+   "label": "M\u00e9todo de Captura",
+   "read_only": 1
+  },
+  {
+   "fieldname": "transaction_nsu",
+   "fieldtype": "Data",
+   "label": "Transaction NSU",
+   "read_only": 1
+  },
+  {
+   "fieldname": "receipt_url",
+   "fieldtype": "Small Text",
+   "label": "URL do Comprovante",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-04-13 12:39:42.009925",
+ "modified_by": "Administrator",
+ "module": "Financeiro",
+ "name": "Cobranca Infinitepay",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

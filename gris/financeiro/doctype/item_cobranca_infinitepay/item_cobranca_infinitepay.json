@@ -1,0 +1,48 @@
+{
+ "actions": [],
+ "creation": "2026-04-13 12:40:38.181847",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "descricao",
+  "quantidade",
+  "preco"
+ ],
+ "fields": [
+  {
+   "fieldname": "descricao",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Descri\u00e7\u00e3o",
+   "reqd": 1
+  },
+  {
+   "fieldname": "quantidade",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Quantidade",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "preco",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Pre\u00e7o",
+   "non_negative": 1,
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-04-13 12:42:25.514472",
+ "modified_by": "Administrator",
+ "module": "Financeiro",
+ "name": "Item Cobranca Infinitepay",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

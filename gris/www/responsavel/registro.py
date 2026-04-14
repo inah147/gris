@@ -219,6 +219,34 @@ def update_novo_associado(novo_associado_name, data, responsaveis_data=None):
 		if isinstance(responsaveis_data, str):
 			responsaveis_data = json.loads(responsaveis_data)
 
+		# Validate duplicate CPFs across associado and responsáveis
+		all_cpfs = []
+		associado_cpf = re.sub(r"\D", "", data.get("cpf") or "")
+		if associado_cpf:
+			all_cpfs.append((associado_cpf, "Novo Associado"))
+
+		for resp_item in responsaveis_data:
+			if not resp_item.get("nome_completo") and not resp_item.get("cpf"):
+				continue
+			resp_cpf = re.sub(r"\D", "", resp_item.get("cpf") or "")
+			if resp_cpf:
+				resp_label = resp_item.get("nome_completo") or "Responsável"
+				all_cpfs.append((resp_cpf, resp_label))
+
+		seen_cpfs = {}
+		duplicates = []
+		for cpf_digits, label in all_cpfs:
+			if cpf_digits in seen_cpfs:
+				duplicates.append(label)
+				if seen_cpfs[cpf_digits] not in duplicates:
+					duplicates.append(seen_cpfs[cpf_digits])
+			else:
+				seen_cpfs[cpf_digits] = label
+
+		if duplicates:
+			nomes = ", ".join(dict.fromkeys(duplicates))
+			frappe.throw(f"Os CPFs devem ser distintos. CPFs repetidos encontrados em: {nomes}.")
+
 		for resp_item in responsaveis_data:
 			resp_id = resp_item.get("name")
 

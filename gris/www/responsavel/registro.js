@@ -371,6 +371,51 @@ frappe.ready(function() {
             }
         });
 
+        // Validate Duplicate CPFs
+        if (isValid) {
+            const cpfEntries = [];
+            const mainCpfRaw = $('#cpf').val();
+            if (mainCpfRaw) {
+                cpfEntries.push({ digits: mainCpfRaw.replace(/\D/g, ''), label: 'Novo Associado', field: $('#cpf') });
+            }
+            $('.responsavel-wrapper:visible .responsavel-card').each(function() {
+                const card = $(this);
+                const respName = card.find('.responsavel-card__title').text() || 'Responsável';
+                const respCpfField = card.find('input[data-fieldname="cpf"]');
+                const val = respCpfField.val();
+                if (val) {
+                    cpfEntries.push({ digits: val.replace(/\D/g, ''), label: respName, field: respCpfField });
+                }
+            });
+
+            const seen = {};
+            const duplicates = [];
+            cpfEntries.forEach(entry => {
+                if (!entry.digits) return;
+                if (seen[entry.digits]) {
+                    duplicates.push(entry);
+                    if (!seen[entry.digits].flagged) {
+                        duplicates.push(seen[entry.digits]);
+                        seen[entry.digits].flagged = true;
+                    }
+                } else {
+                    seen[entry.digits] = entry;
+                }
+            });
+
+            if (duplicates.length) {
+                duplicates.forEach(d => d.field.addClass('is-invalid'));
+                const names = [...new Set(duplicates.map(d => d.label))].join(', ');
+                frappe.msgprint({
+                    title: 'CPF Duplicado',
+                    indicator: 'red',
+                    message: `Os CPFs devem ser distintos. CPFs repetidos encontrados em: ${names}.`
+                });
+                isValid = false;
+                if (!firstInvalidField) firstInvalidField = duplicates[0].field;
+            }
+        }
+
         if (!isValid) return;
 
         let $btn = $(this).find('button[type="submit"]');

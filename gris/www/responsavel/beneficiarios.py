@@ -1,5 +1,7 @@
+import re
+
 import frappe
-from frappe.utils import add_days, cint, getdate, today
+from frappe.utils import add_days, cint, getdate, now, today
 
 from gris.api.portal_access import enrich_context
 
@@ -244,10 +246,14 @@ def get_context(context):
 					visit_info.data_da_visita, {"fieldtype": "Date"}
 				)
 
+	# CPF do responsável para validação client-side (não exibido, apenas para comparação)
+	responsavel_cpf = frappe.db.get_value("Responsavel", responsavel_name, "cpf") or ""
+
 	context.visit_info = visit_info
 	context.beneficiarios_registrados = beneficiarios_registrados
 	context.beneficiarios_integracao = beneficiarios_integracao
 	context.show_schedule_button = show_schedule_button and not visit_info
+	context.responsavel_cpf = responsavel_cpf
 
 	context.sidebar_title = "Painel do Responsável"
 	context.active_link = "/responsavel/beneficiarios"
@@ -432,3 +438,112 @@ def _status_badge_class(status):
 	if status == "vencido":
 		return "g-badge--warning"
 	return "g-badge--secondary"
+
+
+@frappe.whitelist()
+def adicionar_beneficiario(nome_jovem, cpf_jovem, data_nascimento_jovem):
+	"""Adiciona um novo beneficiário (jovem) vinculado ao responsável logado.
+
+	Cria Novo Associado com status 'Conversa Inicial', registra auditoria
+	em Resposta Manifestacao de Interesse e cria o vínculo.
+	"""
+	user = frappe.session.user
+	if user == "Guest":
+		frappe.throw("Acesso negado.", frappe.PermissionError)
+
+	if "Responsavel" not in frappe.get_roles(user):
+		frappe.throw("Você não tem permissão para esta operação.", frappe.PermissionError)
+
+	responsavel_name = _get_responsavel_name(user)
+	if not responsavel_name:
+		frappe.throw("Responsável não encontrado para o usuário logado.")
+
+	# Validar campos obrigatórios
+	nome_jovem = (nome_jovem or "").strip()
+	cpf_jovem = (cpf_jovem or "").strip()
+	data_nascimento_jovem = (data_nascimento_jovem or "").strip()
+
+	if not nome_jovem or not cpf_jovem or not data_nascimento_jovem:
+		frappe.throw("Todos os campos são obrigatórios: nome, CPF e data de nascimento.")
+
+	# Validar formato do nome (somente letras, espaços e acentos)
+	if not re.match(r"^[A-Za-zÀ-ÿ\s]+$", nome_jovem):
+		frappe.throw("Nome do jovem deve conter apenas letras e espaços.")
+
+	# Normalizar CPF (remover formatação)
+	cpf_limpo = re.sub(r"\D", "", cpf_jovem)
+	if len(cpf_limpo) != 11:
+		frappe.throw("CPF do jovem deve conter 11 dígitos.")
+
+	# Validar data de nascimento (deve ser anterior a hoje)
+	try:
+		data_nasc = getdate(data_nascimento_jovem)
+	except Exception:
+		frappe.throw("Data de nascimento inválida.")
+
+	if data_nasc >= getdate(today()):
+		frappe.throw("Data de nascimento deve ser anterior a hoje.")
+
+	# Buscar dados do responsável
+	responsavel_doc = frappe.get_doc("Responsavel", responsavel_name)
+
+	# CPF do jovem não pode ser igual ao do responsável
+	cpf_responsavel_limpo = re.sub(r"\D", "", responsavel_doc.cpf or "")
+	if cpf_limpo == cpf_responsavel_limpo:
+		frappe.throw("O CPF do jovem não pode ser o mesmo do responsável.")
+
+	# Verificar se já existe Novo Associado com o mesmo CPF
+	existing_novo_associado = frappe.db.exists("Novo Associado", {"cpf": cpf_jovem})
+	if existing_novo_associado:
+		frappe.throw(
+			"Já existe um jovem cadastrado com este CPF. Verifique os dados ou entre em contato com o grupo."
+		)
+
+	savepoint_name = f"add_beneficiario_{frappe.generate_hash(length=8)}"
+	frappe.db.savepoint(savepoint_name)
+
+	try:
+		# 1. Registrar auditoria em Resposta Manifestacao de Interesse
+		frappe.get_doc(
+			{
+				"doctype": "Resposta Manifestacao de Interesse",
+				"nome_do_responsavel": responsavel_doc.nome_completo,
+				"email_do_responsavel": responsavel_doc.email,
+				"celular_do_responsavel": responsavel_doc.celular,
+				"cpf_do_responsavel": responsavel_doc.cpf,
+				"nome_do_jovem": nome_jovem,
+				"data_de_nascimento_do_jovem": data_nascimento_jovem,
+				"cpf_do_jovem": cpf_jovem,
+				"data_e_horario_de_resposta": now(),
+				"dados_confirmados": 1,
+				"aceite_lgpd": 1,
+			}
+		).insert(ignore_permissions=True)
+
+		# 2. Criar Novo Associado com status "Conversa Inicial"
+		novo_associado_doc = frappe.get_doc(
+			{
+				"doctype": "Novo Associado",
+				"nome_completo": nome_jovem,
+				"data_de_nascimento": data_nascimento_jovem,
+				"cpf": cpf_jovem,
+				"status": "Conversa Inicial",
+			}
+		)
+		novo_associado_doc.insert(ignore_permissions=True)
+
+		# 3. Criar Responsavel Vinculo
+		frappe.get_doc(
+			{
+				"doctype": "Responsavel Vinculo",
+				"responsavel": responsavel_name,
+				"beneficiario_novo_associado": novo_associado_doc.name,
+			}
+		).insert(ignore_permissions=True)
+
+		return {"ok": True, "message": "Beneficiário adicionado com sucesso!"}
+
+	except Exception:
+		frappe.db.rollback(save_point=savepoint_name)
+		frappe.log_error("Erro ao adicionar beneficiário")
+		frappe.throw("Ocorreu um erro ao adicionar o beneficiário. Tente novamente.")

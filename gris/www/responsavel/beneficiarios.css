@@ -199,3 +199,48 @@
 		justify-content: center;
 	}
 }
+
+/* Section header actions */
+.section-header-wrap {
+	flex-wrap: wrap;
+	gap: 0.75rem;
+}
+
+.section-header-actions {
+	display: flex;
+	gap: 0.75rem;
+	flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+	.section-header-wrap {
+		flex-direction: column;
+		align-items: stretch !important;
+	}
+
+	.section-header-actions {
+		flex-direction: column;
+		width: 100%;
+	}
+
+	.section-header-actions .btn-modern {
+		width: 100%;
+		justify-content: center;
+	}
+}
+
+/* Adicionar Beneficiário form spacing */
+#form-adicionar-beneficiario .form-group-modern {
+	margin-bottom: 1rem;
+}
+
+#form-adicionar-beneficiario .is-invalid {
+	border-color: var(--color-danger, #dc3545);
+}
+
+#form-adicionar-beneficiario .is-invalid + .invalid-feedback {
+	display: block;
+	color: var(--color-danger, #dc3545);
+	font-size: 0.8rem;
+	margin-top: 0.25rem;
+}

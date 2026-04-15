@@ -61,7 +61,7 @@ def get_context(context):
 			resp_doc = frappe.get_doc("Responsavel", v.responsavel)
 			responsaveis.append({"vinculo": v, "doc": resp_doc})
 
-	responsaveis.sort(key=lambda x: (x["doc"].nome_completo or ""))
+	responsaveis.sort(key=lambda x: x["doc"].nome_completo or "")
 
 	# Ensure at least 2 items for the UI
 	while len(responsaveis) < 2:
@@ -377,7 +377,9 @@ def update_novo_associado(novo_associado_name, data, responsaveis_data=None):
 	if guarda_unilateral:
 		guardioes = [v for v in all_vinculos if cint(v.get("\u00e9_guardiao_legal")) == 1]
 		if len(guardioes) != 1:
-			frappe.throw("Com guarda unilateral, exatamente um responsável deve ser marcado como guardião legal.")
+			frappe.throw(
+				"Com guarda unilateral, exatamente um responsável deve ser marcado como guardião legal."
+			)
 	else:
 		for v in all_vinculos:
 			if cint(v.get("\u00e9_guardiao_legal")) != 1:

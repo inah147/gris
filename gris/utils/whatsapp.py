@@ -101,6 +101,51 @@ def _post(endpoint: str, payload: dict, *, config: dict | None = None) -> dict:
 	raise WhatsAppRequestError("Número máximo de tentativas atingido.")  # pragma: no cover
 
 
+def _get(
+	endpoint: str,
+	*,
+	params: dict | None = None,
+	config: dict | None = None,
+) -> dict | list:
+	"""Executa GET na Evolution API com retry automático para erros transitórios."""
+	if config is None:
+		config = _get_config()
+
+	url = f"{config['url_api']}{endpoint}"
+	headers = _build_headers(config["api_key"])
+	logger = _logger()
+
+	for attempt in range(1, MAX_RETRIES + 1):
+		try:
+			response = requests.get(url, headers=headers, params=params, timeout=DEFAULT_TIMEOUT)
+		except requests.RequestException as exc:
+			raise WhatsAppRequestError(f"Falha de conexão ao chamar Evolution API: {exc}") from exc
+
+		if response.status_code < 400:
+			try:
+				return response.json()
+			except ValueError as exc:
+				raise WhatsAppRequestError(
+					"Evolution API retornou resposta inválida ao buscar grupos."
+				) from exc
+
+		if response.status_code not in RETRYABLE_STATUS_CODES or attempt == MAX_RETRIES:
+			try:
+				detail = response.json()
+			except ValueError:
+				detail = response.text or "Sem detalhes."
+			raise WhatsAppRequestError(
+				f"Evolution API retornou HTTP {response.status_code}: {detail}"
+			)
+
+		logger.warning(
+			f"Evolution API HTTP {response.status_code} na tentativa {attempt}/{MAX_RETRIES}. Retentando..."
+		)
+		time.sleep(2 ** (attempt - 1))
+
+	raise WhatsAppRequestError("Número máximo de tentativas atingido.")  # pragma: no cover
+
+
 def _registrar_sucesso() -> None:
 	frappe.db.set_single_value(SETTINGS_DOCTYPE, {"ultimo_envio_em": now_datetime(), "ultimo_erro": ""})
 	frappe.db.commit()
@@ -158,9 +203,16 @@ def _enviar_midia_sync(numero: str, tipo: str, url_ou_base64: str, caption: str 
 	return result
 
 
-def _enviar_para_grupo_sync(grupo_jid: str, mensagem: str) -> dict:
+def _enviar_para_grupo_sync(
+	grupo_jid: str,
+	mensagem: str,
+	*,
+	mencionar_todos: bool = False,
+) -> dict:
 	config = _get_config()
 	payload = {"number": grupo_jid, "text": mensagem}
+	if mencionar_todos:
+		payload["mentionsEveryOne"] = True
 
 	try:
 		result = _post(f"/message/sendText/{config['nome_instancia']}", payload, config=config)
@@ -200,6 +252,64 @@ def _enviar_mensagem_formatada_sync(
 
 
 # ─── API Pública ──────────────────────────────────────────────────────────────
+
+
+def listar_grupos_whatsapp(*, get_participants: bool = False) -> list[dict[str, str]]:
+	"""Lista os grupos da instância WhatsApp conectada na Evolution API.
+
+	Args:
+		get_participants: Quando True, solicita também os participantes no endpoint da Evolution.
+
+	Returns:
+		Lista de grupos no formato [{"id": "...@g.us", "subject": "Nome do grupo"}].
+
+	Raises:
+		WhatsAppConfigurationError: Integração desabilitada ou configuração incompleta.
+		WhatsAppRequestError: Falha de rede, HTTP ou payload inválido ao chamar a Evolution API.
+	"""
+	config = _get_config()
+	params = {"getParticipants": str(bool(get_participants)).lower()}
+	result = _get(
+		f"/group/fetchAllGroups/{config['nome_instancia']}",
+		params=params,
+		config=config,
+	)
+
+	if not isinstance(result, list):
+		raise WhatsAppRequestError("Formato inválido na resposta de listagem de grupos.")
+
+	grupos: list[dict[str, str]] = []
+	for item in result:
+		if not isinstance(item, dict):
+			continue
+
+		grupo_id = str(item.get("id") or "").strip()
+		if not grupo_id:
+			continue
+
+		subject = str(item.get("subject") or "").strip()
+		grupos.append({"id": grupo_id, "subject": subject or grupo_id})
+
+	return sorted(grupos, key=lambda grupo: grupo["subject"].casefold())
+
+
+@frappe.whitelist()
+def listar_grupos_whatsapp_para_select() -> list[dict[str, str]]:
+	"""Retorna opções de grupos WhatsApp para uso em campos Select no Desk."""
+	if not frappe.has_permission("Configuracoes de Recepcao", ptype="write"):
+		frappe.throw(
+			"Sem permissão para editar Configurações de Recepção.",
+			frappe.PermissionError,
+		)
+
+	grupos = listar_grupos_whatsapp()
+	return [
+		{
+			"label": f"{grupo['subject']} ({grupo['id']})",
+			"value": grupo["id"],
+		}
+		for grupo in grupos
+	]
 
 
 def enviar_texto(numero: str, mensagem: str, *, enqueue: bool = True) -> dict | None:
@@ -267,12 +377,19 @@ def enviar_midia(
 	return _enviar_midia_sync(numero, tipo, url_ou_base64, caption)
 
 
-def enviar_para_grupo(grupo_jid: str, mensagem: str, *, enqueue: bool = True) -> dict | None:
+def enviar_para_grupo(
+	grupo_jid: str,
+	mensagem: str,
+	*,
+	mencionar_todos: bool = False,
+	enqueue: bool = True,
+) -> dict | None:
 	"""Envia mensagem de texto para um grupo WhatsApp.
 
 	Args:
 		grupo_jid: JID do grupo no formato Evolution API (ex.: "5511999999999-1234567890@g.us").
 		mensagem: Texto a enviar.
+		mencionar_todos: Quando True, envia com menção geral para todos os participantes do grupo.
 		enqueue: Se True (padrão), processa em background.
 
 	Returns:
@@ -289,9 +406,14 @@ def enviar_para_grupo(grupo_jid: str, mensagem: str, *, enqueue: bool = True) ->
 			timeout=60,
 			grupo_jid=grupo_jid,
 			mensagem=mensagem,
+			mencionar_todos=mencionar_todos,
 		)
 		return None
-	return _enviar_para_grupo_sync(grupo_jid, mensagem)
+	return _enviar_para_grupo_sync(
+		grupo_jid,
+		mensagem,
+		mencionar_todos=mencionar_todos,
+	)
 
 
 def enviar_mensagem_formatada(

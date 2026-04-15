@@ -4,6 +4,7 @@ import frappe
 from frappe.utils import add_days, cint, getdate, now, today
 
 from gris.api.portal_access import enrich_context
+from gris.api.recepcao_notificacoes import notificar_nova_manifestacao_no_grupo_recepcao
 
 no_cache = 1
 
@@ -148,7 +149,8 @@ def get_context(context):
 			"tipo_de_registro",
 			"visita_agendada",
 			"primeira_visita_realizada",
-		] + list(field_interval_map.keys())
+			*field_interval_map.keys(),
+		]
 
 		beneficiarios_integracao = frappe.get_all(
 			"Novo Associado", filters={"name": ["in", novo_associado_names]}, fields=fields_to_fetch
@@ -540,6 +542,13 @@ def adicionar_beneficiario(nome_jovem, cpf_jovem, data_nascimento_jovem):
 				"beneficiario_novo_associado": novo_associado_doc.name,
 			}
 		).insert(ignore_permissions=True)
+
+		notificar_nova_manifestacao_no_grupo_recepcao(
+			nome_jovem=nome_jovem,
+			nome_responsavel=responsavel_doc.nome_completo or responsavel_name,
+			data_nascimento_jovem=data_nascimento_jovem,
+			contexto="adicionar_beneficiario",
+		)
 
 		return {"ok": True, "message": "Beneficiário adicionado com sucesso!"}
 

@@ -6,6 +6,7 @@ from frappe import _
 from frappe.utils import now
 
 from gris.api.portal_cache_utils import get_uel_cached
+from gris.api.recepcao_notificacoes import notificar_nova_manifestacao_no_grupo_recepcao
 
 
 def get_context(context):
@@ -45,6 +46,7 @@ def submit_interest(
 			jovens_list = jovens or []
 
 		last_resposta = None
+		novos_associados_criados: list[dict[str, str]] = []
 		for jovem in jovens_list:
 			resposta = frappe.get_doc(
 				{
@@ -100,6 +102,7 @@ def submit_interest(
 		for jovem in jovens_list:
 			# Create or Get Novo Associado
 			novo_associado_doc = None
+			novo_associado_criado = False
 			cpf_jovem = jovem.get("cpf_jovem")
 			if cpf_jovem:
 				existing_jovem = frappe.db.exists("Novo Associado", {"cpf": cpf_jovem})
@@ -115,6 +118,7 @@ def submit_interest(
 						}
 					)
 					novo_associado_doc.insert(ignore_permissions=True)
+					novo_associado_criado = True
 
 			# Create Responsavel Vinculo
 			if responsavel_doc and novo_associado_doc:
@@ -136,6 +140,14 @@ def submit_interest(
 						}
 					)
 					vinculo.insert(ignore_permissions=True)
+
+			if novo_associado_criado:
+				novos_associados_criados.append(
+					{
+						"nome_jovem": str(jovem.get("nome_jovem") or ""),
+						"data_nascimento_jovem": str(jovem.get("data_nascimento_jovem") or ""),
+					}
+				)
 
 		# Send welcome email manually to suppress "Welcome email sent" message
 		try:
@@ -160,6 +172,14 @@ def submit_interest(
 				frappe.log_error("DEBUG EMAIL SUCCESS", f"Email sent to {email_responsavel}")
 			except Exception as e:
 				frappe.log_error("DEBUG EMAIL ERROR", str(e))
+
+		for payload in novos_associados_criados:
+			notificar_nova_manifestacao_no_grupo_recepcao(
+				nome_jovem=payload.get("nome_jovem") or "",
+				nome_responsavel=nome_responsavel,
+				data_nascimento_jovem=payload.get("data_nascimento_jovem"),
+				contexto="manifestacao_interesse",
+			)
 
 		return {
 			"status": "success",

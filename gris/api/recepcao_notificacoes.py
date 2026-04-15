@@ -11,9 +11,9 @@ Responsabilidades:
 from __future__ import annotations
 
 import frappe
-from frappe.utils import add_days, getdate, today
+from frappe.utils import add_days, get_url, getdate, today
 
-from gris.utils.whatsapp import enviar_mensagem_formatada, enviar_texto
+from gris.utils.whatsapp import enviar_mensagem_formatada, enviar_para_grupo, enviar_texto
 
 
 def _buscar_telefone_responsavel(novo_associado_name: str) -> str | None:
@@ -73,6 +73,76 @@ def _buscar_endereco_grupo() -> str:
 	if uel.bairro:
 		partes.append(uel.bairro)
 	return ", ".join(partes) if partes else "a confirmar"
+
+
+def _calcular_idade_em_anos(data_nascimento: str | None) -> int | None:
+	"""Calcula a idade completa em anos a partir da data de nascimento."""
+	if not data_nascimento:
+		return None
+
+	try:
+		nascimento = getdate(data_nascimento)
+		hoje = getdate(today())
+		idade = hoje.year - nascimento.year - ((hoje.month, hoje.day) < (nascimento.month, nascimento.day))
+		return max(idade, 0)
+	except Exception:
+		return None
+
+
+def _montar_mensagem_nova_manifestacao(
+	*,
+	nome_jovem: str,
+	nome_responsavel: str,
+	idade_anos: int | None,
+) -> str:
+	idade_texto = f"{idade_anos} anos" if idade_anos is not None else "não informada"
+	link_visao_geral = get_url("/recepcao/visao_geral")
+	return (
+		"@todos\n\n"
+		"🎉 Nova manifestação de interesse recebida! 🎉\n\n"
+		f"*Jovem*: {nome_jovem}\n"
+		f"*Responsável*: {nome_responsavel}\n"
+		f"*Idade do jovem*: {idade_texto}.\n\n"
+		f"Acompanhe na Visão Geral: {link_visao_geral}"
+	)
+
+
+def notificar_nova_manifestacao_no_grupo_recepcao(
+	*,
+	nome_jovem: str,
+	nome_responsavel: str,
+	data_nascimento_jovem: str | None,
+	contexto: str,
+) -> None:
+	"""Envia aviso para o grupo WhatsApp da recepção sobre novo associado adicionado.
+
+	O grupo destinatário é definido em Configurações de Recepção > Grupo de recepção (WhatsApp).
+	Falha silenciosa com log para não interromper os fluxos de cadastro.
+	"""
+	logger = frappe.logger("recepcao_notificacoes", allow_site=True)
+
+	grupo_jid = (
+		frappe.db.get_single_value("Configuracoes de Recepcao", "grupo_recepcao_whatsapp") or ""
+	).strip()
+	if not grupo_jid:
+		logger.warning(
+			f"Notificação de nova manifestação não enviada: grupo de recepção não configurado ({contexto})."
+		)
+		return
+
+	mensagem = _montar_mensagem_nova_manifestacao(
+		nome_jovem=(nome_jovem or "").strip() or "Não informado",
+		nome_responsavel=(nome_responsavel or "").strip() or "Não informado",
+		idade_anos=_calcular_idade_em_anos(data_nascimento_jovem),
+	)
+
+	try:
+		enviar_para_grupo(grupo_jid, mensagem, mencionar_todos=True)
+	except Exception:
+		frappe.log_error(
+			frappe.get_traceback(),
+			f"Notificação nova manifestação (grupo recepção): {contexto}",
+		)
 
 
 def notificar_visita_agendada(novo_associado_name: str, data_visita: str) -> None:

@@ -21,7 +21,9 @@
   "valores_de_registro_section",
   "valor_registro_provisorio",
   "column_break_qwxy",
-  "valor_registro_definitivo"
+  "valor_registro_definitivo",
+  "whatsapp_recepcao_section",
+  "grupo_recepcao_whatsapp"
  ],
  "fields": [
   {
@@ -117,6 +119,17 @@
    "fieldname": "valor_registro_definitivo",
    "fieldtype": "Currency",
    "label": "Registro Definitivo"
+  },
+  {
+   "fieldname": "whatsapp_recepcao_section",
+   "fieldtype": "Section Break",
+   "label": "WhatsApp da Recepção"
+  },
+  {
+   "description": "Grupo da recepção para envio de mensagens aos responsáveis pela recepção.",
+   "fieldname": "grupo_recepcao_whatsapp",
+   "fieldtype": "Select",
+   "label": "Grupo de recepção (WhatsApp)"
   }
  ],
  "grid_page_length": 50,

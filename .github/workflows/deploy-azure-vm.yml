@@ -52,3 +52,7 @@ jobs:
 
             docker compose down
             docker compose up -d
+
+            docker volume prune -f
+            docker image prune -af
+            journalctl --vacuum-time=7d

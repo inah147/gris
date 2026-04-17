@@ -1,5 +1,5 @@
 from frappe.model.document import Document
 
 
-class EquipedeInteresseProjeto(Document):
+class EnvolvidonoProjeto(Document):
 	pass

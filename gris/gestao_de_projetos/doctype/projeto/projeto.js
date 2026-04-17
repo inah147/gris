@@ -35,7 +35,8 @@ async function fill_person_contact(frm, cdt, cdn, doctypeName, docname) {
 }
 
 function team_member_names(doc) {
-  return (doc.equipe_de_interesse || [])
+  return (doc.envolvidos || [])
+    .filter((row) => Number(row.aprovador || 0) !== 1)
     .map((row) => row.nome)
     .filter((name) => !!name);
 }
@@ -62,10 +63,10 @@ frappe.ui.form.on("Projeto", {
 
     update_dynamic_select_options(frm);
   },
-  equipe_de_interesse_add(frm) {
+  envolvidos_add(frm) {
     update_dynamic_select_options(frm);
   },
-  equipe_de_interesse_remove(frm) {
+  envolvidos_remove(frm) {
     update_dynamic_select_options(frm);
   },
   padrinho_associado(frm) {
@@ -76,16 +77,23 @@ frappe.ui.form.on("Projeto", {
   },
 });
 
-frappe.ui.form.on("Outro Envolvido Projeto", {
-  associado(frm, cdt, cdn) {
-    const row = locals[cdt][cdn];
-    fill_person_contact(frm, cdt, cdn, "Associado", row.associado);
-  },
-});
-
-frappe.ui.form.on("Equipe de Interesse Projeto", {
+frappe.ui.form.on("Envolvido no Projeto", {
   tipo_pessoa(frm, cdt, cdn) {
     const row = locals[cdt][cdn];
+    if (row.tipo_pessoa === "Associado") {
+      set_child_value(frm, cdt, cdn, {
+        responsavel: "",
+      });
+      return;
+    }
+
+    if (row.tipo_pessoa === "Responsavel") {
+      set_child_value(frm, cdt, cdn, {
+        associado: "",
+      });
+      return;
+    }
+
     if (row.tipo_pessoa === "Outro") {
       set_child_value(frm, cdt, cdn, {
         associado: "",
@@ -112,6 +120,9 @@ frappe.ui.form.on("Equipe de Interesse Projeto", {
     });
   },
   nome(frm) {
+    update_dynamic_select_options(frm);
+  },
+  aprovador(frm) {
     update_dynamic_select_options(frm);
   },
 });

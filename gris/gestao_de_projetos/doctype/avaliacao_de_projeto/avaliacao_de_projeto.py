@@ -51,7 +51,7 @@ class AvaliacaodeProjeto(Document):
 		for individual in self.avaliacoes_individuais or []:
 			if individual.avaliador and individual.avaliador not in allowed:
 				frappe.throw(
-					_("Avaliador '{0}' deve ser da equipe de interesse ou padrinho/orientador.").format(
+					_("Avaliador '{0}' deve ser um envolvido marcado para participar da avaliação.").format(
 						individual.avaliador
 					)
 				)
@@ -192,18 +192,13 @@ def _get_project_goals(projeto: str) -> list[str]:
 
 def _get_allowed_reviewer_names(projeto: str) -> list[str]:
 	doc = frappe.get_doc("Projeto", projeto)
-	names = [(row.nome or "").strip() for row in (doc.equipe_de_interesse or []) if (row.nome or "").strip()]
 
-	padrinho = None
-	if doc.tipo_padrinho_ou_orientador == "Responsavel" and doc.padrinho_responsavel:
-		padrinho = frappe.db.get_value("Responsavel", doc.padrinho_responsavel, "nome_completo")
-	elif doc.padrinho_associado:
-		padrinho = frappe.db.get_value("Associado", doc.padrinho_associado, "nome_completo")
+	names = [
+		(row.get("nome") or "").strip()
+		for row in (doc.get("envolvidos") or [])
+		if cint(row.get("participa_avaliacao")) and (row.get("nome") or "").strip()
+	]
 
-	if padrinho:
-		names.append(padrinho)
-
-	# Preserva ordem e remove duplicados.
 	return list(dict.fromkeys([name for name in names if name]))
 
 
@@ -211,63 +206,13 @@ def _get_all_reviewer_data(projeto_doc) -> list[dict[str, str]]:
 	"""Retorna lista de {nome, email, telefone} para todos os envolvidos no projeto."""
 	reviewers: list[dict[str, str]] = []
 	seen_names: set[str] = set()
-
-	for row in projeto_doc.equipe_de_interesse or []:
-		nome = (row.nome or "").strip()
-		email = (row.email or "").strip()
-		telefone = (row.telefone or "").strip()
-		if nome and email and nome not in seen_names:
-			reviewers.append({"nome": nome, "email": email, "telefone": telefone})
-			seen_names.add(nome)
-
-	padrinho_nome = None
-	padrinho_email = None
-	padrinho_telefone = None
-	if projeto_doc.tipo_padrinho_ou_orientador == "Responsavel" and projeto_doc.padrinho_responsavel:
-		data = frappe.db.get_value(
-			"Responsavel",
-			projeto_doc.padrinho_responsavel,
-			["nome_completo", "email", "celular", "telefone_secundario"],
-			as_dict=True,
-		)
-		if data:
-			padrinho_nome = (data.get("nome_completo") or "").strip()
-			padrinho_email = (data.get("email") or "").strip()
-			padrinho_telefone = (data.get("celular") or data.get("telefone_secundario") or "").strip()
-	elif projeto_doc.padrinho_associado:
-		data = frappe.db.get_value(
-			"Associado",
-			projeto_doc.padrinho_associado,
-			["nome_completo", "id_escoteiros", "email", "telefone"],
-			as_dict=True,
-		)
-		if data:
-			padrinho_nome = (data.get("nome_completo") or "").strip()
-			padrinho_email = (data.get("id_escoteiros") or data.get("email") or "").strip()
-			padrinho_telefone = (data.get("telefone") or "").strip()
-
-	if padrinho_nome and padrinho_email and padrinho_nome not in seen_names:
-		reviewers.append(
-			{
-				"nome": padrinho_nome,
-				"email": padrinho_email,
-				"telefone": (padrinho_telefone or "").strip(),
-			}
-		)
-		seen_names.add(padrinho_nome)
-
-	for row in projeto_doc.outros_envolvidos or []:
-		assoc_name = row.associado
-		if not assoc_name:
+	for row in projeto_doc.get("envolvidos") or []:
+		if not cint(row.get("participa_avaliacao")):
 			continue
-		data = frappe.db.get_value(
-			"Associado", assoc_name, ["nome_completo", "id_escoteiros", "email", "telefone"], as_dict=True
-		)
-		if not data:
-			continue
-		nome = (data.get("nome_completo") or "").strip()
-		email = (data.get("id_escoteiros") or data.get("email") or "").strip()
-		telefone = (data.get("telefone") or row.telefone or "").strip()
+
+		nome = (row.get("nome") or "").strip()
+		email = (row.get("email") or "").strip()
+		telefone = (row.get("telefone") or "").strip()
 		if nome and email and nome not in seen_names:
 			reviewers.append({"nome": nome, "email": email, "telefone": telefone})
 			seen_names.add(nome)

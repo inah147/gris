@@ -127,6 +127,23 @@
         el.textContent = text || "-";
     }
 
+    function updateGoogleDriveButton(link) {
+        const button = document.getElementById("btnAbrirGoogleDrive");
+        if (!button) return;
+
+        const url = String(link || "").trim();
+        if (!url) {
+            button.classList.add("d-none");
+            button.setAttribute("href", "#");
+            button.setAttribute("aria-hidden", "true");
+            return;
+        }
+
+        button.classList.remove("d-none");
+        button.setAttribute("href", url);
+        button.setAttribute("aria-hidden", "false");
+    }
+
     function sanitizeRenderedHtml(html) {
         const container = document.createElement("div");
         container.innerHTML = html || "";
@@ -402,6 +419,7 @@
         fillValue("competencias", projeto.competencias);
         fillValue("especialidade", projeto.especialidade);
         fillValue("observacoes_e_comentarios", projeto.observacoes_e_comentarios);
+        updateGoogleDriveButton(projeto.link_pasta_google_drive);
 
         renderMarkdownToContainer(document.getElementById("view_avaliacao_tap"), projeto.avaliacao_tap || "");
 

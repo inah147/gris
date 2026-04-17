@@ -58,15 +58,13 @@ def _get_related_project_names(
 		)
 		project_names.update(
 			frappe.get_all(
-				"Equipe de Interesse Projeto",
-				filters={"parenttype": "Projeto", "associado": associado_name},
-				pluck="parent",
-			)
-		)
-		project_names.update(
-			frappe.get_all(
-				"Outro Envolvido Projeto",
-				filters={"parenttype": "Projeto", "associado": associado_name},
+				"Envolvido no Projeto",
+				filters={
+					"parenttype": "Projeto",
+					"parentfield": "envolvidos",
+					"tipo_pessoa": "Associado",
+					"associado": associado_name,
+				},
 				pluck="parent",
 			)
 		)
@@ -78,8 +76,13 @@ def _get_related_project_names(
 		)
 		project_names.update(
 			frappe.get_all(
-				"Equipe de Interesse Projeto",
-				filters={"parenttype": "Projeto", "responsavel": responsavel_name},
+				"Envolvido no Projeto",
+				filters={
+					"parenttype": "Projeto",
+					"parentfield": "envolvidos",
+					"tipo_pessoa": "Responsavel",
+					"responsavel": responsavel_name,
+				},
 				pluck="parent",
 			)
 		)
@@ -87,15 +90,8 @@ def _get_related_project_names(
 	if not associado_name and user_email:
 		project_names.update(
 			frappe.get_all(
-				"Equipe de Interesse Projeto",
-				filters={"parenttype": "Projeto", "email": user_email},
-				pluck="parent",
-			)
-		)
-		project_names.update(
-			frappe.get_all(
-				"Outro Envolvido Projeto",
-				filters={"parenttype": "Projeto", "email": user_email},
+				"Envolvido no Projeto",
+				filters={"parenttype": "Projeto", "parentfield": "envolvidos", "email": user_email},
 				pluck="parent",
 			)
 		)

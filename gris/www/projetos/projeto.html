@@ -4,8 +4,6 @@
 
 {% block head_include %}
 {{ super() }}
-<link rel="stylesheet" href="/projetos/projeto.css" />
-<script src="{{ bundled_asset('controls.bundle.js') }}"></script>
 {% endblock %}
 
 {% block page_header %}
@@ -15,6 +13,7 @@
         <p class="page-header__subtitle">Acompanhamento do projeto em execução, com tarefas e reuniões.</p>
     </div>
     <div class="page-header__actions">
+        <a id="btnAbrirGoogleDrive" class="btn-modern btn-modern--outline btn-modern--sm d-none" href="#" target="_blank" rel="noopener noreferrer">Abrir Google Drive</a>
         <button type="button" id="btnCancelarProjeto" class="btn-modern btn-modern--danger btn-modern--sm">Cancelar projeto</button>
         <button type="button" id="btnConcluirProjeto" class="btn-modern btn-modern--primary btn-modern--sm">Concluir projeto</button>
     </div>
@@ -43,6 +42,7 @@
         <div class="card-modern__body tabs-card__body">
             <div class="project-tabs" role="tablist" aria-label="Seções do projeto">
                 <button type="button" class="project-tab is-active" id="tabBtnDadosGerais" data-tab="dados-gerais" role="tab" aria-controls="tabDadosGerais" aria-selected="true">Dados gerais</button>
+                <button type="button" class="project-tab" id="tabBtnParticipantes" data-tab="participantes" role="tab" aria-controls="tabParticipantes" aria-selected="false">Participantes</button>
                 <button type="button" class="project-tab" id="tabBtnTarefas" data-tab="tarefas" role="tab" aria-controls="tabGestaoTarefas" aria-selected="false">Gestão de tarefas</button>
                 <button type="button" class="project-tab" id="tabBtnReunioes" data-tab="reunioes" role="tab" aria-controls="tabReunioes" aria-selected="false">Reuniões</button>
                 <button type="button" class="project-tab" id="tabBtnAvaliacoes" data-tab="avaliacoes" role="tab" aria-controls="tabAvaliacoes" aria-selected="false">Avaliações</button>
@@ -100,18 +100,6 @@
                             <label class="form-label-modern">Alinhamento com o escotismo</label>
                             <textarea id="view_alinhamento_com_escotismo" class="form-input-modern form-input-modern--sm" rows="4" readonly disabled></textarea>
                         </div>
-                    </div>
-                </div>
-            </section>
-
-            <section class="card-modern form-card">
-                <div class="card-modern__header"><h3 class="card-modern__title">Equipe de interesse</h3></div>
-                <div class="card-modern__body">
-                    <div class="table-responsive">
-                        <table class="data-table projeto-table">
-                            <thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Função</th></tr></thead>
-                            <tbody id="view_rows_equipe"></tbody>
-                        </table>
                     </div>
                 </div>
             </section>
@@ -205,6 +193,39 @@
                 </div>
             </section>
         </div>
+    </section>
+
+    <section id="tabParticipantes" class="project-tab-panel" role="tabpanel" aria-labelledby="tabBtnParticipantes">
+        <section class="card-modern form-card">
+            <div class="card-modern__header participants-header">
+                <div>
+                    <h3 class="card-modern__title">Participantes</h3>
+                    <p id="participantsEditHint" class="card-modern__subtitle">Gerencie os envolvidos no projeto e defina quem participa da avaliação.</p>
+                </div>
+                <div class="task-header__actions">
+                    <button type="button" id="btnNovoParticipante" class="btn-modern btn-modern--primary btn-modern--sm">Adicionar envolvido</button>
+                </div>
+            </div>
+            <div class="card-modern__body">
+                <div class="table-responsive">
+                    <table class="data-table projeto-table participantes-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Email</th>
+                                <th>Telefone</th>
+                                <th>Função</th>
+                                <th>Coordenador</th>
+                                <th>Padrinho / orientador</th>
+                                <th>Aprovador</th>
+                                <th>Participa da avaliação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="participantsRows"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
     </section>
 
     <section id="tabGestaoTarefas" class="project-tab-panel" role="tabpanel" aria-labelledby="tabBtnTarefas">
@@ -408,6 +429,82 @@
         <div class="approval-modal-footer">
             <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-close-project-status-modal>Voltar</button>
             <button type="button" id="btnConfirmProjectStatus" class="btn-modern btn-modern--primary btn-modern--sm">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<div id="participantModal" class="info-modal d-none" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="participantModalTitle">
+    <div class="info-modal__backdrop" data-close-participant-modal></div>
+    <div class="info-modal__panel" role="document">
+        <div class="info-modal__header">
+            <h4 id="participantModalTitle" class="info-modal__title">Envolvido no projeto</h4>
+        </div>
+        <div class="info-modal__body">
+            <input type="hidden" id="participant_index" />
+            <div class="row g-3">
+                <div class="col-12 col-md-4">
+                    <label class="form-label-modern" for="participant_tipo_pessoa">Tipo de pessoa *</label>
+                    <select id="participant_tipo_pessoa" class="form-input-modern form-input-modern--sm">
+                        <option value="Associado">Associado</option>
+                        <option value="Responsavel">Responsável</option>
+                        <option value="Outro">Outro</option>
+                    </select>
+                </div>
+
+                <div id="participant_associado_group" class="col-12 col-md-8">
+                    <label class="form-label-modern" for="participant_associado">Associado</label>
+                    <select id="participant_associado" class="form-input-modern form-input-modern--sm">
+                        <option value="">Selecione</option>
+                    </select>
+                </div>
+
+                <div id="participant_responsavel_group" class="col-12 col-md-8 d-none">
+                    <label class="form-label-modern" for="participant_responsavel">Responsável</label>
+                    <select id="participant_responsavel" class="form-input-modern form-input-modern--sm">
+                        <option value="">Selecione</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label class="form-label-modern" for="participant_nome">Nome *</label>
+                    <input id="participant_nome" type="text" class="form-input-modern form-input-modern--sm" />
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label class="form-label-modern" for="participant_funcao">Função</label>
+                    <input id="participant_funcao" type="text" class="form-input-modern form-input-modern--sm" />
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label class="form-label-modern" for="participant_email">Email *</label>
+                    <input id="participant_email" type="email" class="form-input-modern form-input-modern--sm" />
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label class="form-label-modern" for="participant_telefone">Telefone *</label>
+                    <input id="participant_telefone" type="text" class="form-input-modern form-input-modern--sm" />
+                </div>
+
+                <div class="col-12">
+                    <label class="participant-checkbox">
+                        <input id="participant_coordenador" type="checkbox" />
+                        Definir como coordenador do projeto
+                    </label>
+                </div>
+
+                <div class="col-12">
+                    <label class="participant-checkbox">
+                        <input id="participant_participa_avaliacao" type="checkbox" checked />
+                        Participa da avaliação do projeto
+                    </label>
+                </div>
+
+                <div id="participantModalWarning" class="col-12 participant-modal-warning d-none"></div>
+            </div>
+        </div>
+        <div class="approval-modal-footer">
+            <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-close-participant-modal>Cancelar</button>
+            <button type="button" id="btnSalvarParticipante" class="btn-modern btn-modern--primary btn-modern--sm">Salvar envolvido</button>
         </div>
     </div>
 </div>

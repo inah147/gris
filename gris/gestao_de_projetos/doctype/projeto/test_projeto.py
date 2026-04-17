@@ -690,3 +690,340 @@ class TestProjeto(FrappeTestCase):
 			projeto_module._get_approved_keys_by_stage = original_get_approved_map
 			projeto_module._append_review_row = original_append_review
 			projeto_module._enqueue_project_whatsapp_job = original_enqueue
+
+	def test_execution_edit_context_requires_active_user_and_involvement(self):
+		original_get_roles = projeto_module.frappe.get_roles
+		original_is_active = projeto_module._is_user_active_in_gris
+		original_is_involved = projeto_module._is_user_involved_in_project
+
+		state = {"active": True, "involved": True}
+
+		def fake_get_roles(_user):
+			return ["Editor de projetos"]
+
+		def fake_is_active(_user):
+			return state["active"]
+
+		def fake_is_involved(_user, _doc):
+			return state["involved"]
+
+		projeto_module.frappe.get_roles = fake_get_roles
+		projeto_module._is_user_active_in_gris = fake_is_active
+		projeto_module._is_user_involved_in_project = fake_is_involved
+
+		try:
+			doc = _DummyDoc({"status": projeto_module.STATUS_EM_EXECUCAO})
+
+			self.assertTrue(
+				projeto_module._can_user_edit_project_execution_context("editor@example.com", doc)
+			)
+
+			state["involved"] = False
+			self.assertFalse(
+				projeto_module._can_user_edit_project_execution_context("editor@example.com", doc)
+			)
+
+			state["involved"] = True
+			state["active"] = False
+			self.assertFalse(
+				projeto_module._can_user_edit_project_execution_context("editor@example.com", doc)
+			)
+		finally:
+			projeto_module.frappe.get_roles = original_get_roles
+			projeto_module._is_user_active_in_gris = original_is_active
+			projeto_module._is_user_involved_in_project = original_is_involved
+
+	def test_require_execution_edit_access_blocks_inactive_or_not_involved(self):
+		original_is_active = projeto_module._is_user_active_in_gris
+		original_is_involved = projeto_module._is_user_involved_in_project
+
+		state = {"active": False, "involved": True}
+
+		def fake_is_active(_user):
+			return state["active"]
+
+		def fake_is_involved(_user, _doc):
+			return state["involved"]
+
+		projeto_module._is_user_active_in_gris = fake_is_active
+		projeto_module._is_user_involved_in_project = fake_is_involved
+
+		try:
+			doc = _DummyDoc({})
+
+			with self.assertRaises(frappe.PermissionError):
+				projeto_module._require_project_execution_edit_access(doc, user="editor@example.com")
+
+			state["active"] = True
+			state["involved"] = False
+			with self.assertRaises(frappe.PermissionError):
+				projeto_module._require_project_execution_edit_access(doc, user="editor@example.com")
+
+			state["involved"] = True
+			granted_user = projeto_module._require_project_execution_edit_access(
+				doc, user="editor@example.com"
+			)
+			self.assertEqual(granted_user, "editor@example.com")
+		finally:
+			projeto_module._is_user_active_in_gris = original_is_active
+			projeto_module._is_user_involved_in_project = original_is_involved
+
+	def test_get_projeto_execucao_data_computes_can_edit_from_execution_rules(self):
+		original_require_read = projeto_module._require_project_read_access
+		original_get_doc = projeto_module.frappe.get_doc
+		original_assert_visible = projeto_module._assert_project_visible_on_execution_page
+		original_get_choices = projeto_module._get_selection_options
+		original_serialize_projeto = projeto_module._serialize_projeto
+		original_get_responsavel_options = projeto_module._get_responsavel_options
+		original_can_edit_context = projeto_module._can_user_edit_project_execution_context
+
+		state = {"status": projeto_module.STATUS_EM_EXECUCAO, "can_edit_context": True}
+
+		class _ExecDoc:
+			def has_permission(self, permission):
+				return permission == "read"
+
+			def get(self, key):
+				if key == "status":
+					return state["status"]
+				return None
+
+		exec_doc = _ExecDoc()
+
+		def fake_require_read():
+			return "editor@example.com"
+
+		def fake_get_doc(doctype: str, name: str):
+			self.assertEqual(doctype, "Projeto")
+			self.assertEqual(name, "PROJ-0001")
+			return exec_doc
+
+		def fake_assert_visible(_doc):
+			return None
+
+		def fake_get_choices():
+			return {"associados": [], "responsaveis": []}
+
+		def fake_serialize_projeto(_doc):
+			return {"name": "PROJ-0001"}
+
+		def fake_get_responsavel_options(_doc):
+			return []
+
+		def fake_can_edit_context(_user, _doc):
+			return state["can_edit_context"]
+
+		projeto_module._require_project_read_access = fake_require_read
+		projeto_module.frappe.get_doc = fake_get_doc
+		projeto_module._assert_project_visible_on_execution_page = fake_assert_visible
+		projeto_module._get_selection_options = fake_get_choices
+		projeto_module._serialize_projeto = fake_serialize_projeto
+		projeto_module._get_responsavel_options = fake_get_responsavel_options
+		projeto_module._can_user_edit_project_execution_context = fake_can_edit_context
+
+		try:
+			result = projeto_module.get_projeto_execucao_data("PROJ-0001")
+			self.assertTrue(result["can_edit"])
+
+			state["status"] = projeto_module.STATUS_CONCLUIDO
+			result = projeto_module.get_projeto_execucao_data("PROJ-0001")
+			self.assertFalse(result["can_edit"])
+
+			state["status"] = projeto_module.STATUS_EM_EXECUCAO
+			state["can_edit_context"] = False
+			result = projeto_module.get_projeto_execucao_data("PROJ-0001")
+			self.assertFalse(result["can_edit"])
+		finally:
+			projeto_module._require_project_read_access = original_require_read
+			projeto_module.frappe.get_doc = original_get_doc
+			projeto_module._assert_project_visible_on_execution_page = original_assert_visible
+			projeto_module._get_selection_options = original_get_choices
+			projeto_module._serialize_projeto = original_serialize_projeto
+			projeto_module._get_responsavel_options = original_get_responsavel_options
+			projeto_module._can_user_edit_project_execution_context = original_can_edit_context
+
+	def test_get_avaliacao_projeto_data_respects_execution_edit_context(self):
+		original_require_read = projeto_module._require_project_read_access
+		original_get_doc = projeto_module.frappe.get_doc
+		original_assert_visible = projeto_module._assert_project_visible_on_execution_page
+		original_get_avaliacao = projeto_module._get_avaliacao_for_projeto
+		original_serialize_avaliacao = projeto_module._serialize_avaliacao
+		original_is_coordinator = projeto_module._is_user_coordinator
+		original_can_edit_context = projeto_module._can_user_edit_project_execution_context
+
+		state = {
+			"status": projeto_module.STATUS_EM_EXECUCAO,
+			"avaliacao_doc": None,
+			"can_edit_context": True,
+		}
+
+		class _ExecDoc:
+			def has_permission(self, permission):
+				return permission == "read"
+
+			def get(self, key):
+				if key == "status":
+					return state["status"]
+				return None
+
+		exec_doc = _ExecDoc()
+
+		def fake_require_read():
+			return "editor@example.com"
+
+		def fake_get_doc(doctype: str, name: str):
+			self.assertEqual(doctype, "Projeto")
+			self.assertEqual(name, "PROJ-0001")
+			return exec_doc
+
+		def fake_assert_visible(_doc):
+			return None
+
+		def fake_get_avaliacao(_projeto_name: str):
+			return state["avaliacao_doc"]
+
+		def fake_serialize_avaliacao(_avaliacao_doc):
+			return {"name": "AVAL-0001"}
+
+		def fake_is_coordinator(_user, _doc):
+			return True
+
+		def fake_can_edit_context(_user, _doc):
+			return state["can_edit_context"]
+
+		projeto_module._require_project_read_access = fake_require_read
+		projeto_module.frappe.get_doc = fake_get_doc
+		projeto_module._assert_project_visible_on_execution_page = fake_assert_visible
+		projeto_module._get_avaliacao_for_projeto = fake_get_avaliacao
+		projeto_module._serialize_avaliacao = fake_serialize_avaliacao
+		projeto_module._is_user_coordinator = fake_is_coordinator
+		projeto_module._can_user_edit_project_execution_context = fake_can_edit_context
+
+		try:
+			result = projeto_module.get_avaliacao_projeto_data("PROJ-0001")
+			self.assertTrue(result["can_start_evaluation"])
+			self.assertFalse(result["can_edit_general"])
+
+			state["avaliacao_doc"] = frappe._dict({"name": "AVAL-0001"})
+			result = projeto_module.get_avaliacao_projeto_data("PROJ-0001")
+			self.assertFalse(result["can_start_evaluation"])
+			self.assertTrue(result["can_edit_general"])
+
+			state["can_edit_context"] = False
+			result = projeto_module.get_avaliacao_projeto_data("PROJ-0001")
+			self.assertFalse(result["can_start_evaluation"])
+			self.assertFalse(result["can_edit_general"])
+		finally:
+			projeto_module._require_project_read_access = original_require_read
+			projeto_module.frappe.get_doc = original_get_doc
+			projeto_module._assert_project_visible_on_execution_page = original_assert_visible
+			projeto_module._get_avaliacao_for_projeto = original_get_avaliacao
+			projeto_module._serialize_avaliacao = original_serialize_avaliacao
+			projeto_module._is_user_coordinator = original_is_coordinator
+			projeto_module._can_user_edit_project_execution_context = original_can_edit_context
+
+	def test_validate_drive_folder_link_normalizes_and_rejects_invalid_urls(self):
+		class _DriveDoc:
+			def __init__(self, link: str):
+				self._data = {"link_pasta_google_drive": link}
+				self.link_pasta_google_drive = link
+
+			def get(self, key: str):
+				return self._data.get(key)
+
+		valid_doc = _DriveDoc("  https://drive.google.com/drive/folders/abcdefghijklmnop  ")
+		projeto_module.Projeto._validate_drive_folder_link(valid_doc)
+		self.assertEqual(
+			valid_doc.link_pasta_google_drive,
+			"https://drive.google.com/drive/folders/abcdefghijklmnop",
+		)
+
+		invalid_doc = _DriveDoc("https://example.com/sem/google-drive")
+		with self.assertRaises(frappe.ValidationError):
+			projeto_module.Projeto._validate_drive_folder_link(invalid_doc)
+
+	def test_after_insert_enqueues_google_drive_folder_creation(self):
+		original_enqueue_create = projeto_module._enqueue_project_drive_folder_creation
+		enqueued: list[str] = []
+
+		class _InsertedDoc:
+			name = "PROJ-DRV-001"
+
+		def fake_enqueue_create(projeto_name: str):
+			enqueued.append(projeto_name)
+
+		projeto_module._enqueue_project_drive_folder_creation = fake_enqueue_create
+		try:
+			projeto_module.Projeto.after_insert(_InsertedDoc())
+			self.assertEqual(enqueued, ["PROJ-DRV-001"])
+		finally:
+			projeto_module._enqueue_project_drive_folder_creation = original_enqueue_create
+
+	def test_concluir_projeto_execucao_enqueues_drive_cleanup_when_link_exists(self):
+		original_require_editor = projeto_module._require_project_editor_access
+		original_get_doc = projeto_module.frappe.get_doc
+		original_require_exec_access = projeto_module._require_project_execution_edit_access
+		original_assert_execution = projeto_module._assert_project_in_execution
+		original_enqueue_cleanup = projeto_module._enqueue_project_drive_folder_cleanup
+
+		enqueued: list[str] = []
+
+		class _ExecDoc:
+			def __init__(self):
+				self.name = "PROJ-DRV-002"
+				self.status = projeto_module.STATUS_EM_EXECUCAO
+				self.flags = frappe._dict()
+				self._saved = False
+				self._link = "https://drive.google.com/drive/folders/abcdefghijklmnop"
+
+			def has_permission(self, permission: str):
+				return permission == "write"
+
+			def get(self, key: str):
+				if key == "status":
+					return self.status
+				if key == "link_pasta_google_drive":
+					return self._link
+				return None
+
+			def save(self):
+				self._saved = True
+
+		doc = _ExecDoc()
+
+		def fake_require_editor():
+			return "editor@example.com"
+
+		def fake_get_doc(doctype: str, name: str):
+			self.assertEqual(doctype, "Projeto")
+			self.assertEqual(name, doc.name)
+			return doc
+
+		def fake_require_exec_access(_doc, *, user: str | None = None):
+			self.assertEqual(user, "editor@example.com")
+			return user or "editor@example.com"
+
+		def fake_assert_execution(_doc):
+			return None
+
+		def fake_enqueue_cleanup(projeto_name: str):
+			enqueued.append(projeto_name)
+
+		projeto_module._require_project_editor_access = fake_require_editor
+		projeto_module.frappe.get_doc = fake_get_doc
+		projeto_module._require_project_execution_edit_access = fake_require_exec_access
+		projeto_module._assert_project_in_execution = fake_assert_execution
+		projeto_module._enqueue_project_drive_folder_cleanup = fake_enqueue_cleanup
+
+		try:
+			result = projeto_module.concluir_projeto_execucao(doc.name)
+			self.assertTrue(doc._saved)
+			self.assertEqual(doc.status, projeto_module.STATUS_CONCLUIDO)
+			self.assertEqual(result["status"], projeto_module.STATUS_CONCLUIDO)
+			self.assertEqual(enqueued, [doc.name])
+		finally:
+			projeto_module._require_project_editor_access = original_require_editor
+			projeto_module.frappe.get_doc = original_get_doc
+			projeto_module._require_project_execution_edit_access = original_require_exec_access
+			projeto_module._assert_project_in_execution = original_assert_execution
+			projeto_module._enqueue_project_drive_folder_cleanup = original_enqueue_cleanup

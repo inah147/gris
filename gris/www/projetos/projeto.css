@@ -250,6 +250,89 @@
 	flex-wrap: wrap;
 }
 
+.participants-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-wrap: wrap;
+}
+
+.participant-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.12rem 0.48rem;
+	border-radius: 999px;
+	font-size: 0.72rem;
+	font-weight: 600;
+	line-height: 1.2;
+	background: #e2e8f0;
+	color: #334155;
+}
+
+.participant-badge--coordenador {
+	background: #dbeafe;
+	color: #1d4ed8;
+}
+
+.participant-badge--padrinho {
+	background: #fff7ed;
+	color: #9a3412;
+}
+
+.participant-badge--aprovador {
+	background: #ede9fe;
+	color: #5b21b6;
+}
+
+.participant-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+}
+
+.participant-actions-placeholder {
+	font-size: 0.78rem;
+	color: #64748b;
+}
+
+.participant-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-size: 0.82rem;
+	color: #334155;
+}
+
+.participant-toggle input[type="checkbox"] {
+	width: 16px;
+	height: 16px;
+}
+
+.participant-checkbox {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45rem;
+	font-size: 0.88rem;
+	color: #334155;
+}
+
+.participant-checkbox input[type="checkbox"] {
+	width: 16px;
+	height: 16px;
+}
+
+.participant-modal-warning {
+	border: 1px solid #f5d0a5;
+	background: #fff8ec;
+	color: #9a3412;
+	border-radius: 8px;
+	padding: 0.55rem 0.7rem;
+	font-size: 0.83rem;
+	line-height: 1.35;
+}
+
 .task-header__actions {
 	display: flex;
 	gap: 0.5rem;

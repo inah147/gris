@@ -13,15 +13,14 @@
   "nome_do_projeto",
   "coordenador",
   "status",
+    "link_pasta_google_drive",
   "reunioes",
   "tarefas",
-  "outros_envolvidos",
   "termo_de_abertura_tab",
   "termo_abertura_section",
   "data_de_inicio",
   "data_de_termino",
-  "equipe_de_interesse",
-    "aprovadores",
+  "envolvidos",
   "tipo_padrinho_ou_orientador",
   "padrinho_associado",
   "padrinho_responsavel",
@@ -72,6 +71,12 @@
    "label": "Status",
    "options": "Rascunho\nEm aprovacao\nAprovado\nEm execucao\nConcluido\nCancelado"
   },
+    {
+     "fieldname": "link_pasta_google_drive",
+     "fieldtype": "Data",
+     "label": "Link da pasta Google Drive",
+     "read_only": 1
+    },
   {
    "fieldname": "reunioes",
    "fieldtype": "Table",
@@ -83,12 +88,6 @@
    "fieldtype": "Table",
    "label": "Tarefas",
    "options": "Gestao de Tarefas"
-  },
-  {
-   "fieldname": "outros_envolvidos",
-   "fieldtype": "Table",
-   "label": "Outros envolvidos",
-   "options": "Outro Envolvido Projeto"
   },
   {
    "fieldname": "termo_de_abertura_tab",
@@ -111,17 +110,11 @@
    "label": "Data de termino"
   },
   {
-   "fieldname": "equipe_de_interesse",
+   "fieldname": "envolvidos",
    "fieldtype": "Table",
-   "label": "Equipe de interesse",
-   "options": "Equipe de Interesse Projeto"
+   "label": "Envolvidos",
+   "options": "Envolvido no Projeto"
   },
-    {
-     "fieldname": "aprovadores",
-     "fieldtype": "Table",
-     "label": "Aprovadores",
-     "options": "Aprovador Projeto"
-    },
   {
    "default": "Associado",
    "fieldname": "tipo_padrinho_ou_orientador",

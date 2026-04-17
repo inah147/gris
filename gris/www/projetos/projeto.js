@@ -1,6 +1,8 @@
 (function () {
     const METHODS = {
         bootstrap: "gris.gestao_de_projetos.doctype.projeto.projeto.get_projeto_execucao_data",
+        getContatoPessoa: "gris.gestao_de_projetos.doctype.projeto.projeto.get_contato_pessoa",
+        saveParticipants: "gris.gestao_de_projetos.doctype.projeto.projeto.salvar_envolvidos_projeto_execucao",
         saveTask: "gris.gestao_de_projetos.doctype.projeto.projeto.salvar_tarefa_projeto_execucao",
         moveTask: "gris.gestao_de_projetos.doctype.projeto.projeto.atualizar_status_tarefa_projeto_execucao",
         getTaskComments: "gris.gestao_de_projetos.doctype.projeto.projeto.get_tarefa_projeto_execucao_comentarios",
@@ -9,7 +11,7 @@
         deleteTaskComment: "gris.gestao_de_projetos.doctype.projeto.projeto.apagar_comentario_tarefa_projeto_execucao",
         saveMeeting: "gris.gestao_de_projetos.doctype.projeto.projeto.salvar_reuniao_projeto_execucao",
         completeProject: "gris.gestao_de_projetos.doctype.projeto.projeto.concluir_projeto_execucao",
-        cancelProject: "gris.gestao_de_projetos.doctype.projeto.projeto.cancelar_projeto",
+        cancelProject: "gris.gestao_de_projetos.doctype.projeto.projeto.cancelar_projeto_execucao",
         getAvaliacaoData: "gris.gestao_de_projetos.doctype.projeto.projeto.get_avaliacao_projeto_data",
         iniciarAvaliacao: "gris.gestao_de_projetos.doctype.projeto.projeto.iniciar_avaliacao_projeto",
         salvarAvaliacaoGeral: "gris.gestao_de_projetos.doctype.projeto.projeto.salvar_avaliacao_geral_projeto",
@@ -42,9 +44,14 @@
         projetoName: "",
         loading: false,
         canEdit: false,
+        choices: {
+            associados: [],
+            responsaveis: [],
+        },
         responsavelOptions: [],
         projeto: null,
         activeTab: "dados-gerais",
+        participantsSaving: false,
         dragTaskName: "",
         isDraggingTask: false,
         calendarDate: new Date(),
@@ -83,6 +90,13 @@
             .replace(/'/g, "&#39;");
     }
 
+    function toFlag(value, defaultValue) {
+        if (value === null || value === undefined || value === "") {
+            return defaultValue ? 1 : 0;
+        }
+        return Number(value) === 1 ? 1 : 0;
+    }
+
     function showAlert(message, type) {
         if (type !== "error") {
             hideAlert();
@@ -101,6 +115,17 @@
         if (!el) return;
         el.classList.add("d-none");
         el.textContent = "";
+    }
+
+    function getEventTargetElement(event) {
+        const target = event?.target;
+        if (target instanceof Element) {
+            return target;
+        }
+        if (target && target.parentElement instanceof Element) {
+            return target.parentElement;
+        }
+        return null;
     }
 
     function extractServerMessage(response) {
@@ -171,6 +196,23 @@
         el.textContent = text || "-";
     }
 
+    function updateGoogleDriveButton(link) {
+        const button = document.getElementById("btnAbrirGoogleDrive");
+        if (!button) return;
+
+        const url = String(link || "").trim();
+        if (!url) {
+            button.classList.add("d-none");
+            button.setAttribute("href", "#");
+            button.setAttribute("aria-hidden", "true");
+            return;
+        }
+
+        button.classList.remove("d-none");
+        button.setAttribute("href", url);
+        button.setAttribute("aria-hidden", "false");
+    }
+
     function sanitizeRenderedHtml(html) {
         const container = document.createElement("div");
         container.innerHTML = html || "";
@@ -228,17 +270,37 @@
         el.innerHTML = markdownToHtml(value || "");
     }
 
-    function requireFrappeBundle(bundleName) {
+    function requireFrappeBundle(bundleName, timeoutMs = 6000) {
         return new Promise((resolve) => {
             if (!window.frappe || typeof frappe.require !== "function") {
                 resolve(false);
                 return;
             }
 
+            let settled = false;
+            const timer = window.setTimeout(() => {
+                if (!settled) {
+                    settled = true;
+                    resolve(false);
+                }
+            }, timeoutMs);
+
+            const finalize = (result) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                window.clearTimeout(timer);
+                resolve(Boolean(result));
+            };
+
             try {
-                frappe.require(bundleName, () => resolve(true));
+                const maybePromise = frappe.require(bundleName, () => finalize(true));
+                if (maybePromise && typeof maybePromise.then === "function") {
+                    maybePromise.then(() => finalize(true)).catch(() => finalize(false));
+                }
             } catch (error) {
-                resolve(false);
+                finalize(false);
             }
         });
     }
@@ -614,10 +676,10 @@
         fillValue("competencias", projeto.competencias);
         fillValue("especialidade", projeto.especialidade);
         fillValue("observacoes_e_comentarios", projeto.observacoes_e_comentarios);
+        updateGoogleDriveButton(projeto.link_pasta_google_drive);
 
         renderMarkdownToContainer(document.getElementById("view_avaliacao_tap"), projeto.avaliacao_tap || "");
 
-        renderTableRows("view_rows_equipe", projeto.equipe_de_interesse || [], ["nome", "email", "telefone", "funcao"]);
         renderTableRows("view_rows_objetivos", projeto.objetivos || [], ["objetivo", "metrica_de_sucesso"]);
         renderTableRows("view_rows_ods", projeto.ods || [], ["ods"]);
         renderTableRows("view_rows_recursos", projeto.recursos || [], ["recurso"]);
@@ -628,11 +690,382 @@
         renderCronogramaGantt(projeto.cronograma || [], "modal_cronograma_gantt");
     }
 
+    function normalizeParticipantRow(row) {
+        const tipo = String(row?.tipo_pessoa || "Outro").trim() || "Outro";
+        return {
+            tipo_pessoa: ["Associado", "Responsavel", "Outro"].includes(tipo) ? tipo : "Outro",
+            associado: String(row?.associado || "").trim(),
+            responsavel: String(row?.responsavel || "").trim(),
+            nome: String(row?.nome || "").trim(),
+            email: String(row?.email || "").trim(),
+            telefone: String(row?.telefone || "").trim(),
+            funcao: String(row?.funcao || "").trim(),
+            coordenador: toFlag(row?.coordenador, 0),
+            padrinho_orientador: toFlag(row?.padrinho_orientador, 0),
+            aprovador: toFlag(row?.aprovador, 0),
+            origem_regra_aprovador: String(row?.origem_regra_aprovador || "").trim(),
+            permite_remover: toFlag(row?.permite_remover, 1),
+            participa_avaliacao: toFlag(row?.participa_avaliacao, 1),
+        };
+    }
+
+    function getParticipants() {
+        return (state.projeto?.envolvidos || []).map(normalizeParticipantRow);
+    }
+
+    function buildResponsavelOptionsFromProjeto(projeto) {
+        const values = (projeto?.envolvidos || [])
+            .map((row) => String(row?.nome || "").trim())
+            .filter(Boolean);
+        return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right, "pt-BR"));
+    }
+
+    function renderParticipantsTable() {
+        const tbody = document.getElementById("participantsRows");
+        if (!tbody) return;
+
+        bindParticipantTableEvents();
+
+        const rows = getParticipants();
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="8">Nenhum envolvido informado.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = rows
+            .map((row, index) => {
+                const coordinatorChip = row.coordenador
+                    ? '<span class="participant-badge participant-badge--coordenador">Sim</span>'
+                    : '<span class="participant-badge">Não</span>';
+                const sponsorChip = row.padrinho_orientador
+                    ? '<span class="participant-badge participant-badge--padrinho">Sim</span>'
+                    : '<span class="participant-badge">Não</span>';
+                const approverChip = row.aprovador
+                    ? '<span class="participant-badge participant-badge--aprovador">Sim</span>'
+                    : '<span class="participant-badge">Não</span>';
+
+                const participaDisabled = state.canEdit ? "" : "disabled";
+                const participaChecked = row.participa_avaliacao ? "checked" : "";
+
+                return `
+                    <tr>
+                        <td>${escapeHtml(row.nome || "-")}</td>
+                        <td>${escapeHtml(row.email || "-")}</td>
+                        <td>${escapeHtml(row.telefone || "-")}</td>
+                        <td>${escapeHtml(row.funcao || "-")}</td>
+                        <td>${coordinatorChip}</td>
+                        <td>${sponsorChip}</td>
+                        <td>${approverChip}</td>
+                        <td>
+                            <label class="participant-toggle">
+                                <input type="checkbox" data-participa-idx="${index}" ${participaChecked} ${participaDisabled} />
+                                <span>${row.participa_avaliacao ? "Sim" : "Não"}</span>
+                            </label>
+                        </td>
+                    </tr>
+                `;
+            })
+            .join("");
+    }
+
+    function populateParticipantSelects() {
+        const associadoSelect = document.getElementById("participant_associado");
+        const responsavelSelect = document.getElementById("participant_responsavel");
+        if (!associadoSelect || !responsavelSelect) return;
+
+        const associadosOptions = (state.choices?.associados || [])
+            .map((item) => `<option value="${escapeHtml(item.value || "")}">${escapeHtml(item.label || item.value || "")}</option>`)
+            .join("");
+        const responsaveisOptions = (state.choices?.responsaveis || [])
+            .map((item) => `<option value="${escapeHtml(item.value || "")}">${escapeHtml(item.label || item.value || "")}</option>`)
+            .join("");
+
+        associadoSelect.innerHTML = `<option value="">Selecione</option>${associadosOptions}`;
+        responsavelSelect.innerHTML = `<option value="">Selecione</option>${responsaveisOptions}`;
+    }
+
+    function updateParticipantModalType() {
+        const tipo = (document.getElementById("participant_tipo_pessoa")?.value || "Outro").trim();
+        const associadoGroup = document.getElementById("participant_associado_group");
+        const responsavelGroup = document.getElementById("participant_responsavel_group");
+        if (associadoGroup) associadoGroup.classList.toggle("d-none", tipo !== "Associado");
+        if (responsavelGroup) responsavelGroup.classList.toggle("d-none", tipo !== "Responsavel");
+    }
+
+    async function preloadParticipantContact(tipoPessoa, docname) {
+        const tipo = String(tipoPessoa || "").trim();
+        const name = String(docname || "").trim();
+        if (!name || !["Associado", "Responsavel"].includes(tipo)) {
+            return;
+        }
+
+        try {
+            const contato = await callApi(METHODS.getContatoPessoa, {
+                doctype_name: tipo,
+                docname: name,
+            });
+            const nome = document.getElementById("participant_nome");
+            const email = document.getElementById("participant_email");
+            const telefone = document.getElementById("participant_telefone");
+            if (nome) nome.value = contato.nome || "";
+            if (email) email.value = contato.email || "";
+            if (telefone) telefone.value = contato.telefone || "";
+        } catch (error) {
+            showAlert(error.message || "Falha ao carregar dados da pessoa selecionada.", "error");
+        }
+    }
+
+    function setParticipantModalReadOnly(readOnly) {
+        [
+            "participant_tipo_pessoa",
+            "participant_associado",
+            "participant_responsavel",
+            "participant_nome",
+            "participant_email",
+            "participant_telefone",
+            "participant_funcao",
+            "participant_coordenador",
+            "participant_participa_avaliacao",
+        ].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.disabled = Boolean(readOnly);
+            }
+        });
+
+        const saveButton = document.getElementById("btnSalvarParticipante");
+        if (saveButton) {
+            saveButton.disabled = Boolean(readOnly);
+        }
+    }
+
+    function openParticipantModal() {
+        populateParticipantSelects();
+
+        const row = {
+            tipo_pessoa: "Associado",
+            associado: "",
+            responsavel: "",
+            nome: "",
+            email: "",
+            telefone: "",
+            funcao: "",
+            coordenador: 0,
+            padrinho_orientador: 0,
+            aprovador: 0,
+            origem_regra_aprovador: "",
+            permite_remover: 1,
+            participa_avaliacao: 1,
+        };
+
+        const title = document.getElementById("participantModalTitle");
+        if (title) {
+            title.textContent = "Novo envolvido";
+        }
+
+        const warning = document.getElementById("participantModalWarning");
+        if (warning) {
+            warning.classList.add("d-none");
+            warning.textContent = "";
+        }
+
+        const indexInput = document.getElementById("participant_index");
+        if (indexInput) indexInput.value = "";
+
+        const tipoInput = document.getElementById("participant_tipo_pessoa");
+        const associadoInput = document.getElementById("participant_associado");
+        const responsavelInput = document.getElementById("participant_responsavel");
+        const nomeInput = document.getElementById("participant_nome");
+        const emailInput = document.getElementById("participant_email");
+        const telefoneInput = document.getElementById("participant_telefone");
+        const funcaoInput = document.getElementById("participant_funcao");
+        const coordenadorInput = document.getElementById("participant_coordenador");
+        const participaInput = document.getElementById("participant_participa_avaliacao");
+
+        if (tipoInput) tipoInput.value = row.tipo_pessoa || "Outro";
+        if (associadoInput) associadoInput.value = row.associado || "";
+        if (responsavelInput) responsavelInput.value = row.responsavel || "";
+        if (nomeInput) nomeInput.value = row.nome || "";
+        if (emailInput) emailInput.value = row.email || "";
+        if (telefoneInput) telefoneInput.value = row.telefone || "";
+        if (funcaoInput) funcaoInput.value = row.funcao || "";
+        if (coordenadorInput) coordenadorInput.checked = Number(row.coordenador) === 1;
+        if (participaInput) participaInput.checked = Number(row.participa_avaliacao) === 1;
+
+        updateParticipantModalType();
+        setParticipantModalReadOnly(false);
+        openModal("participantModal");
+    }
+
+    function collectParticipantModalPayload() {
+        const tipo = (document.getElementById("participant_tipo_pessoa")?.value || "Outro").trim() || "Outro";
+        const associado = (document.getElementById("participant_associado")?.value || "").trim();
+        const responsavel = (document.getElementById("participant_responsavel")?.value || "").trim();
+        const nome = (document.getElementById("participant_nome")?.value || "").trim();
+        const email = (document.getElementById("participant_email")?.value || "").trim();
+        const telefone = (document.getElementById("participant_telefone")?.value || "").trim();
+        const funcao = (document.getElementById("participant_funcao")?.value || "").trim();
+        const coordenadorFlag = document.getElementById("participant_coordenador")?.checked ? 1 : 0;
+        const participaAvaliacao = document.getElementById("participant_participa_avaliacao")?.checked ? 1 : 0;
+
+        if (tipo === "Associado" && !associado) {
+            showAlert("Selecione o associado para o envolvido.", "error");
+            return null;
+        }
+        if (tipo === "Responsavel" && !responsavel) {
+            showAlert("Selecione o responsável para o envolvido.", "error");
+            return null;
+        }
+        if (!nome || !email || !telefone) {
+            showAlert("Preencha nome, email e telefone do envolvido.", "error");
+            return null;
+        }
+
+        return {
+            tipo_pessoa: tipo,
+            associado: tipo === "Associado" ? associado : "",
+            responsavel: tipo === "Responsavel" ? responsavel : "",
+            nome,
+            email,
+            telefone,
+            funcao,
+            coordenador: coordenadorFlag,
+            participa_avaliacao: participaAvaliacao,
+        };
+    }
+
+    async function persistParticipants(rows) {
+        if (state.participantsSaving) {
+            return false;
+        }
+
+        state.participantsSaving = true;
+        const addButton = document.getElementById("btnNovoParticipante");
+        if (addButton) {
+            addButton.disabled = true;
+        }
+
+        hideAlert();
+        try {
+            const result = await callApi(METHODS.saveParticipants, {
+                projeto_name: state.projetoName,
+                envolvidos: JSON.stringify(rows),
+            });
+
+            state.projeto = result.projeto || state.projeto || {};
+            state.responsavelOptions = buildResponsavelOptionsFromProjeto(state.projeto);
+
+            renderDadosGerais(state.projeto);
+            renderParticipantsTable();
+            renderTaskKanban();
+            renderMeetings();
+            setEditabilityHints();
+
+            return true;
+        } catch (error) {
+            showAlert(error.message || "Falha ao salvar envolvidos do projeto.", "error");
+            return false;
+        } finally {
+            state.participantsSaving = false;
+            if (addButton) {
+                addButton.disabled = !state.canEdit;
+            }
+        }
+    }
+
+    async function saveParticipantFromModal() {
+        if (!state.canEdit || state.participantsSaving) {
+            return;
+        }
+
+        const rows = getParticipants();
+
+        const payload = collectParticipantModalPayload();
+        if (!payload) {
+            return;
+        }
+
+        const nextRow = {
+            ...payload,
+            padrinho_orientador: 0,
+            aprovador: 0,
+            origem_regra_aprovador: "",
+            permite_remover: 1,
+        };
+
+        if (nextRow.coordenador) {
+            rows.forEach((row) => {
+                row.coordenador = 0;
+            });
+        }
+
+        rows.push(normalizeParticipantRow(nextRow));
+
+        if (!rows.some((row) => Number(row.coordenador) === 1)) {
+            showAlert("Defina um coordenador para o projeto.", "error");
+            return;
+        }
+
+        const ok = await persistParticipants(rows);
+        if (ok) {
+            closeModal("participantModal");
+        }
+    }
+
+    async function toggleParticipantEvaluation(index, checked) {
+        if (!state.canEdit || state.participantsSaving) {
+            return;
+        }
+
+        const rows = getParticipants();
+        const target = rows[index];
+        if (!target) {
+            return;
+        }
+
+        target.participa_avaliacao = checked ? 1 : 0;
+        const ok = await persistParticipants(rows);
+        if (!ok) {
+            renderParticipantsTable();
+        }
+    }
+
+    function bindParticipantTableEvents() {
+        const participantsRows = document.getElementById("participantsRows");
+        if (!participantsRows) {
+            return;
+        }
+        if (participantsRows.dataset.boundParticipantEvents === "1") {
+            return;
+        }
+        participantsRows.dataset.boundParticipantEvents = "1";
+
+        participantsRows.addEventListener("change", (event) => {
+            const target = getEventTargetElement(event);
+            if (!target) {
+                return;
+            }
+
+            const participaInput = target.closest("[data-participa-idx]");
+            if (!participaInput || !participantsRows.contains(participaInput)) {
+                return;
+            }
+
+            const idx = Number(participaInput.getAttribute("data-participa-idx"));
+            if (!Number.isInteger(idx) || idx < 0) {
+                return;
+            }
+
+            toggleParticipantEvaluation(idx, Boolean(participaInput.checked));
+        });
+    }
+
     function setActiveTab(tabKey) {
         state.activeTab = tabKey;
 
         const tabs = {
             "dados-gerais": { btn: "tabBtnDadosGerais", panel: "tabDadosGerais" },
+            participantes: { btn: "tabBtnParticipantes", panel: "tabParticipantes" },
             tarefas: { btn: "tabBtnTarefas", panel: "tabGestaoTarefas" },
             reunioes: { btn: "tabBtnReunioes", panel: "tabReunioes" },
             avaliacoes: { btn: "tabBtnAvaliacoes", panel: "tabAvaliacoes" },
@@ -2179,6 +2612,7 @@
     function setEditabilityHints() {
         const taskHint = document.getElementById("taskEditHint");
         const meetingHint = document.getElementById("meetingEditHint");
+        const participantsHint = document.getElementById("participantsEditHint");
 
         if (taskHint) {
             taskHint.textContent = state.canEdit
@@ -2192,10 +2626,18 @@
                 : "Você possui acesso de leitura para reuniões neste projeto.";
         }
 
+        if (participantsHint) {
+            participantsHint.textContent = state.canEdit
+                ? "Adicione envolvidos e indique quem participa da avaliação."
+                : "Você possui acesso de leitura para os participantes deste projeto.";
+        }
+
         const createTaskButton = document.getElementById("btnNovaTarefa");
         const createMeetingButton = document.getElementById("btnNovaReuniao");
+        const addParticipantButton = document.getElementById("btnNovoParticipante");
         if (createTaskButton) createTaskButton.disabled = !state.canEdit;
         if (createMeetingButton) createMeetingButton.disabled = !state.canEdit;
+        if (addParticipantButton) addParticipantButton.disabled = !state.canEdit;
         setProjectStatusButtonsDisabled(!state.canEdit || state.projectStatusSaving);
     }
 
@@ -2209,9 +2651,11 @@
             const result = await callApi(METHODS.bootstrap, { projeto_name: state.projetoName });
             state.projeto = result.projeto || {};
             state.responsavelOptions = result.responsavel_options || [];
+            state.choices = result.choices || { associados: [], responsaveis: [] };
             state.canEdit = Boolean(result.can_edit);
 
             renderDadosGerais(state.projeto);
+            renderParticipantsTable();
             renderTaskKanban();
             renderMeetings();
             setEditabilityHints();
@@ -2223,6 +2667,8 @@
     }
 
     function bindEvents() {
+        bindParticipantTableEvents();
+
         document.querySelectorAll(".project-tab").forEach((button) => {
             button.addEventListener("click", () => {
                 const target = button.getAttribute("data-tab");
@@ -2240,6 +2686,11 @@
         const openMeetingButton = document.getElementById("btnNovaReuniao");
         if (openMeetingButton) {
             openMeetingButton.addEventListener("click", () => openMeetingModal(""));
+        }
+
+        const openParticipantButton = document.getElementById("btnNovoParticipante");
+        if (openParticipantButton) {
+            openParticipantButton.addEventListener("click", () => openParticipantModal());
         }
 
         const concludeProjectButton = document.getElementById("btnConcluirProjeto");
@@ -2326,6 +2777,30 @@
             saveMeetingButton.addEventListener("click", saveMeeting);
         }
 
+        const saveParticipantButton = document.getElementById("btnSalvarParticipante");
+        if (saveParticipantButton) {
+            saveParticipantButton.addEventListener("click", saveParticipantFromModal);
+        }
+
+        const participantTipo = document.getElementById("participant_tipo_pessoa");
+        if (participantTipo) {
+            participantTipo.addEventListener("change", updateParticipantModalType);
+        }
+
+        const participantAssociado = document.getElementById("participant_associado");
+        if (participantAssociado) {
+            participantAssociado.addEventListener("change", () => {
+                preloadParticipantContact("Associado", participantAssociado.value || "");
+            });
+        }
+
+        const participantResponsavel = document.getElementById("participant_responsavel");
+        if (participantResponsavel) {
+            participantResponsavel.addEventListener("change", () => {
+                preloadParticipantContact("Responsavel", participantResponsavel.value || "");
+            });
+        }
+
         document.querySelectorAll("[data-close-task-modal]").forEach((button) => {
             button.addEventListener("click", () => closeModal("taskModal"));
         });
@@ -2340,6 +2815,10 @@
 
         document.querySelectorAll("[data-close-project-status-modal]").forEach((button) => {
             button.addEventListener("click", closeProjectStatusConfirmModal);
+        });
+
+        document.querySelectorAll("[data-close-participant-modal]").forEach((button) => {
+            button.addEventListener("click", () => closeModal("participantModal"));
         });
 
         const openCronogramaButton = document.getElementById("btnAbrirCronogramaModal");
@@ -2375,7 +2854,12 @@
         }
 
         document.addEventListener("click", (event) => {
-            const commentAction = event.target.closest("[data-task-comment-action]");
+            const target = getEventTargetElement(event);
+            if (!target) {
+                return;
+            }
+
+            const commentAction = target.closest("[data-task-comment-action]");
             if (commentAction) {
                 const action = commentAction.getAttribute("data-task-comment-action");
                 const commentName = commentAction.getAttribute("data-comment-name") || "";
@@ -2392,20 +2876,20 @@
                 return;
             }
 
-            const taskCard = event.target.closest(".task-card");
+            const taskCard = target.closest(".task-card");
             if (taskCard && taskCard.dataset.taskName) {
                 if (state.isDraggingTask) return;
                 openTaskModal(taskCard.dataset.taskName);
                 return;
             }
 
-            const meetingCard = event.target.closest(".meeting-card");
+            const meetingCard = target.closest(".meeting-card");
             if (meetingCard && meetingCard.dataset.meetingName) {
                 openMeetingModal(meetingCard.dataset.meetingName);
                 return;
             }
 
-            const markdownButton = event.target.closest("[data-markdown-action]");
+            const markdownButton = target.closest("[data-markdown-action]");
             if (markdownButton) {
                 const toolbar = markdownButton.closest("[data-markdown-target]");
                 const action = markdownButton.getAttribute("data-markdown-action");
@@ -2495,6 +2979,7 @@
 
         document.addEventListener("keydown", (event) => {
             if (event.key === "Escape") {
+                closeModal("participantModal");
                 closeModal("taskModal");
                 closeModal("meetingModal");
                 closeModal("cronogramaModal");
@@ -2525,17 +3010,22 @@
         }
 
         document.addEventListener("click", function (event) {
-            if (event.target.closest("[data-close-avaliacao-detalhe-modal]")) {
+            var target = getEventTargetElement(event);
+            if (!target) {
+                return;
+            }
+
+            if (target.closest("[data-close-avaliacao-detalhe-modal]")) {
                 closeModal("avaliacaoDetalheModal");
                 return;
             }
-            var reenviarBtn = event.target.closest("[data-reenviar-idx]");
+            var reenviarBtn = target.closest("[data-reenviar-idx]");
             if (reenviarBtn) {
                 var idx = reenviarBtn.getAttribute("data-reenviar-idx");
                 reenviarEmailAvaliacao(idx);
                 return;
             }
-            var detalheBtn = event.target.closest("[data-ver-avaliacao-idx]");
+            var detalheBtn = target.closest("[data-ver-avaliacao-idx]");
             if (detalheBtn) {
                 var idx2 = detalheBtn.getAttribute("data-ver-avaliacao-idx");
                 abrirDetalheAvaliacao(idx2);
@@ -2936,9 +3426,11 @@
         state.calendarDate = new Date();
         state.meetingsViewMode = getDefaultMeetingsViewMode();
         setActiveTab("dados-gerais");
-        await initMeetingEditors();
         bindEvents();
         await reloadData();
+        initMeetingEditors().catch(() => {
+            state.useFrappeEditor = false;
+        });
     }
 
     document.addEventListener("DOMContentLoaded", bootstrap);

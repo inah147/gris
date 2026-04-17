@@ -25,19 +25,19 @@ Projetos escoteiros devem alinhar-se aos valores do escotismo: desenvolvimento i
 ### Descrição e justificativa
 Apresente a ideia do projeto, problema/oportunidade abordada e justificativa, com contexto relevante ao escotismo.
 
-**Exemplo positivo**:  
+**Exemplo positivo**:
 "Projeto 'Horta Escoteira Sustentável': Criaremos uma horta orgânica na sede do grupo para ensinar 20 jovens sobre agricultura urbana, combatendo insegurança alimentar local (dados IBGE: 30% das famílias na comunidade sem acesso regular a vegetais). Justificativa: Fomenta autossuficiência e conexão com a natureza, alinhado ao Método Escoteiro."
 
-**Exemplo negativo**:  
+**Exemplo negativo**:
 "Vamos fazer uma horta porque é legal. Tem gente passando fome por aí."
 
 ### Como o projeto se alinha com o escotismo
 Mostre conexão clara com princípios escoteiros (ex.: Promessa Escoteira, Programa Educativo, gestão institucional).
 
-**Exemplo positivo**:  
+**Exemplo positivo**:
 "Alinha-se ao Desenvolvimento Integral (área 'Cuidar da Natureza'): jovens aprendem jardinagem sustentável, promovendo cidadania ativa via doação de produção a famílias carentes e impacto ambiental (redução de resíduos plásticos em embalagens). Contribui para o Programa Educativo das Seções Escoteira e Pioneira."
 
-**Exemplo negativo**:  
+**Exemplo negativo**:
 "É bom para o meio ambiente e ajuda as pessoas, tipo escotismo."
 
 ### Objetivos
@@ -59,7 +59,7 @@ Alinhe com pelo menos um ODS da ONU. A ODS deve ser relacionada com o problema/o
 **Exemplo positivo**:
 Se o projeto for sobre oficinas de hortaliças orgânicas para jovens, pode alinhar com o ODS 2
 
-**Exemplo negativo**:  
+**Exemplo negativo**:
 Se o projeto for sobre oficinas de hortaliças orgânicas para jovens, não pode alinhar com o ODS 7 (Energia Limpa e Acessível)
 
 ### Cronograma
@@ -93,7 +93,7 @@ Identifique riscos principais (natureza, probabilidade, impacto), com estratégi
 - **Risco**: Chuvas excessivas danificam plantas (probabilidade média, impacto alto). **Mitigação**: Estufa improvisada com plásticos reciclados; plano B de cultivo indoor.
 - **Risco**: Baixa adesão de jovens (probabilidade baixa, impacto médio). **Mitigação**: Gamificação com insígnias escoteiras e lembretes semanais.
 
-**Exemplo negativo**:  
+**Exemplo negativo**:
 "Pode chover (sem mitigação). Jovens podem não vir (vamos ver)."
 
 **Observação**: Se uma seção estiver perfeita, diga "Nenhum ponto de atenção identificado".
@@ -217,7 +217,7 @@ def montar_payload_revisao_tap(projeto_name: str) -> dict[str, Any]:
 		"titulo": doc.get("nome_do_projeto") or "",
 		"descricao_e_justificativa": doc.get("justificativa") or "",
 		"alinhamento_com_escotismo": doc.get("alinhamento_com_escotismo") or "",
-		"equipe_de_interesse": _montar_equipe_para_prompt(doc.get("equipe_de_interesse")),
+		"equipe_de_interesse": _montar_equipe_para_prompt(doc.get("envolvidos")),
 		"objetivos": _serialize_rows(doc.get("objetivos"), ["objetivo", "metrica_de_sucesso"]),
 		"ods": _mapear_ods_com_descricao(doc.get("ods")),
 		"cronograma": _serialize_rows(doc.get("cronograma"), ["data_inicio", "data_termino", "tarefa"]),

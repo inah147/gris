@@ -10,6 +10,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, get_datetime, get_fullname, getdate, now_datetime, nowdate, strip_html
 
+from gris.api.google_workspace.project_drive import is_valid_drive_folder_link
 from gris.gestao_de_projetos.doctype.avaliacao_de_projeto.avaliacao_de_projeto import (
 	_get_all_reviewer_data,
 )
@@ -36,11 +37,15 @@ def _is_section_chief_function(value: str | None) -> bool:
 class Projeto(Document):
 	def validate(self):
 		self._validate_dates()
+		self._validate_drive_folder_link()
 		if getattr(self.flags, "portal_draft_save", False):
 			return
 		self._hydrate_people_data()
 		self._validate_sponsor_category()
 		self._validate_people_scopes()
+
+	def after_insert(self):
+		_enqueue_project_drive_folder_creation(self.name)
 
 	def _validate_dates(self):
 		if self.data_de_inicio and self.data_de_termino:
@@ -66,80 +71,62 @@ class Projeto(Document):
 				frappe.throw(_("Cronograma com data de inicio maior que data de termino."))
 
 	def _hydrate_people_data(self):
-		for row in self.outros_envolvidos or []:
-			if not row.associado:
-				continue
-			payload = _get_associado_payload(row.associado)
-			row.email = payload["email"]
-			row.telefone = payload["telefone"]
+		envolvidos = _get_normalized_envolvidos(self, strict=True, include_legacy=True)
 
-		for row in self.equipe_de_interesse or []:
-			tipo = (row.tipo_pessoa or "").strip()
-			if tipo == "Associado":
-				if not row.associado:
-					frappe.throw(_("Selecione um associado para membros da equipe com tipo 'Associado'."))
-				payload = _get_associado_payload(row.associado)
-				row.nome = payload["nome"]
-				row.email = payload["email"]
-				row.telefone = payload["telefone"]
-			elif tipo == "Responsavel":
-				if not row.responsavel:
-					frappe.throw(_("Selecione um responsavel para membros da equipe com tipo 'Responsavel'."))
-				payload = _get_responsavel_payload(row.responsavel)
-				row.nome = payload["nome"]
-				row.email = payload["email"]
-				row.telefone = payload["telefone"]
-			else:
-				if not row.nome:
-					frappe.throw(_("Informe o nome para membros da equipe com tipo 'Outro'."))
-				if not row.email or not row.telefone:
-					frappe.throw(
-						_("Email e telefone sao obrigatorios para membros de equipe com tipo Outro.")
-					)
+		coordenadores = [row for row in envolvidos if cint(row.get("coordenador"))]
+		if len(coordenadores) > 1:
+			frappe.throw(_("Apenas um envolvido pode ser marcado como coordenador."))
+		if coordenadores and coordenadores[0].get("tipo_pessoa") != APPROVER_TYPE_ASSOCIADO:
+			frappe.throw(_("O coordenador do projeto deve ser do tipo Associado."))
 
-		for row in self.aprovadores or []:
-			tipo = (row.tipo_pessoa or "").strip()
-			if tipo not in {APPROVER_TYPE_ASSOCIADO, APPROVER_TYPE_RESPONSAVEL}:
-				frappe.throw(_("Tipo de pessoa inválido na tabela de aprovadores."))
+		padrinhos = [row for row in envolvidos if cint(row.get("padrinho_orientador"))]
+		if len(padrinhos) > 1:
+			frappe.throw(_("Apenas um envolvido pode ser marcado como padrinho/orientador."))
 
-			if tipo == APPROVER_TYPE_ASSOCIADO:
-				if not row.associado:
-					frappe.throw(_("Selecione um associado para aprovadores do tipo Associado."))
-				payload = _get_associado_payload(row.associado)
-				row.responsavel = ""
-			else:
-				if not row.responsavel:
-					frappe.throw(_("Selecione um responsável para aprovadores do tipo Responsável."))
-				payload = _get_responsavel_payload(row.responsavel)
-				row.associado = ""
-
-			row.nome = payload["nome"]
-			row.email = payload["email"]
-			row.telefone = payload["telefone"]
-			row.origem_regra = (row.origem_regra or APPROVER_ORIGIN_MANUAL).strip()
-			if row.origem_regra == APPROVER_ORIGIN_PADRINHO:
-				row.permite_remover = 0
-			elif row.permite_remover in (None, ""):
-				row.permite_remover = 1
+		_set_doc_envolvidos(self, envolvidos)
+		_sync_legacy_people_from_envolvidos(self, envolvidos)
 
 	def _validate_people_scopes(self):
-		team_names = {row.nome for row in (self.equipe_de_interesse or []) if row.nome}
+		team_names = {
+			(row.get("nome") or "").strip()
+			for row in _get_normalized_envolvidos(self, strict=False, include_legacy=True)
+			if (row.get("nome") or "").strip()
+		}
 
 		for tarefa in self.tarefas or []:
 			if tarefa.responsavel and tarefa.responsavel not in team_names:
 				frappe.throw(
-					_("Responsavel '{0}' da tarefa deve existir na equipe de interesse.").format(
+					_("Responsavel '{0}' da tarefa deve existir entre os envolvidos do projeto.").format(
 						tarefa.responsavel
 					)
 				)
 
 	def _validate_sponsor_category(self):
-		if not self.padrinho_associado:
+		padrinho = _get_padrinho_envolvido(self)
+		if not padrinho:
 			return
 
-		categoria = frappe.db.get_value("Associado", self.padrinho_associado, "categoria")
+		if (padrinho.get("tipo_pessoa") or "") != APPROVER_TYPE_ASSOCIADO:
+			return
+
+		padrinho_associado = (padrinho.get("associado") or "").strip()
+		if not padrinho_associado:
+			return
+
+		categoria = frappe.db.get_value("Associado", padrinho_associado, "categoria")
 		if _is_beneficiario_categoria(categoria):
 			frappe.throw(_("Padrinho associado nao pode ter categoria Beneficiario."))
+
+	def _validate_drive_folder_link(self):
+		link = (self.get("link_pasta_google_drive") or "").strip()
+		if not link:
+			self.link_pasta_google_drive = ""
+			return
+
+		if not is_valid_drive_folder_link(link):
+			frappe.throw(_("Link da pasta Google Drive invalido."))
+
+		self.link_pasta_google_drive = link
 
 
 @frappe.whitelist()
@@ -262,24 +249,397 @@ SIMPLE_FORM_FIELDS = [
 	"observacoes_e_comentarios",
 ]
 
+ENVOLVIDO_FIELDS = [
+	"tipo_pessoa",
+	"associado",
+	"responsavel",
+	"nome",
+	"email",
+	"telefone",
+	"funcao",
+	"coordenador",
+	"padrinho_orientador",
+	"aprovador",
+	"origem_regra_aprovador",
+	"permite_remover",
+	"participa_avaliacao",
+]
+
 TABLE_FIELD_MAP = {
-	"equipe_de_interesse": ["tipo_pessoa", "associado", "responsavel", "nome", "email", "telefone", "funcao"],
-	"aprovadores": [
-		"tipo_pessoa",
-		"associado",
-		"responsavel",
-		"nome",
-		"email",
-		"telefone",
-		"origem_regra",
-		"permite_remover",
-	],
+	"envolvidos": ENVOLVIDO_FIELDS,
 	"objetivos": ["objetivo", "metrica_de_sucesso"],
 	"ods": ["ods"],
 	"cronograma": ["data_inicio", "data_termino", "tarefa"],
 	"recursos": ["recurso"],
 	"riscos": ["risco", "mitigacao"],
 }
+
+
+def _doc_has_field(doc: Document, fieldname: str) -> bool:
+	meta = getattr(doc, "meta", None)
+	return bool(meta and meta.has_field(fieldname))
+
+
+def _to_bool_flag(value: Any, default: int = 0) -> int:
+	if value in (None, ""):
+		return 1 if default else 0
+	return 1 if cint(value) else 0
+
+
+def _normalize_envolvido_tipo_pessoa(value: Any) -> str:
+	raw = (value or "").strip() if isinstance(value, str) else ""
+	if raw in {APPROVER_TYPE_ASSOCIADO, APPROVER_TYPE_RESPONSAVEL, "Outro"}:
+		return raw
+	if raw.lower() == "nome livre":
+		return "Outro"
+	return "Outro"
+
+
+def _make_envolvido_row_key(row: dict[str, Any]) -> str:
+	tipo = (row.get("tipo_pessoa") or "").strip()
+	if tipo == APPROVER_TYPE_ASSOCIADO and (row.get("associado") or "").strip():
+		return f"Associado:{(row.get('associado') or '').strip()}"
+	if tipo == APPROVER_TYPE_RESPONSAVEL and (row.get("responsavel") or "").strip():
+		return f"Responsavel:{(row.get('responsavel') or '').strip()}"
+
+	nome = _normalize_text(row.get("nome") or "")
+	email = (row.get("email") or "").strip().lower()
+	if nome or email:
+		return f"Outro:{nome}:{email}"
+
+	return ""
+
+
+def _normalize_envolvido_row(row: Document | dict[str, Any], strict: bool = False) -> dict[str, Any] | None:
+	tipo_pessoa = _normalize_envolvido_tipo_pessoa(row.get("tipo_pessoa"))
+	associado = (row.get("associado") or "").strip() if tipo_pessoa == APPROVER_TYPE_ASSOCIADO else ""
+	responsavel = (row.get("responsavel") or "").strip() if tipo_pessoa == APPROVER_TYPE_RESPONSAVEL else ""
+
+	if tipo_pessoa == APPROVER_TYPE_ASSOCIADO and not associado:
+		if strict:
+			frappe.throw(_("Selecione um associado para envolvidos do tipo Associado."))
+		return None
+
+	if tipo_pessoa == APPROVER_TYPE_RESPONSAVEL and not responsavel:
+		if strict:
+			frappe.throw(_("Selecione um responsável para envolvidos do tipo Responsável."))
+		return None
+
+	if tipo_pessoa == APPROVER_TYPE_ASSOCIADO:
+		payload = _get_associado_payload(associado) if strict else _get_associado_payload_loose(associado)
+		nome = payload.get("nome") or (row.get("nome") or "")
+		email = payload.get("email") or (row.get("email") or "")
+		telefone = payload.get("telefone") or (row.get("telefone") or "")
+	elif tipo_pessoa == APPROVER_TYPE_RESPONSAVEL:
+		payload = (
+			_get_responsavel_payload(responsavel) if strict else _get_responsavel_payload_loose(responsavel)
+		)
+		nome = payload.get("nome") or (row.get("nome") or "")
+		email = payload.get("email") or (row.get("email") or "")
+		telefone = payload.get("telefone") or (row.get("telefone") or "")
+	else:
+		nome = (row.get("nome") or "").strip()
+		email = (row.get("email") or "").strip()
+		telefone = (row.get("telefone") or "").strip()
+		if strict and (not nome or not email or not telefone):
+			frappe.throw(
+				_("Para envolvidos do tipo Outro, preencha nome, email e telefone obrigatoriamente.")
+			)
+
+	funcao = (row.get("funcao") or "").strip()
+	coordenador = _to_bool_flag(row.get("coordenador"), default=0)
+	e_padrinho = _to_bool_flag(row.get("padrinho_orientador"), default=0)
+	aprovador = _to_bool_flag(row.get("aprovador"), default=0)
+	participa_avaliacao = _to_bool_flag(row.get("participa_avaliacao"), default=1)
+
+	origem_regra_aprovador = (
+		row.get("origem_regra_aprovador") or row.get("origem_regra") or APPROVER_ORIGIN_MANUAL
+	).strip()
+	if origem_regra_aprovador not in {
+		APPROVER_ORIGIN_MANUAL,
+		APPROVER_ORIGIN_DIRETOR,
+		APPROVER_ORIGIN_PADRINHO,
+		APPROVER_ORIGIN_CHEFE_SECAO,
+	}:
+		origem_regra_aprovador = APPROVER_ORIGIN_MANUAL
+
+	if aprovador and tipo_pessoa not in {APPROVER_TYPE_ASSOCIADO, APPROVER_TYPE_RESPONSAVEL}:
+		if strict:
+			frappe.throw(_("Aprovadores devem ser do tipo Associado ou Responsável."))
+		aprovador = 0
+
+	if aprovador:
+		if origem_regra_aprovador in {APPROVER_ORIGIN_PADRINHO, APPROVER_ORIGIN_CHEFE_SECAO}:
+			permite_remover = 0
+		else:
+			permite_remover = _to_bool_flag(row.get("permite_remover"), default=1)
+	else:
+		origem_regra_aprovador = ""
+		permite_remover = 1
+
+	if strict and tipo_pessoa in {APPROVER_TYPE_ASSOCIADO, APPROVER_TYPE_RESPONSAVEL}:
+		if not (email or "").strip() or not (telefone or "").strip():
+			frappe.throw(_("Todos os envolvidos devem possuir email e telefone preenchidos."))
+
+	normalized = {
+		"tipo_pessoa": tipo_pessoa,
+		"associado": associado,
+		"responsavel": responsavel,
+		"nome": (nome or "").strip(),
+		"email": (email or "").strip(),
+		"telefone": (telefone or "").strip(),
+		"funcao": funcao,
+		"coordenador": coordenador,
+		"padrinho_orientador": e_padrinho,
+		"aprovador": aprovador,
+		"origem_regra_aprovador": origem_regra_aprovador,
+		"permite_remover": 1 if permite_remover else 0,
+		"participa_avaliacao": 1 if participa_avaliacao else 0,
+	}
+	normalized["key"] = _make_envolvido_row_key(normalized)
+	if not normalized["key"]:
+		if strict:
+			frappe.throw(_("Não foi possível identificar um envolvido válido."))
+		return None
+	return normalized
+
+
+def _merge_duplicate_envolvidos(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+	origem_priority = {
+		APPROVER_ORIGIN_MANUAL: 0,
+		APPROVER_ORIGIN_DIRETOR: 1,
+		APPROVER_ORIGIN_CHEFE_SECAO: 2,
+		APPROVER_ORIGIN_PADRINHO: 3,
+		"": -1,
+	}
+
+	merged: dict[str, dict[str, Any]] = {}
+	order: list[str] = []
+
+	for row in rows:
+		key = (row.get("key") or "").strip()
+		if not key:
+			continue
+
+		current = merged.get(key)
+		if not current:
+			merged[key] = row.copy()
+			order.append(key)
+			continue
+
+		for fieldname in ["nome", "email", "telefone", "funcao", "associado", "responsavel"]:
+			if not (current.get(fieldname) or "").strip() and (row.get(fieldname) or "").strip():
+				current[fieldname] = (row.get(fieldname) or "").strip()
+
+		current["coordenador"] = 1 if cint(current.get("coordenador")) or cint(row.get("coordenador")) else 0
+		current["padrinho_orientador"] = (
+			1 if cint(current.get("padrinho_orientador")) or cint(row.get("padrinho_orientador")) else 0
+		)
+		current["participa_avaliacao"] = (
+			1 if cint(current.get("participa_avaliacao")) or cint(row.get("participa_avaliacao")) else 0
+		)
+
+		is_aprovador = 1 if cint(current.get("aprovador")) or cint(row.get("aprovador")) else 0
+		current["aprovador"] = is_aprovador
+
+		if is_aprovador:
+			current_origin = (current.get("origem_regra_aprovador") or "").strip()
+			row_origin = (row.get("origem_regra_aprovador") or "").strip()
+			chosen_origin = row_origin
+			if origem_priority.get(current_origin, -1) > origem_priority.get(row_origin, -1):
+				chosen_origin = current_origin
+			current["origem_regra_aprovador"] = chosen_origin or APPROVER_ORIGIN_MANUAL
+
+			if current["origem_regra_aprovador"] in {
+				APPROVER_ORIGIN_PADRINHO,
+				APPROVER_ORIGIN_CHEFE_SECAO,
+			}:
+				current["permite_remover"] = 0
+			else:
+				row_perm = 1 if cint(row.get("permite_remover")) else 0
+				current_perm = 1 if cint(current.get("permite_remover")) else 0
+				current["permite_remover"] = 1 if current_perm and row_perm else 0
+		else:
+			current["origem_regra_aprovador"] = ""
+			current["permite_remover"] = 1
+
+		merged[key] = current
+
+	return [merged[key] for key in order]
+
+
+def _to_envolvido_child_payload(row: dict[str, Any]) -> dict[str, Any]:
+	return {
+		"tipo_pessoa": row.get("tipo_pessoa") or "Outro",
+		"associado": row.get("associado") or "",
+		"responsavel": row.get("responsavel") or "",
+		"nome": row.get("nome") or "",
+		"email": row.get("email") or "",
+		"telefone": row.get("telefone") or "",
+		"funcao": row.get("funcao") or "",
+		"coordenador": 1 if cint(row.get("coordenador")) else 0,
+		"padrinho_orientador": 1 if cint(row.get("padrinho_orientador")) else 0,
+		"aprovador": 1 if cint(row.get("aprovador")) else 0,
+		"origem_regra_aprovador": row.get("origem_regra_aprovador") or "",
+		"permite_remover": 1 if cint(row.get("permite_remover")) else 0,
+		"participa_avaliacao": 1 if cint(row.get("participa_avaliacao")) else 0,
+	}
+
+
+def _build_envolvidos_from_legacy(doc: Document) -> list[dict[str, Any]]:
+	rows: list[dict[str, Any]] = []
+
+	coordenador = (doc.get("coordenador") or "").strip()
+	if coordenador:
+		rows.append(
+			{
+				"tipo_pessoa": APPROVER_TYPE_ASSOCIADO,
+				"associado": coordenador,
+				"coordenador": 1,
+				"participa_avaliacao": 1,
+			}
+		)
+
+	tipo_padrinho = (doc.get("tipo_padrinho_ou_orientador") or "").strip()
+	padrinho_associado = (doc.get("padrinho_associado") or "").strip()
+	padrinho_responsavel = (doc.get("padrinho_responsavel") or "").strip()
+	if tipo_padrinho == APPROVER_TYPE_ASSOCIADO and padrinho_associado:
+		rows.append(
+			{
+				"tipo_pessoa": APPROVER_TYPE_ASSOCIADO,
+				"associado": padrinho_associado,
+				"padrinho_orientador": 1,
+				"aprovador": 1,
+				"origem_regra_aprovador": APPROVER_ORIGIN_PADRINHO,
+				"permite_remover": 0,
+				"participa_avaliacao": 1,
+			}
+		)
+	elif tipo_padrinho == APPROVER_TYPE_RESPONSAVEL and padrinho_responsavel:
+		rows.append(
+			{
+				"tipo_pessoa": APPROVER_TYPE_RESPONSAVEL,
+				"responsavel": padrinho_responsavel,
+				"padrinho_orientador": 1,
+				"aprovador": 1,
+				"origem_regra_aprovador": APPROVER_ORIGIN_PADRINHO,
+				"permite_remover": 0,
+				"participa_avaliacao": 1,
+			}
+		)
+
+	normalized = [
+		normalized_row
+		for normalized_row in (_normalize_envolvido_row(row, strict=False) for row in rows)
+		if normalized_row
+	]
+	return _merge_duplicate_envolvidos(normalized)
+
+
+def _get_normalized_envolvidos(
+	doc: Document,
+	*,
+	strict: bool,
+	include_legacy: bool,
+) -> list[dict[str, Any]]:
+	rows = [
+		normalized
+		for normalized in (
+			_normalize_envolvido_row(row, strict=strict) for row in (doc.get("envolvidos") or [])
+		)
+		if normalized
+	]
+	rows = _merge_duplicate_envolvidos(rows)
+	if rows or not include_legacy:
+		return rows
+	return _build_envolvidos_from_legacy(doc)
+
+
+def _set_doc_envolvidos(doc: Document, rows: list[dict[str, Any]]) -> None:
+	if not _doc_has_field(doc, "envolvidos"):
+		return
+
+	doc.set("envolvidos", [])
+	for row in rows:
+		doc.append("envolvidos", _to_envolvido_child_payload(row))
+
+
+def _get_coordenador_envolvido(doc: Document) -> dict[str, Any] | None:
+	for row in _get_normalized_envolvidos(doc, strict=False, include_legacy=True):
+		if cint(row.get("coordenador")) and (row.get("tipo_pessoa") or "") == APPROVER_TYPE_ASSOCIADO:
+			if (row.get("associado") or "").strip():
+				return row
+	return None
+
+
+def _get_padrinho_envolvido(doc: Document) -> dict[str, Any] | None:
+	for row in _get_normalized_envolvidos(doc, strict=False, include_legacy=True):
+		if not cint(row.get("padrinho_orientador")):
+			continue
+		tipo = row.get("tipo_pessoa") or ""
+		if tipo == APPROVER_TYPE_ASSOCIADO and (row.get("associado") or "").strip():
+			return row
+		if tipo == APPROVER_TYPE_RESPONSAVEL and (row.get("responsavel") or "").strip():
+			return row
+	return None
+
+
+def _sync_legacy_people_from_envolvidos(
+	doc: Document, envolvidos: list[dict[str, Any]] | None = None
+) -> None:
+	rows = (
+		envolvidos
+		if envolvidos is not None
+		else _get_normalized_envolvidos(doc, strict=False, include_legacy=True)
+	)
+
+	coordenador = next(
+		(
+			row
+			for row in rows
+			if cint(row.get("coordenador"))
+			and (row.get("tipo_pessoa") or "") == APPROVER_TYPE_ASSOCIADO
+			and (row.get("associado") or "").strip()
+		),
+		None,
+	)
+	if _doc_has_field(doc, "coordenador"):
+		doc.set("coordenador", (coordenador or {}).get("associado") or "")
+
+	padrinho = next(
+		(
+			row
+			for row in rows
+			if cint(row.get("padrinho_orientador"))
+			and (
+				(
+					(row.get("tipo_pessoa") or "") == APPROVER_TYPE_ASSOCIADO
+					and (row.get("associado") or "").strip()
+				)
+				or (
+					(row.get("tipo_pessoa") or "") == APPROVER_TYPE_RESPONSAVEL
+					and (row.get("responsavel") or "").strip()
+				)
+			)
+		),
+		None,
+	)
+	if _doc_has_field(doc, "tipo_padrinho_ou_orientador"):
+		doc.set("tipo_padrinho_ou_orientador", (padrinho or {}).get("tipo_pessoa") or "")
+	if _doc_has_field(doc, "padrinho_associado"):
+		doc.set(
+			"padrinho_associado",
+			(padrinho or {}).get("associado")
+			if (padrinho or {}).get("tipo_pessoa") == APPROVER_TYPE_ASSOCIADO
+			else "",
+		)
+	if _doc_has_field(doc, "padrinho_responsavel"):
+		doc.set(
+			"padrinho_responsavel",
+			(padrinho or {}).get("responsavel")
+			if (padrinho or {}).get("tipo_pessoa") == APPROVER_TYPE_RESPONSAVEL
+			else "",
+		)
 
 
 def _get_user_associados(user: str) -> list[dict[str, str]]:
@@ -511,36 +871,23 @@ def _merge_duplicate_aprovadores(rows: list[dict[str, Any]]) -> list[dict[str, A
 
 
 def _get_sponsor_approver_identity(doc: Document, strict: bool = False) -> dict[str, Any] | None:
-	tipo = (doc.get("tipo_padrinho_ou_orientador") or "").strip()
-	if tipo == APPROVER_TYPE_ASSOCIADO:
-		docname = (doc.get("padrinho_associado") or "").strip()
-		if not docname:
-			return None
-		base_row = {
-			"tipo_pessoa": APPROVER_TYPE_ASSOCIADO,
-			"associado": docname,
-			"origem_regra": APPROVER_ORIGIN_PADRINHO,
-			"permite_remover": 0,
-		}
-		return _normalize_aprovador_row(base_row, strict=strict)
+	padrinho = _get_padrinho_envolvido(doc)
+	if not padrinho:
+		return None
 
-	if tipo == APPROVER_TYPE_RESPONSAVEL:
-		docname = (doc.get("padrinho_responsavel") or "").strip()
-		if not docname:
-			return None
-		base_row = {
-			"tipo_pessoa": APPROVER_TYPE_RESPONSAVEL,
-			"responsavel": docname,
-			"origem_regra": APPROVER_ORIGIN_PADRINHO,
-			"permite_remover": 0,
-		}
-		return _normalize_aprovador_row(base_row, strict=strict)
-
-	return None
+	base_row = {
+		"tipo_pessoa": padrinho.get("tipo_pessoa") or "",
+		"associado": padrinho.get("associado") or "",
+		"responsavel": padrinho.get("responsavel") or "",
+		"origem_regra": APPROVER_ORIGIN_PADRINHO,
+		"permite_remover": 0,
+	}
+	return _normalize_aprovador_row(base_row, strict=strict)
 
 
 def _get_coordinator_profile(doc: Document) -> dict[str, str]:
-	coordenador = (doc.get("coordenador") or "").strip()
+	coordenador_row = _get_coordenador_envolvido(doc)
+	coordenador = (coordenador_row or {}).get("associado") or ""
 	if not coordenador:
 		return {
 			"coordenador": "",
@@ -667,28 +1014,115 @@ def _build_default_aprovadores(doc: Document, strict: bool = False) -> list[dict
 	return _merge_duplicate_aprovadores(rows)
 
 
+def _get_aprovadores_from_envolvidos(doc: Document, strict: bool = False) -> list[dict[str, Any]]:
+	rows: list[dict[str, Any]] = []
+	for envolvido in _get_normalized_envolvidos(doc, strict=strict, include_legacy=True):
+		if not cint(envolvido.get("aprovador")):
+			continue
+		normalized = _normalize_aprovador_row(
+			{
+				"tipo_pessoa": envolvido.get("tipo_pessoa") or "",
+				"associado": envolvido.get("associado") or "",
+				"responsavel": envolvido.get("responsavel") or "",
+				"origem_regra": envolvido.get("origem_regra_aprovador") or APPROVER_ORIGIN_MANUAL,
+				"permite_remover": envolvido.get("permite_remover"),
+			},
+			strict=strict,
+		)
+		if not normalized:
+			continue
+		normalized["nome"] = envolvido.get("nome") or normalized.get("nome") or ""
+		normalized["email"] = envolvido.get("email") or normalized.get("email") or ""
+		normalized["telefone"] = envolvido.get("telefone") or normalized.get("telefone") or ""
+		rows.append(normalized)
+
+	return _merge_duplicate_aprovadores(rows)
+
+
+def _apply_approver_rows_to_envolvidos(doc: Document, approver_rows: list[dict[str, Any]]) -> None:
+	base_rows = _get_normalized_envolvidos(doc, strict=False, include_legacy=True)
+	by_key: dict[str, dict[str, Any]] = {
+		row.get("key") or "": row.copy() for row in base_rows if row.get("key")
+	}
+	target_order: list[str] = []
+
+	for approver in approver_rows:
+		key = (approver.get("key") or "").strip()
+		if not key:
+			continue
+		if key not in target_order:
+			target_order.append(key)
+
+		current = by_key.get(key)
+		if not current:
+			current = _normalize_envolvido_row(
+				{
+					"tipo_pessoa": approver.get("tipo_pessoa") or "",
+					"associado": approver.get("associado") or "",
+					"responsavel": approver.get("responsavel") or "",
+					"nome": approver.get("nome") or "",
+					"email": approver.get("email") or "",
+					"telefone": approver.get("telefone") or "",
+					"funcao": "",
+					"participa_avaliacao": 1,
+				},
+				strict=False,
+			)
+			if not current:
+				continue
+
+		current["tipo_pessoa"] = approver.get("tipo_pessoa") or current.get("tipo_pessoa") or "Outro"
+		current["associado"] = approver.get("associado") or ""
+		current["responsavel"] = approver.get("responsavel") or ""
+		current["nome"] = approver.get("nome") or current.get("nome") or ""
+		current["email"] = approver.get("email") or current.get("email") or ""
+		current["telefone"] = approver.get("telefone") or current.get("telefone") or ""
+		current["aprovador"] = 1
+		current["origem_regra_aprovador"] = approver.get("origem_regra") or APPROVER_ORIGIN_MANUAL
+		current["permite_remover"] = 1 if cint(approver.get("permite_remover")) else 0
+		if current["origem_regra_aprovador"] == APPROVER_ORIGIN_PADRINHO:
+			current["padrinho_orientador"] = 1
+
+		by_key[key] = current
+
+	target_keys = set(target_order)
+	for key, row in by_key.items():
+		if not key:
+			continue
+		if not cint(row.get("aprovador")):
+			continue
+		if key in target_keys:
+			continue
+		row["aprovador"] = 0
+		row["origem_regra_aprovador"] = ""
+		row["permite_remover"] = 1
+
+	ordered_keys = [key for key in (row.get("key") or "" for row in base_rows) if key in by_key]
+	for key in target_order:
+		if key not in ordered_keys:
+			ordered_keys.append(key)
+
+	merged_rows = _merge_duplicate_envolvidos([by_key[key] for key in ordered_keys if key in by_key])
+	_set_doc_envolvidos(doc, merged_rows)
+	_sync_legacy_people_from_envolvidos(doc, merged_rows)
+
+
 def _bootstrap_aprovadores_if_empty(doc: Document) -> None:
-	if doc.get("aprovadores"):
+	current_aprovadores = _get_aprovadores_from_envolvidos(doc, strict=False)
+	if current_aprovadores:
+		_apply_approver_rows_to_envolvidos(doc, current_aprovadores)
 		return
 
 	defaults = _build_default_aprovadores(doc, strict=False)
 	if not defaults:
 		return
 
-	doc.set("aprovadores", [])
-	for row in defaults:
-		doc.append("aprovadores", _to_aprovador_child_payload(row))
+	_apply_approver_rows_to_envolvidos(doc, defaults)
 
 
 def _sync_sponsor_approver(doc: Document) -> None:
 	mandatory_origins = {APPROVER_ORIGIN_PADRINHO, APPROVER_ORIGIN_CHEFE_SECAO}
-	current_rows = [
-		normalized
-		for normalized in (
-			_normalize_aprovador_row(row, strict=False) for row in (doc.get("aprovadores") or [])
-		)
-		if normalized
-	]
+	current_rows = _get_aprovadores_from_envolvidos(doc, strict=False)
 
 	current_rows = [row for row in current_rows if row.get("origem_regra") not in mandatory_origins]
 	mandatory_rows = _get_mandatory_aprovadores(doc, strict=False)
@@ -702,21 +1136,12 @@ def _sync_sponsor_approver(doc: Document) -> None:
 		merged_rows.append(row)
 
 	merged_rows = _merge_duplicate_aprovadores(merged_rows)
-	doc.set("aprovadores", [])
-	for row in merged_rows:
-		doc.append("aprovadores", _to_aprovador_child_payload(row))
+	_apply_approver_rows_to_envolvidos(doc, merged_rows)
 
 
 def _get_effective_aprovadores(doc: Document, strict: bool = False) -> list[dict[str, Any]]:
 	mandatory_origins = {APPROVER_ORIGIN_PADRINHO, APPROVER_ORIGIN_CHEFE_SECAO}
-	rows = [
-		normalized
-		for normalized in (
-			_normalize_aprovador_row(row, strict=strict) for row in (doc.get("aprovadores") or [])
-		)
-		if normalized
-	]
-	rows = _merge_duplicate_aprovadores(rows)
+	rows = _get_aprovadores_from_envolvidos(doc, strict=strict)
 
 	if not rows:
 		rows = _build_default_aprovadores(doc, strict=strict)
@@ -893,7 +1318,8 @@ def _get_current_approval_stage(doc: Document, pipeline: list[dict[str, Any]]) -
 
 
 def _is_user_coordinator(user: str, doc: Document) -> bool:
-	coordenador = doc.get("coordenador")
+	coordenador_row = _get_coordenador_envolvido(doc)
+	coordenador = (coordenador_row or {}).get("associado") or ""
 	if not coordenador:
 		return False
 
@@ -1190,6 +1616,44 @@ def _enqueue_project_whatsapp_job(method: str, **kwargs) -> None:
 		)
 
 
+def _enqueue_project_drive_folder_creation(projeto_name: str) -> None:
+	if not projeto_name:
+		return
+
+	try:
+		frappe.enqueue(
+			method="gris.api.google_workspace.project_drive.create_project_folder_async",
+			queue="long",
+			timeout=300,
+			enqueue_after_commit=True,
+			projeto_name=projeto_name,
+		)
+	except Exception:
+		frappe.log_error(
+			message=frappe.get_traceback(),
+			title="Falha ao enfileirar criacao de pasta do projeto no Google Drive",
+		)
+
+
+def _enqueue_project_drive_folder_cleanup(projeto_name: str) -> None:
+	if not projeto_name:
+		return
+
+	try:
+		frappe.enqueue(
+			method="gris.api.google_workspace.project_drive.cleanup_project_folder_if_empty_async",
+			queue="long",
+			timeout=300,
+			enqueue_after_commit=True,
+			projeto_name=projeto_name,
+		)
+	except Exception:
+		frappe.log_error(
+			message=frappe.get_traceback(),
+			title="Falha ao enfileirar limpeza de pasta do projeto no Google Drive",
+		)
+
+
 def _get_current_stage_pending_approvers(
 	doc: Document, pipeline: list[dict[str, Any]]
 ) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
@@ -1212,7 +1676,8 @@ def _get_current_stage_pending_approvers(
 
 
 def _get_coordinator_notification_contact(doc: Document) -> dict[str, str] | None:
-	coordenador = (doc.get("coordenador") or "").strip()
+	coordenador_row = _get_coordenador_envolvido(doc)
+	coordenador = (coordenador_row or {}).get("associado") or ""
 	if not coordenador:
 		return None
 
@@ -1471,6 +1936,73 @@ def _require_project_editor_access() -> str:
 	return user
 
 
+def _is_user_active_in_gris(user: str) -> bool:
+	if not user or user == "Guest":
+		return False
+
+	enabled = frappe.db.get_value("User", user, "enabled")
+	return cint(enabled) == 1
+
+
+def _is_user_involved_in_project(user: str, doc: Document) -> bool:
+	user_key = (user or "").strip().lower()
+	if not user_key:
+		return False
+
+	associado_names = {
+		(row.get("name") or "").strip()
+		for row in _get_user_associados(user)
+		if (row.get("name") or "").strip()
+	}
+	responsavel_names = {
+		(row.get("name") or "").strip()
+		for row in _get_user_responsaveis(user)
+		if (row.get("name") or "").strip()
+	}
+
+	for row in _get_normalized_envolvidos(doc, strict=False, include_legacy=True):
+		tipo = (row.get("tipo_pessoa") or "").strip()
+		if tipo == APPROVER_TYPE_ASSOCIADO and (row.get("associado") or "").strip() in associado_names:
+			return True
+		if tipo == APPROVER_TYPE_RESPONSAVEL and (row.get("responsavel") or "").strip() in responsavel_names:
+			return True
+
+		row_email = (row.get("email") or "").strip().lower()
+		if row_email and row_email == user_key:
+			return True
+
+	return False
+
+
+def _can_user_edit_project_execution_context(user: str, doc: Document) -> bool:
+	roles = set(frappe.get_roles(user))
+	if "Editor de projetos" not in roles and "System Manager" not in roles:
+		return False
+
+	if not _is_user_active_in_gris(user):
+		return False
+
+	return _is_user_involved_in_project(user, doc)
+
+
+def _require_project_execution_edit_access(doc: Document, *, user: str | None = None) -> str:
+	user = user or _require_project_editor_access()
+
+	if not _is_user_active_in_gris(user):
+		frappe.throw(
+			_("Somente usuários ativos no GRIS podem editar projetos."),
+			frappe.PermissionError,
+		)
+
+	if not _is_user_involved_in_project(user, doc):
+		frappe.throw(
+			_("Somente envolvidos neste projeto podem editar os dados desta página."),
+			frappe.PermissionError,
+		)
+
+	return user
+
+
 def _parse_payload(payload: str | dict[str, Any] | None) -> dict[str, Any]:
 	if payload is None:
 		return {}
@@ -1522,22 +2054,43 @@ def _normalize_equipe_tipo_pessoa(value: Any) -> str:
 
 def _apply_portal_payload(doc: Document, data: dict[str, Any]) -> None:
 	for fieldname in SIMPLE_FORM_FIELDS:
-		if fieldname in data:
+		if fieldname in data and _doc_has_field(doc, fieldname):
 			doc.set(fieldname, _clean_value(data.get(fieldname)))
 
 	for table_field, row_fields in TABLE_FIELD_MAP.items():
+		if table_field == "envolvidos":
+			continue
 		if table_field not in data:
 			continue
+		if not _doc_has_field(doc, table_field):
+			continue
 		rows = _sanitize_rows(data.get(table_field), row_fields)
-		if table_field == "equipe_de_interesse":
-			for row in rows:
-				row["tipo_pessoa"] = _normalize_equipe_tipo_pessoa(row.get("tipo_pessoa"))
 		doc.set(table_field, [])
 		for row in rows:
 			doc.append(table_field, row)
 
+	normalized_envolvidos: list[dict[str, Any]] = []
+	if "envolvidos" in data:
+		raw_rows = _sanitize_rows(data.get("envolvidos"), TABLE_FIELD_MAP["envolvidos"])
+		normalized_envolvidos = [
+			normalized
+			for normalized in (_normalize_envolvido_row(row, strict=False) for row in raw_rows)
+			if normalized
+		]
+		normalized_envolvidos = _merge_duplicate_envolvidos(normalized_envolvidos)
+	else:
+		normalized_envolvidos = _build_envolvidos_from_legacy(doc)
+
+	_set_doc_envolvidos(doc, normalized_envolvidos)
+	_sync_legacy_people_from_envolvidos(doc, normalized_envolvidos)
+
 
 def _assert_required_simple_fields(doc: Document) -> None:
+	_sync_legacy_people_from_envolvidos(
+		doc,
+		_get_normalized_envolvidos(doc, strict=False, include_legacy=True),
+	)
+
 	required_fields = {
 		"nome_do_projeto": _("Título do projeto"),
 		"coordenador": _("Coordenador"),
@@ -1558,8 +2111,10 @@ def _assert_required_simple_fields(doc: Document) -> None:
 
 
 def _assert_required_tables(doc: Document) -> None:
+	envolvidos = _get_normalized_envolvidos(doc, strict=False, include_legacy=True)
+	_sync_legacy_people_from_envolvidos(doc, envolvidos)
+
 	table_required = {
-		"equipe_de_interesse": _("Equipe de interesse"),
 		"objetivos": _("Objetivos"),
 		"ods": _("ODS"),
 		"cronograma": _("Cronograma"),
@@ -1567,11 +2122,19 @@ def _assert_required_tables(doc: Document) -> None:
 		"riscos": _("Riscos"),
 	}
 
+	participantes = [
+		row for row in envolvidos if not cint(row.get("aprovador")) and not cint(row.get("coordenador"))
+	]
+	if not participantes:
+		frappe.throw(
+			_("Preencha ao menos uma linha em {0} para submeter o projeto.").format(_("Equipe de interesse"))
+		)
+
 	for fieldname, label in table_required.items():
 		if not doc.get(fieldname):
 			frappe.throw(_("Preencha ao menos uma linha em {0} para submeter o projeto.").format(label))
 
-	for idx, row in enumerate(doc.get("equipe_de_interesse") or [], start=1):
+	for idx, row in enumerate(participantes, start=1):
 		tipo = (row.get("tipo_pessoa") or "").strip()
 		if not tipo:
 			frappe.throw(_("Informe o tipo de pessoa na equipe de interesse (linha {0}).").format(idx))
@@ -1692,7 +2255,7 @@ def _serialize_reunioes(rows: list[Document]) -> list[dict[str, Any]]:
 def _get_responsavel_options(doc: Document) -> list[str]:
 	options = {
 		(row.get("nome") or "").strip()
-		for row in (doc.get("equipe_de_interesse") or [])
+		for row in _get_normalized_envolvidos(doc, strict=False, include_legacy=True)
 		if (row.get("nome") or "").strip()
 	}
 	return sorted(options)
@@ -1806,7 +2369,7 @@ def _assert_task_payload(payload: dict[str, Any], team_names: set[str]) -> dict[
 
 	responsavel = (payload.get("responsavel") or "").strip()
 	if responsavel and responsavel not in team_names:
-		frappe.throw(_("Responsável da tarefa deve existir na equipe de interesse."))
+		frappe.throw(_("Responsável da tarefa deve existir entre os envolvidos do projeto."))
 
 	if payload.get("data_inicio") and payload.get("prazo"):
 		if getdate(payload["data_inicio"]) > getdate(payload["prazo"]):
@@ -1863,24 +2426,59 @@ def _get_doc_display_name(doctype_name: str, docname: str | None, fieldname: str
 	return str(value or docname)
 
 
+def _serialize_envolvidos(doc: Document) -> list[dict[str, Any]]:
+	rows = _get_normalized_envolvidos(doc, strict=False, include_legacy=True)
+	return [
+		{
+			"tipo_pessoa": row.get("tipo_pessoa") or "Outro",
+			"associado": row.get("associado") or "",
+			"responsavel": row.get("responsavel") or "",
+			"nome": row.get("nome") or "",
+			"email": row.get("email") or "",
+			"telefone": row.get("telefone") or "",
+			"funcao": row.get("funcao") or "",
+			"coordenador": 1 if cint(row.get("coordenador")) else 0,
+			"padrinho_orientador": 1 if cint(row.get("padrinho_orientador")) else 0,
+			"aprovador": 1 if cint(row.get("aprovador")) else 0,
+			"origem_regra_aprovador": row.get("origem_regra_aprovador") or "",
+			"permite_remover": 1 if cint(row.get("permite_remover")) else 0,
+			"participa_avaliacao": 1 if cint(row.get("participa_avaliacao")) else 0,
+		}
+		for row in rows
+	]
+
+
 def _serialize_projeto(doc: Document) -> dict[str, Any]:
-	padrinho_nome = ""
-	if doc.padrinho_associado:
-		padrinho_nome = _get_doc_display_name("Associado", doc.padrinho_associado)
-	elif doc.padrinho_responsavel:
-		padrinho_nome = _get_doc_display_name("Responsavel", doc.padrinho_responsavel)
+	envolvidos = _serialize_envolvidos(doc)
+	coordenador_row = next((row for row in envolvidos if cint(row.get("coordenador"))), None)
+	padrinho_row = next((row for row in envolvidos if cint(row.get("padrinho_orientador"))), None)
+
+	coordenador = (coordenador_row or {}).get("associado") or (doc.get("coordenador") or "")
+	coordenador_label = (coordenador_row or {}).get("nome") or _get_doc_display_name("Associado", coordenador)
+
+	padrinho_tipo = (padrinho_row or {}).get("tipo_pessoa") or (doc.get("tipo_padrinho_ou_orientador") or "")
+	padrinho_associado = (padrinho_row or {}).get("associado") or (doc.get("padrinho_associado") or "")
+	padrinho_responsavel = (padrinho_row or {}).get("responsavel") or (doc.get("padrinho_responsavel") or "")
+	padrinho_nome = (padrinho_row or {}).get("nome") or ""
+	if not padrinho_nome and padrinho_associado:
+		padrinho_nome = _get_doc_display_name("Associado", padrinho_associado)
+	if not padrinho_nome and padrinho_responsavel:
+		padrinho_nome = _get_doc_display_name("Responsavel", padrinho_responsavel)
+
+	equipe_de_interesse = [row for row in envolvidos if not cint(row.get("aprovador"))]
 
 	return {
 		"name": doc.name,
 		"status": doc.status,
 		"nome_do_projeto": doc.nome_do_projeto,
-		"coordenador": doc.coordenador,
-		"coordenador_label": _get_doc_display_name("Associado", doc.coordenador),
+		"link_pasta_google_drive": doc.get("link_pasta_google_drive") or "",
+		"coordenador": coordenador,
+		"coordenador_label": coordenador_label,
 		"data_de_inicio": doc.data_de_inicio,
 		"data_de_termino": doc.data_de_termino,
-		"tipo_padrinho_ou_orientador": doc.tipo_padrinho_ou_orientador,
-		"padrinho_associado": doc.padrinho_associado,
-		"padrinho_responsavel": doc.padrinho_responsavel,
+		"tipo_padrinho_ou_orientador": padrinho_tipo,
+		"padrinho_associado": padrinho_associado,
+		"padrinho_responsavel": padrinho_responsavel,
 		"padrinho_nome": padrinho_nome,
 		"justificativa": doc.justificativa,
 		"alinhamento_com_escotismo": doc.alinhamento_com_escotismo,
@@ -1892,9 +2490,8 @@ def _serialize_projeto(doc: Document) -> dict[str, Any]:
 			doc.get("comentarios_revisao_aprovacao") or []
 		),
 		"pendencias_revisao": len(_get_pending_review_comments(doc)),
-		"equipe_de_interesse": _serialize_table_rows(
-			doc.get("equipe_de_interesse"), TABLE_FIELD_MAP["equipe_de_interesse"]
-		),
+		"envolvidos": envolvidos,
+		"equipe_de_interesse": equipe_de_interesse,
 		"aprovadores": [
 			_to_aprovador_child_payload(row) for row in _get_effective_aprovadores(doc, strict=False)
 		],
@@ -2221,11 +2818,12 @@ def iniciar_execucao_projeto(projeto_name: str) -> dict[str, Any]:
 
 @frappe.whitelist()
 def concluir_projeto_execucao(projeto_name: str) -> dict[str, Any]:
-	_require_project_editor_access()
+	user = _require_project_editor_access()
 	if not projeto_name:
 		frappe.throw(_("Projeto não informado para concluir."))
 
 	doc = frappe.get_doc("Projeto", projeto_name)
+	_require_project_execution_edit_access(doc, user=user)
 	if not doc.has_permission("write"):
 		frappe.throw(_("Você não tem permissão para concluir este projeto."), frappe.PermissionError)
 
@@ -2234,6 +2832,8 @@ def concluir_projeto_execucao(projeto_name: str) -> dict[str, Any]:
 	doc.status = "Concluido"
 	doc.flags.portal_draft_save = False
 	doc.save()
+	if (doc.get("link_pasta_google_drive") or "").strip():
+		_enqueue_project_drive_folder_cleanup(doc.name)
 
 	return {
 		"ok": True,
@@ -2265,8 +2865,25 @@ def cancelar_projeto(projeto_name: str) -> dict[str, Any]:
 
 @frappe.whitelist()
 def cancelar_projeto_execucao(projeto_name: str) -> dict[str, Any]:
-	# Compatibilidade retroativa para chamadas antigas da página de execução.
-	return cancelar_projeto(projeto_name)
+	user = _require_project_editor_access()
+	if not projeto_name:
+		frappe.throw(_("Projeto não informado para cancelar."))
+
+	doc = frappe.get_doc("Projeto", projeto_name)
+	_require_project_execution_edit_access(doc, user=user)
+	if not doc.has_permission("write"):
+		frappe.throw(_("Você não tem permissão para cancelar este projeto."), frappe.PermissionError)
+
+	_assert_project_can_be_cancelled(doc)
+
+	doc.status = "Cancelado"
+	doc.flags.portal_draft_save = False
+	doc.save()
+
+	return {
+		"ok": True,
+		"status": doc.status,
+	}
 
 
 @frappe.whitelist()
@@ -2363,25 +2980,138 @@ def get_projeto_execucao_data(projeto_name: str) -> dict[str, Any]:
 
 	_assert_project_visible_on_execution_page(doc)
 	status = doc.get("status")
+	choices = _get_selection_options()
 
-	roles = set(frappe.get_roles(user))
-	can_edit = ("System Manager" in roles or "Editor de projetos" in roles) and status == STATUS_EM_EXECUCAO
+	can_edit = _can_user_edit_project_execution_context(user, doc) and status == STATUS_EM_EXECUCAO
 
 	return {
 		"ok": True,
 		"projeto": _serialize_projeto(doc),
 		"responsavel_options": _get_responsavel_options(doc),
+		"choices": {
+			"associados": choices.get("associados") or [],
+			"responsaveis": choices.get("responsaveis") or [],
+		},
 		"can_edit": can_edit,
+	}
+
+
+def _parse_envolvidos_rows_payload(
+	payload: str | dict[str, Any] | list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+	parsed: Any = payload
+	if isinstance(payload, str):
+		try:
+			parsed = json.loads(payload) if payload.strip() else []
+		except json.JSONDecodeError as exc:
+			frappe.throw(_("Payload inválido para envolvidos do projeto."))
+			raise exc
+
+	if isinstance(parsed, dict):
+		parsed = parsed.get("envolvidos")
+
+	if not isinstance(parsed, list):
+		frappe.throw(_("Payload de envolvidos deve ser uma lista de linhas."))
+
+	return [row for row in parsed if isinstance(row, dict)]
+
+
+def _make_approver_key_from_envolvido_row(row: dict[str, Any]) -> str:
+	tipo = (row.get("tipo_pessoa") or "").strip()
+	if tipo == APPROVER_TYPE_ASSOCIADO:
+		return _make_approver_key(tipo, row.get("associado") or "")
+	if tipo == APPROVER_TYPE_RESPONSAVEL:
+		return _make_approver_key(tipo, row.get("responsavel") or "")
+	return ""
+
+
+@frappe.whitelist()
+def salvar_envolvidos_projeto_execucao(
+	projeto_name: str,
+	envolvidos: str | dict[str, Any] | list[dict[str, Any]],
+) -> dict[str, Any]:
+	user = _require_project_editor_access()
+	if not projeto_name:
+		frappe.throw(_("Projeto não informado."))
+
+	doc = frappe.get_doc("Projeto", projeto_name)
+	_require_project_execution_edit_access(doc, user=user)
+	if not doc.has_permission("write"):
+		frappe.throw(_("Você não tem permissão para editar este projeto."), frappe.PermissionError)
+
+	_assert_project_in_execution(doc)
+
+	raw_rows = _parse_envolvidos_rows_payload(envolvidos)
+	sanitized_rows = _sanitize_rows(raw_rows, TABLE_FIELD_MAP["envolvidos"])
+	incoming_rows = [
+		normalized
+		for normalized in (_normalize_envolvido_row(row, strict=True) for row in sanitized_rows)
+		if normalized
+	]
+	incoming_rows = _merge_duplicate_envolvidos(incoming_rows)
+
+	if not incoming_rows:
+		frappe.throw(_("Informe ao menos um envolvido para o projeto."))
+
+	coordenadores = [row for row in incoming_rows if cint(row.get("coordenador"))]
+	if len(coordenadores) != 1:
+		frappe.throw(_("Defina exatamente um coordenador para o projeto."))
+	if (coordenadores[0].get("tipo_pessoa") or "") != APPROVER_TYPE_ASSOCIADO:
+		frappe.throw(_("O coordenador precisa ser um envolvido do tipo Associado."))
+
+	padrinhos = [row for row in incoming_rows if cint(row.get("padrinho_orientador"))]
+	if len(padrinhos) > 1:
+		frappe.throw(_("Defina no máximo um padrinho/orientador no projeto."))
+
+	existing_rows = _get_normalized_envolvidos(doc, strict=False, include_legacy=True)
+	existing_approvers: dict[str, dict[str, Any]] = {}
+	for row in existing_rows:
+		if not cint(row.get("aprovador")):
+			continue
+		key = _make_approver_key_from_envolvido_row(row)
+		if key:
+			existing_approvers[key] = row
+
+	incoming_approver_keys = {
+		_make_approver_key_from_envolvido_row(row)
+		for row in incoming_rows
+		if cint(row.get("aprovador")) and _make_approver_key_from_envolvido_row(row)
+	}
+	if incoming_approver_keys != set(existing_approvers.keys()):
+		frappe.throw(_("Aprovadores não podem ser adicionados ou removidos pela aba Participantes."))
+
+	for row in incoming_rows:
+		key = _make_approver_key_from_envolvido_row(row)
+		existing = existing_approvers.get(key)
+		if existing:
+			row["aprovador"] = 1
+			row["origem_regra_aprovador"] = existing.get("origem_regra_aprovador") or APPROVER_ORIGIN_MANUAL
+			row["permite_remover"] = 1 if cint(existing.get("permite_remover")) else 0
+		else:
+			row["aprovador"] = 0
+			row["origem_regra_aprovador"] = ""
+			row["permite_remover"] = 1
+
+	_set_doc_envolvidos(doc, incoming_rows)
+	_sync_legacy_people_from_envolvidos(doc, incoming_rows)
+	doc.flags.portal_draft_save = False
+	doc.save()
+
+	return {
+		"ok": True,
+		"projeto": _serialize_projeto(doc),
+		"envolvidos": _serialize_envolvidos(doc),
 	}
 
 
 @frappe.whitelist()
 def salvar_tarefa_projeto_execucao(projeto_name: str, tarefa: str | dict[str, Any]) -> dict[str, Any]:
-	_require_project_editor_access()
+	user = _require_project_editor_access()
 	if not projeto_name:
 		frappe.throw(_("Projeto não informado."))
 
 	doc = frappe.get_doc("Projeto", projeto_name)
+	_require_project_execution_edit_access(doc, user=user)
 	if not doc.has_permission("write"):
 		frappe.throw(_("Você não tem permissão para editar este projeto."), frappe.PermissionError)
 
@@ -2427,7 +3157,7 @@ def salvar_tarefa_projeto_execucao(projeto_name: str, tarefa: str | dict[str, An
 def atualizar_status_tarefa_projeto_execucao(
 	projeto_name: str, tarefa_name: str, status: str
 ) -> dict[str, Any]:
-	_require_project_editor_access()
+	user = _require_project_editor_access()
 	if not projeto_name or not tarefa_name:
 		frappe.throw(_("Projeto ou tarefa não informados."))
 
@@ -2436,6 +3166,7 @@ def atualizar_status_tarefa_projeto_execucao(
 		frappe.throw(_("Status da tarefa inválido."))
 
 	doc = frappe.get_doc("Projeto", projeto_name)
+	_require_project_execution_edit_access(doc, user=user)
 	if not doc.has_permission("write"):
 		frappe.throw(_("Você não tem permissão para editar este projeto."), frappe.PermissionError)
 
@@ -2531,7 +3262,7 @@ def get_tarefa_projeto_execucao_comentarios(projeto_name: str, tarefa_name: str)
 def adicionar_comentario_tarefa_projeto_execucao(
 	projeto_name: str, tarefa_name: str, conteudo: str
 ) -> dict[str, Any]:
-	_require_project_editor_access()
+	user = _require_project_editor_access()
 	if not projeto_name:
 		frappe.throw(_("Projeto não informado."))
 
@@ -2540,6 +3271,7 @@ def adicionar_comentario_tarefa_projeto_execucao(
 		frappe.throw(_("Informe o comentário antes de enviar."))
 
 	doc = frappe.get_doc("Projeto", projeto_name)
+	_require_project_execution_edit_access(doc, user=user)
 	if not doc.has_permission("write"):
 		frappe.throw(_("Você não tem permissão para editar este projeto."), frappe.PermissionError)
 
@@ -2573,6 +3305,7 @@ def editar_comentario_tarefa_projeto_execucao(
 		frappe.throw(_("Informe o comentário antes de salvar."))
 
 	doc = frappe.get_doc("Projeto", projeto_name)
+	_require_project_execution_edit_access(doc, user=user)
 	if not doc.has_permission("write"):
 		frappe.throw(_("Você não tem permissão para editar este projeto."), frappe.PermissionError)
 
@@ -2601,6 +3334,7 @@ def apagar_comentario_tarefa_projeto_execucao(
 		frappe.throw(_("Projeto não informado."))
 
 	doc = frappe.get_doc("Projeto", projeto_name)
+	_require_project_execution_edit_access(doc, user=user)
 	if not doc.has_permission("write"):
 		frappe.throw(_("Você não tem permissão para editar este projeto."), frappe.PermissionError)
 
@@ -2619,11 +3353,12 @@ def apagar_comentario_tarefa_projeto_execucao(
 
 @frappe.whitelist()
 def salvar_reuniao_projeto_execucao(projeto_name: str, reuniao: str | dict[str, Any]) -> dict[str, Any]:
-	_require_project_editor_access()
+	user = _require_project_editor_access()
 	if not projeto_name:
 		frappe.throw(_("Projeto não informado."))
 
 	doc = frappe.get_doc("Projeto", projeto_name)
+	_require_project_execution_edit_access(doc, user=user)
 	if not doc.has_permission("write"):
 		frappe.throw(_("Você não tem permissão para editar este projeto."), frappe.PermissionError)
 
@@ -2757,19 +3492,20 @@ def get_avaliacao_projeto_data(projeto_name: str) -> dict[str, Any]:
 	avaliacao_doc = _get_avaliacao_for_projeto(projeto_name)
 	avaliacao_data = _serialize_avaliacao(avaliacao_doc) if avaliacao_doc else None
 
-	roles = set(frappe.get_roles(user))
-	is_editor = "System Manager" in roles or "Editor de projetos" in roles
+	can_edit_context = _can_user_edit_project_execution_context(user, doc)
 	is_coordinator = _is_user_coordinator(user, doc)
 
 	can_start = (
-		is_editor
+		can_edit_context
 		and is_coordinator
 		and avaliacao_doc is None
 		and doc.get("status") in STATUS_EXECUCAO_PAGE_ALLOWED
 	)
 
 	can_edit_general = (
-		is_editor and avaliacao_doc is not None and doc.get("status") not in STATUS_EXECUCAO_PAGE_READ_ONLY
+		can_edit_context
+		and avaliacao_doc is not None
+		and doc.get("status") not in STATUS_EXECUCAO_PAGE_READ_ONLY
 	)
 
 	return {
@@ -2795,6 +3531,7 @@ def iniciar_avaliacao_projeto(projeto_name: str) -> dict[str, Any]:
 		frappe.throw(_("Projeto não informado."))
 
 	doc = frappe.get_doc("Projeto", projeto_name)
+	_require_project_execution_edit_access(doc, user=user)
 	if not doc.has_permission("read"):
 		frappe.throw(_("Você não tem permissão para visualizar este projeto."), frappe.PermissionError)
 
@@ -2978,6 +3715,7 @@ def reenviar_email_avaliacao(projeto_name: str, avaliador_idx: int) -> dict[str,
 		frappe.throw(_("Projeto não informado."))
 
 	doc = frappe.get_doc("Projeto", projeto_name)
+	_require_project_execution_edit_access(doc, user=user)
 	if not _is_user_coordinator(user, doc):
 		frappe.throw(
 			_("Somente o coordenador do projeto pode reenviar convites de avaliação."),
@@ -3013,11 +3751,12 @@ def reenviar_email_avaliacao(projeto_name: str, avaliador_idx: int) -> dict[str,
 @frappe.whitelist()
 def salvar_avaliacao_geral_projeto(projeto_name: str, data: str | dict[str, Any]) -> dict[str, Any]:
 	"""Salva os dados da avaliação geral do projeto."""
-	_require_project_editor_access()
+	user = _require_project_editor_access()
 	if not projeto_name:
 		frappe.throw(_("Projeto não informado."))
 
 	doc = frappe.get_doc("Projeto", projeto_name)
+	_require_project_execution_edit_access(doc, user=user)
 	if not doc.has_permission("write"):
 		frappe.throw(_("Você não tem permissão para editar este projeto."), frappe.PermissionError)
 
@@ -3063,11 +3802,12 @@ def salvar_avaliacao_geral_projeto(projeto_name: str, data: str | dict[str, Any]
 @frappe.whitelist()
 def solicitar_resumo_avaliacoes_individuais(projeto_name: str) -> dict[str, Any]:
 	"""Dispara geração de resumo das avaliações individuais via LLM."""
-	_require_project_editor_access()
+	user = _require_project_editor_access()
 	if not projeto_name:
 		frappe.throw(_("Projeto não informado."))
 
 	doc = frappe.get_doc("Projeto", projeto_name)
+	_require_project_execution_edit_access(doc, user=user)
 	if not doc.has_permission("read"):
 		frappe.throw(_("Você não tem permissão para visualizar este projeto."), frappe.PermissionError)
 
@@ -3105,11 +3845,12 @@ def solicitar_resumo_avaliacoes_individuais(projeto_name: str) -> dict[str, Any]
 @frappe.whitelist()
 def solicitar_resumo_avaliacao_completa(projeto_name: str) -> dict[str, Any]:
 	"""Dispara geração do resumo completo da avaliação via LLM."""
-	_require_project_editor_access()
+	user = _require_project_editor_access()
 	if not projeto_name:
 		frappe.throw(_("Projeto não informado."))
 
 	doc = frappe.get_doc("Projeto", projeto_name)
+	_require_project_execution_edit_access(doc, user=user)
 	if not doc.has_permission("read"):
 		frappe.throw(_("Você não tem permissão para visualizar este projeto."), frappe.PermissionError)
 

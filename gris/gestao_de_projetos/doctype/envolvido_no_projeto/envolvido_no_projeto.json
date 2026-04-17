@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2026-03-20 00:00:00.000000",
+ "creation": "2026-04-16 00:00:00.000000",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
@@ -12,16 +12,22 @@
   "nome",
   "email",
   "telefone",
-  "funcao"
+  "funcao",
+  "coordenador",
+  "padrinho_orientador",
+  "aprovador",
+  "origem_regra_aprovador",
+  "permite_remover",
+  "participa_avaliacao"
  ],
  "fields": [
   {
-    "default": "Outro",
+   "default": "Outro",
    "fieldname": "tipo_pessoa",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Tipo de pessoa",
-    "options": "Associado\nResponsavel\nOutro",
+   "options": "Associado\nResponsavel\nOutro",
    "reqd": 1
   },
   {
@@ -50,29 +56,77 @@
   {
    "fieldname": "email",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Email",
    "reqd": 1
   },
   {
    "fieldname": "telefone",
    "fieldtype": "Phone",
+   "in_list_view": 1,
    "label": "Telefone",
    "reqd": 1
   },
   {
    "fieldname": "funcao",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Funcao"
+  },
+  {
+   "default": "0",
+   "fieldname": "coordenador",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Coordenador"
+  },
+  {
+   "default": "0",
+   "fieldname": "padrinho_orientador",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Padrinho/orientador"
+  },
+  {
+   "default": "0",
+   "fieldname": "aprovador",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Aprovador",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.aprovador==1",
+   "fieldname": "origem_regra_aprovador",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Origem regra aprovador",
+   "options": "manual\ndiretor_presidente\npadrinho_orientador\nchefe_secao"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval:doc.aprovador==1",
+   "fieldname": "permite_remover",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Permite remover"
+  },
+  {
+   "default": "1",
+   "fieldname": "participa_avaliacao",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Participa da avaliacao"
   }
  ],
  "grid_page_length": 20,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-20 00:00:00.000000",
+ "modified": "2026-04-16 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gestao de Projetos",
- "name": "Equipe de Interesse Projeto",
+ "name": "Envolvido no Projeto",
  "owner": "Administrator",
  "permissions": [],
  "row_format": "Dynamic",

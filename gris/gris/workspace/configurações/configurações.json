@@ -141,7 +141,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Google",
-   "link_count": 2,
+    "link_count": 3,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -166,6 +166,16 @@
    "onboard": 0,
    "type": "Link"
   },
+    {
+     "hidden": 0,
+     "is_query_report": 0,
+     "label": "Configuracoes de Projetos",
+     "link_count": 0,
+     "link_to": "Configuracoes de Projetos",
+     "link_type": "DocType",
+     "onboard": 0,
+     "type": "Link"
+    },
   {
    "hidden": 0,
    "is_query_report": 0,

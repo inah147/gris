@@ -189,6 +189,71 @@
         return "Outro";
     }
 
+    function toFlag(value, defaultValue) {
+        if (value === null || value === undefined || value === "") {
+            return defaultValue ? 1 : 0;
+        }
+        return Number(value) === 1 ? 1 : 0;
+    }
+
+    function normalizeAprovadorTipoPessoa(value) {
+        return String(value || "").trim() === "Responsavel" ? "Responsavel" : "Associado";
+    }
+
+    function splitRowsFromEnvolvidos(envolvidos) {
+        const sourceRows = Array.isArray(envolvidos) ? envolvidos : [];
+
+        const equipeRows = sourceRows
+            .filter((row) => toFlag(row?.aprovador, 0) !== 1 && toFlag(row?.coordenador, 0) !== 1)
+            .map((row) => {
+                const tipoPessoa = normalizeEquipeTipoPessoa(row?.tipo_pessoa);
+                return {
+                    tipo_pessoa: tipoPessoa,
+                    associado: tipoPessoa === "Associado" ? String(row?.associado || "").trim() : "",
+                    responsavel: tipoPessoa === "Responsavel" ? String(row?.responsavel || "").trim() : "",
+                    nome: String(row?.nome || "").trim(),
+                    email: String(row?.email || "").trim(),
+                    telefone: String(row?.telefone || "").trim(),
+                    funcao: String(row?.funcao || "").trim(),
+                };
+            });
+
+        const aprovadorRows = sourceRows
+            .filter((row) => toFlag(row?.aprovador, 0) === 1)
+            .map((row) => {
+                const tipoPessoa = normalizeAprovadorTipoPessoa(row?.tipo_pessoa);
+                const origemRegra =
+                    String(row?.origem_regra_aprovador || row?.origem_regra || "manual").trim() || "manual";
+
+                let permiteRemover = toFlag(row?.permite_remover, 1);
+                if (origemRegra === "padrinho_orientador" || origemRegra === "chefe_secao") {
+                    permiteRemover = 0;
+                }
+
+                return {
+                    tipo_pessoa: tipoPessoa,
+                    associado: tipoPessoa === "Associado" ? String(row?.associado || "").trim() : "",
+                    responsavel: tipoPessoa === "Responsavel" ? String(row?.responsavel || "").trim() : "",
+                    nome: String(row?.nome || "").trim(),
+                    email: String(row?.email || "").trim(),
+                    telefone: String(row?.telefone || "").trim(),
+                    origem_regra: origemRegra,
+                    permite_remover: permiteRemover,
+                };
+            })
+            .filter((row) => {
+                if (row.tipo_pessoa === "Associado") {
+                    return Boolean(row.associado);
+                }
+                return Boolean(row.responsavel);
+            });
+
+        return {
+            equipeRows,
+            aprovadorRows,
+        };
+    }
+
     function escapeHtml(value) {
         return String(value || "")
             .replace(/&/g, "&amp;")
@@ -211,6 +276,23 @@
         if (!el) return;
         el.classList.add("d-none");
         el.textContent = "";
+    }
+
+    function updateGoogleDriveButton(link) {
+        const button = document.getElementById("btnAbrirGoogleDrive");
+        if (!button) return;
+
+        const url = String(link || "").trim();
+        if (!url) {
+            button.classList.add("d-none");
+            button.setAttribute("href", "#");
+            button.setAttribute("aria-hidden", "true");
+            return;
+        }
+
+        button.classList.remove("d-none");
+        button.setAttribute("href", url);
+        button.setAttribute("aria-hidden", "false");
     }
 
     function formatIsoToBrDate(value) {
@@ -571,11 +653,122 @@
         return rows;
     }
 
+    function buildEnvolvidosPayload(basicPayload, equipeRows, aprovadorRows) {
+        const envolvidos = [];
+
+        const coordenador = String(basicPayload?.coordenador || "").trim();
+        if (coordenador) {
+            envolvidos.push({
+                tipo_pessoa: "Associado",
+                associado: coordenador,
+                responsavel: "",
+                nome: "",
+                email: "",
+                telefone: "",
+                funcao: "",
+                coordenador: 1,
+                padrinho_orientador: 0,
+                aprovador: 0,
+                origem_regra_aprovador: "",
+                permite_remover: 1,
+                participa_avaliacao: 1,
+            });
+        }
+
+        const tipoPadrinho =
+            String(basicPayload?.tipo_padrinho_ou_orientador || "Associado").trim() === "Responsavel"
+                ? "Responsavel"
+                : "Associado";
+        const padrinhoAssociado =
+            tipoPadrinho === "Associado" ? String(basicPayload?.padrinho_associado || "").trim() : "";
+        const padrinhoResponsavel =
+            tipoPadrinho === "Responsavel" ? String(basicPayload?.padrinho_responsavel || "").trim() : "";
+
+        if (padrinhoAssociado || padrinhoResponsavel) {
+            envolvidos.push({
+                tipo_pessoa: tipoPadrinho,
+                associado: padrinhoAssociado,
+                responsavel: padrinhoResponsavel,
+                nome: "",
+                email: "",
+                telefone: "",
+                funcao: "",
+                coordenador: 0,
+                padrinho_orientador: 1,
+                aprovador: 1,
+                origem_regra_aprovador: "padrinho_orientador",
+                permite_remover: 0,
+                participa_avaliacao: 1,
+            });
+        }
+
+        (equipeRows || []).forEach((row) => {
+            const tipoPessoa = normalizeEquipeTipoPessoa(row?.tipo_pessoa);
+            envolvidos.push({
+                tipo_pessoa: tipoPessoa,
+                associado: tipoPessoa === "Associado" ? String(row?.associado || "").trim() : "",
+                responsavel: tipoPessoa === "Responsavel" ? String(row?.responsavel || "").trim() : "",
+                nome: String(row?.nome || "").trim(),
+                email: String(row?.email || "").trim(),
+                telefone: String(row?.telefone || "").trim(),
+                funcao: String(row?.funcao || "").trim(),
+                coordenador: 0,
+                padrinho_orientador: 0,
+                aprovador: 0,
+                origem_regra_aprovador: "",
+                permite_remover: 1,
+                participa_avaliacao: 1,
+            });
+        });
+
+        (aprovadorRows || []).forEach((row) => {
+            const tipoPessoa = normalizeAprovadorTipoPessoa(row?.tipo_pessoa);
+            const associado = tipoPessoa === "Associado" ? String(row?.associado || "").trim() : "";
+            const responsavel = tipoPessoa === "Responsavel" ? String(row?.responsavel || "").trim() : "";
+            if (!associado && !responsavel) {
+                return;
+            }
+
+            let origemRegra = String(row?.origem_regra || "manual").trim() || "manual";
+            if (!["manual", "diretor_presidente", "padrinho_orientador", "chefe_secao"].includes(origemRegra)) {
+                origemRegra = "manual";
+            }
+
+            let permiteRemover = toFlag(row?.permite_remover, 1);
+            if (origemRegra === "padrinho_orientador" || origemRegra === "chefe_secao") {
+                permiteRemover = 0;
+            }
+
+            envolvidos.push({
+                tipo_pessoa: tipoPessoa,
+                associado,
+                responsavel,
+                nome: String(row?.nome || "").trim(),
+                email: String(row?.email || "").trim(),
+                telefone: String(row?.telefone || "").trim(),
+                funcao: "",
+                coordenador: 0,
+                padrinho_orientador: 0,
+                aprovador: 1,
+                origem_regra_aprovador: origemRegra,
+                permite_remover: permiteRemover,
+                participa_avaliacao: 1,
+            });
+        });
+
+        return envolvidos;
+    }
+
     function buildPayload() {
+        const basicPayload = getBasicPayload();
+        const equipeRows = parseRows("equipe_de_interesse");
+        const aprovadorRows = parseRows("aprovadores");
+
         return {
-            ...getBasicPayload(),
-            equipe_de_interesse: parseRows("equipe_de_interesse"),
-            aprovadores: parseRows("aprovadores"),
+            ...basicPayload,
+            envolvidos: buildEnvolvidosPayload(basicPayload, equipeRows, aprovadorRows),
+            equipe_de_interesse: equipeRows,
+            aprovadores: aprovadorRows,
             objetivos: parseRows("objetivos"),
             ods: parseRows("ods"),
             cronograma: parseRows("cronograma"),
@@ -1349,6 +1542,7 @@
 
         state.reviewComments = data.comentarios_revisao_aprovacao || [];
         updatePendingReviewBanner();
+        updateGoogleDriveButton(data.link_pasta_google_drive);
 
         [
             "nome_do_projeto",
@@ -1375,8 +1569,16 @@
 
         updateSponsorVisibility();
 
-        replaceRows("equipe_de_interesse", data.equipe_de_interesse || []);
-        replaceRows("aprovadores", data.aprovadores || []);
+        let equipeRows = data.equipe_de_interesse || [];
+        let aprovadorRows = data.aprovadores || [];
+        if (Array.isArray(data.envolvidos) && data.envolvidos.length) {
+            const rowsFromEnvolvidos = splitRowsFromEnvolvidos(data.envolvidos);
+            equipeRows = rowsFromEnvolvidos.equipeRows;
+            aprovadorRows = rowsFromEnvolvidos.aprovadorRows;
+        }
+
+        replaceRows("equipe_de_interesse", equipeRows);
+        replaceRows("aprovadores", aprovadorRows);
         replaceRows("objetivos", data.objetivos || []);
         replaceRows("ods", data.ods || []);
         replaceRows("cronograma", data.cronograma || []);
@@ -1945,6 +2147,7 @@
                 fillForm(projeto);
                 await syncSponsorAprovadorRowInTable();
             } else {
+                updateGoogleDriveButton("");
                 state.reviewComments = [];
                 updatePendingReviewBanner();
                 replaceRows("equipe_de_interesse", []);

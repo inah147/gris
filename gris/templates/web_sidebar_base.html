@@ -1,6 +1,6 @@
 {% extends "gris/templates/base.html" %}
 
-{% set sidebar_shell_asset_version = "20260422-sidebar-shell-10" %}
+{% set sidebar_shell_asset_version = "20260422-sidebar-shell-11" %}
 
 {% block head_include %}
 {{ super() }}
@@ -10,7 +10,7 @@
 
 {% from "public/design_system/components/generated/sidebar.html.jinja" import sidebar %}
 {% from "public/design_system/components/generated/dropdown-menu.html.jinja" import dropdown_menu %}
-{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import avatar %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import avatar, breadcrumb %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
 {% set login_icon %}
@@ -23,6 +23,14 @@
 
 {% set admin_icon %}
 {{ lucide_icon("shield-check", size="sm") }}
+{% endset %}
+
+{% set theme_dark_icon %}
+{{ lucide_icon("moon", size="sm") }}
+{% endset %}
+
+{% set theme_light_icon %}
+{{ lucide_icon("sun", size="sm") }}
 {% endset %}
 
 {% set current_path = active_link or ('/' ~ path) %}
@@ -92,6 +100,11 @@
 	</a>
 	<hr role="separator" />
 	{% endif %}
+	<a role="menuitem" href="#" class="portal-user-menu__item" data-action="toggle-theme" data-theme-toggle-item>
+		<span class="block dark:hidden" aria-hidden="true">{{ theme_dark_icon | safe }}</span>
+		<span class="hidden dark:block" aria-hidden="true">{{ theme_light_icon | safe }}</span>
+		<span data-theme-toggle-label>Tema escuro</span>
+	</a>
 	<a role="menuitem" href="#" class="portal-user-menu__item" data-action="logout">
 		{{ logout_icon | safe }}
 		<span>Desconectar</span>
@@ -130,6 +143,11 @@ menu=sidebar_menu
 			>
 				{{ topbar_toggle_icon | safe }}
 			</button>
+			{% if portal_breadcrumbs %}
+			<nav class="portal-topbar__breadcrumbs" aria-label="Breadcrumb">
+				{{ breadcrumb(portal_breadcrumbs, attrs={"class": "portal-topbar__breadcrumb-list"}) }}
+			</nav>
+			{% endif %}
 		</div>
 	</header>
 
@@ -175,6 +193,25 @@ menu=sidebar_menu
 			);
 		};
 
+		const updateThemeToggleState = () => {
+			const isDark = document.documentElement.classList.contains("dark");
+			const nextThemeLabel = isDark ? "Tema claro" : "Tema escuro";
+			const ariaLabel = isDark ? "Ativar tema claro" : "Ativar tema escuro";
+
+			document.querySelectorAll("[data-theme-toggle-label]").forEach((element) => {
+				element.textContent = nextThemeLabel;
+			});
+
+			document.querySelectorAll("[data-theme-toggle-item]").forEach((element) => {
+				element.setAttribute("aria-label", ariaLabel);
+				element.setAttribute("title", ariaLabel);
+			});
+		};
+
+		const emitThemeToggle = () => {
+			document.dispatchEvent(new CustomEvent("basecoat:theme"));
+		};
+
 		const doLogout = () => {
 			if (typeof frappe === "undefined" || !frappe.call) {
 				window.location.href = "/login";
@@ -197,6 +234,13 @@ menu=sidebar_menu
 				return;
 			}
 
+			const themeToggle = event.target.closest('[data-action="toggle-theme"]');
+			if (themeToggle) {
+				event.preventDefault();
+				emitThemeToggle();
+				return;
+			}
+
 			const action = event.target.closest('[data-action="logout"]');
 			if (!action) return;
 			event.preventDefault();
@@ -210,12 +254,21 @@ menu=sidebar_menu
 				return;
 			}
 
+			if ((event.key === "Enter" || event.key === " ") && event.target.closest('[data-action="toggle-theme"]')) {
+				event.preventDefault();
+				emitThemeToggle();
+				return;
+			}
+
 			if (event.key !== "Enter" && event.key !== " ") return;
 			const action = event.target.closest('[data-action="logout"]');
 			if (!action) return;
 			event.preventDefault();
 			doLogout();
 		});
+
+		document.addEventListener("gris:theme-change", updateThemeToggleState);
+		updateThemeToggleState();
 	})();
 </script>
 {% block extra_script %}{% endblock %}

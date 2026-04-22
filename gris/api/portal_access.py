@@ -366,6 +366,57 @@ def _to_design_system_sidebar_items(
 	return menu
 
 
+def _to_portal_breadcrumb_items(
+	items: list[dict[str, object]],
+	current_path: str | None,
+) -> list[dict[str, str | None]]:
+	target_path = _normalize_path(current_path)
+	exact_match: list[dict[str, str | None]] | None = None
+	prefix_match: list[dict[str, str | None]] = []
+
+	def _walk(
+		nodes: list[dict[str, object]],
+		trail: list[dict[str, str | None]],
+	) -> bool:
+		nonlocal exact_match, prefix_match
+
+		for item in nodes:
+			children_value = item.get("children")
+			children = children_value if isinstance(children_value, list) else []
+
+			label_value = item.get("label")
+			label = str(label_value).strip() if label_value else ""
+
+			path_value = item.get("path")
+			path = _normalize_path(str(path_value)) if path_value else None
+
+			next_trail = trail
+			if label and path:
+				crumb = {"label": label, "url": path}
+				next_trail = [*trail, crumb]
+
+				if path == target_path:
+					exact_match = next_trail
+					return True
+
+				if _is_current_path(path, target_path) and len(next_trail) > len(prefix_match):
+					prefix_match = next_trail
+
+			if children and _walk(children, next_trail):
+				return True
+
+		return False
+
+	_walk(items, [])
+	match = exact_match or prefix_match
+	if not match:
+		return []
+
+	breadcrumbs = [dict(item) for item in match]
+	breadcrumbs[-1]["url"] = None
+	return breadcrumbs
+
+
 @frappe.whitelist()
 def build_sidebar(user: str | None = None) -> list[dict[str, object]]:
 	roles = _get_user_roles(user)
@@ -377,8 +428,10 @@ def build_sidebar(user: str | None = None) -> list[dict[str, object]]:
 def enrich_context(context, current_path: str):
 	# Sidebar items
 	sidebar_items = build_sidebar()
+	breadcrumb_path = context.get("active_link") or current_path
 	context.sidebar_items = sidebar_items
 	context.sidebar_menu_ds = _to_design_system_sidebar_items(sidebar_items, current_path)
+	context.portal_breadcrumbs = _to_portal_breadcrumb_items(sidebar_items, breadcrumb_path)
 	context.access_denied = not user_has_access(current_path)
 
 	# Permissions for mobile bottom nav

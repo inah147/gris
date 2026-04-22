@@ -84,6 +84,41 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 	{"label": "Transparência", "path": "/portal_transparencia"},
 ]
 
+SIDEBAR_ICON_MAP: dict[str, str] = {
+	"/inicio": "house",
+	"/associados": "users",
+	"/associados/dashboard": "layout-dashboard",
+	"/associados/lista": "list",
+	"/associados/importar": "upload",
+	"/recepcao": "user-plus",
+	"/recepcao/visao_geral": "layout-dashboard",
+	"/recepcao/agenda_visitas": "calendar-days",
+	"/recepcao/fila_espera": "clock-3",
+	"/recepcao/pesquisa_novos_respostas": "clipboard-list",
+	"/financeiro": "wallet",
+	"/financeiro/dashboard": "layout-dashboard",
+	"/financeiro/contribuicoes": "wallet-cards",
+	"/financeiro/contas": "landmark",
+	"/financeiro/extrato": "receipt-text",
+	"/financeiro/despesas": "receipt",
+	"/financeiro/relatorios": "clipboard-list",
+	"/financeiro/pareceres": "file-search",
+	"/calendario": "calendar-days",
+	"/calendario/visualizar": "calendar-days",
+	"/gestao_adultos": "shield-user",
+	"/gestao_adultos/minha_entrevista": "clipboard-list",
+	"/gestao_adultos/entrevista_competencias": "list-check",
+	"/projetos": "folder-kanban",
+	"/projetos/visao_geral": "layout-dashboard",
+	"/projetos/meus_projetos": "folder-search",
+	"/projetos/cadastrar_novo_projeto": "upload",
+	"/responsavel": "shield-user",
+	"/responsavel/meus_dados": "shield-user",
+	"/responsavel/beneficiarios": "users",
+	"/responsavel/pesquisa_novos": "search",
+	"/portal_transparencia": "shield-check",
+}
+
 # Mapping: path -> allowed roles.
 #   "All"    = qualquer usuário autenticado
 #   "Public" = acessível inclusive para Guest (sem login)
@@ -243,6 +278,94 @@ def _filter_items(
 	return filtered
 
 
+def _normalize_path(path: str | None) -> str:
+	if not path:
+		return "/"
+	normalized = path if path.startswith("/") else f"/{path}"
+	if len(normalized) > 1:
+		normalized = normalized.rstrip("/")
+	return normalized or "/"
+
+
+def _is_current_path(target_path: str, current_path: str) -> bool:
+	target = _normalize_path(target_path)
+	current = _normalize_path(current_path)
+
+	if target == "/inicio":
+		return current == "/" or current == "/inicio" or current.startswith("/inicio/")
+
+	if current == target:
+		return True
+
+	return current.startswith(f"{target}/")
+
+
+def _lucide_icon_markup(icon_name: str | None) -> str | None:
+	if not icon_name:
+		return None
+
+	return (
+		f'<svg class="ds-lucide" aria-hidden="true" focusable="false" viewBox="0 0 24 24">'
+		f'<use href="/assets/gris/design_system/icons/lucide/sprite.svg#{icon_name}" /></svg>'
+	)
+
+
+def _to_design_system_sidebar_items(
+	items: list[dict[str, object]],
+	current_path: str,
+) -> list[dict[str, object]]:
+	menu: list[dict[str, object]] = []
+
+	for item in items:
+		label_value = item.get("label")
+		path_value = item.get("path")
+		children_value = item.get("children")
+
+		label = str(label_value).strip() if label_value else ""
+		path = _normalize_path(str(path_value)) if path_value else ""
+		children = children_value if isinstance(children_value, list) else []
+		icon = _lucide_icon_markup(SIDEBAR_ICON_MAP.get(path)) if path else None
+
+		if not label:
+			continue
+
+		if children:
+			submenu_items = _to_design_system_sidebar_items(children, current_path)
+			if not submenu_items:
+				continue
+
+			submenu: dict[str, object] = {
+				"type": "submenu",
+				"label": label,
+				"open": bool(path and _is_current_path(path, current_path)),
+				"items": submenu_items,
+			}
+
+			if icon:
+				submenu["icon"] = icon
+
+			if path and _is_current_path(path, current_path):
+				submenu["attrs"] = {"aria-current": "page"}
+
+			menu.append(submenu)
+			continue
+
+		if not path:
+			continue
+
+		menu.append(
+			{
+				"type": "item",
+				"label": label,
+				"icon": icon,
+				"url": path,
+				"current": _is_current_path(path, current_path),
+			}
+		)
+
+	return menu
+
+
 @frappe.whitelist()
 def build_sidebar(user: str | None = None) -> list[dict[str, object]]:
 	roles = _get_user_roles(user)
@@ -255,6 +378,7 @@ def enrich_context(context, current_path: str):
 	# Sidebar items
 	sidebar_items = build_sidebar()
 	context.sidebar_items = sidebar_items
+	context.sidebar_menu_ds = _to_design_system_sidebar_items(sidebar_items, current_path)
 	context.access_denied = not user_has_access(current_path)
 
 	# Permissions for mobile bottom nav
@@ -285,17 +409,24 @@ def enrich_context(context, current_path: str):
 	# Informações do usuário
 	user = frappe.session.user
 	if user and user != "Guest":
+		user_data = frappe.db.get_value("User", user, ["email", "user_image"], as_dict=True) or {}
 		try:
 			full_name = frappe.utils.get_fullname(user)
 		except Exception:  # pragma: no cover
 			full_name = user
 		context.user_display_name = full_name
+		context.user_email = user_data.get("email") or user
+		context.user_avatar_url = user_data.get("user_image")
 		context.user_initial = (full_name[0] if full_name else user[0]).upper()
 		roles = _get_user_roles(user)
 		context.is_system_manager = "System Manager" in roles
+		context.is_guest_user = False
 	else:
 		context.user_display_name = None
+		context.user_email = None
+		context.user_avatar_url = None
 		context.user_initial = None
 		context.is_system_manager = False
+		context.is_guest_user = True
 
 	return context

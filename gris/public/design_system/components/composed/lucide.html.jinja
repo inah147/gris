@@ -1,0 +1,6 @@
+{% macro lucide_icon(name, size="md", class_name="") %}
+{% set size_class = "ds-lucide--" ~ size %}
+<svg class="ds-lucide {{ size_class }} {{ class_name }}" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+  <use href="/assets/gris/design_system/icons/lucide/sprite.svg#{{ name }}" />
+</svg>
+{% endmacro %}

@@ -1,0 +1,456 @@
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog as _dialog %}
+{% from "public/design_system/components/generated/select.html.jinja" import select as _select %}
+
+{% macro accordion(items=[], attrs={}) %}
+<div class="accordion {{ attrs.class }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+  {% for item in items %}
+  <details {% if item.open %}open{% endif %}>
+    <summary>{{ item.title | safe }}</summary>
+    <section>{{ item.content | safe }}</section>
+  </details>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro alert(title=None, description=None, variant="default", attrs={}) %}
+{% set classes = "alert" %}
+{% if variant in ["success", "warning", "error", "info", "destructive"] %}
+  {% set classes = classes ~ " alert-" ~ ("destructive" if variant == "error" else variant) %}
+{% endif %}
+<div class="{{ classes }} {{ attrs.class }}"
+  role="status"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+  {% if title %}<h2>{{ title }}</h2>{% endif %}
+  {% if description %}<p>{{ description }}</p>{% endif %}
+  {{ caller() if caller }}
+</div>
+{% endmacro %}
+
+{% macro alert_dialog(
+  id=None,
+  trigger=None,
+  title=None,
+  description=None,
+  confirm_label="Continue",
+  cancel_label="Cancel",
+  trigger_attrs={},
+  dialog_attrs={},
+  header_attrs={},
+  body_attrs={},
+  footer_attrs={}
+) %}
+{% set dialog_id = id or ("alert-dialog-" ~ (range(100000, 999999) | random | string)) %}
+{% set fallback_footer %}
+<button type="button" class="btn-outline" onclick="document.getElementById('{{ dialog_id }}').close()">{{ cancel_label }}</button>
+<button type="button" class="btn-primary" onclick="document.getElementById('{{ dialog_id }}').close()">{{ confirm_label }}</button>
+{% endset %}
+{% call _dialog(
+  id=dialog_id,
+  trigger=trigger,
+  title=title,
+  description=description,
+  footer=fallback_footer,
+  trigger_attrs=trigger_attrs,
+  dialog_attrs=dialog_attrs,
+  header_attrs=header_attrs,
+  body_attrs=body_attrs,
+  footer_attrs=footer_attrs,
+  close_button=false,
+  close_on_overlay_click=false
+) %}
+  {{ caller() if caller }}
+{% endcall %}
+{% endmacro %}
+
+{% macro avatar(src=None, alt="Avatar", fallback="A", attrs={}) %}
+<span class="avatar {{ attrs.class }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+  {% if src %}
+    <img src="{{ src }}" alt="{{ alt }}">
+  {% else %}
+    <span aria-hidden="true">{{ fallback }}</span>
+  {% endif %}
+</span>
+{% endmacro %}
+
+{% macro badge(text, variant="default", outline=false, attrs={}) %}
+{% set classes = "badge" %}
+{% if outline %}
+  {% set classes = "badge-outline" %}
+{% elif variant not in ["default", "secondary"] %}
+  {% set classes = classes ~ " badge-" ~ ("destructive" if variant in ["error", "danger"] else variant) %}
+{% endif %}
+<span class="{{ classes }} {{ attrs.class }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>{{ text | safe }}</span>
+{% endmacro %}
+
+{% macro breadcrumb(items=[], attrs={}) %}
+<ol class="breadcrumb {{ attrs.class }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+  {% for item in items %}
+    <li class="inline-flex items-center gap-1.5">
+      {% if item.url %}<a href="{{ item.url }}">{{ item.label | safe }}</a>{% else %}<span>{{ item.label | safe }}</span>{% endif %}
+    </li>
+  {% endfor %}
+</ol>
+{% endmacro %}
+
+{% macro button(text, variant="primary", size="default", attrs={}) %}
+{% set classes = "btn" %}
+{% if variant in ["primary", "default"] %}
+  {% set classes = "btn-primary" %}
+{% elif variant in ["secondary", "outline", "ghost", "link", "destructive"] %}
+  {% set classes = "btn-" ~ variant %}
+{% endif %}
+{% if size in ["sm", "lg", "icon", "sm-icon", "lg-icon"] %}
+  {% set classes = classes ~ " btn-" ~ size %}
+{% endif %}
+<button type="button" class="{{ classes }} {{ attrs.class }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>{{ text | safe }}</button>
+{% endmacro %}
+
+{% macro button_group(buttons=[], attrs={}) %}
+<div class="btn-group {{ attrs.class }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+  {% for item in buttons %}
+    <button type="button" class="{{ item.class if item.class else 'btn-outline' }}">{{ item.label | safe }}</button>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro card(title=None, description=None, footer=None, attrs={}) %}
+<article class="card {{ attrs.class }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+  {% if title or description %}
+  <header>
+    {% if title %}<h2>{{ title | safe }}</h2>{% endif %}
+    {% if description %}<p>{{ description | safe }}</p>{% endif %}
+  </header>
+  {% endif %}
+  <section>{{ caller() if caller }}</section>
+  {% if footer %}<footer>{{ footer | safe }}</footer>{% endif %}
+</article>
+{% endmacro %}
+
+{% macro checkbox(id, label=None, checked=false, attrs={}) %}
+<label class="inline-flex items-center gap-2">
+  <input id="{{ id }}" type="checkbox" {% if checked %}checked{% endif %}
+    {% for key, value in attrs.items() %}
+      {{ key }}="{{ value }}"
+    {% endfor %}
+  >
+  {% if label %}<span>{{ label }}</span>{% endif %}
+</label>
+{% endmacro %}
+
+{% macro combobox(
+  id=None,
+  selected=None,
+  name=None,
+  items=[],
+  close_on_select=false,
+  main_attrs={},
+  trigger_attrs={},
+  popover_attrs={},
+  listbox_attrs={},
+  input_attrs={},
+  search_placeholder="Search entries..."
+) %}
+{% call _select(
+  id=id,
+  selected=selected,
+  name=name,
+  items=items,
+  close_on_select=close_on_select,
+  main_attrs=main_attrs,
+  trigger_attrs=trigger_attrs,
+  popover_attrs=popover_attrs,
+  listbox_attrs=listbox_attrs,
+  input_attrs=input_attrs,
+  search_placeholder=search_placeholder,
+  is_combobox=true
+) %}
+  {{ caller() if caller }}
+{% endcall %}
+{% endmacro %}
+
+{% macro empty(title, description=None, action=None, icon=None, attrs={}) %}
+<section class="empty {{ attrs.class }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+  {% if icon %}<div class="empty-icon">{{ icon | safe }}</div>{% endif %}
+  <h2>{{ title | safe }}</h2>
+  {% if description %}<p>{{ description | safe }}</p>{% endif %}
+  {% if action %}<div>{{ action | safe }}</div>{% endif %}
+  {{ caller() if caller }}
+</section>
+{% endmacro %}
+
+{% macro field(label=None, hint=None, error=None, attrs={}) %}
+<div class="field {{ attrs.class }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+  {% if label %}<label>{{ label | safe }}</label>{% endif %}
+  {{ caller() if caller }}
+  {% if hint %}<p class="text-sm text-muted-foreground">{{ hint | safe }}</p>{% endif %}
+  {% if error %}<p class="text-sm text-destructive">{{ error | safe }}</p>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro form(attrs={}) %}
+<form class="form {{ attrs.class }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+  {{ caller() if caller }}
+</form>
+{% endmacro %}
+
+{% macro input(name=None, type="text", value="", attrs={}) %}
+<input
+  class="input {{ attrs.class }}"
+  type="{{ type }}"
+  {% if name %}name="{{ name }}"{% endif %}
+  value="{{ value }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+{% endmacro %}
+
+{% macro input_group(name=None, type="text", value="", prefix=None, suffix=None, attrs={}, input_attrs={}) %}
+<div class="input-group {{ attrs.class }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+  {% if prefix %}<span>{{ prefix | safe }}</span>{% endif %}
+  <input
+    type="{{ type }}"
+    {% if name %}name="{{ name }}"{% endif %}
+    value="{{ value }}"
+    class="{{ input_attrs.class }}"
+    {% for key, value in input_attrs.items() %}
+      {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+    {% endfor %}
+  >
+  {% if suffix %}<span>{{ suffix | safe }}</span>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro item(label, description=None, icon=None, actions=None, attrs={}) %}
+<div class="item {{ attrs.class }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+  {% if icon %}<div>{{ icon | safe }}</div>{% endif %}
+  <div>
+    <p>{{ label | safe }}</p>
+    {% if description %}<small>{{ description | safe }}</small>{% endif %}
+  </div>
+  {% if actions %}<div>{{ actions | safe }}</div>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro kbd(text, attrs={}) %}
+<kbd class="kbd {{ attrs.class }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>{{ text }}</kbd>
+{% endmacro %}
+
+{% macro label(text, for_id=None, attrs={}) %}
+<label
+  {% if for_id %}for="{{ for_id }}"{% endif %}
+  class="{{ attrs.class }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>{{ text | safe }}</label>
+{% endmacro %}
+
+{% macro pagination(items=[], attrs={}) %}
+<nav class="pagination {{ attrs.class }}"
+  aria-label="Pagination"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+  {% for item in items %}
+    {% if item.url %}
+      <a href="{{ item.url }}" {% if item.current %}aria-current="page"{% endif %}>{{ item.label }}</a>
+    {% else %}
+      <span {% if item.current %}aria-current="page"{% endif %}>{{ item.label }}</span>
+    {% endif %}
+  {% endfor %}
+</nav>
+{% endmacro %}
+
+{% macro progress(value=0, max=100, attrs={}) %}
+<progress class="progress {{ attrs.class }}" value="{{ value }}" max="{{ max }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>{{ value }}</progress>
+{% endmacro %}
+
+{% macro radio_group(name, options=[], value=None, attrs={}) %}
+<div class="radio-group {{ attrs.class }}"
+  role="radiogroup"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+  {% for option in options %}
+    {% set option_value = option.value if option.value is defined else option %}
+    {% set option_label = option.label if option.label is defined else option %}
+    <label class="inline-flex items-center gap-2">
+      <input type="radio" name="{{ name }}" value="{{ option_value }}" {% if option_value == value %}checked{% endif %}>
+      <span>{{ option_label }}</span>
+    </label>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro skeleton(width="100%", height="1rem", attrs={}) %}
+<span class="skeleton {{ attrs.class }}" style="display:block;width:{{ width }};height:{{ height }};"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" and key != "style" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+></span>
+{% endmacro %}
+
+{% macro slider(name=None, value=0, min=0, max=100, step=1, attrs={}) %}
+<input
+  class="slider {{ attrs.class }}"
+  type="range"
+  {% if name %}name="{{ name }}"{% endif %}
+  min="{{ min }}"
+  max="{{ max }}"
+  step="{{ step }}"
+  value="{{ value }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+{% endmacro %}
+
+{% macro spinner(attrs={}) %}
+<span class="spinner {{ attrs.class }}"
+  role="status"
+  aria-label="Loading"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+></span>
+{% endmacro %}
+
+{% macro switch(name=None, checked=false, label=None, attrs={}) %}
+<label class="switch {{ attrs.class }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+  <input type="checkbox" {% if name %}name="{{ name }}"{% endif %} {% if checked %}checked{% endif %}>
+  {% if label %}<span>{{ label | safe }}</span>{% endif %}
+</label>
+{% endmacro %}
+
+{% macro table(headers=[], rows=[], striped=false, attrs={}) %}
+{% set classes = "table" %}
+{% if striped %}{% set classes = classes ~ " table-striped" %}{% endif %}
+<table class="{{ classes }} {{ attrs.class }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+  {% if headers %}
+  <thead>
+    <tr>
+      {% for header in headers %}<th>{{ header | safe }}</th>{% endfor %}
+    </tr>
+  </thead>
+  {% endif %}
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      {% for col in row %}<td>{{ col | safe }}</td>{% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endmacro %}
+
+{% macro textarea(name=None, value="", attrs={}) %}
+<textarea class="textarea {{ attrs.class }}"
+  {% if name %}name="{{ name }}"{% endif %}
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>{{ value }}</textarea>
+{% endmacro %}
+
+{% macro theme_switcher(attrs={}) %}
+<button
+  type="button"
+  aria-label="Toggle dark mode"
+  data-tooltip="Toggle dark mode"
+  data-side="bottom"
+  onclick="document.dispatchEvent(new CustomEvent('basecoat:theme'))"
+  class="btn-icon-outline size-8 {{ attrs.class }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+  <span class="hidden dark:block" aria-hidden="true">
+    <svg class="ds-lucide ds-lucide--md" viewBox="0 0 24 24"><use href="/assets/gris/design_system/icons/lucide/sprite.svg#sun" /></svg>
+  </span>
+  <span class="block dark:hidden" aria-hidden="true">
+    <svg class="ds-lucide ds-lucide--md" viewBox="0 0 24 24"><use href="/assets/gris/design_system/icons/lucide/sprite.svg#moon" /></svg>
+  </span>
+</button>
+{% endmacro %}
+
+{% macro tooltip(content, text, side="top", align="center", attrs={}) %}
+<span
+  class="tooltip {{ attrs.class }}"
+  data-tooltip="{{ text }}"
+  data-side="{{ side }}"
+  data-align="{{ align }}"
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>{{ content | safe }}</span>
+{% endmacro %}

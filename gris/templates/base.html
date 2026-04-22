@@ -1,10 +1,26 @@
 {% extends "frappe/templates/base.html" %}
 
+{% set design_system_asset_version = "20260422-sidebar-shell-10" %}
+
 {% block head %}
 {{ super() }}
 
 <!-- Design System -->
-<link rel="stylesheet" href="/assets/gris/css/design-system.css">
+<link rel="stylesheet" href="/assets/gris/css/design-system.css?v={{ design_system_asset_version }}">
+<link rel="stylesheet" href="/assets/gris/design_system/css/basecoat.css?v={{ design_system_asset_version }}">
+<link rel="stylesheet" href="/assets/gris/design_system/css/theme-shadcn.css?v={{ design_system_asset_version }}">
+<link rel="stylesheet" href="/assets/gris/design_system/css/lucide.css?v={{ design_system_asset_version }}">
+
+<!-- Basecoat JS (local files, without build tool) -->
+<script src="/assets/gris/design_system/js/basecoat/basecoat.min.js?v={{ design_system_asset_version }}" defer></script>
+<script src="/assets/gris/design_system/js/components/command.js?v={{ design_system_asset_version }}" defer></script>
+<script src="/assets/gris/design_system/js/components/dropdown-menu.js?v={{ design_system_asset_version }}" defer></script>
+<script src="/assets/gris/design_system/js/components/popover.js?v={{ design_system_asset_version }}" defer></script>
+<script src="/assets/gris/design_system/js/components/select.js?v={{ design_system_asset_version }}" defer></script>
+<script src="/assets/gris/design_system/js/components/sidebar.js?v={{ design_system_asset_version }}" defer></script>
+<script src="/assets/gris/design_system/js/components/tabs.js?v={{ design_system_asset_version }}" defer></script>
+<script src="/assets/gris/design_system/js/components/toast.js?v={{ design_system_asset_version }}" defer></script>
+<script src="/assets/gris/design_system/js/design-system-init.js?v={{ design_system_asset_version }}" defer></script>
 
 <!-- PWA Meta Tags -->
 <meta name="theme-color" content="#FFFFFF">

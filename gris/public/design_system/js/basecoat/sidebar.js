@@ -3,12 +3,15 @@
     const initialOpen = sidebarComponent.dataset.initialOpen !== 'false';
     const initialMobileOpen = sidebarComponent.dataset.initialMobileOpen === 'true';
     const breakpoint = parseInt(sidebarComponent.dataset.breakpoint) || 768;
-    
-    let open = breakpoint > 0 
-      ? (window.innerWidth >= breakpoint ? initialOpen : initialMobileOpen)
-      : initialOpen;
+
+    const isMobileViewport = () => breakpoint > 0 && window.innerWidth < breakpoint;
+
+    let mobileViewport = isMobileViewport();
+    let open = mobileViewport ? initialMobileOpen : initialOpen;
     
     const updateState = () => {
+      sidebarComponent.dataset.sidebarViewport = mobileViewport ? 'mobile' : 'desktop';
+      sidebarComponent.dataset.sidebarState = open ? 'open' : 'closed';
       sidebarComponent.setAttribute('aria-hidden', !open);
       if (open) {
         sidebarComponent.removeAttribute('inert');
@@ -17,9 +20,33 @@
       }
     };
 
-    const setState = (state) => {
+    const emitStateChange = (reason) => {
+      const detail = {
+        id: sidebarComponent.id,
+        open,
+        viewport: mobileViewport ? 'mobile' : 'desktop',
+        reason,
+      };
+
+      sidebarComponent.dispatchEvent(new CustomEvent('basecoat:sidebar-state', { detail }));
+      document.dispatchEvent(new CustomEvent('basecoat:sidebar-state', { detail }));
+    };
+
+    const setState = (state, reason = 'toggle') => {
       open = state;
       updateState();
+      emitStateChange(reason);
+    };
+
+    const syncToViewport = (reason = 'breakpoint') => {
+      const nextMobileViewport = isMobileViewport();
+
+      if (nextMobileViewport === mobileViewport) {
+        return;
+      }
+
+      mobileViewport = nextMobileViewport;
+      setState(mobileViewport ? initialMobileOpen : initialOpen, reason);
     };
 
     const sidebarId = sidebarComponent.id;
@@ -43,19 +70,31 @@
     sidebarComponent.addEventListener('click', (event) => {
       const target = event.target;
       const nav = sidebarComponent.querySelector('nav');
-      
-      const isMobile = window.innerWidth < breakpoint;
-      
+
+      const isMobile = mobileViewport;
+
       if (isMobile && (target.closest('a, button') && !target.closest('[data-keep-mobile-sidebar-open]'))) {
         if (document.activeElement) document.activeElement.blur();
-        setState(false);
+        setState(false, 'navigation');
         return;
       }
-      
+
       if (target === sidebarComponent || (nav && !nav.contains(target))) {
         if (document.activeElement) document.activeElement.blur();
-        setState(false);
+        setState(false, 'backdrop');
       }
+    });
+
+    let resizeFrame = null;
+    window.addEventListener('resize', () => {
+      if (resizeFrame !== null) {
+        window.cancelAnimationFrame(resizeFrame);
+      }
+
+      resizeFrame = window.requestAnimationFrame(() => {
+        resizeFrame = null;
+        syncToViewport();
+      });
     });
 
     updateState();

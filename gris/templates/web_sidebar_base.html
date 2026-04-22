@@ -1,9 +1,28 @@
 {% extends "gris/templates/base.html" %}
 
-{% set sidebar_shell_asset_version = "20260422-sidebar-shell-11" %}
+{% set sidebar_shell_asset_version = "20260422-sidebar-shell-25" %}
+{% set sidebar_breakpoint = 768 %}
+{% set sidebar_desktop_state_storage_key = "gris-portal-sidebar-desktop-state" %}
 
 {% block head_include %}
 {{ super() }}
+<script>
+	(function () {
+		const storageKey = "{{ sidebar_desktop_state_storage_key }}";
+		const root = document.documentElement;
+		let desktopState = "expanded";
+
+		try {
+			if (window.localStorage.getItem(storageKey) === "collapsed") {
+				desktopState = "collapsed";
+			}
+		} catch (error) {
+			// Ignore storage access issues and keep the default desktop state.
+		}
+
+		root.dataset.portalSidebarDesktopState = desktopState;
+	})();
+</script>
 <link rel="stylesheet" href="/assets/gris/css/components.css?v={{ sidebar_shell_asset_version }}" />
 <link rel="stylesheet" href="/assets/gris/css/web_sidebar_base.css?v={{ sidebar_shell_asset_version }}" />
 {% endblock %}
@@ -101,8 +120,8 @@
 	<hr role="separator" />
 	{% endif %}
 	<a role="menuitem" href="#" class="portal-user-menu__item" data-action="toggle-theme" data-theme-toggle-item>
-		<span class="block dark:hidden" aria-hidden="true">{{ theme_dark_icon | safe }}</span>
-		<span class="hidden dark:block" aria-hidden="true">{{ theme_light_icon | safe }}</span>
+		<span data-theme-dark-icon aria-hidden="true">{{ theme_dark_icon | safe }}</span>
+		<span data-theme-light-icon aria-hidden="true" hidden>{{ theme_light_icon | safe }}</span>
 		<span data-theme-toggle-label>Tema escuro</span>
 	</a>
 	<a role="menuitem" href="#" class="portal-user-menu__item" data-action="logout">
@@ -127,6 +146,7 @@ open=true,
 side="left",
 header=sidebar_header,
 footer=sidebar_footer,
+main_attrs={"class": "portal-sidebar-shell", "data-breakpoint": sidebar_breakpoint, "data-initial-mobile-open": "false"},
 content_attrs={"class": "scrollbar"},
 menu=sidebar_menu
 ) }}
@@ -139,6 +159,7 @@ menu=sidebar_menu
 				class="portal-topbar__toggle"
 				data-sidebar-toggle
 				aria-controls="portal-sidebar"
+				aria-expanded="true"
 				aria-label="Alternar navegação lateral"
 			>
 				{{ topbar_toggle_icon | safe }}
@@ -185,10 +206,32 @@ menu=sidebar_menu
 {{ super() }}
 <script>
 	(function () {
-		const emitSidebarToggle = () => {
+		const sidebarId = "portal-sidebar";
+		const desktopStateStorageKey = "{{ sidebar_desktop_state_storage_key }}";
+		const fallbackSidebarBreakpoint = 768;
+		const root = document.documentElement;
+
+		const withStorage = (callback) => {
+			try {
+				return callback(window.localStorage);
+			} catch (error) {
+				return null;
+			}
+		};
+
+		const readDesktopState = () => {
+			const storedState = withStorage((storage) => storage.getItem(desktopStateStorageKey));
+			return storedState === "collapsed" ? "collapsed" : "expanded";
+		};
+
+		const writeDesktopState = (state) => {
+			withStorage((storage) => storage.setItem(desktopStateStorageKey, state));
+		};
+
+		const emitSidebarAction = (action) => {
 			document.dispatchEvent(
 				new CustomEvent("basecoat:sidebar", {
-					detail: { id: "portal-sidebar", action: "toggle" },
+					detail: { id: sidebarId, action },
 				})
 			);
 		};
@@ -197,6 +240,14 @@ menu=sidebar_menu
 			const isDark = document.documentElement.classList.contains("dark");
 			const nextThemeLabel = isDark ? "Tema claro" : "Tema escuro";
 			const ariaLabel = isDark ? "Ativar tema claro" : "Ativar tema escuro";
+
+			document.querySelectorAll("[data-theme-dark-icon]").forEach((element) => {
+				element.hidden = isDark;
+			});
+
+			document.querySelectorAll("[data-theme-light-icon]").forEach((element) => {
+				element.hidden = !isDark;
+			});
 
 			document.querySelectorAll("[data-theme-toggle-label]").forEach((element) => {
 				element.textContent = nextThemeLabel;
@@ -226,49 +277,322 @@ menu=sidebar_menu
 			});
 		};
 
-		document.addEventListener("click", (event) => {
-			const sidebarToggle = event.target.closest("[data-sidebar-toggle]");
-			if (sidebarToggle) {
-				event.preventDefault();
-				emitSidebarToggle();
-				return;
+		document.addEventListener("DOMContentLoaded", () => {
+			const sidebar = document.getElementById(sidebarId);
+			const toggleButtons = Array.from(document.querySelectorAll("[data-sidebar-toggle]"));
+			const topLevelItemSelector = [
+				"nav > section > [role=group] > ul > li > a",
+				"nav > section > [role=group] > ul > li > details > summary",
+			].join(", ");
+			const detailsSelector = "details";
+			const flyoutViewportPadding = 16;
+			const flyoutOffset = 12;
+			const flyoutMinWidth = 224;
+			const flyoutMaxWidth = 320;
+
+			const getBreakpoint = () => {
+				if (!sidebar) {
+					return fallbackSidebarBreakpoint;
+				}
+
+				const parsedBreakpoint = parseInt(sidebar.dataset.breakpoint || String(fallbackSidebarBreakpoint), 10);
+				return Number.isFinite(parsedBreakpoint) ? parsedBreakpoint : fallbackSidebarBreakpoint;
+			};
+
+			const isMobileViewport = () => getBreakpoint() > 0 && window.innerWidth < getBreakpoint();
+			const isDesktopCollapsed = () => !isMobileViewport() && sidebar?.dataset.desktopState === "collapsed";
+
+			const resetInlineSubmenus = () => {
+				if (!sidebar) {
+					return;
+				}
+
+				sidebar.querySelectorAll(detailsSelector).forEach((element) => {
+					element.open = element.dataset.initiallyOpen === "true";
+					element.dataset.flyoutOpen = "false";
+				});
+			};
+
+			const syncCollapsedTooltips = () => {
+				if (!sidebar) {
+					return;
+				}
+
+				const collapsedDesktop = isDesktopCollapsed();
+				sidebar.querySelectorAll(topLevelItemSelector).forEach((element) => {
+					const label = (element.dataset.portalLabel || element.textContent || "").trim();
+					if (label && !element.dataset.portalLabel) {
+						element.dataset.portalLabel = label;
+					}
+
+					if (collapsedDesktop && label) {
+						element.setAttribute("data-tooltip", label);
+						element.setAttribute("data-side", "right");
+						element.setAttribute("data-align", "center");
+					} else {
+						element.removeAttribute("data-tooltip");
+						element.removeAttribute("data-side");
+						element.removeAttribute("data-align");
+					}
+				});
+			};
+
+			const closeFlyout = (detailsElement) => {
+				if (!detailsElement) {
+					return;
+				}
+
+				detailsElement.open = detailsElement.dataset.initiallyOpen === "true";
+				detailsElement.dataset.flyoutOpen = "false";
+				const flyout = detailsElement.querySelector(":scope > ul");
+				if (flyout) {
+					flyout.style.removeProperty("left");
+					flyout.style.removeProperty("top");
+					flyout.style.removeProperty("width");
+					flyout.style.removeProperty("max-height");
+				}
+			};
+
+			const closeAllFlyouts = (exceptElement = null) => {
+				if (!sidebar) {
+					return;
+				}
+
+				sidebar.querySelectorAll(detailsSelector).forEach((detailsElement) => {
+					if (exceptElement && detailsElement === exceptElement) {
+						return;
+					}
+
+					closeFlyout(detailsElement);
+				});
+			};
+
+			const toggleFlyout = (detailsElement) => {
+				if (!detailsElement) {
+					return;
+				}
+
+				const isOpen = detailsElement.dataset.flyoutOpen === "true";
+				if (isOpen) {
+					closeFlyout(detailsElement);
+					return;
+				}
+
+				closeAllFlyouts(detailsElement);
+				detailsElement.open = true;
+				detailsElement.dataset.flyoutOpen = "true";
+				positionFlyout(detailsElement);
+			};
+
+			const positionFlyout = (detailsElement) => {
+				if (!detailsElement) {
+					return;
+				}
+
+				const summary = detailsElement.querySelector(":scope > summary");
+				const flyout = detailsElement.querySelector(":scope > ul");
+				if (!summary || !flyout) {
+					return;
+				}
+
+				const summaryRect = summary.getBoundingClientRect();
+				const availableWidth = window.innerWidth - summaryRect.right - flyoutOffset - flyoutViewportPadding;
+				const width = Math.max(flyoutMinWidth, Math.min(flyoutMaxWidth, availableWidth));
+				flyout.style.width = `${Math.max(width, Math.min(flyoutMaxWidth, window.innerWidth - flyoutViewportPadding * 2))}px`;
+
+				const maxHeight = Math.max(160, window.innerHeight - flyoutViewportPadding * 2);
+				flyout.style.maxHeight = `${maxHeight}px`;
+
+				const flyoutHeight = Math.min(flyout.scrollHeight, maxHeight);
+				const top = Math.min(
+					Math.max(flyoutViewportPadding, summaryRect.top),
+					window.innerHeight - flyoutHeight - flyoutViewportPadding
+				);
+				const left = Math.max(
+					flyoutViewportPadding,
+					Math.min(
+						summaryRect.right + flyoutOffset,
+						window.innerWidth - (parseFloat(flyout.style.width) || flyoutMinWidth) - flyoutViewportPadding
+					)
+				);
+
+				flyout.style.top = `${top}px`;
+				flyout.style.left = `${left}px`;
+			};
+
+			const updateToggleState = () => {
+				const mobile = isMobileViewport();
+				const desktopState = sidebar?.dataset.desktopState === "collapsed" ? "collapsed" : "expanded";
+				const sidebarOpen = sidebar?.dataset.sidebarState !== "closed";
+				const expanded = mobile ? sidebarOpen : desktopState === "expanded";
+				const label = mobile
+					? expanded
+						? "Fechar navegação lateral"
+						: "Abrir navegação lateral"
+					: desktopState === "collapsed"
+						? "Expandir navegação lateral"
+						: "Colapsar navegação lateral";
+
+				toggleButtons.forEach((button) => {
+					button.setAttribute("aria-expanded", expanded ? "true" : "false");
+					button.setAttribute("aria-label", label);
+					button.setAttribute("title", label);
+				});
+			};
+
+			const setDesktopState = (state, { persist = true } = {}) => {
+				if (!sidebar) {
+					return;
+				}
+
+				const desktopState = state === "collapsed" ? "collapsed" : "expanded";
+				root.dataset.portalSidebarDesktopState = desktopState;
+				sidebar.dataset.desktopState = desktopState;
+
+				resetInlineSubmenus();
+
+				if (persist) {
+					writeDesktopState(desktopState);
+				}
+
+				syncCollapsedTooltips();
+				updateToggleState();
+			};
+
+			const syncViewportState = () => {
+				const mobile = isMobileViewport();
+				root.dataset.portalSidebarViewport = mobile ? "mobile" : "desktop";
+				if (sidebar) {
+					sidebar.dataset.shellViewport = mobile ? "mobile" : "desktop";
+				}
+
+				if (mobile) {
+					resetInlineSubmenus();
+					closeAllFlyouts();
+					emitSidebarAction("close");
+				} else {
+					emitSidebarAction("open");
+					setDesktopState(readDesktopState(), { persist: false });
+					sidebar?.querySelectorAll(`${detailsSelector}[data-flyout-open="true"]`).forEach(positionFlyout);
+				}
+
+				syncCollapsedTooltips();
+				updateToggleState();
+			};
+
+			if (sidebar) {
+				sidebar.querySelectorAll(detailsSelector).forEach((element) => {
+					element.dataset.initiallyOpen = element.open ? "true" : "false";
+					element.dataset.flyoutOpen = "false";
+				});
+
+				sidebar.dataset.desktopState = readDesktopState();
 			}
 
-			const themeToggle = event.target.closest('[data-action="toggle-theme"]');
-			if (themeToggle) {
-				event.preventDefault();
-				emitThemeToggle();
-				return;
-			}
+			document.addEventListener("click", (event) => {
+				const flyoutSummary = event.target.closest("#portal-sidebar details > summary");
+				if (flyoutSummary && isDesktopCollapsed()) {
+					event.preventDefault();
+					toggleFlyout(flyoutSummary.parentElement);
+					return;
+				}
 
-			const action = event.target.closest('[data-action="logout"]');
-			if (!action) return;
-			event.preventDefault();
-			doLogout();
+				if (isDesktopCollapsed() && sidebar && !event.target.closest("#portal-sidebar details")) {
+					closeAllFlyouts();
+				}
+
+				const sidebarToggle = event.target.closest("[data-sidebar-toggle]");
+				if (sidebarToggle) {
+					event.preventDefault();
+					if (isMobileViewport()) {
+						emitSidebarAction("toggle");
+					} else {
+						const nextState = sidebar?.dataset.desktopState === "collapsed" ? "expanded" : "collapsed";
+						setDesktopState(nextState);
+					}
+					return;
+				}
+
+				const themeToggle = event.target.closest('[data-action="toggle-theme"]');
+				if (themeToggle) {
+					event.preventDefault();
+					emitThemeToggle();
+					return;
+				}
+
+				const action = event.target.closest('[data-action="logout"]');
+				if (!action) return;
+				event.preventDefault();
+				doLogout();
+			});
+
+			document.addEventListener("keydown", (event) => {
+				if (event.key === "Escape") {
+					closeAllFlyouts();
+					if (isMobileViewport()) {
+						emitSidebarAction("close");
+					}
+					return;
+				}
+
+				if ((event.key === "Enter" || event.key === " ") && event.target.closest("#portal-sidebar details > summary") && isDesktopCollapsed()) {
+					event.preventDefault();
+					toggleFlyout(event.target.closest("summary")?.parentElement);
+					return;
+				}
+
+				if ((event.key === "Enter" || event.key === " ") && event.target.closest("[data-sidebar-toggle]")) {
+					event.preventDefault();
+					if (isMobileViewport()) {
+						emitSidebarAction("toggle");
+					} else {
+						const nextState = sidebar?.dataset.desktopState === "collapsed" ? "expanded" : "collapsed";
+						setDesktopState(nextState);
+					}
+					return;
+				}
+
+				if ((event.key === "Enter" || event.key === " ") && event.target.closest('[data-action="toggle-theme"]')) {
+					event.preventDefault();
+					emitThemeToggle();
+					return;
+				}
+
+				if (event.key !== "Enter" && event.key !== " ") return;
+				const action = event.target.closest('[data-action="logout"]');
+				if (!action) return;
+				event.preventDefault();
+				doLogout();
+			});
+
+			document.addEventListener("basecoat:sidebar-state", (event) => {
+				if (event.detail?.id !== sidebarId || !sidebar) {
+					return;
+				}
+
+				sidebar.dataset.sidebarState = event.detail.open ? "open" : "closed";
+				if (event.detail.viewport === "mobile" && !event.detail.open) {
+					closeAllFlyouts();
+				}
+				updateToggleState();
+			});
+
+			let resizeFrame = null;
+			window.addEventListener("resize", () => {
+				if (resizeFrame !== null) {
+					window.cancelAnimationFrame(resizeFrame);
+				}
+
+				resizeFrame = window.requestAnimationFrame(() => {
+					resizeFrame = null;
+					syncViewportState();
+				});
+			});
+
+			document.addEventListener("gris:theme-change", updateThemeToggleState);
+			updateThemeToggleState();
+			syncViewportState();
 		});
-
-		document.addEventListener("keydown", (event) => {
-			if ((event.key === "Enter" || event.key === " ") && event.target.closest("[data-sidebar-toggle]")) {
-				event.preventDefault();
-				emitSidebarToggle();
-				return;
-			}
-
-			if ((event.key === "Enter" || event.key === " ") && event.target.closest('[data-action="toggle-theme"]')) {
-				event.preventDefault();
-				emitThemeToggle();
-				return;
-			}
-
-			if (event.key !== "Enter" && event.key !== " ") return;
-			const action = event.target.closest('[data-action="logout"]');
-			if (!action) return;
-			event.preventDefault();
-			doLogout();
-		});
-
-		document.addEventListener("gris:theme-change", updateThemeToggleState);
-		updateThemeToggleState();
 	})();
 </script>
 {% block extra_script %}{% endblock %}

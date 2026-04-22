@@ -16,7 +16,7 @@
 </div>
 {% endmacro %}
 
-{% macro alert(title=None, description=None, variant="default", attrs={}) %}
+{% macro alert(title=None, description=None, icon=None, variant="default", attrs={}) %}
 {% set classes = "alert" %}
 {% if variant in ["success", "warning", "error", "info", "destructive"] %}
   {% set classes = classes ~ " alert-" ~ ("destructive" if variant == "error" else variant) %}
@@ -27,8 +27,9 @@
     {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
   {% endfor %}
 >
+  {% if icon %}{{ icon | safe }}{% endif %}
   {% if title %}<h2>{{ title }}</h2>{% endif %}
-  {% if description %}<p>{{ description }}</p>{% endif %}
+  {% if description %}<section>{{ description | safe }}</section>{% endif %}
   {{ caller() if caller }}
 </div>
 {% endmacro %}

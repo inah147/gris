@@ -28,6 +28,7 @@ Use estes caminhos como referência de implementação:
 - `gris/gris/doctype/`: DocTypes do módulo Gris (schema, controller e scripts).
 - `gris/financeiro/doctype/`: DocTypes do módulo Financeiro.
 - `gris/templates/` e `gris/public/`: templates, assets e scripts globais (ex.: PWA).
+- `gris/public/design_system/`: design system Basecoat do Portal, com CSS/JS locais, macros Jinja, tema e ícones Lucide.
 
 ## 🧠 Skills oficiais (fonte de decisão técnica)
 
@@ -57,10 +58,12 @@ Skills disponíveis em: `.github/skills/<skill-name>/SKILL.md`.
 
 ## 🖥️ Convenções de frontend (Desk + Portal)
 
-> Prioridade de UI no projeto: **equilibrada** entre Desk e Portal.
+> Regra principal de UI: **Portal usa Basecoat; Desk usa componentes nativos do Frappe**.
 
-- **Desk**: usar `frappe.ui.form.on(...)` com eventos claros e responsabilidades pequenas por handler.
-- **Portal (`www`)**: usar `frappe.call`/fetch assíncrono com tratamento de erro e estado de carregamento.
+- **Desk**: usar `frappe.ui.form.on(...)`, `frappe.ui.Dialog`, `frappe.msgprint`, `frappe.show_alert` e padrões nativos do Desk.
+- **Portal (`www`)**: usar o design system Basecoat em `gris/public/design_system`, macros Jinja e assets carregados por `gris/templates/base.html`.
+- Não carregar Basecoat, macros de portal ou `/assets/gris/design_system/*` em telas Desk.
+- Em páginas de portal com shell autenticado, preferir `templates/web_sidebar_base.html`.
 - Evitar duplicar validações críticas no JS sem equivalente no backend.
 - Separar lógica de apresentação da lógica de integração sempre que possível.
 
@@ -99,6 +102,8 @@ Diretrizes práticas:
 Antes de concluir uma entrega:
 
 - [ ] A skill correta foi seguida para o tipo de tarefa.
+- [ ] Interfaces de Portal usam Basecoat e macros do design system quando aplicável.
+- [ ] Interfaces Desk não receberam assets/componentes do Portal.
 - [ ] Regras de negócio críticas estão no backend.
 - [ ] Permissões/autorização foram revisadas.
 - [ ] Não há SQL inseguro ou N+1 evitável.

@@ -21,6 +21,8 @@ Vantagens:
 - menor custo de manutencao;
 - melhor previsibilidade para ajustes de layout.
 
+No Portal, prefira HTML/CSS via Basecoat: macro `card` para o container, `badge` para variacao, `skeleton` para loading e tokens do tema para cor/spacing.
+
 ## Quando usar ECharts no KPI
 Use ECharts no KPI apenas quando houver necessidade real de:
 - sparkline no proprio card;
@@ -29,40 +31,55 @@ Use ECharts no KPI apenas quando houver necessidade real de:
 
 ## Snippet base (HTML)
 ```html
-<div class="card-metric">
-  <span class="card-metric__label">Registro Valido</span>
-  <div class="metric-main-row">
-    <div class="card-metric__value" id="card-reg-valido-total">--</div>
-    <span class="metric-pct metric-pct--positive" id="card-reg-valido-pct">--%</span>
+<article class="card metric-card">
+  <section>
+    <span class="metric-card__label">Registro Valido</span>
+    <div class="metric-card__main">
+      <strong class="metric-card__value" id="card-reg-valido-total">--</strong>
+      <span class="badge metric-card__delta" id="card-reg-valido-pct">--%</span>
+    </div>
+  </section>
+</article>
+```
+
+## Snippet base (Jinja/Basecoat)
+```jinja
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, badge %}
+
+{% call card(attrs={"class": "metric-card"}) %}
+  <span class="metric-card__label">Registro Valido</span>
+  <div class="metric-card__main">
+    <strong class="metric-card__value" id="card-reg-valido-total">--</strong>
+    {{ badge("--%", attrs={"id": "card-reg-valido-pct", "class": "metric-card__delta"}) }}
   </div>
-</div>
+{% endcall %}
 ```
 
 ## Snippet base (CSS)
 ```css
-.card-metric {
-  border: 1px solid var(--border-subtle, #e5e7eb);
-  border-radius: 0.85rem;
+.metric-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   padding: 0.9rem 0.95rem;
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
 }
 
-.card-metric__value {
+.metric-card__value {
   font-size: clamp(1.55rem, 2.2vw, 1.95rem);
   line-height: 1.05;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
-.metric-main-row {
+.metric-card__main {
   display: flex;
   align-items: baseline;
   gap: 0.55rem;
 }
 
-.metric-pct {
+.metric-card__delta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -116,3 +133,5 @@ chart.setOption({
 - [ ] Contraste suficiente entre numero e fundo.
 - [ ] Variacao nao depende apenas de cor.
 - [ ] Layout validado em desktop e mobile.
+- [ ] Em Portal, container e feedback usam Basecoat.
+- [ ] Em Desk, nenhum asset Basecoat foi carregado.

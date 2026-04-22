@@ -4,12 +4,14 @@
     {
       "id": 1,
       "name": "criar-skill-portal-frappe",
-      "prompt": "Crie uma nova skill para implementação de páginas de portal em Frappe (www), incluindo critérios de segurança, chamadas assíncronas e checklist de validação final.",
-      "expected_output": "Estrutura completa da skill com SKILL.md em PT-BR, fluxo operacional claro e referências para portal Frappe.",
+      "prompt": "Crie uma nova skill para implementação de páginas de portal em Frappe (www), incluindo uso do design system Basecoat, macros Jinja, isolamento Portal/Desk, critérios de segurança, chamadas assíncronas e checklist de validação final.",
+      "expected_output": "Estrutura completa da skill com SKILL.md em PT-BR, fluxo operacional claro, referências para portal Frappe e uso correto do design system Basecoat.",
       "files": [],
       "expectations": [
         "Gerar SKILL.md com frontmatter válido (name e description)",
         "Incluir seção de when-to-use/Quando usar com gatilhos explícitos",
+        "Orientar uso de Basecoat, macros Jinja e assets locais do Portal",
+        "Explicitar que componentes do Portal não devem ser carregados no Desk",
         "Incluir critérios de segurança/permissão para contexto Frappe",
         "Não depender de instruções fora do escopo do pedido"
       ]

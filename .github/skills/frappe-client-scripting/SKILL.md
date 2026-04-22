@@ -16,6 +16,7 @@ Use esta skill quando o pedido envolver:
 - Script de formulário claro, com handlers pequenos por responsabilidade.
 - Fluxo assíncrono com tratamento de sucesso, erro e feedback ao usuário.
 - Sincronia entre estado do formulário e resposta do backend.
+- UI implementada com padrões nativos do Frappe Desk, sem dependência do design system do Portal.
 - Checklist final cobrindo UX, robustez e consistência com regras de backend.
 
 ## Fluxo recomendado (event → call → feedback → sync)
@@ -38,6 +39,8 @@ Use esta skill quando o pedido envolver:
 - Tratar erro de API explicitamente na UI.
 - Evitar lógica de negócio extensa no client.
 - Preservar performance em formulários com child table e muitos eventos.
+- Não carregar Basecoat, macros Jinja de Portal, `/assets/gris/design_system/*` ou classes do Portal em telas Desk.
+- Para feedback e modais no Desk, usar `frappe.msgprint`, `frappe.show_alert`, `frappe.confirm`, `frappe.ui.Dialog` e controles nativos.
 
 ## Padrão base
 ```javascript
@@ -84,12 +87,12 @@ frappe.call({
 });
 ```
 
-## Anti-padrões (evitar)
-- Colocar regra crítica apenas no JavaScript.
-- Encadear múltiplas chamadas assíncronas sem controle de erro.
-- Atualizar o formulário inteiro quando só um campo mudou.
-- Criar handlers monolíticos com várias responsabilidades.
-- Mostrar mensagem de sucesso sem validar retorno real da API.
+## Boas práticas
+- Validação crítica deve existir também no backend.
+- Use `frm.refresh_field("campo")` para atualização pontual.
+- Use `frm.reload_doc()` quando o servidor alterar estado relevante.
+- Handlers pequenos e com responsabilidade única.
+- Trate conflitos com componentes do Portal mantendo a solução no Desk nativo; não adapte componentes Basecoat para formulário/list view.
 
 ## Checklist final
 - [ ] Sem regra crítica apenas no JS.
@@ -97,3 +100,4 @@ frappe.call({
 - [ ] Atualização de estado visual consistente (`refresh_field`/`reload_doc`).
 - [ ] Handlers curtos e com responsabilidade única.
 - [ ] Fluxo validado para sucesso, falha e retorno vazio.
+- [ ] Nenhum asset/componente Basecoat do Portal foi introduzido no Desk.

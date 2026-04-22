@@ -40,6 +40,8 @@ Se o `SKILL.md` ficar grande, mova detalhes para `references/` e deixe ponteiros
 - Não criar instruções inseguras, enganosas ou fora da intenção do usuário.
 - Reutilizar padrões já existentes em `.github/skills` antes de inventar estrutura nova.
 - Para tarefas de Frappe, sempre considerar permissões, validação no backend e risco de N+1.
+- Para skills de UI/Portal, exigir o design system Basecoat (`gris/public/design_system`), macros Jinja e isolamento entre Portal e Desk.
+- Para skills de Desk, orientar componentes nativos do Frappe e proibir dependência de Basecoat/Portal.
 
 ## Estrutura recomendada da skill-alvo
 
@@ -112,6 +114,8 @@ Use quando o usuário pedir melhoria de triggering.
 - Priorizar validações críticas no backend (não só no client).
 - Incluir critérios de autorização e segurança nos casos de teste quando houver mutação de dados.
 - Evitar instruções que incentivem SQL inseguro, `ignore_permissions=True` sem contexto, ou padrões com N+1.
+- Em skills de Portal Web, incluir critérios para Basecoat, imports de macros Jinja e assets locais (`gris/public/design_system`).
+- Em skills que tocam Desk, explicitar que Basecoat e `/assets/gris/design_system/*` não devem ser carregados em formulários/listas do Frappe.
 
 ## Recursos desta skill
 - Agentes especializados:
@@ -137,4 +141,5 @@ Use quando o usuário pedir melhoria de triggering.
 - [ ] Avaliação qualitativa/quantitativa registrada.
 - [ ] Iterações aplicadas com base no feedback.
 - [ ] Riscos Frappe (permissão, segurança, performance) cobertos nos critérios.
+- [ ] Skills de UI distinguem Portal Basecoat de Desk nativo.
 - [ ] Skill registrada em catálogo local (quando aplicável).

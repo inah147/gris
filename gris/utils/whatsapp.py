@@ -431,7 +431,7 @@ def enviar_mensagem_formatada(
 		titulo: Título da mensagem.
 		descricao: Descrição/corpo da mensagem.
 		botoes: Lista de botões conforme Evolution API v2.
-		        Exemplo: [{"buttonId": "1", "buttonText": {"displayText": "Confirmar"}, "type": 1}]
+		        Exemplo: [{"buttonId": "1", "buttonText": {"displayText": "Confirmar"}, "type": "reply"}]
 		enqueue: Se True (padrão), processa em background.
 
 	Returns:

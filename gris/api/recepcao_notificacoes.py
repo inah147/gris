@@ -200,8 +200,8 @@ def enviar_lembretes_visita() -> None:
 	logger.info(f"Enviando {len(visitas)} lembrete(s) de visita para {data_alvo}.")
 
 	botoes = [
-		{"buttonId": "confirmar", "buttonText": {"displayText": "Sim, irei! ✅"}, "type": 1},
-		{"buttonId": "cancelar", "buttonText": {"displayText": "Não poderei ir ❌"}, "type": 1},
+		{"buttonId": "confirmar", "buttonText": {"displayText": "Sim, irei! ✅"}, "type": "reply"},
+		{"buttonId": "cancelar", "buttonText": {"displayText": "Não poderei ir ❌"}, "type": "reply"},
 	]
 
 	for visita in visitas:

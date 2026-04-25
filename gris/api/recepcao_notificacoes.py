@@ -179,6 +179,86 @@ def notificar_visita_agendada(novo_associado_name: str, data_visita: str) -> Non
 		frappe.log_error(frappe.get_traceback(), f"Notificação de agendamento: {novo_associado_name}")
 
 
+def _enviar_lembrete_para_visita(*, jovem: str, data_da_visita, visita_name: str | None = None) -> bool:
+	"""Envia lembrete de confirmação para uma visita específica.
+
+	Retorna True quando o envio é disparado e False quando não há telefone.
+	"""
+	logger = frappe.logger("recepcao_notificacoes", allow_site=True)
+
+	telefone = _buscar_telefone_responsavel(jovem)
+	if not telefone:
+		logger.warning(f"Lembrete não enviado: nenhum telefone encontrado para {jovem}.")
+		return False
+
+	nome = frappe.db.get_value("Novo Associado", jovem, "nome_completo") or jovem
+
+	try:
+		data_formatada = getdate(data_da_visita).strftime("%d/%m")
+	except Exception:
+		data_formatada = str(data_da_visita)
+
+	botoes = [
+		{"buttonId": "confirmar", "buttonText": {"displayText": "Sim, irei! ✅"}, "type": "reply"},
+		{"buttonId": "cancelar", "buttonText": {"displayText": "Não poderei ir ❌"}, "type": "reply"},
+	]
+
+	enviar_mensagem_formatada(
+		telefone,
+		titulo="Lembrete de Visita",
+		descricao=(
+			f"A visita de {nome} ao Grupo Escoteiro está marcada para {data_formatada}. "
+			f"Você confirma a presença?"
+		),
+		botoes=botoes,
+	)
+	logger.info(f"Lembrete enviado para visita {visita_name or 'N/A'} ({jovem}).")
+	return True
+
+
+@frappe.whitelist()
+def enviar_lembrete_visita_manual(visita_name: str) -> dict:
+	"""Dispara manualmente o lembrete de confirmação para uma visita."""
+	if not visita_name:
+		frappe.throw("Informe a visita para envio do lembrete.")
+
+	if not frappe.has_permission("Agenda de Visitas", ptype="write", doc=visita_name):
+		frappe.throw("Você não tem permissão para enviar lembrete desta visita.", frappe.PermissionError)
+
+	visita = frappe.db.get_value(
+		"Agenda de Visitas",
+		visita_name,
+		["name", "jovem", "data_da_visita", "visita_confirmada"],
+		as_dict=True,
+	)
+	if not visita:
+		frappe.throw("Visita não encontrada.")
+
+	if not visita.get("jovem"):
+		frappe.throw("A visita não possui jovem vinculado.")
+
+	if visita.get("visita_confirmada"):
+		frappe.throw("A visita já está confirmada.")
+
+	try:
+		enviado = _enviar_lembrete_para_visita(
+			jovem=visita.jovem,
+			data_da_visita=visita.data_da_visita,
+			visita_name=visita.name,
+		)
+	except Exception:
+		frappe.log_error(
+			frappe.get_traceback(),
+			f"Lembrete manual de visita: {visita_name}",
+		)
+		raise
+
+	if not enviado:
+		frappe.throw("Nenhum telefone encontrado para o responsável deste jovem.")
+
+	return {"success": True, "message": "Lembrete enviado para confirmação da visita."}
+
+
 def enviar_lembretes_visita() -> None:
 	"""Scheduler diário: notifica responsáveis com visitas marcadas para daqui a 2 dias.
 
@@ -199,33 +279,12 @@ def enviar_lembretes_visita() -> None:
 
 	logger.info(f"Enviando {len(visitas)} lembrete(s) de visita para {data_alvo}.")
 
-	botoes = [
-		{"buttonId": "confirmar", "buttonText": {"displayText": "Sim, irei! ✅"}, "type": "reply"},
-		{"buttonId": "cancelar", "buttonText": {"displayText": "Não poderei ir ❌"}, "type": "reply"},
-	]
-
 	for visita in visitas:
 		try:
-			telefone = _buscar_telefone_responsavel(visita.jovem)
-			if not telefone:
-				logger.warning(f"Lembrete não enviado: nenhum telefone encontrado para {visita.jovem}.")
-				continue
-
-			nome = frappe.db.get_value("Novo Associado", visita.jovem, "nome_completo") or visita.jovem
-
-			try:
-				data_formatada = getdate(visita.data_da_visita).strftime("%d/%m")
-			except Exception:
-				data_formatada = str(visita.data_da_visita)
-
-			enviar_mensagem_formatada(
-				telefone,
-				titulo="Lembrete de Visita",
-				descricao=(
-					f"A visita de {nome} ao Grupo Escoteiro está marcada para {data_formatada}. "
-					f"Você confirma a presença?"
-				),
-				botoes=botoes,
+			_enviar_lembrete_para_visita(
+				jovem=visita.jovem,
+				data_da_visita=visita.data_da_visita,
+				visita_name=visita.name,
 			)
 
 		except Exception:

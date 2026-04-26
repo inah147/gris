@@ -55,6 +55,7 @@ Esses arquivos são a base para evitar drift de marca. `gris/public/css/design-s
 - O tema Basecoat em `theme-shadcn.css` é a fonte de verdade para cor, tipografia, radius, dark mode e tokens semânticos.
 - Priorizar tokens como `--background`, `--foreground`, `--card`, `--primary`, `--muted`, `--border`, `--ring`, `--radius` em vez de hardcode de cor/spacing.
 - Usar macros Jinja de `public/design_system/components/generated/` e `public/design_system/components/composed/` antes de criar componente local.
+- Inputs de seleção em páginas de Portal devem usar a macro `select` do design system; `<select>` nativo do HTML é anti-padrão de marca porque não segue o tema shadcn nem o padrão visual dos demais componentes.
 - Isolar Portal e Desk: Basecoat e `/assets/gris/design_system/*` pertencem às páginas web do Portal, não aos formulários/listas Desk.
 - Evitar CSS inline quando existir componente/arquivo dedicado.
 - Manter consistência entre Portal e PWA (tema/ícones/metadados).
@@ -63,6 +64,7 @@ Esses arquivos são a base para evitar drift de marca. `gris/public/css/design-s
 ## Anti-padrões
 - Introduzir nova cor sem mapear token no tema Basecoat.
 - Duplicar componente existente nas macros Basecoat.
+- Usar `<select>` nativo em vez da macro `select` do design system em páginas de Portal.
 - Usar `components.css`/`public/components` como base de nova interface quando houver equivalente no design system Basecoat.
 - Aplicar Basecoat em Desk ou misturar componentes de Portal com componentes nativos do Frappe.
 - Ajustar apenas desktop ou apenas mobile em fluxos principais.

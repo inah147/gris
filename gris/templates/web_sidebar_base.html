@@ -1,5 +1,9 @@
 {% extends "gris/templates/base.html" %}
 
+{% if "gris-portal-sidebar-page" not in (body_class or "") %}
+{% set body_class = ((body_class ~ " ") if body_class else "") ~ "gris-portal-sidebar-page" %}
+{% endif %}
+
 {% set sidebar_shell_asset_version = "20260422-sidebar-shell-25" %}
 {% set sidebar_breakpoint = 768 %}
 {% set sidebar_desktop_state_storage_key = "gris-portal-sidebar-desktop-state" %}
@@ -23,7 +27,6 @@
 		root.dataset.portalSidebarDesktopState = desktopState;
 	})();
 </script>
-<link rel="stylesheet" href="/assets/gris/css/components.css?v={{ sidebar_shell_asset_version }}" />
 <link rel="stylesheet" href="/assets/gris/css/web_sidebar_base.css?v={{ sidebar_shell_asset_version }}" />
 {% endblock %}
 

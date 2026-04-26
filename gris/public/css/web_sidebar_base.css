@@ -18,7 +18,7 @@ main {
 	top: 0;
 	z-index: 30;
 	padding: 0;
-	background: color-mix(in srgb, var(--color-background, #ffffff) 96%, transparent);
+	background: color-mix(in srgb, var(--color-sidebar, #ffffff) 100%, transparent);
 	border-bottom: 1px solid var(--color-sidebar-border, #e2e8f0);
 }
 

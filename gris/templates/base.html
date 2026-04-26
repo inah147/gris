@@ -1,9 +1,35 @@
 {% extends "frappe/templates/base.html" %}
 
-{% set design_system_asset_version = "20260422-sidebar-behavior-1" %}
+{% set design_system_asset_version = "20260423-toaster-init-1" %}
+{% set current_page_path = pathname if pathname is defined and pathname else (path if path is defined else "") %}
+{% set is_login_page = current_page_path.startswith("/login") or current_page_path == "login" %}
+{% set hide_website_chrome = is_login_page or no_header %}
+{% if is_login_page and "gris-login-page" not in (body_class or "") %}
+{% set body_class = ((body_class ~ " ") if body_class else "") ~ "gris-login-page" %}
+{% endif %}
+
+{% block banner %}
+{% if not hide_website_chrome %}
+{{ super() }}
+{% endif %}
+{% endblock %}
+
+{% block navbar %}
+{% if not hide_website_chrome %}
+{{ super() }}
+{% endif %}
+{% endblock %}
+
+{% block footer %}
+{% if not is_login_page or show_footer_on_login %}
+{{ super() }}
+{% endif %}
+{% endblock %}
 
 {% block head %}
-{{ super() }}
+{% if head_html is defined -%}
+{{ head_html or "" }}
+{%- endif %}
 
 <script>
 	(function () {
@@ -27,10 +53,14 @@
 </script>
 
 <!-- Design System -->
-<link rel="stylesheet" href="/assets/gris/css/design-system.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/basecoat.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/theme-shadcn.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/lucide.css?v={{ design_system_asset_version }}">
+<link rel="stylesheet" href="/assets/gris/design_system/css/layout.css?v={{ design_system_asset_version }}">
+{% if is_login_page %}
+{{ include_style('website.bundle.css') }}
+<link rel="stylesheet" href="/assets/gris/css/login-page.css?v={{ design_system_asset_version }}">
+{% endif %}
 
 <!-- Basecoat JS (local files, without build tool) -->
 <script src="/assets/gris/design_system/js/basecoat/basecoat.min.js?v={{ design_system_asset_version }}" defer></script>

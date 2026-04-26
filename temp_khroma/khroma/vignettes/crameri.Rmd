@@ -1,0 +1,260 @@
+---
+title: "Fabio Crameri's Color Schemes"
+author: "N. Frerebeau"
+date: "`r Sys.Date()`"
+output:
+  markdown::html_format:
+    options:
+      toc: true
+      number_sections: true
+vignette: >
+  %\VignetteIndexEntry{Fabio Crameri's Color Schemes}
+  %\VignetteEngine{knitr::knitr}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  out.width = "100%"
+)
+```
+
+```{r packages}
+library(khroma)
+```
+
+## Introduction
+
+Crameri (2018) offers carefully chosen schemes, ready for mapping data, with colors that are:
+
+* Perceptually uniform,
+* Perceptually ordered,
+* Color vision deficiency friendly,
+* Readable as black and white print,
+* Citable & reproducible.
+
+All the scales presented in Crameri (2023) are implemented here, for use with base R **graphics**, [**ggplot2**](https://cran.r-project.org/package=ggplot2) and [**ggraph**](https://cran.r-project.org/package=ggraph).
+
+## Diverging data
+
+### *bam*
+```{r crameri_div_bam, fig.height=2, fig.width=7}
+bam <- color("bam")
+plot(bam(256))
+```
+
+### *berlin*
+```{r crameri_div_berlin, fig.height=2, fig.width=7}
+berlin <- color("berlin")
+plot(berlin(256))
+```
+
+### *broc*
+```{r crameri_div_broc, fig.height=2, fig.width=7}
+broc <- color("broc")
+plot(broc(256))
+```
+
+### *cork*
+```{r crameri_div_cork, fig.height=2, fig.width=7}
+cork <- color("cork")
+plot(cork(256))
+```
+
+### *lisbon*
+```{r crameri_div_lisbon, fig.height=2, fig.width=7}
+lisbon <- color("lisbon")
+plot(lisbon(256))
+```
+
+### *managua*
+```{r crameri_seq_managua, fig.height=2, fig.width=7}
+managua <- color("managua")
+plot(managua(256))
+```
+
+### *roma*
+```{r crameri_div_roma, fig.height=2, fig.width=7}
+roma <- color("roma")
+plot(roma(256))
+```
+
+### *tofino*
+```{r crameri_div_tofino, fig.height=2, fig.width=7}
+tofino <- color("tofino")
+plot(tofino(256))
+```
+
+### *vanimo*
+```{r crameri_div_vanimo, fig.height=2, fig.width=7}
+vanimo <- color("vanimo")
+plot(vanimo(256))
+```
+
+### *vik*
+```{r crameri_div_vik, fig.height=2, fig.width=7}
+vik <- color("vik")
+plot(vik(256))
+```
+
+## Sequential data
+
+### *acton*
+```{r crameri_seq_acton, fig.height=2, fig.width=7}
+acton <- color("acton")
+plot(acton(256))
+```
+
+### *bamako*
+```{r crameri_seq_bamako, fig.height=2, fig.width=7}
+bamako <- color("bamako")
+plot(bamako(256))
+```
+
+### *batlow*
+```{r crameri_seq_batlow, fig.height=2, fig.width=7}
+batlow <- color("batlow")
+plot(batlow(256))
+```
+
+### *batlowW*
+```{r crameri_seq_batlowW, fig.height=2, fig.width=7}
+batlowW <- color("batlowW")
+plot(batlowW(256))
+```
+
+### *batlowK*
+```{r crameri_seq_batlowK, fig.height=2, fig.width=7}
+batlowK <- color("batlowK")
+plot(batlowK(256))
+```
+
+### *bilbao*
+```{r crameri_seq_bilbao, fig.height=2, fig.width=7}
+bilbao <- color("bilbao")
+plot(bilbao(256))
+```
+
+### *buda*
+```{r crameri_seq_buda, fig.height=2, fig.width=7}
+buda <- color("buda")
+plot(buda(256))
+```
+
+### *davos*
+```{r crameri_seq_davos, fig.height=2, fig.width=7}
+davos <- color("davos")
+plot(davos(256))
+```
+
+### *devon*
+```{r crameri_seq_devon, fig.height=2, fig.width=7}
+devon <- color("devon")
+plot(devon(256))
+```
+
+### *glasgow*
+```{r crameri_seq_glasgow, fig.height=2, fig.width=7}
+glasgow <- color("glasgow")
+plot(glasgow(256))
+```
+
+### *grayC*
+```{r crameri_seq_grayC, fig.height=2, fig.width=7}
+grayC <- color("grayC")
+plot(grayC(256))
+```
+
+### *hawaii*
+```{r crameri_seq_hawaii, fig.height=2, fig.width=7}
+hawaii <- color("hawaii")
+plot(hawaii(256))
+```
+
+### *imola*
+```{r crameri_seq_imola, fig.height=2, fig.width=7}
+imola <- color("imola")
+plot(imola(256))
+```
+
+### *lajolla*
+```{r crameri_seq_lajolla, fig.height=2, fig.width=7}
+lajolla <- color("lajolla")
+plot(lajolla(256))
+```
+
+### *lapaz*
+```{r crameri_seq_lapaz, fig.height=2, fig.width=7}
+lapaz <- color("lapaz")
+plot(lapaz(256))
+```
+
+### *lipari*
+```{r crameri_seq_lipari, fig.height=2, fig.width=7}
+lipari <- color("lipari")
+plot(lipari(256))
+```
+
+### *navia*
+```{r crameri_seq_navia, fig.height=2, fig.width=7}
+navia <- color("navia")
+plot(navia(256))
+```
+
+### *naviaW*
+```{r crameri_seq_naviaW, fig.height=2, fig.width=7}
+naviaW <- color("naviaW")
+plot(naviaW(256))
+```
+
+### *nuuk*
+```{r crameri_seq_nuuk, fig.height=2, fig.width=7}
+nuuk <- color("nuuk")
+plot(nuuk(256))
+```
+
+### *oslo*
+```{r crameri_seq_oslo, fig.height=2, fig.width=7}
+oslo <- color("oslo")
+plot(oslo(256))
+```
+
+### *tokyo*
+```{r crameri_seq_tokyo, fig.height=2, fig.width=7}
+tokyo <- color("tokyo")
+plot(tokyo(256))
+```
+
+### *turku*
+```{r crameri_seq_turku, fig.height=2, fig.width=7}
+turku <- color("turku")
+plot(turku(256))
+```
+
+## Multi-sequential data
+
+### *bukavu*
+```{r crameri_seq_bukavu, fig.height=2, fig.width=7}
+bukavu <- color("bukavu")
+plot(bukavu(256))
+```
+
+### *fes*
+```{r crameri_seq_fes, fig.height=2, fig.width=7}
+fes <- color("fes")
+plot(fes(256))
+```
+
+### *oleron*
+```{r crameri_seq_oleron, fig.height=2, fig.width=7}
+oleron <- color("oleron")
+plot(oleron(256))
+```
+
+## References
+
+Crameri, F. 2018. "Geodynamic Diagnostics, Scientific Visualisation and StagLab 3.0." *Geoscientific Model Development* 11 (6): 2541-2562. DOI: [10.5194/gmd-11-2541-2018](https://doi.org/10.5194/gmd-11-2541-2018).
+
+Crameri, F. 2023. *Scientific Colour Maps* (version 8.0.1). Zenodo. DOI: [10.5281/zenodo.1243862](https://doi.org/10.5281/zenodo.1243862).

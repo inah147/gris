@@ -63,6 +63,13 @@ Use macros geradas para componentes interativos e macros compostas para elemento
 
 Componentes disponíveis incluem `command`, `dialog`, `dropdown-menu`, `popover`, `select`, `sidebar`, `tabs`, `toast`, além de macros compostas como `alert`, `avatar`, `badge`, `button`, `card`, `field`, `form`, `input`, `table`, `skeleton`, `spinner`, `switch` e `tooltip`.
 
+### Selects
+Em páginas de Portal, usar **sempre** a macro `select` de `public/design_system/components/generated/select.html.jinja`. Nunca usar `<select>` nativo do HTML (mesmo com `class="select"`) — o macro é a forma oficial: UI consistente com o tema shadcn, acessibilidade, suporte a `combobox`/`multiple` e integração com o observer do Basecoat.
+
+Em formulários que usam `FormData` / submit nativo, passar `name="..."` para o macro. O macro renderiza um `<input type="hidden" name="...">` interno, atualizado pelo `select.js` a cada seleção, então `new FormData(form)` devolve o valor corrente.
+
+Para redefinir o componente visualmente após `form.reset()`, iterar sobre `form.querySelectorAll('.select')` e setar `el.value = ''` (a propriedade é exposta pelo componente). O reset nativo do `<form>` limpa apenas o hidden input, mas não o label do trigger.
+
 ### JS e atualização dinâmica
 - Componentes Basecoat são inicializados por `basecoat.min.js`, scripts em `design_system/js/components/` e `design-system-init.js`.
 - Para HTML inserido dinamicamente, o observer do Basecoat cobre novos nós; se necessário, dispare `document.dispatchEvent(new CustomEvent("gris:design-system:init"))`.
@@ -170,6 +177,7 @@ Antes de criar componente novo, revisar:
 - Usar nomes diferentes entre arquivos da mesma rota (quebra co-location e auto-resolução).
 - Duplicar componente já existente em vez de reutilizar macros Basecoat.
 - Usar `gris/public/components` ou `components.css` como padrão de nova UI quando existir equivalente em Basecoat.
+- Usar `<select>` nativo em página de Portal quando existe a macro `select` do design system.
 - Carregar Basecoat ou macros de Portal no Desk para corrigir formulário, list view ou dashboard interno do Frappe.
 - Colocar lógica de API pesada diretamente no template em vez de centralizar em Python.
 - Entregar página apenas para desktop ou apenas para mobile.

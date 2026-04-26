@@ -1,6 +1,6 @@
 import frappe
 
-from gris.api.portal_access import enrich_context, user_has_access
+from gris.api.portal_access import PORTAL_MODULE_ICON_MAP, enrich_context, user_has_access
 from gris.api.portal_cache_utils import get_uel_cached
 
 no_cache = 1
@@ -22,6 +22,7 @@ def get_context(context):
 	else:
 		context.sidebar_title = "Portal"
 	context.active_link = "/inicio"
+	context.module_icons = PORTAL_MODULE_ICON_MAP
 	enrich_context(context, "/inicio")
 	# Flags para controlar exibição de cards na página inicial
 	context.can_associados = user_has_access("/associados")

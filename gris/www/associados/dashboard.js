@@ -2,16 +2,21 @@
 // Usa Apache ECharts como biblioteca única de gráficos.
 
 (async function () {
-  const CHART_COLORS = [
-    '#0072B2',
-    '#E69F00',
-    '#009E73',
-    '#D55E00',
-    '#56B4E9',
-    '#CC79A7',
-    '#F0E442',
-    '#000000',
-  ];
+
+  // Obtém as cores do design system (Paul Tol Bright, colorblind safe)
+  function getChartColors() {
+    const style = getComputedStyle(document.documentElement);
+    // Suporta até 7 cores
+    return [
+      style.getPropertyValue('--chart-1').trim(),
+      style.getPropertyValue('--chart-2').trim(),
+      style.getPropertyValue('--chart-3').trim(),
+      style.getPropertyValue('--chart-4').trim(),
+      style.getPropertyValue('--chart-5').trim(),
+      style.getPropertyValue('--chart-6').trim(),
+      style.getPropertyValue('--chart-7').trim(),
+    ];
+  }
 
   const chartIds = [
     'chart-ramos-categorias',
@@ -100,7 +105,7 @@
   function baseOption({ legendTop = 0, gridTop = 56, yAxisName = '' } = {}) {
     return {
       aria: { enabled: true },
-      color: CHART_COLORS,
+      color: getChartColors(),
       animationDuration: 450,
       animationDurationUpdate: 300,
       tooltip: {
@@ -149,10 +154,20 @@
     if (instance) instance.dispose();
   }
 
+  function resizeRenderedCharts() {
+    if (!window.echarts) return;
+    chartIds.forEach((id) => {
+      const target = document.getElementById(id);
+      if (!target) return;
+      const instance = window.echarts.getInstanceByDom(target);
+      if (instance) instance.resize();
+    });
+  }
+
   function setChartMessage(id, text) {
     disposeChart(id);
     const target = document.getElementById(id);
-    if (target) target.innerHTML = `<div class="text-muted small px-2 pt-3">${text}</div>`;
+    if (target) target.innerHTML = `<div class="text-sm text-muted-foreground chart-message">${text}</div>`;
   }
 
   function updateCards(cards = {}) {
@@ -452,15 +467,38 @@
     }
   }
 
-  function bindGlobalResize() {
-    window.addEventListener('resize', () => {
-      if (!window.echarts) return;
-      chartIds.forEach((id) => {
-        const target = document.getElementById(id);
-        if (!target) return;
-        const instance = window.echarts.getInstanceByDom(target);
-        if (instance) instance.resize();
+  function bindChartResizeHandlers() {
+    let resizeFrame = null;
+
+    const scheduleResize = () => {
+      if (resizeFrame !== null) {
+        window.cancelAnimationFrame(resizeFrame);
+      }
+
+      resizeFrame = window.requestAnimationFrame(() => {
+        resizeFrame = null;
+        resizeRenderedCharts();
       });
+    };
+
+    window.addEventListener('resize', scheduleResize);
+
+    document.addEventListener('basecoat:sidebar-state', () => {
+      scheduleResize();
+      window.setTimeout(scheduleResize, 320);
+    });
+
+    if (typeof window.ResizeObserver !== 'function') {
+      return;
+    }
+
+    const resizeObserver = new window.ResizeObserver(() => {
+      scheduleResize();
+    });
+
+    chartIds.forEach((id) => {
+      const target = document.getElementById(id);
+      if (target) resizeObserver.observe(target);
     });
   }
 
@@ -472,11 +510,16 @@
         await refreshDashboard(getFormFilters(form));
       });
       form.addEventListener('reset', () => {
-        setTimeout(() => refreshDashboard({}), 0);
+        setTimeout(() => {
+          form.querySelectorAll('.select').forEach((el) => {
+            el.value = '';
+          });
+          refreshDashboard({});
+        }, 0);
       });
     }
 
-    bindGlobalResize();
+    bindChartResizeHandlers();
     await refreshDashboard({});
   });
 })();

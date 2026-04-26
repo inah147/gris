@@ -14,6 +14,17 @@
     }
   }
 
+  function ensureToasterContainer() {
+    if (!document.body || document.getElementById("toaster")) {
+      return;
+    }
+
+    const toaster = document.createElement("div");
+    toaster.id = "toaster";
+    toaster.className = "toaster";
+    document.body.appendChild(toaster);
+  }
+
   function getThemeRoot() {
     return document.documentElement;
   }
@@ -52,6 +63,37 @@
       });
   }
 
+  function syncThemeAffordances(theme) {
+    const isDark = theme === DARK_THEME;
+
+    document.querySelectorAll("[data-theme-dark-icon]").forEach((element) => {
+      element.hidden = isDark;
+    });
+
+    document.querySelectorAll("[data-theme-light-icon]").forEach((element) => {
+      element.hidden = !isDark;
+    });
+
+    document.querySelectorAll("[data-theme-toggle-label]").forEach((element) => {
+      const lightText = element.dataset.themeLightText || "Tema escuro";
+      const darkText = element.dataset.themeDarkText || "Tema claro";
+      element.textContent = isDark ? darkText : lightText;
+    });
+
+    document.querySelectorAll("[data-theme-toggle-item]").forEach((element) => {
+      const nextLabel = isDark
+        ? element.dataset.themeDarkLabel || "Ativar tema claro"
+        : element.dataset.themeLightLabel || "Ativar tema escuro";
+
+      element.setAttribute("aria-label", nextLabel);
+      element.setAttribute("title", nextLabel);
+
+      if (element.hasAttribute("data-tooltip")) {
+        element.setAttribute("data-tooltip", nextLabel);
+      }
+    });
+  }
+
   function getTheme() {
     return getThemeRoot().classList.contains("dark") ? DARK_THEME : LIGHT_THEME;
   }
@@ -68,6 +110,7 @@
     }
 
     syncThemeMeta(nextTheme);
+    syncThemeAffordances(nextTheme);
 
     if (options.emit !== false) {
       document.dispatchEvent(
@@ -96,6 +139,7 @@
 
   function initializeDesignSystem() {
     initializeTheme();
+    ensureToasterContainer();
     ensureBasecoatObserver();
   }
 

@@ -84,18 +84,27 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 	{"label": "Transparência", "path": "/portal_transparencia"},
 ]
 
+PORTAL_MODULE_ICON_MAP: dict[str, str] = {
+	"/associados": "users",
+	"/calendario": "calendar-days",
+	"/financeiro": "banknote",
+	"/projetos": "folder-kanban",
+	"/recepcao": "user-plus",
+	"/gestao_adultos": "graduation-cap",
+	"/responsavel": "user",
+	"/portal_transparencia": "file-text",
+}
+
 SIDEBAR_ICON_MAP: dict[str, str] = {
 	"/inicio": "house",
-	"/associados": "users",
+	**PORTAL_MODULE_ICON_MAP,
 	"/associados/dashboard": "layout-dashboard",
 	"/associados/lista": "list",
 	"/associados/importar": "upload",
-	"/recepcao": "user-plus",
 	"/recepcao/visao_geral": "layout-dashboard",
 	"/recepcao/agenda_visitas": "calendar-days",
 	"/recepcao/fila_espera": "clock-3",
 	"/recepcao/pesquisa_novos_respostas": "clipboard-list",
-	"/financeiro": "wallet",
 	"/financeiro/dashboard": "layout-dashboard",
 	"/financeiro/contribuicoes": "wallet-cards",
 	"/financeiro/contas": "landmark",
@@ -103,20 +112,15 @@ SIDEBAR_ICON_MAP: dict[str, str] = {
 	"/financeiro/despesas": "receipt",
 	"/financeiro/relatorios": "clipboard-list",
 	"/financeiro/pareceres": "file-search",
-	"/calendario": "calendar-days",
 	"/calendario/visualizar": "calendar-days",
-	"/gestao_adultos": "shield-user",
 	"/gestao_adultos/minha_entrevista": "clipboard-list",
 	"/gestao_adultos/entrevista_competencias": "list-check",
-	"/projetos": "folder-kanban",
 	"/projetos/visao_geral": "layout-dashboard",
 	"/projetos/meus_projetos": "folder-search",
 	"/projetos/cadastrar_novo_projeto": "upload",
-	"/responsavel": "shield-user",
 	"/responsavel/meus_dados": "shield-user",
 	"/responsavel/beneficiarios": "users",
 	"/responsavel/pesquisa_novos": "search",
-	"/portal_transparencia": "shield-check",
 }
 
 # Mapping: path -> allowed roles.
@@ -431,6 +435,7 @@ def enrich_context(context, current_path: str):
 	breadcrumb_path = context.get("active_link") or current_path
 	context.sidebar_items = sidebar_items
 	context.sidebar_menu_ds = _to_design_system_sidebar_items(sidebar_items, current_path)
+	context.sidebar_icons = SIDEBAR_ICON_MAP
 	context.portal_breadcrumbs = _to_portal_breadcrumb_items(sidebar_items, breadcrumb_path)
 	context.access_denied = not user_has_access(current_path)
 

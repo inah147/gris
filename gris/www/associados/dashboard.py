@@ -56,6 +56,14 @@ def get_context(context):
 	context.filter_secoes = collect("secao")
 	context.filter_funcoes = collect("funcao")
 
+	def as_select_items(values, all_label):
+		return [{"value": "", "label": all_label}] + [{"value": v, "label": v} for v in values]
+
+	context.filter_items_categoria = as_select_items(context.filter_categorias, "Todas")
+	context.filter_items_ramo = as_select_items(context.filter_ramos, "Todos")
+	context.filter_items_secao = as_select_items(context.filter_secoes, "Todas")
+	context.filter_items_funcao = as_select_items(context.filter_funcoes, "Todas")
+
 	return context
 
 

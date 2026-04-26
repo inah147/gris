@@ -49,8 +49,8 @@
 ) %}
 {% set dialog_id = id or ("alert-dialog-" ~ (range(100000, 999999) | random | string)) %}
 {% set fallback_footer %}
-<button type="button" class="btn-outline" onclick="document.getElementById('{{ dialog_id }}').close()">{{ cancel_label }}</button>
-<button type="button" class="btn-primary" onclick="document.getElementById('{{ dialog_id }}').close()">{{ confirm_label }}</button>
+{{ button(cancel_label, variant="outline", attrs={"onclick": "document.getElementById('" ~ dialog_id ~ "').close()"}) }}
+{{ button(confirm_label, variant="primary", attrs={"onclick": "document.getElementById('" ~ dialog_id ~ "').close()"}) }}
 {% endset %}
 {% call _dialog(
   id=dialog_id,
@@ -346,7 +346,9 @@
 {% endmacro %}
 
 {% macro skeleton(width="100%", height="1rem", attrs={}) %}
-<span class="skeleton {{ attrs.class }}" style="display:block;width:{{ width }};height:{{ height }};"
+  {% set skeleton_style = "--skeleton-width:" ~ width ~ ";--skeleton-height:" ~ height ~ ";" %}
+  {% if attrs.style %}{% set skeleton_style = skeleton_style ~ attrs.style %}{% endif %}
+  <span class="skeleton block {{ attrs.class }}" style="{{ skeleton_style }}"
   {% for key, value in attrs.items() %}
     {% if key != "class" and key != "style" %}{{ key }}="{{ value }}"{% endif %}
   {% endfor %}
@@ -426,19 +428,22 @@
 {% macro theme_switcher(attrs={}) %}
 <button
   type="button"
-  aria-label="Toggle dark mode"
-  data-tooltip="Toggle dark mode"
+  aria-label="Ativar tema escuro"
+  data-tooltip="Ativar tema escuro"
   data-side="bottom"
+  data-theme-toggle-item
+  data-theme-dark-label="Ativar tema claro"
+  data-theme-light-label="Ativar tema escuro"
   onclick="document.dispatchEvent(new CustomEvent('basecoat:theme'))"
-  class="btn-icon-outline size-8 {{ attrs.class }}"
+  class="btn-icon-outline w-8 h-8 {{ attrs.class }}"
   {% for key, value in attrs.items() %}
     {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
   {% endfor %}
 >
-  <span class="hidden dark:block" aria-hidden="true">
+  <span data-theme-light-icon aria-hidden="true" hidden>
     <svg class="ds-lucide ds-lucide--md" viewBox="0 0 24 24"><use href="/assets/gris/design_system/icons/lucide/sprite.svg#sun" /></svg>
   </span>
-  <span class="block dark:hidden" aria-hidden="true">
+  <span data-theme-dark-icon aria-hidden="true">
     <svg class="ds-lucide ds-lucide--md" viewBox="0 0 24 24"><use href="/assets/gris/design_system/icons/lucide/sprite.svg#moon" /></svg>
   </span>
 </button>

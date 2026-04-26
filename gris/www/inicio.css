@@ -117,7 +117,7 @@
 	flex-shrink: 0;
 	border-radius: var(--radius-xl);
 	background: var(--color-muted);
-	color: var(--color-primary);
+	color: var(--primary);
 	transition:
 		transform var(--default-transition-duration) var(--default-transition-timing-function),
 		background-color var(--default-transition-duration) var(--default-transition-timing-function);

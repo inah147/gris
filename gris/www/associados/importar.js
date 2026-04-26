@@ -4,61 +4,74 @@
 
   window._uploadedFileUrl = null;
 
+  function escapeHtml(value) {
+    if (window.frappe && frappe.utils && frappe.utils.escape_html) {
+      return frappe.utils.escape_html(String(value ?? ''));
+    }
+
+    const div = document.createElement('div');
+    div.textContent = String(value ?? '');
+    return div.innerHTML;
+  }
+
+  function showToast(category, title, description) {
+    const toaster = document.getElementById('toaster');
+
+    if (toaster) {
+      document.dispatchEvent(new CustomEvent('basecoat:toast', {
+        detail: {
+          config: {
+            category,
+            title,
+            description,
+          },
+        },
+      }));
+      return;
+    }
+
+    if (window.frappe && frappe.show_alert) {
+      frappe.show_alert({
+        message: description || title,
+        indicator: category === 'error' ? 'red' : 'green',
+      });
+    }
+  }
+
   function checkShowImportBtn() {
     const btn = document.getElementById('btnImportar');
     const hasFile = !!window._uploadedFileUrl;
     if (btn) {
-      btn.classList.toggle('d-none', !hasFile);
+      btn.classList.toggle('hidden', !hasFile);
       btn.disabled = !hasFile;
     }
   }
 
   function setupUploader() {
-    const btn = document.getElementById('uploadPdfBtn');
-    if (!btn) return;
+    const uploader = document.getElementById('associadosImportUpload');
+    if (!uploader) return;
 
-    btn.addEventListener('click', function (e) {
-      if (btn.disabled) return;
-      e.stopPropagation();
+    uploader.addEventListener('gris:file-upload:success', function (event) {
+      const file = event.detail?.files?.[0];
+      if (!file) return;
 
-      if (typeof frappe === 'undefined' || !frappe.ui || !frappe.ui.FileUploader) {
-        frappe.msgprint('Uploader indisponível.');
-        return;
+      const fileInfo = document.getElementById('file-info');
+      const fileName = document.getElementById('file-name');
+
+      if (fileName) {
+        fileName.textContent = file.file_name || file.name || file.file_url;
+      }
+      if (fileInfo) {
+        fileInfo.classList.remove('hidden');
       }
 
-      if (window.__opening_uploader) return;
-      window.__opening_uploader = true;
-      setTimeout(() => { window.__opening_uploader = false; }, 500);
+      window._uploadedFileUrl = file.file_url;
+      checkShowImportBtn();
 
-      new frappe.ui.FileUploader({
-        allow_multiple: false,
-        restrictions: { 
-          allowed_file_extensions: ['pdf'], 
-          max_number_of_files: 1 
-        },
-        is_private: 0,
-        options: ['Local'],
-        on_success(file) {
-          const fileInfo = document.getElementById('file-info');
-          const fileName = document.getElementById('file-name');
-          
-          if (fileName) {
-            fileName.textContent = file.file_name || file.name;
-          }
-          if (fileInfo) {
-            fileInfo.classList.remove('d-none');
-          }
-          
-          window._uploadedFileUrl = file.file_url;
-          checkShowImportBtn();
-          
-          // Hide previous results
-          const resultsDiv = document.getElementById('import-results');
-          if (resultsDiv) {
-            resultsDiv.classList.add('d-none');
-          }
-        },
-      });
+      const resultsDiv = document.getElementById('import-results');
+      if (resultsDiv) {
+        resultsDiv.classList.add('hidden');
+      }
     });
   }
 
@@ -70,55 +83,56 @@
 
     if (!resultsDiv || !resultsGrid) return;
 
-    // Clear previous results
     resultsGrid.innerHTML = '';
-    if (errorsContainer) errorsContainer.classList.add('d-none');
+    if (errorsContainer) errorsContainer.classList.add('hidden');
     if (errorsList) errorsList.innerHTML = '';
 
-    // Show results section
-    resultsDiv.classList.remove('d-none');
+    resultsDiv.classList.remove('hidden');
 
-    // Create stats cards
     const stats = [
-      { label: 'Total de Registros', value: data.total || 0, color: 'primary' },
-      { label: 'Criados', value: data.created || 0, color: 'success' },
-      { label: 'Atualizados', value: data.updated || 0, color: 'info' },
-      { label: 'Sem Alteração', value: data.skipped || 0, color: 'secondary' },
-      { label: 'Responsáveis Criados', value: data.responsavel_created || 0, color: 'success' },
-      { label: 'Responsáveis Atualizados', value: data.responsavel_updated || 0, color: 'info' },
-      { label: 'Vínculos Criados', value: data.vinculo_created || 0, color: 'success' },
-      { label: 'Vínculos Atualizados', value: data.vinculo_updated || 0, color: 'info' },
-      { label: 'Erros', value: data.errors || 0, color: 'danger' },
+      { label: 'Total de registros', value: data.total || 0, tone: 'primary' },
+      { label: 'Criados', value: data.created || 0, tone: 'success' },
+      { label: 'Atualizados', value: data.updated || 0, tone: 'info' },
+      { label: 'Sem alteração', value: data.skipped || 0, tone: 'muted' },
+      { label: 'Responsáveis criados', value: data.responsavel_created || 0, tone: 'success' },
+      { label: 'Responsáveis atualizados', value: data.responsavel_updated || 0, tone: 'info' },
+      { label: 'Vínculos criados', value: data.vinculo_created || 0, tone: 'success' },
+      { label: 'Vínculos atualizados', value: data.vinculo_updated || 0, tone: 'info' },
+      { label: 'Erros', value: data.errors || 0, tone: 'error' },
     ];
 
     stats.forEach(stat => {
-      const card = document.createElement('div');
-      card.className = 'col-6 col-lg-2dot4';
+      const card = document.createElement('article');
+      card.className = 'card import-stat-card';
+      card.dataset.tone = stat.tone;
       card.innerHTML = `
-        <div class="card border-0 shadow-sm h-100">
-          <div class="card-body text-center">
-            <div class="display-6 fw-bold text-${stat.color}">${stat.value}</div>
-            <div class="text-muted small mt-2">${stat.label}</div>
-          </div>
-        </div>
+        <section>
+          <p class="import-stat-card__value">${escapeHtml(stat.value)}</p>
+          <p class="import-stat-card__label">${escapeHtml(stat.label)}</p>
+        </section>
       `;
       resultsGrid.appendChild(card);
     });
 
-    // Show errors if any
     if (data.error_details && data.error_details.length > 0) {
       if (errorsContainer && errorsList) {
         const errorItems = data.error_details
           .slice(0, 50)
-          .map(err => `<li>${frappe.utils.escape_html(err || '')}</li>`)
+          .map(err => `<li>${escapeHtml(err || '')}</li>`)
           .join('');
-        
-        const moreText = data.error_details.length > 50 
-          ? `<div class="text-muted mt-2">(+${data.error_details.length - 50} erros adicionais... ver Error Log)</div>` 
+
+        const moreText = data.error_details.length > 50
+          ? `<p class="import-errors__more">+${escapeHtml(data.error_details.length - 50)} erros adicionais. Consulte o Error Log para ver a lista completa.</p>`
           : '';
-        
-        errorsList.innerHTML = `<ul class="mb-0">${errorItems}</ul>${moreText}`;
-        errorsContainer.classList.remove('d-none');
+
+        errorsList.innerHTML = `<ul>${errorItems}</ul>${moreText}`;
+
+        const alertSection = errorsContainer.querySelector('.alert section');
+        if (alertSection) {
+          alertSection.innerHTML = 'As linhas sem erros foram atualizadas com sucesso. Revise os itens abaixo e tente importar novamente após corrigir o relatório.';
+        }
+
+        errorsContainer.classList.remove('hidden');
       }
     }
   }
@@ -132,8 +146,7 @@
     const loadingIndicator = document.getElementById('loading-indicator');
     const btnImportar = document.getElementById('btnImportar');
 
-    // Show loading
-    if (loadingIndicator) loadingIndicator.classList.remove('d-none');
+    if (loadingIndicator) loadingIndicator.classList.remove('hidden');
     if (btnImportar) btnImportar.disabled = true;
 
     frappe.call({
@@ -142,21 +155,21 @@
         path_pdf: window._uploadedFileUrl
       },
       callback: function (r) {
-        // Hide loading
-        if (loadingIndicator) loadingIndicator.classList.add('d-none');
+        if (loadingIndicator) loadingIndicator.classList.add('hidden');
         if (btnImportar) btnImportar.disabled = false;
 
         if (r.message) {
           renderResults(r.message);
-          frappe.show_alert({
-            message: 'Importação concluída com sucesso!',
-            indicator: 'green'
-          });
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          showToast(
+            'success',
+            'Importação concluída',
+            'Os dados dos associados foram processados com sucesso.'
+          );
         }
       },
       error: function (err) {
-        // Hide loading
-        if (loadingIndicator) loadingIndicator.classList.add('d-none');
+        if (loadingIndicator) loadingIndicator.classList.add('hidden');
         if (btnImportar) btnImportar.disabled = false;
 
         frappe.msgprint({
@@ -169,11 +182,9 @@
     });
   }
 
-  // Setup
   setupUploader();
   checkShowImportBtn();
 
-  // Bind import button
   const btnImportar = document.getElementById('btnImportar');
   if (btnImportar) {
     btnImportar.addEventListener('click', importAssociates);

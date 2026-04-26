@@ -29,6 +29,7 @@
 - checkbox
 - empty
 - field
+- file-upload
 - form
 - input
 - input-group

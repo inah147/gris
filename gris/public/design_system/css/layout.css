@@ -21,7 +21,7 @@
 .inline-flex { display: inline-flex; }
 .flex { display: flex; }
 .grid { display: grid; }
-.hidden { display: none; }
+.hidden { display: none !important; }
 
 /* --- Flex direction --- */
 .flex-row { flex-direction: row; }

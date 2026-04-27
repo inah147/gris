@@ -1,7 +1,6 @@
 // detalhe.js - lógica JS da página detalhe do Associado
 (function(){
   document.addEventListener('DOMContentLoaded', function(){
-    const form = document.querySelector('.assoc-form');
     const editableSelectors = 'input[name], select[name]';
     const changed = {}; // field -> value
     const saveBtn = document.getElementById('btn-salvar');
@@ -12,16 +11,25 @@
     const CAN_EDIT = flagsEl?.dataset.canEdit === '1';
     const HAS_OPEN_HIST = flagsEl?.dataset.hasOpen === '1';
 
-    // Guardian visibility
+    // Guardian visibility - read values from hidden inputs or native inputs
+    function getFieldValue(name) {
+      return (
+        document.querySelector(`input[type="hidden"][name="${name}"]`)?.value ||
+        document.querySelector(`input[name="${name}"]:not([type="hidden"])`)?.value ||
+        ''
+      ).trim();
+    }
+
     function updateGuardianVisibility(){
-      const paisDivVal = (document.querySelector('[name="pais_divorciados"]')?.value || '').trim();
-      const tipoGuardaVal = (document.querySelector('[name="tipo_guarda"]')?.value || '').trim();
+      const paisDivVal = getFieldValue('pais_divorciados');
+      const tipoGuardaVal = getFieldValue('tipo_guarda');
       const show = paisDivVal === 'Sim' && tipoGuardaVal && tipoGuardaVal.toLowerCase() === 'unilateral';
       document.querySelectorAll('[data-guardian-field]').forEach(el => { el.style.display = show ? '' : 'none'; });
     }
 
+    // Attach change listeners to native selects (for non-Basecoat selects)
     ['pais_divorciados','tipo_guarda'].forEach(n => {
-      const el = document.querySelector('[name="'+n+'"]');
+      const el = document.querySelector(`select[name="${n}"]`);
       if(el){ el.addEventListener('change', updateGuardianVisibility); }
     });
     updateGuardianVisibility();
@@ -29,7 +37,7 @@
     function markChanged(field, value){
       if(!CAN_EDIT) return;
       changed[field] = value;
-      if(saveBtn && saveBtn.classList.contains('d-none')) saveBtn.classList.remove('d-none');
+      if(saveBtn && saveBtn.hidden) saveBtn.hidden = false;
     }
 
     // Configure form fields
@@ -37,8 +45,9 @@
       document.querySelectorAll(editableSelectors).forEach(el => { el.setAttribute('disabled','disabled'); });
       if(saveBtn) saveBtn.remove();
     } else {
+      // Listen to native inputs and selects
       document.querySelectorAll(editableSelectors).forEach(el => {
-        if(el.disabled) return; // skip read-only
+        if(el.disabled) return;
         el.addEventListener('change', () => {
           let val;
           if(el.type === 'checkbox') val = el.checked ? 1 : 0;
@@ -48,68 +57,39 @@
       });
     }
 
-    if(HAS_OPEN_HIST && CAN_EDIT && afastarBtn){ afastarBtn.classList.remove('d-none'); }
+    // Listen to Basecoat select changes via delegated click on [role="option"]
+    document.addEventListener('click', e => {
+      const opt = e.target.closest('[role="option"]');
+      if (!opt) return;
+      const selectEl = opt.closest('.select');
+      if (!selectEl) return;
+      // Await select.js to update the hidden input
+      setTimeout(() => {
+        const hidden = selectEl.querySelector('input[type="hidden"]');
+        if (hidden?.name) markChanged(hidden.name, hidden.value);
+        updateGuardianVisibility(); // re-evaluate guardian visibility
+      }, 0);
+    });
+
 
     function notify(msg, cls='info'){
       if(window.frappe?.show_alert){ frappe.show_alert({message: msg, indicator: cls}); }
       else { console.log(msg); }
     }
 
-    const createUserConfirmModal = document.getElementById('modalCreateUserConfirm');
-    const createUserConfirmBackdrop = document.getElementById('modalCreateUserConfirmBackdrop');
-    const createUserResultModal = document.getElementById('modalCreateUserResult');
-    const createUserResultBackdrop = document.getElementById('modalCreateUserResultBackdrop');
+    const createUserConfirmDlg = document.getElementById('modalCreateUserConfirm');
+    const createUserResultDlg = document.getElementById('modalCreateUserResult');
     const confirmCreateUserBtn = document.getElementById('btn-confirm-create-user');
-    const createUserResultTitle = document.getElementById('create-user-result-title');
     const createUserResultBody = document.getElementById('create-user-result-body');
 
-    function openModal(modal, backdrop) {
-      if (!modal || !backdrop) return;
-      backdrop.style.display = 'block';
-      modal.style.display = 'flex';
-      setTimeout(() => {
-        backdrop.classList.add('show');
-        modal.classList.add('show');
-      }, 10);
-      document.body.classList.add('modal-open');
-    }
-
-    function closeModal(modal, backdrop) {
-      if (!modal || !backdrop) return;
-      modal.classList.remove('show');
-      backdrop.classList.remove('show');
-      setTimeout(() => {
-        modal.style.display = 'none';
-        backdrop.style.display = 'none';
-        if (!document.querySelector('.modal-modern.show')) {
-          document.body.classList.remove('modal-open');
-        }
-      }, 250);
-    }
-
-    function showCreateUserResult(title, bodyHtml) {
-      if (!createUserResultModal || !createUserResultBackdrop || !createUserResultTitle || !createUserResultBody) {
-        return;
-      }
-      createUserResultTitle.textContent = title;
+    function showCreateUserResult(bodyHtml) {
+      if (!createUserResultDlg || !createUserResultBody) return;
       createUserResultBody.innerHTML = bodyHtml;
-      openModal(createUserResultModal, createUserResultBackdrop);
+      createUserResultDlg.showModal();
     }
 
     if (createUserBtn) {
-      createUserBtn.onclick = () => openModal(createUserConfirmModal, createUserConfirmBackdrop);
-
-      createUserConfirmModal?.querySelectorAll('[data-dismiss-create-user-confirm]').forEach(btn => {
-        btn.addEventListener('click', () => closeModal(createUserConfirmModal, createUserConfirmBackdrop));
-      });
-
-      createUserConfirmBackdrop?.addEventListener('click', () => closeModal(createUserConfirmModal, createUserConfirmBackdrop));
-
-      createUserResultModal?.querySelectorAll('[data-dismiss-create-user-result]').forEach(btn => {
-        btn.addEventListener('click', () => closeModal(createUserResultModal, createUserResultBackdrop));
-      });
-
-      createUserResultBackdrop?.addEventListener('click', () => closeModal(createUserResultModal, createUserResultBackdrop));
+      createUserBtn.onclick = () => createUserConfirmDlg?.showModal();
 
       if (confirmCreateUserBtn) {
         confirmCreateUserBtn.onclick = async () => {
@@ -127,27 +107,24 @@
               args: { associate_name: associadoName }
             });
 
-            closeModal(createUserConfirmModal, createUserConfirmBackdrop);
+            createUserConfirmDlg?.close();
 
             const result = response.message || {};
             if (result.created) {
               showCreateUserResult(
-                'Usuário criado com sucesso',
-                `<p style="margin: 0; color: var(--text-secondary);">Usuário criado para <strong>${frappe.utils.escape_html(result.email || '')}</strong>.</p>`
+                `<p style="margin: 0; color: hsl(var(--muted-foreground));">Usuário criado para <strong>${frappe.utils.escape_html(result.email || '')}</strong>.</p>`
               );
               createUserBtn.remove();
             } else {
               showCreateUserResult(
-                'Usuário já existente',
-                `<p style="margin: 0; color: var(--text-secondary);">Já existe usuário para <strong>${frappe.utils.escape_html(result.email || '')}</strong>.</p>`
+                `<p style="margin: 0; color: hsl(var(--muted-foreground));">Já existe usuário para <strong>${frappe.utils.escape_html(result.email || '')}</strong>.</p>`
               );
               createUserBtn.remove();
             }
           } catch (error) {
-            closeModal(createUserConfirmModal, createUserConfirmBackdrop);
+            createUserConfirmDlg?.close();
             showCreateUserResult(
-              'Erro ao criar usuário',
-              '<p style="margin: 0; color: var(--text-secondary);">Não foi possível concluir a criação do usuário deste associado.</p>'
+              '<p style="margin: 0; color: hsl(var(--muted-foreground));">Não foi possível concluir a criação do usuário deste associado.</p>'
             );
           } finally {
             confirmCreateUserBtn.disabled = false;
@@ -172,7 +149,7 @@
         if(r.message && r.message.success){
           notify('Alterações salvas','green');
           for(const k in changed) delete changed[k];
-          saveBtn.classList.add('d-none');
+          saveBtn.hidden = true;
         } else {
           notify('Falha ao salvar','red');
         }
@@ -182,14 +159,22 @@
       });
     });
 
+    // Afastar dialog
+    const confirmAfastarDlg = document.getElementById('confirmAfastarDialog');
+    const btnConfirmAfastar = document.getElementById('btn-confirm-afastar');
+
     afastarBtn?.addEventListener('click', () => {
-      if(!confirm('Confirmar afastamento?')) return;
+      confirmAfastarDlg?.showModal();
+    });
+
+    btnConfirmAfastar?.addEventListener('click', () => {
       afastarBtn.disabled = true; afastarBtn.textContent = 'Processando...';
+      confirmAfastarDlg?.close();
       frappe.call({
         method: 'gris.api.members_portal.set_member_leave',
         args: { name: associadoName }
       }).then(r => {
-        afastarBtn.disabled = false; afastarBtn.textContent = 'Afastar associado';
+        afastarBtn.disabled = false; afastarBtn.textContent = 'Afastar Associado';
         if(r.message && r.message.success){
           notify('Afastamento registrado','orange');
           window.location.reload();
@@ -197,23 +182,29 @@
           notify(r.message && r.message.message ? r.message.message : 'Nada a afastar','yellow');
         }
       }).catch(() => {
-        afastarBtn.disabled = false; afastarBtn.textContent = 'Afastar associado';
+        afastarBtn.disabled = false; afastarBtn.textContent = 'Afastar Associado';
         notify('Erro ao afastar','red');
       });
     });
 
+    // Adicionar listeners para botões de cancelar nos diálogos
+    confirmAfastarDlg?.querySelectorAll('[data-dialog-close]').forEach(btn => {
+      btn.addEventListener('click', () => confirmAfastarDlg?.close());
+    });
+
     // ========== GERENCIAMENTO DE HISTÓRICO ==========
     const modalHistorico = document.getElementById('modalHistorico');
-    const modalHistoricoBackdrop = document.getElementById('modalHistoricoBackdrop');
     const btnEditHistorico = document.getElementById('btn-edit-historico');
     const btnAddHistorico = document.getElementById('btn-add-historico');
     const btnSaveHistorico = document.getElementById('btn-save-historico');
     const historicoList = document.getElementById('historico-list');
+    const confirmRemoveHistoricoDlg = document.getElementById('confirmRemoveHistoricoDialog');
+    const btnConfirmRemoveHistorico = document.getElementById('btn-confirm-remove-historico');
     let historicoData = [];
+    let pendingRemoveIdx = null;
 
     function openHistoricoModal() {
       if(!modalHistorico) return;
-      // Busca dados atuais do histórico
       frappe.call({
         method: 'gris.api.members_portal.get_member_history',
         args: { name: associadoName }
@@ -221,17 +212,7 @@
         if(r.message && r.message.success) {
           historicoData = r.message.history || [];
           renderHistoricoList();
-          
-          // Mostra backdrop primeiro
-          if(modalHistoricoBackdrop) {
-            modalHistoricoBackdrop.style.display = 'block';
-            setTimeout(() => modalHistoricoBackdrop.classList.add('show'), 10);
-          }
-          
-          // Depois mostra modal
-          modalHistorico.classList.add('show');
-          modalHistorico.style.display = 'flex';
-          document.body.classList.add('modal-open');
+          modalHistorico.showModal();
         } else {
           notify('Erro ao carregar histórico', 'red');
         }
@@ -242,48 +223,31 @@
     }
 
     function closeHistoricoModal() {
-      if(!modalHistorico) return;
-      modalHistorico.classList.remove('show');
-      modalHistorico.style.display = 'none';
-      
-      if(modalHistoricoBackdrop) {
-        modalHistoricoBackdrop.classList.remove('show');
-        setTimeout(() => modalHistoricoBackdrop.style.display = 'none', 300);
-      }
-      
-      document.body.classList.remove('modal-open');
+      if(modalHistorico) modalHistorico.close();
     }
 
     function renderHistoricoList() {
       if(!historicoList) return;
       if(historicoData.length === 0) {
-        historicoList.innerHTML = '<div style="padding: var(--space-lg); text-align: center; color: var(--text-muted);">Nenhum período registrado. Clique em "Adicionar Período" para criar o primeiro.</div>';
+        historicoList.innerHTML = '<div style="padding: calc(var(--spacing) * 4); text-align: center; color: hsl(var(--muted-foreground)); font-size: 0.875rem;">Nenhum período registrado. Clique em "Adicionar Período" para criar o primeiro.</div>';
         return;
       }
-      
+
       let html = '';
       historicoData.forEach((item, idx) => {
         html += `
-          <div class="historico-item" data-idx="${idx}" style="border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: var(--space-md); margin-bottom: var(--space-md);">
-            <div class="row g-3">
-              <div class="col-12 col-md-5">
-                <div class="form-group-modern">
-                  <label class="form-label-modern">Data de Ingresso</label>
-                  <input type="date" class="form-input-modern form-input-modern--sm" data-field="ingresso" value="${item.ingresso || ''}" required>
-                </div>
+          <div class="historico-item" data-idx="${idx}">
+            <div class="detalhe-historico-row">
+              <div class="field">
+                <label class="label">Data de Ingresso</label>
+                <input type="date" class="input" data-field="ingresso" value="${item.ingresso || ''}" required>
               </div>
-              <div class="col-12 col-md-5">
-                <div class="form-group-modern">
-                  <label class="form-label-modern">Data de Desligamento</label>
-                  <input type="date" class="form-input-modern form-input-modern--sm" data-field="desligamento" value="${item.desligamento || ''}">
-                </div>
+              <div class="field">
+                <label class="label">Data de Desligamento</label>
+                <input type="date" class="input" data-field="desligamento" value="${item.desligamento || ''}">
               </div>
-              <div class="col-12 col-md-2 d-flex align-items-end">
-                <button type="button" class="btn-modern btn-modern--danger btn-modern--sm w-100" data-remove="${idx}">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="3 6 5 6 21 6"/>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                  </svg>
+              <div class="detalhe-historico-row__action">
+                <button type="button" class="btn-destructive btn-sm w-100" data-remove="${idx}">
                   Remover
                 </button>
               </div>
@@ -306,11 +270,8 @@
       // Event listeners para botões remover
       historicoList.querySelectorAll('[data-remove]').forEach(btn => {
         btn.addEventListener('click', (e) => {
-          const idx = parseInt(e.currentTarget.dataset.remove);
-          if(confirm('Remover este período do histórico?')) {
-            historicoData.splice(idx, 1);
-            renderHistoricoList();
-          }
+          pendingRemoveIdx = parseInt(e.currentTarget.dataset.remove);
+          confirmRemoveHistoricoDlg?.showModal();
         });
       });
     }
@@ -320,6 +281,23 @@
     btnAddHistorico?.addEventListener('click', () => {
       historicoData.push({ ingresso: '', desligamento: '' });
       renderHistoricoList();
+    });
+
+    btnConfirmRemoveHistorico?.addEventListener('click', () => {
+      if (pendingRemoveIdx !== null) {
+        historicoData.splice(pendingRemoveIdx, 1);
+        renderHistoricoList();
+        pendingRemoveIdx = null;
+        confirmRemoveHistoricoDlg?.close();
+      }
+    });
+
+    // Adicionar listeners para botões de cancelar nos diálogos de histórico
+    confirmRemoveHistoricoDlg?.querySelectorAll('[data-dialog-close]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        pendingRemoveIdx = null;
+        confirmRemoveHistoricoDlg?.close();
+      });
     });
 
     btnSaveHistorico?.addEventListener('click', () => {
@@ -333,10 +311,10 @@
 
       btnSaveHistorico.disabled = true;
       btnSaveHistorico.textContent = 'Salvando...';
-      
+
       frappe.call({
         method: 'gris.api.members_portal.update_member_history',
-        args: { 
+        args: {
           name: associadoName,
           history: JSON.stringify(historicoData)
         }
@@ -356,12 +334,5 @@
         notify('Erro ao salvar histórico', 'red');
       });
     });
-
-    // Fechar modal
-    modalHistorico?.querySelectorAll('[data-dismiss-historico]').forEach(btn => {
-      btn.addEventListener('click', closeHistoricoModal);
-    });
-
-    modalHistoricoBackdrop?.addEventListener('click', closeHistoricoModal);
   });
 })();

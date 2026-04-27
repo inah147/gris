@@ -41,8 +41,8 @@ def get_context(context):
 	context.head_validade = (
 		frappe.format_value(doc.validade_registro, {"fieldtype": "Date"}) if doc.validade_registro else "—"
 	)
-	context.head_status_class = _status_badge_class(context.head_status)
-	context.head_tipo_registro_class = _tipo_registro_badge_class(context.head_tipo_registro)
+	context.head_status_variant = _status_badge_variant(context.head_status)
+	context.head_tipo_registro_variant = _tipo_registro_badge_variant(context.head_tipo_registro)
 
 	# Configuração de exibição
 	meta = frappe.get_meta("Associado")
@@ -125,6 +125,10 @@ def get_context(context):
 		else:
 			opts = (df.options or "").split("\n") if df.fieldtype == "Select" and df.options else []
 			fieldtype = df.fieldtype
+
+		# Pre-format options for Basecoat select macro
+		options_items = [{"value": opt, "label": opt} for opt in opts] if opts else []
+
 		return {
 			"fieldname": fieldname,
 			"label": df.label or fieldname,
@@ -132,6 +136,7 @@ def get_context(context):
 			"display": disp,
 			"fieldtype": fieldtype,
 			"options": opts,
+			"options_items": options_items,
 			"editable": fieldname in editable,
 		}
 
@@ -189,19 +194,19 @@ def get_context(context):
 	return context
 
 
-def _status_badge_class(status):
+def _status_badge_variant(status):
 	status = (status or "").lower()
 	if status in {"válido", "valido"}:
-		return "g-badge--success"
+		return "success"
 	if status == "vencido":
-		return "g-badge--warning"
-	return "g-badge--secondary"
+		return "warning"
+	return "secondary"
 
 
-def _tipo_registro_badge_class(tipo):
+def _tipo_registro_badge_variant(tipo):
 	tipo = (tipo or "").lower()
 	if tipo == "definitivo":
-		return "g-badge--primary"
+		return "default"
 	if tipo in {"provisório", "provisorio"}:
-		return "g-badge--info"
-	return "g-badge--secondary"
+		return "secondary"
+	return "secondary"

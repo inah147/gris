@@ -1,259 +1,240 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, badge, checkbox, alert, accordion %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
 {% block title %}Associado - Detalhes{% endblock %}
 {% set active_link = '/associados' %}
 
 {% block page_header %}
-  <div class="page-header">
-    <div class="page-header__content">
-      <h1 class="page-header__title">Detalhes do Associado</h1>
-      <p class="page-header__subtitle">Visualize e edite informações do associado.</p>
+  <div class="page-header-row mb-6">
+    <div>
+      <h1 class="text-3xl font-bold tracking-tight">Detalhes do Associado</h1>
+      <p class="text-muted-foreground">Visualize e edite informações do associado.</p>
     </div>
-    <div class="page-header__actions">
-      <button type="button" id="btn-salvar" class="btn-modern btn-modern--primary btn-modern--sm d-none">Salvar</button>
-      <button type="button" id="btn-afastar" class="btn-modern btn-modern--outline btn-modern--sm d-none" style="border-color: var(--color-warning); color: var(--color-warning);">Afastar</button>
+    <div class="page-header-actions">
+      <button type="button" id="btn-salvar" class="btn-sm-primary" hidden>Salvar</button>
       {% if can_create_associate_user %}
-      <button type="button" id="btn-criar-usuario" class="btn-modern btn-modern--outline btn-modern--sm">Criar usuário</button>
+      <button type="button" id="btn-criar-usuario" class="btn-sm-outline">Criar usuário</button>
       {% endif %}
-      <a href="/associados/lista" class="btn-modern btn-modern--ghost btn-modern--sm">Voltar</a>
+      <a href="/associados/lista" class="btn-sm-ghost">{{ lucide_icon("arrow-left", size="sm") }} Voltar</a>
     </div>
   </div>
 {% endblock %}
 
 {% block main %}
   {% if not_found %}
-    <div class="alert-modern alert-modern--warning">
-      <svg class="alert-modern__icon" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10"/>
-        <path d="M12 8v4M12 16h.01"/>
-      </svg>
-      <div class="alert-modern__content">
-        <p class="alert-modern__description">{{ missing_reason or 'Registro não encontrado.' }}</p>
-      </div>
-    </div>
+    {{ alert(
+      icon=lucide_icon("circle-alert", size="sm"),
+      description=missing_reason or 'Registro não encontrado.',
+      variant="warning"
+    ) }}
   {% else %}
     <div id="assoc-flags" data-name="{{ associado.name }}" data-has-open="{{ 1 if has_open_historico else 0 }}" data-can-edit="{{ 1 if can_edit_member else 0 }}" hidden></div>
-    
+
     <!-- Card de Cabeçalho com informações principais -->
-    <div class="card-modern mb-4">
-      <div class="card-modern__body">
-        <div class="row g-3 align-items-start">
-          <div class="col-12 col-lg-5">
-            <h2 style="font-size: var(--text-xl); font-weight: var(--font-semibold); margin: 0 0 var(--space-xs) 0; color: var(--text-primary);">{{ head_nome }}</h2>
-            <div style="font-size: var(--text-sm); color: var(--text-secondary);">Registro: {{ head_registro }}</div>
+    {% call card(attrs={"class": "mb-4"}) %}
+      <div class="detalhe-header">
+        <div class="detalhe-header__name">
+          <h2 class="text-xl font-semibold">{{ head_nome }}</h2>
+          <span class="text-muted-foreground text-sm">Registro: {{ head_registro }}</span>
+        </div>
+        <div class="detalhe-header__meta">
+          <div>
+            <div class="text-xs text-muted-foreground mb-1">Tipo</div>
+            {{ badge(head_tipo_registro, head_tipo_registro_variant) }}
           </div>
-          <div class="col-6 col-lg-2">
-            <div style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: var(--space-xs);">Tipo</div>
-            <span class="g-badge {{ head_tipo_registro_class }}">{{ head_tipo_registro }}</span>
+          <div>
+            <div class="text-xs text-muted-foreground mb-1">Status</div>
+            {{ badge(head_status, head_status_variant) }}
           </div>
-          <div class="col-6 col-lg-2">
-            <div style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: var(--space-xs);">Status</div>
-            <span class="g-badge {{ head_status_class }}">{{ head_status }}</span>
-          </div>
-          <div class="col-6 col-lg-3">
-            <div style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: var(--space-xs);">Validade</div>
-            <div style="font-weight: var(--font-semibold);">{{ head_validade }}</div>
+          <div>
+            <div class="text-xs text-muted-foreground mb-1">Validade</div>
+            <div class="font-medium">{{ head_validade }}</div>
           </div>
         </div>
       </div>
-    </div>
+    {% endcall %}
 
     <!-- Dados de Registro -->
-    <div class="card-modern mb-4">
-      <div class="card-modern__header">
-        <h3 class="card-modern__title">Dados de Registro</h3>
-        <p class="card-modern__subtitle">Informações do registro do associado</p>
-      </div>
-      <div class="card-modern__body">
-        <div class="row g-3">
-          {% for f in group_registro %}
-            {% if f.fieldname == 'eleito' and associado.funcao not in ['Diretor','Diretor Presidente'] %}
-              {# oculto #}
-            {% else %}
-            <div class="col-12 col-md-6">
-              {% if f.fieldtype == 'Check' %}
-                <div class="form-check" style="padding-top: 0.5rem;">
-                  <input class="form-check-input" type="checkbox" id="check_{{ f.fieldname }}" name="{{ f.fieldname }}" {% if f.value %}checked{% endif %} {% if not f.editable %}disabled{% endif %}>
-                  <label class="form-check-label" for="check_{{ f.fieldname }}" style="font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--text-primary);">
-                    {{ f.label|e }}
-                  </label>
-                </div>
+    {% call card(title="Dados de Registro", description="Informações do registro do associado", attrs={"class": "mb-4"}) %}
+      <div class="detalhe-fields-grid">
+        {% for f in group_registro %}
+          {% if f.fieldname == 'eleito' and associado.funcao not in ['Diretor','Diretor Presidente'] %}
+            {# hidden #}
+          {% else %}
+          <div class="field">
+            {% if f.fieldtype == 'Check' %}
+              {% if f.editable %}
+                {{ checkbox(id="check_" ~ f.fieldname, label=f.label|e, checked=f.value, attrs={"name": f.fieldname}) }}
               {% else %}
-                <label class="form-label-modern">{{ f.label|e }}</label>
-                {% if f.fieldtype == 'Select' %}
-                  <select class="form-input-modern form-input-modern--sm" name="{{ f.fieldname }}" {% if not f.editable %}disabled{% endif %}>
-                    <option value=""></option>
-                    {% for opt in f.options %}
-                      <option value="{{ opt|e }}" {% if opt == f.value %}selected{% endif %}>{{ opt|e }}</option>
-                    {% endfor %}
-                  </select>
-                {% elif f.fieldtype == 'Date' %}
-                  <input type="date" class="form-input-modern form-input-modern--sm" name="{{ f.fieldname }}" value="{{ f.value or '' }}" {% if not f.editable %}readonly disabled{% endif %}>
-                {% else %}
-                  <input type="text" class="form-input-modern form-input-modern--sm" name="{{ f.fieldname }}" value="{{ f.value or '' }}" {% if not f.editable %}readonly disabled{% endif %}>
-                {% endif %}
+                {{ checkbox(id="check_" ~ f.fieldname, label=f.label|e, checked=f.value, attrs={"name": f.fieldname, "disabled": ""}) }}
               {% endif %}
-            </div>
+            {% elif f.fieldtype == 'Select' %}
+              <label class="label">{{ f.label|e }}</label>
+              {{ select(
+                id="sel_" ~ f.fieldname,
+                name=f.fieldname,
+                selected=f.value or '',
+                items=f.options_items,
+                is_combobox=(f.fieldname == 'area'),
+                search_placeholder=("Buscar área…" if f.fieldname == 'area' else ""),
+                trigger_attrs=({"disabled": ""} if not f.editable else {})
+              ) }}
+            {% elif f.fieldtype == 'Date' %}
+              <label class="label">{{ f.label|e }}</label>
+              <input type="date" class="input" name="{{ f.fieldname }}" value="{{ f.value or '' }}" {% if not f.editable %}disabled{% endif %}>
+            {% elif f.fieldname == 'anos_afastamento' %}
+              <label class="label">{{ f.label|e }}</label>
+              <input type="number" class="input" name="{{ f.fieldname }}" value="{{ f.value or '' }}" {% if not f.editable %}disabled{% endif %}>
+            {% else %}
+              <label class="label">{{ f.label|e }}</label>
+              <input type="text" class="input" name="{{ f.fieldname }}" value="{{ f.value or '' }}" {% if not f.editable %}disabled{% endif %}>
             {% endif %}
-          {% endfor %}
-        </div>
-        </form>
+          </div>
+          {% endif %}
+        {% endfor %}
       </div>
-    </div>
+    {% endcall %}
 
     {% if is_beneficiario %}
     <!-- Responsáveis -->
-    <div class="card-modern mb-4">
-      <div class="card-modern__header">
-        <h3 class="card-modern__title">Responsáveis</h3>
-        <p class="card-modern__subtitle">Informações dos responsáveis pelo beneficiário</p>
-      </div>
-      <div class="card-modern__body">
-        <div class="row g-3">
-          {% for f in group_responsaveis %}
-            {% set is_guardian_flag = f.fieldname in ['guardiao_legal_responsavel_1','guardiao_legal_responsavel_2'] %}
-            {% if is_guardian_flag %}
-            <div class="col-12 col-md-6" data-guardian-field {% if not show_guardian_toggles %}style="display:none;"{% endif %}>
-            {% else %}
-            <div class="col-12 col-md-6">
-            {% endif %}
-              {% if f.fieldtype == 'Check' %}
-                <div class="form-check" style="padding-top: 0.5rem;">
-                  <input class="form-check-input" type="checkbox" id="check_{{ f.fieldname }}" name="{{ f.fieldname }}" {% if f.value %}checked{% endif %} {% if not f.editable %}disabled{% endif %}>
-                  <label class="form-check-label" for="check_{{ f.fieldname }}" style="font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--text-primary);">
-                    {{ f.label }}
-                  </label>
-                </div>
+    {% call card(title="Responsáveis", description="Informações dos responsáveis pelo beneficiário", attrs={"class": "mb-4"}) %}
+      <div class="detalhe-fields-grid">
+        {% for f in group_responsaveis %}
+          {% set is_guardian_flag = f.fieldname in ['guardiao_legal_responsavel_1','guardiao_legal_responsavel_2'] %}
+          {% if is_guardian_flag %}
+          <div class="field" data-guardian-field {% if not show_guardian_toggles %}style="display:none;"{% endif %}>
+          {% else %}
+          <div class="field">
+          {% endif %}
+            {% if f.fieldtype == 'Check' %}
+              {% if f.editable %}
+                {{ checkbox(id="check_" ~ f.fieldname, label=f.label, checked=f.value, attrs={"name": f.fieldname}) }}
               {% else %}
-                <label class="form-label-modern">{{ f.label }}</label>
-                {% if f.fieldtype == 'Select' %}
-                  <select class="form-input-modern form-input-modern--sm" name="{{ f.fieldname }}" {% if not f.editable %}disabled{% endif %}>
-                    <option value=""></option>
-                    {% for opt in f.options %}
-                      <option value="{{ opt }}" {% if opt == f.value %}selected{% endif %}>{{ opt }}</option>
-                    {% endfor %}
-                  </select>
-                {% else %}
-                  <input type="text" class="form-input-modern form-input-modern--sm" name="{{ f.fieldname }}" value="{{ f.value or '' }}" {% if not f.editable %}readonly disabled{% endif %}>
-                {% endif %}
+                {{ checkbox(id="check_" ~ f.fieldname, label=f.label, checked=f.value, attrs={"name": f.fieldname, "disabled": ""}) }}
               {% endif %}
-            </div>
-          {% endfor %}
-        </div>
+            {% elif f.fieldtype == 'Select' %}
+              <label class="label">{{ f.label }}</label>
+              {{ select(
+                id="sel_" ~ f.fieldname,
+                name=f.fieldname,
+                selected=f.value or '',
+                items=f.options_items,
+                trigger_attrs=({"disabled": ""} if not f.editable else {})
+              ) }}
+            {% else %}
+              <label class="label">{{ f.label }}</label>
+              <input type="text" class="input" name="{{ f.fieldname }}" value="{{ f.value or '' }}" {% if not f.editable %}disabled{% endif %}>
+            {% endif %}
+          </div>
+        {% endfor %}
       </div>
-    </div>
+    {% endcall %}
     {% endif %}
 
     <!-- Histórico no Grupo -->
-    <div class="card-modern mb-4">
-      <div class="card-modern__header">
+    {% call card(attrs={"class": "mb-4"}) %}
+      <div class="detalhe-card-header">
         <div>
-          <h3 class="card-modern__title">Histórico no Grupo</h3>
-          <p class="card-modern__subtitle">Períodos de atividade do associado</p>
+          <h3 class="font-semibold">Histórico no Grupo</h3>
+          <p class="text-muted-foreground text-sm">Períodos de atividade do associado</p>
         </div>
         {% if can_edit_member %}
-        <button type="button" id="btn-edit-historico" class="btn-modern btn-modern--outline btn-modern--sm">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-          </svg>
-          Gerenciar
+        <button type="button" id="btn-edit-historico" class="btn-sm-outline">
+          {{ lucide_icon("pencil", size="sm") }} Gerenciar
         </button>
         {% endif %}
       </div>
-      <div class="card-modern__body" style="padding: 0;">
-        {% if historico_no_grupo_rows %}
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Ingresso</th>
-                  <th>Desligamento</th>
-                </tr>
-              </thead>
-              <tbody>
-              {% for r in historico_no_grupo_rows %}
-                <tr>
-                  <td>{{ r.ingresso or '—' }}</td>
-                  <td>{{ r.desligamento or '—' }}</td>
-                </tr>
-              {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        {% else %}
-          <div style="padding: var(--space-lg); text-align: center; color: var(--text-muted); font-size: var(--text-sm);">
-            Nenhum histórico registrado.
-          </div>
-        {% endif %}
-      </div>
-    </div>
+      {% if historico_no_grupo_rows %}
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Ingresso</th>
+              <th>Desligamento</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for r in historico_no_grupo_rows %}
+            <tr>
+              <td>{{ r.ingresso or '—' }}</td>
+              <td>{{ r.desligamento or '—' }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="text-muted-foreground text-sm text-center py-4">Nenhum histórico registrado.</p>
+      {% endif %}
+    {% endcall %}
+
+    <!-- Ações Perigosas em Alert com Accordion -->
+    {% if can_edit_member and has_open_historico %}
+    {% set chevron_icon = lucide_icon("chevron-down", size="sm") %}
+    {% set danger_title %}<span class="dangerous-actions-title"><span>Ações Perigosas</span>{{ chevron_icon }}</span>{% endset %}
+    {% set danger_content %}<p class="text-muted-foreground text-sm mb-4">Essas ações podem afetar permanentemente o registro do associado dentro do Gris.</p><button type="button" id="btn-afastar" class="btn-outline btn-destructive btn-sm">Afastar Associado</button>{% endset %}
+    {% set accordion_html %}{{ accordion(items=[{"title": danger_title, "content": danger_content, "open": false}], attrs={"class": "dangerous-actions-accordion"}) }}{% endset %}
+    {{ alert(
+      icon=lucide_icon("triangle-alert", size="sm"),
+      description=accordion_html,
+      variant="error",
+      attrs={"class": "dangerous-actions-alert mb-4"}
+    ) }}
+    {% endif %}
 
     <!-- Modal de Gerenciamento de Histórico -->
-    <div class="modal-backdrop" id="modalHistoricoBackdrop" style="display: none;"></div>
-    <div class="modal-modern" id="modalHistorico" tabindex="-1" style="display: none;">
-      <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-modern__content">
-          <div class="modal-modern__header">
-            <h5 class="modal-modern__title">Gerenciar Histórico no Grupo</h5>
-          </div>
-          <div class="modal-modern__body">
-            <div id="historico-list">
-              <!-- Lista de históricos será inserida aqui -->
-            </div>
-            <div style="margin-top: var(--space-lg);">
-              <button type="button" id="btn-add-historico" class="btn-modern btn-modern--primary btn-modern--sm">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Adicionar Período
-              </button>
-            </div>
-          </div>
-          <div class="modal-modern__footer">
-            <button type="button" class="btn-modern btn-modern--ghost btn-modern--sm" data-dismiss-historico>Fechar</button>
-            <button type="button" id="btn-save-historico" class="btn-modern btn-modern--primary btn-modern--sm">Salvar Alterações</button>
-          </div>
-        </div>
+    {% call dialog(
+      id="modalHistorico",
+      title="Gerenciar Histórico no Grupo",
+      footer='<button type="button" id="btn-save-historico" class="btn-primary btn-sm">Salvar Alterações</button>',
+      close_button=true
+    ) %}
+      <div id="historico-list"></div>
+      <div class="mt-4">
+        <button type="button" id="btn-add-historico" class="btn-sm-outline">
+          {{ lucide_icon("plus", size="sm") }} Adicionar Período
+        </button>
       </div>
-    </div>
+    {% endcall %}
+
+    <!-- Dialog de Confirmação - Afastar Associado -->
+    {{ dialog(
+      id="confirmAfastarDialog",
+      title="Afastar Associado",
+      description="Confirma o afastamento deste associado? Esta ação não pode ser desfeita.",
+      footer='<button type="button" class="btn-ghost btn-sm" data-dialog-close>Cancelar</button><button type="button" id="btn-confirm-afastar" class="btn-destructive btn-sm">Confirmar Afastamento</button>',
+      close_button=false
+    ) }}
+
+    <!-- Dialog de Confirmação - Remover Período -->
+    {{ dialog(
+      id="confirmRemoveHistoricoDialog",
+      title="Remover Período",
+      description="Confirma a remoção deste período do histórico? Esta ação não pode ser desfeita.",
+      footer='<button type="button" class="btn-ghost btn-sm" data-dialog-close>Cancelar</button><button type="button" id="btn-confirm-remove-historico" class="btn-destructive btn-sm">Confirmar Remoção</button>',
+      close_button=false
+    ) }}
 
     {% if can_create_associate_user %}
-    <div class="modal-backdrop" id="modalCreateUserConfirmBackdrop" style="display: none;"></div>
-    <div class="modal-modern" id="modalCreateUserConfirm" tabindex="-1" style="display: none;">
-      <div class="modal-dialog">
-        <div class="modal-modern__content">
-          <div class="modal-modern__header">
-            <h5 class="modal-modern__title">Criar usuário do associado</h5>
-          </div>
-          <div class="modal-modern__body">
-            <p style="margin: 0; color: var(--text-secondary);">
-              Deseja criar o usuário para este associado usando o ID Escoteiros informado?
-            </p>
-          </div>
-          <div class="modal-modern__footer">
-            <button type="button" class="btn-modern btn-modern--ghost btn-modern--sm" data-dismiss-create-user-confirm>Cancelar</button>
-            <button type="button" id="btn-confirm-create-user" class="btn-modern btn-modern--primary btn-modern--sm">Confirmar</button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- Modal de Confirmação de Criação de Usuário -->
+    {{ dialog(
+      id="modalCreateUserConfirm",
+      title="Criar usuário do associado",
+      description="Deseja criar o usuário para este associado usando o ID Escoteiros informado?",
+      footer='<button type="button" class="btn-ghost btn-sm" data-dialog-close>Cancelar</button><button type="button" id="btn-confirm-create-user" class="btn-primary btn-sm">Confirmar</button>',
+      close_button=false
+    ) }}
 
-    <div class="modal-backdrop" id="modalCreateUserResultBackdrop" style="display: none;"></div>
-    <div class="modal-modern" id="modalCreateUserResult" tabindex="-1" style="display: none;">
-      <div class="modal-dialog">
-        <div class="modal-modern__content">
-          <div class="modal-modern__header">
-            <h5 class="modal-modern__title" id="create-user-result-title">Resultado</h5>
-          </div>
-          <div class="modal-modern__body" id="create-user-result-body"></div>
-          <div class="modal-modern__footer">
-            <button type="button" class="btn-modern btn-modern--primary btn-modern--sm" data-dismiss-create-user-result>Fechar</button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- Modal de Resultado de Criação de Usuário -->
+    {% call dialog(
+      id="modalCreateUserResult",
+      title="Resultado",
+      footer='<button type="button" class="btn-primary btn-sm" data-dialog-close>Fechar</button>',
+      close_button=true
+    ) %}
+      <div id="create-user-result-body"></div>
+    {% endcall %}
     {% endif %}
   {% endif %}
 {% endblock %}

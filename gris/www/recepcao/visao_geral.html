@@ -1,28 +1,80 @@
-{% extends "templates/web_sidebar_base.html" %} {% block title %}Visão Geral - Recepção{% endblock
-%} {% block head_include %} {{ super() }}
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, alert %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/composed/simple_icons.html.jinja" import simple_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+
+{% block title %}Visão Geral - Recepção{% endblock %}
+
+{% block head_include %}
+{{ super() }}
 <link rel="stylesheet" href="/recepcao/visao_geral.css" />
-{% endblock %} {% block page_header %}
-<div class="page-header">
-	<div class="page-header__content">
-		<h1 class="page-header__title">Visão Geral</h1>
-		<p class="page-header__subtitle">Acompanhe o fluxo de novos associados.</p>
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header-row mb-6">
+	<div>
+		<h1 class="text-3xl font-bold tracking-tight">Visão Geral</h1>
+		<p class="text-muted-foreground">Acompanhe o fluxo de novos associados.</p>
 	</div>
 </div>
-{% endblock %} {% block main %}
+{% endblock %}
+
+{# ---- Macro local: cabeçalho com associado e responsável ---- #}
+{% macro people_header(jovem_id, responsavel_id) %}
+<div class="dialog-people">
+	<div class="dialog-people__row">
+		<button type="button" class="btn-icon-outline" onclick="openFicha()" title="Abrir ficha do associado" aria-label="Abrir ficha do associado">
+			{{ lucide_icon("file-user", size="sm") }}
+		</button>
+		<div class="dialog-people__info">
+			<span class="dialog-field__label">Associado</span>
+			<span class="dialog-field__value" id="{{ jovem_id }}"></span>
+		</div>
+	</div>
+	<div class="dialog-people__row">
+		<button type="button" class="btn-icon-outline js-whatsapp-modal-btn" onclick="falarComResponsavelAtual()" title="Falar no WhatsApp" aria-label="Falar no WhatsApp">
+			{{ simple_icon("whatsapp", size="sm") }}
+		</button>
+		<div class="dialog-people__info">
+			<span class="dialog-field__label">Responsável</span>
+			<span class="dialog-field__value" id="{{ responsavel_id }}"></span>
+		</div>
+	</div>
+</div>
+{% endmacro %}
+
+{# ---- Footers reutilizáveis ---- #}
+{% set footer_desistencia %}
+<button type="button" class="btn-destructive" onclick="registrarDesistencia()">
+	{{ lucide_icon("door-open", size="sm") }} Desistência
+</button>
+{% endset %}
+
+{% set footer_desistencia_fila %}
+<button type="button" class="btn-destructive" onclick="registrarDesistencia()">
+	{{ lucide_icon("door-open", size="sm") }} Desistência
+</button>
+<button type="button" class="btn-outline" onclick="enviarFilaEspera()">
+	{{ lucide_icon("hourglass", size="sm") }} Fila de Espera
+</button>
+{% endset %}
+
+{% block main %}
 <div class="kanban-container">
 	{% for status in kanban_columns %}
 	<div class="kanban-column" data-status="{{ status }}">
 		<div class="kanban-column__header">
 			<h3 class="kanban-column__title">
-				{% if status == 'Aguardar Dados' %} Aguardando dados {% else %} {{ status }} {%
-				endif %}
+				{% if status == 'Aguardar Dados' %}Aguardando dados{% else %}{{ status }}{% endif %}
 			</h3>
-			<span class="g-badge g-badge--secondary">{{ kanban_data[status]|length }}</span>
+			{{ badge(kanban_data[status]|length|string, variant="secondary") }}
 		</div>
 		<div class="kanban-column__body">
 			{% for card in kanban_data[status] %}
-			<div
-				class="kanban-card card-modern"
+			<article
+				class="card kanban-card"
 				data-id="{{ card.name }}"
 				data-status="{{ status }}"
 				data-responsavel="{{ card.responsavel_recepcao or '' }}"
@@ -38,639 +90,280 @@
 			>
 				<div class="kanban-card__top">
 					{% if card.ramo %}
-					<span class="g-badge g-badge--{{ card.ramo_class }}">{{ card.ramo }}</span>
-					{% endif %} {% if card.visita_confirmada %}
-					<span class="g-badge g-badge--success" style="margin-left: 4px"
-						>Visita Confirmada</span
-					>
+						{{ badge(card.ramo, variant=card.ramo_variant) }}
+					{% endif %}
+					{% if card.visita_confirmada %}
+						{{ badge("Visita Confirmada", variant="success") }}
 					{% endif %}
 				</div>
 				<div class="kanban-card__main">
 					<h4 class="kanban-card__title">{{ card.nome_completo }}</h4>
 					{% if card.responsavel_associado %}
-					<p class="kanban-card__subtitle">{{ card.responsavel_associado }}</p>
+						<p class="kanban-card__subtitle">{{ card.responsavel_associado }}</p>
 					{% endif %}
 					<div class="kanban-card__separator"></div>
 					<div class="kanban-card__meta">
-						<div class="kanban-card__avatar" title="{{ card.recepcao_name }}">
+						<span class="kanban-card__avatar" title="{{ card.recepcao_name }}">
 							{{ card.recepcao_name[:1] }}
-						</div>
+						</span>
 						<span>{{ card.recepcao_name }}</span>
 					</div>
 				</div>
-			</div>
+			</article>
 			{% endfor %}
 		</div>
 	</div>
 	{% endfor %}
 </div>
 
-<!-- Modal Escolher Responsável para WhatsApp -->
-<div class="modal-modern d-none" id="modalEscolherResponsavelWhatsapp" tabindex="-1">
-	<div class="modal-dialog">
-		<div class="modal-modern__content">
-			<div class="modal-modern__header">
-				<h5 class="modal-modern__title">Falar com responsável</h5>
-			</div>
-			<div class="modal-modern__body">
-				<div class="form-group-modern">
-					<label class="form-label-modern" for="whatsappContatoSelect">Responsável</label>
-					<select class="form-input-modern" id="whatsappContatoSelect">
-						<option value="">Selecione...</option>
-					</select>
-				</div>
-			</div>
-			<div class="modal-modern__footer">
-				<button
-					type="button"
-					class="btn-modern btn-modern--ghost"
-					onclick="closeEscolherResponsavelWhatsapp()"
-				>
-					Cancelar
-				</button>
-				<button type="button" class="btn-modern btn-modern--primary" id="btnAbrirWhatsappContato">
-					<i class="fa fa-whatsapp mr-1" aria-hidden="true"></i> Conversar no WhatsApp
-				</button>
-			</div>
+{# ----------- Modal Escolher Responsável (WhatsApp) ----------- #}
+{% call dialog(
+	id="modalEscolherResponsavelWhatsapp",
+	title="Falar com responsável",
+	footer='<button type="button" class="btn-ghost" data-dialog-close>Cancelar</button><button type="button" class="btn-primary" id="btnAbrirWhatsappContato">' ~ lucide_icon("message-circle", size="sm") ~ ' Conversar no WhatsApp</button>',
+	close_button=true,
+	close_on_overlay_click=false
+) %}
+	<div class="field">
+		<label class="label" for="whatsappContatoSelect-trigger">Responsável</label>
+		{{ select(
+			id="whatsappContatoSelect",
+			name="whatsapp_contato",
+			items=[],
+			placeholder="Selecione…",
+			main_attrs={"data-empty-label": "Selecione…"}
+		) }}
+	</div>
+{% endcall %}
+
+{# ----------- Modal Novo Contato ----------- #}
+{% call dialog(
+	id="modalNovoContato",
+	title="Novo Contato",
+	close_button=true
+) %}
+	{{ people_header("modalAssociadoNome", "modalResponsavelNome") }}
+	<div class="dialog-info-grid">
+		<div class="dialog-field">
+			<span class="dialog-field__label">Ramo</span>
+			<span class="dialog-field__value" id="modalRamo"></span>
 		</div>
 	</div>
-</div>
+	<div class="field">
+		<label class="label" for="responsavelRecepcao-trigger">Responsável pela Recepção</label>
+		{{ select(
+			id="responsavelRecepcao",
+			name="responsavel_recepcao",
+			items=recepcao_user_items,
+			placeholder="Selecione…",
+			is_combobox=true,
+			search_placeholder="Buscar responsável…"
+		) }}
+		<p class="text-muted-foreground text-xs mt-1">
+			Selecione quem será o responsável por este novo associado.
+		</p>
+	</div>
+	<div class="dialog-actions">
+		<button type="button" class="btn-primary" id="btnMoverConversa" disabled onclick="moverParaConversaInicial()">
+			Mover para Conversa Inicial
+		</button>
+	</div>
+{% endcall %}
 
-<!-- Modal Novo Contato -->
-<div class="modal-modern d-none" id="modalNovoContato" tabindex="-1">
-	<div class="modal-dialog">
-		<div class="modal-modern__content">
-			<div class="modal-modern__header">
-				<h5 class="modal-modern__title">Novo Contato</h5>
-			</div>
-			<div class="modal-modern__body">
-				<div class="info-group">
-					<label class="info-label">Associado</label>
-					<div class="info-value" id="modalAssociadoNome"></div>
-				</div>
-				<div class="info-group">
-					<label class="info-label">Responsável</label>
-					<div class="info-value" id="modalResponsavelNome"></div>
-				</div>
-				<div class="info-group">
-					<label class="info-label">Ramo</label>
-					<div class="info-value" id="modalRamo"></div>
-				</div>
-				<div class="form-group-modern">
-					<label class="form-label-modern" for="responsavelRecepcao"
-						>Responsável pela Recepção</label
-					>
-					<select class="form-input-modern" id="responsavelRecepcao">
-						<option value="">Selecione...</option>
-						{% for user in recepcao_users %}
-						<option value="{{ user.name }}">{{ user.full_name }}</option>
-						{% endfor %}
-					</select>
-					<p class="form-helper-text">
-						Selecione quem será o responsável por este novo associado.
-					</p>
-				</div>
-				<div class="modal-actions">
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline js-whatsapp-modal-btn"
-						onclick="falarComResponsavelAtual()"
-					>
-						<i class="fa fa-whatsapp mr-1" aria-hidden="true"></i> Falar com responsável
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--primary"
-						id="btnMoverConversa"
-						disabled
-						onclick="moverParaConversaInicial()"
-					>
-						Mover para Conversa Inicial
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline"
-						onclick="openFicha()"
-					>
-						Abrir Ficha
-					</button>
-				</div>
-			</div>
-			<div class="modal-modern__footer">
-				<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>
-					Fechar
-				</button>
-			</div>
+{# ----------- Modal Conversa Inicial ----------- #}
+{% call dialog(
+	id="modalConversaInicial",
+	title="Conversa Inicial",
+	footer=footer_desistencia_fila,
+	close_button=true
+) %}
+	{{ people_header("ci_associado_nome", "ci_responsavel_nome") }}
+	<div class="dialog-fields-row">
+		<div class="field">
+			<label class="label" for="ci_ramo-trigger">Ramo</label>
+			{{ select(id="ci_ramo", name="ramo", items=ramo_items, placeholder="Selecione…") }}
+		</div>
+		<div class="field">
+			<label class="label" for="ci_responsavel_acompanhamento-trigger">Responsável pelo Acompanhamento</label>
+			{{ select(
+				id="ci_responsavel_acompanhamento",
+				name="responsavel_acompanhamento",
+				items=recepcao_user_items,
+				placeholder="Selecione…",
+				is_combobox=true,
+				search_placeholder="Buscar responsável…"
+			) }}
 		</div>
 	</div>
-</div>
+	<div class="dialog-actions">
+		<button type="button" class="btn-primary" onclick="openAgendarVisita()">Agendar Visita</button>
+	</div>
+{% endcall %}
 
-<!-- Modal Conversa Inicial -->
-<div class="modal-modern d-none" id="modalConversaInicial" tabindex="-1">
-	<div class="modal-dialog modal-dialog-scrollable">
-		<div class="modal-modern__content">
-			<div class="modal-modern__header">
-				<h5 class="modal-modern__title">Conversa Inicial</h5>
-			</div>
-			<div class="modal-modern__body">
-				<div class="info-group">
-					<label class="info-label">Associado</label>
-					<div class="info-value" id="ci_associado_nome"></div>
-				</div>
-				<div class="info-group">
-					<label class="info-label">Responsável</label>
-					<div class="info-value" id="ci_responsavel_nome"></div>
-				</div>
-				<div class="form-group-modern">
-					<label class="form-label-modern" for="ci_ramo">Ramo</label>
-					<select class="form-input-modern" id="ci_ramo">
-						<option value="Filhotes">Filhotes</option>
-						<option value="Lobinho">Lobinho</option>
-						<option value="Escoteiro">Escoteiro</option>
-						<option value="Sênior">Sênior</option>
-						<option value="Pioneiro">Pioneiro</option>
-					</select>
-				</div>
-				<div class="form-group-modern">
-					<label class="form-label-modern" for="ci_responsavel_acompanhamento"
-						>Responsável pelo Acompanhamento</label
-					>
-					<select class="form-input-modern" id="ci_responsavel_acompanhamento">
-						<option value="">Selecione...</option>
-						{% for user in recepcao_users %}
-						<option value="{{ user.name }}">{{ user.full_name }}</option>
-						{% endfor %}
-					</select>
-				</div>
+{# ----------- Modal Agendar Visita ----------- #}
+{% call dialog(
+	id="modalAgendarVisita",
+	title="Agendar Visita",
+	footer='<button type="button" class="btn-ghost" onclick="closeAgendarVisita()">Cancelar</button><button type="button" class="btn-primary" onclick="confirmarAgendamento()">Confirmar</button>',
+	close_button=false,
+	close_on_overlay_click=false
+) %}
+	<div class="field">
+		<label class="label" for="av_data-trigger">Data Disponível</label>
+		{{ select(
+			id="av_data",
+			name="data_visita",
+			items=[],
+			placeholder="Selecione uma data…"
+		) }}
+	</div>
+{% endcall %}
 
-				<div class="modal-actions-vertical">
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline js-whatsapp-modal-btn"
-						onclick="falarComResponsavelAtual()"
-					>
-						<i class="fa fa-whatsapp mr-1" aria-hidden="true"></i> Falar com responsável
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--primary"
-						onclick="openAgendarVisita()"
-					>
-						Agendar Visita
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline"
-						onclick="openFicha()"
-					>
-						Abrir Ficha
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline"
-						onclick="registrarDesistencia()"
-					>
-						Desistência
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline"
-						onclick="enviarFilaEspera()"
-					>
-						Enviar para Fila de Espera
-					</button>
-				</div>
-			</div>
-			<div class="modal-modern__footer">
-				<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>
-					Fechar
-				</button>
-			</div>
+{# ----------- Modal Confirmar Desistência ----------- #}
+{% call dialog(
+	id="modalConfirmarDesistencia",
+	title="Confirmar Desistência",
+	footer='<button type="button" class="btn-ghost" onclick="closeConfirmarDesistencia()">Cancelar</button><button type="button" class="btn-destructive" onclick="confirmarDesistencia()">Confirmar Desistência</button>',
+	close_button=false,
+	close_on_overlay_click=false
+) %}
+	{{ alert(
+		icon=lucide_icon("triangle-alert", size="sm"),
+		description="Tem certeza que deseja registrar a desistência deste associado? Esta ação não pode ser desfeita.",
+		variant="warning",
+		attrs={"class": "mb-4"}
+	) }}
+	<p class="text-muted-foreground text-sm">
+		Ao confirmar, o registro do Novo Associado será excluído. Se o responsável não tiver outros vínculos, seu cadastro também será removido.
+	</p>
+{% endcall %}
+
+{# ----------- Modal Confirmar Fila de Espera ----------- #}
+{{ dialog(
+	id="modalConfirmarFilaEspera",
+	title="Confirmar Fila de Espera",
+	description="Deseja enviar este associado para a Fila de Espera?",
+	footer='<button type="button" class="btn-ghost" onclick="closeConfirmarFilaEspera()">Cancelar</button><button type="button" class="btn-primary" onclick="confirmarFilaEspera()">Confirmar</button>',
+	close_button=false,
+	close_on_overlay_click=false
+) }}
+
+{# ----------- Modal Visita Agendada ----------- #}
+{% call dialog(
+	id="modalVisitaAgendada",
+	title="Visita Agendada",
+	footer=footer_desistencia_fila,
+	close_button=true
+) %}
+	{{ people_header("va_associado_nome", "va_responsavel_nome") }}
+	<div class="dialog-info-grid">
+		<div class="dialog-field">
+			<span class="dialog-field__label">Data da Visita</span>
+			<span class="dialog-field__value" id="va_data_visita"></span>
+		</div>
+		<div class="dialog-field">
+			<span class="dialog-field__label">Status da Visita</span>
+			<span class="dialog-field__value" id="va_status_visita"></span>
 		</div>
 	</div>
-</div>
-
-<!-- Modal Agendar Visita -->
-<div class="modal-modern d-none" id="modalAgendarVisita" tabindex="-1">
-	<div class="modal-dialog">
-		<div class="modal-modern__content">
-			<div class="modal-modern__header">
-				<h5 class="modal-modern__title">Agendar Visita</h5>
-			</div>
-			<div class="modal-modern__body">
-				<div class="form-group-modern">
-					<label class="form-label-modern">Data Disponível</label>
-					<select class="form-input-modern" id="av_data">
-						<option value="">Carregando...</option>
-					</select>
-				</div>
-			</div>
-			<div class="modal-modern__footer">
-				<button
-					type="button"
-					class="btn-modern btn-modern--ghost"
-					onclick="closeAgendarVisita()"
-				>
-					Cancelar
-				</button>
-				<button
-					type="button"
-					class="btn-modern btn-modern--primary"
-					onclick="confirmarAgendamento()"
-				>
-					Confirmar
-				</button>
-			</div>
+	<div class="dialog-fields-row">
+		<div class="field">
+			<label class="label" for="va_ramo-trigger">Ramo</label>
+			{{ select(id="va_ramo", name="ramo", items=ramo_items, placeholder="Selecione…") }}
+		</div>
+		<div class="field">
+			<label class="label" for="va_responsavel_recepcao-trigger">Responsável pela Recepção</label>
+			{{ select(
+				id="va_responsavel_recepcao",
+				name="responsavel_recepcao",
+				items=recepcao_user_items,
+				placeholder="Selecione…",
+				is_combobox=true,
+				search_placeholder="Buscar responsável…"
+			) }}
 		</div>
 	</div>
-</div>
-
-<!-- Modal Confirmar Desistência -->
-<div class="modal-modern d-none" id="modalConfirmarDesistencia" tabindex="-1">
-	<div class="modal-dialog">
-		<div class="modal-modern__content">
-			<div class="modal-modern__header">
-				<h5 class="modal-modern__title">Confirmar Desistência</h5>
-			</div>
-			<div class="modal-modern__body">
-				<div class="alert-modern alert-modern--warning mb-3">
-					<div class="alert-modern__content">
-						<p class="mb-0">
-							Tem certeza que deseja registrar a desistência deste associado? Esta
-							ação não pode ser desfeita.
-						</p>
-					</div>
-				</div>
-				<p class="text-muted mb-3">
-					Ao confirmar, o registro do Novo Associado será excluído. Se o responsável não
-					tiver outros vínculos, seu cadastro também será removido.
-				</p>
-			</div>
-			<div class="modal-modern__footer">
-				<button
-					type="button"
-					class="btn-modern btn-modern--ghost"
-					onclick="closeConfirmarDesistencia()"
-				>
-					Cancelar
-				</button>
-				<button
-					type="button"
-					class="btn-modern btn-modern--danger"
-					onclick="confirmarDesistencia()"
-				>
-					Confirmar Desistência
-				</button>
-			</div>
-		</div>
+	<div class="dialog-actions dialog-actions--vertical">
+		<button type="button" class="btn-primary" id="btnConfirmarVisita" onclick="confirmarVisitaRealizada()">
+			Confirmar Visita
+		</button>
+		<button type="button" class="btn-outline hidden" id="btnRemoverConfirmacao" onclick="removerConfirmacaoVisita()">
+			Remover Confirmação
+		</button>
+		<button type="button" class="btn-primary" onclick="registrarRecepcaoRealizada()">Recepção Realizada</button>
+		<button type="button" class="btn-outline" onclick="openAgendarVisita()">Reagendar Visita</button>
 	</div>
-</div>
+{% endcall %}
 
-<!-- Modal Confirmar Fila de Espera -->
-<div class="modal-modern d-none" id="modalConfirmarFilaEspera" tabindex="-1">
-	<div class="modal-dialog">
-		<div class="modal-modern__content">
-			<div class="modal-modern__header">
-				<h5 class="modal-modern__title">Confirmar Fila de Espera</h5>
-			</div>
-			<div class="modal-modern__body">
-				<p>Deseja enviar este associado para a Fila de Espera?</p>
-			</div>
-			<div class="modal-modern__footer">
-				<button
-					type="button"
-					class="btn-modern btn-modern--ghost"
-					onclick="closeConfirmarFilaEspera()"
-				>
-					Cancelar
-				</button>
-				<button
-					type="button"
-					class="btn-modern btn-modern--primary"
-					onclick="confirmarFilaEspera()"
-				>
-					Confirmar
-				</button>
-			</div>
-		</div>
+{# ----------- Modal Aguardar Dados ----------- #}
+{% call dialog(
+	id="modalAguardarDados",
+	title="Aguardando Dados",
+	footer=footer_desistencia,
+	close_button=true
+) %}
+	{{ people_header("ad_associado_nome", "ad_responsavel_nome") }}
+	<div class="field">
+		<label class="label" for="ad_responsavel_recepcao-trigger">Responsável pela Recepção</label>
+		{{ select(
+			id="ad_responsavel_recepcao",
+			name="responsavel_recepcao",
+			items=recepcao_user_items,
+			placeholder="Selecione…",
+			is_combobox=true,
+			search_placeholder="Buscar responsável…"
+		) }}
 	</div>
-</div>
+	<div class="timeline-container" id="ad_timeline"></div>
+{% endcall %}
 
-<!-- Modal Visita Agendada -->
-<div class="modal-modern d-none" id="modalVisitaAgendada" tabindex="-1">
-	<div class="modal-dialog modal-dialog-scrollable">
-		<div class="modal-modern__content">
-			<div class="modal-modern__header">
-				<h5 class="modal-modern__title">Visita Agendada</h5>
-			</div>
-			<div class="modal-modern__body">
-				<div class="info-group">
-					<label class="info-label">Associado</label>
-					<div class="info-value" id="va_associado_nome"></div>
-				</div>
-				<div class="info-group">
-					<label class="info-label">Responsável</label>
-					<div class="info-value" id="va_responsavel_nome"></div>
-				</div>
-
-				<div class="info-group">
-					<label class="info-label">Data da Visita</label>
-					<div class="info-value" id="va_data_visita"></div>
-				</div>
-
-				<div class="info-group">
-					<label class="info-label">Status da Visita</label>
-					<div class="info-value" id="va_status_visita"></div>
-				</div>
-
-				<div class="form-group-modern">
-					<label class="form-label-modern" for="va_responsavel_recepcao"
-						>Responsável pela Recepção</label
-					>
-					<select class="form-input-modern" id="va_responsavel_recepcao">
-						<option value="">Selecione...</option>
-						{% for user in recepcao_users %}
-						<option value="{{ user.name }}">{{ user.full_name }}</option>
-						{% endfor %}
-					</select>
-				</div>
-
-				<div class="form-group-modern">
-					<label class="form-label-modern" for="va_ramo">Ramo</label>
-					<select class="form-input-modern" id="va_ramo">
-						<option value="Filhotes">Filhotes</option>
-						<option value="Lobinho">Lobinho</option>
-						<option value="Escoteiro">Escoteiro</option>
-						<option value="Sênior">Sênior</option>
-						<option value="Pioneiro">Pioneiro</option>
-					</select>
-				</div>
-
-				<div class="modal-actions-vertical">
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline js-whatsapp-modal-btn"
-						onclick="falarComResponsavelAtual()"
-					>
-						<i class="fa fa-whatsapp mr-1" aria-hidden="true"></i> Falar com responsável
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--primary"
-						id="btnConfirmarVisita"
-						onclick="confirmarVisitaRealizada()"
-					>
-						Confirmar Visita
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--warning d-none"
-						id="btnRemoverConfirmacao"
-						onclick="removerConfirmacaoVisita()"
-					>
-						Remover Confirmação
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--primary"
-						onclick="registrarRecepcaoRealizada()"
-					>
-						Recepção Realizada
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline"
-						onclick="openAgendarVisita()"
-					>
-						Reagendar Visita
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline"
-						onclick="openFicha()"
-					>
-						Abrir Ficha
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline"
-						onclick="registrarDesistencia()"
-					>
-						Desistência
-					</button>
-				</div>
-			</div>
-			<div class="modal-modern__footer">
-				<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>
-					Fechar
-				</button>
-			</div>
-		</div>
+{# ----------- Modal Fazer Registro ----------- #}
+{% call dialog(
+	id="modalFazerRegistro",
+	title="Fazer Registro",
+	footer=footer_desistencia,
+	close_button=true
+) %}
+	{{ people_header("fr_associado_nome", "fr_responsavel_nome") }}
+	<div class="field">
+		<label class="label" for="fr_responsavel_recepcao-trigger">Responsável pela Recepção</label>
+		{{ select(
+			id="fr_responsavel_recepcao",
+			name="responsavel_recepcao",
+			items=recepcao_user_items,
+			placeholder="Selecione…",
+			is_combobox=true,
+			search_placeholder="Buscar responsável…"
+		) }}
 	</div>
-</div>
-
-<!-- Modal Aguardar Dados -->
-<div class="modal-modern d-none" id="modalAguardarDados" tabindex="-1">
-	<div class="modal-dialog modal-dialog-scrollable">
-		<div class="modal-modern__content">
-			<div class="modal-modern__header">
-				<h5 class="modal-modern__title">Aguardando Dados</h5>
-			</div>
-			<div class="modal-modern__body">
-				<div class="info-group">
-					<label class="info-label">Associado</label>
-					<div class="info-value" id="ad_associado_nome"></div>
-				</div>
-				<div class="info-group">
-					<label class="info-label">Responsável</label>
-					<div class="info-value" id="ad_responsavel_nome"></div>
-				</div>
-
-				<div class="form-group-modern">
-					<label class="form-label-modern" for="ad_responsavel_recepcao"
-						>Responsável pela Recepção</label
-					>
-					<select class="form-input-modern" id="ad_responsavel_recepcao">
-						<option value="">Selecione...</option>
-						{% for user in recepcao_users %}
-						<option value="{{ user.name }}">{{ user.full_name }}</option>
-						{% endfor %}
-					</select>
-				</div>
-
-				<div class="timeline-container" id="ad_timeline">
-					<!-- Timeline items will be injected here -->
-				</div>
-
-				<div class="modal-actions-vertical mt-4">
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline js-whatsapp-modal-btn"
-						onclick="falarComResponsavelAtual()"
-					>
-						<i class="fa fa-whatsapp mr-1" aria-hidden="true"></i> Falar com responsável
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline"
-						onclick="openFicha()"
-					>
-						Abrir Ficha
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline"
-						onclick="registrarDesistencia()"
-					>
-						Desistência
-					</button>
-				</div>
-			</div>
-			<div class="modal-modern__footer">
-				<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>
-					Fechar
-				</button>
-			</div>
-		</div>
+	<div class="timeline-container" id="fr_timeline"></div>
+	<div class="dialog-actions">
+		<button type="button" class="btn-primary" onclick="confirmarRegistroCriado()">
+			Registro Criado no Paxtu
+		</button>
 	</div>
-</div>
+{% endcall %}
 
-<!-- Modal Fazer Registro -->
-<div class="modal-modern d-none" id="modalFazerRegistro" tabindex="-1">
-	<div class="modal-dialog modal-dialog-scrollable">
-		<div class="modal-modern__content">
-			<div class="modal-modern__header">
-				<h5 class="modal-modern__title">Fazer Registro</h5>
-			</div>
-			<div class="modal-modern__body">
-				<div class="info-group">
-					<label class="info-label">Associado</label>
-					<div class="info-value" id="fr_associado_nome"></div>
-				</div>
-				<div class="info-group">
-					<label class="info-label">Responsável</label>
-					<div class="info-value" id="fr_responsavel_nome"></div>
-				</div>
-
-				<div class="form-group-modern">
-					<label class="form-label-modern" for="fr_responsavel_recepcao"
-						>Responsável pela Recepção</label
-					>
-					<select class="form-input-modern" id="fr_responsavel_recepcao">
-						<option value="">Selecione...</option>
-						{% for user in recepcao_users %}
-						<option value="{{ user.name }}">{{ user.full_name }}</option>
-						{% endfor %}
-					</select>
-				</div>
-
-				<div class="timeline-container" id="fr_timeline">
-					<!-- Timeline items will be injected here -->
-				</div>
-
-				<div class="modal-actions-vertical mt-4">
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline js-whatsapp-modal-btn"
-						onclick="falarComResponsavelAtual()"
-					>
-						<i class="fa fa-whatsapp mr-1" aria-hidden="true"></i> Falar com responsável
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--primary"
-						onclick="confirmarRegistroCriado()"
-					>
-						Registro Criado no Paxtu
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline"
-						onclick="openFicha()"
-					>
-						Abrir Ficha
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline"
-						onclick="registrarDesistencia()"
-					>
-						Desistência
-					</button>
-				</div>
-			</div>
-			<div class="modal-modern__footer">
-				<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>
-					Fechar
-				</button>
-			</div>
-		</div>
+{# ----------- Modal Acompanhamento ----------- #}
+{% call dialog(
+	id="modalAcompanhamento",
+	title="Acompanhamento",
+	footer=footer_desistencia,
+	close_button=true
+) %}
+	{{ people_header("ac_associado_nome", "ac_responsavel_nome") }}
+	<div class="field">
+		<label class="label" for="ac_responsavel_recepcao-trigger">Responsável pela Recepção</label>
+		{{ select(
+			id="ac_responsavel_recepcao",
+			name="responsavel_recepcao",
+			items=recepcao_user_items,
+			placeholder="Selecione…",
+			is_combobox=true,
+			search_placeholder="Buscar responsável…"
+		) }}
 	</div>
-</div>
-
-<!-- Modal Acompanhamento -->
-<div class="modal-modern d-none" id="modalAcompanhamento" tabindex="-1">
-	<div class="modal-dialog modal-dialog-scrollable">
-		<div class="modal-modern__content">
-			<div class="modal-modern__header">
-				<h5 class="modal-modern__title">Acompanhamento</h5>
-			</div>
-			<div class="modal-modern__body">
-				<div class="info-group">
-					<label class="info-label">Associado</label>
-					<div class="info-value" id="ac_associado_nome"></div>
-				</div>
-				<div class="info-group">
-					<label class="info-label">Responsável</label>
-					<div class="info-value" id="ac_responsavel_nome"></div>
-				</div>
-
-				<div class="form-group-modern">
-					<label class="form-label-modern" for="ac_responsavel_recepcao"
-						>Responsável pela Recepção</label
-					>
-					<select class="form-input-modern" id="ac_responsavel_recepcao">
-						<option value="">Selecione...</option>
-						{% for user in recepcao_users %}
-						<option value="{{ user.name }}">{{ user.full_name }}</option>
-						{% endfor %}
-					</select>
-				</div>
-
-				<div class="timeline-container" id="ac_timeline">
-					<!-- Timeline items will be injected here -->
-				</div>
-
-				<div class="modal-actions-vertical mt-4">
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline js-whatsapp-modal-btn"
-						onclick="falarComResponsavelAtual()"
-					>
-						<i class="fa fa-whatsapp mr-1" aria-hidden="true"></i> Falar com responsável
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline"
-						onclick="openFicha()"
-					>
-						Abrir Ficha
-					</button>
-					<button
-						type="button"
-						class="btn-modern btn-modern--outline"
-						onclick="registrarDesistencia()"
-					>
-						Desistência
-					</button>
-				</div>
-			</div>
-			<div class="modal-modern__footer">
-				<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>
-					Fechar
-				</button>
-			</div>
-		</div>
-	</div>
-</div>
+	<div class="timeline-container" id="ac_timeline"></div>
+	<div class="dialog-actions" id="ac_actions"></div>
+{% endcall %}
 {% endblock %}

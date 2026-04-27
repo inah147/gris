@@ -209,6 +209,15 @@ def get_context(context):
 		"Pioneiro": "pioneiro",
 	}
 
+	# Variantes do badge Basecoat (corresponde a .badge-ramo-* no CSS local)
+	ramo_variant_map = {
+		"Filhotes": "ramo-filhotes",
+		"Lobinho": "ramo-lobinho",
+		"Escoteiro": "ramo-escoteiro",
+		"Sênior": "ramo-senior",
+		"Pioneiro": "ramo-pioneiro",
+	}
+
 	# Steps definition for infographic
 	steps_def = STEPS_DEF
 
@@ -292,6 +301,7 @@ def get_context(context):
 
 			# Set ramo class
 			associado.ramo_class = ramo_map.get(associado.ramo, "default")
+			associado.ramo_variant = ramo_variant_map.get(associado.ramo, "secondary")
 
 			kanban_data[status_key].append(associado)
 
@@ -311,6 +321,16 @@ def get_context(context):
 		)
 	else:
 		context.recepcao_users = []
+
+	# Items para o componente `select` do design system Basecoat
+	context.recepcao_user_items = [
+		{"label": u.full_name or u.name, "value": u.name}
+		for u in context.recepcao_users
+	]
+	context.ramo_items = [
+		{"label": r, "value": r}
+		for r in ["Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro"]
+	]
 
 	return context
 

@@ -1,79 +1,22 @@
-{% extends "templates/web_sidebar_base.html" %}
-{% block title %}Projetos{% endblock %}
-{% set active_link = '/projetos' %}
+{% extends "templates/web_module_index_base.html" %}
 
-{% block head_include %}
-{{ super() }}
-{% endblock %}
-
-{% block page_header %}
-<div class="page-header">
-	<div class="page-header__content">
-		<h1 class="page-header__title">Projetos</h1>
-		<p class="page-header__subtitle">Acesse as funcionalidades do portal de projetos.</p>
-	</div>
-</div>
-{% endblock %}
-
-{% block main %}
-<div class="inicio-cards-grid">
-	<a href="/projetos/visao_geral" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
-		<div class="inicio-card__icon inicio-card__icon--info">
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<rect x="3" y="3" width="7" height="7"></rect>
-				<rect x="14" y="3" width="7" height="7"></rect>
-				<rect x="14" y="14" width="7" height="7"></rect>
-				<rect x="3" y="14" width="7" height="7"></rect>
-			</svg>
-		</div>
-		<div class="inicio-card__content">
-			<h2 class="inicio-card__title">Todos os projetos</h2>
-			<p class="inicio-card__description">Visualize todos os projetos em Kanban por status.</p>
-		</div>
-		<div class="inicio-card__arrow">
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<path d="M5 12h14M12 5l7 7-7 7" />
-			</svg>
-		</div>
-	</a>
-
-	<a href="/projetos/meus_projetos" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
-		<div class="inicio-card__icon inicio-card__icon--info">
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-				<circle cx="12" cy="7" r="4"></circle>
-			</svg>
-		</div>
-		<div class="inicio-card__content">
-			<h2 class="inicio-card__title">Meus projetos</h2>
-			<p class="inicio-card__description">Projetos nos quais você participa.</p>
-		</div>
-		<div class="inicio-card__arrow">
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<path d="M5 12h14M12 5l7 7-7 7" />
-			</svg>
-		</div>
-	</a>
-
-	<a href="/projetos/cadastrar_novo_projeto" class="inicio-card inicio-card--nav card-modern card-modern--clickable">
-		<div class="inicio-card__icon inicio-card__icon--info">
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<path d="M9 18h6"></path>
-				<path d="M10 22h4"></path>
-				<path d="M12 2a7 7 0 0 0-4 12.75c.5.4 1 1.15 1 2.25h6c0-1.1.5-1.85 1-2.25A7 7 0 0 0 12 2z"></path>
-				<line x1="21.5" y1="0.5" x2="21.5" y2="4.5"></line>
-				<line x1="19.5" y1="2.5" x2="23.5" y2="2.5"></line>
-			</svg>
-		</div>
-		<div class="inicio-card__content">
-			<h2 class="inicio-card__title">Cadastrar novo projeto</h2>
-			<p class="inicio-card__description">Abra o formulário completo para criar e submeter um projeto.</p>
-		</div>
-		<div class="inicio-card__arrow">
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-				<path d="M5 12h14M12 5l7 7-7 7" />
-			</svg>
-		</div>
-	</a>
-</div>
-{% endblock %}
+{% set active_link = "/projetos" %}
+{% set module_title = "Projetos" %}
+{% set module_subtitle = "Acesse as funcionalidades do portal de projetos." %}
+{% set module_items = [
+	{
+		"href": "/projetos/visao_geral",
+		"title": "Todos os projetos",
+		"description": "Visualize todos os projetos em Kanban por status.",
+	},
+	{
+		"href": "/projetos/meus_projetos",
+		"title": "Meus projetos",
+		"description": "Projetos nos quais você participa.",
+	},
+	{
+		"href": "/projetos/cadastrar_novo_projeto",
+		"title": "Cadastrar novo projeto",
+		"description": "Abra o formulário completo para criar e submeter um projeto.",
+	},
+] %}

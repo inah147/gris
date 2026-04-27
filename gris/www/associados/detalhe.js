@@ -91,6 +91,7 @@
     if (createUserBtn) {
       createUserBtn.onclick = () => createUserConfirmDlg?.showModal();
 
+      // Listener para confirmar criação
       if (confirmCreateUserBtn) {
         confirmCreateUserBtn.onclick = async () => {
           const originalConfirmText = confirmCreateUserBtn.textContent;
@@ -135,6 +136,13 @@
             }
           }
         };
+      }
+
+      // Listener para botões de cancelar no dialog de criar usuário
+      if (createUserConfirmDlg) {
+        createUserConfirmDlg.querySelectorAll('[data-dialog-close]').forEach(btn => {
+          btn.addEventListener('click', () => createUserConfirmDlg?.close());
+        });
       }
     }
 

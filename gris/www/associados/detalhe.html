@@ -173,7 +173,7 @@
     {% if can_edit_member and has_open_historico %}
     {% set chevron_icon = lucide_icon("chevron-down", size="sm") %}
     {% set danger_title %}<span class="dangerous-actions-title"><span>Ações Perigosas</span>{{ chevron_icon }}</span>{% endset %}
-    {% set danger_content %}<p class="text-muted-foreground text-sm mb-4">Essas ações podem afetar permanentemente o registro do associado dentro do Gris.</p><button type="button" id="btn-afastar" class="btn-outline btn-destructive btn-sm">Afastar Associado</button>{% endset %}
+    {% set danger_content %}<p class="text-muted-foreground text-sm mb-4">Essas ações podem afetar permanentemente o registro do associado dentro do Gris.</p><button type="button" id="btn-afastar" class="btn-sm-destructive">Afastar Associado</button>{% endset %}
     {% set accordion_html %}{{ accordion(items=[{"title": danger_title, "content": danger_content, "open": false}], attrs={"class": "dangerous-actions-accordion"}) }}{% endset %}
     {{ alert(
       icon=lucide_icon("triangle-alert", size="sm"),
@@ -187,7 +187,7 @@
     {% call dialog(
       id="modalHistorico",
       title="Gerenciar Histórico no Grupo",
-      footer='<button type="button" id="btn-save-historico" class="btn-primary btn-sm">Salvar Alterações</button>',
+      footer='<button type="button" id="btn-save-historico" class="btn-sm-primary">Salvar Alterações</button>',
       close_button=true
     ) %}
       <div id="historico-list"></div>
@@ -203,7 +203,7 @@
       id="confirmAfastarDialog",
       title="Afastar Associado",
       description="Confirma o afastamento deste associado? Esta ação não pode ser desfeita.",
-      footer='<button type="button" class="btn-ghost btn-sm" data-dialog-close>Cancelar</button><button type="button" id="btn-confirm-afastar" class="btn-destructive btn-sm">Confirmar Afastamento</button>',
+      footer='<button type="button" class="btn-sm-ghost" data-dialog-close>Cancelar</button><button type="button" id="btn-confirm-afastar" class="btn-sm-destructive">Confirmar Afastamento</button>',
       close_button=false
     ) }}
 
@@ -212,7 +212,7 @@
       id="confirmRemoveHistoricoDialog",
       title="Remover Período",
       description="Confirma a remoção deste período do histórico? Esta ação não pode ser desfeita.",
-      footer='<button type="button" class="btn-ghost btn-sm" data-dialog-close>Cancelar</button><button type="button" id="btn-confirm-remove-historico" class="btn-destructive btn-sm">Confirmar Remoção</button>',
+      footer='<button type="button" class="btn-sm-ghost" data-dialog-close>Cancelar</button><button type="button" id="btn-confirm-remove-historico" class="btn-sm-destructive">Confirmar Remoção</button>',
       close_button=false
     ) }}
 
@@ -222,7 +222,7 @@
       id="modalCreateUserConfirm",
       title="Criar usuário do associado",
       description="Deseja criar o usuário para este associado usando o ID Escoteiros informado?",
-      footer='<button type="button" class="btn-ghost btn-sm" data-dialog-close>Cancelar</button><button type="button" id="btn-confirm-create-user" class="btn-primary btn-sm">Confirmar</button>',
+      footer='<button type="button" class="btn-sm-ghost" data-dialog-close>Cancelar</button><button type="button" id="btn-confirm-create-user" class="btn-sm-primary">Confirmar</button>',
       close_button=false
     ) }}
 
@@ -230,7 +230,7 @@
     {% call dialog(
       id="modalCreateUserResult",
       title="Resultado",
-      footer='<button type="button" class="btn-primary btn-sm" data-dialog-close>Fechar</button>',
+      footer='<button type="button" class="btn-sm-primary" data-dialog-close>Fechar</button>',
       close_button=true
     ) %}
       <div id="create-user-result-body"></div>

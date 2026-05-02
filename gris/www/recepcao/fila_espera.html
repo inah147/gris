@@ -1,72 +1,54 @@
-{% extends "templates/web_sidebar_base.html" %} {% block title %}Fila de Espera - Recepção{%
-endblock %} {% block head_include %} {{ super() }}
-<link rel="stylesheet" href="/recepcao/fila_espera.css" />
-<link
-	rel="stylesheet"
-	href="/assets/frappe/node_modules/frappe-charts/dist/frappe-charts.min.css"
-/>
-<script src="/assets/frappe/node_modules/frappe-charts/dist/frappe-charts.umd.js"></script>
-{% endblock %} {% block page_header %}
-<div class="page-header">
-	<div class="page-header__content">
-		<h1 class="page-header__title">Fila de Espera</h1>
-		<p class="page-header__subtitle">Acompanhe a fila de espera por ramo.</p>
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, badge %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+
+{% block title %}Fila de Espera - Recepção{% endblock %}
+
+{% block head_include %}
+	{{ super() }}
+	<link rel="stylesheet" href="/recepcao/fila_espera.css" />
+{% endblock %}
+
+{% block page_header %}
+	<div class="page-header-row mb-6">
+		<div>
+			<h1 class="text-3xl font-bold tracking-tight">Fila de Espera</h1>
+			<p class="text-muted-foreground">Acompanhe a fila de espera por ramo.</p>
+		</div>
 	</div>
-</div>
-{% endblock %} {% block main %}
+{% endblock %}
+
+{% block main %}
 <div class="kanban-container">
 	{% for ramo in kanban_columns %}
 	<div class="kanban-column" data-ramo="{{ ramo }}">
 		<div class="kanban-column__header">
-			<div>
+			<div class="kanban-column__heading">
 				<h3 class="kanban-column__title">{{ ramo }}</h3>
-				<small
-					class="text-muted"
-					style="
-						font-size: 0.75rem;
-						display: flex;
-						align-items: center;
-						gap: 4px;
-						margin-top: 2px;
-					"
+				<button
+					type="button"
+					class="kanban-column__vagas"
+					data-ramo="{{ ramo }}"
+					data-limite="{{ vagas_por_ramo[ramo].limite }}"
+					data-ativos="{{ vagas_por_ramo[ramo].ativos }}"
+					data-novos="{{ vagas_por_ramo[ramo].novos }}"
+					data-saindo="{{ vagas_por_ramo[ramo].saindo }}"
+					data-disponiveis="{{ vagas_por_ramo[ramo].disponiveis }}"
+					data-chart-labels='{{ vagas_por_ramo[ramo].chart_labels | tojson }}'
+					data-chart-values='{{ vagas_por_ramo[ramo].chart_values | tojson }}'
+					aria-label="Ver detalhes de vagas do ramo {{ ramo }}"
 				>
-					{{ vagas_por_ramo[ramo].disponiveis }} vagas disponíveis
-					<span
-						style="cursor: pointer; display: inline-flex; align-items: center"
-						data-ramo="{{ ramo }}"
-						data-limite="{{ vagas_por_ramo[ramo].limite }}"
-						data-ativos="{{ vagas_por_ramo[ramo].ativos }}"
-						data-novos="{{ vagas_por_ramo[ramo].novos }}"
-						data-saindo="{{ vagas_por_ramo[ramo].saindo }}"
-						data-disponiveis="{{ vagas_por_ramo[ramo].disponiveis }}"
-						data-chart-labels='{{ vagas_por_ramo[ramo].chart_labels | tojson }}'
-						data-chart-values='{{ vagas_por_ramo[ramo].chart_values | tojson }}'
-						onclick="openVagasModal(this)"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="14"
-							height="14"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						>
-							<circle cx="12" cy="12" r="10"></circle>
-							<line x1="12" y1="16" x2="12" y2="12"></line>
-							<line x1="12" y1="8" x2="12.01" y2="8"></line>
-						</svg>
-					</span>
-				</small>
+					<span>{{ vagas_por_ramo[ramo].disponiveis }} vagas disponíveis</span>
+					{{ lucide_icon("info", size="sm") }}
+				</button>
 			</div>
-			<span class="g-badge g-badge--secondary">{{ kanban_data[ramo]|length }}</span>
+			{{ badge(kanban_data[ramo]|length|string, variant="secondary") }}
 		</div>
 		<div class="kanban-column__body">
 			{% for card in kanban_data[ramo] %}
-			<div
-				class="kanban-card card-modern"
+			<article
+				class="card kanban-card"
 				data-id="{{ card.name }}"
 				data-associado="{{ card.associado }}"
 				data-nome="{{ card.nome_completo }}"
@@ -77,204 +59,139 @@ endblock %} {% block head_include %} {{ super() }}
 				data-data-inclusao="{{ card.dt_inclusao_fila.strftime('%d/%m/%Y') }}"
 			>
 				<div class="kanban-card__top">
-					<span class="g-badge g-badge--primary">#{{ card.posicao }}</span>
+					{{ badge("#" ~ card.posicao, variant=ramo_variant_map.get(ramo, "secondary")) }}
 				</div>
 				<div class="kanban-card__main">
 					<h4 class="kanban-card__title">{{ card.nome_completo }}</h4>
 					<p class="kanban-card__subtitle">{{ card.responsavel_nome }}</p>
 				</div>
-			</div>
+			</article>
 			{% endfor %}
 		</div>
 	</div>
 	{% endfor %}
 </div>
 
-<!-- Modal Fila de Espera -->
-<div class="modal-modern d-none" id="modalFilaEspera" tabindex="-1">
-	<div class="modal-dialog">
-		<div class="modal-modern__content">
-			<div class="modal-modern__header">
-				<h5 class="modal-modern__title">Detalhes da Fila de Espera</h5>
-			</div>
-			<div class="modal-modern__body">
-				<div class="info-group">
-					<label class="info-label">Associado</label>
-					<div class="info-value" id="modalAssociadoNome"></div>
-				</div>
-				<div class="info-group">
-					<label class="info-label">Responsável</label>
-					<div class="info-value" id="modalResponsavelNome"></div>
-				</div>
-				<div class="info-group">
-					<label class="info-label">Posição na Fila</label>
-					<div class="info-value" id="modalPosicao"></div>
-				</div>
-				<div class="info-group">
-					<label class="info-label">Previsão de Chamada</label>
-					<div class="info-value" id="modalPrevisao"></div>
-				</div>
-				<div class="info-group">
-					<label class="info-label">Data de Inclusão</label>
-					<div class="info-value" id="modalDataInclusao"></div>
-				</div>
+{# ----------- Modal Detalhes da Fila de Espera ----------- #}
+{% set fila_footer %}
+	<button type="button" class="btn-ghost" data-dialog-close>Fechar</button>
+{% endset %}
 
-				<div class="modal-actions-vertical">
-					<button
-						class="btn-modern btn-modern--primary w-100"
-						onclick="chamarAssociado()"
-					>
-						Chamar
-					</button>
-					<button class="btn-modern btn-modern--outline w-100" onclick="openFicha()">
-						Abrir Ficha
-					</button>
-					<button
-						class="btn-modern btn-modern--outline w-100"
-						onclick="registrarDesistencia()"
-					>
-						Desistência
-					</button>
-				</div>
-			</div>
-			<div class="modal-modern__footer">
-				<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>
-					Fechar
-				</button>
-			</div>
+{% call dialog(
+	id="modalFilaEspera",
+	title="Detalhes da Fila de Espera",
+	footer=fila_footer,
+	close_button=true,
+	dialog_attrs={"class": "fila-dialog"}
+) %}
+	<div class="dialog-info-grid">
+		<div class="dialog-field dialog-info-grid__full">
+			<span class="dialog-field__label">Associado</span>
+			<span class="dialog-field__value" id="modalAssociadoNome"></span>
+		</div>
+		<div class="dialog-field dialog-info-grid__full">
+			<span class="dialog-field__label">Responsável</span>
+			<span class="dialog-field__value" id="modalResponsavelNome"></span>
+		</div>
+		<div class="dialog-field">
+			<span class="dialog-field__label">Posição na Fila</span>
+			<span class="dialog-field__value" id="modalPosicao"></span>
+		</div>
+		<div class="dialog-field">
+			<span class="dialog-field__label">Previsão de Chamada</span>
+			<span class="dialog-field__value" id="modalPrevisao"></span>
+		</div>
+		<div class="dialog-field dialog-info-grid__full">
+			<span class="dialog-field__label">Data de Inclusão</span>
+			<span class="dialog-field__value" id="modalDataInclusao"></span>
 		</div>
 	</div>
-</div>
 
-<!-- Modal Confirmar Desistência -->
-<div class="modal-modern d-none" id="modalConfirmarDesistencia" tabindex="-1">
-	<div class="modal-dialog">
-		<div class="modal-modern__content">
-			<div class="modal-modern__header">
-				<h5 class="modal-modern__title">Confirmar Desistência</h5>
-			</div>
-			<div class="modal-modern__body">
-				<div class="alert-modern alert-modern--warning mb-3">
-					<div class="alert-modern__content">
-						<p class="mb-0">
-							Tem certeza que deseja registrar a desistência deste associado? Esta
-							ação não pode ser desfeita.
-						</p>
-					</div>
-				</div>
-				<p class="text-muted mb-3">
-					Ao confirmar, o registro do Novo Associado será excluído. Se o responsável não
-					tiver outros vínculos, seu cadastro também será removido.
-				</p>
-			</div>
-			<div class="modal-modern__footer">
-				<button
-					type="button"
-					class="btn-modern btn-modern--ghost"
-					onclick="closeConfirmarDesistencia()"
-				>
-					Cancelar
-				</button>
-				<button
-					type="button"
-					class="btn-modern btn-modern--danger"
-					onclick="confirmarDesistencia()"
-				>
-					Confirmar Desistência
-				</button>
-			</div>
-		</div>
+	<div class="dialog-actions dialog-actions--vertical">
+		<button type="button" class="btn-primary" id="btnChamarAssociado">
+			{{ lucide_icon("phone-call", size="sm") }} Chamar
+		</button>
+		<button type="button" class="btn-outline" id="btnAbrirFicha">
+			{{ lucide_icon("file-user", size="sm") }} Abrir Ficha
+		</button>
+		<button type="button" class="btn-destructive" id="btnRegistrarDesistencia">
+			{{ lucide_icon("door-open", size="sm") }} Desistência
+		</button>
 	</div>
-</div>
+{% endcall %}
 
-<!-- Modal Detalhes Vagas -->
-<div class="modal-modern d-none" id="modalVagas" tabindex="-1">
-	<div class="modal-dialog modal-dialog-scrollable">
-		<div class="modal-modern__content">
-			<div class="modal-modern__header">
-				<h5 class="modal-modern__title">
-					Cálculo de Vagas - <span id="modalVagasRamo"></span>
-				</h5>
-			</div>
-			<div class="modal-modern__body">
-				<div
-					class="info-group"
-					style="
-						display: flex;
-						justify-content: space-between;
-						border-bottom: 1px solid #eee;
-						padding-bottom: 8px;
-					"
-				>
-					<span class="text-muted">Limite de vagas no ramo</span>
-					<span class="font-weight-bold" id="vagasLimite"></span>
-				</div>
-				<div
-					class="info-group"
-					style="
-						display: flex;
-						justify-content: space-between;
-						border-bottom: 1px solid #eee;
-						padding-bottom: 8px;
-					"
-				>
-					<span class="text-muted">(-) Associados ativos</span>
-					<span class="font-weight-bold" id="vagasAtivos"></span>
-				</div>
-				<div
-					class="info-group"
-					style="
-						display: flex;
-						justify-content: space-between;
-						border-bottom: 1px solid #eee;
-						padding-bottom: 8px;
-					"
-				>
-					<span class="text-muted">(-) Novos associados (em processo)</span>
-					<span class="font-weight-bold" id="vagasNovos"></span>
-				</div>
-				<div
-					class="info-group"
-					style="
-						display: flex;
-						justify-content: space-between;
-						border-bottom: 1px solid #eee;
-						padding-bottom: 8px;
-					"
-				>
-					<span class="text-muted">(+) Atingindo idade limite (6 meses)</span>
-					<span class="font-weight-bold" id="vagasSaindo"></span>
-				</div>
-				<div
-					class="info-group"
-					style="
-						display: flex;
-						justify-content: space-between;
-						margin-top: 16px;
-						font-size: 1.1em;
-					"
-				>
-					<span class="font-weight-bold">Total Disponível</span>
-					<span
-						class="font-weight-bold"
-						id="vagasDisponiveis"
-						style="color: var(--color-primary)"
-					></span>
-				</div>
+{# ----------- Modal Confirmar Desistência ----------- #}
+{% set confirmar_footer %}
+	<button type="button" class="btn-ghost" id="btnCancelarDesistencia">Cancelar</button>
+	<button type="button" class="btn-destructive" id="btnConfirmarDesistencia">Confirmar Desistência</button>
+{% endset %}
 
-				<div id="vagasChartContainer" style="margin-top: 24px">
-					<h6 style="margin-bottom: 12px; font-weight: 600">
-						Previsão de Vagas (Próximos 12 meses)
-					</h6>
-					<div id="vagasChart" style="min-height: 250px"></div>
-				</div>
-			</div>
-			<div class="modal-modern__footer">
-				<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>
-					Fechar
-				</button>
-			</div>
+{% call dialog(
+	id="modalConfirmarDesistencia",
+	title="Confirmar Desistência",
+	footer=confirmar_footer,
+	close_button=false,
+	close_on_overlay_click=false
+) %}
+	{{ alert(
+		icon=lucide_icon("triangle-alert", size="sm"),
+		description="Tem certeza que deseja registrar a desistência deste associado? Esta ação não pode ser desfeita.",
+		variant="warning",
+		attrs={"class": "mb-4"}
+	) }}
+	<p class="text-muted-foreground text-sm">
+		Ao confirmar, o registro do Novo Associado será excluído. Se o responsável não tiver outros vínculos,
+		seu cadastro também será removido.
+	</p>
+{% endcall %}
+
+{# ----------- Modal Detalhes de Vagas ----------- #}
+{% set vagas_footer %}
+	<button type="button" class="btn-ghost" data-dialog-close>Fechar</button>
+{% endset %}
+
+{% call dialog(
+	id="modalVagas",
+	title="Cálculo de Vagas",
+	footer=vagas_footer,
+	close_button=true,
+	dialog_attrs={"class": "fila-dialog fila-dialog--vagas"}
+) %}
+	<p class="text-muted-foreground text-sm mb-4">
+		Ramo: <span class="font-medium text-foreground" id="modalVagasRamo"></span>
+	</p>
+
+	<dl class="vagas-breakdown">
+		<div class="vagas-breakdown__row">
+			<dt>Limite de vagas no ramo</dt>
+			<dd id="vagasLimite">—</dd>
 		</div>
-	</div>
-</div>
+		<div class="vagas-breakdown__row">
+			<dt>(−) Associados ativos</dt>
+			<dd id="vagasAtivos">—</dd>
+		</div>
+		<div class="vagas-breakdown__row">
+			<dt>(−) Novos associados (em processo)</dt>
+			<dd id="vagasNovos">—</dd>
+		</div>
+		<div class="vagas-breakdown__row">
+			<dt>(+) Atingindo idade limite (6 meses)</dt>
+			<dd id="vagasSaindo">—</dd>
+		</div>
+		<div class="vagas-breakdown__row vagas-breakdown__row--total">
+			<dt>Total disponível</dt>
+			<dd id="vagasDisponiveis">—</dd>
+		</div>
+	</dl>
+
+	<section class="vagas-chart">
+		<h3 class="vagas-chart__title">Previsão de vagas (próximos 12 meses)</h3>
+		<div class="vagas-chart__canvas" id="vagasChart" role="img" aria-label="Previsão de vagas nos próximos 12 meses"></div>
+	</section>
+{% endcall %}
+{% endblock %}
+
+{% block script %}
+	{{ super() }}
+	<script src="/recepcao/fila_espera.js"></script>
 {% endblock %}

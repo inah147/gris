@@ -1,84 +1,53 @@
-{% extends "templates/web_sidebar_base.html" %} {% block title %}Relatórios Financeiros{% endblock
-%} {% set active_link = '/financeiro/relatorios' %} {% block page_header %}
-<div class="page-header">
-	<div class="page-header__content">
-		<h1 class="page-header__title">Relatórios Financeiros</h1>
-		<p class="page-header__subtitle">Acesse relatórios contábeis e demonstrativos.</p>
-	</div>
-</div>
-{% endblock %} {% block main %}
-<div class="inicio-cards-grid">
-	<a
-		href="/financeiro/relatorio_contabil"
-		class="inicio-card inicio-card--nav card-modern card-modern--clickable"
-	>
-		<div class="inicio-card__icon inicio-card__icon--success">
-			<svg
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			>
-				<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-				<polyline points="14 2 14 8 20 8"></polyline>
-				<line x1="16" y1="13" x2="8" y2="13"></line>
-				<line x1="16" y1="17" x2="8" y2="17"></line>
-				<polyline points="10 9 9 9 8 9"></polyline>
-			</svg>
-		</div>
-		<div class="inicio-card__content">
-			<h2 class="inicio-card__title">Relatório Contábil</h2>
-			<p class="inicio-card__description">Informações contábeis detalhadas</p>
-		</div>
-		<div class="inicio-card__arrow">
-			<svg
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			>
-				<path d="M5 12h14M12 5l7 7-7 7" />
-			</svg>
-		</div>
-	</a>
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
-	<a
-		href="/financeiro/demonstrativo"
-		class="inicio-card inicio-card--nav card-modern card-modern--clickable"
-	>
-		<div class="inicio-card__icon inicio-card__icon--success">
-			<svg
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			>
-				<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-				<polyline points="13 2 13 9 20 9"></polyline>
-			</svg>
-		</div>
-		<div class="inicio-card__content">
-			<h2 class="inicio-card__title">Demonstrativo Financeiro</h2>
-			<p class="inicio-card__description">Demonstrativo consolidado da organização</p>
-		</div>
-		<div class="inicio-card__arrow">
-			<svg
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			>
-				<path d="M5 12h14M12 5l7 7-7 7" />
-			</svg>
-		</div>
-	</a>
+{% block title %}Relatórios Financeiros{% endblock %}
+
+{% set active_link = '/financeiro/relatorios' %}
+
+{% block page_header %}
+<section class="financeiro-page-header" aria-labelledby="financeiro-relatorios-title">
+	<div class="flex flex-col gap-2 max-w-2xl">
+		<h1 id="financeiro-relatorios-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Relatórios Financeiros</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">Acesse relatórios contábeis e demonstrativos.</p>
+	</div>
+</section>
+{% endblock %}
+
+{% block main %}
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+	{% set relatorios_links = [
+		{
+			"href": "/financeiro/relatorio_contabil",
+			"icon": "file-text",
+			"title": "Relatório Contábil",
+			"description": "Informações contábeis detalhadas."
+		},
+		{
+			"href": "/financeiro/demonstrativo",
+			"icon": "chart-line",
+			"title": "Demonstrativo Financeiro",
+			"description": "Demonstrativo consolidado da organização."
+		}
+	] %}
+	{% for item in relatorios_links %}
+		<a href="{{ item.href }}" class="financeiro-nav-link" aria-label="{{ item.title }}">
+			{% call card(attrs={"class": "financeiro-nav-card"}) %}
+				<div class="flex items-start gap-4">
+					<div class="financeiro-nav-card__icon" aria-hidden="true">
+						{{ lucide_icon(item.icon, size="md") }}
+					</div>
+					<div class="flex-1 min-w-0">
+						<h2 class="m-0 text-lg font-semibold text-foreground">{{ item.title }}</h2>
+						<p class="m-0 mt-1 text-sm text-muted-foreground">{{ item.description }}</p>
+					</div>
+					<span class="financeiro-nav-card__arrow text-muted-foreground" aria-hidden="true">
+						{{ lucide_icon("arrow-right", size="sm") }}
+					</span>
+				</div>
+			{% endcall %}
+		</a>
+	{% endfor %}
 </div>
 {% endblock %}

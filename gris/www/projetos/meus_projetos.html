@@ -1,48 +1,52 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, card, empty %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 {% block title %}Meus Projetos{% endblock %}
 {% set active_link = '/projetos/meus_projetos' %}
 
 {% block head_include %}
 {{ super() }}
-<link rel="stylesheet" href="/projetos/visao_geral.css" />
 <link rel="stylesheet" href="/projetos/meus_projetos.css" />
 {% endblock %}
 
 {% block page_header %}
-<div class="page-header">
-	<div class="page-header__content">
-		<h1 class="page-header__title">Meus projetos</h1>
-		<p class="page-header__subtitle">Projetos em que você atua como coordenador, equipe, padrinho ou envolvido.</p>
+<section class="my-projects-page-header" aria-labelledby="my-projects-page-title">
+	<div class="flex flex-col gap-2 max-w-2xl">
+		<h1 id="my-projects-page-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Meus projetos</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">Projetos em que você atua como coordenador, equipe, padrinho ou envolvido.</p>
 	</div>
-</div>
+</section>
 {% endblock %}
 
 {% block main %}
 {% if meus_projetos %}
 <div class="meus-projetos-grid">
 	{% for card in meus_projetos %}
-	<div class="kanban-card card-modern">
-		<div class="kanban-card__top">
-			<span class="g-badge g-badge--info">{{ card.status_label }}</span>
-		</div>
-		<div class="kanban-card__main">
-			<h4 class="kanban-card__title">{{ card.titulo }}</h4>
-			<p class="kanban-card__subtitle">Coordenador: {{ card.coordenador }}</p>
-		</div>
-	</div>
+		{% set status_variant = "destructive" if card.status == "Cancelado" else ("secondary" if card.status in ["Rascunho", "Concluido"] else "default") %}
+		<a class="meus-projetos-card-link" href="{{ card.detail_url }}" aria-label="Abrir projeto {{ card.titulo }}">
+			{% call card(attrs={"class": "meus-projetos-card"}) %}
+				<div class="meus-projetos-card__eyebrow">
+					{{ badge(card.status_label, variant=status_variant) }}
+					<span class="meus-projetos-card__eyebrow-text">Projeto vinculado</span>
+				</div>
+				<div class="meus-projetos-card__content">
+					<h2 class="meus-projetos-card__title">{{ card.titulo }}</h2>
+					<p class="meus-projetos-card__subtitle">Coordenador: {{ card.coordenador }}</p>
+				</div>
+				<div class="meus-projetos-card__cta">
+					<span>Abrir projeto</span>
+					{{ lucide_icon("arrow-up-right", size="sm") }}
+				</div>
+			{% endcall %}
+		</a>
 	{% endfor %}
 </div>
 {% else %}
-<div class="empty-state">
-	<svg class="empty-state__icon" viewBox="0 0 24 24">
-		<path d="M3 7h18"></path>
-		<path d="M3 12h18"></path>
-		<path d="M3 17h18"></path>
-		<path d="M7 3v18"></path>
-		<path d="M17 3v18"></path>
-	</svg>
-	<h3 class="empty-state__title">Nenhum projeto vinculado</h3>
-	<p class="empty-state__description">Você ainda não possui projetos vinculados ao seu perfil.</p>
-</div>
+	{{ empty(
+		title="Nenhum projeto vinculado",
+		description="Você ainda não possui projetos vinculados ao seu perfil.",
+		icon=lucide_icon("folder-search", size="lg"),
+		attrs={"class": "meus-projetos-empty"}
+	) }}
 {% endif %}
 {% endblock %}

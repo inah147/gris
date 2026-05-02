@@ -79,6 +79,83 @@ def _is_date_available_for_ramo(ramo, date_value):
 	return True
 
 
+def _get_available_visit_dates_for_responsavel(responsavel_name, include_scheduled=False):
+	if not responsavel_name:
+		return []
+
+	vinculos = frappe.get_all(
+		"Responsavel Vinculo",
+		filters={"responsavel": responsavel_name},
+		fields=["beneficiario_novo_associado"],
+	)
+	novo_associado_names = [v.beneficiario_novo_associado for v in vinculos if v.beneficiario_novo_associado]
+
+	if not novo_associado_names:
+		return []
+
+	beneficiary_filters = {"name": ["in", novo_associado_names]}
+	if not include_scheduled:
+		beneficiary_filters["visita_agendada"] = 0
+
+	beneficiaries = frappe.get_all("Novo Associado", filters=beneficiary_filters, fields=["ramo"])
+
+	if not beneficiaries and not include_scheduled:
+		beneficiaries = frappe.get_all(
+			"Novo Associado",
+			filters={"name": ["in", novo_associado_names]},
+			fields=["ramo"],
+		)
+
+	target_ramos = {row.ramo for row in beneficiaries if row.ramo}
+	target_sections = _get_sections_by_ramos(target_ramos)
+
+	start_date = getdate(today())
+	end_date = add_days(start_date, 60)
+
+	saturdays = []
+	current = start_date
+	while current <= end_date:
+		if current.weekday() == 5:
+			saturdays.append(current)
+		current = add_days(current, 1)
+
+	if not saturdays:
+		return []
+
+	activities = frappe.get_all(
+		"Calendario",
+		filters={"inicio": ["<=", end_date], "termino": [">=", start_date]},
+		fields=["inicio", "termino", "secao", "abertura_geral"],
+	)
+
+	blocked_dates = set()
+	for act in activities:
+		if cint(act.abertura_geral):
+			continue
+
+		if not target_sections:
+			continue
+
+		if not act.secao or act.secao not in target_sections:
+			continue
+
+		act_start = getdate(act.inicio)
+		act_end = getdate(act.termino)
+
+		for sat in saturdays:
+			if act_start <= sat <= act_end:
+				blocked_dates.add(sat)
+
+	return [
+		{
+			"value": sat.strftime("%Y-%m-%d"),
+			"label": frappe.format_value(sat, {"fieldtype": "Date"}),
+		}
+		for sat in saturdays
+		if sat not in blocked_dates
+	]
+
+
 def get_context(context):
 	if frappe.session.user == "Guest":
 		frappe.local.flags.redirect_location = "/login?redirect-to=/responsavel/beneficiarios"
@@ -86,10 +163,18 @@ def get_context(context):
 
 	user = frappe.session.user
 	responsavel_name = _get_responsavel_name(user)
+	context.visit_info = None
+	context.visit_date_options = []
+	context.show_schedule_button = False
+	context.responsavel_cpf = ""
+	context.today_iso = today()
 
 	if not responsavel_name:
 		context.beneficiarios_registrados = []
 		context.beneficiarios_integracao = []
+		context.sidebar_title = "Painel do Responsável"
+		context.active_link = "/responsavel/beneficiarios"
+		enrich_context(context, "/responsavel/beneficiarios")
 		return context
 
 	# Get links
@@ -134,7 +219,9 @@ def get_context(context):
 		for b in beneficiarios_registrados:
 			if b.validade_registro:
 				b.validade_registro = frappe.format_value(b.validade_registro, {"fieldtype": "Date"})
-			b.status_class = _status_badge_class(b.status)
+			status_badge = _status_badge_meta(b.status)
+			b.status_badge_variant = status_badge["variant"]
+			b.status_badge_outline = status_badge["outline"]
 
 	# Fetch Novo Associados
 	beneficiarios_integracao = []
@@ -255,6 +342,10 @@ def get_context(context):
 	context.beneficiarios_registrados = beneficiarios_registrados
 	context.beneficiarios_integracao = beneficiarios_integracao
 	context.show_schedule_button = show_schedule_button and not visit_info
+	context.visit_date_options = _get_available_visit_dates_for_responsavel(
+		responsavel_name,
+		include_scheduled=bool(visit_info),
+	)
 	context.responsavel_cpf = responsavel_cpf
 
 	context.sidebar_title = "Painel do Responsável"
@@ -268,80 +359,7 @@ def get_context(context):
 def get_available_visit_dates():
 	user = frappe.session.user
 	responsavel_name = _get_responsavel_name(user)
-	if not responsavel_name:
-		return []
-
-	# Get beneficiaries in integration
-	vinculos = frappe.get_all(
-		"Responsavel Vinculo",
-		filters={"responsavel": responsavel_name},
-		fields=["beneficiario_novo_associado"],
-	)
-	novo_associado_names = [v.beneficiario_novo_associado for v in vinculos if v.beneficiario_novo_associado]
-
-	if not novo_associado_names:
-		return []
-
-	beneficiaries = frappe.get_all(
-		"Novo Associado",
-		filters={"name": ["in", novo_associado_names], "visita_agendada": 0},
-		fields=["ramo"],
-	)
-	target_ramos = {row.ramo for row in beneficiaries if row.ramo}
-	target_sections = _get_sections_by_ramos(target_ramos)
-
-	start_date = getdate(today())
-	end_date = add_days(start_date, 60)
-
-	# Generate Saturdays
-	saturdays = []
-	current = start_date
-	while current <= end_date:
-		if current.weekday() == 5:  # Saturday
-			saturdays.append(current)
-		current = add_days(current, 1)
-
-	if not saturdays:
-		return []
-
-	# Check calendar for activities
-	# We want days with NO activity.
-	# Fetch all activities in range
-	activities = frappe.get_all(
-		"Calendario",
-		filters={"inicio": ["<=", end_date], "termino": [">=", start_date]},
-		fields=["inicio", "termino", "secao", "abertura_geral"],
-	)
-
-	blocked_dates = set()
-	for act in activities:
-		if cint(act.abertura_geral):
-			continue
-
-		if not target_sections:
-			continue
-
-		if not act.secao or act.secao not in target_sections:
-			continue
-
-		# Check which saturdays fall within this activity
-		act_start = getdate(act.inicio)
-		act_end = getdate(act.termino)
-
-		for sat in saturdays:
-			if act_start <= sat <= act_end:
-				blocked_dates.add(sat)
-
-	available_dates = [
-		{
-			"value": sat.strftime("%Y-%m-%d"),
-			"label": frappe.format_value(sat, {"fieldtype": "Date"}),
-		}
-		for sat in saturdays
-		if sat not in blocked_dates
-	]
-
-	return available_dates
+	return _get_available_visit_dates_for_responsavel(responsavel_name)
 
 
 @frappe.whitelist()
@@ -433,13 +451,13 @@ def reschedule_visit(date):
 	return schedule_visit(date)
 
 
-def _status_badge_class(status):
+def _status_badge_meta(status):
 	status = (status or "").lower()
 	if status in {"válido", "valido"}:
-		return "g-badge--success"
+		return {"variant": "primary", "outline": False}
 	if status == "vencido":
-		return "g-badge--warning"
-	return "g-badge--secondary"
+		return {"variant": "destructive", "outline": False}
+	return {"variant": "secondary", "outline": False}
 
 
 @frappe.whitelist()

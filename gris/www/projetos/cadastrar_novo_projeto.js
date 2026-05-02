@@ -173,6 +173,48 @@
         padrinho_orientador: "Padrinho/orientador (obrigatório)",
         chefe_secao: "Chefe de seção (obrigatório)",
     };
+    const SELECT_RUNTIME_CONFIG = {
+        coordenador: {
+            isCombobox: true,
+            searchPlaceholder: "Buscar coordenador...",
+            triggerClass: "project-select__trigger w-full",
+        },
+        padrinho_associado: {
+            isCombobox: true,
+            searchPlaceholder: "Buscar associado...",
+            triggerClass: "project-select__trigger w-full",
+        },
+        padrinho_responsavel: {
+            isCombobox: true,
+            searchPlaceholder: "Buscar responsável...",
+            triggerClass: "project-select__trigger w-full",
+        },
+        equipe_associado: {
+            isCombobox: true,
+            searchPlaceholder: "Buscar associado...",
+            triggerClass: "project-select__trigger w-full",
+        },
+        equipe_responsavel: {
+            isCombobox: true,
+            searchPlaceholder: "Buscar responsável...",
+            triggerClass: "project-select__trigger w-full",
+        },
+        aprovador_associado: {
+            isCombobox: true,
+            searchPlaceholder: "Buscar associado...",
+            triggerClass: "project-select__trigger w-full",
+        },
+        aprovador_responsavel: {
+            isCombobox: true,
+            searchPlaceholder: "Buscar responsável...",
+            triggerClass: "project-select__trigger w-full",
+        },
+        ods: {
+            isCombobox: false,
+            searchPlaceholder: "Buscar ODS...",
+            triggerClass: "project-table__select-trigger w-full",
+        },
+    };
 
     function normalizeEquipeTipoPessoa(value) {
         const raw = String(value || "").trim();
@@ -263,11 +305,204 @@
             .replace(/'/g, "&#39;");
     }
 
+    function nextRuntimeFieldId(prefix) {
+        state.cronogramaSeq += 1;
+        return `${prefix}_${state.cronogramaSeq}`;
+    }
+
+    function getFieldElementById(fieldId) {
+        return document.getElementById(fieldId);
+    }
+
+    function getFieldValueById(fieldId) {
+        const element = getFieldElementById(fieldId);
+        if (!element) return "";
+        return element.value || "";
+    }
+
+    function setFieldValueWhenReady(element, value) {
+        if (!element) return;
+
+        const apply = () => {
+            element.value = value || "";
+        };
+
+        if (
+            (element.classList?.contains("select") && element.dataset.selectInitialized === "true") ||
+            (element.classList?.contains("datepicker") && element.dataset.datepickerInitialized === "true") ||
+            (!element.classList?.contains("select") && !element.classList?.contains("datepicker") && typeof element.value !== "undefined")
+        ) {
+            apply();
+            return;
+        }
+
+        element.addEventListener("basecoat:initialized", apply, { once: true });
+    }
+
+    function getSelectConfig(selectId) {
+        return SELECT_RUNTIME_CONFIG[selectId] || {
+            isCombobox: false,
+            searchPlaceholder: "Buscar opção...",
+            triggerClass: "project-select__trigger w-full",
+        };
+    }
+
+    function renderSelectOptionsHtml(selectId, options, selectedValue) {
+        return (options || [])
+            .map((opt, index) => {
+                const value = String(opt?.value || "");
+                const label = String(opt?.label || opt?.value || "");
+                const isSelected = value === String(selectedValue || "");
+                return `
+                    <div
+                        id="${escapeHtml(selectId)}-items-${index + 1}"
+                        role="option"
+                        data-value="${escapeHtml(value)}"
+                        ${isSelected ? 'aria-selected="true"' : ""}
+                    >
+                        ${escapeHtml(label)}
+                    </div>
+                `;
+            })
+            .join("");
+    }
+
+    function renderSelectComponentHtml(selectId, options, placeholder, selectedValue, extraAttrs) {
+        const config = getSelectConfig(selectId);
+        const normalizedOptions = [
+            { value: "", label: placeholder || "Selecione..." },
+            ...((options || []).map((opt) => ({
+                value: String(opt?.value || ""),
+                label: String(opt?.label || opt?.value || ""),
+            }))),
+        ];
+        const selectedOption =
+            normalizedOptions.find((opt) => opt.value === String(selectedValue || "")) || normalizedOptions[0];
+        const icon = config.isCombobox
+            ? '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevrons-up-down-icon lucide-chevrons-up-down text-muted-foreground opacity-50 shrink-0"><path d="m7 15 5 5 5-5"></path><path d="m7 9 5-5 5 5"></path></svg>'
+            : '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down-icon lucide-chevron-down text-muted-foreground opacity-50 shrink-0"><path d="m6 9 6 6 6-6"></path></svg>';
+        const attrs = Object.entries(extraAttrs || {})
+            .map(([key, val]) => `${key}="${escapeHtml(val)}"`)
+            .join(" ");
+
+        return `
+            <div id="${escapeHtml(selectId)}" class="select project-select" ${attrs}>
+                <button
+                    type="button"
+                    class="btn-outline ${escapeHtml(config.triggerClass || "project-select__trigger w-full")}" 
+                    id="${escapeHtml(selectId)}-trigger"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                    aria-controls="${escapeHtml(selectId)}-listbox"
+                >
+                    <span class="truncate${selectedOption?.value ? "" : " text-muted-foreground"}">${escapeHtml(selectedOption?.label || placeholder || "Selecione...")}</span>
+                    ${icon}
+                </button>
+                <div id="${escapeHtml(selectId)}-popover" data-popover aria-hidden="true">
+                    ${config.isCombobox ? `
+                        <header>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search-icon lucide-search"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+                            <input
+                                type="text"
+                                value=""
+                                placeholder="${escapeHtml(config.searchPlaceholder || "Buscar opção...")}"
+                                autocomplete="off"
+                                autocorrect="off"
+                                spellcheck="false"
+                                aria-autocomplete="list"
+                                role="combobox"
+                                aria-expanded="false"
+                                aria-controls="${escapeHtml(selectId)}-listbox"
+                                aria-labelledby="${escapeHtml(selectId)}-trigger"
+                            >
+                        </header>
+                    ` : ""}
+                    <div role="listbox" id="${escapeHtml(selectId)}-listbox" aria-orientation="vertical" aria-labelledby="${escapeHtml(selectId)}-trigger">
+                        ${renderSelectOptionsHtml(selectId, normalizedOptions, selectedOption?.value || "")}
+                    </div>
+                </div>
+                <input type="hidden" name="${escapeHtml(selectId)}" value="${escapeHtml(selectedOption?.value || "")}">
+            </div>
+        `;
+    }
+
+    function renderDatepickerComponentHtml(componentId, fieldname, value, placeholder) {
+        const isoValue = parseBrToIsoDate(value || "") || String(value || "").trim();
+        return `
+            <div
+                id="${escapeHtml(componentId)}"
+                class="datepicker project-datepicker"
+                data-field="${escapeHtml(fieldname)}"
+                data-datepicker
+                data-mode="single"
+                data-locale="pt-BR"
+                data-placeholder="${escapeHtml(placeholder || "Selecione uma data")}" 
+            >
+                <button
+                    type="button"
+                    class="datepicker-trigger input project-datepicker__trigger"
+                    aria-haspopup="dialog"
+                    aria-expanded="false"
+                    aria-controls="${escapeHtml(componentId)}-popover"
+                >
+                    <svg class="ds-lucide ds-lucide--sm datepicker-trigger__icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <use href="/assets/gris/design_system/icons/lucide/sprite.svg#calendar"></use>
+                    </svg>
+                    <span class="datepicker-trigger__label" data-datepicker-label>${escapeHtml(placeholder || "Selecione uma data")}</span>
+                </button>
+                <input type="hidden" data-datepicker-value value="${escapeHtml(isoValue || "")}">
+                <div
+                    id="${escapeHtml(componentId)}-popover"
+                    class="datepicker-popover"
+                    data-datepicker-popover
+                    role="dialog"
+                    aria-modal="false"
+                    aria-label="Selecionar data"
+                    hidden
+                >
+                    <header class="datepicker-popover__header">
+                        <button type="button" class="datepicker-popover__nav" data-datepicker-prev aria-label="Mês anterior">
+                            <svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true">
+                                <use href="/assets/gris/design_system/icons/lucide/sprite.svg#chevron-left"></use>
+                            </svg>
+                        </button>
+                        <span class="datepicker-popover__title" data-datepicker-title aria-live="polite"></span>
+                        <button type="button" class="datepicker-popover__nav" data-datepicker-next aria-label="Próximo mês">
+                            <svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true">
+                                <use href="/assets/gris/design_system/icons/lucide/sprite.svg#chevron-right"></use>
+                            </svg>
+                        </button>
+                    </header>
+                    <div class="datepicker-popover__weekdays" aria-hidden="true" data-datepicker-weekdays></div>
+                    <div class="datepicker-popover__grid" role="grid" data-datepicker-grid></div>
+                    <footer class="datepicker-popover__footer">
+                        <button type="button" class="datepicker-popover__action" data-datepicker-clear>Limpar</button>
+                        <button type="button" class="datepicker-popover__action" data-datepicker-today>Hoje</button>
+                    </footer>
+                </div>
+            </div>
+        `;
+    }
+
+    function openDialogById(dialogId) {
+        const dialog = document.getElementById(dialogId);
+        if (dialog && typeof dialog.showModal === "function" && !dialog.open) {
+            dialog.showModal();
+        }
+    }
+
+    function closeDialogById(dialogId) {
+        const dialog = document.getElementById(dialogId);
+        if (dialog && typeof dialog.close === "function" && dialog.open) {
+            dialog.close();
+        }
+    }
+
     function showAlert(message, type) {
         const el = document.getElementById("formAlert");
         if (!el) return;
-        el.classList.remove("d-none", "alert-modern--error", "alert-modern--success");
-        el.classList.add(type === "error" ? "alert-modern--error" : "alert-modern--success");
+        el.classList.remove("d-none", "alert-destructive", "project-form-alert--success");
+        el.classList.add(type === "error" ? "alert-destructive" : "project-form-alert--success");
         el.textContent = message;
     }
 
@@ -345,7 +580,7 @@
     }
 
     function attachDateMask(input) {
-        if (!input || input.dataset.dateMaskBound === "1") return;
+        if (!input || input.tagName !== "INPUT" || input.type !== "text" || input.dataset.dateMaskBound === "1") return;
         input.dataset.dateMaskBound = "1";
 
         input.addEventListener("input", () => {
@@ -390,7 +625,7 @@
                     <td>
                         <button
                             type="button"
-                            class="btn-modern btn-modern--outline btn-modern--sm"
+                            class="btn-sm-outline"
                             data-resolve-review-comment="${escapeHtml(row.name || "")}"
                         >
                             Resolver
@@ -419,20 +654,12 @@
     }
 
     function openPendingReviewModal() {
-        const modal = document.getElementById("pendingReviewModal");
-        if (!modal) return;
         renderPendingReviewRows();
-        modal.classList.remove("d-none");
-        modal.setAttribute("aria-hidden", "false");
-        document.body.classList.add("info-modal-open");
+        openDialogById("pendingReviewModal");
     }
 
     function closePendingReviewModal() {
-        const modal = document.getElementById("pendingReviewModal");
-        if (!modal) return;
-        modal.classList.add("d-none");
-        modal.setAttribute("aria-hidden", "true");
-        document.body.classList.remove("info-modal-open");
+        closeDialogById("pendingReviewModal");
     }
 
     async function resolveReviewComment(commentName) {
@@ -479,19 +706,11 @@
     }
 
     function openSubmitConfirmModal() {
-        const modal = document.getElementById("submitConfirmModal");
-        if (!modal) return;
-        modal.classList.remove("d-none");
-        modal.setAttribute("aria-hidden", "false");
-        document.body.classList.add("info-modal-open");
+        openDialogById("submitConfirmModal");
     }
 
     function closeSubmitConfirmModal() {
-        const modal = document.getElementById("submitConfirmModal");
-        if (!modal) return;
-        modal.classList.add("d-none");
-        modal.setAttribute("aria-hidden", "true");
-        document.body.classList.remove("info-modal-open");
+        closeDialogById("submitConfirmModal");
     }
 
     function redirectToApprovalPage() {
@@ -559,16 +778,24 @@
         const select = document.getElementById(selectId);
         if (!select) return;
 
-        const firstOption = `<option value="">${placeholder}</option>`;
-        const optionTags = (options || [])
-            .map((opt) => `<option value="${escapeHtml(opt.value || "")}">${escapeHtml(opt.label || opt.value || "")}</option>`)
-            .join("");
-        select.innerHTML = `${firstOption}${optionTags}`;
+        const selectedValue = select.value || "";
+        select.outerHTML = renderSelectComponentHtml(selectId, options, placeholder, selectedValue);
+    }
+
+    function updateCommentsCardVisibility(value) {
+        const card = document.getElementById("project-comments-card");
+        if (!card) return;
+
+        const content = typeof value === "string"
+            ? value
+            : document.getElementById("observacoes_e_comentarios")?.value || "";
+
+        card.classList.toggle("d-none", !String(content || "").trim());
     }
 
     function getTrashButtonHtml() {
         return `
-            <button type="button" class="btn-delete-row" aria-label="Remover linha" title="Remover linha">
+            <button type="button" class="btn-icon-destructive btn-delete-row" aria-label="Remover linha" title="Remover linha">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <polyline points="3 6 5 6 21 6"></polyline>
                     <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"></path>
@@ -599,12 +826,12 @@
     function getBasicPayload() {
         return {
             nome_do_projeto: document.getElementById("nome_do_projeto")?.value || "",
-            coordenador: document.getElementById("coordenador")?.value || "",
-            data_de_inicio: parseBrToIsoDate(document.getElementById("data_de_inicio")?.value || ""),
-            data_de_termino: parseBrToIsoDate(document.getElementById("data_de_termino")?.value || ""),
-            tipo_padrinho_ou_orientador: document.getElementById("tipo_padrinho_ou_orientador")?.value || "Associado",
-            padrinho_associado: document.getElementById("padrinho_associado")?.value || "",
-            padrinho_responsavel: document.getElementById("padrinho_responsavel")?.value || "",
+            coordenador: getFieldValueById("coordenador") || "",
+            data_de_inicio: parseBrToIsoDate(getFieldValueById("data_de_inicio") || ""),
+            data_de_termino: parseBrToIsoDate(getFieldValueById("data_de_termino") || ""),
+            tipo_padrinho_ou_orientador: getFieldValueById("tipo_padrinho_ou_orientador") || "Associado",
+            padrinho_associado: getFieldValueById("padrinho_associado") || "",
+            padrinho_responsavel: getFieldValueById("padrinho_responsavel") || "",
             justificativa: document.getElementById("justificativa")?.value || "",
             alinhamento_com_escotismo: document.getElementById("alinhamento_com_escotismo")?.value || "",
             competencias: document.getElementById("competencias")?.value || "",
@@ -1009,17 +1236,25 @@
         const safeValue = escapeHtml(value || "");
 
         if (fieldname === "ods") {
-            const options = state.choices.ods
-                .map((opt) => `<option value="${escapeHtml(opt.value || "")}">${escapeHtml(opt.label || "")}</option>`)
-                .join("");
-            return `<select data-field="${fieldname}"><option value=""></option>${options}</select>`;
+            return renderSelectComponentHtml(
+                nextRuntimeFieldId("ods"),
+                state.choices.ods || [],
+                "Selecione um ODS...",
+                safeValue,
+                { "data-field": fieldname }
+            );
         }
 
         if (fieldname.includes("data_")) {
-            return `<input type="date" data-field="${fieldname}" value="${safeValue}" />`;
+            return renderDatepickerComponentHtml(
+                nextRuntimeFieldId(fieldname),
+                fieldname,
+                safeValue,
+                "Selecione a data"
+            );
         }
 
-        return `<input type="text" data-field="${fieldname}" value="${safeValue}" />`;
+        return `<input type="text" class="input" data-field="${fieldname}" value="${safeValue}" />`;
     }
 
     function createEquipeRow(rowData) {
@@ -1038,11 +1273,11 @@
                 <input type="hidden" data-field="tipo_pessoa" value="${escapeHtml(tipoPessoa)}" />
                 <input type="hidden" data-field="associado" value="${escapeHtml(associado)}" />
                 <input type="hidden" data-field="responsavel" value="${escapeHtml(responsavel)}" />
-                <input type="text" data-field="nome" value="${nome}" ${isReadOnly ? "readonly" : ""} />
+                <input type="text" class="input" data-field="nome" value="${nome}" ${isReadOnly ? "readonly" : ""} />
             </td>
-            <td><input type="text" data-field="email" value="${email}" ${isReadOnly ? "readonly" : ""} /></td>
-            <td><input type="text" data-field="telefone" value="${telefone}" ${isReadOnly ? "readonly" : ""} /></td>
-            <td><input type="text" data-field="funcao" value="${funcao}" /></td>
+            <td><input type="text" class="input" data-field="email" value="${email}" ${isReadOnly ? "readonly" : ""} /></td>
+            <td><input type="text" class="input" data-field="telefone" value="${telefone}" ${isReadOnly ? "readonly" : ""} /></td>
+            <td><input type="text" class="input" data-field="funcao" value="${funcao}" /></td>
             <td>${getTrashButtonHtml()}</td>
         `;
         return tr;
@@ -1066,21 +1301,16 @@
     }
 
     function createCronogramaRow(rowData) {
-        const inicio = normalizeDateDisplayValue(rowData?.data_inicio || "");
-        const termino = normalizeDateDisplayValue(rowData?.data_termino || "");
+        const inicio = rowData?.data_inicio || "";
+        const termino = rowData?.data_termino || "";
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td class="cronograma-cell-handle">${getCronogramaDragHandleHtml()}</td>
-            <td><input type="text" inputmode="numeric" placeholder="dd/mm/aaaa" data-field="data_inicio" value="${escapeHtml(inicio)}" /></td>
-            <td><input type="text" inputmode="numeric" placeholder="dd/mm/aaaa" data-field="data_termino" value="${escapeHtml(termino)}" /></td>
-            <td><input type="text" data-field="tarefa" value="${escapeHtml(rowData?.tarefa || "")}" /></td>
+            <td>${renderDatepickerComponentHtml(nextRuntimeFieldId("cronograma_inicio"), "data_inicio", inicio, "Data inicial")}</td>
+            <td>${renderDatepickerComponentHtml(nextRuntimeFieldId("cronograma_termino"), "data_termino", termino, "Data final")}</td>
+            <td><input type="text" class="input" data-field="tarefa" value="${escapeHtml(rowData?.tarefa || "")}" /></td>
             <td>${getTrashButtonHtml()}</td>
         `;
-
-        const inputInicio = tr.querySelector("[data-field='data_inicio']");
-        const inputTermino = tr.querySelector("[data-field='data_termino']");
-        attachDateMask(inputInicio);
-        attachDateMask(inputTermino);
         return tr;
     }
 
@@ -1156,8 +1386,8 @@
 
     function applyCronogramaDatesToRow(task, startDate, endDate) {
         if (!task?.startInput || !task?.endInput) return;
-        task.startInput.value = normalizeDateDisplayValue(formatDateIso(startDate));
-        task.endInput.value = normalizeDateDisplayValue(formatDateIso(endDate));
+        task.startInput.value = formatDateIso(startDate);
+        task.endInput.value = formatDateIso(endDate);
     }
 
     function renderCronogramaGantt() {
@@ -1510,7 +1740,7 @@
             fields.forEach((fieldname) => {
                 const input = tr.querySelector(`[data-field='${fieldname}']`);
                 if (input) {
-                    input.value = rowData[fieldname] || "";
+                    setFieldValueWhenReady(input, rowData[fieldname] || "");
                 }
             });
         }
@@ -1558,14 +1788,16 @@
         ].forEach((fieldname) => {
             const input = document.getElementById(fieldname);
             if (input && data[fieldname] !== undefined && data[fieldname] !== null) {
-                input.value = data[fieldname];
+                setFieldValueWhenReady(input, data[fieldname]);
             }
         });
 
+        updateCommentsCardVisibility(data.observacoes_e_comentarios || "");
+
         const dataInicio = document.getElementById("data_de_inicio");
         const dataTermino = document.getElementById("data_de_termino");
-        if (dataInicio) dataInicio.value = normalizeDateDisplayValue(data.data_de_inicio || "");
-        if (dataTermino) dataTermino.value = normalizeDateDisplayValue(data.data_de_termino || "");
+        if (dataInicio) setFieldValueWhenReady(dataInicio, data.data_de_inicio || "");
+        if (dataTermino) setFieldValueWhenReady(dataTermino, data.data_de_termino || "");
 
         updateSponsorVisibility();
 
@@ -2034,25 +2266,18 @@
     }
 
     function openInfoModal(key) {
-        const modal = document.getElementById("infoModal");
         const title = document.getElementById("infoModalTitle");
         const body = document.getElementById("infoModalBody");
         const data = INFO_CONTENT[key];
-        if (!modal || !title || !body || !data) return;
+        if (!title || !body || !data) return;
 
         title.textContent = data.title;
         body.innerHTML = data.body;
-        modal.classList.remove("d-none");
-        modal.setAttribute("aria-hidden", "false");
-        document.body.classList.add("info-modal-open");
+        openDialogById("infoModal");
     }
 
     function closeInfoModal() {
-        const modal = document.getElementById("infoModal");
-        if (!modal) return;
-        modal.classList.add("d-none");
-        modal.setAttribute("aria-hidden", "true");
-        document.body.classList.remove("info-modal-open");
+        closeDialogById("infoModal");
     }
 
     function bindInfoModal() {
@@ -2107,15 +2332,6 @@
 
     async function bootstrap() {
         bindInfoModal();
-        bindActions();
-        bindTableEvents();
-        bindCronogramaTableSync();
-        bindCronogramaTableDrag();
-        bindCronogramaGanttEvents();
-        attachDateMask(document.getElementById("data_de_inicio"));
-        attachDateMask(document.getElementById("data_de_termino"));
-        updateSponsorVisibility();
-        updateAprovadorBuilderMode();
 
         state.projetoName = getProjetoNameFromPage();
 
@@ -2138,8 +2354,15 @@
             fillSelect("equipe_responsavel", state.choices.responsaveis, "Selecione...");
             fillSelect("aprovador_associado", state.choices.associados, "Selecione...");
             fillSelect("aprovador_responsavel", state.choices.responsaveis, "Selecione...");
+
+            bindActions();
+            bindTableEvents();
+            bindCronogramaTableSync();
+            bindCronogramaTableDrag();
+            bindCronogramaGanttEvents();
             updateEquipeBuilderMode();
             updateAprovadorBuilderMode();
+            updateSponsorVisibility();
 
             const projeto = result.projeto;
             if (projeto) {
@@ -2150,6 +2373,7 @@
                 updateGoogleDriveButton("");
                 state.reviewComments = [];
                 updatePendingReviewBanner();
+                updateCommentsCardVisibility("");
                 replaceRows("equipe_de_interesse", []);
                 replaceRows("aprovadores", state.defaultAprovadores || []);
                 replaceRows("objetivos", []);

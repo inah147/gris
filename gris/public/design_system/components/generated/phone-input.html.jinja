@@ -1,0 +1,127 @@
+{#
+  Renders an international phone input with a country selector (combobox) and a number field.
+
+  The component combines the country dial code and the typed digits into a single hidden input
+  named after `name`, formatted as `+{dial}{digits}`. For Brazil (dial 55) the JS applies the
+  national mask `(XX) X XXXX-XXXX`; for other countries it keeps digits only.
+
+  @param id {string} [optional] - Unique identifier for the wrapper. A hidden id and combobox id are
+                                   derived from it.
+  @param name {string} [optional] - Hidden input name. Stores the full `+{dial}{digits}` value.
+  @param value {string} [optional] - Initial full number, e.g. `+5511987654321`. The dial portion is
+                                      matched against the countries list to pre-select the country.
+  @param default_country {string} [default="BR"] - ISO 3166-1 alpha-2 fallback when `value` is empty.
+  @param placeholder {string} [default="Número de telefone"] - Placeholder for the number input.
+  @param search_placeholder {string} [default="Buscar país..."] - Placeholder for the combobox search.
+  @param countries {list} [optional] - Country list (`[{iso, name, dial, flag}, ...]`). When omitted,
+                                       the Jinja global `get_phone_countries()` is invoked.
+  @param attrs {object} [optional] - Extra HTML attributes for the wrapper.
+  @param input_attrs {object} [optional] - Extra HTML attributes applied to the number input.
+#}
+{% from "public/design_system/components/generated/select.html.jinja" import select as _select %}
+
+{% macro phone_input(
+    id=None,
+    name=None,
+    value=None,
+    default_country="BR",
+    placeholder="Número de telefone",
+    search_placeholder="Buscar país...",
+    countries=None,
+    attrs={},
+    input_attrs={}
+) %}
+{% set id = id or ("phone-input-" ~ (range(100000, 999999) | random | string)) %}
+{% set countries = countries or get_phone_countries() %}
+
+{# Resolve initial selection: prefer value's longest matching dial, else default_country, else first. #}
+{% set selection = namespace(iso=default_country, dial=None) %}
+{% if value %}
+  {% set digits_only = value | replace("+", "") | replace(" ", "") | replace("-", "") | replace("(", "") | replace(")", "") %}
+  {% set best = namespace(len=0, iso=None, dial=None) %}
+  {% for c in countries %}
+    {% if digits_only.startswith(c.dial) and c.dial | length > best.len %}
+      {% set best.len = c.dial | length %}
+      {% set best.iso = c.iso %}
+      {% set best.dial = c.dial %}
+    {% endif %}
+  {% endfor %}
+  {% if best.iso %}
+    {% set selection.iso = best.iso %}
+    {% set selection.dial = best.dial %}
+  {% endif %}
+{% endif %}
+
+{% set initial_dial = "" %}
+{% set initial_number = "" %}
+{% for c in countries %}
+  {% if c.iso == selection.iso %}
+    {% set initial_dial = c.dial %}
+  {% endif %}
+{% endfor %}
+{% if value and selection.dial %}
+  {% set digits_only = value | replace("+", "") | replace(" ", "") | replace("-", "") | replace("(", "") | replace(")", "") %}
+  {% set initial_number = digits_only[selection.dial | length:] %}
+{% endif %}
+
+{% set country_items_ns = namespace(items=[]) %}
+{% for c in countries %}
+  {% set option_label %}<span class="phone-input__option"><span class="phone-input__flag">{{ c.flag }}</span><span class="phone-input__option-name">{{ c.name }}</span><span class="phone-input__option-dial">+{{ c.dial }}</span></span>{% endset %}
+  {% set country_items_ns.items = country_items_ns.items + [{
+    "label": option_label,
+    "value": c.iso,
+    "attrs": {
+      "data-dial": c.dial,
+      "data-flag": c.flag,
+      "data-filter": c.name ~ " +" ~ c.dial,
+      "data-keywords": c.iso ~ " " ~ c.dial,
+      "data-label": c.flag ~ " +" ~ c.dial
+    }
+  }] %}
+{% endfor %}
+{% set country_items = country_items_ns.items %}
+
+<div
+  id="{{ id }}"
+  class="phone-input {{ attrs.class }}"
+  data-phone-input
+  data-default-country="{{ selection.iso }}"
+  {% for key, val in attrs.items() %}
+    {% if key != 'class' %}{{ key }}="{{ val }}"{% endif %}
+  {% endfor %}
+>
+  <div class="phone-input__group">
+    {% call _select(
+      id=id ~ "-country",
+      selected=selection.iso,
+      items=country_items,
+      is_combobox=true,
+      search_placeholder=search_placeholder,
+      main_attrs={"class": "phone-input__country"},
+      trigger_attrs={"class": "phone-input__trigger", "aria-label": "Selecionar país"},
+      popover_attrs={"class": "phone-input__popover"}
+    ) %}
+    {% endcall %}
+
+    <input
+      type="tel"
+      class="input phone-input__number {{ input_attrs.class }}"
+      data-phone-input-number
+      placeholder="{{ placeholder }}"
+      value="{{ initial_number }}"
+      autocomplete="tel-national"
+      inputmode="tel"
+      {% for key, val in input_attrs.items() %}
+        {% if key != 'class' %}{{ key }}="{{ val }}"{% endif %}
+      {% endfor %}
+    >
+  </div>
+
+  <input
+    type="hidden"
+    data-phone-input-value
+    {% if name %}name="{{ name }}"{% endif %}
+    value="{{ ('+' ~ initial_dial ~ initial_number) if initial_dial and initial_number else '' }}"
+  >
+</div>
+{% endmacro %}

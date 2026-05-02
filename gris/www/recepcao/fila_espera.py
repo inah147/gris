@@ -32,6 +32,16 @@ def get_context(context):
 		"Pioneiro": "pioneiro",
 	}
 
+	# Variantes do badge Basecoat (corresponde a .badge-ramo-* no CSS local).
+	# Mantém paridade com visao_geral.py.
+	ramo_variant_map = {
+		"Filhotes": "ramo-filhotes",
+		"Lobinho": "ramo-lobinho",
+		"Escoteiro": "ramo-escoteiro",
+		"Sênior": "ramo-senior",
+		"Pioneiro": "ramo-pioneiro",
+	}
+
 	six_months_from_now = add_months(today(), 6)
 
 	# Fetch Fila de Espera
@@ -196,6 +206,7 @@ def get_context(context):
 	context.kanban_columns = ramos
 	context.kanban_data = kanban_data
 	context.vagas_por_ramo = vagas_por_ramo
+	context.ramo_variant_map = ramo_variant_map
 
 	return context
 

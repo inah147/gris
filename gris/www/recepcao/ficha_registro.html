@@ -1,789 +1,402 @@
-{% extends "templates/web_sidebar_base.html" %} {% block title %}Ficha de Registro{% if doc %} - {{
-doc.nome_completo }}{% endif %}{% endblock %} {% block head_include %} {{ super() }}
-<link rel="stylesheet" href="/recepcao/ficha_registro.css" />
-{% endblock %} {% block page_header %}
-<div class="page-header">
-	<div class="page-header__content">
-		<h1 class="page-header__title">Ficha de Registro</h1>
-		{% if doc %}
-		<p class="page-header__subtitle">{{ doc.nome_completo }}</p>
-		{% endif %}
-	</div>
-	<div class="page-header__actions">
-			<button
-				id="comment-modal-open"
-				class="btn-modern btn-modern--ghost btn-modern--sm"
-				type="button"
-				style="display: inline-flex; align-items: center; gap: 0.35rem"
-			>
-				<span>Observações</span>
-				<span
-					id="comment-count"
-					class="g-badge g-badge--secondary"
-					style="min-width: 1.75rem; justify-content: center"
-				>
-					{{ comments_count or 0 }}
-				</span>
-			</button>
-			<a href="/recepcao/visao_geral" class="btn-modern btn-modern--ghost btn-modern--sm"
-				>Voltar</a
-			>
-	</div>
-</div>
-{% endblock %} {% block main %} {% if not_found %}
-<div class="alert-modern alert-modern--warning">
-	<div class="alert-modern__content">
-		<p class="alert-modern__description">{{ missing_reason or 'Registro não encontrado.' }}</p>
-	</div>
-</div>
-{% else %}
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, badge, alert, avatar %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
-<!-- Header Info -->
-<div class="card-modern mb-4">
-	<div class="card-modern__body">
-		<div class="row g-3 align-items-start">
-			<div class="col-12 col-lg-5">
-				<h2
-					style="font-size: var(--text-xl); font-weight: var(--font-semibold); margin: 0"
-				>
-					{{ doc.nome_completo }}
-				</h2>
-			</div>
-			<div class="col-6 col-lg-2">
-				<div
-					style="
-						font-size: var(--text-xs);
-						color: var(--text-muted);
-						margin-bottom: 0.25rem;
-					"
-				>
-					Status
-				</div>
-				<span class="g-badge g-badge--primary">{{ doc.status }}</span>
-			</div>
-			<div class="col-6 col-lg-2">
-				<div
-					style="
-						font-size: var(--text-xs);
-						color: var(--text-muted);
-						margin-bottom: 0.25rem;
-					"
-				>
-					Ramo
-				</div>
-				<span class="g-badge g-badge--secondary">{{ doc.ramo or 'Sem Ramo' }}</span>
-			</div>
-			<div class="col-6 col-lg-3">
-				<div
-					style="
-						font-size: var(--text-xs);
-						color: var(--text-muted);
-						margin-bottom: 0.25rem;
-					"
-				>
-					Tipo
-				</div>
-				<span class="g-badge g-badge--info"
-					>{{ doc.tipo_de_registro or 'Tipo não def.' }}</span
-				>
-			</div>
-		</div>
-	</div>
-</div>
+{% block title %}Ficha de Registro{% if doc %} - {{ doc.nome_completo }}{% endif %}{% endblock %}
 
-<!-- Fluxo de Registro Infographic -->
-<div class="card-modern mb-4">
-	<div class="card-modern__header">
-		<h3 class="card-modern__title">Fluxo de Registro</h3>
-	</div>
-	<div class="card-modern__body">
-		<div class="flow-steps-container">
-			{% for step in flow_steps %}
-			<div
-				class="flow-step {{ 'done' if step.done else '' }} {{ 'overdue' if step.is_overdue else '' }}"
-			>
-				<div class="flow-step__icon">
-					{% if step.done %}
-					<svg
-						width="16"
-						height="16"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="3"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					>
-						<polyline points="20 6 9 17 4 12"></polyline>
-					</svg>
-					{% elif step.is_overdue %}
-					<svg
-						width="16"
-						height="16"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="3"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					>
-						<path
-							d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-						></path>
-						<line x1="12" y1="9" x2="12" y2="13"></line>
-						<line x1="12" y1="17" x2="12.01" y2="17"></line>
-					</svg>
-					{% else %}
-					<span style="font-size: 10px">{{ loop.index }}</span>
-					{% endif %}
-				</div>
-				<div class="flow-step__label">{{ step.label }}</div>
-				{% if step.estimated_date and not step.done %}
-				<div class="flow-step__date {{ 'text-overdue' if step.is_overdue else '' }}">
-					{{ 'Em atraso: ' if step.is_overdue else 'Previsto: ' }} {{ step.estimated_date
-					}}
-				</div>
-				{% endif %}
-			</div>
-			{% endfor %}
-		</div>
-	</div>
-</div>
+{% block page_header %}
+  <div class="page-header-row mb-6">
+    <div>
+      <h1 class="text-3xl font-bold tracking-tight">Ficha de Registro</h1>
+      {% if doc %}
+      <p class="text-muted-foreground">{{ doc.nome_completo }}</p>
+      {% endif %}
+    </div>
+    <div class="page-header-actions">
+      <button
+        type="button"
+        id="comment-modal-open"
+        class="btn-sm-outline ficha-comment-trigger"
+      >
+        {{ lucide_icon("message-square", size="sm") }}
+        <span>Observações</span>
+        {{ badge(comments_count or 0, variant="secondary", attrs={"id": "comment-count"}) }}
+      </button>
+      <a href="/recepcao/visao_geral" class="btn-sm-ghost">
+        {{ lucide_icon("arrow-left", size="sm") }} Voltar
+      </a>
+    </div>
+  </div>
+{% endblock %}
 
-<div id="comment-modal" class="comment-modal" aria-hidden="true">
-	<div class="comment-modal__backdrop" data-close="comment-modal"></div>
-	<div class="comment-modal__dialog" role="dialog" aria-modal="true" aria-label="Observações">
-		<div class="comment-modal__header">
-			<div style="display: flex; align-items: center; gap: 0.5rem">
-				<h3 style="margin: 0">Observações</h3>
-				<span class="g-badge g-badge--secondary" id="comment-count-modal">{{ comments_count or 0 }}</span>
-			</div>
-		</div>
-		<div class="comment-modal__body">
-			{% if can_add_comments %}
-			<form id="comment-form" data-docname="{{ doc.name }}" class="comment-form" style="margin-bottom: 1rem">
-				<label class="form-label-modern" for="comment-text" style="margin-bottom: 0.35rem">Novo comentário</label>
-				<textarea
-					id="comment-text"
-					class="form-input-modern"
-					rows="2"
-					placeholder="Escreva um comentário..."
-					required
-				></textarea>
-				<div class="d-flex" style="gap: 0.5rem; margin-top: 0.35rem; align-items: center">
-					<button
-						type="submit"
-						id="comment-submit"
-						class="btn-modern btn-modern--primary btn-modern--sm"
-					>
-						Adicionar
-					</button>
-					<button
-						type="button"
-						id="comment-cancel-edit"
-						class="btn-modern btn-modern--ghost btn-modern--sm"
-						style="display: none"
-					>
-						Cancelar edição
-					</button>
-					<span id="comment-error" style="color: var(--danger-600); display: none"></span>
-				</div>
-			</form>
-			{% endif %}
-			<div id="comment-list" class="comment-list">
-				{% if comments and comments|length > 0 %}
-					{% for c in comments %}
-					<div class="comment-item" data-comment-name="{{ c.name }}">
-							<div class="comment-item__avatar">
-								<span>{{ c.owner_fullname[0]|upper }}</span>
-							</div>
-							<div class="comment-item__body">
-								<div class="comment-item__meta">
-									<div class="comment-item__meta-left">
-										<span class="comment-item__author">{{ c.owner_fullname }}</span>
-										<span class="comment-item__dot">•</span>
-										<span class="comment-item__date">{{ c.creation }}</span>
-									</div>
-									{% if can_add_comments and c.owner == current_user %}
-									<button
-										type="button"
-										class="comment-item__edit btn-modern btn-modern--ghost btn-modern--xs"
-										data-comment-name="{{ c.name }}"
-										data-comment-content="{{ c.content_text | escape }}"
-									>
-										Editar
-									</button>
-									{% endif %}
-								</div>
-								<div class="comment-item__content">{{ c.content_text | escape | replace('\n', '<br>') | safe }}</div>
-							</div>
-					</div>
-					{% endfor %}
-				{% else %}
-				<p class="text-muted" id="comment-empty" style="margin: 0">Nenhum comentário ainda.</p>
-				{% endif %}
-			</div>
-		</div>
-			<div class="comment-modal__footer">
-				<div class="comment-modal__footer-actions">
-					<button type="button" class="btn-modern btn-modern--ghost btn-modern--sm" data-close="comment-modal">
-						Fechar
-					</button>
-				</div>
-			</div>
-	</div>
-</div>
+{% block main %}
+  {% if not_found %}
+    {{ alert(
+      icon=lucide_icon("circle-alert", size="sm"),
+      description=missing_reason or 'Registro não encontrado.',
+      variant="warning"
+    ) }}
+  {% else %}
 
-<!-- Dados do Associado -->
-<div class="card-modern mb-4">
-	<div class="card-modern__header">
-		<h3 class="card-modern__title">Dados do Associado</h3>
-		<p class="card-modern__subtitle">Informações Pessoais</p>
-	</div>
-	<div class="card-modern__body">
-		<div class="row g-3">
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">Data de Nascimento</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ frappe.format_date(doc.data_de_nascimento, 'dd/MM/yyyy') if doc.data_de_nascimento else '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">Sexo</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.sexo or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">Etnia</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.etnia or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">CPF</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.cpf or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">RG</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.rg or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">Órgão Expedidor</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.orgao_expedidor or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">Estado Civil</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.estado_civil or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">Religião</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.religiao or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">Nacionalidade</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ 'Estrangeiro' if doc.estrangeiro else 'Brasileiro' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">Cidade de Nascimento</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.cidade_de_nascimento or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">UF de Nascimento</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.uf_de_nascimento or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-		</div>
-	</div>
-</div>
+    <!-- Cabeçalho do Associado -->
+    {% call card(attrs={"class": "mb-4"}) %}
+      <div class="ficha-header">
+        <div class="ficha-header__name">
+          <h2 class="text-xl font-semibold">{{ doc.nome_completo }}</h2>
+        </div>
+        <div class="ficha-header__meta">
+          <div>
+            <div class="text-xs text-muted-foreground mb-1">Status</div>
+            {{ badge(doc.status, variant="primary") }}
+          </div>
+          <div>
+            <div class="text-xs text-muted-foreground mb-1">Ramo</div>
+            {{ badge(doc.ramo or 'Sem Ramo', variant="secondary") }}
+          </div>
+          <div>
+            <div class="text-xs text-muted-foreground mb-1">Tipo</div>
+            {{ badge(doc.tipo_de_registro or 'Tipo não definido', outline=true) }}
+          </div>
+        </div>
+      </div>
+    {% endcall %}
 
-<div class="card-modern mb-4">
-	<div class="card-modern__header">
-		<h3 class="card-modern__title">Endereço e Contato</h3>
-	</div>
-	<div class="card-modern__body">
-		<div class="row g-3">
-			<div class="col-12 col-md-6">
-				<label class="form-label-modern">Endereço</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.endereco or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-2">
-				<label class="form-label-modern">Número</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.numero or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">Complemento</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.complemento or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">Bairro</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.bairro or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">Cidade</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.cidade or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">Estado</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.estado or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">CEP</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.cep or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">Email</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.email or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">Celular</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.celular or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">Tel. Secundário</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.telefone_secundario or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-		</div>
-	</div>
-</div>
+    <!-- Fluxo de Registro -->
+    {% call card(title="Fluxo de Registro", attrs={"class": "mb-4"}) %}
+      <div class="flow-steps-container">
+        {% for step in flow_steps %}
+          <div class="flow-step{% if step.done %} flow-step--done{% endif %}{% if step.is_overdue %} flow-step--overdue{% endif %}">
+            <div class="flow-step__icon">
+              {% if step.done %}
+                {{ lucide_icon("check", size="sm") }}
+              {% elif step.is_overdue %}
+                {{ lucide_icon("triangle-alert", size="sm") }}
+              {% else %}
+                <span class="flow-step__index">{{ loop.index }}</span>
+              {% endif %}
+            </div>
+            <div class="flow-step__label">{{ step.label }}</div>
+            {% if step.estimated_date and not step.done %}
+              <div class="flow-step__date{% if step.is_overdue %} flow-step__date--overdue{% endif %}">
+                {{ 'Em atraso: ' if step.is_overdue else 'Previsto: ' }}{{ step.estimated_date }}
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% endcall %}
 
-<div class="card-modern mb-4">
-	<div class="card-modern__header">
-		<h3 class="card-modern__title">Profissional / Acadêmico</h3>
-	</div>
-	<div class="card-modern__body">
-		<div class="row g-3">
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">Escolaridade</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.escolaridade or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">Profissão</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.profissao or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-4">
-				<label class="form-label-modern">Local de Trabalho</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.local_de_trabalho or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-		</div>
-	</div>
-</div>
+    <!-- Dados do Associado -->
+    {% call card(title="Dados do Associado", description="Informações pessoais", attrs={"class": "mb-4"}) %}
+      <div class="ficha-fields-grid">
+        <div class="field">
+          <label class="label">Data de Nascimento</label>
+          <input type="text" class="input" value="{{ frappe.format_date(doc.data_de_nascimento, 'dd/MM/yyyy') if doc.data_de_nascimento else '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Sexo</label>
+          <input type="text" class="input" value="{{ doc.sexo or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Etnia</label>
+          <input type="text" class="input" value="{{ doc.etnia or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">CPF</label>
+          <input type="text" class="input" value="{{ doc.cpf or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">RG</label>
+          <input type="text" class="input" value="{{ doc.rg or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Órgão Expedidor</label>
+          <input type="text" class="input" value="{{ doc.orgao_expedidor or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Estado Civil</label>
+          <input type="text" class="input" value="{{ doc.estado_civil or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Religião</label>
+          <input type="text" class="input" value="{{ doc.religiao or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Nacionalidade</label>
+          <input type="text" class="input" value="{{ 'Estrangeiro' if doc.estrangeiro else 'Brasileiro' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Cidade de Nascimento</label>
+          <input type="text" class="input" value="{{ doc.cidade_de_nascimento or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">UF de Nascimento</label>
+          <input type="text" class="input" value="{{ doc.uf_de_nascimento or '-' }}" disabled>
+        </div>
+      </div>
+    {% endcall %}
 
-<div class="card-modern mb-4">
-	<div class="card-modern__header">
-		<h3 class="card-modern__title">Dados de Cobrança</h3>
-	</div>
-	<div class="card-modern__body">
-		<div class="row g-3">
-			<div class="col-12 col-md-6">
-				<label class="form-label-modern">Email de Cobrança</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.email_cobranca or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-			<div class="col-12 col-md-6">
-				<label class="form-label-modern">Telefone de Cobrança</label>
-				<input
-					type="text"
-					class="form-input-modern form-input-modern--sm"
-					value="{{ doc.telefone_cobranca or '-' }}"
-					readonly
-					disabled
-				/>
-			</div>
-		</div>
-	</div>
-</div>
+    <!-- Endereço e Contato -->
+    {% call card(title="Endereço e Contato", attrs={"class": "mb-4"}) %}
+      <div class="ficha-fields-grid">
+        <div class="field">
+          <label class="label">Endereço</label>
+          <input type="text" class="input" value="{{ doc.endereco or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Número</label>
+          <input type="text" class="input" value="{{ doc.numero or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Complemento</label>
+          <input type="text" class="input" value="{{ doc.complemento or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Bairro</label>
+          <input type="text" class="input" value="{{ doc.bairro or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Cidade</label>
+          <input type="text" class="input" value="{{ doc.cidade or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Estado</label>
+          <input type="text" class="input" value="{{ doc.estado or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">CEP</label>
+          <input type="text" class="input" value="{{ doc.cep or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Email</label>
+          <input type="text" class="input" value="{{ doc.email or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Celular</label>
+          <input type="text" class="input" value="{{ doc.celular or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Tel. Secundário</label>
+          <input type="text" class="input" value="{{ doc.telefone_secundario or '-' }}" disabled>
+        </div>
+      </div>
+    {% endcall %}
 
-<!-- Responsáveis -->
-{% if responsaveis %}
-<div class="card-modern mb-4">
-	<div class="card-modern__header">
-		<h3 class="card-modern__title">Responsáveis</h3>
-	</div>
-	<div class="card-modern__body">
-		<div class="row g-3">
-			{% for item in responsaveis %}
-			<div class="col-12">
-				<div class="responsavel-card {{ 'primary' if item.is_primary else '' }}">
-					<div class="responsavel-card__header">
-						<div class="responsavel-card__title">{{ item.doc.nome_completo }}</div>
-						{% if item.is_primary %}
-						<div class="responsavel-card__badge">1º Responsável</div>
-						{% endif %}
-					</div>
-					<div class="card-modern__body">
-						<h4 class="card-modern__subtitle mb-3">Dados Pessoais</h4>
-						<div class="row g-3 mb-4">
-							<div class="col-12 col-md-3">
-								<label class="form-label-modern">CPF</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.doc.cpf or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							<div class="col-12 col-md-3">
-								<label class="form-label-modern">RG</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.doc.rg or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							<div class="col-12 col-md-3">
-								<label class="form-label-modern">Órgão Expedidor</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.doc.orgao_expedidor or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							<div class="col-12 col-md-3">
-								<label class="form-label-modern">Data de Nascimento</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ frappe.format_date(item.doc.data_de_nascimento, 'dd/MM/yyyy') if item.doc.data_de_nascimento else '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							<div class="col-12 col-md-3">
-								<label class="form-label-modern">Sexo</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.doc.sexo or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							<div class="col-12 col-md-3">
-								<label class="form-label-modern">Estado Civil</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.doc.estado_civil or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-						</div>
+    <!-- Profissional / Acadêmico -->
+    {% call card(title="Profissional / Acadêmico", attrs={"class": "mb-4"}) %}
+      <div class="ficha-fields-grid">
+        <div class="field">
+          <label class="label">Escolaridade</label>
+          <input type="text" class="input" value="{{ doc.escolaridade or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Profissão</label>
+          <input type="text" class="input" value="{{ doc.profissao or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Local de Trabalho</label>
+          <input type="text" class="input" value="{{ doc.local_de_trabalho or '-' }}" disabled>
+        </div>
+      </div>
+    {% endcall %}
 
-						<h4 class="card-modern__subtitle mb-3">Profissional / Acadêmico</h4>
-						<div class="row g-3 mb-4">
-							<div class="col-12 col-md-4">
-								<label class="form-label-modern">Escolaridade</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.doc.escolaridade or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							<div class="col-12 col-md-4">
-								<label class="form-label-modern">Profissão</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.doc.get('profissão') or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							<div class="col-12 col-md-4">
-								<label class="form-label-modern">Local de Trabalho</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.doc.local_de_trabalho or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-						</div>
+    <!-- Dados de Cobrança -->
+    {% call card(title="Dados de Cobrança", attrs={"class": "mb-4"}) %}
+      <div class="ficha-fields-grid">
+        <div class="field">
+          <label class="label">Email de Cobrança</label>
+          <input type="text" class="input" value="{{ doc.email_cobranca or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Telefone de Cobrança</label>
+          <input type="text" class="input" value="{{ doc.telefone_cobranca or '-' }}" disabled>
+        </div>
+      </div>
+    {% endcall %}
 
-						<h4 class="card-modern__subtitle mb-3">Endereço e Contato</h4>
-						<div class="row g-3 mb-4">
-							<div class="col-12 col-md-6">
-								<label class="form-label-modern">Endereço</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.doc.get('endereço') or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							<div class="col-12 col-md-2">
-								<label class="form-label-modern">Número</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.doc.get('número') or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							<div class="col-12 col-md-4">
-								<label class="form-label-modern">Complemento</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.doc.complemento or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							<div class="col-12 col-md-4">
-								<label class="form-label-modern">Bairro</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.doc.bairro or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							<div class="col-12 col-md-4">
-								<label class="form-label-modern">Cidade</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.doc.cidade or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							<div class="col-12 col-md-4">
-								<label class="form-label-modern">Estado</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.doc.estado or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							<div class="col-12 col-md-4">
-								<label class="form-label-modern">CEP</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.doc.cep or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							<div class="col-12 col-md-4">
-								<label class="form-label-modern">Email</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.doc.email or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							<div class="col-12 col-md-4">
-								<label class="form-label-modern">Celular</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.doc.celular or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							<div class="col-12 col-md-4">
-								<label class="form-label-modern">Tel. Secundário</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ item.doc.get('telefone_secundario') or '-' }}"
-									readonly
-									disabled
-								/>
-							</div>
-						</div>
+    <!-- Responsáveis -->
+    {% if responsaveis %}
+    {% call card(title="Responsáveis", attrs={"class": "mb-4"}) %}
+      <div class="responsaveis-list">
+        {% for item in responsaveis %}
+          {% set is_primary = loop.first %}
+          <article class="responsavel-card{% if is_primary %} responsavel-card--primary{% endif %}">
+            <header class="responsavel-card__header">
+              <h3 class="responsavel-card__title">{{ item.doc.nome_completo }}</h3>
+              {% if is_primary %}
+                {{ badge("1º Responsável", variant="primary") }}
+              {% endif %}
+            </header>
 
-						<h4 class="card-modern__subtitle mb-3">Vínculo</h4>
-						<div class="row g-3">
-							<div class="col-12 col-md-4">
-								<label class="form-label-modern">Guarda Unilateral?</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ 'Sim' if guarda_unilateral else 'Não' }}"
-									readonly
-									disabled
-								/>
-							</div>
-							<div class="col-12 col-md-4">
-								<label class="form-label-modern">Guardião Legal?</label>
-								<input
-									type="text"
-									class="form-input-modern form-input-modern--sm"
-									value="{{ 'Sim' if item.vinculo.é_guardiao_legal else 'Não' }}"
-									readonly
-									disabled
-								/>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-			{% endfor %}
-		</div>
-	</div>
-</div>
-{% endif %} {% endif %} {% endblock %}
+            <h4 class="responsavel-card__section-title">Dados Pessoais</h4>
+            <div class="ficha-fields-grid mb-4">
+              <div class="field">
+                <label class="label">CPF</label>
+                <input type="text" class="input" value="{{ item.doc.cpf or '-' }}" disabled>
+              </div>
+              <div class="field">
+                <label class="label">RG</label>
+                <input type="text" class="input" value="{{ item.doc.rg or '-' }}" disabled>
+              </div>
+              <div class="field">
+                <label class="label">Órgão Expedidor</label>
+                <input type="text" class="input" value="{{ item.doc.orgao_expedidor or '-' }}" disabled>
+              </div>
+              <div class="field">
+                <label class="label">Data de Nascimento</label>
+                <input type="text" class="input" value="{{ frappe.format_date(item.doc.data_de_nascimento, 'dd/MM/yyyy') if item.doc.data_de_nascimento else '-' }}" disabled>
+              </div>
+              <div class="field">
+                <label class="label">Sexo</label>
+                <input type="text" class="input" value="{{ item.doc.sexo or '-' }}" disabled>
+              </div>
+              <div class="field">
+                <label class="label">Estado Civil</label>
+                <input type="text" class="input" value="{{ item.doc.estado_civil or '-' }}" disabled>
+              </div>
+            </div>
+
+            <h4 class="responsavel-card__section-title">Profissional / Acadêmico</h4>
+            <div class="ficha-fields-grid mb-4">
+              <div class="field">
+                <label class="label">Escolaridade</label>
+                <input type="text" class="input" value="{{ item.doc.escolaridade or '-' }}" disabled>
+              </div>
+              <div class="field">
+                <label class="label">Profissão</label>
+                <input type="text" class="input" value="{{ item.doc.get('profissão') or '-' }}" disabled>
+              </div>
+              <div class="field">
+                <label class="label">Local de Trabalho</label>
+                <input type="text" class="input" value="{{ item.doc.local_de_trabalho or '-' }}" disabled>
+              </div>
+            </div>
+
+            <h4 class="responsavel-card__section-title">Endereço e Contato</h4>
+            <div class="ficha-fields-grid mb-4">
+              <div class="field">
+                <label class="label">Endereço</label>
+                <input type="text" class="input" value="{{ item.doc.get('endereço') or '-' }}" disabled>
+              </div>
+              <div class="field">
+                <label class="label">Número</label>
+                <input type="text" class="input" value="{{ item.doc.get('número') or '-' }}" disabled>
+              </div>
+              <div class="field">
+                <label class="label">Complemento</label>
+                <input type="text" class="input" value="{{ item.doc.complemento or '-' }}" disabled>
+              </div>
+              <div class="field">
+                <label class="label">Bairro</label>
+                <input type="text" class="input" value="{{ item.doc.bairro or '-' }}" disabled>
+              </div>
+              <div class="field">
+                <label class="label">Cidade</label>
+                <input type="text" class="input" value="{{ item.doc.cidade or '-' }}" disabled>
+              </div>
+              <div class="field">
+                <label class="label">Estado</label>
+                <input type="text" class="input" value="{{ item.doc.estado or '-' }}" disabled>
+              </div>
+              <div class="field">
+                <label class="label">CEP</label>
+                <input type="text" class="input" value="{{ item.doc.cep or '-' }}" disabled>
+              </div>
+              <div class="field">
+                <label class="label">Email</label>
+                <input type="text" class="input" value="{{ item.doc.email or '-' }}" disabled>
+              </div>
+              <div class="field">
+                <label class="label">Celular</label>
+                <input type="text" class="input" value="{{ item.doc.celular or '-' }}" disabled>
+              </div>
+              <div class="field">
+                <label class="label">Tel. Secundário</label>
+                <input type="text" class="input" value="{{ item.doc.get('telefone_secundario') or '-' }}" disabled>
+              </div>
+            </div>
+
+            <h4 class="responsavel-card__section-title">Vínculo</h4>
+            <div class="ficha-fields-grid">
+              <div class="field">
+                <label class="label">Guarda Unilateral?</label>
+                <input type="text" class="input" value="{{ 'Sim' if guarda_unilateral else 'Não' }}" disabled>
+              </div>
+              <div class="field">
+                <label class="label">Guardião Legal?</label>
+                <input type="text" class="input" value="{{ 'Sim' if item.vinculo.é_guardiao_legal else 'Não' }}" disabled>
+              </div>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% endcall %}
+    {% endif %}
+
+    <!-- Modal de Observações -->
+    {% call dialog(
+      id="comment-modal",
+      title="Observações",
+      close_button=true,
+      dialog_attrs={"class": "ficha-comment-dialog"}
+    ) %}
+      <div class="ficha-comment-dialog__title-meta">
+        {{ badge(comments_count or 0, variant="secondary", attrs={"id": "comment-count-modal"}) }}
+      </div>
+
+      {% if can_add_comments %}
+      <form id="comment-form" data-docname="{{ doc.name }}" class="comment-form">
+        <label class="label" for="comment-text">Novo comentário</label>
+        <textarea
+          id="comment-text"
+          class="textarea"
+          rows="2"
+          placeholder="Escreva um comentário..."
+          required
+        ></textarea>
+        <div class="comment-form__actions">
+          <button type="submit" id="comment-submit" class="btn-sm-primary">Adicionar</button>
+          <button type="button" id="comment-cancel-edit" class="btn-sm-ghost" hidden>
+            Cancelar edição
+          </button>
+          <span id="comment-error" class="text-destructive text-sm" hidden></span>
+        </div>
+      </form>
+      {% endif %}
+
+      <div id="comment-list" class="comment-list">
+        {% if comments and comments|length > 0 %}
+          {% for c in comments %}
+            <div class="comment-item" data-comment-name="{{ c.name }}">
+              {{ avatar(fallback=c.owner_fullname[0]|upper) }}
+              <div class="comment-item__body">
+                <div class="comment-item__meta">
+                  <div class="comment-item__meta-left">
+                    <span class="comment-item__author">{{ c.owner_fullname }}</span>
+                    <span class="comment-item__dot">•</span>
+                    <span class="comment-item__date">{{ c.creation }}</span>
+                  </div>
+                  {% if can_add_comments and c.owner == current_user %}
+                  <button
+                    type="button"
+                    class="btn-sm-ghost comment-item__edit"
+                    data-comment-name="{{ c.name }}"
+                    data-comment-content="{{ c.content_text | escape }}"
+                  >
+                    {{ lucide_icon("pencil", size="sm") }} Editar
+                  </button>
+                  {% endif %}
+                </div>
+                <div class="comment-item__content">{{ c.content_text | escape | replace('\n', '<br>') | safe }}</div>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-muted-foreground" id="comment-empty">Nenhum comentário ainda.</p>
+        {% endif %}
+      </div>
+    {% endcall %}
+
+  {% endif %}
+{% endblock %}

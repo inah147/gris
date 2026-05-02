@@ -1,300 +1,17 @@
+// Página /financeiro/despesas — modais HTML5 <dialog> e CRUD de Conta Fixa
 ;(() => {
-	function buildModal() {
-		if (document.getElementById('modalDespesa')) return;
-		const modalHtml = `
-		<div id="modalDespesa" class="modal-modern d-none" tabindex="-1">
-			<div class="modal-dialog">
-				<div class="modal-modern__content">
-					<div class="modal-modern__header">
-						<h5 class="modal-modern__title" id="despesaTitulo"></h5>
-						
-					</div>
-					<div class="modal-modern__body">
-						<div class="d-flex flex-wrap gap-2 mb-3" id="despesaBadges"></div>
-						<dl class="row mb-3" id="despesaDados"></dl>
-						<div id="historicoPagamentos" class="border-top pt-3 d-none">
-							<h6 class="fw-semibold mb-2">Histórico de Pagamentos</h6>
-							<div class="table-responsive mb-0">
-								<table class="table table-sm align-middle mb-0" id="historicoTabela">
-									<thead>
-										<tr>
-											<th style="width:120px">Mês</th>
-											<th>Status</th>
-											<th>Valor</th>
-										</tr>
-									</thead>
-									<tbody></tbody>
-								</table>
-								<div class="small text-muted py-2" id="historicoVazio">Carregando...</div>
-							</div>
-						</div>
-						<form id="despesaEditForm" class="d-none">
-							<div class="mb-3">
-								<label class="form-label-modern">Descrição</label>
-								<input type="text" name="descricao" class="form-input-modern" required />
-							</div>
-							<div class="row g-3">
-								<div class="col-6">
-									<label class="form-label-modern">Valor (R$)</label>
-									<input type="number" step="0.01" name="valor" class="form-input-modern" required />
-								</div>
-								<div class="col-6">
-									<label class="form-label-modern">Dia Vencimento</label>
-									<input type="number" min="1" max="31" name="dia_vencimento" class="form-input-modern" required />
-								</div>
-							</div>
-							<div class="mt-3" id="checksRow">
-								<div class="form-check form-check-inline me-4">
-									<input class="form-check-input" type="checkbox" name="ativa" id="editAtiva" />
-									<label class="form-check-label" for="editAtiva">Ativa</label>
-								</div>
-								<div class="form-check form-check-inline">
-									<input class="form-check-input" type="checkbox" name="temporaria" id="editTemporaria" />
-									<label class="form-check-label" for="editTemporaria">Despesa Temporária</label>
-								</div>
-							</div>
-							<div id="temporariaDatas" class="row g-3 mt-2 d-none">
-								<div class="col-6">
-									<label class="form-label-modern" for="field_data_inicio">Data Início</label>
-									<input id="field_data_inicio" type="date" name="data_inicio" class="form-input-modern" />
-								</div>
-								<div class="col-6">
-									<label class="form-label-modern" for="field_data_termino">Data Término</label>
-									<input id="field_data_termino" type="date" name="data_termino" class="form-input-modern" />
-								</div>
-							</div>
-						</form>
-					</div>
-					<div class="modal-modern__footer">
-						<div class="me-auto" id="editButtons" style="display:none">
-							<button type="button" class="btn-modern btn-modern--primary btn-modern--sm" data-action="edit">Editar</button>
-							<button type="button" class="btn-modern btn-modern--success btn-modern--sm d-none" data-action="save">Salvar</button>
-							<button type="button" class="btn-modern btn-modern--ghost btn-modern--sm d-none" data-action="cancel-edit">Cancelar</button>
-						</div>
-						<button type="button" class="btn-modern btn-modern--ghost" data-action="close">Fechar</button>
-					</div>
-				</div>
-			</div>
-		</div>`;
-		document.body.insertAdjacentHTML('beforeend', modalHtml);
-		const modal = document.getElementById('modalDespesa');
-		modal.addEventListener('click', e => {
-			if (e.target.dataset.action === 'close' || e.target === modal) hideModal();
-		});
-		modal.querySelector('[data-action="edit"]').addEventListener('click', enableEditMode);
-		modal.querySelector('[data-action="cancel-edit"]').addEventListener('click', cancelEditMode);
-		modal.querySelector('[data-action="save"]').addEventListener('click', saveEdits);
-		modal.querySelector('#editTemporaria').addEventListener('change', toggleTemporariaDates);
+	'use strict';
+
+	function qs(id) { return document.getElementById(id); }
+
+	function openDialog(id) {
+		const dlg = qs(id);
+		if (dlg && typeof dlg.showModal === 'function' && !dlg.open) dlg.showModal();
 	}
 
-	// --- Criação de Nova Despesa ---
-	function buildCreateModal(){
-		if(document.getElementById('modalNovaDespesa')) return;
-		const html = `
-		<div id="modalNovaDespesa" class="modal-modern d-none" tabindex="-1">
-			<div class="modal-dialog">
-				<div class="modal-modern__content">
-					<div class="modal-modern__header">
-						<h5 class="modal-modern__title">Nova Despesa</h5>
-					</div>
-					<div class="modal-modern__body">
-						<form id="novaDespesaForm">
-							<div class="mb-3">
-								<label class="form-label-modern">Descrição</label>
-								<input type="text" name="descricao" class="form-input-modern" required />
-							</div>
-							<div class="row g-3">
-								<div class="col-6">
-									<label class="form-label-modern">Valor (R$)</label>
-									<input type="number" step="0.01" name="valor" class="form-input-modern" required />
-								</div>
-								<div class="col-6">
-									<label class="form-label-modern">Dia Vencimento</label>
-									<input type="number" min="1" max="31" name="dia_vencimento" class="form-input-modern" required />
-								</div>
-							</div>
-							<div class="mt-3" id="novaChecksRow">
-								<div class="form-check form-check-inline me-4">
-									<input class="form-check-input" type="checkbox" name="ativa" id="novaAtiva" checked />
-									<label class="form-check-label" for="novaAtiva">Ativa</label>
-								</div>
-								<div class="form-check form-check-inline me-4">
-									<input class="form-check-input" type="checkbox" name="temporaria" id="novaTemporaria" />
-									<label class="form-check-label" for="novaTemporaria">Despesa Temporária</label>
-								</div>
-								<div class="form-check form-check-inline">
-									<input class="form-check-input" type="checkbox" name="cobrar_mes_atual" id="novaCobrarMesAtual" />
-									<label class="form-check-label" for="novaCobrarMesAtual">Cobrar mês atual</label>
-								</div>
-							</div>
-							<div id="novaTemporariaDatas" class="row g-3 mt-2 d-none">
-								<div class="col-6">
-									<label class="form-label-modern" for="nova_data_inicio">Data Início</label>
-									<input id="nova_data_inicio" type="date" name="data_inicio" class="form-input-modern" />
-								</div>
-								<div class="col-6">
-									<label class="form-label-modern" for="nova_data_termino">Data Término</label>
-									<input id="nova_data_termino" type="date" name="data_termino" class="form-input-modern" />
-								</div>
-							</div>
-						</form>
-					</div>
-					<div class="modal-modern__footer">
-						<button type="button" class="btn-modern btn-modern--ghost" data-action="close-nova">Cancelar</button>
-						<button type="button" class="btn-modern btn-modern--primary" data-action="save-nova">Salvar</button>
-					</div>
-				</div>
-			</div>
-		</div>`;
-		document.body.insertAdjacentHTML('beforeend', html);
-		const modal = document.getElementById('modalNovaDespesa');
-		modal.addEventListener('click', e => {
-			if(e.target.dataset.action === 'close-nova' || e.target === modal) hideCreateModal();
-		});
-		modal.querySelector('[data-action="save-nova"]').addEventListener('click', saveNovaDespesa);
-		document.getElementById('novaTemporaria').addEventListener('change', toggleNovaTemporariaDates);
-	}
-
-	function showCreateModal(){
-		buildCreateModal();
-		const modal = document.getElementById('modalNovaDespesa');
-		if (!modal) return;
-		
-		// Remove backdrop anterior se existir
-		const oldBackdrop = document.getElementById('modalNovaDespesaBackdrop');
-		if (oldBackdrop) oldBackdrop.remove();
-		
-		modal.classList.remove('d-none');
-		modal.classList.add('show');
-		modal.style.display = 'flex';
-		document.body.classList.add('modal-open');
-		
-		const backdrop = document.createElement('div');
-		backdrop.className = 'modal-backdrop fade show';
-		backdrop.id = 'modalNovaDespesaBackdrop';
-		document.body.appendChild(backdrop);
-	}
-
-	function hideCreateModal(){
-		const modal = document.getElementById('modalNovaDespesa');
-		if(!modal) return;
-		
-		modal.classList.add('d-none');
-		modal.classList.remove('show');
-		modal.style.display = 'none';
-		
-		// Remove backdrop específico
-		const backdrop = document.getElementById('modalNovaDespesaBackdrop');
-		if(backdrop) backdrop.remove();
-		
-		// Fallback: limpa backdrops órfãos se não houver outro modal aberto
-		if(!document.getElementById('modalDespesa')?.classList.contains('show')){
-			document.body.classList.remove('modal-open');
-			// Remove qualquer backdrop órfão
-			document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
-		}
-	}
-
-	function toggleNovaTemporariaDates(){
-		const form = document.getElementById('novaDespesaForm');
-		const box = document.getElementById('novaTemporariaDatas');
-		if(form.temporaria.checked){
-			box.classList.remove('d-none');
-			addAsteriskNova('data_inicio');
-			addAsteriskNova('data_termino');
-		}else{
-			box.classList.add('d-none');
-			removeAsteriskNova('data_inicio');
-			removeAsteriskNova('data_termino');
-		}
-	}
-	function addAsteriskNova(field){
-		const id = field === 'data_inicio' ? 'nova_data_inicio' : 'nova_data_termino';
-		const label = document.querySelector(`#novaTemporariaDatas label[for="${id}"]`);
-		if(!label || label.querySelector('.req-star')) return;
-		const span = document.createElement('span');
-		span.className = 'req-star';
-		span.style.color = '#dc3545';
-		span.textContent = ' *';
-		label.appendChild(span);
-	}
-	function removeAsteriskNova(field){
-		const id = field === 'data_inicio' ? 'nova_data_inicio' : 'nova_data_termino';
-		const label = document.querySelector(`#novaTemporariaDatas label[for="${id}"]`);
-		if(!label) return; const star = label.querySelector('.req-star'); if(star) star.remove();
-	}
-
-	function saveNovaDespesa(){
-		const btn = this;
-		const form = document.getElementById('novaDespesaForm');
-		if(!form.reportValidity()) return;
-		if(form.temporaria.checked){
-			if(!form.data_inicio.value || !form.data_termino.value){
-				frappe.msgprint({ message: 'Preencha Início e Término para despesa temporária.', indicator: 'orange' });
-				return;
-			}
-			if(form.data_inicio.value > form.data_termino.value){
-				frappe.msgprint({ message: 'Data de início não pode ser maior que a data de término.', indicator: 'red' });
-				return;
-			}
-		}
-		btn.disabled = true; btn.textContent = 'Salvando...';
-		frappe.call({
-			method: 'gris.api.financeiro.conta_fixa.create_conta_fixa',
-			args: {
-				descricao: form.descricao.value.trim(),
-				valor: form.valor.value,
-				dia_vencimento: form.dia_vencimento.value,
-				ativa: form.ativa.checked ? 1 : 0,
-				despesa_temporaria: form.temporaria.checked ? 1 : 0,
-				cobrar_mes_atual: form.cobrar_mes_atual.checked ? 1 : 0,
-				data_inicio: form.temporaria.checked ? form.data_inicio.value : '',
-				data_termino: form.temporaria.checked ? form.data_termino.value : ''
-			},
-			callback: r => {
-				btn.disabled = false; btn.textContent = 'Salvar';
-				if(r && r.message && r.message.ok){
-					window.location.reload();
-				}
-			},
-			error: () => { btn.disabled = false; btn.textContent = 'Salvar'; }
-		});
-	}
-
-	function showModal() {
-		const modal = document.getElementById('modalDespesa');
-		if (!modal) return;
-		
-		// Remove backdrop anterior se existir
-		const oldBackdrop = document.getElementById('modalDespesaBackdrop');
-		if (oldBackdrop) oldBackdrop.remove();
-		
-		modal.classList.remove('d-none');
-		modal.classList.add('show');
-		modal.style.display = 'flex';
-		document.body.classList.add('modal-open');
-		
-		const backdrop = document.createElement('div');
-		backdrop.className = 'modal-backdrop fade show';
-		backdrop.id = 'modalDespesaBackdrop';
-		document.body.appendChild(backdrop);
-	}
-
-	function hideModal() {
-		const modal = document.getElementById('modalDespesa');
-		if (!modal) return;
-		
-		modal.classList.add('d-none');
-		modal.classList.remove('show');
-		modal.style.display = 'none';
-		document.body.classList.remove('modal-open');
-		
-		// Remove todos os backdrops relacionados
-		const backdrop = document.getElementById('modalDespesaBackdrop');
-		if (backdrop) backdrop.remove();
-		
-		// Fallback: remove qualquer backdrop órfão
-		document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+	function closeDialog(id) {
+		const dlg = qs(id);
+		if (dlg && dlg.open) dlg.close();
 	}
 
 	function formatCurrency(v) {
@@ -302,34 +19,60 @@
 		return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 	}
 
-	function mapStatusVariant(slug){
-		if(slug === 'pago') return 'success';
-		if(slug === 'atrasado') return 'danger';
-		if(slug === 'emaberto') return 'warning';
-		if(slug === 'aguardar') return 'secondary';
-		return 'neutral';
+	function statusVariantClass(slug) {
+		if (slug === 'pago') return 'badge-success';
+		if (slug === 'atrasado') return 'badge-destructive';
+		if (slug === 'emaberto') return 'badge-warning';
+		return 'badge-secondary';
 	}
+
 	function buildBadges(data) {
-		const badges = [];
+		const out = [];
 		if (data.status) {
 			const slug = data.status.toLowerCase().replace(/\s+/g, '');
-			badges.push(`<span class="g-badge g-badge--${mapStatusVariant(slug)}">${data.status}</span>`);
+			out.push('<span class="badge ' + statusVariantClass(slug) + '">' + data.status + '</span>');
 		}
-		badges.push(`<span class="g-badge g-badge--${data.ativa ? 'primary' : 'inactive'}">${data.ativa ? 'Ativa' : 'Inativa'}</span>`);
-		badges.push(`<span class="g-badge g-badge--${data.temporaria ? 'purple' : 'primary'}">${data.temporaria ? 'Temporária' : 'Contínua'}</span>`);
-		return badges.join('');
+		out.push('<span class="badge ' + (data.ativa ? '' : 'badge-secondary') + '">' + (data.ativa ? 'Ativa' : 'Inativa') + '</span>');
+		out.push('<span class="badge ' + (data.temporaria ? 'badge-info' : '') + '">' + (data.temporaria ? 'Temporária' : 'Contínua') + '</span>');
+		return out.join('');
+	}
+
+	// Lê valor selecionado de um datepicker do design system (pelo id da raiz <div class="datepicker">)
+	function dpGetValue(rootId) {
+		const root = qs(rootId);
+		if (!root) return '';
+		const input = root.querySelector('[data-datepicker-value]');
+		return input ? (input.value || '') : '';
+	}
+
+	// Define valor em um datepicker programaticamente: atualiza hidden input + label visível.
+	// O estado interno do componente só é re-sincronizado quando o usuário interage com o popover;
+	// se ele não interagir, o valor pré-preenchido é o que vai para o backend.
+	function dpSetValue(rootId, isoDate) {
+		const root = qs(rootId);
+		if (!root) return;
+		const input = root.querySelector('[data-datepicker-value]');
+		const labelEl = root.querySelector('[data-datepicker-label]');
+		const placeholder = root.dataset.placeholder || 'Selecione uma data';
+		if (input) input.value = isoDate || '';
+		if (labelEl) {
+			if (isoDate) {
+				const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+				if (m) {
+					labelEl.textContent = `${m[3]}/${m[2]}/${m[1]}`;
+					labelEl.classList.remove('datepicker-trigger__label--placeholder');
+				} else {
+					labelEl.textContent = isoDate;
+					labelEl.classList.remove('datepicker-trigger__label--placeholder');
+				}
+			} else {
+				labelEl.textContent = placeholder;
+				labelEl.classList.add('datepicker-trigger__label--placeholder');
+			}
+		}
 	}
 
 	function openDespesa(btn) {
-		console.log('→ openDespesa chamado para:', btn.getAttribute('data-name'));
-		buildModal();
-		
-		// Limpa conteúdo anterior
-		const historicoTabela = document.querySelector('#historicoTabela tbody');
-		if (historicoTabela) historicoTabela.innerHTML = '';
-		const historicoPag = document.getElementById('historicoPagamentos');
-		if (historicoPag) historicoPag.classList.add('d-none');
-		
 		const data = {
 			name: btn.getAttribute('data-name'),
 			descricao: btn.getAttribute('data-descricao'),
@@ -341,270 +84,252 @@
 			inicio: btn.getAttribute('data-inicio') || '',
 			termino: btn.getAttribute('data-termino') || ''
 		};
-		const permEl = document.getElementById('financeiro-perms');
+		const permEl = qs('financeiro-perms');
 		const canEdit = permEl && permEl.dataset.canEdit === '1';
-		document.getElementById('despesaTitulo').textContent = data.descricao;
-		document.getElementById('despesaBadges').innerHTML = buildBadges(data);
-		const dl = document.getElementById('despesaDados');
+
+		qs('despesaTitulo').textContent = data.descricao;
+		qs('despesaBadges').innerHTML = buildBadges(data);
+
+		const dl = qs('despesaDados');
 		let html = '';
-		html += `<dt class="col-sm-4">Valor Base</dt><dd class="col-sm-8">${formatCurrency(data.valor)}</dd>`;
-		html += `<dt class="col-sm-4">Dia Vencimento</dt><dd class="col-sm-8">${data.dia}</dd>`;
+		html += '<dt>Valor Base</dt><dd>' + formatCurrency(data.valor) + '</dd>';
+		html += '<dt>Dia Vencimento</dt><dd>' + data.dia + '</dd>';
 		if (data.temporaria) {
-			html += `<dt class="col-sm-4">Início</dt><dd class="col-sm-8">${data.inicio || '-'} </dd>`;
-			html += `<dt class="col-sm-4">Término</dt><dd class="col-sm-8">${data.termino || '-'} </dd>`;
+			html += '<dt>Início</dt><dd>' + (data.inicio || '—') + '</dd>';
+			html += '<dt>Término</dt><dd>' + (data.termino || '—') + '</dd>';
 		}
 		dl.innerHTML = html;
-		const editButtons = document.getElementById('editButtons');
+
+		const tbody = document.querySelector('#historicoTabela tbody');
+		if (tbody) tbody.innerHTML = '';
+		qs('historicoPagamentos').classList.add('hidden');
+
+		const editButtons = qs('editButtons');
 		if (canEdit) {
 			editButtons.style.display = '';
 			editButtons.dataset.name = data.name;
 			prefillEditForm(data);
+			cancelEditMode();
 		} else {
 			editButtons.style.display = 'none';
 		}
-		showModal();
+
+		openDialog('modalDespesa');
 		loadHistorico(data.name);
 	}
 
 	let loadingHistorico = false;
-	
-	function loadHistorico(contaName){
-		// Previne chamadas múltiplas simultâneas
-		if (loadingHistorico) {
-			console.warn('loadHistorico já está executando, ignorando chamada duplicada');
-			return;
-		}
+
+	function loadHistorico(contaName) {
+		if (loadingHistorico) return;
 		loadingHistorico = true;
-		
-		const wrap = document.getElementById('historicoPagamentos');
+
+		const wrap = qs('historicoPagamentos');
 		const tabela = document.querySelector('#historicoTabela tbody');
-		const vazio = document.getElementById('historicoVazio');
-		const canEdit = (document.getElementById('financeiro-perms')?.dataset.canEdit === '1');
-		
-		wrap.classList.remove('d-none');
-		vazio.textContent = 'Carregando...';
-		vazio.classList.remove('d-none');
+		const vazio = qs('historicoVazio');
+
+		wrap.classList.remove('hidden');
+		vazio.textContent = 'Carregando…';
+		vazio.classList.remove('hidden');
 		tabela.innerHTML = '';
-		
-		// Remove event listeners antigos
-		document.querySelectorAll('#historicoTabela .pay-btn').forEach(btn => {
-			btn.replaceWith(btn.cloneNode(true));
-		});
-		
+
 		frappe.call({
 			method: 'gris.api.financeiro.conta_fixa.get_pagamentos_conta',
 			args: { conta: contaName, limit: 12 },
 			callback: r => {
 				loadingHistorico = false;
 				const dados = (r && r.message) || [];
-				
-				console.log(`✓ Recebidos ${dados.length} pagamentos:`, dados);
-				
-				if(!dados.length){
+				if (!dados.length) {
 					vazio.textContent = 'Nenhum pagamento encontrado.';
 					return;
 				}
-				vazio.classList.add('d-none');
-				
-				// Limpa novamente antes de popular (segurança extra)
+				vazio.classList.add('hidden');
 				tabela.innerHTML = '';
-				
 				const frag = document.createDocumentFragment();
 				dados.forEach(p => {
 					const tr = document.createElement('tr');
-					const statusSlug = (p.status || '').toLowerCase().replace(/\s+/g,'');
-					const isPago = statusSlug === 'pago';
-					const badgeHtml = `<span class="g-badge g-badge--${mapStatusVariant(statusSlug)} me-2">${p.status}</span>`;
-					
-					tr.innerHTML = `
-						<td class="text-nowrap">${p.mes_format || p.mes_referencia || ''}</td>
-						<td>${badgeHtml}</td>
-						<td>${formatCurrency(p.valor)}</td>
-					`;
+					const slug = (p.status || '').toLowerCase().replace(/\s+/g, '');
+					const badgeHtml = '<span class="badge ' + statusVariantClass(slug) + '">' + p.status + '</span>';
+					tr.innerHTML =
+						'<td class="whitespace-nowrap">' + (p.mes_format || p.mes_referencia || '') + '</td>' +
+						'<td>' + badgeHtml + '</td>' +
+						'<td>' + formatCurrency(p.valor) + '</td>';
 					frag.appendChild(tr);
 				});
 				tabela.appendChild(frag);
-				console.log(`✓ Adicionadas ${dados.length} linhas na tabela`);
 			},
-			error: () => {
-				loadingHistorico = false;
-			}
-		});
-	}
-
-	function attachPayHandlers(){
-		document.querySelectorAll('#historicoTabela .pay-btn').forEach(btn => {
-			btn.addEventListener('click', () => {
-				if(btn.disabled) return;
-				btn.disabled = true;
-				btn.textContent = '...';
-				const pagamento = btn.getAttribute('data-pagamento');
-				frappe.call({
-					method: 'gris.api.financeiro.conta_fixa.marcar_pagamento_pago',
-					args: { pagamento },
-					callback: r => {
-						if (r && r.message && r.message.ok) {
-							const td = btn.parentElement;
-							btn.remove();
-							// replace badge to Pago
-							const badge = td.querySelector('.g-badge');
-							if (badge) {
-								badge.className = 'g-badge g-badge--success me-2';
-								badge.textContent = 'Pago';
-							}
-						}
-					},
-					error: () => {
-						btn.disabled = false;
-						btn.textContent = 'Pago';
-					}
-				});
-			});
+			error: () => { loadingHistorico = false; }
 		});
 	}
 
 	function prefillEditForm(data) {
-		const form = document.getElementById('despesaEditForm');
+		const form = qs('despesaEditForm');
 		form.descricao.value = data.descricao;
 		form.valor.value = Number(data.valor || 0).toFixed(2);
 		form.dia_vencimento.value = data.dia;
-		form.ativa.checked = !!data.ativa;
-		form.temporaria.checked = !!data.temporaria;
-		form.data_inicio.value = data.inicio || '';
-		form.data_termino.value = data.termino || '';
+		qs('editAtiva').checked = !!data.ativa;
+		qs('editTemporaria').checked = !!data.temporaria;
+		dpSetValue('field_data_inicio', data.inicio || '');
+		dpSetValue('field_data_termino', data.termino || '');
 		toggleTemporariaDates();
 	}
 
 	function enableEditMode() {
-		const form = document.getElementById('despesaEditForm');
-		form.classList.remove('d-none');
-		document.getElementById('despesaDados').classList.add('d-none');
-		this.classList.add('d-none');
-		const footer = this.parentElement;
-		footer.querySelector('[data-action="save"]').classList.remove('d-none');
-		footer.querySelector('[data-action="cancel-edit"]').classList.remove('d-none');
+		qs('despesaEditForm').classList.remove('hidden');
+		qs('despesaDados').classList.add('hidden');
+		const footer = qs('editButtons');
+		footer.querySelector('[data-action="edit"]').classList.add('hidden');
+		footer.querySelector('[data-action="save"]').classList.remove('hidden');
+		footer.querySelector('[data-action="cancel-edit"]').classList.remove('hidden');
 	}
 
 	function cancelEditMode() {
-		const footer = this.parentElement;
-		footer.querySelector('[data-action="edit"]').classList.remove('d-none');
-		footer.querySelector('[data-action="save"]').classList.add('d-none');
-		footer.querySelector('[data-action="cancel-edit"]').classList.add('d-none');
-		document.getElementById('despesaEditForm').classList.add('d-none');
-		document.getElementById('despesaDados').classList.remove('d-none');
+		const footer = qs('editButtons');
+		footer.querySelector('[data-action="edit"]').classList.remove('hidden');
+		footer.querySelector('[data-action="save"]').classList.add('hidden');
+		footer.querySelector('[data-action="cancel-edit"]').classList.add('hidden');
+		qs('despesaEditForm').classList.add('hidden');
+		qs('despesaDados').classList.remove('hidden');
 	}
 
 	function toggleTemporariaDates() {
-		const form = document.getElementById('despesaEditForm');
-		const box = document.getElementById('temporariaDatas');
-		if (form.temporaria.checked) {
-			box.classList.remove('d-none');
-			addAsterisk('data_inicio');
-			addAsterisk('data_termino');
-		} else {
-			box.classList.add('d-none');
-			removeAsterisk('data_inicio');
-			removeAsterisk('data_termino');
-		}
+		const box = qs('temporariaDatas');
+		if (qs('editTemporaria').checked) box.classList.remove('hidden');
+		else box.classList.add('hidden');
 	}
 
-	function addAsterisk(fieldName){
-		const id = fieldName === 'data_inicio' ? 'field_data_inicio' : 'field_data_termino';
-		const label = document.querySelector(`#temporariaDatas label[for="${id}"]`);
-		if(!label || label.querySelector('.req-star')) return;
-		const span = document.createElement('span');
-		span.className = 'req-star';
-		span.style.color = '#dc3545';
-		span.textContent = ' *';
-		label.appendChild(span);
-	}
-	function removeAsterisk(fieldName){
-		const id = fieldName === 'data_inicio' ? 'field_data_inicio' : 'field_data_termino';
-		const label = document.querySelector(`#temporariaDatas label[for="${id}"]`);
-		if(!label) return;
-		const star = label.querySelector('.req-star');
-		if(star) star.remove();
-	}
-
-	function saveEdits() {
-		const footer = this.parentElement;
+	function saveEdits(btn) {
+		const footer = qs('editButtons');
 		const name = footer.dataset.name;
-		const form = document.getElementById('despesaEditForm');
-		if (!form.reportValidity()) return; // mantém validação dos outros campos
-		if (form.temporaria.checked) {
-			if (!form.data_inicio.value || !form.data_termino.value) {
-				frappe.msgprint({
-					message: 'Preencha Início e Término para despesa temporária.',
-					indicator: 'orange'
-				});
+		const form = qs('despesaEditForm');
+		if (!form.reportValidity()) return;
+		const isTemp = qs('editTemporaria').checked;
+		const inicio = dpGetValue('field_data_inicio');
+		const termino = dpGetValue('field_data_termino');
+		if (isTemp) {
+			if (!inicio || !termino) {
+				frappe.msgprint({ message: 'Preencha Início e Término para despesa temporária.', indicator: 'orange' });
 				return;
 			}
-			if (form.data_inicio.value > form.data_termino.value) {
-				frappe.msgprint({
-					message: 'Data de início não pode ser maior que a data de término.',
-					indicator: 'red'
-				});
+			if (inicio > termino) {
+				frappe.msgprint({ message: 'Data de início não pode ser maior que a data de término.', indicator: 'red' });
 				return;
 			}
 		}
-		this.disabled = true;
-		this.textContent = 'Salvando...';
-		const payload = {
-			name,
-			descricao: form.descricao.value.trim(),
-			valor: form.valor.value,
-			dia_vencimento: form.dia_vencimento.value,
-			ativa: form.ativa.checked ? 1 : 0,
-			despesa_temporaria: form.temporaria.checked ? 1 : 0,
-			data_inicio: form.temporaria.checked ? form.data_inicio.value : '',
-			data_termino: form.temporaria.checked ? form.data_termino.value : ''
-		};
+		btn.disabled = true;
+		btn.textContent = 'Salvando…';
 		frappe.call({
 			method: 'gris.api.financeiro.conta_fixa.update_conta_fixa',
-			args: payload,
-			callback: (r) => {
-				this.disabled = false;
-				this.textContent = 'Salvar';
-				if (r && r.message && r.message.ok) {
-					// Simple strategy: reload page to reflect updates
-					window.location.reload();
-				}
+			args: {
+				name,
+				descricao: form.descricao.value.trim(),
+				valor: form.valor.value,
+				dia_vencimento: form.dia_vencimento.value,
+				ativa: qs('editAtiva').checked ? 1 : 0,
+				despesa_temporaria: isTemp ? 1 : 0,
+				data_inicio: isTemp ? inicio : '',
+				data_termino: isTemp ? termino : ''
 			},
-			error: () => {
-				this.disabled = false;
-				this.textContent = 'Salvar';
+			callback: r => {
+				btn.disabled = false;
+				btn.textContent = 'Salvar';
+				if (r && r.message && r.message.ok) window.location.reload();
+			},
+			error: () => { btn.disabled = false; btn.textContent = 'Salvar'; }
+		});
+	}
+
+	function showCreateModal() {
+		const form = qs('novaDespesaForm');
+		if (form) form.reset();
+		const ativa = qs('novaAtiva'); if (ativa) ativa.checked = true;
+		const temp = qs('novaTemporaria'); if (temp) temp.checked = false;
+		const cobrar = qs('novaCobrarMesAtual'); if (cobrar) cobrar.checked = false;
+		dpSetValue('nova_data_inicio', '');
+		dpSetValue('nova_data_termino', '');
+		toggleNovaTemporariaDates();
+		openDialog('modalNovaDespesa');
+	}
+
+	function toggleNovaTemporariaDates() {
+		const box = qs('novaTemporariaDatas');
+		if (!box) return;
+		if (qs('novaTemporaria').checked) box.classList.remove('hidden');
+		else box.classList.add('hidden');
+	}
+
+	function saveNovaDespesa(btn) {
+		const form = qs('novaDespesaForm');
+		if (!form.reportValidity()) return;
+		const isTemp = qs('novaTemporaria').checked;
+		const inicio = dpGetValue('nova_data_inicio');
+		const termino = dpGetValue('nova_data_termino');
+		if (isTemp) {
+			if (!inicio || !termino) {
+				frappe.msgprint({ message: 'Preencha Início e Término para despesa temporária.', indicator: 'orange' });
+				return;
 			}
+			if (inicio > termino) {
+				frappe.msgprint({ message: 'Data de início não pode ser maior que a data de término.', indicator: 'red' });
+				return;
+			}
+		}
+		btn.disabled = true;
+		btn.textContent = 'Salvando…';
+		frappe.call({
+			method: 'gris.api.financeiro.conta_fixa.create_conta_fixa',
+			args: {
+				descricao: form.descricao.value.trim(),
+				valor: form.valor.value,
+				dia_vencimento: form.dia_vencimento.value,
+				ativa: qs('novaAtiva').checked ? 1 : 0,
+				despesa_temporaria: isTemp ? 1 : 0,
+				cobrar_mes_atual: qs('novaCobrarMesAtual').checked ? 1 : 0,
+				data_inicio: isTemp ? inicio : '',
+				data_termino: isTemp ? termino : ''
+			},
+			callback: r => {
+				btn.disabled = false;
+				btn.textContent = 'Salvar';
+				if (r && r.message && r.message.ok) window.location.reload();
+			},
+			error: () => { btn.disabled = false; btn.textContent = 'Salvar'; }
 		});
 	}
 
 	let initialized = false;
-	
 	function init() {
-		if (initialized) {
-			console.warn('⚠ init() já foi executado, ignorando');
-			return;
-		}
+		if (initialized) return;
 		initialized = true;
-		console.log('✓ Inicializando despesas.js');
-		
-		const buttons = document.querySelectorAll('.detalhes-conta-btn');
-		console.log(`→ Encontrados ${buttons.length} botões de detalhes`);
-		
-		buttons.forEach((btn, index) => {
+
+		document.querySelectorAll('.detalhes-conta-btn').forEach(btn => {
 			btn.addEventListener('click', () => openDespesa(btn));
 		});
-		
-		const novaBtn = document.getElementById('btnNovaDespesa');
-		if(novaBtn){
-			novaBtn.addEventListener('click', showCreateModal);
-		}
-		document.addEventListener('keydown', e => {
-			if (e.key === 'Escape') {
-				hideModal();
-				hideCreateModal();
+
+		const novaBtn = qs('btnNovaDespesa');
+		if (novaBtn) novaBtn.addEventListener('click', showCreateModal);
+
+		const modalDespesa = qs('modalDespesa');
+		if (modalDespesa) {
+			const editTemp = qs('editTemporaria');
+			if (editTemp) editTemp.addEventListener('change', toggleTemporariaDates);
+			const editButtons = qs('editButtons');
+			if (editButtons) {
+				editButtons.querySelector('[data-action="edit"]').addEventListener('click', enableEditMode);
+				editButtons.querySelector('[data-action="cancel-edit"]').addEventListener('click', cancelEditMode);
+				editButtons.querySelector('[data-action="save"]').addEventListener('click', e => saveEdits(e.currentTarget));
 			}
-		});
+		}
+
+		const modalNova = qs('modalNovaDespesa');
+		if (modalNova) {
+			const novaTemp = qs('novaTemporaria');
+			if (novaTemp) novaTemp.addEventListener('change', toggleNovaTemporariaDates);
+			const saveNovaBtn = modalNova.querySelector('[data-action="save-nova"]');
+			if (saveNovaBtn) saveNovaBtn.addEventListener('click', e => saveNovaDespesa(e.currentTarget));
+		}
 	}
+
 	if (document.readyState === 'loading') {
 		document.addEventListener('DOMContentLoaded', init);
 	} else {

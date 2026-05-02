@@ -20,7 +20,6 @@ def get_context(context):
 
 	if not responsavel_name:
 		context.responsavel = None
-		frappe.msgprint("Cadastro de responsável não encontrado para este usuário.")
 		return context
 
 	responsavel = frappe.get_doc("Responsavel", responsavel_name)
@@ -51,6 +50,9 @@ def get_context(context):
 
 	# Fetch all existing Habilidades for autocomplete
 	context.all_habilidades = frappe.get_all("Habilidade", pluck="name", order_by="name asc")
+	context.habilidades_select_items = [
+		{"label": h, "value": h, "type": "item"} for h in context.all_habilidades
+	]
 
 	context.sidebar_title = "Painel do Responsável"
 	context.active_link = "/responsavel/meus_dados"

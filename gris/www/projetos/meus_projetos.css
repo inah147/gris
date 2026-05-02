@@ -1,5 +1,114 @@
+.my-projects-page-header {
+	margin-bottom: 1.5rem;
+}
+
 .meus-projetos-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-	gap: var(--space-md);
+	grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+	gap: 1rem;
+	align-items: stretch;
+}
+
+.meus-projetos-card-link {
+	display: block;
+	color: inherit;
+	text-decoration: none;
+}
+
+.meus-projetos-card-link:focus-visible {
+	outline: none;
+	border-radius: var(--radius-xl);
+	box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-ring) 30%, transparent);
+}
+
+.meus-projetos-card {
+	height: 100%;
+	border-color: color-mix(in oklab, var(--color-border) 78%, transparent);
+	transition:
+		transform 0.18s ease,
+		border-color 0.18s ease,
+		box-shadow 0.18s ease,
+		background-color 0.18s ease;
+}
+
+.meus-projetos-card > section {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	height: 100%;
+}
+
+.meus-projetos-card-link:hover .meus-projetos-card,
+.meus-projetos-card-link:focus-visible .meus-projetos-card,
+.meus-projetos-card:focus-within {
+	transform: translateY(-2px);
+	border-color: color-mix(in oklab, var(--color-ring) 42%, var(--color-border));
+	box-shadow: 0 16px 32px color-mix(in oklab, var(--color-ring) 10%, transparent);
+	background-color: color-mix(in oklab, var(--color-card) 92%, var(--color-accent));
+}
+
+.meus-projetos-card__eyebrow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+}
+
+.meus-projetos-card__eyebrow-text {
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: var(--color-muted-foreground);
+}
+
+.meus-projetos-card__content {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	min-height: 0;
+}
+
+.meus-projetos-card__title {
+	margin: 0;
+	font-size: 1rem;
+	font-weight: 600;
+	line-height: 1.45;
+	color: var(--color-card-foreground);
+}
+
+.meus-projetos-card__subtitle {
+	margin: 0;
+	font-size: 0.9375rem;
+	line-height: 1.55;
+	color: var(--color-muted-foreground);
+}
+
+.meus-projetos-card__cta {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin-top: auto;
+	font-size: 0.875rem;
+	font-weight: 600;
+	color: var(--color-primary);
+}
+
+.meus-projetos-empty {
+	min-height: 18rem;
+	justify-content: center;
+	border: 1px dashed var(--color-border);
+	border-radius: var(--radius-xl);
+	background: color-mix(in oklab, var(--color-muted) 35%, transparent);
+}
+
+@media (max-width: 640px) {
+	.my-projects-page-header {
+		margin-bottom: 1rem;
+	}
+
+	.meus-projetos-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
 }

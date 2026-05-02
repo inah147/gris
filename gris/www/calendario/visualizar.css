@@ -1,513 +1,262 @@
-/* visualizar.css */
-
-.calendar-page-container {
-    width: 100%;
-    overflow-x: hidden;
+.calendar-view-page {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
 }
 
-/* Filter Bar Customization */
-.section-filter-options {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-md);
-    margin-top: var(--space-xs);
+.calendar-view-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-wrap: wrap;
 }
 
-.filter-option {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    cursor: pointer;
-    font-size: var(--text-sm);
-    color: var(--text-secondary);
-    user-select: none;
-    padding: 4px 8px;
-    border-radius: var(--radius-sm);
-    transition: background-color 0.2s;
+.calendar-view-header__copy {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+	max-width: 48rem;
 }
 
-.filter-option:hover {
-    color: var(--color-primary);
-    background-color: var(--bg-hover);
+.calendar-view-header__actions {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.75rem;
+	flex-wrap: wrap;
 }
 
-.filter-option input[type="checkbox"] {
-    accent-color: var(--color-primary);
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-    margin: 0;
+.calendar-view-card > section {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
 }
 
-.all-option {
-    font-weight: var(--font-semibold);
-    color: var(--color-primary);
+.calendar-view-filters__grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 1rem;
+	align-items: start;
 }
 
-/* Scroll container for the table */
-.calendar-scroll-container {
-    overflow: auto;
-    max-height: calc(100vh - 150px);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--bg-card);
-    box-shadow: var(--shadow-sm);
-    position: relative;
+.calendar-view-field {
+	min-width: 0;
 }
 
-.calendar-table {
-    width: auto;
-    min-width: 100%;
-    table-layout: fixed;
-    border-collapse: separate; /* Needed for sticky */
-    border-spacing: 0;
+.calendar-view-field--wide {
+	grid-column: span 2;
 }
 
-.col-section {
-    width: 250px;
+.calendar-view-calendar {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
 }
 
-.calendar-table th,
-.calendar-table td {
-    padding: var(--space-sm);
-    border-bottom: 1px solid var(--border-color);
-    border-right: 1px solid var(--border-color);
-    vertical-align: top;
+.calendar-view-empty {
+	margin-top: 0.25rem;
 }
 
-.calendar-table th:last-child,
-.calendar-table td:last-child {
-    border-right: none;
+.calendar-view-dialog > div {
+	width: min(44rem, calc(100vw - 2rem));
 }
 
-/* Sticky Header */
-.calendar-table thead th {
-    position: sticky;
-    top: 0;
-    background-color: var(--color-primary-light);
-    color: var(--color-primary);
-    font-weight: var(--font-bold);
-    z-index: 1000;
-    text-align: left;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    height: 50px;
+.calendar-view-dialog__footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.75rem;
 }
 
-.th-content {
-    display: flex;
-    align-items: center;
-    height: 100%;
+.calendar-detail-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.875rem;
 }
 
-/* Sticky First Column (Date) */
-.sticky-col {
-    position: sticky;
-    left: 0;
-    background-color: var(--bg-card);
-    z-index: 5;
-    border-right: 2px solid var(--border-color);
-    width: 100px;
-    min-width: 100px;
-    max-width: 100px;
+.calendar-detail-card {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+	padding: 1rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: color-mix(in oklch, var(--muted) 18%, var(--card));
 }
 
-.calendar-table thead th.sticky-col {
-    z-index: 1005; /* Higher than other headers and other sticky cols */
-    background-color: var(--color-primary-light);
-    border-right: 2px solid var(--border-color);
+.calendar-detail-card--full {
+	grid-column: 1 / -1;
 }
 
-/* Date Cell Styling */
-.date-cell-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    height: 100%;
-    min-height: 40px;
+.calendar-detail-card__label {
+	font-size: var(--text-xs);
+	font-weight: var(--font-weight-semibold);
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: var(--muted-foreground);
 }
 
-.day-number {
-    font-size: var(--text-xl);
-    font-weight: var(--font-bold);
-    color: var(--text-primary);
-    line-height: 1;
+.calendar-detail-card__value {
+	color: var(--foreground);
+	font-size: var(--text-sm);
 }
 
-.date-meta {
-    display: flex;
-    flex-direction: column;
-    font-size: var(--text-xs);
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    margin-top: 2px;
-    font-weight: var(--font-medium);
+.calendar-detail-card__value--title {
+	font-size: var(--text-lg, 1.125rem);
+	font-weight: var(--font-weight-bold);
 }
 
-/* Weekday Styling (Inverted) */
-.calendar-row:not(.is-weekend) {
-    background-color: var(--bg-hover);
+.calendar-detail-flag {
+	margin-top: 1rem;
+	display: flex;
 }
 
-.calendar-row:not(.is-weekend) .sticky-col {
-    background-color: var(--bg-hover);
+.calendar-holiday-list {
+	display: grid;
+	gap: 0.75rem;
 }
 
-/* Weekend Styling (Inverted) */
-.calendar-row.is-weekend {
-    background-color: var(--bg-card);
+.calendar-holiday-item {
+	display: grid;
+	grid-template-columns: minmax(5.5rem, auto) minmax(0, 1fr) auto;
+	align-items: start;
+	gap: 1rem;
+	width: 100%;
+	padding: 1rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: var(--card);
+	text-align: left;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.calendar-row.is-weekend .sticky-col {
-    background-color: var(--bg-card);
+.calendar-holiday-item:hover,
+.calendar-holiday-item:focus-visible {
+	border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+	box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+	transform: translateY(-1px);
+	outline: none;
 }
 
-/* Activity Card */
-.col-activity {
-    padding: 0 !important; /* Remove padding to allow cards to touch edges */
-    vertical-align: top;
-    height: 1px; /* Trick to allow children to inherit full row height */
+.calendar-holiday-item__date {
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
 }
 
-.activities-list {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%; /* Fill the cell height */
-    padding: 0 4px; /* Inner padding so cards don't touch horizontal edges */
-    box-sizing: border-box;
+.calendar-holiday-item__weekday {
+	font-size: var(--text-xs);
+	font-weight: var(--font-weight-semibold);
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: var(--muted-foreground);
 }
 
-.activity-card {
-    background-color: var(--color-primary-lighter);
-    padding: var(--space-xs);
-    border-radius: var(--radius-sm);
-    font-size: var(--text-sm);
-    box-shadow: var(--shadow-xs);
-    /* Delay z-index transition on mouse leave to prevent flickering */
-    transition: transform 0.2s, box-shadow 0.2s, z-index 0s linear 0.2s;
-    margin-bottom: var(--space-xs); /* Default gap between distinct events */
-    position: relative;
-    z-index: 1;
-    flex-shrink: 0; /* Prevent shrinking */
+.calendar-holiday-item__label {
+	font-size: var(--text-base, 1rem);
+	font-weight: var(--font-weight-bold);
+	color: var(--foreground);
 }
 
-.activity-card:first-child {
-    margin-top: var(--space-xs);
+.calendar-holiday-item__content {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	min-width: 0;
 }
 
-/* Ramo Colors */
-/* Lobinho - Amarelo */
-.activity-card.ramo-lobinho {
-    background-color: var(--color-warning-lighter);
-    border: 1px solid color-mix(in srgb, var(--color-warning), transparent 60%);
+.calendar-holiday-item__name {
+	font-size: var(--text-sm);
+	font-weight: var(--font-weight-semibold);
+	color: var(--foreground);
 }
 
-/* Escoteiro - Verde */
-.activity-card.ramo-escoteiro {
-    background-color: var(--color-success-lighter);
-    border: 1px solid color-mix(in srgb, var(--color-success), transparent 60%);
+.calendar-holiday-item__description {
+	font-size: var(--text-sm);
+	color: var(--muted-foreground);
+	line-height: 1.5;
 }
 
-/* Sênior - Grená */
-.activity-card.ramo-senior {
-    background-color: #f8e6ec; /* Fundo rosado frio para diferenciar do vermelho */
-    border: 1px solid color-mix(in srgb, #4a001f, transparent 60%);
+.calendar-holiday-item__badge {
+	display: flex;
+	align-items: center;
 }
 
-/* Pioneiro - Vermelho */
-.activity-card.ramo-pioneiro {
-    background-color: var(--color-danger-lighter);
-    border: 1px solid color-mix(in srgb, var(--color-danger), transparent 60%);
+.calendar-holiday-dialog {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
 }
 
-/* Filhotes - Laranja */
-.activity-card.ramo-filhotes {
-    background-color: #FFFBEB; /* Light Orange */
-    border: 1px solid color-mix(in srgb, #F59E0B, transparent 60%);
+.calendar-holiday-dialog__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-wrap: wrap;
 }
 
-/* Diretoria/Outros - Azul (Default) */
-.activity-card.ramo-diretoria,
-.activity-card.ramo-default {
-    background-color: var(--color-primary-lighter);
-    border: 1px solid color-mix(in srgb, var(--color-primary), transparent 60%);
+.calendar-holiday-dialog__title {
+	margin: 0;
+	font-size: var(--text-xl);
+	font-weight: var(--font-weight-bold);
+	color: var(--foreground);
 }
 
-/* Continued Event Styles */
-.activity-card.is-continued-bottom {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-    border-bottom: none;
-    margin-bottom: -1px !important; /* Cover the 1px border */
-    padding-bottom: var(--space-xs);
-    z-index: 2; /* Sit on top of the next row's border */
-    box-shadow: none; /* Remove shadow at bottom to blend */
-    flex-grow: 1; /* Stretch to fill empty space in the cell */
+.calendar-holiday-dialog__description {
+	margin: 0;
+	padding: 1rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: color-mix(in oklch, var(--muted) 18%, var(--card));
+	color: var(--foreground);
+	line-height: 1.7;
 }
 
-.activity-card.is-continued-top {
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
-    border-top: none;
-    margin-top: -1px !important; /* Pull up to meet previous card */
-    padding-top: var(--space-xs);
-    box-shadow: none; /* Remove shadow at top */
-    flex-grow: 1;
+@media (max-width: 900px) {
+	.calendar-view-filters__grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.calendar-view-field--wide {
+		grid-column: span 2;
+	}
 }
 
-.activity-card.is-continued-top.is-continued-bottom {
-    border-radius: 0;
-    border-top: none;
-    border-bottom: none;
-    margin-top: -1px !important;
-    margin-bottom: -1px !important;
-    padding-top: var(--space-xs);
-    padding-bottom: var(--space-xs);
+@media (max-width: 640px) {
+	.calendar-view-header__actions {
+		width: 100%;
+	}
+
+	.calendar-view-header__actions > * {
+		flex: 1 1 0;
+		justify-content: center;
+	}
+
+	.calendar-view-filters__grid {
+		grid-template-columns: 1fr;
+	}
+
+	.calendar-view-field--wide {
+		grid-column: span 1;
+	}
+
+	.calendar-detail-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.calendar-detail-card--full {
+		grid-column: auto;
+	}
+
+	.calendar-holiday-item {
+		grid-template-columns: 1fr;
+	}
+
+	.calendar-holiday-item__badge {
+		justify-content: flex-start;
+	}
+
+	.calendar-holiday-dialog__header {
+		align-items: flex-start;
+	}
 }
-
-.activity-continuation-marker {
-    height: 10px; /* Minimal height for continuation segments */
-}
-
-.activity-card:hover,
-.activity-card.is-hovered {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    z-index: 100; /* Bring to front on hover */
-    filter: brightness(0.95);
-    cursor: pointer;
-    /* Instant z-index change on hover enter */
-    transition: transform 0.2s, box-shadow 0.2s, z-index 0s;
-}
-
-
-.activity-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 2px;
-}
-
-.activity-time {
-    font-weight: var(--font-bold);
-    font-size: var(--text-xs);
-    color: var(--color-primary);
-    background: rgba(255,255,255,0.5);
-    padding: 0 4px;
-    border-radius: 4px;
-}
-
-.activity-body {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.activity-title {
-    font-weight: var(--font-semibold);
-    color: var(--text-primary);
-    line-height: var(--leading-tight);
-}
-
-.activity-location {
-    font-size: var(--text-xs);
-    color: var(--text-secondary);
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-/* Hover effects */
-.calendar-row:hover td:not(.sticky-col) {
-    background-color: var(--color-info-lighter);
-}
-
-.calendar-row.is-today td {
-    background-color: var(--color-warning-light) !important;
-}
-
-.calendar-row.is-today .sticky-col {
-    background-color: var(--color-warning-light) !important;
-    border-right-color: var(--color-warning);
-}
-
-/* Month Separator */
-.month-separator-row {
-    background-color: var(--color-primary-light);
-}
-
-.month-separator-cell {
-    padding: var(--space-sm) var(--space-md);
-    font-weight: var(--font-bold);
-    color: var(--color-primary);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    position: sticky;
-    left: 0;
-    z-index: 8; /* Between normal sticky col (5) and header (10) */
-    border-bottom: 2px solid var(--color-primary);
-}
-
-/* Print styles */
-@media print {
-    .calendar-page-container {
-        padding: 0;
-        background: white;
-    }
-    
-    .calendar-scroll-container {
-        overflow: visible;
-        max-height: none;
-        border: none;
-        box-shadow: none;
-    }
-    
-    .calendar-page-header button {
-        display: none;
-    }
-    
-    .sticky-col, .calendar-table thead th {
-        position: static;
-        box-shadow: none;
-        border: 1px solid #ddd;
-    }
-    
-    .calendar-table th, .calendar-table td {
-        border: 1px solid #ddd;
-    }
-    
-    .activity-card {
-        border: 1px solid #ccc;
-        background: #f9f9f9 !important;
-        -webkit-print-color-adjust: exact;
-    }
-}
-
-/* Sem Atividade Style (Matches Simulated Calendar) */
-.activity-card.is-no-activity {
-    background-color: #f3f4f6 !important; /* specific gray */
-    opacity: 0.9;
-    box-shadow: none;
-}
-
-.activity-card.is-no-activity .activity-title {
-    color: #6b7280 !important;
-    font-style: italic;
-    font-weight: normal;
-    text-decoration: none;
-}
-
-.activity-card.is-no-activity .activity-location {
-    display: none;
-}
-
-/* Modal Modern Styles specifically for this page */
-.modal-modern {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 2000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-}
-
-.modal-modern.d-none {
-    display: none !important;
-}
-
-.modal-modern__backdrop {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 0;
-    backdrop-filter: blur(2px);
-}
-
-.modal-modern__content {
-    background-color: #fff;
-    border-radius: var(--radius-md, 8px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    width: 100%;
-    max-width: 500px;
-    z-index: 1;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    max-height: 90vh;
-}
-
-.modal-modern__content--lg {
-    max-width: 800px;
-}
-
-.modal-modern__header {
-    padding: 1.5rem;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-modern__title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0;
-}
-
-.modal-modern__body {
-    padding: 1.5rem;
-    overflow-y: auto;
-}
-
-.modal-modern__footer {
-    padding: 1.5rem;
-    border-top: 1px solid var(--border-color);
-    background-color: var(--bg-light);
-    border-bottom-left-radius: var(--radius-md, 8px);
-    border-bottom-right-radius: var(--radius-md, 8px);
-}
-
-/* Holiday Styles */
-.holiday-indicator {
-    margin-top: 8px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    background-color: #FFF8E1;
-    color: #F57F17;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    cursor: pointer;
-    border: 1px solid #FFE082;
-    transition: all 0.2s;
-    width: 100%;
-    justify-content: center;
-}
-
-.holiday-indicator:hover {
-    background-color: #FFECB3;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-
-/* Modal Holiday Tags */
-.holiday-type-tag {
-    background-color: #f1f5f9;
-    color: #475569;
-}
-.holiday-type-tag[data-type*="Nacional"] { background: #E0F2FE; color: #0369A1; }
-.holiday-type-tag[data-type*="Estadual"] { background: #FAE8FF; color: #86198F; }
-.holiday-type-tag[data-type*="Municipal"] { background: #DCFCE7; color: #15803D; }
-.holiday-type-tag[data-type*="Facultativo"] { background: #FFEDD5; color: #C2410C; }
-

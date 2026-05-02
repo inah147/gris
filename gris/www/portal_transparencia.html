@@ -1,150 +1,133 @@
 {% extends "templates/portal_clean.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, card, empty, field %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+
+{% macro render_document_card(doc, eyebrow) %}
+	{% set title = doc.nome if doc.nome is defined else doc.title %}
+	{% set footer %}
+		<a href="{{ doc.arquivo }}" target="_blank" rel="noopener" class="btn-sm-primary transparencia-doc-card__action">
+			{{ lucide_icon("arrow-up-right", size="sm") }}
+			<span>Abrir arquivo</span>
+		</a>
+	{% endset %}
+	{% call card(footer=footer, attrs={"class": "transparencia-doc-card"}) %}
+		<div class="transparencia-doc-card__body">
+			<div class="transparencia-doc-card__icon" aria-hidden="true">
+				{{ lucide_icon("file-text", size="lg") }}
+			</div>
+			<div class="transparencia-doc-card__copy">
+				<p class="transparencia-doc-card__eyebrow">{{ eyebrow }}</p>
+				<h3 class="transparencia-doc-card__title">{{ title }}</h3>
+			</div>
+		</div>
+	{% endcall %}
+{% endmacro %}
+
+{% macro render_area_groups(areas) %}
+	{% if areas %}
+		<div class="transparencia-area-list">
+			{% for area, arquivos in areas.items() %}
+				<section class="transparencia-area" aria-labelledby="transparencia-area-{{ loop.index }}">
+					<div class="transparencia-area__header">
+						<div>
+							<h3 id="transparencia-area-{{ loop.index }}" class="transparencia-area__title">{{ area }}</h3>
+							<p class="transparencia-area__meta">{{ arquivos | length }} documento{{ "s" if (arquivos | length) != 1 else "" }} publicado{{ "s" if (arquivos | length) != 1 else "" }}.</p>
+						</div>
+						{{ badge((arquivos | length) ~ " item" ~ ("s" if (arquivos | length) != 1 else ""), variant="secondary") }}
+					</div>
+					<div class="transparencia-doc-grid">
+						{% for doc in arquivos %}
+							{{ render_document_card(doc, "Documento anual") }}
+						{% endfor %}
+					</div>
+				</section>
+			{% endfor %}
+		</div>
+	{% else %}
+		{{ empty(
+			title="Nenhum documento encontrado",
+			description="Ainda não há publicações disponíveis para o ano selecionado.",
+			icon=lucide_icon("folder-search", size="lg"),
+			attrs={"class": "transparencia-empty"}
+		) }}
+	{% endif %}
+{% endmacro %}
 
 {% block page_content %}
-<!-- Hero Section -->
-<div class="transparency-hero">
-    <div class="container col-xxl-8 px-4 py-5">
-        <div class="row flex-lg-row-reverse align-items-center justify-content-center g-5 py-5">
-            <div class="col-12 col-sm-10 col-lg-6 text-center">
-                {% if logo %}
-                <img src="{{ logo }}" class="d-block mx-auto img-fluid mb-4 mb-lg-0" alt="Logo" style="max-height: 400px; width: auto;" loading="lazy">
-                {% endif %}
-            </div>
-            <div class="col-12 col-lg-6 text-center">
-                <h1 class="display-4 mb-3" style="color: #1D2755; font-weight: 900;">Portal de Transparência</h1>
-                <p class="lead" style="color: var(--text-secondary);">{{ subtitle or 'Acesso público a documentos e informações institucionais' }}</p>
-            </div>
-        </div>
-    </div>
+<div class="transparencia-page" data-transparencia-root data-annual-endpoint="/api/method/gris.api.transparencia.get_arquivos_por_ano">
+	<section class="transparencia-hero" aria-labelledby="portal-transparencia-title">
+		<div class="transparencia-hero__copy">
+			{{ badge("Acesso público", variant="secondary", attrs={"class": "transparencia-hero__badge"}) }}
+			<h1 id="portal-transparencia-title" class="m-0 text-4xl font-semibold leading-tight text-foreground">Portal de Transparência</h1>
+			<p class="m-0 text-base leading-relaxed text-muted-foreground">{{ subtitle or "Acesso público a documentos e informações institucionais." }}</p>
+		</div>
+		{% if logo %}
+			<div class="transparencia-hero__media">
+				<div class="transparencia-hero__logo-shell">
+					<img src="{{ logo }}" alt="Identidade visual institucional" class="transparencia-hero__logo" loading="lazy">
+				</div>
+			</div>
+		{% endif %}
+	</section>
+
+	{% if documentos_gerais %}
+		<section class="transparencia-section" id="documentos-gerais" aria-labelledby="documentos-gerais-title">
+			<header class="transparencia-section__header">
+				<div>
+					<h2 id="documentos-gerais-title" class="m-0 text-2xl font-semibold leading-tight text-foreground">Documentos gerais</h2>
+					<p class="m-0 text-sm leading-relaxed text-muted-foreground">Materiais institucionais de acesso contínuo.</p>
+				</div>
+			</header>
+			<div class="transparencia-doc-grid">
+				{% for doc in documentos_gerais %}
+					{{ render_document_card(doc, "Documento geral") }}
+				{% endfor %}
+			</div>
+		</section>
+	{% endif %}
+
+	<section class="transparencia-section" id="documentos-anuais" aria-labelledby="documentos-anuais-title">
+		<header class="transparencia-section__header">
+			<div>
+				<h2 id="documentos-anuais-title" class="m-0 text-2xl font-semibold leading-tight text-foreground">Documentos anuais</h2>
+				<p class="m-0 text-sm leading-relaxed text-muted-foreground">Consulte as publicações por ano e área responsável.</p>
+			</div>
+		</header>
+
+		{% if year_items %}
+			{% call card(attrs={"class": "transparencia-filter-card"}) %}
+				<div class="transparencia-filter-card__content">
+					<div class="transparencia-filter-card__copy">
+						<h3 class="m-0 text-lg font-semibold leading-tight text-foreground">Filtrar publicações</h3>
+						<p class="m-0 text-sm leading-relaxed text-muted-foreground">Selecione um ano para atualizar a listagem sem sair da página.</p>
+					</div>
+					<div class="transparencia-filter-card__field">
+						{% call field(label="Ano de referência") %}
+							{{ select(
+								id="transparency-year-filter",
+								name="ano_referencia",
+								items=year_items,
+								selected=ano_selecionado or "",
+								main_attrs={"class": "w-full"},
+								trigger_attrs={"class": "w-full justify-between"}
+							) }}
+						{% endcall %}
+					</div>
+				</div>
+			{% endcall %}
+
+			<div id="areas-container" class="transparencia-areas" data-selected-year="{{ ano_selecionado or '' }}">
+				{{ render_area_groups(areas_iniciais) }}
+			</div>
+		{% else %}
+			{{ empty(
+				title="Nenhum ano disponível",
+				description="As publicações anuais aparecerão aqui assim que houver documentos cadastrados.",
+				icon=lucide_icon("calendar-search", size="lg"),
+				attrs={"class": "transparencia-empty"}
+			) }}
+		{% endif %}
+	</section>
 </div>
-
-{% if documentos_gerais %}
-<div class="container my-5 transparency-section" id="documentos-gerais">
-    <h2 class="transparency-section__title">Documentos Gerais</h2>
-    <div class="transparency-grid">
-        {% for doc in documentos_gerais %}
-        <div class="doc-card">
-            <div class="doc-card__icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                </svg>
-            </div>
-            <div class="doc-card__content">
-                <h3 class="doc-card__title">{{ doc.nome }}</h3>
-            </div>
-            <div class="doc-card__footer">
-                <a href="{{ doc.arquivo }}" target="_blank" class="btn btn-primary btn-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                        <polyline points="15 3 21 3 21 9"></polyline>
-                        <line x1="10" y1="14" x2="21" y2="3"></line>
-                    </svg>
-                    Abrir Arquivo
-                </a>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
-
-<!-- Separador entre seções -->
-<div class="container my-5 separator-section">
-    <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 3rem 0;">
-</div>
-
-<div class="container my-5 transparency-section" id="documentos-anuais">
-    <h2 class="transparency-section__title">Documentos Anuais</h2>
-
-    <div class="year-filter">
-        <div class="year-filter__field">
-            <label for="ano_referencia" class="form-label fw-bold mb-2">Ano de Referência</label>
-            <select id="ano_referencia" name="ano_referencia" class="form-select" onchange="carregarArquivos(this.value)">
-                {% for ano in years %}
-                <option value="{{ ano }}" {% if ano == ano_selecionado %}selected{% endif %}>{{ ano }}</option>
-                {% endfor %}
-            </select>
-        </div>
-    </div>
-
-    <div id="areas-container">
-        <!-- Seções dinâmicas via JS -->
-    </div>
-</div>
-
-<script>
-function carregarArquivos(ano) {
-    fetch('/api/method/gris.api.transparencia.get_arquivos_por_ano?ano_referencia=' + ano)
-        .then(response => response.json())
-        .then(data => {
-            atualizarAreas(data.message.areas);
-        });
-}
-
-function atualizarAreas(areas) {
-    const container = document.getElementById('areas-container');
-    container.innerHTML = '';
-    if (!areas || Object.keys(areas).length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                    <polyline points="13 2 13 9 20 9"></polyline>
-                </svg>
-                <p>Nenhum documento encontrado para este ano.</p>
-            </div>
-        `;
-        return;
-    }
-    Object.entries(areas).forEach(([area, arquivos]) => {
-        let cards = '';
-        arquivos.forEach(arq => {
-            cards += `
-                <div class="doc-card">
-                    <div class="doc-card__icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="16" y1="13" x2="8" y2="13"></line>
-                            <line x1="16" y1="17" x2="8" y2="17"></line>
-                        </svg>
-                    </div>
-                    <div class="doc-card__content">
-                        <h3 class="doc-card__title">${arq.title}</h3>
-                    </div>
-                    <div class="doc-card__footer">
-                        <a href="${arq.arquivo}" target="_blank" class="btn btn-primary btn-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                                <polyline points="15 3 21 3 21 9"></polyline>
-                                <line x1="10" y1="14" x2="21" y2="3"></line>
-                            </svg>
-                            Abrir Arquivo
-                        </a>
-                    </div>
-                </div>
-            `;
-        });
-        container.innerHTML += `
-            <div class="doc-area">
-                <h3 class="doc-area__title">${area}</h3>
-                <div class="transparency-grid">
-                    ${cards}
-                </div>
-            </div>
-        `;
-    });
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    const ano = document.getElementById('ano_referencia').value;
-    carregarArquivos(ano);
-});
-</script>
-
-<!-- Espaço de rodapé -->
-<div style="height: 4rem;"></div>
 {% endblock %}

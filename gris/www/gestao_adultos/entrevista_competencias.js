@@ -1,109 +1,99 @@
 frappe.ready(() => {
-	const filtroAssociado = document.getElementById("filtro-associado");
-	const filtroAssociadoList = document.getElementById("filtro-associado-list");
 	const btnFiltrar = document.getElementById("btn-filtrar");
 	const btnNova = document.getElementById("btn-nova-entrevista");
+	const btnConfirmar = document.getElementById("confirmar-modal-associado");
 	const tbody = document.getElementById("lista-entrevistas");
-
-	const modal = document.getElementById("modal-associado");
-	const backdrop = document.getElementById("modal-associado-backdrop");
-	const selectNovoAssociado = document.getElementById("novo-associado");
-	const btnCancelarModal = document.getElementById("cancelar-modal-associado");
-	const btnConfirmarModal = document.getElementById("confirmar-modal-associado");
+	const loadingState = document.getElementById("entrevistas-loading");
+	const emptyState = document.getElementById("entrevistas-empty");
+	const tableWrapper = document.getElementById("entrevistas-table-wrapper");
 
 	let associadosAdultos = [];
+	let entrevistas = [];
 
-	function openModal() {
-		backdrop.style.display = "block";
-		modal.style.display = "flex";
-		document.body.classList.add("modal-open");
-	}
+	const setState = (state) => {
+		loadingState?.classList.toggle("hidden", state !== "loading");
+		emptyState?.classList.toggle("hidden", state !== "empty");
+		tableWrapper?.classList.toggle("hidden", state !== "table");
+	};
 
-	function closeModal() {
-		modal.style.display = "none";
-		backdrop.style.display = "none";
-		document.body.classList.remove("modal-open");
-	}
+	const getFilterSelect = () => document.getElementById("filtro-associado");
+	const getModalSelect = () => document.getElementById("novo-associado");
 
-	function fillAssociadoOptions() {
-		const options = [];
-		associadosAdultos.forEach((row) => {
-			options.push(`<option value="${frappe.utils.escape_html(row.nome_completo || row.name)}"></option>`);
-		});
-		filtroAssociadoList.innerHTML = options.join("");
+	const buildAssociateItems = (emptyLabel) => {
+		const items = [{ value: "", label: emptyLabel }];
+		for (const row of associadosAdultos) {
+			const label = row.nome_completo || row.name;
+			items.push({
+				value: row.name,
+				label,
+				attrs: { "data-keywords": `${row.name} ${row.nome_completo || ""}`.trim() },
+			});
+		}
+		return items;
+	};
 
-		const modalOptions = ["<option value=''>Selecione</option>"];
-		associadosAdultos.forEach((row) => {
-			modalOptions.push(`<option value="${frappe.utils.escape_html(row.name)}">${frappe.utils.escape_html(row.nome_completo || row.name)}</option>`);
-		});
-		selectNovoAssociado.innerHTML = modalOptions.join("");
-	}
+	const renderRows = (rows) => {
+		if (!tbody) {
+			return;
+		}
 
-	function renderLista(rows) {
 		if (!rows.length) {
-			tbody.innerHTML = `<tr class="empty-row"><td colspan="3">Nenhuma entrevista encontrada.</td></tr>`;
+			tbody.innerHTML = "";
+			setState("empty");
 			return;
 		}
 
 		tbody.innerHTML = rows
 			.map((row) => {
 				const associado = frappe.utils.escape_html(row.associado_nome || row.associado || "-");
-				const dataAtualizacao = row.data_da_ultima_atualizacao
-					? frappe.datetime.str_to_user(row.data_da_ultima_atualizacao)
+				const atualizacao = row.data_da_ultima_atualizacao
+					? frappe.utils.escape_html(frappe.datetime.str_to_user(row.data_da_ultima_atualizacao))
 					: "-";
+				const href = `/gestao_adultos/respostas_entrevista?name=${encodeURIComponent(row.name)}`;
 				return `
 					<tr>
 						<td>${associado}</td>
-						<td>${frappe.utils.escape_html(dataAtualizacao)}</td>
-						<td style="text-align: right;">
-							<a class="btn-modern btn-modern--sm" href="/gestao_adultos/respostas_entrevista?name=${encodeURIComponent(row.name)}">Abrir</a>
+						<td>${atualizacao}</td>
+						<td class="interview-table__actions">
+							<a class="btn-sm-outline" href="${href}">Abrir</a>
 						</td>
 					</tr>
 				`;
 			})
 			.join("");
-	}
+		setState("table");
+	};
 
-	async function carregarAssociados() {
+	const applyFilter = () => {
+		const associado = getSelectValue(getFilterSelect());
+		if (!associado) {
+			renderRows(entrevistas);
+			return;
+		}
+		renderRows(entrevistas.filter((row) => String(row.associado || "") === String(associado)));
+	};
+
+	const carregarAssociados = async () => {
 		const response = await frappe.call({
 			method: "gris.api.gestao_adultos.listar_associados_adultos",
 		});
 		associadosAdultos = response.message || [];
-		fillAssociadoOptions();
-	}
+		repopulateSelect("filtro-associado", buildAssociateItems("Todos os associados"));
+		repopulateSelect("novo-associado", buildAssociateItems("Selecione um associado"));
+	};
 
-	async function carregarEntrevistas() {
-		tbody.innerHTML = `
-			<tr>
-				<td colspan="3">
-					<div class="loading-container">
-						<div class="loading-spinner"></div>
-						<span class="loading-text">Carregando entrevistas...</span>
-					</div>
-				</td>
-			</tr>`;
-		const termo = (filtroAssociado.value || "").trim().toLowerCase();
+	const carregarEntrevistas = async () => {
+		setState("loading");
 		const response = await frappe.call({
 			method: "gris.api.gestao_adultos.listar_entrevistas",
 			args: {},
 		});
-		const rows = response.message || [];
-		if (!termo) {
-			renderLista(rows);
-			return;
-		}
+		entrevistas = response.message || [];
+		applyFilter();
+	};
 
-		const filtered = rows.filter((row) => {
-			const associadoNome = String(row.associado_nome || "").toLowerCase();
-			const associadoCodigo = String(row.associado || "").toLowerCase();
-			return associadoNome.includes(termo) || associadoCodigo.includes(termo);
-		});
-
-		renderLista(filtered);
-	}
-
-	async function abrirOuCriarEntrevista() {
-		const associado = selectNovoAssociado.value;
+	const abrirOuCriarEntrevista = async () => {
+		const associado = getSelectValue(getModalSelect());
 		if (!associado) {
 			frappe.msgprint("Selecione um associado para continuar.");
 			return;
@@ -117,16 +107,84 @@ frappe.ready(() => {
 		if (data.name) {
 			window.location.href = `/gestao_adultos/respostas_entrevista?name=${encodeURIComponent(data.name)}`;
 		}
+	};
+
+	btnFiltrar?.addEventListener("click", applyFilter);
+	document.addEventListener("change", (event) => {
+		if (event.target.closest && event.target.closest("#filtro-associado")) {
+			applyFilter();
+		}
+	});
+	btnNova?.addEventListener("click", () => {
+		const modalSelect = getModalSelect();
+		if (modalSelect) {
+			modalSelect.value = "";
+		}
+		openDialog("novo-associado-dialog");
+	});
+	btnConfirmar?.addEventListener("click", abrirOuCriarEntrevista);
+
+	carregarAssociados()
+		.then(carregarEntrevistas)
+		.catch((error) => {
+			console.error(error);
+			setState("empty");
+			frappe.msgprint("Não foi possível carregar a página de entrevistas.");
+		});
+});
+
+function getSelectValue(element) {
+	if (!element) {
+		return "";
+	}
+	const value = element.value;
+	return Array.isArray(value) ? value[0] || "" : (value || "");
+}
+
+function repopulateSelect(id, items) {
+	const oldElement = document.getElementById(id);
+	if (!oldElement) {
+		return;
 	}
 
-	btnFiltrar?.addEventListener("click", carregarEntrevistas);
-	btnNova?.addEventListener("click", openModal);
-	btnCancelarModal?.addEventListener("click", closeModal);
-	backdrop?.addEventListener("click", closeModal);
-	btnConfirmarModal?.addEventListener("click", abrirOuCriarEntrevista);
+	const listbox = oldElement.querySelector('[role="listbox"]');
+	const hiddenInput = oldElement.querySelector('input[type="hidden"]');
+	const triggerLabel = oldElement.querySelector(':scope > button > span');
+	if (!listbox || !hiddenInput || !triggerLabel) {
+		return;
+	}
 
-	carregarAssociados().then(carregarEntrevistas).catch((error) => {
-		console.error(error);
-		frappe.msgprint("Não foi possível carregar a página de entrevistas.");
-	});
-});
+	listbox.innerHTML = (items || [])
+		.map((item, index) => {
+			const attrs = Object.entries(item.attrs || {})
+				.map(([key, value]) => ` ${key}="${escapeAttribute(String(value))}"`)
+				.join("");
+			return `<div id="${id}-items-${index + 1}" role="option" data-value="${escapeAttribute(String(item.value ?? ""))}"${attrs}>${frappe.utils.escape_html(item.label || "")}</div>`;
+		})
+		.join("");
+
+	hiddenInput.value = "";
+	triggerLabel.textContent = items?.[0]?.label || "Selecione";
+
+	const newElement = oldElement.cloneNode(true);
+	newElement.removeAttribute("data-select-initialized");
+	oldElement.parentNode.replaceChild(newElement, oldElement);
+}
+
+function escapeAttribute(value) {
+	return value
+		.replaceAll("&", "&amp;")
+		.replaceAll('"', "&quot;")
+		.replaceAll("<", "&lt;")
+		.replaceAll(">", "&gt;");
+}
+
+function openDialog(id) {
+	const dialog = document.getElementById(id);
+	if (!dialog || typeof dialog.showModal !== "function") {
+		return;
+	}
+	if (!dialog.open) {
+		dialog.showModal();
+	}
+}

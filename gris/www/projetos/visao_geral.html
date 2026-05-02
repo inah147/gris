@@ -1,4 +1,6 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, card, empty %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 {% block title %}Todos os Projetos{% endblock %}
 {% set active_link = '/projetos/visao_geral' %}
 
@@ -8,40 +10,69 @@
 {% endblock %}
 
 {% block page_header %}
-<div class="page-header">
-	<div class="page-header__content">
-		<h1 class="page-header__title">Todos os projetos</h1>
-		<p class="page-header__subtitle">Acompanhe os projetos agrupados por status.</p>
+<section class="projects-page-header" aria-labelledby="projects-page-title">
+	<div class="flex flex-col gap-2 max-w-2xl">
+		<h1 id="projects-page-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Todos os projetos</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">Acompanhe os projetos agrupados por status e abra cada fluxo diretamente pelo quadro.</p>
 	</div>
-</div>
+</section>
 {% endblock %}
 
 {% block main %}
-<div class="kanban-container">
+
+<div class="kanban-board" aria-label="Quadro de projetos por status">
 	{% for status in kanban_columns %}
-	<div class="kanban-column" data-status="{{ status }}">
-		<div class="kanban-column__header">
-			<h3 class="kanban-column__title">{{ status_labels[status] }}</h3>
-			<span class="g-badge g-badge--secondary">{{ kanban_data[status]|length }}</span>
-		</div>
-		<div class="kanban-column__body">
-			{% for card in kanban_data[status] %}
-			<div
-				class="kanban-card card-modern{% if status == 'Rascunho' %} kanban-card--editable{% elif status == 'Em aprovacao' %} kanban-card--approval{% elif status == 'Aprovado' %} kanban-card--approved{% endif %}"
-				data-project-name="{{ card.name }}"
-				data-status="{{ status }}"
-			>
-				<div class="kanban-card__top">
-					<span class="g-badge g-badge--info">{{ card.status_label }}</span>
-				</div>
-				<div class="kanban-card__main">
-					<h4 class="kanban-card__title">{{ card.titulo }}</h4>
-					<p class="kanban-card__subtitle">Coordenador: {{ card.coordenador }}</p>
-				</div>
+	<section class="kanban-column" data-status="{{ status }}" aria-labelledby="kanban-column-{{ loop.index }}">
+		<header class="kanban-column__header">
+			<div class="kanban-column__heading">
+				<h2 id="kanban-column-{{ loop.index }}" class="kanban-column__title">{{ status_labels[status] }}</h2>
+				<p class="kanban-column__subtitle">{{ kanban_data[status]|length }} projeto{% if kanban_data[status]|length != 1 %}s{% endif %} nesta etapa.</p>
 			</div>
-			{% endfor %}
+			{{ badge(kanban_data[status]|length, variant="secondary", outline=true) }}
+		</header>
+		<div class="kanban-column__body">
+			{% if kanban_data[status] %}
+				{% for card in kanban_data[status] %}
+					{% if status == "Rascunho" %}
+						{% set card_href = "/projetos/cadastrar_novo_projeto?projeto=" ~ (card.name | urlencode) %}
+						{% set status_variant = "secondary" %}
+					{% elif status == "Em aprovacao" %}
+						{% set card_href = "/projetos/aprovacao_projeto?projeto=" ~ (card.name | urlencode) %}
+						{% set status_variant = "default" %}
+					{% elif status == "Aprovado" %}
+						{% set card_href = "/projetos/projeto_aprovado?projeto=" ~ (card.name | urlencode) %}
+						{% set status_variant = "default" %}
+					{% else %}
+						{% set card_href = "/projetos/projeto?projeto=" ~ (card.name | urlencode) %}
+						{% set status_variant = "destructive" if status == "Cancelado" else "secondary" %}
+					{% endif %}
+					<a class="kanban-card-link" href="{{ card_href }}" aria-label="Abrir projeto {{ card.titulo }}">
+						{% call card(attrs={"class": "kanban-card", "data-project-name": card.name, "data-status": status}) %}
+							<div class="kanban-card__eyebrow">
+								{{ badge(card.status_label, variant=status_variant) }}
+								<span class="kanban-card__eyebrow-text">Fluxo disponível</span>
+							</div>
+							<div class="kanban-card__content">
+								<h3 class="kanban-card__card-title">{{ card.titulo }}</h3>
+								<p class="kanban-card__card-subtitle">Coordenador: {{ card.coordenador }}</p>
+							</div>
+							<div class="kanban-card__cta">
+								<span>Abrir projeto</span>
+								{{ lucide_icon("arrow-right", size="sm") }}
+							</div>
+						{% endcall %}
+					</a>
+				{% endfor %}
+			{% else %}
+				{{ empty(
+					title="Sem projetos nesta etapa",
+					description="Os próximos projetos que entrarem neste status aparecerão aqui.",
+					icon=lucide_icon("folder-open", size="md"),
+					attrs={"class": "kanban-empty"}
+				) }}
+			{% endif %}
 		</div>
-	</div>
+	</section>
 	{% endfor %}
 </div>
 {% endblock %}

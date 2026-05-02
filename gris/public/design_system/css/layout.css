@@ -171,6 +171,43 @@
 	height: var(--skeleton-height, 1rem);
 }
 
+/* --- Button group: grupo conectado de botões para paginações e toolbars --- */
+.btn-group {
+	display: inline-flex;
+	align-items: stretch;
+	flex-wrap: wrap;
+	gap: 0;
+}
+
+.btn-group > * {
+	border-radius: 0;
+	margin-left: -1px;
+	position: relative;
+}
+
+.btn-group > *:first-child {
+	margin-left: 0;
+	border-top-left-radius: var(--radius-md);
+	border-bottom-left-radius: var(--radius-md);
+}
+
+.btn-group > *:last-child {
+	border-top-right-radius: var(--radius-md);
+	border-bottom-right-radius: var(--radius-md);
+}
+
+.btn-group > *:hover,
+.btn-group > *:focus,
+.btn-group > *[aria-current="page"] {
+	z-index: 1;
+}
+
+.btn-group > *[disabled],
+.btn-group > *[aria-disabled="true"] {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+
 /* --- Responsive: md = 48rem --- */
 @media (min-width: 48rem) {
 	.md\:grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }

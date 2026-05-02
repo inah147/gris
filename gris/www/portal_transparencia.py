@@ -12,6 +12,7 @@ Estilos: portal_transparencia.css (seguindo design-system.css)
 import frappe
 
 from gris.api.portal_cache_utils import get_transparency_years_cached, get_uel_cached
+from gris.api.transparencia import build_areas_por_ano
 
 no_cache = 1
 
@@ -21,17 +22,18 @@ def get_context(context):
 
 	context.no_cache = 1
 
-	# Inclui CSS customizado da página
-	context.style = "/assets/gris/css/portal_transparencia.css"
-
 	# Lista anos (conteúdo público) sem cache para atualização imediata
 	context.years = get_transparency_years_cached(use_cache=False)
+	context.year_items = [{"label": str(ano), "value": str(ano)} for ano in (context.years or [])]
 
 	# Ano selecionado (querystring)
 	ano_selecionado = frappe.form_dict.get("ano_referencia")
 	context.ano_selecionado = ano_selecionado
 	if not ano_selecionado and context.years:
-		context.ano_selecionado = context.years[0]
+		context.ano_selecionado = str(context.years[0])
+	elif context.ano_selecionado is not None:
+		context.ano_selecionado = str(context.ano_selecionado)
+	context.areas_iniciais = build_areas_por_ano(context.ano_selecionado)
 
 	# Dados institucionais (tentar ignorar permissões, fallback se falhar)
 	uel_data = get_uel_cached(use_cache=False)

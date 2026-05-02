@@ -2,34 +2,76 @@ import base64
 import json
 import mimetypes
 import unicodedata
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 import frappe
-from frappe import _
 from frappe.utils import format_date, getdate, today
 from frappe.utils.pdf import get_pdf
 
 from gris.api.portal_access import enrich_context
 
+MONTH_OPTIONS = [
+	{"value": "", "label": "Todos os meses"},
+	{"value": "01", "label": "Janeiro"},
+	{"value": "02", "label": "Fevereiro"},
+	{"value": "03", "label": "Março"},
+	{"value": "04", "label": "Abril"},
+	{"value": "05", "label": "Maio"},
+	{"value": "06", "label": "Junho"},
+	{"value": "07", "label": "Julho"},
+	{"value": "08", "label": "Agosto"},
+	{"value": "09", "label": "Setembro"},
+	{"value": "10", "label": "Outubro"},
+	{"value": "11", "label": "Novembro"},
+	{"value": "12", "label": "Dezembro"},
+]
 
-def get_context(context):
-	# Disable cache to always show fresh data
-	context.no_cache = 1
+SECTION_COLOR_BY_RAMO = {
+	"diretoria": "var(--chart-1)",
+	"filhotes": "var(--chart-4)",
+	"lobinho": "var(--warning)",
+	"escoteiro": "var(--success)",
+	"senior": "var(--chart-6)",
+	"pioneiro": "var(--destructive)",
+}
 
-	roles = frappe.get_roles(frappe.session.user)
-	if not any(role in roles for role in ["Visualizador Calendario", "Gestor Calendario", "System Manager"]):
-		frappe.throw("Você não tem permissão para acessar esta página.", frappe.PermissionError)
+HOLIDAY_TYPE_BADGE = {
+	"Nacional": "default",
+	"Estadual": "secondary",
+	"Municipal": "outline",
+	"Ponto Facultativo": "secondary",
+}
 
-	context.can_simulate = "Gestor Calendario" in roles or "System Manager" in roles
 
+def _normalize_text(value):
+	if not value:
+		return ""
+	return "".join(
+		char for char in unicodedata.normalize("NFD", value) if unicodedata.category(char) != "Mn"
+	).lower()
+
+
+def _get_selected_year():
 	try:
-		year = int(frappe.form_dict.year)
+		return int(frappe.form_dict.year)
 	except (ValueError, TypeError):
-		year = getdate(today()).year
+		return getdate(today()).year
 
-	context.year = year
 
-	# Get available years with activities
+def _get_selected_month():
+	raw_month = frappe.form_dict.month
+	if raw_month in {None, ""}:
+		return ""
+	try:
+		month = int(raw_month)
+	except (TypeError, ValueError):
+		return ""
+	if 1 <= month <= 12:
+		return f"{month:02d}"
+	return ""
+
+
+def _get_available_years(selected_year):
 	years_data = frappe.db.sql(
 		"""
 		SELECT DISTINCT YEAR(inicio) as year FROM `tabCalendario`
@@ -39,78 +81,19 @@ def get_context(context):
 	""",
 		as_dict=True,
 	)
-
-	available_years = sorted(list(set([int(y.year) for y in years_data if y.year])), reverse=True)
-
-	# Ensure current year is in the list if it's the default view, or if the user selected it
-	if year not in available_years:
-		available_years.append(year)
+	available_years = sorted({int(row.year) for row in years_data if row.year}, reverse=True)
+	if selected_year not in available_years:
+		available_years.append(selected_year)
 		available_years.sort(reverse=True)
+	return available_years
 
-	context.available_years = available_years
 
-	# Fetch holidays for the year
-	feriados = frappe.get_all(
-		"Feriados",
-		filters={"data": ["between", [f"{year}-01-01", f"{year}-12-31"]]},
-		fields=["nome", "data", "tipo", "descricao"],
-	)
-	feriados_map = {getdate(f.data): f for f in feriados}
-
-	# Fetch all calendar events for the year
-	# We fetch a bit more to cover year boundaries if needed, but strict year filter is fine for "dias do ano"
-	start_date = f"{year}-01-01"
-	end_date = f"{year}-12-31"
-
-	# Fetch events that overlap with the year
-	events = frappe.get_all(
-		"Calendario",
-		filters={"inicio": ["<=", f"{year}-12-31 23:59:59"], "termino": [">=", f"{year}-01-01 00:00:00"]},
-		fields=["name", "atividade", "inicio", "termino", "secao", "local", "nivel", "sem_atividade"],
-		order_by="inicio asc",
-	)
-
-	sections = set()
-	events_by_date_section = {}
-
-	for event in events:
-		section = event.secao if event.secao else "Diretoria"
-		sections.add(section)
-
-		event_start = getdate(event.inicio)
-		event_end = getdate(event.termino)
-
-		# Clamp dates to current year for display
-		current = max(event_start, date(year, 1, 1))
-		end = min(event_end, date(year, 12, 31))
-
-		while current <= end:
-			date_str = current.strftime("%Y-%m-%d")
-			key = (date_str, section)
-			if key not in events_by_date_section:
-				events_by_date_section[key] = []
-
-			# Create a copy for display logic
-			event_display = event.copy()
-			event_display["is_start"] = current == event_start
-			event_display["is_end"] = current == event_end
-
-			# Helper fields for template data attributes
-			event_display["inicio_fmt"] = format_date(event.inicio)
-			event_display["termino_fmt"] = format_date(event.termino)
-			event_display["hora_inicio"] = event.inicio.strftime("%H:%M") if event.inicio else ""
-			event_display["hora_termino"] = event.termino.strftime("%H:%M") if event.termino else ""
-
-			events_by_date_section[key].append(event_display)
-			current += timedelta(days=1)
-
-	# Fetch Section -> Ramo mapping for sorting
+def _get_section_sorting_data():
 	associados = frappe.get_all("Associado", fields=["secao", "ramo"], distinct=True)
-	section_ramo_map = {d.secao: d.ramo for d in associados if d.secao}
-
+	section_ramo_map = {row.secao: row.ramo for row in associados if row.secao}
 	ramo_order = ["Diretoria", "Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro"]
 
-	def get_section_sort_key(section_name):
+	def sort_key(section_name):
 		if section_name == "Diretoria":
 			return (0, section_name)
 
@@ -118,102 +101,153 @@ def get_context(context):
 		if ramo in ramo_order:
 			return (ramo_order.index(ramo), section_name)
 
-		# If ramo not in order or not found, put at the end
 		return (len(ramo_order), section_name)
 
-	sorted_sections = sorted(list(sections), key=get_section_sort_key)
+	return section_ramo_map, sort_key
 
-	if not sorted_sections:
-		# If no events, at least show Diretoria? Or just empty.
-		sorted_sections = ["Diretoria"]
 
-	context.sections = sorted_sections
+def _get_section_color(section_name, section_ramo_map):
+	ramo = "Diretoria" if section_name == "Diretoria" else section_ramo_map.get(section_name)
+	return SECTION_COLOR_BY_RAMO.get(_normalize_text(ramo), "var(--primary)")
 
-	# Generate CSS classes for sections based on Ramo
-	context.section_classes = {}
-	for section in sorted_sections:
-		ramo = section_ramo_map.get(section, "default")
-		# Normalize ramo to be a valid css class suffix
-		normalized = "".join(
-			c for c in unicodedata.normalize("NFD", ramo) if unicodedata.category(c) != "Mn"
-		).lower()
-		context.section_classes[section] = normalized
 
-	calendar_rows = []
-	current_date = date(year, 1, 1)
-	end_date_obj = date(year, 12, 31)
+def _is_all_day_event(start_dt, end_dt):
+	start_time = getattr(start_dt, "time", lambda: None)()
+	end_time = getattr(end_dt, "time", lambda: None)()
+	if not start_time or not end_time:
+		return True
+	return start_time.strftime("%H:%M:%S") == "00:00:00" and end_time.strftime("%H:%M:%S") == "00:00:00"
 
-	months = {
-		1: "Jan",
-		2: "Fev",
-		3: "Mar",
-		4: "Abr",
-		5: "Mai",
-		6: "Jun",
-		7: "Jul",
-		8: "Ago",
-		9: "Set",
-		10: "Out",
-		11: "Nov",
-		12: "Dez",
-	}
 
-	months_full = {
-		1: "Janeiro",
-		2: "Fevereiro",
-		3: "Março",
-		4: "Abril",
-		5: "Maio",
-		6: "Junho",
-		7: "Julho",
-		8: "Agosto",
-		9: "Setembro",
-		10: "Outubro",
-		11: "Novembro",
-		12: "Dezembro",
-	}
+def _build_calendar_payload(year, selected_month):
+	start_date = f"{year}-01-01"
+	end_date = f"{year}-12-31"
 
-	weekdays = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+	events = frappe.get_all(
+		"Calendario",
+		filters={"inicio": ["<=", f"{end_date} 23:59:59"], "termino": [">=", f"{start_date} 00:00:00"]},
+		fields=["name", "atividade", "inicio", "termino", "secao", "local", "nivel", "sem_atividade"],
+		order_by="inicio asc",
+	)
 
-	last_month = None
-	while current_date <= end_date_obj:
-		date_str = current_date.strftime("%Y-%m-%d")
-
-		is_new_month = False
-		if last_month != current_date.month:
-			is_new_month = True
-			last_month = current_date.month
-
-		row = {
-			"date_str": date_str,
-			"date_obj": current_date,
-			"day": current_date.day,
-			"month": months[current_date.month],
-			"month_full": months_full[current_date.month],
-			"month_num": f"{current_date.month:02d}",
-			"weekday": weekdays[current_date.weekday()],
-			"is_weekend": current_date.weekday() >= 5,
-			"is_new_month": is_new_month,
-			"activities": {},
-			"holiday": feriados_map.get(current_date),
+	section_ramo_map, sort_key = _get_section_sorting_data()
+	sections = sorted({(event.secao or "Diretoria") for event in events} or {"Diretoria"}, key=sort_key)
+	section_categories = [
+		{
+			"name": section,
+			"label": section,
+			"color": _get_section_color(section, section_ramo_map),
 		}
+		for section in sections
+	]
+	section_color_map = {item["name"]: item["color"] for item in section_categories}
 
-		has_activity = False
-		for section in sorted_sections:
-			key = (date_str, section)
-			evts = events_by_date_section.get(key, [])
-			row["activities"][section] = evts
-			if evts:
-				has_activity = True
+	calendar_events = []
+	for event in events:
+		section = event.secao or "Diretoria"
+		calendar_events.append(
+			{
+				"id": event.name,
+				"title": event.atividade or "Atividade",
+				"start": event.inicio.isoformat() if event.inicio else None,
+				"end": event.termino.isoformat() if event.termino else None,
+				"all_day": _is_all_day_event(event.inicio, event.termino),
+				"category": section,
+				"color": section_color_map.get(section, "var(--primary)"),
+				"data": {
+					"atividade": event.atividade or "Atividade",
+					"inicio": format_date(event.inicio) if event.inicio else "-",
+					"termino": format_date(event.termino) if event.termino else "-",
+					"hora_inicio": event.inicio.strftime("%H:%M") if event.inicio else "",
+					"hora_termino": event.termino.strftime("%H:%M") if event.termino else "",
+					"secao": section,
+					"local": event.local or "-",
+					"nivel": event.nivel or "-",
+					"sem_atividade": 1 if event.sem_atividade else 0,
+				},
+			}
+		)
 
-		row["has_activity"] = has_activity
-		calendar_rows.append(row)
-		current_date += timedelta(days=1)
+	feriados = frappe.get_all(
+		"Feriados",
+		filters={"data": ["between", [start_date, end_date]]},
+		fields=["nome", "data", "tipo", "descricao"],
+		order_by="data asc",
+	)
+	weekday_labels = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+	holiday_items = [
+		{
+			"name": holiday.nome,
+			"date_iso": holiday.data.strftime("%Y-%m-%d"),
+			"date_label": format_date(holiday.data),
+			"month": holiday.data.strftime("%m"),
+			"weekday": weekday_labels[holiday.data.weekday()],
+			"type": holiday.tipo or "Geral",
+			"description": holiday.descricao or "Sem descrição disponível.",
+			"badge_variant": HOLIDAY_TYPE_BADGE.get(holiday.tipo, "outline"),
+		}
+		for holiday in feriados
+	]
 
-	context.calendar_rows = calendar_rows
+	today_date = getdate(today())
+	if selected_month:
+		anchor_date = date(year, int(selected_month), 1)
+	else:
+		anchor_date = today_date if today_date.year == year else date(year, 1, 1)
 
-	# Sidebar and context enrichment
+	if selected_month:
+		month_number = int(selected_month)
+		next_month = date(
+			year + (1 if month_number == 12 else 0), 1 if month_number == 12 else month_number + 1, 1
+		)
+		last_day = (next_month - timedelta(days=1)).day
+		list_range_start = f"{year}-{selected_month}-01"
+		list_range_end = f"{year}-{selected_month}-{last_day:02d}"
+	else:
+		list_range_start = f"{year}-01-01"
+		list_range_end = f"{year}-12-31"
+
+	return {
+		"sections": sections,
+		"calendar_categories": section_categories,
+		"calendar_events": calendar_events,
+		"holiday_items": holiday_items,
+		"calendar_initial_date": anchor_date.strftime("%Y-%m-%d"),
+		"calendar_list_range_start": list_range_start,
+		"calendar_list_range_end": list_range_end,
+	}
+
+
+def get_context(context):
+	context.no_cache = 1
+
+	roles = frappe.get_roles(frappe.session.user)
+	if not any(role in roles for role in ["Visualizador Calendario", "Gestor Calendario", "System Manager"]):
+		frappe.throw("Você não tem permissão para acessar esta página.", frappe.PermissionError)
+
+	year = _get_selected_year()
+	selected_month = _get_selected_month()
+	payload = _build_calendar_payload(year, selected_month)
+
+	context.year = year
+	context.selected_month = selected_month
+	context.available_years = _get_available_years(year)
+	context.year_items = [{"value": str(value), "label": str(value)} for value in context.available_years]
+	context.month_items = MONTH_OPTIONS
+	context.selected_sections = []
+	context.sections = payload["sections"]
+	context.section_items = [{"value": section, "label": section} for section in context.sections]
+	context.calendar_categories = payload["calendar_categories"]
+	context.calendar_events = payload["calendar_events"]
+	context.has_calendar_events = bool(context.calendar_events)
+	context.calendar_initial_date = payload["calendar_initial_date"]
+	context.calendar_initial_mode = "list"
+	context.calendar_list_range_start = payload["calendar_list_range_start"]
+	context.calendar_list_range_end = payload["calendar_list_range_end"]
+	context.holiday_items = payload["holiday_items"]
+	context.can_simulate = "Gestor Calendario" in roles or "System Manager" in roles
 	context.active_link = "/calendario/visualizar"
+
 	enrich_context(context, "/calendario/visualizar")
 
 
@@ -231,7 +265,7 @@ def export_calendar(year=None, month=None, show_empty_days=1, sections=None):
 	if sections and isinstance(sections, str):
 		try:
 			sections = json.loads(sections)
-		except:
+		except Exception:
 			sections = []
 
 	show_empty_days = int(show_empty_days)
@@ -343,7 +377,7 @@ def export_calendar(year=None, month=None, show_empty_days=1, sections=None):
 	filtered_events = []
 	busy_dates = set()
 
-	for key, item in grouped_events.items():
+	for item in grouped_events.values():
 		event_sections = item["sections"]
 		display_sections = event_sections
 

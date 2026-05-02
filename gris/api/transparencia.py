@@ -3,9 +3,11 @@ import frappe
 from gris.api.portal_cache_utils import make_file_public
 
 
-@frappe.whitelist(allow_guest=True)
-def get_arquivos_por_ano(ano_referencia):
-	# Conteúdo público: ignora permissões para permitir acesso a Guest
+def build_areas_por_ano(ano_referencia):
+	if not ano_referencia:
+		return {}
+
+	# Conteúdo público: ignora permissões para permitir acesso a Guest.
 	arquivos = frappe.get_all(
 		"Transparencia",
 		fields=["title", "arquivo", "area", "tipo_arquivo", "trimestre_referencia"],
@@ -17,13 +19,17 @@ def get_arquivos_por_ano(ano_referencia):
 		area = arq.area or "Sem área"
 		if area not in areas:
 			areas[area] = []
-		# Torna o arquivo público antes de retornar
-		arquivo_url = make_file_public(arq.arquivo) if arq.arquivo else None
 
-		# Adiciona trimestre ao título se for parecer trimestral
+		arquivo_url = make_file_public(arq.arquivo) if arq.arquivo else None
 		title = arq.title
 		if arq.tipo_arquivo == "Parecer trimestral da comissão fiscal" and arq.trimestre_referencia:
 			title = f"{arq.title} - {arq.trimestre_referencia}º Trimestre"
 
 		areas[area].append({"title": title, "arquivo": arquivo_url})
-	return {"areas": areas}
+
+	return areas
+
+
+@frappe.whitelist(allow_guest=True)
+def get_arquivos_por_ano(ano_referencia):
+	return {"areas": build_areas_por_ano(ano_referencia)}

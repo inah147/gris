@@ -1,117 +1,128 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, card, field, form, textarea %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
 {% block title %}Pesquisa de Novos Associados{% endblock %}
 
 {% block head_include %}
-  {{ super() }}
+	{{ super() }}
+	<link rel="stylesheet" href="/responsavel/pesquisa_novos.css">
 {% endblock %}
 
+{% macro pesquisa_select(name, label, items, selected, is_read_only) %}
+	{% set trigger_attrs = {"class": "pesquisa-select-trigger"} %}
+	{% if is_read_only %}{% set _ = trigger_attrs.update({"disabled": "disabled", "aria-disabled": "true"}) %}{% endif %}
+	{% call field(label=label) %}
+		{{ select(
+			id=name,
+			name=name,
+			selected=selected or "",
+			items=items,
+			main_attrs={"class": "pesquisa-select"},
+			trigger_attrs=trigger_attrs
+		) }}
+	{% endcall %}
+{% endmacro %}
+
+{% macro pesquisa_textarea(name, label, value, is_read_only) %}
+	{% set attrs = {"rows": "3", "class": "pesquisa-textarea"} %}
+	{% if is_read_only %}{% set _ = attrs.update({"disabled": "disabled", "readonly": "readonly"}) %}{% endif %}
+	{% call field(label=label) %}
+		{{ textarea(name=name, value=value or "", attrs=attrs) }}
+	{% endcall %}
+{% endmacro %}
+
 {% block page_header %}
-  <div class="page-header">
-    <div class="page-header__content">
-      <h1 class="page-header__title">Pesquisa de Novos Associados</h1>
-      <p class="page-header__subtitle">Queremos saber mais sobre você e sua experiência conosco.</p>
-    </div>
-  </div>
+	<section class="pesquisa-page-header" aria-labelledby="pesquisa-page-title">
+		<div class="pesquisa-page-header__content">
+			<h1 id="pesquisa-page-title">Pesquisa de Novos Associados</h1>
+			<p>Queremos saber mais sobre você e sua experiência conosco.</p>
+		</div>
+		<a href="/responsavel" class="btn-sm-ghost pesquisa-page-header__back">
+			{{ lucide_icon("arrow-left", size="sm") }}
+			<span>Voltar</span>
+		</a>
+	</section>
 {% endblock %}
 
 {% block main %}
-<div class="card-modern">
-  <div class="card-modern__body">
-    {% if is_read_only %}
-    <div class="alert-modern alert-modern--info mb-4">
-      <svg class="alert-modern__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="12" y1="16" x2="12" y2="12"></line>
-        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-      </svg>
-      <div class="alert-modern__content">
-        <p class="alert-modern__description">Você já respondeu a esta pesquisa. Obrigado!</p>
-      </div>
-    </div>
-    {% endif %}
+{% set como_movimento_options = [
+	"Através de um amigo",
+	"Através de reportagens na televisão ou rádio",
+	"Através de filmes e séries",
+	"Através de redes sociais"
+] %}
+{% set como_grupo_options = [
+	"Através de um amigo",
+	"Através de reportagens na televisão ou rádio",
+	"Através de redes sociais"
+] %}
+{% set como_movimento_items = [{"label": "Selecione...", "value": ""}] %}
+{% for opt in como_movimento_options %}
+	{% set _ = como_movimento_items.append({"label": opt, "value": opt}) %}
+{% endfor %}
+{% set como_grupo_items = [{"label": "Selecione...", "value": ""}] %}
+{% for opt in como_grupo_options %}
+	{% set _ = como_grupo_items.append({"label": opt, "value": opt}) %}
+{% endfor %}
 
-    <form id="survey-form" class="space-y-4">
-      <div class="row g-3">
-        <!-- Como conheceu o Movimento -->
-        <div class="col-12">
-          <label class="form-label-modern">Como você conheceu o Movimento Escoteiro?</label>
-          <select name="como_conheceu_movimento" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>
-            <option value="">Selecione...</option>
-            {% set options = ["Através de um amigo", "Através de reportagens na televisão ou rádio", "Através de filmes e séries", "Através de redes sociais"] %}
-            {% for opt in options %}
-            <option value="{{ opt }}" {% if survey.get('como_conheceu_movimento') == opt %}selected{% endif %}>{{ opt }}</option>
-            {% endfor %}
-          </select>
-        </div>
+<div class="pesquisa-page">
+	{{ toaster() }}
 
-        <!-- Como conheceu o Grupo -->
-        <div class="col-12">
-          <label class="form-label-modern">Como você conheceu o nosso grupo escoteiro?</label>
-          <select name="como_voce_conheceu_grupo" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>
-            <option value="">Selecione...</option>
-            {% set options = ["Através de um amigo", "Através de reportagens na televisão ou rádio", "Através de redes sociais"] %}
-            {% for opt in options %}
-            <option value="{{ opt }}" {% if survey.get('como_você_conheceu_o_nosso_grupo_escoteiro') == opt %}selected{% endif %}>{{ opt }}</option>
-            {% endfor %}
-          </select>
-        </div>
+	{% if is_read_only %}
+		{{ alert(
+			title="Pesquisa já respondida",
+			description="Você já respondeu a esta pesquisa. Obrigado pela contribuição!",
+			icon=lucide_icon("info", size="sm"),
+			variant="info",
+			attrs={"class": "pesquisa-readonly-alert"}
+		) }}
+	{% endif %}
 
-        <!-- Visão sobre o Movimento -->
-        <div class="col-12">
-          <label class="form-label-modern">Qual sua visão sobre o que é o Movimento Escoteiro?</label>
-          <textarea name="visao_sobre_movimento" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.get('visao_sobre_movimento') or '' }}</textarea>
-        </div>
+	{% call form(attrs={"id": "survey-form", "class": "pesquisa-form", "novalidate": "novalidate", "data-read-only": "true" if is_read_only else "false"}) %}
 
-        <!-- O que espera encontrar -->
-        <div class="col-12">
-          <label class="form-label-modern">O que espera encontrar no Movimento?</label>
-          <textarea name="espera_encontrar_movimento" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.get('espera_encontrar_movimento') or '' }}</textarea>
-        </div>
+		{% call card(title="Como você nos conheceu", attrs={"class": "pesquisa-section-card"}) %}
+			{{ pesquisa_select("como_conheceu_movimento", "Como você conheceu o Movimento Escoteiro?", como_movimento_items, survey.get("como_conheceu_movimento"), is_read_only) }}
+			{{ pesquisa_select("como_voce_conheceu_grupo", "Como você conheceu o nosso grupo escoteiro?", como_grupo_items, survey.get("como_você_conheceu_o_nosso_grupo_escoteiro"), is_read_only) }}
+		{% endcall %}
 
-        <!-- O que chamou atenção -->
-        <div class="col-12">
-          <label class="form-label-modern">O que mais te chamou atenção e fez escolher o nosso grupo escoteiro dentre os demais?</label>
-          <textarea name="chamou_atencao_uel" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.get('chamou_atencao_uel') or '' }}</textarea>
-        </div>
+		{% call card(title="Sua visão sobre o Movimento", attrs={"class": "pesquisa-section-card"}) %}
+			{{ pesquisa_textarea("visao_sobre_movimento", "Qual sua visão sobre o que é o Movimento Escoteiro?", survey.get("visao_sobre_movimento"), is_read_only) }}
+			{{ pesquisa_textarea("espera_encontrar_movimento", "O que espera encontrar no Movimento?", survey.get("espera_encontrar_movimento"), is_read_only) }}
+			{{ pesquisa_textarea("chamou_atencao_uel", "O que mais te chamou atenção e fez escolher o nosso grupo escoteiro dentre os demais?", survey.get("chamou_atencao_uel"), is_read_only) }}
+		{% endcall %}
 
-        <!-- NPS Recepção -->
-        <div class="col-12">
-          <label class="form-label-modern">Quanto você gostou do processo de recepção no grupo escoteiro? (0 a 10)</label>
-          <div class="d-flex flex-wrap gap-4 py-2">
-            {% for i in range(11) %}
-            <label class="nps-option">
-              <input type="radio" name="nps_recepcao" value="{{ i }}" class="sr-only peer" {% if survey.get('nps_recepcao')|int == i %}checked{% endif %} {% if is_read_only %}disabled{% endif %}>
-              <div class="nps-circle {% if is_read_only %}cursor-default{% endif %}">
-                {{ i }}
-              </div>
-            </label>
-            {% endfor %}
-          </div>
-        </div>
+		{% call card(title="Avaliação da recepção", attrs={"class": "pesquisa-section-card"}) %}
+			{% call field(label="Quanto você gostou do processo de recepção no grupo escoteiro? (0 a 10)") %}
+				<div class="pesquisa-nps" role="radiogroup" aria-label="Nota NPS de 0 a 10">
+					{% for i in range(11) %}
+						<label class="pesquisa-nps__option">
+							<input
+								type="radio"
+								name="nps_recepcao"
+								value="{{ i }}"
+								aria-label="Nota {{ i }}"
+								{% if survey.get('nps_recepcao') is not none and survey.get('nps_recepcao')|int == i %}checked{% endif %}
+								{% if is_read_only %}disabled{% endif %}
+							>
+							<span class="pesquisa-nps__circle" aria-hidden="true">{{ i }}</span>
+						</label>
+					{% endfor %}
+				</div>
+			{% endcall %}
+			{{ pesquisa_textarea("pontos_fortes_recepcao", "O que mais gostou no processo de recepção de novas famílias?", survey.get("pontos_fortes_recepcao"), is_read_only) }}
+			{{ pesquisa_textarea("melhoria_recepcao", "Tem algo que acredita que podemos melhorar no processo de recepção de novas famílias?", survey.get("melhoria_recepcao"), is_read_only) }}
+		{% endcall %}
 
-        <!-- Pontos Fortes -->
-        <div class="col-12">
-          <label class="form-label-modern">O que mais gostou no processo de recepção de novas famílias?</label>
-          <textarea name="pontos_fortes_recepcao" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.get('pontos_fortes_recepcao') or '' }}</textarea>
-        </div>
+		{% if not is_read_only %}
+			<div class="pesquisa-actions">
+				<button type="submit" class="btn-primary pesquisa-submit">Enviar Pesquisa</button>
+			</div>
+		{% endif %}
 
-        <!-- Melhorias -->
-        <div class="col-12">
-          <label class="form-label-modern">Tem algo que acredita que podemos melhorar no processo de recepção de novas famílias?</label>
-          <textarea name="melhoria_recepcao" rows="3" class="form-input-modern" {% if is_read_only %}disabled{% endif %}>{{ survey.get('melhoria_recepcao') or '' }}</textarea>
-        </div>
-      </div>
-
-      {% if not is_read_only %}
-      <div class="mt-4 pt-2 border-top">
-        <button type="submit" class="btn-modern btn-modern--primary">
-          Enviar Pesquisa
-        </button>
-      </div>
-      {% endif %}
-    </form>
-  </div>
+	{% endcall %}
 </div>
 {% endblock %}
 

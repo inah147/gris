@@ -1,473 +1,402 @@
-{% extends "gris/templates/web_sidebar_base.html" %}
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/generated/calendar.html.jinja" import calendar %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import switch %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
 {% block title %}Simulação de Calendário{% endblock %}
 
-{% block head %}
+{% block head_include %}
 {{ super() }}
-<link rel="stylesheet" href="simulacao_calendario.css">
+<link rel="stylesheet" href="/calendario/simulacao_calendario.css" />
 {% endblock %}
 
 {% block page_header %}
-<div class="page-header">
-    <div class="page-header__content">
-        <h1 class="page-header__title">Simulação de Calendário</h1>
-        <p class="page-header__subtitle">Visualize as atividades simuladas para o ano.</p>
+<section class="simulation-page-header" aria-labelledby="simulation-page-title">
+    <div class="flex flex-col gap-2 max-w-3xl">
+        <h1 id="simulation-page-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Simulação de calendário</h1>
+        <p class="m-0 text-base leading-relaxed text-muted-foreground">Visualize, ajuste e concilie o calendário simulado usando o componente canônico do portal.</p>
     </div>
-    <div class="page-header__actions" style="display: flex; gap: 1rem;">
+    <div class="simulation-page-header__actions">
         {% if can_simulate %}
-        <button id="btn-reconcile" class="btn-modern btn-modern--primary">
-            <svg class="btn-modern__icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M23 4v6h-6"></path>
-                <path d="M1 20v-6h6"></path>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-            </svg>
-            Conciliar
+        <button id="btn-reconcile" type="button" class="btn-outline">
+            {{ lucide_icon("refresh-cw", size="sm") }}
+            <span>Conciliar</span>
         </button>
         {% endif %}
-        <button id="btn-new-event" class="btn-modern btn-modern--primary">
-            Novo Evento
-        </button>
-        <a href="/calendario/visualizar" class="btn-modern btn-modern--outline">
-            Voltar
+        <a href="/calendario/visualizar" class="btn-outline">
+            {{ lucide_icon("arrow-left", size="sm") }}
+            <span>Voltar</span>
         </a>
     </div>
-</div>
+</section>
 {% endblock %}
 
 {% block main %}
-<div class="calendar-page-container">
+<div class="simulation-page-shell">
     {% if not has_data %}
-    <div class="card-modern empty-state-card">
-        <h2 class="empty-state-title">Nenhuma simulação encontrada para {{ year }}</h2>
-        <p class="empty-state-subtitle">Você pode iniciar uma simulação copiando dados de um ano existente do calendário oficial.</p>
-        
-        <div class="empty-state-actions">
-            <div class="filter-field empty-state-year-field">
-                <label class="form-label-modern" for="source-year">Copiar do ano:</label>
-                <select id="source-year" class="form-input-modern empty-state-select">
-                    {% for y in source_years %}
-                    <option value="{{ y }}">{{ y }}</option>
-                    {% endfor %}
-                </select>
+    <article class="card simulation-empty-card">
+        <header class="simulation-empty-card__header">
+            <div>
+                <h2 class="simulation-empty-card__title">Nenhuma simulação encontrada para {{ year }}</h2>
+                <p class="simulation-empty-card__subtitle">Você pode copiar dados do calendário oficial ou começar a simulação vazia para montar os eventos manualmente.</p>
             </div>
-            <button id="btn-copy-data" class="btn-modern btn-modern--primary empty-state-btn" data-target-year="{{ year }}">
-                Copiar Dados
-            </button>
-            <button id="btn-start-empty" class="btn-modern btn-modern--outline empty-state-btn" data-target-year="{{ year }}">
-                Começar do Zero
-            </button>
-        </div>
-    </div>
+        </header>
+        <section class="simulation-empty-card__body">
+            <div class="simulation-empty-card__controls">
+                <div class="field simulation-empty-card__field">
+                    <label class="label" for="source-year-trigger">Copiar do ano</label>
+                    {{ select(
+                        id="source-year",
+                        name="source-year",
+                        items=source_year_items,
+                        trigger_attrs={"class": "simulation-select-trigger w-full"}
+                    ) }}
+                </div>
+                <div class="simulation-empty-card__actions">
+                    <button id="btn-copy-data" type="button" class="btn-primary" data-target-year="{{ year }}">Copiar dados</button>
+                    <button id="btn-start-empty" type="button" class="btn-outline" data-target-year="{{ year }}">Começar do zero</button>
+                </div>
+            </div>
+        </section>
+    </article>
     {% else %}
-    <div class="card-modern mb-4">
-        <div class="card-modern__body card-modern__body--compact">
-            <div class="filter-bar mb-0">
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap;" class="mb-3">
-                    <div class="filter-field">
-                        <label class="form-label-modern">Ano</label>
-                        <select id="year-filter" class="form-input-modern form-input-modern--sm" style="min-width: 100px;">
-                            {% for y in available_years %}
-                            <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="filter-field">
-                        <label class="form-label-modern">Mês</label>
-                        <select id="month-filter" class="form-input-modern form-input-modern--sm" style="min-width: 150px;">
-                            <option value="">Todos</option>
-                            <option value="01">Janeiro</option>
-                            <option value="02">Fevereiro</option>
-                            <option value="03">Março</option>
-                            <option value="04">Abril</option>
-                            <option value="05">Maio</option>
-                            <option value="06">Junho</option>
-                            <option value="07">Julho</option>
-                            <option value="08">Agosto</option>
-                            <option value="09">Setembro</option>
-                            <option value="10">Outubro</option>
-                            <option value="11">Novembro</option>
-                            <option value="12">Dezembro</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="filter-field" style="width: 100%; max-width: none;">
-                    <label class="form-label-modern">Filtrar por Seção</label>
-                    <div class="section-filter-options">
-                        <label class="filter-option all-option">
-                            <input type="checkbox" id="filter-all" checked>
-                            <span>Todas</span>
-                        </label>
-                        {% for section in sections %}
-                        <label class="filter-option">
-                            <input type="checkbox" name="section-filter" value="{{ section }}" checked>
-                            <span>{{ section }}</span>
-                        </label>
-                        {% endfor %}
-                    </div>
-                </div>
-                <div class="filter-field mt-3" style="width: 100%; max-width: none; border-top: 1px solid var(--border-color); padding-top: var(--space-sm);">
-                    <label class="filter-option">
-                        <input type="checkbox" id="show-empty-days" checked>
-                        <span>Mostrar dias sem atividade</span>
-                    </label>
-                </div>
+    <article class="card simulation-toolbar-card">
+        <section class="simulation-toolbar-card__body">
+            <div class="field simulation-toolbar-card__field">
+                <label class="label" for="year-filter-trigger">Ano exibido</label>
+                {{ select(
+                    id="year-filter",
+                    name="year-filter",
+                    items=available_year_items,
+                    selected=year|string,
+                    trigger_attrs={"class": "simulation-select-trigger w-full"}
+                ) }}
             </div>
-        </div>
-    </div>
+            <div class="simulation-toolbar-card__summary">
+                <span class="simulation-summary-pill">{{ sections|length }} seções</span>
+                <span class="simulation-summary-pill">{{ calendar_events|length }} itens no calendário</span>
+                <p class="simulation-toolbar-card__hint">Use os filtros do próprio calendário para mostrar seções específicas, feriados e alternar entre mês, semana e lista.</p>
+            </div>
+        </section>
+    </article>
 
-    <div class="calendar-scroll-container">
-        <table class="calendar-table">
-            <thead>
-                <tr>
-                    <th class="col-date sticky-col">
-                        <div class="th-content">Data</div>
-                    </th>
-                    {% for section in sections %}
-                    <th class="col-section" data-section="{{ section }}">
-                        <div class="th-content">{{ section }}</div>
-                    </th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in calendar_rows %}
-                {% if row.is_new_month %}
-                <tr class="month-separator-row" data-month="{{ row.month_num }}">
-                    <td colspan="{{ 1 + sections|length }}" class="month-separator-cell">
-                        <span class="month-separator-label">{{ row.month_full }}</span>
-                    </td>
-                </tr>
-                {% endif %}
-                <tr class="calendar-row {% if row.is_weekend %}is-weekend{% endif %} {% if row.has_activity %}has-activity{% endif %}" data-date="{{ row.date_str }}">
-                    <td class="col-date sticky-col">
-                        <div class="date-cell-content">
-                            <span class="day-number">{{ row.day }}</span>
-                            <div class="date-meta">
-                                <span class="weekday-name">{{ row.weekday }}</span>
-                                <span class="month-name">{{ row.month }}</span>
-                            </div>
-                            {% if row.holiday %}
-                            <div class="holiday-indicator" 
-                                 data-holiday-name="{{ row.holiday.nome }}" 
-                                 data-holiday-type="{{ row.holiday.tipo }}" 
-                                 data-holiday-desc="{{ row.holiday.descricao }}">
-                                 <i class="fa fa-star holiday-icon" title="Feriado"></i>
-                                 <span class="holiday-label">Feriado</span>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </td>
-                    {% for section in sections %}
-                    <td class="col-activity" data-section="{{ section }}">
-                        {% if row.activities[section] %}
-                            <div class="activities-list">
-                            {% for event in row.activities[section] %}
-                                {% if event %}
-                                <div class="activity-card ramo-{{ section_classes[section] }} {% if not event.is_start %}is-continued-top{% endif %} {% if not event.is_end %}is-continued-bottom{% endif %} {% if event.sem_atividade %}is-no-activity{% endif %}" 
-                                     data-event-id="{{ event.name }}"
-                                     data-atividade="{{ event.atividade }}"
-                                     data-inicio="{{ event.inicio }}"
-                                     data-termino="{{ event.termino }}"
-                                     data-secao="{{ event.secao }}"
-                                     data-local="{{ event.local or '' }}"
-                                      data-nivel="{{ event.nivel or '' }}"
-                                      data-sem-atividade="{{ event.sem_atividade or 0 }}"
-                                      data-abertura-geral="{{ event.abertura_geral or 0 }}">
-                                    <div class="activity-body">
-                                        {% if event.is_start %}
-                                        <div class="activity-title">
-                                            {{ event.atividade }}
-                                            {% if event.is_official %}
-                                            <i class="fa fa-check-circle" title="Evento Oficial" style="margin-left: 4px; opacity: 0.8;"></i>
-                                            {% endif %}
-                                        </div>
-                                        {% if event.local %}
-                                        <div class="activity-location">
-                                            <i class="fa fa-map-marker"></i> {{ event.local }}
-                                        </div>
-                                        {% endif %}
-                                        {% else %}
-                                        <!-- Placeholder for continued event to maintain height/structure if needed, or just empty -->
-                                        <div class="activity-continuation-marker"></div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                {% else %}
-                                <div class="activity-spacer"></div>
-                                {% endif %}
-                            {% endfor %}
-                            </div>
-                        {% endif %}
-                    </td>
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    <article class="card simulation-calendar-card">
+        <header class="simulation-calendar-card__header">
+            <div>
+                <h2 class="simulation-calendar-card__title">Agenda simulada de {{ year }}</h2>
+                <p class="simulation-calendar-card__subtitle">Os eventos do calendário simulado e os feriados do ano aparecem na mesma visualização para facilitar a edição e a conciliação.</p>
+            </div>
+            {% if can_simulate %}
+            <div class="simulation-calendar-card__actions">
+                <button id="btn-new-event" type="button" class="btn-primary">
+                    {{ lucide_icon("plus", size="sm") }}
+                    <span>Novo evento</span>
+                </button>
+            </div>
+            {% endif %}
+        </header>
+        <section class="simulation-calendar-card__body">
+            {{ calendar(
+                id="simulation-calendar",
+                events=calendar_events,
+                categories=calendar_categories,
+                initial_mode="list",
+                initial_list_variant="category",
+                initial_date=calendar_initial_date,
+                allowed_modes=["month", "week", "list"],
+                week_show_hours=false,
+                list_show_all_days=true,
+                list_range_start=year|string ~ "-01-01",
+                list_range_end=year|string ~ "-12-31",
+                empty_message="Nenhum evento encontrado para os filtros atuais.",
+                attrs={"class": "simulation-calendar"}
+            ) }}
+        </section>
+    </article>
 
     {% if non_official_events %}
-    <div class="card-modern" style="margin-top: 2rem;">
-        <div class="card-modern__header">
-            <h3 class="card-modern__title">Eventos Não Oficiais (Simulados)</h3>
-        </div>
-        <div class="card-modern__body">
-            <div style="overflow-x: auto;">
-                <table class="table" style="width: 100%; border-collapse: collapse;">
+    <article class="card simulation-table-card">
+        <header class="simulation-table-card__header">
+            <div>
+                <h2 class="simulation-table-card__title">Eventos não oficiais</h2>
+                <p class="simulation-table-card__subtitle">Itens presentes apenas na simulação e que podem exigir conciliação com o calendário oficial.</p>
+            </div>
+        </header>
+        <section class="simulation-table-card__body">
+            <div class="simulation-table-wrap">
+                <table class="table simulation-table">
                     <thead>
-                        <tr style="background-color: var(--bg-light); text-align: left;">
-                            <th style="padding: 0.75rem; border-bottom: 2px solid var(--border-color);">Atividade</th>
-                            <th style="padding: 0.75rem; border-bottom: 2px solid var(--border-color);">Início</th>
-                            <th style="padding: 0.75rem; border-bottom: 2px solid var(--border-color);">Término</th>
-                            <th style="padding: 0.75rem; border-bottom: 2px solid var(--border-color);">Seções</th>
+                        <tr>
+                            <th>Atividade</th>
+                            <th>Início</th>
+                            <th>Término</th>
+                            <th>Seções</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for event in non_official_events %}
                         <tr>
-                            <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color);">{{ event.atividade }}</td>
-                            <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color);">{{ event.inicio }}</td>
-                            <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color);">{{ event.termino }}</td>
-                            <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color);">{{ event.secoes }}</td>
+                            <td>{{ event.atividade }}</td>
+                            <td>{{ event.inicio }}</td>
+                            <td>{{ event.termino }}</td>
+                            <td>{{ event.secoes }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-        </div>
-    </div>
+        </section>
+    </article>
     {% endif %}
-
     {% endif %}
 </div>
 
-<!-- Modal de Nova Atividade -->
-<div id="new-activity-modal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title">Nova Atividade</h3>
-            <button class="modal-close" id="close-modal">&times;</button>
+{% if can_simulate %}
+{% set new_event_footer %}
+<button id="cancel-modal" type="button" class="btn-outline">Cancelar</button>
+<button id="save-modal" type="button" class="btn-primary">Salvar</button>
+{% endset %}
+{% call dialog(
+    id="new-activity-modal",
+    title="Novo evento simulado",
+    description="Crie um ou mais eventos no calendário simulado selecionando as seções desejadas.",
+    footer=new_event_footer,
+    close_button=true,
+    dialog_attrs={"class": "simulation-dialog simulation-dialog--event"},
+    body_attrs={"class": "simulation-dialog__body"}
+) %}
+    <div class="simulation-dialog-grid">
+        <div class="field simulation-dialog-grid__full">
+            <label class="label" for="modal-atividade">Atividade</label>
+            <input type="text" id="modal-atividade" class="input" placeholder="Nome da atividade" />
         </div>
-        <div class="modal-body">
-            <div class="form-group">
-                <label class="form-label-modern">Atividade</label>
-                <input type="text" id="modal-atividade" class="form-input-modern" placeholder="Nome da atividade">
-            </div>
-            <div class="form-group">
-                <label class="form-label-modern">Data Início</label>
-                <input type="date" id="modal-inicio" class="form-input-modern">
-            </div>
-            <div class="form-group">
-                <label class="form-label-modern">Data Término</label>
-                <input type="date" id="modal-termino" class="form-input-modern">
-            </div>
-            <div class="form-group">
-                <label class="filter-option" style="margin-top: 0.5rem;">
-                    <input type="checkbox" id="modal-sem-atividade">
-                    <span style="font-weight: 500;">Sem Atividade</span>
+        <div class="field">
+            <label class="label" for="modal-inicio-trigger">Data de início</label>
+            {{ datepicker(
+                id="modal-inicio",
+                name="modal-inicio",
+                placeholder="Selecione a data",
+                trigger_attrs={"class": "simulation-datepicker-trigger"}
+            ) }}
+        </div>
+        <div class="field">
+            <label class="label" for="modal-termino-trigger">Data de término</label>
+            {{ datepicker(
+                id="modal-termino",
+                name="modal-termino",
+                placeholder="Selecione a data",
+                trigger_attrs={"class": "simulation-datepicker-trigger"}
+            ) }}
+        </div>
+        <div class="field">
+            <label class="label" for="modal-nivel-trigger">Nível</label>
+            {{ select(
+                id="modal-nivel",
+                name="modal-nivel",
+                items=nivel_select_items,
+                selected="Local",
+                trigger_attrs={"class": "simulation-select-trigger w-full"}
+            ) }}
+        </div>
+        <div class="field simulation-dialog-grid__full">
+            <label class="label" for="modal-local">Local</label>
+            <input type="text" id="modal-local" class="input" placeholder="Local do evento" />
+        </div>
+        <div class="simulation-dialog-grid__full simulation-checkbox-pair">
+            <label class="simulation-checkline">
+                <input type="checkbox" id="modal-sem-atividade" />
+                <span>Sem atividade</span>
+            </label>
+            <label class="simulation-checkline">
+                <input type="checkbox" id="modal-abertura-geral" />
+                <span>Abertura geral</span>
+            </label>
+        </div>
+        <div class="field simulation-dialog-grid__full">
+            <label class="label">Seções</label>
+            <div class="simulation-checkbox-list" id="modal-secoes-list">
+                {% for section in all_sections %}
+                <label class="simulation-checkbox-item">
+                    <input type="checkbox" value="{{ section }}" name="modal-secao" />
+                    <span>{{ section }}</span>
                 </label>
-            </div>
-            <div class="form-group">
-                <label class="filter-option" style="margin-top: 0.5rem;">
-                    <input type="checkbox" id="modal-abertura-geral">
-                    <span style="font-weight: 500;">Abertura Geral</span>
-                </label>
-            </div>
-            <div class="form-group">
-                <label class="form-label-modern">Local</label>
-                <input type="text" id="modal-local" class="form-input-modern" placeholder="Local">
-            </div>
-            <div class="form-group">
-                <label class="form-label-modern">Nível</label>
-                <select id="modal-nivel" class="form-input-modern">
-                    {% for option in nivel_options %}
-                    <option value="{{ option }}">{{ option }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label-modern">Seções</label>
-                <div class="checkbox-list" id="modal-secoes-list">
-                    {% for section in all_sections %}
-                    <label class="checkbox-item">
-                        <input type="checkbox" value="{{ section }}" name="modal-secao">
-                        <span>{{ section }}</span>
-                    </label>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn-modern btn-modern--outline" id="cancel-modal">Cancelar</button>
-            <button class="btn-modern btn-modern--primary" id="save-modal">Salvar</button>
-        </div>
-    </div>
-</div>
-
-<!-- Modal de Edição de Atividade -->
-<div id="edit-activity-modal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title">Editar Atividade</h3>
-            <button class="modal-close" id="close-edit-modal">&times;</button>
-        </div>
-        <div class="modal-body">
-            <input type="hidden" id="edit-event-id">
-            <div class="form-group">
-                <label class="form-label-modern">Atividade</label>
-                <input type="text" id="edit-atividade" class="form-input-modern">
-            </div>
-            <div class="form-group">
-                <label class="form-label-modern">Data Início</label>
-                <input type="date" id="edit-inicio" class="form-input-modern">
-            </div>
-            <div class="form-group">
-                <label class="form-label-modern">Data Término</label>
-                <input type="date" id="edit-termino" class="form-input-modern">
-            </div>
-            <div class="form-group">
-                <label class="filter-option" style="margin-top: 0.5rem;">
-                    <input type="checkbox" id="edit-sem-atividade">
-                    <span style="font-weight: 500;">Sem Atividade</span>
-                </label>
-            </div>
-            <div class="form-group">
-                <label class="filter-option" style="margin-top: 0.5rem;">
-                    <input type="checkbox" id="edit-abertura-geral">
-                    <span style="font-weight: 500;">Abertura Geral</span>
-                </label>
-            </div>
-            <div class="form-group">
-                <label class="form-label-modern">Seção</label>
-                <select id="edit-secao" class="form-input-modern">
-                    {% for section in all_sections %}
-                    <option value="{{ section }}">{{ section }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label-modern">Local</label>
-                <input type="text" id="edit-local" class="form-input-modern">
-            </div>
-            <div class="form-group">
-                <label class="form-label-modern">Nível</label>
-                <select id="edit-nivel" class="form-input-modern">
-                    {% for option in nivel_options %}
-                    <option value="{{ option }}">{{ option }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-        <div class="modal-footer" style="justify-content: space-between;">
-            <button class="btn-modern btn-modern--danger" id="delete-edit-modal" style="background-color: var(--color-danger); color: white; border: none;">Excluir</button>
-            <div style="display: flex; gap: 0.5rem;">
-                <button class="btn-modern btn-modern--outline" id="cancel-edit-modal">Cancelar</button>
-                <button class="btn-modern btn-modern--primary" id="save-edit-modal">Salvar</button>
+                {% endfor %}
             </div>
         </div>
     </div>
+{% endcall %}
+
+{% set edit_event_footer %}
+<button id="delete-edit-modal" type="button" class="btn-destructive">Excluir</button>
+<div class="simulation-dialog__footer-actions">
+    <button id="cancel-edit-modal" type="button" class="btn-outline">Cancelar</button>
+    <button id="save-edit-modal" type="button" class="btn-primary">Salvar</button>
 </div>
-
-<!-- Reconciliation Modal -->
-<div id="reconcile-modal" class="modal-modern d-none">
-    <div class="modal-modern__content modal-modern__content--lg" style="max-width: 800px;">
-        <div class="modal-modern__header">
-            <h3 class="modal-modern__title">Conciliar Calendário</h3>
+{% endset %}
+{% call dialog(
+    id="edit-activity-modal",
+    title="Editar evento simulado",
+    description="Atualize os dados do evento selecionado no calendário.",
+    footer=edit_event_footer,
+    close_button=true,
+    dialog_attrs={"class": "simulation-dialog simulation-dialog--event"},
+    body_attrs={"class": "simulation-dialog__body"}
+) %}
+    <input type="hidden" id="edit-event-id" />
+    <div class="simulation-dialog-grid">
+        <div class="field simulation-dialog-grid__full">
+            <label class="label" for="edit-atividade">Atividade</label>
+            <input type="text" id="edit-atividade" class="input" />
         </div>
-        <div class="modal-modern__body">
-            <p style="margin-bottom: 2rem;">Selecione a ação para cada diferença encontrada entre o calendário oficial e a simulação.</p>
-            
-            <div id="reconcile-loading" class="text-center py-4 d-none" style="text-align: center; padding: 2rem;">
-                <div class="loading-spinner"></div>
-                <p>Analisando diferenças...</p>
-            </div>
-
-            <div id="reconcile-empty" class="alert-modern alert-modern--success d-none">
-                <div class="alert-modern__content">
-                     Calendário sincronizado! Não foram encontradas diferenças.
-                </div>
-            </div>
-
-            <div id="reconcile-list" class="reconcile-list d-none">
-                <table class="table-modern" style="width: 100%;">
-                    <thead>
-                        <tr>
-                            <th style="width: 40%">Evento</th>
-                            <th class="text-center" style="width: 30%">Oficial</th>
-                            <th class="text-center" style="width: 30%">Simulação</th>
-                        </tr>
-                    </thead>
-                    <tbody id="reconcile-tbody"></tbody>
-                </table>
-            </div>
+        <div class="field">
+            <label class="label" for="edit-inicio-trigger">Data de início</label>
+            {{ datepicker(
+                id="edit-inicio",
+                name="edit-inicio",
+                placeholder="Selecione a data",
+                trigger_attrs={"class": "simulation-datepicker-trigger"}
+            ) }}
         </div>
-        <div class="modal-modern__footer" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
-            <div>
-                <button type="button" id="btn-select-all-apply" class="btn-modern btn-modern--primary" style="font-weight: 500;">
-                    <i class="fa fa-check-double"></i> Selecionar Todos
-                </button>
-            </div>
-            <div style="display: flex; gap: 1rem;">
-                <button type="button" class="btn-modern btn-modern--outline close-modal">Cancelar</button>
-                <button type="button" id="btn-confirm-reconcile" class="btn-modern btn-modern--primary" disabled>
-                    Confirmar
-                </button>
-            </div>
+        <div class="field">
+            <label class="label" for="edit-termino-trigger">Data de término</label>
+            {{ datepicker(
+                id="edit-termino",
+                name="edit-termino",
+                placeholder="Selecione a data",
+                trigger_attrs={"class": "simulation-datepicker-trigger"}
+            ) }}
+        </div>
+        <div class="field">
+            <label class="label" for="edit-secao-trigger">Seção</label>
+            {{ select(
+                id="edit-secao",
+                name="edit-secao",
+                items=section_select_items,
+                trigger_attrs={"class": "simulation-select-trigger w-full"}
+            ) }}
+        </div>
+        <div class="field">
+            <label class="label" for="edit-nivel-trigger">Nível</label>
+            {{ select(
+                id="edit-nivel",
+                name="edit-nivel",
+                items=nivel_select_items,
+                selected="Local",
+                trigger_attrs={"class": "simulation-select-trigger w-full"}
+            ) }}
+        </div>
+        <div class="field simulation-dialog-grid__full">
+            <label class="label" for="edit-local">Local</label>
+            <input type="text" id="edit-local" class="input" />
+        </div>
+        <div class="simulation-dialog-grid__full simulation-checkbox-pair">
+            <label class="simulation-checkline">
+                <input type="checkbox" id="edit-sem-atividade" />
+                <span>Sem atividade</span>
+            </label>
+            <label class="simulation-checkline">
+                <input type="checkbox" id="edit-abertura-geral" />
+                <span>Abertura geral</span>
+            </label>
         </div>
     </div>
-    <div class="modal-modern__backdrop close-modal"></div>
-</div>
+{% endcall %}
 
-<!-- Success Modal -->
-<div id="success-modal" class="modal-modern d-none">
-    <div class="modal-modern__content" style="max-width: 400px; text-align: center; border-radius: 24px !important; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
-        <div class="modal-modern__body" style="padding: 2.5rem 2rem;">
-            <div style="width: 60px; height: 60px; background-color: var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto;">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-            </div>
-            <h3 class="modal-modern__title" style="margin-bottom: 0.5rem; font-size: 1.5rem;">Sucesso!</h3>
-            <p id="success-message" style="color: var(--text-muted); margin-bottom: 2rem;">As alterações foram aplicadas com sucesso pelo sistema de conciliação.</p>
-            <button type="button" id="btn-success-ok" class="btn-modern btn-modern--primary" style="width: 100%;">
-                Entendi
-            </button>
-        </div>
+{% set delete_event_footer %}
+<button type="button" id="cancel-delete-modal" class="btn-outline">Voltar</button>
+<button type="button" id="confirm-delete-modal" class="btn-destructive">Excluir evento</button>
+{% endset %}
+{% call dialog(
+    id="delete-event-modal",
+    title="Excluir evento simulado",
+    description="Confirme a exclusão para remover este evento do calendário simulado.",
+    footer=delete_event_footer,
+    close_button=true,
+    dialog_attrs={"class": "simulation-dialog simulation-dialog--confirm"},
+    body_attrs={"class": "simulation-dialog__body"}
+) %}
+    <p class="simulation-dialog__text">Essa ação remove o evento selecionado da simulação e não pode ser desfeita.</p>
+{% endcall %}
+
+{% set reconcile_footer %}
+<button type="button" id="btn-select-all-apply" class="btn-outline">Selecionar todos</button>
+<div class="simulation-dialog__footer-actions">
+    <button type="button" class="btn-outline close-modal">Cancelar</button>
+    <button type="button" id="btn-confirm-reconcile" class="btn-primary" disabled>Confirmar</button>
+</div>
+{% endset %}
+{% call dialog(
+    id="reconcile-modal",
+    title="Conciliar calendário",
+    description="Selecione quais diferenças entre a simulação e o calendário oficial devem ser aplicadas.",
+    footer=reconcile_footer,
+    close_button=true,
+    dialog_attrs={"class": "simulation-dialog simulation-dialog--wide"},
+    body_attrs={"class": "simulation-dialog__body simulation-dialog__body--reconcile"}
+) %}
+    <div id="reconcile-loading" class="simulation-reconcile-state" hidden>
+        <div class="simulation-loading-spinner" aria-hidden="true"></div>
+        <p>Analisando diferenças...</p>
     </div>
-    <div class="modal-modern__backdrop"></div>
-</div>
-
-<!-- Modal de Feriado -->
-<div id="holiday-modal" class="modal-modern d-none">
-    <div class="modal-modern__backdrop close-modal"></div>
-    <div class="modal-modern__content">
-        <div class="modal-modern__header">
-            <h3 class="modal-modern__title">
-                <i class="fa fa-calendar-check-o" style="margin-right: 8px;"></i>
-                Detalhes do Feriado
-            </h3>
-        </div>
-        <div class="modal-modern__body">
-            <h2 id="holiday-modal-name" style="margin: 0 0 1rem 0; font-size: 1.5rem; color: var(--text-color);"></h2>
-            
-            <div style="margin-bottom: 1.5rem;">
-                <span id="holiday-modal-type" style="padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;"></span>
-            </div>
-
-            <div class="holiday-desc-box" style="background: var(--bg-light); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                <p id="holiday-modal-desc" style="margin: 0; color: var(--text-color); line-height: 1.6;"></p>
-            </div>
-        </div>
-        <div class="modal-modern__footer">
-            <button type="button" class="btn-modern btn-modern--primary close-modal">Entendi</button>
-        </div>
+    <div id="reconcile-empty" class="alert simulation-reconcile-empty" hidden>Calendário sincronizado. Nenhuma diferença encontrada.</div>
+    <template id="reconcile-switch-template">
+        {{ switch(
+            label="",
+            attrs={"data-reconcile-switch": "true"}
+        ) }}
+    </template>
+    <div id="reconcile-list" class="simulation-reconcile-table-region" hidden>
+        <table class="table simulation-table simulation-table--reconcile">
+            <thead>
+                <tr>
+                    <th>Evento</th>
+                    <th>Oficializar</th>
+                </tr>
+            </thead>
+            <tbody id="reconcile-tbody"></tbody>
+        </table>
     </div>
-</div>
+{% endcall %}
+{% endif %}
+
+{% set success_footer %}
+<button type="button" id="btn-success-ok" class="btn-primary">Entendi</button>
+{% endset %}
+{% call dialog(
+    id="success-modal",
+    title="Sucesso",
+    description="As alterações selecionadas foram aplicadas.",
+    footer=success_footer,
+    close_button=true,
+    dialog_attrs={"class": "simulation-dialog simulation-dialog--confirm"},
+    body_attrs={"class": "simulation-dialog__body"}
+) %}
+    <p id="success-message" class="simulation-dialog__text">As alterações foram aplicadas com sucesso pelo sistema de conciliação.</p>
+{% endcall %}
+
+{% set holiday_footer %}
+<button type="button" class="btn-primary close-modal">Entendi</button>
+{% endset %}
+{% call dialog(
+    id="holiday-modal",
+    title="Detalhes do feriado",
+    footer=holiday_footer,
+    close_button=true,
+    dialog_attrs={"class": "simulation-dialog simulation-dialog--confirm"},
+    body_attrs={"class": "simulation-dialog__body"}
+) %}
+    <div class="simulation-holiday-content">
+        <h3 id="holiday-modal-name" class="simulation-holiday-content__title"></h3>
+        <span id="holiday-modal-type" class="simulation-holiday-content__tag"></span>
+        <p id="holiday-modal-desc" class="simulation-holiday-content__description"></p>
+    </div>
+{% endcall %}
 {% endblock %}
 
 {% block script %}
 {{ super() }}
-<script src="simulacao_calendario.js"></script>
+<script src="/calendario/simulacao_calendario.js"></script>
 {% endblock %}

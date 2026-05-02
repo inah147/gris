@@ -682,49 +682,46 @@ function confirmarRegistroCriado() {
 
 function toggleStep(field, element) {
 	if (!currentCardId || !field) return;
-	frappe.confirm("Deseja marcar esta etapa como concluída?", () => {
-		frappe.call({
-			method: "gris.www.recepcao.visao_geral.update_step_status",
-			args: { novo_associado_name: currentCardId, field: field, value: 1 },
-			callback: function (r) {
-				if (!r.exc) {
-					frappe.show_alert({ message: "Etapa atualizada", indicator: "green" });
-					if (element) {
-						element.classList.add("completed");
-						element.classList.remove("step-clickable");
-						const helper = element.querySelector(".timeline-helper");
-						if (helper) helper.remove();
-					}
-					setTimeout(() => window.location.reload(), 1000);
+	frappe.call({
+		method: "gris.www.recepcao.visao_geral.update_step_status",
+		args: { novo_associado_name: currentCardId, field: field, value: 1 },
+		callback: function (r) {
+			if (!r.exc) {
+				frappe.show_alert({ message: "Etapa atualizada", indicator: "green" });
+				if (element) {
+					element.classList.add("completed");
+					element.classList.remove("step-clickable");
+					const helper = element.querySelector(".timeline-helper");
+					if (helper) helper.remove();
 				}
-			},
-		});
+				setTimeout(() => window.location.reload(), 1000);
+			}
+		},
 	});
 }
 
 function finalizarRecepcao() {
 	if (!currentCardId) return;
-	frappe.confirm(
-		"Tem certeza? Isso vinculará o Responsável ao Associado, anonimizará os dados do Responsável e excluirá o Novo Associado.",
-		() => {
-			frappe.call({
-				method: "gris.www.recepcao.visao_geral.finalizar_processo_recepcao",
-				args: { novo_associado_name: currentCardId },
-				freeze: true,
-				freeze_message: "Finalizando…",
-				callback: function (r) {
-					if (!r.exc) {
-						frappe.show_alert({
-							message: "Recepção finalizada com sucesso!",
-							indicator: "green",
-						});
-						closeAllDialogs();
-						setTimeout(() => window.location.reload(), 1000);
-					}
-				},
-			});
-		}
+	const ok = window.confirm(
+		"Tem certeza? Isso vinculará o Responsável ao Associado, anonimizará os dados do Responsável e excluirá o Novo Associado."
 	);
+	if (!ok) return;
+	frappe.call({
+		method: "gris.www.recepcao.visao_geral.finalizar_processo_recepcao",
+		args: { novo_associado_name: currentCardId },
+		freeze: true,
+		freeze_message: "Finalizando…",
+		callback: function (r) {
+			if (!r.exc) {
+				frappe.show_alert({
+					message: "Recepção finalizada com sucesso!",
+					indicator: "green",
+				});
+				closeAllDialogs();
+				setTimeout(() => window.location.reload(), 1000);
+			}
+		},
+	});
 }
 
 // ---------- WhatsApp -------------------------------------------------------

@@ -1,6 +1,6 @@
 {% extends "frappe/templates/base.html" %}
 
-{% set design_system_asset_version = "20260426-file-upload-2" %}
+{% set design_system_asset_version = "20260501-btn-group-1" %}
 {% set current_page_path = pathname if pathname is defined and pathname else (path if path is defined else "") %}
 {% set is_login_page = current_page_path.startswith("/login") or current_page_path == "login" %}
 {% set hide_website_chrome = is_login_page or no_header %}
@@ -57,6 +57,9 @@
 <link rel="stylesheet" href="/assets/gris/design_system/css/theme-shadcn.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/lucide.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/file-upload.css?v={{ design_system_asset_version }}">
+<link rel="stylesheet" href="/assets/gris/design_system/css/datepicker.css?v={{ design_system_asset_version }}">
+<link rel="stylesheet" href="/assets/gris/design_system/css/phone-input.css?v={{ design_system_asset_version }}">
+<link rel="stylesheet" href="/assets/gris/design_system/css/calendar.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/layout.css?v={{ design_system_asset_version }}">
 {% if is_login_page %}
 {{ include_style('website.bundle.css') }}
@@ -66,10 +69,13 @@
 <!-- Basecoat JS (local files, without build tool) -->
 <script src="/assets/gris/design_system/js/basecoat/basecoat.min.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/components/command.js?v={{ design_system_asset_version }}" defer></script>
+<script src="/assets/gris/design_system/js/components/datepicker.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/components/dropdown-menu.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/components/file-upload.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/components/popover.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/components/select.js?v={{ design_system_asset_version }}" defer></script>
+<script src="/assets/gris/design_system/js/components/calendar.js?v={{ design_system_asset_version }}" defer></script>
+<script src="/assets/gris/design_system/js/components/phone-input.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/components/sidebar.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/components/tabs.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/components/toast.js?v={{ design_system_asset_version }}" defer></script>

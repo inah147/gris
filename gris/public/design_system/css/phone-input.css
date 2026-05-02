@@ -1,0 +1,155 @@
+.phone-input {
+  display: block;
+  width: 100%;
+}
+
+.phone-input__group {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--background);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.phone-input__group:focus-within {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px oklch(from var(--ring) l c h / 0.18);
+}
+
+.phone-input.is-invalid .phone-input__group {
+  border-color: var(--destructive);
+}
+
+.phone-input.is-invalid .phone-input__group:focus-within {
+  box-shadow: 0 0 0 3px oklch(from var(--destructive) l c h / 0.18);
+}
+
+/* Country combobox embedded in the group --------------------------------- */
+/* Specificity is raised on purpose so the component layout survives broad
+   page-level rules like `.field .select { width: 100% }` that would otherwise
+   make the country trigger occupy the entire group, hiding the number input. */
+.phone-input > .phone-input__group > .phone-input__country {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  display: inline-flex;
+  align-items: stretch;
+  border-right: 1px solid var(--border);
+}
+
+.phone-input__country > button.phone-input__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 100%;
+  padding: 0 0.625rem;
+  border: none;
+  background: var(--muted);
+  color: var(--foreground);
+  border-radius: 0;
+  border-top-left-radius: calc(var(--radius) - 1px);
+  border-bottom-left-radius: calc(var(--radius) - 1px);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.phone-input__country > button.phone-input__trigger:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.phone-input__country > button.phone-input__trigger:focus-visible {
+  outline: none;
+}
+
+.phone-input__country > button.phone-input__trigger > span:first-child {
+  font-size: 0.9375rem;
+  line-height: 1;
+}
+
+.phone-input__country > button.phone-input__trigger svg {
+  flex-shrink: 0;
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* Number input fills the rest of the group ------------------------------- */
+.phone-input > .phone-input__group > .phone-input__number.input {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  height: auto;
+  border: none;
+  border-radius: 0;
+  border-top-right-radius: calc(var(--radius) - 1px);
+  border-bottom-right-radius: calc(var(--radius) - 1px);
+  background: transparent;
+  box-shadow: none;
+  padding-left: 0.75rem;
+}
+
+.phone-input > .phone-input__group > .phone-input__number.input:focus,
+.phone-input > .phone-input__group > .phone-input__number.input:focus-visible {
+  border: none;
+  outline: none;
+  box-shadow: none;
+}
+
+/* Popover with the country list ------------------------------------------ */
+.phone-input__country [data-popover] {
+  min-width: 18rem;
+  max-width: 22rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.phone-input__country [data-popover] > header {
+  flex-shrink: 0;
+}
+
+.phone-input__country [data-popover] [role="listbox"] {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.phone-input__option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.phone-input__flag {
+  font-size: 1.125rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.phone-input__option-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.phone-input__option-dial {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 480px) {
+  .phone-input__country [data-popover] {
+    min-width: min(20rem, calc(100vw - 2rem));
+  }
+}

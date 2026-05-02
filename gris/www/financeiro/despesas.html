@@ -1,152 +1,232 @@
-{% extends "templates/web_sidebar_base.html" %} {% block title %}Despesas Mensais{% endblock %} {%
-set active_link = '/financeiro/despesas' %} {% block page_header %}
-<div class="page-header">
-	<div class="page-header__content">
-		<h1 class="page-header__title">Despesas Mensais</h1>
-		<p class="page-header__subtitle">Gerencie despesas contínuas e temporárias.</p>
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, badge, empty, field, checkbox %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
+
+{% block title %}Despesas Mensais{% endblock %}
+{% set active_link = '/financeiro/despesas' %}
+
+{% block page_header %}
+<section class="financeiro-page-header" aria-labelledby="financeiro-despesas-title">
+	<div class="financeiro-page-header__copy">
+		<h1 id="financeiro-despesas-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Despesas Mensais</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">Gerencie despesas contínuas e temporárias.</p>
 	</div>
 	{% if can_edit_financeiro %}
-	<div class="page-header__actions">
-		<button id="btnNovaDespesa" class="btn-modern btn-modern--primary btn-modern--sm">
-			<svg
-				width="14"
-				height="14"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-			>
-				<path d="M12 5v14M5 12h14" />
-			</svg>
-			Nova Despesa
+	<div class="financeiro-page-header__actions">
+		<button id="btnNovaDespesa" type="button" class="btn-sm-primary inline-flex items-center gap-2">
+			{{ lucide_icon("plus", size="sm") }}
+			<span>Nova Despesa</span>
 		</button>
 	</div>
 	{% endif %}
-</div>
-{% endblock %} {% block main %}
-<div class="despesas-wrapper">
-	<div class="mb-5">
-		<h2 class="h5 mb-3 fw-semibold">Despesas Contínuas</h2>
-		{% if contas_continuas and contas_continuas|length %}
-		<div class="row g-3">
-			{% for conta in contas_continuas %}
-			<div class="col-12 col-md-6 col-lg-4 mb-3 mb-md-0">
-				<div class="card-modern" style="height: 100%">
-					<div class="card-modern__body d-flex flex-column">
-						<h5 class="fw-semibold mb-2" title="{{ conta.descricao }}">
-							{{ conta.descricao }}
-						</h5>
-						<div class="d-flex flex-wrap gap-2 mb-3">
-							{% if conta.status %} {% set status_slug =
-							conta.status.lower().replace(' ', '') %} {% set variant = 'success' if
-							status_slug == 'pago' else ('danger' if status_slug == 'atrasado' else
-							('warning' if status_slug == 'emaberto' else ('secondary' if
-							status_slug == 'aguardar' else 'neutral'))) %}
-							<span class="g-badge g-badge--{{ variant }}">{{ conta.status }}</span>
-							{% endif %}
-							<span
-								class="g-badge g-badge--{{ 'primary' if conta.ativa else 'inactive' }}"
-								>{{ 'Ativa' if conta.ativa else 'Inativa' }}</span
-							>
-						</div>
-						<div
-							class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center"
-						>
-							<strong class="fs-5"
-								>R$ {{ '%.2f'| format(conta.valor|float) }}</strong
-							>
-							<button
-								class="btn-modern btn-modern--outline btn-modern--sm detalhes-conta-btn"
-								data-name="{{ conta.name }}"
-								data-descricao="{{ conta.descricao }}"
-								data-valor="{{ conta.valor }}"
-								data-dia="{{ conta.dia_vencimento }}"
-								data-status="{{ conta.status }}"
-								data-ativa="{{ 1 if conta.ativa else 0 }}"
-								data-temporaria="0"
-								data-inicio=""
-								data-termino=""
-							>
-								Detalhes
-							</button>
-						</div>
-					</div>
-				</div>
-			</div>
-			{% endfor %}
-		</div>
-		{% else %}
-		<div class="empty-state empty-state--compact">
-			<p class="empty-state__message">Nenhuma despesa contínua cadastrada</p>
-		</div>
-		{% endif %}
-	</div>
+</section>
+{% endblock %}
 
-	<div class="mb-3">
-		<h2 class="h5 mb-3 fw-semibold">Despesas Temporárias</h2>
-		{% if contas_temporarias and contas_temporarias|length %}
-		<div class="row g-3">
-			{% for conta in contas_temporarias %}
-			<div class="col-12 col-md-6 col-lg-4 mb-3 mb-md-0">
-				<div
-					class="card-modern"
-					style="height: 100%; border-left: 3px solid var(--color-warning)"
-				>
-					<div class="card-modern__body d-flex flex-column">
-						<h5 class="fw-semibold mb-2" title="{{ conta.descricao }}">
-							{{ conta.descricao }}
-						</h5>
-						<div class="d-flex flex-wrap gap-2 mb-3">
-							{% if conta.status %} {% set status_slug =
-							conta.status.lower().replace(' ', '') %} {% set variant = 'success' if
-							status_slug == 'pago' else ('danger' if status_slug == 'atrasado' else
-							('warning' if status_slug == 'emaberto' else ('secondary' if
-							status_slug == 'aguardar' else 'neutral'))) %}
-							<span class="g-badge g-badge--{{ variant }}">{{ conta.status }}</span>
-							{% endif %}
-							<span
-								class="g-badge g-badge--{{ 'primary' if conta.ativa else 'inactive' }}"
-								>{{ 'Ativa' if conta.ativa else 'Inativa' }}</span
-							>
-						</div>
-						<div
-							class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center"
-						>
-							<strong class="fs-5"
-								>R$ {{ '%.2f'| format(conta.valor|float) }}</strong
-							>
-							<button
-								class="btn-modern btn-modern--outline btn-modern--sm detalhes-conta-btn"
-								data-name="{{ conta.name }}"
-								data-descricao="{{ conta.descricao }}"
-								data-valor="{{ conta.valor }}"
-								data-dia="{{ conta.dia_vencimento }}"
-								data-status="{{ conta.status }}"
-								data-ativa="{{ 1 if conta.ativa else 0 }}"
-								data-temporaria="1"
-								data-inicio="{{ conta.data_inicio or '' }}"
-								data-termino="{{ conta.data_termino or '' }}"
-							>
-								Detalhes
-							</button>
-						</div>
-					</div>
-				</div>
+{% macro _status_variant(status) %}
+	{%- set slug = (status or '').lower().replace(' ', '') -%}
+	{%- if slug == 'pago' -%}success
+	{%- elif slug == 'atrasado' -%}destructive
+	{%- elif slug == 'emaberto' -%}warning
+	{%- else -%}secondary
+	{%- endif -%}
+{% endmacro %}
+
+{% block main %}
+<div class="despesas-wrapper">
+	<section class="mb-8" aria-labelledby="despesas-continuas-title">
+		<h2 id="despesas-continuas-title" class="financeiro-section-title">Despesas Contínuas</h2>
+		{% if contas_continuas and contas_continuas|length %}
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+				{% for conta in contas_continuas %}
+					<article class="card despesa-card">
+						<section class="despesa-card__body">
+							<h3 class="despesa-card__title" title="{{ conta.descricao }}">{{ conta.descricao }}</h3>
+							<div class="flex flex-wrap gap-2 mb-3">
+								{% if conta.status %}
+									{{ badge(conta.status, variant=_status_variant(conta.status)|trim) }}
+								{% endif %}
+								{{ badge('Ativa' if conta.ativa else 'Inativa', variant=('default' if conta.ativa else 'secondary')) }}
+							</div>
+							<div class="despesa-card__footer">
+								<strong class="despesa-card__value">R$ {{ '%.2f' | format(conta.valor | float) }}</strong>
+								<button type="button"
+									class="btn-sm-outline detalhes-conta-btn"
+									data-name="{{ conta.name }}"
+									data-descricao="{{ conta.descricao }}"
+									data-valor="{{ conta.valor }}"
+									data-dia="{{ conta.dia_vencimento }}"
+									data-status="{{ conta.status }}"
+									data-ativa="{{ 1 if conta.ativa else 0 }}"
+									data-temporaria="0"
+									data-inicio=""
+									data-termino="">
+									Detalhes
+								</button>
+							</div>
+						</section>
+					</article>
+				{% endfor %}
 			</div>
-			{% endfor %}
-		</div>
 		{% else %}
-		<div class="empty-state empty-state--compact">
-			<p class="empty-state__message">Nenhuma despesa temporária cadastrada</p>
-		</div>
+			{{ empty(
+				title="Nenhuma despesa contínua",
+				description="Quando houver despesas contínuas cadastradas, elas aparecerão aqui.",
+				icon=lucide_icon("repeat", size="md")
+			) }}
 		{% endif %}
-	</div>
-	<div
-		id="financeiro-perms"
-		data-can-edit="{{ 1 if can_edit_financeiro else 0 }}"
-		class="d-none"
-	></div>
+	</section>
+
+	<section class="mb-4" aria-labelledby="despesas-temporarias-title">
+		<h2 id="despesas-temporarias-title" class="financeiro-section-title">Despesas Temporárias</h2>
+		{% if contas_temporarias and contas_temporarias|length %}
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+				{% for conta in contas_temporarias %}
+					<article class="card despesa-card despesa-card--temp">
+						<section class="despesa-card__body">
+							<h3 class="despesa-card__title" title="{{ conta.descricao }}">{{ conta.descricao }}</h3>
+							<div class="flex flex-wrap gap-2 mb-3">
+								{% if conta.status %}
+									{{ badge(conta.status, variant=_status_variant(conta.status)|trim) }}
+								{% endif %}
+								{{ badge('Ativa' if conta.ativa else 'Inativa', variant=('default' if conta.ativa else 'secondary')) }}
+							</div>
+							<div class="despesa-card__footer">
+								<strong class="despesa-card__value">R$ {{ '%.2f' | format(conta.valor | float) }}</strong>
+								<button type="button"
+									class="btn-sm-outline detalhes-conta-btn"
+									data-name="{{ conta.name }}"
+									data-descricao="{{ conta.descricao }}"
+									data-valor="{{ conta.valor }}"
+									data-dia="{{ conta.dia_vencimento }}"
+									data-status="{{ conta.status }}"
+									data-ativa="{{ 1 if conta.ativa else 0 }}"
+									data-temporaria="1"
+									data-inicio="{{ conta.data_inicio or '' }}"
+									data-termino="{{ conta.data_termino or '' }}">
+									Detalhes
+								</button>
+							</div>
+						</section>
+					</article>
+				{% endfor %}
+			</div>
+		{% else %}
+			{{ empty(
+				title="Nenhuma despesa temporária",
+				description="Quando houver despesas temporárias cadastradas, elas aparecerão aqui.",
+				icon=lucide_icon("calendar-clock", size="md")
+			) }}
+		{% endif %}
+	</section>
+
+	<div id="financeiro-perms" data-can-edit="{{ 1 if can_edit_financeiro else 0 }}" class="hidden"></div>
 </div>
-{% endblock %} {% block extra_script %}
+{% endblock %}
+
+{% block base_scripts %}
+{{ super() }}
+
+{# === Modal: Detalhe da Despesa === #}
+{% set despesa_footer %}
+<div id="editButtons" class="flex gap-2" style="display:none;">
+	<button type="button" class="btn-sm-primary" data-action="edit">Editar</button>
+	<button type="button" class="btn-sm-primary hidden" data-action="save">Salvar</button>
+	<button type="button" class="btn-sm-ghost hidden" data-action="cancel-edit">Cancelar</button>
+</div>
+<button type="button" class="btn-ghost ml-auto" onclick="this.closest('dialog').close()">Fechar</button>
+{% endset %}
+{% call dialog(id="modalDespesa", title="Despesa", footer=despesa_footer, dialog_attrs={"class": "financeiro-dialog financeiro-dialog--lg"}) %}
+	<div id="despesaBadges" class="flex flex-wrap gap-2 mb-3"></div>
+	<dl class="despesa-dados" id="despesaDados"></dl>
+	<div id="historicoPagamentos" class="hidden border-t pt-3 mt-3">
+		<h3 class="text-sm font-semibold m-0 mb-2">Histórico de Pagamentos</h3>
+		<table class="table" id="historicoTabela">
+			<thead>
+				<tr>
+					<th style="width:120px">Mês</th>
+					<th>Status</th>
+					<th>Valor</th>
+				</tr>
+			</thead>
+			<tbody></tbody>
+		</table>
+		<p class="text-sm text-muted-foreground py-2 m-0" id="historicoVazio">Carregando…</p>
+	</div>
+	<form id="despesaEditForm" class="hidden flex flex-col gap-3 mt-3">
+		{% call field(label="Descrição") %}
+			<input type="text" name="descricao" class="input" required />
+		{% endcall %}
+		<div class="grid grid-cols-2 gap-3">
+			{% call field(label="Valor (R$)") %}
+				<input type="number" step="0.01" name="valor" class="input" required />
+			{% endcall %}
+			{% call field(label="Dia Vencimento") %}
+				<input type="number" min="1" max="31" name="dia_vencimento" class="input" required />
+			{% endcall %}
+		</div>
+		<div class="flex gap-4 flex-wrap" id="checksRow">
+			{{ checkbox("editAtiva", label="Ativa", attrs={"name": "ativa"}) }}
+			{{ checkbox("editTemporaria", label="Despesa Temporária", attrs={"name": "temporaria"}) }}
+		</div>
+		<div id="temporariaDatas" class="grid grid-cols-2 gap-3 hidden">
+			{% call field(label="Data Início") %}
+				{{ datepicker(id="field_data_inicio", name="data_inicio", placeholder="Selecione a data") }}
+			{% endcall %}
+			{% call field(label="Data Término") %}
+				{{ datepicker(id="field_data_termino", name="data_termino", placeholder="Selecione a data") }}
+			{% endcall %}
+		</div>
+	</form>
+{% endcall %}
+<script>
+(function(){
+	var dlg = document.getElementById('modalDespesa');
+	if(dlg){
+		var h2 = dlg.querySelector('h2#modalDespesa-title');
+		if(h2){ h2.id = 'despesaTitulo'; h2.textContent = ''; }
+	}
+})();
+</script>
+
+{# === Modal: Nova Despesa === #}
+{% if can_edit_financeiro %}
+{% set nova_despesa_footer %}
+<button type="button" class="btn-ghost" onclick="this.closest('dialog').close()">Cancelar</button>
+<button type="button" class="btn-primary" data-action="save-nova">Salvar</button>
+{% endset %}
+{% call dialog(id="modalNovaDespesa", title="Nova Despesa", footer=nova_despesa_footer, dialog_attrs={"class": "financeiro-dialog financeiro-dialog--lg"}) %}
+	<form id="novaDespesaForm" class="flex flex-col gap-3">
+		{% call field(label="Descrição") %}
+			<input type="text" name="descricao" class="input" required />
+		{% endcall %}
+		<div class="grid grid-cols-2 gap-3">
+			{% call field(label="Valor (R$)") %}
+				<input type="number" step="0.01" name="valor" class="input" required />
+			{% endcall %}
+			{% call field(label="Dia Vencimento") %}
+				<input type="number" min="1" max="31" name="dia_vencimento" class="input" required />
+			{% endcall %}
+		</div>
+		<div class="flex gap-4 flex-wrap" id="novaChecksRow">
+			{{ checkbox("novaAtiva", label="Ativa", checked=true, attrs={"name": "ativa"}) }}
+			{{ checkbox("novaTemporaria", label="Despesa Temporária", attrs={"name": "temporaria"}) }}
+			{{ checkbox("novaCobrarMesAtual", label="Cobrar mês atual", attrs={"name": "cobrar_mes_atual"}) }}
+		</div>
+		<div id="novaTemporariaDatas" class="grid grid-cols-2 gap-3 hidden">
+			{% call field(label="Data Início") %}
+				{{ datepicker(id="nova_data_inicio", name="data_inicio", placeholder="Selecione a data") }}
+			{% endcall %}
+			{% call field(label="Data Término") %}
+				{{ datepicker(id="nova_data_termino", name="data_termino", placeholder="Selecione a data") }}
+			{% endcall %}
+		</div>
+	</form>
+{% endcall %}
+{% endif %}
+{% endblock %}
+
+{% block extra_script %}
 <script src="/financeiro/despesas.js"></script>
 {% endblock %}

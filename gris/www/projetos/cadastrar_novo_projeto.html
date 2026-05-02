@@ -1,6 +1,16 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 {% block title %}Cadastrar novo projeto{% endblock %}
 {% set active_link = '/projetos/cadastrar_novo_projeto' %}
+
+{% set sponsor_type_items = [
+    {"label": "Associado", "value": "Associado"},
+    {"label": "Responsável", "value": "Responsavel"}
+] %}
+{% set team_type_items = sponsor_type_items + [{"label": "Outro", "value": "Outro"}] %}
 
 {% block head_include %}
 {{ super() }}
@@ -8,486 +18,609 @@
 {% endblock %}
 
 {% block page_header %}
-<div class="page-header">
-    <div class="page-header__content">
-        <h1 class="page-header__title">Cadastrar novo projeto</h1>
-        <p class="page-header__subtitle">Preencha os dados gerais do projeto.</p>
+<section class="project-page-header" aria-labelledby="project-page-title">
+    <div class="flex flex-col gap-2 max-w-3xl">
+        <h1 id="project-page-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Cadastrar novo projeto</h1>
+        <p class="m-0 text-base leading-relaxed text-muted-foreground">Preencha os dados gerais, equipe, objetivos, cronograma e riscos do projeto.</p>
     </div>
-    <div class="page-header__actions">
-        <a id="btnAbrirGoogleDrive" class="btn-modern btn-modern--outline btn-modern--sm d-none" href="#" target="_blank" rel="noopener noreferrer">Abrir Google Drive</a>
+    <div class="project-page-header__actions">
+        <a id="btnAbrirGoogleDrive" class="btn-outline d-none" href="#" target="_blank" rel="noopener noreferrer">
+            {{ lucide_icon("folder-open", size="sm") }}
+            <span>Abrir Google Drive</span>
+        </a>
     </div>
-</div>
+</section>
 {% endblock %}
 
 {% block main %}
-<div class="projeto-form-shell card-modern">
+<div class="project-form-page">
     <input type="hidden" id="projetoName" value="{{ projeto_name or '' }}" />
 
-    <div id="pendingReviewBanner" class="pending-review-banner d-none">
-        <button type="button" id="btnPendenciasRevisao" class="btn-modern btn-modern--secondary btn-modern--sm">
-            Ver comentários de revisão
-        </button>
-        <span id="pendingReviewCount" class="pending-review-banner__count"></span>
+    <div id="pendingReviewBanner" class="alert project-review-banner d-none" role="status">
+        <div class="project-review-banner__content">
+            <div>
+                <h2 class="project-review-banner__title">Comentários de revisão pendentes</h2>
+                <p class="project-review-banner__description">Resolva as pendências antes de reenviar o projeto para aprovação.</p>
+            </div>
+            <span id="pendingReviewCount" class="project-review-banner__count"></span>
+        </div>
+        <div class="project-review-banner__actions">
+            <button type="button" id="btnPendenciasRevisao" class="btn-outline">Ver comentários de revisão</button>
+        </div>
     </div>
 
-    <div id="formAlert" class="alert-modern d-none"></div>
+    <div id="formAlert" class="alert project-form-alert d-none" role="alert"></div>
 
-    <section class="card-modern form-card">
-        <div class="card-modern__header">
-            <h3 class="card-modern__title">Dados gerais</h3>
-            <p class="card-modern__subtitle">Informações iniciais do projeto.</p>
-        </div>
-        <div class="card-modern__body">
-            <div class="row g-3">
-                <div class="col-12 col-md-6">
-                    <label for="nome_do_projeto" class="form-label-modern">Título do projeto *</label>
-                    <input id="nome_do_projeto" type="text" class="form-input-modern form-input-modern--sm" placeholder="Digite o título do projeto" />
-                </div>
-                <div class="col-12 col-md-6">
-                    <label for="coordenador" class="form-label-modern">Coordenador *</label>
-                    <select id="coordenador" class="form-input-modern form-input-modern--sm"></select>
-                </div>
-                <div class="col-12 col-md-3">
-                    <label for="data_de_inicio" class="form-label-modern">Data de início</label>
-                    <input id="data_de_inicio" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" autocomplete="off" class="form-input-modern form-input-modern--sm" />
-                </div>
-                <div class="col-12 col-md-3">
-                    <label for="data_de_termino" class="form-label-modern">Data de término</label>
-                    <input id="data_de_termino" type="text" inputmode="numeric" placeholder="dd/mm/aaaa" autocomplete="off" class="form-input-modern form-input-modern--sm" />
-                </div>
-                <div class="col-12 col-md-3">
-                    <label for="tipo_padrinho_ou_orientador" class="form-label-modern">Tipo do padrinho/orientador *</label>
-                    <select id="tipo_padrinho_ou_orientador" class="form-input-modern form-input-modern--sm">
-                        <option value="Associado">Associado</option>
-                        <option value="Responsavel">Responsável</option>
-                    </select>
-                </div>
-
-                <div class="col-12 col-md-3" id="fieldPadrinhoAssociado">
-                    <label for="padrinho_associado" class="form-label-modern">Padrinho associado *</label>
-                    <select id="padrinho_associado" class="form-input-modern form-input-modern--sm"></select>
-                </div>
-                <div class="col-12 col-md-3 d-none" id="fieldPadrinhoResponsavel">
-                    <label for="padrinho_responsavel" class="form-label-modern">Padrinho responsável *</label>
-                    <select id="padrinho_responsavel" class="form-input-modern form-input-modern--sm"></select>
-                </div>
-
+    <article class="card project-form-card">
+        <header class="project-form-card__header">
+            <div>
+                <h2 class="project-form-card__title">Dados gerais</h2>
+                <p class="project-form-card__subtitle">Informações iniciais e vínculo do projeto.</p>
             </div>
-        </div>
-    </section>
-
-    <section class="card-modern form-card form-card--aprovadores">
-        <div class="card-modern__header">
-            <h3 class="card-modern__title">Aprovadores *</h3>
-            <p class="card-modern__subtitle">Diretores presidentes entram por padrão e podem ser removidos. Padrinho/orientador é obrigatório e não pode ser removido.</p>
-        </div>
-        <div class="card-modern__body">
-            <div class="table-box" data-table="aprovadores">
-                <div class="equipe-builder">
-                    <div class="filter-field">
-                        <label for="aprovador_tipo_pessoa" class="form-label-modern">Tipo</label>
-                        <select id="aprovador_tipo_pessoa" class="form-input-modern form-input-modern--sm">
-                            <option value="Associado">Associado</option>
-                            <option value="Responsavel">Responsável</option>
-                        </select>
-                    </div>
-                    <div class="filter-field" id="aprovador_field_associado">
-                        <label for="aprovador_associado" class="form-label-modern">Associado</label>
-                        <select id="aprovador_associado" class="form-input-modern form-input-modern--sm"></select>
-                    </div>
-                    <div class="filter-field d-none" id="aprovador_field_responsavel">
-                        <label for="aprovador_responsavel" class="form-label-modern">Responsável</label>
-                        <select id="aprovador_responsavel" class="form-input-modern form-input-modern--sm"></select>
-                    </div>
-                    <div class="filter-field">
-                        <label for="aprovador_nome" class="form-label-modern">Nome</label>
-                        <input id="aprovador_nome" type="text" class="form-input-modern form-input-modern--sm" readonly />
-                    </div>
-                    <div class="filter-field">
-                        <label for="aprovador_email" class="form-label-modern">Email</label>
-                        <input id="aprovador_email" type="text" class="form-input-modern form-input-modern--sm" readonly />
-                    </div>
-                    <div class="filter-field">
-                        <label for="aprovador_telefone" class="form-label-modern">Telefone</label>
-                        <input id="aprovador_telefone" type="text" class="form-input-modern form-input-modern--sm" readonly />
-                    </div>
-                    <div class="equipe-builder__actions">
-                        <button type="button" id="btnAdicionarAprovador" class="btn-modern btn-modern--outline btn-modern--sm">Adicionar aprovador</button>
-                    </div>
+        </header>
+        <section class="project-form-card__body">
+            <div class="project-form-grid project-form-grid--general">
+                <div class="field">
+                    <label class="label" for="nome_do_projeto">Título do projeto *</label>
+                    <input id="nome_do_projeto" type="text" class="input" placeholder="Digite o título do projeto" />
                 </div>
-                <div class="table-responsive">
-                    <table class="data-table projeto-table">
-                        <thead>
-                            <tr>
-                                <th>Nome</th>
-                                <th>Email</th>
-                                <th>Telefone</th>
-                                <th>Origem</th>
-                                <th style="width: 72px;">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="rows_aprovadores"></tbody>
-                    </table>
+
+                <div class="field">
+                    <label class="label" for="coordenador-trigger">Coordenador *</label>
+                    {{ select(
+                        id="coordenador",
+                        name="coordenador",
+                        items=[{"label": "Selecione...", "value": ""}],
+                        is_combobox=true,
+                        search_placeholder="Buscar coordenador...",
+                        trigger_attrs={"class": "project-select__trigger w-full"}
+                    ) }}
+                </div>
+
+                <div class="field">
+                    <label class="label" for="data_de_inicio-trigger">Data de início</label>
+                    {{ datepicker(
+                        id="data_de_inicio",
+                        name="data_de_inicio",
+                        placeholder="Selecione a data",
+                        trigger_attrs={"class": "project-datepicker__trigger"}
+                    ) }}
+                </div>
+
+                <div class="field">
+                    <label class="label" for="data_de_termino-trigger">Data de término</label>
+                    {{ datepicker(
+                        id="data_de_termino",
+                        name="data_de_termino",
+                        placeholder="Selecione a data",
+                        trigger_attrs={"class": "project-datepicker__trigger"}
+                    ) }}
+                </div>
+
+                <div class="field">
+                    <label class="label" for="tipo_padrinho_ou_orientador-trigger">Tipo do padrinho/orientador *</label>
+                    {{ select(
+                        id="tipo_padrinho_ou_orientador",
+                        name="tipo_padrinho_ou_orientador",
+                        items=sponsor_type_items,
+                        selected="Associado",
+                        trigger_attrs={"class": "project-select__trigger w-full"}
+                    ) }}
+                </div>
+
+                <div class="field" id="fieldPadrinhoAssociado">
+                    <label class="label" for="padrinho_associado-trigger">Padrinho associado *</label>
+                    {{ select(
+                        id="padrinho_associado",
+                        name="padrinho_associado",
+                        items=[{"label": "Selecione...", "value": ""}],
+                        is_combobox=true,
+                        search_placeholder="Buscar associado...",
+                        trigger_attrs={"class": "project-select__trigger w-full"}
+                    ) }}
+                </div>
+
+                <div class="field d-none" id="fieldPadrinhoResponsavel">
+                    <label class="label" for="padrinho_responsavel-trigger">Padrinho responsável *</label>
+                    {{ select(
+                        id="padrinho_responsavel",
+                        name="padrinho_responsavel",
+                        items=[{"label": "Selecione...", "value": ""}],
+                        is_combobox=true,
+                        search_placeholder="Buscar responsável...",
+                        trigger_attrs={"class": "project-select__trigger w-full"}
+                    ) }}
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
+    </article>
 
-    <section class="card-modern form-card">
-        <div class="card-modern__header">
-            <h3 class="card-modern__title">Detalhamento</h3>
-            <p class="card-modern__subtitle">Descrição do projeto e alinhamento com o escotismo.</p>
-        </div>
-        <div class="card-modern__body">
-            <div class="row g-3">
-                <div class="col-12">
-                    <div class="label-with-help">
-                        <label for="justificativa" class="form-label-modern">Descrição e Justificativa *</label>
-                        <button type="button" class="info-trigger info-trigger--field" data-info-key="justificativa" aria-label="Ajuda sobre descrição e justificativa" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
-                    </div>
-                    <textarea id="justificativa" class="form-input-modern form-input-modern--sm" rows="3"></textarea>
+    <article class="card project-form-card project-form-card--aprovadores">
+        <header class="project-form-card__header">
+            <div>
+                <h2 class="project-form-card__title">Aprovadores *</h2>
+                <p class="project-form-card__subtitle">Diretores presidentes entram por padrão e podem ser removidos. Padrinho ou orientador é obrigatório.</p>
+            </div>
+        </header>
+        <section class="project-form-card__body">
+            <div class="project-builder-grid">
+                <div class="field">
+                    <label class="label" for="aprovador_tipo_pessoa-trigger">Tipo</label>
+                    {{ select(
+                        id="aprovador_tipo_pessoa",
+                        name="aprovador_tipo_pessoa",
+                        items=sponsor_type_items,
+                        selected="Associado",
+                        trigger_attrs={"class": "project-select__trigger w-full"}
+                    ) }}
                 </div>
-                <div class="col-12">
-                    <div class="label-with-help">
-                        <label for="alinhamento_com_escotismo" class="form-label-modern">Como o projeto se alinha com o escotismo? *</label>
-                        <button type="button" class="info-trigger info-trigger--field" data-info-key="alinhamento_com_escotismo" aria-label="Ajuda sobre alinhamento com o escotismo" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
-                    </div>
-                    <textarea id="alinhamento_com_escotismo" class="form-input-modern form-input-modern--sm" rows="3"></textarea>
+                <div class="field" id="aprovador_field_associado">
+                    <label class="label" for="aprovador_associado-trigger">Associado</label>
+                    {{ select(
+                        id="aprovador_associado",
+                        name="aprovador_associado",
+                        items=[{"label": "Selecione...", "value": ""}],
+                        is_combobox=true,
+                        search_placeholder="Buscar associado...",
+                        trigger_attrs={"class": "project-select__trigger w-full"}
+                    ) }}
+                </div>
+                <div class="field d-none" id="aprovador_field_responsavel">
+                    <label class="label" for="aprovador_responsavel-trigger">Responsável</label>
+                    {{ select(
+                        id="aprovador_responsavel",
+                        name="aprovador_responsavel",
+                        items=[{"label": "Selecione...", "value": ""}],
+                        is_combobox=true,
+                        search_placeholder="Buscar responsável...",
+                        trigger_attrs={"class": "project-select__trigger w-full"}
+                    ) }}
+                </div>
+                <div class="field">
+                    <label class="label" for="aprovador_nome">Nome</label>
+                    <input id="aprovador_nome" type="text" class="input" readonly />
+                </div>
+                <div class="field">
+                    <label class="label" for="aprovador_email">Email</label>
+                    <input id="aprovador_email" type="text" class="input" readonly />
+                </div>
+                <div class="field">
+                    <label class="label" for="aprovador_telefone">Telefone</label>
+                    <input id="aprovador_telefone" type="text" class="input" readonly />
+                </div>
+                <div class="project-builder-grid__actions">
+                    <button type="button" id="btnAdicionarAprovador" class="btn-outline">Adicionar aprovador</button>
                 </div>
             </div>
-        </div>
-    </section>
 
-    <section class="card-modern form-card">
-        <div class="card-modern__header">
-            <div class="card-title-with-help">
-                <h3 class="card-modern__title">Equipe de interesse *</h3>
-                <button type="button" class="info-trigger info-trigger--card" data-info-key="equipe_de_interesse" aria-label="Ajuda sobre equipe de interesse" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
+            <div class="project-table-wrap">
+                <table class="table project-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Telefone</th>
+                            <th>Origem</th>
+                            <th class="project-table__actions-col">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rows_aprovadores"></tbody>
+                </table>
             </div>
-            <p class="card-modern__subtitle">Adicione os participantes e função de cada um.</p>
-        </div>
-        <div class="card-modern__body">
-            <div class="table-box" data-table="equipe_de_interesse">
-            <div class="equipe-builder">
-                <div class="filter-field">
-                    <label for="equipe_tipo_pessoa" class="form-label-modern">Tipo</label>
-                    <select id="equipe_tipo_pessoa" class="form-input-modern form-input-modern--sm">
-                        <option value="Associado">Associado</option>
-                        <option value="Responsavel">Responsável</option>
-                        <option value="Outro">Outro</option>
-                    </select>
+        </section>
+    </article>
+
+    <article class="card project-form-card">
+        <header class="project-form-card__header">
+            <div>
+                <h2 class="project-form-card__title">Detalhamento</h2>
+                <p class="project-form-card__subtitle">Descrição do projeto e alinhamento com o escotismo.</p>
+            </div>
+        </header>
+        <section class="project-form-card__body project-form-stack">
+            <div class="field">
+                <div class="project-label-row">
+                    <label class="label" for="justificativa">Descrição e justificativa *</label>
+                    <button type="button" class="btn-icon-outline project-help-trigger" data-info-key="justificativa" data-tooltip="Clique para saber mais" aria-label="Ajuda sobre descrição e justificativa">
+                        {{ lucide_icon("info", size="sm") }}
+                    </button>
                 </div>
-                <div class="filter-field" id="equipe_field_associado">
-                    <label for="equipe_associado" class="form-label-modern">Associado</label>
-                    <select id="equipe_associado" class="form-input-modern form-input-modern--sm"></select>
+                <textarea id="justificativa" class="textarea" rows="4"></textarea>
+            </div>
+            <div class="field">
+                <div class="project-label-row">
+                    <label class="label" for="alinhamento_com_escotismo">Como o projeto se alinha com o escotismo? *</label>
+                    <button type="button" class="btn-icon-outline project-help-trigger" data-info-key="alinhamento_com_escotismo" data-tooltip="Clique para saber mais" aria-label="Ajuda sobre alinhamento com o escotismo">
+                        {{ lucide_icon("info", size="sm") }}
+                    </button>
                 </div>
-                <div class="filter-field d-none" id="equipe_field_responsavel">
-                    <label for="equipe_responsavel" class="form-label-modern">Responsável</label>
-                    <select id="equipe_responsavel" class="form-input-modern form-input-modern--sm"></select>
+                <textarea id="alinhamento_com_escotismo" class="textarea" rows="4"></textarea>
+            </div>
+        </section>
+    </article>
+
+    <article class="card project-form-card">
+        <header class="project-form-card__header">
+            <div>
+                <div class="project-title-row">
+                    <h2 class="project-form-card__title">Equipe de interesse *</h2>
+                    <button type="button" class="btn-icon-outline project-help-trigger" data-info-key="equipe_de_interesse" data-tooltip="Clique para saber mais" aria-label="Ajuda sobre equipe de interesse">
+                        {{ lucide_icon("info", size="sm") }}
+                    </button>
                 </div>
-                <div class="filter-field">
-                    <label for="equipe_nome" class="form-label-modern">Nome</label>
-                    <input id="equipe_nome" type="text" class="form-input-modern form-input-modern--sm" />
+                <p class="project-form-card__subtitle">Adicione os participantes e a função de cada um.</p>
+            </div>
+        </header>
+        <section class="project-form-card__body">
+            <div class="project-builder-grid">
+                <div class="field">
+                    <label class="label" for="equipe_tipo_pessoa-trigger">Tipo</label>
+                    {{ select(
+                        id="equipe_tipo_pessoa",
+                        name="equipe_tipo_pessoa",
+                        items=team_type_items,
+                        selected="Associado",
+                        trigger_attrs={"class": "project-select__trigger w-full"}
+                    ) }}
                 </div>
-                <div class="filter-field">
-                    <label for="equipe_email" class="form-label-modern">Email</label>
-                    <input id="equipe_email" type="text" class="form-input-modern form-input-modern--sm" />
+                <div class="field" id="equipe_field_associado">
+                    <label class="label" for="equipe_associado-trigger">Associado</label>
+                    {{ select(
+                        id="equipe_associado",
+                        name="equipe_associado",
+                        items=[{"label": "Selecione...", "value": ""}],
+                        is_combobox=true,
+                        search_placeholder="Buscar associado...",
+                        trigger_attrs={"class": "project-select__trigger w-full"}
+                    ) }}
                 </div>
-                <div class="filter-field">
-                    <label for="equipe_telefone" class="form-label-modern">Telefone</label>
-                    <input id="equipe_telefone" type="text" class="form-input-modern form-input-modern--sm" />
+                <div class="field d-none" id="equipe_field_responsavel">
+                    <label class="label" for="equipe_responsavel-trigger">Responsável</label>
+                    {{ select(
+                        id="equipe_responsavel",
+                        name="equipe_responsavel",
+                        items=[{"label": "Selecione...", "value": ""}],
+                        is_combobox=true,
+                        search_placeholder="Buscar responsável...",
+                        trigger_attrs={"class": "project-select__trigger w-full"}
+                    ) }}
                 </div>
-                <div class="filter-field">
-                    <label for="equipe_funcao" class="form-label-modern">Função</label>
-                    <input id="equipe_funcao" type="text" class="form-input-modern form-input-modern--sm" />
+                <div class="field">
+                    <label class="label" for="equipe_nome">Nome</label>
+                    <input id="equipe_nome" type="text" class="input" />
                 </div>
-                <div class="equipe-builder__actions">
-                    <button type="button" id="btnAdicionarEquipe" class="btn-modern btn-modern--outline btn-modern--sm">Adicionar na tabela</button>
+                <div class="field">
+                    <label class="label" for="equipe_email">Email</label>
+                    <input id="equipe_email" type="text" class="input" />
+                </div>
+                <div class="field">
+                    <label class="label" for="equipe_telefone">Telefone</label>
+                    <input id="equipe_telefone" type="text" class="input" />
+                </div>
+                <div class="field">
+                    <label class="label" for="equipe_funcao">Função</label>
+                    <input id="equipe_funcao" type="text" class="input" />
+                </div>
+                <div class="project-builder-grid__actions">
+                    <button type="button" id="btnAdicionarEquipe" class="btn-outline">Adicionar na tabela</button>
                 </div>
             </div>
-            <div class="table-responsive">
-                <table class="data-table projeto-table">
+
+            <div class="project-table-wrap">
+                <table class="table project-table">
                     <thead>
                         <tr>
                             <th>Nome</th>
                             <th>Email</th>
                             <th>Telefone</th>
                             <th>Função</th>
-                            <th style="width: 72px;">Ações</th>
+                            <th class="project-table__actions-col">Ações</th>
                         </tr>
                     </thead>
                     <tbody id="rows_equipe_de_interesse"></tbody>
                 </table>
             </div>
-            </div>
-        </div>
-    </section>
+        </section>
+    </article>
 
-    <section class="card-modern form-card">
-        <div class="card-modern__header">
-            <div class="card-title-with-help">
-                <h3 class="card-modern__title">Objetivos *</h3>
-                <button type="button" class="info-trigger info-trigger--card" data-info-key="objetivos" aria-label="Ajuda sobre objetivos" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
-            </div>
-        </div>
-        <div class="card-modern__body">
-            <div class="table-box" data-table="objetivos">
-                <div class="table-responsive">
-                    <table class="data-table projeto-table">
-                        <thead>
-                            <tr>
-                                <th>Objetivo</th>
-                                <th>Métrica de sucesso</th>
-                                <th style="width: 72px;">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="rows_objetivos"></tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="3" class="table-footer-cell">
-                                    <button type="button" class="btn-add-row-footer" data-add-row="objetivos" aria-label="Adicionar objetivo">Nova Linha</button>
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
+    <article class="card project-form-card">
+        <header class="project-form-card__header">
+            <div>
+                <div class="project-title-row">
+                    <h2 class="project-form-card__title">Objetivos *</h2>
+                    <button type="button" class="btn-icon-outline project-help-trigger" data-info-key="objetivos" data-tooltip="Clique para saber mais" aria-label="Ajuda sobre objetivos">
+                        {{ lucide_icon("info", size="sm") }}
+                    </button>
                 </div>
+                <p class="project-form-card__subtitle">Defina objetivos específicos e métricas de sucesso.</p>
             </div>
-        </div>
-    </section>
+        </header>
+        <section class="project-form-card__body">
+            <div class="project-table-wrap">
+                <table class="table project-table">
+                    <thead>
+                        <tr>
+                            <th>Objetivo</th>
+                            <th>Métrica de sucesso</th>
+                            <th class="project-table__actions-col">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rows_objetivos"></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="project-table__footer">
+                                <button type="button" class="btn-sm-outline" data-add-row="objetivos">Nova linha</button>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </section>
+    </article>
 
-    <section class="card-modern form-card">
-        <div class="card-modern__header">
-            <h3 class="card-modern__title">Impacto</h3>
-            <p class="card-modern__subtitle">Competências, especialidades e relação com os Objetivos de Desenvolvimento Sustentável.</p>
-        </div>
-        <div class="card-modern__body">
-            <div class="row g-3 mb-3">
-                <div class="col-12 col-md-6">
-                    <div class="label-with-help">
-                        <label for="competencias" class="form-label-modern">Competências e Blocos de Aprendizagem</label>
-                        <button type="button" class="info-trigger info-trigger--field" data-info-key="competencias" aria-label="Ajuda sobre competências e blocos de aprendizagem" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
+    <article class="card project-form-card">
+        <header class="project-form-card__header">
+            <div>
+                <h2 class="project-form-card__title">Impacto</h2>
+                <p class="project-form-card__subtitle">Competências, especialidades e relação com os Objetivos de Desenvolvimento Sustentável.</p>
+            </div>
+        </header>
+        <section class="project-form-card__body project-form-stack">
+            <div class="project-form-grid project-form-grid--impact">
+                <div class="field">
+                    <div class="project-label-row">
+                        <label class="label" for="competencias">Competências e blocos de aprendizagem</label>
+                        <button type="button" class="btn-icon-outline project-help-trigger" data-info-key="competencias" data-tooltip="Clique para saber mais" aria-label="Ajuda sobre competências e blocos de aprendizagem">
+                            {{ lucide_icon("info", size="sm") }}
+                        </button>
                     </div>
-                    <input id="competencias" type="text" class="form-input-modern form-input-modern--sm" placeholder="Descreva as competências e blocos" />
+                    <input id="competencias" type="text" class="input" placeholder="Descreva as competências e blocos" />
                 </div>
-                <div class="col-12 col-md-6">
-                    <div class="label-with-help">
-                        <label for="especialidade" class="form-label-modern">Especialidades</label>
-                        <button type="button" class="info-trigger info-trigger--field" data-info-key="especialidade" aria-label="Ajuda sobre especialidades" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
+                <div class="field">
+                    <div class="project-label-row">
+                        <label class="label" for="especialidade">Especialidades</label>
+                        <button type="button" class="btn-icon-outline project-help-trigger" data-info-key="especialidade" data-tooltip="Clique para saber mais" aria-label="Ajuda sobre especialidades">
+                            {{ lucide_icon("info", size="sm") }}
+                        </button>
                     </div>
-                    <input id="especialidade" type="text" class="form-input-modern form-input-modern--sm" placeholder="Digite a especialidade" />
+                    <input id="especialidade" type="text" class="input" placeholder="Digite a especialidade" />
                 </div>
             </div>
-            <div class="table-box" data-table="ods">
-                <div class="table-responsive">
-                    <table class="data-table projeto-table">
-                        <thead>
-                            <tr>
-                                <th>
-                                    <div class="table-th-actions">
-                                        <span>ODS</span>
-                                        <button type="button" class="info-trigger info-trigger--table" data-info-key="ods" aria-label="Ajuda sobre ODS" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
-                                    </div>
-                                </th>
-                                <th style="width: 72px;">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="rows_ods"></tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="2" class="table-footer-cell">
-                                    <button type="button" class="btn-add-row-footer" data-add-row="ods" aria-label="Adicionar ODS">Nova Linha</button>
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
+
+            <div class="project-table-wrap">
+                <table class="table project-table project-table--ods">
+                    <thead>
+                        <tr>
+                            <th>
+                                <div class="project-table__header-inline">
+                                    <span>ODS</span>
+                                    <button type="button" class="btn-icon-outline project-help-trigger project-help-trigger--inline" data-info-key="ods" data-tooltip="Clique para saber mais" data-side="bottom" aria-label="Ajuda sobre ODS">
+                                        {{ lucide_icon("info", size="sm") }}
+                                    </button>
+                                </div>
+                            </th>
+                            <th class="project-table__actions-col">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rows_ods"></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2" class="project-table__footer">
+                                <button type="button" class="btn-sm-outline" data-add-row="ods">Nova linha</button>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </section>
+    </article>
+
+    <article class="card project-form-card">
+        <header class="project-form-card__header">
+            <div>
+                <div class="project-title-row">
+                    <h2 class="project-form-card__title">Cronograma *</h2>
+                    <button type="button" class="btn-icon-outline project-help-trigger" data-info-key="cronograma" data-tooltip="Clique para saber mais" aria-label="Ajuda sobre cronograma">
+                        {{ lucide_icon("info", size="sm") }}
+                    </button>
                 </div>
+                <p class="project-form-card__subtitle">Defina as tarefas, datas e acompanhe o Gantt interativo.</p>
             </div>
-        </div>
-    </section>
+        </header>
+        <section class="project-form-card__body project-form-stack">
+            <div class="project-table-wrap">
+                <table class="table project-table project-table--cronograma">
+                    <thead>
+                        <tr>
+                            <th class="project-table__handle-col"></th>
+                            <th>Data inicial</th>
+                            <th>Data final</th>
+                            <th>Tarefa</th>
+                            <th class="project-table__actions-col">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rows_cronograma"></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="5" class="project-table__footer">
+                                <button type="button" class="btn-sm-outline" data-add-row="cronograma">Nova linha</button>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
 
-    <section class="card-modern form-card">
-        <div class="card-modern__header">
-            <div class="card-title-with-help">
-                <h3 class="card-modern__title">Cronograma *</h3>
-                <button type="button" class="info-trigger info-trigger--card" data-info-key="cronograma" aria-label="Ajuda sobre cronograma" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
-            </div>
-        </div>
-        <div class="card-modern__body">
-            <div class="table-box" data-table="cronograma">
-                <div class="table-responsive">
-                    <table class="data-table projeto-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 38px;"></th>
-                                <th>Data inicial</th>
-                                <th>Data final</th>
-                                <th>Tarefa</th>
-                                <th style="width: 72px;">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="rows_cronograma"></tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="5" class="table-footer-cell">
-                                    <button type="button" class="btn-add-row-footer" data-add-row="cronograma" aria-label="Adicionar tarefa no cronograma">Nova Linha</button>
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
+            <div class="project-gantt-card" aria-live="polite">
+                <div class="project-gantt-card__header">
+                    <h3 class="project-gantt-card__title">Visualização Gantt</h3>
+                    <p class="project-gantt-card__subtitle">Arraste as extremidades para ajustar datas e arraste a barra para reorganizar a sequência.</p>
                 </div>
-                <div class="gantt-card" aria-live="polite">
-                    <div class="gantt-card__header">
-                        <h4 class="gantt-card__title">Visualização Gantt</h4>
-                        <p class="gantt-card__subtitle">Arraste as extremidades para ajustar datas e arraste a barra para cima/baixo para reorganizar.</p>
-                    </div>
-                    <div id="cronogramaGantt" class="cronograma-gantt"></div>
+                <div id="cronogramaGantt" class="cronograma-gantt"></div>
+            </div>
+        </section>
+    </article>
+
+    <article class="card project-form-card">
+        <header class="project-form-card__header">
+            <div>
+                <div class="project-title-row">
+                    <h2 class="project-form-card__title">Recursos *</h2>
+                    <button type="button" class="btn-icon-outline project-help-trigger" data-info-key="recursos" data-tooltip="Clique para saber mais" aria-label="Ajuda sobre recursos">
+                        {{ lucide_icon("info", size="sm") }}
+                    </button>
                 </div>
+                <p class="project-form-card__subtitle">Liste os recursos necessários para executar o projeto.</p>
             </div>
-        </div>
-    </section>
+        </header>
+        <section class="project-form-card__body">
+            <div class="project-table-wrap">
+                <table class="table project-table">
+                    <thead>
+                        <tr>
+                            <th>Recurso</th>
+                            <th class="project-table__actions-col">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rows_recursos"></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2" class="project-table__footer">
+                                <button type="button" class="btn-sm-outline" data-add-row="recursos">Nova linha</button>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </section>
+    </article>
 
-    <section class="card-modern form-card">
-        <div class="card-modern__header">
-            <div class="card-title-with-help">
-                <h3 class="card-modern__title">Recursos *</h3>
-                <button type="button" class="info-trigger info-trigger--card" data-info-key="recursos" aria-label="Ajuda sobre recursos" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
-            </div>
-        </div>
-        <div class="card-modern__body">
-            <div class="table-box" data-table="recursos">
-                <div class="table-responsive">
-                    <table class="data-table projeto-table">
-                        <thead>
-                            <tr>
-                                <th>Recurso</th>
-                                <th style="width: 72px;">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="rows_recursos"></tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="2" class="table-footer-cell">
-                                    <button type="button" class="btn-add-row-footer" data-add-row="recursos" aria-label="Adicionar recurso">Nova Linha</button>
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
+    <article class="card project-form-card">
+        <header class="project-form-card__header">
+            <div>
+                <div class="project-title-row">
+                    <h2 class="project-form-card__title">Riscos *</h2>
+                    <button type="button" class="btn-icon-outline project-help-trigger" data-info-key="riscos" data-tooltip="Clique para saber mais" aria-label="Ajuda sobre riscos">
+                        {{ lucide_icon("info", size="sm") }}
+                    </button>
                 </div>
+                <p class="project-form-card__subtitle">Mapeie os riscos principais e a estratégia de mitigação.</p>
             </div>
-        </div>
-    </section>
+        </header>
+        <section class="project-form-card__body">
+            <div class="project-table-wrap">
+                <table class="table project-table">
+                    <thead>
+                        <tr>
+                            <th>Risco</th>
+                            <th>Mitigação</th>
+                            <th class="project-table__actions-col">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rows_riscos"></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="project-table__footer">
+                                <button type="button" class="btn-sm-outline" data-add-row="riscos">Nova linha</button>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </section>
+    </article>
 
-    <section class="card-modern form-card">
-        <div class="card-modern__header">
-            <div class="card-title-with-help">
-                <h3 class="card-modern__title">Riscos *</h3>
-                <button type="button" class="info-trigger info-trigger--card" data-info-key="riscos" aria-label="Ajuda sobre riscos" title="Ver orientação de preenchimento"><svg class="info-trigger__icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"></circle><line x1="10" y1="8" x2="10" y2="13"></line><circle cx="10" cy="6" r="0.8" fill="currentColor" stroke="none"></circle></svg></button>
+    <article id="project-comments-card" class="card project-form-card d-none">
+        <header class="project-form-card__header">
+            <div>
+                <h2 class="project-form-card__title">Observações e comentários</h2>
+                <p class="project-form-card__subtitle">Registre observações adicionais relevantes para a aprovação.</p>
             </div>
-        </div>
-        <div class="card-modern__body">
-            <div class="table-box" data-table="riscos">
-                <div class="table-responsive">
-                    <table class="data-table projeto-table">
-                        <thead>
-                            <tr>
-                                <th>Risco</th>
-                                <th>Mitigação</th>
-                                <th style="width: 72px;">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="rows_riscos"></tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="3" class="table-footer-cell">
-                                    <button type="button" class="btn-add-row-footer" data-add-row="riscos" aria-label="Adicionar risco">Nova Linha</button>
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
+        </header>
+        <section class="project-form-card__body">
+            <div class="field">
+                <label class="label" for="observacoes_e_comentarios">Observações e comentários</label>
+                <textarea id="observacoes_e_comentarios" class="textarea" rows="4"></textarea>
             </div>
-        </div>
-    </section>
+        </section>
+    </article>
 
-
-    <section class="card-modern form-card">
-        <div class="card-modern__header">
-            <h3 class="card-modern__title">Observações e comentários</h3>
-        </div>
-        <div class="card-modern__body">
-            <label for="observacoes_e_comentarios" class="form-label-modern">Observações e comentários</label>
-            <textarea id="observacoes_e_comentarios" class="form-input-modern form-input-modern--sm" rows="3"></textarea>
-        </div>
-    </section>
-
-    <section id="avaliacaoSection" class="card-modern form-card d-none">
-        <div class="card-modern__header">
-            <h3 class="card-modern__title">Revisão do TAP por IA</h3>
-        </div>
-        <div class="card-modern__body">
-            <label for="avaliacao_tap_markdown" class="form-label-modern">Resultado da avaliação</label>
-            <div id="avaliacao_tap_markdown" class="avaliacao-markdown form-input-modern form-input-modern--sm" aria-live="polite"></div>
-        </div>
-    </section>
-
-    <div id="infoModal" class="info-modal d-none" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="infoModalTitle">
-        <div class="info-modal__backdrop" data-info-close></div>
-        <div class="info-modal__panel" role="document">
-            <div class="info-modal__header">
-                <h4 id="infoModalTitle" class="info-modal__title"></h4>
-                <button type="button" class="info-modal__close" data-info-close aria-label="Fechar">×</button>
+    <article id="avaliacaoSection" class="card project-form-card d-none">
+        <header class="project-form-card__header">
+            <div>
+                <h2 class="project-form-card__title">Revisão do TAP por IA</h2>
+                <p class="project-form-card__subtitle">Resultado gerado automaticamente para apoiar a revisão do projeto.</p>
             </div>
-            <div id="infoModalBody" class="info-modal__body"></div>
-        </div>
-    </div>
+        </header>
+        <section class="project-form-card__body">
+            <div id="avaliacao_tap_markdown" class="project-markdown-output" aria-live="polite"></div>
+        </section>
+    </article>
 
-    <div id="pendingReviewModal" class="info-modal d-none" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="pendingReviewModalTitle">
-        <div class="info-modal__backdrop" data-pending-review-close></div>
-        <div class="info-modal__panel" role="document">
-            <div class="info-modal__header">
-                <h4 id="pendingReviewModalTitle" class="info-modal__title">Comentários de revisão pendentes</h4>
-                <button type="button" class="info-modal__close" data-pending-review-close aria-label="Fechar">×</button>
-            </div>
-            <div class="info-modal__body">
-                <div class="table-responsive">
-                    <table class="data-table projeto-table">
-                        <thead>
-                            <tr>
-                                <th>Aprovador</th>
-                                <th>Etapa</th>
-                                <th>Comentário</th>
-                                <th>Data</th>
-                                <th style="width: 110px;">Ação</th>
-                            </tr>
-                        </thead>
-                        <tbody id="rows_pending_review_comments"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="submitConfirmModal" class="info-modal d-none" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="submitConfirmModalTitle">
-        <div class="info-modal__backdrop" data-submit-confirm-close></div>
-        <div class="info-modal__panel" role="document">
-            <div class="info-modal__header">
-                <h4 id="submitConfirmModalTitle" class="info-modal__title">Confirmar submissão</h4>
-                <button type="button" class="info-modal__close" data-submit-confirm-close aria-label="Fechar">×</button>
-            </div>
-            <div class="info-modal__body">
-                <p>Deseja submeter este projeto para aprovação agora?</p>
-            </div>
-            <div class="confirm-modal-footer">
-                <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-submit-confirm-close>Cancelar</button>
-                <button type="button" id="btnConfirmSubmitProjeto" class="btn-modern btn-modern--primary btn-modern--sm">Confirmar submissão</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="form-actions">
-        <button type="button" id="btnSalvarRascunho" class="btn-modern btn-modern--outline btn-modern--sm">Salvar rascunho</button>
-        <button type="button" id="btnSubmeter" class="btn-modern btn-modern--primary btn-modern--sm">Submeter</button>
-        <button type="button" id="btnAvaliacaoIA" class="btn-modern btn-modern--secondary btn-modern--sm">Revisão por IA</button>
+    <div class="project-form-actions">
+        <button type="button" id="btnSalvarRascunho" class="btn-outline">Salvar rascunho</button>
+        <button type="button" id="btnSubmeter" class="btn-primary">Submeter</button>
+        <button type="button" id="btnAvaliacaoIA" class="btn-outline">
+            {{ lucide_icon("sparkles", size="sm") }}
+            Revisão por IA
+        </button>
     </div>
 </div>
+
+{% set info_footer %}
+<button type="button" class="btn-outline" data-info-close>Fechar</button>
+{% endset %}
+{% call dialog(
+    id="infoModal",
+    title='<span id="infoModalTitle"></span>',
+    footer=info_footer,
+    close_button=true,
+    dialog_attrs={"class": "project-dialog project-dialog--info"},
+    body_attrs={"class": "project-dialog__body"}
+) %}
+    <div id="infoModalBody" class="project-dialog__richtext"></div>
+{% endcall %}
+
+{% set pending_review_footer %}
+<button type="button" class="btn-outline" data-pending-review-close>Fechar</button>
+{% endset %}
+{% call dialog(
+    id="pendingReviewModal",
+    title="Comentários de revisão pendentes",
+    description="Comentários que ainda precisam ser resolvidos antes do reenvio do projeto.",
+    footer=pending_review_footer,
+    close_button=true,
+    dialog_attrs={"class": "project-dialog project-dialog--wide"},
+    body_attrs={"class": "project-dialog__body"}
+) %}
+    <div class="project-table-wrap project-table-wrap--modal">
+        <table class="table project-table">
+            <thead>
+                <tr>
+                    <th>Aprovador</th>
+                    <th>Etapa</th>
+                    <th>Comentário</th>
+                    <th>Data</th>
+                    <th class="project-table__actions-col">Ação</th>
+                </tr>
+            </thead>
+            <tbody id="rows_pending_review_comments"></tbody>
+        </table>
+    </div>
+{% endcall %}
+
+{% set submit_confirm_footer %}
+<button type="button" class="btn-outline" data-submit-confirm-close>Cancelar</button>
+<button type="button" id="btnConfirmSubmitProjeto" class="btn-primary">Confirmar submissão</button>
+{% endset %}
+{% call dialog(
+    id="submitConfirmModal",
+    title="Confirmar submissão",
+    description="Deseja submeter este projeto para aprovação agora?",
+    footer=submit_confirm_footer,
+    close_button=true,
+    dialog_attrs={"class": "project-dialog project-dialog--confirm"},
+    body_attrs={"class": "project-dialog__body"}
+) %}
+    <p class="project-dialog__text">A submissão vai encaminhar o projeto para o fluxo de aprovação e manter o histórico de revisão disponível para os aprovadores.</p>
+{% endcall %}
 {% endblock %}

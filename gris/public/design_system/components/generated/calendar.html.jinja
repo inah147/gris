@@ -1,0 +1,243 @@
+{#
+  Renders a reusable calendar with month, week and list modes.
+
+  @param id {string} [optional] - Unique identifier for the calendar root.
+  @param events {list} [optional] - List of event dicts. Schema:
+        { id (str), title (str), start (ISO 8601), end (ISO 8601 | None),
+          all_day (bool), category (str | None), color (str | None),
+          icon (str | None — Lucide icon name to render before the title),
+          icon_color (str | None — CSS color/token for the icon),
+          data (dict | None) }.
+  @param categories {list} [optional] - List of category dicts:
+        { name (str), label (str), color (str — CSS token or hex) }.
+    @param initial_mode {string} [optional] [default="month"] - "month" | "week" | "list".
+    @param initial_date {string} [optional] - ISO date "YYYY-MM-DD"; default = today.
+    @param initial_list_variant {string} [optional] [default="default"] - "default" | "category".
+  @param allowed_modes {list} [optional] [default=["month","week","list"]] -
+        Subset of modes the toggle exposes.
+  @param week_show_hours {bool} [optional] [default=true] - Whether the week mode
+        shows the hours axis (and exposes a checkbox to toggle it on the client).
+    @param list_show_all_days {bool} [optional] [default=false] - Whether list mode
+      renders every day in the range or only days with events.
+    @param list_range_start {string} [optional] - ISO date "YYYY-MM-DD" for the
+      start of the list-mode range. Defaults to the anchor month start.
+    @param list_range_end {string} [optional] - ISO date "YYYY-MM-DD" for the
+      end of the list-mode range. Defaults to the anchor month end.
+  @param hour_range {list[int]} [optional] [default=[0,24]] - [startHour, endHour]
+        for the week-with-hours grid.
+  @param first_weekday {int} [optional] [default=0] - 0 = Monday, 6 = Sunday.
+  @param locale {string} [optional] [default="pt-BR"] - Used by Intl.DateTimeFormat
+        on the client for labels.
+  @param filters_enabled {bool} [optional] [default=true] - Show category filters.
+  @param show_toggle {bool} [optional] [default=true] - Show the segmented control.
+  @param empty_message {string} [optional] - Text when no events match.
+  @param attrs {object} [optional] - Extra HTML attributes for the root div.
+
+  Eventos disparados (no elemento root):
+    - "gris:calendar:event-click" → detail = { id, title, start, end, category, data }.
+
+  API pública (no elemento root):
+    - el.events (getter/setter)              re-renderiza ao setar
+    - el.activeCategories (getter/setter)    sincroniza categorias/filtros ativos
+    - el.setMode("month" | "week" | "list")
+    - el.setListVariant("default" | "category")
+    - el.setListShowAllDays(boolean)
+    - el.setListRange("YYYY-MM-DD", "YYYY-MM-DD")
+    - el.setActiveCategories(["Categoria A", "Categoria B"])
+    - el.goToDate("YYYY-MM-DD")
+    - el.refresh()
+#}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import switch %}
+
+{% macro calendar(
+  id=None,
+  events=[],
+  categories=[],
+  initial_mode="month",
+  initial_date=None,
+  initial_list_variant="default",
+  allowed_modes=["month", "week", "list"],
+  week_show_hours=true,
+  list_show_all_days=false,
+  list_range_start=None,
+  list_range_end=None,
+  hour_range=[0, 24],
+  first_weekday=0,
+  locale="pt-BR",
+  filters_enabled=true,
+  show_toggle=true,
+  empty_message="Nenhum evento.",
+  attrs={}
+) %}
+{% set id = id or ("calendar-" + (range(100000, 999999) | random | string)) %}
+{% set _config = {
+  "initialMode": initial_mode,
+  "initialDate": initial_date,
+  "initialListVariant": initial_list_variant,
+  "allowedModes": allowed_modes,
+  "weekShowHours": week_show_hours,
+  "listShowAllDays": list_show_all_days,
+  "listRangeStart": list_range_start,
+  "listRangeEnd": list_range_end,
+  "hourRange": hour_range,
+  "firstWeekday": first_weekday,
+  "locale": locale,
+  "filtersEnabled": filters_enabled,
+  "showToggle": show_toggle,
+  "emptyMessage": empty_message,
+  "categories": categories
+} %}
+<div
+  id="{{ id }}"
+  class="calendar {{ attrs.class or '' }}"
+  data-calendar
+  role="application"
+  aria-label="Calendário"
+  {% for key, value in attrs.items() %}
+    {% if key != 'class' %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+  <div class="calendar__toolbar" data-calendar-toolbar>
+    <div class="calendar__toolbar-group">
+      {% if show_toggle and (allowed_modes | length) > 1 %}
+      <div
+        class="calendar__mode-toggle"
+        role="radiogroup"
+        aria-label="Modo de visualização"
+        data-calendar-mode-toggle
+      >
+        {% for mode in allowed_modes %}
+        <button
+          type="button"
+          class="calendar__mode-toggle-button"
+          role="radio"
+          aria-pressed="{{ 'true' if mode == initial_mode else 'false' }}"
+          aria-checked="{{ 'true' if mode == initial_mode else 'false' }}"
+          data-calendar-mode="{{ mode }}"
+        >
+          {% if mode == "month" %}Mês
+          {% elif mode == "week" %}Semana
+          {% else %}Lista
+          {% endif %}
+        </button>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="calendar__toolbar-group" data-calendar-nav>
+        <button
+          type="button"
+          class="btn-sm-outline"
+          data-calendar-nav-prev
+          aria-label="Período anterior"
+        >‹</button>
+        <button
+          type="button"
+          class="btn-sm-outline"
+          data-calendar-nav-today
+        >Hoje</button>
+        <button
+          type="button"
+          class="btn-sm-outline"
+          data-calendar-nav-next
+          aria-label="Próximo período"
+        >›</button>
+      </div>
+    </div>
+
+    <div class="calendar__period-label" data-calendar-period-label aria-live="polite">
+      {# preenchido pelo JS #}
+    </div>
+
+    <div class="calendar__toolbar-group">
+      {% if week_show_hours %}
+      <label class="calendar__week-options" data-calendar-week-hours-toggle hidden>
+        <input type="checkbox" checked data-calendar-week-hours-checkbox>
+        Mostrar horários
+      </label>
+      {% endif %}
+
+      <div class="calendar__list-controls" data-calendar-list-controls hidden>
+        <div
+          class="calendar__list-variant-toggle"
+          role="radiogroup"
+          aria-label="Variante da lista"
+          data-calendar-list-variant-toggle
+        >
+          <button
+            type="button"
+            class="calendar__mode-toggle-button"
+            role="radio"
+            aria-pressed="{{ 'true' if initial_list_variant == 'default' else 'false' }}"
+            aria-checked="{{ 'true' if initial_list_variant == 'default' else 'false' }}"
+            data-calendar-list-variant="default"
+          >Normal</button>
+          <button
+            type="button"
+            class="calendar__mode-toggle-button"
+            role="radio"
+            aria-pressed="{{ 'true' if initial_list_variant == 'category' else 'false' }}"
+            aria-checked="{{ 'true' if initial_list_variant == 'category' else 'false' }}"
+            data-calendar-list-variant="category"
+          >Por categoria</button>
+        </div>
+        {{ switch(
+          name="calendar-list-show-all-days",
+          checked=list_show_all_days,
+          label="Mostrar todos os dias",
+          attrs={
+            "class": "calendar__list-options",
+            "data-calendar-list-show-all-days-control": "true"
+          }
+        ) }}
+      </div>
+
+      {% if filters_enabled and categories %}
+      <div class="calendar__filters" data-calendar-filters>
+        <button
+          type="button"
+          class="btn-sm-outline"
+          data-calendar-filters-toggle
+          aria-haspopup="true"
+          aria-expanded="false"
+        >
+          Filtros
+          <span class="calendar__filters-count" data-calendar-filters-count></span>
+        </button>
+        <div class="calendar__filters-popover" role="menu">
+          <div class="calendar__filters-actions">
+            <button type="button" data-calendar-filters-all>Todos</button>
+            <button type="button" data-calendar-filters-none>Nenhum</button>
+          </div>
+          {% for cat in categories %}
+          <label class="calendar__filter">
+            <input
+              type="checkbox"
+              checked
+              data-calendar-filter
+              value="{{ cat.name }}"
+            >
+            <span
+              class="calendar__filter-swatch"
+              style="--cal-cat-color: {{ cat.color or 'var(--primary)' }};"
+              aria-hidden="true"
+            ></span>
+            <span class="calendar__filter-label">{{ cat.label or cat.name }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="calendar__body" data-calendar-body>
+    <div class="calendar__skeleton" aria-hidden="true">
+      {% for _ in range(35) %}<div class="calendar__skeleton-cell"></div>{% endfor %}
+    </div>
+  </div>
+
+  <script type="application/json" data-calendar-config>{{ _config | tojson }}</script>
+  <script type="application/json" data-calendar-events>{{ events | tojson }}</script>
+</div>
+{% endmacro %}

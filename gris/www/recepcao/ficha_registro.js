@@ -1,8 +1,8 @@
-(function() {
-    document.addEventListener('DOMContentLoaded', function() {
+(function () {
+    document.addEventListener('DOMContentLoaded', function () {
         const container = document.querySelector('.flow-steps-container');
         if (container) {
-            const doneSteps = container.querySelectorAll('.flow-step.done');
+            const doneSteps = container.querySelectorAll('.flow-step--done');
             if (doneSteps.length > 0) {
                 const lastDoneStep = doneSteps[doneSteps.length - 1];
                 const scrollPos =
@@ -17,11 +17,13 @@
         const emptyState = document.getElementById('comment-empty');
         const errorBox = document.getElementById('comment-error');
         const submitBtn = document.getElementById('comment-submit');
-        const modal = document.getElementById('comment-modal');
+        const dialogEl = document.getElementById('comment-modal');
         const openBtn = document.getElementById('comment-modal-open');
-        const modalBackdrop = modal ? modal.querySelector('.comment-modal__backdrop') : null;
-        const closeButtons = modal ? modal.querySelectorAll('[data-close="comment-modal"]') : [];
         const editCancelBtn = document.getElementById('comment-cancel-edit');
+        const PENCIL_ICON_HTML =
+            '<svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true">' +
+            '<use href="/assets/gris/design_system/icons/lucide/sprite.svg#pencil" />' +
+            '</svg>';
         let editingCommentName = null;
 
         function escapeHtml(str) {
@@ -34,18 +36,13 @@
         }
 
         function openModal() {
-            if (!modal) return;
-            modal.classList.add('is-open');
-            modal.setAttribute('aria-hidden', 'false');
-            document.body.style.overflow = 'hidden';
+            if (!dialogEl || typeof dialogEl.showModal !== 'function') return;
+            if (!dialogEl.open) dialogEl.showModal();
         }
 
         function closeModal() {
-            if (!modal) return;
-            modal.classList.remove('is-open');
-            modal.setAttribute('aria-hidden', 'true');
-            document.body.style.overflow = '';
-            clearEditingState();
+            if (!dialogEl || typeof dialogEl.close !== 'function') return;
+            if (dialogEl.open) dialogEl.close();
         }
 
         function incrementCommentCount() {
@@ -56,29 +53,18 @@
             if (badgeModal) badgeModal.textContent = current + 1;
         }
 
-        if (openBtn && modal) {
+        if (openBtn && dialogEl) {
             openBtn.addEventListener('click', openModal);
         }
 
-        if (modalBackdrop) {
-            modalBackdrop.addEventListener('click', closeModal);
+        if (dialogEl) {
+            dialogEl.addEventListener('close', clearEditingState);
         }
-
-        if (closeButtons && closeButtons.length > 0) {
-            closeButtons.forEach((btn) => btn.addEventListener('click', closeModal));
-        }
-
-        document.addEventListener('keydown', function(ev) {
-            if (ev.key === 'Escape' && modal && modal.classList.contains('is-open')) {
-                ev.preventDefault();
-                closeModal();
-            }
-        });
 
         if (commentForm && commentTextarea && submitBtn) {
             const docName = commentForm.dataset.docname;
 
-            commentForm.addEventListener('submit', async function(e) {
+            commentForm.addEventListener('submit', async function (e) {
                 e.preventDefault();
                 if (!docName && !editingCommentName) return;
 
@@ -87,7 +73,7 @@
 
                 submitBtn.textContent = editingCommentName ? 'Salvando...' : 'Enviando...';
                 submitBtn.disabled = true;
-                if (errorBox) errorBox.style.display = 'none';
+                if (errorBox) errorBox.hidden = true;
 
                 const endpoint = editingCommentName
                     ? '/api/method/gris.api.recepcao.editar_comentario'
@@ -117,8 +103,8 @@
                     if (editingCommentName) {
                         const target =
                             (commentList && commentList.querySelector(`.comment-item[data-comment-name="${editingCommentName}"]`)) ||
-                            (commentList
-                                && commentList
+                            (commentList &&
+                                commentList
                                     .querySelector(`button[data-comment-name="${editingCommentName}"]`)
                                     ?.closest('.comment-item'));
 
@@ -134,28 +120,28 @@
                         item.dataset.commentName = comment.name;
                         const initial = (comment.owner_fullname || '?').trim().charAt(0).toUpperCase();
                         item.innerHTML = `
-                            <div class="comment-item__avatar"><span>${initial}</span></div>
+                            <span class="avatar"><span aria-hidden="true">${escapeHtml(initial)}</span></span>
                             <div class="comment-item__body">
                                 <div class="comment-item__meta">
                                     <div class="comment-item__meta-left">
-                                        <span class="comment-item__author">${comment.owner_fullname}</span>
+                                        <span class="comment-item__author">${escapeHtml(comment.owner_fullname || '')}</span>
                                         <span class="comment-item__dot">•</span>
-                                        <span class="comment-item__date">${comment.creation}</span>
+                                        <span class="comment-item__date">${escapeHtml(comment.creation || '')}</span>
                                     </div>
                                     <button
                                         type="button"
-                                        class="comment-item__edit btn-modern btn-modern--ghost btn-modern--xs"
-                                        data-comment-name="${comment.name}"
+                                        class="btn-sm-ghost comment-item__edit"
+                                        data-comment-name="${escapeHtml(comment.name)}"
                                         data-comment-content="${escapeHtml(contentText)}"
                                     >
-                                        Editar
+                                        ${PENCIL_ICON_HTML} Editar
                                     </button>
                                 </div>
                                 <div class="comment-item__content">${escapeHtml(contentText).replace(/\n/g, '<br>')}</div>
                             </div>
                         `;
                         commentList.prepend(item);
-                        if (emptyState) emptyState.style.display = 'none';
+                        if (emptyState) emptyState.hidden = true;
                         incrementCommentCount();
                     }
 
@@ -164,7 +150,7 @@
                 } catch (err) {
                     if (errorBox) {
                         errorBox.textContent = err.message || 'Não foi possível adicionar o comentário.';
-                        errorBox.style.display = 'inline';
+                        errorBox.hidden = false;
                     }
                 } finally {
                     submitBtn.disabled = false;
@@ -172,7 +158,7 @@
                 }
             });
 
-            commentTextarea.addEventListener('keydown', function(ev) {
+            commentTextarea.addEventListener('keydown', function (ev) {
                 if (ev.key === 'Enter' && !ev.shiftKey) {
                     ev.preventDefault();
                     submitBtn.click();
@@ -181,7 +167,7 @@
         }
 
         if (commentList) {
-            commentList.addEventListener('click', function(ev) {
+            commentList.addEventListener('click', function (ev) {
                 const target = ev.target.closest('.comment-item__edit');
                 if (!target) return;
                 ev.preventDefault();
@@ -192,7 +178,7 @@
         }
 
         if (editCancelBtn) {
-            editCancelBtn.addEventListener('click', function(ev) {
+            editCancelBtn.addEventListener('click', function (ev) {
                 ev.preventDefault();
                 clearEditingState();
             });
@@ -202,16 +188,16 @@
             if (!name || !commentTextarea || !submitBtn) return;
             openModal();
             editingCommentName = name;
-            commentTextarea.value = content.replace(/<br\s*\/>/gi, '\n').replace(/<br>/gi, '\n');
+            commentTextarea.value = content.replace(/<br\s*\/?>/gi, '\n');
             commentTextarea.focus();
             submitBtn.textContent = 'Salvar';
-            if (editCancelBtn) editCancelBtn.style.display = 'inline-flex';
+            if (editCancelBtn) editCancelBtn.hidden = false;
         }
 
         function clearEditingState() {
             editingCommentName = null;
             if (submitBtn) submitBtn.textContent = 'Adicionar';
-            if (editCancelBtn) editCancelBtn.style.display = 'none';
+            if (editCancelBtn) editCancelBtn.hidden = true;
         }
     });
 })();

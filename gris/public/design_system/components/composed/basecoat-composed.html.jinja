@@ -386,7 +386,7 @@
     {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
   {% endfor %}
 >
-  <input type="checkbox" {% if name %}name="{{ name }}"{% endif %} {% if checked %}checked{% endif %}>
+  <input type="checkbox" role="switch" class="input" {% if name %}name="{{ name }}"{% endif %} {% if checked %}checked{% endif %}>
   {% if label %}<span>{{ label | safe }}</span>{% endif %}
 </label>
 {% endmacro %}

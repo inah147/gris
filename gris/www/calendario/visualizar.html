@@ -1,4 +1,9 @@
-{% extends "gris/templates/web_sidebar_base.html" %}
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, button, card, empty %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/calendar.html.jinja" import calendar %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
 
 {% block title %}Calendário{% endblock %}
 
@@ -8,247 +13,203 @@
 {% endblock %}
 
 {% block page_header %}
-<div class="page-header">
-    <div class="page-header__content">
-        <h1 class="page-header__title">Calendário de Atividades</h1>
-        <p class="page-header__subtitle">Visualize as atividades programadas para o ano.</p>
-    </div>
-    <div class="page-header__actions">
-        <button id="btn-export-calendar" class="btn-modern btn-modern--outline">
-            <i class="fa fa-file-pdf-o"></i> Exportar PDF
-        </button>
-        {% if can_simulate %}
-        <a href="/calendario/simulacao_calendario" class="btn-modern btn-modern--primary">
-            Simular
-        </a>
-        {% endif %}
-    </div>
-</div>
+<section class="calendar-view-header">
+	<div class="calendar-view-header__copy">
+		<h1 class="text-3xl font-semibold">Calendário de Atividades</h1>
+		<p class="text-muted-foreground">Acompanhe a programação anual da UEL com visualizações por mês, semana e lista.</p>
+	</div>
+	<div class="calendar-view-header__actions">
+		{{ button(
+			lucide_icon("file-text", size="sm") ~ " Exportar PDF",
+			variant="outline",
+			attrs={"id": "btn-export-calendar"}
+		) }}
+		{% if can_simulate %}
+		<a href="/calendario/simulacao_calendario" class="btn-primary">
+			{{ lucide_icon("sparkles", size="sm") }} Simular
+		</a>
+		{% endif %}
+	</div>
+</section>
 {% endblock %}
 
 {% block main %}
-<div class="calendar-page-container">
-    <div class="card-modern mb-4">
-        <div class="card-modern__body card-modern__body--compact">
-            <div class="filter-bar mb-0">
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap;" class="mb-3">
-                    <div class="filter-field">
-                        <label class="form-label-modern">Ano</label>
-                        <select id="year-filter" class="form-input-modern form-input-modern--sm" style="min-width: 100px;">
-                            {% for y in available_years %}
-                            <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
+<div class="calendar-view-page">
+	{% call card(
+		title="Filtros",
+		description="Ano e mês ajustam o período do calendário. O filtro de seções controla a visualização e a exportação.",
+		attrs={"class": "calendar-view-card calendar-view-card--filters"}
+	) %}
+	<div class="calendar-view-filters__grid">
+		<div class="field calendar-view-field">
+			<label class="label" for="year-filter-trigger">Ano</label>
+			{{ select(id="year-filter", selected=year|string, items=year_items) }}
+		</div>
 
-                    <div class="filter-field">
-                        <label class="form-label-modern">Mês</label>
-                        <select id="month-filter" class="form-input-modern form-input-modern--sm" style="min-width: 150px;">
-                            <option value="">Todos</option>
-                            <option value="01">Janeiro</option>
-                            <option value="02">Fevereiro</option>
-                            <option value="03">Março</option>
-                            <option value="04">Abril</option>
-                            <option value="05">Maio</option>
-                            <option value="06">Junho</option>
-                            <option value="07">Julho</option>
-                            <option value="08">Agosto</option>
-                            <option value="09">Setembro</option>
-                            <option value="10">Outubro</option>
-                            <option value="11">Novembro</option>
-                            <option value="12">Dezembro</option>
-                        </select>
-                    </div>
-                </div>
+		<div class="field calendar-view-field">
+			<label class="label" for="month-filter-trigger">Mês</label>
+			{{ select(id="month-filter", selected=selected_month, items=month_items) }}
+		</div>
 
-                <div class="filter-field" style="width: 100%; max-width: none;">
-                    <label class="form-label-modern">Filtrar por Seção</label>
-                    <div class="section-filter-options">
-                        <label class="filter-option all-option">
-                            <input type="checkbox" id="filter-all" checked>
-                            <span>Todas</span>
-                        </label>
-                        {% for section in sections %}
-                        <label class="filter-option">
-                            <input type="checkbox" name="section-filter" value="{{ section }}" checked>
-                            <span>{{ section }}</span>
-                        </label>
-                        {% endfor %}
-                    </div>
-                </div>
-                <div class="filter-field mt-3" style="width: 100%; max-width: none; border-top: 1px solid var(--border-color); padding-top: var(--space-sm);">
-                    <label class="filter-option">
-                        <input type="checkbox" id="show-empty-days" checked>
-                        <span>Mostrar dias sem atividade</span>
-                    </label>
-                </div>
-            </div>
-        </div>
-    </div>
+		<div class="field calendar-view-field calendar-view-field--wide">
+			<label class="label" for="section-filter-trigger">Seções</label>
+			{{ select(
+				id="section-filter",
+				selected=selected_sections,
+				items=section_items,
+				multiple=true,
+				placeholder="Todas as seções",
+				search_placeholder="Buscar seção...",
+				is_combobox=true
+			) }}
+		</div>
+	</div>
+	{% endcall %}
 
-    <div class="calendar-scroll-container">
-        <table class="calendar-table">
-            <thead>
-                <tr>
-                    <th class="col-date sticky-col">
-                        <div class="th-content">Data</div>
-                    </th>
-                    {% for section in sections %}
-                    <th class="col-section" data-section="{{ section }}">
-                        <div class="th-content">{{ section }}</div>
-                    </th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in calendar_rows %}
-                {% if row.is_new_month %}
-                <tr class="month-separator-row" data-month="{{ row.month_num }}">
-                    <td colspan="{{ 1 + sections|length }}" class="month-separator-cell">
-                        <span class="month-separator-label">{{ row.month_full }}</span>
-                    </td>
-                </tr>
-                {% endif %}
-                <tr class="calendar-row {% if row.is_weekend %}is-weekend{% endif %} {% if row.has_activity %}has-activity{% endif %}" data-date="{{ row.date_str }}">
-                    <td class="col-date sticky-col">
-                        <div class="date-cell-content">
-                            <span class="day-number">{{ row.day }}</span>
-                            <div class="date-meta">
-                                <span class="weekday-name">{{ row.weekday }}</span>
-                                <span class="month-name">{{ row.month }}</span>
-                            </div>
-                            {% if row.holiday %}
-                            <div class="holiday-indicator" 
-                                 data-holiday-name="{{ row.holiday.nome }}" 
-                                 data-holiday-type="{{ row.holiday.tipo }}" 
-                                 data-holiday-desc="{{ row.holiday.descricao }}">
-                                 <i class="fa fa-star holiday-icon" title="Feriado"></i>
-                                 <span class="holiday-label">Feriado</span>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </td>
-                    {% for section in sections %}
-                    <td class="col-activity" data-section="{{ section }}">
-                        {% if row.activities[section] %}
-                            <div class="activities-list">
-                            {% for event in row.activities[section] %}
-                                <div class="activity-card ramo-{{ section_classes[section] }} {% if not event.is_start %}is-continued-top{% endif %} {% if not event.is_end %}is-continued-bottom{% endif %} {% if event.sem_atividade %}is-no-activity{% endif %}" 
-                                     data-event-id="{{ event.name }}"
-                                     data-atividade="{{ event.atividade }}"
-                                     data-inicio="{{ event.inicio_fmt }}"
-                                     data-termino="{{ event.termino_fmt }}"
-                                     data-hora-inicio="{{ event.hora_inicio }}"
-                                     data-hora-termino="{{ event.hora_termino }}"
-                                     data-secao="{{ event.secao }}"
-                                     data-local="{{ event.local or '' }}"
-                                     data-nivel="{{ event.nivel or '' }}"
-                                     data-sem-atividade="{{ 1 if event.sem_atividade else 0 }}">
-                                    <div class="activity-body">
-                                        {% if event.is_start %}
-                                        <div class="activity-title">{{ event.atividade }}</div>
-                                        {% if event.local and not event.sem_atividade %}
-                                        <div class="activity-location">
-                                            <i class="fa fa-map-marker"></i> {{ event.local }}
-                                        </div>
-                                        {% endif %}
-                                        {% else %}
-                                        <!-- Placeholder for continued event to maintain height/structure if needed, or just empty -->
-                                        <div class="activity-continuation-marker"></div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            {% endfor %}
-                            </div>
-                        {% endif %}
-                    </td>
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    
-    <!-- Modal de Visualização de Atividade -->
-    <div id="view-activity-modal" class="modal-modern d-none">
-        <div class="modal-modern__backdrop close-modal"></div>
-        <div class="modal-modern__content">
-            <div class="modal-modern__header">
-                <h3 class="modal-modern__title">Detalhes da Atividade</h3>
-            </div>
-            <div class="modal-modern__body">
-                <div style="margin-bottom: 1.25rem;">
-                    <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.25rem; font-weight: 600;">Atividade</label>
-                    <div id="view-modal-atividade" style="font-weight: 600; font-size: 1.1rem; color: var(--text-primary);"></div>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
-                    <div>
-                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.25rem; font-weight: 600;">Data Início</label>
-                        <div id="view-modal-inicio" style="color: var(--text-primary);"></div>
-                    </div>
-                    <div>
-                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.25rem; font-weight: 600;">Data Término</label>
-                        <div id="view-modal-termino" style="color: var(--text-primary);"></div>
-                    </div>
-                </div>
+	{% if has_calendar_events %}
+	<div class="calendar-view-calendar">
+		{{ calendar(
+			id="activity-calendar",
+			events=calendar_events,
+			categories=calendar_categories,
+			initial_mode=calendar_initial_mode,
+			initial_date=calendar_initial_date,
+			initial_list_variant="default",
+			week_show_hours=false,
+			filters_enabled=false,
+			list_show_all_days=true,
+			list_range_start=calendar_list_range_start,
+			list_range_end=calendar_list_range_end,
+			empty_message="Nenhuma atividade encontrada para os filtros selecionados."
+		) }}
+	</div>
+	{% else %}
+	{{ empty(
+		title="Nenhuma atividade cadastrada",
+		description="Ajuste o ano selecionado ou importe um calendário para começar.",
+		icon=lucide_icon("calendar-x-2", size="lg"),
+		attrs={"class": "calendar-view-empty"}
+	) }}
+	{% endif %}
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
-                     <div>
-                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.25rem; font-weight: 600;">Horário</label>
-                        <div id="view-modal-hora" style="color: var(--text-primary);"></div>
-                    </div>
-                     <div id="view-modal-nivel-group">
-                        <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.25rem; font-weight: 600;">Nível</label>
-                        <div id="view-modal-nivel" style="color: var(--text-primary);"></div>
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 1.25rem;">
-                    <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.25rem; font-weight: 600;">Local</label>
-                    <div id="view-modal-local" style="color: var(--text-primary);"></div>
-                </div>
-                 <div style="margin-bottom: 1.25rem;">
-                    <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.25rem; font-weight: 600;">Seção</label>
-                    <div id="view-modal-secao" style="color: var(--text-primary);"></div>
-                </div>
-                
-                 <div id="view-modal-sem-atividade-group" class="d-none" style="margin-top: 1rem;">
-                    <div style="background-color: var(--color-warning-lighter); color: var(--color-warning-dark); padding: 0.5rem 1rem; border-radius: var(--radius-sm); display: inline-block; font-size: 0.875rem; font-weight: 500;">
-                        <i class="fa fa-info-circle" style="margin-right: 4px;"></i> Dia sem atividade
-                    </div>
-                </div>
-            </div>
-            <div class="modal-modern__footer" style="display: flex; justify-content: flex-end;">
-                <button type="button" class="btn-modern btn-modern--outline close-modal">Fechar</button>
-            </div>
-    <!-- Modal de Feriado -->
-    <div id="holiday-modal" class="modal-modern d-none">
-        <div class="modal-modern__backdrop close-modal"></div>
-        <div class="modal-modern__content">
-            <div class="modal-modern__header">
-                <h3 class="modal-modern__title">
-                    <i class="fa fa-calendar-check-o" style="margin-right: 8px;"></i>
-                    Detalhes do Feriado
-                </h3>
-            </div>
-            <div class="modal-modern__body">
-                <h2 id="holiday-modal-name" style="margin: 0 0 1rem 0; font-size: 1.5rem; color: var(--text-color);"></h2>
-                
-                <div style="margin-bottom: 1.5rem;">
-                    <span id="holiday-modal-type" style="padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;"></span>
-                </div>
-
-                <div class="holiday-desc-box" style="background: var(--bg-light); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                    <p id="holiday-modal-desc" style="margin: 0; color: var(--text-color); line-height: 1.6;"></p>
-                </div>
-            </div>
-            <div class="modal-modern__footer">
-                <button type="button" class="btn-modern btn-modern--primary close-modal">Entendi</button>
-            </div>
-        </div>
-    </div>
+	{% call card(
+		title="Feriados do período",
+		description="Clique em um feriado para ver a descrição completa.",
+		attrs={"class": "calendar-view-card calendar-view-card--holidays"}
+	) %}
+		{% if holiday_items %}
+		<div id="holiday-empty-state" class="hidden">
+			{{ empty(
+				title="Nenhum feriado para este filtro",
+				description="Selecione outro mês para consultar feriados adicionais.",
+				icon=lucide_icon("party-popper", size="lg")
+			) }}
+		</div>
+		<div id="holiday-list" class="calendar-holiday-list">
+			{% for holiday in holiday_items %}
+			<button
+				type="button"
+				class="calendar-holiday-item"
+				data-holiday-button
+				data-holiday-month="{{ holiday.month }}"
+				data-holiday-name="{{ holiday.name }}"
+				data-holiday-type="{{ holiday.type }}"
+				data-holiday-desc="{{ holiday.description }}"
+				data-holiday-badge-variant="{{ holiday.badge_variant }}"
+			>
+				<span class="calendar-holiday-item__date">
+					<span class="calendar-holiday-item__weekday">{{ holiday.weekday }}</span>
+					<span class="calendar-holiday-item__label">{{ holiday.date_label }}</span>
+				</span>
+				<span class="calendar-holiday-item__content">
+					<span class="calendar-holiday-item__name">{{ holiday.name }}</span>
+					<span class="calendar-holiday-item__description">{{ holiday.description }}</span>
+				</span>
+				<span class="calendar-holiday-item__badge">
+					{{ badge(
+						holiday.type,
+						variant=("default" if holiday.badge_variant == "outline" else holiday.badge_variant),
+						outline=(holiday.badge_variant == "outline")
+					) }}
+				</span>
+			</button>
+			{% endfor %}
+		</div>
+		{% else %}
+		{{ empty(
+			title="Nenhum feriado cadastrado",
+			description="Cadastre feriados para exibi-los aqui.",
+			icon=lucide_icon("calendar-x-2", size="lg")
+		) }}
+		{% endif %}
+	{% endcall %}
 </div>
+
+{% set activity_footer %}
+<button type="button" class="btn-outline" onclick="document.getElementById('activity-detail-dialog').close()">Fechar</button>
+{% endset %}
+
+{% call dialog(
+	id="activity-detail-dialog",
+	title="Detalhes da atividade",
+	footer=activity_footer,
+	dialog_attrs={"class": "calendar-view-dialog"},
+	footer_attrs={"class": "calendar-view-dialog__footer"}
+) %}
+	<div class="calendar-detail-grid">
+		<div class="calendar-detail-card calendar-detail-card--full">
+			<span class="calendar-detail-card__label">Atividade</span>
+			<div id="view-modal-atividade" class="calendar-detail-card__value calendar-detail-card__value--title">-</div>
+		</div>
+		<div class="calendar-detail-card">
+			<span class="calendar-detail-card__label">Data inicial</span>
+			<div id="view-modal-inicio" class="calendar-detail-card__value">-</div>
+		</div>
+		<div class="calendar-detail-card">
+			<span class="calendar-detail-card__label">Data final</span>
+			<div id="view-modal-termino" class="calendar-detail-card__value">-</div>
+		</div>
+		<div class="calendar-detail-card">
+			<span class="calendar-detail-card__label">Horário</span>
+			<div id="view-modal-hora" class="calendar-detail-card__value">-</div>
+		</div>
+		<div class="calendar-detail-card">
+			<span class="calendar-detail-card__label">Seção</span>
+			<div id="view-modal-secao" class="calendar-detail-card__value">-</div>
+		</div>
+		<div class="calendar-detail-card">
+			<span class="calendar-detail-card__label">Local</span>
+			<div id="view-modal-local" class="calendar-detail-card__value">-</div>
+		</div>
+		<div class="calendar-detail-card">
+			<span class="calendar-detail-card__label">Nível</span>
+			<div id="view-modal-nivel" class="calendar-detail-card__value">-</div>
+		</div>
+	</div>
+	<div id="view-modal-sem-atividade-group" class="calendar-detail-flag hidden">
+		{{ badge(lucide_icon("info", size="sm") ~ " Dia sem atividade", variant="warning") }}
+	</div>
+{% endcall %}
+
+{% set holiday_footer %}
+<button type="button" class="btn-outline" onclick="document.getElementById('holiday-dialog').close()">Fechar</button>
+{% endset %}
+
+{% call dialog(
+	id="holiday-dialog",
+	title="Detalhes do feriado",
+	footer=holiday_footer,
+	dialog_attrs={"class": "calendar-view-dialog"},
+	footer_attrs={"class": "calendar-view-dialog__footer"}
+) %}
+	<div class="calendar-holiday-dialog">
+		<div class="calendar-holiday-dialog__header">
+			<h3 id="holiday-modal-name" class="calendar-holiday-dialog__title">Feriado</h3>
+			<span id="holiday-modal-type" class="badge badge-outline">Geral</span>
+		</div>
+		<p id="holiday-modal-desc" class="calendar-holiday-dialog__description">Sem descrição disponível.</p>
+	</div>
+{% endcall %}
 {% endblock %}
 
 {% block script %}

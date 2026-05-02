@@ -76,10 +76,11 @@ home_page = "/inicio"
 # ----------
 
 # add methods and filters to jinja environment
-# jinja = {
-# 	"methods": "gris.utils.jinja_methods",
-# 	"filters": "gris.utils.jinja_filters"
-# }
+jinja = {
+	"methods": [
+		"gris.utils.phone_countries.get_phone_countries",
+	],
+}
 
 # Installation
 # ------------

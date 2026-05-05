@@ -11,16 +11,16 @@
     function showFormAlert(message, type) {
         var el = document.getElementById("avaliacaoAlert");
         if (!el) return;
-        el.className = "alert-modern";
-        el.classList.add(type === "error" ? "alert-modern--error" : "alert-modern--success");
-        el.textContent = message;
+        el.className = "alert " + (type === "error" ? "alert-destructive" : "alert-success");
+        el.innerHTML = "<section>" + message.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</section>";
+        el.removeAttribute("hidden");
         el.scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
     function hideFormAlert() {
         var el = document.getElementById("avaliacaoAlert");
         if (!el) return;
-        el.className = "alert-modern d-none";
+        el.setAttribute("hidden", "");
         el.textContent = "";
     }
 

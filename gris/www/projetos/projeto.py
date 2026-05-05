@@ -30,6 +30,11 @@ def _redirect_by_status(status: str, projeto_name: str) -> None:
 
 
 def get_context(context):
+	# Requisições de assets (CSS/JS) não têm parâmetro de projeto — retorna contexto vazio.
+	request_path = (getattr(frappe.local, "request", None) and frappe.local.request.path) or ""
+	if request_path.endswith((".css", ".js")):
+		return context
+
 	if frappe.session.user == "Guest":
 		frappe.local.flags.redirect_location = "/login?redirect-to=/projetos/projeto"
 		raise frappe.Redirect

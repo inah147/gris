@@ -30,15 +30,7 @@
         Cancelado: "Cancelado",
     };
 
-    const WEEKDAY_LABELS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
-    function isMobileMeetingsViewport() {
-        return window.matchMedia("(max-width: 768px)").matches;
-    }
-
-    function getDefaultMeetingsViewMode() {
-        return isMobileMeetingsViewport() ? "list" : "calendar";
-    }
 
     const state = {
         projetoName: "",
@@ -54,8 +46,6 @@
         participantsSaving: false,
         dragTaskName: "",
         isDraggingTask: false,
-        calendarDate: new Date(),
-        meetingsViewMode: getDefaultMeetingsViewMode(),
         useFrappeEditor: false,
         meetingEditors: {
             pauta: null,
@@ -98,22 +88,17 @@
     }
 
     function showAlert(message, type) {
-        if (type !== "error") {
-            hideAlert();
-            return;
-        }
-
         const el = document.getElementById("projectAlert");
         if (!el) return;
-        el.classList.remove("d-none", "alert-modern--error", "alert-modern--success");
-        el.classList.add(type === "error" ? "alert-modern--error" : "alert-modern--success");
-        el.textContent = message;
+        el.className = "alert " + (type === "error" ? "alert-destructive" : "alert-success");
+        el.innerHTML = "<section>" + escapeHtml(message) + "</section>";
+        el.removeAttribute("hidden");
     }
 
     function hideAlert() {
         const el = document.getElementById("projectAlert");
         if (!el) return;
-        el.classList.add("d-none");
+        el.setAttribute("hidden", "");
         el.textContent = "";
     }
 
@@ -194,6 +179,37 @@
             return;
         }
         el.textContent = text || "-";
+    }
+
+    function getSelectComponentValue(selectId, fallback = "") {
+        const selectEl = document.getElementById(selectId);
+        if (!selectEl) return fallback;
+
+        const currentValue = selectEl.value;
+        if (typeof currentValue === "string" && currentValue.trim()) {
+            return currentValue.trim();
+        }
+
+        if (Array.isArray(currentValue) && currentValue.length) {
+            return String(currentValue[0] || "").trim() || fallback;
+        }
+
+        const hiddenInput = selectEl.querySelector(':scope > input[type="hidden"]');
+        const hiddenValue = String(hiddenInput?.value || "").trim();
+        return hiddenValue || fallback;
+    }
+
+    function setSelectComponentValue(selectId, value) {
+        const selectEl = document.getElementById(selectId);
+        if (!selectEl) return;
+
+        const nextValue = String(value || "").trim();
+        selectEl.value = nextValue;
+
+        const hiddenInput = selectEl.querySelector(':scope > input[type="hidden"]');
+        if (hiddenInput) {
+            hiddenInput.value = nextValue;
+        }
     }
 
     function updateGoogleDriveButton(link) {
@@ -394,15 +410,71 @@
         });
     }
 
-    function setTaskObservacoesEditorMode(useFrappeEditor) {
+    function setTaskObservacoesEditorMode(useRichEditor) {
         const host = document.getElementById("task_observacoes_editor_host");
         const block = document.getElementById("task_observacoes_markdown_block");
 
         if (host) {
-            host.classList.toggle("d-none", !useFrappeEditor);
+            host.classList.toggle("d-none", !useRichEditor);
         }
         if (block) {
-            block.classList.toggle("d-none", useFrappeEditor);
+            block.classList.toggle("d-none", useRichEditor);
+        }
+    }
+
+    function setToastEditorValue(editor, value) {
+        if (!editor || typeof editor.setMarkdown !== "function") return;
+        try {
+            editor.setMarkdown(value || "", false);
+        } catch (error) {
+            // ignore — editor pode estar em estado transitório
+        }
+    }
+
+    function getToastEditorValue(editor) {
+        if (!editor || typeof editor.getMarkdown !== "function") return "";
+        try {
+            return String(editor.getMarkdown() || "").trim();
+        } catch (error) {
+            return "";
+        }
+    }
+
+    function setToastEditorReadOnly(editor, readOnly) {
+        const host = document.getElementById("task_observacoes_editor_host");
+        if (host) {
+            host.classList.toggle("is-readonly", Boolean(readOnly));
+            host.querySelectorAll("[contenteditable]").forEach((el) => {
+                el.setAttribute("contenteditable", readOnly ? "false" : "true");
+            });
+        }
+    }
+
+    async function initTaskObservacoesEditor() {
+        const host = document.getElementById("task_observacoes_editor_host");
+        if (!host || !window.gris?.editor?.create) {
+            setTaskObservacoesEditorMode(false);
+            state.taskObservacoesEditor = null;
+            return;
+        }
+
+        host.innerHTML = "";
+        try {
+            const editor = await window.gris.editor.create(host, {
+                initialValue: "",
+                toolbarItems: [
+                    ["heading", "bold", "italic", "strike"],
+                    ["hr", "quote"],
+                    ["ul", "ol", "task"],
+                    ["table", "link"],
+                    ["code", "codeblock"],
+                ],
+            });
+            state.taskObservacoesEditor = editor;
+            setTaskObservacoesEditorMode(true);
+        } catch (error) {
+            state.taskObservacoesEditor = null;
+            setTaskObservacoesEditorMode(false);
         }
     }
 
@@ -451,8 +523,6 @@
 
     async function initMeetingEditors() {
         setMeetingEditorMode(false);
-        setTaskObservacoesEditorMode(false);
-        state.taskObservacoesEditor = null;
 
         const isAvailable = await ensureFrappeTextEditorAvailable();
         if (!isAvailable) {
@@ -461,10 +531,6 @@
 
         const pautaEditor = createMeetingTextEditor("meeting_pauta_editor_host", "meeting_pauta_rich");
         const ataEditor = createMeetingTextEditor("meeting_ata_editor_host", "meeting_ata_rich");
-        const taskObservacoesEditor = createMeetingTextEditor(
-            "task_observacoes_editor_host",
-            "task_observacoes_rich"
-        );
 
         if (!pautaEditor || !ataEditor) {
             state.meetingEditors = { pauta: null, ata: null };
@@ -476,9 +542,6 @@
             };
             setMeetingEditorMode(true);
         }
-
-        state.taskObservacoesEditor = taskObservacoesEditor || null;
-        setTaskObservacoesEditorMode(Boolean(taskObservacoesEditor));
     }
 
     function renderTableRows(tbodyId, rows, columns) {
@@ -757,9 +820,8 @@
                         <td>${sponsorChip}</td>
                         <td>${approverChip}</td>
                         <td>
-                            <label class="participant-toggle">
-                                <input type="checkbox" data-participa-idx="${index}" ${participaChecked} ${participaDisabled} />
-                                <span>${row.participa_avaliacao ? "Sim" : "Não"}</span>
+                            <label class="switch">
+                                <input type="checkbox" role="switch" class="input" data-participa-idx="${index}" ${participaChecked} ${participaDisabled} />
                             </label>
                         </td>
                     </tr>
@@ -768,28 +830,67 @@
             .join("");
     }
 
+    function buildBasecoatSelectHtml(id, items, { isCombobox = false, searchPlaceholder = "Buscar..." } = {}) {
+        const optionsHtml = items
+            .map((item) => `<div role="option" data-value="${escapeHtml(item.value || "")}">${escapeHtml(item.label || item.value || "")}</div>`)
+            .join("");
+        const listboxId = `${id}-listbox`;
+        const popoverId = `${id}-popover`;
+        const triggerId = `${id}-trigger`;
+
+        const triggerIcon = isCombobox
+            ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>`
+            : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
+
+        const searchHeader = isCombobox
+            ? `<header>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" value="" placeholder="${escapeHtml(searchPlaceholder)}" autocomplete="off" autocorrect="off" spellcheck="false" aria-autocomplete="list" role="combobox" aria-expanded="false" aria-controls="${listboxId}" aria-labelledby="${triggerId}" />
+            </header>`
+            : "";
+
+        return `<div id="${id}" class="select">
+            <button type="button" class="btn-outline" id="${triggerId}" aria-haspopup="listbox" aria-expanded="false" aria-controls="${listboxId}">
+                <span class="truncate">Selecione</span>
+                ${triggerIcon}
+            </button>
+            <div id="${popoverId}" data-popover aria-hidden="true">
+                ${searchHeader}
+                <div role="listbox" id="${listboxId}" tabindex="0">${optionsHtml}</div>
+            </div>
+            <input type="hidden" name="${id}-value" value="">
+        </div>`;
+    }
+
     function populateParticipantSelects() {
-        const associadoSelect = document.getElementById("participant_associado");
-        const responsavelSelect = document.getElementById("participant_responsavel");
-        if (!associadoSelect || !responsavelSelect) return;
+        const associadoWrapper = document.getElementById("participant_associado_wrapper");
+        const responsavelWrapper = document.getElementById("participant_responsavel_wrapper");
 
-        const associadosOptions = (state.choices?.associados || [])
-            .map((item) => `<option value="${escapeHtml(item.value || "")}">${escapeHtml(item.label || item.value || "")}</option>`)
-            .join("");
-        const responsaveisOptions = (state.choices?.responsaveis || [])
-            .map((item) => `<option value="${escapeHtml(item.value || "")}">${escapeHtml(item.label || item.value || "")}</option>`)
-            .join("");
-
-        associadoSelect.innerHTML = `<option value="">Selecione</option>${associadosOptions}`;
-        responsavelSelect.innerHTML = `<option value="">Selecione</option>${responsaveisOptions}`;
+        if (associadoWrapper) {
+            associadoWrapper.innerHTML = buildBasecoatSelectHtml("participant_associado", state.choices?.associados || [], { isCombobox: true });
+        }
+        if (responsavelWrapper) {
+            responsavelWrapper.innerHTML = buildBasecoatSelectHtml("participant_responsavel", state.choices?.responsaveis || [], { isCombobox: true });
+        }
     }
 
     function updateParticipantModalType() {
-        const tipo = (document.getElementById("participant_tipo_pessoa")?.value || "Outro").trim();
+        const tipo = getSelectComponentValue("participant_tipo_pessoa", "Outro");
         const associadoGroup = document.getElementById("participant_associado_group");
         const responsavelGroup = document.getElementById("participant_responsavel_group");
-        if (associadoGroup) associadoGroup.classList.toggle("d-none", tipo !== "Associado");
-        if (responsavelGroup) responsavelGroup.classList.toggle("d-none", tipo !== "Responsavel");
+
+        const showAssociado = tipo === "Associado";
+        const showResponsavel = tipo === "Responsavel";
+
+        if (associadoGroup) associadoGroup.classList.toggle("d-none", !showAssociado);
+        if (responsavelGroup) responsavelGroup.classList.toggle("d-none", !showResponsavel);
+
+        if (!showAssociado) {
+            setSelectComponentValue("participant_associado", "");
+        }
+        if (!showResponsavel) {
+            setSelectComponentValue("participant_responsavel", "");
+        }
     }
 
     async function preloadParticipantContact(tipoPessoa, docname) {
@@ -863,18 +964,9 @@
             title.textContent = "Novo envolvido";
         }
 
-        const warning = document.getElementById("participantModalWarning");
-        if (warning) {
-            warning.classList.add("d-none");
-            warning.textContent = "";
-        }
-
         const indexInput = document.getElementById("participant_index");
         if (indexInput) indexInput.value = "";
 
-        const tipoInput = document.getElementById("participant_tipo_pessoa");
-        const associadoInput = document.getElementById("participant_associado");
-        const responsavelInput = document.getElementById("participant_responsavel");
         const nomeInput = document.getElementById("participant_nome");
         const emailInput = document.getElementById("participant_email");
         const telefoneInput = document.getElementById("participant_telefone");
@@ -882,9 +974,9 @@
         const coordenadorInput = document.getElementById("participant_coordenador");
         const participaInput = document.getElementById("participant_participa_avaliacao");
 
-        if (tipoInput) tipoInput.value = row.tipo_pessoa || "Outro";
-        if (associadoInput) associadoInput.value = row.associado || "";
-        if (responsavelInput) responsavelInput.value = row.responsavel || "";
+        setSelectComponentValue("participant_tipo_pessoa", row.tipo_pessoa || "Outro");
+        setSelectComponentValue("participant_associado", row.associado || "");
+        setSelectComponentValue("participant_responsavel", row.responsavel || "");
         if (nomeInput) nomeInput.value = row.nome || "";
         if (emailInput) emailInput.value = row.email || "";
         if (telefoneInput) telefoneInput.value = row.telefone || "";
@@ -898,9 +990,9 @@
     }
 
     function collectParticipantModalPayload() {
-        const tipo = (document.getElementById("participant_tipo_pessoa")?.value || "Outro").trim() || "Outro";
-        const associado = (document.getElementById("participant_associado")?.value || "").trim();
-        const responsavel = (document.getElementById("participant_responsavel")?.value || "").trim();
+        const tipo = getSelectComponentValue("participant_tipo_pessoa", "Outro") || "Outro";
+        const associado = getSelectComponentValue("participant_associado", "");
+        const responsavel = getSelectComponentValue("participant_responsavel", "");
         const nome = (document.getElementById("participant_nome")?.value || "").trim();
         const email = (document.getElementById("participant_email")?.value || "").trim();
         const telefone = (document.getElementById("participant_telefone")?.value || "").trim();
@@ -1317,12 +1409,16 @@
                     `;
                           })
                           .join("")
-                    : '<div class="task-empty">Nenhuma tarefa encontrada</div>';
+                    : "";
 
+                const taskWord = tasks.length !== 1 ? 'tarefas' : 'tarefa';
                 return `
                     <section class="task-column" data-task-column="${escapeHtml(status)}">
                         <header class="task-column__header">
-                            <h4 class="task-column__title">${escapeHtml(TASK_STATUS_LABELS[status] || status)}</h4>
+                            <div class="task-column__heading">
+                                <h4 class="task-column__title">${escapeHtml(TASK_STATUS_LABELS[status] || status)}</h4>
+                                <p class="task-column__subtitle">${tasks.length} ${taskWord}</p>
+                            </div>
                             <span class="g-badge g-badge--secondary">${tasks.length}</span>
                         </header>
                         <div class="task-column__body" data-task-status="${escapeHtml(status)}">
@@ -1382,46 +1478,19 @@
     function setTaskTitleValue(value) {
         const normalized = String(value || "").trim();
         const hidden = document.getElementById("task_descricao");
-        const display = document.getElementById("taskTitleDisplay");
         const editor = document.getElementById("task_title_editor");
 
         if (hidden) {
             hidden.value = normalized;
         }
 
-        if (display) {
-            display.textContent = normalized || "Clique para definir o título da tarefa";
-            display.classList.toggle("is-placeholder", !normalized);
-        }
-
-        if (editor && !state.taskTitleEditing) {
+        if (editor) {
             editor.value = normalized;
         }
     }
 
-    function setTaskTitleEditMode(editing) {
-        const canEditTitle = Boolean(editing && state.canEdit);
-        const display = document.getElementById("taskTitleDisplay");
-        const editor = document.getElementById("task_title_editor");
-
-        state.taskTitleEditing = canEditTitle;
-
-        if (display) {
-            display.classList.toggle("d-none", canEditTitle);
-            display.classList.toggle("is-readonly", !state.canEdit);
-        }
-
-        if (editor) {
-            editor.classList.toggle("d-none", !canEditTitle);
-            editor.disabled = !state.canEdit;
-            if (canEditTitle) {
-                editor.value = getTaskTitleValue();
-                requestAnimationFrame(() => {
-                    editor.focus();
-                    editor.setSelectionRange(editor.value.length, editor.value.length);
-                });
-            }
-        }
+    function setTaskTitleEditMode(_editing) {
+        // título agora é sempre editável via textarea; função mantida por compatibilidade
     }
 
     function startTaskTitleEdit() {
@@ -1867,7 +1936,7 @@
         });
 
         if (state.taskObservacoesEditor) {
-            setFrappeEditorReadOnly(state.taskObservacoesEditor, !editable);
+            setToastEditorReadOnly(state.taskObservacoesEditor, !editable);
         }
 
         const taskModal = document.getElementById("taskModal");
@@ -1912,7 +1981,7 @@
             taskObservacoesInput.value = observacoes;
         }
         if (state.taskObservacoesEditor) {
-            setFrappeEditorValue(state.taskObservacoesEditor, observacoes);
+            setToastEditorValue(state.taskObservacoesEditor, observacoes);
         }
 
         state.editingCommentName = "";
@@ -1938,7 +2007,7 @@
 
     function collectTaskPayload() {
         const observacoes = state.taskObservacoesEditor
-            ? getFrappeEditorValue(state.taskObservacoesEditor)
+            ? getToastEditorValue(state.taskObservacoesEditor)
             : (document.getElementById("task_observacoes")?.value || "").trim();
 
         return {
@@ -2074,221 +2143,17 @@
         return (state.projeto?.reunioes || []).find((item) => (item.name || "") === name) || null;
     }
 
-    function groupMeetingsByDay(meetings) {
-        const map = {};
-        (meetings || []).forEach((meeting) => {
-            const date = parseDateTimeFlexible(meeting.data_hora);
-            if (!date) return;
-            const key = toDateKey(date);
-            if (!map[key]) {
-                map[key] = [];
-            }
-            map[key].push(meeting);
-        });
-
-        Object.keys(map).forEach((key) => {
-            map[key].sort((a, b) => {
-                const left = parseDateTimeFlexible(a.data_hora);
-                const right = parseDateTimeFlexible(b.data_hora);
-                if (!left || !right) return 0;
-                return left.getTime() - right.getTime();
-            });
-        });
-
-        return map;
-    }
-
-    function getCalendarStart(monthDate) {
-        const first = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
-        const dayOfWeek = (first.getDay() + 6) % 7;
-        const start = new Date(first);
-        start.setDate(first.getDate() - dayOfWeek);
-        start.setHours(0, 0, 0, 0);
-        return start;
-    }
-
-    function normalizeMeetingsViewMode(mode) {
-        return mode === "list" ? "list" : "calendar";
-    }
-
-    function updateMeetingsViewControls() {
-        const mode = normalizeMeetingsViewMode(state.meetingsViewMode);
-        const calendarContainer = document.getElementById("meetingsCalendar");
-        const listContainer = document.getElementById("meetingsList");
-
-        if (calendarContainer) {
-            calendarContainer.classList.toggle("d-none", mode !== "calendar");
-        }
-
-        if (listContainer) {
-            listContainer.classList.toggle("d-none", mode !== "list");
-        }
-
-        document.querySelectorAll(".meetings-view-toggle [data-meetings-view]").forEach((button) => {
-            const buttonMode = normalizeMeetingsViewMode(button.getAttribute("data-meetings-view"));
-            const isActive = buttonMode === mode;
-
-            button.classList.toggle("is-active", isActive);
-            button.classList.toggle("btn-modern--primary", isActive);
-            button.classList.toggle("btn-modern--outline", !isActive);
-            button.setAttribute("aria-pressed", isActive ? "true" : "false");
-        });
-    }
-
-    function setMeetingsViewMode(mode) {
-        state.meetingsViewMode = normalizeMeetingsViewMode(mode);
-        renderMeetings();
-    }
-
     function renderMeetings() {
-        updateMeetingsViewControls();
-
-        if (normalizeMeetingsViewMode(state.meetingsViewMode) === "list") {
-            renderMeetingsList();
-            return;
-        }
-
-        renderMeetingsCalendar();
-    }
-
-    function renderMeetingsCalendar() {
-        const label = document.getElementById("meetingMonthLabel");
-        const container = document.getElementById("meetingsCalendar");
-        if (!label || !container) return;
-
-        const baseDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth(), 1);
-        label.textContent = baseDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-        const maxVisibleMeetingsPerDay = isMobileMeetingsViewport() ? 2 : 3;
-
-        const start = getCalendarStart(baseDate);
-        const byDay = groupMeetingsByDay(state.projeto?.reunioes || []);
-
-        const weekdayHeader = WEEKDAY_LABELS.map(
-            (day) => `<div class="meetings-calendar__weekday">${escapeHtml(day)}</div>`
-        ).join("");
-
-        const daysHtml = [];
-        const todayKey = toDateKey(new Date());
-        for (let index = 0; index < 42; index += 1) {
-            const day = addDays(start, index);
-            const key = toDateKey(day);
-            const meetings = byDay[key] || [];
-            const visibleMeetings = meetings.slice(0, maxVisibleMeetingsPerDay);
-            const hiddenCount = meetings.length - visibleMeetings.length;
-            const isOtherMonth = day.getMonth() !== baseDate.getMonth();
-            const isToday = key === todayKey;
-
-            const eventsHtml = visibleMeetings.length
-                ? visibleMeetings
-                      .map(
-                          (meeting) => `
-                        <button type="button" class="meeting-card" data-meeting-name="${escapeHtml(meeting.name || "")}">
-                            <p class="meeting-card__title">${escapeHtml(meeting.descricao || "-")}</p>
-                            <p class="meeting-card__subtitle">${escapeHtml(formatTimePtBr(meeting.data_hora))}</p>
-                        </button>
-                    `
-                      )
-                      .join("")
-                : "";
-
-            const hiddenMeetingsHtml = hiddenCount > 0
-                ? `<div class="meetings-day-more">+${hiddenCount} ${hiddenCount === 1 ? "reunião" : "reuniões"}</div>`
-                : "";
-
-            daysHtml.push(`
-                <div class="meetings-calendar__day ${isOtherMonth ? "is-other-month" : ""} ${isToday ? "is-today" : ""}" data-date="${key}">
-                    <div class="meetings-calendar__day-number">${day.getDate()}</div>
-                    <div class="meetings-day-events">${eventsHtml}${hiddenMeetingsHtml}</div>
-                </div>
-            `);
-        }
-
-        container.innerHTML = `
-            <div class="meetings-calendar__grid">
-                ${weekdayHeader}
-                ${daysHtml.join("")}
-            </div>
-        `;
-    }
-
-    function renderMeetingsList() {
-        const label = document.getElementById("meetingMonthLabel");
-        const container = document.getElementById("meetingsList");
-        if (!label || !container) return;
-
-        const baseDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth(), 1);
-        label.textContent = baseDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-
-        const monthMeetings = (state.projeto?.reunioes || [])
-            .map((meeting) => {
-                const date = parseDateTimeFlexible(meeting.data_hora);
-                return {
-                    meeting,
-                    date,
-                };
-            })
-            .filter(
-                (item) =>
-                    item.date &&
-                    item.date.getFullYear() === baseDate.getFullYear() &&
-                    item.date.getMonth() === baseDate.getMonth()
-            )
-            .sort((left, right) => left.date.getTime() - right.date.getTime());
-
-        if (!monthMeetings.length) {
-            container.innerHTML = '<div class="meetings-list__empty">Nenhuma reunião agendada para este mês.</div>';
-            return;
-        }
-
-        const groupedByDay = {};
-        monthMeetings.forEach((item) => {
-            const key = toDateKey(item.date);
-            if (!groupedByDay[key]) {
-                groupedByDay[key] = {
-                    date: item.date,
-                    meetings: [],
-                };
-            }
-
-            groupedByDay[key].meetings.push(item.meeting);
-        });
-
-        const daysHtml = Object.keys(groupedByDay)
-            .sort()
-            .map((key) => {
-                const group = groupedByDay[key];
-                const weekdayRaw = group.date.toLocaleDateString("pt-BR", { weekday: "long" });
-                const weekday = weekdayRaw ? weekdayRaw.charAt(0).toUpperCase() + weekdayRaw.slice(1) : "";
-                const dateLabel = group.date.toLocaleDateString("pt-BR", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                });
-
-                const cardsHtml = group.meetings
-                    .map(
-                        (meeting) => `
-                    <button type="button" class="meeting-card meetings-list__item" data-meeting-name="${escapeHtml(meeting.name || "")}">
-                        <p class="meeting-card__title">${escapeHtml(meeting.descricao || "-")}</p>
-                        <p class="meeting-card__subtitle">${escapeHtml(formatDateTimePtBr(meeting.data_hora))}</p>
-                    </button>
-                `
-                    )
-                    .join("");
-
-                return `
-                <section class="meetings-list__day" data-date="${key}">
-                    <header class="meetings-list__day-header">
-                        <span class="meetings-list__day-weekday">${escapeHtml(weekday)}</span>
-                        <span class="meetings-list__day-date">${escapeHtml(dateLabel)}</span>
-                    </header>
-                    <div class="meetings-list__items">${cardsHtml}</div>
-                </section>
-            `;
-            })
-            .join("");
-
-        container.innerHTML = daysHtml;
+        const calendarEl = document.getElementById("meetingsCalendar");
+        if (!calendarEl) return;
+        const meetings = state.projeto?.reunioes || [];
+        calendarEl.events = meetings.map((m) => ({
+            id: m.name,
+            title: m.descricao || "-",
+            start: m.data_hora,
+            all_day: false,
+            data: m,
+        }));
     }
 
     function setMeetingModalEditability(editable) {
@@ -2472,24 +2337,16 @@
         renderMarkdownPreviews();
     }
 
-    function syncModalBodyState() {
-        const anyOpen = document.querySelectorAll(".info-modal:not(.d-none)").length > 0;
-        document.body.classList.toggle("info-modal-open", anyOpen);
-    }
-
     function openModal(modalId) {
         const modal = document.getElementById(modalId);
         if (!modal) return;
-        modal.classList.remove("d-none");
-        modal.setAttribute("aria-hidden", "false");
-        syncModalBodyState();
+        modal.showModal();
     }
 
     function closeModal(modalId) {
         const modal = document.getElementById(modalId);
         if (!modal) return;
-        modal.classList.add("d-none");
-        modal.setAttribute("aria-hidden", "true");
+        modal.close();
 
         if (modalId === "taskModal") {
             if (state.taskTitleEditing) {
@@ -2498,8 +2355,6 @@
             setTaskTitleEditMode(false);
             resetTaskCommentsState();
         }
-
-        syncModalBodyState();
     }
 
     function getProjectStatusActionConfig(action) {
@@ -2669,14 +2524,14 @@
     function bindEvents() {
         bindParticipantTableEvents();
 
-        document.querySelectorAll(".project-tab").forEach((button) => {
-            button.addEventListener("click", () => {
-                const target = button.getAttribute("data-tab");
-                if (target) {
-                    setActiveTab(target);
+        const avaliacoesTabBtn = document.getElementById("project-tabs-tab-5");
+        if (avaliacoesTabBtn) {
+            avaliacoesTabBtn.addEventListener("click", () => {
+                if (!state.avaliacaoLoaded) {
+                    loadAvaliacaoData();
                 }
             });
-        });
+        }
 
         const openTaskButton = document.getElementById("btnNovaTarefa");
         if (openTaskButton) {
@@ -2743,32 +2598,11 @@
             field.addEventListener("input", updateTaskTimelineInfographic);
         });
 
-        const taskTitleDisplay = document.getElementById("taskTitleDisplay");
-        if (taskTitleDisplay) {
-            taskTitleDisplay.addEventListener("click", startTaskTitleEdit);
-            taskTitleDisplay.addEventListener("keydown", (event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    startTaskTitleEdit();
-                }
-            });
-        }
-
         const taskTitleEditor = document.getElementById("task_title_editor");
         if (taskTitleEditor) {
-            taskTitleEditor.addEventListener("blur", commitTaskTitleEdit);
-            taskTitleEditor.addEventListener("keydown", (event) => {
-                if (event.key === "Escape") {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    cancelTaskTitleEdit();
-                    return;
-                }
-
-                if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    commitTaskTitleEdit();
-                }
+            taskTitleEditor.addEventListener("input", () => {
+                const hidden = document.getElementById("task_descricao");
+                if (hidden) hidden.value = taskTitleEditor.value.trim();
             });
         }
 
@@ -2787,39 +2621,14 @@
             participantTipo.addEventListener("change", updateParticipantModalType);
         }
 
-        const participantAssociado = document.getElementById("participant_associado");
-        if (participantAssociado) {
-            participantAssociado.addEventListener("change", () => {
-                preloadParticipantContact("Associado", participantAssociado.value || "");
-            });
-        }
-
-        const participantResponsavel = document.getElementById("participant_responsavel");
-        if (participantResponsavel) {
-            participantResponsavel.addEventListener("change", () => {
-                preloadParticipantContact("Responsavel", participantResponsavel.value || "");
-            });
-        }
-
-        document.querySelectorAll("[data-close-task-modal]").forEach((button) => {
-            button.addEventListener("click", () => closeModal("taskModal"));
+        document.addEventListener("change", (event) => {
+            if (event.target.id === "participant_associado") {
+                preloadParticipantContact("Associado", event.target.value || "");
+            } else if (event.target.id === "participant_responsavel") {
+                preloadParticipantContact("Responsavel", event.target.value || "");
+            }
         });
 
-        document.querySelectorAll("[data-close-meeting-modal]").forEach((button) => {
-            button.addEventListener("click", () => closeModal("meetingModal"));
-        });
-
-        document.querySelectorAll("[data-close-cronograma-modal]").forEach((button) => {
-            button.addEventListener("click", () => closeModal("cronogramaModal"));
-        });
-
-        document.querySelectorAll("[data-close-project-status-modal]").forEach((button) => {
-            button.addEventListener("click", closeProjectStatusConfirmModal);
-        });
-
-        document.querySelectorAll("[data-close-participant-modal]").forEach((button) => {
-            button.addEventListener("click", () => closeModal("participantModal"));
-        });
 
         const openCronogramaButton = document.getElementById("btnAbrirCronogramaModal");
         if (openCronogramaButton) {
@@ -2828,28 +2637,19 @@
             });
         }
 
-        const prevMonthButton = document.getElementById("btnPrevMonth");
-        const nextMonthButton = document.getElementById("btnNextMonth");
-        const meetingsViewButtons = document.querySelectorAll(".meetings-view-toggle [data-meetings-view]");
+        const meetingsCalendarEl = document.getElementById("meetingsCalendar");
+        if (meetingsCalendarEl) {
+            const lockMeetingsListVariant = () => {
+                if (typeof meetingsCalendarEl.setListVariant === "function") {
+                    meetingsCalendarEl.setListVariant("default");
+                }
+            };
 
-        meetingsViewButtons.forEach((button) => {
-            button.addEventListener("click", () => {
-                const mode = button.getAttribute("data-meetings-view");
-                setMeetingsViewMode(mode);
-            });
-        });
-
-        if (prevMonthButton) {
-            prevMonthButton.addEventListener("click", () => {
-                state.calendarDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth() - 1, 1);
-                renderMeetings();
-            });
-        }
-
-        if (nextMonthButton) {
-            nextMonthButton.addEventListener("click", () => {
-                state.calendarDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth() + 1, 1);
-                renderMeetings();
+            lockMeetingsListVariant();
+            meetingsCalendarEl.addEventListener("basecoat:initialized", lockMeetingsListVariant);
+            meetingsCalendarEl.addEventListener("gris:calendar:event-click", (event) => {
+                const { id } = event.detail;
+                if (id) openMeetingModal(id);
             });
         }
 
@@ -2977,16 +2777,6 @@
             state.isDraggingTask = false;
         });
 
-        document.addEventListener("keydown", (event) => {
-            if (event.key === "Escape") {
-                closeModal("participantModal");
-                closeModal("taskModal");
-                closeModal("meetingModal");
-                closeModal("cronogramaModal");
-                closeProjectStatusConfirmModal();
-                closeModal("avaliacaoDetalheModal");
-            }
-        });
 
         /* ── Avaliação: events ── */
         const btnIniciar = document.getElementById("btnIniciarAvaliacao");
@@ -3016,7 +2806,7 @@
             }
 
             if (target.closest("[data-close-avaliacao-detalhe-modal]")) {
-                closeModal("avaliacaoDetalheModal");
+                document.getElementById("avaliacaoDetalheModal")?.close();
                 return;
             }
             var reenviarBtn = target.closest("[data-reenviar-idx]");
@@ -3423,13 +3213,15 @@
             return;
         }
 
-        state.calendarDate = new Date();
-        state.meetingsViewMode = getDefaultMeetingsViewMode();
         setActiveTab("dados-gerais");
         bindEvents();
         await reloadData();
         initMeetingEditors().catch(() => {
             state.useFrappeEditor = false;
+        });
+        initTaskObservacoesEditor().catch(() => {
+            state.taskObservacoesEditor = null;
+            setTaskObservacoesEditorMode(false);
         });
     }
 

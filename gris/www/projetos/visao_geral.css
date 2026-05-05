@@ -64,7 +64,9 @@
 	gap: 0.875rem;
 	min-height: 0;
 	overflow-y: auto;
-	padding-right: 0.125rem;
+	overflow-x: visible;
+	padding: 4px 2px 4px 2px;
+	margin: -4px -2px -4px -2px;
 }
 
 .kanban-card-link {

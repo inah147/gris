@@ -1,5 +1,5 @@
 {% extends "templates/web_sidebar_base.html" %}
-{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, card, empty %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, card %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 {% block title %}Todos os Projetos{% endblock %}
 {% set active_link = '/projetos/visao_geral' %}
@@ -32,44 +32,32 @@
 		</header>
 		<div class="kanban-column__body">
 			{% if kanban_data[status] %}
-				{% for card in kanban_data[status] %}
+				{% for projeto in kanban_data[status] %}
 					{% if status == "Rascunho" %}
-						{% set card_href = "/projetos/cadastrar_novo_projeto?projeto=" ~ (card.name | urlencode) %}
+						{% set card_href = "/projetos/cadastrar_novo_projeto?projeto=" ~ (projeto.name | urlencode) %}
 						{% set status_variant = "secondary" %}
 					{% elif status == "Em aprovacao" %}
-						{% set card_href = "/projetos/aprovacao_projeto?projeto=" ~ (card.name | urlencode) %}
+						{% set card_href = "/projetos/aprovacao_projeto?projeto=" ~ (projeto.name | urlencode) %}
 						{% set status_variant = "default" %}
 					{% elif status == "Aprovado" %}
-						{% set card_href = "/projetos/projeto_aprovado?projeto=" ~ (card.name | urlencode) %}
+						{% set card_href = "/projetos/projeto_aprovado?projeto=" ~ (projeto.name | urlencode) %}
 						{% set status_variant = "default" %}
 					{% else %}
-						{% set card_href = "/projetos/projeto?projeto=" ~ (card.name | urlencode) %}
+						{% set card_href = "/projetos/projeto?projeto=" ~ (projeto.name | urlencode) %}
 						{% set status_variant = "destructive" if status == "Cancelado" else "secondary" %}
 					{% endif %}
-					<a class="kanban-card-link" href="{{ card_href }}" aria-label="Abrir projeto {{ card.titulo }}">
-						{% call card(attrs={"class": "kanban-card", "data-project-name": card.name, "data-status": status}) %}
+					<a class="kanban-card-link" href="{{ card_href }}" aria-label="Abrir projeto {{ projeto.titulo }}">
+						{% call card(attrs={"class": "kanban-card", "data-project-name": projeto.name, "data-status": status}) %}
 							<div class="kanban-card__eyebrow">
-								{{ badge(card.status_label, variant=status_variant) }}
-								<span class="kanban-card__eyebrow-text">Fluxo disponível</span>
+								{{ badge(projeto.status_label, variant=status_variant) }}
 							</div>
 							<div class="kanban-card__content">
-								<h3 class="kanban-card__card-title">{{ card.titulo }}</h3>
-								<p class="kanban-card__card-subtitle">Coordenador: {{ card.coordenador }}</p>
-							</div>
-							<div class="kanban-card__cta">
-								<span>Abrir projeto</span>
-								{{ lucide_icon("arrow-right", size="sm") }}
+								<h3 class="kanban-card__card-title">{{ projeto.titulo }}</h3>
+								<p class="kanban-card__card-subtitle">Coordenador: {{ projeto.coordenador }}</p>
 							</div>
 						{% endcall %}
 					</a>
-				{% endfor %}
-			{% else %}
-				{{ empty(
-					title="Sem projetos nesta etapa",
-					description="Os próximos projetos que entrarem neste status aparecerão aqui.",
-					icon=lucide_icon("folder-open", size="md"),
-					attrs={"class": "kanban-empty"}
-				) }}
+			{% endfor %}
 			{% endif %}
 		</div>
 	</section>

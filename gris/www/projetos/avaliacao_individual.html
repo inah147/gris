@@ -1,8 +1,9 @@
 {% extends "templates/web.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card %}
 
 {% block page_content %}
 <div class="avaliacao-wrapper">
-    <div class="avaliacao-header text-center">
+    <div class="avaliacao-header">
         {% if logo %}
         <img src="{{ logo }}" class="avaliacao-logo" alt="Logo" loading="lazy" />
         {% endif %}
@@ -17,20 +18,20 @@
 
     <!-- Estado: token inválido -->
     <div id="stateInvalid" class="avaliacao-state {% if page_state != 'invalid' %}d-none{% endif %}">
-        <div class="avaliacao-message-card">
+        {% call card() %}
             <div class="avaliacao-message-icon">⚠️</div>
             <h2>Link inválido</h2>
             <p>Este link de avaliação não é válido ou já expirou. Verifique se você copiou o link corretamente do e-mail recebido.</p>
-        </div>
+        {% endcall %}
     </div>
 
     <!-- Estado: já respondido -->
     <div id="stateAlreadySubmitted" class="avaliacao-state {% if page_state != 'already_submitted' %}d-none{% endif %}">
-        <div class="avaliacao-message-card avaliacao-message-card--success">
+        {% call card() %}
             <div class="avaliacao-message-icon">✅</div>
             <h2>Avaliação já enviada</h2>
             <p>{{ avaliador_nome }}, você já enviou sua avaliação para este projeto. Obrigado pela participação!</p>
-        </div>
+        {% endcall %}
     </div>
 
     <!-- Estado: formulário -->
@@ -41,10 +42,10 @@
                 <p>Sua avaliação sobre o projeto <strong>{{ projeto_titulo }}</strong> é muito importante para nós. Por favor, responda as perguntas abaixo com sinceridade.</p>
             </div>
 
-            <div id="avaliacaoAlert" class="alert-modern d-none" role="alert"></div>
+            <div id="avaliacaoAlert" class="alert" hidden role="alert"></div>
 
             <form id="avaliacaoForm" novalidate>
-                <div class="avaliacao-question-card">
+                {% call card() %}
                     <label class="avaliacao-question-label" for="resultado_projeto">
                         Como você avalia o resultado do projeto?
                         <span class="avaliacao-question-hint">Escolha uma nota de 0 (péssimo) a 10 (excelente)</span>
@@ -57,9 +58,9 @@
                         </label>
                         {% endfor %}
                     </div>
-                </div>
+                {% endcall %}
 
-                <div class="avaliacao-question-card">
+                {% call card() %}
                     <label class="avaliacao-question-label" for="satisfacao_colaboracao">
                         Quão satisfeito você ficou em colaborar com o projeto?
                         <span class="avaliacao-question-hint">Escolha uma nota de 0 (nada satisfeito) a 10 (muito satisfeito)</span>
@@ -72,12 +73,51 @@
                         </label>
                         {% endfor %}
                     </div>
-                </div>
+                {% endcall %}
 
-                <div class="avaliacao-question-card">
+                {% call card() %}
                     <label class="avaliacao-question-label" for="objetivos_atingidos">
                         O projeto atingiu os objetivos?
                         <span class="avaliacao-question-hint">Descreva em que medida os objetivos foram alcançados</span>
+                    </label>
+                    <textarea id="objetivos_atingidos" name="objetivos_atingidos" class="textarea" rows="4" placeholder="Descreva sua percepção sobre o atingimento dos objetivos..." required></textarea>
+                {% endcall %}
+
+                {% call card() %}
+                    <label class="avaliacao-question-label" for="muito_bom">
+                        O que você considera que foi muito bom?
+                        <span class="avaliacao-question-hint">Destaque os pontos positivos do projeto</span>
+                    </label>
+                    <textarea id="muito_bom" name="muito_bom" class="textarea" rows="4" placeholder="O que mais se destacou positivamente..." required></textarea>
+                {% endcall %}
+
+                {% call card() %}
+                    <label class="avaliacao-question-label" for="pontos_melhoria">
+                        Quais são os pontos de melhoria que você enxerga?
+                        <span class="avaliacao-question-hint">Sugestões construtivas para projetos futuros</span>
+                    </label>
+                    <textarea id="pontos_melhoria" name="pontos_melhoria" class="textarea" rows="4" placeholder="O que poderia ter sido melhor..." required></textarea>
+                {% endcall %}
+
+                <div class="avaliacao-submit-area">
+                    <button type="submit" id="btnSubmitAvaliacao" class="btn-sm-primary">
+                        Enviar avaliação
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Estado: sucesso após envio -->
+    <div id="stateSuccess" class="avaliacao-state d-none">
+        {% call card() %}
+            <div class="avaliacao-message-icon">🎉</div>
+            <h2>Avaliação enviada com sucesso!</h2>
+            <p>Muito obrigado pela sua participação. Sua avaliação é fundamental para o aprimoramento dos nossos projetos.</p>
+        {% endcall %}
+    </div>
+</div>
+{% endblock %}
                     </label>
                     <textarea id="objetivos_atingidos" name="objetivos_atingidos" class="avaliacao-textarea" rows="4" placeholder="Descreva sua percepção sobre o atingimento dos objetivos..." required></textarea>
                 </div>

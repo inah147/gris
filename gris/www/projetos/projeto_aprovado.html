@@ -1,209 +1,157 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import button, card, field, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 {% block title %}Projeto aprovado{% endblock %}
 {% set active_link = '/projetos/visao_geral' %}
 
 {% block head_include %}
 {{ super() }}
-<link rel="stylesheet" href="/projetos/projeto_aprovado.css" />
+<link rel="stylesheet" href="/projetos/aprovacao_projeto.css" />
 {% endblock %}
 
 {% block page_header %}
-<div class="page-header">
-    <div class="page-header__content">
-        <h1 class="page-header__title">Projeto aprovado</h1>
-        <p class="page-header__subtitle">Leitura completa do TAP aprovado e início da execução.</p>
+<section class="project-page-header" aria-labelledby="projeto-aprovado-title">
+    <div class="flex flex-col gap-2 max-w-3xl">
+        <h1 id="projeto-aprovado-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Projeto aprovado</h1>
+        <p class="m-0 text-base leading-relaxed text-muted-foreground">Leitura completa do TAP aprovado e início da execução.</p>
     </div>
-    <div class="page-header__actions">
-        <button type="button" id="btnCancelarProjeto" class="btn-modern btn-modern--danger btn-modern--sm">Cancelar projeto</button>
-        <button type="button" id="btnIniciarProjeto" class="btn-modern btn-modern--primary btn-modern--sm">Iniciar projeto</button>
+    <div class="project-page-header__actions">
+        <button type="button" id="btnIniciarProjeto" class="btn-sm-primary">Iniciar projeto</button>
+        <button type="button" id="btnCancelarProjeto" class="btn-sm-destructive">
+            {{ lucide_icon("trash-2", size="xs") }}
+            Cancelar projeto
+        </button>
     </div>
-</div>
+</section>
 {% endblock %}
 
 {% block main %}
-<div class="approval-shell card-modern">
+{{ toaster() }}
+<div class="projeto-shell">
     <input type="hidden" id="projetoName" value="{{ projeto_name or '' }}" />
 
-    <div id="approvalAlert" class="alert-modern d-none"></div>
+    <div id="approvalAlert" class="alert" hidden></div>
 
-    <section class="card-modern flow-card">
-        <div class="card-modern__header">
-            <h3 class="card-modern__title">Fluxo de aprovação</h3>
-            <p class="card-modern__subtitle">Etapas obrigatórias para concluir a aprovação do projeto.</p>
-        </div>
-        <div class="card-modern__body">
-            <div id="approvalFlow" class="approval-flow" aria-live="polite"></div>
-        </div>
-    </section>
+    {% call card(title="Fluxo de aprovação", description="Etapas obrigatórias para concluir a aprovação do projeto.") %}
+        <div id="approvalFlow" class="approval-flow" aria-live="polite"></div>
+    {% endcall %}
 
-    <section class="card-modern form-card">
-        <div class="card-modern__header">
-            <h3 class="card-modern__title">Dados gerais</h3>
+    {% call card(title="Dados gerais") %}
+        <div class="projeto-grid projeto-grid--3">
+            {% call field(label="Título do projeto", attrs={"class": "projeto-field--span-2"}) %}
+                <input id="view_nome_do_projeto" type="text" class="input" readonly />
+            {% endcall %}
+            {% call field(label="Status") %}
+                <input id="view_status" type="text" class="input" readonly />
+            {% endcall %}
+            {% call field(label="Coordenador") %}
+                <input id="view_coordenador" type="text" class="input" readonly />
+            {% endcall %}
+            {% call field(label="Padrinho", attrs={"class": "projeto-field--span-2"}) %}
+                <input id="view_padrinho_nome" type="text" class="input" readonly />
+            {% endcall %}
+            {% call field(label="Data de início") %}
+                <input id="view_data_de_inicio" type="text" class="input" readonly />
+            {% endcall %}
+            {% call field(label="Data de término") %}
+                <input id="view_data_de_termino" type="text" class="input" readonly />
+            {% endcall %}
         </div>
-        <div class="card-modern__body">
-            <div class="row g-3">
-                <div class="col-12 col-md-6">
-                    <label class="form-label-modern">Título do projeto</label>
-                    <input id="view_nome_do_projeto" type="text" class="form-input-modern form-input-modern--sm" readonly disabled />
-                </div>
-                <div class="col-12 col-md-3">
-                    <label class="form-label-modern">Status</label>
-                    <input id="view_status" type="text" class="form-input-modern form-input-modern--sm" readonly disabled />
-                </div>
-                <div class="col-12 col-md-3">
-                    <label class="form-label-modern">Coordenador</label>
-                    <input id="view_coordenador" type="text" class="form-input-modern form-input-modern--sm" readonly disabled />
-                </div>
-                <div class="col-12 col-md-6">
-                    <label class="form-label-modern">Padrinho</label>
-                    <input id="view_padrinho_nome" type="text" class="form-input-modern form-input-modern--sm" readonly disabled />
-                </div>
-                <div class="col-12 col-md-3">
-                    <label class="form-label-modern">Data de início</label>
-                    <input id="view_data_de_inicio" type="text" class="form-input-modern form-input-modern--sm" readonly disabled />
-                </div>
-                <div class="col-12 col-md-3">
-                    <label class="form-label-modern">Data de término</label>
-                    <input id="view_data_de_termino" type="text" class="form-input-modern form-input-modern--sm" readonly disabled />
-                </div>
-            </div>
-        </div>
-    </section>
+    {% endcall %}
 
-    <section class="card-modern form-card">
-        <div class="card-modern__header">
-            <h3 class="card-modern__title">Detalhamento</h3>
+    {% call card(title="Detalhamento") %}
+        <div class="projeto-grid projeto-grid--1">
+            {% call field(label="Descrição e justificativa") %}
+                <textarea id="view_justificativa" class="textarea" rows="4" readonly></textarea>
+            {% endcall %}
+            {% call field(label="Alinhamento com o escotismo") %}
+                <textarea id="view_alinhamento_com_escotismo" class="textarea" rows="4" readonly></textarea>
+            {% endcall %}
         </div>
-        <div class="card-modern__body">
-            <div class="row g-3">
-                <div class="col-12">
-                    <label class="form-label-modern">Descrição e justificativa</label>
-                    <textarea id="view_justificativa" class="form-input-modern form-input-modern--sm" rows="4" readonly disabled></textarea>
-                </div>
-                <div class="col-12">
-                    <label class="form-label-modern">Alinhamento com o escotismo</label>
-                    <textarea id="view_alinhamento_com_escotismo" class="form-input-modern form-input-modern--sm" rows="4" readonly disabled></textarea>
-                </div>
-            </div>
-        </div>
-    </section>
+    {% endcall %}
 
-    <section class="card-modern form-card">
-        <div class="card-modern__header"><h3 class="card-modern__title">Equipe de interesse</h3></div>
-        <div class="card-modern__body">
-            <div class="table-responsive">
-                <table class="data-table projeto-table">
-                    <thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Função</th></tr></thead>
-                    <tbody id="view_rows_equipe"></tbody>
-                </table>
-            </div>
+    {% call card(title="Equipe de interesse") %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Função</th></tr></thead>
+                <tbody id="view_rows_equipe"></tbody>
+            </table>
         </div>
-    </section>
+    {% endcall %}
 
-    <section class="card-modern form-card">
-        <div class="card-modern__header"><h3 class="card-modern__title">Objetivos</h3></div>
-        <div class="card-modern__body">
-            <div class="table-responsive">
-                <table class="data-table projeto-table">
-                    <thead><tr><th>Objetivo</th><th>Métrica de sucesso</th></tr></thead>
-                    <tbody id="view_rows_objetivos"></tbody>
-                </table>
-            </div>
+    {% call card(title="Objetivos") %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead><tr><th>Objetivo</th><th>Métrica de sucesso</th></tr></thead>
+                <tbody id="view_rows_objetivos"></tbody>
+            </table>
         </div>
-    </section>
+    {% endcall %}
 
-    <section class="card-modern form-card">
-        <div class="card-modern__header"><h3 class="card-modern__title">Impacto</h3></div>
-        <div class="card-modern__body">
-            <div class="row g-3">
-                <div class="col-12 col-md-6">
-                    <label class="form-label-modern">Competências e blocos</label>
-                    <textarea id="view_competencias" class="form-input-modern form-input-modern--sm" rows="3" readonly disabled></textarea>
-                </div>
-                <div class="col-12 col-md-6">
-                    <label class="form-label-modern">Especialidade</label>
-                    <textarea id="view_especialidade" class="form-input-modern form-input-modern--sm" rows="3" readonly disabled></textarea>
-                </div>
-            </div>
-            <div class="table-responsive mt-sm">
-                <table class="data-table projeto-table">
-                    <thead><tr><th>ODS</th></tr></thead>
-                    <tbody id="view_rows_ods"></tbody>
-                </table>
-            </div>
+    {% call card(title="Impacto") %}
+        <div class="projeto-grid projeto-grid--2">
+            {% call field(label="Competências e blocos") %}
+                <textarea id="view_competencias" class="textarea" rows="3" readonly></textarea>
+            {% endcall %}
+            {% call field(label="Especialidade") %}
+                <textarea id="view_especialidade" class="textarea" rows="3" readonly></textarea>
+            {% endcall %}
         </div>
-    </section>
-
-    <section class="card-modern form-card">
-        <div class="card-modern__header"><h3 class="card-modern__title">Cronograma</h3></div>
-        <div class="card-modern__body">
-            <div class="gantt-card" aria-live="polite">
-                <div class="gantt-card__header">
-                    <h4 class="gantt-card__title">Visualização Gantt</h4>
-                    <p class="gantt-card__subtitle">Linha do tempo de atividades do projeto.</p>
-                </div>
-                <div id="view_cronograma_gantt" class="cronograma-gantt"></div>
-            </div>
+        <div class="table-responsive mt-sm">
+            <table class="table">
+                <thead><tr><th>ODS</th></tr></thead>
+                <tbody id="view_rows_ods"></tbody>
+            </table>
         </div>
-    </section>
+    {% endcall %}
 
-    <section class="card-modern form-card">
-        <div class="card-modern__header"><h3 class="card-modern__title">Recursos</h3></div>
-        <div class="card-modern__body">
-            <div class="table-responsive">
-                <table class="data-table projeto-table"><thead><tr><th>Recurso</th></tr></thead><tbody id="view_rows_recursos"></tbody></table>
-            </div>
+    {% call card(title="Cronograma") %}
+        <div class="gantt-card" aria-live="polite">
+            <p class="gantt-card__subtitle">Linha do tempo de atividades do projeto.</p>
+            <div id="view_cronograma_gantt" class="cronograma-gantt"></div>
         </div>
-    </section>
+    {% endcall %}
 
-    <section class="card-modern form-card">
-        <div class="card-modern__header"><h3 class="card-modern__title">Riscos</h3></div>
-        <div class="card-modern__body">
-            <div class="table-responsive">
-                <table class="data-table projeto-table"><thead><tr><th>Risco</th><th>Mitigação</th></tr></thead><tbody id="view_rows_riscos"></tbody></table>
-            </div>
+    {% call card(title="Recursos") %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead><tr><th>Recurso</th></tr></thead>
+                <tbody id="view_rows_recursos"></tbody>
+            </table>
         </div>
-    </section>
+    {% endcall %}
 
-    <section class="card-modern form-card">
-        <div class="card-modern__header"><h3 class="card-modern__title">Observações e comentários</h3></div>
-        <div class="card-modern__body">
-            <textarea id="view_observacoes_e_comentarios" class="form-input-modern form-input-modern--sm" rows="3" readonly disabled></textarea>
+    {% call card(title="Riscos") %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead><tr><th>Risco</th><th>Mitigação</th></tr></thead>
+                <tbody id="view_rows_riscos"></tbody>
+            </table>
         </div>
-    </section>
+    {% endcall %}
 
-    <section class="card-modern form-card">
-        <div class="card-modern__header"><h3 class="card-modern__title">Revisão do TAP por IA</h3></div>
-        <div class="card-modern__body"><div id="view_avaliacao_tap" class="readonly-markdown">-</div></div>
-    </section>
+    {% call card(title="Observações e comentários") %}
+        <textarea id="view_observacoes_e_comentarios" class="textarea" rows="3" readonly></textarea>
+    {% endcall %}
 
-    <section class="card-modern form-card">
-        <div class="card-modern__header"><h3 class="card-modern__title">Histórico de revisão</h3></div>
-        <div class="card-modern__body">
-            <div class="table-responsive">
-                <table class="data-table projeto-table">
-                    <thead><tr><th>Aprovador</th><th>Etapa</th><th>Tipo</th><th>Data</th><th>Comentário</th><th>Resolvido</th></tr></thead>
-                    <tbody id="view_rows_revisoes"></tbody>
-                </table>
-            </div>
+    {% call card(title="Revisão do TAP por IA") %}
+        <div id="view_avaliacao_tap" class="readonly-markdown">-</div>
+    {% endcall %}
+
+    {% call card(title="Histórico de revisão") %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead><tr><th>Aprovador</th><th>Etapa</th><th>Tipo</th><th>Data</th><th>Comentário</th><th>Resolvido</th></tr></thead>
+                <tbody id="view_rows_revisoes"></tbody>
+            </table>
         </div>
-    </section>
+    {% endcall %}
 </div>
 
-<div id="cancelarProjetoModal" class="info-modal d-none" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="cancelarProjetoModalTitle">
-    <div class="info-modal__backdrop" data-close-cancelar-projeto></div>
-    <div class="info-modal__panel" role="document">
-        <div class="info-modal__header">
-            <h4 id="cancelarProjetoModalTitle" class="info-modal__title">Cancelar projeto</h4>
-            <button type="button" class="info-modal__close" data-close-cancelar-projeto aria-label="Fechar">×</button>
-        </div>
-        <div class="info-modal__body">
-            <p>Deseja realmente cancelar este projeto? Após confirmar, o status será alterado para Cancelado.</p>
-        </div>
-        <div class="approval-modal-footer">
-            <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-close-cancelar-projeto>Voltar</button>
-            <button type="button" id="btnConfirmarCancelarProjeto" class="btn-modern btn-modern--danger btn-modern--sm">Confirmar cancelamento</button>
-        </div>
-    </div>
-</div>
+{% call dialog(id="cancelarProjetoModal", title="Cancelar projeto",
+    footer='<button type="button" class="btn-sm-outline" onclick="document.getElementById(\'cancelarProjetoModal\').close()">Voltar</button><button type="button" id="btnConfirmarCancelarProjeto" class="btn-sm-destructive">Confirmar cancelamento</button>') %}
+    <p>Deseja realmente cancelar este projeto? Após confirmar, o status será alterado para Cancelado.</p>
+{% endcall %}
 {% endblock %}

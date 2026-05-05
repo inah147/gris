@@ -22,6 +22,7 @@
 .flex { display: flex; }
 .grid { display: grid; }
 .hidden { display: none !important; }
+.d-none { display: none !important; }
 
 /* --- Flex direction --- */
 .flex-row { flex-direction: row; }

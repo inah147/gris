@@ -149,6 +149,7 @@
 
     const state = {
         projetoName: "",
+        isCoordinator: false,
         choices: {
             associados: [],
             associados_padrinho: [],
@@ -498,19 +499,30 @@
         }
     }
 
-    function showAlert(message, type) {
-        const el = document.getElementById("formAlert");
-        if (!el) return;
-        el.classList.remove("d-none", "alert-destructive", "project-form-alert--success");
-        el.classList.add(type === "error" ? "alert-destructive" : "project-form-alert--success");
-        el.textContent = message;
+    function showToast(message, category) {
+        document.dispatchEvent(
+            new CustomEvent("basecoat:toast", {
+                detail: {
+                    config: {
+                        category: category || "success",
+                        title: message,
+                    },
+                },
+            })
+        );
     }
 
-    function hideAlert() {
-        const el = document.getElementById("formAlert");
-        if (!el) return;
-        el.classList.add("d-none");
-        el.textContent = "";
+    function showToast(message, category) {
+        document.dispatchEvent(
+            new CustomEvent("basecoat:toast", {
+                detail: {
+                    config: {
+                        category: category || "success",
+                        title: message,
+                    },
+                },
+            })
+        );
     }
 
     function updateGoogleDriveButton(link) {
@@ -623,13 +635,13 @@
                     <td>${escapeHtml(row.comentarios || "-")}</td>
                     <td>${escapeHtml(row.data_da_revisao || "-")}</td>
                     <td>
-                        <button
+                        ${state.isCoordinator ? `<button
                             type="button"
                             class="btn-sm-outline"
                             data-resolve-review-comment="${escapeHtml(row.name || "")}"
                         >
                             Resolver
-                        </button>
+                        </button>` : "-"}
                     </td>
                 </tr>
             `
@@ -685,9 +697,9 @@
 
             renderPendingReviewRows();
             updatePendingReviewBanner();
-            showAlert("Comentário marcado como resolvido.", "success");
+            showToast("Comentário marcado como resolvido.", "success");
         } catch (error) {
-            showAlert(error.message || "Falha ao resolver comentário.", "error");
+            showToast(error.message || "Falha ao resolver comentário.", "error");
         }
     }
 
@@ -1086,7 +1098,7 @@
             if (email) email.value = contato.email || "";
             if (telefone) telefone.value = contato.telefone || "";
         } catch (error) {
-            showAlert(error.message || "Falha ao obter dados do aprovador selecionado.", "error");
+            showToast(error.message || "Falha ao obter dados do aprovador selecionado.", "error");
         }
     }
 
@@ -1181,7 +1193,7 @@
                     );
                 });
         } catch (error) {
-            showAlert(
+            showToast(
                 error.message || "Falha ao sincronizar aprovadores obrigatórios.",
                 "error"
             );
@@ -1228,7 +1240,7 @@
             if (email) email.value = contato.email || "";
             if (telefone) telefone.value = contato.telefone || "";
         } catch (error) {
-            showAlert(error.message || "Falha ao obter dados da pessoa selecionada.", "error");
+            showToast(error.message || "Falha ao obter dados da pessoa selecionada.", "error");
         }
     }
 
@@ -1422,12 +1434,15 @@
         const totalDays = Math.max(diffDays(chartStart, chartEnd) + 1, 2);
 
         const tickEvery = totalDays > 45 ? 7 : totalDays > 20 ? 3 : 1;
+        const tickWidthPct = (tickEvery / totalDays) * 100;
         const ticks = [];
         for (let day = 0; day < totalDays; day += tickEvery) {
             const date = addDays(chartStart, day);
+            const daysInCell = Math.min(tickEvery, totalDays - day);
+            const cellWidthPct = (daysInCell / totalDays) * 100;
             ticks.push(`
-                <div class="cronograma-gantt__tick" style="left:${(day / totalDays) * 100}%">
-                    ${date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                <div class="cronograma-gantt__tick" style="width:${cellWidthPct.toFixed(4)}%">
+                    <span>${date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}</span>
                 </div>
             `);
         }
@@ -1481,7 +1496,7 @@
                 <div class="cronograma-gantt__timeline">${ticks.join("")}</div>
             </div>
             ${dragHint}
-            <div class="cronograma-gantt__body" data-chart-start="${formatDateIso(chartStart)}" data-total-days="${totalDays}">
+            <div class="cronograma-gantt__body" data-chart-start="${formatDateIso(chartStart)}" data-total-days="${totalDays}" style="--gantt-tick-width:${tickWidthPct.toFixed(4)}%">
                 ${rowsHtml}
             </div>
         `;
@@ -1903,17 +1918,17 @@
 
             if (!result.pending) {
                 stopPolling();
-                showAlert("Revisão por IA concluída.", "success");
+                showToast("Revisão por IA concluída.", "success");
             }
         } catch (error) {
             stopPolling();
-            showAlert(error.message || "Falha ao consultar revisão por IA.", "error");
+            showToast(error.message || "Falha ao consultar revisão por IA.", "error");
         }
 
         state.pollingAttempts += 1;
         if (state.pollingAttempts > 90) {
             stopPolling();
-            showAlert("A avaliação está demorando mais que o esperado. Tente atualizar a página em instantes.", "error");
+            showToast("A avaliação está demorando mais que o esperado. Tente atualizar a página em instantes.", "error");
         }
     }
 
@@ -1925,7 +1940,6 @@
     async function saveDraft(silent) {
         if (state.saving) return false;
 
-        hideAlert();
         state.saving = true;
         setButtonsDisabled(true);
 
@@ -1939,12 +1953,12 @@
             syncProjetoReference(result.name);
 
             if (!silent) {
-                showAlert("Rascunho salvo com sucesso.", "success");
+                showToast("Rascunho salvo com sucesso.", "success");
             }
             return true;
         } catch (error) {
             resetActionState();
-            showAlert(error.message || "Falha ao salvar rascunho.", "error");
+            showToast(error.message || "Falha ao salvar rascunho.", "error");
             return false;
         } finally {
             resetActionState();
@@ -1956,11 +1970,10 @@
 
         const pendingComments = getPendingReviewComments();
         if (pendingComments.length > 0) {
-            showAlert("Resolva todos os comentários pendentes antes de submeter novamente para aprovação.", "error");
+            showToast("Resolva todos os comentários pendentes antes de submeter novamente para aprovação.", "error");
             return;
         }
 
-        hideAlert();
         state.saving = true;
         setButtonsDisabled(true);
 
@@ -1975,19 +1988,17 @@
             redirectToApprovalPage();
         } catch (error) {
             resetActionState();
-            showAlert(error.message || "Falha ao submeter projeto.", "error");
+            showToast(error.message || "Falha ao submeter projeto.", "error");
         } finally {
             resetActionState();
         }
     }
 
     async function runAvaliacaoIA() {
-        hideAlert();
-
         if (!state.projetoName) {
             const ok = await saveDraft(true);
             if (!ok) {
-                showAlert("Não foi possível iniciar avaliação sem salvar o projeto.", "error");
+                showToast("Não foi possível iniciar avaliação sem salvar o projeto.", "error");
                 return;
             }
         }
@@ -2000,11 +2011,11 @@
             });
 
             showAvaliacao(result.avaliacao_tap || "Gerando avaliação...");
-            showAlert("Revisão por IA iniciada. Aguarde o processamento.", "success");
+            showToast("Revisão por IA iniciada. Aguarde o processamento.", "success");
             startPolling();
         } catch (error) {
             setButtonsDisabled(false);
-            showAlert(error.message || "Falha ao iniciar revisão por IA.", "error");
+            showToast(error.message || "Falha ao iniciar revisão por IA.", "error");
         } finally {
             setButtonsDisabled(false);
         }
@@ -2029,7 +2040,7 @@
                     const row = deleteBtn.closest("tr");
                     if (row) {
                         if (tbody.id === "rows_aprovadores" && (row.dataset.canRemove || "0") !== "1") {
-                            showAlert("Este aprovador é obrigatório e não pode ser removido.", "error");
+                            showToast("Este aprovador é obrigatório e não pode ser removido.", "error");
                             return;
                         }
                         row.remove();
@@ -2079,17 +2090,17 @@
                 const funcao = document.getElementById("equipe_funcao")?.value || "";
 
                 if (tipo === "Associado" && !associado) {
-                    showAlert("Selecione o associado para adicionar na equipe.", "error");
+                    showToast("Selecione o associado para adicionar na equipe.", "error");
                     return;
                 }
 
                 if (tipo === "Responsavel" && !responsavel) {
-                    showAlert("Selecione o responsável para adicionar na equipe.", "error");
+                    showToast("Selecione o responsável para adicionar na equipe.", "error");
                     return;
                 }
 
                 if (!nome || !email || !telefone) {
-                    showAlert("Preencha nome, email e telefone para adicionar na equipe.", "error");
+                    showToast("Preencha nome, email e telefone para adicionar na equipe.", "error");
                     return;
                 }
 
@@ -2158,21 +2169,21 @@
                 const telefone = (document.getElementById("aprovador_telefone")?.value || "").trim();
 
                 if (tipo === "Associado" && !associado) {
-                    showAlert("Selecione o associado para adicionar o aprovador.", "error");
+                    showToast("Selecione o associado para adicionar o aprovador.", "error");
                     return;
                 }
                 if (tipo === "Responsavel" && !responsavel) {
-                    showAlert("Selecione o responsável para adicionar o aprovador.", "error");
+                    showToast("Selecione o responsável para adicionar o aprovador.", "error");
                     return;
                 }
                 if (!nome || !email || !telefone) {
-                    showAlert("Nome, email e telefone do aprovador são obrigatórios.", "error");
+                    showToast("Nome, email e telefone do aprovador são obrigatórios.", "error");
                     return;
                 }
 
                 const aprovadorKey = `${tipo}:${tipo === "Associado" ? associado : responsavel}`;
                 if (hasAprovadorKeyInTable(aprovadorKey)) {
-                    showAlert("Este aprovador já está na lista.", "error");
+                    showToast("Este aprovador já está na lista.", "error");
                     return;
                 }
 
@@ -2342,6 +2353,7 @@
 
             state.choices = result.choices || state.choices;
             state.defaultAprovadores = result.default_aprovadores || [];
+            state.isCoordinator = Boolean(result.is_coordinator);
 
             fillSelect("coordenador", state.choices.associados, "Selecione...");
             fillSelect(
@@ -2386,7 +2398,7 @@
 
             renderCronogramaGantt();
         } catch (error) {
-            showAlert(error.message || "Falha ao carregar dados do formulário.", "error");
+            showToast(error.message || "Falha ao carregar dados do formulário.", "error");
         }
     }
 

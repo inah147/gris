@@ -19,9 +19,9 @@
     }
 
     const icons = [
-      { rel: 'shortcut icon', href: '/assets/gris/images/icons/ios/32.png', type: 'image/png' },
-      { rel: 'icon', href: '/assets/gris/images/icons/ios/16.png', type: 'image/png', sizes: '16x16' },
-      { rel: 'icon', href: '/assets/gris/images/icons/ios/32.png', type: 'image/png', sizes: '32x32' }
+      { rel: 'shortcut icon', href: '/assets/gris/images/icons/favicon/32.png', type: 'image/png' },
+      { rel: 'icon', href: '/assets/gris/images/icons/favicon/16.png', type: 'image/png', sizes: '16x16' },
+      { rel: 'icon', href: '/assets/gris/images/icons/favicon/32.png', type: 'image/png', sizes: '32x32' }
     ];
 
     head.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach((link) => {

@@ -535,7 +535,7 @@
       text,
     });
 
-    const autoScrollListToToday = () => {
+    const autoScrollListToToday = ({ force = false } = {}) => {
       const todayRow = body.querySelector("[data-calendar-list-today='true']");
       if (!todayRow) return;
 
@@ -548,7 +548,7 @@
         formatISODate(end),
       ].join("|");
 
-      if (root.dataset.calendarListScrollKey === scrollKey) {
+      if (!force && root.dataset.calendarListScrollKey === scrollKey) {
         return;
       }
 
@@ -556,6 +556,12 @@
         todayRow.scrollIntoView({ block: "center", inline: "nearest" });
         root.dataset.calendarListScrollKey = scrollKey;
       });
+    };
+
+    const todayInListRange = () => {
+      const { start, end } = getListRange();
+      const today = startOfDay(new Date());
+      return start && end && today >= start && today <= end;
     };
 
     const renderMonth = () => {
@@ -1076,9 +1082,18 @@
         listShowAllDaysCheckbox.checked = listShowAllDays;
       }
 
-      // Hide nav in list mode (irrelevant)
-      const nav = root.querySelector("[data-calendar-nav]");
-      if (nav) nav.style.display = mode === "list" ? "none" : "";
+      // Em list mode, prev/next não fazem sentido — só "Hoje" continua visível
+      // (e desabilitado se hoje estiver fora do range exibido).
+      if (navPrev) navPrev.style.display = mode === "list" ? "none" : "";
+      if (navNext) navNext.style.display = mode === "list" ? "none" : "";
+      if (navToday && mode === "list") {
+        const enabled = todayInListRange();
+        navToday.disabled = !enabled;
+        navToday.setAttribute("aria-disabled", enabled ? "false" : "true");
+      } else if (navToday) {
+        navToday.disabled = false;
+        navToday.removeAttribute("aria-disabled");
+      }
 
       if (mode === "month") renderMonth();
       else if (mode === "week") renderWeek();
@@ -1120,6 +1135,11 @@
     if (navNext) navNext.addEventListener("click", () => navBy(1));
     if (navToday) {
       navToday.addEventListener("click", () => {
+        if (mode === "list") {
+          if (!todayInListRange()) return;
+          autoScrollListToToday({ force: true });
+          return;
+        }
         anchorDate = startOfDay(new Date());
         render();
       });

@@ -26,10 +26,20 @@
 	flex-wrap: wrap;
 }
 
+.interview-card {
+	position: relative;
+	overflow: visible;
+}
+
+.interview-card:has(.select > button[aria-expanded="true"]) {
+	z-index: 12;
+}
+
 .interview-card > section {
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
+	overflow: visible;
 }
 
 .interview-toolbar {
@@ -76,6 +86,15 @@
 
 .interview-dialog > div {
 	width: min(32rem, calc(100vw - 2rem));
+	overflow: visible;
+}
+
+.interview-dialog > div:has(.select > button[aria-expanded="true"]) {
+	z-index: 62;
+}
+
+.interview-dialog > div > section {
+	overflow: visible;
 }
 
 .interview-dialog__footer {
@@ -109,8 +128,8 @@
 /* Select dropdown scroll constraints */
 .interview-page .select [data-popover],
 .interview-dialog .select [data-popover] {
-	max-height: min(20rem, calc(100vh - 8rem));
-	overflow: hidden auto;
+	z-index: 70;
+	overflow: visible;
 	overscroll-behavior: contain;
 }
 

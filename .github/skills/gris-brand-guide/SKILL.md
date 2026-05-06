@@ -56,6 +56,8 @@ Esses arquivos são a base para evitar drift de marca. `gris/public/css/design-s
 - Priorizar tokens como `--background`, `--foreground`, `--card`, `--primary`, `--muted`, `--border`, `--ring`, `--radius` em vez de hardcode de cor/spacing.
 - Usar macros Jinja de `public/design_system/components/generated/` e `public/design_system/components/composed/` antes de criar componente local.
 - Inputs de seleção em páginas de Portal devem usar a macro `select` do design system; `<select>` nativo do HTML é anti-padrão de marca porque não segue o tema shadcn nem o padrão visual dos demais componentes.
+- Para selecionar datas em páginas de Portal, use a macro `datepicker` (`public/design_system/components/generated/datepicker.html.jinja`). **Nunca** use `<input type="date">` — o input nativo não respeita o tema shadcn nem combina com `select`/`input`/`combobox` no mesmo formulário. Modos disponíveis: `single` e `range`.
+- Botões em tamanho `sm` devem usar a classe combinada `btn-sm-<variant>` (ex.: `btn-sm-outline`, `btn-sm-primary`, `btn-sm-destructive`, `btn-sm-ghost`). A forma decomposta `btn-outline btn-sm` / `btn-primary btn-sm` **não** é estilizada pelo bundle Basecoat usado pelo Gris e quebra o visual.
 - Isolar Portal e Desk: Basecoat e `/assets/gris/design_system/*` pertencem às páginas web do Portal, não aos formulários/listas Desk.
 - Evitar CSS inline quando existir componente/arquivo dedicado.
 - Manter consistência entre Portal e PWA (tema/ícones/metadados).
@@ -65,6 +67,8 @@ Esses arquivos são a base para evitar drift de marca. `gris/public/css/design-s
 - Introduzir nova cor sem mapear token no tema Basecoat.
 - Duplicar componente existente nas macros Basecoat.
 - Usar `<select>` nativo em vez da macro `select` do design system em páginas de Portal.
+- Usar `<input type="date">` em vez da macro `datepicker` em páginas de Portal.
+- Combinar `btn-<variant>` com `btn-sm` (ex.: `btn-outline btn-sm`) — usar sempre a classe combinada `btn-sm-<variant>`.
 - Usar `components.css`/`public/components` como base de nova interface quando houver equivalente no design system Basecoat.
 - Aplicar Basecoat em Desk ou misturar componentes de Portal com componentes nativos do Frappe.
 - Ajustar apenas desktop ou apenas mobile em fluxos principais.

@@ -61,10 +61,52 @@ Use macros geradas para componentes interativos e macros compostas para elemento
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 ```
 
-Componentes disponíveis incluem `command`, `dialog`, `dropdown-menu`, `popover`, `select`, `sidebar`, `tabs`, `toast`, além de macros compostas como `alert`, `avatar`, `badge`, `button`, `card`, `field`, `form`, `input`, `table`, `skeleton`, `spinner`, `switch` e `tooltip`.
+Componentes disponíveis incluem `calendar`, `command`, `datepicker`, `dialog`, `dropdown-menu`, `phone-input`, `popover`, `select`, `sidebar`, `tabs`, `toast`, além de macros compostas como `alert`, `avatar`, `badge`, `button`, `card`, `field`, `form`, `input`, `table`, `skeleton`, `spinner`, `switch` e `tooltip`. Para texto rico há ainda o componente JS `editor` (Toast UI), descrito em "Editor de texto rico (WYSIWYG)" abaixo.
+
+### Empty states
+Para qualquer estado vazio (lista sem registros, filtro sem resultado, primeira vez, erro amigável), usar **sempre** a macro `empty` do design system. Antes de adicionar a chamada, escolher entre variante com ícone (Lucide) e variante com imagem do mascote Gris — quando imagem, escolher um dos arquivos de `public/images/gris-character/`. Detalhes da assinatura, lista de imagens disponíveis e regra mandatória de escolha em `gris-brand-guide/references/components.md` (seção "Componente `empty`").
+
+### Calendários
+Para visualizações de calendário (mês/semana/lista), usar **sempre** o componente `calendar` (`public/design_system/components/generated/calendar.html.jinja`). Ele cobre os três modos, filtros por categoria, navegação prev/hoje/next e dispatch de cliques via `CustomEvent("gris:calendar:event-click")` — a página decide o que acontece ao clicar. Detalhes em `gris-brand-guide/references/calendar.md`. Não criar tabela ou matriz custom para calendários novos; categorias devem virar cores + filtros, não colunas paralelas.
 
 ### Selects
 Em páginas de Portal, usar **sempre** a macro `select` de `public/design_system/components/generated/select.html.jinja`. Nunca usar `<select>` nativo do HTML (mesmo com `class="select"`) — o macro é a forma oficial: UI consistente com o tema shadcn, acessibilidade, suporte a `combobox`/`multiple` e integração com o observer do Basecoat.
+
+### Datas
+Em páginas de Portal, usar **sempre** a macro `datepicker` de `public/design_system/components/generated/datepicker.html.jinja`. **Nunca** usar `<input type="date">` — o input nativo varia entre navegadores, ignora o tema shadcn e quebra a consistência com `select`/`input`/`combobox` do mesmo formulário. Use `mode="single"` para data simples e `mode="range"` para intervalos (gera `name_start`/`name_end` em hidden inputs). O hidden input do macro entra em `FormData` normalmente, então submits GET continuam funcionando.
+
+### Editor de texto rico (WYSIWYG)
+Para qualquer campo de texto longo formatado (descrições, observações, conteúdo editorial), usar **sempre** o wrapper `gris.editor.create(...)` baseado no [Toast UI Editor](https://github.com/nhn/tui.editor). **Nunca** carregar Toast UI por CDN, **nunca** usar modo `markdown` e **nunca** habilitar `hideModeSwitch: false` — o Portal trabalha exclusivamente em WYSIWYG.
+
+Assets vendor (carregamento on-demand, não pré-carregar em `base.html`):
+- `/assets/gris/vendor/toastui-editor/toastui-editor-all.min.js`
+- `/assets/gris/vendor/toastui-editor/toastui-editor.min.css`
+- `/assets/gris/vendor/toastui-editor/i18n/pt-br.min.js`
+
+Wrapper do design system: `gris/public/design_system/js/components/toastui-editor.js` (expõe `window.gris.editor`). Para refresh dos vendors: `npm run design-system:sync:toastui-editor`.
+
+Uso:
+```html
+<div id="descricao-editor"></div>
+<input type="hidden" name="descricao" id="descricao-input">
+```
+```javascript
+gris.editor.create(document.getElementById("descricao-editor"), {
+  initialValue: window.gris_initial_descricao || "",
+  height: "320px",
+}).then(function (editor) {
+  document.querySelector("form").addEventListener("submit", function () {
+    document.getElementById("descricao-input").value = editor.getHTML();
+  });
+});
+```
+
+O wrapper força `initialEditType: 'wysiwyg'`, `hideModeSwitch: true`, `language: 'pt-BR'` e `usageStatistics: false`. Passar essas chaves em `options` não tem efeito — são travadas após o merge.
+
+Persistência: o backend recebe HTML. Sanitizar/escapar antes de gravar (ver skill `frappe-security-performance`); nunca renderizar HTML do editor com `| safe` sem sanitização.
+
+### Botões em tamanho `sm`
+Use **sempre** a classe combinada `btn-sm-<variant>`: `btn-sm-outline`, `btn-sm-primary`, `btn-sm-destructive`, `btn-sm-ghost`. **Nunca** componha `btn-outline btn-sm` / `btn-primary btn-sm` — o bundle Basecoat usado pelo Gris não estiliza a forma decomposta e o botão fica sem aparência. Vale para paginação, ações de tabela, dialogs, toolbars e qualquer toolbar de ações compactas.
 
 Em formulários que usam `FormData` / submit nativo, passar `name="..."` para o macro. O macro renderiza um `<input type="hidden" name="...">` interno, atualizado pelo `select.js` a cada seleção, então `new FormData(form)` devolve o valor corrente.
 
@@ -178,6 +220,8 @@ Antes de criar componente novo, revisar:
 - Duplicar componente já existente em vez de reutilizar macros Basecoat.
 - Usar `gris/public/components` ou `components.css` como padrão de nova UI quando existir equivalente em Basecoat.
 - Usar `<select>` nativo em página de Portal quando existe a macro `select` do design system.
+- Usar `<textarea>` ou `contenteditable` cru quando o formulário do Portal precisa de formatação rica — usar o wrapper `gris.editor.create(...)`.
+- Carregar Toast UI Editor por CDN ou habilitar modo `markdown`/`hideModeSwitch: false` no Portal — o uso é vendor local em WYSIWYG fixo.
 - Carregar Basecoat ou macros de Portal no Desk para corrigir formulário, list view ou dashboard interno do Frappe.
 - Colocar lógica de API pesada diretamente no template em vez de centralizar em Python.
 - Entregar página apenas para desktop ou apenas para mobile.

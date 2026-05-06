@@ -1,207 +1,291 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, badge, button, card, empty, field, form, input %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
 {% block title %}Beneficiários{% endblock %}
 
 {% block head_include %}
-  {{ super() }}
-  <link rel="stylesheet" href="/responsavel/beneficiarios.css">
+	{{ super() }}
+	<link rel="stylesheet" href="/responsavel/beneficiarios.css">
 {% endblock %}
 
 {% block page_header %}
-  <div class="page-header">
-    <div class="page-header__content">
-      <h1 class="page-header__title">Beneficiários</h1>
-      <p class="page-header__subtitle">Gerencie os beneficiários vinculados ao seu cadastro.</p>
-    </div>
-  </div>
+	<section class="beneficiarios-page-header" aria-labelledby="beneficiarios-page-title">
+		<div class="flex flex-col gap-2 max-w-2xl">
+			<h1 id="beneficiarios-page-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Beneficiários</h1>
+			<p class="m-0 text-base leading-relaxed text-muted-foreground">Gerencie os beneficiários vinculados ao seu cadastro.</p>
+		</div>
+	</section>
 {% endblock %}
 
 {% block main %}
-<div class="beneficiarios-container">
-
+{% set schedule_select_items = [{"label": "Selecione uma data", "value": ""}] + (visit_date_options or []) %}
+<div class="beneficiarios-page">
 	{% if visit_info %}
-	<div class="card-modern mb-5" style="background-color: #f8fbff; border: 1px solid #bfdbfe; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); border-radius: 16px; overflow: hidden;">
-		<div class="card-modern__body visit-card-body">
-			<div style="flex-shrink: 0;">
-				<div style="background-color: #dbeafe; color: #2563eb; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.1);">
-					<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+		{% call card(attrs={"class": "beneficiarios-visit-card"}) %}
+			<div class="beneficiarios-visit">
+				<div class="beneficiarios-visit__icon" aria-hidden="true">
+					{{ lucide_icon("calendar-check", size="lg") }}
 				</div>
-			</div>
-			<div class="visit-card-content">
-				<h3 class="h5 mb-2" style="color: #1e3a8a; font-weight: 700; font-size: 1.25rem;">Visita Agendada!</h3>
-				<p class="mb-4" style="color: #475569; font-size: 1.05rem; line-height: 1.5;">Você tem uma visita agendada para o dia <strong style="color: #2563eb;">{{ visit_info.formatted_date }}</strong>.</p>
-				
-				<div class="visit-card-actions">
-					<button class="btn-modern btn-modern--sm btn-modern--primary" id="btn-reagendar-visita" style="box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);">Reagendar</button>
-					<button class="btn-modern btn-modern--sm" id="btn-cancelar-visita" style="background: white; border: 1px solid #cbd5e1; color: #64748b; padding: 0.5rem 1rem; font-weight: 500; transition: all 0.2s;">Cancelar agendamento</button>
-				</div>
-			</div>
-		</div>
-	</div>
-	{% endif %}
-	
-	<!-- Section 1: Beneficiários Registrados -->
-	<section class="mb-5">
-		<h2 class="section-title">Beneficiários Registrados</h2>
-		{% if beneficiarios_registrados %}
-			<div class="grid-cards">
-				{% for b in beneficiarios_registrados %}
-				<div class="card-modern card-modern--clickable" onclick="window.location.href='/associados/detalhe?name={{ b.name }}'">
-					<div class="card-modern__body">
-						<div class="d-flex justify-content-between align-items-start mb-3">
-							<h3 class="card-modern__title mb-0" style="font-size: 1.1rem;">{{ b.nome_completo }}</h3>
-							<span class="g-badge {{ b.status_class }}">{{ b.status }}</span>
-						</div>
-						<div class="info-grid">
-							<div class="info-item">
-								<span class="info-label">Registro</span>
-								<span class="info-value">{{ b.registro or '—' }}</span>
-							</div>
-							<div class="info-item">
-								<span class="info-label">Validade</span>
-								<span class="info-value">{{ b.validade_registro or '—' }}</span>
-							</div>
-							<div class="info-item" style="grid-column: span 2;">
-								<span class="info-label">Ramo</span>
-								<span class="info-value">{{ b.ramo or '—' }}</span>
-							</div>
-						</div>
+				<div class="beneficiarios-visit__content">
+					<div>
+						<h2>Visita agendada</h2>
+						<p>Você tem uma visita agendada para o dia <strong>{{ visit_info.formatted_date }}</strong>.</p>
+					</div>
+					<div class="beneficiarios-actions">
+						{{ button(
+							lucide_icon("calendar-days", size="sm") ~ "<span>Reagendar</span>",
+							variant="primary",
+							size="sm",
+							attrs={"id": "btn-reagendar-visita"}
+						) }}
+						{{ button(
+							lucide_icon("calendar-x", size="sm") ~ "<span>Cancelar agendamento</span>",
+							variant="outline",
+							size="sm",
+							attrs={"id": "btn-cancelar-visita"}
+						) }}
 					</div>
 				</div>
+			</div>
+		{% endcall %}
+	{% endif %}
+
+	<section class="beneficiarios-section" aria-labelledby="beneficiarios-registrados-title">
+		<header class="beneficiarios-section__header">
+			<div class="flex flex-col gap-1">
+				<h2 id="beneficiarios-registrados-title" class="m-0 text-xl font-semibold leading-tight text-foreground">Beneficiários registrados</h2>
+				<p class="m-0 text-sm leading-normal text-muted-foreground">Cadastros já vinculados ao seu responsável.</p>
+			</div>
+		</header>
+
+		{% if beneficiarios_registrados %}
+			<div class="beneficiarios-grid">
+				{% for b in beneficiarios_registrados %}
+					<a class="beneficiario-card-link" href="/associados/detalhe?name={{ b.name }}" aria-label="Abrir cadastro de {{ b.nome_completo }}">
+						{% call card(attrs={"class": "beneficiario-card beneficiario-card--clickable"}) %}
+							<div class="beneficiario-card__header">
+								<h3>{{ b.nome_completo }}</h3>
+								{{ badge(
+									b.status or "Sem status",
+									variant=b.status_badge_variant or "secondary",
+									outline=b.status_badge_outline
+								) }}
+							</div>
+							<dl class="beneficiario-info-grid">
+								<div>
+									<dt>Registro</dt>
+									<dd>{{ b.registro or "—" }}</dd>
+								</div>
+								<div>
+									<dt>Validade</dt>
+									<dd>{{ b.validade_registro or "—" }}</dd>
+								</div>
+								<div class="beneficiario-info-grid__wide">
+									<dt>Ramo</dt>
+									<dd>{{ b.ramo or "—" }}</dd>
+								</div>
+							</dl>
+						{% endcall %}
+					</a>
 				{% endfor %}
 			</div>
 		{% else %}
-			<div class="alert alert-info">Nenhum beneficiário registrado encontrado.</div>
+			{{ empty(
+				title="Nenhum beneficiário registrado",
+				description="Quando houver beneficiários com registro ativo, eles aparecerão aqui.",
+				icon=lucide_icon("users", size="lg")
+			) }}
 		{% endif %}
 	</section>
 
-	<!-- Section 2: Beneficiários em processo de integração -->
-	<section>
-		<div class="d-flex justify-content-between align-items-center mb-3 section-header-wrap">
-			<h2 class="section-title mb-0">Beneficiários em processo de integração</h2>
-			<div class="section-header-actions">
-				<button class="btn-modern btn-modern--primary" id="btn-adicionar-beneficiario">
-					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
-					Adicionar Beneficiário
-				</button>
+	<section class="beneficiarios-section" aria-labelledby="beneficiarios-integracao-title">
+		<header class="beneficiarios-section__header beneficiarios-section__header--actions">
+			<div class="flex flex-col gap-1">
+				<h2 id="beneficiarios-integracao-title" class="m-0 text-xl font-semibold leading-tight text-foreground">Beneficiários em integração</h2>
+				<p class="m-0 text-sm leading-normal text-muted-foreground">Acompanhe as etapas de recepção e registro.</p>
+			</div>
+			<div class="beneficiarios-actions">
+				{{ button(
+					lucide_icon("user-plus", size="sm") ~ "<span>Adicionar beneficiário</span>",
+					variant="primary",
+					attrs={"id": "btn-adicionar-beneficiario"}
+				) }}
 				{% if show_schedule_button %}
-					<button class="btn-modern btn-modern--primary" id="btn-agendar-visita">
-						Agendar Visita
-					</button>
+					{{ button(
+						lucide_icon("calendar-plus", size="sm") ~ "<span>Agendar visita</span>",
+						variant="outline",
+						attrs={"id": "btn-agendar-visita"}
+					) }}
 				{% endif %}
 			</div>
-		</div>
-		
+		</header>
+
 		{% if beneficiarios_integracao %}
-			<div class="grid-cards">
+			<div class="beneficiarios-grid">
 				{% for b in beneficiarios_integracao %}
-				<div class="card-modern">
-					<div class="card-modern__body">
-						<div class="mb-4">
-							<h3 class="card-modern__title mb-1" style="font-size: 1.1rem;">{{ b.nome_completo }}</h3>
-							<div class="text-muted small mb-3">{{ b.ramo or 'Ramo não definido' }}</div>
-							
+					{% call card(attrs={"class": "beneficiario-card"}) %}
+						<div class="beneficiario-card__header beneficiario-card__header--stacked">
+							<div>
+								<h3>{{ b.nome_completo }}</h3>
+								<p>{{ b.ramo or "Ramo não definido" }}</p>
+							</div>
 							{% if b.primeira_visita_realizada %}
-							<a href="/responsavel/registro?novo_associado={{ b.name }}" class="btn-modern btn-modern--sm btn-modern--primary">
-								{% if b.registro_criado_no_paxtu %}
-									Visualizar Dados
-								{% elif b.status == 'Fazer Registro' %}
-									Editar Dados
-								{% else %}
-									Preencher Registro
-								{% endif %}
-							</a>
+								<a href="/responsavel/registro?novo_associado={{ b.name }}" class="btn-sm-primary">
+									{{ lucide_icon("clipboard-list", size="sm") }}
+									{% if b.registro_criado_no_paxtu %}
+										Visualizar dados
+									{% elif b.status == "Fazer Registro" %}
+										Editar dados
+									{% else %}
+										Preencher registro
+									{% endif %}
+								</a>
 							{% endif %}
 						</div>
-						
-						<div class="timeline-container">
+
+						<ol class="beneficiarios-timeline" aria-label="Etapas de integração de {{ b.nome_completo }}">
 							{% for step in b.steps %}
-							<div class="timeline-item {% if step.completed %}completed{% elif step.is_overdue %}overdue{% endif %}">
-								<div class="timeline-marker"></div>
-								<div class="timeline-content">
-									<span class="timeline-label">{{ step.label }}</span>
-									{% if step.estimated_date and not step.completed %}
-									<div class="timeline-date {{ 'text-overdue' if step.is_overdue else '' }}">
-										{{ 'Em atraso: ' if step.is_overdue else 'Previsto: ' }} {{ step.estimated_date }}
-									</div>
-									{% endif %}
-								</div>
-							</div>
+								<li class="beneficiarios-timeline__item{% if step.completed %} beneficiarios-timeline__item--completed{% elif step.is_overdue %} beneficiarios-timeline__item--overdue{% endif %}">
+									<span class="beneficiarios-timeline__marker" aria-hidden="true">
+										{% if step.completed %}
+											{{ lucide_icon("check", size="sm") }}
+										{% elif step.is_overdue %}
+											{{ lucide_icon("triangle-alert", size="sm") }}
+										{% endif %}
+									</span>
+									<span class="beneficiarios-timeline__content">
+										<span class="beneficiarios-timeline__label">{{ step.label }}</span>
+										{% if step.estimated_date and not step.completed %}
+											<span class="beneficiarios-timeline__date">
+												{{ "Em atraso: " if step.is_overdue else "Previsto: " }}{{ step.estimated_date }}
+											</span>
+										{% endif %}
+									</span>
+								</li>
 							{% endfor %}
-						</div>
-					</div>
-				</div>
+						</ol>
+					{% endcall %}
 				{% endfor %}
 			</div>
 		{% else %}
-			<div class="text-muted p-3 border rounded bg-light text-center">
-				Nenhum beneficiário em processo de integração.
-			</div>
+			{{ empty(
+				title="Nenhum beneficiário em integração",
+				description="Novos beneficiários adicionados pelo responsável aparecerão nesta lista.",
+				icon=lucide_icon("user-round-plus", size="lg")
+			) }}
 		{% endif %}
 	</section>
 
-	<!-- Modal Agendamento -->
-	<div class="modal-backdrop" id="modalAgendamentoBackdrop" style="display: none;"></div>
-	<div class="modal-modern" id="modalAgendamento" tabindex="-1" style="display: none;">
-		<div class="modal-dialog">
-			<div class="modal-modern__content">
-				<div class="modal-modern__header">
-					<h5 class="modal-modern__title">Agendar Visita</h5>
-				</div>
-				<div class="modal-modern__body">
-					<p class="text-muted mb-3">Selecione uma data disponível para realizar a visita:</p>
-					<div id="dates-list" class="list-group">
-						<!-- Dates will be injected here -->
-						<div class="text-center p-3">Carregando datas...</div>
-					</div>
-				</div>
-				<div class="modal-modern__footer">
-					<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>Cancelar</button>
-					<button type="button" class="btn-modern btn-modern--primary" id="btn-confirmar-agendamento" disabled>Confirmar</button>
-				</div>
-			</div>
+	{% set schedule_footer %}
+		{{ button("Cancelar", variant="ghost", attrs={"data-close-dialog": "modalAgendamento"}) }}
+		{{ button("Confirmar", variant="primary", attrs={"id": "btn-confirmar-agendamento", "disabled": "disabled"}) }}
+	{% endset %}
+	{% call dialog(
+		id="modalAgendamento",
+		title="Agendar visita",
+		description="Selecione uma data disponível para realizar a visita.",
+		footer=schedule_footer,
+		dialog_attrs={"class": "beneficiarios-dialog"},
+		close_button=true
+	) %}
+		<div class="beneficiarios-dialog-body">
+			{% if visit_date_options %}
+				{{ select(
+					id="visit-date-select",
+					name="date",
+					selected="",
+					items=schedule_select_items,
+					main_attrs={"class": "beneficiarios-date-select"},
+					trigger_attrs={"class": "beneficiarios-date-select__trigger"}
+				) }}
+				<p class="beneficiarios-help-text">As datas consideram os próximos 60 dias e a disponibilidade do ramo.</p>
+			{% else %}
+				{{ alert(
+					icon=lucide_icon("calendar-x", size="sm"),
+					description="Nenhuma data disponível encontrada nos próximos 2 meses.",
+					variant="warning"
+				) }}
+			{% endif %}
 		</div>
-	</div>
+	{% endcall %}
 
-	<!-- Modal Adicionar Beneficiário -->
-	<div class="modal-backdrop" id="modalAdicionarBackdrop" style="display: none;"></div>
-	<div class="modal-modern" id="modalAdicionar" tabindex="-1" style="display: none;">
-		<div class="modal-dialog">
-			<div class="modal-modern__content">
-				<div class="modal-modern__header">
-					<h5 class="modal-modern__title">Adicionar Beneficiário</h5>
-				</div>
-				<div class="modal-modern__body">
-					<p class="text-muted mb-3">Informe os dados do jovem que deseja cadastrar.</p>
-					<p class="text-muted small mb-3"><span class="text-danger">*</span> Campos obrigatórios</p>
-					<form id="form-adicionar-beneficiario" novalidate>
-						<div class="form-group-modern">
-							<label for="add_nome_jovem" class="form-label-modern form-label-modern--required">Nome Completo do Jovem</label>
-							<input type="text" class="form-input-modern" id="add_nome_jovem" required>
-							<div class="invalid-feedback">Por favor, insira um nome válido (somente letras e espaços).</div>
-						</div>
-						<div class="form-group-modern">
-							<label for="add_cpf_jovem" class="form-label-modern form-label-modern--required">CPF do Jovem</label>
-							<input type="text" class="form-input-modern" id="add_cpf_jovem" required maxlength="14" placeholder="000.000.000-00">
-							<div class="invalid-feedback">CPF inválido.</div>
-						</div>
-						<div class="form-group-modern">
-							<label for="add_data_nascimento_jovem" class="form-label-modern form-label-modern--required">Data de Nascimento</label>
-							<input type="date" class="form-input-modern" id="add_data_nascimento_jovem" required>
-							<div class="invalid-feedback">Por favor, insira uma data válida anterior a hoje.</div>
-						</div>
-					</form>
-				</div>
-				<div class="modal-modern__footer">
-					<button type="button" class="btn-modern btn-modern--ghost" data-dismiss-modal>Cancelar</button>
-					<button type="button" class="btn-modern btn-modern--primary" id="btn-confirmar-adicionar">Adicionar</button>
-				</div>
-			</div>
-		</div>
-	</div>
+	{% set add_footer %}
+		{{ button("Cancelar", variant="ghost", attrs={"data-close-dialog": "modalAdicionar"}) }}
+		<button type="submit" form="form-adicionar-beneficiario" class="btn-primary" id="btn-confirmar-adicionar">Adicionar</button>
+	{% endset %}
+	{% call dialog(
+		id="modalAdicionar",
+		title="Adicionar beneficiário",
+		description="Informe os dados do jovem que deseja cadastrar.",
+		footer=add_footer,
+		dialog_attrs={"class": "beneficiarios-dialog"},
+		close_button=true
+	) %}
+		{% call form(attrs={"id": "form-adicionar-beneficiario", "novalidate": "novalidate"}) %}
+			{% call field(label="Nome completo do jovem", attrs={"class": "beneficiarios-field"}) %}
+				{{ input(
+					name="nome_jovem",
+					attrs={
+						"id": "add_nome_jovem",
+						"required": "required",
+						"autocomplete": "name"
+					}
+				) }}
+				<p class="beneficiarios-field-error" data-field-error="nome_jovem" hidden></p>
+			{% endcall %}
+			{% call field(label="CPF do jovem", attrs={"class": "beneficiarios-field"}) %}
+				{{ input(
+					name="cpf_jovem",
+					attrs={
+						"id": "add_cpf_jovem",
+						"required": "required",
+						"maxlength": "14",
+						"placeholder": "000.000.000-00",
+						"inputmode": "numeric",
+						"autocomplete": "off"
+					}
+				) }}
+				<p class="beneficiarios-field-error" data-field-error="cpf_jovem" hidden></p>
+			{% endcall %}
+			{% call field(label="Data de nascimento", attrs={"class": "beneficiarios-field"}) %}
+				{{ datepicker(
+					id="add_data_nascimento_jovem",
+					name="data_nascimento_jovem",
+					max=today_iso,
+					placeholder="Selecione a data"
+				) }}
+				<p class="beneficiarios-field-error" data-field-error="data_nascimento_jovem" hidden></p>
+			{% endcall %}
+		{% endcall %}
+	{% endcall %}
 
+	{% set cancel_footer %}
+		{{ button("Manter agendamento", variant="ghost", attrs={"data-close-dialog": "modalCancelarAgendamento"}) }}
+		{{ button("Cancelar agendamento", variant="destructive", attrs={"id": "btn-confirmar-cancelamento"}) }}
+	{% endset %}
+	{% call dialog(
+		id="modalCancelarAgendamento",
+		title="Cancelar agendamento",
+		description="Esta ação remove a visita agendada dos beneficiários em integração.",
+		footer=cancel_footer,
+		dialog_attrs={"class": "beneficiarios-dialog"},
+		close_button=true
+	) %}
+		{{ alert(
+			icon=lucide_icon("circle-alert", size="sm"),
+			description="Você poderá agendar uma nova visita depois, se ainda houver beneficiários aguardando essa etapa.",
+			variant="warning"
+		) }}
+	{% endcall %}
 </div>
-<div id="responsavel-data" data-cpf="{{ responsavel_cpf }}" style="display:none;"></div>
+
+<div id="responsavel-data" data-cpf="{{ responsavel_cpf }}" hidden></div>
+{{ toaster() }}
 {% endblock %}
 
 {% block script %}

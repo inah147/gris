@@ -1,1 +1,99 @@
-/* Styles have been moved to /assets/gris/css/components.css */
+/* Página /financeiro/dashboard — layout, filtros e gráficos */
+
+.financeiro-page-header {
+	margin-bottom: calc(var(--spacing) * 6);
+}
+
+.financeiro-section-title {
+	font-size: var(--text-base);
+	font-weight: 600;
+	color: var(--foreground);
+	margin: calc(var(--spacing) * 6) 0 calc(var(--spacing) * 4);
+}
+
+.financeiro-section-title:first-of-type {
+	margin-top: 0;
+}
+
+/* Filtros — mesmo padrão de associados/dashboard */
+.fin-filters {
+	--fin-filter-width: 12.5rem;
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 4);
+	align-items: flex-end;
+}
+
+.fin-filters > .field {
+	flex: 0 0 var(--fin-filter-width);
+	width: var(--fin-filter-width);
+}
+
+.fin-filters > .field .select,
+.fin-filters > .field .select > button {
+	width: 100%;
+}
+
+.fin-filters > .field .select > button {
+	justify-content: space-between;
+}
+
+.fin-filters__actions {
+	display: flex;
+	gap: calc(var(--spacing) * 2);
+	justify-content: flex-end;
+	margin-left: auto;
+}
+
+@media (max-width: 48rem) {
+	.fin-filters {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.fin-filters > .field {
+		flex: 0 0 auto;
+		width: 100%;
+	}
+
+	.fin-filters__actions {
+		margin-left: 0;
+		width: 100%;
+		justify-content: stretch;
+	}
+
+	.fin-filters__actions > .btn-primary,
+	.fin-filters__actions > .btn-sm-outline {
+		flex: 1;
+	}
+}
+
+/* Cards de métrica */
+.metric-card section {
+	padding: calc(var(--spacing) * 4) calc(var(--spacing) * 5);
+}
+
+.chart-card section {
+	padding: calc(var(--spacing) * 3) calc(var(--spacing) * 4) calc(var(--spacing) * 4);
+}
+
+[id^="chart-"].financeiro-chart {
+	width: 100%;
+}
+
+.financeiro-chart__loading {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+	color: var(--muted-foreground);
+	padding: calc(var(--spacing) * 4) 0;
+}
+
+/* Tooltip customizado consumido pelo dashboard.js */
+.echarts-tooltip-modern {
+	max-width: calc(100vw - 24px);
+	white-space: normal;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+	text-align: left;
+}

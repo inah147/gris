@@ -1,400 +1,397 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, empty %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
 
 {% block title %}Extrato{% endblock %}
 
 {% set active_link = '/financeiro/extrato' %}
 
 {% block page_header %}
-  <div class="page-header">
-    <div class="page-header__content">
-      <h1 class="page-header__title">Extrato</h1>
-      <p class="page-header__subtitle">Visualize e filtre todas as transações financeiras.</p>
-    </div>
-  </div>
+<section class="financeiro-page-header" aria-labelledby="financeiro-extrato-title">
+	<div class="flex flex-col gap-2 max-w-2xl">
+		<h1 id="financeiro-extrato-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Extrato</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">Visualize e filtre todas as transações financeiras.</p>
+	</div>
+</section>
 {% endblock %}
 
 {% block main %}
-  <div class="card-modern mb-4">
-    <div class="card-modern__body card-modern__body--compact">
-      <form method="get" class="filter-bar mb-0">
-        <div class="filter-field">
-          <label class="form-label-modern small">Data início</label>
-          <input type="date" name="data_inicio" class="form-input-modern form-input-modern--sm" value="{{ filtros_ativos.data_inicio or '' }}">
-        </div>
-        <div class="filter-field">
-          <label class="form-label-modern small">Data fim</label>
-          <input type="date" name="data_fim" class="form-input-modern form-input-modern--sm" value="{{ filtros_ativos.data_fim or '' }}">
-        </div>
-        <div class="filter-field">
-          <label class="form-label-modern small">Instituição</label>
-          <select name="instituicao" class="form-input-modern form-input-modern--sm">
-            <option value=""></option>
-            {% for op in opcoes_instituicao %}
-              <option value="{{ op }}" {% if filtros_ativos.instituicao==op %}selected{% endif %}>{{ op }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="filter-field">
-          <label class="form-label-modern small">Carteira</label>
-          <select name="carteira" class="form-input-modern form-input-modern--sm">
-            <option value=""></option>
-            {% for op in opcoes_carteira %}
-              <option value="{{ op }}" {% if filtros_ativos.carteira==op %}selected{% endif %}>{{ op }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="filter-field">
-          <label class="form-label-modern small">Categoria</label>
-          <select name="categoria" class="form-input-modern form-input-modern--sm">
-            <option value=""></option>
-            {% for op in opcoes_categoria %}
-              <option value="{{ op }}" {% if filtros_ativos.categoria==op %}selected{% endif %}>{{ op }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="filter-field">
-          <label class="form-label-modern small">Centro de custo</label>
-          <select name="centro_de_custo" class="form-input-modern form-input-modern--sm">
-            <option value=""></option>
-            {% for op in opcoes_centro_de_custo %}
-              <option value="{{ op }}" {% if filtros_ativos.centro_de_custo==op %}selected{% endif %}>{{ op }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="filter-field">
-          <label class="form-label-modern small">Fixo/Variável</label>
-          <select name="fixo_variavel" class="form-input-modern form-input-modern--sm">
-            <option value=""></option>
-            <option value="Fixo" {% if filtros_ativos.fixo_variavel=='Fixo' %}selected{% endif %}>Fixo</option>
-            <option value="Variável" {% if filtros_ativos.fixo_variavel=='Variável' %}selected{% endif %}>Variável</option>
-          </select>
-        </div>
-        <div class="filter-field">
-          <label class="form-label-modern small">Ordinária/Extraordinária</label>
-          <select name="ordinaria_extraordinaria" class="form-input-modern form-input-modern--sm">
-            <option value=""></option>
-            <option value="Ordinária" {% if filtros_ativos.ordinaria_extraordinaria=='Ordinária' %}selected{% endif %}>Ordinária</option>
-            <option value="Extraordinária" {% if filtros_ativos.ordinaria_extraordinaria=='Extraordinária' %}selected{% endif %}>Extraordinária</option>
-          </select>
-        </div>
-        <div class="filter-field">
-          <label class="form-label-modern small">Conta fixa</label>
-          <select name="conta_fixa" class="form-input-modern form-input-modern--sm">
-            <option value=""></option>
-            {% for op in opcoes_conta_fixa %}
-              <option value="{{ op }}" {% if filtros_ativos.conta_fixa==op %}selected{% endif %}>{{ op }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="filter-field">
-          <label class="form-label-modern small">Repasse entre contas</label>
-          <select name="repasse_entre_contas" class="form-input-modern form-input-modern--sm">
-            <option value=""></option>
-            <option value="1" {% if filtros_ativos.repasse_entre_contas=='1' %}selected{% endif %}>Sim</option>
-            <option value="0" {% if filtros_ativos.repasse_entre_contas=='0' %}selected{% endif %}>Não</option>
-          </select>
-        </div>
-        <div class="filter-field">
-          <label class="form-label-modern small">Transação revisada</label>
-          <select name="transacao_revisada" class="form-input-modern form-input-modern--sm">
-            <option value=""></option>
-            <option value="1" {% if filtros_ativos.transacao_revisada=='1' %}selected{% endif %}>Sim</option>
-            <option value="0" {% if filtros_ativos.transacao_revisada=='0' %}selected{% endif %}>Não</option>
-          </select>
-        </div>
-        <div class="filter-actions">
-          <button type="submit" class="btn-modern btn-modern--primary btn-modern--sm">Filtrar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-  <!-- Painel de Edição em Lote -->
-  <div id="batchEditPanel" class="card-modern mb-3" style="display: none;">
-    <div class="card-modern__header">
-      <div class="d-flex align-items-center justify-content-between w-100">
-        <div>
-          <h3 class="card-modern__title">Edição em Lote</h3>
-          <p class="card-modern__subtitle mb-0"><span id="selectedCount">0</span> transações selecionadas</p>
-        </div>
-        <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" onclick="cancelarSelecao()">Cancelar</button>
-      </div>
-    </div>
-    <div class="card-modern__body">
-      <form id="batchEditForm" class="row g-3">
-        <div class="col-md-6">
-          <label class="form-label-modern">Descrição Reduzida</label>
-          <input type="text" id="batch_descricao_reduzida" class="form-input-modern form-input-modern--sm" placeholder="Deixe em branco para não alterar">
-        </div>
-        <div class="col-md-6">
-          <label class="form-label-modern">Categoria</label>
-          <select id="batch_categoria" class="form-input-modern form-input-modern--sm">
-            <option value="">Não alterar</option>
-            {% for op in opcoes_categoria %}
-              <option value="{{ op }}">{{ op }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label-modern">Centro de Custo</label>
-          <select id="batch_centro_de_custo" class="form-input-modern form-input-modern--sm">
-            <option value="">Não alterar</option>
-            {% for op in opcoes_centro_de_custo %}
-              <option value="{{ op }}">{{ op }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label-modern">Ordinária/Extraordinária</label>
-          <select id="batch_ordinaria_extraordinaria" class="form-input-modern form-input-modern--sm">
-            <option value="">Não alterar</option>
-            <option value="Ordinária">Ordinária</option>
-            <option value="Extraordinária">Extraordinária</option>
-          </select>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label-modern">Transação Revisada</label>
-          <select id="batch_transacao_revisada" class="form-input-modern form-input-modern--sm">
-            <option value="">Não alterar</option>
-            <option value="1">Sim</option>
-            <option value="0">Não</option>
-          </select>
-        </div>
-        <div class="col-12">
-          <button type="button" class="btn-modern btn-modern--primary" onclick="salvarEdicaoLote()">Salvar Alterações</button>
-        </div>
-      </form>
-    </div>
-  </div>
+{% set ns = namespace(
+	instituicao=[{"label": "Todas", "value": ""}],
+	carteira=[{"label": "Todas", "value": ""}],
+	categoria=[{"label": "Todas", "value": ""}],
+	centro=[{"label": "Todos", "value": ""}],
+	conta_fixa=[{"label": "Todas", "value": ""}]
+) %}
+{% for v in opcoes_instituicao %}{% set ns.instituicao = ns.instituicao + [{"label": v, "value": v}] %}{% endfor %}
+{% for v in opcoes_carteira %}{% set ns.carteira = ns.carteira + [{"label": v, "value": v}] %}{% endfor %}
+{% for v in opcoes_categoria %}{% set ns.categoria = ns.categoria + [{"label": v, "value": v}] %}{% endfor %}
+{% for v in opcoes_centro_de_custo %}{% set ns.centro = ns.centro + [{"label": v, "value": v}] %}{% endfor %}
+{% for v in opcoes_conta_fixa %}{% set ns.conta_fixa = ns.conta_fixa + [{"label": v, "value": v}] %}{% endfor %}
 
-  <div class="card-modern">
-    <div class="table-responsive">
-      <table class="data-table" id="extratoTable">
-        <thead>
-          <tr>
-            <th style="width: 50px; padding-left: 2rem;">
-              <input type="checkbox" id="selectAll" class="form-check-input" onchange="toggleSelectAll(this)" style="cursor: pointer;">
-            </th>
-            <th style="width: 40px;"></th>
-            <th style="width: 120px;">Data/Hora</th>
-            <th>Descrição Reduzida</th>
-            {% if can_view_full_description %}
-            <th>Descrição</th>
-            {% endif %}
-            <th style="width: 120px; text-align: right;">Valor</th>
-            <th style="width: 150px;">Instituição</th>
-            <th style="width: 130px;">Carteira</th>
-            <th style="width: 150px;">Categoria</th>
-            <th style="width: 150px;">Centro de Custo</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for transacao in transacoes %}
-            <tr data-transaction-id="{{ transacao.name }}">
-              <td style="text-align: center; padding-left: 2rem;" onclick="event.stopPropagation();">
-                <input type="checkbox" class="form-check-input transaction-checkbox" value="{{ transacao.name }}" onchange="updateSelection()" style="cursor: pointer;">
-              </td>
-              <td style="text-align: center;" onclick="rowClick('{{ transacao.name }}');" style="cursor: pointer;">
-                {% if transacao.transacao_revisada %}
-                  <span class="status-indicator status-indicator--reviewed" title="Transação revisada">
-                    <span class="status-indicator__dot"></span>
-                  </span>
-                {% else %}
-                  <span class="status-indicator status-indicator--pending-review" title="Aguardando revisão">
-                    <span class="status-indicator__dot"></span>
-                  </span>
-                {% endif %}
-              </td>
-              <td onclick="rowClick('{{ transacao.name }}');" style="cursor: pointer;">
-                <div style="font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;">
-                  {{ transacao.timestamp_transacao.strftime('%d/%m/%Y') if transacao.timestamp_transacao else "-" }}
-                </div>
-                <div style="font-size: 0.7rem; color: var(--text-muted); white-space: nowrap;">
-                  {{ transacao.timestamp_transacao.strftime('%H:%M') if transacao.timestamp_transacao else "" }}
-                </div>
-              </td>
-              <td onclick="rowClick('{{ transacao.name }}');" style="cursor: pointer;">
-                <div style="font-weight: 500; color: var(--text-primary);">
-                  {{ (transacao.descricao_reduzida[:45] + '...') if transacao.descricao_reduzida and transacao.descricao_reduzida|length > 45 else (transacao.descricao_reduzida or "-") }}
-                </div>
-              </td>
-              {% if can_view_full_description %}
-              <td onclick="rowClick('{{ transacao.name }}');" style="cursor: pointer;">
-                <div style="font-weight: 500; color: var(--text-primary);">
-                  {{ (transacao.descricao[:70] + '...') if transacao.descricao and transacao.descricao|length > 70 else (transacao.descricao or "-") }}
-                </div>
-              </td>
-              {% endif %}
-              <td style="text-align: right;" onclick="rowClick('{{ transacao.name }}');" style="cursor: pointer;">
-                <span style="font-weight: 600; font-size: 0.875rem; color: var(--text-primary); white-space: nowrap;">
-                  R$ {{ '{:,.2f}'.format(transacao.valor|float).replace(',', 'X').replace('.', ',').replace('X', '.') if transacao.valor is not none else '-' }}
-                </span>
-              </td>
-              <td onclick="rowClick('{{ transacao.name }}');" style="cursor: pointer;">
-                {% if transacao.instituicao %}
-                  {% set inst = transacao.instituicao.lower() %}
-                  {% if 'btg empresas' in inst %}
-                    <span class="g-badge g-badge--primary g-badge--small">{{ transacao.instituicao }}</span>
-                  {% elif 'btg investimentos' in inst %}
-                    <span class="g-badge g-badge--primary g-badge--small g-badge--outline">{{ transacao.instituicao }}</span>
-                  {% elif 'portão 3' in inst or 'portao 3' in inst %}
-                    <span class="g-badge g-badge--purple g-badge--small">{{ transacao.instituicao }}</span>
-                  {% elif 'inifinitepay' in inst or 'infinitepay' in inst %}
-                    <span class="g-badge g-badge--success g-badge--small">{{ transacao.instituicao }}</span>
-                  {% elif 'pagbank' in inst %}
-                    <span class="g-badge g-badge--warning g-badge--small">{{ transacao.instituicao }}</span>
-                  {% else %}
-                    <span class="g-badge g-badge--neutral g-badge--small">{{ transacao.instituicao }}</span>
-                  {% endif %}
-                {% else %}
-                  <span style="color: var(--text-muted); font-size: 0.75rem;">—</span>
-                {% endif %}
-              </td>
-              <td onclick="rowClick('{{ transacao.name }}');" style="cursor: pointer;">
-                {% if transacao.carteira %}
-                  <span class="g-badge g-badge--secondary g-badge--small">{{ transacao.carteira }}</span>
-                {% else %}
-                  <span style="color: var(--text-muted); font-size: 0.75rem;">—</span>
-                {% endif %}
-              </td>
-              <td onclick="rowClick('{{ transacao.name }}');" style="cursor: pointer;">
-                {% if transacao.categoria %}
-                  <span class="g-badge g-badge--accent g-badge--small g-badge--outline">{{ transacao.categoria }}</span>
-                {% else %}
-                  <span style="color: var(--text-muted); font-size: 0.75rem;">—</span>
-                {% endif %}
-              </td>
-              <td onclick="rowClick('{{ transacao.name }}');" style="cursor: pointer;">
-                {% if transacao.centro_de_custo %}
-                  <span class="g-badge g-badge--info g-badge--small g-badge--outline">{{ transacao.centro_de_custo }}</span>
-                {% else %}
-                  <span style="color: var(--text-muted); font-size: 0.75rem;">—</span>
-                {% endif %}
-              </td>
-            </tr>
-          {% else %}
-            <tr>
-              <td colspan="{{ 10 if can_view_full_description else 9 }}">
-                <div class="empty-state" style="border: none; margin: 2rem 0;">
-                  <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 64px; height: 64px; margin-bottom: 1rem; color: var(--text-muted);">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <path d="M16 16s-1.5-2-4-2-4 2-4 2M9 9h.01M15 9h.01"></path>
-                  </svg>
-                  <h3 class="empty-state__title">Nenhuma transação encontrada</h3>
-                  <p class="empty-state__description">Tente ajustar os filtros acima</p>
-                </div>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  
-  {% if paginacao and paginacao.total > paginacao.tamanho_pagina %}
-    <div id="extrato-pagination" class="pagination-modern mt-4"
-      data-total="{{ paginacao.total }}"
-      data-page="{{ paginacao.pagina_atual }}"
-      data-pagesize="{{ paginacao.tamanho_pagina }}"></div>
-    <script src="/financeiro/extrato.js"></script>
-  {% endif %}
+{% set fixo_variavel_items = [
+	{"label": "Todos", "value": ""},
+	{"label": "Fixo", "value": "Fixo"},
+	{"label": "Variável", "value": "Variável"}
+] %}
+{% set ord_extra_items = [
+	{"label": "Todos", "value": ""},
+	{"label": "Ordinária", "value": "Ordinária"},
+	{"label": "Extraordinária", "value": "Extraordinária"}
+] %}
+{% set sim_nao_items = [
+	{"label": "Todos", "value": ""},
+	{"label": "Sim", "value": "1"},
+	{"label": "Não", "value": "0"}
+] %}
+{% set batch_categoria_items = [{"label": "Não alterar", "value": ""}] %}
+{% for v in opcoes_categoria %}{% set batch_categoria_items = batch_categoria_items + [{"label": v, "value": v}] %}{% endfor %}
+{% set batch_centro_items = [{"label": "Não alterar", "value": ""}] %}
+{% for v in opcoes_centro_de_custo %}{% set batch_centro_items = batch_centro_items + [{"label": v, "value": v}] %}{% endfor %}
+{% set batch_ord_items = [
+	{"label": "Não alterar", "value": ""},
+	{"label": "Ordinária", "value": "Ordinária"},
+	{"label": "Extraordinária", "value": "Extraordinária"}
+] %}
+{% set batch_revisada_items = [
+	{"label": "Não alterar", "value": ""},
+	{"label": "Sim", "value": "1"},
+	{"label": "Não", "value": "0"}
+] %}
+
+<article class="card mb-4">
+	<section>
+		<form method="get" class="extrato-filtros">
+			<div class="field">
+				<label class="label" for="extrato-filter-data-inicio">Data início</label>
+				{{ datepicker(id="extrato-filter-data-inicio", name="data_inicio", value=(filtros_ativos.data_inicio or ''), placeholder="Selecione a data") }}
+			</div>
+			<div class="field">
+				<label class="label" for="extrato-filter-data-fim">Data fim</label>
+				{{ datepicker(id="extrato-filter-data-fim", name="data_fim", value=(filtros_ativos.data_fim or ''), placeholder="Selecione a data") }}
+			</div>
+			<div class="field">
+				<label class="label" for="extrato-filter-instituicao">Instituição</label>
+				{{ select(id="extrato-filter-instituicao", name="instituicao", items=ns.instituicao, selected=filtros_ativos.instituicao or '') }}
+			</div>
+			<div class="field">
+				<label class="label" for="extrato-filter-carteira">Carteira</label>
+				{{ select(id="extrato-filter-carteira", name="carteira", items=ns.carteira, selected=filtros_ativos.carteira or '', is_combobox=true, search_placeholder="Buscar carteira…") }}
+			</div>
+			<div class="field">
+				<label class="label" for="extrato-filter-categoria">Categoria</label>
+				{{ select(id="extrato-filter-categoria", name="categoria", items=ns.categoria, selected=filtros_ativos.categoria or '', is_combobox=true, search_placeholder="Buscar categoria…") }}
+			</div>
+			<div class="field">
+				<label class="label" for="extrato-filter-centro">Centro de custo</label>
+				{{ select(id="extrato-filter-centro", name="centro_de_custo", items=ns.centro, selected=filtros_ativos.centro_de_custo or '', is_combobox=true, search_placeholder="Buscar centro…") }}
+			</div>
+			<div class="field">
+				<label class="label" for="extrato-filter-fixo-variavel">Fixo/Variável</label>
+				{{ select(id="extrato-filter-fixo-variavel", name="fixo_variavel", items=fixo_variavel_items, selected=filtros_ativos.fixo_variavel or '') }}
+			</div>
+			<div class="field">
+				<label class="label" for="extrato-filter-ord-extra">Ordinária/Extraordinária</label>
+				{{ select(id="extrato-filter-ord-extra", name="ordinaria_extraordinaria", items=ord_extra_items, selected=filtros_ativos.ordinaria_extraordinaria or '') }}
+			</div>
+			<div class="field">
+				<label class="label" for="extrato-filter-conta-fixa">Conta fixa</label>
+				{{ select(id="extrato-filter-conta-fixa", name="conta_fixa", items=ns.conta_fixa, selected=filtros_ativos.conta_fixa or '') }}
+			</div>
+			<div class="field">
+				<label class="label" for="extrato-filter-repasse">Repasse entre contas</label>
+				{{ select(id="extrato-filter-repasse", name="repasse_entre_contas", items=sim_nao_items, selected=filtros_ativos.repasse_entre_contas or '') }}
+			</div>
+			<div class="field">
+				<label class="label" for="extrato-filter-revisada">Transação revisada</label>
+				{{ select(id="extrato-filter-revisada", name="transacao_revisada", items=sim_nao_items, selected=filtros_ativos.transacao_revisada or '') }}
+			</div>
+			<div class="extrato-filtros__actions">
+				<button type="submit" class="btn-sm-primary">Filtrar</button>
+				<a class="btn-sm-outline" href="/financeiro/extrato">Limpar</a>
+			</div>
+		</form>
+	</section>
+</article>
+
+<article id="batchEditPanel" class="card mb-4 hidden">
+	<header class="flex items-center justify-between gap-3 flex-wrap">
+		<div class="flex flex-col gap-1">
+			<h3 class="m-0 text-lg font-semibold text-foreground">Edição em lote</h3>
+			<p class="m-0 text-sm text-muted-foreground"><span id="selectedCount">0</span> transações selecionadas</p>
+		</div>
+		<button type="button" class="btn-sm-outline" onclick="cancelarSelecao()">Cancelar</button>
+	</header>
+	<section>
+		<form id="batchEditForm" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+			<div class="field">
+				<label class="label" for="batch_descricao_reduzida">Descrição reduzida</label>
+				<input type="text" id="batch_descricao_reduzida" class="input" placeholder="Deixe em branco para não alterar" />
+			</div>
+			<div class="field">
+				<label class="label" for="batch_categoria">Categoria</label>
+				{{ select(id="batch_categoria", name="batch_categoria", items=batch_categoria_items, is_combobox=true, search_placeholder="Buscar categoria…") }}
+			</div>
+			<div class="field">
+				<label class="label" for="batch_centro_de_custo">Centro de custo</label>
+				{{ select(id="batch_centro_de_custo", name="batch_centro_de_custo", items=batch_centro_items, is_combobox=true, search_placeholder="Buscar centro…") }}
+			</div>
+			<div class="field">
+				<label class="label" for="batch_ordinaria_extraordinaria">Ordinária/Extraordinária</label>
+				{{ select(id="batch_ordinaria_extraordinaria", name="batch_ordinaria_extraordinaria", items=batch_ord_items) }}
+			</div>
+			<div class="field">
+				<label class="label" for="batch_transacao_revisada">Transação revisada</label>
+				{{ select(id="batch_transacao_revisada", name="batch_transacao_revisada", items=batch_revisada_items) }}
+			</div>
+			<div class="md:col-span-2">
+				<button type="button" class="btn-sm-primary" onclick="salvarEdicaoLote()">Salvar alterações</button>
+			</div>
+		</form>
+	</section>
+</article>
+
+<article class="card extrato-tabela__card">
+	<section class="p-0 extrato-tabela__section">
+		<div class="extrato-tabela__scroll">
+			<table class="table extrato-tabela">
+				<thead>
+					<tr>
+						<th style="width:48px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" aria-label="Selecionar todas as transações" /></th>
+						<th style="width:32px;" aria-label="Status de revisão"></th>
+						<th style="width:130px;">Data/Hora</th>
+						<th>Descrição reduzida</th>
+						{% if can_view_full_description %}
+						<th>Descrição</th>
+						{% endif %}
+						<th class="text-right" style="width:130px;">Valor</th>
+						<th>Instituição</th>
+						<th>Carteira</th>
+						<th>Categoria</th>
+						<th>Centro de custo</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for transacao in transacoes %}
+						<tr data-transaction-id="{{ transacao.name }}" class="extrato-row">
+							<td onclick="event.stopPropagation();">
+								<input type="checkbox" class="transaction-checkbox" value="{{ transacao.name }}" onchange="updateSelection()" aria-label="Selecionar transação" />
+							</td>
+							<td onclick="rowClick('{{ transacao.name }}');" class="cursor-pointer">
+								{% if transacao.transacao_revisada %}
+									<span class="review-dot review-dot--reviewed" title="Transação revisada" aria-label="Transação revisada"></span>
+								{% else %}
+									<span class="review-dot review-dot--pending" title="Aguardando revisão" aria-label="Aguardando revisão"></span>
+								{% endif %}
+							</td>
+							<td onclick="rowClick('{{ transacao.name }}');" class="cursor-pointer whitespace-nowrap">
+								<div class="text-sm text-muted-foreground">
+									{{ transacao.timestamp_transacao.strftime('%d/%m/%Y') if transacao.timestamp_transacao else '—' }}
+								</div>
+								<div class="text-xs text-muted-foreground">
+									{{ transacao.timestamp_transacao.strftime('%H:%M') if transacao.timestamp_transacao else '' }}
+								</div>
+							</td>
+							<td onclick="rowClick('{{ transacao.name }}');" class="cursor-pointer">
+								<div class="font-medium text-foreground">
+									{{ (transacao.descricao_reduzida[:45] + '…') if transacao.descricao_reduzida and transacao.descricao_reduzida|length > 45 else (transacao.descricao_reduzida or '—') }}
+								</div>
+							</td>
+							{% if can_view_full_description %}
+							<td onclick="rowClick('{{ transacao.name }}');" class="cursor-pointer">
+								<div class="font-medium text-foreground">
+									{{ (transacao.descricao[:70] + '…') if transacao.descricao and transacao.descricao|length > 70 else (transacao.descricao or '—') }}
+								</div>
+							</td>
+							{% endif %}
+							<td onclick="rowClick('{{ transacao.name }}');" class="cursor-pointer text-right whitespace-nowrap font-semibold">
+								{% if transacao.valor is not none %}
+									R$ {{ '{:,.2f}'.format(transacao.valor|float).replace(',', 'X').replace('.', ',').replace('X', '.') }}
+								{% else %}
+									—
+								{% endif %}
+							</td>
+							<td onclick="rowClick('{{ transacao.name }}');" class="cursor-pointer">
+								{% if transacao.instituicao %}
+									{% set inst = transacao.instituicao.lower() %}
+									{% if 'btg empresas' in inst %}
+										{{ badge(transacao.instituicao, variant="default") }}
+									{% elif 'btg investimentos' in inst %}
+										{{ badge(transacao.instituicao, variant="default", outline=true) }}
+									{% elif 'portão 3' in inst or 'portao 3' in inst %}
+										{{ badge(transacao.instituicao, variant="info") }}
+									{% elif 'infinitepay' in inst or 'inifinitepay' in inst %}
+										{{ badge(transacao.instituicao, variant="success") }}
+									{% elif 'pagbank' in inst %}
+										{{ badge(transacao.instituicao, variant="warning") }}
+									{% else %}
+										{{ badge(transacao.instituicao, variant="secondary") }}
+									{% endif %}
+								{% else %}
+									<span class="text-xs text-muted-foreground">—</span>
+								{% endif %}
+							</td>
+							<td onclick="rowClick('{{ transacao.name }}');" class="cursor-pointer">
+								{% if transacao.carteira %}
+									{{ badge(transacao.carteira, variant="secondary") }}
+								{% else %}
+									<span class="text-xs text-muted-foreground">—</span>
+								{% endif %}
+							</td>
+							<td onclick="rowClick('{{ transacao.name }}');" class="cursor-pointer">
+								{% if transacao.categoria %}
+									{{ badge(transacao.categoria, variant="default", outline=true) }}
+								{% else %}
+									<span class="text-xs text-muted-foreground">—</span>
+								{% endif %}
+							</td>
+							<td onclick="rowClick('{{ transacao.name }}');" class="cursor-pointer">
+								{% if transacao.centro_de_custo %}
+									{{ badge(transacao.centro_de_custo, variant="info", outline=true) }}
+								{% else %}
+									<span class="text-xs text-muted-foreground">—</span>
+								{% endif %}
+							</td>
+						</tr>
+					{% else %}
+						<tr>
+							<td colspan="{{ 10 if can_view_full_description else 9 }}">
+								{{ empty(
+									title="Nenhuma transação encontrada",
+									description="Tente ajustar os filtros acima.",
+									image="/assets/gris/images/gris-character/gris-search.png",
+									image_size="md",
+									image_alt="Personagem Gris com lupa, indicando busca sem resultado"
+								) }}
+							</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</section>
+</article>
+
+{% if paginacao and paginacao.total > paginacao.tamanho_pagina %}
+	<nav id="extrato-pagination" class="pagination mt-4"
+		data-total="{{ paginacao.total }}"
+		data-page="{{ paginacao.pagina_atual }}"
+		data-pagesize="{{ paginacao.tamanho_pagina }}"
+		aria-label="Paginação do extrato"></nav>
+{% endif %}
 {% endblock %}
 
 {% block extra_script %}
 <script>
 function toggleSelectAll(checkbox) {
-  const checkboxes = document.querySelectorAll('.transaction-checkbox');
-  checkboxes.forEach(cb => cb.checked = checkbox.checked);
-  updateSelection();
+	document.querySelectorAll('.transaction-checkbox').forEach(cb => cb.checked = checkbox.checked);
+	updateSelection();
 }
 
 function updateSelection() {
-  const selected = document.querySelectorAll('.transaction-checkbox:checked');
-  const count = selected.length;
-  const panel = document.getElementById('batchEditPanel');
-  const countSpan = document.getElementById('selectedCount');
-  
-  countSpan.textContent = count;
-  
-  if (count > 0) {
-    panel.style.display = 'block';
-  } else {
-    panel.style.display = 'none';
-  }
-  
-  // Atualiza checkbox "selecionar todos"
-  const allCheckboxes = document.querySelectorAll('.transaction-checkbox');
-  const selectAllCheckbox = document.getElementById('selectAll');
-  selectAllCheckbox.checked = allCheckboxes.length > 0 && count === allCheckboxes.length;
+	const selected = document.querySelectorAll('.transaction-checkbox:checked');
+	const count = selected.length;
+	const panel = document.getElementById('batchEditPanel');
+	const countSpan = document.getElementById('selectedCount');
+
+	if (countSpan) countSpan.textContent = count;
+
+	if (panel) {
+		if (count > 0) {
+			panel.classList.remove('hidden');
+		} else {
+			panel.classList.add('hidden');
+		}
+	}
+
+	const all = document.querySelectorAll('.transaction-checkbox');
+	const selectAllCheckbox = document.getElementById('selectAll');
+	if (selectAllCheckbox) {
+		selectAllCheckbox.checked = all.length > 0 && count === all.length;
+	}
 }
 
 function cancelarSelecao() {
-  document.querySelectorAll('.transaction-checkbox').forEach(cb => cb.checked = false);
-  document.getElementById('selectAll').checked = false;
-  updateSelection();
-  
-  // Limpa o formulário
-  document.getElementById('batchEditForm').reset();
+	document.querySelectorAll('.transaction-checkbox').forEach(cb => cb.checked = false);
+	const selectAllCheckbox = document.getElementById('selectAll');
+	if (selectAllCheckbox) selectAllCheckbox.checked = false;
+	updateSelection();
+
+	const form = document.getElementById('batchEditForm');
+	if (form) {
+		const desc = document.getElementById('batch_descricao_reduzida');
+		if (desc) desc.value = '';
+		['batch_categoria', 'batch_centro_de_custo', 'batch_ordinaria_extraordinaria', 'batch_transacao_revisada'].forEach(id => {
+			const wrapper = document.getElementById(id);
+			if (!wrapper) return;
+			const hidden = wrapper.querySelector('input[type="hidden"]');
+			if (hidden) hidden.value = '';
+			const trigger = wrapper.querySelector('[id$="-trigger"] .truncate');
+			if (trigger) trigger.textContent = 'Não alterar';
+		});
+	}
 }
 
 function rowClick(transactionId) {
-  window.location.href = '/financeiro/detalhe_extrato?name=' + transactionId;
+	window.location.href = '/financeiro/detalhe_extrato?name=' + transactionId;
+}
+
+function getBatchSelectValue(wrapperId) {
+	const wrapper = document.getElementById(wrapperId);
+	if (!wrapper) return '';
+	const hidden = wrapper.querySelector('input[type="hidden"]');
+	return hidden ? hidden.value : '';
 }
 
 function salvarEdicaoLote() {
-  const selected = Array.from(document.querySelectorAll('.transaction-checkbox:checked')).map(cb => cb.value);
-  
-  if (selected.length === 0) {
-    frappe.msgprint('Nenhuma transação selecionada');
-    return;
-  }
-  
-  // Coleta os valores do formulário
-  const updates = {};
-  const descricao = document.getElementById('batch_descricao_reduzida').value.trim();
-  const categoria = document.getElementById('batch_categoria').value;
-  const centroCusto = document.getElementById('batch_centro_de_custo').value;
-  const ordinaria = document.getElementById('batch_ordinaria_extraordinaria').value;
-  const revisada = document.getElementById('batch_transacao_revisada').value;
-  
-  if (descricao) updates.descricao_reduzida = descricao;
-  if (categoria) updates.categoria = categoria;
-  if (centroCusto) updates.centro_de_custo = centroCusto;
-  if (ordinaria) updates.ordinaria_extraordinaria = ordinaria;
-  if (revisada) updates.transacao_revisada = parseInt(revisada);
-  
-  if (Object.keys(updates).length === 0) {
-    frappe.msgprint('Selecione pelo menos um campo para alterar');
-    return;
-  }
-  
-  console.log('Sending batch update:', {
-    transaction_ids: selected,
-    updates: updates
-  });
-  
-  frappe.call({
-    method: 'gris.api.financeiro.transactions.batch_update_transactions',
-    args: {
-      transaction_ids: JSON.stringify(selected),
-      updates: JSON.stringify(updates)
-    },
-    freeze: true,
-    freeze_message: 'Atualizando transações...',
-    callback: function(r) {
-      console.log('Response:', r);
-      if (r.message && r.message.success) {
-        frappe.show_alert({
-          message: `${r.message.updated_count} transações atualizadas com sucesso`,
-          indicator: 'green'
-        });
-        setTimeout(() => window.location.reload(), 1500);
-      }
-    },
-    error: function(err) {
-      console.error('Error details:', err);
-      frappe.msgprint('Erro ao atualizar transações');
-    }
-  });
+	const selected = Array.from(document.querySelectorAll('.transaction-checkbox:checked')).map(cb => cb.value);
+
+	if (selected.length === 0) {
+		frappe.msgprint('Nenhuma transação selecionada');
+		return;
+	}
+
+	const updates = {};
+	const descricao = document.getElementById('batch_descricao_reduzida').value.trim();
+	const categoria = getBatchSelectValue('batch_categoria');
+	const centroCusto = getBatchSelectValue('batch_centro_de_custo');
+	const ordinaria = getBatchSelectValue('batch_ordinaria_extraordinaria');
+	const revisada = getBatchSelectValue('batch_transacao_revisada');
+
+	if (descricao) updates.descricao_reduzida = descricao;
+	if (categoria) updates.categoria = categoria;
+	if (centroCusto) updates.centro_de_custo = centroCusto;
+	if (ordinaria) updates.ordinaria_extraordinaria = ordinaria;
+	if (revisada) updates.transacao_revisada = parseInt(revisada);
+
+	if (Object.keys(updates).length === 0) {
+		frappe.msgprint('Selecione pelo menos um campo para alterar');
+		return;
+	}
+
+	frappe.call({
+		method: 'gris.api.financeiro.transactions.batch_update_transactions',
+		args: {
+			transaction_ids: JSON.stringify(selected),
+			updates: JSON.stringify(updates)
+		},
+		freeze: true,
+		freeze_message: 'Atualizando transações...',
+		callback: function (r) {
+			if (r.message && r.message.success) {
+				frappe.show_alert({
+					message: `${r.message.updated_count} transações atualizadas com sucesso`,
+					indicator: 'green'
+				});
+				setTimeout(() => window.location.reload(), 1500);
+			}
+		},
+		error: function () {
+			frappe.msgprint('Erro ao atualizar transações');
+		}
+	});
 }
 </script>
 {% endblock %}

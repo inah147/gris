@@ -1,7 +1,7 @@
 import frappe
 import pandas as pd
 
-from gris.api.portal_access import enrich_context, user_has_access
+from gris.api.portal_access import enrich_context
 from gris.api.portal_cache_utils import get_uel_cached
 
 no_cache = 1
@@ -76,8 +76,6 @@ def get_context(context):
 	df = pd.DataFrame(transacoes_dict)
 
 	# Buscar saldo inicial de cada instituição somando o campo saldo_inicial de todas as carteiras
-	from datetime import datetime, timedelta
-
 	# Buscar saldos iniciais = saldo_inicial das carteiras + transações anteriores ao período
 	saldos_iniciais = {inst: 0.0 for inst in instituicoes_nomes}
 

@@ -1,7 +1,6 @@
 import frappe
-import pandas as pd
 
-from gris.api.portal_access import enrich_context, user_has_access
+from gris.api.portal_access import enrich_context
 from gris.api.portal_cache_utils import get_uel_cached
 
 no_cache = 1
@@ -114,11 +113,6 @@ def get_context(context):
 	# compute saldo inicial per month: saldo inicial month 1 = sum of transactions before year start
 	# then saldo inicial for month N = saldo final month N-1
 	# saldo final month = saldo inicial + (entradas - saidas)
-
-	# compute prior balance up to day before year start
-	saldo_prev = {}
-	for sec in ["entradas", "saidas"]:
-		saldo_prev[sec] = 0.0
 
 	# we consider saldo as entradas - saidas across all categories and institutions
 	# get total before year

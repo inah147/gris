@@ -30,15 +30,7 @@
         Cancelado: "Cancelado",
     };
 
-    const WEEKDAY_LABELS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
-    function isMobileMeetingsViewport() {
-        return window.matchMedia("(max-width: 768px)").matches;
-    }
-
-    function getDefaultMeetingsViewMode() {
-        return isMobileMeetingsViewport() ? "list" : "calendar";
-    }
 
     const state = {
         projetoName: "",
@@ -54,9 +46,6 @@
         participantsSaving: false,
         dragTaskName: "",
         isDraggingTask: false,
-        calendarDate: new Date(),
-        meetingsViewMode: getDefaultMeetingsViewMode(),
-        useFrappeEditor: false,
         meetingEditors: {
             pauta: null,
             ata: null,
@@ -98,23 +87,26 @@
     }
 
     function showAlert(message, type) {
-        if (type !== "error") {
-            hideAlert();
-            return;
-        }
-
         const el = document.getElementById("projectAlert");
         if (!el) return;
-        el.classList.remove("d-none", "alert-modern--error", "alert-modern--success");
-        el.classList.add(type === "error" ? "alert-modern--error" : "alert-modern--success");
-        el.textContent = message;
+        el.className = "alert " + (type === "error" ? "alert-destructive" : "alert-success");
+        el.innerHTML = "<section>" + escapeHtml(message) + "</section>";
+        el.removeAttribute("hidden");
     }
 
     function hideAlert() {
         const el = document.getElementById("projectAlert");
         if (!el) return;
-        el.classList.add("d-none");
+        el.setAttribute("hidden", "");
         el.textContent = "";
+    }
+
+    function showToast(message, category = "info") {
+        document.dispatchEvent(
+            new CustomEvent("basecoat:toast", {
+                detail: { config: { category, description: message } },
+            })
+        );
     }
 
     function getEventTargetElement(event) {
@@ -196,6 +188,37 @@
         el.textContent = text || "-";
     }
 
+    function getSelectComponentValue(selectId, fallback = "") {
+        const selectEl = document.getElementById(selectId);
+        if (!selectEl) return fallback;
+
+        const currentValue = selectEl.value;
+        if (typeof currentValue === "string" && currentValue.trim()) {
+            return currentValue.trim();
+        }
+
+        if (Array.isArray(currentValue) && currentValue.length) {
+            return String(currentValue[0] || "").trim() || fallback;
+        }
+
+        const hiddenInput = selectEl.querySelector(':scope > input[type="hidden"]');
+        const hiddenValue = String(hiddenInput?.value || "").trim();
+        return hiddenValue || fallback;
+    }
+
+    function setSelectComponentValue(selectId, value) {
+        const selectEl = document.getElementById(selectId);
+        if (!selectEl) return;
+
+        const nextValue = String(value || "").trim();
+        selectEl.value = nextValue;
+
+        const hiddenInput = selectEl.querySelector(':scope > input[type="hidden"]');
+        if (hiddenInput) {
+            hiddenInput.value = nextValue;
+        }
+    }
+
     function updateGoogleDriveButton(link) {
         const button = document.getElementById("btnAbrirGoogleDrive");
         if (!button) return;
@@ -270,84 +293,6 @@
         el.innerHTML = markdownToHtml(value || "");
     }
 
-    function requireFrappeBundle(bundleName, timeoutMs = 6000) {
-        return new Promise((resolve) => {
-            if (!window.frappe || typeof frappe.require !== "function") {
-                resolve(false);
-                return;
-            }
-
-            let settled = false;
-            const timer = window.setTimeout(() => {
-                if (!settled) {
-                    settled = true;
-                    resolve(false);
-                }
-            }, timeoutMs);
-
-            const finalize = (result) => {
-                if (settled) {
-                    return;
-                }
-                settled = true;
-                window.clearTimeout(timer);
-                resolve(Boolean(result));
-            };
-
-            try {
-                const maybePromise = frappe.require(bundleName, () => finalize(true));
-                if (maybePromise && typeof maybePromise.then === "function") {
-                    maybePromise.then(() => finalize(true)).catch(() => finalize(false));
-                }
-            } catch (error) {
-                finalize(false);
-            }
-        });
-    }
-
-    async function ensureFrappeTextEditorAvailable() {
-        if (!window.frappe) {
-            return false;
-        }
-
-        const hasFactory = Boolean(window.frappe?.ui?.form?.make_control);
-        const hasTextEditor = Boolean(window.frappe?.ui?.form?.ControlTextEditor);
-        if (!hasFactory || !hasTextEditor) {
-            await requireFrappeBundle("controls.bundle.js");
-        }
-
-        return Boolean(window.frappe?.ui?.form?.make_control && window.frappe?.ui?.form?.ControlTextEditor);
-    }
-
-    function createMeetingTextEditor(hostId, fieldname) {
-        const host = document.getElementById(hostId);
-        if (!host || !window.frappe?.ui?.form?.make_control) {
-            return null;
-        }
-
-        host.innerHTML = "";
-        const control = frappe.ui.form.make_control({
-            parent: host,
-            only_input: true,
-            render_input: 1,
-            df: {
-                fieldtype: "Text Editor",
-                fieldname,
-                label: "",
-            },
-        });
-
-        if (!control || typeof control.refresh !== "function") {
-            return null;
-        }
-
-        control.refresh();
-        if (control.$wrapper) {
-            control.$wrapper.find(".tooltip-content").remove();
-        }
-        return control;
-    }
-
     function updateMeetingAtaAvailability(editable) {
         const ataSection = document.getElementById("meetingAtaSection");
         const canEditAta = Boolean(editable && state.meetingPersisted);
@@ -356,129 +301,110 @@
             ataSection.classList.toggle("d-none", !state.meetingPersisted);
         }
 
-        if (state.useFrappeEditor) {
-            const ataHost = document.getElementById("meeting_ata_editor_host");
-            if (ataHost) {
-                ataHost.classList.toggle("is-locked", !canEditAta);
-            }
-
-            if (!state.meetingPersisted) {
-                setFrappeEditorValue(state.meetingEditors.ata, "");
-            }
-            setFrappeEditorReadOnly(state.meetingEditors.ata, !canEditAta);
-            return;
+        if (!state.meetingPersisted) {
+            setToastEditorValue(state.meetingEditors.ata, "");
         }
-
-        const ataInput = document.getElementById("meeting_ata");
-        if (ataInput) {
-            if (!state.meetingPersisted) {
-                ataInput.value = "";
-            }
-            ataInput.disabled = !canEditAta;
-        }
+        setToastEditorReadOnly(state.meetingEditors.ata, !canEditAta, "meeting_ata_editor_host");
     }
 
-    function setMeetingEditorMode(useFrappeEditor) {
-        state.useFrappeEditor = Boolean(useFrappeEditor);
-
-        ["meeting_pauta_editor_host", "meeting_ata_editor_host"].forEach((id) => {
-            const host = document.getElementById(id);
-            if (!host) return;
-            host.classList.toggle("d-none", !state.useFrappeEditor);
-        });
-
-        ["meeting_pauta_markdown_block", "meeting_ata_markdown_block"].forEach((id) => {
-            const block = document.getElementById(id);
-            if (!block) return;
-            block.classList.toggle("d-none", state.useFrappeEditor);
-        });
-    }
-
-    function setTaskObservacoesEditorMode(useFrappeEditor) {
+    function setTaskObservacoesEditorMode(useRichEditor) {
         const host = document.getElementById("task_observacoes_editor_host");
         const block = document.getElementById("task_observacoes_markdown_block");
 
         if (host) {
-            host.classList.toggle("d-none", !useFrappeEditor);
+            host.classList.toggle("d-none", !useRichEditor);
         }
         if (block) {
-            block.classList.toggle("d-none", useFrappeEditor);
+            block.classList.toggle("d-none", useRichEditor);
         }
     }
 
-    function setFrappeEditorValue(control, value) {
-        if (!control) return;
+    function setToastEditorValue(editor, value) {
+        if (!editor || typeof editor.setMarkdown !== "function") return;
+        try {
+            editor.setMarkdown(value || "", false);
+        } catch (error) {
+            // ignore — editor pode estar em estado transitório
+        }
+    }
 
-        if (typeof control.set_value === "function") {
-            Promise.resolve(control.set_value(value || "", true)).catch(() => {
-                if (typeof control.set_input === "function") {
-                    control.set_input(value || "");
-                }
+    function getToastEditorValue(editor) {
+        if (!editor || typeof editor.getMarkdown !== "function") return "";
+        try {
+            return String(editor.getMarkdown() || "").trim();
+        } catch (error) {
+            return "";
+        }
+    }
+
+    function setToastEditorReadOnly(editor, readOnly, hostId = "task_observacoes_editor_host") {
+        const host = document.getElementById(hostId);
+        if (host) {
+            host.classList.toggle("is-readonly", Boolean(readOnly));
+            host.querySelectorAll("[contenteditable]").forEach((el) => {
+                el.setAttribute("contenteditable", readOnly ? "false" : "true");
             });
+        }
+    }
+
+    async function initTaskObservacoesEditor() {
+        const host = document.getElementById("task_observacoes_editor_host");
+        if (!host || !window.gris?.editor?.create) {
+            setTaskObservacoesEditorMode(false);
+            state.taskObservacoesEditor = null;
             return;
         }
 
-        if (typeof control.set_input === "function") {
-            control.set_input(value || "");
+        host.innerHTML = "";
+        try {
+            const editor = await window.gris.editor.create(host, {
+                initialValue: "",
+                toolbarItems: [
+                    ["heading", "bold", "italic", "strike"],
+                    ["hr", "quote"],
+                    ["ul", "ol", "task"],
+                    ["table", "link"],
+                    ["code", "codeblock"],
+                ],
+            });
+            state.taskObservacoesEditor = editor;
+            setTaskObservacoesEditorMode(true);
+        } catch (error) {
+            state.taskObservacoesEditor = null;
+            setTaskObservacoesEditorMode(false);
         }
     }
 
-    function getFrappeEditorValue(control) {
-        if (!control) return "";
-
-        if (typeof control.get_input_value === "function") {
-            return String(control.get_input_value() || "").trim();
+    async function initMeetingToastEditor(hostId) {
+        const host = document.getElementById(hostId);
+        if (!host || !window.gris?.editor?.create) {
+            return null;
         }
 
-        if (typeof control.get_value === "function") {
-            return String(control.get_value() || "").trim();
-        }
-
-        return "";
-    }
-
-    function setFrappeEditorReadOnly(control, readOnly) {
-        if (!control) return;
-
-        control.df.read_only = readOnly ? 1 : 0;
-        if (control.quill && typeof control.quill.enable === "function") {
-            control.quill.enable(!readOnly);
-        }
-        if (control.$wrapper) {
-            control.$wrapper.toggleClass("is-disabled", Boolean(readOnly));
+        host.innerHTML = "";
+        try {
+            return await window.gris.editor.create(host, {
+                initialValue: "",
+                toolbarItems: [
+                    ["heading", "bold", "italic", "strike"],
+                    ["hr", "quote"],
+                    ["ul", "ol", "task"],
+                    ["table", "link"],
+                    ["code", "codeblock"],
+                ],
+            });
+        } catch (error) {
+            return null;
         }
     }
 
     async function initMeetingEditors() {
-        setMeetingEditorMode(false);
-        setTaskObservacoesEditorMode(false);
-        state.taskObservacoesEditor = null;
-
-        const isAvailable = await ensureFrappeTextEditorAvailable();
-        if (!isAvailable) {
-            return;
-        }
-
-        const pautaEditor = createMeetingTextEditor("meeting_pauta_editor_host", "meeting_pauta_rich");
-        const ataEditor = createMeetingTextEditor("meeting_ata_editor_host", "meeting_ata_rich");
-        const taskObservacoesEditor = createMeetingTextEditor(
-            "task_observacoes_editor_host",
-            "task_observacoes_rich"
-        );
-
-        if (!pautaEditor || !ataEditor) {
-            state.meetingEditors = { pauta: null, ata: null };
-            setMeetingEditorMode(false);
-        } else {
-            state.meetingEditors = {
-                pauta: pautaEditor,
-                ata: ataEditor,
-            };
-            setMeetingEditorMode(true);
-        }
-
-        state.taskObservacoesEditor = taskObservacoesEditor || null;
-        setTaskObservacoesEditorMode(Boolean(taskObservacoesEditor));
+        const [pautaEditor, ataEditor] = await Promise.all([
+            initMeetingToastEditor("meeting_pauta_editor_host"),
+            initMeetingToastEditor("meeting_ata_editor_host"),
+        ]);
+        state.meetingEditors.pauta = pautaEditor;
+        state.meetingEditors.ata = ataEditor;
     }
 
     function renderTableRows(tbodyId, rows, columns) {
@@ -757,9 +683,8 @@
                         <td>${sponsorChip}</td>
                         <td>${approverChip}</td>
                         <td>
-                            <label class="participant-toggle">
-                                <input type="checkbox" data-participa-idx="${index}" ${participaChecked} ${participaDisabled} />
-                                <span>${row.participa_avaliacao ? "Sim" : "Não"}</span>
+                            <label class="switch">
+                                <input type="checkbox" role="switch" class="input" data-participa-idx="${index}" ${participaChecked} ${participaDisabled} />
                             </label>
                         </td>
                     </tr>
@@ -768,28 +693,67 @@
             .join("");
     }
 
+    function buildBasecoatSelectHtml(id, items, { isCombobox = false, searchPlaceholder = "Buscar..." } = {}) {
+        const optionsHtml = items
+            .map((item) => `<div role="option" data-value="${escapeHtml(item.value || "")}">${escapeHtml(item.label || item.value || "")}</div>`)
+            .join("");
+        const listboxId = `${id}-listbox`;
+        const popoverId = `${id}-popover`;
+        const triggerId = `${id}-trigger`;
+
+        const triggerIcon = isCombobox
+            ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>`
+            : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
+
+        const searchHeader = isCombobox
+            ? `<header>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" value="" placeholder="${escapeHtml(searchPlaceholder)}" autocomplete="off" autocorrect="off" spellcheck="false" aria-autocomplete="list" role="combobox" aria-expanded="false" aria-controls="${listboxId}" aria-labelledby="${triggerId}" />
+            </header>`
+            : "";
+
+        return `<div id="${id}" class="select">
+            <button type="button" class="btn-outline" id="${triggerId}" aria-haspopup="listbox" aria-expanded="false" aria-controls="${listboxId}">
+                <span class="truncate">Selecione</span>
+                ${triggerIcon}
+            </button>
+            <div id="${popoverId}" data-popover aria-hidden="true">
+                ${searchHeader}
+                <div role="listbox" id="${listboxId}" tabindex="0">${optionsHtml}</div>
+            </div>
+            <input type="hidden" name="${id}-value" value="">
+        </div>`;
+    }
+
     function populateParticipantSelects() {
-        const associadoSelect = document.getElementById("participant_associado");
-        const responsavelSelect = document.getElementById("participant_responsavel");
-        if (!associadoSelect || !responsavelSelect) return;
+        const associadoWrapper = document.getElementById("participant_associado_wrapper");
+        const responsavelWrapper = document.getElementById("participant_responsavel_wrapper");
 
-        const associadosOptions = (state.choices?.associados || [])
-            .map((item) => `<option value="${escapeHtml(item.value || "")}">${escapeHtml(item.label || item.value || "")}</option>`)
-            .join("");
-        const responsaveisOptions = (state.choices?.responsaveis || [])
-            .map((item) => `<option value="${escapeHtml(item.value || "")}">${escapeHtml(item.label || item.value || "")}</option>`)
-            .join("");
-
-        associadoSelect.innerHTML = `<option value="">Selecione</option>${associadosOptions}`;
-        responsavelSelect.innerHTML = `<option value="">Selecione</option>${responsaveisOptions}`;
+        if (associadoWrapper) {
+            associadoWrapper.innerHTML = buildBasecoatSelectHtml("participant_associado", state.choices?.associados || [], { isCombobox: true });
+        }
+        if (responsavelWrapper) {
+            responsavelWrapper.innerHTML = buildBasecoatSelectHtml("participant_responsavel", state.choices?.responsaveis || [], { isCombobox: true });
+        }
     }
 
     function updateParticipantModalType() {
-        const tipo = (document.getElementById("participant_tipo_pessoa")?.value || "Outro").trim();
+        const tipo = getSelectComponentValue("participant_tipo_pessoa", "Outro");
         const associadoGroup = document.getElementById("participant_associado_group");
         const responsavelGroup = document.getElementById("participant_responsavel_group");
-        if (associadoGroup) associadoGroup.classList.toggle("d-none", tipo !== "Associado");
-        if (responsavelGroup) responsavelGroup.classList.toggle("d-none", tipo !== "Responsavel");
+
+        const showAssociado = tipo === "Associado";
+        const showResponsavel = tipo === "Responsavel";
+
+        if (associadoGroup) associadoGroup.classList.toggle("d-none", !showAssociado);
+        if (responsavelGroup) responsavelGroup.classList.toggle("d-none", !showResponsavel);
+
+        if (!showAssociado) {
+            setSelectComponentValue("participant_associado", "");
+        }
+        if (!showResponsavel) {
+            setSelectComponentValue("participant_responsavel", "");
+        }
     }
 
     async function preloadParticipantContact(tipoPessoa, docname) {
@@ -863,18 +827,9 @@
             title.textContent = "Novo envolvido";
         }
 
-        const warning = document.getElementById("participantModalWarning");
-        if (warning) {
-            warning.classList.add("d-none");
-            warning.textContent = "";
-        }
-
         const indexInput = document.getElementById("participant_index");
         if (indexInput) indexInput.value = "";
 
-        const tipoInput = document.getElementById("participant_tipo_pessoa");
-        const associadoInput = document.getElementById("participant_associado");
-        const responsavelInput = document.getElementById("participant_responsavel");
         const nomeInput = document.getElementById("participant_nome");
         const emailInput = document.getElementById("participant_email");
         const telefoneInput = document.getElementById("participant_telefone");
@@ -882,9 +837,9 @@
         const coordenadorInput = document.getElementById("participant_coordenador");
         const participaInput = document.getElementById("participant_participa_avaliacao");
 
-        if (tipoInput) tipoInput.value = row.tipo_pessoa || "Outro";
-        if (associadoInput) associadoInput.value = row.associado || "";
-        if (responsavelInput) responsavelInput.value = row.responsavel || "";
+        setSelectComponentValue("participant_tipo_pessoa", row.tipo_pessoa || "Outro");
+        setSelectComponentValue("participant_associado", row.associado || "");
+        setSelectComponentValue("participant_responsavel", row.responsavel || "");
         if (nomeInput) nomeInput.value = row.nome || "";
         if (emailInput) emailInput.value = row.email || "";
         if (telefoneInput) telefoneInput.value = row.telefone || "";
@@ -898,9 +853,9 @@
     }
 
     function collectParticipantModalPayload() {
-        const tipo = (document.getElementById("participant_tipo_pessoa")?.value || "Outro").trim() || "Outro";
-        const associado = (document.getElementById("participant_associado")?.value || "").trim();
-        const responsavel = (document.getElementById("participant_responsavel")?.value || "").trim();
+        const tipo = getSelectComponentValue("participant_tipo_pessoa", "Outro") || "Outro";
+        const associado = getSelectComponentValue("participant_associado", "");
+        const responsavel = getSelectComponentValue("participant_responsavel", "");
         const nome = (document.getElementById("participant_nome")?.value || "").trim();
         const email = (document.getElementById("participant_email")?.value || "").trim();
         const telefone = (document.getElementById("participant_telefone")?.value || "").trim();
@@ -1129,7 +1084,7 @@
 
         const status = (document.getElementById("task_status")?.value || "Nao iniciado").trim() || "Nao iniciado";
         const startDateValue = (document.getElementById("task_data_inicio")?.value || "").trim();
-        const dueDateValue = (document.getElementById("task_prazo")?.value || "").trim();
+        const dueDateValue = getTaskPrazoValue();
         const deliveryInput = document.getElementById("task_data_entrega");
         const deliveryDateValue = (deliveryInput?.value || "").trim();
 
@@ -1317,12 +1272,16 @@
                     `;
                           })
                           .join("")
-                    : '<div class="task-empty">Nenhuma tarefa encontrada</div>';
+                    : "";
 
+                const taskWord = tasks.length !== 1 ? 'tarefas' : 'tarefa';
                 return `
                     <section class="task-column" data-task-column="${escapeHtml(status)}">
                         <header class="task-column__header">
-                            <h4 class="task-column__title">${escapeHtml(TASK_STATUS_LABELS[status] || status)}</h4>
+                            <div class="task-column__heading">
+                                <h4 class="task-column__title">${escapeHtml(TASK_STATUS_LABELS[status] || status)}</h4>
+                                <p class="task-column__subtitle">${tasks.length} ${taskWord}</p>
+                            </div>
                             <span class="g-badge g-badge--secondary">${tasks.length}</span>
                         </header>
                         <div class="task-column__body" data-task-status="${escapeHtml(status)}">
@@ -1334,9 +1293,9 @@
             .join("");
     }
 
-    function renderTaskResponsavelSelect(selectedValue) {
-        const select = document.getElementById("task_responsavel");
-        if (!select) return;
+    function renderTaskResponsavelCombobox(selectedValue) {
+        const wrapper = document.getElementById("task_responsavel_wrapper");
+        if (!wrapper) return;
 
         const normalizedSelected = String(selectedValue || "").trim();
         const normalizedOptions = Array.from(
@@ -1348,16 +1307,73 @@
             )
         );
 
-        const options = ['<option value="">Selecione</option>']
-            .concat(
-                normalizedOptions.map((item) => {
-                    const selected = item === normalizedSelected ? "selected" : "";
-                    return `<option value="${escapeHtml(item)}" ${selected}>${escapeHtml(item)}</option>`;
-                })
-            )
-            .join("");
+        const items = [{ value: "", label: "Selecione" }].concat(
+            normalizedOptions.map((item) => ({ value: item, label: item }))
+        );
 
-        select.innerHTML = options;
+        wrapper.innerHTML = buildBasecoatSelectHtml("task_responsavel", items, {
+            isCombobox: true,
+            searchPlaceholder: "Buscar responsável...",
+        });
+
+        // Pre-select current value after rendering
+        if (normalizedSelected) {
+            const selectEl = document.getElementById("task_responsavel");
+            if (selectEl) {
+                const option = selectEl.querySelector(`[role="option"][data-value="${CSS.escape(normalizedSelected)}"]`);
+                if (option) {
+                    const label = selectEl.querySelector("button > span.truncate");
+                    if (label) label.textContent = normalizedSelected;
+                    const hiddenInput = selectEl.querySelector(':scope > input[type="hidden"]');
+                    if (hiddenInput) hiddenInput.value = normalizedSelected;
+                }
+            }
+        }
+
+        // Re-initialize Basecoat for the newly injected component
+        document.dispatchEvent(new CustomEvent("gris:design-system:init"));
+    }
+
+    function buildDatepickerHtml(id, isoValue) {
+        const locale = "pt-BR";
+        const placeholder = "Selecione uma data";
+        const popoverId = `${id}-popover`;
+        const safeValue = escapeHtml(isoValue || "");
+        const safePlaceholder = escapeHtml(placeholder);
+        const spriteBase = "/assets/gris/design_system/icons/lucide/sprite.svg";
+        return `<div id="${id}" class="datepicker" data-datepicker data-mode="single" data-locale="${locale}" data-placeholder="${safePlaceholder}">
+  <button type="button" class="datepicker-trigger input" aria-haspopup="dialog" aria-expanded="false" aria-controls="${popoverId}">
+    <svg class="ds-lucide ds-lucide--sm datepicker-trigger__icon" viewBox="0 0 24 24" aria-hidden="true"><use href="${spriteBase}#calendar"></use></svg>
+    <span class="datepicker-trigger__label datepicker-trigger__label--placeholder" data-datepicker-label>${safePlaceholder}</span>
+  </button>
+  <input type="hidden" data-datepicker-value value="${safeValue}">
+  <div id="${popoverId}" class="datepicker-popover" data-datepicker-popover role="dialog" aria-modal="false" aria-label="Selecionar data" hidden>
+    <header class="datepicker-popover__header">
+      <button type="button" class="datepicker-popover__nav" data-datepicker-prev aria-label="Mês anterior"><svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="${spriteBase}#chevron-left"></use></svg></button>
+      <span class="datepicker-popover__title" data-datepicker-title aria-live="polite"></span>
+      <button type="button" class="datepicker-popover__nav" data-datepicker-next aria-label="Próximo mês"><svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="${spriteBase}#chevron-right"></use></svg></button>
+    </header>
+    <div class="datepicker-popover__weekdays" aria-hidden="true" data-datepicker-weekdays></div>
+    <div class="datepicker-popover__grid" role="grid" data-datepicker-grid></div>
+    <footer class="datepicker-popover__footer">
+      <button type="button" class="datepicker-popover__action" data-datepicker-clear>Limpar</button>
+      <button type="button" class="datepicker-popover__action" data-datepicker-today>Hoje</button>
+    </footer>
+  </div>
+</div>`;
+    }
+
+    function getTaskPrazoValue() {
+        const dp = document.getElementById("task_prazo_datepicker");
+        if (!dp) return "";
+        return dp.querySelector("[data-datepicker-value]")?.value || "";
+    }
+
+    function renderTaskPrazoDatepicker(value) {
+        const wrapper = document.getElementById("task_prazo_wrapper");
+        if (!wrapper) return;
+        wrapper.innerHTML = buildDatepickerHtml("task_prazo_datepicker", value || "");
+        document.dispatchEvent(new CustomEvent("gris:design-system:init"));
     }
 
     function setTaskModalHeading(task) {
@@ -1370,8 +1386,8 @@
 
         if (subtitle) {
             subtitle.textContent = task?.name
-                ? "Atualize os metadados e registre atividades no histórico de comentários."
-                : "Preencha os metadados e salve para habilitar comentários na lateral.";
+                ? "Atualize os dados e registre atividades no histórico de comentários."
+                : "Preencha os dados e salve para habilitar comentários na lateral.";
         }
     }
 
@@ -1382,46 +1398,19 @@
     function setTaskTitleValue(value) {
         const normalized = String(value || "").trim();
         const hidden = document.getElementById("task_descricao");
-        const display = document.getElementById("taskTitleDisplay");
         const editor = document.getElementById("task_title_editor");
 
         if (hidden) {
             hidden.value = normalized;
         }
 
-        if (display) {
-            display.textContent = normalized || "Clique para definir o título da tarefa";
-            display.classList.toggle("is-placeholder", !normalized);
-        }
-
-        if (editor && !state.taskTitleEditing) {
+        if (editor) {
             editor.value = normalized;
         }
     }
 
-    function setTaskTitleEditMode(editing) {
-        const canEditTitle = Boolean(editing && state.canEdit);
-        const display = document.getElementById("taskTitleDisplay");
-        const editor = document.getElementById("task_title_editor");
-
-        state.taskTitleEditing = canEditTitle;
-
-        if (display) {
-            display.classList.toggle("d-none", canEditTitle);
-            display.classList.toggle("is-readonly", !state.canEdit);
-        }
-
-        if (editor) {
-            editor.classList.toggle("d-none", !canEditTitle);
-            editor.disabled = !state.canEdit;
-            if (canEditTitle) {
-                editor.value = getTaskTitleValue();
-                requestAnimationFrame(() => {
-                    editor.focus();
-                    editor.setSelectionRange(editor.value.length, editor.value.length);
-                });
-            }
-        }
+    function setTaskTitleEditMode(_editing) {
+        // título agora é sempre editável via textarea; função mantida por compatibilidade
     }
 
     function startTaskTitleEdit() {
@@ -1853,11 +1842,9 @@
     function setTaskModalEditability(editable) {
         [
             "task_data_inicio",
-            "task_prazo",
             "task_data_entrega",
             "task_title_editor",
             "task_status",
-            "task_responsavel",
             "task_observacoes",
         ].forEach((fieldId) => {
             const field = document.getElementById(fieldId);
@@ -1866,8 +1853,20 @@
             }
         });
 
+        // Disable the trigger button of the responsável Basecoat combobox
+        const responsavelTrigger = document.querySelector("#task_responsavel > button");
+        if (responsavelTrigger) {
+            responsavelTrigger.disabled = !editable;
+        }
+
+        // Disable the trigger button of the prazo Basecoat datepicker
+        const prazoTrigger = document.querySelector("#task_prazo_datepicker > button");
+        if (prazoTrigger) {
+            prazoTrigger.disabled = !editable;
+        }
+
         if (state.taskObservacoesEditor) {
-            setFrappeEditorReadOnly(state.taskObservacoesEditor, !editable);
+            setToastEditorReadOnly(state.taskObservacoesEditor, !editable);
         }
 
         const taskModal = document.getElementById("taskModal");
@@ -1898,7 +1897,7 @@
 
         document.getElementById("task_name").value = task?.name || "";
         document.getElementById("task_data_inicio").value = task?.data_inicio || "";
-        document.getElementById("task_prazo").value = task?.prazo || "";
+        renderTaskPrazoDatepicker(task?.prazo || "");
         document.getElementById("task_data_entrega").value = task?.data_entrega || "";
         setTaskTitleValue(task?.descricao || "");
         state.taskTitleBeforeEdit = getTaskTitleValue();
@@ -1912,7 +1911,7 @@
             taskObservacoesInput.value = observacoes;
         }
         if (state.taskObservacoesEditor) {
-            setFrappeEditorValue(state.taskObservacoesEditor, observacoes);
+            setToastEditorValue(state.taskObservacoesEditor, observacoes);
         }
 
         state.editingCommentName = "";
@@ -1923,7 +1922,7 @@
             commentInput.value = "";
         }
 
-        renderTaskResponsavelSelect(task?.responsavel || "");
+        renderTaskResponsavelCombobox(task?.responsavel || "");
         setTaskModalHeading(task);
         renderTaskComments();
         setTaskModalEditability(state.canEdit);
@@ -1938,16 +1937,16 @@
 
     function collectTaskPayload() {
         const observacoes = state.taskObservacoesEditor
-            ? getFrappeEditorValue(state.taskObservacoesEditor)
+            ? getToastEditorValue(state.taskObservacoesEditor)
             : (document.getElementById("task_observacoes")?.value || "").trim();
 
         return {
             name: (document.getElementById("task_name")?.value || "").trim(),
             data_inicio: (document.getElementById("task_data_inicio")?.value || "").trim(),
-            prazo: (document.getElementById("task_prazo")?.value || "").trim(),
+            prazo: getTaskPrazoValue(),
             data_entrega: (document.getElementById("task_data_entrega")?.value || "").trim(),
             descricao: (document.getElementById("task_descricao")?.value || "").trim(),
-            responsavel: (document.getElementById("task_responsavel")?.value || "").trim(),
+            responsavel: getSelectComponentValue("task_responsavel"),
             status: (document.getElementById("task_status")?.value || "").trim() || "Nao iniciado",
             observacoes,
         };
@@ -1962,11 +1961,11 @@
 
         const payload = collectTaskPayload();
         if (!payload.descricao) {
-            showAlert("Informe o título da tarefa.", "error");
+            showToast("Informe o título da tarefa.", "error");
             return;
         }
         if (!payload.prazo) {
-            showAlert("Informe o prazo da tarefa.", "error");
+            showToast("Informe o prazo da tarefa.", "error");
             return;
         }
 
@@ -2074,221 +2073,17 @@
         return (state.projeto?.reunioes || []).find((item) => (item.name || "") === name) || null;
     }
 
-    function groupMeetingsByDay(meetings) {
-        const map = {};
-        (meetings || []).forEach((meeting) => {
-            const date = parseDateTimeFlexible(meeting.data_hora);
-            if (!date) return;
-            const key = toDateKey(date);
-            if (!map[key]) {
-                map[key] = [];
-            }
-            map[key].push(meeting);
-        });
-
-        Object.keys(map).forEach((key) => {
-            map[key].sort((a, b) => {
-                const left = parseDateTimeFlexible(a.data_hora);
-                const right = parseDateTimeFlexible(b.data_hora);
-                if (!left || !right) return 0;
-                return left.getTime() - right.getTime();
-            });
-        });
-
-        return map;
-    }
-
-    function getCalendarStart(monthDate) {
-        const first = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
-        const dayOfWeek = (first.getDay() + 6) % 7;
-        const start = new Date(first);
-        start.setDate(first.getDate() - dayOfWeek);
-        start.setHours(0, 0, 0, 0);
-        return start;
-    }
-
-    function normalizeMeetingsViewMode(mode) {
-        return mode === "list" ? "list" : "calendar";
-    }
-
-    function updateMeetingsViewControls() {
-        const mode = normalizeMeetingsViewMode(state.meetingsViewMode);
-        const calendarContainer = document.getElementById("meetingsCalendar");
-        const listContainer = document.getElementById("meetingsList");
-
-        if (calendarContainer) {
-            calendarContainer.classList.toggle("d-none", mode !== "calendar");
-        }
-
-        if (listContainer) {
-            listContainer.classList.toggle("d-none", mode !== "list");
-        }
-
-        document.querySelectorAll(".meetings-view-toggle [data-meetings-view]").forEach((button) => {
-            const buttonMode = normalizeMeetingsViewMode(button.getAttribute("data-meetings-view"));
-            const isActive = buttonMode === mode;
-
-            button.classList.toggle("is-active", isActive);
-            button.classList.toggle("btn-modern--primary", isActive);
-            button.classList.toggle("btn-modern--outline", !isActive);
-            button.setAttribute("aria-pressed", isActive ? "true" : "false");
-        });
-    }
-
-    function setMeetingsViewMode(mode) {
-        state.meetingsViewMode = normalizeMeetingsViewMode(mode);
-        renderMeetings();
-    }
-
     function renderMeetings() {
-        updateMeetingsViewControls();
-
-        if (normalizeMeetingsViewMode(state.meetingsViewMode) === "list") {
-            renderMeetingsList();
-            return;
-        }
-
-        renderMeetingsCalendar();
-    }
-
-    function renderMeetingsCalendar() {
-        const label = document.getElementById("meetingMonthLabel");
-        const container = document.getElementById("meetingsCalendar");
-        if (!label || !container) return;
-
-        const baseDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth(), 1);
-        label.textContent = baseDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-        const maxVisibleMeetingsPerDay = isMobileMeetingsViewport() ? 2 : 3;
-
-        const start = getCalendarStart(baseDate);
-        const byDay = groupMeetingsByDay(state.projeto?.reunioes || []);
-
-        const weekdayHeader = WEEKDAY_LABELS.map(
-            (day) => `<div class="meetings-calendar__weekday">${escapeHtml(day)}</div>`
-        ).join("");
-
-        const daysHtml = [];
-        const todayKey = toDateKey(new Date());
-        for (let index = 0; index < 42; index += 1) {
-            const day = addDays(start, index);
-            const key = toDateKey(day);
-            const meetings = byDay[key] || [];
-            const visibleMeetings = meetings.slice(0, maxVisibleMeetingsPerDay);
-            const hiddenCount = meetings.length - visibleMeetings.length;
-            const isOtherMonth = day.getMonth() !== baseDate.getMonth();
-            const isToday = key === todayKey;
-
-            const eventsHtml = visibleMeetings.length
-                ? visibleMeetings
-                      .map(
-                          (meeting) => `
-                        <button type="button" class="meeting-card" data-meeting-name="${escapeHtml(meeting.name || "")}">
-                            <p class="meeting-card__title">${escapeHtml(meeting.descricao || "-")}</p>
-                            <p class="meeting-card__subtitle">${escapeHtml(formatTimePtBr(meeting.data_hora))}</p>
-                        </button>
-                    `
-                      )
-                      .join("")
-                : "";
-
-            const hiddenMeetingsHtml = hiddenCount > 0
-                ? `<div class="meetings-day-more">+${hiddenCount} ${hiddenCount === 1 ? "reunião" : "reuniões"}</div>`
-                : "";
-
-            daysHtml.push(`
-                <div class="meetings-calendar__day ${isOtherMonth ? "is-other-month" : ""} ${isToday ? "is-today" : ""}" data-date="${key}">
-                    <div class="meetings-calendar__day-number">${day.getDate()}</div>
-                    <div class="meetings-day-events">${eventsHtml}${hiddenMeetingsHtml}</div>
-                </div>
-            `);
-        }
-
-        container.innerHTML = `
-            <div class="meetings-calendar__grid">
-                ${weekdayHeader}
-                ${daysHtml.join("")}
-            </div>
-        `;
-    }
-
-    function renderMeetingsList() {
-        const label = document.getElementById("meetingMonthLabel");
-        const container = document.getElementById("meetingsList");
-        if (!label || !container) return;
-
-        const baseDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth(), 1);
-        label.textContent = baseDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-
-        const monthMeetings = (state.projeto?.reunioes || [])
-            .map((meeting) => {
-                const date = parseDateTimeFlexible(meeting.data_hora);
-                return {
-                    meeting,
-                    date,
-                };
-            })
-            .filter(
-                (item) =>
-                    item.date &&
-                    item.date.getFullYear() === baseDate.getFullYear() &&
-                    item.date.getMonth() === baseDate.getMonth()
-            )
-            .sort((left, right) => left.date.getTime() - right.date.getTime());
-
-        if (!monthMeetings.length) {
-            container.innerHTML = '<div class="meetings-list__empty">Nenhuma reunião agendada para este mês.</div>';
-            return;
-        }
-
-        const groupedByDay = {};
-        monthMeetings.forEach((item) => {
-            const key = toDateKey(item.date);
-            if (!groupedByDay[key]) {
-                groupedByDay[key] = {
-                    date: item.date,
-                    meetings: [],
-                };
-            }
-
-            groupedByDay[key].meetings.push(item.meeting);
-        });
-
-        const daysHtml = Object.keys(groupedByDay)
-            .sort()
-            .map((key) => {
-                const group = groupedByDay[key];
-                const weekdayRaw = group.date.toLocaleDateString("pt-BR", { weekday: "long" });
-                const weekday = weekdayRaw ? weekdayRaw.charAt(0).toUpperCase() + weekdayRaw.slice(1) : "";
-                const dateLabel = group.date.toLocaleDateString("pt-BR", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                });
-
-                const cardsHtml = group.meetings
-                    .map(
-                        (meeting) => `
-                    <button type="button" class="meeting-card meetings-list__item" data-meeting-name="${escapeHtml(meeting.name || "")}">
-                        <p class="meeting-card__title">${escapeHtml(meeting.descricao || "-")}</p>
-                        <p class="meeting-card__subtitle">${escapeHtml(formatDateTimePtBr(meeting.data_hora))}</p>
-                    </button>
-                `
-                    )
-                    .join("");
-
-                return `
-                <section class="meetings-list__day" data-date="${key}">
-                    <header class="meetings-list__day-header">
-                        <span class="meetings-list__day-weekday">${escapeHtml(weekday)}</span>
-                        <span class="meetings-list__day-date">${escapeHtml(dateLabel)}</span>
-                    </header>
-                    <div class="meetings-list__items">${cardsHtml}</div>
-                </section>
-            `;
-            })
-            .join("");
-
-        container.innerHTML = daysHtml;
+        const calendarEl = document.getElementById("meetingsCalendar");
+        if (!calendarEl) return;
+        const meetings = state.projeto?.reunioes || [];
+        calendarEl.events = meetings.map((m) => ({
+            id: m.name,
+            title: m.descricao || "-",
+            start: m.data_hora,
+            all_day: false,
+            data: m,
+        }));
     }
 
     function setMeetingModalEditability(editable) {
@@ -2297,24 +2092,14 @@
 
         modal.querySelectorAll("input, textarea").forEach((el) => {
             if (el.id === "meeting_name") return;
-            if (state.useFrappeEditor && (el.id === "meeting_pauta" || el.id === "meeting_ata")) return;
-            if (el.id === "meeting_ata" && !state.meetingPersisted) {
-                el.disabled = true;
-                return;
-            }
+            if (el.closest("[data-datepicker]")) return;
             el.disabled = !editable;
         });
 
-        modal.querySelectorAll("[data-markdown-action]").forEach((btn) => {
-            const toolbar = btn.closest("[data-markdown-target]");
-            const targetId = toolbar?.getAttribute("data-markdown-target") || "";
-            const isAtaToolbar = targetId === "meeting_ata";
-            btn.disabled = !editable || state.useFrappeEditor || (isAtaToolbar && !state.meetingPersisted);
-        });
+        const dpTrigger = modal.querySelector("#meeting_data_hora .datepicker-trigger");
+        if (dpTrigger) dpTrigger.disabled = !editable;
 
-        if (state.useFrappeEditor) {
-            setFrappeEditorReadOnly(state.meetingEditors.pauta, !editable);
-        }
+        setToastEditorReadOnly(state.meetingEditors.pauta, !editable, "meeting_pauta_editor_host");
 
         updateMeetingAtaAvailability(editable);
 
@@ -2323,20 +2108,6 @@
     }
 
     function renderMarkdownPreviews() {
-        if (!state.useFrappeEditor) {
-            const pauta = document.getElementById("meeting_pauta")?.value || "";
-            const ata = document.getElementById("meeting_ata")?.value || "";
-            const pautaPreview = document.getElementById("meeting_pauta_preview");
-            const ataPreview = document.getElementById("meeting_ata_preview");
-
-            if (pautaPreview) {
-                pautaPreview.innerHTML = pauta ? markdownToHtml(pauta) : "-";
-            }
-            if (ataPreview) {
-                ataPreview.innerHTML = ata ? markdownToHtml(ata) : "-";
-            }
-        }
-
         if (!state.taskObservacoesEditor) {
             const taskObservacoes = document.getElementById("task_observacoes")?.value || "";
             const taskObservacoesPreview = document.getElementById("task_observacoes_preview");
@@ -2351,37 +2122,29 @@
         state.meetingPersisted = Boolean(meeting?.name);
 
         document.getElementById("meeting_name").value = meeting?.name || "";
-        document.getElementById("meeting_data_hora").value = toDatetimeLocalValue(meeting?.data_hora || "");
+        const dp = document.getElementById("meeting_data_hora");
+        if (dp) dp.value = toDatetimeLocalValue(meeting?.data_hora || "");
         document.getElementById("meeting_descricao").value = meeting?.descricao || "";
         const pautaValue = meeting?.pauta || "";
         const ataValue = state.meetingPersisted ? meeting?.ata || "" : "";
 
-        document.getElementById("meeting_pauta").value = pautaValue;
-        document.getElementById("meeting_ata").value = ataValue;
-
-        if (state.useFrappeEditor) {
-            setFrappeEditorValue(state.meetingEditors.pauta, pautaValue);
-            setFrappeEditorValue(state.meetingEditors.ata, ataValue);
-        }
+        setToastEditorValue(state.meetingEditors.pauta, pautaValue);
+        setToastEditorValue(state.meetingEditors.ata, ataValue);
 
         setMeetingModalEditability(state.canEdit);
-        if (!state.useFrappeEditor) {
-            renderMarkdownPreviews();
-        }
+        renderMarkdownPreviews();
         openModal("meetingModal");
     }
 
     function collectMeetingPayload() {
-        const pauta = state.useFrappeEditor
-            ? getFrappeEditorValue(state.meetingEditors.pauta)
-            : (document.getElementById("meeting_pauta")?.value || "").trim();
-        const ata = state.useFrappeEditor
-            ? getFrappeEditorValue(state.meetingEditors.ata)
-            : (document.getElementById("meeting_ata")?.value || "").trim();
+        const pauta = getToastEditorValue(state.meetingEditors.pauta);
+        const ata = getToastEditorValue(state.meetingEditors.ata);
+        const dp = document.getElementById("meeting_data_hora");
+        const dataHoraIso = dp?.value || "";
 
         return {
             name: (document.getElementById("meeting_name")?.value || "").trim(),
-            data_hora: fromDatetimeLocalValue(document.getElementById("meeting_data_hora")?.value || ""),
+            data_hora: fromDatetimeLocalValue(dataHoraIso),
             descricao: (document.getElementById("meeting_descricao")?.value || "").trim(),
             pauta,
             ata: state.meetingPersisted ? ata : "",
@@ -2433,17 +2196,7 @@
     }
 
     function applyMarkdownAction(action, targetId) {
-        const usesMeetingFrappeEditor =
-            state.useFrappeEditor && (targetId === "meeting_pauta" || targetId === "meeting_ata");
-        if (usesMeetingFrappeEditor) {
-            return;
-        }
-
         if (targetId === "task_observacoes" && state.taskObservacoesEditor) {
-            return;
-        }
-
-        if (targetId === "meeting_ata" && !state.meetingPersisted) {
             return;
         }
 
@@ -2472,24 +2225,16 @@
         renderMarkdownPreviews();
     }
 
-    function syncModalBodyState() {
-        const anyOpen = document.querySelectorAll(".info-modal:not(.d-none)").length > 0;
-        document.body.classList.toggle("info-modal-open", anyOpen);
-    }
-
     function openModal(modalId) {
         const modal = document.getElementById(modalId);
         if (!modal) return;
-        modal.classList.remove("d-none");
-        modal.setAttribute("aria-hidden", "false");
-        syncModalBodyState();
+        modal.showModal();
     }
 
     function closeModal(modalId) {
         const modal = document.getElementById(modalId);
         if (!modal) return;
-        modal.classList.add("d-none");
-        modal.setAttribute("aria-hidden", "true");
+        modal.close();
 
         if (modalId === "taskModal") {
             if (state.taskTitleEditing) {
@@ -2498,8 +2243,6 @@
             setTaskTitleEditMode(false);
             resetTaskCommentsState();
         }
-
-        syncModalBodyState();
     }
 
     function getProjectStatusActionConfig(action) {
@@ -2669,14 +2412,14 @@
     function bindEvents() {
         bindParticipantTableEvents();
 
-        document.querySelectorAll(".project-tab").forEach((button) => {
-            button.addEventListener("click", () => {
-                const target = button.getAttribute("data-tab");
-                if (target) {
-                    setActiveTab(target);
+        const avaliacoesTabBtn = document.getElementById("project-tabs-tab-5");
+        if (avaliacoesTabBtn) {
+            avaliacoesTabBtn.addEventListener("click", () => {
+                if (!state.avaliacaoLoaded) {
+                    loadAvaliacaoData();
                 }
             });
-        });
+        }
 
         const openTaskButton = document.getElementById("btnNovaTarefa");
         if (openTaskButton) {
@@ -2733,42 +2476,24 @@
             taskStatusSelect.addEventListener("change", applyTaskDateRulesByStatusChange);
         }
 
-        ["task_data_inicio", "task_prazo"].forEach((fieldId) => {
-            const field = document.getElementById(fieldId);
-            if (!field) {
-                return;
-            }
-
-            field.addEventListener("change", updateTaskTimelineInfographic);
-            field.addEventListener("input", updateTaskTimelineInfographic);
-        });
-
-        const taskTitleDisplay = document.getElementById("taskTitleDisplay");
-        if (taskTitleDisplay) {
-            taskTitleDisplay.addEventListener("click", startTaskTitleEdit);
-            taskTitleDisplay.addEventListener("keydown", (event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    startTaskTitleEdit();
-                }
-            });
+        const startField = document.getElementById("task_data_inicio");
+        if (startField) {
+            startField.addEventListener("change", updateTaskTimelineInfographic);
+            startField.addEventListener("input", updateTaskTimelineInfographic);
         }
+
+        document.addEventListener("datepicker:change", (event) => {
+            const wrapper = document.getElementById("task_prazo_wrapper");
+            if (wrapper && wrapper.contains(event.target)) {
+                updateTaskTimelineInfographic();
+            }
+        });
 
         const taskTitleEditor = document.getElementById("task_title_editor");
         if (taskTitleEditor) {
-            taskTitleEditor.addEventListener("blur", commitTaskTitleEdit);
-            taskTitleEditor.addEventListener("keydown", (event) => {
-                if (event.key === "Escape") {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    cancelTaskTitleEdit();
-                    return;
-                }
-
-                if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    commitTaskTitleEdit();
-                }
+            taskTitleEditor.addEventListener("input", () => {
+                const hidden = document.getElementById("task_descricao");
+                if (hidden) hidden.value = taskTitleEditor.value.trim();
             });
         }
 
@@ -2787,39 +2512,14 @@
             participantTipo.addEventListener("change", updateParticipantModalType);
         }
 
-        const participantAssociado = document.getElementById("participant_associado");
-        if (participantAssociado) {
-            participantAssociado.addEventListener("change", () => {
-                preloadParticipantContact("Associado", participantAssociado.value || "");
-            });
-        }
-
-        const participantResponsavel = document.getElementById("participant_responsavel");
-        if (participantResponsavel) {
-            participantResponsavel.addEventListener("change", () => {
-                preloadParticipantContact("Responsavel", participantResponsavel.value || "");
-            });
-        }
-
-        document.querySelectorAll("[data-close-task-modal]").forEach((button) => {
-            button.addEventListener("click", () => closeModal("taskModal"));
+        document.addEventListener("change", (event) => {
+            if (event.target.id === "participant_associado") {
+                preloadParticipantContact("Associado", event.target.value || "");
+            } else if (event.target.id === "participant_responsavel") {
+                preloadParticipantContact("Responsavel", event.target.value || "");
+            }
         });
 
-        document.querySelectorAll("[data-close-meeting-modal]").forEach((button) => {
-            button.addEventListener("click", () => closeModal("meetingModal"));
-        });
-
-        document.querySelectorAll("[data-close-cronograma-modal]").forEach((button) => {
-            button.addEventListener("click", () => closeModal("cronogramaModal"));
-        });
-
-        document.querySelectorAll("[data-close-project-status-modal]").forEach((button) => {
-            button.addEventListener("click", closeProjectStatusConfirmModal);
-        });
-
-        document.querySelectorAll("[data-close-participant-modal]").forEach((button) => {
-            button.addEventListener("click", () => closeModal("participantModal"));
-        });
 
         const openCronogramaButton = document.getElementById("btnAbrirCronogramaModal");
         if (openCronogramaButton) {
@@ -2828,28 +2528,19 @@
             });
         }
 
-        const prevMonthButton = document.getElementById("btnPrevMonth");
-        const nextMonthButton = document.getElementById("btnNextMonth");
-        const meetingsViewButtons = document.querySelectorAll(".meetings-view-toggle [data-meetings-view]");
+        const meetingsCalendarEl = document.getElementById("meetingsCalendar");
+        if (meetingsCalendarEl) {
+            const lockMeetingsListVariant = () => {
+                if (typeof meetingsCalendarEl.setListVariant === "function") {
+                    meetingsCalendarEl.setListVariant("default");
+                }
+            };
 
-        meetingsViewButtons.forEach((button) => {
-            button.addEventListener("click", () => {
-                const mode = button.getAttribute("data-meetings-view");
-                setMeetingsViewMode(mode);
-            });
-        });
-
-        if (prevMonthButton) {
-            prevMonthButton.addEventListener("click", () => {
-                state.calendarDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth() - 1, 1);
-                renderMeetings();
-            });
-        }
-
-        if (nextMonthButton) {
-            nextMonthButton.addEventListener("click", () => {
-                state.calendarDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth() + 1, 1);
-                renderMeetings();
+            lockMeetingsListVariant();
+            meetingsCalendarEl.addEventListener("basecoat:initialized", lockMeetingsListVariant);
+            meetingsCalendarEl.addEventListener("gris:calendar:event-click", (event) => {
+                const { id } = event.detail;
+                if (id) openMeetingModal(id);
             });
         }
 
@@ -2902,7 +2593,7 @@
 
         document.addEventListener("input", (event) => {
             const target = event.target;
-            if (target && (target.id === "meeting_pauta" || target.id === "meeting_ata" || target.id === "task_observacoes")) {
+            if (target && target.id === "task_observacoes") {
                 renderMarkdownPreviews();
                 return;
             }
@@ -2977,16 +2668,6 @@
             state.isDraggingTask = false;
         });
 
-        document.addEventListener("keydown", (event) => {
-            if (event.key === "Escape") {
-                closeModal("participantModal");
-                closeModal("taskModal");
-                closeModal("meetingModal");
-                closeModal("cronogramaModal");
-                closeProjectStatusConfirmModal();
-                closeModal("avaliacaoDetalheModal");
-            }
-        });
 
         /* ── Avaliação: events ── */
         const btnIniciar = document.getElementById("btnIniciarAvaliacao");
@@ -3016,7 +2697,7 @@
             }
 
             if (target.closest("[data-close-avaliacao-detalhe-modal]")) {
-                closeModal("avaliacaoDetalheModal");
+                document.getElementById("avaliacaoDetalheModal")?.close();
                 return;
             }
             var reenviarBtn = target.closest("[data-reenviar-idx]");
@@ -3142,16 +2823,17 @@
             individuais.forEach(function (a, i) {
                 var statusClass = a.avaliacao_concluida ? "aval-avaliador--concluido" : "aval-avaliador--pendente";
                 var statusLabel = a.avaliacao_concluida ? "Concluída" : "Pendente";
+                var statusBadgeClass = a.avaliacao_concluida ? "badge badge-success" : "badge badge-secondary";
                 html += '<div class="aval-avaliador ' + statusClass + '">';
                 html += '<div class="aval-avaliador__info">';
                 html += '<span class="aval-avaliador__nome">' + escapeHtml(a.avaliador) + '</span>';
-                html += '<span class="aval-avaliador__status">' + statusLabel + '</span>';
+                html += '<span class="' + statusBadgeClass + '">' + statusLabel + '</span>';
                 html += '</div>';
                 html += '<div class="aval-avaliador__actions">';
                 if (a.avaliacao_concluida) {
-                    html += '<button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-ver-avaliacao-idx="' + a.idx + '">Ver detalhes</button>';
+                    html += '<button type="button" class="btn-sm-outline" data-ver-avaliacao-idx="' + a.idx + '">Ver detalhes</button>';
                 } else if (data.can_edit_general) {
-                    html += '<button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-reenviar-idx="' + a.idx + '">Reenviar e-mail e WhatsApp</button>';
+                    html += '<button type="button" class="btn-sm-outline" data-reenviar-idx="' + a.idx + '">Reenviar e-mail e WhatsApp</button>';
                 }
                 html += '</div></div>';
             });
@@ -3165,21 +2847,44 @@
             if (objetivos.length === 0) {
                 objHtml = '<tr><td colspan="3" class="text-center">Nenhum objetivo cadastrado</td></tr>';
             } else {
+                var objAtingidoItems = [
+                    { value: "", label: "Selecione" },
+                    { value: "Completamente", label: "Completamente" },
+                    { value: "Parcialmente", label: "Parcialmente" },
+                    { value: "Nao", label: "Não" },
+                ];
                 objetivos.forEach(function (obj, i) {
                     var disabledAttr = data.can_edit_general ? "" : " disabled";
+                    var selectId = "aval_obj_sel_" + i;
                     objHtml += '<tr>';
                     objHtml += '<td>' + escapeHtml(obj.objetivo || "") + '</td>';
-                    objHtml += '<td><select class="form-input-modern form-input-modern--sm aval-obj-select" data-obj-idx="' + i + '"' + disabledAttr + '>';
-                    objHtml += '<option value=""' + (!obj.objetivo_atingido ? ' selected' : '') + '>Selecione</option>';
-                    objHtml += '<option value="Completamente"' + (obj.objetivo_atingido === 'Completamente' ? ' selected' : '') + '>Completamente</option>';
-                    objHtml += '<option value="Parcialmente"' + (obj.objetivo_atingido === 'Parcialmente' ? ' selected' : '') + '>Parcialmente</option>';
-                    objHtml += '<option value="Nao"' + (obj.objetivo_atingido === 'Nao' ? ' selected' : '') + '>Não</option>';
-                    objHtml += '</select></td>';
+                    objHtml += '<td>' + buildBasecoatSelectHtml(selectId, objAtingidoItems) + '</td>';
                     objHtml += '<td><input type="text" class="form-input-modern form-input-modern--sm aval-obj-motivo" data-obj-idx="' + i + '" value="' + escapeHtml(obj.porque_nao_foi_atingido || "") + '"' + disabledAttr + ' placeholder="Opcional" /></td>';
                     objHtml += '</tr>';
                 });
             }
             objBody.innerHTML = objHtml;
+            objetivos.forEach(function (obj, i) {
+                var selectId = "aval_obj_sel_" + i;
+                var currentValue = obj.objetivo_atingido || "";
+                var selectEl = document.getElementById(selectId);
+                if (selectEl) {
+                    if (currentValue) {
+                        var optionEl = selectEl.querySelector('[role="option"][data-value="' + currentValue + '"]');
+                        var labelText = optionEl ? optionEl.textContent.trim() : currentValue;
+                        var btnLabel = selectEl.querySelector("button > span.truncate");
+                        var hiddenInput = selectEl.querySelector(':scope > input[type="hidden"]');
+                        if (btnLabel) btnLabel.textContent = labelText;
+                        if (hiddenInput) hiddenInput.value = currentValue;
+                    }
+                    if (!data.can_edit_general) {
+                        var triggerBtn = selectEl.querySelector(":scope > button");
+                        if (triggerBtn) triggerBtn.disabled = true;
+                    }
+                }
+            });
+            document.dispatchEvent(new CustomEvent("gris:design-system:init"));
+            initObjSelectsFloating();
         }
 
         /* Campos da avaliação geral */
@@ -3221,6 +2926,45 @@
         }
     }
 
+    function initObjSelectsFloating() {
+        var objBody = document.getElementById("avaliacaoObjetivosBody");
+        if (!objBody || objBody.dataset.floatingObserver === "1") return;
+        objBody.dataset.floatingObserver = "1";
+
+        var observer = new MutationObserver(function (mutations) {
+            mutations.forEach(function (mutation) {
+                if (mutation.type !== "attributes" || mutation.attributeName !== "aria-hidden") return;
+                var popover = mutation.target;
+                if (!popover.hasAttribute("data-popover")) return;
+                var selectEl = popover.closest(".select");
+                if (!selectEl || !objBody.contains(selectEl)) return;
+                var trigger = selectEl.querySelector(":scope > button");
+                if (!trigger) return;
+                var isOpen = popover.getAttribute("aria-hidden") === "false";
+                if (isOpen) {
+                    var rect = trigger.getBoundingClientRect();
+                    popover.style.position = "fixed";
+                    popover.style.top = rect.bottom + "px";
+                    popover.style.left = rect.left + "px";
+                    popover.style.minWidth = rect.width + "px";
+                    popover.style.zIndex = "9999";
+                } else {
+                    popover.style.position = "";
+                    popover.style.top = "";
+                    popover.style.left = "";
+                    popover.style.minWidth = "";
+                    popover.style.zIndex = "";
+                }
+            });
+        });
+
+        observer.observe(objBody, {
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["aria-hidden"],
+        });
+    }
+
     async function iniciarAvaliacao() {
         var btn = document.getElementById("btnIniciarAvaliacao");
         if (btn) {
@@ -3256,11 +3000,10 @@
 
         var objData = [];
         objetivos.forEach(function (obj, i) {
-            var selEl = document.querySelector('.aval-obj-select[data-obj-idx="' + i + '"]');
             var motEl = document.querySelector('.aval-obj-motivo[data-obj-idx="' + i + '"]');
             objData.push({
                 objetivo: obj.objetivo || "",
-                objetivo_atingido: selEl ? selEl.value : (obj.objetivo_atingido || ""),
+                objetivo_atingido: getSelectComponentValue("aval_obj_sel_" + i) || (obj.objetivo_atingido || ""),
                 porque_nao_foi_atingido: motEl ? motEl.value : (obj.porque_nao_foi_atingido || ""),
             });
         });
@@ -3423,13 +3166,15 @@
             return;
         }
 
-        state.calendarDate = new Date();
-        state.meetingsViewMode = getDefaultMeetingsViewMode();
         setActiveTab("dados-gerais");
         bindEvents();
         await reloadData();
         initMeetingEditors().catch(() => {
-            state.useFrappeEditor = false;
+            state.meetingEditors = { pauta: null, ata: null };
+        });
+        initTaskObservacoesEditor().catch(() => {
+            state.taskObservacoesEditor = null;
+            setTaskObservacoesEditorMode(false);
         });
     }
 

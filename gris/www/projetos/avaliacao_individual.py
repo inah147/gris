@@ -10,10 +10,13 @@ def get_context(context):
 
 	context.title = "Avaliação de Projeto"
 	context.show_sidebar = False
+	context.no_header = True
+	context.no_footer = True
 	context.token = token
 	context.page_state = "invalid"
 	context.avaliador_nome = ""
 	context.projeto_titulo = ""
+	context.rating_options = [{"value": str(i), "label": str(i)} for i in range(11)]
 
 	uel_data = get_uel_cached()
 	if uel_data:

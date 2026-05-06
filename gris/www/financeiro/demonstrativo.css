@@ -1,197 +1,232 @@
-/**
- * Demonstrativo Financeiro - CSS Moderno
- * Segue padrões de components.css
- */
-
-/* Tabela Demonstrativo - Estrutura BEM */
-.demonstrativo-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-sm, 0.875rem);
-  background: white;
+.demonstrativo-page {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
 }
 
-/* Header */
+.demonstrativo-filter-card,
+.demonstrativo-table-card {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.demonstrativo-filter-card > section {
+  max-width: 100%;
+}
+
+.demonstrativo-filter-form {
+  display: grid;
+  grid-template-columns: minmax(0, 16rem);
+  gap: 1rem;
+  align-items: end;
+}
+
+.demonstrativo-filter-form__field {
+  min-width: 0;
+}
+
+.demonstrativo-filter-form__field > .select,
+.demonstrativo-filter-form__field > .select > button {
+  width: 100%;
+}
+
+.demonstrativo-table-card {
+  display: flex;
+  flex-direction: column;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.demonstrativo-table-card > section {
+  padding: 0;
+  max-width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.demonstrativo-table__scroll {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.demonstrativo-table {
+  width: 100%;
+  min-width: max-content;
+  border-collapse: collapse;
+  background: var(--color-card);
+  font-size: 0.875rem;
+}
+
 .demonstrativo-table__header {
-  padding: 1rem;
+  padding: 0.95rem 1rem;
   text-align: left;
-  font-size: var(--text-xs, 0.75rem);
-  font-weight: var(--font-semibold, 600);
+  font-size: 0.75rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-secondary, #64748b);
-  background-color: var(--bg-hover, #f8fafc);
-  border-bottom: 2px solid var(--border-color, #e2e8f0);
+  color: var(--color-muted-foreground);
+  background: color-mix(in oklab, var(--color-muted) 88%, var(--color-card) 12%);
+  border-bottom: 1px solid var(--color-border);
   white-space: nowrap;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 1;
 }
 
 .demonstrativo-table__header--number {
   text-align: right;
 }
 
-/* Células */
 .demonstrativo-table__cell {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border-color, #e2e8f0);
-  color: var(--text-primary, #1e293b);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-foreground);
   white-space: nowrap;
 }
 
 .demonstrativo-table__cell--number {
   text-align: right;
   font-variant-numeric: tabular-nums;
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 0.8125rem;
 }
 
 .demonstrativo-table__cell--bold {
-  font-weight: var(--font-semibold, 600);
+  font-weight: 700;
 }
 
 .demonstrativo-table__cell--indent {
   padding-left: 2rem;
 }
 
-/* Linhas especiais */
 .demonstrativo-table__row--highlight {
-  background-color: #f1f5f9;
+  background: color-mix(in oklab, var(--color-muted) 76%, var(--color-card) 24%);
 }
 
 .demonstrativo-table__row--final {
-  background-color: #e0e7ff;
-  border-top: 2px solid var(--border-color, #e2e8f0);
+  background: color-mix(in oklab, var(--color-primary) 12%, var(--color-card) 88%);
 }
 
-/* Seções (Entradas/Saídas) */
 .demonstrativo-table__row--section {
-  background-color: #f8fafc;
-  border-top: 2px solid var(--border-color, #e2e8f0);
-  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  background: color-mix(in oklab, var(--color-muted) 84%, var(--color-card) 16%);
 }
 
 .demonstrativo-table__section {
   padding: 0.875rem 1rem;
-  font-weight: var(--font-semibold, 600);
-  font-size: var(--text-sm, 0.875rem);
-  color: var(--text-primary, #1e293b);
+  font-weight: 700;
+  font-size: 0.8125rem;
   text-transform: uppercase;
-  letter-spacing: 0.025em;
+  letter-spacing: 0.03em;
+  color: var(--color-foreground);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .demonstrativo-table__section-icon {
-  display: inline-block;
-  width: 1.5rem;
-  height: 1.5rem;
-  line-height: 1.5rem;
-  text-align: center;
-  border-radius: 50%;
-  margin-right: 0.5rem;
-  font-size: 1rem;
-  font-weight: bold;
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 9999px;
+  margin-right: 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
 .demonstrativo-table__row--success .demonstrativo-table__section {
-  color: #059669;
+  color: color-mix(in oklab, var(--success) 90%, var(--color-foreground) 10%);
 }
 
 .demonstrativo-table__row--success .demonstrativo-table__section-icon {
-  background-color: #d1fae5;
-  color: #059669;
+  background: color-mix(in oklab, var(--success) 18%, var(--color-card) 82%);
+  color: color-mix(in oklab, var(--success) 92%, black 8%);
 }
 
 .demonstrativo-table__row--danger .demonstrativo-table__section {
-  color: #dc2626;
+  color: color-mix(in oklab, var(--destructive) 90%, var(--color-foreground) 10%);
 }
 
 .demonstrativo-table__row--danger .demonstrativo-table__section-icon {
-  background-color: #fee2e2;
-  color: #dc2626;
+  background: color-mix(in oklab, var(--destructive) 16%, var(--color-card) 84%);
+  color: color-mix(in oklab, var(--destructive) 92%, black 8%);
 }
 
-/* Totais */
 .demonstrativo-table__row--subtotal {
-  background-color: #fafafa;
-  border-top: 1px solid var(--border-color, #e2e8f0);
+  background: color-mix(in oklab, var(--color-muted) 66%, var(--color-card) 34%);
 }
 
 .demonstrativo-table__row--success-total {
-  background-color: #f0fdf4;
+  background: color-mix(in oklab, var(--success) 10%, var(--color-card) 90%);
 }
 
 .demonstrativo-table__row--danger-total {
-  background-color: #fef2f2;
+  background: color-mix(in oklab, var(--destructive) 10%, var(--color-card) 90%);
 }
 
-/* Resultado */
 .demonstrativo-table__row--result {
-  background-color: #fffbeb;
-  border-top: 2px solid var(--border-color, #e2e8f0);
+  background: color-mix(in oklab, var(--warning) 12%, var(--color-card) 88%);
 }
 
 .demonstrativo-table__cell--positive {
-  color: #059669;
-  font-weight: var(--font-semibold, 600);
+  color: color-mix(in oklab, var(--success) 92%, var(--color-foreground) 8%);
+  font-weight: 700;
 }
 
 .demonstrativo-table__cell--negative {
-  color: #dc2626;
-  font-weight: var(--font-semibold, 600);
+  color: color-mix(in oklab, var(--destructive) 92%, var(--color-foreground) 8%);
+  font-weight: 700;
 }
 
-/* Linhas de dados */
 .demonstrativo-table__row--data:hover {
-  background-color: #f8fafc;
+  background: color-mix(in oklab, var(--color-muted) 74%, var(--color-card) 26%);
 }
 
-/* Responsivo */
-@media (max-width: 768px) {
-  .demonstrativo-table {
-    font-size: var(--text-xs, 0.75rem);
-  }
-  
-  .demonstrativo-table__header,
-  .demonstrativo-table__cell {
-    padding: 0.5rem 0.75rem;
-  }
-  
-  .demonstrativo-table__cell--indent {
-    padding-left: 1.25rem;
-  }
-  
-  .demonstrativo-table__cell--number {
-    font-size: 0.75rem;
-  }
-  
-  .demonstrativo-table__section {
-    font-size: var(--text-xs, 0.75rem);
-    padding: 0.625rem 0.75rem;
-  }
-}
-
-/* Scroll horizontal suave */
-.card-modern__body {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Efeito de borda no scroll */
-.card-modern__body::-webkit-scrollbar {
+.demonstrativo-table__scroll::-webkit-scrollbar {
+  width: 8px;
   height: 8px;
 }
 
-.card-modern__body::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 4px;
+.demonstrativo-table__scroll::-webkit-scrollbar-track {
+  background: color-mix(in oklab, var(--color-muted) 76%, var(--color-card) 24%);
+  border-radius: 9999px;
 }
 
-.card-modern__body::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+.demonstrativo-table__scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--color-border) 80%, var(--color-foreground) 20%);
+  border-radius: 9999px;
 }
 
-.card-modern__body::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+@media (max-width: 960px) {
+  .demonstrativo-filter-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .demonstrativo-table {
+    font-size: 0.75rem;
+  }
+
+  .demonstrativo-table__header,
+  .demonstrativo-table__cell {
+    padding: 0.5rem 0.65rem;
+  }
+
+  .demonstrativo-table__cell--indent {
+    padding-left: 1rem;
+  }
+
+  .demonstrativo-table__cell--number {
+    font-size: 0.75rem;
+  }
+
+  .demonstrativo-table__section {
+    font-size: 0.75rem;
+    padding: 0.625rem 0.65rem;
+  }
 }

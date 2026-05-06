@@ -1,192 +1,155 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, card, checkbox, empty, field, input, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
 
 {% block title %}Detalhe da Transação{% endblock %}
 
 {% set active_link = '/financeiro/extrato' %}
 
+{% macro render_read_value(value, empty_text="Não informado") %}
+	{% set normalized = (value | string) | trim if value is not none else "" %}
+	<div class="detalhe-extrato-read-value{% if not normalized %} detalhe-extrato-read-value--empty{% endif %}">
+		{{ normalized if normalized else empty_text }}
+	</div>
+{% endmacro %}
+
 {% block page_header %}
-  <div class="page-header">
-    <div class="page-header__content">
-      <h1 class="page-header__title">Detalhe da Transação</h1>
-      <p class="page-header__subtitle">Visualize e edite os dados da transação financeira.</p>
-    </div>
-    <div class="page-header__actions">
-      <a href="/financeiro/extrato" class="btn-modern btn-modern--outline btn-modern--sm">Voltar ao Extrato</a>
-    </div>
-  </div>
+	<section class="financeiro-page-header detalhe-extrato-header" aria-labelledby="financeiro-detalhe-extrato-title">
+		<div class="flex flex-col gap-2 max-w-2xl">
+			<h1 id="financeiro-detalhe-extrato-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Detalhe da Transação</h1>
+			<p class="m-0 text-base leading-relaxed text-muted-foreground">Visualize e edite os dados da transação financeira.</p>
+		</div>
+		<div class="financeiro-page-header__actions">
+			<a href="/financeiro/extrato" class="btn-sm-ghost inline-flex items-center gap-2">
+				{{ lucide_icon("arrow-left", size="sm") }}
+				<span>Voltar ao Extrato</span>
+			</a>
+		</div>
+	</section>
 {% endblock %}
 
 {% block main %}
-  <!-- Dados da Transação (Somente Leitura) -->
-  <div class="card-modern mb-4">
-    <div class="card-modern__header">
-      <h3 class="card-modern__title">Dados da Transação</h3>
-      <p class="card-modern__subtitle">Informações básicas da movimentação financeira</p>
-    </div>
-    <div class="card-modern__body">
-      <div class="row g-3">
-        <div class="col-12 col-md-6">
-          <label class="form-label-modern">Timestamp</label>
-          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.timestamp_transacao or '-' }}" readonly>
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label-modern">Data da Transação</label>
-          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.data or '-' }}" readonly>
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label-modern">Data de Depósito</label>
-          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.data_deposito or '-' }}" readonly>
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label-modern">ID</label>
-          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.name or '-' }}" readonly>
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label-modern">Número de Liquidação</label>
-          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.numero_liquidacao or '-' }}" readonly>
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label-modern">Valor</label>
-          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.valor or '-' }}" readonly>
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label-modern">Débito ou Crédito</label>
-          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.debito_credito or '-' }}" readonly>
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label-modern">Método</label>
-          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.metodo or '-' }}" readonly>
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label-modern">Origem</label>
-          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.origem or '-' }}" readonly>
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label-modern">Destino</label>
-          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.destino or '-' }}" readonly>
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label-modern">Instituição</label>
-          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.instituicao or '-' }}" readonly>
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label-modern">Carteira</label>
-          <input type="text" class="form-input-modern form-input-modern--sm" value="{{ doc.carteira or '-' }}" readonly>
-        </div>
-      </div>
-    </div>
-  </div>
-  <!-- Formulário de Edição -->
-  <div class="card-modern mb-4">
-    <div class="card-modern__header">
-      <h3 class="card-modern__title">Dados Editáveis</h3>
-      <p class="card-modern__subtitle">Edite as informações complementares da transação</p>
-    </div>
-    <div class="card-modern__body">
-      {% if sugestoes_contribuicao %}
-      <div class="alert-modern alert-modern--info mb-4" id="banner-sugestao-contribuicao">
-        <svg class="alert-modern__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="16" x2="12" y2="12"></line>
-          <line x1="12" y1="8" x2="12.01" y2="8"></line>
-        </svg>
-        <div class="alert-modern__content">
-          <p class="alert-modern__title">Possível contribuição mensal</p>
-          <p class="alert-modern__description">Esta transação parece ser a contribuição mensal de:</p>
-          <ul style="margin: 0.5rem 0 0; padding-left: 1.25rem;">
-            {% for s in sugestoes_contribuicao %}
-            <li>{{ s.nome_completo }}</li>
-            {% endfor %}
-          </ul>
-        </div>
-      </div>
-      {% endif %}
-      <form id="extrato-complementar-form">
-        <div class="row g-3">
-          <!-- Descrição e Descrição Reduzida -->
-          <div class="col-12 col-md-6">
-            <label class="form-label-modern">Descrição</label>
-            <input type="text" class="form-input-modern form-input-modern--sm" name="descricao" value="{{ doc.descricao or '' }}">
-          </div>
-          <div class="col-12 col-md-6">
-            <label class="form-label-modern">Descrição Reduzida</label>
-            <input type="text" class="form-input-modern form-input-modern--sm" name="descricao_reduzida" value="{{ doc.descricao_reduzida or '' }}">
-          </div>
+{% set ns = namespace(
+	categoria_items=[{"label": "Selecione", "value": ""}],
+	centro_items=[{"label": "Selecione", "value": ""}],
+	conta_fixa_items=[{"label": "Selecione", "value": ""}],
+	beneficiario_items=[{"label": "Selecione", "value": ""}],
+	ord_extra_items=[
+		{"label": "Selecione", "value": ""},
+		{"label": "Ordinária", "value": "Ordinária"},
+		{"label": "Extraordinária", "value": "Extraordinária"}
+	]
+) %}
+{% for op in opcoes_categoria %}{% set ns.categoria_items = ns.categoria_items + [{"label": op, "value": op}] %}{% endfor %}
+{% for op in opcoes_centro_de_custo %}{% set ns.centro_items = ns.centro_items + [{"label": op, "value": op}] %}{% endfor %}
+{% for op in opcoes_conta_fixa %}{% set ns.conta_fixa_items = ns.conta_fixa_items + [{"label": op, "value": op}] %}{% endfor %}
+{% for op in opcoes_beneficiario %}{% set ns.beneficiario_items = ns.beneficiario_items + [{"label": op.nome_completo or op.name, "value": op.name}] %}{% endfor %}
+{% set select_popover_attrs = {"class": "detalhe-extrato-select-popover"} %}
+{% set select_listbox_attrs = {"class": "detalhe-extrato-select-listbox"} %}
 
-          <!-- Categoria e Centro de Custo -->
-          <div class="col-12 col-md-6">
-            <label class="form-label-modern">Categoria</label>
-            <select name="categoria" class="form-input-modern form-input-modern--sm">
-              <option value=""></option>
-              {% for op in opcoes_categoria %}
-                <option value="{{ op }}" {% if doc.categoria==op %}selected{% endif %}>{{ op }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-12 col-md-6">
-            <label class="form-label-modern">Centro de Custo</label>
-            <select name="centro_de_custo" class="form-input-modern form-input-modern--sm">
-              <option value=""></option>
-              {% for op in opcoes_centro_de_custo %}
-                <option value="{{ op }}" {% if doc.centro_de_custo==op %}selected{% endif %}>{{ op }}</option>
-              {% endfor %}
-            </select>
-          </div>
+	{% if not_found %}
+		{{ empty(
+			title="Transação não encontrada",
+			description=missing_reason or "Não foi possível localizar os dados da transação.",
+			icon=lucide_icon("triangle-alert", size="lg"),
+			secondary_action={"label": "Voltar ao Extrato", "href": "/financeiro/extrato"}
+		) }}
+	{% else %}
+		<div class="detalhe-extrato-page">
+			{% call card(title="Dados da Transação", description="Informações básicas da movimentação financeira") %}
+				<div class="detalhe-extrato-grid detalhe-extrato-grid--readonly">
+					{% call field(label="Timestamp") %}{{ render_read_value(doc.timestamp_transacao or "-") }}{% endcall %}
+					{% call field(label="Data da Transação") %}{{ render_read_value(doc.data or "-") }}{% endcall %}
+					{% call field(label="Data de Depósito") %}{{ render_read_value(doc.data_deposito or "-") }}{% endcall %}
+					{% call field(label="ID") %}{{ render_read_value(doc.name or "-") }}{% endcall %}
+					{% call field(label="Número de Liquidação") %}{{ render_read_value(doc.numero_liquidacao or "-") }}{% endcall %}
+					{% call field(label="Valor") %}{{ render_read_value(doc.valor or "-") }}{% endcall %}
+					{% call field(label="Débito ou Crédito") %}{{ render_read_value(doc.debito_credito or "-") }}{% endcall %}
+					{% call field(label="Método") %}{{ render_read_value(doc.metodo or "-") }}{% endcall %}
+					{% call field(label="Origem") %}{{ render_read_value(doc.origem or "-") }}{% endcall %}
+					{% call field(label="Destino") %}{{ render_read_value(doc.destino or "-") }}{% endcall %}
+					{% call field(label="Instituição") %}{{ render_read_value(doc.instituicao or "-") }}{% endcall %}
+					{% call field(label="Carteira") %}{{ render_read_value(doc.carteira or "-") }}{% endcall %}
+				</div>
+			{% endcall %}
 
-          <!-- Ordinária/Extraordinária e Conta Fixa -->
-          <div class="col-12 col-md-6">
-            <label class="form-label-modern">Ordinária/Extraordinária</label>
-            <select name="ordinaria_extraordinaria" class="form-input-modern form-input-modern--sm">
-              <option value=""></option>
-              <option value="Ordinária" {% if doc.ordinaria_extraordinaria=='Ordinária' %}selected{% endif %}>Ordinária</option>
-              <option value="Extraordinária" {% if doc.ordinaria_extraordinaria=='Extraordinária' %}selected{% endif %}>Extraordinária</option>
-            </select>
-          </div>
-          <div class="col-12 col-md-6" id="conta-fixa-field-container">
-            <label class="form-label-modern">Conta Fixa</label>
-            <select name="conta_fixa" class="form-input-modern form-input-modern--sm">
-              <option value=""></option>
-              {% for op in opcoes_conta_fixa %}
-                <option value="{{ op }}" {% if doc.conta_fixa==op %}selected{% endif %}>{{ op }}</option>
-              {% endfor %}
-            </select>
-          </div>
+			{% call card(title="Dados Editáveis", description="Edite as informações complementares da transação") %}
+				{% if sugestoes_contribuicao %}
+					{% call alert(
+						title="Possível contribuição mensal",
+						description="Esta transação parece ser a contribuição mensal de:",
+						icon=lucide_icon("circle-alert", size="sm"),
+						variant="info",
+						attrs={"id": "banner-sugestao-contribuicao", "class": "detalhe-extrato-banner"}
+					) %}
+						<ul class="detalhe-extrato-banner__list">
+							{% for s in sugestoes_contribuicao %}
+								<li>{{ s.nome_completo }}</li>
+							{% endfor %}
+						</ul>
+					{% endcall %}
+				{% endif %}
 
-          <!-- Beneficiário -->
-          <div class="col-12" id="beneficiario-field-container">
-            <label class="form-label-modern">Beneficiário da Contribuição Mensal</label>
-            <select name="beneficiario" class="form-input-modern form-input-modern--sm">
-              <option value=""></option>
-              {% for op in opcoes_beneficiario %}
-                <option value="{{ op.name }}" {% if doc.beneficiario==op.name %}selected{% endif %}>{{ op.nome_completo }}</option>
-              {% endfor %}
-            </select>
-          </div>
+				<form id="extrato-complementar-form" class="detalhe-extrato-form">
+					<div class="detalhe-extrato-grid">
+						{% call field(label="Descrição") %}
+							{{ input(name="descricao", value=doc.descricao or "", attrs={"id": "descricao", "autocomplete": "off"}) }}
+						{% endcall %}
 
-          <!-- Observações -->
-          <div class="col-12">
-            <label class="form-label-modern">Observações</label>
-            <textarea class="form-input-modern form-input-modern--sm" name="observacoes" rows="3">{{ doc.observacoes or '' }}</textarea>
-          </div>
+						{% call field(label="Descrição Reduzida") %}
+							{{ input(name="descricao_reduzida", value=doc.descricao_reduzida or "", attrs={"id": "descricao_reduzida", "autocomplete": "off"}) }}
+						{% endcall %}
 
-          <!-- Checkboxes -->
-          <div class="col-12 col-md-6">
-            <div class="form-check" style="padding-top: 0.5rem;">
-              <input type="checkbox" id="repasse_entre_contas" name="repasse_entre_contas" value="1" class="form-check-input" disabled title="Campo calculado automaticamente pela categoria" {% if doc.repasse_entre_contas in ['1', 1, true] %}checked{% endif %}>
-              <label for="repasse_entre_contas" class="form-check-label" style="font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--text-primary);">Repasse entre Contas (automático)</label>
-            </div>
-          </div>
-          <div class="col-12 col-md-6">
-            <div class="form-check" style="padding-top: 0.5rem;">
-              <input type="checkbox" id="transacao_revisada" name="transacao_revisada" value="1" class="form-check-input" {% if doc.transacao_revisada in ['1', 1, true] %}checked{% endif %}>
-              <label for="transacao_revisada" class="form-check-label" style="font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--text-primary);">Transação Revisada</label>
-            </div>
-          </div>
-        </div>
-      </form>
-    </div>
-    <div class="card-modern__footer" id="footer-salvar" style="display: none;">
-      <button type="button" id="btn-salvar-extrato" class="btn-modern btn-modern--primary btn-modern--sm">Salvar</button>
-    </div>
-  </div>
+						{% call field(label="Categoria") %}
+							{{ select(id="categoria", name="categoria", items=ns.categoria_items, selected=doc.categoria or "", main_attrs={"class": "w-full"}, trigger_attrs={"class": "w-full justify-between"}, popover_attrs=select_popover_attrs, listbox_attrs=select_listbox_attrs, is_combobox=true, search_placeholder="Buscar categoria...") }}
+						{% endcall %}
+
+						{% call field(label="Centro de Custo") %}
+							{{ select(id="centro_de_custo", name="centro_de_custo", items=ns.centro_items, selected=doc.centro_de_custo or "", main_attrs={"class": "w-full"}, trigger_attrs={"class": "w-full justify-between"}, popover_attrs=select_popover_attrs, listbox_attrs=select_listbox_attrs, is_combobox=true, search_placeholder="Buscar centro...") }}
+						{% endcall %}
+
+						{% call field(label="Ordinária/Extraordinária") %}
+							{{ select(id="ordinaria_extraordinaria", name="ordinaria_extraordinaria", items=ns.ord_extra_items, selected=doc.ordinaria_extraordinaria or "", main_attrs={"class": "w-full"}, trigger_attrs={"class": "w-full justify-between"}, popover_attrs=select_popover_attrs, listbox_attrs=select_listbox_attrs) }}
+						{% endcall %}
+
+						<div class="detalhe-extrato-toggle-field" id="conta-fixa-field-container">
+							{% call field(label="Conta Fixa") %}
+								{{ select(id="conta_fixa", name="conta_fixa", items=ns.conta_fixa_items, selected=doc.conta_fixa or "", main_attrs={"class": "w-full"}, trigger_attrs={"class": "w-full justify-between"}, popover_attrs=select_popover_attrs, listbox_attrs=select_listbox_attrs, is_combobox=true, search_placeholder="Buscar conta fixa...") }}
+							{% endcall %}
+						</div>
+
+						<div class="detalhe-extrato-toggle-field detalhe-extrato-grid__full" id="beneficiario-field-container">
+							{% call field(label="Beneficiário da Contribuição Mensal") %}
+								{{ select(id="beneficiario", name="beneficiario", items=ns.beneficiario_items, selected=doc.beneficiario or "", main_attrs={"class": "w-full"}, trigger_attrs={"class": "w-full justify-between"}, popover_attrs=select_popover_attrs, listbox_attrs=select_listbox_attrs, is_combobox=true, search_placeholder="Buscar beneficiário...") }}
+							{% endcall %}
+						</div>
+
+						{% call field(label="Observações", attrs={"class": "detalhe-extrato-grid__full"}) %}
+							{{ textarea(name="observacoes", value=doc.observacoes or "", attrs={"id": "observacoes", "rows": "3"}) }}
+						{% endcall %}
+
+						<div class="detalhe-extrato-checkboxes detalhe-extrato-grid__full">
+							{{ checkbox(
+								id="repasse_entre_contas",
+								label="Repasse entre Contas (automático)",
+								checked=doc.repasse_entre_contas in ['1', 1, true],
+								attrs={"name": "repasse_entre_contas", "value": "1", "disabled": "disabled", "title": "Campo calculado automaticamente pela categoria"}
+							) }}
+							{{ checkbox(
+								id="transacao_revisada",
+								label="Transação Revisada",
+								checked=doc.transacao_revisada in ['1', 1, true],
+								attrs={"name": "transacao_revisada", "value": "1"}
+							) }}
+						</div>
+					</div>
+				</form>
+
+				<div class="detalhe-extrato-footer hidden" id="footer-salvar">
+					<button type="button" id="btn-salvar-extrato" class="btn-sm-primary">Salvar</button>
+				</div>
+			{% endcall %}
+		</div>
+	{% endif %}
 {% endblock %}

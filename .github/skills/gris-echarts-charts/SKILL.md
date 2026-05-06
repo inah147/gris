@@ -13,6 +13,7 @@ Use esta skill quando a solicitacao envolver um ou mais pontos:
 - definicao de paleta de cores acessivel para daltonismo;
 - ajustes de tooltip, legenda, eixos ou estados de interacao em charts.
 - padronizacao de cards KPI em dashboards (numero principal, percentual e breakdown).
+- composicao visual de dashboards de Portal com cards, filtros, tabelas e badges Basecoat ao redor dos graficos.
 
 ## Objetivo
 Garantir que todos os graficos do projeto GRIS sejam implementados com Apache ECharts, com foco em:
@@ -29,6 +30,8 @@ Garantir que todos os graficos do projeto GRIS sejam implementados com Apache EC
 - Sempre configurar `tooltip`, `legend` e `grid` de forma explicita.
 - Preferir `dataset` + `encode` quando fizer sentido, para separar dados da apresentacao.
 - Em series com comparacao entre categorias, nao depender apenas de cor: combinar com `lineStyle.type`, `symbol` ou padrao visual equivalente.
+- Em dashboards de Portal, usar Basecoat para shell visual (cards, filtros, tabelas, badges, tabs, empty/loading/error) e manter ECharts somente para visualizacao de dados.
+- Em Desk, nao carregar Basecoat: usar containers e padroes nativos do Frappe para embutir o grafico.
 
 ## Cards KPI (numero grande)
 Use estas diretrizes quando a tela tiver cards de metricas junto com graficos.
@@ -56,6 +59,8 @@ Para implementacao pratica (estrutura, snippets e checklist), consultar:
 - Usar `font-variant-numeric: tabular-nums` para estabilidade visual de numeros.
 - Para `delta`, usar badge/pill com contraste adequado e texto explicito (ex.: `12,3%`).
 - Em breakdown, preferir linhas curtas com label + valor e espacamento regular.
+- Em Portal, montar o KPI com macros/classes Basecoat (`card`, `badge`, `skeleton`, `empty`) antes de criar CSS proprio.
+- Em Desk, manter padrao visual nativo do Frappe e nao importar `/assets/gris/design_system/*`.
 
 ### Estado e atualizacao de KPI
 - Definir estados explicitos: `loading`, `success`, `empty`, `error`.
@@ -113,6 +118,7 @@ Toda implementacao deve cobrir ao menos:
 - Manter dados e transformacoes em modulo separado da configuracao visual.
 - Evitar objetos gigantes inline quando o grafico tiver multiplas series.
 - Nomear series e eixos com termos de negocio em PT-BR.
+- Para Portal, separar container visual Basecoat do ciclo de vida ECharts: markup/Jinja para layout, JS co-localizado para `echarts.init`, resize e refresh de dados.
 
 ## Anti-padroes
 - Criar grafico novo com biblioteca diferente de Apache ECharts.
@@ -121,6 +127,8 @@ Toda implementacao deve cobrir ao menos:
 - Tooltip sem unidade de medida em dados numericos.
 - Rotulos truncados sem estrategia de responsividade.
 - Usar ECharts para KPI textual simples sem necessidade funcional.
+- Criar card/filtro/tabela de dashboard do Portal sem verificar macros Basecoat existentes.
+- Importar Basecoat em Desk para resolver problema visual de grafico.
 - Misturar alinhamentos diferentes entre cards KPI no mesmo bloco (parte centralizada, parte alinhada a esquerda sem criterio).
 - Atualizar apenas o numero principal e esquecer percentual/breakdown no refresh.
 
@@ -134,6 +142,8 @@ Toda implementacao deve cobrir ao menos:
 - [ ] Cards KPI seguem hierarquia visual clara (label, value, delta, breakdown).
 - [ ] Foi escolhido corretamente entre ECharts ou HTML/CSS para KPI.
 - [ ] Estados de loading/erro/empty dos KPIs foram tratados.
+- [ ] Dashboards de Portal usam Basecoat para componentes de layout/feedback ao redor dos graficos.
+- [ ] Dashboards Desk permanecem sem assets/componentes do Portal.
 
 ## Referencia complementar
 - Tokens e combinacoes recomendadas: `references/colorblind-palette.md`

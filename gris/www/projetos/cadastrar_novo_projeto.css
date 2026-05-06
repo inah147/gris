@@ -1,606 +1,714 @@
-.projeto-form-shell {
-    padding: 0;
+.project-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 0 0.5rem;
+}
+
+/* Utility: not loaded from Bootstrap in this portal context */
+.d-none {
+    display: none !important;
+}
+
+.project-page-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.project-page-header__actions .btn-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.project-form-page {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    padding-bottom: 2rem;
+    overflow-x: clip;
+}
+
+.project-form-card {
+    position: relative;
+    overflow: visible;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+}
+
+.project-form-card:has(.select > button[aria-expanded="true"]),
+.project-form-card:has(.datepicker > button[aria-expanded="true"]) {
+    z-index: 10;
+}
+
+.project-form-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.25rem 1.25rem 0;
+}
+
+.project-form-card__title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--foreground);
+}
+
+.project-form-card__subtitle {
+    margin: 0.35rem 0 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--muted-foreground);
+}
+
+.project-form-card__body {
+    display: grid;
+    gap: 1rem;
+    padding: 1.25rem;
+}
+
+.project-form-stack {
+    display: grid;
+    gap: 1rem;
+}
+
+.project-form-grid,
+.project-builder-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.project-form-grid--general {
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.project-form-grid--impact {
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+}
+
+.project-builder-grid {
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    align-items: end;
+}
+
+.project-builder-grid__actions {
+    display: flex;
+    align-items: end;
+}
+
+.field {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.field .input,
+.field .textarea,
+.field > .select,
+.field > .datepicker {
+    width: 100%;
+}
+
+.field .textarea {
+    min-height: 7rem;
+    resize: vertical;
+}
+
+.project-title-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.project-label-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.project-help-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    position: relative;
+    width: 1rem;
+    height: 1rem;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: var(--muted-foreground);
+    line-height: 0;
+    vertical-align: -0.125em;
+    transition: color 0.15s ease;
+}
+
+.project-help-trigger svg {
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 auto;
+}
+
+.project-help-trigger:hover,
+.project-help-trigger:focus-visible {
     background: transparent;
     border: none;
     box-shadow: none;
+    color: var(--foreground);
 }
 
-.projeto-form-shell .form-card--aprovadores {
-    order: 900;
+.project-select,
+.project-datepicker {
+    width: 100%;
 }
 
-.projeto-form-shell .form-actions {
-    order: 1000;
-}
-
-.pending-review-banner {
-    display: flex;
-    align-items: center;
+.project-select__trigger,
+.project-table__select-trigger,
+.project-datepicker__trigger {
+    width: 100%;
+    min-height: 2.75rem;
     justify-content: space-between;
     gap: 0.75rem;
-    padding: 0.75rem;
-    border: 1px solid #f0c88b;
-    border-radius: 10px;
-    background: #fff8ec;
+    background: var(--background);
+    border-color: var(--border);
+    box-shadow: none;
 }
 
-.pending-review-banner__count {
-    color: #8a5a09;
+.project-select__trigger:hover,
+.project-table__select-trigger:hover,
+.project-datepicker__trigger:hover {
+    background: color-mix(in srgb, var(--accent) 18%, var(--background));
+}
+
+.project-select [data-popover] {
+    min-width: min(22rem, calc(100vw - 2rem));
+    max-width: min(30rem, calc(100vw - 2rem));
+    max-height: min(22rem, calc(100vh - 8rem));
+    overflow: hidden auto;
+    overscroll-behavior: contain;
+    z-index: 60;
+}
+
+.project-select [role="listbox"] {
+    max-height: min(18rem, calc(100vh - 12rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.project-form-alert {
+    border: 1px solid var(--border);
+}
+
+.project-form-alert--success {
+    border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+    background: color-mix(in srgb, var(--primary) 12%, var(--background));
+    color: var(--foreground);
+}
+
+.project-review-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+    border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
+    background: color-mix(in srgb, var(--primary) 8%, var(--background));
+}
+
+.project-review-banner__content {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+}
+
+.project-review-banner__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--foreground);
+}
+
+.project-review-banner__description {
+    margin: 0.2rem 0 0;
+    color: var(--muted-foreground);
+}
+
+.project-review-banner__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    min-height: 2rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--primary) 16%, var(--background));
+    color: var(--primary);
     font-size: 0.85rem;
     font-weight: 600;
 }
 
-.form-card .card-modern__body {
-    padding-top: 1rem;
+.project-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) + 4px);
+    background: var(--background);
 }
 
-.card-title-with-help {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 0.4rem;
+.project-table-wrap:has(.select > button[aria-expanded="true"]),
+.project-table-wrap:has(.datepicker > button[aria-expanded="true"]) {
+    overflow: visible;
 }
 
-.label-with-help {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 0.35rem;
-    margin-bottom: 0.35rem;
+.project-table-wrap:has(.project-table--ods) {
+    overflow-x: clip;
 }
 
-.label-with-help .form-label-modern {
-    margin-bottom: 0;
-}
-
-.table-th-actions {
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 0.35rem;
-}
-
-.info-trigger {
-    display: inline-flex;
-    background: transparent;
+.project-table-wrap--modal {
     border: 0;
+    border-radius: 0;
+}
+
+.project-table {
+    width: 100%;
+    min-width: 42rem;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.project-table--ods {
+    min-width: 0;
+}
+
+.project-table--ods .project-select [data-popover] {
+    max-height: none;
+    overflow: hidden visible;
+}
+
+.project-table--ods .project-select [role="listbox"] {
+    max-height: none;
+    overflow-y: visible;
+}
+
+.project-table thead th {
+    padding: 0.9rem 1rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+    background: color-mix(in srgb, var(--muted) 58%, transparent);
+    border-bottom: 1px solid var(--border);
+}
+
+.project-table tbody td,
+.project-table tfoot td {
+    padding: 0.9rem 1rem;
+    vertical-align: top;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+}
+
+.project-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.project-table tbody .input,
+.project-table tbody .textarea,
+.project-table tbody .select,
+.project-table tbody .datepicker {
+    width: 100%;
+}
+
+.project-table tbody .textarea {
+    min-height: 5.5rem;
+}
+
+.project-table__header-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.project-table__actions-col {
+    width: 5rem;
+    text-align: right;
+}
+
+.project-table__handle-col {
+    width: 3rem;
+}
+
+.project-table__footer {
+    text-align: left;
+    background: color-mix(in srgb, var(--muted) 35%, transparent);
+}
+
+.btn-delete-row {
+    width: 2rem;
+    height: 2rem;
     padding: 0;
-    cursor: pointer;
-    line-height: 1;
-    color: var(--color-primary, #0d4d91);
+}
+
+.btn-delete-row svg {
+    width: 1rem;
+    height: 1rem;
     flex: 0 0 auto;
 }
 
-.info-trigger:hover,
-.info-trigger:focus-visible {
-    color: var(--color-primary, #0a3d73);
-}
-
-.info-trigger__icon {
-    width: 1rem;
-    height: 1rem;
-    display: block;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.8;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-.info-trigger:focus-visible {
-    outline: 2px solid var(--color-primary, #0d4d91);
-    outline-offset: 2px;
-    border-radius: 4px;
-}
-
-.info-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 1080;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-}
-
-.info-modal__backdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(14, 30, 50, 0.55);
-}
-
-.info-modal__panel {
-    position: relative;
-    width: min(860px, 100%);
-    max-height: 88vh;
-    overflow: auto;
-    border-radius: 12px;
-    border: 1px solid var(--border-color, #d7e1ec);
-    background: #fff;
-    box-shadow: 0 16px 48px rgba(11, 30, 54, 0.22);
-}
-
-.info-modal__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.6rem;
-    padding: 0.85rem 1rem;
-    border-bottom: 1px solid var(--border-color, #d7e1ec);
-}
-
-.info-modal__title {
-    margin: 0;
-    color: #103d73;
-    font-size: 1rem;
-}
-
-.info-modal__close {
-    border: 1px solid var(--border-color, #d7e1ec);
-    background: #fff;
-    color: #334155;
-    border-radius: 8px;
-    width: 32px;
-    height: 32px;
-    font-size: 1.25rem;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-}
-
-.info-modal__body {
-    padding: 1rem;
-    color: #1f2937;
-    font-size: 0.92rem;
-    line-height: 1.45;
-}
-
-.info-modal__body p {
-    margin: 0 0 0.6rem;
-}
-
-.info-modal__body ol {
-    margin: 0.5rem 0 0.8rem 1.1rem;
-    padding: 0;
-}
-
-.info-modal__body li {
-    margin-bottom: 0.4rem;
-}
-
-body.info-modal-open {
-    overflow: hidden;
-}
-
-.table-box {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-}
-
-.equipe-builder {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    align-items: end;
-    padding: 0.85rem;
-    border: 1px dashed var(--border-color, #d7e1ec);
-    border-radius: 10px;
-    background: var(--surface-subtle, #f8fafc);
-}
-
-.equipe-builder .filter-field {
-    min-width: 190px;
-    flex: 1 1 190px;
-}
-
-.equipe-builder__actions {
-    display: flex;
-    align-items: flex-end;
-    justify-content: flex-end;
-    flex: 1 1 190px;
-}
-
-.projeto-table {
-    min-width: 640px;
-}
-
-.projeto-table tbody td {
-    vertical-align: middle;
-}
-
-.projeto-table tfoot td {
-    border-top: 1px solid var(--border-color, #d7e1ec);
-}
-
-.table-footer-cell {
-    text-align: left;
-    padding: 0.55rem;
-}
-
-.btn-add-row-footer {
-    border: 1px solid var(--primary-color, #0d4d91);
-    background: #fff;
-    color: var(--primary-color, #0d4d91);
-    border-radius: 8px;
-    padding: 0.34rem 0.65rem;
-    font-size: 0.82rem;
-    font-weight: 600;
-    line-height: 1.2;
-    cursor: pointer;
-}
-
-.btn-add-row-footer:hover,
-.btn-add-row-footer:focus-visible {
-    background: #eef4fb;
-}
-
-.projeto-table input,
-.projeto-table select,
-.projeto-table textarea {
-    width: 100%;
-    border: 1px solid var(--border-color, #d7e1ec);
-    border-radius: 8px;
-    padding: 0.38rem 0.5rem;
-    background: #fff;
-    font-size: 0.875rem;
-}
-
-.projeto-table .btn-delete-row {
-    border: 1px solid #d35d5d;
-    background: #fff3f3;
-    color: #a33232;
-    border-radius: 8px;
-    width: 34px;
-    height: 34px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-}
-
-.projeto-table .btn-delete-row svg {
-    width: 16px;
-    height: 16px;
-}
-
-.projeto-table .btn-delete-row:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-}
-
 .cronograma-cell-handle {
-    width: 38px;
     text-align: center;
     vertical-align: middle;
 }
 
 .cronograma-row-handle {
-    border: 0;
-    background: transparent;
-    color: #7a8699;
-    width: 22px;
-    height: 22px;
-    padding: 2px;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    gap: 2px;
-    margin: 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 999px;
+    color: var(--muted-foreground);
     cursor: grab;
 }
 
-.cronograma-row-handle span {
-    width: 4px;
-    height: 4px;
-    border-radius: 999px;
-    background: currentColor;
-    justify-self: center;
-    align-self: center;
+.project-gantt-card {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) + 6px);
+    background: color-mix(in srgb, var(--muted) 28%, transparent);
 }
 
-#rows_cronograma tr.is-drag-source {
-    opacity: 0.7;
-    background: #f4f9ff;
+.project-gantt-card__header {
+    display: grid;
+    gap: 0.3rem;
 }
 
-#rows_cronograma tr.is-drop-target-before td {
-    border-top: 2px solid #2a71bd;
-}
-
-#rows_cronograma tr.is-drop-target-after td {
-    border-bottom: 2px solid #2a71bd;
-}
-
-.gantt-card {
-    border: 1px solid var(--border-color, #d7e1ec);
-    border-radius: 10px;
-    background: #fff;
-    padding: 0.75rem;
-}
-
-.gantt-card__header {
-    margin-bottom: 0.55rem;
-}
-
-.gantt-card__title {
+.project-gantt-card__title {
     margin: 0;
-    font-size: 0.95rem;
-    color: #143f73;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--foreground);
 }
 
-.gantt-card__subtitle {
-    margin: 0.25rem 0 0;
-    font-size: 0.82rem;
-    color: #5b6576;
+.project-gantt-card__subtitle {
+    margin: 0;
+    color: var(--muted-foreground);
+    line-height: 1.5;
 }
 
 .cronograma-gantt {
-    border: 1px solid var(--border-color, #d7e1ec);
-    border-radius: 10px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    background: #fbfdff;
+    display: grid;
+    gap: 0.9rem;
 }
 
 .cronograma-gantt__empty {
-    padding: 0.9rem;
-    color: #64748b;
-    font-size: 0.85rem;
+    padding: 2rem;
+    text-align: center;
+    color: var(--muted-foreground);
+    border: 1px dashed color-mix(in srgb, var(--border) 85%, transparent);
+    border-radius: calc(var(--radius) + 4px);
+    background: var(--background);
 }
 
-.cronograma-gantt__header {
+.cronograma-gantt__header,
+.cronograma-gantt__row {
     display: grid;
-    grid-template-columns: minmax(150px, 220px) 1fr;
-    min-width: 620px;
-    border-bottom: 1px solid var(--border-color, #d7e1ec);
-    background: #f3f7fb;
-}
-
-.cronograma-gantt__body {
-    min-width: 620px;
+    grid-template-columns: minmax(12rem, 16rem) minmax(18rem, 1fr);
+    gap: 1rem;
+    align-items: center;
 }
 
 .cronograma-gantt__header-label {
-    padding: 0.45rem 0.6rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #475569;
-    border-right: 1px solid var(--border-color, #d7e1ec);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
 }
 
 .cronograma-gantt__timeline {
     position: relative;
-    min-height: 28px;
+    min-height: 2.75rem;
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) + 4px);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--background) 92%, transparent), color-mix(in srgb, var(--muted) 28%, transparent));
+    overflow: hidden;
 }
 
 .cronograma-gantt__tick {
     position: absolute;
-    top: 5px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: color-mix(in srgb, var(--border) 75%, transparent);
+}
+
+.cronograma-gantt__tick > span {
+    position: absolute;
+    top: 0.35rem;
+    left: 0;
     transform: translateX(-50%);
-    font-size: 0.72rem;
-    color: #6b7280;
     white-space: nowrap;
-}
-
-.cronograma-gantt__row {
-    display: grid;
-    grid-template-columns: minmax(150px, 220px) 1fr;
-    min-height: 44px;
-    border-bottom: 1px solid #edf2f7;
-}
-
-.cronograma-gantt__row:last-child {
-    border-bottom: 0;
-}
-
-.cronograma-gantt__row.is-drop-target {
-    background: #eef6ff;
-    box-shadow: inset 0 0 0 2px #8eb9ea;
-}
-
-.cronograma-gantt__row.is-drop-target .cronograma-gantt__label::after {
-    content: " ← destino";
-    color: #0f4a89;
     font-size: 0.72rem;
-    font-weight: 600;
+    color: var(--muted-foreground);
+}
+
+.cronograma-gantt__body {
+    display: grid;
+    gap: 0.75rem;
 }
 
 .cronograma-gantt__row.is-drag-source {
-    background: #f2f8ff;
+    opacity: 0.7;
+}
+
+.cronograma-gantt__row.is-drop-target .cronograma-gantt__lane {
+    border-color: color-mix(in srgb, var(--ring) 45%, var(--border));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ring) 38%, transparent);
 }
 
 .cronograma-gantt__label {
-    padding: 0.48rem 0.6rem;
-    font-size: 0.82rem;
-    color: #334155;
-    border-right: 1px solid #edf2f7;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--foreground);
 }
 
 .cronograma-gantt__lane {
     position: relative;
-    margin: 6px;
-    border-radius: 8px;
-    background: repeating-linear-gradient(
-        to right,
-        #f7fbff,
-        #f7fbff 24px,
-        #eef4fb 24px,
-        #eef4fb 25px
-    );
+    min-height: 3.5rem;
+    border: 1px dashed color-mix(in srgb, var(--border) 82%, transparent);
+    border-radius: calc(var(--radius) + 4px);
+    background: color-mix(in srgb, var(--background) 88%, transparent);
+    overflow: hidden;
 }
 
 .cronograma-gantt__bar {
     position: absolute;
-    top: 2px;
-    height: calc(100% - 4px);
-    min-width: 42px;
-    border-radius: 7px;
-    background: linear-gradient(90deg, #0d4d91, #2a71bd);
-    color: #fff;
+    top: 50%;
     display: flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0 0.3rem;
+    gap: 0.4rem;
+    height: 2.2rem;
+    padding: 0 0.5rem;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 94%, white 6%), color-mix(in srgb, var(--primary) 78%, black 22%));
+    color: var(--primary-foreground);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-50%);
     cursor: grab;
-    box-shadow: 0 4px 10px rgba(13, 77, 145, 0.25);
-}
-
-.cronograma-gantt__bar.is-dragging {
-    opacity: 0.9;
 }
 
 .cronograma-gantt__bar.is-dragging-source {
-    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #1d69b6, 0 10px 24px rgba(13, 77, 145, 0.34);
-    transform: translateY(-1px);
-}
-
-.gantt-is-dragging .cronograma-gantt__bar {
     cursor: grabbing;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 24%, transparent), var(--shadow-sm);
 }
 
 .cronograma-gantt__bar-text {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 0.75rem;
-    flex: 1;
-    user-select: none;
-}
-
-.cronograma-gantt__handle {
-    width: 8px;
-    height: 70%;
-    border: 0;
-    border-radius: 3px;
-    background: rgba(255, 255, 255, 0.7);
-    cursor: ew-resize;
-    padding: 0;
-    flex: 0 0 auto;
-}
-
-.cronograma-gantt__delete {
-    border: 0;
-    background: rgba(161, 18, 18, 0.2);
-    color: #fff;
-    width: 18px;
-    height: 18px;
-    border-radius: 4px;
-    line-height: 1;
-    font-size: 0.85rem;
-    cursor: pointer;
-    flex: 0 0 auto;
-}
-
-.cronograma-gantt__drag-hint {
-    display: block;
-    padding: 0.35rem 0.6rem;
-    font-size: 0.78rem;
-    color: #0f4a89;
-    background: #eaf3ff;
-    border-bottom: 1px solid #cfe2f8;
+    font-size: 0.8rem;
     font-weight: 600;
 }
 
-.form-actions {
+.cronograma-gantt__handle {
+    flex: 0 0 auto;
+    width: 0.8rem;
+    height: 1.35rem;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: color-mix(in srgb, white 28%, transparent);
+    cursor: ew-resize;
+}
+
+.cronograma-gantt__delete {
+    flex: 0 0 auto;
+    width: 1.35rem;
+    height: 1.35rem;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: color-mix(in srgb, black 16%, transparent);
+    color: inherit;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.cronograma-gantt__drag-hint {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 52%, transparent);
+    color: var(--accent-foreground);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.project-markdown-output {
+    display: grid;
+    gap: 0.9rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) + 4px);
+    background: color-mix(in srgb, var(--muted) 25%, transparent);
+    line-height: 1.65;
+}
+
+.project-markdown-output > :first-child {
+    margin-top: 0;
+}
+
+.project-markdown-output > :last-child {
+    margin-bottom: 0;
+}
+
+.project-form-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.6rem;
     justify-content: flex-end;
+    gap: 0.75rem;
 }
 
-.confirm-modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
-    padding: 0 1rem 1rem;
+.project-form-actions > * {
+    min-width: 11rem;
 }
 
-.alert-modern--error {
-    border: 1px solid #dc8b8b;
-    background: #fff2f2;
-    color: #8a1f1f;
+.project-dialog {
+    padding: 0;
+    border: 0;
+    background: transparent;
 }
 
-.alert-modern--success {
-    border: 1px solid #93ce9d;
-    background: #f1fbf2;
-    color: #1f6b2b;
+.project-dialog::backdrop {
+    background: color-mix(in srgb, black 48%, transparent);
+    backdrop-filter: blur(4px);
 }
 
-.avaliacao-markdown {
-    min-height: 240px;
-    max-height: 480px;
-    overflow: auto;
-    white-space: normal;
-    line-height: 1.45;
+.project-dialog__body {
+    padding: 1rem 1.25rem;
 }
 
-.avaliacao-markdown h1,
-.avaliacao-markdown h2,
-.avaliacao-markdown h3,
-.avaliacao-markdown h4 {
-    margin: 0.9rem 0 0.5rem;
-    color: #103d73;
+.project-dialog__body p {
+    margin: 0;
 }
 
-.avaliacao-markdown p {
-    margin: 0.4rem 0;
+.project-dialog__richtext {
+    display: grid;
+    gap: 0.85rem;
+    line-height: 1.65;
 }
 
-.avaliacao-markdown ul,
-.avaliacao-markdown ol {
-    margin: 0.35rem 0 0.65rem 1.1rem;
+.project-dialog__richtext > :first-child {
+    margin-top: 0;
 }
 
-.avaliacao-markdown code {
-    background: #f2f4f8;
-    border-radius: 4px;
-    padding: 0.08rem 0.25rem;
+.project-dialog__richtext > :last-child {
+    margin-bottom: 0;
 }
 
-@media (max-width: 1000px) {
-    .equipe-builder {
+.project-dialog--info > div {
+    max-width: min(48rem, calc(100vw - 2rem));
+}
+
+.project-dialog--confirm > div {
+    max-width: min(34rem, calc(100vw - 2rem));
+}
+
+.project-dialog__text {
+    line-height: 1.6;
+    color: var(--foreground);
+}
+
+@media (max-width: 960px) {
+    .project-page-header {
         flex-direction: column;
         align-items: stretch;
     }
 
-    .equipe-builder .filter-field,
-    .equipe-builder__actions {
-        min-width: 100%;
-    }
-
-    .equipe-builder__actions {
+    .project-page-header__actions {
         justify-content: flex-start;
-    }
-
-    .label-with-help {
-        align-items: flex-start;
-    }
-}
-
-@media (max-width: 720px) {
-    .projeto-table {
-        min-width: 560px;
     }
 
     .cronograma-gantt__header,
     .cronograma-gantt__row {
-        grid-template-columns: minmax(120px, 150px) 1fr;
+        grid-template-columns: 1fr;
+    }
+
+    .cronograma-gantt__header-label {
+        display: none;
     }
 
     .cronograma-gantt__label {
-        font-size: 0.76rem;
+        white-space: normal;
+    }
+}
+
+@media (max-width: 720px) {
+    .project-form-card__header,
+    .project-title-row,
+    .project-label-row,
+    .project-review-banner,
+    .project-review-banner__content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .project-builder-grid,
+    .project-form-grid--general,
+    .project-form-grid--impact {
+        grid-template-columns: 1fr;
+    }
+
+    .project-table {
+        min-width: 36rem;
+    }
+
+    .project-form-actions {
+        justify-content: stretch;
+    }
+
+    .project-form-actions > * {
+        width: 100%;
+    }
+
+    .project-dialog footer {
+        flex-direction: column-reverse;
+    }
+
+    .project-dialog footer > * {
+        width: 100%;
+    }
+}
+
+@media (max-width: 520px) {
+    .project-form-card__header,
+    .project-form-card__body,
+    .project-dialog header,
+    .project-dialog__body,
+    .project-dialog footer {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .project-table {
+        min-width: 32rem;
+    }
+
+    .project-gantt-card {
+        padding: 0.85rem;
     }
 }

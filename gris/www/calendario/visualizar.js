@@ -1,383 +1,269 @@
-frappe.ready(function() {
-    scrollToToday();
-    initFilters();
-    initHoverEffects();
-    initViewModal();
-    initExport();
+frappe.ready(() => {
+	const calendar = document.getElementById("activity-calendar");
+	const yearFilter = document.getElementById("year-filter");
+	const monthFilter = document.getElementById("month-filter");
+	const sectionFilter = document.getElementById("section-filter");
+	const exportButton = document.getElementById("btn-export-calendar");
+	const sourceEvents = calendar ? (calendar.events || []).map(cloneEvent) : [];
+	const allSections = calendar ? (calendar.activeCategories || []) : [];
+
+	const applyFilters = ({ resetAnchor = false } = {}) => {
+		const year = Number(getSelectValue(yearFilter) || new Date().getFullYear());
+		const selectedMonth = getSelectValue(monthFilter) || "";
+		const requestedSections = getMultipleSelectValue(sectionFilter);
+		const activeSections = requestedSections.length ? requestedSections : allSections;
+
+		if (calendar) {
+			const filteredEvents = sourceEvents.filter((event) => {
+				const eventSection = event.category || "Diretoria";
+				return activeSections.includes(eventSection) && eventMatchesMonth(event, year, selectedMonth);
+			});
+
+			calendar.events = filteredEvents;
+			calendar.setActiveCategories(activeSections);
+
+			if (selectedMonth) {
+				const monthRange = getMonthRange(year, selectedMonth);
+				calendar.setListRange(monthRange.start, monthRange.end);
+				if (resetAnchor) {
+					calendar.goToDate(monthRange.start);
+				}
+			} else {
+				calendar.setListRange(`${year}-01-01`, `${year}-12-31`);
+				if (resetAnchor) {
+					calendar.goToDate(getDefaultAnchorDate(year));
+				}
+			}
+		}
+
+		updateHolidayList(selectedMonth);
+	};
+
+	if (yearFilter) {
+		yearFilter.addEventListener("change", () => {
+			const url = new URL(window.location.href);
+			const year = getSelectValue(yearFilter);
+			const selectedMonth = getSelectValue(monthFilter);
+			if (year) {
+				url.searchParams.set("year", year);
+			}
+			if (selectedMonth) {
+				url.searchParams.set("month", selectedMonth);
+			} else {
+				url.searchParams.delete("month");
+			}
+			window.location.href = url.toString();
+		});
+	}
+
+	if (monthFilter) {
+		monthFilter.addEventListener("change", () => applyFilters({ resetAnchor: true }));
+	}
+
+	if (sectionFilter) {
+		sectionFilter.addEventListener("change", () => applyFilters());
+	}
+
+	if (calendar) {
+		calendar.addEventListener("gris:calendar:event-click", (event) => {
+			const detail = event.detail || {};
+			const data = detail.data || {};
+			setText("view-modal-atividade", data.atividade || detail.title || "-");
+			setText("view-modal-inicio", data.inicio || "-");
+			setText("view-modal-termino", data.termino || "-");
+			setText("view-modal-hora", formatTimeWindow(data.hora_inicio, data.hora_termino));
+			setText("view-modal-secao", data.secao || detail.category || "-");
+			setText("view-modal-local", data.local || "-");
+			setText("view-modal-nivel", data.nivel || "-");
+
+			const emptyDayFlag = document.getElementById("view-modal-sem-atividade-group");
+			if (emptyDayFlag) {
+				emptyDayFlag.classList.toggle("hidden", String(data.sem_atividade || 0) !== "1");
+			}
+
+			openDialog("activity-detail-dialog");
+		});
+	}
+
+	if (exportButton) {
+		exportButton.addEventListener("click", () => {
+			const year = getSelectValue(yearFilter) || String(new Date().getFullYear());
+			const month = getSelectValue(monthFilter) || "";
+			const sections = getMultipleSelectValue(sectionFilter);
+			const showEmptyDays = getCalendarShowAllDays(calendar) ? 1 : 0;
+			const params = new URLSearchParams({
+				year,
+				month,
+				show_empty_days: String(showEmptyDays),
+				sections: JSON.stringify(sections),
+			});
+
+			window.open(`/api/method/gris.www.calendario.visualizar.export_calendar?${params.toString()}`, "_blank");
+		});
+	}
+
+	document.addEventListener("click", (event) => {
+		const holidayButton = event.target.closest("[data-holiday-button]");
+		if (!holidayButton) {
+			return;
+		}
+
+		setText("holiday-modal-name", holidayButton.dataset.holidayName || "Feriado");
+		setText("holiday-modal-desc", holidayButton.dataset.holidayDesc || "Sem descrição disponível.");
+		setHolidayBadge(holidayButton.dataset.holidayType || "Geral", holidayButton.dataset.holidayBadgeVariant || "outline");
+		openDialog("holiday-dialog");
+	});
+
+	applyFilters();
 });
 
-function initExport() {
-    const btnExport = document.getElementById('btn-export-calendar');
-    if (btnExport) {
-        btnExport.addEventListener('click', function() {
-            const yearFilter = document.getElementById('year-filter');
-            const monthFilter = document.getElementById('month-filter');
-            const showEmptyDaysCheckbox = document.getElementById('show-empty-days');
-            const sectionCheckboxes = document.querySelectorAll('input[name="section-filter"]');
-            
-            const year = yearFilter ? yearFilter.value : new Date().getFullYear();
-            const month = monthFilter ? monthFilter.value : '';
-            const showEmptyDays = showEmptyDaysCheckbox ? (showEmptyDaysCheckbox.checked ? 1 : 0) : 1;
-            
-            const selectedSections = Array.from(sectionCheckboxes)
-                .filter(cb => cb.checked)
-                .map(cb => cb.value);
-            
-            // Build Query Params
-            const params = new URLSearchParams({
-                year: year,
-                month: month,
-                show_empty_days: showEmptyDays,
-                sections: JSON.stringify(selectedSections)
-            });
-                
-            window.open(`/api/method/gris.www.calendario.visualizar.export_calendar?${params.toString()}`, '_blank');
-        });
-    }
+function cloneEvent(event) {
+	return {
+		...event,
+		data: { ...(event.data || {}) },
+	};
 }
 
-function scrollToToday() {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
-    
-    const row = document.querySelector(`tr[data-date="${dateStr}"]`);
-    if (row) {
-        // Wait a bit for layout to settle
-        setTimeout(() => {
-            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            row.classList.add('is-today');
-        }, 500);
-    }
+function getSelectValue(element) {
+	if (!element) {
+		return "";
+	}
+	const value = element.value;
+	return Array.isArray(value) ? value[0] || "" : (value || "");
 }
 
-function initFilters() {
-    const allCheckbox = document.getElementById('filter-all');
-    const sectionCheckboxes = document.querySelectorAll('input[name="section-filter"]');
-    const showEmptyDaysCheckbox = document.getElementById('show-empty-days');
-    const monthFilter = document.getElementById('month-filter');
-    const yearFilter = document.getElementById('year-filter');
-
-    // Year filter logic
-    if (yearFilter) {
-        yearFilter.addEventListener('change', () => {
-            const selectedYear = yearFilter.value;
-            const url = new URL(window.location.href);
-            url.searchParams.set('year', selectedYear);
-            window.location.href = url.toString();
-        });
-    }
-    
-    // "All" checkbox logic
-    allCheckbox.addEventListener('change', (e) => {
-        const isChecked = e.target.checked;
-        sectionCheckboxes.forEach(cb => {
-            cb.checked = isChecked;
-        });
-        applyFilters();
-    });
-    
-    // Individual checkboxes logic
-    sectionCheckboxes.forEach(cb => {
-        cb.addEventListener('change', () => {
-            const allChecked = Array.from(sectionCheckboxes).every(c => c.checked);
-            allCheckbox.checked = allChecked;
-            allCheckbox.indeterminate = !allChecked && Array.from(sectionCheckboxes).some(c => c.checked);
-            applyFilters();
-        });
-    });
-
-    // Show empty days logic
-    showEmptyDaysCheckbox.addEventListener('change', () => {
-        applyFilters();
-    });
-
-    // Month filter logic
-    monthFilter.addEventListener('change', () => {
-        applyFilters();
-    });
-    
-    function applyFilters() {
-        const selectedSections = Array.from(sectionCheckboxes)
-            .filter(cb => cb.checked)
-            .map(cb => cb.value);
-        
-        const showEmptyDays = showEmptyDaysCheckbox.checked;
-        const selectedMonth = monthFilter.value;
-            
-        const rows = document.querySelectorAll('.calendar-row');
-        
-        rows.forEach(row => {
-            let showRow = false;
-            const rowDate = row.getAttribute('data-date');
-            const rowMonth = rowDate.substring(5, 7);
-            
-            // Month filter check
-            if (selectedMonth && rowMonth !== selectedMonth) {
-                showRow = false;
-            } else {
-                if (showEmptyDays) {
-                    showRow = true;
-                } else {
-                    // If no sections selected, show nothing (unless showEmptyDays is true, handled above)
-                    if (selectedSections.length === 0) {
-                        showRow = false;
-                    } else {
-                        // Check if row has activity in ANY of the selected sections
-                        for (const section of selectedSections) {
-                            // Find the cell for this section
-                            // We use CSS.escape to handle section names with special chars if any
-                            const cell = row.querySelector(`td[data-section="${CSS.escape(section)}"]`);
-                            if (cell && cell.querySelector('.activity-card')) {
-                                showRow = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            
-            if (showRow) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-
-        // Handle month separators
-        document.querySelectorAll('.month-separator-row').forEach(sep => {
-            const sepMonth = sep.getAttribute('data-month');
-            if (selectedMonth && sepMonth !== selectedMonth) {
-                sep.style.display = 'none';
-            } else {
-                sep.style.display = '';
-            }
-        });
-        
-        // Also toggle column visibility
-        const allSectionHeaders = document.querySelectorAll('th.col-section');
-        const allSectionCells = document.querySelectorAll('td.col-activity');
-        
-        // This part might be heavy if done cell by cell. 
-        // Better to use a style tag to toggle classes?
-        // Or just iterate columns.
-        
-        // Let's use a dynamic style block for column visibility to be efficient
-        let styleBlock = document.getElementById('dynamic-filter-style');
-        if (!styleBlock) {
-            styleBlock = document.createElement('style');
-            styleBlock.id = 'dynamic-filter-style';
-            document.head.appendChild(styleBlock);
-        }
-        
-        // Generate CSS to hide unselected columns
-        // We need to know which columns to hide.
-        // Actually, iterating headers and cells is fine for this scale.
-        // But CSS is cleaner.
-        // We can add a class to the table or body indicating which sections are hidden?
-        // No, sections are dynamic.
-        
-        // Let's just iterate headers and cells.
-        // Wait, if I hide a column, the sticky header might break or alignment might break?
-        // Table layout handles hidden columns fine.
-        
-        // However, the prompt asked for "filtro para somente datas".
-        // It didn't explicitly ask to hide columns.
-        // But if I select only "Section A", seeing empty columns for B, C, D is annoying.
-        // I will hide columns too.
-        
-        const allSections = Array.from(sectionCheckboxes).map(cb => cb.value);
-        const unselectedSections = allSections.filter(s => !selectedSections.includes(s));
-        
-        // Show all first
-        document.querySelectorAll('.col-section, .col-activity').forEach(el => el.style.display = '');
-        
-        unselectedSections.forEach(section => {
-             const selector = `[data-section="${CSS.escape(section)}"]`;
-             // Hide headers (headers don't have data-section in my HTML yet! I need to add it)
-             // Hide cells
-             document.querySelectorAll(`td${selector}`).forEach(el => el.style.display = 'none');
-             
-             // For headers, I need to find them.
-             // In HTML: <th class="col-section"><div class="th-content">{{ section }}</div></th>
-             // I should add data-section to th as well.
-             const headers = document.querySelectorAll(`th.col-section[data-section="${CSS.escape(section)}"]`);
-             headers.forEach(th => {
-                 th.style.display = 'none';
-             });
-        });
-
-        // Update colspan for month separators
-        const visibleColumnsCount = 1 + selectedSections.length; // 1 for date column
-        document.querySelectorAll('.month-separator-cell').forEach(cell => {
-            cell.colSpan = visibleColumnsCount;
-        });
-    }
-
-    // Apply filters initially to match UI state
-    applyFilters();
+function getMultipleSelectValue(element) {
+	if (!element) {
+		return [];
+	}
+	const value = element.value;
+	return Array.isArray(value) ? value : [];
 }
 
-function initHoverEffects() {
-    const cards = document.querySelectorAll('.activity-card');
-    
-    cards.forEach(card => {
-        card.addEventListener('mouseenter', () => {
-            const eventId = card.getAttribute('data-event-id');
-            if (eventId) {
-                const relatedCards = document.querySelectorAll(`.activity-card[data-event-id="${eventId}"]`);
-                relatedCards.forEach(c => c.classList.add('is-hovered'));
-            }
-        });
-        
-        card.addEventListener('mouseleave', () => {
-            const eventId = card.getAttribute('data-event-id');
-            if (eventId) {
-                const relatedCards = document.querySelectorAll(`.activity-card[data-event-id="${eventId}"]`);
-                relatedCards.forEach(c => c.classList.remove('is-hovered'));
-            }
-        });
-    });
+function parseISODate(value) {
+	if (!value) {
+		return null;
+	}
+	if (value instanceof Date) {
+		return new Date(value.getTime());
+	}
+	const stringValue = String(value);
+	const dateOnly = stringValue.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+	if (dateOnly) {
+		return new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]));
+	}
+	const parsed = new Date(stringValue);
+	return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function initViewModal() {
-    const modal = document.getElementById('view-activity-modal');
-    if (!modal) return;
-
-    // Use .close-modal class for closing (buttons and backdrop)
-    const closeElements = modal.querySelectorAll('.close-modal');
-    
-    function closeModal() {
-        modal.classList.add('d-none');
-        document.body.style.overflow = '';
-    }
-    
-    closeElements.forEach(el => el.addEventListener('click', closeModal));
-    
-    // Escape key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !modal.classList.contains('d-none')) {
-            closeModal();
-        }
-    });
-
-    // Delegate click on activity cards
-    document.addEventListener('click', function(e) {
-        const card = e.target.closest('.activity-card');
-        if (card) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const ds = card.dataset;
-
-            // Populate Modal Fields (checking existence to avoid errors)
-            const setField = (id, val) => {
-                const el = document.getElementById(id);
-                if (el) el.textContent = val || '-';
-            };
-
-            setField('view-modal-atividade', ds.atividade);
-            setField('view-modal-inicio', ds.inicio);
-            setField('view-modal-termino', ds.termino);
-            
-            const hStart = ds.horaInicio || '';
-            const hEnd = ds.horaTermino || '';
-            let timeStr = '-';
-            if (hStart || hEnd) {
-                 timeStr = `${hStart} - ${hEnd}`;
-            }
-            setField('view-modal-hora', timeStr);
-            
-            setField('view-modal-nivel', ds.nivel);
-            setField('view-modal-local', ds.local);
-            setField('view-modal-secao', ds.secao);
-            
-            // Sem atividade badge
-            const semAtividadeGroup = document.getElementById('view-modal-sem-atividade-group');
-            if (semAtividadeGroup) {
-                if (ds.semAtividade === '1') {
-                    semAtividadeGroup.classList.remove('d-none');
-                } else {
-                    semAtividadeGroup.classList.add('d-none');
-                }
-            }
-
-            // Show Modal
-            modal.classList.remove('d-none');
-            document.body.style.overflow = 'hidden';
-        }
-    });
+function eventMatchesMonth(event, year, selectedMonth) {
+	if (!selectedMonth) {
+		return true;
+	}
+	const { start, end } = getMonthRange(year, selectedMonth, true);
+	const eventStart = parseISODate(event.start);
+	const eventEnd = parseISODate(event.end || event.start);
+	if (!eventStart || !eventEnd) {
+		return false;
+	}
+	return eventStart <= end && eventEnd >= start;
 }
 
-// Holiday Modal Logic
-frappe.ready(function() {
-    initHolidayModal();
-});
-
-function initHolidayModal() {
-    const modal = document.getElementById('holiday-modal');
-    if (!modal) return;
-
-    // Move modal to body to ensure it's not clipped by containers with overflow:hidden
-    // or trapped in stacking contexts
-    document.body.appendChild(modal);
-
-    const closeElements = modal.querySelectorAll('.close-modal');
-    
-    function closeModal() {
-        modal.classList.add('d-none');
-        document.body.style.overflow = '';
-    }
-    
-    closeElements.forEach(el => el.addEventListener('click', closeModal));
-    
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !modal.classList.contains('d-none')) {
-            closeModal();
-        }
-    });
-
-    // Delegated click handler for holidays
-    document.addEventListener('click', function(e) {
-        const holidayBtn = e.target.closest('.holiday-indicator');
-        if (holidayBtn) {
-            e.preventDefault();
-            e.stopPropagation();
-            openHolidayModal(holidayBtn); // Pass the element here!
-        }
-    });
+function getMonthRange(year, month, asDates = false) {
+	const monthNumber = Number(month);
+	const lastDay = new Date(year, monthNumber, 0).getDate();
+	if (asDates) {
+		return {
+			start: new Date(year, monthNumber - 1, 1, 0, 0, 0, 0),
+			end: new Date(year, monthNumber - 1, lastDay, 23, 59, 59, 999),
+		};
+	}
+	return {
+		start: `${year}-${String(monthNumber).padStart(2, "0")}-01`,
+		end: `${year}-${String(monthNumber).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`,
+	};
 }
 
-function openHolidayModal(element) {
-    const name = element.getAttribute("data-holiday-name");
-    const type = element.getAttribute("data-holiday-type");
-    const desc = element.getAttribute("data-holiday-desc");
-
-    const modal = document.getElementById("holiday-modal");
-    const nameEl = document.getElementById("holiday-modal-name");
-    const typeEl = document.getElementById("holiday-modal-type");
-    const descEl = document.getElementById("holiday-modal-desc");
-
-    if (modal && nameEl && typeEl && descEl) {
-        nameEl.textContent = name || "Feriado";
-        typeEl.textContent = type || "Geral";
-        
-        // Reset classes and apply type logic
-        typeEl.className = "holiday-type-tag";
-        typeEl.setAttribute("data-type", type);
-        
-        descEl.textContent = desc || "Sem descrição disponível.";
-        
-        // Remove d-none first
-        modal.classList.remove("d-none");
-        
-        // Ensure z-index is correct (hardcode inline just in case)
-        modal.style.zIndex = '9999';
-        modal.style.display = 'flex'; // Force flex display
-        
-        document.body.style.overflow = 'hidden';
-    }
+function getDefaultAnchorDate(year) {
+	const today = new Date();
+	if (today.getFullYear() === year) {
+		return formatDateKey(today);
+	}
+	return `${year}-01-01`;
 }
 
+function formatDateKey(date) {
+	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function formatTimeWindow(start, end) {
+	if (!start && !end) {
+		return "-";
+	}
+	if (start && end) {
+		return `${start} – ${end}`;
+	}
+	return start || end || "-";
+}
+
+function updateHolidayList(selectedMonth) {
+	const holidayButtons = Array.from(document.querySelectorAll("[data-holiday-button]"));
+	const holidayList = document.getElementById("holiday-list");
+	const holidayEmptyState = document.getElementById("holiday-empty-state");
+	let visibleCount = 0;
+
+	for (const button of holidayButtons) {
+		const shouldShow = !selectedMonth || button.dataset.holidayMonth === selectedMonth;
+		button.hidden = !shouldShow;
+		if (shouldShow) {
+			visibleCount += 1;
+		}
+	}
+
+	if (holidayList) {
+		holidayList.hidden = visibleCount === 0;
+	}
+	if (holidayEmptyState) {
+		holidayEmptyState.classList.toggle("hidden", visibleCount !== 0);
+	}
+}
+
+function openDialog(id) {
+	const dialog = document.getElementById(id);
+	if (!dialog || typeof dialog.showModal !== "function") {
+		return;
+	}
+	if (!dialog.open) {
+		dialog.showModal();
+	}
+}
+
+function setText(id, value) {
+	const element = document.getElementById(id);
+	if (element) {
+		element.textContent = value || "-";
+	}
+}
+
+function setHolidayBadge(label, variant) {
+	const badge = document.getElementById("holiday-modal-type");
+	if (!badge) {
+		return;
+	}
+
+	badge.textContent = label;
+	if (variant === "outline") {
+		badge.className = "badge-outline";
+		return;
+	}
+	if (["success", "warning", "info", "destructive"].includes(variant)) {
+		badge.className = `badge badge-${variant}`;
+		return;
+	}
+	badge.className = "badge";
+}
+
+function getCalendarShowAllDays(calendar) {
+	const checkbox = calendar?.querySelector("[data-calendar-list-show-all-days]");
+	return checkbox ? checkbox.checked : true;
+}

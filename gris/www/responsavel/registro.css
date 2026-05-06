@@ -1,110 +1,433 @@
-/* registro.css - Custom styles for registro page */
-
-/* Responsavel Card */
-.responsavel-card {
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: var(--space-md);
-    background: var(--bg-surface);
-    height: 100%;
+.registro-page-header {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 4);
+	padding-bottom: calc(var(--spacing) * 5);
+	border-block-end: 1px solid var(--color-border);
 }
 
-.responsavel-card.primary {
-    border-color: var(--color-primary);
-    background-color: var(--bg-subtle);
+.registro-page-header__content {
+	display: flex;
+	max-width: 42rem;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+}
+
+.registro-page-header h1 {
+	margin: 0;
+	color: var(--color-foreground);
+	font-size: var(--text-3xl);
+	font-weight: var(--font-weight-semibold);
+	line-height: 1.2;
+}
+
+.registro-page-header p {
+	margin: 0;
+	color: var(--color-muted-foreground);
+	font-size: var(--text-base);
+	line-height: var(--leading-relaxed);
+}
+
+.registro-page-header__back {
+	gap: calc(var(--spacing) * 1.5);
+}
+
+.registro-page {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 5);
+	margin-top: calc(var(--spacing) * 4);
+}
+
+.registro-form {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 5);
+}
+
+.registro-section-card > section,
+.responsavel-card > section {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 5);
+}
+
+.registro-grid {
+	display: grid;
+	gap: calc(var(--spacing) * 4);
+	align-items: start;
+}
+
+.registro-grid--2 {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.registro-grid--3 {
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.registro-grid--4 {
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.registro-field--full,
+.registro-checkbox--full {
+	grid-column: 1 / -1;
+}
+
+.registro-field--span-2 {
+	grid-column: span 2;
+}
+
+.registro-required {
+	color: var(--color-destructive);
+	font-weight: var(--font-weight-semibold);
+}
+
+.registro-field .input,
+.registro-field .select,
+.registro-field .select > button,
+.registro-field .datepicker,
+.registro-field .datepicker-trigger,
+.registro-field .phone-input {
+	width: 100%;
+}
+
+.registro-field-error {
+	margin: calc(var(--spacing) * 1) 0 0;
+	color: var(--color-destructive);
+	font-size: var(--text-sm);
+	line-height: var(--leading-normal);
+}
+
+.registro-field [aria-invalid="true"],
+.registro-control[aria-invalid="true"],
+.registro-select[aria-invalid="true"] > button,
+.registro-datepicker[aria-invalid="true"] .datepicker-trigger,
+.phone-input[aria-invalid="true"] .phone-input__group {
+	border-color: var(--color-destructive);
+}
+
+.registro-field [aria-invalid="true"]:focus-visible,
+.registro-select[aria-invalid="true"] > button:focus-visible,
+.registro-datepicker[aria-invalid="true"] .datepicker-trigger:focus-visible,
+.phone-input[aria-invalid="true"] .phone-input__group:focus-within {
+	--tw-ring-color: var(--color-destructive);
+}
+
+.registro-control[readonly],
+.registro-control[aria-disabled="true"],
+.registro-control[data-address-locked="true"] {
+	color: var(--color-muted-foreground);
+}
+
+.registro-control[readonly],
+.registro-control[data-address-locked="true"] {
+	background-color: var(--color-muted);
+}
+
+.registro-checkbox label {
+	align-items: flex-start;
+	gap: calc(var(--spacing) * 2.5);
+	color: var(--color-foreground);
+	font-size: var(--text-sm);
+	line-height: var(--leading-normal);
+}
+
+.registro-checkbox input[type="checkbox"] {
+	margin-top: calc(var(--spacing) * .5);
+}
+
+.registro-checkbox--compact label {
+	font-size: var(--text-sm);
+}
+
+.registro-toggle-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: calc(var(--spacing) * 4);
+}
+
+.registro-responsaveis {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 5);
+}
+
+.responsavel-wrapper[hidden],
+.registro-responsavel-vinculo[hidden] {
+	display: none;
+}
+
+.responsavel-card {
+	background: var(--color-card);
 }
 
 .responsavel-card__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-sm);
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 3);
+	padding-bottom: calc(var(--spacing) * 3);
+	border-block-end: 1px solid var(--color-border);
 }
 
 .responsavel-card__title {
-    font-weight: var(--font-semibold);
-    font-size: var(--text-md);
+	margin: 0;
+	color: var(--color-foreground);
+	font-size: var(--text-lg);
+	font-weight: var(--font-weight-semibold);
+	line-height: 1.25;
 }
 
-.responsavel-card__badge {
-    font-size: var(--text-xs);
-    padding: 2px 8px;
-    border-radius: 10px;
-    background: var(--color-primary);
-    color: white;
+.registro-subsection {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 3);
 }
 
-/* Override disabled input styles for better visibility */
-.form-input-modern:disabled,
-.form-input-modern[readonly] {
-    color: var(--text-primary, #1f2937) !important;
-    opacity: 1 !important; /* Fix for iOS/Safari */
-    -webkit-text-fill-color: var(--text-primary, #1f2937) !important;
-    background-color: var(--bg-subtle, #f8fafc);
-    border-color: var(--border-color, #e2e8f0);
+.registro-subsection h4,
+.registro-subsection__header h4 {
+	margin: 0;
+	color: var(--color-foreground);
+	font-size: var(--text-base);
+	font-weight: var(--font-weight-semibold);
+	line-height: 1.35;
 }
 
-/* Spacing between responsible cards */
-.responsavel-wrapper:not(:last-child) {
-    margin-bottom: 3rem;
+.registro-subsection__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 3);
 }
 
-/* Tipo de Registro Selection */
+.registro-actions {
+	display: flex;
+	justify-content: flex-end;
+	padding-bottom: calc(var(--spacing) * 6);
+}
+
+.registro-actions button {
+	gap: calc(var(--spacing) * 1.5);
+}
+
+.registro-dialog {
+	width: min(44rem, calc(100vw - calc(var(--spacing) * 8)));
+}
+
+.registro-dialog--wide {
+	width: min(64rem, calc(100vw - calc(var(--spacing) * 8)));
+}
+
+.registro-dialog > *,
+.registro-dialog--wide > * {
+	max-height: calc(100vh - calc(var(--spacing) * 8));
+}
+
+.registro-dialog > * > section,
+.registro-dialog--wide > * > section {
+	min-height: 0;
+	overflow-y: auto;
+	margin-inline: calc(var(--spacing) * -6);
+	padding-inline: calc(var(--spacing) * 6);
+}
+
+.registro-dialog > * > footer,
+.registro-dialog--wide > * > footer {
+	flex-shrink: 0;
+}
+
+.registro-dialog-body {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 5);
+}
+
+.registro-type-options {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: calc(var(--spacing) * 4);
+}
+
 .registro-option-card {
-    border: 2px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: var(--space-lg);
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    height: 100%;
-    position: relative;
-    background: #fff;
+	cursor: pointer;
+	transition:
+		border-color var(--default-transition-duration) var(--default-transition-timing-function),
+		box-shadow var(--default-transition-duration) var(--default-transition-timing-function),
+		transform var(--default-transition-duration) var(--default-transition-timing-function);
 }
 
-.registro-option-card:hover {
-    border-color: var(--color-primary-light, #93c5fd);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+.registro-option-card > section {
+	display: flex;
+	height: 100%;
+	flex-direction: column;
+	align-items: center;
+	gap: calc(var(--spacing) * 3);
+	text-align: center;
 }
 
-.registro-option-card.selected {
-    border-color: var(--color-primary);
-    background-color: var(--bg-subtle);
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+.registro-option-card:hover,
+.registro-option-card:focus-visible,
+.registro-option-card[aria-selected="true"] {
+	border-color: var(--color-ring);
 }
 
-.registro-option-card .card-icon {
-    color: var(--text-secondary);
-    margin-bottom: 1rem;
-    transition: color 0.2s;
+.registro-option-card:hover,
+.registro-option-card:focus-visible {
+	transform: translateY(-1px);
 }
 
-.registro-option-card.selected .card-icon {
-    color: var(--color-primary);
+.registro-option-card[aria-selected="true"] {
+	box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-ring) 24%, transparent);
 }
 
-.registro-option-card h4 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--text-primary);
+.registro-option-card__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: calc(var(--spacing) * 12);
+	height: calc(var(--spacing) * 12);
+	border-radius: var(--radius-lg);
+	background: var(--color-muted);
+	color: var(--color-primary);
+}
+
+.registro-option-card h3 {
+	margin: 0;
+	color: var(--color-foreground);
+	font-size: var(--text-lg);
+	font-weight: var(--font-weight-semibold);
+	line-height: 1.25;
 }
 
 .registro-option-card p {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    margin-bottom: 0;
-    line-height: 1.4;
+	margin: 0;
+	color: var(--color-muted-foreground);
+	font-size: var(--text-sm);
+	line-height: var(--leading-relaxed);
 }
 
-/* Validation Styles */
-.form-input-modern.is-invalid {
-    border-color: #dc2626 !important; /* Red-600 */
+.registro-option-card .registro-option-card__price {
+	color: var(--color-foreground);
+	font-weight: var(--font-weight-semibold);
 }
 
-.form-input-modern.is-invalid:focus {
-    border-color: #dc2626 !important;
-    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.1) !important;
+.registro-summary {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 5);
 }
 
+.registro-summary-section {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+}
+
+.registro-summary-section h3 {
+	margin: 0;
+	color: var(--color-foreground);
+	font-size: var(--text-base);
+	font-weight: var(--font-weight-semibold);
+	line-height: 1.35;
+}
+
+.registro-table-wrap {
+	overflow-x: auto;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-lg);
+}
+
+.registro-summary-table {
+	width: 100%;
+}
+
+.registro-summary-table th {
+	width: 14rem;
+	color: var(--color-muted-foreground);
+}
+
+.registro-summary-table td {
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+.registro-confirm-box {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 3);
+	padding: calc(var(--spacing) * 4);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-lg);
+	background: var(--color-muted);
+}
+
+.registro-link {
+	width: fit-content;
+	color: var(--color-primary);
+	font-size: var(--text-sm);
+	font-weight: var(--font-weight-medium);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+.registro-link:focus-visible {
+	outline: 2px solid var(--color-ring);
+	outline-offset: 3px;
+}
+
+@media (max-width: 64rem) {
+	.registro-grid--4 {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 48rem) {
+	.registro-page-header {
+		align-items: stretch;
+		flex-direction: column;
+		padding-bottom: calc(var(--spacing) * 4);
+	}
+
+	.registro-page-header h1 {
+		font-size: var(--text-2xl);
+	}
+
+	.registro-page {
+		gap: calc(var(--spacing) * 4);
+		margin-top: calc(var(--spacing) * 3);
+	}
+
+	.registro-grid,
+	.registro-grid--2,
+	.registro-grid--3,
+	.registro-grid--4,
+	.registro-toggle-grid,
+	.registro-type-options {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.registro-field--span-2 {
+		grid-column: auto;
+	}
+
+	.registro-subsection__header,
+	.registro-actions {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.registro-page-header__back,
+	.registro-actions button,
+	.registro-dialog footer button {
+		width: 100%;
+		justify-content: center;
+	}
+
+	.registro-dialog,
+	.registro-dialog--wide {
+		width: min(100%, calc(100vw - calc(var(--spacing) * 4)));
+	}
+}

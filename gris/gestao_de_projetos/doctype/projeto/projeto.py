@@ -1320,16 +1320,11 @@ def _get_current_approval_stage(doc: Document, pipeline: list[dict[str, Any]]) -
 def _is_user_coordinator(user: str, doc: Document) -> bool:
 	coordenador_row = _get_coordenador_envolvido(doc)
 	coordenador = (coordenador_row or {}).get("associado") or ""
-	if not coordenador:
+	if not coordenador or not user:
 		return False
 
-	coordinator_data = frappe.db.get_value("Associado", coordenador, ["id_escoteiros", "email"], as_dict=True)
-	if not coordinator_data:
-		return False
-
-	coordinator_user = (coordinator_data.get("id_escoteiros") or "").strip()
-	coordinator_email = (coordinator_data.get("email") or "").strip()
-	return bool(user and user in {coordinator_user, coordinator_email})
+	user_associados = {row.get("name") for row in _get_user_associados(user) if row.get("name")}
+	return coordenador in user_associados
 
 
 def _append_review_row(
@@ -2551,9 +2546,10 @@ def _get_selection_options() -> dict[str, list[dict[str, str]]]:
 
 @frappe.whitelist()
 def get_projeto_form_data(projeto_name: str | None = None) -> dict[str, Any]:
-	_require_project_read_access()
+	user = _require_project_read_access()
 	project_data = None
 	default_aprovadores: list[dict[str, Any]] = []
+	is_coordinator = False
 
 	if projeto_name:
 		doc = frappe.get_doc("Projeto", projeto_name)
@@ -2562,6 +2558,7 @@ def get_projeto_form_data(projeto_name: str | None = None) -> dict[str, Any]:
 		_bootstrap_aprovadores_if_empty(doc)
 		_sync_sponsor_approver(doc)
 		project_data = _serialize_projeto(doc)
+		is_coordinator = _is_user_coordinator(user, doc)
 	else:
 		temp_doc = frappe.new_doc("Projeto")
 		default_aprovadores = [
@@ -2572,6 +2569,7 @@ def get_projeto_form_data(projeto_name: str | None = None) -> dict[str, Any]:
 		"choices": _get_selection_options(),
 		"projeto": project_data,
 		"default_aprovadores": default_aprovadores,
+		"is_coordinator": is_coordinator,
 	}
 
 

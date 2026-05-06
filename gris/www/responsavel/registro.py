@@ -13,6 +13,19 @@ def _format_currency_brl(value):
 	return f"R$ {formatted}"
 
 
+def _select_items(options):
+	items = [{"label": "Selecione...", "value": ""}]
+	for option in options or []:
+		option = (option or "").strip()
+		if option:
+			items.append({"label": option, "value": option})
+	return items
+
+
+def _format_phone_for_ui(phone):
+	return format_phone(phone) or ""
+
+
 def get_context(context):
 	# Get current user
 	user = frappe.session.user
@@ -43,6 +56,11 @@ def get_context(context):
 	novo_associado = frappe.get_doc("Novo Associado", novo_associado_name)
 
 	context.novo_associado = novo_associado
+	context.novo_associado_phone = {
+		"celular": _format_phone_for_ui(novo_associado.celular),
+		"telefone_secundario": _format_phone_for_ui(novo_associado.telefone_secundario),
+		"telefone_cobranca": _format_phone_for_ui(novo_associado.telefone_cobranca),
+	}
 
 	# Fetch Responsibles via Responsavel Vinculo
 	vinculos = frappe.get_all(
@@ -59,13 +77,29 @@ def get_context(context):
 
 		if v.responsavel:
 			resp_doc = frappe.get_doc("Responsavel", v.responsavel)
-			responsaveis.append({"vinculo": v, "doc": resp_doc})
+			responsaveis.append(
+				{
+					"vinculo": v,
+					"doc": resp_doc,
+					"phone": {
+						"celular": _format_phone_for_ui(resp_doc.celular),
+						"telefone_secundario": _format_phone_for_ui(resp_doc.telefone_secundario),
+					},
+				}
+			)
 
 	responsaveis.sort(key=lambda x: x["doc"].nome_completo or "")
 
 	# Ensure at least 2 items for the UI
 	while len(responsaveis) < 2:
-		responsaveis.append({"vinculo": {}, "doc": {}, "is_placeholder": True})
+		responsaveis.append(
+			{
+				"vinculo": {},
+				"doc": {},
+				"phone": {"celular": "", "telefone_secundario": ""},
+				"is_placeholder": True,
+			}
+		)
 
 	context.responsaveis = responsaveis
 	context.family_info = family_info
@@ -75,7 +109,7 @@ def get_context(context):
 	context.options = {}
 	for field in meta.fields:
 		if field.fieldtype == "Select" and field.options:
-			context.options[field.fieldname] = field.options.split("\n")
+			context.options[field.fieldname] = _select_items(field.options.split("\n"))
 
 	try:
 		config = frappe.get_doc("Configuracoes de Recepcao")

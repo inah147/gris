@@ -1,80 +1,114 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import button, card, empty, spinner %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
 
 {% block title %}Entrevistas por Competências{% endblock %}
 
-{% set active_link = '/gestao_adultos/entrevista_competencias' %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="entrevista_competencias.css">
+{% endblock %}
 
 {% block page_header %}
-	<div class="page-header">
-		<div class="page-header__content">
-			<h1 class="page-header__title">Entrevistas por Competências</h1>
-			<p class="page-header__subtitle">Gerencie as entrevistas realizadas na Gestão de Adultos</p>
-		</div>
+<section class="interview-page-header">
+	<div class="interview-page-header__copy">
+		<h1 class="text-3xl font-semibold">Entrevistas por Competências</h1>
+		<p class="text-muted-foreground">Gerencie as entrevistas realizadas na Gestão de Adultos.</p>
 	</div>
+	<div class="interview-page-header__actions">
+		{{ button(
+			lucide_icon("plus", size="sm") ~ " Adicionar entrevista",
+			variant="primary",
+			attrs={"id": "btn-nova-entrevista"}
+		) }}
+	</div>
+</section>
 {% endblock %}
 
 {% block main %}
-	<div class="mb-4 d-flex justify-content-end">
-		<button type="button" id="btn-nova-entrevista" class="btn-modern btn-modern--outline">Adicionar entrevista</button>
-	</div>
-
-	<div class="card-modern mb-4">
-		<div class="card-modern__body card-modern__body--compact">
-			<div class="row g-3 align-items-end">
-				<div class="col-12 col-md-9">
-					<label for="filtro-associado" class="form-label-modern">Filtrar por associado</label>
-					<input id="filtro-associado" class="form-input-modern" list="filtro-associado-list" placeholder="Digite o nome ou código do associado" />
-					<datalist id="filtro-associado-list"></datalist>
-				</div>
-				<div class="col-12 col-md-3 d-flex gap-2 justify-content-md-end">
-					<button type="button" id="btn-filtrar" class="btn-modern">Aplicar</button>
-				</div>
-			</div>
+<div class="interview-page">
+	{% call card(
+		title="Filtros",
+		description="Selecione um associado para restringir a lista de entrevistas.",
+		attrs={"class": "interview-card interview-card--filters"}
+	) %}
+	<div class="interview-toolbar">
+		<div class="field interview-field interview-field--wide">
+			<label class="label" for="filtro-associado-trigger">Associado</label>
+			{{ select(
+				id="filtro-associado",
+				items=[{"value": "", "label": "Todos os associados"}],
+				is_combobox=true,
+				search_placeholder="Buscar por nome ou código..."
+			) }}
+		</div>
+		<div class="interview-toolbar__actions">
+			{{ button("Aplicar filtro", variant="outline", attrs={"id": "btn-filtrar"}) }}
 		</div>
 	</div>
+	{% endcall %}
 
-	<div class="card-modern">
-		<div class="table-responsive">
-			<table class="data-table" id="entrevistasTable">
-				<thead>
-					<tr>
-						<th>Associado</th>
-						<th style="width: 220px;">Última atualização</th>
-						<th style="width: 140px; text-align: right;">Ações</th>
-					</tr>
-				</thead>
-				<tbody id="lista-entrevistas">
-					<tr>
-						<td colspan="3">
-							<div class="loading-container">
-								<div class="loading-spinner"></div>
-								<span class="loading-text">Carregando entrevistas...</span>
-							</div>
-						</td>
-					</tr>
-				</tbody>
-			</table>
-		</div>
+	{% call card(
+		title="Entrevistas cadastradas",
+		description="Abra respostas existentes ou inicie uma nova entrevista para um associado adulto.",
+		attrs={"class": "interview-card interview-card--list"}
+	) %}
+	<div id="entrevistas-loading" class="interview-state">
+		{{ spinner() }}
+		<span>Carregando entrevistas...</span>
 	</div>
 
-	<div class="modal-modern-backdrop" id="modal-associado-backdrop" style="display:none;"></div>
-	<div class="modal-modern" id="modal-associado" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-associado-title">
-		<div class="modal-modern__dialog">
-			<div class="modal-modern__content">
-				<div class="modal-modern__header">
-					<h5 class="modal-modern__title" id="modal-associado-title">Selecionar associado para entrevista</h5>
-				</div>
-				<div class="modal-modern__body">
-					<label for="novo-associado" class="form-label-modern">Associado (apenas maiores de 18 anos)</label>
-					<select id="novo-associado" class="form-input-modern">
-						<option value="">Selecione</option>
-					</select>
-				</div>
-				<div class="modal-modern__footer">
-					<button type="button" class="btn-modern btn-modern--outline" id="cancelar-modal-associado">Cancelar</button>
-					<button type="button" class="btn-modern" id="confirmar-modal-associado">Abrir entrevista</button>
-				</div>
-			</div>
-		</div>
+	<div id="entrevistas-empty" class="hidden">
+		{{ empty(
+			title="Nenhuma entrevista encontrada",
+			description="Ajuste o filtro ou crie uma nova entrevista para continuar.",
+			icon=lucide_icon("inbox", size="lg")
+		) }}
 	</div>
+
+	<div id="entrevistas-table-wrapper" class="interview-table-wrapper hidden">
+		<table class="table interview-table" id="entrevistas-table">
+			<thead>
+				<tr>
+					<th>Associado</th>
+					<th>Última atualização</th>
+					<th class="interview-table__actions">Ações</th>
+				</tr>
+			</thead>
+			<tbody id="lista-entrevistas"></tbody>
+		</table>
+	</div>
+	{% endcall %}
+</div>
+
+{% set dialog_footer %}
+<button type="button" class="btn-outline" onclick="document.getElementById('novo-associado-dialog').close()">Cancelar</button>
+<button type="button" class="btn-primary" id="confirmar-modal-associado">Abrir entrevista</button>
+{% endset %}
+
+{% call dialog(
+	id="novo-associado-dialog",
+	title="Selecionar associado para entrevista",
+	description="Somente associados com 18 anos ou mais podem receber uma entrevista por competências.",
+	footer=dialog_footer,
+	dialog_attrs={"class": "interview-dialog"},
+	footer_attrs={"class": "interview-dialog__footer"}
+) %}
+	<div class="field">
+		<label class="label" for="novo-associado-trigger">Associado</label>
+		{{ select(
+			id="novo-associado",
+			items=[{"value": "", "label": "Selecione um associado"}],
+			is_combobox=true,
+			search_placeholder="Buscar associado..."
+		) }}
+	</div>
+{% endcall %}
+{% endblock %}
+
+{% block script %}
+{{ super() }}
+<script src="entrevista_competencias.js"></script>
 {% endblock %}

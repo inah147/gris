@@ -1,12 +1,103 @@
 import json
 import unicodedata
-from datetime import date, timedelta
 
 import frappe
 from frappe import _
 from frappe.utils import cint, format_date, getdate, today
 
 from gris.api.portal_access import enrich_context
+
+
+SECTION_COLOR_BY_RAMO = {
+	"diretoria": "var(--chart-1)",
+	"filhotes": "var(--chart-2)",
+	"lobinho": "var(--chart-3)",
+	"escoteiro": "var(--chart-4)",
+	"senior": "var(--chart-5)",
+	"pioneiro": "#ea580c",
+	"default": "var(--primary)",
+}
+
+HOLIDAY_CATEGORY_NAME = "__holidays__"
+HOLIDAY_CATEGORY_COLOR = "#d97706"
+
+
+def _normalize_ramo(value):
+	return "".join(
+		c for c in unicodedata.normalize("NFD", value or "") if unicodedata.category(c) != "Mn"
+	).lower()
+
+
+def _get_section_sort_key(section_name, section_ramo_map, ramo_order):
+	if section_name == "Diretoria":
+		return (0, section_name)
+
+	ramo = section_ramo_map.get(section_name)
+	if ramo in ramo_order:
+		return (ramo_order.index(ramo), section_name)
+
+	return (len(ramo_order), section_name)
+
+
+def _get_section_color(section_name, section_ramo_map):
+	if section_name == "Diretoria":
+		return SECTION_COLOR_BY_RAMO["diretoria"]
+
+	normalized_ramo = _normalize_ramo(section_ramo_map.get(section_name) or "default")
+	return SECTION_COLOR_BY_RAMO.get(normalized_ramo, SECTION_COLOR_BY_RAMO["default"])
+
+
+def _serialize_simulated_event(event, color):
+	icon = None
+	if cint(event.sem_atividade):
+		icon = "circle-off"
+	elif cint(event.abertura_geral):
+		icon = "sparkles"
+
+	section = event.secao if event.secao else "Diretoria"
+	return {
+		"id": event.name,
+		"title": event.atividade,
+		"start": str(getdate(event.inicio)),
+		"end": str(getdate(event.termino)),
+		"all_day": True,
+		"category": section,
+		"color": color,
+		"icon": icon,
+		"data": {
+			"event_type": "simulation",
+			"name": event.name,
+			"atividade": event.atividade,
+			"inicio": str(event.inicio),
+			"termino": str(event.termino),
+			"secao": section,
+			"local": event.local or "",
+			"nivel": event.nivel or "",
+			"sem_atividade": cint(event.sem_atividade),
+			"abertura_geral": cint(event.abertura_geral),
+			"is_official": bool(getattr(event, "is_official", False)),
+		},
+	}
+
+
+def _serialize_holiday_event(holiday):
+	holiday_date = str(getdate(holiday.data))
+	return {
+		"id": f"holiday-{holiday_date}",
+		"title": holiday.nome,
+		"start": holiday_date,
+		"end": holiday_date,
+		"all_day": True,
+		"category": HOLIDAY_CATEGORY_NAME,
+		"color": HOLIDAY_CATEGORY_COLOR,
+		"icon": "star",
+		"data": {
+			"event_type": "holiday",
+			"holiday_name": holiday.nome,
+			"holiday_type": holiday.tipo or "Geral",
+			"holiday_desc": holiday.descricao or "",
+		},
+	}
 
 
 def get_context(context):
@@ -39,6 +130,7 @@ def get_context(context):
 		available_years.sort(reverse=True)
 
 	context.available_years = available_years
+	context.available_year_items = [{"label": str(item), "value": str(item)} for item in available_years]
 
 	# Fetch holidays for the year
 	feriados = frappe.get_all(
@@ -46,13 +138,8 @@ def get_context(context):
 		filters={"data": ["between", [f"{year}-01-01", f"{year}-12-31"]]},
 		fields=["nome", "data", "tipo", "descricao"],
 	)
-	feriados_map = {getdate(f.data): f for f in feriados}
 
 	# Fetch all calendar events for the year
-	# We fetch a bit more to cover year boundaries if needed, but strict year filter is fine for "dias do ano"
-	start_date = f"{year}-01-01"
-	end_date = f"{year}-12-31"
-
 	# Fetch events that overlap with the year
 	events = frappe.get_all(
 		"Calendario Simulado",
@@ -138,98 +225,9 @@ def get_context(context):
 			as_dict=True,
 		)
 		context.source_years = [y.year for y in source_years_data]
+		context.source_year_items = [{"label": str(item.year), "value": str(item.year)} for item in source_years_data]
 
-	sections = set()
-	events_by_date_section = {}
-
-	# Group events by section for lane processing
-	events_by_section = {}
-	for event in events:
-		section = event.secao if event.secao else "Diretoria"
-		sections.add(section)
-		if section not in events_by_section:
-			events_by_section[section] = []
-		events_by_section[section].append(event)
-
-	# Process lanes and clusters per section
-	for _section, section_events in events_by_section.items():
-		# Sort by start date
-		section_events.sort(key=lambda x: x.inicio)
-
-		# Assign lanes (packing algorithm)
-		lanes = []  # stores end_date of the last event in this lane
-		for event in section_events:
-			event_start = getdate(event.inicio)
-			event_end = getdate(event.termino)
-
-			assigned_lane = -1
-			for i, lane_end in enumerate(lanes):
-				if lane_end < event_start:
-					lanes[i] = event_end
-					assigned_lane = i
-					break
-
-			if assigned_lane == -1:
-				assigned_lane = len(lanes)
-				lanes.append(event_end)
-
-			event.lane_index = assigned_lane
-
-		# Identify clusters to determine max width
-		clusters = []
-		if section_events:
-			current_cluster = [section_events[0]]
-			cluster_end = getdate(section_events[0].termino)
-
-			for event in section_events[1:]:
-				evt_start = getdate(event.inicio)
-				evt_end = getdate(event.termino)
-
-				if evt_start <= cluster_end:
-					current_cluster.append(event)
-					cluster_end = max(cluster_end, evt_end)
-				else:
-					clusters.append(current_cluster)
-					current_cluster = [event]
-					cluster_end = evt_end
-			clusters.append(current_cluster)
-
-		# Assign total_lanes based on cluster max
-		for cluster in clusters:
-			max_lane = 0
-			for event in cluster:
-				max_lane = max(max_lane, event.lane_index)
-
-			cluster_width_count = max_lane + 1
-			for event in cluster:
-				event.total_lanes = cluster_width_count
-
-	# Populate daily map
-	for event in events:
-		section = event.secao if event.secao else "Diretoria"
-		event_start = getdate(event.inicio)
-		event_end = getdate(event.termino)
-
-		# Clamp dates to current year for display
-		current = max(event_start, date(year, 1, 1))
-		end = min(event_end, date(year, 12, 31))
-
-		while current <= end:
-			date_str = current.strftime("%Y-%m-%d")
-			key = (date_str, section)
-			if key not in events_by_date_section:
-				events_by_date_section[key] = []
-
-			# Create a copy for display logic
-			event_display = event.copy()
-			event_display["is_start"] = current == event_start
-			event_display["is_end"] = current == event_end
-			# Ensure lane info is carried over
-			event_display["lane_index"] = getattr(event, "lane_index", 0)
-			event_display["total_lanes"] = getattr(event, "total_lanes", 1)
-
-			events_by_date_section[key].append(event_display)
-			current += timedelta(days=1)
+	sections = {event.secao if event.secao else "Diretoria" for event in events}
 
 	# Fetch Section -> Ramo mapping for sorting
 	associados = frappe.get_all("Associado", fields=["secao", "ramo"], distinct=True)
@@ -238,23 +236,17 @@ def get_context(context):
 	# Get Nivel options
 	nivel_options = (frappe.get_meta("Calendario").get_field("nivel").options or "").split("\n")
 	context.nivel_options = [o for o in nivel_options if o]
+	context.nivel_select_items = [{"label": option, "value": option} for option in context.nivel_options]
 
 	# Get all available sections for the dropdown
 	all_sections = sorted(list(set([d.secao for d in associados if d.secao] + ["Diretoria"])))
 	context.all_sections = all_sections
+	context.section_select_items = [{"label": section, "value": section} for section in all_sections]
 
 	ramo_order = ["Diretoria", "Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro"]
 
 	def get_section_sort_key(section_name):
-		if section_name == "Diretoria":
-			return (0, section_name)
-
-		ramo = section_ramo_map.get(section_name)
-		if ramo in ramo_order:
-			return (ramo_order.index(ramo), section_name)
-
-		# If ramo not in order or not found, put at the end
-		return (len(ramo_order), section_name)
+		return _get_section_sort_key(section_name, section_ramo_map, ramo_order)
 
 	sorted_sections = sorted(list(sections), key=get_section_sort_key)
 
@@ -268,101 +260,28 @@ def get_context(context):
 	context.section_classes = {}
 	for section in sorted_sections:
 		ramo = section_ramo_map.get(section, "default")
-		# Normalize ramo to be a valid css class suffix
-		normalized = "".join(
-			c for c in unicodedata.normalize("NFD", ramo) if unicodedata.category(c) != "Mn"
-		).lower()
+		normalized = _normalize_ramo(ramo)
 		context.section_classes[section] = normalized
 
-	calendar_rows = []
-	current_date = date(year, 1, 1)
-	end_date_obj = date(year, 12, 31)
+	section_colors = {section: _get_section_color(section, section_ramo_map) for section in sorted_sections}
+	context.calendar_categories = [
+		{"name": section, "label": section, "color": section_colors[section]} for section in sorted_sections
+	]
+	if feriados:
+		context.calendar_categories.append(
+			{"name": HOLIDAY_CATEGORY_NAME, "label": "Feriados", "color": HOLIDAY_CATEGORY_COLOR}
+		)
 
-	months = {
-		1: "Jan",
-		2: "Fev",
-		3: "Mar",
-		4: "Abr",
-		5: "Mai",
-		6: "Jun",
-		7: "Jul",
-		8: "Ago",
-		9: "Set",
-		10: "Out",
-		11: "Nov",
-		12: "Dez",
-	}
-
-	months_full = {
-		1: "Janeiro",
-		2: "Fevereiro",
-		3: "Março",
-		4: "Abril",
-		5: "Maio",
-		6: "Junho",
-		7: "Julho",
-		8: "Agosto",
-		9: "Setembro",
-		10: "Outubro",
-		11: "Novembro",
-		12: "Dezembro",
-	}
-
-	weekdays = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
-
-	last_month = None
-	while current_date <= end_date_obj:
-		date_str = current_date.strftime("%Y-%m-%d")
-
-		is_new_month = False
-		if last_month != current_date.month:
-			is_new_month = True
-			last_month = current_date.month
-
-		row = {
-			"date_str": date_str,
-			"date_obj": current_date,
-			"day": current_date.day,
-			"month": months[current_date.month],
-			"month_full": months_full[current_date.month],
-			"month_num": f"{current_date.month:02d}",
-			"weekday": weekdays[current_date.weekday()],
-			"is_weekend": current_date.weekday() >= 5,
-			"is_new_month": is_new_month,
-			"activities": {},
-			"holiday": feriados_map.get(current_date),
-		}
-
-		has_activity = False
-		for section in sorted_sections:
-			key = (date_str, section)
-			evts = events_by_date_section.get(key, [])
-
-			# Sort events by lane index to ensure correct order
-			# And fill gaps with None for spacers
-			if evts:
-				evts.sort(key=lambda x: x.get("lane_index", 0))
-				# Get the maximum total_lanes from all events in this day to be safe
-				max_lanes = max(e.get("total_lanes", 1) for e in evts)
-
-				# Create a list of size max_lanes filled with None
-				display_slots = [None] * max_lanes
-
-				for evt in evts:
-					idx = evt.get("lane_index", 0)
-					if idx < max_lanes:
-						display_slots[idx] = evt
-
-				row["activities"][section] = display_slots
-				has_activity = True
-			else:
-				row["activities"][section] = []
-
-		row["has_activity"] = has_activity
-		calendar_rows.append(row)
-		current_date += timedelta(days=1)
-
-	context.calendar_rows = calendar_rows
+	serialized_events = [
+		_serialize_simulated_event(event, section_colors.get(event.secao or "Diretoria", SECTION_COLOR_BY_RAMO["default"]))
+		for event in events
+	]
+	serialized_holidays = [_serialize_holiday_event(holiday) for holiday in feriados]
+	context.calendar_events = sorted(
+		serialized_events + serialized_holidays,
+		key=lambda item: (item.get("start") or "", item.get("title") or ""),
+	)
+	context.calendar_initial_date = today() if year == getdate(today()).year else f"{year}-01-01"
 
 	# Check permission for reconciliation
 	context.can_simulate = frappe.has_permission("Calendario", "write")

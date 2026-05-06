@@ -1,124 +1,212 @@
-/* Kanban Container */
+/* ---------------------------------------------------------------
+   Visão Geral da Recepção
+   Estilos específicos do Kanban e timeline. Componentes globais
+   (card, badge, dialog, select, alert, button) vêm do design system
+   Basecoat (gris/public/design_system).
+   --------------------------------------------------------------- */
+
+/* Kanban ---------------------------------------------------------*/
 .kanban-container {
-    display: flex;
-    gap: var(--space-md);
-    overflow-x: auto;
-    padding-bottom: var(--space-md);
-    height: calc(100vh - 200px);
-    min-height: 500px;
+	display: flex;
+	gap: calc(var(--spacing) * 4);
+	overflow-x: auto;
+	padding-bottom: calc(var(--spacing) * 4);
+	min-height: 60vh;
 }
 
-/* Kanban Column */
 .kanban-column {
-    flex: 0 0 320px; /* Slightly wider */
-    display: flex;
-    flex-direction: column;
-    background-color: var(--color-neutral-light);
-    border-radius: var(--radius-md);
-    padding: var(--space-sm);
-    height: 100%;
-    border: 1px solid var(--border-color);
+	flex: 0 0 320px;
+	display: flex;
+	flex-direction: column;
+	background-color: var(--color-muted);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	padding: calc(var(--spacing) * 3);
+	max-height: calc(100vh - 220px);
 }
 
 .kanban-column__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--space-sm) var(--space-xs);
-    margin-bottom: var(--space-sm);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: calc(var(--spacing) * 1) calc(var(--spacing) * 1) calc(var(--spacing) * 3);
+	margin-bottom: calc(var(--spacing) * 2);
+	border-bottom: 1px solid var(--color-border);
 }
 
 .kanban-column__title {
-    font-size: var(--text-sm);
-    font-weight: var(--font-bold);
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin: 0;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--color-muted-foreground);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	margin: 0;
 }
 
 .kanban-column__body {
-    flex: 1;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
-    padding: 4px; /* Prevent scrollbar from hiding content edges */
+	flex: 1;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 3);
+	padding-right: calc(var(--spacing) * 1);
 }
 
-/* Kanban Card */
+.kanban-column__body::-webkit-scrollbar {
+	width: 6px;
+}
+
+.kanban-column__body::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.kanban-column__body::-webkit-scrollbar-thumb {
+	background-color: var(--color-border);
+	border-radius: 9999px;
+}
+
+/* Card do Kanban (estende .card do Basecoat) */
 .kanban-card {
-    /* Inherits base styles from card-modern */
-    padding: var(--space-md);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
-    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-    cursor: pointer;
-    background-color: var(--bg-card); /* Ensure white background */
-    border-radius: var(--radius-md);
+	padding: calc(var(--spacing) * 4);
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	cursor: pointer;
+	transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .kanban-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-    border-color: var(--color-primary-light);
+	transform: translateY(-1px);
+	border-color: var(--color-primary);
+	box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--color-foreground) 12%, transparent);
 }
 
 .kanban-card__top {
-    display: flex;
-    justify-content: flex-start;
-    align-items: flex-start;
-    min-height: 24px;
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 1.5);
+	min-height: 24px;
 }
 
 .kanban-card__main {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 1);
 }
 
 .kanban-card__title {
-    font-size: var(--text-base);
-    font-weight: var(--font-semibold);
-    color: var(--text-primary);
-    margin: 0;
-    line-height: 1.4;
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: var(--color-foreground);
+	margin: 0;
+	line-height: 1.4;
 }
 
 .kanban-card__subtitle {
-    font-size: var(--text-xs);
-    color: var(--text-muted);
-    margin: 0;
-    line-height: 1.2;
+	font-size: 0.75rem;
+	color: var(--color-muted-foreground);
+	margin: 0;
+	line-height: 1.3;
 }
 
 .kanban-card__separator {
-    height: 1px;
-    background-color: var(--border-color);
-    margin: 4px 0;
-    width: 100%;
+	height: 1px;
+	background-color: var(--color-border);
+	margin: calc(var(--spacing) * 1) 0;
+	width: 100%;
 }
 
 .kanban-card__meta {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    font-size: var(--text-xs);
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+	font-size: 0.75rem;
+	color: var(--color-muted-foreground);
 }
 
-/* Timeline Styles */
+.kanban-card__avatar {
+	width: 22px;
+	height: 22px;
+	border-radius: 9999px;
+	background-color: color-mix(in srgb, var(--color-primary) 18%, transparent);
+	color: var(--color-primary);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.7rem;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+/* Badges de ramo (paleta oficial do escoteirismo) -----------------
+   Estendem o componente .badge do Basecoat com as cores do programa.
+   Mantidas em hex para preservar identidade do escoteirismo nos dois
+   temas; pares fundo/texto têm contraste >= AA. */
+.badge.badge-ramo-filhotes {
+	background-color: #fff3e0;
+	color: #b34700;
+	border-color: #ffd9a8;
+}
+.badge.badge-ramo-lobinho {
+	background-color: #fffde7;
+	color: #8a5a00;
+	border-color: #f7e89c;
+}
+.badge.badge-ramo-escoteiro {
+	background-color: #e8f5e9;
+	color: #1f6b27;
+	border-color: #b3dab6;
+}
+.badge.badge-ramo-senior {
+	background-color: #ffebee;
+	color: #a32424;
+	border-color: #f5b3b3;
+}
+.badge.badge-ramo-pioneiro {
+	background-color: #e3f2fd;
+	color: #114c8a;
+	border-color: #a8cdee;
+}
+
+.dark .badge.badge-ramo-filhotes {
+	background-color: color-mix(in srgb, #ff8a3d 22%, transparent);
+	color: #ffc090;
+	border-color: color-mix(in srgb, #ff8a3d 32%, transparent);
+}
+.dark .badge.badge-ramo-lobinho {
+	background-color: color-mix(in srgb, #f5c542 22%, transparent);
+	color: #f4d97a;
+	border-color: color-mix(in srgb, #f5c542 32%, transparent);
+}
+.dark .badge.badge-ramo-escoteiro {
+	background-color: color-mix(in srgb, #4caf50 22%, transparent);
+	color: #b6e3b8;
+	border-color: color-mix(in srgb, #4caf50 32%, transparent);
+}
+.dark .badge.badge-ramo-senior {
+	background-color: color-mix(in srgb, #ef5350 22%, transparent);
+	color: #f6b8b6;
+	border-color: color-mix(in srgb, #ef5350 32%, transparent);
+}
+.dark .badge.badge-ramo-pioneiro {
+	background-color: color-mix(in srgb, #42a5f5 22%, transparent);
+	color: #b6d4f4;
+	border-color: color-mix(in srgb, #42a5f5 32%, transparent);
+}
+
+/* Timeline (etapas da recepção) ----------------------------------*/
 .timeline-container {
 	position: relative;
-	padding-left: 0.5rem;
-    margin-top: 1rem;
+	padding-left: calc(var(--spacing) * 1);
+	margin-top: calc(var(--spacing) * 4);
 }
 
 .timeline-item {
 	position: relative;
-	padding-bottom: 1.5rem;
-	padding-left: 1.5rem;
-	border-left: 2px solid #e2e8f0;
+	padding-bottom: calc(var(--spacing) * 5);
+	padding-left: calc(var(--spacing) * 5);
+	border-left: 2px solid var(--color-border);
 }
 
 .timeline-item:last-child {
@@ -129,13 +217,13 @@
 .timeline-marker {
 	position: absolute;
 	left: -7px;
-	top: 0.25rem;
+	top: 0.2rem;
 	width: 12px;
 	height: 12px;
-	border-radius: 50%;
-	background-color: #fff;
-	border: 2px solid #cbd5e1;
-	transition: all 0.3s ease;
+	border-radius: 9999px;
+	background-color: var(--color-card);
+	border: 2px solid var(--color-border);
+	transition: all 0.2s ease;
 	z-index: 1;
 }
 
@@ -145,127 +233,190 @@
 }
 
 .timeline-label {
-	font-size: 0.9rem;
-	color: #64748b;
+	font-size: 0.875rem;
+	color: var(--color-muted-foreground);
 	font-weight: 500;
 }
 
 .timeline-date {
-	font-size: 0.8rem;
-	color: #94a3b8;
+	font-size: 0.75rem;
+	color: var(--color-muted-foreground);
 	font-weight: 400;
-	margin-left: 0.25rem;
+	margin-left: calc(var(--spacing) * 1);
 }
 
-/* Completed State */
+.timeline-helper {
+	display: block;
+	font-size: 0.7rem;
+	color: var(--color-muted-foreground);
+	margin-top: calc(var(--spacing) * 0.5);
+}
+
 .timeline-item.completed .timeline-marker {
-	background-color: var(--color-primary, #0284c7);
-	border-color: var(--color-primary, #0284c7);
+	background-color: var(--color-primary);
+	border-color: var(--color-primary);
 }
 
 .timeline-item.completed .timeline-label {
-	color: var(--text-primary, #334155);
+	color: var(--color-foreground);
 	font-weight: 600;
 }
 
 .timeline-item.completed {
-	border-left-color: var(--color-primary, #0284c7);
+	border-left-color: var(--color-primary);
 }
 
-/* Overdue State */
 .timeline-item.overdue .timeline-marker {
-	background-color: #fffbeb; /* amber-50 */
-	border-color: #d97706; /* amber-600 */
+	background-color: color-mix(in srgb, var(--color-warning) 25%, transparent);
+	border-color: var(--color-warning);
 }
 
-.timeline-item.overdue .timeline-label {
-    color: #b45309 !important; /* amber-700 */
-}
-
+.timeline-item.overdue .timeline-label,
 .text-overdue {
-    color: #b45309 !important; /* amber-700 */
+	color: var(--color-warning) !important;
 }
 
-.kanban-card__avatar {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background-color: var(--color-primary-light);
-    color: var(--color-primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    font-weight: bold;
+.timeline-item.step-clickable {
+	cursor: pointer;
 }
 
-/* Ramo Badges */
-.g-badge--filhotes { background-color: #FFF3E0; color: #E65100; border: 1px solid #FFE0B2; }
-.g-badge--lobinho { background-color: #FFFDE7; color: #F57F17; border: 1px solid #FFF9C4; }
-.g-badge--escoteiro { background-color: #E8F5E9; color: #2E7D32; border: 1px solid #C8E6C9; }
-.g-badge--senior { background-color: #FFEBEE; color: #C62828; border: 1px solid #FFCDD2; }
-.g-badge--pioneiro { background-color: #E3F2FD; color: #1565C0; border: 1px solid #BBDEFB; }
-.g-badge--default { background-color: var(--color-neutral-light); color: var(--text-secondary); border: 1px solid var(--border-color); }
-
-/* Scrollbar styling for columns */
-.kanban-column__body::-webkit-scrollbar {
-    width: 6px;
+.timeline-item.step-clickable:hover .timeline-marker {
+	border-color: var(--color-primary);
 }
 
-.kanban-column__body::-webkit-scrollbar-track {
-    background: transparent;
+/* Dialogs com conteúdo rolável: cabeçalho e rodapé permanecem fixos,
+   e a seção do meio (corpo do dialog) rola se ultrapassar a altura
+   máxima da viewport. */
+dialog.dialog {
+	max-height: 90vh;
+	box-sizing: border-box;
 }
 
-.kanban-column__body::-webkit-scrollbar-thumb {
-    background-color: var(--color-secondary-light);
-    border-radius: 20px;
+dialog.dialog > div {
+	display: flex;
+	flex-direction: column;
+	max-height: inherit;
+	overflow: hidden;
 }
 
-/* Info Group Styles */
-.info-group {
-    margin-bottom: 16px;
+dialog.dialog > div > header,
+dialog.dialog > div > footer {
+	flex-shrink: 0;
 }
 
-.info-label {
-    font-size: 12px;
-    color: var(--text-muted, #64748b);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 4px;
-    display: block;
+dialog.dialog > div > section {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	min-height: 0;
 }
 
-.info-value {
-    font-size: 16px;
-    font-weight: 500;
-    color: var(--text-primary, #1e293b);
+/* Layout interno padronizado dos dialogs -------------------------*/
+
+/* Cabeçalho do dialog: associado + responsável empilhados.
+   Em cada linha, o botão ícone (ficha / WhatsApp) fica à esquerda, e o
+   bloco label+nome fica à direita. */
+.dialog-people {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 3);
+	padding-bottom: calc(var(--spacing) * 4);
+	margin-bottom: calc(var(--spacing) * 4);
+	border-bottom: 1px solid var(--color-border);
 }
 
-.modal-actions {
-    display: flex;
-    gap: var(--space-sm);
-    margin-top: var(--space-lg);
+.dialog-people__row {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 3);
 }
 
+.dialog-people__info {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+	flex: 1;
+}
+
+.dialog-people__row .dialog-field__value {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Linha com dois campos lado a lado (ex.: Ramo + Responsável) */
+.dialog-fields-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: calc(var(--spacing) * 4);
+	margin-bottom: calc(var(--spacing) * 4);
+}
+
+.dialog-info-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: calc(var(--spacing) * 4);
+	margin-bottom: calc(var(--spacing) * 4);
+}
+
+.dialog-info-grid > .dialog-info-grid__full {
+	grid-column: 1 / -1;
+}
+
+.dialog-field {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 1);
+}
+
+.dialog-field__label {
+	font-size: 0.7rem;
+	color: var(--color-muted-foreground);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	font-weight: 500;
+}
+
+.dialog-field__value {
+	font-size: 0.95rem;
+	color: var(--color-foreground);
+	font-weight: 500;
+}
+
+.dialog-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 2);
+	margin-top: calc(var(--spacing) * 4);
+}
+
+.dialog-actions--vertical {
+	flex-direction: column;
+	align-items: stretch;
+}
+
+.dialog-actions--vertical > * {
+	width: 100%;
+}
+
+/* Responsivo ------------------------------------------------------*/
 @media (max-width: 768px) {
-    #modalNovoContato .modal-actions {
-        flex-direction: column;
-    }
+	.kanban-column {
+		flex: 0 0 280px;
+		max-height: none;
+	}
 
-    #modalNovoContato .modal-actions .btn-modern {
-        width: 100%;
-    }
-}
+	.dialog-info-grid,
+	.dialog-fields-row {
+		grid-template-columns: 1fr;
+	}
 
-.modal-actions-vertical {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 24px;
-}
+	.dialog-actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
 
-body.modal-open .fxm-topbar,
-body.modal-open .fxm-bottom-nav,
-body.modal-open .fxm-bottom-fab {
-    z-index: 1030 !important;
+	.dialog-actions > * {
+		width: 100%;
+	}
 }

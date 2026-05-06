@@ -1,0 +1,101 @@
+/* Página /financeiro/despesas */
+
+.financeiro-page-header {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	align-items: flex-start;
+	justify-content: space-between;
+	margin-bottom: 1.5rem;
+}
+
+.financeiro-page-header__copy {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	max-width: 42rem;
+}
+
+.financeiro-page-header__actions {
+	display: flex;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+.financeiro-section-title {
+	font-size: 1.125rem;
+	font-weight: 600;
+	color: var(--foreground);
+	margin: 0 0 1rem 0;
+}
+
+.despesa-card {
+	height: 100%;
+}
+
+.despesa-card--temp {
+	border-left: 3px solid var(--warning, #f59e0b);
+}
+
+.despesa-card__body {
+	display: flex;
+	flex-direction: column;
+	padding: 1rem;
+	height: 100%;
+}
+
+.despesa-card__title {
+	margin: 0 0 0.5rem 0;
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: var(--foreground);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.despesa-card__footer {
+	margin-top: auto;
+	padding-top: 0.75rem;
+	border-top: 1px solid var(--border);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+.despesa-card__value {
+	font-size: 1.125rem;
+	font-weight: 600;
+	color: var(--foreground);
+}
+
+.despesa-dados {
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	gap: 0.5rem 1rem;
+	margin: 0 0 1rem 0;
+}
+
+.despesa-dados dt {
+	font-weight: 600;
+	color: var(--foreground);
+}
+
+.despesa-dados dd {
+	margin: 0;
+	color: var(--muted-foreground);
+}
+
+dialog.financeiro-dialog {
+	max-width: 32rem;
+}
+
+dialog.financeiro-dialog--lg {
+	max-width: 48rem;
+}
+
+.hidden {
+	display: none !important;
+}

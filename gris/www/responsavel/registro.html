@@ -1,530 +1,348 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
+{% from "public/design_system/components/generated/phone-input.html.jinja" import phone_input %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, button, card, checkbox, field, form, input, table %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
 {% block title %}Registro de Novo Associado{% endblock %}
 {% set active_link = '/responsavel/beneficiarios' %}
 {% set read_only = novo_associado.registro_criado_no_paxtu %}
 
+{% macro required_label(label, required=false) %}
+	{{ label }}{% if required %} <span class="registro-required" aria-hidden="true">*</span>{% endif %}
+{% endmacro %}
+
+{% macro text_control(fieldname, label, value="", type="text", required=false, scope="main", field_id=None, include_name=true, class_name="", inputmode=None, autocomplete=None, placeholder=None, maxlength=None) %}
+	{% set control_id = field_id or fieldname %}
+	{% set attrs = {
+		"id": control_id,
+		"data-fieldname": fieldname,
+		"data-field-scope": scope,
+		"class": "registro-control " ~ class_name
+	} %}
+	{% if required %}{% set _ = attrs.update({"required": "required"}) %}{% endif %}
+	{% if inputmode %}{% set _ = attrs.update({"inputmode": inputmode}) %}{% endif %}
+	{% if autocomplete %}{% set _ = attrs.update({"autocomplete": autocomplete}) %}{% endif %}
+	{% if placeholder %}{% set _ = attrs.update({"placeholder": placeholder}) %}{% endif %}
+	{% if maxlength %}{% set _ = attrs.update({"maxlength": maxlength}) %}{% endif %}
+	{% call field(label=required_label(label, required), attrs={"class": "registro-field " ~ class_name}) %}
+		{{ input(name=fieldname if include_name else None, type=type, value=value or "", attrs=attrs) }}
+		<p class="registro-field-error" data-field-error="{{ fieldname }}" hidden></p>
+	{% endcall %}
+{% endmacro %}
+
+{% macro select_control(fieldname, label, items, selected="", required=false, scope="main", field_id=None, include_name=true, class_name="") %}
+	{% set control_id = field_id or fieldname %}
+	{% set main_attrs = {
+		"class": "registro-control registro-select " ~ class_name,
+		"data-fieldname": fieldname,
+		"data-field-scope": scope
+	} %}
+	{% call field(label=required_label(label, required), attrs={"class": "registro-field " ~ class_name}) %}
+		{{ select(
+			id=control_id,
+			name=fieldname if include_name else None,
+			selected=selected or "",
+			items=items or [{"label": "Selecione...", "value": ""}],
+			main_attrs=main_attrs,
+			trigger_attrs={"class": "registro-select-trigger"}
+		) }}
+		<p class="registro-field-error" data-field-error="{{ fieldname }}" hidden></p>
+	{% endcall %}
+{% endmacro %}
+
+{% macro date_control(fieldname, label, value="", required=false, scope="main", field_id=None, include_name=true, class_name="") %}
+	{% set control_id = field_id or fieldname %}
+	{% set main_attrs = {
+		"class": "registro-control registro-datepicker " ~ class_name,
+		"data-fieldname": fieldname,
+		"data-field-scope": scope
+	} %}
+	{% call field(label=required_label(label, required), attrs={"class": "registro-field " ~ class_name}) %}
+		{{ datepicker(
+			id=control_id,
+			name=fieldname if include_name else None,
+			value=value or "",
+			placeholder="Selecione a data",
+			main_attrs=main_attrs,
+			trigger_attrs={"class": "registro-datepicker-trigger"}
+		) }}
+		<p class="registro-field-error" data-field-error="{{ fieldname }}" hidden></p>
+	{% endcall %}
+{% endmacro %}
+
+{% macro phone_control(fieldname, label, value="", required=false, scope="main", field_id=None, include_name=true, class_name="") %}
+	{% set control_id = field_id or fieldname %}
+	{% set attrs = {
+		"class": "registro-control " ~ class_name,
+		"data-fieldname": fieldname,
+		"data-field-scope": scope
+	} %}
+	{% set input_attrs = {"id": control_id ~ "-number"} %}
+	{% if required %}{% set _ = input_attrs.update({"required": "required"}) %}{% endif %}
+	{% call field(label=required_label(label, required), attrs={"class": "registro-field " ~ class_name}) %}
+		{{ phone_input(
+			id=control_id,
+			name=fieldname if include_name else None,
+			value=value or "",
+			default_country="BR",
+			placeholder="DDD + número",
+			attrs=attrs,
+			input_attrs=input_attrs
+		) }}
+		<p class="registro-field-error" data-field-error="{{ fieldname }}" hidden></p>
+	{% endcall %}
+{% endmacro %}
+
+{% macro checkbox_control(fieldname, label, checked=false, scope="main", field_id=None, include_name=true, class_name="") %}
+	{% set control_id = field_id or fieldname %}
+	{% set attrs = {
+		"data-fieldname": fieldname,
+		"data-field-scope": scope,
+		"class": "registro-control " ~ class_name
+	} %}
+	{% if include_name %}{% set _ = attrs.update({"name": fieldname}) %}{% endif %}
+	<div class="registro-checkbox {{ class_name }}">
+		{{ checkbox(control_id, label, checked=checked, attrs=attrs) }}
+	</div>
+{% endmacro %}
+
 {% block head_include %}
-  {{ super() }}
+	{{ super() }}
+	<link rel="stylesheet" href="/responsavel/registro.css">
 {% endblock %}
 
 {% block page_header %}
-  <div class="page-header">
-    <div class="page-header__content">
-      <h1 class="page-header__title">Registro de Novo Associado</h1>
-      <p class="page-header__subtitle">
-        {% if read_only %}
-            Visualização dos dados do registro.
-        {% else %}
-            Preencha os dados para o registro do novo associado.
-        {% endif %}
-      </p>
-    </div>
-    <div class="page-header__actions">
-        <a href="/responsavel/beneficiarios" class="btn-modern btn-modern--ghost btn-modern--sm">Voltar</a>
-    </div>
-  </div>
+	<section class="registro-page-header" aria-labelledby="registro-page-title">
+		<div class="registro-page-header__content">
+			<h1 id="registro-page-title">Registro de Novo Associado</h1>
+			<p>
+				{% if read_only %}
+					Visualização dos dados do registro.
+				{% else %}
+					Preencha os dados para o registro do novo associado.
+				{% endif %}
+			</p>
+		</div>
+		<a href="/responsavel/beneficiarios" class="btn-sm-outline registro-page-header__back">
+			{{ lucide_icon("arrow-left", size="sm") }}
+			<span>Voltar</span>
+		</a>
+	</section>
 {% endblock %}
 
 {% block main %}
-<div class="container-fluid p-0">
-    {% if read_only %}
-    <div class="alert-modern alert-modern--info mb-4">
-        <div class="alert-modern__icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-        </div>
-        <div class="alert-modern__content">
-            <h4 class="alert-modern__title">Modo de Visualização</h4>
-            <p class="alert-modern__description">O registro já foi criado no Paxtu, portanto os dados não podem mais ser alterados por aqui. Caso necessite de correções, entre em contato com a secretaria.</p>
-        </div>
-    </div>
-    {% endif %}
+<div class="registro-page">
+	{{ toaster() }}
 
-    <form id="registro-form">
-        <input type="hidden" name="name" value="{{ novo_associado.name }}">
-        
-        <!-- Dados do Associado -->
-        <div class="card-modern mb-4">
-            <div class="card-modern__header">
-                <h3 class="card-modern__title">Dados do Associado</h3>
-            </div>
-            <div class="card-modern__body">
-                <div class="row g-3">
-                    <div class="col-12">
-                        <label for="nome_completo" class="form-label-modern">Nome Completo <span class="text-danger">*</span></label>
-                        <input type="text" class="form-input-modern" id="nome_completo" name="nome_completo" value="{{ novo_associado.nome_completo or '' }}">
-                    </div>
-                    <div class="col-md-4">
-                        <label for="data_de_nascimento" class="form-label-modern">Data de Nascimento <span class="text-danger">*</span></label>
-                        <input type="date" class="form-input-modern" id="data_de_nascimento" name="data_de_nascimento" value="{{ novo_associado.data_de_nascimento or '' }}">
-                    </div>
-                    <div class="col-md-4">
-                        <label for="etnia" class="form-label-modern">Etnia <span class="text-danger">*</span></label>
-                        <select class="form-input-modern" id="etnia" name="etnia">
-                            <option value="">Selecione...</option>
-                            {% for opt in options.etnia %}
-                            <option value="{{ opt }}" {% if novo_associado.etnia == opt %}selected{% endif %}>{{ opt }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="sexo" class="form-label-modern">Sexo <span class="text-danger">*</span></label>
-                        <select class="form-input-modern" id="sexo" name="sexo">
-                            <option value="">Selecione...</option>
-                            {% for opt in options.sexo %}
-                            <option value="{{ opt }}" {% if novo_associado.sexo == opt %}selected{% endif %}>{{ opt }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-12 d-flex align-items-center">
-                        <div class="form-check mt-2">
-                            <input class="form-check-input" type="checkbox" id="estrangeiro" name="estrangeiro" {% if novo_associado.estrangeiro %}checked{% endif %}>
-                            <label class="form-check-label" for="estrangeiro">
-                                É estrangeiro?
-                            </label>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="pais_nascimento" class="form-label-modern">País de Nascimento <span class="text-danger">*</span></label>
-                        <input type="text" class="form-input-modern" id="pais_nascimento" name="pais_nascimento" value="{{ novo_associado.pais_nascimento or '' }}">
-                    </div>
-                    <div class="col-md-4">
-                        <label for="uf_de_nascimento" class="form-label-modern">UF de Nascimento <span class="text-danger">*</span></label>
-                        <select class="form-input-modern" id="uf_de_nascimento" name="uf_de_nascimento">
-                            <option value="">Selecione...</option>
-                            {% for opt in options.uf_de_nascimento %}
-                            <option value="{{ opt }}" {% if novo_associado.uf_de_nascimento == opt %}selected{% endif %}>{{ opt }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="cidade_de_nascimento" class="form-label-modern">Cidade de Nascimento <span class="text-danger">*</span></label>
-                        <input type="text" class="form-input-modern" id="cidade_de_nascimento" name="cidade_de_nascimento" value="{{ novo_associado.cidade_de_nascimento or '' }}">
-                    </div>
-                    <div class="col-md-4">
-                        <label for="rg" class="form-label-modern">RG <span class="text-danger">*</span></label>
-                        <input type="text" class="form-input-modern" id="rg" name="rg" value="{{ novo_associado.rg or '' }}">
-                    </div>
-                    <div class="col-md-4">
-                        <label for="orgao_expedidor" class="form-label-modern">Órgão Expedidor <span class="text-danger">*</span></label>
-                        <input type="text" class="form-input-modern" id="orgao_expedidor" name="orgao_expedidor" value="{{ novo_associado.orgao_expedidor or '' }}">
-                    </div>
-                    <div class="col-md-4">
-                        <label for="cpf" class="form-label-modern">CPF <span class="text-danger">*</span></label>
-                        <input type="text" class="form-input-modern" id="cpf" name="cpf" value="{{ novo_associado.cpf or '' }}">
-                    </div>
-                    <div class="col-md-6">
-                        <label for="estado_civil" class="form-label-modern">Estado Civil <span class="text-danger">*</span></label>
-                        <select class="form-input-modern" id="estado_civil" name="estado_civil">
-                            <option value="">Selecione...</option>
-                            {% for opt in options.estado_civil %}
-                            <option value="{{ opt }}" {% if novo_associado.estado_civil == opt %}selected{% endif %}>{{ opt }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="religiao" class="form-label-modern">Religião <span class="text-danger">*</span></label>
-                        <select class="form-input-modern" id="religiao" name="religiao">
-                            <option value="">Selecione...</option>
-                            {% for opt in options.religiao %}
-                            <option value="{{ opt }}" {% if novo_associado.religiao == opt %}selected{% endif %}>{{ opt }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
+	{% if read_only %}
+		{{ alert(
+			title="Modo de visualização",
+			description="O registro já foi criado no Paxtu, portanto os dados não podem mais ser alterados por aqui. Caso necessite de correções, entre em contato com a secretaria.",
+			icon=lucide_icon("info", size="sm"),
+			variant="info",
+			attrs={"class": "registro-readonly-alert"}
+		) }}
+	{% endif %}
 
-        <!-- Informações Profissionais e Acadêmicas -->
-        <div class="card-modern mb-4">
-            <div class="card-modern__header">
-                <h3 class="card-modern__title">Informações Profissionais e Acadêmicas</h3>
-            </div>
-            <div class="card-modern__body">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label for="escolaridade" class="form-label-modern">Escolaridade <span class="text-danger">*</span></label>
-                        <select class="form-input-modern" id="escolaridade" name="escolaridade">
-                            <option value="">Selecione...</option>
-                            {% for opt in options.escolaridade %}
-                            <option value="{{ opt }}" {% if novo_associado.escolaridade == opt %}selected{% endif %}>{{ opt }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="profissao" class="form-label-modern">Profissão</label>
-                        <input type="text" class="form-input-modern" id="profissao" name="profissao" value="{{ novo_associado.profissao or '' }}">
-                    </div>
-                    <div class="col-md-4">
-                        <label for="local_de_trabalho" class="form-label-modern">Local de Trabalho</label>
-                        <input type="text" class="form-input-modern" id="local_de_trabalho" name="local_de_trabalho" value="{{ novo_associado.local_de_trabalho or '' }}">
-                    </div>
-                </div>
-            </div>
-        </div>
+	{% call form(attrs={"id": "registro-form", "class": "registro-form", "novalidate": "novalidate", "data-read-only": "true" if read_only else "false"}) %}
+		<input type="hidden" id="novo-associado-name" name="name" value="{{ novo_associado.name }}">
 
-        <!-- Endereço e Dados de Contato -->
-        <div class="card-modern mb-4">
-            <div class="card-modern__header">
-                <h3 class="card-modern__title">Endereço e Dados de Contato</h3>
-            </div>
-            <div class="card-modern__body">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label for="cep" class="form-label-modern">CEP <span class="text-danger">*</span></label>
-                        <input type="text" class="form-input-modern" id="cep" name="cep" value="{{ novo_associado.cep or '' }}">
-                    </div>
-                    <div class="col-md-8">
-                        <label for="endereco" class="form-label-modern">Endereço <span class="text-danger">*</span></label>
-                        <input type="text" class="form-input-modern" id="endereco" name="endereco" value="{{ novo_associado.endereco or '' }}">
-                    </div>
-                    <div class="col-md-4">
-                        <label for="numero" class="form-label-modern">Número <span class="text-danger">*</span></label>
-                        <input type="number" class="form-input-modern" id="numero" name="numero" value="{{ novo_associado.numero or '' }}">
-                    </div>
-                    <div class="col-md-8">
-                        <label for="complemento" class="form-label-modern">Complemento</label>
-                        <input type="text" class="form-input-modern" id="complemento" name="complemento" value="{{ novo_associado.complemento or '' }}">
-                    </div>
-                    <div class="col-md-4">
-                        <label for="estado" class="form-label-modern">Estado <span class="text-danger">*</span></label>
-                        <select class="form-input-modern" id="estado" name="estado">
-                            <option value="">Selecione...</option>
-                            {% for opt in options.estado %}
-                            <option value="{{ opt }}" {% if novo_associado.estado == opt %}selected{% endif %}>{{ opt }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="cidade" class="form-label-modern">Cidade <span class="text-danger">*</span></label>
-                        <input type="text" class="form-input-modern" id="cidade" name="cidade" value="{{ novo_associado.cidade or '' }}">
-                    </div>
-                    <div class="col-md-4">
-                        <label for="bairro" class="form-label-modern">Bairro <span class="text-danger">*</span></label>
-                        <input type="text" class="form-input-modern" id="bairro" name="bairro" value="{{ novo_associado.bairro or '' }}">
-                    </div>
-                    <div class="col-md-4">
-                        <label for="email" class="form-label-modern">Email <span class="text-danger">*</span></label>
-                        <input type="email" class="form-input-modern" id="email" name="email" value="{{ novo_associado.email or '' }}">
-                    </div>
-                    <div class="col-md-4">
-                        <label for="celular" class="form-label-modern">Celular <span class="text-danger">*</span></label>
-                        <input type="text" class="form-input-modern" id="celular" name="celular" value="{{ novo_associado.celular or '' }}">
-                    </div>
-                    <div class="col-md-4">
-                        <label for="telefone_secundario" class="form-label-modern">Telefone Secundário</label>
-                        <input type="text" class="form-input-modern" id="telefone_secundario" name="telefone_secundario" value="{{ novo_associado.telefone_secundario or '' }}">
-                    </div>
-                </div>
-            </div>
-        </div>
+		{% call card(title="Dados do Associado", attrs={"class": "registro-section-card"}) %}
+			<div class="registro-grid registro-grid--3">
+				{{ text_control("nome_completo", "Nome completo", novo_associado.nome_completo, required=true, autocomplete="name", class_name="registro-field--full") }}
+				{{ date_control("data_de_nascimento", "Data de nascimento", novo_associado.data_de_nascimento, required=true) }}
+				{{ select_control("etnia", "Etnia", options.etnia, novo_associado.etnia, required=true) }}
+				{{ select_control("sexo", "Sexo", options.sexo, novo_associado.sexo, required=true) }}
+				{{ checkbox_control("estrangeiro", "É estrangeiro?", novo_associado.estrangeiro, class_name="registro-checkbox--full") }}
+				{{ text_control("pais_nascimento", "País de nascimento", novo_associado.pais_nascimento, required=true) }}
+				{{ select_control("uf_de_nascimento", "UF de nascimento", options.uf_de_nascimento, novo_associado.uf_de_nascimento, required=true) }}
+				{{ text_control("cidade_de_nascimento", "Cidade de nascimento", novo_associado.cidade_de_nascimento, required=true) }}
+				{{ text_control("rg", "RG", novo_associado.rg, required=true, autocomplete="off") }}
+				{{ text_control("orgao_expedidor", "Órgão expedidor", novo_associado.orgao_expedidor, required=true) }}
+				{{ text_control("cpf", "CPF", novo_associado.cpf, required=true, inputmode="numeric", maxlength="14", placeholder="000.000.000-00", autocomplete="off") }}
+				{{ select_control("estado_civil", "Estado civil", options.estado_civil, novo_associado.estado_civil, required=true) }}
+				{{ select_control("religiao", "Religião", options.religiao, novo_associado.religiao, required=true) }}
+			</div>
+		{% endcall %}
 
-        <!-- Dados de Cobrança -->
-        <div class="card-modern mb-4">
-            <div class="card-modern__header">
-                <h3 class="card-modern__title">Dados de Cobrança</h3>
-            </div>
-            <div class="card-modern__body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="email_cobranca" class="form-label-modern">Email de Cobrança <span class="text-danger">*</span></label>
-                        <input type="email" class="form-input-modern" id="email_cobranca" name="email_cobranca" value="{{ novo_associado.email_cobranca or '' }}">
-                    </div>
-                    <div class="col-md-6">
-                        <label for="telefone_cobranca" class="form-label-modern">Telefone de Cobrança <span class="text-danger">*</span></label>
-                        <input type="text" class="form-input-modern" id="telefone_cobranca" name="telefone_cobranca" value="{{ novo_associado.telefone_cobranca or '' }}">
-                    </div>
-                </div>
-            </div>
-        </div>
+		{% call card(title="Informações Profissionais e Acadêmicas", attrs={"class": "registro-section-card"}) %}
+			<div class="registro-grid registro-grid--3">
+				{{ select_control("escolaridade", "Escolaridade", options.escolaridade, novo_associado.escolaridade, required=true) }}
+				{{ text_control("profissao", "Profissão", novo_associado.profissao) }}
+				{{ text_control("local_de_trabalho", "Local de trabalho", novo_associado.local_de_trabalho) }}
+			</div>
+		{% endcall %}
 
-        <!-- Informações Familiares -->
-        <div class="card-modern mb-4">
-            <div class="card-modern__header">
-                <h3 class="card-modern__title">Informações Familiares</h3>
-            </div>
-            <div class="card-modern__body">
-                <div class="row g-3">
-                    <div class="col-md-6 d-flex align-items-center">
-                        <div class="form-check mt-2">
-                            <input class="form-check-input" type="checkbox" id="guarda_unilateral" name="guarda_unilateral" {% if family_info.guarda_unilateral %}checked{% endif %}>
-                            <label class="form-check-label" for="guarda_unilateral">
-                                A guarda do jovem é unilateral?
-                            </label>
-                        </div>
-                    </div>
-                    <div class="col-md-6 d-flex align-items-center">
-                        <div class="form-check mt-2">
-                            <input class="form-check-input" type="checkbox" id="somente_um_responsavel" name="somente_um_responsavel">
-                            <label class="form-check-label" for="somente_um_responsavel">
-                                Somente um responsável legal
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+		{% call card(title="Endereço e Dados de Contato", attrs={"class": "registro-section-card"}) %}
+			<div class="registro-grid registro-grid--3">
+				{{ text_control("cep", "CEP", novo_associado.cep, required=true, inputmode="numeric", maxlength="9", placeholder="00000-000") }}
+				{{ text_control("endereco", "Endereço", novo_associado.endereco, required=true, autocomplete="street-address", class_name="registro-field--span-2") }}
+				{{ text_control("numero", "Número", novo_associado.numero, type="number", required=true, inputmode="numeric") }}
+				{{ text_control("complemento", "Complemento", novo_associado.complemento, class_name="registro-field--span-2") }}
+				{{ select_control("estado", "Estado", options.estado, novo_associado.estado, required=true) }}
+				{{ text_control("cidade", "Cidade", novo_associado.cidade, required=true) }}
+				{{ text_control("bairro", "Bairro", novo_associado.bairro, required=true) }}
+				{{ text_control("email", "Email", novo_associado.email, type="email", required=true, autocomplete="email") }}
+				{{ phone_control("celular", "Celular", novo_associado_phone.celular, required=true) }}
+				{{ phone_control("telefone_secundario", "Telefone secundário", novo_associado_phone.telefone_secundario) }}
+			</div>
+		{% endcall %}
 
-        <!-- Responsáveis -->
-        {% if responsaveis %}
-        <div class="card-modern mb-4">
-            <div class="card-modern__header">
-                <h3 class="card-modern__title">Responsáveis</h3>
-            </div>
-            <div class="card-modern__body">
-                <div class="row g-5" id="responsaveis-list">
-                    {% for item in responsaveis %}
-                    <div class="col-12 responsavel-wrapper">
-                        <div class="responsavel-card" data-responsavel-id="{{ item.doc.name or '' }}">
-                            <div class="responsavel-card__header">
-                                <div class="responsavel-card__title">{{ item.doc.nome_completo or 'Novo Responsável' }}</div>
-                            </div>
-                            <div class="card-modern__body">
-                                <h4 class="card-modern__subtitle mb-3">Dados Pessoais</h4>
-                                <div class="row g-3 mb-4">
-                                    <div class="col-12 col-md-3">
-                                        <label class="form-label-modern">Nome Completo <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="nome_completo" value="{{ item.doc.nome_completo or '' }}">
-                                    </div>
-                                    <div class="col-12 col-md-3">
-                                        <label class="form-label-modern">CPF <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="cpf" value="{{ item.doc.cpf or '' }}">
-                                    </div>
-                                    <div class="col-12 col-md-3">
-                                        <label class="form-label-modern">RG <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="rg" value="{{ item.doc.rg or '' }}">
-                                    </div>
-                                    <div class="col-12 col-md-3">
-                                        <label class="form-label-modern">Órgão Expedidor <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="orgao_expedidor" value="{{ item.doc.orgao_expedidor or '' }}">
-                                    </div>
-                                    <div class="col-12 col-md-3">
-                                        <label class="form-label-modern">Data de Nascimento <span class="text-danger">*</span></label>
-                                        <input type="date" class="form-input-modern form-input-modern--sm" data-fieldname="data_de_nascimento" value="{{ item.doc.data_de_nascimento or '' }}">
-                                    </div>
-                                    <div class="col-12 col-md-3">
-                                        <label class="form-label-modern">Sexo <span class="text-danger">*</span></label>
-                                        <select class="form-input-modern form-input-modern--sm" data-fieldname="sexo">
-                                            <option value="">Selecione...</option>
-                                            {% for opt in options.sexo %}
-                                            <option value="{{ opt }}" {% if item.doc.sexo == opt %}selected{% endif %}>{{ opt }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="col-12 col-md-3">
-                                        <label class="form-label-modern">Estado Civil <span class="text-danger">*</span></label>
-                                        <select class="form-input-modern form-input-modern--sm" data-fieldname="estado_civil">
-                                            <option value="">Selecione...</option>
-                                            {% for opt in options.estado_civil %}
-                                            <option value="{{ opt }}" {% if item.doc.estado_civil == opt %}selected{% endif %}>{{ opt }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                </div>
+		{% call card(title="Dados de Cobrança", attrs={"class": "registro-section-card"}) %}
+			<div class="registro-grid registro-grid--2">
+				{{ text_control("email_cobranca", "Email de cobrança", novo_associado.email_cobranca, type="email", required=true, autocomplete="email") }}
+				{{ phone_control("telefone_cobranca", "Telefone de cobrança", novo_associado_phone.telefone_cobranca, required=true) }}
+			</div>
+		{% endcall %}
 
-                                <h4 class="card-modern__subtitle mb-3">Profissional / Acadêmico</h4>
-                                <div class="row g-3 mb-4">
-                                    <div class="col-12 col-md-4">
-                                        <label class="form-label-modern">Escolaridade <span class="text-danger">*</span></label>
-                                        <select class="form-input-modern form-input-modern--sm" data-fieldname="escolaridade">
-                                            <option value="">Selecione...</option>
-                                            {% for opt in options.escolaridade %}
-                                            <option value="{{ opt }}" {% if item.doc.escolaridade == opt %}selected{% endif %}>{{ opt }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="col-12 col-md-4">
-                                        <label class="form-label-modern">Profissão <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="profissao" value="{{ item.doc.get('profissão') or '' }}">
-                                    </div>
-                                    <div class="col-12 col-md-4">
-                                        <label class="form-label-modern">Local de Trabalho <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="local_de_trabalho" value="{{ item.doc.local_de_trabalho or '' }}">
-                                    </div>
-                                </div>
+		{% call card(title="Informações Familiares", attrs={"class": "registro-section-card"}) %}
+			<div class="registro-toggle-grid">
+				{{ checkbox_control("guarda_unilateral", "A guarda do jovem é unilateral?", family_info.guarda_unilateral) }}
+				{{ checkbox_control("somente_um_responsavel", "Somente um responsável legal", false) }}
+			</div>
+		{% endcall %}
 
-                                <h4 class="card-modern__subtitle mb-3">Endereço e Contato</h4>
-                                <div class="row g-3 mb-4">
-                                    <div class="col-12">
-                                        <div class="form-check">
-                                            <input class="form-check-input same-address-check" type="checkbox">
-                                            <label class="form-check-label">
-                                                Mesmo endereço do jovem
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 col-md-6">
-                                        <label class="form-label-modern">Endereço <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="endereco" value="{{ item.doc.get('endereço') or '' }}">
-                                    </div>
-                                    <div class="col-12 col-md-2">
-                                        <label class="form-label-modern">Número <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="numero" value="{{ item.doc.get('número') or '' }}">
-                                    </div>
-                                    <div class="col-12 col-md-4">
-                                        <label class="form-label-modern">Complemento</label>
-                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="complemento" value="{{ item.doc.complemento or '' }}">
-                                    </div>
-                                    <div class="col-12 col-md-4">
-                                        <label class="form-label-modern">Bairro <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="bairro" value="{{ item.doc.bairro or '' }}">
-                                    </div>
-                                    <div class="col-12 col-md-4">
-                                        <label class="form-label-modern">Cidade <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="cidade" value="{{ item.doc.cidade or '' }}">
-                                    </div>
-                                    <div class="col-12 col-md-4">
-                                        <label class="form-label-modern">Estado <span class="text-danger">*</span></label>
-                                        <select class="form-input-modern form-input-modern--sm" data-fieldname="estado">
-                                            <option value="">Selecione...</option>
-                                            {% for opt in options.estado %}
-                                            <option value="{{ opt }}" {% if item.doc.estado == opt %}selected{% endif %}>{{ opt }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="col-12 col-md-4">
-                                        <label class="form-label-modern">CEP <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="cep" value="{{ item.doc.cep or '' }}">
-                                    </div>
-                                    <div class="col-12 col-md-4">
-                                        <label class="form-label-modern">Email <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="email" value="{{ item.doc.email or '' }}">
-                                    </div>
-                                    <div class="col-12 col-md-4">
-                                        <label class="form-label-modern">Celular <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="celular" value="{{ item.doc.celular or '' }}">
-                                    </div>
-                                    <div class="col-12 col-md-4">
-                                        <label class="form-label-modern">Tel. Secundário</label>
-                                        <input type="text" class="form-input-modern form-input-modern--sm" data-fieldname="telefone_secundario" value="{{ item.doc.telefone_secundario or '' }}">
-                                    </div>
-                                </div>
+		{% if responsaveis %}
+			{% call card(title="Responsáveis", attrs={"class": "registro-section-card"}) %}
+				<div class="registro-responsaveis" id="responsaveis-list">
+					{% for item in responsaveis %}
+						<div class="responsavel-wrapper">
+							{% call card(attrs={"class": "responsavel-card", "data-responsavel-id": item.doc.name or ""}) %}
+								<div class="responsavel-card__header">
+									<h3 class="responsavel-card__title">{{ item.doc.nome_completo or "Novo Responsável" }}</h3>
+								</div>
 
-                                <h4 class="card-modern__subtitle mb-3">Vínculo</h4>
-                                <div class="row g-3">
-                                    <div class="col-12 col-md-4 guardiao-legal-container">
-                                        <div class="form-check mt-2">
-                                            <input class="form-check-input guardiao-legal-check" type="checkbox" data-fieldname="é_guardiao_legal" {% if item.vinculo.é_guardiao_legal %}checked{% endif %}>
-                                            <label class="form-check-label">
-                                                É Guardião Legal?
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
+								<section class="registro-subsection" aria-label="Dados pessoais do responsável">
+									<h4>Dados pessoais</h4>
+									<div class="registro-grid registro-grid--4">
+										{{ text_control("nome_completo", "Nome completo", item.doc.nome_completo, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-nome-completo", include_name=false) }}
+										{{ text_control("cpf", "CPF", item.doc.cpf, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-cpf", include_name=false, inputmode="numeric", maxlength="14", placeholder="000.000.000-00", autocomplete="off") }}
+										{{ text_control("rg", "RG", item.doc.rg, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-rg", include_name=false) }}
+										{{ text_control("orgao_expedidor", "Órgão expedidor", item.doc.orgao_expedidor, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-orgao-expedidor", include_name=false) }}
+										{{ date_control("data_de_nascimento", "Data de nascimento", item.doc.data_de_nascimento, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-data-nascimento", include_name=false) }}
+										{{ select_control("sexo", "Sexo", options.sexo, item.doc.sexo, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-sexo", include_name=false) }}
+										{{ select_control("estado_civil", "Estado civil", options.estado_civil, item.doc.estado_civil, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-estado-civil", include_name=false) }}
+									</div>
+								</section>
 
-            </div>
-        </div>
-        {% endif %}
+								<section class="registro-subsection" aria-label="Dados profissionais do responsável">
+									<h4>Profissional e acadêmico</h4>
+									<div class="registro-grid registro-grid--3">
+										{{ select_control("escolaridade", "Escolaridade", options.escolaridade, item.doc.escolaridade, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-escolaridade", include_name=false) }}
+										{{ text_control("profissao", "Profissão", item.doc.get("profissão"), required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-profissao", include_name=false) }}
+										{{ text_control("local_de_trabalho", "Local de trabalho", item.doc.local_de_trabalho, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-local-trabalho", include_name=false) }}
+									</div>
+								</section>
 
-        {% if not read_only %}
-        <div class="d-flex justify-content-end mb-5">
-            <button type="submit" class="btn-modern btn-modern--primary btn-modern--lg">Salvar Alterações</button>
-        </div>
-        {% endif %}
-    </form>
+								<section class="registro-subsection" aria-label="Endereço e contato do responsável">
+									<div class="registro-subsection__header">
+										<h4>Endereço e contato</h4>
+										<div class="registro-checkbox registro-checkbox--compact">
+											{{ checkbox("same-address-" ~ loop.index, "Mesmo endereço do jovem", attrs={"class": "same-address-check"}) }}
+										</div>
+									</div>
+									<div class="registro-grid registro-grid--4">
+										{{ text_control("endereco", "Endereço", item.doc.get("endereço"), required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-endereco", include_name=false, class_name="registro-field--span-2") }}
+										{{ text_control("numero", "Número", item.doc.get("número"), required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-numero", include_name=false) }}
+										{{ text_control("complemento", "Complemento", item.doc.complemento, scope="responsavel", field_id="resp-" ~ loop.index ~ "-complemento", include_name=false) }}
+										{{ text_control("bairro", "Bairro", item.doc.bairro, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-bairro", include_name=false) }}
+										{{ text_control("cidade", "Cidade", item.doc.cidade, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-cidade", include_name=false) }}
+										{{ select_control("estado", "Estado", options.estado, item.doc.estado, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-estado", include_name=false) }}
+										{{ text_control("cep", "CEP", item.doc.cep, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-cep", include_name=false, inputmode="numeric", maxlength="9", placeholder="00000-000") }}
+										{{ text_control("email", "Email", item.doc.email, type="email", required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-email", include_name=false, autocomplete="email") }}
+										{{ phone_control("celular", "Celular", item.phone.celular, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-celular", include_name=false) }}
+										{{ phone_control("telefone_secundario", "Telefone secundário", item.phone.telefone_secundario, scope="responsavel", field_id="resp-" ~ loop.index ~ "-telefone-secundario", include_name=false) }}
+									</div>
+								</section>
+
+								<section class="registro-subsection registro-responsavel-vinculo" aria-label="Vínculo do responsável">
+									<h4>Vínculo</h4>
+									<div class="guardiao-legal-container">
+										{{ checkbox_control("é_guardiao_legal", "É guardião legal?", item.vinculo.é_guardiao_legal, scope="responsavel", field_id="resp-" ~ loop.index ~ "-guardiao-legal", include_name=false, class_name="guardiao-legal-check") }}
+									</div>
+								</section>
+							{% endcall %}
+						</div>
+					{% endfor %}
+				</div>
+			{% endcall %}
+		{% endif %}
+
+		{% if not read_only %}
+			<div class="registro-actions">
+				<button type="submit" class="btn-lg-primary" id="btn-submit-registro">
+					{{ lucide_icon("save", size="sm") }}
+					<span>Salvar alterações</span>
+				</button>
+			</div>
+		{% endif %}
+	{% endcall %}
+
+	{% set confirmation_footer %}
+		{{ button("Voltar para edição", variant="outline", attrs={"data-close-dialog": "confirmationDialog"}) }}
+		{{ button("Salvar definitivamente", variant="primary", attrs={"id": "btn-confirm-save", "disabled": "disabled"}) }}
+	{% endset %}
+	{% call dialog(
+		id="confirmationDialog",
+		title="Confirmar dados",
+		description="Revise os dados antes de enviar para registro.",
+		footer=confirmation_footer,
+		dialog_attrs={"class": "registro-dialog registro-dialog--wide"},
+		close_button=true
+	) %}
+		<div class="registro-dialog-body">
+			<div id="confirmation-summary" class="registro-summary" aria-live="polite"></div>
+			<div class="registro-confirm-box">
+				{{ checkbox(
+					"confirm-data-check",
+					"Confirmo que todos os dados estão corretos, especialmente os CPFs e datas de nascimento do associado e dos responsáveis."
+				) }}
+				{{ checkbox(
+					"confirm-image-check",
+					"Estou ciente e autorizo o uso de imagem conforme os termos."
+				) }}
+				<a href="https://www.escoteiros.org.br/wp-content/themes/escoteiros-theme/files/autorizacao.pdf" target="_blank" rel="noopener noreferrer" class="registro-link">
+					Termo de Autorização de Uso de Imagem
+				</a>
+			</div>
+		</div>
+	{% endcall %}
+
+	{% set tipo_footer %}
+		{{ button("Cancelar", variant="ghost", attrs={"data-close-dialog": "modalTipoRegistro", "data-reset-submit": "true"}) }}
+		{{ button("Continuar", variant="primary", attrs={"id": "btn-confirm-tipo-registro", "disabled": "disabled"}) }}
+	{% endset %}
+	{% call dialog(
+		id="modalTipoRegistro",
+		title="Escolha o tipo de registro",
+		description="Selecione uma das opções abaixo para prosseguir com o registro.",
+		footer=tipo_footer,
+		dialog_attrs={"class": "registro-dialog"},
+		close_button=true
+	) %}
+		<div class="registro-type-options" role="listbox" aria-label="Tipo de registro">
+			{% call card(attrs={"class": "registro-option-card", "data-value": "Provisório", "role": "option", "tabindex": "0", "aria-selected": "false"}) %}
+				<div class="registro-option-card__icon" aria-hidden="true">
+					{{ lucide_icon("clock", size="lg") }}
+				</div>
+				<h3>Registro provisório</h3>
+				<p class="registro-option-card__price">Valor: {{ valor_registro_provisorio_fmt }}</p>
+				<p>Válido por 30 dias. Ideal para quem está começando e quer conhecer melhor o movimento antes do registro definitivo.</p>
+			{% endcall %}
+			{% call card(attrs={"class": "registro-option-card", "data-value": "Definitivo", "role": "option", "tabindex": "0", "aria-selected": "false"}) %}
+				<div class="registro-option-card__icon" aria-hidden="true">
+					{{ lucide_icon("circle-check-big", size="lg") }}
+				</div>
+				<h3>Registro definitivo</h3>
+				<p class="registro-option-card__price">Valor: {{ valor_registro_definitivo_fmt }}</p>
+				<p>Registro anual válido por 12 meses. Ideal para quem já tem certeza que vai continuar.</p>
+			{% endcall %}
+		</div>
+		<input type="hidden" id="selected-tipo-registro" value="">
+	{% endcall %}
 </div>
-
-{% if read_only %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('registro-form');
-        const inputs = form.querySelectorAll('input, select, textarea');
-        inputs.forEach(input => {
-            input.disabled = true;
-        });
-    });
-</script>
-{% endif %}
-
-<!-- Confirmation Modal -->
-<div class="modal-modern fade" id="confirmationModal" tabindex="-1" aria-hidden="true" style="display: none;">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-modern__content">
-            <div class="modal-modern__header">
-                <h5 class="modal-modern__title">Confirmar Dados</h5>
-            </div>
-            <div class="modal-modern__body">
-                <div id="confirmation-summary">
-                    <!-- Content will be injected via JS -->
-                </div>
-
-                <div class="mt-4 p-3 bg-light border rounded">
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="confirm-data-check">
-                        <label class="form-check-label fw-bold" for="confirm-data-check">
-                            Confirmo que todos os dados estão corretos, especialmente os CPFs e Datas de Nascimento do associado e dos responsáveis.
-                        </label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="confirm-image-check">
-                        <label class="form-check-label" for="confirm-image-check">
-                            Estou ciente e autorizo o uso de imagem conforme os termos: <a href="https://www.escoteiros.org.br/wp-content/themes/escoteiros-theme/files/autorizacao.pdf" target="_blank" class="text-primary text-decoration-underline">Termo de Autorização de Uso de Imagem</a>.
-                        </label>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-modern__footer">
-                <button type="button" class="btn-modern btn-modern--secondary" data-bs-dismiss="modal">Voltar para edição</button>
-                <button type="button" class="btn-modern btn-modern--primary" id="btn-confirm-save" disabled>Salvar Definitivamente</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Backdrop -->
-<div class="modal-backdrop fade" id="confirmationModalBackdrop" style="display: none;"></div>
-
-<!-- Modal Tipo de Registro -->
-<div class="modal-modern fade" id="modalTipoRegistro" tabindex="-1" style="display: none;">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-modern__content">
-            <div class="modal-modern__header">
-                <h5 class="modal-modern__title">Escolha o Tipo de Registro</h5>
-            </div>
-            <div class="modal-modern__body">
-                <p class="text-muted mb-4 text-center">Selecione uma das opções abaixo para prosseguir com o registro:</p>
-                
-                <div class="row g-4 justify-content-center">
-                    <div class="col-md-5">
-                        <div class="registro-option-card" data-value="Provisório">
-                            <div class="card-icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                            </div>
-                            <h4>Registro Provisório</h4>
-                            <p class="fw-bold mb-2">Valor: {{ valor_registro_provisorio_fmt }}</p>
-                            <p>Válido por 30. Ideal para quem está começando e quer conhecer melhor o movimento antes de fazer o registro definitivo.</p>
-                            <div class="selection-indicator"></div>
-                        </div>
-                    </div>
-                    <div class="col-md-5">
-                        <div class="registro-option-card" data-value="Definitivo">
-                            <div class="card-icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                            </div>
-                            <h4>Registro Definitivo</h4>
-                            <p class="fw-bold mb-2">Valor: {{ valor_registro_definitivo_fmt }}</p>
-                            <p>Registro anual válido por 12 meses. Ideal para quem já tem certeza que vai continuar.</p>
-                            <div class="selection-indicator"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <input type="hidden" id="selected-tipo-registro" value="">
-
-            </div>
-            <div class="modal-modern__footer">
-                <button type="button" class="btn-modern btn-modern--ghost" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn-modern btn-modern--primary" id="btn-confirm-tipo-registro" disabled>Continuar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 {% endblock %}
-
-

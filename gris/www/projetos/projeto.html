@@ -1,31 +1,42 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+{% from "public/design_system/components/generated/tabs.html.jinja" import tabs %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
+{% from "public/design_system/components/generated/calendar.html.jinja" import calendar %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, textarea, switch, empty %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 {% block title %}{{ projeto_titulo or 'Página do projeto' }}{% endblock %}
 {% set active_link = '/projetos/visao_geral' %}
 
 {% block head_include %}
 {{ super() }}
+<link rel="stylesheet" href="/projetos/projeto.css" />
+<script src="/assets/gris/design_system/js/components/toastui-editor.js?v={{ design_system_asset_version }}" defer></script>
 {% endblock %}
 
 {% block page_header %}
-<div class="page-header">
-    <div class="page-header__content">
-        <h1 class="page-header__title">{{ projeto_titulo or 'Página do projeto' }}</h1>
-        <p class="page-header__subtitle">Acompanhamento do projeto em execução, com tarefas e reuniões.</p>
+<section class="project-page-header" aria-labelledby="projeto-execucao-title">
+    <div class="flex flex-col gap-2 max-w-3xl">
+        <h1 id="projeto-execucao-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">{{ projeto_titulo or 'Projeto em execução' }}</h1>
+        <p class="m-0 text-base leading-relaxed text-muted-foreground">Acompanhamento do projeto em execução, com tarefas e reuniões.</p>
     </div>
-    <div class="page-header__actions">
-        <a id="btnAbrirGoogleDrive" class="btn-modern btn-modern--outline btn-modern--sm d-none" href="#" target="_blank" rel="noopener noreferrer">Abrir Google Drive</a>
-        <button type="button" id="btnCancelarProjeto" class="btn-modern btn-modern--danger btn-modern--sm">Cancelar projeto</button>
-        <button type="button" id="btnConcluirProjeto" class="btn-modern btn-modern--primary btn-modern--sm">Concluir projeto</button>
+    <div class="project-page-header__actions">
+        <a id="btnAbrirGoogleDrive" class="btn-sm-outline d-none" href="#" target="_blank" rel="noopener noreferrer">Abrir Google Drive</a>
+        <button type="button" id="btnConcluirProjeto" class="btn-sm-primary">Concluir projeto</button>
     </div>
-</div>
+</section>
 {% endblock %}
 
 {% block main %}
-<div class="project-shell card-modern">
+{{ toaster() }}
+<div class="project-shell">
     <input type="hidden" id="projetoName" value="{{ projeto_name or '' }}" />
 
     {% if projeto_read_only %}
-    <div class="project-readonly-notice" role="status" aria-live="polite">
+    <div class="alert alert-warning" role="status" aria-live="polite">
+        <section>
         {% if projeto_status == "Cancelado" %}
         Este projeto está em modo somente leitura porque foi cancelado.
         {% elif projeto_status == "Concluido" %}
@@ -33,659 +44,446 @@
         {% else %}
         Este projeto está em modo somente leitura.
         {% endif %}
+        </section>
     </div>
     {% endif %}
 
-    <div id="projectAlert" class="alert-modern d-none"></div>
+    <div id="projectAlert" class="alert" hidden></div>
 
-    <section class="card-modern tabs-card">
-        <div class="card-modern__body tabs-card__body">
-            <div class="project-tabs" role="tablist" aria-label="Seções do projeto">
-                <button type="button" class="project-tab is-active" id="tabBtnDadosGerais" data-tab="dados-gerais" role="tab" aria-controls="tabDadosGerais" aria-selected="true">Dados gerais</button>
-                <button type="button" class="project-tab" id="tabBtnParticipantes" data-tab="participantes" role="tab" aria-controls="tabParticipantes" aria-selected="false">Participantes</button>
-                <button type="button" class="project-tab" id="tabBtnTarefas" data-tab="tarefas" role="tab" aria-controls="tabGestaoTarefas" aria-selected="false">Gestão de tarefas</button>
-                <button type="button" class="project-tab" id="tabBtnReunioes" data-tab="reunioes" role="tab" aria-controls="tabReunioes" aria-selected="false">Reuniões</button>
-                <button type="button" class="project-tab" id="tabBtnAvaliacoes" data-tab="avaliacoes" role="tab" aria-controls="tabAvaliacoes" aria-selected="false">Avaliações</button>
+    {# ─── Painel 1: Dados gerais ─────────────────────────── #}
+    {% set panel_1 %}
+    <div class="projeto-shell">
+        {% call card(title="Dados gerais") %}
+            <div class="projeto-grid projeto-grid--3">
+                {% call field(label="Título do projeto", attrs={"class": "projeto-field--span-2"}) %}
+                    <input id="view_nome_do_projeto" type="text" class="input" readonly />
+                {% endcall %}
+                {% call field(label="Status") %}
+                    <input id="view_status" type="text" class="input" readonly />
+                {% endcall %}
+                {% call field(label="Coordenador") %}
+                    <input id="view_coordenador" type="text" class="input" readonly />
+                {% endcall %}
+                {% call field(label="Padrinho", attrs={"class": "projeto-field--span-2"}) %}
+                    <input id="view_padrinho_nome" type="text" class="input" readonly />
+                {% endcall %}
+                {% call field(label="Data de início") %}
+                    <input id="view_data_de_inicio" type="text" class="input" readonly />
+                {% endcall %}
+                {% call field(label="Data de término") %}
+                    <input id="view_data_de_termino" type="text" class="input" readonly />
+                {% endcall %}
             </div>
+        {% endcall %}
+
+        {% call card(title="Detalhamento") %}
+            <div class="projeto-grid projeto-grid--1">
+                {% call field(label="Descrição e justificativa") %}
+                    <textarea id="view_justificativa" class="textarea" rows="4" readonly></textarea>
+                {% endcall %}
+                {% call field(label="Alinhamento com o escotismo") %}
+                    <textarea id="view_alinhamento_com_escotismo" class="textarea" rows="4" readonly></textarea>
+                {% endcall %}
+            </div>
+        {% endcall %}
+
+        {% call card(title="Objetivos") %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>Objetivo</th><th>Métrica de sucesso</th></tr></thead>
+                    <tbody id="view_rows_objetivos"></tbody>
+                </table>
+            </div>
+        {% endcall %}
+
+        {% call card(title="Impacto") %}
+            <div class="projeto-grid projeto-grid--2">
+                {% call field(label="Competências e blocos") %}
+                    <textarea id="view_competencias" class="textarea" rows="3" readonly></textarea>
+                {% endcall %}
+                {% call field(label="Especialidade") %}
+                    <textarea id="view_especialidade" class="textarea" rows="3" readonly></textarea>
+                {% endcall %}
+            </div>
+            <div class="table-responsive mt-sm">
+                <table class="table">
+                    <thead><tr><th>ODS</th></tr></thead>
+                    <tbody id="view_rows_ods"></tbody>
+                </table>
+            </div>
+        {% endcall %}
+
+        {% call card(title="Cronograma") %}
+            <p class="gantt-card__subtitle">Linha do tempo de atividades do projeto.</p>
+            <div id="view_cronograma_gantt" class="cronograma-gantt" aria-live="polite"></div>
+        {% endcall %}
+
+        {% call card(title="Recursos") %}
+            <div class="table-responsive">
+                <table class="table"><thead><tr><th>Recurso</th></tr></thead><tbody id="view_rows_recursos"></tbody></table>
+            </div>
+        {% endcall %}
+
+        {% call card(title="Riscos") %}
+            <div class="table-responsive">
+                <table class="table"><thead><tr><th>Risco</th><th>Mitigação</th></tr></thead><tbody id="view_rows_riscos"></tbody></table>
+            </div>
+        {% endcall %}
+
+        {% call card(title="Observações e comentários") %}
+            <textarea id="view_observacoes_e_comentarios" class="textarea" rows="3" readonly></textarea>
+        {% endcall %}
+
+        {% call card(title="Revisão do TAP por IA") %}
+            <div id="view_avaliacao_tap" class="readonly-markdown">-</div>
+        {% endcall %}
+
+        {% call card(title="Histórico de revisão") %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>Aprovador</th><th>Etapa</th><th>Tipo</th><th>Data</th><th>Comentário</th><th>Resolvido</th></tr></thead>
+                    <tbody id="view_rows_revisoes"></tbody>
+                </table>
+            </div>
+        {% endcall %}
+    </div>
+    {% endset %}
+
+    {# ─── Painel 2: Participantes ────────────────────────── #}
+    {% set panel_2 %}
+    {% call card(title="Participantes", description="Gerencie os envolvidos no projeto e defina quem participa da avaliação.") %}
+        <div class="card-actions mb-sm">
+            <button type="button" id="btnNovoParticipante" class="btn-sm-primary">Adicionar envolvido</button>
         </div>
-    </section>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Nome</th><th>Email</th><th>Telefone</th><th>Função</th>
+                        <th>Coordenador</th><th>Padrinho / orientador</th>
+                        <th>Aprovador</th><th>Participa da avaliação</th>
+                    </tr>
+                </thead>
+                <tbody id="participantsRows"></tbody>
+            </table>
+        </div>
+    {% endcall %}
+    {% endset %}
 
-    <section id="tabDadosGerais" class="project-tab-panel is-active" role="tabpanel" aria-labelledby="tabBtnDadosGerais">
-        <div class="approval-shell card-modern">
-            <section class="card-modern form-card">
-                <div class="card-modern__header">
-                    <h3 class="card-modern__title">Dados gerais</h3>
-                </div>
-                <div class="card-modern__body">
-                    <div class="row g-3">
-                        <div class="col-12 col-md-6">
-                            <label class="form-label-modern">Título do projeto</label>
-                            <input id="view_nome_do_projeto" type="text" class="form-input-modern form-input-modern--sm" readonly disabled />
-                        </div>
-                        <div class="col-12 col-md-3">
-                            <label class="form-label-modern">Status</label>
-                            <input id="view_status" type="text" class="form-input-modern form-input-modern--sm" readonly disabled />
-                        </div>
-                        <div class="col-12 col-md-3">
-                            <label class="form-label-modern">Coordenador</label>
-                            <input id="view_coordenador" type="text" class="form-input-modern form-input-modern--sm" readonly disabled />
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label-modern">Padrinho</label>
-                            <input id="view_padrinho_nome" type="text" class="form-input-modern form-input-modern--sm" readonly disabled />
-                        </div>
-                        <div class="col-12 col-md-3">
-                            <label class="form-label-modern">Data de início</label>
-                            <input id="view_data_de_inicio" type="text" class="form-input-modern form-input-modern--sm" readonly disabled />
-                        </div>
-                        <div class="col-12 col-md-3">
-                            <label class="form-label-modern">Data de término</label>
-                            <input id="view_data_de_termino" type="text" class="form-input-modern form-input-modern--sm" readonly disabled />
-                        </div>
-                    </div>
-                </div>
-            </section>
+    {# ─── Painel 3: Gestão de tarefas ────────────────────── #}
+    {% set panel_3 %}
+    {% call card(title="Gestão de tarefas") %}
+        <div class="card-actions card-actions--end mb-sm">
+            <button type="button" id="btnAbrirCronogramaModal" class="btn-sm-outline">Abrir cronograma</button>
+            <button type="button" id="btnNovaTarefa" class="btn-sm-primary">Nova tarefa</button>
+        </div>
+        <p id="taskEditHint" class="card-hint">Carregando permissões de edição...</p>
+        <div id="taskKanban" class="task-kanban" aria-live="polite"></div>
+    {% endcall %}
+    {% endset %}
 
-            <section class="card-modern form-card">
-                <div class="card-modern__header">
-                    <h3 class="card-modern__title">Detalhamento</h3>
-                </div>
-                <div class="card-modern__body">
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label-modern">Descrição e justificativa</label>
-                            <textarea id="view_justificativa" class="form-input-modern form-input-modern--sm" rows="4" readonly disabled></textarea>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label-modern">Alinhamento com o escotismo</label>
-                            <textarea id="view_alinhamento_com_escotismo" class="form-input-modern form-input-modern--sm" rows="4" readonly disabled></textarea>
-                        </div>
-                    </div>
-                </div>
-            </section>
+    {# ─── Painel 4: Reuniões ─────────────────────────────── #}
+    {% set panel_4 %}
+    {% call card(title="Reuniões", description="Calendário mensal, semanal e em lista das reuniões do projeto.") %}
+        <div class="card-actions mb-sm">
+            <button type="button" id="btnNovaReuniao" class="btn-sm-primary">Cadastrar reunião</button>
+        </div>
+        {{ calendar(id="meetingsCalendar", allowed_modes=["month", "week", "list"], initial_mode="month", initial_list_variant="default", first_weekday=0, locale="pt-BR", filters_enabled=false, empty_message="Nenhuma reunião agendada.") }}
+    {% endcall %}
+    {% endset %}
 
-            <section class="card-modern form-card">
-                <div class="card-modern__header"><h3 class="card-modern__title">Objetivos</h3></div>
-                <div class="card-modern__body">
+    {# ─── Painel 5: Avaliações ───────────────────────────── #}
+    {% set panel_5 %}
+    <div id="avaliacaoLoading" class="aval-loading" aria-live="polite">Carregando dados de avaliação...</div>
+
+    {{ empty(
+        title="Avaliação não iniciada",
+        description="A avaliação deste projeto ainda não foi iniciada. Como coordenador, você pode iniciá-la agora.",
+        image="/assets/gris/images/gris-character/gris-cientist.png",
+        image_alt="Personagem Gris cientista",
+        image_size="md",
+        primary_action={
+            "label": "Iniciar avaliação",
+            "attrs": {"id": "btnIniciarAvaliacao"}
+        },
+        attrs={"id": "avaliacaoEmpty", "class": "d-none"}
+    ) }}
+
+    {{ empty(
+        title="Avaliação não iniciada",
+        description="A avaliação deste projeto ainda não foi iniciada.",
+        image="/assets/gris/images/gris-character/gris-cientist.png",
+        image_alt="Personagem Gris cientista",
+        image_size="md",
+        attrs={"id": "avaliacaoNoAccess", "class": "d-none"}
+    ) }}
+
+    <div id="avaliacaoContent" class="projeto-shell d-none">
+        {% call card(title="Avaliações individuais") %}
+            <div id="avaliacaoProgressBar" class="aval-progress">
+                <div class="aval-progress__label">
+                    <span id="avaliacaoProgressText">0 de 0 avaliações concluídas</span>
+                </div>
+                <div class="aval-progress__track">
+                    <div id="avaliacaoProgressFill" class="aval-progress__fill" style="width: 0%"></div>
+                </div>
+            </div>
+            <div id="avaliacaoMetrics" class="aval-metrics">
+                <div class="aval-metric-card">
+                    <span class="aval-metric-card__label">Satisfação dos participantes</span>
+                    <span id="avaliacaoMetricSatisfacao" class="aval-metric-card__value">-</span>
+                </div>
+                <div class="aval-metric-card">
+                    <span class="aval-metric-card__label">Avaliação geral</span>
+                    <span id="avaliacaoMetricGeral" class="aval-metric-card__value">-</span>
+                </div>
+            </div>
+            <div id="avaliacaoResumoIndividual" class="d-none mt-sm">
+                {% call field(label="Resumo das avaliações individuais") %}
+                    <div id="avaliacaoResumoIndividualContent" class="readonly-markdown">-</div>
+                {% endcall %}
+                <button type="button" id="btnGerarResumoIndividual" class="btn-sm-outline mt-sm"><svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="/assets/gris/design_system/icons/lucide/sprite.svg#sparkles"></use></svg> Gerar resumo individual</button>
+            </div>
+            <div id="avaliacaoAvaliadores" class="aval-avaliadores mt-sm">
+                <h4 class="aval-avaliadores__title">Avaliadores</h4>
+                <div id="avaliacaoAvaliadoresList" class="aval-avaliadores__list"></div>
+            </div>
+        {% endcall %}
+
+        {% call card(title="Avaliação geral do projeto") %}
+            <div id="avaliacaoObjetivosSection">
+                {% call field(label="Objetivos atingidos") %}
                     <div class="table-responsive">
-                        <table class="data-table projeto-table">
-                            <thead><tr><th>Objetivo</th><th>Métrica de sucesso</th></tr></thead>
-                            <tbody id="view_rows_objetivos"></tbody>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Objetivo</th>
+                                    <th style="width:200px">Atingido</th>
+                                    <th>Motivo (se não atingido)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="avaliacaoObjetivosBody"></tbody>
                         </table>
                     </div>
-                </div>
-            </section>
+                {% endcall %}
+            </div>
+            <div class="aval-general-fields projeto-grid projeto-grid--2 mt-sm">
+                {% call field(label="O que funcionou bem?") %}
+                    <textarea id="aval_funcionou_bem" class="textarea" rows="4"></textarea>
+                {% endcall %}
+                {% call field(label="O que não funcionou?") %}
+                    <textarea id="aval_nao_funcionou" class="textarea" rows="4"></textarea>
+                {% endcall %}
+                {% call field(label="Aprendizado") %}
+                    <textarea id="aval_aprendizado" class="textarea" rows="4"></textarea>
+                {% endcall %}
+                {% call field(label="Impacto") %}
+                    <textarea id="aval_impacto" class="textarea" rows="4"></textarea>
+                {% endcall %}
+                {% call field(label="Pontos positivos") %}
+                    <textarea id="aval_pontos_positivos" class="textarea" rows="4"></textarea>
+                {% endcall %}
+                {% call field(label="Pontos de melhoria") %}
+                    <textarea id="aval_pontos_melhoria" class="textarea" rows="4"></textarea>
+                {% endcall %}
+            </div>
+            <div class="aval-general-actions mt-sm">
+                <button type="button" id="btnSalvarAvaliacaoGeral" class="btn-sm-primary">Salvar avaliação geral</button>
+            </div>
+            <div id="avaliacaoResumoCompleto" class="d-none mt-sm">
+                {% call field(label="Resumo da avaliação completa") %}
+                    <div id="avaliacaoResumoCompletoContent" class="readonly-markdown">-</div>
+                {% endcall %}
+                <button type="button" id="btnGerarResumoCompleto" class="btn-sm-outline mt-sm"><svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="/assets/gris/design_system/icons/lucide/sprite.svg#sparkles"></use></svg> Gerar avaliação completa</button>
+            </div>
+        {% endcall %}
+    </div>
+    {% endset %}
 
-            <section class="card-modern form-card">
-                <div class="card-modern__header"><h3 class="card-modern__title">Impacto</h3></div>
-                <div class="card-modern__body">
-                    <div class="row g-3">
-                        <div class="col-12 col-md-6">
-                            <label class="form-label-modern">Competências e blocos</label>
-                            <textarea id="view_competencias" class="form-input-modern form-input-modern--sm" rows="3" readonly disabled></textarea>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label-modern">Especialidade</label>
-                            <textarea id="view_especialidade" class="form-input-modern form-input-modern--sm" rows="3" readonly disabled></textarea>
-                        </div>
-                    </div>
-                    <div class="table-responsive mt-sm">
-                        <table class="data-table projeto-table">
-                            <thead><tr><th>ODS</th></tr></thead>
-                            <tbody id="view_rows_ods"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
+    {{ tabs(id="project-tabs", tabsets=[
+        {"id": "1", "tab": "Dados gerais",     "panel": panel_1},
+        {"id": "2", "tab": "Participantes",     "panel": panel_2},
+        {"id": "3", "tab": "Gestão de tarefas", "panel": panel_3},
+        {"id": "4", "tab": "Reuniões",          "panel": panel_4},
+        {"id": "5", "tab": "Avaliações",        "panel": panel_5}
+    ]) }}
 
-            <section class="card-modern form-card">
-                <div class="card-modern__header"><h3 class="card-modern__title">Cronograma</h3></div>
-                <div class="card-modern__body">
-                    <div class="gantt-card" aria-live="polite">
-                        <div class="gantt-card__header">
-                            <h4 class="gantt-card__title">Visualização Gantt</h4>
-                            <p class="gantt-card__subtitle">Linha do tempo de atividades do projeto.</p>
-                        </div>
-                        <div id="view_cronograma_gantt" class="cronograma-gantt"></div>
-                    </div>
-                </div>
-            </section>
+    <div class="project-footer-actions">
+        <button type="button" id="btnCancelarProjeto" class="btn-sm-destructive">
+            {{ lucide_icon("trash-2", size="xs") }}
+            Cancelar projeto
+        </button>
+    </div>
+</div>
 
-            <section class="card-modern form-card">
-                <div class="card-modern__header"><h3 class="card-modern__title">Recursos</h3></div>
-                <div class="card-modern__body">
-                    <div class="table-responsive">
-                        <table class="data-table projeto-table"><thead><tr><th>Recurso</th></tr></thead><tbody id="view_rows_recursos"></tbody></table>
-                    </div>
-                </div>
-            </section>
+{# ─── Modais ─────────────────────────────────────────────── #}
 
-            <section class="card-modern form-card">
-                <div class="card-modern__header"><h3 class="card-modern__title">Riscos</h3></div>
-                <div class="card-modern__body">
-                    <div class="table-responsive">
-                        <table class="data-table projeto-table"><thead><tr><th>Risco</th><th>Mitigação</th></tr></thead><tbody id="view_rows_riscos"></tbody></table>
-                    </div>
-                </div>
-            </section>
+{% call dialog(id="avaliacaoDetalheModal", title="Detalhes da avaliação",
+    footer='<button type="button" class="btn-sm-outline" onclick="document.getElementById(\'avaliacaoDetalheModal\').close()">Fechar</button>') %}
+    <div id="avaliacaoDetalheContent"></div>
+{% endcall %}
 
-            <section class="card-modern form-card">
-                <div class="card-modern__header"><h3 class="card-modern__title">Observações e comentários</h3></div>
-                <div class="card-modern__body">
-                    <textarea id="view_observacoes_e_comentarios" class="form-input-modern form-input-modern--sm" rows="3" readonly disabled></textarea>
-                </div>
-            </section>
+{% call dialog(id="projectStatusConfirmModal", title="Confirmar ação",
+    footer='<button type="button" class="btn-sm-outline" onclick="document.getElementById(\'projectStatusConfirmModal\').close()">Voltar</button><button type="button" id="btnConfirmProjectStatus" class="btn-sm-primary">Confirmar</button>') %}
+    <p id="projectStatusConfirmModalMessage">Deseja confirmar esta alteração de status?</p>
+{% endcall %}
 
-            <section class="card-modern form-card">
-                <div class="card-modern__header"><h3 class="card-modern__title">Revisão do TAP por IA</h3></div>
-                <div class="card-modern__body"><div id="view_avaliacao_tap" class="readonly-markdown">-</div></div>
-            </section>
-
-            <section class="card-modern form-card">
-                <div class="card-modern__header"><h3 class="card-modern__title">Histórico de revisão</h3></div>
-                <div class="card-modern__body">
-                    <div class="table-responsive">
-                        <table class="data-table projeto-table">
-                            <thead><tr><th>Aprovador</th><th>Etapa</th><th>Tipo</th><th>Data</th><th>Comentário</th><th>Resolvido</th></tr></thead>
-                            <tbody id="view_rows_revisoes"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
+{% call dialog(id="participantModal", title="Envolvido no projeto", dialog_attrs={"class": "participant-dialog"},
+    footer='<button type="button" class="btn-sm-outline" onclick="document.getElementById(\'participantModal\').close()">Cancelar</button><button type="button" id="btnSalvarParticipante" class="btn-sm-primary">Salvar envolvido</button>') %}
+    <input type="hidden" id="participant_index" />
+    <div class="projeto-grid projeto-grid--2">
+        {% call field(label="Tipo de pessoa *") %}
+            {{ select(id="participant_tipo_pessoa", selected="Associado", items=[
+                {"value": "Associado", "label": "Associado"},
+                {"value": "Responsavel", "label": "Responsável"},
+                {"value": "Outro", "label": "Outro"}
+            ]) }}
+        {% endcall %}
+        <div id="participant_associado_group">
+            {% call field(label="Associado") %}
+                <div id="participant_associado_wrapper"></div>
+            {% endcall %}
         </div>
-    </section>
+        <div id="participant_responsavel_group" class="d-none">
+            {% call field(label="Responsável") %}
+                <div id="participant_responsavel_wrapper"></div>
+            {% endcall %}
+        </div>
+        {% call field(label="Nome *") %}
+            <input id="participant_nome" type="text" class="input" />
+        {% endcall %}
+        {% call field(label="Função") %}
+            <input id="participant_funcao" type="text" class="input" />
+        {% endcall %}
+        {% call field(label="Email *") %}
+            <input id="participant_email" type="email" class="input" />
+        {% endcall %}
+        {% call field(label="Telefone *") %}
+            <input id="participant_telefone" type="text" class="input" />
+        {% endcall %}
+    </div>
+    <div class="mt-sm">
+        <label class="switch">
+            <input id="participant_coordenador" type="checkbox" role="switch" class="input" />
+            <span>Definir como coordenador do projeto</span>
+        </label>
+    </div>
+    <div class="mt-sm">
+        <label class="switch">
+            <input id="participant_participa_avaliacao" type="checkbox" role="switch" class="input" checked />
+            <span>Participa da avaliação do projeto</span>
+        </label>
+    </div>
+{% endcall %}
 
-    <section id="tabParticipantes" class="project-tab-panel" role="tabpanel" aria-labelledby="tabBtnParticipantes">
-        <section class="card-modern form-card">
-            <div class="card-modern__header participants-header">
-                <div>
-                    <h3 class="card-modern__title">Participantes</h3>
-                    <p id="participantsEditHint" class="card-modern__subtitle">Gerencie os envolvidos no projeto e defina quem participa da avaliação.</p>
+{% call dialog(id="taskModal", title="Detalhes da tarefa", dialog_attrs={"class": "task-dialog"},
+    footer='<button type="button" id="btnSalvarTarefa" class="btn-sm-primary">Salvar tarefa</button>') %}
+    <input type="hidden" id="task_name" />
+    <p id="taskModalSubtitle" class="task-modal-subtitle">Preencha os detalhes e acompanhe os comentários da tarefa.</p>
+    <div class="task-modal-grid">
+        <section class="task-modal-main">
+            <div class="task-title-block">
+                <textarea id="task_title_editor" class="textarea task-title-editor" rows="2" placeholder="Ex.: Organizar reunião com equipe de interesse"></textarea>
+                <input type="hidden" id="task_descricao" />
+            </div>
+
+            <div class="task-meta-row">
+                {% call field(label="Responsável") %}
+                    <div id="task_responsavel_wrapper"></div>
+                {% endcall %}
+                {% call field(label="Status") %}
+                    {{ select(id="task_status", selected="Nao iniciado", items=[
+                        {"value": "Nao iniciado",  "label": "Não iniciado"},
+                        {"value": "Em andamento",  "label": "Em andamento"},
+                        {"value": "Atrasado",      "label": "Atrasado"},
+                        {"value": "Concluido",     "label": "Concluído"},
+                        {"value": "Cancelado",     "label": "Cancelado"}
+                    ]) }}
+                {% endcall %}
+                {% call field(label="Prazo *") %}
+                    <div id="task_prazo_wrapper"></div>
+                {% endcall %}
+            </div>
+
+            <div id="taskTimelineInfographic" class="task-timeline d-none" aria-live="polite">
+                <div class="task-timeline__track" aria-hidden="true">
+                    <span class="task-timeline__dot task-timeline__dot--start"></span>
+                    <span class="task-timeline__line"></span>
+                    <span id="taskTimelineEndDot" class="task-timeline__dot task-timeline__dot--end"></span>
                 </div>
-                <div class="task-header__actions">
-                    <button type="button" id="btnNovoParticipante" class="btn-modern btn-modern--primary btn-modern--sm">Adicionar envolvido</button>
+                <div class="task-timeline__labels">
+                    <div class="task-timeline__item task-timeline__item--start">
+                        <p class="task-timeline__title">Início</p>
+                        <p id="taskTimelineStartDate" class="task-timeline__date">-</p>
+                    </div>
+                    <div class="task-timeline__item task-timeline__item--end">
+                        <p class="task-timeline__title">Conclusão</p>
+                        <p id="taskTimelineEndDate" class="task-timeline__date">Em execução</p>
+                        <p id="taskTimelineDelta" class="task-timeline__delta"></p>
+                    </div>
                 </div>
             </div>
-            <div class="card-modern__body">
-                <div class="table-responsive">
-                    <table class="data-table projeto-table participantes-table">
-                        <thead>
-                            <tr>
-                                <th>Nome</th>
-                                <th>Email</th>
-                                <th>Telefone</th>
-                                <th>Função</th>
-                                <th>Coordenador</th>
-                                <th>Padrinho / orientador</th>
-                                <th>Aprovador</th>
-                                <th>Participa da avaliação</th>
-                            </tr>
-                        </thead>
-                        <tbody id="participantsRows"></tbody>
-                    </table>
+
+            <input type="hidden" id="task_data_inicio" />
+            <input type="hidden" id="task_data_entrega" />
+
+            {% call field(label="Descrição e Observações", attrs={"class": "task-observacoes-field"}) %}
+                <div id="task_observacoes_editor_host" class="meeting-editor-host d-none"></div>
+                <div id="task_observacoes_markdown_block" class="markdown-editor">
+                    <div class="markdown-editor__toolbar" data-markdown-target="task_observacoes" data-preview-target="task_observacoes_preview">
+                        <button type="button" class="btn-sm-outline" data-markdown-action="bold"><strong>B</strong></button>
+                        <button type="button" class="btn-sm-outline" data-markdown-action="italic"><em>I</em></button>
+                        <button type="button" class="btn-sm-outline" data-markdown-action="list">Lista</button>
+                        <button type="button" class="btn-sm-outline" data-markdown-action="link">Link</button>
+                    </div>
+                    <textarea id="task_observacoes" class="textarea" rows="6" placeholder="Adicione detalhes importantes sobre a execução da tarefa."></textarea>
+                    <div class="markdown-editor__preview" id="task_observacoes_preview">-</div>
                 </div>
-            </div>
+            {% endcall %}
         </section>
-    </section>
 
-    <section id="tabGestaoTarefas" class="project-tab-panel" role="tabpanel" aria-labelledby="tabBtnTarefas">
-        <section class="card-modern form-card">
-            <div class="card-modern__header task-header">
-                <div>
-                    <h3 class="card-modern__title">Gestão de tarefas</h3>
-                    <p id="taskEditHint" class="card-modern__subtitle">Carregando permissões de edição...</p>
+        <aside class="task-modal-side">
+            <div class="task-comments-card">
+                <div class="task-comments-card__header">
+                    <h5 class="task-comments-card__title">Comentários e atividade</h5>
+                    <p id="taskCommentsHint" class="task-comments-card__subtitle">Salve a tarefa para habilitar comentários.</p>
                 </div>
-                <div class="task-header__actions">
-                    <button type="button" id="btnAbrirCronogramaModal" class="btn-modern btn-modern--outline btn-modern--sm">Abrir cronograma</button>
-                    <button type="button" id="btnNovaTarefa" class="btn-modern btn-modern--primary btn-modern--sm">Nova tarefa</button>
-                </div>
-            </div>
-            <div class="card-modern__body">
-                <div id="taskKanban" class="task-kanban" aria-live="polite"></div>
-            </div>
-        </section>
-    </section>
-
-    <section id="tabReunioes" class="project-tab-panel" role="tabpanel" aria-labelledby="tabBtnReunioes">
-        <section class="card-modern form-card">
-            <div class="card-modern__header meetings-header">
-                <div>
-                    <h3 class="card-modern__title">Reuniões</h3>
-                    <p id="meetingEditHint" class="card-modern__subtitle">Calendário mensal das reuniões do projeto.</p>
-                </div>
-                <div class="task-header__actions">
-                    <button type="button" id="btnNovaReuniao" class="btn-modern btn-modern--primary btn-modern--sm">Cadastrar reunião</button>
+                <div id="taskCommentsList" class="task-comments-list" aria-live="polite"></div>
+                <div class="task-comments-compose">
+                    {% call field(label="Novo comentário") %}
+                        <textarea id="task_comment_input" class="textarea" rows="3" placeholder="Digite seu comentário"></textarea>
+                    {% endcall %}
+                    <button type="button" id="btnAdicionarComentarioTarefa" class="btn-sm-outline mt-sm">Comentar</button>
                 </div>
             </div>
-            <div class="card-modern__body">
-                <div class="meetings-view-toggle" role="group" aria-label="Visualização das reuniões">
-                    <button type="button" id="btnMeetingsViewCalendar" class="btn-modern btn-modern--outline btn-modern--sm is-active" data-meetings-view="calendar" aria-pressed="true">Calendário</button>
-                    <button type="button" id="btnMeetingsViewList" class="btn-modern btn-modern--outline btn-modern--sm" data-meetings-view="list" aria-pressed="false">Lista</button>
-                </div>
-                <div id="meetingsToolbar" class="meetings-toolbar">
-                    <button type="button" id="btnPrevMonth" class="btn-modern btn-modern--outline btn-modern--sm">Mês anterior</button>
-                    <div id="meetingMonthLabel" class="meetings-toolbar__label">-</div>
-                    <button type="button" id="btnNextMonth" class="btn-modern btn-modern--outline btn-modern--sm">Próximo mês</button>
-                </div>
-                <div id="meetingsCalendar" class="meetings-calendar" aria-live="polite"></div>
-                <div id="meetingsList" class="meetings-list d-none" aria-live="polite"></div>
-            </div>
-        </section>
-    </section>
-
-    <!-- ═══════ Tab: Avaliações ═══════ -->
-    <section id="tabAvaliacoes" class="project-tab-panel" role="tabpanel" aria-labelledby="tabBtnAvaliacoes">
-        <div id="avaliacaoLoading" class="avaliacao-loading" aria-live="polite">Carregando dados de avaliação...</div>
-
-        <!-- Estado: sem avaliação, pode iniciar -->
-        <div id="avaliacaoEmpty" class="avaliacao-empty-state d-none">
-            <div class="avaliacao-empty-card">
-                <h3>Nenhuma avaliação iniciada</h3>
-                <p>Inicie o processo de avaliação para que os participantes possam avaliar o projeto.</p>
-                <button type="button" id="btnIniciarAvaliacao" class="btn-modern btn-modern--primary btn-modern--sm">Iniciar avaliação</button>
-            </div>
-        </div>
-
-        <!-- Estado: sem avaliação, não pode iniciar -->
-        <div id="avaliacaoNoAccess" class="avaliacao-empty-state d-none">
-            <div class="avaliacao-empty-card">
-                <h3>Nenhuma avaliação iniciada</h3>
-                <p>A avaliação ainda não foi iniciada pelo coordenador do projeto.</p>
-            </div>
-        </div>
-
-        <!-- Estado: avaliação em andamento -->
-        <div id="avaliacaoContent" class="avaliacao-content d-none">
-            <!-- Avaliações Individuais -->
-            <section class="card-modern form-card">
-                <div class="card-modern__header">
-                    <h3 class="card-modern__title">Avaliações individuais</h3>
-                </div>
-                <div class="card-modern__body">
-                    <div id="avaliacaoProgressBar" class="aval-progress">
-                        <div class="aval-progress__label">
-                            <span id="avaliacaoProgressText">0 de 0 avaliações concluídas</span>
-                        </div>
-                        <div class="aval-progress__track">
-                            <div id="avaliacaoProgressFill" class="aval-progress__fill" style="width: 0%"></div>
-                        </div>
-                    </div>
-
-                    <div id="avaliacaoMetrics" class="aval-metrics">
-                        <div class="aval-metric-card">
-                            <span class="aval-metric-card__label">Satisfação dos participantes</span>
-                            <span id="avaliacaoMetricSatisfacao" class="aval-metric-card__value">-</span>
-                        </div>
-                        <div class="aval-metric-card">
-                            <span class="aval-metric-card__label">Avaliação geral</span>
-                            <span id="avaliacaoMetricGeral" class="aval-metric-card__value">-</span>
-                        </div>
-                    </div>
-
-                    <div id="avaliacaoResumoIndividual" class="aval-resumo-section d-none">
-                        <label class="form-label-modern">Resumo das avaliações individuais</label>
-                        <div id="avaliacaoResumoIndividualContent" class="readonly-markdown">-</div>
-                        <button type="button" id="btnGerarResumoIndividual" class="btn-modern btn-modern--outline btn-modern--sm mt-sm">Gerar resumo individual</button>
-                    </div>
-
-                    <div id="avaliacaoAvaliadores" class="aval-avaliadores">
-                        <h4 class="aval-avaliadores__title">Avaliadores</h4>
-                        <div id="avaliacaoAvaliadoresList" class="aval-avaliadores__list"></div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Avaliação Geral do Projeto -->
-            <section class="card-modern form-card">
-                <div class="card-modern__header">
-                    <h3 class="card-modern__title">Avaliação geral do projeto</h3>
-                </div>
-                <div class="card-modern__body">
-                    <div id="avaliacaoObjetivosSection">
-                        <label class="form-label-modern">Objetivos atingidos</label>
-                        <div class="table-responsive">
-                            <table class="data-table projeto-table">
-                                <thead>
-                                    <tr>
-                                        <th>Objetivo</th>
-                                        <th style="width: 180px;">Atingido</th>
-                                        <th>Motivo (se não atingido)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="avaliacaoObjetivosBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div class="aval-general-fields">
-                        <div class="row g-3">
-                            <div class="col-12 col-md-6">
-                                <label class="form-label-modern" for="aval_funcionou_bem">O que funcionou bem?</label>
-                                <textarea id="aval_funcionou_bem" class="form-input-modern form-input-modern--sm" rows="4"></textarea>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label-modern" for="aval_nao_funcionou">O que não funcionou?</label>
-                                <textarea id="aval_nao_funcionou" class="form-input-modern form-input-modern--sm" rows="4"></textarea>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label-modern" for="aval_aprendizado">Aprendizado</label>
-                                <textarea id="aval_aprendizado" class="form-input-modern form-input-modern--sm" rows="4"></textarea>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label-modern" for="aval_impacto">Impacto</label>
-                                <textarea id="aval_impacto" class="form-input-modern form-input-modern--sm" rows="4"></textarea>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label-modern" for="aval_pontos_positivos">Pontos positivos</label>
-                                <textarea id="aval_pontos_positivos" class="form-input-modern form-input-modern--sm" rows="4"></textarea>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label-modern" for="aval_pontos_melhoria">Pontos de melhoria</label>
-                                <textarea id="aval_pontos_melhoria" class="form-input-modern form-input-modern--sm" rows="4"></textarea>
-                            </div>
-                        </div>
-
-                        <div class="aval-general-actions">
-                            <button type="button" id="btnSalvarAvaliacaoGeral" class="btn-modern btn-modern--primary btn-modern--sm">Salvar avaliação geral</button>
-                        </div>
-                    </div>
-
-                    <div id="avaliacaoResumoCompleto" class="aval-resumo-section d-none">
-                        <label class="form-label-modern">Resumo da avaliação completa</label>
-                        <div id="avaliacaoResumoCompletoContent" class="readonly-markdown">-</div>
-                        <button type="button" id="btnGerarResumoCompleto" class="btn-modern btn-modern--outline btn-modern--sm mt-sm">Gerar avaliação completa</button>
-                    </div>
-                </div>
-            </section>
-        </div>
-    </section>
-</div>
-
-<!-- Modal: detalhe de avaliação individual -->
-<div id="avaliacaoDetalheModal" class="info-modal d-none" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="avaliacaoDetalheModalTitle">
-    <div class="info-modal__backdrop" data-close-avaliacao-detalhe-modal></div>
-    <div class="info-modal__panel" role="document">
-        <div class="info-modal__header">
-            <h4 id="avaliacaoDetalheModalTitle" class="info-modal__title">Detalhes da avaliação</h4>
-        </div>
-        <div class="info-modal__body">
-            <div id="avaliacaoDetalheContent"></div>
-        </div>
-        <div class="approval-modal-footer">
-            <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-close-avaliacao-detalhe-modal>Fechar</button>
-        </div>
+        </aside>
     </div>
-</div>
+{% endcall %}
 
-<div id="projectStatusConfirmModal" class="info-modal d-none" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="projectStatusConfirmModalTitle">
-    <div class="info-modal__backdrop" data-close-project-status-modal></div>
-    <div class="info-modal__panel" role="document">
-        <div class="info-modal__header">
-            <h4 id="projectStatusConfirmModalTitle" class="info-modal__title">Confirmar ação</h4>
-        </div>
-        <div class="info-modal__body">
-            <p id="projectStatusConfirmModalMessage">Deseja confirmar esta alteração de status?</p>
-        </div>
-        <div class="approval-modal-footer">
-            <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-close-project-status-modal>Voltar</button>
-            <button type="button" id="btnConfirmProjectStatus" class="btn-modern btn-modern--primary btn-modern--sm">Confirmar</button>
-        </div>
+{% call dialog(id="meetingModal", title="Reunião do projeto",
+    footer='<button type="button" class="btn-sm-outline" onclick="document.getElementById(\'meetingModal\').close()">Cancelar</button><button type="button" id="btnSalvarReuniao" class="btn-sm-primary">Salvar reunião</button>') %}
+    <input type="hidden" id="meeting_name" />
+    <div class="projeto-grid projeto-grid--2">
+        {% call field(label="Data e hora *") %}
+            {{ datepicker(id="meeting_data_hora", with_time=true, placeholder="Selecione data e hora") }}
+        {% endcall %}
+        {% call field(label="Descrição *") %}
+            <input id="meeting_descricao" type="text" class="input" />
+        {% endcall %}
     </div>
-</div>
-
-<div id="participantModal" class="info-modal d-none" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="participantModalTitle">
-    <div class="info-modal__backdrop" data-close-participant-modal></div>
-    <div class="info-modal__panel" role="document">
-        <div class="info-modal__header">
-            <h4 id="participantModalTitle" class="info-modal__title">Envolvido no projeto</h4>
-        </div>
-        <div class="info-modal__body">
-            <input type="hidden" id="participant_index" />
-            <div class="row g-3">
-                <div class="col-12 col-md-4">
-                    <label class="form-label-modern" for="participant_tipo_pessoa">Tipo de pessoa *</label>
-                    <select id="participant_tipo_pessoa" class="form-input-modern form-input-modern--sm">
-                        <option value="Associado">Associado</option>
-                        <option value="Responsavel">Responsável</option>
-                        <option value="Outro">Outro</option>
-                    </select>
-                </div>
-
-                <div id="participant_associado_group" class="col-12 col-md-8">
-                    <label class="form-label-modern" for="participant_associado">Associado</label>
-                    <select id="participant_associado" class="form-input-modern form-input-modern--sm">
-                        <option value="">Selecione</option>
-                    </select>
-                </div>
-
-                <div id="participant_responsavel_group" class="col-12 col-md-8 d-none">
-                    <label class="form-label-modern" for="participant_responsavel">Responsável</label>
-                    <select id="participant_responsavel" class="form-input-modern form-input-modern--sm">
-                        <option value="">Selecione</option>
-                    </select>
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <label class="form-label-modern" for="participant_nome">Nome *</label>
-                    <input id="participant_nome" type="text" class="form-input-modern form-input-modern--sm" />
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <label class="form-label-modern" for="participant_funcao">Função</label>
-                    <input id="participant_funcao" type="text" class="form-input-modern form-input-modern--sm" />
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <label class="form-label-modern" for="participant_email">Email *</label>
-                    <input id="participant_email" type="email" class="form-input-modern form-input-modern--sm" />
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <label class="form-label-modern" for="participant_telefone">Telefone *</label>
-                    <input id="participant_telefone" type="text" class="form-input-modern form-input-modern--sm" />
-                </div>
-
-                <div class="col-12">
-                    <label class="participant-checkbox">
-                        <input id="participant_coordenador" type="checkbox" />
-                        Definir como coordenador do projeto
-                    </label>
-                </div>
-
-                <div class="col-12">
-                    <label class="participant-checkbox">
-                        <input id="participant_participa_avaliacao" type="checkbox" checked />
-                        Participa da avaliação do projeto
-                    </label>
-                </div>
-
-                <div id="participantModalWarning" class="col-12 participant-modal-warning d-none"></div>
-            </div>
-        </div>
-        <div class="approval-modal-footer">
-            <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-close-participant-modal>Cancelar</button>
-            <button type="button" id="btnSalvarParticipante" class="btn-modern btn-modern--primary btn-modern--sm">Salvar envolvido</button>
-        </div>
+    {% call field(label="Pauta") %}
+        <div id="meeting_pauta_editor_host" class="meeting-editor-host"></div>
+    {% endcall %}
+    <div id="meetingAtaSection">
+        {% call field(label="Ata") %}
+            <div id="meeting_ata_editor_host" class="meeting-editor-host"></div>
+        {% endcall %}
     </div>
-</div>
+{% endcall %}
 
-<div id="taskModal" class="info-modal d-none" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle">
-    <div class="info-modal__backdrop" data-close-task-modal></div>
-    <div class="info-modal__panel task-modal-panel" role="document">
-        <div class="info-modal__header task-modal-header">
-            <div>
-                <h4 id="taskModalTitle" class="info-modal__title">Detalhes da tarefa</h4>
-                <p id="taskModalSubtitle" class="task-modal-subtitle">Preencha os detalhes e acompanhe os comentários da tarefa.</p>
-            </div>
-        </div>
-        <div class="info-modal__body task-modal-body">
-            <input type="hidden" id="task_name" />
-            <div class="task-modal-grid">
-                <section class="task-modal-main">
-                    <div class="task-detail-card">
-                        <div class="task-title-block">
-                            <h2 id="taskTitleDisplay" class="task-title-display" role="button" tabindex="0" aria-label="Título da tarefa"></h2>
-                            <textarea id="task_title_editor" class="form-input-modern form-input-modern--sm task-title-editor d-none" rows="2" placeholder="Ex.: Organizar reunião com equipe de interesse"></textarea>
-                            <input type="hidden" id="task_descricao" />
-                        </div>
-
-                        <div class="task-meta-row">
-                            <div class="task-meta-item">
-                                <label class="form-label-modern" for="task_responsavel">Responsável</label>
-                                <select id="task_responsavel" class="form-input-modern form-input-modern--sm"></select>
-                            </div>
-                            <div class="task-meta-item">
-                                <label class="form-label-modern" for="task_status">Status</label>
-                                <select id="task_status" class="form-input-modern form-input-modern--sm">
-                                    <option value="Nao iniciado">Não iniciado</option>
-                                    <option value="Em andamento">Em andamento</option>
-                                    <option value="Atrasado">Atrasado</option>
-                                    <option value="Concluido">Concluído</option>
-                                    <option value="Cancelado">Cancelado</option>
-                                </select>
-                            </div>
-                            <div class="task-meta-item">
-                                <label class="form-label-modern" for="task_prazo">Prazo *</label>
-                                <input id="task_prazo" type="date" class="form-input-modern form-input-modern--sm" />
-                            </div>
-                        </div>
-
-                        <div id="taskTimelineInfographic" class="task-timeline d-none" aria-live="polite">
-                            <div class="task-timeline__track" aria-hidden="true">
-                                <span class="task-timeline__line"></span>
-                                <span class="task-timeline__dot task-timeline__dot--start"></span>
-                                <span id="taskTimelineEndDot" class="task-timeline__dot task-timeline__dot--end"></span>
-                            </div>
-                            <div class="task-timeline__labels">
-                                <div class="task-timeline__item task-timeline__item--start">
-                                    <p class="task-timeline__title">Início</p>
-                                    <p id="taskTimelineStartDate" class="task-timeline__date">-</p>
-                                </div>
-                                <div class="task-timeline__item task-timeline__item--end">
-                                    <p class="task-timeline__title">Conclusão</p>
-                                    <p id="taskTimelineEndDate" class="task-timeline__date">Em execução</p>
-                                    <p id="taskTimelineDelta" class="task-timeline__delta"></p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <input type="hidden" id="task_data_inicio" />
-                        <input type="hidden" id="task_data_entrega" />
-
-                        <div>
-                            <label class="form-label-modern" for="task_observacoes">Descrição e Observações</label>
-                            <div id="task_observacoes_editor_host" class="meeting-editor-host d-none"></div>
-                            <div id="task_observacoes_markdown_block" class="markdown-editor">
-                                <div class="markdown-editor__toolbar" data-markdown-target="task_observacoes" data-preview-target="task_observacoes_preview">
-                                    <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-markdown-action="bold"><strong>B</strong></button>
-                                    <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-markdown-action="italic"><em>I</em></button>
-                                    <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-markdown-action="list">Lista</button>
-                                    <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-markdown-action="link">Link</button>
-                                </div>
-                                <textarea id="task_observacoes" class="form-input-modern form-input-modern--sm" rows="6" placeholder="Adicione detalhes importantes sobre a execução da tarefa."></textarea>
-                                <div class="markdown-editor__preview" id="task_observacoes_preview">-</div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <aside class="task-modal-side">
-                    <div class="task-comments-card">
-                        <div class="task-comments-card__header">
-                            <h5 class="task-comments-card__title">Comentários e atividade</h5>
-                            <p id="taskCommentsHint" class="task-comments-card__subtitle">Salve a tarefa para habilitar comentários.</p>
-                        </div>
-
-                        <div id="taskCommentsList" class="task-comments-list" aria-live="polite"></div>
-
-                        <div class="task-comments-compose">
-                            <label class="form-label-modern" for="task_comment_input">Novo comentário</label>
-                            <textarea id="task_comment_input" class="form-input-modern form-input-modern--sm" rows="3" placeholder="Digite seu comentário"></textarea>
-                            <button type="button" id="btnAdicionarComentarioTarefa" class="btn-modern btn-modern--outline btn-modern--sm">Comentar</button>
-                        </div>
-                    </div>
-                </aside>
-            </div>
-        </div>
-        <div class="approval-modal-footer">
-            <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-close-task-modal>Cancelar</button>
-            <button type="button" id="btnSalvarTarefa" class="btn-modern btn-modern--primary btn-modern--sm">Salvar tarefa</button>
-        </div>
-    </div>
-</div>
-
-<div id="meetingModal" class="info-modal d-none" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="meetingModalTitle">
-    <div class="info-modal__backdrop" data-close-meeting-modal></div>
-    <div class="info-modal__panel" role="document">
-        <div class="info-modal__header">
-            <h4 id="meetingModalTitle" class="info-modal__title">Reunião do projeto</h4>
-        </div>
-        <div class="info-modal__body">
-            <input type="hidden" id="meeting_name" />
-            <div class="row g-3">
-                <div class="col-12 col-md-6">
-                    <label class="form-label-modern" for="meeting_data_hora">Data e hora *</label>
-                    <input id="meeting_data_hora" type="datetime-local" class="form-input-modern form-input-modern--sm" />
-                </div>
-                <div class="col-12 col-md-6">
-                    <label class="form-label-modern" for="meeting_descricao">Descrição *</label>
-                    <input id="meeting_descricao" type="text" class="form-input-modern form-input-modern--sm" />
-                </div>
-                <div class="col-12">
-                    <label class="form-label-modern" for="meeting_pauta">Pauta</label>
-                    <div id="meeting_pauta_editor_host" class="meeting-editor-host d-none"></div>
-                    <div id="meeting_pauta_markdown_block" class="markdown-editor">
-                        <div class="markdown-editor__toolbar" data-markdown-target="meeting_pauta" data-preview-target="meeting_pauta_preview">
-                            <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-markdown-action="bold"><strong>B</strong></button>
-                            <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-markdown-action="italic"><em>I</em></button>
-                            <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-markdown-action="list">Lista</button>
-                            <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-markdown-action="link">Link</button>
-                        </div>
-                        <textarea id="meeting_pauta" class="form-input-modern form-input-modern--sm" rows="4"></textarea>
-                        <div class="markdown-editor__preview" id="meeting_pauta_preview">-</div>
-                    </div>
-                </div>
-                <div id="meetingAtaSection" class="col-12">
-                    <label class="form-label-modern" for="meeting_ata">Ata</label>
-                    <div id="meeting_ata_editor_host" class="meeting-editor-host d-none"></div>
-                    <div id="meeting_ata_markdown_block" class="markdown-editor">
-                        <div class="markdown-editor__toolbar" data-markdown-target="meeting_ata" data-preview-target="meeting_ata_preview">
-                            <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-markdown-action="bold"><strong>B</strong></button>
-                            <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-markdown-action="italic"><em>I</em></button>
-                            <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-markdown-action="list">Lista</button>
-                            <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-markdown-action="link">Link</button>
-                        </div>
-                        <textarea id="meeting_ata" class="form-input-modern form-input-modern--sm" rows="4"></textarea>
-                        <div class="markdown-editor__preview" id="meeting_ata_preview">-</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="approval-modal-footer">
-            <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-close-meeting-modal>Cancelar</button>
-            <button type="button" id="btnSalvarReuniao" class="btn-modern btn-modern--primary btn-modern--sm">Salvar reunião</button>
-        </div>
-    </div>
-</div>
-
-<div id="cronogramaModal" class="info-modal d-none" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="cronogramaModalTitle">
-    <div class="info-modal__backdrop" data-close-cronograma-modal></div>
-    <div class="info-modal__panel" role="document">
-        <div class="info-modal__header">
-            <h4 id="cronogramaModalTitle" class="info-modal__title">Cronograma do projeto</h4>
-        </div>
-        <div class="info-modal__body">
-            <div class="gantt-card" aria-live="polite">
-                <div class="gantt-card__header">
-                    <h4 class="gantt-card__title">Visualização Gantt</h4>
-                    <p class="gantt-card__subtitle">Linha do tempo de atividades do projeto.</p>
-                </div>
-                <div id="modal_cronograma_gantt" class="cronograma-gantt"></div>
-            </div>
-        </div>
-        <div class="approval-modal-footer">
-            <button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-close-cronograma-modal>Fechar</button>
-        </div>
-    </div>
-</div>
+{% call dialog(id="cronogramaModal", title="Cronograma do projeto",
+    footer='<button type="button" class="btn-sm-outline" onclick="document.getElementById(\'cronogramaModal\').close()">Fechar</button>') %}
+    <p class="gantt-card__subtitle">Linha do tempo de atividades do projeto.</p>
+    <div id="modal_cronograma_gantt" class="cronograma-gantt" aria-live="polite"></div>
+{% endcall %}
 {% endblock %}

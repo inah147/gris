@@ -125,6 +125,36 @@ def _parse_scout_data(text: str) -> list[dict]:
 	return scouts
 
 
+_FIELD_LABELS = {
+	"telefone": "Telefone",
+	"telefone_responsavel_1": "Telefone do Responsável 1",
+	"telefone_responsavel_2": "Telefone do Responsável 2",
+	"celular": "Celular",
+	"email": "E-mail",
+	"cpf": "CPF",
+	"cpf_responsavel_1": "CPF do Responsável 1",
+	"nome_completo": "Nome completo",
+}
+
+
+def _format_error_pt(error_str: str) -> str:
+	"""Strip HTML tags and translate known Frappe validation messages to Portuguese."""
+	clean = re.sub(r"<[^>]+>", "", str(error_str)).strip()
+
+	m = re.match(
+		r"Phone Number\s+(\S+)\s+set in field\s+(\S+)\s+is not valid\.",
+		clean,
+		re.IGNORECASE,
+	)
+	if m:
+		phone = m.group(1).rstrip(".")
+		fieldname = m.group(2).rstrip(".")
+		label = _FIELD_LABELS.get(fieldname, fieldname)
+		return f"Telefone inválido: {phone} (campo: {label})"
+
+	return clean
+
+
 def _values_differ(current_value, new_value) -> bool:
 	"""
 	Compara dois valores considerando None e string vazia como equivalentes.
@@ -530,17 +560,20 @@ def parse_associates_report(path_pdf: str) -> dict:
 						else:
 							results["vinculo_skipped"] += 1
 					except Exception as e:
+						frappe.clear_messages()
 						results["errors"] += 1
 						error_msg = (
-							f"CPF {cpf or 'desconhecido'}: erro ao sincronizar responsável/vínculo - {e!s}"
+							f"CPF {cpf or 'desconhecido'}: erro ao sincronizar responsável/vínculo"
+							f" - {_format_error_pt(str(e))}"
 						)
 						results["error_details"].append(f"Linha {idx + 1} - {error_msg}")
 						frappe.log_error(f"Erro sync responsavel linha {idx + 1}", str(e))
 
 		except Exception as e:
+			frappe.clear_messages()
 			frappe.log_error(f"Erro importação linha {idx + 1}", str(e))
 			results["errors"] += 1
-			error_msg = f"CPF {cpf or 'desconhecido'}: {e!s}"
+			error_msg = f"CPF {cpf or 'desconhecido'}: {_format_error_pt(str(e))}"
 			results["error_details"].append(f"Linha {idx + 1} - {error_msg}")
 
 	# Commit das alterações

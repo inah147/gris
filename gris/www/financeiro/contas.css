@@ -1,1 +1,175 @@
-/* Styles have been moved to /assets/gris/css/components.css */
+/* Página /financeiro/contas */
+
+.financeiro-page-header {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 4);
+	align-items: flex-start;
+	justify-content: space-between;
+	margin-bottom: calc(var(--spacing) * 6);
+}
+
+.financeiro-page-header__copy {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	max-width: 42rem;
+}
+
+.financeiro-section-title {
+	font-size: var(--text-base);
+	font-weight: 600;
+	color: var(--foreground);
+	margin: 0 0 calc(var(--spacing) * 4) 0;
+}
+
+.financeiro-section-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 3);
+	flex-wrap: wrap;
+	margin-bottom: calc(var(--spacing) * 4);
+}
+
+/* Instituições financeiras: grid em mobile/tablet, linha única em desktop */
+.contas-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: calc(var(--spacing) * 3);
+}
+
+@media (min-width: 40rem) {
+	.contas-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
+@media (min-width: 64rem) {
+	/* Desktop: linha única — todos os cards dividem o espaço disponível em flexbox */
+	.contas-grid {
+		display: flex;
+		flex-wrap: nowrap;
+	}
+	.contas-grid > .conta-card {
+		flex: 1 1 0;
+		min-width: 0;
+	}
+}
+
+.conta-card {
+	min-height: 0;
+}
+
+.conta-card__body {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: calc(var(--spacing) * 3) calc(var(--spacing) * 3);
+	gap: calc(var(--spacing) * 2);
+	height: 100%;
+}
+
+.conta-card__name {
+	font-weight: 600;
+	color: var(--foreground);
+	text-align: center;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 100%;
+	font-size: var(--text-sm);
+}
+
+.carteira-card {
+	height: 100%;
+}
+
+.carteira-card__body {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 1);
+	padding: calc(var(--spacing) * 3);
+	height: 100%;
+}
+
+.carteira-card__header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: calc(var(--spacing) * 2);
+	flex-wrap: wrap;
+	margin-bottom: calc(var(--spacing) * 2);
+}
+
+.carteira-card__name {
+	margin: 0;
+	font-size: var(--text-sm);
+	font-weight: 600;
+	color: var(--foreground);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	min-width: 0;
+}
+
+.carteira-card__label {
+	margin: 0;
+	font-size: var(--text-xs);
+	color: var(--muted-foreground);
+}
+
+.carteira-card__value {
+	margin: 0 0 calc(var(--spacing) * 2);
+	font-size: var(--text-base);
+	font-weight: 600;
+	color: var(--foreground);
+}
+
+.carteira-card__footer {
+	margin-top: auto;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+	flex-wrap: wrap;
+}
+
+.carteira-card__updated {
+	font-size: var(--text-xs);
+	color: var(--muted-foreground);
+}
+
+.carteira-card__updated span + span {
+	margin-left: calc(var(--spacing) * 1);
+}
+
+dialog.financeiro-dialog {
+	max-width: 32rem;
+}
+
+dialog.financeiro-dialog--lg {
+	max-width: 48rem;
+}
+
+.financeiro-upload-row {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 1);
+}
+
+.financeiro-upload-row__controls {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+	flex-wrap: wrap;
+}
+
+.text-success {
+	color: var(--success);
+}
+
+.hidden {
+	display: none !important;
+}

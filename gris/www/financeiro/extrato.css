@@ -1,17 +1,91 @@
-/* Indicadores de revisao no extrato com paleta colorblind-safe (Okabe-Ito). */
+/* Indicadores de revisão no extrato com paleta colorblind-safe (Okabe-Ito). */
 :root {
-  --extrato-status-reviewed: #0072B2;
-  --extrato-status-reviewed-ring: rgba(0, 114, 178, 0.22);
-  --extrato-status-pending-review: #E69F00;
-  --extrato-status-pending-review-ring: rgba(230, 159, 0, 0.24);
+	--extrato-status-reviewed: #0072B2;
+	--extrato-status-reviewed-ring: rgba(0, 114, 178, 0.22);
+	--extrato-status-pending-review: #E69F00;
+	--extrato-status-pending-review-ring: rgba(230, 159, 0, 0.24);
 }
 
-.status-indicator--reviewed .status-indicator__dot {
-  background-color: var(--extrato-status-reviewed);
-  box-shadow: 0 0 0 3px var(--extrato-status-reviewed-ring);
+.review-dot {
+	display: inline-block;
+	width: 0.625rem;
+	height: 0.625rem;
+	border-radius: 9999px;
+	vertical-align: middle;
 }
 
-.status-indicator--pending-review .status-indicator__dot {
-  background-color: var(--extrato-status-pending-review);
-  box-shadow: 0 0 0 3px var(--extrato-status-pending-review-ring);
+.review-dot--reviewed {
+	background-color: var(--extrato-status-reviewed);
+	box-shadow: 0 0 0 3px var(--extrato-status-reviewed-ring);
+}
+
+.review-dot--pending {
+	background-color: var(--extrato-status-pending-review);
+	box-shadow: 0 0 0 3px var(--extrato-status-pending-review-ring);
+}
+
+.extrato-filtros {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 1rem;
+	align-items: end;
+	width: 100%;
+}
+
+.extrato-filtros .field {
+	min-width: 0;
+}
+
+.extrato-filtros .field > .input,
+.extrato-filtros .field > .datepicker,
+.extrato-filtros .field > .select,
+.extrato-filtros .field [id$="-trigger"] {
+	width: 100%;
+}
+
+.extrato-filtros__actions {
+	display: flex;
+	gap: 0.5rem;
+	align-items: center;
+	grid-column: 1 / -1;
+	justify-content: flex-end;
+}
+
+@media (min-width: 64rem) {
+	.extrato-filtros {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+}
+
+@media (min-width: 80rem) {
+	.extrato-filtros {
+		grid-template-columns: repeat(6, minmax(0, 1fr));
+	}
+}
+
+.extrato-row .cursor-pointer {
+	cursor: pointer;
+}
+
+/* Garante que a tabela do extrato fique com scroll horizontal interno ao card,
+   sem extrapolar a largura do container quando não couber na tela. */
+.extrato-tabela__card {
+	min-width: 0;
+	max-width: 100%;
+}
+
+.extrato-tabela__section {
+	min-width: 0;
+	width: 100%;
+}
+
+.extrato-tabela__scroll {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	overflow-x: auto;
+}
+
+.extrato-tabela__scroll > .extrato-tabela {
+	min-width: max-content;
 }

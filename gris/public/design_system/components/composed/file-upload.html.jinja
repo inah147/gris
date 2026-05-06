@@ -1,0 +1,172 @@
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{% macro file_upload(
+  id,
+  label="Arquivo",
+  description="Selecione um arquivo para enviar.",
+  trigger_label="Selecionar arquivo",
+  dialog_title="Enviar arquivo",
+  dialog_description="Selecione a origem e envie o arquivo.",
+  accept="",
+  allowed_extensions=[],
+  sources=["local"],
+  allow_multiple=false,
+  max_files=1,
+  is_private=false,
+  private_by_default=None,
+  allow_private_choice=None,
+  allow_private_toggle=false,
+  allow_toggle_private=false,
+  allow_take_photo=false,
+  camera_accept="image/*",
+  camera_capture="environment",
+  allow_optimize=false,
+  folder="Home",
+  doctype=None,
+  docname=None,
+  fieldname=None,
+  method=None,
+  name=None,
+  attrs={},
+  trigger_attrs={}
+) %}
+{% set upload_sources = sources | join(",") %}
+{% set upload_extensions = allowed_extensions | join(",") %}
+{% set effective_is_private = is_private if private_by_default is none else private_by_default %}
+{% set effective_allow_private_choice = (allow_private_toggle or allow_toggle_private) if allow_private_choice is none else allow_private_choice %}
+<section
+  id="{{ id }}"
+  class="file-upload {{ attrs.class }}"
+  data-file-upload
+  data-sources="{{ upload_sources }}"
+  data-allowed-extensions="{{ upload_extensions }}"
+  data-allow-multiple="{{ 'true' if allow_multiple else 'false' }}"
+  data-max-files="{{ max_files }}"
+  data-is-private="{{ 'true' if effective_is_private else 'false' }}"
+  data-allow-private-choice="{{ 'true' if effective_allow_private_choice else 'false' }}"
+  data-allow-private-toggle="{{ 'true' if effective_allow_private_choice else 'false' }}"
+  data-allow-take-photo="{{ 'true' if allow_take_photo else 'false' }}"
+  data-allow-optimize="{{ 'true' if allow_optimize else 'false' }}"
+  data-folder="{{ folder }}"
+  {% if doctype %}data-doctype="{{ doctype }}"{% endif %}
+  {% if docname %}data-docname="{{ docname }}"{% endif %}
+  {% if fieldname %}data-fieldname="{{ fieldname }}"{% endif %}
+  {% if method %}data-method="{{ method }}"{% endif %}
+  {% for key, value in attrs.items() %}
+    {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+  {% endfor %}
+>
+  {% if name %}<input type="hidden" name="{{ name }}" data-file-upload-value>{% endif %}
+  <div class="file-upload__summary">
+    <div class="file-upload__icon" aria-hidden="true">
+      {{ lucide_icon("upload", size="md") }}
+    </div>
+    <div class="file-upload__copy">
+      <p class="file-upload__label">{{ label }}</p>
+      <p class="file-upload__description">{{ description }}</p>
+    </div>
+    <button
+      type="button"
+      class="btn-outline file-upload__trigger {{ trigger_attrs.class }}"
+      data-file-upload-open
+      {% for key, value in trigger_attrs.items() %}
+        {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
+      {% endfor %}
+    >
+      {{ lucide_icon("upload", size="sm") }}
+      <span>{{ trigger_label }}</span>
+    </button>
+  </div>
+
+  <dialog
+    id="{{ id }}Dialog"
+    class="dialog file-upload__dialog"
+    aria-labelledby="{{ id }}DialogTitle"
+    aria-describedby="{{ id }}DialogDescription"
+    data-file-upload-dialog
+  >
+    <div>
+      <header>
+        <h2 id="{{ id }}DialogTitle">{{ dialog_title }}</h2>
+        <p id="{{ id }}DialogDescription">{{ dialog_description }}</p>
+      </header>
+
+      <section class="file-upload__body">
+        <div class="file-upload__sources" data-file-upload-sources aria-label="Origem do arquivo"></div>
+
+        <div class="file-upload__panel" data-file-upload-panel="local">
+          <input
+            type="file"
+            class="file-upload__input"
+            data-file-upload-input
+            {% if accept %}accept="{{ accept }}"{% endif %}
+            {% if allow_multiple %}multiple{% endif %}
+          >
+          <button type="button" class="file-upload__dropzone" data-file-upload-dropzone>
+            <span class="file-upload__dropzone-icon" aria-hidden="true">{{ lucide_icon("cloud-upload", size="lg") }}</span>
+            <span class="file-upload__dropzone-title">Arraste o arquivo aqui</span>
+            <span class="file-upload__dropzone-description">ou clique para escolher no seu dispositivo.</span>
+          </button>
+        </div>
+
+        <div class="file-upload__panel" data-file-upload-panel="camera" hidden>
+          <input
+            type="file"
+            class="file-upload__input"
+            data-file-upload-camera-input
+            accept="{{ camera_accept }}"
+            capture="{{ camera_capture }}"
+            {% if allow_multiple %}multiple{% endif %}
+          >
+          <button type="button" class="file-upload__dropzone" data-file-upload-camera-trigger>
+            <span class="file-upload__dropzone-icon" aria-hidden="true">{{ lucide_icon("camera", size="lg") }}</span>
+            <span class="file-upload__dropzone-title">Tirar foto</span>
+            <span class="file-upload__dropzone-description">Use a câmera do dispositivo para capturar uma imagem.</span>
+          </button>
+        </div>
+
+        <div class="file-upload__panel" data-file-upload-panel="web_link" hidden>
+          <label class="file-upload__field">
+            <span>Link do arquivo</span>
+            <input type="url" class="input" data-file-upload-web-link placeholder="https://exemplo.com/arquivo.pdf">
+          </label>
+        </div>
+
+        <div class="file-upload__panel" data-file-upload-panel="library" hidden>
+          <label class="file-upload__field">
+            <span>Arquivo existente</span>
+            <input type="text" class="input" data-file-upload-library-file placeholder="Nome do arquivo no Frappe">
+          </label>
+        </div>
+
+        <div class="file-upload__options">
+          {% if effective_allow_private_choice %}
+          <label class="switch file-upload__switch">
+            <input type="checkbox" data-file-upload-private {% if effective_is_private %}checked{% endif %}>
+            <span>Arquivo privado</span>
+          </label>
+          {% endif %}
+          {% if allow_optimize %}
+          <label class="switch file-upload__switch">
+            <input type="checkbox" data-file-upload-optimize>
+            <span>Otimizar imagem</span>
+          </label>
+          {% endif %}
+        </div>
+
+        <div class="file-upload__list" data-file-upload-list aria-live="polite"></div>
+        <p class="file-upload__message" data-file-upload-message role="status" aria-live="polite"></p>
+      </section>
+
+      <footer>
+        <button type="button" class="btn-outline" data-file-upload-close>Cancelar</button>
+        <button type="button" class="btn" data-file-upload-submit>Enviar arquivo</button>
+      </footer>
+
+      <button type="button" aria-label="Fechar" data-file-upload-close>
+        {{ lucide_icon("x", size="sm") }}
+      </button>
+    </div>
+  </dialog>
+</section>
+{% endmacro %}

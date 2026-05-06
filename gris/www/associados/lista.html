@@ -1,4 +1,7 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import table %}
 
 {% block title %}Lista de Associados{% endblock %}
 
@@ -7,146 +10,127 @@
 {% set sidebar_sections = [] %}
 
 {% block page_header %}
-  <div class="page-header">
-    <div class="page-header__content">
-      <h1 class="page-header__title">Lista de Associados</h1>
-      <p class="page-header__subtitle">Consulte e gerencie todos os associados cadastrados</p>
+  <div class="page-header-row mb-6">
+    <div>
+      <h1 class="text-3xl font-bold tracking-tight">Lista de Associados</h1>
+      <p class="text-muted-foreground">Consulte e gerencie todos os associados cadastrados.</p>
     </div>
+    {% if can_create_associate_users %}
+      <div class="page-header-actions">
+        <button type="button" id="btn-create-users" class="btn-sm-outline">Criar usuários pendentes</button>
+      </div>
+    {% endif %}
   </div>
 {% endblock %}
 
 {% block main %}
-  <div class="card-modern mb-4">
-    <div class="card-modern__body card-modern__body--compact">
-      <form id="assoc-filters" class="filter-bar mb-0">
-        <div class="filter-field" style="width:260px">
-          <label class="form-label-modern">Nome</label>
-          <input type="text" class="form-input-modern form-input-modern--sm" id="f-nome" placeholder="Buscar por nome...">
+  <article class="card mb-4">
+    <section>
+      <form id="assoc-filters" class="assoc-filters">
+        <div class="field assoc-filters__nome">
+          <label class="label" for="f-nome">Nome</label>
+          <input id="f-nome" name="nome" type="text" class="input" placeholder="Buscar por nome…" />
         </div>
-        <div class="filter-field">
-          <label class="form-label-modern">Categoria</label>
-          <select id="f-categoria" class="form-input-modern form-input-modern--sm">
-            <option value="">Todas</option>
-          </select>
+        <div class="field">
+          <label class="label" for="f-categoria">Categoria</label>
+          {{ select(id="f-categoria", name="categoria", items=filter_items_categoria) }}
         </div>
-        <div class="filter-field">
-          <label class="form-label-modern">Ramo</label>
-          <select id="f-ramo" class="form-input-modern form-input-modern--sm">
-            <option value="">Todos</option>
-          </select>
+        <div class="field">
+          <label class="label" for="f-ramo">Ramo</label>
+          {{ select(id="f-ramo", name="ramo", items=filter_items_ramo) }}
         </div>
-        <div class="filter-field">
-          <label class="form-label-modern">Seção</label>
-          <select id="f-secao" class="form-input-modern form-input-modern--sm">
-            <option value="">Todas</option>
-          </select>
+        <div class="field">
+          <label class="label" for="f-secao">Seção</label>
+          {{ select(
+            id="f-secao",
+            name="secao",
+            items=filter_items_secao,
+            is_combobox=true,
+            search_placeholder="Buscar seção…"
+          ) }}
         </div>
-        <div class="filter-field">
-          <label class="form-label-modern">Função</label>
-          <select id="f-funcao" class="form-input-modern form-input-modern--sm">
-            <option value="">Todas</option>
-          </select>
+        <div class="field">
+          <label class="label" for="f-funcao">Função</label>
+          {{ select(
+            id="f-funcao",
+            name="funcao",
+            items=filter_items_funcao,
+            is_combobox=true,
+            search_placeholder="Buscar função…"
+          ) }}
         </div>
-        <div class="filter-field">
-          <label class="form-label-modern">Área</label>
-          <select id="f-area" class="form-input-modern form-input-modern--sm">
-            <option value="">Todas</option>
-          </select>
+        <div class="field">
+          <label class="label" for="f-area">Área</label>
+          {{ select(
+            id="f-area",
+            name="area",
+            items=filter_items_area,
+            is_combobox=true,
+            search_placeholder="Buscar área…"
+          ) }}
         </div>
-        <div class="filter-field">
-          <label class="form-label-modern">Status</label>
-          <select id="f-status" class="form-input-modern form-input-modern--sm">
-            <option value="">Todos</option>
-          </select>
+        <div class="field">
+          <label class="label" for="f-status">Status</label>
+          {{ select(id="f-status", name="status", items=filter_items_status) }}
         </div>
-        <div class="filter-field">
-          <label class="form-label-modern">Status no Grupo</label>
-          <select id="f-status-grupo" class="form-input-modern form-input-modern--sm">
-            <option value="">Todos</option>
-            <option value="Ativo" selected>Ativo</option>
-            <option value="Afastado">Afastado</option>
-            <option value="Inativo">Inativo</option>
-          </select>
+        <div class="field">
+          <label class="label" for="f-status-grupo">Status no Grupo</label>
+          {{ select(
+            id="f-status-grupo",
+            name="status_no_grupo",
+            items=filter_items_status_no_grupo,
+            selected="Ativo"
+          ) }}
         </div>
-        <div class="filter-actions">
-          {% if can_create_associate_users %}
-            <button type="button" id="btn-create-users" class="btn-modern btn-modern--outline btn-modern--sm">Criar usuários pendentes</button>
-          {% endif %}
-          <button type="submit" class="btn-modern btn-modern--primary btn-modern--sm">Aplicar</button>
-          <button type="button" id="btn-reset" class="btn-modern btn-modern--outline btn-modern--sm">Limpar</button>
+        <div class="assoc-filters__actions">
+          <button type="submit" class="btn-sm-primary">Aplicar</button>
+          <button type="reset" id="btn-reset" class="btn-sm-outline">Limpar</button>
         </div>
       </form>
-    </div>
-  </div>
+    </section>
+  </article>
 
-  <div class="card-modern">
-    <div class="table-responsive">
-      <table class="data-table" id="associadosTable">
-        <thead>
-          <tr>
-            <th style="width: 40px;"></th>
-            <th>Nome</th>
-            <th style="width: 150px;">Nº Registro</th>
-            <th style="width: 150px;">Categoria</th>
-            <th style="width: 130px;">Ramo</th>
-            <th style="width: 130px;">Seção</th>
-            <th style="width: 150px;">Função</th>
-            <th style="width: 130px;">Área</th>
-          </tr>
-        </thead>
-        <tbody id="assoc-list">
-          <tr>
-            <td colspan="8">
-              <div class="loading-container">
-                <div class="loading-spinner"></div>
-                <span class="loading-text">Carregando associados...</span>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+  <article class="card">
+    <section class="assoc-table-wrap">
+      {{ table(
+        headers=[
+          '<span class="sr-only">Status</span>',
+          'Nome',
+          'Nº Registro',
+          'Categoria',
+          'Ramo',
+          'Seção',
+          'Função',
+          'Área'
+        ],
+        rows=[],
+        sort_skip=[0],
+        attrs={"id": "associadosTable"}
+      ) }}
+    </section>
+  </article>
 
   {% if can_create_associate_users %}
-    <div class="modal-backdrop" id="modalCreateUsersConfirmBackdrop" style="display: none;"></div>
-    <div class="modal-modern" id="modalCreateUsersConfirm" tabindex="-1" style="display: none;">
-      <div class="modal-dialog">
-        <div class="modal-modern__content">
-          <div class="modal-modern__header">
-            <h5 class="modal-modern__title">Criar usuários pendentes</h5>
-          </div>
-          <div class="modal-modern__body">
-            <p style="margin: 0; color: var(--text-secondary);">
-              Deseja criar usuários para associados válidos com id@escoteiros que ainda não possuem usuário?
-            </p>
-          </div>
-          <div class="modal-modern__footer">
-            <button type="button" class="btn-modern btn-modern--ghost btn-modern--sm" data-dismiss-create-users-confirm>Cancelar</button>
-            <button type="button" id="btn-confirm-create-users" class="btn-modern btn-modern--primary btn-modern--sm">Confirmar</button>
-          </div>
-        </div>
-      </div>
-    </div>
+    {{ dialog(
+      id="modalCreateUsersConfirm",
+      title="Criar usuários pendentes",
+      description="Deseja criar usuários para associados válidos com id@escoteiros que ainda não possuem usuário?",
+      footer='<button type="button" class="btn-sm-ghost" data-dialog-close>Cancelar</button>'
+             '<button type="button" id="btn-confirm-create-users" class="btn-sm-primary">Confirmar</button>',
+      close_button=true
+    ) }}
 
-    <div class="modal-backdrop" id="modalCreateUsersResultBackdrop" style="display: none;"></div>
-    <div class="modal-modern" id="modalCreateUsersResult" tabindex="-1" style="display: none;">
-      <div class="modal-dialog">
-        <div class="modal-modern__content">
-          <div class="modal-modern__header">
-            <h5 class="modal-modern__title" id="create-users-result-title">Resultado</h5>
-          </div>
-          <div class="modal-modern__body" id="create-users-result-body"></div>
-          <div class="modal-modern__footer">
-            <button type="button" class="btn-modern btn-modern--primary btn-modern--sm" data-dismiss-create-users-result>Fechar</button>
-          </div>
-        </div>
-      </div>
-    </div>
+    {% call dialog(
+      id="modalCreateUsersResult",
+      title="Resultado",
+      footer='<button type="button" class="btn-sm-primary" data-dialog-close>Fechar</button>',
+      close_button=true
+    ) %}
+      <div id="create-users-result-body"></div>
+    {% endcall %}
   {% endif %}
 {% endblock %}
 
 {% block extra_script %}
 <script src="/associados/lista.js"></script>
 {% endblock %}
-

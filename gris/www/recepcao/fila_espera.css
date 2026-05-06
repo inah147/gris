@@ -1,149 +1,363 @@
-/* Kanban Container */
+/* ---------------------------------------------------------------
+   Fila de Espera da Recepção
+   Estilos específicos do Kanban de fila de espera, breakdown de
+   vagas e gráfico de previsão. Componentes globais (card, badge,
+   dialog, alert, button) vêm do design system Basecoat
+   (gris/public/design_system).
+   --------------------------------------------------------------- */
+
+/* Kanban -------------------------------------------------------- */
 .kanban-container {
-    display: flex;
-    gap: var(--space-md);
-    overflow-x: auto;
-    padding-bottom: var(--space-md);
-    height: calc(100vh - 200px);
-    min-height: 500px;
+	display: flex;
+	gap: calc(var(--spacing) * 4);
+	overflow-x: auto;
+	padding-bottom: calc(var(--spacing) * 4);
+	min-height: 60vh;
 }
 
-/* Kanban Column */
 .kanban-column {
-    flex: 0 0 320px;
-    display: flex;
-    flex-direction: column;
-    background-color: var(--color-neutral-light);
-    border-radius: var(--radius-md);
-    padding: var(--space-sm);
-    height: 100%;
-    border: 1px solid var(--border-color);
+	flex: 0 0 320px;
+	display: flex;
+	flex-direction: column;
+	background-color: var(--color-muted);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	padding: calc(var(--spacing) * 3);
+	max-height: calc(100vh - 220px);
 }
 
 .kanban-column__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--space-sm) var(--space-xs);
-    margin-bottom: var(--space-sm);
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: calc(var(--spacing) * 2);
+	padding: calc(var(--spacing) * 1) calc(var(--spacing) * 1) calc(var(--spacing) * 3);
+	margin-bottom: calc(var(--spacing) * 2);
+	border-bottom: 1px solid var(--color-border);
+}
+
+.kanban-column__heading {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 1);
+	min-width: 0;
 }
 
 .kanban-column__title {
-    font-size: var(--text-sm);
-    font-weight: var(--font-bold);
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin: 0;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--color-muted-foreground);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	margin: 0;
+}
+
+.kanban-column__vagas {
+	all: unset;
+	display: inline-flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 1);
+	font-size: 0.75rem;
+	color: var(--color-muted-foreground);
+	cursor: pointer;
+	border-radius: var(--radius-sm);
+	padding: 2px 4px;
+	margin-left: -4px;
+	transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.kanban-column__vagas:hover,
+.kanban-column__vagas:focus-visible {
+	color: var(--color-foreground);
+	background-color: color-mix(in srgb, var(--color-foreground) 6%, transparent);
+}
+
+.kanban-column__vagas:focus-visible {
+	outline: 2px solid var(--color-ring);
+	outline-offset: 2px;
 }
 
 .kanban-column__body {
-    flex: 1;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
-    padding: 4px;
+	flex: 1;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 3);
+	padding-right: calc(var(--spacing) * 1);
 }
 
-/* Kanban Card */
-.kanban-card {
-    padding: var(--space-md);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
-    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-    cursor: pointer;
-    background-color: var(--bg-card);
-    border-radius: var(--radius-md);
-}
-
-.kanban-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-    border-color: var(--color-primary-light);
-}
-
-.kanban-card__top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-xs);
-}
-
-.kanban-card__main {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-}
-
-.kanban-card__title {
-    font-size: var(--text-base);
-    font-weight: var(--font-semibold);
-    color: var(--text-primary);
-    margin: 0;
-    line-height: 1.4;
-}
-
-.kanban-card__subtitle {
-    font-size: var(--text-xs);
-    color: var(--text-muted);
-    margin: 0;
-    line-height: 1.2;
-}
-
-/* Scrollbar styling for columns */
 .kanban-column__body::-webkit-scrollbar {
-    width: 6px;
+	width: 6px;
 }
 
 .kanban-column__body::-webkit-scrollbar-track {
-    background: transparent;
+	background: transparent;
 }
 
 .kanban-column__body::-webkit-scrollbar-thumb {
-    background-color: var(--color-secondary-light);
-    border-radius: 20px;
+	background-color: var(--color-border);
+	border-radius: 9999px;
 }
 
-/* Info Group Styles */
-.info-group {
-    margin-bottom: 16px;
+/* Card do Kanban (estende .card do Basecoat) */
+.kanban-card {
+	padding: calc(var(--spacing) * 4);
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	cursor: pointer;
+	transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
-.info-label {
-    font-size: 12px;
-    color: var(--text-muted, #64748b);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 4px;
-    display: block;
+.kanban-card:hover {
+	transform: translateY(-1px);
+	border-color: var(--color-primary);
+	box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--color-foreground) 12%, transparent);
 }
 
-.info-value {
-    font-size: 16px;
-    font-weight: 500;
-    color: var(--text-primary, #1e293b);
+.kanban-card__top {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 1.5);
+	min-height: 24px;
 }
 
-.modal-actions {
-    display: flex;
-    gap: var(--space-sm);
-    margin-top: var(--space-lg);
+.kanban-card__main {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 1);
 }
 
-.modal-actions-vertical {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 24px;
+.kanban-card__title {
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: var(--color-foreground);
+	margin: 0;
+	line-height: 1.4;
 }
 
-/* Ensure backdrop overlays fixed top/bottom page bars on this screen */
-.modal-backdrop {
-    z-index: 2000;
+.kanban-card__subtitle {
+	font-size: 0.75rem;
+	color: var(--color-muted-foreground);
+	margin: 0;
+	line-height: 1.3;
 }
 
-.modal-modern {
-    z-index: 2010;
+/* Badges de ramo (paleta oficial do escoteirismo) ----------------
+   Replicadas em fila_espera para evitar acoplamento entre rotas.
+   Estendem o componente .badge do Basecoat. */
+.badge.badge-ramo-filhotes {
+	background-color: #fff3e0;
+	color: #b34700;
+	border-color: #ffd9a8;
+}
+.badge.badge-ramo-lobinho {
+	background-color: #fffde7;
+	color: #8a5a00;
+	border-color: #f7e89c;
+}
+.badge.badge-ramo-escoteiro {
+	background-color: #e8f5e9;
+	color: #1f6b27;
+	border-color: #b3dab6;
+}
+.badge.badge-ramo-senior {
+	background-color: #ffebee;
+	color: #a32424;
+	border-color: #f5b3b3;
+}
+.badge.badge-ramo-pioneiro {
+	background-color: #e3f2fd;
+	color: #114c8a;
+	border-color: #a8cdee;
+}
+
+.dark .badge.badge-ramo-filhotes {
+	background-color: color-mix(in srgb, #ff8a3d 22%, transparent);
+	color: #ffc090;
+	border-color: color-mix(in srgb, #ff8a3d 32%, transparent);
+}
+.dark .badge.badge-ramo-lobinho {
+	background-color: color-mix(in srgb, #f5c542 22%, transparent);
+	color: #f4d97a;
+	border-color: color-mix(in srgb, #f5c542 32%, transparent);
+}
+.dark .badge.badge-ramo-escoteiro {
+	background-color: color-mix(in srgb, #4caf50 22%, transparent);
+	color: #b6e3b8;
+	border-color: color-mix(in srgb, #4caf50 32%, transparent);
+}
+.dark .badge.badge-ramo-senior {
+	background-color: color-mix(in srgb, #ef5350 22%, transparent);
+	color: #f6b8b6;
+	border-color: color-mix(in srgb, #ef5350 32%, transparent);
+}
+.dark .badge.badge-ramo-pioneiro {
+	background-color: color-mix(in srgb, #42a5f5 22%, transparent);
+	color: #b6d4f4;
+	border-color: color-mix(in srgb, #42a5f5 32%, transparent);
+}
+
+/* Dialogs com conteúdo rolável: cabeçalho/rodapé fixos, corpo rola. */
+dialog.dialog.fila-dialog {
+	max-height: 90vh;
+	box-sizing: border-box;
+}
+
+dialog.dialog.fila-dialog > div {
+	display: flex;
+	flex-direction: column;
+	max-height: inherit;
+	overflow: hidden;
+}
+
+dialog.dialog.fila-dialog > div > header,
+dialog.dialog.fila-dialog > div > footer {
+	flex-shrink: 0;
+}
+
+dialog.dialog.fila-dialog > div > section {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	min-height: 0;
+}
+
+/* Layout interno padronizado dos dialogs ------------------------ */
+.dialog-info-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: calc(var(--spacing) * 4);
+	margin-bottom: calc(var(--spacing) * 4);
+}
+
+.dialog-info-grid > .dialog-info-grid__full {
+	grid-column: 1 / -1;
+}
+
+.dialog-field {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 1);
+}
+
+.dialog-field__label {
+	font-size: 0.7rem;
+	color: var(--color-muted-foreground);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	font-weight: 500;
+}
+
+.dialog-field__value {
+	font-size: 0.95rem;
+	color: var(--color-foreground);
+	font-weight: 500;
+}
+
+.dialog-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 2);
+	margin-top: calc(var(--spacing) * 4);
+}
+
+.dialog-actions--vertical {
+	flex-direction: column;
+	align-items: stretch;
+}
+
+.dialog-actions--vertical > * {
+	width: 100%;
+	justify-content: center;
+}
+
+/* Breakdown de vagas (modal) ------------------------------------ */
+.vagas-breakdown {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	margin: 0;
+}
+
+.vagas-breakdown__row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: calc(var(--spacing) * 3);
+	padding: calc(var(--spacing) * 2) 0;
+	border-bottom: 1px solid var(--color-border);
+}
+
+.vagas-breakdown__row > dt {
+	margin: 0;
+	color: var(--color-muted-foreground);
+	font-size: 0.875rem;
+}
+
+.vagas-breakdown__row > dd {
+	margin: 0;
+	color: var(--color-foreground);
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+.vagas-breakdown__row--total {
+	border-bottom: none;
+	border-top: 1px solid var(--color-border);
+	margin-top: calc(var(--spacing) * 1);
+	padding-top: calc(var(--spacing) * 3);
+}
+
+.vagas-breakdown__row--total > dt {
+	color: var(--color-foreground);
+	font-weight: 600;
+}
+
+.vagas-breakdown__row--total > dd {
+	color: var(--color-primary);
+	font-size: 1.05rem;
+}
+
+/* Gráfico ECharts (modal de vagas) ------------------------------ */
+.vagas-chart {
+	margin-top: calc(var(--spacing) * 6);
+}
+
+.vagas-chart__title {
+	font-size: 0.875rem;
+	font-weight: 600;
+	color: var(--color-foreground);
+	margin: 0 0 calc(var(--spacing) * 3);
+}
+
+.vagas-chart__canvas {
+	width: 100%;
+	min-height: 250px;
+}
+
+/* Responsivo ---------------------------------------------------- */
+@media (max-width: 768px) {
+	.kanban-column {
+		flex: 0 0 280px;
+		max-height: none;
+	}
+
+	.dialog-info-grid {
+		grid-template-columns: 1fr;
+		gap: calc(var(--spacing) * 3);
+	}
+
+	.dialog-actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.dialog-actions > * {
+		width: 100%;
+	}
+
+	.vagas-chart__canvas {
+		min-height: 220px;
+	}
 }

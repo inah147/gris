@@ -1,4 +1,5 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
 
 {% block title %}Associados{% endblock %}
 
@@ -8,336 +9,155 @@
 {% set sidebar_sections = [] %}
 
 {% block page_header %}
-  <div class="page-header">
-    <div class="page-header__content">
-      <h1 class="page-header__title">Dashboard de Associados</h1>
-      <p class="page-header__subtitle">Visão geral dos associados ativos e suas estatísticas.</p>
-    </div>
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold tracking-tight">Dashboard de Associados</h1>
+    <p class="text-muted-foreground">Visão geral dos associados ativos e suas estatísticas.</p>
   </div>
 {% endblock %}
 
 {% block main %}
-  <div class="card-modern mb-4">
-    <div class="card-modern__body card-modern__body--compact">
-      <form id="assoc-dashboard-filters" class="filter-bar mb-0">
-        <div class="filter-field">
-          <label class="form-label small text-muted mb-1">Categoria</label>
-          <select name="categoria" class="form-select form-select-sm">
-            <option value="">Todas</option>
-            {% for c in filter_categorias %}
-              <option value="{{ c }}">{{ c }}</option>
-            {% endfor %}
-          </select>
+  <article class="card mb-4">
+    <section>
+      <form id="assoc-dashboard-filters" class="assoc-filters">
+        <div class="field">
+          <label class="label" for="f-categoria">Categoria</label>
+          {{ select(
+            id="f-categoria",
+            name="categoria",
+            items=filter_items_categoria
+          ) }}
         </div>
-        <div class="filter-field">
-          <label class="form-label small text-muted mb-1">Ramo</label>
-          <select name="ramo" class="form-select form-select-sm">
-            <option value="">Todos</option>
-            {% for r in filter_ramos %}
-              <option value="{{ r }}">{{ r }}</option>
-            {% endfor %}
-          </select>
+        <div class="field">
+          <label class="label" for="f-ramo">Ramo</label>
+          {{ select(
+            id="f-ramo",
+            name="ramo",
+            items=filter_items_ramo
+          ) }}
         </div>
-        <div class="filter-field">
-          <label class="form-label-modern">Seção</label>
-          <select name="secao" class="form-input-modern form-input-modern--sm">
-            <option value="">Todas</option>
-            {% for s in filter_secoes %}
-              <option value="{{ s }}">{{ s }}</option>
-            {% endfor %}
-          </select>
+        <div class="field">
+          <label class="label" for="f-secao">Seção</label>
+          {{ select(
+            id="f-secao",
+            name="secao",
+            items=filter_items_secao
+          ) }}
         </div>
-        <div class="filter-field">
-          <label class="form-label-modern">Função</label>
-          <select name="funcao" class="form-input-modern form-input-modern--sm">
-            <option value="">Todas</option>
-            {% for f in filter_funcoes %}
-              <option value="{{ f }}">{{ f }}</option>
-            {% endfor %}
-          </select>
+        <div class="field">
+          <label class="label" for="f-funcao">Função</label>
+          {{ select(
+            id="f-funcao",
+            name="funcao",
+            items=filter_items_funcao
+          ) }}
         </div>
-        <div class="filter-actions d-flex gap-2">
-          <button type="submit" class="btn-modern btn-modern--sm">Aplicar</button>
-          <button type="reset" class="btn-modern btn-modern--outline btn-modern--sm">Limpar</button>
+        <div class="assoc-filters__actions">
+          <button type="submit" class="btn-primary btn-sm">Aplicar</button>
+          <button type="reset" class="btn-sm-outline">Limpar</button>
         </div>
       </form>
-    </div>
-  </div>
-  <div class="metrics-grid mb-4" id="cards-metricas">
-    <div class="card-metric">
-      <span class="card-metric__label">Ativos</span>
-      <div class="card-metric__value" id="card-ativos-total">--</div>
-      <div class="card-metric__description" id="card-ativos-breakdown">
-        <div class="metric-breakdown-row">
-          <span class="metric-breakdown-label">Beneficiários</span>
-          <span class="metric-breakdown-value" id="card-ativos-benef">--</span>
+    </section>
+  </article>
+
+  <div id="cards-metricas" class="metric-grid mb-4">
+    <article class="metric-card">
+      <span class="metric-card__label">Ativos</span>
+      <div class="metric-card__value" id="card-ativos-total">--</div>
+      <div class="metric-card__breakdown" id="card-ativos-breakdown">
+        <div class="metric-card__breakdown-row">
+          <span class="metric-card__breakdown-label">Beneficiários</span>
+          <span class="metric-card__breakdown-value" id="card-ativos-benef">--</span>
         </div>
-        <div class="metric-breakdown-row">
-          <span class="metric-breakdown-label">Adultos</span>
-          <span class="metric-breakdown-value" id="card-ativos-adultos">--</span>
+        <div class="metric-card__breakdown-row">
+          <span class="metric-card__breakdown-label">Adultos</span>
+          <span class="metric-card__breakdown-value" id="card-ativos-adultos">--</span>
         </div>
-        <div class="metric-breakdown-row">
-          <span class="metric-breakdown-label">Outros</span>
-          <span class="metric-breakdown-value" id="card-ativos-outros">--</span>
+        <div class="metric-card__breakdown-row">
+          <span class="metric-card__breakdown-label">Outros</span>
+          <span class="metric-card__breakdown-value" id="card-ativos-outros">--</span>
         </div>
       </div>
-    </div>
-    
-    <div class="card-metric">
-      <span class="card-metric__label">Registro Válido</span>
-      <div class="metric-main-row">
-        <div class="card-metric__value" id="card-reg-valido-total">--</div>
+    </article>
+
+    <article class="metric-card">
+      <span class="metric-card__label">Registro Válido</span>
+      <div class="metric-card__row">
+        <div class="metric-card__value" id="card-reg-valido-total">--</div>
         <span class="metric-pct metric-pct--positive" id="card-reg-valido-pct">--%</span>
       </div>
-    </div>
-    
-    <div class="card-metric">
-      <span class="card-metric__label">Vencidos</span>
-      <div class="metric-main-row">
-        <div class="card-metric__value" id="card-reg-vencido-total">--</div>
+    </article>
+
+    <article class="metric-card">
+      <span class="metric-card__label">Vencidos</span>
+      <div class="metric-card__row">
+        <div class="metric-card__value" id="card-reg-vencido-total">--</div>
         <span class="metric-pct metric-pct--negative" id="card-reg-vencido-pct">--%</span>
       </div>
-    </div>
-    
-    <div class="card-metric">
-      <span class="card-metric__label">Isentos</span>
-      <div class="metric-main-row">
-        <div class="card-metric__value" id="card-reg-isento-total">--</div>
+    </article>
+
+    <article class="metric-card">
+      <span class="metric-card__label">Isentos</span>
+      <div class="metric-card__row">
+        <div class="metric-card__value" id="card-reg-isento-total">--</div>
         <span class="metric-pct metric-pct--info" id="card-reg-isento-pct">--%</span>
       </div>
-    </div>
-    
-    <div class="card-metric">
-      <span class="card-metric__label">Provisórios</span>
-      <div class="metric-main-row">
-        <div class="card-metric__value" id="card-reg-provisorio-total">--</div>
+    </article>
+
+    <article class="metric-card">
+      <span class="metric-card__label">Provisórios</span>
+      <div class="metric-card__row">
+        <div class="metric-card__value" id="card-reg-provisorio-total">--</div>
         <span class="metric-pct metric-pct--warning" id="card-reg-provisorio-pct">--%</span>
       </div>
-    </div>
+    </article>
   </div>
-  <div class="row g-4 mb-4" id="charts-row">
-    <div class="col-12 col-xl-6">
-      <div class="card-modern chart-card h-100">
-        <div class="card-modern__header card-modern__header--no-border">
-          <h3 class="card-modern__title" style="font-size: var(--text-base);">Ativos por Ramo e Categoria</h3>
-        </div>
-        <div class="card-modern__body">
-          <div id="chart-ramos-categorias" class="chart-area" style="min-height:320px"></div>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-xl-6">
-      <div class="card-modern chart-card h-100">
-        <div class="card-modern__header card-modern__header--no-border">
-          <h3 class="card-modern__title" style="font-size: var(--text-base);">Vencimento de Registro (Próximos 6 meses)</h3>
-        </div>
-        <div class="card-modern__body">
-          <div id="chart-vencimentos-registro" class="chart-area" style="min-height:320px"></div>
-        </div>
-      </div>
-    </div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4" id="charts-row">
+    <article class="card">
+      <header>
+        <h3 class="text-base font-semibold">Ativos por Ramo e Categoria</h3>
+      </header>
+      <section>
+        <div id="chart-ramos-categorias" class="chart-area"></div>
+      </section>
+    </article>
+    <article class="card">
+      <header>
+        <h3 class="text-base font-semibold">Vencimento de Registro (Próximos 6 meses)</h3>
+      </header>
+      <section>
+        <div id="chart-vencimentos-registro" class="chart-area"></div>
+      </section>
+    </article>
   </div>
-  
-  <div class="row g-4 mb-4" id="charts-row-2">
-    <div class="col-12 col-xl-6">
-      <div class="card-modern chart-card h-100">
-        <div class="card-modern__header card-modern__header--no-border">
-          <h3 class="card-modern__title" style="font-size: var(--text-base);">Ativos (Últimos 12 meses)</h3>
-        </div>
-        <div class="card-modern__body">
-          <div id="chart-ativos-mensal" class="chart-area" style="min-height:320px"></div>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-xl-6">
-      <div class="card-modern chart-card h-100">
-        <div class="card-modern__header card-modern__header--no-border">
-          <h3 class="card-modern__title" style="font-size: var(--text-base);">Novos Associados (Últimos 12 meses)</h3>
-        </div>
-        <div class="card-modern__body">
-          <div id="chart-novos-mensal" class="chart-area" style="min-height:320px"></div>
-        </div>
-      </div>
-    </div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4" id="charts-row-2">
+    <article class="card">
+      <header>
+        <h3 class="text-base font-semibold">Ativos (Últimos 12 meses)</h3>
+      </header>
+      <section>
+        <div id="chart-ativos-mensal" class="chart-area"></div>
+      </section>
+    </article>
+    <article class="card">
+      <header>
+        <h3 class="text-base font-semibold">Novos Associados (Últimos 12 meses)</h3>
+      </header>
+      <section>
+        <div id="chart-novos-mensal" class="chart-area"></div>
+      </section>
+    </article>
   </div>
-  
-  <div class="row g-4 mb-4" id="charts-row-3">
-    <div class="col-12 col-xl-6">
-      <div class="card-modern chart-card h-100 position-relative" id="card-evasao-wrapper">
-        <div class="card-modern__header card-modern__header--no-border">
-          <h3 class="card-modern__title" style="font-size: var(--text-base);">Evasão (Últimos 12 meses)</h3>
-        </div>
-        <div class="card-modern__body">
-          <div id="chart-evasao-mensal" class="chart-area" style="min-height:320px"></div>
-        </div>
-      </div>
-    </div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4" id="charts-row-3">
+    <article class="card relative" id="card-evasao-wrapper">
+      <header>
+        <h3 class="text-base font-semibold">Evasão (Últimos 12 meses)</h3>
+      </header>
+      <section>
+        <div id="chart-evasao-mensal" class="chart-area"></div>
+      </section>
+    </article>
   </div>
-{% endblock %}
-
-{% block extra_style %}
-<style>
-  /* Metrics Grid */
-  .metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: var(--space-lg);
-  }
-  
-  @media (max-width: 768px) {
-    .metrics-grid {
-      grid-template-columns: repeat(2, 1fr);
-      gap: var(--space-md);
-    }
-  }
-  
-  @media (max-width: 576px) {
-    .metrics-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-  
-  /* Chart improvements */
-  .chart-area {
-    width: 100%;
-    min-height: 320px;
-  }
-
-  .echarts-tooltip-modern {
-    max-width: calc(100vw - 24px);
-    white-space: normal;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
-
-  #cards-metricas .card-metric {
-    border: 1px solid var(--border-subtle, #e5e7eb);
-    border-radius: 0.85rem;
-    padding: 0.9rem 0.95rem;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(249, 250, 251, 0.98) 100%);
-    min-height: 152px;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
-    text-align: center;
-    gap: 0.3rem;
-  }
-
-  #cards-metricas .card-metric__label {
-    font-size: 0.74rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    color: var(--text-muted, #6b7280);
-  }
-
-  #cards-metricas .card-metric__value {
-    font-size: clamp(1.55rem, 2.2vw, 1.95rem);
-    line-height: 1.05;
-    font-weight: 800;
-    color: var(--text-primary, #111827);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .metric-main-row {
-    display: flex;
-    align-items: baseline;
-    justify-content: center;
-    gap: 0.55rem;
-    margin-top: 0.2rem;
-    flex-wrap: wrap;
-  }
-
-  .metric-pct {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 1.3rem;
-    padding: 0.12rem 0.45rem;
-    border-radius: 999px;
-    font-size: 0.76rem;
-    font-weight: 700;
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
-    border: 1px solid transparent;
-  }
-
-  .metric-pct--positive {
-    color: #166534;
-    background: rgba(34, 197, 94, 0.14);
-    border-color: rgba(34, 197, 94, 0.3);
-  }
-
-  .metric-pct--negative {
-    color: #991b1b;
-    background: rgba(239, 68, 68, 0.14);
-    border-color: rgba(239, 68, 68, 0.3);
-  }
-
-  .metric-pct--info {
-    color: #0d4d91;
-    background: rgba(13, 77, 145, 0.12);
-    border-color: rgba(13, 77, 145, 0.3);
-  }
-
-  .metric-pct--warning {
-    color: #92400e;
-    background: rgba(245, 158, 11, 0.16);
-    border-color: rgba(245, 158, 11, 0.34);
-  }
-  
-  #card-ativos-breakdown {
-    margin-top: var(--space-sm);
-    display: grid;
-    gap: 0.35rem;
-    font-size: 0.78rem;
-    line-height: 1.3;
-    width: min(100%, 220px);
-  }
-
-  #card-ativos-breakdown .metric-breakdown-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.45rem;
-    padding: 0.3rem 0.45rem;
-    border-radius: 0.45rem;
-    background: color-mix(in srgb, var(--surface-muted, #f3f4f6) 72%, white 28%);
-    border: 1px solid color-mix(in srgb, var(--border-subtle, #e5e7eb) 78%, transparent 22%);
-  }
-
-  #card-ativos-breakdown .metric-breakdown-label {
-    color: var(--text-muted, #6b7280);
-    font-weight: 500;
-    letter-spacing: 0.01em;
-  }
-
-  #card-ativos-breakdown .metric-breakdown-value {
-    font-weight: 700;
-    color: var(--text-primary, #111827);
-    font-variant-numeric: tabular-nums;
-  }
-  
-  /* Margem vertical entre cards no mobile */
-  @media (max-width: 768px) { 
-    #cards-metricas .col-12 { margin-bottom: 1rem; }
-    #cards-metricas .display-6 { font-size:1.9rem; }
-    #cards-metricas .card-metric {
-      min-height: 144px;
-      padding: 0.85rem;
-    }
-    #card-ativos-breakdown {
-      font-size: 0.8rem;
-    }
-  }
-  
-  /* Ajustes mobile */
-  @media (max-width: 640px) {
-    .echarts-tooltip-modern { text-align: left; }
-    /* Mais espaço entre gráficos empilhados */
-    #charts-row > .col-12 + .col-12 { margin-top: 1.5rem; }
-    #charts-row-2 > .col-12 + .col-12 { margin-top: 1.5rem; }
-  }
-</style>
 {% endblock %}

@@ -1,204 +1,214 @@
 frappe.ready(function () {
-	if ($("#meus-dados-form").length > 0) {
-		const data = window.gris_meus_dados || { habilidades_iniciais: [], todas_habilidades: [] };
-		let currentSkills = new Set(data.habilidades_iniciais);
-		const allSkills = new Set(data.todas_habilidades);
+	const form = document.getElementById("meus-dados-form");
+	if (!form) return;
 
-		// Initial render
-		renderSkills();
-		renderSuggestions();
+	const data = window.gris_meus_dados || { habilidades_iniciais: [], todas_habilidades: [] };
+	const SPRITE = "/assets/gris/design_system/icons/lucide/sprite.svg";
+	const COMBOBOX_PLACEHOLDER = "Adicionar habilidade existente";
 
-		// Handle adding skills
-		$("#btn-add-habilidade").on("click", function () {
-			addHabilidade();
-		});
+	const currentSkills = new Set(data.habilidades_iniciais || []);
 
-		$("#nova-habilidade").on("keypress", function (e) {
-			if (e.which === 13) {
-				e.preventDefault();
-				addHabilidade();
-			}
-		});
+	const selectedContainer = document.getElementById("habilidades-selecionadas");
+	const novaInput = document.getElementById("nova-habilidade");
+	const btnAdd = document.getElementById("btn-add-habilidade");
+	const combobox = document.getElementById("combobox-habilidades");
+	const comboboxTriggerLabel = combobox && combobox.querySelector(":scope > button > span");
+	const comboboxHidden = combobox && combobox.querySelector(':scope > input[type="hidden"]');
+	const submitBtn = document.getElementById("btn-salvar-meus-dados");
 
-		// Filter suggestions on type
-		$("#nova-habilidade").on("input", function () {
-			renderSuggestions($(this).val());
-		});
+	function escapeHtml(value) {
+		return String(value).replace(/[&<>"']/g, (ch) => ({
+			"&": "&amp;",
+			"<": "&lt;",
+			">": "&gt;",
+			'"': "&quot;",
+			"'": "&#39;",
+		}[ch]));
+	}
 
-		// Remove skill
-		$(document).on("click", ".remove-habilidade", function () {
-			const tag = $(this).closest(".habilidade-tag");
-			const val = tag.data("val");
-			currentSkills.delete(val);
-			renderSkills();
-			renderSuggestions(); // Move back to suggestions if it exists in allSkills
-		});
+	function lucideSvg(name, size) {
+		const sizeClass = size === "sm" ? "ds-lucide--sm" : "ds-lucide--md";
+		return `<svg class="ds-lucide ${sizeClass}" viewBox="0 0 24 24" aria-hidden="true"><use href="${SPRITE}#${name}"></use></svg>`;
+	}
 
-		// Add suggestion
-		$(document).on("click", ".sugestao-tag", function () {
-			const val = $(this).data("val");
-			addSkill(val);
-		});
-
-		function addSkill(val) {
-			if (!val) return;
-			val = val.trim();
-			if (!val) return;
-
-			// Case insensitive check
-			let exists = false;
-			currentSkills.forEach((s) => {
-				if (s.toLowerCase() === val.toLowerCase()) exists = true;
-			});
-
-			if (exists) {
-				// Blink existing?
-				return;
-			}
-
-			currentSkills.add(val);
-			renderSkills();
-			renderSuggestions();
+	function isAlreadySelected(value) {
+		const target = value.trim().toLowerCase();
+		for (const skill of currentSkills) {
+			if (skill.toLowerCase() === target) return true;
 		}
+		return false;
+	}
 
-		function addHabilidade() {
-			const rawVal = $("#nova-habilidade").val();
-			if (rawVal) {
-				// Split by comma
-				const values = rawVal
-					.split(",")
-					.map((s) => s.trim())
-					.filter((s) => s.length > 0);
-
-				let addedCount = 0;
-				values.forEach((val) => {
-					// Check duplicates
-					let exists = false;
-					currentSkills.forEach((s) => {
-						if (s.toLowerCase() === val.toLowerCase()) exists = true;
-					});
-
-					if (!exists) {
-						currentSkills.add(val);
-						addedCount++;
-					}
-				});
-
-				if (addedCount > 0) {
-					renderSkills();
-					renderSuggestions();
-					$("#nova-habilidade").val("");
-				} else if (values.length > 0) {
-					frappe.show_alert({
-						message: "Habilidade(s) já adicionada(s)",
-						indicator: "orange",
-					});
-					$("#nova-habilidade").val("");
-				}
-			}
-		}
-
-		function renderSkills() {
-			const container = $(".habilidades-list");
-			container.empty();
-
-			Array.from(currentSkills)
-				.sort()
-				.forEach((hab) => {
-					const badge = `
-					<span class="g-badge g-badge--primary me-1 mb-1 habilidade-tag" data-val="${hab}">
-						${hab}
-						<span class="remove-habilidade" style="cursor:pointer; margin-left:5px;">&times;</span>
-					</span>
-				`;
-					container.append(badge);
-				});
-		}
-
-		function renderSuggestions(filterText = "") {
-			const container = $(".sugestoes-list");
-			container.empty();
-
-			const suggestionsContainer = $(".sugestoes-container");
-
-			// Filter: In allSkills AND NOT in currentSkills
-			// AND matches filterText
-
-			const available = Array.from(allSkills)
-				.filter((s) => {
-					// Check if already selected (case insensitive)
-					let selected = false;
-					currentSkills.forEach((cs) => {
-						if (cs.toLowerCase() === s.toLowerCase()) selected = true;
-					});
-					if (selected) return false;
-
-					if (filterText) {
-						return s.toLowerCase().includes(filterText.toLowerCase());
-					}
-					return true;
-				})
-				.sort();
-
-			if (available.length === 0) {
-				suggestionsContainer.hide();
-				return;
-			}
-
-			suggestionsContainer.show();
-
-			// Show max 15 to avoid clutter unless filtering
-			const limit = filterText ? 100 : 15;
-
-			available.slice(0, limit).forEach((hab) => {
-				const badge = `
-					<span class="g-badge g-badge--secondary me-1 mb-1 sugestao-tag pointer" data-val="${hab}" style="cursor:pointer; opacity: 0.8;">
-						${hab} <i class="fa fa-plus ms-1" style="font-size: 0.8em"></i>
-					</span>
-				`;
-				container.append(badge);
-			});
-
-			if (available.length > limit) {
-				container.append(
-					`<span class="text-muted small ms-1 align-self-center">+ ${
-						available.length - limit
-					} mais...</span>`
-				);
-			}
-		}
-
-		// Handle form submit
-		$("#meus-dados-form").on("submit", function (e) {
-			e.preventDefault();
-
-			const btn = $(this).find('button[type="submit"]');
-			const originalText = btn.text();
-			btn.prop("disabled", true).text("Salvando...");
-
-			const o_que_gosta = $("#o_que_gosta").val();
-			const habilidades = Array.from(currentSkills);
-
-			frappe.call({
-				method: "gris.www.responsavel.meus_dados.update_meus_dados",
-				args: {
-					o_que_gosta_de_fazer_no_dia_a_dia: o_que_gosta,
-					habilidades: JSON.stringify(habilidades),
+	function showToast(category, title, description) {
+		document.dispatchEvent(
+			new CustomEvent("basecoat:toast", {
+				detail: {
+					config: {
+						category: category,
+						title: title,
+						description: description,
+					},
 				},
-				freeze: true,
-				callback: function (r) {
-					btn.prop("disabled", false).text(originalText);
-					if (!r.exc) {
-						frappe.show_alert({
-							message: "Dados atualizados com sucesso.",
-							indicator: "green",
-						});
-					}
-				},
-				error: function () {
-					btn.prop("disabled", false).text(originalText);
-				},
-			});
+			})
+		);
+	}
+
+	function resetCombobox() {
+		if (!combobox) return;
+		if (comboboxHidden) comboboxHidden.value = "";
+		if (comboboxTriggerLabel) {
+			comboboxTriggerLabel.textContent = COMBOBOX_PLACEHOLDER;
+			comboboxTriggerLabel.classList.add("text-muted-foreground");
+		}
+		combobox.querySelectorAll('[role="option"][aria-selected="true"]').forEach((opt) => {
+			opt.removeAttribute("aria-selected");
 		});
 	}
+
+	function refreshComboboxOptions() {
+		if (!combobox) return;
+		combobox.querySelectorAll('[role="option"]').forEach((opt) => {
+			const value = opt.dataset.value || opt.textContent.trim();
+			if (isAlreadySelected(value)) {
+				opt.setAttribute("data-selected-already", "true");
+			} else {
+				opt.removeAttribute("data-selected-already");
+			}
+		});
+	}
+
+	function renderSelectedSkills() {
+		if (!selectedContainer) return;
+		selectedContainer.innerHTML = "";
+		const sorted = Array.from(currentSkills).sort((a, b) =>
+			a.localeCompare(b, "pt-BR", { sensitivity: "base" })
+		);
+		for (const skill of sorted) {
+			const safe = escapeHtml(skill);
+			const tag = document.createElement("span");
+			tag.className = "badge badge-secondary habilidade-tag";
+			tag.dataset.val = skill;
+			tag.innerHTML = `
+				<span>${safe}</span>
+				<button
+					type="button"
+					class="habilidade-tag__remove"
+					data-remove-habilidade="${safe}"
+					aria-label="Remover habilidade ${safe}"
+				>${lucideSvg("x", "sm")}</button>
+			`;
+			selectedContainer.appendChild(tag);
+		}
+	}
+
+	function addSkill(rawValue, { silent } = { silent: false }) {
+		if (!rawValue) return false;
+		const value = rawValue.trim();
+		if (!value) return false;
+		if (isAlreadySelected(value)) {
+			if (!silent) {
+				showToast("warning", "Habilidade já adicionada", `“${value}” já está na sua lista.`);
+			}
+			return false;
+		}
+		currentSkills.add(value);
+		renderSelectedSkills();
+		refreshComboboxOptions();
+		return true;
+	}
+
+	function removeSkill(value) {
+		if (!currentSkills.has(value)) return;
+		currentSkills.delete(value);
+		renderSelectedSkills();
+		refreshComboboxOptions();
+	}
+
+	if (combobox) {
+		combobox.addEventListener("change", (event) => {
+			const value = event.detail && event.detail.value;
+			if (!value) return;
+			addSkill(value, { silent: true });
+			resetCombobox();
+		});
+	}
+
+	if (selectedContainer) {
+		selectedContainer.addEventListener("click", (event) => {
+			const btn = event.target.closest("[data-remove-habilidade]");
+			if (!btn) return;
+			removeSkill(btn.getAttribute("data-remove-habilidade"));
+		});
+	}
+
+	if (btnAdd) {
+		btnAdd.addEventListener("click", () => {
+			const value = novaInput ? novaInput.value : "";
+			if (addSkill(value)) {
+				if (novaInput) novaInput.value = "";
+			}
+			if (novaInput) novaInput.focus();
+		});
+	}
+
+	if (novaInput) {
+		novaInput.addEventListener("keydown", (event) => {
+			if (event.key === "Enter") {
+				event.preventDefault();
+				if (addSkill(novaInput.value)) {
+					novaInput.value = "";
+				}
+			}
+		});
+	}
+
+	form.addEventListener("submit", (event) => {
+		event.preventDefault();
+
+		const textarea = document.getElementById("o_que_gosta");
+		const oQueGosta = textarea ? textarea.value : "";
+		const habilidades = Array.from(currentSkills);
+
+		const originalLabel = submitBtn ? submitBtn.textContent : "";
+		if (submitBtn) {
+			submitBtn.disabled = true;
+			submitBtn.textContent = "Salvando…";
+		}
+
+		frappe.call({
+			method: "gris.www.responsavel.meus_dados.update_meus_dados",
+			args: {
+				o_que_gosta_de_fazer_no_dia_a_dia: oQueGosta,
+				habilidades: JSON.stringify(habilidades),
+			},
+			callback: function (r) {
+				if (submitBtn) {
+					submitBtn.disabled = false;
+					submitBtn.textContent = originalLabel;
+				}
+				if (!r.exc) {
+					showToast(
+						"success",
+						"Dados atualizados",
+						"Suas informações foram salvas com sucesso."
+					);
+				}
+			},
+			error: function () {
+				if (submitBtn) {
+					submitBtn.disabled = false;
+					submitBtn.textContent = originalLabel;
+				}
+				showToast(
+					"error",
+					"Não foi possível salvar",
+					"Tente novamente em instantes."
+				);
+			},
+		});
+	});
+
+	resetCombobox();
+	refreshComboboxOptions();
+	renderSelectedSkills();
 });

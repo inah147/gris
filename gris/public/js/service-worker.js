@@ -1,21 +1,32 @@
 // Service Worker para GRIS PWA
-const CACHE_NAME = 'gris-cache-v1';
+const CACHE_NAME = 'gris-cache-v2';
 const urlsToCache = [
-  '/inicio',
-  '/assets/gris/css/gris.css',
-  '/assets/gris/js/gris.js',
-  '/assets/frappe/css/desk.min.css',
-  '/assets/frappe/js/desk.min.js'
+  '/assets/gris/manifest.json',
+  '/assets/gris/images/icons/ios/32.png',
+  '/assets/gris/images/icons/ios/180.png',
+  '/assets/gris/js/pwa-init.js'
 ];
+
+async function cacheStaticAssets(cache) {
+  await Promise.all(
+    urlsToCache.map(async (url) => {
+      try {
+        await cache.add(url);
+      } catch (error) {
+        console.warn(`[Service Worker] Failed to cache ${url}:`, error);
+      }
+    })
+  );
+}
 
 // Instalação do Service Worker
 self.addEventListener('install', event => {
   console.log('[Service Worker] Installing...');
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => {
+      .then(async cache => {
         console.log('[Service Worker] Caching app shell');
-        return cache.addAll(urlsToCache);
+        await cacheStaticAssets(cache);
       })
       .catch(err => {
         console.log('[Service Worker] Cache failed:', err);

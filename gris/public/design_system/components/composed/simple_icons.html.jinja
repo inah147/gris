@@ -1,0 +1,16 @@
+{# Renderiza um ícone do Simple Icons (logos de marcas) usando o sprite local.
+   Reutiliza o sizing do lucide (.ds-lucide--*) mas usa fill em vez de stroke,
+   já que os ícones do Simple Icons são fill-based.
+#}
+{% macro simple_icon(name, size="md", class_name="") %}
+{% set size_class = "ds-lucide--" ~ size %}
+<svg
+  class="ds-lucide {{ size_class }} {{ class_name }}"
+  style="fill: currentColor; stroke: none;"
+  aria-hidden="true"
+  focusable="false"
+  viewBox="0 0 24 24"
+>
+  <use href="/assets/gris/design_system/icons/simple-icons/sprite.svg#{{ name }}" />
+</svg>
+{% endmacro %}

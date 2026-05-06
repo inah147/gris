@@ -1,136 +1,160 @@
-// Página de importação Intinitepay: upload de 3 arquivos e processamento com cards de resultado
 (function () {
   if (window.__ip_import_page_inited) return;
   window.__ip_import_page_inited = true;
-  // Flag injetada no template via contexto (se disponível)
-  const CAN_RECONCILE = (window.frappe && frappe.boot && frappe.boot.can_reconcile_intinitepay) || (typeof can_reconcile_intinitepay !== 'undefined' ? can_reconcile_intinitepay : undefined);
+
+  const CAN_RECONCILE = (window.frappe && frappe.boot && frappe.boot.can_reconcile_intinitepay);
 
   window._extratoFileUrl = null;
   window._vendasFileUrl = null;
   window._recebimentosFileUrl = null;
 
+  function escapeHtml(value) {
+    if (window.frappe && frappe.utils && frappe.utils.escape_html) {
+      return frappe.utils.escape_html(String(value ?? ''));
+    }
+    const div = document.createElement('div');
+    div.textContent = String(value ?? '');
+    return div.innerHTML;
+  }
+
+  function showToast(category, title, description) {
+    const toaster = document.getElementById('toaster');
+    if (toaster) {
+      document.dispatchEvent(new CustomEvent('basecoat:toast', {
+        detail: { config: { category, title, description } },
+      }));
+      return;
+    }
+    if (window.frappe && frappe.show_alert) {
+      frappe.show_alert({
+        message: description || title,
+        indicator: category === 'error' ? 'red' : 'green',
+      });
+    }
+  }
+
   function checkShowConciliarBtn() {
     const btn = document.getElementById('btnConciliarInfinitepay');
     const ok = !!(window._extratoFileUrl && window._vendasFileUrl && window._recebimentosFileUrl);
     if (btn) {
-      btn.classList.toggle('d-none', !ok);
-      btn.disabled = !ok;
+      btn.classList.toggle('hidden', !ok);
+      btn.disabled = !ok || CAN_RECONCILE === false;
     }
   }
 
-  function setupUploader(btnId, nomeId, checkId, allowedExt) {
-    const btn = document.getElementById(btnId);
-    if (!btn) return;
-    btn.addEventListener('click', function (e) {
-      if (btn.disabled) return;
-      if (CAN_RECONCILE === false) { frappe.msgprint('Sem permissão para enviar arquivos.'); return; }
-      e.stopPropagation();
-      btn.setAttribute('accept', allowedExt.map((ext) => '.' + ext).join(','));
-      if (typeof frappe === 'undefined' || !frappe.ui || !frappe.ui.FileUploader) {
-        frappe.msgprint('Uploader indisponível.');
-        return;
-      }
-      if (window.__ip_opening_uploader) return;
-      window.__ip_opening_uploader = true;
-      setTimeout(() => { window.__ip_opening_uploader = false; }, 500);
+  function setupUploader(uploaderId, fileInfoId, nomeId, urlSetter) {
+    const uploader = document.getElementById(uploaderId);
+    if (!uploader) return;
 
-      new frappe.ui.FileUploader({
-        allow_multiple: false,
-        restrictions: { allowed_file_extensions: allowedExt, max_number_of_files: 1 },
-        is_private: 0,
-        options: ['Local'],
-        on_success(file) {
-          const nomeSpan = document.getElementById(nomeId);
-          const checkSpan = document.getElementById(checkId);
-          if (nomeSpan) { nomeSpan.textContent = file.file_name || file.name; nomeSpan.classList.remove('d-none'); }
-          if (checkSpan) checkSpan.classList.remove('d-none');
-          if (btnId === 'uploadExtratoBtn') window._extratoFileUrl = file.file_url;
-          if (btnId === 'uploadVendasBtn') window._vendasFileUrl = file.file_url;
-          if (btnId === 'uploadRecebimentosBtn') window._recebimentosFileUrl = file.file_url;
-          checkShowConciliarBtn();
-        },
-      });
+    uploader.addEventListener('gris:file-upload:success', function (event) {
+      const file = event.detail && event.detail.files && event.detail.files[0];
+      if (!file) return;
+
+      const fileInfo = document.getElementById(fileInfoId);
+      const fileName = document.getElementById(nomeId);
+
+      if (fileName) {
+        fileName.textContent = file.file_name || file.name || file.file_url || '';
+      }
+      if (fileInfo) fileInfo.classList.remove('hidden');
+
+      urlSetter(file.file_url);
+      checkShowConciliarBtn();
+
+      const resultsDiv = document.getElementById('ip-results');
+      if (resultsDiv) resultsDiv.classList.add('hidden');
     });
   }
 
-  setupUploader('uploadExtratoBtn', 'nomeExtratoInfinitepay', 'checkExtratoInfinitepay', ['ofx']);
-  setupUploader('uploadVendasBtn', 'nomeVendasInfinitepay', 'checkVendasInfinitepay', ['csv']);
-  setupUploader('uploadRecebimentosBtn', 'nomeRecebimentosInfinitepay', 'checkRecebimentosInfinitepay', ['csv']);
+  setupUploader('ipExtratoUpload', 'file-info-extrato', 'nomeExtratoInfinitepay', function (url) {
+    window._extratoFileUrl = url;
+  });
+  setupUploader('ipVendasUpload', 'file-info-vendas', 'nomeVendasInfinitepay', function (url) {
+    window._vendasFileUrl = url;
+  });
+  setupUploader('ipRecebimentosUpload', 'file-info-recebimentos', 'nomeRecebimentosInfinitepay', function (url) {
+    window._recebimentosFileUrl = url;
+  });
+
+  function buildStatCards(stats) {
+    const cards = [
+      { label: 'Total de transações', value: stats.total || 0, tone: 'primary' },
+      { label: 'Inseridos', value: stats.inserted || 0, tone: 'success' },
+      { label: 'Repetidos', value: stats.skipped_exist || 0, tone: 'muted' },
+      { label: 'Erros', value: stats.failed || 0, tone: 'error' },
+    ];
+    return cards.map(function (stat) {
+      return `
+        <article class="card import-stat-card" data-tone="${escapeHtml(stat.tone)}">
+          <section>
+            <p class="import-stat-card__value">${escapeHtml(stat.value)}</p>
+            <p class="import-stat-card__label">${escapeHtml(stat.label)}</p>
+          </section>
+        </article>
+      `;
+    }).join('');
+  }
 
   function renderResults(payload) {
-    const container = document.getElementById('ip-results');
-    const grid = document.getElementById('ip-stat-cards');
+    const resultsDiv = document.getElementById('ip-results');
+    const sections = document.getElementById('ip-stat-cards');
     const errWrap = document.getElementById('ip-errors-card');
-    if (!container || !grid || !errWrap) return;
+    const errList = document.getElementById('ip-errors-list');
+    if (!resultsDiv || !sections || !errWrap || !errList) return;
 
-    grid.innerHTML = '';
-    errWrap.innerHTML = '';
-    grid.classList.add('d-none');
-    errWrap.classList.add('d-none');
+    sections.innerHTML = '';
+    errList.innerHTML = '';
+    errWrap.classList.add('hidden');
+    resultsDiv.classList.remove('hidden');
 
     const stats = (payload && payload.stats) || {};
-    const cards = [
-      { key: 'extrato', title: 'Transacao Infinitepay extrato' },
-      { key: 'vendas', title: 'Transacao Infinitepay vendas' },
-      { key: 'recebimentos', title: 'Transacao Infinitepay recebimento' },
-      { key: 'geral', title: 'Transacao Extrato Geral' },
+    const groups = [
+      { key: 'extrato', title: 'Transação Infinitepay extrato' },
+      { key: 'vendas', title: 'Transação Infinitepay vendas' },
+      { key: 'recebimentos', title: 'Transação Infinitepay recebimento' },
+      { key: 'geral', title: 'Transação Extrato Geral' },
     ];
 
-    let hasAny = false;
-    cards.forEach((c) => {
-      const s = stats[c.key] || { total: 0, inserted: 0, skipped_exist: 0, failed: 0 };
-      const el = document.createElement('div');
-      el.className = 'col-12 col-md-6 col-lg-3';
-      el.innerHTML = `
-        <div class="card shadow-sm h-100">
-          <div class="card-body">
-            <div class="small text-muted">${c.title}</div>
-            <div class="d-flex flex-column mt-2 gap-1">
-              <div><strong>Total:</strong> ${s.total ?? 0}</div>
-              <div class="text-success"><strong>Inseridos:</strong> ${s.inserted ?? 0}</div>
-              <div class="text-warning"><strong>Repetidos:</strong> ${s.skipped_exist ?? 0}</div>
-              <div class="text-danger"><strong>Erros:</strong> ${s.failed ?? 0}</div>
-            </div>
-          </div>
-        </div>`;
-      grid.appendChild(el);
-      hasAny = true;
+    groups.forEach(function (group) {
+      const groupStats = stats[group.key] || { total: 0, inserted: 0, skipped_exist: 0, failed: 0 };
+      const section = document.createElement('section');
+      section.className = 'import-results__section';
+      section.innerHTML = `
+        <h3 class="import-results__section-title">${escapeHtml(group.title)}</h3>
+        <div class="import-results-grid">${buildStatCards(groupStats)}</div>
+      `;
+      sections.appendChild(section);
     });
-    if (hasAny) grid.classList.remove('d-none');
 
     const errors = (payload && payload.errors) || {};
-    const sections = ['extrato', 'vendas', 'recebimentos', 'geral'];
+    const sectionKeys = ['extrato', 'vendas', 'recebimentos', 'geral'];
     const flat = [];
-    sections.forEach((k) => {
+    sectionKeys.forEach(function (k) {
       const arr = errors[k] || [];
-      arr.forEach((msg) => flat.push({ section: k, msg }));
+      arr.forEach(function (msg) { flat.push({ section: k, msg: msg }); });
     });
     if (flat.length) {
-      const el = document.createElement('div');
-      el.className = 'card shadow-sm mt-2';
       const items = flat
         .slice(0, 50)
-        .map((e) => `<li><code>${e.section}</code>: ${frappe.utils.escape_html(e.msg || '')}</li>`)
+        .map(function (e) {
+          return `<li><strong>${escapeHtml(e.section)}:</strong> ${escapeHtml(e.msg || '')}</li>`;
+        })
         .join('');
-      const more = flat.length > 50 ? `<div class="text-muted small mt-2">(+${flat.length - 50} outras… ver Error Log)</div>` : '';
-      el.innerHTML = `
-        <div class="card-body">
-          <div class="d-flex align-items-center mb-2">
-            <span class="badge bg-danger me-2">Erros</span>
-            <div class="fw-bold">Ocorreram erros de inserção</div>
-          </div>
-          <ul class="mb-0 small">${items}</ul>
-          ${more}
-        </div>`;
-      errWrap.appendChild(el);
-      errWrap.classList.remove('d-none');
+      const more = flat.length > 50
+        ? `<p class="import-errors__more">+${escapeHtml(flat.length - 50)} erros adicionais. Consulte o Error Log para a lista completa.</p>`
+        : '';
+      errList.innerHTML = `<ul>${items}</ul>${more}`;
+      errWrap.classList.remove('hidden');
     }
   }
 
   window.enviarArquivosImportados = function () {
-  if (CAN_RECONCILE === false) { frappe.msgprint('Sem permissão para conciliar.'); return; }
+    if (CAN_RECONCILE === false) {
+      showToast('error', 'Permissão negada', 'Você não tem permissão para conciliar.');
+      return;
+    }
     if (!window._extratoFileUrl || !window._vendasFileUrl || !window._recebimentosFileUrl) {
-      frappe.msgprint('Faça o upload dos três arquivos antes de enviar.');
+      showToast('error', 'Arquivos ausentes', 'Faça o upload dos três arquivos antes de enviar.');
       return;
     }
 
@@ -138,10 +162,9 @@
     const btnConciliar = document.getElementById('btnConciliarInfinitepay');
     const resultsDiv = document.getElementById('ip-results');
 
-    // Show loading, hide results, disable button
-    if (loadingIndicator) loadingIndicator.classList.remove('d-none');
+    if (loadingIndicator) loadingIndicator.classList.remove('hidden');
     if (btnConciliar) btnConciliar.disabled = true;
-    if (resultsDiv) resultsDiv.classList.add('d-none');
+    if (resultsDiv) resultsDiv.classList.add('hidden');
 
     frappe.call({
       method: 'gris.www.financeiro.contas.process_uploaded_files',
@@ -151,20 +174,32 @@
         recebimentos_file_url: window._recebimentosFileUrl,
       },
       callback: function (r) {
-        // Hide loading, enable button, show results
-        if (loadingIndicator) loadingIndicator.classList.add('d-none');
+        if (loadingIndicator) loadingIndicator.classList.add('hidden');
         if (btnConciliar) btnConciliar.disabled = false;
-        if (resultsDiv) resultsDiv.classList.remove('d-none');
 
         if (r && r.exc) {
           console.error('Erro process_uploaded_files', r.exc);
-          frappe.msgprint('Erro ao processar: ver console.');
+          showToast('error', 'Erro ao processar', 'Verifique o console e os logs do sistema.');
           return;
         }
         const payload = (r && r.message) ? r.message : r;
         renderResults(payload);
-        frappe.show_alert({ message: 'Conciliação concluída', indicator: 'green' }, 5);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showToast('success', 'Conciliação concluída', 'Os arquivos Infinitepay foram processados com sucesso.');
+      },
+      error: function (err) {
+        if (loadingIndicator) loadingIndicator.classList.add('hidden');
+        if (btnConciliar) btnConciliar.disabled = false;
+        console.error('Erro ao processar Infinitepay:', err);
+        showToast('error', 'Erro na conciliação', 'Ocorreu um erro ao processar os arquivos.');
       },
     });
   };
+
+  checkShowConciliarBtn();
+
+  const btnConciliar = document.getElementById('btnConciliarInfinitepay');
+  if (btnConciliar) {
+    btnConciliar.addEventListener('click', window.enviarArquivosImportados);
+  }
 })();

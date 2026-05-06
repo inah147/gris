@@ -1,0 +1,70 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{% block title %}{{ module_title or "Módulo" }}{% endblock %}
+
+{% block page_header %}
+<section class="flex flex-col gap-2 max-w-2xl module-index-header">
+	<h1 class="text-4xl font-semibold tracking-tight text-balance">{{ module_title }}</h1>
+	{% if module_subtitle %}
+	<p class="text-base text-muted-foreground leading-relaxed text-pretty">{{ module_subtitle }}</p>
+	{% endif %}
+</section>
+{% endblock %}
+
+{% block main %}
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" aria-label="{{ module_title }}">
+	{% for item in module_items %}
+		{% if item.visible is not defined or item.visible %}
+		<a href="{{ item.href }}" class="block h-full no-underline text-inherit module-index-card-link">
+			{% call card(attrs={"class": "h-full"}) %}
+			<div class="flex flex-row items-start gap-3">
+				<div class="inline-flex items-center justify-center flex-shrink-0 w-11 h-11 rounded-xl bg-muted text-primary module-index-card-icon" aria-hidden="true">
+					{{ lucide_icon(sidebar_icons.get(item.href, "circle"), size="md") }}
+				</div>
+				<div class="flex flex-col flex-1 min-w-0 gap-2">
+					<div class="flex items-start justify-between gap-2">
+						<h2 class="m-0 text-base font-semibold leading-tight text-balance flex-1">{{ item.title }}</h2>
+						<span class="inline-flex flex-shrink-0 module-index-card-arrow" aria-hidden="true">
+							{{ lucide_icon("arrow-right", size="sm") }}
+						</span>
+					</div>
+					{% if item.description %}
+					<p class="m-0 text-sm leading-relaxed">{{ item.description }}</p>
+					{% endif %}
+				</div>
+			</div>
+			{% endcall %}
+		</a>
+		{% endif %}
+	{% endfor %}
+</section>
+{% endblock %}
+
+{% block extra_style %}
+<style>
+	.module-index-header {
+		margin-top: calc(var(--spacing) * 6);
+		margin-bottom: calc(var(--spacing) * 10);
+	}
+
+	.module-index-card-icon {
+		transition: transform 0.2s ease-in-out;
+	}
+
+	.module-index-card-link:hover .module-index-card-icon {
+		transform: rotate(-6deg);
+	}
+
+	.module-index-card-arrow {
+		opacity: 0;
+		transition: opacity 0.2s ease-in-out, color 0.2s ease-in-out;
+	}
+
+	.module-index-card-link:hover .module-index-card-arrow {
+		opacity: 1;
+		color: var(--color-primary);
+	}
+</style>
+{% endblock %}

@@ -11,17 +11,23 @@
     function showFormAlert(message, type) {
         var el = document.getElementById("avaliacaoAlert");
         if (!el) return;
-        el.className = "alert-modern";
-        el.classList.add(type === "error" ? "alert-modern--error" : "alert-modern--success");
-        el.textContent = message;
+
+        el.className = "alert " + (type === "error" ? "alert-destructive" : "alert-success");
+        el.setAttribute("role", type === "error" ? "alert" : "status");
+        el.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
+
+        var section = document.createElement("section");
+        section.textContent = message;
+        el.replaceChildren(section);
+        el.removeAttribute("hidden");
         el.scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
     function hideFormAlert() {
         var el = document.getElementById("avaliacaoAlert");
         if (!el) return;
-        el.className = "alert-modern d-none";
-        el.textContent = "";
+        el.setAttribute("hidden", "");
+        el.replaceChildren();
     }
 
     function getSelectedRadio(name) {
@@ -39,6 +45,18 @@
         }
         var target = document.getElementById(stateId);
         if (target) target.classList.remove("d-none");
+    }
+
+    function setSubmitLoading(button, isLoading) {
+        if (!button) return;
+
+        if (!button.dataset.defaultLabel) {
+            button.dataset.defaultLabel = button.textContent.trim();
+        }
+
+        button.disabled = isLoading;
+        button.toggleAttribute("aria-busy", isLoading);
+        button.textContent = isLoading ? "Enviando..." : button.dataset.defaultLabel;
     }
 
     function handleSubmit(event) {
@@ -79,10 +97,7 @@
         }
 
         var btn = document.getElementById("btnSubmitAvaliacao");
-        if (btn) {
-            btn.disabled = true;
-            btn.textContent = "Enviando...";
-        }
+        setSubmitLoading(btn, true);
 
         frappe.call({
             method: SUBMIT_METHOD,
@@ -99,18 +114,12 @@
                     showState("stateSuccess");
                 } else {
                     showFormAlert("Erro ao enviar avaliação. Tente novamente.", "error");
-                    if (btn) {
-                        btn.disabled = false;
-                        btn.textContent = "Enviar avaliação";
-                    }
+                    setSubmitLoading(btn, false);
                 }
             },
             error: function () {
                 showFormAlert("Erro de comunicação com o servidor. Tente novamente.", "error");
-                if (btn) {
-                    btn.disabled = false;
-                    btn.textContent = "Enviar avaliação";
-                }
+                setSubmitLoading(btn, false);
             },
         });
     }

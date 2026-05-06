@@ -29,15 +29,16 @@
     function showAlert(message, type) {
         const el = document.getElementById("approvalAlert");
         if (!el) return;
-        el.classList.remove("d-none", "alert-modern--error", "alert-modern--success");
-        el.classList.add(type === "error" ? "alert-modern--error" : "alert-modern--success");
-        el.textContent = message;
+        el.className = "alert " + (type === "error" ? "alert-destructive" : "alert-success");
+        el.innerHTML = `<section>${escapeHtml(message)}</section>`;
+        el.removeAttribute("hidden");
+        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
     function hideAlert() {
         const el = document.getElementById("approvalAlert");
         if (!el) return;
-        el.classList.add("d-none");
+        el.setAttribute("hidden", "");
         el.textContent = "";
     }
 
@@ -455,51 +456,27 @@
     }
 
     function openAlteracoesModal() {
-        const modal = document.getElementById("alteracoesModal");
-        if (!modal) return;
-        modal.classList.remove("d-none");
-        modal.setAttribute("aria-hidden", "false");
-        document.body.classList.add("info-modal-open");
+        document.getElementById("alteracoesModal")?.showModal();
     }
 
     function openAprovarEtapaModal() {
-        const modal = document.getElementById("aprovarEtapaModal");
-        if (!modal) return;
-        modal.classList.remove("d-none");
-        modal.setAttribute("aria-hidden", "false");
-        document.body.classList.add("info-modal-open");
+        document.getElementById("aprovarEtapaModal")?.showModal();
     }
 
     function closeAprovarEtapaModal() {
-        const modal = document.getElementById("aprovarEtapaModal");
-        if (!modal) return;
-        modal.classList.add("d-none");
-        modal.setAttribute("aria-hidden", "true");
-        document.body.classList.remove("info-modal-open");
+        document.getElementById("aprovarEtapaModal")?.close();
     }
 
     function closeAlteracoesModal() {
-        const modal = document.getElementById("alteracoesModal");
-        if (!modal) return;
-        modal.classList.add("d-none");
-        modal.setAttribute("aria-hidden", "true");
-        document.body.classList.remove("info-modal-open");
+        document.getElementById("alteracoesModal")?.close();
     }
 
     function openCancelarProjetoModal() {
-        const modal = document.getElementById("cancelarProjetoModal");
-        if (!modal) return;
-        modal.classList.remove("d-none");
-        modal.setAttribute("aria-hidden", "false");
-        document.body.classList.add("info-modal-open");
+        document.getElementById("cancelarProjetoModal")?.showModal();
     }
 
     function closeCancelarProjetoModal() {
-        const modal = document.getElementById("cancelarProjetoModal");
-        if (!modal) return;
-        modal.classList.add("d-none");
-        modal.setAttribute("aria-hidden", "true");
-        document.body.classList.remove("info-modal-open");
+        document.getElementById("cancelarProjetoModal")?.close();
     }
 
     async function aprovarEtapa() {
@@ -581,25 +558,7 @@
         if (cancelProjectBtn) cancelProjectBtn.addEventListener("click", openCancelarProjetoModal);
         if (confirmCancelProjectBtn) confirmCancelProjectBtn.addEventListener("click", cancelarProjeto);
 
-        document.querySelectorAll("[data-close-alteracoes]").forEach((btn) => {
-            btn.addEventListener("click", closeAlteracoesModal);
-        });
-
-        document.querySelectorAll("[data-close-aprovar-etapa]").forEach((btn) => {
-            btn.addEventListener("click", closeAprovarEtapaModal);
-        });
-
-        document.querySelectorAll("[data-close-cancelar-projeto]").forEach((btn) => {
-            btn.addEventListener("click", closeCancelarProjetoModal);
-        });
-
-        document.addEventListener("keydown", (event) => {
-            if (event.key === "Escape") {
-                closeAlteracoesModal();
-                closeAprovarEtapaModal();
-                closeCancelarProjetoModal();
-            }
-        });
+        // Escape key is handled natively by the <dialog> element
     }
 
     async function bootstrap() {

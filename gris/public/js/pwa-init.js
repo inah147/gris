@@ -2,6 +2,16 @@
 (function() {
   'use strict';
 
+  function isMobileViewport() {
+    return window.matchMedia('(max-width: 768px)').matches;
+  }
+
+  function showBasecoatToast(config) {
+    if (!document.getElementById('toaster')) return false;
+    document.dispatchEvent(new CustomEvent('basecoat:toast', { detail: { config } }));
+    return true;
+  }
+
   function setGrisFavicon() {
     const head = document.head || document.getElementsByTagName('head')[0];
     if (!head) {
@@ -65,23 +75,25 @@
 
   // Função para mostrar notificação de atualização
   function showUpdateNotification() {
-    if (frappe && frappe.show_alert) {
-      frappe.show_alert({
-        message: __('Uma nova versão do app está disponível. Recarregue a página para atualizar.'),
-        indicator: 'blue'
-      }, 10);
-    }
+    showBasecoatToast({
+      category: 'info',
+      title: __('Uma nova versão do app está disponível. Recarregue para atualizar.'),
+      duration: -1,
+      action: {
+        label: __('Recarregar'),
+        onclick: 'window.location.reload()'
+      }
+    });
   }
 
   // Detecta quando o app é instalado
   window.addEventListener('appinstalled', () => {
     console.log('[PWA] App instalado com sucesso!');
-    if (frappe && frappe.show_alert) {
-      frappe.show_alert({
-        message: __('GRIS foi instalado com sucesso!'),
-        indicator: 'green'
-      }, 5);
-    }
+    showBasecoatToast({
+      category: 'success',
+      title: __('Gris foi instalado com sucesso!'),
+      duration: 5000
+    });
   });
 
   // Prompt de instalação
@@ -97,40 +109,31 @@
   });
 
   function showInstallPromotion() {
-    // 1. Não mostrar para visitantes (Guest)
+    if (!isMobileViewport()) {
+      return;
+    }
+
+    if (window.location.pathname !== '/inicio') {
+      return;
+    }
+
     if (!frappe.session || frappe.session.user === 'Guest') {
       return;
     }
 
-    // 2. Não mostrar em páginas públicas específicas, mesmo se logado
-    const publicPaths = [
-      '/manifestacao_interesse',
-      '/login',
-      '/password',
-      '/third_party_apps',
-      '/landing'
-    ];
-    
-    if (publicPaths.some(path => window.location.pathname.startsWith(path))) {
-      return;
-    }
-
-    // Adiciona um banner ou botão para instalar o app
-    if (frappe && frappe.show_alert) {
-      const installButton = `
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <span>${__('Instalar GRIS no seu dispositivo')}</span>
-          <button class="btn btn-primary btn-sm" onclick="window.installPWA()" style="margin-left: 10px;">
-            ${__('Instalar')}
-          </button>
-        </div>
-      `;
-      
-      frappe.show_alert({
-        message: installButton,
-        indicator: 'blue'
-      }, 20);
-    }
+    showBasecoatToast({
+      category: 'info',
+      title: __('Instale o Gris no seu dispositivo!'),
+      duration: -1,
+      action: {
+        label: __('Instalar'),
+        onclick: 'window.installPWA()'
+      },
+      cancel: {
+        label: __('Fechar'),
+        onclick: ''
+      }
+    });
   }
 
   // Função global para instalar o PWA

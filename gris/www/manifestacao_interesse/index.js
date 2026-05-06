@@ -1,451 +1,508 @@
-frappe.ready(function() {
-    
-    // CPF Masking
-    // Removed initial binding here as it is handled by applyMasks() and addJovem()
-    
-    // Phone Masking
-    function applyPhoneMask() {
-        const ddi = $('#pais_celular_responsavel').val();
-        const phoneInput = $('#celular_responsavel');
-        let value = phoneInput.val().replace(/\D/g, '');
+frappe.ready(function () {
+	"use strict";
 
-        if (ddi === '55') {
-            if (value.length > 11) value = value.slice(0, 11);
-            
-            if (value.length > 10) {
-                // (XX) X XXXX-XXXX
-                value = value.replace(/^(\d{2})(\d{1})(\d{4})(\d{4}).*/, '($1) $2 $3-$4');
-            } else if (value.length > 6) {
-                // (XX) XXXX-XXXX
-                value = value.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
-            } else if (value.length > 2) {
-                value = value.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
-            }
-        }
-        phoneInput.val(value);
-    }
+	// ===================== Helpers =====================
 
-    $('#celular_responsavel').on('input', function() {
-        applyPhoneMask();
-    });
+	function setFieldError(input, message) {
+		if (!input) return;
+		input.classList.add("is-invalid");
+		const fieldEl = input.closest(".field") || input.closest(".jovem-entry") || input.parentElement;
+		if (!fieldEl) return;
+		let error = fieldEl.querySelector(":scope > .field__error");
+		if (!error) {
+			error = document.createElement("p");
+			error.className = "field__error";
+			fieldEl.appendChild(error);
+		}
+		error.textContent = message;
+	}
 
-    // Country Code Masking
-    $('#pais_celular_responsavel').on('input', function() {
-        this.value = this.value.replace(/\D/g, '');
-        applyPhoneMask(); // Re-apply phone mask if country changes
-    });
+	function clearFieldError(input) {
+		if (!input) return;
+		input.classList.remove("is-invalid");
+		const fieldEl = input.closest(".field") || input.closest(".jovem-entry") || input.parentElement;
+		const error = fieldEl ? fieldEl.querySelector(":scope > .field__error") : null;
+		if (error) error.remove();
+	}
 
-    // Dynamic Jovem Forms
-    function updateJovensForms() {
-        const qtd = parseInt($('#qtd_jovens').val()) || 1;
-        const container = $('#jovens-container');
-        const currentCount = container.children().length;
-        const template = document.getElementById('jovem-template');
+	function getTabByKey(key) {
+		return document.querySelector('[role="tab"][data-tab-key="' + key + '"]');
+	}
 
-        if (qtd > currentCount) {
-            // Add more forms
-            for (let i = currentCount; i < qtd; i++) {
-                const clone = template.content.cloneNode(true);
-                $(clone).find('.jovem-title').text(`Jovem ${i + 1}`);
-                container.append(clone);
-            }
-        } else if (qtd < currentCount) {
-            // Remove excess forms
-            container.children().slice(qtd).remove();
-        }
-        
-        // Re-apply masks to new inputs
-        applyMasks();
-    }
+	function getPanelByTabKey(key) {
+		const tab = getTabByKey(key);
+		if (!tab) return null;
+		const panelId = tab.getAttribute("aria-controls");
+		return panelId ? document.getElementById(panelId) : null;
+	}
 
-    function applyMasks() {
-        $('#cpf_responsavel, .cpf_jovem').off('input').on('input', function() {
-            let value = $(this).val().replace(/\D/g, '');
-            if (value.length > 11) value = value.slice(0, 11);
-            
-            if (value.length > 9) {
-                value = value.replace(/^(\d{3})(\d{3})(\d{3})(\d{1,2}).*/, '$1.$2.$3-$4');
-            } else if (value.length > 6) {
-                value = value.replace(/^(\d{3})(\d{3})(\d{1,3}).*/, '$1.$2.$3');
-            } else if (value.length > 3) {
-                value = value.replace(/^(\d{3})(\d{1,3}).*/, '$1.$2');
-            }
-            $(this).val(value);
-        });
-    }
+	function showTab(key) {
+		const tab = getTabByKey(key);
+		if (!tab) return;
+		tab.removeAttribute("aria-disabled");
+		tab.setAttribute("tabindex", "0");
+		tab.click();
+	}
 
-    // Initialize first Jovem
-    updateJovensForms();
+	function notifyDesignSystem() {
+		document.dispatchEvent(new CustomEvent("gris:design-system:init"));
+	}
 
-    // Event Listeners for Quantity Change
-    $('#qtd_jovens').on('change input', updateJovensForms);
+	// ===================== Validators (puros) =====================
 
-    function validateCPF(cpf) {
-        cpf = cpf.replace(/[^\d]+/g, '');
-        if (cpf == '') return false;
-        // Elimina CPFs invalidos conhecidos
-        if (cpf.length != 11 || 
-            cpf == "00000000000" || 
-            cpf == "11111111111" || 
-            cpf == "22222222222" || 
-            cpf == "33333333333" || 
-            cpf == "44444444444" || 
-            cpf == "55555555555" || 
-            cpf == "66666666666" || 
-            cpf == "77777777777" || 
-            cpf == "88888888888" || 
-            cpf == "99999999999")
-                return false;
-        // Valida 1o digito
-        let add = 0;
-        for (let i = 0; i < 9; i++) 
-            add += parseInt(cpf.charAt(i)) * (10 - i);
-        let rev = 11 - (add % 11);
-        if (rev == 10 || rev == 11) 
-            rev = 0;
-        if (rev != parseInt(cpf.charAt(9))) 
-            return false;
-        // Valida 2o digito
-        add = 0;
-        for (let i = 0; i < 10; i++) 
-            add += parseInt(cpf.charAt(i)) * (11 - i);
-        rev = 11 - (add % 11);
-        if (rev == 10 || rev == 11) 
-            rev = 0;
-        if (rev != parseInt(cpf.charAt(10))) 
-            return false;
-        return true;
-    }
+	function validateCPF(cpf) {
+		cpf = (cpf || "").replace(/[^\d]+/g, "");
+		if (cpf === "") return false;
+		if (
+			cpf.length !== 11 ||
+			cpf === "00000000000" ||
+			cpf === "11111111111" ||
+			cpf === "22222222222" ||
+			cpf === "33333333333" ||
+			cpf === "44444444444" ||
+			cpf === "55555555555" ||
+			cpf === "66666666666" ||
+			cpf === "77777777777" ||
+			cpf === "88888888888" ||
+			cpf === "99999999999"
+		) {
+			return false;
+		}
+		let add = 0;
+		for (let i = 0; i < 9; i++) add += parseInt(cpf.charAt(i)) * (10 - i);
+		let rev = 11 - (add % 11);
+		if (rev === 10 || rev === 11) rev = 0;
+		if (rev !== parseInt(cpf.charAt(9))) return false;
+		add = 0;
+		for (let i = 0; i < 10; i++) add += parseInt(cpf.charAt(i)) * (11 - i);
+		rev = 11 - (add % 11);
+		if (rev === 10 || rev === 11) rev = 0;
+		if (rev !== parseInt(cpf.charAt(10))) return false;
+		return true;
+	}
 
-    function validateEmail(email) {
-        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return re.test(email);
-    }
+	function validateEmail(email) {
+		return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || "");
+	}
 
-    function validateName(name) {
-        // Only letters and spaces
-        const re = /^[a-zA-Z\u00C0-\u00FF\s]+$/;
-        return re.test(name);
-    }
+	function validateName(name) {
+		return /^[a-zA-ZÀ-ÿ\s]+$/.test(name || "");
+	}
 
-    function validateDate(dateString) {
-        if(!dateString) return false;
-        const date = new Date(dateString);
-        const today = new Date();
-        today.setHours(0,0,0,0);
-        return date instanceof Date && !isNaN(date) && date < today;
-    }
+	function validateDate(dateString) {
+		if (!dateString) return false;
+		const date = new Date(dateString);
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+		return date instanceof Date && !isNaN(date) && date < today;
+	}
 
-    function validateTab(tabId) {
-        let isValid = true;
-        const tab = $(tabId);
-        
-        // Reset validations in this tab
-        tab.find('.is-invalid').removeClass('is-invalid');
+	// ===================== Masks =====================
 
-        // Validate fields inside this tab
-        if (tabId === '#responsavel') {
-            // Validate Name
-            const nameField = $('#nome_responsavel');
-            if (!validateName(nameField.val())) {
-                nameField.addClass('is-invalid');
-                isValid = false;
-            }
+	function maskCPF(input) {
+		let value = input.value.replace(/\D/g, "");
+		if (value.length > 11) value = value.slice(0, 11);
+		if (value.length > 9) value = value.replace(/^(\d{3})(\d{3})(\d{3})(\d{1,2}).*/, "$1.$2.$3-$4");
+		else if (value.length > 6) value = value.replace(/^(\d{3})(\d{3})(\d{1,3}).*/, "$1.$2.$3");
+		else if (value.length > 3) value = value.replace(/^(\d{3})(\d{1,3}).*/, "$1.$2");
+		input.value = value;
+	}
 
-            // Validate Email
-            const emailField = $('#email_responsavel');
-            if (!validateEmail(emailField.val())) {
-                emailField.addClass('is-invalid');
-                isValid = false;
-            }
+	function bindCPFMask(scope) {
+		(scope || document).querySelectorAll("#cpf_responsavel, .cpf_jovem").forEach((input) => {
+			if (input.dataset.cpfMaskBound) return;
+			input.addEventListener("input", () => maskCPF(input));
+			input.dataset.cpfMaskBound = "true";
+		});
+	}
 
-            // Validate Phone
-            const phoneField = $('#celular_responsavel');
-            const countryField = $('#pais_celular_responsavel');
-            
-            // Validate Country Code (must have digits)
-            if (!/^\d{1,4}$/.test(countryField.val())) {
-                countryField.addClass('is-invalid');
-                isValid = false;
-            }
+	bindCPFMask();
 
-            // Validate Phone (must have digits)
-            if (!/\d+/.test(phoneField.val())) {
-                phoneField.addClass('is-invalid');
-                isValid = false;
-            }
+	// Phone-input: o componente cuida da máscara internamente (Brasil = formato BR; demais = dígitos).
 
-            // Validate CPF
-            const cpfField = $('#cpf_responsavel');
-            if (!validateCPF(cpfField.val())) {
-                cpfField.addClass('is-invalid');
-                isValid = false;
-            }
-        } else if (tabId === '#jovem') {
-            // Validate All Jovens
-            $('.jovem-entry').each(function() {
-                const entry = $(this);
-                
-                // Validate Name Jovem
-                const nameJovemField = entry.find('.nome_jovem');
-                if (!validateName(nameJovemField.val())) {
-                    nameJovemField.addClass('is-invalid');
-                    isValid = false;
-                }
+	// ===================== Jovens dynamic forms =====================
 
-                // Validate CPF Jovem
-                const cpfJovemField = entry.find('.cpf_jovem');
-                if (!validateCPF(cpfJovemField.val())) {
-                    cpfJovemField.addClass('is-invalid');
-                    isValid = false;
-                }
+	function updateJovensForms() {
+		const qtdInput = document.getElementById("qtd_jovens");
+		const container = document.getElementById("jovens-container");
+		const template = document.getElementById("jovem-template");
+		let qtd = parseInt(qtdInput.value, 10);
+		if (!Number.isFinite(qtd) || qtd < 1) qtd = 1;
+		if (qtd > 10) qtd = 10;
+		const currentCount = container.children.length;
 
-                // Validate Date Jovem
-                const dateJovemField = entry.find('.data_nascimento_jovem');
-                if (!validateDate(dateJovemField.val())) {
-                    dateJovemField.addClass('is-invalid');
-                    isValid = false;
-                }
-            });
-        } else if (tabId === '#confirmacao') {
-            const checkDados = $('#check_dados_corretos');
-            if (!checkDados.is(':checked')) {
-                checkDados.addClass('is-invalid');
-                isValid = false;
-            }
+		if (qtd > currentCount) {
+			for (let i = currentCount; i < qtd; i++) {
+				const clone = template.content.cloneNode(true);
+				const titleEl = clone.querySelector(".jovem-title");
+				if (titleEl) titleEl.textContent = "Jovem " + (i + 1);
+				container.appendChild(clone);
+			}
+		} else if (qtd < currentCount) {
+			while (container.children.length > qtd) {
+				container.removeChild(container.lastElementChild);
+			}
+		}
 
-            const checkLgpd = $('#check_lgpd');
-            if (!checkLgpd.is(':checked')) {
-                checkLgpd.addClass('is-invalid');
-                isValid = false;
-            }
-        }
-        return isValid;
-    }
+		bindCPFMask(container);
+		notifyDesignSystem();
+	}
 
-    // Navigation Buttons
-    $('.btn-next').on('click', function() {
-        if (validateTab('#responsavel')) {
-            $('#jovem-tab').removeClass('disabled').tab('show');
-        }
-    });
+	updateJovensForms();
+	document.getElementById("qtd_jovens").addEventListener("input", updateJovensForms);
+	document.getElementById("qtd_jovens").addEventListener("change", updateJovensForms);
 
-    $('.btn-next-jovem').on('click', function() {
-        if (validateTab('#jovem')) {
-            // Check for duplicate CPFs
-            const cpfResponsavelField = $('#cpf_responsavel');
-            const cpfResponsavel = cpfResponsavelField.val();
-            let hasDuplicates = false;
-            
-            // Reset previous duplicate errors (specifically for duplicates, though validateTab clears some)
-            // We need to ensure we don't clear other validation errors if we were to run this differently,
-            // but here validateTab('#jovem') just ran and passed, so .cpf_jovem fields are valid format-wise.
-            // #cpf_responsavel might have old invalid class if we don't clear it, but validateTab('#responsavel') isn't called here.
-            cpfResponsavelField.removeClass('is-invalid');
-            
-            const seenCpfs = {}; // Map CPF -> Array of fields
+	// ===================== Tab navigation =====================
 
-            // Add Responsavel
-            if (cpfResponsavel) {
-                seenCpfs[cpfResponsavel] = [cpfResponsavelField];
-            }
+	function getResponsavelPanel() {
+		return getPanelByTabKey("responsavel");
+	}
+	function getJovemPanel() {
+		return getPanelByTabKey("jovem");
+	}
 
-            // Add Jovens
-            $('.jovem-entry').each(function() {
-                const field = $(this).find('.cpf_jovem');
-                const val = field.val();
-                if (val) {
-                    if (!seenCpfs[val]) {
-                        seenCpfs[val] = [];
-                    }
-                    seenCpfs[val].push(field);
-                }
-            });
+	// Block clicks on disabled tabs
+	document.getElementById("manifestacao-tabs").addEventListener(
+		"click",
+		function (event) {
+			const tab = event.target.closest('[role="tab"]');
+			if (tab && tab.getAttribute("aria-disabled") === "true") {
+				event.stopImmediatePropagation();
+				event.preventDefault();
+			}
+		},
+		true,
+	);
 
-            // Check counts
-            for (const cpf in seenCpfs) {
-                if (seenCpfs[cpf].length > 1) {
-                    hasDuplicates = true;
-                    seenCpfs[cpf].forEach(field => field.addClass('is-invalid'));
-                }
-            }
+	// ===================== Validation per tab =====================
 
-            if (hasDuplicates) {
-                frappe.msgprint({
-                    title: 'Erro de Validação',
-                    indicator: 'red',
-                    message: 'Existem CPFs duplicados (Responsável ou Jovens). Cada pessoa deve ter um CPF único.'
-                });
-                return;
-            }
+	function validateResponsavel() {
+		let isValid = true;
+		const panel = getResponsavelPanel();
+		if (!panel) return false;
+		panel.querySelectorAll(".is-invalid").forEach((el) => clearFieldError(el));
 
-            // Enable confirmation tab
-            $('#confirmacao-tab').removeClass('disabled');
-            
-            // Populate Summary
-            $('#summary_nome_responsavel').text($('#nome_responsavel').val());
-            $('#summary_email_responsavel').text($('#email_responsavel').val());
-            $('#summary_celular_responsavel').text('+' + $('#pais_celular_responsavel').val() + ' ' + $('#celular_responsavel').val());
-            $('#summary_cpf_responsavel').text($('#cpf_responsavel').val());
-            
-            const summaryJovensContainer = $('#summary-jovens-container');
-            summaryJovensContainer.empty();
+		const nameField = document.getElementById("nome_responsavel");
+		if (!validateName(nameField.value)) {
+			setFieldError(nameField, "Por favor, insira um nome válido (somente letras e espaços).");
+			isValid = false;
+		}
 
-            $('.jovem-entry').each(function(index) {
-                const entry = $(this);
-                const nome = entry.find('.nome_jovem').val();
-                const cpf = entry.find('.cpf_jovem').val();
-                const dataNasc = entry.find('.data_nascimento_jovem').val();
-                
-                let dataFormatada = '';
-                if (dataNasc) {
-                    const dateObj = new Date(dataNasc);
-                    const userTimezoneOffset = dateObj.getTimezoneOffset() * 60000;
-                    const adjustedDate = new Date(dateObj.getTime() + userTimezoneOffset);
-                    dataFormatada = adjustedDate.toLocaleDateString('pt-BR');
-                }
+		const emailField = document.getElementById("email_responsavel");
+		if (!validateEmail(emailField.value)) {
+			setFieldError(emailField, "Por favor, insira um e-mail válido.");
+			isValid = false;
+		}
 
-                const html = `
-                    <div class="mb-3 pb-3 border-bottom ${index === $('.jovem-entry').length - 1 ? 'border-0 pb-0 mb-0' : ''}">
-                        <h6 class="text-secondary mb-2">Jovem ${index + 1}</h6>
-                        <div class="row g-3">
-                            <div class="col-12 mb-2">
-                                <small class="text-muted d-block text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">Nome</small>
-                                <span class="fw-bold text-dark">${nome}</span>
-                            </div>
-                            <div class="col-sm-6 mb-2">
-                                <small class="text-muted d-block text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">CPF</small>
-                                <span class="fw-bold text-dark">${cpf}</span>
-                            </div>
-                            <div class="col-sm-6 mb-2">
-                                <small class="text-muted d-block text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">Data de Nascimento</small>
-                                <span class="fw-bold text-dark">${dataFormatada}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                summaryJovensContainer.append(html);
-            });
+		const phoneRoot = document.getElementById("celular_responsavel_input");
+		const phoneVisible = document.getElementById("celular_responsavel");
+		const phoneFull = phoneRoot ? phoneRoot.value : "";
+		// hidden input só recebe valor se houver dígitos no campo de número
+		if (!phoneFull || phoneFull.replace(/\D/g, "").length < 6) {
+			if (phoneRoot) phoneRoot.classList.add("is-invalid");
+			setFieldError(phoneVisible, "Por favor, insira um número válido com DDD.");
+			isValid = false;
+		} else if (phoneRoot) {
+			phoneRoot.classList.remove("is-invalid");
+		}
 
-            $('#confirmacao-tab').tab('show');
-        }
-    });
+		const cpfField = document.getElementById("cpf_responsavel");
+		if (!validateCPF(cpfField.value)) {
+			setFieldError(cpfField, "CPF inválido.");
+			isValid = false;
+		}
 
-    $('.btn-prev').on('click', function() {
-        $('#responsavel-tab').tab('show');
-    });
+		return isValid;
+	}
 
-    $('.btn-prev-confirmacao').on('click', function() {
-        $('#jovem-tab').tab('show');
-    });
+	function getJovemDataNascimentoValue(entry) {
+		const dp = entry.querySelector(".data_nascimento_jovem");
+		if (!dp) return "";
+		// componente expõe `value` via getter; fallback para o hidden input
+		if (typeof dp.value === "string") return dp.value;
+		const hidden = dp.querySelector("[data-datepicker-value]");
+		return hidden ? hidden.value : "";
+	}
 
-    $('#interest-form').on('submit', function(e) {
-        e.preventDefault();
-        
-        // Validate all tabs before submit
-        if (!validateTab('#responsavel')) {
-            $('#responsavel-tab').tab('show');
-            return;
-        }
-        if (!validateTab('#jovem')) {
-            $('#jovem-tab').tab('show');
-            return;
-        }
-        if (!validateTab('#confirmacao')) {
-            // Already on this tab usually
-            return;
-        }
+	function validateJovens() {
+		let isValid = true;
+		const panel = getJovemPanel();
+		if (!panel) return false;
+		panel.querySelectorAll(".is-invalid").forEach((el) => clearFieldError(el));
+		// remove erros do datepicker também
+		panel.querySelectorAll(".datepicker.is-invalid").forEach((el) => el.classList.remove("is-invalid"));
+		panel.querySelectorAll(".jovem-entry .field__error").forEach((el) => el.remove());
 
-        var data = {};
-        // Collect Responsavel Data
-        data['nome_responsavel'] = $('#nome_responsavel').val();
-        data['email_responsavel'] = $('#email_responsavel').val();
-        
-        // Construct full phone number: +DDI + Phone (digits only)
-        const ddi = $('#pais_celular_responsavel').val();
-        const phone = $('#celular_responsavel').val().replace(/\D/g, '');
-        data['celular_responsavel'] = '+' + ddi + phone;
-        
-        data['cpf_responsavel'] = $('#cpf_responsavel').val();
+		const entries = panel.querySelectorAll(".jovem-entry");
+		entries.forEach((entry) => {
+			const nameField = entry.querySelector(".nome_jovem");
+			if (!validateName(nameField.value)) {
+				setFieldError(nameField, "Por favor, insira um nome válido (somente letras e espaços).");
+				isValid = false;
+			}
 
-        // Collect Jovens Data
-        var jovens = [];
-        $('.jovem-entry').each(function() {
-            var entry = $(this);
-            jovens.push({
-                'nome_jovem': entry.find('.nome_jovem').val(),
-                'cpf_jovem': entry.find('.cpf_jovem').val(),
-                'data_nascimento_jovem': entry.find('.data_nascimento_jovem').val()
-            });
-        });
-        data['jovens'] = JSON.stringify(jovens);
+			const cpfField = entry.querySelector(".cpf_jovem");
+			if (!validateCPF(cpfField.value)) {
+				setFieldError(cpfField, "CPF inválido.");
+				isValid = false;
+			}
 
-        // Custom loading dialog
-        let loadingDialog = new frappe.ui.Dialog({
-            title: 'Processando solicitação...',
-            indicators: false, // Hide standard indicators if not needed
-            primary_action: null // No buttons
-        });
-        
-        loadingDialog.$body.html(`
-            <div class="text-center" style="padding: 20px;">
-                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-                </div>
-                <p class="mt-3 text-muted">Aguarde, estamos processando sua solicitação enviando os e-mails de confirmação...</p>
-            </div>
-        `);
-        
-        loadingDialog.show();
-        // Prevent closing by clicking outside
-        loadingDialog.$wrapper.data('bs.modal')._config.backdrop = 'static';
-        loadingDialog.$wrapper.data('bs.modal')._config.keyboard = false;
+			const dataValue = getJovemDataNascimentoValue(entry);
+			if (!validateDate(dataValue)) {
+				const dp = entry.querySelector(".data_nascimento_jovem");
+				if (dp) dp.classList.add("is-invalid");
+				const fieldEl = dp ? dp.closest(".field") : null;
+				if (fieldEl) {
+					let error = fieldEl.querySelector(":scope > .field__error");
+					if (!error) {
+						error = document.createElement("p");
+						error.className = "field__error";
+						fieldEl.appendChild(error);
+					}
+					error.textContent = "Por favor, insira uma data válida anterior a hoje.";
+				}
+				isValid = false;
+			}
+		});
 
-        frappe.call({
-            method: 'gris.www.manifestacao_interesse.index.submit_interest',
-            args: data,
-            // freeze: true,  <-- Removing standard freeze
-            // freeze_message: 'Enviando...',
-            callback: function(r) {
-                loadingDialog.hide();
-                if (r.message && r.message.status === 'success') {
-                    $('#interest-form').slideUp();
-                    $('#form-message').html(`
-                        <div class="text-center py-5">
-                             <div class="mb-4">
-                                <div style="width: 80px; height: 80px; background: #dbfbe6; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto; color: #28a745; font-size: 40px;">
-                                    ✓
-                                </div>
-                            </div>
-                            <h2 class="mb-3">Sucesso!</h2>
-                            <p class="lead mb-4" style="font-size: 1.1rem; color: #6c757d;">${r.message.message}</p>
-                        </div>
-                    `).fadeIn();
-                    
-                    // Update Stepper
-                    $('#step-1').removeClass('active').addClass('completed');
-                    $('#step-2').addClass('active');
-                    
-                    // Scroll to message
-                     $('html, body').animate({
-                        scrollTop: $("#form-message").offset().top - 100
-                    }, 500);
+		return isValid;
+	}
 
-                } else {
-                    frappe.msgprint({
-                        title: 'Erro',
-                        indicator: 'red',
-                        message: r.message ? r.message.message : 'Ocorreu um erro desconhecido.'
-                    });
-                }
-            },
-            error: function(r) {
-                loadingDialog.hide();
-                frappe.msgprint({
-                    title: 'Erro',
-                    indicator: 'red',
-                    message: 'Não foi possível conectar ao servidor. Tente novamente mais tarde.'
-                });
-            }
-        });
-    });
+	function validateConfirmacao() {
+		let isValid = true;
+		const checkDados = document.getElementById("check_dados_corretos");
+		const checkLgpd = document.getElementById("check_lgpd");
+		if (!checkDados.checked) {
+			checkDados.classList.add("is-invalid");
+			isValid = false;
+		}
+		if (!checkLgpd.checked) {
+			checkLgpd.classList.add("is-invalid");
+			isValid = false;
+		}
+		return isValid;
+	}
+
+	// Limpa "is-invalid" de checkboxes ao alterar
+	document.getElementById("check_dados_corretos").addEventListener("change", function () {
+		this.classList.remove("is-invalid");
+	});
+	document.getElementById("check_lgpd").addEventListener("change", function () {
+		this.classList.remove("is-invalid");
+	});
+
+	// ===================== Navigation buttons =====================
+
+	document.querySelectorAll(".btn-next").forEach((btn) =>
+		btn.addEventListener("click", function () {
+			if (validateResponsavel()) {
+				showTab("jovem");
+			}
+		}),
+	);
+
+	document.querySelectorAll(".btn-prev").forEach((btn) =>
+		btn.addEventListener("click", function () {
+			showTab("responsavel");
+		}),
+	);
+
+	document.querySelectorAll(".btn-prev-confirmacao").forEach((btn) =>
+		btn.addEventListener("click", function () {
+			showTab("jovem");
+		}),
+	);
+
+	function buildSummary() {
+		document.getElementById("summary_nome_responsavel").textContent = document.getElementById("nome_responsavel").value;
+		document.getElementById("summary_email_responsavel").textContent = document.getElementById("email_responsavel").value;
+		const phoneRoot = document.getElementById("celular_responsavel_input");
+		const phoneFull = phoneRoot ? phoneRoot.value : "";
+		const phoneVisible = document.getElementById("celular_responsavel").value;
+		document.getElementById("summary_celular_responsavel").textContent = phoneFull
+			? phoneFull + (phoneVisible ? " (" + phoneVisible + ")" : "")
+			: "";
+		document.getElementById("summary_cpf_responsavel").textContent = document.getElementById("cpf_responsavel").value;
+
+		const summaryContainer = document.getElementById("summary-jovens-container");
+		summaryContainer.innerHTML = "";
+
+		document.querySelectorAll(".jovem-entry").forEach((entry, index) => {
+			const nome = entry.querySelector(".nome_jovem").value;
+			const cpf = entry.querySelector(".cpf_jovem").value;
+			const dataNasc = getJovemDataNascimentoValue(entry);
+
+			let dataFormatada = "";
+			if (dataNasc) {
+				const dateObj = new Date(dataNasc);
+				const adjusted = new Date(dateObj.getTime() + dateObj.getTimezoneOffset() * 60000);
+				dataFormatada = adjusted.toLocaleDateString("pt-BR");
+			}
+
+			const wrapper = document.createElement("div");
+			wrapper.className = "manifestacao__summary-jovem";
+			wrapper.innerHTML =
+				'<h4 class="manifestacao__summary-jovem-title">Jovem ' +
+				(index + 1) +
+				"</h4>" +
+				'<dl class="manifestacao__summary-grid">' +
+				'<div><dt>Nome</dt><dd></dd></div>' +
+				'<div><dt>CPF</dt><dd></dd></div>' +
+				'<div><dt>Data de nascimento</dt><dd></dd></div>' +
+				"</dl>";
+			const dds = wrapper.querySelectorAll("dd");
+			dds[0].textContent = nome;
+			dds[1].textContent = cpf;
+			dds[2].textContent = dataFormatada;
+			summaryContainer.appendChild(wrapper);
+		});
+	}
+
+	document.querySelectorAll(".btn-next-jovem").forEach((btn) =>
+		btn.addEventListener("click", function () {
+			if (!validateJovens()) return;
+
+			// CPF duplicate check
+			const cpfRespField = document.getElementById("cpf_responsavel");
+			const cpfResp = cpfRespField.value;
+			const seen = {};
+			if (cpfResp) seen[cpfResp] = [cpfRespField];
+			document.querySelectorAll(".jovem-entry").forEach((entry) => {
+				const f = entry.querySelector(".cpf_jovem");
+				if (f && f.value) {
+					if (!seen[f.value]) seen[f.value] = [];
+					seen[f.value].push(f);
+				}
+			});
+
+			let hasDuplicates = false;
+			Object.keys(seen).forEach((cpf) => {
+				if (seen[cpf].length > 1) {
+					hasDuplicates = true;
+					seen[cpf].forEach((f) => setFieldError(f, "Este CPF está duplicado em outro campo."));
+				}
+			});
+
+			if (hasDuplicates) {
+				frappe.msgprint({
+					title: "Erro de validação",
+					indicator: "red",
+					message: "Existem CPFs duplicados (Responsável ou Jovens). Cada pessoa deve ter um CPF único.",
+				});
+				return;
+			}
+
+			buildSummary();
+			showTab("confirmacao");
+		}),
+	);
+
+	// ===================== Submit =====================
+
+	const overlay = document.getElementById("loading-overlay");
+
+	function showOverlay() {
+		overlay.hidden = false;
+		overlay.setAttribute("aria-hidden", "false");
+	}
+
+	function hideOverlay() {
+		overlay.hidden = true;
+		overlay.setAttribute("aria-hidden", "true");
+	}
+
+	function showSuccessMessage(message) {
+		const form = document.getElementById("interest-form");
+		const msg = document.getElementById("form-message");
+
+		form.style.transition = "opacity 250ms ease";
+		form.style.opacity = "0";
+		setTimeout(() => {
+			form.hidden = true;
+			form.style.display = "none";
+		}, 260);
+
+		msg.innerHTML =
+			'<div class="manifestacao__success-icon">' +
+			'<svg class="ds-lucide ds-lucide--lg" viewBox="0 0 24 24" aria-hidden="true">' +
+			'<use href="/assets/gris/design_system/icons/lucide/sprite.svg#circle-check-big"></use>' +
+			"</svg>" +
+			"</div>" +
+			'<h2 class="manifestacao__success-title">Sucesso!</h2>' +
+			'<p class="manifestacao__success-message"></p>';
+		msg.querySelector(".manifestacao__success-message").textContent = message;
+		msg.hidden = false;
+
+		// Update stepper
+		const step1 = document.getElementById("step-1");
+		const step2 = document.getElementById("step-2");
+		if (step1) {
+			step1.classList.remove("is-active");
+			step1.classList.add("is-completed");
+		}
+		if (step2) step2.classList.add("is-active");
+
+		const offset = msg.getBoundingClientRect().top + window.scrollY - 100;
+		window.scrollTo({ top: offset, behavior: "smooth" });
+	}
+
+	document.getElementById("interest-form").addEventListener("submit", function (event) {
+		event.preventDefault();
+
+		if (!validateResponsavel()) {
+			showTab("responsavel");
+			return;
+		}
+		if (!validateJovens()) {
+			showTab("jovem");
+			return;
+		}
+		if (!validateConfirmacao()) return;
+
+		const data = {
+			nome_responsavel: document.getElementById("nome_responsavel").value,
+			email_responsavel: document.getElementById("email_responsavel").value,
+			cpf_responsavel: document.getElementById("cpf_responsavel").value,
+		};
+
+		const phoneRoot = document.getElementById("celular_responsavel_input");
+		data.celular_responsavel = phoneRoot ? phoneRoot.value : "";
+
+		const jovens = [];
+		document.querySelectorAll(".jovem-entry").forEach((entry) => {
+			jovens.push({
+				nome_jovem: entry.querySelector(".nome_jovem").value,
+				cpf_jovem: entry.querySelector(".cpf_jovem").value,
+				data_nascimento_jovem: getJovemDataNascimentoValue(entry),
+			});
+		});
+		data.jovens = JSON.stringify(jovens);
+
+		showOverlay();
+
+		frappe.call({
+			method: "gris.www.manifestacao_interesse.index.submit_interest",
+			args: data,
+			callback: function (r) {
+				hideOverlay();
+				if (r.message && r.message.status === "success") {
+					showSuccessMessage(r.message.message);
+				} else {
+					frappe.msgprint({
+						title: "Erro",
+						indicator: "red",
+						message: r.message ? r.message.message : "Ocorreu um erro desconhecido.",
+					});
+				}
+			},
+			error: function () {
+				hideOverlay();
+				frappe.msgprint({
+					title: "Erro",
+					indicator: "red",
+					message: "Não foi possível conectar ao servidor. Tente novamente mais tarde.",
+				});
+			},
+		});
+	});
 });

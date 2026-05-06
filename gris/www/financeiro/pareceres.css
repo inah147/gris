@@ -1,32 +1,131 @@
-/**
- * Pareceres - CSS Moderno
- * Página de documentos e pareceres financeiros
- */
+/* Página /financeiro/pareceres */
 
-/* Títulos de seção */
-.section-title {
-  font-size: 1.125rem;
-  font-weight: var(--font-semibold, 600);
-  color: var(--text-primary, #1e293b);
-  margin-bottom: 1rem;
+.financeiro-page-header {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 4);
+	align-items: flex-start;
+	justify-content: space-between;
+	margin-bottom: calc(var(--spacing) * 6);
 }
 
-/* Cards de parecer */
+.financeiro-page-header__copy {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	max-width: 42rem;
+}
+
+.financeiro-page-header__actions {
+	display: flex;
+	gap: calc(var(--spacing) * 2);
+	flex-wrap: wrap;
+}
+
+.financeiro-section-title {
+	font-size: var(--text-base);
+	font-weight: 600;
+	color: var(--foreground);
+	margin: 0 0 calc(var(--spacing) * 4) 0;
+}
+
+.parecer-filters {
+	--parecer-filter-width: 14rem;
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 4);
+	align-items: flex-end;
+}
+
+.parecer-filters > .field {
+	flex: 0 0 var(--parecer-filter-width);
+	width: var(--parecer-filter-width);
+}
+
+.parecer-filters > .field .select,
+.parecer-filters > .field .select > button {
+	width: 100%;
+}
+
+.parecer-filters > .field .select > button {
+	justify-content: space-between;
+}
+
+@media (max-width: 48rem) {
+	.parecer-filters > .field {
+		flex: 0 0 auto;
+		width: 100%;
+	}
+}
+
+.parecer-add-form {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 4);
+}
+
+.parecer-add-form .select,
+.parecer-add-form .select > button {
+	width: 100%;
+}
+
 .parecer-card {
-  transition: all 0.2s ease;
-  cursor: pointer;
+	transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+	height: 100%;
 }
 
 .parecer-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+	transform: translateY(-2px);
 }
 
-.parecer-card .card-modern__body {
-  gap: 0.25rem;
+.parecer-card__body {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 1);
+	padding: calc(var(--spacing) * 4);
+	height: 100%;
 }
 
-/* Modal actions */
-.modal-footer .d-flex > .btn + .btn {
-  margin-left: 0.5rem;
+.parecer-card__title {
+	margin: 0;
+	font-size: var(--text-sm);
+	font-weight: 600;
+	color: var(--foreground);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.parecer-card__period {
+	margin: 0;
+	font-size: var(--text-xs);
+	color: var(--muted-foreground);
+}
+
+.parecer-card__footer {
+	margin-top: auto;
+	padding-top: calc(var(--spacing) * 3);
+	border-top: 1px solid var(--border);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 2);
+}
+
+.parecer-modal-actions {
+	display: flex;
+	gap: calc(var(--spacing) * 2);
+	flex-wrap: wrap;
+	align-items: center;
+	width: 100%;
+}
+
+.parecer-modal-actions .ml-auto {
+	margin-left: auto;
+}
+
+.parecer-card.hidden,
+.parecer-card[hidden] {
+	display: none !important;
 }

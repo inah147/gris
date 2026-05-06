@@ -1,116 +1,137 @@
-{% extends "templates/web_sidebar_base.html" %} {% block title %}Meus Dados{% endblock %} {% block
-head_include %} {{ super() }}
-<link rel="stylesheet" href="/responsavel/meus_dados.css" />
-{% endblock %} {% block page_header %}
-<div class="page-header">
-	<div class="page-header__content">
-		<h1 class="page-header__title">Meus Dados</h1>
-		<p class="page-header__subtitle">Visualize e atualize suas informações.</p>
-	</div>
-</div>
-{% endblock %} {% block main %}
-<div class="meus-dados-container">
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import button, card, combobox, empty, field, form, input, textarea %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{% block title %}Meus Dados{% endblock %}
+
+{% block head_include %}
+	{{ super() }}
+	<link rel="stylesheet" href="/responsavel/meus_dados.css">
+{% endblock %}
+
+{% block page_header %}
+	<section class="meus-dados-page-header" aria-labelledby="meus-dados-title">
+		<div class="flex flex-col gap-2 max-w-2xl">
+			<h1 id="meus-dados-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Meus Dados</h1>
+			<p class="m-0 text-base leading-relaxed text-muted-foreground">Visualize e atualize suas informações.</p>
+		</div>
+	</section>
+{% endblock %}
+
+{% block main %}
+<div class="meus-dados-page">
 	{% if not responsavel %}
-	<div class="alert alert-warning">Cadastro de responsável não encontrado.</div>
-	{% else %} {% if is_nova_familia %}
-	<div class="card-modern mb-4">
-		<div class="card-modern__header">
-			<h3 class="card-modern__title">Informações Cadastrais</h3>
-		</div>
-		<div class="card-modern__body">
-			<div class="data-grid">
-				{% for field in fields_to_show %}
-				<div class="data-item">
-					<label class="data-label">{{ field.label }}</label>
-					<div class="data-value">{{ field.value }}</div>
-				</div>
+		{{ empty(
+			title="Cadastro não encontrado",
+			description="Não localizamos um cadastro de responsável vinculado ao seu usuário.",
+			icon=lucide_icon("user-x", size="lg")
+		) }}
+	{% elif is_nova_familia %}
+		{% call card(title="Informações cadastrais", attrs={"class": "meus-dados-card"}) %}
+			<dl class="meus-dados-info-grid">
+				{% for f in fields_to_show %}
+					<div>
+						<dt>{{ f.label }}</dt>
+						<dd>{{ f.value }}</dd>
+					</div>
 				{% endfor %}
-			</div>
-		</div>
-	</div>
+			</dl>
+		{% endcall %}
 	{% else %}
-	<form id="meus-dados-form" class="card-modern mb-4">
-		<div class="card-modern__header">
-			<h3 class="card-modern__title">Editar Meus Dados</h3>
-		</div>
-		<div class="card-modern__body">
-			<div class="row">
-				<div class="col-md-6">
-					<div class="form-group-modern">
-						<label class="form-label-modern">Nome Completo</label>
-						<input
-							type="text"
-							class="form-input-modern"
-							value="{{ nome_completo }}"
-							disabled
-						/>
-					</div>
-				</div>
-				<div class="col-md-6">
-					<div class="form-group-modern">
-						<label class="form-label-modern">E-mail</label>
-						<input
-							type="email"
-							class="form-input-modern"
-							value="{{ email }}"
-							disabled
-						/>
-					</div>
-				</div>
-			</div>
+		{% set form_footer %}
+			<button type="submit" form="meus-dados-form" id="btn-salvar-meus-dados" class="btn-primary">Salvar alterações</button>
+		{% endset %}
+		{% call card(footer=form_footer, attrs={"class": "meus-dados-card"}) %}
+			<header class="meus-dados-card__header">
+				<h2 class="m-0 text-xl font-semibold leading-tight text-foreground">Editar meus dados</h2>
+				<p class="m-0 text-sm leading-normal text-muted-foreground">Mantenha suas informações atualizadas.</p>
+			</header>
 
-			<div class="form-group-modern">
-				<label class="form-label-modern" for="o_que_gosta"
-					>O que gosta de fazer no dia a dia</label
-				>
-				<textarea class="form-input-modern" id="o_que_gosta" rows="3" style="height: auto">
-{{ o_que_gosta or '' }}</textarea
-				>
-			</div>
+			{% call form(attrs={"id": "meus-dados-form", "novalidate": "novalidate"}) %}
+				<div class="meus-dados-grid">
+					{% call field(label="Nome completo") %}
+						{{ input(
+							name="nome_completo",
+							value=nome_completo,
+							attrs={"id": "meus-dados-nome", "disabled": "disabled", "autocomplete": "name"}
+						) }}
+					{% endcall %}
+					{% call field(label="E-mail") %}
+						{{ input(
+							name="email",
+							type="email",
+							value=email,
+							attrs={"id": "meus-dados-email", "disabled": "disabled", "autocomplete": "email"}
+						) }}
+					{% endcall %}
+				</div>
 
-			<div class="form-group-modern">
-				<label class="form-label-modern">Habilidades</label>
-				<div id="habilidades-container" class="p-3 border rounded bg-light">
-					<div class="habilidades-list mb-3">
-						<!-- Rendered via JS -->
-					</div>
-					<div class="input-group mb-2">
-						<input
-							type="text"
-							class="form-input-modern"
-							id="nova-habilidade"
-							placeholder="Adicionar habilidade (separar por vírgula)"
-							autocomplete="off"
-						/>
-						<button
-							class="btn-modern btn-modern--secondary"
-							type="button"
-							id="btn-add-habilidade"
-						>
-							Adicionar
-						</button>
-					</div>
-					<div class="sugestoes-container mt-2" style="display: none">
-						<label class="data-label mb-2">Sugestões (clique para adicionar)</label>
-						<div class="sugestoes-list d-flex flex-wrap gap-1">
-							<!-- Rendered via JS -->
+				{% call field(
+					label="O que gosta de fazer no dia a dia",
+					hint="Conte um pouco sobre seus interesses e atividades favoritas."
+				) %}
+					{{ textarea(
+						name="o_que_gosta_de_fazer_no_dia_a_dia",
+						value=(o_que_gosta or ""),
+						attrs={"id": "o_que_gosta", "rows": "4", "placeholder": "Ex.: leitura, esportes, cozinhar…"}
+					) }}
+				{% endcall %}
+
+				{% call field(
+					label="Habilidades",
+					hint="Selecione das opções existentes ou crie uma nova abaixo."
+				) %}
+					<div class="habilidades-selector" id="habilidades-selector">
+						<div
+							class="habilidades-selecionadas"
+							id="habilidades-selecionadas"
+							aria-live="polite"
+							data-empty-message="Nenhuma habilidade selecionada."
+						></div>
+
+						{{ combobox(
+							id="combobox-habilidades",
+							name="combobox_habilidades",
+							items=(habilidades_select_items or []),
+							close_on_select=true,
+							search_placeholder="Buscar habilidade…",
+							main_attrs={"class": "habilidades-combobox"},
+							trigger_attrs={"class": "habilidades-combobox__trigger w-full"}
+						) }}
+
+						<div class="habilidades-nova">
+							{{ input(
+								name="nova_habilidade",
+								attrs={
+									"id": "nova-habilidade",
+									"placeholder": "Nome de uma nova habilidade",
+									"autocomplete": "off"
+								}
+							) }}
+							{{ button(
+								lucide_icon("plus", size="sm") ~ "<span>Criar nova</span>",
+								variant="outline",
+								attrs={"id": "btn-add-habilidade", "type": "button"}
+							) }}
 						</div>
 					</div>
-				</div>
-			</div>
-		</div>
-		<div class="card-modern__footer">
-			<button type="submit" class="btn-modern btn-modern--primary">Salvar Alterações</button>
-		</div>
-	</form>
-	{% endif %} {% endif %}
+				{% endcall %}
+			{% endcall %}
+		{% endcall %}
+	{% endif %}
 </div>
-{% endblock %} {% block script %} {{ super() }}
-<script>
-	window.gris_meus_dados = {
-		habilidades_iniciais: {{ habilidades_list | tojson | default("[]") }},
-		todas_habilidades: {{ all_habilidades | tojson | default("[]") }}
-	};
-</script>
-<script src="/responsavel/meus_dados.js"></script>
+
+{{ toaster() }}
+{% endblock %}
+
+{% block script %}
+	{{ super() }}
+	<script>
+		window.gris_meus_dados = {
+			habilidades_iniciais: {{ (habilidades_list or []) | tojson }},
+			todas_habilidades: {{ (all_habilidades or []) | tojson }}
+		};
+	</script>
+	<script src="/responsavel/meus_dados.js"></script>
 {% endblock %}

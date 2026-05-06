@@ -1,5 +1,6 @@
 import html
 import json
+from datetime import date
 
 import frappe
 from frappe import _
@@ -12,6 +13,7 @@ from gris.api.recepcao_notificacoes import notificar_nova_manifestacao_no_grupo_
 def get_context(context):
 	context.title = "Manifestação de Interesse"
 	context.show_sidebar = False
+	context.today_iso = date.today().isoformat()
 
 	uel_data = get_uel_cached()
 	if uel_data:

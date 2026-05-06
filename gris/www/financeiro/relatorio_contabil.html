@@ -1,94 +1,86 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty, field %}
+{% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
 
 {% block title %}Relatório Contábil{% endblock %}
 
 {% set active_link = '/financeiro/relatorios' %}
 
 {% block page_header %}
-  <div class="page-header">
-    <div class="page-header__content">
-      <h1 class="page-header__title">Relatório Contábil</h1>
-      <p class="page-header__subtitle">Transações detalhadas por instituição e período</p>
-    </div>
-  </div>
+	<section class="financeiro-page-header" aria-labelledby="financeiro-relatorio-contabil-title">
+		<div class="flex flex-col gap-2 max-w-2xl">
+			<h1 id="financeiro-relatorio-contabil-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Relatório Contábil</h1>
+			<p class="m-0 text-base leading-relaxed text-muted-foreground">Transações detalhadas por instituição e período.</p>
+		</div>
+	</section>
 {% endblock %}
 
 {% block main %}
-<link rel="stylesheet" href="/financeiro/relatorio_contabil.css">
+<div class="relatorio-contabil-page">
+	{% call card(attrs={"class": "relatorio-contabil-filter-card"}) %}
+		<form id="relatorio-contabil-filter" method="get" class="relatorio-contabil-filter-form">
+			{% call field(label="Data de início", attrs={"class": "relatorio-contabil-filter-form__field"}) %}
+				{{ datepicker(id="data_inicio", name="data_inicio", value=data_inicio or "", placeholder="Selecione a data") }}
+			{% endcall %}
+			{% call field(label="Data de término", attrs={"class": "relatorio-contabil-filter-form__field"}) %}
+				{{ datepicker(id="data_fim", name="data_fim", value=data_fim or "", placeholder="Selecione a data") }}
+			{% endcall %}
+			<div class="relatorio-contabil-filter-actions">
+				<button type="submit" class="btn-sm-primary">Filtrar</button>
+				<button type="button" id="export-xlsx" class="btn-sm-outline">Exportar XLSX</button>
+			</div>
+		</form>
+	{% endcall %}
 
-  <div class="card-modern mb-4">
-    <div class="card-modern__body card-modern__body--compact">
-      <form method="get" class="filter-bar mb-0">
-        <div class="filter-field">
-          <label for="data_inicio" class="form-label-modern small">Data de início</label>
-          <input type="date" class="form-input-modern form-input-modern--sm" id="data_inicio" name="data_inicio" value="{{ data_inicio or '' }}">
-        </div>
-        <div class="filter-field">
-          <label for="data_fim" class="form-label-modern small">Data de término</label>
-          <input type="date" class="form-input-modern form-input-modern--sm" id="data_fim" name="data_fim" value="{{ data_fim or '' }}">
-        </div>
-        <div class="filter-actions">
-          <button type="submit" class="btn-modern btn-modern--primary btn-modern--sm">Filtrar</button>
-          <button type="button" id="export-xlsx" class="btn-modern btn-modern--outline btn-modern--sm">Exportar XLSX</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <div class="card-modern">
-    <div class="card-modern__body" style="padding: 0; overflow-x: auto;">
-      <table class="relatorio-contabil-table" id="relatorio-contabil-tabela">
-        <thead>
-          <tr>
-            <th class="relatorio-contabil-table__header">Data</th>
-            <th class="relatorio-contabil-table__header">Instituição</th>
-            <th class="relatorio-contabil-table__header">Carteira</th>
-            <th class="relatorio-contabil-table__header">Centro de Custo</th>
-            <th class="relatorio-contabil-table__header relatorio-contabil-table__header--number">Valor</th>
-            <th class="relatorio-contabil-table__header">Tipo</th>
-            <th class="relatorio-contabil-table__header">Descrição</th>
-            <th class="relatorio-contabil-table__header">Categoria</th>
-            <th class="relatorio-contabil-table__header">Atividade</th>
-            <th class="relatorio-contabil-table__header">Observações</th>
-            {% for inst in instituicoes %}
-              <th class="relatorio-contabil-table__header relatorio-contabil-table__header--number">{{ inst }}</th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {# Exemplo de lógica: saldos = dict com saldo de cada instituição, inicializado antes do loop #}
-          {% set saldos = dict() %}
-          {% for inst in instituicoes %}
-            {% set _ = saldos.update({inst: 0}) %}
-          {% endfor %}
-          {% for t in transacoes %}
-            <tr class="relatorio-contabil-table__row">
-              <td class="relatorio-contabil-table__cell">{{ t.data_deposito or '-' }}</td>
-              <td class="relatorio-contabil-table__cell">{{ t.instituicao or '-' }}</td>
-              <td class="relatorio-contabil-table__cell">{{ t.carteira or '-' }}</td>
-              <td class="relatorio-contabil-table__cell">{{ t.centro_de_custo or '-' }}</td>
-              <td class="relatorio-contabil-table__cell relatorio-contabil-table__cell--number">
-                {{ 'R$ ' + '{:,.2f}'.format(t.valor_absoluto|float).replace(',', 'X').replace('.', ',').replace('X', '.') if t.valor_absoluto is not none else '-' }}
-              </td>
-              <td class="relatorio-contabil-table__cell">{{ t.debito_credito or '-' }}</td>
-              <td class="relatorio-contabil-table__cell">{{ t.descricao or '-' }}</td>
-              <td class="relatorio-contabil-table__cell">{{ t.categoria or '-' }}</td>
-              <td class="relatorio-contabil-table__cell">{{ t.nome_atividade or '-' }}</td>
-              <td class="relatorio-contabil-table__cell">{{ t['observa\u00e7\u00f5es'] or '-' }}</td>
-              {% for inst in instituicoes %}
-                <td class="relatorio-contabil-table__cell relatorio-contabil-table__cell--number">
-                  {{ 'R$ ' + '{:,.2f}'.format(t[inst]|float).replace(',', 'X').replace('.', ',').replace('X', '.') if t[inst] is not none else '-' }}
-                </td>
-              {% endfor %}
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-{% endblock %}
-
-{% block script %}
-{{ super() }}
-<script src="/financeiro/relatorio_contabil.js"></script>
+	{% if transacoes %}
+		{% call card(title="Relatório Contábil", description="Transações detalhadas por instituição e período.", attrs={"class": "relatorio-contabil-table-card"}) %}
+			<div class="relatorio-contabil-table__scroll">
+				<table class="table relatorio-contabil-table" id="relatorio-contabil-tabela">
+					<thead>
+						<tr>
+							<th class="relatorio-contabil-table__header">Data</th>
+							<th class="relatorio-contabil-table__header">Instituição</th>
+							<th class="relatorio-contabil-table__header">Carteira</th>
+							<th class="relatorio-contabil-table__header">Centro de Custo</th>
+							<th class="relatorio-contabil-table__header relatorio-contabil-table__header--number">Valor</th>
+							<th class="relatorio-contabil-table__header">Tipo</th>
+							<th class="relatorio-contabil-table__header">Descrição</th>
+							<th class="relatorio-contabil-table__header">Categoria</th>
+							<th class="relatorio-contabil-table__header">Atividade</th>
+							<th class="relatorio-contabil-table__header">Observações</th>
+							{% for inst in instituicoes %}
+								<th class="relatorio-contabil-table__header relatorio-contabil-table__header--number">{{ inst }}</th>
+							{% endfor %}
+						</tr>
+					</thead>
+					<tbody>
+						{% for t in transacoes %}
+							<tr class="relatorio-contabil-table__row">
+								<td class="relatorio-contabil-table__cell">{{ t.data_deposito or '-' }}</td>
+								<td class="relatorio-contabil-table__cell">{{ t.instituicao or '-' }}</td>
+								<td class="relatorio-contabil-table__cell">{{ t.carteira or '-' }}</td>
+								<td class="relatorio-contabil-table__cell">{{ t.centro_de_custo or '-' }}</td>
+								<td class="relatorio-contabil-table__cell relatorio-contabil-table__cell--number">
+									{{ 'R$ ' + '{:,.2f}'.format(t.valor_absoluto|float).replace(',', 'X').replace('.', ',').replace('X', '.') if t.valor_absoluto is not none else '-' }}
+								</td>
+								<td class="relatorio-contabil-table__cell">{{ t.debito_credito or '-' }}</td>
+								<td class="relatorio-contabil-table__cell">{{ t.descricao or '-' }}</td>
+								<td class="relatorio-contabil-table__cell">{{ t.categoria or '-' }}</td>
+								<td class="relatorio-contabil-table__cell">{{ t.nome_atividade or '-' }}</td>
+								<td class="relatorio-contabil-table__cell">{{ t.observacoes or '-' }}</td>
+								{% for inst in instituicoes %}
+									<td class="relatorio-contabil-table__cell relatorio-contabil-table__cell--number">
+										{{ 'R$ ' + '{:,.2f}'.format(t[inst]|float).replace(',', 'X').replace('.', ',').replace('X', '.') if t[inst] is not none else '-' }}
+									</td>
+								{% endfor %}
+							</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		{% endcall %}
+	{% else %}
+		{{ empty(title="Nenhuma transação encontrada", description="Tente ajustar o período selecionado para visualizar dados.", image="/assets/gris/images/gris-character/gris-search.png", image_alt="Gris pesquisando transações", image_size="lg") }}
+	{% endif %}
+</div>
 {% endblock %}

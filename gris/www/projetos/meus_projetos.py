@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 import frappe
 
 from gris.api.portal_access import enrich_context, user_has_access
@@ -13,6 +15,17 @@ STATUS_LABELS = {
 	"Concluido": "Concluído",
 	"Cancelado": "Cancelado",
 }
+
+
+def _get_project_url(project_name: str, status: str | None) -> str:
+	encoded_name = quote(project_name or "")
+	if status == "Rascunho":
+		return f"/projetos/cadastrar_novo_projeto?projeto={encoded_name}"
+	if status == "Em aprovacao":
+		return f"/projetos/aprovacao_projeto?projeto={encoded_name}"
+	if status == "Aprovado":
+		return f"/projetos/projeto_aprovado?projeto={encoded_name}"
+	return f"/projetos/projeto?projeto={encoded_name}"
 
 
 def _get_responsavel_by_email(user_email: str | None) -> str | None:
@@ -144,7 +157,9 @@ def get_context(context):
 			"coordenador": coordinator_names.get(project.get("coordenador"))
 			or project.get("coordenador")
 			or "Não informado",
+			"status": project.get("status") or "",
 			"status_label": STATUS_LABELS.get(project.get("status"), project.get("status") or "Sem status"),
+			"detail_url": _get_project_url(project.get("name") or "", project.get("status")),
 		}
 		for project in projects
 	]

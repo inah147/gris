@@ -432,20 +432,18 @@ def get_context(context):
 		order_by="nome asc",
 	)
 	carteiras = []
-	# Mapeamento simples instituição -> variante de badge
-	# variant_map agora mapeia substring -> (variant, outline_bool)
+	# Mapeamento substring -> (variant Basecoat, outline_bool) usado pelo macro `badge`.
 	variant_map = {
-		"btg empresas": ("primary", False),
-		"btg investimentos": ("primary", True),
-		"portão 3": ("purple", False),
-		"portao 3": ("purple", False),
+		"btg empresas": ("info", False),
+		"btg investimentos": ("info", True),
+		"portão 3": ("info", True),
+		"portao 3": ("info", True),
 		"inifinitepay": ("success", False),  # grafia presente no fixture
 		"infinitepay": ("success", False),  # grafia alternativa
 		"pagbank": ("warning", False),
 	}
 	for cart in carteiras_raw:
 		saldo = cart.get("saldo") or 0
-		# Campo pode ter sido criado com ou sem acento; fazemos fallback
 		inst = cart.get("instituicao_financeira") or ""
 		inst_slug = inst.lower()
 		variant = None
@@ -455,17 +453,13 @@ def get_context(context):
 				variant, outline = v
 				break
 		if not variant:
-			variant = "neutral"
-		badge_classes = f"g-badge g-badge--{variant} g-badge--small"
-		if outline:
-			badge_classes = f"{badge_classes} g-badge--outline"
+			variant = "secondary"
 		carteiras.append(
 			{
 				"name": cart.get("name"),
 				"display_name": cart.get("nome") or cart.get("name"),
 				"instituicao_financeira": cart.get("instituicao_financeira"),
 				"instituicao_variant": variant,
-				"instituicao_badge_classes": badge_classes,
 				"instituicao_badge_outline": outline,
 				"descricao": cart.get("descricao") or "",
 				"responsavel": cart.get("responsavel") or "",

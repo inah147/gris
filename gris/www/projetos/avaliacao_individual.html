@@ -1,119 +1,148 @@
-{% extends "templates/web.html" %}
+{% extends "templates/portal_clean.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, card, field, form, radio_group, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
 {% block page_content %}
-<div class="avaliacao-wrapper">
-    <div class="avaliacao-header text-center">
+<main class="avaliacao-page" aria-labelledby="avaliacao-title">
+    <header class="avaliacao-header">
         {% if logo %}
-        <img src="{{ logo }}" class="avaliacao-logo" alt="Logo" loading="lazy" />
+        <img src="{{ logo }}" class="avaliacao-logo" alt="Logo da UEL" loading="lazy" decoding="async" />
         {% endif %}
-        <h1 class="avaliacao-title">Avaliação de Projeto</h1>
-        {% if subtitle %}
-        <p class="avaliacao-subtitle">{{ subtitle }}</p>
-        {% endif %}
-    </div>
+        <div class="avaliacao-header__content">
+            <p class="avaliacao-eyebrow">Avaliação individual</p>
+            <h1 id="avaliacao-title" class="avaliacao-title">Avaliação de Projeto</h1>
+            {% if subtitle %}
+            <p class="avaliacao-subtitle">{{ subtitle }}</p>
+            {% endif %}
+        </div>
+    </header>
 
     <input type="hidden" id="avaliacaoToken" value="{{ token or '' }}" />
     <input type="hidden" id="pageState" value="{{ page_state or 'invalid' }}" />
 
-    <!-- Estado: token inválido -->
-    <div id="stateInvalid" class="avaliacao-state {% if page_state != 'invalid' %}d-none{% endif %}">
-        <div class="avaliacao-message-card">
-            <div class="avaliacao-message-icon">⚠️</div>
+    <section id="stateInvalid" class="avaliacao-state {% if page_state != 'invalid' %}d-none{% endif %}" aria-live="polite">
+        {% call card(attrs={"class": "avaliacao-state-card"}) %}
+            <div class="avaliacao-state-card__icon avaliacao-state-card__icon--warning">
+                {{ lucide_icon("triangle-alert", size="lg") }}
+            </div>
             <h2>Link inválido</h2>
             <p>Este link de avaliação não é válido ou já expirou. Verifique se você copiou o link corretamente do e-mail recebido.</p>
-        </div>
-    </div>
+        {% endcall %}
+    </section>
 
-    <!-- Estado: já respondido -->
-    <div id="stateAlreadySubmitted" class="avaliacao-state {% if page_state != 'already_submitted' %}d-none{% endif %}">
-        <div class="avaliacao-message-card avaliacao-message-card--success">
-            <div class="avaliacao-message-icon">✅</div>
-            <h2>Avaliação já enviada</h2>
-            <p>{{ avaliador_nome }}, você já enviou sua avaliação para este projeto. Obrigado pela participação!</p>
-        </div>
-    </div>
-
-    <!-- Estado: formulário -->
-    <div id="stateForm" class="avaliacao-state {% if page_state != 'form' %}d-none{% endif %}">
-        <div class="avaliacao-form-container">
-            <div class="avaliacao-welcome">
-                <h2>Olá, {{ avaliador_nome }}!</h2>
-                <p>Sua avaliação sobre o projeto <strong>{{ projeto_titulo }}</strong> é muito importante para nós. Por favor, responda as perguntas abaixo com sinceridade.</p>
+    <section id="stateAlreadySubmitted" class="avaliacao-state {% if page_state != 'already_submitted' %}d-none{% endif %}" aria-live="polite">
+        {% call card(attrs={"class": "avaliacao-state-card"}) %}
+            <div class="avaliacao-state-card__icon avaliacao-state-card__icon--success">
+                {{ lucide_icon("circle-check", size="lg") }}
             </div>
+            <h2>Avaliação já enviada</h2>
+            <p>{{ avaliador_nome }}, você já enviou sua avaliação para este projeto. Obrigado pela participação.</p>
+        {% endcall %}
+    </section>
 
-            <div id="avaliacaoAlert" class="alert-modern d-none" role="alert"></div>
-
-            <form id="avaliacaoForm" novalidate>
-                <div class="avaliacao-question-card">
-                    <label class="avaliacao-question-label" for="resultado_projeto">
-                        Como você avalia o resultado do projeto?
-                        <span class="avaliacao-question-hint">Escolha uma nota de 0 (péssimo) a 10 (excelente)</span>
-                    </label>
-                    <div class="avaliacao-scale" role="radiogroup" aria-label="Resultado do projeto">
-                        {% for i in range(11) %}
-                        <label class="avaliacao-scale-option">
-                            <input type="radio" name="resultado_projeto" value="{{ i }}" required />
-                            <span class="avaliacao-scale-label">{{ i }}</span>
-                        </label>
-                        {% endfor %}
-                    </div>
+    <section id="stateForm" class="avaliacao-state {% if page_state != 'form' %}d-none{% endif %}">
+        <div class="avaliacao-form-container">
+            {% call card(attrs={"class": "avaliacao-intro-card"}) %}
+                <div class="avaliacao-intro-card__icon">
+                    {{ lucide_icon("clipboard-check", size="md") }}
                 </div>
-
-                <div class="avaliacao-question-card">
-                    <label class="avaliacao-question-label" for="satisfacao_colaboracao">
-                        Quão satisfeito você ficou em colaborar com o projeto?
-                        <span class="avaliacao-question-hint">Escolha uma nota de 0 (nada satisfeito) a 10 (muito satisfeito)</span>
-                    </label>
-                    <div class="avaliacao-scale" role="radiogroup" aria-label="Satisfação com colaboração">
-                        {% for i in range(11) %}
-                        <label class="avaliacao-scale-option">
-                            <input type="radio" name="satisfacao_colaboracao" value="{{ i }}" required />
-                            <span class="avaliacao-scale-label">{{ i }}</span>
-                        </label>
-                        {% endfor %}
-                    </div>
+                <div class="avaliacao-intro-card__content">
+                    <h2>Olá, {{ avaliador_nome }}!</h2>
+                    <p>Sua avaliação sobre o projeto <strong>{{ projeto_titulo }}</strong> é muito importante para nós. Responda às perguntas abaixo com sinceridade.</p>
                 </div>
+            {% endcall %}
 
-                <div class="avaliacao-question-card">
-                    <label class="avaliacao-question-label" for="objetivos_atingidos">
-                        O projeto atingiu os objetivos?
-                        <span class="avaliacao-question-hint">Descreva em que medida os objetivos foram alcançados</span>
-                    </label>
-                    <textarea id="objetivos_atingidos" name="objetivos_atingidos" class="avaliacao-textarea" rows="4" placeholder="Descreva sua percepção sobre o atingimento dos objetivos..." required></textarea>
-                </div>
+            {% call alert(attrs={"id": "avaliacaoAlert", "hidden": "hidden", "aria-live": "polite"}) %}
+            {% endcall %}
 
-                <div class="avaliacao-question-card">
-                    <label class="avaliacao-question-label" for="muito_bom">
-                        O que você considera que foi muito bom?
-                        <span class="avaliacao-question-hint">Destaque os pontos positivos do projeto</span>
-                    </label>
-                    <textarea id="muito_bom" name="muito_bom" class="avaliacao-textarea" rows="4" placeholder="O que mais se destacou positivamente..." required></textarea>
-                </div>
+            {% call form(attrs={"id": "avaliacaoForm", "novalidate": "novalidate"}) %}
+                {% call card(attrs={"class": "avaliacao-question-card"}) %}
+                    {% call field(
+                        label="Como você avalia o resultado do projeto?",
+                        hint="Escolha uma nota de 0 (péssimo) a 10 (excelente).",
+                        attrs={"class": "avaliacao-rating-field"}
+                    ) %}
+                        {{ radio_group(
+                            name="resultado_projeto",
+                            options=rating_options,
+                            attrs={"class": "avaliacao-rating-scale", "aria-label": "Resultado do projeto", "aria-required": "true"}
+                        ) }}
+                    {% endcall %}
+                {% endcall %}
 
-                <div class="avaliacao-question-card">
-                    <label class="avaliacao-question-label" for="pontos_melhoria">
-                        Quais são os pontos de melhoria que você enxerga?
-                        <span class="avaliacao-question-hint">Sugestões construtivas para projetos futuros</span>
-                    </label>
-                    <textarea id="pontos_melhoria" name="pontos_melhoria" class="avaliacao-textarea" rows="4" placeholder="O que poderia ter sido melhor..." required></textarea>
-                </div>
+                {% call card(attrs={"class": "avaliacao-question-card"}) %}
+                    {% call field(
+                        label="Quão satisfeito você ficou em colaborar com o projeto?",
+                        hint="Escolha uma nota de 0 (nada satisfeito) a 10 (muito satisfeito).",
+                        attrs={"class": "avaliacao-rating-field"}
+                    ) %}
+                        {{ radio_group(
+                            name="satisfacao_colaboracao",
+                            options=rating_options,
+                            attrs={"class": "avaliacao-rating-scale", "aria-label": "Satisfação com colaboração", "aria-required": "true"}
+                        ) }}
+                    {% endcall %}
+                {% endcall %}
+
+                {% call card(attrs={"class": "avaliacao-question-card"}) %}
+                    {% call field(label="O projeto atingiu os objetivos?", hint="Descreva em que medida os objetivos foram alcançados.") %}
+                        {{ textarea(
+                            name="objetivos_atingidos",
+                            attrs={
+                                "id": "objetivos_atingidos",
+                                "rows": "4",
+                                "placeholder": "Descreva sua percepção sobre o atingimento dos objetivos...",
+                                "required": "required"
+                            }
+                        ) }}
+                    {% endcall %}
+                {% endcall %}
+
+                {% call card(attrs={"class": "avaliacao-question-card"}) %}
+                    {% call field(label="O que você considera que foi muito bom?", hint="Destaque os pontos positivos do projeto.") %}
+                        {{ textarea(
+                            name="muito_bom",
+                            attrs={
+                                "id": "muito_bom",
+                                "rows": "4",
+                                "placeholder": "O que mais se destacou positivamente...",
+                                "required": "required"
+                            }
+                        ) }}
+                    {% endcall %}
+                {% endcall %}
+
+                {% call card(attrs={"class": "avaliacao-question-card"}) %}
+                    {% call field(label="Quais são os pontos de melhoria que você enxerga?", hint="Sugestões construtivas para projetos futuros.") %}
+                        {{ textarea(
+                            name="pontos_melhoria",
+                            attrs={
+                                "id": "pontos_melhoria",
+                                "rows": "4",
+                                "placeholder": "O que poderia ter sido melhor...",
+                                "required": "required"
+                            }
+                        ) }}
+                    {% endcall %}
+                {% endcall %}
 
                 <div class="avaliacao-submit-area">
-                    <button type="submit" id="btnSubmitAvaliacao" class="avaliacao-submit-btn">
+                    <button type="submit" id="btnSubmitAvaliacao" class="btn-sm-primary">
                         Enviar avaliação
                     </button>
                 </div>
-            </form>
+            {% endcall %}
         </div>
-    </div>
+    </section>
 
-    <!-- Estado: sucesso após envio -->
-    <div id="stateSuccess" class="avaliacao-state d-none">
-        <div class="avaliacao-message-card avaliacao-message-card--success">
-            <div class="avaliacao-message-icon">🎉</div>
+    <section id="stateSuccess" class="avaliacao-state d-none" aria-live="polite">
+        {% call card(attrs={"class": "avaliacao-state-card"}) %}
+            <div class="avaliacao-state-card__icon avaliacao-state-card__icon--success">
+                {{ lucide_icon("party-popper", size="lg") }}
+            </div>
             <h2>Avaliação enviada com sucesso!</h2>
             <p>Muito obrigado pela sua participação. Sua avaliação é fundamental para o aprimoramento dos nossos projetos.</p>
-        </div>
-    </div>
-</div>
+        {% endcall %}
+    </section>
+</main>
 {% endblock %}

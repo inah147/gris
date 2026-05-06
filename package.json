@@ -1,0 +1,35 @@
+{
+  "name": "gris",
+  "private": true,
+  "version": "1.0.0",
+  "description": "App base para gestão complementar de Grupos Escoteiros",
+  "scripts": {
+    "design-system:sync:basecoat": "bash ./scripts/design-system/sync-basecoat-assets.sh",
+    "design-system:sync:lucide": "bash ./scripts/design-system/sync-lucide-assets.sh",
+    "design-system:sync:fonts": "bash ./scripts/design-system/sync-fonts.sh",
+    "design-system:sync:toastui-editor": "bash ./scripts/design-system/sync-toastui-editor.sh",
+    "design-system:sync": "npm run design-system:sync:basecoat && npm run design-system:sync:lucide && npm run design-system:sync:fonts && npm run design-system:sync:toastui-editor",
+    "test": "echo \"No JS tests configured\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/inah147/gris.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/inah147/gris/issues"
+  },
+  "homepage": "https://github.com/inah147/gris#readme",
+  "dependencies": {
+    "@fontsource-variable/figtree": "^5.2.10",
+    "@toast-ui/editor": "^3.2.2",
+    "basecoat-css": "^0.3.11",
+    "lucide-static": "^1.8.0"
+  },
+  "devDependencies": {
+    "basecoat-cli": "^0.3.11",
+    "esbuild": "^0.25.0"
+  }
+}

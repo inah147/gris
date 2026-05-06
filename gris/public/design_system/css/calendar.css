@@ -1,0 +1,1102 @@
+/* calendar.css — componente Calendário do design system Basecoat (tokens shadcn) */
+
+/* ==========================================================================
+   Root e estado base
+   ========================================================================== */
+
+.calendar {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	width: 100%;
+	font-size: var(--text-sm);
+	color: var(--foreground);
+	--cal-px-per-min: 0.8;
+	--cal-week-day-min-width: 80px;
+	--cal-day-cell-height: 8.25rem;
+	--cal-month-day-label-space: 1.875rem;
+	--cal-event-card-height: 1.5rem;
+	--cal-event-card-gap: 2px;
+}
+
+.calendar[hidden] {
+	display: none;
+}
+
+/* ==========================================================================
+   Toolbar
+   ========================================================================== */
+
+.calendar__toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.75rem;
+	justify-content: space-between;
+}
+
+.calendar__toolbar-group {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.calendar__period-label {
+	font-weight: var(--font-weight-semibold);
+	color: var(--foreground);
+	min-width: 10rem;
+	text-align: center;
+}
+
+/* Segmented control de modos */
+.calendar__mode-toggle {
+	display: inline-flex;
+	align-items: stretch;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: var(--card);
+	padding: 2px;
+	gap: 2px;
+}
+
+.calendar__mode-toggle-button {
+	appearance: none;
+	background: transparent;
+	border: 0;
+	padding: 0.375rem 0.75rem;
+	font-size: var(--text-sm);
+	font-weight: var(--font-weight-medium);
+	color: var(--muted-foreground);
+	border-radius: calc(var(--radius-md) - 2px);
+	cursor: pointer;
+	transition: background-color 0.15s, color 0.15s;
+}
+
+.calendar__mode-toggle-button:hover {
+	color: var(--foreground);
+	background: var(--accent);
+}
+
+.calendar__mode-toggle-button[aria-pressed="true"] {
+	background: var(--primary);
+	color: var(--primary-foreground);
+}
+
+.calendar__mode-toggle-button:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 2px;
+}
+
+/* Filtros */
+.calendar__filters {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.calendar__filters-popover {
+	position: absolute;
+	top: calc(100% + 0.25rem);
+	right: 0;
+	z-index: 50;
+	min-width: 14rem;
+	background: var(--popover, var(--card));
+	color: var(--popover-foreground, var(--foreground));
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+	padding: 0.5rem;
+	display: none;
+	flex-direction: column;
+	gap: 0.25rem;
+	max-height: 20rem;
+	overflow-y: auto;
+}
+
+.calendar__filters[data-open="true"] .calendar__filters-popover {
+	display: flex;
+}
+
+.calendar__filters-actions {
+	display: flex;
+	gap: 0.25rem;
+	padding-bottom: 0.25rem;
+	border-bottom: 1px solid var(--border);
+	margin-bottom: 0.25rem;
+}
+
+.calendar__filters-actions button {
+	flex: 1;
+	appearance: none;
+	background: transparent;
+	border: 1px solid var(--border);
+	color: var(--foreground);
+	font-size: var(--text-xs);
+	padding: 0.25rem 0.5rem;
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+}
+
+.calendar__filters-actions button:hover {
+	background: var(--accent);
+}
+
+.calendar__filter {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.25rem 0.375rem;
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+	user-select: none;
+}
+
+.calendar__filter:hover {
+	background: var(--accent);
+}
+
+.calendar__filter input {
+	accent-color: var(--primary);
+}
+
+.calendar__filter-swatch {
+	display: inline-block;
+	width: 0.75rem;
+	height: 0.75rem;
+	border-radius: 999px;
+	background: var(--cal-cat-color, var(--primary));
+	border: 1px solid color-mix(in oklch, var(--cal-cat-color, var(--primary)) 60%, var(--border));
+	flex-shrink: 0;
+}
+
+.calendar__filter-label {
+	flex: 1;
+	font-size: var(--text-sm);
+}
+
+.calendar__week-options {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	font-size: var(--text-xs);
+	color: var(--muted-foreground);
+}
+
+.calendar__week-options input {
+	accent-color: var(--primary);
+}
+
+.calendar__list-controls {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+.calendar__list-variant-toggle {
+	display: inline-flex;
+	align-items: stretch;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: var(--card);
+	padding: 2px;
+	gap: 2px;
+}
+
+.calendar__list-options {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	font-size: var(--text-xs);
+	color: var(--muted-foreground);
+}
+
+.calendar__list-options.switch {
+	gap: 0.625rem;
+}
+
+.calendar__list-options.switch > span {
+	color: var(--foreground);
+}
+
+/* ==========================================================================
+   Body / container
+   ========================================================================== */
+
+.calendar__body {
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: var(--card);
+	overflow: hidden;
+	min-height: 18rem;
+}
+
+.calendar[data-calendar-mode="list"] .calendar__body {
+	max-height: var(--cal-list-max-height, none);
+	overflow: auto;
+	overscroll-behavior: contain;
+}
+
+.calendar__empty {
+	padding: 2rem;
+	text-align: center;
+	color: var(--muted-foreground);
+}
+
+/* ==========================================================================
+   Card de evento (base, compartilhado por todos os modos)
+
+   Estilo "pill" tintada: fundo claro derivado da cor da categoria, borda e
+   texto na própria cor da categoria (mais saturada). Sem categoria, usa
+   `--primary` como fallback. As variáveis `--_color` (raw) e `--_bg` (tint
+   leve) são derivadas em runtime via `color-mix`.
+   ========================================================================== */
+
+.calendar-event-card {
+	--_color: var(--cal-cat-color, var(--primary));
+	/* Em sRGB o pastel mantém saturação melhor do que oklch para a faixa Tailwind 100-200. */
+	--_bg: color-mix(in srgb, var(--_color) 5%, white);
+	--_bg-hover: color-mix(in srgb, var(--_color) 10%, white);
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	background: var(--_bg);
+	border: 1px solid var(--_color);
+	color: var(--_color);
+	border-radius: var(--radius-md);
+	padding: 0.125rem 0.5rem;
+	font-size: var(--text-xs);
+	line-height: 1.2;
+	cursor: pointer;
+	min-width: 0;
+	transition: background-color 0.15s, box-shadow 0.15s;
+}
+
+.calendar-event-card:hover {
+	background: var(--_bg-hover);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Dark mode: o tint claro (sobre branco) fica ilegível em fundo escuro;
+   substitui por um tint escuro derivado da própria cor (mistura com preto). */
+:root.dark .calendar-event-card,
+[data-theme="dark"] .calendar-event-card {
+	--_bg: color-mix(in srgb, var(--_color) 22%, black);
+	--_bg-hover: color-mix(in srgb, var(--_color) 32%, black);
+}
+
+.calendar-event-card:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 1px;
+}
+
+.calendar-event-card__icon {
+	flex-shrink: 0;
+	width: 14px;
+	height: 14px;
+	color: var(--cal-event-icon-color, var(--_color));
+}
+
+.calendar-event-card__title {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-weight: var(--font-weight-semibold);
+	color: var(--_color);
+}
+
+.calendar-event-card__time {
+	font-size: var(--text-xs);
+	flex-shrink: 0;
+	color: var(--_color);
+	opacity: 0.85;
+	font-variant-numeric: tabular-nums;
+}
+
+/* Cards multi-dia e continuações usam o mesmo radius-md base; os modificadores
+   apenas zeram o lado da continuação para fazer a barra emendar visualmente. */
+
+.calendar-event-card--continued-left {
+	border-top-left-radius: 0;
+	border-bottom-left-radius: 0;
+}
+
+.calendar-event-card--continued-right {
+	border-top-right-radius: 0;
+	border-bottom-right-radius: 0;
+}
+
+/* ==========================================================================
+   Modo Mês
+   ========================================================================== */
+
+.calendar__month {
+	display: flex;
+	flex-direction: column;
+}
+
+/* Cabeçalho dos dias da semana — para alterar a cor de fundo, edite aqui
+   o token `background` (e o equivalente em `.calendar__week-header` abaixo). */
+.calendar__month-weekdays {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	border-bottom: 1px solid var(--border);
+	background: var(--card);
+}
+
+.calendar__month-weekday {
+	padding: 0.5rem 0.25rem;
+	text-align: center;
+	font-size: var(--text-xs);
+	font-weight: var(--font-weight-semibold);
+	color: var(--primary);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.calendar__month-grid {
+	display: flex;
+	flex-direction: column;
+}
+
+.calendar__week-row {
+	position: relative;
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	height: var(--cal-day-cell-height);
+	border-bottom: 1px solid var(--border);
+}
+
+.calendar__week-row:last-child {
+	border-bottom: none;
+}
+
+.calendar__day-cell {
+	position: relative;
+	border-right: 1px solid var(--border);
+	padding: 0.25rem 0.25rem 0;
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	background: color-mix(in oklch, var(--muted) 16%, var(--card));
+}
+
+.calendar__day-cell:last-child {
+	border-right: none;
+}
+
+.calendar__day-cell--other-month {
+	background: color-mix(in oklch, var(--muted) 50%, var(--card));
+	color: var(--muted-foreground);
+}
+
+.calendar__day-cell--weekend {
+	background: var(--card);
+}
+
+/* Dia atual: o destaque vem APENAS no `.calendar__day-number` abaixo;
+   o fundo da célula permanece igual aos demais (semana/fim de semana). */
+
+.calendar__day-number {
+	font-size: var(--text-xs);
+	font-weight: var(--font-weight-semibold);
+	color: var(--foreground);
+	padding: 0.125rem 0.25rem;
+	align-self: flex-start;
+	line-height: 1;
+	position: relative;
+	z-index: 1;
+}
+
+.calendar__day-cell--today .calendar__day-number {
+	background: var(--primary);
+	color: var(--primary-foreground);
+	border-radius: 999px;
+	width: 1.5rem;
+	height: 1.5rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+}
+
+.calendar__day-cell--other-month .calendar__day-number {
+	color: var(--muted-foreground);
+}
+
+.calendar__day-events {
+	display: flex;
+	flex-direction: column;
+	gap: var(--cal-event-card-gap);
+	margin-top: 0.25rem;
+	padding-bottom: 0.25rem;
+	overflow: hidden;
+}
+
+.calendar__day-events .calendar-event-card {
+	height: var(--cal-event-card-height);
+	flex-shrink: 0;
+}
+
+/* Botão "+N" — aparece quando há mais eventos do que cabem na célula.
+   Clicar abre um popover com a lista completa daquele dia. */
+.calendar__more-indicator {
+	position: absolute;
+	bottom: 0.125rem;
+	left: 0.25rem;
+	right: 0.25rem;
+	font-size: var(--text-xs);
+	color: var(--muted-foreground);
+	font-weight: var(--font-weight-medium);
+	background: transparent;
+	border: 0;
+	cursor: pointer;
+	padding: 2px 6px;
+	border-radius: var(--radius-sm);
+	text-align: left;
+	z-index: 2;
+}
+
+.calendar__more-indicator:hover,
+.calendar__more-indicator:focus-visible {
+	color: var(--foreground);
+	outline: none;
+}
+
+.calendar__more-popover {
+	position: absolute;
+	top: 100%;
+	left: 0.25rem;
+	right: auto;
+	z-index: 50;
+	display: none;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 13rem;
+	max-width: 18rem;
+	padding: 0.5rem;
+	background: var(--popover, var(--card));
+	color: var(--popover-foreground, var(--foreground));
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.calendar__day-cell[data-more-popover-open="true"] .calendar__more-popover {
+	display: flex;
+}
+
+.calendar__more-popover-day {
+	font-size: var(--text-xs);
+	color: var(--muted-foreground);
+	font-weight: var(--font-weight-semibold);
+	margin-bottom: 0.25rem;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+/* Barras multi-dia: posicionadas absolutamente sobre a semana.
+   `overflow: hidden` clipa lanes que excedem a altura fixa da semana. */
+.calendar__multi-day-layer {
+	position: absolute;
+	inset: var(--cal-month-day-label-space) 0 0;
+	pointer-events: none;
+	padding: 0;
+	overflow: hidden;
+}
+
+.calendar__multi-day-layer .calendar-event-card {
+	position: absolute;
+	pointer-events: auto;
+	height: var(--cal-event-card-height);
+}
+
+/* ==========================================================================
+   Modo Semana
+   ========================================================================== */
+
+.calendar__week {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.calendar__week-scroll {
+	overflow-x: auto;
+}
+
+/* Cabeçalho dos dias na visão semanal — mesmo background do `.calendar__month-weekdays`. */
+.calendar__week-header {
+	display: grid;
+	grid-template-columns: 4rem repeat(7, minmax(var(--cal-week-day-min-width), 1fr));
+	border-bottom: 1px solid var(--border);
+	background: var(--card);
+}
+
+.calendar__week-header--no-axis {
+	grid-template-columns: repeat(7, minmax(var(--cal-week-day-min-width), 1fr));
+}
+
+.calendar__week-axis-spacer {
+	border-right: 1px solid var(--border);
+}
+
+.calendar__week-day-header {
+	padding: 0.5rem 0.375rem;
+	text-align: center;
+	border-right: 1px solid var(--border);
+	font-size: var(--text-xs);
+	color: var(--primary);
+	font-weight: var(--font-weight-semibold);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	align-items: center;
+}
+
+.calendar__week-day-header--weekday {
+	background: color-mix(in oklch, var(--muted) 16%, var(--card));
+}
+
+.calendar__week-day-header--weekend {
+	background: var(--card);
+}
+
+.calendar__week-day-header:last-child {
+	border-right: none;
+}
+
+.calendar__week-day-name {
+	font-weight: var(--font-weight-semibold);
+}
+
+.calendar__week-day-number {
+	font-size: var(--text-base, 1rem);
+	color: var(--foreground);
+	font-weight: var(--font-weight-bold);
+	width: 1.75rem;
+	height: 1.75rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
+}
+
+.calendar__week-day-header--today .calendar__week-day-number {
+	background: var(--primary);
+	color: var(--primary-foreground);
+	border-radius: 999px;
+}
+
+/* Faixa all-day */
+.calendar__week-allday {
+	display: grid;
+	grid-template-columns: 4rem minmax(0, 1fr);
+	border-bottom: 1px solid var(--border);
+	background: var(--card);
+}
+
+.calendar__week-allday--no-axis {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.calendar__week-allday-label {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: var(--cal-week-span-height, calc(var(--cal-event-card-height) + 0.5rem));
+	font-size: var(--text-xs);
+	color: var(--muted-foreground);
+	border-right: 1px solid var(--border);
+}
+
+
+.calendar__week-allday-content {
+	position: relative;
+	min-width: 0;
+}
+
+.calendar__week-allday-cells {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(var(--cal-week-day-min-width), 1fr));
+	min-height: var(--cal-week-span-height, calc(var(--cal-event-card-height) + 0.5rem));
+}
+
+.calendar__week-allday-cell {
+	border-right: 1px solid var(--border);
+	min-width: 0;
+}
+
+.calendar__week-allday-cell--weekday {
+	background: color-mix(in oklch, var(--muted) 16%, var(--card));
+}
+
+.calendar__week-allday-cell--weekend {
+	background: var(--card);
+}
+
+.calendar__week-allday-cell:last-child {
+	border-right: none;
+}
+
+.calendar__week-allday-events {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	padding: 0.25rem 0;
+}
+
+.calendar__week-allday-events .calendar-event-card {
+	position: absolute;
+	pointer-events: auto;
+	height: var(--cal-event-card-height);
+}
+
+/* Grid com horários */
+.calendar__week-grid {
+	display: grid;
+	grid-template-columns: 4rem repeat(7, minmax(var(--cal-week-day-min-width), 1fr));
+	position: relative;
+}
+
+.calendar__week-hours {
+	display: flex;
+	flex-direction: column;
+	border-right: 1px solid var(--border);
+}
+
+.calendar__week-hour {
+	height: calc(60 * var(--cal-px-per-min) * 1px);
+	font-size: var(--text-xs);
+	color: var(--muted-foreground);
+	padding: 0.125rem 0.375rem;
+	text-align: right;
+	border-bottom: 1px dashed color-mix(in oklch, var(--border) 70%, transparent);
+}
+
+.calendar__week-day-column {
+	position: relative;
+	border-right: 1px solid var(--border);
+	background: var(--card);
+}
+
+.calendar__week-day-column--weekday,
+.calendar__week-stacked-cell--weekday {
+	background: color-mix(in oklch, var(--muted) 16%, var(--card));
+}
+
+.calendar__week-day-column--weekend,
+.calendar__week-stacked-cell--weekend {
+	background: var(--card);
+}
+
+.calendar__week-day-column:last-child {
+	border-right: none;
+}
+
+/* Hoje: fundo da coluna permanece igual; o destaque é só no número do header. */
+
+.calendar__week-hour-line {
+	position: absolute;
+	left: 0;
+	right: 0;
+	border-top: 1px dashed color-mix(in oklch, var(--border) 70%, transparent);
+	pointer-events: none;
+}
+
+.calendar__week-day-column .calendar-event-card {
+	position: absolute;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 0;
+	padding: 0.25rem 0.375rem;
+	overflow: hidden;
+	z-index: 1;
+	/* Herda border-radius: var(--radius-md) do `.calendar-event-card` base. */
+}
+
+.calendar__week-day-column .calendar-event-card__title {
+	white-space: normal;
+	font-size: var(--text-xs);
+}
+
+.calendar__week-day-column .calendar-event-card__time {
+	font-size: 0.6875rem;
+}
+
+/* Modo semana sem horários (lista vertical por dia) */
+.calendar__week--no-hours .calendar__week-stacked {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(var(--cal-week-day-min-width), 1fr));
+	min-height: 14rem;
+}
+
+.calendar__week-stacked-cell {
+	border-right: 1px solid var(--border);
+	padding: 0.5rem 0.375rem;
+	display: flex;
+	flex-direction: column;
+	gap: var(--cal-event-card-gap);
+	min-width: 0;
+}
+
+.calendar__week-stacked-cell:last-child {
+	border-right: none;
+}
+
+/* Hoje: fundo da célula permanece igual; o destaque é só no número do header. */
+
+/* ==========================================================================
+   Modo Lista
+   ========================================================================== */
+
+.calendar__list {
+	display: flex;
+	flex-direction: column;
+}
+
+.calendar__list--by-category {
+	gap: 1rem;
+}
+
+.calendar__list-month {
+	display: flex;
+	flex-direction: column;
+}
+
+.calendar__list-month-header {
+	padding: 0.625rem 1rem;
+	background: var(--card);
+	color: var(--primary);
+	font-weight: var(--font-weight-bold);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	font-size: var(--text-xs);
+	border-bottom: 1px solid var(--border);
+}
+
+.calendar__list-day {
+	display: grid;
+	grid-template-columns: 5rem 1fr;
+	gap: 1rem;
+	padding: 0.75rem 1rem;
+	border-bottom: 1px solid var(--border);
+	align-items: start;
+}
+
+.calendar__list-day--weekday {
+	background: var(--card);
+}
+
+.calendar__list-day--weekend {
+	background: color-mix(in oklch, var(--muted) 34%, var(--card));
+}
+
+.calendar__list-day:last-child {
+	border-bottom: none;
+}
+
+.calendar__list-date {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.125rem;
+	color: var(--muted-foreground);
+	font-size: var(--text-xs);
+	text-transform: uppercase;
+}
+
+.calendar__list-date-number {
+	font-size: 1.5rem;
+	font-weight: var(--font-weight-bold);
+	color: var(--foreground);
+	line-height: 1;
+}
+
+.calendar__list-date-weekday {
+	font-weight: var(--font-weight-medium);
+}
+
+.calendar__list-day--today .calendar__list-date-number {
+	background: var(--primary);
+	color: var(--primary-foreground);
+	border-radius: 999px;
+	width: 2.25rem;
+	height: 2.25rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.calendar__list-events {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+}
+
+.calendar__list-empty-cell {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 2.5rem;
+	padding: 0.75rem;
+	border: 1px dashed color-mix(in oklch, var(--border) 82%, transparent);
+	border-radius: var(--radius-md);
+	color: var(--muted-foreground);
+	font-size: var(--text-xs);
+	text-align: center;
+	background: color-mix(in oklch, var(--muted) 30%, var(--card));
+}
+
+.calendar__list-event {
+	--_color: var(--cal-cat-color, var(--primary));
+	--_bg: color-mix(in srgb, var(--_color) 5%, white);
+	--_bg-hover: color-mix(in srgb, var(--_color) 10%, white);
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	padding: 0.5rem 0.75rem;
+	background: var(--_bg);
+	border: 1px solid var(--_color);
+	border-radius: var(--radius-md);
+	cursor: pointer;
+	transition: background 0.15s, box-shadow 0.15s;
+}
+
+.calendar__list-event:hover {
+	background: var(--_bg-hover);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+:root.dark .calendar__list-event,
+[data-theme="dark"] .calendar__list-event {
+	--_bg: color-mix(in srgb, var(--_color) 22%, black);
+	--_bg-hover: color-mix(in srgb, var(--_color) 32%, black);
+}
+
+.calendar__list-event:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 1px;
+}
+
+.calendar__list-event-title {
+	font-weight: var(--font-weight-semibold);
+	color: var(--_color);
+	font-size: var(--text-sm);
+}
+
+.calendar__list-event-time {
+	font-size: var(--text-xs);
+	color: var(--_color);
+	opacity: 0.85;
+}
+
+.calendar__list-category-header-row,
+.calendar__list-category-row {
+	display: grid;
+	grid-template-columns: minmax(4.5rem, 5.5rem) repeat(var(--cal-list-category-count, 1), minmax(0, 1fr));
+}
+
+.calendar__list-category-header-row {
+	border-bottom: 1px solid var(--border);
+	background: var(--card);
+}
+
+.calendar__list-category-head-spacer,
+.calendar__list-category-header,
+.calendar__list-category-cell {
+	padding: 0.75rem;
+	min-width: 0;
+	border-left: 1px solid var(--border);
+}
+
+.calendar__list-category-head-spacer {
+	border-left: none;
+	font-size: var(--text-xs);
+	font-weight: var(--font-weight-semibold);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--muted-foreground);
+	display: flex;
+	align-items: center;
+}
+
+.calendar__list-category-header {
+	font-size: var(--text-xs);
+	font-weight: var(--font-weight-semibold);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--cal-cat-color, var(--primary));
+	background: var(--card);
+	display: flex;
+	align-items: center;
+}
+
+.calendar__list-category-row {
+	border-bottom: 1px solid var(--border);
+	align-items: stretch;
+	background: var(--card);
+}
+
+.calendar__list-category-row--weekday {
+	background: var(--card);
+}
+
+.calendar__list-category-row--weekend {
+	background: color-mix(in oklch, var(--muted) 34%, var(--card));
+}
+
+.calendar__list-category-row:last-child {
+	border-bottom: none;
+}
+
+.calendar__list-category-row--today .calendar__list-date-number {
+	background: var(--primary);
+	color: var(--primary-foreground);
+	border-radius: 999px;
+	width: 2.25rem;
+	height: 2.25rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding-inline: 0;
+}
+
+.calendar__list-category-row .calendar__list-date {
+	justify-content: center;
+	border-left: none;
+	padding: 0.75rem;
+	background: transparent;
+}
+
+.calendar__list-category-cell {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	background: transparent;
+}
+
+/* ==========================================================================
+   Skeleton (mostrado antes do JS inicializar)
+   ========================================================================== */
+
+.calendar__skeleton {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 1px;
+	background: var(--border);
+	min-height: 24rem;
+}
+
+.calendar__skeleton-cell {
+	background: var(--card);
+}
+
+.calendar[data-calendar-initialized] .calendar__skeleton {
+	display: none;
+}
+
+/* ==========================================================================
+   Responsivo
+   ========================================================================== */
+
+@media (max-width: 640px) {
+	.calendar {
+		--cal-day-cell-height: 6.75rem;
+		--cal-week-day-min-width: 80px;
+		--cal-px-per-min: 1.6;
+	}
+
+	.calendar__period-label {
+		min-width: 8rem;
+		font-size: var(--text-sm);
+	}
+
+	.calendar__month-grid,
+	.calendar__month-weekdays,
+	.calendar__week-header,
+	.calendar__week-allday,
+	.calendar__week-grid,
+	.calendar__week-stacked {
+		min-width: 560px;
+	}
+
+	.calendar__month-grid-scroll,
+	.calendar__week-scroll {
+		overflow-x: auto;
+	}
+
+	.calendar__list-day {
+		grid-template-columns: 4rem 1fr;
+	}
+
+	.calendar__list-controls {
+		width: 100%;
+	}
+
+	.calendar__list-variant-toggle {
+		width: 100%;
+	}
+
+	.calendar__list-options {
+		justify-content: space-between;
+		width: 100%;
+	}
+
+	.calendar__list-variant-toggle .calendar__mode-toggle-button {
+		flex: 1 1 0;
+	}
+
+	.calendar__list-category-header-row {
+		display: none;
+	}
+
+	.calendar__list-category-row {
+		grid-template-columns: 1fr;
+	}
+
+	.calendar__list-category-row .calendar__list-date {
+		border-bottom: 1px solid var(--border);
+	}
+
+	.calendar__list-category-cell {
+		border-left: none;
+		border-top: 1px solid var(--border);
+	}
+
+	.calendar__list-category-cell::before {
+		content: attr(data-category-label);
+		font-size: var(--text-xs);
+		font-weight: var(--font-weight-semibold);
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--cal-cat-color, var(--primary));
+		margin-bottom: 0.5rem;
+	}
+}
+
+/* Print: simplifica layout */
+@media print {
+	.calendar__toolbar,
+	.calendar__filters {
+		display: none;
+	}
+
+	.calendar__body {
+		border: 1px solid #ccc;
+		box-shadow: none;
+	}
+
+	.calendar-event-card {
+		background: #f5f5f5 !important;
+		border: 1px solid #aaa !important;
+		print-color-adjust: exact;
+		-webkit-print-color-adjust: exact;
+	}
+}

@@ -1,87 +1,115 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import table, field, empty, spinner %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
 
 {% block title %}Respostas da Pesquisa{% endblock %}
 
+{% block head_include %}
+  {{ super() }}
+  <link rel="stylesheet" href="/recepcao/pesquisa_novos_respostas.css" />
+{% endblock %}
+
 {% block page_header %}
-  <div class="page-header">
-    <div class="page-header__content">
-      <h1 class="page-header__title">Respostas da Pesquisa</h1>
-      <p class="page-header__subtitle">Acompanhe a satisfação dos novos associados</p>
+  <div class="page-header-row mb-6">
+    <div>
+      <h1 class="text-3xl font-bold tracking-tight">Respostas da Pesquisa</h1>
+      <p class="text-muted-foreground">Acompanhe a satisfação dos novos associados.</p>
     </div>
   </div>
 {% endblock %}
 
 {% block main %}
-  <div class="card-modern mb-4">
-    <div class="card-modern__header d-flex justify-content-between align-items-center">
-        <h3 class="card-modern__title">Evolução do NPS</h3>
-        <div class="d-flex gap-2" role="group">
-            <button type="button" class="btn-modern btn-modern--sm btn-modern--primary" id="btn-period-monthly">Mensal</button>
-            <button type="button" class="btn-modern btn-modern--sm btn-modern--outline" id="btn-period-weekly">Semanal</button>
-        </div>
-    </div>
-    <div class="card-modern__body">
-        <div id="nps-chart"></div>
-    </div>
-  </div>
-
-  <div class="card-modern mb-4">
-    <div class="card-modern__body card-modern__body--compact">
-        <div class="filter-bar mb-0">
-             <div class="filter-field" style="width:100%">
-                <label class="form-label-modern">Buscar</label>
-                <input type="text" class="form-input-modern form-input-modern--sm" id="f-search" placeholder="Buscar por responsável...">
-             </div>
-        </div>
-    </div>
-  </div>
-
-  <div class="card-modern">
-    <div class="table-responsive">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Responsável</th>
-            <th>Data</th>
-            <th>NPS</th>
-            <th style="width: 100px;">Ações</th>
-          </tr>
-        </thead>
-        <tbody id="survey-list">
-            <tr>
-                <td colspan="4" class="text-center text-muted p-4">Carregando...</td>
-            </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Modal -->
-  <div class="modal-backdrop" id="detail-modal-backdrop" style="display: none;"></div>
-  <div class="modal-modern" id="detail-modal" tabindex="-1" style="display: none;">
-      <div class="modal-dialog modal-lg modal-dialog-scrollable w-100" style="max-width: 800px;">
-        <div class="modal-modern__content">
-          <div class="modal-modern__header">
-            <h5 class="modal-modern__title">Detalhes da Resposta</h5>
-            <button type="button" class="btn-close" data-modal-close>×</button>
-          </div>
-          <div class="modal-modern__body" id="modal-body-content">
-             <!-- Content -->
-          </div>
-          <div class="modal-modern__footer">
-            <button type="button" class="btn-modern btn-modern--ghost btn-modern--sm" data-modal-close>Fechar</button>
-          </div>
-        </div>
+  <article class="card mb-4 survey-chart-card">
+    <header class="survey-chart-card__header">
+      <div>
+        <h2>Evolução do NPS</h2>
+        <p>Variação do NPS da recepção nos últimos 6 meses.</p>
       </div>
-  </div>
-{% endblock %}
+      <div
+        class="survey-period"
+        role="tablist"
+        aria-label="Selecionar período do gráfico"
+        data-period-tabs
+      >
+        <button
+          type="button"
+          role="tab"
+          class="survey-period__btn"
+          data-period="monthly"
+          aria-selected="true"
+        >
+          Mensal
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="survey-period__btn"
+          data-period="weekly"
+          aria-selected="false"
+        >
+          Semanal
+        </button>
+      </div>
+    </header>
+    <section class="survey-chart-card__body">
+      <div id="nps-chart" class="survey-chart" aria-label="Gráfico de evolução do NPS"></div>
+      <div id="nps-chart-empty" class="survey-chart__empty" hidden>
+        {% call empty(
+          title="Sem dados no período",
+          description="Não há respostas registradas para o período selecionado.",
+          icon=lucide_icon("chart-line", size="md")
+        ) %}{% endcall %}
+      </div>
+    </section>
+  </article>
 
-{% block head_include %}
-  {{ super() }}
-  <link rel="stylesheet" href="/assets/frappe/node_modules/frappe-charts/dist/frappe-charts.min.css">
-  <script src="/assets/frappe/node_modules/frappe-charts/dist/frappe-charts.umd.js"></script>
-  <link rel="stylesheet" href="/recepcao/pesquisa_novos_respostas.css">
+  <article class="card mb-4">
+    <section class="survey-filters">
+      {% call field(label="Buscar") %}
+        <input
+          id="f-search"
+          type="search"
+          class="input"
+          placeholder="Buscar por responsável…"
+          autocomplete="off"
+        />
+      {% endcall %}
+    </section>
+  </article>
+
+  <article class="card">
+    <section class="survey-table-wrap">
+      {{ table(
+        headers=[
+          'Responsável',
+          'Data',
+          'NPS',
+          '<span class="sr-only">Ações</span>'
+        ],
+        rows=[],
+        sort_skip=[3],
+        attrs={"id": "surveyTable"}
+      ) }}
+    </section>
+  </article>
+
+  {% call dialog(
+    id="surveyDetailDialog",
+    title="Detalhes da resposta",
+    description="Resumo das informações enviadas pelo responsável.",
+    footer='<button type="button" class="btn-ghost" data-dialog-close>Fechar</button>',
+    close_button=true
+  ) %}
+    <div id="survey-detail-body" class="survey-detail">
+      <div class="survey-detail__loading">
+        {{ spinner() }}
+        <span>Carregando detalhes…</span>
+      </div>
+    </div>
+  {% endcall %}
 {% endblock %}
 
 {% block extra_script %}
+  <script src="/recepcao/pesquisa_novos_respostas.js"></script>
 {% endblock %}

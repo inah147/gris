@@ -1,118 +1,145 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, empty, field %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
 
 {% block title %}Contribuições Mensais{% endblock %}
 
 {% set active_link = '/financeiro/contribuicoes' %}
 
 {% block page_header %}
-  <div class="page-header">
-    <div class="page-header__content">
-      <h1 class="page-header__title">Contribuições Mensais</h1>
-      <p class="page-header__subtitle">Acompanhe o status das contribuições dos associados.</p>
-    </div>
-    <div class="page-header__actions">
-      <input type="text" id="filtroAssociado" class="form-input-modern form-input-modern--sm" style="max-width:320px;" placeholder="Filtrar por nome..." oninput="aplicarFiltroAssociado()" />
-    </div>
-  </div>
+<section class="financeiro-page-header" aria-labelledby="financeiro-contrib-title">
+	<div class="flex flex-col gap-2 max-w-2xl">
+		<h1 id="financeiro-contrib-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Contribuições Mensais</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">Acompanhe o status das contribuições dos associados.</p>
+	</div>
+</section>
 {% endblock %}
 
 {% block main %}
-  {% set ordem = ["Cadastrar","Cancelar","Aguardar","Atrasado","Em Aberto","Pago"] %}
-  <script>
-    window.canManageContrib = JSON.parse('{{ can_manage_contributions | tojson }}');
-  </script>
-  <div class="contribuicoes-wrapper">
-    {% for status in ordem %}
-      {% set lista = (contribuicoes.get(status) or []) if contribuicoes else [] %}
-      {% if lista|length > 0 %}
-        {% set status_id = 'status-' + (status | replace(' ', '-') | lower) %}
-        <div class="status-bloco mb-5" id="{{ status_id }}" data-status="{{ status }}">
-          <h2 class="h5 mb-3 fw-semibold">{{ status }} <small class="text-muted">({{ lista|length }})</small></h2>
-          <div class="row gx-3 gy-4 assoc-list" data-total="{{ lista|length }}">
-            {% for assoc in lista %}
-              {% set page = (loop.index0 // 12) + 1 %}
-              <div class="col-12 col-sm-6 col-md-4 col-lg-3 assoc-card-col" data-page="{{ page }}">
-                <div class="card-modern" style="height: 100%;">
-                  <div class="card-modern__body d-flex flex-column" style="min-height: 100px;">
-                    <strong class="d-block mb-3" style="overflow-wrap: break-word; word-break: break-word; white-space: normal; line-height: 1.4;" title="{{ assoc.nome }}">{{ assoc.nome }}</strong>
-                    <div class="mt-auto">
-                      <button class="btn-modern btn-modern--outline btn-modern--sm"
-                        data-assoc='{{ assoc | tojson }}'
-                        onclick="mostrarDetalhes(this)">Detalhes</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            {% endfor %}
-          </div>
-          <div class="status-pagination mt-3" data-status-pag="{{ status }}"></div>
-        </div>
-      {% endif %}
-    {% endfor %}
-  </div>
-  <div id="detalheModal" class="modal-modern" style="display: none;">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-      <div class="modal-modern__content">
-        <div class="modal-modern__header">
-          <div class="d-flex align-items-center justify-content-between w-100">
-            <h5 class="modal-modern__title" id="detalheTitulo"></h5>
-            {% if can_manage_contributions %}
-            <div id="cancelarContainer" class="d-none">
-              <button id="btnCadastroCancelado" class="btn-modern btn-modern--danger btn-modern--sm" onclick="cadastroCancelado()">Cadastro Cancelado</button>
-            </div>
-            {% endif %}
-          </div>
-        </div>
-        <div class="modal-modern__body">
-          <div class="d-flex align-items-center justify-content-between mb-3 w-100">
-            <div class="me-3 flex-grow-1" id="valorContainer">
-              <strong>Valor Atual:</strong> R$ <span id="detalheValor"></span>
-            </div>
-            <!-- <span id="detalheStatus" class="badge bg-secondary"></span> -->
-            <div class="ms-auto ml-auto text-end">
-              <div id="acoesValor">
-                {% if can_manage_contributions %}
-                <button id="btnAlterarValor" class="btn-modern btn-modern--outline btn-modern--sm" onclick="alterarValor()">Alterar Valor</button>
-                {% endif %}
-              </div>
-            </div>
-          </div>
-          {% if can_manage_contributions %}
-          <div id="cobrancaContainer" class="mb-3" data-manage-only="1">
-            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-              <div class="flex-grow-1">
-                <div><strong>E-mail Cobrança:</strong> <span id="emailCobranca"></span></div>
-                <div><strong>Telefone Cobrança:</strong> <span id="foneCobranca"></span></div>
-              </div>
-              <div id="acoesCobranca">
-                <button id="btnEditarCobranca" class="btn-modern btn-modern--outline btn-modern--sm" onclick="editarCobranca()">Editar Cobrança</button>
-              </div>
-            </div>
-          </div>
-          {% endif %}
-          <div id="cadastroContainer" class="mb-3 d-none" data-manage-only="1">
-            {% if can_manage_contributions %}
-            <button id="btnCadastroRealizado" class="btn-modern btn-modern--success" onclick="cadastroRealizado()">Cadastro Realizado</button>
-            {% endif %}
-          </div>
-          <div id="tabelaPagamentosContainer" class="table-responsive">
-            <table class="table table-sm align-middle">
-              <thead>
-                <tr>
-                  <th>Mês Referência</th>
-                  <th>Status</th>
-                  <th class="text-end">Valor</th>
-                </tr>
-              </thead>
-              <tbody id="detalhePagamentos"></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="modal-modern__footer">
-          <button type="button" class="btn-modern btn-modern--ghost" onclick="fecharDetalhes()">Fechar</button>
-        </div>
-      </div>
-    </div>
-  </div>
+<script>
+	window.canManageContrib = JSON.parse('{{ can_manage_contributions | tojson }}');
+</script>
+
+<article class="card mb-4">
+	<section>
+		<div class="field">
+			<label class="label" for="filtroAssociado">Filtrar por nome</label>
+			<input type="search" id="filtroAssociado" class="input" placeholder="Digite o nome do beneficiário…" oninput="aplicarFiltroAssociado()" />
+		</div>
+	</section>
+</article>
+
+{% set ordem = ["Cadastrar", "Cancelar", "Aguardar", "Atrasado", "Em Aberto", "Pago"] %}
+{% set has_any = namespace(value=false) %}
+{% for status in ordem %}
+	{% set lista = (contribuicoes.get(status) or []) if contribuicoes else [] %}
+	{% if lista|length > 0 %}
+		{% set has_any.value = true %}
+		{% set status_id = 'status-' + (status | replace(' ', '-') | lower) %}
+		<section class="contrib-status-bloco" id="{{ status_id }}" data-status="{{ status }}">
+			<header class="flex items-baseline gap-2 mb-3">
+				<h2 class="financeiro-section-title m-0">{{ status }}</h2>
+				<span class="text-sm text-muted-foreground" data-status-count>({{ lista|length }})</span>
+			</header>
+			<article class="card">
+				<section class="p-0">
+					<div class="overflow-x-auto">
+						<table class="table contrib-status-list" data-total="{{ lista|length }}">
+							<thead>
+								<tr>
+									<th>Beneficiário</th>
+									<th class="text-right">Valor da cobrança</th>
+									<th class="text-right">Ações</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for assoc in lista %}
+									{% set page = (loop.index0 // 12) + 1 %}
+									<tr class="contrib-status-row" data-page="{{ page }}" data-nome="{{ assoc.nome }}" data-assoc='{{ assoc | tojson }}'>
+										<td class="font-medium">{{ assoc.nome }}</td>
+										<td class="text-right whitespace-nowrap">R$ {{ '{:,.2f}'.format((assoc.valor_contribuicao or 0)|float).replace(',', 'X').replace('.', ',').replace('X', '.') }}</td>
+										<td class="text-right">
+											<button type="button" class="btn-sm-outline" onclick="mostrarDetalhes(this)">Detalhes</button>
+										</td>
+									</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+					</div>
+				</section>
+			</article>
+			<nav class="contrib-status-pagination pagination mt-3" data-status-pag="{{ status }}" aria-label="Paginação de {{ status }}"></nav>
+		</section>
+	{% endif %}
+{% endfor %}
+
+{% if not has_any.value %}
+	{{ empty(
+		title="Nenhuma contribuição registrada",
+		description="Quando houver associados com cobranças, eles aparecerão agrupados aqui por status.",
+		icon=lucide_icon("inbox", size="md")
+	) }}
+{% endif %}
 {% endblock %}
 
+{% block base_scripts %}
+{{ super() }}
+
+{% set detalhe_footer %}
+<button type="button" class="btn-ghost" onclick="this.closest('dialog').close()">Fechar</button>
+{% endset %}
+
+{% call dialog(id="detalheModal", title="Detalhes do beneficiário", footer=detalhe_footer, dialog_attrs={"class": "financeiro-dialog financeiro-dialog--lg"}) %}
+	{% if can_manage_contributions %}
+	<div id="cancelarContainer" class="hidden mb-4" data-manage-only="1">
+		<button type="button" id="btnCadastroCancelado" class="btn-sm-destructive" onclick="cadastroCancelado()">Cadastro Cancelado</button>
+	</div>
+	{% endif %}
+
+	<div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+		<div id="valorContainer" class="flex-1 min-w-0">
+			<strong class="text-sm">Valor atual:</strong>
+			<span class="text-sm">R$ <span id="detalheValor">—</span></span>
+		</div>
+		<div id="acoesValor">
+			{% if can_manage_contributions %}
+			<button type="button" id="btnAlterarValor" class="btn-sm-outline" onclick="alterarValor()">Alterar Valor</button>
+			{% endif %}
+		</div>
+	</div>
+
+	{% if can_manage_contributions %}
+	<div id="cobrancaContainer" class="mb-4" data-manage-only="1">
+		<div class="flex items-start justify-between gap-3 flex-wrap">
+			<div class="flex-1 min-w-0 flex flex-col gap-1">
+				<div class="text-sm"><strong>E-mail Cobrança:</strong> <span id="emailCobranca">—</span></div>
+				<div class="text-sm"><strong>Telefone Cobrança:</strong> <span id="foneCobranca">—</span></div>
+			</div>
+			<div id="acoesCobranca">
+				<button type="button" id="btnEditarCobranca" class="btn-sm-outline" onclick="editarCobranca()">Editar Cobrança</button>
+			</div>
+		</div>
+	</div>
+	{% endif %}
+
+	<div id="cadastroContainer" class="hidden mb-4" data-manage-only="1">
+		{% if can_manage_contributions %}
+		<button type="button" id="btnCadastroRealizado" class="btn-primary btn-sm" onclick="cadastroRealizado()">Cadastro Realizado</button>
+		{% endif %}
+	</div>
+
+	<div id="tabelaPagamentosContainer" class="overflow-x-auto">
+		<table class="table contrib-pagamentos-tabela">
+			<thead>
+				<tr>
+					<th>Mês Referência</th>
+					<th>Status</th>
+					<th class="text-right">Valor</th>
+				</tr>
+			</thead>
+			<tbody id="detalhePagamentos"></tbody>
+		</table>
+	</div>
+{% endcall %}
+{% endblock %}

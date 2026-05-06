@@ -16,6 +16,16 @@ from gris.gestão_de_adultos.doctype.entrevista_por_competencias.entrevista_por_
 
 INTERVIEW_DTYPE = "Entrevista por Competencias"
 GESTOR_ROLE = "Gestor de Adultos"
+ALERT_CATEGORY_DEFINITIONS = [
+	{"key": "alerta_geral", "label": "Alerta Geral"},
+	{"key": "pontuacao_dirigente_administrativo_financeiro", "label": "Dirigente Adm. Financeiro"},
+	{"key": "pontuacao_dirigente_gestao_institucional", "label": "Dir. Gestão Institucional"},
+	{"key": "pontuacao_dirigente_metodos_educativos", "label": "Dir. Métodos Educativos"},
+	{"key": "pontuacao_ramo_lobinho", "label": "Ramo Lobinho"},
+	{"key": "pontuacao_ramo_escoteiro", "label": "Ramo Escoteiro"},
+	{"key": "pontuacao_ramo_senior", "label": "Ramo Sênior"},
+	{"key": "pontuacao_ramo_pioneiro", "label": "Ramo Pioneiro"},
+]
 
 QUESTION_SECTIONS = [
 	{
@@ -152,11 +162,14 @@ def _build_form_config():
 	for section in QUESTION_SECTIONS:
 		section_fields = []
 		for fieldname in section["fields"]:
+			options = options_by_field.get(fieldname, [])
 			section_fields.append(
 				{
 					"fieldname": fieldname,
 					"label": questions_by_field.get(fieldname),
-					"options": options_by_field.get(fieldname, []),
+					"options": options,
+					"items": [{"label": "Selecione", "value": ""}]
+					+ [{"label": option, "value": option} for option in options],
 					"observation_fieldname": f"obs_{fieldname}",
 				}
 			)
@@ -164,6 +177,8 @@ def _build_form_config():
 
 	return {
 		"motivos_entrevista": MOTIVOS_ENTREVISTA,
+		"motivos_entrevista_items": [{"label": "Selecione", "value": ""}]
+		+ [{"label": motivo, "value": motivo} for motivo in MOTIVOS_ENTREVISTA],
 		"sections": sections,
 		"alert_rules": [
 			{
@@ -183,6 +198,11 @@ def _build_form_config():
 			"pontuacao_ramo_pioneiro",
 		],
 	}
+
+
+def build_entrevista_payload(name: str) -> dict:
+	doc = frappe.get_doc(INTERVIEW_DTYPE, name)
+	return {"config": _build_form_config(), "entrevista": _serialize_entrevista(doc)}
 
 
 def _serialize_entrevista(doc):
@@ -208,6 +228,8 @@ def _serialize_entrevista(doc):
 		"observacoes",
 	]
 	data = {field: doc.get(field) for field in base_fields + question_fields + obs_fields}
+	if data.get("data_da_ultima_atualizacao") is not None:
+		data["data_da_ultima_atualizacao"] = str(data["data_da_ultima_atualizacao"])
 	data["associado_nome"] = (
 		frappe.db.get_value("Associado", doc.get("associado"), "nome_completo")
 		if doc.get("associado")
@@ -324,8 +346,7 @@ def obter_formulario_entrevista(name: str):
 	_require_gestor_adultos()
 	if not name:
 		frappe.throw(_("Informe o nome da entrevista."))
-	doc = frappe.get_doc(INTERVIEW_DTYPE, name)
-	return {"config": _build_form_config(), "entrevista": _serialize_entrevista(doc)}
+	return build_entrevista_payload(name)
 
 
 @frappe.whitelist()

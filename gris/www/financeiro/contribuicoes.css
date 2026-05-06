@@ -2,6 +2,10 @@
 	margin-bottom: 2rem;
 }
 
+.contrib-status-bloco .card > section {
+	min-width: 0;
+}
+
 .contrib-status-list tbody > tr.contrib-status-row.hidden-by-page,
 .contrib-status-list tbody > tr.contrib-status-row.filter-hidden {
 	display: none;

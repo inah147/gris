@@ -1,8 +1,32 @@
 {% extends "frappe/templates/base.html" %}
 
-{% set design_system_asset_version = "20260506-table-sort-datepicker-border" %}
+{% set design_system_asset_version = "20260506-overflow-utils" %}
 {% set current_page_path = pathname if pathname is defined and pathname else (path if path is defined else "") %}
-{% set is_login_page = current_page_path.startswith("/login") or current_page_path == "login" %}
+{# Frappe entrega `pathname` sem a barra inicial (ex.: "inicio", "projetos/abc"). Normalizamos para comparar com segurança independentemente do contexto. #}
+{% set normalized_page_path = current_page_path.lstrip("/") %}
+
+{#
+    Rotas servidas por gris/www/ (arquivos *.html ou pastas <rota>/). Toda rota Gris
+    PRECISA estar listada aqui para receber o design system Basecoat. Rotas fora da
+    lista caem no caminho de páginas Frappe nativas e herdam website.bundle.css via
+    super(). Ao criar uma nova rota em gris/www/, adicione o prefixo correspondente
+    (sem barra inicial).
+#}
+{% set gris_route_prefixes = [
+    "inicio", "portal_transparencia", "403",
+    "associados", "calendario", "financeiro",
+    "gestao_adultos", "manifestacao_interesse",
+    "projetos", "recepcao", "responsavel",
+] %}
+{% set ns = namespace(is_gris_page=false) %}
+{% for prefix in gris_route_prefixes %}
+    {% if normalized_page_path == prefix or normalized_page_path.startswith(prefix ~ "/") %}
+        {% set ns.is_gris_page = true %}
+    {% endif %}
+{% endfor %}
+{% set is_gris_page = ns.is_gris_page %}
+
+{% set is_login_page = normalized_page_path == "login" or normalized_page_path.startswith("login/") %}
 {% set hide_website_chrome = is_login_page or no_header %}
 {% if is_login_page and "gris-login-page" not in (body_class or "") %}
 {% set body_class = ((body_class ~ " ") if body_class else "") ~ "gris-login-page" %}
@@ -27,6 +51,7 @@
 {% endblock %}
 
 {% block head %}
+{% if is_gris_page %}
 {% if head_html is defined -%}
 {{ head_html or "" }}
 {%- endif %}
@@ -52,7 +77,7 @@
 	})();
 </script>
 
-<!-- Design System -->
+<!-- Design System (somente em rotas Gris) -->
 <link rel="stylesheet" href="/assets/gris/design_system/css/basecoat.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/theme-shadcn.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/lucide.css?v={{ design_system_asset_version }}">
@@ -63,10 +88,6 @@
 <link rel="stylesheet" href="/assets/gris/design_system/css/layout.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/empty.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/table.css?v={{ design_system_asset_version }}">
-{% if is_login_page %}
-{{ include_style('website.bundle.css') }}
-<link rel="stylesheet" href="/assets/gris/css/login-page.css?v={{ design_system_asset_version }}">
-{% endif %}
 
 <!-- Basecoat JS (local files, without build tool) -->
 <script src="/assets/gris/design_system/js/basecoat/basecoat.min.js?v={{ design_system_asset_version }}" defer></script>
@@ -84,6 +105,19 @@
 <script src="/assets/gris/design_system/js/components/table.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/design-system-init.js?v={{ design_system_asset_version }}" defer></script>
 
+<!-- PWA bootstrap (em rotas Gris não chamamos super(); incluímos explicitamente) -->
+<script src="/assets/gris/js/pwa-init.js?v={{ design_system_asset_version }}" defer></script>
+{% else %}
+{#
+    Página servida pelo Frappe (frappe/www/* ou Web Page genérica): herda o head
+    padrão para receber website.bundle.css e demais assets nativos. Sem Basecoat.
+#}
+{{ super() }}
+{% if is_login_page %}
+<link rel="stylesheet" href="/assets/gris/css/login-page.css?v={{ design_system_asset_version }}">
+{% endif %}
+{% endif %}
+
 <!-- PWA Meta Tags -->
 <meta name="theme-color" content="#FFFFFF">
 <meta name="mobile-web-app-capable" content="yes">
@@ -98,9 +132,9 @@
 <link rel="manifest" href="/assets/gris/manifest.json">
 
 <!-- Favicon (Chrome/Browser Tab) -->
-<link rel="shortcut icon" href="/assets/gris/images/icons/ios/32.png" type="image/png">
-<link rel="icon" type="image/png" sizes="16x16" href="/assets/gris/images/icons/ios/16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/gris/images/icons/ios/32.png">
+<link rel="shortcut icon" href="/assets/gris/images/icons/favicon/32.png" type="image/png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/gris/images/icons/favicon/16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/gris/images/icons/favicon/32.png">
 
 <!-- iOS Icons (apple-touch-icon) -->
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/gris/images/icons/ios/180.png">

@@ -53,6 +53,16 @@
 	gap: 1rem;
 }
 
+#activity-calendar {
+	--cal-list-max-height: calc(100vh - 16rem);
+}
+
+@media (max-width: 640px) {
+	#activity-calendar {
+		--cal-list-max-height: calc(100vh - 12rem);
+	}
+}
+
 .calendar-view-empty {
 	margin-top: 0.25rem;
 }

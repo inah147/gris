@@ -1,46 +1,133 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, button, card, empty, field %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
 
 {% block title %}Minha Entrevista{% endblock %}
 
 {% set active_link = '/gestao_adultos/minha_entrevista' %}
 
-{% block page_header %}
-	<div class="page-header">
-		<div class="page-header__content">
-			<h1 class="page-header__title">Minha Entrevista por Competências</h1>
-			<p class="page-header__subtitle">Visualização das respostas e observações</p>
-		</div>
+{% macro render_read_value(value, empty_text="Não informado", multiline=false) %}
+	{% set normalized = (value | string) | trim if value is not none else "" %}
+	<div class="entrevista-read-value{% if multiline %} entrevista-read-value--multiline{% endif %}{% if not normalized %} entrevista-read-value--empty{% endif %}">
+		{% if normalized %}
+			{% if multiline %}
+				{{ normalized | replace('\n', '<br>') | safe }}
+			{% else %}
+				{{ value }}
+			{% endif %}
+		{% else %}
+			{{ empty_text }}
+		{% endif %}
 	</div>
+{% endmacro %}
+
+{% block page_header %}
+	<section class="entrevista-page-header" aria-labelledby="minha-entrevista-title">
+		<div class="flex flex-col gap-2 max-w-2xl">
+			<h1 id="minha-entrevista-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Minha Entrevista por Competências</h1>
+			<p class="m-0 text-base leading-relaxed text-muted-foreground">Visualização das respostas e observações registradas na sua entrevista.</p>
+		</div>
+	</section>
 {% endblock %}
 
 {% block main %}
-	<div id="minha-entrevista-root" data-entrevista-name="{{ entrevista_name or '' }}"></div>
+	<div class="entrevista-page">
 
-	<div class="card-modern mb-4">
-		<div class="card-modern__body" id="associado-container"></div>
-	</div>
-
-	<div class="card-modern mb-4">
-		<div class="card-modern__body" id="dados-iniciais-container"></div>
-	</div>
-
-	<div id="secoes-perguntas"></div>
-
-	<div class="modal-modern-backdrop" id="modal-observacao-backdrop" style="display:none;"></div>
-	<div class="modal-modern" id="modal-observacao" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-observacao-title">
-		<div class="modal-modern__dialog">
-			<div class="modal-modern__content">
-				<div class="modal-modern__header">
-					<h5 class="modal-modern__title" id="modal-observacao-title">Observação da resposta</h5>
+		{% call card(attrs={"class": "entrevista-summary-card"}) %}
+			<div class="entrevista-summary-card__body">
+				<div class="entrevista-summary-card__identity">
+					<div class="entrevista-summary-card__icon" aria-hidden="true">
+						{{ lucide_icon("user-round", size="lg") }}
+					</div>
+					<div class="entrevista-summary-card__copy">
+						<p class="entrevista-summary-card__eyebrow">Associado</p>
+						<h2 class="entrevista-summary-card__title">{{ entrevista.associado_nome or entrevista.associado or "Associado não informado" }}</h2>
+						<p class="entrevista-summary-card__meta">Entrevista {{ entrevista.name }}</p>
+					</div>
 				</div>
-				<div class="modal-modern__body">
-					<div id="modal-observacao-pergunta" class="mb-2 fw-semibold"></div>
-					<div id="modal-observacao-mensagem" class="text-muted"></div>
-				</div>
-				<div class="modal-modern__footer">
-					<button type="button" class="btn-modern" id="ok-modal-observacao">Entendi</button>
+				<div class="entrevista-summary-card__badges">
+					{% if entrevista_updated_label %}
+						{{ badge("Atualizada em " ~ entrevista_updated_label, variant="secondary") }}
+					{% else %}
+						{{ badge("Sem atualização registrada", outline=true) }}
+					{% endif %}
+					{% if entrevista.motivo_da_entrevista %}
+						{{ badge(entrevista.motivo_da_entrevista, outline=true) }}
+					{% endif %}
 				</div>
 			</div>
+		{% endcall %}
+
+		{% call card(title="Dados iniciais", description="Informações de contexto preenchidas antes da avaliação de competências.") %}
+			<div class="entrevista-form-grid">
+				{% call field(label="Motivo da entrevista", attrs={"class": "entrevista-field-card"}) %}
+					{{ render_read_value(entrevista.motivo_da_entrevista) }}
+				{% endcall %}
+				{% call field(label="Função atual", attrs={"class": "entrevista-field-card"}) %}
+					{{ render_read_value(entrevista.funcao_atual) }}
+				{% endcall %}
+				{% call field(label="Profissão", attrs={"class": "entrevista-field-card"}) %}
+					{{ render_read_value(entrevista.profissao) }}
+				{% endcall %}
+				{% call field(label="Formação", attrs={"class": "entrevista-field-card"}) %}
+					{{ render_read_value(entrevista.formacao) }}
+				{% endcall %}
+				{% call field(label="Hobbies e interesses", attrs={"class": "entrevista-field-card"}) %}
+					{{ render_read_value(entrevista.hobbies_e_interesses) }}
+				{% endcall %}
+				{% call field(label="Observações gerais", attrs={"class": "entrevista-field-card entrevista-field-card--wide"}) %}
+					{{ render_read_value(entrevista.observacoes, "Sem observações gerais.", true) }}
+				{% endcall %}
+			</div>
+		{% endcall %}
+
+		<div class="entrevista-section-list">
+			{% for section in form_config.sections %}
+				{% call card(title=section.label, description="Respostas e observações registradas na entrevista.") %}
+					<div class="entrevista-question-list">
+						{% for field_item in section.fields %}
+							{% set obs_value = entrevista[field_item.observation_fieldname] or "" %}
+							{% set has_obs = (obs_value | string) | trim | length > 0 %}
+							<article class="entrevista-question" data-fieldname="{{ field_item.fieldname }}">
+								<div class="entrevista-question__header">
+									<div class="entrevista-question__header-copy">
+										<h3 class="entrevista-question__title">{{ field_item.label }}</h3>
+									</div>
+									<div class="entrevista-question__actions">
+										<button
+											type="button"
+											class="btn-icon-outline entrevista-question__indicator{% if not has_obs %} hidden{% endif %}"
+											title="Ver observação"
+											aria-label="Ver observação da resposta"
+											data-obs-trigger
+											data-question="{{ field_item.label | e }}"
+											data-observation="{{ obs_value | e }}"
+										>
+											{{ lucide_icon("message-square-more", size="sm") }}
+										</button>
+									</div>
+								</div>
+								{{ render_read_value(entrevista[field_item.fieldname], "Sem resposta registrada.") }}
+							</article>
+						{% endfor %}
+					</div>
+				{% endcall %}
+			{% endfor %}
 		</div>
+
 	</div>
+
+	{% set observacao_footer %}
+		{{ button("Entendi", variant="primary", attrs={"data-close-dialog": "modal-observacao"}) }}
+	{% endset %}
+	{% call dialog(id="modal-observacao", title="Observação da resposta", footer=observacao_footer, dialog_attrs={"class": "entrevista-dialog"}) %}
+		<div class="entrevista-dialog__stack">
+			<p id="modal-observacao-pergunta" class="entrevista-dialog__question"></p>
+			<div id="modal-observacao-mensagem" class="entrevista-dialog__copy text-muted-foreground"></div>
+		</div>
+	{% endcall %}
+
+	{{ toaster() }}
 {% endblock %}

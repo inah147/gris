@@ -3,8 +3,9 @@
 {% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
 {% from "public/design_system/components/generated/tabs.html.jinja" import tabs %}
 {% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
 {% from "public/design_system/components/generated/calendar.html.jinja" import calendar %}
-{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, textarea, switch %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, textarea, switch, empty %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 {% block title %}{{ projeto_titulo or 'Página do projeto' }}{% endblock %}
 {% set active_link = '/projetos/visao_geral' %}
@@ -195,17 +196,27 @@
     {% set panel_5 %}
     <div id="avaliacaoLoading" class="aval-loading" aria-live="polite">Carregando dados de avaliação...</div>
 
-    <div id="avaliacaoEmpty" class="d-none">
-        {% call card() %}
-            <button type="button" id="btnIniciarAvaliacao" class="btn-sm-primary mt-sm">Iniciar avaliação</button>
-        {% endcall %}
-    </div>
+    {{ empty(
+        title="Avaliação não iniciada",
+        description="A avaliação deste projeto ainda não foi iniciada. Como coordenador, você pode iniciá-la agora.",
+        image="/assets/gris/images/gris-character/gris-cientist.png",
+        image_alt="Personagem Gris cientista",
+        image_size="md",
+        primary_action={
+            "label": "Iniciar avaliação",
+            "attrs": {"id": "btnIniciarAvaliacao"}
+        },
+        attrs={"id": "avaliacaoEmpty", "class": "d-none"}
+    ) }}
 
-    <div id="avaliacaoNoAccess" class="d-none">
-        {% call card() %}
-            <p>A avaliação ainda não foi iniciada.</p>
-        {% endcall %}
-    </div>
+    {{ empty(
+        title="Avaliação não iniciada",
+        description="A avaliação deste projeto ainda não foi iniciada.",
+        image="/assets/gris/images/gris-character/gris-cientist.png",
+        image_alt="Personagem Gris cientista",
+        image_size="md",
+        attrs={"id": "avaliacaoNoAccess", "class": "d-none"}
+    ) }}
 
     <div id="avaliacaoContent" class="projeto-shell d-none">
         {% call card(title="Avaliações individuais") %}
@@ -231,7 +242,7 @@
                 {% call field(label="Resumo das avaliações individuais") %}
                     <div id="avaliacaoResumoIndividualContent" class="readonly-markdown">-</div>
                 {% endcall %}
-                <button type="button" id="btnGerarResumoIndividual" class="btn-sm-outline mt-sm">Gerar resumo individual</button>
+                <button type="button" id="btnGerarResumoIndividual" class="btn-sm-outline mt-sm"><svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="/assets/gris/design_system/icons/lucide/sprite.svg#sparkles"></use></svg> Gerar resumo individual</button>
             </div>
             <div id="avaliacaoAvaliadores" class="aval-avaliadores mt-sm">
                 <h4 class="aval-avaliadores__title">Avaliadores</h4>
@@ -247,7 +258,7 @@
                             <thead>
                                 <tr>
                                     <th>Objetivo</th>
-                                    <th style="width:180px">Atingido</th>
+                                    <th style="width:200px">Atingido</th>
                                     <th>Motivo (se não atingido)</th>
                                 </tr>
                             </thead>
@@ -283,7 +294,7 @@
                 {% call field(label="Resumo da avaliação completa") %}
                     <div id="avaliacaoResumoCompletoContent" class="readonly-markdown">-</div>
                 {% endcall %}
-                <button type="button" id="btnGerarResumoCompleto" class="btn-sm-outline mt-sm">Gerar avaliação completa</button>
+                <button type="button" id="btnGerarResumoCompleto" class="btn-sm-outline mt-sm"><svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="/assets/gris/design_system/icons/lucide/sprite.svg#sparkles"></use></svg> Gerar avaliação completa</button>
             </div>
         {% endcall %}
     </div>
@@ -366,7 +377,7 @@
 {% endcall %}
 
 {% call dialog(id="taskModal", title="Detalhes da tarefa", dialog_attrs={"class": "task-dialog"},
-    footer='<button type="button" class="btn-sm-outline" onclick="document.getElementById(\'taskModal\').close()">Cancelar</button><button type="button" id="btnSalvarTarefa" class="btn-sm-primary">Salvar tarefa</button>') %}
+    footer='<button type="button" id="btnSalvarTarefa" class="btn-sm-primary">Salvar tarefa</button>') %}
     <input type="hidden" id="task_name" />
     <p id="taskModalSubtitle" class="task-modal-subtitle">Preencha os detalhes e acompanhe os comentários da tarefa.</p>
     <div class="task-modal-grid">
@@ -378,7 +389,7 @@
 
             <div class="task-meta-row">
                 {% call field(label="Responsável") %}
-                    <select id="task_responsavel" class="input"></select>
+                    <div id="task_responsavel_wrapper"></div>
                 {% endcall %}
                 {% call field(label="Status") %}
                     {{ select(id="task_status", selected="Nao iniciado", items=[
@@ -390,14 +401,14 @@
                     ]) }}
                 {% endcall %}
                 {% call field(label="Prazo *") %}
-                    <input id="task_prazo" type="date" class="input" />
+                    <div id="task_prazo_wrapper"></div>
                 {% endcall %}
             </div>
 
             <div id="taskTimelineInfographic" class="task-timeline d-none" aria-live="polite">
                 <div class="task-timeline__track" aria-hidden="true">
-                    <span class="task-timeline__line"></span>
                     <span class="task-timeline__dot task-timeline__dot--start"></span>
+                    <span class="task-timeline__line"></span>
                     <span id="taskTimelineEndDot" class="task-timeline__dot task-timeline__dot--end"></span>
                 </div>
                 <div class="task-timeline__labels">
@@ -416,7 +427,7 @@
             <input type="hidden" id="task_data_inicio" />
             <input type="hidden" id="task_data_entrega" />
 
-            {% call field(label="Descrição e Observações") %}
+            {% call field(label="Descrição e Observações", attrs={"class": "task-observacoes-field"}) %}
                 <div id="task_observacoes_editor_host" class="meeting-editor-host d-none"></div>
                 <div id="task_observacoes_markdown_block" class="markdown-editor">
                     <div class="markdown-editor__toolbar" data-markdown-target="task_observacoes" data-preview-target="task_observacoes_preview">
@@ -454,38 +465,18 @@
     <input type="hidden" id="meeting_name" />
     <div class="projeto-grid projeto-grid--2">
         {% call field(label="Data e hora *") %}
-            <input id="meeting_data_hora" type="datetime-local" class="input" />
+            {{ datepicker(id="meeting_data_hora", with_time=true, placeholder="Selecione data e hora") }}
         {% endcall %}
         {% call field(label="Descrição *") %}
             <input id="meeting_descricao" type="text" class="input" />
         {% endcall %}
     </div>
     {% call field(label="Pauta") %}
-        <div id="meeting_pauta_editor_host" class="meeting-editor-host d-none"></div>
-        <div id="meeting_pauta_markdown_block" class="markdown-editor">
-            <div class="markdown-editor__toolbar" data-markdown-target="meeting_pauta" data-preview-target="meeting_pauta_preview">
-                <button type="button" class="btn-sm-outline" data-markdown-action="bold"><strong>B</strong></button>
-                <button type="button" class="btn-sm-outline" data-markdown-action="italic"><em>I</em></button>
-                <button type="button" class="btn-sm-outline" data-markdown-action="list">Lista</button>
-                <button type="button" class="btn-sm-outline" data-markdown-action="link">Link</button>
-            </div>
-            <textarea id="meeting_pauta" class="textarea" rows="4"></textarea>
-            <div class="markdown-editor__preview" id="meeting_pauta_preview">-</div>
-        </div>
+        <div id="meeting_pauta_editor_host" class="meeting-editor-host"></div>
     {% endcall %}
     <div id="meetingAtaSection">
         {% call field(label="Ata") %}
-            <div id="meeting_ata_editor_host" class="meeting-editor-host d-none"></div>
-            <div id="meeting_ata_markdown_block" class="markdown-editor">
-                <div class="markdown-editor__toolbar" data-markdown-target="meeting_ata" data-preview-target="meeting_ata_preview">
-                    <button type="button" class="btn-sm-outline" data-markdown-action="bold"><strong>B</strong></button>
-                    <button type="button" class="btn-sm-outline" data-markdown-action="italic"><em>I</em></button>
-                    <button type="button" class="btn-sm-outline" data-markdown-action="list">Lista</button>
-                    <button type="button" class="btn-sm-outline" data-markdown-action="link">Link</button>
-                </div>
-                <textarea id="meeting_ata" class="textarea" rows="4"></textarea>
-                <div class="markdown-editor__preview" id="meeting_ata_preview">-</div>
-            </div>
+            <div id="meeting_ata_editor_host" class="meeting-editor-host"></div>
         {% endcall %}
     </div>
 {% endcall %}

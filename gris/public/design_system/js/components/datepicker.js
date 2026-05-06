@@ -8,12 +8,26 @@
 
   const parseISO = (str) => {
     if (!str) return null;
-    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str);
+    const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ]\d{2}:\d{2}(?::\d{2})?)?$/.exec(str);
     if (!m) return null;
     const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
     if (Number.isNaN(d.getTime())) return null;
     return d;
   };
+
+  const parseTimeFromISO = (str) => {
+    if (!str) return null;
+    const m = /^\d{4}-\d{2}-\d{2}[T ](\d{2}):(\d{2})(?::\d{2})?$/.exec(str);
+    if (!m) return null;
+    return `${m[1]}:${m[2]}`;
+  };
+
+  const currentTime = () => {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  };
+
+  const isValidTime = (str) => /^\d{2}:\d{2}$/.test(String(str || ""));
 
   const stripTime = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
@@ -53,6 +67,8 @@
     const nextBtn = root.querySelector("[data-datepicker-next]");
     const clearBtn = root.querySelector("[data-datepicker-clear]");
     const todayBtn = root.querySelector("[data-datepicker-today]");
+    const timeInput = root.querySelector("[data-datepicker-time]");
+    const confirmBtn = root.querySelector("[data-datepicker-confirm]");
 
     if (!trigger || !popover || !titleEl || !gridEl) {
       console.error("Datepicker initialisation failed", root);
@@ -60,6 +76,7 @@
     }
 
     const mode = root.dataset.mode === "range" ? "range" : "single";
+    const withTime = mode === "single" && root.dataset.withTime === "true";
     const locale = root.dataset.locale || "pt-BR";
     const placeholder = root.dataset.placeholder || "Selecione uma data";
     const minDate = parseISO(root.dataset.min || "");
@@ -69,14 +86,22 @@
     const startInput = root.querySelector("[data-datepicker-value-start]");
     const endInput = root.querySelector("[data-datepicker-value-end]");
 
+    const initialSingleRaw = valueInput?.value || "";
+    const initialTime = withTime ? parseTimeFromISO(initialSingleRaw) : null;
+
     const state = {
       cursor: new Date(),
-      single: parseISO(valueInput?.value || ""),
+      single: parseISO(initialSingleRaw),
       start: parseISO(startInput?.value || ""),
       end: parseISO(endInput?.value || ""),
+      time: withTime ? (initialTime || "") : "",
       hover: null,
       pendingRangeStart: null,
     };
+
+    if (withTime && timeInput) {
+      timeInput.value = state.time || "";
+    }
 
     if (mode === "single" && state.single) {
       state.cursor = new Date(state.single);
@@ -98,7 +123,10 @@
     const updateLabel = () => {
       if (mode === "single") {
         if (state.single) {
-          labelEl.textContent = formatDisplay(state.single, locale);
+          const dateText = formatDisplay(state.single, locale);
+          labelEl.textContent = withTime && isValidTime(state.time)
+            ? `${dateText} ${state.time}`
+            : dateText;
           labelEl.classList.remove("datepicker-trigger__label--placeholder");
         } else {
           labelEl.textContent = placeholder;
@@ -118,10 +146,18 @@
       }
     };
 
+    const serializeSingle = () => {
+      if (!state.single) return "";
+      const datePart = ISO(state.single);
+      if (!withTime) return datePart;
+      const timePart = isValidTime(state.time) ? state.time : "00:00";
+      return `${datePart}T${timePart}`;
+    };
+
     const writeValues = () => {
       if (mode === "single") {
         if (valueInput) {
-          valueInput.value = state.single ? ISO(state.single) : "";
+          valueInput.value = serializeSingle();
           valueInput.dispatchEvent(new Event("change", { bubbles: true }));
         }
       } else {
@@ -139,7 +175,7 @@
           bubbles: true,
           detail:
             mode === "single"
-              ? { value: state.single ? ISO(state.single) : null }
+              ? { value: state.single ? serializeSingle() : null }
               : {
                   value: {
                     start: state.start ? ISO(state.start) : null,
@@ -219,10 +255,14 @@
 
     const setSingle = (d) => {
       state.single = new Date(d);
+      if (withTime && !isValidTime(state.time)) {
+        state.time = currentTime();
+        if (timeInput) timeInput.value = state.time;
+      }
       writeValues();
       updateLabel();
       renderGrid();
-      close();
+      if (!withTime) close();
     };
 
     const setRangeBoundary = (d) => {
@@ -290,8 +330,10 @@
       state.single = null;
       state.start = null;
       state.end = null;
+      state.time = "";
       state.pendingRangeStart = null;
       state.hover = null;
+      if (timeInput) timeInput.value = "";
       writeValues();
       updateLabel();
       renderGrid();
@@ -302,9 +344,28 @@
       if (isDisabled(today)) return;
       state.cursor = new Date(today.getFullYear(), today.getMonth(), 1);
       if (mode === "single") {
+        if (withTime) {
+          state.time = currentTime();
+          if (timeInput) timeInput.value = state.time;
+        }
         setSingle(today);
       } else {
         setRangeBoundary(today);
+      }
+    });
+
+    timeInput?.addEventListener("input", () => {
+      const next = String(timeInput.value || "");
+      state.time = isValidTime(next) ? next : "";
+      if (state.single) {
+        writeValues();
+        updateLabel();
+      }
+    });
+
+    confirmBtn?.addEventListener("click", () => {
+      if (state.single && (!withTime || isValidTime(state.time))) {
+        close(true);
       }
     });
 
@@ -377,7 +438,7 @@
     Object.defineProperty(root, "value", {
       configurable: true,
       get() {
-        if (mode === "single") return state.single ? ISO(state.single) : null;
+        if (mode === "single") return state.single ? serializeSingle() : null;
         return {
           start: state.start ? ISO(state.start) : null,
           end: state.end ? ISO(state.end) : null,
@@ -385,7 +446,20 @@
       },
       set(next) {
         if (mode === "single") {
-          state.single = typeof next === "string" ? parseISO(next) : null;
+          if (typeof next === "string" && next) {
+            state.single = parseISO(next);
+            if (withTime) {
+              const t = parseTimeFromISO(next);
+              state.time = t || "";
+              if (timeInput) timeInput.value = state.time;
+            }
+          } else {
+            state.single = null;
+            if (withTime) {
+              state.time = "";
+              if (timeInput) timeInput.value = "";
+            }
+          }
         } else if (next && typeof next === "object") {
           state.start = next.start ? parseISO(next.start) : null;
           state.end = next.end ? parseISO(next.end) : null;

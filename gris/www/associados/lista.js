@@ -32,6 +32,9 @@ frappe.ready(() => {
       <tr>
         <td colspan="${COLSPAN}">
           <section class="empty">
+            <div class="empty-media">
+              <img src="/assets/gris/images/gris-character/gris-search.png" alt="" class="empty-image empty-image--md" loading="lazy" decoding="async" />
+            </div>
             <h2>${frappe.utils.escape_html(title)}</h2>
             <p>${frappe.utils.escape_html(description)}</p>
           </section>

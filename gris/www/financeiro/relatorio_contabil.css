@@ -1,106 +1,164 @@
-/**
- * Relatório Contábil - CSS Moderno
- * Tabela de transações detalhadas com múltiplas instituições
- */
-
-/* Tabela Relatório Contábil - Estrutura BEM */
-.relatorio-contabil-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-sm, 0.875rem);
-  background: white;
-  min-width: 1200px; /* Garante largura mínima para scroll horizontal */
+.relatorio-contabil-page {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
 }
 
-/* Header */
+.relatorio-contabil-filter-card,
+.relatorio-contabil-table-card {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.relatorio-contabil-filter-card > section {
+  max-width: 100%;
+}
+
+.relatorio-contabil-filter-card,
+.relatorio-contabil-filter-card > section {
+  overflow: visible;
+}
+
+.relatorio-contabil-filter-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.relatorio-contabil-filter-form__field {
+  min-width: 0;
+}
+
+.relatorio-contabil-filter-form__field > .datepicker,
+.relatorio-contabil-filter-form__field > .datepicker > button {
+  width: 100%;
+}
+
+.relatorio-contabil-filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  grid-column: 1 / -1;
+}
+
+.relatorio-contabil-table-card {
+  display: flex;
+  flex-direction: column;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.relatorio-contabil-table-card > section {
+  padding: 0;
+  max-width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.relatorio-contabil-table__scroll {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.relatorio-contabil-table {
+  width: 100%;
+  min-width: max-content;
+  border-collapse: collapse;
+  background: var(--color-card);
+  font-size: 0.875rem;
+}
+
 .relatorio-contabil-table__header {
-  padding: 1rem;
+  padding: 0.95rem 1rem;
   text-align: left;
-  font-size: var(--text-xs, 0.75rem);
-  font-weight: var(--font-semibold, 600);
+  font-size: 0.75rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-secondary, #64748b);
-  background-color: var(--bg-hover, #f8fafc);
-  border-bottom: 2px solid var(--border-color, #e2e8f0);
+  color: var(--color-muted-foreground);
+  background: color-mix(in oklab, var(--color-muted) 88%, var(--color-card) 12%);
+  border-bottom: 1px solid var(--color-border);
   white-space: nowrap;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 1;
 }
 
 .relatorio-contabil-table__header--number {
   text-align: right;
 }
 
-/* Células */
 .relatorio-contabil-table__cell {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border-color, #e2e8f0);
-  color: var(--text-primary, #1e293b);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-foreground);
   white-space: nowrap;
-  font-size: var(--text-sm, 0.875rem);
+  font-size: 0.875rem;
 }
 
 .relatorio-contabil-table__cell--number {
   text-align: right;
   font-variant-numeric: tabular-nums;
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 0.8125rem;
 }
 
-/* Linhas - alternância de cores */
-.relatorio-contabil-table__row:nth-child(even) {
-  background-color: #f8fafc;
+.relatorio-contabil-table__row:nth-child(2n) {
+  background: color-mix(in oklab, var(--color-muted) 72%, var(--color-card) 28%);
 }
 
-.relatorio-contabil-table__row:nth-child(odd) {
-  background-color: #ffffff;
+.relatorio-contabil-table__row:nth-child(2n + 1) {
+  background: var(--color-card);
 }
 
 .relatorio-contabil-table__row:hover {
-  background-color: #f1f5f9;
-  transition: background-color 0.15s ease;
+  background: color-mix(in oklab, var(--color-muted) 82%, var(--color-card) 18%);
+  transition: background-color 160ms ease;
 }
 
-/* Responsivo */
-@media (max-width: 768px) {
-  .relatorio-contabil-table {
-    font-size: var(--text-xs, 0.75rem);
-    min-width: 1000px;
-  }
-  
-  .relatorio-contabil-table__header,
-  .relatorio-contabil-table__cell {
-    padding: 0.5rem 0.75rem;
-  }
-  
-  .relatorio-contabil-table__cell--number {
-    font-size: 0.75rem;
-  }
-}
-
-/* Scroll horizontal suave */
-.card-modern__body {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Customização do scrollbar */
-.card-modern__body::-webkit-scrollbar {
+.relatorio-contabil-table__scroll::-webkit-scrollbar {
+  width: 8px;
   height: 8px;
 }
 
-.card-modern__body::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 4px;
+.relatorio-contabil-table__scroll::-webkit-scrollbar-track {
+  background: color-mix(in oklab, var(--color-muted) 76%, var(--color-card) 24%);
+  border-radius: 9999px;
 }
 
-.card-modern__body::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+.relatorio-contabil-table__scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--color-border) 80%, var(--color-foreground) 20%);
+  border-radius: 9999px;
 }
 
-.card-modern__body::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+@media (max-width: 960px) {
+  .relatorio-contabil-filter-form {
+    grid-template-columns: 1fr;
+  }
+
+  .relatorio-contabil-filter-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .relatorio-contabil-table {
+    font-size: 0.75rem;
+  }
+
+  .relatorio-contabil-table__header,
+  .relatorio-contabil-table__cell {
+    padding: 0.5rem 0.65rem;
+  }
+
+  .relatorio-contabil-table__cell--number {
+    font-size: 0.75rem;
+  }
 }

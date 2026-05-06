@@ -3,7 +3,7 @@
 {% from "public/design_system/components/generated/select.html.jinja" import select %}
 {% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
 {% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
-{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import switch %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import switch, empty %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
 {% block title %}Simulação de Calendário{% endblock %}
@@ -39,10 +39,12 @@
     {% if not has_data %}
     <article class="card simulation-empty-card">
         <header class="simulation-empty-card__header">
-            <div>
-                <h2 class="simulation-empty-card__title">Nenhuma simulação encontrada para {{ year }}</h2>
-                <p class="simulation-empty-card__subtitle">Você pode copiar dados do calendário oficial ou começar a simulação vazia para montar os eventos manualmente.</p>
-            </div>
+            {{ empty(
+                title="Nenhuma simulação encontrada para " ~ year,
+                description="Você pode copiar dados do calendário oficial ou começar a simulação vazia para montar os eventos manualmente.",
+                image="/assets/gris/images/gris-character/gris-excited.png",
+                image_alt="Gris animado"
+            ) }}
         </header>
         <section class="simulation-empty-card__body">
             <div class="simulation-empty-card__controls">

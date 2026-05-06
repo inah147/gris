@@ -66,3 +66,26 @@
 .extrato-row .cursor-pointer {
 	cursor: pointer;
 }
+
+/* Garante que a tabela do extrato fique com scroll horizontal interno ao card,
+   sem extrapolar a largura do container quando não couber na tela. */
+.extrato-tabela__card {
+	min-width: 0;
+	max-width: 100%;
+}
+
+.extrato-tabela__section {
+	min-width: 0;
+	width: 100%;
+}
+
+.extrato-tabela__scroll {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	overflow-x: auto;
+}
+
+.extrato-tabela__scroll > .extrato-tabela {
+	min-width: max-content;
+}

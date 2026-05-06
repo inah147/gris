@@ -21,17 +21,17 @@
 {% block main %}
 {% if meus_projetos %}
 <div class="meus-projetos-grid">
-	{% for card in meus_projetos %}
-		{% set status_variant = "destructive" if card.status == "Cancelado" else ("secondary" if card.status in ["Rascunho", "Concluido"] else "default") %}
-		<a class="meus-projetos-card-link" href="{{ card.detail_url }}" aria-label="Abrir projeto {{ card.titulo }}">
+	{% for projeto in meus_projetos %}
+		{% set status_variant = "destructive" if projeto.status == "Cancelado" else ("secondary" if projeto.status in ["Rascunho", "Concluido"] else "default") %}
+		<a class="meus-projetos-card-link" href="{{ projeto.detail_url }}" aria-label="Abrir projeto {{ projeto.titulo }}">
 			{% call card(attrs={"class": "meus-projetos-card"}) %}
 				<div class="meus-projetos-card__eyebrow">
-					{{ badge(card.status_label, variant=status_variant) }}
+					{{ badge(projeto.status_label, variant=status_variant) }}
 					<span class="meus-projetos-card__eyebrow-text">Projeto vinculado</span>
 				</div>
 				<div class="meus-projetos-card__content">
-					<h2 class="meus-projetos-card__title">{{ card.titulo }}</h2>
-					<p class="meus-projetos-card__subtitle">Coordenador: {{ card.coordenador }}</p>
+					<h2 class="meus-projetos-card__title">{{ projeto.titulo }}</h2>
+					<p class="meus-projetos-card__subtitle">Coordenador: {{ projeto.coordenador }}</p>
 				</div>
 				<div class="meus-projetos-card__cta">
 					<span>Abrir projeto</span>
@@ -43,9 +43,19 @@
 </div>
 {% else %}
 	{{ empty(
-		title="Nenhum projeto vinculado",
-		description="Você ainda não possui projetos vinculados ao seu perfil.",
-		icon=lucide_icon("folder-search", size="lg"),
+		title="Nenhum projeto...",
+		description="Você ainda não possui projetos vinculados ao seu perfil. Que tal começar um novo ou participar de algum em andamento?",
+		image="/assets/gris/images/gris-character/gris-idea.png",
+		image_alt="Personagem Gris com uma ideia",
+		image_size="lg",
+		primary_action={
+			"label": "Cadastrar novo projeto",
+			"href": "/projetos/cadastrar_novo_projeto"
+		},
+		secondary_action={
+			"label": "Abrir lista de projetos",
+			"href": "/projetos/visao_geral"
+		},
 		attrs={"class": "meus-projetos-empty"}
 	) }}
 {% endif %}

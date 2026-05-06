@@ -100,7 +100,7 @@
   line-height: var(--leading-relaxed);
 }
 
-#btnConciliarBtg {
+#btnConciliarInfinitepay {
   gap: calc(var(--spacing) * 2);
 }
 
@@ -157,6 +157,24 @@
 .import-results__header {
   display: grid;
   gap: calc(var(--spacing) * 1);
+}
+
+.import-results__sections {
+  display: grid;
+  gap: calc(var(--spacing) * 6);
+}
+
+.import-results__section {
+  display: grid;
+  gap: calc(var(--spacing) * 3);
+}
+
+.import-results__section-title {
+  margin: 0;
+  color: var(--color-foreground);
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--text-base--line-height);
 }
 
 .import-results-grid {
@@ -274,7 +292,7 @@
     line-height: var(--text-3xl--line-height);
   }
 
-  #btnConciliarBtg {
+  #btnConciliarInfinitepay {
     width: 100%;
   }
 }

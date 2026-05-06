@@ -1,32 +1,138 @@
-/* 
- * Detalhe Extrato - CSS Customizado
- * Usa components.css como base - adicione apenas estilos específicos se necessário
- */
+.detalhe-extrato-page {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
 
-/* Fix para mobile - evita que selects ultrapassem a tela */
-@media (max-width: 768px) {
-  select.form-input-modern {
-    max-width: 100%;
+.detalhe-extrato-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.detalhe-extrato-header .financeiro-page-header__actions {
+  margin-left: auto;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.detalhe-extrato-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  min-width: 0;
+}
+
+.detalhe-extrato-grid--readonly {
+  gap: 0.875rem 1rem;
+}
+
+.detalhe-extrato-grid__full {
+  grid-column: 1 / -1;
+}
+
+.detalhe-extrato-read-value {
+  min-height: 2.75rem;
+  padding: 0.75rem 0.875rem;
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in oklab, var(--color-border) 80%, var(--color-card) 20%);
+  background: color-mix(in oklab, var(--color-muted) 78%, var(--color-card) 22%);
+  color: var(--color-foreground);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.detalhe-extrato-read-value--empty {
+  color: var(--color-muted-foreground);
+  font-style: italic;
+}
+
+.detalhe-extrato-form .field {
+  min-width: 0;
+}
+
+.detalhe-extrato-form .field > .input,
+.detalhe-extrato-form .field > .textarea,
+.detalhe-extrato-form .field > .select,
+.detalhe-extrato-form .field > .select > button {
+  width: 100%;
+}
+
+.detalhe-extrato-select-popover .detalhe-extrato-select-listbox {
+  max-height: min(18rem, 45vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.detalhe-extrato-toggle-field.hidden {
+  display: none;
+}
+
+.detalhe-extrato-banner {
+  margin-bottom: 1rem;
+}
+
+.detalhe-extrato-banner__list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.detalhe-extrato-checkboxes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.875rem 1rem;
+  padding-top: 0.25rem;
+}
+
+.detalhe-extrato-checkboxes > label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-foreground);
+  line-height: 1.4;
+}
+
+.detalhe-extrato-checkboxes input[disabled] + span {
+  color: var(--color-muted-foreground);
+}
+
+.detalhe-extrato-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+@media (max-width: 960px) {
+  .detalhe-extrato-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detalhe-extrato-checkboxes {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .detalhe-extrato-header .financeiro-page-header__actions {
     width: 100%;
+    justify-content: flex-end;
   }
-  
-  .card-modern {
-    overflow: visible;
-  }
-  
-  /* Garante que nada ultrapasse a largura da viewport */
-  body, html {
-    overflow-x: hidden;
-    max-width: 100vw;
-  }
-  
-  .row {
-    margin-left: 0;
-    margin-right: 0;
-  }
-  
-  .row > * {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
+
+  .detalhe-extrato-read-value {
+    font-size: 0.85rem;
+    padding: 0.65rem 0.75rem;
   }
 }

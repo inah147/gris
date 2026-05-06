@@ -82,7 +82,7 @@ def get_context(context):
 	payload = build_entrevista_payload(context.entrevista_name)
 	context.form_config = payload["config"]
 	context.entrevista = payload["entrevista"]
-	context.alert_groups = _build_alert_groups(context.entrevista)
+	context.alert_groups = _build_alert_groups(context.entrevista.get("alertas"))
 	context.alert_category_definitions = ALERT_CATEGORY_DEFINITIONS
 	context.entrevista_updated_label = (
 		format_datetime(context.entrevista.get("data_da_ultima_atualizacao"))

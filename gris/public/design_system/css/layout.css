@@ -172,6 +172,26 @@
 	height: var(--skeleton-height, 1rem);
 }
 
+/* --- Dialog: body rolável quando o conteúdo excede o max-height do dialog ---
+ * O Basecoat aplica max-height em `dialog > *` mas não trata overflow do <section>.
+ * Sem este bloco, conteúdos longos (editores ToastUI, formulários grandes) vazam
+ * para fora do dialog. Mantém header e footer fixos.
+ */
+.dialog > div {
+	overflow: hidden;
+}
+
+.dialog > div > header,
+.dialog > div > footer {
+	flex: 0 0 auto;
+}
+
+.dialog > div > section {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+}
+
 /* --- Button group: grupo conectado de botões para paginações e toolbars --- */
 .btn-group {
 	display: inline-flex;

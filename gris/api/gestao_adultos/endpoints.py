@@ -228,6 +228,8 @@ def _serialize_entrevista(doc):
 		"observacoes",
 	]
 	data = {field: doc.get(field) for field in base_fields + question_fields + obs_fields}
+	if data.get("data_da_ultima_atualizacao") is not None:
+		data["data_da_ultima_atualizacao"] = str(data["data_da_ultima_atualizacao"])
 	data["associado_nome"] = (
 		frappe.db.get_value("Associado", doc.get("associado"), "nome_completo")
 		if doc.get("associado")

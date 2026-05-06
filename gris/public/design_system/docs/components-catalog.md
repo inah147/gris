@@ -162,6 +162,44 @@ Exemplos:
 Eventos: `datepicker:change` no elemento raiz com `detail.value` (string ISO no `single`, `{start, end}` no `range`).
 API pública via DOM: `el.value` (getter/setter), `el.open()`, `el.close()`.
 
+Visual: o gatilho do datepicker tem borda padrão `1px solid var(--color-input)` e radius `--radius-md`, alinhada com `<input>` e `<select>` adjacentes em formulários. Foco e estado expandido usam `--color-ring` (borda + outline).
+
+### table
+
+Macro: `public/design_system/components/composed/basecoat-composed.html.jinja`.
+Comportamento de ordenação: `public/design_system/js/components/table.js`. CSS de extensão: `public/design_system/css/table.css`.
+
+Por padrão, a tabela é ordenável ao clicar no cabeçalho (`<th>`). Cada `<th>` ordenável vira um `<button>` que cicla entre `none → ascending → descending → none` (o estado `none` restaura a ordem original). O ícone (Lucide `chevrons-up-down` / `chevron-up` / `chevron-down`) reflete o estado.
+
+API:
+
+```jinja
+{{ table(
+    headers=[],          # lista de strings (HTML aceito via `safe`)
+    rows=[],             # lista de listas (HTML aceito por célula)
+    striped=false,       # zebra
+    sortable=true,       # ordenar ao clicar nos cabeçalhos
+    sort_skip=[],        # índices de colunas que NÃO devem ser ordenáveis
+    attrs={}             # atributos extras na <table>
+) }}
+```
+
+Exemplos:
+
+```jinja
+{# Coluna 0 (status visual) e coluna 7 (ações) não devem ser ordenáveis #}
+{{ table(headers=hdrs, rows=[], sort_skip=[0, 7], attrs={"id": "minhaTabela"}) }}
+
+{# Tabela com paginação server-side: desligar ordenação client-side #}
+{{ table(headers=hdrs, rows=linhas, sortable=false) }}
+```
+
+Detecção de tipo: o JS inspeciona os valores da coluna e infere `number`, `date` (ISO `YYYY-MM-DD` ou `DD/MM/YYYY`) ou `text` (Intl.Collator `pt-BR`). Para forçar o tipo, definir `data-sort-type="number|date|text"` no `<th>`. Para casos onde o texto exibido difere do valor a ordenar (ex.: NPS com `<span>` decorativo), use `data-sort-value="..."` na `<td>`.
+
+Eventos: `table:sort` no elemento da tabela, `detail = { columnIndex, direction }` (`direction ∈ "ascending" | "descending" | "none"`).
+
+Quando desativar: tabelas com paginação ou ordenação server-side devem passar `sortable=false` para evitar ordenar apenas a página visível.
+
 ## Componentes com macro local sem JS dedicado
 
 - dialog
@@ -195,7 +233,58 @@ API pública via DOM: `el.value` (getter/setter), `el.open()`, `el.close()`.
 - slider
 - spinner
 - switch
-- table
 - textarea
 - theme-switcher
 - tooltip
+
+### empty
+
+Macro: `public/design_system/components/composed/basecoat-composed.html.jinja`. CSS de extensão: `public/design_system/css/empty.css` (carregado via `templates/base.html`).
+
+Componente para estados vazios (lista sem registros, filtro sem resultado, primeira vez). Suporta duas variantes mutuamente exclusivas via mídia: ícone Lucide ou imagem (mascote Gris). Aceita até três ações opcionais (primary, secondary outline, ghost). Conteúdo é centralizado vertical e horizontalmente.
+
+API:
+
+```jinja
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import empty %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{{ empty(
+    title,                    # obrigatório
+    description=None,         # subtítulo opcional
+    icon=None,                # HTML do ícone — variante simples
+    image=None,               # caminho de imagem — variante imagem (precede icon)
+    image_size="md",          # "sm" (96px) | "md" (160px) | "lg" (240px) | string CSS livre
+    image_alt="",             # alt em PT-BR
+    primary_action=None,      # dict {label, href?, onclick?, attrs?} — btn-primary
+    secondary_action=None,    # idem — btn-outline
+    ghost_action=None,        # idem — btn-ghost
+    action=None,              # slot HTML livre (legado)
+    attrs={}
+) }}
+```
+
+Variante ícone:
+
+```jinja
+{{ empty(
+    title="Nenhum resultado",
+    description="Tente ajustar os filtros acima.",
+    icon=lucide_icon("search-x", size="md")
+) }}
+```
+
+Variante imagem (mascote Gris):
+
+```jinja
+{{ empty(
+    title="Nenhum projeto ainda",
+    description="Crie seu primeiro projeto para começar.",
+    image="/assets/gris/images/gris-character/gris-idea.png",
+    image_size="md",
+    image_alt="Gris com lâmpada acesa indicando ideia",
+    primary_action={"label": "Criar projeto", "href": "/projetos/novo"}
+) }}
+```
+
+Imagens disponíveis em `public/images/gris-character/` (servidas em `/assets/gris/images/gris-character/`): `gris-search`, `gris-confused`, `gris-idea`, `gris-idea-stand-up`, `gris-idle`, `gris-cientist`, `gris-police`, `gris-ramo-filhotes`, `gris-ramo-filhotes-sentado`. A escolha entre variante ícone vs. imagem deve ser confirmada com o usuário antes da implementação (ver `gris-brand-guide/references/components.md`, seção "Componente `empty`").

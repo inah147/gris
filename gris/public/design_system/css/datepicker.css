@@ -9,9 +9,28 @@
   align-items: center;
   gap: 0.5rem;
   width: 100%;
+  height: calc(var(--spacing) * 9);
+  padding: calc(var(--spacing) * 1) calc(var(--spacing) * 3);
+  background-color: transparent;
+  border: 1px solid var(--color-input);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.05);
   text-align: left;
   font-family: inherit;
+  font-size: var(--text-base);
+  color: var(--foreground);
   cursor: pointer;
+  transition: color 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.datepicker-trigger:hover {
+  border-color: var(--ring);
+}
+
+.datepicker-trigger:focus-visible {
+  border-color: var(--ring);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .datepicker-trigger__icon {
@@ -32,6 +51,7 @@
 }
 
 .datepicker-trigger[aria-expanded="true"] {
+  border-color: var(--ring);
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
@@ -169,6 +189,30 @@
   cursor: not-allowed;
 }
 
+.datepicker-popover__time {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.datepicker-popover__time-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+
+.datepicker-popover__time-input {
+  flex: 1;
+  min-width: 0;
+  height: 2.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
 .datepicker-popover__footer {
   display: flex;
   justify-content: space-between;
@@ -176,6 +220,24 @@
   margin-top: 0.5rem;
   padding-top: 0.5rem;
   border-top: 1px solid var(--border);
+}
+
+.datepicker-popover__time + .datepicker-popover__footer {
+  margin-top: 0.25rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--border);
+}
+
+.datepicker-popover__action--primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+
+.datepicker-popover__action--primary:hover {
+  background: oklch(from var(--primary) calc(l - 0.05) c h);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
 }
 
 .datepicker-popover__action {

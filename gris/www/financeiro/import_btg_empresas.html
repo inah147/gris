@@ -1,103 +1,130 @@
 {% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, button, card, spinner %}
+{% from "public/design_system/components/composed/file-upload.html.jinja" import file_upload %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
 {% block title %}Importação de dados - BTG Empresas{% endblock %}
 
 {% set active_link = '/financeiro/contas' %}
 
 {% block page_header %}
-  <div class="page-header">
-    <div class="page-header__content">
-      <h1 class="page-header__title">Importação BTG Empresas</h1>
-      <p class="page-header__subtitle">Faça upload do extrato bancário para conciliação automática</p>
-    </div>
-    <div class="page-header__actions">
-      <a href="/financeiro/contas" class="btn-modern btn-modern--outline btn-modern--sm">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M19 12H5M12 19l-7-7 7-7"/>
-        </svg>
-        Voltar
-      </a>
-    </div>
+<section class="import-page-header">
+  <div class="import-page-header__copy">
+    <h1>Importação BTG Empresas</h1>
+    <p>Faça upload do extrato bancário em OFX para conciliação automática.</p>
   </div>
+  <div class="import-page-header__actions">
+    <a href="/financeiro/contas" class="btn-sm-outline">
+      {{ lucide_icon("arrow-left", size="sm") }}
+      <span>Voltar</span>
+    </a>
+  </div>
+</section>
 {% endblock %}
 
 {% block main %}
-  <div class="card-modern mb-4">
-    <div class="card-modern__body">
-      <!-- Upload Section -->
-      <div class="form-group-modern mb-4">
-        <h2 style="font-size: var(--text-lg); font-weight: var(--font-semibold); margin-bottom: var(--space-md); color: var(--text-primary);">1. Selecione o arquivo de extrato</h2>
-        <button 
-          type="button" 
-          id="uploadBtgBtn" 
-          class="btn-modern btn-modern--outline"
-        >
-          <svg class="btn-modern__icon" viewBox="0 0 24 24">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="17 8 12 3 7 8"></polyline>
-            <line x1="12" y1="3" x2="12" y2="15"></line>
-          </svg>
-          Selecionar Arquivo OFX
-        </button>
-        
-        <div id="file-info-btg" class="mt-3 d-none">
-          <div class="alert-modern alert-modern--success">
-            <svg class="alert-modern__icon" viewBox="0 0 24 24">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-              <polyline points="22 4 12 14.01 9 11.01"></polyline>
-            </svg>
-            <div class="alert-modern__content">
-              <p class="alert-modern__description">
-                <strong>Arquivo carregado:</strong>
-                <span id="nomeBtg" class="ms-2"></span>
-              </p>
-            </div>
+<section class="import-page" aria-label="Importação BTG Empresas">
+  {% if not can_reconcile_btg_empresas %}
+    {{ alert(
+      title="Permissão negada",
+      description="Você não tem permissão para realizar a conciliação ou enviar arquivos para o doctype Transacao BTG Empresas.",
+      icon=lucide_icon("triangle-alert", size="sm"),
+      variant="warning"
+    ) }}
+  {% endif %}
+
+  {% call card(
+    title="Conciliar extrato BTG Empresas",
+    description="Selecione o arquivo OFX, confirme o envio e acompanhe o resumo da conciliação.",
+    attrs={"class": "import-card"}
+  ) %}
+    <div class="import-flow">
+      <section class="import-step" aria-labelledby="btg-upload-step-title">
+        <div class="import-step__content">
+          <div class="import-step__badge" aria-hidden="true">1</div>
+          <div>
+            <h2 id="btg-upload-step-title">Selecione o arquivo de extrato</h2>
+            <p>Apenas arquivos no formato OFX são aceitos.</p>
           </div>
         </div>
-      </div>
 
-      <!-- Import Button -->
-      <div class="form-group-modern mb-4">
-        <h2 style="font-size: var(--text-lg); font-weight: var(--font-semibold); margin-bottom: var(--space-md); color: var(--text-primary);">2. Iniciar conciliação</h2>
-        <button 
-          type="button" 
-          id="btnConciliarBtg" 
-          class="btn-modern btn-modern--success d-none"
-          onclick="sendBtgFile()"
-        >
-          <svg class="btn-modern__icon" viewBox="0 0 24 24">
-            <polyline points="23 4 23 10 17 10"></polyline>
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-          </svg>
-          Realizar Conciliação
-        </button>
-      </div>
+        {{ file_upload(
+          id="btgImportUpload",
+          label="Extrato bancário OFX",
+          description="Apenas um arquivo OFX pode ser enviado por vez.",
+          trigger_label="Selecionar arquivo OFX",
+          dialog_title="Enviar extrato BTG Empresas",
+          dialog_description="Selecione o arquivo OFX exportado do BTG Empresas para continuar.",
+          accept=".ofx,application/x-ofx",
+          allowed_extensions=["ofx"],
+          sources=["local"],
+          allow_multiple=false,
+          max_files=1,
+          private_by_default=false,
+          allow_private_choice=false,
+          attrs={"class": "import-upload-component"},
+          trigger_attrs={"id": "uploadBtgBtn"}
+        ) }}
 
-      <!-- Results Section -->
-      <div id="btg-results" class="d-none">
-        <h2 style="font-size: var(--text-lg); font-weight: var(--font-semibold); margin-bottom: var(--space-md); color: var(--text-primary);">Resultados da Importação</h2>
-        <div id="btg-stat-card" class="row g-3 gy-4"></div>
-        
-        <div id="btg-errors-card" class="mt-3 d-none">
-          <div class="alert-modern alert-modern--danger">
-            <svg class="alert-modern__icon" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="12"></line>
-              <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-            <div class="alert-modern__content">
-              <h3 class="alert-modern__title">Erros Encontrados</h3>
-              <div id="btg-errors-list" class="alert-modern__description" style="font-size: var(--text-sm);"></div>
-            </div>
+        <div id="file-info-btg" class="import-file-info hidden">
+          {{ alert(
+            icon=lucide_icon("circle-check", size="sm"),
+            description="<strong>Arquivo carregado:</strong> <span id='nomeBtg' class='import-file-name'></span>",
+            variant="success",
+            attrs={"class": "import-file-alert"}
+          ) }}
+        </div>
+      </section>
+
+      <section class="import-step" aria-labelledby="btg-conciliar-step-title">
+        <div class="import-step__content">
+          <div class="import-step__badge" aria-hidden="true">2</div>
+          <div>
+            <h2 id="btg-conciliar-step-title">Inicie a conciliação</h2>
+            <p>Revise o arquivo selecionado antes de processar as transações.</p>
           </div>
         </div>
-      </div>
 
-      <!-- Loading Indicator -->
-      <div id="btg-loading-indicator" class="loading-container d-none">
-        <div class="loading-spinner loading-spinner--lg"></div>
-        <p class="loading-text" style="font-weight: var(--font-semibold);">Processando conciliação... Isso pode levar alguns minutos.</p>
+        {% if can_reconcile_btg_empresas %}
+          {{ button(
+            lucide_icon("refresh-cw", size="sm") ~ "Realizar conciliação",
+            attrs={"id": "btnConciliarBtg", "class": "hidden"}
+          ) }}
+        {% else %}
+          {{ button(
+            lucide_icon("refresh-cw", size="sm") ~ "Realizar conciliação",
+            attrs={"id": "btnConciliarBtg", "class": "hidden", "disabled": "disabled"}
+          ) }}
+        {% endif %}
+      </section>
+
+      <div id="btg-loading-indicator" class="import-loading hidden" role="status" aria-live="polite">
+        {{ spinner(attrs={"class": "import-loading__spinner"}) }}
+        <p>Processando conciliação. Isso pode levar alguns minutos.</p>
       </div>
     </div>
-  </div>
+  {% endcall %}
+
+  <section id="btg-results" class="import-results hidden" aria-labelledby="btg-results-title">
+    <div class="import-results__header">
+      <h2 id="btg-results-title">Resultados da conciliação</h2>
+      <p>Resumo das transações processadas no extrato BTG Empresas.</p>
+    </div>
+    <div id="btg-stat-card" class="import-results-grid"></div>
+
+    <div id="btg-errors-card" class="import-errors hidden">
+      {{ alert(
+        title="Erros encontrados",
+        description="Revise os itens abaixo e tente novamente após corrigir o extrato.",
+        icon=lucide_icon("circle-alert", size="sm"),
+        variant="error",
+        attrs={"class": "import-errors__alert"}
+      ) }}
+      <div id="btg-errors-list" class="import-errors__list"></div>
+    </div>
+  </section>
+</section>
+
+{{ toaster() }}
 {% endblock %}

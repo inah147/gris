@@ -128,7 +128,7 @@
 								</div>
 								<div data-edit-mode class="hidden entrevista-question__edit">
 									{% call field(label="Resposta") %}
-										{{ select(id=field_item.fieldname, name=field_item.fieldname, items=field_item.items, selected=entrevista[field_item.fieldname] or "", main_attrs={"class": "w-full"}, trigger_attrs={"class": "w-full justify-between"}) }}
+										{{ select(id=field_item.fieldname, name=field_item.fieldname, items=field_item["items"], selected=entrevista[field_item.fieldname] or "", main_attrs={"class": "w-full"}, trigger_attrs={"class": "w-full justify-between"}) }}
 									{% endcall %}
 									{% call field(label="Observação da resposta") %}
 										{{ textarea(name=field_item.observation_fieldname, value=entrevista[field_item.observation_fieldname] or "", attrs={"id": field_item.observation_fieldname, "rows": "3"}) }}
@@ -142,36 +142,9 @@
 		</div>
 
 		<div id="resultado-leitura" class="entrevista-results">
-			<div class="entrevista-insights-grid">
-				{% call card(title="Pontuações", description="Visualização consolidada das categorias avaliadas na entrevista.") %}
-					<div id="grafico-pontuacoes" class="entrevista-chart" aria-label="Gráfico de pontuações por categoria"></div>
-				{% endcall %}
-
-				{% call card(title="Pontuações por categoria", description="Tabela de apoio para leitura rápida e comparação com alertas.") %}
-					<div class="overflow-x-auto">
-						<table class="table entrevista-score-table">
-							<thead>
-								<tr>
-									<th>Categoria</th>
-									<th class="text-right">Pontuação</th>
-									<th class="text-right">Alertas da categoria</th>
-									<th class="text-right">Alertas totais</th>
-								</tr>
-							</thead>
-							<tbody>
-								{% for row in score_rows %}
-									<tr>
-										<td>{{ row.label }}</td>
-										<td class="text-right font-semibold">{{ row.score }}</td>
-										<td class="text-right">{{ row.alertas_categoria }}</td>
-										<td class="text-right">{{ row.alertas_totais }}</td>
-									</tr>
-								{% endfor %}
-							</tbody>
-						</table>
-					</div>
-				{% endcall %}
-			</div>
+			{% call card(title="Pontuações", description="Visualização consolidada das categorias avaliadas na entrevista.") %}
+				<div id="grafico-pontuacoes" class="entrevista-chart" aria-label="Gráfico de pontuações por categoria"></div>
+			{% endcall %}
 
 			{% call card(title="Alertas por categoria", description="Alertas consolidados a partir das respostas marcadas na entrevista.") %}
 				<div id="lista-alertas">
@@ -182,12 +155,12 @@
 									<div class="entrevista-alert-group__header">
 										<div>
 											<h3 class="entrevista-alert-group__title">{{ group.label }}</h3>
-											<p class="entrevista-alert-group__meta">{{ group.items | length }} alerta{{ "s" if (group.items | length) != 1 else "" }} associado{{ "s" if (group.items | length) != 1 else "" }}.</p>
+											<p class="entrevista-alert-group__meta">{{ group["items"] | length }} alerta{{ "s" if (group["items"] | length) != 1 else "" }} associado{{ "s" if (group["items"] | length) != 1 else "" }}.</p>
 										</div>
-										{{ badge((group.items | length) ~ " alerta" ~ ("s" if (group.items | length) != 1 else ""), variant="secondary") }}
+										{{ badge((group["items"] | length) ~ " alerta" ~ ("s" if (group["items"] | length) != 1 else ""), variant="secondary") }}
 									</div>
 									<div class="entrevista-alert-group__list">
-										{% for item in group.items %}
+										{% for item in group["items"] %}
 											{{ alert(description=item.motivo_do_alerta or "Alerta sem descrição.", icon=lucide_icon("triangle-alert", size="sm"), variant="warning", attrs={"class": "entrevista-alert-card"}) }}
 										{% endfor %}
 									</div>

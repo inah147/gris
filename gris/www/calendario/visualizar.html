@@ -87,7 +87,8 @@
 	{{ empty(
 		title="Nenhuma atividade cadastrada",
 		description="Ajuste o ano selecionado ou importe um calendário para começar.",
-		icon=lucide_icon("calendar-x-2", size="lg"),
+		image="/assets/gris/images/gris-character/gris-sad.png",
+		image_alt="Gris triste",
 		attrs={"class": "calendar-view-empty"}
 	) }}
 	{% endif %}
@@ -102,7 +103,8 @@
 			{{ empty(
 				title="Nenhum feriado para este filtro",
 				description="Selecione outro mês para consultar feriados adicionais.",
-				icon=lucide_icon("party-popper", size="lg")
+				image="/assets/gris/images/gris-character/gris-search.png",
+				image_alt="Gris procurando"
 			) }}
 		</div>
 		<div id="holiday-list" class="calendar-holiday-list">
@@ -139,7 +141,8 @@
 		{{ empty(
 			title="Nenhum feriado cadastrado",
 			description="Cadastre feriados para exibi-los aqui.",
-			icon=lucide_icon("calendar-x-2", size="lg")
+			image="/assets/gris/images/gris-character/gris-search.png",
+			image_alt="Gris procurando"
 		) }}
 		{% endif %}
 	{% endcall %}

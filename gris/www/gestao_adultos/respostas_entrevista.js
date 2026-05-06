@@ -1,4 +1,4 @@
-frappe.ready(() => {
+frappe.ready(async () => {
 	const dataElement = document.getElementById("respostas-entrevista-data");
 	if (!dataElement) {
 		return;
@@ -338,16 +338,13 @@ frappe.ready(() => {
 	function renderEcharts(target, labels, scores, alertsByCategory, alertsTotal, generalAlertsCount) {
 		const styles = getComputedStyle(document.documentElement);
 		const barColor = styles.getPropertyValue("--color-chart-1").trim() || "#4477AA";
-		const markBorderColor = styles.getPropertyValue("--warning").trim() || "#E69F00";
-		const markFillColor = `color-mix(in oklab, ${markBorderColor} 12%, ${styles.getPropertyValue("--color-card").trim() || "#fff"})`;
+		const markColor = styles.getPropertyValue("--warning").trim() || "#fde6d4";
 		const textColor = styles.getPropertyValue("--color-foreground").trim() || "#111827";
 		const mutedColor = styles.getPropertyValue("--color-muted-foreground").trim() || "#6b7280";
 		const borderColor = styles.getPropertyValue("--color-border").trim() || "#d1d5db";
 		const backgroundColor = styles.getPropertyValue("--color-card").trim() || "#ffffff";
 		target.innerHTML = "";
 		chart = window.echarts.init(target);
-		const roundedTriangleSymbol =
-			"path://M0,-100 Q12,-90 24,-78 L82,28 Q92,42 82,56 L20,92 Q0,104 -20,92 L-82,56 Q-92,42 -82,28 L-24,-78 Q-12,-90 0,-100 Z";
 		const alertMarkers = alertsTotal
 			.map((total, index) => {
 				if (!total) {
@@ -414,12 +411,12 @@ frappe.ready(() => {
 					itemStyle: { color: barColor, borderRadius: [6, 6, 0, 0] },
 					barMaxWidth: 46,
 					markPoint: {
-						symbol: roundedTriangleSymbol,
-						symbolSize: 30,
-						symbolOffset: [0, -22],
+						symbol: "circle",
+						symbolSize: 24,
+						symbolOffset: [0, -24],
 						itemStyle: {
-							color: markFillColor,
-							borderColor: markBorderColor,
+							color: "transparent",
+							borderColor: markColor,
 							borderWidth: 2,
 						},
 						label: {
@@ -427,11 +424,10 @@ frappe.ready(() => {
 							position: "inside",
 							align: "center",
 							verticalAlign: "middle",
-							offset: [0, 2],
 							formatter: ({ value }) => `${value}`,
 							fontSize: 10,
 							fontWeight: 700,
-							color: markBorderColor,
+							color: "#111827",
 						},
 						data: alertMarkers,
 					},

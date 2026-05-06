@@ -421,15 +421,18 @@
 
 /* ─── Modal de tarefa ───────────────────────────────────── */
 .task-dialog > div {
-    max-width: min(900px, 95vw);
-    width: min(900px, 95vw);
-    max-height: min(92vh, 760px);
+    max-width: min(1160px, 97vw);
+    width: min(1160px, 97vw);
+    height: min(92vh, 900px);
 }
 
 .task-dialog > div > section {
     flex: 1;
     overflow-y: auto;
     min-height: 0;
+    overflow-x: visible;
+    display: flex;
+    flex-direction: column;
 }
 
 .task-modal-subtitle {
@@ -442,7 +445,9 @@
     display: grid;
     grid-template-columns: 1fr 290px;
     gap: 1.25rem;
-    align-items: start;
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
 }
 .task-modal-grid > * { min-width: 0; }
 
@@ -451,6 +456,7 @@
     flex-direction: column;
     gap: 0.75rem;
     min-width: 0;
+    min-height: 0;
 }
 
 .task-modal-side {
@@ -500,6 +506,37 @@
     gap: 0.75rem;
 }
 .task-meta-row > * { min-width: 0; }
+
+/* ─── Campo de observações (expansível) ─────────────────── */
+.task-observacoes-field {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+.task-observacoes-field > label { flex-shrink: 0; }
+.task-observacoes-field #task_observacoes_markdown_block,
+.task-observacoes-field #task_observacoes_editor_host {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+.task-observacoes-field .markdown-editor__toolbar { flex-shrink: 0; }
+.task-observacoes-field .markdown-editor__preview {
+    flex-shrink: 0;
+    max-height: 6rem;
+    overflow-y: auto;
+}
+.task-observacoes-field #task_observacoes {
+    flex: 1;
+    min-height: 0;
+    resize: none;
+}
+.task-observacoes-field .toastui-editor-defaultUI {
+    flex: 1;
+    min-height: 0;
+}
 
 /* ─── Timeline da tarefa ────────────────────────────────── */
 .task-timeline {
@@ -591,8 +628,7 @@
     flex-direction: column;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
-    min-height: 120px;
-    max-height: 280px;
+    min-height: 0;
 }
 
 .task-comments-empty {
@@ -743,10 +779,15 @@
 @media (max-width: 680px) {
     .task-dialog > div {
         max-height: 98vh;
+        height: 98vh;
     }
 
     .task-modal-grid {
         grid-template-columns: 1fr;
+        /* No mobile, a grid não deve tentar preencher a altura da section:
+           deixa crescer ao tamanho natural do conteúdo e deixa a section rolar. */
+        flex: none;
+        min-height: unset;
     }
 
     .task-title-editor {
@@ -755,6 +796,16 @@
 
     .task-meta-row {
         grid-template-columns: 1fr 1fr;
+    }
+
+    /* Garante que o campo de descrição tenha altura mínima visível */
+    .task-observacoes-field {
+        min-height: 8rem;
+    }
+
+    /* Garante que o painel de comentários tenha altura mínima visível */
+    .task-modal-side {
+        min-height: 18rem;
     }
 }
 

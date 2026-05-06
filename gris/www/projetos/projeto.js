@@ -46,7 +46,6 @@
         participantsSaving: false,
         dragTaskName: "",
         isDraggingTask: false,
-        useFrappeEditor: false,
         meetingEditors: {
             pauta: null,
             ata: null,
@@ -100,6 +99,14 @@
         if (!el) return;
         el.setAttribute("hidden", "");
         el.textContent = "";
+    }
+
+    function showToast(message, category = "info") {
+        document.dispatchEvent(
+            new CustomEvent("basecoat:toast", {
+                detail: { config: { category, description: message } },
+            })
+        );
     }
 
     function getEventTargetElement(event) {
@@ -286,84 +293,6 @@
         el.innerHTML = markdownToHtml(value || "");
     }
 
-    function requireFrappeBundle(bundleName, timeoutMs = 6000) {
-        return new Promise((resolve) => {
-            if (!window.frappe || typeof frappe.require !== "function") {
-                resolve(false);
-                return;
-            }
-
-            let settled = false;
-            const timer = window.setTimeout(() => {
-                if (!settled) {
-                    settled = true;
-                    resolve(false);
-                }
-            }, timeoutMs);
-
-            const finalize = (result) => {
-                if (settled) {
-                    return;
-                }
-                settled = true;
-                window.clearTimeout(timer);
-                resolve(Boolean(result));
-            };
-
-            try {
-                const maybePromise = frappe.require(bundleName, () => finalize(true));
-                if (maybePromise && typeof maybePromise.then === "function") {
-                    maybePromise.then(() => finalize(true)).catch(() => finalize(false));
-                }
-            } catch (error) {
-                finalize(false);
-            }
-        });
-    }
-
-    async function ensureFrappeTextEditorAvailable() {
-        if (!window.frappe) {
-            return false;
-        }
-
-        const hasFactory = Boolean(window.frappe?.ui?.form?.make_control);
-        const hasTextEditor = Boolean(window.frappe?.ui?.form?.ControlTextEditor);
-        if (!hasFactory || !hasTextEditor) {
-            await requireFrappeBundle("controls.bundle.js");
-        }
-
-        return Boolean(window.frappe?.ui?.form?.make_control && window.frappe?.ui?.form?.ControlTextEditor);
-    }
-
-    function createMeetingTextEditor(hostId, fieldname) {
-        const host = document.getElementById(hostId);
-        if (!host || !window.frappe?.ui?.form?.make_control) {
-            return null;
-        }
-
-        host.innerHTML = "";
-        const control = frappe.ui.form.make_control({
-            parent: host,
-            only_input: true,
-            render_input: 1,
-            df: {
-                fieldtype: "Text Editor",
-                fieldname,
-                label: "",
-            },
-        });
-
-        if (!control || typeof control.refresh !== "function") {
-            return null;
-        }
-
-        control.refresh();
-        if (control.$wrapper) {
-            control.$wrapper.find(".tooltip-content").remove();
-        }
-        return control;
-    }
-
     function updateMeetingAtaAvailability(editable) {
         const ataSection = document.getElementById("meetingAtaSection");
         const canEditAta = Boolean(editable && state.meetingPersisted);
@@ -372,42 +301,10 @@
             ataSection.classList.toggle("d-none", !state.meetingPersisted);
         }
 
-        if (state.useFrappeEditor) {
-            const ataHost = document.getElementById("meeting_ata_editor_host");
-            if (ataHost) {
-                ataHost.classList.toggle("is-locked", !canEditAta);
-            }
-
-            if (!state.meetingPersisted) {
-                setFrappeEditorValue(state.meetingEditors.ata, "");
-            }
-            setFrappeEditorReadOnly(state.meetingEditors.ata, !canEditAta);
-            return;
+        if (!state.meetingPersisted) {
+            setToastEditorValue(state.meetingEditors.ata, "");
         }
-
-        const ataInput = document.getElementById("meeting_ata");
-        if (ataInput) {
-            if (!state.meetingPersisted) {
-                ataInput.value = "";
-            }
-            ataInput.disabled = !canEditAta;
-        }
-    }
-
-    function setMeetingEditorMode(useFrappeEditor) {
-        state.useFrappeEditor = Boolean(useFrappeEditor);
-
-        ["meeting_pauta_editor_host", "meeting_ata_editor_host"].forEach((id) => {
-            const host = document.getElementById(id);
-            if (!host) return;
-            host.classList.toggle("d-none", !state.useFrappeEditor);
-        });
-
-        ["meeting_pauta_markdown_block", "meeting_ata_markdown_block"].forEach((id) => {
-            const block = document.getElementById(id);
-            if (!block) return;
-            block.classList.toggle("d-none", state.useFrappeEditor);
-        });
+        setToastEditorReadOnly(state.meetingEditors.ata, !canEditAta, "meeting_ata_editor_host");
     }
 
     function setTaskObservacoesEditorMode(useRichEditor) {
@@ -440,8 +337,8 @@
         }
     }
 
-    function setToastEditorReadOnly(editor, readOnly) {
-        const host = document.getElementById("task_observacoes_editor_host");
+    function setToastEditorReadOnly(editor, readOnly, hostId = "task_observacoes_editor_host") {
+        const host = document.getElementById(hostId);
         if (host) {
             host.classList.toggle("is-readonly", Boolean(readOnly));
             host.querySelectorAll("[contenteditable]").forEach((el) => {
@@ -478,70 +375,36 @@
         }
     }
 
-    function setFrappeEditorValue(control, value) {
-        if (!control) return;
+    async function initMeetingToastEditor(hostId) {
+        const host = document.getElementById(hostId);
+        if (!host || !window.gris?.editor?.create) {
+            return null;
+        }
 
-        if (typeof control.set_value === "function") {
-            Promise.resolve(control.set_value(value || "", true)).catch(() => {
-                if (typeof control.set_input === "function") {
-                    control.set_input(value || "");
-                }
+        host.innerHTML = "";
+        try {
+            return await window.gris.editor.create(host, {
+                initialValue: "",
+                toolbarItems: [
+                    ["heading", "bold", "italic", "strike"],
+                    ["hr", "quote"],
+                    ["ul", "ol", "task"],
+                    ["table", "link"],
+                    ["code", "codeblock"],
+                ],
             });
-            return;
-        }
-
-        if (typeof control.set_input === "function") {
-            control.set_input(value || "");
-        }
-    }
-
-    function getFrappeEditorValue(control) {
-        if (!control) return "";
-
-        if (typeof control.get_input_value === "function") {
-            return String(control.get_input_value() || "").trim();
-        }
-
-        if (typeof control.get_value === "function") {
-            return String(control.get_value() || "").trim();
-        }
-
-        return "";
-    }
-
-    function setFrappeEditorReadOnly(control, readOnly) {
-        if (!control) return;
-
-        control.df.read_only = readOnly ? 1 : 0;
-        if (control.quill && typeof control.quill.enable === "function") {
-            control.quill.enable(!readOnly);
-        }
-        if (control.$wrapper) {
-            control.$wrapper.toggleClass("is-disabled", Boolean(readOnly));
+        } catch (error) {
+            return null;
         }
     }
 
     async function initMeetingEditors() {
-        setMeetingEditorMode(false);
-
-        const isAvailable = await ensureFrappeTextEditorAvailable();
-        if (!isAvailable) {
-            return;
-        }
-
-        const pautaEditor = createMeetingTextEditor("meeting_pauta_editor_host", "meeting_pauta_rich");
-        const ataEditor = createMeetingTextEditor("meeting_ata_editor_host", "meeting_ata_rich");
-
-        if (!pautaEditor || !ataEditor) {
-            state.meetingEditors = { pauta: null, ata: null };
-            setMeetingEditorMode(false);
-        } else {
-            state.meetingEditors = {
-                pauta: pautaEditor,
-                ata: ataEditor,
-            };
-            setMeetingEditorMode(true);
-        }
+        const [pautaEditor, ataEditor] = await Promise.all([
+            initMeetingToastEditor("meeting_pauta_editor_host"),
+            initMeetingToastEditor("meeting_ata_editor_host"),
+        ]);
+        state.meetingEditors.pauta = pautaEditor;
+        state.meetingEditors.ata = ataEditor;
     }
 
     function renderTableRows(tbodyId, rows, columns) {
@@ -1221,7 +1084,7 @@
 
         const status = (document.getElementById("task_status")?.value || "Nao iniciado").trim() || "Nao iniciado";
         const startDateValue = (document.getElementById("task_data_inicio")?.value || "").trim();
-        const dueDateValue = (document.getElementById("task_prazo")?.value || "").trim();
+        const dueDateValue = getTaskPrazoValue();
         const deliveryInput = document.getElementById("task_data_entrega");
         const deliveryDateValue = (deliveryInput?.value || "").trim();
 
@@ -1430,9 +1293,9 @@
             .join("");
     }
 
-    function renderTaskResponsavelSelect(selectedValue) {
-        const select = document.getElementById("task_responsavel");
-        if (!select) return;
+    function renderTaskResponsavelCombobox(selectedValue) {
+        const wrapper = document.getElementById("task_responsavel_wrapper");
+        if (!wrapper) return;
 
         const normalizedSelected = String(selectedValue || "").trim();
         const normalizedOptions = Array.from(
@@ -1444,16 +1307,73 @@
             )
         );
 
-        const options = ['<option value="">Selecione</option>']
-            .concat(
-                normalizedOptions.map((item) => {
-                    const selected = item === normalizedSelected ? "selected" : "";
-                    return `<option value="${escapeHtml(item)}" ${selected}>${escapeHtml(item)}</option>`;
-                })
-            )
-            .join("");
+        const items = [{ value: "", label: "Selecione" }].concat(
+            normalizedOptions.map((item) => ({ value: item, label: item }))
+        );
 
-        select.innerHTML = options;
+        wrapper.innerHTML = buildBasecoatSelectHtml("task_responsavel", items, {
+            isCombobox: true,
+            searchPlaceholder: "Buscar responsável...",
+        });
+
+        // Pre-select current value after rendering
+        if (normalizedSelected) {
+            const selectEl = document.getElementById("task_responsavel");
+            if (selectEl) {
+                const option = selectEl.querySelector(`[role="option"][data-value="${CSS.escape(normalizedSelected)}"]`);
+                if (option) {
+                    const label = selectEl.querySelector("button > span.truncate");
+                    if (label) label.textContent = normalizedSelected;
+                    const hiddenInput = selectEl.querySelector(':scope > input[type="hidden"]');
+                    if (hiddenInput) hiddenInput.value = normalizedSelected;
+                }
+            }
+        }
+
+        // Re-initialize Basecoat for the newly injected component
+        document.dispatchEvent(new CustomEvent("gris:design-system:init"));
+    }
+
+    function buildDatepickerHtml(id, isoValue) {
+        const locale = "pt-BR";
+        const placeholder = "Selecione uma data";
+        const popoverId = `${id}-popover`;
+        const safeValue = escapeHtml(isoValue || "");
+        const safePlaceholder = escapeHtml(placeholder);
+        const spriteBase = "/assets/gris/design_system/icons/lucide/sprite.svg";
+        return `<div id="${id}" class="datepicker" data-datepicker data-mode="single" data-locale="${locale}" data-placeholder="${safePlaceholder}">
+  <button type="button" class="datepicker-trigger input" aria-haspopup="dialog" aria-expanded="false" aria-controls="${popoverId}">
+    <svg class="ds-lucide ds-lucide--sm datepicker-trigger__icon" viewBox="0 0 24 24" aria-hidden="true"><use href="${spriteBase}#calendar"></use></svg>
+    <span class="datepicker-trigger__label datepicker-trigger__label--placeholder" data-datepicker-label>${safePlaceholder}</span>
+  </button>
+  <input type="hidden" data-datepicker-value value="${safeValue}">
+  <div id="${popoverId}" class="datepicker-popover" data-datepicker-popover role="dialog" aria-modal="false" aria-label="Selecionar data" hidden>
+    <header class="datepicker-popover__header">
+      <button type="button" class="datepicker-popover__nav" data-datepicker-prev aria-label="Mês anterior"><svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="${spriteBase}#chevron-left"></use></svg></button>
+      <span class="datepicker-popover__title" data-datepicker-title aria-live="polite"></span>
+      <button type="button" class="datepicker-popover__nav" data-datepicker-next aria-label="Próximo mês"><svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="${spriteBase}#chevron-right"></use></svg></button>
+    </header>
+    <div class="datepicker-popover__weekdays" aria-hidden="true" data-datepicker-weekdays></div>
+    <div class="datepicker-popover__grid" role="grid" data-datepicker-grid></div>
+    <footer class="datepicker-popover__footer">
+      <button type="button" class="datepicker-popover__action" data-datepicker-clear>Limpar</button>
+      <button type="button" class="datepicker-popover__action" data-datepicker-today>Hoje</button>
+    </footer>
+  </div>
+</div>`;
+    }
+
+    function getTaskPrazoValue() {
+        const dp = document.getElementById("task_prazo_datepicker");
+        if (!dp) return "";
+        return dp.querySelector("[data-datepicker-value]")?.value || "";
+    }
+
+    function renderTaskPrazoDatepicker(value) {
+        const wrapper = document.getElementById("task_prazo_wrapper");
+        if (!wrapper) return;
+        wrapper.innerHTML = buildDatepickerHtml("task_prazo_datepicker", value || "");
+        document.dispatchEvent(new CustomEvent("gris:design-system:init"));
     }
 
     function setTaskModalHeading(task) {
@@ -1466,8 +1386,8 @@
 
         if (subtitle) {
             subtitle.textContent = task?.name
-                ? "Atualize os metadados e registre atividades no histórico de comentários."
-                : "Preencha os metadados e salve para habilitar comentários na lateral.";
+                ? "Atualize os dados e registre atividades no histórico de comentários."
+                : "Preencha os dados e salve para habilitar comentários na lateral.";
         }
     }
 
@@ -1922,11 +1842,9 @@
     function setTaskModalEditability(editable) {
         [
             "task_data_inicio",
-            "task_prazo",
             "task_data_entrega",
             "task_title_editor",
             "task_status",
-            "task_responsavel",
             "task_observacoes",
         ].forEach((fieldId) => {
             const field = document.getElementById(fieldId);
@@ -1934,6 +1852,18 @@
                 field.disabled = !editable;
             }
         });
+
+        // Disable the trigger button of the responsável Basecoat combobox
+        const responsavelTrigger = document.querySelector("#task_responsavel > button");
+        if (responsavelTrigger) {
+            responsavelTrigger.disabled = !editable;
+        }
+
+        // Disable the trigger button of the prazo Basecoat datepicker
+        const prazoTrigger = document.querySelector("#task_prazo_datepicker > button");
+        if (prazoTrigger) {
+            prazoTrigger.disabled = !editable;
+        }
 
         if (state.taskObservacoesEditor) {
             setToastEditorReadOnly(state.taskObservacoesEditor, !editable);
@@ -1967,7 +1897,7 @@
 
         document.getElementById("task_name").value = task?.name || "";
         document.getElementById("task_data_inicio").value = task?.data_inicio || "";
-        document.getElementById("task_prazo").value = task?.prazo || "";
+        renderTaskPrazoDatepicker(task?.prazo || "");
         document.getElementById("task_data_entrega").value = task?.data_entrega || "";
         setTaskTitleValue(task?.descricao || "");
         state.taskTitleBeforeEdit = getTaskTitleValue();
@@ -1992,7 +1922,7 @@
             commentInput.value = "";
         }
 
-        renderTaskResponsavelSelect(task?.responsavel || "");
+        renderTaskResponsavelCombobox(task?.responsavel || "");
         setTaskModalHeading(task);
         renderTaskComments();
         setTaskModalEditability(state.canEdit);
@@ -2013,10 +1943,10 @@
         return {
             name: (document.getElementById("task_name")?.value || "").trim(),
             data_inicio: (document.getElementById("task_data_inicio")?.value || "").trim(),
-            prazo: (document.getElementById("task_prazo")?.value || "").trim(),
+            prazo: getTaskPrazoValue(),
             data_entrega: (document.getElementById("task_data_entrega")?.value || "").trim(),
             descricao: (document.getElementById("task_descricao")?.value || "").trim(),
-            responsavel: (document.getElementById("task_responsavel")?.value || "").trim(),
+            responsavel: getSelectComponentValue("task_responsavel"),
             status: (document.getElementById("task_status")?.value || "").trim() || "Nao iniciado",
             observacoes,
         };
@@ -2031,11 +1961,11 @@
 
         const payload = collectTaskPayload();
         if (!payload.descricao) {
-            showAlert("Informe o título da tarefa.", "error");
+            showToast("Informe o título da tarefa.", "error");
             return;
         }
         if (!payload.prazo) {
-            showAlert("Informe o prazo da tarefa.", "error");
+            showToast("Informe o prazo da tarefa.", "error");
             return;
         }
 
@@ -2162,24 +2092,14 @@
 
         modal.querySelectorAll("input, textarea").forEach((el) => {
             if (el.id === "meeting_name") return;
-            if (state.useFrappeEditor && (el.id === "meeting_pauta" || el.id === "meeting_ata")) return;
-            if (el.id === "meeting_ata" && !state.meetingPersisted) {
-                el.disabled = true;
-                return;
-            }
+            if (el.closest("[data-datepicker]")) return;
             el.disabled = !editable;
         });
 
-        modal.querySelectorAll("[data-markdown-action]").forEach((btn) => {
-            const toolbar = btn.closest("[data-markdown-target]");
-            const targetId = toolbar?.getAttribute("data-markdown-target") || "";
-            const isAtaToolbar = targetId === "meeting_ata";
-            btn.disabled = !editable || state.useFrappeEditor || (isAtaToolbar && !state.meetingPersisted);
-        });
+        const dpTrigger = modal.querySelector("#meeting_data_hora .datepicker-trigger");
+        if (dpTrigger) dpTrigger.disabled = !editable;
 
-        if (state.useFrappeEditor) {
-            setFrappeEditorReadOnly(state.meetingEditors.pauta, !editable);
-        }
+        setToastEditorReadOnly(state.meetingEditors.pauta, !editable, "meeting_pauta_editor_host");
 
         updateMeetingAtaAvailability(editable);
 
@@ -2188,20 +2108,6 @@
     }
 
     function renderMarkdownPreviews() {
-        if (!state.useFrappeEditor) {
-            const pauta = document.getElementById("meeting_pauta")?.value || "";
-            const ata = document.getElementById("meeting_ata")?.value || "";
-            const pautaPreview = document.getElementById("meeting_pauta_preview");
-            const ataPreview = document.getElementById("meeting_ata_preview");
-
-            if (pautaPreview) {
-                pautaPreview.innerHTML = pauta ? markdownToHtml(pauta) : "-";
-            }
-            if (ataPreview) {
-                ataPreview.innerHTML = ata ? markdownToHtml(ata) : "-";
-            }
-        }
-
         if (!state.taskObservacoesEditor) {
             const taskObservacoes = document.getElementById("task_observacoes")?.value || "";
             const taskObservacoesPreview = document.getElementById("task_observacoes_preview");
@@ -2216,37 +2122,29 @@
         state.meetingPersisted = Boolean(meeting?.name);
 
         document.getElementById("meeting_name").value = meeting?.name || "";
-        document.getElementById("meeting_data_hora").value = toDatetimeLocalValue(meeting?.data_hora || "");
+        const dp = document.getElementById("meeting_data_hora");
+        if (dp) dp.value = toDatetimeLocalValue(meeting?.data_hora || "");
         document.getElementById("meeting_descricao").value = meeting?.descricao || "";
         const pautaValue = meeting?.pauta || "";
         const ataValue = state.meetingPersisted ? meeting?.ata || "" : "";
 
-        document.getElementById("meeting_pauta").value = pautaValue;
-        document.getElementById("meeting_ata").value = ataValue;
-
-        if (state.useFrappeEditor) {
-            setFrappeEditorValue(state.meetingEditors.pauta, pautaValue);
-            setFrappeEditorValue(state.meetingEditors.ata, ataValue);
-        }
+        setToastEditorValue(state.meetingEditors.pauta, pautaValue);
+        setToastEditorValue(state.meetingEditors.ata, ataValue);
 
         setMeetingModalEditability(state.canEdit);
-        if (!state.useFrappeEditor) {
-            renderMarkdownPreviews();
-        }
+        renderMarkdownPreviews();
         openModal("meetingModal");
     }
 
     function collectMeetingPayload() {
-        const pauta = state.useFrappeEditor
-            ? getFrappeEditorValue(state.meetingEditors.pauta)
-            : (document.getElementById("meeting_pauta")?.value || "").trim();
-        const ata = state.useFrappeEditor
-            ? getFrappeEditorValue(state.meetingEditors.ata)
-            : (document.getElementById("meeting_ata")?.value || "").trim();
+        const pauta = getToastEditorValue(state.meetingEditors.pauta);
+        const ata = getToastEditorValue(state.meetingEditors.ata);
+        const dp = document.getElementById("meeting_data_hora");
+        const dataHoraIso = dp?.value || "";
 
         return {
             name: (document.getElementById("meeting_name")?.value || "").trim(),
-            data_hora: fromDatetimeLocalValue(document.getElementById("meeting_data_hora")?.value || ""),
+            data_hora: fromDatetimeLocalValue(dataHoraIso),
             descricao: (document.getElementById("meeting_descricao")?.value || "").trim(),
             pauta,
             ata: state.meetingPersisted ? ata : "",
@@ -2298,17 +2196,7 @@
     }
 
     function applyMarkdownAction(action, targetId) {
-        const usesMeetingFrappeEditor =
-            state.useFrappeEditor && (targetId === "meeting_pauta" || targetId === "meeting_ata");
-        if (usesMeetingFrappeEditor) {
-            return;
-        }
-
         if (targetId === "task_observacoes" && state.taskObservacoesEditor) {
-            return;
-        }
-
-        if (targetId === "meeting_ata" && !state.meetingPersisted) {
             return;
         }
 
@@ -2588,14 +2476,17 @@
             taskStatusSelect.addEventListener("change", applyTaskDateRulesByStatusChange);
         }
 
-        ["task_data_inicio", "task_prazo"].forEach((fieldId) => {
-            const field = document.getElementById(fieldId);
-            if (!field) {
-                return;
-            }
+        const startField = document.getElementById("task_data_inicio");
+        if (startField) {
+            startField.addEventListener("change", updateTaskTimelineInfographic);
+            startField.addEventListener("input", updateTaskTimelineInfographic);
+        }
 
-            field.addEventListener("change", updateTaskTimelineInfographic);
-            field.addEventListener("input", updateTaskTimelineInfographic);
+        document.addEventListener("datepicker:change", (event) => {
+            const wrapper = document.getElementById("task_prazo_wrapper");
+            if (wrapper && wrapper.contains(event.target)) {
+                updateTaskTimelineInfographic();
+            }
         });
 
         const taskTitleEditor = document.getElementById("task_title_editor");
@@ -2702,7 +2593,7 @@
 
         document.addEventListener("input", (event) => {
             const target = event.target;
-            if (target && (target.id === "meeting_pauta" || target.id === "meeting_ata" || target.id === "task_observacoes")) {
+            if (target && target.id === "task_observacoes") {
                 renderMarkdownPreviews();
                 return;
             }
@@ -2932,16 +2823,17 @@
             individuais.forEach(function (a, i) {
                 var statusClass = a.avaliacao_concluida ? "aval-avaliador--concluido" : "aval-avaliador--pendente";
                 var statusLabel = a.avaliacao_concluida ? "Concluída" : "Pendente";
+                var statusBadgeClass = a.avaliacao_concluida ? "badge badge-success" : "badge badge-secondary";
                 html += '<div class="aval-avaliador ' + statusClass + '">';
                 html += '<div class="aval-avaliador__info">';
                 html += '<span class="aval-avaliador__nome">' + escapeHtml(a.avaliador) + '</span>';
-                html += '<span class="aval-avaliador__status">' + statusLabel + '</span>';
+                html += '<span class="' + statusBadgeClass + '">' + statusLabel + '</span>';
                 html += '</div>';
                 html += '<div class="aval-avaliador__actions">';
                 if (a.avaliacao_concluida) {
-                    html += '<button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-ver-avaliacao-idx="' + a.idx + '">Ver detalhes</button>';
+                    html += '<button type="button" class="btn-sm-outline" data-ver-avaliacao-idx="' + a.idx + '">Ver detalhes</button>';
                 } else if (data.can_edit_general) {
-                    html += '<button type="button" class="btn-modern btn-modern--outline btn-modern--sm" data-reenviar-idx="' + a.idx + '">Reenviar e-mail e WhatsApp</button>';
+                    html += '<button type="button" class="btn-sm-outline" data-reenviar-idx="' + a.idx + '">Reenviar e-mail e WhatsApp</button>';
                 }
                 html += '</div></div>';
             });
@@ -2955,21 +2847,44 @@
             if (objetivos.length === 0) {
                 objHtml = '<tr><td colspan="3" class="text-center">Nenhum objetivo cadastrado</td></tr>';
             } else {
+                var objAtingidoItems = [
+                    { value: "", label: "Selecione" },
+                    { value: "Completamente", label: "Completamente" },
+                    { value: "Parcialmente", label: "Parcialmente" },
+                    { value: "Nao", label: "Não" },
+                ];
                 objetivos.forEach(function (obj, i) {
                     var disabledAttr = data.can_edit_general ? "" : " disabled";
+                    var selectId = "aval_obj_sel_" + i;
                     objHtml += '<tr>';
                     objHtml += '<td>' + escapeHtml(obj.objetivo || "") + '</td>';
-                    objHtml += '<td><select class="form-input-modern form-input-modern--sm aval-obj-select" data-obj-idx="' + i + '"' + disabledAttr + '>';
-                    objHtml += '<option value=""' + (!obj.objetivo_atingido ? ' selected' : '') + '>Selecione</option>';
-                    objHtml += '<option value="Completamente"' + (obj.objetivo_atingido === 'Completamente' ? ' selected' : '') + '>Completamente</option>';
-                    objHtml += '<option value="Parcialmente"' + (obj.objetivo_atingido === 'Parcialmente' ? ' selected' : '') + '>Parcialmente</option>';
-                    objHtml += '<option value="Nao"' + (obj.objetivo_atingido === 'Nao' ? ' selected' : '') + '>Não</option>';
-                    objHtml += '</select></td>';
+                    objHtml += '<td>' + buildBasecoatSelectHtml(selectId, objAtingidoItems) + '</td>';
                     objHtml += '<td><input type="text" class="form-input-modern form-input-modern--sm aval-obj-motivo" data-obj-idx="' + i + '" value="' + escapeHtml(obj.porque_nao_foi_atingido || "") + '"' + disabledAttr + ' placeholder="Opcional" /></td>';
                     objHtml += '</tr>';
                 });
             }
             objBody.innerHTML = objHtml;
+            objetivos.forEach(function (obj, i) {
+                var selectId = "aval_obj_sel_" + i;
+                var currentValue = obj.objetivo_atingido || "";
+                var selectEl = document.getElementById(selectId);
+                if (selectEl) {
+                    if (currentValue) {
+                        var optionEl = selectEl.querySelector('[role="option"][data-value="' + currentValue + '"]');
+                        var labelText = optionEl ? optionEl.textContent.trim() : currentValue;
+                        var btnLabel = selectEl.querySelector("button > span.truncate");
+                        var hiddenInput = selectEl.querySelector(':scope > input[type="hidden"]');
+                        if (btnLabel) btnLabel.textContent = labelText;
+                        if (hiddenInput) hiddenInput.value = currentValue;
+                    }
+                    if (!data.can_edit_general) {
+                        var triggerBtn = selectEl.querySelector(":scope > button");
+                        if (triggerBtn) triggerBtn.disabled = true;
+                    }
+                }
+            });
+            document.dispatchEvent(new CustomEvent("gris:design-system:init"));
+            initObjSelectsFloating();
         }
 
         /* Campos da avaliação geral */
@@ -3011,6 +2926,45 @@
         }
     }
 
+    function initObjSelectsFloating() {
+        var objBody = document.getElementById("avaliacaoObjetivosBody");
+        if (!objBody || objBody.dataset.floatingObserver === "1") return;
+        objBody.dataset.floatingObserver = "1";
+
+        var observer = new MutationObserver(function (mutations) {
+            mutations.forEach(function (mutation) {
+                if (mutation.type !== "attributes" || mutation.attributeName !== "aria-hidden") return;
+                var popover = mutation.target;
+                if (!popover.hasAttribute("data-popover")) return;
+                var selectEl = popover.closest(".select");
+                if (!selectEl || !objBody.contains(selectEl)) return;
+                var trigger = selectEl.querySelector(":scope > button");
+                if (!trigger) return;
+                var isOpen = popover.getAttribute("aria-hidden") === "false";
+                if (isOpen) {
+                    var rect = trigger.getBoundingClientRect();
+                    popover.style.position = "fixed";
+                    popover.style.top = rect.bottom + "px";
+                    popover.style.left = rect.left + "px";
+                    popover.style.minWidth = rect.width + "px";
+                    popover.style.zIndex = "9999";
+                } else {
+                    popover.style.position = "";
+                    popover.style.top = "";
+                    popover.style.left = "";
+                    popover.style.minWidth = "";
+                    popover.style.zIndex = "";
+                }
+            });
+        });
+
+        observer.observe(objBody, {
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["aria-hidden"],
+        });
+    }
+
     async function iniciarAvaliacao() {
         var btn = document.getElementById("btnIniciarAvaliacao");
         if (btn) {
@@ -3046,11 +3000,10 @@
 
         var objData = [];
         objetivos.forEach(function (obj, i) {
-            var selEl = document.querySelector('.aval-obj-select[data-obj-idx="' + i + '"]');
             var motEl = document.querySelector('.aval-obj-motivo[data-obj-idx="' + i + '"]');
             objData.push({
                 objetivo: obj.objetivo || "",
-                objetivo_atingido: selEl ? selEl.value : (obj.objetivo_atingido || ""),
+                objetivo_atingido: getSelectComponentValue("aval_obj_sel_" + i) || (obj.objetivo_atingido || ""),
                 porque_nao_foi_atingido: motEl ? motEl.value : (obj.porque_nao_foi_atingido || ""),
             });
         });
@@ -3217,7 +3170,7 @@
         bindEvents();
         await reloadData();
         initMeetingEditors().catch(() => {
-            state.useFrappeEditor = false;
+            state.meetingEditors = { pauta: null, ata: null };
         });
         initTaskObservacoesEditor().catch(() => {
             state.taskObservacoesEditor = null;

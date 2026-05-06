@@ -52,6 +52,7 @@
     r.setDate(r.getDate() + n);
     return r;
   };
+  const isWeekendDate = (date) => date.getDay() === 0 || date.getDay() === 6;
   const addMonths = (d, n) => {
     const r = new Date(d);
     r.setMonth(r.getMonth() + n);
@@ -533,8 +534,6 @@
       class: "calendar__list-empty-cell",
       text,
     });
-
-    const isWeekendDate = (date) => date.getDay() === 0 || date.getDay() === 6;
 
     const autoScrollListToToday = () => {
       const todayRow = body.querySelector("[data-calendar-list-today='true']");

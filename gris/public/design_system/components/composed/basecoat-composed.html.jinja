@@ -200,15 +200,63 @@
 {% endcall %}
 {% endmacro %}
 
-{% macro empty(title, description=None, action=None, icon=None, attrs={}) %}
+{% macro _empty_action(action, base_class) %}
+  {% if action %}
+    {% set _label = action.label | default('') %}
+    {% set _attrs = action.attrs | default({}) %}
+    {% set _extra_class = _attrs.class | default('') %}
+    {% if action.href %}
+      <a href="{{ action.href }}" class="{{ base_class }} {{ _extra_class }}"
+        {% for k, v in _attrs.items() %}{% if k != 'class' %}{{ k }}="{{ v }}"{% endif %}{% endfor %}
+      >{{ _label | safe }}</a>
+    {% else %}
+      <button type="button" class="{{ base_class }} {{ _extra_class }}"
+        {% if action.onclick %}onclick="{{ action.onclick }}"{% endif %}
+        {% for k, v in _attrs.items() %}{% if k != 'class' %}{{ k }}="{{ v }}"{% endif %}{% endfor %}
+      >{{ _label | safe }}</button>
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{% macro empty(
+    title,
+    description=None,
+    icon=None,
+    image=None,
+    image_size="md",
+    image_alt="",
+    primary_action=None,
+    secondary_action=None,
+    ghost_action=None,
+    action=None,
+    attrs={}
+) %}
+{% set _size_token = image_size if image_size in ['sm', 'md', 'lg'] else '' %}
+{% set _size_class = ('empty-image--' ~ _size_token) if _size_token else '' %}
+{% set _size_style = ('max-width: ' ~ image_size ~ ';') if image_size and not _size_token else '' %}
 <section class="empty {{ attrs.class }}"
   {% for key, value in attrs.items() %}
     {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
   {% endfor %}
 >
-  {% if icon %}<div class="empty-icon">{{ icon | safe }}</div>{% endif %}
+  {% if image %}
+    <div class="empty-media">
+      <img src="{{ image }}" alt="{{ image_alt }}" class="empty-image {{ _size_class }}"
+        {% if _size_style %}style="{{ _size_style }}"{% endif %}
+        loading="lazy" decoding="async" />
+    </div>
+  {% elif icon %}
+    <div class="empty-icon">{{ icon | safe }}</div>
+  {% endif %}
   <h2>{{ title | safe }}</h2>
   {% if description %}<p>{{ description | safe }}</p>{% endif %}
+  {% if primary_action or secondary_action or ghost_action %}
+    <div class="empty-actions">
+      {{ _empty_action(primary_action, 'btn-primary') }}
+      {{ _empty_action(secondary_action, 'btn-outline') }}
+      {{ _empty_action(ghost_action, 'btn-ghost') }}
+    </div>
+  {% endif %}
   {% if action %}<div>{{ action | safe }}</div>{% endif %}
   {{ caller() if caller }}
 </section>
@@ -391,10 +439,12 @@
 </label>
 {% endmacro %}
 
-{% macro table(headers=[], rows=[], striped=false, attrs={}) %}
+{% macro table(headers=[], rows=[], striped=false, sortable=true, sort_skip=[], attrs={}) %}
 {% set classes = "table" %}
 {% if striped %}{% set classes = classes ~ " table-striped" %}{% endif %}
+{% if sortable %}{% set classes = classes ~ " table-sortable" %}{% endif %}
 <table class="{{ classes }} {{ attrs.class }}"
+  {% if sortable %}data-table-sortable{% endif %}
   {% for key, value in attrs.items() %}
     {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
   {% endfor %}
@@ -402,7 +452,20 @@
   {% if headers %}
   <thead>
     <tr>
-      {% for header in headers %}<th>{{ header | safe }}</th>{% endfor %}
+      {% for header in headers %}
+        {% if sortable and (loop.index0 not in sort_skip) %}
+        <th aria-sort="none" data-sortable>
+          <button type="button" class="table-sort-trigger">
+            <span>{{ header | safe }}</span>
+            <svg class="ds-lucide ds-lucide--xs table-sort-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <use href="/assets/gris/design_system/icons/lucide/sprite.svg#chevrons-up-down"></use>
+            </svg>
+          </button>
+        </th>
+        {% else %}
+        <th>{{ header | safe }}</th>
+        {% endif %}
+      {% endfor %}
     </tr>
   </thead>
   {% endif %}

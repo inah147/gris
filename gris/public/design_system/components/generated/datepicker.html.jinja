@@ -4,11 +4,13 @@
   @param id {string} [optional] - Unique identifier for the datepicker.
   @param name {string} [optional] - Hidden input name. In `single` mode, used as-is. In `range` mode, used as a prefix and the suffixes `_start` / `_end` are appended.
   @param mode {string} [default="single"] - Selection mode: "single" or "range".
-  @param value {string|object} [optional] - Initial value. ISO "YYYY-MM-DD" for `single`; `{"start": "...", "end": "..."}` for `range`.
+  @param value {string|object} [optional] - Initial value. ISO "YYYY-MM-DD" (or "YYYY-MM-DDTHH:MM" when with_time) for `single`; `{"start": "...", "end": "..."}` for `range`.
   @param min {string} [optional] - Minimum selectable ISO date "YYYY-MM-DD".
   @param max {string} [optional] - Maximum selectable ISO date "YYYY-MM-DD".
   @param placeholder {string} [default="Selecione uma data"] - Placeholder shown when no value is selected.
   @param locale {string} [default="pt-BR"] - BCP 47 locale tag used for `Intl.DateTimeFormat`.
+  @param with_time {boolean} [default=false] - Quando `true`, exibe seletor de hora no rodapé do popover. Hidden input passa a serializar `YYYY-MM-DDTHH:MM`. Apenas em `mode="single"`.
+  @param time_step {integer} [default=300] - Passo (em segundos) do `<input type="time">`. Aplicável apenas quando `with_time=true`.
   @param main_attrs {object} [optional] - Extra attributes for the wrapper div.
   @param trigger_attrs {object} [optional] - Extra attributes for the trigger button.
 #}
@@ -21,11 +23,14 @@
     max=None,
     placeholder="Selecione uma data",
     locale="pt-BR",
+    with_time=false,
+    time_step=300,
     main_attrs={},
     trigger_attrs={}
 ) %}
 {% set id = id or ("datepicker-" ~ (range(100000, 999999) | random | string)) %}
 {% set is_range = mode == "range" %}
+{% set with_time_active = with_time and not is_range %}
 {% set value_single = value if (value and not is_range) else "" %}
 {% set value_start = (value.start if (is_range and value and value.start) else "") %}
 {% set value_end = (value.end if (is_range and value and value.end) else "") %}
@@ -34,6 +39,8 @@
   class="datepicker {{ main_attrs.class }}"
   data-datepicker
   data-mode="{{ 'range' if is_range else 'single' }}"
+  {% if with_time_active %}data-with-time="true"{% endif %}
+  {% if with_time_active %}data-time-step="{{ time_step }}"{% endif %}
   {% if min %}data-min="{{ min }}"{% endif %}
   {% if max %}data-max="{{ max }}"{% endif %}
   data-locale="{{ locale }}"
@@ -95,9 +102,24 @@
     </header>
     <div class="datepicker-popover__weekdays" aria-hidden="true" data-datepicker-weekdays></div>
     <div class="datepicker-popover__grid" role="grid" data-datepicker-grid></div>
+    {% if with_time_active %}
+    <div class="datepicker-popover__time">
+      <label class="datepicker-popover__time-label" for="{{ id }}-time">Hora</label>
+      <input
+        id="{{ id }}-time"
+        type="time"
+        class="input datepicker-popover__time-input"
+        data-datepicker-time
+        step="{{ time_step }}"
+      />
+    </div>
+    {% endif %}
     <footer class="datepicker-popover__footer">
       <button type="button" class="datepicker-popover__action" data-datepicker-clear>Limpar</button>
       <button type="button" class="datepicker-popover__action" data-datepicker-today>Hoje</button>
+      {% if with_time_active %}
+      <button type="button" class="datepicker-popover__action datepicker-popover__action--primary" data-datepicker-confirm>Confirmar</button>
+      {% endif %}
     </footer>
   </div>
 </div>

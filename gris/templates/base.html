@@ -1,6 +1,6 @@
 {% extends "frappe/templates/base.html" %}
 
-{% set design_system_asset_version = "20260501-btn-group-1" %}
+{% set design_system_asset_version = "20260506-table-sort-datepicker-border" %}
 {% set current_page_path = pathname if pathname is defined and pathname else (path if path is defined else "") %}
 {% set is_login_page = current_page_path.startswith("/login") or current_page_path == "login" %}
 {% set hide_website_chrome = is_login_page or no_header %}
@@ -61,6 +61,8 @@
 <link rel="stylesheet" href="/assets/gris/design_system/css/phone-input.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/calendar.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/layout.css?v={{ design_system_asset_version }}">
+<link rel="stylesheet" href="/assets/gris/design_system/css/empty.css?v={{ design_system_asset_version }}">
+<link rel="stylesheet" href="/assets/gris/design_system/css/table.css?v={{ design_system_asset_version }}">
 {% if is_login_page %}
 {{ include_style('website.bundle.css') }}
 <link rel="stylesheet" href="/assets/gris/css/login-page.css?v={{ design_system_asset_version }}">
@@ -79,6 +81,7 @@
 <script src="/assets/gris/design_system/js/components/sidebar.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/components/tabs.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/components/toast.js?v={{ design_system_asset_version }}" defer></script>
+<script src="/assets/gris/design_system/js/components/table.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/design-system-init.js?v={{ design_system_asset_version }}" defer></script>
 
 <!-- PWA Meta Tags -->

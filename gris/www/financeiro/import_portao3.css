@@ -100,7 +100,7 @@
   line-height: var(--leading-relaxed);
 }
 
-#btnConciliarBtg {
+#btnConciliarPortao3 {
   gap: calc(var(--spacing) * 2);
 }
 
@@ -274,7 +274,7 @@
     line-height: var(--text-3xl--line-height);
   }
 
-  #btnConciliarBtg {
+  #btnConciliarPortao3 {
     width: 100%;
   }
 }

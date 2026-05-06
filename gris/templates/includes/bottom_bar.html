@@ -13,7 +13,7 @@
     --bb-active-glow: 0 6px 16px color-mix(in oklch, var(--primary) 45%, transparent);
     --radius-pill: 34px;
   }
-  body { padding-bottom: var(--bottom-bar-height); }
+  body { padding-bottom: calc(var(--bottom-bar-height) + 32px); }
   .bottom-bar-wrapper { position: fixed; left: 0; right: 0; bottom: 16px; display: flex; justify-content: center; pointer-events: none; z-index: 30; }
   .bottom-bar { pointer-events: auto; background: var(--bb-bg); height: var(--bottom-bar-height); min-width: 280px; width: min(92%, 560px); display: flex; align-items: center; justify-content: space-around; border-radius: var(--radius-pill); box-shadow: var(--bb-shadow); padding: 0 8px; }
   .bb-item { flex: 1 1 0; text-align: center; text-decoration: none; color: var(--bb-icon); font-size: 11px; font-weight: 500; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 0 8px; position: relative; -webkit-tap-highlight-color: transparent; border-radius: 16px; }

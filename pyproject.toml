@@ -14,7 +14,9 @@ dependencies = [
     "ofxparse",
     "openpyxl",
     "numpy",
-    "pdfplumber"
+    "pdfplumber",
+    "Faker>=24.0.0",
+    "PyYAML>=6.0",
 ]
 
 [build-system]

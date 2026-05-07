@@ -122,6 +122,29 @@ Para redefinir o componente visualmente após `form.reset()`, iterar sobre `form
 - Prefira classes e tokens Basecoat (`--background`, `--foreground`, `--card`, `--primary`, `--muted`, `--border`, `--ring`, `--radius`) em vez de criar uma camada paralela.
 - `gris/public/css/design-system.css`, `gris/public/css/components.css` e `gris/public/components/` são legado/compatibilidade; não usar como primeira opção em nova interface.
 
+### Overflow em cards e contêineres de conteúdo
+
+Quando o conteúdo de um card pode exceder a largura/altura do card (tabelas largas, listas longas, blocos de texto pré-formatado, código), garantir **scroll interno** no contêiner de conteúdo — nunca deixar o card estourar o layout da página.
+
+Padrão recomendado:
+
+```html
+<article class="card">
+    <section class="p-0 min-w-0">
+        <div class="overflow-x-auto">
+            <table class="table">…</table>
+        </div>
+    </section>
+</article>
+```
+
+Pontos críticos:
+- `.card` do Basecoat é `flex flex-col`. Itens flex têm `min-width: auto`, então o filho direto que envolve o conteúdo rolável **precisa** de `min-w-0` para que `overflow-x-auto`/`overflow-y-auto` aninhado funcione.
+- Para overflow vertical, aplicar `max-h-*` (ou altura explícita via CSS local) + `overflow-y-auto` no contêiner interno.
+- **Manter `overflow: visible` no `.card`** — não usar `overflow-hidden` no card, pois isso clipa elementos sobrepostos que devem extravasar (dialogs ancorados, tooltips, popovers, dropdowns/`combobox`, `select`). Esses componentes posicionam fora do fluxo e dependem do card permanecer visível.
+
+Esta regra **não se aplica** a popovers, combobox, select e tooltip: eles são camadas flutuantes; seu próprio container deve continuar com overflow visível.
+
 ## Convenção de nome e auto-carregamento
 Para rotas em `www`, use o **mesmo nome base** para arquivos relacionados:
 
@@ -151,6 +174,21 @@ Para casos não-HTML também suportados em `www`, manter o mesmo padrão de pare
 - `robots.txt` + `robots.py`
 - `sitemap.xml` + `sitemap.py`
 - `website_script.js` + `website_script.py`
+
+## Registro da rota em `gris_route_prefixes` (obrigatório)
+Ao criar qualquer nova rota em `gris/www/` (arquivo `<rota>.html` ou pasta `<rota>/`), **é obrigatório** adicionar o prefixo `<rota>` (sem barra inicial) à lista `gris_route_prefixes` em `gris/templates/base.html`.
+
+**Por que:** o template base do Gris só carrega o design system Basecoat em rotas listadas em `gris_route_prefixes`. Rotas fora da lista caem no caminho de páginas Frappe nativas e herdam `website.bundle.css` via `super()`. Se esquecer, sua página Gris renderiza com a aparência do Frappe nativo — sem Basecoat, sem theme-shadcn, sem ícones Lucide.
+
+Esse desenho é proposital: páginas públicas nativas do Frappe (`/login`, `/update-password`, `/me`, `/error`, `/contact`, `/about`, etc.) não devem receber Basecoat para preservar a formatação esperada por cada uma.
+
+**Atenção ao formato:** o Frappe entrega `pathname` no template **sem a barra inicial** (ex.: `"inicio"`, `"projetos/abc"`). Os prefixos em `gris_route_prefixes` seguem o mesmo formato — `"inicio"`, **não** `"/inicio"`.
+
+**Passo a passo ao criar rota nova em `gris/www/`:**
+1. Criar `gris/www/<rota>.html` (ou `gris/www/<rota>/index.html`) e o `.py` com `get_context`.
+2. Adicionar `"<rota>"` em `gris_route_prefixes` (em `gris/templates/base.html`), seguindo a ordem da lista.
+3. Bumpar `design_system_asset_version` em `gris/templates/base.html` para invalidar caches de CSS.
+4. Validar em browser via DevTools → Network: na rota nova devem aparecer `basecoat.css`, `theme-shadcn.css`, `lucide.css` carregados; **não** deve aparecer `website.bundle.css`.
 
 ## Permissões (regra obrigatória desta skill)
 **Sempre validar permissões no backend** (`*.py`), exceto quando o requisito pedir explicitamente que a página seja pública.
@@ -204,6 +242,7 @@ Antes de criar componente novo, revisar:
 ## Checklist obrigatório antes de concluir uma rota
 - [ ] Arquivos separados por responsabilidade (`.html/.py/.js/.css`).
 - [ ] Nomes alinhados por basename para auto-resolução.
+- [ ] Prefixo da rota adicionado em `gris_route_prefixes` em `gris/templates/base.html`, com `design_system_asset_version` bumpado.
 - [ ] Permissão validada no backend (exceto quando explicitamente pública).
 - [ ] JS/CSS no escopo da rota, sem acoplamento global desnecessário.
 - [ ] Componentes Basecoat/macros Jinja reaproveitados quando possível.
@@ -212,6 +251,7 @@ Antes de criar componente novo, revisar:
 - [ ] Ajustes de identidade visual por dispositivo aplicados com consistência.
 
 ## Anti-padrões (evitar)
+- Criar rota em `gris/www/` sem registrá-la em `gris_route_prefixes` em `gris/templates/base.html` — a página renderiza sem o design system Basecoat.
 - Criar rota em `www` sem arquivo `*.py` de contexto quando houver qualquer regra de negócio ou acesso.
 - Assumir página pública por padrão sem requisito explícito.
 - Fazer checagem de permissão apenas no frontend (JS): validação de acesso é backend.

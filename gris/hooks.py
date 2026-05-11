@@ -158,6 +158,7 @@ scheduler_events = {
 		"0 9 * * *": [
 			"gris.gestao_de_projetos.doctype.projeto.projeto.enviar_lembretes_whatsapp_aprovacao_projetos",
 			"gris.api.associados_notificacoes.enviar_lembrete_atualizacao_associados",
+			"gris.api.associados_vencimento_notificacoes.enviar_lembretes_vencimento_registro_associados",
 		],
 	},
 	# "all": [

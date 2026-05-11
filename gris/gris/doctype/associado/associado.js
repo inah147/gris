@@ -133,5 +133,38 @@ frappe.ui.form.on("Associado", {
         if (frm.doc.guardiao_legal_responsavel_1 === 1 && frm.doc.guardiao_legal_responsavel_2 === 1) {
             frm.set_value("guardiao_legal_responsavel_2", 0);
         }
+
+        if (!frm.doc.__islocal && frm.doc.validade_registro) {
+            frm.add_custom_button("Avisar Vencimento", () => {
+                frappe.confirm(
+                    "Enviar aviso de vencimento de registro via WhatsApp para o responsável (ou o próprio associado)?",
+                    () => {
+                        frappe.call({
+                            method: "gris.api.associados_vencimento_notificacoes.notificar_vencimento_manual",
+                            args: { associado_name: frm.doc.name },
+                            freeze: true,
+                            freeze_message: "Enviando aviso via WhatsApp...",
+                            callback(r) {
+                                if (!r.message) return;
+                                const { destinatario_nome, destinatario_tipo, dias_para_vencer } = r.message;
+                                const tipo_label = destinatario_tipo === "responsavel" ? "responsável" : "próprio associado";
+                                let prazo;
+                                if (dias_para_vencer < 0) {
+                                    prazo = `vencido há ${Math.abs(dias_para_vencer)} dia(s)`;
+                                } else if (dias_para_vencer === 0) {
+                                    prazo = "que vence hoje";
+                                } else {
+                                    prazo = `que vence em ${dias_para_vencer} dia(s)`;
+                                }
+                                frappe.show_alert({
+                                    message: `Aviso enviado para ${destinatario_nome} (${tipo_label}) — registro ${prazo}.`,
+                                    indicator: "green"
+                                }, 8);
+                            }
+                        });
+                    }
+                );
+            }, "Notificações");
+        }
     }
 });

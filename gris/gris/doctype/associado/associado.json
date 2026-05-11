@@ -20,6 +20,9 @@
   "informacoes_de_registro_section",
   "status",
   "validade_registro",
+    "data_notificacao_vencimento_30_dias",
+    "data_notificacao_vencimento_7_dias",
+    "data_notificacao_vencimento",
   "tipo_registro",
   "column_break_fjby",
   "status_no_grupo",
@@ -214,6 +217,27 @@
    "fieldtype": "Date",
    "label": "Validade"
   },
+    {
+     "fieldname": "data_notificacao_vencimento_30_dias",
+     "fieldtype": "Date",
+     "hidden": 1,
+     "label": "Data notificacao vencimento 30 dias",
+     "read_only": 1
+    },
+    {
+     "fieldname": "data_notificacao_vencimento_7_dias",
+     "fieldtype": "Date",
+     "hidden": 1,
+     "label": "Data notificacao vencimento 7 dias",
+     "read_only": 1
+    },
+    {
+     "fieldname": "data_notificacao_vencimento",
+     "fieldtype": "Date",
+     "hidden": 1,
+     "label": "Data notificacao vencimento",
+     "read_only": 1
+    },
   {
    "fieldname": "ramo",
    "fieldtype": "Select",

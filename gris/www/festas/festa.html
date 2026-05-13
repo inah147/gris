@@ -1,0 +1,1257 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, input, empty, badge, switch %}
+{% from "public/design_system/components/generated/tabs.html.jinja" import tabs %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/popover.html.jinja" import popover %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+{% from "public/design_system/components/generated/phone-input.html.jinja" import phone_input %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{% block title %}{{ nome_festa or "Festa" }}{% endblock %}
+
+{% set active_link = "/festas" %}
+
+{% block head_include %}
+{{ super() }}
+<link rel="stylesheet" href="/festas/festa.css" />
+{% endblock %}
+
+{% block page_header %}
+{% if not_found %}
+<div class="flex flex-col gap-2">
+	<h1 class="m-0 text-3xl font-semibold text-foreground">Festa não encontrada</h1>
+</div>
+{% else %}
+<div class="festa-page-header">
+	<div class="flex flex-col gap-1">
+		<div class="flex items-center gap-3">
+			<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">{{ nome_festa }}</h1>
+			{% if status == "Realizada" %}
+				{{ badge("Realizada", variant="secondary") }}
+			{% else %}
+				{{ badge("Em andamento", variant="success") }}
+			{% endif %}
+		</div>
+		{% if data_formatada %}
+		<p class="m-0 text-base text-muted-foreground">
+			{{ data_formatada }}
+			{% if horario_inicio %} · {{ horario_inicio }}{% if horario_termino %} – {{ horario_termino }}{% endif %}{% endif %}
+		</p>
+		{% endif %}
+	</div>
+	{% if link_drive %}
+	<div class="festa-page-header__actions">
+		<a
+			href="{{ link_drive }}"
+			target="_blank"
+			rel="noopener noreferrer"
+			class="btn-sm-outline festa-drive-btn"
+			aria-label="Abrir pasta do Drive"
+		>
+			{{ lucide_icon("folder-open", size="sm") }}
+			<span>Drive</span>
+		</a>
+	</div>
+	{% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block main %}
+{{ toaster() }}
+
+{# Dialog reutilizável de confirmação (usado por exclusões e ações destrutivas) #}
+{% call dialog(
+	id="confirm-dialog",
+	title="Confirmar ação",
+	dialog_attrs={"class": "dialog-confirm"},
+	footer='<button type="button" class="btn-outline" id="confirm-dialog-cancel">Cancelar</button><button type="button" class="btn-destructive" id="confirm-dialog-ok">Confirmar</button>'
+) %}
+<p id="confirm-dialog-message" class="text-sm text-muted-foreground">Tem certeza?</p>
+{% endcall %}
+
+{% if not_found %}
+{{ empty(
+	title="Festa não encontrada",
+	description=missing_reason or "Verifique o endereço e tente novamente.",
+	image="/assets/gris/images/gris-character/gris-search.png",
+	image_alt="Personagem Gris procurando",
+	image_size="sm",
+	primary_action={"label": "Voltar para festas", "href": "/festas/todas_festas"}
+) }}
+{% else %}
+
+{# ─── Dados serializados para o JS ─── #}
+<script>
+window._festaData = {
+	name: {{ festa_name | tojson }},
+	canEdit: {{ can_edit | tojson }},
+	areas: {{ areas | tojson }},
+	barracas: {{ barracas | tojson }},
+	associadosItems: {{ associados_items | tojson }},
+	responsaveisItems: {{ responsaveis_items | tojson }},
+	produtos: {{ produtos | tojson }},
+	compras: {{ compras | tojson }},
+	contratacoes: {{ contratacoes | tojson }},
+	barracasItems: {{ barracas_items | tojson }},
+	areasItems: {{ areas_items | tojson }},
+	produtosItems: {{ produtos_items | tojson }},
+	unidadesItems: {{ unidades_items | tojson }},
+	publicoMin: {{ expectativa_min | tojson }},
+	publicoIntermediario: {{ expectativa_intermediario | tojson }},
+	publicoMax: {{ expectativa_max | tojson }},
+	cenarioSimulacao: {{ cenario_simulacao | tojson }},
+	precoMinConvite: {{ preco_min_convite | tojson }},
+	precoSugeridoConvite: {{ preco_sugerido_convite | tojson }},
+	precoConvite: {{ preco_convite | tojson }},
+	margemSeguranca: {{ margem_seguranca | tojson }},
+	totais: {{ totais | tojson }},
+	receitasPorArea: {{ receitas_por_area | tojson }},
+	despesasPorArea: {{ despesas_por_area | tojson }},
+	receitasPorBarraca: {{ receitas_por_barraca | tojson }},
+	despesasPorBarraca: {{ despesas_por_barraca | tojson }},
+};
+</script>
+
+{# ─── Tab: Dados Gerais ─── #}
+{% set tab_dados_gerais %}
+<div class="festa-tab-content">
+
+	{# Seção 1 — Coordenador #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Coordenador</h2>
+			<p class="festa-card__subtitle">Responsável pela organização da festa.</p>
+		</div>
+		{% if can_edit %}
+		<button
+			type="button"
+			class="btn-sm-outline"
+			id="btn-editar-coord"
+			onclick="document.getElementById('dialog-coord').showModal()"
+		>
+			{{ lucide_icon("pencil", size="sm") }}
+			<span>Editar</span>
+		</button>
+		{% endif %}
+	</div>
+	<dl class="festa-info-grid">
+		<div>
+			<dt>Coordenador</dt>
+			<dd id="display-nome-coord">{{ nome_coord_geral or "—" }}</dd>
+		</div>
+		<div>
+			<dt>Tipo</dt>
+			<dd id="display-tipo-coord">{{ tipo_coord_geral or "—" }}</dd>
+		</div>
+	</dl>
+	{% endcall %}
+
+	{# Seção 2 — Estimativas #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Estimativa de participantes</h2>
+			<p class="festa-card__subtitle">Cenários de público esperado para o planejamento.</p>
+		</div>
+		{% if can_edit %}
+		<button type="button" class="btn-sm-outline" id="btn-salvar-estimativas" data-action="save-estimativas" hidden>
+			{{ lucide_icon("save", size="sm") }}
+			<span>Salvar</span>
+		</button>
+		{% endif %}
+	</div>
+	<div class="festa-estimativas-grid">
+		<div class="festa-estimativa-item">
+			<label class="text-sm font-medium text-muted-foreground" for="est-min">Mínimo</label>
+			<input
+				id="est-min"
+				type="number"
+				min="0"
+				class="input festa-estimativa-input"
+				value="{{ expectativa_min }}"
+				{% if not can_edit %}readonly{% endif %}
+				data-estimativa="min"
+			/>
+		</div>
+		<div class="festa-estimativa-item">
+			<label class="text-sm font-medium text-muted-foreground" for="est-int">Intermediário</label>
+			<input
+				id="est-int"
+				type="number"
+				min="0"
+				class="input festa-estimativa-input"
+				value="{{ expectativa_intermediario }}"
+				{% if not can_edit %}readonly{% endif %}
+				data-estimativa="int"
+			/>
+		</div>
+		<div class="festa-estimativa-item">
+			<label class="text-sm font-medium text-muted-foreground" for="est-max">Máximo</label>
+			<input
+				id="est-max"
+				type="number"
+				min="0"
+				class="input festa-estimativa-input"
+				value="{{ expectativa_max }}"
+				{% if not can_edit %}readonly{% endif %}
+				data-estimativa="max"
+			/>
+		</div>
+	</div>
+	{% endcall %}
+
+	{# Seção 3 — Cenário para Simulação #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Cenário para Simulação</h2>
+			<p class="festa-card__subtitle">Define qual cenário de público é usado para calcular as compras.</p>
+		</div>
+		{% if can_edit %}
+		<button type="button" class="btn-sm-outline" id="btn-salvar-cenario" hidden>
+			{{ lucide_icon("save", size="sm") }}
+			<span>Salvar</span>
+		</button>
+		{% endif %}
+	</div>
+	<div class="festa-estimativas-grid">
+		<div class="festa-estimativa-item">
+			{% call field(label="Cenário") %}
+				{% if can_edit %}
+				{{ select(
+					id="cenario-simulacao-select",
+					name="cenario_simulacao",
+					items=[
+						{"label": "Mínimo", "value": "Mínimo", "type": "item"},
+						{"label": "Intermediário", "value": "Intermediário", "type": "item"},
+						{"label": "Máximo", "value": "Máximo", "type": "item"}
+					],
+					selected=cenario_simulacao,
+					trigger_attrs={"class": "w-full"}
+				) }}
+				{% else %}
+				<input class="input" readonly value="{{ cenario_simulacao }}" />
+				{% endif %}
+			{% endcall %}
+		</div>
+	</div>
+	{% endcall %}
+
+	{# Seção 4 — Áreas #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Áreas</h2>
+			<p class="festa-card__subtitle">Divisões operacionais da festa.</p>
+		</div>
+		{% if can_edit %}
+		<button
+			type="button"
+			class="btn-sm-outline"
+			onclick="document.getElementById('dialog-add-area').showModal()"
+		>
+			{{ lucide_icon("plus", size="sm") }}
+			<span>Adicionar área</span>
+		</button>
+		{% endif %}
+	</div>
+	<div id="areas-table-container"></div>
+	{% endcall %}
+
+	{# Seção 4 — Barracas #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Barracas</h2>
+			<p class="festa-card__subtitle">Estruturas de venda e serviço da festa.</p>
+		</div>
+		{% if can_edit %}
+		<button
+			type="button"
+			class="btn-sm-outline"
+			onclick="document.getElementById('dialog-add-barraca').showModal()"
+		>
+			{{ lucide_icon("plus", size="sm") }}
+			<span>Adicionar barraca</span>
+		</button>
+		{% endif %}
+	</div>
+	<div id="barracas-table-container"></div>
+	{% endcall %}
+
+</div>
+{% endset %}
+
+{# ─── Tab: Produtos Vendidos ─── #}
+{% set tab_produtos_vendidos %}
+<div class="festa-tab-content">
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Produtos Vendidos</h2>
+			<p class="festa-card__subtitle">Produtos e serviços comercializados na festa.</p>
+		</div>
+		{% if can_edit %}
+		<button
+			type="button"
+			class="btn-sm-outline"
+			onclick="document.getElementById('dialog-add-produto').showModal()"
+		>
+			{{ lucide_icon("plus", size="sm") }}
+			<span>Adicionar produto</span>
+		</button>
+		{% endif %}
+	</div>
+	<div id="produtos-table-container"></div>
+	{% endcall %}
+</div>
+{% endset %}
+
+{# ─── Tab: Compras ─── #}
+{% set tab_compras %}
+<div class="festa-tab-content">
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Compras</h2>
+			<p class="festa-card__subtitle">Itens planejados para compra na festa.</p>
+		</div>
+		{% if can_edit %}
+		<button
+			type="button"
+			class="btn-sm-outline"
+			data-action="add-compra"
+		>
+			{{ lucide_icon("plus", size="sm") }}
+			<span>Adicionar compra</span>
+		</button>
+		{% endif %}
+	</div>
+	<div id="compras-table-container"></div>
+	{% endcall %}
+</div>
+{% endset %}
+
+{# ─── Tab: Orçamento ─── #}
+{% set tab_orcamento %}
+<div class="festa-tab-content">
+
+	{# Seção — Preço do convite #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Preço do convite</h2>
+			<p class="festa-card__subtitle">Define o valor cobrado por convite. Alterar atualiza receitas e saldo.</p>
+		</div>
+	</div>
+	<div class="festa-estimativas-grid">
+		<div class="festa-estimativa-item">
+			<label class="text-sm font-medium text-muted-foreground" for="preco-min-convite">Preço mínimo</label>
+			<input id="preco-min-convite" type="text" class="input festa-estimativa-input" readonly tabindex="-1" />
+		</div>
+		<div class="festa-estimativa-item">
+			<label class="text-sm font-medium text-muted-foreground" for="preco-sugerido-convite">Preço sugerido</label>
+			<input id="preco-sugerido-convite" type="text" class="input festa-estimativa-input" readonly tabindex="-1" />
+		</div>
+		<div class="festa-estimativa-item">
+			<label class="text-sm font-medium text-muted-foreground" for="preco-convite">Preço do convite</label>
+			<input
+				id="preco-convite"
+				type="number"
+				min="0"
+				step="0.01"
+				class="input festa-estimativa-input"
+				value="{{ preco_convite }}"
+				{% if not can_edit %}readonly{% endif %}
+			/>
+		</div>
+	</div>
+	{% endcall %}
+
+	{# Seção — Resultado por cenário #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Resultado por cenário</h2>
+			<p class="festa-card__subtitle">Receita de convites, receita de produtos, despesa e saldo estimados por cenário de público.</p>
+		</div>
+	</div>
+	<div id="orc-resultado-table" class="festa-cenarios-wrap"></div>
+	{% endcall %}
+
+	{# Seção — Margem de segurança #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Margem de segurança</h2>
+			<p class="festa-card__subtitle">Reserva aplicada sobre as despesas estimadas.</p>
+		</div>
+	</div>
+	<div class="festa-estimativas-grid">
+		<div class="festa-estimativa-item">
+			<label class="text-sm font-medium text-muted-foreground" for="margem-seguranca">Margem (%)</label>
+			<input
+				id="margem-seguranca"
+				type="number"
+				min="0"
+				max="100"
+				step="0.01"
+				class="input festa-estimativa-input"
+				value="{{ margem_seguranca }}"
+				{% if not can_edit %}readonly{% endif %}
+			/>
+		</div>
+	</div>
+	<div id="orc-margem-table" class="festa-cenarios-wrap"></div>
+	{% endcall %}
+
+	{# Seção — Receitas por área #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Receitas por área</h2>
+		</div>
+	</div>
+	<div id="orc-receitas-area-table" class="festa-cenarios-wrap"></div>
+	{% endcall %}
+
+	{# Seção — Despesas por área #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Despesas por área</h2>
+		</div>
+	</div>
+	<div id="orc-despesas-area-table" class="festa-cenarios-wrap"></div>
+	{% endcall %}
+
+	{# Seção — Receitas por barraca #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Receitas por barraca</h2>
+		</div>
+	</div>
+	<div id="orc-receitas-barraca-table" class="festa-cenarios-wrap"></div>
+	{% endcall %}
+
+	{# Seção — Despesas por barraca #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Despesas por barraca</h2>
+		</div>
+	</div>
+	<div id="orc-despesas-barraca-table" class="festa-cenarios-wrap"></div>
+	{% endcall %}
+
+</div>
+{% endset %}
+
+{# ─── Tab: Contratações ─── #}
+{% set tab_contratacoes %}
+<div class="festa-tab-content">
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Contratações</h2>
+			<p class="festa-card__subtitle">Itens contratados de fornecedores e prestadores.</p>
+		</div>
+		{% if can_edit %}
+		<button
+			type="button"
+			class="btn-sm-outline"
+			data-action="add-contratacao"
+		>
+			{{ lucide_icon("plus", size="sm") }}
+			<span>Adicionar contratação</span>
+		</button>
+		{% endif %}
+	</div>
+	<div id="contratacoes-table-container"></div>
+	{% endcall %}
+</div>
+{% endset %}
+
+{# ─── Tabs ─── #}
+{{ tabs(
+	id="festa-tabs",
+	tabsets=[
+		{"id": "dados-gerais", "tab": "Dados Gerais", "panel": tab_dados_gerais},
+		{"id": "produtos-vendidos", "tab": "Produtos Vendidos", "panel": tab_produtos_vendidos},
+		{"id": "compras", "tab": "Compras", "panel": tab_compras},
+		{"id": "contratacoes", "tab": "Contratações", "panel": tab_contratacoes},
+		{"id": "orcamento", "tab": "Orçamento", "panel": tab_orcamento}
+	]
+) }}
+
+{# ───────────────── Dialogs ───────────────── #}
+
+{# Dialog — Editar Coordenador #}
+{% if can_edit %}
+{% call dialog(
+	id="dialog-coord",
+	title="Editar coordenador",
+	description="Selecione o tipo e a pessoa responsável pela festa.",
+	dialog_attrs={"class": "dialog-coord-large"},
+	footer='<button type="button" class="btn-outline" onclick="document.getElementById(\'dialog-coord\').close()">Cancelar</button><button type="button" class="btn-primary" id="btn-coord-salvar">Salvar</button>'
+) %}
+<div class="festa-dialog-form">
+	{% call field(label="Tipo de coordenador") %}
+		{{ select(
+			id="coord-tipo",
+			name="tipo_coord_geral",
+			items=[
+				{"label": "Responsável", "value": "Responsavel", "type": "item"},
+				{"label": "Associado", "value": "Associado", "type": "item"}
+			],
+			selected=tipo_coord_geral or "Responsavel",
+			trigger_attrs={"class": "w-full"}
+		) }}
+	{% endcall %}
+	<div id="coord-picker-responsavel">
+		{% call field(label="Responsável") %}
+			{{ select(
+				id="coord-select-responsavel",
+				name="coordenador_responsavel",
+				items=responsaveis_items or [],
+				selected=responsavel_coord_geral or "",
+				is_combobox=true,
+				search_placeholder="Buscar responsável…",
+				trigger_attrs={"class": "w-full"}
+			) }}
+		{% endcall %}
+	</div>
+	<div id="coord-picker-associado" hidden>
+		{% call field(label="Associado") %}
+			{{ select(
+				id="coord-select-associado",
+				name="coordenador_associado",
+				items=associados_items or [],
+				selected=associado_coord_geral or "",
+				is_combobox=true,
+				search_placeholder="Buscar associado…",
+				trigger_attrs={"class": "w-full"}
+			) }}
+		{% endcall %}
+	</div>
+</div>
+{% endcall %}
+
+{# Dialog — Adicionar Área #}
+{% call dialog(
+	id="dialog-add-area",
+	title="Adicionar área",
+	description="Preencha os dados obrigatórios para criar a área.",
+	footer='<button type="button" class="btn-outline" onclick="document.getElementById(\'dialog-add-area\').close()">Cancelar</button><button type="button" class="btn-primary" id="btn-add-area-salvar">Criar área</button>'
+) %}
+<div class="festa-dialog-form">
+	{% call field(label="Nome da área *") %}
+		{{ input(name="add-area-nome", attrs={"id": "add-area-nome", "required": "required", "autocomplete": "off", "placeholder": "Ex.: Bar, Palco, Cozinha…"}) }}
+	{% endcall %}
+	{% call field(label="Descrição *") %}
+		<textarea id="add-area-descricao" class="input" rows="3" placeholder="Descreva as responsabilidades desta área…" required></textarea>
+	{% endcall %}
+</div>
+{% endcall %}
+
+{# Dialog — Adicionar Barraca #}
+{% call dialog(
+	id="dialog-add-barraca",
+	title="Adicionar barraca",
+	description="Preencha os dados obrigatórios para criar a barraca.",
+	footer='<button type="button" class="btn-outline" onclick="document.getElementById(\'dialog-add-barraca\').close()">Cancelar</button><button type="button" class="btn-primary" id="btn-add-barraca-salvar">Criar barraca</button>'
+) %}
+<div class="festa-dialog-form">
+	{% call field(label="Nome da barraca *") %}
+		{{ input(name="add-barraca-nome", attrs={"id": "add-barraca-nome", "required": "required", "autocomplete": "off", "placeholder": "Ex.: Barraca de churros, Caixa…"}) }}
+	{% endcall %}
+	{% call field(label="Área *") %}
+		{{ select(
+			id="add-barraca-area",
+			name="add-barraca-area",
+			items=areas_items_obrigatorio or [],
+			is_combobox=true,
+			search_placeholder="Buscar área…",
+			trigger_attrs={"class": "w-full"}
+		) }}
+	{% endcall %}
+	{% call field(label="Descrição *") %}
+		<textarea id="add-barraca-descricao" class="input" rows="3" placeholder="Descreva as responsabilidades desta barraca…" required></textarea>
+	{% endcall %}
+</div>
+{% endcall %}
+
+{# Dialog — Editar Área (preenchido via JS) #}
+<dialog
+	id="dialog-edit-area"
+		class="dialog dialog-edit-area dialog-edit-large"
+	aria-labelledby="dialog-edit-area-title"
+	onclick="if (event.target === this) this.close()"
+>
+<div>
+	<header>
+		<h2 id="dialog-edit-area-title">Editar área</h2>
+	</header>
+	<section class="festa-dialog-edit-body">
+		<div class="festa-dialog-form">
+			{% call field(label="Nome da área *") %}
+				{{ input(name="edit-area-nome", attrs={"id": "edit-area-nome", "required": "required"}) }}
+			{% endcall %}
+			{% call field(label="Descrição") %}
+				<textarea id="edit-area-descricao" class="input" rows="3"></textarea>
+			{% endcall %}
+			{% call field(label="Tipo de coordenador") %}
+				{{ select(
+					id="edit-area-tipo-coord",
+					name="edit-area-tipo-coord",
+					items=[
+						{"label": "Responsável", "value": "Responsavel", "type": "item"},
+						{"label": "Associado", "value": "Associado", "type": "item"},
+						{"label": "Outro", "value": "Outro", "type": "item"}
+					],
+					trigger_attrs={"class": "w-full"}
+				) }}
+			{% endcall %}
+			<div id="edit-area-coord-responsavel" class="festa-coord-picker">
+				{% call field(label="Responsável") %}
+					{{ select(
+						id="edit-area-select-responsavel",
+						items=responsaveis_items or [],
+						is_combobox=true,
+						search_placeholder="Buscar responsável…",
+						trigger_attrs={"class": "w-full"}
+					) }}
+				{% endcall %}
+				{% call field(label="E-mail") %}
+					{{ input(attrs={"id": "edit-area-coord-resp-email", "readonly": "readonly", "placeholder": "—", "tabindex": "-1"}) }}
+				{% endcall %}
+				{% call field(label="Telefone") %}
+					{{ phone_input(id="edit-area-coord-resp-telefone", input_attrs={"readonly": "readonly", "tabindex": "-1"}) }}
+				{% endcall %}
+			</div>
+			<div id="edit-area-coord-associado" class="festa-coord-picker" hidden>
+				{% call field(label="Associado") %}
+					{{ select(
+						id="edit-area-select-associado",
+						items=associados_items or [],
+						is_combobox=true,
+						search_placeholder="Buscar associado…",
+						trigger_attrs={"class": "w-full"}
+					) }}
+				{% endcall %}
+				{% call field(label="E-mail") %}
+					{{ input(attrs={"id": "edit-area-coord-assoc-email", "readonly": "readonly", "placeholder": "—", "tabindex": "-1"}) }}
+				{% endcall %}
+				{% call field(label="Telefone") %}
+					{{ phone_input(id="edit-area-coord-assoc-telefone", input_attrs={"readonly": "readonly", "tabindex": "-1"}) }}
+				{% endcall %}
+			</div>
+			<div id="edit-area-coord-outro" class="festa-coord-picker" hidden>
+				{% call field(label="Nome do coordenador") %}
+					{{ input(attrs={"id": "edit-area-coord-outro-nome", "placeholder": "Nome completo"}) }}
+				{% endcall %}
+				{% call field(label="E-mail") %}
+					{{ input(attrs={"id": "edit-area-coord-outro-email", "type": "email", "placeholder": "email@exemplo.com"}) }}
+				{% endcall %}
+				{% call field(label="Telefone") %}
+					{{ phone_input(id="edit-area-coord-outro-telefone") }}
+				{% endcall %}
+			</div>
+		</div>
+
+		<h3 class="festa-equipe-title">Equipe</h3>
+		<div id="edit-area-equipe-container"></div>
+		<div class="popover" id="eq-area-popover" data-popover-initialized>
+			<button type="button" class="btn-sm-outline festa-add-membro-btn"
+					id="btn-add-area-membro"
+					aria-expanded="false"
+					aria-controls="eq-area-form-popover">
+				{{ lucide_icon("plus", size="sm") }}
+				<span>Adicionar membro</span>
+			</button>
+			<div id="eq-area-form-popover" data-popover aria-hidden="true" class="festa-eq-popover-content">
+				<div id="eq-area-form" class="festa-dialog-form">
+					{% call field(label="Tipo *") %}
+						{{ select(
+							id="eq-area-tipo",
+							name="eq-area-tipo",
+							items=[
+								{"label": "Responsável", "value": "Responsavel", "type": "item"},
+								{"label": "Associado", "value": "Associado", "type": "item"},
+								{"label": "Outro", "value": "Outro", "type": "item"}
+							],
+							selected="Outro",
+							trigger_attrs={"class": "w-full"}
+						) }}
+					{% endcall %}
+					<div id="eq-area-picker-responsavel" class="festa-coord-picker" hidden>
+						{% call field(label="Responsável *") %}
+							{{ select(
+								id="eq-area-select-responsavel",
+								items=responsaveis_items or [],
+								is_combobox=true,
+								search_placeholder="Buscar responsável…",
+								trigger_attrs={"class": "w-full"}
+							) }}
+						{% endcall %}
+						{% call field(label="E-mail") %}
+							{{ input(attrs={"id": "eq-area-resp-email", "readonly": "readonly", "placeholder": "—", "tabindex": "-1"}) }}
+						{% endcall %}
+						{% call field(label="Telefone") %}
+							{{ phone_input(id="eq-area-resp-telefone", input_attrs={"readonly": "readonly", "tabindex": "-1"}) }}
+						{% endcall %}
+					</div>
+					<div id="eq-area-picker-associado" class="festa-coord-picker" hidden>
+						{% call field(label="Associado *") %}
+							{{ select(
+								id="eq-area-select-associado",
+								items=associados_items or [],
+								is_combobox=true,
+								search_placeholder="Buscar associado…",
+								trigger_attrs={"class": "w-full"}
+							) }}
+						{% endcall %}
+						{% call field(label="E-mail") %}
+							{{ input(attrs={"id": "eq-area-assoc-email", "readonly": "readonly", "placeholder": "—", "tabindex": "-1"}) }}
+						{% endcall %}
+						{% call field(label="Telefone") %}
+							{{ phone_input(id="eq-area-assoc-telefone", input_attrs={"readonly": "readonly", "tabindex": "-1"}) }}
+						{% endcall %}
+					</div>
+					<div id="eq-area-picker-outro" class="festa-coord-picker">
+						{% call field(label="Nome *") %}
+							{{ input(attrs={"id": "eq-area-outro-nome", "placeholder": "Nome completo"}) }}
+						{% endcall %}
+						{% call field(label="E-mail") %}
+							{{ input(attrs={"id": "eq-area-outro-email", "type": "email", "placeholder": "email@exemplo.com"}) }}
+						{% endcall %}
+						{% call field(label="Telefone") %}
+							{{ phone_input(id="eq-area-outro-telefone") }}
+						{% endcall %}
+					</div>
+					{% call field(label="Função") %}
+						{{ input(attrs={"id": "eq-area-funcao", "placeholder": "Ex.: Caixa, Segurança, DJ…"}) }}
+					{% endcall %}
+				</div>
+				<div class="equipe-member-form__actions">
+					<button type="button" class="btn-sm-outline" id="btn-eq-area-cancelar">Cancelar</button>
+					<button type="button" class="btn-sm-primary" id="btn-eq-area-confirmar">Confirmar membro</button>
+				</div>
+			</div>
+		</div>
+	</section>
+	<footer>
+		<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Cancelar</button>
+		<button type="button" class="btn-primary" id="btn-edit-area-salvar">Salvar</button>
+	</footer>
+	<button type="button" aria-label="Fechar dialog" onclick="this.closest('dialog').close()">
+		<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+	</button>
+</div>
+</dialog>
+
+{# Dialog — Editar Barraca (preenchido via JS) #}
+<dialog
+	id="dialog-edit-barraca"
+		class="dialog dialog-edit-barraca dialog-edit-large"
+	aria-labelledby="dialog-edit-barraca-title"
+	onclick="if (event.target === this) this.close()"
+>
+<div>
+	<header>
+		<h2 id="dialog-edit-barraca-title">Editar barraca</h2>
+	</header>
+	<section class="festa-dialog-edit-body">
+		<div class="festa-dialog-form">
+			{% call field(label="Nome da barraca *") %}
+				{{ input(name="edit-barraca-nome", attrs={"id": "edit-barraca-nome", "required": "required"}) }}
+			{% endcall %}
+			{% call field(label="Área *") %}
+				{{ select(
+					id="edit-barraca-area",
+					name="edit-barraca-area",
+					items=areas_items_obrigatorio or [],
+					is_combobox=true,
+					search_placeholder="Buscar área…",
+					trigger_attrs={"class": "w-full"}
+				) }}
+			{% endcall %}
+			{% call field(label="Descrição") %}
+				<textarea id="edit-barraca-descricao" class="input" rows="3"></textarea>
+			{% endcall %}
+			{% call field(label="Tipo de coordenador") %}
+				{{ select(
+					id="edit-barraca-tipo-coord",
+					name="edit-barraca-tipo-coord",
+					items=[
+						{"label": "Responsável", "value": "Responsavel", "type": "item"},
+						{"label": "Associado", "value": "Associado", "type": "item"},
+						{"label": "Outro", "value": "Outro", "type": "item"}
+					],
+					trigger_attrs={"class": "w-full"}
+				) }}
+			{% endcall %}
+			<div id="edit-barraca-coord-responsavel" class="festa-coord-picker">
+				{% call field(label="Responsável") %}
+					{{ select(
+						id="edit-barraca-select-responsavel",
+						items=responsaveis_items or [],
+						is_combobox=true,
+						search_placeholder="Buscar responsável…",
+						trigger_attrs={"class": "w-full"}
+					) }}
+				{% endcall %}
+				{% call field(label="E-mail") %}
+					{{ input(attrs={"id": "edit-barraca-coord-resp-email", "readonly": "readonly", "placeholder": "—", "tabindex": "-1"}) }}
+				{% endcall %}
+				{% call field(label="Telefone") %}
+					{{ phone_input(id="edit-barraca-coord-resp-telefone", input_attrs={"readonly": "readonly", "tabindex": "-1"}) }}
+				{% endcall %}
+			</div>
+			<div id="edit-barraca-coord-associado" class="festa-coord-picker" hidden>
+				{% call field(label="Associado") %}
+					{{ select(
+						id="edit-barraca-select-associado",
+						items=associados_items or [],
+						is_combobox=true,
+						search_placeholder="Buscar associado…",
+						trigger_attrs={"class": "w-full"}
+					) }}
+				{% endcall %}
+				{% call field(label="E-mail") %}
+					{{ input(attrs={"id": "edit-barraca-coord-assoc-email", "readonly": "readonly", "placeholder": "—", "tabindex": "-1"}) }}
+				{% endcall %}
+				{% call field(label="Telefone") %}
+					{{ phone_input(id="edit-barraca-coord-assoc-telefone", input_attrs={"readonly": "readonly", "tabindex": "-1"}) }}
+				{% endcall %}
+			</div>
+			<div id="edit-barraca-coord-outro" class="festa-coord-picker" hidden>
+				{% call field(label="Nome do coordenador") %}
+					{{ input(attrs={"id": "edit-barraca-coord-outro-nome", "placeholder": "Nome completo"}) }}
+				{% endcall %}
+				{% call field(label="E-mail") %}
+					{{ input(attrs={"id": "edit-barraca-coord-outro-email", "type": "email", "placeholder": "email@exemplo.com"}) }}
+				{% endcall %}
+				{% call field(label="Telefone") %}
+					{{ phone_input(id="edit-barraca-coord-outro-telefone") }}
+				{% endcall %}
+			</div>
+		</div>
+
+		<h3 class="festa-equipe-title">Equipe</h3>
+		<div id="edit-barraca-equipe-container"></div>
+		<div class="popover" id="eq-barraca-popover" data-popover-initialized>
+			<button type="button" class="btn-sm-outline festa-add-membro-btn"
+					id="btn-add-barraca-membro"
+					aria-expanded="false"
+					aria-controls="eq-barraca-form-popover">
+				{{ lucide_icon("plus", size="sm") }}
+				<span>Adicionar membro</span>
+			</button>
+			<div id="eq-barraca-form-popover" data-popover aria-hidden="true" class="festa-eq-popover-content">
+				<div id="eq-barraca-form" class="festa-dialog-form">
+					{% call field(label="Tipo *") %}
+						{{ select(
+							id="eq-barraca-tipo",
+							name="eq-barraca-tipo",
+							items=[
+								{"label": "Responsável", "value": "Responsavel", "type": "item"},
+								{"label": "Associado", "value": "Associado", "type": "item"},
+								{"label": "Outro", "value": "Outro", "type": "item"}
+							],
+							selected="Outro",
+							trigger_attrs={"class": "w-full"}
+						) }}
+					{% endcall %}
+					<div id="eq-barraca-picker-responsavel" class="festa-coord-picker" hidden>
+						{% call field(label="Responsável *") %}
+							{{ select(
+								id="eq-barraca-select-responsavel",
+								items=responsaveis_items or [],
+								is_combobox=true,
+								search_placeholder="Buscar responsável…",
+								trigger_attrs={"class": "w-full"}
+							) }}
+						{% endcall %}
+						{% call field(label="E-mail") %}
+							{{ input(attrs={"id": "eq-barraca-resp-email", "readonly": "readonly", "placeholder": "—", "tabindex": "-1"}) }}
+						{% endcall %}
+						{% call field(label="Telefone") %}
+							{{ phone_input(id="eq-barraca-resp-telefone", input_attrs={"readonly": "readonly", "tabindex": "-1"}) }}
+						{% endcall %}
+					</div>
+					<div id="eq-barraca-picker-associado" class="festa-coord-picker" hidden>
+						{% call field(label="Associado *") %}
+							{{ select(
+								id="eq-barraca-select-associado",
+								items=associados_items or [],
+								is_combobox=true,
+								search_placeholder="Buscar associado…",
+								trigger_attrs={"class": "w-full"}
+							) }}
+						{% endcall %}
+						{% call field(label="E-mail") %}
+							{{ input(attrs={"id": "eq-barraca-assoc-email", "readonly": "readonly", "placeholder": "—", "tabindex": "-1"}) }}
+						{% endcall %}
+						{% call field(label="Telefone") %}
+							{{ phone_input(id="eq-barraca-assoc-telefone", input_attrs={"readonly": "readonly", "tabindex": "-1"}) }}
+						{% endcall %}
+					</div>
+					<div id="eq-barraca-picker-outro" class="festa-coord-picker">
+						{% call field(label="Nome *") %}
+							{{ input(attrs={"id": "eq-barraca-outro-nome", "placeholder": "Nome completo"}) }}
+						{% endcall %}
+						{% call field(label="E-mail") %}
+							{{ input(attrs={"id": "eq-barraca-outro-email", "type": "email", "placeholder": "email@exemplo.com"}) }}
+						{% endcall %}
+						{% call field(label="Telefone") %}
+							{{ phone_input(id="eq-barraca-outro-telefone") }}
+						{% endcall %}
+					</div>
+					{% call field(label="Função") %}
+						{{ input(attrs={"id": "eq-barraca-funcao", "placeholder": "Ex.: Caixa, Segurança, DJ…"}) }}
+					{% endcall %}
+				</div>
+				<div class="equipe-member-form__actions">
+					<button type="button" class="btn-sm-outline" id="btn-eq-barraca-cancelar">Cancelar</button>
+					<button type="button" class="btn-sm-primary" id="btn-eq-barraca-confirmar">Confirmar membro</button>
+				</div>
+			</div>
+		</div>
+	</section>
+	<footer>
+		<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Cancelar</button>
+		<button type="button" class="btn-primary" id="btn-edit-barraca-salvar">Salvar</button>
+	</footer>
+	<button type="button" aria-label="Fechar dialog" onclick="this.closest('dialog').close()">
+		<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+	</button>
+</div>
+</dialog>
+
+{% endif %}{# can_edit #}
+
+{# ─── Dialogs de Produto (acessíveis também para leitura) ─── #}
+{% if can_edit %}
+
+{# Dialog — Adicionar Produto #}
+{% call dialog(
+	id="dialog-add-produto",
+	title="Adicionar produto",
+	description="Preencha os dados do produto vendido na festa.",
+	footer='<button type="button" class="btn-outline" onclick="document.getElementById(\'dialog-add-produto\').close()">Cancelar</button><button type="button" class="btn-primary" id="btn-add-produto-salvar">Criar produto</button>'
+) %}
+<div class="festa-dialog-form">
+	{% call field(label="Nome do produto *") %}
+		{{ input(name="add-produto-nome", attrs={"id": "add-produto-nome", "required": "required", "autocomplete": "off", "placeholder": "Ex.: Chopp, Hot-dog, Algodão doce…"}) }}
+	{% endcall %}
+	{% call field(label="Barraca") %}
+		{{ select(
+			id="add-produto-barraca",
+			name="add-produto-barraca",
+			items=barracas_items or [],
+			is_combobox=true,
+			search_placeholder="Buscar barraca…",
+			trigger_attrs={"class": "w-full"}
+		) }}
+	{% endcall %}
+	{% call field(label="Faz parte do convite") %}
+		{{ switch(name="add-produto-convite", attrs={"id": "add-produto-convite"}) }}
+	{% endcall %}
+	{% call field(label="Preço de venda (R$)") %}
+		{{ input(attrs={"id": "add-produto-preco-venda", "type": "number", "min": "0", "step": "0.01", "placeholder": "0,00"}) }}
+	{% endcall %}
+	{% call field(label="Expectativa de venda por pessoa") %}
+		{{ input(attrs={"id": "add-produto-expectativa", "type": "number", "min": "0", "step": "0.01", "placeholder": "0"}) }}
+	{% endcall %}
+</div>
+{% endcall %}
+
+{# Dialog — Editar Produto #}
+<dialog
+	id="dialog-edit-produto"
+	class="dialog dialog-edit-produto dialog-edit-large"
+	aria-labelledby="dialog-edit-produto-title"
+	onclick="if (event.target === this) this.close()"
+>
+<div>
+	<header>
+		<h2 id="dialog-edit-produto-title">Editar produto</h2>
+	</header>
+	<section class="festa-dialog-edit-body">
+		<div class="festa-dialog-form">
+			{% call field(label="Nome do produto *") %}
+				{{ input(name="edit-produto-nome", attrs={"id": "edit-produto-nome", "required": "required"}) }}
+			{% endcall %}
+			{% call field(label="Barraca") %}
+				{{ select(
+					id="edit-produto-barraca",
+					name="edit-produto-barraca",
+					items=barracas_items or [],
+					is_combobox=true,
+					search_placeholder="Buscar barraca…",
+					trigger_attrs={"class": "w-full"}
+				) }}
+			{% endcall %}
+			{% call field(label="Faz parte do convite") %}
+				{{ switch(name="edit-produto-convite", attrs={"id": "edit-produto-convite"}) }}
+			{% endcall %}
+			{% call field(label="Preço de custo (R$)") %}
+				{{ input(attrs={"id": "edit-produto-preco-custo", "readonly": "readonly", "tabindex": "-1", "placeholder": "—"}) }}
+			{% endcall %}
+			{% call field(label="Preço de venda (R$)") %}
+				{{ input(attrs={"id": "edit-produto-preco-venda", "type": "number", "min": "0", "step": "0.01", "placeholder": "0,00"}) }}
+			{% endcall %}
+			{% call field(label="Margem de lucro") %}
+				{{ input(attrs={"id": "edit-produto-margem", "readonly": "readonly", "tabindex": "-1", "placeholder": "—"}) }}
+			{% endcall %}
+			{% call field(label="Expectativa de venda por pessoa") %}
+				{{ input(attrs={"id": "edit-produto-expectativa", "type": "number", "min": "0", "step": "0.01", "placeholder": "0"}) }}
+			{% endcall %}
+		</div>
+
+		<h3 class="festa-equipe-title">Cenários</h3>
+		<div class="festa-cenarios-wrap">
+			<table class="festa-cenarios-table">
+				<thead>
+					<tr>
+						<th></th>
+						<th>Mínimo</th>
+						<th>Intermediário</th>
+						<th>Máximo</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td class="festa-cenarios-label">Quantidade</td>
+						<td id="cen-qtd-min">—</td>
+						<td id="cen-qtd-int">—</td>
+						<td id="cen-qtd-max">—</td>
+					</tr>
+					<tr>
+						<td class="festa-cenarios-label">Custo total</td>
+						<td id="cen-custo-min">—</td>
+						<td id="cen-custo-int">—</td>
+						<td id="cen-custo-max">—</td>
+					</tr>
+					<tr>
+						<td class="festa-cenarios-label">Receita total</td>
+						<td id="cen-receita-min">—</td>
+						<td id="cen-receita-int">—</td>
+						<td id="cen-receita-max">—</td>
+					</tr>
+					<tr>
+						<td class="festa-cenarios-label">Superávit</td>
+						<td id="cen-superavit-min">—</td>
+						<td id="cen-superavit-int">—</td>
+						<td id="cen-superavit-max">—</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<h3 class="festa-equipe-title">Compras vinculadas</h3>
+		<div id="edit-produto-compras-container">
+			<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhuma compra vinculada.</p>
+		</div>
+	</section>
+	<footer>
+		<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Cancelar</button>
+		<button type="button" class="btn-primary" id="btn-edit-produto-salvar">Salvar</button>
+	</footer>
+	<button type="button" aria-label="Fechar dialog" onclick="this.closest('dialog').close()">
+		<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+	</button>
+</div>
+</dialog>
+
+{# Dialog — Adicionar/Editar Compra #}
+<dialog
+	id="dialog-compra"
+	class="dialog dialog-compra dialog-edit-large"
+	aria-labelledby="dialog-compra-title"
+	onclick="if (event.target === this) this.close()"
+>
+<div>
+	<header>
+		<h2 id="dialog-compra-title">Editar compra</h2>
+	</header>
+	<section class="festa-dialog-edit-body">
+		{# ─── Campos do formulário — selects Jinja tratados pelo Basecoat padrão ─── #}
+		<div class="festa-dialog-form festa-compra-form-grid">
+			{% call field(label="Nome do item *") %}
+				{{ input(name="compra-nome-item", attrs={"id": "compra-nome-item", "required": "required", "autocomplete": "off", "placeholder": "Ex.: Carne, copos, gelo…"}) }}
+			{% endcall %}
+			{% call field(label="Área") %}
+				{{ select(
+					id="compra-area",
+					name="compra-area",
+					items=areas_items or [],
+					is_combobox=true,
+					search_placeholder="Buscar área…",
+					trigger_attrs={"class": "w-full"}
+				) }}
+			{% endcall %}
+			{% call field(label="Unidade de medida") %}
+				{{ select(
+					id="compra-unidade",
+					name="compra-unidade",
+					items=unidades_items or [],
+					selected="unidade",
+					trigger_attrs={"class": "w-full"}
+				) }}
+			{% endcall %}
+			{% call field(label="Quantidade sugerida") %}
+				{{ input(attrs={"id": "compra-quantidade-sugerida", "readonly": "readonly", "tabindex": "-1", "placeholder": "0"}) }}
+			{% endcall %}
+			{% call field(label="Quantidade final *") %}
+				{{ input(attrs={"id": "compra-quantidade-final", "type": "number", "min": "0", "step": "0.001", "placeholder": "0"}) }}
+			{% endcall %}
+			{% call field(label="Valor total de compra") %}
+				{{ input(attrs={"id": "compra-valor-total", "readonly": "readonly", "tabindex": "-1", "placeholder": "R$ 0,00"}) }}
+			{% endcall %}
+			{% call field(label="Varia com o público") %}
+				{{ switch(name="compra-varia-publico", attrs={"id": "compra-varia-publico"}) }}
+			{% endcall %}
+			{% call field(label="Usado em produtos") %}
+				{{ switch(name="compra-usado-produtos", attrs={"id": "compra-usado-produtos"}) }}
+			{% endcall %}
+		</div>
+
+		{# ─── Cenários de compra — somente leitura ─── #}
+		<div class="festa-compra-section">
+			<h3 class="festa-equipe-title">Cenários de compra</h3>
+			<div class="festa-cenarios-wrap">
+				<table class="festa-cenarios-table">
+					<thead>
+						<tr>
+							<th></th>
+							<th>Mínimo</th>
+							<th>Intermediário</th>
+							<th>Máximo</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td class="festa-cenarios-label">Qtd sugerida</td>
+							<td id="compra-cen-qtd-min">—</td>
+							<td id="compra-cen-qtd-int">—</td>
+							<td id="compra-cen-qtd-max">—</td>
+						</tr>
+						<tr>
+							<td class="festa-cenarios-label">Valor total</td>
+							<td id="compra-cen-valor-min">—</td>
+							<td id="compra-cen-valor-int">—</td>
+							<td id="compra-cen-valor-max">—</td>
+						</tr>
+						<tr>
+							<td class="festa-cenarios-label">Sobra individual</td>
+							<td id="compra-cen-sobra-qtd-min">—</td>
+							<td id="compra-cen-sobra-qtd-int">—</td>
+							<td id="compra-cen-sobra-qtd-max">—</td>
+						</tr>
+						<tr>
+							<td class="festa-cenarios-label">Valor de sobra</td>
+							<td id="compra-cen-sobra-valor-min">—</td>
+							<td id="compra-cen-sobra-valor-int">—</td>
+							<td id="compra-cen-sobra-valor-max">—</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+		{# ─── Cotações — selects dinâmicos via renderBasecoatSelect + setupFloatingPopovers ─── #}
+		<div class="festa-compra-section">
+			<div class="festa-compra-section__header">
+				<h3 class="festa-equipe-title">Cotações</h3>
+				<button type="button" class="btn-sm-outline" id="btn-compra-add-cotacao">
+					{{ lucide_icon("plus", size="sm") }}
+					<span>Adicionar cotação</span>
+				</button>
+			</div>
+			<div id="compra-cotacoes-container"></div>
+		</div>
+
+		{# ─── Uso em produtos — visível apenas quando switch ativado ─── #}
+		<div class="festa-compra-section" id="compra-usos-section" hidden>
+			<div class="festa-compra-section__header">
+				<h3 class="festa-equipe-title">Uso em produtos</h3>
+				<button type="button" class="btn-sm-outline" id="btn-compra-add-uso">
+					{{ lucide_icon("plus", size="sm") }}
+					<span>Adicionar uso</span>
+				</button>
+			</div>
+			<div id="compra-usos-container"></div>
+		</div>
+	</section>
+	<footer>
+		<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Cancelar</button>
+		<button type="button" class="btn-primary" id="btn-compra-salvar">Salvar</button>
+	</footer>
+	<button type="button" aria-label="Fechar dialog" onclick="this.closest('dialog').close()">
+		<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+	</button>
+</div>
+</dialog>
+
+{# Dialog — Adicionar/Editar Contratação #}
+<dialog
+	id="dialog-contratacao"
+	class="dialog dialog-contratacao dialog-edit-large"
+	aria-labelledby="dialog-contratacao-title"
+	onclick="if (event.target === this) this.close()"
+>
+<div>
+	<header>
+		<h2 id="dialog-contratacao-title">Editar contratação</h2>
+	</header>
+	<section class="festa-dialog-edit-body">
+		<div class="festa-dialog-form festa-compra-form-grid">
+			{% call field(label="Nome do item *") %}
+				{{ input(name="contratacao-nome-item", attrs={"id": "contratacao-nome-item", "required": "required", "autocomplete": "off", "placeholder": "Ex.: Som, segurança, limpeza…"}) }}
+			{% endcall %}
+			{% call field(label="Área") %}
+				{{ select(
+					id="contratacao-area",
+					name="contratacao-area",
+					items=areas_items or [],
+					is_combobox=true,
+					search_placeholder="Buscar área…",
+					trigger_attrs={"class": "w-full"}
+				) }}
+			{% endcall %}
+			{% call field(label="Valor total da contratação") %}
+				{{ input(attrs={"id": "contratacao-valor-total", "readonly": "readonly", "tabindex": "-1", "placeholder": "R$ 0,00"}) }}
+			{% endcall %}
+		</div>
+
+		<div class="festa-compra-section">
+			<div class="festa-compra-section__header">
+				<h3 class="festa-equipe-title">Cotações</h3>
+				<button type="button" class="btn-sm-outline" id="btn-contratacao-add-cotacao">
+					{{ lucide_icon("plus", size="sm") }}
+					<span>Adicionar cotação</span>
+				</button>
+			</div>
+			<div id="contratacao-cotacoes-container"></div>
+		</div>
+	</section>
+	<footer>
+		<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Cancelar</button>
+		<button type="button" class="btn-primary" id="btn-contratacao-salvar">Salvar</button>
+	</footer>
+	<button type="button" aria-label="Fechar dialog" onclick="this.closest('dialog').close()">
+		<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+	</button>
+</div>
+</dialog>
+
+{% endif %}{# can_edit (dialogs de produto) #}
+
+{% endif %}{# not_found #}
+{% endblock %}

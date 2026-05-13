@@ -1,0 +1,56 @@
+.nova-festa {
+	margin-top: calc(var(--spacing) * 6);
+}
+
+.nova-festa-form {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 5);
+	width: 100%;
+}
+
+.nova-festa-card__header {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 1);
+	margin-bottom: calc(var(--spacing) * 4);
+}
+
+.nova-festa-card__title {
+	margin: 0;
+	font-size: var(--text-lg);
+	line-height: 1.25;
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-foreground);
+}
+
+.nova-festa-card__subtitle {
+	margin: 0;
+	font-size: var(--text-sm);
+	color: var(--color-muted-foreground);
+}
+
+.nova-festa-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: calc(var(--spacing) * 4);
+}
+
+@media (min-width: 40rem) {
+	.nova-festa-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+.nova-festa-coord__pickers {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 4);
+}
+
+.nova-festa-actions {
+	display: flex;
+	gap: calc(var(--spacing) * 3);
+	justify-content: flex-end;
+	flex-wrap: wrap;
+}

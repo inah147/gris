@@ -1,0 +1,85 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-05-10 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "tipo_pessoa",
+  "associado",
+  "responsavel",
+  "nome",
+  "email",
+  "telefone",
+  "funcao"
+ ],
+ "fields": [
+  {
+   "default": "Outro",
+   "fieldname": "tipo_pessoa",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Tipo de pessoa",
+   "options": "Associado\nResponsavel\nOutro",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.tipo_pessoa=='Associado'",
+   "fieldname": "associado",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Associado",
+   "options": "Associado"
+  },
+  {
+   "depends_on": "eval:doc.tipo_pessoa=='Responsavel'",
+   "fieldname": "responsavel",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Responsavel",
+   "options": "Responsavel"
+  },
+  {
+   "fieldname": "nome",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome",
+   "reqd": 1
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Email",
+   "reqd": 1
+  },
+  {
+   "fieldname": "telefone",
+   "fieldtype": "Phone",
+   "in_list_view": 1,
+   "label": "Telefone",
+   "reqd": 1
+  },
+  {
+   "fieldname": "funcao",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Funcao"
+  }
+ ],
+ "grid_page_length": 20,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-10 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Festas",
+ "name": "Membro Equipe Festa",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

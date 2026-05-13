@@ -1,0 +1,90 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:{festa} - {nome_item}",
+ "creation": "2026-05-10 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "festa",
+  "nome_item",
+  "area",
+  "totais_section",
+  "valor_total_contratacao",
+  "cotacoes_section",
+  "cotacoes"
+ ],
+ "fields": [
+  {
+   "fieldname": "festa",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Festa",
+   "options": "Festa",
+   "reqd": 1
+  },
+  {
+   "fieldname": "nome_item",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome do Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "area",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Area",
+   "options": "Area da Festa"
+  },
+  {
+   "fieldname": "totais_section",
+   "fieldtype": "Section Break",
+   "label": "Totais"
+  },
+  {
+   "fieldname": "valor_total_contratacao",
+   "fieldtype": "Currency",
+   "label": "Valor Total da Contratacao",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cotacoes_section",
+   "fieldtype": "Section Break",
+   "label": "Cotacoes"
+  },
+  {
+   "fieldname": "cotacoes",
+   "fieldtype": "Table",
+   "label": "Cotacoes",
+   "options": "Cotacao Contratacao Festa"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-05-10 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Festas",
+ "name": "Contratacao Festa",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "nome_item"
+}

@@ -1,0 +1,118 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{% block title %}Todas as festas{% endblock %}
+
+{% set active_link = "/festas/todas_festas" %}
+
+{% block head_include %}
+{{ super() }}
+<link rel="stylesheet" href="/festas/todas_festas.css" />
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header-row">
+	<div class="flex flex-col gap-2 max-w-3xl">
+		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">Todas as festas</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">Acompanhe as festas em andamento e veja o histórico das já realizadas.</p>
+	</div>
+	{% if can_criar %}
+	<div class="page-header-actions">
+		<a class="btn-primary todas-festas-header__cta" href="/festas/nova_festa">
+			{{ lucide_icon("calendar-plus", size="sm") }}
+			<span>Nova festa</span>
+		</a>
+	</div>
+	{% endif %}
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="todas-festas">
+	<section class="todas-festas__section" aria-labelledby="festas-em-andamento-titulo">
+		<header class="todas-festas__section-header">
+			<h2 id="festas-em-andamento-titulo" class="todas-festas__section-title">Festas em andamento</h2>
+		</header>
+
+		{% if festas_em_andamento %}
+		<div class="todas-festas__grid">
+			{% for festa in festas_em_andamento %}
+			{% call card(attrs={"class": "todas-festas-card", "onclick": "location.href='/festas/festa?name=" ~ festa.name ~ "'"}) %}
+				<div class="todas-festas-card__title-row">
+					<a class="todas-festas-card__title-link" href="/festas/festa?name={{ festa.name }}">
+						<h3 class="todas-festas-card__title">{{ festa.nome_festa }}</h3>
+					</a>
+					<span class="todas-festas-card__icon" aria-hidden="true">
+						{{ lucide_icon("party-popper", size="sm") }}
+					</span>
+				</div>
+				<dl class="todas-festas-card__meta">
+					<div>
+						<dt>Data</dt>
+						<dd>{{ festa.data_formatada or "—" }}</dd>
+					</div>
+					{% if festa.horario_inicio_fmt or festa.horario_termino_fmt %}
+					<div>
+						<dt>Horário</dt>
+						<dd>
+							{{ festa.horario_inicio_fmt or "—" }}
+							{% if festa.horario_termino_fmt %} – {{ festa.horario_termino_fmt }}{% endif %}
+						</dd>
+					</div>
+					{% endif %}
+				</dl>
+			{% endcall %}
+			{% endfor %}
+		</div>
+		{% else %}
+		{{ empty(
+			title="Nenhuma festa em andamento",
+			description="Quando uma nova festa for criada, ela aparecerá aqui.",
+			image="/assets/gris/images/gris-character/gris-sad.png",
+			image_alt="Personagem Gris triste",
+			image_size="sm",
+			attrs={"class": "todas-festas__empty"}
+		) }}
+		{% endif %}
+	</section>
+
+	<section class="todas-festas__section" aria-labelledby="festas-realizadas-titulo">
+		<header class="todas-festas__section-header">
+			<h2 id="festas-realizadas-titulo" class="todas-festas__section-title">Festas já realizadas</h2>
+		</header>
+
+		{% if festas_realizadas %}
+		{% call card(attrs={"class": "todas-festas__historico"}) %}
+			<div class="overflow-x-auto">
+				<table class="table todas-festas-table">
+					<thead>
+						<tr>
+							<th>Festa</th>
+							<th class="todas-festas-table__date">Data</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for festa in festas_realizadas %}
+						<tr>
+							<td><a href="/festas/festa?name={{ festa.name }}">{{ festa.nome_festa }}</a></td>
+							<td class="todas-festas-table__date">{{ festa.data_formatada or "—" }}</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		{% endcall %}
+		{% else %}
+		{{ empty(
+			title="Nenhuma festa realizada",
+			description="Quando uma festa for concluída, ela aparecerá nesta lista.",
+			image="/assets/gris/images/gris-character/gris-sad.png",
+			image_alt="Personagem Gris triste",
+			image_size="sm",
+			attrs={"class": "todas-festas__empty"}
+		) }}
+		{% endif %}
+	</section>
+</div>
+{% endblock %}

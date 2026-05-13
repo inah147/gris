@@ -1,0 +1,520 @@
+/* ─── Dialog coordenador (maior) ─────────────────────────────────────── */
+
+.dialog-coord-large {
+	width: min(480px, 95vw);
+	max-width: min(480px, 95vw);
+}
+
+/* Permite que o popover do select escape os limites do dialog */
+.dialog-coord-large > div {
+	overflow: visible;
+}
+
+.dialog-coord-large > div > section {
+	overflow: visible;
+}
+
+/* ─── Equipe member form ──────────────────────────────────────────────── */
+
+.equipe-member-form {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 1rem;
+	background: var(--muted);
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	margin-bottom: 0.5rem;
+}
+
+.equipe-member-form__actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+}
+
+/* ─── Page Header ─────────────────────────────────────────────────────── */
+
+.festa-page-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-wrap: wrap;
+}
+
+.festa-page-header__actions {
+	flex-shrink: 0;
+}
+
+.festa-drive-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+}
+
+/* ─── Tab content wrapper ─────────────────────────────────────────────── */
+
+.festa-tab-content {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+	padding-top: 1.5rem;
+}
+
+/* ─── Card header (title + optional action button) ───────────────────── */
+
+.festa-card__header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 1rem;
+}
+
+.festa-card__title {
+	font-size: 1rem;
+	font-weight: 600;
+	margin: 0 0 0.25rem;
+	color: var(--foreground);
+}
+
+.festa-card__subtitle {
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+	margin: 0;
+}
+
+/* ─── Coordinator info grid ───────────────────────────────────────────── */
+
+.festa-info-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+	gap: 0.75rem 1.5rem;
+	margin: 0;
+}
+
+.festa-info-grid dt {
+	font-size: 0.75rem;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--muted-foreground);
+	margin-bottom: 0.25rem;
+}
+
+.festa-info-grid dd {
+	font-size: 0.9375rem;
+	color: var(--foreground);
+	margin: 0;
+}
+
+/* ─── Estimativas grid ────────────────────────────────────────────────── */
+
+.festa-estimativas-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+	gap: 1rem;
+}
+
+.festa-estimativa-item {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+}
+
+.festa-estimativa-input {
+	width: 100%;
+}
+
+/* ─── Generic table ───────────────────────────────────────────────────── */
+
+.festa-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.875rem;
+}
+
+.festa-table th {
+	text-align: left;
+	padding: 0.5rem 0.75rem;
+	font-size: 0.75rem;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--muted-foreground);
+	border-bottom: 1px solid var(--border);
+	overflow-wrap: anywhere; /* permite quebra em qualquer ponto para comprimir colunas */
+}
+
+.festa-table td {
+	padding: 0.625rem 0.75rem;
+	border-bottom: 1px solid var(--border);
+	color: var(--foreground);
+	vertical-align: middle;
+	overflow-wrap: anywhere; /* permite quebra em qualquer ponto para comprimir colunas */
+}
+
+.festa-table tbody tr:last-child td {
+	border-bottom: none;
+}
+
+.festa-table tbody tr:hover td {
+	background-color: var(--muted);
+}
+
+.festa-table-actions {
+	width: 2.5rem;
+	text-align: right;
+}
+
+/* ─── Actions button "…" ──────────────────────────────────────────────── */
+
+.festa-actions-btn {
+	font-size: 1rem;
+	font-weight: 700;
+	line-height: 1;
+	padding: 0.25rem 0.5rem;
+}
+
+/* ─── Popover menu ────────────────────────────────────────────────────── */
+
+.festa-popover-menu {
+	display: flex;
+	flex-direction: column;
+	min-width: 8rem;
+	padding: 0.25rem;
+}
+
+.festa-popover-item {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	font-size: 0.875rem;
+	width: 100%;
+	text-align: left;
+	border-radius: var(--radius-sm, 0.25rem);
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	color: var(--foreground);
+}
+
+.festa-popover-item:hover {
+	background-color: var(--accent);
+}
+
+.festa-popover-item--destructive {
+	color: var(--destructive);
+}
+
+.festa-popover-item--destructive:hover {
+	background-color: color-mix(in srgb, var(--destructive) 10%, transparent);
+}
+
+/* ─── Dialog form ─────────────────────────────────────────────────────── */
+
+.festa-dialog-form {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.festa-dialog-edit-body {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+/* ─── Equipe section inside edit dialog ──────────────────────────────── */
+
+.festa-equipe-title {
+	font-size: 0.9375rem;
+	font-weight: 600;
+	margin: 0;
+	color: var(--foreground);
+}
+
+.festa-equipe-empty {
+	padding: 0.75rem 0;
+}
+
+.festa-add-membro-btn {
+	align-self: flex-start;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+}
+
+/* ─── Inline equipe edit row ──────────────────────────────────────────── */
+
+.festa-equipe-editing td {
+	background-color: color-mix(in srgb, var(--primary) 5%, transparent);
+}
+
+/* ─── Coord picker sub-container ─────────────────────────────────────── */
+
+.festa-coord-picker {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+/* ─── Edit area/barraca dialog — largura aumentada ───────────────────── */
+
+.dialog-edit-large > div {
+	width: min(780px, 95vw) !important;
+	max-width: min(780px, 95vw) !important;
+}
+
+/* ─── Equipe table scroll horizontal ──────────────────────────────────── */
+
+/* Sem max-height: o container cresce livremente (scroll vertical fica no
+ * <section> do dialog via layout.css). overflow-x: auto trata tabelas largas. */
+.festa-equipe-scroll {
+	overflow-x: auto;
+	overflow-y: clip;
+}
+
+/* ─── Equipe member popover ──────────────────────────────────────────── */
+
+.festa-eq-popover-content {
+	width: min(460px, 85vw);
+	max-width: min(460px, 85vw);
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	padding: 1.25rem;
+	border-width: 1px;
+}
+
+/* ─── Responsive ──────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+	.festa-page-header {
+		flex-direction: column;
+	}
+
+	.festa-estimativas-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.festa-compra-form-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* ─── Tabs com scroll horizontal ──────────────────────────────────────── */
+
+#festa-tabs {
+	min-width: 0;
+	max-width: 100%;
+}
+
+#festa-tabs > [role="tablist"] {
+	width: 100%;
+	max-width: 100%;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+	justify-content: flex-start;
+	scrollbar-width: thin;
+}
+
+#festa-tabs > [role="tablist"]::-webkit-scrollbar {
+	height: 4px;
+}
+
+#festa-tabs > [role="tabpanel"] {
+	min-width: 0;
+	max-width: 100%;
+}
+
+/* ─── Tabelas: cada coluna respeita largura do título no mobile ───────── */
+
+.festa-table-scroll .festa-table {
+	min-width: max-content;
+}
+
+.festa-table-scroll .festa-table th,
+.festa-table-scroll .festa-table td {
+	white-space: nowrap;
+}
+
+/* ─── Produtos vendidos — célula de convite ───────────────────────────── */
+
+.festa-switch-cell {
+	text-align: center;
+}
+
+/* ─── Produtos vendidos — scroll horizontal da tabela ─────────────────── */
+
+.festa-table-scroll {
+	width: 100%;
+	max-width: 100%;
+	overflow-x: auto;
+	overflow-y: clip; /* evita coerção da spec: overflow-x:auto → overflow-y:auto */
+}
+
+.festa-table-scroll .festa-table {
+	min-width: 100%;
+}
+
+/* ─── Dialog editar produto ───────────────────────────────────────────── */
+
+.dialog-edit-produto > div {
+	width: min(640px, 95vw) !important;
+	max-width: min(640px, 95vw) !important;
+}
+
+/* Corpo do dialog scrollable com header/footer fixos;
+ * max-height gerenciado pelo dialog nativo (calc(100% - 2rem)) + flex layout.css */
+.dialog-edit-produto > div > section {
+	overflow-y: auto;
+	min-height: 0;
+}
+
+/* ─── Dialog de compras ──────────────────────────────────────────────── */
+
+.dialog-compra > div {
+	width: min(980px, 96vw) !important;
+	max-width: min(980px, 96vw) !important;
+}
+
+.dialog-compra > div > section {
+	overflow-y: auto;
+	min-height: 0;
+}
+
+.festa-compra-form-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1rem;
+}
+
+.festa-compra-section {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.festa-compra-section__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+}
+
+.festa-edit-table {
+	min-width: 760px;
+}
+
+.festa-edit-table .select,
+.festa-edit-table select.select {
+	min-width: 9rem;
+	width: 100%;
+}
+
+.festa-edit-table select.select.compra-select-produto {
+	min-width: 11rem;
+}
+
+.festa-edit-table th {
+	white-space: nowrap;
+}
+
+.festa-edit-table td {
+	vertical-align: top;
+}
+
+.festa-compact-input {
+	width: 100%;
+	min-width: 7rem;
+}
+
+/* ─── Tabela de cenários (dentro do dialog de produto) ───────────────── */
+
+.festa-cenarios-wrap {
+	overflow-x: auto;
+	overflow-y: clip; /* evita coerção da spec: overflow-x:auto → overflow-y:auto */
+	flex-shrink: 0;
+	min-height: fit-content;
+}
+
+.festa-cenarios-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.875rem;
+	margin-bottom: 0.5rem;
+}
+
+.festa-cenarios-table th {
+	text-align: center;
+	padding: 0.375rem 0.75rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--muted-foreground);
+	border-bottom: 1px solid var(--border);
+}
+
+.festa-cenarios-table th:first-child {
+	text-align: left;
+}
+
+.festa-cenarios-table td {
+	padding: 0.5rem 0.75rem;
+	border-bottom: 1px solid var(--border);
+	color: var(--foreground);
+	text-align: center;
+}
+
+.festa-cenarios-table .festa-cenarios-label {
+	text-align: left;
+	font-size: 0.8125rem;
+	font-weight: 500;
+	color: var(--muted-foreground);
+	white-space: nowrap;
+}
+
+.festa-cenarios-table tbody tr:last-child td {
+	border-bottom: none;
+}
+
+.festa-cenarios-table .festa-cenarios-row--total td {
+	font-weight: 600;
+	color: var(--foreground);
+	border-top: 1px solid var(--border);
+	background: var(--muted);
+}
+
+.festa-cenarios-table .festa-cenarios-row--total .festa-cenarios-label {
+	color: var(--foreground);
+}
+
+.festa-cenarios-table td.festa-cenarios-cell--success {
+	color: var(--success);
+}
+
+.festa-cenarios-table td.festa-cenarios-cell--danger {
+	color: var(--destructive);
+}
+
+.festa-cenarios-table .festa-cenarios-row--total td.festa-cenarios-cell--danger {
+	color: var(--destructive);
+}
+
+@media (max-width: 640px) {
+	.festa-compra-form-grid {
+		grid-template-columns: 1fr;
+	}
+
+	#compras-table-container .festa-table th:nth-child(2),
+	#compras-table-container .festa-table td:nth-child(2),
+	.festa-edit-table th:nth-child(2),
+	.festa-edit-table td:nth-child(2) {
+		display: table-cell;
+	}
+}

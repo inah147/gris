@@ -1,0 +1,18 @@
+{% extends "templates/web_module_index_base.html" %}
+
+{% set active_link = "/festas" %}
+{% set module_title = "Festas" %}
+{% set module_subtitle = "Organize as festas da UEL e acompanhe o que está em andamento." %}
+{% set module_items = [
+	{
+		"href": "/festas/nova_festa",
+		"title": "Nova festa",
+		"description": "Cadastre uma nova festa e crie a pasta no Drive automaticamente.",
+		"visible": can_criar,
+	},
+	{
+		"href": "/festas/todas_festas",
+		"title": "Todas as festas",
+		"description": "Visualize as festas em andamento e as já realizadas.",
+	},
+] %}

@@ -73,6 +73,14 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 		],
 	},
 	{
+		"label": "Festas",
+		"path": "/festas",
+		"children": [
+			{"label": "Nova festa", "path": "/festas/nova_festa"},
+			{"label": "Todas as festas", "path": "/festas/todas_festas"},
+		],
+	},
+	{
 		"label": "Painel do Responsável",
 		"path": "/responsavel",
 		"children": [
@@ -93,6 +101,7 @@ PORTAL_MODULE_ICON_MAP: dict[str, str] = {
 	"/gestao_adultos": "graduation-cap",
 	"/responsavel": "user",
 	"/portal_transparencia": "file-text",
+	"/festas": "party-popper",
 }
 
 SIDEBAR_ICON_MAP: dict[str, str] = {
@@ -121,6 +130,9 @@ SIDEBAR_ICON_MAP: dict[str, str] = {
 	"/responsavel/meus_dados": "shield-user",
 	"/responsavel/beneficiarios": "users",
 	"/responsavel/pesquisa_novos": "search",
+	"/festas/nova_festa": "calendar-plus",
+	"/festas/todas_festas": "list",
+	"/festas/festa": "party-popper",
 }
 
 # Mapping: path -> allowed roles.
@@ -175,6 +187,10 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/projetos/cadastrar_novo_projeto": ["Editor de projetos"],
 	"/projetos/projeto": ["Visualizador de projetos", "Editor de projetos"],
 	"/projetos/aprovacao_projeto": ["Visualizador de projetos", "Editor de projetos"],
+	"/festas": ["Visualizador de festas", "Gestor de festas"],
+	"/festas/nova_festa": ["Gestor de festas"],
+	"/festas/todas_festas": ["Visualizador de festas", "Gestor de festas"],
+	"/festas/festa": ["Visualizador de festas", "Gestor de festas"],
 }
 
 # Páginas marcadas como "estritas": mesmo System Manager deve ter uma das roles listadas.

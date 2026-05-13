@@ -6,7 +6,7 @@
 
 {% set active_link = "/inicio" %}
 {% set first_name = (user_display_name or "usuário").split(" ")[0] %}
-{% set has_available_modules = can_associados or can_calendario or can_financeiro or can_projetos or can_recepcao or can_gestao_adultos or can_responsavel or can_transparencia %}
+{% set has_available_modules = can_associados or can_calendario or can_financeiro or can_projetos or can_recepcao or can_gestao_adultos or can_responsavel or can_transparencia or can_festas %}
 {% set home_modules = [
 	{
 		"visible": can_associados,
@@ -35,6 +35,13 @@
 		"title": "Portal de Projetos",
 		"description": "Acompanhe os projetos e seus status.",
 		"icon": module_icons["/projetos"]
+	},
+	{
+		"visible": can_festas,
+		"href": "/festas",
+		"title": "Festas",
+		"description": "Organize e acompanhe as festas da UEL.",
+		"icon": module_icons["/festas"]
 	},
 	{
 		"visible": can_recepcao,

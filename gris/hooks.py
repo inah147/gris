@@ -172,6 +172,7 @@ scheduler_events = {
 		"gris.api.google_workspace.access_manager.enqueue_daily_restricted_access_cleanup",
 		"gris.api.google_workspace.access_manager.enqueue_daily_inactive_access_cleanup",
 		"gris.api.recepcao_notificacoes.enviar_lembretes_visita",
+		"gris.festas.doctype.festa.festa.marcar_festas_realizadas",
 	],
 	# "hourly": [
 	# 	"gris.tasks.hourly"
@@ -295,6 +296,8 @@ fixtures = [
 					"Gestor Calendario",
 					"Recepcao",
 					"Responsavel",
+					"Gestor de festas",
+					"Visualizador de festas",
 				],
 			]
 		],

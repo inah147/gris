@@ -1,0 +1,153 @@
+.page-header-row {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 4);
+	flex-wrap: wrap;
+}
+
+.page-header-actions {
+	display: flex;
+	gap: calc(var(--spacing) * 2);
+	margin-left: auto;
+}
+
+.todas-festas-header__cta {
+	display: inline-flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+	text-decoration: none;
+}
+
+@media (max-width: 48rem) {
+	.page-header-row {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.page-header-actions {
+		margin-left: 0;
+		width: 100%;
+	}
+
+	.page-header-actions .todas-festas-header__cta {
+		flex: 1;
+		justify-content: center;
+	}
+}
+
+.todas-festas {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 8);
+	margin-top: calc(var(--spacing) * 6);
+}
+
+.todas-festas__section {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 4);
+}
+
+.todas-festas__section-title {
+	margin: 0;
+	font-size: var(--text-xl);
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-foreground);
+}
+
+.todas-festas__grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: calc(var(--spacing) * 4);
+}
+
+@media (min-width: 48rem) {
+	.todas-festas__grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (min-width: 72rem) {
+	.todas-festas__grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
+.todas-festas-card {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 3);
+	cursor: pointer;
+	transition: box-shadow 0.15s ease;
+}
+
+.todas-festas-card:hover {
+	box-shadow: 0 0 0 2px var(--primary);
+}
+
+.todas-festas-card__title-link {
+	text-decoration: none;
+	color: inherit;
+}
+
+.todas-festas-card__title-link:hover .todas-festas-card__title {
+	text-decoration: underline;
+}
+
+.todas-festas-card__title-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 3);
+}
+
+.todas-festas-card__title {
+	margin: 0;
+	font-size: var(--text-lg);
+	font-weight: var(--font-weight-semibold);
+	line-height: 1.25;
+	color: var(--color-foreground);
+}
+
+.todas-festas-card__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--color-primary);
+}
+
+.todas-festas-card__meta {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: calc(var(--spacing) * 3);
+	margin: 0;
+}
+
+.todas-festas-card__meta dt {
+	margin: 0;
+	font-size: var(--text-xs);
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--color-muted-foreground);
+}
+
+.todas-festas-card__meta dd {
+	margin: calc(var(--spacing) * 1) 0 0;
+	font-size: var(--text-sm);
+	color: var(--color-foreground);
+}
+
+.todas-festas__historico section {
+	padding: 0;
+	min-width: 0;
+}
+
+.todas-festas-table__date {
+	white-space: nowrap;
+	color: var(--color-muted-foreground);
+}
+
+.todas-festas__empty {
+	margin: 0;
+}

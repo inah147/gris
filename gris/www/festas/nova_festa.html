@@ -1,0 +1,108 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, form, input %}
+{% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Nova festa{% endblock %}
+
+{% set active_link = "/festas/nova_festa" %}
+
+{% block head_include %}
+{{ super() }}
+<link rel="stylesheet" href="/festas/nova_festa.css" />
+{% endblock %}
+
+{% block page_header %}
+<section class="nova-festa-header" aria-labelledby="nova-festa-titulo">
+	<div class="flex flex-col gap-2 max-w-3xl">
+		<h1 id="nova-festa-titulo" class="m-0 text-3xl font-semibold leading-tight text-foreground">Nova festa</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">Cadastre uma festa preenchendo os dados básicos. Após criar, a pasta no Drive será gerada automaticamente quando habilitado nas Configurações de Festas.</p>
+	</div>
+</section>
+{% endblock %}
+
+{% block main %}
+<div class="nova-festa">
+	{{ toaster() }}
+
+	{% call form(attrs={"id": "nova-festa-form", "novalidate": "novalidate", "class": "nova-festa-form"}) %}
+		{% call card(attrs={"class": "nova-festa-card"}) %}
+			<header class="nova-festa-card__header">
+				<h2 class="nova-festa-card__title">Dados gerais</h2>
+				<p class="nova-festa-card__subtitle">Nome, data e horário da festa.</p>
+			</header>
+			<div class="nova-festa-grid">
+				{% call field(label="Nome da festa") %}
+					{{ input(name="nome_festa", attrs={"id": "nova-festa-nome", "required": "required", "minlength": "3", "autocomplete": "off", "placeholder": "Ex.: Festa Junina 2026"}) }}
+				{% endcall %}
+				{% call field(label="Data") %}
+					{{ datepicker(
+						id="nova-festa-data",
+						name="data",
+						placeholder="Selecione a data",
+						trigger_attrs={"class": "w-full"}
+					) }}
+				{% endcall %}
+				{% call field(label="Horário de início") %}
+					{{ input(name="horario_inicio", type="time", attrs={"id": "nova-festa-horario-inicio"}) }}
+				{% endcall %}
+				{% call field(label="Horário de término") %}
+					{{ input(name="horario_termino", type="time", attrs={"id": "nova-festa-horario-termino"}) }}
+				{% endcall %}
+			</div>
+		{% endcall %}
+
+		{% call card(attrs={"class": "nova-festa-card"}) %}
+			<header class="nova-festa-card__header">
+				<h2 class="nova-festa-card__title">Coordenador geral</h2>
+				<p class="nova-festa-card__subtitle">Quem responde pela organização desta festa.</p>
+			</header>
+			<div class="nova-festa-coord__pickers">
+				{% call field(label="Tipo de coordenador") %}
+					{{ select(
+						id="nova-festa-tipo-coord",
+						name="tipo_coord_geral",
+						items=[
+							{"label": "Responsável", "value": "Responsavel"},
+							{"label": "Associado", "value": "Associado"}
+						],
+						selected="Responsavel",
+						trigger_attrs={"class": "w-full"}
+					) }}
+				{% endcall %}
+
+				<div data-coord-picker="Responsavel">
+					{% call field(label="Selecione o responsável") %}
+						{{ select(
+							id="nova-festa-combo-responsavel",
+							name="coordenador_responsavel",
+							items=responsaveis_items or [],
+							is_combobox=true,
+							search_placeholder="Buscar responsável…",
+							trigger_attrs={"class": "w-full"}
+						) }}
+					{% endcall %}
+				</div>
+				<div data-coord-picker="Associado" hidden>
+					{% call field(label="Selecione o associado") %}
+						{{ select(
+							id="nova-festa-combo-associado",
+							name="coordenador_associado",
+							items=associados_items or [],
+							is_combobox=true,
+							search_placeholder="Buscar associado…",
+							trigger_attrs={"class": "w-full"}
+						) }}
+					{% endcall %}
+				</div>
+			</div>
+		{% endcall %}
+
+		<div class="nova-festa-actions">
+			<a class="btn-outline" href="/festas">Cancelar</a>
+			<button type="submit" class="btn-primary" id="nova-festa-submit">Criar festa</button>
+		</div>
+	{% endcall %}
+</div>
+{% endblock %}

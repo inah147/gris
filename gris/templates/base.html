@@ -1,6 +1,6 @@
 {% extends "frappe/templates/base.html" %}
 
-{% set design_system_asset_version = "20260506-overflow-utils" %}
+{% set design_system_asset_version = "20260511-smart-popover" %}
 {% set current_page_path = pathname if pathname is defined and pathname else (path if path is defined else "") %}
 {# Frappe entrega `pathname` sem a barra inicial (ex.: "inicio", "projetos/abc"). Normalizamos para comparar com segurança independentemente do contexto. #}
 {% set normalized_page_path = current_page_path.lstrip("/") %}
@@ -14,7 +14,7 @@
 #}
 {% set gris_route_prefixes = [
     "inicio", "portal_transparencia", "403",
-    "associados", "calendario", "financeiro",
+    "associados", "calendario", "festas", "financeiro",
     "gestao_adultos", "manifestacao_interesse",
     "projetos", "recepcao", "responsavel",
 ] %}
@@ -88,6 +88,7 @@
 <link rel="stylesheet" href="/assets/gris/design_system/css/layout.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/empty.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/table.css?v={{ design_system_asset_version }}">
+<link rel="stylesheet" href="/assets/gris/design_system/css/select.css?v={{ design_system_asset_version }}">
 
 <!-- Basecoat JS (local files, without build tool) -->
 <script src="/assets/gris/design_system/js/basecoat/basecoat.min.js?v={{ design_system_asset_version }}" defer></script>

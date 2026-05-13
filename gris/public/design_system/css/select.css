@@ -1,0 +1,17 @@
+/**
+ * SELECT.CSS
+ * Correções e extensões do componente Select/Combobox do Basecoat.
+ *
+ * O basecoat.css (bundle upstream) não define max-height nem overflow-y no
+ * [role=listbox], o que faz o popover crescer indefinidamente quando há muitos
+ * itens — expandindo a página junto. Este arquivo corrige isso adicionando
+ * scroll interno ao listbox.
+ *
+ * Valor de max-height (300px) alinhado com o .command [role=menu] do Basecoat.
+ */
+
+/* Scroll interno: o [role=listbox] rola; o header de busca (combobox) fica fixo */
+:not(select).select [data-popover] [role=listbox] {
+  max-height: 300px;
+  overflow-y: auto;
+}

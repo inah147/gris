@@ -1,0 +1,253 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:{festa} - {nome_item}",
+ "creation": "2026-05-10 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "festa",
+  "nome_item",
+  "area",
+  "varia_com_publico",
+  "usado_em_produtos",
+  "unidade_compra",
+  "quantidade_compra",
+  "quantidade_compra_final",
+  "totais_section",
+  "cotacao_escolhida_valor",
+  "valor_total_compra",
+  "cenarios_compra_section",
+  "qtd_sugerida_min",
+  "valor_total_min",
+  "qtd_sobra_individual_min",
+  "valor_sobra_min",
+  "cenarios_compra_col2",
+  "qtd_sugerida_intermediario",
+  "valor_total_intermediario",
+  "qtd_sobra_individual_intermediario",
+  "valor_sobra_intermediario",
+  "cenarios_compra_col3",
+  "qtd_sugerida_max",
+  "valor_total_max",
+  "qtd_sobra_individual_max",
+  "valor_sobra_max",
+  "cotacoes_section",
+  "cotacoes",
+  "usos_section",
+  "usos_em_produto"
+ ],
+ "fields": [
+  {
+   "fieldname": "festa",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Festa",
+   "options": "Festa",
+   "reqd": 1
+  },
+  {
+   "fieldname": "nome_item",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome do Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "area",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Area",
+   "options": "Area da Festa"
+  },
+  {
+   "default": "0",
+   "fieldname": "varia_com_publico",
+   "fieldtype": "Check",
+   "label": "Quantidade varia com publico"
+  },
+  {
+   "default": "0",
+   "fieldname": "usado_em_produtos",
+   "fieldtype": "Check",
+   "label": "Usado em produtos"
+  },
+  {
+   "default": "unidade",
+   "fieldname": "unidade_compra",
+   "fieldtype": "Select",
+   "label": "Unidade de Compra",
+   "options": "unidade\nkg\ng\nlitro\nml",
+   "reqd": 1
+  },
+  {
+   "fieldname": "quantidade_compra",
+   "fieldtype": "Float",
+   "label": "Quantidade de Compra",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "quantidade_compra_final",
+   "fieldtype": "Float",
+   "label": "Quantidade de Compra Final",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "totais_section",
+   "fieldtype": "Section Break",
+   "label": "Totais"
+  },
+  {
+   "fieldname": "cotacao_escolhida_valor",
+   "fieldtype": "Currency",
+   "label": "Valor da Cotacao Escolhida",
+   "read_only": 1
+  },
+  {
+   "fieldname": "valor_total_compra",
+   "fieldtype": "Currency",
+   "label": "Valor Total da Compra",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cenarios_compra_section",
+   "fieldtype": "Section Break",
+   "label": "Cen\u00e1rios de Compra"
+  },
+  {
+   "fieldname": "qtd_sugerida_min",
+   "fieldtype": "Float",
+   "label": "Qtd Sugerida (M\u00ednimo)",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "valor_total_min",
+   "fieldtype": "Currency",
+   "label": "Valor Total (M\u00ednimo)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "qtd_sobra_individual_min",
+   "fieldtype": "Float",
+   "label": "Sobra Individual (M\u00ednimo)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "valor_sobra_min",
+   "fieldtype": "Currency",
+   "label": "Valor de Sobra (M\u00ednimo)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cenarios_compra_col2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "qtd_sugerida_intermediario",
+   "fieldtype": "Float",
+   "label": "Qtd Sugerida (Intermedi\u00e1rio)",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "valor_total_intermediario",
+   "fieldtype": "Currency",
+   "label": "Valor Total (Intermedi\u00e1rio)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "qtd_sobra_individual_intermediario",
+   "fieldtype": "Float",
+   "label": "Sobra Individual (Intermedi\u00e1rio)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "valor_sobra_intermediario",
+   "fieldtype": "Currency",
+   "label": "Valor de Sobra (Intermedi\u00e1rio)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cenarios_compra_col3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "qtd_sugerida_max",
+   "fieldtype": "Float",
+   "label": "Qtd Sugerida (M\u00e1ximo)",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "valor_total_max",
+   "fieldtype": "Currency",
+   "label": "Valor Total (M\u00e1ximo)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "qtd_sobra_individual_max",
+   "fieldtype": "Float",
+   "label": "Sobra Individual (M\u00e1ximo)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "valor_sobra_max",
+   "fieldtype": "Currency",
+   "label": "Valor de Sobra (M\u00e1ximo)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cotacoes_section",
+   "fieldtype": "Section Break",
+   "label": "Cotacoes"
+  },
+  {
+   "fieldname": "cotacoes",
+   "fieldtype": "Table",
+   "label": "Cotacoes",
+   "options": "Cotacao Compra Festa"
+  },
+  {
+   "depends_on": "eval:doc.usado_em_produtos",
+   "fieldname": "usos_section",
+   "fieldtype": "Section Break",
+   "label": "Uso em Produtos"
+  },
+  {
+   "depends_on": "eval:doc.usado_em_produtos",
+   "fieldname": "usos_em_produto",
+   "fieldtype": "Table",
+   "label": "Uso em Produtos",
+   "options": "Uso em Produto Festa"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-05-10 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Festas",
+ "name": "Compra Festa",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "nome_item"
+}

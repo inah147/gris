@@ -1,5 +1,20 @@
 (() => {
   const initSelect = (selectComponent) => {
+    const previousCleanup = selectComponent.__basecoatSelectCleanup;
+    if (typeof previousCleanup === 'function') {
+      previousCleanup();
+    }
+
+    const listenerController = typeof AbortController === 'function' ? new AbortController() : null;
+    const addListener = (target, eventName, handler, options) => {
+      if (!target) return;
+      if (listenerController) {
+        target.addEventListener(eventName, handler, { ...(options || {}), signal: listenerController.signal });
+        return;
+      }
+      target.addEventListener(eventName, handler, options);
+    };
+
     const trigger = selectComponent.querySelector(':scope > button');
     const selectedLabel = trigger.querySelector(':scope > span');
     const popover = selectComponent.querySelector(':scope > [data-popover]');
@@ -191,7 +206,7 @@
         });
       };
 
-      filter.addEventListener('input', filterOptions);
+      addListener(filter, 'input', filterOptions);
     }
 
     // Initialization
@@ -295,7 +310,7 @@
       }
     };
 
-    listbox.addEventListener('mousemove', (event) => {
+    addListener(listbox, 'mousemove', (event) => {
       const option = event.target.closest('[role="option"]');
       if (option && visibleOptions.includes(option)) {
         const index = options.indexOf(option);
@@ -305,7 +320,7 @@
       }
     });
 
-    listbox.addEventListener('mouseleave', () => {
+    addListener(listbox, 'mouseleave', () => {
       const selectedOption = listbox.querySelector('[role="option"][aria-selected="true"]');
       if (selectedOption) {
         setActiveOption(options.indexOf(selectedOption));
@@ -314,9 +329,9 @@
       }
     });
 
-    trigger.addEventListener('keydown', handleKeyNavigation);
+    addListener(trigger, 'keydown', handleKeyNavigation);
     if (filter) {
-      filter.addEventListener('keydown', handleKeyNavigation);
+      addListener(filter, 'keydown', handleKeyNavigation);
     }
 
     const openPopover = () => {
@@ -344,7 +359,7 @@
       }
     };
 
-    trigger.addEventListener('click', () => {
+    addListener(trigger, 'click', () => {
       const isExpanded = trigger.getAttribute('aria-expanded') === 'true';
       if (isExpanded) {
         closePopover();
@@ -353,7 +368,7 @@
       }
     });
 
-    listbox.addEventListener('click', (event) => {
+    addListener(listbox, 'click', (event) => {
       const clickedOption = event.target.closest('[role="option"]');
       if (!clickedOption) return;
 
@@ -380,13 +395,13 @@
       }
     });
 
-    document.addEventListener('click', (event) => {
+    addListener(document, 'click', (event) => {
       if (!selectComponent.contains(event.target)) {
         closePopover(false);
       }
     });
 
-    document.addEventListener('basecoat:popover', (event) => {
+    addListener(document, 'basecoat:popover', (event) => {
       if (event.detail.source !== selectComponent) {
         closePopover(false);
       }
@@ -395,32 +410,36 @@
     popover.setAttribute('aria-hidden', 'true');
 
     // Public API
-    Object.defineProperty(selectComponent, 'value', {
-      get: () => {
-        if (isMultiple) {
-          return options.filter(opt => selectedOptions.has(opt)).map(getValue);
-        } else {
-          return input.value;
-        }
-      },
-      set: (val) => {
-        if (isMultiple) {
-          const values = Array.isArray(val) ? val : (val != null ? [val] : []);
-          const opts = [];
-          values.forEach(v => {
-            const opt = options.find(o => getValue(o) === v && !opts.includes(o));
-            if (opt) opts.push(opt);
-          });
-          updateValue(opts);
-        } else {
-          const option = options.find(opt => getValue(opt) === val);
-          if (option) {
-            updateValue(option);
-            closePopover();
+    const valueDescriptor = Object.getOwnPropertyDescriptor(selectComponent, 'value');
+    if (!valueDescriptor || valueDescriptor.configurable) {
+      Object.defineProperty(selectComponent, 'value', {
+        configurable: true,
+        get: () => {
+          if (isMultiple) {
+            return options.filter(opt => selectedOptions.has(opt)).map(getValue);
+          } else {
+            return input.value;
+          }
+        },
+        set: (val) => {
+          if (isMultiple) {
+            const values = Array.isArray(val) ? val : (val != null ? [val] : []);
+            const opts = [];
+            values.forEach(v => {
+              const opt = options.find(o => getValue(o) === v && !opts.includes(o));
+              if (opt) opts.push(opt);
+            });
+            updateValue(opts);
+          } else {
+            const option = options.find(opt => getValue(opt) === val);
+            if (option) {
+              updateValue(option);
+              closePopover();
+            }
           }
         }
-      }
-    });
+      });
+    }
 
     selectComponent.select = select;
     selectComponent.selectByValue = select; // Backward compatibility alias
@@ -430,6 +449,11 @@
       selectComponent.selectAll = () => updateValue(options);
       selectComponent.selectNone = () => updateValue([]);
     }
+    selectComponent.__basecoatSelectCleanup = () => {
+      if (listenerController) {
+        listenerController.abort();
+      }
+    };
     selectComponent.dataset.selectInitialized = true;
     selectComponent.dispatchEvent(new CustomEvent('basecoat:initialized'));
   };

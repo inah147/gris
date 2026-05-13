@@ -1,0 +1,123 @@
+{
+ "actions": [],
+ "autoname": "format:{festa} - {nome_area}",
+ "creation": "2026-05-10 12:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "festa",
+  "nome_area",
+  "descricao",
+  "coord_section",
+  "tipo_coord",
+  "responsavel_coord",
+  "associado_coord",
+  "nome_coord",
+  "email_coord",
+  "telefone_coord",
+  "equipe_section",
+  "equipe"
+ ],
+ "fields": [
+  {
+   "fieldname": "festa",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Festa",
+   "options": "Festa",
+   "reqd": 1
+  },
+  {
+   "fieldname": "nome_area",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome da Area",
+   "reqd": 1
+  },
+  {
+   "fieldname": "descricao",
+   "fieldtype": "Small Text",
+   "label": "Descricao"
+  },
+  {
+   "fieldname": "coord_section",
+   "fieldtype": "Section Break",
+   "label": "Coordenador da Area"
+  },
+  {
+   "default": "Outro",
+   "fieldname": "tipo_coord",
+   "fieldtype": "Select",
+   "label": "Tipo de pessoa",
+   "options": "Associado\nResponsavel\nOutro"
+  },
+  {
+   "depends_on": "eval:doc.tipo_coord=='Responsavel'",
+   "fieldname": "responsavel_coord",
+   "fieldtype": "Link",
+   "label": "Responsavel",
+   "options": "Responsavel"
+  },
+  {
+   "depends_on": "eval:doc.tipo_coord=='Associado'",
+   "fieldname": "associado_coord",
+   "fieldtype": "Link",
+   "label": "Associado",
+   "options": "Associado"
+  },
+  {
+   "fieldname": "nome_coord",
+   "fieldtype": "Data",
+   "label": "Nome"
+  },
+  {
+   "fieldname": "email_coord",
+   "fieldtype": "Data",
+   "label": "Email"
+  },
+  {
+   "fieldname": "telefone_coord",
+   "fieldtype": "Phone",
+   "label": "Telefone"
+  },
+  {
+   "fieldname": "equipe_section",
+   "fieldtype": "Section Break",
+   "label": "Equipe"
+  },
+  {
+   "fieldname": "equipe",
+   "fieldtype": "Table",
+   "label": "Equipe",
+   "options": "Membro Equipe Festa"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-05-11 08:58:50.397667",
+ "modified_by": "Administrator",
+ "module": "Festas",
+ "name": "Area da Festa",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "nome_area"
+}

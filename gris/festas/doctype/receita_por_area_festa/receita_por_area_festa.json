@@ -1,0 +1,80 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-05-10 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "area",
+  "esperado_min",
+  "realizado_min",
+  "esperado_intermediario",
+  "realizado_intermediario",
+  "esperado_max",
+  "realizado_max"
+ ],
+ "fields": [
+  {
+   "fieldname": "area",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Area",
+   "options": "Area da Festa",
+   "read_only": 1
+  },
+  {
+   "fieldname": "esperado_min",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Esperado (Min)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "realizado_min",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Realizado (Min)"
+  },
+  {
+   "fieldname": "esperado_intermediario",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Esperado (Inter)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "realizado_intermediario",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Realizado (Inter)"
+  },
+  {
+   "fieldname": "esperado_max",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Esperado (Max)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "realizado_max",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Realizado (Max)"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-10 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Festas",
+ "name": "Receita por Area Festa",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

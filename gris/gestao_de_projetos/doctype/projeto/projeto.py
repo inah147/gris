@@ -14,6 +14,7 @@ from gris.api.google_workspace.project_drive import is_valid_drive_folder_link
 from gris.gestao_de_projetos.doctype.avaliacao_de_projeto.avaliacao_de_projeto import (
 	_get_all_reviewer_data,
 )
+from gris.utils.contato import get_contato_pessoa as _shared_get_contato_pessoa
 from gris.utils.whatsapp import enviar_mensagem_formatada, enviar_texto
 
 
@@ -131,55 +132,7 @@ class Projeto(Document):
 
 @frappe.whitelist()
 def get_contato_pessoa(doctype_name: str, docname: str) -> dict[str, Any]:
-	if doctype_name not in {"Associado", "Responsavel"}:
-		frappe.throw(_("Tipo de pessoa invalido."))
-
-	if doctype_name == "Associado":
-		return _get_associado_payload(docname)
-
-	return _get_responsavel_payload(docname)
-
-
-def _get_associado_payload(name: str) -> dict[str, str]:
-	data = frappe.db.get_value(
-		"Associado",
-		name,
-		["nome_completo", "id_escoteiros", "email", "telefone"],
-		as_dict=True,
-	)
-	if not data:
-		frappe.throw(_("Associado nao encontrado."))
-
-	email = data.get("id_escoteiros") or data.get("email")
-	if not email or not data.get("telefone"):
-		frappe.throw(_("Associado selecionado nao possui email ou telefone preenchido."))
-
-	return {
-		"nome": data.get("nome_completo") or name,
-		"email": email,
-		"telefone": data.get("telefone"),
-	}
-
-
-def _get_responsavel_payload(name: str) -> dict[str, str]:
-	data = frappe.db.get_value(
-		"Responsavel",
-		name,
-		["nome_completo", "email", "celular", "telefone_secundario"],
-		as_dict=True,
-	)
-	if not data:
-		frappe.throw(_("Responsavel nao encontrado."))
-
-	telefone = data.get("celular") or data.get("telefone_secundario")
-	if not data.get("email") or not telefone:
-		frappe.throw(_("Responsavel selecionado nao possui email ou telefone preenchido."))
-
-	return {
-		"nome": data.get("nome_completo") or name,
-		"email": data.get("email"),
-		"telefone": telefone,
-	}
+	return _shared_get_contato_pessoa(doctype_name, docname)
 
 
 STATUS_EM_APROVACAO = "Em aprovacao"

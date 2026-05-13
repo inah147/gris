@@ -1,0 +1,68 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-05-10 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "produto",
+  "quantidade_usada",
+  "unidade_medida_uso",
+  "fracao_item",
+  "valor_uso"
+ ],
+ "fields": [
+  {
+   "fieldname": "produto",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Produto",
+   "options": "Produto de Venda Festa"
+  },
+  {
+   "fieldname": "quantidade_usada",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Quantidade Usada",
+   "non_negative": 1
+  },
+  {
+   "default": "unidade",
+   "fieldname": "unidade_medida_uso",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Unidade de Uso",
+   "options": "unidade\nkg\ng\nlitro\nml",
+   "reqd": 1
+  },
+  {
+   "fieldname": "fracao_item",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Fracao do Item",
+   "read_only": 1
+  },
+  {
+   "fieldname": "valor_uso",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Valor do Uso",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 20,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-10 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Festas",
+ "name": "Uso em Produto Festa",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

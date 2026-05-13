@@ -1,0 +1,517 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:nome_festa",
+ "creation": "2026-05-10 11:32:29.093812",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "geral_tab",
+  "dados_gerais_section",
+  "nome_festa",
+  "data",
+  "horario_inicio",
+  "horario_termino",
+  "status",
+  "dados_gerais_col2",
+  "expectativa_publico_min",
+  "expectativa_publico_intermediario",
+  "expectativa_publico_max",
+  "link_drive",
+  "cenario_simulacao",
+  "equipe_section",
+  "tipo_coord_geral",
+  "responsavel_coord_geral",
+  "associado_coord_geral",
+  "equipe_col2",
+  "nome_coord_geral",
+  "email_coord_geral",
+  "telefone_coord_geral",
+  "financeiro_tab",
+  "configs_section",
+  "margem_seguranca",
+  "pct_uso_cartao",
+  "configs_col2",
+  "taxa_media_cartao",
+  "tipo_convite",
+  "orcamento_section",
+  "receitas_por_area",
+  "despesas_por_area",
+  "receitas_por_barraca",
+  "despesas_por_barraca",
+  "totais_section",
+  "margem_seg_valor_min",
+  "receita_convite_min",
+  "receita_produtos_min",
+  "receita_total_min",
+  "despesa_total_min",
+  "totais_col2",
+  "margem_seg_valor_intermediario",
+  "receita_convite_intermediario",
+  "receita_produtos_intermediario",
+  "receita_total_intermediario",
+  "despesa_total_intermediario",
+  "totais_col3",
+  "margem_seg_valor_max",
+  "receita_convite_max",
+  "receita_produtos_max",
+  "receita_total_max",
+  "despesa_total_max",
+  "convite_section",
+  "preco_min_convite",
+  "preco_sugerido_convite",
+  "convite_col2",
+  "preco_convite",
+  "produtos_tab",
+  "produtos_info_section",
+  "produtos_info_html",
+  "compras_tab",
+  "compras_info_section",
+  "compras_info_html",
+  "lista_compras_tab",
+  "lista_compras_section",
+  "lista_compras"
+ ],
+ "fields": [
+  {
+   "fieldname": "geral_tab",
+   "fieldtype": "Tab Break",
+   "label": "Geral"
+  },
+  {
+   "fieldname": "dados_gerais_section",
+   "fieldtype": "Section Break",
+   "label": "Dados Gerais"
+  },
+  {
+   "fieldname": "nome_festa",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome da Festa",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "data",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Data",
+   "reqd": 1
+  },
+  {
+   "fieldname": "horario_inicio",
+   "fieldtype": "Time",
+   "label": "Horario de Inicio"
+  },
+  {
+   "fieldname": "horario_termino",
+   "fieldtype": "Time",
+   "label": "Horario de Termino"
+  },
+  {
+   "default": "Em andamento",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Em andamento\nRealizada",
+   "reqd": 1
+  },
+  {
+   "fieldname": "dados_gerais_col2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "expectativa_publico_min",
+   "fieldtype": "Int",
+   "label": "Expectativa de Publico (Minimo)",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "expectativa_publico_intermediario",
+   "fieldtype": "Int",
+   "label": "Expectativa de Publico (Intermediario)",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "expectativa_publico_max",
+   "fieldtype": "Int",
+   "label": "Expectativa de Publico (Maximo)",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "link_drive",
+   "fieldtype": "Data",
+   "label": "Link do Drive",
+   "options": "URL"
+  },
+  {
+   "default": "Intermedi\u00e1rio",
+   "fieldname": "cenario_simulacao",
+   "fieldtype": "Select",
+   "label": "Cen\u00e1rio para Simula\u00e7\u00e3o",
+   "options": "M\u00ednimo\nIntermedi\u00e1rio\nM\u00e1ximo"
+  },
+  {
+   "fieldname": "equipe_section",
+   "fieldtype": "Section Break",
+   "label": "Equipe"
+  },
+  {
+   "default": "Responsavel",
+   "fieldname": "tipo_coord_geral",
+   "fieldtype": "Select",
+   "label": "Tipo de Coordenador Geral",
+   "options": "Responsavel\nAssociado"
+  },
+  {
+   "depends_on": "eval:doc.tipo_coord_geral=='Responsavel'",
+   "fieldname": "responsavel_coord_geral",
+   "fieldtype": "Link",
+   "label": "Coordenador Geral (Responsavel)",
+   "options": "Responsavel"
+  },
+  {
+   "depends_on": "eval:doc.tipo_coord_geral=='Associado'",
+   "fieldname": "associado_coord_geral",
+   "fieldtype": "Link",
+   "label": "Coordenador Geral (Associado)",
+   "options": "Associado"
+  },
+  {
+   "fieldname": "equipe_col2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "nome_coord_geral",
+   "fieldtype": "Data",
+   "label": "Nome do Coordenador Geral",
+   "read_only": 1
+  },
+  {
+   "fieldname": "email_coord_geral",
+   "fieldtype": "Data",
+   "label": "Email do Coordenador Geral",
+   "read_only": 1
+  },
+  {
+   "fieldname": "telefone_coord_geral",
+   "fieldtype": "Phone",
+   "label": "Telefone do Coordenador Geral",
+   "read_only": 1
+  },
+  {
+   "fieldname": "financeiro_tab",
+   "fieldtype": "Tab Break",
+   "label": "Financeiro"
+  },
+  {
+   "fieldname": "configs_section",
+   "fieldtype": "Section Break",
+   "label": "Configuracoes Iniciais"
+  },
+  {
+   "fieldname": "margem_seguranca",
+   "fieldtype": "Percent",
+   "label": "Margem de Seguranca"
+  },
+  {
+   "fieldname": "pct_uso_cartao",
+   "fieldtype": "Percent",
+   "label": "Porcentagem de Uso de Cartao"
+  },
+  {
+   "fieldname": "configs_col2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "taxa_media_cartao",
+   "fieldtype": "Percent",
+   "label": "Taxa Media de Cartao"
+  },
+  {
+   "default": "Com consumo",
+   "fieldname": "tipo_convite",
+   "fieldtype": "Select",
+   "label": "Tipo de Convite",
+   "options": "Com consumo\nSomente entrada"
+  },
+  {
+   "fieldname": "orcamento_section",
+   "fieldtype": "Section Break",
+   "label": "Orcamento por Area"
+  },
+  {
+   "fieldname": "receitas_por_area",
+   "fieldtype": "Table",
+   "label": "Receitas por Area",
+   "options": "Receita por Area Festa"
+  },
+  {
+   "fieldname": "despesas_por_area",
+   "fieldtype": "Table",
+   "label": "Despesas por Area",
+   "options": "Despesa por Area Festa"
+  },
+  {
+   "fieldname": "receitas_por_barraca",
+   "fieldtype": "Table",
+   "label": "Receitas por Barraca",
+   "options": "Receita por Barraca Festa"
+  },
+  {
+   "fieldname": "despesas_por_barraca",
+   "fieldtype": "Table",
+   "label": "Despesas por Barraca",
+   "options": "Despesa por Barraca Festa"
+  },
+  {
+   "fieldname": "totais_section",
+   "fieldtype": "Section Break",
+   "label": "Totais por Cenario"
+  },
+  {
+   "fieldname": "margem_seg_valor_min",
+   "fieldtype": "Currency",
+   "label": "Margem de Seguranca (Min)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "receita_convite_min",
+   "fieldtype": "Currency",
+   "label": "Receita de Convites (Min)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "receita_produtos_min",
+   "fieldtype": "Currency",
+   "label": "Receita de Produtos (Min)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "receita_total_min",
+   "fieldtype": "Currency",
+   "label": "Receita Total (Min)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "despesa_total_min",
+   "fieldtype": "Currency",
+   "label": "Despesa Total (Min)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "totais_col2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "margem_seg_valor_intermediario",
+   "fieldtype": "Currency",
+   "label": "Margem de Seguranca (Inter)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "receita_convite_intermediario",
+   "fieldtype": "Currency",
+   "label": "Receita de Convites (Inter)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "receita_produtos_intermediario",
+   "fieldtype": "Currency",
+   "label": "Receita de Produtos (Inter)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "receita_total_intermediario",
+   "fieldtype": "Currency",
+   "label": "Receita Total (Inter)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "despesa_total_intermediario",
+   "fieldtype": "Currency",
+   "label": "Despesa Total (Inter)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "totais_col3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "margem_seg_valor_max",
+   "fieldtype": "Currency",
+   "label": "Margem de Seguranca (Max)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "receita_convite_max",
+   "fieldtype": "Currency",
+   "label": "Receita de Convites (Max)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "receita_produtos_max",
+   "fieldtype": "Currency",
+   "label": "Receita de Produtos (Max)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "receita_total_max",
+   "fieldtype": "Currency",
+   "label": "Receita Total (Max)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "despesa_total_max",
+   "fieldtype": "Currency",
+   "label": "Despesa Total (Max)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "convite_section",
+   "fieldtype": "Section Break",
+   "label": "Convite"
+  },
+  {
+   "fieldname": "preco_min_convite",
+   "fieldtype": "Currency",
+   "label": "Preco Minimo do Convite",
+   "read_only": 1
+  },
+  {
+   "fieldname": "preco_sugerido_convite",
+   "fieldtype": "Currency",
+   "label": "Preco Sugerido do Convite",
+   "read_only": 1
+  },
+  {
+   "fieldname": "convite_col2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "preco_convite",
+   "fieldtype": "Currency",
+   "label": "Preco do Convite"
+  },
+  {
+   "fieldname": "produtos_tab",
+   "fieldtype": "Tab Break",
+   "label": "Produtos Vendidos"
+  },
+  {
+   "fieldname": "produtos_info_section",
+   "fieldtype": "Section Break",
+   "label": "Produtos"
+  },
+  {
+   "fieldname": "produtos_info_html",
+   "fieldtype": "HTML",
+   "options": "<p>Os produtos vendidos desta festa estao disponiveis na secao <b>Connections</b> do rodape do formulario (Produto de Venda Festa).</p>"
+  },
+  {
+   "fieldname": "compras_tab",
+   "fieldtype": "Tab Break",
+   "label": "Compras e Contratacoes"
+  },
+  {
+   "fieldname": "compras_info_section",
+   "fieldtype": "Section Break",
+   "label": "Compras e Contratacoes"
+  },
+  {
+   "fieldname": "compras_info_html",
+   "fieldtype": "HTML",
+   "options": "<p>As compras e contratacoes desta festa estao disponiveis na secao <b>Connections</b> do rodape do formulario.</p>"
+  },
+  {
+   "fieldname": "lista_compras_tab",
+   "fieldtype": "Tab Break",
+   "label": "Lista de Compras"
+  },
+  {
+   "fieldname": "lista_compras_section",
+   "fieldtype": "Section Break",
+   "label": "Lista de Compras (gerada automaticamente ao salvar)"
+  },
+  {
+   "fieldname": "lista_compras",
+   "fieldtype": "Table",
+   "label": "Lista de Compras",
+   "options": "Lista de Compras Festa"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [
+  {
+   "group": "Estrutura",
+   "link_doctype": "Area da Festa",
+   "link_fieldname": "festa"
+  },
+  {
+   "group": "Estrutura",
+   "link_doctype": "Barraca da Festa",
+   "link_fieldname": "festa"
+  },
+  {
+   "group": "Produtos",
+   "link_doctype": "Produto de Venda Festa",
+   "link_fieldname": "festa"
+  },
+  {
+   "group": "Compras",
+   "link_doctype": "Compra Festa",
+   "link_fieldname": "festa"
+  },
+  {
+   "group": "Compras",
+   "link_doctype": "Contratacao Festa",
+   "link_fieldname": "festa"
+  }
+ ],
+ "modified": "2026-05-10 15:18:32.037585",
+ "modified_by": "Administrator",
+ "module": "Festas",
+ "name": "Festa",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de festas",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Visualizador de festas"
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "nome_festa"
+}

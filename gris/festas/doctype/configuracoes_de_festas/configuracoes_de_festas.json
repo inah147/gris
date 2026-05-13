@@ -1,0 +1,63 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-05-10 21:49:04.651187",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "habilitar_pastas_festas_drive",
+    "section_break_drive",
+    "drive_compartilhado_festas",
+    "pasta_festas_id"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "fieldname": "habilitar_pastas_festas_drive",
+   "fieldtype": "Check",
+   "label": "Habilitar pastas de festas no Google Drive"
+  },
+  {
+     "fieldname": "section_break_drive",
+   "fieldtype": "Section Break",
+   "label": "Configuracao da pasta"
+  },
+  {
+   "description": "Selecione o drive compartilhado configurado em Configuracoes Google Workspace.",
+   "fieldname": "drive_compartilhado_festas",
+   "fieldtype": "Select",
+   "label": "Drive compartilhado das festas"
+    },
+    {
+     "description": "ID da pasta raiz onde as pastas de festas serao criadas.",
+     "fieldname": "pasta_festas_id",
+     "fieldtype": "Data",
+     "label": "ID da pasta de festas"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-05-10 21:51:57.635955",
+ "modified_by": "Administrator",
+ "module": "Festas",
+ "name": "Configuracoes de Festas",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

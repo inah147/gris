@@ -139,6 +139,76 @@ def _montar_mensagem_aviso(*, dias_para_vencer: int, associado_nome: str, destin
 	)
 
 
+def _buscar_destinatarios_gestores() -> list[frappe._dict]:
+	"""Retorna lista de {nome, telefone} de usuários habilitados com role 'Gestor de Associado'."""
+	role_assignments = frappe.get_all(
+		"Has Role",
+		filters={"role": "Gestor de Associado", "parenttype": "User"},
+		fields=["parent"],
+	)
+	user_emails = [r.parent for r in role_assignments if r.parent]
+	if not user_emails:
+		return []
+
+	users = frappe.get_all(
+		"User",
+		filters={"name": ["in", user_emails], "enabled": 1},
+		fields=["name", "full_name", "mobile_no"],
+	)
+
+	# Para usuários sem mobile_no, tenta buscar telefone pelo Associado vinculado
+	users_sem_telefone = [u.name for u in users if not (u.get("mobile_no") or "").strip()]
+	associado_por_user: dict[str, frappe._dict] = {}
+	if users_sem_telefone:
+		associados_gestores = frappe.get_all(
+			"Associado",
+			filters={"id_escoteiros": ["in", users_sem_telefone]},
+			fields=["id_escoteiros", "nome_completo", "telefone"],
+		)
+		associado_por_user = {
+			str(a.get("id_escoteiros")): a for a in associados_gestores if a.get("id_escoteiros")
+		}
+
+	destinatarios: list[frappe._dict] = []
+	for user in users:
+		telefone = (user.get("mobile_no") or "").strip()
+		if not telefone:
+			assoc = associado_por_user.get(str(user.name))
+			if assoc:
+				telefone = (assoc.get("telefone") or "").strip()
+		if not telefone:
+			continue
+		destinatarios.append(
+			frappe._dict(
+				{
+					"nome": (user.get("full_name") or str(user.name)).strip(),
+					"telefone": telefone,
+				}
+			)
+		)
+
+	return destinatarios
+
+
+def _montar_mensagem_gestor_vencimento(
+	*, dias_para_vencer: int, associado_nome: str, gestor: frappe._dict
+) -> str:
+	primeiro_nome_gestor = _extrair_primeiro_nome(gestor.get("nome"))
+	primeiro_nome_associado = _extrair_primeiro_nome(associado_nome)
+
+	if dias_para_vencer < 0:
+		situacao = f"venceu há {abs(dias_para_vencer)} dia(s)"
+	else:
+		situacao = "venceu hoje"
+
+	return (
+		f"Oi, {primeiro_nome_gestor}!\n\n"
+		f"Atenção: o registro escoteiro de {primeiro_nome_associado} {situacao}.\n"
+		"Verifique o status e tome as providências necessárias.\n\n"
+		"_Mensagem automática do Gris_"
+	)
+
+
 def enviar_lembretes_vencimento_registro_associados() -> None:
 	"""Scheduler diario para lembretes de vencimento (30 dias, 7 dias e no vencimento)."""
 	logger = frappe.logger("associados_vencimento_notificacoes", allow_site=True)
@@ -168,6 +238,7 @@ def enviar_lembretes_vencimento_registro_associados() -> None:
 
 	enviados = 0
 	pulados = 0
+	gestores_associado = _buscar_destinatarios_gestores()
 
 	for associado in associados:
 		validade = associado.get("validade_registro")
@@ -207,6 +278,22 @@ def enviar_lembretes_vencimento_registro_associados() -> None:
 				update_modified=False,
 			)
 			enviados += 1
+			if dias_para_vencer == 0:
+				for gestor in gestores_associado:
+					try:
+						enviar_texto(
+							gestor.telefone,
+							_montar_mensagem_gestor_vencimento(
+								dias_para_vencer=0,
+								associado_nome=associado.get("nome_completo") or str(associado.name),
+								gestor=gestor,
+							),
+						)
+					except Exception:
+						frappe.log_error(
+							frappe.get_traceback(),
+							f"Aviso gestor vencimento: gestor={gestor.get('nome')}, associado={associado.name}",
+						)
 		except Exception:
 			frappe.log_error(
 				frappe.get_traceback(),
@@ -261,6 +348,23 @@ def notificar_vencimento_manual(associado_name: str) -> dict:
 	)
 
 	enviar_texto(destinatario.telefone, mensagem)
+
+	if dias_para_vencer <= 0:
+		for gestor in _buscar_destinatarios_gestores():
+			try:
+				enviar_texto(
+					gestor.telefone,
+					_montar_mensagem_gestor_vencimento(
+						dias_para_vencer=dias_para_vencer,
+						associado_nome=associado.nome_completo or str(associado_name),
+						gestor=gestor,
+					),
+				)
+			except Exception:
+				frappe.log_error(
+					frappe.get_traceback(),
+					f"Aviso gestor vencimento manual: gestor={gestor.get('nome')}, associado={associado_name}",
+				)
 
 	frappe.logger("associados_vencimento_notificacoes", allow_site=True).info(
 		f"Aviso manual de vencimento enviado para {destinatario.get('nome')} "

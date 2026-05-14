@@ -25,9 +25,16 @@
 				<article class="card conta-card">
 					<section class="conta-card__body">
 						<span class="conta-card__name" title="{{ conta.display_name }}">{{ conta.display_name }}</span>
-						<button type="button" class="btn-sm-outline importar-dados-btn" data-nome="{{ conta.display_name }}">
-							Importar dados
-						</button>
+						<div class="flex gap-2 flex-wrap mt-2">
+							<button type="button" class="btn-sm-outline importar-dados-btn" data-nome="{{ conta.display_name }}">
+								Importar dados
+							</button>
+							{% if can_toggle_ativa %}
+							<button type="button" class="btn-sm-outline desativar-instituicao-btn" data-name="{{ conta.name }}" data-nome="{{ conta.display_name }}">
+								Desativar
+							</button>
+							{% endif %}
+						</div>
 					</section>
 				</article>
 			{% endfor %}
@@ -178,6 +185,9 @@
 
 {# === Modal: Detalhe da Carteira === #}
 {% set carteira_footer %}
+{% if can_toggle_ativa %}
+<button type="button" id="btnDesativarCarteira" class="btn-sm-outline">Desativar</button>
+{% endif %}
 <button type="button" class="btn-ghost" onclick="this.closest('dialog').close()">Fechar</button>
 {% endset %}
 {% call dialog(id="carteiraDetalheModal", title="Carteira", footer=carteira_footer, dialog_attrs={"class": "financeiro-dialog financeiro-dialog--lg"}) %}

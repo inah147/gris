@@ -11,3 +11,4 @@ gris.patches.add_project_roles_to_all_users
 gris.patches.backfill_quantidade_compra_final
 gris.patches.popular_receitas_despesas_barraca
 gris.patches.add_area_to_barracas
+gris.patches.backfill_ativa_contas_carteiras

@@ -313,5 +313,49 @@
 		}
 		if (e.target.closest('#btnCancelarEdicaoCarteira')) { setEditMode(false); return; }
 		if (e.target.closest('#btnSalvarCarteira')) { salvarCampos(); return; }
+
+		// Desativar carteira
+		if (e.target.closest('#btnDesativarCarteira')) {
+			const name = carteiraModal && carteiraModal.dataset.carteiraName;
+			const nomeTitulo = qs('carteiraModalTitulo') ? qs('carteiraModalTitulo').textContent.trim() : name;
+			if (!name) return;
+			if (!confirm(`Desativar a carteira "${nomeTitulo}"?\n\nEla deixará de aparecer no portal. É possível reativá-la pelo Desk.`)) return;
+			frappe.call({
+				method: 'gris.api.financeiro.contas.desativar',
+				args: { doctype: 'Carteira', name },
+				callback: function (r) {
+					if (r && r.exc) {
+						frappe.msgprint('Erro ao desativar carteira.');
+						return;
+					}
+					closeDialog('carteiraDetalheModal');
+					frappe.show_alert({ message: 'Carteira desativada', indicator: 'orange' }, 4);
+					setTimeout(() => window.location.reload(), 600);
+				}
+			});
+			return;
+		}
+
+		// Desativar instituição financeira
+		const desativarInstBtn = e.target.closest('.desativar-instituicao-btn');
+		if (desativarInstBtn) {
+			const name = desativarInstBtn.dataset.name;
+			const nome = desativarInstBtn.dataset.nome || name;
+			if (!name) return;
+			if (!confirm(`Desativar a instituição "${nome}"?\n\nEla deixará de aparecer no portal. É possível reativá-la pelo Desk.`)) return;
+			frappe.call({
+				method: 'gris.api.financeiro.contas.desativar',
+				args: { doctype: 'Instituicao Financeira', name },
+				callback: function (r) {
+					if (r && r.exc) {
+						frappe.msgprint('Erro ao desativar instituição.');
+						return;
+					}
+					frappe.show_alert({ message: 'Instituição desativada', indicator: 'orange' }, 4);
+					setTimeout(() => window.location.reload(), 600);
+				}
+			});
+			return;
+		}
 	});
 })();

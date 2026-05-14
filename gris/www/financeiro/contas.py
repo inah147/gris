@@ -401,9 +401,12 @@ def get_context(context):
 		context.can_create_carteira = frappe.has_permission("Carteira", "create")
 	except Exception:
 		context.can_create_carteira = False
+	roles = frappe.get_roles()
+	context.can_toggle_ativa = "Gestor Financeiro" in roles or "System Manager" in roles
 	contas_raw = frappe.get_all(
 		"Instituicao Financeira",
 		fields=["name", "nome"],
+		filters={"ativa": 1},
 		order_by="nome asc",
 	)
 	context.contas = [
@@ -429,6 +432,7 @@ def get_context(context):
 			"chave_pix",
 			"centro_de_custo",
 		],
+		filters={"ativa": 1},
 		order_by="nome asc",
 	)
 	carteiras = []

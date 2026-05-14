@@ -7,6 +7,7 @@ from collections import defaultdict
 import frappe
 from frappe.utils import date_diff, getdate, today
 
+from gris.utils.gestores import buscar_destinatarios_gestores
 from gris.utils.whatsapp import enviar_texto
 
 CAMPO_POR_MARCO = {
@@ -139,57 +140,6 @@ def _montar_mensagem_aviso(*, dias_para_vencer: int, associado_nome: str, destin
 	)
 
 
-def _buscar_destinatarios_gestores() -> list[frappe._dict]:
-	"""Retorna lista de {nome, telefone} de usuários habilitados com role 'Gestor de Associado'."""
-	role_assignments = frappe.get_all(
-		"Has Role",
-		filters={"role": "Gestor de Associado", "parenttype": "User"},
-		fields=["parent"],
-	)
-	user_emails = [r.parent for r in role_assignments if r.parent]
-	if not user_emails:
-		return []
-
-	users = frappe.get_all(
-		"User",
-		filters={"name": ["in", user_emails], "enabled": 1},
-		fields=["name", "full_name", "mobile_no"],
-	)
-
-	# Para usuários sem mobile_no, tenta buscar telefone pelo Associado vinculado
-	users_sem_telefone = [u.name for u in users if not (u.get("mobile_no") or "").strip()]
-	associado_por_user: dict[str, frappe._dict] = {}
-	if users_sem_telefone:
-		associados_gestores = frappe.get_all(
-			"Associado",
-			filters={"id_escoteiros": ["in", users_sem_telefone]},
-			fields=["id_escoteiros", "nome_completo", "telefone"],
-		)
-		associado_por_user = {
-			str(a.get("id_escoteiros")): a for a in associados_gestores if a.get("id_escoteiros")
-		}
-
-	destinatarios: list[frappe._dict] = []
-	for user in users:
-		telefone = (user.get("mobile_no") or "").strip()
-		if not telefone:
-			assoc = associado_por_user.get(str(user.name))
-			if assoc:
-				telefone = (assoc.get("telefone") or "").strip()
-		if not telefone:
-			continue
-		destinatarios.append(
-			frappe._dict(
-				{
-					"nome": (user.get("full_name") or str(user.name)).strip(),
-					"telefone": telefone,
-				}
-			)
-		)
-
-	return destinatarios
-
-
 def _montar_mensagem_gestor_vencimento(
 	*, dias_para_vencer: int, associado_nome: str, gestor: frappe._dict
 ) -> str:
@@ -238,7 +188,7 @@ def enviar_lembretes_vencimento_registro_associados() -> None:
 
 	enviados = 0
 	pulados = 0
-	gestores_associado = _buscar_destinatarios_gestores()
+	gestores_associado = buscar_destinatarios_gestores()
 
 	for associado in associados:
 		validade = associado.get("validade_registro")
@@ -350,7 +300,7 @@ def notificar_vencimento_manual(associado_name: str) -> dict:
 	enviar_texto(destinatario.telefone, mensagem)
 
 	if dias_para_vencer <= 0:
-		for gestor in _buscar_destinatarios_gestores():
+		for gestor in buscar_destinatarios_gestores():
 			try:
 				enviar_texto(
 					gestor.telefone,

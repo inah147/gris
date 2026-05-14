@@ -5,6 +5,8 @@ import frappe
 from frappe.utils import cint
 
 from gris.api.portal_access import enrich_context
+from gris.utils.gestores import buscar_destinatarios_gestores
+from gris.utils.whatsapp import enviar_texto
 
 
 def _format_currency_brl(value):
@@ -148,6 +150,28 @@ def format_phone(phone):
 		return f"+{digits}"
 
 	return phone
+
+
+def _notificar_gestores_novo_associado(nome_associado: str) -> None:
+	"""Notifica usuários com role 'Gestor de Associado' para criarem o registro no PAXTU."""
+	primeiro_nome_associado = (nome_associado or "").strip().split()[0] if nome_associado else "novo associado"
+
+	for gestor in buscar_destinatarios_gestores():
+		nome_gestor = gestor.get("nome") or "Gestor"
+		primeiro_nome_gestor = nome_gestor.split()[0]
+		mensagem = (
+			f"Oi, {primeiro_nome_gestor}!\n\n"
+			f"O responsável preencheu os dados de *{primeiro_nome_associado}*."
+			" Por favor, crie o registro do novo associado no PAXTU.\n\n"
+			"_Mensagem automática do Gris_"
+		)
+		try:
+			enviar_texto(gestor.telefone, mensagem)
+		except Exception:
+			frappe.log_error(
+				frappe.get_traceback(),
+				f"Notificação gestor novo associado: gestor={gestor.get('nome')}, novo_associado={nome_associado}",
+			)
 
 
 @frappe.whitelist()
@@ -419,4 +443,6 @@ def update_novo_associado(novo_associado_name, data, responsaveis_data=None):
 			if cint(v.get("\u00e9_guardiao_legal")) != 1:
 				frappe.db.set_value("Responsavel Vinculo", v.name, "\u00e9_guardiao_legal", 1)
 
+	_notificar_gestores_novo_associado(doc.nome_completo or str(novo_associado_name))
 	return {"status": "success"}
+

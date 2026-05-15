@@ -1,6 +1,7 @@
 {% extends "templates/web_sidebar_base.html" %}
 {% from "public/design_system/components/generated/select.html.jinja" import select %}
 {% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/popover.html.jinja" import popover %}
 {% from "public/design_system/components/composed/basecoat-composed.html.jinja" import table %}
 
 {% block title %}Lista de Associados{% endblock %}
@@ -83,6 +84,23 @@
           ) }}
         </div>
         <div class="assoc-filters__actions">
+          {% call popover(
+            trigger='<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg> Colunas',
+            id="col-toggle-popover",
+            trigger_attrs={"class": "btn-sm-outline"},
+            popover_attrs={"class": "col-toggle-panel"}
+          ) %}
+            <div class="col-toggle-list" id="col-toggle-list">
+              <label class="col-toggle-item"><input type="checkbox" data-col-toggle="registro" /> Nº Registro</label>
+              <label class="col-toggle-item"><input type="checkbox" data-col-toggle="categoria" /> Categoria</label>
+              <label class="col-toggle-item"><input type="checkbox" data-col-toggle="ramo" /> Ramo</label>
+              <label class="col-toggle-item"><input type="checkbox" data-col-toggle="secao" /> Seção</label>
+              <label class="col-toggle-item"><input type="checkbox" data-col-toggle="funcao" /> Função</label>
+              <label class="col-toggle-item"><input type="checkbox" data-col-toggle="area" /> Área</label>
+              <label class="col-toggle-item"><input type="checkbox" data-col-toggle="validade_registro" /> Validade do Registro</label>
+              <label class="col-toggle-item"><input type="checkbox" data-col-toggle="dias_restantes" /> Dias Restantes</label>
+            </div>
+          {% endcall %}
           <button type="submit" class="btn-sm-primary">Aplicar</button>
           <button type="reset" id="btn-reset" class="btn-sm-outline">Limpar</button>
         </div>
@@ -101,10 +119,12 @@
           'Ramo',
           'Seção',
           'Função',
-          'Área'
+          'Área',
+          'Validade do Registro',
+          'Dias Restantes'
         ],
         rows=[],
-        sort_skip=[0],
+        sort_skip=[0, 9],
         attrs={"id": "associadosTable"}
       ) }}
     </section>

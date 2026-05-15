@@ -47,6 +47,10 @@
 	grid-column: span 2;
 }
 
+.calendar-view-field--full {
+	grid-column: 1 / -1;
+}
+
 .calendar-view-calendar {
 	display: flex;
 	flex-direction: column;

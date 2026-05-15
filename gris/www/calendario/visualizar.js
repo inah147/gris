@@ -3,6 +3,7 @@ frappe.ready(() => {
 	const yearFilter = document.getElementById("year-filter");
 	const monthFilter = document.getElementById("month-filter");
 	const sectionFilter = document.getElementById("section-filter");
+	const activitySearch = document.getElementById("activity-search");
 	const exportButton = document.getElementById("btn-export-calendar");
 	const sourceEvents = calendar ? (calendar.events || []).map(cloneEvent) : [];
 	const allSections = calendar ? (calendar.activeCategories || []) : [];
@@ -12,11 +13,16 @@ frappe.ready(() => {
 		const selectedMonth = getSelectValue(monthFilter) || "";
 		const requestedSections = getMultipleSelectValue(sectionFilter);
 		const activeSections = requestedSections.length ? requestedSections : allSections;
+		const searchTerm = normalizeText(activitySearch ? activitySearch.value : "");
 
 		if (calendar) {
 			const filteredEvents = sourceEvents.filter((event) => {
 				const eventSection = event.category || "Diretoria";
-				return activeSections.includes(eventSection) && eventMatchesMonth(event, year, selectedMonth);
+				return (
+					activeSections.includes(eventSection) &&
+					eventMatchesMonth(event, year, selectedMonth) &&
+					(!searchTerm || normalizeText(event.title || "").includes(searchTerm))
+				);
 			});
 
 			calendar.events = filteredEvents;
@@ -62,6 +68,10 @@ frappe.ready(() => {
 
 	if (sectionFilter) {
 		sectionFilter.addEventListener("change", () => applyFilters());
+	}
+
+	if (activitySearch) {
+		activitySearch.addEventListener("input", () => applyFilters());
 	}
 
 	if (calendar) {
@@ -266,4 +276,11 @@ function setHolidayBadge(label, variant) {
 function getCalendarShowAllDays(calendar) {
 	const checkbox = calendar?.querySelector("[data-calendar-list-show-all-days]");
 	return checkbox ? checkbox.checked : true;
+}
+
+function normalizeText(text) {
+	return String(text)
+		.toLowerCase()
+		.normalize("NFD")
+		.replace(/\p{M}/gu, "");
 }

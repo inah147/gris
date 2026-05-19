@@ -86,50 +86,9 @@
         updateHidden();
       });
 
-      const popover = country.querySelector("[data-popover]");
-      if (popover) {
-        const VIEWPORT_MARGIN = 8;
-        const MIN_HEIGHT = 160;
-
-        const adjustPopoverPlacement = () => {
-          if (popover.getAttribute("aria-hidden") === "true") return;
-
-          const triggerRect = trigger.getBoundingClientRect();
-          const spaceBelow = window.innerHeight - triggerRect.bottom - VIEWPORT_MARGIN;
-          const spaceAbove = triggerRect.top - VIEWPORT_MARGIN;
-          const openUp = spaceAbove > spaceBelow && spaceBelow < MIN_HEIGHT;
-          const available = Math.max(openUp ? spaceAbove : spaceBelow, MIN_HEIGHT);
-
-          popover.style.top = "";
-          popover.style.bottom = "";
-          if (openUp) {
-            popover.style.bottom = "100%";
-            popover.dataset.side = "top";
-          } else {
-            popover.style.top = "100%";
-            popover.dataset.side = "bottom";
-          }
-          popover.style.maxHeight = `${available}px`;
-        };
-
-        const popoverObserver = new MutationObserver(() => {
-          if (popover.getAttribute("aria-hidden") === "false") {
-            adjustPopoverPlacement();
-          }
-        });
-        popoverObserver.observe(popover, {
-          attributes: true,
-          attributeFilter: ["aria-hidden"],
-        });
-
-        const onViewportChange = () => {
-          if (popover.getAttribute("aria-hidden") === "false") {
-            adjustPopoverPlacement();
-          }
-        };
-        window.addEventListener("resize", onViewportChange);
-        window.addEventListener("scroll", onViewportChange, true);
-      }
+      // Posicionamento do popover do seletor de país é gerenciado pelo
+      // próprio select.js (HTML Popover API + position:fixed com coordenadas
+      // calculadas a partir do triggerRect). Override redundante removido.
 
       // Public API
       Object.defineProperty(root, "value", {

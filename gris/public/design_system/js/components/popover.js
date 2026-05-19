@@ -11,6 +11,15 @@
       return;
     }
 
+    // HTML Popover API: promove o content ao top layer ao abrir, fazendo-o
+    // renderizar acima de qualquer elemento (incluindo <dialog> em showModal)
+    // e isolando-o de ancestors com `overflow: hidden` ou
+    // `transform`/`translate`/`scale` (que estabeleceriam novo containing
+    // block para position:fixed).
+    if (!content.hasAttribute('popover')) {
+      content.setAttribute('popover', 'manual');
+    }
+
     const positionPopover = () => {
       const GAP = 8;
       const vw = window.innerWidth;
@@ -33,14 +42,11 @@
       const side = (contentH > spaceBelow && spaceAbove > spaceBelow) ? 'top' : 'bottom';
       content.setAttribute('data-side', side);
 
-      // Alinhamento horizontal: start (left:0, expande à direita) vs end (right:0, expande à esquerda)
+      // Alinhamento horizontal: start (alinhado à esquerda do trigger) vs end (alinhado à direita)
       const spaceRight = vw - triggerRect.left - GAP;
       const spaceLeft = triggerRect.right - GAP;
-      if (contentW > spaceRight && spaceLeft > spaceRight) {
-        content.setAttribute('data-align', 'end');
-      } else {
-        content.setAttribute('data-align', 'start');
-      }
+      const align = (contentW > spaceRight && spaceLeft > spaceRight) ? 'end' : 'start';
+      content.setAttribute('data-align', align);
 
       // Altura máxima: restringe ao espaço disponível com scroll interno
       const availH = Math.max(side === 'bottom' ? spaceBelow : spaceAbove, 120);
@@ -57,7 +63,26 @@
       } else {
         content.style.removeProperty('max-width');
       }
+
+      // Materializa coordenadas (position: fixed → relativas ao viewport)
+      if (side === 'bottom') {
+        content.style.top = `${triggerRect.bottom + GAP}px`;
+        content.style.removeProperty('bottom');
+      } else {
+        content.style.bottom = `${vh - triggerRect.top + GAP}px`;
+        content.style.removeProperty('top');
+      }
+      if (align === 'start') {
+        content.style.left = `${triggerRect.left}px`;
+        content.style.removeProperty('right');
+      } else {
+        content.style.right = `${vw - triggerRect.right}px`;
+        content.style.removeProperty('left');
+      }
+      content.style.minWidth = `${triggerRect.width}px`;
     };
+
+    const onReposition = () => positionPopover();
 
     const closePopover = (focusOnTrigger = true) => {
       if (trigger.getAttribute('aria-expanded') === 'false') return;
@@ -65,6 +90,16 @@
       content.setAttribute('aria-hidden', 'true');
       content.style.removeProperty('max-height');
       content.style.removeProperty('max-width');
+      content.style.removeProperty('top');
+      content.style.removeProperty('bottom');
+      content.style.removeProperty('left');
+      content.style.removeProperty('right');
+      content.style.removeProperty('min-width');
+      window.removeEventListener('scroll', onReposition, true);
+      window.removeEventListener('resize', onReposition);
+      if (content.matches(':popover-open')) {
+        content.hidePopover();
+      }
       if (focusOnTrigger) {
         trigger.focus();
       }
@@ -75,17 +110,26 @@
         detail: { source: popoverComponent }
       }));
 
+      // Promove ao top layer antes de medir/posicionar; o navegador
+      // automaticamente remove o `display: none` do estado fechado.
+      if (!content.matches(':popover-open')) {
+        content.showPopover();
+      }
+
       positionPopover();
 
       const elementToFocus = content.querySelector('[autofocus]');
       if (elementToFocus) {
-        content.addEventListener('transitionend', () => {
-          elementToFocus.focus();
-        }, { once: true });
+        elementToFocus.focus();
       }
 
       trigger.setAttribute('aria-expanded', 'true');
       content.setAttribute('aria-hidden', 'false');
+
+      // Reposicionar enquanto aberto: scroll (capture pega scrolls internos
+      // como o body de um <dialog>) e resize do viewport.
+      window.addEventListener('scroll', onReposition, true);
+      window.addEventListener('resize', onReposition);
     };
 
     trigger.addEventListener('click', () => {
@@ -97,11 +141,14 @@
       }
     });
 
-    popoverComponent.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') {
-        closePopover();
-      }
-    });
+    // Escape: trigger fica em popoverComponent; o content também recebe
+    // listener próprio para casos em que o foco está em elementos internos
+    // (ex.: input de busca).
+    const onKeydown = (event) => {
+      if (event.key === 'Escape') closePopover();
+    };
+    popoverComponent.addEventListener('keydown', onKeydown);
+    content.addEventListener('keydown', onKeydown);
 
     document.addEventListener('click', (event) => {
       if (!popoverComponent.contains(event.target)) {

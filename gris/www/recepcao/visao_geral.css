@@ -399,6 +399,19 @@ dialog.dialog > div > section {
 	width: 100%;
 }
 
+/* Dialogs com formulário: garantir respiro mínimo no body, para que
+   campos e ações não fiquem apertados. Não aplicamos altura mínima a
+   todos os dialogs do design system para não regredir aqueles que já
+   abrem em tamanho equilibrado (ex.: confirmações curtas). */
+#modalNovoContato,
+#modalConversaInicial {
+	min-height: 55vh;
+}
+
+#modalAgendarVisita {
+	min-height: 32vh;
+}
+
 /* Responsivo ------------------------------------------------------*/
 @media (max-width: 768px) {
 	.kanban-column {

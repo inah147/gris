@@ -18,6 +18,13 @@
     let menuItems = [];
     let activeIndex = -1;
 
+    // HTML Popover API: promove o popover ao top layer ao abrir, fazendo-o
+    // renderizar acima de qualquer elemento (sidebars, dialogs, etc.) e
+    // isolando-o de ancestors com `overflow: hidden` ou `transform`.
+    if (!popover.hasAttribute('popover')) {
+      popover.setAttribute('popover', 'manual');
+    }
+
     const positionPopover = () => {
       const GAP = 8;
       const vw = window.innerWidth;
@@ -25,46 +32,57 @@
       const triggerRect = trigger.getBoundingClientRect();
 
       // Mede dimensões naturais sem exibir (visibility:hidden + sem transições)
+      const previousVisibility = popover.style.visibility;
+      const previousTransition = popover.style.transition;
       popover.style.visibility = 'hidden';
       popover.style.transition = 'none';
-      popover.setAttribute('aria-hidden', 'false');
+      const wasHidden = popover.getAttribute('aria-hidden') !== 'false';
+      if (wasHidden) popover.setAttribute('aria-hidden', 'false');
       const contentW = popover.scrollWidth;
       const contentH = popover.scrollHeight;
-      popover.setAttribute('aria-hidden', 'true');
-      popover.style.removeProperty('visibility');
-      popover.style.removeProperty('transition');
+      if (wasHidden) popover.setAttribute('aria-hidden', 'true');
+      if (previousVisibility) popover.style.visibility = previousVisibility;
+      else popover.style.removeProperty('visibility');
+      if (previousTransition) popover.style.transition = previousTransition;
+      else popover.style.removeProperty('transition');
 
-      // Lado vertical: prefere baixo, inverte para cima se houver mais espaço
       const spaceBelow = vh - triggerRect.bottom - GAP;
       const spaceAbove = triggerRect.top - GAP;
       const side = (contentH > spaceBelow && spaceAbove > spaceBelow) ? 'top' : 'bottom';
       popover.setAttribute('data-side', side);
 
-      // Alinhamento horizontal: start (left:0, expande à direita) vs end (right:0, expande à esquerda)
       const spaceRight = vw - triggerRect.left - GAP;
       const spaceLeft = triggerRect.right - GAP;
-      if (contentW > spaceRight && spaceLeft > spaceRight) {
-        popover.setAttribute('data-align', 'end');
-      } else {
-        popover.setAttribute('data-align', 'start');
-      }
+      const align = (contentW > spaceRight && spaceLeft > spaceRight) ? 'end' : 'start';
+      popover.setAttribute('data-align', align);
 
-      // Altura máxima: restringe ao espaço disponível com scroll interno
       const availH = Math.max(side === 'bottom' ? spaceBelow : spaceAbove, 120);
-      if (contentH > availH) {
-        popover.style.maxHeight = `${availH}px`;
-      } else {
-        popover.style.removeProperty('max-height');
-      }
+      if (contentH > availH) popover.style.maxHeight = `${availH}px`;
+      else popover.style.removeProperty('max-height');
 
-      // Largura máxima: evita overflow do viewport
       const maxW = vw - 2 * GAP;
-      if (contentW > maxW) {
-        popover.style.maxWidth = `${maxW}px`;
+      if (contentW > maxW) popover.style.maxWidth = `${maxW}px`;
+      else popover.style.removeProperty('max-width');
+
+      // Coordenadas para position: fixed (relativas ao viewport)
+      if (side === 'bottom') {
+        popover.style.top = `${triggerRect.bottom + GAP}px`;
+        popover.style.removeProperty('bottom');
       } else {
-        popover.style.removeProperty('max-width');
+        popover.style.bottom = `${vh - triggerRect.top + GAP}px`;
+        popover.style.removeProperty('top');
       }
+      if (align === 'start') {
+        popover.style.left = `${triggerRect.left}px`;
+        popover.style.removeProperty('right');
+      } else {
+        popover.style.right = `${vw - triggerRect.right}px`;
+        popover.style.removeProperty('left');
+      }
+      popover.style.minWidth = `${triggerRect.width}px`;
     };
+
+    const onReposition = () => positionPopover();
 
     const closePopover = (focusOnTrigger = true) => {
       if (trigger.getAttribute('aria-expanded') === 'false') return;
@@ -73,11 +91,21 @@
       popover.setAttribute('aria-hidden', 'true');
       popover.style.removeProperty('max-height');
       popover.style.removeProperty('max-width');
-      
+      popover.style.removeProperty('top');
+      popover.style.removeProperty('bottom');
+      popover.style.removeProperty('left');
+      popover.style.removeProperty('right');
+      popover.style.removeProperty('min-width');
+      window.removeEventListener('scroll', onReposition, true);
+      window.removeEventListener('resize', onReposition);
+      if (popover.matches(':popover-open')) {
+        popover.hidePopover();
+      }
+
       if (focusOnTrigger) {
         trigger.focus();
       }
-      
+
       setActiveItem(-1);
     };
 
@@ -86,15 +114,18 @@
         detail: { source: dropdownMenuComponent }
       }));
 
+      if (!popover.matches(':popover-open')) {
+        popover.showPopover();
+      }
       positionPopover();
 
       trigger.setAttribute('aria-expanded', 'true');
       popover.setAttribute('aria-hidden', 'false');
-      menuItems = Array.from(menu.querySelectorAll('[role^="menuitem"]')).filter(item => 
-        !item.hasAttribute('disabled') && 
+      menuItems = Array.from(menu.querySelectorAll('[role^="menuitem"]')).filter(item =>
+        !item.hasAttribute('disabled') &&
         item.getAttribute('aria-disabled') !== 'true'
       );
-      
+
       if (menuItems.length > 0 && initialSelection) {
         if (initialSelection === 'first') {
           setActiveItem(0);
@@ -102,6 +133,9 @@
           setActiveItem(menuItems.length - 1);
         }
       }
+
+      window.addEventListener('scroll', onReposition, true);
+      window.addEventListener('resize', onReposition);
     };
 
     const setActiveItem = (index) => {

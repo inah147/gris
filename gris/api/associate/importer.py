@@ -196,6 +196,25 @@ def _is_beneficiario_category(category: str) -> bool:
 	return _normalize_text(category) == "beneficiario"
 
 
+def _format_row_summary(row) -> str:
+	"""Formata os dados do registro para exibição em mensagens de erro."""
+	fields = [
+		("Nome", row.get("Nome", "")),
+		("CPF", row.get("CPF", "")),
+		("Registro", row.get("Registro", "")),
+		("Categoria", row.get("Categoria_1_Funcao", "")),
+		("Função", row.get("Funcao_1_Funcao", "")),
+		("Seção", row.get("Secao", "")),
+		("Celular", row.get("Celular", "")),
+		("Email", row.get("Email", "")),
+		("Nome Responsável", row.get("Nome_responsavel", "")),
+		("CPF Responsável", row.get("CPF_responsavel", "")),
+		("Celular Responsável", row.get("Celular_responsavel", "") or row.get("Telefone_Residencial_responsavel", "")),
+	]
+	parts = [f"{label}: {str(value).strip()}" for label, value in fields if value and str(value).strip()]
+	return " | ".join(parts) if parts else "sem dados"
+
+
 def _extract_responsavel_payload(row) -> dict:
 	nome = (row.get("Nome_responsavel", "") or "").strip()
 	if nome:
@@ -565,6 +584,7 @@ def parse_associates_report(path_pdf: str) -> dict:
 						error_msg = (
 							f"CPF {cpf or 'desconhecido'}: erro ao sincronizar responsável/vínculo"
 							f" - {_format_error_pt(str(e))}"
+							f"\n  Dados do registro: {_format_row_summary(row)}"
 						)
 						results["error_details"].append(f"Linha {idx + 1} - {error_msg}")
 						frappe.log_error(f"Erro sync responsavel linha {idx + 1}", str(e))
@@ -573,7 +593,10 @@ def parse_associates_report(path_pdf: str) -> dict:
 			frappe.clear_messages()
 			frappe.log_error(f"Erro importação linha {idx + 1}", str(e))
 			results["errors"] += 1
-			error_msg = f"CPF {cpf or 'desconhecido'}: {_format_error_pt(str(e))}"
+			error_msg = (
+				f"CPF {cpf or 'desconhecido'}: {_format_error_pt(str(e))}"
+				f"\n  Dados do registro: {_format_row_summary(row)}"
+			)
 			results["error_details"].append(f"Linha {idx + 1} - {error_msg}")
 
 	# Commit das alterações

@@ -118,7 +118,15 @@
       if (errorsContainer && errorsList) {
         const errorItems = data.error_details
           .slice(0, 50)
-          .map(err => `<li>${escapeHtml(err || '')}</li>`)
+          .map(err => {
+            const [mainLine, ...extraLines] = (err || '').split('\n');
+            const extra = extraLines
+              .map(l => l.replace(/^\s+/, ''))
+              .filter(Boolean)
+              .map(l => `<span class="import-error-detail">${escapeHtml(l)}</span>`)
+              .join('');
+            return `<li>${escapeHtml(mainLine)}${extra ? `<br>${extra}` : ''}</li>`;
+          })
           .join('');
 
         const moreText = data.error_details.length > 50

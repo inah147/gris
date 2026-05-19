@@ -230,6 +230,18 @@
   line-height: var(--leading-relaxed);
 }
 
+.import-error-detail {
+  display: inline-block;
+  margin-top: calc(var(--spacing) * 1);
+  padding: calc(var(--spacing) * 0.5) calc(var(--spacing) * 2);
+  border-radius: var(--radius-sm);
+  background: var(--color-muted);
+  color: var(--color-muted-foreground);
+  font-size: var(--text-xs);
+  font-family: var(--font-mono, monospace);
+  word-break: break-all;
+}
+
 @media (hover: hover) {
   .import-stat-card:hover {
     transform: translateY(-1px);

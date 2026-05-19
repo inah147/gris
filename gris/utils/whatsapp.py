@@ -7,7 +7,7 @@ import frappe
 import requests
 from frappe.utils import now_datetime
 
-from .whatsapp_errors import WhatsAppConfigurationError, WhatsAppRequestError
+from .whatsapp_errors import WhatsAppConfigurationError, WhatsAppNumberNotFoundError, WhatsAppRequestError
 
 SETTINGS_DOCTYPE = "Configuracoes WhatsApp"
 DEFAULT_TIMEOUT = 30
@@ -61,7 +61,16 @@ def _normalize_phone(number: str) -> str:
 	digits = re.sub(r"\D", "", number)
 
 	if digits.startswith("55") and len(digits) >= 12:
+		# Already has country code; check for duplicate DDD: 55 + DDD + DDD + number
+		# e.g. 551111971872252 → 5511971872252
+		if len(digits) >= 14 and digits[2:4] == digits[4:6]:
+			digits = digits[:2] + digits[4:]
 		return digits
+
+	# No country code; check for duplicate DDD: DDD + DDD + number
+	# e.g. 1111971872252 (13 digits) → 11971872252 (11 digits)
+	if len(digits) > 11 and digits[:2] == digits[2:4]:
+		digits = digits[2:]
 
 	return f"55{digits}"
 
@@ -89,6 +98,19 @@ def _post(endpoint: str, payload: dict, *, config: dict | None = None) -> dict:
 				detail = response.json()
 			except ValueError:
 				detail = response.text or "Sem detalhes."
+			# Evolution API returns 400 with exists:False when number is not on WhatsApp
+			if response.status_code == 400 and isinstance(detail, dict):
+				messages = detail.get("response", {}).get("message", [])
+				if isinstance(messages, list) and any(
+					isinstance(m, dict) and m.get("exists") is False for m in messages
+				):
+					number = messages[0].get("number", "") if messages else ""
+					raise WhatsAppNumberNotFoundError(
+						f"Número {number} não está registrado no WhatsApp."
+					)
+				raise WhatsAppRequestError(
+					f"Evolution API retornou HTTP {response.status_code}: {detail}"
+				)
 			raise WhatsAppRequestError(
 				f"Evolution API retornou HTTP {response.status_code}: {detail}"
 			)

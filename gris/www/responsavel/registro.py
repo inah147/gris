@@ -5,6 +5,7 @@ import frappe
 from frappe.utils import cint
 
 from gris.api.portal_access import enrich_context
+from gris.utils.contato import format_phone
 from gris.utils.gestores import buscar_destinatarios_gestores
 from gris.utils.whatsapp import enviar_texto
 
@@ -130,28 +131,6 @@ def get_context(context):
 	enrich_context(context, "/responsavel/beneficiarios")
 
 
-def format_phone(phone):
-	if not phone:
-		return phone
-
-	# Remove non-digits
-	digits = "".join(filter(str.isdigit, str(phone)))
-
-	if not digits:
-		return ""
-
-	# If it doesn't start with country code (assuming Brazil +55 for now based on context)
-	# Brazil numbers are usually 10 or 11 digits (2 digit area code + 8 or 9 digit number)
-	if len(digits) in [10, 11]:
-		return f"+55{digits}"
-
-	# If it already has 55 at start (12 or 13 digits)
-	if len(digits) in [12, 13] and digits.startswith("55"):
-		return f"+{digits}"
-
-	return phone
-
-
 def _notificar_gestores_novo_associado(nome_associado: str) -> None:
 	"""Notifica usuários com role 'Gestor de Associado' para criarem o registro no PAXTU."""
 	primeiro_nome_associado = (nome_associado or "").strip().split()[0] if nome_associado else "novo associado"
@@ -211,9 +190,10 @@ def update_novo_associado(novo_associado_name, data, responsaveis_data=None):
 	if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", email_cobranca):
 		frappe.throw("Email de cobrança inválido.")
 
-	phone_digits = "".join(filter(str.isdigit, str(telefone_cobranca)))
-	if len(phone_digits) < 10:
-		frappe.throw("Telefone de cobrança inválido.")
+	telefone_cobranca_fmt = format_phone(telefone_cobranca)
+	phone_digits = "".join(filter(str.isdigit, str(telefone_cobranca_fmt or telefone_cobranca)))
+	if len(phone_digits) not in (12, 13):
+		frappe.throw("Telefone de cobrança inválido. Informe DDD + número (ex: 11 91234-5678).")
 
 	data["email_cobranca"] = email_cobranca
 

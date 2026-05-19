@@ -8,6 +8,7 @@ from frappe.utils import now
 
 from gris.api.portal_cache_utils import get_uel_cached
 from gris.api.recepcao_notificacoes import notificar_nova_manifestacao_no_grupo_recepcao
+from gris.utils.contato import format_phone
 
 
 def get_context(context):
@@ -38,6 +39,12 @@ def submit_interest(
 			"status": "error",
 			"message": "Já existe um usuário com este e-mail. Por favor, faça login para acompanhar seu processo.",
 		}
+
+	celular_responsavel_fmt = format_phone(celular_responsavel)
+	phone_digits = "".join(filter(str.isdigit, str(celular_responsavel_fmt or celular_responsavel)))
+	if len(phone_digits) not in (12, 13):
+		return {"status": "error", "message": "Celular inválido. Informe DDD + número (ex: 11 91234-5678)."}
+	celular_responsavel = celular_responsavel_fmt or celular_responsavel
 
 	core_savepoint = None
 	try:

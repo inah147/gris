@@ -32,6 +32,74 @@
       return;
     }
 
+    // HTML Popover API: promove o popover ao top layer ao abrir, fazendo-o
+    // renderizar acima de qualquer elemento (incluindo <dialog> em showModal)
+    // e isolando-o de ancestors com `overflow: hidden` ou
+    // `transform`/`translate`/`scale` (que estabeleceriam novo containing
+    // block para position:fixed).
+    if (!popover.hasAttribute('popover')) {
+      popover.setAttribute('popover', 'manual');
+    }
+
+    const positionPopover = () => {
+      const GAP = 8;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const triggerRect = trigger.getBoundingClientRect();
+
+      // Mede dimensões naturais sem exibir
+      const previousVisibility = popover.style.visibility;
+      const previousTransition = popover.style.transition;
+      popover.style.visibility = 'hidden';
+      popover.style.transition = 'none';
+      const wasHidden = popover.getAttribute('aria-hidden') !== 'false';
+      if (wasHidden) popover.setAttribute('aria-hidden', 'false');
+      const contentW = popover.scrollWidth;
+      const contentH = popover.scrollHeight;
+      if (wasHidden) popover.setAttribute('aria-hidden', 'true');
+      if (previousVisibility) popover.style.visibility = previousVisibility;
+      else popover.style.removeProperty('visibility');
+      if (previousTransition) popover.style.transition = previousTransition;
+      else popover.style.removeProperty('transition');
+
+      const spaceBelow = vh - triggerRect.bottom - GAP;
+      const spaceAbove = triggerRect.top - GAP;
+      const side = (contentH > spaceBelow && spaceAbove > spaceBelow) ? 'top' : 'bottom';
+      popover.setAttribute('data-side', side);
+
+      const spaceRight = vw - triggerRect.left - GAP;
+      const spaceLeft = triggerRect.right - GAP;
+      const align = (contentW > spaceRight && spaceLeft > spaceRight) ? 'end' : 'start';
+      popover.setAttribute('data-align', align);
+
+      const availH = Math.max(side === 'bottom' ? spaceBelow : spaceAbove, 120);
+      if (contentH > availH) popover.style.maxHeight = `${availH}px`;
+      else popover.style.removeProperty('max-height');
+
+      const maxW = vw - 2 * GAP;
+      if (contentW > maxW) popover.style.maxWidth = `${maxW}px`;
+      else popover.style.removeProperty('max-width');
+
+      // Coordenadas para position: fixed (relativas ao viewport)
+      if (side === 'bottom') {
+        popover.style.top = `${triggerRect.bottom + GAP}px`;
+        popover.style.removeProperty('bottom');
+      } else {
+        popover.style.bottom = `${vh - triggerRect.top + GAP}px`;
+        popover.style.removeProperty('top');
+      }
+      if (align === 'start') {
+        popover.style.left = `${triggerRect.left}px`;
+        popover.style.removeProperty('right');
+      } else {
+        popover.style.right = `${vw - triggerRect.right}px`;
+        popover.style.removeProperty('left');
+      }
+      popover.style.minWidth = `${triggerRect.width}px`;
+    };
+
+    const onReposition = () => positionPopover();
+
     const allOptions = Array.from(listbox.querySelectorAll('[role="option"]'));
     const options = allOptions.filter(opt => opt.getAttribute('aria-disabled') !== 'true');
     let visibleOptions = [...options];
@@ -128,6 +196,21 @@
         } else {
           resetFilter();
         }
+      }
+
+      // Limpa coordenadas inline e listeners de reposicionamento, e remove
+      // o popover do top layer via Popover API.
+      popover.style.removeProperty('top');
+      popover.style.removeProperty('bottom');
+      popover.style.removeProperty('left');
+      popover.style.removeProperty('right');
+      popover.style.removeProperty('min-width');
+      popover.style.removeProperty('max-height');
+      popover.style.removeProperty('max-width');
+      window.removeEventListener('scroll', onReposition, true);
+      window.removeEventListener('resize', onReposition);
+      if (popover.matches(':popover-open')) {
+        popover.hidePopover();
       }
 
       if (focusOnTrigger) trigger.focus();
@@ -339,6 +422,13 @@
         detail: { source: selectComponent }
       }));
 
+      // Promove ao top layer antes de medir/posicionar; o navegador
+      // automaticamente remove o `display: none` do estado fechado.
+      if (!popover.matches(':popover-open')) {
+        popover.showPopover();
+      }
+      positionPopover();
+
       if (filter) {
         if (hasTransition()) {
           popover.addEventListener('transitionend', () => {
@@ -357,6 +447,11 @@
         setActiveOption(options.indexOf(selectedOption));
         selectedOption.scrollIntoView({ block: 'nearest' });
       }
+
+      // Reposicionar enquanto aberto: scroll com capture pega scroll do body
+      // do <dialog> ou de qualquer container; resize cobre redimensionamento.
+      window.addEventListener('scroll', onReposition, true);
+      window.addEventListener('resize', onReposition);
     };
 
     addListener(trigger, 'click', () => {
@@ -452,6 +547,13 @@
     selectComponent.__basecoatSelectCleanup = () => {
       if (listenerController) {
         listenerController.abort();
+      }
+      // Garante que o popover saia do top layer caso o select seja
+      // re-inicializado ou removido enquanto aberto.
+      window.removeEventListener('scroll', onReposition, true);
+      window.removeEventListener('resize', onReposition);
+      if (popover.matches(':popover-open')) {
+        popover.hidePopover();
       }
     };
     selectComponent.dataset.selectInitialized = true;

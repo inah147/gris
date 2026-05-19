@@ -15,3 +15,55 @@
   max-height: 300px;
   overflow-y: auto;
 }
+
+/* ---------------------------------------------------------------
+   Popover: top layer + sem transição.
+
+   O JS dos componentes promove o [data-popover] ao top layer do
+   navegador via HTML Popover API (popover="manual" + showPopover()).
+   Isso faz o popover renderizar acima de qualquer elemento — inclusive
+   <dialog> abertos com showModal() — e isola o popover de ancestors
+   com `overflow: hidden` ou `transform`/`scale`/`translate` (que
+   estabelecem containing block para position:fixed).
+
+   Posicionamento é feito inline pelo JS via getBoundingClientRect();
+   aqui anulamos transições e transformações de entrada do upstream
+   para que o popover apareça instantaneamente no lugar calculado,
+   sem deslizar pela tela.
+   --------------------------------------------------------------- */
+[data-popover] {
+  position: fixed;
+  z-index: 60;
+  transition: none !important;
+  animation: none !important;
+  /* Reseta defaults da UA stylesheet aplicados pelo atributo `popover`
+     (inset: 0; margin: auto) que centralizariam o elemento no viewport.
+     O JS dos componentes seta top/bottom/left/right inline. */
+  inset: auto;
+  margin: 0;
+}
+
+/* Anula transformações de entrada/saída do upstream baseadas em
+   aria-hidden + data-side, que causavam o efeito "deslize" reportado. */
+[data-popover],
+[data-popover][aria-hidden="true"] {
+  scale: 1 !important;
+  translate: 0 0 !important;
+  --tw-scale-x: 100%;
+  --tw-scale-y: 100%;
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+}
+
+/* Anula `left:0` / `right:0` do upstream (válidos para position:absolute);
+   coordenadas reais são setadas inline pelo JS com base no triggerRect. */
+[data-popover][data-align=start],
+[data-popover][data-align=end] {
+  left: auto;
+  right: auto;
+}
+
+/* Popover não usa backdrop nativo da Popover API. */
+[data-popover]::backdrop {
+  background: transparent;
+}

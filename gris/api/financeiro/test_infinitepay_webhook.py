@@ -84,7 +84,7 @@ class TestInfinitepayWebhook(FrappeTestCase):
 		self.addCleanup(handle_patcher.stop)
 
 		# Mock da chamada server-to-server para confirmar o pagamento.
-		def _verificacao_ok(handle, order_nsu, transaction_nsu=None):
+		def _verificacao_ok(handle, order_nsu, transaction_nsu=None, slug=None):
 			esperado = sum(
 				int(item.quantidade or 0) * round(float(item.preco) * 100)
 				for item in frappe.get_doc("Cobranca Infinitepay", order_nsu).itens

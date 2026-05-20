@@ -9,8 +9,16 @@ import requests
 INFINITEPAY_PAYMENT_CHECK_URL = "https://api.checkout.infinitepay.io/payment_check"
 
 
-def _verificar_pagamento(handle: str, order_nsu: str, transaction_nsu: str | None = None) -> dict:
+def _verificar_pagamento(
+	handle: str,
+	order_nsu: str,
+	transaction_nsu: str | None = None,
+	slug: str | None = None,
+) -> dict:
 	"""Confirma server-to-server se o pagamento é legítimo na InfinitePay.
+
+	A InfinitePay aceita `handle`, `order_nsu`, `transaction_nsu` e `slug`.
+	Quanto mais parâmetros, maior a chance de a busca casar.
 
 	Retorna o dict da resposta em caso de sucesso.
 	Levanta requests.exceptions.RequestException em caso de falha de rede ou HTTP.
@@ -19,6 +27,8 @@ def _verificar_pagamento(handle: str, order_nsu: str, transaction_nsu: str | Non
 	payload: dict = {"handle": handle, "order_nsu": order_nsu}
 	if transaction_nsu:
 		payload["transaction_nsu"] = transaction_nsu
+	if slug:
+		payload["slug"] = slug
 
 	response = requests.post(
 		INFINITEPAY_PAYMENT_CHECK_URL,
@@ -29,7 +39,16 @@ def _verificar_pagamento(handle: str, order_nsu: str, transaction_nsu: str | Non
 	response.raise_for_status()
 	data = response.json()
 	if not data.get("success"):
-		raise ValueError(f"payment_check retornou success=False para order_nsu={order_nsu}")
+		# Inclui o corpo da resposta na exceção para diagnosticar o motivo
+		# (mensagem de erro da InfinitePay, código, etc.).
+		frappe.logger().warning(
+			f"payment_check success=False para order_nsu={order_nsu} "
+			f"transaction_nsu={transaction_nsu} payload={payload} resposta={data}"
+		)
+		raise ValueError(
+			f"payment_check retornou success=False para order_nsu={order_nsu}. "
+			f"Resposta da InfinitePay: {data}"
+		)
 	return data
 
 
@@ -82,11 +101,15 @@ def webhook_infinitepay():
 		frappe.local.response.http_status_code = 400
 		return {"ok": False, "error": {"code": "MISSING_HANDLE", "message": "Configuração ausente."}}
 
-	# Confirmação server-to-server: passa o transaction_nsu recebido no webhook
-	# para que a InfinitePay confirme aquela transação específica.
+	# Confirmação server-to-server: usa o máximo de identificadores que vieram
+	# no payload do webhook (transaction_nsu + invoice_slug) para a InfinitePay
+	# confirmar essa transação específica.
 	transaction_nsu_webhook = data.get("transaction_nsu") or None
+	invoice_slug_webhook = data.get("invoice_slug") or doc.invoice_slug or None
 	try:
-		verificacao = _verificar_pagamento(handle, order_nsu, transaction_nsu_webhook)
+		verificacao = _verificar_pagamento(
+			handle, order_nsu, transaction_nsu_webhook, invoice_slug_webhook
+		)
 	except (requests.exceptions.RequestException, ValueError) as e:
 		frappe.logger().error(f"Falha na verificação InfinitePay para order_nsu={order_nsu}: {e}")
 		frappe.local.response.http_status_code = 400

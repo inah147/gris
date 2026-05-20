@@ -1,0 +1,67 @@
+{
+ "actions": [],
+ "creation": "2026-05-20 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "eh_convite",
+  "opcao_convite",
+  "descricao",
+  "quantidade",
+  "valor"
+ ],
+ "fields": [
+  {
+   "default": "1",
+   "fieldname": "eh_convite",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "É Convite"
+  },
+  {
+   "depends_on": "eval:doc.eh_convite",
+   "fieldname": "opcao_convite",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Opção de Convite",
+   "mandatory_depends_on": "eval:doc.eh_convite",
+   "options": "Opcao Convite Festa"
+  },
+  {
+   "fieldname": "descricao",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Descrição",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "quantidade",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Quantidade",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "valor",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Valor",
+   "non_negative": 1,
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-20 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Festas",
+ "name": "Item Convite Festa",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

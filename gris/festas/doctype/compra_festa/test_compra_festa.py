@@ -1,17 +1,24 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import flt, today
+from frappe.utils import add_days, flt, today
 
 
 def _nova_festa():
-	return frappe.get_doc(
+	festa = frappe.get_doc(
 		{
 			"doctype": "Festa",
 			"nome_festa": f"Festa Teste {frappe.generate_hash(length=8)}",
 			"data": today(),
+			"data_limite_vendas": today(),
 			"status": "Em andamento",
 		}
 	).insert(ignore_permissions=True)
+	portaria = frappe.get_doc("Area da Festa", f"{festa.name} - Portaria")
+	portaria.nome_coord = "Coord Portaria"
+	portaria.email_coord = "portaria@example.com"
+	portaria.telefone_coord = "+5511999999999"
+	portaria.save(ignore_permissions=True)
+	return festa
 
 
 def _novo_produto(festa):

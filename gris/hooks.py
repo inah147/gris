@@ -140,13 +140,13 @@ after_install = "gris.install.after_install"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Cobranca Infinitepay": {
+		"on_update": [
+			"gris.festas.doctype.convite_festa.convite_festa.on_cobranca_atualizada",
+		],
+	},
+}
 
 # Scheduled Tasks
 # ---------------

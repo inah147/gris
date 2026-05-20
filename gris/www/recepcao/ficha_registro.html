@@ -137,6 +137,24 @@
       </div>
     {% endcall %}
 
+    <!-- Profissional / Acadêmico -->
+    {% call card(title="Profissional / Acadêmico", attrs={"class": "mb-4"}) %}
+      <div class="ficha-fields-grid">
+        <div class="field">
+          <label class="label">Escolaridade</label>
+          <input type="text" class="input" value="{{ doc.escolaridade or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Profissão</label>
+          <input type="text" class="input" value="{{ doc.profissao or '-' }}" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Local de Trabalho</label>
+          <input type="text" class="input" value="{{ doc.local_de_trabalho or '-' }}" disabled>
+        </div>
+      </div>
+    {% endcall %}
+
     <!-- Endereço e Contato -->
     {% call card(title="Endereço e Contato", attrs={"class": "mb-4"}) %}
       <div class="ficha-fields-grid">
@@ -179,24 +197,6 @@
         <div class="field">
           <label class="label">Tel. Secundário</label>
           <input type="text" class="input" value="{{ doc.telefone_secundario or '-' }}" disabled>
-        </div>
-      </div>
-    {% endcall %}
-
-    <!-- Profissional / Acadêmico -->
-    {% call card(title="Profissional / Acadêmico", attrs={"class": "mb-4"}) %}
-      <div class="ficha-fields-grid">
-        <div class="field">
-          <label class="label">Escolaridade</label>
-          <input type="text" class="input" value="{{ doc.escolaridade or '-' }}" disabled>
-        </div>
-        <div class="field">
-          <label class="label">Profissão</label>
-          <input type="text" class="input" value="{{ doc.profissao or '-' }}" disabled>
-        </div>
-        <div class="field">
-          <label class="label">Local de Trabalho</label>
-          <input type="text" class="input" value="{{ doc.local_de_trabalho or '-' }}" disabled>
         </div>
       </div>
     {% endcall %}

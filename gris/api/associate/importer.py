@@ -469,6 +469,13 @@ def parse_associates_report(path_pdf: str) -> dict:
 				)
 				tel_resp = _normalize_phone(tel_resp)
 
+				# Para escotistas (não-beneficiários), telefone inválido fica em branco
+				# sem gerar erro — o PDF pode conter números sem DDD ou incompletos
+				if tel_resp and not _is_beneficiario_category(row.get("Categoria_1_Funcao", "")):
+					num_digits = re.sub(r"\D", "", tel_resp)
+					if len(num_digits) not in (12, 13):
+						tel_resp = ""
+
 				associate_data.update(
 					{
 						"nome_responsavel_1": nome_resp,

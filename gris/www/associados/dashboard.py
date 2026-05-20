@@ -101,13 +101,13 @@ def get_associados_dashboard(categoria=None, ramo=None, secao=None, funcao=None)
 	stats_card = frappe.db.sql(
 		f"""
 		SELECT
-			SUM(CASE WHEN status_no_grupo='Ativo' THEN 1 ELSE 0 END) AS ativos_total,
-			SUM(CASE WHEN status_no_grupo='Ativo' AND categoria='Beneficiário' THEN 1 ELSE 0 END) AS ativos_beneficiarios,
-			SUM(CASE WHEN status_no_grupo='Ativo' AND categoria IN ('Escotista','Dirigente') THEN 1 ELSE 0 END) AS ativos_adultos,
-			SUM(CASE WHEN status_no_grupo='Ativo' AND status='Válido' THEN 1 ELSE 0 END) AS registro_valido,
-			SUM(CASE WHEN status_no_grupo='Ativo' AND status='Vencido' THEN 1 ELSE 0 END) AS registro_vencido,
-			SUM(CASE WHEN status_no_grupo='Ativo' AND IFNULL(registro_isento,'Não')='Sim' THEN 1 ELSE 0 END) AS registro_isento,
-			SUM(CASE WHEN status_no_grupo='Ativo' AND tipo_registro='Provisório' THEN 1 ELSE 0 END) AS registro_provisorio
+			COUNT(*) AS ativos_total,
+			SUM(CASE WHEN categoria='Beneficiário' THEN 1 ELSE 0 END) AS ativos_beneficiarios,
+			SUM(CASE WHEN categoria IN ('Escotista','Dirigente') THEN 1 ELSE 0 END) AS ativos_adultos,
+			SUM(CASE WHEN validade_registro IS NOT NULL AND validade_registro > CURDATE() THEN 1 ELSE 0 END) AS registro_valido,
+			SUM(CASE WHEN validade_registro IS NOT NULL AND validade_registro <= CURDATE() AND IFNULL(registro_isento,'Não')='Não' THEN 1 ELSE 0 END) AS registro_vencido,
+			SUM(CASE WHEN IFNULL(registro_isento,'Não')='Sim' THEN 1 ELSE 0 END) AS registro_isento,
+			SUM(CASE WHEN tipo_registro='Provisório' THEN 1 ELSE 0 END) AS registro_provisorio
 		FROM `tabAssociado`
 		WHERE {where_clause}
 		""",

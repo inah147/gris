@@ -60,8 +60,10 @@
   "convite_section",
   "preco_min_convite",
   "preco_sugerido_convite",
+  "data_limite_vendas",
   "convite_col2",
   "preco_convite",
+  "aceitar_doacoes",
   "produtos_tab",
   "produtos_info_section",
   "produtos_info_html",
@@ -395,6 +397,18 @@
    "label": "Preco do Convite"
   },
   {
+   "default": "0",
+   "fieldname": "aceitar_doacoes",
+   "fieldtype": "Check",
+   "label": "Aceitar doações junto com os convites"
+  },
+  {
+   "fieldname": "data_limite_vendas",
+   "fieldtype": "Date",
+   "label": "Data Limite de Vendas",
+   "reqd": 1
+  },
+  {
    "fieldname": "produtos_tab",
    "fieldtype": "Tab Break",
    "label": "Produtos Vendidos"
@@ -467,6 +481,16 @@
   {
    "group": "Compras",
    "link_doctype": "Contratacao Festa",
+   "link_fieldname": "festa"
+  },
+  {
+   "group": "Vendas",
+   "link_doctype": "Opcao Convite Festa",
+   "link_fieldname": "festa"
+  },
+  {
+   "group": "Vendas",
+   "link_doctype": "Convite Festa",
    "link_fieldname": "festa"
   }
  ],

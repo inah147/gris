@@ -21,6 +21,8 @@ class Festa(Document):
 		self._cache_cenario_antes()
 		self._normalizar_coordenador_geral()
 		self._validar_coordenador_geral()
+		self._validar_data_limite_vendas()
+		self._validar_portaria_completa()
 		self._sincronizar_receitas_e_despesas()
 		self._sincronizar_receitas_e_despesas_barraca()
 		self._calcular_precos_convite()
@@ -73,6 +75,53 @@ class Festa(Document):
 
 		referencia = self.data or date.today()
 		_calcular_idade(getdate(nascimento), getdate(referencia))
+
+	# ---------- Data limite de vendas ----------
+
+	def _validar_data_limite_vendas(self):
+		if not self.data_limite_vendas:
+			return
+		if self.data and getdate(self.data_limite_vendas) > getdate(self.data):
+			frappe.throw(
+				_("A data limite de vendas não pode ser posterior à data da festa.")
+			)
+
+	# ---------- Portaria obrigatória ----------
+
+	def _validar_portaria_completa(self):
+		if self.is_new():
+			return
+		nome_doc = f"{self.name} - {AREA_PORTARIA_NOME}"
+		portaria = frappe.db.get_value(
+			"Area da Festa",
+			nome_doc,
+			[
+				"tipo_coord",
+				"responsavel_coord",
+				"associado_coord",
+				"nome_coord",
+				"email_coord",
+				"telefone_coord",
+			],
+			as_dict=True,
+		)
+		if not portaria:
+			frappe.throw(
+				_("A área Portaria é obrigatória e ainda não foi criada para esta festa.")
+			)
+
+		if portaria.tipo_coord == "Responsavel" and not portaria.responsavel_coord:
+			frappe.throw(_("A área Portaria precisa de um coordenador responsável."))
+		if portaria.tipo_coord == "Associado" and not portaria.associado_coord:
+			frappe.throw(_("A área Portaria precisa de um coordenador associado."))
+		if portaria.tipo_coord == "Outro" and not (
+			portaria.nome_coord and portaria.email_coord and portaria.telefone_coord
+		):
+			frappe.throw(
+				_(
+					"A área Portaria precisa de coordenador com nome, e-mail e telefone preenchidos."
+				)
+			)
 
 	# ---------- Receitas / Despesas por area ----------
 
@@ -403,6 +452,7 @@ def _garantir_area_portaria(festa_name: str) -> None:
 	doc.nome_area = AREA_PORTARIA_NOME
 	doc.descricao = "Area da portaria. Recebe a arrecadacao dos convites."
 	doc.tipo_coord = "Outro"
+	doc.flags.in_portaria_auto_create = True
 	doc.insert(ignore_permissions=True)
 
 

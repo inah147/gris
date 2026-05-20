@@ -3,22 +3,33 @@
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import flt, today
+from frappe.utils import add_days, flt, today
+
+
+def _completar_portaria(festa_name: str) -> None:
+	portaria = frappe.get_doc("Area da Festa", f"{festa_name} - Portaria")
+	portaria.nome_coord = "Coord Portaria"
+	portaria.email_coord = "portaria@example.com"
+	portaria.telefone_coord = "+5511999999999"
+	portaria.save(ignore_permissions=True)
 
 
 class TestFesta(FrappeTestCase):
 	def _nova_festa(self):
-		return frappe.get_doc(
+		festa = frappe.get_doc(
 			{
 				"doctype": "Festa",
 				"nome_festa": f"Festa Teste {frappe.generate_hash(length=8)}",
-				"data": today(),
+				"data": add_days(today(), 30),
+				"data_limite_vendas": add_days(today(), 20),
 				"status": "Em andamento",
 				"expectativa_publico_min": 10,
 				"expectativa_publico_intermediario": 20,
 				"expectativa_publico_max": 30,
 			}
 		).insert(ignore_permissions=True)
+		_completar_portaria(festa.name)
+		return festa
 
 	def test_lista_de_compras_usa_quantidade_final(self):
 		festa = self._nova_festa()

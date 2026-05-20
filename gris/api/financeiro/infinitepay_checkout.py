@@ -4,6 +4,33 @@
 import json
 
 import frappe
+import requests
+
+INFINITEPAY_PAYMENT_CHECK_URL = "https://api.checkout.infinitepay.io/payment_check"
+
+
+def _verificar_pagamento(handle: str, order_nsu: str, transaction_nsu: str | None = None) -> dict:
+	"""Confirma server-to-server se o pagamento é legítimo na InfinitePay.
+
+	Retorna o dict da resposta em caso de sucesso.
+	Levanta requests.exceptions.RequestException em caso de falha de rede ou HTTP.
+	Levanta ValueError se a resposta indicar success=False.
+	"""
+	payload: dict = {"handle": handle, "order_nsu": order_nsu}
+	if transaction_nsu:
+		payload["transaction_nsu"] = transaction_nsu
+
+	response = requests.post(
+		INFINITEPAY_PAYMENT_CHECK_URL,
+		json=payload,
+		headers={"Content-Type": "application/json"},
+		timeout=15,
+	)
+	response.raise_for_status()
+	data = response.json()
+	if not data.get("success"):
+		raise ValueError(f"payment_check retornou success=False para order_nsu={order_nsu}")
+	return data
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
@@ -11,8 +38,15 @@ def webhook_infinitepay():
 	"""Endpoint para receber notificações de pagamento da InfinitePay.
 
 	allow_guest=True: endpoint chamado externamente pela InfinitePay,
-	sem autenticação Frappe. A validação é feita conferindo se o order_nsu
-	existe como documento no sistema.
+	sem autenticação Frappe.
+
+	Fluxo de segurança:
+	1. Valida que o order_nsu existe no sistema.
+	2. Idempotência: se transaction_nsu já estiver preenchido, o pagamento
+	   já foi processado — retorna 200 sem reprocessar.
+	3. Confirma o pagamento server-to-server via /payment_check (InfinitePay).
+	4. Valida que paid=True e que paid_amount >= valor esperado dos itens.
+	5. Só então persiste o pagamento.
 
 	Responde 200 OK em sucesso ou 400 Bad Request em erro
 	(InfinitePay reenvia automaticamente em caso de 400).
@@ -32,23 +66,68 @@ def webhook_infinitepay():
 		frappe.local.response.http_status_code = 400
 		return {"ok": False, "error": {"code": "ORDER_NOT_FOUND", "message": "Cobrança não encontrada."}}
 
+	doc = frappe.get_doc("Cobranca Infinitepay", order_nsu)
+
+	# Idempotência: transaction_nsu preenchido significa que este pagamento
+	# já foi confirmado e persistido anteriormente.
+	if doc.transaction_nsu:
+		frappe.logger().info(
+			f"Webhook InfinitePay ignorado (já processado) para order_nsu={order_nsu}"
+		)
+		return {"ok": True}
+
+	handle = frappe.db.get_single_value("Configuracao infinitepay", "handle")
+	if not handle:
+		frappe.logger().error(f"Handle não configurado. Webhook para order_nsu={order_nsu} não processado.")
+		frappe.local.response.http_status_code = 400
+		return {"ok": False, "error": {"code": "MISSING_HANDLE", "message": "Configuração ausente."}}
+
+	# Confirmação server-to-server: passa o transaction_nsu recebido no webhook
+	# para que a InfinitePay confirme aquela transação específica.
+	transaction_nsu_webhook = data.get("transaction_nsu") or None
+	try:
+		verificacao = _verificar_pagamento(handle, order_nsu, transaction_nsu_webhook)
+	except (requests.exceptions.RequestException, ValueError) as e:
+		frappe.logger().error(f"Falha na verificação InfinitePay para order_nsu={order_nsu}: {e}")
+		frappe.local.response.http_status_code = 400
+		return {"ok": False, "error": {"code": "VERIFICATION_FAILED", "message": "Não foi possível confirmar o pagamento."}}
+
+	# Validação de pagamento efetivo
+	if not verificacao.get("paid"):
+		frappe.logger().warning(f"Webhook rejeitado: paid=False para order_nsu={order_nsu}")
+		frappe.local.response.http_status_code = 400
+		return {"ok": False, "error": {"code": "NOT_PAID", "message": "Pagamento não confirmado."}}
+
+	# Validação cruzada de valor: paid_amount deve cobrir o total dos itens.
+	# paid_amount pode ser maior que o esperado (juros de parcelamento são aceitos).
+	valor_esperado_centavos = sum(
+		item.quantidade * round(item.preco * 100) for item in doc.itens
+	)
+	paid_amount = verificacao.get("paid_amount", 0)
+	if paid_amount < valor_esperado_centavos:
+		frappe.logger().warning(
+			f"Webhook rejeitado: paid_amount={paid_amount} < esperado={valor_esperado_centavos} "
+			f"para order_nsu={order_nsu}"
+		)
+		frappe.local.response.http_status_code = 400
+		return {"ok": False, "error": {"code": "INSUFFICIENT_AMOUNT", "message": "Valor pago insuficiente."}}
+
 	campos_webhook = {
 		"invoice_slug": data.get("invoice_slug", ""),
-		"amount": data.get("amount", 0),
-		"paid_amount": data.get("paid_amount", 0),
-		"installments": data.get("installments", 0),
-		"capture_method": data.get("capture_method", ""),
+		"amount": verificacao.get("amount", 0),
+		"paid_amount": paid_amount,
+		"installments": verificacao.get("installments", 0),
+		"capture_method": verificacao.get("capture_method", ""),
 		"transaction_nsu": data.get("transaction_nsu", ""),
 		"receipt_url": data.get("receipt_url", ""),
 		"status": "Pago",
 	}
 
-	frappe.db.set_value(
-		"Cobranca Infinitepay",
-		order_nsu,
-		campos_webhook,
-		update_modified=True,
-	)
+	# Usamos save() em vez de db.set_value para que o on_update da Cobranca
+	# dispare e os handlers registrados em doc_events (módulo Festas e futuros
+	# consumidores) reajam à transição de status.
+	doc.update(campos_webhook)
+	doc.save(ignore_permissions=True)
 	frappe.db.commit()
 
 	frappe.logger().info(f"Webhook InfinitePay processado para order_nsu={order_nsu}")

@@ -1,0 +1,131 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:{festa} - {nome_convite}",
+ "creation": "2026-05-20 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "festa",
+  "nome_convite",
+  "ativo",
+  "column_break_dados",
+  "valor",
+  "quantidade_esperada",
+  "quantidade_vendida",
+  "imagem_section",
+  "imagem_capa"
+ ],
+ "fields": [
+  {
+   "fieldname": "festa",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Festa",
+   "options": "Festa",
+   "reqd": 1
+  },
+  {
+   "fieldname": "nome_convite",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome do Convite",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "ativo",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Ativo"
+  },
+  {
+   "fieldname": "column_break_dados",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "valor",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Valor",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "quantidade_esperada",
+   "fieldtype": "Int",
+   "label": "Quantidade Esperada de Vendas",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "quantidade_vendida",
+   "fieldtype": "Int",
+   "label": "Quantidade Atual de Vendas",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "imagem_section",
+   "fieldtype": "Section Break",
+   "label": "Imagem de Capa"
+  },
+  {
+   "fieldname": "imagem_capa",
+   "fieldtype": "Attach Image",
+   "label": "Imagem de Capa"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [
+  {
+   "group": "Vendas",
+   "link_doctype": "Convite Festa",
+   "link_fieldname": "festa"
+  }
+ ],
+ "modified": "2026-05-20 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Festas",
+ "name": "Opcao Convite Festa",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de festas",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Visualizador de festas"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "nome_convite"
+}

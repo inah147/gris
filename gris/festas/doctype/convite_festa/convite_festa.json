@@ -1,0 +1,174 @@
+{
+ "actions": [],
+ "autoname": "format:CF-{YYYY}-{#####}",
+ "creation": "2026-05-20 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "festa",
+  "secao_pedido",
+  "itens",
+  "secao_pagador",
+  "nome_pagador",
+  "telefone_pagador",
+  "column_break_pagador",
+  "email_pagador",
+  "secao_pagamento",
+  "valor_total",
+  "status_pagamento",
+  "column_break_pagamento",
+  "cobranca_infinitepay",
+  "secao_controle",
+  "pagador_recebe_qr_codes",
+  "convidados"
+ ],
+ "fields": [
+  {
+   "fieldname": "festa",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Festa",
+   "options": "Festa",
+   "reqd": 1
+  },
+  {
+   "fieldname": "secao_pedido",
+   "fieldtype": "Section Break",
+   "label": "Dados do Pedido"
+  },
+  {
+   "fieldname": "itens",
+   "fieldtype": "Table",
+   "label": "Itens",
+   "options": "Item Convite Festa",
+   "reqd": 1
+  },
+  {
+   "fieldname": "secao_pagador",
+   "fieldtype": "Section Break",
+   "label": "Dados do Pagador"
+  },
+  {
+   "fieldname": "nome_pagador",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome do Pagador",
+   "reqd": 1
+  },
+  {
+   "fieldname": "telefone_pagador",
+   "fieldtype": "Data",
+   "label": "Telefone do Pagador",
+   "options": "Phone",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_pagador",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "email_pagador",
+   "fieldtype": "Data",
+   "label": "E-mail do Pagador",
+   "options": "Email",
+   "reqd": 1
+  },
+  {
+   "fieldname": "secao_pagamento",
+   "fieldtype": "Section Break",
+   "label": "Dados do Pagamento"
+  },
+  {
+   "fieldname": "valor_total",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Valor Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status_pagamento",
+   "fieldtype": "Data",
+   "is_virtual": 1,
+   "label": "Status do Pagamento",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_pagamento",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cobranca_infinitepay",
+   "fieldtype": "Link",
+   "label": "Cobrança Infinitepay",
+   "options": "Cobranca Infinitepay",
+   "read_only": 1
+  },
+  {
+   "fieldname": "secao_controle",
+   "fieldtype": "Section Break",
+   "label": "Controle de Entrada"
+  },
+  {
+   "default": "0",
+   "description": "Quando marcado, todos os QR codes são enviados em um único e-mail para o pagador.",
+   "fieldname": "pagador_recebe_qr_codes",
+   "fieldtype": "Check",
+   "label": "Pagador recebe todos os QR codes"
+  },
+  {
+   "depends_on": "eval:!doc.pagador_recebe_qr_codes",
+   "description": "Lista gerada automaticamente quando o pagador recebe todos os QR codes.",
+   "fieldname": "convidados",
+   "fieldtype": "Table",
+   "label": "Convidados",
+   "options": "Convidado Convite Festa"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-05-20 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Festas",
+ "name": "Convite Festa",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de festas",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Visualizador de festas"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "nome_pagador"
+}

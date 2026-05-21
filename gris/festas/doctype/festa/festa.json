@@ -34,6 +34,7 @@
   "configs_col2",
   "taxa_media_cartao",
   "tipo_convite",
+  "convites_por_ramo",
   "orcamento_section",
   "receitas_por_area",
   "despesas_por_area",
@@ -237,6 +238,12 @@
    "fieldtype": "Select",
    "label": "Tipo de Convite",
    "options": "Com consumo\nSomente entrada"
+  },
+  {
+   "default": "0",
+   "fieldname": "convites_por_ramo",
+   "fieldtype": "Check",
+   "label": "Convites por ramo"
   },
   {
    "fieldname": "orcamento_section",

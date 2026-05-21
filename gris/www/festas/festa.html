@@ -1,5 +1,6 @@
 {% extends "templates/web_sidebar_base.html" %}
 {% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, input, empty, badge, switch %}
+{% from "public/design_system/components/composed/file-upload.html.jinja" import file_upload %}
 {% from "public/design_system/components/generated/tabs.html.jinja" import tabs %}
 {% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
 {% from "public/design_system/components/generated/popover.html.jinja" import popover %}
@@ -111,6 +112,7 @@ window._festaData = {
 	despesasPorArea: {{ despesas_por_area | tojson }},
 	receitasPorBarraca: {{ receitas_por_barraca | tojson }},
 	despesasPorBarraca: {{ despesas_por_barraca | tojson }},
+	convitesDashboard: {{ convites_dashboard | tojson }},
 };
 </script>
 
@@ -476,6 +478,116 @@ window._festaData = {
 </div>
 {% endset %}
 
+{# ─── Tab: Convites ─── #}
+{% set tab_convites %}
+<div class="festa-tab-content">
+
+	{# Seção — Configurações + link público #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Configurações da venda</h2>
+			<p class="festa-card__subtitle">Tipos de convite, doações e prazo de vendas.</p>
+		</div>
+		<div class="festa-convites-actions">
+			<a
+				href="/festas/venda_convite"
+				target="_blank"
+				rel="noopener"
+				class="btn-sm-outline"
+				aria-label="Abrir página pública de venda"
+			>
+				{{ lucide_icon("external-link", size="sm") }}
+				<span>Abrir página de venda</span>
+			</a>
+			<button type="button" class="btn-sm-outline" id="btn-copy-link-vendas" aria-label="Copiar link de venda">
+				{{ lucide_icon("copy", size="sm") }}
+				<span>Copiar link</span>
+			</button>
+			{% if can_edit %}
+			<button
+				type="button"
+				class="btn-sm-outline"
+				id="btn-config-convites"
+				onclick="document.getElementById('dialog-convites-config').showModal()"
+			>
+				{{ lucide_icon("settings", size="sm") }}
+				<span>Configurar</span>
+			</button>
+			{% endif %}
+		</div>
+	</div>
+	<div id="convites-config-summary" class="festa-info-grid"></div>
+	{% endcall %}
+
+	{# Seção — Gráfico de barras (qtd/valor por opção) #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Vendas confirmadas por tipo de convite</h2>
+			<p class="festa-card__subtitle">Apenas pedidos com pagamento confirmado.</p>
+		</div>
+		<div class="festa-convites-chart-toggle">
+			<button type="button" class="btn-sm-outline" data-chart="barras" data-mode="qtd" aria-pressed="true">Quantidade</button>
+			<button type="button" class="btn-sm-outline" data-chart="barras" data-mode="valor" aria-pressed="false">Valor</button>
+		</div>
+	</div>
+	<div id="chart-convites-barras" class="festa-convites-chart"></div>
+	{% endcall %}
+
+	{# Seção — Gauges por opção (vendido vs esperado) #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Progresso por convite</h2>
+			<p class="festa-card__subtitle">Vendido x esperado, por tipo de convite.</p>
+		</div>
+	</div>
+	<div id="chart-convites-gauges" class="festa-convites-gauges"></div>
+	{% endcall %}
+
+	{# Seção — Convites por beneficiário do ramo (só quando convites_por_ramo=1) #}
+	<div id="card-convites-por-ramo" hidden>
+		{% call card(attrs={"class": "festa-card"}) %}
+		<div class="festa-card__header">
+			<div>
+				<h2 class="festa-card__title">Convites por beneficiário do ramo</h2>
+				<p class="festa-card__subtitle">Vendidos / beneficiários ativos na UEL. A linha tracejada marca a média por associado.</p>
+			</div>
+		</div>
+		<div id="chart-convites-por-ramo" class="festa-convites-chart"></div>
+		{% endcall %}
+	</div>
+
+	{# Seção — Linha de vendas por dia #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Convites vendidos por dia</h2>
+			<p class="festa-card__subtitle">Tendência diária da venda de convites pagos.</p>
+		</div>
+		<div class="festa-convites-chart-toggle">
+			<button type="button" class="btn-sm-outline" data-chart="linha" data-mode="total" aria-pressed="true">Total</button>
+			<button type="button" class="btn-sm-outline" data-chart="linha" data-mode="por_opcao" aria-pressed="false">Por convite</button>
+		</div>
+	</div>
+	<div id="chart-convites-linha" class="festa-convites-chart"></div>
+	{% endcall %}
+
+	{# Seção — Tabela de convites vendidos #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Pedidos de convite</h2>
+			<p class="festa-card__subtitle">Uma linha por item de convite (todos os status).</p>
+		</div>
+	</div>
+	<div id="convites-table-container"></div>
+	{% endcall %}
+
+</div>
+{% endset %}
+
 {# ─── Tabs ─── #}
 {{ tabs(
 	id="festa-tabs",
@@ -484,7 +596,8 @@ window._festaData = {
 		{"id": "produtos-vendidos", "tab": "Produtos Vendidos", "panel": tab_produtos_vendidos},
 		{"id": "compras", "tab": "Compras", "panel": tab_compras},
 		{"id": "contratacoes", "tab": "Contratações", "panel": tab_contratacoes},
-		{"id": "orcamento", "tab": "Orçamento", "panel": tab_orcamento}
+		{"id": "orcamento", "tab": "Orçamento", "panel": tab_orcamento},
+		{"id": "convites", "tab": "Convites", "panel": tab_convites}
 	]
 ) }}
 
@@ -926,6 +1039,98 @@ window._festaData = {
 	<footer>
 		<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Cancelar</button>
 		<button type="button" class="btn-primary" id="btn-edit-barraca-salvar">Salvar</button>
+	</footer>
+	<button type="button" aria-label="Fechar dialog" onclick="this.closest('dialog').close()">
+		<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+	</button>
+</div>
+</dialog>
+
+{# Dialog — Configurar venda de convites #}
+<dialog
+	id="dialog-convites-config"
+	class="dialog dialog-convites-config dialog-edit-large"
+	aria-labelledby="dialog-convites-config-title"
+	onclick="if (event.target === this) this.close()"
+>
+<div>
+	<header>
+		<h2 id="dialog-convites-config-title">Configurar venda de convites</h2>
+	</header>
+	<section class="festa-dialog-edit-body">
+		<div class="festa-dialog-form">
+			{% call field(label="Aceitar doações junto com os convites") %}
+				{{ switch(name="cfg-aceitar-doacoes", attrs={"id": "cfg-aceitar-doacoes"}) }}
+			{% endcall %}
+			{% call field(label="Data limite de vendas") %}
+				{{ input(attrs={"id": "cfg-data-limite-vendas", "type": "date"}) }}
+			{% endcall %}
+		</div>
+
+		<h3 class="festa-equipe-title">Tipos de convite</h3>
+		<p class="text-sm text-muted-foreground">
+			Alterar o valor afeta apenas vendas futuras. Pedidos já registrados mantêm o valor original.
+		</p>
+		<div id="opcoes-convite-table-container"></div>
+
+		<div id="opcao-convite-form" class="equipe-member-form" hidden>
+			<div class="festa-dialog-form festa-compra-form-grid">
+				{% call field(label="Nome do convite *") %}
+					{{ input(attrs={"id": "opcao-nome-convite", "required": "required", "placeholder": "Ex.: Inteira, Meia, Família"}) }}
+				{% endcall %}
+				{% call field(label="Valor (R$) *") %}
+					{{ input(attrs={"id": "opcao-valor", "type": "number", "min": "0", "step": "0.01", "placeholder": "0,00"}) }}
+				{% endcall %}
+				{% call field(label="Quantidade esperada") %}
+					{{ input(attrs={"id": "opcao-quantidade-esperada", "type": "number", "min": "0", "step": "1", "placeholder": "0"}) }}
+				{% endcall %}
+				{% call field(label="Ativo") %}
+					{{ switch(name="opcao-ativo", attrs={"id": "opcao-ativo", "checked": "checked"}) }}
+				{% endcall %}
+				<div class="opcao-imagem-uploader">
+					<div class="opcao-imagem-preview" id="opcao-imagem-preview" aria-live="polite">
+						<span class="opcao-imagem-empty">Nenhuma imagem selecionada.</span>
+					</div>
+					<input type="hidden" id="opcao-imagem-capa" value="" />
+					{{ file_upload(
+						id="opcao-imagem-upload",
+						label="Imagem de capa",
+						description="Imagem mostrada na vitrine pública. Será sempre pública.",
+						trigger_label="Selecionar imagem",
+						dialog_title="Enviar imagem do convite",
+						dialog_description="Envie uma imagem que represente este tipo de convite.",
+						allowed_extensions=["png", "jpg", "jpeg", "webp", "gif"],
+						accept="image/*",
+						folder="Home",
+						is_private=false,
+						allow_private_choice=false
+					) }}
+					<button type="button" class="btn-sm-outline opcao-imagem-remover" id="btn-opcao-imagem-remover" hidden>
+						{{ lucide_icon("trash-2", size="sm") }}
+						<span>Remover imagem</span>
+					</button>
+				</div>
+			</div>
+			<div class="equipe-member-form__actions">
+				<button type="button" class="btn-sm-outline" id="btn-opcao-cancelar">Cancelar</button>
+				<button type="button" class="btn-sm-primary" id="btn-opcao-confirmar">Salvar tipo</button>
+			</div>
+		</div>
+
+		<div class="festa-opcao-actions">
+			<button type="button" class="btn-sm-outline festa-add-membro-btn" id="btn-convites-por-ramo" hidden>
+				{{ lucide_icon("users", size="sm") }}
+				<span>Convites por ramo</span>
+			</button>
+			<button type="button" class="btn-sm-outline festa-add-membro-btn" id="btn-add-opcao-convite">
+				{{ lucide_icon("plus", size="sm") }}
+				<span>Adicionar tipo</span>
+			</button>
+		</div>
+	</section>
+	<footer>
+		<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Fechar</button>
+		<button type="button" class="btn-primary" id="btn-convites-config-salvar">Salvar configurações</button>
 	</footer>
 	<button type="button" aria-label="Fechar dialog" onclick="this.closest('dialog').close()">
 		<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>

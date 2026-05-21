@@ -2514,6 +2514,775 @@
 		}
 	}
 
+	// ─── Convites tab ────────────────────────────────────────────────────────
+
+	const CHART_PALETTE = [
+		"#0072B2", "#E69F00", "#009E73", "#D55E00",
+		"#56B4E9", "#CC79A7", "#F0E442", "#000000",
+	];
+	let convitesDashboard = window._festaData.convitesDashboard || {
+		opcoes: [], convites: [], series_por_dia: [],
+		aceitar_doacoes: false, data_limite_vendas: "",
+		link_publico: "/festas/venda_convite",
+		totais: { qtd_por_opcao: {}, valor_por_opcao: {}, total_doacoes_valor: 0 },
+	};
+	let convitesBarrasMode = "qtd";
+	let convitesLinhaMode = "total";
+	let chartBarrasInstance = null;
+	let chartLinhaInstance = null;
+	let chartConvitesPorRamoInstance = null;
+	const gaugeInstances = new Map();
+	const RAMOS_ORDEM = ["Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro", "Diretoria"];
+	let echartsLoading = null;
+	let opcaoDraft = null;
+	let opcaoLocalList = [];
+
+	function ensureECharts() {
+		if (window.echarts) return Promise.resolve();
+		if (echartsLoading) return echartsLoading;
+		echartsLoading = new Promise(function (resolve, reject) {
+			const script = document.createElement("script");
+			script.src = "/assets/gris/vendor/echarts/echarts.min.js";
+			script.onload = function () {
+				if (window.echarts) resolve();
+				else reject(new Error("ECharts não carregou."));
+			};
+			script.onerror = function () { reject(new Error("Falha ao carregar ECharts.")); };
+			document.head.appendChild(script);
+		});
+		return echartsLoading;
+	}
+
+	function fmtMoeda(valor) {
+		return new Intl.NumberFormat("pt-BR", {
+			style: "currency", currency: "BRL", minimumFractionDigits: 2,
+		}).format(Number(valor) || 0);
+	}
+
+	function fmtInt(valor) {
+		return new Intl.NumberFormat("pt-BR").format(Number(valor) || 0);
+	}
+
+	function badgeStatus(status) {
+		const map = {
+			"Pago": "success",
+			"Pendente": "secondary",
+			"Erro": "destructive",
+		};
+		const variant = map[status] || "secondary";
+		return '<span class="badge badge-' + variant + '">' + (status || "Pendente") + "</span>";
+	}
+
+	function renderConvitesConfigSummary() {
+		const container = document.getElementById("convites-config-summary");
+		if (!container) return;
+		const data = convitesDashboard.data_limite_vendas
+			? new Date(convitesDashboard.data_limite_vendas + "T00:00:00").toLocaleDateString("pt-BR")
+			: "—";
+		const doacoes = convitesDashboard.aceitar_doacoes ? "Sim" : "Não";
+		const tiposAtivos = (convitesDashboard.opcoes || []).filter(function (o) { return o.ativo; }).length;
+		const tiposTotal = (convitesDashboard.opcoes || []).length;
+		container.innerHTML =
+			'<div><dt>Tipos cadastrados</dt><dd>' + tiposAtivos + " ativos / " + tiposTotal + " no total</dd></div>" +
+			'<div><dt>Aceita doações</dt><dd>' + doacoes + "</dd></div>" +
+			"<div><dt>Limite de vendas</dt><dd>" + data + "</dd></div>";
+	}
+
+	function renderConvitesBarras() {
+		const el = document.getElementById("chart-convites-barras");
+		if (!el) return;
+		ensureECharts().then(function () {
+			if (!chartBarrasInstance) {
+				chartBarrasInstance = window.echarts.init(el);
+				window.addEventListener("resize", function () {
+					if (chartBarrasInstance) chartBarrasInstance.resize();
+				});
+			}
+			const opcoes = convitesDashboard.opcoes || [];
+			const isValor = convitesBarrasMode === "valor";
+			const totais = convitesDashboard.totais || {};
+			const dataMap = isValor ? (totais.valor_por_opcao || {}) : (totais.qtd_por_opcao || {});
+			const categorias = opcoes.map(function (o) { return o.nome_convite || o.name; });
+			const valores = opcoes.map(function (o) {
+				return Number(dataMap[o.name] || 0);
+			});
+			if (isValor && convitesDashboard.aceitar_doacoes) {
+				categorias.push("Doações");
+				valores.push(Number(totais.total_doacoes_valor || 0));
+			}
+			const formatter = isValor ? fmtMoeda : fmtInt;
+			chartBarrasInstance.setOption({
+				aria: { enabled: true },
+				color: CHART_PALETTE,
+				tooltip: {
+					trigger: "axis",
+					axisPointer: { type: "shadow" },
+					formatter: function (params) {
+						const p = params[0];
+						return p.name + "<br/>" + p.marker + " " + formatter(p.value);
+					},
+				},
+				legend: { show: false },
+				grid: { left: 16, right: 24, top: 24, bottom: 48, containLabel: true },
+				xAxis: {
+					type: "category",
+					data: categorias,
+					axisLabel: { interval: 0, rotate: categorias.length > 4 ? 20 : 0 },
+				},
+				yAxis: {
+					type: "value",
+					name: isValor ? "Valor (R$)" : "Quantidade",
+					nameLocation: "middle",
+					nameGap: 56,
+					nameRotate: 90,
+					nameTextStyle: { fontSize: 12 },
+					axisLabel: {
+						formatter: function (v) {
+							return isValor ? "R$ " + Number(v).toLocaleString("pt-BR") : Number(v).toLocaleString("pt-BR");
+						},
+					},
+				},
+				series: [{
+					name: isValor ? "Valor" : "Quantidade",
+					type: "bar",
+					data: valores,
+					barMaxWidth: 64,
+					itemStyle: { borderRadius: [4, 4, 0, 0] },
+				}],
+			}, true);
+		}).catch(function (err) {
+			toast(err.message || "Erro ao carregar gráficos.", "error");
+		});
+	}
+
+	function renderConvitesGauges() {
+		const container = document.getElementById("chart-convites-gauges");
+		if (!container) return;
+		ensureECharts().then(function () {
+			const opcoes = (convitesDashboard.opcoes || []).filter(function (o) { return o.ativo; });
+			gaugeInstances.forEach(function (inst) { inst.dispose(); });
+			gaugeInstances.clear();
+			container.innerHTML = "";
+			if (!opcoes.length) {
+				container.innerHTML = '<p class="text-sm text-muted-foreground">Cadastre opções de convite para visualizar o progresso.</p>';
+				return;
+			}
+			const totais = convitesDashboard.totais || {};
+			const wrap = document.createElement("div");
+			wrap.className = "chart-gauge-ring";
+			container.appendChild(wrap);
+
+			const n = opcoes.length;
+			const itemSpacing = n > 4 ? 18 : 22;
+			const innerGap = 10;
+			const startY = -((n - 1) * itemSpacing) / 2;
+
+			const data = opcoes.map(function (opcao, idx) {
+				const vendido = Number((totais.qtd_por_opcao || {})[opcao.name] || 0);
+				const esperado = Number(opcao.quantidade_esperada || 0);
+				const pct = esperado > 0 ? Math.min(100, (vendido / esperado) * 100) : 0;
+				const rowCenter = startY + idx * itemSpacing;
+				const color = CHART_PALETTE[idx % CHART_PALETTE.length];
+				return {
+					value: Number(pct.toFixed(1)),
+					name: opcao.nome_convite,
+					title: { offsetCenter: ["0%", (rowCenter - innerGap / 2) + "%"] },
+					detail: {
+						valueAnimation: true,
+						offsetCenter: ["0%", (rowCenter + innerGap / 2) + "%"],
+						borderColor: color,
+					},
+					itemStyle: { color: color },
+				};
+			});
+
+			const inst = window.echarts.init(wrap);
+			gaugeInstances.set("__ring__", inst);
+			inst.setOption({
+				aria: { enabled: true },
+				color: CHART_PALETTE,
+				series: [{
+					type: "gauge",
+					startAngle: 90,
+					endAngle: -270,
+					radius: "85%",
+					pointer: { show: false },
+					progress: {
+						show: true,
+						overlap: false,
+						roundCap: true,
+						clip: false,
+						itemStyle: { borderWidth: 1, borderColor: "#fff" },
+					},
+					axisLine: { lineStyle: { width: 24, color: [[1, "#E5E7EB"]] } },
+					splitLine: { show: false },
+					axisTick: { show: false },
+					axisLabel: { show: false },
+					data: data,
+					title: { fontSize: 12, color: "#6b7280" },
+					detail: {
+						width: 56,
+						height: 16,
+						fontSize: 13,
+						fontWeight: 600,
+						color: "inherit",
+						borderWidth: 1,
+						borderRadius: 20,
+						formatter: "{value}%",
+					},
+				}],
+			});
+		}).catch(function (err) {
+			toast(err.message || "Erro ao carregar gráficos.", "error");
+		});
+	}
+
+	function renderChartConvitesPorRamo() {
+		const card = document.getElementById("card-convites-por-ramo");
+		const el = document.getElementById("chart-convites-por-ramo");
+		if (!card || !el) return;
+		if (!convitesDashboard.convites_por_ramo) {
+			card.hidden = true;
+			return;
+		}
+		card.hidden = false;
+		ensureECharts().then(function () {
+			if (!chartConvitesPorRamoInstance) {
+				chartConvitesPorRamoInstance = window.echarts.init(el);
+				window.addEventListener("resize", function () {
+					if (chartConvitesPorRamoInstance) chartConvitesPorRamoInstance.resize();
+				});
+			}
+			const porRamo = convitesDashboard.por_ramo || {};
+			const media = Number(convitesDashboard.convites_por_associado || 0);
+			const valores = RAMOS_ORDEM.map(function (ramo) {
+				const info = porRamo[ramo] || {};
+				const beneficiarios = Number(info.beneficiarios_ativos || 0);
+				const vendidos = Number(info.qtd_vendida || 0);
+				return beneficiarios > 0 ? vendidos / beneficiarios : 0;
+			});
+			el.setAttribute(
+				"aria-label",
+				"Convites vendidos por beneficiário em cada ramo; linha tracejada indica a média de " +
+				media.toFixed(2) + " convites por associado."
+			);
+			chartConvitesPorRamoInstance.setOption({
+				aria: { enabled: true },
+				color: [CHART_PALETTE[0]],
+				tooltip: {
+					trigger: "axis",
+					axisPointer: { type: "shadow" },
+					formatter: function (params) {
+						const p = params[0];
+						const ramo = p.name;
+						const info = porRamo[ramo] || {};
+						return ramo + "<br/>" +
+							p.marker + " " + Number(p.value).toFixed(2) + " convite(s) / beneficiário<br/>" +
+							"Vendidos: " + fmtInt(info.qtd_vendida || 0) +
+							" · Benef. ativos: " + fmtInt(info.beneficiarios_ativos || 0);
+					},
+				},
+				legend: { show: false },
+				grid: { left: 16, right: 32, top: 32, bottom: 48, containLabel: true },
+				xAxis: {
+					type: "category",
+					data: RAMOS_ORDEM,
+					axisLabel: { interval: 0 },
+				},
+				yAxis: {
+					type: "value",
+					name: "Convites / beneficiário",
+					nameLocation: "middle",
+					nameGap: 48,
+					nameRotate: 90,
+					nameTextStyle: { fontSize: 12 },
+				},
+				series: [{
+					name: "Convites por beneficiário",
+					type: "bar",
+					data: valores,
+					barMaxWidth: 64,
+					itemStyle: { borderRadius: [4, 4, 0, 0] },
+					markLine: {
+						symbol: "none",
+						silent: true,
+						lineStyle: { type: "dashed", color: CHART_PALETTE[7], width: 2 },
+						label: {
+							show: true,
+							position: "end",
+							formatter: "Média/assoc: " + media.toFixed(2),
+						},
+						data: [{ yAxis: media, name: "Média por associado" }],
+					},
+				}],
+			}, true);
+		}).catch(function (err) {
+			toast(err.message || "Erro ao carregar gráfico de ramos.", "error");
+		});
+	}
+
+	function updateConvitesPorRamoButtonVisibility() {
+		const btn = document.getElementById("btn-convites-por-ramo");
+		if (!btn) return;
+		btn.hidden = opcaoLocalList.length > 0;
+	}
+
+	function renderConvitesLinha() {
+		const el = document.getElementById("chart-convites-linha");
+		if (!el) return;
+		ensureECharts().then(function () {
+			if (!chartLinhaInstance) {
+				chartLinhaInstance = window.echarts.init(el);
+				window.addEventListener("resize", function () {
+					if (chartLinhaInstance) chartLinhaInstance.resize();
+				});
+			}
+			const linhas = convitesDashboard.series_por_dia || [];
+			const diasSet = new Set();
+			const opcoesMap = new Map();
+			linhas.forEach(function (row) {
+				diasSet.add(row.dia);
+				const key = row.opcao_convite || row.tipo_convite;
+				if (!opcoesMap.has(key)) {
+					opcoesMap.set(key, { label: row.tipo_convite || key, por_dia: {} });
+				}
+				opcoesMap.get(key).por_dia[row.dia] = Number(row.quantidade || 0);
+			});
+			const dias = Array.from(diasSet).sort();
+			let series = [];
+			if (convitesLinhaMode === "total") {
+				const totalPorDia = dias.map(function (d) {
+					return linhas
+						.filter(function (l) { return l.dia === d; })
+						.reduce(function (acc, l) { return acc + Number(l.quantidade || 0); }, 0);
+				});
+				series = [{
+					name: "Total",
+					type: "line",
+					smooth: true,
+					symbol: "circle",
+					data: totalPorDia,
+				}];
+			} else {
+				series = Array.from(opcoesMap.entries()).map(function (entry, idx) {
+					const info = entry[1];
+					return {
+						name: info.label,
+						type: "line",
+						smooth: true,
+						symbol: ["circle", "rect", "triangle", "diamond"][idx % 4],
+						lineStyle: { type: ["solid", "dashed", "dotted"][idx % 3] },
+						data: dias.map(function (d) { return Number(info.por_dia[d] || 0); }),
+					};
+				});
+			}
+			chartLinhaInstance.setOption({
+				aria: { enabled: true },
+				color: CHART_PALETTE,
+				tooltip: { trigger: "axis" },
+				legend: { show: convitesLinhaMode !== "total", bottom: 0 },
+				grid: { left: 16, right: 24, top: 24, bottom: 48, containLabel: true },
+				xAxis: {
+					type: "category",
+					boundaryGap: false,
+					data: dias.map(function (d) {
+						const parts = d.split("-");
+						return parts.length === 3 ? parts[2] + "/" + parts[1] : d;
+					}),
+				},
+				yAxis: {
+					type: "value",
+					name: "Convites",
+					nameLocation: "middle",
+					nameGap: 40,
+					nameRotate: 90,
+					nameTextStyle: { fontSize: 12 },
+					minInterval: 1,
+				},
+				series: series,
+			}, true);
+		}).catch(function (err) {
+			toast(err.message || "Erro ao carregar gráficos.", "error");
+		});
+	}
+
+	function renderConvitesTable() {
+		const container = document.getElementById("convites-table-container");
+		if (!container) return;
+		const linhas = convitesDashboard.convites || [];
+		if (!linhas.length) {
+			container.innerHTML = '<p class="text-sm text-muted-foreground">Nenhum convite registrado para esta festa ainda.</p>';
+			return;
+		}
+		const headers = [
+			{ label: "Pagador", sortType: "text" },
+			{ label: "E-mail", sortType: "text" },
+			{ label: "Tipo de convite", sortType: "text" },
+			{ label: "Qtd.", sortType: "number" },
+			{ label: "Status", sortType: "text" },
+		];
+		const body = linhas.map(function (row) {
+			return "<tr>" +
+				"<td>" + frappe.utils.escape_html(row.nome_pagador || "—") + "</td>" +
+				"<td>" + frappe.utils.escape_html(row.email_pagador || "—") + "</td>" +
+				"<td>" + frappe.utils.escape_html(row.tipo_convite || "—") + "</td>" +
+				"<td>" + fmtInt(row.quantidade) + "</td>" +
+				"<td>" + badgeStatus(row.status_pagamento) + "</td>" +
+				"</tr>";
+		}).join("");
+		container.innerHTML = buildSortableTable(headers, body);
+		notifyDesignSystem();
+	}
+
+	function renderOpcoesTable() {
+		const container = document.getElementById("opcoes-convite-table-container");
+		if (!container) {
+			updateConvitesPorRamoButtonVisibility();
+			return;
+		}
+		if (!opcaoLocalList.length) {
+			container.innerHTML = '<p class="text-sm text-muted-foreground">Nenhum tipo de convite cadastrado.</p>';
+			updateConvitesPorRamoButtonVisibility();
+			return;
+		}
+		const headers = ["Nome", "Valor", "Esperado", "Vendido", "Ativo", '<span class="sr-only">Ações</span>'];
+		const body = opcaoLocalList.map(function (op, idx) {
+			const actions = canEdit
+				? '<button type="button" class="btn-sm-outline" data-opcao-edit="' + idx + '" aria-label="Editar">✎</button>' +
+				  ' <button type="button" class="btn-sm-outline" data-opcao-delete="' + idx + '" aria-label="Excluir">🗑</button>'
+				: "";
+			return "<tr>" +
+				"<td>" + frappe.utils.escape_html(op.nome_convite) + "</td>" +
+				"<td>" + fmtMoeda(op.valor) + "</td>" +
+				"<td>" + fmtInt(op.quantidade_esperada) + "</td>" +
+				"<td>" + fmtInt(op.quantidade_vendida) + "</td>" +
+				"<td>" + (op.ativo ? "Sim" : "Não") + "</td>" +
+				"<td class=\"festa-table-actions\">" + actions + "</td>" +
+				"</tr>";
+		}).join("");
+		container.innerHTML = '<div class="festa-table-scroll">' +
+			'<table class="festa-table"><thead><tr>' +
+			headers.map(function (h) { return "<th>" + h + "</th>"; }).join("") +
+			"</tr></thead><tbody>" + body + "</tbody></table></div>";
+
+		updateConvitesPorRamoButtonVisibility();
+
+		if (!canEdit) return;
+		container.querySelectorAll("[data-opcao-edit]").forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				const idx = Number(btn.getAttribute("data-opcao-edit"));
+				openOpcaoForm(opcaoLocalList[idx]);
+			});
+		});
+		container.querySelectorAll("[data-opcao-delete]").forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				const idx = Number(btn.getAttribute("data-opcao-delete"));
+				const op = opcaoLocalList[idx];
+				confirmDialog({
+					title: "Excluir tipo de convite",
+					message: "Tem certeza que deseja excluir '" + op.nome_convite + "'?",
+					confirmLabel: "Excluir",
+				}).then(function (ok) {
+					if (!ok) return;
+					api("gris.api.festas.convites.delete_opcao", { opcao_name: op.name })
+						.then(function () {
+							toast("Tipo de convite excluído.", "success");
+							opcaoLocalList.splice(idx, 1);
+							renderOpcoesTable();
+						})
+						.catch(function (err) {
+							toast(err.message || "Não foi possível excluir.", "error");
+						});
+				});
+			});
+		});
+	}
+
+	function getSwitchInput(id) {
+		const wrap = document.getElementById(id);
+		if (!wrap) return null;
+		// O macro `switch` envolve um <input type="checkbox"> dentro de um <label>;
+		// o `id` fica no <label>, então é preciso buscar o input por dentro.
+		if (wrap.tagName === "INPUT") return wrap;
+		return wrap.querySelector('input[type="checkbox"]');
+	}
+
+	function setSwitchChecked(id, checked) {
+		const input = getSwitchInput(id);
+		if (input) input.checked = !!checked;
+	}
+
+	function getSwitchChecked(id) {
+		const input = getSwitchInput(id);
+		return input ? !!input.checked : false;
+	}
+
+	function renderOpcaoImagemPreview(url) {
+		const preview = document.getElementById("opcao-imagem-preview");
+		const removeBtn = document.getElementById("btn-opcao-imagem-remover");
+		const triggerSpan = document.querySelector(
+			"#opcao-imagem-upload [data-file-upload-open] span"
+		);
+		if (!preview) return;
+		if (url) {
+			preview.innerHTML = '<img class="opcao-imagem-thumb" alt="Capa do convite" />';
+			preview.querySelector("img").src = url;
+			if (removeBtn) removeBtn.hidden = false;
+			if (triggerSpan) triggerSpan.textContent = "Substituir imagem";
+		} else {
+			preview.innerHTML = '<span class="opcao-imagem-empty">Nenhuma imagem selecionada.</span>';
+			if (removeBtn) removeBtn.hidden = true;
+			if (triggerSpan) triggerSpan.textContent = "Selecionar imagem";
+		}
+	}
+
+	function openOpcaoForm(opcao) {
+		const form = document.getElementById("opcao-convite-form");
+		if (!form) return;
+		opcaoDraft = opcao ? Object.assign({}, opcao) : { name: "", nome_convite: "", valor: 0, quantidade_esperada: 0, ativo: true, imagem_capa: "" };
+		document.getElementById("opcao-nome-convite").value = opcaoDraft.nome_convite || "";
+		document.getElementById("opcao-valor").value = opcaoDraft.valor || 0;
+		document.getElementById("opcao-quantidade-esperada").value = opcaoDraft.quantidade_esperada || 0;
+		const hiddenUrl = document.getElementById("opcao-imagem-capa");
+		if (hiddenUrl) hiddenUrl.value = opcaoDraft.imagem_capa || "";
+		renderOpcaoImagemPreview(opcaoDraft.imagem_capa || "");
+		setSwitchChecked("opcao-ativo", !!opcaoDraft.ativo);
+		form.hidden = false;
+		form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+	}
+
+	function closeOpcaoForm() {
+		const form = document.getElementById("opcao-convite-form");
+		if (form) form.hidden = true;
+		opcaoDraft = null;
+	}
+
+	function syncDashboard(payload) {
+		if (!payload) return;
+		convitesDashboard = payload;
+		window._festaData.convitesDashboard = payload;
+		opcaoLocalList = (convitesDashboard.opcoes || []).slice();
+		renderConvitesConfigSummary();
+		renderConvitesBarras();
+		renderConvitesGauges();
+		renderChartConvitesPorRamo();
+		renderConvitesLinha();
+		renderConvitesTable();
+		renderOpcoesTable();
+	}
+
+	function initConvitesTab() {
+		opcaoLocalList = (convitesDashboard.opcoes || []).slice();
+		renderConvitesConfigSummary();
+		renderConvitesTable();
+		renderOpcoesTable();
+
+		// Os gráficos ECharts precisam ser inicializados com o container visível
+		// (caso contrário, o canvas fica em 0x0). A aba de convites começa
+		// escondida, então adiamos a renderização para o momento em que ela
+		// aparece pela primeira vez, e apenas redimensionamos em reaberturas.
+		let convitesChartsBootstrapped = false;
+		const conviteChartEl = document.getElementById("chart-convites-barras");
+		const convitesPanel = conviteChartEl ? conviteChartEl.closest("[role='tabpanel']") : null;
+		const renderConvitesCharts = function () {
+			renderConvitesBarras();
+			renderConvitesGauges();
+			renderChartConvitesPorRamo();
+			renderConvitesLinha();
+		};
+		const onConvitesVisible = function () {
+			if (!convitesChartsBootstrapped) {
+				convitesChartsBootstrapped = true;
+				renderConvitesCharts();
+			} else {
+				if (chartBarrasInstance) chartBarrasInstance.resize();
+				if (chartLinhaInstance) chartLinhaInstance.resize();
+				if (chartConvitesPorRamoInstance) chartConvitesPorRamoInstance.resize();
+				gaugeInstances.forEach(function (inst) { inst.resize(); });
+			}
+		};
+		if (convitesPanel) {
+			if (!convitesPanel.hidden) {
+				onConvitesVisible();
+			}
+			const observer = new MutationObserver(function () {
+				if (!convitesPanel.hidden) onConvitesVisible();
+			});
+			observer.observe(convitesPanel, { attributes: true, attributeFilter: ["hidden"] });
+		} else {
+			renderConvitesCharts();
+		}
+
+		document.querySelectorAll('[data-chart="barras"]').forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				convitesBarrasMode = btn.getAttribute("data-mode");
+				document.querySelectorAll('[data-chart="barras"]').forEach(function (b) {
+					b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+				});
+				renderConvitesBarras();
+			});
+		});
+		document.querySelectorAll('[data-chart="linha"]').forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				convitesLinhaMode = btn.getAttribute("data-mode");
+				document.querySelectorAll('[data-chart="linha"]').forEach(function (b) {
+					b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+				});
+				renderConvitesLinha();
+			});
+		});
+
+		const copyBtn = document.getElementById("btn-copy-link-vendas");
+		if (copyBtn) {
+			copyBtn.addEventListener("click", function () {
+				const url = window.location.origin + (convitesDashboard.link_publico || "/festas/venda_convite");
+				if (navigator.clipboard && navigator.clipboard.writeText) {
+					navigator.clipboard.writeText(url).then(function () {
+						toast("Link copiado.", "success");
+					}).catch(function () { toast("Não foi possível copiar.", "error"); });
+				} else {
+					toast(url, "info");
+				}
+			});
+		}
+
+		if (!canEdit) return;
+
+		const dlg = document.getElementById("dialog-convites-config");
+		if (!dlg) return;
+
+		dlg.addEventListener("close", closeOpcaoForm);
+
+		const addBtn = document.getElementById("btn-add-opcao-convite");
+		if (addBtn) addBtn.addEventListener("click", function () { openOpcaoForm(null); });
+
+		const porRamoBtn = document.getElementById("btn-convites-por-ramo");
+		if (porRamoBtn) {
+			porRamoBtn.addEventListener("click", function () {
+				confirmDialog({
+					title: "Criar convites por ramo",
+					message: "Criar uma opção de convite para cada ramo com beneficiários ativos? Diretoria será sempre criada.",
+					confirmLabel: "Criar",
+				}).then(function (ok) {
+					if (!ok) return;
+					porRamoBtn.disabled = true;
+					api("gris.api.festas.convites.criar_opcoes_por_ramo", {
+						festa_name: festaName,
+					})
+						.then(function (resp) {
+							syncDashboard(resp && resp.dashboard);
+							toast("Opções criadas por ramo.", "success");
+						})
+						.catch(function (err) {
+							toast(err.message || "Falha ao criar opções por ramo.", "error");
+						})
+						.finally(function () { porRamoBtn.disabled = false; });
+				});
+			});
+		}
+
+		const cancelBtn = document.getElementById("btn-opcao-cancelar");
+		if (cancelBtn) cancelBtn.addEventListener("click", closeOpcaoForm);
+
+		// Componente file_upload do design system dispara este evento com
+		// detail.files[0].file_url quando o upload conclui.
+		const fileUploadComp = document.getElementById("opcao-imagem-upload");
+		if (fileUploadComp) {
+			fileUploadComp.addEventListener("gris:file-upload:success", function (e) {
+				const file = e && e.detail && e.detail.files && e.detail.files[0];
+				const url = file && file.file_url ? file.file_url : "";
+				if (!url) return;
+				if (opcaoDraft) opcaoDraft.imagem_capa = url;
+				const hidden = document.getElementById("opcao-imagem-capa");
+				if (hidden) hidden.value = url;
+				renderOpcaoImagemPreview(url);
+			});
+		}
+		const removeImgBtn = document.getElementById("btn-opcao-imagem-remover");
+		if (removeImgBtn) {
+			removeImgBtn.addEventListener("click", function () {
+				if (opcaoDraft) opcaoDraft.imagem_capa = "";
+				const hidden = document.getElementById("opcao-imagem-capa");
+				if (hidden) hidden.value = "";
+				renderOpcaoImagemPreview("");
+			});
+		}
+
+		const confirmBtn = document.getElementById("btn-opcao-confirmar");
+		if (confirmBtn) {
+			confirmBtn.addEventListener("click", function () {
+				if (!opcaoDraft) return;
+				const payload = {
+					name: opcaoDraft.name || "",
+					nome_convite: (document.getElementById("opcao-nome-convite").value || "").trim(),
+					valor: Number(document.getElementById("opcao-valor").value || 0),
+					quantidade_esperada: Number(document.getElementById("opcao-quantidade-esperada").value || 0),
+					ativo: getSwitchChecked("opcao-ativo"),
+					imagem_capa: (document.getElementById("opcao-imagem-capa").value || "").trim(),
+				};
+				confirmBtn.disabled = true;
+				api("gris.api.festas.convites.upsert_opcao", {
+					festa_name: festaName,
+					payload: JSON.stringify(payload),
+				})
+					.then(function (resp) {
+						const opcao = resp && resp.opcao;
+						if (!opcao) return;
+						const idx = opcaoLocalList.findIndex(function (o) { return o.name === opcao.name; });
+						if (idx >= 0) opcaoLocalList[idx] = opcao;
+						else opcaoLocalList.push(opcao);
+						closeOpcaoForm();
+						renderOpcoesTable();
+						toast("Tipo salvo.", "success");
+					})
+					.catch(function (err) {
+						toast(err.message || "Não foi possível salvar.", "error");
+					})
+					.finally(function () { confirmBtn.disabled = false; });
+			});
+		}
+
+		// Inicializa os campos de config quando o dialog abre
+		dlg.addEventListener("toggle", function () { hydrateConfigDialog(); });
+		const triggerBtn = document.getElementById("btn-config-convites");
+		if (triggerBtn) triggerBtn.addEventListener("click", hydrateConfigDialog);
+
+		const saveCfgBtn = document.getElementById("btn-convites-config-salvar");
+		if (saveCfgBtn) {
+			saveCfgBtn.addEventListener("click", function () {
+				const aceita = getSwitchChecked("cfg-aceitar-doacoes");
+				const data = (document.getElementById("cfg-data-limite-vendas").value || "").trim();
+				saveCfgBtn.disabled = true;
+				api("gris.api.festas.convites.update_config", {
+					festa_name: festaName,
+					aceitar_doacoes: aceita ? 1 : 0,
+					data_limite_vendas: data,
+				})
+					.then(function (resp) {
+						convitesDashboard.aceitar_doacoes = !!resp.aceitar_doacoes;
+						convitesDashboard.data_limite_vendas = resp.data_limite_vendas || "";
+						renderConvitesConfigSummary();
+						renderConvitesBarras();
+						toast("Configurações salvas.", "success");
+						dlg.close();
+					})
+					.catch(function (err) {
+						toast(err.message || "Não foi possível salvar.", "error");
+					})
+					.finally(function () { saveCfgBtn.disabled = false; });
+			});
+		}
+	}
+
+	function hydrateConfigDialog() {
+		setSwitchChecked("cfg-aceitar-doacoes", !!convitesDashboard.aceitar_doacoes);
+		const data = document.getElementById("cfg-data-limite-vendas");
+		if (data) data.value = convitesDashboard.data_limite_vendas || "";
+		opcaoLocalList = (convitesDashboard.opcoes || []).slice();
+		renderOpcoesTable();
+		closeOpcaoForm();
+	}
+
 	document.addEventListener("DOMContentLoaded", function () {
 		renderAreasTable();
 		renderBarracasTable();
@@ -2530,5 +3299,6 @@
 		initAddProduto();
 		initEditProduto();
 		initOrcamento();
+		initConvitesTab();
 	});
 })();

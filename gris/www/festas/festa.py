@@ -4,6 +4,7 @@ import frappe
 from frappe.utils import flt, format_date
 
 from gris.api.festas import totais_payload
+from gris.api.festas.convites import build_dashboard as build_convites_dashboard
 from gris.api.portal_access import enrich_context, user_has_access
 from gris.api.portal_cache_utils import get_uel_cached
 from gris.festas.utils.unidades import UNIDADES
@@ -342,6 +343,7 @@ def build_festa_payload(festa_name: str) -> dict:
 	]
 	payload["associados_items"] = _select_items_associados()
 	payload["responsaveis_items"] = _select_items_responsaveis()
+	payload["convites_dashboard"] = build_convites_dashboard(doc.name)
 
 	return payload
 

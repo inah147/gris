@@ -1,0 +1,567 @@
+/* ─── Página pública de venda de convites ─────────────────────────────── */
+
+.vc-page {
+	max-width: 980px;
+	margin: 0 auto;
+	padding: 1.5rem 1rem 4rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+/* ─── Hero ────────────────────────────────────────────────────────────── */
+
+.vc-hero {
+	text-align: center;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.75rem;
+	padding-top: 2rem;
+}
+
+.vc-hero__logo {
+	width: 96px;
+	height: 96px;
+	object-fit: contain;
+}
+
+.vc-hero__title {
+	font-size: 1.875rem;
+	font-weight: 700;
+	margin: 0;
+	color: var(--foreground);
+	line-height: 1.2;
+}
+
+.vc-hero__subtitle {
+	margin: 0;
+	color: var(--muted-foreground);
+	font-size: 1rem;
+}
+
+/* ─── Empty state ─────────────────────────────────────────────────────── */
+
+.vc-empty {
+	margin-top: 2rem;
+}
+
+/* ─── Festa select ────────────────────────────────────────────────────── */
+
+.vc-festa-select {
+	max-width: 520px;
+	margin: 0 auto;
+	width: 100%;
+}
+
+/* ─── Tabs travadas (navegação só via botões internos) ────────────────── */
+
+#vc-tabs [role="tablist"] {
+	align-self: center;
+}
+
+#vc-tabs [role="tab"][aria-disabled="true"] {
+	cursor: default;
+}
+
+/* ─── Tab content ─────────────────────────────────────────────────────── */
+
+.vc-tab-content {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	padding-top: 1rem;
+}
+
+.vc-card {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.vc-card__title {
+	font-size: 1.125rem;
+	font-weight: 600;
+	margin: 0;
+	color: var(--foreground);
+}
+
+.vc-card__actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+.vc-section-title {
+	font-size: 1rem;
+	font-weight: 600;
+	margin: 0 0 0.25rem;
+}
+
+/* ─── Vitrine ─────────────────────────────────────────────────────────── */
+
+.vc-vitrine {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+	gap: 1rem;
+}
+
+.vc-card-convite {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--card);
+	overflow: hidden;
+}
+
+.vc-card-convite__imagem {
+	width: 100%;
+	aspect-ratio: 4 / 3;
+	object-fit: contain;
+	background: color-mix(in srgb, var(--muted) 70%, transparent);
+}
+
+.vc-card-convite__imagem--placeholder {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--muted-foreground);
+}
+
+.vc-card-convite__body {
+	padding: 1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	align-items: center;
+	text-align: center;
+}
+
+.vc-card-convite__title {
+	font-size: 1rem;
+	font-weight: 600;
+	margin: 0;
+}
+
+.vc-card-convite__price {
+	margin: 0;
+	font-size: 1.125rem;
+	font-weight: 700;
+	color: var(--primary);
+	font-variant-numeric: tabular-nums;
+}
+
+.vc-card-convite__cta {
+	margin-top: 0.5rem;
+	width: 100%;
+	justify-content: center;
+}
+
+.vc-qty {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.25rem;
+	width: 100%;
+}
+
+.vc-qty__input {
+	width: 4rem;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+	padding: 0.375rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--background);
+	color: var(--foreground);
+}
+
+/* ─── Tabela do pedido ────────────────────────────────────────────────── */
+
+.vc-pedido-tabela-wrapper {
+	overflow-x: auto;
+}
+
+.vc-pedido-tabela {
+	width: 100%;
+}
+
+.vc-pedido-tabela .vc-col-num {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.vc-pedido-tabela .vc-tabela-subtotal td {
+	border-top: 1px dashed var(--border);
+	color: var(--muted-foreground);
+}
+
+.vc-pedido-tabela .vc-tabela-total td {
+	border-top: 2px solid var(--border);
+	font-size: 1.05rem;
+}
+
+/* ─── Doação ─────────────────────────────────────────────────────────── */
+
+.vc-radio-cards {
+	display: flex;
+	flex-direction: column;
+	gap: 0.625rem;
+}
+
+.vc-radio-card {
+	position: relative;
+	display: flex;
+	align-items: flex-start;
+	gap: 0.75rem;
+	padding: 1rem 1.125rem;
+	border: 1.5px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--card);
+	cursor: pointer;
+	transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vc-radio-card:hover {
+	border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+}
+
+.vc-radio-card > input[type="radio"] {
+	position: absolute;
+	opacity: 0;
+	width: 0;
+	height: 0;
+	pointer-events: none;
+}
+
+.vc-radio-card__indicator {
+	flex-shrink: 0;
+	width: 1.125rem;
+	height: 1.125rem;
+	margin-top: 0.125rem;
+	border: 1.5px solid var(--border);
+	border-radius: 50%;
+	background: var(--background);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.vc-radio-card__indicator::after {
+	content: "";
+	width: 0.5rem;
+	height: 0.5rem;
+	border-radius: 50%;
+	background: var(--primary);
+	transform: scale(0);
+	transition: transform 0.15s ease;
+}
+
+.vc-radio-card:has(input[type="radio"]:checked) {
+	border-color: var(--primary);
+	background: color-mix(in srgb, var(--primary) 8%, var(--card));
+	box-shadow: 0 0 0 1px var(--primary) inset;
+}
+
+.vc-radio-card:has(input[type="radio"]:checked) .vc-radio-card__indicator {
+	border-color: var(--primary);
+}
+
+.vc-radio-card:has(input[type="radio"]:checked) .vc-radio-card__indicator::after {
+	transform: scale(1);
+}
+
+.vc-radio-card:focus-within {
+	outline: 2px solid color-mix(in srgb, var(--primary) 50%, transparent);
+	outline-offset: 2px;
+}
+
+.vc-radio-card__content {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	min-width: 0;
+}
+
+.vc-radio-card__title {
+	font-weight: 600;
+	color: var(--foreground);
+	font-size: 0.9375rem;
+	line-height: 1.3;
+}
+
+.vc-radio-card__desc {
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+	line-height: 1.4;
+}
+
+.vc-doacao-controls {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	margin-top: 0.5rem;
+}
+
+.vc-doacao-label {
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+}
+
+#vc-doacao-slider {
+	width: 100%;
+}
+
+/* ─── Totais ─────────────────────────────────────────────────────────── */
+
+.vc-totais {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+	margin: 0;
+}
+
+.vc-totais > div {
+	display: flex;
+	justify-content: space-between;
+	font-variant-numeric: tabular-nums;
+}
+
+.vc-totais dt {
+	color: var(--muted-foreground);
+	margin: 0;
+}
+
+.vc-totais dd {
+	margin: 0;
+}
+
+.vc-totais__total {
+	border-top: 2px solid var(--border);
+	padding-top: 0.5rem;
+	font-size: 1.125rem;
+	font-weight: 700;
+	color: var(--foreground);
+}
+
+/* ─── Galeria de convidados ──────────────────────────────────────────── */
+
+.vc-grid-2 {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 1rem;
+}
+
+.vc-galeria {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 1rem;
+	background: var(--card);
+	margin-top: 1rem;
+}
+
+.vc-galeria__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+}
+
+.vc-galeria__indicator {
+	font-weight: 600;
+	color: var(--foreground);
+}
+
+.vc-galeria__tipo {
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+	display: block;
+	margin-bottom: 0.5rem;
+}
+
+/* ─── Revisão (final) ────────────────────────────────────────────────── */
+
+.vc-revisao-bloco {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.vc-revisao-dl {
+	margin: 0;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	gap: 0.5rem 1rem;
+}
+
+.vc-revisao-dl > div {
+	display: flex;
+	flex-direction: column;
+}
+
+.vc-revisao-dl dt {
+	font-size: 0.75rem;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--muted-foreground);
+	margin: 0;
+}
+
+.vc-revisao-dl dd {
+	margin: 0;
+	color: var(--foreground);
+}
+
+.vc-revisao-convites {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+}
+
+.vc-revisao-convite {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.5rem 0;
+	border-bottom: 1px dashed var(--border);
+}
+
+.vc-revisao-convite:last-child {
+	border-bottom: none;
+}
+
+.vc-revisao-convite__tipo {
+	font-weight: 600;
+	color: var(--foreground);
+}
+
+.vc-revisao-valor {
+	margin: 0;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+/* ─── Dialog Pagamento ───────────────────────────────────────────────── */
+
+.vc-pagamento-dialog header {
+	text-align: center;
+}
+
+.vc-pagamento-dialog header h2 {
+	text-align: center;
+	width: 100%;
+}
+
+.vc-pagamento-body {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 1rem;
+	padding: 1.5rem 0;
+	min-height: 180px;
+}
+
+.vc-pagamento-loading,
+.vc-pagamento-pronto {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.75rem;
+	width: 100%;
+}
+
+.vc-pagamento-logo {
+	width: 96px;
+	height: 96px;
+	object-fit: contain;
+	animation: vc-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes vc-pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.5; }
+}
+
+.vc-pagamento-status {
+	margin: 0;
+	color: var(--muted-foreground);
+}
+
+.vc-pagamento-cta {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	width: auto;
+	align-self: center;
+	padding: 0.625rem 1.25rem;
+	font-size: 0.9375rem;
+	text-decoration: none;
+}
+
+.vc-pagamento-cta .ds-lucide {
+	flex-shrink: 0;
+}
+
+/* ─── Responsivo ─────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+	.vc-hero__title { font-size: 1.5rem; }
+
+	.vc-page { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
+
+	.vc-card__actions {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 40;
+		justify-content: stretch;
+		margin: 0;
+		padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+		background: var(--background);
+		border-top: 1px solid var(--border);
+		box-shadow: 0 -2px 8px -4px color-mix(in srgb, var(--foreground) 15%, transparent);
+	}
+	.vc-card__actions .btn-primary,
+	.vc-card__actions .btn-outline { flex: 1; }
+
+	.vc-vitrine {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 0.5rem;
+	}
+
+	.vc-card-convite__body {
+		padding: 0.625rem;
+		gap: 0.375rem;
+	}
+
+	.vc-card-convite__title {
+		font-size: 0.9rem;
+	}
+
+	.vc-card-convite__price {
+		font-size: 1rem;
+	}
+
+	.vc-qty__input {
+		width: 2.75rem;
+	}
+
+	.vc-revisao-convite {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.25rem;
+	}
+}

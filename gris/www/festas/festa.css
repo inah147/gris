@@ -518,3 +518,110 @@
 		display: table-cell;
 	}
 }
+
+/* ─── Convites tab ─────────────────────────────────────────────────────── */
+
+.festa-convites-actions {
+	display: flex;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+.festa-convites-chart {
+	width: 100%;
+	min-height: 320px;
+}
+
+.festa-convites-gauges {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	width: 100%;
+	min-height: 380px;
+}
+
+.festa-convites-gauges .chart-gauge-ring {
+	width: 100%;
+	max-width: 480px;
+	height: 380px;
+}
+
+.festa-convites-chart-toggle {
+	display: inline-flex;
+	gap: 0.25rem;
+}
+
+.festa-convites-chart-toggle [aria-pressed="true"] {
+	background: var(--primary);
+	color: var(--primary-foreground);
+}
+
+.dialog-convites-config > div {
+	width: min(820px, 96vw) !important;
+	max-width: min(820px, 96vw) !important;
+}
+
+.dialog-convites-config > div > section {
+	overflow-y: auto;
+	min-height: 0;
+}
+
+.opcao-imagem-uploader {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+/* No contexto do dialog de Opção de Convite, o título do campo já é "Imagem de
+ * capa" e o thumbnail comunica o estado — escondemos o ícone/label/descrição
+ * internos do componente para evitar duplicação. */
+.opcao-imagem-uploader #opcao-imagem-upload .file-upload__summary {
+	justify-content: flex-start;
+	padding: 0;
+	background: transparent;
+	border: none;
+}
+
+.opcao-imagem-uploader #opcao-imagem-upload .file-upload__icon,
+.opcao-imagem-uploader #opcao-imagem-upload .file-upload__copy {
+	display: none;
+}
+
+.opcao-imagem-preview {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 96px;
+	max-height: 200px;
+	padding: 0.5rem;
+	border: 1px dashed var(--border);
+	border-radius: var(--radius);
+	background: color-mix(in srgb, var(--muted) 50%, transparent);
+	overflow: hidden;
+}
+
+.opcao-imagem-thumb {
+	max-width: 100%;
+	max-height: 192px;
+	object-fit: contain;
+	border-radius: var(--radius-sm, 0.25rem);
+}
+
+.opcao-imagem-empty {
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+}
+
+.opcao-imagem-actions {
+	display: flex;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+.opcao-tabela-thumb {
+	width: 48px;
+	height: 36px;
+	object-fit: cover;
+	border-radius: var(--radius-sm, 0.25rem);
+	border: 1px solid var(--border);
+}

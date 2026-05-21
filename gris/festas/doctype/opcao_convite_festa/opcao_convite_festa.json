@@ -8,6 +8,7 @@
  "field_order": [
   "festa",
   "nome_convite",
+  "ramo",
   "ativo",
   "column_break_dados",
   "valor",
@@ -31,6 +32,12 @@
    "in_list_view": 1,
    "label": "Nome do Convite",
    "reqd": 1
+  },
+  {
+   "fieldname": "ramo",
+   "fieldtype": "Select",
+   "label": "Ramo",
+   "options": "\nFilhotes\nLobinho\nEscoteiro\nSênior\nPioneiro\nDiretoria"
   },
   {
    "default": "1",

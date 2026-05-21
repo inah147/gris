@@ -1,0 +1,282 @@
+{% extends "gris/templates/portal_clean.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, input, switch, slider, table, empty %}
+{% from "public/design_system/components/generated/phone-input.html.jinja" import phone_input %}
+{% from "public/design_system/components/generated/tabs.html.jinja" import tabs %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+
+{% block title %}Comprar convites{% endblock %}
+
+{% block head_include %}
+{{ super() }}
+<link rel="stylesheet" href="/festas/venda_convite.css" />
+{% endblock %}
+
+{% block page_content %}
+<div class="vc-page">
+
+<section class="vc-hero">
+	{% if portal_logo %}
+	<img class="vc-hero__logo" src="{{ portal_logo }}" alt="Logo do grupo escoteiro" />
+	{% else %}
+	<img class="vc-hero__logo" src="/assets/gris/images/gris-character/gris-logo.png" alt="GRIS" onerror="this.style.display='none'" />
+	{% endif %}
+	<h1 class="vc-hero__title" id="vc-festa-title">Comprar convites</h1>
+	<p class="vc-hero__subtitle" id="vc-festa-subtitle">Selecione a festa para começar.</p>
+</section>
+
+<script>
+window._vendaConvite = {
+	festas: {{ festas | tojson }},
+	portal_logo: {{ (portal_logo or "/assets/gris/images/gris-character/gris-logo.png") | tojson }},
+};
+</script>
+
+{{ toaster() }}
+
+{% if sem_festas %}
+<div class="vc-empty">
+{{ empty(
+	title="Nenhuma festa disponível",
+	description="Não há festas com vendas abertas no momento. Volte mais tarde.",
+	image="/assets/gris/images/gris-character/gris-search.png",
+	image_alt="Personagem Gris procurando",
+	image_size="sm"
+) }}
+</div>
+{% else %}
+
+{% if festas | length > 1 %}
+<section class="vc-festa-select">
+	{% call field(label="Festa") %}
+		{{ select(
+			id="vc-festa",
+			name="vc_festa",
+			items=festas_select_items,
+			is_combobox=true,
+			search_placeholder="Buscar festa…",
+			trigger_attrs={"class": "w-full"}
+		) }}
+	{% endcall %}
+</section>
+{% endif %}
+
+{# ─── Aba: Convites (vitrine) ─── #}
+{% set tab_escolha %}
+<div class="vc-tab-content">
+	<div id="vc-vitrine" class="vc-vitrine"></div>
+	<div class="vc-card__actions">
+		<button type="button" class="btn-primary" data-vc-nav="pedido" id="btn-escolha-revisar" disabled>
+			Ir para revisão do pedido
+		</button>
+	</div>
+</div>
+{% endset %}
+
+{# ─── Aba: Pedido (antiga Revisão) ─── #}
+{% set tab_pedido %}
+<div class="vc-tab-content">
+	{% call card(attrs={"class": "vc-card"}) %}
+	<h2 class="vc-card__title">Dados do pagador</h2>
+	<div class="vc-grid-2">
+		{% call field(label="Nome completo *") %}
+			{{ input(attrs={"id": "vc-pagador-nome", "required": "required", "placeholder": "Seu nome", "autocomplete": "name"}) }}
+		{% endcall %}
+		{% call field(label="E-mail *") %}
+			{{ input(type="email", attrs={"id": "vc-pagador-email", "required": "required", "placeholder": "voce@email.com", "autocomplete": "email"}) }}
+			<p id="vc-pagador-email-erro" class="text-sm text-destructive" hidden>Informe um e-mail válido.</p>
+		{% endcall %}
+		{% call field(label="Telefone *") %}
+			{{ phone_input(
+				id="vc-pagador-telefone",
+				name="vc-pagador-telefone",
+				default_country="BR",
+				placeholder="(11) 91234-5678",
+				input_attrs={"id": "vc-pagador-telefone-number", "required": "required"}
+			) }}
+		{% endcall %}
+	</div>
+	{% endcall %}
+
+	<div id="vc-doacao-section" hidden>
+		{% call card(attrs={"class": "vc-card"}) %}
+		<h2 class="vc-card__title">Quer apoiar com uma doação?</h2>
+		<p class="text-sm text-muted-foreground">
+			Você pode somar uma doação ao seu pedido. Cada real faz diferença para o grupo escoteiro.
+		</p>
+		<div class="vc-radio-cards" role="radiogroup" aria-label="Quer apoiar com uma doação?">
+			<label class="vc-radio-card">
+				<input type="radio" name="vc-doar" value="nao" checked />
+				<span class="vc-radio-card__indicator" aria-hidden="true"></span>
+				<span class="vc-radio-card__content">
+					<span class="vc-radio-card__title">Não, obrigado</span>
+					<span class="vc-radio-card__desc">Seguir apenas com os convites do pedido.</span>
+				</span>
+			</label>
+			<label class="vc-radio-card">
+				<input type="radio" name="vc-doar" value="sim" />
+				<span class="vc-radio-card__indicator" aria-hidden="true"></span>
+				<span class="vc-radio-card__content">
+					<span class="vc-radio-card__title">Sim, quero doar</span>
+					<span class="vc-radio-card__desc">Some um valor extra para apoiar o grupo escoteiro.</span>
+				</span>
+			</label>
+		</div>
+		<div id="vc-doacao-controls" class="vc-doacao-controls" hidden>
+			<label class="vc-doacao-label" for="vc-doacao-slider">
+				Valor: <span id="vc-doacao-valor">R$ 10,00</span>
+			</label>
+			{{ slider(
+				name="vc-doacao",
+				value=10,
+				min=1,
+				max=100,
+				step=1,
+				attrs={"id": "vc-doacao-slider", "style": "--slider-value:10%;"}
+			) }}
+		</div>
+		{% endcall %}
+	</div>
+
+	{% call card(attrs={"class": "vc-card"}) %}
+	<h2 class="vc-card__title">Resumo do pedido</h2>
+	<div class="vc-pedido-tabela-wrapper">
+		<table class="table vc-pedido-tabela" id="vc-pedido-tabela">
+			<thead>
+				<tr><th>Item</th><th>Quantidade</th><th class="vc-col-num">Valor</th></tr>
+			</thead>
+			<tbody id="vc-pedido-tabela-body">
+				<tr><td colspan="3" class="text-sm text-muted-foreground">Adicione convites para ver o resumo.</td></tr>
+			</tbody>
+		</table>
+	</div>
+	{% endcall %}
+
+	<div class="vc-card__actions">
+		<button type="button" class="btn-outline" data-vc-nav="escolha">Voltar</button>
+		<button type="button" class="btn-primary" data-vc-nav="convidados" id="btn-pedido-continuar">Continuar</button>
+	</div>
+</div>
+{% endset %}
+
+{# ─── Aba: Convidados ─── #}
+{% set tab_convidados %}
+<div class="vc-tab-content">
+	{% call card(attrs={"class": "vc-card"}) %}
+	<h2 class="vc-card__title">Quem vai receber os QR codes?</h2>
+	<p class="text-sm text-muted-foreground">
+		Se marcar, todos os convites chegam no seu e-mail e você decide depois para quem repassar.
+		Se desmarcar, vamos enviar cada QR code para o e-mail do respectivo convidado.
+	</p>
+	{% call field(label="Enviar todos para o meu e-mail") %}
+		{{ switch(name="vc-pagador-recebe", checked=true, attrs={"id": "vc-pagador-recebe"}) }}
+	{% endcall %}
+
+	<div id="vc-galeria" class="vc-galeria" hidden>
+		<header class="vc-galeria__header">
+			<button type="button" class="btn-sm-outline" id="vc-galeria-prev" aria-label="Convidado anterior">‹</button>
+			<span class="vc-galeria__indicator" id="vc-galeria-indicator">Convidado 1/1</span>
+			<button type="button" class="btn-sm-outline" id="vc-galeria-next" aria-label="Próximo convidado">›</button>
+		</header>
+		<div class="vc-galeria__body">
+			<span id="vc-galeria-tipo" class="vc-galeria__tipo"></span>
+			<div class="vc-grid-2">
+				{% call field(label="Nome do convidado *") %}
+					{{ input(attrs={"id": "vc-convidado-nome", "required": "required"}) }}
+				{% endcall %}
+				{% call field(label="E-mail do convidado *") %}
+					{{ input(type="email", attrs={"id": "vc-convidado-email", "required": "required", "autocomplete": "email"}) }}
+					<p id="vc-convidado-email-erro" class="text-sm text-destructive" hidden>Informe um e-mail válido.</p>
+				{% endcall %}
+				{% call field(label="Telefone (opcional)") %}
+					{{ phone_input(
+						id="vc-convidado-telefone",
+						name="vc-convidado-telefone",
+						default_country="BR",
+						placeholder="(11) 91234-5678",
+						input_attrs={"id": "vc-convidado-telefone-number"}
+					) }}
+				{% endcall %}
+			</div>
+		</div>
+	</div>
+	{% endcall %}
+
+	<div class="vc-card__actions">
+		<button type="button" class="btn-outline" data-vc-nav="pedido">Voltar</button>
+		<button type="button" class="btn-primary" data-vc-nav="revisao" id="btn-convidados-continuar">Continuar</button>
+	</div>
+</div>
+{% endset %}
+
+{# ─── Aba: Revisão (final) ─── #}
+{% set tab_revisao %}
+<div class="vc-tab-content">
+	{% call card(attrs={"class": "vc-card"}) %}
+	<h2 class="vc-card__title">Confira o pedido</h2>
+
+	<section class="vc-revisao-bloco">
+		<h3 class="vc-section-title">Pagador</h3>
+		<dl class="vc-revisao-dl" id="vc-revisao-pagador"></dl>
+	</section>
+
+	<section class="vc-revisao-bloco">
+		<h3 class="vc-section-title">Convites</h3>
+		<ul class="vc-revisao-convites" id="vc-revisao-convites"></ul>
+	</section>
+
+	<section class="vc-revisao-bloco" id="vc-revisao-doacao-bloco" hidden>
+		<h3 class="vc-section-title">Doação</h3>
+		<p id="vc-revisao-doacao" class="vc-revisao-valor"></p>
+	</section>
+
+	<section class="vc-revisao-bloco vc-revisao-total">
+		<dl class="vc-totais">
+			<div class="vc-totais__total">
+				<dt>Total</dt>
+				<dd id="vc-revisao-total-valor">R$ 0,00</dd>
+			</div>
+		</dl>
+	</section>
+	{% endcall %}
+
+	<div class="vc-card__actions">
+		<button type="button" class="btn-outline" data-vc-nav="convidados">Voltar</button>
+		<button type="button" class="btn-primary" id="btn-revisao-finalizar">Finalizar</button>
+	</div>
+</div>
+{% endset %}
+
+<div id="vc-tabs-wrapper" hidden>
+{{ tabs(
+	id="vc-tabs",
+	tabsets=[
+		{"id": "escolha", "tab": "Convites", "panel": tab_escolha},
+		{"id": "pedido", "tab": "Pedido", "panel": tab_pedido},
+		{"id": "convidados", "tab": "Convidados", "panel": tab_convidados},
+		{"id": "revisao", "tab": "Revisão", "panel": tab_revisao}
+	]
+) }}
+</div>
+
+{% call dialog(
+	id="vc-pagamento-dialog",
+	title="Pagamento",
+	close_button=false,
+	close_on_overlay_click=false,
+	dialog_attrs={"class": "vc-pagamento-dialog"},
+	body_attrs={"id": "vc-pagamento-body", "class": "vc-pagamento-body"}
+) %}
+	<div class="vc-pagamento-loading">
+		<img class="vc-pagamento-logo" src="/assets/gris/images/gris-character/gris-logo.png" alt="Logo" />
+		<p class="vc-pagamento-status">Carregando…</p>
+	</div>
+{% endcall %}
+
+{% endif %}{# sem_festas else #}
+
+</div>
+
+<script src="/festas/venda_convite.js"></script>
+{% endblock %}

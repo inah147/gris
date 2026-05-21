@@ -152,6 +152,31 @@ class TestConviteEnvio(FrappeTestCase):
 		self.assertEqual(len(enviados), 1)
 		self.assertTrue(self.mock_whatsapp.called)
 
+	def test_forcar_todos_reenvia_para_enviado(self):
+		festa = _nova_festa()
+		opcao = _opcao(festa.name)
+		convite = _convite(
+			festa.name,
+			opcao.name,
+			pagador_recebe=False,
+			convidados=[
+				{"nome": "Alice", "email": "alice@example.com"},
+				{"nome": "Bob", "email": "bob@example.com"},
+			],
+		)
+		_marcar_cobranca_paga(convite.cobranca_infinitepay)
+
+		enviar_qr_codes(convite.name)
+		self.assertEqual(self.mock_sendmail.call_count, 2)
+
+		# Sem forcar_todos: idempotente
+		enviar_qr_codes(convite.name)
+		self.assertEqual(self.mock_sendmail.call_count, 2)
+
+		# Com forcar_todos: reenvia para todos
+		enviar_qr_codes(convite.name, forcar_todos=True)
+		self.assertEqual(self.mock_sendmail.call_count, 4)
+
 	def test_idempotencia_nao_reenvia_para_enviado(self):
 		festa = _nova_festa()
 		opcao = _opcao(festa.name)

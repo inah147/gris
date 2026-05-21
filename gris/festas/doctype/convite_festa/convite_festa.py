@@ -265,10 +265,11 @@ def _atualizar_contadores_opcoes(convite_name: str) -> None:
 EMAIL_TEMPLATE_CONVITE = "Convite Festa - QR Code"
 
 
-def enviar_qr_codes(convite_name: str) -> None:
+def enviar_qr_codes(convite_name: str, forcar_todos: bool = False) -> None:
 	"""Job de background: gera PDFs com QR code e envia por e-mail.
 
-	- Só age sobre convidados com status_envio em {Pendente, Erro}.
+	- Por padrão age só sobre convidados com status_envio em {Pendente, Erro}.
+	- Quando `forcar_todos=True`, reenvia também para quem já está `Enviado`.
 	- Se pagador_recebe_qr_codes=1, envia um único e-mail com todos os anexos
 	  para o e-mail do pagador.
 	- Caso contrário, envia 1 e-mail por convidado.
@@ -283,11 +284,14 @@ def enviar_qr_codes(convite_name: str) -> None:
 	if doc.status_pagamento != STATUS_PAGAMENTO_PAGO:
 		return
 
-	pendentes = [
-		c
-		for c in (doc.convidados or [])
-		if c.status_envio in (STATUS_ENVIO_PENDENTE, STATUS_ENVIO_ERRO)
-	]
+	if forcar_todos:
+		pendentes = list(doc.convidados or [])
+	else:
+		pendentes = [
+			c
+			for c in (doc.convidados or [])
+			if c.status_envio in (STATUS_ENVIO_PENDENTE, STATUS_ENVIO_ERRO)
+		]
 	if not pendentes:
 		return
 
@@ -420,9 +424,11 @@ def _mensagem_whatsapp_erro(
 
 
 @frappe.whitelist()
-def reenviar_qr_codes(convite_name: str) -> dict:
+def reenviar_qr_codes(convite_name: str, forcar_todos: int | bool = 0) -> dict:
 	"""Endpoint para botão 'Reenviar QR codes' no Desk.
 
+	`forcar_todos` (default False): quando True, reenvia inclusive para
+	convidados com status Enviado.
 	Validação canônica no backend: permissão e status Pago são checados aqui.
 	"""
 	doc = frappe.get_doc("Convite Festa", convite_name)
@@ -434,5 +440,6 @@ def reenviar_qr_codes(convite_name: str) -> dict:
 		"gris.festas.doctype.convite_festa.convite_festa.enviar_qr_codes",
 		queue="long",
 		convite_name=convite_name,
+		forcar_todos=bool(int(forcar_todos)) if forcar_todos else False,
 	)
 	return {"ok": True}

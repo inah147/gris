@@ -11,25 +11,66 @@ frappe.ui.form.on("Convite Festa", {
 		}));
 	},
 	refresh(frm) {
-		if (!frm.is_new() && frm.doc.cobranca_infinitepay) {
-			frm.add_custom_button(__("Reenviar QR codes"), () => {
-				frappe.call({
-					method:
-						"gris.festas.doctype.convite_festa.convite_festa.reenviar_qr_codes",
-					args: { convite_name: frm.doc.name },
-					freeze: true,
-					freeze_message: __("Enfileirando reenvio..."),
-					callback: (r) => {
-						if (r.message && r.message.ok) {
-							frappe.show_alert({
-								message: __("Reenvio enfileirado com sucesso."),
-								indicator: "green",
-							});
-						}
+		if (frm.is_new() || !frm.doc.cobranca_infinitepay) return;
+
+		const convidados = frm.doc.convidados || [];
+		const algumEnviado = convidados.some((c) => c.status_envio === "Enviado");
+		const label = algumEnviado
+			? __("Reenviar QR codes")
+			: __("Enviar QR codes");
+
+		frm.add_custom_button(
+			label,
+			() => {
+				const dialog = new frappe.ui.Dialog({
+					title: __("Enviar QR codes"),
+					fields: [
+						{
+							label: __("Quais convidados?"),
+							fieldname: "alvo",
+							fieldtype: "Select",
+							options: [
+								{
+									label: __("Apenas Pendente / Erro (recomendado)"),
+									value: "pendentes",
+								},
+								{
+									label: __("Todos (reenviar para quem já recebeu também)"),
+									value: "todos",
+								},
+							],
+							default: "pendentes",
+							reqd: 1,
+						},
+					],
+					primary_action_label: __("Enfileirar envio"),
+					primary_action: (values) => {
+						dialog.hide();
+						frappe.call({
+							method:
+								"gris.festas.doctype.convite_festa.convite_festa.reenviar_qr_codes",
+							args: {
+								convite_name: frm.doc.name,
+								forcar_todos: values.alvo === "todos" ? 1 : 0,
+							},
+							freeze: true,
+							freeze_message: __("Enfileirando envio..."),
+							callback: (r) => {
+								if (!r.message || !r.message.ok) return;
+								frappe.show_alert({
+									message: __(
+										"Envio enfileirado. Os e-mails saem em background.",
+									),
+									indicator: "green",
+								});
+							},
+						});
 					},
 				});
-			});
-		}
+				dialog.show();
+			},
+			__("Convidados"),
+		);
 	},
 });
 

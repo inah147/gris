@@ -17,6 +17,7 @@ dependencies = [
     "pdfplumber",
     "Faker>=24.0.0",
     "PyYAML>=6.0",
+    "qrcode[pil]>=7.4",
 ]
 
 [build-system]

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 import frappe
-from frappe.utils import get_time, getdate
+from frappe.utils import add_days, get_time, getdate
 
 from gris.api.portal_access import enrich_context
 from gris.api.portal_cache_utils import get_uel_cached
@@ -125,6 +125,7 @@ def criar_festa(payload):
 	doc = frappe.new_doc("Festa")
 	doc.nome_festa = nome
 	doc.data = data_festa
+	doc.data_limite_vendas = add_days(data_festa, -7)
 	doc.horario_inicio = horario_inicio
 	doc.horario_termino = horario_termino
 	doc.status = "Em andamento"

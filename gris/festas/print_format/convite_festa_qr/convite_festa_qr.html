@@ -4,61 +4,89 @@
 		<meta charset="utf-8" />
 		<title>Convite — {{ festa.nome_festa }}</title>
 		<style>
-			@page { size: A5; margin: 16mm; }
+			@page { size: A5; margin: 14mm; }
 			body {
 				font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-				color: #1a2733;
+				color: #0f1b26;
+				background: #ffffff;
 				margin: 0;
+				padding: 0;
+				text-align: center;
 			}
-			.wrapper {
-				border: 1px solid #d8e0e9;
-				border-radius: 12px;
-				padding: 28px 32px;
-			}
-			.brand {
-				color: #0d4d91;
-				font-size: 11px;
-				letter-spacing: 2px;
-				text-transform: uppercase;
-				margin-bottom: 8px;
-			}
+			.page { width: 100%; }
+			.logo { margin: 0 auto 18px; }
+			.logo img { max-height: 110px; max-width: 220px; }
 			h1 {
-				margin: 0 0 4px;
+				margin: 0 0 6px;
 				font-size: 26px;
 				color: #0d4d91;
+				font-weight: 700;
+				letter-spacing: -0.01em;
 			}
 			.subtitulo {
-				color: #5a6877;
-				font-size: 14px;
-				margin-bottom: 24px;
+				color: #64748b;
+				font-size: 13px;
+				margin-bottom: 28px;
 			}
-			.dados {
-				margin: 24px 0;
-				font-size: 14px;
-				line-height: 1.55;
+			.dados { margin: 0 auto 24px; }
+			.dado { margin-bottom: 14px; }
+			.dado .rotulo {
+				font-size: 10px;
+				letter-spacing: 1.6px;
+				text-transform: uppercase;
+				color: #64748b;
+				margin-bottom: 2px;
 			}
-			.dados strong { color: #0d4d91; }
-			.qr {
-				text-align: center;
-				margin: 24px 0;
+			.dado .valor {
+				font-size: 15px;
+				color: #0f1b26;
+				font-weight: 600;
 			}
-			.qr img {
-				width: 220px;
-				height: 220px;
+			.qr-card {
+				display: inline-block;
+				background: #ffffff;
+				border: 1px solid #e2e8f0;
+				border-radius: 12px;
+				padding: 16px;
+				margin: 8px auto 14px;
+				box-shadow: 0 6px 18px rgba(15, 27, 38, 0.08),
+					0 2px 4px rgba(15, 27, 38, 0.05);
 			}
-			.footer {
-				border-top: 1px solid #d8e0e9;
-				margin-top: 24px;
-				padding-top: 12px;
+			.qr-card img { display: block; width: 200px; height: 200px; }
+			.qr-codigo {
+				margin: 10px auto 18px;
+				font-family: "Menlo", "Consolas", "Courier New", monospace;
 				font-size: 11px;
-				color: #93a1b1;
-				text-align: center;
+				color: #475569;
+				letter-spacing: 0.5px;
+				word-break: break-all;
 			}
+			.instrucao {
+				color: #64748b;
+				font-size: 12px;
+				margin-bottom: 22px;
+			}
+			hr {
+				border: none;
+				border-top: 1px solid #e2e8f0;
+				max-width: 60%;
+				margin: 18px auto;
+			}
+			.assinatura {
+				color: #64748b;
+				font-size: 11px;
+			}
+			.assinatura .coracao { color: #d6336c; }
 		</style>
 	</head>
 	<body>
-		<div class="wrapper">
-			<div class="brand">GRIS · Convite de Entrada</div>
+		<div class="page">
+			{% if uel_logo_b64 %}
+			<div class="logo">
+				<img src="data:image/png;base64,{{ uel_logo_b64 }}" alt="Logo" />
+			</div>
+			{% endif %}
+
 			<h1>{{ festa.nome_festa }}</h1>
 			<div class="subtitulo">
 				{{ frappe.format_value(festa.data, {"fieldtype": "Date"}) }}
@@ -69,17 +97,33 @@
 			</div>
 
 			<div class="dados">
-				<div><strong>Convidado:</strong> {{ convidado.nome }}</div>
-				<div><strong>Tipo de convite:</strong> {{ tipo_convite }}</div>
-				<div><strong>Pedido:</strong> {{ convite.name }}</div>
+				<div class="dado">
+					<div class="rotulo">Convidado</div>
+					<div class="valor">{{ convidado.nome }}</div>
+				</div>
+				<div class="dado">
+					<div class="rotulo">Tipo de convite</div>
+					<div class="valor">{{ tipo_convite }}</div>
+				</div>
+				<div class="dado">
+					<div class="rotulo">Pedido</div>
+					<div class="valor">{{ convite.name }}</div>
+				</div>
 			</div>
 
-			<div class="qr">
+			<div class="qr-card">
 				<img src="data:image/png;base64,{{ qr_png_b64 }}" alt="QR code do convite" />
 			</div>
+			<div class="qr-codigo">{{ convidado.qr_code_payload }}</div>
+			<div class="instrucao">
+				Apresente este QR code na entrada da festa.
+			</div>
 
-			<div class="footer">
-				Apresente este QR code na portaria para liberação da entrada.
+			<hr />
+
+			<div class="assinatura">
+				Feito com <span class="coracao">&#10084;</span> por
+				{% if uel_tipo %}{{ uel_tipo }} {% endif %}{{ uel_nome }}
 			</div>
 		</div>
 	</body>

@@ -49,6 +49,8 @@ def _convite(festa_name: str, opcao_name: str, quantidade: int = 2):
 
 def _fake_request(payload: dict):
 	class _Req:
+		host = "dev.gris"
+
 		def get_data(self, *, as_text: bool = False):
 			return json.dumps(payload)
 
@@ -133,12 +135,19 @@ class TestInfinitepayWebhook(FrappeTestCase):
 		self.assertEqual(int(opcao.quantidade_vendida), 3)
 
 		self.mock_enqueue.assert_called()
-		args, kwargs = self.mock_enqueue.call_args
-		self.assertEqual(
-			args[0] if args else kwargs.get("method"),
+		chamadas_convite = {
+			(call.args[0] if call.args else call.kwargs.get("method")): call.kwargs
+			for call in self.mock_enqueue.call_args_list
+			if call.kwargs.get("convite_name") == convite.name
+		}
+		self.assertIn(
 			"gris.festas.doctype.convite_festa.convite_festa.enviar_qr_codes",
+			chamadas_convite,
 		)
-		self.assertEqual(kwargs.get("convite_name"), convite.name)
+		self.assertIn(
+			"gris.festas.doctype.convite_festa.convite_festa.enviar_whatsapp_confirmacao_convite",
+			chamadas_convite,
+		)
 
 	def test_webhook_para_cobranca_inexistente_retorna_400(self):
 		_fake_request({"order_nsu": "CF-INEXISTENTE"})

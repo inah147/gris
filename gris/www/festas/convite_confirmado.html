@@ -1,0 +1,145 @@
+{% extends "gris/templates/portal_clean.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, button, alert %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{% block title %}Pagamento confirmado{% endblock %}
+
+{% block head_include %}
+{{ super() }}
+<link rel="stylesheet" href="/festas/convite_confirmado.css" />
+{% endblock %}
+
+{% block page_content %}
+<div class="cc-page" data-estado="{{ estado }}" data-convite="{{ convite_name }}" data-token="{{ convite_token }}">
+
+	<section class="cc-hero">
+		{% if portal_logo %}
+		<img class="cc-hero__logo" src="{{ portal_logo }}" alt="Logo da Unidade Escoteira Local" />
+		{% else %}
+		<img class="cc-hero__logo" src="/assets/gris/images/gris-character/gris-logo.png" alt="GRIS" onerror="this.style.display='none'" />
+		{% endif %}
+	</section>
+
+	<main class="cc-main">
+
+		{% if estado == "pago" %}
+		{% call card(attrs={"class": "cc-card cc-card--pago"}) %}
+			<div class="cc-status">
+				<span class="cc-status__icone cc-status__icone--sucesso">{{ lucide_icon("circle-check", "lg") }}</span>
+				<div>
+					<h1 class="cc-status__titulo">Pagamento confirmado</h1>
+					<p class="cc-status__subtitulo">Seu pedido foi processado com sucesso.</p>
+				</div>
+			</div>
+
+			<h2 class="cc-festa__nome">{{ festa.nome }}</h2>
+
+			<dl class="cc-festa__dados">
+				{% if festa.data %}
+				<div class="cc-festa__linha">
+					<dt>{{ lucide_icon("calendar-check", "sm") }} <span>Data</span></dt>
+					<dd>{{ festa.data }}</dd>
+				</div>
+				{% endif %}
+				{% if festa.horario_inicio or festa.horario_termino %}
+				<div class="cc-festa__linha">
+					<dt>{{ lucide_icon("clock", "sm") }} <span>Horário</span></dt>
+					<dd>
+						{% if festa.horario_inicio %}{{ festa.horario_inicio }}{% endif %}
+						{% if festa.horario_inicio and festa.horario_termino %} — {% endif %}
+						{% if festa.horario_termino %}{{ festa.horario_termino }}{% endif %}
+					</dd>
+				</div>
+				{% endif %}
+			</dl>
+
+			<div class="cc-orientacoes">
+				{% if pagador_recebe_qr_codes %}
+				{% set descricao_html %}
+					Todos os convites foram enviados para <strong>{{ email_pagador_mascarado }}</strong>.
+					Apresente-os impressos ou no celular na entrada da festa.
+				{% endset %}
+				{{ alert(
+					title="Seus convites estão a caminho",
+					description=descricao_html,
+					icon=lucide_icon("mail-check", "md"),
+					variant="success"
+				) }}
+				{% else %}
+				{% set descricao_html %}
+					Cada convidado receberá seu convite no e-mail informado durante a compra.
+					Cada um deverá apresentar o próprio convite na entrada da festa.
+				{% endset %}
+				{{ alert(
+					title="Convites enviados individualmente",
+					description=descricao_html,
+					icon=lucide_icon("ticket-check", "md"),
+					variant="success"
+				) }}
+				{% endif %}
+			</div>
+
+			{% if receipt_url %}
+			<div class="cc-actions">
+				<a class="btn-primary cc-receipt"
+				   href="{{ receipt_url }}"
+				   target="_blank"
+				   rel="noopener noreferrer">
+					{{ lucide_icon("receipt", "sm") }} Abrir recibo
+				</a>
+			</div>
+			{% endif %}
+		{% endcall %}
+
+		{% elif estado == "pendente" %}
+		{% call card(attrs={"class": "cc-card cc-card--pendente"}) %}
+			<div class="cc-status">
+				<span class="cc-status__icone cc-status__icone--pendente">{{ lucide_icon("loader", "lg") }}</span>
+				<div>
+					<h1 class="cc-status__titulo">Pagamento sendo processado</h1>
+					<p class="cc-status__subtitulo">
+						Estamos confirmando seu pagamento com a operadora.
+						Esta página vai atualizar automaticamente em alguns segundos.
+					</p>
+				</div>
+			</div>
+			<p class="cc-pendente__ajuda" id="cc-pendente-ajuda">
+				Se demorar mais que alguns minutos, você pode fechar esta página com segurança:
+				assim que o pagamento for confirmado, enviaremos os convites para o e-mail informado
+				durante a compra.
+			</p>
+		{% endcall %}
+
+		{% else %}
+		{% call card(attrs={"class": "cc-card cc-card--falha"}) %}
+			<div class="cc-status">
+				<span class="cc-status__icone cc-status__icone--falha">{{ lucide_icon("triangle-alert", "lg") }}</span>
+				<div>
+					<h1 class="cc-status__titulo">Não conseguimos confirmar o pagamento</h1>
+					<p class="cc-status__subtitulo">
+						A operadora indicou que o pagamento não foi concluído.
+						Se você acredita que pagou, aguarde alguns minutos e recarregue esta página.
+					</p>
+				</div>
+			</div>
+			<div class="cc-actions">
+				<a class="btn-outline" href="/festas/venda_convite">Voltar para a compra</a>
+			</div>
+		{% endcall %}
+		{% endif %}
+
+	</main>
+
+	{% if uel.nome_da_uel %}
+	<footer class="cc-footer">
+		<p>
+			{% if uel.tipo_uel %}{{ uel.tipo_uel }} {% endif %}{{ uel.nome_da_uel }}{% if uel.numeral %} {{ uel.numeral }}{% endif %}
+		</p>
+		{% if uel.regiao %}<p class="cc-footer__sub">{{ uel.regiao }}</p>{% endif %}
+	</footer>
+	{% endif %}
+
+</div>
+
+<script src="/festas/convite_confirmado.js" defer></script>
+{% endblock %}

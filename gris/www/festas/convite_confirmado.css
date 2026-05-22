@@ -1,0 +1,191 @@
+.cc-page {
+	min-height: 100vh;
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: clamp(1.5rem, 4vw, 3rem) 1rem 2rem;
+	gap: clamp(1.25rem, 3vw, 2rem);
+	background: var(--background);
+	color: var(--foreground);
+}
+
+.cc-hero {
+	display: flex;
+	justify-content: center;
+	width: 100%;
+}
+
+.cc-hero__logo {
+	max-height: 80px;
+	max-width: 200px;
+	object-fit: contain;
+}
+
+.cc-main {
+	width: 100%;
+	max-width: 640px;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.cc-card {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+}
+
+.cc-card section {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+}
+
+.cc-status {
+	display: flex;
+	align-items: flex-start;
+	gap: 1rem;
+}
+
+.cc-status__icone {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 3rem;
+	height: 3rem;
+	border-radius: 999px;
+	flex-shrink: 0;
+}
+
+.cc-status__icone--sucesso {
+	background: color-mix(in oklab, var(--success) 14%, transparent);
+	color: var(--success);
+}
+
+.cc-status__icone--pendente {
+	background: color-mix(in oklab, var(--info, var(--primary)) 14%, transparent);
+	color: var(--info, var(--primary));
+}
+
+.cc-status__icone--pendente .ds-lucide {
+	animation: cc-spin 1.4s linear infinite;
+}
+
+.cc-status__icone--falha {
+	background: color-mix(in oklab, var(--destructive) 14%, transparent);
+	color: var(--destructive);
+}
+
+@keyframes cc-spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+.cc-status__titulo {
+	margin: 0 0 0.25rem;
+	font-size: 1.25rem;
+	font-weight: 600;
+	line-height: 1.25;
+	color: var(--foreground);
+}
+
+.cc-status__subtitulo {
+	margin: 0;
+	color: var(--muted-foreground);
+	font-size: 0.95rem;
+}
+
+.cc-festa__nome {
+	margin: 0;
+	font-size: 1.5rem;
+	font-weight: 700;
+	line-height: 1.2;
+	color: var(--foreground);
+}
+
+.cc-festa__dados {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 0.5rem;
+	margin: 0;
+	padding: 0;
+}
+
+.cc-festa__linha {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0.75rem 1rem;
+	border-radius: var(--radius);
+	background: var(--muted);
+}
+
+.cc-festa__linha dt {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	color: var(--muted-foreground);
+	font-weight: 500;
+	margin: 0;
+}
+
+.cc-festa__linha dd {
+	margin: 0;
+	font-weight: 600;
+	color: var(--foreground);
+}
+
+.cc-orientacoes {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.cc-actions {
+	display: flex;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+}
+
+.cc-receipt {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.cc-pendente__ajuda {
+	color: var(--muted-foreground);
+	margin: 0;
+	font-size: 0.95rem;
+	line-height: 1.5;
+}
+
+.cc-footer {
+	margin-top: auto;
+	width: 100%;
+	max-width: 640px;
+	padding: 1.5rem 0 0.5rem;
+	border-top: 1px solid var(--border);
+	text-align: center;
+	color: var(--muted-foreground);
+}
+
+.cc-footer p {
+	margin: 0;
+	font-size: 0.9rem;
+}
+
+.cc-footer__sub {
+	margin-top: 0.25rem !important;
+	font-size: 0.8rem;
+}
+
+@media (max-width: 480px) {
+	.cc-festa__linha {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.25rem;
+	}
+}

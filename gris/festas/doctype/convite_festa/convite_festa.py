@@ -183,6 +183,8 @@ class ConviteFesta(Document):
 				convidado.status_envio = STATUS_ENVIO_PENDENTE
 
 	def _criar_cobranca_infinitepay(self):
+		from gris.api.festas.convite_confirmado import _build_redirect_url
+
 		cobranca = frappe.get_doc(
 			{
 				"doctype": "Cobranca Infinitepay",
@@ -190,6 +192,7 @@ class ConviteFesta(Document):
 				"customer_name": self.nome_pagador,
 				"customer_email": self.email_pagador,
 				"customer_phone": self.telefone_pagador,
+				"redirect_url": _build_redirect_url(self.name),
 				"itens": [
 					{
 						"descricao": it.descricao,
@@ -231,6 +234,12 @@ def on_cobranca_atualizada(doc, method=None):
 		frappe.enqueue(
 			"gris.festas.doctype.convite_festa.convite_festa.enviar_qr_codes",
 			queue="long",
+			enqueue_after_commit=True,
+			convite_name=convite_name,
+		)
+		frappe.enqueue(
+			"gris.festas.doctype.convite_festa.convite_festa.enviar_whatsapp_confirmacao_convite",
+			queue="short",
 			enqueue_after_commit=True,
 			convite_name=convite_name,
 		)
@@ -509,6 +518,109 @@ def _mensagem_whatsapp_erro(
 		f"[GRIS] Falha ao enviar QR codes do Convite Festa {convite_name} "
 		f"({festa_nome}).\nConvidados em erro:\n{linhas}"
 	)
+
+
+# ---------- WhatsApp: confirmação de pagamento ----------
+
+
+def enviar_whatsapp_confirmacao_convite(convite_name: str) -> None:
+	"""Job de background: notifica via WhatsApp que o pagamento foi confirmado.
+
+	- Idempotente: usa `whatsapp_notificado_em` no Convite Festa (e por linha em
+	  Convidado Convite Festa) para evitar reenvios quando o webhook é reentrante.
+	- Disparada apenas pelo handler `on_cobranca_atualizada` (sistema), nunca por
+	  ações do usuário/visita de página.
+	- Falhas em mensagens individuais não interrompem o fluxo: são logadas e
+	  marcadas no respectivo registro.
+	"""
+	from frappe.utils import now
+
+	from gris.api.festas.convite_confirmado import (
+		_build_redirect_url,
+		_mask_email,
+	)
+	from gris.utils.whatsapp import enviar_texto
+
+	doc = frappe.get_doc("Convite Festa", convite_name)
+	if doc.status_pagamento != STATUS_PAGAMENTO_PAGO:
+		return
+
+	festa_nome = frappe.db.get_value("Festa", doc.festa, "nome_festa") or doc.festa
+	primeiro_nome_pagador = _primeiro_nome(doc.nome_pagador)
+	qtd_convites = sum(int(it.quantidade or 0) for it in doc.itens if it.eh_convite)
+	link_assinado = _build_redirect_url(doc.name)
+	pagador_recebe_tudo = bool(doc.pagador_recebe_qr_codes)
+
+	# 1) Mensagem para o pagador (uma única vez)
+	if not doc.whatsapp_notificado_em and doc.telefone_pagador:
+		if pagador_recebe_tudo:
+			mensagem_pagador = (
+				f"Olá, {primeiro_nome_pagador}!\n"
+				f"Recebemos o pagamento da sua compra de {qtd_convites} convite(s) para {festa_nome}.\n"
+				f"Em breve você receberá os convites no e-mail {_mask_email(doc.email_pagador)}.\n"
+				"Apresente-os na entrada da festa.\n"
+				f"Confirmação e recibo: {link_assinado}"
+			)
+		else:
+			mensagem_pagador = (
+				f"Olá, {primeiro_nome_pagador}!\n"
+				f"Recebemos o pagamento da sua compra de {qtd_convites} convite(s) para {festa_nome}.\n"
+				"Cada convidado receberá seu convite no e-mail informado.\n"
+				f"Confirmação e recibo: {link_assinado}"
+			)
+		try:
+			enviar_texto(doc.telefone_pagador, mensagem_pagador)
+		except Exception:
+			frappe.log_error(
+				message=frappe.get_traceback(),
+				title=f"Falha ao notificar pagador via WhatsApp ({doc.name})",
+			)
+
+	frappe.db.set_value(
+		"Convite Festa",
+		doc.name,
+		"whatsapp_notificado_em",
+		now(),
+		update_modified=False,
+	)
+
+	# 2) Mensagens individuais por convidado (apenas se cada um recebe o próprio)
+	if pagador_recebe_tudo:
+		return
+
+	for convidado in doc.convidados or []:
+		if convidado.whatsapp_notificado_em:
+			continue
+		telefone = (convidado.telefone or "").strip()
+		if not telefone:
+			continue
+		mensagem_convidado = (
+			f"Olá, {_primeiro_nome(convidado.nome)}!\n"
+			f"Um convite para {festa_nome} foi comprado em seu nome.\n"
+			f"Em breve você receberá o convite no e-mail {_mask_email(convidado.email)}.\n"
+			"Apresente esse convite na entrada da festa."
+		)
+		try:
+			enviar_texto(telefone, mensagem_convidado)
+		except Exception:
+			frappe.log_error(
+				message=frappe.get_traceback(),
+				title=f"Falha ao notificar convidado via WhatsApp ({doc.name}/{convidado.name})",
+			)
+			continue
+		frappe.db.set_value(
+			"Convidado Convite Festa",
+			convidado.name,
+			"whatsapp_notificado_em",
+			now(),
+			update_modified=False,
+		)
+
+
+def _primeiro_nome(nome: str | None) -> str:
+	if not nome:
+		return ""
+	return (nome.strip().split(" ", 1)[0] or "").strip()
 
 
 @frappe.whitelist()

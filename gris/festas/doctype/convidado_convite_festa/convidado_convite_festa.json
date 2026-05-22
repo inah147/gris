@@ -10,7 +10,8 @@
   "qr_code_payload",
   "qr_code",
   "status_envio",
-  "descricao_erro_envio"
+  "descricao_erro_envio",
+  "whatsapp_notificado_em"
  ],
  "fields": [
   {
@@ -59,6 +60,14 @@
    "fieldname": "descricao_erro_envio",
    "fieldtype": "Small Text",
    "label": "Descrição do Erro de Envio",
+   "read_only": 1
+  },
+  {
+   "fieldname": "whatsapp_notificado_em",
+   "fieldtype": "Datetime",
+   "hidden": 1,
+   "label": "WhatsApp Notificado em",
+   "no_copy": 1,
    "read_only": 1
   }
  ],

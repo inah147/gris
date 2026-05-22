@@ -20,7 +20,8 @@
   "cobranca_infinitepay",
   "secao_controle",
   "pagador_recebe_qr_codes",
-  "convidados"
+  "convidados",
+  "whatsapp_notificado_em"
  ],
  "fields": [
   {
@@ -122,6 +123,14 @@
    "fieldtype": "Table",
    "label": "Convidados",
    "options": "Convidado Convite Festa"
+  },
+  {
+   "fieldname": "whatsapp_notificado_em",
+   "fieldtype": "Datetime",
+   "hidden": 1,
+   "label": "WhatsApp Notificado em",
+   "no_copy": 1,
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

@@ -123,12 +123,21 @@ def _sobrepor_logo(qr_img: Image.Image, logo: Image.Image) -> Image.Image:
 def gerar_pdf_convite(convite, convidado, *, item_convite=None) -> bytes:
 	"""Renderiza o PDF de um convite individual.
 
-	Conteúdo: nome da festa, data, horário, nome do convidado, tipo de convite
-	e o QR code. O template fica em `festas/print_format/convite_festa_qr/`.
+	Conteúdo: logo da UEL, nome da festa, data, horário, dados do convidado e
+	QR code em card com sombra. O template fica em
+	`festas/print_format/convite_festa_qr/`.
 	"""
 	festa = frappe.get_doc("Festa", convite.festa)
 	tipo_convite = _descobrir_tipo_convite(convite, item_convite)
 	png = gerar_png(convidado.qr_code_payload)
+	uel = frappe.get_cached_doc("Definicao da UEL")
+	logo_img = _carregar_logo()
+	uel_logo_b64 = ""
+	if logo_img is not None:
+		buf = io.BytesIO()
+		logo_img.save(buf, format="PNG")
+		uel_logo_b64 = base64.b64encode(buf.getvalue()).decode()
+
 	template_path = os.path.join(
 		frappe.get_app_path("gris"),
 		"festas",
@@ -147,6 +156,9 @@ def gerar_pdf_convite(convite, convidado, *, item_convite=None) -> bytes:
 			"convidado": convidado,
 			"tipo_convite": tipo_convite,
 			"qr_png_b64": base64.b64encode(png).decode(),
+			"uel_tipo": uel.get("tipo_uel") or "",
+			"uel_nome": uel.get("nome_da_uel") or "",
+			"uel_logo_b64": uel_logo_b64,
 		},
 	)
 	return get_pdf(html)

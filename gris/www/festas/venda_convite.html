@@ -30,6 +30,7 @@
 window._vendaConvite = {
 	festas: {{ festas | tojson }},
 	portal_logo: {{ (portal_logo or "/assets/gris/images/gris-character/gris-logo.png") | tojson }},
+	festa_pre_selecionada: {{ (festa_pre_selecionada or "") | tojson }},
 };
 </script>
 

@@ -299,6 +299,7 @@ fixtures = [
 					"Responsavel",
 					"Gestor de festas",
 					"Visualizador de festas",
+					"Portaria",
 				],
 			]
 		],

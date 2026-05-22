@@ -26,5 +26,7 @@ def get_context(context):
 
 	context.active_link = "/festas"
 	context.can_criar = user_has_access("/festas/nova_festa")
+	context.can_ver_todas = user_has_access("/festas/todas_festas")
+	context.can_portaria = user_has_access("/festas/portaria")
 	enrich_context(context, "/festas")
 	return context

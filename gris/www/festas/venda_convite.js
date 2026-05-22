@@ -838,7 +838,19 @@
 		initConvidadosControls();
 		bindDialogGuard();
 		bloquearAbas();
-		const inicial = getFestaSelectValue() || (data.festas[0] && data.festas[0].name) || "";
-		if (inicial) carregarFesta(inicial);
+		// Prioridade: ?festa=<name> (validado no backend) > select (>1 festa) > única festa.
+		const inicial = (data.festa_pre_selecionada || "")
+			|| getFestaSelectValue()
+			|| (data.festas[0] && data.festas[0].name)
+			|| "";
+		if (inicial) {
+			// Se houve pré-seleção via query param, reflete no select também (quando existir).
+			if (data.festa_pre_selecionada) {
+				const selectEl = document.getElementById("vc-festa");
+				const hidden = selectEl && selectEl.querySelector('input[type="hidden"]');
+				if (hidden) hidden.value = data.festa_pre_selecionada;
+			}
+			carregarFesta(inicial);
+		}
 	});
 })();

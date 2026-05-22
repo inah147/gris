@@ -1,0 +1,411 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, input, badge, empty %}
+{% from "public/design_system/components/generated/tabs.html.jinja" import tabs %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{% block title %}Portaria{% endblock %}
+
+{% set active_link = "/festas" %}
+
+{% block head_include %}
+{{ super() }}
+<link rel="stylesheet" href="/festas/portaria.css" />
+{% endblock %}
+
+{% block page_header %}
+<div class="portaria-page-header">
+	<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">Portaria</h1>
+	<p class="m-0 text-base text-muted-foreground" id="portaria-festa-subtitle">Selecione a festa para começar.</p>
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="portaria-page">
+
+<script>
+window._portariaData = {
+	festas: {{ festas_ativas | tojson }},
+	festas_select_items: {{ festas_select_items | tojson }},
+};
+</script>
+
+{{ toaster() }}
+
+{% if not festas_ativas %}
+<div class="portaria-empty">
+{{ empty(
+	title="Nenhuma festa ativa",
+	description="Não há festas com vendas/operação abertas no momento.",
+	image="/assets/gris/images/gris-character/gris-search.png",
+	image_alt="Personagem Gris procurando",
+	image_size="sm"
+) }}
+</div>
+{% else %}
+
+{% if festas_ativas|length > 1 %}
+<section class="portaria-festa-select">
+	{% call field(label="Festa") %}
+		{{ select(
+			id="portaria-festa",
+			name="portaria_festa",
+			items=festas_select_items,
+			is_combobox=true,
+			search_placeholder="Buscar festa…",
+			trigger_attrs={"class": "w-full"}
+		) }}
+	{% endcall %}
+</section>
+{% endif %}
+
+{# ─── Botões grandes de ação ─── #}
+<section class="portaria-actions">
+	<button type="button" class="btn-portaria-action btn-portaria-action--primary" id="btn-portaria-scan" disabled>
+		{{ lucide_icon("scan-qr-code", size="lg") }}
+		<span>Ler QR code</span>
+	</button>
+	<button type="button" class="btn-portaria-action btn-portaria-action--outline" id="btn-portaria-vender" disabled>
+		{{ lucide_icon("ticket", size="lg") }}
+		<span>Vender na porta</span>
+	</button>
+</section>
+
+{# ─── Tabs ─── #}
+{% set tab_convidados %}
+<div class="portaria-tab-content">
+	<div class="portaria-filtros">
+		{% call field(label="Filtrar por nome") %}
+			{{ input(attrs={"id": "portaria-filtro-nome", "type": "search", "placeholder": "Buscar…"}) }}
+		{% endcall %}
+		{% call field(label="Status") %}
+			{{ select(
+				id="portaria-filtro-status",
+				name="portaria_filtro_status",
+				items=[
+					{"label": "Todos", "value": "", "type": "item"},
+					{"label": "Não entrou", "value": "Não entrou", "type": "item"},
+					{"label": "Entrou", "value": "Entrou", "type": "item"}
+				],
+				selected=""
+			) }}
+		{% endcall %}
+	</div>
+
+	<div class="portaria-tabela-wrapper" id="portaria-tabela-wrapper">
+		<div id="portaria-tabela-vazia" class="portaria-empty" hidden>
+			{{ empty(
+				title="Nenhum convidado encontrado",
+				description="Quando houver convidados que correspondam aos filtros, eles aparecerão aqui.",
+				image="/assets/gris/images/gris-character/gris-search.png",
+				image_alt="Personagem Gris procurando",
+				image_size="sm"
+			) }}
+		</div>
+		<div id="portaria-tabela-container"></div>
+	</div>
+</div>
+{% endset %}
+
+{% set tab_acompanhamento %}
+<div class="portaria-tab-content">
+	<div class="portaria-charts-grid">
+		{% call card(attrs={"class": "portaria-card"}) %}
+		<h3 class="portaria-card__title">Entradas confirmadas</h3>
+		<div id="chart-portaria-pizza" class="portaria-chart" aria-label="Gráfico de entradas confirmadas (Entrou vs Não entrou)"></div>
+		{% endcall %}
+
+		{% call card(attrs={"class": "portaria-card"}) %}
+		<div class="portaria-chart-header">
+			<h3 class="portaria-card__title">Entradas por janela de 15 min</h3>
+			<div class="portaria-chart-actions">
+				<button type="button" class="btn-sm-outline portaria-chart-mode" data-modo="acumulado" aria-pressed="true">Acumulado</button>
+				<button type="button" class="btn-sm-outline portaria-chart-mode" data-modo="janela" aria-pressed="false">Por janela</button>
+			</div>
+		</div>
+		<div id="chart-portaria-linha" class="portaria-chart" aria-label="Gráfico de entradas por janela de 15 minutos"></div>
+		{% endcall %}
+	</div>
+</div>
+{% endset %}
+
+{{ tabs(
+	id="portaria-tabs",
+	tabsets=[
+		{"id": "convidados", "tab": "Lista de convidados", "panel": tab_convidados},
+		{"id": "acompanhamento", "tab": "Acompanhamento", "panel": tab_acompanhamento}
+	]
+) }}
+
+{# ─── Dialogs (vazios; preenchidos pelo JS) ─── #}
+<dialog id="dlg-portaria-scan" class="dialog" aria-labelledby="dlg-portaria-scan-title" onclick="if (event.target === this) this.close()">
+<div>
+	<header><h2 id="dlg-portaria-scan-title">Confirmar entrada</h2></header>
+	<section class="festa-dialog-edit-body">
+		<div class="portaria-scan-video-wrapper" id="portaria-scan-video-wrapper">
+			<video id="portaria-scan-video" playsinline autoplay muted></video>
+			<p id="portaria-scan-status" class="text-sm text-muted-foreground">Aguardando QR code…</p>
+		</div>
+		<div class="portaria-scan-toggle-row">
+			<button type="button" class="btn-sm-outline" id="btn-portaria-toggle-manual" hidden>
+				{{ lucide_icon("keyboard", size="sm") }}
+				<span>Inserir manualmente</span>
+			</button>
+		</div>
+		<div class="portaria-scan-manual" id="portaria-scan-manual" hidden>
+			<p class="text-sm text-muted-foreground" id="portaria-scan-manual-hint">
+				Digite o código do convite manualmente:
+			</p>
+			{% call field(label="Código do convite") %}
+				{{ input(attrs={"id": "portaria-scan-codigo-manual", "placeholder": "Cole o código aqui"}) }}
+			{% endcall %}
+			<div class="portaria-scan-manual-actions">
+				<button type="button" class="btn-sm-outline" id="btn-portaria-voltar-camera" hidden>
+					{{ lucide_icon("arrow-left", size="sm") }}
+					<span>Voltar para a câmera</span>
+				</button>
+				<button type="button" class="btn-primary" id="btn-portaria-validar-codigo">Validar código</button>
+			</div>
+		</div>
+		<div id="portaria-scan-resultado" class="portaria-scan-resultado" hidden>
+			<section class="portaria-section">
+				<h3 class="portaria-section__title">Convidado</h3>
+				<div class="portaria-detail-grid">
+					<div class="portaria-detail-field">
+						<span class="portaria-detail-field__label">Nome</span>
+						<span class="portaria-detail-field__value" id="portaria-scan-nome">—</span>
+					</div>
+					<div class="portaria-detail-field">
+						<span class="portaria-detail-field__label">E-mail</span>
+						<span class="portaria-detail-field__value" id="portaria-scan-email">—</span>
+					</div>
+					<div class="portaria-detail-field">
+						<span class="portaria-detail-field__label">Telefone</span>
+						<span class="portaria-detail-field__value" id="portaria-scan-telefone">—</span>
+					</div>
+				</div>
+			</section>
+			<section class="portaria-section">
+				<h3 class="portaria-section__title">Pagador</h3>
+				<div class="portaria-detail-grid">
+					<div class="portaria-detail-field">
+						<span class="portaria-detail-field__label">Nome</span>
+						<span class="portaria-detail-field__value" id="portaria-scan-pagador">—</span>
+					</div>
+					<div class="portaria-detail-field">
+						<span class="portaria-detail-field__label">E-mail</span>
+						<span class="portaria-detail-field__value" id="portaria-scan-pagador-email">—</span>
+					</div>
+					<div class="portaria-detail-field">
+						<span class="portaria-detail-field__label">Telefone</span>
+						<span class="portaria-detail-field__value" id="portaria-scan-pagador-telefone">—</span>
+					</div>
+				</div>
+			</section>
+			<section class="portaria-section">
+				<h3 class="portaria-section__title">Código do convite</h3>
+				<div class="portaria-detail-grid">
+					<div class="portaria-detail-field">
+						<span class="portaria-detail-field__label">Código</span>
+						<span class="portaria-detail-field__value portaria-detail-field__value--code" id="portaria-scan-codigo">—</span>
+					</div>
+				</div>
+			</section>
+		</div>
+	</section>
+	<footer class="portaria-dialog-footer">
+		<button type="button" class="btn-outline" id="btn-portaria-scan-cancelar">Cancelar</button>
+		<button type="button" class="btn-primary" id="btn-portaria-scan-confirmar" disabled>Confirmar entrada</button>
+	</footer>
+	<button type="button" aria-label="Fechar" onclick="this.closest('dialog').close()">
+		<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+	</button>
+</div>
+</dialog>
+
+<dialog id="dlg-portaria-ja-entrou" class="dialog" aria-labelledby="dlg-portaria-ja-entrou-title" onclick="if (event.target === this) this.close()">
+<div>
+	<header><h2 id="dlg-portaria-ja-entrou-title">Convidado já registrou entrada</h2></header>
+	<section class="festa-dialog-edit-body">
+		<p id="portaria-ja-entrou-mensagem" class="text-sm">—</p>
+		<div class="portaria-detail-grid">
+			<div class="portaria-detail-field">
+				<span class="portaria-detail-field__label">Status</span>
+				<span class="portaria-detail-field__value portaria-detail-field__value--badge">
+					<span class="badge badge-success">Entrou</span>
+				</span>
+			</div>
+			<div class="portaria-detail-field">
+				<span class="portaria-detail-field__label">Convidado</span>
+				<span class="portaria-detail-field__value" id="portaria-ja-entrou-nome">—</span>
+			</div>
+			<div class="portaria-detail-field">
+				<span class="portaria-detail-field__label">Hora de entrada</span>
+				<span class="portaria-detail-field__value" id="portaria-ja-entrou-hora">—</span>
+			</div>
+			<div class="portaria-detail-field">
+				<span class="portaria-detail-field__label">Registrado por</span>
+				<span class="portaria-detail-field__value" id="portaria-ja-entrou-por">—</span>
+			</div>
+		</div>
+	</section>
+	<footer>
+		<button type="button" class="btn-primary" onclick="this.closest('dialog').close()">Ok</button>
+	</footer>
+</div>
+</dialog>
+
+<dialog id="dlg-portaria-codigo-invalido" class="dialog" aria-labelledby="dlg-portaria-codigo-invalido-title" onclick="if (event.target === this) this.close()">
+<div>
+	<header><h2 id="dlg-portaria-codigo-invalido-title">Código inválido</h2></header>
+	<section class="festa-dialog-edit-body">
+		<p id="portaria-codigo-invalido-mensagem" class="text-sm">
+			Este código de convite não é válido para esta festa.
+		</p>
+		<p class="text-sm text-muted-foreground">
+			Verifique se você está operando a festa correta e tente novamente.
+		</p>
+	</section>
+	<footer class="portaria-dialog-footer">
+		<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Fechar</button>
+		<button type="button" class="btn-primary" id="btn-portaria-codigo-invalido-tentar">Tentar de novo</button>
+	</footer>
+	<button type="button" aria-label="Fechar" onclick="this.closest('dialog').close()">
+		<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+	</button>
+</div>
+</dialog>
+
+<dialog id="dlg-portaria-vender" class="dialog" aria-labelledby="dlg-portaria-vender-title" onclick="if (event.target === this) this.close()">
+<div>
+	<header><h2 id="dlg-portaria-vender-title">Vender na porta</h2></header>
+	<section class="festa-dialog-edit-body portaria-vender-body">
+		<p class="text-sm text-muted-foreground">
+			Escolha como o cliente vai concluir a compra:
+		</p>
+		<div class="portaria-vender-acoes">
+			<a class="btn-primary" id="btn-portaria-abrir-venda" href="#" target="_blank" rel="noopener">
+				{{ lucide_icon("external-link", size="sm") }}
+				<span>Abrir página de venda</span>
+			</a>
+		</div>
+		<div id="portaria-vender-qr-wrapper" class="portaria-qr-wrapper">
+			<img id="portaria-vender-qr" alt="QR code para venda na porta" />
+			<p class="text-xs text-muted-foreground" id="portaria-vender-qr-url"></p>
+		</div>
+	</section>
+	<footer>
+		<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Fechar</button>
+	</footer>
+</div>
+</dialog>
+
+<dialog id="dlg-portaria-editar" class="dialog" aria-labelledby="dlg-portaria-editar-title" onclick="if (event.target === this) this.close()">
+<div>
+	<header><h2 id="dlg-portaria-editar-title">Editar dados do convidado</h2></header>
+	<section class="festa-dialog-edit-body">
+		<input type="hidden" id="portaria-editar-name" />
+		<div class="festa-dialog-form">
+			<p class="text-sm"><strong>Nome:</strong> <span id="portaria-editar-nome">—</span></p>
+			{% call field(label="E-mail") %}
+				{{ input(attrs={"id": "portaria-editar-email", "type": "email", "placeholder": "voce@email.com"}) }}
+			{% endcall %}
+			{% call field(label="Telefone") %}
+				{{ input(attrs={"id": "portaria-editar-telefone", "type": "tel", "placeholder": "(00) 00000-0000"}) }}
+			{% endcall %}
+		</div>
+	</section>
+	<footer>
+		<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Cancelar</button>
+		<button type="button" class="btn-primary" id="btn-portaria-editar-salvar">Salvar</button>
+	</footer>
+</div>
+</dialog>
+
+<dialog id="dlg-portaria-detalhes" class="dialog" aria-labelledby="dlg-portaria-detalhes-title" onclick="if (event.target === this) this.close()">
+<div>
+	<header><h2 id="dlg-portaria-detalhes-title">Detalhes do convidado</h2></header>
+	<section class="festa-dialog-edit-body">
+		<section class="portaria-section">
+			<h3 class="portaria-section__title">Dados do convidado</h3>
+			<div class="portaria-detail-grid">
+				<div class="portaria-detail-field">
+					<span class="portaria-detail-field__label">Nome</span>
+					<span class="portaria-detail-field__value" id="portaria-det-nome">—</span>
+				</div>
+				<div class="portaria-detail-field">
+					<span class="portaria-detail-field__label">E-mail</span>
+					<span class="portaria-detail-field__value" id="portaria-det-email">—</span>
+				</div>
+				<div class="portaria-detail-field">
+					<span class="portaria-detail-field__label">Telefone</span>
+					<span class="portaria-detail-field__value" id="portaria-det-telefone">—</span>
+				</div>
+			</div>
+		</section>
+		<section class="portaria-section">
+			<h3 class="portaria-section__title">Dados do convite</h3>
+			<div class="portaria-detail-grid">
+				<div class="portaria-detail-field">
+					<span class="portaria-detail-field__label">Código</span>
+					<span class="portaria-detail-field__value portaria-detail-field__value--code" id="portaria-det-codigo">—</span>
+				</div>
+				<div class="portaria-detail-field">
+					<span class="portaria-detail-field__label">Convite</span>
+					<span class="portaria-detail-field__value" id="portaria-det-convite">—</span>
+				</div>
+			</div>
+		</section>
+		<section class="portaria-section">
+			<h3 class="portaria-section__title">Dados da festa</h3>
+			<div class="portaria-detail-grid">
+				<div class="portaria-detail-field">
+					<span class="portaria-detail-field__label">Status</span>
+					<span class="portaria-detail-field__value portaria-detail-field__value--badge" id="portaria-det-status">—</span>
+				</div>
+				<div class="portaria-detail-field">
+					<span class="portaria-detail-field__label">Hora de entrada</span>
+					<span class="portaria-detail-field__value" id="portaria-det-hora">—</span>
+				</div>
+				<div class="portaria-detail-field">
+					<span class="portaria-detail-field__label">Registrado por</span>
+					<span class="portaria-detail-field__value" id="portaria-det-por">—</span>
+				</div>
+			</div>
+		</section>
+	</section>
+	<footer class="portaria-dialog-footer">
+		<button type="button" class="btn-outline" id="btn-portaria-det-reenviar">
+			{{ lucide_icon("send", size="sm") }}
+			<span>Reenviar convite</span>
+		</button>
+		<button type="button" class="btn-outline" id="btn-portaria-det-editar">
+			{{ lucide_icon("pencil", size="sm") }}
+			<span>Editar</span>
+		</button>
+		<button type="button" class="btn-primary" onclick="this.closest('dialog').close()">Fechar</button>
+	</footer>
+</div>
+</dialog>
+
+{# ─── Confirm dialog reutilizado ─── #}
+<dialog id="confirm-dialog" class="dialog" aria-labelledby="confirm-dialog-title">
+<div>
+	<header><h2 id="confirm-dialog-title">Confirmar ação</h2></header>
+	<section class="festa-dialog-edit-body">
+		<p id="confirm-dialog-message" class="text-sm">Tem certeza?</p>
+	</section>
+	<footer>
+		<button type="button" class="btn-outline" id="confirm-dialog-cancel">Cancelar</button>
+		<button type="button" class="btn-destructive" id="confirm-dialog-ok">Confirmar</button>
+	</footer>
+</div>
+</dialog>
+
+{% endif %}
+
+</div>
+{% endblock %}
+

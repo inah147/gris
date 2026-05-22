@@ -17,6 +17,7 @@ from frappe.utils import flt, getdate, today
 from gris.api.festas import _ensure_gestor, _validate_festa
 
 PUBLIC_SALE_URL = "/festas/venda_convite"
+PORTARIA_NOME_CONVITE = "Portaria"
 
 RAMOS_ESCOTEIROS = ["Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro"]
 RAMOS_CONVITE = [*RAMOS_ESCOTEIROS, "Diretoria"]
@@ -105,6 +106,7 @@ def build_dashboard(festa_name: str) -> dict:
 			"expectativa_publico_min",
 			"expectativa_publico_intermediario",
 			"expectativa_publico_max",
+			"venda_na_portaria",
 		],
 		as_dict=True,
 	) or {}
@@ -294,6 +296,7 @@ def build_dashboard(festa_name: str) -> dict:
 		"convites": convites_tabela,
 		"series_por_dia": series_por_dia,
 		"aceitar_doacoes": bool(festa.get("aceitar_doacoes")),
+		"venda_na_portaria": bool(festa.get("venda_na_portaria")),
 		"data_limite_vendas": data_limite.isoformat() if data_limite else "",
 		"link_publico": PUBLIC_SALE_URL,
 		"convites_por_ramo": convites_por_ramo,
@@ -507,3 +510,101 @@ def criar_opcoes_por_ramo(festa_name: str) -> dict:
 	festa.db_set("convites_por_ramo", 1, update_modified=True)
 
 	return {"ok": True, "dashboard": build_dashboard(festa_name)}
+
+
+# ---------------------------------------------------------------------------
+# Toggle "Venda na portaria"
+# ---------------------------------------------------------------------------
+
+
+@frappe.whitelist()
+def toggle_venda_portaria(festa_name: str, ativo) -> dict:
+	"""Liga ou desliga o modo 'Venda na portaria' de uma festa.
+
+	Liga: desativa todos os outros tipos de convite e cria (ou reativa) o tipo
+	'Portaria' (portaria=1, ativo=1).
+	Desliga: desativa apenas o tipo Portaria — os demais permanecem como estão
+	(decisão consciente para evitar reativar tipos que o usuário desativou
+	intencionalmente).
+	"""
+	_ensure_gestor()
+	_validate_festa(festa_name)
+
+	ativo_bool = ativo in ("1", "true", "True", True, 1)
+
+	# Verifica estado atual; se já está como solicitado, no-op.
+	estado_atual = bool(
+		frappe.db.get_value("Festa", festa_name, "venda_na_portaria")
+	)
+	if estado_atual == ativo_bool:
+		return {"ok": True, "venda_na_portaria": ativo_bool, "no_op": True}
+
+	festa = frappe.get_doc("Festa", festa_name)
+	preco_sugerido = flt(festa.preco_convite) or flt(festa.preco_sugerido_convite) or 0.0
+
+	sp = f"toggle_portaria_{frappe.generate_hash(length=8)}"
+	frappe.db.savepoint(sp)
+	try:
+		if ativo_bool:
+			# 1) Desativa todos os tipos que NÃO são portaria.
+			frappe.db.sql(
+				"""
+				UPDATE `tabOpcao Convite Festa`
+				   SET ativo = 0
+				 WHERE festa = %s
+				   AND COALESCE(portaria, 0) = 0
+				   AND ativo = 1
+				""",
+				(festa_name,),
+			)
+			# 2) Encontra (ou cria) o tipo Portaria desta festa.
+			opcao_portaria = frappe.db.get_value(
+				"Opcao Convite Festa",
+				{"festa": festa_name, "portaria": 1},
+				"name",
+			)
+			if opcao_portaria:
+				frappe.db.set_value(
+					"Opcao Convite Festa",
+					opcao_portaria,
+					"ativo",
+					1,
+					update_modified=True,
+				)
+			else:
+				doc = frappe.new_doc("Opcao Convite Festa")
+				doc.festa = festa_name
+				doc.nome_convite = PORTARIA_NOME_CONVITE
+				doc.valor = preco_sugerido
+				doc.ativo = 1
+				doc.portaria = 1
+				doc.flags.ignore_permissions = False  # respeita ACL do gestor
+				doc.insert()
+		else:
+			# Desativa apenas o tipo Portaria. Os demais ficam como estão.
+			frappe.db.sql(
+				"""
+				UPDATE `tabOpcao Convite Festa`
+				   SET ativo = 0
+				 WHERE festa = %s
+				   AND portaria = 1
+				""",
+				(festa_name,),
+			)
+
+		frappe.db.set_value(
+			"Festa",
+			festa_name,
+			"venda_na_portaria",
+			1 if ativo_bool else 0,
+			update_modified=True,
+		)
+	except Exception:
+		frappe.db.rollback(save_point=sp)
+		raise
+
+	return {
+		"ok": True,
+		"venda_na_portaria": ativo_bool,
+		"dashboard": build_dashboard(festa_name),
+	}

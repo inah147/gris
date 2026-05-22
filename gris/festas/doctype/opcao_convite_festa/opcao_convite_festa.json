@@ -10,6 +10,7 @@
   "nome_convite",
   "ramo",
   "ativo",
+  "portaria",
   "column_break_dados",
   "valor",
   "quantidade_esperada",
@@ -45,6 +46,14 @@
    "fieldtype": "Check",
    "in_list_view": 1,
    "label": "Ativo"
+  },
+  {
+   "default": "0",
+   "description": "Marcado automaticamente para o tipo 'Portaria' criado pelo modo Venda na portaria.",
+   "fieldname": "portaria",
+   "fieldtype": "Check",
+   "label": "Convite de Portaria",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_dados",

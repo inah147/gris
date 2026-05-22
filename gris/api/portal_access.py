@@ -78,6 +78,7 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 		"children": [
 			{"label": "Nova festa", "path": "/festas/nova_festa"},
 			{"label": "Todas as festas", "path": "/festas/todas_festas"},
+			{"label": "Portaria", "path": "/festas/portaria"},
 		],
 	},
 	{
@@ -133,6 +134,7 @@ SIDEBAR_ICON_MAP: dict[str, str] = {
 	"/festas/nova_festa": "calendar-plus",
 	"/festas/todas_festas": "list",
 	"/festas/festa": "party-popper",
+	"/festas/portaria": "scan-qr-code",
 }
 
 # Mapping: path -> allowed roles.
@@ -187,10 +189,11 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/projetos/cadastrar_novo_projeto": ["Editor de projetos"],
 	"/projetos/projeto": ["Visualizador de projetos", "Editor de projetos"],
 	"/projetos/aprovacao_projeto": ["Visualizador de projetos", "Editor de projetos"],
-	"/festas": ["Visualizador de festas", "Gestor de festas"],
+	"/festas": ["Visualizador de festas", "Gestor de festas", "Portaria"],
 	"/festas/nova_festa": ["Gestor de festas"],
 	"/festas/todas_festas": ["Visualizador de festas", "Gestor de festas"],
 	"/festas/festa": ["Visualizador de festas", "Gestor de festas"],
+	"/festas/portaria": ["Gestor de festas", "Portaria"],
 }
 
 # Páginas marcadas como "estritas": mesmo System Manager deve ter uma das roles listadas.

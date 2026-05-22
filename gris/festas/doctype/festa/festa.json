@@ -65,6 +65,7 @@
   "convite_col2",
   "preco_convite",
   "aceitar_doacoes",
+  "venda_na_portaria",
   "produtos_tab",
   "produtos_info_section",
   "produtos_info_html",
@@ -410,6 +411,13 @@
    "label": "Aceitar doações junto com os convites"
   },
   {
+   "default": "0",
+   "description": "Quando ativo, somente o tipo de convite 'Portaria' é vendido; demais tipos ficam desativados.",
+   "fieldname": "venda_na_portaria",
+   "fieldtype": "Check",
+   "label": "Venda na portaria"
+  },
+  {
    "fieldname": "data_limite_vendas",
    "fieldtype": "Date",
    "label": "Data Limite de Vendas",
@@ -498,6 +506,11 @@
   {
    "group": "Vendas",
    "link_doctype": "Convite Festa",
+   "link_fieldname": "festa"
+  },
+  {
+   "group": "Vendas",
+   "link_doctype": "Lista Entrada Festa",
    "link_fieldname": "festa"
   }
  ],

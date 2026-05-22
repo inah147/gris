@@ -1,5 +1,5 @@
 {% extends "gris/templates/portal_clean.html" %}
-{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, input, switch, slider, table, empty %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, input, switch, table, empty %}
 {% from "public/design_system/components/generated/phone-input.html.jinja" import phone_input %}
 {% from "public/design_system/components/generated/tabs.html.jinja" import tabs %}
 {% from "public/design_system/components/generated/select.html.jinja" import select %}
@@ -103,7 +103,7 @@ window._vendaConvite = {
 		{% call card(attrs={"class": "vc-card"}) %}
 		<h2 class="vc-card__title">Quer apoiar com uma doação?</h2>
 		<p class="text-sm text-muted-foreground">
-			Você pode somar uma doação ao seu pedido. Cada real faz diferença para o grupo escoteiro.
+			Você pode somar uma doação ao seu pedido. Cada real faz diferença para nosso grupo escoteiro!
 		</p>
 		<div class="vc-radio-cards" role="radiogroup" aria-label="Quer apoiar com uma doação?">
 			<label class="vc-radio-card">
@@ -124,17 +124,14 @@ window._vendaConvite = {
 			</label>
 		</div>
 		<div id="vc-doacao-controls" class="vc-doacao-controls" hidden>
-			<label class="vc-doacao-label" for="vc-doacao-slider">
-				Valor: <span id="vc-doacao-valor">R$ 10,00</span>
-			</label>
-			{{ slider(
-				name="vc-doacao",
-				value=10,
-				min=1,
-				max=100,
-				step=1,
-				attrs={"id": "vc-doacao-slider", "style": "--slider-value:10%;"}
-			) }}
+			<span class="vc-doacao-label">Escolha o valor da doação:</span>
+			<div class="vc-doacao-valores" role="radiogroup" aria-label="Valor da doação">
+				<button type="button" class="vc-doacao-valor" data-vc-doacao-valor="5" aria-pressed="false">R$ 5</button>
+				<button type="button" class="vc-doacao-valor is-active" data-vc-doacao-valor="10" aria-pressed="true">R$ 10</button>
+				<button type="button" class="vc-doacao-valor" data-vc-doacao-valor="25" aria-pressed="false">R$ 25</button>
+				<button type="button" class="vc-doacao-valor" data-vc-doacao-valor="50" aria-pressed="false">R$ 50</button>
+				<button type="button" class="vc-doacao-valor" data-vc-doacao-valor="100" aria-pressed="false">R$ 100</button>
+			</div>
 		</div>
 		{% endcall %}
 	</div>
@@ -164,10 +161,11 @@ window._vendaConvite = {
 {% set tab_convidados %}
 <div class="vc-tab-content">
 	{% call card(attrs={"class": "vc-card"}) %}
-	<h2 class="vc-card__title">Quem vai receber os QR codes?</h2>
+	<h2 class="vc-card__title">Quem vai receber os convites?</h2>
 	<p class="text-sm text-muted-foreground">
-		Se marcar, todos os convites chegam no seu e-mail e você decide depois para quem repassar.
-		Se desmarcar, vamos enviar cada QR code para o e-mail do respectivo convidado.
+		Os convites são enviados por e-mail com um QR code para cada convidado. 
+		Você pode escolher receber todos os convites no seu e-mail ou enviar diretamente para cada convidado.
+
 	</p>
 	{% call field(label="Enviar todos para o meu e-mail") %}
 		{{ switch(name="vc-pagador-recebe", checked=true, attrs={"id": "vc-pagador-recebe"}) }}

@@ -2531,7 +2531,6 @@
 	let chartBarrasInstance = null;
 	let chartLinhaInstance = null;
 	let chartConvitesPorRamoInstance = null;
-	const gaugeInstances = new Map();
 	const RAMOS_ORDEM = ["Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro", "Diretoria"];
 	let echartsLoading = null;
 	let opcaoDraft = null;
@@ -2655,88 +2654,6 @@
 		});
 	}
 
-	function renderConvitesGauges() {
-		const container = document.getElementById("chart-convites-gauges");
-		if (!container) return;
-		ensureECharts().then(function () {
-			const opcoes = (convitesDashboard.opcoes || []).filter(function (o) { return o.ativo; });
-			gaugeInstances.forEach(function (inst) { inst.dispose(); });
-			gaugeInstances.clear();
-			container.innerHTML = "";
-			if (!opcoes.length) {
-				container.innerHTML = '<p class="text-sm text-muted-foreground">Cadastre opções de convite para visualizar o progresso.</p>';
-				return;
-			}
-			const totais = convitesDashboard.totais || {};
-			const wrap = document.createElement("div");
-			wrap.className = "chart-gauge-ring";
-			container.appendChild(wrap);
-
-			const n = opcoes.length;
-			const itemSpacing = n > 4 ? 18 : 22;
-			const innerGap = 10;
-			const startY = -((n - 1) * itemSpacing) / 2;
-
-			const data = opcoes.map(function (opcao, idx) {
-				const vendido = Number((totais.qtd_por_opcao || {})[opcao.name] || 0);
-				const esperado = Number(opcao.quantidade_esperada || 0);
-				const pct = esperado > 0 ? Math.min(100, (vendido / esperado) * 100) : 0;
-				const rowCenter = startY + idx * itemSpacing;
-				const color = CHART_PALETTE[idx % CHART_PALETTE.length];
-				return {
-					value: Number(pct.toFixed(1)),
-					name: opcao.nome_convite,
-					title: { offsetCenter: ["0%", (rowCenter - innerGap / 2) + "%"] },
-					detail: {
-						valueAnimation: true,
-						offsetCenter: ["0%", (rowCenter + innerGap / 2) + "%"],
-						borderColor: color,
-					},
-					itemStyle: { color: color },
-				};
-			});
-
-			const inst = window.echarts.init(wrap);
-			gaugeInstances.set("__ring__", inst);
-			inst.setOption({
-				aria: { enabled: true },
-				color: CHART_PALETTE,
-				series: [{
-					type: "gauge",
-					startAngle: 90,
-					endAngle: -270,
-					radius: "85%",
-					pointer: { show: false },
-					progress: {
-						show: true,
-						overlap: false,
-						roundCap: true,
-						clip: false,
-						itemStyle: { borderWidth: 1, borderColor: "#fff" },
-					},
-					axisLine: { lineStyle: { width: 24, color: [[1, "#E5E7EB"]] } },
-					splitLine: { show: false },
-					axisTick: { show: false },
-					axisLabel: { show: false },
-					data: data,
-					title: { fontSize: 12, color: "#6b7280" },
-					detail: {
-						width: 56,
-						height: 16,
-						fontSize: 13,
-						fontWeight: 600,
-						color: "inherit",
-						borderWidth: 1,
-						borderRadius: 20,
-						formatter: "{value}%",
-					},
-				}],
-			});
-		}).catch(function (err) {
-			toast(err.message || "Erro ao carregar gráficos.", "error");
-		});
-	}
-
 	function renderChartConvitesPorRamo() {
 		const card = document.getElementById("card-convites-por-ramo");
 		const el = document.getElementById("chart-convites-por-ramo");
@@ -2761,10 +2678,26 @@
 				const vendidos = Number(info.qtd_vendida || 0);
 				return beneficiarios > 0 ? vendidos / beneficiarios : 0;
 			});
+			const pctVendido = RAMOS_ORDEM.map(function (ramo) {
+				const info = porRamo[ramo] || {};
+				const esperado = Number(info.qtd_esperada || 0);
+				const vendidos = Number(info.qtd_vendida || 0);
+				return esperado > 0 ? (vendidos / esperado) * 100 : null;
+			});
+			const markPointData = RAMOS_ORDEM.map(function (ramo, idx) {
+				const pct = pctVendido[idx];
+				if (pct === null) return null;
+				return {
+					name: ramo,
+					value: Math.round(pct) + "%",
+					xAxis: idx,
+					yAxis: valores[idx],
+				};
+			}).filter(function (d) { return d !== null; });
 			el.setAttribute(
 				"aria-label",
 				"Convites vendidos por beneficiário em cada ramo; linha tracejada indica a média de " +
-				media.toFixed(2) + " convites por associado."
+				media.toFixed(2) + " convites por associado. Cada gota indica o percentual vendido em relação ao esperado."
 			);
 			chartConvitesPorRamoInstance.setOption({
 				aria: { enabled: true },
@@ -2776,14 +2709,21 @@
 						const p = params[0];
 						const ramo = p.name;
 						const info = porRamo[ramo] || {};
+						const esperado = Number(info.qtd_esperada || 0);
+						const vendidos = Number(info.qtd_vendida || 0);
+						const pct = esperado > 0 ? (vendidos / esperado) * 100 : null;
+						const pctLine = pct === null
+							? "Esperado: — · Vendidos: " + fmtInt(vendidos)
+							: "Vendidos / esperado: " + fmtInt(vendidos) + " / " + fmtInt(esperado) +
+								" (" + pct.toFixed(1) + "%)";
 						return ramo + "<br/>" +
 							p.marker + " " + Number(p.value).toFixed(2) + " convite(s) / beneficiário<br/>" +
-							"Vendidos: " + fmtInt(info.qtd_vendida || 0) +
-							" · Benef. ativos: " + fmtInt(info.beneficiarios_ativos || 0);
+							pctLine + "<br/>" +
+							"Benef. ativos: " + fmtInt(info.beneficiarios_ativos || 0);
 					},
 				},
 				legend: { show: false },
-				grid: { left: 16, right: 32, top: 32, bottom: 48, containLabel: true },
+				grid: { left: 16, right: 32, top: 48, bottom: 48, containLabel: true },
 				xAxis: {
 					type: "category",
 					data: RAMOS_ORDEM,
@@ -2803,6 +2743,19 @@
 					data: valores,
 					barMaxWidth: 64,
 					itemStyle: { borderRadius: [4, 4, 0, 0] },
+					markPoint: {
+						symbol: "pin",
+						symbolSize: 52,
+						itemStyle: { color: CHART_PALETTE[3] },
+						label: {
+							show: true,
+							color: "#fff",
+							fontSize: 11,
+							fontWeight: 600,
+							formatter: "{c}",
+						},
+						data: markPointData,
+					},
 					markLine: {
 						symbol: "none",
 						silent: true,
@@ -3064,7 +3017,6 @@
 		opcaoLocalList = (convitesDashboard.opcoes || []).slice();
 		renderConvitesConfigSummary();
 		renderConvitesBarras();
-		renderConvitesGauges();
 		renderChartConvitesPorRamo();
 		renderConvitesLinha();
 		renderConvitesTable();
@@ -3086,7 +3038,6 @@
 		const convitesPanel = conviteChartEl ? conviteChartEl.closest("[role='tabpanel']") : null;
 		const renderConvitesCharts = function () {
 			renderConvitesBarras();
-			renderConvitesGauges();
 			renderChartConvitesPorRamo();
 			renderConvitesLinha();
 		};
@@ -3098,7 +3049,6 @@
 				if (chartBarrasInstance) chartBarrasInstance.resize();
 				if (chartLinhaInstance) chartLinhaInstance.resize();
 				if (chartConvitesPorRamoInstance) chartConvitesPorRamoInstance.resize();
-				gaugeInstances.forEach(function (inst) { inst.resize(); });
 			}
 		};
 		if (convitesPanel) {
@@ -3252,29 +3202,67 @@
 			saveCfgBtn.addEventListener("click", function () {
 				const aceita = getSwitchChecked("cfg-aceitar-doacoes");
 				const data = (document.getElementById("cfg-data-limite-vendas").value || "").trim();
-				saveCfgBtn.disabled = true;
-				api("gris.api.festas.convites.update_config", {
-					festa_name: festaName,
-					aceitar_doacoes: aceita ? 1 : 0,
-					data_limite_vendas: data,
-				})
-					.then(function (resp) {
-						convitesDashboard.aceitar_doacoes = !!resp.aceitar_doacoes;
-						convitesDashboard.data_limite_vendas = resp.data_limite_vendas || "";
-						renderConvitesConfigSummary();
-						renderConvitesBarras();
-						toast("Configurações salvas.", "success");
-						dlg.close();
-					})
-					.catch(function (err) {
-						toast(err.message || "Não foi possível salvar.", "error");
-					})
-					.finally(function () { saveCfgBtn.disabled = false; });
+				const vendaPortariaDesejado = getSwitchChecked("cfg-venda-portaria");
+				const vendaPortariaAtual = !!convitesDashboard.venda_na_portaria;
+				const mudouPortaria = vendaPortariaDesejado !== vendaPortariaAtual;
+
+				const aplicar = function () {
+					saveCfgBtn.disabled = true;
+					const tarefas = [];
+					if (mudouPortaria) {
+						tarefas.push(
+							api("gris.api.festas.convites.toggle_venda_portaria", {
+								festa_name: festaName,
+								ativo: vendaPortariaDesejado ? 1 : 0,
+							}).then(function (resp) {
+								if (resp && resp.dashboard) syncDashboard(resp.dashboard);
+							})
+						);
+					}
+					tarefas.push(
+						api("gris.api.festas.convites.update_config", {
+							festa_name: festaName,
+							aceitar_doacoes: aceita ? 1 : 0,
+							data_limite_vendas: data,
+						}).then(function (resp) {
+							convitesDashboard.aceitar_doacoes = !!resp.aceitar_doacoes;
+							convitesDashboard.data_limite_vendas = resp.data_limite_vendas || "";
+						})
+					);
+					Promise.all(tarefas)
+						.then(function () {
+							renderConvitesConfigSummary();
+							renderConvitesBarras();
+							toast("Configurações salvas.", "success");
+							dlg.close();
+						})
+						.catch(function (err) {
+							toast(err.message || "Não foi possível salvar.", "error");
+						})
+						.finally(function () { saveCfgBtn.disabled = false; });
+				};
+
+				if (mudouPortaria) {
+					const msg = vendaPortariaDesejado
+						? "Ativar 'Venda na portaria' irá desativar todos os outros tipos de convite ativos e habilitar apenas o tipo 'Portaria'. Continuar?"
+						: "Desativar o modo 'Venda na portaria' irá desativar o tipo 'Portaria'. Os demais tipos permanecem como estão (você precisará reativá-los manualmente). Continuar?";
+					confirmDialog({
+						title: vendaPortariaDesejado ? "Ativar venda na portaria" : "Desativar venda na portaria",
+						message: msg,
+						confirmLabel: "Salvar e continuar",
+						variant: vendaPortariaDesejado ? "primary" : undefined,
+					}).then(function (ok) {
+						if (ok) aplicar();
+					});
+				} else {
+					aplicar();
+				}
 			});
 		}
 	}
 
 	function hydrateConfigDialog() {
+		setSwitchChecked("cfg-venda-portaria", !!convitesDashboard.venda_na_portaria);
 		setSwitchChecked("cfg-aceitar-doacoes", !!convitesDashboard.aceitar_doacoes);
 		const data = document.getElementById("cfg-data-limite-vendas");
 		if (data) data.value = convitesDashboard.data_limite_vendas || "";

@@ -535,17 +535,6 @@ window._festaData = {
 	<div id="chart-convites-barras" class="festa-convites-chart"></div>
 	{% endcall %}
 
-	{# Seção — Gauges por opção (vendido vs esperado) #}
-	{% call card(attrs={"class": "festa-card"}) %}
-	<div class="festa-card__header">
-		<div>
-			<h2 class="festa-card__title">Progresso por convite</h2>
-			<p class="festa-card__subtitle">Vendido x esperado, por tipo de convite.</p>
-		</div>
-	</div>
-	<div id="chart-convites-gauges" class="festa-convites-gauges"></div>
-	{% endcall %}
-
 	{# Seção — Convites por beneficiário do ramo (só quando convites_por_ramo=1) #}
 	<div id="card-convites-por-ramo" hidden>
 		{% call card(attrs={"class": "festa-card"}) %}
@@ -1059,6 +1048,9 @@ window._festaData = {
 	</header>
 	<section class="festa-dialog-edit-body">
 		<div class="festa-dialog-form">
+			{% call field(label="Venda na portaria", hint="Ativa o tipo 'Portaria' e desativa todos os outros tipos de convite.") %}
+				{{ switch(name="cfg-venda-portaria", attrs={"id": "cfg-venda-portaria"}) }}
+			{% endcall %}
 			{% call field(label="Aceitar doações junto com os convites") %}
 				{{ switch(name="cfg-aceitar-doacoes", attrs={"id": "cfg-aceitar-doacoes"}) }}
 			{% endcall %}

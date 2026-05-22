@@ -98,13 +98,15 @@ def _validar_itens(festa_name: str, itens_raw) -> tuple[list[dict], float, int]:
 	opcoes = frappe.get_all(
 		"Opcao Convite Festa",
 		filters={"name": ("in", list(agregado.keys()))},
-		fields=["name", "festa", "ativo", "nome_convite", "valor"],
+		fields=["name", "festa", "ativo", "nome_convite", "valor", "portaria"],
 	)
 	indexado = {row.name: row for row in opcoes}
 
 	resumo_itens: list[dict] = []
 	subtotal = 0.0
 	total_convites = 0
+	tem_portaria = False
+	tem_nao_portaria = False
 	for opcao_name, quantidade in agregado.items():
 		opcao = indexado.get(opcao_name)
 		if not opcao:
@@ -113,6 +115,10 @@ def _validar_itens(festa_name: str, itens_raw) -> tuple[list[dict], float, int]:
 			frappe.throw("Opção de convite não pertence a esta festa.")
 		if not opcao.ativo:
 			frappe.throw(f"A opção '{opcao.nome_convite}' está inativa.")
+		if opcao.portaria:
+			tem_portaria = True
+		else:
+			tem_nao_portaria = True
 		valor = flt(opcao.valor)
 		subtotal += valor * quantidade
 		total_convites += quantidade
@@ -124,6 +130,12 @@ def _validar_itens(festa_name: str, itens_raw) -> tuple[list[dict], float, int]:
 				"valor_unitario": valor,
 				"subtotal": valor * quantidade,
 			}
+		)
+
+	# Regra de negócio: convite de portaria não pode ser misturado com outros.
+	if tem_portaria and tem_nao_portaria:
+		frappe.throw(
+			"Convites de portaria não podem ser comprados junto com outros tipos."
 		)
 
 	return resumo_itens, subtotal, total_convites

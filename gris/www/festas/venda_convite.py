@@ -54,3 +54,13 @@ def get_context(context):
 	context.festas_select_items = [
 		{"label": f["nome_festa"], "value": f["name"], "type": "item"} for f in festas
 	]
+
+	# Pré-seleção via query param ?festa=<name> (usada pelo QR "Vender na porta").
+	# Só aceita se a festa estiver realmente na lista (não vaza outras festas).
+	festa_param = (frappe.form_dict.get("festa") or "").strip()
+	festa_pre_selecionada = ""
+	if festa_param:
+		nomes_validos = {f["name"] for f in festas}
+		if festa_param in nomes_validos:
+			festa_pre_selecionada = festa_param
+	context.festa_pre_selecionada = festa_pre_selecionada

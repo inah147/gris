@@ -32,6 +32,10 @@ class ConviteFesta(Document):
 	def after_insert(self):
 		self._criar_cobranca_infinitepay()
 
+	def on_trash(self):
+		# Remove Lista Entrada Festa em cascata para manter integridade referencial.
+		frappe.db.delete("Lista Entrada Festa", {"convite": self.name})
+
 	@property
 	def status_pagamento(self):
 		"""Virtual field: lê o status diretamente da Cobranca Infinitepay vinculada."""
@@ -223,12 +227,79 @@ def on_cobranca_atualizada(doc, method=None):
 	)
 	for convite_name in convites:
 		_atualizar_contadores_opcoes(convite_name)
+		_criar_lista_entrada(convite_name)
 		frappe.enqueue(
 			"gris.festas.doctype.convite_festa.convite_festa.enviar_qr_codes",
 			queue="long",
 			enqueue_after_commit=True,
 			convite_name=convite_name,
 		)
+
+
+def _convite_eh_portaria(convite_name: str) -> bool:
+	"""True se algum item do convite referencia uma Opcao com portaria=1."""
+	row = frappe.db.sql(
+		"""
+		SELECT 1
+		  FROM `tabItem Convite Festa` it
+		  JOIN `tabOpcao Convite Festa` op ON op.name = it.opcao_convite
+		 WHERE it.parent = %s
+		   AND it.parenttype = 'Convite Festa'
+		   AND it.eh_convite = 1
+		   AND op.portaria = 1
+		 LIMIT 1
+		""",
+		(convite_name,),
+	)
+	return bool(row)
+
+
+def _criar_lista_entrada(convite_name: str) -> None:
+	"""Cria 1 Lista Entrada Festa por convidado do convite, idempotentemente.
+
+	Chamada por webhook do pagamento — `ignore_permissions=True` é seguro porque
+	o gatilho vem do sistema (não do usuário). Se algum item do convite for de
+	Opcao com portaria=1, marca o status como 'Entrou' diretamente (compra na
+	porta, presença implícita).
+	"""
+	from frappe.utils import now
+
+	convite = frappe.get_doc("Convite Festa", convite_name)
+	if not convite.convidados:
+		return
+
+	eh_portaria = _convite_eh_portaria(convite_name)
+
+	for convidado in convite.convidados:
+		if not convidado.qr_code_payload:
+			continue
+		# Idempotência forte: a chave `convidado_row` é única por linha.
+		if frappe.db.exists("Lista Entrada Festa", {"convidado_row": convidado.name}):
+			continue
+		try:
+			doc = frappe.new_doc("Lista Entrada Festa")
+			doc.festa = convite.festa
+			doc.convite = convite.name
+			doc.convidado_row = convidado.name
+			doc.codigo_convite = convidado.qr_code_payload
+			doc.nome_convidado = convidado.nome
+			doc.email = convidado.email
+			doc.telefone = convidado.telefone
+			if eh_portaria:
+				doc.status = "Entrou"
+				doc.hora_entrada = now()
+				doc.entrada_registrada_por = frappe.session.user or "Administrator"
+			else:
+				doc.status = "Não entrou"
+			doc.insert(ignore_permissions=True)
+		except frappe.UniqueValidationError:
+			# Concorrência: outro processo criou no meio do caminho. Ignorar.
+			continue
+		except Exception:
+			frappe.log_error(
+				message=frappe.get_traceback(),
+				title=f"Falha ao criar Lista Entrada Festa ({convite_name}/{convidado.name})",
+			)
 
 
 def _atualizar_contadores_opcoes(convite_name: str) -> None:
@@ -265,13 +336,21 @@ def _atualizar_contadores_opcoes(convite_name: str) -> None:
 EMAIL_TEMPLATE_CONVITE = "Convite Festa - QR Code"
 
 
-def enviar_qr_codes(convite_name: str, forcar_todos: bool = False) -> None:
+def enviar_qr_codes(
+	convite_name: str,
+	forcar_todos: bool = False,
+	convidado_row_name: str | None = None,
+) -> None:
 	"""Job de background: gera PDFs com QR code e envia por e-mail.
 
 	- Por padrão age só sobre convidados com status_envio em {Pendente, Erro}.
 	- Quando `forcar_todos=True`, reenvia também para quem já está `Enviado`.
-	- Se pagador_recebe_qr_codes=1, envia um único e-mail com todos os anexos
-	  para o e-mail do pagador.
+	- Quando `convidado_row_name` é informado, envia apenas para aquele
+	  convidado (e sempre para o e-mail individual dele, mesmo que o convite
+	  tenha `pagador_recebe_qr_codes=1`). Usado pela portaria para reenvio
+	  pontual.
+	- Se pagador_recebe_qr_codes=1 (sem filtro de convidado), envia um único
+	  e-mail com todos os anexos para o e-mail do pagador.
 	- Caso contrário, envia 1 e-mail por convidado.
 	- Em qualquer falha, marca o convidado afetado como Erro e dispara
 	  uma mensagem consolidada via WhatsApp para o coordenador da Portaria.
@@ -284,14 +363,23 @@ def enviar_qr_codes(convite_name: str, forcar_todos: bool = False) -> None:
 	if doc.status_pagamento != STATUS_PAGAMENTO_PAGO:
 		return
 
-	if forcar_todos:
+	if convidado_row_name:
+		# Reenvio individual: sempre força (ignora status_envio) e envia para o
+		# convidado específico, mesmo em modo "pagador recebe todos".
+		pendentes = [c for c in (doc.convidados or []) if c.name == convidado_row_name]
+		if not pendentes:
+			return
+		envio_individual_forcado = True
+	elif forcar_todos:
 		pendentes = list(doc.convidados or [])
+		envio_individual_forcado = False
 	else:
 		pendentes = [
 			c
 			for c in (doc.convidados or [])
 			if c.status_envio in (STATUS_ENVIO_PENDENTE, STATUS_ENVIO_ERRO)
 		]
+		envio_individual_forcado = False
 	if not pendentes:
 		return
 
@@ -299,7 +387,7 @@ def enviar_qr_codes(convite_name: str, forcar_todos: bool = False) -> None:
 	contexto_template = _carregar_template(doc, festa)
 	falhas: list[tuple[str, str, str]] = []  # (nome, email, descricao_erro)
 
-	if doc.pagador_recebe_qr_codes:
+	if doc.pagador_recebe_qr_codes and not envio_individual_forcado:
 		anexos = []
 		for convidado in pendentes:
 			try:

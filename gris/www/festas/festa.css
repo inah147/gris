@@ -532,20 +532,6 @@
 	min-height: 320px;
 }
 
-.festa-convites-gauges {
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	width: 100%;
-	min-height: 380px;
-}
-
-.festa-convites-gauges .chart-gauge-ring {
-	width: 100%;
-	max-width: 480px;
-	height: 380px;
-}
-
 .festa-convites-chart-toggle {
 	display: inline-flex;
 	gap: 0.25rem;

@@ -434,25 +434,19 @@
 			});
 		});
 
-		const slider = document.getElementById("vc-doacao-slider");
-		const valorLabel = document.getElementById("vc-doacao-valor");
-		function atualizarSliderFill() {
-			if (!slider) return;
-			const min = Number(slider.min || 0);
-			const max = Number(slider.max || 100);
-			const val = Number(slider.value || 0);
-			const pct = max > min ? ((val - min) / (max - min)) * 100 : 0;
-			slider.style.setProperty("--slider-value", pct + "%");
-		}
-		if (slider) {
-			atualizarSliderFill();
-			slider.addEventListener("input", function () {
-				doacaoValor = Number(slider.value || 0);
-				if (valorLabel) valorLabel.textContent = fmtMoeda(doacaoValor);
-				atualizarSliderFill();
+		const doacaoBtns = document.querySelectorAll("[data-vc-doacao-valor]");
+		doacaoBtns.forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				const valor = Number(btn.getAttribute("data-vc-doacao-valor")) || 0;
+				doacaoValor = valor;
+				doacaoBtns.forEach(function (b) {
+					const active = b === btn;
+					b.classList.toggle("is-active", active);
+					b.setAttribute("aria-pressed", active ? "true" : "false");
+				});
 				atualizarLinhasDoacao();
 			});
-		}
+		});
 	}
 
 	// ─── Aba Convidados ─────────────────────────────────────────────────────

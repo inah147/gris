@@ -49,11 +49,8 @@ jobs:
             docker compose exec redis-cache redis-cli FLUSHALL
             docker compose exec backend bench build --app gris --force
 
-            # Disconnect stale network endpoints by ID (handles duplicate entries from restarting containers)
-            docker network inspect gris_default --format '{{range $k,$v := .Containers}}{{$k}} {{end}}' 2>/dev/null \
-              | tr ' ' '\n' | grep -v '^$' \
-              | xargs -r -I{} docker network disconnect -f gris_default {} 2>/dev/null || true
-
+            # Stop all containers first (prevents evolution-manager from creating new endpoints while restarting)
+            docker compose stop
             docker compose down
             docker compose up -d --wait --wait-timeout 120
 

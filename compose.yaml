@@ -150,6 +150,8 @@ services:
   evolution-manager:
     image: evoapicloud/evolution-manager:latest
     restart: unless-stopped
+    volumes:
+      - ./deploy/evolution-manager/nginx.conf:/etc/nginx/conf.d/nginx.conf:ro
     expose:
       - "80"
 

@@ -42,16 +42,15 @@ jobs:
               --tag=gris:latest \
               --file=Containerfile .
 
-            docker compose up -d
+            docker compose up -d --wait --wait-timeout 120
             docker compose exec backend bench --site gris.local migrate
             docker compose exec backend bench --site gris.local clear-cache
             docker compose exec backend bench --site gris.local clear-website-cache
             docker compose exec redis-cache redis-cli FLUSHALL
             docker compose exec backend bench build --app gris --force
-            docker compose restart
 
             docker compose down
-            docker compose up -d
+            docker compose up -d --wait --wait-timeout 120
 
             docker volume prune -f
             docker image prune -af

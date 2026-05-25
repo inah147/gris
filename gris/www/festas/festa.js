@@ -289,6 +289,7 @@
 		});
 	}
 
+
 	function selectLabelFor(items, value, fallback) {
 		for (var i = 0; i < items.length; i++) {
 			if (items[i].value === value) return items[i].label || fallback || "";
@@ -318,12 +319,15 @@
 		if (outro) outro.hidden = tipo !== "Outro";
 	}
 
-	function openEquipeForm(renderPrefix, equipe, container, editIdx) {
+	// Popula campos do form de equipe. N\u00c3O abre o popover \u2014 quem chama \u00e9
+	// respons\u00e1vel por isso. A abertura \u00e9 delegada ao design system (Basecoat
+	// popover) via trigger.click(); aqui s\u00f3 preparamos o conte\u00fado antes do
+	// design system medir/posicionar.
+	function populateEquipeForm(renderPrefix, equipe, container, editIdx) {
 		const short = renderPrefix.replace("edit-", "");
 		const popoverEl = document.getElementById("eq-" + short + "-popover");
 		const trigger = document.getElementById("btn-add-" + short + "-membro");
-		const content = document.getElementById("eq-" + short + "-form-popover");
-		if (!popoverEl || !trigger || !content) return;
+		if (!popoverEl || !trigger) return;
 
 		popoverEl._editEquipe = equipe;
 		popoverEl._container = container;
@@ -360,22 +364,69 @@
 
 		const funcaoEl = document.getElementById("eq-" + short + "-funcao");
 		if (funcaoEl) funcaoEl.value = m ? (m.funcao || "") : "";
+	}
 
-		// Open popover
-		trigger.setAttribute("aria-expanded", "true");
-		content.setAttribute("aria-hidden", "false");
+	// Abre o popover de equipe via design system, populando os campos antes
+	// para que a medi\u00e7\u00e3o/posicionamento j\u00e1 considere o conte\u00fado final.
+	// Se j\u00e1 est\u00e1 aberto, repopula e dispara `resize` para reposicionar.
+	function openEquipeForm(renderPrefix, equipe, container, editIdx) {
+		const short = renderPrefix.replace("edit-", "");
+		const popoverEl = document.getElementById("eq-" + short + "-popover");
+		const trigger = document.getElementById("btn-add-" + short + "-membro");
+		if (!popoverEl || !trigger) return;
+
+		if (trigger.getAttribute("aria-expanded") === "true") {
+			// J\u00e1 aberto: s\u00f3 repopular e reposicionar.
+			populateEquipeForm(renderPrefix, equipe, container, editIdx);
+			window.dispatchEvent(new Event("resize"));
+			return;
+		}
+
+		// Fechado: marca o \u00edndice pendente e clica no trigger. O listener de
+		// captura em initEquipeTriggers() l\u00ea pendingEditIdx, popula os campos,
+		// e em seguida o design system processa o click \u2192 showPopover + position.
+		popoverEl.dataset.pendingEditIdx = String(editIdx);
+		trigger.click();
+	}
+
+	// Listener em fase de captura no document: intercepta o clique no trigger
+	// "Adicionar membro" ANTES do design system, popula os campos com base em
+	// pendingEditIdx (default -1 = novo membro) e remove a flag.
+	function initEquipeTriggers() {
+		if (document._festaEqTriggers) return;
+		document._festaEqTriggers = true;
+		document.addEventListener("click", function (e) {
+			const trigger = e.target.closest("#btn-add-area-membro, #btn-add-barraca-membro");
+			if (!trigger) return;
+			// Se est\u00e1 fechando (toggle off), n\u00e3o precisa popular.
+			if (trigger.getAttribute("aria-expanded") === "true") return;
+
+			const isArea = trigger.id === "btn-add-area-membro";
+			const short = isArea ? "area" : "barraca";
+			const dlg = document.getElementById("dialog-edit-" + short);
+			if (!dlg) return;
+			const idx = parseInt(dlg.dataset[isArea ? "areaIdx" : "barracaIdx"], 10);
+			const item = (isArea ? areas : barracas)[idx];
+			if (!item) return;
+			if (!item._editEquipe) item._editEquipe = [];
+			const container = dlg.querySelector("#edit-" + short + "-equipe-container");
+
+			const popoverEl = document.getElementById("eq-" + short + "-popover");
+			const editIdx = popoverEl ? parseInt(popoverEl.dataset.pendingEditIdx || "-1", 10) : -1;
+			if (popoverEl) delete popoverEl.dataset.pendingEditIdx;
+
+			populateEquipeForm("edit-" + short, item._editEquipe, container, editIdx);
+		}, true);
 	}
 
 	function closeEquipeForm(renderPrefix) {
 		const short = renderPrefix.replace("edit-", "");
 		const trigger = document.getElementById("btn-add-" + short + "-membro");
-		const content = document.getElementById("eq-" + short + "-form-popover");
-		// Move focus to trigger before hiding to avoid aria-hidden-with-focus warning
-		if (trigger && content && content.contains(document.activeElement)) {
-			trigger.focus();
-		}
-		if (trigger) trigger.setAttribute("aria-expanded", "false");
-		if (content) content.setAttribute("aria-hidden", "true");
+		if (!trigger) return;
+		// Delega o fechamento ao design system via toggle. O listener de
+		// captura em initEquipeTriggers() retorna cedo quando aria-expanded
+		// já é "true" (não repopula), e o design system trata aria/hidePopover/foco.
+		if (trigger.getAttribute("aria-expanded") === "true") trigger.click();
 	}
 
 	function confirmEquipeForm(renderPrefix) {
@@ -998,26 +1049,9 @@
 			btnEqConfirmar.addEventListener("click", function () { confirmEquipeForm("edit-area"); });
 		}
 
-		const btnAddMembro = document.getElementById("btn-add-area-membro");
-		if (btnAddMembro) {
-			btnAddMembro.addEventListener("click", function () {
-				const dlg = document.getElementById("dialog-edit-area");
-				const idx = parseInt(dlg.dataset.areaIdx, 10);
-				const area = areas[idx];
-				if (!area._editEquipe) area._editEquipe = [];
-				const container = dlg.querySelector("#edit-area-equipe-container");
-				openEquipeForm("edit-area", area._editEquipe, container, -1);
-			});
-		}
-
-		// Click-outside closes the equipe popover
-		document.addEventListener("click", function (e) {
-			const popoverEl = document.getElementById("eq-area-popover");
-			const trigger = document.getElementById("btn-add-area-membro");
-			if (!popoverEl || !trigger) return;
-			if (trigger.getAttribute("aria-expanded") !== "true") return;
-			if (!popoverEl.contains(e.target)) closeEquipeForm("edit-area");
-		});
+		// Trigger "Adicionar membro" e click-outside são tratados pelo design
+		// system (Basecoat popover) — popula via initEquipeTriggers() em fase
+		// de captura antes do design system processar o click.
 
 		const btnSalvar = document.getElementById("btn-edit-area-salvar");
 		if (!btnSalvar) return;
@@ -1168,26 +1202,7 @@
 			btnEqConfirmar.addEventListener("click", function () { confirmEquipeForm("edit-barraca"); });
 		}
 
-		const btnAddMembro = document.getElementById("btn-add-barraca-membro");
-		if (btnAddMembro) {
-			btnAddMembro.addEventListener("click", function () {
-				const dlg = document.getElementById("dialog-edit-barraca");
-				const idx = parseInt(dlg.dataset.barracaIdx, 10);
-				const barraca = barracas[idx];
-				if (!barraca._editEquipe) barraca._editEquipe = [];
-				const container = dlg.querySelector("#edit-barraca-equipe-container");
-				openEquipeForm("edit-barraca", barraca._editEquipe, container, -1);
-			});
-		}
-
-		// Click-outside closes the equipe popover
-		document.addEventListener("click", function (e) {
-			const popoverEl = document.getElementById("eq-barraca-popover");
-			const trigger = document.getElementById("btn-add-barraca-membro");
-			if (!popoverEl || !trigger) return;
-			if (trigger.getAttribute("aria-expanded") !== "true") return;
-			if (!popoverEl.contains(e.target)) closeEquipeForm("edit-barraca");
-		});
+		// Trigger e click-outside delegados ao design system (initEquipeTriggers).
 
 		const btnSalvar = document.getElementById("btn-edit-barraca-salvar");
 		if (!btnSalvar) return;
@@ -2672,26 +2687,28 @@
 			}
 			const porRamo = convitesDashboard.por_ramo || {};
 			const media = Number(convitesDashboard.convites_por_associado || 0);
-			const valores = RAMOS_ORDEM.map(function (ramo) {
+			const entries = RAMOS_ORDEM.map(function (ramo) {
 				const info = porRamo[ramo] || {};
 				const beneficiarios = Number(info.beneficiarios_ativos || 0);
 				const vendidos = Number(info.qtd_vendida || 0);
-				return beneficiarios > 0 ? vendidos / beneficiarios : 0;
-			});
-			const pctVendido = RAMOS_ORDEM.map(function (ramo) {
-				const info = porRamo[ramo] || {};
 				const esperado = Number(info.qtd_esperada || 0);
-				const vendidos = Number(info.qtd_vendida || 0);
-				return esperado > 0 ? (vendidos / esperado) * 100 : null;
-			});
-			const markPointData = RAMOS_ORDEM.map(function (ramo, idx) {
-				const pct = pctVendido[idx];
-				if (pct === null) return null;
 				return {
-					name: ramo,
-					value: Math.round(pct) + "%",
+					ramo: ramo,
+					valor: beneficiarios > 0 ? vendidos / beneficiarios : 0,
+					pct: esperado > 0 ? (vendidos / esperado) * 100 : null,
+				};
+			});
+			entries.sort(function (a, b) { return b.valor - a.valor; });
+			const ramosOrdenados = entries.map(function (e) { return e.ramo; });
+			const valores = entries.map(function (e) { return e.valor; });
+			const pctVendido = entries.map(function (e) { return e.pct; });
+			const markPointData = entries.map(function (e, idx) {
+				if (e.pct === null) return null;
+				return {
+					name: e.ramo,
+					value: Math.round(e.pct) + "%",
 					xAxis: idx,
-					yAxis: valores[idx],
+					yAxis: e.valor,
 				};
 			}).filter(function (d) { return d !== null; });
 			el.setAttribute(
@@ -2726,7 +2743,7 @@
 				grid: { left: 16, right: 32, top: 48, bottom: 48, containLabel: true },
 				xAxis: {
 					type: "category",
-					data: RAMOS_ORDEM,
+					data: ramosOrdenados,
 					axisLabel: { interval: 0 },
 				},
 				yAxis: {
@@ -2873,18 +2890,239 @@
 			{ label: "Tipo de convite", sortType: "text" },
 			{ label: "Qtd.", sortType: "number" },
 			{ label: "Status", sortType: "text" },
+			{ label: '<span class="sr-only">Ações</span>', sortable: false },
 		];
 		const body = linhas.map(function (row) {
+			const pedidoName = row.pedido_name || "";
+			const actions = pedidoName
+				? '<button type="button" class="btn-sm-outline" data-pedido-detalhes="' + escHtml(pedidoName) + '">Detalhes</button>'
+				: "";
 			return "<tr>" +
 				"<td>" + frappe.utils.escape_html(row.nome_pagador || "—") + "</td>" +
 				"<td>" + frappe.utils.escape_html(row.email_pagador || "—") + "</td>" +
 				"<td>" + frappe.utils.escape_html(row.tipo_convite || "—") + "</td>" +
 				"<td>" + fmtInt(row.quantidade) + "</td>" +
 				"<td>" + badgeStatus(row.status_pagamento) + "</td>" +
+				'<td class="festa-table-actions">' + actions + "</td>" +
 				"</tr>";
 		}).join("");
 		container.innerHTML = buildSortableTable(headers, body);
+		container.querySelectorAll("[data-pedido-detalhes]").forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				abrirDetalhesPedido(btn.getAttribute("data-pedido-detalhes"));
+			});
+		});
 		notifyDesignSystem();
+	}
+
+	// ─── Detalhes do pedido (dialog na aba Convites) ────────────────────────────
+
+	let detalhesPedidoAtual = null;
+	let detalhesEdicaoConvRow = null;
+
+	function fmtDataHora(iso) {
+		if (!iso) return "—";
+		const d = new Date(iso);
+		if (isNaN(d.getTime())) return iso;
+		return d.toLocaleString("pt-BR");
+	}
+
+	function abrirDetalhesPedido(pedidoName) {
+		if (!pedidoName) return;
+		api("gris.api.festas.convites.get_detalhes_pedido", { pedido_name: pedidoName })
+			.then(function (data) {
+				detalhesPedidoAtual = data;
+				detalhesEdicaoConvRow = null;
+				preencherDialogDetalhes(data);
+				const dlg = document.getElementById("dialog-detalhes-pedido");
+				if (dlg && typeof dlg.showModal === "function") dlg.showModal();
+			})
+			.catch(function (err) {
+				toast((err && err.message) || "Falha ao carregar detalhes do pedido.", "error");
+			});
+	}
+
+	function preencherDialogDetalhes(data) {
+		const set = function (id, val) {
+			const el = document.getElementById(id);
+			if (el) el.textContent = val || "—";
+		};
+		const hiddenName = document.getElementById("detalhes-pedido-name");
+		if (hiddenName) hiddenName.value = data.pedido_name || "";
+
+		const pagador = data.pagador || {};
+		set("detalhes-pagador-nome", pagador.nome);
+		set("detalhes-pagador-email", pagador.email);
+		set("detalhes-pagador-telefone", pagador.telefone);
+
+		set("detalhes-pedido-criacao", data.creation ? fmtDataHora(data.creation) : "—");
+		const statusEl = document.getElementById("detalhes-pedido-status");
+		if (statusEl) statusEl.innerHTML = badgeStatus(data.status_pagamento || "Pendente");
+
+		renderDetalhesItens(data.itens || []);
+		renderDetalhesConvidados(data.convidados || []);
+	}
+
+	function renderDetalhesItens(itens) {
+		const container = document.getElementById("detalhes-pedido-itens-container");
+		if (!container) return;
+		if (!itens.length) {
+			container.innerHTML = '<p class="text-sm text-muted-foreground">Nenhum item neste pedido.</p>';
+			return;
+		}
+		const rows = itens.map(function (it) {
+			return "<tr>" +
+				"<td>" + escHtml(it.tipo_convite || "—") + "</td>" +
+				"<td>" + fmtInt(it.quantidade) + "</td>" +
+				"<td>" + fmtMoeda(it.valor) + "</td>" +
+				"</tr>";
+		}).join("");
+		container.innerHTML =
+			'<div class="festa-table-scroll">' +
+			'<table class="festa-table">' +
+			'<thead><tr><th>Item</th><th>Qtd.</th><th>Valor unit.</th></tr></thead>' +
+			"<tbody>" + rows + "</tbody>" +
+			"</table></div>";
+	}
+
+	function renderDetalhesConvidados(convidados) {
+		const container = document.getElementById("detalhes-pedido-convidados-container");
+		if (!container) return;
+		if (!convidados.length) {
+			container.innerHTML = '<p class="text-sm text-muted-foreground">Nenhum convidado registrado neste pedido.</p>';
+			return;
+		}
+		const podePago = (detalhesPedidoAtual && detalhesPedidoAtual.status_pagamento === "Pago");
+		const rows = convidados.map(function (c) {
+			const convRow = c.convidado_row || "";
+			const ja = !!c.ja_entrou;
+			const statusBadge = ja
+				? '<span class="badge badge-success">Entrou</span>'
+				: '<span class="badge badge-secondary">Não entrou</span>';
+			let acoes = "";
+			if (canEdit && convRow) {
+				if (detalhesEdicaoConvRow === convRow) {
+					acoes =
+						'<button type="button" class="btn-sm-primary" data-conv-salvar="' + escHtml(convRow) + '">Salvar</button> ' +
+						'<button type="button" class="btn-sm-outline" data-conv-cancelar="' + escHtml(convRow) + '">Cancelar</button>';
+				} else {
+					acoes =
+						'<button type="button" class="btn-sm-outline" data-conv-editar="' + escHtml(convRow) + '">Editar</button>';
+					if (podePago) {
+						acoes += ' <button type="button" class="btn-sm-outline" data-conv-reenviar="' + escHtml(convRow) + '">Reenviar QR</button>';
+					}
+				}
+			}
+			let emailCell;
+			let telCell;
+			if (detalhesEdicaoConvRow === convRow) {
+				emailCell =
+					'<input type="email" class="input festa-detalhes-edit-input" id="conv-edit-email-' + escHtml(convRow) +
+					'" value="' + escHtml(c.email || "") + '" placeholder="email@exemplo.com" />';
+				telCell =
+					'<input type="tel" class="input festa-detalhes-edit-input" id="conv-edit-tel-' + escHtml(convRow) +
+					'" value="' + escHtml(c.telefone || "") + '" placeholder="(00) 00000-0000" />';
+			} else {
+				emailCell = escHtml(c.email || "—");
+				telCell = escHtml(c.telefone || "—");
+			}
+			return "<tr>" +
+				"<td>" + escHtml(c.nome_convidado || "—") + "</td>" +
+				"<td>" + emailCell + "</td>" +
+				"<td>" + telCell + "</td>" +
+				'<td><code class="festa-codigo-mono">' + escHtml(c.codigo_convite || "—") + "</code></td>" +
+				"<td>" + statusBadge + "</td>" +
+				'<td class="festa-table-actions">' + acoes + "</td>" +
+				"</tr>";
+		}).join("");
+		const headers = canEdit
+			? "<th>Nome</th><th>E-mail</th><th>Telefone</th><th>Código</th><th>Status</th><th>Ações</th>"
+			: "<th>Nome</th><th>E-mail</th><th>Telefone</th><th>Código</th><th>Status</th><th></th>";
+		container.innerHTML =
+			'<div class="festa-table-scroll">' +
+			'<table class="festa-table">' +
+			"<thead><tr>" + headers + "</tr></thead>" +
+			"<tbody>" + rows + "</tbody>" +
+			"</table></div>";
+
+		container.querySelectorAll("[data-conv-editar]").forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				detalhesEdicaoConvRow = btn.getAttribute("data-conv-editar");
+				renderDetalhesConvidados(detalhesPedidoAtual.convidados || []);
+			});
+		});
+		container.querySelectorAll("[data-conv-cancelar]").forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				detalhesEdicaoConvRow = null;
+				renderDetalhesConvidados(detalhesPedidoAtual.convidados || []);
+			});
+		});
+		container.querySelectorAll("[data-conv-salvar]").forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				salvarEdicaoConvidado(btn.getAttribute("data-conv-salvar"), btn);
+			});
+		});
+		container.querySelectorAll("[data-conv-reenviar]").forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				reenviarConviteConvidado(btn.getAttribute("data-conv-reenviar"), btn);
+			});
+		});
+	}
+
+	function salvarEdicaoConvidado(convRow, btn) {
+		if (!convRow) return;
+		const emailEl = document.getElementById("conv-edit-email-" + convRow);
+		const telEl = document.getElementById("conv-edit-tel-" + convRow);
+		const email = emailEl ? emailEl.value : "";
+		const telefone = telEl ? telEl.value : "";
+		if (btn) btn.disabled = true;
+		api("gris.api.festas.convites.editar_dados_convidado_pedido", {
+			convidado_row: convRow,
+			email: email,
+			telefone: telefone,
+		})
+			.then(function (resp) {
+				const atualizado = (resp && resp.convidado) || {};
+				if (detalhesPedidoAtual && detalhesPedidoAtual.convidados) {
+					detalhesPedidoAtual.convidados = detalhesPedidoAtual.convidados.map(function (c) {
+						if (c.convidado_row !== convRow) return c;
+						return Object.assign({}, c, {
+							email: atualizado.email || "",
+							telefone: atualizado.telefone || "",
+						});
+					});
+				}
+				detalhesEdicaoConvRow = null;
+				renderDetalhesConvidados(detalhesPedidoAtual.convidados || []);
+				toast("Dados do convidado atualizados.", "success");
+			})
+			.catch(function (err) {
+				toast((err && err.message) || "Falha ao salvar dados.", "error");
+				if (btn) btn.disabled = false;
+			});
+	}
+
+	function reenviarConviteConvidado(convRow, btn) {
+		if (!convRow) return;
+		confirmDialog({
+			title: "Reenviar QR code?",
+			message: "O convidado receberá um novo e-mail com o QR code do convite.",
+			confirmLabel: "Reenviar",
+			variant: "primary",
+		}).then(function (ok) {
+			if (!ok) return;
+			if (btn) btn.disabled = true;
+			api("gris.api.festas.convites.reenviar_convite_convidado", { convidado_row: convRow })
+				.then(function () {
+					toast("Reenvio enfileirado. O e-mail será enviado em instantes.", "success");
+				})
+				.catch(function (err) {
+					toast((err && err.message) || "Falha ao reenviar o convite.", "error");
+				})
+				.finally(function () {
+					if (btn) btn.disabled = false;
+				});
+		});
 	}
 
 	function renderOpcoesTable() {
@@ -3288,5 +3526,6 @@
 		initEditProduto();
 		initOrcamento();
 		initConvitesTab();
+		initEquipeTriggers();
 	});
 })();

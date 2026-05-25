@@ -1150,23 +1150,39 @@
 	}
 
 	function renderIndicadorTotal(pizza) {
+		const previa = Number((pizza && pizza.entrou) || 0);
+		const naoEntrou = Number((pizza && pizza.nao_entrou) || 0);
+		const portaria = Number((pizza && pizza.comprou_portaria) || 0);
+		const totalEntrou = Number((pizza && pizza.total_entrou) || 0);
+		const totalPrevia = previa + naoEntrou;
+
 		const el = document.getElementById("portaria-indicador-total-valor");
 		if (el) {
-			const total = Number((pizza && pizza.total_entrou) || 0);
-			el.textContent = String(total);
+			el.textContent = String(previa);
 		}
 		const extra = document.getElementById("portaria-indicador-total-extra");
 		if (extra) {
-			const previa = Number((pizza && pizza.entrou) || 0);
-			const totalEntrou = Number((pizza && pizza.total_entrou) || 0);
-			if (totalEntrou > 0) {
-				const pct = Math.round((previa / totalEntrou) * 1000) / 10;
+			if (totalPrevia > 0) {
+				const pct = Math.round((previa / totalPrevia) * 1000) / 10;
 				extra.textContent = pct.toLocaleString("pt-BR", {
 					minimumFractionDigits: pct % 1 === 0 ? 0 : 1,
 					maximumFractionDigits: 1,
-				}) + "% de compras prévias";
+				}) + "% das compras prévias";
 			} else {
-				extra.textContent = "Sem entradas registradas";
+				extra.textContent = "Sem compras prévias registradas";
+			}
+		}
+
+		const elGeral = document.getElementById("portaria-indicador-total-geral-valor");
+		if (elGeral) {
+			elGeral.textContent = String(totalEntrou);
+		}
+		const extraGeral = document.getElementById("portaria-indicador-total-geral-extra");
+		if (extraGeral) {
+			if (totalEntrou > 0) {
+				extraGeral.textContent = previa + " com compra prévia · " + portaria + " na portaria";
+			} else {
+				extraGeral.textContent = "Sem entradas registradas";
 			}
 		}
 	}

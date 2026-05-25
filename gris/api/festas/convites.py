@@ -9,12 +9,17 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from datetime import datetime
 
 import frappe
+from frappe import _
+from frappe.rate_limiter import rate_limit
 from frappe.utils import flt, getdate, today
 
 from gris.api.festas import _ensure_gestor, _validate_festa
+
+EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 PUBLIC_SALE_URL = "/festas/venda_convite"
 PORTARIA_NOME_CONVITE = "Portaria"
@@ -608,3 +613,273 @@ def toggle_venda_portaria(festa_name: str, ativo) -> dict:
 		"venda_na_portaria": ativo_bool,
 		"dashboard": build_dashboard(festa_name),
 	}
+
+
+# ---------------------------------------------------------------------------
+# Detalhes do pedido (dialog na aba Convites)
+# ---------------------------------------------------------------------------
+
+
+def _ensure_festa_acessivel(festa_name: str) -> None:
+	"""Garante que o usuário atual pode acessar a festa do pedido.
+
+	Padrão idêntico ao usado em `get_dashboard`: combina o papel de gestor
+	com `frappe.has_permission("Festa", "read", ...)`. System Manager passa
+	pelos dois.
+	"""
+	_ensure_gestor()
+	if not frappe.has_permission("Festa", "read", festa_name):
+		frappe.throw(_("Sem permissão para acessar esta festa."), frappe.PermissionError)
+
+
+@frappe.whitelist()
+def get_detalhes_pedido(pedido_name: str) -> dict:
+	"""Detalhes completos de um pedido de convite para a dialog na aba Convites.
+
+	Pagador e convidados vêm direto de `Convite Festa` / `Convidado Convite Festa`
+	(fonte canônica, populada na criação do pedido). `Lista Entrada Festa` é
+	consultada só para enriquecer cada convidado com `ja_entrou` (existe apenas
+	após confirmação do pagamento).
+	"""
+	pedido_name = (pedido_name or "").strip()
+	if not pedido_name:
+		frappe.throw(_("Pedido obrigatório."))
+
+	convite = frappe.db.get_value(
+		"Convite Festa",
+		pedido_name,
+		[
+			"name",
+			"festa",
+			"nome_pagador",
+			"email_pagador",
+			"telefone_pagador",
+			"cobranca_infinitepay",
+			"creation",
+		],
+		as_dict=True,
+	)
+	if not convite:
+		frappe.throw(_("Pedido não encontrado."), frappe.DoesNotExistError)
+
+	_ensure_festa_acessivel(convite.festa)
+
+	status_pagamento = "Pendente"
+	if convite.cobranca_infinitepay:
+		status_pagamento = (
+			frappe.db.get_value("Cobranca Infinitepay", convite.cobranca_infinitepay, "status")
+			or "Pendente"
+		)
+
+	itens_rows = frappe.db.sql(
+		"""
+		SELECT
+			it.descricao      AS tipo_convite,
+			it.opcao_convite  AS opcao_convite,
+			it.quantidade     AS quantidade,
+			it.valor          AS valor,
+			it.eh_convite     AS eh_convite
+		FROM `tabItem Convite Festa` it
+		WHERE it.parent = %(pedido)s
+		  AND it.parenttype = 'Convite Festa'
+		ORDER BY it.eh_convite DESC, it.idx ASC
+		""",
+		{"pedido": pedido_name},
+		as_dict=True,
+	)
+	itens = [
+		{
+			"tipo_convite": row.tipo_convite or "",
+			"opcao_convite": row.opcao_convite or "",
+			"quantidade": int(row.quantidade or 0),
+			"valor": flt(row.valor),
+			"eh_convite": bool(row.eh_convite),
+		}
+		for row in itens_rows
+	]
+
+	convidados_rows = frappe.get_all(
+		"Convidado Convite Festa",
+		filters={"parent": pedido_name, "parenttype": "Convite Festa"},
+		fields=[
+			"name",
+			"nome",
+			"email",
+			"telefone",
+			"qr_code_payload",
+			"status_envio",
+		],
+		order_by="idx asc",
+	)
+	# Mapeia status de entrada (LEF) por convidado_row em uma query.
+	convidado_names = [r.name for r in convidados_rows]
+	lef_por_convidado: dict[str, dict] = {}
+	if convidado_names:
+		for lef in frappe.get_all(
+			"Lista Entrada Festa",
+			filters={"convidado_row": ("in", convidado_names)},
+			fields=["name", "convidado_row", "status"],
+		):
+			lef_por_convidado[lef.convidado_row] = lef
+
+	convidados = []
+	for row in convidados_rows:
+		lef = lef_por_convidado.get(row.name) or {}
+		convidados.append(
+			{
+				"convidado_row": row.name,
+				"nome_convidado": row.nome or "",
+				"email": row.email or "",
+				"telefone": row.telefone or "",
+				"codigo_convite": row.qr_code_payload or "",
+				"status_envio": row.status_envio or "Pendente",
+				"lef_name": lef.get("name") or "",
+				"ja_entrou": (lef.get("status") == "Entrou"),
+			}
+		)
+
+	return {
+		"pedido_name": convite.name,
+		"festa": convite.festa,
+		"creation": convite.creation.isoformat() if convite.creation else "",
+		"status_pagamento": status_pagamento,
+		"pagador": {
+			"nome": convite.nome_pagador or "",
+			"email": convite.email_pagador or "",
+			"telefone": convite.telefone_pagador or "",
+		},
+		"itens": itens,
+		"convidados": convidados,
+	}
+
+
+def _carregar_convidado_row(convidado_row: str) -> frappe._dict:
+	"""Carrega a linha de Convidado Convite Festa garantindo que pertence
+	a um Convite Festa (proteção contra IDs de outros parenttypes).
+	"""
+	row = frappe.db.get_value(
+		"Convidado Convite Festa",
+		convidado_row,
+		["name", "parent", "parenttype", "nome", "email", "telefone"],
+		as_dict=True,
+	)
+	if not row or row.parenttype != "Convite Festa":
+		frappe.throw(_("Convidado não encontrado."), frappe.DoesNotExistError)
+	return row
+
+
+@frappe.whitelist()
+def editar_dados_convidado_pedido(
+	convidado_row: str,
+	email: str | None = None,
+	telefone: str | None = None,
+) -> dict:
+	"""Atualiza email/telefone de um convidado direto em `Convidado Convite Festa`.
+
+	Propaga a alteração para a `Lista Entrada Festa` correspondente quando ela
+	existe (criada após confirmação do pagamento). Pagador é sempre legível
+	em `Convite Festa` e não é editado aqui.
+	"""
+	convidado_row = (convidado_row or "").strip()
+	if not convidado_row:
+		frappe.throw(_("Registro inválido."))
+
+	row = _carregar_convidado_row(convidado_row)
+	festa_name = frappe.db.get_value("Convite Festa", row.parent, "festa")
+	_ensure_festa_acessivel(festa_name)
+
+	email_norm: str | None = None
+	if email is not None:
+		email_strip = (email or "").strip().lower()
+		if email_strip:
+			if not EMAIL_REGEX.match(email_strip):
+				frappe.throw(_("E-mail inválido."))
+			email_norm = email_strip
+
+	telefone_norm: str | None = None
+	if telefone is not None:
+		telefone_digits = re.sub(r"\D", "", telefone or "")
+		telefone_norm = telefone_digits or None
+
+	updates: dict = {}
+	if email is not None:
+		updates["email"] = email_norm
+	if telefone is not None:
+		updates["telefone"] = telefone_norm
+
+	if updates:
+		# Fonte da verdade: Convidado Convite Festa.
+		frappe.db.set_value("Convidado Convite Festa", convidado_row, updates)
+		# Propaga para Lista Entrada Festa, se já existir (pedido pago).
+		lef_name = frappe.db.get_value(
+			"Lista Entrada Festa", {"convidado_row": convidado_row}, "name"
+		)
+		if lef_name:
+			frappe.db.set_value("Lista Entrada Festa", lef_name, updates)
+
+	atualizado = frappe.db.get_value(
+		"Convidado Convite Festa",
+		convidado_row,
+		["name", "nome", "email", "telefone"],
+		as_dict=True,
+	)
+	return {
+		"ok": True,
+		"convidado": {
+			"convidado_row": atualizado.name,
+			"nome_convidado": atualizado.nome or "",
+			"email": atualizado.email or "",
+			"telefone": atualizado.telefone or "",
+		},
+	}
+
+
+@frappe.whitelist()
+@rate_limit(key="convites-reenvio", limit=10, seconds=60)
+def reenviar_convite_convidado(convidado_row: str) -> dict:
+	"""Reenvia o QR code de um convidado específico do pedido.
+
+	Identifica o convidado por `convidado_row` (linha de `Convidado Convite Festa`)
+	e dispara `enviar_qr_codes` em fila. Exige pagamento Pago — o envio só faz
+	sentido quando o QR já foi gerado.
+	"""
+	from gris.festas.doctype.convite_festa.convite_festa import (
+		STATUS_PAGAMENTO_PAGO,
+	)
+
+	convidado_row = (convidado_row or "").strip()
+	if not convidado_row:
+		frappe.throw(_("Registro inválido."))
+
+	row = _carregar_convidado_row(convidado_row)
+	convite_name = row.parent
+	convite = frappe.db.get_value(
+		"Convite Festa",
+		convite_name,
+		["festa", "cobranca_infinitepay"],
+		as_dict=True,
+	)
+	if not convite:
+		frappe.throw(_("Pedido não encontrado."), frappe.DoesNotExistError)
+	_ensure_festa_acessivel(convite.festa)
+
+	if not row.email:
+		frappe.throw(_("Convidado não possui e-mail cadastrado."))
+
+	status = (
+		frappe.db.get_value("Cobranca Infinitepay", convite.cobranca_infinitepay, "status")
+		if convite.cobranca_infinitepay
+		else None
+	)
+	if status != STATUS_PAGAMENTO_PAGO:
+		frappe.throw(_("O pagamento deste convite ainda não foi confirmado."))
+
+	frappe.enqueue(
+		"gris.festas.doctype.convite_festa.convite_festa.enviar_qr_codes",
+		queue="long",
+		enqueue_after_commit=True,
+		convite_name=convite_name,
+		convidado_row_name=convidado_row,
+		forcar_todos=True,
+	)
+	return {"ok": True}

@@ -420,6 +420,47 @@
 	margin-bottom: 0.5rem;
 }
 
+/* ─── Lista de nomes (pagador recebe todos os QR codes) ──────────────── */
+
+.vc-nomes-pagador-recebe {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 1rem;
+	background: var(--card);
+	margin-top: 1rem;
+}
+
+.vc-nomes-pagador-recebe__acoes {
+	display: flex;
+	justify-content: flex-end;
+}
+
+.vc-nomes-pagador-recebe__lista {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.vc-nomes-pagador-recebe__item {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.vc-nomes-pagador-recebe__label {
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: var(--foreground);
+}
+
+.vc-nomes-pagador-recebe__tipo {
+	color: var(--muted-foreground);
+	font-weight: 400;
+}
+
 /* ─── Revisão (final) ────────────────────────────────────────────────── */
 
 .vc-revisao-bloco {

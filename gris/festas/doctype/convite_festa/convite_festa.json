@@ -14,6 +14,8 @@
   "column_break_pagador",
   "email_pagador",
   "secao_pagamento",
+  "presencial",
+  "meio_pagamento",
   "valor_total",
   "status_pagamento",
   "column_break_pagamento",
@@ -61,7 +63,7 @@
    "fieldtype": "Data",
    "label": "Telefone do Pagador",
    "options": "Phone",
-   "reqd": 1
+   "mandatory_depends_on": "eval:!doc.presencial"
   },
   {
    "fieldname": "column_break_pagador",
@@ -72,12 +74,30 @@
    "fieldtype": "Data",
    "label": "E-mail do Pagador",
    "options": "Email",
-   "reqd": 1
+   "mandatory_depends_on": "eval:!doc.presencial"
   },
   {
    "fieldname": "secao_pagamento",
    "fieldtype": "Section Break",
    "label": "Dados do Pagamento"
+  },
+  {
+   "default": "0",
+   "description": "Marcado quando o convite foi vendido na portaria (dinheiro/cartão físico).",
+   "fieldname": "presencial",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Pagamento Presencial",
+   "read_only": 1
+  },
+  {
+   "default": "Checkout Infinitepay",
+   "fieldname": "meio_pagamento",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Meio de Pagamento",
+   "options": "Checkout Infinitepay\nDinheiro\nCartão",
+   "reqd": 1
   },
   {
    "fieldname": "valor_total",

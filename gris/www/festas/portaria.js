@@ -16,9 +16,20 @@
 	let jsqrLoading = null;
 	let chartPizza = null;
 	let chartLinha = null;
+	let chartOrigem = null;
 	let linhaModo = "acumulado";
 	let echartsLoading = null;
 	let acompanhamentoTimer = null;
+
+	// ─── Estado do fluxo "Vender na porta" presencial ──────────────────────
+	const presencialState = {
+		precoUnitario: 0,
+		quantidade: 1,
+		meioPagamento: null, // "Dinheiro" | "Cartão"
+		convidados: [{ nome: "" }],
+		convidadoIdx: 0,
+		submetendo: false,
+	};
 
 	const TAB_CONVIDADOS_IDX = 1;
 	const TAB_ACOMPANHAMENTO_IDX = 2;
@@ -70,6 +81,53 @@
 		}
 		if (err.message) return err.message;
 		return "Erro de servidor.";
+	}
+
+	// Confirmação custom via o dialog #confirm-dialog presente em portaria.html.
+	// Mantém o look-and-feel do Basecoat (botão danger) sem depender do helper
+	// global do festa.js, que não é carregado nesta página.
+	function confirmDialog(opts) {
+		opts = opts || {};
+		return new Promise(function (resolve) {
+			const dlg = document.getElementById("confirm-dialog");
+			if (!dlg || typeof dlg.showModal !== "function") {
+				resolve(window.confirm(opts.message || opts.title || "Confirmar?"));
+				return;
+			}
+			const titleEl = dlg.querySelector("header h2");
+			const messageEl = dlg.querySelector("#confirm-dialog-message");
+			const okBtn = dlg.querySelector("#confirm-dialog-ok");
+			const cancelBtn = dlg.querySelector("#confirm-dialog-cancel");
+			if (titleEl) titleEl.textContent = opts.title || "Confirmar ação";
+			if (messageEl) messageEl.textContent = opts.message || "Tem certeza?";
+			if (okBtn) {
+				okBtn.textContent = opts.confirmLabel || "Confirmar";
+				okBtn.className = opts.variant === "primary" ? "btn-primary" : "btn-destructive";
+			}
+			function cleanup() {
+				if (okBtn) okBtn.removeEventListener("click", onOk);
+				if (cancelBtn) cancelBtn.removeEventListener("click", onCancel);
+				dlg.removeEventListener("close", onClose);
+			}
+			function onOk() {
+				cleanup();
+				dlg.close("confirm");
+				resolve(true);
+			}
+			function onCancel() {
+				cleanup();
+				dlg.close("cancel");
+				resolve(false);
+			}
+			function onClose() {
+				cleanup();
+				if (dlg.returnValue !== "confirm") resolve(false);
+			}
+			if (okBtn) okBtn.addEventListener("click", onOk);
+			if (cancelBtn) cancelBtn.addEventListener("click", onCancel);
+			dlg.addEventListener("close", onClose);
+			dlg.showModal();
+		});
 	}
 
 	// Bypass da frappe.call do portal: ela roda process_response no .always,
@@ -592,6 +650,9 @@
 		set("portaria-det-nome", entrada.nome_convidado);
 		set("portaria-det-email", entrada.email);
 		set("portaria-det-telefone", entrada.telefone);
+		set("portaria-det-pagador-nome", entrada.nome_pagador);
+		set("portaria-det-pagador-email", entrada.email_pagador);
+		set("portaria-det-pagador-telefone", entrada.telefone_pagador);
 		set("portaria-det-codigo", entrada.codigo);
 		set("portaria-det-hora", entrada.hora_entrada ? fmtData(entrada.hora_entrada) : "—");
 		set("portaria-det-por", entrada.registrado_por);
@@ -611,7 +672,53 @@
 			statusEl.appendChild(badge);
 		}
 
+		// "Entrada Manual" só faz sentido para quem ainda não entrou.
+		const btnManual = document.getElementById("btn-portaria-det-entrada-manual");
+		if (btnManual) btnManual.hidden = !!entrada.ja_entrou;
+
 		if (dlg && typeof dlg.showModal === "function") dlg.showModal();
+	}
+
+	function confirmarEntradaManual() {
+		if (!entradaDetalhesAtual) return;
+		const entrada = entradaDetalhesAtual;
+		const nome = entrada.nome_convidado || "este convidado";
+		confirmDialog({
+			title: "Confirmar entrada manual?",
+			message: "Esta ação irá confirmar a entrada de " + nome
+				+ " mesmo sem apresentar o QR code. Use apenas quando o convidado realmente comprou o convite.",
+			confirmLabel: "Confirmar entrada",
+			variant: "destructive",
+		}).then(function (ok) {
+			if (!ok) return;
+			const btn = document.getElementById("btn-portaria-det-entrada-manual");
+			if (btn) btn.disabled = true;
+			api("gris.api.festas.portaria.marcar_entrada_manual", {
+				festa: festaAtual,
+				codigo: entrada.codigo,
+			})
+				.then(function (resp) {
+					if (!resp || resp.valido === false) {
+						toast("Convidado não encontrado para esta festa.", "error");
+						return;
+					}
+					if (resp.ja_entrou_antes) {
+						toast("Entrada já estava confirmada.", "info");
+					} else {
+						toast("Entrada manual confirmada: " + (resp.nome_convidado || ""), "success");
+					}
+					const dlgDet = document.getElementById("dlg-portaria-detalhes");
+					if (dlgDet && dlgDet.open) dlgDet.close();
+					carregarLista();
+					if (chartPizza) carregarAcompanhamento();
+				})
+				.catch(function (err) {
+					toast(err.message || "Falha ao confirmar entrada manual.", "error");
+				})
+				.finally(function () {
+					if (btn) btn.disabled = false;
+				});
+		});
 	}
 
 	function abrirEditar(entrada) {
@@ -675,7 +782,22 @@
 			toast("Selecione uma festa primeiro.", "error");
 			return;
 		}
-		const dlg = document.getElementById("dlg-portaria-vender");
+		const dlg = document.getElementById("dlg-portaria-vender-modo");
+		if (dlg && typeof dlg.showModal === "function") dlg.showModal();
+	}
+
+	function escolherModoVenda(modo) {
+		const dlgModo = document.getElementById("dlg-portaria-vender-modo");
+		if (dlgModo && dlgModo.open) dlgModo.close();
+		if (modo === "link") {
+			abrirVenderLink();
+		} else if (modo === "presencial") {
+			abrirVenderPresencial();
+		}
+	}
+
+	function abrirVenderLink() {
+		const dlg = document.getElementById("dlg-portaria-vender-link");
 		const urlEl = document.getElementById("portaria-vender-qr-url");
 		if (urlEl) urlEl.textContent = "";
 		const img = document.getElementById("portaria-vender-qr");
@@ -693,25 +815,360 @@
 			});
 	}
 
+	function abrirVenderPresencial() {
+		api("gris.api.festas.portaria.get_url_venda_porta", { festa: festaAtual })
+			.then(function (resp) {
+				presencialState.precoUnitario = Number(resp.preco || 0);
+				presencialState.quantidade = 1;
+				presencialState.meioPagamento = null;
+				presencialState.convidados = [{ nome: "" }];
+				presencialState.convidadoIdx = 0;
+				presencialState.submetendo = false;
+				limparErrosPresencial();
+				renderPresencialUI();
+				const dlg = document.getElementById("dlg-portaria-vender-presencial");
+				if (dlg && typeof dlg.showModal === "function") dlg.showModal();
+			})
+			.catch(function (err) {
+				toast(err.message || "Não foi possível preparar a venda.", "error");
+			});
+	}
+
+	function lerTelefonePresencialDOM() {
+		const wrap = document.getElementById("presencial-pagador-telefone");
+		if (!wrap) return "";
+		const hidden = wrap.querySelector("[data-phone-input-value]");
+		if (hidden && hidden.value) return hidden.value.trim();
+		const num = wrap.querySelector("[data-phone-input-number]");
+		const raw = num ? num.value.replace(/\D/g, "") : "";
+		return raw;
+	}
+
+	function nomeCompleto(valor) {
+		const partes = String(valor || "").trim().split(/\s+/).filter(Boolean);
+		return partes.length >= 2;
+	}
+
+	function marcarErro(wrapId, erroId, mensagem) {
+		const wrap = document.getElementById(wrapId);
+		if (wrap) wrap.classList.add("portaria-presencial-field--erro");
+		if (erroId) {
+			const el = document.getElementById(erroId);
+			if (el) {
+				el.textContent = mensagem || "";
+				el.hidden = !mensagem;
+			}
+		}
+	}
+
+	function limparErro(wrapId, erroId) {
+		const wrap = document.getElementById(wrapId);
+		if (wrap) wrap.classList.remove("portaria-presencial-field--erro");
+		if (erroId) {
+			const el = document.getElementById(erroId);
+			if (el) {
+				el.textContent = "";
+				el.hidden = true;
+			}
+		}
+	}
+
+	function limparErrosPresencial() {
+		[
+			["presencial-pagador-nome-wrap", "presencial-pagador-nome-erro"],
+			["presencial-pagador-email-wrap", "presencial-pagador-email-erro"],
+			["presencial-pagador-telefone-wrap", "presencial-pagador-telefone-erro"],
+			["presencial-convidado-nome-wrap", "presencial-convidado-nome-erro"],
+			["presencial-meio-wrap", "presencial-meio-erro"],
+		].forEach(function (par) {
+			limparErro(par[0], par[1]);
+		});
+	}
+
+	function ajustarQuantidadePresencial(delta) {
+		salvarConvidadoAtualPresencial();
+		const nova = Math.max(1, presencialState.quantidade + delta);
+		if (nova === presencialState.quantidade) return;
+		while (presencialState.convidados.length < nova) {
+			presencialState.convidados.push({ nome: "" });
+		}
+		if (presencialState.convidados.length > nova) {
+			presencialState.convidados = presencialState.convidados.slice(0, nova);
+		}
+		presencialState.quantidade = nova;
+		if (presencialState.convidadoIdx >= nova) {
+			presencialState.convidadoIdx = nova - 1;
+		}
+		renderPresencialUI();
+	}
+
+	function definirQuantidadePresencial(valor) {
+		salvarConvidadoAtualPresencial();
+		let nova = parseInt(valor, 10);
+		if (!Number.isFinite(nova) || nova < 1) nova = 1;
+		while (presencialState.convidados.length < nova) {
+			presencialState.convidados.push({ nome: "" });
+		}
+		if (presencialState.convidados.length > nova) {
+			presencialState.convidados = presencialState.convidados.slice(0, nova);
+		}
+		presencialState.quantidade = nova;
+		if (presencialState.convidadoIdx >= nova) {
+			presencialState.convidadoIdx = nova - 1;
+		}
+		renderPresencialUI();
+	}
+
+	function selecionarMeioPagamentoPresencial(meio) {
+		presencialState.meioPagamento = meio;
+		const cards = document.querySelectorAll(".portaria-meio-card");
+		cards.forEach(function (card) {
+			const ativo = card.getAttribute("data-meio") === meio;
+			card.setAttribute("aria-checked", ativo ? "true" : "false");
+			card.classList.toggle("portaria-meio-card--ativo", ativo);
+		});
+	}
+
+	function salvarConvidadoAtualPresencial() {
+		const input = document.getElementById("presencial-convidado-nome");
+		if (!input) return;
+		const idx = presencialState.convidadoIdx;
+		if (!presencialState.convidados[idx]) {
+			presencialState.convidados[idx] = { nome: "" };
+		}
+		presencialState.convidados[idx].nome = (input.value || "").trim();
+	}
+
+	function renderConvidadoAtualPresencial() {
+		const idx = presencialState.convidadoIdx;
+		const total = presencialState.quantidade;
+		const indicator = document.getElementById("presencial-galeria-indicator");
+		if (indicator) {
+			indicator.textContent = "Convidado " + (idx + 1) + "/" + total;
+		}
+		const input = document.getElementById("presencial-convidado-nome");
+		if (input) {
+			input.value = (presencialState.convidados[idx] || {}).nome || "";
+		}
+		const prev = document.getElementById("presencial-galeria-prev");
+		const next = document.getElementById("presencial-galeria-next");
+		if (prev) prev.disabled = idx <= 0;
+		if (next) next.disabled = idx >= total - 1;
+	}
+
+	function navegarConvidadoPresencial(delta) {
+		salvarConvidadoAtualPresencial();
+		const novoIdx = presencialState.convidadoIdx + delta;
+		if (novoIdx < 0 || novoIdx >= presencialState.quantidade) return;
+		presencialState.convidadoIdx = novoIdx;
+		limparErro("presencial-convidado-nome-wrap", "presencial-convidado-nome-erro");
+		renderConvidadoAtualPresencial();
+	}
+
+	function formatarMoeda(valor) {
+		const numero = Number(valor || 0);
+		return numero.toLocaleString("pt-BR", {
+			style: "currency",
+			currency: "BRL",
+		});
+	}
+
+	function atualizarTotalPresencial() {
+		const total = (presencialState.precoUnitario || 0) * (presencialState.quantidade || 0);
+		const totalEl = document.getElementById("presencial-valor-total");
+		if (totalEl) totalEl.textContent = formatarMoeda(total);
+		const unitEl = document.getElementById("presencial-preco-unitario");
+		if (unitEl) unitEl.textContent = formatarMoeda(presencialState.precoUnitario);
+	}
+
+	function renderPresencialUI() {
+		const qtdInput = document.getElementById("presencial-quantidade");
+		if (qtdInput) qtdInput.value = String(presencialState.quantidade);
+		const nomeInput = document.getElementById("presencial-pagador-nome");
+		const emailInput = document.getElementById("presencial-pagador-email");
+		const telInput = document.getElementById("presencial-pagador-telefone");
+		// Limpa apenas quando o dialog acabou de abrir (quantidade=1 e sem convidado preenchido)
+		if (
+			presencialState.quantidade === 1 &&
+			!(presencialState.convidados[0] && presencialState.convidados[0].nome) &&
+			!presencialState.meioPagamento &&
+			!presencialState.submetendo
+		) {
+			if (nomeInput) nomeInput.value = "";
+			if (emailInput) emailInput.value = "";
+			if (telInput) telInput.value = "";
+		}
+		selecionarMeioPagamentoPresencial(presencialState.meioPagamento);
+		atualizarTotalPresencial();
+		renderConvidadoAtualPresencial();
+	}
+
+	function confirmarVendaPresencial() {
+		if (presencialState.submetendo) return;
+		salvarConvidadoAtualPresencial();
+		limparErrosPresencial();
+
+		const nome = ((document.getElementById("presencial-pagador-nome") || {}).value || "").trim();
+		const email = ((document.getElementById("presencial-pagador-email") || {}).value || "").trim();
+		const telefone = lerTelefonePresencialDOM();
+
+		const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		let primeiroErro = null;
+		let erros = 0;
+
+		if (!nome) {
+			marcarErro("presencial-pagador-nome-wrap", "presencial-pagador-nome-erro", "Informe o nome do pagador.");
+			primeiroErro = primeiroErro || "presencial-pagador-nome";
+			erros += 1;
+		} else if (!nomeCompleto(nome)) {
+			marcarErro(
+				"presencial-pagador-nome-wrap",
+				"presencial-pagador-nome-erro",
+				"Informe o nome completo (nome e sobrenome).",
+			);
+			primeiroErro = primeiroErro || "presencial-pagador-nome";
+			erros += 1;
+		}
+
+		if (email && !EMAIL_RE.test(email)) {
+			marcarErro("presencial-pagador-email-wrap", "presencial-pagador-email-erro", "E-mail inválido.");
+			primeiroErro = primeiroErro || "presencial-pagador-email";
+			erros += 1;
+		}
+
+		if (telefone && telefone.replace(/\D/g, "").length < 10) {
+			marcarErro(
+				"presencial-pagador-telefone-wrap",
+				"presencial-pagador-telefone-erro",
+				"Telefone inválido.",
+			);
+			primeiroErro = primeiroErro || "presencial-pagador-telefone-number";
+			erros += 1;
+		}
+
+		if (!presencialState.meioPagamento) {
+			marcarErro(
+				"presencial-meio-wrap",
+				"presencial-meio-erro",
+				"Escolha a forma de pagamento (Dinheiro ou Cartão).",
+			);
+			erros += 1;
+		}
+
+		let convidadoErroIdx = -1;
+		let convidadoErroMsg = "";
+		for (let i = 0; i < presencialState.quantidade; i += 1) {
+			const c = presencialState.convidados[i] || { nome: "" };
+			if (!c.nome) {
+				convidadoErroIdx = i;
+				convidadoErroMsg = "Informe o nome do convidado.";
+				break;
+			}
+			if (!nomeCompleto(c.nome)) {
+				convidadoErroIdx = i;
+				convidadoErroMsg = "Informe o nome completo (nome e sobrenome).";
+				break;
+			}
+		}
+		if (convidadoErroIdx >= 0) {
+			presencialState.convidadoIdx = convidadoErroIdx;
+			renderConvidadoAtualPresencial();
+			marcarErro(
+				"presencial-convidado-nome-wrap",
+				"presencial-convidado-nome-erro",
+				convidadoErroMsg,
+			);
+			primeiroErro = primeiroErro || "presencial-convidado-nome";
+			erros += 1;
+		}
+
+		if (erros > 0) {
+			toast("Revise os campos destacados.", "error");
+			if (primeiroErro) {
+				const focusEl = document.getElementById(primeiroErro);
+				if (focusEl && typeof focusEl.focus === "function") focusEl.focus();
+			}
+			return;
+		}
+
+		presencialState.submetendo = true;
+		const btn = document.getElementById("btn-presencial-confirmar");
+		if (btn) btn.disabled = true;
+
+		api("gris.api.festas.portaria.criar_convite_presencial", {
+			festa: festaAtual,
+			pagador: { nome: nome, email: email, telefone: telefone },
+			quantidade: presencialState.quantidade,
+			meio_pagamento: presencialState.meioPagamento,
+			convidados: presencialState.convidados.slice(0, presencialState.quantidade).map(function (c) {
+				return { nome: c.nome };
+			}),
+		})
+			.then(function (resp) {
+				toast(
+					"Venda registrada (" + formatarMoeda(resp.valor_total) + ", " + (resp.meio_pagamento || "") + ").",
+					"success"
+				);
+				const dlg = document.getElementById("dlg-portaria-vender-presencial");
+				if (dlg && dlg.open) dlg.close();
+				carregarLista();
+				if (tabAtiva() === TAB_ACOMPANHAMENTO_IDX) carregarAcompanhamento();
+			})
+			.catch(function (err) {
+				toast(extractServerMessage(err) || "Falha ao registrar venda presencial.", "error");
+			})
+			.finally(function () {
+				presencialState.submetendo = false;
+				if (btn) btn.disabled = false;
+			});
+	}
+
 	// ─── Acompanhamento (gráficos) ─────────────────────────────────────────
 
 	// Paleta acessível (Wong, daltonismo-friendly)
 	const COR_ENTROU = "#009E73";
 	const COR_NAO_ENTROU = "#D55E00";
 	const COR_LINHA = "#0072B2";
+	const COR_PORTARIA = "#0072B2";
+	const COR_COMPRA_PREVIA = "#56B4E9";
+	const COR_COMPRA_PORTARIA = "#E69F00";
 
 	function carregarAcompanhamento() {
 		if (!festaAtual) return Promise.resolve();
 		return api("gris.api.festas.portaria.get_acompanhamento", { festa: festaAtual })
 			.then(function (resp) {
 				return ensureECharts().then(function () {
+					renderIndicadorTotal(resp.pizza);
 					renderPizza(resp.pizza);
+					renderOrigem(resp.origem_entradas);
 					renderLinha(resp.linha);
 				});
 			})
 			.catch(function (err) {
 				toast(err.message || "Falha ao carregar gráficos.", "error");
 			});
+	}
+
+	function renderIndicadorTotal(pizza) {
+		const el = document.getElementById("portaria-indicador-total-valor");
+		if (el) {
+			const total = Number((pizza && pizza.total_entrou) || 0);
+			el.textContent = String(total);
+		}
+		const extra = document.getElementById("portaria-indicador-total-extra");
+		if (extra) {
+			const previa = Number((pizza && pizza.entrou) || 0);
+			const totalEntrou = Number((pizza && pizza.total_entrou) || 0);
+			if (totalEntrou > 0) {
+				const pct = Math.round((previa / totalEntrou) * 1000) / 10;
+				extra.textContent = pct.toLocaleString("pt-BR", {
+					minimumFractionDigits: pct % 1 === 0 ? 0 : 1,
+					maximumFractionDigits: 1,
+				}) + "% de compras prévias";
+			} else {
+				extra.textContent = "Sem entradas registradas";
+			}
+		}
 	}
 
 	function renderPizza(pizza) {
@@ -726,15 +1183,17 @@
 		const total = Number((pizza && pizza.total) || 0);
 		const entrou = Number((pizza && pizza.entrou) || 0);
 		const naoEntrou = Number((pizza && pizza.nao_entrou) || 0);
+		const comprouPortaria = Number((pizza && pizza.comprou_portaria) || 0);
 		chartPizza.setOption({
 			tooltip: { trigger: "item" },
-			legend: { bottom: 0 },
-			color: [COR_ENTROU, COR_NAO_ENTROU],
+			legend: { bottom: 0, padding: [16, 0, 0, 0] },
+			color: [COR_ENTROU, COR_NAO_ENTROU, COR_PORTARIA],
 			series: [
 				{
 					name: "Entradas",
 					type: "pie",
-					radius: ["45%", "70%"],
+					radius: ["40%", "62%"],
+					center: ["50%", "42%"],
 					avoidLabelOverlap: true,
 					label: {
 						show: true,
@@ -745,6 +1204,7 @@
 					data: [
 						{ value: entrou, name: "Entrou" },
 						{ value: naoEntrou, name: "Não entrou" },
+						{ value: comprouPortaria, name: "Comprou na Portaria" },
 					],
 				},
 			],
@@ -755,6 +1215,56 @@
 					top: "middle",
 					style: {
 						text: "Sem dados ainda",
+						fill: "#888",
+						font: "14px sans-serif",
+					},
+				},
+			] : undefined,
+		});
+	}
+
+	function renderOrigem(origem) {
+		const el = document.getElementById("chart-portaria-origem");
+		if (!el) return;
+		if (!chartOrigem) {
+			chartOrigem = window.echarts.init(el);
+			window.addEventListener("resize", function () {
+				if (chartOrigem) chartOrigem.resize();
+			});
+		}
+		const previa = Number((origem && origem.compra_previa) || 0);
+		const portaria = Number((origem && origem.compra_portaria) || 0);
+		const total = previa + portaria;
+		chartOrigem.setOption({
+			tooltip: { trigger: "item" },
+			legend: { bottom: 0, padding: [16, 0, 0, 0] },
+			color: [COR_COMPRA_PREVIA, COR_COMPRA_PORTARIA],
+			series: [
+				{
+					name: "Origem",
+					type: "pie",
+					radius: ["40%", "62%"],
+					center: ["50%", "42%"],
+					avoidLabelOverlap: true,
+					label: {
+						show: true,
+						formatter: function (p) {
+							return p.name + "\n" + p.value + " (" + p.percent + "%)";
+						},
+					},
+					data: [
+						{ value: previa, name: "Compra Prévia" },
+						{ value: portaria, name: "Compra na Portaria" },
+					],
+				},
+			],
+			graphic: total === 0 ? [
+				{
+					type: "text",
+					left: "center",
+					top: "middle",
+					style: {
+						text: "Sem entradas registradas",
 						fill: "#888",
 						font: "14px sans-serif",
 					},
@@ -912,6 +1422,11 @@
 			});
 		}
 
+		const btnDetEntradaManual = document.getElementById("btn-portaria-det-entrada-manual");
+		if (btnDetEntradaManual) {
+			btnDetEntradaManual.addEventListener("click", confirmarEntradaManual);
+		}
+
 		const filtroNome = document.getElementById("portaria-filtro-nome");
 		if (filtroNome) filtroNome.addEventListener("input", debounce(carregarLista, 300));
 		const filtroStatus = document.getElementById("portaria-filtro-status");
@@ -944,6 +1459,64 @@
 		// Fechar dialog do scanner solta a câmera.
 		const dlgScan = document.getElementById("dlg-portaria-scan");
 		if (dlgScan) dlgScan.addEventListener("close", function () { pararCamera(); });
+
+		// ─── Fluxo "Vender na porta" ────────────────────────────────────────
+		const btnModoLink = document.getElementById("btn-portaria-modo-link");
+		if (btnModoLink) btnModoLink.addEventListener("click", function () { escolherModoVenda("link"); });
+		const btnModoPresencial = document.getElementById("btn-portaria-modo-presencial");
+		if (btnModoPresencial) btnModoPresencial.addEventListener("click", function () { escolherModoVenda("presencial"); });
+
+		const btnQtdMenos = document.getElementById("btn-presencial-quantidade-menos");
+		if (btnQtdMenos) btnQtdMenos.addEventListener("click", function () { ajustarQuantidadePresencial(-1); });
+		const btnQtdMais = document.getElementById("btn-presencial-quantidade-mais");
+		if (btnQtdMais) btnQtdMais.addEventListener("click", function () { ajustarQuantidadePresencial(1); });
+		const qtdInput = document.getElementById("presencial-quantidade");
+		if (qtdInput) {
+			qtdInput.addEventListener("change", function () { definirQuantidadePresencial(qtdInput.value); });
+			qtdInput.addEventListener("blur", function () { definirQuantidadePresencial(qtdInput.value); });
+		}
+
+		const btnMeioDin = document.getElementById("btn-presencial-meio-dinheiro");
+		if (btnMeioDin) btnMeioDin.addEventListener("click", function () {
+			selecionarMeioPagamentoPresencial("Dinheiro");
+			limparErro("presencial-meio-wrap", "presencial-meio-erro");
+		});
+		const btnMeioCartao = document.getElementById("btn-presencial-meio-cartao");
+		if (btnMeioCartao) btnMeioCartao.addEventListener("click", function () {
+			selecionarMeioPagamentoPresencial("Cartão");
+			limparErro("presencial-meio-wrap", "presencial-meio-erro");
+		});
+
+		const pagadorNomeInput = document.getElementById("presencial-pagador-nome");
+		if (pagadorNomeInput) pagadorNomeInput.addEventListener("input", function () {
+			limparErro("presencial-pagador-nome-wrap", "presencial-pagador-nome-erro");
+		});
+		const pagadorEmailInput = document.getElementById("presencial-pagador-email");
+		if (pagadorEmailInput) pagadorEmailInput.addEventListener("input", function () {
+			limparErro("presencial-pagador-email-wrap", "presencial-pagador-email-erro");
+		});
+		const pagadorTelInput = document.getElementById("presencial-pagador-telefone-number");
+		if (pagadorTelInput) pagadorTelInput.addEventListener("input", function () {
+			limparErro("presencial-pagador-telefone-wrap", "presencial-pagador-telefone-erro");
+		});
+
+		const galPrev = document.getElementById("presencial-galeria-prev");
+		if (galPrev) galPrev.addEventListener("click", function () { navegarConvidadoPresencial(-1); });
+		const galNext = document.getElementById("presencial-galeria-next");
+		if (galNext) galNext.addEventListener("click", function () { navegarConvidadoPresencial(1); });
+		const nomeConv = document.getElementById("presencial-convidado-nome");
+		if (nomeConv) {
+			nomeConv.addEventListener("blur", salvarConvidadoAtualPresencial);
+			nomeConv.addEventListener("input", function () {
+				const idx = presencialState.convidadoIdx;
+				if (!presencialState.convidados[idx]) presencialState.convidados[idx] = { nome: "" };
+				presencialState.convidados[idx].nome = (nomeConv.value || "").trim();
+				limparErro("presencial-convidado-nome-wrap", "presencial-convidado-nome-erro");
+			});
+		}
+
+		const btnConfirmarPresencial = document.getElementById("btn-presencial-confirmar");
+		if (btnConfirmarPresencial) btnConfirmarPresencial.addEventListener("click", confirmarVendaPresencial);
 	}
 
 	document.addEventListener("DOMContentLoaded", function () {

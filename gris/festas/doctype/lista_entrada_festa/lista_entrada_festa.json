@@ -14,11 +14,18 @@
   "status",
   "hora_entrada",
   "entrada_registrada_por",
+  "entrada_manual",
+  "presencial",
   "secao_convidado",
   "nome_convidado",
   "column_break_convidado",
   "email",
-  "telefone"
+  "telefone",
+  "secao_pagador",
+  "nome_pagador",
+  "column_break_pagador",
+  "email_pagador",
+  "telefone_pagador"
  ],
  "fields": [
   {
@@ -85,6 +92,24 @@
    "read_only": 1
   },
   {
+   "default": "0",
+   "description": "Marcado quando a entrada foi confirmada manualmente pela portaria, sem apresentação do QR code.",
+   "fieldname": "entrada_manual",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Entrada Manual",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Marcado quando o convite associado foi vendido presencialmente na portaria.",
+   "fieldname": "presencial",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Comprou na Portaria",
+   "read_only": 1
+  },
+  {
    "fieldname": "secao_convidado",
    "fieldtype": "Section Break",
    "label": "Dados do Convidado"
@@ -111,6 +136,35 @@
    "fieldtype": "Data",
    "label": "Telefone",
    "options": "Phone"
+  },
+  {
+   "fieldname": "secao_pagador",
+   "fieldtype": "Section Break",
+   "label": "Dados do Pagador"
+  },
+  {
+   "fieldname": "nome_pagador",
+   "fieldtype": "Data",
+   "label": "Nome do Pagador",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_pagador",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "email_pagador",
+   "fieldtype": "Data",
+   "label": "E-mail do Pagador",
+   "options": "Email",
+   "read_only": 1
+  },
+  {
+   "fieldname": "telefone_pagador",
+   "fieldtype": "Data",
+   "label": "Telefone do Pagador",
+   "options": "Phone",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

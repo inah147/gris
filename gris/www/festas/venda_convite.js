@@ -12,7 +12,7 @@
 	let doarFlag = false;
 	let doacaoValor = 10;
 	let pagador = { nome: "", email: "", telefone: "" };
-	let pagadorRecebe = true;
+	let pagadorRecebe = false;
 	let convidados = []; // [{nome, email, telefone, tipo_convite}]
 	let convidadoIdx = 0;
 	let pedidoNome = null;
@@ -473,20 +473,46 @@
 		if (convidadoIdx >= convidados.length) convidadoIdx = 0;
 	}
 
-	function aplicarPagadorAosConvidados() {
-		convidados.forEach(function (c) {
-			c.nome = pagador.nome;
-			c.email = pagador.email;
-			c.telefone = pagador.telefone;
-		});
-	}
-
 	function renderConvidados() {
 		expandirConvidados();
 		const galeria = document.getElementById("vc-galeria");
-		if (galeria) galeria.hidden = pagadorRecebe || convidados.length === 0;
-		renderGaleriaAtual();
+		const nomesBox = document.getElementById("vc-nomes-pagador-recebe");
+		const temConvidado = convidados.length > 0;
+		if (galeria) galeria.hidden = pagadorRecebe || !temConvidado;
+		if (nomesBox) nomesBox.hidden = !pagadorRecebe || !temConvidado;
+		if (pagadorRecebe) {
+			renderNomesPagadorRecebe();
+		} else {
+			renderGaleriaAtual();
+		}
 		atualizarBotaoConvidadosContinuar();
+	}
+
+	function renderNomesPagadorRecebe() {
+		const lista = document.getElementById("vc-nomes-pagador-recebe-lista");
+		const btnUsar = document.getElementById("vc-usar-dados-pagador");
+		if (btnUsar) btnUsar.hidden = convidados.length !== 1;
+		if (!lista) return;
+		lista.innerHTML = convidados.map(function (c, idx) {
+			const tipo = c.tipo_convite ? ' <span class="vc-nomes-pagador-recebe__tipo">· ' + escapeHtml(c.tipo_convite) + "</span>" : "";
+			const valor = escapeHtml(c.nome || "");
+			const inputId = "vc-pr-nome-" + idx;
+			return '<div class="vc-nomes-pagador-recebe__item">'
+				+ '<label class="vc-nomes-pagador-recebe__label" for="' + inputId + '">'
+				+ "Convite " + (idx + 1) + tipo
+				+ "</label>"
+				+ '<input class="input" type="text" id="' + inputId + '" data-vc-pr-idx="' + idx + '"'
+				+ ' value="' + valor + '" required autocomplete="name" placeholder="Nome do convidado">'
+				+ "</div>";
+		}).join("");
+		const inputs = lista.querySelectorAll("input[data-vc-pr-idx]");
+		inputs.forEach(function (inp) {
+			inp.addEventListener("input", function () {
+				const idx = parseInt(inp.getAttribute("data-vc-pr-idx"), 10);
+				if (convidados[idx]) convidados[idx].nome = inp.value.trim();
+				atualizarBotaoConvidadosContinuar();
+			});
+		});
 	}
 
 	function lerTelefoneConvidadoDOM() {
@@ -544,7 +570,13 @@
 	function atualizarBotaoConvidadosContinuar() {
 		const btn = document.getElementById("btn-convidados-continuar");
 		if (!btn) return;
-		if (pagadorRecebe) { btn.disabled = false; return; }
+		if (pagadorRecebe) {
+			const valido = convidados.length > 0 && convidados.every(function (c) {
+				return c.nome && c.nome.trim().length > 0;
+			});
+			btn.disabled = !valido;
+			return;
+		}
 		const valido = convidados.length > 0 && convidados.every(function (c) {
 			return c.nome && emailValido(c.email);
 		});
@@ -620,6 +652,19 @@
 				numConv.addEventListener("change", onTelConvChange);
 			}
 		}
+
+		// Botão "Usar meus dados" (modo pagador-recebe + 1 convite): preenche
+		// o único campo de nome com o nome do pagador.
+		const btnUsar = document.getElementById("vc-usar-dados-pagador");
+		if (btnUsar) {
+			btnUsar.addEventListener("click", function () {
+				sincronizarPagador();
+				if (!pagador.nome || convidados.length !== 1) return;
+				convidados[0].nome = pagador.nome;
+				renderNomesPagadorRecebe();
+				atualizarBotaoConvidadosContinuar();
+			});
+		}
 	}
 
 	// ─── Aba Revisão (final) ────────────────────────────────────────────────
@@ -639,13 +684,13 @@
 				ul.innerHTML = '<li class="text-sm text-muted-foreground">Nenhum convite no pedido.</li>';
 			} else {
 				ul.innerHTML = convidados.map(function (c, idx) {
-					const destino = pagadorRecebe
-						? '<span class="text-sm text-muted-foreground">QR code para o pagador</span>'
-						: "<strong>" + escapeHtml(c.nome || "Convidado " + (idx + 1)) + "</strong>" +
-						  ' <span class="text-sm text-muted-foreground">· ' + escapeHtml(c.email || "—") + "</span>";
+					const nomeHtml = "<strong>" + escapeHtml(c.nome || "Convidado " + (idx + 1)) + "</strong>";
+					const detalhe = pagadorRecebe
+						? ' <span class="text-sm text-muted-foreground">· QR no e-mail do pagador</span>'
+						: ' <span class="text-sm text-muted-foreground">· ' + escapeHtml(c.email || "—") + "</span>";
 					return '<li class="vc-revisao-convite">' +
 						'<span class="vc-revisao-convite__tipo">' + escapeHtml(c.tipo_convite || "Convite") + "</span>" +
-						'<span class="vc-revisao-convite__destino">' + destino + "</span>" +
+						'<span class="vc-revisao-convite__destino">' + nomeHtml + detalhe + "</span>" +
 						"</li>";
 				}).join("");
 			}
@@ -733,7 +778,6 @@
 		}
 		sincronizarPagador();
 		if (!pagadorRecebe) salvarConvidadoAtual();
-		if (pagadorRecebe) aplicarPagadorAosConvidados();
 
 		const btn = document.getElementById("btn-revisao-finalizar");
 		if (btn) btn.disabled = true;
@@ -745,7 +789,7 @@
 			pagador: JSON.stringify(pagador),
 			itens: JSON.stringify(carrinhoComoArray()),
 			doacao_valor: doarFlag ? doacaoValor : 0,
-			convidados: JSON.stringify(pagadorRecebe ? [] : convidados),
+			convidados: JSON.stringify(convidados),
 			pagador_recebe_qr_codes: pagadorRecebe ? 1 : 0,
 		})
 			.then(function (resp) {

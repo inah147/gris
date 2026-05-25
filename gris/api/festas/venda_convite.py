@@ -176,13 +176,17 @@ def _validar_pagador(pagador_raw) -> dict:
 
 
 def _validar_convidados(convidados_raw, total_convites: int, pagador_recebe: bool, pagador: dict) -> list[dict]:
-	if pagador_recebe:
-		# O controller gera as linhas a partir do pagador; nada a validar aqui.
-		return []
+	"""Valida e normaliza a lista de convidados.
+
+	Em qualquer cenário o front envia uma linha por convite com pelo menos o
+	nome — a portaria precisa identificar quem entrou. Email e telefone são
+	obrigatórios apenas quando o pagador NÃO recebe todos os QR codes (cada
+	convidado recebe o próprio).
+	"""
 	convidados = _parse_json(convidados_raw, "Lista de convidados")
 	if not isinstance(convidados, list) or len(convidados) != total_convites:
 		frappe.throw(
-			f"Informe os dados de exatamente {total_convites} convidado(s)."
+			f"Informe o nome de exatamente {total_convites} convidado(s)."
 		)
 	saida: list[dict] = []
 	for c in convidados:
@@ -193,6 +197,11 @@ def _validar_convidados(convidados_raw, total_convites: int, pagador_recebe: boo
 		telefone = re.sub(r"\D", "", (c.get("telefone") or ""))
 		if not nome:
 			frappe.throw("Todo convidado precisa de nome.")
+		if pagador_recebe:
+			# QR codes vão todos para o e-mail do pagador; ignoramos email/tel
+			# individuais para evitar coleta desnecessária de dado pessoal.
+			saida.append({"nome": nome, "email": "", "telefone": ""})
+			continue
 		if not email or not EMAIL_REGEX.match(email):
 			frappe.throw(f"E-mail do convidado '{nome}' é inválido.")
 		saida.append({"nome": nome, "email": email, "telefone": telefone})

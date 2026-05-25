@@ -4,6 +4,7 @@
 {% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
 {% from "public/design_system/components/generated/select.html.jinja" import select %}
 {% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+{% from "public/design_system/components/generated/phone-input.html.jinja" import phone_input %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
 {% block title %}Portaria{% endblock %}
@@ -111,13 +112,26 @@ window._portariaData = {
 
 {% set tab_acompanhamento %}
 <div class="portaria-tab-content">
+	<div class="portaria-indicadores-row">
+		{% call card(attrs={"class": "portaria-card portaria-card--indicador"}) %}
+		<p class="portaria-card__indicador-label">Total de convidados que entraram</p>
+		<p class="portaria-card__indicador-valor" id="portaria-indicador-total-valor">—</p>
+		<p class="portaria-card__indicador-extra" id="portaria-indicador-total-extra">—</p>
+		{% endcall %}
+	</div>
+
 	<div class="portaria-charts-grid">
 		{% call card(attrs={"class": "portaria-card"}) %}
 		<h3 class="portaria-card__title">Entradas confirmadas</h3>
-		<div id="chart-portaria-pizza" class="portaria-chart" aria-label="Gráfico de entradas confirmadas (Entrou vs Não entrou)"></div>
+		<div id="chart-portaria-pizza" class="portaria-chart" aria-label="Gráfico de entradas confirmadas (Entrou, Não entrou, Comprou na Portaria)"></div>
 		{% endcall %}
 
 		{% call card(attrs={"class": "portaria-card"}) %}
+		<h3 class="portaria-card__title">Origem das entradas</h3>
+		<div id="chart-portaria-origem" class="portaria-chart" aria-label="Gráfico de origem das entradas (Compra Prévia vs Compra na Portaria)"></div>
+		{% endcall %}
+
+		{% call card(attrs={"class": "portaria-card portaria-card--span-2"}) %}
 		<div class="portaria-chart-header">
 			<h3 class="portaria-card__title">Entradas por janela de 15 min</h3>
 			<div class="portaria-chart-actions">
@@ -278,9 +292,36 @@ window._portariaData = {
 </div>
 </dialog>
 
-<dialog id="dlg-portaria-vender" class="dialog" aria-labelledby="dlg-portaria-vender-title" onclick="if (event.target === this) this.close()">
+<dialog id="dlg-portaria-vender-modo" class="dialog" aria-labelledby="dlg-portaria-vender-modo-title" onclick="if (event.target === this) this.close()">
 <div>
-	<header><h2 id="dlg-portaria-vender-title">Vender na porta</h2></header>
+	<header><h2 id="dlg-portaria-vender-modo-title">Vender na porta</h2></header>
+	<section class="festa-dialog-edit-body">
+		<p class="text-sm text-muted-foreground">
+			Como o cliente vai pagar?
+		</p>
+		<div class="portaria-modo-cards">
+			<button type="button" class="portaria-modo-card portaria-modo-card--primary" id="btn-portaria-modo-link" data-modo="link">
+				<span class="portaria-modo-card__badge">Recomendado</span>
+				{{ lucide_icon("qr-code", size="lg") }}
+				<span class="portaria-modo-card__titulo">Link de pagamento</span>
+				<span class="portaria-modo-card__descricao">O cliente escaneia o QR code e paga online (Pix, cartão ou Infinitepay).</span>
+			</button>
+			<button type="button" class="portaria-modo-card" id="btn-portaria-modo-presencial" data-modo="presencial">
+				{{ lucide_icon("wallet", size="lg") }}
+				<span class="portaria-modo-card__titulo">Dinheiro ou Cartão presencial</span>
+				<span class="portaria-modo-card__descricao">Recebido na hora, em dinheiro ou cartão físico. A entrada é confirmada automaticamente.</span>
+			</button>
+		</div>
+	</section>
+	<footer>
+		<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Cancelar</button>
+	</footer>
+</div>
+</dialog>
+
+<dialog id="dlg-portaria-vender-link" class="dialog" aria-labelledby="dlg-portaria-vender-link-title" onclick="if (event.target === this) this.close()">
+<div>
+	<header><h2 id="dlg-portaria-vender-link-title">Link de pagamento</h2></header>
 	<section class="festa-dialog-edit-body portaria-vender-body">
 		<p class="text-sm text-muted-foreground">
 			O cliente pode escanear o QR code abaixo ou você pode abrir a página de venda diretamente.
@@ -298,6 +339,103 @@ window._portariaData = {
 	</section>
 	<footer>
 		<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Fechar</button>
+	</footer>
+</div>
+</dialog>
+
+<dialog id="dlg-portaria-vender-presencial" class="dialog" aria-labelledby="dlg-portaria-vender-presencial-title" onclick="if (event.target === this) this.close()">
+<div>
+	<header><h2 id="dlg-portaria-vender-presencial-title">Venda presencial</h2></header>
+	<section class="festa-dialog-edit-body portaria-presencial-body">
+		{% call card(attrs={"class": "portaria-presencial-card"}) %}
+		<h3 class="portaria-presencial-card__titulo">Quantidade de convites</h3>
+		<div class="portaria-quantidade-wrapper">
+			<div class="portaria-quantidade">
+				<button type="button" class="btn-sm-outline portaria-quantidade__btn" id="btn-presencial-quantidade-menos" aria-label="Diminuir quantidade">−</button>
+				<input type="number" inputmode="numeric" min="1" step="1" value="1" id="presencial-quantidade" class="portaria-quantidade__input" />
+				<button type="button" class="btn-sm-outline portaria-quantidade__btn" id="btn-presencial-quantidade-mais" aria-label="Aumentar quantidade">+</button>
+			</div>
+			<p class="text-sm text-muted-foreground portaria-quantidade__preco">Valor unitário: <span id="presencial-preco-unitario">—</span></p>
+		</div>
+		{% endcall %}
+
+		{% call card(attrs={"class": "portaria-presencial-card"}) %}
+		<h3 class="portaria-presencial-card__titulo">Pagador</h3>
+		<div class="portaria-presencial-stack">
+			<div class="portaria-presencial-field" id="presencial-pagador-nome-wrap">
+				{% call field(label="Nome completo *") %}
+					{{ input(attrs={"id": "presencial-pagador-nome", "required": "required", "autocomplete": "name", "placeholder": "Ex.: Maria Silva"}) }}
+				{% endcall %}
+				<p class="text-xs text-muted-foreground portaria-presencial-hint">Informe nome e sobrenome.</p>
+				<p class="text-xs text-destructive portaria-presencial-erro" id="presencial-pagador-nome-erro" hidden></p>
+			</div>
+			<div class="portaria-presencial-field" id="presencial-pagador-email-wrap">
+				{% call field(label="E-mail (opcional)") %}
+					{{ input(type="email", attrs={"id": "presencial-pagador-email", "autocomplete": "email"}) }}
+				{% endcall %}
+				<p class="text-xs text-destructive portaria-presencial-erro" id="presencial-pagador-email-erro" hidden></p>
+			</div>
+			<div class="portaria-presencial-field" id="presencial-pagador-telefone-wrap">
+				{% call field(label="Telefone (opcional)") %}
+					{{ phone_input(
+						id="presencial-pagador-telefone",
+						name="presencial-pagador-telefone",
+						default_country="BR",
+						placeholder="(11) 91234-5678",
+						input_attrs={"id": "presencial-pagador-telefone-number"}
+					) }}
+				{% endcall %}
+				<p class="text-xs text-destructive portaria-presencial-erro" id="presencial-pagador-telefone-erro" hidden></p>
+			</div>
+		</div>
+		{% endcall %}
+
+		{% call card(attrs={"class": "portaria-presencial-card"}) %}
+		<h3 class="portaria-presencial-card__titulo">Forma de pagamento</h3>
+		<div class="portaria-meio-cards" role="radiogroup" aria-label="Forma de pagamento" id="presencial-meio-wrap">
+			<button type="button" class="portaria-meio-card" role="radio" aria-checked="false" data-meio="Dinheiro" id="btn-presencial-meio-dinheiro">
+				{{ lucide_icon("banknote", size="lg") }}
+				<span class="portaria-meio-card__titulo">Dinheiro</span>
+			</button>
+			<button type="button" class="portaria-meio-card" role="radio" aria-checked="false" data-meio="Cartão" id="btn-presencial-meio-cartao">
+				{{ lucide_icon("credit-card", size="lg") }}
+				<span class="portaria-meio-card__titulo">Cartão</span>
+			</button>
+		</div>
+		<p class="text-xs text-destructive portaria-presencial-erro" id="presencial-meio-erro" hidden></p>
+		{% endcall %}
+
+		{% call card(attrs={"class": "portaria-presencial-card"}) %}
+		<h3 class="portaria-presencial-card__titulo">Convidados</h3>
+		<p class="text-sm text-muted-foreground">Informe o nome completo de cada convidado (nome e sobrenome).</p>
+		<div id="presencial-galeria" class="vc-galeria">
+			<header class="vc-galeria__header">
+				<button type="button" class="btn-sm-outline" id="presencial-galeria-prev" aria-label="Convidado anterior">‹</button>
+				<span class="vc-galeria__indicator" id="presencial-galeria-indicator">Convidado 1/1</span>
+				<button type="button" class="btn-sm-outline" id="presencial-galeria-next" aria-label="Próximo convidado">›</button>
+			</header>
+			<div class="vc-galeria__body">
+				<div class="portaria-presencial-field" id="presencial-convidado-nome-wrap">
+					{% call field(label="Nome completo *") %}
+						{{ input(attrs={"id": "presencial-convidado-nome", "required": "required", "autocomplete": "off", "placeholder": "Ex.: João Souza"}) }}
+					{% endcall %}
+					<p class="text-xs text-destructive portaria-presencial-erro" id="presencial-convidado-nome-erro" hidden></p>
+				</div>
+			</div>
+		</div>
+		{% endcall %}
+
+		<div class="portaria-presencial-total">
+			<span>Valor total</span>
+			<strong id="presencial-valor-total">R$ 0,00</strong>
+		</div>
+	</section>
+	<footer>
+		<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Cancelar</button>
+		<button type="button" class="btn-primary" id="btn-presencial-confirmar">
+			{{ lucide_icon("check", size="sm") }}
+			<span>Pagamento realizado</span>
+		</button>
 	</footer>
 </div>
 </dialog>
@@ -346,6 +484,23 @@ window._portariaData = {
 			</div>
 		</section>
 		<section class="portaria-section">
+			<h3 class="portaria-section__title">Dados do pagador</h3>
+			<div class="portaria-detail-grid">
+				<div class="portaria-detail-field">
+					<span class="portaria-detail-field__label">Nome</span>
+					<span class="portaria-detail-field__value" id="portaria-det-pagador-nome">—</span>
+				</div>
+				<div class="portaria-detail-field">
+					<span class="portaria-detail-field__label">E-mail</span>
+					<span class="portaria-detail-field__value" id="portaria-det-pagador-email">—</span>
+				</div>
+				<div class="portaria-detail-field">
+					<span class="portaria-detail-field__label">Telefone</span>
+					<span class="portaria-detail-field__value" id="portaria-det-pagador-telefone">—</span>
+				</div>
+			</div>
+		</section>
+		<section class="portaria-section">
 			<h3 class="portaria-section__title">Dados do convite</h3>
 			<div class="portaria-detail-grid">
 				<div class="portaria-detail-field">
@@ -384,6 +539,10 @@ window._portariaData = {
 		<button type="button" class="btn-outline" id="btn-portaria-det-editar">
 			{{ lucide_icon("pencil", size="sm") }}
 			<span>Editar</span>
+		</button>
+		<button type="button" class="btn-destructive" id="btn-portaria-det-entrada-manual" hidden>
+			{{ lucide_icon("user-check", size="sm") }}
+			<span>Entrada Manual</span>
 		</button>
 		<button type="button" class="btn-primary" onclick="this.closest('dialog').close()">Fechar</button>
 	</footer>

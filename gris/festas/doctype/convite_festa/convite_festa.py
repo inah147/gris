@@ -14,6 +14,11 @@ STATUS_ENVIO_PENDENTE = "Pendente"
 STATUS_ENVIO_ENVIADO = "Enviado"
 STATUS_ENVIO_ERRO = "Erro"
 
+MEIO_PAGAMENTO_CHECKOUT = "Checkout Infinitepay"
+MEIO_PAGAMENTO_DINHEIRO = "Dinheiro"
+MEIO_PAGAMENTO_CARTAO = "Cartão"
+MEIOS_PAGAMENTO_PRESENCIAL = (MEIO_PAGAMENTO_DINHEIRO, MEIO_PAGAMENTO_CARTAO)
+
 EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
@@ -22,6 +27,7 @@ class ConviteFesta(Document):
 		self._validar_periodo_de_vendas()
 
 	def validate(self):
+		self._aplicar_meio_pagamento()
 		self._sanitizar_pagador()
 		self._validar_itens()
 		self._calcular_valor_total()
@@ -30,6 +36,10 @@ class ConviteFesta(Document):
 		self._gerar_payloads_qr_code()
 
 	def after_insert(self):
+		if self.presencial:
+			_atualizar_contadores_opcoes(self.name)
+			_criar_lista_entrada(self.name)
+			return
 		self._criar_cobranca_infinitepay()
 
 	def on_trash(self):
@@ -38,7 +48,13 @@ class ConviteFesta(Document):
 
 	@property
 	def status_pagamento(self):
-		"""Virtual field: lê o status diretamente da Cobranca Infinitepay vinculada."""
+		"""Virtual field: lê o status diretamente da Cobranca Infinitepay vinculada.
+
+		Para convites presenciais o pagamento é confirmado no ato da venda
+		(dinheiro/cartão físico), sem cobrança Infinitepay.
+		"""
+		if self.presencial:
+			return STATUS_PAGAMENTO_PAGO
 		if not self.cobranca_infinitepay:
 			return STATUS_ENVIO_PENDENTE
 		return (
@@ -57,18 +73,38 @@ class ConviteFesta(Document):
 		if getdate(today()) > getdate(data_limite):
 			frappe.throw(_("O período de vendas para esta festa foi encerrado."))
 
+	def _aplicar_meio_pagamento(self):
+		"""Garante o invariante meio_pagamento ↔ presencial.
+
+		Convite online: meio_pagamento sempre 'Checkout Infinitepay'.
+		Convite presencial: usuário escolhe entre 'Dinheiro' ou 'Cartão'.
+		"""
+		if not self.presencial:
+			self.meio_pagamento = MEIO_PAGAMENTO_CHECKOUT
+			return
+		if self.meio_pagamento not in MEIOS_PAGAMENTO_PRESENCIAL:
+			frappe.throw(
+				_("Meio de pagamento inválido para venda presencial: escolha Dinheiro ou Cartão.")
+			)
+
 	def _sanitizar_pagador(self):
+		if self.nome_pagador:
+			self.nome_pagador = self.nome_pagador.strip()
+		if not self.nome_pagador:
+			frappe.throw(_("Nome do pagador é obrigatório."))
 		if self.email_pagador:
 			email = self.email_pagador.strip().lower()
 			if not EMAIL_REGEX.match(email):
 				frappe.throw(_("E-mail do pagador inválido."))
 			self.email_pagador = email
+		elif not self.presencial:
+			frappe.throw(_("E-mail do pagador é obrigatório."))
 		if self.telefone_pagador:
 			self.telefone_pagador = re.sub(r"\D", "", self.telefone_pagador)
 			if not self.telefone_pagador:
 				frappe.throw(_("Telefone do pagador inválido."))
-		if self.nome_pagador:
-			self.nome_pagador = self.nome_pagador.strip()
+		elif not self.presencial:
+			frappe.throw(_("Telefone do pagador é obrigatório."))
 
 	def _validar_itens(self):
 		if not self.itens:
@@ -131,6 +167,9 @@ class ConviteFesta(Document):
 		"""Quando o pagador recebe todos os QR codes, a lista de convidados
 		é totalmente gerenciada pelo servidor: garante uma linha por convite
 		preenchida com os dados do pagador, preservando UUIDs já gerados.
+
+		Em vendas presenciais, mantemos os nomes informados pela portaria e
+		não preenchemos email/telefone (não há envio de QR codes).
 		"""
 		if not self.pagador_recebe_qr_codes:
 			return
@@ -138,9 +177,14 @@ class ConviteFesta(Document):
 			int(it.quantidade or 0) for it in self.itens or [] if it.eh_convite
 		)
 		if len(self.convidados or []) != total:
-			self.set("convidados", [])
-			for _ in range(total):
-				self.append("convidados", {})
+			# Em presencial os nomes vêm do formulário; só ajustamos o tamanho
+			# quando ainda não houver convidados (fluxo online).
+			if not self.presencial or not (self.convidados or []):
+				self.set("convidados", [])
+				for _ in range(total):
+					self.append("convidados", {})
+		if self.presencial:
+			return
 		for convidado in self.convidados:
 			convidado.nome = self.nome_pagador
 			convidado.email = self.email_pagador
@@ -160,16 +204,19 @@ class ConviteFesta(Document):
 			)
 
 		for convidado in convidados:
+			if convidado.nome:
+				convidado.nome = convidado.nome.strip()
 			if not convidado.nome:
 				frappe.throw(_("Todo convidado precisa de nome."))
-			if not convidado.email:
+			if convidado.email:
+				email = convidado.email.strip().lower()
+				if not EMAIL_REGEX.match(email):
+					frappe.throw(
+						_("E-mail do convidado '{0}' é inválido.").format(convidado.nome)
+					)
+				convidado.email = email
+			elif not self.presencial:
 				frappe.throw(_("Todo convidado precisa de e-mail."))
-			email = convidado.email.strip().lower()
-			if not EMAIL_REGEX.match(email):
-				frappe.throw(
-					_("E-mail do convidado '{0}' é inválido.").format(convidado.nome)
-				)
-			convidado.email = email
 			if convidado.telefone:
 				convidado.telefone = re.sub(r"\D", "", convidado.telefone)
 
@@ -294,6 +341,7 @@ def _criar_lista_entrada(convite_name: str) -> None:
 			doc.nome_convidado = convidado.nome
 			doc.email = convidado.email
 			doc.telefone = convidado.telefone
+			doc.presencial = 1 if convite.presencial else 0
 			if eh_portaria:
 				doc.status = "Entrou"
 				doc.hora_entrada = now()

@@ -343,29 +343,40 @@ def reenviar_convite(lista_entrada_name: str) -> dict:
 
 @frappe.whitelist()
 def get_acompanhamento(festa: str) -> dict:
-	"""Métricas para a aba Acompanhamento (pizza + linha por 15min)."""
+	"""Métricas para a aba Acompanhamento (pizza + linha por 15min + origem)."""
 	festa = (festa or "").strip()
 	if not festa:
 		frappe.throw(_("Festa é obrigatória."))
 
 	ensure_user_pode_operar_portaria(festa)
 
-	# Pizza: contagem por status.
-	pizza_rows = frappe.db.sql(
+	# Contagem por (status, presencial). Convites presenciais entram automaticamente
+	# como 'Entrou' no after_insert do Convite Festa, mas são exibidos em uma fatia
+	# separada na pizza ("Comprou na Portaria").
+	contagem_rows = frappe.db.sql(
 		"""
-		SELECT status, COUNT(*) AS qtd
+		SELECT status, presencial, COUNT(*) AS qtd
 		  FROM `tabLista Entrada Festa`
 		 WHERE festa = %s
-		 GROUP BY status
+		 GROUP BY status, presencial
 		""",
 		(festa,),
 		as_dict=True,
 	)
-	pizza = {STATUS_ENTROU: 0, STATUS_NAO_ENTROU: 0}
-	for row in pizza_rows:
-		if row.status in pizza:
-			pizza[row.status] = int(row.qtd or 0)
-	total = pizza[STATUS_ENTROU] + pizza[STATUS_NAO_ENTROU]
+	entrou_previo = 0
+	comprou_portaria = 0
+	nao_entrou = 0
+	for row in contagem_rows:
+		qtd = int(row.qtd or 0)
+		if row.status == STATUS_NAO_ENTROU:
+			nao_entrou += qtd
+		elif row.status == STATUS_ENTROU:
+			if int(row.presencial or 0):
+				comprou_portaria += qtd
+			else:
+				entrou_previo += qtd
+	total = entrou_previo + nao_entrou + comprou_portaria
+	total_entrou = entrou_previo + comprou_portaria
 
 	# Linha: bins de 15 minutos contando entradas.
 	# Truncamento para 15min via floor(unix_timestamp/900)*900.
@@ -399,12 +410,19 @@ def get_acompanhamento(festa: str) -> dict:
 
 	return {
 		"pizza": {
-			"entrou": pizza[STATUS_ENTROU],
-			"nao_entrou": pizza[STATUS_NAO_ENTROU],
+			"entrou": entrou_previo,
+			"nao_entrou": nao_entrou,
+			"comprou_portaria": comprou_portaria,
 			"total": total,
-			"pct_entrou": round((pizza[STATUS_ENTROU] / total) * 100, 1) if total else 0.0,
+			"total_entrou": total_entrou,
+			"pct_entrou": round((total_entrou / total) * 100, 1) if total else 0.0,
 		},
 		"linha": linha,
+		"origem_entradas": {
+			"compra_previa": entrou_previo,
+			"compra_portaria": comprou_portaria,
+			"total_entrou": total_entrou,
+		},
 	}
 
 
@@ -451,4 +469,153 @@ def get_url_venda_porta(festa: str) -> dict:
 				"valor",
 			)
 		),
+	}
+
+
+_MEIOS_PAGAMENTO_PRESENCIAL = ("Dinheiro", "Cartão")
+
+
+def _nome_completo(valor: str) -> bool:
+	return len([p for p in (valor or "").split() if p]) >= 2
+
+
+def _sanitizar_pagador_presencial(pagador) -> dict:
+	if isinstance(pagador, str):
+		try:
+			pagador = frappe.parse_json(pagador) or {}
+		except Exception:
+			frappe.throw(_("Dados do pagador inválidos."))
+	if not isinstance(pagador, dict):
+		frappe.throw(_("Dados do pagador inválidos."))
+	nome = (pagador.get("nome") or "").strip()
+	if not nome:
+		frappe.throw(_("Nome do pagador é obrigatório."))
+	if not _nome_completo(nome):
+		frappe.throw(_("Informe o nome completo do pagador (nome e sobrenome)."))
+	email_raw = (pagador.get("email") or "").strip().lower()
+	email: str | None = None
+	if email_raw:
+		if not EMAIL_REGEX.match(email_raw):
+			frappe.throw(_("E-mail do pagador inválido."))
+		email = email_raw
+	telefone_digits = re.sub(r"\D", "", pagador.get("telefone") or "")
+	telefone: str | None = telefone_digits or None
+	return {"nome": nome, "email": email, "telefone": telefone}
+
+
+def _sanitizar_convidados_presencial(convidados, quantidade: int) -> list[dict]:
+	if isinstance(convidados, str):
+		try:
+			convidados = frappe.parse_json(convidados) or []
+		except Exception:
+			frappe.throw(_("Lista de convidados inválida."))
+	if not isinstance(convidados, list):
+		frappe.throw(_("Lista de convidados inválida."))
+	if len(convidados) != quantidade:
+		frappe.throw(
+			_("Informe exatamente {0} convidado(s) (1 por convite).").format(quantidade)
+		)
+	resultado: list[dict] = []
+	for idx, item in enumerate(convidados, start=1):
+		if not isinstance(item, dict):
+			frappe.throw(_("Convidado #{0} inválido.").format(idx))
+		nome = (item.get("nome") or "").strip()
+		if not nome:
+			frappe.throw(_("Convidado #{0} precisa de nome.").format(idx))
+		if not _nome_completo(nome):
+			frappe.throw(
+				_("Convidado #{0}: informe o nome completo (nome e sobrenome).").format(idx)
+			)
+		resultado.append({"nome": nome})
+	return resultado
+
+
+@frappe.whitelist()
+@rate_limit(key="portaria-presencial", limit=30, seconds=60)
+def criar_convite_presencial(
+	festa: str,
+	pagador,
+	quantidade,
+	meio_pagamento: str,
+	convidados,
+) -> dict:
+	"""Registra uma venda presencial (dinheiro/cartão físico) na portaria.
+
+	- Usa a Opcao Convite Festa ativa com `portaria=1` da festa selecionada.
+	- ACL: somente quem opera a portaria da festa (System Manager, role
+	  Portaria ou coordenador/membro da Area Portaria).
+	- Não cria Cobranca Infinitepay e não dispara e-mail/WhatsApp; a
+	  presença dos convidados é registrada automaticamente pelo
+	  `after_insert` do Convite Festa.
+	"""
+	festa = (festa or "").strip()
+	if not festa:
+		frappe.throw(_("Festa é obrigatória."))
+
+	ensure_user_pode_operar_portaria(festa)
+
+	venda_ativa = frappe.db.get_value("Festa", festa, "venda_na_portaria")
+	if not venda_ativa:
+		frappe.throw(
+			_("O modo 'Venda na portaria' não está ativo para esta festa.")
+		)
+
+	meio_pagamento = (meio_pagamento or "").strip()
+	if meio_pagamento not in _MEIOS_PAGAMENTO_PRESENCIAL:
+		frappe.throw(
+			_("Meio de pagamento inválido: escolha Dinheiro ou Cartão.")
+		)
+
+	try:
+		quantidade_int = int(quantidade)
+	except (TypeError, ValueError):
+		quantidade_int = 0
+	if quantidade_int <= 0:
+		frappe.throw(_("Informe uma quantidade válida (maior que zero)."))
+
+	pagador_data = _sanitizar_pagador_presencial(pagador)
+	convidados_data = _sanitizar_convidados_presencial(convidados, quantidade_int)
+
+	opcao = frappe.db.get_value(
+		"Opcao Convite Festa",
+		{"festa": festa, "portaria": 1, "ativo": 1},
+		["name", "valor"],
+		as_dict=True,
+	)
+	if not opcao:
+		frappe.throw(
+			_("Não há Opção de Convite ativa do tipo Portaria para esta festa.")
+		)
+
+	convite = frappe.get_doc(
+		{
+			"doctype": "Convite Festa",
+			"festa": festa,
+			"nome_pagador": pagador_data["nome"],
+			"email_pagador": pagador_data["email"],
+			"telefone_pagador": pagador_data["telefone"],
+			"presencial": 1,
+			"meio_pagamento": meio_pagamento,
+			# Em venda presencial não enviamos e-mail/QR — mas mantemos a flag
+			# para que `_aplicar_pagador_aos_convidados` não exija e-mail por
+			# convidado.
+			"pagador_recebe_qr_codes": 1,
+			"itens": [
+				{
+					"eh_convite": 1,
+					"opcao_convite": opcao.name,
+					"quantidade": quantidade_int,
+				}
+			],
+			"convidados": [{"nome": c["nome"]} for c in convidados_data],
+		}
+	)
+	convite.insert(ignore_permissions=True)
+	frappe.db.commit()
+
+	return {
+		"ok": True,
+		"convite_name": convite.name,
+		"valor_total": flt(convite.valor_total),
+		"meio_pagamento": convite.meio_pagamento,
 	}

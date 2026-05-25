@@ -146,6 +146,53 @@
 	gap: 0.75rem;
 }
 
+.portaria-card--span-2 {
+	grid-column: 1 / -1;
+}
+
+.portaria-indicadores-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+}
+
+.portaria-card--indicador {
+	gap: 0.25rem;
+	align-items: flex-start;
+	width: auto;
+	min-width: 14rem;
+	max-width: 22rem;
+	flex: 0 0 auto;
+}
+
+@media (max-width: 640px) {
+	.portaria-card--indicador {
+		width: 100%;
+		max-width: none;
+	}
+}
+
+.portaria-card__indicador-label {
+	margin: 0;
+	font-size: 0.875rem;
+	color: var(--muted-foreground, #6b7280);
+}
+
+.portaria-card__indicador-valor {
+	margin: 0;
+	font-size: 2.25rem;
+	font-weight: 700;
+	line-height: 1.1;
+	color: var(--foreground, #111827);
+}
+
+.portaria-card__indicador-extra {
+	margin: 0.125rem 0 0;
+	font-size: 0.8125rem;
+	color: var(--muted-foreground, #6b7280);
+}
+
 .portaria-card__title {
 	font-size: 1rem;
 	font-weight: 600;
@@ -337,4 +384,221 @@
 	background: transparent;
 	border-color: transparent;
 	padding: 0.25rem 0;
+}
+
+/* ─── Vender na porta: cards de modo (Link x Presencial) ─── */
+.portaria-modo-cards {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 1rem;
+}
+
+@media (max-width: 640px) {
+	.portaria-modo-cards {
+		grid-template-columns: 1fr;
+	}
+}
+
+.portaria-modo-card {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 1.25rem 1rem;
+	border-radius: 0.75rem;
+	border: 1px solid var(--border, #d1d5db);
+	background: var(--background, #fff);
+	color: var(--foreground, #111827);
+	cursor: pointer;
+	text-align: center;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
+}
+
+.portaria-modo-card:hover {
+	border-color: var(--primary, #1d4ed8);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.portaria-modo-card:active {
+	transform: scale(0.99);
+}
+
+.portaria-modo-card svg {
+	width: 2.5rem;
+	height: 2.5rem;
+	color: var(--primary, #1d4ed8);
+}
+
+.portaria-modo-card--primary {
+	border-color: var(--primary, #1d4ed8);
+	box-shadow: 0 0 0 1px var(--primary, #1d4ed8) inset;
+}
+
+.portaria-modo-card__badge {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	font-size: 0.6875rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	padding: 0.125rem 0.5rem;
+	background: var(--primary, #1d4ed8);
+	color: var(--primary-foreground, #fff);
+	border-radius: 999px;
+}
+
+.portaria-modo-card__titulo {
+	font-size: 1rem;
+	font-weight: 600;
+}
+
+.portaria-modo-card__descricao {
+	font-size: 0.8125rem;
+	color: var(--muted-foreground, #6b7280);
+}
+
+/* ─── Dialog presencial: cards de forma de pagamento ─── */
+.portaria-presencial-body {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.portaria-presencial-card {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.portaria-presencial-card__titulo {
+	font-size: 0.95rem;
+	font-weight: 600;
+	margin: 0;
+}
+
+.portaria-quantidade-wrapper {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.portaria-quantidade {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.portaria-quantidade__btn {
+	width: 2.5rem;
+	height: 2.5rem;
+	font-size: 1.25rem;
+	font-weight: 700;
+}
+
+.portaria-quantidade__input {
+	width: 5rem;
+	text-align: center;
+	font-size: 1.125rem;
+	font-weight: 600;
+	padding: 0.5rem;
+	border: 1px solid var(--border, #d1d5db);
+	border-radius: 0.5rem;
+	background: var(--background, #fff);
+	color: var(--foreground, #111827);
+}
+
+.portaria-quantidade__preco {
+	margin: 0;
+	text-align: center;
+}
+
+.portaria-presencial-stack {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+}
+
+.portaria-presencial-field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.portaria-presencial-hint {
+	margin: 0;
+}
+
+.portaria-presencial-erro {
+	margin: 0;
+	color: var(--destructive, #dc2626);
+}
+
+.portaria-presencial-field--erro input,
+.portaria-presencial-field--erro [data-phone-input-number],
+.portaria-presencial-field--erro [role="combobox"] {
+	border-color: var(--destructive, #dc2626) !important;
+	box-shadow: 0 0 0 1px var(--destructive, #dc2626) inset;
+}
+
+.portaria-meio-cards.portaria-presencial-field--erro .portaria-meio-card {
+	border-color: var(--destructive, #dc2626);
+}
+
+.portaria-meio-cards {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.75rem;
+}
+
+.portaria-meio-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 1rem;
+	border-radius: 0.75rem;
+	border: 1px solid var(--border, #d1d5db);
+	background: var(--background, #fff);
+	color: var(--foreground, #111827);
+	cursor: pointer;
+	transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.portaria-meio-card:hover {
+	border-color: var(--primary, #1d4ed8);
+}
+
+.portaria-meio-card svg {
+	width: 1.75rem;
+	height: 1.75rem;
+}
+
+.portaria-meio-card__titulo {
+	font-size: 0.95rem;
+	font-weight: 600;
+}
+
+.portaria-meio-card--ativo {
+	border-color: var(--primary, #1d4ed8);
+	background: rgba(29, 78, 216, 0.06);
+	box-shadow: 0 0 0 1px var(--primary, #1d4ed8) inset;
+}
+
+.portaria-presencial-total {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0.875rem 1rem;
+	border-radius: 0.75rem;
+	background: var(--muted, #f3f4f6);
+	font-size: 1rem;
+}
+
+.portaria-presencial-total strong {
+	font-size: 1.25rem;
+	color: var(--foreground, #111827);
 }

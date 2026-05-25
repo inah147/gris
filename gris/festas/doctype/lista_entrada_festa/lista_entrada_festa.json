@@ -14,6 +14,7 @@
   "status",
   "hora_entrada",
   "entrada_registrada_por",
+  "presencial",
   "secao_convidado",
   "nome_convidado",
   "column_break_convidado",
@@ -82,6 +83,15 @@
    "fieldtype": "Link",
    "label": "Entrada Registrada Por",
    "options": "User",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Marcado quando o convite associado foi vendido presencialmente na portaria.",
+   "fieldname": "presencial",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Comprou na Portaria",
    "read_only": 1
   },
   {

@@ -484,6 +484,23 @@ window._portariaData = {
 			</div>
 		</section>
 		<section class="portaria-section">
+			<h3 class="portaria-section__title">Dados do pagador</h3>
+			<div class="portaria-detail-grid">
+				<div class="portaria-detail-field">
+					<span class="portaria-detail-field__label">Nome</span>
+					<span class="portaria-detail-field__value" id="portaria-det-pagador-nome">—</span>
+				</div>
+				<div class="portaria-detail-field">
+					<span class="portaria-detail-field__label">E-mail</span>
+					<span class="portaria-detail-field__value" id="portaria-det-pagador-email">—</span>
+				</div>
+				<div class="portaria-detail-field">
+					<span class="portaria-detail-field__label">Telefone</span>
+					<span class="portaria-detail-field__value" id="portaria-det-pagador-telefone">—</span>
+				</div>
+			</div>
+		</section>
+		<section class="portaria-section">
 			<h3 class="portaria-section__title">Dados do convite</h3>
 			<div class="portaria-detail-grid">
 				<div class="portaria-detail-field">
@@ -522,6 +539,10 @@ window._portariaData = {
 		<button type="button" class="btn-outline" id="btn-portaria-det-editar">
 			{{ lucide_icon("pencil", size="sm") }}
 			<span>Editar</span>
+		</button>
+		<button type="button" class="btn-destructive" id="btn-portaria-det-entrada-manual" hidden>
+			{{ lucide_icon("user-check", size="sm") }}
+			<span>Entrada Manual</span>
 		</button>
 		<button type="button" class="btn-primary" onclick="this.closest('dialog').close()">Fechar</button>
 	</footer>

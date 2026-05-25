@@ -169,7 +169,7 @@ window._vendaConvite = {
 
 	</p>
 	{% call field(label="Enviar todos para o meu e-mail") %}
-		{{ switch(name="vc-pagador-recebe", checked=true, attrs={"id": "vc-pagador-recebe"}) }}
+		{{ switch(name="vc-pagador-recebe", checked=false, attrs={"id": "vc-pagador-recebe"}) }}
 	{% endcall %}
 
 	<div id="vc-galeria" class="vc-galeria" hidden>
@@ -199,6 +199,16 @@ window._vendaConvite = {
 				{% endcall %}
 			</div>
 		</div>
+	</div>
+
+	<div id="vc-nomes-pagador-recebe" class="vc-nomes-pagador-recebe" hidden>
+		<p class="text-sm text-muted-foreground">
+			Informe o nome de cada convidado. Os QR codes serão enviados todos para o seu e-mail.
+		</p>
+		<div class="vc-nomes-pagador-recebe__acoes">
+			<button type="button" class="btn-outline" id="vc-usar-dados-pagador" hidden>Usar meus dados</button>
+		</div>
+		<div id="vc-nomes-pagador-recebe-lista" class="vc-nomes-pagador-recebe__lista"></div>
 	</div>
 	{% endcall %}
 

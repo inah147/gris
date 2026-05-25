@@ -261,7 +261,34 @@
 .portaria-dialog-footer {
 	display: flex;
 	justify-content: flex-end;
+	flex-wrap: wrap;
 	gap: 0.5rem;
+}
+
+/* Dialog de detalhes do convidado: 4 botões no rodapé apertam o tamanho
+ * padrão do Basecoat (32rem). Damos um pouco mais de largura no desktop. */
+#dlg-portaria-detalhes > * {
+	max-width: 44rem;
+}
+
+@media (max-width: 640px) {
+	/* No mobile, garante margem lateral (a base do Basecoat fica 100%) e
+	 * empilha/reordena os botões: editar, reenviar, entrada manual, fechar. */
+	#dlg-portaria-detalhes > * {
+		max-width: calc(100% - 2rem);
+	}
+	#dlg-portaria-detalhes .portaria-dialog-footer {
+		flex-direction: column;
+		align-items: stretch;
+	}
+	#dlg-portaria-detalhes .portaria-dialog-footer > button {
+		width: 100%;
+		justify-content: center;
+	}
+	#dlg-portaria-detalhes #btn-portaria-det-editar { order: 1; }
+	#dlg-portaria-detalhes #btn-portaria-det-reenviar { order: 2; }
+	#dlg-portaria-detalhes #btn-portaria-det-entrada-manual { order: 3; }
+	#dlg-portaria-detalhes .portaria-dialog-footer > .btn-primary { order: 4; }
 }
 
 .portaria-vender-body {

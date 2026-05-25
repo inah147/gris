@@ -168,6 +168,37 @@ def marcar_entrada(festa: str, codigo: str) -> dict:
 
 
 @frappe.whitelist()
+@rate_limit(key="portaria-marcar-manual", limit=30, seconds=60)
+def marcar_entrada_manual(festa: str, codigo: str) -> dict:
+	"""Confirma a entrada de um convidado sem apresentação do QR code.
+
+	Usado quando o convidado realmente comprou o convite mas não tem o QR à
+	mão. Mesma semântica atômica de `marcar_entrada`, mas seta
+	`entrada_manual=1` para auditoria.
+	"""
+	festa = (festa or "").strip()
+	codigo = (codigo or "").strip()
+	if not festa or not codigo:
+		frappe.throw(_("Festa e código são obrigatórios."))
+
+	ensure_user_pode_operar_portaria(festa)
+
+	row = _buscar_por_codigo(festa, codigo)
+	if not row:
+		return {"valido": False}
+
+	resultado = ListaEntradaFesta.marcar_entrada(
+		row.name, user=frappe.session.user, manual=True
+	)
+
+	row = _carregar_entrada(row.name)
+	hidratado = _hidratar_entrada(row, pagador=_dados_pagador(row.convite))
+	hidratado["valido"] = True
+	hidratado["ja_entrou_antes"] = resultado.get("ja_entrou_antes", False)
+	return hidratado
+
+
+@frappe.whitelist()
 def listar_entradas(
 	festa: str,
 	nome: str = "",

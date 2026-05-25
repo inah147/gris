@@ -83,6 +83,53 @@
 		return "Erro de servidor.";
 	}
 
+	// Confirmação custom via o dialog #confirm-dialog presente em portaria.html.
+	// Mantém o look-and-feel do Basecoat (botão danger) sem depender do helper
+	// global do festa.js, que não é carregado nesta página.
+	function confirmDialog(opts) {
+		opts = opts || {};
+		return new Promise(function (resolve) {
+			const dlg = document.getElementById("confirm-dialog");
+			if (!dlg || typeof dlg.showModal !== "function") {
+				resolve(window.confirm(opts.message || opts.title || "Confirmar?"));
+				return;
+			}
+			const titleEl = dlg.querySelector("header h2");
+			const messageEl = dlg.querySelector("#confirm-dialog-message");
+			const okBtn = dlg.querySelector("#confirm-dialog-ok");
+			const cancelBtn = dlg.querySelector("#confirm-dialog-cancel");
+			if (titleEl) titleEl.textContent = opts.title || "Confirmar ação";
+			if (messageEl) messageEl.textContent = opts.message || "Tem certeza?";
+			if (okBtn) {
+				okBtn.textContent = opts.confirmLabel || "Confirmar";
+				okBtn.className = opts.variant === "primary" ? "btn-primary" : "btn-destructive";
+			}
+			function cleanup() {
+				if (okBtn) okBtn.removeEventListener("click", onOk);
+				if (cancelBtn) cancelBtn.removeEventListener("click", onCancel);
+				dlg.removeEventListener("close", onClose);
+			}
+			function onOk() {
+				cleanup();
+				dlg.close("confirm");
+				resolve(true);
+			}
+			function onCancel() {
+				cleanup();
+				dlg.close("cancel");
+				resolve(false);
+			}
+			function onClose() {
+				cleanup();
+				if (dlg.returnValue !== "confirm") resolve(false);
+			}
+			if (okBtn) okBtn.addEventListener("click", onOk);
+			if (cancelBtn) cancelBtn.addEventListener("click", onCancel);
+			dlg.addEventListener("close", onClose);
+			dlg.showModal();
+		});
+	}
+
 	// Bypass da frappe.call do portal: ela roda process_response no .always,
 	// que loga data.exc no console.error e mostra msgprint, sem permitir
 	// opt-out. Usamos fetch direto para ter controle total do fluxo de erro
@@ -603,6 +650,9 @@
 		set("portaria-det-nome", entrada.nome_convidado);
 		set("portaria-det-email", entrada.email);
 		set("portaria-det-telefone", entrada.telefone);
+		set("portaria-det-pagador-nome", entrada.nome_pagador);
+		set("portaria-det-pagador-email", entrada.email_pagador);
+		set("portaria-det-pagador-telefone", entrada.telefone_pagador);
 		set("portaria-det-codigo", entrada.codigo);
 		set("portaria-det-hora", entrada.hora_entrada ? fmtData(entrada.hora_entrada) : "—");
 		set("portaria-det-por", entrada.registrado_por);
@@ -622,7 +672,53 @@
 			statusEl.appendChild(badge);
 		}
 
+		// "Entrada Manual" só faz sentido para quem ainda não entrou.
+		const btnManual = document.getElementById("btn-portaria-det-entrada-manual");
+		if (btnManual) btnManual.hidden = !!entrada.ja_entrou;
+
 		if (dlg && typeof dlg.showModal === "function") dlg.showModal();
+	}
+
+	function confirmarEntradaManual() {
+		if (!entradaDetalhesAtual) return;
+		const entrada = entradaDetalhesAtual;
+		const nome = entrada.nome_convidado || "este convidado";
+		confirmDialog({
+			title: "Confirmar entrada manual?",
+			message: "Esta ação irá confirmar a entrada de " + nome
+				+ " mesmo sem apresentar o QR code. Use apenas quando o convidado realmente comprou o convite.",
+			confirmLabel: "Confirmar entrada",
+			variant: "destructive",
+		}).then(function (ok) {
+			if (!ok) return;
+			const btn = document.getElementById("btn-portaria-det-entrada-manual");
+			if (btn) btn.disabled = true;
+			api("gris.api.festas.portaria.marcar_entrada_manual", {
+				festa: festaAtual,
+				codigo: entrada.codigo,
+			})
+				.then(function (resp) {
+					if (!resp || resp.valido === false) {
+						toast("Convidado não encontrado para esta festa.", "error");
+						return;
+					}
+					if (resp.ja_entrou_antes) {
+						toast("Entrada já estava confirmada.", "info");
+					} else {
+						toast("Entrada manual confirmada: " + (resp.nome_convidado || ""), "success");
+					}
+					const dlgDet = document.getElementById("dlg-portaria-detalhes");
+					if (dlgDet && dlgDet.open) dlgDet.close();
+					carregarLista();
+					if (chartPizza) carregarAcompanhamento();
+				})
+				.catch(function (err) {
+					toast(err.message || "Falha ao confirmar entrada manual.", "error");
+				})
+				.finally(function () {
+					if (btn) btn.disabled = false;
+				});
+		});
 	}
 
 	function abrirEditar(entrada) {
@@ -1324,6 +1420,11 @@
 				if (!entradaDetalhesAtual) return;
 				confirmarReenvio(entradaDetalhesAtual);
 			});
+		}
+
+		const btnDetEntradaManual = document.getElementById("btn-portaria-det-entrada-manual");
+		if (btnDetEntradaManual) {
+			btnDetEntradaManual.addEventListener("click", confirmarEntradaManual);
 		}
 
 		const filtroNome = document.getElementById("portaria-filtro-nome");

@@ -46,12 +46,15 @@ class ListaEntradaFesta(Document):
 			self.entrada_registrada_por = None
 
 	@staticmethod
-	def marcar_entrada(name: str, user: str | None = None) -> dict:
+	def marcar_entrada(name: str, user: str | None = None, manual: bool = False) -> dict:
 		"""Marca uma entrada de forma atômica (evita race condition em duplo scan).
 
 		Atualiza apenas se status atual = 'Não entrou'. Retorna:
 		- {ok: True, ja_entrou_antes: False, hora_entrada}  se efetivou
 		- {ok: True, ja_entrou_antes: True, hora_entrada, registrado_por} se já tinha entrado
+
+		`manual=True` quando a entrada foi confirmada pela portaria sem QR
+		code; grava `entrada_manual=1` para auditoria.
 		"""
 		from frappe.utils import now
 
@@ -66,6 +69,7 @@ class ListaEntradaFesta(Document):
 			   SET status = %(status)s,
 			       hora_entrada = %(agora)s,
 			       entrada_registrada_por = %(user)s,
+			       entrada_manual = %(manual)s,
 			       modified = %(agora)s,
 			       modified_by = %(user)s
 			 WHERE name = %(name)s
@@ -76,6 +80,7 @@ class ListaEntradaFesta(Document):
 				"status_atual": STATUS_NAO_ENTROU,
 				"agora": agora,
 				"user": user,
+				"manual": 1 if manual else 0,
 				"name": name,
 			},
 		)

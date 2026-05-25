@@ -26,13 +26,18 @@
       const vh = window.innerHeight;
       const triggerRect = trigger.getBoundingClientRect();
 
-      // Mede dimensões naturais sem exibir (visibility:hidden + sem transições)
+      // Mede dimensões naturais sem exibir (visibility:hidden + sem transições).
+      // Preserva o estado original de aria-hidden: positionPopover é chamada
+      // tanto durante openPopover (estado inicial: 'true') quanto por
+      // onReposition em scroll/resize (estado: 'false', popover aberto).
+      // Restaurar evita esconder o popover por engano em reposicionamentos.
+      const prevAriaHidden = content.getAttribute('aria-hidden');
       content.style.visibility = 'hidden';
       content.style.transition = 'none';
       content.setAttribute('aria-hidden', 'false');
       const contentW = content.scrollWidth;
       const contentH = content.scrollHeight;
-      content.setAttribute('aria-hidden', 'true');
+      content.setAttribute('aria-hidden', prevAriaHidden == null ? 'true' : prevAriaHidden);
       content.style.removeProperty('visibility');
       content.style.removeProperty('transition');
 

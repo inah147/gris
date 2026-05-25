@@ -767,7 +767,7 @@ window._festaData = {
 
 		<h3 class="festa-equipe-title">Equipe</h3>
 		<div id="edit-area-equipe-container"></div>
-		<div class="popover" id="eq-area-popover" data-popover-initialized>
+		<div class="popover" id="eq-area-popover">
 			<button type="button" class="btn-sm-outline festa-add-membro-btn"
 					id="btn-add-area-membro"
 					aria-expanded="false"
@@ -946,7 +946,7 @@ window._festaData = {
 
 		<h3 class="festa-equipe-title">Equipe</h3>
 		<div id="edit-barraca-equipe-container"></div>
-		<div class="popover" id="eq-barraca-popover" data-popover-initialized>
+		<div class="popover" id="eq-barraca-popover">
 			<button type="button" class="btn-sm-outline festa-add-membro-btn"
 					id="btn-add-barraca-membro"
 					aria-expanded="false"
@@ -1449,6 +1449,67 @@ window._festaData = {
 </dialog>
 
 {% endif %}{# can_edit (dialogs de produto) #}
+
+{# Dialog — Detalhes do pedido de convite (aba Convites) #}
+<dialog
+	id="dialog-detalhes-pedido"
+	class="dialog dialog-edit-large"
+	aria-labelledby="dialog-detalhes-pedido-title"
+	onclick="if (event.target === this) this.close()"
+>
+<div>
+	<header>
+		<h2 id="dialog-detalhes-pedido-title">Detalhes do pedido</h2>
+	</header>
+	<section class="festa-dialog-edit-body">
+		<input type="hidden" id="detalhes-pedido-name" />
+
+		<section class="festa-detalhes-section">
+			<h3 class="festa-detalhes-section__title">Dados do pagador</h3>
+			<div class="festa-detail-grid">
+				<div class="festa-detail-field">
+					<span class="festa-detail-field__label">Nome</span>
+					<span class="festa-detail-field__value" id="detalhes-pagador-nome">—</span>
+				</div>
+				<div class="festa-detail-field">
+					<span class="festa-detail-field__label">E-mail</span>
+					<span class="festa-detail-field__value" id="detalhes-pagador-email">—</span>
+				</div>
+				<div class="festa-detail-field">
+					<span class="festa-detail-field__label">Telefone</span>
+					<span class="festa-detail-field__value" id="detalhes-pagador-telefone">—</span>
+				</div>
+			</div>
+		</section>
+
+		<section class="festa-detalhes-section">
+			<h3 class="festa-detalhes-section__title">Dados do pedido</h3>
+			<div class="festa-detail-grid">
+				<div class="festa-detail-field">
+					<span class="festa-detail-field__label">Criado em</span>
+					<span class="festa-detail-field__value" id="detalhes-pedido-criacao">—</span>
+				</div>
+				<div class="festa-detail-field">
+					<span class="festa-detail-field__label">Status do pagamento</span>
+					<span class="festa-detail-field__value" id="detalhes-pedido-status">—</span>
+				</div>
+			</div>
+			<div id="detalhes-pedido-itens-container"></div>
+		</section>
+
+		<section class="festa-detalhes-section">
+			<h3 class="festa-detalhes-section__title">Convidados</h3>
+			<div id="detalhes-pedido-convidados-container"></div>
+		</section>
+	</section>
+	<footer>
+		<button type="button" class="btn-primary" onclick="this.closest('dialog').close()">Fechar</button>
+	</footer>
+	<button type="button" aria-label="Fechar dialog" onclick="this.closest('dialog').close()">
+		<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+	</button>
+</div>
+</dialog>
 
 {% endif %}{# not_found #}
 {% endblock %}

@@ -146,39 +146,53 @@ def build_dashboard(festa_name: str) -> dict:
 		for row in opcoes_rows
 	]
 
-	# Tabela: 1 linha por item de convite (eh_convite=1), todos os pedidos.
+	# Tabela: 1 linha por pedido. "tipo_convite" concatena os tipos do pedido;
+	# "quantidade" é o total de convidados cadastrados (não a soma de itens).
 	convite_rows = frappe.db.sql(
 		"""
 		SELECT
-			cf.name              AS pedido_name,
-			cf.nome_pagador      AS nome_pagador,
-			cf.email_pagador     AS email_pagador,
-			cf.creation          AS creation,
-			it.descricao         AS tipo_convite,
-			it.opcao_convite     AS opcao_convite,
-			it.quantidade        AS quantidade,
-			it.valor             AS valor,
+			cf.name          AS pedido_name,
+			cf.nome_pagador  AS nome_pagador,
+			cf.email_pagador AS email_pagador,
+			cf.creation      AS creation,
+			GROUP_CONCAT(DISTINCT it.descricao ORDER BY it.idx SEPARATOR ', ') AS tipos_convite,
+			COALESCE(SUM(it.valor * it.quantidade), 0) AS valor_total,
 			COALESCE(cob.status, 'Pendente') AS status_pagamento
 		FROM `tabConvite Festa` AS cf
 		INNER JOIN `tabItem Convite Festa` AS it
-			ON it.parent = cf.name AND it.parenttype = 'Convite Festa'
+			ON it.parent = cf.name AND it.parenttype = 'Convite Festa' AND it.eh_convite = 1
 		LEFT JOIN `tabCobranca Infinitepay` AS cob
 			ON cob.name = cf.cobranca_infinitepay
-		WHERE cf.festa = %(festa)s AND it.eh_convite = 1
-		ORDER BY cf.creation DESC, it.idx ASC
+		WHERE cf.festa = %(festa)s
+		GROUP BY cf.name
+		ORDER BY cf.creation DESC
 		""",
 		{"festa": festa_name},
 		as_dict=True,
 	)
+	pedido_names = [row.pedido_name for row in convite_rows]
+	conv_counts: dict = {}
+	if pedido_names:
+		count_rows = frappe.db.sql(
+			"""
+			SELECT parent, COUNT(*) AS qtd
+			  FROM `tabConvidado Convite Festa`
+			 WHERE parenttype = 'Convite Festa' AND parent IN %(names)s
+			 GROUP BY parent
+			""",
+			{"names": tuple(pedido_names)},
+			as_dict=True,
+		)
+		conv_counts = {row.parent: int(row.qtd or 0) for row in count_rows}
 	convites_tabela = [
 		{
 			"pedido_name": row.pedido_name,
 			"nome_pagador": row.nome_pagador or "",
 			"email_pagador": row.email_pagador or "",
-			"tipo_convite": row.tipo_convite or "",
-			"opcao_convite": row.opcao_convite or "",
-			"quantidade": int(row.quantidade or 0),
-			"valor": flt(row.valor),
+			"tipo_convite": row.tipos_convite or "",
+			"opcao_convite": "",
+			"quantidade": conv_counts.get(row.pedido_name, 0),
+			"valor": flt(row.valor_total),
 			"status_pagamento": row.status_pagamento or "Pendente",
 			"creation": row.creation.isoformat() if row.creation else "",
 		}

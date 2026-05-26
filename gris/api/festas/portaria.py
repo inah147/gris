@@ -219,37 +219,63 @@ def listar_entradas(
 	except (ValueError, TypeError):
 		frappe.throw(_("Paginação inválida."))
 
-	filters: dict = {"festa": festa}
+	params: dict = {
+		"festa": festa,
+		"limit": limit_int,
+		"offset": offset_int,
+	}
+	extra_where = ""
 	if status and status in (STATUS_ENTROU, STATUS_NAO_ENTROU):
-		filters["status"] = status
+		extra_where += " AND lef.status = %(status)s"
+		params["status"] = status
 	nome_norm = (nome or "").strip()
 	if nome_norm:
-		filters["nome_convidado"] = ("like", f"%{nome_norm}%")
+		extra_where += " AND lef.nome_convidado LIKE %(nome_like)s"
+		params["nome_like"] = f"%{nome_norm}%"
 
-	rows = frappe.get_all(
-		"Lista Entrada Festa",
-		filters=filters,
-		fields=[
-			"name",
-			"convite",
-			"codigo_convite",
-			"nome_convidado",
-			"email",
-			"telefone",
-			"nome_pagador",
-			"email_pagador",
-			"telefone_pagador",
-			"status",
-			"hora_entrada",
-			"entrada_registrada_por",
-		],
-		order_by="nome_convidado asc",
-		limit_page_length=limit_int,
-		limit_start=offset_int,
+	rows = frappe.db.sql(
+		f"""
+		SELECT
+			lef.name, lef.convite, lef.codigo_convite,
+			lef.nome_convidado, lef.email, lef.telefone,
+			lef.nome_pagador, lef.email_pagador, lef.telefone_pagador,
+			lef.status, lef.hora_entrada, lef.entrada_registrada_por,
+			lef.presencial,
+			MAX(COALESCE(opc.portaria, 0)) AS origem_portaria_opcao
+		  FROM `tabLista Entrada Festa` lef
+		  LEFT JOIN `tabItem Convite Festa` it
+			ON it.parent = lef.convite
+			AND it.parenttype = 'Convite Festa'
+			AND it.eh_convite = 1
+		  LEFT JOIN `tabOpcao Convite Festa` opc
+			ON opc.name = it.opcao_convite
+		 WHERE lef.festa = %(festa)s{extra_where}
+		 GROUP BY lef.name
+		 ORDER BY lef.nome_convidado ASC
+		 LIMIT %(limit)s OFFSET %(offset)s
+		""",
+		params,
+		as_dict=True,
 	)
-	total = frappe.db.count("Lista Entrada Festa", filters)
+
+	count_params = {"festa": festa}
+	count_where = ""
+	if "status" in params:
+		count_where += " AND status = %(status)s"
+		count_params["status"] = params["status"]
+	if "nome_like" in params:
+		count_where += " AND nome_convidado LIKE %(nome_like)s"
+		count_params["nome_like"] = params["nome_like"]
+	total_row = frappe.db.sql(
+		f"SELECT COUNT(*) AS qtd FROM `tabLista Entrada Festa` WHERE festa = %(festa)s{count_where}",
+		count_params,
+		as_dict=True,
+	)
+	total = int(total_row[0].qtd) if total_row else 0
+
 	entradas = []
 	for r in rows:
+		eh_portaria = bool(int(r.presencial or 0)) or bool(int(r.origem_portaria_opcao or 0))
 		entradas.append(
 			{
 				"name": r.name,
@@ -265,10 +291,11 @@ def listar_entradas(
 				"hora_entrada": r.hora_entrada.isoformat() if r.hora_entrada else "",
 				"registrado_por": r.entrada_registrada_por or "",
 				"ja_entrou": r.status == STATUS_ENTROU,
+				"origem": "portaria" if eh_portaria else "previa",
 			}
 		)
 
-	return {"entradas": entradas, "total": int(total)}
+	return {"entradas": entradas, "total": total}
 
 
 @frappe.whitelist()
@@ -387,15 +414,32 @@ def get_acompanhamento(festa: str) -> dict:
 
 	ensure_user_pode_operar_portaria(festa)
 
-	# Contagem por (status, presencial). Convites presenciais entram automaticamente
-	# como 'Entrou' no after_insert do Convite Festa, mas são exibidos em uma fatia
-	# separada na pizza ("Comprou na Portaria").
+	# Contagem por (status, origem_portaria). É considerado "portaria" quando:
+	#  - lef.presencial = 1 (venda presencial física, marca o entrou no after_insert), OU
+	#  - o convite contém ao menos um Item Convite Festa cuja Opcao Convite Festa
+	#    tem portaria=1 (cobre vendas via link de pagamento da portaria).
 	contagem_rows = frappe.db.sql(
 		"""
-		SELECT status, presencial, COUNT(*) AS qtd
-		  FROM `tabLista Entrada Festa`
-		 WHERE festa = %s
-		 GROUP BY status, presencial
+		SELECT
+			lef.status,
+			CASE
+				WHEN lef.presencial = 1
+				  OR EXISTS (
+					  SELECT 1
+						FROM `tabItem Convite Festa` it
+						JOIN `tabOpcao Convite Festa` opc
+						  ON opc.name = it.opcao_convite
+					   WHERE it.parent = lef.convite
+						 AND it.parenttype = 'Convite Festa'
+						 AND it.eh_convite = 1
+						 AND opc.portaria = 1
+				  ) THEN 1
+				ELSE 0
+			END AS origem_portaria,
+			COUNT(*) AS qtd
+		  FROM `tabLista Entrada Festa` lef
+		 WHERE lef.festa = %s
+		 GROUP BY lef.status, origem_portaria
 		""",
 		(festa,),
 		as_dict=True,
@@ -408,7 +452,7 @@ def get_acompanhamento(festa: str) -> dict:
 		if row.status == STATUS_NAO_ENTROU:
 			nao_entrou += qtd
 		elif row.status == STATUS_ENTROU:
-			if int(row.presencial or 0):
+			if int(row.origem_portaria or 0):
 				comprou_portaria += qtd
 			else:
 				entrou_previo += qtd

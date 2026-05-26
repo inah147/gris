@@ -6,6 +6,8 @@
  "engine": "InnoDB",
  "field_order": [
   "habilitar_integracao",
+  "section_break_contato",
+  "telefone_contato",
   "section_break_conexao",
   "url_api",
   "api_key",
@@ -20,6 +22,18 @@
    "fieldname": "habilitar_integracao",
    "fieldtype": "Check",
    "label": "Habilitar integração com WhatsApp"
+  },
+  {
+   "fieldname": "section_break_contato",
+   "fieldtype": "Section Break",
+   "label": "Contato público"
+  },
+  {
+   "description": "Número público usado em links wa.me nos e-mails de convite. Apenas dígitos com DDI/DDD (ex.: 5531999999999). Não substitui o número da instância da integração.",
+   "fieldname": "telefone_contato",
+   "fieldtype": "Data",
+   "label": "Telefone de contato (WhatsApp)",
+   "options": "Phone"
   },
   {
    "fieldname": "section_break_conexao",

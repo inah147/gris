@@ -114,13 +114,13 @@ window._portariaData = {
 <div class="portaria-tab-content">
 	<div class="portaria-indicadores-row">
 		{% call card(attrs={"class": "portaria-card portaria-card--indicador"}) %}
-		<p class="portaria-card__indicador-label">Total de convidados que entraram</p>
+		<p class="portaria-card__indicador-label">Total de convidados prévios que entraram</p>
 		<p class="portaria-card__indicador-valor" id="portaria-indicador-total-valor">—</p>
 		<p class="portaria-card__indicador-extra" id="portaria-indicador-total-extra">—</p>
 		{% endcall %}
 
 		{% call card(attrs={"class": "portaria-card portaria-card--indicador"}) %}
-		<p class="portaria-card__indicador-label">Total de convidados que entraram (incluindo compras na portaria)</p>
+		<p class="portaria-card__indicador-label">Total de entradas (incluindo portaria)</p>
 		<p class="portaria-card__indicador-valor" id="portaria-indicador-total-geral-valor">—</p>
 		<p class="portaria-card__indicador-extra" id="portaria-indicador-total-geral-extra">—</p>
 		{% endcall %}

@@ -583,6 +583,9 @@
 				const statusBadge = e.ja_entrou
 					? '<span class="badge badge-success">Entrou</span>'
 					: '<span class="badge badge-secondary">Não entrou</span>';
+				const origemBadge = e.origem === "portaria"
+					? '<span class="badge badge-success">Portaria</span>'
+					: '<span class="badge badge-secondary">Prévia</span>';
 				const hora = e.hora_entrada ? fmtHora(e.hora_entrada) : "—";
 				const acoes =
 					'<button type="button" class="btn-sm-outline" data-acao="detalhes" data-name="' +
@@ -592,6 +595,7 @@
 					"<tr>" +
 					"<td>" + escapeHtml(e.nome_convidado || "—") + "</td>" +
 					"<td>" + statusBadge + "</td>" +
+					"<td>" + origemBadge + "</td>" +
 					"<td>" + hora + "</td>" +
 					"<td>" + acoes + "</td>" +
 					"</tr>"
@@ -604,6 +608,7 @@
 			"<thead><tr>" +
 			"<th>Nome</th>" +
 			"<th>Status</th>" +
+			"<th>Origem</th>" +
 			"<th>Hora de entrada</th>" +
 			"<th>Ações</th>" +
 			"</tr></thead>" +

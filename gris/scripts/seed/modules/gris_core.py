@@ -668,15 +668,16 @@ def seed_singles_gris(creds: dict):
 	cfg = get(creds, "gris", "configuracoes_whatsapp", default={}) or {}
 	if cfg.get("api_key") and cfg.get("url_api"):
 		try:
-			set_single(
-				"Configuracoes WhatsApp",
-				{
-					"habilitar_integracao": 0,  # safe default em seed
-					"url_api": cfg.get("url_api") or "https://exemplo.evolution.api",
-					"api_key": cfg["api_key"],
-					"nome_instancia": cfg.get("nome_instancia") or "gris-dev",
-				},
-			)
+			payload = {
+				"habilitar_integracao": 0,  # safe default em seed
+				"url_api": cfg.get("url_api") or "https://exemplo.evolution.api",
+				"api_key": cfg["api_key"],
+				"nome_instancia": cfg.get("nome_instancia") or "gris-dev",
+			}
+			telefone_contato = (cfg.get("telefone_contato") or "").strip()
+			if telefone_contato:
+				payload["telefone_contato"] = telefone_contato
+			set_single("Configuracoes WhatsApp", payload)
 			print("  → Configuracoes WhatsApp atualizado")
 		except Exception as e:
 			print(f"  ⚠️  Configuracoes WhatsApp: {e}")

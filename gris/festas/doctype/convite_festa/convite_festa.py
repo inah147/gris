@@ -483,9 +483,15 @@ def enviar_qr_codes(
 
 def _carregar_template(doc, festa) -> dict:
 	template = frappe.get_doc("Email Template", EMAIL_TEMPLATE_CONVITE)
+	numero = (
+		frappe.db.get_single_value("Configuracoes WhatsApp", "telefone_contato") or ""
+	).strip()
+	numero_digits = re.sub(r"\D", "", numero)
+	whatsapp_link = f"https://wa.me/{numero_digits}" if numero_digits else ""
 	return {
 		"doc": doc,
 		"festa": festa,
+		"whatsapp_link": whatsapp_link,
 		"_template_subject": template.subject,
 		# response é armazenado com entidades HTML escapadas (&gt;, &lt;);
 		# o Jinja precisa do operador original para parsear corretamente.
@@ -607,10 +613,12 @@ def enviar_whatsapp_confirmacao_convite(convite_name: str) -> None:
 		if not telefone:
 			continue
 		mensagem_convidado = (
-			f"Olá, {_primeiro_nome(convidado.nome)}!\n"
-			f"Um convite para {festa_nome} foi comprado em seu nome.\n"
-			f"Em breve você receberá o convite no e-mail {_mask_email(convidado.email)}.\n"
-			"Apresente esse convite na entrada da festa."
+			f"Olá, {_primeiro_nome(convidado.nome)}!\n\n"
+			f"Um convite para {festa_nome} foi comprado em seu nome."
+			f"Em breve você receberá o convite no e-mail {_mask_email(convidado.email)}.\n\n"
+			"Para entrar na festa você precisará apresentar seu convite. Não se esqueça de salvá-lo em um lugar de fácil acesso para não ter problemas na entrada, combinado?!\n\n"
+			f"Aqui está a confirmação de sua compra: {link_assinado}"
+			"\n\nNos vemos na festa! 🎉"
 		)
 		try:
 			enviar_texto(telefone, mensagem_convidado)

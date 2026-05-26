@@ -160,6 +160,7 @@ scheduler_events = {
 			"gris.api.associados_notificacoes.enviar_lembrete_atualizacao_associados",
 			"gris.api.associados_vencimento_notificacoes.enviar_lembretes_vencimento_registro_associados",
 		],
+		"0 */6 * * *": ["gris.api.financeiro.btg_auth.renovar_token_se_necessario"],
 	},
 	# "all": [
 	# 	"gris.tasks.all"

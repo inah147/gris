@@ -1,0 +1,145 @@
+{
+ "actions": [],
+ "autoname": "BTG-COB-.YYYY.-.#####",
+ "creation": "2026-05-26 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_cobranca",
+  "valor",
+  "descricao",
+  "expiracao",
+  "column_break_cobranca",
+  "status",
+  "charge_id",
+  "transaction_id",
+  "section_pagador",
+  "customer_name",
+  "customer_email",
+  "customer_phone",
+  "section_resultado",
+  "link_pagamento",
+  "qr_code_emv"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_cobranca",
+   "fieldtype": "Section Break",
+   "label": "Dados da Cobran\u00e7a"
+  },
+  {
+   "fieldname": "valor",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Valor (R$)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "descricao",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Descri\u00e7\u00e3o",
+   "reqd": 1
+  },
+  {
+   "fieldname": "expiracao",
+   "fieldtype": "Date",
+   "label": "Expira\u00e7\u00e3o"
+  },
+  {
+   "fieldname": "column_break_cobranca",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Pendente",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Pendente\nPago\nExpirado\nCancelado",
+   "read_only": 1
+  },
+  {
+   "description": "ID da cobran\u00e7a retornado pela API BTG.",
+   "fieldname": "charge_id",
+   "fieldtype": "Data",
+   "label": "Charge ID (BTG)",
+   "read_only": 1
+  },
+  {
+   "description": "ID da transa\u00e7\u00e3o quando o pagamento \u00e9 efetuado.",
+   "fieldname": "transaction_id",
+   "fieldtype": "Data",
+   "label": "Transaction ID (BTG)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_pagador",
+   "fieldtype": "Section Break",
+   "label": "Dados do Pagador (Opcional)"
+  },
+  {
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "label": "Nome do Pagador"
+  },
+  {
+   "fieldname": "customer_email",
+   "fieldtype": "Data",
+   "label": "E-mail do Pagador",
+   "options": "Email"
+  },
+  {
+   "fieldname": "customer_phone",
+   "fieldtype": "Data",
+   "label": "Telefone do Pagador"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_resultado",
+   "fieldtype": "Section Break",
+   "label": "Link e QR Code"
+  },
+  {
+   "fieldname": "link_pagamento",
+   "fieldtype": "Data",
+   "label": "Link de Pagamento",
+   "options": "URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "qr_code_emv",
+   "fieldtype": "Code",
+   "label": "QR Code (EMV / Copia e Cola)",
+   "options": "Plain Text",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-05-26 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Financeiro",
+ "name": "Cobranca BTG",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

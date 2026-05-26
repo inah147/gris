@@ -1,0 +1,126 @@
+{
+ "actions": [],
+ "creation": "2026-05-26 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_aplicativo",
+  "client_id",
+  "client_secret",
+  "redirect_uri",
+  "scope",
+  "column_break_aplicativo",
+  "sandbox_mode",
+  "webhook_secret",
+  "section_tokens",
+  "access_token",
+  "refresh_token",
+  "token_expires_at",
+  "column_break_tokens",
+  "account_id"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_aplicativo",
+   "fieldtype": "Section Break",
+   "label": "Aplicativo BTG"
+  },
+  {
+   "fieldname": "client_id",
+   "fieldtype": "Data",
+   "label": "Client ID",
+   "reqd": 1
+  },
+  {
+   "fieldname": "client_secret",
+   "fieldtype": "Password",
+   "label": "Client Secret",
+   "reqd": 1
+  },
+  {
+   "description": "URL de callback OAuth2 cadastrada no Developer Console do BTG. Exemplo: https://seusite.com/financeiro/btg_oauth_callback",
+   "fieldname": "redirect_uri",
+   "fieldtype": "Data",
+   "label": "Redirect URI",
+   "reqd": 1
+  },
+  {
+   "default": "openid empresas.btgpactual.com/account.readonly empresas.btgpactual.com/payment empresas.btgpactual.com/charge",
+   "description": "Escopos OAuth2 separados por espa\u00e7o. O escopo 'openid' \u00e9 obrigat\u00f3rio para APIs de Banking.",
+   "fieldname": "scope",
+   "fieldtype": "Small Text",
+   "label": "Escopos (Scopes)"
+  },
+  {
+   "fieldname": "column_break_aplicativo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Quando ativo, utiliza os endpoints de sandbox do BTG (testes).",
+   "fieldname": "sandbox_mode",
+   "fieldtype": "Check",
+   "label": "Modo Sandbox (Teste)"
+  },
+  {
+   "description": "Segredo HMAC usado para validar a assinatura dos webhooks recebidos do BTG.",
+   "fieldname": "webhook_secret",
+   "fieldtype": "Password",
+   "label": "Segredo do Webhook"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_tokens",
+   "fieldtype": "Section Break",
+   "label": "Tokens OAuth (preenchidos automaticamente)"
+  },
+  {
+   "fieldname": "access_token",
+   "fieldtype": "Password",
+   "label": "Access Token",
+   "read_only": 1
+  },
+  {
+   "fieldname": "refresh_token",
+   "fieldtype": "Password",
+   "label": "Refresh Token",
+   "read_only": 1
+  },
+  {
+   "fieldname": "token_expires_at",
+   "fieldtype": "Datetime",
+   "label": "Token Expira Em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_tokens",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "ID da conta BTG PJ, obtido ap\u00f3s a autoriza\u00e7\u00e3o OAuth.",
+   "fieldname": "account_id",
+   "fieldtype": "Data",
+   "label": "Account ID",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-05-26 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Financeiro",
+ "name": "Configuracao BTG Empresas",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

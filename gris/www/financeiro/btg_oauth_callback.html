@@ -1,0 +1,20 @@
+{% extends "templates/portal_clean.html" %}
+
+{% block page_content %}
+<div style="max-width: 600px; margin: 60px auto; padding: 0 20px;">
+  {% if success %}
+    <h2 style="color: #2d7a2d;">✓ Autorização BTG realizada com sucesso!</h2>
+    {% if scope %}
+      <p>Escopos concedidos: <code>{{ scope }}</code></p>
+    {% endif %}
+    <p>Os tokens de acesso foram salvos em <strong>Configuracao BTG Empresas</strong>.</p>
+    <a href="/app/configuracao-btg-empresas" class="btn btn-primary">Ir para Configuração BTG</a>
+  {% else %}
+    <h2 style="color: #a94442;">✗ Erro na autorização BTG</h2>
+    <p>{{ error_message }}</p>
+    <p>
+      <a href="/app/configuracao-btg-empresas" class="btn btn-default">Voltar à Configuração</a>
+    </p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -109,3 +109,18 @@ def process_uploaded_btg_file(file_url):
 		"stats": stats,
 		"errors": errors,
 	}
+
+
+@frappe.whitelist()
+def sync_via_api(data_inicio: str, data_fim: str) -> dict:
+	"""Puxa o extrato BTG via API REST para o período informado e insere as transações.
+
+	Alternativa ao upload de OFX: não requer arquivo, usa os tokens OAuth salvos.
+	Datas no formato YYYY-MM-DD.
+	"""
+	if not frappe.has_permission("Transacao BTG Empresas", ptype="create"):
+		frappe.throw("Sem permissão para sincronizar transações BTG.", frappe.PermissionError)
+
+	from gris.api.financeiro.btg import sync_extrato_btg
+
+	return sync_extrato_btg(data_inicio, data_fim)

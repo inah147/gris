@@ -1,0 +1,132 @@
+{
+ "actions": [],
+ "autoname": "BTG-PAG-.YYYY.-.#####",
+ "creation": "2026-05-26 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_pedido",
+  "tipo",
+  "valor",
+  "descricao",
+  "column_break_pedido",
+  "status",
+  "idempotency_key",
+  "external_id",
+  "section_detalhes",
+  "details_json",
+  "section_resposta",
+  "error_message"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_pedido",
+   "fieldtype": "Section Break",
+   "label": "Pedido de Pagamento"
+  },
+  {
+   "fieldname": "tipo",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Tipo",
+   "options": "PIX_KEY\nPIX_QR_CODE\nPIX_MANUAL\nBANKSLIP\nTED\nUTILITIES\nDARF\nPIX_REVERSAL",
+   "reqd": 1
+  },
+  {
+   "fieldname": "valor",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Valor (R$)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "descricao",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Descri\u00e7\u00e3o"
+  },
+  {
+   "fieldname": "column_break_pedido",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Rascunho",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Rascunho\nAguardando Aprova\u00e7\u00e3o\nAprovado\nCancelado\nRejeitado",
+   "read_only": 1
+  },
+  {
+   "description": "Chave \u00fanica gerada automaticamente para garantir idempot\u00eancia na API BTG.",
+   "fieldname": "idempotency_key",
+   "fieldtype": "Data",
+   "label": "Idempotency Key",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "description": "ID do pagamento retornado pela API BTG ap\u00f3s a cria\u00e7\u00e3o.",
+   "fieldname": "external_id",
+   "fieldtype": "Data",
+   "label": "ID Externo (BTG)",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_detalhes",
+   "fieldtype": "Section Break",
+   "label": "Detalhes do Pagamento (JSON)"
+  },
+  {
+   "description": "Objeto JSON com os campos espec\u00edficos do tipo de pagamento (chave Pix, linha digit\u00e1vel, dados banc\u00e1rios, etc.).",
+   "fieldname": "details_json",
+   "fieldtype": "Code",
+   "label": "Details (JSON)",
+   "options": "JSON",
+   "reqd": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_resposta",
+   "fieldtype": "Section Break",
+   "label": "Resposta / Erros"
+  },
+  {
+   "fieldname": "error_message",
+   "fieldtype": "Small Text",
+   "label": "Mensagem de Erro",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-05-26 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Financeiro",
+ "name": "Iniciacao Pagamento BTG",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -334,6 +334,7 @@
 			atualizarBotaoContinuarPedido();
 		}).catch(function (err) {
 			tbody.innerHTML = '<tr><td colspan="3" class="text-sm text-destructive">' + escapeHtml(err.message || "Erro ao calcular pedido.") + "</td></tr>";
+			atualizarBotaoContinuarPedido();
 		});
 	}
 
@@ -381,13 +382,16 @@
 	}
 
 	function initPedidoControls() {
-		// Pagador — nome
+		// Pagador — nome. `change` cobre autofill do navegador (Safari/Chrome
+		// nem sempre disparam `input` em autofill ou restauração de sessão).
 		const nomeEl = document.getElementById("vc-pagador-nome");
 		if (nomeEl) {
-			nomeEl.addEventListener("input", function () {
+			const onNome = function () {
 				pagador.nome = nomeEl.value.trim();
 				atualizarBotaoContinuarPedido();
-			});
+			};
+			nomeEl.addEventListener("input", onNome);
+			nomeEl.addEventListener("change", onNome);
 		}
 
 		// Pagador — e-mail com validação
@@ -401,11 +405,13 @@
 			emailEl.setAttribute("aria-invalid", ok ? "false" : "true");
 		}
 		if (emailEl) {
-			emailEl.addEventListener("input", function () {
+			const onEmail = function () {
 				pagador.email = emailEl.value.trim();
 				if (emailErro && !emailErro.hidden) validarEmailUI();
 				atualizarBotaoContinuarPedido();
-			});
+			};
+			emailEl.addEventListener("input", onEmail);
+			emailEl.addEventListener("change", onEmail);
 			emailEl.addEventListener("blur", validarEmailUI);
 		}
 
@@ -840,7 +846,12 @@
 				if (btn.id === "btn-pedido-continuar" && !pagadorValido()) {
 					return;
 				}
-				if (target === "pedido") renderPedido();
+				if (target === "pedido") {
+					renderPedido();
+					// Re-valida imediatamente pra refletir o estado real do formulário
+					// sem esperar a API de resumo (que pode demorar ou falhar).
+					atualizarBotaoContinuarPedido();
+				}
 				if (target === "convidados") renderConvidados();
 				if (target === "revisao") renderRevisaoFinal();
 				activateTab(target);
@@ -896,5 +907,12 @@
 			}
 			carregarFesta(inicial);
 		}
+	});
+
+	// Restauração via bfcache (botão Voltar do navegador) não reexecuta
+	// DOMContentLoaded — força re-validação do botão pra refletir o que o
+	// navegador acabou de restaurar nos inputs.
+	window.addEventListener("pageshow", function (event) {
+		if (event.persisted) atualizarBotaoContinuarPedido();
 	});
 })();

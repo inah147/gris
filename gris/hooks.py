@@ -305,12 +305,6 @@ fixtures = [
 		],
 	},
 	{
-		"dt": "Carteira",
-	},
-	{
-		"dt": "Instituicao Financeira",
-	},
-	{
 		"dt": "Centro de Custo",
 	},
 	{

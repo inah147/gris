@@ -287,6 +287,9 @@ def deactivate_associate_user(user):
 @frappe.whitelist()
 def update_associate_user(associate_name, old_funcao_categoria=None, new_funcao_categoria=None, **_kwargs):
 	log = _logger()
+	if not _should_auto_create_users():
+		log.info(f"[UPDATE] skip associate_name={associate_name} reason=auto create disabled")
+		return
 	try:
 		if not frappe.db.exists("Associado", associate_name):
 			return
@@ -299,7 +302,8 @@ def update_associate_user(associate_name, old_funcao_categoria=None, new_funcao_
 
 		user = _get_user(associate.id_escoteiros)
 		if not user:
-			log.info(f"[UPDATE] skip associate_name={associate_name} reason=user not found")
+			log.info(f"[UPDATE] user not found for associate_name={associate_name}, creating")
+			create_associate_user(associate=associate)
 			return
 
 		# Ativar / desativar conforme validade

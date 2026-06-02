@@ -128,6 +128,16 @@ after_install = "gris.install.after_install"
 # 	"Event": "frappe.desk.doctype.event.event.has_permission",
 # }
 
+permission_query_conditions = {
+	"Board": "gris.gris.doctype.board.board_permissions.board_permission_query_conditions",
+	"Gestao de Tarefas": "gris.gris.doctype.board.board_permissions.gestao_de_tarefas_permission_query_conditions",
+}
+
+has_permission = {
+	"Board": "gris.gris.doctype.board.board_permissions.board_has_permission",
+	"Gestao de Tarefas": "gris.gris.doctype.board.board_permissions.gestao_de_tarefas_has_permission",
+}
+
 # DocType Class
 # ---------------
 # Override standard doctype classes
@@ -146,6 +156,16 @@ doc_events = {
 			"gris.festas.doctype.convite_festa.convite_festa.on_cobranca_atualizada",
 		],
 	},
+	"User": {
+		"after_insert": [
+			"gris.gestao_de_tarefas.user_board.criar_board_pessoal",
+		],
+	},
+	"Projeto": {
+		"on_update": [
+			"gris.gestao_de_tarefas.board_sync.sync_projeto_envolvidos",
+		],
+	},
 }
 
 # Scheduled Tasks
@@ -153,7 +173,7 @@ doc_events = {
 
 scheduler_events = {
 	"cron": {
-		"0 3 * * *": ["gris.gestao_de_projetos.doctype.projeto.projeto.validar_tarefas_atrasadas_madrugada"],
+		"0 3 * * *": ["gris.gris.doctype.gestao_de_tarefas.gestao_de_tarefas.validar_tarefas_atrasadas"],
 		"0 5 * * *": ["gris.api.users.user_manager.manage_associate_users"],
 		"0 9 * * *": [
 			"gris.gestao_de_projetos.doctype.projeto.projeto.enviar_lembretes_whatsapp_aprovacao_projetos",
@@ -340,3 +360,7 @@ fixtures = [
 # 		{"label": "Relatório Ativos", "href": "/app/query-report/Associados Ativos"},
 # 	]
 # }
+
+update_website_context = [
+	"gris.api.gestao_de_tarefas.minhas_tarefas.context_inject",
+]

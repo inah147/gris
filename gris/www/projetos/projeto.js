@@ -21,17 +21,6 @@
         consultarResumo: "gris.gestao_de_projetos.doctype.projeto.projeto.consultar_resumo_avaliacao",
     };
 
-    const TASK_STATUS_ORDER = ["Nao iniciado", "Em andamento", "Atrasado", "Concluido", "Cancelado"];
-    const TASK_STATUS_LABELS = {
-        "Nao iniciado": "Não iniciado",
-        "Em andamento": "Em andamento",
-        Atrasado: "Atrasado",
-        Concluido: "Concluído",
-        Cancelado: "Cancelado",
-    };
-
-
-
     const state = {
         projetoName: "",
         loading: false,
@@ -44,28 +33,18 @@
         projeto: null,
         activeTab: "dados-gerais",
         participantsSaving: false,
-        dragTaskName: "",
-        isDraggingTask: false,
         meetingEditors: {
             pauta: null,
             ata: null,
         },
-        taskObservacoesEditor: null,
         meetingPersisted: false,
-        taskComments: [],
-        taskCommentsLoading: false,
-        activeTaskName: "",
-        editingCommentName: "",
-        editingCommentDraft: "",
-        taskTitleEditing: false,
-        taskTitleBeforeEdit: "",
-        taskStatusBeforeChange: "Nao iniciado",
         projectStatusAction: "",
         projectStatusSaving: false,
         avaliacaoData: null,
         avaliacaoLoaded: false,
         avaliacaoSaving: false,
         avaliacaoResumoPolling: null,
+        kanban: null,
     };
 
     const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -307,18 +286,6 @@
         setToastEditorReadOnly(state.meetingEditors.ata, !canEditAta, "meeting_ata_editor_host");
     }
 
-    function setTaskObservacoesEditorMode(useRichEditor) {
-        const host = document.getElementById("task_observacoes_editor_host");
-        const block = document.getElementById("task_observacoes_markdown_block");
-
-        if (host) {
-            host.classList.toggle("d-none", !useRichEditor);
-        }
-        if (block) {
-            block.classList.toggle("d-none", useRichEditor);
-        }
-    }
-
     function setToastEditorValue(editor, value) {
         if (!editor || typeof editor.setMarkdown !== "function") return;
         try {
@@ -344,34 +311,6 @@
             host.querySelectorAll("[contenteditable]").forEach((el) => {
                 el.setAttribute("contenteditable", readOnly ? "false" : "true");
             });
-        }
-    }
-
-    async function initTaskObservacoesEditor() {
-        const host = document.getElementById("task_observacoes_editor_host");
-        if (!host || !window.gris?.editor?.create) {
-            setTaskObservacoesEditorMode(false);
-            state.taskObservacoesEditor = null;
-            return;
-        }
-
-        host.innerHTML = "";
-        try {
-            const editor = await window.gris.editor.create(host, {
-                initialValue: "",
-                toolbarItems: [
-                    ["heading", "bold", "italic", "strike"],
-                    ["hr", "quote"],
-                    ["ul", "ol", "task"],
-                    ["table", "link"],
-                    ["code", "codeblock"],
-                ],
-            });
-            state.taskObservacoesEditor = editor;
-            setTaskObservacoesEditorMode(true);
-        } catch (error) {
-            state.taskObservacoesEditor = null;
-            setTaskObservacoesEditorMode(false);
         }
     }
 
@@ -912,7 +851,11 @@
 
             renderDadosGerais(state.projeto);
             renderParticipantsTable();
-            renderTaskKanban();
+            if (state.kanban) {
+                state.kanban.setResponsavelOptions(state.responsavelOptions);
+                state.kanban.setCanEdit(state.canEdit);
+                state.kanban.setTasks(state.projeto?.tarefas || []);
+            }
             renderMeetings();
             setEditabilityHints();
 
@@ -1045,971 +988,6 @@
         });
     }
 
-    function getTaskByName(taskName) {
-        return (state.projeto?.tarefas || []).find((task) => (task.name || "") === taskName) || null;
-    }
-
-    function formatTaskDeadline(value) {
-        const date = parseDateFlexible(value);
-        if (!date) return "-";
-        return date.toLocaleDateString("pt-BR", { day: "numeric", month: "short" });
-    }
-
-    function getTodayIsoDate() {
-        const now = new Date();
-        const y = now.getFullYear();
-        const m = String(now.getMonth() + 1).padStart(2, "0");
-        const d = String(now.getDate()).padStart(2, "0");
-        return `${y}-${m}-${d}`;
-    }
-
-    function formatTaskTimelineDate(value, fallbackText) {
-        const parsed = parseDateFlexible(value);
-        if (!parsed) {
-            return fallbackText || "-";
-        }
-
-        return parsed.toLocaleDateString("pt-BR", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-        });
-    }
-
-    function updateTaskTimelineInfographic() {
-        const timeline = document.getElementById("taskTimelineInfographic");
-        if (!timeline) {
-            return;
-        }
-
-        const status = (document.getElementById("task_status")?.value || "Nao iniciado").trim() || "Nao iniciado";
-        const startDateValue = (document.getElementById("task_data_inicio")?.value || "").trim();
-        const dueDateValue = getTaskPrazoValue();
-        const deliveryInput = document.getElementById("task_data_entrega");
-        const deliveryDateValue = (deliveryInput?.value || "").trim();
-
-        if (status === "Nao iniciado" || status === "Cancelado") {
-            timeline.classList.add("d-none");
-            return;
-        }
-
-        timeline.classList.remove("d-none");
-
-        const startDateEl = document.getElementById("taskTimelineStartDate");
-        const endDateEl = document.getElementById("taskTimelineEndDate");
-        const deltaEl = document.getElementById("taskTimelineDelta");
-        const endDot = document.getElementById("taskTimelineEndDot");
-
-        if (startDateEl) {
-            startDateEl.textContent = formatTaskTimelineDate(startDateValue, "-");
-        }
-
-        if (endDot) {
-            endDot.classList.remove("is-on-time", "is-late");
-        }
-        if (deltaEl) {
-            deltaEl.classList.remove("is-late", "is-early");
-            deltaEl.textContent = "";
-        }
-
-        const isCompleted = status === "Concluido";
-        if (!isCompleted) {
-            if (endDateEl) {
-                endDateEl.textContent = "Em execução";
-            }
-            return;
-        }
-
-        const resolvedDelivery = deliveryDateValue || getTodayIsoDate();
-        if (!deliveryDateValue && deliveryInput) {
-            deliveryInput.value = resolvedDelivery;
-        }
-
-        if (endDateEl) {
-            endDateEl.textContent = formatTaskTimelineDate(resolvedDelivery, "-");
-        }
-
-        const dueDate = parseDateFlexible(dueDateValue);
-        const deliveryDate = parseDateFlexible(resolvedDelivery);
-        if (!dueDate || !deliveryDate) {
-            if (endDot) {
-                endDot.classList.add("is-on-time");
-            }
-            return;
-        }
-
-        const diff = diffDays(dueDate, deliveryDate);
-        if (!deltaEl || !endDot) {
-            return;
-        }
-
-        if (diff > 0) {
-            const label = diff === 1 ? "1 dia atrasado" : `${diff} dias atrasado`;
-            deltaEl.textContent = `(${label})`;
-            deltaEl.classList.add("is-late");
-            endDot.classList.add("is-late");
-            return;
-        }
-
-        if (diff < 0) {
-            const daysEarly = Math.abs(diff);
-            const label = daysEarly === 1 ? "1 dia adiantado" : `${daysEarly} dias adiantado`;
-            deltaEl.textContent = `(${label})`;
-            deltaEl.classList.add("is-early");
-            endDot.classList.add("is-on-time");
-            return;
-        }
-
-        deltaEl.textContent = "(entregue no prazo)";
-        endDot.classList.add("is-on-time");
-    }
-
-    function applyTaskDateRulesByStatusChange() {
-        const statusSelect = document.getElementById("task_status");
-        const startInput = document.getElementById("task_data_inicio");
-        const deliveryInput = document.getElementById("task_data_entrega");
-        if (!statusSelect || !startInput || !deliveryInput) {
-            return;
-        }
-
-        const nextStatus = (statusSelect.value || "Nao iniciado").trim() || "Nao iniciado";
-        const previousStatus = (state.taskStatusBeforeChange || "Nao iniciado").trim() || "Nao iniciado";
-
-        if (previousStatus === "Nao iniciado" && nextStatus !== "Nao iniciado" && !startInput.value) {
-            startInput.value = getTodayIsoDate();
-        }
-
-        if (nextStatus === "Concluido") {
-            deliveryInput.value = deliveryInput.value || getTodayIsoDate();
-        } else {
-            deliveryInput.value = "";
-        }
-
-        state.taskStatusBeforeChange = nextStatus;
-        updateTaskTimelineInfographic();
-    }
-
-    function compareTasksByPrazoAsc(left, right) {
-        const leftDate = parseDateFlexible(left?.prazo);
-        const rightDate = parseDateFlexible(right?.prazo);
-
-        if (leftDate && rightDate) {
-            const diff = leftDate.getTime() - rightDate.getTime();
-            if (diff !== 0) {
-                return diff;
-            }
-        } else if (leftDate) {
-            return -1;
-        } else if (rightDate) {
-            return 1;
-        }
-
-        const leftTitle = String(left?.descricao || "").toLowerCase();
-        const rightTitle = String(right?.descricao || "").toLowerCase();
-        if (leftTitle !== rightTitle) {
-            return leftTitle.localeCompare(rightTitle, "pt-BR");
-        }
-
-        return String(left?.name || "").localeCompare(String(right?.name || ""), "pt-BR");
-    }
-
-    function getTaskResponsavelInitials(name) {
-        const words = String(name || "")
-            .trim()
-            .split(/\s+/)
-            .filter(Boolean);
-
-        if (!words.length) {
-            return "--";
-        }
-
-        const first = words[0][0] || "";
-        const second = words.length > 1 ? words[words.length - 1][0] || "" : words[0][1] || "";
-        return `${first}${second}`.toUpperCase();
-    }
-
-    function renderTaskKanban() {
-        const container = document.getElementById("taskKanban");
-        if (!container) return;
-
-        const allTasks = state.projeto?.tarefas || [];
-        const byStatus = Object.fromEntries(TASK_STATUS_ORDER.map((status) => [status, []]));
-
-        allTasks.forEach((task) => {
-            const normalizedStatus = TASK_STATUS_ORDER.includes(task.status) ? task.status : "Nao iniciado";
-            byStatus[normalizedStatus].push(task);
-        });
-
-        TASK_STATUS_ORDER.forEach((status) => {
-            byStatus[status].sort(compareTasksByPrazoAsc);
-        });
-
-        container.innerHTML = TASK_STATUS_ORDER
-            .map((status) => {
-                const tasks = byStatus[status] || [];
-                const bodyHtml = tasks.length
-                    ? tasks
-                          .map((task) => {
-                              const deadline = formatTaskDeadline(task.prazo);
-                              const initials = getTaskResponsavelInitials(task.responsavel);
-                              const responsavelLabel = task.responsavel || "Sem responsável";
-                              const responsavelClass = task.responsavel ? "" : " is-empty";
-
-                              return `
-                        <article class="task-card" data-task-name="${escapeHtml(task.name || "")}" draggable="${state.canEdit ? "true" : "false"}">
-                            <h4 class="task-card__title" title="${escapeHtml(task.descricao || "-")}">${escapeHtml(task.descricao || "-")}</h4>
-                            <div class="task-card__footer">
-                                <span class="task-card__deadline" title="Prazo">
-                                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                        <circle cx="12" cy="12" r="8"></circle>
-                                        <path d="M12 8v4l2.5 1.5"></path>
-                                    </svg>
-                                    ${escapeHtml(deadline)}
-                                </span>
-                                <span class="task-card__responsavel${responsavelClass}" title="${escapeHtml(responsavelLabel)}">${escapeHtml(initials)}</span>
-                            </div>
-                        </article>
-                    `;
-                          })
-                          .join("")
-                    : "";
-
-                const taskWord = tasks.length !== 1 ? 'tarefas' : 'tarefa';
-                return `
-                    <section class="task-column" data-task-column="${escapeHtml(status)}">
-                        <header class="task-column__header">
-                            <div class="task-column__heading">
-                                <h4 class="task-column__title">${escapeHtml(TASK_STATUS_LABELS[status] || status)}</h4>
-                                <p class="task-column__subtitle">${tasks.length} ${taskWord}</p>
-                            </div>
-                            <span class="g-badge g-badge--secondary">${tasks.length}</span>
-                        </header>
-                        <div class="task-column__body" data-task-status="${escapeHtml(status)}">
-                            ${bodyHtml}
-                        </div>
-                    </section>
-                `;
-            })
-            .join("");
-    }
-
-    function renderTaskResponsavelCombobox(selectedValue) {
-        const wrapper = document.getElementById("task_responsavel_wrapper");
-        if (!wrapper) return;
-
-        const normalizedSelected = String(selectedValue || "").trim();
-        const normalizedOptions = Array.from(
-            new Set(
-                (state.responsavelOptions || [])
-                    .map((item) => String(item || "").trim())
-                    .filter(Boolean)
-                    .concat(normalizedSelected ? [normalizedSelected] : [])
-            )
-        );
-
-        const items = [{ value: "", label: "Selecione" }].concat(
-            normalizedOptions.map((item) => ({ value: item, label: item }))
-        );
-
-        wrapper.innerHTML = buildBasecoatSelectHtml("task_responsavel", items, {
-            isCombobox: true,
-            searchPlaceholder: "Buscar responsável...",
-        });
-
-        // Pre-select current value after rendering
-        if (normalizedSelected) {
-            const selectEl = document.getElementById("task_responsavel");
-            if (selectEl) {
-                const option = selectEl.querySelector(`[role="option"][data-value="${CSS.escape(normalizedSelected)}"]`);
-                if (option) {
-                    const label = selectEl.querySelector("button > span.truncate");
-                    if (label) label.textContent = normalizedSelected;
-                    const hiddenInput = selectEl.querySelector(':scope > input[type="hidden"]');
-                    if (hiddenInput) hiddenInput.value = normalizedSelected;
-                }
-            }
-        }
-
-        // Re-initialize Basecoat for the newly injected component
-        document.dispatchEvent(new CustomEvent("gris:design-system:init"));
-    }
-
-    function buildDatepickerHtml(id, isoValue) {
-        const locale = "pt-BR";
-        const placeholder = "Selecione uma data";
-        const popoverId = `${id}-popover`;
-        const safeValue = escapeHtml(isoValue || "");
-        const safePlaceholder = escapeHtml(placeholder);
-        const spriteBase = "/assets/gris/design_system/icons/lucide/sprite.svg";
-        return `<div id="${id}" class="datepicker" data-datepicker data-mode="single" data-locale="${locale}" data-placeholder="${safePlaceholder}">
-  <button type="button" class="datepicker-trigger input" aria-haspopup="dialog" aria-expanded="false" aria-controls="${popoverId}">
-    <svg class="ds-lucide ds-lucide--sm datepicker-trigger__icon" viewBox="0 0 24 24" aria-hidden="true"><use href="${spriteBase}#calendar"></use></svg>
-    <span class="datepicker-trigger__label datepicker-trigger__label--placeholder" data-datepicker-label>${safePlaceholder}</span>
-  </button>
-  <input type="hidden" data-datepicker-value value="${safeValue}">
-  <div id="${popoverId}" class="datepicker-popover" data-datepicker-popover role="dialog" aria-modal="false" aria-label="Selecionar data" hidden>
-    <header class="datepicker-popover__header">
-      <button type="button" class="datepicker-popover__nav" data-datepicker-prev aria-label="Mês anterior"><svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="${spriteBase}#chevron-left"></use></svg></button>
-      <span class="datepicker-popover__title" data-datepicker-title aria-live="polite"></span>
-      <button type="button" class="datepicker-popover__nav" data-datepicker-next aria-label="Próximo mês"><svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="${spriteBase}#chevron-right"></use></svg></button>
-    </header>
-    <div class="datepicker-popover__weekdays" aria-hidden="true" data-datepicker-weekdays></div>
-    <div class="datepicker-popover__grid" role="grid" data-datepicker-grid></div>
-    <footer class="datepicker-popover__footer">
-      <button type="button" class="datepicker-popover__action" data-datepicker-clear>Limpar</button>
-      <button type="button" class="datepicker-popover__action" data-datepicker-today>Hoje</button>
-    </footer>
-  </div>
-</div>`;
-    }
-
-    function getTaskPrazoValue() {
-        const dp = document.getElementById("task_prazo_datepicker");
-        if (!dp) return "";
-        return dp.querySelector("[data-datepicker-value]")?.value || "";
-    }
-
-    function renderTaskPrazoDatepicker(value) {
-        const wrapper = document.getElementById("task_prazo_wrapper");
-        if (!wrapper) return;
-        wrapper.innerHTML = buildDatepickerHtml("task_prazo_datepicker", value || "");
-        document.dispatchEvent(new CustomEvent("gris:design-system:init"));
-    }
-
-    function setTaskModalHeading(task) {
-        const title = document.getElementById("taskModalTitle");
-        const subtitle = document.getElementById("taskModalSubtitle");
-
-        if (title) {
-            title.textContent = task?.name ? "Detalhes da tarefa" : "Nova tarefa";
-        }
-
-        if (subtitle) {
-            subtitle.textContent = task?.name
-                ? "Atualize os dados e registre atividades no histórico de comentários."
-                : "Preencha os dados e salve para habilitar comentários na lateral.";
-        }
-    }
-
-    function getTaskTitleValue() {
-        return (document.getElementById("task_descricao")?.value || "").trim();
-    }
-
-    function setTaskTitleValue(value) {
-        const normalized = String(value || "").trim();
-        const hidden = document.getElementById("task_descricao");
-        const editor = document.getElementById("task_title_editor");
-
-        if (hidden) {
-            hidden.value = normalized;
-        }
-
-        if (editor) {
-            editor.value = normalized;
-        }
-    }
-
-    function setTaskTitleEditMode(_editing) {
-        // título agora é sempre editável via textarea; função mantida por compatibilidade
-    }
-
-    function startTaskTitleEdit() {
-        if (!state.canEdit) {
-            return;
-        }
-
-        state.taskTitleBeforeEdit = getTaskTitleValue();
-        setTaskTitleEditMode(true);
-    }
-
-    function commitTaskTitleEdit() {
-        if (!state.taskTitleEditing) {
-            return;
-        }
-
-        const editor = document.getElementById("task_title_editor");
-        const value = (editor?.value || "").trim();
-        setTaskTitleValue(value);
-        state.taskTitleBeforeEdit = value;
-        setTaskTitleEditMode(false);
-    }
-
-    function cancelTaskTitleEdit() {
-        if (!state.taskTitleEditing) {
-            return;
-        }
-
-        setTaskTitleValue(state.taskTitleBeforeEdit || "");
-        setTaskTitleEditMode(false);
-    }
-
-    function formatTaskCommentDate(value) {
-        return formatDateTimePtBr(value || "");
-    }
-
-    function getTaskCommentByName(commentName) {
-        const targetName = String(commentName || "").trim();
-        if (!targetName) return null;
-        return (state.taskComments || []).find((comment) => String(comment?.name || "") === targetName) || null;
-    }
-
-    function renderTaskComments() {
-        const list = document.getElementById("taskCommentsList");
-        if (!list) return;
-
-        if (state.taskCommentsLoading) {
-            list.innerHTML = '<div class="task-comments-empty">Carregando comentários...</div>';
-            return;
-        }
-
-        if (!state.activeTaskName) {
-            list.innerHTML = '<div class="task-comments-empty">Salve a tarefa para liberar o histórico de comentários.</div>';
-            return;
-        }
-
-        const comments = state.taskComments || [];
-        if (!comments.length) {
-            list.innerHTML = '<div class="task-comments-empty">Nenhum comentário registrado para esta tarefa.</div>';
-            return;
-        }
-
-        list.innerHTML = comments
-            .map((comment) => {
-                const commentName = String(comment?.name || "").trim();
-                const author = comment.author || comment.author_email || "Usuário";
-                const initials = getTaskResponsavelInitials(author);
-                const timestamp = formatTaskCommentDate(comment.creation);
-                const rawContent = (comment.content || "").trim();
-                const fallbackText = String(comment.content_text || "").trim();
-                const contentHtml = rawContent
-                    ? sanitizeRenderedHtml(rawContent)
-                    : escapeHtml(fallbackText || "-").replace(/\n/g, "<br>");
-                const owner = String(comment.owner || comment.author_email || "").trim().toLowerCase();
-                const currentUser = String(frappe?.session?.user || "").trim().toLowerCase();
-                const isAuthor = Boolean(commentName && owner && currentUser && owner === currentUser);
-                const isEditing = Boolean(commentName && state.editingCommentName === commentName);
-
-                if (isEditing) {
-                    return `
-                        <article class="task-comment-item task-comment-item--editing">
-                            <div class="task-comment-item__row">
-                                <span class="task-comment-item__avatar" aria-hidden="true">${escapeHtml(initials)}</span>
-                                <div class="task-comment-item__main">
-                                    <header class="task-comment-item__header">
-                                        <strong class="task-comment-item__author">${escapeHtml(author)}</strong>
-                                        <span class="task-comment-item__time">${escapeHtml(timestamp)}</span>
-                                    </header>
-                                    <div class="task-comment-item__bubble task-comment-item__bubble--edit">
-                                        <textarea
-                                            class="form-input-modern form-input-modern--sm task-comment-item__edit-input"
-                                            rows="4"
-                                            data-comment-edit-input="${escapeHtml(commentName)}"
-                                            placeholder="Edite o comentário"
-                                        >${escapeHtml(state.editingCommentDraft || fallbackText)}</textarea>
-                                    </div>
-                                    <div class="task-comment-item__actions task-comment-item__actions--edit">
-                                        <button
-                                            type="button"
-                                            class="task-comment-item__action-link task-comment-item__action-link--primary"
-                                            data-task-comment-action="save-edit"
-                                            data-comment-name="${escapeHtml(commentName)}"
-                                        >Salvar</button>
-                                        <span class="task-comment-item__action-sep" aria-hidden="true">•</span>
-                                        <button
-                                            type="button"
-                                            class="task-comment-item__action-link"
-                                            data-task-comment-action="cancel-edit"
-                                        >Cancelar</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </article>
-                    `;
-                }
-
-                const actionsHtml = isAuthor
-                    ? `
-                        <div class="task-comment-item__actions">
-                            <span class="task-comment-item__action-icon" aria-hidden="true">↪</span>
-                            <button
-                                type="button"
-                                class="task-comment-item__action-link"
-                                data-task-comment-action="edit"
-                                data-comment-name="${escapeHtml(commentName)}"
-                                aria-label="Editar comentário"
-                                title="Editar comentário"
-                            >
-                                <svg class="task-comment-item__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <path d="M12 20h9"></path>
-                                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
-                                </svg>
-                            </button>
-                            <span class="task-comment-item__action-sep" aria-hidden="true">•</span>
-                            <button
-                                type="button"
-                                class="task-comment-item__action-link"
-                                data-task-comment-action="delete"
-                                data-comment-name="${escapeHtml(commentName)}"
-                                aria-label="Excluir comentário"
-                                title="Excluir comentário"
-                            >
-                                <svg class="task-comment-item__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <path d="M6 6h12"></path>
-                                    <path d="M7 6v13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6"></path>
-                                </svg>
-                            </button>
-                        </div>
-                    `
-                    : "";
-
-                return `
-                    <article class="task-comment-item">
-                        <div class="task-comment-item__row">
-                            <span class="task-comment-item__avatar" aria-hidden="true">${escapeHtml(initials)}</span>
-                            <div class="task-comment-item__main">
-                                <header class="task-comment-item__header">
-                                    <strong class="task-comment-item__author">${escapeHtml(author)}</strong>
-                                    <span class="task-comment-item__time">${escapeHtml(timestamp)}</span>
-                                </header>
-                                <div class="task-comment-item__bubble">
-                                    <div class="task-comment-item__content">${contentHtml}</div>
-                                </div>
-                                ${actionsHtml}
-                            </div>
-                        </div>
-                    </article>
-                `;
-            })
-            .join("");
-    }
-
-    function beginTaskCommentEdit(commentName) {
-        if (!state.canEdit || state.taskCommentsLoading) {
-            return;
-        }
-
-        const comment = getTaskCommentByName(commentName);
-        if (!comment) {
-            return;
-        }
-
-        state.editingCommentName = String(comment.name || "").trim();
-        state.editingCommentDraft = String(comment.content_text || "").trim();
-        renderTaskComments();
-    }
-
-    function cancelTaskCommentEdit() {
-        state.editingCommentName = "";
-        state.editingCommentDraft = "";
-        renderTaskComments();
-    }
-
-    function setTaskCommentComposerState() {
-        const hint = document.getElementById("taskCommentsHint");
-        const input = document.getElementById("task_comment_input");
-        const button = document.getElementById("btnAdicionarComentarioTarefa");
-
-        const hasTask = Boolean(state.activeTaskName);
-        const canCompose = Boolean(state.canEdit && hasTask && !state.taskCommentsLoading);
-
-        if (input) {
-            input.disabled = !canCompose;
-        }
-
-        if (button) {
-            button.disabled = !canCompose;
-        }
-
-        if (!hint) {
-            return;
-        }
-
-        if (!hasTask) {
-            hint.textContent = "Salve a tarefa para habilitar comentários.";
-            return;
-        }
-
-        if (!state.canEdit) {
-            hint.textContent = "Você possui acesso de leitura para os comentários desta tarefa.";
-            return;
-        }
-
-        hint.textContent = state.taskCommentsLoading
-            ? "Atualizando histórico de comentários..."
-            : "Use os comentários para registrar decisões e andamento da tarefa.";
-    }
-
-    function resetTaskCommentsState() {
-        state.activeTaskName = "";
-        state.taskComments = [];
-        state.taskCommentsLoading = false;
-        state.editingCommentName = "";
-        state.editingCommentDraft = "";
-
-        const input = document.getElementById("task_comment_input");
-        if (input) {
-            input.value = "";
-        }
-
-        renderTaskComments();
-        setTaskCommentComposerState();
-    }
-
-    async function loadTaskComments(taskName) {
-        if (!taskName) {
-            return;
-        }
-
-        const requestedTaskName = String(taskName || "").trim();
-        if (!requestedTaskName) {
-            return;
-        }
-
-        state.taskCommentsLoading = true;
-        renderTaskComments();
-        setTaskCommentComposerState();
-
-        try {
-            const result = await callApi(METHODS.getTaskComments, {
-                projeto_name: state.projetoName,
-                tarefa_name: requestedTaskName,
-            });
-
-            if (state.activeTaskName !== requestedTaskName) {
-                return;
-            }
-
-            state.taskComments = result.comentarios || [];
-            state.editingCommentName = "";
-            state.editingCommentDraft = "";
-        } catch (error) {
-            if (state.activeTaskName === requestedTaskName) {
-                state.taskComments = [];
-                state.editingCommentName = "";
-                state.editingCommentDraft = "";
-            }
-            showAlert(error.message || "Falha ao carregar comentários da tarefa.", "error");
-        } finally {
-            if (state.activeTaskName === requestedTaskName) {
-                state.taskCommentsLoading = false;
-                renderTaskComments();
-                setTaskCommentComposerState();
-            }
-        }
-    }
-
-    async function addTaskComment() {
-        if (!state.canEdit || state.taskCommentsLoading || !state.activeTaskName) {
-            return;
-        }
-
-        const input = document.getElementById("task_comment_input");
-        const content = (input?.value || "").trim();
-
-        if (!content) {
-            showAlert("Digite um comentário antes de enviar.", "error");
-            return;
-        }
-
-        const requestedTaskName = state.activeTaskName;
-        state.taskCommentsLoading = true;
-        renderTaskComments();
-        setTaskCommentComposerState();
-
-        hideAlert();
-        try {
-            const result = await callApi(METHODS.addTaskComment, {
-                projeto_name: state.projetoName,
-                tarefa_name: requestedTaskName,
-                conteudo: content,
-            });
-
-            if (state.activeTaskName !== requestedTaskName) {
-                return;
-            }
-
-            state.taskComments = result.comentarios || [];
-            if (input) {
-                input.value = "";
-            }
-        } catch (error) {
-            showAlert(error.message || "Falha ao publicar comentário da tarefa.", "error");
-        } finally {
-            if (state.activeTaskName === requestedTaskName) {
-                state.taskCommentsLoading = false;
-                renderTaskComments();
-                setTaskCommentComposerState();
-            }
-        }
-    }
-
-    async function saveTaskCommentEdit(commentName) {
-        if (!state.canEdit || state.taskCommentsLoading || !state.activeTaskName) {
-            return;
-        }
-
-        const requestedTaskName = state.activeTaskName;
-        const normalizedCommentName = String(commentName || "").trim();
-        if (!normalizedCommentName || state.editingCommentName !== normalizedCommentName) {
-            return;
-        }
-
-        const content = String(state.editingCommentDraft || "").trim();
-        if (!content) {
-            showAlert("O comentário não pode ficar vazio.", "error");
-            return;
-        }
-
-        state.taskCommentsLoading = true;
-        renderTaskComments();
-        setTaskCommentComposerState();
-
-        hideAlert();
-        try {
-            const result = await callApi(METHODS.editTaskComment, {
-                projeto_name: state.projetoName,
-                tarefa_name: requestedTaskName,
-                comentario_name: normalizedCommentName,
-                conteudo: content,
-            });
-
-            if (state.activeTaskName !== requestedTaskName) {
-                return;
-            }
-
-            state.taskComments = result.comentarios || [];
-            state.editingCommentName = "";
-            state.editingCommentDraft = "";
-        } catch (error) {
-            showAlert(error.message || "Falha ao salvar edição do comentário.", "error");
-        } finally {
-            if (state.activeTaskName === requestedTaskName) {
-                state.taskCommentsLoading = false;
-                renderTaskComments();
-                setTaskCommentComposerState();
-            }
-        }
-    }
-
-    async function deleteTaskComment(commentName) {
-        if (!state.canEdit || state.taskCommentsLoading || !state.activeTaskName) {
-            return;
-        }
-
-        const normalizedCommentName = String(commentName || "").trim();
-        if (!normalizedCommentName) {
-            return;
-        }
-
-        const confirmed = window.confirm("Deseja apagar este comentário?");
-        if (!confirmed) {
-            return;
-        }
-
-        const requestedTaskName = state.activeTaskName;
-        state.taskCommentsLoading = true;
-        renderTaskComments();
-        setTaskCommentComposerState();
-
-        hideAlert();
-        try {
-            const result = await callApi(METHODS.deleteTaskComment, {
-                projeto_name: state.projetoName,
-                tarefa_name: requestedTaskName,
-                comentario_name: normalizedCommentName,
-            });
-
-            if (state.activeTaskName !== requestedTaskName) {
-                return;
-            }
-
-            state.taskComments = result.comentarios || [];
-            if (state.editingCommentName === normalizedCommentName) {
-                state.editingCommentName = "";
-                state.editingCommentDraft = "";
-            }
-        } catch (error) {
-            showAlert(error.message || "Falha ao apagar comentário.", "error");
-        } finally {
-            if (state.activeTaskName === requestedTaskName) {
-                state.taskCommentsLoading = false;
-                renderTaskComments();
-                setTaskCommentComposerState();
-            }
-        }
-    }
-
-    function setTaskModalEditability(editable) {
-        [
-            "task_data_inicio",
-            "task_data_entrega",
-            "task_title_editor",
-            "task_status",
-            "task_observacoes",
-        ].forEach((fieldId) => {
-            const field = document.getElementById(fieldId);
-            if (field) {
-                field.disabled = !editable;
-            }
-        });
-
-        // Disable the trigger button of the responsável Basecoat combobox
-        const responsavelTrigger = document.querySelector("#task_responsavel > button");
-        if (responsavelTrigger) {
-            responsavelTrigger.disabled = !editable;
-        }
-
-        // Disable the trigger button of the prazo Basecoat datepicker
-        const prazoTrigger = document.querySelector("#task_prazo_datepicker > button");
-        if (prazoTrigger) {
-            prazoTrigger.disabled = !editable;
-        }
-
-        if (state.taskObservacoesEditor) {
-            setToastEditorReadOnly(state.taskObservacoesEditor, !editable);
-        }
-
-        const taskModal = document.getElementById("taskModal");
-        taskModal?.querySelectorAll("[data-markdown-action]").forEach((btn) => {
-            const toolbar = btn.closest("[data-markdown-target]");
-            const targetId = toolbar?.getAttribute("data-markdown-target") || "";
-            if (targetId === "task_observacoes") {
-                btn.disabled = !editable || Boolean(state.taskObservacoesEditor);
-            }
-        });
-
-        const saveButton = document.getElementById("btnSalvarTarefa");
-        if (saveButton) saveButton.disabled = !editable;
-
-        if (!editable && state.taskTitleEditing) {
-            commitTaskTitleEdit();
-        }
-
-        setTaskCommentComposerState();
-    }
-
-    function openTaskModal(taskName) {
-        const task = taskName ? getTaskByName(taskName) : null;
-
-        state.activeTaskName = task?.name || "";
-        state.taskComments = [];
-        state.taskCommentsLoading = false;
-
-        document.getElementById("task_name").value = task?.name || "";
-        document.getElementById("task_data_inicio").value = task?.data_inicio || "";
-        renderTaskPrazoDatepicker(task?.prazo || "");
-        document.getElementById("task_data_entrega").value = task?.data_entrega || "";
-        setTaskTitleValue(task?.descricao || "");
-        state.taskTitleBeforeEdit = getTaskTitleValue();
-        setTaskTitleEditMode(false);
-        const currentStatus = task?.status || "Nao iniciado";
-        document.getElementById("task_status").value = currentStatus;
-        state.taskStatusBeforeChange = currentStatus;
-        const observacoes = task?.observacoes || "";
-        const taskObservacoesInput = document.getElementById("task_observacoes");
-        if (taskObservacoesInput) {
-            taskObservacoesInput.value = observacoes;
-        }
-        if (state.taskObservacoesEditor) {
-            setToastEditorValue(state.taskObservacoesEditor, observacoes);
-        }
-
-        state.editingCommentName = "";
-        state.editingCommentDraft = "";
-
-        const commentInput = document.getElementById("task_comment_input");
-        if (commentInput) {
-            commentInput.value = "";
-        }
-
-        renderTaskResponsavelCombobox(task?.responsavel || "");
-        setTaskModalHeading(task);
-        renderTaskComments();
-        setTaskModalEditability(state.canEdit);
-        renderMarkdownPreviews();
-        updateTaskTimelineInfographic();
-        openModal("taskModal");
-
-        if (state.activeTaskName) {
-            loadTaskComments(state.activeTaskName);
-        }
-    }
-
-    function collectTaskPayload() {
-        const observacoes = state.taskObservacoesEditor
-            ? getToastEditorValue(state.taskObservacoesEditor)
-            : (document.getElementById("task_observacoes")?.value || "").trim();
-
-        return {
-            name: (document.getElementById("task_name")?.value || "").trim(),
-            data_inicio: (document.getElementById("task_data_inicio")?.value || "").trim(),
-            prazo: getTaskPrazoValue(),
-            data_entrega: (document.getElementById("task_data_entrega")?.value || "").trim(),
-            descricao: (document.getElementById("task_descricao")?.value || "").trim(),
-            responsavel: getSelectComponentValue("task_responsavel"),
-            status: (document.getElementById("task_status")?.value || "").trim() || "Nao iniciado",
-            observacoes,
-        };
-    }
-
-    async function saveTask() {
-        if (!state.canEdit || state.loading) return;
-
-        if (state.taskTitleEditing) {
-            commitTaskTitleEdit();
-        }
-
-        const payload = collectTaskPayload();
-        if (!payload.descricao) {
-            showToast("Informe o título da tarefa.", "error");
-            return;
-        }
-        if (!payload.prazo) {
-            showToast("Informe o prazo da tarefa.", "error");
-            return;
-        }
-
-        const saveBtn = document.getElementById("btnSalvarTarefa");
-        if (saveBtn) saveBtn.disabled = true;
-
-        hideAlert();
-        try {
-            const result = await callApi(METHODS.saveTask, {
-                projeto_name: state.projetoName,
-                tarefa: payload,
-            });
-            state.projeto.tarefas = result.tarefas || [];
-            renderTaskKanban();
-            closeModal("taskModal");
-            showAlert("Tarefa salva com sucesso.", "success");
-        } catch (error) {
-            showAlert(error.message || "Falha ao salvar tarefa.", "error");
-        } finally {
-            if (saveBtn) saveBtn.disabled = !state.canEdit;
-        }
-    }
-
-    async function moveTask(taskName, nextStatus) {
-        if (!state.canEdit || !taskName || !nextStatus) return;
-
-        const current = getTaskByName(taskName);
-        if (!current || current.status === nextStatus) return;
-
-        hideAlert();
-        try {
-            const result = await callApi(METHODS.moveTask, {
-                projeto_name: state.projetoName,
-                tarefa_name: taskName,
-                status: nextStatus,
-            });
-            state.projeto.tarefas = result.tarefas || [];
-            renderTaskKanban();
-            showAlert("Status da tarefa atualizado.", "success");
-        } catch (error) {
-            showAlert(error.message || "Falha ao mover tarefa.", "error");
-        }
-    }
-
     function parseDateTimeFlexible(value) {
         const text = String(value || "").trim();
         if (!text) return null;
@@ -2107,16 +1085,6 @@
         if (saveButton) saveButton.disabled = !editable;
     }
 
-    function renderMarkdownPreviews() {
-        if (!state.taskObservacoesEditor) {
-            const taskObservacoes = document.getElementById("task_observacoes")?.value || "";
-            const taskObservacoesPreview = document.getElementById("task_observacoes_preview");
-            if (taskObservacoesPreview) {
-                taskObservacoesPreview.innerHTML = taskObservacoes ? markdownToHtml(taskObservacoes) : "-";
-            }
-        }
-    }
-
     function openMeetingModal(meetingName) {
         const meeting = meetingName ? getMeetingByName(meetingName) : null;
         state.meetingPersisted = Boolean(meeting?.name);
@@ -2132,7 +1100,6 @@
         setToastEditorValue(state.meetingEditors.ata, ataValue);
 
         setMeetingModalEditability(state.canEdit);
-        renderMarkdownPreviews();
         openModal("meetingModal");
     }
 
@@ -2184,47 +1151,6 @@
         }
     }
 
-    function wrapTextareaSelection(textarea, before, after) {
-        if (!textarea) return;
-        const start = textarea.selectionStart || 0;
-        const end = textarea.selectionEnd || 0;
-        const selected = textarea.value.slice(start, end);
-        const replacement = `${before}${selected}${after}`;
-
-        textarea.setRangeText(replacement, start, end, "end");
-        textarea.focus();
-    }
-
-    function applyMarkdownAction(action, targetId) {
-        if (targetId === "task_observacoes" && state.taskObservacoesEditor) {
-            return;
-        }
-
-        const textarea = document.getElementById(targetId);
-        if (!textarea || textarea.disabled) return;
-
-        if (action === "bold") {
-            wrapTextareaSelection(textarea, "**", "**");
-        } else if (action === "italic") {
-            wrapTextareaSelection(textarea, "*", "*");
-        } else if (action === "list") {
-            const start = textarea.selectionStart || 0;
-            const end = textarea.selectionEnd || 0;
-            const selected = textarea.value.slice(start, end) || "item";
-            const lines = selected.split("\n").map((line) => (line.trim() ? `- ${line}` : "- "));
-            textarea.setRangeText(lines.join("\n"), start, end, "end");
-            textarea.focus();
-        } else if (action === "link") {
-            const start = textarea.selectionStart || 0;
-            const end = textarea.selectionEnd || 0;
-            const selected = textarea.value.slice(start, end) || "texto";
-            textarea.setRangeText(`[${selected}](https://)`, start, end, "end");
-            textarea.focus();
-        }
-
-        renderMarkdownPreviews();
-    }
-
     function openModal(modalId) {
         const modal = document.getElementById(modalId);
         if (!modal) return;
@@ -2235,14 +1161,6 @@
         const modal = document.getElementById(modalId);
         if (!modal) return;
         modal.close();
-
-        if (modalId === "taskModal") {
-            if (state.taskTitleEditing) {
-                cancelTaskTitleEdit();
-            }
-            setTaskTitleEditMode(false);
-            resetTaskCommentsState();
-        }
     }
 
     function getProjectStatusActionConfig(action) {
@@ -2353,15 +1271,8 @@
     }
 
     function setEditabilityHints() {
-        const taskHint = document.getElementById("taskEditHint");
         const meetingHint = document.getElementById("meetingEditHint");
         const participantsHint = document.getElementById("participantsEditHint");
-
-        if (taskHint) {
-            taskHint.textContent = state.canEdit
-                ? "Arraste cards entre colunas, clique para editar ou crie novas tarefas."
-                : "Você possui acesso de leitura para tarefas neste projeto.";
-        }
 
         if (meetingHint) {
             meetingHint.textContent = state.canEdit
@@ -2375,10 +1286,15 @@
                 : "Você possui acesso de leitura para os participantes deste projeto.";
         }
 
-        const createTaskButton = document.getElementById("btnNovaTarefa");
+        if (state.kanban) {
+            state.kanban.setCanEdit(state.canEdit);
+            state.kanban.setHint(state.canEdit
+                ? "Arraste cards entre colunas, clique para editar ou crie novas tarefas."
+                : "Você possui acesso de leitura para tarefas neste projeto.");
+        }
+
         const createMeetingButton = document.getElementById("btnNovaReuniao");
         const addParticipantButton = document.getElementById("btnNovoParticipante");
-        if (createTaskButton) createTaskButton.disabled = !state.canEdit;
         if (createMeetingButton) createMeetingButton.disabled = !state.canEdit;
         if (addParticipantButton) addParticipantButton.disabled = !state.canEdit;
         setProjectStatusButtonsDisabled(!state.canEdit || state.projectStatusSaving);
@@ -2399,7 +1315,11 @@
 
             renderDadosGerais(state.projeto);
             renderParticipantsTable();
-            renderTaskKanban();
+            if (state.kanban) {
+                state.kanban.setResponsavelOptions(state.responsavelOptions);
+                state.kanban.setCanEdit(state.canEdit);
+                state.kanban.setTasks(state.projeto?.tarefas || []);
+            }
             renderMeetings();
             setEditabilityHints();
         } catch (error) {
@@ -2419,11 +1339,6 @@
                     loadAvaliacaoData();
                 }
             });
-        }
-
-        const openTaskButton = document.getElementById("btnNovaTarefa");
-        if (openTaskButton) {
-            openTaskButton.addEventListener("click", () => openTaskModal(""));
         }
 
         const openMeetingButton = document.getElementById("btnNovaReuniao");
@@ -2449,52 +1364,6 @@
         const confirmProjectStatusButton = document.getElementById("btnConfirmProjectStatus");
         if (confirmProjectStatusButton) {
             confirmProjectStatusButton.addEventListener("click", confirmProjectStatusChange);
-        }
-
-        const saveTaskButton = document.getElementById("btnSalvarTarefa");
-        if (saveTaskButton) {
-            saveTaskButton.addEventListener("click", saveTask);
-        }
-
-        const addTaskCommentButton = document.getElementById("btnAdicionarComentarioTarefa");
-        if (addTaskCommentButton) {
-            addTaskCommentButton.addEventListener("click", addTaskComment);
-        }
-
-        const taskCommentInput = document.getElementById("task_comment_input");
-        if (taskCommentInput) {
-            taskCommentInput.addEventListener("keydown", (event) => {
-                if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
-                    event.preventDefault();
-                    addTaskComment();
-                }
-            });
-        }
-
-        const taskStatusSelect = document.getElementById("task_status");
-        if (taskStatusSelect) {
-            taskStatusSelect.addEventListener("change", applyTaskDateRulesByStatusChange);
-        }
-
-        const startField = document.getElementById("task_data_inicio");
-        if (startField) {
-            startField.addEventListener("change", updateTaskTimelineInfographic);
-            startField.addEventListener("input", updateTaskTimelineInfographic);
-        }
-
-        document.addEventListener("datepicker:change", (event) => {
-            const wrapper = document.getElementById("task_prazo_wrapper");
-            if (wrapper && wrapper.contains(event.target)) {
-                updateTaskTimelineInfographic();
-            }
-        });
-
-        const taskTitleEditor = document.getElementById("task_title_editor");
-        if (taskTitleEditor) {
-            taskTitleEditor.addEventListener("input", () => {
-                const hidden = document.getElementById("task_descricao");
-                if (hidden) hidden.value = taskTitleEditor.value.trim();
-            });
         }
 
         const saveMeetingButton = document.getElementById("btnSalvarReuniao");
@@ -2550,122 +1419,10 @@
                 return;
             }
 
-            const commentAction = target.closest("[data-task-comment-action]");
-            if (commentAction) {
-                const action = commentAction.getAttribute("data-task-comment-action");
-                const commentName = commentAction.getAttribute("data-comment-name") || "";
-
-                if (action === "edit") {
-                    beginTaskCommentEdit(commentName);
-                } else if (action === "save-edit") {
-                    saveTaskCommentEdit(commentName);
-                } else if (action === "cancel-edit") {
-                    cancelTaskCommentEdit();
-                } else if (action === "delete") {
-                    deleteTaskComment(commentName);
-                }
-                return;
-            }
-
-            const taskCard = target.closest(".task-card");
-            if (taskCard && taskCard.dataset.taskName) {
-                if (state.isDraggingTask) return;
-                openTaskModal(taskCard.dataset.taskName);
-                return;
-            }
-
             const meetingCard = target.closest(".meeting-card");
             if (meetingCard && meetingCard.dataset.meetingName) {
                 openMeetingModal(meetingCard.dataset.meetingName);
-                return;
             }
-
-            const markdownButton = target.closest("[data-markdown-action]");
-            if (markdownButton) {
-                const toolbar = markdownButton.closest("[data-markdown-target]");
-                const action = markdownButton.getAttribute("data-markdown-action");
-                const targetId = toolbar?.getAttribute("data-markdown-target");
-                if (action && targetId) {
-                    applyMarkdownAction(action, targetId);
-                }
-            }
-        });
-
-        document.addEventListener("input", (event) => {
-            const target = event.target;
-            if (target && target.id === "task_observacoes") {
-                renderMarkdownPreviews();
-                return;
-            }
-
-            const editCommentName = target?.getAttribute?.("data-comment-edit-input");
-            if (editCommentName && state.editingCommentName === editCommentName) {
-                state.editingCommentDraft = target.value;
-            }
-        });
-
-        document.addEventListener("dragstart", (event) => {
-            const card = event.target.closest(".task-card");
-            if (!card || !state.canEdit) return;
-
-            const taskName = card.getAttribute("data-task-name");
-            if (!taskName) return;
-
-            state.dragTaskName = taskName;
-            state.isDraggingTask = true;
-            card.classList.add("is-dragging");
-
-            if (event.dataTransfer) {
-                event.dataTransfer.effectAllowed = "move";
-                event.dataTransfer.setData("text/plain", taskName);
-            }
-        });
-
-        document.addEventListener("dragend", (event) => {
-            const card = event.target.closest(".task-card");
-            if (card) {
-                card.classList.remove("is-dragging");
-            }
-            state.dragTaskName = "";
-            setTimeout(() => {
-                state.isDraggingTask = false;
-            }, 0);
-
-            document.querySelectorAll(".task-column__body.is-drop-target").forEach((column) => {
-                column.classList.remove("is-drop-target");
-            });
-        });
-
-        document.addEventListener("dragover", (event) => {
-            const column = event.target.closest(".task-column__body");
-            if (!column || !state.canEdit || !state.dragTaskName) return;
-            event.preventDefault();
-            column.classList.add("is-drop-target");
-        });
-
-        document.addEventListener("dragleave", (event) => {
-            const column = event.target.closest(".task-column__body");
-            if (!column) return;
-            if (column.contains(event.relatedTarget)) return;
-            column.classList.remove("is-drop-target");
-        });
-
-        document.addEventListener("drop", async (event) => {
-            const column = event.target.closest(".task-column__body");
-            if (!column || !state.canEdit) return;
-
-            event.preventDefault();
-            document.querySelectorAll(".task-column__body.is-drop-target").forEach((item) => {
-                item.classList.remove("is-drop-target");
-            });
-
-            const targetStatus = column.getAttribute("data-task-status") || "";
-            const taskName = state.dragTaskName || event.dataTransfer?.getData("text/plain") || "";
-            if (!taskName || !targetStatus) return;
-
-            await moveTask(taskName, targetStatus);
-            state.dragTaskName = "";
-            state.isDraggingTask = false;
         });
 
 
@@ -3159,6 +1916,66 @@
         openModal("avaliacaoDetalheModal");
     }
 
+    function initKanban() {
+        if (!window.GrisKanbanTarefas) return;
+        state.kanban = new window.GrisKanbanTarefas("#taskKanban", {
+            mode: "projeto",
+            currentUser: String(window.frappe?.session?.user || ""),
+            currentUserFullName: String(window.frappe?.session?.user || ""),
+            canEdit: state.canEdit,
+            responsavelOptions: state.responsavelOptions,
+            onSaveTask: async (payload) => {
+                const result = await callApi(METHODS.saveTask, {
+                    projeto_name: state.projetoName,
+                    tarefa: payload,
+                });
+                state.projeto.tarefas = result.tarefas || [];
+                return { tarefas: state.projeto.tarefas };
+            },
+            onMoveTask: async (taskName, status) => {
+                const result = await callApi(METHODS.moveTask, {
+                    projeto_name: state.projetoName,
+                    tarefa_name: taskName,
+                    status,
+                });
+                state.projeto.tarefas = result.tarefas || [];
+                return { tarefas: state.projeto.tarefas };
+            },
+            onLoadComments: async (taskName) => {
+                const result = await callApi(METHODS.getTaskComments, {
+                    projeto_name: state.projetoName,
+                    tarefa_name: taskName,
+                });
+                return { comentarios: result.comentarios || [] };
+            },
+            onAddComment: async (taskName, texto) => {
+                const result = await callApi(METHODS.addTaskComment, {
+                    projeto_name: state.projetoName,
+                    tarefa_name: taskName,
+                    conteudo: texto,
+                });
+                return { comentarios: result.comentarios || [] };
+            },
+            onEditComment: async (commentName, texto) => {
+                const result = await callApi(METHODS.editTaskComment, {
+                    projeto_name: state.projetoName,
+                    tarefa_name: state.kanban?.activeTask?.name || "",
+                    comentario_name: commentName,
+                    conteudo: texto,
+                });
+                return { comentarios: result.comentarios || [] };
+            },
+            onDeleteComment: async (commentName) => {
+                const result = await callApi(METHODS.deleteTaskComment, {
+                    projeto_name: state.projetoName,
+                    tarefa_name: state.kanban?.activeTask?.name || "",
+                    comentario_name: commentName,
+                });
+                return { comentarios: result.comentarios || [] };
+            },
+        });
+    }
+
     async function bootstrap() {
         state.projetoName = getProjetoName();
         if (!state.projetoName) {
@@ -3168,13 +1985,10 @@
 
         setActiveTab("dados-gerais");
         bindEvents();
+        initKanban();
         await reloadData();
         initMeetingEditors().catch(() => {
             state.meetingEditors = { pauta: null, ata: null };
-        });
-        initTaskObservacoesEditor().catch(() => {
-            state.taskObservacoesEditor = null;
-            setTaskObservacoesEditorMode(false);
         });
     }
 

@@ -15,7 +15,7 @@
 {% set gris_route_prefixes = [
     "inicio", "portal_transparencia", "403",
     "associados", "calendario", "festas", "financeiro",
-    "gestao_adultos", "manifestacao_interesse",
+    "gestao_adultos", "gestao_tarefas", "manifestacao_interesse",
     "projetos", "recepcao", "responsavel",
 ] %}
 {% set ns = namespace(is_gris_page=false) %}
@@ -89,6 +89,7 @@
 <link rel="stylesheet" href="/assets/gris/design_system/css/empty.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/table.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/select.css?v={{ design_system_asset_version }}">
+<link rel="stylesheet" href="/assets/gris/design_system/css/kanban-tarefas.css?v={{ design_system_asset_version }}">
 
 <!-- Basecoat JS (local files, without build tool) -->
 <script src="/assets/gris/design_system/js/basecoat/basecoat.min.js?v={{ design_system_asset_version }}" defer></script>
@@ -104,6 +105,7 @@
 <script src="/assets/gris/design_system/js/components/tabs.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/components/toast.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/components/table.js?v={{ design_system_asset_version }}" defer></script>
+<script src="/assets/gris/design_system/js/components/kanban-tarefas.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/design-system-init.js?v={{ design_system_asset_version }}" defer></script>
 
 <!-- PWA bootstrap (em rotas Gris não chamamos super(); incluímos explicitamente) -->

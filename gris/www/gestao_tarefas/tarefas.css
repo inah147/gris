@@ -1,0 +1,226 @@
+/* /gestao_tarefas — estilos especificos da pagina.
+ * Estilos do kanban e do dialog de tarefa ficam no design system
+ * (kanban-tarefas.css). Aqui mantemos apenas o shell da pagina e o
+ * dialog local de gestao de membros.
+ */
+
+.project-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.project-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1rem 0;
+}
+
+.project-page-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* O dimensionamento vai no card interno (> div), nao no elemento <dialog>.
+   Aplicar width/height/display ao proprio <dialog> faz o navegador renderizar
+   o background/borda padrao do elemento como um retangulo branco vazio atras do
+   card (o card real e o > div, position:fixed centralizado). Mesma convencao de
+   .task-dialog em kanban-tarefas.css. */
+.dialog-membros-quadro > div {
+    width: min(42rem, 92vw);
+    max-width: min(42rem, 92vw);
+    height: min(36rem, 85vh);
+    max-height: min(36rem, 85vh);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* Enquanto o JS do Basecoat ainda nao promoveu o popover (sem atributo `popover`),
+   esconde-o para evitar que apareca como retangulo branco antes da inicializacao. */
+.dialog-membros-quadro [data-popover]:not([popover]) {
+    display: none !important;
+}
+
+/* O toaster e promovido ao top layer (popover) enquanto o dialog de membros
+   esta aberto, para que os toasts aparecam acima do <dialog> modal. Aqui
+   anulamos os estilos padrao do UA para `[popover]` (inset:0; margin:auto;
+   border; padding; background) que, sem isso, transformariam o toaster numa
+   caixa branca centralizada. Mantemos o posicionamento original do .toaster. */
+#toaster:popover-open {
+    inset: auto auto 0 auto;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    overflow: visible;
+}
+
+.dialog-membros-quadro > div > section {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.membros-quadro {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    flex: 1;
+    min-height: 0;
+}
+
+.membros-quadro__add {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.membros-quadro__search {
+    display: flex;
+    gap: 0.5rem;
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+
+.membros-quadro__search-combo {
+    flex: 1 1 16rem;
+    min-width: 0;
+}
+
+.membros-quadro__search-nivel {
+    flex: 0 0 9rem;
+}
+
+.membros-quadro__search-combo .select,
+.membros-quadro__search-nivel .select {
+    width: 100%;
+}
+
+.membros-quadro__search-combo .select > button,
+.membros-quadro__search-nivel .select > button {
+    width: 100%;
+    justify-content: space-between;
+}
+
+.membros-quadro__opt-user {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.membros-quadro__opt-user small {
+    color: var(--color-muted-foreground);
+    font-size: 0.8125rem;
+}
+
+.membros-quadro__list-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+    min-height: 0;
+}
+
+.membros-quadro__list-title {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-muted-foreground);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.membros-quadro__list {
+    list-style: none;
+    margin: 0;
+    padding: 0 0.25rem 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+
+.membros-quadro__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    background: var(--color-card, var(--color-background));
+}
+
+.membros-quadro__user {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+}
+
+.membros-quadro__user small {
+    color: var(--color-muted-foreground);
+    font-size: 0.8125rem;
+}
+
+.membros-quadro__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.membros-quadro__actions .select {
+    width: 9.5rem;
+}
+
+.membros-quadro__actions .select > button {
+    width: 100%;
+    justify-content: space-between;
+}
+
+.membros-quadro__empty {
+    padding: 0.5rem 0;
+    color: var(--color-muted-foreground);
+    font-style: italic;
+}
+
+@media (max-width: 540px) {
+    .membros-quadro__search {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    /* No layout em coluna o eixo principal vira a altura: os flex-basis de
+       16rem/9rem (pensados para largura na linha) esticariam combo e nivel
+       verticalmente, empurrando a lista de membros para fora da tela sem
+       scroll. Voltamos a altura natural e deixamos a largura preencher. */
+    .membros-quadro__search-combo,
+    .membros-quadro__search-nivel {
+        flex: 0 0 auto;
+        width: 100%;
+    }
+
+    .membros-quadro__select {
+        width: 100%;
+    }
+
+    .membros-quadro__item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .membros-quadro__actions {
+        justify-content: flex-end;
+    }
+}

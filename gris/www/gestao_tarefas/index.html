@@ -1,0 +1,85 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, card, empty %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Gestao de Tarefas{% endblock %}
+{% set active_link = '/gestao_tarefas' %}
+
+{% block head_include %}
+{{ super() }}
+<link rel="stylesheet" href="/gestao_tarefas/index.css" />
+{% endblock %}
+
+{% block page_header %}
+<section class="quadros-page-header" aria-labelledby="quadros-page-title">
+	<div class="flex flex-col gap-2 max-w-3xl">
+		<h1 id="quadros-page-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Gestao de Tarefas</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">Quadros em que voce participa. Crie um novo quadro para organizar tarefas com outras pessoas.</p>
+	</div>
+	<div class="quadros-page-header__actions">
+		<button type="button" id="btn-novo-quadro" class="btn-primary" onclick="document.getElementById('dialog-novo-quadro').showModal()">
+			{{ lucide_icon("plus", size="sm") }}
+			<span>Novo quadro</span>
+		</button>
+	</div>
+</section>
+{% endblock %}
+
+{% block main %}
+{{ toaster() }}
+
+{% if quadros %}
+<div class="quadros-grid">
+	{% for quadro in quadros %}
+		<a class="quadro-card-link" href="{{ quadro.detail_url }}" aria-label="Abrir quadro {{ quadro.titulo }}">
+			{% call card(attrs={"class": "quadro-card"}) %}
+				{% if quadro.badge_label %}
+				<div class="quadro-card__eyebrow">
+					{{ badge(quadro.badge_label, variant=quadro.badge_variant) }}
+				</div>
+				{% endif %}
+				<div class="quadro-card__content">
+					<h2 class="quadro-card__title">{{ quadro.titulo }}</h2>
+				</div>
+				<div class="quadro-card__cta">
+					<span>Abrir quadro</span>
+					{{ lucide_icon("arrow-up-right", size="sm") }}
+				</div>
+			{% endcall %}
+		</a>
+	{% endfor %}
+</div>
+{% else %}
+	{{ empty(
+		title="Nenhum quadro disponivel",
+		description="Voce ainda nao participa de nenhum quadro. Crie um novo quadro para comecar.",
+		image="/assets/gris/images/gris-character/gris-idea.png",
+		image_alt="Personagem Gris com uma ideia",
+		image_size="lg",
+		primary_action={
+			"label": "Criar novo quadro",
+			"onclick": "document.getElementById('dialog-novo-quadro').showModal();"
+		},
+		attrs={"class": "quadros-empty"}
+	) }}
+{% endif %}
+
+{% set dialog_footer %}
+<button type="button" class="btn-outline" data-dialog-close="dialog-novo-quadro">Cancelar</button>
+<button type="button" id="btn-criar-quadro" class="btn-primary">Criar quadro</button>
+{% endset %}
+{% call dialog(
+	id="dialog-novo-quadro",
+	title="Novo quadro",
+	description="Crie um quadro para organizar tarefas. Voce sera adicionado automaticamente como participante.",
+	dialog_attrs={"class": "dialog-novo-quadro"},
+	footer=dialog_footer
+) %}
+	<form id="form-novo-quadro" onsubmit="return false;">
+		<label class="label" for="input-titulo-quadro">Titulo do quadro</label>
+		<input type="text" id="input-titulo-quadro" class="input" name="titulo" maxlength="140" placeholder="Ex.: Planejamento da reuniao" required />
+	</form>
+{% endcall %}
+{% endblock %}

@@ -11,6 +11,7 @@
   "responsavel",
   "nome",
   "email",
+  "user",
   "telefone",
   "funcao",
   "coordenador",
@@ -59,6 +60,14 @@
    "in_list_view": 1,
    "label": "Email",
    "reqd": 1
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Usuario",
+   "options": "User",
+   "read_only": 1
   },
   {
    "fieldname": "telefone",

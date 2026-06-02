@@ -1,0 +1,132 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:TAR-{#####}",
+ "creation": "2026-05-29 00:00:00",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "board",
+  "descricao",
+  "responsavel",
+  "status",
+  "datas_section",
+  "data_inicio",
+  "prazo",
+  "data_entrega",
+  "observacoes_section",
+  "observacoes"
+ ],
+ "fields": [
+  {
+   "fieldname": "board",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Board",
+   "options": "Board",
+   "reqd": 1
+  },
+  {
+   "fieldname": "descricao",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Descricao",
+   "reqd": 1
+  },
+  {
+   "fieldname": "responsavel",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Responsavel",
+   "options": "User"
+  },
+  {
+   "default": "Nao iniciado",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Nao iniciado\nEm andamento\nAtrasado\nConcluido\nCancelado"
+  },
+  {
+   "fieldname": "datas_section",
+   "fieldtype": "Section Break",
+   "label": "Datas"
+  },
+  {
+   "fieldname": "data_inicio",
+   "fieldtype": "Date",
+   "label": "Data de inicio"
+  },
+  {
+   "fieldname": "prazo",
+   "fieldtype": "Date",
+   "label": "Prazo",
+   "reqd": 1
+  },
+  {
+   "fieldname": "data_entrega",
+   "fieldtype": "Date",
+   "label": "Data de entrega"
+  },
+  {
+   "fieldname": "observacoes_section",
+   "fieldtype": "Section Break",
+   "label": "Observacoes"
+  },
+  {
+   "fieldname": "observacoes",
+   "fieldtype": "Small Text",
+   "label": "Observacoes"
+  }
+ ],
+ "grid_page_length": 20,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-05-29 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Gestao de Tarefas",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Editor de projetos",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Visualizador de projetos"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "descricao",
+ "track_changes": 1
+}

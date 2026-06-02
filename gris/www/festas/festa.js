@@ -3529,3 +3529,88 @@
 		initEquipeTriggers();
 	});
 })();
+
+// ─── Kanban de tarefas da festa ─────────────────────────────────────────────
+// Reutiliza a API genérica de quadros (gris.api.gestao_de_tarefas.*), que é
+// keyed por Board e impõe a permissão de Board no backend: qualquer integrante
+// da festa presente em `usuarios_autorizados` pode editar o quadro.
+(function () {
+	"use strict";
+
+	const METHODS = {
+		bootstrap: "gris.api.gestao_de_tarefas.quadros.bootstrap_quadro",
+		saveTask: "gris.api.gestao_de_tarefas.quadros.salvar_tarefa_quadro",
+		updateStatus: "gris.api.gestao_de_tarefas.quadros.atualizar_status_quadro",
+		getComments: "gris.api.gestao_de_tarefas.minhas_tarefas.get_comentarios",
+		addComment: "gris.api.gestao_de_tarefas.minhas_tarefas.adicionar_comentario",
+		editComment: "gris.api.gestao_de_tarefas.minhas_tarefas.editar_comentario",
+		deleteComment: "gris.api.gestao_de_tarefas.minhas_tarefas.apagar_comentario",
+	};
+
+	function callApi(method, args = {}) {
+		return new Promise((resolve, reject) => {
+			frappe.call({
+				method,
+				args,
+				callback: (r) => resolve(r.message || {}),
+				error: (err) => reject(err),
+			});
+		});
+	}
+
+	function $(id) {
+		return document.getElementById(id);
+	}
+
+	function init() {
+		const board = ($("userBoardName")?.value || "").trim();
+		if (!board || !$("taskKanban")) return;
+		if (typeof frappe === "undefined" || !frappe.call || !window.GrisKanbanTarefas) {
+			setTimeout(init, 100);
+			return;
+		}
+
+		const kanban = new window.GrisKanbanTarefas("#taskKanban", {
+			mode: "projeto",
+			currentUser: $("currentUser")?.value || "",
+			currentUserFullName: $("currentUserFullName")?.value || "",
+			canEdit: true,
+			onLoad: async () => {
+				const data = await callApi(METHODS.bootstrap, { board_name: board });
+				return { tarefas: data.tarefas || [] };
+			},
+			onSaveTask: async (payload) => {
+				const data = await callApi(METHODS.saveTask, { tarefa: { ...payload, board } });
+				return { tarefas: data.tarefas || [] };
+			},
+			onMoveTask: async (tarefaName, status) => {
+				const data = await callApi(METHODS.updateStatus, { tarefa_name: tarefaName, status });
+				return { tarefas: data.tarefas || [] };
+			},
+			onLoadComments: async (tarefaName) => {
+				const data = await callApi(METHODS.getComments, { tarefa_name: tarefaName });
+				return { comentarios: data.comentarios || [] };
+			},
+			onAddComment: async (tarefaName, texto) => {
+				const data = await callApi(METHODS.addComment, { tarefa_name: tarefaName, texto });
+				return { comentarios: data.comentarios || [] };
+			},
+			onEditComment: async (commentName, texto) => {
+				const data = await callApi(METHODS.editComment, { comentario_name: commentName, texto });
+				return { comentarios: data.comentarios || [] };
+			},
+			onDeleteComment: async (commentName) => {
+				const data = await callApi(METHODS.deleteComment, { comentario_name: commentName });
+				return { comentarios: data.comentarios || [] };
+			},
+		});
+
+		kanban.refresh();
+	}
+
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", init);
+	} else {
+		init();
+	}
+})();

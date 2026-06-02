@@ -74,7 +74,8 @@
   "compras_info_html",
   "lista_compras_tab",
   "lista_compras_section",
-  "lista_compras"
+  "lista_compras",
+  "board_tarefas"
  ],
  "fields": [
   {
@@ -468,6 +469,14 @@
    "fieldtype": "Table",
    "label": "Lista de Compras",
    "options": "Lista de Compras Festa"
+  },
+  {
+   "fieldname": "board_tarefas",
+   "fieldtype": "Link",
+   "label": "Board de tarefas",
+   "no_copy": 1,
+   "options": "Board",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

@@ -166,6 +166,27 @@ doc_events = {
 			"gris.gestao_de_tarefas.board_sync.sync_projeto_envolvidos",
 		],
 	},
+	"Festa": {
+		"on_update": [
+			"gris.gestao_de_tarefas.board_sync_festa.sync_from_festa",
+		],
+	},
+	"Area da Festa": {
+		"after_insert": [
+			"gris.gestao_de_tarefas.board_sync_festa.sync_from_area",
+		],
+		"on_update": [
+			"gris.gestao_de_tarefas.board_sync_festa.sync_from_area",
+		],
+	},
+	"Barraca da Festa": {
+		"after_insert": [
+			"gris.gestao_de_tarefas.board_sync_festa.sync_from_barraca",
+		],
+		"on_update": [
+			"gris.gestao_de_tarefas.board_sync_festa.sync_from_barraca",
+		],
+	},
 }
 
 # Scheduled Tasks

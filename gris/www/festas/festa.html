@@ -8,6 +8,7 @@
 {% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
 {% from "public/design_system/components/generated/phone-input.html.jinja" import phone_input %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/composed/kanban-tarefas.html.jinja" import kanban_tarefas %}
 
 {% block title %}{{ nome_festa or "Festa" }}{% endblock %}
 
@@ -16,6 +17,7 @@
 {% block head_include %}
 {{ super() }}
 <link rel="stylesheet" href="/festas/festa.css" />
+<script src="/assets/gris/design_system/js/components/toastui-editor.js?v={{ design_system_asset_version }}" defer></script>
 {% endblock %}
 
 {% block page_header %}
@@ -577,6 +579,19 @@ window._festaData = {
 </div>
 {% endset %}
 
+{# ─── Tab: Gestão de Tarefas ─── #}
+{% set tab_gestao_tarefas %}
+<input type="hidden" id="userBoardName" value="{{ festa_board_name or '' }}" />
+<input type="hidden" id="currentUser" value="{{ current_user or '' }}" />
+<input type="hidden" id="currentUserFullName" value="{{ current_user_full_name or '' }}" />
+{{ kanban_tarefas(
+	id="taskKanban",
+	modo="projeto",
+	titulo="Gestão de tarefas",
+	hint_text="Arraste cards entre colunas, clique para editar ou crie novas tarefas."
+) }}
+{% endset %}
+
 {# ─── Tabs ─── #}
 {{ tabs(
 	id="festa-tabs",
@@ -586,6 +601,7 @@ window._festaData = {
 		{"id": "compras", "tab": "Compras", "panel": tab_compras},
 		{"id": "contratacoes", "tab": "Contratações", "panel": tab_contratacoes},
 		{"id": "orcamento", "tab": "Orçamento", "panel": tab_orcamento},
+		{"id": "gestao-tarefas", "tab": "Gestão de Tarefas", "panel": tab_gestao_tarefas},
 		{"id": "convites", "tab": "Convites", "panel": tab_convites}
 	]
 ) }}

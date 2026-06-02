@@ -1,0 +1,171 @@
+{#
+  Componente Kanban de tarefas reusavel para o Portal GRIS.
+
+  Renderiza:
+  - Cabecalho de acoes com botoes customizados + botao "Nova tarefa".
+  - Hint opcional.
+  - Container do kanban (renderizado pelo JS GrisKanbanTarefas).
+  - Dialog completo de tarefa (titulo, status, prazo, responsavel, observacoes,
+    timeline infografica e painel de comentarios).
+
+  Parametros:
+    id              - id do container do kanban (default: taskKanban)
+    modo            - "projeto" | "pessoal"
+    titulo          - titulo do card que envolve o kanban (default: "Gestao de tarefas")
+    new_task_label  - rotulo do botao primario (default: "Nova tarefa")
+    custom_actions  - lista de botoes adicionais [{"id","label","variant"?}]
+                      "variant" pode ser "primary"|"outline" (default: outline).
+    show_timeline   - exibe timeline infografica no dialog (default: true em modo projeto)
+    show_edit_hint  - exibe paragrafo de hint acima do kanban (default: true)
+    hint_text       - texto do hint inicial (default depende do modo)
+    new_task_button_attrs - atributos extras para o botao "Nova tarefa"
+#}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog as _dialog %}
+{% from "public/design_system/components/generated/select.html.jinja" import select as _select %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card as _card, field as _field %}
+
+{% macro kanban_tarefas(
+    id="taskKanban",
+    modo="pessoal",
+    titulo="Gestao de tarefas",
+    new_task_label="Nova tarefa",
+    custom_actions=[],
+    show_timeline=None,
+    show_edit_hint=true,
+    hint_text=None,
+    new_task_button_attrs={}
+) %}
+{% set is_projeto = (modo == "projeto") %}
+{% set effective_show_timeline = show_timeline if show_timeline is not none else is_projeto %}
+{% set dialog_id = id ~ "-dialog" %}
+{% set save_btn_id = id ~ "-btn-salvar" %}
+{% set comment_btn_id = id ~ "-btn-comentar" %}
+{% set new_btn_id = id ~ "-btn-nova" %}
+{% set effective_hint = hint_text or ("Arraste cards entre colunas para alterar o status, ou clique para editar todos os campos." if not is_projeto else "Carregando permissoes de edicao...") %}
+
+{% call _card(title=titulo) %}
+    <div class="kanban-tarefas-actions card-actions card-actions--end mb-sm" data-kanban-actions>
+        {% for action in custom_actions %}
+            {% set variant = action.variant or "outline" %}
+            <button type="button" id="{{ action.id }}" class="btn-sm-{{ variant }}">{{ action.label }}</button>
+        {% endfor %}
+        <button type="button" id="{{ new_btn_id }}" class="btn-sm-primary"
+            data-kanban-new-task
+            {% for key, value in new_task_button_attrs.items() %}{{ key }}="{{ value }}" {% endfor %}>{{ new_task_label }}</button>
+    </div>
+
+    {% if show_edit_hint %}
+    <p class="card-hint" data-kanban-hint>{{ effective_hint }}</p>
+    {% endif %}
+
+    <div id="{{ id }}" class="task-kanban"
+        data-kanban-tarefas
+        data-modo="{{ modo }}"
+        data-dialog-id="{{ dialog_id }}"
+        data-save-button-id="{{ save_btn_id }}"
+        data-comment-button-id="{{ comment_btn_id }}"
+        data-new-button-id="{{ new_btn_id }}"
+        data-show-timeline="{{ '1' if effective_show_timeline else '0' }}"
+        aria-live="polite"></div>
+{% endcall %}
+
+{% call _dialog(id=dialog_id, title="Detalhes da tarefa",
+    dialog_attrs={"class": "task-dialog"},
+    footer='<button type="button" id="' ~ save_btn_id ~ '" class="btn-sm-primary" data-kanban-save>Salvar tarefa</button>') %}
+    <input type="hidden" data-kanban-field="name" />
+    <p class="task-modal-subtitle" data-kanban-subtitle>
+        {% if not is_projeto %}<span class="task-board-badge" data-kanban-board-badge data-tipo=""></span>{% endif %}
+        <span data-kanban-subtitle-text>Preencha os detalhes da tarefa.</span>
+    </p>
+
+    <div class="task-modal-grid">
+        <section class="task-modal-main">
+            <div class="task-title-block">
+                <textarea class="textarea task-title-editor"
+                    data-kanban-field="titulo"
+                    rows="2"
+                    placeholder="Ex.: Organizar reuniao com equipe"></textarea>
+                <input type="hidden" data-kanban-field="descricao" />
+            </div>
+
+            <div class="task-meta-row">
+                {% call _field(label="Responsavel") %}
+                    {% if is_projeto %}
+                        <div data-kanban-responsavel-wrapper></div>
+                    {% else %}
+                        <input class="input" type="text" data-kanban-field="responsavel-display" readonly />
+                    {% endif %}
+                {% endcall %}
+                {% call _field(label="Status") %}
+                    {{ _select(id=id ~ "-status", selected="Nao iniciado", main_attrs={"data-kanban-field": "status"}, items=[
+                        {"value": "Nao iniciado",  "label": "Nao iniciado"},
+                        {"value": "Em andamento",  "label": "Em andamento"},
+                        {"value": "Atrasado",      "label": "Atrasado"},
+                        {"value": "Concluido",     "label": "Concluido"},
+                        {"value": "Cancelado",     "label": "Cancelado"}
+                    ]) }}
+                {% endcall %}
+                {% call _field(label="Prazo *") %}
+                    <div data-kanban-prazo-wrapper></div>
+                {% endcall %}
+            </div>
+
+            {% if effective_show_timeline %}
+            <div class="task-timeline d-none" data-kanban-timeline aria-live="polite">
+                <div class="task-timeline__track" aria-hidden="true">
+                    <span class="task-timeline__dot task-timeline__dot--start"></span>
+                    <span class="task-timeline__line"></span>
+                    <span class="task-timeline__dot task-timeline__dot--end" data-kanban-timeline-end-dot></span>
+                </div>
+                <div class="task-timeline__labels">
+                    <div class="task-timeline__item task-timeline__item--start">
+                        <p class="task-timeline__title">Inicio</p>
+                        <p class="task-timeline__date" data-kanban-timeline-start>-</p>
+                    </div>
+                    <div class="task-timeline__item task-timeline__item--end">
+                        <p class="task-timeline__title">Conclusao</p>
+                        <p class="task-timeline__date" data-kanban-timeline-end>Em execucao</p>
+                        <p class="task-timeline__delta" data-kanban-timeline-delta></p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <input type="hidden" data-kanban-field="data_inicio" />
+            <input type="hidden" data-kanban-field="data_entrega" />
+
+            {% call _field(label="Descricao e observacoes", attrs={"class": "task-observacoes-field"}) %}
+                <div class="meeting-editor-host d-none" data-kanban-observacoes-editor-host></div>
+                <div class="markdown-editor" data-kanban-observacoes-markdown>
+                    <div class="markdown-editor__toolbar" data-kanban-markdown-toolbar>
+                        <button type="button" class="btn-sm-outline" data-kanban-markdown-action="bold"><strong>B</strong></button>
+                        <button type="button" class="btn-sm-outline" data-kanban-markdown-action="italic"><em>I</em></button>
+                        <button type="button" class="btn-sm-outline" data-kanban-markdown-action="list">Lista</button>
+                        <button type="button" class="btn-sm-outline" data-kanban-markdown-action="link">Link</button>
+                    </div>
+                    <textarea class="textarea" rows="6" data-kanban-field="observacoes"
+                        placeholder="Adicione detalhes sobre a tarefa."></textarea>
+                    <div class="markdown-editor__preview" data-kanban-observacoes-preview>-</div>
+                </div>
+            {% endcall %}
+        </section>
+
+        <aside class="task-modal-side">
+            <div class="task-comments-card">
+                <div class="task-comments-card__header">
+                    <h5 class="task-comments-card__title">Comentarios</h5>
+                    <p class="task-comments-card__subtitle" data-kanban-comments-hint>Salve a tarefa para habilitar comentarios.</p>
+                </div>
+                <div class="task-comments-list" data-kanban-comments-list aria-live="polite"></div>
+                <div class="task-comments-compose">
+                    {% call _field(label="Novo comentario") %}
+                        <textarea class="textarea" rows="3" data-kanban-comment-input
+                            placeholder="Digite seu comentario"></textarea>
+                    {% endcall %}
+                    <button type="button" id="{{ comment_btn_id }}" class="btn-sm-outline mt-sm" data-kanban-comment-submit>Comentar</button>
+                </div>
+            </div>
+        </aside>
+    </div>
+{% endcall %}
+{% endmacro %}

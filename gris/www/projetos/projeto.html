@@ -7,6 +7,7 @@
 {% from "public/design_system/components/generated/calendar.html.jinja" import calendar %}
 {% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, textarea, switch, empty %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/composed/kanban-tarefas.html.jinja" import kanban_tarefas %}
 {% block title %}{{ projeto_titulo or 'Página do projeto' }}{% endblock %}
 {% set active_link = '/projetos/visao_geral' %}
 
@@ -172,14 +173,15 @@
 
     {# ─── Painel 3: Gestão de tarefas ────────────────────── #}
     {% set panel_3 %}
-    {% call card(title="Gestão de tarefas") %}
-        <div class="card-actions card-actions--end mb-sm">
-            <button type="button" id="btnAbrirCronogramaModal" class="btn-sm-outline">Abrir cronograma</button>
-            <button type="button" id="btnNovaTarefa" class="btn-sm-primary">Nova tarefa</button>
-        </div>
-        <p id="taskEditHint" class="card-hint">Carregando permissões de edição...</p>
-        <div id="taskKanban" class="task-kanban" aria-live="polite"></div>
-    {% endcall %}
+        {{ kanban_tarefas(
+            id="taskKanban",
+            modo="projeto",
+            titulo="Gestão de tarefas",
+            custom_actions=[
+                {"id": "btnAbrirCronogramaModal", "label": "Abrir cronograma", "variant": "outline"}
+            ],
+            hint_text="Carregando permissões de edição..."
+        ) }}
     {% endset %}
 
     {# ─── Painel 4: Reuniões ─────────────────────────────── #}
@@ -373,90 +375,6 @@
             <input id="participant_participa_avaliacao" type="checkbox" role="switch" class="input" checked />
             <span>Participa da avaliação do projeto</span>
         </label>
-    </div>
-{% endcall %}
-
-{% call dialog(id="taskModal", title="Detalhes da tarefa", dialog_attrs={"class": "task-dialog"},
-    footer='<button type="button" id="btnSalvarTarefa" class="btn-sm-primary">Salvar tarefa</button>') %}
-    <input type="hidden" id="task_name" />
-    <p id="taskModalSubtitle" class="task-modal-subtitle">Preencha os detalhes e acompanhe os comentários da tarefa.</p>
-    <div class="task-modal-grid">
-        <section class="task-modal-main">
-            <div class="task-title-block">
-                <textarea id="task_title_editor" class="textarea task-title-editor" rows="2" placeholder="Ex.: Organizar reunião com equipe de interesse"></textarea>
-                <input type="hidden" id="task_descricao" />
-            </div>
-
-            <div class="task-meta-row">
-                {% call field(label="Responsável") %}
-                    <div id="task_responsavel_wrapper"></div>
-                {% endcall %}
-                {% call field(label="Status") %}
-                    {{ select(id="task_status", selected="Nao iniciado", items=[
-                        {"value": "Nao iniciado",  "label": "Não iniciado"},
-                        {"value": "Em andamento",  "label": "Em andamento"},
-                        {"value": "Atrasado",      "label": "Atrasado"},
-                        {"value": "Concluido",     "label": "Concluído"},
-                        {"value": "Cancelado",     "label": "Cancelado"}
-                    ]) }}
-                {% endcall %}
-                {% call field(label="Prazo *") %}
-                    <div id="task_prazo_wrapper"></div>
-                {% endcall %}
-            </div>
-
-            <div id="taskTimelineInfographic" class="task-timeline d-none" aria-live="polite">
-                <div class="task-timeline__track" aria-hidden="true">
-                    <span class="task-timeline__dot task-timeline__dot--start"></span>
-                    <span class="task-timeline__line"></span>
-                    <span id="taskTimelineEndDot" class="task-timeline__dot task-timeline__dot--end"></span>
-                </div>
-                <div class="task-timeline__labels">
-                    <div class="task-timeline__item task-timeline__item--start">
-                        <p class="task-timeline__title">Início</p>
-                        <p id="taskTimelineStartDate" class="task-timeline__date">-</p>
-                    </div>
-                    <div class="task-timeline__item task-timeline__item--end">
-                        <p class="task-timeline__title">Conclusão</p>
-                        <p id="taskTimelineEndDate" class="task-timeline__date">Em execução</p>
-                        <p id="taskTimelineDelta" class="task-timeline__delta"></p>
-                    </div>
-                </div>
-            </div>
-
-            <input type="hidden" id="task_data_inicio" />
-            <input type="hidden" id="task_data_entrega" />
-
-            {% call field(label="Descrição e Observações", attrs={"class": "task-observacoes-field"}) %}
-                <div id="task_observacoes_editor_host" class="meeting-editor-host d-none"></div>
-                <div id="task_observacoes_markdown_block" class="markdown-editor">
-                    <div class="markdown-editor__toolbar" data-markdown-target="task_observacoes" data-preview-target="task_observacoes_preview">
-                        <button type="button" class="btn-sm-outline" data-markdown-action="bold"><strong>B</strong></button>
-                        <button type="button" class="btn-sm-outline" data-markdown-action="italic"><em>I</em></button>
-                        <button type="button" class="btn-sm-outline" data-markdown-action="list">Lista</button>
-                        <button type="button" class="btn-sm-outline" data-markdown-action="link">Link</button>
-                    </div>
-                    <textarea id="task_observacoes" class="textarea" rows="6" placeholder="Adicione detalhes importantes sobre a execução da tarefa."></textarea>
-                    <div class="markdown-editor__preview" id="task_observacoes_preview">-</div>
-                </div>
-            {% endcall %}
-        </section>
-
-        <aside class="task-modal-side">
-            <div class="task-comments-card">
-                <div class="task-comments-card__header">
-                    <h5 class="task-comments-card__title">Comentários e atividade</h5>
-                    <p id="taskCommentsHint" class="task-comments-card__subtitle">Salve a tarefa para habilitar comentários.</p>
-                </div>
-                <div id="taskCommentsList" class="task-comments-list" aria-live="polite"></div>
-                <div class="task-comments-compose">
-                    {% call field(label="Novo comentário") %}
-                        <textarea id="task_comment_input" class="textarea" rows="3" placeholder="Digite seu comentário"></textarea>
-                    {% endcall %}
-                    <button type="button" id="btnAdicionarComentarioTarefa" class="btn-sm-outline mt-sm">Comentar</button>
-                </div>
-            </div>
-        </aside>
     </div>
 {% endcall %}
 

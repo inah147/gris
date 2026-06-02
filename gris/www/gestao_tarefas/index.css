@@ -1,0 +1,79 @@
+.quadros-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1rem 0;
+}
+
+.quadros-page-header__actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.quadros-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: 1rem;
+}
+
+.quadro-card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.quadro-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    height: 100%;
+    transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.quadro-card-link:hover .quadro-card,
+.quadro-card-link:focus-visible .quadro-card {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 32px color-mix(in oklab, var(--color-ring) 10%, transparent);
+}
+
+.quadro-card__eyebrow {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.quadro-card__title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-card-foreground);
+}
+
+.quadro-card__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--color-muted-foreground);
+}
+
+#form-novo-quadro {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+#form-novo-quadro .label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-foreground);
+}
+
+@media (max-width: 640px) {
+    .quadros-grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -37,21 +37,7 @@ def _build_projeto_data(status: str, idx: int) -> dict:
 	# ODS Projeto (fixture)
 	ods_disponiveis = all_names("ODS Projeto", limit=5)
 
-	# Tarefas: cobrir todos os status
 	hoje = date.today()
-	tarefas = []
-	for i, ts in enumerate(TAREFA_STATUSES[:3]):
-		tarefas.append(
-			{
-				"data_inicio": hoje + timedelta(days=i * 5),
-				"prazo": hoje + timedelta(days=i * 5 + 10),
-				"data_entrega": hoje + timedelta(days=i * 5 + 8) if ts == "Concluido" else None,
-				"descricao": fake.sentence(),
-				"responsavel": "",  # campo Select dinâmico — deixa vazio para evitar validação cruzada
-				"status": ts,
-				"observacoes": "",
-			}
-		)
 
 	# Envolvidos: coordenador (Associado) + 1-2 outros associados
 	envolvidos = [
@@ -157,7 +143,6 @@ def _build_projeto_data(status: str, idx: int) -> dict:
 		"especialidade": "Acampamento, Pioneiria",
 		"observacoes_e_comentarios": "",
 		"reunioes": reunioes,
-		"tarefas": tarefas,
 		"envolvidos": envolvidos,
 		"objetivos": objetivos,
 		"ods": ods_rows,
@@ -168,9 +153,39 @@ def _build_projeto_data(status: str, idx: int) -> dict:
 	}
 
 
+def _seed_tarefas_para_projeto(projeto_name: str) -> int:
+	"""Semeia tarefas independentes (Gestao de Tarefas) no board do projeto."""
+	board_name = frappe.db.get_value("Projeto", projeto_name, "board_tarefas")
+	if not board_name:
+		return 0
+
+	hoje = date.today()
+	created = 0
+	for i, ts in enumerate(TAREFA_STATUSES[:3]):
+		try:
+			frappe.get_doc(
+				{
+					"doctype": "Gestao de Tarefas",
+					"board": board_name,
+					"data_inicio": hoje + timedelta(days=i * 5),
+					"prazo": hoje + timedelta(days=i * 5 + 10),
+					"data_entrega": hoje + timedelta(days=i * 5 + 8) if ts == "Concluido" else None,
+					"descricao": fake.sentence(),
+					"responsavel": "",
+					"status": ts,
+					"observacoes": "",
+				}
+			).insert(ignore_permissions=True)
+			created += 1
+		except Exception as e:
+			print(f"    ⚠️  Tarefa do projeto {projeto_name}: {e}")
+	return created
+
+
 def seed_projetos(por_status: int) -> dict[str, list[str]]:
 	"""Cria `por_status` projetos para CADA um dos 6 status. Retorna dict {status: [names]}."""
 	created = 0
+	tarefas_created = 0
 	by_status: dict[str, list[str]] = {}
 	for status in PROJETO_STATUSES:
 		by_status[status] = []
@@ -182,6 +197,7 @@ def seed_projetos(por_status: int) -> dict[str, list[str]]:
 			existing = frappe.db.exists("Projeto", {"nome_do_projeto": data["nome_do_projeto"]})
 			if existing:
 				by_status[status].append(existing)
+				tarefas_created += _seed_tarefas_para_projeto(existing)
 				continue
 			try:
 				doc = frappe.get_doc(data)
@@ -191,9 +207,10 @@ def seed_projetos(por_status: int) -> dict[str, list[str]]:
 				doc.insert(ignore_permissions=True)
 				by_status[status].append(doc.name)
 				created += 1
+				tarefas_created += _seed_tarefas_para_projeto(doc.name)
 			except Exception as e:
 				print(f"  ⚠️  Projeto status={status}: {e}")
-	print(f"  → {created} Projeto (x {len(PROJETO_STATUSES)} status)")
+	print(f"  → {created} Projeto (x {len(PROJETO_STATUSES)} status) + {tarefas_created} tarefas")
 	return by_status
 
 

@@ -1,0 +1,112 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/select.html.jinja" import select as ds_select %}
+{% from "public/design_system/components/composed/kanban-tarefas.html.jinja" import kanban_tarefas %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% block title %}{{ page_title or "Gestao de tarefas" }}{% endblock %}
+{% set active_link = '/gestao_tarefas' %}
+
+{% block head_include %}
+{{ super() }}
+<link rel="stylesheet" href="/gestao_tarefas/tarefas.css" />
+<script src="/assets/gris/design_system/js/components/toastui-editor.js?v={{ design_system_asset_version }}" defer></script>
+{% endblock %}
+
+{% block page_header %}
+<section class="project-page-header" aria-labelledby="gestao-tarefas-title">
+    <div class="flex flex-col gap-2 max-w-3xl">
+        <h1 id="gestao-tarefas-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">{{ page_title or "Minhas tarefas" }}</h1>
+        <p class="m-0 text-base leading-relaxed text-muted-foreground">{{ page_subtitle or "Acompanhe e gerencie tarefas atribuidas a voce em todos os quadros." }}</p>
+    </div>
+    {% if is_quadro_solto %}
+    <div class="project-page-header__actions">
+        <button type="button" id="btn-gerir-membros" class="btn-outline">
+            {{ lucide_icon("users", size="sm") }}
+            <span>Membros</span>
+        </button>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block main %}
+{{ toaster() }}
+<div class="project-shell">
+    <input type="hidden" id="userBoardName" value="{{ user_board_name or '' }}" />
+    <input type="hidden" id="currentUser" value="{{ current_user or '' }}" />
+    <input type="hidden" id="currentUserFullName" value="{{ current_user_full_name or '' }}" />
+    <input type="hidden" id="isQuadroSolto" value="{{ '1' if is_quadro_solto else '0' }}" />
+    <input type="hidden" id="podeGerirMembros" value="{{ '1' if pode_gerir_membros else '0' }}" />
+
+    {{ kanban_tarefas(
+        id="taskKanban",
+        modo=(kanban_modo or "pessoal"),
+        titulo=(kanban_titulo or "Gestao de tarefas")
+    ) }}
+</div>
+
+{% if is_quadro_solto %}
+{% set membros_footer %}
+<button type="button" class="btn-outline" data-dialog-close="dialog-membros-quadro">Fechar</button>
+{% endset %}
+{% set nivel_items = [
+    {"value": "Gerenciar", "label": "Gerenciar"},
+    {"value": "Editar", "label": "Editar"},
+    {"value": "Visualizar", "label": "Visualizar"},
+] %}
+{# namespace e necessario: {% set %} dentro de {% for %} nao vaza para o escopo
+   externo no Jinja, entao acumular numa lista comum resultaria em [] (combobox vazio). #}
+{% set usuarios_ns = namespace(items=[]) %}
+{% for u in usuarios_elegiveis %}
+    {% set usuarios_ns.items = usuarios_ns.items + [{
+        "value": u.value,
+        "label": '<div class="membros-quadro__opt-user"><strong>' ~ u.label ~ '</strong><small>' ~ u.email ~ '</small></div>',
+        "attrs": {"data-nome": u.label, "data-filter": u.label ~ ' ' ~ u.email}
+    }] %}
+{% endfor %}
+{% call dialog(
+    id="dialog-membros-quadro",
+    title="Gerir membros do quadro",
+    description="Adicione, remova e ajuste o nivel de acesso de cada participante.",
+    dialog_attrs={"class": "dialog-membros-quadro"},
+    footer=membros_footer
+) %}
+    <section class="membros-quadro" data-membros-quadro>
+        {% if pode_gerir_membros %}
+        <div class="membros-quadro__add">
+            <label class="label" for="combo-buscar-usuario-trigger">Adicionar membro</label>
+            <div class="membros-quadro__search">
+                <div class="membros-quadro__search-combo">
+                    {{ ds_select(
+                        id="combo-buscar-usuario",
+                        name="combo-buscar-usuario-value",
+                        items=usuarios_ns.items,
+                        is_combobox=true,
+                        search_placeholder="Buscar por nome ou email...",
+                        trigger_attrs={"class": "membros-quadro__combo-trigger"}
+                    ) }}
+                </div>
+                <div class="membros-quadro__search-nivel">
+                    {{ ds_select(
+                        id="select-nivel-novo",
+                        name="select-nivel-novo-value",
+                        items=nivel_items,
+                        selected="Editar"
+                    ) }}
+                </div>
+                <button type="button" id="btn-adicionar-membro" class="btn-primary">Adicionar</button>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="membros-quadro__list-wrap">
+            <h3 class="membros-quadro__list-title">Membros atuais</h3>
+            <ul id="lista-membros" class="membros-quadro__list" aria-live="polite">
+                <li class="membros-quadro__empty">Carregando...</li>
+            </ul>
+        </div>
+    </section>
+{% endcall %}
+{% endif %}
+{% endblock %}

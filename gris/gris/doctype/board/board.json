@@ -1,0 +1,112 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:BOARD-{#####}",
+ "creation": "2026-05-29 00:00:00",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "titulo",
+  "ativo",
+  "referencia_section",
+  "referencia_doctype",
+  "referencia_nome",
+  "acesso_section",
+  "usuarios_autorizados"
+ ],
+ "fields": [
+  {
+   "fieldname": "titulo",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Titulo",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "ativo",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Ativo"
+  },
+  {
+   "fieldname": "referencia_section",
+   "fieldtype": "Section Break",
+   "label": "Referencia"
+  },
+  {
+   "fieldname": "referencia_doctype",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "DocType do dono",
+   "options": "DocType",
+   "read_only": 0,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "referencia_nome",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Dono",
+   "options": "referencia_doctype",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "acesso_section",
+   "fieldtype": "Section Break",
+   "label": "Acesso"
+  },
+  {
+   "fieldname": "usuarios_autorizados",
+   "fieldtype": "Table",
+   "label": "Usuarios autorizados",
+   "options": "Board User"
+  }
+ ],
+ "grid_page_length": 20,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-02 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Board",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Editor de projetos",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Visualizador de projetos"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "titulo",
+ "track_changes": 1
+}

@@ -1,0 +1,46 @@
+{
+  "actions": [],
+  "creation": "2026-06-02 00:00:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": ["user", "nivel_acesso", "adicionado_em"],
+  "fields": [
+    {
+      "fieldname": "user",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "label": "Usuario",
+      "options": "User",
+      "reqd": 1
+    },
+    {
+      "default": "Visualizar",
+      "fieldname": "nivel_acesso",
+      "fieldtype": "Select",
+      "in_list_view": 1,
+      "label": "Nivel de acesso",
+      "options": "Gerenciar\nEditar\nVisualizar",
+      "reqd": 1
+    },
+    {
+      "default": "Today",
+      "fieldname": "adicionado_em",
+      "fieldtype": "Date",
+      "in_list_view": 1,
+      "label": "Adicionado em",
+      "read_only": 1
+    }
+  ],
+  "istable": 1,
+  "links": [],
+  "modified": "2026-06-02 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Gris",
+  "name": "Board User",
+  "owner": "Administrator",
+  "permissions": [],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": []
+}

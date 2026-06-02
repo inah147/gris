@@ -14,6 +14,10 @@ from gris.api.google_workspace.project_drive import is_valid_drive_folder_link
 from gris.gestao_de_projetos.doctype.avaliacao_de_projeto.avaliacao_de_projeto import (
 	_get_all_reviewer_data,
 )
+from gris.gris.doctype.gestao_de_tarefas.gestao_de_tarefas import (
+	TASK_FIELDS,
+	TASK_STATUS_OPTIONS,
+)
 from gris.utils.contato import get_contato_pessoa as _shared_get_contato_pessoa
 from gris.utils.whatsapp import enviar_mensagem_formatada, enviar_texto
 
@@ -46,22 +50,13 @@ class Projeto(Document):
 		self._validate_people_scopes()
 
 	def after_insert(self):
+		_ensure_project_board(self)
 		_enqueue_project_drive_folder_creation(self.name)
 
 	def _validate_dates(self):
 		if self.data_de_inicio and self.data_de_termino:
 			if getdate(self.data_de_inicio) > getdate(self.data_de_termino):
 				frappe.throw(_("Data de inicio nao pode ser maior que data de termino."))
-
-		for tarefa in self.tarefas or []:
-			if tarefa.data_inicio and tarefa.prazo and getdate(tarefa.data_inicio) > getdate(tarefa.prazo):
-				frappe.throw(
-					_("Tarefa '{0}' com data de inicio maior que prazo.").format(
-						tarefa.descricao or tarefa.idx
-					)
-				)
-			if tarefa.status == "Concluido" and not tarefa.data_entrega:
-				tarefa.data_entrega = nowdate()
 
 		for item in self.cronograma or []:
 			if (
@@ -88,19 +83,11 @@ class Projeto(Document):
 		_sync_legacy_people_from_envolvidos(self, envolvidos)
 
 	def _validate_people_scopes(self):
-		team_names = {
-			(row.get("nome") or "").strip()
-			for row in _get_normalized_envolvidos(self, strict=False, include_legacy=True)
-			if (row.get("nome") or "").strip()
-		}
-
-		for tarefa in self.tarefas or []:
-			if tarefa.responsavel and tarefa.responsavel not in team_names:
-				frappe.throw(
-					_("Responsavel '{0}' da tarefa deve existir entre os envolvidos do projeto.").format(
-						tarefa.responsavel
-					)
-				)
+		# Mantido como hook para futuras validacoes de escopo de pessoas.
+		# Validacao de responsaveis de tarefa agora vive nos endpoints
+		# whitelisted de Gestao de Tarefas, pois board pode pertencer a
+		# qualquer DocType (Projeto, Festa, ...).
+		return
 
 	def _validate_sponsor_category(self):
 		padrinho = _get_padrinho_envolvido(self)
@@ -160,24 +147,6 @@ APPROVAL_STAGE_LABELS = {
 	STAGE_APROVADORES_INICIAIS: "Padrinho / Orientador e demais aprovadores",
 	STAGE_CHEFE_SECAO: "Chefe de Seção",
 	STAGE_DIRETOR: "Diretor Presidente",
-}
-
-TASK_FIELDS = [
-	"data_inicio",
-	"prazo",
-	"data_entrega",
-	"descricao",
-	"responsavel",
-	"status",
-	"observacoes",
-]
-
-TASK_STATUS_OPTIONS = {
-	"Nao iniciado",
-	"Em andamento",
-	"Atrasado",
-	"Concluido",
-	"Cancelado",
 }
 
 MEETING_FIELDS = ["data_hora", "descricao", "pauta", "ata"]
@@ -263,6 +232,14 @@ def _make_envolvido_row_key(row: dict[str, Any]) -> str:
 	return ""
 
 
+def _resolve_user_from_email(email: str | None) -> str:
+	candidate = (email or "").strip()
+	if not candidate:
+		return ""
+	user_name = frappe.db.exists("User", candidate)
+	return user_name or ""
+
+
 def _normalize_envolvido_row(row: Document | dict[str, Any], strict: bool = False) -> dict[str, Any] | None:
 	tipo_pessoa = _normalize_envolvido_tipo_pessoa(row.get("tipo_pessoa"))
 	associado = (row.get("associado") or "").strip() if tipo_pessoa == APPROVER_TYPE_ASSOCIADO else ""
@@ -334,12 +311,16 @@ def _normalize_envolvido_row(row: Document | dict[str, Any], strict: bool = Fals
 		if not (email or "").strip() or not (telefone or "").strip():
 			frappe.throw(_("Todos os envolvidos devem possuir email e telefone preenchidos."))
 
+	normalized_email = (email or "").strip()
+	resolved_user = (row.get("user") or "").strip() or _resolve_user_from_email(normalized_email)
+
 	normalized = {
 		"tipo_pessoa": tipo_pessoa,
 		"associado": associado,
 		"responsavel": responsavel,
 		"nome": (nome or "").strip(),
-		"email": (email or "").strip(),
+		"email": normalized_email,
+		"user": resolved_user,
 		"telefone": (telefone or "").strip(),
 		"funcao": funcao,
 		"coordenador": coordenador,
@@ -428,6 +409,7 @@ def _to_envolvido_child_payload(row: dict[str, Any]) -> dict[str, Any]:
 		"responsavel": row.get("responsavel") or "",
 		"nome": row.get("nome") or "",
 		"email": row.get("email") or "",
+		"user": row.get("user") or "",
 		"telefone": row.get("telefone") or "",
 		"funcao": row.get("funcao") or "",
 		"coordenador": 1 if cint(row.get("coordenador")) else 0,
@@ -1564,6 +1546,29 @@ def _enqueue_project_whatsapp_job(method: str, **kwargs) -> None:
 		)
 
 
+def _ensure_project_board(doc: Document) -> None:
+	"""Cria automaticamente o Board de tarefas vinculado ao projeto recem-criado.
+
+	Usa ignore_permissions porque after_insert pode ser disparado em fluxos
+	(portal, importacao) em que o usuario nao tem permissao direta de criar
+	Board, mas tem permissao para criar Projeto.
+	"""
+	if doc.get("board_tarefas"):
+		return
+
+	board = frappe.get_doc(
+		{
+			"doctype": "Board",
+			"titulo": f"Tarefas — {doc.name}",
+			"referencia_doctype": "Projeto",
+			"referencia_nome": doc.name,
+		}
+	).insert(ignore_permissions=True)
+
+	frappe.db.set_value("Projeto", doc.name, "board_tarefas", board.name, update_modified=False)
+	doc.board_tarefas = board.name
+
+
 def _enqueue_project_drive_folder_creation(projeto_name: str) -> None:
 	if not projeto_name:
 		return
@@ -2174,17 +2179,47 @@ def _serialize_table_rows(rows: list[Document], fields: list[str]) -> list[dict[
 	return serialized
 
 
-def _serialize_tarefas(rows: list[Document]) -> list[dict[str, Any]]:
+TASK_CLIENT_FIELDS = tuple(f for f in TASK_FIELDS if f != "board")
+
+
+def _serialize_tarefas_for_projeto(projeto_doc: Document) -> list[dict[str, Any]]:
+	board_name = (projeto_doc.get("board_tarefas") or "").strip()
+	if not board_name:
+		return []
+
+	rows = frappe.get_all(
+		"Gestao de Tarefas",
+		filters={"board": board_name},
+		fields=["name", *TASK_CLIENT_FIELDS],
+		order_by="creation asc",
+		limit_page_length=0,
+	)
+
+	user_ids = {(row.get("responsavel") or "").strip() for row in rows if row.get("responsavel")}
+	user_full_names = _get_user_full_names_map(user_ids)
+
 	serialized: list[dict[str, Any]] = []
-	for row in rows or []:
-		payload = {
-			"name": row.get("name"),
-			"idx": row.get("idx"),
-		}
-		for fieldname in TASK_FIELDS:
+	for idx, row in enumerate(rows, start=1):
+		payload = {"name": row.get("name"), "idx": idx}
+		for fieldname in TASK_CLIENT_FIELDS:
 			payload[fieldname] = row.get(fieldname)
+		responsavel_id = (row.get("responsavel") or "").strip()
+		payload["responsavel_full_name"] = user_full_names.get(responsavel_id, "")
 		serialized.append(payload)
 	return serialized
+
+
+def _get_user_full_names_map(user_ids: set[str]) -> dict[str, str]:
+	cleaned = {u for u in (user_ids or set()) if u}
+	if not cleaned:
+		return {}
+	rows = frappe.get_all(
+		"User",
+		filters={"name": ["in", list(cleaned)]},
+		fields=["name", "full_name"],
+		limit_page_length=0,
+	)
+	return {row.get("name"): (row.get("full_name") or row.get("name") or "") for row in rows}
 
 
 def _serialize_reunioes(rows: list[Document]) -> list[dict[str, Any]]:
@@ -2200,13 +2235,27 @@ def _serialize_reunioes(rows: list[Document]) -> list[dict[str, Any]]:
 	return serialized
 
 
-def _get_responsavel_options(doc: Document) -> list[str]:
-	options = {
-		(row.get("nome") or "").strip()
-		for row in _get_normalized_envolvidos(doc, strict=False, include_legacy=True)
-		if (row.get("nome") or "").strip()
-	}
-	return sorted(options)
+def _get_responsavel_options(doc: Document) -> list[dict[str, str]]:
+	seen: set[str] = set()
+	options: list[dict[str, str]] = []
+	for row in _get_normalized_envolvidos(doc, strict=False, include_legacy=True):
+		user_id = (row.get("user") or "").strip()
+		if not user_id or user_id in seen:
+			continue
+		seen.add(user_id)
+		options.append(
+			{
+				"user": user_id,
+				"full_name": (row.get("nome") or "").strip() or get_fullname(user_id) or user_id,
+				"email": (row.get("email") or "").strip() or user_id,
+			}
+		)
+	options.sort(key=lambda item: item["full_name"].lower())
+	return options
+
+
+def _get_responsavel_user_ids(doc: Document) -> set[str]:
+	return {opt["user"] for opt in _get_responsavel_options(doc) if opt.get("user")}
 
 
 def _assert_project_in_execution(doc: Document) -> None:
@@ -2233,19 +2282,26 @@ def _find_child_row(rows: list[Document], row_name: str) -> Document | None:
 	return None
 
 
-def _get_task_row_from_project(doc: Document, tarefa_name: str) -> Document:
+def _get_task_doc_for_projeto(projeto_doc: Document, tarefa_name: str) -> Document:
 	tarefa_name = (tarefa_name or "").strip()
 	if not tarefa_name:
 		frappe.throw(_("Tarefa não informada."))
 
-	target_row = _find_child_row(doc.get("tarefas") or [], tarefa_name)
-	if not target_row:
-		frappe.throw(_("Tarefa não encontrada no projeto."))
+	board_name = (projeto_doc.get("board_tarefas") or "").strip()
+	if not board_name:
+		frappe.throw(_("Projeto sem board de tarefas vinculado."))
 
-	return target_row
+	if not frappe.db.exists("Gestao de Tarefas", tarefa_name):
+		frappe.throw(_("Tarefa não encontrada."))
+
+	task_doc = frappe.get_doc("Gestao de Tarefas", tarefa_name)
+	if (task_doc.get("board") or "") != board_name:
+		frappe.throw(_("Tarefa não pertence ao board deste projeto."), frappe.PermissionError)
+
+	return task_doc
 
 
-def _get_task_comment_from_row(tarefa_row: Document, comentario_name: str) -> Document:
+def _get_task_comment_from_doc(task_doc: Document, comentario_name: str) -> Document:
 	comentario_name = (comentario_name or "").strip()
 	if not comentario_name:
 		frappe.throw(_("Comentário não informado."))
@@ -2254,7 +2310,7 @@ def _get_task_comment_from_row(tarefa_row: Document, comentario_name: str) -> Do
 	if (
 		(comment_doc.get("comment_type") or "") != "Comment"
 		or (comment_doc.get("reference_doctype") or "") != "Gestao de Tarefas"
-		or (comment_doc.get("reference_name") or "") != (tarefa_row.get("name") or "")
+		or (comment_doc.get("reference_name") or "") != (task_doc.get("name") or "")
 	):
 		frappe.throw(_("Comentário não encontrado para a tarefa informada."))
 
@@ -2305,7 +2361,7 @@ def _serialize_tarefa_comentarios(tarefa_name: str) -> list[dict[str, Any]]:
 	return serialized
 
 
-def _assert_task_payload(payload: dict[str, Any], team_names: set[str]) -> dict[str, Any]:
+def _assert_task_payload(payload: dict[str, Any], team_user_ids: set[str]) -> dict[str, Any]:
 	if not payload.get("descricao"):
 		frappe.throw(_("Informe a descrição da tarefa."))
 	if not payload.get("prazo"):
@@ -2316,8 +2372,11 @@ def _assert_task_payload(payload: dict[str, Any], team_names: set[str]) -> dict[
 		frappe.throw(_("Status da tarefa inválido."))
 
 	responsavel = (payload.get("responsavel") or "").strip()
-	if responsavel and responsavel not in team_names:
-		frappe.throw(_("Responsável da tarefa deve existir entre os envolvidos do projeto."))
+	if responsavel and responsavel not in team_user_ids:
+		frappe.throw(
+			_("Responsável da tarefa deve ser um envolvido do projeto com usuário vinculado.")
+		)
+	payload["responsavel"] = responsavel
 
 	if payload.get("data_inicio") and payload.get("prazo"):
 		if getdate(payload["data_inicio"]) > getdate(payload["prazo"]):
@@ -2383,6 +2442,7 @@ def _serialize_envolvidos(doc: Document) -> list[dict[str, Any]]:
 			"responsavel": row.get("responsavel") or "",
 			"nome": row.get("nome") or "",
 			"email": row.get("email") or "",
+			"user": row.get("user") or "",
 			"telefone": row.get("telefone") or "",
 			"funcao": row.get("funcao") or "",
 			"coordenador": 1 if cint(row.get("coordenador")) else 0,
@@ -2446,7 +2506,7 @@ def _serialize_projeto(doc: Document) -> dict[str, Any]:
 		"objetivos": _serialize_table_rows(doc.get("objetivos"), TABLE_FIELD_MAP["objetivos"]),
 		"ods": _serialize_table_rows(doc.get("ods"), TABLE_FIELD_MAP["ods"]),
 		"cronograma": _serialize_table_rows(doc.get("cronograma"), TABLE_FIELD_MAP["cronograma"]),
-		"tarefas": _serialize_tarefas(doc.get("tarefas") or []),
+		"tarefas": _serialize_tarefas_for_projeto(doc),
 		"reunioes": _serialize_reunioes(doc.get("reunioes") or []),
 		"recursos": _serialize_table_rows(doc.get("recursos"), TABLE_FIELD_MAP["recursos"]),
 		"riscos": _serialize_table_rows(doc.get("riscos"), TABLE_FIELD_MAP["riscos"]),
@@ -3068,39 +3128,51 @@ def salvar_tarefa_projeto_execucao(projeto_name: str, tarefa: str | dict[str, An
 
 	_assert_project_in_execution(doc)
 
+	board_name = (doc.get("board_tarefas") or "").strip()
+	if not board_name:
+		frappe.throw(_("Projeto sem board de tarefas vinculado."))
+
 	payload = _parse_payload(tarefa)
 	tarefa_name = (payload.get("name") or "").strip()
-	target_row = _find_child_row(doc.get("tarefas") or [], tarefa_name) if tarefa_name else None
-	previous_status = (target_row.get("status") or "").strip() if target_row else ""
 
-	if tarefa_name and not target_row:
-		frappe.throw(_("Tarefa não encontrada no projeto."))
+	existing_task: Document | None = None
+	previous_status = ""
+	if tarefa_name:
+		existing_task = _get_task_doc_for_projeto(doc, tarefa_name)
+		previous_status = (existing_task.get("status") or "").strip()
 
-	if target_row:
+	if existing_task:
 		task_payload = {
-			fieldname: _clean_value(payload.get(fieldname, target_row.get(fieldname)))
-			for fieldname in TASK_FIELDS
+			fieldname: _clean_value(payload.get(fieldname, existing_task.get(fieldname)))
+			for fieldname in TASK_CLIENT_FIELDS
 		}
 	else:
-		task_payload = {fieldname: _clean_value(payload.get(fieldname)) for fieldname in TASK_FIELDS}
+		task_payload = {
+			fieldname: _clean_value(payload.get(fieldname)) for fieldname in TASK_CLIENT_FIELDS
+		}
 
-	team_names = set(_get_responsavel_options(doc))
+	team_user_ids = _get_responsavel_user_ids(doc)
 	task_payload = _normalize_task_start_date(task_payload, previous_status=previous_status)
 	task_payload = _normalize_task_delivery_date(task_payload)
-	task_payload = _assert_task_payload(task_payload, team_names)
+	task_payload = _assert_task_payload(task_payload, team_user_ids)
 
-	if target_row:
-		for fieldname in TASK_FIELDS:
-			target_row.set(fieldname, task_payload.get(fieldname))
+	if existing_task:
+		for fieldname in TASK_CLIENT_FIELDS:
+			existing_task.set(fieldname, task_payload.get(fieldname))
+		existing_task.save()
 	else:
-		doc.append("tarefas", task_payload)
-
-	doc.flags.portal_draft_save = False
-	doc.save()
+		new_task = frappe.get_doc(
+			{
+				"doctype": "Gestao de Tarefas",
+				"board": board_name,
+				**{fieldname: task_payload.get(fieldname) for fieldname in TASK_CLIENT_FIELDS},
+			}
+		)
+		new_task.insert()
 
 	return {
 		"ok": True,
-		"tarefas": _serialize_tarefas(doc.get("tarefas") or []),
+		"tarefas": _serialize_tarefas_for_projeto(doc),
 	}
 
 
@@ -3123,71 +3195,19 @@ def atualizar_status_tarefa_projeto_execucao(
 
 	_assert_project_in_execution(doc)
 
-	target_row = _find_child_row(doc.get("tarefas") or [], tarefa_name)
-	if not target_row:
-		frappe.throw(_("Tarefa não encontrada no projeto."))
+	task_doc = _get_task_doc_for_projeto(doc, tarefa_name)
 
-	previous_status = (target_row.status or "").strip()
-	target_row.status = status
-	if status != "Nao iniciado" and previous_status == "Nao iniciado" and not target_row.data_inicio:
-		target_row.data_inicio = nowdate()
-	target_row.data_entrega = nowdate() if status == "Concluido" else ""
-	doc.flags.portal_draft_save = False
-	doc.save()
+	previous_status = (task_doc.status or "").strip()
+	task_doc.status = status
+	if status != "Nao iniciado" and previous_status == "Nao iniciado" and not task_doc.data_inicio:
+		task_doc.data_inicio = nowdate()
+	task_doc.data_entrega = nowdate() if status == "Concluido" else None
+	task_doc.save()
 
 	return {
 		"ok": True,
-		"tarefas": _serialize_tarefas(doc.get("tarefas") or []),
+		"tarefas": _serialize_tarefas_for_projeto(doc),
 	}
-
-
-def validar_tarefas_atrasadas_madrugada() -> None:
-	hoje = getdate(nowdate())
-	projetos_execucao = frappe.get_all(
-		"Projeto",
-		filters={"status": STATUS_EM_EXECUCAO},
-		fields=["name"],
-		limit_page_length=0,
-	)
-
-	for projeto in projetos_execucao:
-		projeto_name = projeto.get("name")
-		if not projeto_name:
-			continue
-
-		try:
-			doc = frappe.get_doc("Projeto", projeto_name)
-		except Exception:
-			frappe.log_error(
-				message=frappe.get_traceback(),
-				title=_("Falha ao carregar projeto para validação de atraso"),
-			)
-			continue
-
-		alterou_tarefa = False
-		for tarefa in doc.get("tarefas") or []:
-			status = (tarefa.get("status") or "").strip()
-			if status in {"Concluido", "Cancelado", "Atrasado"}:
-				continue
-
-			prazo = tarefa.get("prazo")
-			if not prazo:
-				continue
-
-			try:
-				prazo_date = getdate(prazo)
-			except Exception:
-				continue
-
-			if prazo_date < hoje:
-				tarefa.status = "Atrasado"
-				alterou_tarefa = True
-
-		if not alterou_tarefa:
-			continue
-
-		doc.flags.portal_draft_save = False
-		doc.save(ignore_permissions=True)
 
 
 @frappe.whitelist()
@@ -3201,11 +3221,11 @@ def get_tarefa_projeto_execucao_comentarios(projeto_name: str, tarefa_name: str)
 		frappe.throw(_("Você não tem permissão para visualizar este projeto."), frappe.PermissionError)
 
 	_assert_project_visible_on_execution_page(doc)
-	task_row = _get_task_row_from_project(doc, tarefa_name)
+	task_doc = _get_task_doc_for_projeto(doc, tarefa_name)
 
 	return {
 		"ok": True,
-		"comentarios": _serialize_tarefa_comentarios(task_row.name),
+		"comentarios": _serialize_tarefa_comentarios(task_doc.name),
 	}
 
 
@@ -3227,9 +3247,8 @@ def adicionar_comentario_tarefa_projeto_execucao(
 		frappe.throw(_("Você não tem permissão para editar este projeto."), frappe.PermissionError)
 
 	_assert_project_in_execution(doc)
-	task_row = _get_task_row_from_project(doc, tarefa_name)
+	task_doc = _get_task_doc_for_projeto(doc, tarefa_name)
 
-	task_doc = frappe.get_doc("Gestao de Tarefas", task_row.name)
 	task_doc.add_comment(
 		"Comment",
 		text=texto.replace("\n", "<br>"),
@@ -3239,7 +3258,7 @@ def adicionar_comentario_tarefa_projeto_execucao(
 
 	return {
 		"ok": True,
-		"comentarios": _serialize_tarefa_comentarios(task_row.name),
+		"comentarios": _serialize_tarefa_comentarios(task_doc.name),
 	}
 
 
@@ -3261,8 +3280,8 @@ def editar_comentario_tarefa_projeto_execucao(
 		frappe.throw(_("Você não tem permissão para editar este projeto."), frappe.PermissionError)
 
 	_assert_project_in_execution(doc)
-	task_row = _get_task_row_from_project(doc, tarefa_name)
-	comment_doc = _get_task_comment_from_row(task_row, comentario_name)
+	task_doc = _get_task_doc_for_projeto(doc, tarefa_name)
+	comment_doc = _get_task_comment_from_doc(task_doc, comentario_name)
 	_assert_comment_author(comment_doc, user)
 
 	comment_doc.content = texto.replace("\n", "<br>")
@@ -3272,7 +3291,7 @@ def editar_comentario_tarefa_projeto_execucao(
 
 	return {
 		"ok": True,
-		"comentarios": _serialize_tarefa_comentarios(task_row.name),
+		"comentarios": _serialize_tarefa_comentarios(task_doc.name),
 	}
 
 
@@ -3290,15 +3309,15 @@ def apagar_comentario_tarefa_projeto_execucao(
 		frappe.throw(_("Você não tem permissão para editar este projeto."), frappe.PermissionError)
 
 	_assert_project_in_execution(doc)
-	task_row = _get_task_row_from_project(doc, tarefa_name)
-	comment_doc = _get_task_comment_from_row(task_row, comentario_name)
+	task_doc = _get_task_doc_for_projeto(doc, tarefa_name)
+	comment_doc = _get_task_comment_from_doc(task_doc, comentario_name)
 	_assert_comment_author(comment_doc, user)
 
 	frappe.delete_doc("Comment", comment_doc.name, ignore_permissions=True)
 
 	return {
 		"ok": True,
-		"comentarios": _serialize_tarefa_comentarios(task_row.name),
+		"comentarios": _serialize_tarefa_comentarios(task_doc.name),
 	}
 
 

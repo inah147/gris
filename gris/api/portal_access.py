@@ -73,6 +73,14 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 		],
 	},
 	{
+		"label": "Gestão de Tarefas",
+		"path": "/gestao_tarefas",
+		"children": [
+			{"label": "Quadros", "path": "/gestao_tarefas"},
+			{"label": "Minhas tarefas", "path": "/gestao_tarefas/tarefas"},
+		],
+	},
+	{
 		"label": "Festas",
 		"path": "/festas",
 		"children": [
@@ -103,6 +111,7 @@ PORTAL_MODULE_ICON_MAP: dict[str, str] = {
 	"/responsavel": "user",
 	"/portal_transparencia": "file-text",
 	"/festas": "party-popper",
+	"/gestao_tarefas": "list-checks",
 }
 
 SIDEBAR_ICON_MAP: dict[str, str] = {
@@ -135,6 +144,7 @@ SIDEBAR_ICON_MAP: dict[str, str] = {
 	"/festas/todas_festas": "list",
 	"/festas/festa": "party-popper",
 	"/festas/portaria": "scan-qr-code",
+	"/gestao_tarefas/tarefas": "square-check-big",
 }
 
 # Mapping: path -> allowed roles.
@@ -143,6 +153,8 @@ SIDEBAR_ICON_MAP: dict[str, str] = {
 PAGE_ROLES: dict[str, list[str]] = {
 	"/inicio": ["All"],
 	"/403": ["All"],
+	"/gestao_tarefas": ["All"],
+	"/gestao_tarefas/tarefas": ["All"],
 	"/responsavel": ["Responsavel"],
 	"/responsavel/meus_dados": ["Responsavel"],
 	"/responsavel/beneficiarios": ["Responsavel"],

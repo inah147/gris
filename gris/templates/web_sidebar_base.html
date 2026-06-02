@@ -4,7 +4,7 @@
 {% set body_class = ((body_class ~ " ") if body_class else "") ~ "gris-portal-sidebar-page" %}
 {% endif %}
 
-{% set sidebar_shell_asset_version = "20260422-sidebar-shell-25" %}
+{% set sidebar_shell_asset_version = "20260529-sidebar-shell-26" %}
 {% set sidebar_breakpoint = 768 %}
 {% set sidebar_desktop_state_storage_key = "gris-portal-sidebar-desktop-state" %}
 
@@ -32,6 +32,7 @@
 
 {% from "public/design_system/components/generated/sidebar.html.jinja" import sidebar %}
 {% from "public/design_system/components/generated/dropdown-menu.html.jinja" import dropdown_menu %}
+{% from "public/design_system/components/generated/popover.html.jinja" import popover %}
 {% from "public/design_system/components/composed/basecoat-composed.html.jinja" import avatar, breadcrumb %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
@@ -171,6 +172,36 @@ menu=sidebar_menu
 			<nav class="portal-topbar__breadcrumbs" aria-label="Breadcrumb">
 				{{ breadcrumb(portal_breadcrumbs, attrs={"class": "portal-topbar__breadcrumb-list"}) }}
 			</nav>
+			{% endif %}
+			{% if frappe.session.user and frappe.session.user != "Guest" %}
+			<div class="portal-topbar__actions">
+				{% set tarefas_trigger %}
+				<span class="portal-tarefas-trigger__icon">{{ lucide_icon("list-todo", size="sm") }}</span>
+				{% if tarefas_count and tarefas_count > 0 %}
+				<span class="portal-tarefas-trigger__badge" data-tarefas-count>{{ tarefas_count }}</span>
+				{% else %}
+				<span class="portal-tarefas-trigger__badge" data-tarefas-count hidden>0</span>
+				{% endif %}
+				{% endset %}
+				{% call popover(
+					id="portal-tarefas",
+					trigger=tarefas_trigger,
+					main_attrs={"class": "portal-tarefas-popover"},
+					trigger_attrs={"class": "portal-tarefas-trigger btn-ghost", "data-portal-tarefas-trigger": "true", "aria-label": "Tarefas"},
+					popover_attrs={"class": "portal-tarefas-popover__content", "data-side": "bottom", "data-align": "end"}
+				) %}
+					<header class="portal-tarefas-popover__header">
+						<h3 class="portal-tarefas-popover__title">Tarefas dos próximos 7 dias</h3>
+						<p class="portal-tarefas-popover__subtitle">Atrasadas e prazos até daqui a 7 dias.</p>
+					</header>
+					<div id="portal-tarefas-list" class="portal-tarefas-popover__list" aria-live="polite">
+						<div class="portal-tarefas-popover__empty">Carregando...</div>
+					</div>
+					<footer class="portal-tarefas-popover__footer">
+						<a href="/gestao_tarefas/tarefas" class="btn-sm-outline">Abrir minhas tarefas</a>
+					</footer>
+				{% endcall %}
+			</div>
 			{% endif %}
 		</div>
 	</header>
@@ -597,6 +628,108 @@ menu=sidebar_menu
 			document.addEventListener("gris:theme-change", updateThemeToggleState);
 			updateThemeToggleState();
 			syncViewportState();
+		});
+	})();
+</script>
+<script>
+	(function () {
+		const POPOVER_ID = "portal-tarefas-popover";
+		const TRIGGER_SELECTOR = "[data-portal-tarefas-trigger]";
+		const LIST_ID = "portal-tarefas-list";
+		const CACHE_TTL_MS = 60000;
+		const state = { lastFetchAt: 0, loading: false };
+
+		function escapeHtml(value) {
+			return String(value ?? "").replace(/[&<>"']/g, (ch) => (
+				{ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]
+			));
+		}
+
+		function formatPrazo(value) {
+			if (!value) return "Sem prazo";
+			try {
+				const d = new Date(value + "T00:00:00");
+				if (Number.isNaN(d.getTime())) return value;
+				return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+			} catch (e) { return value; }
+		}
+
+		function renderList(tarefas) {
+			const list = document.getElementById(LIST_ID);
+			if (!list) return;
+			if (!tarefas || !tarefas.length) {
+				list.innerHTML = '<div class="portal-tarefas-popover__empty">Nenhuma tarefa pendente para os próximos 7 dias.</div>';
+				return;
+			}
+			list.innerHTML = tarefas
+				.map((t) => {
+					const badge = t.board_badge_label
+						? `<span class="portal-tarefa-mini__badge" data-tipo="${escapeHtml(t.board_badge_tipo || "")}">${escapeHtml(t.board_badge_label)}</span>`
+						: "";
+					const params = new URLSearchParams();
+					if (t.board) params.set("board", t.board);
+					if (t.name) params.set("tarefa", t.name);
+					const href = `/gestao_tarefas/tarefas${params.toString() ? `?${params.toString()}` : ""}`;
+					return `
+						<a class="portal-tarefa-mini" href="${escapeHtml(href)}">
+							<p class="portal-tarefa-mini__title">${escapeHtml(t.descricao || "-")}</p>
+							<div class="portal-tarefa-mini__meta">
+								${badge}
+								<span class="portal-tarefa-mini__status" data-status="${escapeHtml(t.status || "")}">${escapeHtml(t.status || "")}</span>
+								<span>${escapeHtml(formatPrazo(t.prazo))}</span>
+							</div>
+						</a>
+					`;
+				})
+				.join("");
+		}
+
+		function loadTarefas(force) {
+			const now = Date.now();
+			if (!force && now - state.lastFetchAt < CACHE_TTL_MS) return;
+			if (state.loading) return;
+			if (typeof frappe === "undefined" || !frappe.call) return;
+			state.loading = true;
+			frappe.call({
+				method: "gris.api.gestao_de_tarefas.minhas_tarefas.list_proximos_7_dias",
+				callback: (response) => {
+					state.loading = false;
+					state.lastFetchAt = Date.now();
+					const data = response?.message;
+					if (!data || data.ok === false) {
+						const list = document.getElementById(LIST_ID);
+						if (list) list.innerHTML = '<div class="portal-tarefas-popover__empty">Não foi possível carregar.</div>';
+						return;
+					}
+					renderList(data.tarefas || []);
+					const badge = document.querySelector("[data-tarefas-count]");
+					if (badge) {
+						const count = (data.tarefas || []).length;
+						badge.textContent = String(count);
+						badge.hidden = count === 0;
+					}
+				},
+				error: () => {
+					state.loading = false;
+				},
+			});
+		}
+
+		document.addEventListener("DOMContentLoaded", () => {
+			const popover = document.getElementById(POPOVER_ID);
+			const trigger = document.querySelector(TRIGGER_SELECTOR);
+			if (!popover || !trigger) return;
+
+			trigger.addEventListener("click", () => {
+				setTimeout(() => loadTarefas(false), 50);
+			});
+
+			const observer = new MutationObserver(() => {
+				if (popover.getAttribute("aria-hidden") === "false") {
+					loadTarefas(false);
+				}
+			});
+			observer.observe(popover, { attributes: true, attributeFilter: ["aria-hidden"] });
 		});
 	})();
 </script>

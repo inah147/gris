@@ -1,0 +1,730 @@
+/* GRIS Design System — Kanban de Tarefas
+ * Componente reusavel: quadro kanban, cards, dialog de tarefa,
+ * timeline infografica, painel de comentarios e badge de board.
+ * Responsivo de desktop a mobile (full-screen sheet abaixo de 680px).
+ */
+
+/* ── Kanban ───────────────────────────────────────────────── */
+.task-kanban {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(17rem, 1fr);
+    gap: 1rem;
+    overflow-x: auto;
+    align-items: stretch;
+    padding-bottom: 0.75rem;
+    height: min(70vh, 36rem);
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+}
+
+.task-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-height: 0;
+    height: 100%;
+    padding: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background: linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--color-card) 88%, var(--color-muted)) 0%,
+        var(--color-card) 100%
+    );
+    box-shadow: 0 1px 3px color-mix(in oklab, var(--color-primary) 10%, transparent);
+}
+
+.task-column__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.task-column__heading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.task-column__title {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted-foreground);
+}
+
+.task-column__subtitle {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--color-muted-foreground);
+}
+
+.task-column__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.875rem;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: visible;
+    padding: 4px 2px;
+    margin: -4px -2px;
+    transition: background-color 0.15s;
+}
+
+.task-column__body.is-drop-target {
+    background: color-mix(in oklab, var(--color-primary) 8%, transparent);
+    outline: 2px dashed var(--color-primary);
+    outline-offset: -2px;
+    border-radius: var(--radius-xl);
+}
+
+/* ── Card ─────────────────────────────────────────────────── */
+.task-card {
+    background-color: var(--color-card);
+    border: 1px solid color-mix(in oklab, var(--color-border) 76%, transparent);
+    border-radius: var(--radius-xl);
+    padding: 1rem;
+    cursor: pointer;
+    user-select: none;
+    transition:
+        transform 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        background-color 0.18s ease,
+        opacity 0.15s;
+}
+
+.task-card:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in oklab, var(--color-ring) 42%, var(--color-border));
+    box-shadow: 0 16px 32px color-mix(in oklab, var(--color-ring) 10%, transparent);
+    background-color: color-mix(in oklab, var(--color-card) 92%, var(--color-accent));
+}
+
+.task-card.is-dragging {
+    opacity: 0.45;
+    cursor: grabbing;
+    transform: scale(0.97);
+}
+
+.task-card__title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--color-card-foreground);
+    margin: 0 0 0.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.task-card__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.task-card__deadline {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.875rem;
+    color: var(--color-muted-foreground);
+}
+
+.task-card__deadline svg {
+    width: 13px;
+    height: 13px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    flex-shrink: 0;
+}
+
+.task-card__responsavel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: var(--color-primary-foreground);
+    font-size: 0.68rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.task-card__responsavel.is-empty {
+    background: var(--color-muted);
+    color: var(--color-muted-foreground);
+    border: 1px dashed var(--color-border);
+}
+
+/* ── Badge do board (no card e no dialog) ─────────────────── */
+.task-board-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.55rem;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.25;
+    background-color: var(--color-muted);
+    color: var(--color-muted-foreground);
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.task-board-badge[data-tipo="projeto"] {
+    background-color: color-mix(in oklab, var(--color-primary) 12%, transparent);
+    color: var(--color-primary);
+}
+
+.task-board-badge[data-tipo="pessoal"] {
+    background-color: color-mix(in oklab, var(--color-accent) 30%, transparent);
+    color: var(--color-accent-foreground);
+}
+
+.task-card__board-badge {
+    margin: 0 0 0.5rem;
+}
+
+/* ── Dialog ───────────────────────────────────────────────── */
+.task-dialog > div {
+    max-width: min(1160px, 97vw);
+    width: min(1160px, 97vw);
+    height: min(92vh, 900px);
+}
+
+.task-dialog > div > section {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    overflow-x: visible;
+    display: flex;
+    flex-direction: column;
+    /* Sem isso, o overflow-y:auto recorta as bordas inferiores (1px) dos cards
+       internos, que ficavam apagadas/sobrepostas pelo rodape do dialog. */
+    padding-bottom: 0.25rem;
+}
+
+.task-modal-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.82rem;
+    color: var(--color-muted-foreground);
+    margin: 0 0 1rem;
+}
+
+.task-modal-grid {
+    display: grid;
+    grid-template-columns: 1fr 290px;
+    gap: 1.25rem;
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
+}
+.task-modal-grid > * {
+    min-width: 0;
+}
+
+.task-modal-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;
+    min-height: 0;
+}
+
+.task-modal-side {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    background: color-mix(in oklab, var(--color-muted) 60%, var(--color-card));
+    overflow: hidden;
+}
+
+.task-title-block {
+    margin-bottom: 0;
+}
+
+.task-title-editor {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    padding: 0.2rem 0.3rem;
+    border-color: transparent;
+    background: transparent;
+    resize: none;
+    word-break: break-word;
+    transition: border-color 0.15s;
+    min-height: unset;
+}
+
+.task-title-editor::placeholder {
+    color: var(--color-muted-foreground);
+    font-weight: 600;
+}
+
+.task-title-editor:focus {
+    border-color: var(--color-border);
+    background: var(--color-background);
+}
+
+.task-title-editor:disabled,
+.task-title-editor[readonly] {
+    opacity: 1;
+    background: transparent;
+    border-color: transparent;
+    cursor: default;
+}
+
+.task-meta-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+.task-meta-row > * {
+    min-width: 0;
+}
+
+/* ── Campo de observacoes ────────────────────────────────── */
+.task-observacoes-field {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+.task-observacoes-field > label {
+    flex-shrink: 0;
+}
+.task-observacoes-field [data-kanban-observacoes-markdown],
+.task-observacoes-field [data-kanban-observacoes-editor-host] {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+.task-observacoes-field .markdown-editor__toolbar {
+    flex-shrink: 0;
+}
+.task-observacoes-field .markdown-editor__preview {
+    flex-shrink: 0;
+    max-height: 6rem;
+    overflow-y: auto;
+}
+.task-observacoes-field [data-kanban-field="observacoes"] {
+    flex: 1;
+    min-height: 0;
+    resize: none;
+}
+.task-observacoes-field .toastui-editor-defaultUI {
+    flex: 1;
+    min-height: 0;
+}
+
+/* ── Timeline ────────────────────────────────────────────── */
+.task-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.task-timeline__track {
+    display: flex;
+    align-items: center;
+    position: relative;
+    height: 16px;
+}
+
+.task-timeline__line {
+    flex: 1;
+    height: 3px;
+    background: var(--color-border);
+}
+
+.task-timeline__dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--color-primary);
+    background: var(--color-card);
+    flex-shrink: 0;
+}
+
+.task-timeline__dot--start { background: var(--color-primary); }
+.task-timeline__dot--end { background: var(--color-card); }
+.task-timeline__dot.is-late { border-color: var(--color-destructive, hsl(0 84% 60%)); background: var(--color-destructive, hsl(0 84% 60%)); }
+.task-timeline__dot.is-on-time { border-color: var(--color-primary); background: var(--color-primary); }
+
+.task-timeline__labels {
+    display: flex;
+    justify-content: space-between;
+}
+
+.task-timeline__title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-muted-foreground);
+    margin: 0;
+}
+
+.task-timeline__date {
+    font-size: 0.8rem;
+    color: var(--color-foreground);
+    margin: 0;
+}
+
+.task-timeline__delta {
+    font-size: 0.75rem;
+    color: var(--color-muted-foreground);
+    margin: 0;
+}
+
+.task-timeline__delta.is-late { color: var(--color-destructive, hsl(0 84% 60%)); }
+.task-timeline__delta.is-early { color: var(--color-primary); }
+
+/* ── Comentarios ─────────────────────────────────────────── */
+.task-comments-card {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.task-comments-card__header {
+    padding: 1rem 1rem 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.task-comments-card__title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin: 0;
+}
+
+.task-comments-card__subtitle {
+    font-size: 0.78rem;
+    color: var(--color-muted-foreground);
+    margin: 0.2rem 0 0;
+}
+
+.task-comments-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    min-height: 0;
+}
+
+.task-comments-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px dashed var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: 1.5rem;
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--color-muted-foreground);
+    min-height: 120px;
+    margin: 0.75rem 1rem;
+}
+
+.task-comment-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.task-comment-item__row {
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-start;
+}
+
+.task-comment-item__avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: var(--color-primary-foreground);
+    font-size: 0.65rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.task-comment-item__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.task-comment-item__header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.task-comment-item__author {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-foreground);
+}
+
+.task-comment-item__time {
+    font-size: 0.72rem;
+    color: var(--color-muted-foreground);
+}
+
+.task-comment-item__bubble {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 0.45rem 0.65rem;
+}
+
+.task-comment-item__bubble--edit {
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.task-comment-item__content {
+    font-size: 0.82rem;
+    color: var(--color-foreground);
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.task-comment-item__edit-input {
+    width: 100%;
+}
+
+.task-comment-item__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding-left: 0.25rem;
+}
+
+.task-comment-item__actions--edit {
+    margin-top: 0.25rem;
+}
+
+.task-comment-item__action-icon {
+    font-size: 0.75rem;
+    color: var(--color-muted-foreground);
+}
+
+.task-comment-item__action-sep {
+    font-size: 0.65rem;
+    color: var(--color-muted-foreground);
+}
+
+.task-comment-item__action-link {
+    font-size: 0.75rem;
+    color: var(--color-muted-foreground);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.15s;
+}
+
+.task-comment-item__action-link:hover,
+.task-comment-item__action-link--primary {
+    color: var(--color-primary);
+}
+
+.task-comment-item__icon {
+    width: 13px;
+    height: 13px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    vertical-align: middle;
+}
+
+.task-comments-compose {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem 1rem;
+    border-top: 1px solid var(--color-border);
+    background: color-mix(in oklab, var(--color-card) 88%, var(--color-muted));
+    flex-shrink: 0;
+}
+
+.task-comments-compose > button {
+    align-self: flex-end;
+    margin-top: 0.25rem;
+}
+
+/* ── Markdown editor (compartilhado) ─────────────────────── */
+.markdown-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.markdown-editor__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.markdown-editor__preview {
+    min-height: 60px;
+    padding: 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-muted);
+    font-size: 0.85rem;
+    color: var(--color-card-foreground);
+    line-height: 1.5;
+}
+
+.meeting-editor-host {
+    min-height: 120px;
+}
+
+.meeting-editor-host.is-readonly {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+[data-kanban-observacoes-editor-host] .toastui-editor-defaultUI {
+    border-radius: var(--radius);
+    border-color: var(--color-border);
+    /* Clipa os cantos quadrados da toolbar/area de edicao internos para que
+       respeitem o arredondamento do container pai. */
+    overflow: hidden;
+}
+
+/* Garante que a area de edicao (com height: 100%) ocupe toda a altura do card,
+   evitando o fundo preencher so a metade no modo noturno. */
+.task-observacoes-field [data-kanban-observacoes-editor-host] .toastui-editor-main,
+.task-observacoes-field [data-kanban-observacoes-editor-host] .toastui-editor-md-container,
+.task-observacoes-field [data-kanban-observacoes-editor-host] .toastui-editor-ww-container {
+    min-height: 0;
+}
+
+/* ── Estado invalido do prazo ────────────────────────────── */
+[data-kanban-prazo-wrapper].is-invalid .datepicker-trigger,
+[data-kanban-prazo-wrapper].is-invalid .input {
+    border-color: var(--color-destructive, hsl(0 84% 60%));
+    box-shadow: 0 0 0 1px var(--color-destructive, hsl(0 84% 60%));
+    background-color: color-mix(in oklab, var(--color-destructive, hsl(0 84% 60%)) 6%, transparent);
+}
+
+/* ── Helpers reusaveis usados pelo macro ─────────────────── */
+.card-hint {
+    margin: 0 0 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--color-muted-foreground);
+}
+
+.card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.card-actions--end {
+    justify-content: flex-end;
+}
+
+/* ── Botoes de acao do kanban ────────────────────────────── */
+.kanban-tarefas-actions {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+}
+
+.kanban-tarefas-actions .btn-sm-primary,
+.kanban-tarefas-actions .btn-sm-outline {
+    min-height: 36px;
+}
+
+/* ── Responsivo ──────────────────────────────────────────── */
+@media (max-width: 900px) {
+    .task-kanban {
+        grid-auto-columns: minmax(15rem, 80vw);
+        height: min(70vh, 30rem);
+    }
+}
+
+@media (max-width: 768px) {
+    .task-modal-grid {
+        grid-template-columns: 1fr;
+        flex: none;
+        min-height: unset;
+    }
+    .task-meta-row {
+        grid-template-columns: 1fr;
+    }
+    .task-title-editor {
+        font-size: 1.3rem;
+    }
+    .task-observacoes-field {
+        min-height: 8rem;
+    }
+    .task-modal-side {
+        min-height: 18rem;
+    }
+    .kanban-tarefas-actions {
+        justify-content: stretch;
+    }
+    .kanban-tarefas-actions .btn-sm-primary,
+    .kanban-tarefas-actions .btn-sm-outline {
+        flex: 1 1 auto;
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 680px) {
+    /* Dialog full-screen como bottom sheet */
+    .task-dialog > div {
+        max-width: 100vw;
+        width: 100vw;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+}
+
+@media (max-width: 640px) {
+    .task-kanban {
+        grid-auto-columns: minmax(14rem, 78vw);
+    }
+}

@@ -15,7 +15,7 @@
   "status",
     "link_pasta_google_drive",
   "reunioes",
-  "tarefas",
+  "board_tarefas",
   "termo_de_abertura_tab",
   "termo_abertura_section",
   "data_de_inicio",
@@ -84,10 +84,12 @@
    "options": "Reuniao de Projeto"
   },
   {
-   "fieldname": "tarefas",
-   "fieldtype": "Table",
-   "label": "Tarefas",
-   "options": "Gestao de Tarefas"
+   "fieldname": "board_tarefas",
+   "fieldtype": "Link",
+   "label": "Board de tarefas",
+   "no_copy": 1,
+   "options": "Board",
+   "read_only": 1
   },
   {
    "fieldname": "termo_de_abertura_tab",

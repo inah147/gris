@@ -232,12 +232,25 @@ def _select_items_responsaveis() -> list[dict]:
 	]
 
 
+def _resolver_nome_coord_geral(doc) -> str:
+	"""Nome do coordenador geral, com fallback ao link para festas salvas antes
+	do campo `nome_coord_geral` passar a ser materializado no controller."""
+	if doc.nome_coord_geral:
+		return doc.nome_coord_geral
+	if doc.tipo_coord_geral == "Responsavel" and doc.responsavel_coord_geral:
+		return frappe.db.get_value("Responsavel", doc.responsavel_coord_geral, "nome_completo") or ""
+	if doc.tipo_coord_geral == "Associado" and doc.associado_coord_geral:
+		return frappe.db.get_value("Associado", doc.associado_coord_geral, "nome_completo") or ""
+	return ""
+
+
 def build_festa_payload(festa_name: str) -> dict:
 	"""Monta o payload completo de uma Festa para hidratar a página ou refresh via API."""
 	doc = frappe.get_doc("Festa", festa_name)
 
 	payload: dict = {
 		"festa_name": doc.name,
+		"festa_board_name": doc.board_tarefas or "",
 		"nome_festa": doc.nome_festa or doc.name,
 		"status": doc.status or "",
 		"data_formatada": format_date(doc.data, "dd/MM/yyyy") if doc.data else "",
@@ -247,7 +260,7 @@ def build_festa_payload(festa_name: str) -> dict:
 		"tipo_coord_geral": doc.tipo_coord_geral or "",
 		"responsavel_coord_geral": doc.responsavel_coord_geral or "",
 		"associado_coord_geral": doc.associado_coord_geral or "",
-		"nome_coord_geral": doc.nome_coord_geral or "",
+		"nome_coord_geral": _resolver_nome_coord_geral(doc),
 		"expectativa_min": doc.expectativa_publico_min or 0,
 		"expectativa_intermediario": doc.expectativa_publico_intermediario or 0,
 		"expectativa_max": doc.expectativa_publico_max or 0,
@@ -393,6 +406,11 @@ def get_context(context):
 
 	roles = set(frappe.get_roles(frappe.session.user))
 	context.can_edit = bool(roles & ALLOWED_ROLES)
+
+	context.current_user = frappe.session.user
+	context.current_user_full_name = (
+		frappe.db.get_value("User", frappe.session.user, "full_name") or frappe.session.user
+	)
 
 	for key, value in payload.items():
 		setattr(context, key, value)

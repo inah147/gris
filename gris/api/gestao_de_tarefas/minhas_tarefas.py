@@ -359,22 +359,11 @@ def atualizar_status(tarefa_name: str, status: str) -> dict[str, Any]:
 def _can_user_access_tarefa(tarefa, user: str) -> bool:
 	if (tarefa.responsavel or "") == user:
 		return True
-	board = frappe.db.get_value(
-		"Board",
-		tarefa.board,
-		["referencia_doctype", "referencia_nome"],
-		as_dict=True,
-	)
-	if not board or (board.get("referencia_doctype") or "") != "Projeto":
+	if not tarefa.board:
 		return False
-	projeto_name = board.get("referencia_nome")
-	if not projeto_name:
-		return False
-	try:
-		projeto = frappe.get_doc("Projeto", projeto_name)
-	except Exception:
-		return False
-	return bool(projeto.has_permission("read"))
+	# Delega ao sistema de permissao de Board (board_has_permission), que cobre
+	# uniformemente quadros de Projeto, Festa e soltos via `usuarios_autorizados`.
+	return bool(frappe.has_permission("Board", doc=tarefa.board, ptype="read", user=user))
 
 
 def _serialize_comentarios(tarefa_name: str) -> list[dict[str, Any]]:

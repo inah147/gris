@@ -21,6 +21,7 @@ class Festa(Document):
 		self._cache_cenario_antes()
 		self._normalizar_coordenador_geral()
 		self._validar_coordenador_geral()
+		self._preencher_dados_coordenador_geral()
 		self._validar_data_limite_vendas()
 		self._validar_portaria_completa()
 		self._sincronizar_receitas_e_despesas()
@@ -30,6 +31,7 @@ class Festa(Document):
 		self._gerar_lista_de_compras()
 
 	def after_insert(self):
+		_ensure_festa_board(self)
 		_garantir_area_portaria(self.name)
 		_enqueue_festa_drive_folder_creation(self.name)
 
@@ -75,6 +77,38 @@ class Festa(Document):
 
 		referencia = self.data or date.today()
 		_calcular_idade(getdate(nascimento), getdate(referencia))
+
+	def _preencher_dados_coordenador_geral(self):
+		"""Persiste nome/email/telefone do coordenador geral a partir do link selecionado.
+
+		Os campos `nome_coord_geral`, `email_coord_geral` e `telefone_coord_geral`
+		são read-only e usados pela página de portal; precisam ser materializados
+		aqui para sobreviverem ao recarregamento da página.
+		"""
+		nome = email = telefone = ""
+
+		if self.tipo_coord_geral == "Responsavel" and self.responsavel_coord_geral:
+			dados = frappe.db.get_value(
+				"Responsavel",
+				self.responsavel_coord_geral,
+				["nome_completo", "email", "celular"],
+				as_dict=True,
+			)
+			if dados:
+				nome, email, telefone = dados.nome_completo, dados.email, dados.celular
+		elif self.tipo_coord_geral == "Associado" and self.associado_coord_geral:
+			dados = frappe.db.get_value(
+				"Associado",
+				self.associado_coord_geral,
+				["nome_completo", "email", "telefone"],
+				as_dict=True,
+			)
+			if dados:
+				nome, email, telefone = dados.nome_completo, dados.email, dados.telefone
+
+		self.nome_coord_geral = nome or ""
+		self.email_coord_geral = email or ""
+		self.telefone_coord_geral = telefone or ""
 
 	# ---------- Data limite de vendas ----------
 
@@ -439,6 +473,30 @@ def _calcular_idade(nascimento: date, referencia: date) -> int:
 
 def _zeros() -> dict[str, float]:
 	return {"min": 0.0, "intermediario": 0.0, "max": 0.0}
+
+
+def _ensure_festa_board(doc: Document) -> None:
+	"""Cria automaticamente o Board de tarefas vinculado a festa recem-criada.
+
+	Usa ignore_permissions porque after_insert pode ser disparado em fluxos
+	(portal, importacao) em que o usuario nao tem permissao direta de criar
+	Board, mas tem permissao para criar Festa. O Board.before_insert ja
+	popula `usuarios_autorizados` com o coordenador geral da festa.
+	"""
+	if doc.get("board_tarefas"):
+		return
+
+	board = frappe.get_doc(
+		{
+			"doctype": "Board",
+			"titulo": f"Tarefas — {doc.nome_festa or doc.name}",
+			"referencia_doctype": "Festa",
+			"referencia_nome": doc.name,
+		}
+	).insert(ignore_permissions=True)
+
+	frappe.db.set_value("Festa", doc.name, "board_tarefas", board.name, update_modified=False)
+	doc.board_tarefas = board.name
 
 
 def _garantir_area_portaria(festa_name: str) -> None:

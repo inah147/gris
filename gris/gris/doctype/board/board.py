@@ -25,6 +25,8 @@ class Board(Document):
 
 		if referencia_doctype == "Projeto" and (self.referencia_nome or "").strip():
 			self._popular_envolvidos_projeto(self.referencia_nome)
+		elif referencia_doctype == "Festa" and (self.referencia_nome or "").strip():
+			self._popular_envolvidos_festa(self.referencia_nome)
 
 	def _validate_referencia(self) -> None:
 		referencia_doctype = (self.referencia_doctype or "").strip()
@@ -88,3 +90,9 @@ class Board(Document):
 			email = frappe.db.get_value("Associado", coordenador, "email")
 			if email and frappe.db.exists("User", email):
 				self._adicionar_usuario(email, nivel_acesso="Gerenciar")
+
+	def _popular_envolvidos_festa(self, festa_name: str) -> None:
+		from gris.gestao_de_tarefas.board_sync_festa import coletar_usuarios_da_festa
+
+		for user, nivel in coletar_usuarios_da_festa(festa_name).items():
+			self._adicionar_usuario(user, nivel_acesso=nivel)

@@ -684,3 +684,106 @@
 	border-radius: var(--radius-sm, 0.25rem);
 	border: 1px solid var(--border);
 }
+
+/* ─── Fechamento ─────────────────────────────────────────────────────────── */
+
+.festa-fechamento-details {
+	width: 100%;
+}
+
+/* Cabeçalho clicável do card (ícone + título + dica + chevron). */
+.festa-fechamento-summary {
+	display: flex;
+	align-items: center;
+	gap: 0.875rem;
+	width: 100%;
+	padding: 0;
+	cursor: pointer;
+	list-style: none;
+}
+
+.festa-fechamento-summary::-webkit-details-marker {
+	display: none;
+}
+
+.festa-fechamento-summary__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: 2.5rem;
+	height: 2.5rem;
+	border-radius: var(--radius-md, 0.5rem);
+	background: var(--muted, #f4f4f5);
+	color: var(--foreground);
+}
+
+.festa-fechamento-summary__text {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	flex: 1;
+	min-width: 0;
+}
+
+.festa-fechamento-summary__title {
+	font-size: 1rem;
+	font-weight: 600;
+	color: var(--foreground);
+}
+
+.festa-fechamento-summary__hint {
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+}
+
+.festa-fechamento-summary__chevron {
+	display: inline-flex;
+	flex-shrink: 0;
+	color: var(--muted-foreground);
+	transition: transform 0.15s ease;
+}
+
+.festa-fechamento-details[open] .festa-fechamento-summary__chevron {
+	transform: rotate(90deg);
+}
+
+.festa-fechamento-body {
+	padding-top: 1.25rem;
+}
+
+.festa-fechamento-section-actions {
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: 0.75rem;
+}
+
+/* Linha expandida de itens da barraca: remove padding extra da célula host. */
+#fechamento-barracas-container [data-barraca-detail] > td {
+	padding: 0.5rem 0.75rem;
+	background: var(--muted, #f4f4f5);
+}
+
+/* Linha de total da tabela de convites do fechamento. */
+#fechamento-convites-container .festa-table .festa-fechamento-total-row td {
+	font-weight: 600;
+	background: var(--muted, #f4f4f5);
+	border-top: 1px solid var(--border);
+}
+
+/* Resumo: tabela de 2 colunas (item × valor). */
+.festa-resumo-table td.festa-resumo-value {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.festa-resumo-table .festa-resumo-group td {
+	text-align: left;
+	padding-top: 0.875rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--muted-foreground);
+	border-bottom: 1px solid var(--border);
+}

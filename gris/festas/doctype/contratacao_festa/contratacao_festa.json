@@ -9,10 +9,15 @@
   "festa",
   "nome_item",
   "area",
+  "previsto",
   "totais_section",
   "valor_total_contratacao",
   "cotacoes_section",
-  "cotacoes"
+  "cotacoes",
+  "realizado_section",
+  "valor_total_realizado",
+  "fornecedor_realizado",
+  "observacoes_realizado"
  ],
  "fields": [
   {
@@ -38,6 +43,12 @@
    "options": "Area da Festa"
   },
   {
+   "default": "1",
+   "fieldname": "previsto",
+   "fieldtype": "Check",
+   "label": "Previsto"
+  },
+  {
    "fieldname": "totais_section",
    "fieldtype": "Section Break",
    "label": "Totais"
@@ -58,6 +69,26 @@
    "fieldtype": "Table",
    "label": "Cotacoes",
    "options": "Cotacao Contratacao Festa"
+  },
+  {
+   "fieldname": "realizado_section",
+   "fieldtype": "Section Break",
+   "label": "Realizado"
+  },
+  {
+   "fieldname": "valor_total_realizado",
+   "fieldtype": "Currency",
+   "label": "Valor Total Realizado"
+  },
+  {
+   "fieldname": "fornecedor_realizado",
+   "fieldtype": "Data",
+   "label": "Fornecedor Realizado"
+  },
+  {
+   "fieldname": "observacoes_realizado",
+   "fieldtype": "Small Text",
+   "label": "Observações"
   }
  ],
  "grid_page_length": 50,

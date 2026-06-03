@@ -592,6 +592,115 @@ window._festaData = {
 ) }}
 {% endset %}
 
+{# ─── Tab: Fechamento ─── #}
+{% set tab_fechamento %}
+<div class="festa-tab-content">
+
+	{# Seção — Compras #}
+	{% call card(attrs={"class": "festa-card festa-fechamento-card"}) %}
+	<details class="festa-fechamento-details">
+		<summary class="festa-fechamento-summary">
+			<span class="festa-fechamento-summary__icon">{{ lucide_icon("shopping-cart", size="md") }}</span>
+			<span class="festa-fechamento-summary__text">
+				<span class="festa-fechamento-summary__title">Compras</span>
+				<span class="festa-fechamento-summary__hint">Clique na seção para expandir e acessar o realizado das compras.</span>
+			</span>
+			<span class="festa-fechamento-summary__chevron">{{ lucide_icon("chevron-right", size="sm") }}</span>
+		</summary>
+		<div class="festa-fechamento-body">
+			{% if can_edit %}
+			<div class="festa-fechamento-section-actions">
+				<button type="button" class="btn-sm-outline" data-action="add-compra-sem-previsao">
+					{{ lucide_icon("plus", size="sm") }}
+					<span>Adicionar compra sem previsão</span>
+				</button>
+			</div>
+			{% endif %}
+			<div id="fechamento-compras-container"></div>
+		</div>
+	</details>
+	{% endcall %}
+
+	{# Seção — Contratações #}
+	{% call card(attrs={"class": "festa-card festa-fechamento-card"}) %}
+	<details class="festa-fechamento-details">
+		<summary class="festa-fechamento-summary">
+			<span class="festa-fechamento-summary__icon">{{ lucide_icon("handshake", size="md") }}</span>
+			<span class="festa-fechamento-summary__text">
+				<span class="festa-fechamento-summary__title">Contratações</span>
+				<span class="festa-fechamento-summary__hint">Clique na seção para expandir e acessar o realizado das contratações.</span>
+			</span>
+			<span class="festa-fechamento-summary__chevron">{{ lucide_icon("chevron-right", size="sm") }}</span>
+		</summary>
+		<div class="festa-fechamento-body">
+			{% if can_edit %}
+			<div class="festa-fechamento-section-actions">
+				<button type="button" class="btn-sm-outline" data-action="add-contratacao-sem-previsao">
+					{{ lucide_icon("plus", size="sm") }}
+					<span>Adicionar contratação sem previsão</span>
+				</button>
+			</div>
+			{% endif %}
+			<div id="fechamento-contratacoes-container"></div>
+		</div>
+	</details>
+	{% endcall %}
+
+	{# Seção — Barracas #}
+	{% call card(attrs={"class": "festa-card festa-fechamento-card"}) %}
+	<details class="festa-fechamento-details">
+		<summary class="festa-fechamento-summary">
+			<span class="festa-fechamento-summary__icon">{{ lucide_icon("store", size="md") }}</span>
+			<span class="festa-fechamento-summary__text">
+				<span class="festa-fechamento-summary__title">Barracas</span>
+				<span class="festa-fechamento-summary__hint">Clique na seção para expandir e acessar o realizado das barracas.</span>
+			</span>
+			<span class="festa-fechamento-summary__chevron">{{ lucide_icon("chevron-right", size="sm") }}</span>
+		</summary>
+		<div class="festa-fechamento-body">
+			<div id="fechamento-barracas-container"></div>
+		</div>
+	</details>
+	{% endcall %}
+
+	{# Seção — Convites #}
+	{% call card(attrs={"class": "festa-card festa-fechamento-card"}) %}
+	<details class="festa-fechamento-details">
+		<summary class="festa-fechamento-summary">
+			<span class="festa-fechamento-summary__icon">{{ lucide_icon("ticket", size="md") }}</span>
+			<span class="festa-fechamento-summary__text">
+				<span class="festa-fechamento-summary__title">Convites</span>
+				<span class="festa-fechamento-summary__hint">Convites pagos por tipo, com quantidade e valor arrecadado.</span>
+			</span>
+			<span class="festa-fechamento-summary__chevron">{{ lucide_icon("chevron-right", size="sm") }}</span>
+		</summary>
+		<div class="festa-fechamento-body">
+			<div id="fechamento-convites-container"></div>
+		</div>
+	</details>
+	{% endcall %}
+
+	{# Seção — Resumo #}
+	{% call card(attrs={"class": "festa-card festa-fechamento-card"}) %}
+	<details class="festa-fechamento-details" id="fechamento-resumo-details">
+		<summary class="festa-fechamento-summary">
+			<span class="festa-fechamento-summary__icon">{{ lucide_icon("chart-column", size="md") }}</span>
+			<span class="festa-fechamento-summary__text">
+				<span class="festa-fechamento-summary__title">Resumo</span>
+				<span class="festa-fechamento-summary__hint">Entradas, saídas e resultado do fechamento da festa.</span>
+			</span>
+			<span class="festa-fechamento-summary__chevron">{{ lucide_icon("chevron-right", size="sm") }}</span>
+		</summary>
+		<div class="festa-fechamento-body">
+			<div id="chart-fechamento-resumo" class="festa-convites-chart"></div>
+			<div id="fechamento-resumo-container"></div>
+		</div>
+	</details>
+	{% endcall %}
+
+</div>
+{% endset %}
+
 {# ─── Tabs ─── #}
 {{ tabs(
 	id="festa-tabs",
@@ -601,6 +710,7 @@ window._festaData = {
 		{"id": "compras", "tab": "Compras", "panel": tab_compras},
 		{"id": "contratacoes", "tab": "Contratações", "panel": tab_contratacoes},
 		{"id": "orcamento", "tab": "Orçamento", "panel": tab_orcamento},
+		{"id": "fechamento", "tab": "Fechamento", "panel": tab_fechamento},
 		{"id": "gestao-tarefas", "tab": "Gestão de Tarefas", "panel": tab_gestao_tarefas},
 		{"id": "convites", "tab": "Convites", "panel": tab_convites}
 	]
@@ -1457,6 +1567,148 @@ window._festaData = {
 	<footer>
 		<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Cancelar</button>
 		<button type="button" class="btn-primary" id="btn-contratacao-salvar">Salvar</button>
+	</footer>
+	<button type="button" aria-label="Fechar dialog" onclick="this.closest('dialog').close()">
+		<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+	</button>
+</div>
+</dialog>
+
+{# Dialog — Fechamento: detalhes/realizado de Compra #}
+<dialog
+	id="dialog-compra-fechamento"
+	class="dialog dialog-edit-large"
+	aria-labelledby="dialog-compra-fechamento-title"
+	onclick="if (event.target === this) this.close()"
+>
+<div>
+	<header>
+		<h2 id="dialog-compra-fechamento-title">Detalhes da compra</h2>
+	</header>
+	<section class="festa-dialog-edit-body">
+		{# Identificação — apenas no modo "sem previsão" #}
+		<div class="festa-compra-section" data-fechamento-block="identificacao" hidden>
+			<div class="festa-dialog-form festa-compra-form-grid">
+				{% call field(label="Nome do item *") %}
+					{{ input(attrs={"id": "fechamento-compra-nome-item", "autocomplete": "off", "placeholder": "Ex.: Gelo, descartáveis…"}) }}
+				{% endcall %}
+				{% call field(label="Área") %}
+					{{ select(id="fechamento-compra-area", name="fechamento-compra-area", items=areas_items or [], is_combobox=true, search_placeholder="Buscar área…", trigger_attrs={"class": "w-full"}) }}
+				{% endcall %}
+				{% call field(label="Usado em produtos") %}
+					{{ switch(name="fechamento-compra-usado-produtos", attrs={"id": "fechamento-compra-usado-produtos"}) }}
+				{% endcall %}
+			</div>
+			<div class="festa-compra-section" id="fechamento-compra-usos-section" hidden>
+				<div class="festa-compra-section__header">
+					<h3 class="festa-equipe-title">Uso em produtos</h3>
+					<button type="button" class="btn-sm-outline" id="btn-fechamento-compra-add-uso">
+						{{ lucide_icon("plus", size="sm") }}
+						<span>Adicionar uso</span>
+					</button>
+				</div>
+				<div id="fechamento-compra-usos-container"></div>
+			</div>
+		</div>
+
+		{# Orçamento — somente leitura #}
+		<div class="festa-compra-section" data-fechamento-block="orcamento" hidden>
+			<h3 class="festa-equipe-title">Orçamento</h3>
+			<dl class="festa-info-grid">
+				<div><dt>Valor individual</dt><dd id="fechamento-compra-orc-individual">—</dd></div>
+				<div><dt>Quantidade (cenário)</dt><dd id="fechamento-compra-orc-qtd">—</dd></div>
+				<div><dt>Valor total</dt><dd id="fechamento-compra-orc-total">—</dd></div>
+				<div><dt>Fornecedor</dt><dd id="fechamento-compra-orc-fornecedor">—</dd></div>
+			</dl>
+		</div>
+
+		{# Realizado — inputs #}
+		<div class="festa-compra-section" data-fechamento-block="realizado">
+			<h3 class="festa-equipe-title">Realizado</h3>
+			<div class="festa-dialog-form festa-compra-form-grid">
+				{% call field(label="Valor individual") %}
+					{{ input(attrs={"id": "fechamento-compra-real-individual", "type": "number", "min": "0", "step": "0.01", "placeholder": "R$ 0,00"}) }}
+				{% endcall %}
+				{% call field(label="Unidade de medida") %}
+					{{ select(id="fechamento-compra-real-unidade", name="fechamento-compra-real-unidade", items=unidades_items or [], selected="unidade", trigger_attrs={"class": "w-full"}) }}
+				{% endcall %}
+				{% call field(label="Quantidade") %}
+					{{ input(attrs={"id": "fechamento-compra-real-qtd", "type": "number", "min": "0", "step": "0.001", "placeholder": "0"}) }}
+				{% endcall %}
+				{% call field(label="Valor total") %}
+					{{ input(attrs={"id": "fechamento-compra-real-total", "type": "number", "min": "0", "step": "0.01", "placeholder": "R$ 0,00"}) }}
+				{% endcall %}
+				{% call field(label="Fornecedor") %}
+					{{ input(attrs={"id": "fechamento-compra-real-fornecedor", "autocomplete": "off", "placeholder": "Fornecedor"}) }}
+				{% endcall %}
+			</div>
+			{% call field(label="Observações") %}
+				<textarea id="fechamento-compra-real-obs" class="input" rows="2" placeholder="Observações (opcional)"></textarea>
+			{% endcall %}
+		</div>
+	</section>
+	<footer>
+		<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Cancelar</button>
+		<button type="button" class="btn-primary" id="btn-fechamento-compra-salvar">Salvar</button>
+	</footer>
+	<button type="button" aria-label="Fechar dialog" onclick="this.closest('dialog').close()">
+		<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+	</button>
+</div>
+</dialog>
+
+{# Dialog — Fechamento: detalhes/realizado de Contratação #}
+<dialog
+	id="dialog-contratacao-fechamento"
+	class="dialog dialog-edit-large"
+	aria-labelledby="dialog-contratacao-fechamento-title"
+	onclick="if (event.target === this) this.close()"
+>
+<div>
+	<header>
+		<h2 id="dialog-contratacao-fechamento-title">Detalhes da contratação</h2>
+	</header>
+	<section class="festa-dialog-edit-body">
+		{# Identificação — apenas no modo "sem previsão" #}
+		<div class="festa-compra-section" data-fechamento-block="identificacao" hidden>
+			<div class="festa-dialog-form festa-compra-form-grid">
+				{% call field(label="Nome do item *") %}
+					{{ input(attrs={"id": "fechamento-contratacao-nome-item", "autocomplete": "off", "placeholder": "Ex.: Som, segurança…"}) }}
+				{% endcall %}
+				{% call field(label="Área") %}
+					{{ select(id="fechamento-contratacao-area", name="fechamento-contratacao-area", items=areas_items or [], is_combobox=true, search_placeholder="Buscar área…", trigger_attrs={"class": "w-full"}) }}
+				{% endcall %}
+			</div>
+		</div>
+
+		{# Orçamento — somente leitura #}
+		<div class="festa-compra-section" data-fechamento-block="orcamento" hidden>
+			<h3 class="festa-equipe-title">Orçamento</h3>
+			<dl class="festa-info-grid">
+				<div><dt>Valor total</dt><dd id="fechamento-contratacao-orc-total">—</dd></div>
+				<div><dt>Fornecedor</dt><dd id="fechamento-contratacao-orc-fornecedor">—</dd></div>
+			</dl>
+		</div>
+
+		{# Realizado — inputs #}
+		<div class="festa-compra-section" data-fechamento-block="realizado">
+			<h3 class="festa-equipe-title">Realizado</h3>
+			<div class="festa-dialog-form festa-compra-form-grid">
+				{% call field(label="Valor total") %}
+					{{ input(attrs={"id": "fechamento-contratacao-real-total", "type": "number", "min": "0", "step": "0.01", "placeholder": "R$ 0,00"}) }}
+				{% endcall %}
+				{% call field(label="Fornecedor") %}
+					{{ input(attrs={"id": "fechamento-contratacao-real-fornecedor", "autocomplete": "off", "placeholder": "Fornecedor"}) }}
+				{% endcall %}
+			</div>
+			{% call field(label="Observações") %}
+				<textarea id="fechamento-contratacao-real-obs" class="input" rows="2" placeholder="Observações (opcional)"></textarea>
+			{% endcall %}
+		</div>
+	</section>
+	<footer>
+		<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Cancelar</button>
+		<button type="button" class="btn-primary" id="btn-fechamento-contratacao-salvar">Salvar</button>
 	</footer>
 	<button type="button" aria-label="Fechar dialog" onclick="this.closest('dialog').close()">
 		<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>

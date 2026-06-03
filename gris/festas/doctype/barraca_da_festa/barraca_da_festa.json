@@ -17,7 +17,9 @@
   "email_coord",
   "telefone_coord",
   "equipe_section",
-  "equipe"
+  "equipe",
+  "fechamento_section",
+  "valor_arrecadado_realizado_real"
  ],
  "fields": [
   {
@@ -99,6 +101,16 @@
    "fieldtype": "Table",
    "label": "Equipe",
    "options": "Membro Equipe Festa"
+  },
+  {
+   "fieldname": "fechamento_section",
+   "fieldtype": "Section Break",
+   "label": "Fechamento"
+  },
+  {
+   "fieldname": "valor_arrecadado_realizado_real",
+   "fieldtype": "Currency",
+   "label": "Valor Arrecadado Realizado Real"
   }
  ],
  "grid_page_length": 50,

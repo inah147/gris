@@ -9,6 +9,7 @@
   "festa",
   "nome_item",
   "area",
+  "previsto",
   "varia_com_publico",
   "usado_em_produtos",
   "unidade_compra",
@@ -35,7 +36,14 @@
   "cotacoes_section",
   "cotacoes",
   "usos_section",
-  "usos_em_produto"
+  "usos_em_produto",
+  "realizado_section",
+  "valor_individual_realizado",
+  "unidade_medida_realizado",
+  "quantidade_realizada",
+  "valor_total_realizado",
+  "fornecedor_realizado",
+  "observacoes_realizado"
  ],
  "fields": [
   {
@@ -59,6 +67,12 @@
    "in_list_view": 1,
    "label": "Area",
    "options": "Area da Festa"
+  },
+  {
+   "default": "1",
+   "fieldname": "previsto",
+   "fieldtype": "Check",
+   "label": "Previsto"
   },
   {
    "default": "0",
@@ -221,6 +235,44 @@
    "fieldtype": "Table",
    "label": "Uso em Produtos",
    "options": "Uso em Produto Festa"
+  },
+  {
+   "fieldname": "realizado_section",
+   "fieldtype": "Section Break",
+   "label": "Realizado"
+  },
+  {
+   "fieldname": "valor_individual_realizado",
+   "fieldtype": "Currency",
+   "label": "Valor Individual Realizado"
+  },
+  {
+   "default": "unidade",
+   "fieldname": "unidade_medida_realizado",
+   "fieldtype": "Select",
+   "label": "Unidade de Medida Realizada",
+   "options": "unidade\nkg\ng\nlitro\nml"
+  },
+  {
+   "fieldname": "quantidade_realizada",
+   "fieldtype": "Float",
+   "label": "Quantidade Realizada",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "valor_total_realizado",
+   "fieldtype": "Currency",
+   "label": "Valor Total Realizado"
+  },
+  {
+   "fieldname": "fornecedor_realizado",
+   "fieldtype": "Data",
+   "label": "Fornecedor Realizado"
+  },
+  {
+   "fieldname": "observacoes_realizado",
+   "fieldtype": "Small Text",
+   "label": "Observações"
   }
  ],
  "grid_page_length": 50,

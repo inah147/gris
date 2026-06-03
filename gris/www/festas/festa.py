@@ -82,6 +82,7 @@ def _hydrate_barraca(doc) -> dict:
 		"nome_coord": doc.nome_coord or "",
 		"email_coord": doc.email_coord or "",
 		"telefone_coord": doc.telefone_coord or "",
+		"valor_arrecadado_realizado_real": flt(doc.valor_arrecadado_realizado_real),
 		"equipe": [_hydrate_membro(m) for m in (doc.equipe or [])],
 	}
 
@@ -112,6 +113,8 @@ def _hydrate_produto(doc) -> dict:
 		"custo_total_max": flt(doc.custo_total_max),
 		"receita_total_max": flt(doc.receita_total_max),
 		"superavit_max": flt(doc.superavit_max),
+		"qtd_realizada_vendas": flt(doc.qtd_realizada_vendas),
+		"valor_total_arrecadado": flt(doc.valor_total_arrecadado),
 	}
 
 
@@ -147,6 +150,7 @@ def _hydrate_compra(doc, produto_labels: dict[str, str]) -> dict:
 		"area": doc.area or "",
 		"nome_area": nome_area,
 		"nome_item": doc.nome_item or "",
+		"previsto": bool(doc.previsto),
 		"varia_com_publico": bool(doc.varia_com_publico),
 		"usado_em_produtos": bool(doc.usado_em_produtos),
 		"unidade_compra": doc.unidade_compra or "unidade",
@@ -154,6 +158,13 @@ def _hydrate_compra(doc, produto_labels: dict[str, str]) -> dict:
 		"quantidade_compra_final": flt(doc.quantidade_compra_final),
 		"cotacao_escolhida_valor": flt(doc.cotacao_escolhida_valor),
 		"valor_total_compra": flt(doc.valor_total_compra),
+		# Realizado
+		"valor_individual_realizado": flt(doc.valor_individual_realizado),
+		"unidade_medida_realizado": doc.unidade_medida_realizado or "unidade",
+		"quantidade_realizada": flt(doc.quantidade_realizada),
+		"valor_total_realizado": flt(doc.valor_total_realizado),
+		"fornecedor_realizado": doc.fornecedor_realizado or "",
+		"observacoes_realizado": doc.observacoes_realizado or "",
 		# Cenários de compra
 		"qtd_sugerida_min": flt(doc.qtd_sugerida_min),
 		"valor_total_min": flt(doc.valor_total_min),
@@ -192,7 +203,11 @@ def _hydrate_contratacao(doc) -> dict:
 		"area": doc.area or "",
 		"nome_area": nome_area,
 		"nome_item": doc.nome_item or "",
+		"previsto": bool(doc.previsto),
 		"valor_total_contratacao": flt(doc.valor_total_contratacao),
+		"valor_total_realizado": flt(doc.valor_total_realizado),
+		"fornecedor_realizado": doc.fornecedor_realizado or "",
+		"observacoes_realizado": doc.observacoes_realizado or "",
 		"cotacoes": [_hydrate_cotacao_contratacao(c) for c in (doc.cotacoes or [])],
 	}
 

@@ -156,6 +156,8 @@
 		refreshSelectOptions("edit-produto-barraca", barracasItems);
 		refreshSelectOptions("compra-area", areasItems);
 		refreshSelectOptions("contratacao-area", areasItems);
+		refreshSelectOptions("fechamento-compra-area", areasItems);
+		refreshSelectOptions("fechamento-contratacao-area", areasItems);
 		refreshSelectOptions("add-barraca-area", areasItemsObrigatorio);
 		refreshSelectOptions("edit-barraca-area", areasItemsObrigatorio);
 	}
@@ -207,6 +209,7 @@
 				renderComprasTable();
 				renderContratacoesTable();
 				renderOrcamentoTab();
+				renderFechamentoTab();
 				var precoMin = document.getElementById("preco-min-convite");
 				var precoSug = document.getElementById("preco-sugerido-convite");
 				if (precoMin) precoMin.value = fmtCurrency(window._festaData.precoMinConvite);
@@ -305,6 +308,41 @@
 		}).join("");
 		var cls = "select" + (extraClass ? " " + extraClass : "");
 		return '<select class="' + cls + '" data-field="' + escHtml(dataField) + '">' + opts + "</select>";
+	}
+
+	// Gera o markup de um select do design system (Basecoat) para uso dinâmico
+	// em tabelas/formulários. O valor selecionado fica no input hidden, que
+	// carrega o `data-field` para que a leitura via `[data-field=...] .value`
+	// continue funcionando como nos selects nativos. O Basecoat inicializa o
+	// componente automaticamente (MutationObserver) ou via notifyDesignSystem().
+	var _basecoatSelectSeq = 0;
+	function renderBasecoatSelect(dataField, items, selectedValue) {
+		_basecoatSelectSeq += 1;
+		var id = "ds-sel-" + dataField + "-" + _basecoatSelectSeq;
+		var selected = String(selectedValue == null ? "" : selectedValue);
+		var matched = null;
+		for (var i = 0; i < items.length; i++) {
+			if (String(items[i].value == null ? "" : items[i].value) === selected) { matched = items[i]; break; }
+		}
+		var def = matched || items[0] || null;
+		var defValue = def ? String(def.value == null ? "" : def.value) : "";
+		var defLabel = def ? (def.label || defValue) : "";
+		var optionsHtml = items.map(function (item, idx) {
+			var value = item.value == null ? "" : String(item.value);
+			var sel = (matched && value === selected) ? ' aria-selected="true"' : "";
+			return '<div id="' + id + '-items-' + idx + '" role="option" data-value="' + escHtml(value) + '"' + sel + '>' + escHtml(item.label || value) + '</div>';
+		}).join("");
+		return '<div id="' + id + '" class="select">'
+			+ '<button type="button" class="btn-outline w-full" id="' + id + '-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="' + id + '-listbox">'
+			+ '<span class="truncate">' + escHtml(defLabel) + '</span>'
+			+ lucideSvg("chevron-down", "sm", "text-muted-foreground opacity-50 shrink-0")
+			+ '</button>'
+			+ '<div id="' + id + '-popover" data-popover aria-hidden="true">'
+			+ '<div role="listbox" id="' + id + '-listbox" aria-orientation="vertical" aria-labelledby="' + id + '-trigger">'
+			+ optionsHtml
+			+ '</div></div>'
+			+ '<input type="hidden" name="' + id + '-value" value="' + escHtml(defValue) + '" data-field="' + escHtml(dataField) + '">'
+			+ '</div>';
 	}
 
 	// ─── Equipe form helpers ─────────────────────────────────────────────────────
@@ -1295,6 +1333,28 @@
 		return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(val || 0);
 	}
 
+	// Converte uma string de moeda BRL (ex.: "R$ 1.234,56") de volta para número.
+	function parseCurrencyBR(value) {
+		if (value == null) return 0;
+		if (typeof value === "number") return value;
+		var s = String(value).trim().replace(/[^\d,.-]/g, "");
+		if (!s) return 0;
+		if (s.indexOf(",") !== -1) {
+			s = s.replace(/\./g, "").replace(",", ".");
+		}
+		var n = parseFloat(s);
+		return isNaN(n) ? 0 : n;
+	}
+
+	// SVG inline de um ícone Lucide a partir do sprite do design system.
+	function lucideSvg(name, size, extraClass) {
+		return '<svg class="ds-lucide ds-lucide--' + (size || "sm")
+			+ (extraClass ? " " + extraClass : "")
+			+ '" aria-hidden="true" focusable="false" viewBox="0 0 24 24">'
+			+ '<use href="/assets/gris/design_system/icons/lucide/sprite.svg#' + name + '"></use>'
+			+ '</svg>';
+	}
+
 	// ─── Calcula margem de lucro no frontend ──────────────────────────────────────
 
 	function calcMargemLucro(precoCusto, precoVenda) {
@@ -1735,7 +1795,9 @@
 		var container = document.getElementById("compras-table-container");
 		if (!container) return;
 
-		if (!compras.length) {
+		// Aba de planejamento mostra apenas itens previstos; não previstos só no Fechamento.
+		var comprasVisiveis = compras.filter(function (c) { return c.previsto !== false; });
+		if (!comprasVisiveis.length) {
 			container.innerHTML = `
 <section class="empty">
 	<div class="empty-media">
@@ -1748,6 +1810,7 @@
 		}
 
 		var rows = compras.map(function (c, i) {
+			if (c.previsto === false) return "";
 			var qtd = Number(c.quantidade_compra_final) || 0;
 			var valor = Number(c.valor_total_compra) || 0;
 			var nCot = (c.cotacoes || []).length;
@@ -2175,7 +2238,9 @@
 		var container = document.getElementById("contratacoes-table-container");
 		if (!container) return;
 
-		if (!contratacoes.length) {
+		// Aba de planejamento mostra apenas itens previstos; não previstos só no Fechamento.
+		var contratacoesVisiveis = contratacoes.filter(function (c) { return c.previsto !== false; });
+		if (!contratacoesVisiveis.length) {
 			container.innerHTML = `
 <section class="empty">
 	<div class="empty-media">
@@ -2188,6 +2253,7 @@
 		}
 
 		var rows = contratacoes.map(function (c, i) {
+			if (c.previsto === false) return "";
 			var valor = Number(c.valor_total_contratacao) || 0;
 			var nCot = (c.cotacoes || []).length;
 			return `
@@ -2546,6 +2612,7 @@
 	let chartBarrasInstance = null;
 	let chartLinhaInstance = null;
 	let chartConvitesPorRamoInstance = null;
+	let chartFechamentoResumoInstance = null;
 	const RAMOS_ORDEM = ["Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro", "Diretoria"];
 	let echartsLoading = null;
 	let opcaoDraft = null;
@@ -3509,6 +3576,666 @@
 		closeOpcaoForm();
 	}
 
+	// ─── Fechamento ──────────────────────────────────────────────────────────────
+
+	var fechamentoCompraUsos = [];
+
+	function fechamentoCenarioKey() {
+		return { "Mínimo": "min", "Intermediário": "intermediario", "Máximo": "max" }[cenarioSimulacao] || "intermediario";
+	}
+
+	function fechamentoSetText(id, text) {
+		var el = document.getElementById(id);
+		if (el) el.textContent = text;
+	}
+
+	function fechamentoEmpty(msg) {
+		return '<p class="text-sm text-muted-foreground festa-equipe-empty">' + escHtml(msg) + '</p>';
+	}
+
+	function renderFechamentoTab() {
+		renderFechamentoCompras();
+		renderFechamentoContratacoes();
+		renderFechamentoBarracas();
+		renderFechamentoConvites();
+		renderFechamentoResumo();
+	}
+
+	// ── Compras ──
+
+	function renderFechamentoCompras() {
+		var container = document.getElementById("fechamento-compras-container");
+		if (!container) return;
+		if (!compras.length) { container.innerHTML = fechamentoEmpty("Nenhuma compra cadastrada."); return; }
+
+		var key = fechamentoCenarioKey();
+		var rows = compras.map(function (c, i) {
+			var tag = c.previsto === false ? ' <span class="badge">Sem previsão</span>' : "";
+			var detalhes = canEdit
+				? `<td class="festa-table-actions"><button type="button" class="btn-sm-outline" data-fechamento-compra="${i}">Detalhes</button></td>`
+				: "";
+			// Itens previstos: o valor cotado vem do cenário ativo (mesmo dado
+			// exibido no diálogo de detalhes). Sem previsão não tem orçamento.
+			var valorCotado = c.previsto !== false
+				? (Number(c["valor_total_" + key]) || 0)
+				: (Number(c.valor_total_compra) || 0);
+			return `
+<tr>
+	<td>${escHtml(c.nome_item)}${tag}</td>
+	<td>${fmtNum(c.quantidade_compra_final)} ${escHtml(c.unidade_compra || "")}</td>
+	<td>${fmtCurrency(valorCotado)}</td>
+	<td>${fmtCurrency(c.valor_total_realizado)}</td>
+	${detalhes}
+</tr>`;
+		}).join("");
+
+		var actionTh = canEdit ? "<th></th>" : "";
+		container.innerHTML = `<div class="festa-table-scroll"><table class="festa-table"><thead><tr><th>Item</th><th>Quantidade</th><th>Valor cotado</th><th>Valor gasto</th>${actionTh}</tr></thead><tbody>${rows}</tbody></table></div>`;
+		notifyDesignSystem();
+		if (!canEdit) return;
+		container.querySelectorAll("[data-fechamento-compra]").forEach(function (btn) {
+			btn.addEventListener("click", function () { openCompraFechamentoDialog(parseInt(btn.dataset.fechamentoCompra, 10)); });
+		});
+	}
+
+	function setRealizadoCompra(c) {
+		document.getElementById("fechamento-compra-real-individual").value = c.valor_individual_realizado || "";
+		setSelectValue("fechamento-compra-real-unidade", c.unidade_medida_realizado || "unidade", c.unidade_medida_realizado || "unidade");
+		document.getElementById("fechamento-compra-real-qtd").value = c.quantidade_realizada || "";
+		document.getElementById("fechamento-compra-real-total").value = c.valor_total_realizado || "";
+		document.getElementById("fechamento-compra-real-fornecedor").value = c.fornecedor_realizado || "";
+		document.getElementById("fechamento-compra-real-obs").value = c.observacoes_realizado || "";
+	}
+
+	function openCompraFechamentoDialog(idx) {
+		var dlg = document.getElementById("dialog-compra-fechamento");
+		if (!dlg) return;
+		dlg.dataset.compraIdx = String(idx);
+		var titleEl = document.getElementById("dialog-compra-fechamento-title");
+		var blocoIdent = dlg.querySelector('[data-fechamento-block="identificacao"]');
+		var blocoOrc = dlg.querySelector('[data-fechamento-block="orcamento"]');
+
+		if (idx < 0) {
+			titleEl.textContent = "Adicionar compra sem previsão";
+			blocoIdent.hidden = false;
+			blocoOrc.hidden = true;
+			document.getElementById("fechamento-compra-nome-item").value = "";
+			setSelectValue("fechamento-compra-area", "", selectLabelFor(areasItems, "", "Sem área"));
+			setSwitchChecked("fechamento-compra-usado-produtos", false);
+			fechamentoCompraUsos = [];
+			renderFechamentoCompraUsos();
+			updateFechamentoCompraUsosVisibility();
+			setRealizadoCompra({});
+		} else {
+			var compra = compras[idx];
+			titleEl.textContent = "Detalhes da compra — " + (compra.nome_item || "");
+			blocoIdent.hidden = true;
+			if (compra.previsto !== false) {
+				blocoOrc.hidden = false;
+				var key = fechamentoCenarioKey();
+				var escolhida = (compra.cotacoes || []).find(function (x) { return x.escolhida; });
+				var valIndividual = escolhida && Number(escolhida.quantidade) > 0 && !escolhida.doacao
+					? (Number(escolhida.valor) || 0) / Number(escolhida.quantidade) : 0;
+				fechamentoSetText("fechamento-compra-orc-individual",
+					escolhida ? fmtCurrency(valIndividual) + " / " + (escolhida.unidade_medida || "unidade") : "—");
+				fechamentoSetText("fechamento-compra-orc-qtd",
+					fmtNum(compra["qtd_sugerida_" + key]) + " " + (compra.unidade_compra || ""));
+				fechamentoSetText("fechamento-compra-orc-total", fmtCurrency(compra["valor_total_" + key]));
+				fechamentoSetText("fechamento-compra-orc-fornecedor", escolhida ? (escolhida.fornecedor || "—") : "—");
+			} else {
+				blocoOrc.hidden = true;
+			}
+			setRealizadoCompra(compra);
+		}
+		dlg.showModal();
+	}
+
+	function readFechamentoCompraUsos() {
+		fechamentoCompraUsos = [];
+		document.querySelectorAll("#fechamento-compra-usos-container [data-fechamento-uso-row]").forEach(function (row) {
+			fechamentoCompraUsos.push({
+				produto: (row.querySelector("[data-field='produto']") || {}).value || "",
+				quantidade_usada: parseFloat(row.querySelector("[data-field='quantidade_usada']").value || "0") || 0,
+				unidade_medida_uso: (row.querySelector("[data-field='unidade_medida_uso']") || {}).value || "unidade",
+			});
+		});
+	}
+
+	function renderFechamentoCompraUsos() {
+		var container = document.getElementById("fechamento-compra-usos-container");
+		if (!container) return;
+		if (!fechamentoCompraUsos.length) {
+			container.innerHTML = '<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhum produto vinculado.</p>';
+			return;
+		}
+		var rows = fechamentoCompraUsos.map(function (u, idx) {
+			return `
+<tr data-fechamento-uso-row>
+	<td>${renderBasecoatSelect("produto", produtosItems, u.produto || "")}</td>
+	<td><input class="input festa-compact-input" data-field="quantidade_usada" type="number" min="0" step="0.001" value="${escHtml(u.quantidade_usada || "")}"></td>
+	<td>${renderBasecoatSelect("unidade_medida_uso", unidadesItems, u.unidade_medida_uso || "unidade")}</td>
+	<td class="festa-table-actions"><button type="button" class="btn-sm-ghost festa-actions-btn" data-fechamento-remove-uso="${idx}" aria-label="Remover uso">×</button></td>
+</tr>`;
+		}).join("");
+		container.innerHTML = `<div class="festa-table-scroll"><table class="festa-table festa-edit-table"><thead><tr><th>Produto</th><th>Quantidade usada</th><th>Unidade</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+		notifyDesignSystem();
+		container.querySelectorAll("[data-fechamento-remove-uso]").forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				readFechamentoCompraUsos();
+				fechamentoCompraUsos.splice(parseInt(btn.dataset.fechamentoRemoveUso, 10), 1);
+				renderFechamentoCompraUsos();
+			});
+		});
+	}
+
+	function updateFechamentoCompraUsosVisibility() {
+		var sec = document.getElementById("fechamento-compra-usos-section");
+		if (sec) sec.hidden = !getSwitchChecked("fechamento-compra-usado-produtos");
+	}
+
+	function collectCompraRealizado() {
+		return {
+			valor_individual_realizado: parseFloat(document.getElementById("fechamento-compra-real-individual").value) || 0,
+			unidade_medida_realizado: getSelectValue("fechamento-compra-real-unidade") || "unidade",
+			quantidade_realizada: parseFloat(document.getElementById("fechamento-compra-real-qtd").value) || 0,
+			valor_total_realizado: parseFloat(document.getElementById("fechamento-compra-real-total").value) || 0,
+			fornecedor_realizado: (document.getElementById("fechamento-compra-real-fornecedor").value || "").trim(),
+			observacoes_realizado: (document.getElementById("fechamento-compra-real-obs").value || "").trim(),
+		};
+	}
+
+	function saveCompraFechamento() {
+		var dlg = document.getElementById("dialog-compra-fechamento");
+		var idx = parseInt(dlg.dataset.compraIdx, 10);
+		var dados = collectCompraRealizado();
+		var request;
+		if (idx < 0) {
+			var nome = (document.getElementById("fechamento-compra-nome-item").value || "").trim();
+			if (!nome) { toast("Informe o nome do item.", "error"); return; }
+			readFechamentoCompraUsos();
+			dados.nome_item = nome;
+			dados.area = getSelectValue("fechamento-compra-area");
+			dados.usado_em_produtos = getSwitchChecked("fechamento-compra-usado-produtos");
+			dados.usos_em_produto = dados.usado_em_produtos ? fechamentoCompraUsos : [];
+			request = api("gris.api.festas.criar_compra_sem_previsao", { festa_name: festaName, dados_json: JSON.stringify(dados) });
+		} else {
+			request = api("gris.api.festas.salvar_realizado_compra", { compra_name: compras[idx].name, dados_json: JSON.stringify(dados) });
+		}
+		var btn = document.getElementById("btn-fechamento-compra-salvar");
+		btn.disabled = true;
+		request
+			.then(function () { dlg.close(); return refreshFestaData(); })
+			.then(function () { toast("Fechamento salvo.", "success"); })
+			.catch(function (err) { toast(err.message || "Erro ao salvar.", "error"); })
+			.finally(function () { btn.disabled = false; });
+	}
+
+	// ── Contratações ──
+
+	function renderFechamentoContratacoes() {
+		var container = document.getElementById("fechamento-contratacoes-container");
+		if (!container) return;
+		if (!contratacoes.length) { container.innerHTML = fechamentoEmpty("Nenhuma contratação cadastrada."); return; }
+
+		var rows = contratacoes.map(function (c, i) {
+			var tag = c.previsto === false ? ' <span class="badge">Sem previsão</span>' : "";
+			var detalhes = canEdit
+				? `<td class="festa-table-actions"><button type="button" class="btn-sm-outline" data-fechamento-contratacao="${i}">Detalhes</button></td>`
+				: "";
+			return `
+<tr>
+	<td>${escHtml(c.nome_item)}${tag}</td>
+	<td>${fmtCurrency(c.valor_total_contratacao)}</td>
+	<td>${fmtCurrency(c.valor_total_realizado)}</td>
+	${detalhes}
+</tr>`;
+		}).join("");
+
+		var actionTh = canEdit ? "<th></th>" : "";
+		container.innerHTML = `<div class="festa-table-scroll"><table class="festa-table"><thead><tr><th>Item</th><th>Valor cotado</th><th>Valor gasto</th>${actionTh}</tr></thead><tbody>${rows}</tbody></table></div>`;
+		notifyDesignSystem();
+		if (!canEdit) return;
+		container.querySelectorAll("[data-fechamento-contratacao]").forEach(function (btn) {
+			btn.addEventListener("click", function () { openContratacaoFechamentoDialog(parseInt(btn.dataset.fechamentoContratacao, 10)); });
+		});
+	}
+
+	function setRealizadoContratacao(c) {
+		document.getElementById("fechamento-contratacao-real-total").value = c.valor_total_realizado || "";
+		document.getElementById("fechamento-contratacao-real-fornecedor").value = c.fornecedor_realizado || "";
+		document.getElementById("fechamento-contratacao-real-obs").value = c.observacoes_realizado || "";
+	}
+
+	function openContratacaoFechamentoDialog(idx) {
+		var dlg = document.getElementById("dialog-contratacao-fechamento");
+		if (!dlg) return;
+		dlg.dataset.contratacaoIdx = String(idx);
+		var titleEl = document.getElementById("dialog-contratacao-fechamento-title");
+		var blocoIdent = dlg.querySelector('[data-fechamento-block="identificacao"]');
+		var blocoOrc = dlg.querySelector('[data-fechamento-block="orcamento"]');
+
+		if (idx < 0) {
+			titleEl.textContent = "Adicionar contratação sem previsão";
+			blocoIdent.hidden = false;
+			blocoOrc.hidden = true;
+			document.getElementById("fechamento-contratacao-nome-item").value = "";
+			setSelectValue("fechamento-contratacao-area", "", selectLabelFor(areasItems, "", "Sem área"));
+			setRealizadoContratacao({});
+		} else {
+			var c = contratacoes[idx];
+			titleEl.textContent = "Detalhes da contratação — " + (c.nome_item || "");
+			blocoIdent.hidden = true;
+			if (c.previsto !== false) {
+				blocoOrc.hidden = false;
+				var escolhida = (c.cotacoes || []).find(function (x) { return x.escolhida; });
+				fechamentoSetText("fechamento-contratacao-orc-total", fmtCurrency(c.valor_total_contratacao));
+				fechamentoSetText("fechamento-contratacao-orc-fornecedor", escolhida ? (escolhida.fornecedor || "—") : "—");
+			} else {
+				blocoOrc.hidden = true;
+			}
+			setRealizadoContratacao(c);
+		}
+		dlg.showModal();
+	}
+
+	function saveContratacaoFechamento() {
+		var dlg = document.getElementById("dialog-contratacao-fechamento");
+		var idx = parseInt(dlg.dataset.contratacaoIdx, 10);
+		var dados = {
+			valor_total_realizado: parseFloat(document.getElementById("fechamento-contratacao-real-total").value) || 0,
+			fornecedor_realizado: (document.getElementById("fechamento-contratacao-real-fornecedor").value || "").trim(),
+			observacoes_realizado: (document.getElementById("fechamento-contratacao-real-obs").value || "").trim(),
+		};
+		var request;
+		if (idx < 0) {
+			var nome = (document.getElementById("fechamento-contratacao-nome-item").value || "").trim();
+			if (!nome) { toast("Informe o nome do item.", "error"); return; }
+			dados.nome_item = nome;
+			dados.area = getSelectValue("fechamento-contratacao-area");
+			request = api("gris.api.festas.criar_contratacao_sem_previsao", { festa_name: festaName, dados_json: JSON.stringify(dados) });
+		} else {
+			request = api("gris.api.festas.salvar_realizado_contratacao", { contratacao_name: contratacoes[idx].name, dados_json: JSON.stringify(dados) });
+		}
+		var btn = document.getElementById("btn-fechamento-contratacao-salvar");
+		btn.disabled = true;
+		request
+			.then(function () { dlg.close(); return refreshFestaData(); })
+			.then(function () { toast("Fechamento salvo.", "success"); })
+			.catch(function (err) { toast(err.message || "Erro ao salvar.", "error"); })
+			.finally(function () { btn.disabled = false; });
+	}
+
+	// ── Barracas ──
+
+	function renderBarracaItens(produtosBarraca, bi, key) {
+		if (!produtosBarraca.length) {
+			return '<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhum produto nesta barraca.</p>';
+		}
+		var itens = produtosBarraca.map(function (p, j) {
+			var preco = Number(p.preco_venda) || 0;
+			var qtdEsp = Number(p["qtd_" + key]) || 0;
+			var qtdReal = Number(p.qtd_realizada_vendas) || 0;
+			var qtdInput = canEdit
+				? `<input class="input festa-compact-input" type="number" min="0" step="0.001" data-item-barraca="${bi}" data-item-idx="${j}" data-item-produto="${escHtml(p.name)}" data-item-preco="${preco}" value="${escHtml(p.qtd_realizada_vendas || "")}">`
+				: fmtNum(qtdReal);
+			return `
+<tr>
+	<td>${escHtml(p.nome_produto)}</td>
+	<td>${fmtCurrency(preco)}</td>
+	<td>${fmtNum(qtdEsp)}</td>
+	<td>${fmtCurrency(qtdEsp * preco)}</td>
+	<td>${qtdInput}</td>
+	<td data-item-total="${bi}-${j}">${fmtCurrency(qtdReal * preco)}</td>
+</tr>`;
+		}).join("");
+		return `<table class="festa-table festa-edit-table"><thead><tr><th>Item</th><th>Valor individual</th><th>Qtd esperada</th><th>Total esperado</th><th>Qtd realizada</th><th>Total arrecadado</th></tr></thead><tbody>${itens}</tbody></table>`;
+	}
+
+	function renderFechamentoBarracas() {
+		var container = document.getElementById("fechamento-barracas-container");
+		if (!container) return;
+		if (!barracas.length) { container.innerHTML = fechamentoEmpty("Nenhuma barraca cadastrada."); return; }
+
+		var key = fechamentoCenarioKey();
+		var espMap = {};
+		(window._festaData.receitasPorBarraca || []).forEach(function (r) { espMap[r.name] = r["esperado_" + key] || 0; });
+
+		var rows = barracas.map(function (b, i) {
+			var produtosBarraca = produtos.filter(function (p) { return p.barraca === b.name; });
+			var realizadoCalc = produtosBarraca.reduce(function (s, p) { return s + (Number(p.valor_total_arrecadado) || 0); }, 0);
+			var realVal = Number(b.valor_arrecadado_realizado_real) || 0;
+			var realInput = canEdit
+				? `<input class="input festa-compact-input" type="text" inputmode="decimal" data-barraca-real="${i}" value="${realVal ? escHtml(fmtCurrency(realVal)) : ""}">`
+				: fmtCurrency(b.valor_arrecadado_realizado_real);
+			var salvarBtn = canEdit ? `<button type="button" class="btn-sm-outline" data-barraca-salvar="${i}">Salvar</button>` : "";
+			return `
+<tr>
+	<td><button type="button" class="btn-sm-ghost festa-actions-btn" data-barraca-toggle="${i}" aria-expanded="false" aria-label="Expandir itens">${lucideSvg("chevron-right")}</button></td>
+	<td>${escHtml(b.nome_barraca)}</td>
+	<td>${fmtCurrency(espMap[b.name] || 0)}</td>
+	<td data-barraca-realizado="${i}">${fmtCurrency(realizadoCalc)}</td>
+	<td>${realInput}</td>
+	<td class="festa-table-actions">${salvarBtn}</td>
+</tr>
+<tr data-barraca-detail="${i}" hidden><td colspan="6">${renderBarracaItens(produtosBarraca, i, key)}</td></tr>`;
+		}).join("");
+
+		container.innerHTML = `<div class="festa-table-scroll"><table class="festa-table"><thead><tr><th></th><th>Barraca</th><th>Arrecadação esperada</th><th>Arrecadação realizada</th><th>Realizado real</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+		notifyDesignSystem();
+		wireFechamentoBarracas(container);
+	}
+
+	function wireFechamentoBarracas(container) {
+		container.querySelectorAll("[data-barraca-toggle]").forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				var bi = btn.dataset.barracaToggle;
+				var detail = container.querySelector('[data-barraca-detail="' + bi + '"]');
+				if (!detail) return;
+				var open = detail.hidden;
+				detail.hidden = !open;
+				btn.setAttribute("aria-expanded", open ? "true" : "false");
+				btn.innerHTML = open ? lucideSvg("chevron-down") : lucideSvg("chevron-right");
+			});
+		});
+		if (!canEdit) return;
+
+		// "Realizado real": campo editável formatado como moeda (BRL). Mostra o
+		// valor cru durante a edição e reformata como moeda ao perder o foco.
+		container.querySelectorAll("[data-barraca-real]").forEach(function (inp) {
+			inp.addEventListener("focus", function () {
+				var n = parseCurrencyBR(inp.value);
+				inp.value = n ? String(n).replace(".", ",") : "";
+				inp.select();
+			});
+			inp.addEventListener("blur", function () {
+				var n = parseCurrencyBR(inp.value);
+				inp.value = n ? fmtCurrency(n) : "";
+			});
+		});
+
+		container.querySelectorAll("[data-item-barraca]").forEach(function (inp) {
+			inp.addEventListener("input", function () {
+				var bi = inp.dataset.itemBarraca;
+				var preco = Number(inp.dataset.itemPreco) || 0;
+				var totalCell = container.querySelector('[data-item-total="' + bi + "-" + inp.dataset.itemIdx + '"]');
+				if (totalCell) totalCell.textContent = fmtCurrency((parseFloat(inp.value) || 0) * preco);
+				var sum = 0;
+				container.querySelectorAll('[data-item-barraca="' + bi + '"]').forEach(function (o) {
+					sum += (parseFloat(o.value) || 0) * (Number(o.dataset.itemPreco) || 0);
+				});
+				var realizadoCell = container.querySelector('[data-barraca-realizado="' + bi + '"]');
+				if (realizadoCell) realizadoCell.textContent = fmtCurrency(sum);
+			});
+		});
+
+		container.querySelectorAll("[data-barraca-salvar]").forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				var bi = btn.dataset.barracaSalvar;
+				var barraca = barracas[parseInt(bi, 10)];
+				var itens = [];
+				container.querySelectorAll('[data-item-barraca="' + bi + '"]').forEach(function (o) {
+					itens.push({ produto: o.dataset.itemProduto, qtd_realizada: parseFloat(o.value) || 0 });
+				});
+				var realEl = container.querySelector('[data-barraca-real="' + bi + '"]');
+				var dados = { valor_realizado_real: realEl ? parseCurrencyBR(realEl.value) : 0, itens: itens };
+				btn.disabled = true;
+				api("gris.api.festas.salvar_fechamento_barraca", { festa_name: festaName, barraca_name: barraca.name, dados_json: JSON.stringify(dados) })
+					.then(function () { return refreshFestaData(); })
+					.then(function () { toast("Barraca salva.", "success"); })
+					.catch(function (err) { toast(err.message || "Erro ao salvar barraca.", "error"); })
+					.finally(function () { btn.disabled = false; });
+			});
+		});
+	}
+
+	// ── Convites (resumo de fechamento) ──
+
+	function renderFechamentoConvites() {
+		var container = document.getElementById("fechamento-convites-container");
+		if (!container) return;
+
+		var opcoes = convitesDashboard.opcoes || [];
+		var totais = convitesDashboard.totais || {};
+		var qtdMap = totais.qtd_por_opcao || {};
+		var valMap = totais.valor_por_opcao || {};
+		var doacoes = Number(totais.total_doacoes_valor || 0);
+
+		if (!opcoes.length && doacoes <= 0) {
+			container.innerHTML = fechamentoEmpty("Nenhum convite cadastrado.");
+			return;
+		}
+
+		var totalQtd = 0;
+		var totalVal = 0;
+		var rows = opcoes.map(function (o) {
+			var qtd = Number(qtdMap[o.name] || 0);
+			var val = Number(valMap[o.name] || 0);
+			totalQtd += qtd;
+			totalVal += val;
+			return `
+<tr>
+	<td>${escHtml(o.nome_convite || o.name)}</td>
+	<td>${fmtNum(qtd)}</td>
+	<td>${fmtCurrency(val)}</td>
+</tr>`;
+		}).join("");
+
+		var totalRow = `
+<tr class="festa-fechamento-total-row">
+	<td>Total</td>
+	<td>${fmtNum(totalQtd)}</td>
+	<td>${fmtCurrency(totalVal)}</td>
+</tr>`;
+
+		var doacoesRow = doacoes > 0 ? `
+<tr>
+	<td>Doações</td>
+	<td>—</td>
+	<td>${fmtCurrency(doacoes)}</td>
+</tr>` : "";
+
+		container.innerHTML = `<div class="festa-table-scroll"><table class="festa-table"><thead><tr><th>Tipo de convite</th><th>Qtd. (Pago)</th><th>Valor arrecadado</th></tr></thead><tbody>${rows}${totalRow}${doacoesRow}</tbody></table></div>`;
+		notifyDesignSystem();
+	}
+
+	// ── Resumo (entradas × saídas × resultado) ──
+
+	function computeFechamentoResumo() {
+		var totais = convitesDashboard.totais || {};
+		var valMap = totais.valor_por_opcao || {};
+		var convitesTotal = (convitesDashboard.opcoes || []).reduce(function (s, o) {
+			return s + Number(valMap[o.name] || 0);
+		}, 0);
+		var doacoes = Number(totais.total_doacoes_valor || 0);
+		var barracasLinhas = barracas.map(function (b) {
+			return { label: b.nome_barraca || b.name, valor: Number(b.valor_arrecadado_realizado_real) || 0 };
+		});
+		var barracasTotal = barracasLinhas.reduce(function (s, r) { return s + r.valor; }, 0);
+		var comprasTotal = compras.reduce(function (s, c) { return s + (Number(c.valor_total_realizado) || 0); }, 0);
+		var contratacoesTotal = contratacoes.reduce(function (s, c) { return s + (Number(c.valor_total_realizado) || 0); }, 0);
+		var entradas = convitesTotal + doacoes + barracasTotal;
+		var saidas = comprasTotal + contratacoesTotal;
+		return {
+			convitesTotal: convitesTotal,
+			doacoes: doacoes,
+			barracasLinhas: barracasLinhas,
+			comprasTotal: comprasTotal,
+			contratacoesTotal: contratacoesTotal,
+			entradas: entradas,
+			saidas: saidas,
+			resultado: entradas - saidas,
+		};
+	}
+
+	function fechamentoResumoGroup(label) {
+		return '<tr class="festa-resumo-group"><td colspan="2">' + escHtml(label) + "</td></tr>";
+	}
+
+	function fechamentoResumoRow(label, valor, opts) {
+		opts = opts || {};
+		var rowCls = opts.total ? ' class="festa-cenarios-row--total"' : "";
+		var cellCls = opts.cellClass || "";
+		if (opts.negativeIsDanger) {
+			cellCls = Number(valor) < 0 ? "festa-cenarios-cell--danger" : "festa-cenarios-cell--success";
+		}
+		var cellAttr = ' class="festa-resumo-value' + (cellCls ? " " + cellCls : "") + '"';
+		return "<tr" + rowCls + '><td class="festa-cenarios-label">' + escHtml(label) +
+			"</td><td" + cellAttr + ">" + fmtCurrency(valor) + "</td></tr>";
+	}
+
+	function renderFechamentoResumo() {
+		var container = document.getElementById("fechamento-resumo-container");
+		if (!container) return;
+		var r = computeFechamentoResumo();
+
+		var entradasRows =
+			fechamentoResumoRow("Convites", r.convitesTotal) +
+			(r.doacoes > 0 ? fechamentoResumoRow("Doações", r.doacoes) : "") +
+			r.barracasLinhas.map(function (b) { return fechamentoResumoRow(b.label, b.valor); }).join("");
+
+		var html = '<table class="festa-cenarios-table festa-resumo-table"><tbody>';
+		html += fechamentoResumoGroup("Entradas");
+		html += entradasRows;
+		html += fechamentoResumoRow("Total de entradas", r.entradas, { total: true, cellClass: "festa-cenarios-cell--success" });
+		html += fechamentoResumoGroup("Saídas");
+		html += fechamentoResumoRow("Compras", r.comprasTotal);
+		html += fechamentoResumoRow("Contratações", r.contratacoesTotal);
+		html += fechamentoResumoRow("Total de saídas", r.saidas, { total: true, cellClass: "festa-cenarios-cell--danger" });
+		html += fechamentoResumoRow("Resultado", r.resultado, { total: true, negativeIsDanger: true });
+		html += "</tbody></table>";
+		container.innerHTML = html;
+
+		// Mantém o gráfico em sincronia quando já estiver inicializado/visível.
+		if (chartFechamentoResumoInstance) renderFechamentoWaterfall();
+	}
+
+	function renderFechamentoWaterfall() {
+		var el = document.getElementById("chart-fechamento-resumo");
+		if (!el) return;
+		ensureECharts().then(function () {
+			if (!chartFechamentoResumoInstance) {
+				chartFechamentoResumoInstance = window.echarts.init(el);
+				window.addEventListener("resize", function () {
+					if (chartFechamentoResumoInstance) chartFechamentoResumoInstance.resize();
+				});
+			}
+			var r = computeFechamentoResumo();
+			var E = r.entradas, S = r.saidas, R = r.resultado;
+			var cats = ["Entradas", "Saídas", "Resultado"];
+			var COR_ENTRADA = "#009E73";
+			var COR_SAIDA = "#D55E00";
+			var cores = [COR_ENTRADA, COR_SAIDA, R >= 0 ? COR_ENTRADA : COR_SAIDA];
+			// Cada barra é desenhada como retângulo flutuante [início, fim] via custom
+			// series — robusto inclusive quando o Resultado é negativo.
+			// value = [índice da categoria, início, fim, valor exibido]
+			var dados = [
+				{ value: [0, 0, E, E] },
+				{ value: [1, E, R, S] },
+				{ value: [2, 0, R, R] },
+			];
+
+			chartFechamentoResumoInstance.setOption({
+				aria: { enabled: true },
+				tooltip: {
+					trigger: "item",
+					formatter: function (p) {
+						var i = p.value[0];
+						return cats[i] + "<br/>" + fmtMoeda(p.value[3]);
+					},
+				},
+				grid: { left: 16, right: 24, top: 32, bottom: 48, containLabel: true },
+				xAxis: { type: "category", data: cats },
+				yAxis: {
+					type: "value",
+					name: "Valor (R$)",
+					nameLocation: "middle",
+					nameGap: 56,
+					nameRotate: 90,
+					nameTextStyle: { fontSize: 12 },
+					axisLabel: {
+						formatter: function (v) { return "R$ " + Number(v).toLocaleString("pt-BR"); },
+					},
+				},
+				series: [{
+					type: "custom",
+					encode: { x: 0, y: [1, 2] },
+					data: dados,
+					renderItem: function (params, api) {
+						var catIndex = api.value(0);
+						var pStart = api.coord([catIndex, api.value(1)]);
+						var pEnd = api.coord([catIndex, api.value(2)]);
+						var bandWidth = api.size([1, 0])[0];
+						var width = Math.min(bandWidth * 0.5, 64);
+						var yTop = Math.min(pStart[1], pEnd[1]);
+						var height = Math.abs(pStart[1] - pEnd[1]);
+						return {
+							type: "group",
+							children: [
+								{
+									type: "rect",
+									shape: { x: pStart[0] - width / 2, y: yTop, width: width, height: height, r: [4, 4, 0, 0] },
+									style: { fill: cores[catIndex] },
+								},
+								{
+									type: "text",
+									style: {
+										text: fmtMoeda(api.value(3)),
+										x: pStart[0],
+										y: yTop - 6,
+										textAlign: "center",
+										textVerticalAlign: "bottom",
+										fontSize: 12,
+										fontWeight: 600,
+										fill: "#1f2937",
+									},
+								},
+							],
+						};
+					},
+				}],
+			}, true);
+		}).catch(function (err) {
+			toast(err.message || "Erro ao carregar gráficos.", "error");
+		});
+	}
+
+	function initFechamento() {
+		renderFechamentoTab();
+
+		// O gráfico do Resumo só é renderizado quando a seção é aberta — assim ele
+		// nasce com largura correta (a aba Fechamento inicia oculta).
+		var resumoDetails = document.getElementById("fechamento-resumo-details");
+		if (resumoDetails) {
+			resumoDetails.addEventListener("toggle", function () {
+				if (resumoDetails.open) renderFechamentoWaterfall();
+			});
+		}
+
+		if (!canEdit) return;
+
+		document.querySelectorAll("[data-action='add-compra-sem-previsao']").forEach(function (btn) {
+			btn.addEventListener("click", function () { openCompraFechamentoDialog(-1); });
+		});
+		document.querySelectorAll("[data-action='add-contratacao-sem-previsao']").forEach(function (btn) {
+			btn.addEventListener("click", function () { openContratacaoFechamentoDialog(-1); });
+		});
+
+		var usadoEl = document.querySelector("#fechamento-compra-usado-produtos input[type='checkbox']");
+		if (usadoEl) usadoEl.addEventListener("change", updateFechamentoCompraUsosVisibility);
+
+		var addUso = document.getElementById("btn-fechamento-compra-add-uso");
+		if (addUso) addUso.addEventListener("click", function () {
+			readFechamentoCompraUsos();
+			fechamentoCompraUsos.push({ produto: "", quantidade_usada: 0, unidade_medida_uso: "unidade" });
+			renderFechamentoCompraUsos();
+		});
+
+		var btnCompra = document.getElementById("btn-fechamento-compra-salvar");
+		if (btnCompra) btnCompra.addEventListener("click", saveCompraFechamento);
+		var btnContr = document.getElementById("btn-fechamento-contratacao-salvar");
+		if (btnContr) btnContr.addEventListener("click", saveContratacaoFechamento);
+	}
+
 	document.addEventListener("DOMContentLoaded", function () {
 		renderAreasTable();
 		renderBarracasTable();
@@ -3525,6 +4252,7 @@
 		initAddProduto();
 		initEditProduto();
 		initOrcamento();
+		initFechamento();
 		initConvitesTab();
 		initEquipeTriggers();
 	});

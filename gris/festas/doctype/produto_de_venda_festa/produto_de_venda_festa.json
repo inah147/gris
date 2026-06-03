@@ -31,7 +31,10 @@
   "qtd_max",
   "custo_total_max",
   "receita_total_max",
-  "superavit_max"
+  "superavit_max",
+  "vendas_realizadas_section",
+  "qtd_realizada_vendas",
+  "valor_total_arrecadado"
  ],
  "fields": [
   {
@@ -188,6 +191,23 @@
    "fieldname": "superavit_max",
    "fieldtype": "Currency",
    "label": "Superavit (Max)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "vendas_realizadas_section",
+   "fieldtype": "Section Break",
+   "label": "Vendas Realizadas"
+  },
+  {
+   "fieldname": "qtd_realizada_vendas",
+   "fieldtype": "Float",
+   "label": "Quantidade Realizada de Vendas",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "valor_total_arrecadado",
+   "fieldtype": "Currency",
+   "label": "Valor Total Arrecadado",
    "read_only": 1
   }
  ],

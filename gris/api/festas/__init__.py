@@ -485,6 +485,8 @@ def _hydrate_produto(doc) -> dict:
 		"custo_total_max": flt(doc.custo_total_max),
 		"receita_total_max": flt(doc.receita_total_max),
 		"superavit_max": flt(doc.superavit_max),
+		"qtd_realizada_vendas": flt(doc.qtd_realizada_vendas),
+		"valor_total_arrecadado": flt(doc.valor_total_arrecadado),
 	}
 
 
@@ -713,6 +715,7 @@ def _hydrate_compra(doc) -> dict:
 		"area": doc.area or "",
 		"nome_area": nome_area,
 		"nome_item": doc.nome_item or "",
+		"previsto": bool(doc.previsto),
 		"varia_com_publico": bool(doc.varia_com_publico),
 		"usado_em_produtos": bool(doc.usado_em_produtos),
 		"unidade_compra": doc.unidade_compra or "unidade",
@@ -720,6 +723,12 @@ def _hydrate_compra(doc) -> dict:
 		"quantidade_compra_final": flt(doc.quantidade_compra_final),
 		"cotacao_escolhida_valor": flt(doc.cotacao_escolhida_valor),
 		"valor_total_compra": flt(doc.valor_total_compra),
+		"valor_individual_realizado": flt(doc.valor_individual_realizado),
+		"unidade_medida_realizado": doc.unidade_medida_realizado or "unidade",
+		"quantidade_realizada": flt(doc.quantidade_realizada),
+		"valor_total_realizado": flt(doc.valor_total_realizado),
+		"fornecedor_realizado": doc.fornecedor_realizado or "",
+		"observacoes_realizado": doc.observacoes_realizado or "",
 		"qtd_sugerida_min": flt(doc.qtd_sugerida_min),
 		"valor_total_min": flt(doc.valor_total_min),
 		"qtd_sobra_individual_min": flt(doc.qtd_sobra_individual_min),
@@ -827,6 +836,7 @@ def criar_compra(festa_name: str, dados_json: str) -> dict:
 
 	doc = frappe.new_doc("Compra Festa")
 	doc.festa = festa_name
+	doc.previsto = 1
 	_apply_compra_dados(doc, dados, festa_name)
 	doc.insert()
 	doc.reload()
@@ -884,7 +894,11 @@ def _hydrate_contratacao(doc) -> dict:
 		"area": doc.area or "",
 		"nome_area": nome_area,
 		"nome_item": doc.nome_item or "",
+		"previsto": bool(doc.previsto),
 		"valor_total_contratacao": flt(doc.valor_total_contratacao),
+		"valor_total_realizado": flt(doc.valor_total_realizado),
+		"fornecedor_realizado": doc.fornecedor_realizado or "",
+		"observacoes_realizado": doc.observacoes_realizado or "",
 		"cotacoes": [_hydrate_cotacao_contratacao(c) for c in (doc.cotacoes or [])],
 	}
 
@@ -927,6 +941,7 @@ def criar_contratacao(festa_name: str, dados_json: str) -> dict:
 
 	doc = frappe.new_doc("Contratacao Festa")
 	doc.festa = festa_name
+	doc.previsto = 1
 	_apply_contratacao_dados(doc, dados, festa_name)
 	doc.insert()
 	doc.reload()
@@ -954,4 +969,176 @@ def excluir_contratacao(contratacao_name: str, festa_name: str) -> dict:
 		frappe.throw("Contratação não pertence a esta festa.")
 
 	frappe.delete_doc("Contratacao Festa", contratacao_name)
+	return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Fechamento — realizado de compras, contratações e barracas
+# ---------------------------------------------------------------------------
+
+
+def _apply_compra_realizado(doc, dados: dict) -> None:
+	doc.valor_individual_realizado = _as_non_negative_float(
+		dados.get("valor_individual_realizado", 0), "Valor individual realizado"
+	)
+	doc.unidade_medida_realizado = _validate_unidade(
+		dados.get("unidade_medida_realizado") or "unidade", "Unidade realizada"
+	)
+	doc.quantidade_realizada = _as_non_negative_float(
+		dados.get("quantidade_realizada", 0), "Quantidade realizada"
+	)
+	doc.valor_total_realizado = _as_non_negative_float(
+		dados.get("valor_total_realizado", 0), "Valor total realizado"
+	)
+	doc.fornecedor_realizado = (dados.get("fornecedor_realizado") or "").strip()
+	doc.observacoes_realizado = (dados.get("observacoes_realizado") or "").strip()
+
+
+def _apply_contratacao_realizado(doc, dados: dict) -> None:
+	doc.valor_total_realizado = _as_non_negative_float(
+		dados.get("valor_total_realizado", 0), "Valor total realizado"
+	)
+	doc.fornecedor_realizado = (dados.get("fornecedor_realizado") or "").strip()
+	doc.observacoes_realizado = (dados.get("observacoes_realizado") or "").strip()
+
+
+def _apply_compra_usos_sem_previsao(doc, dados: dict, festa_name: str) -> None:
+	doc.usos_em_produto = []
+	if not doc.usado_em_produtos:
+		return
+	usos = dados.get("usos_em_produto") or []
+	if not isinstance(usos, list):
+		frappe.throw("Usos em produto inválidos.")
+	for row in usos:
+		if not isinstance(row, dict):
+			frappe.throw("Uso em produto inválido.")
+		doc.append(
+			"usos_em_produto",
+			{
+				"produto": _validate_produto_festa(row.get("produto"), festa_name),
+				"quantidade_usada": _as_non_negative_float(
+					row.get("quantidade_usada", 0), "Quantidade usada"
+				),
+				"unidade_medida_uso": _validate_unidade(
+					row.get("unidade_medida_uso") or "unidade", "Unidade de uso"
+				),
+			},
+		)
+
+
+@frappe.whitelist()
+def salvar_realizado_compra(compra_name: str, dados_json: str) -> dict:
+	_ensure_gestor()
+	dados = _parse_json_dict(dados_json)
+
+	doc = frappe.get_doc("Compra Festa", compra_name)
+	_apply_compra_realizado(doc, dados)
+	doc.save()
+	doc.reload()
+	return {"ok": True, "compra": _hydrate_compra(doc)}
+
+
+@frappe.whitelist()
+def criar_compra_sem_previsao(festa_name: str, dados_json: str) -> dict:
+	_ensure_gestor()
+	_validate_festa(festa_name)
+	dados = _parse_json_dict(dados_json)
+
+	nome_item = (dados.get("nome_item") or "").strip()
+	if not nome_item:
+		frappe.throw("Informe o nome do item.")
+
+	doc = frappe.new_doc("Compra Festa")
+	doc.festa = festa_name
+	doc.previsto = 0
+	doc.nome_item = nome_item
+	doc.area = _validate_area_festa(dados.get("area"), festa_name)
+	doc.usado_em_produtos = _as_bool(dados.get("usado_em_produtos"))
+	doc.unidade_compra = _validate_unidade(
+		dados.get("unidade_medida_realizado") or "unidade"
+	)
+	_apply_compra_usos_sem_previsao(doc, dados, festa_name)
+	_apply_compra_realizado(doc, dados)
+	doc.insert()
+	doc.reload()
+	return {"ok": True, "compra": _hydrate_compra(doc)}
+
+
+@frappe.whitelist()
+def salvar_realizado_contratacao(contratacao_name: str, dados_json: str) -> dict:
+	_ensure_gestor()
+	dados = _parse_json_dict(dados_json)
+
+	doc = frappe.get_doc("Contratacao Festa", contratacao_name)
+	_apply_contratacao_realizado(doc, dados)
+	doc.save()
+	doc.reload()
+	return {"ok": True, "contratacao": _hydrate_contratacao(doc)}
+
+
+@frappe.whitelist()
+def criar_contratacao_sem_previsao(festa_name: str, dados_json: str) -> dict:
+	_ensure_gestor()
+	_validate_festa(festa_name)
+	dados = _parse_json_dict(dados_json)
+
+	nome_item = (dados.get("nome_item") or "").strip()
+	if not nome_item:
+		frappe.throw("Informe o nome do item.")
+
+	doc = frappe.new_doc("Contratacao Festa")
+	doc.festa = festa_name
+	doc.previsto = 0
+	doc.nome_item = nome_item
+	doc.area = _validate_area_festa(dados.get("area"), festa_name)
+	_apply_contratacao_realizado(doc, dados)
+	doc.insert()
+	doc.reload()
+	return {"ok": True, "contratacao": _hydrate_contratacao(doc)}
+
+
+@frappe.whitelist()
+def salvar_fechamento_barraca(festa_name: str, barraca_name: str, dados_json: str) -> dict:
+	_ensure_gestor()
+	_validate_festa(festa_name)
+	dados = _parse_json_dict(dados_json)
+
+	if frappe.db.get_value("Barraca da Festa", barraca_name, "festa") != festa_name:
+		frappe.throw("Barraca não pertence a esta festa.")
+
+	precos = {
+		p.name: flt(p.preco_venda)
+		for p in frappe.get_all(
+			"Produto de Venda Festa",
+			filters={"festa": festa_name, "barraca": barraca_name},
+			fields=["name", "preco_venda"],
+		)
+	}
+
+	itens = dados.get("itens") or []
+	if not isinstance(itens, list):
+		frappe.throw("Itens inválidos.")
+	for row in itens:
+		if not isinstance(row, dict):
+			frappe.throw("Item inválido.")
+		produto = (row.get("produto") or "").strip()
+		if produto not in precos:
+			frappe.throw("Produto não pertence a esta barraca.")
+		qtd = _as_non_negative_float(row.get("qtd_realizada", 0), "Quantidade realizada")
+		frappe.db.set_value(
+			"Produto de Venda Festa",
+			produto,
+			{
+				"qtd_realizada_vendas": qtd,
+				"valor_total_arrecadado": qtd * precos[produto],
+			},
+		)
+
+	valor_real = _as_non_negative_float(
+		dados.get("valor_realizado_real", 0), "Valor arrecadado realizado real"
+	)
+	frappe.db.set_value(
+		"Barraca da Festa", barraca_name, "valor_arrecadado_realizado_real", valor_real
+	)
+
 	return {"ok": True}

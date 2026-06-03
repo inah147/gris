@@ -14,6 +14,7 @@ class ProdutodeVendaFesta(Document):
 		self._calcular_preco_custo()
 		self._calcular_margem_lucro()
 		self._calcular_cenarios()
+		self._calcular_vendas_realizadas()
 
 	def on_update(self):
 		self._reagregar_festa()
@@ -69,6 +70,9 @@ class ProdutodeVendaFesta(Document):
 			self.set(f"custo_total_{chave}", custo_total)
 			self.set(f"receita_total_{chave}", receita_total)
 			self.set(f"superavit_{chave}", superavit)
+
+	def _calcular_vendas_realizadas(self):
+		self.valor_total_arrecadado = flt(self.qtd_realizada_vendas) * flt(self.preco_venda)
 
 	def _reagregar_festa(self):
 		if not self.festa:

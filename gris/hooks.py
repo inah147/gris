@@ -167,6 +167,9 @@ doc_events = {
 		],
 	},
 	"Festa": {
+		"after_insert": [
+			"gris.api.festas.avaliacao.criar_avaliacao_festa_automatica",
+		],
 		"on_update": [
 			"gris.gestao_de_tarefas.board_sync_festa.sync_from_festa",
 		],

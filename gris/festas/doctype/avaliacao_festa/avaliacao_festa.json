@@ -1,0 +1,160 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "format:AV-FESTA-{#####}",
+ "creation": "2026-06-03 00:00:00",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "festa",
+  "status",
+  "token_convidado",
+  "avaliacoes_individuais",
+  "avaliacoes_convidados",
+  "avaliacao_geral",
+  "satisfacao_dos_participantes",
+  "recomendacao_media_convidados",
+  "o_que_funcionou_bem_na_dinamica_da_equipe",
+  "o_que_nao_funcionou_na_dinamica_da_equipe",
+  "pontos_positivos_adicionais",
+  "pontos_de_melhoria_adicionais",
+  "resumo_avaliacoes_individuais",
+  "resumo_avaliacao_completa",
+  "resumo_avaliacoes_convidados"
+ ],
+ "fields": [
+  {
+   "fieldname": "festa",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Festa",
+   "options": "Festa",
+   "reqd": 1
+  },
+  {
+   "default": "Em andamento",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Em andamento\nAvaliacoes individuais concluidas\nConcluida"
+  },
+  {
+   "fieldname": "token_convidado",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Token do link de convidados",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "avaliacoes_individuais",
+   "fieldtype": "Table",
+   "label": "Avaliacoes individuais",
+   "options": "Avaliacao Individual Festa"
+  },
+  {
+   "fieldname": "avaliacoes_convidados",
+   "fieldtype": "Table",
+   "label": "Avaliacoes de convidados",
+   "options": "Avaliacao Convidado"
+  },
+  {
+   "fieldname": "avaliacao_geral",
+   "fieldtype": "Float",
+   "label": "Avaliacao geral",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "satisfacao_dos_participantes",
+   "fieldtype": "Float",
+   "label": "Satisfacao dos participantes",
+   "precision": "4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recomendacao_media_convidados",
+   "fieldtype": "Float",
+   "label": "Recomendacao media dos convidados",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "o_que_funcionou_bem_na_dinamica_da_equipe",
+   "fieldtype": "Small Text",
+   "label": "O que funcionou bem na dinamica da equipe?"
+  },
+  {
+   "fieldname": "o_que_nao_funcionou_na_dinamica_da_equipe",
+   "fieldtype": "Small Text",
+   "label": "O que nao funcionou na dinamica da equipe?"
+  },
+  {
+   "fieldname": "pontos_positivos_adicionais",
+   "fieldtype": "Small Text",
+   "label": "Pontos positivos adicionais"
+  },
+  {
+   "fieldname": "pontos_de_melhoria_adicionais",
+   "fieldtype": "Small Text",
+   "label": "Pontos de melhoria adicionais"
+  },
+  {
+   "fieldname": "resumo_avaliacoes_individuais",
+   "fieldtype": "Small Text",
+   "label": "Resumo das avaliacoes individuais"
+  },
+  {
+   "fieldname": "resumo_avaliacao_completa",
+   "fieldtype": "Small Text",
+   "label": "Resumo da avaliacao completa"
+  },
+  {
+   "fieldname": "resumo_avaliacoes_convidados",
+   "fieldtype": "Small Text",
+   "label": "Resumo das avaliacoes de convidados"
+  }
+ ],
+ "grid_page_length": 20,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-03 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Festas",
+ "name": "Avaliacao Festa",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de festas",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "festa"
+}

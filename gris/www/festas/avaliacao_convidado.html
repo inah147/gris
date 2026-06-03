@@ -1,0 +1,119 @@
+{% extends "templates/portal_clean.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, card, field, form, input, radio_group, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+
+{% block style %}
+{{ super() }}
+<link rel="stylesheet" href="/festas/avaliacao_individual.css" />
+{% endblock %}
+
+{% block page_content %}
+<main class="avaliacao-page" aria-labelledby="avaliacao-title">
+    <header class="avaliacao-header">
+        {% if logo %}
+        <img src="{{ logo }}" class="avaliacao-logo" alt="Logo da UEL" loading="lazy" decoding="async" />
+        {% endif %}
+        <div class="avaliacao-header__content">
+            <p class="avaliacao-eyebrow">Avaliação da festa</p>
+            <h1 id="avaliacao-title" class="avaliacao-title">{{ festa_titulo or "Avaliação da Festa" }}</h1>
+            {% if subtitle %}
+            <p class="avaliacao-subtitle">{{ subtitle }}</p>
+            {% endif %}
+        </div>
+    </header>
+
+    <input type="hidden" id="avaliacaoToken" value="{{ token or '' }}" />
+
+    <section id="stateInvalid" class="avaliacao-state {% if page_state != 'invalid' %}d-none{% endif %}" aria-live="polite">
+        {% call card(attrs={"class": "avaliacao-state-card"}) %}
+            <div class="avaliacao-state-card__icon avaliacao-state-card__icon--warning">
+                {{ lucide_icon("triangle-alert", size="lg") }}
+            </div>
+            <h2>Link inválido</h2>
+            <p>Este link de avaliação não é válido ou já expirou.</p>
+        {% endcall %}
+    </section>
+
+    <section id="stateForm" class="avaliacao-state {% if page_state != 'form' %}d-none{% endif %}">
+        <div class="avaliacao-form-container">
+            {% call card(attrs={"class": "avaliacao-intro-card"}) %}
+                <div class="avaliacao-intro-card__icon">
+                    {{ lucide_icon("party-popper", size="md") }}
+                </div>
+                <div class="avaliacao-intro-card__content">
+                    <h2>Sua opinião importa!</h2>
+                    <p>Conte como foi sua experiência na festa. Leva menos de um minuto e nos ajuda a melhorar cada vez mais.</p>
+                </div>
+            {% endcall %}
+
+            {% call alert(attrs={"id": "avaliacaoAlert", "hidden": "hidden", "aria-live": "polite"}) %}
+            {% endcall %}
+
+            {% call form(attrs={"id": "avaliacaoForm", "novalidate": "novalidate"}) %}
+                {% call card(attrs={"class": "avaliacao-question-card"}) %}
+                    {% call field(label="E-mail (opcional)", hint="Informe seu e-mail caso queira evitar respostas duplicadas.") %}
+                        {{ input(attrs={"id": "convidado_email", "type": "email", "placeholder": "seu@email.com", "autocomplete": "email"}) }}
+                    {% endcall %}
+                {% endcall %}
+
+                {% call card(attrs={"class": "avaliacao-question-card"}) %}
+                    {% call field(
+                        label="Quanto você recomendaria a um amigo para vir nesta festa?",
+                        hint="Escolha uma nota de 0 (não recomendaria) a 10 (recomendaria com certeza).",
+                        attrs={"class": "avaliacao-rating-field"}
+                    ) %}
+                        {{ radio_group(
+                            name="recomendacao",
+                            options=rating_options,
+                            attrs={"class": "avaliacao-rating-scale", "aria-label": "Recomendação", "aria-required": "true"}
+                        ) }}
+                    {% endcall %}
+                {% endcall %}
+
+                {% call card(attrs={"class": "avaliacao-question-card"}) %}
+                    {% call field(label="O que você mais gostou na festa?") %}
+                        {{ textarea(
+                            name="mais_gostou",
+                            attrs={"id": "mais_gostou", "rows": "4", "placeholder": "Conte o que mais te marcou...", "required": "required"}
+                        ) }}
+                    {% endcall %}
+                {% endcall %}
+
+                {% call card(attrs={"class": "avaliacao-question-card"}) %}
+                    {% call field(label="O que você acha que pode melhorar?") %}
+                        {{ textarea(
+                            name="pode_melhorar",
+                            attrs={"id": "pode_melhorar", "rows": "4", "placeholder": "Suas sugestões para a próxima festa...", "required": "required"}
+                        ) }}
+                    {% endcall %}
+                {% endcall %}
+
+                <div class="avaliacao-submit-area">
+                    <button type="submit" id="btnSubmitAvaliacao" class="btn-sm-primary">
+                        Enviar avaliação
+                    </button>
+                </div>
+            {% endcall %}
+        </div>
+    </section>
+
+    <section id="stateSuccess" class="avaliacao-state d-none" aria-live="polite">
+        {% call card(attrs={"class": "avaliacao-state-card"}) %}
+            <div class="avaliacao-state-card__icon avaliacao-state-card__icon--success">
+                {{ lucide_icon("circle-check", size="lg") }}
+            </div>
+            <h2>Avaliação enviada com sucesso!</h2>
+            <p>Muito obrigado por compartilhar sua experiência. Esperamos te ver na próxima festa!</p>
+        {% endcall %}
+    </section>
+
+    {% call dialog(
+        id="dialogDuplicado",
+        title="Você já avaliou esta festa",
+        footer='<button type="button" class="btn-sm-primary" onclick="document.getElementById(\'dialogDuplicado\').close()">Entendi</button>'
+    ) %}
+    <p class="text-sm text-muted-foreground">Já existe uma resposta relacionada a este e-mail. Agradecemos muito o seu apoio e a sua participação!</p>
+    {% endcall %}
+</main>
+{% endblock %}

@@ -1,0 +1,85 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-06-03 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "avaliador",
+  "email",
+  "token",
+  "resultado_festa",
+  "satisfacao_colaboracao",
+  "muito_bom",
+  "pontos_melhoria",
+  "avaliacao_concluida"
+ ],
+ "fields": [
+  {
+   "fieldname": "avaliador",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Avaliador",
+   "reqd": 1
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "read_only": 1
+  },
+  {
+   "fieldname": "token",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Token",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "resultado_festa",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Como voce avalia o resultado da festa?",
+   "options": "0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10"
+  },
+  {
+   "fieldname": "satisfacao_colaboracao",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Quao satisfeito voce ficou em colaborar com a festa?",
+   "options": "0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10"
+  },
+  {
+   "fieldname": "muito_bom",
+   "fieldtype": "Small Text",
+   "label": "O que voce considera que foi muito bom?"
+  },
+  {
+   "fieldname": "pontos_melhoria",
+   "fieldtype": "Small Text",
+   "label": "Quais sao os pontos de melhoria que voce enxerga?"
+  },
+  {
+   "default": "0",
+   "fieldname": "avaliacao_concluida",
+   "fieldtype": "Check",
+   "label": "Avaliação concluída"
+  }
+ ],
+ "grid_page_length": 20,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-06-03 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Festas",
+ "name": "Avaliacao Individual Festa",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

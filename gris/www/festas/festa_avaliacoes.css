@@ -1,0 +1,213 @@
+/* ─── Aba de Avaliações da Festa ─────────────────────────── */
+.aval-loading {
+    color: var(--muted-foreground);
+    font-size: 0.9rem;
+    padding: 1rem;
+}
+
+.aval-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.aval-shell .mt-sm {
+    margin-top: 0.75rem;
+}
+
+.aval-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+@media (max-width: 768px) {
+    .aval-grid-2 { grid-template-columns: 1fr; }
+}
+
+.aval-progress {
+    margin-bottom: 1rem;
+}
+
+.aval-progress__label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    color: var(--muted-foreground);
+    margin-bottom: 0.35rem;
+}
+
+.aval-progress__track {
+    height: 8px;
+    background: var(--muted);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.aval-progress__fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 999px;
+    transition: width 0.4s ease;
+}
+
+.aval-metrics {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+}
+
+.aval-metric-card {
+    flex: 1;
+    min-width: 160px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.aval-metric-card__label {
+    font-size: 0.78rem;
+    color: var(--muted-foreground);
+    font-weight: 500;
+}
+
+.aval-metric-card__value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.aval-avaliadores {
+    margin-top: 0.75rem;
+}
+
+.aval-avaliadores__title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--foreground);
+    margin: 0 0 0.5rem;
+}
+
+.aval-avaliadores__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.aval-avaliador {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    padding: 0.5rem 0.75rem;
+}
+
+.aval-avaliador__info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.aval-avaliador__nome {
+    font-size: 0.88rem;
+    color: var(--foreground);
+    font-weight: 500;
+}
+
+.aval-avaliador__actions {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.aval-public-link {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.aval-public-link .input {
+    flex: 1;
+    min-width: 0;
+}
+
+.aval-qr {
+    display: flex;
+    justify-content: center;
+    margin-top: 0.75rem;
+}
+
+.aval-qr-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 0.5rem;
+}
+
+.aval-qr__img {
+    width: 180px;
+    height: 180px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+    padding: 0.5rem;
+}
+
+.aval-general-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.75rem;
+}
+
+.aval-detalhe-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+}
+
+.aval-detalhe-item__label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--muted-foreground);
+    margin: 0 0 0.2rem;
+    display: block;
+}
+
+.aval-detalhe-item__value {
+    font-size: 0.88rem;
+    color: var(--foreground);
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.readonly-markdown {
+    color: var(--card-foreground);
+    background: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.75rem;
+    min-height: 80px;
+    line-height: 1.5;
+}
+
+.readonly-markdown h1, .readonly-markdown h2,
+.readonly-markdown h3, .readonly-markdown h4 {
+    margin: 0.9rem 0 0.5rem;
+    color: var(--foreground);
+}
+
+.readonly-markdown p { margin: 0.4rem 0; }
+.readonly-markdown ul, .readonly-markdown ol { margin: 0.35rem 0 0.65rem 1.1rem; }
+
+@media (max-width: 768px) {
+    .aval-metrics { flex-direction: column; }
+    .aval-detalhe-grid { grid-template-columns: 1fr; }
+    .aval-avaliador { flex-direction: column; align-items: flex-start; }
+}

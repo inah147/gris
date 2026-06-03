@@ -1,0 +1,134 @@
+{% extends "templates/portal_clean.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, card, field, form, radio_group, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{% block page_content %}
+<main class="avaliacao-page" aria-labelledby="avaliacao-title">
+    <header class="avaliacao-header">
+        {% if logo %}
+        <img src="{{ logo }}" class="avaliacao-logo" alt="Logo da UEL" loading="lazy" decoding="async" />
+        {% endif %}
+        <div class="avaliacao-header__content">
+            <p class="avaliacao-eyebrow">Avaliação individual</p>
+            <h1 id="avaliacao-title" class="avaliacao-title">Avaliação de Festa</h1>
+            {% if subtitle %}
+            <p class="avaliacao-subtitle">{{ subtitle }}</p>
+            {% endif %}
+        </div>
+    </header>
+
+    <input type="hidden" id="avaliacaoToken" value="{{ token or '' }}" />
+    <input type="hidden" id="pageState" value="{{ page_state or 'invalid' }}" />
+
+    <section id="stateInvalid" class="avaliacao-state {% if page_state != 'invalid' %}d-none{% endif %}" aria-live="polite">
+        {% call card(attrs={"class": "avaliacao-state-card"}) %}
+            <div class="avaliacao-state-card__icon avaliacao-state-card__icon--warning">
+                {{ lucide_icon("triangle-alert", size="lg") }}
+            </div>
+            <h2>Link inválido</h2>
+            <p>Este link de avaliação não é válido ou já expirou. Verifique se você copiou o link corretamente do e-mail recebido.</p>
+        {% endcall %}
+    </section>
+
+    <section id="stateAlreadySubmitted" class="avaliacao-state {% if page_state != 'already_submitted' %}d-none{% endif %}" aria-live="polite">
+        {% call card(attrs={"class": "avaliacao-state-card"}) %}
+            <div class="avaliacao-state-card__icon avaliacao-state-card__icon--success">
+                {{ lucide_icon("circle-check", size="lg") }}
+            </div>
+            <h2>Avaliação já enviada</h2>
+            <p>{{ avaliador_nome }}, você já enviou sua avaliação para esta festa. Obrigado pela participação.</p>
+        {% endcall %}
+    </section>
+
+    <section id="stateForm" class="avaliacao-state {% if page_state != 'form' %}d-none{% endif %}">
+        <div class="avaliacao-form-container">
+            {% call card(attrs={"class": "avaliacao-intro-card"}) %}
+                <div class="avaliacao-intro-card__icon">
+                    {{ lucide_icon("clipboard-check", size="md") }}
+                </div>
+                <div class="avaliacao-intro-card__content">
+                    <h2>Olá, {{ avaliador_nome }}!</h2>
+                    <p>Sua avaliação sobre a festa <strong>{{ festa_titulo }}</strong> é muito importante para nós. Responda às perguntas abaixo com sinceridade.</p>
+                </div>
+            {% endcall %}
+
+            {% call alert(attrs={"id": "avaliacaoAlert", "hidden": "hidden", "aria-live": "polite"}) %}
+            {% endcall %}
+
+            {% call form(attrs={"id": "avaliacaoForm", "novalidate": "novalidate"}) %}
+                {% call card(attrs={"class": "avaliacao-question-card"}) %}
+                    {% call field(
+                        label="Como você avalia o resultado da festa?",
+                        hint="Escolha uma nota de 0 (péssimo) a 10 (excelente).",
+                        attrs={"class": "avaliacao-rating-field"}
+                    ) %}
+                        {{ radio_group(
+                            name="resultado_festa",
+                            options=rating_options,
+                            attrs={"class": "avaliacao-rating-scale", "aria-label": "Resultado da festa", "aria-required": "true"}
+                        ) }}
+                    {% endcall %}
+                {% endcall %}
+
+                {% call card(attrs={"class": "avaliacao-question-card"}) %}
+                    {% call field(
+                        label="Quão satisfeito você ficou em colaborar com a festa?",
+                        hint="Escolha uma nota de 0 (nada satisfeito) a 10 (muito satisfeito).",
+                        attrs={"class": "avaliacao-rating-field"}
+                    ) %}
+                        {{ radio_group(
+                            name="satisfacao_colaboracao",
+                            options=rating_options,
+                            attrs={"class": "avaliacao-rating-scale", "aria-label": "Satisfação com colaboração", "aria-required": "true"}
+                        ) }}
+                    {% endcall %}
+                {% endcall %}
+
+                {% call card(attrs={"class": "avaliacao-question-card"}) %}
+                    {% call field(label="O que você considera que foi muito bom?", hint="Destaque os pontos positivos da festa.") %}
+                        {{ textarea(
+                            name="muito_bom",
+                            attrs={
+                                "id": "muito_bom",
+                                "rows": "4",
+                                "placeholder": "O que mais se destacou positivamente...",
+                                "required": "required"
+                            }
+                        ) }}
+                    {% endcall %}
+                {% endcall %}
+
+                {% call card(attrs={"class": "avaliacao-question-card"}) %}
+                    {% call field(label="Quais são os pontos de melhoria que você enxerga?", hint="Sugestões construtivas para festas futuras.") %}
+                        {{ textarea(
+                            name="pontos_melhoria",
+                            attrs={
+                                "id": "pontos_melhoria",
+                                "rows": "4",
+                                "placeholder": "O que poderia ter sido melhor...",
+                                "required": "required"
+                            }
+                        ) }}
+                    {% endcall %}
+                {% endcall %}
+
+                <div class="avaliacao-submit-area">
+                    <button type="submit" id="btnSubmitAvaliacao" class="btn-sm-primary">
+                        Enviar avaliação
+                    </button>
+                </div>
+            {% endcall %}
+        </div>
+    </section>
+
+    <section id="stateSuccess" class="avaliacao-state d-none" aria-live="polite">
+        {% call card(attrs={"class": "avaliacao-state-card"}) %}
+            <div class="avaliacao-state-card__icon avaliacao-state-card__icon--success">
+                {{ lucide_icon("party-popper", size="lg") }}
+            </div>
+            <h2>Avaliação enviada com sucesso!</h2>
+            <p>Muito obrigado pela sua participação. Sua avaliação é fundamental para o aprimoramento das nossas festas.</p>
+        {% endcall %}
+    </section>
+</main>
+{% endblock %}

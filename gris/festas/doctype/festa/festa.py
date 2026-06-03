@@ -35,6 +35,10 @@ class Festa(Document):
 		_garantir_area_portaria(self.name)
 		_enqueue_festa_drive_folder_creation(self.name)
 
+	def on_trash(self):
+		_excluir_dependencias_da_festa(self)
+		_desvincular_board_da_festa(self)
+
 	def on_update(self):
 		if getattr(self, "_cenario_antes", None) != (self.cenario_simulacao or "Intermediário"):
 			_enqueue_recalcular_compras(self.name)
@@ -497,6 +501,54 @@ def _ensure_festa_board(doc: Document) -> None:
 
 	frappe.db.set_value("Festa", doc.name, "board_tarefas", board.name, update_modified=False)
 	doc.board_tarefas = board.name
+
+
+def _excluir_dependencias_da_festa(doc: Document) -> None:
+	delete_plan = (
+		("Lista Entrada Festa", None),
+		("Convite Festa", None),
+		("Opcao Convite Festa", None),
+		("Compra Festa", None),
+		("Contratacao Festa", None),
+		("Produto de Venda Festa", None),
+		("Barraca da Festa", None),
+		("Avaliacao Festa", None),
+		("Area da Festa", {"from_festa_delete": True}),
+	)
+
+	for doctype, flags in delete_plan:
+		nomes = frappe.get_all(
+			doctype,
+			filters={"festa": doc.name},
+			pluck="name",
+			order_by="creation desc",
+		)
+		for nome in nomes:
+			frappe.delete_doc(doctype, nome, ignore_permissions=True, flags=flags)
+
+
+def _desvincular_board_da_festa(doc: Document) -> None:
+	board_names: list[str] = []
+	if doc.get("board_tarefas"):
+		board_names.append(doc.board_tarefas)
+
+	board_names.extend(
+		nome
+		for nome in frappe.get_all(
+			"Board",
+			filters={"referencia_doctype": "Festa", "referencia_nome": doc.name},
+			pluck="name",
+		)
+		if nome not in board_names
+	)
+
+	for board_name in board_names:
+		frappe.db.set_value(
+			"Board",
+			board_name,
+			{"referencia_doctype": "", "referencia_nome": ""},
+			update_modified=False,
+		)
 
 
 def _garantir_area_portaria(festa_name: str) -> None:

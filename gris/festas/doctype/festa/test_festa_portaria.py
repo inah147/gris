@@ -50,6 +50,15 @@ class TestFestaPortaria(FrappeTestCase):
 			frappe.ValidationError, portaria.delete, ignore_permissions=True
 		)
 
+	def test_deletar_festa_remove_portaria_automaticamente(self):
+		festa = self._criar_festa()
+		self.assertTrue(frappe.db.exists("Area da Festa", f"{festa.name} - Portaria"))
+
+		frappe.delete_doc("Festa", festa.name, ignore_permissions=True)
+
+		self.assertFalse(frappe.db.exists("Festa", festa.name))
+		self.assertFalse(frappe.db.exists("Area da Festa", f"{festa.name} - Portaria"))
+
 	def test_portaria_sem_coordenador_falha_no_save_direto(self):
 		festa = self._criar_festa()
 		portaria = frappe.get_doc("Area da Festa", f"{festa.name} - Portaria")

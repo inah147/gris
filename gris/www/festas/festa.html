@@ -1,5 +1,5 @@
 {% extends "templates/web_sidebar_base.html" %}
-{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, input, empty, badge, switch %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, input, textarea, empty, badge, switch %}
 {% from "public/design_system/components/composed/file-upload.html.jinja" import file_upload %}
 {% from "public/design_system/components/generated/tabs.html.jinja" import tabs %}
 {% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
@@ -17,7 +17,9 @@
 {% block head_include %}
 {{ super() }}
 <link rel="stylesheet" href="/festas/festa.css" />
+<link rel="stylesheet" href="/festas/festa_avaliacoes.css" />
 <script src="/assets/gris/design_system/js/components/toastui-editor.js?v={{ design_system_asset_version }}" defer></script>
+<script src="/festas/festa_avaliacoes.js" defer></script>
 {% endblock %}
 
 {% block page_header %}
@@ -701,6 +703,121 @@ window._festaData = {
 </div>
 {% endset %}
 
+{# ─── Tab: Avaliações ─── #}
+{% set tab_avaliacoes %}
+<div class="festa-tab-content">
+	<div id="avaliacaoLoading" class="aval-loading" aria-live="polite">Carregando dados de avaliação...</div>
+
+	<div id="avaliacaoContent" class="aval-shell d-none">
+		{# 1) Avaliação dos convidados — disponível desde a criação da festa #}
+		{% call card(title="Avaliações de convidados", description="Coleta pública e anônima, disponível desde a criação da festa.") %}
+			{% call field(label="Link público de avaliação", hint="Compartilhe este link com os convidados (WhatsApp, redes sociais ou QR Code).") %}
+				<div class="aval-public-link">
+					<input id="avaliacaoPublicLink" type="text" class="input" readonly />
+					<button type="button" id="btnCopiarLinkConvidados" class="btn-sm-outline">Copiar</button>
+				</div>
+			{% endcall %}
+			<div class="aval-qr">
+				<img id="avaliacaoPublicQr" class="aval-qr__img" alt="QR Code do link de avaliação dos convidados" />
+			</div>
+			<div class="aval-qr-actions">
+				<button type="button" id="btnBaixarPdfQr" class="btn-sm-outline">{{ lucide_icon("printer", size="xs") }} Baixar PDF para impressão</button>
+			</div>
+			<div class="aval-metrics mt-sm">
+				<div class="aval-metric-card">
+					<span class="aval-metric-card__label">Recomendação média</span>
+					<span id="avaliacaoMetricRecomendacao" class="aval-metric-card__value">-</span>
+				</div>
+				<div class="aval-metric-card">
+					<span class="aval-metric-card__label">Respostas recebidas</span>
+					<span id="avaliacaoConvidadosCount" class="aval-metric-card__value">0</span>
+				</div>
+			</div>
+			<div id="avaliacaoResumoConvidados" class="d-none mt-sm">
+				{% call field(label="Resumo das avaliações de convidados") %}
+					<div id="avaliacaoResumoConvidadosContent" class="readonly-markdown">-</div>
+				{% endcall %}
+				<button type="button" id="btnGerarResumoConvidados" class="btn-sm-outline mt-sm">{{ lucide_icon("sparkles", size="xs") }} Gerar resumo dos convidados</button>
+			</div>
+			<div class="aval-avaliadores mt-sm">
+				<h4 class="aval-avaliadores__title">Respostas dos convidados</h4>
+				<div id="avaliacaoConvidadosList" class="aval-avaliadores__list"></div>
+			</div>
+		{% endcall %}
+
+		{# 2) Avaliação da equipe — ainda não iniciada #}
+		<div id="avaliacaoTeamEmpty" class="d-none">
+			{% call card(title="Avaliação da equipe") %}
+				<p class="text-sm text-muted-foreground">A avaliação da equipe ainda não foi iniciada. Ao iniciar, enviaremos o formulário individual por e-mail e WhatsApp para todos os envolvidos na organização (coordenadores e equipes de área e barraca).</p>
+				<div class="aval-general-actions">
+					<button type="button" id="btnIniciarAvaliacao" class="btn-sm-primary">Iniciar avaliação da equipe</button>
+				</div>
+			{% endcall %}
+		</div>
+
+		{# Avaliação da equipe — em andamento #}
+		<div id="avaliacaoTeamStarted" class="aval-shell d-none">
+		{% call card(title="Avaliações individuais da equipe") %}
+			<div class="aval-progress">
+				<div class="aval-progress__label">
+					<span id="avaliacaoProgressText">0 de 0 avaliações concluídas</span>
+				</div>
+				<div class="aval-progress__track">
+					<div id="avaliacaoProgressFill" class="aval-progress__fill" style="width: 0%"></div>
+				</div>
+			</div>
+			<div class="aval-metrics">
+				<div class="aval-metric-card">
+					<span class="aval-metric-card__label">Satisfação dos participantes</span>
+					<span id="avaliacaoMetricSatisfacao" class="aval-metric-card__value">-</span>
+				</div>
+				<div class="aval-metric-card">
+					<span class="aval-metric-card__label">Avaliação geral</span>
+					<span id="avaliacaoMetricGeral" class="aval-metric-card__value">-</span>
+				</div>
+			</div>
+			<div id="avaliacaoResumoIndividual" class="d-none mt-sm">
+				{% call field(label="Resumo das avaliações individuais") %}
+					<div id="avaliacaoResumoIndividualContent" class="readonly-markdown">-</div>
+				{% endcall %}
+				<button type="button" id="btnGerarResumoIndividual" class="btn-sm-outline mt-sm">{{ lucide_icon("sparkles", size="xs") }} Gerar resumo individual</button>
+			</div>
+			<div class="aval-avaliadores mt-sm">
+				<h4 class="aval-avaliadores__title">Avaliadores</h4>
+				<div id="avaliacaoAvaliadoresList" class="aval-avaliadores__list"></div>
+			</div>
+		{% endcall %}
+
+		{% call card(title="Avaliação geral da festa") %}
+			<div class="aval-grid-2">
+				{% call field(label="O que funcionou bem na dinâmica da equipe?") %}
+					<textarea id="aval_funcionou_bem" class="textarea" rows="4"></textarea>
+				{% endcall %}
+				{% call field(label="O que não funcionou na dinâmica da equipe?") %}
+					<textarea id="aval_nao_funcionou" class="textarea" rows="4"></textarea>
+				{% endcall %}
+				{% call field(label="Pontos positivos adicionais") %}
+					<textarea id="aval_pontos_positivos" class="textarea" rows="4"></textarea>
+				{% endcall %}
+				{% call field(label="Pontos de melhoria adicionais") %}
+					<textarea id="aval_pontos_melhoria" class="textarea" rows="4"></textarea>
+				{% endcall %}
+			</div>
+			<div class="aval-general-actions">
+				<button type="button" id="btnSalvarAvaliacaoGeral" class="btn-sm-primary">Salvar avaliação geral</button>
+			</div>
+			<div id="avaliacaoResumoCompleto" class="d-none mt-sm">
+				{% call field(label="Resumo da avaliação completa") %}
+					<div id="avaliacaoResumoCompletoContent" class="readonly-markdown">-</div>
+				{% endcall %}
+				<button type="button" id="btnGerarResumoCompleto" class="btn-sm-outline mt-sm">{{ lucide_icon("sparkles", size="xs") }} Gerar avaliação completa</button>
+			</div>
+		{% endcall %}
+		</div>
+	</div>
+</div>
+{% endset %}
+
 {# ─── Tabs ─── #}
 {{ tabs(
 	id="festa-tabs",
@@ -712,7 +829,8 @@ window._festaData = {
 		{"id": "orcamento", "tab": "Orçamento", "panel": tab_orcamento},
 		{"id": "fechamento", "tab": "Fechamento", "panel": tab_fechamento},
 		{"id": "gestao-tarefas", "tab": "Gestão de Tarefas", "panel": tab_gestao_tarefas},
-		{"id": "convites", "tab": "Convites", "panel": tab_convites}
+		{"id": "convites", "tab": "Convites", "panel": tab_convites},
+		{"id": "avaliacoes", "tab": "Avaliações", "panel": tab_avaliacoes, "tab_attrs": {"data-tab": "avaliacoes"}}
 	]
 ) }}
 
@@ -1778,6 +1896,15 @@ window._festaData = {
 	</button>
 </div>
 </dialog>
+
+{# Dialog — Detalhe de avaliação #}
+{% call dialog(
+	id="avaliacaoDetalheModal",
+	title="Detalhes da avaliação",
+	footer='<button type="button" class="btn-sm-outline" onclick="document.getElementById(\'avaliacaoDetalheModal\').close()">Fechar</button>'
+) %}
+<div id="avaliacaoDetalheContent"></div>
+{% endcall %}
 
 {% endif %}{# not_found #}
 {% endblock %}

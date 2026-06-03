@@ -14,6 +14,8 @@ class AreadaFesta(Document):
 		self._validar_portaria()
 
 	def on_trash(self):
+		if self.flags.get("from_festa_delete"):
+			return
 		if self.nome_area == AREA_PORTARIA_NOME:
 			frappe.throw(
 				_("A área Portaria é obrigatória e não pode ser excluída.")

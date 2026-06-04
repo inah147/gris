@@ -369,5 +369,20 @@
     "role": "Editor de projetos"
    }
   ]
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Role Profile",
+  "modified": "2026-06-04 00:00:00.000000",
+  "name": "Responsavel",
+  "role_profile": "Responsavel",
+  "roles": [
+   {
+    "parent": "Responsavel",
+    "parentfield": "roles",
+    "parenttype": "Role Profile",
+    "role": "Responsavel"
+   }
+  ]
  }
 ]

@@ -3,6 +3,7 @@ import json
 import os
 import re
 import unicodedata
+import uuid
 
 import frappe
 import pandas as pd
@@ -326,6 +327,70 @@ def _upsert_responsavel_vinculo(responsavel_name: str, associado_name: str, cpf_
 	return "created"
 
 
+def _upsert_portal_user(
+	email: str,
+	nome_completo: str,
+	associate_doc,
+	responsavel_name: str | None = None,
+) -> str:
+	"""Cria um usuário Frappe para o email informado se ainda não existir e garante
+	que Responsavel.email aponte para esse email (vínculo exigido pelo portal).
+
+	Retorna action em {created, skipped}.
+	"""
+	if not email:
+		return "skipped"
+
+	action = "skipped"
+	if not frappe.db.exists("User", email):
+		name_parts = (nome_completo or "").strip().split(" ")
+		first_name = name_parts[0] if name_parts else email
+		last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
+
+		registro = (getattr(associate_doc, "registro", "") or "").split("-")[0]
+		role_profile_name = "Responsavel" if responsavel_name else "Beneficiário"
+
+		user = frappe.get_doc(
+			{
+				"doctype": "User",
+				"email": email,
+				"first_name": first_name,
+				"last_name": last_name,
+				"new_password": f"gepim{registro}" if registro else None,
+				"send_welcome_email": 1,
+				"role_profile_name": role_profile_name,
+				"reset_password_key": str(uuid.uuid4()),
+				"enabled": 1,
+			}
+		)
+		if responsavel_name:
+			user.append("roles", {"role": "Responsavel"})
+		user.insert()
+		action = "created"
+	else:
+		# Usuário já existe — garante que o papel Responsavel está atribuído, se aplicável.
+		if responsavel_name:
+			user_doc = frappe.get_doc("User", email)
+			has_changes = False
+			if user_doc.role_profile_name != "Responsavel":
+				user_doc.role_profile_name = "Responsavel"
+				has_changes = True
+			existing_roles = {r.role for r in user_doc.roles}
+			if "Responsavel" not in existing_roles:
+				user_doc.append("roles", {"role": "Responsavel"})
+				has_changes = True
+			if has_changes:
+				user_doc.save(ignore_permissions=True)
+
+	# Garante que Responsavel.email aponte para este usuário (exigido pelo portal).
+	if responsavel_name and frappe.db.exists("Responsavel", responsavel_name):
+		current_email = frappe.db.get_value("Responsavel", responsavel_name, "email")
+		if current_email != email:
+			frappe.db.set_value("Responsavel", responsavel_name, "email", email)
+
+	return action
+
+
 def _registrar_log_importacao(path_pdf: str, results: dict) -> None:
 	"""Persiste uma linha de log com o resultado da importação de associados."""
 	resumo = {
@@ -341,6 +406,8 @@ def _registrar_log_importacao(path_pdf: str, results: dict) -> None:
 		"vinculo_created": results.get("vinculo_created", 0),
 		"vinculo_updated": results.get("vinculo_updated", 0),
 		"vinculo_skipped": results.get("vinculo_skipped", 0),
+		"usuario_created": results.get("usuario_created", 0),
+		"usuario_skipped": results.get("usuario_skipped", 0),
 	}
 
 	log_doc = frappe.get_doc(
@@ -403,6 +470,8 @@ def parse_associates_report(path_pdf: str) -> dict:
 		"vinculo_created": 0,
 		"vinculo_updated": 0,
 		"vinculo_skipped": 0,
+		"usuario_created": 0,
+		"usuario_skipped": 0
 	}
 
 	# Processar cada registro
@@ -576,8 +645,10 @@ def parse_associates_report(path_pdf: str) -> dict:
 			if associado_name and _is_beneficiario_category(associate_data.get("categoria")):
 				responsavel_payload = _extract_responsavel_payload(row)
 				if _has_responsavel_data(responsavel_payload):
+					_resp_name_for_user = None
 					try:
 						responsavel_name, responsavel_action = _upsert_responsavel(responsavel_payload)
+						_resp_name_for_user = responsavel_name
 						results[f"responsavel_{responsavel_action}"] += 1
 
 						if responsavel_name:
@@ -595,6 +666,23 @@ def parse_associates_report(path_pdf: str) -> dict:
 						)
 						results["error_details"].append(f"Linha {idx + 1} - {error_msg}")
 						frappe.log_error(f"Erro sync responsavel linha {idx + 1}", str(e))
+
+					# Criar usuário: usa email do responsável ou, na ausência, email do associado
+					try:
+						email_for_user = responsavel_payload.get("email") or associate_data.get("email") or ""
+						nome_for_user = responsavel_payload.get("nome_completo") or associate_data.get("nome_completo") or ""
+						usuario_action = _upsert_portal_user(email_for_user, nome_for_user, doc, _resp_name_for_user)
+						results[f"usuario_{usuario_action}"] += 1
+					except Exception as e:
+						frappe.clear_messages()
+						results["errors"] += 1
+						error_msg = (
+							f"CPF {cpf or 'desconhecido'}: erro ao criar usuário"
+							f" - {_format_error_pt(str(e))}"
+							f"\n  Dados do registro: {_format_row_summary(row)}"
+						)
+						results["error_details"].append(f"Linha {idx + 1} - {error_msg}")
+						frappe.log_error(f"Erro criação usuário linha {idx + 1}", str(e))
 
 		except Exception as e:
 			frappe.clear_messages()

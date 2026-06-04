@@ -1,5 +1,8 @@
 """Tests for sidebar adapter used by the design system template."""
 
+from unittest.mock import patch
+
+import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from gris.api.portal_access import (
@@ -8,6 +11,7 @@ from gris.api.portal_access import (
 	_normalize_path,
 	_to_design_system_sidebar_items,
 	_to_portal_breadcrumb_items,
+	user_has_access,
 )
 
 
@@ -145,3 +149,19 @@ class TestPortalAccessSidebarAdapter(FrappeTestCase):
 				{"label": "Extrato", "url": None},
 			],
 		)
+
+	def test_associado_detalhe_allows_linked_responsavel(self):
+		with (
+			patch("gris.api.portal_access._get_user_roles", return_value=["Responsavel"]),
+			patch("gris.api.portal_access._responsavel_has_associado_access", return_value=True),
+		):
+			frappe.local.form_dict = {"name": "ASSOC-1"}
+			self.assertTrue(user_has_access("/associados/detalhe", user="resp@example.com"))
+
+	def test_associado_detalhe_blocks_unlinked_responsavel(self):
+		with (
+			patch("gris.api.portal_access._get_user_roles", return_value=["Responsavel"]),
+			patch("gris.api.portal_access._responsavel_has_associado_access", return_value=False),
+		):
+			frappe.local.form_dict = {"name": "ASSOC-1"}
+			self.assertFalse(user_has_access("/associados/detalhe", user="resp@example.com"))

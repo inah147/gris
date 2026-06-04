@@ -1,6 +1,6 @@
 import frappe
 
-from gris.api.portal_access import enrich_context
+from gris.api.portal_access import _responsavel_has_associado_access, enrich_context
 
 no_cache = 1
 
@@ -31,6 +31,17 @@ def get_context(context):
 	except Exception as e:  # pragma: no cover
 		context.not_found = True
 		context.missing_reason = f"Erro ao carregar associado: {e}"
+		return context
+
+	try:
+		user_roles = set(frappe.get_roles())
+	except Exception:
+		user_roles = set()
+
+	can_manage_member_admin = "Gestor de Associados" in user_roles
+	is_linked_responsavel = "Responsavel" in user_roles and _responsavel_has_associado_access(doc.name)
+	if "Responsavel" in user_roles and not can_manage_member_admin and not is_linked_responsavel:
+		context.access_denied = True
 		return context
 
 	# Cabeçalho / Seção 1
@@ -87,17 +98,43 @@ def get_context(context):
 		"tipo_registro",
 		"status",
 	]
-
-	# Conjunto de edição permitida
-	editable = {
+	shared_editable = {
+		"etnia",
+		"sexo",
+		"data_de_nascimento",
+		"religiao",
+		"estado_civil",
+		"email",
+		"telefone",
+		"cep_residencia",
+		"numero_residencia",
+		"nome_responsavel_1",
+		"telefone_responsavel_1",
+		"email_responsavel_1",
+		"estado_civil_responsavel_1",
+		"nome_responsavel_2",
+		"telefone_responsavel_2",
+		"email_responsavel_2",
+		"estado_civil_responsavel_2",
+		"pais_divorciados",
+		"tipo_guarda",
 		"guardiao_legal_responsavel_1",
 		"guardiao_legal_responsavel_2",
+	}
+
+	# Conjunto de edição permitida
+	gestor_editable = shared_editable | {
 		"anos_afastamento",
 		"eleito",
-		"tipo_guarda",
 		"area",
-		"pais_divorciados",
 	}
+	responsavel_editable = shared_editable
+	if can_manage_member_admin:
+		editable = gestor_editable
+	elif is_linked_responsavel:
+		editable = responsavel_editable
+	else:
+		editable = set()
 
 	area_options = frappe.get_all(
 		"Unidade Organizacional",
@@ -174,12 +211,8 @@ def get_context(context):
 		)
 	context.historico_no_grupo_rows = historico_rows
 	context.has_open_historico = has_open_historico
-	# Permissão de edição passada ao template sem usar frappe.has_role (não disponível neste contexto)
-	try:
-		user_roles = set(frappe.get_roles())
-	except Exception:
-		user_roles = set()
-	context.can_edit_member = "Gestor de Associados" in user_roles
+	context.can_edit_member = can_manage_member_admin or is_linked_responsavel
+	context.can_manage_member_admin = can_manage_member_admin
 
 	id_escoteiros = (doc.id_escoteiros or "").strip().lower()
 	has_desk_access = "Acesso ao Desk" in user_roles

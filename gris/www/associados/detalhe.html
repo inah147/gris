@@ -141,7 +141,7 @@
           <h3 class="font-semibold">Histórico no Grupo</h3>
           <p class="text-muted-foreground text-sm">Períodos de atividade do associado</p>
         </div>
-        {% if can_edit_member %}
+        {% if can_manage_member_admin %}
         <button type="button" id="btn-edit-historico" class="btn-sm-outline">
           {{ lucide_icon("pencil", size="sm") }} Gerenciar
         </button>
@@ -170,7 +170,7 @@
     {% endcall %}
 
     <!-- Ações Perigosas em Alert com Accordion -->
-    {% if can_edit_member and has_open_historico %}
+    {% if can_manage_member_admin and has_open_historico %}
     {% set chevron_icon = lucide_icon("chevron-down", size="sm") %}
     {% set danger_title %}<span class="dangerous-actions-title"><span>Ações Perigosas</span>{{ chevron_icon }}</span>{% endset %}
     {% set danger_content %}<p class="text-muted-foreground text-sm mb-4">Essas ações podem afetar permanentemente o registro do associado dentro do Gris.</p><button type="button" id="btn-afastar" class="btn-sm-destructive">Afastar Associado</button>{% endset %}

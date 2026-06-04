@@ -1,7 +1,33 @@
 import frappe
 from frappe.utils import today
 
-ALLOWED_UPDATE_FIELDS = {
+from gris.api.portal_access import _responsavel_has_associado_access
+
+COMMON_ALLOWED_UPDATE_FIELDS = {
+	"etnia",
+	"sexo",
+	"data_de_nascimento",
+	"religiao",
+	"estado_civil",
+	"email",
+	"telefone",
+	"cep_residencia",
+	"numero_residencia",
+	"nome_responsavel_1",
+	"telefone_responsavel_1",
+	"email_responsavel_1",
+	"estado_civil_responsavel_1",
+	"nome_responsavel_2",
+	"telefone_responsavel_2",
+	"email_responsavel_2",
+	"estado_civil_responsavel_2",
+	"guardiao_legal_responsavel_1",
+	"guardiao_legal_responsavel_2",
+	"tipo_guarda",
+	"pais_divorciados",
+}
+
+GESTOR_ALLOWED_UPDATE_FIELDS = COMMON_ALLOWED_UPDATE_FIELDS | {
 	"guardiao_legal_responsavel_1",
 	"guardiao_legal_responsavel_2",
 	"anos_afastamento",
@@ -11,16 +37,25 @@ ALLOWED_UPDATE_FIELDS = {
 	"pais_divorciados",
 }
 
+RESPONSAVEL_ALLOWED_UPDATE_FIELDS = COMMON_ALLOWED_UPDATE_FIELDS
+
 
 def _ensure_logged_in():
 	if frappe.session.user == "Guest":
 		frappe.throw("Session expired. Please login again.", frappe.PermissionError)
 
 
-def _can_edit(doc):
-	# Only users with role 'Gestor de Associados' can edit (avoid frappe.has_role for compatibility)
+def _can_manage_member(doc):
+	# Only users with role 'Gestor de Associados' can manage admin actions.
 	try:
 		return "Gestor de Associados" in frappe.get_roles()
+	except Exception:  # pragma: no cover
+		return False
+
+
+def _is_linked_responsavel(doc) -> bool:
+	try:
+		return _responsavel_has_associado_access(getattr(doc, "name", None))
 	except Exception:  # pragma: no cover
 		return False
 
@@ -34,7 +69,16 @@ def update_member(name: str, changes: str):
 	except frappe.DoesNotExistError:
 		frappe.throw("Member not found", frappe.DoesNotExistError)
 
-	can_edit = _can_edit(doc)
+	can_manage_member = _can_manage_member(doc)
+	is_linked_responsavel = _is_linked_responsavel(doc)
+	allowed_fields = (
+		GESTOR_ALLOWED_UPDATE_FIELDS
+		if can_manage_member
+		else RESPONSAVEL_ALLOWED_UPDATE_FIELDS
+		if is_linked_responsavel
+		else set()
+	)
+	can_edit = bool(allowed_fields)
 
 	try:
 		data = frappe.parse_json(changes) if isinstance(changes, str) else changes
@@ -46,7 +90,7 @@ def update_member(name: str, changes: str):
 
 	applied = {}
 	for field, val in data.items():
-		if field not in ALLOWED_UPDATE_FIELDS:
+		if field not in allowed_fields:
 			continue
 		if not can_edit:
 			# skip silently if user can't edit
@@ -66,7 +110,7 @@ def update_member(name: str, changes: str):
 
 	if applied:
 		try:
-			doc.save()  # respect user permissions
+			doc.save(ignore_permissions=not can_manage_member)
 			frappe.db.commit()
 		except frappe.PermissionError:
 			return {"success": False, "message": "Permission denied saving document", "applied": {}}
@@ -83,7 +127,7 @@ def set_member_leave(name: str):
 	except frappe.DoesNotExistError:
 		frappe.throw("Member not found", frappe.DoesNotExistError)
 
-	if not _can_edit(doc):
+	if not _can_manage_member(doc):
 		frappe.throw("No permission to edit", frappe.PermissionError)
 
 	applied_date = None
@@ -113,7 +157,7 @@ def get_member_history(name: str):
 	except frappe.DoesNotExistError:
 		frappe.throw("Member not found", frappe.DoesNotExistError)
 
-	if not _can_edit(doc):
+	if not _can_manage_member(doc):
 		frappe.throw("No permission to view", frappe.PermissionError)
 
 	history = []
@@ -137,7 +181,7 @@ def update_member_history(name: str, history: str):
 	except frappe.DoesNotExistError:
 		frappe.throw("Member not found", frappe.DoesNotExistError)
 
-	if not _can_edit(doc):
+	if not _can_manage_member(doc):
 		frappe.throw("No permission to edit", frappe.PermissionError)
 
 	import json

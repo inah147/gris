@@ -262,6 +262,22 @@ def _has_beneficiario_em_integracao(user: str | None = None) -> bool:
 	)
 
 
+def _responsavel_has_associado_access(associado_name: str | None, user: str | None = None) -> bool:
+	if not associado_name:
+		return False
+
+	responsavel_name = _get_responsavel_name(user)
+	if not responsavel_name:
+		return False
+
+	return bool(
+		frappe.db.exists(
+			"Responsavel Vinculo",
+			{"responsavel": responsavel_name, "beneficiario_associado": associado_name},
+		)
+	)
+
+
 def _has_minha_entrevista(user: str | None = None) -> bool:
 	user = user or frappe.session.user
 	if not user or user == "Guest":
@@ -279,6 +295,11 @@ def user_has_access(path: str, user: str | None = None, roles: Iterable[str] | N
 	allowed = PAGE_ROLES.get(path)
 	if path == "/responsavel/pesquisa_novos" and not _has_beneficiario_em_integracao(user):
 		return False
+	if path == "/associados/detalhe" and "Responsavel" in roles:
+		form_dict = getattr(frappe.local, "form_dict", {}) or {}
+		associado_name = form_dict.get("name")
+		if _responsavel_has_associado_access(associado_name, user):
+			return True
 	if "System Manager" in roles and (path not in STRICT_PORTAL_PAGES):
 		return True
 	if not allowed:

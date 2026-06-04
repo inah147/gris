@@ -45,8 +45,19 @@
 		</p>
 		{% endif %}
 	</div>
-	{% if link_drive %}
+	{% if link_drive or relatorio_disponivel %}
 	<div class="festa-page-header__actions">
+		{% if relatorio_disponivel %}
+		<a
+			href="/festas/relatorio?name={{ festa_name }}"
+			class="btn-sm-outline"
+			aria-label="Abrir relatório da festa"
+		>
+			{{ lucide_icon("clipboard-list", size="sm") }}
+			<span>Relatório</span>
+		</a>
+		{% endif %}
+		{% if link_drive %}
 		<a
 			href="{{ link_drive }}"
 			target="_blank"
@@ -57,6 +68,7 @@
 			{{ lucide_icon("folder-open", size="sm") }}
 			<span>Drive</span>
 		</a>
+		{% endif %}
 	</div>
 	{% endif %}
 </div>

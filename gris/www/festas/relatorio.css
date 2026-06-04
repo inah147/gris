@@ -1,0 +1,520 @@
+/* Relatório completo da festa — layout, seções colapsáveis e impressão. */
+
+.rel-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-wrap: wrap;
+}
+
+.rel-header__subtitle {
+	margin: 0.25rem 0 0;
+	color: var(--muted-foreground);
+}
+
+.rel-header__actions {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.rel-page {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.rel-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.75rem;
+	text-align: center;
+	padding: 2rem 1rem;
+}
+
+.rel-empty__icon {
+	color: var(--muted-foreground);
+}
+
+/* ── Seções colapsáveis ─────────────────────────────────────────────────── */
+
+.rel-section-card {
+	padding: 1.25rem;
+}
+
+.rel-section {
+	width: 100%;
+}
+
+.rel-section__summary {
+	display: flex;
+	align-items: center;
+	gap: 0.875rem;
+	width: 100%;
+	cursor: pointer;
+	list-style: none;
+}
+
+.rel-section__summary::-webkit-details-marker {
+	display: none;
+}
+
+.rel-section__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: 2.5rem;
+	height: 2.5rem;
+	border-radius: var(--radius-md, 0.5rem);
+	background: var(--muted, #f4f4f5);
+	color: var(--foreground);
+}
+
+.rel-section__text {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	flex: 1;
+	min-width: 0;
+}
+
+.rel-section__title {
+	font-size: 1.05rem;
+	font-weight: 600;
+	color: var(--foreground);
+}
+
+.rel-section__hint {
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+}
+
+.rel-section__chevron {
+	display: inline-flex;
+	flex-shrink: 0;
+	color: var(--muted-foreground);
+	transition: transform 0.15s ease;
+}
+
+.rel-section[open] .rel-section__chevron {
+	transform: rotate(90deg);
+}
+
+.rel-section__body {
+	padding-top: 1.25rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.rel-subtitle {
+	margin: 0.75rem 0 0;
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: var(--foreground);
+}
+
+/* ── Campos / definições ────────────────────────────────────────────────── */
+
+.rel-fields {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	gap: 0.75rem;
+	margin: 0;
+}
+
+.rel-fields > div {
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+}
+
+.rel-fields dt {
+	font-size: 0.78rem;
+	color: var(--muted-foreground);
+	font-weight: 500;
+}
+
+.rel-fields dd {
+	margin: 0;
+	font-size: 0.95rem;
+	color: var(--foreground);
+}
+
+/* ── Estimativa de participantes ────────────────────────────────────────── */
+
+.rel-estimativas {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--card);
+	padding: 0.85rem 1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.rel-estimativas__title {
+	font-size: 0.78rem;
+	font-weight: 600;
+	color: var(--muted-foreground);
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+}
+
+.rel-estimativas__grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 0.75rem;
+	margin: 0;
+}
+
+.rel-estimativa {
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+}
+
+.rel-estimativa dt {
+	font-size: 0.78rem;
+	font-weight: 500;
+	color: var(--muted-foreground);
+}
+
+.rel-estimativa dd {
+	margin: 0;
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 0.3rem;
+	font-size: 1.35rem;
+	font-weight: 700;
+	color: var(--foreground);
+}
+
+.rel-estimativa__unit {
+	font-size: 0.78rem;
+	font-weight: 500;
+	color: var(--muted-foreground);
+}
+
+.rel-estimativas__cenario {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	padding-top: 0.6rem;
+	border-top: 1px solid var(--border);
+}
+
+.rel-estimativas__cenario-label {
+	font-size: 0.78rem;
+	font-weight: 500;
+	color: var(--muted-foreground);
+}
+
+/* ── Grids de cards ─────────────────────────────────────────────────────── */
+
+.rel-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+	gap: 0.75rem;
+}
+
+.rel-grid--1 {
+	grid-template-columns: 1fr;
+}
+
+.rel-grid--barracas {
+	grid-template-columns: repeat(auto-fill, minmax(min(420px, 100%), 1fr));
+}
+
+.rel-grid--1 .rel-mini-card {
+	padding: 1.1rem 1.25rem;
+	gap: 0.4rem;
+}
+
+.rel-grid--1 .rel-mini-card .rel-text {
+	font-size: 0.95rem;
+}
+
+.rel-mini-card,
+.rel-barraca-card {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--card);
+	padding: 0.85rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.rel-mini-card__header,
+.rel-barraca-card__header {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+}
+
+.rel-mini-card__title,
+.rel-barraca-card__title {
+	font-weight: 600;
+	color: var(--foreground);
+}
+
+.rel-mini-card__meta {
+	font-size: 0.8rem;
+	color: var(--muted-foreground);
+}
+
+.rel-mini-card__empty {
+	font-size: 0.85rem;
+	color: var(--muted-foreground);
+	margin: 0;
+}
+
+.rel-team {
+	margin: 0;
+	padding-left: 1.1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+	font-size: 0.88rem;
+}
+
+.rel-barraca-card__team {
+	margin: 0;
+	font-size: 0.88rem;
+}
+
+.rel-barraca-card__totais {
+	display: flex;
+	gap: 1rem;
+	margin: 0;
+	flex-wrap: wrap;
+}
+
+.rel-barraca-card__totais > div {
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+}
+
+.rel-barraca-card__totais dt {
+	font-size: 0.75rem;
+	color: var(--muted-foreground);
+}
+
+.rel-barraca-card__totais dd {
+	margin: 0;
+	font-weight: 600;
+	color: var(--foreground);
+}
+
+.rel-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+}
+
+/* ── Cards de métrica ───────────────────────────────────────────────────── */
+
+.rel-stats {
+	display: flex;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+}
+
+.rel-stat {
+	flex: 1;
+	min-width: 160px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--card);
+	padding: 0.85rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+}
+
+.rel-stat__label {
+	font-size: 0.78rem;
+	color: var(--muted-foreground);
+	font-weight: 500;
+}
+
+.rel-stat__value {
+	font-size: 1.5rem;
+	font-weight: 700;
+	color: var(--foreground);
+}
+
+.rel-stat__value--pos {
+	color: #009E73;
+}
+
+.rel-stat__value--neg {
+	color: #D55E00;
+}
+
+.rel-stat__suffix {
+	font-size: 0.8rem;
+	font-weight: 500;
+	color: var(--muted-foreground);
+	margin-left: 0.3rem;
+}
+
+.rel-stat__extra {
+	font-size: 0.8rem;
+	color: var(--muted-foreground);
+}
+
+/* ── Tabelas ────────────────────────────────────────────────────────────── */
+
+.rel-table-wrap {
+	overflow-x: auto;
+}
+
+.rel-table {
+	width: 100%;
+}
+
+.rel-table .rel-num {
+	text-align: right;
+	white-space: nowrap;
+}
+
+.rel-table .rel-obs {
+	text-align: center;
+	width: 3rem;
+}
+
+.rel-table tr.rel-total td {
+	font-weight: 700;
+	border-top: 2px solid var(--border);
+}
+
+.rel-table--sm {
+	font-size: 0.85rem;
+}
+
+.rel-obs-btn {
+	width: 1.75rem;
+	height: 1.75rem;
+}
+
+.rel-obs-text {
+	margin: 0;
+	white-space: pre-wrap;
+}
+
+/* ── Gráficos ───────────────────────────────────────────────────────────── */
+
+.rel-chart {
+	width: 100%;
+	min-height: 320px;
+}
+
+/* Roscas de entradas lado a lado (confirmadas / origem / compras prévias). */
+.rel-charts-pies {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 0.75rem;
+}
+
+.rel-chart-block {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.rel-chart--pie {
+	min-height: 300px;
+}
+
+.rel-chart__empty {
+	margin: 0;
+	padding: 1.5rem 0;
+	text-align: center;
+	color: var(--muted-foreground);
+}
+
+/* ── Resumo por IA ──────────────────────────────────────────────────────── */
+
+.rel-ia {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: color-mix(in srgb, var(--muted) 40%, transparent);
+	padding: 0.85rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+}
+
+.rel-ia__label {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	font-size: 0.78rem;
+	font-weight: 600;
+	color: var(--muted-foreground);
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+}
+
+.rel-text {
+	margin: 0;
+	white-space: pre-wrap;
+	color: var(--foreground);
+}
+
+/* ── Impressão ──────────────────────────────────────────────────────────── */
+
+@media print {
+	@page {
+		size: A4;
+		margin: 12mm;
+	}
+
+	body {
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+	}
+
+	/* Esconde a interface do portal e ações que não fazem parte do relatório. */
+	#portal-sidebar,
+	.portal-sidebar-shell,
+	.portal-topbar,
+	.bottom-bar-wrapper,
+	.rel-header__actions,
+	[data-action="imprimir"] {
+		display: none !important;
+	}
+
+	main,
+	.page-container {
+		width: 100% !important;
+		max-width: none !important;
+		margin: 0 !important;
+		padding: 0 !important;
+	}
+
+	.rel-section-card,
+	.rel-mini-card,
+	.rel-barraca-card,
+	.rel-estimativas,
+	.rel-stat,
+	.rel-ia,
+	.rel-table {
+		break-inside: avoid;
+	}
+
+	.rel-section__chevron {
+		display: none !important;
+	}
+
+	.rel-chart {
+		min-height: 260px;
+	}
+}

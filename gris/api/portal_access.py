@@ -205,6 +205,7 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/festas/nova_festa": ["Gestor de festas"],
 	"/festas/todas_festas": ["Visualizador de festas", "Gestor de festas"],
 	"/festas/festa": ["Visualizador de festas", "Gestor de festas"],
+	"/festas/relatorio": ["Visualizador de festas", "Gestor de festas"],
 	"/festas/portaria": ["Gestor de festas", "Portaria"],
 }
 

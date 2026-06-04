@@ -413,7 +413,15 @@ def get_acompanhamento(festa: str) -> dict:
 		frappe.throw(_("Festa é obrigatória."))
 
 	ensure_user_pode_operar_portaria(festa)
+	return build_acompanhamento_data(festa)
 
+
+def build_acompanhamento_data(festa: str) -> dict:
+	"""Pizza/linha/origem das entradas de uma festa, sem checagem de permissão.
+
+	O chamador é responsável por autorizar o acesso. Reutilizado pela página de
+	relatório (`/festas/relatorio`), que já valida a permissão de leitura da Festa.
+	"""
 	# Contagem por (status, origem_portaria). É considerado "portaria" quando:
 	#  - lef.presencial = 1 (venda presencial física, marca o entrou no after_insert), OU
 	#  - o convite contém ao menos um Item Convite Festa cuja Opcao Convite Festa

@@ -910,8 +910,8 @@ window._festaData = {
 	{% call field(label="Nome da área *") %}
 		{{ input(name="add-area-nome", attrs={"id": "add-area-nome", "required": "required", "autocomplete": "off", "placeholder": "Ex.: Bar, Palco, Cozinha…"}) }}
 	{% endcall %}
-	{% call field(label="Descrição *") %}
-		<textarea id="add-area-descricao" class="input" rows="3" placeholder="Descreva as responsabilidades desta área…" required></textarea>
+	{% call field(label="Descrição") %}
+		<textarea id="add-area-descricao" class="input" rows="3" placeholder="Descreva as responsabilidades desta área…"></textarea>
 	{% endcall %}
 </div>
 {% endcall %}
@@ -937,8 +937,8 @@ window._festaData = {
 			trigger_attrs={"class": "w-full"}
 		) }}
 	{% endcall %}
-	{% call field(label="Descrição *") %}
-		<textarea id="add-barraca-descricao" class="input" rows="3" placeholder="Descreva as responsabilidades desta barraca…" required></textarea>
+	{% call field(label="Descrição") %}
+		<textarea id="add-barraca-descricao" class="input" rows="3" placeholder="Descreva as responsabilidades desta barraca…"></textarea>
 	{% endcall %}
 </div>
 {% endcall %}

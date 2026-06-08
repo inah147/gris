@@ -8,8 +8,12 @@ avaliações reaproveitam o código já existente.
 
 from __future__ import annotations
 
+import base64
+import io
+import os
+
 import frappe
-from frappe.utils import cint, flt, format_date
+from frappe.utils import cint, flt, format_date, today
 
 from gris.api.festas.avaliacao import _get_avaliacao_for_festa, _serialize_avaliacao
 from gris.api.festas.convites import build_dashboard as build_convites_dashboard
@@ -485,3 +489,262 @@ def get_relatorio_payload(festa_name: str) -> dict:
 	if not relatorio_disponivel(festa_name):
 		frappe.throw("Relatório indisponível: a avaliação da equipe ainda não foi iniciada.")
 	return build_relatorio_payload(festa_name)
+
+
+# ---------------------------------------------------------------------------
+# Relatório em PDF (capa + corpo) — gerado no servidor com WeasyPrint.
+#
+# Documento único: o template do corpo inclui a capa (página nomeada `cover`,
+# full-bleed) e usa CSS moderno (linear-gradient, flexbox, web font Figtree,
+# `@page`/`counter(page)`). Como o WeasyPrint também não roda JavaScript, os
+# gráficos seguem em SVG estático com a geometria (roscas/waterfall/séries)
+# calculada aqui em Python.
+# ---------------------------------------------------------------------------
+
+# Paleta acessível (Okabe-Ito) — mesma da página de relatório (`relatorio.js`).
+_COR_ENTROU = "#009E73"
+_COR_NAO_ENTROU = "#D55E00"
+_COR_PORTARIA = "#0072B2"
+_COR_COMPRA_PREVIA = "#56B4E9"
+_COR_COMPRA_PORTARIA = "#E69F00"
+# Marca (degradê e acentos).
+_COR_NAVY = "#1D2755"
+
+# A capa é renderizada à parte e injetada no corpo (documento mestre) como
+# `capa_html`. Não usamos `{% include %}`: o loader do Jinja do Frappe não resolve
+# o nome do template quando renderizamos a partir de string.
+_CAPA_TEMPLATE = "templates/pages/relatorio_festa_pdf_capa.html"
+_CORPO_TEMPLATE = "templates/pages/relatorio_festa_pdf_corpo.html"
+
+
+def _logo_uel_data_uri() -> str:
+	"""Logo da UEL como data-URI PNG (mesmo carregamento do convite/QR)."""
+	from gris.festas.utils.convite_qr import _carregar_logo
+
+	logo = _carregar_logo()
+	if logo is None:
+		return ""
+	buf = io.BytesIO()
+	logo.save(buf, format="PNG")
+	return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
+def _donut(pares: list[dict]) -> dict | None:
+	"""Segmentos prontos para um donut SVG.
+
+	O círculo usa r=15.915 (circunferência ≈ 100), então `stroke-dasharray` já é
+	a própria porcentagem e o `stroke-dashoffset` posiciona cada fatia a partir do
+	topo (12h). `pares`: lista de ``{label, value, color}``.
+	"""
+	total = sum(flt(p["value"]) for p in pares)
+	if total <= 0:
+		return None
+	segmentos = []
+	acumulado = 0.0
+	for p in pares:
+		valor = flt(p["value"])
+		pct = valor / total * 100
+		segmentos.append(
+			{
+				"label": p["label"],
+				"value": valor,
+				"pct": pct,
+				"color": p["color"],
+				"dasharray": f"{pct:.3f} {100 - pct:.3f}",
+				"dashoffset": f"{125 - acumulado:.3f}",
+			}
+		)
+		acumulado += pct
+	return {"total": total, "segmentos": segmentos}
+
+
+def _waterfall(steps: list[dict], resultado: float) -> dict | None:
+	"""Geometria (px) das barras do waterfall financeiro para um SVG estático."""
+	if not steps:
+		return None
+	largura, altura = 540.0, 230.0
+	pad_top, pad_bottom, pad_lado = 16.0, 46.0, 10.0
+
+	pontos = []  # (label, inicio, fim, valor)
+	running = 0.0
+	for s in steps:
+		valor = flt(s["valor"])
+		pontos.append((s["label"], running, running + valor, valor))
+		running += valor
+	pontos.append(("Resultado", 0.0, flt(resultado), flt(resultado)))
+
+	valores_eixo = [0.0]
+	for _, inicio, fim, _ in pontos:
+		valores_eixo += [inicio, fim]
+	vmin, vmax = min(valores_eixo), max(valores_eixo)
+	if vmax == vmin:
+		vmax = vmin + 1
+	plot_h = altura - pad_top - pad_bottom
+
+	def y_de(v: float) -> float:
+		return pad_top + (vmax - v) / (vmax - vmin) * plot_h
+
+	n = len(pontos)
+	slot = (largura - 2 * pad_lado) / n
+	bar_w = min(slot * 0.55, 56.0)
+
+	barras = []
+	for i, (label, inicio, fim, valor) in enumerate(pontos):
+		cx = pad_lado + slot * i + slot / 2
+		y_top = y_de(max(inicio, fim))
+		h = max(abs(y_de(inicio) - y_de(fim)), 1.0)
+		cor = _COR_NAVY if label == "Resultado" else (_COR_ENTROU if valor >= 0 else _COR_NAO_ENTROU)
+		barras.append(
+			{
+				"x": cx - bar_w / 2,
+				"y": y_top,
+				"w": bar_w,
+				"h": h,
+				"cx": cx,
+				"cor": cor,
+				"label": label,
+				"valor": valor,
+				"valor_y": y_top - 5,
+			}
+		)
+	return {
+		"width": largura,
+		"height": altura,
+		"zero_y": y_de(0.0),
+		"label_y": altura - pad_bottom + 14,
+		"barras": barras,
+	}
+
+
+def _serie(linha: list[dict], modo: str) -> dict | None:
+	"""Pontos de uma série temporal (linha + área) para um SVG estático.
+
+	`modo`: ``"qtd"`` (entradas por janela de 15 min) ou ``"acumulado"``.
+	"""
+	if not linha:
+		return None
+	chave = "acumulado" if modo == "acumulado" else "qtd"
+	valores = [flt(p.get(chave)) for p in linha]
+	largura, altura = 540.0, 170.0
+	pad_top, pad_bottom, pad_lado = 12.0, 26.0, 10.0
+	plot_h = altura - pad_top - pad_bottom
+	plot_w = largura - 2 * pad_lado
+	vmax = max(valores) or 1.0
+	n = len(valores)
+
+	def x_de(i: int) -> float:
+		return pad_lado + (plot_w * (i / (n - 1) if n > 1 else 0.5))
+
+	def y_de(v: float) -> float:
+		return pad_top + (1 - v / vmax) * plot_h
+
+	pts = [(x_de(i), y_de(v)) for i, v in enumerate(valores)]
+	base_y = pad_top + plot_h
+	linha_pts = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+	area_pts = f"{pts[0][0]:.1f},{base_y:.1f} {linha_pts} {pts[-1][0]:.1f},{base_y:.1f}"
+
+	rotulos = []
+	for p in linha:
+		b = str(p.get("bin") or "")
+		rotulos.append(b[11:16] if len(b) >= 16 else b)
+	marcas = [
+		{"x": x_de(i), "label": rotulos[i]}
+		for i in sorted({0, n // 2, n - 1})
+		if 0 <= i < n
+	]
+	return {
+		"width": largura,
+		"height": altura,
+		"base_y": base_y,
+		"vmax": vmax,
+		"linha": linha_pts,
+		"area": area_pts,
+		"pontos": [{"x": round(x, 1), "y": round(y, 1)} for x, y in pts],
+		"marcas": marcas,
+		"label_y": altura - pad_bottom + 14,
+	}
+
+
+def _build_pdf_visuais(payload: dict) -> dict:
+	"""Calcula a geometria dos visuais estáticos do PDF a partir do payload."""
+	chart = (payload.get("convites_secao") or {}).get("chart") or {}
+	pizza = chart.get("pizza") or {}
+	origem = chart.get("origem") or {}
+	linha = chart.get("linha") or []
+
+	return {
+		"donut_entradas": _donut(
+			[
+				{"label": "Entrou", "value": cint(pizza.get("entrou")), "color": _COR_ENTROU},
+				{"label": "Não entrou", "value": cint(pizza.get("nao_entrou")), "color": _COR_NAO_ENTROU},
+				{"label": "Comprou na portaria", "value": cint(pizza.get("comprou_portaria")), "color": _COR_PORTARIA},
+			]
+		),
+		"donut_origem": _donut(
+			[
+				{"label": "Compra prévia", "value": cint(origem.get("compra_previa")), "color": _COR_COMPRA_PREVIA},
+				{"label": "Compra na portaria", "value": cint(origem.get("compra_portaria")), "color": _COR_COMPRA_PORTARIA},
+			]
+		),
+		"donut_previa": _donut(
+			[
+				{"label": "Entrou", "value": cint(pizza.get("entrou")), "color": _COR_ENTROU},
+				{"label": "Não entrou", "value": cint(pizza.get("nao_entrou")), "color": _COR_NAO_ENTROU},
+			]
+		),
+		"waterfall": _waterfall(
+			(payload.get("chart_data") or {}).get("waterfall") or [], flt(payload.get("resultado"))
+		),
+		"serie_janela": _serie(linha, "qtd"),
+		"serie_acumulado": _serie(linha, "acumulado"),
+	}
+
+
+def _render_pdf_template(rel_path: str, ctx: dict) -> str:
+	path = os.path.join(frappe.get_app_path("gris"), rel_path)
+	with open(path, encoding="utf-8") as fh:
+		return frappe.render_template(fh.read(), ctx)
+
+
+def _gerar_relatorio_pdf_bytes(festa_name: str) -> bytes:
+	"""Monta o PDF completo (capa + corpo) com WeasyPrint.
+
+	O corpo é o documento mestre e inclui a capa numa página nomeada `cover`
+	(full-bleed, sem rodapé). O número de página vem de `counter(page)` na
+	margin box do `@page`; a faixa de marca do rodapé é um elemento
+	`position:fixed`. `base_url` aponta para `gris/public/` para resolver a web
+	font Figtree do `@font-face`.
+	"""
+	from weasyprint import HTML
+
+	payload = build_relatorio_payload(festa_name)
+	uel = frappe.get_cached_doc("Definicao da UEL")
+	ctx = {
+		**payload,
+		"uel_logo": _logo_uel_data_uri(),
+		"uel_tipo": uel.get("tipo_uel") or "",
+		"uel_nome": uel.get("nome_da_uel") or "",
+		"gerado_em": format_date(today(), "dd/MM/yyyy"),
+		"visuais": _build_pdf_visuais(payload),
+	}
+
+	ctx["capa_html"] = _render_pdf_template(_CAPA_TEMPLATE, ctx)
+	html = _render_pdf_template(_CORPO_TEMPLATE, ctx)
+	base_url = frappe.get_app_path("gris", "public") + os.sep
+	return HTML(string=html, base_url=base_url).write_pdf()
+
+
+@frappe.whitelist()
+def download_relatorio_pdf(festa_name: str) -> None:
+	"""Gera e disponibiliza o relatório completo da festa em PDF (capa + corpo)."""
+	if not festa_name:
+		frappe.throw("Parâmetro 'festa_name' obrigatório.", frappe.ValidationError)
+	if not frappe.has_permission("Festa", "read", festa_name):
+		frappe.throw("Sem permissão para acessar esta festa.", frappe.PermissionError)
+	if not relatorio_disponivel(festa_name):
+		frappe.throw("Relatório indisponível: a avaliação da equipe ainda não foi iniciada.")
+
+	nome_festa = frappe.db.get_value("Festa", festa_name, "nome_festa") or festa_name
+	frappe.local.response.filename = f"relatorio-{frappe.scrub(nome_festa)}.pdf"
+	frappe.local.response.filecontent = _gerar_relatorio_pdf_bytes(festa_name)
+	frappe.local.response.type = "pdf"

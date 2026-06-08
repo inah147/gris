@@ -138,7 +138,6 @@
    "label": "Pagador recebe todos os QR codes"
   },
   {
-   "depends_on": "eval:!doc.pagador_recebe_qr_codes",
    "description": "Lista gerada automaticamente quando o pagador recebe todos os QR codes.",
    "fieldname": "convidados",
    "fieldtype": "Table",
@@ -157,7 +156,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-03 23:20:12.001462",
+ "modified": "2026-06-05 12:43:52.809833",
  "modified_by": "Administrator",
  "module": "Festas",
  "name": "Convite Festa",

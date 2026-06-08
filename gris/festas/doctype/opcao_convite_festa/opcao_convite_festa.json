@@ -1,8 +1,7 @@
 {
  "actions": [],
- "allow_rename": 0,
  "autoname": "format:{festa} - {nome_convite}",
- "creation": "2026-05-20 09:00:00.000000",
+ "creation": "2026-05-20 09:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -38,7 +37,7 @@
    "fieldname": "ramo",
    "fieldtype": "Select",
    "label": "Ramo",
-   "options": "\nFilhotes\nLobinho\nEscoteiro\nSênior\nPioneiro\nDiretoria"
+   "options": "\nFilhotes\nLobinho\nEscoteiro\nS\u00eanior\nPioneiro\nDiretoria"
   },
   {
    "default": "1",
@@ -77,8 +76,7 @@
    "fieldname": "quantidade_vendida",
    "fieldtype": "Int",
    "label": "Quantidade Atual de Vendas",
-   "non_negative": 1,
-   "read_only": 1
+   "non_negative": 1
   },
   {
    "fieldname": "imagem_section",
@@ -100,7 +98,7 @@
    "link_fieldname": "festa"
   }
  ],
- "modified": "2026-05-20 09:00:00.000000",
+ "modified": "2026-06-08 10:28:42.386277",
  "modified_by": "Administrator",
  "module": "Festas",
  "name": "Opcao Convite Festa",

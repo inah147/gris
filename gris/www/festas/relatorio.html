@@ -40,8 +40,8 @@
 	</div>
 	{% if not not_found and not indisponivel %}
 	<div class="rel-header__actions">
-		<button type="button" class="btn-outline" data-action="imprimir">
-			{{ lucide_icon("printer", size="sm") }} <span>Imprimir / Salvar PDF</span>
+		<button type="button" class="btn-outline" data-action="baixar-pdf" data-festa="{{ festa_name }}">
+			{{ lucide_icon("download", size="sm") }} <span>Baixar PDF</span>
 		</button>
 	</div>
 	{% endif %}
@@ -409,7 +409,7 @@
 		<article class="rel-mini-card"><header class="rel-mini-card__header"><span class="rel-mini-card__title">Pontos de melhoria adicionais</span></header><p class="rel-text">{{ avaliacoes.geral.pontos_melhoria or "—" }}</p></article>
 	</div>
 	{% if avaliacoes.geral.resumo_ia %}
-	<article class="rel-ia"><span class="rel-ia__label">{{ lucide_icon("sparkles", size="xs") }} Resumo por IA</span><p class="rel-text">{{ avaliacoes.geral.resumo_ia }}</p></article>
+	<article class="rel-ia"><span class="rel-ia__label">{{ lucide_icon("sparkles", size="xs") }} Resumo por IA</span><div class="rel-ia__md">{{ frappe.utils.markdown(avaliacoes.geral.resumo_ia) | safe }}</div></article>
 	{% endif %}
 
 	<h3 class="rel-subtitle">Avaliação dos convidados</h3>
@@ -419,7 +419,7 @@
 	</div>
 	<div id="rel-chart-convidados" class="rel-chart"></div>
 	{% if avaliacoes.convidados.resumo_ia %}
-	<article class="rel-ia"><span class="rel-ia__label">{{ lucide_icon("sparkles", size="xs") }} Resumo por IA</span><p class="rel-text">{{ avaliacoes.convidados.resumo_ia }}</p></article>
+	<article class="rel-ia"><span class="rel-ia__label">{{ lucide_icon("sparkles", size="xs") }} Resumo por IA</span><div class="rel-ia__md">{{ frappe.utils.markdown(avaliacoes.convidados.resumo_ia) | safe }}</div></article>
 	{% endif %}
 
 	<h3 class="rel-subtitle">Avaliação individual da equipe</h3>
@@ -431,7 +431,7 @@
 		<div class="rel-stat"><span class="rel-stat__label">Respostas</span><span class="rel-stat__value">{{ eq.concluidas }}<span class="rel-stat__suffix">de {{ eq.total }} ({{ "%.0f"|format(taxa) }}%)</span></span></div>
 	</div>
 	{% if eq.resumo_ia %}
-	<article class="rel-ia"><span class="rel-ia__label">{{ lucide_icon("sparkles", size="xs") }} Resumo por IA</span><p class="rel-text">{{ eq.resumo_ia }}</p></article>
+	<article class="rel-ia"><span class="rel-ia__label">{{ lucide_icon("sparkles", size="xs") }} Resumo por IA</span><div class="rel-ia__md">{{ frappe.utils.markdown(eq.resumo_ia) | safe }}</div></article>
 	{% endif %}
 
 	{% else %}

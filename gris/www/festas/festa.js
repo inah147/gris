@@ -990,7 +990,6 @@
 			const nome = (document.getElementById("add-area-nome").value || "").trim();
 			const descricao = (document.getElementById("add-area-descricao").value || "").trim();
 			if (!nome) { toast("Informe o nome da área.", "error"); return; }
-			if (!descricao) { toast("Informe a descrição da área.", "error"); return; }
 
 			btn.disabled = true;
 			api("gris.api.festas.criar_area", { festa_name: festaName, nome_area: nome, descricao: descricao })
@@ -1142,7 +1141,6 @@
 			const area = (getSelectValue("add-barraca-area") || "").trim();
 			if (!nome) { toast("Informe o nome da barraca.", "error"); return; }
 			if (!area) { toast("Selecione a área da barraca.", "error"); return; }
-			if (!descricao) { toast("Informe a descrição da barraca.", "error"); return; }
 
 			btn.disabled = true;
 			api("gris.api.festas.criar_barraca", { festa_name: festaName, nome_barraca: nome, descricao: descricao, area: area })

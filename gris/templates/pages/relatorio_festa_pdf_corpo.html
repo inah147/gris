@@ -1,0 +1,605 @@
+{#- Relatório da festa em PDF — documento único (capa + corpo), renderizado com
+   WeasyPrint. A capa é renderizada à parte e injetada aqui via `capa_html`
+   (página nomeada `cover`, full-bleed, sem rodapé) — não usamos `{% include %}`
+   porque o loader do Jinja do Frappe não resolve o nome ao renderizar de string.
+   O número de página vem de `counter(page)` na margin
+   box do @page; a faixa de marca do rodapé é um elemento `position:fixed`
+   (repetido em todas as páginas e coberto pela capa na primeira).
+
+   Sem as gambiarras do wkhtmltopdf: `linear-gradient`, flexbox, web fonts
+   (Figtree) e `@page`/counters são nativos do WeasyPrint. Os gráficos continuam
+   em SVG estático (sem JS), com geometria calculada em Python. -#}
+{% macro brl(v) %}{{ frappe.utils.fmt_money(v or 0, currency="BRL") }}{% endmacro %}
+{% macro qty(v) %}{{ "%g"|format(v or 0) }}{% endmacro %}
+
+{% macro sec_head(num, titulo, dica="") %}
+<header class="sec-head">
+	<span class="sec-head__num">{{ "%02d"|format(num) }}</span>
+	<div class="sec-head__txt">
+		<div class="sec-head__title">{{ titulo }}</div>
+		{% if dica %}<div class="sec-head__hint">{{ dica }}</div>{% endif %}
+	</div>
+</header>
+{% endmacro %}
+
+{% macro stat(label, valor, mod="") %}
+<div class="stat">
+	<div class="stat__label">{{ label }}</div>
+	<div class="stat__value {{ mod }}">{{ valor }}</div>
+</div>
+{% endmacro %}
+
+{% macro donut(d, titulo) %}
+{% if d %}
+<div class="donut">
+	<div class="donut__svgcell">
+		<svg viewBox="0 0 42 42" class="donut__svg">
+			<circle cx="21" cy="21" r="15.915" fill="none" stroke="#eef0f4" stroke-width="4.5"></circle>
+			{% for s in d.segmentos %}
+			<circle cx="21" cy="21" r="15.915" fill="none" stroke="{{ s.color }}" stroke-width="4.5"
+				stroke-dasharray="{{ s.dasharray }}" stroke-dashoffset="{{ s.dashoffset }}" stroke-linecap="round"></circle>
+			{% endfor %}
+		</svg>
+	</div>
+	<div class="donut__side">
+		<div class="donut__title">{{ titulo }}</div>
+		{% for s in d.segmentos %}
+		<div class="legend">
+			<span class="legend__dot" style="background:{{ s.color }}"></span>
+			<span class="legend__label">{{ s.label }}</span>
+			<span class="legend__val">{{ "%g"|format(s.value) }} · {{ "%.0f"|format(s.pct) }}%</span>
+		</div>
+		{% endfor %}
+	</div>
+</div>
+{% else %}
+<p class="empty">{{ titulo }}: sem dados.</p>
+{% endif %}
+{% endmacro %}
+
+{% macro barras(itens, cor="#1231E4") %}{# itens: [{label, valor}] em R$ #}
+{% set vmax = (itens | map(attribute='valor') | map('abs') | max) or 1 %}
+<table class="bars">
+	{% for it in itens %}
+	<tr>
+		<td class="bar__label">{{ it.label }}</td>
+		<td><div class="bar__track"><div class="bar__fill" style="width:{{ ((it.valor|abs)/vmax*100)|round(1) }}%;background:{{ cor }}"></div></div></td>
+		<td class="bar__valcell">{{ brl(it.valor) }}</td>
+	</tr>
+	{% endfor %}
+</table>
+{% endmacro %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+	<meta charset="utf-8" />
+	<title>Relatório — {{ nome_festa }}</title>
+	<style>
+		/* ─────────── Fonte de marca (Figtree variável, local) ─────────── */
+		@font-face {
+			font-family: "Figtree"; font-style: normal; font-weight: 300 900;
+			src: url("design_system/fonts/figtree/figtree-latin-wght-normal.woff2") format("woff2");
+		}
+		@font-face {
+			font-family: "Figtree"; font-style: italic; font-weight: 300 900;
+			src: url("design_system/fonts/figtree/figtree-latin-wght-italic.woff2") format("woff2");
+		}
+
+		/* ─────────── Tokens (derivados do tema shadcn do Portal) ─────────── */
+		:root {
+			--brand-1: #4F39F6;   /* indigo (sidebar-primary) */
+			--brand-2: #1231E4;   /* azul (primary)           */
+			--ink:     #1E1B4B;   /* indigo escuro p/ títulos */
+			--accent:  #00A516;   /* verde (success)          */
+			--danger:  #CF0213;   /* vermelho (destructive)   */
+			--fg:      #14161C;
+			--muted:   #67787C;
+			--border:  #CFD6DF;
+			--surface: #ffffff;
+			--soft:    #F6F8FC;
+			--radius:  10px;
+			--shadow:  0 1px 2px rgba(16,24,40,.09), 0 4px 10px rgba(16,24,40,.05);
+		}
+
+		/* ─────────── Página ─────────── */
+		@page {
+			size: A4;
+			margin: 15mm 13mm 18mm 13mm;
+			/* Texto do rodapé em branco, alinhado ao fundo da margem para cair SOBRE a
+			   faixa de marca full-bleed (.footer-bar). Counter aqui é confiável. */
+			@bottom-left  { content: string(festatitle); font-family: "Figtree", sans-serif; font-size: 9.5pt;
+				color: #fff; vertical-align: bottom; padding: 0 0 4.6mm 7mm; }
+			@bottom-right { content: counter(page); font-family: "Figtree", sans-serif; font-size: 11pt;
+				font-weight: 800; color: #fff; vertical-align: bottom; padding: 0 7mm 4mm 0; }
+		}
+		@page cover { margin: 0; @bottom-left { content: none; } @bottom-right { content: none; } }
+
+		html, body { margin: 0; padding: 0; }
+		body { font-family: "Figtree", "Helvetica Neue", Helvetica, Arial, sans-serif;
+			color: var(--fg); font-size: 9.5pt; line-height: 1.45; -weasy-hyphens: none; }
+
+		/* Faixa de marca fixa no rodapé, FULL-BLEED: os offsets negativos cancelam as
+		   margens do @page (lados 13mm, base 18mm) para a faixa sangrar até as bordas
+		   da página. O número/festa (margin boxes brancos) caem sobre ela. Coberta
+		   pela capa na 1ª página. Se mudar a margem do @page, ajuste estes offsets.
+		   NB: o WeasyPrint 59 não resolve var() dentro de linear-gradient() → hex. */
+		.footer-bar { position: fixed; left: -13mm; right: -13mm; bottom: -18mm; height: 13mm; z-index: 1;
+			background: linear-gradient(90deg, #4F39F6 0%, #1231E4 55%, #00A516 100%); }
+
+		.wrap { position: relative; z-index: 2; }
+		h3.sub { color: var(--ink); font-size: 11.5pt; margin: 7mm 0 2.5mm; font-weight: 700; letter-spacing: -.2px; }
+		.muted { color: var(--muted); }
+		.empty { color: var(--muted); font-style: italic; margin: 2mm 0; }
+
+		/* ─────────── Capa (página nomeada `cover`) ─────────── */
+		/* Layout em bloco (o flex cross-size do WeasyPrint 59 é instável aqui): o
+		   rodapé é absoluto com left/right fixando a largura (card nunca vaza); a
+		   altura 296mm + page-break-inside:avoid garantem a capa em 1 página. */
+		.cover { page: cover; position: relative; z-index: 10; overflow: hidden; page-break-inside: avoid;
+			width: 210mm; height: 296mm; box-sizing: border-box; padding: 24mm 20mm 0;
+			color: #fff;
+			background: linear-gradient(152deg, #5A45F8 0%, #2C3BEA 46%, #122C9E 84%, #0C1F6B 100%); }
+		.cover__blob { position: absolute; border-radius: 50%; }
+		.cover__blob--a { top: -40mm; right: -34mm; width: 150mm; height: 150mm;
+			background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.14), rgba(255,255,255,0) 70%); }
+		.cover__blob--b { bottom: 30mm; left: -30mm; width: 120mm; height: 120mm;
+			background: radial-gradient(circle at 50% 50%, rgba(0,165,22,0.30), rgba(0,165,22,0) 70%); }
+		.cover__top { position: relative; z-index: 1; }
+		.cover__kicker { font-size: 10.5pt; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #6BF59A; }
+		.cover__mid { position: relative; z-index: 1; margin-top: 36mm; max-width: 168mm; }
+		.cover__title { font-size: 38pt; font-weight: 800; line-height: 1.04; letter-spacing: -1px; margin: 0;
+			max-width: 168mm; overflow-wrap: break-word; }
+		.cover__rule { display: block; width: 42mm; height: 5px; border-radius: 3px; margin: 9mm 0 6mm;
+			background: linear-gradient(90deg, #6BF59A, #00A516); }
+		.cover__subtitle { font-size: 15pt; font-weight: 500; color: #DCE3FF; margin: 0; letter-spacing: .2px; }
+		.cover__foot { position: absolute; left: 20mm; right: 20mm; bottom: 18mm; z-index: 1; }
+		.cover__card { display: flex; align-items: center; gap: 7mm;
+			background: rgba(255,255,255,0.96); border-radius: 14px; padding: 6mm 7mm; box-shadow: 0 6px 18px rgba(8,15,52,.28); }
+		.cover__logo { flex: none; height: 22mm; width: auto; max-width: 60mm; }
+		.cover__org { min-width: 0; border-left: 2px solid var(--border); padding-left: 6mm; }
+		.cover__uel { font-size: 13pt; font-weight: 800; color: var(--ink); }
+		.cover__meta { font-size: 9.5pt; color: var(--muted); margin-top: 1.5mm; }
+
+		/* ─────────── Seções (cada uma em nova página) ─────────── */
+		.sec { page-break-before: always; }
+		.sec--first { page-break-before: avoid; }
+		/* inline-block (não flex): o flex do WeasyPrint 59 encolhe itens pequenos de
+		   tamanho fixo e colapsa o gap — o número viraria um disco minúsculo. */
+		.sec-head { margin: 0 0 6mm; padding-bottom: 4mm; border-bottom: 2px solid var(--border); }
+		.sec-head__num { display: inline-block; width: 15mm; height: 15mm; border-radius: 12px; color: #fff;
+			font-size: 16pt; font-weight: 800; text-align: center; line-height: 15mm; vertical-align: middle;
+			margin-right: 5mm; background: linear-gradient(140deg, #4F39F6, #1231E4); }
+		.sec-head__txt { display: inline-block; vertical-align: middle; }
+		.sec-head__title { font-size: 16pt; font-weight: 800; color: var(--ink); letter-spacing: -.3px; }
+		.sec-head__hint { font-size: 9pt; color: var(--muted); margin-top: 1mm; }
+
+		/* ─────────── Cards de destaque (flex) ─────────── */
+		.statgrid { display: flex; gap: 4mm; margin: 3mm 0; }
+		.stat { flex: 1; border: 1px solid var(--border); border-radius: var(--radius); padding: 4mm;
+			background: var(--soft); box-shadow: var(--shadow); }
+		.stat__label { font-size: 8pt; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); font-weight: 600; }
+		.stat__value { font-size: 17pt; font-weight: 800; color: var(--ink); margin-top: 1.5mm; letter-spacing: -.5px; }
+		.stat__value.pos { color: var(--accent); }
+		.stat__value.neg { color: var(--danger); }
+
+		/* ─────────── Grid de info (2 colunas) ─────────── */
+		.fieldgrid { display: flex; flex-wrap: wrap; gap: 3mm 4mm; margin: 2mm 0; }
+		.field { flex: 1 1 45%; box-sizing: border-box; border-left: 3px solid var(--accent);
+			padding: 1mm 0 1mm 3.5mm; }
+		.field dt { font-size: 8pt; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); font-weight: 600; }
+		.field dd { margin: .5mm 0 0; font-size: 11.5pt; font-weight: 700; color: var(--ink); }
+
+		/* ─────────── Mini-cards (flex wrap) ─────────── */
+		.cards { display: flex; flex-wrap: wrap; gap: 3mm; margin: 2mm 0; }
+		.mini { flex: 1 1 47%; box-sizing: border-box; border: 1px solid var(--border);
+			border-radius: var(--radius); padding: 3.5mm; background: var(--soft); box-shadow: var(--shadow); }
+		.mini__title { font-weight: 700; color: var(--ink); }
+		.mini__meta { font-size: 8.5pt; color: var(--muted); }
+		.mini__list { margin: 2mm 0 0; padding-left: 4mm; }
+		.mini__list li { margin-bottom: .6mm; }
+		.chip { display: inline-block; background: #EEF1FF; color: var(--brand-2); border: 1px solid #DfE4FF;
+			border-radius: 999px; padding: 1mm 3mm; font-size: 8.5pt; font-weight: 600; margin: 0 1.5mm 1.5mm 0; }
+		.badge { display: inline-block; background: linear-gradient(140deg, #4F39F6, #1231E4);
+			color: #fff; border-radius: 6px; padding: 1mm 3mm; font-size: 9pt; font-weight: 700; }
+
+		/* ─────────── Tabelas ─────────── */
+		table.tbl { width: 100%; border-collapse: collapse; margin: 2mm 0; font-size: 8.8pt; }
+		table.tbl th { text-align: left; color: var(--muted); text-transform: uppercase; font-size: 7.5pt;
+			letter-spacing: .4px; font-weight: 700; padding: 2.4mm 2.5mm; border-bottom: 1.5px solid var(--border); }
+		table.tbl td { padding: 2.2mm 2.5mm; border-bottom: 1px solid #F0F1F6; vertical-align: top; }
+		table.tbl tr:nth-child(even) td { background: var(--soft); }
+		table.tbl .num { text-align: right; white-space: nowrap; }
+		table.tbl tr.total td { font-weight: 800; color: var(--ink); border-top: 1.5px solid var(--brand-2); background: #fff; }
+
+		/* ─────────── Barras horizontais ─────────── */
+		.bars { width: 100%; border-collapse: separate; border-spacing: 0 1.4mm; margin: 2mm 0; }
+		.bars td { vertical-align: middle; }
+		.bar__label { width: 40mm; font-size: 8.8pt; padding-right: 3mm; }
+		.bar__valcell { width: 30mm; text-align: right; font-size: 8.8pt; font-weight: 700; color: var(--ink); white-space: nowrap; padding-left: 3mm; }
+		.bar__track { height: 5mm; background: #EEF0F4; border-radius: 5px; overflow: hidden; }
+		.bar__fill { height: 5mm; border-radius: 5px; }
+
+		/* ─────────── Donut + SVG ─────────── */
+		.donut { display: flex; align-items: center; gap: 4mm; border: 1px solid var(--border);
+			border-radius: var(--radius); background: var(--soft); box-shadow: var(--shadow);
+			padding: 3.5mm; margin: 2mm 0; page-break-inside: avoid; }
+		.donut-row { display: flex; gap: 4mm; align-items: stretch; }
+		.donut-row > .donut { flex: 1; min-width: 0; }
+		.donut__svgcell { flex: none; width: 30mm; }
+		.donut__svg { width: 30mm; height: 30mm; }
+		.donut__side { flex: 1; }
+		.donut__title { font-weight: 700; color: var(--ink); margin-bottom: 2mm; }
+		.legend { font-size: 8.5pt; margin-bottom: 1mm; }
+		.legend__dot { display: inline-block; width: 3mm; height: 3mm; border-radius: 2px; vertical-align: middle; margin-right: 2mm; }
+		.legend__val { color: var(--muted); }
+		.svgchart { display: block; margin: 1mm 0 2mm; }
+		.chart-card { border: 1px solid var(--border); border-radius: var(--radius); background: var(--soft);
+			box-shadow: var(--shadow); padding: 3.5mm; margin: 2mm 0; page-break-inside: avoid; }
+
+		/* ─────────── Resumo IA ─────────── */
+		.ia { border: 1px solid #D7DCFB; background: linear-gradient(180deg, #F4F6FF, #FBFCFF);
+			border-radius: var(--radius); padding: 3.5mm 4mm; margin: 3mm 0; page-break-inside: avoid; }
+		.ia__label { font-weight: 800; color: var(--brand-2); font-size: 8.5pt; text-transform: uppercase; letter-spacing: .6px; }
+		.ia__md { margin-top: 1.5mm; }
+		.ia__md p { margin: 1.5mm 0; }
+		.text { white-space: pre-line; }
+
+		/* ─────────── Participantes ─────────── */
+		.part-coord { border-radius: var(--radius); padding: 4mm 5mm; margin: 2mm 0 4mm; color: #fff;
+			background: linear-gradient(135deg, #4F39F6, #1231E4); box-shadow: var(--shadow); }
+		.part-coord .lbl { font-size: 8pt; text-transform: uppercase; letter-spacing: .5px; color: #9CF0B8; font-weight: 600; }
+		.part-coord .nome { font-size: 14pt; font-weight: 800; margin-top: .5mm; }
+		.part-block { border: 1px solid var(--border); border-radius: var(--radius); padding: 3.5mm; margin-bottom: 3mm;
+			background: var(--soft); box-shadow: var(--shadow); page-break-inside: avoid; }
+		.part-block__head { display: flex; justify-content: space-between; align-items: baseline;
+			border-bottom: 1px solid #F0F1F6; padding-bottom: 2mm; margin-bottom: 2mm; gap: 4mm; }
+		.part-block__name { font-weight: 700; color: var(--ink); }
+		.part-block__coord { font-size: 8.5pt; color: var(--muted); white-space: nowrap; }
+		.part-team { margin: 0; padding-left: 4mm; font-size: 9pt; }
+		.part-team li { margin-bottom: .5mm; }
+
+		/* ─────────── Índice ─────────── */
+		.toc-head { margin: 2mm 0 7mm; }
+		.toc-eyebrow { font-size: 9.5pt; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--brand-2); }
+		.toc-title { color: var(--ink); font-size: 26pt; font-weight: 800; margin: 1.5mm 0 1mm; letter-spacing: -.6px;
+			string-set: festatitle content(); }
+		.toc-sub { color: var(--muted); margin: 0; font-size: 10pt; }
+		.toc-item { display: block; border-bottom: 1px solid #EDEFF4; padding: 3.4mm 0; text-decoration: none; color: inherit; }
+		.toc-num { display: inline-block; width: 9mm; height: 9mm; line-height: 9mm; text-align: center; border-radius: 50%;
+			vertical-align: middle; margin-right: 4mm;
+			background: linear-gradient(140deg, #4F39F6, #1231E4); color: #fff; font-weight: 800; font-size: 9.5pt; }
+		.toc-label { display: inline-block; vertical-align: middle; font-size: 12pt; font-weight: 600; color: var(--fg); }
+		/* Nº da página à direita: leader('. ') preenche o espaço e target-counter
+		   resolve a página real da seção (via âncora href) na renderização. */
+		.toc-item::after { content: leader('. ') target-counter(attr(href), page);
+			vertical-align: middle; color: var(--muted); font-weight: 700; font-size: 11pt; }
+	</style>
+</head>
+<body>
+	{{ capa_html | safe }}
+	<div class="footer-bar"></div>
+	<div class="wrap">
+
+	{# ───────── Índice ───────── #}
+	<section class="sec sec--first">
+		<div class="toc-head">
+			<div class="toc-eyebrow">Relatório de execução</div>
+			<div class="toc-title">{{ nome_festa }}</div>
+			<p class="toc-sub">Gerado em {{ gerado_em }}</p>
+		</div>
+		<a class="toc-item" href="#sec-1"><span class="toc-num">01</span><span class="toc-label">Dados da festa</span></a>
+		<a class="toc-item" href="#sec-2"><span class="toc-num">02</span><span class="toc-label">Convites</span></a>
+		<a class="toc-item" href="#sec-3"><span class="toc-num">03</span><span class="toc-label">Fechamento financeiro</span></a>
+		<a class="toc-item" href="#sec-4"><span class="toc-num">04</span><span class="toc-label">Dados das barracas</span></a>
+		<a class="toc-item" href="#sec-5"><span class="toc-num">05</span><span class="toc-label">Lista de compras e contratações</span></a>
+		<a class="toc-item" href="#sec-6"><span class="toc-num">06</span><span class="toc-label">Avaliações</span></a>
+		<a class="toc-item" href="#sec-7"><span class="toc-num">07</span><span class="toc-label">Participantes por área e barraca</span></a>
+	</section>
+
+	{# ───────── 1. Dados da festa ───────── #}
+	<section class="sec" id="sec-1">
+		{{ sec_head(1, "Dados da festa", "Informações gerais, áreas e barracas.") }}
+		<div class="fieldgrid">
+			<div class="field" style="flex:1"><dt>Nome</dt><dd>{{ nome_festa }}</dd></div>
+			<div class="field" style="flex:1"><dt>Data</dt><dd>{{ data_formatada or "—" }}</dd></div>
+			<div class="field" style="flex:1"><dt>Horário</dt><dd>{{ horario_inicio or "—" }}{% if horario_termino %} – {{ horario_termino }}{% endif %}</dd></div>
+		</div>
+		<div class="fieldgrid">
+			<div class="field" style="flex:1 1 100%"><dt>Coordenador geral</dt><dd>{{ nome_coord_geral or "—" }}</dd></div>
+		</div>
+
+		<h3 class="sub">Estimativa de participantes</h3>
+		<div class="statgrid">
+			{{ stat("Mínima", expectativa_min) }}
+			{{ stat("Intermediária", expectativa_intermediario) }}
+			{{ stat("Máxima", expectativa_max) }}
+		</div>
+		<p class="muted">Cenário escolhido para cotações: <span class="badge">{{ cenario_simulacao }}</span></p>
+
+		<h3 class="sub">Áreas</h3>
+		{% if areas %}
+		<div>{% for area in areas %}<span class="chip">{{ area.nome_area }}</span>{% endfor %}</div>
+		{% else %}<p class="empty">Nenhuma área cadastrada.</p>{% endif %}
+
+		<h3 class="sub">Barracas</h3>
+		{% if barracas_lista %}
+		<div>{% for nome in barracas_lista %}<span class="chip">{{ nome }}</span>{% endfor %}</div>
+		{% else %}<p class="empty">Nenhuma barraca cadastrada.</p>{% endif %}
+	</section>
+
+	{# ───────── 2. Convites ───────── #}
+	{% set cv = convites_secao %}
+	<section class="sec" id="sec-2">
+		{{ sec_head(2, "Convites", "Entradas confirmadas, origem e ritmo de chegada na portaria.") }}
+		<div class="statgrid">
+			{{ stat("Prévios que entraram", cv.cards.previa_entrou) }}
+			{{ stat("Entradas na portaria", cv.cards.portaria_entrou) }}
+			{{ stat("Total de entradas", cv.cards.total_entrou) }}
+		</div>
+		<div class="statgrid">
+			{{ stat("Prévios que não entraram", cv.cards.previa_total - cv.cards.previa_entrou) }}
+			<div style="flex:1"></div>
+			<div style="flex:1"></div>
+		</div>
+
+		<h3 class="sub">Convites por tipo</h3>
+		{% if cv.tabela %}
+		<table class="tbl">
+			<thead><tr><th>Tipo de convite</th><th class="num">Qtd. (pago)</th><th class="num">Arrecadado</th><th class="num">Entraram</th><th class="num">% entrou</th></tr></thead>
+			<tbody>
+				{% for t in cv.tabela %}
+				<tr><td>{{ t.nome }}</td><td class="num">{{ qty(t.qtd) }}</td><td class="num">{{ brl(t.valor) }}</td><td class="num">{{ qty(t.entraram) }}</td><td class="num">{{ "%.0f"|format(t.pct_entrou) }}%</td></tr>
+				{% endfor %}
+				<tr class="total"><td>Total</td><td class="num">{{ qty(cv.tabela_total.qtd) }}</td><td class="num">{{ brl(cv.tabela_total.valor) }}</td><td class="num">{{ qty(cv.tabela_total.entraram) }}</td><td class="num">{{ "%.0f"|format(cv.tabela_total.pct_entrou) }}%</td></tr>
+			</tbody>
+		</table>
+		{% else %}<p class="empty">Nenhum convite cadastrado.</p>{% endif %}
+
+		<h3 class="sub">Entradas confirmadas</h3>
+		<div class="donut-row">
+			{{ donut(visuais.donut_entradas, "Entradas confirmadas") }}
+			{{ donut(visuais.donut_origem, "Origem das entradas") }}
+		</div>
+		{{ donut(visuais.donut_previa, "Entradas de compras prévias") }}
+
+		{% if visuais.serie_janela %}
+		{% set sj = visuais.serie_janela %}
+		<h3 class="sub">Entradas por janela de 15 min</h3>
+		<div class="chart-card">
+			<svg class="svgchart" width="100%" viewBox="-14 0 {{ sj.width + 28 }} {{ sj.height }}" preserveAspectRatio="xMidYMid meet">
+				<polygon points="{{ sj.area }}" fill="rgba(18,49,228,0.12)"></polygon>
+				<polyline points="{{ sj.linha }}" fill="none" stroke="#1231E4" stroke-width="2"></polyline>
+				{% for p in sj.pontos %}<circle cx="{{ p.x }}" cy="{{ p.y }}" r="3.5" fill="#1231E4" stroke="#fff" stroke-width="1.2"></circle>{% endfor %}
+				{% for m in sj.marcas %}<text x="{{ m.x }}" y="{{ sj.label_y }}" text-anchor="middle" font-size="9" fill="#8a90a2">{{ m.label }}</text>{% endfor %}
+			</svg>
+		</div>
+		{% endif %}
+
+		{% if visuais.serie_acumulado %}
+		{% set sa = visuais.serie_acumulado %}
+		<h3 class="sub">Entradas acumuladas por janela de 15 min</h3>
+		<div class="chart-card">
+			<svg class="svgchart" width="100%" viewBox="-14 0 {{ sa.width + 28 }} {{ sa.height }}" preserveAspectRatio="xMidYMid meet">
+				<polyline points="{{ sa.linha }}" fill="none" stroke="#1231E4" stroke-width="2"></polyline>
+				{% for p in sa.pontos %}<circle cx="{{ p.x }}" cy="{{ p.y }}" r="3.5" fill="#1231E4" stroke="#fff" stroke-width="1.2"></circle>{% endfor %}
+				{% for m in sa.marcas %}<text x="{{ m.x }}" y="{{ sa.label_y }}" text-anchor="middle" font-size="9" fill="#8a90a2">{{ m.label }}</text>{% endfor %}
+			</svg>
+		</div>
+		{% endif %}
+	</section>
+
+	{# ───────── 3. Fechamento financeiro ───────── #}
+	<section class="sec" id="sec-3">
+		{{ sec_head(3, "Fechamento financeiro", "Arrecadação, despesas e resultado realizados.") }}
+		<div class="statgrid">
+			{{ stat("Arrecadação", brl(arrecadacao), "pos") }}
+			{{ stat("Despesas", brl(despesas), "neg") }}
+			{{ stat("Resultado", brl(resultado), "pos" if resultado >= 0 else "neg") }}
+		</div>
+
+		<h3 class="sub">Receitas</h3>
+		<table class="tbl">
+			<thead><tr><th>Origem</th><th class="num">Valor</th></tr></thead>
+			<tbody>
+				<tr><td>Convites (executado)</td><td class="num">{{ brl(receita_convites) }}</td></tr>
+				<tr><td>Doações</td><td class="num">{{ brl(receita_doacoes) }}</td></tr>
+				{% for b in receitas_barracas %}<tr><td>{{ b.label }}</td><td class="num">{{ brl(b.valor) }}</td></tr>{% endfor %}
+				<tr class="total"><td>Total de receitas</td><td class="num">{{ brl(arrecadacao) }}</td></tr>
+			</tbody>
+		</table>
+
+		{% if receitas_barracas %}
+		<h3 class="sub">Arrecadação por barraca</h3>
+		{{ barras(receitas_barracas, "#1231E4") }}
+		{% endif %}
+
+		<h3 class="sub">Despesas por área</h3>
+		<table class="tbl">
+			<thead><tr><th>Área</th><th class="num">Valor</th></tr></thead>
+			<tbody>
+				{% for d in despesas_por_area %}<tr><td>{{ d.label }}</td><td class="num">{{ brl(d.valor) }}</td></tr>
+				{% else %}<tr><td colspan="2" class="muted">Sem despesas realizadas.</td></tr>{% endfor %}
+				<tr class="total"><td>Total de despesas</td><td class="num">{{ brl(despesas) }}</td></tr>
+			</tbody>
+		</table>
+
+		{% if visuais.waterfall %}
+		{% set w = visuais.waterfall %}
+		<h3 class="sub">Composição do resultado</h3>
+		<div class="chart-card">
+			<svg class="svgchart" width="100%" viewBox="0 0 {{ w.width }} {{ w.height }}" preserveAspectRatio="xMidYMid meet">
+				<line x1="0" y1="{{ w.zero_y }}" x2="{{ w.width }}" y2="{{ w.zero_y }}" stroke="#d1d5db" stroke-width="1"></line>
+				{% for b in w.barras %}
+				<rect x="{{ b.x }}" y="{{ b.y }}" width="{{ b.w }}" height="{{ b.h }}" rx="3" fill="{{ b.cor }}"></rect>
+				<text x="{{ b.cx }}" y="{{ b.valor_y }}" text-anchor="middle" font-size="9" font-weight="bold" fill="#1E1B4B">{{ brl(b.valor) }}</text>
+				<text x="{{ b.cx }}" y="{{ w.label_y }}" text-anchor="middle" font-size="9" fill="#6b7280">{{ b.label }}</text>
+				{% endfor %}
+			</svg>
+		</div>
+		{% endif %}
+	</section>
+
+	{# ───────── 4. Dados das barracas ───────── #}
+	<section class="sec" id="sec-4">
+		{{ sec_head(4, "Dados das barracas", "Itens vendidos e arrecadação por barraca.") }}
+		{% if barracas %}
+		{% for b in barracas %}
+		<div class="part-block">
+			<div class="part-block__head">
+				<span class="part-block__name">{{ b.nome_barraca }}</span>
+				{% if b.nome_coord %}<span class="part-block__coord">Coord.: {{ b.nome_coord }}</span>{% endif %}
+			</div>
+			{% if b.equipe %}<p class="mini__meta" style="margin:-1mm 0 2mm;">Equipe: {% for m in b.equipe %}{{ m.nome }}{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+			{% if b.itens %}
+			<table class="tbl">
+				<thead><tr><th>Item</th><th class="num">Vendido (R$)</th><th class="num">Exp. (qtd)</th><th class="num">Qtd vendida</th></tr></thead>
+				<tbody>
+					{% for it in b.itens %}<tr><td>{{ it.nome_produto }}</td><td class="num">{{ brl(it.valor_vendido) }}</td><td class="num">{{ qty(it.qtd_esperada) }}</td><td class="num">{% if it.qtd_vendida %}{{ qty(it.qtd_vendida) }}{% endif %}</td></tr>{% endfor %}
+				</tbody>
+			</table>
+			{% else %}<p class="empty">Sem itens cadastrados.</p>{% endif %}
+			<div class="statgrid">
+				{{ stat("Arrecadação esperada", brl(b.esperado)) }}
+				{{ stat("Arrecadação realizada", brl(b.realizado), "pos") }}
+			</div>
+		</div>
+		{% endfor %}
+		{% else %}<p class="empty">Nenhuma barraca cadastrada.</p>{% endif %}
+	</section>
+
+	{# ───────── 5. Compras e contratações ───────── #}
+	<section class="sec" id="sec-5">
+		{{ sec_head(5, "Lista de compras e contratações", "Orçado x realizado de cada item.") }}
+		<h3 class="sub">Compras</h3>
+		{% if compras %}
+		<table class="tbl">
+			<thead><tr><th>Item</th><th class="num">Qtd orç.</th><th class="num">Total orç.</th><th class="num">Qtd real.</th><th class="num">Total real.</th><th>Fornecedor real.</th><th>Obs.</th></tr></thead>
+			<tbody>
+				{% for c in compras %}
+				<tr>
+					<td>{{ c.nome_item }}</td>
+					<td class="num">{{ qty(c.qtd_orcada) }}</td>
+					<td class="num">{{ brl(c.valor_total_orcado) }}</td>
+					<td class="num">{{ qty(c.qtd_realizada) }}</td>
+					<td class="num">{{ brl(c.valor_total_realizado) }}</td>
+					<td>{{ c.fornecedor_realizado }}</td>
+					<td class="muted">{{ c.observacoes }}</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+		{% else %}<p class="empty">Nenhuma compra cadastrada.</p>{% endif %}
+
+		<h3 class="sub">Contratações</h3>
+		{% if contratacoes %}
+		<table class="tbl">
+			<thead><tr><th>Nome</th><th class="num">Valor orç.</th><th>Fornecedor orç.</th><th class="num">Valor real.</th><th>Fornecedor real.</th><th>Obs.</th></tr></thead>
+			<tbody>
+				{% for c in contratacoes %}
+				<tr>
+					<td>{{ c.nome_item }}</td>
+					<td class="num">{{ brl(c.valor_orcado) }}</td>
+					<td>{{ c.fornecedor_orcado }}</td>
+					<td class="num">{{ brl(c.valor_realizado) }}</td>
+					<td>{{ c.fornecedor_realizado }}</td>
+					<td class="muted">{{ c.observacoes }}</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+		{% else %}<p class="empty">Nenhuma contratação cadastrada.</p>{% endif %}
+	</section>
+
+	{# ───────── 6. Avaliações ───────── #}
+	<section class="sec" id="sec-6">
+		{{ sec_head(6, "Avaliações", "Avaliação geral, dos convidados e da equipe.") }}
+		{% if avaliacoes %}
+		<h3 class="sub">Avaliação geral da festa</h3>
+		<div class="cards">
+			<div class="mini"><div class="mini__title">O que funcionou bem na dinâmica da equipe</div><p class="text">{{ avaliacoes.geral.funcionou_bem or "—" }}</p></div>
+			<div class="mini"><div class="mini__title">O que não funcionou na dinâmica da equipe</div><p class="text">{{ avaliacoes.geral.nao_funcionou or "—" }}</p></div>
+			<div class="mini"><div class="mini__title">Pontos positivos adicionais</div><p class="text">{{ avaliacoes.geral.pontos_positivos or "—" }}</p></div>
+			<div class="mini"><div class="mini__title">Pontos de melhoria adicionais</div><p class="text">{{ avaliacoes.geral.pontos_melhoria or "—" }}</p></div>
+		</div>
+		{% if avaliacoes.geral.resumo_ia %}
+		<div class="ia"><div class="ia__label">✦ Resumo por IA</div><div class="ia__md">{{ frappe.utils.markdown(avaliacoes.geral.resumo_ia) | safe }}</div></div>
+		{% endif %}
+
+		<h3 class="sub">Avaliação dos convidados</h3>
+		<div class="statgrid">
+			{{ stat("NPS", "%.2f"|format(avaliacoes.convidados.nps)) }}
+			{{ stat("Respostas", avaliacoes.convidados.total) }}
+		</div>
+		{% set dist = avaliacoes.convidados.distribuicao %}
+		{% if dist and (dist | sum) > 0 %}
+		{% set dmax = (dist | max) or 1 %}
+		<table class="bars">
+			{% for v in dist %}
+			<tr>
+				<td class="bar__label" style="width:16mm;">Nota {{ loop.index0 }}</td>
+				<td><div class="bar__track"><div class="bar__fill" style="width:{{ (v/dmax*100)|round(1) }}%;background:#1231E4"></div></div></td>
+				<td class="bar__valcell" style="width:18mm;">{{ v }}</td>
+			</tr>
+			{% endfor %}
+		</table>
+		{% else %}<p class="empty">Sem respostas numéricas dos convidados.</p>{% endif %}
+		{% if avaliacoes.convidados.resumo_ia %}
+		<div class="ia"><div class="ia__label">✦ Resumo por IA</div><div class="ia__md">{{ frappe.utils.markdown(avaliacoes.convidados.resumo_ia) | safe }}</div></div>
+		{% endif %}
+
+		<h3 class="sub">Avaliação individual da equipe</h3>
+		{% set eq = avaliacoes.equipe %}
+		{% set taxa = (eq.concluidas / eq.total * 100) if eq.total else 0 %}
+		<div class="statgrid">
+			{{ stat("NPS", "%.2f"|format(eq.nps)) }}
+			{{ stat("Avaliação geral", ("%.1f"|format(eq.avaliacao_geral)) ~ " /10") }}
+			{{ stat("Respostas", (eq.concluidas ~ " de " ~ eq.total ~ " (" ~ ("%.0f"|format(taxa)) ~ "%)")) }}
+		</div>
+		{% if eq.resumo_ia %}
+		<div class="ia"><div class="ia__label">✦ Resumo por IA</div><div class="ia__md">{{ frappe.utils.markdown(eq.resumo_ia) | safe }}</div></div>
+		{% endif %}
+		{% else %}<p class="empty">Dados de avaliação indisponíveis.</p>{% endif %}
+	</section>
+
+	{# ───────── 7. Participantes por área e barraca ───────── #}
+	<section class="sec" id="sec-7">
+		{{ sec_head(7, "Participantes por área e barraca", "Coordenação geral, áreas e barracas com suas equipes.") }}
+		<div class="part-coord">
+			<div class="lbl">Coordenador geral</div>
+			<div class="nome">{{ nome_coord_geral or "—" }}</div>
+		</div>
+
+		<h3 class="sub">Áreas</h3>
+		{% if areas %}
+		{% for area in areas %}
+		<div class="part-block">
+			<div class="part-block__head">
+				<span class="part-block__name">{{ area.nome_area }}</span>
+				<span class="part-block__coord">Coord.: {{ area.nome_coord or "—" }}</span>
+			</div>
+			{% if area.equipe %}
+			<ul class="part-team">{% for m in area.equipe %}<li>{{ m.nome }}{% if m.funcao %} <span class="muted">— {{ m.funcao }}</span>{% endif %}</li>{% endfor %}</ul>
+			{% else %}<p class="empty" style="margin:0;">Sem equipe cadastrada.</p>{% endif %}
+		</div>
+		{% endfor %}
+		{% else %}<p class="empty">Nenhuma área cadastrada.</p>{% endif %}
+
+		<h3 class="sub">Barracas</h3>
+		{% if barracas %}
+		{% for b in barracas %}
+		<div class="part-block">
+			<div class="part-block__head">
+				<span class="part-block__name">{{ b.nome_barraca }}</span>
+				<span class="part-block__coord">Coord.: {{ b.nome_coord or "—" }}</span>
+			</div>
+			{% if b.equipe %}
+			<ul class="part-team">{% for m in b.equipe %}<li>{{ m.nome }}{% if m.funcao %} <span class="muted">— {{ m.funcao }}</span>{% endif %}</li>{% endfor %}</ul>
+			{% else %}<p class="empty" style="margin:0;">Sem equipe cadastrada.</p>{% endif %}
+		</div>
+		{% endfor %}
+		{% else %}<p class="empty">Nenhuma barraca cadastrada.</p>{% endif %}
+	</section>
+
+	</div>
+</body>
+</html>

@@ -1,6 +1,6 @@
 /* Relatório completo da festa — gráficos (ECharts) e impressão.
- * Os dados das tabelas/cards são renderizados no servidor (Jinja); aqui só
- * tratamos os 3 gráficos e a ação de imprimir/salvar PDF.
+ * Os dados das tabelas/cards/markdown são renderizados no servidor (Jinja);
+ * aqui só tratamos os gráficos e a ação de imprimir/salvar PDF.
  */
 (function () {
 	"use strict";
@@ -330,14 +330,15 @@
 	}
 
 	function bindPrint() {
-		var btn = document.querySelector('[data-action="imprimir"]');
+		var btn = document.querySelector('[data-action="baixar-pdf"]');
 		if (!btn) return;
 		btn.addEventListener("click", function () {
-			// Garante todas as seções abertas e os gráficos redimensionados antes
-			// do diálogo de impressão.
-			document.querySelectorAll("details.rel-section").forEach(function (d) { d.open = true; });
-			instances.forEach(function (c) { c.resize(); });
-			window.setTimeout(function () { window.print(); }, 150);
+			// PDF gerado no servidor (template dedicado), não a impressão da página.
+			var festa = btn.getAttribute("data-festa");
+			if (!festa) return;
+			var url = "/api/method/gris.api.festas.relatorio.download_relatorio_pdf?festa_name=" +
+				encodeURIComponent(festa);
+			window.open(url, "_blank");
 		});
 	}
 

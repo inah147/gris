@@ -284,10 +284,17 @@ def _convite_eh_portaria(convite_name: str) -> bool:
 def _criar_lista_entrada(convite_name: str) -> None:
 	"""Cria 1 Lista Entrada Festa por convidado do convite, idempotentemente.
 
-	Chamada por webhook do pagamento — `ignore_permissions=True` é seguro porque
-	o gatilho vem do sistema (não do usuário). Se algum item do convite for de
-	Opcao com portaria=1, marca o status como 'Entrou' diretamente (compra na
-	porta, presença implícita).
+	Chamada pela confirmação de pagamento — webhook InfinitePay, `sincronizar_pagamento`
+	ou `marcar_pago_manualmente` — sempre via o `on_update` da Cobranca (doc_event
+	`on_cobranca_atualizada`). `ignore_permissions=True` é seguro porque o gatilho vem
+	do sistema (não do usuário). Se algum item do convite for de Opcao com portaria=1,
+	marca o status como 'Entrou' diretamente (compra na porta, presença implícita).
+
+	Garantia: a `Lista Entrada Festa` é a ÚNICA fonte da portaria e do relatório, então
+	materializá-la é uma pós-condição *obrigatória* da confirmação de pagamento. Se a
+	entrada de algum convidado não puder ser criada, propagamos o erro para que a
+	transição para "Pago" falhe de forma visível — em vez de confirmar o pagamento
+	deixando convidados silenciosamente fora da portaria.
 	"""
 	from frappe.utils import now
 
@@ -296,6 +303,7 @@ def _criar_lista_entrada(convite_name: str) -> None:
 		return
 
 	eh_portaria = _convite_eh_portaria(convite_name)
+	falhas: list[str] = []
 
 	for convidado in convite.convidados:
 		if not convidado.qr_code_payload:
@@ -327,10 +335,27 @@ def _criar_lista_entrada(convite_name: str) -> None:
 			# Concorrência: outro processo criou no meio do caminho. Ignorar.
 			continue
 		except Exception:
-			frappe.log_error(
-				message=frappe.get_traceback(),
-				title=f"Falha ao criar Lista Entrada Festa ({convite_name}/{convidado.name})",
+			# A `Lista Entrada Festa` é a única fonte da portaria e do relatório, então
+			# uma falha inesperada NÃO pode ser silenciosa. Logamos no logger de arquivo
+			# (sobrevive ao rollback do `frappe.throw` abaixo) e acumulamos para abortar
+			# a confirmação ao final, depois de tentar todos os convidados.
+			frappe.logger("festas").error(
+				f"Falha ao criar Lista Entrada Festa "
+				f"({convite_name}/{convidado.name}): {frappe.get_traceback()}"
 			)
+			falhas.append(convidado.name)
+
+	if falhas:
+		# Propaga: a transição para "Pago" (webhook, sincronização ou marcação manual)
+		# deve falhar de forma visível em vez de confirmar o pagamento deixando
+		# convidados fora da portaria/relatório.
+		frappe.throw(
+			_(
+				"Não foi possível registrar a entrada de {0} convidado(s) do pedido {1}. "
+				"A confirmação do pagamento foi abortada para não deixar convidados fora "
+				"da portaria. Verifique os logs e tente novamente."
+			).format(len(falhas), convite_name)
+		)
 
 
 def _atualizar_contadores_opcoes(convite_name: str) -> None:

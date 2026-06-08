@@ -1,0 +1,446 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{% macro brl(v) %}{{ frappe.utils.fmt_money(v or 0, currency="BRL") }}{% endmacro %}
+{% macro qty(v) %}{{ "%g"|format(v or 0) }}{% endmacro %}
+
+{% macro secao(titulo, icone, dica="") %}
+<article class="card rel-section-card">
+	<details class="rel-section" open>
+		<summary class="rel-section__summary">
+			<span class="rel-section__icon">{{ lucide_icon(icone, size="md") }}</span>
+			<span class="rel-section__text">
+				<span class="rel-section__title">{{ titulo }}</span>
+				{% if dica %}<span class="rel-section__hint">{{ dica }}</span>{% endif %}
+			</span>
+			<span class="rel-section__chevron">{{ lucide_icon("chevron-right", size="sm") }}</span>
+		</summary>
+		<div class="rel-section__body">{{ caller() }}</div>
+	</details>
+</article>
+{% endmacro %}
+
+{% block title %}Relatório — {{ nome_festa or "Festa" }}{% endblock %}
+
+{% set active_link = "/festas" %}
+
+{% block head_include %}
+{{ super() }}
+<link rel="stylesheet" href="/festas/relatorio.css" />
+<script src="/festas/relatorio.js" defer></script>
+{% endblock %}
+
+{% block page_header %}
+<div class="rel-header">
+	<div class="rel-header__titles">
+		<h1 class="m-0 text-2xl font-semibold text-foreground">Relatório da festa</h1>
+		{% if nome_festa %}<p class="rel-header__subtitle">{{ nome_festa }}</p>{% endif %}
+	</div>
+	{% if not not_found and not indisponivel %}
+	<div class="rel-header__actions">
+		<button type="button" class="btn-outline" data-action="baixar-pdf" data-festa="{{ festa_name }}">
+			{{ lucide_icon("download", size="sm") }} <span>Baixar PDF</span>
+		</button>
+	</div>
+	{% endif %}
+</div>
+{% endblock %}
+
+{% block main %}
+{% if not_found %}
+<article class="card"><section>
+	<h2 class="text-lg font-semibold">Relatório indisponível</h2>
+	<p class="text-muted-foreground">{{ missing_reason or "Festa não encontrada." }}</p>
+</section></article>
+
+{% elif indisponivel %}
+<article class="card"><section class="rel-empty">
+	<span class="rel-empty__icon">{{ lucide_icon("clipboard-list", size="lg") }}</span>
+	<h2 class="text-lg font-semibold">Relatório ainda indisponível</h2>
+	<p class="text-muted-foreground">O relatório completo fica disponível depois que a avaliação da equipe for iniciada.</p>
+	<a class="btn-outline" href="/festas/festa?name={{ festa_name }}">Voltar para a festa</a>
+</section></article>
+
+{% else %}
+<div class="rel-page">
+
+	{# ─── 1. Dados da festa ─── #}
+	{% call secao("Dados da festa", "party-popper", "Informações gerais, áreas, equipes e barracas.") %}
+	<dl class="rel-fields">
+		<div><dt>Nome</dt><dd>{{ nome_festa }}</dd></div>
+		<div><dt>Data</dt><dd>{{ data_formatada or "—" }}</dd></div>
+		<div><dt>Horário</dt><dd>{{ horario_inicio or "—" }}{% if horario_termino %} – {{ horario_termino }}{% endif %}</dd></div>
+		<div><dt>Coordenador</dt><dd>{{ nome_coord_geral or "—" }}</dd></div>
+	</dl>
+
+	<article class="rel-estimativas">
+		<span class="rel-estimativas__title">Estimativa de participantes</span>
+		<dl class="rel-estimativas__grid">
+			<div class="rel-estimativa"><dt>Mínima</dt><dd>{{ expectativa_min }}<span class="rel-estimativa__unit">participantes</span></dd></div>
+			<div class="rel-estimativa"><dt>Intermediária</dt><dd>{{ expectativa_intermediario }}<span class="rel-estimativa__unit">participantes</span></dd></div>
+			<div class="rel-estimativa"><dt>Máxima</dt><dd>{{ expectativa_max }}<span class="rel-estimativa__unit">participantes</span></dd></div>
+		</dl>
+		<div class="rel-estimativas__cenario">
+			<span class="rel-estimativas__cenario-label">Cenário escolhido para cotações</span>
+			{{ badge(cenario_simulacao, variant="secondary") }}
+		</div>
+	</article>
+
+	<h3 class="rel-subtitle">Áreas e equipes</h3>
+	{% if areas %}
+	<div class="rel-grid">
+		{% for area in areas %}
+		<article class="rel-mini-card">
+			<header class="rel-mini-card__header">
+				<span class="rel-mini-card__title">{{ area.nome_area }}</span>
+				{% if area.nome_coord %}<span class="rel-mini-card__meta">Coord.: {{ area.nome_coord }}</span>{% endif %}
+			</header>
+			{% if area.equipe %}
+			<ul class="rel-team">
+				{% for m in area.equipe %}
+				<li>{{ m.nome }}{% if m.funcao %} <span class="text-muted-foreground">— {{ m.funcao }}</span>{% endif %}</li>
+				{% endfor %}
+			</ul>
+			{% else %}
+			<p class="rel-mini-card__empty">Sem equipe cadastrada.</p>
+			{% endif %}
+		</article>
+		{% endfor %}
+	</div>
+	{% else %}
+	<p class="text-muted-foreground">Nenhuma área cadastrada.</p>
+	{% endif %}
+
+	<h3 class="rel-subtitle">Barracas</h3>
+	{% if barracas_lista %}
+	<div class="rel-chips">
+		{% for nome in barracas_lista %}{{ badge(nome, variant="secondary") }}{% endfor %}
+	</div>
+	{% else %}
+	<p class="text-muted-foreground">Nenhuma barraca cadastrada.</p>
+	{% endif %}
+	{% endcall %}
+
+	{# ─── 2. Convites ─── #}
+	{% call secao("Convites", "ticket", "Entradas confirmadas, origem e ritmo de chegada na portaria.") %}
+	{% set cv = convites_secao %}
+	<div class="rel-stats">
+		<div class="rel-stat">
+			<span class="rel-stat__label">Total de convidados prévios que entraram</span>
+			<span class="rel-stat__value">{{ cv.cards.previa_entrou }}</span>
+			<span class="rel-stat__extra">
+				{% if cv.cards.previa_total %}{{ "%g"|format(cv.cards.previa_pct|round(1)) }}% das compras prévias{% else %}Sem compras prévias registradas{% endif %}
+			</span>
+		</div>
+		<div class="rel-stat">
+			<span class="rel-stat__label">Total de entradas (incluindo portaria)</span>
+			<span class="rel-stat__value">{{ cv.cards.total_entrou }}</span>
+			<span class="rel-stat__extra">
+				{% if cv.cards.total_entrou %}{{ cv.cards.previa_entrou }} com compra prévia · {{ cv.cards.portaria_entrou }} na portaria{% else %}Sem entradas registradas{% endif %}
+			</span>
+		</div>
+	</div>
+
+	<h3 class="rel-subtitle">Convites por tipo</h3>
+	{% if cv.tabela or cv.doacoes %}
+	<div class="rel-table-wrap">
+		<table class="table rel-table">
+			<thead><tr>
+				<th>Tipo de convite</th>
+				<th class="rel-num">Qtd. (pago)</th>
+				<th class="rel-num">Valor arrecadado</th>
+				<th class="rel-num">Entraram</th>
+				<th class="rel-num">% que entrou</th>
+			</tr></thead>
+			<tbody>
+				{% for t in cv.tabela %}
+				<tr>
+					<td>{{ t.nome }}</td>
+					<td class="rel-num">{{ qty(t.qtd) }}</td>
+					<td class="rel-num">{{ brl(t.valor) }}</td>
+					<td class="rel-num">{{ qty(t.entraram) }}</td>
+					<td class="rel-num">{{ "%.0f"|format(t.pct_entrou) }}%</td>
+				</tr>
+				{% endfor %}
+				<tr class="rel-total">
+					<td>Total</td>
+					<td class="rel-num">{{ qty(cv.tabela_total.qtd) }}</td>
+					<td class="rel-num">{{ brl(cv.tabela_total.valor) }}</td>
+					<td class="rel-num">{{ qty(cv.tabela_total.entraram) }}</td>
+					<td class="rel-num">{{ "%.0f"|format(cv.tabela_total.pct_entrou) }}%</td>
+				</tr>
+				{% if cv.doacoes %}
+				<tr>
+					<td>Doações</td>
+					<td class="rel-num"></td>
+					<td class="rel-num">{{ brl(cv.doacoes) }}</td>
+					<td class="rel-num"></td>
+					<td class="rel-num"></td>
+				</tr>
+				{% endif %}
+			</tbody>
+		</table>
+	</div>
+	{% else %}
+	<p class="text-muted-foreground">Nenhum convite cadastrado.</p>
+	{% endif %}
+
+	<div class="rel-charts-pies">
+		<div class="rel-chart-block">
+			<h3 class="rel-subtitle">Entradas confirmadas</h3>
+			<div id="rel-chart-entradas-pizza" class="rel-chart rel-chart--pie" aria-label="Gráfico de entradas confirmadas (Entrou, Não entrou, Comprou na Portaria)"></div>
+		</div>
+		<div class="rel-chart-block">
+			<h3 class="rel-subtitle">Origem das entradas</h3>
+			<div id="rel-chart-entradas-origem" class="rel-chart rel-chart--pie" aria-label="Gráfico de origem das entradas (Compra Prévia vs Compra na Portaria)"></div>
+		</div>
+		<div class="rel-chart-block">
+			<h3 class="rel-subtitle">Entradas de compras prévias</h3>
+			<div id="rel-chart-entradas-previa" class="rel-chart rel-chart--pie" aria-label="Gráfico de entradas das compras prévias (Entrou vs Não entrou)"></div>
+		</div>
+	</div>
+
+	<h3 class="rel-subtitle">Entradas por janela de 15 min</h3>
+	<div id="rel-chart-entradas-janela" class="rel-chart" aria-label="Gráfico de entradas por janela de 15 minutos"></div>
+
+	<h3 class="rel-subtitle">Entradas acumuladas por janela de 15 min</h3>
+	<div id="rel-chart-entradas-acumulado" class="rel-chart" aria-label="Gráfico de entradas acumuladas por janela de 15 minutos"></div>
+	{% endcall %}
+
+	{# ─── 3. Fechamento financeiro ─── #}
+	{% call secao("Fechamento financeiro", "wallet", "Arrecadação, despesas e resultado realizados.") %}
+	<div class="rel-stats">
+		<div class="rel-stat">
+			<span class="rel-stat__label">Arrecadação</span>
+			<span class="rel-stat__value rel-stat__value--pos">{{ brl(arrecadacao) }}</span>
+		</div>
+		<div class="rel-stat">
+			<span class="rel-stat__label">Despesas</span>
+			<span class="rel-stat__value rel-stat__value--neg">{{ brl(despesas) }}</span>
+		</div>
+		<div class="rel-stat">
+			<span class="rel-stat__label">Resultado</span>
+			<span class="rel-stat__value {{ 'rel-stat__value--pos' if resultado >= 0 else 'rel-stat__value--neg' }}">{{ brl(resultado) }}</span>
+		</div>
+	</div>
+
+	<h3 class="rel-subtitle">Receitas</h3>
+	<table class="table rel-table">
+		<thead><tr><th>Origem</th><th class="rel-num">Valor</th></tr></thead>
+		<tbody>
+			<tr><td>Convites (executado)</td><td class="rel-num">{{ brl(receita_convites) }}</td></tr>
+			<tr><td>Doações</td><td class="rel-num">{{ brl(receita_doacoes) }}</td></tr>
+			{% for b in receitas_barracas %}
+			<tr><td>{{ b.label }}</td><td class="rel-num">{{ brl(b.valor) }}</td></tr>
+			{% endfor %}
+			<tr class="rel-total"><td>Total de receitas</td><td class="rel-num">{{ brl(arrecadacao) }}</td></tr>
+		</tbody>
+	</table>
+
+	<h3 class="rel-subtitle">Resultado por barraca</h3>
+	<div id="rel-chart-barracas" class="rel-chart"></div>
+
+	<h3 class="rel-subtitle">Despesas por área</h3>
+	<table class="table rel-table">
+		<thead><tr><th>Área</th><th class="rel-num">Valor</th></tr></thead>
+		<tbody>
+			{% for d in despesas_por_area %}
+			<tr><td>{{ d.label }}</td><td class="rel-num">{{ brl(d.valor) }}</td></tr>
+			{% else %}
+			<tr><td colspan="2" class="text-muted-foreground">Sem despesas realizadas.</td></tr>
+			{% endfor %}
+			<tr class="rel-total"><td>Total de despesas</td><td class="rel-num">{{ brl(despesas) }}</td></tr>
+		</tbody>
+	</table>
+
+	<h3 class="rel-subtitle">Composição do resultado</h3>
+	<div id="rel-chart-waterfall" class="rel-chart"></div>
+	{% endcall %}
+
+	{# ─── 4. Dados das barracas ─── #}
+	{% call secao("Dados das barracas", "store", "Itens vendidos e arrecadação por barraca.") %}
+	{% if barracas %}
+	<div class="rel-grid rel-grid--barracas">
+		{% for b in barracas %}
+		<article class="rel-barraca-card">
+			<header class="rel-barraca-card__header">
+				<span class="rel-barraca-card__title">{{ b.nome_barraca }}</span>
+				{% if b.nome_coord %}<span class="rel-mini-card__meta">Coord.: {{ b.nome_coord }}</span>{% endif %}
+			</header>
+			{% if b.equipe %}
+			<p class="rel-barraca-card__team">
+				<span class="text-muted-foreground">Equipe:</span>
+				{% for m in b.equipe %}{{ m.nome }}{% if not loop.last %}, {% endif %}{% endfor %}
+			</p>
+			{% endif %}
+
+			{% if b.itens %}
+			<div class="rel-table-wrap">
+				<table class="table rel-table rel-table--sm">
+					<thead><tr><th>Item</th><th class="rel-num">Vendido (R$)</th><th class="rel-num">Exp. (qtd)</th><th class="rel-num">Qtd vendida</th></tr></thead>
+					<tbody>
+						{% for it in b.itens %}
+						<tr>
+							<td>{{ it.nome_produto }}</td>
+							<td class="rel-num">{{ brl(it.valor_vendido) }}</td>
+							<td class="rel-num">{{ qty(it.qtd_esperada) }}</td>
+							<td class="rel-num">{% if it.qtd_vendida %}{{ qty(it.qtd_vendida) }}{% endif %}</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+			{% else %}
+			<p class="rel-mini-card__empty">Sem itens cadastrados.</p>
+			{% endif %}
+
+			<dl class="rel-barraca-card__totais">
+				<div><dt>Arrecadação esperada</dt><dd>{{ brl(b.esperado) }}</dd></div>
+				<div><dt>Arrecadação realizada</dt><dd>{{ brl(b.realizado) }}</dd></div>
+			</dl>
+		</article>
+		{% endfor %}
+	</div>
+	{% else %}
+	<p class="text-muted-foreground">Nenhuma barraca cadastrada.</p>
+	{% endif %}
+	{% endcall %}
+
+	{# ─── 5. Lista de compras e contratações ─── #}
+	{% call secao("Lista de compras e contratações", "shopping-cart", "Orçado x realizado de cada item.") %}
+	<h3 class="rel-subtitle">Compras</h3>
+	{% if compras %}
+	<div class="rel-table-wrap">
+		<table class="table rel-table rel-table--compras">
+			<thead><tr>
+				<th>Item</th>
+				<th class="rel-num">Vlr unit. orçado</th>
+				<th class="rel-num">Qtd orçada</th>
+				<th class="rel-num">Total orçado</th>
+				<th>Fornecedor orçado</th>
+				<th class="rel-num">Vlr unit. real</th>
+				<th class="rel-num">Qtd executada</th>
+				<th class="rel-num">Total executado</th>
+				<th>Fornecedor real</th>
+				<th class="rel-obs">Obs.</th>
+			</tr></thead>
+			<tbody>
+				{% for c in compras %}
+				<tr>
+					<td>{{ c.nome_item }}</td>
+					<td class="rel-num">{{ brl(c.valor_individual_orcado) }}</td>
+					<td class="rel-num">{{ qty(c.qtd_orcada) }}</td>
+					<td class="rel-num">{{ brl(c.valor_total_orcado) }}</td>
+					<td>{{ c.fornecedor_orcado }}</td>
+					<td class="rel-num">{{ brl(c.valor_individual_realizado) }}</td>
+					<td class="rel-num">{{ qty(c.qtd_realizada) }}</td>
+					<td class="rel-num">{{ brl(c.valor_total_realizado) }}</td>
+					<td>{{ c.fornecedor_realizado }}</td>
+					<td class="rel-obs">
+						{% if c.observacoes %}
+						{% call dialog(
+							id="obs-compra-" ~ loop.index,
+							trigger=lucide_icon("info", size="xs"),
+							title="Observações — " ~ c.nome_item,
+							trigger_attrs={"class": "btn-icon-outline rel-obs-btn", "aria-label": "Ver observações"}
+						) %}<p class="rel-obs-text">{{ c.observacoes }}</p>{% endcall %}
+						{% endif %}
+					</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+	{% else %}
+	<p class="text-muted-foreground">Nenhuma compra cadastrada.</p>
+	{% endif %}
+
+	<h3 class="rel-subtitle">Contratações</h3>
+	{% if contratacoes %}
+	<div class="rel-table-wrap">
+		<table class="table rel-table">
+			<thead><tr>
+				<th>Nome</th>
+				<th class="rel-num">Valor orçado</th>
+				<th>Fornecedor orçado</th>
+				<th class="rel-num">Valor realizado</th>
+				<th>Fornecedor real</th>
+				<th class="rel-obs">Obs.</th>
+			</tr></thead>
+			<tbody>
+				{% for c in contratacoes %}
+				<tr>
+					<td>{{ c.nome_item }}</td>
+					<td class="rel-num">{{ brl(c.valor_orcado) }}</td>
+					<td>{{ c.fornecedor_orcado }}</td>
+					<td class="rel-num">{{ brl(c.valor_realizado) }}</td>
+					<td>{{ c.fornecedor_realizado }}</td>
+					<td class="rel-obs">
+						{% if c.observacoes %}
+						{% call dialog(
+							id="obs-contr-" ~ loop.index,
+							trigger=lucide_icon("info", size="xs"),
+							title="Observações — " ~ c.nome_item,
+							trigger_attrs={"class": "btn-icon-outline rel-obs-btn", "aria-label": "Ver observações"}
+						) %}<p class="rel-obs-text">{{ c.observacoes }}</p>{% endcall %}
+						{% endif %}
+					</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+	{% else %}
+	<p class="text-muted-foreground">Nenhuma contratação cadastrada.</p>
+	{% endif %}
+	{% endcall %}
+
+	{# ─── 6. Avaliações ─── #}
+	{% call secao("Avaliações", "star", "Avaliação geral, dos convidados e da equipe.") %}
+	{% if avaliacoes %}
+
+	<h3 class="rel-subtitle">Avaliação geral da festa</h3>
+	<div class="rel-grid rel-grid--1">
+		<article class="rel-mini-card"><header class="rel-mini-card__header"><span class="rel-mini-card__title">O que funcionou bem na dinâmica da equipe</span></header><p class="rel-text">{{ avaliacoes.geral.funcionou_bem or "—" }}</p></article>
+		<article class="rel-mini-card"><header class="rel-mini-card__header"><span class="rel-mini-card__title">O que não funcionou na dinâmica da equipe</span></header><p class="rel-text">{{ avaliacoes.geral.nao_funcionou or "—" }}</p></article>
+		<article class="rel-mini-card"><header class="rel-mini-card__header"><span class="rel-mini-card__title">Pontos positivos adicionais</span></header><p class="rel-text">{{ avaliacoes.geral.pontos_positivos or "—" }}</p></article>
+		<article class="rel-mini-card"><header class="rel-mini-card__header"><span class="rel-mini-card__title">Pontos de melhoria adicionais</span></header><p class="rel-text">{{ avaliacoes.geral.pontos_melhoria or "—" }}</p></article>
+	</div>
+	{% if avaliacoes.geral.resumo_ia %}
+	<article class="rel-ia"><span class="rel-ia__label">{{ lucide_icon("sparkles", size="xs") }} Resumo por IA</span><div class="rel-ia__md">{{ frappe.utils.markdown(avaliacoes.geral.resumo_ia) | safe }}</div></article>
+	{% endif %}
+
+	<h3 class="rel-subtitle">Avaliação dos convidados</h3>
+	<div class="rel-stats">
+		<div class="rel-stat"><span class="rel-stat__label">NPS</span><span class="rel-stat__value">{{ "%.2f"|format(avaliacoes.convidados.nps) }}</span></div>
+		<div class="rel-stat"><span class="rel-stat__label">Respostas</span><span class="rel-stat__value">{{ avaliacoes.convidados.total }}</span></div>
+	</div>
+	<div id="rel-chart-convidados" class="rel-chart"></div>
+	{% if avaliacoes.convidados.resumo_ia %}
+	<article class="rel-ia"><span class="rel-ia__label">{{ lucide_icon("sparkles", size="xs") }} Resumo por IA</span><div class="rel-ia__md">{{ frappe.utils.markdown(avaliacoes.convidados.resumo_ia) | safe }}</div></article>
+	{% endif %}
+
+	<h3 class="rel-subtitle">Avaliação individual da equipe</h3>
+	{% set eq = avaliacoes.equipe %}
+	{% set taxa = (eq.concluidas / eq.total * 100) if eq.total else 0 %}
+	<div class="rel-stats">
+		<div class="rel-stat"><span class="rel-stat__label">NPS</span><span class="rel-stat__value">{{ "%.2f"|format(eq.nps) }}</span></div>
+		<div class="rel-stat"><span class="rel-stat__label">Avaliação geral</span><span class="rel-stat__value">{{ "%.1f"|format(eq.avaliacao_geral) }}<span class="rel-stat__suffix">/10</span></span></div>
+		<div class="rel-stat"><span class="rel-stat__label">Respostas</span><span class="rel-stat__value">{{ eq.concluidas }}<span class="rel-stat__suffix">de {{ eq.total }} ({{ "%.0f"|format(taxa) }}%)</span></span></div>
+	</div>
+	{% if eq.resumo_ia %}
+	<article class="rel-ia"><span class="rel-ia__label">{{ lucide_icon("sparkles", size="xs") }} Resumo por IA</span><div class="rel-ia__md">{{ frappe.utils.markdown(eq.resumo_ia) | safe }}</div></article>
+	{% endif %}
+
+	{% else %}
+	<p class="text-muted-foreground">Dados de avaliação indisponíveis.</p>
+	{% endif %}
+	{% endcall %}
+
+</div>
+
+<script>window._relatorioData = {{ chart_data | tojson }};</script>
+{% endif %}
+{% endblock %}

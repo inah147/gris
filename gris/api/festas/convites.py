@@ -157,7 +157,8 @@ def build_dashboard(festa_name: str) -> dict:
 			cf.creation      AS creation,
 			GROUP_CONCAT(DISTINCT it.descricao ORDER BY it.idx SEPARATOR ', ') AS tipos_convite,
 			COALESCE(SUM(it.valor * it.quantidade), 0) AS valor_total,
-			COALESCE(cob.status, 'Pendente') AS status_pagamento
+			CASE WHEN cf.presencial = 1 THEN 'Pago'
+			     ELSE COALESCE(cob.status, 'Pendente') END AS status_pagamento
 		FROM `tabConvite Festa` AS cf
 		INNER JOIN `tabItem Convite Festa` AS it
 			ON it.parent = cf.name AND it.parenttype = 'Convite Festa' AND it.eh_convite = 1
@@ -212,9 +213,10 @@ def build_dashboard(festa_name: str) -> dict:
 		FROM `tabConvite Festa` AS cf
 		INNER JOIN `tabItem Convite Festa` AS it
 			ON it.parent = cf.name AND it.parenttype = 'Convite Festa'
-		INNER JOIN `tabCobranca Infinitepay` AS cob
-			ON cob.name = cf.cobranca_infinitepay AND cob.status = 'Pago'
+		LEFT JOIN `tabCobranca Infinitepay` AS cob
+			ON cob.name = cf.cobranca_infinitepay
 		WHERE cf.festa = %(festa)s AND it.eh_convite = 1
+			AND (cf.presencial = 1 OR cob.status = 'Pago')
 		GROUP BY DATE(cf.creation), it.opcao_convite, it.descricao
 		ORDER BY dia ASC
 		""",
@@ -243,9 +245,10 @@ def build_dashboard(festa_name: str) -> dict:
 		FROM `tabConvite Festa` AS cf
 		INNER JOIN `tabItem Convite Festa` AS it
 			ON it.parent = cf.name AND it.parenttype = 'Convite Festa'
-		INNER JOIN `tabCobranca Infinitepay` AS cob
-			ON cob.name = cf.cobranca_infinitepay AND cob.status = 'Pago'
+		LEFT JOIN `tabCobranca Infinitepay` AS cob
+			ON cob.name = cf.cobranca_infinitepay
 		WHERE cf.festa = %(festa)s AND it.eh_convite = 1
+			AND (cf.presencial = 1 OR cob.status = 'Pago')
 		GROUP BY it.opcao_convite, it.descricao
 		""",
 		{"festa": festa_name},

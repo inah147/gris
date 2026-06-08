@@ -1,0 +1,29 @@
+{#- Capa do relatório da festa (fragmento incluído por relatorio_festa_pdf_corpo.html).
+   Renderizada com WeasyPrint: página nomeada `cover` (full-bleed, sem rodapé), gradiente
+   CSS real e tipografia Figtree. Os estilos vivem no <style> único do corpo. -#}
+<section class="cover">
+	<span class="cover__blob cover__blob--a"></span>
+	<span class="cover__blob cover__blob--b"></span>
+
+	<header class="cover__top">
+		{% if uel_tipo or uel_nome %}
+		<div class="cover__kicker">{{ uel_tipo }} {{ uel_nome }}</div>
+		{% endif %}
+	</header>
+
+	<div class="cover__mid">
+		<h1 class="cover__title">{{ nome_festa }}</h1>
+		<span class="cover__rule"></span>
+		<p class="cover__subtitle">Relatório de execução</p>
+	</div>
+
+	<footer class="cover__foot">
+		<div class="cover__card">
+			{% if uel_logo %}<img class="cover__logo" src="{{ uel_logo }}" alt="Logo da UEL" />{% endif %}
+			<div class="cover__org">
+				{% if uel_nome %}<div class="cover__uel">{{ uel_tipo }} {{ uel_nome }}</div>{% endif %}
+				<div class="cover__meta">Gerado em {{ gerado_em }}</div>
+			</div>
+		</div>
+	</footer>
+</section>

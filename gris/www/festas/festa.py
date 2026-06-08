@@ -5,6 +5,7 @@ from frappe.utils import flt, format_date
 
 from gris.api.festas import totais_payload
 from gris.api.festas.convites import build_dashboard as build_convites_dashboard
+from gris.api.festas.relatorio import relatorio_disponivel
 from gris.api.portal_access import enrich_context, user_has_access
 from gris.api.portal_cache_utils import get_uel_cached
 from gris.festas.utils.unidades import UNIDADES
@@ -421,6 +422,7 @@ def get_context(context):
 
 	roles = set(frappe.get_roles(frappe.session.user))
 	context.can_edit = bool(roles & ALLOWED_ROLES)
+	context.relatorio_disponivel = relatorio_disponivel(festa_name)
 
 	context.current_user = frappe.session.user
 	context.current_user_full_name = (

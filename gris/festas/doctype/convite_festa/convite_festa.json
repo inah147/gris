@@ -1,7 +1,7 @@
 {
  "actions": [],
  "autoname": "format:CF-{YYYY}-{#####}",
- "creation": "2026-05-20 09:00:00.000000",
+ "creation": "2026-05-20 09:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -62,8 +62,8 @@
    "fieldname": "telefone_pagador",
    "fieldtype": "Data",
    "label": "Telefone do Pagador",
-   "options": "Phone",
-   "mandatory_depends_on": "eval:!doc.presencial"
+   "mandatory_depends_on": "eval:!doc.presencial",
+   "options": "Phone"
   },
   {
    "fieldname": "column_break_pagador",
@@ -73,8 +73,8 @@
    "fieldname": "email_pagador",
    "fieldtype": "Data",
    "label": "E-mail do Pagador",
-   "options": "Email",
-   "mandatory_depends_on": "eval:!doc.presencial"
+   "mandatory_depends_on": "eval:!doc.presencial",
+   "options": "Email"
   },
   {
    "fieldname": "secao_pagamento",
@@ -83,7 +83,7 @@
   },
   {
    "default": "0",
-   "description": "Marcado quando o convite foi vendido na portaria (dinheiro/cartão físico).",
+   "description": "Marcado quando o convite foi vendido na portaria (dinheiro/cart\u00e3o f\u00edsico).",
    "fieldname": "presencial",
    "fieldtype": "Check",
    "in_standard_filter": 1,
@@ -96,7 +96,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Meio de Pagamento",
-   "options": "Checkout Infinitepay\nDinheiro\nCartão",
+   "options": "Checkout Infinitepay\nDinheiro\nCart\u00e3o",
    "reqd": 1
   },
   {
@@ -109,6 +109,7 @@
   {
    "fieldname": "status_pagamento",
    "fieldtype": "Data",
+   "in_standard_filter": 1,
    "is_virtual": 1,
    "label": "Status do Pagamento",
    "read_only": 1
@@ -120,7 +121,7 @@
   {
    "fieldname": "cobranca_infinitepay",
    "fieldtype": "Link",
-   "label": "Cobrança Infinitepay",
+   "label": "Cobran\u00e7a Infinitepay",
    "options": "Cobranca Infinitepay",
    "read_only": 1
   },
@@ -131,13 +132,12 @@
   },
   {
    "default": "0",
-   "description": "Quando marcado, todos os QR codes são enviados em um único e-mail para o pagador.",
+   "description": "Quando marcado, todos os QR codes s\u00e3o enviados em um \u00fanico e-mail para o pagador.",
    "fieldname": "pagador_recebe_qr_codes",
    "fieldtype": "Check",
    "label": "Pagador recebe todos os QR codes"
   },
   {
-   "depends_on": "eval:!doc.pagador_recebe_qr_codes",
    "description": "Lista gerada automaticamente quando o pagador recebe todos os QR codes.",
    "fieldname": "convidados",
    "fieldtype": "Table",
@@ -156,7 +156,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-20 09:00:00.000000",
+ "modified": "2026-06-05 12:43:52.809833",
  "modified_by": "Administrator",
  "module": "Festas",
  "name": "Convite Festa",
@@ -177,7 +177,6 @@
   },
   {
    "create": 1,
-   "delete": 0,
    "email": 1,
    "export": 1,
    "print": 1,

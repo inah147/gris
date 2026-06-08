@@ -18,6 +18,7 @@ dependencies = [
     "Faker>=24.0.0",
     "PyYAML>=6.0",
     "qrcode[pil]>=7.4",
+    "PyMuPDF>=1.23",  # rodapé (degradê + nº de página) do relatório em PDF
 ]
 
 [build-system]

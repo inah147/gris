@@ -121,3 +121,59 @@ class TestSincronizarPagamento(FrappeTestCase):
 				sincronizar_pagamento,
 				convite.cobranca_infinitepay,
 			)
+
+	def test_falha_ao_materializar_entrada_aborta_confirmacao(self):
+		"""Materializar a Lista Entrada Festa é pós-condição obrigatória do pagamento.
+
+		Se a entrada de um convidado não puder ser criada, a confirmação (aqui via o
+		caminho de sincronização/marcação manual) deve FALHAR de forma visível em vez
+		de marcar a cobrança como Paga deixando o convidado fora da portaria.
+		"""
+		festa = _nova_festa()
+		opcao = _opcao(festa.name)
+		# Convidado nomeado explícito (não usa o auto-preenchimento de pagador).
+		convite = frappe.get_doc(
+			{
+				"doctype": "Convite Festa",
+				"festa": festa.name,
+				"nome_pagador": "P",
+				"telefone_pagador": "11988887777",
+				"email_pagador": "p@example.com",
+				"pagador_recebe_qr_codes": 0,
+				"itens": [
+					{
+						"eh_convite": 1,
+						"opcao_convite": opcao.name,
+						"descricao": "Inteira",
+						"quantidade": 1,
+						"valor": 50,
+					}
+				],
+				"convidados": [{"nome": "Convidado Um", "email": "c1@example.com"}],
+			}
+		).insert(ignore_permissions=True)
+
+		with patch(
+			"gris.api.financeiro.infinitepay_checkout._verificar_pagamento",
+			return_value={
+				"success": True,
+				"paid": True,
+				"amount": 5000,
+				"paid_amount": 5000,
+				"installments": 1,
+				"capture_method": "credit_card",
+			},
+		), patch(
+			"gris.festas.doctype.lista_entrada_festa.lista_entrada_festa.ListaEntradaFesta.validate",
+			side_effect=Exception("falha simulada ao criar entrada"),
+		):
+			self.assertRaises(
+				frappe.ValidationError,
+				sincronizar_pagamento,
+				convite.cobranca_infinitepay,
+			)
+
+		# Nenhuma entrada deve ter sido materializada (sem sucesso parcial silencioso).
+		self.assertFalse(
+			frappe.db.exists("Lista Entrada Festa", {"convite": convite.name})
+		)

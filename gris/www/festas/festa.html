@@ -45,8 +45,19 @@
 		</p>
 		{% endif %}
 	</div>
-	{% if link_drive %}
+	{% if link_drive or relatorio_disponivel %}
 	<div class="festa-page-header__actions">
+		{% if relatorio_disponivel %}
+		<a
+			href="/festas/relatorio?name={{ festa_name }}"
+			class="btn-sm-outline"
+			aria-label="Abrir relatório da festa"
+		>
+			{{ lucide_icon("clipboard-list", size="sm") }}
+			<span>Relatório</span>
+		</a>
+		{% endif %}
+		{% if link_drive %}
 		<a
 			href="{{ link_drive }}"
 			target="_blank"
@@ -57,6 +68,7 @@
 			{{ lucide_icon("folder-open", size="sm") }}
 			<span>Drive</span>
 		</a>
+		{% endif %}
 	</div>
 	{% endif %}
 </div>
@@ -898,8 +910,8 @@ window._festaData = {
 	{% call field(label="Nome da área *") %}
 		{{ input(name="add-area-nome", attrs={"id": "add-area-nome", "required": "required", "autocomplete": "off", "placeholder": "Ex.: Bar, Palco, Cozinha…"}) }}
 	{% endcall %}
-	{% call field(label="Descrição *") %}
-		<textarea id="add-area-descricao" class="input" rows="3" placeholder="Descreva as responsabilidades desta área…" required></textarea>
+	{% call field(label="Descrição") %}
+		<textarea id="add-area-descricao" class="input" rows="3" placeholder="Descreva as responsabilidades desta área…"></textarea>
 	{% endcall %}
 </div>
 {% endcall %}
@@ -925,8 +937,8 @@ window._festaData = {
 			trigger_attrs={"class": "w-full"}
 		) }}
 	{% endcall %}
-	{% call field(label="Descrição *") %}
-		<textarea id="add-barraca-descricao" class="input" rows="3" placeholder="Descreva as responsabilidades desta barraca…" required></textarea>
+	{% call field(label="Descrição") %}
+		<textarea id="add-barraca-descricao" class="input" rows="3" placeholder="Descreva as responsabilidades desta barraca…"></textarea>
 	{% endcall %}
 </div>
 {% endcall %}

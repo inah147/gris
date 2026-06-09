@@ -30,6 +30,12 @@ class AvaliacaoFesta(Document):
 		results: list[int] = []
 		satisfaction: list[int] = []
 		for ind in self.avaliacoes_individuais or []:
+			# Só linhas efetivamente respondidas entram nas métricas. As pendentes
+			# carregam o placeholder "0" do campo Select (resultado_festa/
+			# satisfacao_colaboracao) e distorceriam a média — espelha o tratamento
+			# de _serialize_avaliacao, que também só considera linhas concluídas.
+			if not cint(ind.avaliacao_concluida):
+				continue
 			if ind.resultado_festa is not None and str(ind.resultado_festa) != "":
 				results.append(cint(ind.resultado_festa))
 			if ind.satisfacao_colaboracao is not None and str(ind.satisfacao_colaboracao) != "":

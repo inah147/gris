@@ -409,11 +409,11 @@
    "default": "0",
    "fieldname": "aceitar_doacoes",
    "fieldtype": "Check",
-   "label": "Aceitar doações junto com os convites"
+   "label": "Aceitar doa\u00e7\u00f5es junto com os convites"
   },
   {
    "default": "0",
-   "description": "Quando ativo, somente o tipo de convite 'Portaria' é vendido; demais tipos ficam desativados.",
+   "description": "Quando ativo, somente o tipo de convite 'Portaria' \u00e9 vendido; demais tipos ficam desativados.",
    "fieldname": "venda_na_portaria",
    "fieldtype": "Check",
    "label": "Venda na portaria"
@@ -475,8 +475,7 @@
    "fieldtype": "Link",
    "label": "Board de tarefas",
    "no_copy": 1,
-   "options": "Board",
-   "read_only": 1
+   "options": "Board"
   }
  ],
  "grid_page_length": 50,
@@ -523,10 +522,11 @@
    "link_fieldname": "festa"
   }
  ],
- "modified": "2026-05-10 15:18:32.037585",
+ "modified": "2026-06-09 09:39:40.576079",
  "modified_by": "Administrator",
  "module": "Festas",
  "name": "Festa",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

@@ -61,6 +61,10 @@ class AvaliacaodeProjeto(Document):
 		satisfaction: list[int] = []
 
 		for individual in self.avaliacoes_individuais or []:
+			# Só linhas efetivamente respondidas entram nas métricas: as pendentes
+			# carregam o placeholder "0" do campo Select e distorceriam a média.
+			if not cint(individual.avaliacao_concluida):
+				continue
 			if individual.resultado_projeto is not None and str(individual.resultado_projeto) != "":
 				results.append(cint(individual.resultado_projeto))
 			if individual.satisfacao_colaboracao is not None and str(individual.satisfacao_colaboracao) != "":

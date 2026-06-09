@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import io
+import math
 import os
 
 import frappe
@@ -221,6 +222,11 @@ def _montar_secao_convites(festa_name: str, convites_dashboard: dict) -> dict:
 	}
 
 
+def _distribuicao_0_10(notas: list[int]) -> list[int]:
+	"""Contagem de cada nota inteira de 0 a 10 (11 baldes), para os histogramas."""
+	return [sum(1 for n in notas if n == i) for i in range(11)]
+
+
 def _montar_avaliacoes(avaliacao: dict | None) -> dict | None:
 	"""Normaliza os dados de avaliação para o relatório, calculando o NPS dos
 	convidados e a distribuição das notas a partir das respostas."""
@@ -233,7 +239,22 @@ def _montar_avaliacoes(avaliacao: dict | None) -> dict | None:
 	promotores = sum(1 for n in notas if n >= 9)
 	detratores = sum(1 for n in notas if n <= 6)
 	nps_conv = (promotores - detratores) / total_conv if total_conv else 0.0
-	distribuicao = [sum(1 for n in notas if n == i) for i in range(11)]
+	distribuicao = _distribuicao_0_10(notas)
+
+	# Distribuição das notas da equipe (avaliações individuais concluídas): a
+	# satisfação em colaborar alimenta o NPS da equipe; o resultado da festa, a
+	# avaliação geral. Servem para os histogramas do relatório.
+	individuais = avaliacao.get("individuais") or []
+	notas_satisfacao = [
+		cint(i.get("satisfacao_colaboracao"))
+		for i in individuais
+		if i.get("satisfacao_colaboracao") not in (None, "")
+	]
+	notas_resultado = [
+		cint(i.get("resultado_festa"))
+		for i in individuais
+		if i.get("resultado_festa") not in (None, "")
+	]
 
 	return {
 		"geral": {
@@ -254,6 +275,8 @@ def _montar_avaliacoes(avaliacao: dict | None) -> dict | None:
 			"avaliacao_geral": flt(avaliacao.get("avaliacao_geral")),
 			"total": cint(avaliacao.get("total_individuais")),
 			"concluidas": cint(avaliacao.get("concluidas_individuais")),
+			"dist_nps": _distribuicao_0_10(notas_satisfacao),
+			"dist_geral": _distribuicao_0_10(notas_resultado),
 			"resumo_ia": avaliacao.get("resumo_avaliacoes_individuais", ""),
 		},
 	}
@@ -426,11 +449,60 @@ def build_relatorio_payload(festa_name: str) -> dict:
 	]
 	despesas_por_area.sort(key=lambda x: x["valor"], reverse=True)
 
+	# ── Arrecadação e resultado por área ────────────────────────────────────
+	# Receita realizada de cada barraca agrupada pela área a que pertence e o
+	# resultado por área (receita das barracas − despesas de compras/contratações).
+	# Áreas seguem a ordem de cadastro; barracas/despesas sem área vão ao final.
+	ordem_areas = [a.name for a in areas]
+
+	def _ordem_area(chave: str) -> tuple[int, str]:
+		return (ordem_areas.index(chave), "") if chave in ordem_areas else (len(ordem_areas), chave)
+
+	def _label_area(chave: str) -> str:
+		return area_nome.get(chave, "Sem área") if chave else "Sem área"
+
+	barracas_por_area: dict[str, list[dict]] = {}
+	receita_area: dict[str, float] = {}
+	for b in barracas:
+		chave = b.area or ""
+		valor = flt(b.valor_arrecadado_realizado_real)
+		barracas_por_area.setdefault(chave, []).append(
+			{"nome_barraca": b.nome_barraca or b.name, "valor": valor}
+		)
+		receita_area[chave] = receita_area.get(chave, 0.0) + valor
+
+	arrecadacao_por_area = [
+		{
+			"label": _label_area(chave),
+			"barracas": barracas_por_area[chave],
+			"subtotal": receita_area.get(chave, 0.0),
+		}
+		for chave in sorted(barracas_por_area, key=_ordem_area)
+	]
+	resultado_por_area = [
+		{
+			"label": _label_area(chave),
+			"receitas": receita_area.get(chave, 0.0),
+			"despesas": despesa_area.get(chave, 0.0),
+			"resultado": receita_area.get(chave, 0.0) - despesa_area.get(chave, 0.0),
+		}
+		for chave in sorted(set(receita_area) | set(despesa_area), key=_ordem_area)
+	]
+
 	# ── Totais do fechamento ────────────────────────────────────────────────
 	arrecadacao_barracas = sum(flt(b.valor_arrecadado_realizado_real) for b in barracas)
 	arrecadacao = receita_convites + receita_doacoes + arrecadacao_barracas
 	despesas = sum(x["valor"] for x in despesas_por_area)
 	resultado = arrecadacao - despesas
+
+	# Previsão do cenário escolhido (totais esperados gravados no doc Festa).
+	previsto_arrecadacao = flt(doc.get(f"receita_total_{sufixo}"))
+	previsto_despesas = flt(doc.get(f"despesa_total_{sufixo}"))
+	previsto = {
+		"arrecadacao": previsto_arrecadacao,
+		"despesas": previsto_despesas,
+		"resultado": previsto_arrecadacao - previsto_despesas,
+	}
 
 	# Passos do waterfall: entradas (+) e despesas por area (-); o JS acumula e
 	# fecha com a barra de Resultado.
@@ -462,10 +534,14 @@ def build_relatorio_payload(festa_name: str) -> dict:
 		"receita_convites": receita_convites,
 		"receita_doacoes": receita_doacoes,
 		"receitas_barracas": barracas_receita,
+		"arrecadacao_barracas": arrecadacao_barracas,
+		"arrecadacao_por_area": arrecadacao_por_area,
 		"despesas_por_area": despesas_por_area,
+		"resultado_por_area": resultado_por_area,
 		"arrecadacao": arrecadacao,
 		"despesas": despesas,
 		"resultado": resultado,
+		"previsto": previsto,
 		"compras": compras_payload,
 		"contratacoes": contratacoes_payload,
 		"avaliacoes": avaliacoes,
@@ -517,16 +593,142 @@ _CAPA_TEMPLATE = "templates/pages/relatorio_festa_pdf_capa.html"
 _CORPO_TEMPLATE = "templates/pages/relatorio_festa_pdf_corpo.html"
 
 
+# ── Paginação das tabelas "de lado" (compras/contratações) ─────────────────────
+# No corpo do PDF a seção de compras/contratações fica em folhas RETRATO com o
+# conteúdo rotacionado 90° (CSS `transform: rotate`), para a tabela larga caber. O
+# WeasyPrint aplica o transform DEPOIS do layout, então conteúdo transformado não
+# pagina sozinho — o que passa da folha é cortado. Por isso quebramos as linhas em
+# blocos aqui, estimando a altura de cada linha, de modo que cada bloco (uma
+# `.rot-canvas`) caiba em uma folha. Estimativas conservadoras (poucos caracteres
+# por linha → mais linhas previstas) preferem sobrar espaço a cortar conteúdo.
+_PAG_ALTURA_MM = 184.0      # espaço de empilhamento por folha (largura útil do retrato)
+_PAG_MARGEM_MM = 12.0       # folga de segurança
+_PAG_SEC_HEAD_MM = 22.0     # sec_head + h3 (só na 1ª folha das compras)
+_PAG_H3_MM = 8.0            # h3 "Contratações" / "(continuação)"
+_PAG_THEAD_MM = 16.0        # cabeçalho da tabela (repetido por folha; rótulos quebram em 2-3 linhas)
+_PAG_LINHA_MM = 4.4         # altura de uma linha de texto a 8pt
+_PAG_ROW_PAD_MM = 4.2       # padding vertical de uma <tr>
+
+
+def _altura_linha(celulas: list[tuple[str, int]]) -> float:
+    """Altura estimada (mm) de uma `<tr>`: a célula que mais quebra define a altura.
+
+    `celulas`: pares ``(texto, caracteres_por_linha_da_coluna)``.
+    """
+    linhas = 1
+    for texto, cpl in celulas:
+        if texto:
+            linhas = max(linhas, math.ceil(len(str(texto)) / cpl))
+    return linhas * _PAG_LINHA_MM + _PAG_ROW_PAD_MM
+
+
+def _paginar(linhas: list[dict], celulas_de, extra_primeira_mm: float) -> list[list[dict]]:
+    """Quebra `linhas` em blocos que cabem numa folha rotacionada.
+
+    `celulas_de(linha)` devolve os pares ``(texto, cpl)`` que estimam a altura da
+    linha. `extra_primeira_mm` é o cabeçalho extra que só aparece na 1ª folha.
+    Devolve sempre ao menos um bloco (vazio quando não há linhas) para o template
+    renderizar o estado "nenhum item cadastrado".
+    """
+    if not linhas:
+        return [[]]
+    cap_primeira = _PAG_ALTURA_MM - _PAG_MARGEM_MM - extra_primeira_mm - _PAG_THEAD_MM
+    cap_demais = _PAG_ALTURA_MM - _PAG_MARGEM_MM - _PAG_H3_MM - _PAG_THEAD_MM
+    paginas: list[list[dict]] = []
+    atual: list[dict] = []
+    restante = cap_primeira
+    for ln in linhas:
+        altura = _altura_linha(celulas_de(ln))
+        if atual and altura > restante:
+            paginas.append(atual)
+            atual = []
+            restante = cap_demais
+        atual.append(ln)
+        restante -= altura
+    paginas.append(atual)
+    return paginas
+
+
+# caracteres-por-linha de cada coluna que quebra (≈ largura útil / largura do
+# caractere a 8pt). Valores conservadores — derivados das larguras fixas do
+# `<colgroup>` no template — para superestimar a altura e nunca cortar linhas.
+def _paginar_compras(compras: list[dict]) -> list[list[dict]]:
+    def celulas(c: dict) -> list[tuple[str, int]]:
+        return [
+            (c.get("observacoes"), 38),       # obs: col. 68mm
+            (c.get("nome_item"), 14),         # item: col. 26mm
+            (c.get("fornecedor_orcado"), 15),  # fornecedor: col. 28mm
+            (c.get("fornecedor_realizado"), 15),
+        ]
+
+    return _paginar(compras, celulas, _PAG_SEC_HEAD_MM)
+
+
+def _paginar_contratacoes(contratacoes: list[dict]) -> list[list[dict]]:
+    def celulas(c: dict) -> list[tuple[str, int]]:
+        return [
+            (c.get("observacoes"), 38),       # obs: col. 68mm
+            (c.get("nome_item"), 20),         # nome: col. 42mm
+            (c.get("fornecedor_orcado"), 22),  # fornecedor: col. 46mm
+            (c.get("fornecedor_realizado"), 22),
+        ]
+
+    return _paginar(contratacoes, celulas, _PAG_H3_MM)
+
+
 def _logo_uel_data_uri() -> str:
-	"""Logo da UEL como data-URI PNG (mesmo carregamento do convite/QR)."""
+	"""Logo da UEL como data-URI PNG (mesmo carregamento do convite/QR), com
+	contorno branco para contraste sobre o gradiente escuro da capa."""
 	from gris.festas.utils.convite_qr import _carregar_logo
 
 	logo = _carregar_logo()
 	if logo is None:
 		return ""
+	logo = _com_contorno_branco(logo)
 	buf = io.BytesIO()
 	logo.save(buf, format="PNG")
 	return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
+def _com_contorno_branco(logo, proporcao: float = 0.06):
+	"""Recorta um contorno branco que segue a silhueta (alpha) do logo — efeito
+	"die-cut" de adesivo, para o logo ficar legível sobre o gradiente escuro da
+	capa. O WeasyPrint não gera esse contorno via CSS, então pré-processamos o PNG.
+
+	Dilata a máscara alpha carimbando-a num disco (contorno redondo e uniforme) e
+	usa a silhueta resultante para recortar uma camada branca, com o logo original
+	por cima. A espessura é `proporcao` da menor dimensão (independe da resolução).
+	"""
+	from PIL import Image, ImageChops
+
+	logo = logo.convert("RGBA")
+	bbox = logo.getbbox()
+	if bbox:
+		logo = logo.crop(bbox)
+	# O logo aparece pequeno na capa (~22mm) e o custo do contorno cresce com a
+	# espessura²; limitar a resolução de trabalho mantém o pré-processo barato.
+	limite = 480
+	if max(logo.size) > limite:
+		resample = getattr(Image, "Resampling", Image).LANCZOS
+		logo.thumbnail((limite, limite), resample)
+
+	espessura = max(4, round(min(logo.size) * proporcao))
+	alpha = logo.getchannel("A")
+	pad = espessura + 4
+	size = (logo.width + 2 * pad, logo.height + 2 * pad)
+
+	mascara = Image.new("L", size, 0)
+	for dy in range(-espessura, espessura + 1):
+		for dx in range(-espessura, espessura + 1):
+			if dx * dx + dy * dy <= espessura * espessura:
+				deslocado = Image.new("L", size, 0)
+				deslocado.paste(alpha, (pad + dx, pad + dy))
+				mascara = ImageChops.lighter(mascara, deslocado)
+
+	out = Image.new("RGBA", size, (255, 255, 255, 0))
+	out.paste(Image.new("RGBA", size, (255, 255, 255, 255)), (0, 0), mascara)
+	out.alpha_composite(logo, (pad, pad))
+	return out
 
 
 def _donut(pares: list[dict]) -> dict | None:
@@ -726,6 +928,9 @@ def _gerar_relatorio_pdf_bytes(festa_name: str) -> bytes:
 		"uel_nome": uel.get("nome_da_uel") or "",
 		"gerado_em": format_date(today(), "dd/MM/yyyy"),
 		"visuais": _build_pdf_visuais(payload),
+		# Compras/contratações já fatiadas em folhas (conteúdo rotacionado de lado).
+		"compras_paginas": _paginar_compras(payload["compras"]),
+		"contratacoes_paginas": _paginar_contratacoes(payload["contratacoes"]),
 	}
 
 	ctx["capa_html"] = _render_pdf_template(_CAPA_TEMPLATE, ctx)

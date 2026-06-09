@@ -497,7 +497,11 @@
     });
 
     addListener(document, 'basecoat:popover', (event) => {
-      if (event.detail.source !== selectComponent) {
+      // Não fecha quando o popover/select que está abrindo é um descendente
+      // deste select (cenário aninhado). Mantém o comportamento de fechar
+      // selects/popovers irmãos ou não relacionados.
+      const source = event.detail.source;
+      if (source !== selectComponent && !selectComponent.contains(source)) {
         closePopover(false);
       }
     });

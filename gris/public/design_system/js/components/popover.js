@@ -162,7 +162,11 @@
     });
 
     document.addEventListener('basecoat:popover', (event) => {
-      if (event.detail.source !== popoverComponent) {
+      // Não fecha quando o popover/select que está abrindo é um descendente
+      // deste (ex.: um select dentro do conteúdo do popover). Sem essa guarda,
+      // abrir um select aninhado dispararia o fechamento do popover pai.
+      const source = event.detail.source;
+      if (source !== popoverComponent && !popoverComponent.contains(source)) {
         closePopover(false);
       }
     });

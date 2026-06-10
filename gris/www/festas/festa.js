@@ -4303,7 +4303,10 @@
 			canEdit: true,
 			onLoad: async () => {
 				const data = await callApi(METHODS.bootstrap, { board_name: board });
-				return { tarefas: data.tarefas || [] };
+				return {
+					tarefas: data.tarefas || [],
+					responsavelOptions: data.responsavel_options || [],
+				};
 			},
 			onSaveTask: async (payload) => {
 				const data = await callApi(METHODS.saveTask, { tarefa: { ...payload, board } });

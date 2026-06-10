@@ -127,7 +127,10 @@ def coletar_usuarios_da_festa(festa_name: str) -> dict[str, str]:
 def _resolver_email(tipo, associado, responsavel, email_direto) -> str:
 	tipo = (tipo or "").strip()
 	if tipo == "Associado" and associado:
-		email = frappe.db.get_value("Associado", associado, "email")
+		# O User (login) do associado é criado com o id@escoteiros, então
+		# priorizamos esse e-mail; senão cai para o e-mail comum.
+		dados = frappe.db.get_value("Associado", associado, ["id_escoteiros", "email"], as_dict=True) or {}
+		email = dados.get("id_escoteiros") or dados.get("email")
 	elif tipo == "Responsavel" and responsavel:
 		email = frappe.db.get_value("Responsavel", responsavel, "email")
 	else:

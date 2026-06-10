@@ -197,7 +197,18 @@ def bootstrap_quadro(board_name: str) -> dict[str, Any]:
 		"user_board_name": board_name,
 		"board": board,
 		"tarefas": _listar_tarefas_do_quadro(board_name),
+		"responsavel_options": _responsavel_options_do_quadro(board_name),
 	}
+
+
+def _responsavel_options_do_quadro(board_name: str) -> list[dict[str, Any]]:
+	"""Usuarios autorizados do board (equipe da festa) como opcoes de responsavel
+	para o combobox de tarefas: {user, full_name}."""
+	return [
+		{"user": membro["user"], "full_name": membro["full_name"]}
+		for membro in _serializar_membros(board_name)
+		if membro.get("user")
+	]
 
 
 @frappe.whitelist()

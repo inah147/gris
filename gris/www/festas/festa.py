@@ -217,7 +217,7 @@ def _select_items_associados() -> list[dict]:
 	registros = frappe.get_all(
 		"Associado",
 		filters={"status_no_grupo": "Ativo"},
-		fields=["name", "nome_completo", "email", "telefone"],
+		fields=["name", "nome_completo", "id_escoteiros", "email", "telefone"],
 		order_by="nome_completo asc",
 	)
 	return [
@@ -225,7 +225,8 @@ def _select_items_associados() -> list[dict]:
 			"label": r.nome_completo or r.name,
 			"value": r.name,
 			"type": "item",
-			"attrs": {"data-email": r.email or "", "data-telefone": r.telefone or ""},
+			# Prioriza o id@escoteiros sobre o e-mail comum (mesma regra do backend).
+			"attrs": {"data-email": r.id_escoteiros or r.email or "", "data-telefone": r.telefone or ""},
 		}
 		for r in registros
 	]

@@ -27,6 +27,13 @@ def _validate_tipo_coord(tipo: str) -> None:
 		frappe.throw("Tipo de coordenador inválido.")
 
 
+def _associado_email(name: str) -> str:
+	"""E-mail preferencial do associado: usa o id@escoteiros quando preenchido,
+	senão cai para o e-mail comum."""
+	dados = frappe.db.get_value("Associado", name, ["id_escoteiros", "email"], as_dict=True) or {}
+	return (dados.get("id_escoteiros") or dados.get("email") or "").strip()
+
+
 # ---------------------------------------------------------------------------
 # Coordenador da festa
 # ---------------------------------------------------------------------------
@@ -259,7 +266,7 @@ def salvar_area(area_name: str, dados_json: str) -> dict:
 		doc.responsavel_coord = None
 		nome_coord = frappe.db.get_value("Associado", coord, "nome_completo") or coord
 		doc.nome_coord = nome_coord
-		doc.email_coord = frappe.db.get_value("Associado", coord, "email") or ""
+		doc.email_coord = _associado_email(coord)
 		doc.telefone_coord = frappe.db.get_value("Associado", coord, "telefone") or ""
 	else:
 		doc.responsavel_coord = None
@@ -284,6 +291,10 @@ def salvar_area(area_name: str, dados_json: str) -> dict:
 		if tipo_pessoa == "Associado":
 			entry["associado"] = (row.get("associado") or "").strip() or None
 			entry["responsavel"] = None
+			if entry["associado"]:
+				# Resolve no servidor para garantir o id@escoteiros quando houver,
+				# em vez de confiar no e-mail enviado pelo client.
+				entry["email"] = _associado_email(entry["associado"]) or entry["email"]
 		elif tipo_pessoa == "Responsavel":
 			entry["responsavel"] = (row.get("responsavel") or "").strip() or None
 			entry["associado"] = None
@@ -400,7 +411,7 @@ def salvar_barraca(barraca_name: str, dados_json: str) -> dict:
 		doc.responsavel_coord = None
 		nome_coord = frappe.db.get_value("Associado", coord, "nome_completo") or coord
 		doc.nome_coord = nome_coord
-		doc.email_coord = frappe.db.get_value("Associado", coord, "email") or ""
+		doc.email_coord = _associado_email(coord)
 		doc.telefone_coord = frappe.db.get_value("Associado", coord, "telefone") or ""
 	else:
 		doc.responsavel_coord = None
@@ -425,6 +436,10 @@ def salvar_barraca(barraca_name: str, dados_json: str) -> dict:
 		if tipo_pessoa == "Associado":
 			entry["associado"] = (row.get("associado") or "").strip() or None
 			entry["responsavel"] = None
+			if entry["associado"]:
+				# Resolve no servidor para garantir o id@escoteiros quando houver,
+				# em vez de confiar no e-mail enviado pelo client.
+				entry["email"] = _associado_email(entry["associado"]) or entry["email"]
 		elif tipo_pessoa == "Responsavel":
 			entry["responsavel"] = (row.get("responsavel") or "").strip() or None
 			entry["associado"] = None

@@ -410,7 +410,7 @@ def get_context(context):
 	contas_raw = frappe.get_all(
 		"Instituicao Financeira",
 		fields=["name", "nome"],
-		filters={"ativa": 1},
+		filters={"ativa": ["!=", 0]},
 		order_by="nome asc",
 	)
 	context.contas = [
@@ -436,7 +436,7 @@ def get_context(context):
 			"chave_pix",
 			"centro_de_custo",
 		],
-		filters={"ativa": 1},
+		filters={"ativa": ["!=", 0]},
 		order_by="nome asc",
 	)
 	carteiras = []

@@ -17,6 +17,12 @@ class TransacaoExtratoGeral(Document):
 		self.repasse_entre_contas = 1 if categoria in self.TRANSFER_CATEGORIES else 0
 
 	def validate(self):
+		if self.is_new() and self.data_transacao and getdate(self.data_transacao) >= getdate("2026-06-01"):
+			if not frappe.flags.via_integracao_carteira:
+				frappe.throw(
+					"Transações a partir de junho de 2026 só podem ser inseridas via integração de carteiras.",
+					frappe.PermissionError,
+				)
 		self._sync_repasse_entre_contas_with_categoria()
 
 	def _update_wallet(self):

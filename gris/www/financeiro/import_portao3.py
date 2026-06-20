@@ -105,7 +105,11 @@ def process_uploaded_file_portao3(file_url):
 						"e2e": row.get("E2E"),
 					}
 				)
-				doc.insert(ignore_permissions=False)
+				frappe.flags.via_integracao_carteira = True
+				try:
+					doc.insert(ignore_permissions=False)
+				finally:
+					frappe.flags.via_integracao_carteira = False
 				stats["inserted"] += 1
 		except Exception as e:
 			stats["failed"] += 1

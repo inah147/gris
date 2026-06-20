@@ -202,7 +202,7 @@
 		{% call card(title="Informações Familiares", attrs={"class": "registro-section-card"}) %}
 			<div class="registro-toggle-grid">
 				{{ checkbox_control("guarda_unilateral", "A guarda do jovem é unilateral?", family_info.guarda_unilateral) }}
-				{{ checkbox_control("somente_um_responsavel", "Somente um responsável legal", false) }}
+				{{ checkbox_control("somente_um_responsavel", "Somente um responsável legal", family_info.somente_um_responsavel) }}
 			</div>
 		{% endcall %}
 

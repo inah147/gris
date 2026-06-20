@@ -92,6 +92,7 @@ def get_context(context):
 			)
 
 	responsaveis.sort(key=lambda x: x["doc"].nome_completo or "")
+	family_info["somente_um_responsavel"] = 1 if len(responsaveis) <= 1 else 0
 
 	# Ensure at least 2 items for the UI
 	while len(responsaveis) < 2:

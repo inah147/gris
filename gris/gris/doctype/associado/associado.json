@@ -554,6 +554,8 @@
    "share": 1
   },
   {
+   "create": 1,
+   "write": 1,
    "read": 1,
    "role": "Gestor de Associados"
   },

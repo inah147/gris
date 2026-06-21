@@ -1,15 +1,31 @@
 # Gris - Como Rodar o Projeto no Windows
 
 Guia passo a passo para colocar o ambiente **Gris** (Frappe v15) rodando
-localmente em uma máquina **Windows**, usando WSL2 + Docker Desktop.
+localmente em uma máquina **Windows**.
 
-> Esta é a forma recomendada de rodar o projeto no Windows, pois o Frappe
-> depende de ferramentas e scripts shell que não funcionam de forma nativa
-> no Windows. Todo o ambiente roda em containers Linux via Docker.
+> O Frappe depende de ferramentas e scripts shell que não funcionam de
+> forma nativa no Windows puro. Por isso, em ambos os caminhos abaixo você
+> vai usar o **WSL2** (Linux dentro do Windows) como base. Não é possível
+> rodar 100% nativo no Windows sem o WSL2.
+
+## Qual caminho escolher?
+
+| | Docker Compose (manual) | **Frappe Manager (fm)** — recomendado para dev |
+|---|---|---|
+| Live reload (código Python/JS/CSS) | Não, por padrão | **Sim**, automático no ambiente `dev` |
+| Setup | Mais manual (build de imagem, `.env`, criar site) | 1-2 comandos criam tudo |
+| Ferramentas extras | — | Mailpit (e-mail), Adminer (DB), debug no VS Code |
+| Uso recomendado | Subir o stack completo (Evolution API, Outline, Caddy) tal como em produção | Desenvolver a app `gris` no dia a dia |
+| Ainda usa Docker? | Sim | Sim (o `fm` é um wrapper sobre Docker Compose) |
+
+Se você quer **desenvolver** a app com recarregamento automático, vá direto
+para a [Opção B — Frappe Manager](#opção-b--frappe-manager-fm-recomendado-para-desenvolvimento).
+Se você quer reproduzir o stack completo de produção localmente, use a
+[Opção A — Docker Compose](#opção-a--docker-compose-manual).
 
 ---
 
-## Pré-requisitos
+## Pré-requisitos comuns
 
 | Requisito | Observação |
 |---|---|
@@ -17,70 +33,42 @@ localmente em uma máquina **Windows**, usando WSL2 + Docker Desktop.
 | Virtualização habilitada na BIOS/UEFI | VT-x (Intel) ou AMD-V (AMD) |
 | 8 GB de RAM (mínimo) | 4 GB livres para os containers |
 | 20 GB de disco livre | Imagens + volumes |
-| Conta de administrador no Windows | Para instalar WSL2 e Docker Desktop |
 
----
+### 1. Instalar o WSL2
 
-## Passo 1 — Instalar o WSL2
-
-Abra o **PowerShell como Administrador** e execute:
+Abra o **PowerShell como Administrador**:
 
 ```powershell
 wsl --install
 ```
 
-Isso instala o WSL2 com Ubuntu como distribuição padrão. Reinicie o
-computador quando solicitado.
-
-Após reiniciar, confirme que está usando WSL versão 2:
+Reinicie o computador quando solicitado e confirme a versão:
 
 ```powershell
 wsl -l -v
 ```
 
-A coluna `VERSION` deve mostrar `2` para a distribuição instalada.
+A coluna `VERSION` deve mostrar `2`.
 
----
-
-## Passo 2 — Instalar o Docker Desktop
+### 2. Instalar o Docker Desktop
 
 1. Baixe e instale o [Docker Desktop para Windows](https://www.docker.com/products/docker-desktop/).
-2. Durante a instalação, mantenha marcada a opção **"Use WSL 2 instead of Hyper-V"**.
-3. Após instalar, abra o Docker Desktop → **Settings → Resources → WSL Integration**
-   e habilite a integração com sua distribuição Ubuntu.
-4. Aplique e reinicie o Docker Desktop.
+2. Mantenha marcada a opção **"Use WSL 2 instead of Hyper-V"** durante a instalação.
+3. Em **Settings → Resources → WSL Integration**, habilite a integração com sua distribuição (Ubuntu).
 
-Valide no terminal (PowerShell ou WSL):
+### 3. Instalar o Git para Windows
 
-```bash
-docker --version
-docker compose version
-```
-
----
-
-## Passo 3 — Instalar o Git para Windows
-
-Baixe em [git-scm.com](https://git-scm.com/download/win). Durante a
-instalação, recomenda-se manter os finais de linha originais (LF), pois o
-projeto contém scripts shell (`.sh`) usados dentro dos containers:
+Baixe em [git-scm.com](https://git-scm.com/download/win) e configure os
+finais de linha (o projeto tem scripts `.sh` usados nos containers):
 
 ```bash
 git config --global core.autocrlf input
 ```
 
-> Se você já clonou o repositório antes de ajustar essa configuração e
-> encontrar erros como `nginx-entrypoint.sh: not found` ou
-> `$'\r': command not found`, veja a seção de **Solução de Problemas**.
+### 4. Clonar o repositório (dentro do WSL)
 
----
-
-## Passo 4 — Clonar o repositório (dentro do WSL)
-
-Para evitar problemas de performance e permissões, trabalhe **dentro do
-sistema de arquivos do WSL** (não em `/mnt/c/...`).
-
-Abra um terminal Ubuntu/WSL:
+Trabalhe **dentro do sistema de arquivos do WSL** (não em `/mnt/c/...`) —
+isso é importante tanto para performance quanto para o `fm` funcionar bem.
 
 ```bash
 wsl
@@ -91,30 +79,29 @@ cd gris
 
 ---
 
-## Passo 5 — Configurar variáveis de ambiente
+## Opção A — Docker Compose (manual)
+
+Use esse caminho se quiser reproduzir o stack completo (igual produção),
+sem live reload.
+
+### Passo 1 — Configurar variáveis de ambiente
 
 ```bash
 cp .env.example .env
 ```
 
-Edite o `.env` (pode usar `nano .env` ou abrir a pasta no VS Code com a
-extensão *Remote - WSL*) e ajuste no mínimo:
+Ajuste no mínimo:
 
 ```dotenv
 DB_PASSWORD=uma-senha-forte
 FRAPPE_SITE_NAME_HEADER=gris.local
 ```
 
-> As demais variáveis (Evolution API, Outline) só são necessárias se você
-> for usar esses serviços opcionais. Para rodar apenas o app Gris
-> localmente, os valores padrão (`changeit`) do `.env.example` são
-> suficientes para o `docker compose` subir sem erros.
+> As variáveis de Evolution API e Outline só importam se você for usar
+> esses serviços opcionais; os valores padrão (`changeit`) bastam para o
+> `docker compose` subir sem erro.
 
----
-
-## Passo 6 — Build da imagem Docker
-
-Ainda no terminal WSL, na raiz do repositório:
+### Passo 2 — Build da imagem Docker
 
 ```bash
 export APPS_JSON_BASE64=$(base64 -w 0 apps.json)
@@ -129,29 +116,14 @@ docker build \
   --file=Containerfile .
 ```
 
-Esse build pode levar alguns minutos na primeira vez (baixa o Frappe,
-Node.js e dependências Python).
-
----
-
-## Passo 7 — Subir os containers
+### Passo 3 — Subir os containers
 
 ```bash
 docker compose up -d
+docker compose logs configurator -f   # aguarde finalizar, depois Ctrl+C
 ```
 
-Acompanhe o serviço `configurator` até ele finalizar (sai do log
-automaticamente quando termina):
-
-```bash
-docker compose logs configurator -f
-```
-
-Pressione `Ctrl+C` para sair do log depois que ele finalizar.
-
----
-
-## Passo 8 — Criar o site Frappe
+### Passo 4 — Criar o site
 
 ```bash
 docker compose exec backend bench new-site gris.local \
@@ -161,47 +133,143 @@ docker compose exec backend bench new-site gris.local \
   --install-app gris
 ```
 
-> Substitua `uma-senha-forte` pelo mesmo valor definido em `DB_PASSWORD`
-> no `.env`.
+### Passo 5 — Acessar a aplicação
 
----
+Abra **http://localhost:8080**. Login: `Administrator` / `admin`.
 
-## Passo 9 — Acessar a aplicação
+Se usou `FRAPPE_SITE_NAME_HEADER=gris.local`, adicione ao arquivo de hosts
+do Windows (Notepad como Administrador,
+`C:\Windows\System32\drivers\etc\hosts`):
 
-Abra o navegador em **http://localhost:8080**.
+```
+127.0.0.1 gris.local
+```
 
-Login: `Administrator` / senha: a definida em `--admin-password` (`admin`
-no exemplo acima).
+E acesse **http://gris.local:8080**.
 
-> Se você alterou `FRAPPE_SITE_NAME_HEADER` para algo diferente de
-> `localhost` (ex.: `gris.local`), adicione uma entrada no arquivo de hosts
-> do Windows para resolver esse nome para `127.0.0.1`:
->
-> 1. Abra o Notepad **como Administrador**.
-> 2. Abra `C:\Windows\System32\drivers\etc\hosts`.
-> 3. Adicione a linha: `127.0.0.1 gris.local`
-> 4. Salve e acesse **http://gris.local:8080**.
-
----
-
-## Comandos úteis (rodar no terminal WSL, dentro da pasta do projeto)
+### Comandos úteis (Opção A)
 
 ```bash
-# Rodar migrações após atualizar o código
+# Migrações após atualizar código
 docker compose exec backend bench --site gris.local migrate
 
-# Ver logs do backend ou do scheduler
+# Logs
 docker compose logs backend -f
 docker compose logs scheduler -f
 
-# Entrar no shell do container
+# Shell do container
 docker compose exec backend bash
 
-# Parar todos os containers
+# Parar / reiniciar
 docker compose down
-
-# Reiniciar todos os containers
 docker compose restart
+```
+
+---
+
+## Opção B — Frappe Manager (fm) (recomendado para desenvolvimento)
+
+O [Frappe Manager](https://github.com/rtCamp/Frappe-Manager) (`fm`) é um
+CLI que também usa Docker Compose por baixo dos panos, mas automatiza
+todo o setup: cria o bench, o site e instala a app com um único comando,
+já no modo de desenvolvimento com **live reload** (alterações em
+Python/JS/CSS são aplicadas automaticamente), além de incluir Mailpit
+(teste de e-mails), Adminer (gerenciador de banco) e integração com
+debugger do VS Code.
+
+### Pré-requisitos específicos
+
+- WSL2 + Docker Desktop (Passos 1 a 4 acima)
+- Python 3.13+ dentro do WSL (o `fm` é instalado com `uv` ou `pipx`)
+- (Opcional) VS Code com a extensão **Dev Containers**, para usar `fm code`
+
+### Passo 1 — Instalar o fm (dentro do WSL)
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh   # se ainda não tiver o uv
+uv tool install --python 3.13 frappe-manager
+```
+
+Alternativa com `pipx`:
+
+```bash
+pipx install frappe-manager
+```
+
+### Passo 2 — Criar o bench já com a app gris
+
+A partir da raiz clonada do repositório (ou de qualquer pasta — o `fm`
+busca a app diretamente do GitHub):
+
+```bash
+fm create gris --apps https://github.com/inah147/gris:main --environment dev
+```
+
+Isso cria o bench `gris`, baixa o Frappe e a app `gris`, sobe os
+containers e cria o site `gris.localhost`. Se a app não for instalada
+automaticamente no site, instale manualmente:
+
+```bash
+fm shell gris -c "bench --site gris.localhost install-app gris"
+```
+
+### Passo 3 — Acessar a aplicação
+
+Abra **http://gris.localhost**. Login padrão: `Administrator` / `admin`.
+
+> No **Windows 11**, domínios `*.localhost` costumam resolver
+> automaticamente. No **Windows 10**, pode ser necessário adicionar ao
+> arquivo de hosts (`C:\Windows\System32\drivers\etc\hosts`, como
+> Administrador):
+> ```
+> 127.0.0.1 gris.localhost
+> ```
+
+### Passo 4 — Editar código com live reload
+
+No ambiente `--environment dev`, alterações em arquivos Python, JS e CSS
+da app são recarregadas automaticamente — não é necessário reiniciar
+containers manualmente.
+
+Para editar o código com o VS Code conectado direto ao container (via
+extensão **Dev Containers**):
+
+```bash
+fm code gris
+```
+
+Isso abre o bench no VS Code já com Python, Ruff, ESLint, Prettier e
+debugpy configurados.
+
+### Passo 5 — Debug com VS Code (opcional)
+
+```bash
+fm code gris --debugger
+```
+
+Com isso o `fm` configura uma task que para o servidor web antes de
+anexar o debugger (necessário para o `debugpy` conseguir ocupar a porta).
+O bench precisa estar rodando para o attach funcionar — use
+`--force-start` se necessário.
+
+### Ferramentas administrativas
+
+| Ferramenta | URL | Credenciais |
+|---|---|---|
+| Mailpit (e-mails de teste) | `http://gris.localhost/mailpit/` | `fm info gris` |
+| Adminer (gerenciador de banco) | `http://gris.localhost/adminer/` | `fm info gris` |
+
+### Comandos úteis (Opção B)
+
+```bash
+fm list              # lista todos os benches
+fm info gris         # detalhes e credenciais do bench
+fm logs gris -f      # logs em tempo real
+fm start gris        # iniciar
+fm stop gris         # parar
+fm restart gris      # reiniciar serviços
+fm shell gris        # shell dentro do bench
+fm delete gris       # remove o bench (e opcionalmente o banco)
 ```
 
 ---
@@ -210,13 +278,14 @@ docker compose restart
 
 | Problema | Causa provável | Solução |
 |---|---|---|
-| Docker Desktop não inicia / erro de virtualização | Virtualização desabilitada na BIOS, ou Hyper-V/WSL não habilitado | Habilite VT-x/AMD-V na BIOS; em "Recursos do Windows" habilite "Plataforma de Máquina Virtual" e "Subsistema do Windows para Linux" |
-| `docker compose up` muito lento ou trava | Repositório clonado em `/mnt/c/...` em vez do filesystem do WSL | Clone o repositório em `~/` dentro do WSL (Passo 4) |
-| Erro `$'\r': command not found` ou `nginx-entrypoint.sh: not found` ao iniciar o `frontend` | Scripts `.sh` foram salvos com final de linha CRLF (Windows) | Configure `git config --global core.autocrlf input` e re-clone o repositório, ou rode `dos2unix resources/*.sh` |
-| Porta 8080 já em uso | Outro serviço (IIS, Skype, outro container) está usando a porta | Altere `HTTP_PUBLISH_PORT` no `.env` ou pare o serviço conflitante |
-| `configurator` reinicia em loop | Banco de dados (`db`) ainda não está saudável | `docker compose logs db` para investigar; aguarde o healthcheck do MariaDB |
+| Docker Desktop não inicia / erro de virtualização | Virtualização desabilitada na BIOS, ou Hyper-V/WSL não habilitado | Habilite VT-x/AMD-V na BIOS; habilite "Plataforma de Máquina Virtual" e "Subsistema do Windows para Linux" em Recursos do Windows |
+| Tudo muito lento (build, `fm create`, `docker compose up`) | Repositório/bench dentro de `/mnt/c/...` em vez do filesystem do WSL | Trabalhe em `~/` dentro do WSL, nunca em `/mnt/c/...` |
+| Erro `$'\r': command not found` ou `nginx-entrypoint.sh: not found` (Opção A) | Scripts `.sh` salvos com final de linha CRLF | `git config --global core.autocrlf input` e re-clone, ou `dos2unix resources/*.sh` |
+| Porta 8080 já em uso (Opção A) | Outro serviço usando a porta | Altere `HTTP_PUBLISH_PORT` no `.env` ou pare o serviço conflitante |
+| `http://gris.localhost` não abre (Opção B) | Windows 10 não resolve `*.localhost` automaticamente | Adicione `127.0.0.1 gris.localhost` ao arquivo de hosts |
+| `configurator` reinicia em loop (Opção A) | Banco de dados ainda não está saudável | `docker compose logs db` para investigar |
 | `docker` não é reconhecido no terminal WSL | Integração do Docker Desktop com a distro WSL não habilitada | Docker Desktop → Settings → Resources → WSL Integration → habilite sua distro |
-| Build falha em `bench init` / clone do Frappe | Firewall corporativo/VPN bloqueando acesso ao GitHub | Verifique a conectividade com `github.com` e desative VPN/proxy temporariamente para testar |
+| Build/clone falha (apps do Frappe ou gris) | Firewall corporativo/VPN bloqueando GitHub | Verifique conectividade com `github.com`; desative VPN/proxy para testar |
 
 ---
 
@@ -224,5 +293,6 @@ docker compose restart
 
 - [WSL2 - Microsoft Docs](https://learn.microsoft.com/windows/wsl/install)
 - [Docker Desktop for Windows](https://docs.docker.com/desktop/install/windows-install/)
+- [Frappe Manager (fm) - repositório oficial](https://github.com/rtCamp/Frappe-Manager)
 - Guia completo de deploy (Linux/produção): [`DOCKER_DEPLOYMENT.md`](./DOCKER_DEPLOYMENT.md)
 - Diretrizes do projeto: [`AGENTS.md`](./AGENTS.md)

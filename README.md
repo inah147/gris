@@ -17,8 +17,9 @@ Para rodar via Docker, veja [`DOCKER_DEPLOYMENT.md`](./DOCKER_DEPLOYMENT.md).
 ### Rodando no Windows
 
 Se você está usando uma máquina Windows, siga o guia passo a passo em
-[`WINDOWS_SETUP.md`](./WINDOWS_SETUP.md) para configurar o WSL2, Docker
-Desktop e subir o ambiente Gris localmente.
+[`WINDOWS_SETUP.md`](./WINDOWS_SETUP.md). Ele cobre tanto o setup via
+Docker Compose quanto via [Frappe Manager](https://github.com/rtCamp/Frappe-Manager)
+(recomendado para desenvolvimento, com live reload).
 
 ### Contributing
 

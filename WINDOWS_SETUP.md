@@ -244,13 +244,38 @@ debugpy configurados.
 ### Passo 5 — Debug com VS Code (opcional)
 
 ```bash
-fm code gris --debugger
+fm code gris --debugger --force-start
 ```
 
-Com isso o `fm` configura uma task que para o servidor web antes de
-anexar o debugger (necessário para o `debugpy` conseguir ocupar a porta).
-O bench precisa estar rodando para o attach funcionar — use
-`--force-start` se necessário.
+Isso grava `.vscode/tasks.json` e `.vscode/launch.json` no workspace do
+bench. Para depurar:
+
+1. Coloque um breakpoint no código (ex.: em `gris/api/*.py`).
+2. Abra o painel **Run and Debug** (`Ctrl+Shift+D`) e aperte **F5**,
+   selecionando a configuração gerada pelo `fm`.
+3. O VS Code primeiro roda a task `fm-kill-port` (`fmx stop frappe`), que
+   para o Gunicorn para liberar a porta para o `debugpy`, e então anexa o
+   debugger.
+4. Dispare a requisição/ação que aciona o código (ex.: acesse a tela ou
+   chame o endpoint no navegador/Postman) — a execução vai parar no
+   breakpoint.
+5. Ao parar o debug, o Gunicorn volta a subir automaticamente.
+
+### Passo 6 — Popular o site com dados de exemplo (seed)
+
+As fixtures de configuração (roles, carteiras, centros de custo,
+categorias de transação, UOs) já são instaladas automaticamente junto
+com a app. Para ter registros de exemplo para testar a interface
+(associados, responsáveis, contas fixas e pagamentos fictícios), use o
+script `gris/scripts/seed_demo_data.py`:
+
+```bash
+fm shell gris -c "bench --site gris.localhost execute gris.scripts.seed_demo_data.run"
+```
+
+O script é idempotente (pode rodar de novo sem duplicar dados) e só
+funciona com `developer_mode` ativo, para evitar execução acidental em
+produção.
 
 ### Ferramentas administrativas
 

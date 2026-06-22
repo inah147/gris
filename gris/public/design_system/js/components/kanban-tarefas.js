@@ -820,11 +820,6 @@
                 return;
             }
             const prazoWrapper = this._dlg("[data-kanban-prazo-wrapper]");
-            if (!payload.prazo) {
-                if (prazoWrapper) prazoWrapper.classList.add("is-invalid");
-                showToast("Informe o prazo da tarefa.", "error");
-                return;
-            }
             if (prazoWrapper) prazoWrapper.classList.remove("is-invalid");
 
             this.saving = true;

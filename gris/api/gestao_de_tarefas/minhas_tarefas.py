@@ -247,8 +247,6 @@ def _normalize_dates(payload: dict[str, Any], previous_status: str = "") -> dict
 def _assert_payload(payload: dict[str, Any]) -> None:
 	if not (payload.get("descricao") or "").strip():
 		frappe.throw(_("Informe o titulo da tarefa."))
-	if not payload.get("prazo"):
-		frappe.throw(_("Informe o prazo da tarefa."))
 	status = (payload.get("status") or "Nao iniciado").strip()
 	if status not in TASK_STATUS_OPTIONS:
 		frappe.throw(_("Status da tarefa invalido."))

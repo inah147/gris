@@ -366,7 +366,10 @@
             onLoad: async () => {
                 const args = modo === "projeto" ? { board_name: boardName } : {};
                 const data = await callApi(methods.bootstrap, args);
-                return { tarefas: data.tarefas || [] };
+                return {
+                    tarefas: data.tarefas || [],
+                    responsavelOptions: data.responsavel_options || [],
+                };
             },
             onSaveTask: async (payload) => {
                 const taskPayload = modo === "projeto"

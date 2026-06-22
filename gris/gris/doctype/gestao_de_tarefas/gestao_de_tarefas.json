@@ -65,8 +65,7 @@
   {
    "fieldname": "prazo",
    "fieldtype": "Date",
-   "label": "Prazo",
-   "reqd": 1
+   "label": "Prazo"
   },
   {
    "fieldname": "data_entrega",

@@ -40,7 +40,7 @@ apps/                           # Apps Django complementares (em construção)
 
 ## Skills Disponíveis
 
-Ao trabalhar em tarefas específicas, consulte a skill correspondente em `.github/skills/<nome>/SKILL.md`:
+Ao trabalhar em tarefas específicas, consulte a skill correspondente em `.claude/skills/<nome>/SKILL.md`:
 
 | Tarefa | Skill |
 |---|---|
@@ -108,5 +108,5 @@ Ao trabalhar em tarefas específicas, consulte a skill correspondente em `.githu
 ## Referências
 
 - Documentação Frappe: [docs.frappe.io](https://docs.frappe.io)
-- Skills do projeto: `.github copy/skills/`
+- Skills do projeto: `.claude/skills/`
 - Detalhes de deploy: `DOCKER_DEPLOYMENT.md`

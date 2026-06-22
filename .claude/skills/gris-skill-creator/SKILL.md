@@ -38,7 +38,7 @@ Se o `SKILL.md` ficar grande, mova detalhes para `references/` e deixe ponteiros
 - Frontmatter deve explicitar **quando ativar** e **o que entrega**.
 - Evitar overfitting aos exemplos de teste.
 - Não criar instruções inseguras, enganosas ou fora da intenção do usuário.
-- Reutilizar padrões já existentes em `.github/skills` antes de inventar estrutura nova.
+- Reutilizar padrões já existentes em `.claude/skills` antes de inventar estrutura nova.
 - Para tarefas de Frappe, sempre considerar permissões, validação no backend e risco de N+1.
 - Para skills de UI/Portal, exigir o design system Basecoat (`gris/public/design_system`), macros Jinja e isolamento entre Portal e Desk.
 - Para skills de Desk, orientar componentes nativos do Frappe e proibir dependência de Basecoat/Portal.

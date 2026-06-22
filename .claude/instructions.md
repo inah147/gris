@@ -45,7 +45,7 @@ Consulte a skill adequada conforme o tipo de trabalho:
 | Segurança e performance | `@frappe-security-performance` |
 | Importação do último backup do Google Drive | `@google-drive-backup-import` |
 
-Skills disponíveis em: `.github/skills/<skill-name>/SKILL.md`.
+Skills disponíveis em: `.claude/skills/<skill-name>/SKILL.md`.
 
 ## ⚙️ Convenções de backend (Frappe)
 
@@ -124,4 +124,4 @@ Antes de concluir uma entrega:
 
 - Documentação Frappe: [docs.frappe.io](https://docs.frappe.io)
 - Código-base do framework no workspace: `apps/frappe/`
-- Skills do projeto: `apps/gris/.github/skills/`
+- Skills do projeto: `apps/gris/.claude/skills/`

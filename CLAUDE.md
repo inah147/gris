@@ -7,21 +7,22 @@ Este arquivo é o ponto de entrada do Claude Code neste repositório. Ele **não
 | Preciso de... | Arquivo |
 |---|---|
 | Visão geral do projeto, stack, estrutura de pastas, convenções de código, segurança, anti-padrões e checklist de qualidade | [AGENTS.md](AGENTS.md) |
+| Instruções detalhadas de convenções de backend/frontend e checklist de PR (formato alternativo, mesmo conteúdo do AGENTS.md em mais detalhe) | [.claude/instructions.md](.claude/instructions.md) |
 
 ## Skills por tipo de tarefa
 
 | Vou trabalhar em... | Arquivo |
 |---|---|
-| Criar ou alterar um DocType (schema, campos, naming) | [.github/skills/frappe-doctype-schema/SKILL.md](.github/skills/frappe-doctype-schema/SKILL.md) |
-| Lógica de backend (controllers, hooks, banco de dados) | [.github/skills/frappe-server-logic/SKILL.md](.github/skills/frappe-server-logic/SKILL.md) |
-| Scripts de formulário no Desk (client scripting) | [.github/skills/frappe-client-scripting/SKILL.md](.github/skills/frappe-client-scripting/SKILL.md) |
-| Páginas do portal web (`www`, Jinja) | [.github/skills/frappe-web-portal/SKILL.md](.github/skills/frappe-web-portal/SKILL.md) |
-| Design de API e whitelisting | [.github/skills/frappe-api-design/SKILL.md](.github/skills/frappe-api-design/SKILL.md) |
-| Segurança e performance | [.github/skills/frappe-security-performance/SKILL.md](.github/skills/frappe-security-performance/SKILL.md) |
-| Gráficos ECharts | [.github/skills/gris-echarts-charts/SKILL.md](.github/skills/gris-echarts-charts/SKILL.md) |
-| Guia de marca (cores, tipografia, tom, PWA) | [.github/skills/gris-brand-guide/SKILL.md](.github/skills/gris-brand-guide/SKILL.md) |
-| Backup/importação do Google Drive | [.github/skills/google-drive-backup-import/SKILL.md](.github/skills/google-drive-backup-import/SKILL.md) |
-| Criar ou avaliar uma nova skill | [.github/skills/gris-skill-creator/SKILL.md](.github/skills/gris-skill-creator/SKILL.md) |
+| Criar ou alterar um DocType (schema, campos, naming) | [.claude/skills/frappe-doctype-schema/SKILL.md](.claude/skills/frappe-doctype-schema/SKILL.md) |
+| Lógica de backend (controllers, hooks, banco de dados) | [.claude/skills/frappe-server-logic/SKILL.md](.claude/skills/frappe-server-logic/SKILL.md) |
+| Scripts de formulário no Desk (client scripting) | [.claude/skills/frappe-client-scripting/SKILL.md](.claude/skills/frappe-client-scripting/SKILL.md) |
+| Páginas do portal web (`www`, Jinja) | [.claude/skills/frappe-web-portal/SKILL.md](.claude/skills/frappe-web-portal/SKILL.md) |
+| Design de API e whitelisting | [.claude/skills/frappe-api-design/SKILL.md](.claude/skills/frappe-api-design/SKILL.md) |
+| Segurança e performance | [.claude/skills/frappe-security-performance/SKILL.md](.claude/skills/frappe-security-performance/SKILL.md) |
+| Gráficos ECharts | [.claude/skills/gris-echarts-charts/SKILL.md](.claude/skills/gris-echarts-charts/SKILL.md) |
+| Guia de marca (cores, tipografia, tom, PWA) | [.claude/skills/gris-brand-guide/SKILL.md](.claude/skills/gris-brand-guide/SKILL.md) |
+| Backup/importação do Google Drive | [.claude/skills/google-drive-backup-import/SKILL.md](.claude/skills/google-drive-backup-import/SKILL.md) |
+| Criar ou avaliar uma nova skill | [.claude/skills/gris-skill-creator/SKILL.md](.claude/skills/gris-skill-creator/SKILL.md) |
 
 ## Operação e dados
 

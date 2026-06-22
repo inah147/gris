@@ -7,10 +7,23 @@ Via Frappe Manager:
     fm shell gris -c "bench --site gris.localhost execute gris.scripts.seed_demo_data.run"
 
 Idempotente: pode ser executado várias vezes sem duplicar registros.
+
+Cobre os doctypes "de conteúdo" criáveis manualmente dos módulos Gris, Financeiro,
+Gestão de Adultos e Gestão de Projetos. Ficam de fora deste seed:
+- Doctypes mestre/configuração já cobertos por fixtures (gris/hooks.py), como
+  Carteira, Centro de Custo, Categoria de Transacao, Instituicao Financeira,
+  Unidade Organizacional (real), ODS Projeto, Mapeamento de perguntas e respostas
+  da entrevista, Role, Role Profile e Email Template.
+- Singles de configuração (Configuracoes de Associados, Configuracoes WhatsApp etc.).
+- Tabelas filhas (istable=1), que só existem como linhas de outro documento.
+- Doctypes de importação de extrato bancário (Transacao BTG Empresas, Transacao
+  Infinitepay *, Transacao Portao 3) e o respectivo log (Log Importacao de
+  Associados), que representam dados brutos de integrações, não registros manuais.
+- Transparencia, por exigir um arquivo real (campo Attach).
 """
 
 import frappe
-from frappe.utils import add_years, get_first_day, nowdate
+from frappe.utils import add_days, add_months, add_years, get_first_day, now, nowdate
 
 
 def run():
@@ -19,11 +32,29 @@ def run():
 
 	unidades = _seed_unidades_organizacionais()
 	_seed_habilidades()
+	_seed_funcoes_voluntario()
+	_seed_feriados()
+	_seed_calendario()
+
 	associados = _seed_associados(unidades)
-	_seed_responsaveis()
+	responsaveis = _seed_responsaveis()
+	_seed_responsavel_vinculo(responsaveis, associados)
+
+	novos_associados = _seed_novos_associados()
+	_seed_fila_de_espera(novos_associados)
+	_seed_agenda_de_visitas(novos_associados)
+	_seed_pesquisa_de_novos_associados(responsaveis)
+	_seed_resposta_manifestacao_de_interesse()
+	_seed_metrica_mensal_de_associados()
+
 	contas_fixas = _seed_contas_fixas()
 	_seed_pagamentos_conta_fixa(contas_fixas)
 	_seed_pagamentos_contribuicao_mensal(associados)
+	_seed_transacoes_extrato_geral(associados, contas_fixas)
+
+	projeto = _seed_projeto(associados)
+	_seed_avaliacao_de_projeto(projeto)
+	_seed_entrevista_por_competencias(associados)
 
 	frappe.db.commit()
 	print("Seed de dados concluído.")
@@ -47,6 +78,55 @@ def _seed_habilidades():
 		if frappe.db.exists("Habilidade", habilidade):
 			continue
 		frappe.get_doc({"doctype": "Habilidade", "habilidade": habilidade}).insert(ignore_permissions=True)
+
+
+def _seed_funcoes_voluntario():
+	funcoes = [
+		{"categoria": "Escotista", "area": "Seção Lobinho Demo"},
+		{"categoria": "Dirigente", "area": "Grupo Escoteiro Demo"},
+	]
+	for funcao in funcoes:
+		if frappe.db.exists("Funcao Voluntario", funcao):
+			continue
+		frappe.get_doc({"doctype": "Funcao Voluntario", **funcao}).insert(ignore_permissions=True)
+
+
+def _seed_feriados():
+	feriados = [
+		{"id": "DEMO-FERIADO-001", "nome": "Feriado Demo - Tiradentes", "data": "2026-04-21", "tipo": "Nacional"},
+		{"id": "DEMO-FERIADO-002", "nome": "Feriado Demo - Aniversário da Cidade", "data": "2026-08-09", "tipo": "Municipal"},
+	]
+	for feriado in feriados:
+		if frappe.db.exists("Feriados", feriado["id"]):
+			continue
+		frappe.get_doc({"doctype": "Feriados", **feriado}).insert(ignore_permissions=True)
+
+
+def _seed_calendario():
+	eventos = [
+		{
+			"id": "DEMO-CAL-001",
+			"atividade": "Acampamento Demo de Fim de Ano",
+			"secao": "Seção Escoteiro Demo",
+			"local": "Sede do Grupo Escoteiro Demo",
+			"nivel": "Local",
+			"inicio": add_days(nowdate(), 30),
+			"termino": add_days(nowdate(), 32),
+		},
+		{
+			"id": "DEMO-CAL-002",
+			"atividade": "Reunião Demo de Matilha",
+			"secao": "Seção Lobinho Demo",
+			"local": "Sede do Grupo Escoteiro Demo",
+			"nivel": "Local",
+			"inicio": add_days(nowdate(), 7),
+			"termino": add_days(nowdate(), 7),
+		},
+	]
+	for evento in eventos:
+		if frappe.db.exists("Calendario", evento["id"]):
+			continue
+		frappe.get_doc({"doctype": "Calendario", **evento}).insert(ignore_permissions=True)
 
 
 def _seed_associados(unidades):
@@ -117,10 +197,147 @@ def _seed_responsaveis():
 			"celular": "11999990002",
 		},
 	]
+	created = []
 	for responsavel in responsaveis:
-		if frappe.db.exists("Responsavel", {"cpf": responsavel["cpf"]}):
+		existing = frappe.db.exists("Responsavel", {"cpf": responsavel["cpf"]})
+		if existing:
+			created.append(existing)
 			continue
-		frappe.get_doc({"doctype": "Responsavel", **responsavel}).insert(ignore_permissions=True)
+		doc = frappe.get_doc({"doctype": "Responsavel", **responsavel})
+		doc.insert(ignore_permissions=True)
+		created.append(doc.name)
+	return created
+
+
+def _seed_responsavel_vinculo(responsaveis, associados):
+	if len(responsaveis) < 1 or len(associados) < 1:
+		return
+	vinculos = [
+		{
+			"responsavel": responsaveis[0],
+			"beneficiario_associado": associados[0],
+			"primeiro_responsavel": 1,
+			"é_guardiao_legal": 1,
+		},
+	]
+	for vinculo in vinculos:
+		name = vinculo["responsavel"] + vinculo["beneficiario_associado"]
+		if frappe.db.exists("Responsavel Vinculo", name):
+			continue
+		frappe.get_doc({"doctype": "Responsavel Vinculo", **vinculo}).insert(ignore_permissions=True)
+
+
+def _seed_novos_associados():
+	leads = [
+		{
+			"nome_completo": "Fernanda Lima Rocha",
+			"cpf": "66666666666",
+			"data_de_nascimento": add_years(nowdate(), -10),
+			"sexo": "Feminínio",
+			"ramo": "Lobinho",
+			"status": "Visita Agendada",
+			"visita_agendada": 1,
+		},
+		{
+			"nome_completo": "Gustavo Henrique Alves",
+			"cpf": "77777777777",
+			"data_de_nascimento": add_years(nowdate(), -13),
+			"sexo": "Masculino",
+			"ramo": "Escoteiro",
+			"status": "Fila de espera",
+		},
+	]
+	created = []
+	for lead in leads:
+		existing = frappe.db.exists("Novo Associado", {"cpf": lead["cpf"]})
+		if existing:
+			created.append(existing)
+			continue
+		doc = frappe.get_doc({"doctype": "Novo Associado", **lead})
+		doc.insert(ignore_permissions=True)
+		created.append(doc.name)
+	return created
+
+
+def _seed_fila_de_espera(novos_associados):
+	if len(novos_associados) < 2:
+		return
+	if frappe.db.exists("Fila de Espera", {"associado": novos_associados[1]}):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Fila de Espera",
+			"associado": novos_associados[1],
+			"ramo": "Escoteiro",
+			"dt_inclusao_fila": now(),
+		}
+	).insert(ignore_permissions=True)
+
+
+def _seed_agenda_de_visitas(novos_associados):
+	if len(novos_associados) < 1:
+		return
+	if frappe.db.exists("Agenda de Visitas", {"jovem": novos_associados[0]}):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Agenda de Visitas",
+			"jovem": novos_associados[0],
+			"data_da_visita": add_days(nowdate(), 5),
+			"ramo": "Lobinho",
+		}
+	).insert(ignore_permissions=True)
+
+
+def _seed_pesquisa_de_novos_associados(responsaveis):
+	if len(responsaveis) < 1:
+		return
+	responsavel = responsaveis[0]
+	if frappe.db.exists("Pesqusa de Novos Associados", responsavel):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Pesqusa de Novos Associados",
+			"responsavel": responsavel,
+			"como_conheceu_movimento": "Através de um amigo",
+			"nps_recepcao": "9",
+			"data_resposta": nowdate(),
+		}
+	).insert(ignore_permissions=True)
+
+
+def _seed_resposta_manifestacao_de_interesse():
+	if frappe.db.exists("Resposta Manifestacao de Interesse", {"cpf_do_jovem": "88888888888"}):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Resposta Manifestacao de Interesse",
+			"nome_do_jovem": "Helena Martins Cardoso",
+			"cpf_do_jovem": "88888888888",
+			"nome_do_responsavel": "Igor Martins Cardoso",
+			"email_do_responsavel": "igor.cardoso@example.com",
+			"celular_do_responsavel": "11999990003",
+			"cpf_do_responsavel": "99999999999",
+			"data_e_horario_de_resposta": now(),
+			"dados_confirmados": 1,
+			"aceite_lgpd": 1,
+		}
+	).insert(ignore_permissions=True)
+
+
+def _seed_metrica_mensal_de_associados():
+	mes_referencia = get_first_day(nowdate())
+	if frappe.db.exists("Metrica Mensal de Associados", {"mes_referencia": mes_referencia}):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Metrica Mensal de Associados",
+			"mes_referencia": mes_referencia,
+			"qt_ativos_uel": 3,
+			"qt_evasao": 0,
+			"qt_novos": 2,
+		}
+	).insert(ignore_permissions=True)
 
 
 def _seed_contas_fixas():
@@ -168,3 +385,107 @@ def _seed_pagamentos_contribuicao_mensal(associados):
 				"valor": 60,
 			}
 		).insert(ignore_permissions=True)
+
+
+def _seed_transacoes_extrato_geral(associados, contas_fixas):
+	mes_referencia = get_first_day(nowdate())
+
+	transacoes = [
+		{
+			"id": "DEMO-EXTRATO-001",
+			"descricao": "Doação Demo recebida via Pix",
+			"debito_credito": "Crédito",
+			"valor": 500,
+			"valor_absoluto": 500,
+			"data_transacao": mes_referencia,
+			"metodo": "Pix",
+			"carteira": "Ramo Escoteiro",
+			"instituicao": "Portão 3",
+			"categoria": "Doação",
+		},
+		{
+			"id": "DEMO-EXTRATO-002",
+			"descricao": "Pagamento Demo de contribuição mensal",
+			"debito_credito": "Crédito",
+			"valor": 60,
+			"valor_absoluto": 60,
+			"data_transacao": mes_referencia,
+			"metodo": "Pix",
+			"carteira": "Ramo Lobinho",
+			"instituicao": "Portão 3",
+			"categoria": "Contribuição Mensal",
+			"beneficiario": associados[0] if associados else None,
+		},
+		{
+			"id": "DEMO-EXTRATO-003",
+			"descricao": "Pagamento Demo de conta fixa",
+			"debito_credito": "Débito",
+			"valor": -1200,
+			"valor_absoluto": 1200,
+			"data_transacao": mes_referencia,
+			"metodo": "Boleto",
+			"carteira": "Espécie",
+			"instituicao": "Espécie",
+			"categoria": "Contas Ordinárias",
+			"conta_fixa": contas_fixas[0] if contas_fixas else None,
+		},
+	]
+
+	for transacao in transacoes:
+		if frappe.db.exists("Transacao Extrato Geral", transacao["id"]):
+			continue
+		frappe.get_doc({"doctype": "Transacao Extrato Geral", **transacao}).insert(ignore_permissions=True)
+
+
+def _seed_projeto(associados):
+	nome_do_projeto = "Projeto Demo - Mutirão de Reforma da Sede"
+	existing = frappe.db.exists("Projeto", {"nome_do_projeto": nome_do_projeto})
+	if existing:
+		return existing
+
+	coordenador = associados[2] if len(associados) > 2 else associados[0]
+	doc = frappe.get_doc(
+		{
+			"doctype": "Projeto",
+			"nome_do_projeto": nome_do_projeto,
+			"coordenador": coordenador,
+			"status": "Rascunho",
+			"data_de_inicio": nowdate(),
+			"data_de_termino": add_months(nowdate(), 2),
+			"justificativa": "A sede precisa de reparos para receber as atividades das seções.",
+			"alinhamento_com_escotismo": "Desenvolve protagonismo juvenil e trabalho em equipe.",
+			"ods": [{"ods": "ODS 04"}],
+		}
+	)
+	doc.insert(ignore_permissions=True)
+	return doc.name
+
+
+def _seed_avaliacao_de_projeto(projeto):
+	if not projeto:
+		return
+	if frappe.db.exists("Avaliacao de Projeto", {"projeto": projeto}):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Avaliacao de Projeto",
+			"projeto": projeto,
+			"status": "Em andamento",
+		}
+	).insert(ignore_permissions=True)
+
+
+def _seed_entrevista_por_competencias(associados):
+	if not associados:
+		return
+	escotista = associados[2] if len(associados) > 2 else associados[0]
+	if frappe.db.exists("Entrevista por Competencias", {"associado": escotista}):
+		return
+	frappe.get_doc(
+		{
+			"doctype": "Entrevista por Competencias",
+			"associado": escotista,
+			"funcao_atual": "Escotista",
+			"motivo_da_entrevista": "Ingresso",
+		}
+	).insert(ignore_permissions=True)

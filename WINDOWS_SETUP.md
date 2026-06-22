@@ -265,9 +265,11 @@ bench. Para depurar:
 
 As fixtures de configuração (roles, carteiras, centros de custo,
 categorias de transação, UOs) já são instaladas automaticamente junto
-com a app. Para ter registros de exemplo para testar a interface
-(associados, responsáveis, contas fixas e pagamentos fictícios), use o
-script `gris/scripts/seed_demo_data.py`:
+com a app. Para ter registros de exemplo para testar a interface —
+associados, responsáveis e vínculos, leads de novos associados (fila
+de espera, agenda de visitas), contas fixas e pagamentos, extrato
+financeiro, projetos e entrevistas por competências — use o script
+`gris/scripts/seed_demo_data.py`:
 
 ```bash
 fm shell gris -c "bench --site gris.localhost execute gris.scripts.seed_demo_data.run"

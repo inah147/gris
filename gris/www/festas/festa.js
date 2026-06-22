@@ -2012,8 +2012,8 @@
 			return `
 <tr data-compra-cotacao-row>
 	<td><input class="input festa-compact-input" data-field="fornecedor" value="${escHtml(c.fornecedor || "")}" placeholder="Fornecedor"></td>
-	<td><input class="input festa-compact-input" data-field="valor" type="number" min="0" step="0.01" value="${escHtml(c.valor || "")}"></td>
-	<td><input class="input festa-compact-input" data-field="quantidade" type="number" min="0" step="0.001" value="${escHtml(c.quantidade || "")}"></td>
+	<td>${window.GrisCurrencyInput.render({ field: "valor", value: c.valor, class: "festa-compact-input" })}</td>
+	<td><input class="input festa-compact-input" data-field="quantidade" type="text" inputmode="decimal" data-numeric-input value="${escHtml(c.quantidade || "")}"></td>
 	<td>${renderNativeSelect("unidade_medida", unidadesItems, c.unidade_medida || "unidade")}</td>
 	<td class="text-sm text-muted-foreground" data-valor-unitario>${escHtml(valUnit)}</td>
 	<td class="festa-switch-cell"><label class="switch" aria-label="Cotação escolhida"><input type="checkbox" role="switch" class="input" data-field="escolhida"${c.escolhida ? " checked" : ""}></label></td>
@@ -2074,7 +2074,7 @@
 			return `
 <tr data-compra-uso-row>
 	<td>${renderNativeSelect("produto", produtosItems, u.produto || "", "compra-select-produto")}</td>
-	<td><input class="input festa-compact-input" data-field="quantidade_usada" type="number" min="0" step="0.001" value="${escHtml(u.quantidade_usada || "")}"></td>
+	<td><input class="input festa-compact-input" data-field="quantidade_usada" type="text" inputmode="decimal" data-numeric-input value="${escHtml(u.quantidade_usada || "")}"></td>
 	<td>${renderNativeSelect("unidade_medida_uso", unidadesItems, u.unidade_medida_uso || "unidade")}</td>
 	<td class="festa-table-actions"><button type="button" class="btn-sm-ghost festa-actions-btn" data-compra-remove-uso="${idx}" aria-label="Remover uso">×</button></td>
 </tr>`;
@@ -2404,7 +2404,7 @@
 			return `
 <tr data-contratacao-cotacao-row>
 	<td><input class="input festa-compact-input" data-field="fornecedor" value="${escHtml(c.fornecedor || "")}" placeholder="Fornecedor"></td>
-	<td><input class="input festa-compact-input" data-field="valor" type="number" min="0" step="0.01" value="${escHtml(c.valor || "")}"></td>
+	<td>${window.GrisCurrencyInput.render({ field: "valor", value: c.valor, class: "festa-compact-input" })}</td>
 	<td class="festa-switch-cell"><label class="switch" aria-label="Cotação escolhida"><input type="checkbox" role="switch" class="input" data-field="escolhida"${c.escolhida ? " checked" : ""}></label></td>
 	<td class="festa-table-actions"><button type="button" class="btn-sm-ghost festa-actions-btn" data-contratacao-remove-cotacao="${idx}" aria-label="Remover cotação">×</button></td>
 </tr>`;
@@ -3781,7 +3781,7 @@
 			return `
 <tr data-fechamento-uso-row>
 	<td>${renderBasecoatSelect("produto", produtosItems, u.produto || "")}</td>
-	<td><input class="input festa-compact-input" data-field="quantidade_usada" type="number" min="0" step="0.001" value="${escHtml(u.quantidade_usada || "")}"></td>
+	<td><input class="input festa-compact-input" data-field="quantidade_usada" type="text" inputmode="decimal" data-numeric-input value="${escHtml(u.quantidade_usada || "")}"></td>
 	<td>${renderBasecoatSelect("unidade_medida_uso", unidadesItems, u.unidade_medida_uso || "unidade")}</td>
 	<td class="festa-table-actions"><button type="button" class="btn-sm-ghost festa-actions-btn" data-fechamento-remove-uso="${idx}" aria-label="Remover uso">×</button></td>
 </tr>`;
@@ -3945,7 +3945,7 @@
 			var qtdEsp = Number(p["qtd_" + key]) || 0;
 			var qtdReal = Number(p.qtd_realizada_vendas) || 0;
 			var qtdInput = canEdit
-				? `<input class="input festa-compact-input" type="number" min="0" step="0.001" data-item-barraca="${bi}" data-item-idx="${j}" data-item-produto="${escHtml(p.name)}" data-item-preco="${preco}" value="${escHtml(p.qtd_realizada_vendas || "")}">`
+				? `<input class="input festa-compact-input" type="text" inputmode="decimal" data-numeric-input data-item-barraca="${bi}" data-item-idx="${j}" data-item-produto="${escHtml(p.name)}" data-item-preco="${preco}" value="${escHtml(p.qtd_realizada_vendas || "")}">`
 				: fmtNum(qtdReal);
 			return `
 <tr>

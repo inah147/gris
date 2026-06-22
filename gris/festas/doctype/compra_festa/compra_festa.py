@@ -80,17 +80,19 @@ class CompraFesta(Document):
 		escolhida = self._cotacao_escolhida()
 		soma_uso = getattr(self, "_soma_uso_total", 0.0)
 
-		# Dados da cotação escolhida
+		# Dados da cotação escolhida.
+		# Em doações, a quantidade do pacote continua valendo (para manter as
+		# quantidades sugeridas), mas o valor é zerado.
 		qtd_pacote = 0.0
 		valor_pacote = 0.0
-		if escolhida and not escolhida.doacao and flt(escolhida.quantidade) > 0:
+		if escolhida and flt(escolhida.quantidade) > 0:
 			try:
 				qtd_pacote = converter(
 					flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra
 				)
 			except Exception:
 				qtd_pacote = 0.0
-			valor_pacote = flt(escolhida.valor)
+			valor_pacote = 0.0 if escolhida.doacao else flt(escolhida.valor)
 
 		# Busca público por cenário da festa
 		publicos = _carregar_publicos_festa(self.festa)
@@ -165,7 +167,7 @@ class CompraFesta(Document):
 	def _calcular_usos_em_produto(self):
 		escolhida = self._cotacao_escolhida()
 		qtd_pacote = 0.0
-		if escolhida and not escolhida.doacao and flt(escolhida.quantidade) > 0:
+		if escolhida and flt(escolhida.quantidade) > 0:
 			try:
 				qtd_pacote = converter(
 					flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra

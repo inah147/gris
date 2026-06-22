@@ -292,7 +292,10 @@ class Festa(Document):
 			fields=["name"],
 			order_by="creation",
 		)
-		nomes_barracas = [b.name for b in barracas]
+		# Barraca em processo de exclusão: ignora para não recriar as linhas de
+		# orçamento que a referenciam (evita LinkExistsError no on_trash).
+		ignorar_barraca = self.flags.get("ignorar_barraca")
+		nomes_barracas = [b.name for b in barracas if b.name != ignorar_barraca]
 
 		produtos = frappe.get_all(
 			"Produto de Venda Festa",

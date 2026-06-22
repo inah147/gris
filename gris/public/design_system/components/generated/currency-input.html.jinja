@@ -1,0 +1,57 @@
+{#
+  Renders a Brazilian Real (R$) currency input with bank-style behaviour: the user types
+  only digits, the value fills in from the cents and grows right-to-left, and the visible
+  field always shows the formatted amount with the "R$" prefix (e.g. "R$ 1.234,56").
+
+  The visible field is display-only; the parsed numeric value (dot decimal, e.g. "1234.56")
+  is kept in a sibling hidden input — that is what should be read/submitted.
+
+  @param id {string} [optional]   - Identifier applied to the wrapper (root). The JS exposes
+                                     `value` / `disabled` / `readOnly` on this root element.
+  @param name {string} [optional] - Name of the hidden input (numeric value).
+  @param value {number} [optional]- Initial numeric value (e.g. 1234.56).
+  @param placeholder {string} [default="R$ 0,00"] - Placeholder for the visible field.
+  @param attrs {object} [optional]       - Extra HTML attributes for the wrapper.
+  @param input_attrs {object} [optional] - Extra HTML attributes for the visible field
+                                           (e.g. readonly, tabindex, data-field).
+#}
+{% macro currency_input(
+    id=None,
+    name=None,
+    value=None,
+    placeholder="R$ 0,00",
+    attrs={},
+    input_attrs={}
+) %}
+{% set has_value = value is not none and (value | string | trim) != "" %}
+{% set numeric = "%.2f" | format(value | float) if has_value else "" %}
+{# Exibição inicial sem separador de milhar; o JS reformata (adiciona ".") ao inicializar,
+   lendo o valor cru do input hidden. Evita `str.format`, bloqueado pelo Jinja sandbox. #}
+{% set display = ("R$ " ~ (numeric | replace(".", ","))) if has_value else "" %}
+<div
+  {% if id %}id="{{ id }}"{% endif %}
+  class="currency-input {{ attrs.class }}"
+  data-currency-input
+  {% for key, val in attrs.items() %}
+    {% if key != 'class' %}{{ key }}="{{ val }}"{% endif %}
+  {% endfor %}
+>
+  <input
+    type="text"
+    class="input currency-input__display {{ input_attrs.class }}"
+    data-currency-input-display
+    inputmode="numeric"
+    placeholder="{{ placeholder }}"
+    value="{{ display }}"
+    {% for key, val in input_attrs.items() %}
+      {% if key != 'class' %}{{ key }}="{{ val }}"{% endif %}
+    {% endfor %}
+  >
+  <input
+    type="hidden"
+    data-currency-input-value
+    {% if name %}name="{{ name }}"{% endif %}
+    value="{{ numeric }}"
+  >
+</div>
+{% endmacro %}

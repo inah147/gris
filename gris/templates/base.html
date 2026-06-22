@@ -1,6 +1,6 @@
 {% extends "frappe/templates/base.html" %}
 
-{% set design_system_asset_version = "20260609-nested-popover" %}
+{% set design_system_asset_version = "20260622-currency-numeric-input" %}
 {% set current_page_path = pathname if pathname is defined and pathname else (path if path is defined else "") %}
 {# Frappe entrega `pathname` sem a barra inicial (ex.: "inicio", "projetos/abc"). Normalizamos para comparar com segurança independentemente do contexto. #}
 {% set normalized_page_path = current_page_path.lstrip("/") %}
@@ -84,6 +84,7 @@
 <link rel="stylesheet" href="/assets/gris/design_system/css/file-upload.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/datepicker.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/phone-input.css?v={{ design_system_asset_version }}">
+<link rel="stylesheet" href="/assets/gris/design_system/css/currency-input.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/calendar.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/layout.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/empty.css?v={{ design_system_asset_version }}">
@@ -101,6 +102,8 @@
 <script src="/assets/gris/design_system/js/components/select.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/components/calendar.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/components/phone-input.js?v={{ design_system_asset_version }}" defer></script>
+<script src="/assets/gris/design_system/js/components/currency-input.js?v={{ design_system_asset_version }}" defer></script>
+<script src="/assets/gris/design_system/js/components/numeric-input.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/components/sidebar.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/components/tabs.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/assets/gris/design_system/js/components/toast.js?v={{ design_system_asset_version }}" defer></script>

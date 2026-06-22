@@ -92,6 +92,55 @@
 		});
 	}
 
+	// ─── Info dialog helper (exclusão bloqueada por vínculos) ────────────────────
+
+	function infoDialog(opts) {
+		opts = opts || {};
+		return new Promise(function (resolve) {
+			var dlg = document.getElementById("info-dialog");
+			if (!dlg || typeof dlg.showModal !== "function") {
+				var fallback = opts.message || opts.title || "";
+				if (opts.items && opts.items.length) {
+					fallback += "\n\n- " + opts.items.join("\n- ");
+				}
+				window.alert(fallback);
+				resolve();
+				return;
+			}
+			var titleEl = dlg.querySelector("header h2");
+			var messageEl = dlg.querySelector("#info-dialog-message");
+			var listEl = dlg.querySelector("#info-dialog-list");
+			var okBtn = dlg.querySelector("#info-dialog-ok");
+			if (titleEl) titleEl.textContent = opts.title || "Atenção";
+			if (messageEl) messageEl.textContent = opts.message || "";
+			if (listEl) {
+				var itens = opts.items || [];
+				listEl.innerHTML = itens
+					.map(function (item) {
+						return "<li>" + escHtml(item) + "</li>";
+					})
+					.join("");
+				listEl.hidden = itens.length === 0;
+			}
+
+			function cleanup() {
+				if (okBtn) okBtn.removeEventListener("click", onOk);
+				dlg.removeEventListener("close", onClose);
+			}
+			function onOk() {
+				cleanup();
+				dlg.close();
+			}
+			function onClose() {
+				cleanup();
+				resolve();
+			}
+			if (okBtn) okBtn.addEventListener("click", onOk);
+			dlg.addEventListener("close", onClose);
+			dlg.showModal();
+		});
+	}
+
 	// ─── Sortable table helpers ─────────────────────────────────────────────────
 
 	function sortHeaderHtml(label, opts) {
@@ -881,8 +930,19 @@
 		}).then(function (ok) {
 			if (!ok) return;
 			api("gris.api.festas.excluir_barraca", { barraca_name: barraca.name, festa_name: festaName })
-				.then(function () { return refreshFestaData(); })
-				.then(function () { toast("Barraca removida.", "success"); })
+				.then(function (res) {
+					if (res && res.ok === false && res.bloqueado === "produtos") {
+						infoDialog({
+							title: "Não é possível excluir a barraca",
+							message: "Existem produtos de venda vinculados a esta barraca. A barraca só pode ser apagada depois de desvincular os produtos abaixo:",
+							items: res.itens,
+						});
+						return;
+					}
+					return refreshFestaData().then(function () {
+						toast("Barraca removida.", "success");
+					});
+				})
 				.catch(function (err) {
 					toast(err.message || "Erro ao remover barraca.", "error");
 				});
@@ -1547,8 +1607,19 @@
 		}).then(function (ok) {
 			if (!ok) return;
 			api("gris.api.festas.excluir_produto", { produto_name: produto.name, festa_name: festaName })
-				.then(function () { return refreshFestaData(); })
-				.then(function () { toast("Produto removido.", "success"); })
+				.then(function (res) {
+					if (res && res.ok === false && res.bloqueado === "compras") {
+						infoDialog({
+							title: "Não é possível excluir o produto",
+							message: "Este produto de venda só pode ser excluído se não houver nenhum item de compra vinculado. Itens de compra vinculados:",
+							items: res.itens,
+						});
+						return;
+					}
+					return refreshFestaData().then(function () {
+						toast("Produto removido.", "success");
+					});
+				})
 				.catch(function (err) {
 					toast(err.message || "Erro ao remover produto.", "error");
 				});
@@ -1704,10 +1775,12 @@
 		var finalQty = parseFloat((document.getElementById("compra-quantidade-final") || {}).value || "0") || 0;
 
 		var escolhida = compraDraftCotacoes.find(function (c) { return c.escolhida; }) || null;
+		// Em doações, mantemos a quantidade do pacote (para preservar as quantidades
+		// sugeridas) e zeramos apenas o valor.
 		var qtdPacote = 0, valorPacote = 0;
-		if (escolhida && !escolhida.doacao && (escolhida.quantidade || 0) > 0) {
+		if (escolhida && (escolhida.quantidade || 0) > 0) {
 			var conv = convertUnit(escolhida.quantidade, escolhida.unidade_medida || "unidade", unidadeCompra);
-			if (conv !== null && conv > 0) { qtdPacote = conv; valorPacote = escolhida.valor || 0; }
+			if (conv !== null && conv > 0) { qtdPacote = conv; valorPacote = escolhida.doacao ? 0 : (escolhida.valor || 0); }
 		}
 
 		var prodQtdMap = {};
@@ -1941,8 +2014,8 @@
 			return `
 <tr data-compra-cotacao-row>
 	<td><input class="input festa-compact-input" data-field="fornecedor" value="${escHtml(c.fornecedor || "")}" placeholder="Fornecedor"></td>
-	<td><input class="input festa-compact-input" data-field="valor" type="number" min="0" step="0.01" value="${escHtml(c.valor || "")}"></td>
-	<td><input class="input festa-compact-input" data-field="quantidade" type="number" min="0" step="0.001" value="${escHtml(c.quantidade || "")}"></td>
+	<td>${window.GrisCurrencyInput.render({ field: "valor", value: c.valor, class: "festa-compact-input" })}</td>
+	<td><input class="input festa-compact-input" data-field="quantidade" type="text" inputmode="decimal" data-numeric-input value="${escHtml(c.quantidade || "")}"></td>
 	<td>${renderNativeSelect("unidade_medida", unidadesItems, c.unidade_medida || "unidade")}</td>
 	<td class="text-sm text-muted-foreground" data-valor-unitario>${escHtml(valUnit)}</td>
 	<td class="festa-switch-cell"><label class="switch" aria-label="Cotação escolhida"><input type="checkbox" role="switch" class="input" data-field="escolhida"${c.escolhida ? " checked" : ""}></label></td>
@@ -2003,7 +2076,7 @@
 			return `
 <tr data-compra-uso-row>
 	<td>${renderNativeSelect("produto", produtosItems, u.produto || "", "compra-select-produto")}</td>
-	<td><input class="input festa-compact-input" data-field="quantidade_usada" type="number" min="0" step="0.001" value="${escHtml(u.quantidade_usada || "")}"></td>
+	<td><input class="input festa-compact-input" data-field="quantidade_usada" type="text" inputmode="decimal" data-numeric-input value="${escHtml(u.quantidade_usada || "")}"></td>
 	<td>${renderNativeSelect("unidade_medida_uso", unidadesItems, u.unidade_medida_uso || "unidade")}</td>
 	<td class="festa-table-actions"><button type="button" class="btn-sm-ghost festa-actions-btn" data-compra-remove-uso="${idx}" aria-label="Remover uso">×</button></td>
 </tr>`;
@@ -2333,7 +2406,7 @@
 			return `
 <tr data-contratacao-cotacao-row>
 	<td><input class="input festa-compact-input" data-field="fornecedor" value="${escHtml(c.fornecedor || "")}" placeholder="Fornecedor"></td>
-	<td><input class="input festa-compact-input" data-field="valor" type="number" min="0" step="0.01" value="${escHtml(c.valor || "")}"></td>
+	<td>${window.GrisCurrencyInput.render({ field: "valor", value: c.valor, class: "festa-compact-input" })}</td>
 	<td class="festa-switch-cell"><label class="switch" aria-label="Cotação escolhida"><input type="checkbox" role="switch" class="input" data-field="escolhida"${c.escolhida ? " checked" : ""}></label></td>
 	<td class="festa-table-actions"><button type="button" class="btn-sm-ghost festa-actions-btn" data-contratacao-remove-cotacao="${idx}" aria-label="Remover cotação">×</button></td>
 </tr>`;
@@ -3710,7 +3783,7 @@
 			return `
 <tr data-fechamento-uso-row>
 	<td>${renderBasecoatSelect("produto", produtosItems, u.produto || "")}</td>
-	<td><input class="input festa-compact-input" data-field="quantidade_usada" type="number" min="0" step="0.001" value="${escHtml(u.quantidade_usada || "")}"></td>
+	<td><input class="input festa-compact-input" data-field="quantidade_usada" type="text" inputmode="decimal" data-numeric-input value="${escHtml(u.quantidade_usada || "")}"></td>
 	<td>${renderBasecoatSelect("unidade_medida_uso", unidadesItems, u.unidade_medida_uso || "unidade")}</td>
 	<td class="festa-table-actions"><button type="button" class="btn-sm-ghost festa-actions-btn" data-fechamento-remove-uso="${idx}" aria-label="Remover uso">×</button></td>
 </tr>`;
@@ -3874,7 +3947,7 @@
 			var qtdEsp = Number(p["qtd_" + key]) || 0;
 			var qtdReal = Number(p.qtd_realizada_vendas) || 0;
 			var qtdInput = canEdit
-				? `<input class="input festa-compact-input" type="number" min="0" step="0.001" data-item-barraca="${bi}" data-item-idx="${j}" data-item-produto="${escHtml(p.name)}" data-item-preco="${preco}" value="${escHtml(p.qtd_realizada_vendas || "")}">`
+				? `<input class="input festa-compact-input" type="text" inputmode="decimal" data-numeric-input data-item-barraca="${bi}" data-item-idx="${j}" data-item-produto="${escHtml(p.name)}" data-item-preco="${preco}" value="${escHtml(p.qtd_realizada_vendas || "")}">`
 				: fmtNum(qtdReal);
 			return `
 <tr>

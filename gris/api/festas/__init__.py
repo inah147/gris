@@ -464,6 +464,22 @@ def excluir_barraca(barraca_name: str, festa_name: str) -> dict:
 	if doc.festa != festa_name:
 		frappe.throw("Barraca não pertence a esta festa.")
 
+	produtos = frappe.get_all(
+		"Produto de Venda Festa",
+		filters={"barraca": barraca_name},
+		fields=["nome_produto"],
+		order_by="nome_produto",
+	)
+	if produtos:
+		return {
+			"ok": False,
+			"bloqueado": "produtos",
+			"itens": [p.nome_produto for p in produtos],
+		}
+
+	# Sem produtos vinculados: a exclusão é permitida. As linhas de orçamento
+	# (receitas/despesas por barraca da Festa) que referenciam a barraca são
+	# removidas pela re-agregação disparada no on_trash da Barraca da Festa.
 	frappe.delete_doc("Barraca da Festa", barraca_name)
 	return {"ok": True}
 
@@ -619,6 +635,25 @@ def excluir_produto(produto_name: str, festa_name: str) -> dict:
 	doc = frappe.get_doc("Produto de Venda Festa", produto_name)
 	if doc.festa != festa_name:
 		frappe.throw("Produto não pertence a esta festa.")
+
+	usos = frappe.get_all(
+		"Uso em Produto Festa",
+		filters={"produto": produto_name},
+		fields=["parent"],
+		distinct=True,
+	)
+	if usos:
+		compras = frappe.get_all(
+			"Compra Festa",
+			filters={"name": ["in", [u.parent for u in usos]]},
+			fields=["nome_item"],
+			order_by="nome_item",
+		)
+		return {
+			"ok": False,
+			"bloqueado": "compras",
+			"itens": [c.nome_item for c in compras],
+		}
 
 	frappe.delete_doc("Produto de Venda Festa", produto_name)
 	return {"ok": True}

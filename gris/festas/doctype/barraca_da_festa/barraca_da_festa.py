@@ -15,13 +15,18 @@ class BarracadaFesta(Document):
 		self._reagregar_festa()
 
 	def on_trash(self):
-		self._reagregar_festa()
+		# Sinaliza para a festa ignorar esta barraca ao reconstruir o orçamento,
+		# evitando que as linhas de receita/despesa por barraca sejam recriadas
+		# (o que geraria LinkExistsError ao excluir a barraca).
+		self._reagregar_festa(ignorar_self=True)
 
-	def _reagregar_festa(self):
+	def _reagregar_festa(self, ignorar_self=False):
 		if not self.festa:
 			return
 		try:
 			festa_doc = frappe.get_doc("Festa", self.festa)
+			if ignorar_self:
+				festa_doc.flags.ignorar_barraca = self.name
 			festa_doc.save(ignore_permissions=True)
 		except frappe.DoesNotExistError:
 			return

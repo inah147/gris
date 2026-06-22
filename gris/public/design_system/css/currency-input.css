@@ -1,0 +1,14 @@
+/* Currency input (R$) — máscara estilo banco.
+   O campo visível reaproveita a classe `.input`; o input de valor cru fica oculto. */
+
+.currency-input {
+  display: block;
+}
+
+.currency-input > [data-currency-input-value] {
+  display: none;
+}
+
+.currency-input__display {
+  width: 100%;
+}

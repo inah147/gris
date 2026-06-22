@@ -307,12 +307,14 @@ def build_festa_payload(festa_name: str) -> dict:
 	barracas = [_hydrate_barraca(frappe.get_doc("Barraca da Festa", r.name)) for r in barracas_refs]
 	payload["barracas"] = barracas
 
-	payload["barracas_items"] = [
-		{"label": b["nome_barraca"], "value": b["name"], "type": "item"} for b in barracas
-	]
-	areas_obrigatorias = [
-		{"label": a["nome_area"], "value": a["name"], "type": "item"} for a in areas
-	]
+	payload["barracas_items"] = sorted(
+		[{"label": b["nome_barraca"], "value": b["name"], "type": "item"} for b in barracas],
+		key=lambda item: item["label"].casefold(),
+	)
+	areas_obrigatorias = sorted(
+		[{"label": a["nome_area"], "value": a["name"], "type": "item"} for a in areas],
+		key=lambda item: item["label"].casefold(),
+	)
 	payload["areas_items"] = [{"label": "Sem área", "value": "", "type": "item"}] + areas_obrigatorias
 	payload["areas_items_obrigatorio"] = areas_obrigatorias
 
@@ -341,9 +343,10 @@ def build_festa_payload(festa_name: str) -> dict:
 		_hydrate_produto(frappe.get_doc("Produto de Venda Festa", r.name)) for r in produtos_refs
 	]
 	payload["produtos"] = produtos
-	payload["produtos_items"] = [{"label": "Selecionar produto", "value": "", "type": "item"}] + [
-		{"label": p["nome_produto"], "value": p["name"], "type": "item"} for p in produtos
-	]
+	payload["produtos_items"] = [{"label": "Selecionar produto", "value": "", "type": "item"}] + sorted(
+		[{"label": p["nome_produto"], "value": p["name"], "type": "item"} for p in produtos],
+		key=lambda item: item["label"].casefold(),
+	)
 	produto_labels = {p["name"]: p["nome_produto"] for p in produtos}
 
 	compras_refs = frappe.get_all(

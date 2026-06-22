@@ -1775,10 +1775,12 @@
 		var finalQty = parseFloat((document.getElementById("compra-quantidade-final") || {}).value || "0") || 0;
 
 		var escolhida = compraDraftCotacoes.find(function (c) { return c.escolhida; }) || null;
+		// Em doações, mantemos a quantidade do pacote (para preservar as quantidades
+		// sugeridas) e zeramos apenas o valor.
 		var qtdPacote = 0, valorPacote = 0;
-		if (escolhida && !escolhida.doacao && (escolhida.quantidade || 0) > 0) {
+		if (escolhida && (escolhida.quantidade || 0) > 0) {
 			var conv = convertUnit(escolhida.quantidade, escolhida.unidade_medida || "unidade", unidadeCompra);
-			if (conv !== null && conv > 0) { qtdPacote = conv; valorPacote = escolhida.valor || 0; }
+			if (conv !== null && conv > 0) { qtdPacote = conv; valorPacote = escolhida.doacao ? 0 : (escolhida.valor || 0); }
 		}
 
 		var prodQtdMap = {};

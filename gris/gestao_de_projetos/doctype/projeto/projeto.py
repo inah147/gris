@@ -18,6 +18,10 @@ from gris.gris.doctype.gestao_de_tarefas.gestao_de_tarefas import (
 	TASK_FIELDS,
 	TASK_STATUS_OPTIONS,
 )
+from gris.utils.contato import (
+	_get_associado_payload,
+	_get_responsavel_payload,
+)
 from gris.utils.contato import get_contato_pessoa as _shared_get_contato_pessoa
 from gris.utils.whatsapp import enviar_mensagem_formatada, enviar_texto
 

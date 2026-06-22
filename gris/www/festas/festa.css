@@ -787,3 +787,16 @@
 	color: var(--muted-foreground);
 	border-bottom: 1px solid var(--border);
 }
+
+/* Lista de itens vinculados no dialog informativo de exclusão bloqueada */
+.festa-info-dialog-list {
+	margin: 0.75rem 0 0;
+	padding-left: 1.25rem;
+	list-style: disc;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	max-height: 16rem;
+	overflow-y: auto;
+	color: var(--foreground);
+}

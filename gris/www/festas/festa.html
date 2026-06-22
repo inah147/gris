@@ -88,6 +88,17 @@
 <p id="confirm-dialog-message" class="text-sm text-muted-foreground">Tem certeza?</p>
 {% endcall %}
 
+{# Dialog informativo para exclusões bloqueadas por vínculos #}
+{% call dialog(
+	id="info-dialog",
+	title="Atenção",
+	dialog_attrs={"class": "dialog-confirm"},
+	footer='<button type="button" class="btn-primary" id="info-dialog-ok">Entendi</button>'
+) %}
+<p id="info-dialog-message" class="text-sm text-muted-foreground"></p>
+<ul id="info-dialog-list" class="festa-info-dialog-list text-sm" hidden></ul>
+{% endcall %}
+
 {% if not_found %}
 {{ empty(
 	title="Festa não encontrada",

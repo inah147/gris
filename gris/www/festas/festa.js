@@ -92,6 +92,55 @@
 		});
 	}
 
+	// ─── Info dialog helper (exclusão bloqueada por vínculos) ────────────────────
+
+	function infoDialog(opts) {
+		opts = opts || {};
+		return new Promise(function (resolve) {
+			var dlg = document.getElementById("info-dialog");
+			if (!dlg || typeof dlg.showModal !== "function") {
+				var fallback = opts.message || opts.title || "";
+				if (opts.items && opts.items.length) {
+					fallback += "\n\n- " + opts.items.join("\n- ");
+				}
+				window.alert(fallback);
+				resolve();
+				return;
+			}
+			var titleEl = dlg.querySelector("header h2");
+			var messageEl = dlg.querySelector("#info-dialog-message");
+			var listEl = dlg.querySelector("#info-dialog-list");
+			var okBtn = dlg.querySelector("#info-dialog-ok");
+			if (titleEl) titleEl.textContent = opts.title || "Atenção";
+			if (messageEl) messageEl.textContent = opts.message || "";
+			if (listEl) {
+				var itens = opts.items || [];
+				listEl.innerHTML = itens
+					.map(function (item) {
+						return "<li>" + escHtml(item) + "</li>";
+					})
+					.join("");
+				listEl.hidden = itens.length === 0;
+			}
+
+			function cleanup() {
+				if (okBtn) okBtn.removeEventListener("click", onOk);
+				dlg.removeEventListener("close", onClose);
+			}
+			function onOk() {
+				cleanup();
+				dlg.close();
+			}
+			function onClose() {
+				cleanup();
+				resolve();
+			}
+			if (okBtn) okBtn.addEventListener("click", onOk);
+			dlg.addEventListener("close", onClose);
+			dlg.showModal();
+		});
+	}
+
 	// ─── Sortable table helpers ─────────────────────────────────────────────────
 
 	function sortHeaderHtml(label, opts) {
@@ -881,8 +930,19 @@
 		}).then(function (ok) {
 			if (!ok) return;
 			api("gris.api.festas.excluir_barraca", { barraca_name: barraca.name, festa_name: festaName })
-				.then(function () { return refreshFestaData(); })
-				.then(function () { toast("Barraca removida.", "success"); })
+				.then(function (res) {
+					if (res && res.ok === false && res.bloqueado === "produtos") {
+						infoDialog({
+							title: "Não é possível excluir a barraca",
+							message: "Existem produtos de venda vinculados a esta barraca. A barraca só pode ser apagada depois de desvincular os produtos abaixo:",
+							items: res.itens,
+						});
+						return;
+					}
+					return refreshFestaData().then(function () {
+						toast("Barraca removida.", "success");
+					});
+				})
 				.catch(function (err) {
 					toast(err.message || "Erro ao remover barraca.", "error");
 				});
@@ -1547,8 +1607,19 @@
 		}).then(function (ok) {
 			if (!ok) return;
 			api("gris.api.festas.excluir_produto", { produto_name: produto.name, festa_name: festaName })
-				.then(function () { return refreshFestaData(); })
-				.then(function () { toast("Produto removido.", "success"); })
+				.then(function (res) {
+					if (res && res.ok === false && res.bloqueado === "compras") {
+						infoDialog({
+							title: "Não é possível excluir o produto",
+							message: "Este produto de venda só pode ser excluído se não houver nenhum item de compra vinculado. Itens de compra vinculados:",
+							items: res.itens,
+						});
+						return;
+					}
+					return refreshFestaData().then(function () {
+						toast("Produto removido.", "success");
+					});
+				})
 				.catch(function (err) {
 					toast(err.message || "Erro ao remover produto.", "error");
 				});

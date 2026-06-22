@@ -21,6 +21,33 @@ Se você está usando uma máquina Windows, siga o guia passo a passo em
 Docker Compose quanto via [Frappe Manager](https://github.com/rtCamp/Frappe-Manager)
 (recomendado para desenvolvimento, com live reload).
 
+### Rodando os testes
+
+Os testes usam o test runner do Frappe (`bench run-tests`, baseado em
+`FrappeTestCase`).
+
+Via [Frappe Manager](https://github.com/rtCamp/Frappe-Manager) (`fm`):
+
+```bash
+fm shell gris -c "bench --site gris.localhost run-tests --app gris"
+```
+
+Via Docker Compose:
+
+```bash
+docker compose exec backend bench --site gris.local run-tests --app gris
+```
+
+Diretamente num bench local (sem `fm` nem Docker):
+
+```bash
+bench --site $SITE_NAME run-tests --app gris
+```
+
+Para rodar só um doctype/módulo específico, use `--module` com o caminho
+do arquivo de teste (ex.: `fm shell gris -c "bench --site gris.localhost
+run-tests --app gris --module gris.gris.doctype.associado.test_associado"`).
+
 ### Contributing
 
 This app uses `pre-commit` for code formatting and linting. Please [install pre-commit](https://pre-commit.com/#installation) and enable it for this repository:

@@ -18,6 +18,49 @@ def update_novo_associado(name, responsavel_recepcao=None, status=None, ramo=Non
 	return doc.as_dict()
 
 
+def _anonimizar_user(user_email):
+	"""Anonimiza o login do responsável que desistiu (LGPD).
+
+	Não é possível excluir o User: ele tem um Board pessoal criado pelo hook
+	`after_insert` (gris.gestao_de_tarefas.user_board.criar_board_pessoal) cujo
+	Dynamic Link dispara LinkExistsError. Então removemos o Board pessoal — que
+	também guarda o nome no título — e anonimizamos o User, inclusive renomeando
+	o email/login para um identificador anônimo.
+	"""
+	# Remove o Board pessoal (Dynamic Link bloqueador + título com o nome) e suas tarefas
+	boards = frappe.get_all(
+		"Board",
+		filters={"referencia_doctype": "User", "referencia_nome": user_email},
+		pluck="name",
+	)
+	for board in boards:
+		frappe.db.delete("Gestao de Tarefas", {"board": board})
+		frappe.delete_doc("Board", board, ignore_permissions=True)
+
+	# Renomeia o login para um identificador anônimo (atualiza links que apontam ao User)
+	anon_email = f"desativado-{frappe.generate_hash(length=10)}@anonimizado.invalid"
+	frappe.rename_doc("User", user_email, anon_email, force=True, ignore_permissions=True)
+
+	# Limpa os dados pessoais remanescentes e desativa o acesso
+	frappe.db.set_value(
+		"User",
+		anon_email,
+		{
+			"enabled": 0,
+			"email": anon_email,
+			"username": "",
+			"first_name": "ANONIMIZADO",
+			"last_name": "",
+			"full_name": "ANONIMIZADO",
+			"mobile_no": "",
+			"phone": "",
+			"birth_date": None,
+			"location": "",
+			"bio": "",
+		},
+	)
+
+
 @frappe.whitelist()
 def processar_desistencia(novo_associado_name, motivo=None):
 	# 1. Get Novo Associado
@@ -109,7 +152,7 @@ def processar_desistencia(novo_associado_name, motivo=None):
 				frappe.delete_doc("Responsavel", responsavel_id, ignore_permissions=True)
 
 				if user_email and frappe.db.exists("User", user_email):
-					frappe.delete_doc("User", user_email, ignore_permissions=True)
+					_anonimizar_user(user_email)
 
 	# 5. Cleanup Fila de Espera (if any)
 	frappe.db.delete("Fila de Espera", {"associado": novo_associado_name})

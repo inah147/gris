@@ -37,9 +37,14 @@ def _anonimizar_user(user_email):
 		frappe.db.delete("Gestao de Tarefas", {"board": board})
 		frappe.delete_doc("Board", board, ignore_permissions=True)
 
-	# Renomeia o login para um identificador anônimo (atualiza links que apontam ao User)
+	# Renomeia o login para um identificador anônimo (atualiza os links que apontam
+	# ao User). Usa o rename_doc interno: o wrapper público `frappe.rename_doc` não
+	# expõe `ignore_permissions`, necessário aqui porque a recepção não tem permissão
+	# de escrita em User.
+	from frappe.model.rename_doc import rename_doc
+
 	anon_email = f"desativado-{frappe.generate_hash(length=10)}@anonimizado.invalid"
-	frappe.rename_doc("User", user_email, anon_email, force=True, ignore_permissions=True)
+	rename_doc("User", user_email, anon_email, force=True, ignore_permissions=True)
 
 	# Limpa os dados pessoais remanescentes e desativa o acesso
 	frappe.db.set_value(

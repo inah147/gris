@@ -53,17 +53,50 @@ def _anonimizar_user(user_email):
 		{
 			"enabled": 0,
 			"email": anon_email,
-			"username": "",
+			# username e mobile_no são UNIQUE em tabUser. Gravar "" (literal, via set_value,
+			# que não passa pela conversão da ORM) colide com outros Users já anonimizados
+			# ("Duplicate entry '' for key '<campo>'"). NULL é permitido em múltiplas linhas
+			# no índice UNIQUE. (api_key também é UNIQUE, mas não é tocado aqui.)
+			"username": None,
 			"first_name": "ANONIMIZADO",
 			"last_name": "",
 			"full_name": "ANONIMIZADO",
-			"mobile_no": "",
+			"mobile_no": None,
 			"phone": "",
 			"birth_date": None,
 			"location": "",
 			"bio": "",
 		},
 	)
+
+
+def _desvincular_referencias(doctype, name):
+	"""Limpa todas as referências Link a ``name`` antes de excluí-lo.
+
+	- child table (meta.istable): apaga as linhas que referenciam o registro;
+	- single doctype: zera o campo no Single;
+	- doc normal: seta o campo para NULL em todas as linhas que apontam ao registro.
+
+	Usa ``get_link_fields`` (o mesmo mapa que ``check_if_doc_is_linked`` usa para
+	detectar os bloqueios de exclusão) para não depender de uma lista fixa de
+	DocTypes — qualquer DocType futuro que aponte para ``doctype`` é tratado
+	automaticamente. Dynamic Links remanescentes (Comment, ToDo, File…) já estão
+	em ``ignore_links_on_delete`` do Frappe e não bloqueiam a exclusão.
+	"""
+	from frappe.model.rename_doc import get_link_fields
+
+	for lf in get_link_fields(doctype):
+		link_dt, link_field, issingle = lf["parent"], lf["fieldname"], lf["issingle"]
+		if link_dt == doctype:  # auto-referência: ignora
+			continue
+		if issingle:
+			if frappe.db.get_single_value(link_dt, link_field) == name:
+				frappe.db.set_single_value(link_dt, link_field, None)
+			continue
+		if frappe.get_meta(link_dt).istable:
+			frappe.db.delete(link_dt, {link_field: name})
+			continue
+		frappe.db.set_value(link_dt, {link_field: name}, link_field, None, update_modified=False)
 
 
 @frappe.whitelist()
@@ -154,7 +187,15 @@ def processar_desistencia(novo_associado_name, motivo=None):
 				responsavel_doc = frappe.get_doc("Responsavel", responsavel_id)
 				user_email = responsavel_doc.email
 
-				frappe.delete_doc("Responsavel", responsavel_id, ignore_permissions=True)
+				# O Responsavel pode estar vinculado a outros contextos além do associado
+				# (ex.: coordenador geral de Festa, padrinho de Projeto, membro de equipe).
+				# Nesses casos o delete dispara LinkExistsError. Política: não preservar —
+				# desvinculamos todas as referências e excluímos o cadastro de fato.
+				try:
+					frappe.delete_doc("Responsavel", responsavel_id, ignore_permissions=True)
+				except frappe.LinkExistsError:
+					_desvincular_referencias("Responsavel", responsavel_id)
+					frappe.delete_doc("Responsavel", responsavel_id, ignore_permissions=True)
 
 				if user_email and frappe.db.exists("User", user_email):
 					_anonimizar_user(user_email)

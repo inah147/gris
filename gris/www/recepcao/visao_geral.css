@@ -412,6 +412,27 @@ dialog.dialog > div > section {
 	min-height: 32vh;
 }
 
+/* Estado de processamento (modal de Desistência) ------------------*/
+@keyframes ds-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.ds-spin {
+	animation: ds-spin 0.8s linear infinite;
+}
+
+.desistencia-loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: calc(var(--spacing) * 2);
+	padding: calc(var(--spacing) * 6) 0;
+	color: var(--color-muted-foreground);
+	font-size: 0.95rem;
+}
+
 /* Responsivo ------------------------------------------------------*/
 @media (max-width: 768px) {
 	.kanban-column {

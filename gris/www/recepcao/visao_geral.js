@@ -555,14 +555,29 @@ function confirmarAgendamento() {
 	});
 }
 
+function resetDesistenciaModal() {
+	const conteudo = document.getElementById("desistencia_conteudo");
+	const loading = document.getElementById("desistencia_loading");
+	const erro = document.getElementById("desistencia_erro");
+	const btnConfirmar = document.getElementById("btnConfirmarDesistencia");
+	const btnCancelar = document.getElementById("btnCancelarDesistencia");
+	if (conteudo) conteudo.classList.remove("hidden");
+	if (loading) loading.classList.add("hidden");
+	if (erro) erro.classList.add("hidden");
+	if (btnConfirmar) btnConfirmar.disabled = false;
+	if (btnCancelar) btnCancelar.disabled = false;
+}
+
 function registrarDesistencia() {
 	previousModalId = getOpenDialogId("modalConfirmarDesistencia");
 	if (previousModalId) closeDialog(previousModalId);
+	resetDesistenciaModal();
 	openDialog("modalConfirmarDesistencia");
 }
 
 function closeConfirmarDesistencia() {
 	closeDialog("modalConfirmarDesistencia");
+	resetDesistenciaModal();
 	if (previousModalId) {
 		const prev = previousModalId;
 		previousModalId = null;
@@ -571,6 +586,18 @@ function closeConfirmarDesistencia() {
 }
 
 function confirmarDesistencia() {
+	const conteudo = document.getElementById("desistencia_conteudo");
+	const loading = document.getElementById("desistencia_loading");
+	const erro = document.getElementById("desistencia_erro");
+	const btnConfirmar = document.getElementById("btnConfirmarDesistencia");
+	const btnCancelar = document.getElementById("btnCancelarDesistencia");
+
+	if (conteudo) conteudo.classList.add("hidden");
+	if (erro) erro.classList.add("hidden");
+	if (loading) loading.classList.remove("hidden");
+	if (btnConfirmar) btnConfirmar.disabled = true;
+	if (btnCancelar) btnCancelar.disabled = true;
+
 	frappe.call({
 		method: "gris.api.recepcao.processar_desistencia",
 		args: { novo_associado_name: currentCardId },
@@ -582,6 +609,11 @@ function confirmarDesistencia() {
 				});
 				window.location.reload();
 			}
+		},
+		error: function () {
+			if (loading) loading.classList.add("hidden");
+			if (erro) erro.classList.remove("hidden");
+			if (btnCancelar) btnCancelar.disabled = false;
 		},
 	});
 }

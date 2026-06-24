@@ -501,7 +501,7 @@
       // deste select (cenário aninhado). Mantém o comportamento de fechar
       // selects/popovers irmãos ou não relacionados.
       const source = event.detail.source;
-      if (source !== selectComponent && !selectComponent.contains(source)) {
+      if (source !== selectComponent && !selectComponent.contaiadasdns(source)) {
         closePopover(false);
       }
     });

@@ -223,19 +223,32 @@
 {% call dialog(
 	id="modalConfirmarDesistencia",
 	title="Confirmar Desistência",
-	footer='<button type="button" class="btn-ghost" onclick="closeConfirmarDesistencia()">Cancelar</button><button type="button" class="btn-destructive" onclick="confirmarDesistencia()">Confirmar Desistência</button>',
+	footer='<button type="button" class="btn-ghost" id="btnCancelarDesistencia" onclick="closeConfirmarDesistencia()">Cancelar</button><button type="button" class="btn-destructive" id="btnConfirmarDesistencia" onclick="confirmarDesistencia()">Confirmar Desistência</button>',
 	close_button=false,
 	close_on_overlay_click=false
 ) %}
-	{{ alert(
-		icon=lucide_icon("triangle-alert", size="sm"),
-		description="Tem certeza que deseja registrar a desistência deste associado? Esta ação não pode ser desfeita.",
-		variant="warning",
-		attrs={"class": "mb-4"}
-	) }}
-	<p class="text-muted-foreground text-sm">
-		Ao confirmar, o registro do Novo Associado será excluído. Se o responsável não tiver outros vínculos, seu cadastro também será removido.
-	</p>
+	<div id="desistencia_conteudo">
+		{{ alert(
+			icon=lucide_icon("triangle-alert", size="sm"),
+			description="Tem certeza que deseja registrar a desistência deste associado? Esta ação não pode ser desfeita.",
+			variant="warning",
+			attrs={"class": "mb-4"}
+		) }}
+		<p class="text-muted-foreground text-sm">
+			Ao confirmar, o registro do Novo Associado será excluído. Se o responsável não tiver outros vínculos, seu cadastro também será removido.
+		</p>
+	</div>
+	<div id="desistencia_loading" class="hidden desistencia-loading">
+		{{ lucide_icon("loader-circle", size="sm", class_name="ds-spin") }}
+		<span>Processando desistência…</span>
+	</div>
+	<div id="desistencia_erro" class="hidden">
+		{{ alert(
+			icon=lucide_icon("circle-alert", size="sm"),
+			description="Ocorreu um erro ao processar a desistência. Por favor, contate o administrador do sistema.",
+			variant="error"
+		) }}
+	</div>
 {% endcall %}
 
 {# ----------- Modal Confirmar Fila de Espera ----------- #}

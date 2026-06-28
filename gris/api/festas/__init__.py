@@ -769,6 +769,7 @@ def _hydrate_compra(doc) -> dict:
 		"varia_com_publico": bool(doc.varia_com_publico),
 		"usado_em_produtos": bool(doc.usado_em_produtos),
 		"unidade_compra": doc.unidade_compra or "unidade",
+		"consumo_por_pessoa": flt(doc.consumo_por_pessoa),
 		"quantidade_compra": flt(doc.quantidade_compra),
 		"quantidade_compra_final": flt(doc.quantidade_compra_final),
 		"cotacao_escolhida_valor": flt(doc.cotacao_escolhida_valor),
@@ -806,6 +807,10 @@ def _apply_compra_dados(doc, dados: dict, festa_name: str) -> set[str]:
 	doc.unidade_compra = _validate_unidade(dados.get("unidade_compra") or "unidade")
 	doc.varia_com_publico = _as_bool(dados.get("varia_com_publico"))
 	doc.usado_em_produtos = _as_bool(dados.get("usado_em_produtos"))
+	doc.consumo_por_pessoa = _as_non_negative_float(
+		dados.get("consumo_por_pessoa", 0),
+		"Consumo por pessoa",
+	)
 	doc.quantidade_compra_final = _as_non_negative_float(
 		dados.get("quantidade_compra_final", 0),
 		"Quantidade final",

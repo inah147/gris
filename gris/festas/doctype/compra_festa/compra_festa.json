@@ -13,6 +13,7 @@
   "varia_com_publico",
   "usado_em_produtos",
   "unidade_compra",
+  "consumo_por_pessoa",
   "quantidade_compra",
   "quantidade_compra_final",
   "totais_section",
@@ -93,6 +94,14 @@
    "label": "Unidade de Compra",
    "options": "unidade\nkg\ng\nlitro\nml",
    "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.varia_com_publico",
+   "description": "Consumo por pessoa (na unidade de compra). Base da quantidade sugerida por cenário.",
+   "fieldname": "consumo_por_pessoa",
+   "fieldtype": "Float",
+   "label": "Consumo por Pessoa",
+   "non_negative": 1
   },
   {
    "fieldname": "quantidade_compra",

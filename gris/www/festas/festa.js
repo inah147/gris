@@ -1773,6 +1773,7 @@
 		var variaComPublico = getSwitchChecked("compra-varia-publico");
 		var usadoEmProdutos = getSwitchChecked("compra-usado-produtos");
 		var finalQty = parseFloat((document.getElementById("compra-quantidade-final") || {}).value || "0") || 0;
+		var consumoPessoa = parseFloat((document.getElementById("compra-consumo-pessoa") || {}).value || "0") || 0;
 
 		var escolhida = compraDraftCotacoes.find(function (c) { return c.escolhida; }) || null;
 		// Em doações, mantemos a quantidade do pacote (para preservar as quantidades
@@ -1798,43 +1799,36 @@
 			max: window._festaData.publicoMax || 0,
 		};
 
-		// soma_uso_total: base sem multiplicador de cenário (para cálculo de sobra)
-		var somaUsoTotal = 0;
-		if (usadoEmProdutos) {
-			compraDraftUsos.forEach(function (uso) {
-				if (!uso.quantidade_usada || !uso.unidade_medida_uso) return;
-				var c = convertUnit(Number(uso.quantidade_usada), uso.unidade_medida_uso, unidadeCompra);
-				if (c !== null) somaUsoTotal += c;
-			});
-		}
-
 		var result = {};
 		["min", "intermediario", "max"].forEach(function (chave) {
-			var qtdSugerida;
+			// necessidade na unidade de compra (ex.: 90 litros), não o nº de pacotes
+			var necessidade;
 			if (usadoEmProdutos) {
-				var somaCenario = 0;
+				necessidade = 0;
 				compraDraftUsos.forEach(function (uso) {
 					if (!uso.produto || !uso.quantidade_usada || !uso.unidade_medida_uso) return;
 					var qtdUso = convertUnit(Number(uso.quantidade_usada), uso.unidade_medida_uso, unidadeCompra);
 					if (qtdUso === null) return;
 					var qtdProdCenario = (prodQtdMap[uso.produto] || {})[chave] || 0;
-					somaCenario += qtdUso * qtdProdCenario;
+					necessidade += qtdUso * qtdProdCenario;
 				});
-				qtdSugerida = ceilPacotes(somaCenario, qtdPacote);
 			} else if (variaComPublico) {
-				qtdSugerida = ceilPacotes(finalQty * publicos[chave], qtdPacote);
+				necessidade = consumoPessoa * publicos[chave];
 			} else {
-				qtdSugerida = ceilPacotes(finalQty, qtdPacote);
+				necessidade = finalQty;
 			}
 
-			var valorTotal = qtdPacote > 0 ? qtdSugerida * valorPacote : 0;
+			// pacotes inteiros: usado apenas para custo e sobra
+			var nPacotes = ceilPacotes(necessidade, qtdPacote);
+			var valorTotal = qtdPacote > 0 ? nPacotes * valorPacote : 0;
 			var qtdSobra = 0;
 			if (usadoEmProdutos && qtdPacote > 0) {
-				qtdSobra = Math.max(0, qtdSugerida * qtdPacote - somaUsoTotal);
+				// total comprado (pacotes inteiros) menos o consumo real do cenário
+				qtdSobra = Math.max(0, nPacotes * qtdPacote - necessidade);
 			}
 			var precoUnitario = qtdPacote > 0 ? valorPacote / qtdPacote : 0;
 			result[chave] = {
-				qtd_sugerida: qtdSugerida,
+				qtd_sugerida: necessidade,
 				valor_total: valorTotal,
 				qtd_sobra_individual: qtdSobra,
 				valor_sobra: qtdSobra * precoUnitario,
@@ -1938,6 +1932,7 @@
 			varia_com_publico: false,
 			usado_em_produtos: false,
 			unidade_compra: "unidade",
+			consumo_por_pessoa: 0,
 			quantidade_compra: 0,
 			quantidade_compra_final: 0,
 			valor_total_compra: 0,
@@ -1957,6 +1952,8 @@
 		document.getElementById("compra-nome-item").value = compra.nome_item || "";
 		setSelectValue("compra-area", compra.area || "", compra.nome_area || selectLabelFor(areasItems, "", "Sem área"));
 		setSelectValue("compra-unidade", compra.unidade_compra || "unidade", compra.unidade_compra || "unidade");
+		var consumoEl = document.getElementById("compra-consumo-pessoa");
+		if (consumoEl) consumoEl.value = compra.consumo_por_pessoa || "";
 		document.getElementById("compra-quantidade-sugerida").value = fmtNum(compra.quantidade_compra);
 		var finalEl = document.getElementById("compra-quantidade-final");
 		finalEl.value = compra.quantidade_compra_final || "";
@@ -1970,6 +1967,7 @@
 		renderCompraCotacoes();
 		renderCompraUsos();
 		updateCompraUsosVisibility();
+		updateCompraConsumoVisibility();
 		syncCompraCalculatedFields();
 		dlg.showModal();
 	}
@@ -2115,6 +2113,11 @@
 		if (section) section.hidden = !getSwitchChecked("compra-usado-produtos");
 	}
 
+	function updateCompraConsumoVisibility() {
+		var wrap = document.getElementById("compra-consumo-wrap");
+		if (wrap) wrap.hidden = !getSwitchChecked("compra-varia-publico");
+	}
+
 	function syncCompraCalculatedFields() {
 		readCompraDrafts();
 		var unidadeCompra = getSelectValue("compra-unidade") || "unidade";
@@ -2150,13 +2153,24 @@
 			}
 		}
 
+		var unidade = getSelectValue("compra-unidade") || "unidade";
+		// quantidades exibem a unidade de medida ao lado do valor; moeda fica sem unidade
+		function fmtQtdUni(v) { return fmtNum(v) + " " + unidade; }
+
+		// rótulos dos campos do topo recebem a unidade entre parênteses
+		var sufUni = "(" + unidade + ")";
+		var sugUniEl = document.getElementById("compra-sugerida-unidade");
+		if (sugUniEl) sugUniEl.textContent = sufUni;
+		var finUniEl = document.getElementById("compra-final-unidade");
+		if (finUniEl) finUniEl.textContent = sufUni;
+
 		var cenFields = [
 			{ min: "compra-cen-qtd-min", int: "compra-cen-qtd-int", max: "compra-cen-qtd-max",
-			  vMin: fmtNum(cen.min.qtd_sugerida), vInt: fmtNum(cen.intermediario.qtd_sugerida), vMax: fmtNum(cen.max.qtd_sugerida) },
+			  vMin: fmtQtdUni(cen.min.qtd_sugerida), vInt: fmtQtdUni(cen.intermediario.qtd_sugerida), vMax: fmtQtdUni(cen.max.qtd_sugerida) },
 			{ min: "compra-cen-valor-min", int: "compra-cen-valor-int", max: "compra-cen-valor-max",
 			  vMin: fmtCurrency(cen.min.valor_total), vInt: fmtCurrency(cen.intermediario.valor_total), vMax: fmtCurrency(cen.max.valor_total) },
 			{ min: "compra-cen-sobra-qtd-min", int: "compra-cen-sobra-qtd-int", max: "compra-cen-sobra-qtd-max",
-			  vMin: fmtNum(cen.min.qtd_sobra_individual), vInt: fmtNum(cen.intermediario.qtd_sobra_individual), vMax: fmtNum(cen.max.qtd_sobra_individual) },
+			  vMin: fmtQtdUni(cen.min.qtd_sobra_individual), vInt: fmtQtdUni(cen.intermediario.qtd_sobra_individual), vMax: fmtQtdUni(cen.max.qtd_sobra_individual) },
 			{ min: "compra-cen-sobra-valor-min", int: "compra-cen-sobra-valor-int", max: "compra-cen-sobra-valor-max",
 			  vMin: fmtCurrency(cen.min.valor_sobra), vInt: fmtCurrency(cen.intermediario.valor_sobra), vMax: fmtCurrency(cen.max.valor_sobra) },
 		];
@@ -2169,11 +2183,15 @@
 			if (elMax) elMax.textContent = f.vMax;
 		});
 
+		// Valor de compra = custo da quantidade final (o que será de fato comprado),
+		// em pacotes inteiros. A quantidade sugerida é apenas indicativa.
+		var unidadeCompra = getSelectValue("compra-unidade") || "unidade";
 		var finalQty = parseFloat((document.getElementById("compra-quantidade-final") || {}).value || "0") || 0;
 		var escolhida = compraDraftCotacoes.find(function (c) { return c.escolhida; });
 		var total = 0;
-		if (escolhida && !escolhida.doacao && finalQty > 0) {
-			total = finalQty * (escolhida.valor || 0);
+		if (escolhida && !escolhida.doacao && finalQty > 0 && (escolhida.quantidade || 0) > 0) {
+			var qp = convertUnit(escolhida.quantidade, escolhida.unidade_medida || "unidade", unidadeCompra);
+			if (qp !== null && qp > 0) total = ceilPacotes(finalQty, qp) * (escolhida.valor || 0);
 		}
 		var totalEl = document.getElementById("compra-valor-total");
 		if (totalEl) totalEl.value = fmtCurrency(total);
@@ -2185,16 +2203,41 @@
 		if (!nome) { toast("Informe o nome do item.", "error"); return null; }
 		var finalQty = parseFloat((document.getElementById("compra-quantidade-final").value || "0").trim()) || 0;
 		if (finalQty < 0) { toast("A quantidade final deve ser não-negativa.", "error"); return null; }
+		var variaComPublico = getSwitchChecked("compra-varia-publico");
+		var consumoPessoa = parseFloat((document.getElementById("compra-consumo-pessoa").value || "0").trim()) || 0;
 		return {
 			nome_item: nome,
 			area: getSelectValue("compra-area"),
 			unidade_compra: getSelectValue("compra-unidade") || "unidade",
+			consumo_por_pessoa: variaComPublico ? consumoPessoa : 0,
 			quantidade_compra_final: finalQty,
-			varia_com_publico: getSwitchChecked("compra-varia-publico"),
+			varia_com_publico: variaComPublico,
 			usado_em_produtos: getSwitchChecked("compra-usado-produtos"),
 			cotacoes: compraDraftCotacoes,
 			usos_em_produto: getSwitchChecked("compra-usado-produtos") ? compraDraftUsos : [],
 		};
+	}
+
+	// Lista de incompatibilidades de unidade (familia massa/volume/unidade) entre a
+	// unidade de compra e a cotação escolhida / usos. Vazia = tudo conversível.
+	function compraUnidadesIncompativeis(dados) {
+		var avisos = [];
+		var unidade = dados.unidade_compra || "unidade";
+		var escolhida = (dados.cotacoes || []).find(function (c) { return c.escolhida; });
+		if (escolhida && (escolhida.quantidade || 0) > 0
+			&& convertUnit(escolhida.quantidade, escolhida.unidade_medida || "unidade", unidade) === null) {
+			avisos.push("Cotação " + (escolhida.fornecedor || "selecionada") + ": "
+				+ (escolhida.unidade_medida || "unidade") + " não converte para " + unidade + ".");
+		}
+		if (dados.usado_em_produtos) {
+			(dados.usos_em_produto || []).forEach(function (uso) {
+				if (!uso.quantidade_usada || !uso.unidade_medida_uso) return;
+				if (convertUnit(Number(uso.quantidade_usada), uso.unidade_medida_uso, unidade) === null) {
+					avisos.push("Uso em produto: " + uso.unidade_medida_uso + " não converte para " + unidade + ".");
+				}
+			});
+		}
+		return avisos;
 	}
 
 	function deleteCompra(idx) {
@@ -2228,7 +2271,10 @@
 			syncCompraCalculatedFields();
 		});
 		var variaEl = document.querySelector("#compra-varia-publico input[type='checkbox']");
-		if (variaEl) variaEl.addEventListener("change", syncCompraCalculatedFields);
+		if (variaEl) variaEl.addEventListener("change", function () {
+			updateCompraConsumoVisibility();
+			syncCompraCalculatedFields();
+		});
 		var unidadeEl = document.getElementById("compra-unidade");
 		if (unidadeEl) unidadeEl.addEventListener("change", syncCompraCalculatedFields);
 		var finalEl = document.getElementById("compra-quantidade-final");
@@ -2272,6 +2318,16 @@
 			var idx = parseInt(dlg.dataset.compraIdx, 10);
 			var dados = collectCompraDados();
 			if (!dados) return;
+
+			var incompat = compraUnidadesIncompativeis(dados);
+			if (incompat.length) {
+				infoDialog({
+					title: "Unidades incompatíveis",
+					message: "Não é possível converter para a unidade de compra (" + (dados.unidade_compra || "unidade") + "). Ajuste as unidades antes de salvar:",
+					items: incompat,
+				});
+				return;
+			}
 
 			btnSalvar.disabled = true;
 			var request = idx >= 0

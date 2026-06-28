@@ -23,6 +23,7 @@ class CompraFesta(Document):
 		self._validar_area()
 		self._validar_usos_em_produto()
 		self._validar_cotacoes()
+		self._validar_unidades()
 		self._calcular_quantidade_compra_base()
 		self._calcular_cenarios()
 		self._calcular_quantidade_compra()
@@ -57,6 +58,21 @@ class CompraFesta(Document):
 		if len(escolhidas) > 1:
 			frappe.throw(_("Apenas uma cotacao pode ser marcada como escolhida."))
 
+	def _validar_unidades(self):
+		"""Garante que cotações e usos sejam convertíveis para a unidade de compra.
+
+		`converter` lança ValidationError quando as unidades pertencem a famílias
+		diferentes (ex.: litro vs kg), evitando cálculos silenciosamente incorretos.
+		"""
+		escolhida = self._cotacao_escolhida()
+		if escolhida and flt(escolhida.quantidade) > 0:
+			converter(flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra)
+		if self.usado_em_produtos:
+			for uso in self.usos_em_produto or []:
+				if not uso.unidade_medida_uso or not uso.quantidade_usada:
+					continue
+				converter(flt(uso.quantidade_usada), uso.unidade_medida_uso, self.unidade_compra)
+
 	def _cotacao_escolhida(self):
 		for c in self.cotacoes or []:
 			if c.escolhida:
@@ -86,12 +102,9 @@ class CompraFesta(Document):
 		qtd_pacote = 0.0
 		valor_pacote = 0.0
 		if escolhida and flt(escolhida.quantidade) > 0:
-			try:
-				qtd_pacote = converter(
-					flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra
-				)
-			except Exception:
-				qtd_pacote = 0.0
+			qtd_pacote = converter(
+				flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra
+			)
 			valor_pacote = 0.0 if escolhida.doacao else flt(escolhida.valor)
 
 		# Busca público por cenário da festa
@@ -103,10 +116,10 @@ class CompraFesta(Document):
 		)
 
 		for chave in CENARIOS:
-			# ---------- quantidade sugerida ----------
+			# ---------- quantidade necessária (na unidade de compra) ----------
 			if self.usado_em_produtos:
 				# soma: para cada uso, converter qtd para unidade_compra × qtd do produto no cenário
-				soma_cenario = 0.0
+				necessidade = 0.0
 				for uso in self.usos_em_produto or []:
 					if not uso.produto or not uso.quantidade_usada or not uso.unidade_medida_uso:
 						continue
@@ -114,21 +127,28 @@ class CompraFesta(Document):
 						flt(uso.quantidade_usada), uso.unidade_medida_uso, self.unidade_compra
 					)
 					qtd_produto_cenario = produtos_qtd.get(uso.produto, {}).get(chave, 0.0)
-					soma_cenario += qtd_uso_em_compra * qtd_produto_cenario
-				qtd_sugerida = _ceil_pacotes(soma_cenario, qtd_pacote)
+					necessidade += qtd_uso_em_compra * qtd_produto_cenario
 			elif self.varia_com_publico:
-				# qtd_compra_final é "por pessoa" × expectativa do cenário
-				qtd_sugerida = _ceil_pacotes(flt(self.quantidade_compra_final) * publicos[chave], qtd_pacote)
+				# consumo por pessoa × expectativa de público do cenário
+				necessidade = flt(self.consumo_por_pessoa) * publicos[chave]
 			else:
-				# constante: mesmo valor para todos os cenários
-				qtd_sugerida = _ceil_pacotes(flt(self.quantidade_compra_final), qtd_pacote)
+				# constante: mesmo valor para todos os cenários (= total a comprar)
+				necessidade = flt(self.quantidade_compra_final)
+
+			# Pacotes a comprar (arredonda p/ cima): usado apenas para custo e sobra.
+			n_pacotes = _ceil_pacotes(necessidade, qtd_pacote)
+
+			# ---------- quantidade sugerida ----------
+			# Necessidade real na unidade de medida (ex.: 90 litros), não o nº de pacotes.
+			qtd_sugerida = necessidade
 
 			# ---------- valor total ----------
-			valor_total_cen = qtd_sugerida * valor_pacote if qtd_pacote > 0 else 0.0
+			# Custo de pacotes inteiros (você compra pacotes fechados).
+			valor_total_cen = n_pacotes * valor_pacote if qtd_pacote > 0 else 0.0
 
 			# ---------- sobra individual ----------
 			if self.usado_em_produtos and qtd_pacote > 0:
-				qtd_sobra = max(0.0, qtd_sugerida * qtd_pacote - soma_uso)
+				qtd_sobra = max(0.0, n_pacotes * qtd_pacote - soma_uso)
 			else:
 				qtd_sobra = 0.0
 
@@ -141,11 +161,14 @@ class CompraFesta(Document):
 			self.set(f"qtd_sobra_individual_{chave}", qtd_sobra)
 			self.set(f"valor_sobra_{chave}", valor_sobra)
 
+	def _chave_cenario_festa(self) -> str:
+		"""Chave (min/intermediario/max) do cenário ativo de simulação da Festa."""
+		cenario_festa = frappe.db.get_value("Festa", self.festa, "cenario_simulacao") or "Intermediário"
+		return _CENARIO_FIELD_MAP.get(cenario_festa, "intermediario")
+
 	def _calcular_quantidade_compra(self):
 		"""Define quantidade_compra igual à qtd_sugerida do cenário escolhido na Festa."""
-		cenario_festa = frappe.db.get_value("Festa", self.festa, "cenario_simulacao") or "Intermediário"
-		chave = _CENARIO_FIELD_MAP.get(cenario_festa, "intermediario")
-		self.quantidade_compra = flt(self.get(f"qtd_sugerida_{chave}"))
+		self.quantidade_compra = flt(self.get(f"qtd_sugerida_{self._chave_cenario_festa()}"))
 
 	def _calcular_valor_total(self):
 		escolhida = self._cotacao_escolhida()
@@ -154,27 +177,29 @@ class CompraFesta(Document):
 			self.valor_total_compra = 0
 			return
 
-		valor = flt(escolhida.valor)
-		self.cotacao_escolhida_valor = valor
+		self.cotacao_escolhida_valor = flt(escolhida.valor)
 
+		# Valor de compra = custo da quantidade final (o que será de fato comprado),
+		# em pacotes inteiros. A quantidade sugerida é apenas indicativa.
 		quantidade_final = flt(self.quantidade_compra_final)
-		if quantidade_final <= 0:
+		qtd_pacote = 0.0
+		if flt(escolhida.quantidade) > 0:
+			qtd_pacote = converter(
+				flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra
+			)
+		if quantidade_final <= 0 or qtd_pacote <= 0:
 			self.valor_total_compra = 0
 			return
-
-		self.valor_total_compra = quantidade_final * valor
+		self.valor_total_compra = _ceil_pacotes(quantidade_final, qtd_pacote) * flt(escolhida.valor)
 
 	def _calcular_usos_em_produto(self):
 		escolhida = self._cotacao_escolhida()
 		qtd_pacote = 0.0
 		if escolhida and flt(escolhida.quantidade) > 0:
-			try:
-				qtd_pacote = converter(
-					flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra
-				)
-			except Exception:
-				qtd_pacote = 0.0
-		
+			qtd_pacote = converter(
+				flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra
+			)
+
 		valor_total = flt(self.cotacao_escolhida_valor)
 		for uso in self.usos_em_produto or []:
 			if not uso.unidade_medida_uso or not uso.quantidade_usada:

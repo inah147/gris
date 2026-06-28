@@ -155,6 +155,7 @@ def _hydrate_compra(doc, produto_labels: dict[str, str]) -> dict:
 		"varia_com_publico": bool(doc.varia_com_publico),
 		"usado_em_produtos": bool(doc.usado_em_produtos),
 		"unidade_compra": doc.unidade_compra or "unidade",
+		"consumo_por_pessoa": flt(doc.consumo_por_pessoa),
 		"quantidade_compra": flt(doc.quantidade_compra),
 		"quantidade_compra_final": flt(doc.quantidade_compra_final),
 		"cotacao_escolhida_valor": flt(doc.cotacao_escolhida_valor),

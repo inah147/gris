@@ -1568,10 +1568,15 @@ window._festaData = {
 					trigger_attrs={"class": "w-full"}
 				) }}
 			{% endcall %}
-			{% call field(label="Quantidade sugerida") %}
+			<div id="compra-consumo-wrap" hidden>
+				{% call field(label="Consumo por pessoa") %}
+					{{ input(attrs={"id": "compra-consumo-pessoa", "inputmode": "decimal", "data-numeric-input": "1", "placeholder": "0"}) }}
+				{% endcall %}
+			</div>
+			{% call field(label='Quantidade sugerida <span id="compra-sugerida-unidade" class="text-muted-foreground"></span>') %}
 				{{ input(attrs={"id": "compra-quantidade-sugerida", "readonly": "readonly", "tabindex": "-1", "placeholder": "0"}) }}
 			{% endcall %}
-			{% call field(label="Quantidade final *") %}
+			{% call field(label='Quantidade final * <span id="compra-final-unidade" class="text-muted-foreground"></span>') %}
 				{{ input(attrs={"id": "compra-quantidade-final", "inputmode": "decimal", "data-numeric-input": "1", "placeholder": "0"}) }}
 			{% endcall %}
 			{% call field(label="Valor total de compra") %}

@@ -364,8 +364,12 @@
 	// carrega o `data-field` para que a leitura via `[data-field=...] .value`
 	// continue funcionando como nos selects nativos. O Basecoat inicializa o
 	// componente automaticamente (MutationObserver) ou via notifyDesignSystem().
+	// `optionMeta` (opcional): função value -> { disabled, title }. Opções
+	// desabilitadas recebem aria-disabled="true" (o Basecoat ignora cliques e
+	// navegação por teclado) e um atributo title para a tooltip. A opção
+	// selecionada nunca é desabilitada, para o componente não ficar inválido.
 	var _basecoatSelectSeq = 0;
-	function renderBasecoatSelect(dataField, items, selectedValue) {
+	function renderBasecoatSelect(dataField, items, selectedValue, optionMeta) {
 		_basecoatSelectSeq += 1;
 		var id = "ds-sel-" + dataField + "-" + _basecoatSelectSeq;
 		var selected = String(selectedValue == null ? "" : selectedValue);
@@ -379,7 +383,10 @@
 		var optionsHtml = items.map(function (item, idx) {
 			var value = item.value == null ? "" : String(item.value);
 			var sel = (matched && value === selected) ? ' aria-selected="true"' : "";
-			return '<div id="' + id + '-items-' + idx + '" role="option" data-value="' + escHtml(value) + '"' + sel + '>' + escHtml(item.label || value) + '</div>';
+			var meta = optionMeta ? optionMeta(value) : null;
+			var disabled = (meta && meta.disabled && value !== selected) ? ' aria-disabled="true"' : "";
+			var title = (meta && meta.title) ? ' title="' + escHtml(meta.title) + '"' : "";
+			return '<div id="' + id + '-items-' + idx + '" role="option" data-value="' + escHtml(value) + '"' + sel + disabled + title + '>' + escHtml(item.label || value) + '</div>';
 		}).join("");
 		return '<div id="' + id + '" class="select">'
 			+ '<button type="button" class="btn-outline w-full" id="' + id + '-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="' + id + '-listbox">'
@@ -1763,6 +1770,33 @@
 		return (qtd * from.factor) / to.factor;
 	}
 
+	// Duas unidades só são compatíveis quando pertencem à mesma família
+	// (massa, volume ou unidade) e, portanto, podem ser convertidas entre si.
+	function unitsCompatible(unitA, unitB) {
+		var a = UNIT_FACTORS[unitA];
+		var b = UNIT_FACTORS[unitB];
+		return !!(a && b && a.family === b.family);
+	}
+
+	function unitLabel(value) {
+		var found = (unidadesItems || []).find(function (it) { return String(it.value) === String(value); });
+		return (found && found.label) || value;
+	}
+
+	// Fábrica de `optionMeta` para os selects de unidade da cotação e do uso em
+	// produtos: desabilita (com tooltip) toda unidade que não pode ser convertida
+	// para a unidade geral do produto.
+	function unitOptionMeta(generalUnit) {
+		return function (value) {
+			if (unitsCompatible(value, generalUnit)) return null;
+			return {
+				disabled: true,
+				title: "Indisponível: a unidade geral do produto (" + unitLabel(generalUnit)
+					+ ") não pode ser convertida para " + unitLabel(value) + ".",
+			};
+		};
+	}
+
 	function ceilPacotes(qtdTotal, qtdPacote) {
 		if (qtdPacote <= 0) return 0;
 		return Math.ceil(qtdTotal / qtdPacote);
@@ -1798,16 +1832,6 @@
 			max: window._festaData.publicoMax || 0,
 		};
 
-		// soma_uso_total: base sem multiplicador de cenário (para cálculo de sobra)
-		var somaUsoTotal = 0;
-		if (usadoEmProdutos) {
-			compraDraftUsos.forEach(function (uso) {
-				if (!uso.quantidade_usada || !uso.unidade_medida_uso) return;
-				var c = convertUnit(Number(uso.quantidade_usada), uso.unidade_medida_uso, unidadeCompra);
-				if (c !== null) somaUsoTotal += c;
-			});
-		}
-
 		var result = {};
 		["min", "intermediario", "max"].forEach(function (chave) {
 			var qtdSugerida;
@@ -1828,16 +1852,21 @@
 			}
 
 			var valorTotal = qtdPacote > 0 ? qtdSugerida * valorPacote : 0;
+			// Sobra individual:
+			//   ceil(somaCenario / qtdPacote) - somaCenario
+			// onde somaCenario = Σ (qtd utilizada × qtd do produto no cenário),
+			// e qtdSugerida já é ceil(somaCenario / qtdPacote).
 			var qtdSobra = 0;
 			if (usadoEmProdutos && qtdPacote > 0) {
-				qtdSobra = Math.max(0, qtdSugerida * qtdPacote - somaUsoTotal);
+				qtdSobra = Math.max(0, qtdSugerida * qtdPacote - somaCenario);
 			}
-			var precoUnitario = qtdPacote > 0 ? valorPacote / qtdPacote : 0;
 			result[chave] = {
 				qtd_sugerida: qtdSugerida,
+				qtd_total_compra: qtdSugerida * qtdPacote,
+				unidade_compra: unidadeCompra,
 				valor_total: valorTotal,
 				qtd_sobra_individual: qtdSobra,
-				valor_sobra: qtdSobra * precoUnitario,
+				valor_sobra: qtdSobra * valorPacote,
 			};
 		});
 		return result;
@@ -1886,10 +1915,21 @@
 			var valor = Number(c.valor_total_compra) || 0;
 			var nCot = (c.cotacoes || []).length;
 			var nUso = (c.usos_em_produto || []).length;
+			// "Quantidade de compra" é a contagem de cotações; o total na unidade
+			// geral do produto = contagem × quantidade da cotação escolhida
+			// (convertida para a unidade geral).
+			var escolhida = (c.cotacoes || []).find(function (x) { return x.escolhida; });
+			var qtdPacote = 0;
+			if (escolhida && Number(escolhida.quantidade) > 0) {
+				var conv = convertUnit(Number(escolhida.quantidade), escolhida.unidade_medida || "unidade", c.unidade_compra || "unidade");
+				if (conv !== null && conv > 0) qtdPacote = conv;
+			}
+			var total = qtd * qtdPacote;
 			return `
 <tr data-compra-idx="${i}">
 	<td>${escHtml(c.nome_item)}</td>
-	<td data-sort-value="${qtd}">${fmtNum(c.quantidade_compra_final)} ${escHtml(c.unidade_compra || "")}</td>
+	<td data-sort-value="${qtd}">${fmtNum(c.quantidade_compra_final)}</td>
+	<td data-sort-value="${total}">${fmtNum(total)} ${escHtml(c.unidade_compra || "")}</td>
 	<td data-sort-value="${valor}">${fmtCurrency(c.valor_total_compra)}</td>
 	<td data-sort-value="${nCot}"><span class="badge">${nCot}</span></td>
 	<td data-sort-value="${nUso}"><span class="badge">${nUso}</span></td>
@@ -1908,7 +1948,8 @@
 
 		var headers = [
 			{ label: "Item", sortType: "text" },
-			{ label: "Quantidade", sortType: "number" },
+			{ label: "Quantidade de compra", sortType: "number" },
+			{ label: "Total", sortType: "number" },
 			{ label: "Valor total", sortType: "number" },
 			{ label: "Cotações", sortType: "number" },
 			{ label: "Produtos", sortType: "number" },
@@ -2006,6 +2047,8 @@
 			container.innerHTML = '<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhuma cotação adicionada.</p>';
 			return;
 		}
+		var unidadeGeral = getSelectValue("compra-unidade") || "unidade";
+		var metaUnidade = unitOptionMeta(unidadeGeral);
 		var rows = compraDraftCotacoes.map(function (c, idx) {
 			var valUnit = (c.quantidade > 0 && !c.doacao)
 				? (new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format((c.valor || 0) / c.quantidade)
@@ -2016,7 +2059,7 @@
 	<td><input class="input festa-compact-input" data-field="fornecedor" value="${escHtml(c.fornecedor || "")}" placeholder="Fornecedor"></td>
 	<td>${window.GrisCurrencyInput.render({ field: "valor", value: c.valor, class: "festa-compact-input" })}</td>
 	<td><input class="input festa-compact-input" data-field="quantidade" type="text" inputmode="decimal" data-numeric-input value="${escHtml(c.quantidade || "")}"></td>
-	<td>${renderNativeSelect("unidade_medida", unidadesItems, c.unidade_medida || "unidade")}</td>
+	<td>${renderBasecoatSelect("unidade_medida", unidadesItems, c.unidade_medida || "unidade", metaUnidade)}</td>
 	<td class="text-sm text-muted-foreground" data-valor-unitario>${escHtml(valUnit)}</td>
 	<td class="festa-switch-cell"><label class="switch" aria-label="Cotação escolhida"><input type="checkbox" role="switch" class="input" data-field="escolhida"${c.escolhida ? " checked" : ""}></label></td>
 	<td class="festa-switch-cell"><label class="switch" aria-label="Doação"><input type="checkbox" role="switch" class="input" data-field="doacao"${c.doacao ? " checked" : ""}></label></td>
@@ -2042,7 +2085,9 @@
 </table>
 </div>`;
 		document.dispatchEvent(new CustomEvent("gris:design-system:init"));
-		container.querySelectorAll("input, select").forEach(function (el) {
+		// Inclui ".select" para capturar o evento change que o select Basecoat
+		// dispara no próprio componente (não no input hidden interno).
+		container.querySelectorAll("input, select, .select").forEach(function (el) {
 			el.addEventListener("input", syncCompraCalculatedFields);
 			el.addEventListener("change", syncCompraCalculatedFields);
 		});
@@ -2072,12 +2117,14 @@
 			container.innerHTML = '<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhum produto vinculado.</p>';
 			return;
 		}
+		var unidadeGeral = getSelectValue("compra-unidade") || "unidade";
+		var metaUnidade = unitOptionMeta(unidadeGeral);
 		var rows = compraDraftUsos.map(function (u, idx) {
 			return `
 <tr data-compra-uso-row>
 	<td>${renderNativeSelect("produto", produtosItems, u.produto || "", "compra-select-produto")}</td>
 	<td><input class="input festa-compact-input" data-field="quantidade_usada" type="text" inputmode="decimal" data-numeric-input value="${escHtml(u.quantidade_usada || "")}"></td>
-	<td>${renderNativeSelect("unidade_medida_uso", unidadesItems, u.unidade_medida_uso || "unidade")}</td>
+	<td>${renderBasecoatSelect("unidade_medida_uso", unidadesItems, u.unidade_medida_uso || "unidade", metaUnidade)}</td>
 	<td class="festa-table-actions"><button type="button" class="btn-sm-ghost festa-actions-btn" data-compra-remove-uso="${idx}" aria-label="Remover uso">×</button></td>
 </tr>`;
 		}).join("");
@@ -2096,7 +2143,9 @@
 </table>
 </div>`;
 		document.dispatchEvent(new CustomEvent("gris:design-system:init"));
-		container.querySelectorAll("input, select").forEach(function (el) {
+		// Inclui ".select" para capturar o evento change que o select Basecoat
+		// dispara no próprio componente (não no input hidden interno).
+		container.querySelectorAll("input, select, .select").forEach(function (el) {
 			el.addEventListener("input", syncCompraCalculatedFields);
 			el.addEventListener("change", syncCompraCalculatedFields);
 		});
@@ -2150,13 +2199,18 @@
 			}
 		}
 
+		// "Cotações a comprar" é uma contagem de cotações (sem unidade); "Total" e
+		// "Sobra individual" são quantidades na unidade de medida escolhida.
+		function fmtQtdUnidade(v, un) { return un ? (fmtNum(v) + " " + un) : fmtNum(v); }
 		var cenFields = [
 			{ min: "compra-cen-qtd-min", int: "compra-cen-qtd-int", max: "compra-cen-qtd-max",
 			  vMin: fmtNum(cen.min.qtd_sugerida), vInt: fmtNum(cen.intermediario.qtd_sugerida), vMax: fmtNum(cen.max.qtd_sugerida) },
+			{ min: "compra-cen-total-min", int: "compra-cen-total-int", max: "compra-cen-total-max",
+			  vMin: fmtQtdUnidade(cen.min.qtd_total_compra, cen.min.unidade_compra), vInt: fmtQtdUnidade(cen.intermediario.qtd_total_compra, cen.intermediario.unidade_compra), vMax: fmtQtdUnidade(cen.max.qtd_total_compra, cen.max.unidade_compra) },
 			{ min: "compra-cen-valor-min", int: "compra-cen-valor-int", max: "compra-cen-valor-max",
 			  vMin: fmtCurrency(cen.min.valor_total), vInt: fmtCurrency(cen.intermediario.valor_total), vMax: fmtCurrency(cen.max.valor_total) },
 			{ min: "compra-cen-sobra-qtd-min", int: "compra-cen-sobra-qtd-int", max: "compra-cen-sobra-qtd-max",
-			  vMin: fmtNum(cen.min.qtd_sobra_individual), vInt: fmtNum(cen.intermediario.qtd_sobra_individual), vMax: fmtNum(cen.max.qtd_sobra_individual) },
+			  vMin: fmtQtdUnidade(cen.min.qtd_sobra_individual, cen.min.unidade_compra), vInt: fmtQtdUnidade(cen.intermediario.qtd_sobra_individual, cen.intermediario.unidade_compra), vMax: fmtQtdUnidade(cen.max.qtd_sobra_individual, cen.max.unidade_compra) },
 			{ min: "compra-cen-sobra-valor-min", int: "compra-cen-sobra-valor-int", max: "compra-cen-sobra-valor-max",
 			  vMin: fmtCurrency(cen.min.valor_sobra), vInt: fmtCurrency(cen.intermediario.valor_sobra), vMax: fmtCurrency(cen.max.valor_sobra) },
 		];
@@ -2230,7 +2284,22 @@
 		var variaEl = document.querySelector("#compra-varia-publico input[type='checkbox']");
 		if (variaEl) variaEl.addEventListener("change", syncCompraCalculatedFields);
 		var unidadeEl = document.getElementById("compra-unidade");
-		if (unidadeEl) unidadeEl.addEventListener("change", syncCompraCalculatedFields);
+		if (unidadeEl) unidadeEl.addEventListener("change", function () {
+			// Ao trocar a unidade geral, reavaliamos as unidades de cotação e de
+			// uso: as que deixaram de ser conversíveis voltam para a unidade geral
+			// e os selects são redesenhados para refletir as opções ativas.
+			readCompraDrafts();
+			var gen = getSelectValue("compra-unidade") || "unidade";
+			compraDraftCotacoes.forEach(function (c) {
+				if (!unitsCompatible(c.unidade_medida || "unidade", gen)) c.unidade_medida = gen;
+			});
+			compraDraftUsos.forEach(function (u) {
+				if (!unitsCompatible(u.unidade_medida_uso || "unidade", gen)) u.unidade_medida_uso = gen;
+			});
+			renderCompraCotacoes();
+			renderCompraUsos();
+			syncCompraCalculatedFields();
+		});
 		var finalEl = document.getElementById("compra-quantidade-final");
 		if (finalEl) finalEl.addEventListener("input", function () {
 			finalEl.dataset.autoFinal = "0";

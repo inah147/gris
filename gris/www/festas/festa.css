@@ -493,8 +493,38 @@
 	min-width: 11rem;
 }
 
+/* Opções de unidade indisponíveis (não conversíveis para a unidade geral):
+   o Basecoat as marca com pointer-events:none, o que impediria a tooltip de
+   aparecer no hover. Reabilitamos o ponteiro apenas para exibir a tooltip
+   (atributo title) — o clique continua bloqueado pelo JS do componente, que
+   ignora opções com aria-disabled. */
+.festa-edit-table .select [data-popover] [role="option"][aria-disabled="true"] {
+	pointer-events: auto;
+	cursor: not-allowed;
+}
+
 .festa-edit-table th {
 	white-space: nowrap;
+}
+
+/* Ícone de informação ao lado do rótulo de um campo (ex.: unidade de medida
+   base). Fica alinhado ao texto, com cor suave e cursor de ajuda. */
+.festa-field-info-icon {
+	display: inline-block;
+	vertical-align: -0.15em;
+	margin-left: 0.25rem;
+	color: var(--color-muted-foreground);
+	cursor: help;
+}
+
+/* Tooltip do Basecoat com frase longa: por padrão o componente usa uma única
+   linha (white-space: nowrap) e trunca com reticências. Aqui permitimos a
+   quebra de linha para o texto explicativo aparecer por completo. */
+.festa-info-tooltip[data-tooltip]::before {
+	white-space: normal;
+	width: max-content;
+	max-width: 16rem;
+	text-overflow: clip;
 }
 
 .festa-edit-table td {

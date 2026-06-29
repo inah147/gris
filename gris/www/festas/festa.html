@@ -1,5 +1,5 @@
 {% extends "templates/web_sidebar_base.html" %}
-{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, input, textarea, empty, badge, switch %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, input, textarea, empty, badge, switch, tooltip %}
 {% from "public/design_system/components/composed/file-upload.html.jinja" import file_upload %}
 {% from "public/design_system/components/generated/tabs.html.jinja" import tabs %}
 {% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
@@ -1559,7 +1559,12 @@ window._festaData = {
 					trigger_attrs={"class": "w-full"}
 				) }}
 			{% endcall %}
-			{% call field(label="Unidade de medida") %}
+			{% call field(label="Unidade de medida " ~ tooltip(
+				lucide_icon("info", size="sm", class_name="festa-field-info-icon"),
+				"Escolha a unidade de medida base do produto. Apenas para referência — será usada para apresentar a lista de compras.",
+				side="top",
+				attrs={"class": "festa-info-tooltip"}
+			)) %}
 				{{ select(
 					id="compra-unidade",
 					name="compra-unidade",
@@ -1600,10 +1605,16 @@ window._festaData = {
 					</thead>
 					<tbody>
 						<tr>
-							<td class="festa-cenarios-label">Qtd sugerida</td>
+							<td class="festa-cenarios-label">Cotações a comprar</td>
 							<td id="compra-cen-qtd-min">—</td>
 							<td id="compra-cen-qtd-int">—</td>
 							<td id="compra-cen-qtd-max">—</td>
+						</tr>
+						<tr>
+							<td class="festa-cenarios-label">Total</td>
+							<td id="compra-cen-total-min">—</td>
+							<td id="compra-cen-total-int">—</td>
+							<td id="compra-cen-total-max">—</td>
 						</tr>
 						<tr>
 							<td class="festa-cenarios-label">Valor total</td>

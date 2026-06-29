@@ -352,16 +352,26 @@ window._festaData = {
 			<h2 class="festa-card__title">Compras</h2>
 			<p class="festa-card__subtitle">Itens planejados para compra na festa.</p>
 		</div>
-		{% if can_edit %}
-		<button
-			type="button"
-			class="btn-sm-outline"
-			data-action="add-compra"
-		>
-			{{ lucide_icon("plus", size="sm") }}
-			<span>Adicionar compra</span>
-		</button>
-		{% endif %}
+		<div class="festa-card__header-actions">
+			<button
+				type="button"
+				class="btn-sm-outline"
+				data-action="gerar-lista-compras"
+			>
+				{{ lucide_icon("list-checks", size="sm") }}
+				<span>Gerar lista de compras</span>
+			</button>
+			{% if can_edit %}
+			<button
+				type="button"
+				class="btn-sm-outline"
+				data-action="add-compra"
+			>
+				{{ lucide_icon("plus", size="sm") }}
+				<span>Adicionar compra</span>
+			</button>
+			{% endif %}
+		</div>
 	</div>
 	<div id="compras-table-container"></div>
 	{% endcall %}

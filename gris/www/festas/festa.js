@@ -2270,6 +2270,17 @@
 
 	function initCompras() {
 		renderComprasTable();
+
+		// Disponível para todos que veem a aba (documento de apoio só de leitura),
+		// por isso é vinculado antes do early-return de canEdit.
+		document.querySelectorAll("[data-action='gerar-lista-compras']").forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				var url = "/api/method/gris.api.festas.lista_compras.download_lista_compras_pdf?festa_name="
+					+ encodeURIComponent(festaName);
+				window.open(url, "_blank");
+			});
+		});
+
 		if (!canEdit) return;
 
 		document.querySelectorAll("[data-action='add-compra']").forEach(function (btn) {

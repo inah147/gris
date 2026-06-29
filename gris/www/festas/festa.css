@@ -72,6 +72,12 @@
 	margin-bottom: 1rem;
 }
 
+.festa-card__header-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
 .festa-card__title {
 	font-size: 1rem;
 	font-weight: 600;

@@ -364,8 +364,12 @@
 	// carrega o `data-field` para que a leitura via `[data-field=...] .value`
 	// continue funcionando como nos selects nativos. O Basecoat inicializa o
 	// componente automaticamente (MutationObserver) ou via notifyDesignSystem().
+	// `optionMeta` (opcional): função value -> { disabled, title }. Opções
+	// desabilitadas recebem aria-disabled="true" (o Basecoat ignora cliques e
+	// navegação por teclado) e um atributo title para a tooltip. A opção
+	// selecionada nunca é desabilitada, para o componente não ficar inválido.
 	var _basecoatSelectSeq = 0;
-	function renderBasecoatSelect(dataField, items, selectedValue) {
+	function renderBasecoatSelect(dataField, items, selectedValue, optionMeta) {
 		_basecoatSelectSeq += 1;
 		var id = "ds-sel-" + dataField + "-" + _basecoatSelectSeq;
 		var selected = String(selectedValue == null ? "" : selectedValue);
@@ -379,7 +383,10 @@
 		var optionsHtml = items.map(function (item, idx) {
 			var value = item.value == null ? "" : String(item.value);
 			var sel = (matched && value === selected) ? ' aria-selected="true"' : "";
-			return '<div id="' + id + '-items-' + idx + '" role="option" data-value="' + escHtml(value) + '"' + sel + '>' + escHtml(item.label || value) + '</div>';
+			var meta = optionMeta ? optionMeta(value) : null;
+			var disabled = (meta && meta.disabled && value !== selected) ? ' aria-disabled="true"' : "";
+			var title = (meta && meta.title) ? ' title="' + escHtml(meta.title) + '"' : "";
+			return '<div id="' + id + '-items-' + idx + '" role="option" data-value="' + escHtml(value) + '"' + sel + disabled + title + '>' + escHtml(item.label || value) + '</div>';
 		}).join("");
 		return '<div id="' + id + '" class="select">'
 			+ '<button type="button" class="btn-outline w-full" id="' + id + '-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="' + id + '-listbox">'
@@ -1763,6 +1770,33 @@
 		return (qtd * from.factor) / to.factor;
 	}
 
+	// Duas unidades só são compatíveis quando pertencem à mesma família
+	// (massa, volume ou unidade) e, portanto, podem ser convertidas entre si.
+	function unitsCompatible(unitA, unitB) {
+		var a = UNIT_FACTORS[unitA];
+		var b = UNIT_FACTORS[unitB];
+		return !!(a && b && a.family === b.family);
+	}
+
+	function unitLabel(value) {
+		var found = (unidadesItems || []).find(function (it) { return String(it.value) === String(value); });
+		return (found && found.label) || value;
+	}
+
+	// Fábrica de `optionMeta` para os selects de unidade da cotação e do uso em
+	// produtos: desabilita (com tooltip) toda unidade que não pode ser convertida
+	// para a unidade geral do produto.
+	function unitOptionMeta(generalUnit) {
+		return function (value) {
+			if (unitsCompatible(value, generalUnit)) return null;
+			return {
+				disabled: true,
+				title: "Indisponível: a unidade geral do produto (" + unitLabel(generalUnit)
+					+ ") não pode ser convertida para " + unitLabel(value) + ".",
+			};
+		};
+	}
+
 	function ceilPacotes(qtdTotal, qtdPacote) {
 		if (qtdPacote <= 0) return 0;
 		return Math.ceil(qtdTotal / qtdPacote);
@@ -1798,16 +1832,6 @@
 			max: window._festaData.publicoMax || 0,
 		};
 
-		// soma_uso_total: base sem multiplicador de cenário (para cálculo de sobra)
-		var somaUsoTotal = 0;
-		if (usadoEmProdutos) {
-			compraDraftUsos.forEach(function (uso) {
-				if (!uso.quantidade_usada || !uso.unidade_medida_uso) return;
-				var c = convertUnit(Number(uso.quantidade_usada), uso.unidade_medida_uso, unidadeCompra);
-				if (c !== null) somaUsoTotal += c;
-			});
-		}
-
 		var result = {};
 		["min", "intermediario", "max"].forEach(function (chave) {
 			var qtdSugerida;
@@ -1828,16 +1852,21 @@
 			}
 
 			var valorTotal = qtdPacote > 0 ? qtdSugerida * valorPacote : 0;
+			// Sobra individual:
+			//   ceil(somaCenario / qtdPacote) - somaCenario
+			// onde somaCenario = Σ (qtd utilizada × qtd do produto no cenário),
+			// e qtdSugerida já é ceil(somaCenario / qtdPacote).
 			var qtdSobra = 0;
 			if (usadoEmProdutos && qtdPacote > 0) {
-				qtdSobra = Math.max(0, qtdSugerida * qtdPacote - somaUsoTotal);
+				qtdSobra = Math.max(0, qtdSugerida * qtdPacote - somaCenario);
 			}
-			var precoUnitario = qtdPacote > 0 ? valorPacote / qtdPacote : 0;
 			result[chave] = {
 				qtd_sugerida: qtdSugerida,
+				qtd_total_compra: qtdSugerida * qtdPacote,
+				unidade_compra: unidadeCompra,
 				valor_total: valorTotal,
 				qtd_sobra_individual: qtdSobra,
-				valor_sobra: qtdSobra * precoUnitario,
+				valor_sobra: qtdSobra * valorPacote,
 			};
 		});
 		return result;
@@ -1886,10 +1915,21 @@
 			var valor = Number(c.valor_total_compra) || 0;
 			var nCot = (c.cotacoes || []).length;
 			var nUso = (c.usos_em_produto || []).length;
+			// "Quantidade de compra" é a contagem de cotações; o total na unidade
+			// geral do produto = contagem × quantidade da cotação escolhida
+			// (convertida para a unidade geral).
+			var escolhida = (c.cotacoes || []).find(function (x) { return x.escolhida; });
+			var qtdPacote = 0;
+			if (escolhida && Number(escolhida.quantidade) > 0) {
+				var conv = convertUnit(Number(escolhida.quantidade), escolhida.unidade_medida || "unidade", c.unidade_compra || "unidade");
+				if (conv !== null && conv > 0) qtdPacote = conv;
+			}
+			var total = qtd * qtdPacote;
 			return `
 <tr data-compra-idx="${i}">
 	<td>${escHtml(c.nome_item)}</td>
-	<td data-sort-value="${qtd}">${fmtNum(c.quantidade_compra_final)} ${escHtml(c.unidade_compra || "")}</td>
+	<td data-sort-value="${qtd}">${fmtNum(c.quantidade_compra_final)}</td>
+	<td data-sort-value="${total}">${fmtNum(total)} ${escHtml(c.unidade_compra || "")}</td>
 	<td data-sort-value="${valor}">${fmtCurrency(c.valor_total_compra)}</td>
 	<td data-sort-value="${nCot}"><span class="badge">${nCot}</span></td>
 	<td data-sort-value="${nUso}"><span class="badge">${nUso}</span></td>
@@ -1908,7 +1948,8 @@
 
 		var headers = [
 			{ label: "Item", sortType: "text" },
-			{ label: "Quantidade", sortType: "number" },
+			{ label: "Quantidade de compra", sortType: "number" },
+			{ label: "Total", sortType: "number" },
 			{ label: "Valor total", sortType: "number" },
 			{ label: "Cotações", sortType: "number" },
 			{ label: "Produtos", sortType: "number" },
@@ -2006,6 +2047,8 @@
 			container.innerHTML = '<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhuma cotação adicionada.</p>';
 			return;
 		}
+		var unidadeGeral = getSelectValue("compra-unidade") || "unidade";
+		var metaUnidade = unitOptionMeta(unidadeGeral);
 		var rows = compraDraftCotacoes.map(function (c, idx) {
 			var valUnit = (c.quantidade > 0 && !c.doacao)
 				? (new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format((c.valor || 0) / c.quantidade)
@@ -2016,7 +2059,7 @@
 	<td><input class="input festa-compact-input" data-field="fornecedor" value="${escHtml(c.fornecedor || "")}" placeholder="Fornecedor"></td>
 	<td>${window.GrisCurrencyInput.render({ field: "valor", value: c.valor, class: "festa-compact-input" })}</td>
 	<td><input class="input festa-compact-input" data-field="quantidade" type="text" inputmode="decimal" data-numeric-input value="${escHtml(c.quantidade || "")}"></td>
-	<td>${renderNativeSelect("unidade_medida", unidadesItems, c.unidade_medida || "unidade")}</td>
+	<td>${renderBasecoatSelect("unidade_medida", unidadesItems, c.unidade_medida || "unidade", metaUnidade)}</td>
 	<td class="text-sm text-muted-foreground" data-valor-unitario>${escHtml(valUnit)}</td>
 	<td class="festa-switch-cell"><label class="switch" aria-label="Cotação escolhida"><input type="checkbox" role="switch" class="input" data-field="escolhida"${c.escolhida ? " checked" : ""}></label></td>
 	<td class="festa-switch-cell"><label class="switch" aria-label="Doação"><input type="checkbox" role="switch" class="input" data-field="doacao"${c.doacao ? " checked" : ""}></label></td>
@@ -2042,7 +2085,9 @@
 </table>
 </div>`;
 		document.dispatchEvent(new CustomEvent("gris:design-system:init"));
-		container.querySelectorAll("input, select").forEach(function (el) {
+		// Inclui ".select" para capturar o evento change que o select Basecoat
+		// dispara no próprio componente (não no input hidden interno).
+		container.querySelectorAll("input, select, .select").forEach(function (el) {
 			el.addEventListener("input", syncCompraCalculatedFields);
 			el.addEventListener("change", syncCompraCalculatedFields);
 		});
@@ -2072,12 +2117,14 @@
 			container.innerHTML = '<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhum produto vinculado.</p>';
 			return;
 		}
+		var unidadeGeral = getSelectValue("compra-unidade") || "unidade";
+		var metaUnidade = unitOptionMeta(unidadeGeral);
 		var rows = compraDraftUsos.map(function (u, idx) {
 			return `
 <tr data-compra-uso-row>
 	<td>${renderNativeSelect("produto", produtosItems, u.produto || "", "compra-select-produto")}</td>
 	<td><input class="input festa-compact-input" data-field="quantidade_usada" type="text" inputmode="decimal" data-numeric-input value="${escHtml(u.quantidade_usada || "")}"></td>
-	<td>${renderNativeSelect("unidade_medida_uso", unidadesItems, u.unidade_medida_uso || "unidade")}</td>
+	<td>${renderBasecoatSelect("unidade_medida_uso", unidadesItems, u.unidade_medida_uso || "unidade", metaUnidade)}</td>
 	<td class="festa-table-actions"><button type="button" class="btn-sm-ghost festa-actions-btn" data-compra-remove-uso="${idx}" aria-label="Remover uso">×</button></td>
 </tr>`;
 		}).join("");
@@ -2096,7 +2143,9 @@
 </table>
 </div>`;
 		document.dispatchEvent(new CustomEvent("gris:design-system:init"));
-		container.querySelectorAll("input, select").forEach(function (el) {
+		// Inclui ".select" para capturar o evento change que o select Basecoat
+		// dispara no próprio componente (não no input hidden interno).
+		container.querySelectorAll("input, select, .select").forEach(function (el) {
 			el.addEventListener("input", syncCompraCalculatedFields);
 			el.addEventListener("change", syncCompraCalculatedFields);
 		});
@@ -2150,13 +2199,18 @@
 			}
 		}
 
+		// "Cotações a comprar" é uma contagem de cotações (sem unidade); "Total" e
+		// "Sobra individual" são quantidades na unidade de medida escolhida.
+		function fmtQtdUnidade(v, un) { return un ? (fmtNum(v) + " " + un) : fmtNum(v); }
 		var cenFields = [
 			{ min: "compra-cen-qtd-min", int: "compra-cen-qtd-int", max: "compra-cen-qtd-max",
 			  vMin: fmtNum(cen.min.qtd_sugerida), vInt: fmtNum(cen.intermediario.qtd_sugerida), vMax: fmtNum(cen.max.qtd_sugerida) },
+			{ min: "compra-cen-total-min", int: "compra-cen-total-int", max: "compra-cen-total-max",
+			  vMin: fmtQtdUnidade(cen.min.qtd_total_compra, cen.min.unidade_compra), vInt: fmtQtdUnidade(cen.intermediario.qtd_total_compra, cen.intermediario.unidade_compra), vMax: fmtQtdUnidade(cen.max.qtd_total_compra, cen.max.unidade_compra) },
 			{ min: "compra-cen-valor-min", int: "compra-cen-valor-int", max: "compra-cen-valor-max",
 			  vMin: fmtCurrency(cen.min.valor_total), vInt: fmtCurrency(cen.intermediario.valor_total), vMax: fmtCurrency(cen.max.valor_total) },
 			{ min: "compra-cen-sobra-qtd-min", int: "compra-cen-sobra-qtd-int", max: "compra-cen-sobra-qtd-max",
-			  vMin: fmtNum(cen.min.qtd_sobra_individual), vInt: fmtNum(cen.intermediario.qtd_sobra_individual), vMax: fmtNum(cen.max.qtd_sobra_individual) },
+			  vMin: fmtQtdUnidade(cen.min.qtd_sobra_individual, cen.min.unidade_compra), vInt: fmtQtdUnidade(cen.intermediario.qtd_sobra_individual, cen.intermediario.unidade_compra), vMax: fmtQtdUnidade(cen.max.qtd_sobra_individual, cen.max.unidade_compra) },
 			{ min: "compra-cen-sobra-valor-min", int: "compra-cen-sobra-valor-int", max: "compra-cen-sobra-valor-max",
 			  vMin: fmtCurrency(cen.min.valor_sobra), vInt: fmtCurrency(cen.intermediario.valor_sobra), vMax: fmtCurrency(cen.max.valor_sobra) },
 		];
@@ -2216,6 +2270,17 @@
 
 	function initCompras() {
 		renderComprasTable();
+
+		// Disponível para todos que veem a aba (documento de apoio só de leitura),
+		// por isso é vinculado antes do early-return de canEdit.
+		document.querySelectorAll("[data-action='gerar-lista-compras']").forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				var url = "/api/method/gris.api.festas.lista_compras.download_lista_compras_pdf?festa_name="
+					+ encodeURIComponent(festaName);
+				window.open(url, "_blank");
+			});
+		});
+
 		if (!canEdit) return;
 
 		document.querySelectorAll("[data-action='add-compra']").forEach(function (btn) {
@@ -2230,7 +2295,22 @@
 		var variaEl = document.querySelector("#compra-varia-publico input[type='checkbox']");
 		if (variaEl) variaEl.addEventListener("change", syncCompraCalculatedFields);
 		var unidadeEl = document.getElementById("compra-unidade");
-		if (unidadeEl) unidadeEl.addEventListener("change", syncCompraCalculatedFields);
+		if (unidadeEl) unidadeEl.addEventListener("change", function () {
+			// Ao trocar a unidade geral, reavaliamos as unidades de cotação e de
+			// uso: as que deixaram de ser conversíveis voltam para a unidade geral
+			// e os selects são redesenhados para refletir as opções ativas.
+			readCompraDrafts();
+			var gen = getSelectValue("compra-unidade") || "unidade";
+			compraDraftCotacoes.forEach(function (c) {
+				if (!unitsCompatible(c.unidade_medida || "unidade", gen)) c.unidade_medida = gen;
+			});
+			compraDraftUsos.forEach(function (u) {
+				if (!unitsCompatible(u.unidade_medida_uso || "unidade", gen)) u.unidade_medida_uso = gen;
+			});
+			renderCompraCotacoes();
+			renderCompraUsos();
+			syncCompraCalculatedFields();
+		});
 		var finalEl = document.getElementById("compra-quantidade-final");
 		if (finalEl) finalEl.addEventListener("input", function () {
 			finalEl.dataset.autoFinal = "0";
@@ -2680,6 +2760,7 @@
 	};
 	let convitesBarrasMode = "qtd";
 	let convitesLinhaMode = "total";
+	let convitesLinhaAcum = "diario";
 	let chartBarrasInstance = null;
 	let chartLinhaInstance = null;
 	let chartConvitesPorRamoInstance = null;
@@ -2738,6 +2819,111 @@
 			'<div><dt>Tipos cadastrados</dt><dd>' + tiposAtivos + " ativos / " + tiposTotal + " no total</dd></div>" +
 			'<div><dt>Aceita doações</dt><dd>' + doacoes + "</dd></div>" +
 			"<div><dt>Limite de vendas</dt><dd>" + data + "</dd></div>";
+	}
+
+	function expectativaPublicoCenario() {
+		const fd = window._festaData || {};
+		const mapa = {
+			"Mínimo": fd.publicoMin,
+			"Intermediário": fd.publicoIntermediario,
+			"Máximo": fd.publicoMax,
+		};
+		const cenario = convitesDashboard.cenario_simulacao || "Intermediário";
+		return { cenario: cenario, esperado: Number(mapa[cenario] || 0) };
+	}
+
+	function renderConvitesKpis() {
+		const container = document.getElementById("convites-kpis");
+		if (!container) return;
+		const totais = convitesDashboard.totais || {};
+		const qtdMap = totais.qtd_por_opcao || {};
+		const valMap = totais.valor_por_opcao || {};
+		const totalVendidos = Object.keys(qtdMap).reduce(function (s, k) {
+			return s + Number(qtdMap[k] || 0);
+		}, 0);
+		let receitaTotal = Object.keys(valMap).reduce(function (s, k) {
+			return s + Number(valMap[k] || 0);
+		}, 0);
+		if (convitesDashboard.aceitar_doacoes) {
+			receitaTotal += Number(totais.total_doacoes_valor || 0);
+		}
+		const exp = expectativaPublicoCenario();
+		const taxa = exp.esperado > 0 ? (totalVendidos / exp.esperado) * 100 : null;
+		const taxaValor = taxa === null ? "—" : taxa.toFixed(1) + "%";
+		const taxaHint = exp.esperado > 0
+			? fmtInt(totalVendidos) + " de " + fmtInt(exp.esperado) + " esperados (cenário " + escapeHtml(exp.cenario) + ")"
+			: "Defina a expectativa de público do cenário";
+		container.innerHTML =
+			'<div class="festa-kpi-item">' +
+				'<span class="festa-kpi-label">Convites vendidos</span>' +
+				'<span class="festa-kpi-value">' + fmtInt(totalVendidos) + "</span>" +
+			"</div>" +
+			'<div class="festa-kpi-item">' +
+				'<span class="festa-kpi-label">Receita arrecadada</span>' +
+				'<span class="festa-kpi-value">' + fmtMoeda(receitaTotal) + "</span>" +
+			"</div>" +
+			'<div class="festa-kpi-item">' +
+				'<span class="festa-kpi-label">Taxa vs. expectativa</span>' +
+				'<span class="festa-kpi-value">' + taxaValor + "</span>" +
+				'<span class="festa-kpi-hint">' + taxaHint + "</span>" +
+			"</div>";
+	}
+
+	function renderConvitesRamoMetaTable() {
+		const container = document.getElementById("convites-ramo-meta-table");
+		if (!container) return;
+		if (!convitesDashboard.convites_por_ramo) {
+			container.innerHTML = "";
+			return;
+		}
+		const porRamo = convitesDashboard.por_ramo || {};
+		const linhas = RAMOS_ORDEM
+			.map(function (ramo) {
+				const info = porRamo[ramo] || {};
+				return {
+					ramo: ramo,
+					vendidos: Number(info.qtd_vendida || 0),
+					meta: Number(info.qtd_esperada || 0),
+					beneficiarios: Number(info.beneficiarios_ativos || 0),
+				};
+			})
+			.filter(function (r) { return r.meta > 0 || r.vendidos > 0 || r.beneficiarios > 0; });
+		if (!linhas.length) {
+			container.innerHTML = '<p class="text-sm text-muted-foreground">Nenhuma meta por ramo definida ainda.</p>';
+			return;
+		}
+		const metaCell = function (vendidos, meta) {
+			if (meta <= 0) return "<td>—</td>";
+			const pct = (vendidos / meta) * 100;
+			const cls = pct >= 100 ? "festa-cenarios-cell--success" : "festa-cenarios-cell--danger";
+			return '<td class="' + cls + '">' + pct.toFixed(1) + "%</td>";
+		};
+		let totalVend = 0, totalMeta = 0;
+		let html = '<table class="festa-cenarios-table"><thead><tr>';
+		html += "<th>Ramo</th><th>Vendidos</th><th>Meta</th><th>% da meta</th><th>Faltam</th>";
+		html += "</tr></thead><tbody>";
+		linhas.forEach(function (r) {
+			totalVend += r.vendidos;
+			totalMeta += r.meta;
+			const faltam = Math.max(r.meta - r.vendidos, 0);
+			html += "<tr>";
+			html += '<td class="festa-cenarios-label">' + escapeHtml(r.ramo) + "</td>";
+			html += "<td>" + fmtInt(r.vendidos) + "</td>";
+			html += "<td>" + fmtInt(r.meta) + "</td>";
+			html += metaCell(r.vendidos, r.meta);
+			html += "<td>" + fmtInt(faltam) + "</td>";
+			html += "</tr>";
+		});
+		const totalFaltam = Math.max(totalMeta - totalVend, 0);
+		html += '<tr class="festa-cenarios-row--total">';
+		html += '<td class="festa-cenarios-label">Total</td>';
+		html += "<td>" + fmtInt(totalVend) + "</td>";
+		html += "<td>" + fmtInt(totalMeta) + "</td>";
+		html += metaCell(totalVend, totalMeta);
+		html += "<td>" + fmtInt(totalFaltam) + "</td>";
+		html += "</tr>";
+		html += "</tbody></table>";
+		container.innerHTML = html;
 	}
 
 	function renderConvitesBarras() {
@@ -2984,6 +3170,18 @@
 					};
 				});
 			}
+			const acumulado = convitesLinhaAcum === "acumulado";
+			if (acumulado) {
+				series = series.map(function (s) {
+					let soma = 0;
+					return Object.assign({}, s, {
+						data: (s.data || []).map(function (v) {
+							soma += Number(v || 0);
+							return soma;
+						}),
+					});
+				});
+			}
 			chartLinhaInstance.setOption({
 				aria: { enabled: true },
 				color: CHART_PALETTE,
@@ -3000,7 +3198,7 @@
 				},
 				yAxis: {
 					type: "value",
-					name: "Convites",
+					name: acumulado ? "Convites (acumulado)" : "Convites",
 					nameLocation: "middle",
 					nameGap: 40,
 					nameRotate: 90,
@@ -3392,8 +3590,10 @@
 		window._festaData.convitesDashboard = payload;
 		opcaoLocalList = (convitesDashboard.opcoes || []).slice();
 		renderConvitesConfigSummary();
+		renderConvitesKpis();
 		renderConvitesBarras();
 		renderChartConvitesPorRamo();
+		renderConvitesRamoMetaTable();
 		renderConvitesLinha();
 		renderConvitesTable();
 		renderOpcoesTable();
@@ -3402,6 +3602,8 @@
 	function initConvitesTab() {
 		opcaoLocalList = (convitesDashboard.opcoes || []).slice();
 		renderConvitesConfigSummary();
+		renderConvitesKpis();
+		renderConvitesRamoMetaTable();
 		renderConvitesTable();
 		renderOpcoesTable();
 
@@ -3452,6 +3654,15 @@
 			btn.addEventListener("click", function () {
 				convitesLinhaMode = btn.getAttribute("data-mode");
 				document.querySelectorAll('[data-chart="linha"]').forEach(function (b) {
+					b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+				});
+				renderConvitesLinha();
+			});
+		});
+		document.querySelectorAll('[data-chart="linha-acum"]').forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				convitesLinhaAcum = btn.getAttribute("data-mode");
+				document.querySelectorAll('[data-chart="linha-acum"]').forEach(function (b) {
 					b.setAttribute("aria-pressed", b === btn ? "true" : "false");
 				});
 				renderConvitesLinha();
@@ -3608,6 +3819,7 @@
 					Promise.all(tarefas)
 						.then(function () {
 							renderConvitesConfigSummary();
+							renderConvitesKpis();
 							renderConvitesBarras();
 							toast("Configurações salvas.", "success");
 							dlg.close();
@@ -3690,10 +3902,22 @@
 			var valorCotado = c.previsto !== false
 				? (Number(c["valor_total_" + key]) || 0)
 				: (Number(c.valor_total_compra) || 0);
+			// "Quantidade de compra" é a contagem de cotações; o total previsto na
+			// unidade geral do produto = contagem × quantidade da cotação escolhida
+			// (convertida para a unidade geral). Mesmo cálculo da aba de compras.
+			var qtd = Number(c.quantidade_compra_final) || 0;
+			var escolhida = (c.cotacoes || []).find(function (x) { return x.escolhida; });
+			var qtdPacote = 0;
+			if (escolhida && Number(escolhida.quantidade) > 0) {
+				var conv = convertUnit(Number(escolhida.quantidade), escolhida.unidade_medida || "unidade", c.unidade_compra || "unidade");
+				if (conv !== null && conv > 0) qtdPacote = conv;
+			}
+			var totalPrevisto = qtd * qtdPacote;
 			return `
 <tr>
 	<td>${escHtml(c.nome_item)}${tag}</td>
-	<td>${fmtNum(c.quantidade_compra_final)} ${escHtml(c.unidade_compra || "")}</td>
+	<td>${fmtNum(c.quantidade_compra_final)}</td>
+	<td>${fmtNum(totalPrevisto)} ${escHtml(c.unidade_compra || "")}</td>
 	<td>${fmtCurrency(valorCotado)}</td>
 	<td>${fmtCurrency(c.valor_total_realizado)}</td>
 	${detalhes}
@@ -3701,7 +3925,7 @@
 		}).join("");
 
 		var actionTh = canEdit ? "<th></th>" : "";
-		container.innerHTML = `<div class="festa-table-scroll"><table class="festa-table"><thead><tr><th>Item</th><th>Quantidade</th><th>Valor cotado</th><th>Valor gasto</th>${actionTh}</tr></thead><tbody>${rows}</tbody></table></div>`;
+		container.innerHTML = `<div class="festa-table-scroll"><table class="festa-table"><thead><tr><th>Item</th><th>Quantidade de compra</th><th>Total previsto</th><th>Valor cotado</th><th>Valor gasto</th>${actionTh}</tr></thead><tbody>${rows}</tbody></table></div>`;
 		notifyDesignSystem();
 		if (!canEdit) return;
 		container.querySelectorAll("[data-fechamento-compra]").forEach(function (btn) {
@@ -3710,12 +3934,37 @@
 	}
 
 	function setRealizadoCompra(c) {
-		document.getElementById("fechamento-compra-real-individual").value = c.valor_individual_realizado || "";
+		document.getElementById("fechamento-compra-real-fornecedor").value = c.fornecedor_realizado || "";
+		document.getElementById("fechamento-compra-real-valor").value = c.valor_individual_realizado || "";
+		document.getElementById("fechamento-compra-real-cotqtd").value = c.quantidade_cotacao_realizada || "";
 		setSelectValue("fechamento-compra-real-unidade", c.unidade_medida_realizado || "unidade", c.unidade_medida_realizado || "unidade");
 		document.getElementById("fechamento-compra-real-qtd").value = c.quantidade_realizada || "";
-		document.getElementById("fechamento-compra-real-total").value = c.valor_total_realizado || "";
-		document.getElementById("fechamento-compra-real-fornecedor").value = c.fornecedor_realizado || "";
+		var totalEl = document.getElementById("fechamento-compra-real-total");
+		totalEl.value = c.valor_total_realizado || "";
+		// O total é automático quando ainda não foi informado; ao reabrir um
+		// realizado já preenchido, preservamos o valor digitado pelo gestor.
+		totalEl.dataset.autoTotal = Number(c.valor_total_realizado) > 0 ? "0" : "1";
 		document.getElementById("fechamento-compra-real-obs").value = c.observacoes_realizado || "";
+		syncFechamentoRealizado();
+	}
+
+	// Recalcula o valor unitário exibido e, enquanto o total estiver em modo
+	// automático, o valor total gasto (= quantidade de compra × valor por pacote).
+	function syncFechamentoRealizado() {
+		var valor = parseFloat((document.getElementById("fechamento-compra-real-valor") || {}).value) || 0;
+		var cotQtd = parseFloat((document.getElementById("fechamento-compra-real-cotqtd") || {}).value) || 0;
+		var unidade = getSelectValue("fechamento-compra-real-unidade") || "unidade";
+		var unitarioEl = document.getElementById("fechamento-compra-real-valor-unitario");
+		if (unitarioEl) {
+			unitarioEl.textContent = cotQtd > 0
+				? fmtCurrency(valor / cotQtd) + " / " + unitLabel(unidade)
+				: "—";
+		}
+		var totalEl = document.getElementById("fechamento-compra-real-total");
+		if (totalEl && totalEl.dataset.autoTotal === "1") {
+			var qtdCompra = parseFloat((document.getElementById("fechamento-compra-real-qtd") || {}).value) || 0;
+			totalEl.value = qtdCompra * valor;
+		}
 	}
 
 	function openCompraFechamentoDialog(idx) {
@@ -3747,10 +3996,24 @@
 				var escolhida = (compra.cotacoes || []).find(function (x) { return x.escolhida; });
 				var valIndividual = escolhida && Number(escolhida.quantidade) > 0 && !escolhida.doacao
 					? (Number(escolhida.valor) || 0) / Number(escolhida.quantidade) : 0;
+				fechamentoSetText("fechamento-compra-orc-valor",
+					escolhida ? (escolhida.doacao ? "Doação" : fmtCurrency(escolhida.valor)) : "—");
+				fechamentoSetText("fechamento-compra-orc-cotqtd",
+					escolhida ? fmtNum(escolhida.quantidade) + " " + unitLabel(escolhida.unidade_medida || "unidade") : "—");
 				fechamentoSetText("fechamento-compra-orc-individual",
-					escolhida ? fmtCurrency(valIndividual) + " / " + (escolhida.unidade_medida || "unidade") : "—");
-				fechamentoSetText("fechamento-compra-orc-qtd",
-					fmtNum(compra["qtd_sugerida_" + key]) + " " + (compra.unidade_compra || ""));
+					escolhida ? fmtCurrency(valIndividual) + " / " + unitLabel(escolhida.unidade_medida || "unidade") : "—");
+				// Quantidade de compra = quantidade final (mesma da tabela), não a sugerida.
+				var qtdCompraFinal = Number(compra.quantidade_compra_final) || 0;
+				fechamentoSetText("fechamento-compra-orc-qtd", fmtNum(qtdCompraFinal));
+				// Total previsto = quantidade de compra × tamanho do pacote da cotação
+				// (convertido para a unidade geral do produto). Mesmo cálculo da tabela.
+				var qtdPacoteOrc = 0;
+				if (escolhida && Number(escolhida.quantidade) > 0) {
+					var convOrc = convertUnit(Number(escolhida.quantidade), escolhida.unidade_medida || "unidade", compra.unidade_compra || "unidade");
+					if (convOrc !== null && convOrc > 0) qtdPacoteOrc = convOrc;
+				}
+				fechamentoSetText("fechamento-compra-orc-totalqtd",
+					fmtNum(qtdCompraFinal * qtdPacoteOrc) + " " + (compra.unidade_compra || ""));
 				fechamentoSetText("fechamento-compra-orc-total", fmtCurrency(compra["valor_total_" + key]));
 				fechamentoSetText("fechamento-compra-orc-fornecedor", escolhida ? (escolhida.fornecedor || "—") : "—");
 			} else {
@@ -3806,7 +4069,8 @@
 
 	function collectCompraRealizado() {
 		return {
-			valor_individual_realizado: parseFloat(document.getElementById("fechamento-compra-real-individual").value) || 0,
+			valor_individual_realizado: parseFloat(document.getElementById("fechamento-compra-real-valor").value) || 0,
+			quantidade_cotacao_realizada: parseFloat(document.getElementById("fechamento-compra-real-cotqtd").value) || 0,
 			unidade_medida_realizado: getSelectValue("fechamento-compra-real-unidade") || "unidade",
 			quantidade_realizada: parseFloat(document.getElementById("fechamento-compra-real-qtd").value) || 0,
 			valor_total_realizado: parseFloat(document.getElementById("fechamento-compra-real-total").value) || 0,
@@ -4300,6 +4564,23 @@
 			fechamentoCompraUsos.push({ produto: "", quantidade_usada: 0, unidade_medida_uso: "unidade" });
 			renderFechamentoCompraUsos();
 		});
+
+		// Ao editar a cotação realizada, reativa o cálculo automático do total e
+		// recalcula valor unitário + total gasto.
+		["fechamento-compra-real-valor", "fechamento-compra-real-cotqtd", "fechamento-compra-real-qtd"].forEach(function (id) {
+			var el = document.getElementById(id);
+			if (!el) return;
+			el.addEventListener("input", function () {
+				var totalEl = document.getElementById("fechamento-compra-real-total");
+				if (totalEl) totalEl.dataset.autoTotal = "1";
+				syncFechamentoRealizado();
+			});
+		});
+		var unidadeReal = document.getElementById("fechamento-compra-real-unidade");
+		if (unidadeReal) unidadeReal.addEventListener("change", syncFechamentoRealizado);
+		// Ao digitar o total manualmente, deixa de ser automático (resposta final do gestor).
+		var totalReal = document.getElementById("fechamento-compra-real-total");
+		if (totalReal) totalReal.addEventListener("input", function () { totalReal.dataset.autoTotal = "0"; });
 
 		var btnCompra = document.getElementById("btn-fechamento-compra-salvar");
 		if (btnCompra) btnCompra.addEventListener("click", saveCompraFechamento);

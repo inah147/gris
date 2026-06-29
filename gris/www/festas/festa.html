@@ -1,5 +1,5 @@
 {% extends "templates/web_sidebar_base.html" %}
-{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, input, textarea, empty, badge, switch %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, input, textarea, empty, badge, switch, tooltip %}
 {% from "public/design_system/components/composed/file-upload.html.jinja" import file_upload %}
 {% from "public/design_system/components/generated/tabs.html.jinja" import tabs %}
 {% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
@@ -352,16 +352,26 @@ window._festaData = {
 			<h2 class="festa-card__title">Compras</h2>
 			<p class="festa-card__subtitle">Itens planejados para compra na festa.</p>
 		</div>
-		{% if can_edit %}
-		<button
-			type="button"
-			class="btn-sm-outline"
-			data-action="add-compra"
-		>
-			{{ lucide_icon("plus", size="sm") }}
-			<span>Adicionar compra</span>
-		</button>
-		{% endif %}
+		<div class="festa-card__header-actions">
+			<button
+				type="button"
+				class="btn-sm-outline"
+				data-action="gerar-lista-compras"
+			>
+				{{ lucide_icon("list-checks", size="sm") }}
+				<span>Gerar lista de compras</span>
+			</button>
+			{% if can_edit %}
+			<button
+				type="button"
+				class="btn-sm-outline"
+				data-action="add-compra"
+			>
+				{{ lucide_icon("plus", size="sm") }}
+				<span>Adicionar compra</span>
+			</button>
+			{% endif %}
+		</div>
 	</div>
 	<div id="compras-table-container"></div>
 	{% endcall %}
@@ -546,6 +556,17 @@ window._festaData = {
 	<div id="convites-config-summary" class="festa-info-grid"></div>
 	{% endcall %}
 
+	{# Seção — KPIs de desempenho de vendas #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Desempenho de vendas</h2>
+			<p class="festa-card__subtitle">Convites vendidos, receita arrecadada e taxa frente à expectativa do cenário.</p>
+		</div>
+	</div>
+	<div id="convites-kpis" class="festa-kpi-grid"></div>
+	{% endcall %}
+
 	{# Seção — Gráfico de barras (qtd/valor por opção) #}
 	{% call card(attrs={"class": "festa-card"}) %}
 	<div class="festa-card__header">
@@ -571,6 +592,7 @@ window._festaData = {
 			</div>
 		</div>
 		<div id="chart-convites-por-ramo" class="festa-convites-chart"></div>
+		<div id="convites-ramo-meta-table" class="festa-cenarios-wrap"></div>
 		{% endcall %}
 	</div>
 
@@ -581,9 +603,15 @@ window._festaData = {
 			<h2 class="festa-card__title">Convites vendidos por dia</h2>
 			<p class="festa-card__subtitle">Tendência diária da venda de convites pagos.</p>
 		</div>
-		<div class="festa-convites-chart-toggle">
-			<button type="button" class="btn-sm-outline" data-chart="linha" data-mode="total" aria-pressed="true">Total</button>
-			<button type="button" class="btn-sm-outline" data-chart="linha" data-mode="por_opcao" aria-pressed="false">Por convite</button>
+		<div class="festa-convites-toggle-wrap">
+			<div class="btn-group" role="group" aria-label="Modo de série">
+				<button type="button" class="btn-sm-outline" data-chart="linha" data-mode="total" aria-pressed="true">Total</button>
+				<button type="button" class="btn-sm-outline" data-chart="linha" data-mode="por_opcao" aria-pressed="false">Por convite</button>
+			</div>
+			<div class="btn-group" role="group" aria-label="Acumulação">
+				<button type="button" class="btn-sm-outline" data-chart="linha-acum" data-mode="diario" aria-pressed="true">Diário</button>
+				<button type="button" class="btn-sm-outline" data-chart="linha-acum" data-mode="acumulado" aria-pressed="false">Acumulado</button>
+			</div>
 		</div>
 	</div>
 	<div id="chart-convites-linha" class="festa-convites-chart"></div>
@@ -1559,7 +1587,12 @@ window._festaData = {
 					trigger_attrs={"class": "w-full"}
 				) }}
 			{% endcall %}
-			{% call field(label="Unidade de medida") %}
+			{% call field(label="Unidade de medida " ~ tooltip(
+				lucide_icon("info", size="sm", class_name="festa-field-info-icon"),
+				"Escolha a unidade de medida base do produto. Apenas para referência — será usada para apresentar a lista de compras.",
+				side="top",
+				attrs={"class": "festa-info-tooltip"}
+			)) %}
 				{{ select(
 					id="compra-unidade",
 					name="compra-unidade",
@@ -1600,10 +1633,16 @@ window._festaData = {
 					</thead>
 					<tbody>
 						<tr>
-							<td class="festa-cenarios-label">Qtd sugerida</td>
+							<td class="festa-cenarios-label">Cotações a comprar</td>
 							<td id="compra-cen-qtd-min">—</td>
 							<td id="compra-cen-qtd-int">—</td>
 							<td id="compra-cen-qtd-max">—</td>
+						</tr>
+						<tr>
+							<td class="festa-cenarios-label">Total</td>
+							<td id="compra-cen-total-min">—</td>
+							<td id="compra-cen-total-int">—</td>
+							<td id="compra-cen-total-max">—</td>
 						</tr>
 						<tr>
 							<td class="festa-cenarios-label">Valor total</td>
@@ -1755,9 +1794,12 @@ window._festaData = {
 		<div class="festa-compra-section" data-fechamento-block="orcamento" hidden>
 			<h3 class="festa-equipe-title">Orçamento</h3>
 			<dl class="festa-info-grid">
-				<div><dt>Valor individual</dt><dd id="fechamento-compra-orc-individual">—</dd></div>
-				<div><dt>Quantidade (cenário)</dt><dd id="fechamento-compra-orc-qtd">—</dd></div>
-				<div><dt>Valor total</dt><dd id="fechamento-compra-orc-total">—</dd></div>
+				<div><dt>Valor cotado</dt><dd id="fechamento-compra-orc-valor">—</dd></div>
+				<div><dt>Quantidade do valor cotado</dt><dd id="fechamento-compra-orc-cotqtd">—</dd></div>
+				<div><dt>Valor unitário cotado</dt><dd id="fechamento-compra-orc-individual">—</dd></div>
+				<div><dt>Quantidade de compra prevista</dt><dd id="fechamento-compra-orc-qtd">—</dd></div>
+				<div><dt>Total de compra previsto</dt><dd id="fechamento-compra-orc-totalqtd">—</dd></div>
+				<div><dt>Valor total gasto previsto</dt><dd id="fechamento-compra-orc-total">—</dd></div>
 				<div><dt>Fornecedor</dt><dd id="fechamento-compra-orc-fornecedor">—</dd></div>
 			</dl>
 		</div>
@@ -1765,21 +1807,34 @@ window._festaData = {
 		{# Realizado — inputs #}
 		<div class="festa-compra-section" data-fechamento-block="realizado">
 			<h3 class="festa-equipe-title">Realizado</h3>
+			<div class="festa-table-scroll">
+				<table class="festa-table festa-edit-table">
+					<thead>
+						<tr>
+							<th>Fornecedor</th>
+							<th>Valor</th>
+							<th>Quantidade</th>
+							<th>Unidade</th>
+							<th>Valor unitário</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td><input class="input festa-compact-input" id="fechamento-compra-real-fornecedor" autocomplete="off" placeholder="Fornecedor"></td>
+							<td>{{ currency_input(id="fechamento-compra-real-valor", attrs={"class": "festa-compact-input"}) }}</td>
+							<td><input class="input festa-compact-input" id="fechamento-compra-real-cotqtd" type="text" inputmode="decimal" data-numeric-input placeholder="0"></td>
+							<td>{{ select(id="fechamento-compra-real-unidade", name="fechamento-compra-real-unidade", items=unidades_items or [], selected="unidade", trigger_attrs={"class": "w-full"}) }}</td>
+							<td class="text-sm text-muted-foreground" id="fechamento-compra-real-valor-unitario">—</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
 			<div class="festa-dialog-form festa-compra-form-grid">
-				{% call field(label="Valor individual") %}
-					{{ currency_input(id="fechamento-compra-real-individual") }}
-				{% endcall %}
-				{% call field(label="Unidade de medida") %}
-					{{ select(id="fechamento-compra-real-unidade", name="fechamento-compra-real-unidade", items=unidades_items or [], selected="unidade", trigger_attrs={"class": "w-full"}) }}
-				{% endcall %}
-				{% call field(label="Quantidade") %}
+				{% call field(label="Quantidade de compra") %}
 					{{ input(attrs={"id": "fechamento-compra-real-qtd", "inputmode": "decimal", "data-numeric-input": "1", "placeholder": "0"}) }}
 				{% endcall %}
-				{% call field(label="Valor total") %}
+				{% call field(label="Valor total gasto") %}
 					{{ currency_input(id="fechamento-compra-real-total") }}
-				{% endcall %}
-				{% call field(label="Fornecedor") %}
-					{{ input(attrs={"id": "fechamento-compra-real-fornecedor", "autocomplete": "off", "placeholder": "Fornecedor"}) }}
 				{% endcall %}
 			</div>
 			{% call field(label="Observações") %}

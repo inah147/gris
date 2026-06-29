@@ -39,6 +39,7 @@
   "usos_em_produto",
   "realizado_section",
   "valor_individual_realizado",
+  "quantidade_cotacao_realizada",
   "unidade_medida_realizado",
   "quantidade_realizada",
   "valor_total_realizado",
@@ -245,6 +246,12 @@
    "fieldname": "valor_individual_realizado",
    "fieldtype": "Currency",
    "label": "Valor Individual Realizado"
+  },
+  {
+   "fieldname": "quantidade_cotacao_realizada",
+   "fieldtype": "Float",
+   "label": "Quantidade da Cotação Realizada",
+   "non_negative": 1
   },
   {
    "default": "unidade",

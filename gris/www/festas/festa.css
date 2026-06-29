@@ -72,6 +72,12 @@
 	margin-bottom: 1rem;
 }
 
+.festa-card__header-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
 .festa-card__title {
 	font-size: 1rem;
 	font-weight: 600;
@@ -107,6 +113,45 @@
 	font-size: 0.9375rem;
 	color: var(--foreground);
 	margin: 0;
+}
+
+/* ─── KPIs de convites ────────────────────────────────────────────────── */
+
+.festa-kpi-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+	gap: 1rem;
+	margin: 0;
+}
+
+.festa-kpi-item {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	padding: 1rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--card);
+}
+
+.festa-kpi-label {
+	font-size: 0.75rem;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--muted-foreground);
+}
+
+.festa-kpi-value {
+	font-size: var(--text-2xl);
+	line-height: 1.2;
+	font-weight: 600;
+	color: var(--foreground);
+}
+
+.festa-kpi-hint {
+	font-size: 0.75rem;
+	color: var(--muted-foreground);
 }
 
 /* ─── Estimativas grid ────────────────────────────────────────────────── */
@@ -493,8 +538,38 @@
 	min-width: 11rem;
 }
 
+/* Opções de unidade indisponíveis (não conversíveis para a unidade geral):
+   o Basecoat as marca com pointer-events:none, o que impediria a tooltip de
+   aparecer no hover. Reabilitamos o ponteiro apenas para exibir a tooltip
+   (atributo title) — o clique continua bloqueado pelo JS do componente, que
+   ignora opções com aria-disabled. */
+.festa-edit-table .select [data-popover] [role="option"][aria-disabled="true"] {
+	pointer-events: auto;
+	cursor: not-allowed;
+}
+
 .festa-edit-table th {
 	white-space: nowrap;
+}
+
+/* Ícone de informação ao lado do rótulo de um campo (ex.: unidade de medida
+   base). Fica alinhado ao texto, com cor suave e cursor de ajuda. */
+.festa-field-info-icon {
+	display: inline-block;
+	vertical-align: -0.15em;
+	margin-left: 0.25rem;
+	color: var(--color-muted-foreground);
+	cursor: help;
+}
+
+/* Tooltip do Basecoat com frase longa: por padrão o componente usa uma única
+   linha (white-space: nowrap) e trunca com reticências. Aqui permitimos a
+   quebra de linha para o texto explicativo aparecer por completo. */
+.festa-info-tooltip[data-tooltip]::before {
+	white-space: normal;
+	width: max-content;
+	max-width: 16rem;
+	text-overflow: clip;
 }
 
 .festa-edit-table td {
@@ -613,6 +688,18 @@
 .festa-convites-chart-toggle [aria-pressed="true"] {
 	background: var(--primary);
 	color: var(--primary-foreground);
+}
+
+.festa-convites-toggle-wrap {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.festa-convites-toggle-wrap .btn-group [aria-pressed="true"] {
+	background: var(--primary);
+	color: var(--primary-foreground);
+	border-color: var(--primary);
 }
 
 .dialog-convites-config > div {

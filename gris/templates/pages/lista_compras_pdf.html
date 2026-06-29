@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+	<meta charset="utf-8" />
+	<title>Lista de compras — {{ nome_festa }}</title>
+	<style>
+		/* ─────────── Fonte de marca (Figtree variável, local) ─────────── */
+		@font-face {
+			font-family: "Figtree"; font-style: normal; font-weight: 300 900;
+			src: url("design_system/fonts/figtree/figtree-latin-wght-normal.woff2") format("woff2");
+		}
+
+		/* ─────────── Tokens (derivados do tema shadcn do Portal) ─────────── */
+		/* Apenas cores de texto: var() resolve em `color` (não em background/border). */
+		:root {
+			--ink:   #1E1B4B;
+			--fg:    #14161C;
+			--muted: #67787C;
+		}
+
+		/* ─────────── Página ─────────── */
+		/* Rodapé por página: texto vem de `string-set: footerinfo` (elemento oculto
+		   no fluxo) — evita quebrar o CSS com nome de festa contendo aspas. O número
+		   da página usa `counter(page)` (confiável no WeasyPrint 59). Cores em hex. */
+		@page {
+			size: A4;
+			margin: 16mm 14mm 18mm 14mm;
+			@bottom-left { content: string(footerinfo);
+				font-family: "Figtree", sans-serif; font-size: 8pt; font-weight: 500;
+				color: #8a90a2; vertical-align: middle; }
+			@bottom-right { content: counter(page);
+				font-family: "Figtree", sans-serif; font-size: 9pt; font-weight: 700;
+				color: #8a90a2; vertical-align: middle; }
+		}
+
+		html, body { margin: 0; padding: 0; }
+		body { font-family: "Figtree", "Helvetica Neue", Helvetica, Arial, sans-serif;
+			color: var(--fg); font-size: 10pt; line-height: 1.45; -weasy-hyphens: none; }
+
+		/* Elemento oculto que alimenta o rodapé de todas as páginas. */
+		.footer-src { display: block; height: 0; overflow: hidden; font-size: 0;
+			string-set: footerinfo content(); }
+
+		/* ─────────── Hero (logo + UEL) ─────────── */
+		/* inline-block (não flex): o flex cross-size do WeasyPrint 59 é instável. */
+		.hero { padding-bottom: 3.5mm; margin-bottom: 6mm;
+			border-bottom: 1pt solid #CFD6DF; text-align: center; }
+		.hero__logo { height: 16mm; width: auto; vertical-align: middle;
+			margin-right: 4mm; }
+		.hero__uel { display: inline-block; vertical-align: middle;
+			font-size: 14pt; font-weight: 800; color: var(--ink);
+			letter-spacing: -.2px; }
+
+		/* ─────────── Cabeçalho do documento ─────────── */
+		.title { font-size: 22pt; font-weight: 800; color: var(--ink);
+			letter-spacing: -.4px; margin: 0; }
+		.subtitle { font-size: 11pt; font-weight: 600; color: var(--muted);
+			margin: 2mm 0 0; }
+
+		/* ─────────── Aviso ─────────── */
+		/* Hex literal: var() não pinta background/border no WeasyPrint 59. */
+		.aviso { margin: 5mm 0 6mm; padding: 3.5mm 4mm; border-radius: 8px;
+			background-color: #EEF2FF; border: 1pt solid #C7D2FE;
+			color: #3730A3; font-size: 9pt; line-height: 1.4; }
+		.aviso strong { font-weight: 700; }
+
+		/* ─────────── Tabela ─────────── */
+		/* NB: WeasyPrint 59 não pinta `background` com var() em células de tabela
+		   (th/td) — cores em hex literal para a zebra funcionar. */
+		table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+		/* Repete o cabeçalho da tabela em cada página. */
+		thead { display: table-header-group; }
+		/* Cabeçalho sem fundo: apenas negrito + linha de separação dos dados. */
+		thead th { color: #1E1B4B; font-weight: 700;
+			text-align: left; padding: 1.6mm 3mm; font-size: 9pt;
+			text-transform: uppercase; letter-spacing: .3px;
+			border-bottom: 1.5pt solid #1E1B4B; }
+		thead th.num { text-align: right; }
+		thead th.check { text-align: center; width: 22mm; }
+		tbody tr { page-break-inside: avoid; }
+		tbody td { padding: 1.3mm 3mm; border-bottom: 1px solid #CFD6DF;
+			vertical-align: middle; }
+		/* Zebra: linhas pares em cinza claro (economiza tinta na impressão). */
+		tbody tr:nth-child(even) td { background-color: #F0F0F0; }
+		td.num { text-align: right; white-space: nowrap; }
+		td.check { text-align: center; }
+		.especificacao { font-weight: 600; color: #1E1B4B; }
+
+		/* Checkbox vazio impresso (quadrado com borda). */
+		.box { display: inline-block; width: 3.2mm; height: 3.2mm; border: 1pt solid #4a5568;
+			border-radius: 1.5px; vertical-align: middle; }
+
+		.empty { color: var(--muted); font-style: italic; margin: 8mm 0; text-align: center; }
+	</style>
+</head>
+<body>
+	<span class="footer-src">{{ footer_text }}</span>
+
+	{% set uel_str = (uel_tipo ~ " " ~ uel_nome) | trim %}
+	{% if uel_logo or uel_str %}
+	<header class="hero">
+		{% if uel_logo %}<img class="hero__logo" src="{{ uel_logo }}" alt="Logo da UEL" />{% endif %}
+		{% if uel_str %}<span class="hero__uel">{{ uel_str }}</span>{% endif %}
+	</header>
+	{% endif %}
+
+	<h1 class="title">Lista de compras</h1>
+	<p class="subtitle">{{ nome_festa }}{% if data_festa %} • {{ data_festa }}{% endif %}</p>
+
+	<div class="aviso">
+		<strong>Documento de apoio.</strong> Esta lista serve apenas para auxiliar a compra.
+		Os dados oficiais de compra devem ser inseridos no Gris.
+	</div>
+
+	{% if rows %}
+	<table>
+		<thead>
+			<tr>
+				<th>Item</th>
+				<th class="num">Quantidade de compra</th>
+				<th class="num">Total</th>
+				<th class="check">Comprado</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for row in rows %}
+			<tr>
+				<td class="especificacao">{{ row.especificacao }}</td>
+				<td class="num">{{ row.quantidade }}</td>
+				<td class="num">{{ row.total }}</td>
+				<td class="check"><span class="box"></span></td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+	{% else %}
+	<p class="empty">Nenhum item com cotação escolhida para comprar.</p>
+	{% endif %}
+</body>
+</html>

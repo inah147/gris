@@ -774,6 +774,7 @@ def _hydrate_compra(doc) -> dict:
 		"cotacao_escolhida_valor": flt(doc.cotacao_escolhida_valor),
 		"valor_total_compra": flt(doc.valor_total_compra),
 		"valor_individual_realizado": flt(doc.valor_individual_realizado),
+		"quantidade_cotacao_realizada": flt(doc.quantidade_cotacao_realizada),
 		"unidade_medida_realizado": doc.unidade_medida_realizado or "unidade",
 		"quantidade_realizada": flt(doc.quantidade_realizada),
 		"valor_total_realizado": flt(doc.valor_total_realizado),
@@ -1030,6 +1031,9 @@ def excluir_contratacao(contratacao_name: str, festa_name: str) -> dict:
 def _apply_compra_realizado(doc, dados: dict) -> None:
 	doc.valor_individual_realizado = _as_non_negative_float(
 		dados.get("valor_individual_realizado", 0), "Valor individual realizado"
+	)
+	doc.quantidade_cotacao_realizada = _as_non_negative_float(
+		dados.get("quantidade_cotacao_realizada", 0), "Quantidade da cotação realizada"
 	)
 	doc.unidade_medida_realizado = _validate_unidade(
 		dados.get("unidade_medida_realizado") or "unidade", "Unidade realizada"

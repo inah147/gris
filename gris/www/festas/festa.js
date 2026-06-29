@@ -3770,10 +3770,22 @@
 			var valorCotado = c.previsto !== false
 				? (Number(c["valor_total_" + key]) || 0)
 				: (Number(c.valor_total_compra) || 0);
+			// "Quantidade de compra" é a contagem de cotações; o total previsto na
+			// unidade geral do produto = contagem × quantidade da cotação escolhida
+			// (convertida para a unidade geral). Mesmo cálculo da aba de compras.
+			var qtd = Number(c.quantidade_compra_final) || 0;
+			var escolhida = (c.cotacoes || []).find(function (x) { return x.escolhida; });
+			var qtdPacote = 0;
+			if (escolhida && Number(escolhida.quantidade) > 0) {
+				var conv = convertUnit(Number(escolhida.quantidade), escolhida.unidade_medida || "unidade", c.unidade_compra || "unidade");
+				if (conv !== null && conv > 0) qtdPacote = conv;
+			}
+			var totalPrevisto = qtd * qtdPacote;
 			return `
 <tr>
 	<td>${escHtml(c.nome_item)}${tag}</td>
-	<td>${fmtNum(c.quantidade_compra_final)} ${escHtml(c.unidade_compra || "")}</td>
+	<td>${fmtNum(c.quantidade_compra_final)}</td>
+	<td>${fmtNum(totalPrevisto)} ${escHtml(c.unidade_compra || "")}</td>
 	<td>${fmtCurrency(valorCotado)}</td>
 	<td>${fmtCurrency(c.valor_total_realizado)}</td>
 	${detalhes}
@@ -3781,7 +3793,7 @@
 		}).join("");
 
 		var actionTh = canEdit ? "<th></th>" : "";
-		container.innerHTML = `<div class="festa-table-scroll"><table class="festa-table"><thead><tr><th>Item</th><th>Quantidade</th><th>Valor cotado</th><th>Valor gasto</th>${actionTh}</tr></thead><tbody>${rows}</tbody></table></div>`;
+		container.innerHTML = `<div class="festa-table-scroll"><table class="festa-table"><thead><tr><th>Item</th><th>Quantidade de compra</th><th>Total previsto</th><th>Valor cotado</th><th>Valor gasto</th>${actionTh}</tr></thead><tbody>${rows}</tbody></table></div>`;
 		notifyDesignSystem();
 		if (!canEdit) return;
 		container.querySelectorAll("[data-fechamento-compra]").forEach(function (btn) {
@@ -3790,12 +3802,37 @@
 	}
 
 	function setRealizadoCompra(c) {
-		document.getElementById("fechamento-compra-real-individual").value = c.valor_individual_realizado || "";
+		document.getElementById("fechamento-compra-real-fornecedor").value = c.fornecedor_realizado || "";
+		document.getElementById("fechamento-compra-real-valor").value = c.valor_individual_realizado || "";
+		document.getElementById("fechamento-compra-real-cotqtd").value = c.quantidade_cotacao_realizada || "";
 		setSelectValue("fechamento-compra-real-unidade", c.unidade_medida_realizado || "unidade", c.unidade_medida_realizado || "unidade");
 		document.getElementById("fechamento-compra-real-qtd").value = c.quantidade_realizada || "";
-		document.getElementById("fechamento-compra-real-total").value = c.valor_total_realizado || "";
-		document.getElementById("fechamento-compra-real-fornecedor").value = c.fornecedor_realizado || "";
+		var totalEl = document.getElementById("fechamento-compra-real-total");
+		totalEl.value = c.valor_total_realizado || "";
+		// O total é automático quando ainda não foi informado; ao reabrir um
+		// realizado já preenchido, preservamos o valor digitado pelo gestor.
+		totalEl.dataset.autoTotal = Number(c.valor_total_realizado) > 0 ? "0" : "1";
 		document.getElementById("fechamento-compra-real-obs").value = c.observacoes_realizado || "";
+		syncFechamentoRealizado();
+	}
+
+	// Recalcula o valor unitário exibido e, enquanto o total estiver em modo
+	// automático, o valor total gasto (= quantidade de compra × valor por pacote).
+	function syncFechamentoRealizado() {
+		var valor = parseFloat((document.getElementById("fechamento-compra-real-valor") || {}).value) || 0;
+		var cotQtd = parseFloat((document.getElementById("fechamento-compra-real-cotqtd") || {}).value) || 0;
+		var unidade = getSelectValue("fechamento-compra-real-unidade") || "unidade";
+		var unitarioEl = document.getElementById("fechamento-compra-real-valor-unitario");
+		if (unitarioEl) {
+			unitarioEl.textContent = cotQtd > 0
+				? fmtCurrency(valor / cotQtd) + " / " + unitLabel(unidade)
+				: "—";
+		}
+		var totalEl = document.getElementById("fechamento-compra-real-total");
+		if (totalEl && totalEl.dataset.autoTotal === "1") {
+			var qtdCompra = parseFloat((document.getElementById("fechamento-compra-real-qtd") || {}).value) || 0;
+			totalEl.value = qtdCompra * valor;
+		}
 	}
 
 	function openCompraFechamentoDialog(idx) {
@@ -3827,10 +3864,24 @@
 				var escolhida = (compra.cotacoes || []).find(function (x) { return x.escolhida; });
 				var valIndividual = escolhida && Number(escolhida.quantidade) > 0 && !escolhida.doacao
 					? (Number(escolhida.valor) || 0) / Number(escolhida.quantidade) : 0;
+				fechamentoSetText("fechamento-compra-orc-valor",
+					escolhida ? (escolhida.doacao ? "Doação" : fmtCurrency(escolhida.valor)) : "—");
+				fechamentoSetText("fechamento-compra-orc-cotqtd",
+					escolhida ? fmtNum(escolhida.quantidade) + " " + unitLabel(escolhida.unidade_medida || "unidade") : "—");
 				fechamentoSetText("fechamento-compra-orc-individual",
-					escolhida ? fmtCurrency(valIndividual) + " / " + (escolhida.unidade_medida || "unidade") : "—");
-				fechamentoSetText("fechamento-compra-orc-qtd",
-					fmtNum(compra["qtd_sugerida_" + key]) + " " + (compra.unidade_compra || ""));
+					escolhida ? fmtCurrency(valIndividual) + " / " + unitLabel(escolhida.unidade_medida || "unidade") : "—");
+				// Quantidade de compra = quantidade final (mesma da tabela), não a sugerida.
+				var qtdCompraFinal = Number(compra.quantidade_compra_final) || 0;
+				fechamentoSetText("fechamento-compra-orc-qtd", fmtNum(qtdCompraFinal));
+				// Total previsto = quantidade de compra × tamanho do pacote da cotação
+				// (convertido para a unidade geral do produto). Mesmo cálculo da tabela.
+				var qtdPacoteOrc = 0;
+				if (escolhida && Number(escolhida.quantidade) > 0) {
+					var convOrc = convertUnit(Number(escolhida.quantidade), escolhida.unidade_medida || "unidade", compra.unidade_compra || "unidade");
+					if (convOrc !== null && convOrc > 0) qtdPacoteOrc = convOrc;
+				}
+				fechamentoSetText("fechamento-compra-orc-totalqtd",
+					fmtNum(qtdCompraFinal * qtdPacoteOrc) + " " + (compra.unidade_compra || ""));
 				fechamentoSetText("fechamento-compra-orc-total", fmtCurrency(compra["valor_total_" + key]));
 				fechamentoSetText("fechamento-compra-orc-fornecedor", escolhida ? (escolhida.fornecedor || "—") : "—");
 			} else {
@@ -3886,7 +3937,8 @@
 
 	function collectCompraRealizado() {
 		return {
-			valor_individual_realizado: parseFloat(document.getElementById("fechamento-compra-real-individual").value) || 0,
+			valor_individual_realizado: parseFloat(document.getElementById("fechamento-compra-real-valor").value) || 0,
+			quantidade_cotacao_realizada: parseFloat(document.getElementById("fechamento-compra-real-cotqtd").value) || 0,
 			unidade_medida_realizado: getSelectValue("fechamento-compra-real-unidade") || "unidade",
 			quantidade_realizada: parseFloat(document.getElementById("fechamento-compra-real-qtd").value) || 0,
 			valor_total_realizado: parseFloat(document.getElementById("fechamento-compra-real-total").value) || 0,
@@ -4380,6 +4432,23 @@
 			fechamentoCompraUsos.push({ produto: "", quantidade_usada: 0, unidade_medida_uso: "unidade" });
 			renderFechamentoCompraUsos();
 		});
+
+		// Ao editar a cotação realizada, reativa o cálculo automático do total e
+		// recalcula valor unitário + total gasto.
+		["fechamento-compra-real-valor", "fechamento-compra-real-cotqtd", "fechamento-compra-real-qtd"].forEach(function (id) {
+			var el = document.getElementById(id);
+			if (!el) return;
+			el.addEventListener("input", function () {
+				var totalEl = document.getElementById("fechamento-compra-real-total");
+				if (totalEl) totalEl.dataset.autoTotal = "1";
+				syncFechamentoRealizado();
+			});
+		});
+		var unidadeReal = document.getElementById("fechamento-compra-real-unidade");
+		if (unidadeReal) unidadeReal.addEventListener("change", syncFechamentoRealizado);
+		// Ao digitar o total manualmente, deixa de ser automático (resposta final do gestor).
+		var totalReal = document.getElementById("fechamento-compra-real-total");
+		if (totalReal) totalReal.addEventListener("input", function () { totalReal.dataset.autoTotal = "0"; });
 
 		var btnCompra = document.getElementById("btn-fechamento-compra-salvar");
 		if (btnCompra) btnCompra.addEventListener("click", saveCompraFechamento);

@@ -161,6 +161,7 @@ def _hydrate_compra(doc, produto_labels: dict[str, str]) -> dict:
 		"valor_total_compra": flt(doc.valor_total_compra),
 		# Realizado
 		"valor_individual_realizado": flt(doc.valor_individual_realizado),
+		"quantidade_cotacao_realizada": flt(doc.quantidade_cotacao_realizada),
 		"unidade_medida_realizado": doc.unidade_medida_realizado or "unidade",
 		"quantidade_realizada": flt(doc.quantidade_realizada),
 		"valor_total_realizado": flt(doc.valor_total_realizado),

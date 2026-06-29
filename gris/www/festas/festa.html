@@ -1776,9 +1776,12 @@ window._festaData = {
 		<div class="festa-compra-section" data-fechamento-block="orcamento" hidden>
 			<h3 class="festa-equipe-title">Orçamento</h3>
 			<dl class="festa-info-grid">
-				<div><dt>Valor individual</dt><dd id="fechamento-compra-orc-individual">—</dd></div>
-				<div><dt>Quantidade (cenário)</dt><dd id="fechamento-compra-orc-qtd">—</dd></div>
-				<div><dt>Valor total</dt><dd id="fechamento-compra-orc-total">—</dd></div>
+				<div><dt>Valor cotado</dt><dd id="fechamento-compra-orc-valor">—</dd></div>
+				<div><dt>Quantidade do valor cotado</dt><dd id="fechamento-compra-orc-cotqtd">—</dd></div>
+				<div><dt>Valor unitário cotado</dt><dd id="fechamento-compra-orc-individual">—</dd></div>
+				<div><dt>Quantidade de compra prevista</dt><dd id="fechamento-compra-orc-qtd">—</dd></div>
+				<div><dt>Total de compra previsto</dt><dd id="fechamento-compra-orc-totalqtd">—</dd></div>
+				<div><dt>Valor total gasto previsto</dt><dd id="fechamento-compra-orc-total">—</dd></div>
 				<div><dt>Fornecedor</dt><dd id="fechamento-compra-orc-fornecedor">—</dd></div>
 			</dl>
 		</div>
@@ -1786,21 +1789,34 @@ window._festaData = {
 		{# Realizado — inputs #}
 		<div class="festa-compra-section" data-fechamento-block="realizado">
 			<h3 class="festa-equipe-title">Realizado</h3>
+			<div class="festa-table-scroll">
+				<table class="festa-table festa-edit-table">
+					<thead>
+						<tr>
+							<th>Fornecedor</th>
+							<th>Valor</th>
+							<th>Quantidade</th>
+							<th>Unidade</th>
+							<th>Valor unitário</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td><input class="input festa-compact-input" id="fechamento-compra-real-fornecedor" autocomplete="off" placeholder="Fornecedor"></td>
+							<td>{{ currency_input(id="fechamento-compra-real-valor", attrs={"class": "festa-compact-input"}) }}</td>
+							<td><input class="input festa-compact-input" id="fechamento-compra-real-cotqtd" type="text" inputmode="decimal" data-numeric-input placeholder="0"></td>
+							<td>{{ select(id="fechamento-compra-real-unidade", name="fechamento-compra-real-unidade", items=unidades_items or [], selected="unidade", trigger_attrs={"class": "w-full"}) }}</td>
+							<td class="text-sm text-muted-foreground" id="fechamento-compra-real-valor-unitario">—</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
 			<div class="festa-dialog-form festa-compra-form-grid">
-				{% call field(label="Valor individual") %}
-					{{ currency_input(id="fechamento-compra-real-individual") }}
-				{% endcall %}
-				{% call field(label="Unidade de medida") %}
-					{{ select(id="fechamento-compra-real-unidade", name="fechamento-compra-real-unidade", items=unidades_items or [], selected="unidade", trigger_attrs={"class": "w-full"}) }}
-				{% endcall %}
-				{% call field(label="Quantidade") %}
+				{% call field(label="Quantidade de compra") %}
 					{{ input(attrs={"id": "fechamento-compra-real-qtd", "inputmode": "decimal", "data-numeric-input": "1", "placeholder": "0"}) }}
 				{% endcall %}
-				{% call field(label="Valor total") %}
+				{% call field(label="Valor total gasto") %}
 					{{ currency_input(id="fechamento-compra-real-total") }}
-				{% endcall %}
-				{% call field(label="Fornecedor") %}
-					{{ input(attrs={"id": "fechamento-compra-real-fornecedor", "autocomplete": "off", "placeholder": "Fornecedor"}) }}
 				{% endcall %}
 			</div>
 			{% call field(label="Observações") %}

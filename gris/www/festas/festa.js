@@ -2760,6 +2760,7 @@
 	};
 	let convitesBarrasMode = "qtd";
 	let convitesLinhaMode = "total";
+	let convitesLinhaAcum = "diario";
 	let chartBarrasInstance = null;
 	let chartLinhaInstance = null;
 	let chartConvitesPorRamoInstance = null;
@@ -2818,6 +2819,111 @@
 			'<div><dt>Tipos cadastrados</dt><dd>' + tiposAtivos + " ativos / " + tiposTotal + " no total</dd></div>" +
 			'<div><dt>Aceita doações</dt><dd>' + doacoes + "</dd></div>" +
 			"<div><dt>Limite de vendas</dt><dd>" + data + "</dd></div>";
+	}
+
+	function expectativaPublicoCenario() {
+		const fd = window._festaData || {};
+		const mapa = {
+			"Mínimo": fd.publicoMin,
+			"Intermediário": fd.publicoIntermediario,
+			"Máximo": fd.publicoMax,
+		};
+		const cenario = convitesDashboard.cenario_simulacao || "Intermediário";
+		return { cenario: cenario, esperado: Number(mapa[cenario] || 0) };
+	}
+
+	function renderConvitesKpis() {
+		const container = document.getElementById("convites-kpis");
+		if (!container) return;
+		const totais = convitesDashboard.totais || {};
+		const qtdMap = totais.qtd_por_opcao || {};
+		const valMap = totais.valor_por_opcao || {};
+		const totalVendidos = Object.keys(qtdMap).reduce(function (s, k) {
+			return s + Number(qtdMap[k] || 0);
+		}, 0);
+		let receitaTotal = Object.keys(valMap).reduce(function (s, k) {
+			return s + Number(valMap[k] || 0);
+		}, 0);
+		if (convitesDashboard.aceitar_doacoes) {
+			receitaTotal += Number(totais.total_doacoes_valor || 0);
+		}
+		const exp = expectativaPublicoCenario();
+		const taxa = exp.esperado > 0 ? (totalVendidos / exp.esperado) * 100 : null;
+		const taxaValor = taxa === null ? "—" : taxa.toFixed(1) + "%";
+		const taxaHint = exp.esperado > 0
+			? fmtInt(totalVendidos) + " de " + fmtInt(exp.esperado) + " esperados (cenário " + escapeHtml(exp.cenario) + ")"
+			: "Defina a expectativa de público do cenário";
+		container.innerHTML =
+			'<div class="festa-kpi-item">' +
+				'<span class="festa-kpi-label">Convites vendidos</span>' +
+				'<span class="festa-kpi-value">' + fmtInt(totalVendidos) + "</span>" +
+			"</div>" +
+			'<div class="festa-kpi-item">' +
+				'<span class="festa-kpi-label">Receita arrecadada</span>' +
+				'<span class="festa-kpi-value">' + fmtMoeda(receitaTotal) + "</span>" +
+			"</div>" +
+			'<div class="festa-kpi-item">' +
+				'<span class="festa-kpi-label">Taxa vs. expectativa</span>' +
+				'<span class="festa-kpi-value">' + taxaValor + "</span>" +
+				'<span class="festa-kpi-hint">' + taxaHint + "</span>" +
+			"</div>";
+	}
+
+	function renderConvitesRamoMetaTable() {
+		const container = document.getElementById("convites-ramo-meta-table");
+		if (!container) return;
+		if (!convitesDashboard.convites_por_ramo) {
+			container.innerHTML = "";
+			return;
+		}
+		const porRamo = convitesDashboard.por_ramo || {};
+		const linhas = RAMOS_ORDEM
+			.map(function (ramo) {
+				const info = porRamo[ramo] || {};
+				return {
+					ramo: ramo,
+					vendidos: Number(info.qtd_vendida || 0),
+					meta: Number(info.qtd_esperada || 0),
+					beneficiarios: Number(info.beneficiarios_ativos || 0),
+				};
+			})
+			.filter(function (r) { return r.meta > 0 || r.vendidos > 0 || r.beneficiarios > 0; });
+		if (!linhas.length) {
+			container.innerHTML = '<p class="text-sm text-muted-foreground">Nenhuma meta por ramo definida ainda.</p>';
+			return;
+		}
+		const metaCell = function (vendidos, meta) {
+			if (meta <= 0) return "<td>—</td>";
+			const pct = (vendidos / meta) * 100;
+			const cls = pct >= 100 ? "festa-cenarios-cell--success" : "festa-cenarios-cell--danger";
+			return '<td class="' + cls + '">' + pct.toFixed(1) + "%</td>";
+		};
+		let totalVend = 0, totalMeta = 0;
+		let html = '<table class="festa-cenarios-table"><thead><tr>';
+		html += "<th>Ramo</th><th>Vendidos</th><th>Meta</th><th>% da meta</th><th>Faltam</th>";
+		html += "</tr></thead><tbody>";
+		linhas.forEach(function (r) {
+			totalVend += r.vendidos;
+			totalMeta += r.meta;
+			const faltam = Math.max(r.meta - r.vendidos, 0);
+			html += "<tr>";
+			html += '<td class="festa-cenarios-label">' + escapeHtml(r.ramo) + "</td>";
+			html += "<td>" + fmtInt(r.vendidos) + "</td>";
+			html += "<td>" + fmtInt(r.meta) + "</td>";
+			html += metaCell(r.vendidos, r.meta);
+			html += "<td>" + fmtInt(faltam) + "</td>";
+			html += "</tr>";
+		});
+		const totalFaltam = Math.max(totalMeta - totalVend, 0);
+		html += '<tr class="festa-cenarios-row--total">';
+		html += '<td class="festa-cenarios-label">Total</td>';
+		html += "<td>" + fmtInt(totalVend) + "</td>";
+		html += "<td>" + fmtInt(totalMeta) + "</td>";
+		html += metaCell(totalVend, totalMeta);
+		html += "<td>" + fmtInt(totalFaltam) + "</td>";
+		html += "</tr>";
+		html += "</tbody></table>";
+		container.innerHTML = html;
 	}
 
 	function renderConvitesBarras() {
@@ -3064,6 +3170,18 @@
 					};
 				});
 			}
+			const acumulado = convitesLinhaAcum === "acumulado";
+			if (acumulado) {
+				series = series.map(function (s) {
+					let soma = 0;
+					return Object.assign({}, s, {
+						data: (s.data || []).map(function (v) {
+							soma += Number(v || 0);
+							return soma;
+						}),
+					});
+				});
+			}
 			chartLinhaInstance.setOption({
 				aria: { enabled: true },
 				color: CHART_PALETTE,
@@ -3080,7 +3198,7 @@
 				},
 				yAxis: {
 					type: "value",
-					name: "Convites",
+					name: acumulado ? "Convites (acumulado)" : "Convites",
 					nameLocation: "middle",
 					nameGap: 40,
 					nameRotate: 90,
@@ -3472,8 +3590,10 @@
 		window._festaData.convitesDashboard = payload;
 		opcaoLocalList = (convitesDashboard.opcoes || []).slice();
 		renderConvitesConfigSummary();
+		renderConvitesKpis();
 		renderConvitesBarras();
 		renderChartConvitesPorRamo();
+		renderConvitesRamoMetaTable();
 		renderConvitesLinha();
 		renderConvitesTable();
 		renderOpcoesTable();
@@ -3482,6 +3602,8 @@
 	function initConvitesTab() {
 		opcaoLocalList = (convitesDashboard.opcoes || []).slice();
 		renderConvitesConfigSummary();
+		renderConvitesKpis();
+		renderConvitesRamoMetaTable();
 		renderConvitesTable();
 		renderOpcoesTable();
 
@@ -3532,6 +3654,15 @@
 			btn.addEventListener("click", function () {
 				convitesLinhaMode = btn.getAttribute("data-mode");
 				document.querySelectorAll('[data-chart="linha"]').forEach(function (b) {
+					b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+				});
+				renderConvitesLinha();
+			});
+		});
+		document.querySelectorAll('[data-chart="linha-acum"]').forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				convitesLinhaAcum = btn.getAttribute("data-mode");
+				document.querySelectorAll('[data-chart="linha-acum"]').forEach(function (b) {
 					b.setAttribute("aria-pressed", b === btn ? "true" : "false");
 				});
 				renderConvitesLinha();
@@ -3688,6 +3819,7 @@
 					Promise.all(tarefas)
 						.then(function () {
 							renderConvitesConfigSummary();
+							renderConvitesKpis();
 							renderConvitesBarras();
 							toast("Configurações salvas.", "success");
 							dlg.close();

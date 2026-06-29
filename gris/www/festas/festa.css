@@ -115,6 +115,45 @@
 	margin: 0;
 }
 
+/* ─── KPIs de convites ────────────────────────────────────────────────── */
+
+.festa-kpi-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+	gap: 1rem;
+	margin: 0;
+}
+
+.festa-kpi-item {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	padding: 1rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--card);
+}
+
+.festa-kpi-label {
+	font-size: 0.75rem;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--muted-foreground);
+}
+
+.festa-kpi-value {
+	font-size: var(--text-2xl);
+	line-height: 1.2;
+	font-weight: 600;
+	color: var(--foreground);
+}
+
+.festa-kpi-hint {
+	font-size: 0.75rem;
+	color: var(--muted-foreground);
+}
+
 /* ─── Estimativas grid ────────────────────────────────────────────────── */
 
 .festa-estimativas-grid {
@@ -649,6 +688,18 @@
 .festa-convites-chart-toggle [aria-pressed="true"] {
 	background: var(--primary);
 	color: var(--primary-foreground);
+}
+
+.festa-convites-toggle-wrap {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.festa-convites-toggle-wrap .btn-group [aria-pressed="true"] {
+	background: var(--primary);
+	color: var(--primary-foreground);
+	border-color: var(--primary);
 }
 
 .dialog-convites-config > div {

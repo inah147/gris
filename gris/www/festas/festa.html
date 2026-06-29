@@ -556,6 +556,17 @@ window._festaData = {
 	<div id="convites-config-summary" class="festa-info-grid"></div>
 	{% endcall %}
 
+	{# Seção — KPIs de desempenho de vendas #}
+	{% call card(attrs={"class": "festa-card"}) %}
+	<div class="festa-card__header">
+		<div>
+			<h2 class="festa-card__title">Desempenho de vendas</h2>
+			<p class="festa-card__subtitle">Convites vendidos, receita arrecadada e taxa frente à expectativa do cenário.</p>
+		</div>
+	</div>
+	<div id="convites-kpis" class="festa-kpi-grid"></div>
+	{% endcall %}
+
 	{# Seção — Gráfico de barras (qtd/valor por opção) #}
 	{% call card(attrs={"class": "festa-card"}) %}
 	<div class="festa-card__header">
@@ -581,6 +592,7 @@ window._festaData = {
 			</div>
 		</div>
 		<div id="chart-convites-por-ramo" class="festa-convites-chart"></div>
+		<div id="convites-ramo-meta-table" class="festa-cenarios-wrap"></div>
 		{% endcall %}
 	</div>
 
@@ -591,9 +603,15 @@ window._festaData = {
 			<h2 class="festa-card__title">Convites vendidos por dia</h2>
 			<p class="festa-card__subtitle">Tendência diária da venda de convites pagos.</p>
 		</div>
-		<div class="festa-convites-chart-toggle">
-			<button type="button" class="btn-sm-outline" data-chart="linha" data-mode="total" aria-pressed="true">Total</button>
-			<button type="button" class="btn-sm-outline" data-chart="linha" data-mode="por_opcao" aria-pressed="false">Por convite</button>
+		<div class="festa-convites-toggle-wrap">
+			<div class="btn-group" role="group" aria-label="Modo de série">
+				<button type="button" class="btn-sm-outline" data-chart="linha" data-mode="total" aria-pressed="true">Total</button>
+				<button type="button" class="btn-sm-outline" data-chart="linha" data-mode="por_opcao" aria-pressed="false">Por convite</button>
+			</div>
+			<div class="btn-group" role="group" aria-label="Acumulação">
+				<button type="button" class="btn-sm-outline" data-chart="linha-acum" data-mode="diario" aria-pressed="true">Diário</button>
+				<button type="button" class="btn-sm-outline" data-chart="linha-acum" data-mode="acumulado" aria-pressed="false">Acumulado</button>
+			</div>
 		</div>
 	</div>
 	<div id="chart-convites-linha" class="festa-convites-chart"></div>

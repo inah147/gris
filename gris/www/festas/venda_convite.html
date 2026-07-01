@@ -8,10 +8,11 @@
 
 {% block title %}Comprar convites{% endblock %}
 
-{% block head_include %}
-{{ super() }}
-<link rel="stylesheet" href="/festas/venda_convite.css" />
-{% endblock %}
+{# O CSS e o JS co-localizados (venda_convite.css / venda_convite.js) são
+   injetados AUTOMATICAMENTE pelo Frappe (colocated_css/colocated_js em
+   frappe/templates/base.html). NÃO referenciar manualmente com <link>/<script>:
+   isso carrega o arquivo em DUPLICIDADE e faz o script rodar duas vezes, com
+   estados independentes disputando o mesmo botão/UI. #}
 
 {% block page_content %}
 <div class="vc-page">
@@ -287,5 +288,4 @@ window._vendaConvite = {
 
 </div>
 
-<script src="/festas/venda_convite.js"></script>
 {% endblock %}

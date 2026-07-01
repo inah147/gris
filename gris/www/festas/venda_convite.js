@@ -421,6 +421,9 @@
 		const telWrap = document.getElementById("vc-pagador-telefone");
 		if (telWrap) {
 			telWrap.addEventListener("phone-input:change", atualizarBotaoContinuarPedido);
+			// Revalida quando o phone-input termina de inicializar (a ordem de boot
+			// entre este script e o design system não é garantida).
+			telWrap.addEventListener("basecoat:initialized", atualizarBotaoContinuarPedido);
 			const hidden = telWrap.querySelector("[data-phone-input-value]");
 			if (hidden) hidden.addEventListener("change", atualizarBotaoContinuarPedido);
 			const numero = telWrap.querySelector("[data-phone-input-number]");
@@ -453,6 +456,10 @@
 				atualizarLinhasDoacao();
 			});
 		});
+
+		// Estado inicial: reflete valores já presentes (autofill/restauração) sem
+		// depender de um primeiro evento de input do usuário.
+		atualizarBotaoContinuarPedido();
 	}
 
 	// ─── Aba Convidados ─────────────────────────────────────────────────────

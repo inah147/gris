@@ -11,10 +11,7 @@
 
 {% set active_link = "/festas" %}
 
-{% block head_include %}
-{{ super() }}
-<link rel="stylesheet" href="/festas/portaria.css" />
-{% endblock %}
+{# portaria.css/.js são injetados automaticamente pelo Frappe (colocated). Não referenciar manualmente: duplica o carregamento. #}
 
 {% block page_header %}
 <div class="portaria-page-header">

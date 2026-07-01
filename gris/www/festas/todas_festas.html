@@ -6,10 +6,7 @@
 
 {% set active_link = "/festas/todas_festas" %}
 
-{% block head_include %}
-{{ super() }}
-<link rel="stylesheet" href="/festas/todas_festas.css" />
-{% endblock %}
+{# todas_festas.css/.js são injetados automaticamente pelo Frappe (colocated). Não referenciar manualmente: duplica o carregamento. #}
 
 {% block page_header %}
 <div class="page-header-row">

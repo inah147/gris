@@ -4,10 +4,7 @@
 
 {% block title %}Pagamento confirmado{% endblock %}
 
-{% block head_include %}
-{{ super() }}
-<link rel="stylesheet" href="/festas/convite_confirmado.css" />
-{% endblock %}
+{# convite_confirmado.css/.js são injetados automaticamente pelo Frappe (colocated). Não referenciar manualmente: duplica o carregamento. #}
 
 {% block page_content %}
 <div class="cc-page" data-estado="{{ estado }}" data-convite="{{ convite_name }}" data-token="{{ convite_token }}">
@@ -56,7 +53,7 @@
 			<div class="cc-orientacoes">
 				{% if pagador_recebe_qr_codes %}
 				{% set descricao_html %}
-					Todos os convites foram enviados para <strong>{{ email_pagador_mascarado }}</strong>.
+					Todos os convites foram enviados para <strong>{{ email_pagador_mascarado }}</strong>
 					Apresente-os impressos ou no celular na entrada da festa.
 				{% endset %}
 				{{ alert(
@@ -141,5 +138,5 @@
 
 </div>
 
-<script src="/festas/convite_confirmado.js" defer></script>
+{# convite_confirmado.js é injetado automaticamente pelo Frappe (colocated). #}
 {% endblock %}

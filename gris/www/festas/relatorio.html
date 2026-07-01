@@ -26,11 +26,7 @@
 
 {% set active_link = "/festas" %}
 
-{% block head_include %}
-{{ super() }}
-<link rel="stylesheet" href="/festas/relatorio.css" />
-<script src="/festas/relatorio.js" defer></script>
-{% endblock %}
+{# relatorio.css/.js são injetados automaticamente pelo Frappe (colocated). Não referenciar manualmente: duplica o carregamento (roda o script 2x). #}
 
 {% block page_header %}
 <div class="rel-header">

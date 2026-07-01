@@ -17,7 +17,7 @@
 
 {% block head_include %}
 {{ super() }}
-<link rel="stylesheet" href="/festas/festa.css" />
+{# festa.css/.js são injetados automaticamente pelo Frappe (colocated) — não referenciar manualmente. Abaixo apenas assets de OUTROS arquivos (não co-localizados a esta página). #}
 <link rel="stylesheet" href="/festas/festa_avaliacoes.css" />
 <script src="/assets/gris/design_system/js/components/toastui-editor.js?v={{ design_system_asset_version }}" defer></script>
 <script src="/festas/festa_avaliacoes.js" defer></script>

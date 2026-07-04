@@ -3683,6 +3683,16 @@
 			});
 		}
 
+		// Exportação da tabela de pedidos de convite em Excel (disponível para todos
+		// que enxergam a aba; é um download somente leitura).
+		document.querySelectorAll("[data-action='exportar-convites-xlsx']").forEach(function (btn) {
+			btn.addEventListener("click", function () {
+				const url = "/api/method/gris.api.festas.convites.export_convites_excel?festa_name="
+					+ encodeURIComponent(festaName);
+				window.open(url, "_blank");
+			});
+		});
+
 		if (!canEdit) return;
 
 		const dlg = document.getElementById("dialog-convites-config");

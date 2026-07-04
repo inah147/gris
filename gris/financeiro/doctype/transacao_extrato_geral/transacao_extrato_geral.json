@@ -1,6 +1,6 @@
 {
  "actions": [],
- "allow_import": 0,
+ "allow_import": 1,
  "allow_rename": 1,
  "autoname": "field:id",
  "creation": "2025-09-17 08:58:10.200080",

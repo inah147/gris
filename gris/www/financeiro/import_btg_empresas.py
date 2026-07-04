@@ -95,11 +95,7 @@ def process_uploaded_btg_file(file_url):
 						"tipo": row.get("type"),
 					}
 				)
-				frappe.flags.via_integracao_carteira = True
-				try:
-					doc.insert(ignore_permissions=False)
-				finally:
-					frappe.flags.via_integracao_carteira = False
+				doc.insert(ignore_permissions=False)
 				stats["inserted"] += 1
 		except Exception as e:
 			stats["failed"] += 1

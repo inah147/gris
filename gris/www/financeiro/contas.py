@@ -325,11 +325,7 @@ def process_uploaded_files(extrato_file_url, vendas_file_url, recebimentos_file_
 							"transacao_revisada": 0,
 						}
 					)
-					frappe.flags.via_integracao_carteira = True
-					try:
-						doc.insert(ignore_permissions=False)
-					finally:
-						frappe.flags.via_integracao_carteira = False
+					doc.insert(ignore_permissions=False)
 					stats["geral"]["inserted"] += 1
 			except Exception as e:
 				stats["geral"]["failed"] += 1

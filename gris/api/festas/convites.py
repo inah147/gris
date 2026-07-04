@@ -343,6 +343,80 @@ def get_dashboard(festa_name: str) -> dict:
 	return build_dashboard(festa_name)
 
 
+@frappe.whitelist()
+def export_convites_excel(festa_name: str) -> None:
+	"""Exporta a tabela "Pedidos de convite" da festa em um arquivo Excel (.xlsx).
+
+	Gera uma linha por pedido (mesma visão da aba Convites), com todos os status.
+	"""
+	import io
+
+	from openpyxl import Workbook
+	from openpyxl.styles import Alignment, Font, PatternFill
+	from openpyxl.utils import get_column_letter
+
+	if not festa_name:
+		frappe.throw("Parâmetro 'festa_name' obrigatório.")
+	if not frappe.has_permission("Festa", "read", festa_name):
+		frappe.throw("Sem permissão para acessar esta festa.", frappe.PermissionError)
+	_validate_festa(festa_name)
+
+	dashboard = build_dashboard(festa_name)
+	linhas = dashboard.get("convites") or []
+
+	colunas = [
+		("Pagador", 32),
+		("E-mail", 32),
+		("Tipo de convite", 30),
+		("Qtd.", 8),
+		("Valor (R$)", 14),
+		("Status", 14),
+		("Data do pedido", 20),
+	]
+
+	wb = Workbook()
+	ws = wb.active
+	ws.title = "Pedidos de convite"
+
+	header_font = Font(bold=True, color="FFFFFF")
+	header_fill = PatternFill(start_color="0D4D91", end_color="0D4D91", fill_type="solid")
+	center = Alignment(horizontal="center", vertical="center")
+
+	for idx, (titulo, largura) in enumerate(colunas, start=1):
+		cell = ws.cell(row=1, column=idx, value=titulo)
+		cell.font = header_font
+		cell.fill = header_fill
+		cell.alignment = center
+		ws.column_dimensions[get_column_letter(idx)].width = largura
+
+	for ri, row in enumerate(linhas, start=2):
+		creation = row.get("creation") or ""
+		data_pedido = ""
+		if creation:
+			try:
+				data_pedido = frappe.utils.format_datetime(creation, "dd/MM/yyyy HH:mm")
+			except Exception:
+				data_pedido = creation
+		ws.cell(row=ri, column=1, value=row.get("nome_pagador") or "")
+		ws.cell(row=ri, column=2, value=row.get("email_pagador") or "")
+		ws.cell(row=ri, column=3, value=row.get("tipo_convite") or "")
+		ws.cell(row=ri, column=4, value=int(row.get("quantidade") or 0)).alignment = center
+		ws.cell(row=ri, column=5, value=flt(row.get("valor"))).number_format = "#,##0.00"
+		ws.cell(row=ri, column=6, value=row.get("status_pagamento") or "Pendente")
+		ws.cell(row=ri, column=7, value=data_pedido)
+
+	ws.freeze_panes = "A2"
+
+	out = io.BytesIO()
+	wb.save(out)
+	out.seek(0)
+
+	nome_festa = frappe.db.get_value("Festa", festa_name, "nome_festa") or festa_name
+	frappe.local.response.filename = f"pedidos-de-convite-{frappe.scrub(nome_festa)}.xlsx"
+	frappe.local.response.filecontent = out.read()
+	frappe.local.response.type = "download"
+
+
 # ---------------------------------------------------------------------------
 # Configurações da festa (switch + data limite)
 # ---------------------------------------------------------------------------

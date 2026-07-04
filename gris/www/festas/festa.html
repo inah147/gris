@@ -624,6 +624,16 @@ window._festaData = {
 			<h2 class="festa-card__title">Pedidos de convite</h2>
 			<p class="festa-card__subtitle">Uma linha por item de convite (todos os status).</p>
 		</div>
+		<div class="festa-card__header-actions">
+			<button
+				type="button"
+				class="btn-sm-outline"
+				data-action="exportar-convites-xlsx"
+			>
+				{{ lucide_icon("file-spreadsheet", size="sm") }}
+				<span>Exportar Excel</span>
+			</button>
+		</div>
 	</div>
 	<div id="convites-table-container"></div>
 	{% endcall %}

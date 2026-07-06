@@ -73,6 +73,25 @@ def _get_festa(festa_name: str):
 	return frappe.get_doc("Festa", festa_name)
 
 
+def _pode_enviar_convidados(festa_doc) -> bool:
+	"""O envio de avaliação aos convidados só fica disponível a partir do dia seguinte à festa."""
+	if not festa_doc.data:
+		return False
+	return frappe.utils.getdate() > frappe.utils.getdate(festa_doc.data)
+
+
+def _whatsapp_integracao_ativa() -> bool:
+	"""True se a integração de WhatsApp está habilitada e configurada (não lança)."""
+	from gris.utils.whatsapp import _get_config
+	from gris.utils.whatsapp_errors import WhatsAppConfigurationError
+
+	try:
+		_get_config()
+		return True
+	except WhatsAppConfigurationError:
+		return False
+
+
 def _get_avaliacao_for_festa(festa_name: str):
 	name = frappe.db.get_value("Avaliacao Festa", {"festa": festa_name}, "name")
 	return frappe.get_doc("Avaliacao Festa", name) if name else None
@@ -133,6 +152,32 @@ def _collect_festa_team(festa_doc) -> list[dict[str, str]]:
 				add(membro.nome, membro.email, membro.telefone)
 
 	return team
+
+
+def _telefones_equipe_festa(festa_doc) -> set[str]:
+	"""Telefones (normalizados) de todos os envolvidos na organização da festa.
+
+	Coordenador geral, coordenadores e membros das equipes de área e de barraca — usado
+	para que a equipe não receba a mensagem de avaliação destinada aos convidados.
+	"""
+	from gris.utils.whatsapp import _normalize_phone
+
+	telefones: set[str] = set()
+
+	def add(telefone: str) -> None:
+		telefone = (telefone or "").strip()
+		if telefone:
+			telefones.add(_normalize_phone(telefone))
+
+	add(festa_doc.telefone_coord_geral)
+	for doctype in ("Area da Festa", "Barraca da Festa"):
+		for ref in frappe.get_all(doctype, filters={"festa": festa_doc.name}, fields=["name"]):
+			grupo = frappe.get_doc(doctype, ref.name)
+			add(grupo.telefone_coord)
+			for membro in grupo.equipe or []:
+				add(membro.telefone)
+
+	return telefones
 
 
 def _send_whatsapp(numero: str, mensagem: str, *, contexto: str) -> bool:
@@ -331,14 +376,81 @@ def gerar_pdf_qr_convidados(festa_name: str) -> None:
 
 
 @frappe.whitelist()
+def enviar_avaliacao_convidados_whatsapp(festa_name: str) -> dict[str, Any]:
+	"""Envia o link de avaliação de convidados por WhatsApp.
+
+	Alcança apenas convidados que compraram ingresso E entraram na festa (registro em
+	Lista Entrada Festa com status "Entrou") e que tenham telefone próprio preenchido.
+	Os telefones são deduplicados (um envio por número único). Disponível somente a
+	partir do dia seguinte à festa.
+	"""
+	from gris.festas.doctype.lista_entrada_festa.lista_entrada_festa import STATUS_ENTROU
+	from gris.utils.whatsapp import _get_config, _normalize_phone
+	from gris.utils.whatsapp_errors import WhatsAppConfigurationError
+
+	_ensure_gestor()
+	festa_doc = _get_festa(festa_name)
+	if not _pode_enviar_convidados(festa_doc):
+		frappe.throw(_("O envio só fica disponível a partir do dia seguinte à festa."))
+
+	# Falha cedo se a integração estiver desabilitada/mal configurada — assim o gestor
+	# recebe o motivo real em vez de um "envio iniciado" que nunca é entregue (o envio
+	# real roda em background e só valida a config dentro do worker).
+	try:
+		_get_config()
+	except WhatsAppConfigurationError as exc:
+		frappe.throw(str(exc))
+
+	avaliacao_doc = ensure_avaliacao_festa(festa_name)
+	link = _public_link(avaliacao_doc)
+
+	rows = frappe.get_all(
+		"Lista Entrada Festa",
+		filters={"festa": festa_name, "status": STATUS_ENTROU},
+		fields=["telefone"],
+	)
+
+	equipe_telefones = _telefones_equipe_festa(festa_doc)
+	vistos: set[str] = set()
+	telefones: list[str] = []
+	for r in rows:
+		bruto = (r.telefone or "").strip()
+		if not bruto:
+			continue
+		chave = _normalize_phone(bruto)
+		if chave in equipe_telefones or chave in vistos:
+			continue
+		vistos.add(chave)
+		telefones.append(bruto)
+
+	festa_titulo = festa_doc.nome_festa or festa_doc.name
+	mensagem = (
+		f"Olá! Ficamos muito felizes em ter recebido você na festa *{festa_titulo}*! 🎉\n\n"
+		"Gostaríamos muito de saber a sua opinião sobre como foi. "
+		"É bem rapidinho, é só acessar o link abaixo:\n"
+		f"{link}\n\n"
+		"Muito obrigado por contribuir para melhorarmos nossas festas!"
+	)
+
+	enviados = 0
+	for numero in telefones:
+		if _send_whatsapp(numero, mensagem, contexto=f"avaliacao_convidados:{festa_name}"):
+			enviados += 1
+
+	return {"ok": True, "enviados": enviados, "total_telefones": len(telefones)}
+
+
+@frappe.whitelist()
 def get_festa_avaliacao_data(festa_name: str) -> dict[str, Any]:
 	"""Retorna os dados da aba de avaliação (carregado sob demanda na abertura da aba).
 
 	A coleta de convidados (link público + QR) está disponível desde a criação da
 	festa; a avaliação da equipe só começa quando o gestor a inicia.
 	"""
-	_get_festa(festa_name)
+	festa_doc = _get_festa(festa_name)
 	can_edit = _can_edit()
+	can_send_convidados = can_edit and _pode_enviar_convidados(festa_doc)
+	whatsapp_integracao_ativa = can_edit and _whatsapp_integracao_ativa()
 	avaliacao_doc = _get_avaliacao_for_festa(festa_name)
 	if not avaliacao_doc and can_edit:
 		avaliacao_doc = ensure_avaliacao_festa(festa_name)
@@ -351,6 +463,8 @@ def get_festa_avaliacao_data(festa_name: str) -> dict[str, Any]:
 			"can_edit": False,
 			"can_start_evaluation": False,
 			"can_edit_general": False,
+			"can_send_convidados_whatsapp": False,
+			"whatsapp_integracao_ativa": False,
 			"public_link": "",
 			"public_link_qr": "",
 		}
@@ -363,6 +477,8 @@ def get_festa_avaliacao_data(festa_name: str) -> dict[str, Any]:
 		"can_edit": can_edit,
 		"can_start_evaluation": can_edit and not team_started,
 		"can_edit_general": can_edit and team_started,
+		"can_send_convidados_whatsapp": can_send_convidados,
+		"whatsapp_integracao_ativa": whatsapp_integracao_ativa,
 		"public_link": _public_link(avaliacao_doc),
 		"public_link_qr": _public_link_qr(avaliacao_doc),
 	}

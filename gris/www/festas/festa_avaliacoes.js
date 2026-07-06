@@ -10,6 +10,7 @@
         reenviar: "gris.api.festas.avaliacao.reenviar_email_avaliacao_festa",
         salvarGeral: "gris.api.festas.avaliacao.salvar_avaliacao_geral_festa",
         consultarResumo: "gris.api.festas.avaliacao.consultar_resumo_avaliacao_festa",
+        enviarConvidadosWhatsapp: "gris.api.festas.avaliacao.enviar_avaliacao_convidados_whatsapp",
     };
 
     var RESUMO_CONFIG = {
@@ -57,6 +58,51 @@
                 detail: { config: { category: category || "info", description: message, duration: 3500 } },
             })
         );
+    }
+
+    function confirmDialog(opts) {
+        opts = opts || {};
+        return new Promise(function (resolve) {
+            var dlg = $("confirm-dialog");
+            if (!dlg || typeof dlg.showModal !== "function") {
+                resolve(window.confirm(opts.message || opts.title || "Confirmar?"));
+                return;
+            }
+            var titleEl = dlg.querySelector("header h2");
+            var messageEl = dlg.querySelector("#confirm-dialog-message");
+            var okBtn = dlg.querySelector("#confirm-dialog-ok");
+            var cancelBtn = dlg.querySelector("#confirm-dialog-cancel");
+            if (titleEl) titleEl.textContent = opts.title || "Confirmar ação";
+            if (messageEl) messageEl.textContent = opts.message || "Tem certeza?";
+            if (okBtn) {
+                okBtn.textContent = opts.confirmLabel || "Confirmar";
+                okBtn.className = opts.variant === "primary" ? "btn-primary" : "btn-destructive";
+            }
+
+            function cleanup() {
+                if (okBtn) okBtn.removeEventListener("click", onOk);
+                if (cancelBtn) cancelBtn.removeEventListener("click", onCancel);
+                dlg.removeEventListener("close", onClose);
+            }
+            function onOk() {
+                cleanup();
+                dlg.close("confirm");
+                resolve(true);
+            }
+            function onCancel() {
+                cleanup();
+                dlg.close("cancel");
+                resolve(false);
+            }
+            function onClose() {
+                cleanup();
+                if (dlg.returnValue !== "confirm") resolve(false);
+            }
+            if (okBtn) okBtn.addEventListener("click", onOk);
+            if (cancelBtn) cancelBtn.addEventListener("click", onCancel);
+            dlg.addEventListener("close", onClose);
+            dlg.showModal();
+        });
     }
 
     function markdownToHtml(value) {
@@ -207,6 +253,12 @@
 
         var qr = $("avaliacaoPublicQr");
         if (qr) qr.src = data.public_link_qr || "";
+
+        var btnWa = $("btnEnviarWhatsappConvidados");
+        if (btnWa) {
+            show(btnWa, !!data.whatsapp_integracao_ativa);
+            btnWa.disabled = !data.can_send_convidados_whatsapp;
+        }
 
         if ($("avaliacaoMetricRecomendacao")) {
             $("avaliacaoMetricRecomendacao").textContent =
@@ -402,6 +454,34 @@
         window.open(url, "_blank");
     }
 
+    function enviarWhatsappConvidados() {
+        confirmDialog({
+            title: "Enviar avaliação por WhatsApp",
+            message: "Enviar a avaliação por WhatsApp para todos os convidados que entraram na festa?",
+            confirmLabel: "Enviar",
+            variant: "primary",
+        }).then(function (ok) {
+            if (!ok) return;
+            var btn = $("btnEnviarWhatsappConvidados");
+            if (btn) btn.disabled = true;
+            callApi(METHODS.enviarConvidadosWhatsapp, { festa_name: FESTA_NAME }).then(
+                function (r) {
+                    var enviados = r.enviados || 0;
+                    if (enviados > 0) {
+                        toast("Envio iniciado para " + enviados + " convidado(s).", "success");
+                    } else {
+                        toast("Nenhum convidado elegível para envio (com entrada, telefone e fora da equipe).", "info");
+                    }
+                    if (btn) btn.disabled = false;
+                },
+                function () {
+                    toast("Não foi possível enviar as mensagens.", "error");
+                    if (btn) btn.disabled = false;
+                }
+            );
+        });
+    }
+
     /* ── Binding ──────────────────────────────────────────────────────────── */
 
     function bind() {
@@ -423,6 +503,7 @@
             if (target.closest("#btnGerarResumoConvidados")) return gerarResumo("convidados");
             if (target.closest("#btnCopiarLinkConvidados")) return copiarLink();
             if (target.closest("#btnBaixarPdfQr")) return baixarPdfQr();
+            if (target.closest("#btnEnviarWhatsappConvidados")) return enviarWhatsappConvidados();
 
             var reenviar = target.closest("[data-reenviar-idx]");
             if (reenviar) return reenviarConvite(reenviar.getAttribute("data-reenviar-idx"));

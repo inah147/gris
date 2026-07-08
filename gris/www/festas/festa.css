@@ -875,6 +875,17 @@
 	border-bottom: 1px solid var(--border);
 }
 
+/* Badge de item de compra/contratação cancelado (não comprado) */
+.festa-badge-cancelado {
+	background-color: var(--destructive);
+	color: var(--destructive-foreground);
+}
+
+/* Botão "Remover item" no rodapé dos diálogos de fechamento: alinhado à esquerda */
+.festa-fechamento-remover {
+	margin-right: auto;
+}
+
 /* Lista de itens vinculados no dialog informativo de exclusão bloqueada */
 .festa-info-dialog-list {
 	margin: 0.75rem 0 0;

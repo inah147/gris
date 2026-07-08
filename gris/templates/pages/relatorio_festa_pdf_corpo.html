@@ -108,7 +108,7 @@
 	<tbody>
 		{% for c in linhas %}
 		<tr>
-			<td>{{ c.nome_item }}</td>
+			<td>{{ c.nome_item }}{% if c.cancelado %} <span class="badge badge--cancelado">Cancelado</span>{% endif %}</td>
 			<td class="num">{{ brl(c.valor_individual_orcado) }}</td>
 			<td class="num">{{ qty(c.qtd_orcada) }}</td>
 			<td class="num">{{ brl(c.valor_total_orcado) }}</td>
@@ -134,7 +134,7 @@
 	<tbody>
 		{% for c in linhas %}
 		<tr>
-			<td>{{ c.nome_item }}</td>
+			<td>{{ c.nome_item }}{% if c.cancelado %} <span class="badge badge--cancelado">Cancelado</span>{% endif %}</td>
 			<td class="num">{{ brl(c.valor_orcado) }}</td>
 			<td>{{ c.fornecedor_orcado }}</td>
 			<td class="num">{{ brl(c.valor_realizado) }}</td>
@@ -292,6 +292,8 @@
 			border-radius: 999px; padding: 1mm 3mm; font-size: 8.5pt; font-weight: 600; margin: 0 1.5mm 1.5mm 0; }
 		.badge { display: inline-block; background: linear-gradient(140deg, #4F39F6, #1231E4);
 			color: #fff; border-radius: 6px; padding: 1mm 3mm; font-size: 9pt; font-weight: 700; }
+		/* Item cancelado (não comprado): cor sólida (WeasyPrint 59 é instável com var() em gradiente). */
+		.badge--cancelado { background: #dc2626; font-size: 7pt; padding: 0.3mm 2mm; }
 		/* Mini-cards empilhados: um abaixo do outro, largura total (sem dividir
 		   colunas). Bloco em vez de flex — o flex do WeasyPrint 59 é instável. */
 		.cards--stack { display: block; }

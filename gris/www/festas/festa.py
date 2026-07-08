@@ -167,6 +167,7 @@ def _hydrate_compra(doc, produto_labels: dict[str, str]) -> dict:
 		"valor_total_realizado": flt(doc.valor_total_realizado),
 		"fornecedor_realizado": doc.fornecedor_realizado or "",
 		"observacoes_realizado": doc.observacoes_realizado or "",
+		"cancelado": bool(doc.cancelado),
 		# Cenários de compra
 		"qtd_sugerida_min": flt(doc.qtd_sugerida_min),
 		"valor_total_min": flt(doc.valor_total_min),
@@ -210,6 +211,7 @@ def _hydrate_contratacao(doc) -> dict:
 		"valor_total_realizado": flt(doc.valor_total_realizado),
 		"fornecedor_realizado": doc.fornecedor_realizado or "",
 		"observacoes_realizado": doc.observacoes_realizado or "",
+		"cancelado": bool(doc.cancelado),
 		"cotacoes": [_hydrate_cotacao_contratacao(c) for c in (doc.cotacoes or [])],
 	}
 

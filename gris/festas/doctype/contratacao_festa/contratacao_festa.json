@@ -17,7 +17,8 @@
   "realizado_section",
   "valor_total_realizado",
   "fornecedor_realizado",
-  "observacoes_realizado"
+  "observacoes_realizado",
+  "cancelado"
  ],
  "fields": [
   {
@@ -89,6 +90,12 @@
    "fieldname": "observacoes_realizado",
    "fieldtype": "Small Text",
    "label": "Observações"
+  },
+  {
+   "default": "0",
+   "fieldname": "cancelado",
+   "fieldtype": "Check",
+   "label": "Cancelado (não comprado)"
   }
  ],
  "grid_page_length": 50,

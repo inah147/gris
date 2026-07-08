@@ -112,6 +112,20 @@
    "role": "Equipe de Metodos",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "Editor Calendario",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "Gestor Calendario",
+   "write": 1
   }
  ],
  "row_format": "Dynamic",

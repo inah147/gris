@@ -35,10 +35,14 @@
 
   Eventos disparados (no elemento root):
     - "gris:calendar:event-click" → detail = { id, title, start, end, category, data }.
+    - "gris:calendar:day-click"   → detail = { date } (YYYY-MM-DD). Disparado ao
+        clicar no espaço vazio de um dia, em qualquer modo (mês, semana, lista).
 
   API pública (no elemento root):
     - el.events (getter/setter)              re-renderiza ao setar
     - el.activeCategories (getter/setter)    sincroniza categorias/filtros ativos
+    - el.setCategories([{name,label,color}]) substitui as categorias (recria os
+        filtros; novas categorias entram ativas) e re-renderiza
     - el.setMode("month" | "week" | "list")
     - el.setListVariant("default" | "category")
     - el.setListShowAllDays(boolean)

@@ -779,6 +779,7 @@
               isToday ? "calendar__week-day-column--today" : "",
             ].filter(Boolean).join(" "),
             style: { height: `${totalHeight}px` },
+            attrs: { "data-calendar-day": formatISODate(dayDate) },
           });
           for (let h = hourRange[0] + 1; h < hourRange[1]; h += 1) {
             dayCol.appendChild(el("div", {
@@ -861,6 +862,7 @@
               isWeekend ? "calendar__week-stacked-cell--weekend" : "calendar__week-stacked-cell--weekday",
               isToday ? "calendar__week-stacked-cell--today" : "",
             ].filter(Boolean).join(" "),
+            attrs: { "data-calendar-day": formatISODate(dayDate) },
           });
 
           const dayItems = stackedEvents
@@ -1168,14 +1170,18 @@
       });
     }
 
-    root.querySelectorAll("[data-calendar-filter]").forEach((cb) => {
-      cb.addEventListener("change", () => {
+    // Delegação no wrapper de filtros para sobreviver à recriação dos checkboxes
+    // quando `setCategories` é chamado (ex.: atualização in-place de eventos).
+    if (filtersWrap) {
+      filtersWrap.addEventListener("change", (event) => {
+        const cb = event.target.closest("[data-calendar-filter]");
+        if (!cb) return;
         if (cb.checked) activeCategories.add(cb.value);
         else activeCategories.delete(cb.value);
         updateFiltersCount();
         render();
       });
-    });
+    }
 
     const allBtn = root.querySelector("[data-calendar-filters-all]");
     const noneBtn = root.querySelector("[data-calendar-filters-none]");
@@ -1224,21 +1230,35 @@
     // Click delegation: dispatch CustomEvent
     body.addEventListener("click", (event) => {
       const card = event.target.closest("[data-calendar-event-id]");
-      if (!card) return;
-      const eventId = card.getAttribute("data-calendar-event-id");
-      const found = events.find((e) => String(e.id) === String(eventId));
-      if (!found) return;
-      root.dispatchEvent(new CustomEvent("gris:calendar:event-click", {
+      if (card) {
+        const eventId = card.getAttribute("data-calendar-event-id");
+        const found = events.find((e) => String(e.id) === String(eventId));
+        if (!found) return;
+        root.dispatchEvent(new CustomEvent("gris:calendar:event-click", {
+          bubbles: true,
+          detail: {
+            id: found.id,
+            title: found.title,
+            start: found.raw.start,
+            end: found.raw.end,
+            all_day: found.allDay,
+            category: found.category,
+            data: found.data,
+          },
+        }));
+        return;
+      }
+
+      // Clique em espaço vazio de um dia → dispara "day-click" com a data (YYYY-MM-DD).
+      // Ignora cliques dentro do popover "+N" (o botão "+N" já usa stopPropagation).
+      if (event.target.closest(".calendar__more-popover")) return;
+      const dayEl = event.target.closest("[data-calendar-day]");
+      if (!dayEl) return;
+      const date = dayEl.getAttribute("data-calendar-day");
+      if (!date) return;
+      root.dispatchEvent(new CustomEvent("gris:calendar:day-click", {
         bubbles: true,
-        detail: {
-          id: found.id,
-          title: found.title,
-          start: found.raw.start,
-          end: found.raw.end,
-          all_day: found.allDay,
-          category: found.category,
-          data: found.data,
-        },
+        detail: { date },
       }));
     });
 
@@ -1319,6 +1339,54 @@
 
     root.setActiveCategories = (names) => {
       root.activeCategories = names;
+    };
+
+    // Recria os checkboxes de filtro no popover a partir do array `categories`
+    // atual, preservando o estado (marcado/desmarcado) via `activeCategories`.
+    const rebuildFilterOptions = () => {
+      if (!filtersWrap) return;
+      const popover = filtersWrap.querySelector(".calendar__filters-popover");
+      if (!popover) return;
+      popover.querySelectorAll(".calendar__filter").forEach((node) => node.remove());
+      for (const cat of categories) {
+        const input = el("input", {
+          attrs: { type: "checkbox", "data-calendar-filter": "", value: cat.name },
+        });
+        input.checked = activeCategories.has(cat.name);
+        const swatch = el("span", {
+          class: "calendar__filter-swatch",
+          attrs: { "aria-hidden": "true" },
+          style: { "--cal-cat-color": cat.color || "var(--primary)" },
+        });
+        const label = el("span", { class: "calendar__filter-label", text: cat.label || cat.name });
+        popover.appendChild(el("label", { class: "calendar__filter" }, [input, swatch, label]));
+      }
+    };
+
+    root.setCategories = (nextCategories) => {
+      const list = Array.isArray(nextCategories)
+        ? nextCategories.filter((c) => c && c.name)
+        : [];
+      const previouslyKnown = new Set(categoryMap.keys());
+
+      categories.length = 0;
+      categoryMap.clear();
+      for (const cat of list) {
+        categories.push(cat);
+        categoryMap.set(cat.name, cat);
+      }
+
+      // Remove filtros ativos de categorias que sumiram; ativa as novas por padrão.
+      for (const name of Array.from(activeCategories)) {
+        if (!categoryMap.has(name)) activeCategories.delete(name);
+      }
+      for (const cat of list) {
+        if (!previouslyKnown.has(cat.name)) activeCategories.add(cat.name);
+      }
+
+      rebuildFilterOptions();
+      updateFiltersCount();
+      render();
     };
 
     root.goToDate = (iso) => {

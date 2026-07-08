@@ -3901,18 +3901,15 @@
 		if (!container) return;
 		if (!compras.length) { container.innerHTML = fechamentoEmpty("Nenhuma compra cadastrada."); return; }
 
-		var key = fechamentoCenarioKey();
 		var rows = compras.map(function (c, i) {
 			var tag = c.previsto === false ? ' <span class="badge">Sem previsão</span>' : "";
 			var cancelBadge = c.cancelado ? ' <span class="badge festa-badge-cancelado">Cancelado</span>' : "";
 			var detalhes = canEdit
 				? `<td class="festa-table-actions"><button type="button" class="btn-sm-outline" data-fechamento-compra="${i}">Detalhes</button></td>`
 				: "";
-			// Itens previstos: o valor cotado vem do cenário ativo (mesmo dado
-			// exibido no diálogo de detalhes). Sem previsão não tem orçamento.
-			var valorCotado = c.previsto !== false
-				? (Number(c["valor_total_" + key]) || 0)
-				: (Number(c.valor_total_compra) || 0);
+			// O valor cotado é o valor total de compra (mesmo dado exibido no
+			// diálogo de detalhes), independente do cenário de simulação.
+			var valorCotado = Number(c.valor_total_compra) || 0;
 			// "Quantidade de compra" é a contagem de cotações; o total previsto na
 			// unidade geral do produto = contagem × quantidade da cotação escolhida
 			// (convertida para a unidade geral). Mesmo cálculo da aba de compras.

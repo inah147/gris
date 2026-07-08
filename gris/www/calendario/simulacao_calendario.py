@@ -297,6 +297,75 @@ def _validate_activity_flags(sem_atividade, abertura_geral):
 
 
 @frappe.whitelist()
+def get_calendar_events(year=None):
+	"""Retorna os eventos serializados + categorias do calendário simulado do ano.
+
+	Usado para atualização in-place no cliente após criar/editar/excluir um evento,
+	evitando recarregar a página inteira. Espelha a montagem de `calendar_events` e
+	`calendar_categories` feita em `get_context`, reaproveitando os mesmos helpers de
+	serialização e cor para não haver divergência.
+	"""
+	try:
+		year = int(year)
+	except (ValueError, TypeError):
+		year = getdate(today()).year
+
+	if not frappe.has_permission("Calendario", "write"):
+		frappe.throw(_("Permissão negada"), frappe.PermissionError)
+
+	feriados = frappe.get_all(
+		"Feriados",
+		filters={"data": ["between", [f"{year}-01-01", f"{year}-12-31"]]},
+		fields=["nome", "data", "tipo", "descricao"],
+	)
+
+	events = frappe.get_all(
+		"Calendario Simulado",
+		filters={"inicio": ["<=", f"{year}-12-31 23:59:59"], "termino": [">=", f"{year}-01-01 00:00:00"]},
+		fields=[
+			"name",
+			"atividade",
+			"inicio",
+			"termino",
+			"secao",
+			"local",
+			"sem_atividade",
+			"abertura_geral",
+			"nivel",
+		],
+		order_by="inicio asc",
+	)
+
+	associados = frappe.get_all("Associado", fields=["secao", "ramo"], distinct=True)
+	section_ramo_map = {d.secao: d.ramo for d in associados if d.secao}
+
+	sections = {event.secao if event.secao else "Diretoria" for event in events}
+	ramo_order = ["Diretoria", "Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro"]
+	sorted_sections = sorted(
+		list(sections), key=lambda s: _get_section_sort_key(s, section_ramo_map, ramo_order)
+	)
+
+	section_colors = {s: _get_section_color(s, section_ramo_map) for s in sorted_sections}
+	categories = [{"name": s, "label": s, "color": section_colors[s]} for s in sorted_sections]
+	if feriados:
+		categories.append(
+			{"name": HOLIDAY_CATEGORY_NAME, "label": "Feriados", "color": HOLIDAY_CATEGORY_COLOR}
+		)
+
+	serialized_events = [
+		_serialize_simulated_event(event, section_colors.get(event.secao or "Diretoria", SECTION_COLOR_BY_RAMO["default"]))
+		for event in events
+	]
+	serialized_holidays = [_serialize_holiday_event(holiday) for holiday in feriados]
+	calendar_events = sorted(
+		serialized_events + serialized_holidays,
+		key=lambda item: (item.get("start") or "", item.get("title") or ""),
+	)
+
+	return {"events": calendar_events, "categories": categories}
+
+
+@frappe.whitelist()
 def get_reconciliation_data(year=None):
 	if not year:
 		year = getdate(today()).year

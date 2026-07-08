@@ -339,6 +339,7 @@ fixtures = [
 					"Acesso ao Desk",
 					"Visualizador Calendario",
 					"Gestor Calendario",
+					"Editor Calendario",
 					"Recepcao",
 					"Responsavel",
 					"Gestor de festas",

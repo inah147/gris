@@ -148,6 +148,45 @@ function reloadPage() {
     window.location.reload();
 }
 
+// Atualiza o calendário in-place após uma mutação (criar/editar/excluir), sem
+// recarregar a página: rebusca os eventos/categorias serializados do servidor e os
+// aplica ao componente, preservando a posição de scroll (a lista rola dentro de
+// `[data-calendar-body]`, não na janela). Se algo falhar, cai para o reload completo.
+function refreshCalendarEvents() {
+    const calendarRoot = document.getElementById("simulation-calendar");
+    if (!calendarRoot || typeof calendarRoot.setCategories !== "function") {
+        reloadPage();
+        return;
+    }
+
+    frappe.call({
+        method: "gris.www.calendario.simulacao_calendario.get_calendar_events",
+        args: { year: getSelectedYear() },
+        callback(result) {
+            const payload = result.message || {};
+            if (!Array.isArray(payload.events)) {
+                reloadPage();
+                return;
+            }
+
+            const calendarBody = calendarRoot.querySelector("[data-calendar-body]");
+            const bodyTop = calendarBody ? calendarBody.scrollTop : 0;
+            const windowY = window.scrollY || 0;
+
+            if (Array.isArray(payload.categories)) {
+                calendarRoot.setCategories(payload.categories);
+            }
+            calendarRoot.events = payload.events; // re-render síncrono
+
+            if (calendarBody) calendarBody.scrollTop = bodyTop;
+            window.scrollTo(0, windowY);
+        },
+        error() {
+            reloadPage();
+        },
+    });
+}
+
 function applySemAtividadeState(checkboxEl, localEl, levelFieldId) {
     const isSemAtividade = checkboxEl ? checkboxEl.checked : false;
     if (localEl) {
@@ -338,6 +377,12 @@ function resetNewEventForm(defaultDate, selectedSection) {
     applyAberturaGeralState(aberturaGeralInput, atividadeInput);
 }
 
+function openNewEventDialogForDate(date) {
+    if (!document.getElementById("new-activity-modal")) return;
+    resetNewEventForm(date || getDefaultEventDate(), null);
+    openDialogById("new-activity-modal");
+}
+
 function initNewEventDialog() {
     const dialog = document.getElementById("new-activity-modal");
     if (!dialog) return;
@@ -360,8 +405,7 @@ function initNewEventDialog() {
     });
 
     newEventButton?.addEventListener("click", () => {
-        resetNewEventForm(getDefaultEventDate(), null);
-        openDialogById("new-activity-modal");
+        openNewEventDialogForDate(getDefaultEventDate());
     });
 
     cancelButton?.addEventListener("click", () => closeDialogById("new-activity-modal"));
@@ -404,7 +448,7 @@ function initNewEventDialog() {
                 if (result.message?.success) {
                     closeDialogById("new-activity-modal");
                     frappe.show_alert({ message: result.message.message, indicator: "green" });
-                    reloadPage();
+                    refreshCalendarEvents();
                     return;
                 }
                 showApiError(result, "Erro ao criar o evento simulado.");
@@ -500,7 +544,7 @@ function initEditEventDialog() {
                 if (result.message?.success) {
                     closeDialogById("edit-activity-modal");
                     frappe.show_alert({ message: result.message.message, indicator: "green" });
-                    reloadPage();
+                    refreshCalendarEvents();
                     return;
                 }
                 showApiError(result, "Erro ao atualizar o evento.");
@@ -558,7 +602,7 @@ function initDeleteEventDialog() {
             callback(result) {
                 if (result.message?.success) {
                     frappe.show_alert({ message: result.message.message, indicator: "green" });
-                    reloadPage();
+                    refreshCalendarEvents();
                     return;
                 }
                 showApiError(result, "Erro ao excluir o evento.");
@@ -588,6 +632,14 @@ function initCalendarInteractions() {
         if (data.event_type === "simulation" && document.getElementById("edit-activity-modal")) {
             openEditDialog(data);
         }
+    });
+
+    // Clique em espaço vazio de um dia (qualquer visualização) abre o diálogo de
+    // novo evento já com a data clicada preenchida.
+    calendarRoot.addEventListener("gris:calendar:day-click", (event) => {
+        const date = event.detail?.date;
+        if (!date) return;
+        openNewEventDialogForDate(date);
     });
 }
 

@@ -325,7 +325,7 @@
 			<tbody>
 				{% for c in compras %}
 				<tr>
-					<td>{{ c.nome_item }}</td>
+					<td>{{ c.nome_item }}{% if c.cancelado %} <span class="rel-badge rel-badge--cancelado">Cancelado</span>{% endif %}</td>
 					<td class="rel-num">{{ brl(c.valor_individual_orcado) }}</td>
 					<td class="rel-num">{{ qty(c.qtd_orcada) }}</td>
 					<td class="rel-num">{{ brl(c.valor_total_orcado) }}</td>
@@ -368,7 +368,7 @@
 			<tbody>
 				{% for c in contratacoes %}
 				<tr>
-					<td>{{ c.nome_item }}</td>
+					<td>{{ c.nome_item }}{% if c.cancelado %} <span class="rel-badge rel-badge--cancelado">Cancelado</span>{% endif %}</td>
 					<td class="rel-num">{{ brl(c.valor_orcado) }}</td>
 					<td>{{ c.fornecedor_orcado }}</td>
 					<td class="rel-num">{{ brl(c.valor_realizado) }}</td>

@@ -3904,6 +3904,7 @@
 		var key = fechamentoCenarioKey();
 		var rows = compras.map(function (c, i) {
 			var tag = c.previsto === false ? ' <span class="badge">Sem previsão</span>' : "";
+			var cancelBadge = c.cancelado ? ' <span class="badge festa-badge-cancelado">Cancelado</span>' : "";
 			var detalhes = canEdit
 				? `<td class="festa-table-actions"><button type="button" class="btn-sm-outline" data-fechamento-compra="${i}">Detalhes</button></td>`
 				: "";
@@ -3925,7 +3926,7 @@
 			var totalPrevisto = qtd * qtdPacote;
 			return `
 <tr>
-	<td>${escHtml(c.nome_item)}${tag}</td>
+	<td>${escHtml(c.nome_item)}${tag}${cancelBadge}</td>
 	<td>${fmtNum(c.quantidade_compra_final)}</td>
 	<td>${fmtNum(totalPrevisto)} ${escHtml(c.unidade_compra || "")}</td>
 	<td>${fmtCurrency(valorCotado)}</td>
@@ -3955,6 +3956,7 @@
 		// realizado já preenchido, preservamos o valor digitado pelo gestor.
 		totalEl.dataset.autoTotal = Number(c.valor_total_realizado) > 0 ? "0" : "1";
 		document.getElementById("fechamento-compra-real-obs").value = c.observacoes_realizado || "";
+		setSwitchChecked("fechamento-compra-comprado", !c.cancelado);
 		syncFechamentoRealizado();
 	}
 
@@ -3985,10 +3987,13 @@
 		var blocoIdent = dlg.querySelector('[data-fechamento-block="identificacao"]');
 		var blocoOrc = dlg.querySelector('[data-fechamento-block="orcamento"]');
 
+		var btnRemover = document.getElementById("btn-fechamento-compra-remover");
+
 		if (idx < 0) {
 			titleEl.textContent = "Adicionar compra sem previsão";
 			blocoIdent.hidden = false;
 			blocoOrc.hidden = true;
+			if (btnRemover) btnRemover.hidden = true;
 			document.getElementById("fechamento-compra-nome-item").value = "";
 			setSelectValue("fechamento-compra-area", "", selectLabelFor(areasItems, "", "Sem área"));
 			setSwitchChecked("fechamento-compra-usado-produtos", false);
@@ -3998,11 +4003,28 @@
 			setRealizadoCompra({});
 		} else {
 			var compra = compras[idx];
+			var semPrevisao = compra.previsto === false;
 			titleEl.textContent = "Detalhes da compra — " + (compra.nome_item || "");
-			blocoIdent.hidden = true;
-			if (compra.previsto !== false) {
+			// Itens sem previsão podem ser removidos e ter nome/área/usos editados.
+			if (btnRemover) btnRemover.hidden = !semPrevisao;
+			if (semPrevisao) {
+				blocoIdent.hidden = false;
+				blocoOrc.hidden = true;
+				document.getElementById("fechamento-compra-nome-item").value = compra.nome_item || "";
+				setSelectValue("fechamento-compra-area", compra.area || "", compra.nome_area || selectLabelFor(areasItems, "", "Sem área"));
+				setSwitchChecked("fechamento-compra-usado-produtos", !!compra.usado_em_produtos);
+				fechamentoCompraUsos = (compra.usos_em_produto || []).map(function (u) {
+					return {
+						produto: u.produto || "",
+						quantidade_usada: u.quantidade_usada || 0,
+						unidade_medida_uso: u.unidade_medida_uso || "unidade",
+					};
+				});
+				renderFechamentoCompraUsos();
+				updateFechamentoCompraUsosVisibility();
+			} else {
+				blocoIdent.hidden = true;
 				blocoOrc.hidden = false;
-				var key = fechamentoCenarioKey();
 				var escolhida = (compra.cotacoes || []).find(function (x) { return x.escolhida; });
 				var valIndividual = escolhida && Number(escolhida.quantidade) > 0 && !escolhida.doacao
 					? (Number(escolhida.valor) || 0) / Number(escolhida.quantidade) : 0;
@@ -4024,10 +4046,8 @@
 				}
 				fechamentoSetText("fechamento-compra-orc-totalqtd",
 					fmtNum(qtdCompraFinal * qtdPacoteOrc) + " " + (compra.unidade_compra || ""));
-				fechamentoSetText("fechamento-compra-orc-total", fmtCurrency(compra["valor_total_" + key]));
+				fechamentoSetText("fechamento-compra-orc-total", fmtCurrency(compra.valor_total_compra));
 				fechamentoSetText("fechamento-compra-orc-fornecedor", escolhida ? (escolhida.fornecedor || "—") : "—");
-			} else {
-				blocoOrc.hidden = true;
 			}
 			setRealizadoCompra(compra);
 		}
@@ -4086,6 +4106,7 @@
 			valor_total_realizado: parseFloat(document.getElementById("fechamento-compra-real-total").value) || 0,
 			fornecedor_realizado: (document.getElementById("fechamento-compra-real-fornecedor").value || "").trim(),
 			observacoes_realizado: (document.getElementById("fechamento-compra-real-obs").value || "").trim(),
+			cancelado: getSwitchChecked("fechamento-compra-comprado") ? 0 : 1,
 		};
 	}
 
@@ -4094,7 +4115,8 @@
 		var idx = parseInt(dlg.dataset.compraIdx, 10);
 		var dados = collectCompraRealizado();
 		var request;
-		if (idx < 0) {
+		if (idx < 0 || compras[idx].previsto === false) {
+			// Criação (idx<0) ou edição de item sem previsão: nome/área/usos editáveis.
 			var nome = (document.getElementById("fechamento-compra-nome-item").value || "").trim();
 			if (!nome) { toast("Informe o nome do item.", "error"); return; }
 			readFechamentoCompraUsos();
@@ -4102,7 +4124,9 @@
 			dados.area = getSelectValue("fechamento-compra-area");
 			dados.usado_em_produtos = getSwitchChecked("fechamento-compra-usado-produtos");
 			dados.usos_em_produto = dados.usado_em_produtos ? fechamentoCompraUsos : [];
-			request = api("gris.api.festas.criar_compra_sem_previsao", { festa_name: festaName, dados_json: JSON.stringify(dados) });
+			request = idx < 0
+				? api("gris.api.festas.criar_compra_sem_previsao", { festa_name: festaName, dados_json: JSON.stringify(dados) })
+				: api("gris.api.festas.salvar_compra_sem_previsao", { compra_name: compras[idx].name, dados_json: JSON.stringify(dados) });
 		} else {
 			request = api("gris.api.festas.salvar_realizado_compra", { compra_name: compras[idx].name, dados_json: JSON.stringify(dados) });
 		}
@@ -4115,6 +4139,24 @@
 			.finally(function () { btn.disabled = false; });
 	}
 
+	function removerCompraFechamento() {
+		var dlg = document.getElementById("dialog-compra-fechamento");
+		var idx = parseInt(dlg.dataset.compraIdx, 10);
+		if (!(idx >= 0)) return;
+		var compra = compras[idx];
+		confirmDialog({
+			title: "Remover item",
+			message: "Remover a compra \"" + compra.nome_item + "\"? Esta ação não pode ser desfeita.",
+			confirmLabel: "Remover",
+		}).then(function (ok) {
+			if (!ok) return;
+			api("gris.api.festas.excluir_compra", { compra_name: compra.name, festa_name: festaName })
+				.then(function () { dlg.close(); return refreshFestaData(); })
+				.then(function () { toast("Item removido.", "success"); })
+				.catch(function (err) { toast(err.message || "Erro ao remover item.", "error"); });
+		});
+	}
+
 	// ── Contratações ──
 
 	function renderFechamentoContratacoes() {
@@ -4124,12 +4166,13 @@
 
 		var rows = contratacoes.map(function (c, i) {
 			var tag = c.previsto === false ? ' <span class="badge">Sem previsão</span>' : "";
+			var cancelBadge = c.cancelado ? ' <span class="badge festa-badge-cancelado">Cancelado</span>' : "";
 			var detalhes = canEdit
 				? `<td class="festa-table-actions"><button type="button" class="btn-sm-outline" data-fechamento-contratacao="${i}">Detalhes</button></td>`
 				: "";
 			return `
 <tr>
-	<td>${escHtml(c.nome_item)}${tag}</td>
+	<td>${escHtml(c.nome_item)}${tag}${cancelBadge}</td>
 	<td>${fmtCurrency(c.valor_total_contratacao)}</td>
 	<td>${fmtCurrency(c.valor_total_realizado)}</td>
 	${detalhes}
@@ -4149,6 +4192,7 @@
 		document.getElementById("fechamento-contratacao-real-total").value = c.valor_total_realizado || "";
 		document.getElementById("fechamento-contratacao-real-fornecedor").value = c.fornecedor_realizado || "";
 		document.getElementById("fechamento-contratacao-real-obs").value = c.observacoes_realizado || "";
+		setSwitchChecked("fechamento-contratacao-comprado", !c.cancelado);
 	}
 
 	function openContratacaoFechamentoDialog(idx) {
@@ -4159,24 +4203,32 @@
 		var blocoIdent = dlg.querySelector('[data-fechamento-block="identificacao"]');
 		var blocoOrc = dlg.querySelector('[data-fechamento-block="orcamento"]');
 
+		var btnRemover = document.getElementById("btn-fechamento-contratacao-remover");
+
 		if (idx < 0) {
 			titleEl.textContent = "Adicionar contratação sem previsão";
 			blocoIdent.hidden = false;
 			blocoOrc.hidden = true;
+			if (btnRemover) btnRemover.hidden = true;
 			document.getElementById("fechamento-contratacao-nome-item").value = "";
 			setSelectValue("fechamento-contratacao-area", "", selectLabelFor(areasItems, "", "Sem área"));
 			setRealizadoContratacao({});
 		} else {
 			var c = contratacoes[idx];
+			var semPrevisao = c.previsto === false;
 			titleEl.textContent = "Detalhes da contratação — " + (c.nome_item || "");
-			blocoIdent.hidden = true;
-			if (c.previsto !== false) {
+			if (btnRemover) btnRemover.hidden = !semPrevisao;
+			if (semPrevisao) {
+				blocoIdent.hidden = false;
+				blocoOrc.hidden = true;
+				document.getElementById("fechamento-contratacao-nome-item").value = c.nome_item || "";
+				setSelectValue("fechamento-contratacao-area", c.area || "", c.nome_area || selectLabelFor(areasItems, "", "Sem área"));
+			} else {
+				blocoIdent.hidden = true;
 				blocoOrc.hidden = false;
 				var escolhida = (c.cotacoes || []).find(function (x) { return x.escolhida; });
 				fechamentoSetText("fechamento-contratacao-orc-total", fmtCurrency(c.valor_total_contratacao));
 				fechamentoSetText("fechamento-contratacao-orc-fornecedor", escolhida ? (escolhida.fornecedor || "—") : "—");
-			} else {
-				blocoOrc.hidden = true;
 			}
 			setRealizadoContratacao(c);
 		}
@@ -4190,14 +4242,18 @@
 			valor_total_realizado: parseFloat(document.getElementById("fechamento-contratacao-real-total").value) || 0,
 			fornecedor_realizado: (document.getElementById("fechamento-contratacao-real-fornecedor").value || "").trim(),
 			observacoes_realizado: (document.getElementById("fechamento-contratacao-real-obs").value || "").trim(),
+			cancelado: getSwitchChecked("fechamento-contratacao-comprado") ? 0 : 1,
 		};
 		var request;
-		if (idx < 0) {
+		if (idx < 0 || contratacoes[idx].previsto === false) {
+			// Criação (idx<0) ou edição de item sem previsão: nome/área editáveis.
 			var nome = (document.getElementById("fechamento-contratacao-nome-item").value || "").trim();
 			if (!nome) { toast("Informe o nome do item.", "error"); return; }
 			dados.nome_item = nome;
 			dados.area = getSelectValue("fechamento-contratacao-area");
-			request = api("gris.api.festas.criar_contratacao_sem_previsao", { festa_name: festaName, dados_json: JSON.stringify(dados) });
+			request = idx < 0
+				? api("gris.api.festas.criar_contratacao_sem_previsao", { festa_name: festaName, dados_json: JSON.stringify(dados) })
+				: api("gris.api.festas.salvar_contratacao_sem_previsao", { contratacao_name: contratacoes[idx].name, dados_json: JSON.stringify(dados) });
 		} else {
 			request = api("gris.api.festas.salvar_realizado_contratacao", { contratacao_name: contratacoes[idx].name, dados_json: JSON.stringify(dados) });
 		}
@@ -4208,6 +4264,24 @@
 			.then(function () { toast("Fechamento salvo.", "success"); })
 			.catch(function (err) { toast(err.message || "Erro ao salvar.", "error"); })
 			.finally(function () { btn.disabled = false; });
+	}
+
+	function removerContratacaoFechamento() {
+		var dlg = document.getElementById("dialog-contratacao-fechamento");
+		var idx = parseInt(dlg.dataset.contratacaoIdx, 10);
+		if (!(idx >= 0)) return;
+		var c = contratacoes[idx];
+		confirmDialog({
+			title: "Remover item",
+			message: "Remover a contratação \"" + c.nome_item + "\"? Esta ação não pode ser desfeita.",
+			confirmLabel: "Remover",
+		}).then(function (ok) {
+			if (!ok) return;
+			api("gris.api.festas.excluir_contratacao", { contratacao_name: c.name, festa_name: festaName })
+				.then(function () { dlg.close(); return refreshFestaData(); })
+				.then(function () { toast("Item removido.", "success"); })
+				.catch(function (err) { toast(err.message || "Erro ao remover item.", "error"); });
+		});
 	}
 
 	// ── Barracas ──
@@ -4396,8 +4470,9 @@
 			return { label: b.nome_barraca || b.name, valor: Number(b.valor_arrecadado_realizado_real) || 0 };
 		});
 		var barracasTotal = barracasLinhas.reduce(function (s, r) { return s + r.valor; }, 0);
-		var comprasTotal = compras.reduce(function (s, c) { return s + (Number(c.valor_total_realizado) || 0); }, 0);
-		var contratacoesTotal = contratacoes.reduce(function (s, c) { return s + (Number(c.valor_total_realizado) || 0); }, 0);
+		// Itens cancelados (não comprados) não entram nas despesas.
+		var comprasTotal = compras.reduce(function (s, c) { return s + (c.cancelado ? 0 : Number(c.valor_total_realizado) || 0); }, 0);
+		var contratacoesTotal = contratacoes.reduce(function (s, c) { return s + (c.cancelado ? 0 : Number(c.valor_total_realizado) || 0); }, 0);
 		var entradas = convitesTotal + doacoes + barracasTotal;
 		var saidas = comprasTotal + contratacoesTotal;
 		return {
@@ -4596,6 +4671,11 @@
 		if (btnCompra) btnCompra.addEventListener("click", saveCompraFechamento);
 		var btnContr = document.getElementById("btn-fechamento-contratacao-salvar");
 		if (btnContr) btnContr.addEventListener("click", saveContratacaoFechamento);
+
+		var btnRemoverCompra = document.getElementById("btn-fechamento-compra-remover");
+		if (btnRemoverCompra) btnRemoverCompra.addEventListener("click", removerCompraFechamento);
+		var btnRemoverContr = document.getElementById("btn-fechamento-contratacao-remover");
+		if (btnRemoverContr) btnRemoverContr.addEventListener("click", removerContratacaoFechamento);
 	}
 
 	document.addEventListener("DOMContentLoaded", function () {

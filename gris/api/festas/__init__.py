@@ -780,6 +780,7 @@ def _hydrate_compra(doc) -> dict:
 		"valor_total_realizado": flt(doc.valor_total_realizado),
 		"fornecedor_realizado": doc.fornecedor_realizado or "",
 		"observacoes_realizado": doc.observacoes_realizado or "",
+		"cancelado": bool(doc.cancelado),
 		"qtd_sugerida_min": flt(doc.qtd_sugerida_min),
 		"valor_total_min": flt(doc.valor_total_min),
 		"qtd_sobra_individual_min": flt(doc.qtd_sobra_individual_min),
@@ -950,6 +951,7 @@ def _hydrate_contratacao(doc) -> dict:
 		"valor_total_realizado": flt(doc.valor_total_realizado),
 		"fornecedor_realizado": doc.fornecedor_realizado or "",
 		"observacoes_realizado": doc.observacoes_realizado or "",
+		"cancelado": bool(doc.cancelado),
 		"cotacoes": [_hydrate_cotacao_contratacao(c) for c in (doc.cotacoes or [])],
 	}
 
@@ -1046,6 +1048,7 @@ def _apply_compra_realizado(doc, dados: dict) -> None:
 	)
 	doc.fornecedor_realizado = (dados.get("fornecedor_realizado") or "").strip()
 	doc.observacoes_realizado = (dados.get("observacoes_realizado") or "").strip()
+	doc.cancelado = _as_bool(dados.get("cancelado"))
 
 
 def _apply_contratacao_realizado(doc, dados: dict) -> None:
@@ -1054,6 +1057,7 @@ def _apply_contratacao_realizado(doc, dados: dict) -> None:
 	)
 	doc.fornecedor_realizado = (dados.get("fornecedor_realizado") or "").strip()
 	doc.observacoes_realizado = (dados.get("observacoes_realizado") or "").strip()
+	doc.cancelado = _as_bool(dados.get("cancelado"))
 
 
 def _apply_compra_usos_sem_previsao(doc, dados: dict, festa_name: str) -> None:
@@ -1119,6 +1123,32 @@ def criar_compra_sem_previsao(festa_name: str, dados_json: str) -> dict:
 
 
 @frappe.whitelist()
+def salvar_compra_sem_previsao(compra_name: str, dados_json: str) -> dict:
+	_ensure_gestor()
+	dados = _parse_json_dict(dados_json)
+
+	doc = frappe.get_doc("Compra Festa", compra_name)
+	if doc.previsto:
+		frappe.throw("Apenas itens sem previsão podem ser editados aqui.")
+
+	nome_item = (dados.get("nome_item") or "").strip()
+	if not nome_item:
+		frappe.throw("Informe o nome do item.")
+
+	doc.nome_item = nome_item
+	doc.area = _validate_area_festa(dados.get("area"), doc.festa)
+	doc.usado_em_produtos = _as_bool(dados.get("usado_em_produtos"))
+	doc.unidade_compra = _validate_unidade(
+		dados.get("unidade_medida_realizado") or "unidade"
+	)
+	_apply_compra_usos_sem_previsao(doc, dados, doc.festa)
+	_apply_compra_realizado(doc, dados)
+	doc.save()
+	doc.reload()
+	return {"ok": True, "compra": _hydrate_compra(doc)}
+
+
+@frappe.whitelist()
 def salvar_realizado_contratacao(contratacao_name: str, dados_json: str) -> dict:
 	_ensure_gestor()
 	dados = _parse_json_dict(dados_json)
@@ -1147,6 +1177,27 @@ def criar_contratacao_sem_previsao(festa_name: str, dados_json: str) -> dict:
 	doc.area = _validate_area_festa(dados.get("area"), festa_name)
 	_apply_contratacao_realizado(doc, dados)
 	doc.insert()
+	doc.reload()
+	return {"ok": True, "contratacao": _hydrate_contratacao(doc)}
+
+
+@frappe.whitelist()
+def salvar_contratacao_sem_previsao(contratacao_name: str, dados_json: str) -> dict:
+	_ensure_gestor()
+	dados = _parse_json_dict(dados_json)
+
+	doc = frappe.get_doc("Contratacao Festa", contratacao_name)
+	if doc.previsto:
+		frappe.throw("Apenas itens sem previsão podem ser editados aqui.")
+
+	nome_item = (dados.get("nome_item") or "").strip()
+	if not nome_item:
+		frappe.throw("Informe o nome do item.")
+
+	doc.nome_item = nome_item
+	doc.area = _validate_area_festa(dados.get("area"), doc.festa)
+	_apply_contratacao_realizado(doc, dados)
+	doc.save()
 	doc.reload()
 	return {"ok": True, "contratacao": _hydrate_contratacao(doc)}
 

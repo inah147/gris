@@ -1,6 +1,17 @@
+import json
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, flt, today
+
+from gris.api.festas import (
+	criar_compra,
+	criar_compra_sem_previsao,
+	excluir_compra,
+	salvar_compra_sem_previsao,
+	salvar_realizado_compra,
+)
+from gris.api.festas.relatorio import build_relatorio_payload
 
 
 def _nova_festa():
@@ -109,6 +120,66 @@ class TestCompraFesta(FrappeTestCase):
 		)
 
 		self.assertRaises(frappe.ValidationError, compra.insert, ignore_permissions=True)
+
+	def test_compra_sem_previsao_pode_ser_criada_editada_e_removida(self):
+		festa = _nova_festa()
+		r = criar_compra_sem_previsao(
+			festa.name, json.dumps({"nome_item": "Gelo", "valor_total_realizado": 50, "cancelado": 1})
+		)
+		compra = r["compra"]
+		self.assertFalse(compra["previsto"])
+		self.assertTrue(compra["cancelado"])
+		self.assertEqual(flt(compra["valor_total_realizado"]), 50)
+
+		# Editar nome e desmarcar cancelado (item passou a ser comprado).
+		r2 = salvar_compra_sem_previsao(
+			compra["name"],
+			json.dumps({"nome_item": "Gelo em cubos", "valor_total_realizado": 50, "cancelado": 0}),
+		)
+		self.assertEqual(r2["compra"]["nome_item"], "Gelo em cubos")
+		self.assertFalse(r2["compra"]["cancelado"])
+
+		excluir_compra(compra["name"], festa.name)
+		self.assertFalse(frappe.db.exists("Compra Festa", compra["name"]))
+
+	def test_salvar_compra_sem_previsao_recusa_item_previsto(self):
+		festa = _nova_festa()
+		compra = criar_compra(
+			festa.name,
+			json.dumps(
+				{
+					"nome_item": "Carvao",
+					"unidade_medida_realizado": "kg",
+					"quantidade_compra_final": 5,
+					"cotacoes": [
+						{"fornecedor": "A", "valor": 10, "quantidade": 1, "unidade_medida": "kg", "escolhida": 1}
+					],
+				}
+			),
+		)["compra"]
+		self.assertRaises(
+			frappe.ValidationError,
+			salvar_compra_sem_previsao,
+			compra["name"],
+			json.dumps({"nome_item": "Outro", "valor_total_realizado": 10}),
+		)
+
+	def test_item_cancelado_nao_entra_nas_despesas_do_relatorio(self):
+		festa = _nova_festa()
+		# Item comprado (entra nas despesas).
+		criar_compra_sem_previsao(
+			festa.name, json.dumps({"nome_item": "Comprado", "valor_total_realizado": 50, "cancelado": 0})
+		)
+		# Item cancelado com valor gasto (NÃO deve contar).
+		criar_compra_sem_previsao(
+			festa.name, json.dumps({"nome_item": "Cancelado", "valor_total_realizado": 200, "cancelado": 1})
+		)
+
+		payload = build_relatorio_payload(festa.name)
+		self.assertEqual(flt(payload["despesas"]), 50)
+		flags = {c["nome_item"]: c["cancelado"] for c in payload["compras"]}
+		self.assertTrue(flags["Cancelado"])
+		self.assertFalse(flags["Comprado"])
 
 	def test_unidade_incompativel_falha_no_calculo(self):
 		festa = _nova_festa()

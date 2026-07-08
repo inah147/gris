@@ -386,6 +386,7 @@ def build_relatorio_payload(festa_name: str) -> dict:
 			"valor_total_realizado",
 			"fornecedor_realizado",
 			"observacoes_realizado",
+			"cancelado",
 		],
 		order_by="nome_item asc",
 	)
@@ -400,6 +401,7 @@ def build_relatorio_payload(festa_name: str) -> dict:
 			"valor_total_realizado",
 			"fornecedor_realizado",
 			"observacoes_realizado",
+			"cancelado",
 		],
 		order_by="nome_item asc",
 	)
@@ -422,6 +424,7 @@ def build_relatorio_payload(festa_name: str) -> dict:
 			"valor_total_realizado": flt(c.valor_total_realizado),
 			"fornecedor_realizado": c.fornecedor_realizado or "",
 			"observacoes": c.observacoes_realizado or "",
+			"cancelado": bool(c.cancelado),
 		}
 		for c in compras
 	]
@@ -433,15 +436,21 @@ def build_relatorio_payload(festa_name: str) -> dict:
 			"valor_realizado": flt(c.valor_total_realizado),
 			"fornecedor_realizado": c.fornecedor_realizado or "",
 			"observacoes": c.observacoes_realizado or "",
+			"cancelado": bool(c.cancelado),
 		}
 		for c in contratacoes
 	]
 
 	# Despesa realizada por área (compras + contratações).
+	# Itens cancelados (não comprados) não entram nas despesas.
 	despesa_area: dict[str, float] = {}
 	for c in compras:
+		if c.cancelado:
+			continue
 		despesa_area[c.area or ""] = despesa_area.get(c.area or "", 0.0) + flt(c.valor_total_realizado)
 	for c in contratacoes:
+		if c.cancelado:
+			continue
 		despesa_area[c.area or ""] = despesa_area.get(c.area or "", 0.0) + flt(c.valor_total_realizado)
 	despesas_por_area = [
 		{"label": area_nome.get(a, "Sem área") if a else "Sem área", "valor": v}

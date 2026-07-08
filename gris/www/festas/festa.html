@@ -1818,6 +1818,9 @@ window._festaData = {
 		{# Realizado — inputs #}
 		<div class="festa-compra-section" data-fechamento-block="realizado">
 			<h3 class="festa-equipe-title">Realizado</h3>
+			{% call field(label="Item comprado") %}
+				{{ switch(name="fechamento-compra-comprado", checked=true, attrs={"id": "fechamento-compra-comprado"}) }}
+			{% endcall %}
 			<div class="festa-table-scroll">
 				<table class="festa-table festa-edit-table">
 					<thead>
@@ -1854,6 +1857,7 @@ window._festaData = {
 		</div>
 	</section>
 	<footer>
+		<button type="button" class="btn-destructive festa-fechamento-remover" id="btn-fechamento-compra-remover" hidden>Remover item</button>
 		<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Cancelar</button>
 		<button type="button" class="btn-primary" id="btn-fechamento-compra-salvar">Salvar</button>
 	</footer>
@@ -1899,6 +1903,9 @@ window._festaData = {
 		{# Realizado — inputs #}
 		<div class="festa-compra-section" data-fechamento-block="realizado">
 			<h3 class="festa-equipe-title">Realizado</h3>
+			{% call field(label="Item comprado") %}
+				{{ switch(name="fechamento-contratacao-comprado", checked=true, attrs={"id": "fechamento-contratacao-comprado"}) }}
+			{% endcall %}
 			<div class="festa-dialog-form festa-compra-form-grid">
 				{% call field(label="Valor total") %}
 					{{ currency_input(id="fechamento-contratacao-real-total") }}
@@ -1913,6 +1920,7 @@ window._festaData = {
 		</div>
 	</section>
 	<footer>
+		<button type="button" class="btn-destructive festa-fechamento-remover" id="btn-fechamento-contratacao-remover" hidden>Remover item</button>
 		<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Cancelar</button>
 		<button type="button" class="btn-primary" id="btn-fechamento-contratacao-salvar">Salvar</button>
 	</footer>

@@ -134,6 +134,9 @@ window._festaData = {
 	precoMinConvite: {{ preco_min_convite | tojson }},
 	precoSugeridoConvite: {{ preco_sugerido_convite | tojson }},
 	precoConvite: {{ preco_convite | tojson }},
+	convitePorLotes: {{ convite_por_lotes | tojson }},
+	lotesConvite: {{ lotes_convite | tojson }},
+	valorArrecadadoFesta: {{ valor_arrecadado_festa | tojson }},
 	margemSeguranca: {{ margem_seguranca | tojson }},
 	totais: {{ totais | tojson }},
 	receitasPorArea: {{ receitas_por_area | tojson }},
@@ -382,11 +385,11 @@ window._festaData = {
 {% set tab_orcamento %}
 <div class="festa-tab-content">
 
-	{# Seção — Preço do convite #}
+	{# Seção — Convites (preço e lotes) #}
 	{% call card(attrs={"class": "festa-card"}) %}
 	<div class="festa-card__header">
 		<div>
-			<h2 class="festa-card__title">Preço do convite</h2>
+			<h2 class="festa-card__title">Convites</h2>
 			<p class="festa-card__subtitle">Define o valor cobrado por convite. Alterar atualiza receitas e saldo.</p>
 		</div>
 	</div>
@@ -406,6 +409,34 @@ window._festaData = {
 				value=preco_convite,
 				input_attrs={"class": "festa-estimativa-input"} if can_edit else {"class": "festa-estimativa-input", "readonly": "readonly", "tabindex": "-1"}
 			) }}
+		</div>
+	</div>
+
+	<hr class="festa-card__divider" />
+
+	<h3 class="festa-equipe-title">Convite por lotes</h3>
+	<p class="festa-card__subtitle">Modele lotes com valores diferentes de convite e consumação. A soma das expectativas de vendas deve ser 100%.</p>
+	<div class="festa-dialog-form">
+		{% call field(label="Usar lotes no planejamento", hint="Quando ativo, a receita de convites usa os lotes abaixo em vez do preço único.") %}
+			{{ switch(name="convite-por-lotes-toggle", attrs={"id": "convite-por-lotes-toggle"} if can_edit else {"id": "convite-por-lotes-toggle", "disabled": "disabled"}) }}
+		{% endcall %}
+	</div>
+	<div id="lotes-convite-wrap" hidden>
+		<div id="lotes-convite-container"></div>
+		<div class="festa-lotes-footer">
+			<span id="lotes-convite-soma" class="text-sm text-muted-foreground"></span>
+			{% if can_edit %}
+			<div class="festa-fechamento-section-actions">
+				<button type="button" class="btn-sm-outline" id="btn-add-lote-convite">
+					{{ lucide_icon("plus", size="sm") }}
+					<span>Adicionar lote</span>
+				</button>
+				<button type="button" class="btn-sm-primary" id="lotes-convite-salvar">
+					{{ lucide_icon("save", size="sm") }}
+					<span>Salvar lotes</span>
+				</button>
+			</div>
+			{% endif %}
 		</div>
 	</div>
 	{% endcall %}
@@ -742,6 +773,40 @@ window._festaData = {
 	</details>
 	{% endcall %}
 
+	{# Seção — Fechamento de Caixa #}
+	{% call card(attrs={"class": "festa-card festa-fechamento-card"}) %}
+	<details class="festa-fechamento-details">
+		<summary class="festa-fechamento-summary">
+			<span class="festa-fechamento-summary__icon">{{ lucide_icon("wallet", size="md") }}</span>
+			<span class="festa-fechamento-summary__text">
+				<span class="festa-fechamento-summary__title">Fechamento de Caixa</span>
+				<span class="festa-fechamento-summary__hint">Valor total arrecadado no caixa da festa.</span>
+			</span>
+			<span class="festa-fechamento-summary__chevron">{{ lucide_icon("chevron-right", size="sm") }}</span>
+		</summary>
+		<div class="festa-fechamento-body">
+			<div class="festa-estimativas-grid">
+				<div class="festa-estimativa-item">
+					<label class="text-sm font-medium text-muted-foreground" for="fechamento-caixa-input">Valor arrecadado na festa</label>
+					{{ currency_input(
+						id="fechamento-caixa-input",
+						value=valor_arrecadado_festa,
+						input_attrs={"class": "festa-estimativa-input"} if can_edit else {"class": "festa-estimativa-input", "readonly": "readonly", "tabindex": "-1"}
+					) }}
+				</div>
+			</div>
+			{% if can_edit %}
+			<div class="festa-fechamento-section-actions">
+				<button type="button" class="btn-sm-primary" id="fechamento-caixa-salvar">
+					{{ lucide_icon("save", size="sm") }}
+					<span>Salvar</span>
+				</button>
+			</div>
+			{% endif %}
+		</div>
+	</details>
+	{% endcall %}
+
 	{# Seção — Resumo #}
 	{% call card(attrs={"class": "festa-card festa-fechamento-card"}) %}
 	<details class="festa-fechamento-details" id="fechamento-resumo-details">
@@ -749,7 +814,7 @@ window._festaData = {
 			<span class="festa-fechamento-summary__icon">{{ lucide_icon("chart-column", size="md") }}</span>
 			<span class="festa-fechamento-summary__text">
 				<span class="festa-fechamento-summary__title">Resumo</span>
-				<span class="festa-fechamento-summary__hint">Entradas, saídas e resultado do fechamento da festa.</span>
+				<span class="festa-fechamento-summary__hint">Receitas, saídas, resultado e fichas não gastas do fechamento.</span>
 			</span>
 			<span class="festa-fechamento-summary__chevron">{{ lucide_icon("chevron-right", size="sm") }}</span>
 		</summary>
@@ -1375,8 +1440,11 @@ window._festaData = {
 				{% call field(label="Nome do convite *") %}
 					{{ input(attrs={"id": "opcao-nome-convite", "required": "required", "placeholder": "Ex.: Inteira, Meia, Família"}) }}
 				{% endcall %}
-				{% call field(label="Valor (R$) *") %}
+				{% call field(label="Valor (R$) *", hint="Definido pelo lote vigente quando houver lotes.") %}
 					{{ currency_input(id="opcao-valor") }}
+				{% endcall %}
+				{% call field(label="Valor de consumação (R$)", hint="Parcela do valor destinada a fichas. Definida pelo lote vigente quando houver lotes.") %}
+					{{ currency_input(id="opcao-valor-consumacao") }}
 				{% endcall %}
 				{% call field(label="Quantidade esperada") %}
 					{{ input(attrs={"id": "opcao-quantidade-esperada", "inputmode": "decimal", "data-numeric-input": "1", "placeholder": "0"}) }}
@@ -1407,6 +1475,17 @@ window._festaData = {
 						<span>Remover imagem</span>
 					</button>
 				</div>
+			</div>
+			<div id="opcao-lotes-wrap">
+				<h4 class="festa-equipe-title">Lotes</h4>
+				<p class="text-sm text-muted-foreground">
+					Cada lote define o valor e a consumação válidos em um período. Sem nenhum lote vigente, o convite é desativado automaticamente.
+				</p>
+				<div id="opcao-lotes-container"></div>
+				<button type="button" class="btn-sm-outline festa-add-membro-btn" id="btn-add-opcao-lote">
+					{{ lucide_icon("plus", size="sm") }}
+					<span>Adicionar lote</span>
+				</button>
 			</div>
 			<div class="equipe-member-form__actions">
 				<button type="button" class="btn-sm-outline" id="btn-opcao-cancelar">Cancelar</button>

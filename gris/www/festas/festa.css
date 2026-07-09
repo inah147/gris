@@ -845,6 +845,27 @@
 	margin-bottom: 0.75rem;
 }
 
+/* Divisor entre preço do convite e lotes dentro do card "Convites". */
+.festa-card__divider {
+	border: 0;
+	border-top: 1px solid var(--border, #e4e4e7);
+	margin: 1.25rem 0 1rem;
+}
+
+/* Rodapé do editor de lotes: indicador de soma + ações. */
+.festa-lotes-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+	margin-top: 0.75rem;
+}
+
+.festa-lotes-footer .festa-fechamento-section-actions {
+	margin-bottom: 0;
+}
+
 /* Linha expandida de itens da barraca: remove padding extra da célula host. */
 #fechamento-barracas-container [data-barraca-detail] > td {
 	padding: 0.5rem 0.75rem;

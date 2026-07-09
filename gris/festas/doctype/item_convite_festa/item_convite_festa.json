@@ -8,7 +8,8 @@
   "opcao_convite",
   "descricao",
   "quantidade",
-  "valor"
+  "valor",
+  "valor_consumacao"
  ],
  "fields": [
   {
@@ -50,6 +51,13 @@
    "label": "Valor",
    "non_negative": 1,
    "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "valor_consumacao",
+   "fieldtype": "Currency",
+   "label": "Valor de Consumação",
+   "non_negative": 1
   }
  ],
  "index_web_pages_for_search": 1,

@@ -117,7 +117,7 @@ class ConviteFesta(Document):
 				opcao = frappe.db.get_value(
 					"Opcao Convite Festa",
 					item.opcao_convite,
-					["festa", "ativo", "nome_convite", "valor"],
+					["festa", "ativo", "nome_convite", "valor", "valor_consumacao"],
 					as_dict=True,
 				)
 				if not opcao:
@@ -130,10 +130,12 @@ class ConviteFesta(Document):
 					frappe.throw(_("A Opção de Convite '{0}' está inativa.").format(item.opcao_convite))
 				item.descricao = opcao.nome_convite
 				item.valor = opcao.valor
+				item.valor_consumacao = opcao.valor_consumacao
 			else:
 				if not aceitar_doacoes:
 					frappe.throw(_("A festa selecionada não aceita doações junto com os convites."))
 				item.opcao_convite = None
+				item.valor_consumacao = 0
 				if not item.descricao:
 					frappe.throw(_("Item sem descrição."))
 				if flt(item.valor) <= 0:

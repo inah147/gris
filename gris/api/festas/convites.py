@@ -59,6 +59,78 @@ def _parse_payload(payload) -> dict:
 	return data
 
 
+def _parse_lotes_opcao(raw) -> list[dict]:
+	"""Valida e normaliza os lotes recebidos do cliente para uma Opcao Convite."""
+	if raw in (None, ""):
+		return []
+	if isinstance(raw, str):
+		try:
+			raw = json.loads(raw)
+		except (ValueError, TypeError):
+			frappe.throw("Lotes inválidos.")
+	if not isinstance(raw, list):
+		frappe.throw("Lotes inválidos.")
+
+	lotes: list[dict] = []
+	for item in raw:
+		if not isinstance(item, dict):
+			frappe.throw("Lote inválido.")
+		inicio = (item.get("data_inicio") or "").strip() if isinstance(item.get("data_inicio"), str) else item.get("data_inicio")
+		fim = (item.get("data_fim") or "").strip() if isinstance(item.get("data_fim"), str) else item.get("data_fim")
+		if not inicio or not fim:
+			frappe.throw("Cada lote precisa de data de início e término.")
+		try:
+			valor = flt(item.get("valor", 0))
+			consumacao = flt(item.get("valor_consumacao", 0))
+		except (ValueError, TypeError):
+			frappe.throw("Valores do lote inválidos.")
+		if valor < 0 or consumacao < 0:
+			frappe.throw("Valores do lote não podem ser negativos.")
+		if getdate(fim) < getdate(inicio):
+			frappe.throw("A data de término do lote não pode ser anterior à de início.")
+		if consumacao > valor:
+			frappe.throw("O valor de consumação do lote não pode ser maior que o valor do convite.")
+		lotes.append(
+			{
+				"data_inicio": getdate(inicio),
+				"data_fim": getdate(fim),
+				"valor": valor,
+				"valor_consumacao": consumacao,
+			}
+		)
+	return lotes
+
+
+def _lote_row_to_dict(lote) -> dict:
+	def _get(field):
+		return lote.get(field) if isinstance(lote, dict) else getattr(lote, field, None)
+
+	inicio = _get("data_inicio")
+	fim = _get("data_fim")
+	return {
+		"data_inicio": inicio.isoformat() if hasattr(inicio, "isoformat") else (inicio or ""),
+		"data_fim": fim.isoformat() if hasattr(fim, "isoformat") else (fim or ""),
+		"valor": flt(_get("valor")),
+		"valor_consumacao": flt(_get("valor_consumacao")),
+	}
+
+
+def _lotes_por_opcao(opcao_names: list[str]) -> dict[str, list[dict]]:
+	"""Lotes (Lote Opcao Convite Festa) agrupados por opção pai."""
+	if not opcao_names:
+		return {}
+	rows = frappe.get_all(
+		"Lote Opcao Convite Festa",
+		filters={"parenttype": "Opcao Convite Festa", "parent": ("in", opcao_names)},
+		fields=["parent", "data_inicio", "data_fim", "valor", "valor_consumacao"],
+		order_by="data_inicio asc, idx asc",
+	)
+	agrupado: dict[str, list[dict]] = {}
+	for row in rows:
+		agrupado.setdefault(row.parent, []).append(_lote_row_to_dict(row))
+	return agrupado
+
+
 def _hydrate_opcao(doc) -> dict:
 	return {
 		"name": doc.name,
@@ -66,10 +138,13 @@ def _hydrate_opcao(doc) -> dict:
 		"nome_convite": doc.nome_convite,
 		"ramo": doc.ramo or "",
 		"ativo": bool(doc.ativo),
+		"portaria": bool(doc.portaria),
 		"valor": flt(doc.valor),
+		"valor_consumacao": flt(doc.valor_consumacao),
 		"quantidade_esperada": int(doc.quantidade_esperada or 0),
 		"quantidade_vendida": int(doc.quantidade_vendida or 0),
 		"imagem_capa": doc.imagem_capa or "",
+		"lotes": [_lote_row_to_dict(lote) for lote in (doc.lotes or [])],
 	}
 
 
@@ -124,13 +199,16 @@ def build_dashboard(festa_name: str) -> dict:
 			"nome_convite",
 			"ramo",
 			"ativo",
+			"portaria",
 			"valor",
+			"valor_consumacao",
 			"quantidade_esperada",
 			"quantidade_vendida",
 			"imagem_capa",
 		],
 		order_by="nome_convite asc",
 	)
+	lotes_por_opcao = _lotes_por_opcao([row.name for row in opcoes_rows])
 	opcoes = [
 		{
 			"name": row.name,
@@ -138,10 +216,13 @@ def build_dashboard(festa_name: str) -> dict:
 			"nome_convite": row.nome_convite or "",
 			"ramo": row.ramo or "",
 			"ativo": bool(row.ativo),
+			"portaria": bool(row.portaria),
 			"valor": flt(row.valor),
+			"valor_consumacao": flt(row.valor_consumacao),
 			"quantidade_esperada": int(row.quantidade_esperada or 0),
 			"quantidade_vendida": int(row.quantidade_vendida or 0),
 			"imagem_capa": row.imagem_capa or "",
+			"lotes": lotes_por_opcao.get(row.name, []),
 		}
 		for row in opcoes_rows
 	]
@@ -234,14 +315,15 @@ def build_dashboard(festa_name: str) -> dict:
 		for row in serie_rows
 	]
 
-	# Totais e barras: qtd e valor por opção, considerando apenas pagos.
+	# Totais e barras: qtd, valor e consumação por opção, considerando apenas pagos.
 	totais_rows = frappe.db.sql(
 		"""
 		SELECT
 			it.opcao_convite  AS opcao_convite,
 			it.descricao      AS tipo_convite,
 			SUM(it.quantidade) AS quantidade,
-			SUM(it.quantidade * it.valor) AS valor
+			SUM(it.quantidade * it.valor) AS valor,
+			SUM(it.quantidade * it.valor_consumacao) AS consumacao
 		FROM `tabConvite Festa` AS cf
 		INNER JOIN `tabItem Convite Festa` AS it
 			ON it.parent = cf.name AND it.parenttype = 'Convite Festa'
@@ -256,10 +338,21 @@ def build_dashboard(festa_name: str) -> dict:
 	)
 	qtd_por_opcao = {}
 	valor_por_opcao = {}
+	consumacao_por_opcao = {}
 	for row in totais_rows:
 		key = row.opcao_convite or row.tipo_convite or ""
 		qtd_por_opcao[key] = int(row.quantidade or 0)
 		valor_por_opcao[key] = flt(row.valor)
+		consumacao_por_opcao[key] = flt(row.consumacao)
+
+	# Total de consumação vendida e valor dos convites de portaria (evita
+	# dupla contagem no fechamento de caixa, já que a portaria entra no caixa).
+	opcoes_portaria = {op["name"] for op in opcoes if op.get("portaria")}
+	total_consumacao = sum(consumacao_por_opcao.values())
+	total_valor_convites = sum(valor_por_opcao.values())
+	total_portaria_valor = sum(
+		v for k, v in valor_por_opcao.items() if k in opcoes_portaria
+	)
 
 	# Total de doações (itens com eh_convite=0) em pedidos pagos.
 	doacoes_row = frappe.db.sql(
@@ -328,6 +421,10 @@ def build_dashboard(festa_name: str) -> dict:
 		"totais": {
 			"qtd_por_opcao": qtd_por_opcao,
 			"valor_por_opcao": valor_por_opcao,
+			"consumacao_por_opcao": consumacao_por_opcao,
+			"total_valor_convites": total_valor_convites,
+			"total_consumacao": total_consumacao,
+			"total_portaria_valor": total_portaria_valor,
 			"total_doacoes_valor": total_doacoes_valor,
 		},
 	}
@@ -475,6 +572,15 @@ def upsert_opcao(festa_name: str, payload) -> dict:
 	if valor < 0:
 		frappe.throw("Valor não pode ser negativo.")
 
+	try:
+		valor_consumacao = flt(data.get("valor_consumacao", 0))
+	except (ValueError, TypeError):
+		frappe.throw("Valor de consumação inválido.")
+	if valor_consumacao < 0:
+		frappe.throw("Valor de consumação não pode ser negativo.")
+
+	lotes = _parse_lotes_opcao(data.get("lotes"))
+
 	qtd_esperada = data.get("quantidade_esperada")
 	if qtd_esperada in (None, ""):
 		qtd_esperada = 0
@@ -504,9 +610,12 @@ def upsert_opcao(festa_name: str, payload) -> dict:
 		if ramo_presente:
 			doc.ramo = ramo
 		doc.valor = valor
+		doc.valor_consumacao = valor_consumacao
 		doc.quantidade_esperada = qtd_esperada
 		doc.ativo = ativo
 		doc.imagem_capa = imagem_capa
+		if not doc.portaria:
+			doc.set("lotes", lotes)
 		doc.save()
 	else:
 		doc = frappe.get_doc(
@@ -516,9 +625,11 @@ def upsert_opcao(festa_name: str, payload) -> dict:
 				"nome_convite": nome_convite,
 				"ramo": ramo,
 				"valor": valor,
+				"valor_consumacao": valor_consumacao,
 				"quantidade_esperada": qtd_esperada,
 				"ativo": ativo,
 				"imagem_capa": imagem_capa,
+				"lotes": lotes,
 			}
 		)
 		doc.insert()

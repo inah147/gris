@@ -288,6 +288,17 @@ def build_festa_payload(festa_name: str) -> dict:
 		"preco_min_convite": flt(doc.preco_min_convite),
 		"preco_sugerido_convite": flt(doc.preco_sugerido_convite),
 		"preco_convite": flt(doc.preco_convite),
+		"convite_por_lotes": bool(doc.convite_por_lotes),
+		"lotes_convite": [
+			{
+				"nome_lote": lote.nome_lote or "",
+				"valor_convite": flt(lote.valor_convite),
+				"valor_consumacao": flt(lote.valor_consumacao),
+				"expectativa_percentual": flt(lote.expectativa_percentual),
+			}
+			for lote in (doc.lotes_convite or [])
+		],
+		"valor_arrecadado_festa": flt(doc.valor_arrecadado_festa),
 		"margem_seguranca": flt(doc.margem_seguranca),
 		"totais": totais_payload(doc),
 	}

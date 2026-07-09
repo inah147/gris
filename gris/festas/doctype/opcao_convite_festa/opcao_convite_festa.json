@@ -12,8 +12,11 @@
   "portaria",
   "column_break_dados",
   "valor",
+  "valor_consumacao",
   "quantidade_esperada",
   "quantidade_vendida",
+  "lotes_section",
+  "lotes",
   "imagem_section",
   "imagem_capa"
  ],
@@ -59,12 +62,21 @@
    "fieldtype": "Column Break"
   },
   {
+   "description": "Definido automaticamente pelo lote vigente quando houver lotes cadastrados.",
    "fieldname": "valor",
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Valor",
    "non_negative": 1,
    "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "Parcela do valor destinada a consumação (fichas). Definida pelo lote vigente quando houver lotes.",
+   "fieldname": "valor_consumacao",
+   "fieldtype": "Currency",
+   "label": "Valor de Consumação",
+   "non_negative": 1
   },
   {
    "fieldname": "quantidade_esperada",
@@ -77,6 +89,20 @@
    "fieldtype": "Int",
    "label": "Quantidade Atual de Vendas",
    "non_negative": 1
+  },
+  {
+   "depends_on": "eval:!doc.portaria",
+   "description": "Faixas de preço por período. O convite de portaria não usa lotes.",
+   "fieldname": "lotes_section",
+   "fieldtype": "Section Break",
+   "label": "Lotes"
+  },
+  {
+   "depends_on": "eval:!doc.portaria",
+   "fieldname": "lotes",
+   "fieldtype": "Table",
+   "label": "Lotes",
+   "options": "Lote Opcao Convite Festa"
   },
   {
    "fieldname": "imagem_section",

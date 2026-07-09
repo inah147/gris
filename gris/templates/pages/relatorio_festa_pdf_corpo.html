@@ -560,9 +560,10 @@
 		<table class="tbl">
 			<thead><tr><th>Origem</th><th class="num">Valor</th></tr></thead>
 			<tbody>
-				<tr><td>Convites (executado)</td><td class="num">{{ brl(receita_convites) }}</td></tr>
-				<tr><td>Doações</td><td class="num">{{ brl(receita_doacoes) }}</td></tr>
-				{% for b in receitas_barracas %}<tr><td>{{ b.label }}</td><td class="num">{{ brl(b.valor) }}</td></tr>{% endfor %}
+				<tr><td>Convites (consumação)</td><td class="num">{{ brl(consumacao_convites) }}</td></tr>
+				<tr><td>Convites (entrada)</td><td class="num">{{ brl(entrada_convites) }}</td></tr>
+				<tr><td>Fechamento de caixa</td><td class="num">{{ brl(fechamento_caixa) }}</td></tr>
+				{% if receita_doacoes %}<tr><td>Doações</td><td class="num">{{ brl(receita_doacoes) }}</td></tr>{% endif %}
 				<tr class="total"><td>Total de receitas</td><td class="num">{{ brl(arrecadacao) }}</td></tr>
 			</tbody>
 		</table>
@@ -629,6 +630,12 @@
 			</svg>
 		</div>
 		{% endif %}
+
+		<h3 class="sub">Fichas não gastas</h3>
+		<p class="muted" style="margin:0 0 1mm;font-size:8.5pt;">Consumação vendida nos convites + fechamento de caixa − arrecadação das barracas.</p>
+		<div class="statgrid">
+			{{ stat("Fichas não gastas", brl(fichas_nao_gastas), "pos" if fichas_nao_gastas >= 0 else "neg") }}
+		</div>
 	</section>
 
 	{# ───────── 4. Dados das barracas ───────── #}

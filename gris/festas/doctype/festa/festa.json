@@ -66,6 +66,10 @@
   "preco_convite",
   "aceitar_doacoes",
   "venda_na_portaria",
+  "convite_por_lotes",
+  "lotes_convite",
+  "fechamento_caixa_section",
+  "valor_arrecadado_festa",
   "produtos_tab",
   "produtos_info_section",
   "produtos_info_html",
@@ -419,10 +423,38 @@
    "label": "Venda na portaria"
   },
   {
+   "default": "0",
+   "description": "Quando ativo, o planejamento de receita de convites usa os lotes abaixo em vez do pre\u00e7o \u00fanico.",
+   "fieldname": "convite_por_lotes",
+   "fieldtype": "Check",
+   "label": "Convite por lotes"
+  },
+  {
+   "depends_on": "eval:doc.convite_por_lotes",
+   "description": "A soma das expectativas de vendas (%) de todos os lotes deve ser 100%.",
+   "fieldname": "lotes_convite",
+   "fieldtype": "Table",
+   "label": "Lotes do Convite",
+   "options": "Lote Convite Festa"
+  },
+  {
    "fieldname": "data_limite_vendas",
    "fieldtype": "Date",
    "label": "Data Limite de Vendas",
    "reqd": 1
+  },
+  {
+   "fieldname": "fechamento_caixa_section",
+   "fieldtype": "Section Break",
+   "label": "Fechamento de Caixa"
+  },
+  {
+   "default": "0",
+   "description": "Valor total arrecadado no caixa da festa (fechamento).",
+   "fieldname": "valor_arrecadado_festa",
+   "fieldtype": "Currency",
+   "label": "Valor arrecadado na festa",
+   "non_negative": 1
   },
   {
    "fieldname": "produtos_tab",

@@ -218,6 +218,7 @@ scheduler_events = {
 		"gris.api.google_workspace.access_manager.enqueue_daily_inactive_access_cleanup",
 		"gris.api.recepcao_notificacoes.enviar_lembretes_visita",
 		"gris.festas.doctype.festa.festa.marcar_festas_realizadas",
+		"gris.festas.doctype.opcao_convite_festa.opcao_convite_festa.atualizar_lotes_opcoes_convite",
 	],
 	# "hourly": [
 	# 	"gris.tasks.hourly"

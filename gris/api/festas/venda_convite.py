@@ -98,7 +98,7 @@ def _validar_itens(festa_name: str, itens_raw) -> tuple[list[dict], float, int]:
 	opcoes = frappe.get_all(
 		"Opcao Convite Festa",
 		filters={"name": ("in", list(agregado.keys()))},
-		fields=["name", "festa", "ativo", "nome_convite", "valor", "portaria"],
+		fields=["name", "festa", "ativo", "nome_convite", "valor", "valor_consumacao", "portaria"],
 	)
 	indexado = {row.name: row for row in opcoes}
 

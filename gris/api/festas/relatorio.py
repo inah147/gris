@@ -498,11 +498,24 @@ def build_relatorio_payload(festa_name: str) -> dict:
 		for chave in sorted(set(receita_area) | set(despesa_area), key=_ordem_area)
 	]
 
-	# ── Totais do fechamento ────────────────────────────────────────────────
+	# ── Totais do fechamento (segmentação de receitas) ──────────────────────
+	# Receitas de convite segmentadas: consumação (parcela de fichas embutida no
+	# valor do convite) e entrada (restante do valor do convite).
+	consumacao_convites = flt(totais_conv.get("total_consumacao"))
+	entrada_convites = receita_convites - consumacao_convites
+	# Os convites de portaria já entram no caixa da festa; subtraímos para não
+	# contabilizar duas vezes no fechamento de caixa.
+	portaria_valor = flt(totais_conv.get("total_portaria_valor"))
+	valor_arrecadado_festa = flt(doc.get("valor_arrecadado_festa"))
+	fechamento_caixa = valor_arrecadado_festa - portaria_valor
+
 	arrecadacao_barracas = sum(flt(b.valor_arrecadado_realizado_real) for b in barracas)
-	arrecadacao = receita_convites + receita_doacoes + arrecadacao_barracas
+	arrecadacao = consumacao_convites + entrada_convites + fechamento_caixa + receita_doacoes
 	despesas = sum(x["valor"] for x in despesas_por_area)
 	resultado = arrecadacao - despesas
+
+	# Fichas não gastas: consumação vendida + caixa − arrecadação das barracas.
+	fichas_nao_gastas = consumacao_convites + fechamento_caixa - arrecadacao_barracas
 
 	# Previsão do cenário escolhido (totais esperados gravados no doc Festa).
 	previsto_arrecadacao = flt(doc.get(f"receita_total_{sufixo}"))
@@ -513,12 +526,15 @@ def build_relatorio_payload(festa_name: str) -> dict:
 		"resultado": previsto_arrecadacao - previsto_despesas,
 	}
 
-	# Passos do waterfall: entradas (+) e despesas por area (-); o JS acumula e
-	# fecha com a barra de Resultado.
-	waterfall = [{"label": "Convites", "valor": receita_convites}]
+	# Passos do waterfall: as 3 receitas segmentadas (+), doações (+) e despesas
+	# por área (−); o JS acumula e fecha com a barra de Resultado.
+	waterfall = [
+		{"label": "Consumação", "valor": consumacao_convites},
+		{"label": "Entrada", "valor": entrada_convites},
+		{"label": "Fechamento de caixa", "valor": fechamento_caixa},
+	]
 	if receita_doacoes:
 		waterfall.append({"label": "Doações", "valor": receita_doacoes})
-	waterfall += [{"label": b["label"], "valor": b["valor"]} for b in barracas_receita]
 	waterfall += [{"label": d["label"], "valor": -d["valor"]} for d in despesas_por_area]
 
 	avaliacao_doc = _get_avaliacao_for_festa(festa_name)
@@ -542,6 +558,11 @@ def build_relatorio_payload(festa_name: str) -> dict:
 		"convites_secao": convites_secao,
 		"receita_convites": receita_convites,
 		"receita_doacoes": receita_doacoes,
+		"consumacao_convites": consumacao_convites,
+		"entrada_convites": entrada_convites,
+		"fechamento_caixa": fechamento_caixa,
+		"valor_arrecadado_festa": valor_arrecadado_festa,
+		"fichas_nao_gastas": fichas_nao_gastas,
 		"receitas_barracas": barracas_receita,
 		"arrecadacao_barracas": arrecadacao_barracas,
 		"arrecadacao_por_area": arrecadacao_por_area,

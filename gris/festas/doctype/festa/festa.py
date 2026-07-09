@@ -27,6 +27,7 @@ class Festa(Document):
 		self._sincronizar_receitas_e_despesas()
 		self._sincronizar_receitas_e_despesas_barraca()
 		self._calcular_precos_convite()
+		self._validar_lotes_convite()
 		self._calcular_totais_financeiros()
 		self._gerar_lista_de_compras()
 
@@ -388,11 +389,57 @@ class Festa(Document):
 			flt(p.preco_venda) * (flt(p.qtd_no_convite) or 1) for p in produtos
 		)
 
+	# ---------- Lotes de convite (planejamento) ----------
+
+	def _validar_lotes_convite(self):
+		if not self.convite_por_lotes:
+			return
+		if not self.lotes_convite:
+			frappe.throw(_("Cadastre ao menos um lote de convite ou desligue 'Convite por lotes'."))
+		total_pct = sum(flt(lote.expectativa_percentual) for lote in self.lotes_convite)
+		# Tolerância para arredondamento de percentuais.
+		if abs(total_pct - 100.0) > 0.01:
+			frappe.throw(
+				_("A soma das expectativas de vendas dos lotes deve ser 100% (atual: {0}%).").format(
+					flt(total_pct, 2)
+				)
+			)
+		for lote in self.lotes_convite:
+			if flt(lote.valor_consumacao) > flt(lote.valor_convite):
+				frappe.throw(
+					_("O valor de consumação de um lote não pode ser maior que o valor do convite.")
+				)
+
+	def _preco_medio_convite_por_lotes(self) -> float:
+		"""Preço médio ponderado do convite pela expectativa de vendas de cada lote."""
+		total_pct = sum(flt(lote.expectativa_percentual) for lote in self.lotes_convite or [])
+		if total_pct <= 0:
+			return 0.0
+		soma = sum(
+			flt(lote.valor_convite) * flt(lote.expectativa_percentual)
+			for lote in self.lotes_convite or []
+		)
+		return soma / total_pct
+
+	def _consumacao_media_convite_por_lotes(self) -> float:
+		"""Consumação média ponderada do convite pela expectativa de vendas de cada lote."""
+		total_pct = sum(flt(lote.expectativa_percentual) for lote in self.lotes_convite or [])
+		if total_pct <= 0:
+			return 0.0
+		soma = sum(
+			flt(lote.valor_consumacao) * flt(lote.expectativa_percentual)
+			for lote in self.lotes_convite or []
+		)
+		return soma / total_pct
+
 	# ---------- Totais por cenario ----------
 
 	def _calcular_totais_financeiros(self):
 		margem_decimal = flt(self.margem_seguranca) / 100.0
-		preco_convite = flt(self.preco_convite)
+		if self.convite_por_lotes:
+			preco_convite = self._preco_medio_convite_por_lotes()
+		else:
+			preco_convite = flt(self.preco_convite)
 
 		for chave in CENARIOS:
 			receita_produtos = sum(

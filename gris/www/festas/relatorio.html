@@ -220,17 +220,20 @@
 			<span class="rel-stat__label">Resultado</span>
 			<span class="rel-stat__value {{ 'rel-stat__value--pos' if resultado >= 0 else 'rel-stat__value--neg' }}">{{ brl(resultado) }}</span>
 		</div>
+		<div class="rel-stat">
+			<span class="rel-stat__label">Fichas não gastas</span>
+			<span class="rel-stat__value {{ 'rel-stat__value--pos' if fichas_nao_gastas >= 0 else 'rel-stat__value--neg' }}">{{ brl(fichas_nao_gastas) }}</span>
+		</div>
 	</div>
 
 	<h3 class="rel-subtitle">Receitas</h3>
 	<table class="table rel-table">
 		<thead><tr><th>Origem</th><th class="rel-num">Valor</th></tr></thead>
 		<tbody>
-			<tr><td>Convites (executado)</td><td class="rel-num">{{ brl(receita_convites) }}</td></tr>
-			<tr><td>Doações</td><td class="rel-num">{{ brl(receita_doacoes) }}</td></tr>
-			{% for b in receitas_barracas %}
-			<tr><td>{{ b.label }}</td><td class="rel-num">{{ brl(b.valor) }}</td></tr>
-			{% endfor %}
+			<tr><td>Convites (consumação)</td><td class="rel-num">{{ brl(consumacao_convites) }}</td></tr>
+			<tr><td>Convites (entrada)</td><td class="rel-num">{{ brl(entrada_convites) }}</td></tr>
+			<tr><td>Fechamento de caixa</td><td class="rel-num">{{ brl(fechamento_caixa) }}</td></tr>
+			{% if receita_doacoes %}<tr><td>Doações</td><td class="rel-num">{{ brl(receita_doacoes) }}</td></tr>{% endif %}
 			<tr class="rel-total"><td>Total de receitas</td><td class="rel-num">{{ brl(arrecadacao) }}</td></tr>
 		</tbody>
 	</table>

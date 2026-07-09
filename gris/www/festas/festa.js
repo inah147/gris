@@ -13,6 +13,9 @@
 	let areasItemsObrigatorio = areasItems.filter(function (it) { return it.value; });
 	let produtosItems = window._festaData.produtosItems || [];
 	let unidadesItems = window._festaData.unidadesItems || [];
+	let valorArrecadadoFesta = Number(window._festaData.valorArrecadadoFesta || 0);
+	let convitePorLotes = !!window._festaData.convitePorLotes;
+	let lotesConvite = (window._festaData.lotesConvite || []).slice();
 	let compraDraftCotacoes = [];
 	let compraDraftUsos = [];
 	let contratacaoDraftCotacoes = [];
@@ -250,6 +253,12 @@
 				window._festaData.precoMinConvite = payload.preco_min_convite || 0;
 				window._festaData.precoSugeridoConvite = payload.preco_sugerido_convite || 0;
 				window._festaData.precoConvite = payload.preco_convite || 0;
+				valorArrecadadoFesta = Number(payload.valor_arrecadado_festa || 0);
+				convitePorLotes = !!payload.convite_por_lotes;
+				lotesConvite = (payload.lotes_convite || []).slice();
+				window._festaData.valorArrecadadoFesta = valorArrecadadoFesta;
+				window._festaData.convitePorLotes = convitePorLotes;
+				window._festaData.lotesConvite = lotesConvite;
 				window._festaData.margemSeguranca = payload.margem_seguranca || 0;
 
 				renderAreasTable();
@@ -2651,7 +2660,8 @@
 		const min = totais.min || {}, inter = totais.intermediario || {}, max = totais.max || {};
 
 		const resultado = [
-			{ label: "Receita de convites", min: min.receita_convite, intermediario: inter.receita_convite, max: max.receita_convite },
+			{ label: "Convites (entrada)", min: min.receita_entrada, intermediario: inter.receita_entrada, max: max.receita_entrada },
+			{ label: "Convites (consumação)", min: min.receita_consumacao, intermediario: inter.receita_consumacao, max: max.receita_consumacao },
 			{ label: "Receita de produtos", min: min.receita_produtos, intermediario: inter.receita_produtos, max: max.receita_produtos },
 			{ label: "Receita total", min: min.receita, intermediario: inter.receita, max: max.receita, cellClass: "festa-cenarios-cell--success" },
 			{ label: "Despesa total", min: min.despesa, intermediario: inter.despesa, max: max.despesa, cellClass: "festa-cenarios-cell--danger" },
@@ -2699,6 +2709,141 @@
 	function renderOrcamentoTab() {
 		renderOrcamentoCenarios();
 		renderOrcamentoBreakdowns();
+		renderLotesConvite();
+	}
+
+	// ── Convite por lotes (planejamento) ──
+
+	function lotesConviteSomaPct() {
+		return lotesConvite.reduce(function (s, l) { return s + Number(l.expectativa_percentual || 0); }, 0);
+	}
+
+	function atualizarSomaLotesConvite() {
+		var el = document.getElementById("lotes-convite-soma");
+		if (!el) return;
+		var container = document.getElementById("lotes-convite-container");
+		var soma = 0;
+		if (container) {
+			container.querySelectorAll("[data-lote-pct]").forEach(function (inp) {
+				soma += Number(inp.value || 0);
+			});
+		} else {
+			soma = lotesConviteSomaPct();
+		}
+		var ok = Math.abs(soma - 100) < 0.01;
+		el.textContent = "Soma das expectativas: " + soma.toLocaleString("pt-BR") + "%" + (ok ? " ✓" : " (deve ser 100%)");
+		el.classList.toggle("festa-cenarios-cell--danger", !ok);
+		el.classList.toggle("festa-cenarios-cell--success", ok);
+	}
+
+	function renderLotesConvite() {
+		var wrap = document.getElementById("lotes-convite-wrap");
+		setSwitchChecked("convite-por-lotes-toggle", convitePorLotes);
+		if (wrap) wrap.hidden = !convitePorLotes;
+
+		var container = document.getElementById("lotes-convite-container");
+		if (!container) return;
+		if (!lotesConvite.length) {
+			container.innerHTML = '<p class="text-sm text-muted-foreground">Nenhum lote cadastrado. Clique em "Adicionar lote".</p>';
+			atualizarSomaLotesConvite();
+			return;
+		}
+		var editable = canEdit;
+		var ro = editable ? "" : " readonly tabindex=\"-1\"";
+		var rows = lotesConvite.map(function (l, i) {
+			return '<tr>' +
+				'<td><input type="text" class="input" data-lote-nome="' + i + '" value="' + escHtml(l.nome_lote || "") + '" placeholder="Ex.: 1º lote"' + ro + ' /></td>' +
+				'<td><input type="text" class="input" data-numeric-input="1" data-lote-valor="' + i + '" value="' + escHtml(String(l.valor_convite != null ? l.valor_convite : "")) + '" placeholder="0"' + ro + ' /></td>' +
+				'<td><input type="text" class="input" data-numeric-input="1" data-lote-consumacao="' + i + '" value="' + escHtml(String(l.valor_consumacao != null ? l.valor_consumacao : "")) + '" placeholder="0"' + ro + ' /></td>' +
+				'<td><input type="text" class="input" data-numeric-input="1" data-lote-pct="' + i + '" value="' + escHtml(String(l.expectativa_percentual != null ? l.expectativa_percentual : "")) + '" placeholder="0"' + ro + ' /></td>' +
+				(editable ? '<td class="festa-table-actions"><button type="button" class="btn-sm-outline" data-lote-remover="' + i + '">Remover</button></td>' : "") +
+				'</tr>';
+		}).join("");
+		container.innerHTML =
+			'<table class="festa-cenarios-table"><thead><tr>' +
+			'<th>Nome</th><th>Valor do convite</th><th>Consumação</th><th>Expectativa (%)</th>' +
+			(editable ? "<th></th>" : "") +
+			'</tr></thead><tbody>' + rows + '</tbody></table>';
+		atualizarSomaLotesConvite();
+	}
+
+	function coletarLotesConviteDoDom() {
+		var container = document.getElementById("lotes-convite-container");
+		if (!container) return lotesConvite;
+		var novos = [];
+		container.querySelectorAll("tbody tr").forEach(function (tr) {
+			var nome = tr.querySelector("[data-lote-nome]");
+			if (!nome) return;
+			novos.push({
+				nome_lote: nome.value.trim(),
+				valor_convite: parseCurrencyBR(tr.querySelector("[data-lote-valor]").value),
+				valor_consumacao: parseCurrencyBR(tr.querySelector("[data-lote-consumacao]").value),
+				expectativa_percentual: Number(tr.querySelector("[data-lote-pct]").value || 0),
+			});
+		});
+		return novos;
+	}
+
+	function initLotesConvite() {
+		renderLotesConvite();
+		if (!canEdit) return;
+
+		// O macro switch coloca o id no <label>; o checkbox real está dentro dele.
+		var toggleInput = document.querySelector("#convite-por-lotes-toggle input[type='checkbox']");
+		if (toggleInput) {
+			toggleInput.addEventListener("change", function () {
+				convitePorLotes = toggleInput.checked;
+				var wrap = document.getElementById("lotes-convite-wrap");
+				if (wrap) wrap.hidden = !convitePorLotes;
+				if (convitePorLotes && !lotesConvite.length) {
+					lotesConvite = [{ nome_lote: "", valor_convite: "", valor_consumacao: "", expectativa_percentual: "" }];
+				}
+				renderLotesConvite();
+			});
+		}
+
+		var addBtn = document.getElementById("btn-add-lote-convite");
+		if (addBtn) {
+			addBtn.addEventListener("click", function () {
+				lotesConvite = coletarLotesConviteDoDom();
+				lotesConvite.push({ nome_lote: "", valor_convite: "", valor_consumacao: "", expectativa_percentual: "" });
+				renderLotesConvite();
+			});
+		}
+
+		var container = document.getElementById("lotes-convite-container");
+		if (container) {
+			container.addEventListener("input", function (ev) {
+				if (ev.target && ev.target.hasAttribute("data-lote-pct")) atualizarSomaLotesConvite();
+			});
+			container.addEventListener("click", function (ev) {
+				var btn = ev.target.closest("[data-lote-remover]");
+				if (!btn) return;
+				var idx = Number(btn.getAttribute("data-lote-remover"));
+				lotesConvite = coletarLotesConviteDoDom();
+				lotesConvite.splice(idx, 1);
+				renderLotesConvite();
+			});
+		}
+
+		var salvarBtn = document.getElementById("lotes-convite-salvar");
+		if (salvarBtn) {
+			salvarBtn.addEventListener("click", function () {
+				var lotes = coletarLotesConviteDoDom();
+				salvarBtn.disabled = true;
+				api("gris.api.festas.update_lotes_convite", {
+					festa_name: festaName,
+					convite_por_lotes: convitePorLotes ? 1 : 0,
+					lotes: JSON.stringify(lotes),
+				})
+					.then(function () {
+						toast("Lotes do convite salvos.", "success");
+						return refreshFestaData();
+					})
+					.catch(function (err) { toast(err.message || "Erro ao salvar lotes.", "error"); })
+					.finally(function () { salvarBtn.disabled = false; });
+			});
+		}
 	}
 
 	function initOrcamento() {
@@ -2709,6 +2854,7 @@
 		if (precoSug) precoSug.value = fmtCurrency(window._festaData.precoSugeridoConvite);
 
 		renderOrcamentoTab();
+		initLotesConvite();
 
 		if (!precoInput || precoInput.readOnly) return;
 
@@ -2768,6 +2914,7 @@
 	const RAMOS_ORDEM = ["Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro", "Diretoria"];
 	let echartsLoading = null;
 	let opcaoDraft = null;
+	let opcaoLotesDraft = [];
 	let opcaoLocalList = [];
 
 	function ensureECharts() {
@@ -3566,16 +3713,67 @@
 	function openOpcaoForm(opcao) {
 		const form = document.getElementById("opcao-convite-form");
 		if (!form) return;
-		opcaoDraft = opcao ? Object.assign({}, opcao) : { name: "", nome_convite: "", valor: 0, quantidade_esperada: 0, ativo: true, imagem_capa: "" };
+		opcaoDraft = opcao ? Object.assign({}, opcao) : { name: "", nome_convite: "", valor: 0, valor_consumacao: 0, quantidade_esperada: 0, ativo: true, portaria: false, imagem_capa: "", lotes: [] };
 		document.getElementById("opcao-nome-convite").value = opcaoDraft.nome_convite || "";
 		document.getElementById("opcao-valor").value = opcaoDraft.valor || 0;
+		const consumacaoEl = document.getElementById("opcao-valor-consumacao");
+		if (consumacaoEl) consumacaoEl.value = opcaoDraft.valor_consumacao || 0;
 		document.getElementById("opcao-quantidade-esperada").value = opcaoDraft.quantidade_esperada || 0;
 		const hiddenUrl = document.getElementById("opcao-imagem-capa");
 		if (hiddenUrl) hiddenUrl.value = opcaoDraft.imagem_capa || "";
 		renderOpcaoImagemPreview(opcaoDraft.imagem_capa || "");
 		setSwitchChecked("opcao-ativo", !!opcaoDraft.ativo);
+		// Convite de portaria não usa lotes.
+		opcaoLotesDraft = opcaoDraft.portaria ? [] : (opcaoDraft.lotes || []).slice();
+		renderOpcaoLotes();
 		form.hidden = false;
 		form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+	}
+
+	function renderOpcaoLotes() {
+		const wrap = document.getElementById("opcao-lotes-wrap");
+		const container = document.getElementById("opcao-lotes-container");
+		const isPortaria = !!(opcaoDraft && opcaoDraft.portaria);
+		if (wrap) wrap.hidden = isPortaria;
+		if (!container) return;
+		if (isPortaria) { container.innerHTML = ""; return; }
+		const editable = canEdit;
+		const ro = editable ? "" : " readonly tabindex=\"-1\"";
+		if (!opcaoLotesDraft.length) {
+			container.innerHTML = '<p class="text-sm text-muted-foreground">Sem lotes: o valor acima é usado diretamente.</p>';
+			return;
+		}
+		const rows = opcaoLotesDraft.map(function (l, i) {
+			return '<tr>' +
+				'<td><input type="date" class="input" data-opcao-lote-inicio="' + i + '" value="' + escHtml(l.data_inicio || "") + '"' + ro + ' /></td>' +
+				'<td><input type="date" class="input" data-opcao-lote-fim="' + i + '" value="' + escHtml(l.data_fim || "") + '"' + ro + ' /></td>' +
+				'<td><input type="text" class="input" data-numeric-input="1" data-opcao-lote-valor="' + i + '" value="' + escHtml(String(l.valor != null ? l.valor : "")) + '" placeholder="0"' + ro + ' /></td>' +
+				'<td><input type="text" class="input" data-numeric-input="1" data-opcao-lote-consumacao="' + i + '" value="' + escHtml(String(l.valor_consumacao != null ? l.valor_consumacao : "")) + '" placeholder="0"' + ro + ' /></td>' +
+				(editable ? '<td class="festa-table-actions"><button type="button" class="btn-sm-outline" data-opcao-lote-remover="' + i + '">Remover</button></td>' : "") +
+				'</tr>';
+		}).join("");
+		container.innerHTML =
+			'<table class="festa-cenarios-table"><thead><tr>' +
+			'<th>Início</th><th>Término</th><th>Valor</th><th>Consumação</th>' +
+			(editable ? "<th></th>" : "") +
+			'</tr></thead><tbody>' + rows + '</tbody></table>';
+	}
+
+	function coletarOpcaoLotesDoDom() {
+		const container = document.getElementById("opcao-lotes-container");
+		if (!container) return opcaoLotesDraft;
+		const novos = [];
+		container.querySelectorAll("tbody tr").forEach(function (tr) {
+			const inicio = tr.querySelector("[data-opcao-lote-inicio]");
+			if (!inicio) return;
+			novos.push({
+				data_inicio: inicio.value,
+				data_fim: tr.querySelector("[data-opcao-lote-fim]").value,
+				valor: parseCurrencyBR(tr.querySelector("[data-opcao-lote-valor]").value),
+				valor_consumacao: parseCurrencyBR(tr.querySelector("[data-opcao-lote-consumacao]").value),
+			});
+		});
+		return novos;
 	}
 
 	function closeOpcaoForm() {
@@ -3731,6 +3929,26 @@
 		const cancelBtn = document.getElementById("btn-opcao-cancelar");
 		if (cancelBtn) cancelBtn.addEventListener("click", closeOpcaoForm);
 
+		const addLoteBtn = document.getElementById("btn-add-opcao-lote");
+		if (addLoteBtn) {
+			addLoteBtn.addEventListener("click", function () {
+				opcaoLotesDraft = coletarOpcaoLotesDoDom();
+				opcaoLotesDraft.push({ data_inicio: "", data_fim: "", valor: "", valor_consumacao: "" });
+				renderOpcaoLotes();
+			});
+		}
+		const lotesContainer = document.getElementById("opcao-lotes-container");
+		if (lotesContainer) {
+			lotesContainer.addEventListener("click", function (ev) {
+				const btn = ev.target.closest("[data-opcao-lote-remover]");
+				if (!btn) return;
+				const idx = Number(btn.getAttribute("data-opcao-lote-remover"));
+				opcaoLotesDraft = coletarOpcaoLotesDoDom();
+				opcaoLotesDraft.splice(idx, 1);
+				renderOpcaoLotes();
+			});
+		}
+
 		// Componente file_upload do design system dispara este evento com
 		// detail.files[0].file_url quando o upload conclui.
 		const fileUploadComp = document.getElementById("opcao-imagem-upload");
@@ -3759,13 +3977,16 @@
 		if (confirmBtn) {
 			confirmBtn.addEventListener("click", function () {
 				if (!opcaoDraft) return;
+				const consumacaoEl = document.getElementById("opcao-valor-consumacao");
 				const payload = {
 					name: opcaoDraft.name || "",
 					nome_convite: (document.getElementById("opcao-nome-convite").value || "").trim(),
 					valor: Number(document.getElementById("opcao-valor").value || 0),
+					valor_consumacao: Number((consumacaoEl && consumacaoEl.value) || 0),
 					quantidade_esperada: Number(document.getElementById("opcao-quantidade-esperada").value || 0),
 					ativo: getSwitchChecked("opcao-ativo"),
 					imagem_capa: (document.getElementById("opcao-imagem-capa").value || "").trim(),
+					lotes: (opcaoDraft.portaria ? [] : coletarOpcaoLotesDoDom()),
 				};
 				confirmBtn.disabled = true;
 				api("gris.api.festas.convites.upsert_opcao", {
@@ -3891,7 +4112,35 @@
 		renderFechamentoContratacoes();
 		renderFechamentoBarracas();
 		renderFechamentoConvites();
+		renderFechamentoCaixa();
 		renderFechamentoResumo();
+	}
+
+	// ── Fechamento de caixa ──
+
+	function renderFechamentoCaixa() {
+		var input = document.getElementById("fechamento-caixa-input");
+		// `fechamento-caixa-input` é o wrapper do currency-input: o setter `.value`
+		// espera o número cru (ele mesmo formata o display). Passar já formatado
+		// via fmtCurrency faria o parseFloat interno virar NaN e limpar o campo.
+		if (input) input.value = valorArrecadadoFesta;
+	}
+
+	function wireFechamentoCaixa() {
+		var btn = document.getElementById("fechamento-caixa-salvar");
+		if (!btn) return;
+		btn.addEventListener("click", function () {
+			var input = document.getElementById("fechamento-caixa-input");
+			var valor = input ? parseCurrencyBR(input.value) : 0;
+			btn.disabled = true;
+			api("gris.api.festas.salvar_fechamento_caixa", { festa_name: festaName, valor: valor })
+				.then(function () {
+					toast("Fechamento de caixa salvo.", "success");
+					return refreshFestaData();
+				})
+				.catch(function (err) { toast(err.message || "Erro ao salvar.", "error"); })
+				.finally(function () { btn.disabled = false; });
+		});
 	}
 
 	// ── Compras ──
@@ -4462,7 +4711,13 @@
 		var convitesTotal = (convitesDashboard.opcoes || []).reduce(function (s, o) {
 			return s + Number(valMap[o.name] || 0);
 		}, 0);
+		// Receitas de convite segmentadas: consumação (parcela de fichas) e entrada.
+		var consumacao = Number(totais.total_consumacao || 0);
+		var entrada = convitesTotal - consumacao;
 		var doacoes = Number(totais.total_doacoes_valor || 0);
+		// Convites de portaria já entram no caixa; subtraímos para não contar duas vezes.
+		var portariaValor = Number(totais.total_portaria_valor || 0);
+		var fechamentoCaixa = valorArrecadadoFesta - portariaValor;
 		var barracasLinhas = barracas.map(function (b) {
 			return { label: b.nome_barraca || b.name, valor: Number(b.valor_arrecadado_realizado_real) || 0 };
 		});
@@ -4470,17 +4725,21 @@
 		// Itens cancelados (não comprados) não entram nas despesas.
 		var comprasTotal = compras.reduce(function (s, c) { return s + (c.cancelado ? 0 : Number(c.valor_total_realizado) || 0); }, 0);
 		var contratacoesTotal = contratacoes.reduce(function (s, c) { return s + (c.cancelado ? 0 : Number(c.valor_total_realizado) || 0); }, 0);
-		var entradas = convitesTotal + doacoes + barracasTotal;
+		var entradas = consumacao + entrada + fechamentoCaixa + doacoes;
 		var saidas = comprasTotal + contratacoesTotal;
 		return {
-			convitesTotal: convitesTotal,
+			consumacao: consumacao,
+			entrada: entrada,
+			fechamentoCaixa: fechamentoCaixa,
 			doacoes: doacoes,
 			barracasLinhas: barracasLinhas,
+			barracasTotal: barracasTotal,
 			comprasTotal: comprasTotal,
 			contratacoesTotal: contratacoesTotal,
 			entradas: entradas,
 			saidas: saidas,
 			resultado: entradas - saidas,
+			fichasNaoGastas: consumacao + fechamentoCaixa - barracasTotal,
 		};
 	}
 
@@ -4505,20 +4764,33 @@
 		if (!container) return;
 		var r = computeFechamentoResumo();
 
-		var entradasRows =
-			fechamentoResumoRow("Convites", r.convitesTotal) +
-			(r.doacoes > 0 ? fechamentoResumoRow("Doações", r.doacoes) : "") +
-			r.barracasLinhas.map(function (b) { return fechamentoResumoRow(b.label, b.valor); }).join("");
+		var receitasRows =
+			fechamentoResumoRow("Convites (consumação)", r.consumacao) +
+			fechamentoResumoRow("Convites (entrada)", r.entrada) +
+			fechamentoResumoRow("Fechamento de caixa", r.fechamentoCaixa) +
+			(r.doacoes > 0 ? fechamentoResumoRow("Doações", r.doacoes) : "");
 
 		var html = '<table class="festa-cenarios-table festa-resumo-table"><tbody>';
-		html += fechamentoResumoGroup("Entradas");
-		html += entradasRows;
-		html += fechamentoResumoRow("Total de entradas", r.entradas, { total: true, cellClass: "festa-cenarios-cell--success" });
+		html += fechamentoResumoGroup("Receitas");
+		html += receitasRows;
+		html += fechamentoResumoRow("Total de receitas", r.entradas, { total: true, cellClass: "festa-cenarios-cell--success" });
 		html += fechamentoResumoGroup("Saídas");
 		html += fechamentoResumoRow("Compras", r.comprasTotal);
 		html += fechamentoResumoRow("Contratações", r.contratacoesTotal);
 		html += fechamentoResumoRow("Total de saídas", r.saidas, { total: true, cellClass: "festa-cenarios-cell--danger" });
 		html += fechamentoResumoRow("Resultado", r.resultado, { total: true, negativeIsDanger: true });
+		html += fechamentoResumoRow("Fichas não gastas", r.fichasNaoGastas, { negativeIsDanger: true });
+		html += "</tbody></table>";
+
+		// Arrecadação de cada barraca (referência; não entra no resultado).
+		html += '<table class="festa-cenarios-table festa-resumo-table"><tbody>';
+		html += fechamentoResumoGroup("Arrecadação por barraca");
+		if (r.barracasLinhas.length) {
+			html += r.barracasLinhas.map(function (b) { return fechamentoResumoRow(b.label, b.valor); }).join("");
+			html += fechamentoResumoRow("Total das barracas", r.barracasTotal, { total: true });
+		} else {
+			html += '<tr><td class="festa-cenarios-label" colspan="2">Nenhuma barraca cadastrada.</td></tr>';
+		}
 		html += "</tbody></table>";
 		container.innerHTML = html;
 
@@ -4618,6 +4890,7 @@
 
 	function initFechamento() {
 		renderFechamentoTab();
+		wireFechamentoCaixa();
 
 		// O gráfico do Resumo só é renderizado quando a seção é aberta — assim ele
 		// nasce com largura correta (a aba Fechamento inicia oculta).

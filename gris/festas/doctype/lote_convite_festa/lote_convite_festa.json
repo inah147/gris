@@ -1,0 +1,58 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-07-09 09:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "nome_lote",
+  "valor_convite",
+  "valor_consumacao",
+  "expectativa_percentual"
+ ],
+ "fields": [
+  {
+   "fieldname": "nome_lote",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome do Lote"
+  },
+  {
+   "fieldname": "valor_convite",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Valor do Convite",
+   "non_negative": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "valor_consumacao",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Valor de Consumação",
+   "non_negative": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "expectativa_percentual",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Expectativa de Vendas (%)"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-09 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Festas",
+ "name": "Lote Convite Festa",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -129,17 +129,33 @@ _CENARIOS_KEYS = ("min", "intermediario", "max")
 
 
 def totais_payload(doc) -> dict:
-	"""Retorna receita/despesa/margem/saldo por cenário a partir do doc Festa."""
+	"""Retorna receita/despesa/margem/saldo por cenário a partir do doc Festa.
+
+	A receita de convites é segmentada em entrada e consumação usando a
+	expectativa de vendas de cada lote (consumação média ponderada × público).
+	A receita de produtos considera apenas o excedente sobre a consumação (ou a
+	própria consumação, o que for maior), evitando contá-la duas vezes — mesma
+	lógica de resultado aplicada no fechamento.
+	"""
+	consumacao_media = (
+		doc._consumacao_media_convite_por_lotes() if doc.convite_por_lotes else 0.0
+	)
 	payload = {}
 	for chave in _CENARIOS_KEYS:
 		receita_convite = flt(doc.get(f"receita_convite_{chave}"))
 		receita_produtos = flt(doc.get(f"receita_produtos_{chave}"))
-		receita = flt(doc.get(f"receita_total_{chave}"))
+		publico = flt(doc.get(f"expectativa_publico_{chave}"))
+		consumacao = consumacao_media * publico
+		entrada = receita_convite - consumacao
+		receita_produtos_ajustada = max(consumacao, receita_produtos - consumacao)
+		receita = entrada + consumacao + receita_produtos_ajustada
 		despesa = flt(doc.get(f"despesa_total_{chave}"))
 		margem = flt(doc.get(f"margem_seg_valor_{chave}"))
 		payload[chave] = {
 			"receita_convite": receita_convite,
-			"receita_produtos": receita_produtos,
+			"receita_entrada": entrada,
+			"receita_consumacao": consumacao,
+			"receita_produtos": receita_produtos_ajustada,
 			"receita": receita,
 			"despesa": despesa,
 			"margem": margem,
@@ -196,6 +212,79 @@ def update_preco_convite(festa_name: str, preco: str) -> dict:
 		"preco_sugerido_convite": flt(doc.preco_sugerido_convite),
 		"totais": totais_payload(doc),
 	}
+
+
+def _parse_lotes_convite(raw) -> list[dict]:
+	"""Normaliza os lotes de planejamento (Lote Convite Festa) do cliente."""
+	if raw in (None, ""):
+		return []
+	if isinstance(raw, str):
+		try:
+			raw = json.loads(raw)
+		except (ValueError, TypeError):
+			frappe.throw("Lotes inválidos.")
+	if not isinstance(raw, list):
+		frappe.throw("Lotes inválidos.")
+
+	lotes: list[dict] = []
+	for item in raw:
+		if not isinstance(item, dict):
+			frappe.throw("Lote inválido.")
+		valor_convite = _as_non_negative_float(item.get("valor_convite", 0), "Valor do convite")
+		valor_consumacao = _as_non_negative_float(
+			item.get("valor_consumacao", 0), "Valor de consumação"
+		)
+		expectativa = _as_non_negative_float(
+			item.get("expectativa_percentual", 0), "Expectativa de vendas"
+		)
+		lotes.append(
+			{
+				"nome_lote": (item.get("nome_lote") or "").strip(),
+				"valor_convite": valor_convite,
+				"valor_consumacao": valor_consumacao,
+				"expectativa_percentual": expectativa,
+			}
+		)
+	return lotes
+
+
+@frappe.whitelist()
+def update_lotes_convite(festa_name: str, convite_por_lotes, lotes=None) -> dict:
+	_ensure_gestor()
+	_validate_festa(festa_name)
+
+	ligado = 1 if convite_por_lotes in ("1", "true", "True", True, 1) else 0
+
+	doc = frappe.get_doc("Festa", festa_name)
+	doc.convite_por_lotes = ligado
+	doc.set("lotes_convite", _parse_lotes_convite(lotes) if ligado else [])
+	doc.save()  # validate() garante a soma de 100% quando ligado.
+
+	return {
+		"ok": True,
+		"convite_por_lotes": bool(doc.convite_por_lotes),
+		"lotes_convite": [
+			{
+				"nome_lote": lote.nome_lote or "",
+				"valor_convite": flt(lote.valor_convite),
+				"valor_consumacao": flt(lote.valor_consumacao),
+				"expectativa_percentual": flt(lote.expectativa_percentual),
+			}
+			for lote in (doc.lotes_convite or [])
+		],
+		"totais": totais_payload(doc),
+	}
+
+
+@frappe.whitelist()
+def salvar_fechamento_caixa(festa_name: str, valor) -> dict:
+	_ensure_gestor()
+	_validate_festa(festa_name)
+
+	valor_arrecadado = _as_non_negative_float(valor, "Valor arrecadado na festa")
+	frappe.db.set_value("Festa", festa_name, "valor_arrecadado_festa", valor_arrecadado)
+
+	return {"ok": True, "valor_arrecadado_festa": valor_arrecadado}
 
 
 # ---------------------------------------------------------------------------

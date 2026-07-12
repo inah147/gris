@@ -368,18 +368,15 @@ def _upsert_portal_user(
 		user.insert()
 		action = "created"
 	else:
-		# Usuário já existe — garante que o papel Responsavel está atribuído, se aplicável.
+		# Usuário já existe — apenas garante (de forma aditiva) que o papel
+		# Responsavel está atribuído. NÃO alteramos role_profile_name (Função),
+		# pois isso substituiria o perfil existente e removeria acessos de
+		# usuários que já são responsáveis e também têm outras funções.
 		if responsavel_name:
 			user_doc = frappe.get_doc("User", email)
-			has_changes = False
-			if user_doc.role_profile_name != "Responsavel":
-				user_doc.role_profile_name = "Responsavel"
-				has_changes = True
 			existing_roles = {r.role for r in user_doc.roles}
 			if "Responsavel" not in existing_roles:
 				user_doc.append("roles", {"role": "Responsavel"})
-				has_changes = True
-			if has_changes:
 				user_doc.save(ignore_permissions=True)
 
 	# Garante que Responsavel.email aponte para este usuário (exigido pelo portal).

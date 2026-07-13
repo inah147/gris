@@ -19,3 +19,4 @@ gris.patches.create_personal_boards_for_users
 gris.patches.migrate_responsavel_to_user_link
 gris.patches.v01_board_user_autopopulate
 gris.patches.v02_board_user_nivel_acesso
+gris.patches.reativar_carteiras_instituicoes

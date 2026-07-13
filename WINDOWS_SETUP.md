@@ -263,7 +263,7 @@ bench. Para depurar:
 
 ### Passo 6 — Popular o site com dados de exemplo (seed)
 
-As fixtures de configuração (roles, carteiras, centros de custo,
+As fixtures de configuração (roles, centros de custo,
 categorias de transação, UOs) já são instaladas automaticamente junto
 com a app. Para ter registros de exemplo para testar a interface —
 associados, responsáveis e vínculos, leads de novos associados (fila

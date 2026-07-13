@@ -77,9 +77,14 @@ gris/
   fixtures/
     role.json
     role_profile.json
-    carteira.json
     etc...
 ```
+
+> ⚠️ **Atenção:** o import de fixtures (`bench migrate`) varre **todos** os `.json`
+> desta pasta e sobrescreve os registros correspondentes — mesmo os que não estão
+> declarados no hook `fixtures` (o hook só controla o *export*). Nunca deixe aqui
+> dados operacionais editáveis pelo usuário (ex.: Carteira, Instituição Financeira,
+> com saldo/ativa/chave PIX), senão cada deploy zera esses campos em produção.
 
 ## Comandos Úteis
 

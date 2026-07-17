@@ -10,6 +10,9 @@ from gris.api.financeiro.infinitepay import (
 	get_infinitepay_receipts_df,
 	get_infinitepay_sales_df,
 )
+from gris.financeiro.doctype.transacao_extrato_geral.transacao_extrato_geral import (
+	criar_transacao_de_sistema,
+)
 from gris.api.portal_access import enrich_context, user_has_access
 from gris.api.portal_cache_utils import get_uel_cached
 
@@ -288,9 +291,8 @@ def process_uploaded_files(extrato_file_url, vendas_file_url, recebimentos_file_
 				if filters and frappe.db.exists("Transacao Extrato Geral", filters):
 					stats["geral"]["skipped_exist"] += 1
 				else:
-					doc = frappe.get_doc(
+					criar_transacao_de_sistema(
 						{
-							"doctype": "Transacao Extrato Geral",
 							"timestamp_transacao": nv(row.get("data_hora")),
 							"data_transacao": (
 								nv(row.get("data_hora")).date()
@@ -325,7 +327,6 @@ def process_uploaded_files(extrato_file_url, vendas_file_url, recebimentos_file_
 							"transacao_revisada": 0,
 						}
 					)
-					doc.insert(ignore_permissions=False)
 					stats["geral"]["inserted"] += 1
 			except Exception as e:
 				stats["geral"]["failed"] += 1

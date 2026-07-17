@@ -5,6 +5,29 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import getdate
 
+FONTE_SISTEMA = "Sistema"
+FONTE_PLANILHA = "Planilha"
+
+
+def criar_transacao_de_sistema(campos: dict) -> Document:
+	"""Cria uma Transacao Extrato Geral originada de integração de sistema.
+
+	Todo fluxo automático de importação (botão "Importar dados" e os `after_insert` das
+	doctypes de origem) deve criar a transação consolidada por aqui. `doctype` e `fonte`
+	são aplicados depois de `campos`, de modo que o chamador não consiga sobrescrevê-los
+	nem esquecer a fonte e cair no default "Planilha" — que é reservado para o que entra
+	por planilha/Data Import ou digitação manual.
+	"""
+	doc = frappe.get_doc(
+		{
+			**campos,
+			"doctype": "Transacao Extrato Geral",
+			"fonte": FONTE_SISTEMA,
+		}
+	)
+	doc.insert()
+	return doc
+
 
 class TransacaoExtratoGeral(Document):
 	TRANSFER_CATEGORIES = (
@@ -26,7 +49,8 @@ class TransacaoExtratoGeral(Document):
 			inst = frappe.db.get_value("Carteira", self.carteira, "instituicao_financeira") or ""
 			apply_cash_filter = "infinitepay" in inst.lower()
 
-			_filters = {"carteira": self.carteira}
+			# Duplicatas conciliadas marcadas com excluir_do_total não entram no saldo.
+			_filters = {"carteira": self.carteira, "excluir_do_total": 0}
 			if apply_cash_filter:
 				_filters["metodo"] = ["!=", "Dinheiro"]
 
@@ -45,8 +69,9 @@ class TransacaoExtratoGeral(Document):
 			saldo_atual = total_transacoes + saldo_inicial
 
 			# 4. Atualizar o saldo da carteira no doctype Carteira
+			# Sem commit explícito: o Frappe commita ao final da requisição/job, e o commit
+			# aqui quebraria o rollback dos testes, persistindo dados de teste no site.
 			frappe.db.set_value("Carteira", self.carteira, "saldo", saldo_atual)
-			frappe.db.commit()
 
 	def _update_pagamento_contribuicao_mensal(self):
 		"""Atualiza o status de Pagamento Contribuicao Mensal quando beneficiario é preenchido."""
@@ -92,7 +117,6 @@ class TransacaoExtratoGeral(Document):
 				if pagamento.status != "Pago":
 					pagamento.status = "Pago"
 					pagamento.save(ignore_permissions=True)
-					frappe.db.commit()
 					frappe.logger().info("Pagamento atualizado para Pago")
 					frappe.msgprint(
 						f"Pagamento de contribuição mensal marcado como Pago para {mes_referencia.strftime('%m/%Y')}",
@@ -135,7 +159,6 @@ class TransacaoExtratoGeral(Document):
 					pagamento.status = "Pago"
 					pagamento.valor = abs(self.valor)
 					pagamento.save(ignore_permissions=True)
-					frappe.db.commit()
 					frappe.msgprint(
 						f"Pagamento de conta fixa atualizado para Pago no mês {mes_referencia.strftime('%m/%Y')}",
 						alert=True,
@@ -144,8 +167,9 @@ class TransacaoExtratoGeral(Document):
 	def on_update(self):
 		self._update_pagamento_contribuicao_mensal()
 		self._update_pagamento_conta_fixa()
-
-	def after_update(self):
+		# `on_update` é o hook real do Frappe para pós-save; `after_update` não existe e
+		# nunca era chamado, então o saldo da carteira não acompanhava edições da transação
+		# (ex.: marcar excluir_do_total ao conciliar).
 		self._update_wallet()
 
 	def after_delete(self):

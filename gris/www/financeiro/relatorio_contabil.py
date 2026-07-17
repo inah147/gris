@@ -46,7 +46,11 @@ def get_context(context):
 	data_inicio = request_args.get("data_inicio") or primeiro_dia.strftime("%Y-%m-%d")
 	data_fim = request_args.get("data_fim") or today.strftime("%Y-%m-%d")
 
-	filters = [["data_deposito", "between", [data_inicio, data_fim]], ["metodo", "!=", "Dinheiro"]]
+	filters = [
+		["data_deposito", "between", [data_inicio, data_fim]],
+		["metodo", "!=", "Dinheiro"],
+		["excluir_do_total", "=", 0],
+	]
 
 	# Buscar transações do extrato geral filtradas
 	transacoes = frappe.get_all(
@@ -102,7 +106,11 @@ def get_context(context):
 		transacoes_anteriores = frappe.get_all(
 			"Transacao Extrato Geral",
 			fields=["instituicao", "valor"],
-			filters=[["data_deposito", "<", data_inicio], ["metodo", "!=", "Dinheiro"]],
+			filters=[
+				["data_deposito", "<", data_inicio],
+				["metodo", "!=", "Dinheiro"],
+				["excluir_do_total", "=", 0],
+			],
 			limit_page_length=0,
 		)
 		for t in transacoes_anteriores:

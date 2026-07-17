@@ -36,7 +36,13 @@
   "centro_de_custo",
   "ordinaria_extraordinaria",
   "repasse_entre_contas",
-  "transacao_revisada"
+  "transacao_revisada",
+  "conciliacao_section",
+  "fonte",
+  "status_conciliacao",
+  "column_break_conc",
+  "transacao_conciliada",
+  "excluir_do_total"
  ],
  "fields": [
   {
@@ -203,6 +209,43 @@
    "fieldname": "observacoes",
    "fieldtype": "Small Text",
    "label": "Observa\u00e7\u00f5es"
+  },
+  {
+   "fieldname": "conciliacao_section",
+   "fieldtype": "Section Break",
+   "label": "Concilia\u00e7\u00e3o"
+  },
+  {
+   "default": "Planilha",
+   "fieldname": "fonte",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Fonte do dado",
+   "options": "Planilha\nSistema"
+  },
+  {
+   "default": "N\u00e3o conciliada",
+   "fieldname": "status_conciliacao",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Status da Concilia\u00e7\u00e3o",
+   "options": "N\u00e3o conciliada\nConciliada"
+  },
+  {
+   "fieldname": "column_break_conc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "transacao_conciliada",
+   "fieldtype": "Link",
+   "label": "Transa\u00e7\u00e3o Conciliada",
+   "options": "Transacao Extrato Geral"
+  },
+  {
+   "default": "0",
+   "fieldname": "excluir_do_total",
+   "fieldtype": "Check",
+   "label": "Excluir do total (duplicata conciliada)"
   }
  ],
  "grid_page_length": 50,

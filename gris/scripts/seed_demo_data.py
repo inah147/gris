@@ -11,9 +11,13 @@ Idempotente: pode ser executado várias vezes sem duplicar registros.
 Cobre os doctypes "de conteúdo" criáveis manualmente dos módulos Gris, Financeiro,
 Gestão de Adultos e Gestão de Projetos. Ficam de fora deste seed:
 - Doctypes mestre/configuração já cobertos por fixtures (gris/hooks.py), como
-  Carteira, Centro de Custo, Categoria de Transacao, Instituicao Financeira,
-  Unidade Organizacional (real), ODS Projeto, Mapeamento de perguntas e respostas
-  da entrevista, Role, Role Profile e Email Template.
+  Centro de Custo, Categoria de Transacao, Unidade Organizacional (real),
+  ODS Projeto, Mapeamento de perguntas e respostas da entrevista, Role,
+  Role Profile e Email Template.
+
+Instituicao Financeira e Carteira NÃO têm fixture — por isso o seed as cria
+(`_seed_instituicoes_financeiras`/`_seed_carteiras`), senão as transações do extrato
+falham na validação de link em um site novo.
 - Singles de configuração (Configuracoes de Associados, Configuracoes WhatsApp etc.).
 - Tabelas filhas (istable=1), que só existem como linhas de outro documento.
 - Doctypes de importação de extrato bancário (Transacao BTG Empresas, Transacao
@@ -47,10 +51,13 @@ def run():
 	_seed_resposta_manifestacao_de_interesse()
 	_seed_metrica_mensal_de_associados()
 
+	_seed_instituicoes_financeiras()
+	_seed_carteiras()
 	contas_fixas = _seed_contas_fixas()
 	_seed_pagamentos_conta_fixa(contas_fixas)
 	_seed_pagamentos_contribuicao_mensal(associados)
 	_seed_transacoes_extrato_geral(associados, contas_fixas)
+	_seed_transacoes_conciliacao()
 
 	projeto = _seed_projeto(associados)
 	_seed_avaliacao_de_projeto(projeto)
@@ -140,6 +147,8 @@ def _seed_associados(unidades):
 			"ramo": "Lobinho",
 			"area": unidades[1],
 			"ingresso": add_years(nowdate(), -1),
+			"email": "ana.souza@example.com",
+			"telefone": "11999990101",
 		},
 		{
 			"nome_completo": "Bruno Carlos Lima",
@@ -150,6 +159,8 @@ def _seed_associados(unidades):
 			"ramo": "Escoteiro",
 			"area": unidades[2],
 			"ingresso": add_years(nowdate(), -2),
+			"email": "bruno.lima@example.com",
+			"telefone": "11999990102",
 		},
 		{
 			"nome_completo": "Carla Dias Pereira",
@@ -160,6 +171,9 @@ def _seed_associados(unidades):
 			"ramo": "Não se aplica",
 			"area": unidades[0],
 			"ingresso": add_years(nowdate(), -3),
+			# Coordenadora do projeto demo: Envolvido no Projeto exige email e telefone.
+			"email": "carla.pereira@example.com",
+			"telefone": "11999990103",
 		},
 	]
 
@@ -387,6 +401,43 @@ def _seed_pagamentos_contribuicao_mensal(associados):
 		).insert(ignore_permissions=True)
 
 
+def _seed_instituicoes_financeiras():
+	"""Instituições usadas pelas transações demo.
+
+	Não há fixture para Instituicao Financeira/Carteira: em um site novo elas não existem
+	e as transações do extrato falhariam na validação de link.
+	"""
+	for nome in ("Portão 3", "Espécie", "BTG Empresas", "Infinitepay"):
+		if frappe.db.exists("Instituicao Financeira", nome):
+			continue
+		frappe.get_doc(
+			{"doctype": "Instituicao Financeira", "nome": nome, "ativa": 1}
+		).insert(ignore_permissions=True)
+
+
+def _seed_carteiras():
+	"""Carteiras usadas pelas transações demo, vinculadas às instituições."""
+	carteiras = [
+		("Ramo Escoteiro", "Portão 3"),
+		("Ramo Lobinho", "Portão 3"),
+		("Espécie", "Espécie"),
+		("BTG Empresas", "BTG Empresas"),
+		("Infinitepay", "Infinitepay"),
+	]
+	for nome, instituicao in carteiras:
+		if frappe.db.exists("Carteira", nome):
+			continue
+		frappe.get_doc(
+			{
+				"doctype": "Carteira",
+				"nome": nome,
+				"instituicao_financeira": instituicao,
+				"ativa": 1,
+				"saldo_inicial": 0,
+			}
+		).insert(ignore_permissions=True)
+
+
 def _seed_transacoes_extrato_geral(associados, contas_fixas):
 	mes_referencia = get_first_day(nowdate())
 
@@ -435,6 +486,51 @@ def _seed_transacoes_extrato_geral(associados, contas_fixas):
 		if frappe.db.exists("Transacao Extrato Geral", transacao["id"]):
 			continue
 		frappe.get_doc({"doctype": "Transacao Extrato Geral", **transacao}).insert(ignore_permissions=True)
+
+
+def _seed_transacoes_conciliacao():
+	"""Transações para exercitar a tela de Conciliação (/financeiro/conciliacao).
+
+	Monta pares em que a MESMA transação real aparece nas duas fontes — descrição no
+	formato da planilha e no formato da integração — mais transações de sistema sem par.
+	"""
+	transacoes = [
+		# Par exato: casa por valor e data.
+		("CONC-P1", "Planilha", 150.00, 5, "Pix recebido de MARIA SILVA", "Contribuição Mensal"),
+		("CONC-S1", "Sistema", 150.00, 5, "Pagamento em Pix de Maria Silva", None),
+		# Par exato de doação.
+		("CONC-P2", "Planilha", 300.00, 4, "Pix recebido de JOAO SOUZA", "Doação"),
+		("CONC-S2", "Sistema", 300.00, 4, "Pagamento em Pix de Joao Souza", None),
+		# Par com centavos de diferença: exercita a tolerância de valor (±R$1).
+		("CONC-P3", "Planilha", 60.00, 3, "Pix recebido de ANA COSTA", "Contribuição Mensal"),
+		("CONC-S3", "Sistema", 60.49, 3, "Pagamento em Pix de Ana Costa", None),
+		# Sem par na planilha: exercita o botão "Não é duplicata".
+		("CONC-S4", "Sistema", -89.90, 2, "Taxa de maquininha InfinitePay", None),
+		("CONC-S5", "Sistema", 1250.00, 1, "Depósito de vendas InfinitePay", None),
+	]
+
+	for _id, fonte, valor, dias_atras, descricao, categoria in transacoes:
+		if frappe.db.exists("Transacao Extrato Geral", _id):
+			continue
+		data = add_days(nowdate(), -dias_atras)
+		frappe.get_doc(
+			{
+				"doctype": "Transacao Extrato Geral",
+				"id": _id,
+				"fonte": fonte,
+				"descricao": descricao,
+				"valor": valor,
+				"valor_absoluto": abs(valor),
+				"debito_credito": "Crédito" if valor > 0 else "Débito",
+				"data_transacao": data,
+				"data_deposito": data,
+				"timestamp_transacao": f"{data} 10:00:00",
+				"metodo": "Pix",
+				"carteira": "Infinitepay",
+				"instituicao": "Infinitepay",
+				"categoria": categoria,
+			}
+		).insert(ignore_permissions=True)
 
 
 def _seed_projeto(associados):

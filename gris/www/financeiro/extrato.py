@@ -84,6 +84,7 @@ def get_context(context):
 		"conta_fixa",
 		"repasse_entre_contas",
 		"transacao_revisada",
+		"fonte",
 	]:
 		valor = request_args.get(campo)
 		if valor not in (None, "", "null"):
@@ -107,6 +108,8 @@ def get_context(context):
 		"conta_fixa",
 		"repasse_entre_contas",
 		"data_deposito",
+		"fonte",
+		"status_conciliacao",
 	]
 	if context.can_view_full_description:
 		fields.insert(4, "descricao")

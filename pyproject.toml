@@ -9,6 +9,12 @@ readme = "README.md"
 dynamic = ["version"]
 dependencies = [
     # "frappe~=15.0.0" # Installed and managed by bench.
+    # Espelha o pin do Frappe v15. cryptography entra como dependência transitiva de
+    # pdfplumber (via pdfminer.six), que não declara limite superior: sem este pin,
+    # `bench get-app` — que roda `pip install -U` — sobe o cryptography acima da faixa
+    # suportada e o pyOpenSSL do Frappe quebra com
+    # "module 'lib' has no attribute 'GEN_EMAIL'", derrubando o bench inteiro.
+    "cryptography~=44.0.1",
     "pandas",
     "dateparser",
     "ofxparse",

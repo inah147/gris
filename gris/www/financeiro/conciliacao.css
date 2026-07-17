@@ -1,0 +1,254 @@
+/* Página /financeiro/conciliacao */
+
+.financeiro-page-header {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 4);
+	align-items: flex-start;
+	justify-content: space-between;
+	margin-bottom: calc(var(--spacing) * 6);
+}
+
+.conciliacao-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: calc(var(--spacing) * 4);
+	align-items: start;
+}
+
+@media (min-width: 64rem) {
+	.conciliacao-layout {
+		grid-template-columns: 22rem minmax(0, 1fr);
+	}
+}
+
+/* ---------- Coluna: pendentes ---------- */
+
+.conciliacao-pendentes__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 2);
+	margin-bottom: calc(var(--spacing) * 3);
+}
+
+.conciliacao-pendentes__lista {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	max-height: 32rem;
+	overflow-y: auto;
+}
+
+/* Item da lista: botão sem herdar o alinhamento centralizado dos .btn-* */
+.conciliacao-item {
+	display: block;
+	width: 100%;
+	text-align: left;
+	background: var(--card);
+	color: var(--foreground);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: calc(var(--spacing) * 2.5);
+	cursor: pointer;
+	transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.conciliacao-item:hover {
+	background: var(--accent);
+}
+
+.conciliacao-item:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 2px;
+}
+
+.conciliacao-item[aria-selected="true"] {
+	border-color: var(--primary);
+	background: var(--accent);
+}
+
+.conciliacao-item__topo {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 2);
+}
+
+.conciliacao-item__valor {
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.conciliacao-item__valor--negativo {
+	color: var(--destructive);
+}
+
+.conciliacao-item__data {
+	font-size: var(--text-xs);
+	color: var(--muted-foreground);
+	white-space: nowrap;
+}
+
+.conciliacao-item__descricao {
+	margin: calc(var(--spacing) * 1) 0 0 0;
+	font-size: var(--text-sm);
+	color: var(--muted-foreground);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.conciliacao-item__meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 1.5);
+	margin-top: calc(var(--spacing) * 2);
+}
+
+/* ---------- Tabela de comparação ---------- */
+
+.conciliacao-comparacao__scroll {
+	overflow-x: auto;
+}
+
+.conciliacao-comparacao {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: var(--text-sm);
+}
+
+.conciliacao-comparacao th,
+.conciliacao-comparacao td {
+	padding: calc(var(--spacing) * 2) calc(var(--spacing) * 2.5);
+	border-bottom: 1px solid var(--border);
+	text-align: left;
+	vertical-align: top;
+}
+
+.conciliacao-comparacao thead th {
+	font-weight: 600;
+	color: var(--foreground);
+	border-bottom: 1px solid var(--border);
+	white-space: nowrap;
+}
+
+.conciliacao-comparacao tbody th {
+	font-weight: 400;
+	color: var(--muted-foreground);
+	white-space: nowrap;
+	width: 11rem;
+}
+
+.conciliacao-comparacao td {
+	color: var(--foreground);
+}
+
+.conciliacao-comparacao__col {
+	width: 40%;
+}
+
+/* Linha cujos valores divergem entre as fontes */
+.conciliacao-comparacao tr[data-diff="true"] td {
+	background: color-mix(in oklab, var(--warning) 14%, transparent);
+	font-weight: 500;
+}
+
+.conciliacao-comparacao__vazio {
+	color: var(--muted-foreground);
+}
+
+.conciliacao-valor-num {
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+/* ---------- Candidatos ---------- */
+
+.conciliacao-candidatos {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+}
+
+.conciliacao-candidato {
+	display: flex;
+	align-items: flex-start;
+	gap: calc(var(--spacing) * 2.5);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: calc(var(--spacing) * 2.5);
+	cursor: pointer;
+	transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.conciliacao-candidato:hover {
+	background: var(--accent);
+}
+
+.conciliacao-candidato:has(input:checked) {
+	border-color: var(--primary);
+	background: var(--accent);
+}
+
+.conciliacao-candidato__radio {
+	margin-top: calc(var(--spacing) * 0.5);
+	flex-shrink: 0;
+}
+
+.conciliacao-candidato__corpo {
+	flex: 1;
+	min-width: 0;
+}
+
+.conciliacao-candidato__topo {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 2);
+}
+
+.conciliacao-candidato__descricao {
+	margin: calc(var(--spacing) * 1) 0 0 0;
+	font-size: var(--text-sm);
+	color: var(--muted-foreground);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.conciliacao-candidato__meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 1.5);
+	margin-top: calc(var(--spacing) * 2);
+}
+
+/* Distância do candidato em relação à transação de sistema */
+.conciliacao-candidato__match {
+	font-size: var(--text-xs);
+	color: var(--muted-foreground);
+	white-space: nowrap;
+}
+
+/* ---------- Rodapé de ações ---------- */
+
+.conciliacao-acoes {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 2);
+	margin-top: calc(var(--spacing) * 4);
+}
+
+.conciliacao-form-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: calc(var(--spacing) * 3);
+}
+
+@media (min-width: 48rem) {
+	.conciliacao-form-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}

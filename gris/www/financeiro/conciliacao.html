@@ -1,0 +1,136 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, empty %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+
+{% block title %}Conciliação{% endblock %}
+
+{% set active_link = '/financeiro/conciliacao' %}
+
+{% block page_header %}
+<section class="financeiro-page-header" aria-labelledby="financeiro-conciliacao-title">
+	<div class="financeiro-page-header__copy">
+		<h1 id="financeiro-conciliacao-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Conciliação</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">
+			Compare transações do sistema com as da planilha, vincule as duplicadas e escolha qual delas
+			conta no total.
+		</p>
+	</div>
+</section>
+{% endblock %}
+
+{% block main %}
+{% set categoria_items = [{"label": "Manter atual", "value": ""}] %}
+{% for v in opcoes_categoria %}{% set categoria_items = categoria_items + [{"label": v, "value": v}] %}{% endfor %}
+{% set centro_items = [{"label": "Manter atual", "value": ""}] %}
+{% for v in opcoes_centro_de_custo %}{% set centro_items = centro_items + [{"label": v, "value": v}] %}{% endfor %}
+{% set carteira_items = [{"label": "Todas as carteiras", "value": ""}] %}
+{% for v in opcoes_carteira %}{% set carteira_items = carteira_items + [{"label": v, "value": v}] %}{% endfor %}
+{% set tipo_items = [
+	{"label": "Manter atual", "value": ""},
+	{"label": "Ordinária", "value": "Ordinária"},
+	{"label": "Extraordinária", "value": "Extraordinária"}
+] %}
+
+<div class="conciliacao-layout">
+	{# ===== Coluna esquerda: pendentes de sistema ===== #}
+	<article class="card">
+		<section>
+			<header class="conciliacao-pendentes__header">
+				<h2 class="m-0 text-base font-semibold text-foreground">Pendentes (Sistema)</h2>
+				<span id="conc-pendentes-count" class="badge">0</span>
+			</header>
+
+			<div class="field mb-4">
+				<label class="label" for="conc-filtro-carteira">Carteira</label>
+				{{ select(id="conc-filtro-carteira", name="carteira", items=carteira_items) }}
+			</div>
+
+			<div id="conc-lista-pendentes" class="conciliacao-pendentes__lista">
+				<p class="m-0 text-sm text-muted-foreground">Carregando…</p>
+			</div>
+		</section>
+	</article>
+
+	{# ===== Coluna direita: comparação e ações ===== #}
+	<article class="card">
+		<section>
+			<div id="conc-vazio">
+				{{ empty(
+					title="Selecione uma transação",
+					description="Escolha uma transação de sistema à esquerda para compará-la com a planilha.",
+					icon=lucide_icon("arrow-left-right", size="md")
+				) }}
+			</div>
+
+			<div id="conc-comparacao" class="hidden">
+				<h3 class="financeiro-section-title">Comparação</h3>
+				<div class="conciliacao-comparacao__scroll">
+					<table class="conciliacao-comparacao">
+						<thead>
+							<tr>
+								<th scope="col">Campo</th>
+								<th scope="col" class="conciliacao-comparacao__col">{{ badge('Sistema', variant='info') }}</th>
+								<th scope="col" class="conciliacao-comparacao__col">{{ badge('Planilha', variant='secondary', outline=true) }}</th>
+							</tr>
+						</thead>
+						<tbody id="conc-comparacao-corpo"></tbody>
+					</table>
+				</div>
+				<p class="m-0 mt-2 text-xs text-muted-foreground">
+					Linhas destacadas indicam divergência entre as fontes.
+				</p>
+
+				<h3 class="financeiro-section-title mt-6">Candidatos da planilha</h3>
+				<div id="conc-candidatos" class="conciliacao-candidatos" role="radiogroup" aria-label="Candidatos da planilha"></div>
+
+				<hr class="my-4" />
+
+				<h3 class="financeiro-section-title">Categorização e total</h3>
+				<div class="conciliacao-form-grid">
+					<div class="field">
+						<label class="label" for="conc-manter">Qual conta no total?</label>
+						{{ select(id="conc-manter", name="manter", items=[
+							{"label": "Manter o do Sistema", "value": "sistema"},
+							{"label": "Manter o da Planilha", "value": "planilha"}
+						]) }}
+					</div>
+					<div class="field">
+						<label class="label" for="conc-descricao">Descrição reduzida</label>
+						<input type="text" id="conc-descricao" class="input" placeholder="Opcional — aplicada ao registro mantido" />
+					</div>
+					<div class="field">
+						<label class="label" for="conc-categoria">Categoria</label>
+						{{ select(id="conc-categoria", name="categoria", items=categoria_items, is_combobox=true, search_placeholder="Buscar categoria…") }}
+					</div>
+					<div class="field">
+						<label class="label" for="conc-centro">Centro de custo</label>
+						{{ select(id="conc-centro", name="centro_de_custo", items=centro_items, is_combobox=true, search_placeholder="Buscar centro…") }}
+					</div>
+					<div class="field">
+						<label class="label" for="conc-tipo">Ordinária/Extraordinária</label>
+						{{ select(id="conc-tipo", name="ordinaria_extraordinaria", items=tipo_items) }}
+					</div>
+				</div>
+
+				<div class="conciliacao-acoes">
+					<button type="button" id="conc-btn-conciliar" class="btn-primary" disabled onclick="conciliarPar()">
+						Conciliar par
+					</button>
+					<button type="button" class="btn-sm-outline" onclick="marcarSemDuplicata()">
+						Não é duplicata
+					</button>
+					<span id="conc-loading" class="hidden inline-flex items-center gap-2">
+						<span class="spinner" role="status" aria-label="Processando"></span>
+						<span class="text-sm text-muted-foreground">Processando…</span>
+					</span>
+				</div>
+			</div>
+		</section>
+	</article>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script src="/financeiro/conciliacao.js"></script>
+{% endblock %}

@@ -28,7 +28,10 @@ def get_instituicoes():
 
 def get_transacoes_periodo(data_inicio=None, data_fim=None):
 	"""Busca transações do período filtrado, excluindo método Dinheiro."""
-	filters = [["Transacao Extrato Geral", "metodo", "!=", "Dinheiro"]]
+	filters = [
+		["Transacao Extrato Geral", "metodo", "!=", "Dinheiro"],
+		["Transacao Extrato Geral", "excluir_do_total", "=", 0],
+	]
 
 	if data_inicio:
 		filters.append(["Transacao Extrato Geral", "data_deposito", ">=", data_inicio])
@@ -103,6 +106,7 @@ def get_transacoes_anteriores(data_inicio, instituicoes_nomes):
 		filters_anteriores = [
 			["Transacao Extrato Geral", "data_deposito", "<", data_inicio],
 			["Transacao Extrato Geral", "metodo", "!=", "Dinheiro"],
+			["Transacao Extrato Geral", "excluir_do_total", "=", 0],
 		]
 		transacoes_anteriores = frappe.get_all(
 			"Transacao Extrato Geral",

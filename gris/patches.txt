@@ -20,4 +20,5 @@ gris.patches.migrate_responsavel_to_user_link
 gris.patches.v01_board_user_autopopulate
 gris.patches.v02_board_user_nivel_acesso
 gris.patches.reativar_carteiras_instituicoes
+gris.patches.backfill_data_registro_provisorio_efetivado
 gris.patches.backfill_fonte_transacao_extrato

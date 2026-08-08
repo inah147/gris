@@ -20,6 +20,23 @@ class NovoAssociado(Document):
 		if ramo:
 			self.ramo = ramo
 
+	def validate(self):
+		self._sincronizar_data_registro_provisorio()
+
+	def _sincronizar_data_registro_provisorio(self):
+		"""Mantém a data de ativação do registro provisório em sincronia com o flag.
+
+		A data alimenta o aviso automático de seguimento (ver
+		``gris.api.registro_provisorio_notificacoes``). Ao desmarcar o flag, a data e o
+		controle de aviso são limpos para que um novo ciclo recomece do zero.
+		"""
+		if self.registro_provisorio_efetivado:
+			if not self.data_registro_provisorio_efetivado:
+				self.data_registro_provisorio_efetivado = today()
+		else:
+			self.data_registro_provisorio_efetivado = None
+			self.data_aviso_seguimento_provisorio = None
+
 	def on_trash(self):
 		"""Limpa referências em Responsavel Vinculo ao excluir Novo Associado."""
 		vinculos = frappe.get_all(

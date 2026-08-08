@@ -764,6 +764,7 @@ def seed_singles_gris(creds: dict):
 			"reuniao_de_acolhida_realizada": 14,
 			"valor_registro_provisorio": 50.0,
 			"valor_registro_definitivo": 150.0,
+			"dias_aviso_seguimento_provisorio": 20,
 		},
 	)
 	print("  → Configuracoes de Recepcao atualizado")

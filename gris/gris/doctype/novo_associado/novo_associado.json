@@ -51,6 +51,8 @@
   "registro_criado_no_paxtu",
   "registro_provisorio_pago",
   "registro_provisorio_efetivado",
+  "data_registro_provisorio_efetivado",
+  "data_aviso_seguimento_provisorio",
   "pesquisa_de_novos_associados_respondida",
   "ficha_medica_preenchida",
   "id_escoteiros_criado",
@@ -319,6 +321,20 @@
    "label": "Registro provis\u00f3rio efetivado"
   },
   {
+   "depends_on": "eval:doc.registro_provisorio_efetivado",
+   "fieldname": "data_registro_provisorio_efetivado",
+   "fieldtype": "Date",
+   "label": "Registro provis\u00f3rio efetivado em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_aviso_seguimento_provisorio",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "Aviso de seguimento do registro provis\u00f3rio enviado em",
+   "read_only": 1
+  },
+  {
    "default": "0",
    "fieldname": "ficha_medica_preenchida",
    "fieldtype": "Check",
@@ -346,7 +362,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-14 21:42:50.587776",
+ "modified": "2026-08-08 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Novo Associado",

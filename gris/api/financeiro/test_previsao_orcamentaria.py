@@ -102,9 +102,13 @@ class TestPrevisaoOrcamentariaHelpers(FrappeTestCase):
 
 
 class TestObterComparativo(FrappeTestCase):
-	def setUp(self):
+	# FrappeTestCase só faz rollback no fim da classe, então o cenário é montado
+	# uma única vez em setUpClass — em setUp ele colidiria a partir do 2º teste.
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
 		frappe.set_user("Administrator")
-		self.previsao = frappe.get_doc(
+		cls.previsao = frappe.get_doc(
 			{
 				"doctype": "Previsao Orcamentaria",
 				"titulo": "Comparativo Teste",

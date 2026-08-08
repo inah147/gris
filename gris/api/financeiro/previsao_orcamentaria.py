@@ -329,7 +329,10 @@ def excluir_item(previsao: str, item_name: str) -> dict:
 	if len(restantes) == len(doc.itens):
 		frappe.throw(_("Item não encontrado nesta previsão"))
 
-	# set() reindexa o idx das linhas remanescentes; atribuição direta deixaria buracos.
+	# Linhas já persistidas mantêm o idx original ao serem reatribuídas, o que deixaria
+	# buracos na numeração da tabela; por isso renumeramos explicitamente.
+	for posicao, item in enumerate(restantes, start=1):
+		item.idx = posicao
 	doc.set("itens", restantes)
 	doc.save()
 	frappe.db.commit()

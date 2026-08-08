@@ -2,6 +2,15 @@
 (function () {
 	'use strict';
 
+	// O Frappe injeta o JS co-localizado no HTML da página e o template também o carrega
+	// via <script src>, então este arquivo executa duas vezes. Sem esta guarda os
+	// listeners de clique seriam registrados em dobro (cada ação dispararia 2 requisições).
+	// A flag não usa prefixo de underscores duplos: o Frappe renderiza este arquivo como
+	// template Jinja e rejeita a fonte inteira ("Illegal template") se ela contiver um
+	// ponto seguido de dois underscores.
+	if (window.grisPrevisaoOrcamentariaCarregado) return;
+	window.grisPrevisaoOrcamentariaCarregado = true;
+
 	const API = 'gris.api.financeiro.previsao_orcamentaria';
 	// Paleta Okabe-Ito (colorblind-safe) — ver skill gris-echarts-charts.
 	const COR_PREVISTO = '#0072B2';

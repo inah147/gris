@@ -45,6 +45,7 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 			{"label": "Extrato", "path": "/financeiro/extrato"},
 			{"label": "Conciliação", "path": "/financeiro/conciliacao"},
 			{"label": "Despesas Mensais", "path": "/financeiro/despesas"},
+			{"label": "Previsão Orçamentária", "path": "/financeiro/previsao_orcamentaria"},
 			{"label": "Relatórios", "path": "/financeiro/relatorios"},
 			{"label": "Pareceres", "path": "/financeiro/pareceres"},
 		],
@@ -142,6 +143,7 @@ SIDEBAR_ICON_MAP: dict[str, str] = {
 	"/financeiro/extrato": "receipt-text",
 	"/financeiro/conciliacao": "arrow-left-right",
 	"/financeiro/despesas": "receipt",
+	"/financeiro/previsao_orcamentaria": "target",
 	"/financeiro/relatorios": "clipboard-list",
 	"/financeiro/pareceres": "file-search",
 	"/calendario/visualizar": "calendar-days",
@@ -202,6 +204,7 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/financeiro/extrato": ["Visualizador Financeiro", "Gestor Financeiro"],
 	"/financeiro/conciliacao": ["Gestor Financeiro"],
 	"/financeiro/despesas": ["Visualizador Financeiro", "Gestor Financeiro"],
+	"/financeiro/previsao_orcamentaria": ["Visualizador Financeiro", "Gestor Financeiro"],
 	"/financeiro/relatorios": ["Visualizador Financeiro", "Gestor Financeiro"],
 	"/financeiro/pareceres": ["Visualizador Financeiro", "Gestor Financeiro", "Editor de Parecer"],
 	"/portal_transparencia": ["Public"],  # totalmente público

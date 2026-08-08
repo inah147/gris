@@ -1,0 +1,174 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:titulo",
+ "creation": "2026-08-08 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "titulo",
+  "exercicio",
+  "status",
+  "column_break_pvo",
+  "data_inicio",
+  "data_fim",
+  "centro_de_custo",
+  "section_break_totais",
+  "total_receitas_previstas",
+  "total_despesas_previstas",
+  "column_break_totais",
+  "resultado_previsto",
+  "section_break_itens",
+  "itens",
+  "section_break_obs",
+  "observacoes"
+ ],
+ "fields": [
+  {
+   "fieldname": "titulo",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "T\u00edtulo",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "description": "Ano de refer\u00eancia do or\u00e7amento.",
+   "fieldname": "exercicio",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Exerc\u00edcio",
+   "reqd": 1
+  },
+  {
+   "default": "Rascunho",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Rascunho\nAprovada\nEncerrada",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_pvo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "data_inicio",
+   "fieldtype": "Date",
+   "label": "In\u00edcio do Per\u00edodo",
+   "reqd": 1
+  },
+  {
+   "fieldname": "data_fim",
+   "fieldtype": "Date",
+   "label": "Fim do Per\u00edodo",
+   "reqd": 1
+  },
+  {
+   "description": "Restringe o comparativo com o realizado a um centro de custo.",
+   "fieldname": "centro_de_custo",
+   "fieldtype": "Link",
+   "label": "Centro de Custo",
+   "options": "Centro de Custo"
+  },
+  {
+   "fieldname": "section_break_totais",
+   "fieldtype": "Section Break",
+   "label": "Totais Previstos"
+  },
+  {
+   "fieldname": "total_receitas_previstas",
+   "fieldtype": "Currency",
+   "label": "Total de Receitas Previstas",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_despesas_previstas",
+   "fieldtype": "Currency",
+   "label": "Total de Despesas Previstas",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_totais",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "resultado_previsto",
+   "fieldtype": "Currency",
+   "label": "Resultado Previsto",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_itens",
+   "fieldtype": "Section Break",
+   "label": "Itens do Or\u00e7amento"
+  },
+  {
+   "fieldname": "itens",
+   "fieldtype": "Table",
+   "label": "Itens",
+   "options": "Item Previsao Orcamentaria"
+  },
+  {
+   "fieldname": "section_break_obs",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "observacoes",
+   "fieldtype": "Small Text",
+   "label": "Observa\u00e7\u00f5es"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-08 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Financeiro",
+ "name": "Previsao Orcamentaria",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor Financeiro",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Visualizador Financeiro",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "titulo"
+}

@@ -175,6 +175,10 @@ class Associado(Document):
 		new_funcao_categoria = f"{self.funcao} - {self.categoria}" if self.funcao and self.categoria else None
 		self.flags.old_funcao_categoria = old_funcao_categoria
 		self.flags.new_funcao_categoria = new_funcao_categoria
+		# Guardados separadamente para que a sincronização de papéis saiba qual
+		# perfil a automação teria atribuído antes da alteração.
+		self.flags.old_categoria = getattr(old_doc, "categoria", None) if old_doc else None
+		self.flags.old_funcao = getattr(old_doc, "funcao", None) if old_doc else None
 		self.flags.old_status_no_grupo = getattr(old_doc, "status_no_grupo", None) if old_doc else None
 		self.flags.status_no_grupo_changed = self.flags.old_status_no_grupo != self.status_no_grupo
 
@@ -221,9 +225,10 @@ class Associado(Document):
 			job_name=f"update_associate_user:{self.name}",
 			queue="default",
 			associate_name=self.name,
-			# old_funcao_categoria=getattr(self.flags, "old_funcao_categoria", None),
 			old_funcao_categoria=getattr(self.flags, "old_funcao_categoria", None),
 			new_funcao_categoria=getattr(self.flags, "new_funcao_categoria", None),
+			old_categoria=getattr(self.flags, "old_categoria", None),
+			old_funcao=getattr(self.flags, "old_funcao", None),
 			enqueue_after_commit=True,
 		)
 		# Se houve alteração no histórico, atualiza série temporal de associados

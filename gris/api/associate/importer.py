@@ -9,6 +9,8 @@ import frappe
 import pandas as pd
 import pdfplumber
 
+from gris.api.users.roles import add_user_roles
+
 
 def _extract_text_from_pdf(pdf_path: str) -> str:
 	"""Extrai texto completo do PDF utilizando pdfplumber"""
@@ -368,16 +370,12 @@ def _upsert_portal_user(
 		user.insert()
 		action = "created"
 	else:
-		# Usuário já existe — apenas garante (de forma aditiva) que o papel
-		# Responsavel está atribuído. NÃO alteramos role_profile_name (Função),
-		# pois isso substituiria o perfil existente e removeria acessos de
-		# usuários que já são responsáveis e também têm outras funções.
+		# Usuário já existe — apenas concede (de forma aditiva) o papel
+		# Responsavel. NÃO alteramos role_profile_name (Função) nem usamos
+		# User.save(): ambos fazem o Frappe repopular a lista de papéis a partir
+		# do perfil, removendo acessos concedidos manualmente ao usuário.
 		if responsavel_name:
-			user_doc = frappe.get_doc("User", email)
-			existing_roles = {r.role for r in user_doc.roles}
-			if "Responsavel" not in existing_roles:
-				user_doc.append("roles", {"role": "Responsavel"})
-				user_doc.save(ignore_permissions=True)
+			add_user_roles(email, ["Responsavel"])
 
 	# Garante que Responsavel.email aponte para este usuário (exigido pelo portal).
 	if responsavel_name and frappe.db.exists("Responsavel", responsavel_name):

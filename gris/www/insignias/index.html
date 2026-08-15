@@ -1,0 +1,25 @@
+{% extends "templates/web_module_index_base.html" %}
+
+{% set active_link = "/insignias" %}
+{% set module_title = "Insígnias e Distintivos" %}
+{% set module_subtitle = "Solicite as insígnias e distintivos do Plano Educativo e acompanhe a compra até a entrega." %}
+{% set module_items = [
+	{
+		"href": "/insignias/solicitar",
+		"title": "Nova solicitação",
+		"description": "Monte o pedido escolhendo os itens do catálogo e a quantidade de cada um.",
+		"visible": can_solicitar,
+	},
+	{
+		"href": "/insignias/minhas_solicitacoes",
+		"title": "Minhas solicitações",
+		"description": "Acompanhe o andamento dos seus pedidos e confirme o recebimento.",
+		"visible": can_ver_minhas,
+	},
+	{
+		"href": "/insignias/compras",
+		"title": "Compras",
+		"description": "Fila do financeiro: registre a compra, o recebimento e acompanhe os valores.",
+		"visible": can_ver_compras,
+	},
+] %}

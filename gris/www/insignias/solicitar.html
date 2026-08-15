@@ -1,0 +1,129 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty, field, form, input, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Nova solicitação de insígnias{% endblock %}
+
+{% set active_link = "/insignias/solicitar" %}
+
+{# solicitar.css/.js são injetados automaticamente pelo Frappe (colocated). Não referenciar manualmente: duplica o carregamento. #}
+
+{% block page_header %}
+<section class="flex flex-col gap-2 max-w-3xl" aria-labelledby="solicitar-titulo">
+	<h1 id="solicitar-titulo" class="m-0 text-3xl font-semibold leading-tight text-foreground">Nova solicitação</h1>
+	<p class="m-0 text-base leading-relaxed text-muted-foreground">Monte o pedido de insígnias e distintivos do Plano Educativo. Depois de enviado, o financeiro registra a compra e você confirma a entrega.</p>
+</section>
+{% endblock %}
+
+{% block main %}
+<div class="insignias-solicitar">
+	{{ toaster() }}
+
+	{% if catalogo_vazio %}
+	{{ empty(
+		title="O catálogo ainda está vazio",
+		description="Nenhuma insígnia ou distintivo foi cadastrado. Peça a um gestor de métodos para cadastrar os itens antes de abrir uma solicitação.",
+		image="/assets/gris/images/gris-character/gris-sad.png",
+		image_alt="Personagem Gris triste",
+		image_size="sm",
+		primary_action={"label": "Voltar", "href": "/insignias"}
+	) }}
+	{% else %}
+
+	<script id="insignias-precos" type="application/json">{{ precos | tojson }}</script>
+
+	{% call form(attrs={"id": "insignias-form", "novalidate": "novalidate", "class": "insignias-form"}) %}
+
+		{% call card(attrs={"class": "insignias-card"}) %}
+			<header class="insignias-card__header">
+				<h2 class="insignias-card__title">Dados do pedido</h2>
+				<p class="insignias-card__subtitle">Para qual ramo ou seção é este pedido.</p>
+			</header>
+			<div class="insignias-grid">
+				{% call field(label="Ramo / Seção") %}
+					{{ select(
+						id="insignias-ramo",
+						name="ramo",
+						items=ramo_items,
+						trigger_attrs={"class": "w-full"}
+					) }}
+				{% endcall %}
+			</div>
+			{% call field(label="Justificativa (opcional)", hint="Ex.: cerimônia de progressão da Alcateia em setembro.") %}
+				{{ textarea(name="justificativa", attrs={"id": "insignias-justificativa", "rows": "3", "maxlength": "1000", "placeholder": "Conte rapidamente para que servem estes itens"}) }}
+			{% endcall %}
+		{% endcall %}
+
+		{% call card(attrs={"class": "insignias-card"}) %}
+			<header class="insignias-card__header">
+				<h2 class="insignias-card__title">Itens solicitados</h2>
+				<p class="insignias-card__subtitle">Escolha cada insígnia e a quantidade. O beneficiário é opcional — use quando o item for de um associado específico.</p>
+			</header>
+
+			<div id="insignias-itens" class="insignias-itens"></div>
+
+			<div class="insignias-itens__actions">
+				<button type="button" class="btn-sm-outline" id="insignias-add-item">
+					{{ lucide_icon("plus", size="sm") }}
+					<span>Adicionar item</span>
+				</button>
+			</div>
+
+			<footer class="insignias-total">
+				<span class="insignias-total__label">Total estimado</span>
+				<strong class="insignias-total__value" id="insignias-total">R$ 0,00</strong>
+				<p class="insignias-total__hint">Valor de referência do catálogo. O valor final é informado pelo financeiro na compra.</p>
+			</footer>
+		{% endcall %}
+
+		<div class="insignias-actions">
+			<a class="btn-outline" href="/insignias">Cancelar</a>
+			<button type="submit" class="btn-primary" id="insignias-submit">Enviar solicitação</button>
+		</div>
+	{% endcall %}
+
+	{# Modelo de linha clonado pelo JS. O token __IDX__ vira o índice da linha para manter ids únicos. #}
+	<template id="insignias-item-template">
+		<div class="insignias-item" data-item-row>
+			<div class="insignias-item__grid">
+				{% call field(label="Insígnia ou distintivo") %}
+					{{ select(
+						id="insignias-item-__IDX__",
+						name="insignia",
+						items=catalogo_items,
+						is_combobox=true,
+						search_placeholder="Buscar no catálogo…",
+						trigger_attrs={"class": "w-full"}
+					) }}
+				{% endcall %}
+				{% call field(label="Quantidade") %}
+					{{ input(name="quantidade", type="number", value="1", attrs={"id": "insignias-qtd-__IDX__", "min": "1", "max": "999", "step": "1", "inputmode": "numeric"}) }}
+				{% endcall %}
+				{% call field(label="Beneficiário (opcional)") %}
+					{{ select(
+						id="insignias-benef-__IDX__",
+						name="beneficiario",
+						items=associados_items,
+						is_combobox=true,
+						search_placeholder="Buscar associado…",
+						trigger_attrs={"class": "w-full"}
+					) }}
+				{% endcall %}
+				{% call field(label="Observação (opcional)") %}
+					{{ input(name="observacao", attrs={"id": "insignias-obs-__IDX__", "maxlength": "140", "placeholder": "Ex.: tamanho ou detalhe do item"}) }}
+				{% endcall %}
+			</div>
+			<div class="insignias-item__aside">
+				<span class="insignias-item__subtotal" data-item-subtotal>R$ 0,00</span>
+				<button type="button" class="btn-sm-ghost insignias-item__remove" data-item-remove aria-label="Remover item">
+					{{ lucide_icon("trash-2", size="sm") }}
+				</button>
+			</div>
+		</div>
+	</template>
+
+	{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, card, empty %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{% block title %}Minhas solicitações de insígnias{% endblock %}
+
+{% set active_link = "/insignias/minhas_solicitacoes" %}
+
+{# minhas_solicitacoes.css é injetado automaticamente pelo Frappe (colocated). Não referenciar manualmente: duplica o carregamento. #}
+
+{% block page_header %}
+<div class="page-header-row">
+	<div class="flex flex-col gap-2 max-w-3xl">
+		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">Minhas solicitações</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">Acompanhe seus pedidos de insígnias e distintivos, da solicitação até a entrega.</p>
+	</div>
+	<div class="page-header-actions">
+		<a class="btn-primary" href="/insignias/solicitar">
+			{{ lucide_icon("plus", size="sm") }}
+			<span>Nova solicitação</span>
+		</a>
+	</div>
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="insignias-lista">
+	{% if solicitacoes %}
+	<section class="insignias-resumo" aria-label="Resumo por status">
+		{% for rotulo, quantidade in resumo.items() %}
+		<div class="insignias-resumo__item">
+			<span class="insignias-resumo__valor">{{ quantidade }}</span>
+			<span class="insignias-resumo__rotulo">{{ rotulo }}</span>
+		</div>
+		{% endfor %}
+	</section>
+
+	{% call card(attrs={"class": "insignias-tabela-card"}) %}
+	<section class="p-0 min-w-0">
+		<div class="overflow-x-auto">
+			<table class="table insignias-tabela">
+				<thead>
+					<tr>
+						<th>Pedido</th>
+						<th>Ramo</th>
+						<th class="insignias-tabela__num">Peças</th>
+						<th class="insignias-tabela__num">Estimado</th>
+						<th>Solicitado em</th>
+						<th>Status</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for solicitacao in solicitacoes %}
+					<tr>
+						<td>
+							<a class="insignias-tabela__link" href="/insignias/solicitacao?name={{ solicitacao.name }}">{{ solicitacao.name }}</a>
+						</td>
+						<td>{{ solicitacao.ramo }}</td>
+						<td class="insignias-tabela__num">{{ solicitacao.total_pecas }}</td>
+						<td class="insignias-tabela__num">{{ solicitacao.valor_estimado_fmt }}</td>
+						<td>{{ solicitacao.data_solicitacao_fmt }}</td>
+						<td>{{ badge(solicitacao.status, variant=solicitacao.status_variant) }}</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</section>
+	{% endcall %}
+	{% else %}
+	{{ empty(
+		title="Você ainda não fez nenhuma solicitação",
+		description="Monte seu primeiro pedido de insígnias e distintivos escolhendo os itens do catálogo.",
+		image="/assets/gris/images/gris-character/gris-sad.png",
+		image_alt="Personagem Gris triste",
+		image_size="sm",
+		primary_action={"label": "Nova solicitação", "href": "/insignias/solicitar"}
+	) }}
+	{% endif %}
+</div>
+{% endblock %}

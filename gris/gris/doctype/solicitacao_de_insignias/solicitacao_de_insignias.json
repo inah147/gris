@@ -1,0 +1,315 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "naming_series:",
+ "creation": "2026-08-15 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "solicitante",
+  "solicitante_nome",
+  "ramo",
+  "column_break_cabecalho",
+  "data_solicitacao",
+  "status",
+  "valor_estimado",
+  "section_break_itens",
+  "itens",
+  "section_break_justificativa",
+  "justificativa",
+  "section_break_compra",
+  "data_compra",
+  "fornecedor",
+  "numero_documento",
+  "column_break_compra",
+  "valor_pago",
+  "comprado_por",
+  "observacoes_compra",
+  "section_break_recebimento",
+  "data_recebimento",
+  "recebido_por",
+  "column_break_entrega",
+  "data_entrega",
+  "entregue_por",
+  "observacoes_entrega",
+  "section_break_cancelamento",
+  "motivo_cancelamento",
+  "cancelada_por",
+  "data_cancelamento"
+ ],
+ "fields": [
+  {
+   "default": "SOL-INS-.YYYY.-",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Série",
+   "options": "SOL-INS-.YYYY.-",
+   "print_hide": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "solicitante",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Solicitante",
+   "options": "User",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "solicitante_nome",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome do solicitante",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ramo",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Ramo / Seção",
+   "options": "Filhotes\nLobinho\nEscoteiro\nSênior\nPioneiro\nEscotistas e Dirigentes\nGrupo (geral)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_cabecalho",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "data_solicitacao",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Data da solicitação",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "default": "Solicitada",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Solicitada\nComprada\nRecebida\nEntregue\nCancelada",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "description": "Soma dos itens usando o valor de referência do catálogo.",
+   "fieldname": "valor_estimado",
+   "fieldtype": "Currency",
+   "label": "Valor estimado",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_itens",
+   "fieldtype": "Section Break",
+   "label": "Itens solicitados"
+  },
+  {
+   "fieldname": "itens",
+   "fieldtype": "Table",
+   "label": "Itens",
+   "options": "Item de Solicitacao de Insignias",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_justificativa",
+   "fieldtype": "Section Break",
+   "label": "Justificativa"
+  },
+  {
+   "fieldname": "justificativa",
+   "fieldtype": "Small Text",
+   "label": "Justificativa / observações"
+  },
+  {
+   "depends_on": "eval:[\"Comprada\", \"Recebida\", \"Entregue\"].includes(doc.status)",
+   "fieldname": "section_break_compra",
+   "fieldtype": "Section Break",
+   "label": "Compra"
+  },
+  {
+   "fieldname": "data_compra",
+   "fieldtype": "Date",
+   "label": "Data da compra",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fornecedor",
+   "fieldtype": "Data",
+   "label": "Fornecedor",
+   "read_only": 1
+  },
+  {
+   "fieldname": "numero_documento",
+   "fieldtype": "Data",
+   "label": "Nota fiscal / pedido",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_compra",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "valor_pago",
+   "fieldtype": "Currency",
+   "label": "Valor pago",
+   "read_only": 1
+  },
+  {
+   "fieldname": "comprado_por",
+   "fieldtype": "Link",
+   "label": "Compra registrada por",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "observacoes_compra",
+   "fieldtype": "Small Text",
+   "label": "Observações da compra",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:[\"Recebida\", \"Entregue\"].includes(doc.status)",
+   "fieldname": "section_break_recebimento",
+   "fieldtype": "Section Break",
+   "label": "Recebimento e entrega"
+  },
+  {
+   "fieldname": "data_recebimento",
+   "fieldtype": "Date",
+   "label": "Data de recebimento no grupo",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recebido_por",
+   "fieldtype": "Link",
+   "label": "Recebimento registrado por",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_entrega",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "data_entrega",
+   "fieldtype": "Date",
+   "label": "Data de entrega ao solicitante",
+   "read_only": 1
+  },
+  {
+   "fieldname": "entregue_por",
+   "fieldtype": "Link",
+   "label": "Entrega registrada por",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "observacoes_entrega",
+   "fieldtype": "Small Text",
+   "label": "Observações da entrega",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.status == \"Cancelada\"",
+   "fieldname": "section_break_cancelamento",
+   "fieldtype": "Section Break",
+   "label": "Cancelamento"
+  },
+  {
+   "fieldname": "motivo_cancelamento",
+   "fieldtype": "Small Text",
+   "label": "Motivo do cancelamento",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cancelada_por",
+   "fieldtype": "Link",
+   "label": "Cancelada por",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_cancelamento",
+   "fieldtype": "Date",
+   "label": "Data do cancelamento",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-15 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Solicitacao de Insignias",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de Metodos",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Equipe de Metodos",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor Financeiro",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Visualizador Financeiro",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "solicitante_nome"
+}

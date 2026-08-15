@@ -1,0 +1,95 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-08-15 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "insignia",
+  "tipo",
+  "ramo",
+  "quantidade",
+  "column_break_valores",
+  "valor_unitario",
+  "valor_total",
+  "beneficiario",
+  "observacao"
+ ],
+ "fields": [
+  {
+   "fieldname": "insignia",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Insígnia ou distintivo",
+   "options": "Insignia ou Distintivo",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "insignia.tipo",
+   "fieldname": "tipo",
+   "fieldtype": "Data",
+   "label": "Tipo",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "insignia.ramo",
+   "fieldname": "ramo",
+   "fieldtype": "Data",
+   "label": "Ramo",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "quantidade",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Quantidade",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_valores",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "insignia.valor_unitario",
+   "fieldname": "valor_unitario",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Valor unitário"
+  },
+  {
+   "fieldname": "valor_total",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Valor total",
+   "read_only": 1
+  },
+  {
+   "description": "Opcional: associado que receberá o item.",
+   "fieldname": "beneficiario",
+   "fieldtype": "Link",
+   "label": "Beneficiário",
+   "options": "Associado"
+  },
+  {
+   "fieldname": "observacao",
+   "fieldtype": "Data",
+   "label": "Observação"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-08-15 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Item de Solicitacao de Insignias",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

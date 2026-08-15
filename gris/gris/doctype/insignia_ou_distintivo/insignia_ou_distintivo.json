@@ -1,0 +1,138 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:nome",
+ "creation": "2026-08-15 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "nome",
+  "tipo",
+  "ramo",
+  "column_break_dados",
+  "codigo",
+  "valor_unitario",
+  "ativo",
+  "section_break_detalhes",
+  "descricao"
+ ],
+ "fields": [
+  {
+   "fieldname": "nome",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "tipo",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Tipo",
+   "options": "Distintivo de Progressão\nEspecialidade\nInsígnia Especial\nDistintivo de Identificação\nDistintivo de Função\nOutro",
+   "reqd": 1
+  },
+  {
+   "default": "Todos",
+   "fieldname": "ramo",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Ramo",
+   "options": "Todos\nFilhotes\nLobinho\nEscoteiro\nSênior\nPioneiro\nEscotistas e Dirigentes",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_dados",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Código do item no catálogo da Loja Escoteira, quando houver.",
+   "fieldname": "codigo",
+   "fieldtype": "Data",
+   "label": "Código"
+  },
+  {
+   "fieldname": "valor_unitario",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Valor unitário de referência"
+  },
+  {
+   "default": "1",
+   "fieldname": "ativo",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Ativo"
+  },
+  {
+   "fieldname": "section_break_detalhes",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "descricao",
+   "fieldtype": "Small Text",
+   "label": "Descrição"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-15 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Insignia ou Distintivo",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de Metodos",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Equipe de Metodos",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor Financeiro",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "nome",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "nome"
+}

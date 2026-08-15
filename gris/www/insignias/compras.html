@@ -1,0 +1,181 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, card, empty, field, input, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/currency-input.html.jinja" import currency_input %}
+{% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Compras de insígnias{% endblock %}
+
+{% set active_link = "/insignias/compras" %}
+
+{# compras.css/.js são injetados automaticamente pelo Frappe (colocated). Não referenciar manualmente: duplica o carregamento. #}
+
+{% block page_header %}
+<section class="flex flex-col gap-2 max-w-3xl" aria-labelledby="compras-titulo">
+	<h1 id="compras-titulo" class="m-0 text-3xl font-semibold leading-tight text-foreground">Compras de insígnias</h1>
+	<p class="m-0 text-base leading-relaxed text-muted-foreground">Fila dos pedidos de insígnias e distintivos. Registre quando comprou e quando o material chegou ao grupo.</p>
+</section>
+{% endblock %}
+
+{% block main %}
+<div class="insignias-compras">
+	{{ toaster() }}
+
+	<section class="insignias-kpis" aria-label="Indicadores da fila">
+		<div class="insignias-kpi">
+			<span class="insignias-kpi__valor">{{ total_aguardando }}</span>
+			<span class="insignias-kpi__rotulo">Aguardando compra</span>
+			<span class="insignias-kpi__extra">{{ valor_aguardando }} estimados</span>
+		</div>
+		<div class="insignias-kpi">
+			<span class="insignias-kpi__valor">{{ total_em_transito }}</span>
+			<span class="insignias-kpi__rotulo">Compradas, a caminho</span>
+		</div>
+		<div class="insignias-kpi">
+			<span class="insignias-kpi__valor">{{ total_a_entregar }}</span>
+			<span class="insignias-kpi__rotulo">Recebidas, a entregar</span>
+		</div>
+	</section>
+
+	<section aria-labelledby="fila-titulo">
+		<header class="insignias-secao__header">
+			<h2 id="fila-titulo" class="insignias-secao__titulo">Pedidos em aberto</h2>
+		</header>
+
+		{% if solicitacoes_abertas %}
+		{% call card(attrs={"class": "insignias-tabela-card"}) %}
+		<section class="p-0 min-w-0">
+			<div class="overflow-x-auto">
+				<table class="table insignias-tabela">
+					<thead>
+						<tr>
+							<th>Pedido</th>
+							<th>Solicitante</th>
+							<th>Ramo</th>
+							<th class="insignias-tabela__num">Peças</th>
+							<th class="insignias-tabela__num">Estimado</th>
+							<th>Solicitado em</th>
+							<th>Status</th>
+							<th class="insignias-tabela__acoes">Ação</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for solicitacao in solicitacoes_abertas %}
+						<tr>
+							<td><a class="insignias-tabela__link" href="/insignias/solicitacao?name={{ solicitacao.name }}">{{ solicitacao.name }}</a></td>
+							<td>{{ solicitacao.solicitante_nome or solicitacao.solicitante }}</td>
+							<td>{{ solicitacao.ramo }}</td>
+							<td class="insignias-tabela__num">{{ solicitacao.total_pecas }}</td>
+							<td class="insignias-tabela__num">{{ solicitacao.valor_estimado_fmt }}</td>
+							<td>{{ solicitacao.data_solicitacao_fmt }}</td>
+							<td>{{ badge(solicitacao.status, variant=solicitacao.status_variant) }}</td>
+							<td class="insignias-tabela__acoes">
+								{% if solicitacao.status == "Solicitada" %}
+								<button type="button" class="btn-sm-primary" data-acao="comprar" data-nome="{{ solicitacao.name }}" data-estimado="{{ solicitacao.valor_estimado or 0 }}">Registrar compra</button>
+								{% elif solicitacao.status == "Comprada" %}
+								<button type="button" class="btn-sm-outline" data-acao="receber" data-nome="{{ solicitacao.name }}">Marcar recebido</button>
+								{% else %}
+								<span class="insignias-tabela__aguardando">Com o solicitante</span>
+								{% endif %}
+							</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</section>
+		{% endcall %}
+		{% else %}
+		{{ empty(
+			title="Nenhum pedido em aberto",
+			description="Quando uma equipe solicitar insígnias ou distintivos, o pedido aparece aqui para compra.",
+			image="/assets/gris/images/gris-character/gris-idle.png",
+			image_alt="Personagem Gris parado",
+			image_size="sm"
+		) }}
+		{% endif %}
+	</section>
+
+	{% if solicitacoes_encerradas %}
+	<section aria-labelledby="historico-titulo">
+		<header class="insignias-secao__header">
+			<h2 id="historico-titulo" class="insignias-secao__titulo">Histórico</h2>
+		</header>
+		{% call card(attrs={"class": "insignias-tabela-card"}) %}
+		<section class="p-0 min-w-0">
+			<div class="overflow-x-auto">
+				<table class="table insignias-tabela">
+					<thead>
+						<tr>
+							<th>Pedido</th>
+							<th>Solicitante</th>
+							<th class="insignias-tabela__num">Pago</th>
+							<th>Compra</th>
+							<th>Entrega</th>
+							<th>Status</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for solicitacao in solicitacoes_encerradas %}
+						<tr>
+							<td><a class="insignias-tabela__link" href="/insignias/solicitacao?name={{ solicitacao.name }}">{{ solicitacao.name }}</a></td>
+							<td>{{ solicitacao.solicitante_nome or solicitacao.solicitante }}</td>
+							<td class="insignias-tabela__num">{{ solicitacao.valor_pago_fmt }}</td>
+							<td>{{ solicitacao.data_compra_fmt }}</td>
+							<td>{{ solicitacao.data_entrega_fmt }}</td>
+							<td>{{ badge(solicitacao.status, variant=solicitacao.status_variant) }}</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</section>
+		{% endcall %}
+	</section>
+	{% endif %}
+
+	{% call dialog(
+		id="dialog-compra",
+		title="Registrar compra",
+		description="Informe os dados da compra realizada. O solicitante é avisado da mudança de status.",
+		dialog_attrs={"class": "insignias-dialog"},
+		footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-compra">Cancelar</button><button type="button" class="btn-primary" id="btn-confirmar-compra">Confirmar compra</button>'
+	) %}
+	<div class="insignias-dialog__form">
+		<p class="insignias-dialog__pedido">Pedido <strong id="compra-pedido"></strong> · estimado <span id="compra-estimado"></span></p>
+		{% call field(label="Data da compra") %}
+			{{ datepicker(id="compra-data", name="data_compra", placeholder="Selecione a data", trigger_attrs={"class": "w-full"}) }}
+		{% endcall %}
+		{% call field(label="Valor pago") %}
+			{{ currency_input(id="compra-valor", name="valor_pago") }}
+		{% endcall %}
+		{% call field(label="Fornecedor (opcional)") %}
+			{{ input(name="fornecedor", attrs={"id": "compra-fornecedor", "maxlength": "140", "placeholder": "Ex.: Loja Escoteira"}) }}
+		{% endcall %}
+		{% call field(label="Nota fiscal / pedido (opcional)") %}
+			{{ input(name="numero_documento", attrs={"id": "compra-documento", "maxlength": "140"}) }}
+		{% endcall %}
+		{% call field(label="Observações (opcional)") %}
+			{{ textarea(name="observacoes_compra", attrs={"id": "compra-observacoes", "rows": "2", "maxlength": "1000"}) }}
+		{% endcall %}
+	</div>
+	{% endcall %}
+
+	{% call dialog(
+		id="dialog-recebimento",
+		title="Marcar como recebido",
+		description="Confirme que o material chegou ao grupo. Depois disso o solicitante confirma a entrega.",
+		dialog_attrs={"class": "insignias-dialog"},
+		footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-recebimento">Cancelar</button><button type="button" class="btn-primary" id="btn-confirmar-recebimento">Confirmar recebimento</button>'
+	) %}
+	<div class="insignias-dialog__form">
+		<p class="insignias-dialog__pedido">Pedido <strong id="recebimento-pedido"></strong></p>
+		{% call field(label="Data de recebimento") %}
+			{{ datepicker(id="recebimento-data", name="data_recebimento", placeholder="Selecione a data", trigger_attrs={"class": "w-full"}) }}
+		{% endcall %}
+	</div>
+	{% endcall %}
+</div>
+{% endblock %}

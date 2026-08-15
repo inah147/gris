@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import frappe
 
+from gris.api.users.roles import add_user_roles
+
 PROJECT_ROLES = ("Visualizador de projetos", "Editor de projetos")
 EXCLUDED_USERS = ("Guest",)
 
@@ -30,4 +32,7 @@ def execute():
 		if not roles_to_add:
 			continue
 
-		frappe.get_doc("User", user_name).add_roles(*roles_to_add)
+		# add_roles() grava o usuário e faz o Frappe repopular a lista de papéis a
+		# partir do Role Profile, removendo concessões manuais. Concedemos de
+		# forma aditiva.
+		add_user_roles(user_name, roles_to_add)

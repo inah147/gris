@@ -102,6 +102,9 @@ Ao trabalhar em tarefas específicas, consulte a skill correspondente em `.claud
 - Endpoint sem validação de acesso
 - SQL sem parâmetros
 - Usar `frappe.cache`
+- Gravar `User.role_profile_name` (ou chamar `User.save()` / `add_roles()`) em rotinas
+  automáticas: o Frappe repopula `roles` a partir do perfil e remove papéis concedidos
+  manualmente. Use os utilitários de `gris/api/users/roles.py`
 - Regra de negócio extensa dentro de handlers de UI
 - Logs permanentes ruidosos sem valor operacional
 

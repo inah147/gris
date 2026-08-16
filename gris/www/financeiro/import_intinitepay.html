@@ -12,7 +12,7 @@
 <section class="import-page-header">
   <div class="import-page-header__copy">
     <h1>Importação Infinitepay</h1>
-    <p>Faça upload do extrato OFX e dos relatórios CSV para conciliação automática.</p>
+    <p>Faça upload do extrato e dos relatórios de vendas e recebimentos para conciliação automática.</p>
   </div>
   <div class="import-page-header__actions">
     <a href="/financeiro/contas" class="btn-sm-outline">
@@ -44,24 +44,24 @@
         <div class="import-step__content">
           <div class="import-step__badge" aria-hidden="true">1</div>
           <div>
-            <h2 id="ip-extrato-step-title">Extrato bancário (.ofx)</h2>
-            <p>Arquivo OFX exportado da conta Infinitepay.</p>
+            <h2 id="ip-extrato-step-title">Extrato bancário (.ofx ou .html)</h2>
+            <p>Extrato OFX ou o "Relatório de movimentações" da Conta Web Infinitepay (baixado como .ofx ou .html).</p>
           </div>
         </div>
 
         {{ file_upload(
           id="ipExtratoUpload",
-          label="Extrato bancário OFX",
-          description="Apenas um arquivo OFX por envio.",
-          trigger_label="Selecionar arquivo OFX",
+          label="Extrato bancário",
+          description="Apenas um arquivo OFX ou HTML por envio.",
+          trigger_label="Selecionar extrato",
           dialog_title="Enviar extrato Infinitepay",
-          dialog_description="Selecione o arquivo OFX exportado da Infinitepay.",
-          accept=".ofx,application/x-ofx",
-          allowed_extensions=["ofx"],
+          dialog_description="Selecione o extrato exportado da Infinitepay (.ofx ou .html).",
+          accept=".ofx,.html,.htm,application/x-ofx,text/html",
+          allowed_extensions=["ofx", "html", "htm"],
           sources=["local"],
           allow_multiple=false,
           max_files=1,
-          private_by_default=false,
+          private_by_default=true,
           allow_private_choice=false,
           attrs={"class": "import-upload-component"},
           trigger_attrs={"id": "uploadExtratoBtn"}
@@ -81,24 +81,24 @@
         <div class="import-step__content">
           <div class="import-step__badge" aria-hidden="true">2</div>
           <div>
-            <h2 id="ip-vendas-step-title">Relatório de vendas (.csv)</h2>
-            <p>CSV de vendas exportado do painel Infinitepay.</p>
+            <h2 id="ip-vendas-step-title">Relatório de vendas (.csv ou .xml)</h2>
+            <p>Relatório de vendas exportado do painel Infinitepay (<code>sales_report.xml</code> ou o CSV equivalente).</p>
           </div>
         </div>
 
         {{ file_upload(
           id="ipVendasUpload",
-          label="Relatório de vendas CSV",
-          description="Apenas um arquivo CSV por envio.",
-          trigger_label="Selecionar arquivo CSV",
+          label="Relatório de vendas",
+          description="Apenas um arquivo CSV ou XML por envio.",
+          trigger_label="Selecionar relatório de vendas",
           dialog_title="Enviar relatório de vendas",
-          dialog_description="Selecione o arquivo CSV de vendas exportado da Infinitepay.",
-          accept=".csv,text/csv",
-          allowed_extensions=["csv"],
+          dialog_description="Selecione o relatório de vendas exportado da Infinitepay (.csv ou .xml).",
+          accept=".csv,.xml,text/csv,text/xml,application/xml",
+          allowed_extensions=["csv", "xml"],
           sources=["local"],
           allow_multiple=false,
           max_files=1,
-          private_by_default=false,
+          private_by_default=true,
           allow_private_choice=false,
           attrs={"class": "import-upload-component"},
           trigger_attrs={"id": "uploadVendasBtn"}
@@ -118,24 +118,24 @@
         <div class="import-step__content">
           <div class="import-step__badge" aria-hidden="true">3</div>
           <div>
-            <h2 id="ip-recebimentos-step-title">Relatório de recebimentos (.csv)</h2>
-            <p>CSV de recebimentos exportado do painel Infinitepay.</p>
+            <h2 id="ip-recebimentos-step-title">Relatório de recebimentos (.csv ou .xml)</h2>
+            <p>Relatório de recebimentos exportado do painel Infinitepay (<code>transaction_payments_report</code> em CSV ou XML, ou o <code>proof_of_transfer_report.xml</code>).</p>
           </div>
         </div>
 
         {{ file_upload(
           id="ipRecebimentosUpload",
-          label="Relatório de recebimentos CSV",
-          description="Apenas um arquivo CSV por envio.",
-          trigger_label="Selecionar arquivo CSV",
+          label="Relatório de recebimentos",
+          description="Apenas um arquivo CSV ou XML por envio.",
+          trigger_label="Selecionar relatório de recebimentos",
           dialog_title="Enviar relatório de recebimentos",
-          dialog_description="Selecione o arquivo CSV de recebimentos exportado da Infinitepay.",
-          accept=".csv,text/csv",
-          allowed_extensions=["csv"],
+          dialog_description="Selecione o relatório de recebimentos exportado da Infinitepay (.csv ou .xml).",
+          accept=".csv,.xml,text/csv,text/xml,application/xml",
+          allowed_extensions=["csv", "xml"],
           sources=["local"],
           allow_multiple=false,
           max_files=1,
-          private_by_default=false,
+          private_by_default=true,
           allow_private_choice=false,
           attrs={"class": "import-upload-component"},
           trigger_attrs={"id": "uploadRecebimentosBtn"}

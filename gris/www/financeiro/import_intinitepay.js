@@ -183,6 +183,15 @@
           return;
         }
         const payload = (r && r.message) ? r.message : r;
+
+        // Sem `stats` o processamento abortou antes de inserir qualquer coisa
+        // (arquivo em formato não reconhecido, ausente ou ilegível).
+        if (!payload || !payload.stats) {
+          const detalhe = (payload && payload.summary_text) || 'Verifique os arquivos enviados e tente novamente.';
+          showToast('error', 'Erro ao processar', detalhe);
+          return;
+        }
+
         renderResults(payload);
         window.scrollTo({ top: 0, behavior: 'smooth' });
         showToast('success', 'Conciliação concluída', 'Os arquivos Infinitepay foram processados com sucesso.');

@@ -22,6 +22,7 @@ Este arquivo é o ponto de entrada do Claude Code neste repositório. Ele **não
 | Gráficos ECharts | [.claude/skills/gris-echarts-charts/SKILL.md](.claude/skills/gris-echarts-charts/SKILL.md) |
 | Guia de marca (cores, tipografia, tom, PWA) | [.claude/skills/gris-brand-guide/SKILL.md](.claude/skills/gris-brand-guide/SKILL.md) |
 | Backup/importação do Google Drive | [.claude/skills/google-drive-backup-import/SKILL.md](.claude/skills/google-drive-backup-import/SKILL.md) |
+| Rodar, atualizar ou depurar a aplicação local (WSL2 + Frappe Manager) | [.claude/skills/gris-ambiente-local/SKILL.md](.claude/skills/gris-ambiente-local/SKILL.md) |
 | Criar ou avaliar uma nova skill | [.claude/skills/gris-skill-creator/SKILL.md](.claude/skills/gris-skill-creator/SKILL.md) |
 
 ## Operação e dados
@@ -29,7 +30,9 @@ Este arquivo é o ponto de entrada do Claude Code neste repositório. Ele **não
 | Preciso de... | Arquivo |
 |---|---|
 | Deploy em Docker/produção | [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) |
+| Setup inicial do ambiente no Windows (WSL2, Docker, `fm`) | [WINDOWS_SETUP.md](WINDOWS_SETUP.md) |
 | Dados de fixtures (roles, categorias, UOs) | [FIXTURES.md](FIXTURES.md) |
+| Permissões e ambiente do auto mode do Claude Code | [.claude/settings.json](.claude/settings.json) |
 
 ## Regra de manutenção deste índice
 

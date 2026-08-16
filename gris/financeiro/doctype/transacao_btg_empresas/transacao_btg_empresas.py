@@ -7,6 +7,10 @@ import re
 import frappe
 from frappe.model.document import Document
 
+from gris.financeiro.doctype.transacao_extrato_geral.transacao_extrato_geral import (
+	criar_transacao_de_sistema,
+)
+
 
 class TransacaoBTGEmpresas(Document):
 	def after_insert(self):
@@ -39,9 +43,8 @@ class TransacaoBTGEmpresas(Document):
 
 		categoria = "Transferência entre Contas" if is_internal_tx else None
 
-		tx = frappe.get_doc(
+		criar_transacao_de_sistema(
 			{
-				"doctype": "Transacao Extrato Geral",
 				"id": self.id,
 				"timestamp_transacao": self.data_transacao,
 				"data_transacao": self.data_transacao,
@@ -60,5 +63,3 @@ class TransacaoBTGEmpresas(Document):
 				"repasse_entre_contas": is_internal_tx,
 			}
 		)
-		tx.insert()
-		pass

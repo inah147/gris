@@ -46,6 +46,11 @@
 	{"label": "Sim", "value": "1"},
 	{"label": "Não", "value": "0"}
 ] %}
+{% set fonte_items = [
+	{"label": "Todas", "value": ""},
+	{"label": "Planilha", "value": "Planilha"},
+	{"label": "Sistema", "value": "Sistema"}
+] %}
 {% set batch_categoria_items = [{"label": "Não alterar", "value": ""}] %}
 {% for v in opcoes_categoria %}{% set batch_categoria_items = batch_categoria_items + [{"label": v, "value": v}] %}{% endfor %}
 {% set batch_centro_items = [{"label": "Não alterar", "value": ""}] %}
@@ -108,6 +113,10 @@
 				<label class="label" for="extrato-filter-revisada">Transação revisada</label>
 				{{ select(id="extrato-filter-revisada", name="transacao_revisada", items=sim_nao_items, selected=filtros_ativos.transacao_revisada or '') }}
 			</div>
+			<div class="field">
+				<label class="label" for="extrato-filter-fonte">Fonte</label>
+				{{ select(id="extrato-filter-fonte", name="fonte", items=fonte_items, selected=filtros_ativos.fonte or '') }}
+			</div>
 			<div class="extrato-filtros__actions">
 				<button type="submit" class="btn-sm-primary">Filtrar</button>
 				<a class="btn-sm-outline" href="/financeiro/extrato">Limpar</a>
@@ -168,6 +177,7 @@
 						{% endif %}
 						<th class="text-right" style="width:130px;">Valor</th>
 						<th>Instituição</th>
+						<th>Fonte</th>
 						<th>Carteira</th>
 						<th>Categoria</th>
 						<th>Centro de custo</th>
@@ -233,6 +243,16 @@
 									<span class="text-xs text-muted-foreground">—</span>
 								{% endif %}
 							</td>
+							<td onclick="rowClick('{{ transacao.name }}');" class="cursor-pointer whitespace-nowrap">
+								{% if transacao.fonte == 'Sistema' %}
+									{{ badge('Sistema', variant="info") }}
+								{% else %}
+									{{ badge('Planilha', variant="secondary", outline=true) }}
+								{% endif %}
+								{% if transacao.status_conciliacao == 'Conciliada' %}
+									{{ badge('Conciliada', variant="success", outline=true) }}
+								{% endif %}
+							</td>
 							<td onclick="rowClick('{{ transacao.name }}');" class="cursor-pointer">
 								{% if transacao.carteira %}
 									{{ badge(transacao.carteira, variant="secondary") }}
@@ -257,7 +277,7 @@
 						</tr>
 					{% else %}
 						<tr>
-							<td colspan="{{ 10 if can_view_full_description else 9 }}">
+							<td colspan="{{ 11 if can_view_full_description else 10 }}">
 								{{ empty(
 									title="Nenhuma transação encontrada",
 									description="Tente ajustar os filtros acima.",

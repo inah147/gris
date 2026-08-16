@@ -22,7 +22,7 @@ def _get_total_amount() -> float:
 		pre_tx = frappe.get_all(
 			"Transacao Extrato Geral",
 			fields=["SUM(valor) as total"],
-			filters={"metodo": ["!=", "Dinheiro"]},
+			filters={"metodo": ["!=", "Dinheiro"], "excluir_do_total": 0},
 			limit_page_length=0,
 		)
 		total_extrato = pre_tx[0].get("total") or 0.0 if pre_tx else 0.0
@@ -44,7 +44,7 @@ def _distinct_list(field: str) -> list:
 		rows = frappe.get_all(
 			"Transacao Extrato Geral",
 			fields=[f"distinct {field} as val"],
-			filters={field: ["is", "set"], "metodo": ["!=", "Dinheiro"]},
+			filters={field: ["is", "set"], "metodo": ["!=", "Dinheiro"], "excluir_do_total": 0},
 			order_by=f"{field} asc",
 			limit_page_length=0,
 		)

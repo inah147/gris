@@ -1,0 +1,173 @@
+/* Página /financeiro/previsao_orcamentaria — indicadores, gráficos e tabela de itens */
+
+.financeiro-page-header {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 4);
+	align-items: flex-start;
+	justify-content: space-between;
+	margin-bottom: calc(var(--spacing) * 6);
+}
+
+.financeiro-page-header__copy {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	max-width: 42rem;
+}
+
+.financeiro-page-header__actions {
+	display: flex;
+	gap: calc(var(--spacing) * 2);
+	flex-wrap: wrap;
+}
+
+.financeiro-section-title {
+	font-size: var(--text-base);
+	font-weight: 600;
+	color: var(--foreground);
+	margin: calc(var(--spacing) * 6) 0 calc(var(--spacing) * 4);
+}
+
+.financeiro-section-title:first-of-type {
+	margin-top: 0;
+}
+
+/* Seletor de previsão + resumo — mesmo padrão de filtros do dashboard */
+.fin-filters {
+	--fin-filter-width: 18rem;
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 4);
+	align-items: flex-end;
+}
+
+.fin-filters > .field {
+	flex: 0 0 var(--fin-filter-width);
+	width: var(--fin-filter-width);
+}
+
+.fin-filters > .field .select,
+.fin-filters > .field .select > button {
+	width: 100%;
+}
+
+.fin-filters > .field .select > button {
+	justify-content: space-between;
+}
+
+.fin-filters__actions {
+	display: flex;
+	gap: calc(var(--spacing) * 2);
+	justify-content: flex-end;
+	margin-left: auto;
+}
+
+.previsao-resumo {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 2);
+	align-items: center;
+	padding-bottom: calc(var(--spacing) * 2);
+}
+
+/* Cards de indicador */
+.metric-card section {
+	padding: calc(var(--spacing) * 4) calc(var(--spacing) * 5);
+}
+
+.previsao-kpi__value {
+	font-variant-numeric: tabular-nums;
+}
+
+.previsao-kpi__value--alerta {
+	color: var(--destructive, #d55e00);
+}
+
+.previsao-kpi__value--positivo {
+	color: var(--success, #009e73);
+}
+
+/* Gráficos */
+.chart-card section {
+	padding: calc(var(--spacing) * 3) calc(var(--spacing) * 4) calc(var(--spacing) * 4);
+}
+
+[id^="chart-previsao-"].financeiro-chart {
+	width: 100%;
+}
+
+.financeiro-chart__loading {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+	color: var(--muted-foreground);
+	padding: calc(var(--spacing) * 4) 0;
+}
+
+.echarts-tooltip-modern {
+	max-width: calc(100vw - 24px);
+	white-space: normal;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+	text-align: left;
+}
+
+/* Itens do orçamento */
+.previsao-itens-header {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 3);
+	align-items: center;
+	justify-content: space-between;
+	margin: calc(var(--spacing) * 6) 0 calc(var(--spacing) * 4);
+}
+
+.previsao-tabela-wrapper {
+	overflow-x: auto;
+}
+
+.previsao-tabela {
+	width: 100%;
+	min-width: 44rem;
+}
+
+.previsao-col-valor {
+	text-align: right;
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
+.previsao-col-acoes {
+	white-space: nowrap;
+}
+
+.previsao-col-acoes > button + button {
+	margin-left: calc(var(--spacing) * 2);
+}
+
+.previsao-btn-danger {
+	color: var(--destructive, #d55e00);
+	border-color: var(--destructive, #d55e00);
+}
+
+@media (max-width: 48rem) {
+	.fin-filters {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.fin-filters > .field {
+		flex: 0 0 auto;
+		width: 100%;
+	}
+
+	.fin-filters__actions {
+		margin-left: 0;
+		width: 100%;
+	}
+
+	.fin-filters__actions > .btn-sm-outline {
+		flex: 1;
+	}
+}

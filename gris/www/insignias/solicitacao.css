@@ -1,0 +1,219 @@
+.insignias-detalhe {
+	margin-top: calc(var(--spacing) * 6);
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 5);
+}
+
+.insignias-detalhe__header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 4);
+	flex-wrap: wrap;
+}
+
+.insignias-detalhe__identidade {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	min-width: 0;
+}
+
+.insignias-detalhe__voltar {
+	display: inline-flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 1);
+	font-size: var(--text-sm);
+	color: var(--color-muted-foreground);
+	width: fit-content;
+}
+
+.insignias-detalhe__titulo {
+	margin: 0;
+	font-size: var(--text-3xl);
+	font-weight: var(--font-weight-semibold);
+	line-height: 1.15;
+	color: var(--color-foreground);
+}
+
+.insignias-detalhe__subtitulo {
+	margin: 0;
+	font-size: var(--text-sm);
+	color: var(--color-muted-foreground);
+}
+
+.insignias-detalhe__status {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: calc(var(--spacing) * 2);
+	max-width: 20rem;
+}
+
+.insignias-detalhe__status-descricao {
+	margin: 0;
+	font-size: var(--text-xs);
+	color: var(--color-muted-foreground);
+}
+
+/* --- Linha do tempo do pedido --- */
+.insignias-timeline {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+	gap: calc(var(--spacing) * 2);
+	padding: calc(var(--spacing) * 4);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	background-color: var(--color-card);
+}
+
+.insignias-timeline__etapa {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 1);
+	padding-top: calc(var(--spacing) * 3);
+	border-top: 2px solid var(--color-border);
+	position: relative;
+}
+
+.insignias-timeline__marcador {
+	position: absolute;
+	top: calc(var(--spacing) * -1.25);
+	left: 0;
+	width: calc(var(--spacing) * 2.5);
+	height: calc(var(--spacing) * 2.5);
+	border-radius: 9999px;
+	background-color: var(--color-border);
+}
+
+.insignias-timeline__label {
+	font-size: var(--text-sm);
+	font-weight: var(--font-weight-medium);
+	color: var(--color-muted-foreground);
+}
+
+.insignias-timeline__data {
+	font-size: var(--text-xs);
+	color: var(--color-muted-foreground);
+	font-variant-numeric: tabular-nums;
+}
+
+.insignias-timeline__etapa--concluida {
+	border-top-color: var(--color-primary);
+}
+
+.insignias-timeline__etapa--concluida .insignias-timeline__marcador {
+	background-color: var(--color-primary);
+}
+
+.insignias-timeline__etapa--concluida .insignias-timeline__label {
+	color: var(--color-foreground);
+}
+
+.insignias-timeline__etapa--atual {
+	border-top-color: var(--color-primary);
+}
+
+.insignias-timeline__etapa--atual .insignias-timeline__marcador {
+	background-color: var(--color-primary);
+	box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 25%, transparent);
+}
+
+.insignias-timeline__etapa--atual .insignias-timeline__label {
+	color: var(--color-foreground);
+	font-weight: var(--font-weight-semibold);
+}
+
+.insignias-timeline__etapa--cancelada {
+	border-top-color: var(--color-destructive);
+}
+
+.insignias-timeline__etapa--cancelada .insignias-timeline__marcador {
+	background-color: var(--color-destructive);
+}
+
+.insignias-timeline__etapa--cancelada .insignias-timeline__label {
+	color: var(--color-destructive);
+	font-weight: var(--font-weight-semibold);
+}
+
+/* --- Ações e cards --- */
+.insignias-detalhe__acoes {
+	display: flex;
+	gap: calc(var(--spacing) * 3);
+	flex-wrap: wrap;
+}
+
+.insignias-detalhe__card-header {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 3);
+	flex-wrap: wrap;
+	margin-bottom: calc(var(--spacing) * 4);
+}
+
+.insignias-detalhe__card-titulo {
+	margin: 0;
+	font-size: var(--text-lg);
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-foreground);
+}
+
+.insignias-detalhe__card-meta {
+	font-size: var(--text-sm);
+	color: var(--color-muted-foreground);
+}
+
+.insignias-detalhe__num {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.insignias-detalhe__obs {
+	display: block;
+	font-size: var(--text-xs);
+	color: var(--color-muted-foreground);
+}
+
+.insignias-detalhe__texto {
+	margin: 0;
+	font-size: var(--text-sm);
+	line-height: 1.6;
+	color: var(--color-foreground);
+	white-space: pre-line;
+}
+
+.insignias-detalhe__dados {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+	gap: calc(var(--spacing) * 4);
+	margin: 0 0 calc(var(--spacing) * 4) 0;
+}
+
+.insignias-detalhe__dados dt {
+	font-size: var(--text-xs);
+	color: var(--color-muted-foreground);
+	margin-bottom: calc(var(--spacing) * 1);
+}
+
+.insignias-detalhe__dados dd {
+	margin: 0;
+	font-size: var(--text-sm);
+	color: var(--color-foreground);
+	font-variant-numeric: tabular-nums;
+}
+
+.insignias-dialog__form {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 4);
+}
+
+@media (min-width: 48rem) {
+	.insignias-dialog {
+		min-width: 30rem;
+	}
+}

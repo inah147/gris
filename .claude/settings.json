@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "autoMode": {
+    "environment": [
+      "$defaults",
+      "### Org-wide",
+      "**Organization**: None configured (personal GitHub account `inah147`; project \"Gris\" — app de gestão para Grupos Escoteiros)",
+      "**Cloud provider(s)**: Azure (CI deploy secrets reference an Azure VM over SSH); Google Cloud / Google Drive API used for backup storage via a service account",
+      "**Repository visibility**: not verified — assume private unless confirmed otherwise",
+      "**Internal sharing / snippet hosting**: None configured — treat public paste/gist services as outside the trust boundary",
+      "**Secrets management**: GitHub Actions repository secrets (AZURE_VM_HOST, AZURE_VM_SSH_KEY, AZURE_VM_SSH_PORT, AZURE_VM_USER); local `.env` copied from `.env.example`; Google service-account JSON stored in the Frappe DocType `Configuracoes Backup Google Drive`; `.credentials` is gitignored",
+      "**Default / protected branches**: default branch `develop`; PRs in practice target `main`. Treat both as protected.",
+      "**CI/CD deploy targets**: GitHub Actions workflows in `.github/workflows` deploying over SSH to an Azure VM host (host value held only in CI secrets); Docker Compose stack for the Gris site",
+      "**Network posture**: None configured — local development against `gris.localhost` / `gris.local` via WSL, Docker Compose and Frappe Manager; self-hosted services reachable at `evolution.gepim.com.br` and `outline.gepim.com.br`",
+      "**Source control**: GitHub — `https://github.com/inah147/gris.git` (remote `origin`) only",
+      "**Trusted internal domains**: `gris.localhost`, `gris.local` (local dev sites)",
+      "**Trusted cloud buckets**: None configured — the Google Drive backup folder is identified only by an ID in app config and is not a trusted upload destination",
+      "**Key internal services**: local Frappe/Bench site `gris.localhost`; Docker Compose services `backend`, `nginx`, MariaDB; Evolution API (WhatsApp) and Outline (wiki) as self-hosted companions per `.env.example`",
+      "**Internal package registry**: None configured — public npm and PyPI only",
+      "**Sensitive data locations & audiences**: `.env` and `.credentials` (never committed or printed); `gris/scripts/seed/credentials.py`; the Google service-account JSON in `Configuracoes Backup Google Drive` (never log or echo its contents); the MariaDB root password in `~/frappe/services/docker-compose.yml` (`MYSQL_ROOT_PASSWORD`) and `fm info`; Frappe site backups (`*-database*.sql.gz`, `*-site_config_backup*.json`, public/private files tarballs) and `sites/<site>/site_config.json` — these contain scout-member personal data, including minors. The `backup/` directory in the repo root is gitignored and may hold restored production dumps.",
+      "**Data retention / declassification**: None configured (daily scheduled backup to Google Shared Drive via `scheduler_events[\"daily\"]`; no retention policy documented)",
+      "**Sensitive remote targets**: the Azure VM deploy host reached by the GitHub Actions workflow, plus any namespace, host, or container whose name carries `prod` or `production` as a whole word or name segment",
+      "**Protected deployment namespaces / environments**: the Docker Compose production stack described in `DOCKER_DEPLOYMENT.md` and the Azure VM target of the deploy workflow; restore operations (`bench --site ... --force restore`) are destructive and require an explicitly confirmed target site",
+      "**Protected IaC scopes**: IAM, RBAC, networking, quota, and node-pool resources; GitHub Actions workflow files and repository secrets; Docker Compose files and `.env`; anything whose name or tag carries `prod` or `production` as a whole word or name segment",
+      "**Side-effectful scheduled jobs (local runs included)**: `gris/hooks.py` schedules daily jobs that send WhatsApp messages to real families, synchronize Google Workspace access, and push backups to the production Google Drive folder. On any local site restored from production data, `pause_scheduler` and `mute_emails` must stay set.",
+      "### User-specific",
+      "**Primary use of Claude Code**: software development on this Frappe app (backend Python/DocTypes, Portal Jinja pages with the Basecoat design system, ECharts dashboards, skill authoring)",
+      "**Trusted repo**: `C:\\GIT\\gris` and its `origin` remote `https://github.com/inah147/gris.git`. When the repo's public/private visibility is given, use it to scope what is OK to commit or push there. Visibility scopes confidential material only: secrets and personal data are never cleared into any repo by its visibility.",
+      "**Org-specific CLIs**: `wsl` (the standard shell entry point on this Windows machine), `bench` / `fm` (Frappe Manager) for site tasks, `docker compose` and `docker exec` for the local stack, `az`",
+      "**Routine under this repo's prefix**: read-only and dev-loop work in `C:\\GIT\\gris` — `wsl`-wrapped `bench` commands against `gris.localhost`, `rsync` from the repo into the local bench app directory, `npm run design-system:sync:*`, `bench run-tests --app gris`"
+    ],
+    "allow": [
+      "$defaults",
+      "Bash(bench --site gris.localhost run-tests:*)",
+      "Bash(bench --site gris.local run-tests:*)",
+      "Bash(npm run design-system:sync:*)",
+      "Bash(docker compose exec backend bench --site gris.local run-tests:*)"
+    ],
+    "soft_deny": [
+      "$defaults",
+      "Bash(bench --site:* restore:*)",
+      "Bash(bench --site:* --force:*)",
+      "Bash(bench --site:* reinstall:*)",
+      "Bash(bench --site:* drop-site:*)",
+      "Bash(docker compose down -v:*)"
+    ]
+  }
+}

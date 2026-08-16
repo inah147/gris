@@ -9,6 +9,10 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import get_datetime
 
+from gris.financeiro.doctype.transacao_extrato_geral.transacao_extrato_geral import (
+	criar_transacao_de_sistema,
+)
+
 
 class TransacaoPortao3(Document):
 	def _get_centro_de_custo(self):
@@ -94,9 +98,8 @@ class TransacaoPortao3(Document):
 			if frappe.db.exists("Transacao Extrato Geral", {"id": self.id}):
 				stats["extrato_repetidos"] += 1
 			else:
-				tx = frappe.get_doc(
+				criar_transacao_de_sistema(
 					{
-						"doctype": "Transacao Extrato Geral",
 						"id": self.id,
 						"data_transacao": self.data_transacao,
 						"data_deposito": self.data_transacao,
@@ -117,7 +120,6 @@ class TransacaoPortao3(Document):
 						"repasse_entre_contas": is_internal_tx,
 					}
 				)
-				tx.insert()
 				stats["extrato_inseridos"] += 1
 		except Exception as e:
 			stats["extrato_erros"] += 1

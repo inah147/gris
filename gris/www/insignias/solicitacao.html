@@ -1,0 +1,193 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, card, empty, field, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Solicitação de insígnias{% endblock %}
+
+{% set active_link = "/insignias/minhas_solicitacoes" %}
+
+{# solicitacao.css/.js são injetados automaticamente pelo Frappe (colocated). Não referenciar manualmente: duplica o carregamento. #}
+
+{% block main %}
+<div class="insignias-detalhe" {% if solicitacao %}data-solicitacao="{{ solicitacao.name }}"{% endif %}>
+	{{ toaster() }}
+
+	{% if nao_encontrada %}
+	{{ empty(
+		title="Solicitação não encontrada",
+		description="Verifique o endereço e tente novamente.",
+		image="/assets/gris/images/gris-character/gris-search.png",
+		image_alt="Personagem Gris procurando",
+		image_size="sm",
+		primary_action={"label": "Voltar", "href": "/insignias/minhas_solicitacoes"}
+	) }}
+	{% else %}
+
+	<header class="insignias-detalhe__header">
+		<div class="insignias-detalhe__identidade">
+			<a class="insignias-detalhe__voltar" href="/insignias/minhas_solicitacoes">
+				{{ lucide_icon("arrow-left", size="sm") }}
+				<span>Voltar</span>
+			</a>
+			<h1 class="insignias-detalhe__titulo">{{ solicitacao.name }}</h1>
+			<p class="insignias-detalhe__subtitulo">
+				{{ solicitacao.ramo }} · solicitado por {{ solicitacao.solicitante_nome or solicitacao.solicitante }} em {{ solicitacao.data_solicitacao_fmt }}
+			</p>
+		</div>
+		<div class="insignias-detalhe__status">
+			{{ badge(solicitacao.status, variant=solicitacao.status_variant) }}
+			<p class="insignias-detalhe__status-descricao">{{ solicitacao.status_descricao }}</p>
+		</div>
+	</header>
+
+	<section class="insignias-timeline" aria-label="Andamento do pedido">
+		{% for etapa in solicitacao.timeline %}
+		<div class="insignias-timeline__etapa insignias-timeline__etapa--{{ etapa.estado }}">
+			<span class="insignias-timeline__marcador" aria-hidden="true"></span>
+			<span class="insignias-timeline__label">{{ etapa.label }}</span>
+			<span class="insignias-timeline__data">{{ etapa.data or "—" }}</span>
+		</div>
+		{% endfor %}
+	</section>
+
+	{% if solicitacao.pode_comprar or solicitacao.pode_receber or solicitacao.pode_entregar or solicitacao.pode_cancelar %}
+	<div class="insignias-detalhe__acoes">
+		{% if solicitacao.pode_comprar %}
+		<a class="btn-primary" href="/insignias/compras">Registrar compra</a>
+		{% endif %}
+		{% if solicitacao.pode_receber %}
+		<a class="btn-primary" href="/insignias/compras">Marcar recebido</a>
+		{% endif %}
+		{% if solicitacao.pode_entregar %}
+		<button type="button" class="btn-primary" id="btn-abrir-entrega">Confirmar entrega</button>
+		{% endif %}
+		{% if solicitacao.pode_cancelar %}
+		<button type="button" class="btn-outline" id="btn-abrir-cancelamento">Cancelar solicitação</button>
+		{% endif %}
+	</div>
+	{% endif %}
+
+	{% call card(attrs={"class": "insignias-detalhe__card"}) %}
+		<header class="insignias-detalhe__card-header">
+			<h2 class="insignias-detalhe__card-titulo">Itens</h2>
+			<span class="insignias-detalhe__card-meta">{{ solicitacao.total_pecas }} peça(s) · {{ solicitacao.valor_estimado_fmt }} estimados</span>
+		</header>
+		<section class="p-0 min-w-0">
+			<div class="overflow-x-auto">
+				<table class="table insignias-detalhe__tabela">
+					<thead>
+						<tr>
+							<th>Insígnia / distintivo</th>
+							<th>Tipo</th>
+							<th>Beneficiário</th>
+							<th class="insignias-detalhe__num">Qtd.</th>
+							<th class="insignias-detalhe__num">Unitário</th>
+							<th class="insignias-detalhe__num">Total</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for item in solicitacao.itens %}
+						<tr>
+							<td>
+								{{ item.insignia }}
+								{% if item.observacao %}<span class="insignias-detalhe__obs">{{ item.observacao }}</span>{% endif %}
+							</td>
+							<td>{{ item.tipo }}</td>
+							<td>{{ item.beneficiario or "—" }}</td>
+							<td class="insignias-detalhe__num">{{ item.quantidade }}</td>
+							<td class="insignias-detalhe__num">{{ item.valor_unitario_fmt }}</td>
+							<td class="insignias-detalhe__num">{{ item.valor_total_fmt }}</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</section>
+	{% endcall %}
+
+	{% if solicitacao.justificativa %}
+	{% call card(attrs={"class": "insignias-detalhe__card"}) %}
+		<header class="insignias-detalhe__card-header">
+			<h2 class="insignias-detalhe__card-titulo">Justificativa</h2>
+		</header>
+		<p class="insignias-detalhe__texto">{{ solicitacao.justificativa }}</p>
+	{% endcall %}
+	{% endif %}
+
+	{% if solicitacao.status in ["Comprada", "Recebida", "Entregue"] %}
+	{% call card(attrs={"class": "insignias-detalhe__card"}) %}
+		<header class="insignias-detalhe__card-header">
+			<h2 class="insignias-detalhe__card-titulo">Compra</h2>
+		</header>
+		<dl class="insignias-detalhe__dados">
+			<div><dt>Data da compra</dt><dd>{{ solicitacao.data_compra_fmt }}</dd></div>
+			<div><dt>Valor pago</dt><dd>{{ solicitacao.valor_pago_fmt }}</dd></div>
+			<div><dt>Fornecedor</dt><dd>{{ solicitacao.fornecedor or "—" }}</dd></div>
+			<div><dt>Nota fiscal / pedido</dt><dd>{{ solicitacao.numero_documento or "—" }}</dd></div>
+			<div><dt>Registrado por</dt><dd>{{ solicitacao.comprado_por or "—" }}</dd></div>
+			<div><dt>Recebido no grupo</dt><dd>{{ solicitacao.data_recebimento_fmt }}</dd></div>
+			<div><dt>Entregue em</dt><dd>{{ solicitacao.data_entrega_fmt }}</dd></div>
+		</dl>
+		{% if solicitacao.observacoes_compra %}
+		<p class="insignias-detalhe__texto">{{ solicitacao.observacoes_compra }}</p>
+		{% endif %}
+		{% if solicitacao.observacoes_entrega %}
+		<p class="insignias-detalhe__texto">Entrega: {{ solicitacao.observacoes_entrega }}</p>
+		{% endif %}
+	{% endcall %}
+	{% endif %}
+
+	{% if solicitacao.status == "Cancelada" %}
+	{% call card(attrs={"class": "insignias-detalhe__card"}) %}
+		<header class="insignias-detalhe__card-header">
+			<h2 class="insignias-detalhe__card-titulo">Cancelamento</h2>
+		</header>
+		<dl class="insignias-detalhe__dados">
+			<div><dt>Cancelada em</dt><dd>{{ solicitacao.data_cancelamento_fmt }}</dd></div>
+			<div><dt>Cancelada por</dt><dd>{{ solicitacao.cancelada_por or "—" }}</dd></div>
+		</dl>
+		<p class="insignias-detalhe__texto">{{ solicitacao.motivo_cancelamento }}</p>
+	{% endcall %}
+	{% endif %}
+
+	{% if solicitacao.pode_entregar %}
+	{% call dialog(
+		id="dialog-entrega",
+		title="Confirmar entrega",
+		description="Confirme que você recebeu as insígnias e distintivos em mãos. Isso encerra o pedido.",
+		dialog_attrs={"class": "insignias-dialog"},
+		footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-entrega">Cancelar</button><button type="button" class="btn-primary" id="btn-confirmar-entrega">Confirmar entrega</button>'
+	) %}
+	<div class="insignias-dialog__form">
+		{% call field(label="Data da entrega") %}
+			{{ datepicker(id="entrega-data", name="data_entrega", placeholder="Selecione a data", trigger_attrs={"class": "w-full"}) }}
+		{% endcall %}
+		{% call field(label="Observações (opcional)") %}
+			{{ textarea(name="observacoes_entrega", attrs={"id": "entrega-observacoes", "rows": "2", "maxlength": "1000"}) }}
+		{% endcall %}
+	</div>
+	{% endcall %}
+	{% endif %}
+
+	{% if solicitacao.pode_cancelar %}
+	{% call dialog(
+		id="dialog-cancelamento",
+		title="Cancelar solicitação",
+		description="O pedido é encerrado e não pode ser reaberto. Informe o motivo para o histórico.",
+		dialog_attrs={"class": "insignias-dialog"},
+		footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-cancelamento">Voltar</button><button type="button" class="btn-destructive" id="btn-confirmar-cancelamento">Cancelar solicitação</button>'
+	) %}
+	<div class="insignias-dialog__form">
+		{% call field(label="Motivo do cancelamento") %}
+			{{ textarea(name="motivo", attrs={"id": "cancelamento-motivo", "rows": "3", "maxlength": "1000", "placeholder": "Ex.: itens já disponíveis no estoque do grupo"}) }}
+		{% endcall %}
+	</div>
+	{% endcall %}
+	{% endif %}
+
+	{% endif %}
+</div>
+{% endblock %}

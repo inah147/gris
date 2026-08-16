@@ -1,7 +1,12 @@
 import ast
+import csv
 import hashlib
+import io
 import re
 import unicodedata
+import xml.etree.ElementTree as ET
+from datetime import date, datetime
+from html.parser import HTMLParser
 from typing import Optional
 
 import dateparser
@@ -9,6 +14,96 @@ import frappe
 import numpy as np
 import pandas as pd
 from ofxparse import OfxParser
+
+# ----------------------------------------------------------
+
+# Detecção de formato
+#
+# A Infinitepay mudou os formatos de exportação: o extrato passou a sair como
+# página HTML ("Relatório de movimentações" da Conta Web — ainda com extensão
+# .ofx no download) e os relatórios de vendas/recebimentos ganharam versão XML.
+# Os formatos antigos (OFX e CSV) continuam suportados; o formato é detectado
+# pelo conteúdo do arquivo, não pela extensão.
+
+FORMATO_OFX = "ofx"
+FORMATO_HTML = "html"
+FORMATO_XML = "xml"
+FORMATO_CSV = "csv"
+
+
+def _read_text(file_path: str) -> str:
+	"""Lê o arquivo como texto, tolerando UTF-8 (com ou sem BOM) e Latin-1."""
+	with open(file_path, "rb") as f:
+		raw = f.read()
+	for encoding in ("utf-8-sig", "latin-1"):
+		try:
+			return raw.decode(encoding)
+		except UnicodeDecodeError:
+			continue
+	return raw.decode("utf-8", errors="replace")
+
+
+def _detect_format(file_path: str) -> str:
+	"""Descobre o formato do arquivo pelo conteúdo (não pela extensão)."""
+	head = _read_text(file_path)[:4096].lstrip().lower()
+	if "ofxheader" in head or "<ofx>" in head:
+		return FORMATO_OFX
+	if "<!doctype html" in head or "<html" in head:
+		return FORMATO_HTML
+	if head.startswith("<"):
+		return FORMATO_XML
+	return FORMATO_CSV
+
+
+def _limpar_espacos(texto: str) -> str:
+	"""Normaliza espaços (inclui NBSP) e remove sobras nas pontas."""
+	return re.sub(r"\s+", " ", (texto or "").replace("\xa0", " ")).strip()
+
+
+def _normalize_column(col):
+	nfkd = unicodedata.normalize("NFKD", col)
+	no_accents = "".join([c for c in nfkd if not unicodedata.combining(c)])
+	no_specials = re.sub(r"\W+", "_", no_accents)
+	return no_specials.lower().strip("_")
+
+
+def _parse_valor_br(texto) -> float | None:
+	"""Converte valor no formato brasileiro ('+1.234,56', '- 12,50', 'R$ 7,00') em float.
+
+	O ponto é sempre separador de milhar e a vírgula, decimal — é o formato usado
+	no extrato HTML, no relatório de vendas XML e no comprovante de transferência.
+	"""
+	t = _limpar_espacos(str(texto)) if texto is not None else ""
+	if not t:
+		return None
+	negativo = t.startswith("-")
+	t = t.lstrip("+-").replace("R$", "").replace("'", "").strip()
+	# sinal pode vir depois do prefixo (ex.: "'- 0,80")
+	if t.startswith("-"):
+		negativo = True
+		t = t.lstrip("-").strip()
+	t = t.replace(".", "").replace(",", ".")
+	try:
+		valor = float(t)
+	except ValueError:
+		return None
+	return -valor if negativo else valor
+
+
+def _parse_numero_flex(texto) -> float | None:
+	"""Converte número que pode vir com decimal por vírgula ('12,50') ou ponto ('12.5')."""
+	t = _limpar_espacos(str(texto)) if texto is not None else ""
+	if not t:
+		return None
+	if "," in t:
+		return _parse_valor_br(t)
+	try:
+		return float(t.replace("'", "").strip())
+	except ValueError:
+		return None
+
+
+# ----------------------------------------------------------
 
 
 # Bank statement helper methods
@@ -21,12 +116,180 @@ def _get_transaction_type(name):
 		return "Outro"
 
 
-@frappe.whitelist()
-def get_infinitepay_bank_statement_df(file: str, filter_dt: str | None = None) -> pd.DataFrame:
-	with open(file) as f:
+def _get_transaction_type_html(tipo_coluna: str, nome: str) -> str:
+	"""Mapeia a coluna 'Tipo de transação' do extrato HTML para os tipos usados na conciliação."""
+	tipo = _limpar_espacos(tipo_coluna).lower()
+	if tipo.startswith("pix"):
+		return "PIX"
+	if "venda" in tipo:
+		return "Depósito de vendas"
+	if tipo:
+		return "Outro"
+	# Sem a coluna de tipo, cai na heurística pelo nome (mesma regra do OFX).
+	return _get_transaction_type(nome or "")
+
+
+_MESES_ABREV_PT = {
+	"jan": 1,
+	"fev": 2,
+	"mar": 3,
+	"abr": 4,
+	"mai": 5,
+	"jun": 6,
+	"jul": 7,
+	"ago": 8,
+	"set": 9,
+	"out": 10,
+	"nov": 11,
+	"dez": 12,
+}
+
+_RE_DATA_EXTRATO_HTML = re.compile(r"^(\d{1,2})\s+([^\W\d_]{3,})\.?,?\s+(\d{4})$", re.UNICODE)
+_RE_HORA_EXTRATO_HTML = re.compile(r"^\d{1,2}:\d{2}$")
+
+
+def _parse_data_extrato_html(texto: str) -> date | None:
+	"""Interpreta o cabeçalho de dia do extrato HTML ('03 Mai, 2026')."""
+	m = _RE_DATA_EXTRATO_HTML.match(_limpar_espacos(texto))
+	if not m:
+		return None
+	dia, mes_txt, ano = m.groups()
+	mes = _MESES_ABREV_PT.get(_normalize_column(mes_txt)[:3])
+	if not mes:
+		return None
+	try:
+		return date(int(ano), mes, int(dia))
+	except ValueError:
+		return None
+
+
+class _TabelaHTMLParser(HTMLParser):
+	"""Extrai as linhas de todas as tabelas do HTML, na ordem do documento.
+
+	Usa pilhas de linha/célula para lidar com as tabelas aninhadas do relatório
+	(a tabela externa é só o cabeçalho/rodapé da página): o texto vai sempre para
+	a célula mais interna aberta, então uma linha externa nunca "engole" o
+	conteúdo das linhas internas.
+	"""
+
+	def __init__(self):
+		super().__init__(convert_charrefs=True)
+		self.rows: list[list[str]] = []
+		self._row_stack: list[list[str]] = []
+		self._cell_stack: list[list[str]] = []
+
+	def handle_starttag(self, tag, attrs):
+		if tag == "tr":
+			self._row_stack.append([])
+		elif tag in ("td", "th"):
+			self._cell_stack.append([])
+
+	def handle_endtag(self, tag):
+		if tag == "tr" and self._row_stack:
+			self.rows.append(self._row_stack.pop())
+		elif tag in ("td", "th") and self._cell_stack:
+			texto = _limpar_espacos("".join(self._cell_stack.pop()))
+			if self._row_stack:
+				self._row_stack[-1].append(texto)
+
+	def handle_data(self, data):
+		if self._cell_stack:
+			self._cell_stack[-1].append(data)
+
+
+def _gerar_fitid_extrato_html(
+	data_hora: datetime, tipo: str, nome: str, detalhe: str, valor: float, ocorrencia: int
+) -> str:
+	"""Gera um identificador estável para a linha do extrato HTML.
+
+	O relatório HTML não traz FITID (o OFX trazia), então o ID é derivado do
+	conteúdo da linha. O contador de ocorrência distingue lançamentos idênticos
+	no mesmo minuto e mantém a importação idempotente para o mesmo arquivo.
+	"""
+	base = "|".join(
+		[
+			data_hora.strftime("%Y-%m-%d %H:%M"),
+			_limpar_espacos(tipo),
+			_limpar_espacos(nome),
+			_limpar_espacos(detalhe),
+			f"{valor:.2f}",
+			str(ocorrencia),
+		]
+	)
+	return f"infinitepay-extrato-{hashlib.md5(base.encode('utf-8')).hexdigest()}"
+
+
+def _bank_statement_rows_from_html(file_path: str) -> list[dict]:
+	"""Lê o 'Relatório de movimentações' (Conta Web Infinitepay) em HTML.
+
+	Estrutura: uma tabela por dia; o dia vem numa linha própria do `thead`
+	('03 Mai, 2026') e cada lançamento é uma linha de 6 células
+	(Data, Hora, Tipo de transação, Nome, Detalhe, Valor). A linha
+	'Saldo do dia' tem menos células e é ignorada.
+	"""
+	parser = _TabelaHTMLParser()
+	parser.feed(_read_text(file_path))
+	parser.close()
+
+	dia_atual: date | None = None
+	ocorrencias: dict[str, int] = {}
+	transactions: list[dict] = []
+
+	for cells in parser.rows:
+		if not cells:
+			continue
+
+		# Linha de cabeçalho de dia: célula única com a data.
+		if len(cells) == 1:
+			d = _parse_data_extrato_html(cells[0])
+			if d:
+				dia_atual = d
+			continue
+
+		if len(cells) != 6 or not _RE_HORA_EXTRATO_HTML.match(cells[1]):
+			continue
+
+		# Algumas variações do relatório repetem a data na primeira célula.
+		d = _parse_data_extrato_html(cells[0])
+		if d:
+			dia_atual = d
+		if not dia_atual:
+			raise ValueError(
+				f"Extrato HTML sem cabeçalho de data antes do lançamento das {cells[1]} ({cells[3]})."
+			)
+
+		valor = _parse_valor_br(cells[5])
+		if valor is None:
+			raise ValueError(f"Valor inválido no extrato HTML: {cells[5]!r} (linha {cells!r}).")
+
+		hora, minuto = (int(p) for p in cells[1].split(":")[:2])
+		data_hora = datetime(dia_atual.year, dia_atual.month, dia_atual.day, hora, minuto)
+
+		chave = f"{data_hora:%Y-%m-%d %H:%M}|{cells[2]}|{cells[3]}|{cells[4]}|{valor:.2f}"
+		ocorrencias[chave] = ocorrencias.get(chave, 0) + 1
+
+		transactions.append(
+			{
+				"type": "credit" if valor >= 0 else "debit",
+				"date": data_hora,
+				"value": valor,
+				"fitid": _gerar_fitid_extrato_html(
+					data_hora, cells[2], cells[3], cells[4], valor, ocorrencias[chave]
+				),
+				"name": cells[3],
+				"memo": cells[4],
+				"transaction_type": _get_transaction_type_html(cells[2], cells[3]),
+			}
+		)
+
+	return transactions
+
+
+def _bank_statement_rows_from_ofx(file_path: str) -> list[dict]:
+	with open(file_path) as f:
 		ofx = OfxParser.parse(f)
 
-	transactions = [
+	return [
 		{
 			"type": t.type,  # TRNTYPE
 			"date": t.date,  # DTPOSTED (datetime)
@@ -34,13 +297,29 @@ def get_infinitepay_bank_statement_df(file: str, filter_dt: str | None = None) -
 			"fitid": t.id,  # FITID
 			"name": t.payee,  # NAME
 			"memo": t.memo,  # MEMO
+			"transaction_type": _get_transaction_type(t.payee or ""),
 		}
 		for t in ofx.account.statement.transactions
 	]
 
-	df = pd.DataFrame(transactions)
 
-	df["transaction_type"] = df["name"].apply(_get_transaction_type)
+@frappe.whitelist()
+def get_infinitepay_bank_statement_df(file: str, filter_dt: str | None = None) -> pd.DataFrame:
+	"""Extrato bancário Infinitepay: aceita o OFX antigo e o relatório HTML atual."""
+	formato = _detect_format(file)
+	if formato == FORMATO_HTML:
+		transactions = _bank_statement_rows_from_html(file)
+	elif formato == FORMATO_OFX:
+		transactions = _bank_statement_rows_from_ofx(file)
+	else:
+		raise ValueError(
+			f"Formato de extrato Infinitepay não reconhecido ({formato}). "
+			"Envie o arquivo OFX ou o relatório de movimentações em HTML."
+		)
+
+	df = pd.DataFrame(
+		transactions, columns=["type", "date", "value", "fitid", "name", "memo", "transaction_type"]
+	)
 
 	if filter_dt:
 		df = df[df["date"] >= filter_dt]
@@ -50,13 +329,6 @@ def get_infinitepay_bank_statement_df(file: str, filter_dt: str | None = None) -
 # ----------------------------------------------------------
 
 # Sales report helper methods
-
-
-def _normalize_column(col):
-	nfkd = unicodedata.normalize("NFKD", col)
-	no_accents = "".join([c for c in nfkd if not unicodedata.combining(c)])
-	no_specials = re.sub(r"\W+", "_", no_accents)
-	return no_specials.lower().strip("_")
 
 
 def _parse_date(date_str):
@@ -75,9 +347,67 @@ def _generate_infinite_id_money(row):
 	return row["infinite_id"]
 
 
-@frappe.whitelist()
-def get_infinitepay_sales_df(file_path: str, filter_dt: str | None = None):
-	df = pd.read_csv(file_path)
+# Colunas do relatório de vendas, na ordem em que a Infinitepay exporta.
+# Correspondem aos cabeçalhos do CSV depois de `_normalize_column`.
+COLUNAS_VENDAS = [
+	"data_e_hora",
+	"meio_meio",
+	"meio_bandeira",
+	"meio_parcelas",
+	"tipo_origem",
+	"tipo_dados_adicionais",
+	"identificador",
+	"status",
+	"valor_r",
+	"liquido_r",
+	"taxa_aplicada_valor_r",
+	"taxa_aplicada_aplicada",
+	"plano",
+	"nsu",
+	"origem_nome",
+]
+
+# No XML de vendas os campos monetários vêm com aspas duplicadas (`""26,50""`),
+# o que quebra qualquer leitor de CSV: normaliza para aspas simples antes de ler.
+_RE_ASPAS_DUPLICADAS = re.compile(r'""([^"]*)""')
+
+
+def _sales_df_from_xml(file_path: str) -> pd.DataFrame:
+	"""Lê o relatório de vendas em XML.
+
+	Cada `<sale>` tem um único filho cujo nome concatena todos os cabeçalhos e
+	cujo texto é a linha CSV correspondente.
+	"""
+	root = ET.fromstring(_read_text(file_path))
+	registros = []
+	invalidas = []
+
+	for sale in root.findall(".//sale"):
+		filhos = list(sale)
+		linha = (filhos[0].text if filhos else sale.text) or ""
+		linha = linha.strip()
+		if not linha:
+			continue
+		valores = next(csv.reader(io.StringIO(_RE_ASPAS_DUPLICADAS.sub(r'"\1"', linha))), [])
+		if len(valores) != len(COLUNAS_VENDAS):
+			invalidas.append(linha)
+			continue
+		registros.append(dict(zip(COLUNAS_VENDAS, valores, strict=True)))
+
+	if invalidas:
+		amostra = "; ".join(invalidas[:3])
+		raise ValueError(
+			f"{len(invalidas)} linha(s) do relatório de vendas XML não têm as "
+			f"{len(COLUNAS_VENDAS)} colunas esperadas. Exemplo: {amostra}"
+		)
+
+	df = pd.DataFrame(registros, columns=COLUNAS_VENDAS)
+	# Campos vazios viram NaN, como no CSV lido por pandas.
+	return df.replace("", np.nan)
+
+
+def _prepare_sales_df(df: pd.DataFrame, filter_dt: str | None = None) -> pd.DataFrame:
+	"""Normaliza colunas, datas e valores do relatório de vendas (CSV ou XML)."""
 	df.columns = [_normalize_column(col) for col in df.columns]
 	df["data_e_hora"] = df["data_e_hora"].apply(_parse_date)
 	monetary_cols = ["valor_r", "liquido_r"]
@@ -108,20 +438,29 @@ def get_infinitepay_sales_df(file_path: str, filter_dt: str | None = None):
 	df["infinite_id"] = df.apply(_generate_infinite_id_money, axis=1)
 
 	if filter_dt:
-		df = df[df["date"] >= filter_dt]
+		df = df[df["data_hora"] >= filter_dt]
 	return df
+
+
+@frappe.whitelist()
+def get_infinitepay_sales_df(file_path: str, filter_dt: str | None = None):
+	"""Relatório de vendas Infinitepay: aceita o CSV antigo e o XML atual."""
+	formato = _detect_format(file_path)
+	if formato == FORMATO_XML:
+		df = _sales_df_from_xml(file_path)
+	elif formato == FORMATO_CSV:
+		df = pd.read_csv(file_path)
+	else:
+		raise ValueError(
+			f"Formato do relatório de vendas Infinitepay não reconhecido ({formato}). "
+			"Envie o arquivo CSV ou XML."
+		)
+	return _prepare_sales_df(df, filter_dt)
 
 
 # ----------------------------------------------------------
 
 # Receipts report helper methods
-
-
-def _normalize_column(col):
-	nfkd = unicodedata.normalize("NFKD", col)
-	no_accents = "".join([c for c in nfkd if not unicodedata.combining(c)])
-	no_specials = re.sub(r"\W+", "_", no_accents)
-	return no_specials.lower().strip("_")
 
 
 def _parse_datetime_column(series: pd.Series) -> pd.Series:
@@ -154,11 +493,144 @@ def _parse_date_column(series: pd.Series) -> pd.Series:
 	return series.apply(parse_single_date)
 
 
-@frappe.whitelist()
-def get_infinitepay_receipts_df(file_path: str, filter_dt: str | None = None) -> pd.DataFrame:
-	# Read CSV file with semicolon delimiter
-	df = pd.read_csv(file_path, delimiter=";", encoding="utf-8")
+# Colunas do relatório de recebimentos depois de `_normalize_column`,
+# na ordem em que a Infinitepay exporta.
+COLUNAS_RECEBIMENTOS = [
+	"infinite_id",
+	"origem",
+	"data_da_venda",
+	"autorizacao",
+	"bandeira",
+	"tipo",
+	"valor_r",
+	"total_de_parcelas",
+	"no_da_parcela",
+	"valor_da_parcela_r",
+	"liquido_r",
+	"recebido_r",
+	"status",
+	"data_do_deposito",
+	"numero_unico_de_liquidacao_nuliquid",
+	"antecipada",
+]
 
+# Colunas numéricas do relatório de recebimentos (pandas infere no CSV; no XML
+# a conversão é explícita).
+_RECEBIMENTOS_COLS_NUMERICAS = (
+	"valor_r",
+	"total_de_parcelas",
+	"no_da_parcela",
+	"valor_da_parcela_r",
+	"liquido_r",
+	"recebido_r",
+)
+
+_BANDEIRAS_RECEBIMENTOS = {
+	"mastercard": "Mastercard",
+	"visa": "Visa",
+	"elo": "Elo",
+	"hipercard": "Hipercard",
+	"amex": "Amex",
+	"american express": "American Express",
+}
+
+_METODOS_RECEBIMENTOS = {"credit": "Crédito", "debit": "Débito", "pix": "Pix", "money": "Dinheiro"}
+
+
+def _receipts_df_from_transaction_payments_xml(root: ET.Element) -> pd.DataFrame:
+	"""Lê o `transaction_payments_report.xml` (mesmos dados do CSV de recebimentos).
+
+	As tags do XML perdem os caracteres acentuados (`autoriza_o`, `l_quido_r`),
+	então o mapeamento é posicional — a ordem dos campos é a mesma do CSV.
+	"""
+	registros = []
+	for transaction in root.findall(".//transaction"):
+		valores = [(c.text or "").strip() for c in list(transaction)]
+		if len(valores) != len(COLUNAS_RECEBIMENTOS):
+			raise ValueError(
+				f"Relatório de recebimentos XML com {len(valores)} campos, "
+				f"esperado {len(COLUNAS_RECEBIMENTOS)}."
+			)
+		registros.append(dict(zip(COLUNAS_RECEBIMENTOS, valores, strict=True)))
+	return pd.DataFrame(registros, columns=COLUNAS_RECEBIMENTOS)
+
+
+def _receipts_df_from_proof_of_transfer_xml(root: ET.Element) -> pd.DataFrame:
+	"""Lê o `proof_of_transfer_report.xml` (comprovante de transferência).
+
+	Traz os mesmos recebimentos do relatório de pagamentos, agrupados por
+	transferência e com nomes de campo em inglês. Não há campo de autorização.
+	"""
+	registros = []
+	for transaction in root.findall(".//transaction"):
+
+		def campo(tag, _t=transaction):
+			return (_t.findtext(tag) or "").strip()
+
+		data_venda = campo("transaction_date")  # 'YYYY-MM-DD HH:MM:SS'
+		data_deposito = campo("payment_date")  # 'YYYY-MM-DD'
+		antecipada = campo("anticipated").lower()
+		registros.append(
+			{
+				"infinite_id": campo("nsu"),
+				"origem": campo("capture_method"),
+				# Convertidos para o formato do CSV, reaproveitando o mesmo parser.
+				"data_da_venda": (
+					f"{data_venda[8:10]}/{data_venda[5:7]}/{data_venda[0:4]} {data_venda[11:13]}h{data_venda[14:16]}"
+					if len(data_venda) >= 16
+					else ""
+				),
+				"autorizacao": "",
+				"bandeira": _BANDEIRAS_RECEBIMENTOS.get(
+					campo("card_brand").lower(), campo("card_brand").title()
+				),
+				"tipo": _METODOS_RECEBIMENTOS.get(
+					campo("payment_method").lower(), campo("payment_method").title()
+				),
+				"valor_r": campo("amount"),
+				"total_de_parcelas": campo("installments"),
+				"no_da_parcela": campo("installment_number"),
+				# O comprovante não separa valor total da venda e valor da parcela;
+				# para vendas parceladas os dois campos ficam iguais.
+				"valor_da_parcela_r": campo("amount"),
+				"liquido_r": campo("net_amount"),
+				"recebido_r": campo("receivable_amount"),
+				"status": campo("status"),
+				"data_do_deposito": (
+					f"{data_deposito[8:10]}/{data_deposito[5:7]}/{data_deposito[0:4]}"
+					if len(data_deposito) >= 10
+					else ""
+				),
+				"numero_unico_de_liquidacao_nuliquid": campo("cip_liquidation_id"),
+				"antecipada": "Sim" if antecipada in ("true", "1", "sim") else "Não",
+			}
+		)
+	return pd.DataFrame(registros, columns=COLUNAS_RECEBIMENTOS)
+
+
+def _receipts_df_from_xml(file_path: str) -> pd.DataFrame:
+	root = ET.fromstring(_read_text(file_path))
+	if root.tag == "proof_of_transfer":
+		df = _receipts_df_from_proof_of_transfer_xml(root)
+	elif root.tag == "transaction_payments":
+		df = _receipts_df_from_transaction_payments_xml(root)
+	else:
+		raise ValueError(
+			f"XML de recebimentos Infinitepay não reconhecido (raiz <{root.tag}>). "
+			"Esperado <transaction_payments> ou <proof_of_transfer>."
+		)
+
+	for col in _RECEBIMENTOS_COLS_NUMERICAS:
+		df[col] = pd.to_numeric(df[col].apply(_parse_numero_flex), errors="coerce")
+	# Contagens de parcela viram inteiro, como no CSV lido por pandas.
+	for col in ("total_de_parcelas", "no_da_parcela"):
+		if df[col].notna().all():
+			df[col] = df[col].astype("int64")
+	return df.replace("", np.nan)
+
+
+def _prepare_receipts_df(df: pd.DataFrame) -> pd.DataFrame:
+	"""Normaliza colunas, datas e nomes do relatório de recebimentos (CSV ou XML)."""
 	# Apply normalization to all column names
 	df.columns = [_normalize_column(col) for col in df.columns]
 
@@ -170,7 +642,7 @@ def get_infinitepay_receipts_df(file_path: str, filter_dt: str | None = None) ->
 	if "data_do_deposito" in df.columns:
 		df["data_do_deposito"] = _parse_date_column(df["data_do_deposito"])
 
-	df = df.rename(
+	return df.rename(
 		columns={
 			"data_da_venda": "data_venda",
 			"valor_r": "valor",
@@ -184,7 +656,22 @@ def get_infinitepay_receipts_df(file_path: str, filter_dt: str | None = None) ->
 		}
 	)
 
-	return df
+
+@frappe.whitelist()
+def get_infinitepay_receipts_df(file_path: str, filter_dt: str | None = None) -> pd.DataFrame:
+	"""Relatório de recebimentos Infinitepay: aceita o CSV antigo e os XML atuais."""
+	formato = _detect_format(file_path)
+	if formato == FORMATO_XML:
+		df = _receipts_df_from_xml(file_path)
+	elif formato == FORMATO_CSV:
+		# Read CSV file with semicolon delimiter
+		df = pd.read_csv(file_path, delimiter=";", encoding="utf-8")
+	else:
+		raise ValueError(
+			f"Formato do relatório de recebimentos Infinitepay não reconhecido ({formato}). "
+			"Envie o arquivo CSV ou XML."
+		)
+	return _prepare_receipts_df(df)
 
 
 # ----------------------------------------------------------

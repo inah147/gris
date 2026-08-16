@@ -28,6 +28,18 @@ def _maybe_exclude_transfers(conditions, categoria=None, carteira=None, institui
 		conditions.append("COALESCE(repasse_entre_contas,0) = 0")
 
 
+def _apply_fonte_filter(conditions, params):
+	"""Aplica o filtro de fonte (Planilha/Sistema) lido da requisição, se informado.
+
+	Lido de frappe.form_dict para funcionar em todas as funções whitelisted sem alterar
+	suas assinaturas — o frontend passa `fonte` junto dos demais filtros.
+	"""
+	fonte = frappe.form_dict.get("fonte")
+	if fonte in ("Planilha", "Sistema"):
+		conditions.append("fonte = %(fonte)s")
+		params["fonte"] = fonte
+
+
 @frappe.whitelist()
 def get_entradas_saidas_mensal(
 	categoria=None, instituicao=None, carteira=None, centro_de_custo=None, ordinaria_extraordinaria=None
@@ -37,6 +49,7 @@ def get_entradas_saidas_mensal(
 		"COALESCE(data_deposito, timestamp_transacao) >= %(min_day)s",
 		"COALESCE(data_deposito, timestamp_transacao) < %(next_month)s",
 		"metodo != 'Dinheiro'",
+		"COALESCE(excluir_do_total,0) = 0",
 	]
 	params = {"min_day": min_day, "next_month": next_month}
 	if not categoria and not carteira:
@@ -56,6 +69,7 @@ def get_entradas_saidas_mensal(
 	if ordinaria_extraordinaria:
 		conditions.append("ordinaria_extraordinaria = %(ordinaria_extraordinaria)s")
 		params["ordinaria_extraordinaria"] = ordinaria_extraordinaria
+	_apply_fonte_filter(conditions, params)
 	where_sql = " AND ".join(conditions)
 	query = f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,
@@ -95,6 +109,7 @@ def get_entradas_credito_mensal(
 		"COALESCE(data_deposito, timestamp_transacao) >= %(min_day)s",
 		"COALESCE(data_deposito, timestamp_transacao) < %(next_month)s",
 		"metodo != 'Dinheiro'",
+		"COALESCE(excluir_do_total,0) = 0",
 		"valor > 0",
 		"debito_credito = 'Crédito'",
 	]
@@ -116,6 +131,7 @@ def get_entradas_credito_mensal(
 	if ordinaria_extraordinaria:
 		conditions.append("ordinaria_extraordinaria = %(ordinaria_extraordinaria)s")
 		params["ordinaria_extraordinaria"] = ordinaria_extraordinaria
+	_apply_fonte_filter(conditions, params)
 	where_sql = " AND ".join(conditions)
 	query = f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,
@@ -145,6 +161,7 @@ def get_entradas_credito_mensal_por_categoria(
 		"COALESCE(data_deposito, timestamp_transacao) >= %(min_day)s",
 		"COALESCE(data_deposito, timestamp_transacao) < %(next_month)s",
 		"metodo != 'Dinheiro'",
+		"COALESCE(excluir_do_total,0) = 0",
 		"valor > 0",
 		"debito_credito = 'Crédito'",
 	]
@@ -163,6 +180,7 @@ def get_entradas_credito_mensal_por_categoria(
 	if ordinaria_extraordinaria:
 		conditions.append("ordinaria_extraordinaria = %(ordinaria_extraordinaria)s")
 		params["ordinaria_extraordinaria"] = ordinaria_extraordinaria
+	_apply_fonte_filter(conditions, params)
 	where_sql = " AND ".join(conditions)
 	query = f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,
@@ -197,6 +215,7 @@ def get_entradas_credito_mensal_por_centro_custo(
 		"COALESCE(data_deposito, timestamp_transacao) >= %(min_day)s",
 		"COALESCE(data_deposito, timestamp_transacao) < %(next_month)s",
 		"metodo != 'Dinheiro'",
+		"COALESCE(excluir_do_total,0) = 0",
 		"valor > 0",
 		"debito_credito = 'Crédito'",
 	]
@@ -215,6 +234,7 @@ def get_entradas_credito_mensal_por_centro_custo(
 	if ordinaria_extraordinaria:
 		conditions.append("ordinaria_extraordinaria = %(ordinaria_extraordinaria)s")
 		params["ordinaria_extraordinaria"] = ordinaria_extraordinaria
+	_apply_fonte_filter(conditions, params)
 	where_sql = " AND ".join(conditions)
 	query = f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,
@@ -249,6 +269,7 @@ def get_entradas_credito_mensal_por_tipo(
 		"COALESCE(data_deposito, timestamp_transacao) >= %(min_day)s",
 		"COALESCE(data_deposito, timestamp_transacao) < %(next_month)s",
 		"metodo != 'Dinheiro'",
+		"COALESCE(excluir_do_total,0) = 0",
 		"valor > 0",
 		"debito_credito = 'Crédito'",
 	]
@@ -267,6 +288,7 @@ def get_entradas_credito_mensal_por_tipo(
 	if centro_de_custo:
 		conditions.append("centro_de_custo = %(centro_de_custo)s")
 		params["centro_de_custo"] = centro_de_custo
+	_apply_fonte_filter(conditions, params)
 	where_sql = " AND ".join(conditions)
 	query = f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,
@@ -303,6 +325,7 @@ def get_saidas_debito_mensal(
 		"COALESCE(data_deposito, timestamp_transacao) >= %(min_day)s",
 		"COALESCE(data_deposito, timestamp_transacao) < %(next_month)s",
 		"metodo != 'Dinheiro'",
+		"COALESCE(excluir_do_total,0) = 0",
 		"valor < 0",
 		"debito_credito = 'Débito'",
 	]
@@ -324,6 +347,7 @@ def get_saidas_debito_mensal(
 	if ordinaria_extraordinaria:
 		conditions.append("ordinaria_extraordinaria = %(ordinaria_extraordinaria)s")
 		params["ordinaria_extraordinaria"] = ordinaria_extraordinaria
+	_apply_fonte_filter(conditions, params)
 	where_sql = " AND ".join(conditions)
 	query = f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,
@@ -353,6 +377,7 @@ def get_saidas_debito_mensal_por_categoria(
 		"COALESCE(data_deposito, timestamp_transacao) >= %(min_day)s",
 		"COALESCE(data_deposito, timestamp_transacao) < %(next_month)s",
 		"metodo != 'Dinheiro'",
+		"COALESCE(excluir_do_total,0) = 0",
 		"valor < 0",
 		"debito_credito = 'Débito'",
 	]
@@ -371,6 +396,7 @@ def get_saidas_debito_mensal_por_categoria(
 	if ordinaria_extraordinaria:
 		conditions.append("ordinaria_extraordinaria = %(ordinaria_extraordinaria)s")
 		params["ordinaria_extraordinaria"] = ordinaria_extraordinaria
+	_apply_fonte_filter(conditions, params)
 	where_sql = " AND ".join(conditions)
 	query = f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,
@@ -405,6 +431,7 @@ def get_saidas_debito_mensal_por_centro_custo(
 		"COALESCE(data_deposito, timestamp_transacao) >= %(min_day)s",
 		"COALESCE(data_deposito, timestamp_transacao) < %(next_month)s",
 		"metodo != 'Dinheiro'",
+		"COALESCE(excluir_do_total,0) = 0",
 		"valor < 0",
 		"debito_credito = 'Débito'",
 	]
@@ -423,6 +450,7 @@ def get_saidas_debito_mensal_por_centro_custo(
 	if ordinaria_extraordinaria:
 		conditions.append("ordinaria_extraordinaria = %(ordinaria_extraordinaria)s")
 		params["ordinaria_extraordinaria"] = ordinaria_extraordinaria
+	_apply_fonte_filter(conditions, params)
 	where_sql = " AND ".join(conditions)
 	query = f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,
@@ -455,6 +483,7 @@ def get_saidas_debito_mensal_por_tipo(instituicao=None, carteira=None, categoria
 		"COALESCE(data_deposito, timestamp_transacao) >= %(min_day)s",
 		"COALESCE(data_deposito, timestamp_transacao) < %(next_month)s",
 		"metodo != 'Dinheiro'",
+		"COALESCE(excluir_do_total,0) = 0",
 		"valor < 0",
 		"debito_credito = 'Débito'",
 	]
@@ -473,6 +502,7 @@ def get_saidas_debito_mensal_por_tipo(instituicao=None, carteira=None, categoria
 	if centro_de_custo:
 		conditions.append("centro_de_custo = %(centro_de_custo)s")
 		params["centro_de_custo"] = centro_de_custo
+	_apply_fonte_filter(conditions, params)
 	where_sql = " AND ".join(conditions)
 	query = f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,

@@ -23,7 +23,11 @@
   "column_break_qwxy",
   "valor_registro_definitivo",
   "whatsapp_recepcao_section",
-  "grupo_recepcao_whatsapp"
+  "grupo_recepcao_whatsapp",
+  "acompanhamento_registro_provisorio_section",
+  "responsavel_administrativo",
+  "column_break_acomp_prov",
+  "dias_aviso_seguimento_provisorio"
  ],
  "fields": [
   {
@@ -130,13 +134,36 @@
    "fieldname": "grupo_recepcao_whatsapp",
    "fieldtype": "Select",
    "label": "Grupo de recepção (WhatsApp)"
+  },
+  {
+   "fieldname": "acompanhamento_registro_provisorio_section",
+   "fieldtype": "Section Break",
+   "label": "Acompanhamento do registro provisório"
+  },
+  {
+   "description": "Associado que recebe o aviso por WhatsApp para entrar em contato com o responsável do novo associado.",
+   "fieldname": "responsavel_administrativo",
+   "fieldtype": "Link",
+   "label": "Responsável administrativo",
+   "options": "Associado"
+  },
+  {
+   "fieldname": "column_break_acomp_prov",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "20",
+   "description": "Dias após a ativação do registro provisório para avisar o responsável administrativo.",
+   "fieldname": "dias_aviso_seguimento_provisorio",
+   "fieldtype": "Int",
+   "label": "Dias para aviso de seguimento do registro provisório"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-03-10 12:52:24.282669",
+ "modified": "2026-08-08 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Configuracoes de Recepcao",

@@ -1,0 +1,380 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, badge, empty, field %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+
+{% block title %}Previsão Orçamentária{% endblock %}
+
+{% set active_link = '/financeiro/previsao_orcamentaria' %}
+
+{% macro _status_variant(status) %}
+	{%- if status == 'Aprovada' -%}success
+	{%- elif status == 'Encerrada' -%}secondary
+	{%- else -%}warning
+	{%- endif -%}
+{% endmacro %}
+
+{% block page_header %}
+<section class="financeiro-page-header" aria-labelledby="financeiro-previsao-title">
+	<div class="financeiro-page-header__copy">
+		<h1 id="financeiro-previsao-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Previsão Orçamentária</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">Planeje receitas e despesas do exercício e acompanhe a execução do orçamento.</p>
+	</div>
+	{% if can_edit_financeiro %}
+	<div class="financeiro-page-header__actions">
+		{% if previsao %}
+		<button id="btnDuplicarPrevisao" type="button" class="btn-sm-outline inline-flex items-center gap-2">
+			{{ lucide_icon("copy", size="sm") }}
+			<span>Duplicar</span>
+		</button>
+		{% endif %}
+		<button id="btnNovaPrevisao" type="button" class="btn-sm-primary inline-flex items-center gap-2">
+			{{ lucide_icon("plus", size="sm") }}
+			<span>Nova Previsão</span>
+		</button>
+	</div>
+	{% endif %}
+</section>
+{% endblock %}
+
+{% block main %}
+{% set ns = namespace(previsoes=[], categorias=[{"label": "Sem categoria", "value": ""}], centros=[{"label": "Sem centro de custo", "value": ""}]) %}
+{% for p in previsoes %}{% set ns.previsoes = ns.previsoes + [{"label": p.titulo ~ " · " ~ p.exercicio, "value": p.name}] %}{% endfor %}
+{% for c in categorias %}{% set ns.categorias = ns.categorias + [{"label": c, "value": c}] %}{% endfor %}
+{% for c in centros_de_custo %}{% set ns.centros = ns.centros + [{"label": c, "value": c}] %}{% endfor %}
+
+<div class="previsao-wrapper"
+	data-previsao="{{ previsao.name if previsao else '' }}"
+	data-can-edit="{{ 1 if can_edit_financeiro else 0 }}">
+
+	{% if previsoes and previsoes|length %}
+	<article class="card mb-4">
+		<section>
+			<div class="fin-filters">
+				<div class="field">
+					<label class="label" for="previsao-seletor">Previsão</label>
+					{{ select(id="previsao-seletor", name="previsao", items=ns.previsoes, selected=previsao_selecionada, is_combobox=(previsoes|length > 8), search_placeholder="Buscar previsão…") }}
+				</div>
+				{% if previsao %}
+				<div class="previsao-resumo">
+					{{ badge(previsao.status, variant=_status_variant(previsao.status)|trim) }}
+					{{ badge(previsao.data_inicio.strftime('%d/%m/%Y') ~ ' — ' ~ previsao.data_fim.strftime('%d/%m/%Y'), variant="secondary") }}
+					{% if previsao.centro_de_custo %}{{ badge('Centro: ' ~ previsao.centro_de_custo, variant="secondary") }}{% endif %}
+				</div>
+				{% endif %}
+				{% if can_edit_financeiro and previsao %}
+				<div class="fin-filters__actions">
+					<button id="btnEditarPrevisao" type="button" class="btn-sm-outline">Editar</button>
+					<button id="btnExcluirPrevisao" type="button" class="btn-sm-outline previsao-btn-danger">Excluir</button>
+				</div>
+				{% endif %}
+			</div>
+		</section>
+	</article>
+	{% endif %}
+
+	{% if not previsao %}
+		{{ empty(
+			title="Nenhuma previsão orçamentária cadastrada",
+			description="Crie uma previsão para planejar receitas e despesas do exercício e acompanhar a execução.",
+			icon=lucide_icon("target", size="md")
+		) }}
+	{% else %}
+
+	<h2 class="financeiro-section-title">Indicadores</h2>
+	<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+		<article class="card metric-card">
+			<section>
+				<p class="m-0 text-sm text-muted-foreground">Receitas</p>
+				<p id="kpi-receitas-realizadas" class="m-0 mt-1 text-2xl font-semibold text-foreground previsao-kpi__value">—</p>
+				<p id="kpi-receitas-previstas" class="m-0 mt-2 text-xs text-muted-foreground">Previsto: —</p>
+				<p id="kpi-receitas-execucao" class="m-0 mt-1 text-xs text-muted-foreground">Execução: —</p>
+			</section>
+		</article>
+		<article class="card metric-card">
+			<section>
+				<p class="m-0 text-sm text-muted-foreground">Despesas</p>
+				<p id="kpi-despesas-realizadas" class="m-0 mt-1 text-2xl font-semibold text-foreground previsao-kpi__value">—</p>
+				<p id="kpi-despesas-previstas" class="m-0 mt-2 text-xs text-muted-foreground">Previsto: —</p>
+				<p id="kpi-despesas-execucao" class="m-0 mt-1 text-xs text-muted-foreground">Execução: —</p>
+			</section>
+		</article>
+		<article class="card metric-card">
+			<section>
+				<p class="m-0 text-sm text-muted-foreground">Resultado</p>
+				<p id="kpi-resultado-realizado" class="m-0 mt-1 text-2xl font-semibold text-foreground previsao-kpi__value">—</p>
+				<p id="kpi-resultado-previsto" class="m-0 mt-2 text-xs text-muted-foreground">Previsto: —</p>
+				<p class="m-0 mt-1 text-xs text-muted-foreground">Receitas − Despesas no período</p>
+			</section>
+		</article>
+		<article class="card metric-card">
+			<section>
+				<p class="m-0 text-sm text-muted-foreground">Desvio das Despesas</p>
+				<p id="kpi-desvio-despesas" class="m-0 mt-1 text-2xl font-semibold text-foreground previsao-kpi__value">—</p>
+				<p id="kpi-desvio-despesas-desc" class="m-0 mt-2 text-xs text-muted-foreground">Realizado − Previsto</p>
+				<p class="m-0 mt-1 text-xs text-muted-foreground">Valor positivo indica estouro do orçamento</p>
+			</section>
+		</article>
+	</div>
+
+	<h2 class="financeiro-section-title">Previsto × Realizado</h2>
+	<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+		{% call card(title="Receitas por mês", attrs={"class": "chart-card"}) %}
+			<div id="chart-previsao-receitas" class="financeiro-chart" style="min-height:320px;">
+				<div class="financeiro-chart__loading">
+					<span class="spinner" role="status" aria-label="Carregando"></span>
+					<span>Carregando…</span>
+				</div>
+			</div>
+		{% endcall %}
+		{% call card(title="Despesas por mês", attrs={"class": "chart-card"}) %}
+			<div id="chart-previsao-despesas" class="financeiro-chart" style="min-height:320px;">
+				<div class="financeiro-chart__loading">
+					<span class="spinner" role="status" aria-label="Carregando"></span>
+					<span>Carregando…</span>
+				</div>
+			</div>
+		{% endcall %}
+	</div>
+	<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+		{% call card(title="Resultado acumulado", attrs={"class": "chart-card"}) %}
+			<div id="chart-previsao-acumulado" class="financeiro-chart" style="min-height:340px;">
+				<div class="financeiro-chart__loading">
+					<span class="spinner" role="status" aria-label="Carregando"></span>
+					<span>Carregando…</span>
+				</div>
+			</div>
+		{% endcall %}
+		{% call card(title="Despesas por categoria", attrs={"class": "chart-card"}) %}
+			<div id="chart-previsao-categorias" class="financeiro-chart" style="min-height:340px;">
+				<div class="financeiro-chart__loading">
+					<span class="spinner" role="status" aria-label="Carregando"></span>
+					<span>Carregando…</span>
+				</div>
+			</div>
+		{% endcall %}
+	</div>
+
+	<div class="previsao-itens-header">
+		<h2 class="financeiro-section-title m-0">Itens do Orçamento</h2>
+		{% if can_edit_financeiro and previsao.status != 'Encerrada' %}
+		<button id="btnNovoItem" type="button" class="btn-sm-primary inline-flex items-center gap-2">
+			{{ lucide_icon("plus", size="sm") }}
+			<span>Novo Item</span>
+		</button>
+		{% endif %}
+	</div>
+
+	{% if previsao.itens and previsao.itens|length %}
+	<article class="card mb-6">
+		<section class="previsao-tabela-wrapper">
+			<table class="table previsao-tabela">
+				<thead>
+					<tr>
+						<th>Tipo</th>
+						<th>Descrição</th>
+						<th>Categoria</th>
+						<th>Centro de Custo</th>
+						<th>Distribuição</th>
+						<th class="previsao-col-valor">Valor Previsto</th>
+						{% if can_edit_financeiro and previsao.status != 'Encerrada' %}<th class="previsao-col-acoes">Ações</th>{% endif %}
+					</tr>
+				</thead>
+				<tbody>
+					{% for item in previsao.itens %}
+					<tr>
+						<td>{{ badge(item.tipo, variant=('success' if item.tipo == 'Receita' else 'destructive')) }}</td>
+						<td>{{ item.descricao }}</td>
+						<td>{{ item.categoria or '—' }}</td>
+						<td>{{ item.centro_de_custo or '—' }}</td>
+						<td>
+							{% if item.distribuicao == 'Mês específico' and item.mes_referencia %}
+								{{ item.mes_referencia.strftime('%m/%Y') }}
+							{% else %}
+								Uniforme
+							{% endif %}
+						</td>
+						<td class="previsao-col-valor">R$ {{ '%.2f' | format(item.valor_previsto | float) }}</td>
+						{% if can_edit_financeiro and previsao.status != 'Encerrada' %}
+						<td class="previsao-col-acoes">
+							<button type="button" class="btn-sm-outline previsao-item-editar"
+								data-name="{{ item.name }}"
+								data-tipo="{{ item.tipo }}"
+								data-descricao="{{ item.descricao }}"
+								data-categoria="{{ item.categoria or '' }}"
+								data-centro="{{ item.centro_de_custo or '' }}"
+								data-distribuicao="{{ item.distribuicao }}"
+								data-mes="{{ item.mes_referencia or '' }}"
+								data-valor="{{ item.valor_previsto }}"
+								data-observacoes="{{ item.observacoes or '' }}">Editar</button>
+							<button type="button" class="btn-sm-outline previsao-btn-danger previsao-item-excluir"
+								data-name="{{ item.name }}"
+								data-descricao="{{ item.descricao }}">Excluir</button>
+						</td>
+						{% endif %}
+					</tr>
+					{% endfor %}
+				</tbody>
+				<tfoot>
+					<tr>
+						<td colspan="5" class="text-right font-semibold">Receitas previstas</td>
+						<td class="previsao-col-valor font-semibold">R$ {{ '%.2f' | format(previsao.total_receitas_previstas | float) }}</td>
+						{% if can_edit_financeiro and previsao.status != 'Encerrada' %}<td></td>{% endif %}
+					</tr>
+					<tr>
+						<td colspan="5" class="text-right font-semibold">Despesas previstas</td>
+						<td class="previsao-col-valor font-semibold">R$ {{ '%.2f' | format(previsao.total_despesas_previstas | float) }}</td>
+						{% if can_edit_financeiro and previsao.status != 'Encerrada' %}<td></td>{% endif %}
+					</tr>
+					<tr>
+						<td colspan="5" class="text-right font-semibold">Resultado previsto</td>
+						<td class="previsao-col-valor font-semibold">R$ {{ '%.2f' | format(previsao.resultado_previsto | float) }}</td>
+						{% if can_edit_financeiro and previsao.status != 'Encerrada' %}<td></td>{% endif %}
+					</tr>
+				</tfoot>
+			</table>
+		</section>
+	</article>
+	{% else %}
+		{{ empty(
+			title="Nenhum item no orçamento",
+			description="Adicione itens de receita e despesa para montar a previsão do período.",
+			icon=lucide_icon("list-plus", size="md")
+		) }}
+	{% endif %}
+
+	{% endif %}
+</div>
+{% endblock %}
+
+{% block base_scripts %}
+{{ super() }}
+
+{% if can_edit_financeiro %}
+{# === Modal: Nova / Editar Previsão === #}
+{% set previsao_footer %}
+<button type="button" class="btn-ghost" onclick="this.closest('dialog').close()">Cancelar</button>
+<button type="button" class="btn-primary" data-action="salvar-previsao">Salvar</button>
+{% endset %}
+{% call dialog(id="modalPrevisao", title="Previsão Orçamentária", footer=previsao_footer, dialog_attrs={"class": "financeiro-dialog financeiro-dialog--lg"}) %}
+	<form id="formPrevisao" class="flex flex-col gap-3">
+		<input type="hidden" name="name" value="" />
+		{% call field(label="Título") %}
+			<input type="text" name="titulo" class="input" required maxlength="140" />
+		{% endcall %}
+		<div class="grid grid-cols-2 gap-3">
+			{% call field(label="Exercício") %}
+				<input type="number" name="exercicio" class="input" min="2000" max="2100" required />
+			{% endcall %}
+			{% call field(label="Status") %}
+				<select name="status" class="select">
+					<option value="Rascunho">Rascunho</option>
+					<option value="Aprovada">Aprovada</option>
+					<option value="Encerrada">Encerrada</option>
+				</select>
+			{% endcall %}
+		</div>
+		<div class="grid grid-cols-2 gap-3">
+			{% call field(label="Início do período") %}
+				{{ datepicker(id="previsao_data_inicio", name="data_inicio", placeholder="Selecione a data") }}
+			{% endcall %}
+			{% call field(label="Fim do período") %}
+				{{ datepicker(id="previsao_data_fim", name="data_fim", placeholder="Selecione a data") }}
+			{% endcall %}
+		</div>
+		{% call field(label="Centro de Custo (opcional)", hint="Restringe o comparativo com o realizado a um centro de custo.") %}
+			<select name="centro_de_custo" class="select">
+				<option value="">Todos</option>
+				{% for c in centros_de_custo %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+			</select>
+		{% endcall %}
+		{% call field(label="Observações") %}
+			<textarea name="observacoes" class="textarea" rows="3"></textarea>
+		{% endcall %}
+	</form>
+{% endcall %}
+
+{# === Modal: Novo / Editar Item === #}
+{% set item_footer %}
+<button type="button" class="btn-ghost" onclick="this.closest('dialog').close()">Cancelar</button>
+<button type="button" class="btn-primary" data-action="salvar-item">Salvar</button>
+{% endset %}
+{% call dialog(id="modalItem", title="Item do Orçamento", footer=item_footer, dialog_attrs={"class": "financeiro-dialog financeiro-dialog--lg"}) %}
+	<form id="formItem" class="flex flex-col gap-3">
+		<input type="hidden" name="item_name" value="" />
+		<div class="grid grid-cols-2 gap-3">
+			{% call field(label="Tipo") %}
+				<select name="tipo" class="select">
+					<option value="Despesa">Despesa</option>
+					<option value="Receita">Receita</option>
+				</select>
+			{% endcall %}
+			{% call field(label="Valor previsto no período (R$)") %}
+				<input type="number" step="0.01" min="0.01" name="valor_previsto" class="input" required />
+			{% endcall %}
+		</div>
+		{% call field(label="Descrição") %}
+			<input type="text" name="descricao" class="input" required maxlength="140" />
+		{% endcall %}
+		<div class="grid grid-cols-2 gap-3">
+			{% call field(label="Categoria") %}
+				<select name="categoria" class="select">
+					<option value="">Sem categoria</option>
+					{% for c in categorias %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+				</select>
+			{% endcall %}
+			{% call field(label="Centro de Custo") %}
+				<select name="centro_de_custo" class="select">
+					<option value="">Sem centro de custo</option>
+					{% for c in centros_de_custo %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+				</select>
+			{% endcall %}
+		</div>
+		{% call field(label="Distribuição", hint="Uniforme divide o valor igualmente entre os meses do período.") %}
+			<select name="distribuicao" class="select" id="itemDistribuicao">
+				<option value="Uniforme no período">Uniforme no período</option>
+				<option value="Mês específico">Mês específico</option>
+			</select>
+		{% endcall %}
+		<div id="itemMesWrapper" class="hidden">
+			{% call field(label="Mês de referência", hint="Qualquer dia do mês desejado.") %}
+				{{ datepicker(id="item_mes_referencia", name="mes_referencia", placeholder="Selecione o mês") }}
+			{% endcall %}
+		</div>
+		{% call field(label="Observações") %}
+			<textarea name="observacoes" class="textarea" rows="2"></textarea>
+		{% endcall %}
+	</form>
+{% endcall %}
+
+{# === Modal: Duplicar Previsão === #}
+{% set duplicar_footer %}
+<button type="button" class="btn-ghost" onclick="this.closest('dialog').close()">Cancelar</button>
+<button type="button" class="btn-primary" data-action="confirmar-duplicar">Duplicar</button>
+{% endset %}
+{% call dialog(id="modalDuplicar", title="Duplicar Previsão", description="Os itens da previsão atual são copiados para o novo período.", footer=duplicar_footer, dialog_attrs={"class": "financeiro-dialog"}) %}
+	<form id="formDuplicar" class="flex flex-col gap-3">
+		{% call field(label="Título da nova previsão") %}
+			<input type="text" name="titulo" class="input" required maxlength="140" />
+		{% endcall %}
+		{% call field(label="Exercício") %}
+			<input type="number" name="exercicio" class="input" min="2000" max="2100" required />
+		{% endcall %}
+		<div class="grid grid-cols-2 gap-3">
+			{% call field(label="Início do período") %}
+				{{ datepicker(id="duplicar_data_inicio", name="data_inicio", placeholder="Selecione a data") }}
+			{% endcall %}
+			{% call field(label="Fim do período") %}
+				{{ datepicker(id="duplicar_data_fim", name="data_fim", placeholder="Selecione a data") }}
+			{% endcall %}
+		</div>
+	</form>
+{% endcall %}
+{% endif %}
+{% endblock %}
+
+{% block extra_script %}
+<script src="/financeiro/previsao_orcamentaria.js"></script>
+{% endblock %}

@@ -71,6 +71,7 @@ def get_context(context):
 			["data_deposito", "<=", end],
 			["metodo", "!=", "Dinheiro"],
 			["repasse_entre_contas", "=", 0],
+			["excluir_do_total", "=", 0],
 		],
 		limit_page_length=0,
 	)
@@ -119,7 +120,12 @@ def get_context(context):
 	pre_tx = frappe.get_all(
 		"Transacao Extrato Geral",
 		fields=["SUM(valor) as total"],
-		filters={"data_deposito": ["<", start], "metodo": ["!=", "Dinheiro"], "repasse_entre_contas": 0},
+		filters={
+			"data_deposito": ["<", start],
+			"metodo": ["!=", "Dinheiro"],
+			"repasse_entre_contas": 0,
+			"excluir_do_total": 0,
+		},
 		limit_page_length=0,
 	)
 	total_before = pre_tx[0].get("total") or 0.0 if pre_tx else 0.0

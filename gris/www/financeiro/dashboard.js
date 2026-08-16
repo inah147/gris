@@ -52,7 +52,7 @@
   function getFormFilters(form) {
     const fd = new FormData(form);
     const out = {};
-    ['categoria', 'instituicao', 'carteira', 'centro_de_custo', 'ordinaria_extraordinaria'].forEach((k) => {
+    ['categoria', 'instituicao', 'carteira', 'centro_de_custo', 'ordinaria_extraordinaria', 'fonte'].forEach((k) => {
       const v = (fd.get(k) || '').trim();
       if (v) out[k] = v;
     });

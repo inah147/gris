@@ -31,6 +31,11 @@
 	{"label": "Ordinária", "value": "Ordinária"},
 	{"label": "Extraordinária", "value": "Extraordinária"}
 ] %}
+{% set fonte_items = [
+	{"label": "Todas as fontes", "value": ""},
+	{"label": "Planilha", "value": "Planilha"},
+	{"label": "Sistema", "value": "Sistema"}
+] %}
 
 <article class="card mb-4">
 	<section>
@@ -54,6 +59,10 @@
 			<div class="field">
 				<label class="label" for="fin-filter-tipo">Tipo</label>
 				{{ select(id="fin-filter-tipo", name="ordinaria_extraordinaria", items=tipo_items) }}
+			</div>
+			<div class="field">
+				<label class="label" for="fin-filter-fonte">Fonte</label>
+				{{ select(id="fin-filter-fonte", name="fonte", items=fonte_items) }}
 			</div>
 			<div class="fin-filters__actions">
 				<button type="submit" class="btn-primary btn-sm">Aplicar</button>

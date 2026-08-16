@@ -28,5 +28,6 @@ def get_context(context):
 	context.can_solicitar = user_has_access("/insignias/solicitar")
 	context.can_ver_minhas = user_has_access("/insignias/minhas_solicitacoes")
 	context.can_ver_compras = user_has_access("/insignias/compras")
+	context.can_ver_catalogo = user_has_access("/insignias/catalogo")
 	enrich_context(context, "/insignias")
 	return context

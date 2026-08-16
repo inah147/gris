@@ -1,0 +1,134 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, card, empty, field, input, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/currency-input.html.jinja" import currency_input %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Catálogo de insígnias e distintivos{% endblock %}
+
+{% set active_link = "/insignias/catalogo" %}
+
+{# catalogo.css/.js são injetados automaticamente pelo Frappe (colocated). Não referenciar manualmente: duplica o carregamento. #}
+
+{% block page_header %}
+<div class="page-header-row">
+	<div class="flex flex-col gap-2 max-w-3xl">
+		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">Catálogo</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">Cadastre as insígnias e distintivos que as equipes podem solicitar. Só os itens ativos aparecem no formulário de solicitação.</p>
+	</div>
+	<div class="page-header-actions">
+		<button type="button" class="btn-primary" id="btn-novo-item">
+			{{ lucide_icon("plus", size="sm") }}
+			<span>Novo item</span>
+		</button>
+	</div>
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="insignias-catalogo">
+	{{ toaster() }}
+
+	{% if itens %}
+	<p class="insignias-catalogo__resumo">{{ total_ativos }} ativo(s){% if total_inativos %} · {{ total_inativos }} inativo(s){% endif %}</p>
+
+	{% call card(attrs={"class": "insignias-catalogo__card"}) %}
+	<section class="p-0 min-w-0">
+		<div class="overflow-x-auto">
+			<table class="table insignias-catalogo__tabela">
+				<thead>
+					<tr>
+						<th>Item</th>
+						<th>Tipo</th>
+						<th>Ramo</th>
+						<th>Código</th>
+						<th class="insignias-catalogo__num">Valor</th>
+						<th>Status</th>
+						<th class="insignias-catalogo__acoes">Ações</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for item in itens %}
+					<tr{% if not item.ativo %} class="insignias-catalogo__linha--inativa"{% endif %}>
+						<td>
+							{{ item.nome }}
+							{% if item.descricao %}<span class="insignias-catalogo__desc">{{ item.descricao }}</span>{% endif %}
+						</td>
+						<td>{{ item.tipo }}</td>
+						<td>{{ item.ramo }}</td>
+						<td>{{ item.codigo or "—" }}</td>
+						<td class="insignias-catalogo__num">{{ item.valor_unitario_fmt }}</td>
+						<td>
+							{% if item.ativo %}
+								{{ badge("Ativo", variant="primary") }}
+							{% else %}
+								{{ badge("Inativo", variant="outline") }}
+							{% endif %}
+						</td>
+						<td class="insignias-catalogo__acoes">
+							<button type="button" class="btn-sm-outline"
+								data-acao="editar"
+								data-name="{{ item.name }}"
+								data-nome="{{ item.nome }}"
+								data-tipo="{{ item.tipo }}"
+								data-ramo="{{ item.ramo }}"
+								data-codigo="{{ item.codigo or '' }}"
+								data-valor="{{ item.valor_unitario_num }}"
+								data-descricao="{{ item.descricao or '' }}">Editar</button>
+							<button type="button" class="btn-sm-ghost" data-acao="alternar" data-name="{{ item.name }}">
+								{{ "Inativar" if item.ativo else "Reativar" }}
+							</button>
+						</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</section>
+	{% endcall %}
+	{% else %}
+	{{ empty(
+		title="O catálogo está vazio",
+		description="Cadastre as insígnias e distintivos do Plano Educativo para que as equipes possam solicitá-los.",
+		image="/assets/gris/images/gris-character/gris-idea.png",
+		image_alt="Personagem Gris com uma ideia",
+		image_size="sm",
+		attrs={"class": "insignias-catalogo__empty"}
+	) }}
+	{% endif %}
+
+	{% call dialog(
+		id="dialog-item",
+		title="Item do catálogo",
+		dialog_attrs={"class": "insignias-dialog"},
+		footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-item">Cancelar</button><button type="button" class="btn-primary" id="btn-salvar-item">Salvar</button>'
+	) %}
+	<div class="insignias-dialog__form">
+		<input type="hidden" name="name" id="item-name">
+		<div id="item-nome-wrapper">
+			{% call field(label="Nome") %}
+				{{ input(name="nome", attrs={"id": "item-nome", "maxlength": "140", "placeholder": "Ex.: Distintivo de Progressão — Pata Tenra"}) }}
+			{% endcall %}
+		</div>
+		<p class="insignias-dialog__aviso" id="item-nome-fixo" hidden>O nome não pode ser alterado, pois identifica o item nas solicitações já registradas.</p>
+		{% call field(label="Tipo") %}
+			{{ select(id="item-tipo", name="tipo", items=tipo_items, trigger_attrs={"class": "w-full"}) }}
+		{% endcall %}
+		{% call field(label="Ramo") %}
+			{{ select(id="item-ramo", name="ramo", items=ramo_items, trigger_attrs={"class": "w-full"}) }}
+		{% endcall %}
+		{% call field(label="Valor unitário de referência") %}
+			{{ currency_input(id="item-valor", name="valor_unitario") }}
+		{% endcall %}
+		{% call field(label="Código (opcional)", hint="Código do item no catálogo da Loja Escoteira, quando houver.") %}
+			{{ input(name="codigo", attrs={"id": "item-codigo", "maxlength": "140"}) }}
+		{% endcall %}
+		{% call field(label="Descrição (opcional)") %}
+			{{ textarea(name="descricao", attrs={"id": "item-descricao", "rows": "2", "maxlength": "500"}) }}
+		{% endcall %}
+	</div>
+	{% endcall %}
+</div>
+{% endblock %}

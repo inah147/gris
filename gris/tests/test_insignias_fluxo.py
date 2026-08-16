@@ -88,6 +88,18 @@ class TestPermissoesDoFluxo(FrappeTestCase):
 		doc = frappe._dict(solicitante="escotista@exemplo.com", status=STATUS_RECEBIDA)
 		self.assertFalse(permissoes.pode_registrar_entrega(doc, "estranho@exemplo.com"))
 
+	def test_apenas_gestor_de_metodos_mantem_o_catalogo(self):
+		self._com_roles(["Gestor de Metodos"])
+		self.assertTrue(permissoes.pode_gerenciar_catalogo("gestor@exemplo.com"))
+
+	def test_equipe_de_metodos_nao_mantem_o_catalogo(self):
+		self._com_roles(["Equipe de Metodos"])
+		self.assertFalse(permissoes.pode_gerenciar_catalogo("escotista@exemplo.com"))
+
+	def test_financeiro_nao_mantem_o_catalogo(self):
+		self._com_roles(["Gestor Financeiro"])
+		self.assertFalse(permissoes.pode_gerenciar_catalogo("financeiro@exemplo.com"))
+
 
 class TestNormalizacaoDeItens(FrappeTestCase):
 	CATALOGO: ClassVar[dict[str, dict]] = {

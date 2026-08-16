@@ -38,6 +38,8 @@ def get_context(context):
 
 	catalogo = consultas.itens_catalogo()
 	context.catalogo_vazio = not catalogo
+	# Define se o estado vazio oferece o atalho para cadastrar ou só orienta a pedir.
+	context.pode_gerenciar_catalogo = permissoes.pode_gerenciar_catalogo()
 	# O macro `select` pré-seleciona o primeiro item quando não recebe `selected`.
 	# A opção vazia à frente evita que o formulário abra com um item já escolhido.
 	context.catalogo_items = [

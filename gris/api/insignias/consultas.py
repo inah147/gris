@@ -246,6 +246,24 @@ def itens_catalogo() -> list[dict]:
 	return items
 
 
+def listar_catalogo_completo() -> list[dict]:
+	"""Catálogo inteiro (ativos e inativos) para a tela de manutenção."""
+	registros = frappe.get_all(
+		"Insignia ou Distintivo",
+		fields=["name", "nome", "tipo", "ramo", "codigo", "valor_unitario", "ativo", "descricao"],
+		order_by="ativo desc, tipo asc, nome asc",
+	)
+
+	linhas = []
+	for registro in registros:
+		linha = dict(registro)
+		linha["ativo"] = bool(linha.get("ativo"))
+		linha["valor_unitario_fmt"] = formatar_moeda(linha.get("valor_unitario"))
+		linha["valor_unitario_num"] = flt(linha.get("valor_unitario"))
+		linhas.append(linha)
+	return linhas
+
+
 def precos_catalogo() -> dict[str, float]:
 	"""Mapa nome -> valor unitário, usado pelo JS para o total estimado ao vivo."""
 	return {

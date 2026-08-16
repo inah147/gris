@@ -39,6 +39,20 @@ def pode_ver_todas(user: str | None = None) -> bool:
 	return bool(roles & (set(ROLES_FINANCEIRO) | set(ROLES_GESTOR_METODOS))) or ROLE_ADMIN in roles
 
 
+def pode_gerenciar_catalogo(user: str | None = None) -> bool:
+	"""Quem cadastra e edita o catálogo de insígnias: gestão de métodos."""
+	roles = _roles(user)
+	return bool(roles & set(ROLES_GESTOR_METODOS)) or ROLE_ADMIN in roles
+
+
+def garantir_gestor_catalogo(user: str | None = None) -> None:
+	if not pode_gerenciar_catalogo(user):
+		frappe.throw(
+			"Apenas a gestão de métodos pode manter o catálogo de insígnias e distintivos.",
+			frappe.PermissionError,
+		)
+
+
 def garantir_solicitante(user: str | None = None) -> None:
 	if not pode_solicitar(user):
 		frappe.throw(

@@ -22,6 +22,17 @@
 	{{ toaster() }}
 
 	{% if catalogo_vazio %}
+	{% if pode_gerenciar_catalogo %}
+	{{ empty(
+		title="O catálogo ainda está vazio",
+		description="Cadastre as insígnias e distintivos do Plano Educativo para poder solicitá-los.",
+		image="/assets/gris/images/gris-character/gris-idea.png",
+		image_alt="Personagem Gris com uma ideia",
+		image_size="sm",
+		primary_action={"label": "Cadastrar itens", "href": "/insignias/catalogo"},
+		secondary_action={"label": "Voltar", "href": "/insignias"}
+	) }}
+	{% else %}
 	{{ empty(
 		title="O catálogo ainda está vazio",
 		description="Nenhuma insígnia ou distintivo foi cadastrado. Peça a um gestor de métodos para cadastrar os itens antes de abrir uma solicitação.",
@@ -30,6 +41,7 @@
 		image_size="sm",
 		primary_action={"label": "Voltar", "href": "/insignias"}
 	) }}
+	{% endif %}
 	{% else %}
 
 	<script id="insignias-precos" type="application/json">{{ precos | tojson }}</script>

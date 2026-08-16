@@ -37,6 +37,27 @@ RAMOS_VALIDOS = {
 MAX_ITENS = 100
 MAX_QUANTIDADE = 999
 
+CATALOGO_DOCTYPE = "Insignia ou Distintivo"
+
+TIPOS_VALIDOS = {
+	"Distintivo de Progressão",
+	"Especialidade",
+	"Insígnia Especial",
+	"Distintivo de Identificação",
+	"Distintivo de Função",
+	"Outro",
+}
+
+RAMOS_CATALOGO_VALIDOS = {
+	"Todos",
+	"Filhotes",
+	"Lobinho",
+	"Escoteiro",
+	"Sênior",
+	"Pioneiro",
+	"Escotistas e Dirigentes",
+}
+
 
 def _parse_payload(payload: Any) -> dict:
 	if isinstance(payload, str):
@@ -144,6 +165,76 @@ def _normalizar_itens(itens_brutos: Any) -> list[dict]:
 		)
 
 	return itens
+
+
+@frappe.whitelist(methods=["POST"])
+def salvar_item_catalogo(payload):
+	"""Cria ou edita um item do catálogo a partir do portal.
+
+	O nome é a chave do documento (autoname), então só pode ser definido na
+	criação: renomear quebraria o vínculo com solicitações já registradas.
+	"""
+	permissoes.garantir_gestor_catalogo()
+	dados = _parse_payload(payload)
+
+	tipo = _texto(dados.get("tipo"), 60)
+	if tipo not in TIPOS_VALIDOS:
+		frappe.throw("Selecione um tipo válido.")
+
+	ramo = _texto(dados.get("ramo"), 60)
+	if ramo not in RAMOS_CATALOGO_VALIDOS:
+		frappe.throw("Selecione um ramo válido.")
+
+	valor_unitario = _valor_positivo(dados.get("valor_unitario"), "O valor unitário")
+	codigo = _texto(dados.get("codigo"), 140)
+	descricao = _texto(dados.get("descricao"), 500)
+
+	name = _texto(dados.get("name"), 140)
+	if name:
+		if not frappe.db.exists(CATALOGO_DOCTYPE, name):
+			frappe.throw("Item do catálogo não encontrado.")
+		doc = frappe.get_doc(CATALOGO_DOCTYPE, name)
+		criado = False
+	else:
+		nome = _texto(dados.get("nome"), 140)
+		if not nome or len(nome) < 3:
+			frappe.throw("Informe um nome com pelo menos 3 caracteres.")
+		if frappe.db.exists(CATALOGO_DOCTYPE, nome):
+			frappe.throw(f"Já existe um item chamado '{nome}'.")
+		doc = frappe.new_doc(CATALOGO_DOCTYPE)
+		doc.nome = nome
+		doc.ativo = 1
+		criado = True
+
+	doc.tipo = tipo
+	doc.ramo = ramo
+	doc.valor_unitario = valor_unitario
+	doc.codigo = codigo
+	doc.descricao = descricao
+
+	if criado:
+		doc.insert()
+	else:
+		doc.save()
+
+	return {"success": True, "name": doc.name, "criado": criado}
+
+
+@frappe.whitelist(methods=["POST"])
+def alternar_item_catalogo(payload):
+	"""Ativa ou inativa um item. Não há exclusão: itens podem estar em pedidos antigos."""
+	permissoes.garantir_gestor_catalogo()
+	dados = _parse_payload(payload)
+
+	name = _texto(dados.get("name"), 140)
+	if not name or not frappe.db.exists(CATALOGO_DOCTYPE, name):
+		frappe.throw("Item do catálogo não encontrado.")
+
+	doc = frappe.get_doc(CATALOGO_DOCTYPE, name)
+	doc.ativo = 0 if doc.ativo else 1
+	doc.save()
+
+	return {"success": True, "name": doc.name, "ativo": bool(doc.ativo)}
 
 
 @frappe.whitelist(methods=["POST"])

@@ -71,6 +71,7 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 			{"label": "Nova solicitação", "path": "/insignias/solicitar"},
 			{"label": "Minhas solicitações", "path": "/insignias/minhas_solicitacoes"},
 			{"label": "Compras", "path": "/insignias/compras"},
+			{"label": "Catálogo", "path": "/insignias/catalogo"},
 		],
 	},
 	{
@@ -149,6 +150,7 @@ SIDEBAR_ICON_MAP: dict[str, str] = {
 	"/insignias/solicitar": "file-plus",
 	"/insignias/minhas_solicitacoes": "list",
 	"/insignias/compras": "shopping-cart",
+	"/insignias/catalogo": "award",
 	"/projetos/visao_geral": "layout-dashboard",
 	"/projetos/meus_projetos": "folder-search",
 	"/projetos/cadastrar_novo_projeto": "upload",
@@ -216,6 +218,7 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/insignias/minhas_solicitacoes": ["Equipe de Metodos", "Gestor de Metodos"],
 	"/insignias/solicitacao": ["Equipe de Metodos", "Gestor de Metodos", "Gestor Financeiro"],
 	"/insignias/compras": ["Gestor Financeiro"],
+	"/insignias/catalogo": ["Gestor de Metodos"],
 	"/projetos": ["Visualizador de projetos", "Editor de projetos"],
 	"/projetos/visao_geral": ["Visualizador de projetos", "Editor de projetos"],
 	"/projetos/meus_projetos": ["Visualizador de projetos", "Editor de projetos"],

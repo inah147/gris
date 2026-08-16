@@ -65,7 +65,9 @@ class TestConviteFesta(FrappeTestCase):
 		doc = frappe.get_doc(payload).insert(ignore_permissions=True)
 		self.assertEqual(float(doc.valor_total), 150.0)
 
-	def test_pagador_recebe_qr_codes_sobrescreve_convidados(self):
+	def test_pagador_recebe_qr_codes_preserva_nomes_do_formulario(self):
+		"""Mesmo com o pagador recebendo os QR codes, o nome de cada convidado
+		vem do formulário — a portaria precisa identificar quem entrou."""
 		festa = _nova_festa()
 		opcao = _opcao(festa.name)
 		doc = frappe.get_doc(
@@ -78,10 +80,22 @@ class TestConviteFesta(FrappeTestCase):
 				],
 			)
 		).insert(ignore_permissions=True)
-		for convidado in doc.convidados:
-			self.assertEqual(convidado.nome, "João Pagador")
-			self.assertEqual(convidado.email, "joao@example.com")
-			self.assertEqual(convidado.telefone, "11988887777")
+		self.assertEqual([c.nome for c in doc.convidados], ["X", "Y"])
+		self.assertEqual([c.email for c in doc.convidados], ["x@example.com", "y@example.com"])
+
+	def test_pagador_recebe_qr_codes_dispensa_email_do_convidado(self):
+		"""O envio vai todo para o e-mail do pagador; o convidado só precisa de nome."""
+		festa = _nova_festa()
+		opcao = _opcao(festa.name)
+		doc = frappe.get_doc(
+			_convite_payload(
+				festa.name,
+				opcao,
+				convidados=[{"nome": "X"}, {"nome": "Y"}],
+			)
+		).insert(ignore_permissions=True)
+		self.assertEqual([c.nome for c in doc.convidados], ["X", "Y"])
+		self.assertFalse(any(c.email for c in doc.convidados))
 
 	def test_individual_exige_dados_dos_convidados(self):
 		festa = _nova_festa()
@@ -108,21 +122,17 @@ class TestConviteFesta(FrappeTestCase):
 		doc = frappe.get_doc(payload)
 		self.assertRaises(frappe.ValidationError, doc.insert, ignore_permissions=True)
 
-	def test_pagador_recebe_qr_codes_autogera_lista(self):
-		"""Quando o pagador recebe todos, o servidor cria as linhas faltantes."""
+	def test_lista_vazia_bloqueada_mesmo_com_pagador_recebendo(self):
+		"""Sem nomes não há como identificar quem entra: o pedido é recusado."""
 		festa = _nova_festa()
 		opcao = _opcao(festa.name)
 		payload = _convite_payload(festa.name, opcao)
 		payload["convidados"] = []  # usuário não preencheu nada
-		doc = frappe.get_doc(payload).insert(ignore_permissions=True)
-		self.assertEqual(len(doc.convidados), 2)
-		for convidado in doc.convidados:
-			self.assertEqual(convidado.nome, "João Pagador")
-			self.assertEqual(convidado.email, "joao@example.com")
-			self.assertEqual(convidado.telefone, "11988887777")
+		doc = frappe.get_doc(payload)
+		self.assertRaises(frappe.ValidationError, doc.insert, ignore_permissions=True)
 
-	def test_pagador_recebe_qr_codes_ajusta_quando_quantidade_muda(self):
-		"""Mudar a quantidade do item recria a lista de convidados."""
+	def test_quantidade_alterada_exige_ajuste_da_lista(self):
+		"""Mudar a quantidade do item sem ajustar os convidados é recusado."""
 		festa = _nova_festa()
 		opcao = _opcao(festa.name)
 		doc = frappe.get_doc(_convite_payload(festa.name, opcao)).insert(
@@ -132,10 +142,14 @@ class TestConviteFesta(FrappeTestCase):
 
 		doc.reload()
 		doc.itens[0].quantidade = 4
+		self.assertRaises(frappe.ValidationError, doc.save, ignore_permissions=True)
+
+		doc.reload()
+		doc.itens[0].quantidade = 4
+		doc.append("convidados", {"nome": "C"})
+		doc.append("convidados", {"nome": "D"})
 		doc.save(ignore_permissions=True)
-		self.assertEqual(len(doc.convidados), 4)
-		for convidado in doc.convidados:
-			self.assertEqual(convidado.nome, "João Pagador")
+		self.assertEqual([c.nome for c in doc.convidados], ["ph", "ph", "C", "D"])
 
 	def test_item_doacao_bloqueado_quando_festa_nao_aceita(self):
 		festa = _nova_festa()

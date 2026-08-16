@@ -14,7 +14,7 @@ from gris.api.festas import (
 from gris.api.festas.relatorio import build_relatorio_payload
 
 
-def _nova_festa():
+def _nova_festa(publico_min=0, publico_intermediario=0, publico_max=0):
 	festa = frappe.get_doc(
 		{
 			"doctype": "Festa",
@@ -22,6 +22,9 @@ def _nova_festa():
 			"data": today(),
 			"data_limite_vendas": today(),
 			"status": "Em andamento",
+			"expectativa_publico_min": publico_min,
+			"expectativa_publico_intermediario": publico_intermediario,
+			"expectativa_publico_max": publico_max,
 		}
 	).insert(ignore_permissions=True)
 	portaria = frappe.get_doc("Area da Festa", f"{festa.name} - Portaria")
@@ -32,13 +35,14 @@ def _nova_festa():
 	return festa
 
 
-def _novo_produto(festa):
+def _novo_produto(festa, expectativa_venda_por_pessoa=0):
 	return frappe.get_doc(
 		{
 			"doctype": "Produto de Venda Festa",
 			"festa": festa.name,
 			"nome_produto": f"Produto {frappe.generate_hash(length=6)}",
 			"preco_venda": 10,
+			"expectativa_venda_por_pessoa": expectativa_venda_por_pessoa,
 		}
 	).insert(ignore_permissions=True)
 
@@ -69,8 +73,10 @@ class TestCompraFesta(FrappeTestCase):
 		self.assertEqual(flt(compra.valor_total_compra), 80)
 
 	def test_quantidade_final_rateia_uso_em_produto(self):
-		festa = _nova_festa()
-		produto = _novo_produto(festa)
+		# Publico intermediario=1 e expectativa=1 -> qtd do produto no cenario = 1,
+		# entao a necessidade de queijo e o proprio uso (2 kg) = 1 pacote de 10 kg.
+		festa = _nova_festa(publico_intermediario=1)
+		produto = _novo_produto(festa, expectativa_venda_por_pessoa=1)
 		compra = frappe.get_doc(
 			{
 				"doctype": "Compra Festa",
@@ -99,7 +105,8 @@ class TestCompraFesta(FrappeTestCase):
 		).insert(ignore_permissions=True)
 
 		uso = compra.usos_em_produto[0]
-		self.assertEqual(flt(compra.quantidade_compra), 2)
+		# quantidade_compra e a sugestao do cenario ativo, em pacotes inteiros.
+		self.assertEqual(flt(compra.quantidade_compra), 1)
 		self.assertEqual(flt(uso.fracao_item), 0.2)
 		self.assertEqual(flt(uso.valor_uso), 20)
 
@@ -149,6 +156,7 @@ class TestCompraFesta(FrappeTestCase):
 			json.dumps(
 				{
 					"nome_item": "Carvao",
+					"unidade_compra": "kg",
 					"unidade_medida_realizado": "kg",
 					"quantidade_compra_final": 5,
 					"cotacoes": [

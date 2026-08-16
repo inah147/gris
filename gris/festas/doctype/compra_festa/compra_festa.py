@@ -23,6 +23,7 @@ class CompraFesta(Document):
 		self._validar_area()
 		self._validar_usos_em_produto()
 		self._validar_cotacoes()
+		self._validar_unidades()
 		self._calcular_quantidade_compra_base()
 		self._calcular_cenarios()
 		self._calcular_quantidade_compra()
@@ -57,6 +58,21 @@ class CompraFesta(Document):
 		if len(escolhidas) > 1:
 			frappe.throw(_("Apenas uma cotacao pode ser marcada como escolhida."))
 
+	def _validar_unidades(self):
+		"""Garante que cotacoes e usos sejam converciveis para a unidade de compra.
+
+		`converter` lanca ValidationError quando as unidades pertencem a familias
+		diferentes (ex.: litro vs kg), evitando calculos silenciosamente incorretos.
+		"""
+		escolhida = self._cotacao_escolhida()
+		if escolhida and flt(escolhida.quantidade) > 0:
+			converter(flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra)
+		if self.usado_em_produtos:
+			for uso in self.usos_em_produto or []:
+				if not uso.unidade_medida_uso or not uso.quantidade_usada:
+					continue
+				converter(flt(uso.quantidade_usada), uso.unidade_medida_uso, self.unidade_compra)
+
 	def _cotacao_escolhida(self):
 		for c in self.cotacoes or []:
 			if c.escolhida:
@@ -86,12 +102,9 @@ class CompraFesta(Document):
 		qtd_pacote = 0.0
 		valor_pacote = 0.0
 		if escolhida and flt(escolhida.quantidade) > 0:
-			try:
-				qtd_pacote = converter(
-					flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra
-				)
-			except Exception:
-				qtd_pacote = 0.0
+			qtd_pacote = converter(
+				flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra
+			)
 			valor_pacote = 0.0 if escolhida.doacao else flt(escolhida.valor)
 
 		# Busca público por cenário da festa
@@ -154,27 +167,30 @@ class CompraFesta(Document):
 			self.valor_total_compra = 0
 			return
 
-		valor = flt(escolhida.valor)
-		self.cotacao_escolhida_valor = valor
+		self.cotacao_escolhida_valor = flt(escolhida.valor)
 
+		# O valor da cotacao e o preco do pacote (ex.: R$ 20 por 2 kg). O custo da
+		# compra e o numero de pacotes inteiros necessarios para a quantidade final.
 		quantidade_final = flt(self.quantidade_compra_final)
-		if quantidade_final <= 0:
+		qtd_pacote = 0.0
+		if flt(escolhida.quantidade) > 0:
+			qtd_pacote = converter(
+				flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra
+			)
+		if quantidade_final <= 0 or qtd_pacote <= 0:
 			self.valor_total_compra = 0
 			return
 
-		self.valor_total_compra = quantidade_final * valor
+		self.valor_total_compra = _ceil_pacotes(quantidade_final, qtd_pacote) * flt(escolhida.valor)
 
 	def _calcular_usos_em_produto(self):
 		escolhida = self._cotacao_escolhida()
 		qtd_pacote = 0.0
 		if escolhida and flt(escolhida.quantidade) > 0:
-			try:
-				qtd_pacote = converter(
-					flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra
-				)
-			except Exception:
-				qtd_pacote = 0.0
-		
+			qtd_pacote = converter(
+				flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra
+			)
+
 		valor_total = flt(self.cotacao_escolhida_valor)
 		for uso in self.usos_em_produto or []:
 			if not uso.unidade_medida_uso or not uso.quantidade_usada:

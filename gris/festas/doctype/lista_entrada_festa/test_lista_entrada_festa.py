@@ -29,6 +29,9 @@ class TestListaEntradaFesta(FrappeTestCase):
 			festa.insert(ignore_permissions=True)
 
 	def _criar_entrada(self, codigo: str) -> str:
+		# `marcar_entrada` commita (atualização atômica), então o registro sobrevive
+		# ao rollback do teste: o código precisa ser único por execução.
+		codigo = f"{codigo}-{frappe.generate_hash(length=8)}"
 		doc = frappe.get_doc(
 			{
 				"doctype": "Lista Entrada Festa",

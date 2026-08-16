@@ -159,7 +159,7 @@ class TestAssociadosVencimentoNotificacoes(FrappeTestCase):
 
 		self.assertEqual(len(enviadas), 1)
 		self.assertEqual(enviadas[0]["numero"], "+5511977776666")
-		self.assertIn("venceu hoje", enviadas[0]["mensagem"])
+		self.assertIn("vence hoje", enviadas[0]["mensagem"])
 		self.assertEqual(atualizacoes[0]["fieldname"], "data_notificacao_vencimento")
 
 	def test_nao_duplica_envio_quando_ja_notificado_no_dia(self):

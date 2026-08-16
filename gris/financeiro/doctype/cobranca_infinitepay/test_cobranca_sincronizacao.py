@@ -41,6 +41,7 @@ def _convite(festa_name: str, opcao_name: str):
 					"valor": 50,
 				}
 			],
+			"convidados": [{"nome": "Convidado 1"}],
 		}
 	).insert(ignore_permissions=True)
 

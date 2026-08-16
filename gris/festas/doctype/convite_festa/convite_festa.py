@@ -639,12 +639,13 @@ def enviar_whatsapp_confirmacao_convite(convite_name: str) -> None:
 		telefone = (convidado.telefone or "").strip()
 		if not telefone:
 			continue
+		# O link assinado abre a confirmação da compra do pagador (status do
+		# pedido e recibo da Infinitepay); ele fica restrito ao pagador.
 		mensagem_convidado = (
 			f"Olá, {_primeiro_nome(convidado.nome)}!\n\n"
-			f"Um convite para {festa_nome} foi comprado em seu nome."
+			f"Um convite para {festa_nome} foi comprado em seu nome. "
 			f"Em breve você receberá o convite no e-mail {_mask_email(convidado.email)}.\n\n"
-			"Para entrar na festa você precisará apresentar seu convite. Não se esqueça de salvá-lo em um lugar de fácil acesso para não ter problemas na entrada, combinado?!\n\n"
-			f"Aqui está a confirmação de sua compra: {link_assinado}"
+			"Para entrar na festa você precisará apresentar seu convite. Não se esqueça de salvá-lo em um lugar de fácil acesso para não ter problemas na entrada, combinado?!"
 			"\n\nNos vemos na festa! 🎉"
 		)
 		try:

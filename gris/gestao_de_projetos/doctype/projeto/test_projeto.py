@@ -35,6 +35,21 @@ def _patch_person_payload_lookup():
 	return original
 
 
+def _patch_associado_payload():
+	"""Evita a busca real de Associado na validação estrita de envolvidos."""
+	original = projeto_module._get_associado_payload
+
+	def fake_payload(name: str):
+		return {
+			"nome": f"Associado-{name}",
+			"email": f"{name.lower()}@teste.local",
+			"telefone": "11999990000",
+		}
+
+	projeto_module._get_associado_payload = fake_payload
+	return original
+
+
 def _patch_coordinator_profile(categoria: str = "", secao: str = "", ramo: str = ""):
 	original = projeto_module._get_coordinator_profile
 
@@ -68,12 +83,14 @@ class TestProjeto(FrappeTestCase):
 				{
 					"tipo_padrinho_ou_orientador": "Associado",
 					"padrinho_associado": "SPONSOR-1",
-					"aprovadores": [
+					"envolvidos": [
 						frappe._dict(
 							{
 								"tipo_pessoa": "Associado",
 								"associado": "SPONSOR-1",
-								"origem_regra": "padrinho_orientador",
+								"aprovador": 1,
+								"padrinho_orientador": 1,
+								"origem_regra_aprovador": "padrinho_orientador",
 								"permite_remover": 0,
 							}
 						),
@@ -81,7 +98,8 @@ class TestProjeto(FrappeTestCase):
 							{
 								"tipo_pessoa": "Associado",
 								"associado": "ASSOC-2",
-								"origem_regra": "manual",
+								"aprovador": 1,
+								"origem_regra_aprovador": "manual",
 								"permite_remover": 1,
 							}
 						),
@@ -89,7 +107,8 @@ class TestProjeto(FrappeTestCase):
 							{
 								"tipo_pessoa": "Associado",
 								"associado": "DIR-1",
-								"origem_regra": "diretor_presidente",
+								"aprovador": 1,
+								"origem_regra_aprovador": "diretor_presidente",
 								"permite_remover": 1,
 							}
 						),
@@ -154,20 +173,32 @@ class TestProjeto(FrappeTestCase):
 
 	def test_sponsor_is_enforced_in_approver_rules(self):
 		original_lookup = _patch_person_payload_lookup()
+		original_payload = _patch_associado_payload()
 		try:
 			doc = _DummyDoc(
 				{
 					"tipo_padrinho_ou_orientador": "Associado",
 					"padrinho_associado": "SPONSOR-1",
-					"aprovadores": [
+					"envolvidos": [
+						# Padrinho presente como envolvido, mas ainda não marcado
+						# como aprovador: a regra tem que promovê-lo.
+						frappe._dict(
+							{
+								"tipo_pessoa": "Associado",
+								"associado": "SPONSOR-1",
+								"padrinho_orientador": 1,
+								"aprovador": 0,
+							}
+						),
 						frappe._dict(
 							{
 								"tipo_pessoa": "Associado",
 								"associado": "ASSOC-2",
-								"origem_regra": "manual",
+								"aprovador": 1,
+								"origem_regra_aprovador": "manual",
 								"permite_remover": 1,
 							}
-						)
+						),
 					],
 				}
 			)
@@ -184,6 +215,7 @@ class TestProjeto(FrappeTestCase):
 			self.assertIn("Associado:SPONSOR-1", sponsor_keys)
 		finally:
 			projeto_module._get_person_payload_by_type = original_lookup
+			projeto_module._get_associado_payload = original_payload
 
 	def test_section_chief_stage_between_initial_and_director(self):
 		original_lookup = _patch_person_payload_lookup()
@@ -195,12 +227,14 @@ class TestProjeto(FrappeTestCase):
 					"coordenador": "COORD-1",
 					"tipo_padrinho_ou_orientador": "Associado",
 					"padrinho_associado": "SPONSOR-1",
-					"aprovadores": [
+					"envolvidos": [
 						frappe._dict(
 							{
 								"tipo_pessoa": "Associado",
 								"associado": "SPONSOR-1",
-								"origem_regra": "padrinho_orientador",
+								"aprovador": 1,
+								"padrinho_orientador": 1,
+								"origem_regra_aprovador": "padrinho_orientador",
 								"permite_remover": 0,
 							}
 						),
@@ -208,7 +242,8 @@ class TestProjeto(FrappeTestCase):
 							{
 								"tipo_pessoa": "Associado",
 								"associado": "DIR-1",
-								"origem_regra": "diretor_presidente",
+								"aprovador": 1,
+								"origem_regra_aprovador": "diretor_presidente",
 								"permite_remover": 1,
 							}
 						),
@@ -275,12 +310,14 @@ class TestProjeto(FrappeTestCase):
 					"coordenador": "COORD-1",
 					"tipo_padrinho_ou_orientador": "Associado",
 					"padrinho_associado": "SPONSOR-1",
-					"aprovadores": [
+					"envolvidos": [
 						frappe._dict(
 							{
 								"tipo_pessoa": "Associado",
 								"associado": "SPONSOR-1",
-								"origem_regra": "padrinho_orientador",
+								"aprovador": 1,
+								"padrinho_orientador": 1,
+								"origem_regra_aprovador": "padrinho_orientador",
 								"permite_remover": 0,
 							}
 						),
@@ -288,7 +325,8 @@ class TestProjeto(FrappeTestCase):
 							{
 								"tipo_pessoa": "Associado",
 								"associado": "DIR-1",
-								"origem_regra": "diretor_presidente",
+								"aprovador": 1,
+								"origem_regra_aprovador": "diretor_presidente",
 								"permite_remover": 1,
 							}
 						),
@@ -338,12 +376,14 @@ class TestProjeto(FrappeTestCase):
 				{
 					"tipo_padrinho_ou_orientador": "Associado",
 					"padrinho_associado": "SPONSOR-1",
-					"aprovadores": [
+					"envolvidos": [
 						frappe._dict(
 							{
 								"tipo_pessoa": "Associado",
 								"associado": "SPONSOR-1",
-								"origem_regra": "padrinho_orientador",
+								"aprovador": 1,
+								"padrinho_orientador": 1,
+								"origem_regra_aprovador": "padrinho_orientador",
 								"permite_remover": 0,
 							}
 						),
@@ -351,7 +391,8 @@ class TestProjeto(FrappeTestCase):
 							{
 								"tipo_pessoa": "Associado",
 								"associado": "ASSOC-2",
-								"origem_regra": "manual",
+								"aprovador": 1,
+								"origem_regra_aprovador": "manual",
 								"permite_remover": 1,
 							}
 						),
@@ -359,7 +400,8 @@ class TestProjeto(FrappeTestCase):
 							{
 								"tipo_pessoa": "Associado",
 								"associado": "DIR-1",
-								"origem_regra": "diretor_presidente",
+								"aprovador": 1,
+								"origem_regra_aprovador": "diretor_presidente",
 								"permite_remover": 1,
 							}
 						),
@@ -574,11 +616,11 @@ class TestProjeto(FrappeTestCase):
 			projeto_module.enviar_notificacao_whatsapp_entrada_aprovacao("PROJ-0002")
 			self.assertEqual(len(enviados), 1)
 			self.assertEqual(enviados[0]["numero"], "11988887777")
-			self.assertEqual(enviados[0]["titulo"], "Aprovacao de Projeto")
-			self.assertIn("Ola, Aprovador!", enviados[0]["descricao"])
-			self.assertIn("Um novo projeto foi enviado para aprovacao", enviados[0]["descricao"])
-			self.assertIn("**Projeto**: Projeto A", enviados[0]["descricao"])
-			self.assertIn("**Etapa**: Etapa inicial", enviados[0]["descricao"])
+			self.assertEqual(enviados[0]["titulo"], "*Aprovacao de Projeto*")
+			self.assertIn("Oi, Aprovador!", enviados[0]["descricao"])
+			self.assertIn("Um novo projeto foi enviado para aprovação", enviados[0]["descricao"])
+			self.assertIn("*Projeto*: Projeto A", enviados[0]["descricao"])
+			self.assertIn("*Etapa*: Etapa inicial", enviados[0]["descricao"])
 			self.assertIn("PROJ-0002", enviados[0]["link"])
 		finally:
 			projeto_module.frappe.get_doc = original_get_doc
@@ -944,7 +986,9 @@ class TestProjeto(FrappeTestCase):
 
 	def test_after_insert_enqueues_google_drive_folder_creation(self):
 		original_enqueue_create = projeto_module._enqueue_project_drive_folder_creation
+		original_ensure_board = projeto_module._ensure_project_board
 		enqueued: list[str] = []
+		boards: list[str] = []
 
 		class _InsertedDoc:
 			name = "PROJ-DRV-001"
@@ -952,12 +996,18 @@ class TestProjeto(FrappeTestCase):
 		def fake_enqueue_create(projeto_name: str):
 			enqueued.append(projeto_name)
 
+		def fake_ensure_board(doc):
+			boards.append(doc.name)
+
 		projeto_module._enqueue_project_drive_folder_creation = fake_enqueue_create
+		projeto_module._ensure_project_board = fake_ensure_board
 		try:
 			projeto_module.Projeto.after_insert(_InsertedDoc())
 			self.assertEqual(enqueued, ["PROJ-DRV-001"])
+			self.assertEqual(boards, ["PROJ-DRV-001"])
 		finally:
 			projeto_module._enqueue_project_drive_folder_creation = original_enqueue_create
+			projeto_module._ensure_project_board = original_ensure_board
 
 	def test_concluir_projeto_execucao_enqueues_drive_cleanup_when_link_exists(self):
 		original_require_editor = projeto_module._require_project_editor_access

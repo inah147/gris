@@ -34,6 +34,14 @@
     ) }}
   {% endif %}
 
+  {{ alert(
+    title="Quais arquivos usar",
+    description="O fechamento baixado da Infinitepay traz vários arquivos, mas só três entram aqui — cada passo abaixo mostra o nome esperado. Os PDFs (<code class='import-file-chip'>monthly_report.pdf</code> e <code class='import-file-chip'>reinf_AAAA_MM.pdf</code>) são só para leitura e conferência: não precisam ser enviados.",
+    icon=lucide_icon("info", size="sm"),
+    variant="info",
+    attrs={"class": "import-files-hint"}
+  ) }}
+
   {% call card(
     title="Conciliar dados Infinitepay",
     description="Selecione os três arquivos necessários e inicie a conciliação para registrar as transações.",
@@ -44,15 +52,25 @@
         <div class="import-step__content">
           <div class="import-step__badge" aria-hidden="true">1</div>
           <div>
-            <h2 id="ip-extrato-step-title">Extrato bancário (.ofx ou .html)</h2>
-            <p>Extrato OFX ou o "Relatório de movimentações" da Conta Web Infinitepay (baixado como .ofx ou .html).</p>
+            <h2 id="ip-extrato-step-title">Extrato bancário</h2>
+            <p>O "Relatório de movimentações" da Conta Web Infinitepay — é o arquivo que vem com nome de mês.</p>
+            <ul class="import-step__files">
+              <li>
+                <span class="import-step__files-label">Envie</span>
+                <code class="import-file-chip">bank_statement_2026_05.ofx</code>
+              </li>
+              <li>
+                <span class="import-step__files-label">ou</span>
+                <code class="import-file-chip">bank_statement_2026_05.html</code>
+              </li>
+            </ul>
           </div>
         </div>
 
         {{ file_upload(
           id="ipExtratoUpload",
           label="Extrato bancário",
-          description="Apenas um arquivo OFX ou HTML por envio.",
+          description="bank_statement_AAAA_MM.ofx (ou .html) — apenas um arquivo por envio.",
           trigger_label="Selecionar extrato",
           dialog_title="Enviar extrato Infinitepay",
           dialog_description="Selecione o extrato exportado da Infinitepay (.ofx ou .html).",
@@ -81,15 +99,25 @@
         <div class="import-step__content">
           <div class="import-step__badge" aria-hidden="true">2</div>
           <div>
-            <h2 id="ip-vendas-step-title">Relatório de vendas (.csv ou .xml)</h2>
-            <p>Relatório de vendas exportado do painel Infinitepay (<code>sales_report.xml</code> ou o CSV equivalente).</p>
+            <h2 id="ip-vendas-step-title">Relatório de vendas</h2>
+            <p>Todas as vendas do período (maquininha, link, Pix e dinheiro), com taxas e valor líquido.</p>
+            <ul class="import-step__files">
+              <li>
+                <span class="import-step__files-label">Envie</span>
+                <code class="import-file-chip">sales_report.xml</code>
+              </li>
+              <li>
+                <span class="import-step__files-label">ou</span>
+                <code class="import-file-chip">sales_report.csv</code>
+              </li>
+            </ul>
           </div>
         </div>
 
         {{ file_upload(
           id="ipVendasUpload",
           label="Relatório de vendas",
-          description="Apenas um arquivo CSV ou XML por envio.",
+          description="sales_report.xml (ou .csv) — apenas um arquivo por envio.",
           trigger_label="Selecionar relatório de vendas",
           dialog_title="Enviar relatório de vendas",
           dialog_description="Selecione o relatório de vendas exportado da Infinitepay (.csv ou .xml).",
@@ -118,15 +146,29 @@
         <div class="import-step__content">
           <div class="import-step__badge" aria-hidden="true">3</div>
           <div>
-            <h2 id="ip-recebimentos-step-title">Relatório de recebimentos (.csv ou .xml)</h2>
-            <p>Relatório de recebimentos exportado do painel Infinitepay (<code>transaction_payments_report</code> em CSV ou XML, ou o <code>proof_of_transfer_report.xml</code>).</p>
+            <h2 id="ip-recebimentos-step-title">Relatório de recebimentos</h2>
+            <p>Quando cada venda em cartão foi depositada na conta. É o que liga a venda ao depósito no extrato.</p>
+            <ul class="import-step__files">
+              <li>
+                <span class="import-step__files-label">Envie</span>
+                <code class="import-file-chip">transaction_payments_report.xml</code>
+              </li>
+              <li>
+                <span class="import-step__files-label">ou</span>
+                <code class="import-file-chip">transaction_payments_report.csv</code>
+              </li>
+              <li>
+                <span class="import-step__files-label">ou</span>
+                <code class="import-file-chip">proof_of_transfer_report.xml</code>
+              </li>
+            </ul>
           </div>
         </div>
 
         {{ file_upload(
           id="ipRecebimentosUpload",
           label="Relatório de recebimentos",
-          description="Apenas um arquivo CSV ou XML por envio.",
+          description="transaction_payments_report.xml (ou .csv) — apenas um arquivo por envio.",
           trigger_label="Selecionar relatório de recebimentos",
           dialog_title="Enviar relatório de recebimentos",
           dialog_description="Selecione o relatório de recebimentos exportado da Infinitepay (.csv ou .xml).",

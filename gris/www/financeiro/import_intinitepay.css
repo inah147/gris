@@ -100,6 +100,49 @@
   line-height: var(--leading-relaxed);
 }
 
+/* Dica com o nome exato do arquivo esperado em cada passo. */
+.import-step__files {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+  margin: calc(var(--spacing) * 3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.import-step__files li {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+}
+
+.import-step__files-label {
+  flex: 0 0 auto;
+  color: var(--color-muted-foreground);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+}
+
+.import-file-chip {
+  display: inline-block;
+  padding: calc(var(--spacing) * 1) calc(var(--spacing) * 2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  /* `--color-muted` é branco neste tema; o tint garante contraste com o card. */
+  background: color-mix(in oklab, var(--color-muted-foreground) 10%, transparent);
+  color: var(--color-foreground);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  overflow-wrap: anywhere;
+}
+
+.import-files-hint {
+  max-width: 100%;
+}
+
 #btnConciliarInfinitepay {
   gap: calc(var(--spacing) * 2);
 }

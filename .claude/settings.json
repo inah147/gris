@@ -44,5 +44,18 @@
       "Bash(bench --site:* drop-site:*)",
       "Bash(docker compose down -v:*)"
     ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh",
+            "timeout": 900
+          }
+        ]
+      }
+    ]
   }
 }

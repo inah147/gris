@@ -1,427 +1,690 @@
-let assocAtual = null;
+// Contribuições mensais — gráficos ECharts, filtros da tabela e detalhe por contribuinte.
+(function () {
+	'use strict';
 
-const TOAST_INDICATOR_TO_CATEGORY = {
-	green: 'success',
-	red: 'error',
-	orange: 'warning',
-	yellow: 'warning',
-	blue: 'info',
-};
+	const CHART_COLORS = ['#0072B2', '#E69F00', '#009E73', '#D55E00', '#56B4E9', '#CC79A7'];
+	const LINHAS_POR_PAGINA = 15;
 
-function showToast(opts) {
-	const message = typeof opts === 'string' ? opts : (opts.message || '');
-	const indicator = (typeof opts === 'object' && opts.indicator) || 'blue';
-	const category = TOAST_INDICATOR_TO_CATEGORY[indicator.toLowerCase()] || 'info';
-	document.dispatchEvent(new CustomEvent('basecoat:toast', {
-		detail: { config: { category, title: message, duration: 3000 } }
-	}));
-}
+	let assocAtual = null;
+	let paginaAtual = 1;
 
-function getDialog() {
-	return document.getElementById('detalheModal');
-}
+	// ─────────────────────────── utilitários ───────────────────────────
 
-function getDialogTitle() {
-	const dlg = getDialog();
-	return dlg ? dlg.querySelector('h2#detalheModal-title') : null;
-}
-
-function formatarMoeda(valor) {
-	const numero = parseFloat(valor || 0);
-	if (isNaN(numero)) return '0,00';
-	return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function badgeVariant(status) {
-	switch (status) {
-		case 'Cadastrar': return 'info';
-		case 'Cancelar': return 'destructive';
-		case 'Aguardar': return 'secondary';
-		case 'Atrasado': return 'destructive';
-		case 'Em Aberto': return 'warning';
-		case 'Pago': return 'success';
-		default: return 'secondary';
+	function parseNumber(valor) {
+		const numero = typeof valor === 'number' ? valor : parseFloat(valor || 0);
+		return Number.isFinite(numero) ? numero : 0;
 	}
-}
 
-function badgeClasses(status) {
-	const variant = badgeVariant(status);
-	if (variant === 'default' || variant === 'secondary') return 'badge';
-	return 'badge badge-' + variant;
-}
+	function formatarMoeda(valor) {
+		return parseNumber(valor).toLocaleString('pt-BR', {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2,
+		});
+	}
 
-function mostrarDetalhes(btn) {
-	const tr = btn.closest('tr');
-	const data = JSON.parse((tr || btn).getAttribute('data-assoc'));
-	assocAtual = data;
+	function formatarMoedaCompleta(valor) {
+		return parseNumber(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+	}
 
-	const titulo = getDialogTitle();
-	if (titulo) titulo.textContent = data.nome || 'Detalhes do beneficiário';
+	function formatarPercentual(valor) {
+		return `${parseNumber(valor).toFixed(1).replace('.', ',')}%`;
+	}
 
-	const valorEl = document.getElementById('detalheValor');
-	if (valorEl) valorEl.textContent = formatarMoeda(data.valor_contribuicao);
+	function formatarData(iso) {
+		if (!iso) return '—';
+		const partes = String(iso).split('-');
+		if (partes.length !== 3) return iso;
+		return `${partes[2]}/${partes[1]}/${partes[0]}`;
+	}
 
-	const emailSpan = document.getElementById('emailCobranca');
-	const foneSpan = document.getElementById('foneCobranca');
-	if (emailSpan) emailSpan.textContent = data.email_cobranca || '—';
-	if (foneSpan) foneSpan.textContent = data.telefone_cobranca || '—';
+	// Escapa também aspas: o resultado é interpolado em atributos, não só em texto.
+	function escapeHtml(texto) {
+		return String(texto == null ? '' : texto)
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+	}
 
-	const tbody = document.getElementById('detalhePagamentos');
-	if (tbody) {
-		tbody.innerHTML = '';
-		(data.pagamentos || []).forEach(p => {
-			const tr = document.createElement('tr');
-			tr.setAttribute('data-pag-id', p.name || '');
-			const valorFormatado = formatarMoeda(p.valor);
-			let valorCell;
-			if (p.status !== 'Pago' && window.canManageContrib) {
-				valorCell = `<td class="text-right whitespace-nowrap"><div class="flex items-center justify-end gap-2"><span>R$ ${valorFormatado}</span><button type="button" class="btn-sm-primary" onclick="marcarComoPago(this)" data-pag-id="${p.name}">Pago</button></div></td>`;
-			} else {
-				valorCell = `<td class="text-right whitespace-nowrap">R$ ${valorFormatado}</td>`;
+	function showToast(mensagem, indicador) {
+		const categorias = { green: 'success', red: 'error', orange: 'warning', blue: 'info' };
+		document.dispatchEvent(
+			new CustomEvent('basecoat:toast', {
+				detail: {
+					config: {
+						category: categorias[indicador] || 'info',
+						title: mensagem,
+						duration: 3000,
+					},
+				},
+			})
+		);
+	}
+
+	function isMobile() {
+		return window.innerWidth < 640;
+	}
+
+	// ─────────────────────────── gráficos ───────────────────────────
+
+	function ensureEcharts() {
+		return new Promise((resolve, reject) => {
+			if (window.echarts) {
+				resolve();
+				return;
 			}
-			tr.innerHTML = `<td>${p.mes_de_referencia || ''}</td><td><span class="${badgeClasses(p.status)} status-badge">${p.status}</span></td>${valorCell}`;
+			const existente = document.querySelector('script[data-gris-echarts="1"]');
+			if (existente) {
+				existente.addEventListener(
+					'load',
+					() => (window.echarts ? resolve() : reject(new Error('ECharts não disponível'))),
+					{ once: true }
+				);
+				existente.addEventListener('error', () => reject(new Error('Falha ao carregar ECharts')), {
+					once: true,
+				});
+				return;
+			}
+			const script = document.createElement('script');
+			script.dataset.grisEcharts = '1';
+			script.src = '/assets/gris/vendor/echarts/echarts.min.js';
+			script.onload = () => (window.echarts ? resolve() : reject(new Error('ECharts não disponível')));
+			script.onerror = () => reject(new Error('Falha ao carregar ECharts'));
+			document.head.appendChild(script);
+		});
+	}
+
+	function baseOption(yAxisName) {
+		return {
+			aria: { enabled: true },
+			color: CHART_COLORS,
+			animationDuration: 400,
+			tooltip: {
+				trigger: 'axis',
+				confine: true,
+				className: 'echarts-tooltip-modern',
+				axisPointer: { type: 'shadow' },
+			},
+			legend: { type: 'scroll', top: 4 },
+			grid: {
+				top: 52,
+				left: 14,
+				right: 14,
+				bottom: isMobile() ? 60 : 32,
+				containLabel: true,
+			},
+			xAxis: {
+				type: 'category',
+				axisTick: { alignWithLabel: true },
+				axisLabel: {
+					interval: 0,
+					rotate: isMobile() ? 40 : 0,
+					hideOverlap: true,
+					fontSize: isMobile() ? 10 : 12,
+				},
+			},
+			yAxis: { type: 'value', name: yAxisName },
+		};
+	}
+
+	function getChart(id) {
+		const alvo = document.getElementById(id);
+		if (!alvo || !window.echarts) return null;
+		const existente = window.echarts.getInstanceByDom(alvo);
+		if (existente) return existente;
+		alvo.innerHTML = '';
+		return window.echarts.init(alvo);
+	}
+
+	function setChartMessage(id, texto) {
+		const alvo = document.getElementById(id);
+		if (!alvo) return;
+		if (window.echarts) {
+			const existente = window.echarts.getInstanceByDom(alvo);
+			if (existente) existente.dispose();
+		}
+		alvo.innerHTML = `<div class="text-sm text-muted-foreground px-2 pt-3">${escapeHtml(texto)}</div>`;
+	}
+
+	function temDados(valores) {
+		return (valores || []).some((v) => parseNumber(v) !== 0);
+	}
+
+	function renderRecebidoEsperado(series) {
+		const id = 'chart-contrib-recebido-esperado';
+		const semDados =
+			!temDados(series.recebido) && !temDados(series.esperado) && !temDados(series.nao_vinculado);
+		if (semDados) {
+			setChartMessage(id, 'Nenhuma contribuição registrada no período.');
+			return;
+		}
+		const chart = getChart(id);
+		if (!chart) return;
+
+		chart.setOption(
+			Object.assign(baseOption('R$'), {
+				tooltip: {
+					trigger: 'axis',
+					confine: true,
+					className: 'echarts-tooltip-modern',
+					axisPointer: { type: 'shadow' },
+					valueFormatter: (valor) => formatarMoedaCompleta(valor),
+				},
+				xAxis: Object.assign(baseOption().xAxis, { data: series.labels }),
+				series: [
+					{
+						name: 'Recebido (identificado)',
+						type: 'bar',
+						stack: 'recebido',
+						emphasis: { focus: 'series' },
+						itemStyle: { borderColor: 'transparent', borderWidth: 1 },
+						data: series.recebido,
+					},
+					{
+						name: 'Recebido (a identificar)',
+						type: 'bar',
+						stack: 'recebido',
+						emphasis: { focus: 'series' },
+						itemStyle: { borderColor: 'transparent', borderWidth: 1 },
+						data: series.nao_vinculado,
+					},
+					{
+						name: 'Esperado',
+						type: 'line',
+						smooth: false,
+						symbol: 'diamond',
+						symbolSize: 8,
+						lineStyle: { type: 'dashed', width: 2 },
+						data: series.esperado,
+					},
+				],
+			}),
+			true
+		);
+	}
+
+	function renderAdimplencia(series) {
+		const id = 'chart-contrib-adimplencia';
+		if (!temDados(series.adimplencia)) {
+			setChartMessage(id, 'Sem meses apurados para calcular adimplência.');
+			return;
+		}
+		const chart = getChart(id);
+		if (!chart) return;
+
+		chart.setOption(
+			Object.assign(baseOption('%'), {
+				tooltip: {
+					trigger: 'axis',
+					confine: true,
+					className: 'echarts-tooltip-modern',
+					axisPointer: { type: 'line' },
+					valueFormatter: (valor) => formatarPercentual(valor),
+				},
+				xAxis: Object.assign(baseOption().xAxis, { data: series.labels }),
+				yAxis: { type: 'value', name: '%', max: 100, min: 0 },
+				series: [
+					{
+						name: 'Meses quitados',
+						type: 'line',
+						smooth: false,
+						symbol: 'circle',
+						symbolSize: 8,
+						lineStyle: { width: 2 },
+						areaStyle: { opacity: 0.12 },
+						data: series.adimplencia,
+					},
+				],
+			}),
+			true
+		);
+	}
+
+	function initGraficos() {
+		const bloco = document.getElementById('contrib-dados-graficos');
+		if (!bloco) return;
+
+		let dados;
+		try {
+			dados = JSON.parse(bloco.textContent || '{}');
+		} catch (e) {
+			setChartMessage('chart-contrib-recebido-esperado', 'Não foi possível ler os dados do período.');
+			setChartMessage('chart-contrib-adimplencia', 'Não foi possível ler os dados do período.');
+			return;
+		}
+
+		const series = dados.series || {};
+		ensureEcharts()
+			.then(() => {
+				renderRecebidoEsperado(series);
+				renderAdimplencia(series);
+			})
+			.catch(() => {
+				setChartMessage('chart-contrib-recebido-esperado', 'Não foi possível carregar os gráficos.');
+				setChartMessage('chart-contrib-adimplencia', 'Não foi possível carregar os gráficos.');
+			});
+
+		let redimensionando = null;
+		window.addEventListener('resize', () => {
+			clearTimeout(redimensionando);
+			redimensionando = setTimeout(() => {
+				['chart-contrib-recebido-esperado', 'chart-contrib-adimplencia'].forEach((id) => {
+					const alvo = document.getElementById(id);
+					if (!alvo || !window.echarts) return;
+					const instancia = window.echarts.getInstanceByDom(alvo);
+					if (instancia) instancia.resize();
+				});
+			}, 150);
+		});
+	}
+
+	// ─────────────────────────── tabela ───────────────────────────
+
+	function getLinhas() {
+		return Array.from(document.querySelectorAll('#contribTabela tbody > tr.contrib-linha'));
+	}
+
+	function linhasVisiveis() {
+		return getLinhas().filter((linha) => !linha.classList.contains('filter-hidden'));
+	}
+
+	function aplicarFiltros() {
+		const termo = (document.getElementById('filtroAssociado')?.value || '').trim().toLowerCase();
+		const situacao =
+			document.querySelector('#filtroSituacao > input[type="hidden"]')?.value || '';
+
+		getLinhas().forEach((linha) => {
+			const nome = (linha.getAttribute('data-nome') || '').toLowerCase();
+			const casaNome = !termo || nome.includes(termo);
+			const casaSituacao = !situacao || linha.getAttribute('data-situacao') === situacao;
+			linha.classList.toggle('filter-hidden', !(casaNome && casaSituacao));
+		});
+
+		paginaAtual = 1;
+		atualizarPaginacao();
+	}
+
+	function atualizarPaginacao() {
+		const visiveis = linhasVisiveis();
+		const totalPaginas = Math.max(1, Math.ceil(visiveis.length / LINHAS_POR_PAGINA));
+		if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+
+		getLinhas().forEach((linha) => linha.classList.add('hidden-by-page'));
+		visiveis.forEach((linha, indice) => {
+			const pagina = Math.floor(indice / LINHAS_POR_PAGINA) + 1;
+			linha.classList.toggle('hidden-by-page', pagina !== paginaAtual);
+		});
+
+		const aviso = document.getElementById('contribSemResultado');
+		if (aviso) aviso.classList.toggle('hidden', visiveis.length > 0);
+
+		renderControlesPaginacao(totalPaginas, visiveis.length);
+	}
+
+	function renderControlesPaginacao(totalPaginas, totalLinhas) {
+		const container = document.getElementById('contribPaginacao');
+		if (!container) return;
+		container.innerHTML = '';
+		if (totalLinhas === 0 || totalPaginas <= 1) return;
+		container.classList.add('btn-group');
+
+		const addBotao = (rotulo, pagina, desabilitado, ativo) => {
+			const botao = document.createElement('button');
+			botao.type = 'button';
+			botao.textContent = rotulo;
+			botao.className = ativo ? 'btn-sm-primary' : 'btn-sm-outline';
+			if (ativo) botao.setAttribute('aria-current', 'page');
+			if (desabilitado) {
+				botao.disabled = true;
+				botao.setAttribute('aria-disabled', 'true');
+			} else if (!ativo) {
+				botao.addEventListener('click', () => {
+					paginaAtual = pagina;
+					atualizarPaginacao();
+				});
+			}
+			container.appendChild(botao);
+		};
+
+		addBotao('«', 1, paginaAtual === 1, false);
+		addBotao('‹', paginaAtual - 1, paginaAtual === 1, false);
+		const janela = 5;
+		let inicio = Math.max(1, paginaAtual - Math.floor(janela / 2));
+		let fim = Math.min(totalPaginas, inicio + janela - 1);
+		inicio = Math.max(1, fim - janela + 1);
+		for (let pagina = inicio; pagina <= fim; pagina += 1) {
+			addBotao(String(pagina), pagina, false, pagina === paginaAtual);
+		}
+		addBotao('›', paginaAtual + 1, paginaAtual === totalPaginas, false);
+		addBotao('»', totalPaginas, paginaAtual === totalPaginas, false);
+	}
+
+	// ─────────────────────────── detalhe ───────────────────────────
+
+	function getDialog() {
+		return document.getElementById('detalheModal');
+	}
+
+	function setTexto(id, valor) {
+		const elemento = document.getElementById(id);
+		if (elemento) elemento.textContent = valor;
+	}
+
+	function renderMeses(assoc) {
+		const tbody = document.getElementById('detalheMeses');
+		if (!tbody) return;
+		tbody.innerHTML = '';
+
+		(assoc.linhas || []).forEach((linha) => {
+			const tr = document.createElement('tr');
+			const marcaCredito = linha.usou_credito
+				? ' <span class="text-xs text-muted-foreground">(crédito)</span>'
+				: '';
+			tr.innerHTML = [
+				`<td class="whitespace-nowrap">${escapeHtml(linha.rotulo)}</td>`,
+				`<td><span class="badge contrib-badge contrib-badge--${escapeHtml(linha.status_slug)}">${escapeHtml(linha.status)}</span>${marcaCredito}</td>`,
+				`<td class="text-right whitespace-nowrap contrib-num">R$ ${formatarMoeda(linha.esperado)}</td>`,
+				`<td class="text-right whitespace-nowrap contrib-num">R$ ${formatarMoeda(linha.recebido)}</td>`,
+			].join('');
 			tbody.appendChild(tr);
 		});
 	}
 
-	const cadastroContainer = document.getElementById('cadastroContainer');
-	const tabelaPagamentosContainer = document.getElementById('tabelaPagamentosContainer');
-	if (data.status_geral === 'Cadastrar') {
-		if (cadastroContainer) cadastroContainer.classList.remove('hidden');
-		if (tabelaPagamentosContainer) tabelaPagamentosContainer.classList.add('hidden');
-	} else {
-		if (cadastroContainer) cadastroContainer.classList.add('hidden');
-		if (tabelaPagamentosContainer) tabelaPagamentosContainer.classList.remove('hidden');
-	}
+	function renderTransacoes(transacoes) {
+		const tbody = document.getElementById('detalheTransacoes');
+		if (!tbody) return;
+		tbody.innerHTML = '';
 
-	const cancelarContainer = document.getElementById('cancelarContainer');
-	if (cancelarContainer) {
-		// Mostra "Cadastro Cancelado" para qualquer contribuição já cadastrada
-		// (status_geral diferente de "Cadastrar"), permitindo desativar a cobrança.
-		if (data.status_geral !== 'Cadastrar') {
-			cancelarContainer.classList.remove('hidden');
-		} else {
-			cancelarContainer.classList.add('hidden');
+		if (!transacoes || !transacoes.length) {
+			tbody.innerHTML =
+				'<tr><td colspan="4" class="text-sm text-muted-foreground">Nenhuma transação de contribuição no período.</td></tr>';
+			return;
 		}
-	}
 
-	if (!window.canManageContrib) {
-		document.querySelectorAll('[data-manage-only="1"]').forEach(el => el.classList.add('hidden'));
-		const acoesValor = document.getElementById('acoesValor');
-		if (acoesValor) acoesValor.innerHTML = '';
-		const acoesCobranca = document.getElementById('acoesCobranca');
-		if (acoesCobranca) acoesCobranca.innerHTML = '';
-	}
-
-	const dlg = getDialog();
-	if (dlg && typeof dlg.showModal === 'function') {
-		if (!dlg.open) dlg.showModal();
-	}
-}
-
-function fecharDetalhes() {
-	const dlg = getDialog();
-	if (dlg && dlg.open) dlg.close();
-}
-
-function alterarValor() {
-	if (!window.canManageContrib) { frappe.msgprint('Sem permissão para alterar valor.'); return; }
-	if (!assocAtual) return;
-	const container = document.getElementById('valorContainer');
-	const acoes = document.getElementById('acoesValor');
-	if (!container || !acoes) return;
-	if (container.querySelector('input')) return;
-	const valorAtual = assocAtual.valor_contribuicao || 0;
-	container.innerHTML = `
-		<div class="field">
-			<label class="label" for="inputNovoValor">Novo valor (R$)</label>
-			<input type="number" min="0" step="0.01" id="inputNovoValor" class="input" style="max-width:200px;" value="${valorAtual}" />
-		</div>
-	`;
-	acoes.innerHTML = `
-		<button type="button" class="btn-sm-primary" onclick="salvarNovoValor()">Salvar</button>
-		<button type="button" class="btn-sm-outline" onclick="cancelarEdicaoValor()">Cancelar</button>
-	`;
-}
-
-function cancelarEdicaoValor() {
-	if (!assocAtual) return;
-	const container = document.getElementById('valorContainer');
-	const acoes = document.getElementById('acoesValor');
-	if (container) {
-		container.innerHTML = `<strong class="text-sm">Valor atual:</strong> <span class="text-sm">R$ <span id="detalheValor">${formatarMoeda(assocAtual.valor_contribuicao)}</span></span>`;
-	}
-	if (acoes) {
-		acoes.innerHTML = `<button type="button" id="btnAlterarValor" class="btn-sm-outline" onclick="alterarValor()">Alterar Valor</button>`;
-	}
-}
-
-function salvarNovoValor() {
-	if (!assocAtual) return;
-	const input = document.getElementById('inputNovoValor');
-	if (!input) return;
-	const novoValor = parseFloat(input.value);
-	if (isNaN(novoValor) || novoValor < 0) {
-		frappe.msgprint('Informe um valor válido.');
-		return;
-	}
-	frappe.call({
-		method: 'gris.api.financeiro.monthly_payments.update_contribution_value',
-		args: { associate_id: assocAtual.id, new_value: novoValor },
-		freeze: true,
-		callback: function (r) {
-			if (r.message && r.message.ok) {
-				assocAtual.valor_contribuicao = r.message.valor;
-				cancelarEdicaoValor();
-				const detalheValor = document.getElementById('detalheValor');
-				if (detalheValor) detalheValor.textContent = formatarMoeda(assocAtual.valor_contribuicao);
-				showToast({ message: 'Valor atualizado', indicator: 'green' });
-			}
-		},
-		error: function () { frappe.msgprint('Erro ao salvar valor.'); }
-	});
-}
-
-if (document.readyState === 'loading') {
-	document.addEventListener('DOMContentLoaded', () => { initStatusPagination(); });
-} else {
-	initStatusPagination();
-}
-
-function initStatusPagination() {
-	document.querySelectorAll('.contrib-status-bloco').forEach(block => rebuildPaginationForBlock(block));
-}
-
-function rebuildPaginationForBlock(block) {
-	if (!block) return;
-	const pagContainer = block.querySelector('.contrib-status-pagination');
-	if (pagContainer) pagContainer.innerHTML = '';
-	const list = block.querySelector('.contrib-status-list');
-	if (!list) return;
-	const allRows = Array.from(list.querySelectorAll('tbody > tr.contrib-status-row'));
-	const visibleRows = allRows.filter(r => !r.classList.contains('filter-hidden'));
-	const countEl = block.querySelector('[data-status-count]');
-	if (countEl) countEl.textContent = '(' + visibleRows.length + ')';
-
-	allRows.forEach(r => r.classList.add('hidden-by-page'));
-	visibleRows.forEach((r, idx) => {
-		r.setAttribute('data-page', Math.floor(idx / 12) + 1);
-	});
-	if (visibleRows.length === 0) return;
-	const pages = Math.ceil(visibleRows.length / 12);
-	if (pages > 1) {
-		renderPaginationControls(pagContainer, pages, 1, block.id);
-		showStatusPage(block.id, 1);
-	} else {
-		visibleRows.forEach(r => r.classList.remove('hidden-by-page'));
-		if (pagContainer) pagContainer.innerHTML = '';
-	}
-}
-
-function renderPaginationControls(container, totalPages, current, statusBlockId) {
-	if (!container) return;
-	container.innerHTML = '';
-	container.classList.add('btn-group');
-	const addItem = (label, page, disabled = false, active = false) => {
-		const btn = document.createElement('button');
-		btn.type = 'button';
-		btn.textContent = label;
-		btn.className = active ? 'btn-sm-primary' : 'btn-sm-outline';
-		if (active) btn.setAttribute('aria-current', 'page');
-		if (disabled) {
-			btn.disabled = true;
-			btn.setAttribute('aria-disabled', 'true');
-		}
-		if (!disabled && !active) {
-			btn.addEventListener('click', () => {
-				showStatusPage(statusBlockId, page);
-				renderPaginationControls(container, totalPages, page, statusBlockId);
-			});
-		}
-		container.appendChild(btn);
-	};
-	addItem('«', 1, current === 1);
-	addItem('‹', current - 1, current === 1);
-	const windowSize = 5;
-	let start = Math.max(1, current - Math.floor(windowSize / 2));
-	let end = start + windowSize - 1;
-	if (end > totalPages) {
-		end = totalPages;
-		start = Math.max(1, end - windowSize + 1);
-	}
-	for (let p = start; p <= end; p++) addItem(String(p), p, false, p === current);
-	addItem('›', current + 1, current === totalPages);
-	addItem('»', totalPages, current === totalPages);
-}
-
-function showStatusPage(statusBlockId, page) {
-	const block = document.getElementById(statusBlockId);
-	if (!block) return;
-	const rows = block.querySelectorAll('.contrib-status-list tbody > tr.contrib-status-row');
-	rows.forEach(r => {
-		const p = parseInt(r.getAttribute('data-page'));
-		if (p === page && !r.classList.contains('filter-hidden')) {
-			r.classList.remove('hidden-by-page');
-		} else {
-			r.classList.add('hidden-by-page');
-		}
-	});
-}
-
-function aplicarFiltroAssociado() {
-	const termo = (document.getElementById('filtroAssociado')?.value || '').trim().toLowerCase();
-	document.querySelectorAll('.contrib-status-bloco').forEach(block => {
-		const rows = block.querySelectorAll('.contrib-status-list tbody > tr.contrib-status-row');
-		rows.forEach(row => {
-			const nome = (row.getAttribute('data-nome') || '').toLowerCase();
-			if (!termo || nome.includes(termo)) {
-				row.classList.remove('filter-hidden');
-			} else {
-				row.classList.add('filter-hidden');
-			}
+		transacoes.forEach((transacao) => {
+			const tr = document.createElement('tr');
+			const url = `/financeiro/detalhe_extrato?name=${encodeURIComponent(transacao.name)}`;
+			tr.innerHTML = [
+				`<td class="whitespace-nowrap">${escapeHtml(formatarData(transacao.data))}</td>`,
+				`<td>${escapeHtml(transacao.descricao || '—')}</td>`,
+				`<td class="text-right whitespace-nowrap contrib-num">R$ ${formatarMoeda(transacao.valor)}</td>`,
+				`<td class="text-right"><a class="btn-sm-outline" href="${url}">Abrir</a></td>`,
+			].join('');
+			tbody.appendChild(tr);
 		});
-		rebuildPaginationForBlock(block);
-	});
-}
+	}
 
-function marcarComoPago(btn) {
-	if (!window.canManageContrib) { frappe.msgprint('Sem permissão para marcar pagamento.'); return; }
-	const pagId = btn.getAttribute('data-pag-id');
-	if (!pagId) return;
-	frappe.call({
-		method: 'gris.api.financeiro.monthly_payments.mark_payment_as_paid',
-		args: { payment_id: pagId },
-		freeze: true,
-		callback: function (r) {
-			if (r.message && r.message.ok) {
-				const tr = btn.closest('tr');
-				if (tr) {
-					const badge = tr.querySelector('.status-badge');
-					if (badge) {
-						badge.textContent = 'Pago';
-						badge.className = badgeClasses('Pago') + ' status-badge';
-					}
-					btn.remove();
+	function carregarTransacoes(assoc) {
+		const tbody = document.getElementById('detalheTransacoes');
+		if (tbody) {
+			tbody.innerHTML = '<tr><td colspan="4" class="text-sm text-muted-foreground">Carregando…</td></tr>';
+		}
+
+		frappe
+			.call({
+				method: 'gris.api.financeiro.contribuicoes.get_extrato_do_associado',
+				args: { associado: assoc.id, meses: window.contribMeses },
+			})
+			.then((resposta) => {
+				const dados = (resposta && resposta.message) || {};
+				renderTransacoes(dados.transacoes);
+			})
+			.catch(() => {
+				if (tbody) {
+					tbody.innerHTML =
+						'<tr><td colspan="4" class="text-sm text-muted-foreground">Não foi possível carregar as transações.</td></tr>';
 				}
-				showToast({ message: 'Pagamento marcado como Pago', indicator: 'green' });
-			}
-		},
-		error: function () { frappe.msgprint('Erro ao marcar pagamento.'); }
-	});
-}
+			});
+	}
 
-function cadastroRealizado() {
-	if (!window.canManageContrib) { frappe.msgprint('Sem permissão.'); return; }
-	if (!assocAtual) return;
-	frappe.call({
-		method: 'gris.api.financeiro.monthly_payments.activate_billing_status',
-		args: { associate_id: assocAtual.id },
-		freeze: true,
-		callback: function (r) {
-			if (r.message && r.message.ok) {
-				assocAtual.status_cobranca = 'Ativo';
-				const cadastroContainer = document.getElementById('cadastroContainer');
-				if (cadastroContainer) cadastroContainer.classList.add('hidden');
-				showToast({ message: 'Status de cobrança ativado', indicator: 'green' });
-				fecharDetalhes();
-			}
-		},
-		error: function () { frappe.msgprint('Erro ao atualizar status de cobrança.'); }
-	});
-}
+	function atualizarAcoesCadastro(assoc) {
+		const btnRealizado = document.getElementById('btnCadastroRealizado');
+		const btnCancelado = document.getElementById('btnCadastroCancelado');
+		if (btnRealizado) btnRealizado.classList.toggle('hidden', assoc.acao_cadastro !== 'Cadastrar');
+		if (btnCancelado) {
+			btnCancelado.classList.toggle('hidden', assoc.status_cobranca !== 'Ativo');
+		}
+	}
 
-function cadastroCancelado() {
-	if (!window.canManageContrib) { frappe.msgprint('Sem permissão.'); return; }
-	if (!assocAtual) return;
-	frappe.call({
-		method: 'gris.api.financeiro.monthly_payments.deactivate_billing_status',
-		args: { associate_id: assocAtual.id },
-		freeze: true,
-		callback: function (r) {
-			if (r.message && r.message.ok) {
-				assocAtual.status_cobranca = 'Inativo';
-				showToast({ message: 'Status de cobrança inativado', indicator: 'orange' });
-				fecharDetalhes();
-			}
-		},
-		error: function () { frappe.msgprint('Erro ao inativar status de cobrança.'); }
-	});
-}
+	function mostrarDetalhes(linha) {
+		const assoc = JSON.parse(linha.getAttribute('data-assoc'));
+		assocAtual = assoc;
 
-function editarCobranca() {
-	if (!window.canManageContrib) { frappe.msgprint('Sem permissão para editar.'); return; }
-	if (!assocAtual) return;
-	const container = document.getElementById('cobrancaContainer');
-	const acoes = document.getElementById('acoesCobranca');
-	if (!container || !acoes) return;
-	if (container.querySelector('input')) return;
-	const email = assocAtual.email_cobranca || '';
-	const fone = assocAtual.telefone_cobranca || '';
-	const emailWrapper = container.querySelector('#emailCobranca');
-	const foneWrapper = container.querySelector('#foneCobranca');
-	if (emailWrapper) {
-		emailWrapper.outerHTML = `
-			<span id="emailCobranca" class="block">
-				<div class="field">
-					<label class="label" for="inputEmailCobranca">E-mail</label>
-					<input type="email" id="inputEmailCobranca" class="input" style="max-width:300px;" value="${email}" placeholder="email@exemplo.com" />
-				</div>
-			</span>
+		const dialog = getDialog();
+		const titulo = dialog ? dialog.querySelector('h2#detalheModal-title') : null;
+		if (titulo) titulo.textContent = assoc.nome || 'Detalhes do contribuinte';
+
+		// Desfaz edições em aberto de um contribuinte anterior antes de preencher os campos:
+		// os spans só existem depois que os formulários inline saem da tela.
+		cancelarEdicaoValor();
+		restaurarCobranca();
+
+		setTexto('detalheValor', formatarMoeda(assoc.esperado_mensal));
+		setTexto('detalheRecebido', formatarMoeda(assoc.total_recebido));
+		setTexto('detalheCredito', formatarMoeda(assoc.credito));
+
+		renderMeses(assoc);
+		atualizarAcoesCadastro(assoc);
+		carregarTransacoes(assoc);
+
+		if (dialog && typeof dialog.showModal === 'function' && !dialog.open) {
+			dialog.showModal();
+		}
+	}
+
+	// ─────────────────────────── ações de gestão ───────────────────────────
+
+	function semPermissao() {
+		if (window.canManageContrib) return false;
+		showToast('Sem permissão para esta ação.', 'red');
+		return true;
+	}
+
+	function chamarApi(metodo, args, mensagemSucesso) {
+		frappe
+			.call({ method: metodo, args: args, freeze: true })
+			.then((resposta) => {
+				const dados = (resposta && resposta.message) || {};
+				if (!dados.ok) {
+					showToast('Não foi possível concluir a ação.', 'red');
+					return;
+				}
+				showToast(mensagemSucesso, 'green');
+				// A apuração é calculada no servidor: recarregar mantém tela e números coerentes.
+				window.setTimeout(() => window.location.reload(), 600);
+			})
+			.catch(() => showToast('Erro ao executar a ação.', 'red'));
+	}
+
+	function alterarValor() {
+		if (semPermissao() || !assocAtual) return;
+		const container = document.getElementById('valorContainer');
+		const acoes = document.getElementById('acoesValor');
+		if (!container || !acoes || container.querySelector('input')) return;
+
+		container.classList.remove('hidden');
+		container.innerHTML = `
+			<div class="field">
+				<label class="label" for="inputNovoValor">Novo valor esperado por mês (R$)</label>
+				<input type="number" min="0" step="0.01" id="inputNovoValor" class="input contrib-input-valor"
+					value="${parseNumber(assocAtual.esperado_mensal)}" />
+			</div>
+		`;
+		acoes.innerHTML = `
+			<button type="button" class="btn-sm-primary" data-acao="salvar-valor">Salvar</button>
+			<button type="button" class="btn-sm-outline" data-acao="cancelar-valor">Cancelar</button>
 		`;
 	}
-	if (foneWrapper) {
-		foneWrapper.outerHTML = `
-			<span id="foneCobranca" class="block">
+
+	function cancelarEdicaoValor() {
+		const container = document.getElementById('valorContainer');
+		const acoes = document.getElementById('acoesValor');
+		if (container) {
+			container.innerHTML = '';
+			container.classList.add('hidden');
+		}
+		if (acoes && window.canManageContrib) {
+			acoes.innerHTML =
+				'<button type="button" id="btnAlterarValor" class="btn-sm-outline" data-acao="alterar-valor">Alterar valor</button>';
+		}
+	}
+
+	function salvarNovoValor() {
+		if (semPermissao() || !assocAtual) return;
+		const input = document.getElementById('inputNovoValor');
+		if (!input) return;
+		const novoValor = parseFloat(input.value);
+		if (!Number.isFinite(novoValor) || novoValor < 0) {
+			showToast('Informe um valor válido.', 'orange');
+			return;
+		}
+		frappe
+			.call({
+				method: 'gris.api.financeiro.monthly_payments.update_contribution_value',
+				args: { associate_id: assocAtual.id, new_value: novoValor },
+				freeze: true,
+			})
+			.then((resposta) => {
+				const dados = (resposta && resposta.message) || {};
+				if (!dados.ok) {
+					showToast('Não foi possível salvar o valor.', 'red');
+					return;
+				}
+				showToast('Valor atualizado', 'green');
+				window.setTimeout(() => window.location.reload(), 600);
+			})
+			.catch(() => showToast('Erro ao salvar valor.', 'red'));
+	}
+
+	function cadastroRealizado() {
+		if (semPermissao() || !assocAtual) return;
+		chamarApi(
+			'gris.api.financeiro.monthly_payments.activate_billing_status',
+			{ associate_id: assocAtual.id },
+			'Cobrança ativada'
+		);
+	}
+
+	function cadastroCancelado() {
+		if (semPermissao() || !assocAtual) return;
+		chamarApi(
+			'gris.api.financeiro.monthly_payments.deactivate_billing_status',
+			{ associate_id: assocAtual.id },
+			'Cobrança inativada'
+		);
+	}
+
+	function editarCobranca() {
+		if (semPermissao() || !assocAtual) return;
+		const container = document.getElementById('cobrancaContainer');
+		const acoes = document.getElementById('acoesCobranca');
+		if (!container || !acoes || container.querySelector('input')) return;
+
+		const email = assocAtual.email_cobranca || '';
+		const telefone = assocAtual.telefone_cobranca || '';
+		const alvo = container.querySelector('.flex-1');
+		if (alvo) {
+			alvo.innerHTML = `
 				<div class="field">
-					<label class="label" for="inputFoneCobranca">Telefone</label>
-					<input type="text" id="inputFoneCobranca" class="input" style="max-width:200px;" value="${fone}" placeholder="(xx) xxxxx-xxxx" />
+					<label class="label" for="inputEmailCobranca">E-mail de cobrança</label>
+					<input type="email" id="inputEmailCobranca" class="input" value="${escapeHtml(email)}" placeholder="email@exemplo.com" />
 				</div>
-			</span>
+				<div class="field">
+					<label class="label" for="inputFoneCobranca">Telefone de cobrança</label>
+					<input type="text" id="inputFoneCobranca" class="input" value="${escapeHtml(telefone)}" placeholder="(xx) xxxxx-xxxx" />
+				</div>
+			`;
+		}
+		acoes.innerHTML = `
+			<button type="button" class="btn-sm-primary" data-acao="salvar-cobranca">Salvar</button>
+			<button type="button" class="btn-sm-outline" data-acao="cancelar-cobranca">Cancelar</button>
 		`;
 	}
-	acoes.innerHTML = `
-		<button type="button" class="btn-sm-primary" onclick="salvarDadosCobranca()">Salvar</button>
-		<button type="button" class="btn-sm-outline" onclick="cancelarEdicaoCobranca()">Cancelar</button>
-	`;
-}
 
-function cancelarEdicaoCobranca() {
-	if (!assocAtual) return;
-	const container = document.getElementById('cobrancaContainer');
-	if (!container) return;
-	const emailWrapper = container.querySelector('#emailCobranca');
-	const foneWrapper = container.querySelector('#foneCobranca');
-	if (emailWrapper) {
-		emailWrapper.outerHTML = `<span id="emailCobranca">${assocAtual.email_cobranca || '—'}</span>`;
-	}
-	if (foneWrapper) {
-		foneWrapper.outerHTML = `<span id="foneCobranca">${assocAtual.telefone_cobranca || '—'}</span>`;
-	}
-	const acoes = document.getElementById('acoesCobranca');
-	if (acoes) {
-		acoes.innerHTML = `<button type="button" id="btnEditarCobranca" class="btn-sm-outline" onclick="editarCobranca()">Editar Cobrança</button>`;
-	}
-}
-
-function salvarDadosCobranca() {
-	if (!window.canManageContrib) { frappe.msgprint('Sem permissão para salvar.'); return; }
-	if (!assocAtual) return;
-	const emailInput = document.getElementById('inputEmailCobranca');
-	const foneInput = document.getElementById('inputFoneCobranca');
-	const email = emailInput ? emailInput.value.trim() : '';
-	const phone = foneInput ? foneInput.value.trim() : '';
-	frappe.call({
-		method: 'gris.api.financeiro.monthly_payments.update_billing_contacts',
-		args: { associate_id: assocAtual.id, email: email, phone: phone },
-		freeze: true,
-		callback: function (r) {
-			if (r.message && r.message.ok) {
-				assocAtual.email_cobranca = r.message.email;
-				assocAtual.telefone_cobranca = r.message.phone;
-				cancelarEdicaoCobranca();
-				showToast({ message: 'Dados de cobrança atualizados', indicator: 'green' });
+	function restaurarCobranca() {
+		const container = document.getElementById('cobrancaContainer');
+		const acoes = document.getElementById('acoesCobranca');
+		if (container && assocAtual) {
+			const alvo = container.querySelector('.flex-1');
+			if (alvo) {
+				alvo.innerHTML = `
+					<div class="text-sm"><strong>E-mail de cobrança:</strong> <span id="emailCobranca">${escapeHtml(assocAtual.email_cobranca || '—')}</span></div>
+					<div class="text-sm"><strong>Telefone de cobrança:</strong> <span id="foneCobranca">${escapeHtml(assocAtual.telefone_cobranca || '—')}</span></div>
+				`;
 			}
-		},
-		error: function () { frappe.msgprint('Erro ao salvar dados de cobrança.'); }
-	});
-}
+		}
+		if (acoes) {
+			acoes.innerHTML =
+				'<button type="button" id="btnEditarCobranca" class="btn-sm-outline" data-acao="editar-cobranca">Editar cobrança</button>';
+		}
+	}
+
+	function salvarDadosCobranca() {
+		if (semPermissao() || !assocAtual) return;
+		const email = document.getElementById('inputEmailCobranca')?.value.trim() || '';
+		const telefone = document.getElementById('inputFoneCobranca')?.value.trim() || '';
+
+		frappe
+			.call({
+				method: 'gris.api.financeiro.monthly_payments.update_billing_contacts',
+				args: { associate_id: assocAtual.id, email: email, phone: telefone },
+				freeze: true,
+			})
+			.then((resposta) => {
+				const dados = (resposta && resposta.message) || {};
+				if (!dados.ok) {
+					showToast('Não foi possível salvar os dados de cobrança.', 'red');
+					return;
+				}
+				assocAtual.email_cobranca = dados.email;
+				assocAtual.telefone_cobranca = dados.phone;
+				restaurarCobranca();
+				showToast('Dados de cobrança atualizados', 'green');
+			})
+			.catch(() => showToast('Erro ao salvar dados de cobrança.', 'red'));
+	}
+
+	// ─────────────────────────── ligações ───────────────────────────
+
+	const ACOES = {
+		detalhes: (elemento) => mostrarDetalhes(elemento.closest('tr')),
+		'alterar-valor': alterarValor,
+		'salvar-valor': salvarNovoValor,
+		'cancelar-valor': cancelarEdicaoValor,
+		'editar-cobranca': editarCobranca,
+		'salvar-cobranca': salvarDadosCobranca,
+		'cancelar-cobranca': restaurarCobranca,
+		'cadastro-realizado': cadastroRealizado,
+		'cadastro-cancelado': cadastroCancelado,
+	};
+
+	function init() {
+		initGraficos();
+
+		const filtroNome = document.getElementById('filtroAssociado');
+		if (filtroNome) filtroNome.addEventListener('input', aplicarFiltros);
+
+		// O macro `select` dispara `change` no próprio componente (não no input hidden,
+		// que é filho dele) e só então atualiza o valor do hidden.
+		const filtroSituacao = document.getElementById('filtroSituacao');
+		if (filtroSituacao) filtroSituacao.addEventListener('change', aplicarFiltros);
+
+		document.addEventListener('click', (evento) => {
+			const alvo = evento.target.closest('[data-acao]');
+			if (!alvo) return;
+			const acao = ACOES[alvo.getAttribute('data-acao')];
+			if (!acao) return;
+			evento.preventDefault();
+			acao(alvo);
+		});
+
+		atualizarPaginacao();
+	}
+
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', init);
+	} else {
+		init();
+	}
+})();

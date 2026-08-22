@@ -4,6 +4,7 @@ import unicodedata
 import frappe
 from frappe import _
 
+from gris.api.financeiro.contribuicoes import CATEGORIAS_CONTRIBUINTES
 from gris.api.portal_access import enrich_context
 from gris.api.portal_cache_utils import get_uel_cached
 
@@ -96,10 +97,13 @@ def _buscar_sugestoes_contribuicao(doc):
 	if not descricao_limpa:
 		return []
 
-	# Buscar beneficiários com valor de contribuição preenchido
+	# Buscar contribuintes com valor de contribuição preenchido
 	beneficiarios = frappe.get_all(
 		"Associado",
-		filters={"categoria": "Beneficiário", "valor_contribuicao": [">", 0]},
+		filters={
+			"categoria": ["in", list(CATEGORIAS_CONTRIBUINTES)],
+			"valor_contribuicao": [">", 0],
+		},
 		fields=["name", "nome_completo", "valor_contribuicao"],
 	)
 
@@ -202,13 +206,13 @@ def get_context(context):
 	context.opcoes_centro_de_custo = get_distinct("Centro de Custo", "name")
 	context.opcoes_conta_fixa = get_distinct("Conta Fixa", "name")
 
-	# Beneficiários: apenas associados com categoria Beneficiário
+	# Beneficiários: associados das categorias que contribuem (Dirigente não paga).
 	context.opcoes_beneficiario = [
 		{"name": r["name"], "nome_completo": r.get("nome_completo", r["name"])}
 		for r in frappe.get_all(
 			"Associado",
 			fields=["name", "nome_completo", "categoria"],
-			filters={"categoria": "Beneficiário"},
+			filters={"categoria": ["in", list(CATEGORIAS_CONTRIBUINTES)]},
 			order_by="nome_completo",
 		)
 	]

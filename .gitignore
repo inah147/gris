@@ -9,3 +9,6 @@ __pycache__
 graphify-out/
 backup/
 *.sql.gz
+
+# Credenciais locais (MCP, Docker)
+.env

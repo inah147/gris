@@ -1,8 +1,13 @@
-"""Ferramentas MCP de contribuições mensais e cobrança dos associados.
+"""Ferramentas MCP da contribuição mensal.
 
-A regra de negócio continua em ``gris.api.financeiro.monthly_payments`` — aqui há
-consulta, agregação e a chamada dos serviços já existentes, com suporte a
-simulação (dry-run) nas operações de escrita.
+A apuração é a de ``gris.api.financeiro.contribuicoes``: a fonte de verdade são
+as transações de crédito do extrato com categoria "Contribuição Mensal" e
+beneficiário preenchido — não o DocType ``Pagamento Contribuicao Mensal``, que
+continua servindo ao fluxo de cobrança (schedulers e gráficos do painel).
+
+Por isso, a forma de fazer uma contribuição "contar" é vincular a transação ao
+associado: use 'listar_contribuicoes_nao_vinculadas' e depois
+'categorizar_transacoes' com o campo beneficiario.
 """
 
 from __future__ import annotations
@@ -10,286 +15,260 @@ from __future__ import annotations
 from typing import Any
 
 import frappe
-from frappe.utils import flt, getdate
+from frappe.utils import flt
 
+from gris.api.financeiro import contribuicoes as servico
 from gris.api.mcp.registry import ErroDeFerramenta, ferramenta, normalizar_limite
-
-DOCTYPE = "Pagamento Contribuicao Mensal"
 
 ROLES_LEITURA = ("Gestor Contribuição Mensal", "Visualizador Contribuição Mensal")
 ROLES_ESCRITA = ("Gestor Contribuição Mensal",)
 
-STATUS_VALIDOS = ("Pago", "Em Aberto", "Atrasado")
-MAX_PAGAMENTOS_LOTE = 200
+SITUACOES = (
+	servico.STATUS_ATRASADO,
+	servico.STATUS_PARCIAL,
+	servico.STATUS_EM_ABERTO,
+	servico.STATUS_PAGO,
+	servico.STATUS_AGUARDANDO,
+	servico.STATUS_NAO_APLICAVEL,
+)
+
+ACOES_CADASTRO = ("Cadastrar", "Cancelar")
 
 CAMPOS_COBRANCA = ("valor_contribuicao", "status_cobranca", "email_cobranca", "telefone_cobranca")
 
-
-def _mes_para_data(mes: str, nome_campo: str) -> str:
-	"""Aceita 'AAAA-MM' ou 'AAAA-MM-DD' e devolve o primeiro dia do mês."""
-	texto = str(mes).strip()
-	if len(texto) == 7:
-		texto = f"{texto}-01"
-	try:
-		data = getdate(texto)
-	except Exception:
-		raise ErroDeFerramenta(
-			"ARGUMENTO_INVALIDO",
-			f"'{nome_campo}' deve estar no formato AAAA-MM (ex.: 2026-03).",
-		)
-	return data.replace(day=1).strftime("%Y-%m-%d")
+PARAMETRO_MESES = {
+	"type": "integer",
+	"default": servico.MESES_PADRAO,
+	"minimum": 1,
+	"maximum": servico.MESES_MAXIMO,
+	"description": (
+		f"Janela de apuração em meses, terminando no mês corrente "
+		f"(padrão {servico.MESES_PADRAO}, máximo {servico.MESES_MAXIMO})."
+	),
+}
 
 
-def _nomes_de_associados(registros: list[dict]) -> dict[str, str]:
-	"""Busca os nomes em uma consulta só (evita N+1 ao montar a lista)."""
-	cpfs = sorted({linha["associado"] for linha in registros if linha.get("associado")})
-	if not cpfs:
-		return {}
-	linhas = frappe.get_all(
-		"Associado",
-		filters={"name": ["in", cpfs]},
-		fields=["name", "nome_completo"],
-	)
-	return {linha["name"]: linha["nome_completo"] for linha in linhas}
+def _apurar(meses: int) -> dict:
+	"""Apuração completa, respeitando o controle de acesso da página do portal."""
+	resposta = servico.get_apuracao(meses)
+	return resposta.get("dados") or {}
 
 
 @ferramenta(
-	nome="listar_contribuicoes",
-	titulo="Listar contribuições mensais",
+	nome="resumo_contribuicoes",
+	titulo="Resumo da contribuição mensal",
 	descricao=(
-		"Lista os registros de contribuição mensal com filtros de associado, status e mês. "
-		"Use status='Atrasado' para ver a inadimplência e mes_referencia no formato AAAA-MM."
+		"Consolida a contribuição mensal do período: quanto foi recebido (vinculado e não "
+		"vinculado a associado), quanto era esperado, adimplência, quantos associados estão "
+		"com pendência e quantos cadastros de cobrança precisam ser criados ou cancelados. "
+		"A apuração vem das transações do extrato, não dos registros de cobrança."
+	),
+	parametros={"meses": PARAMETRO_MESES},
+	roles=ROLES_LEITURA,
+)
+def resumo_contribuicoes(meses: int = servico.MESES_PADRAO) -> dict:
+	dados = _apurar(meses)
+	series = dados.get("series") or {}
+
+	por_mes = [
+		{
+			"mes": rotulo,
+			"recebido": series.get("recebido", [])[indice],
+			"nao_vinculado": series.get("nao_vinculado", [])[indice],
+			"esperado": series.get("esperado", [])[indice],
+			"adimplencia": series.get("adimplencia", [])[indice],
+		}
+		for indice, rotulo in enumerate(series.get("labels") or [])
+	]
+
+	return {
+		"periodo": dados.get("periodo"),
+		"quantidade_meses": dados.get("quantidade_meses"),
+		"dia_vencimento": dados.get("dia_vencimento"),
+		"totais": dados.get("totais"),
+		"por_mes": por_mes,
+	}
+
+
+@ferramenta(
+	nome="apuracao_contribuicoes",
+	titulo="Apuração por associado",
+	descricao=(
+		"Situação de cada contribuinte no período: esperado, recebido, saldo, crédito "
+		"acumulado e situação (Atrasado, Parcial, Em Aberto, Pago, Aguardando). "
+		"Use situacao='Atrasado' ou com_pendencia=true para a lista de cobrança e "
+		"acao_cadastro para quem precisa ter a cobrança criada ou cancelada."
 	),
 	parametros={
-		"associado": {"type": "string", "description": "CPF do associado (identificador do registro)."},
-		"status": {
+		"meses": PARAMETRO_MESES,
+		"situacao": {
 			"type": "string",
-			"enum": list(STATUS_VALIDOS),
-			"description": "Situação do pagamento.",
+			"enum": list(SITUACOES),
+			"description": "Situação consolidada do associado no período.",
 		},
-		"mes_referencia": {"type": "string", "description": "Mês exato no formato AAAA-MM."},
-		"mes_inicio": {"type": "string", "description": "Início do intervalo (AAAA-MM)."},
-		"mes_fim": {"type": "string", "description": "Fim do intervalo (AAAA-MM)."},
+		"com_pendencia": {
+			"type": "boolean",
+			"description": "Atalho para situação Atrasado ou Parcial.",
+		},
+		"acao_cadastro": {
+			"type": "string",
+			"enum": list(ACOES_CADASTRO),
+			"description": "Pendência de cadastro da cobrança.",
+		},
+		"secao": {"type": "string", "description": "Seção do associado."},
+		"categoria": {
+			"type": "string",
+			"enum": list(servico.CATEGORIAS_CONTRIBUINTES),
+			"description": "Categoria do associado (Dirigente não contribui).",
+		},
+		"busca": {"type": "string", "description": "Parte do nome do associado."},
+		"incluir_meses": {
+			"type": "boolean",
+			"default": False,
+			"description": "Inclui a grade mês a mês de cada associado (resposta bem maior).",
+		},
 		"limite": {
 			"type": "integer",
 			"default": 25,
 			"minimum": 1,
 			"maximum": 100,
-			"description": "Registros por página (máx. 100).",
+			"description": "Associados por página (máx. 100).",
 		},
 		"inicio": {"type": "integer", "default": 0, "minimum": 0, "description": "Deslocamento."},
 	},
 	roles=ROLES_LEITURA,
 )
-def listar_contribuicoes(
-	associado: str | None = None,
-	status: str | None = None,
-	mes_referencia: str | None = None,
-	mes_inicio: str | None = None,
-	mes_fim: str | None = None,
+def apuracao_contribuicoes(
+	meses: int = servico.MESES_PADRAO,
+	situacao: str | None = None,
+	com_pendencia: bool | None = None,
+	acao_cadastro: str | None = None,
+	secao: str | None = None,
+	categoria: str | None = None,
+	busca: str | None = None,
+	incluir_meses: bool = False,
 	limite: int = 25,
 	inicio: int = 0,
 ) -> dict:
-	filtros: dict[str, Any] = {}
-	if associado:
-		filtros["associado"] = associado
-	if status:
-		filtros["status"] = status
+	dados = _apurar(meses)
+	associados = dados.get("associados") or []
 
-	if mes_referencia:
-		filtros["mes_de_referencia"] = _mes_para_data(mes_referencia, "mes_referencia")
-	elif mes_inicio and mes_fim:
-		filtros["mes_de_referencia"] = [
-			"between",
-			[_mes_para_data(mes_inicio, "mes_inicio"), _mes_para_data(mes_fim, "mes_fim")],
-		]
-	elif mes_inicio:
-		filtros["mes_de_referencia"] = [">=", _mes_para_data(mes_inicio, "mes_inicio")]
-	elif mes_fim:
-		filtros["mes_de_referencia"] = ["<=", _mes_para_data(mes_fim, "mes_fim")]
+	if situacao:
+		associados = [a for a in associados if a.get("situacao") == situacao]
+	if com_pendencia:
+		pendentes = (servico.STATUS_ATRASADO, servico.STATUS_PARCIAL)
+		associados = [a for a in associados if a.get("situacao") in pendentes]
+	if acao_cadastro:
+		associados = [a for a in associados if a.get("acao_cadastro") == acao_cadastro]
+	if secao:
+		associados = [a for a in associados if a.get("secao") == secao]
+	if categoria:
+		associados = [a for a in associados if a.get("categoria") == categoria]
+	if busca:
+		termo = busca.strip().lower()
+		associados = [a for a in associados if termo in (a.get("nome") or "").lower()]
 
-	registros = frappe.get_all(
-		DOCTYPE,
-		filters=filtros,
-		fields=["name", "associado", "status", "mes_de_referencia", "valor", "atrasou"],
-		order_by="mes_de_referencia desc, associado asc",
-		limit_page_length=normalizar_limite(limite),
-		limit_start=max(0, int(inicio or 0)),
-	)
-
-	nomes = _nomes_de_associados(registros)
-	for linha in registros:
-		linha["nome_associado"] = nomes.get(linha.get("associado"))
+	limite = normalizar_limite(limite)
+	inicio = max(0, int(inicio or 0))
+	pagina = [dict(associado) for associado in associados[inicio : inicio + limite]]
+	if not incluir_meses:
+		for associado in pagina:
+			associado.pop("linhas", None)
 
 	return {
-		"contribuicoes": registros,
+		"periodo": dados.get("periodo"),
+		"meses": dados.get("meses") if incluir_meses else None,
+		"associados": pagina,
 		"paginacao": {
-			"inicio": max(0, int(inicio or 0)),
-			"limite": normalizar_limite(limite),
-			"retornados": len(registros),
-			"total_com_filtros": frappe.db.count(DOCTYPE, filtros),
+			"inicio": inicio,
+			"limite": limite,
+			"retornados": len(pagina),
+			"total_com_filtros": len(associados),
+			"total_contribuintes": len(dados.get("associados") or []),
 		},
 	}
 
 
 @ferramenta(
-	nome="resumo_inadimplencia",
-	titulo="Resumo de inadimplência",
+	nome="extrato_contribuicoes_associado",
+	titulo="Extrato de contribuições do associado",
 	descricao=(
-		"Consolida as contribuições de um mês (ou intervalo): quantidade e valor por status, "
-		"percentual de inadimplência e a lista de associados em atraso. Sem parâmetros, usa o "
-		"mês corrente."
+		"Transações de contribuição mensal atribuídas a um associado no período, da mais "
+		"recente para a mais antiga, com data de competência, valor, método e carteira."
 	),
 	parametros={
-		"mes_referencia": {"type": "string", "description": "Mês a consolidar (AAAA-MM)."},
-		"mes_inicio": {"type": "string", "description": "Início do intervalo (AAAA-MM)."},
-		"mes_fim": {"type": "string", "description": "Fim do intervalo (AAAA-MM)."},
-		"limite_devedores": {
+		"associado": {"type": "string", "description": "CPF do associado (identificador)."},
+		"meses": PARAMETRO_MESES,
+	},
+	obrigatorios=("associado",),
+	roles=ROLES_LEITURA,
+)
+def extrato_contribuicoes_associado(associado: str, meses: int = servico.MESES_PADRAO) -> dict:
+	if not frappe.db.exists("Associado", associado):
+		raise ErroDeFerramenta("NAO_ENCONTRADO", f"Nenhum associado com o CPF '{associado}'.")
+
+	resposta = servico.get_extrato_do_associado(associado, meses)
+	transacoes = resposta.get("transacoes") or []
+	return {
+		"associado": associado,
+		"transacoes": transacoes,
+		"total_recebido": flt(sum(t.get("valor") or 0 for t in transacoes), 2),
+		"quantidade": len(transacoes),
+	}
+
+
+@ferramenta(
+	nome="listar_contribuicoes_nao_vinculadas",
+	titulo="Contribuições sem associado",
+	descricao=(
+		"Transações de contribuição mensal que entraram na conta mas ainda não foram "
+		"atribuídas a ninguém — elas contam no total recebido, mas não na apuração de "
+		"cada associado. Para resolver, use 'categorizar_transacoes' informando "
+		"beneficiario (e categoria 'Contribuição Mensal', se ainda não estiver)."
+	),
+	parametros={
+		"meses": PARAMETRO_MESES,
+		"limite": {
 			"type": "integer",
-			"default": 20,
+			"default": 25,
 			"minimum": 1,
 			"maximum": 100,
-			"description": "Quantos associados em atraso listar.",
+			"description": "Transações por página (máx. 100).",
 		},
+		"inicio": {"type": "integer", "default": 0, "minimum": 0, "description": "Deslocamento."},
 	},
 	roles=ROLES_LEITURA,
 )
-def resumo_inadimplencia(
-	mes_referencia: str | None = None,
-	mes_inicio: str | None = None,
-	mes_fim: str | None = None,
-	limite_devedores: int = 20,
+def listar_contribuicoes_nao_vinculadas(
+	meses: int = servico.MESES_PADRAO, limite: int = 25, inicio: int = 0
 ) -> dict:
-	if mes_inicio or mes_fim:
-		inicio = _mes_para_data(mes_inicio or mes_fim, "mes_inicio")
-		fim = _mes_para_data(mes_fim or mes_inicio, "mes_fim")
-		filtros: dict[str, Any] = {"mes_de_referencia": ["between", [inicio, fim]]}
-		periodo = {"inicio": inicio, "fim": fim}
-	else:
-		mes = _mes_para_data(mes_referencia or getdate().strftime("%Y-%m"), "mes_referencia")
-		filtros = {"mes_de_referencia": mes}
-		periodo = {"inicio": mes, "fim": mes}
+	dados = _apurar(meses)
+	transacoes = dados.get("nao_vinculadas") or []
 
-	agregados = frappe.get_all(
-		DOCTYPE,
-		filters=filtros,
-		fields=["status", "count(name) as quantidade", "sum(valor) as total"],
-		group_by="status",
-	)
-
-	por_status = {
-		linha.get("status") or "(sem status)": {
-			"quantidade": int(linha.get("quantidade") or 0),
-			"valor": flt(linha.get("total"), 2),
-		}
-		for linha in agregados
-	}
-
-	total_registros = sum(item["quantidade"] for item in por_status.values())
-	atrasados = por_status.get("Atrasado", {"quantidade": 0, "valor": 0.0})
-	em_aberto = por_status.get("Em Aberto", {"quantidade": 0, "valor": 0.0})
-
-	filtros_atraso = dict(filtros)
-	filtros_atraso["status"] = "Atrasado"
-	devedores = frappe.get_all(
-		DOCTYPE,
-		filters=filtros_atraso,
-		fields=["name", "associado", "mes_de_referencia", "valor"],
-		order_by="mes_de_referencia asc, associado asc",
-		limit_page_length=normalizar_limite(limite_devedores),
-	)
-	nomes = _nomes_de_associados(devedores)
-	for linha in devedores:
-		linha["nome_associado"] = nomes.get(linha.get("associado"))
-
-	percentual = round((atrasados["quantidade"] / total_registros) * 100, 2) if total_registros else 0.0
+	limite = normalizar_limite(limite)
+	inicio = max(0, int(inicio or 0))
+	pagina = transacoes[inicio : inicio + limite]
 
 	return {
-		"periodo": periodo,
-		"total_registros": total_registros,
-		"por_status": por_status,
-		"inadimplencia": {
-			"quantidade": atrasados["quantidade"],
-			"valor": atrasados["valor"],
-			"percentual": percentual,
+		"periodo": dados.get("periodo"),
+		"transacoes": pagina,
+		"valor_total_nao_vinculado": (dados.get("totais") or {}).get("recebido_nao_vinculado"),
+		"paginacao": {
+			"inicio": inicio,
+			"limite": limite,
+			"retornados": len(pagina),
+			"total": len(transacoes),
 		},
-		"a_receber": {
-			"quantidade": atrasados["quantidade"] + em_aberto["quantidade"],
-			"valor": flt(atrasados["valor"] + em_aberto["valor"], 2),
-		},
-		"devedores": devedores,
 	}
-
-
-@ferramenta(
-	nome="marcar_contribuicoes_pagas",
-	titulo="Marcar contribuições como pagas",
-	descricao=(
-		"Marca registros de contribuição mensal como 'Pago' (até 200 por chamada). "
-		"Use simular=true para conferir a lista antes de gravar."
-	),
-	parametros={
-		"ids": {
-			"type": "array",
-			"maxItems": MAX_PAGAMENTOS_LOTE,
-			"description": "IDs dos pagamentos ('name' devolvido por 'listar_contribuicoes').",
-		},
-	},
-	obrigatorios=("ids",),
-	roles=ROLES_ESCRITA,
-	somente_leitura=False,
-)
-def marcar_contribuicoes_pagas(ids: list[str], simular: bool = False) -> dict:
-	ids = [str(item).strip() for item in ids if str(item).strip()]
-	if not ids:
-		raise ErroDeFerramenta("ARGUMENTO_INVALIDO", "Informe ao menos um ID de pagamento.")
-
-	from gris.api.financeiro import monthly_payments
-
-	pagos: list[str] = []
-	ja_pagos: list[str] = []
-	falhas: list[dict] = []
-
-	for pagamento_id in ids:
-		situacao = frappe.db.get_value(
-			DOCTYPE, pagamento_id, ["status", "associado", "mes_de_referencia"], as_dict=True
-		)
-		if situacao is None:
-			falhas.append({"id": pagamento_id, "erro": "Pagamento não encontrado."})
-			continue
-		if situacao.get("status") == "Pago":
-			ja_pagos.append(pagamento_id)
-			continue
-		if simular:
-			pagos.append(pagamento_id)
-			continue
-		try:
-			monthly_payments.mark_payment_as_paid(pagamento_id)
-			pagos.append(pagamento_id)
-		except frappe.PermissionError as exc:
-			falhas.append({"id": pagamento_id, "erro": str(exc) or "Sem permissão de escrita."})
-
-	resultado = {
-		"solicitadas": len(ids),
-		"marcadas_como_pagas": len(pagos),
-		"ids_afetados": pagos,
-		"ja_estavam_pagas": ja_pagos,
-		"falhas": falhas,
-	}
-	if simular:
-		resultado["simulacao"] = True
-		resultado["marcadas_como_pagas"] = 0
-		resultado["seriam_marcadas"] = pagos
-		resultado.pop("ids_afetados")
-	return resultado
 
 
 @ferramenta(
 	nome="atualizar_cobranca_associado",
 	titulo="Atualizar cobrança do associado",
 	descricao=(
-		"Ajusta os dados de cobrança de um associado: valor da contribuição mensal, situação da "
-		"cobrança (Ativo/Inativo) e contatos de cobrança. Informe ao menos um campo."
+		"Ajusta os dados de cobrança de um associado: valor da contribuição mensal, situação "
+		"da cobrança (Ativo/Inativo) e contatos de cobrança. Informe ao menos um campo. "
+		"Use 'apuracao_contribuicoes' com acao_cadastro para saber quem precisa de ajuste."
 	),
 	parametros={
 		"cpf": {"type": "string", "description": "CPF do associado."},
@@ -317,7 +296,7 @@ def atualizar_cobranca_associado(
 	telefone_cobranca: str | None = None,
 	simular: bool = False,
 ) -> dict:
-	solicitado = {
+	solicitado: dict[str, Any] = {
 		"valor_contribuicao": valor_contribuicao,
 		"status_cobranca": status_cobranca,
 		"email_cobranca": email_cobranca,
@@ -366,45 +345,3 @@ def atualizar_cobranca_associado(
 		)
 
 	return {"atualizado": True, "cpf": cpf, "alteracoes": alteracoes}
-
-
-@ferramenta(
-	nome="gerar_contribuicoes_do_mes",
-	titulo="Gerar contribuições do mês",
-	descricao=(
-		"Cria os registros 'Em Aberto' do mês corrente para todos os associados ativos da "
-		"categoria Beneficiário. É idempotente: quem já tem registro no mês é ignorado. "
-		"Use simular=true para saber quantos seriam criados."
-	),
-	parametros={},
-	roles=ROLES_ESCRITA,
-	somente_leitura=False,
-)
-def gerar_contribuicoes_do_mes(simular: bool = False) -> dict:
-	mes = getdate().replace(day=1).strftime("%Y-%m-%d")
-
-	beneficiarios = frappe.get_all(
-		"Associado",
-		filters={"status_no_grupo": "Ativo", "categoria": "Beneficiário"},
-		pluck="name",
-	)
-	existentes = set(frappe.get_all(DOCTYPE, filters={"mes_de_referencia": mes}, pluck="associado"))
-	pendentes = [cpf for cpf in beneficiarios if cpf not in existentes]
-
-	if simular:
-		return {
-			"simulacao": True,
-			"mes_de_referencia": mes,
-			"beneficiarios_ativos": len(beneficiarios),
-			"ja_possuem_registro": len(beneficiarios) - len(pendentes),
-			"seriam_criados": len(pendentes),
-		}
-
-	from gris.api.financeiro import monthly_payments
-
-	criados = monthly_payments.generate_monthly_payments()
-	return {
-		"mes_de_referencia": mes,
-		"beneficiarios_ativos": len(beneficiarios),
-		"criados": criados,
-	}

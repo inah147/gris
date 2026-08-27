@@ -46,7 +46,7 @@ atualizado — sem mexer na máquina de quem usa.
 |---|---|---|
 | `listar_transacoes` | Extrato com filtros de período, categoria, carteira, revisão e `sem_categoria` | Gestor Financeiro, Visualizador Financeiro |
 | `listar_opcoes_financeiras` | Valores válidos: categorias, centros de custo, carteiras, instituições, contas fixas | Gestor Financeiro, Visualizador Financeiro |
-| `categorizar_transacoes` ✎ | Categoriza até 200 transações por chamada | Gestor Financeiro |
+| `categorizar_transacoes` ✎ | Categoriza até 200 transações por chamada; define o `beneficiario` que liga a contribuição mensal ao associado | Gestor Financeiro |
 | `resumo_financeiro` | Totais de crédito/débito por período, agrupados por categoria, centro de custo ou carteira | Gestor Financeiro, Visualizador Financeiro |
 | `serie_financeira` | Séries dos últimos 12 meses do painel (entradas x saídas, por categoria/centro/tipo, contribuições, inadimplência) | Gestor Financeiro, Visualizador Financeiro |
 
@@ -62,13 +62,19 @@ atualizado — sem mexer na máquina de quem usa.
 
 ### Contribuições mensais
 
+A apuração vem das **transações do extrato** (crédito com categoria "Contribuição
+Mensal" e beneficiário preenchido), não do DocType `Pagamento Contribuicao
+Mensal` — que segue existindo para o fluxo de cobrança e para os gráficos do
+painel. Para uma contribuição contar para alguém, a transação precisa ter o
+beneficiário definido.
+
 | Ferramenta | O que faz | Papéis |
 |---|---|---|
-| `listar_contribuicoes` | Contribuições por associado, status e mês (ou intervalo) | Gestor/Visualizador Contribuição Mensal |
-| `resumo_inadimplencia` | Consolidado do mês: quantidade e valor por status, % de inadimplência e lista de devedores | Gestor/Visualizador Contribuição Mensal |
-| `marcar_contribuicoes_pagas` ✎ | Marca até 200 pagamentos como 'Pago' | Gestor Contribuição Mensal |
+| `resumo_contribuicoes` | Recebido (vinculado e não vinculado), esperado, adimplência e pendências de cadastro no período | Gestor/Visualizador Contribuição Mensal |
+| `apuracao_contribuicoes` | Situação de cada contribuinte: esperado, recebido, saldo, crédito e situação; filtra por situação, pendência e ação de cadastro | Gestor/Visualizador Contribuição Mensal |
+| `extrato_contribuicoes_associado` | Transações de contribuição atribuídas a um associado no período | Gestor/Visualizador Contribuição Mensal |
+| `listar_contribuicoes_nao_vinculadas` | Contribuições que entraram na conta e ainda não têm associado | Gestor/Visualizador Contribuição Mensal |
 | `atualizar_cobranca_associado` ✎ | Valor da contribuição, situação da cobrança e contatos de cobrança | Gestor Contribuição Mensal |
-| `gerar_contribuicoes_do_mes` ✎ | Cria os registros do mês para os beneficiários ativos (idempotente) | Gestor Contribuição Mensal |
 
 ### Contas fixas
 
@@ -239,12 +245,6 @@ Exemplos de pedidos que funcionam bem:
 3. o Claude lê as descrições ("PIX RECEBIDO M S SILVA" x "Contribuição Ago/Mariana Silva") e propõe o par;
 4. você confirma e ele chama `conciliar_transacoes` — ou `marcar_sem_duplicata` quando não há par.
 
-**Contribuições**
-- *"Como está a inadimplência de março?"* → `resumo_inadimplencia`
-- *"Quem está atrasado há mais de dois meses?"* → `listar_contribuicoes` com intervalo e `status='Atrasado'`
-- *"Baixa o pagamento desses três associados"* → `marcar_contribuicoes_pagas`
-- *"Sobe a contribuição da Ana para R$ 75 a partir de agora"* → `atualizar_cobranca_associado`
-
 **Recepção**
 - *"Quem está travado no funil e em qual etapa?"* → `funil_recepcao`, depois `listar_novos_associados` com `somente_atrasados=true`
 - *"Quem ainda não fez a ficha médica?"* → `listar_novos_associados` com `etapa_pendente='ficha_medica_preenchida'`
@@ -252,6 +252,13 @@ Exemplos de pedidos que funcionam bem:
 - *"Que sábados estão livres para o Lobinho? Agenda dia 14 para o João"* → `datas_disponiveis_visita` + `agendar_visita`
 - *"Abriu vaga no Lobinho — quem é o próximo da fila?"* → `listar_fila_espera` + `chamar_da_fila_espera`
 - *"Como está o NPS da recepção?"* → `nps_recepcao`
+
+**Contribuições**
+- *"Como está a adimplência dos últimos 6 meses?"* → `resumo_contribuicoes`
+- *"Quem está atrasado ou pagou parcial?"* → `apuracao_contribuicoes` com `com_pendencia=true`
+- *"Quais contribuições caíram na conta sem dono?"* → `listar_contribuicoes_nao_vinculadas`, depois `categorizar_transacoes` com `beneficiario`
+- *"Quem entrou no grupo e ainda não tem cobrança cadastrada?"* → `apuracao_contribuicoes` com `acao_cadastro='Cadastrar'`
+- *"Sobe a contribuição da Ana para R$ 75"* → `atualizar_cobranca_associado`
 
 **Orçamento**
 - *"Como está a execução do orçamento deste ano?"* → `comparar_previsto_realizado`
@@ -326,13 +333,14 @@ Nada precisa ser alterado na ponte local nem na configuração do Claude.
 # ponte stdio (não precisa de Frappe)
 cd mcp_server && python3 -m unittest discover -s tests
 
-# camada do app (dentro do bench)
+# camada do app (dentro do bench; nas sessões web use `bench-gris`, montado pelo
+# hook .claude/hooks/session-start.sh)
 for modulo in registry ferramentas http contribuicoes conciliacao orcamento recepcao visitas; do
-  bench --site <seu-site> run-tests --app gris --module gris.tests.test_mcp_$modulo
+  bench --site <seu-site> run-tests --module gris.tests.test_mcp_$modulo
 done
 
 # regra do funil de recepção, compartilhada com o portal
-bench --site <seu-site> run-tests --app gris --module gris.tests.test_recepcao_funil
+bench --site <seu-site> run-tests --module gris.tests.test_recepcao_funil
 ```
 
 ## Diagnóstico rápido

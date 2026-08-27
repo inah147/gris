@@ -36,6 +36,7 @@ CAMPOS_LISTA = [
 	"carteira",
 	"categoria",
 	"centro_de_custo",
+	"beneficiario",
 	"conta_fixa",
 	"fixo_variavel",
 	"ordinaria_extraordinaria",
@@ -51,10 +52,15 @@ CAMPOS_LISTA = [
 CAMPOS_CATEGORIZACAO = {
 	"categoria": "Categoria de Transacao",
 	"centro_de_custo": "Centro de Custo",
+	"beneficiario": "Associado",
 	"ordinaria_extraordinaria": None,
 	"descricao_reduzida": None,
 	"transacao_revisada": None,
 }
+
+# O beneficiário só faz sentido na contribuição mensal: é ele que liga a
+# transação ao associado na apuração de gris.api.financeiro.contribuicoes.
+CATEGORIA_CONTRIBUICAO = "Contribuição Mensal"
 
 MAX_TRANSACOES_LOTE = 200
 
@@ -216,6 +222,51 @@ def listar_opcoes_financeiras() -> dict:
 	}
 
 
+def _validar_beneficiario(ids: list[str], beneficiario: str, categoria: str | None) -> None:
+	"""O beneficiário só vale para contribuição mensal e para quem contribui.
+
+	Atribuir a um Dirigente (ou a uma transação de outra categoria) faria o valor
+	sumir da apuração sem erro nenhum — melhor recusar aqui.
+	"""
+	from gris.api.financeiro.contribuicoes import CATEGORIAS_CONTRIBUINTES
+
+	categoria_associado = frappe.db.get_value("Associado", beneficiario, "categoria")
+	if categoria_associado not in CATEGORIAS_CONTRIBUINTES:
+		raise ErroDeFerramenta(
+			"VALIDACAO",
+			f"O associado '{beneficiario}' é da categoria '{categoria_associado}' e não entra "
+			f"na apuração da contribuição mensal (categorias que contribuem: "
+			f"{', '.join(CATEGORIAS_CONTRIBUINTES)}).",
+		)
+
+	if categoria and categoria != CATEGORIA_CONTRIBUICAO:
+		raise ErroDeFerramenta(
+			"VALIDACAO",
+			f"Beneficiário só se aplica a transações de categoria '{CATEGORIA_CONTRIBUICAO}'.",
+		)
+
+	if categoria:
+		return
+
+	# Sem categoria na chamada, as transações precisam já estar na categoria certa.
+	fora = [
+		transacao["name"]
+		for transacao in frappe.get_all(
+			DOCTYPE,
+			filters={"name": ["in", ids], "categoria": ["!=", CATEGORIA_CONTRIBUICAO]},
+			fields=["name"],
+		)
+	]
+	if fora:
+		raise ErroDeFerramenta(
+			"VALIDACAO",
+			f"Só é possível definir beneficiário em transações de categoria "
+			f"'{CATEGORIA_CONTRIBUICAO}'. Informe categoria='{CATEGORIA_CONTRIBUICAO}' na mesma "
+			f"chamada ou ajuste as transações primeiro.",
+			{"transacoes_fora_da_categoria": fora[:20]},
+		)
+
+
 def _simular_categorizacao(ids: list[str], atualizacoes: dict) -> dict:
 	"""Monta o antes/depois da categorização sem tocar em nenhum documento."""
 	if not frappe.has_permission(DOCTYPE, ptype="write"):
@@ -249,9 +300,10 @@ def _simular_categorizacao(ids: list[str], atualizacoes: dict) -> dict:
 	titulo="Categorizar transações em lote",
 	descricao=(
 		"Aplica categoria, centro de custo, classificação ordinária/extraordinária, descrição "
-		"reduzida e/ou marcação de revisada a uma lista de transações (máx. 200 por chamada). "
-		"Informe ao menos um campo além dos IDs. Use simular=true para conferir o antes/depois "
-		"antes de gravar em lote."
+		"reduzida, beneficiário e/ou marcação de revisada a uma lista de transações "
+		"(máx. 200 por chamada). Informe ao menos um campo além dos IDs. O beneficiário é o "
+		"que faz a contribuição mensal contar para o associado na apuração — use junto com "
+		"categoria='Contribuição Mensal'. Use simular=true para conferir o antes/depois."
 	),
 	parametros={
 		"ids": {
@@ -267,6 +319,13 @@ def _simular_categorizacao(ids: list[str], atualizacoes: dict) -> dict:
 			"description": "Classificação da transação.",
 		},
 		"descricao_reduzida": {"type": "string", "description": "Descrição amigável da transação."},
+		"beneficiario": {
+			"type": "string",
+			"description": (
+				"CPF do associado que fez a contribuição mensal. Só se aplica a transações "
+				"de categoria 'Contribuição Mensal'."
+			),
+		},
 		"marcar_revisada": {
 			"type": "boolean",
 			"description": "Marca (true) ou desmarca (false) a transação como revisada.",
@@ -282,6 +341,7 @@ def categorizar_transacoes(
 	centro_de_custo: str | None = None,
 	ordinaria_extraordinaria: str | None = None,
 	descricao_reduzida: str | None = None,
+	beneficiario: str | None = None,
 	marcar_revisada: bool | None = None,
 	simular: bool = False,
 ) -> dict:
@@ -298,6 +358,8 @@ def categorizar_transacoes(
 		atualizacoes["ordinaria_extraordinaria"] = ordinaria_extraordinaria
 	if descricao_reduzida:
 		atualizacoes["descricao_reduzida"] = descricao_reduzida
+	if beneficiario:
+		atualizacoes["beneficiario"] = beneficiario
 	if marcar_revisada is not None:
 		atualizacoes["transacao_revisada"] = 1 if marcar_revisada else 0
 
@@ -317,6 +379,9 @@ def categorizar_transacoes(
 				f"'{valor}' não existe em {doctype_link}. Consulte 'listar_opcoes_financeiras'.",
 				{"campo": campo, "doctype": doctype_link},
 			)
+
+	if beneficiario:
+		_validar_beneficiario(ids, beneficiario, categoria)
 
 	if simular:
 		return _simular_categorizacao(ids, atualizacoes)
@@ -467,6 +532,9 @@ def _tabular(payload: dict) -> dict:
 	descricao=(
 		"Séries dos últimos 12 meses usadas no painel financeiro: entradas x saídas, entradas ou "
 		"saídas por categoria/centro de custo/tipo, contribuições por status e inadimplência. "
+		"Atenção: as duas séries de contribuição vêm do fluxo de cobrança (Pagamento "
+		"Contribuicao Mensal); a apuração pelo dinheiro que entrou está em "
+		"'resumo_contribuicoes'. "
 		"Retorna uma linha por mês, pronta para comparação. O período é sempre os 12 meses "
 		"encerrados no mês atual — para recortes livres use 'resumo_financeiro'."
 	),

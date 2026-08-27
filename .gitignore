@@ -12,3 +12,4 @@ backup/
 
 # Credenciais locais (MCP, Docker)
 .env
+dump.rdb

@@ -308,3 +308,58 @@ class TestSimulacaoNasEscritas(TestCase):
 				financeiro.categorizar_transacoes(["T1"], categoria="Doações", simular=True)
 
 		self.assertEqual(ctx.exception.codigo, "PERMISSAO_NEGADA")
+
+
+class TestBeneficiarioNaCategorizacao(TestCase):
+	"""O beneficiário é o que liga a transação ao associado na apuração da
+	contribuição mensal — atribuir errado faria o valor sumir da conta dele."""
+
+	def test_recusa_associado_que_nao_contribui(self):
+		with (
+			patch.object(financeiro.frappe.db, "exists", return_value=True),
+			patch.object(financeiro.frappe.db, "get_value", return_value="Dirigente"),
+		):
+			with self.assertRaises(ErroDeFerramenta) as ctx:
+				financeiro.categorizar_transacoes(["T1"], categoria="Contribuição Mensal", beneficiario="111")
+
+		self.assertEqual(ctx.exception.codigo, "VALIDACAO")
+		self.assertIn("Dirigente", ctx.exception.mensagem)
+
+	def test_recusa_categoria_diferente_de_contribuicao(self):
+		with (
+			patch.object(financeiro.frappe.db, "exists", return_value=True),
+			patch.object(financeiro.frappe.db, "get_value", return_value="Beneficiário"),
+		):
+			with self.assertRaises(ErroDeFerramenta) as ctx:
+				financeiro.categorizar_transacoes(["T1"], categoria="Doações", beneficiario="111")
+
+		self.assertEqual(ctx.exception.codigo, "VALIDACAO")
+		self.assertIn("Contribuição Mensal", ctx.exception.mensagem)
+
+	def test_sem_categoria_na_chamada_confere_as_transacoes(self):
+		with (
+			patch.object(financeiro.frappe.db, "exists", return_value=True),
+			patch.object(financeiro.frappe.db, "get_value", return_value="Beneficiário"),
+			patch.object(financeiro.frappe, "get_all", return_value=[{"name": "T2"}]),
+		):
+			with self.assertRaises(ErroDeFerramenta) as ctx:
+				financeiro.categorizar_transacoes(["T1", "T2"], beneficiario="111")
+
+		self.assertEqual(ctx.exception.codigo, "VALIDACAO")
+		self.assertEqual(ctx.exception.detalhes["transacoes_fora_da_categoria"], ["T2"])
+
+	def test_vincula_quando_tudo_confere(self):
+		doc = MagicMock()
+		with (
+			patch.object(financeiro.frappe.db, "exists", return_value=True),
+			patch.object(financeiro.frappe.db, "get_value", return_value="Escotista"),
+			patch.object(financeiro.frappe, "get_all", return_value=[]),
+			patch.object(financeiro.frappe, "get_doc", return_value=doc),
+		):
+			resultado = financeiro.categorizar_transacoes(
+				["T1"], categoria="Contribuição Mensal", beneficiario="111"
+			)
+
+		doc.set.assert_any_call("beneficiario", "111")
+		doc.set.assert_any_call("categoria", "Contribuição Mensal")
+		self.assertEqual(resultado["atualizadas"], 1)

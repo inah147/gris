@@ -1,4 +1,9 @@
-"""Testes das ferramentas MCP de contribuições mensais e contas fixas."""
+"""Testes das ferramentas MCP de contribuição mensal e contas fixas.
+
+A apuração da contribuição vem das transações do extrato
+(gris.api.financeiro.contribuicoes); aqui checamos o recorte, os filtros e as
+guardas das ferramentas.
+"""
 
 from unittest import TestCase
 from unittest.mock import patch
@@ -6,122 +11,194 @@ from unittest.mock import patch
 from gris.api.mcp import contas_fixas, contribuicoes
 from gris.api.mcp.registry import ErroDeFerramenta
 
+APURACAO = {
+	"periodo": {"inicio": "2026-01-01", "fim": "2026-03-01"},
+	"quantidade_meses": 3,
+	"dia_vencimento": 10,
+	"meses": [{"ym": "2026-01", "rotulo": "01/2026"}],
+	"associados": [
+		{
+			"id": "111",
+			"nome": "Ana",
+			"categoria": "Beneficiário",
+			"secao": "Alcateia",
+			"situacao": "Atrasado",
+			"acao_cadastro": None,
+			"total_recebido": 60.0,
+			"total_esperado": 180.0,
+			"linhas": [{"ym": "2026-01", "status": "Atrasado"}],
+		},
+		{
+			"id": "222",
+			"nome": "Bruno",
+			"categoria": "Escotista",
+			"secao": "Tropa",
+			"situacao": "Pago",
+			"acao_cadastro": "Cancelar",
+			"total_recebido": 180.0,
+			"total_esperado": 180.0,
+			"linhas": [{"ym": "2026-01", "status": "Pago"}],
+		},
+		{
+			"id": "333",
+			"nome": "Carla",
+			"categoria": "Beneficiário",
+			"secao": "Alcateia",
+			"situacao": "Parcial",
+			"acao_cadastro": "Cadastrar",
+			"total_recebido": 30.0,
+			"total_esperado": 180.0,
+			"linhas": [{"ym": "2026-01", "status": "Parcial"}],
+		},
+	],
+	"nao_vinculadas": [
+		{"name": "T1", "data": "2026-02-05", "valor": 60.0, "descricao": "PIX RECEBIDO"},
+		{"name": "T2", "data": "2026-02-07", "valor": 60.0, "descricao": "PIX RECEBIDO"},
+	],
+	"series": {
+		"labels": ["01/2026", "02/2026"],
+		"recebido": [120.0, 240.0],
+		"nao_vinculado": [0.0, 120.0],
+		"esperado": [180.0, 180.0],
+		"adimplencia": [66.67, 100.0],
+	},
+	"totais": {
+		"contribuintes": 3,
+		"recebido_vinculado": 360.0,
+		"recebido_nao_vinculado": 120.0,
+		"adimplencia": 80.0,
+		"com_pendencia": 2,
+		"a_cadastrar": 1,
+		"a_cancelar": 1,
+	},
+}
 
-class TestListarContribuicoes(TestCase):
-	def test_mes_referencia_vira_primeiro_dia(self):
-		with (
-			patch.object(contribuicoes.frappe, "get_all", return_value=[]) as get_all,
-			patch.object(contribuicoes.frappe.db, "count", return_value=0),
-		):
-			contribuicoes.listar_contribuicoes(mes_referencia="2026-03", status="Atrasado")
 
-		filtros = get_all.call_args.kwargs["filters"]
-		self.assertEqual(filtros["mes_de_referencia"], "2026-03-01")
-		self.assertEqual(filtros["status"], "Atrasado")
+def _com_apuracao():
+	return patch.object(
+		contribuicoes.servico, "get_apuracao", return_value={"success": True, "dados": APURACAO}
+	)
 
-	def test_intervalo_de_meses_usa_between(self):
-		with (
-			patch.object(contribuicoes.frappe, "get_all", return_value=[]) as get_all,
-			patch.object(contribuicoes.frappe.db, "count", return_value=0),
-		):
-			contribuicoes.listar_contribuicoes(mes_inicio="2026-01", mes_fim="2026-03")
 
+class TestResumoContribuicoes(TestCase):
+	def test_tabula_series_por_mes_e_repassa_totais(self):
+		with _com_apuracao():
+			resultado = contribuicoes.resumo_contribuicoes(meses=3)
+
+		self.assertEqual(resultado["totais"]["adimplencia"], 80.0)
 		self.assertEqual(
-			get_all.call_args.kwargs["filters"]["mes_de_referencia"],
-			["between", ["2026-01-01", "2026-03-01"]],
+			resultado["por_mes"][1],
+			{
+				"mes": "02/2026",
+				"recebido": 240.0,
+				"nao_vinculado": 120.0,
+				"esperado": 180.0,
+				"adimplencia": 100.0,
+			},
 		)
 
-	def test_mes_invalido(self):
-		with self.assertRaises(ErroDeFerramenta) as ctx:
-			contribuicoes.listar_contribuicoes(mes_referencia="marco/2026")
-		self.assertEqual(ctx.exception.codigo, "ARGUMENTO_INVALIDO")
+	def test_repassa_a_janela_pedida(self):
+		with _com_apuracao() as servico:
+			contribuicoes.resumo_contribuicoes(meses=24)
+		servico.assert_called_once_with(24)
 
-	def test_anexa_nome_do_associado_em_uma_consulta(self):
-		pagamentos = [
-			{"name": "P1", "associado": "111", "status": "Atrasado"},
-			{"name": "P2", "associado": "222", "status": "Pago"},
-		]
-		associados = [
-			{"name": "111", "nome_completo": "Ana"},
-			{"name": "222", "nome_completo": "Bruno"},
-		]
+
+class TestApuracaoPorAssociado(TestCase):
+	def test_omite_a_grade_mensal_por_padrao(self):
+		with _com_apuracao():
+			resultado = contribuicoes.apuracao_contribuicoes()
+
+		self.assertTrue(all("linhas" not in a for a in resultado["associados"]))
+		self.assertIsNone(resultado["meses"])
+
+	def test_incluir_meses_traz_a_grade(self):
+		with _com_apuracao():
+			resultado = contribuicoes.apuracao_contribuicoes(incluir_meses=True)
+
+		self.assertEqual(resultado["associados"][0]["linhas"][0]["ym"], "2026-01")
+		self.assertEqual(resultado["meses"][0]["rotulo"], "01/2026")
+
+	def test_filtra_por_situacao(self):
+		with _com_apuracao():
+			resultado = contribuicoes.apuracao_contribuicoes(situacao="Atrasado")
+
+		self.assertEqual([a["id"] for a in resultado["associados"]], ["111"])
+		self.assertEqual(resultado["paginacao"]["total_com_filtros"], 1)
+		self.assertEqual(resultado["paginacao"]["total_contribuintes"], 3)
+
+	def test_com_pendencia_junta_atrasado_e_parcial(self):
+		with _com_apuracao():
+			resultado = contribuicoes.apuracao_contribuicoes(com_pendencia=True)
+
+		self.assertEqual([a["id"] for a in resultado["associados"]], ["111", "333"])
+
+	def test_filtra_por_acao_de_cadastro(self):
+		with _com_apuracao():
+			resultado = contribuicoes.apuracao_contribuicoes(acao_cadastro="Cadastrar")
+
+		self.assertEqual([a["id"] for a in resultado["associados"]], ["333"])
+
+	def test_filtra_por_secao_categoria_e_busca(self):
+		with _com_apuracao():
+			por_secao = contribuicoes.apuracao_contribuicoes(secao="Tropa")
+			por_categoria = contribuicoes.apuracao_contribuicoes(categoria="Beneficiário")
+			por_busca = contribuicoes.apuracao_contribuicoes(busca="car")
+
+		self.assertEqual([a["id"] for a in por_secao["associados"]], ["222"])
+		self.assertEqual([a["id"] for a in por_categoria["associados"]], ["111", "333"])
+		self.assertEqual([a["id"] for a in por_busca["associados"]], ["333"])
+
+	def test_pagina_em_memoria(self):
+		with _com_apuracao():
+			resultado = contribuicoes.apuracao_contribuicoes(limite=1, inicio=1)
+
+		self.assertEqual([a["id"] for a in resultado["associados"]], ["222"])
+		self.assertEqual(resultado["paginacao"]["retornados"], 1)
+
+	def test_nao_muta_a_apuracao_original(self):
+		with _com_apuracao():
+			contribuicoes.apuracao_contribuicoes()
+
+		self.assertIn("linhas", APURACAO["associados"][0])
+
+
+class TestExtratoDoAssociado(TestCase):
+	def test_associado_inexistente(self):
+		with patch.object(contribuicoes.frappe.db, "exists", return_value=False):
+			with self.assertRaises(ErroDeFerramenta) as ctx:
+				contribuicoes.extrato_contribuicoes_associado("999")
+		self.assertEqual(ctx.exception.codigo, "NAO_ENCONTRADO")
+
+	def test_soma_o_recebido(self):
+		transacoes = [{"name": "T1", "valor": 60.0}, {"name": "T2", "valor": 30.0}]
 		with (
-			patch.object(contribuicoes.frappe, "get_all", side_effect=[pagamentos, associados]) as get_all,
-			patch.object(contribuicoes.frappe.db, "count", return_value=2),
+			patch.object(contribuicoes.frappe.db, "exists", return_value=True),
+			patch.object(
+				contribuicoes.servico,
+				"get_extrato_do_associado",
+				return_value={"success": True, "transacoes": transacoes},
+			) as servico,
 		):
-			resultado = contribuicoes.listar_contribuicoes()
+			resultado = contribuicoes.extrato_contribuicoes_associado("111", meses=6)
 
-		self.assertEqual(get_all.call_count, 2)
-		self.assertEqual(resultado["contribuicoes"][0]["nome_associado"], "Ana")
-		self.assertEqual(resultado["contribuicoes"][1]["nome_associado"], "Bruno")
-
-
-class TestResumoInadimplencia(TestCase):
-	def test_consolida_por_status_e_percentual(self):
-		agregados = [
-			{"status": "Pago", "quantidade": 30, "total": 1800.0},
-			{"status": "Atrasado", "quantidade": 10, "total": 600.0},
-		]
-		devedores = [{"name": "P1", "associado": "111", "mes_de_referencia": "2026-03", "valor": 60.0}]
-		with patch.object(
-			contribuicoes.frappe,
-			"get_all",
-			side_effect=[agregados, devedores, [{"name": "111", "nome_completo": "Ana"}]],
-		):
-			resultado = contribuicoes.resumo_inadimplencia(mes_referencia="2026-03")
-
-		self.assertEqual(resultado["periodo"], {"inicio": "2026-03-01", "fim": "2026-03-01"})
-		self.assertEqual(resultado["total_registros"], 40)
-		self.assertEqual(resultado["inadimplencia"]["percentual"], 25.0)
-		self.assertEqual(resultado["a_receber"]["valor"], 600.0)
-		self.assertEqual(resultado["devedores"][0]["nome_associado"], "Ana")
-
-	def test_sem_registros_nao_divide_por_zero(self):
-		with patch.object(contribuicoes.frappe, "get_all", side_effect=[[], [], []]):
-			resultado = contribuicoes.resumo_inadimplencia(mes_referencia="2026-03")
-		self.assertEqual(resultado["inadimplencia"]["percentual"], 0.0)
+		servico.assert_called_once_with("111", 6)
+		self.assertEqual(resultado["total_recebido"], 90.0)
+		self.assertEqual(resultado["quantidade"], 2)
 
 
-class TestMarcarContribuicoesPagas(TestCase):
-	def test_simulacao_nao_chama_o_servico(self):
-		from gris.api.financeiro import monthly_payments
+class TestNaoVinculadas(TestCase):
+	def test_lista_com_total_e_valor(self):
+		with _com_apuracao():
+			resultado = contribuicoes.listar_contribuicoes_nao_vinculadas()
 
-		valores = {"status": "Em Aberto", "associado": "111", "mes_de_referencia": "2026-03"}
-		with (
-			patch.object(contribuicoes.frappe.db, "get_value", return_value=valores),
-			patch.object(monthly_payments, "mark_payment_as_paid") as servico,
-		):
-			resultado = contribuicoes.marcar_contribuicoes_pagas(["P1"], simular=True)
+		self.assertEqual(resultado["paginacao"]["total"], 2)
+		self.assertEqual(resultado["valor_total_nao_vinculado"], 120.0)
 
-		servico.assert_not_called()
-		self.assertTrue(resultado["simulacao"])
-		self.assertEqual(resultado["seriam_marcadas"], ["P1"])
-		self.assertEqual(resultado["marcadas_como_pagas"], 0)
+	def test_pagina(self):
+		with _com_apuracao():
+			resultado = contribuicoes.listar_contribuicoes_nao_vinculadas(limite=1, inicio=1)
 
-	def test_separa_ja_pagos_e_inexistentes(self):
-		from gris.api.financeiro import monthly_payments
-
-		def get_value(_doctype, name, _campos, as_dict=True):
-			if name == "P1":
-				return {"status": "Em Aberto"}
-			if name == "P2":
-				return {"status": "Pago"}
-			return None
-
-		with (
-			patch.object(contribuicoes.frappe.db, "get_value", side_effect=get_value),
-			patch.object(monthly_payments, "mark_payment_as_paid") as servico,
-		):
-			resultado = contribuicoes.marcar_contribuicoes_pagas(["P1", "P2", "P3"])
-
-		servico.assert_called_once_with("P1")
-		self.assertEqual(resultado["marcadas_como_pagas"], 1)
-		self.assertEqual(resultado["ja_estavam_pagas"], ["P2"])
-		self.assertEqual(resultado["falhas"][0]["id"], "P3")
-
-	def test_exige_ids(self):
-		with self.assertRaises(ErroDeFerramenta):
-			contribuicoes.marcar_contribuicoes_pagas(["  "])
+		self.assertEqual([t["name"] for t in resultado["transacoes"]], ["T2"])
 
 
 class TestAtualizarCobranca(TestCase):
@@ -181,37 +258,6 @@ class TestAtualizarCobranca(TestCase):
 		ativar.assert_not_called()
 		contatos.assert_called_once_with("111", email="ana@example.com", phone=None)
 		self.assertTrue(resultado["atualizado"])
-		self.assertEqual(
-			sorted(resultado["alteracoes"]), ["email_cobranca", "status_cobranca", "valor_contribuicao"]
-		)
-
-
-class TestGerarContribuicoesDoMes(TestCase):
-	def test_simulacao_conta_pendentes(self):
-		from gris.api.financeiro import monthly_payments
-
-		with (
-			patch.object(contribuicoes.frappe, "get_all", side_effect=[["111", "222", "333"], ["111"]]),
-			patch.object(monthly_payments, "generate_monthly_payments") as servico,
-		):
-			resultado = contribuicoes.gerar_contribuicoes_do_mes(simular=True)
-
-		servico.assert_not_called()
-		self.assertEqual(resultado["beneficiarios_ativos"], 3)
-		self.assertEqual(resultado["ja_possuem_registro"], 1)
-		self.assertEqual(resultado["seriam_criados"], 2)
-
-	def test_execucao_delega_ao_servico(self):
-		from gris.api.financeiro import monthly_payments
-
-		with (
-			patch.object(contribuicoes.frappe, "get_all", side_effect=[["111", "222"], []]),
-			patch.object(monthly_payments, "generate_monthly_payments", return_value=2) as servico,
-		):
-			resultado = contribuicoes.gerar_contribuicoes_do_mes()
-
-		servico.assert_called_once_with()
-		self.assertEqual(resultado["criados"], 2)
 
 
 class TestContasFixas(TestCase):
@@ -260,18 +306,20 @@ class TestContasFixas(TestCase):
 
 
 class TestRegistroDeFerramentas(TestCase):
-	def test_ferramentas_da_onda_estao_no_catalogo(self):
+	def test_catalogo_reflete_a_apuracao_por_transacoes(self):
 		from gris.api.mcp import registry
 
 		nomes = set(registry.carregar_ferramentas())
 		esperadas = {
-			"listar_contribuicoes",
-			"resumo_inadimplencia",
-			"marcar_contribuicoes_pagas",
+			"resumo_contribuicoes",
+			"apuracao_contribuicoes",
+			"extrato_contribuicoes_associado",
+			"listar_contribuicoes_nao_vinculadas",
 			"atualizar_cobranca_associado",
-			"gerar_contribuicoes_do_mes",
-			"listar_contas_fixas",
-			"listar_pagamentos_contas_fixas",
-			"marcar_contas_fixas_pagas",
 		}
 		self.assertTrue(esperadas.issubset(nomes), esperadas - nomes)
+
+		# Ferramentas que escreviam em Pagamento Contribuicao Mensal saíram do
+		# catálogo: aquele DocType não é mais a fonte de verdade da apuração.
+		aposentadas = {"listar_contribuicoes", "resumo_inadimplencia", "marcar_contribuicoes_pagas"}
+		self.assertFalse(aposentadas & nomes)

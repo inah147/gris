@@ -1,31 +1,57 @@
-import frappe
-from frappe.utils import add_days, getdate, nowdate
+"""Contribuições mensais apuradas a partir das transações do extrato geral."""
 
+import json
+
+import frappe
+
+from gris.api.financeiro.contribuicoes import (
+	MESES_PADRAO,
+	ROLE_GESTOR,
+	STATUS_AGUARDANDO,
+	STATUS_ATRASADO,
+	STATUS_EM_ABERTO,
+	STATUS_NAO_APLICAVEL,
+	STATUS_PAGO,
+	STATUS_PARCIAL,
+	apurar,
+	normalizar_meses,
+)
 from gris.api.portal_access import enrich_context
 from gris.api.portal_cache_utils import get_uel_cached
 
 no_cache = 1
 
-# Ordem de exibição incluindo novos status "Cadastrar" e "Cancelar"
-STATUS_KEYS = ["Cadastrar", "Cancelar", "Aguardar", "Atrasado", "Em Aberto", "Pago"]
+# Janelas de apuração oferecidas no filtro da página.
+OPCOES_PERIODO = [
+	{"label": "Últimos 6 meses", "value": "6"},
+	{"label": "Últimos 12 meses", "value": "12"},
+	{"label": "Últimos 24 meses", "value": "24"},
+]
+
+# Ordem de exibição na tela, do mais urgente ao resolvido.
+ORDEM_EXIBICAO = [
+	STATUS_ATRASADO,
+	STATUS_PARCIAL,
+	STATUS_EM_ABERTO,
+	STATUS_AGUARDANDO,
+	STATUS_PAGO,
+	STATUS_NAO_APLICAVEL,
+]
 
 
 def get_context(context):
-	# Bloqueio para usuários não autenticados
 	enrich_context(context, "/financeiro/contribuicoes")
 
 	if frappe.session.user == "Guest":
 		frappe.local.flags.redirect_location = "/login?redirect-to=/financeiro"
 		raise frappe.Redirect
 
-	# Se o usuário está autenticado mas não possui uma das roles exigidas em
-	# PAGE_ROLES (portal_access.PAGE_ROLES["/financeiro/contribuicoes"]) lançamos
-	# PermissionError ao invés de redirecionar para login (melhor UX e evita loop).
+	# Usuário autenticado sem uma das roles de PAGE_ROLES: 403 em vez de voltar
+	# ao login, que só produziria um laço de redirecionamento.
 	if context.access_denied:
 		frappe.local.flags.redirect_location = "/403"
 		raise frappe.Redirect
 
-	# Recupera logo e define para sidebar
 	uel_data = get_uel_cached()
 	if uel_data:
 		context.portal_logo = uel_data.get("logo")
@@ -37,142 +63,36 @@ def get_context(context):
 		context.sidebar_title = "Portal"
 
 	context.active_link = "/financeiro/contribuicoes"
-
-	# Flag de permissão de gestão (usada no front para exibir botões de ação)
-	roles = frappe.get_roles()
-	context.can_manage_contributions = "Gestor Contribuição Mensal" in roles
-
-	# Dados de contribuições
-	beneficiarios = _get_beneficiarios()
-	pagamentos_map = _get_pagamentos_por_associado([b["name"] for b in beneficiarios])
-	agrupado = {k: [] for k in STATUS_KEYS}
-	hoje = getdate(nowdate())
-
-	for b in beneficiarios:
-		inicio = b.get("inicio_do_pagamento")
-		inicio_date = getdate(inicio) if inicio else getdate("1999-01-01")
-		pagamentos = pagamentos_map.get(b["name"], [])
-		status_geral = _calcular_status_geral(b, inicio_date, pagamentos, hoje)
-		# Dados de cobrança só expostos a gestores
-		email_cobranca = b.get("email_cobranca") if context.can_manage_contributions else None
-		telefone_cobranca = b.get("telefone_cobranca") if context.can_manage_contributions else None
-		item = {
-			"nome": b.get("nome_completo"),
-			"id": b.get("name"),
-			# manter como string para ser serializável em JSON no template
-			"inicio_do_pagamento": inicio_date.isoformat(),
-			"valor_contribuicao": b.get("valor_contribuicao"),
-			"qt_contribuicoes_pagas": b.get("qt_contribuicoes_pagas") or 0,
-			"qt_contribuicoes_atrasadas": b.get("qt_contribuicoes_atrasadas") or 0,
-			"status_geral": status_geral,
-			"pagamentos": pagamentos,
-			"status_no_grupo": b.get("status_no_grupo"),
-			"status_cobranca": b.get("status_cobranca"),
-			"email_cobranca": email_cobranca,
-			"telefone_cobranca": telefone_cobranca,
-		}
-		# Usa setdefault para evitar KeyError caso apareça status não listado
-		agrupado.setdefault(status_geral, []).append(item)
-
-	context.contribuicoes = agrupado
 	context.titulo = "Contribuições Mensais"
+
+	context.can_manage_contributions = ROLE_GESTOR in frappe.get_roles()
+
+	meses = normalizar_meses(frappe.form_dict.get("meses") or MESES_PADRAO)
+	# Dados de cobrança (e-mail/telefone) só entram no payload para quem pode geri-los.
+	apuracao = apurar(meses, incluir_dados_cobranca=context.can_manage_contributions)
+
+	context.meses_selecionado = str(meses)
+	context.opcoes_periodo = OPCOES_PERIODO
+	context.apuracao = apuracao
+	context.totais = apuracao["totais"]
+	context.nao_vinculadas = apuracao["nao_vinculadas"]
+	context.associados_por_situacao = _agrupar_por_situacao(apuracao["associados"])
+	context.ordem_situacao = ORDEM_EXIBICAO
+	# Payload consumido pelos gráficos ECharts em contribuicoes.js. O escape de "<"
+	# impede que um "</script>" em qualquer valor feche o bloco antes da hora.
+	context.dados_graficos = json.dumps(
+		{
+			"series": apuracao["series"],
+			"totais": apuracao["totais"],
+		}
+	).replace("<", "\\u003c")
 
 	return context
 
 
-def _get_beneficiarios():
-	campos = [
-		"name",
-		"nome_completo",
-		"inicio_do_pagamento",
-		"valor_contribuicao",
-		"qt_contribuicoes_pagas",
-		"qt_contribuicoes_atrasadas",
-		"status_no_grupo",
-		"status_cobranca",
-		"email_cobranca",
-		"telefone_cobranca",
-	]
-	# Buscamos Beneficiário ativos e também os Inativos com cobrança ativa (para status 'Cancelar')
-	beneficiarios_ativos = frappe.get_all(
-		"Associado",
-		filters={"status_no_grupo": "Ativo", "categoria": "Beneficiário"},
-		fields=campos,
-		order_by="nome_completo asc",
-	)
-	beneficiarios_cancelar = frappe.get_all(
-		"Associado",
-		filters={
-			"status_no_grupo": "Inativo",
-			"status_cobranca": "Ativo",
-			"categoria": "Beneficiário",
-		},
-		fields=campos,
-		order_by="nome_completo asc",
-	)
-	# Unimos listas removendo duplicatas baseadas no ID (name)
-	ids_vistos = set()
-	resultado = []
-	for b in beneficiarios_ativos + beneficiarios_cancelar:
-		if b["name"] not in ids_vistos:
-			ids_vistos.add(b["name"])
-			resultado.append(b)
-	return resultado
-
-
-def _get_pagamentos_por_associado(associados):
-	if not associados:
-		return {}
-	pagamentos = frappe.get_all(
-		"Pagamento Contribuicao Mensal",
-		filters={"associado": ["in", associados]},
-		fields=["name", "associado", "mes_de_referencia", "status", "valor"],
-		order_by="mes_de_referencia desc",
-	)
-	mapa = {}
-	for p in pagamentos:
-		lista = mapa.setdefault(p["associado"], [])
-		lista.append(
-			{
-				"name": p.get("name"),
-				# garantir serialização segura
-				"mes_de_referencia": (
-					p.get("mes_de_referencia").isoformat()
-					if getattr(p.get("mes_de_referencia"), "isoformat", None)
-					else p.get("mes_de_referencia")
-				),
-				"status": p.get("status"),
-				"valor": (float(p.get("valor")) if p.get("valor") is not None else None),
-			}
-		)
-	return mapa
-
-
-def _calcular_status_geral(assoc_row, inicio, pagamentos, hoje):
-	# Nova regra: Inativo + status_cobranca=Ativo => Cancelar
-	if assoc_row.get("status_no_grupo") == "Inativo" and assoc_row.get("status_cobranca") == "Ativo":
-		return "Cancelar"
-	janela_cadastro = add_days(inicio, -30) if inicio else None
-	if (
-		assoc_row.get("status_no_grupo") == "Ativo"
-		and assoc_row.get("status_cobranca") == "Inativo"
-		and janela_cadastro
-		and hoje >= janela_cadastro
-	):
-		return "Cadastrar"
-	qt_atrasadas = assoc_row.get("qt_contribuicoes_atrasadas") or 0
-	if inicio and inicio > hoje:
-		return "Aguardar"
-	if qt_atrasadas > 0:
-		return "Atrasado"
-	for p in pagamentos:
-		if p.get("status") == "Em Aberto":
-			return "Em Aberto"
-	return "Pago"
-
-
-# Melhorias futuras sugeridas:
-# - Criar endpoint separado (whitelisted) que retorne JSON para permitir front 100% dinâmico.
-# - Aplicar cache curto (ex: 5 min) para evitar múltiplas queries pesadas.
-# - Suporte a filtros (ramo, seção) via query params.
-# - Paginação quando nº de associados crescer.
+def _agrupar_por_situacao(associados: list[dict]) -> dict[str, list[dict]]:
+	"""Agrupa os contribuintes pela situação apurada, preservando a ordem alfabética."""
+	agrupado: dict[str, list[dict]] = {situacao: [] for situacao in ORDEM_EXIBICAO}
+	for associado in associados:
+		agrupado.setdefault(associado["situacao"], []).append(associado)
+	return agrupado

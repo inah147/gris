@@ -29,10 +29,12 @@ Este arquivo é o ponto de entrada do Claude Code neste repositório. Ele **não
 
 | Preciso de... | Arquivo |
 |---|---|
+| Acessar o GRIS pelo Claude (integração MCP: associados, transações, atualizações) | [MCP_CLAUDE.md](MCP_CLAUDE.md) |
 | Deploy em Docker/produção | [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) |
 | Setup inicial do ambiente no Windows (WSL2, Docker, `fm`) | [WINDOWS_SETUP.md](WINDOWS_SETUP.md) |
 | Dados de fixtures (roles, categorias, UOs) | [FIXTURES.md](FIXTURES.md) |
 | Permissões e ambiente do auto mode do Claude Code | [.claude/settings.json](.claude/settings.json) |
+| Bench para rodar testes nas sessões do Claude Code na web | [.claude/hooks/session-start.sh](.claude/hooks/session-start.sh) |
 
 ## Regra de manutenção deste índice
 

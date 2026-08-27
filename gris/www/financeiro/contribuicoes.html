@@ -1,86 +1,266 @@
 {% extends "templates/web_sidebar_base.html" %}
-{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, empty, field %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/tabs.html.jinja" import tabs %}
 {% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
 
 {% block title %}Contribuições Mensais{% endblock %}
 
 {% set active_link = '/financeiro/contribuicoes' %}
 
+{% macro brl(valor) %}{{ frappe.utils.fmt_money(valor or 0, currency="BRL") }}{% endmacro %}
+
+{% macro situacao_badge(situacao, slug) %}
+<span class="badge contrib-badge contrib-badge--{{ slug }}">{{ situacao }}</span>
+{% endmacro %}
+
 {% block page_header %}
 <section class="financeiro-page-header" aria-labelledby="financeiro-contrib-title">
 	<div class="flex flex-col gap-2 max-w-2xl">
 		<h1 id="financeiro-contrib-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Contribuições Mensais</h1>
-		<p class="m-0 text-base leading-relaxed text-muted-foreground">Acompanhe o status das contribuições dos associados.</p>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">
+			Apurado a partir das transações do extrato geral: cada crédito da categoria
+			&ldquo;Contribuição Mensal&rdquo; vinculado a um associado conta como contribuição recebida.
+		</p>
 	</div>
 </section>
 {% endblock %}
 
 {% block main %}
+<script id="contrib-dados-graficos" type="application/json">{{ dados_graficos | safe }}</script>
 <script>
 	window.canManageContrib = JSON.parse('{{ can_manage_contributions | tojson }}');
+	window.contribMeses = JSON.parse('{{ meses_selecionado | tojson }}');
 </script>
 
 <article class="card mb-4">
 	<section>
-		<div class="field">
-			<label class="label" for="filtroAssociado">Filtrar por nome</label>
-			<input type="search" id="filtroAssociado" class="input" placeholder="Digite o nome do beneficiário…" oninput="aplicarFiltroAssociado()" />
+		<form method="get" id="contrib-filtro-periodo" class="contrib-filtros">
+			<div class="field">
+				<label class="label" for="contrib-periodo">Período apurado</label>
+				{{ select(id="contrib-periodo", name="meses", items=opcoes_periodo, selected=meses_selecionado) }}
+			</div>
+			<div class="contrib-filtros__actions">
+				<button type="submit" class="btn-sm-primary">Aplicar</button>
+			</div>
+		</form>
+	</section>
+</article>
+
+{% set painel_geral %}
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+	<article class="card metric-card">
+		<section>
+			<p class="m-0 text-sm text-muted-foreground">Recebido no período</p>
+			<p class="m-0 mt-1 text-2xl font-semibold text-foreground contrib-num">{{ brl(totais.recebido_total) }}</p>
+			<p class="m-0 mt-2 text-xs text-muted-foreground">
+				{{ brl(totais.recebido_vinculado) }} identificado &middot; {{ brl(totais.recebido_nao_vinculado) }} a identificar
+			</p>
+		</section>
+	</article>
+	<article class="card metric-card">
+		<section>
+			<p class="m-0 text-sm text-muted-foreground">Esperado no período</p>
+			<p class="m-0 mt-1 text-2xl font-semibold text-foreground contrib-num">{{ brl(totais.esperado) }}</p>
+			<p class="m-0 mt-2 text-xs text-muted-foreground">
+				Saldo de {{ brl(totais.saldo) }} entre identificado e esperado
+			</p>
+		</section>
+	</article>
+	<article class="card metric-card">
+		<section>
+			<p class="m-0 text-sm text-muted-foreground">Adimplência</p>
+			<p class="m-0 mt-1 text-2xl font-semibold text-foreground contrib-num">
+				{{ '{:.1f}'.format(totais.adimplencia|float).replace('.', ',') }}%
+			</p>
+			<p class="m-0 mt-2 text-xs text-muted-foreground">
+				{{ totais.meses_quitados }} de {{ totais.meses_devidos }} meses quitados
+			</p>
+		</section>
+	</article>
+	<article class="card metric-card">
+		<section>
+			<p class="m-0 text-sm text-muted-foreground">Contribuintes</p>
+			<p class="m-0 mt-1 text-2xl font-semibold text-foreground contrib-num">{{ totais.contribuintes }}</p>
+			<p class="m-0 mt-2 text-xs text-muted-foreground">
+				{{ totais.com_pendencia }} com pendência &middot; Dirigentes não contribuem
+			</p>
+		</section>
+	</article>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+	{% call card(title="Recebido × esperado por mês", attrs={"class": "chart-card"}) %}
+		<div id="chart-contrib-recebido-esperado" class="financeiro-chart" style="min-height:320px;">
+			<div class="financeiro-chart__loading">
+				<span class="spinner" role="status" aria-label="Carregando"></span>
+				<span>Carregando…</span>
+			</div>
+		</div>
+	{% endcall %}
+	{% call card(title="Adimplência por mês", attrs={"class": "chart-card"}) %}
+		<div id="chart-contrib-adimplencia" class="financeiro-chart" style="min-height:320px;">
+			<div class="financeiro-chart__loading">
+				<span class="spinner" role="status" aria-label="Carregando"></span>
+				<span>Carregando…</span>
+			</div>
+		</div>
+	{% endcall %}
+</div>
+
+{% if totais.a_cadastrar or totais.a_cancelar %}
+<article class="card">
+	<section>
+		<h2 class="financeiro-section-title m-0 mb-2">Pendências de cadastro da cobrança</h2>
+		<p class="m-0 text-sm text-muted-foreground">
+			{{ totais.a_cadastrar }} contribuinte(s) aguardando cadastro da cobrança e
+			{{ totais.a_cancelar }} com cobrança ativa mesmo já inativos no grupo.
+			Use a aba <strong>Por associado</strong> para tratar caso a caso.
+		</p>
+	</section>
+</article>
+{% endif %}
+{% endset %}
+
+{% set painel_associados %}
+<article class="card mb-4">
+	<section>
+		<div class="contrib-filtros">
+			<div class="field">
+				<label class="label" for="filtroAssociado">Filtrar por nome</label>
+				<input type="search" id="filtroAssociado" class="input" placeholder="Digite o nome do contribuinte…" />
+			</div>
+			<div class="field">
+				<label class="label" for="filtroSituacao">Situação</label>
+				{% set ns_situacao = namespace(items=[{"label": "Todas", "value": ""}]) %}
+				{% for situacao in ordem_situacao %}
+					{% set contagem = (associados_por_situacao.get(situacao) or []) | length %}
+					{% set ns_situacao.items = ns_situacao.items + [{"label": situacao ~ " (" ~ contagem ~ ")", "value": situacao}] %}
+				{% endfor %}
+				{{ select(id="filtroSituacao", name="situacao", items=ns_situacao.items) }}
+			</div>
 		</div>
 	</section>
 </article>
 
-{% set ordem = ["Cadastrar", "Cancelar", "Aguardar", "Atrasado", "Em Aberto", "Pago"] %}
-{% set has_any = namespace(value=false) %}
-{% for status in ordem %}
-	{% set lista = (contribuicoes.get(status) or []) if contribuicoes else [] %}
-	{% if lista|length > 0 %}
-		{% set has_any.value = true %}
-		{% set status_id = 'status-' + (status | replace(' ', '-') | lower) %}
-		<section class="contrib-status-bloco" id="{{ status_id }}" data-status="{{ status }}">
-			<header class="flex items-baseline gap-2 mb-3">
-				<h2 class="financeiro-section-title m-0">{{ status }}</h2>
-				<span class="text-sm text-muted-foreground" data-status-count>({{ lista|length }})</span>
-			</header>
-			<article class="card">
-				<section class="p-0 min-w-0">
-					<div class="overflow-x-auto">
-						<table class="table contrib-status-list" data-total="{{ lista|length }}">
-							<thead>
-								<tr>
-									<th>Beneficiário</th>
-									<th class="text-right">Valor da cobrança</th>
-									<th class="text-right">Ações</th>
-								</tr>
-							</thead>
-							<tbody>
-								{% for assoc in lista %}
-									{% set page = (loop.index0 // 12) + 1 %}
-									<tr class="contrib-status-row" data-page="{{ page }}" data-nome="{{ assoc.nome }}" data-assoc='{{ assoc | tojson }}'>
-										<td class="font-medium">{{ assoc.nome }}</td>
-										<td class="text-right whitespace-nowrap">R$ {{ '{:,.2f}'.format((assoc.valor_contribuicao or 0)|float).replace(',', 'X').replace('.', ',').replace('X', '.') }}</td>
-										<td class="text-right">
-											<button type="button" class="btn-sm-outline" onclick="mostrarDetalhes(this)">Detalhes</button>
-										</td>
-									</tr>
-								{% endfor %}
-							</tbody>
-						</table>
-					</div>
-				</section>
-			</article>
-			<nav class="contrib-status-pagination pagination mt-3" data-status-pag="{{ status }}" aria-label="Paginação de {{ status }}"></nav>
-		</section>
-	{% endif %}
-{% endfor %}
-
-{% if not has_any.value %}
+{% set total_associados = apuracao.associados | length %}
+{% if total_associados %}
+<article class="card">
+	<section class="p-0 min-w-0">
+		<div class="overflow-x-auto">
+			<table class="table contrib-tabela" id="contribTabela">
+				<thead>
+					<tr>
+						<th>Contribuinte</th>
+						<th>Categoria</th>
+						<th>Situação</th>
+						<th class="text-right">Esperado/mês</th>
+						<th class="text-right">Recebido no período</th>
+						<th class="text-right">Meses quitados</th>
+						<th class="text-right">Ações</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for situacao in ordem_situacao %}
+						{% for assoc in (associados_por_situacao.get(situacao) or []) %}
+						<tr class="contrib-linha"
+							data-nome="{{ assoc.nome }}"
+							data-situacao="{{ assoc.situacao }}"
+							data-assoc='{{ assoc | tojson }}'>
+							<td class="font-medium">
+								{{ assoc.nome }}
+								{% if assoc.acao_cadastro %}
+									<span class="badge badge-outline contrib-badge--acao">{{ assoc.acao_cadastro }}</span>
+								{% endif %}
+							</td>
+							<td class="text-muted-foreground">{{ assoc.categoria or '—' }}</td>
+							<td>{{ situacao_badge(assoc.situacao, assoc.situacao_slug) }}</td>
+							<td class="text-right whitespace-nowrap contrib-num">{{ brl(assoc.esperado_mensal) }}</td>
+							<td class="text-right whitespace-nowrap contrib-num">{{ brl(assoc.total_recebido) }}</td>
+							<td class="text-right whitespace-nowrap contrib-num">{{ assoc.meses_quitados }}/{{ assoc.meses_devidos }}</td>
+							<td class="text-right">
+								<button type="button" class="btn-sm-outline" data-acao="detalhes">Detalhes</button>
+							</td>
+						</tr>
+						{% endfor %}
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</section>
+</article>
+<p id="contribSemResultado" class="hidden text-sm text-muted-foreground mt-3">
+	Nenhum contribuinte corresponde ao filtro aplicado.
+</p>
+<nav class="contrib-paginacao pagination mt-3" id="contribPaginacao" aria-label="Paginação de contribuintes"></nav>
+{% else %}
 	{{ empty(
-		title="Nenhuma contribuição registrada",
-		description="Quando houver associados com cobranças, eles aparecerão agrupados aqui por status.",
-		icon=lucide_icon("inbox", size="md")
+		title="Nenhum contribuinte cadastrado",
+		description="Associados ativos das categorias Beneficiário e Escotista aparecem aqui. Dirigentes não contribuem.",
+		icon=lucide_icon("users", size="md")
 	) }}
 {% endif %}
+{% endset %}
+
+{% set painel_identificar %}
+{% if nao_vinculadas %}
+<article class="card mb-4">
+	<section>
+		<p class="m-0 text-sm text-muted-foreground">
+			Créditos da categoria &ldquo;Contribuição Mensal&rdquo; que entraram na conta mas ainda não têm
+			beneficiário atribuído. Eles somam no total recebido, mas não podem ser apurados por associado.
+			Abra o detalhe da transação para escolher o contribuinte.
+		</p>
+	</section>
+</article>
+<article class="card">
+	<section class="p-0 min-w-0">
+		<div class="overflow-x-auto">
+			<table class="table">
+				<thead>
+					<tr>
+						<th>Data</th>
+						<th>Descrição</th>
+						<th>Carteira</th>
+						<th class="text-right">Valor</th>
+						<th class="text-right">Ações</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for transacao in nao_vinculadas %}
+					<tr>
+						<td class="whitespace-nowrap">{{ frappe.utils.formatdate(transacao.data) if transacao.data else '—' }}</td>
+						<td>{{ transacao.descricao or '—' }}</td>
+						<td class="text-muted-foreground">{{ transacao.carteira or '—' }}</td>
+						<td class="text-right whitespace-nowrap contrib-num">{{ brl(transacao.valor) }}</td>
+						<td class="text-right">
+							<a class="btn-sm-outline" href="/financeiro/detalhe_extrato?name={{ transacao.name | urlencode }}">Atribuir</a>
+						</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</section>
+</article>
+{% else %}
+	{{ empty(
+		title="Nada a identificar",
+		description="Todas as contribuições recebidas no período estão vinculadas a um contribuinte.",
+		icon=lucide_icon("circle-check", size="md")
+	) }}
+{% endif %}
+{% endset %}
+
+{{ tabs(
+	id="contrib-tabs",
+	tabsets=[
+		{"id": "visao-geral", "tab": "Visão geral", "panel": painel_geral},
+		{"id": "por-associado", "tab": "Por associado", "panel": painel_associados},
+		{"id": "a-identificar", "tab": "A identificar (" ~ totais.transacoes_nao_vinculadas ~ ")", "panel": painel_identificar}
+	]
+) }}
 {% endblock %}
 
 {% block base_scripts %}
@@ -90,55 +270,77 @@
 <button type="button" class="btn-ghost" onclick="this.closest('dialog').close()">Fechar</button>
 {% endset %}
 
-{% call dialog(id="detalheModal", title="Detalhes do beneficiário", footer=detalhe_footer, dialog_attrs={"class": "financeiro-dialog financeiro-dialog--lg"}) %}
-	{% if can_manage_contributions %}
-	<div id="cancelarContainer" class="hidden mb-4" data-manage-only="1">
-		<button type="button" id="btnCadastroCancelado" class="btn-sm-destructive" onclick="cadastroCancelado()">Cadastro Cancelado</button>
-	</div>
-	{% endif %}
-
-	<div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
-		<div id="valorContainer" class="flex-1 min-w-0">
-			<strong class="text-sm">Valor atual:</strong>
-			<span class="text-sm">R$ <span id="detalheValor">—</span></span>
+{% call dialog(id="detalheModal", title="Detalhes do contribuinte", footer=detalhe_footer, dialog_attrs={"class": "financeiro-dialog financeiro-dialog--lg"}) %}
+	<div class="contrib-detalhe-resumo mb-4">
+		<div>
+			<span class="text-xs text-muted-foreground block">Valor esperado por mês</span>
+			<strong class="text-sm contrib-num">R$ <span id="detalheValor">—</span></strong>
+		</div>
+		<div>
+			<span class="text-xs text-muted-foreground block">Recebido no período</span>
+			<strong class="text-sm contrib-num">R$ <span id="detalheRecebido">—</span></strong>
+		</div>
+		<div>
+			<span class="text-xs text-muted-foreground block">Crédito acumulado</span>
+			<strong class="text-sm contrib-num">R$ <span id="detalheCredito">—</span></strong>
 		</div>
 		<div id="acoesValor">
 			{% if can_manage_contributions %}
-			<button type="button" id="btnAlterarValor" class="btn-sm-outline" onclick="alterarValor()">Alterar Valor</button>
+			<button type="button" id="btnAlterarValor" class="btn-sm-outline" data-acao="alterar-valor">Alterar valor</button>
 			{% endif %}
 		</div>
 	</div>
+
+	<div id="valorContainer" class="hidden mb-4"></div>
 
 	{% if can_manage_contributions %}
 	<div id="cobrancaContainer" class="mb-4" data-manage-only="1">
 		<div class="flex items-start justify-between gap-3 flex-wrap">
 			<div class="flex-1 min-w-0 flex flex-col gap-1">
-				<div class="text-sm"><strong>E-mail Cobrança:</strong> <span id="emailCobranca">—</span></div>
-				<div class="text-sm"><strong>Telefone Cobrança:</strong> <span id="foneCobranca">—</span></div>
+				<div class="text-sm"><strong>E-mail de cobrança:</strong> <span id="emailCobranca">—</span></div>
+				<div class="text-sm"><strong>Telefone de cobrança:</strong> <span id="foneCobranca">—</span></div>
 			</div>
 			<div id="acoesCobranca">
-				<button type="button" id="btnEditarCobranca" class="btn-sm-outline" onclick="editarCobranca()">Editar Cobrança</button>
+				<button type="button" id="btnEditarCobranca" class="btn-sm-outline" data-acao="editar-cobranca">Editar cobrança</button>
 			</div>
 		</div>
 	</div>
+
+	<div id="acoesCadastro" class="flex gap-2 flex-wrap mb-4" data-manage-only="1">
+		<button type="button" id="btnCadastroRealizado" class="btn-sm-primary hidden" data-acao="cadastro-realizado">Cadastro realizado</button>
+		<button type="button" id="btnCadastroCancelado" class="btn-sm-destructive hidden" data-acao="cadastro-cancelado">Cadastro cancelado</button>
+	</div>
 	{% endif %}
 
-	<div id="cadastroContainer" class="hidden mb-4" data-manage-only="1">
-		{% if can_manage_contributions %}
-		<button type="button" id="btnCadastroRealizado" class="btn-primary btn-sm" onclick="cadastroRealizado()">Cadastro Realizado</button>
-		{% endif %}
-	</div>
-
-	<div id="tabelaPagamentosContainer" class="overflow-x-auto">
-		<table class="table contrib-pagamentos-tabela">
+	<h3 class="text-sm font-semibold mb-2">Apuração mês a mês</h3>
+	<div class="overflow-x-auto mb-4">
+		<table class="table contrib-meses-tabela">
 			<thead>
 				<tr>
-					<th>Mês Referência</th>
-					<th>Status</th>
-					<th class="text-right">Valor</th>
+					<th>Mês</th>
+					<th>Situação</th>
+					<th class="text-right">Esperado</th>
+					<th class="text-right">Recebido</th>
 				</tr>
 			</thead>
-			<tbody id="detalhePagamentos"></tbody>
+			<tbody id="detalheMeses"></tbody>
+		</table>
+	</div>
+
+	<h3 class="text-sm font-semibold mb-2">Transações do período</h3>
+	<div class="overflow-x-auto">
+		<table class="table contrib-transacoes-tabela">
+			<thead>
+				<tr>
+					<th>Data</th>
+					<th>Descrição</th>
+					<th class="text-right">Valor</th>
+					<th class="text-right"></th>
+				</tr>
+			</thead>
+			<tbody id="detalheTransacoes">
+				<tr><td colspan="4" class="text-sm text-muted-foreground">—</td></tr>
+			</tbody>
 		</table>
 	</div>
 {% endcall %}

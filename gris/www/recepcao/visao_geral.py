@@ -3,30 +3,17 @@ import json
 import re
 
 import frappe
-from frappe.utils import add_days, format_date, getdate
+from frappe.utils import format_date, getdate
 
 from gris.api.portal_access import enrich_context
+from gris.api.recepcao_funil import (
+	FIELD_INTERVAL_MAP,
+	STEPS_DEF,
+	calcular_etapas,
+	carregar_configuracao,
+)
 
 no_cache = 1
-
-STEPS_DEF = [
-	{"field": "visita_agendada", "label": "Visita Agendada"},
-	{"field": "primeira_visita_realizada", "label": "Primeira Visita Realizada"},
-	{"field": "dados_para_registro_enviados", "label": "Dados Enviados"},
-	{"field": "registro_criado_no_paxtu", "label": "Registro no Paxtu"},
-	{"field": "registro_provisorio_pago", "label": "Registro Provisório Pago", "conditional": True},
-	{
-		"field": "registro_provisorio_efetivado",
-		"label": "Registro Provisório Efetivado",
-		"conditional": True,
-	},
-	{"field": "pesquisa_de_novos_associados_respondida", "label": "Pesquisa Respondida"},
-	{"field": "ficha_medica_preenchida", "label": "Ficha Médica"},
-	{"field": "id_escoteiros_criado", "label": "ID Escoteiros Criado"},
-	{"field": "registro_definitivo_pago", "label": "Registro Definitivo Pago"},
-	{"field": "registro_definitivo_efetivado", "label": "Registro Definitivo Efetivado"},
-	{"field": "reuniao_de_acolhida_realizada", "label": "Reunião de Acolhida"},
-]
 
 
 def _normalize_whatsapp_phone(phone):
@@ -67,25 +54,9 @@ def get_context(context):
 		"Acompanhamento",
 	]
 
-	# Fetch configuration for intervals
-	try:
-		config = frappe.get_doc("Configuracoes de Recepcao").as_dict()
-	except (frappe.DoesNotExistError, ImportError):
-		config = {}
-
-	# Map Novo Associado fields to Config fields
-	field_interval_map = {
-		"dados_para_registro_enviados": "dados_para_registro_enviados",
-		"registro_criado_no_paxtu": "registro_criado_no_paxtu",
-		"registro_provisorio_pago": "registro_provisorio_pago",
-		"registro_provisorio_efetivado": "registro_provisorio_efetivado",
-		"pesquisa_de_novos_associados_respondida": "pesquisa_de_novos_associados_respondida",
-		"ficha_medica_preenchida": "ficha_medica_preenchida",
-		"id_escoteiros_criado": "id_escoteiros_criado",
-		"registro_definitivo_pago": "registro_definitivo_pago",
-		"registro_definitivo_efetivado": "registro_definitivo_efetivado",
-		"reuniao_de_acolhida_realizada": "reuniao_de_acolhida_realizada",
-	}
+	# Intervalos entre etapas (mesma regra usada pela integração MCP)
+	config = carregar_configuracao()
+	field_interval_map = FIELD_INTERVAL_MAP
 
 	# Fields to fetch for Novo Associado
 	fields_to_fetch = [
@@ -218,9 +189,6 @@ def get_context(context):
 		"Pioneiro": "ramo-pioneiro",
 	}
 
-	# Steps definition for infographic
-	steps_def = STEPS_DEF
-
 	# Group by status
 	kanban_data = {status: [] for status in statuses}
 
@@ -238,41 +206,7 @@ def get_context(context):
 			base_date = visit_rec.data_da_visita if visit_rec else None
 
 			# Process steps
-			associado.steps = []
-			is_definitivo = associado.tipo_de_registro == "Definitivo"
-
-			current_calc_date = base_date
-
-			for step in steps_def:
-				if step.get("conditional") and is_definitivo:
-					continue
-
-				val = associado.get(step["field"])
-				is_completed = bool(val)
-				step_data = {
-					"label": step["label"],
-					"completed": is_completed,
-					"field": step["field"],
-				}
-
-				# Calculate dates for pending steps
-				if current_calc_date:
-					config_field_name = field_interval_map.get(step["field"])
-					if config_field_name:
-						days_val = config.get(config_field_name) or 0
-						try:
-							days_int = int(days_val)
-							current_calc_date = add_days(current_calc_date, days_int)
-							# If not completed, show the estimated date
-							if not is_completed:
-								step_data["estimated_date"] = format_date(current_calc_date)
-								# Check if overdue
-								if current_calc_date < today:
-									step_data["is_overdue"] = True
-						except (ValueError, TypeError):
-							pass
-
-				associado.steps.append(step_data)
+			associado.steps = calcular_etapas(associado, config, base_date, today)
 
 			associado.steps_json = json.dumps(associado.steps, default=str)
 
@@ -324,12 +258,10 @@ def get_context(context):
 
 	# Items para o componente `select` do design system Basecoat
 	context.recepcao_user_items = [
-		{"label": u.full_name or u.name, "value": u.name}
-		for u in context.recepcao_users
+		{"label": u.full_name or u.name, "value": u.name} for u in context.recepcao_users
 	]
 	context.ramo_items = [
-		{"label": r, "value": r}
-		for r in ["Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro"]
+		{"label": r, "value": r} for r in ["Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro"]
 	]
 
 	return context

@@ -54,9 +54,7 @@ class TestTransacaoPortao3(FrappeTestCase):
 		self.assertEqual(geral.valor, 120)
 
 	def test_transferencia_entre_carteiras_tambem_e_sistema(self):
-		origem = self._importar(
-			"transferência interna", 50, "Crédito", tipo="TRANFERÊNCIA ENTRE CARTEIRAS"
-		)
+		origem = self._importar("transferência interna", 50, "Crédito", tipo="TRANFERÊNCIA ENTRE CARTEIRAS")
 
 		geral = frappe.get_doc("Transacao Extrato Geral", {"id": origem.id})
 		self.assertEqual(geral.fonte, "Sistema")

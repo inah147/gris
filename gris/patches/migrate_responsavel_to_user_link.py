@@ -118,9 +118,5 @@ def _clear_and_log(tarefa_name: str, responsavel_anterior: str, motivo: str) -> 
 	)
 	frappe.log_error(
 		title="Tarefa orfa na migracao responsavel->User",
-		message=(
-			f"Tarefa: {tarefa_name}\n"
-			f"Responsavel anterior: {responsavel_anterior}\n"
-			f"Motivo: {motivo}"
-		),
+		message=(f"Tarefa: {tarefa_name}\nResponsavel anterior: {responsavel_anterior}\nMotivo: {motivo}"),
 	)

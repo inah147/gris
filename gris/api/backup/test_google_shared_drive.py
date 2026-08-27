@@ -38,9 +38,11 @@ class _FakeFilesResource:
 		self.list_calls.append(kwargs)
 
 		return _FakeRequest(
-			lambda: self.list_pages[index]
-			if index < len(self.list_pages)
-			else {"files": [], "nextPageToken": None}
+			lambda: (
+				self.list_pages[index]
+				if index < len(self.list_pages)
+				else {"files": [], "nextPageToken": None}
+			)
 		)
 
 	def delete(self, fileId, supportsAllDrives=True):
@@ -100,11 +102,7 @@ def _snapshot(folder_id, created_time):
 
 def _make_http_error(status_code, message):
 	response = _DummyHttpResponse(status_code)
-	content = (
-		"{"
-		f'"error":{{"code":{status_code},"message":"{message}"}}'
-		"}"
-	).encode()
+	content = (f'{{"error":{{"code":{status_code},"message":"{message}"}}}}').encode()
 	return HttpError(response, content, uri="https://www.googleapis.com/drive/v3/files/test")
 
 
@@ -181,7 +179,9 @@ class TestGoogleSharedDriveBackup(FrappeTestCase):
 	def test_retention_skips_recent_snapshot(self):
 		settings = _DummySettings(retention_days=30)
 		recent_time = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=5)
-		drive = _FakeDrive(list_pages=[{"files": [_snapshot("recent-1", recent_time)], "nextPageToken": None}])
+		drive = _FakeDrive(
+			list_pages=[{"files": [_snapshot("recent-1", recent_time)], "nextPageToken": None}]
+		)
 
 		result = backup_module._apply_retention_policy(drive, settings)
 
@@ -203,7 +203,9 @@ class TestGoogleSharedDriveBackup(FrappeTestCase):
 
 		try:
 			_patch_module_attr(backup_module, "_get_settings", lambda: settings, patched_attrs)
-			_patch_module_attr(backup_module, "_validate_settings", lambda current_settings: None, patched_attrs)
+			_patch_module_attr(
+				backup_module, "_validate_settings", lambda current_settings: None, patched_attrs
+			)
 			_patch_module_attr(backup_module, "_get_google_drive_service", lambda: object(), patched_attrs)
 			_patch_module_attr(
 				backup_module,
@@ -217,7 +219,9 @@ class TestGoogleSharedDriveBackup(FrappeTestCase):
 				lambda drive, current_settings: {"id": "snapshot-1", "name": "snapshot-1"},
 				patched_attrs,
 			)
-			_patch_module_attr(backup_module, "_generate_backups", lambda current_settings: ["db.sql.gz"], patched_attrs)
+			_patch_module_attr(
+				backup_module, "_generate_backups", lambda current_settings: ["db.sql.gz"], patched_attrs
+			)
 			_patch_module_attr(
 				backup_module,
 				"_upload_file_to_shared_drive",

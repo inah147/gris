@@ -49,9 +49,10 @@
 
 		const data = new FormData(form);
 		const tipoCoord = getTipoCoord();
-		const coordenador = tipoCoord === "Responsavel"
-			? (data.get("coordenador_responsavel") || "").trim()
-			: (data.get("coordenador_associado") || "").trim();
+		const coordenador =
+			tipoCoord === "Responsavel"
+				? (data.get("coordenador_responsavel") || "").trim()
+				: (data.get("coordenador_associado") || "").trim();
 
 		const payload = {
 			nome_festa: (data.get("nome_festa") || "").trim(),

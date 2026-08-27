@@ -269,6 +269,5 @@ def get_phone_countries() -> list[dict]:
 	and ``flag`` (emoji built from the ISO code).
 	"""
 	return [
-		{"iso": iso, "name": name, "dial": dial, "flag": _flag(iso)}
-		for iso, name, dial in _RAW_COUNTRIES
+		{"iso": iso, "name": name, "dial": dial, "flag": _flag(iso)} for iso, name, dial in _RAW_COUNTRIES
 	]

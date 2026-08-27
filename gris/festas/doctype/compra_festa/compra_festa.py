@@ -102,9 +102,7 @@ class CompraFesta(Document):
 		qtd_pacote = 0.0
 		valor_pacote = 0.0
 		if escolhida and flt(escolhida.quantidade) > 0:
-			qtd_pacote = converter(
-				flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra
-			)
+			qtd_pacote = converter(flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra)
 			valor_pacote = 0.0 if escolhida.doacao else flt(escolhida.valor)
 
 		# Busca público por cenário da festa
@@ -174,9 +172,7 @@ class CompraFesta(Document):
 		quantidade_final = flt(self.quantidade_compra_final)
 		qtd_pacote = 0.0
 		if flt(escolhida.quantidade) > 0:
-			qtd_pacote = converter(
-				flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra
-			)
+			qtd_pacote = converter(flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra)
 		if quantidade_final <= 0 or qtd_pacote <= 0:
 			self.valor_total_compra = 0
 			return
@@ -187,9 +183,7 @@ class CompraFesta(Document):
 		escolhida = self._cotacao_escolhida()
 		qtd_pacote = 0.0
 		if escolhida and flt(escolhida.quantidade) > 0:
-			qtd_pacote = converter(
-				flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra
-			)
+			qtd_pacote = converter(flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra)
 
 		valor_total = flt(self.cotacao_escolhida_valor)
 		for uso in self.usos_em_produto or []:

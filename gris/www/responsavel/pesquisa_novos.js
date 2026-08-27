@@ -20,7 +20,11 @@ frappe.ready(function () {
 			data[key] = value;
 		}
 
-		if (!data.como_conheceu_movimento || !data.como_voce_conheceu_grupo || !data.nps_recepcao) {
+		if (
+			!data.como_conheceu_movimento ||
+			!data.como_voce_conheceu_grupo ||
+			!data.nps_recepcao
+		) {
 			showToast({
 				title: "Campos obrigatórios",
 				description: "Preencha as duas seleções e a nota NPS antes de enviar.",

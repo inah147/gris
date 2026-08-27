@@ -132,9 +132,7 @@ def seed_responsaveis(n: int) -> list[str]:
 				"nome_completo": nome,
 				"data_de_nascimento": fake_data_nascimento_adulto(),
 				"sexo": random.choice(["Masculino", "Feminínio"]),
-				"estado_civil": random.choice(
-					["Solteiro(a)", "Casado(a)", "Divorciado(a)", "Viúvo(a)"]
-				),
+				"estado_civil": random.choice(["Solteiro(a)", "Casado(a)", "Divorciado(a)", "Viúvo(a)"]),
 				"cpf": cpf,
 				"rg": fake.numerify("##.###.###-#"),
 				"orgao_expedidor": "SSP",
@@ -231,8 +229,12 @@ def seed_novos_associados(por_ramo: int) -> list[str]:
 					"ramo": ramo,
 					"tipo_de_registro": random.choice(["Provisório", "Definitivo"]),
 					"visita_agendada": 1 if status in {"Visita Agendada", "Aguardar Dados"} else 0,
-					"primeira_visita_realizada": 1 if status not in {"Novo Contato", "Conversa Inicial"} else 0,
-					"dados_para_registro_enviados": 1 if status in {"Fazer Registro", "Acompanhamento", "Concluído"} else 0,
+					"primeira_visita_realizada": 1
+					if status not in {"Novo Contato", "Conversa Inicial"}
+					else 0,
+					"dados_para_registro_enviados": 1
+					if status in {"Fazer Registro", "Acompanhamento", "Concluído"}
+					else 0,
 					"registro_definitivo_efetivado": 1 if status == "Concluído" else 0,
 				}
 			)
@@ -293,7 +295,13 @@ def seed_associados(por_combinacao: int, extras: int) -> list[str]:
 		hoje = date.today()
 		validade = hoje + timedelta(days=180) if status == "Válido" else hoje - timedelta(days=60)
 		idade = random.randint(7, 21) if categoria == "Beneficiário" else random.randint(25, 60)
-		ramo_efetivo = ramo if ramo else (random.choice([r[0] for r in RAMO_FAIXAS]) if categoria == "Beneficiário" else "Não se aplica")
+		ramo_efetivo = (
+			ramo
+			if ramo
+			else (
+				random.choice([r[0] for r in RAMO_FAIXAS]) if categoria == "Beneficiário" else "Não se aplica"
+			)
+		)
 		doc = frappe.get_doc(
 			{
 				"doctype": "Associado",
@@ -331,7 +339,9 @@ def seed_associados(por_combinacao: int, extras: int) -> list[str]:
 				"secao": "Alcateia" if ramo_efetivo == "Lobinho" else "",
 				"eleito": "Não",
 				"valor_contribuicao": 60.0 if categoria == "Beneficiário" else 0,
-				"status_cobranca": "Ativo" if categoria == "Beneficiário" and status_grupo == "Ativo" else "Inativo",
+				"status_cobranca": "Ativo"
+				if categoria == "Beneficiário" and status_grupo == "Ativo"
+				else "Inativo",
 				"inicio_do_pagamento": date(hoje.year, 1, 1) if categoria == "Beneficiário" else None,
 				"email_cobranca": fake.email() if categoria == "Beneficiário" else "",
 				"telefone_cobranca": fake_telefone() if categoria == "Beneficiário" else "",
@@ -361,7 +371,9 @@ def seed_associados(por_combinacao: int, extras: int) -> list[str]:
 	return names
 
 
-def seed_responsavel_vinculo(responsavel_names: list[str], associado_names: list[str], novo_associado_names: list[str]):
+def seed_responsavel_vinculo(
+	responsavel_names: list[str], associado_names: list[str], novo_associado_names: list[str]
+):
 	"""Cria vínculos entre responsáveis e beneficiários (associados E novos associados)."""
 	if not responsavel_names:
 		return
@@ -661,7 +673,9 @@ def seed_singles_gris(creds: dict):
 	# Configuracoes LLM
 	cfg = get(creds, "gris", "configuracoes_llm", default={}) or {}
 	if cfg.get("api_key"):
-		set_single("Configuracoes LLM", {"api_key": cfg["api_key"], "modelo": cfg.get("modelo") or "gpt-4o-mini"})
+		set_single(
+			"Configuracoes LLM", {"api_key": cfg["api_key"], "modelo": cfg.get("modelo") or "gpt-4o-mini"}
+		)
 		print("  → Configuracoes LLM atualizado")
 
 	# Configuracoes WhatsApp

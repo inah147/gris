@@ -17,9 +17,7 @@ class AreadaFesta(Document):
 		if self.flags.get("from_festa_delete"):
 			return
 		if self.nome_area == AREA_PORTARIA_NOME:
-			frappe.throw(
-				_("A área Portaria é obrigatória e não pode ser excluída.")
-			)
+			frappe.throw(_("A área Portaria é obrigatória e não pode ser excluída."))
 
 	def _normalizar_coordenador(self):
 		if self.tipo_coord == "Associado":
@@ -39,11 +37,5 @@ class AreadaFesta(Document):
 			frappe.throw(_("A área Portaria precisa de um coordenador responsável."))
 		if self.tipo_coord == "Associado" and not self.associado_coord:
 			frappe.throw(_("A área Portaria precisa de um coordenador associado."))
-		if self.tipo_coord == "Outro" and not (
-			self.nome_coord and self.email_coord and self.telefone_coord
-		):
-			frappe.throw(
-				_(
-					"A área Portaria precisa de coordenador com nome, e-mail e telefone preenchidos."
-				)
-			)
+		if self.tipo_coord == "Outro" and not (self.nome_coord and self.email_coord and self.telefone_coord):
+			frappe.throw(_("A área Portaria precisa de coordenador com nome, e-mail e telefone preenchidos."))

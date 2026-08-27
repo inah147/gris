@@ -7,7 +7,8 @@ frappe.ready(() => {
 		return;
 	}
 
-	const endpoint = page.dataset.annualEndpoint || "/api/method/gris.api.transparencia.get_arquivos_por_ano";
+	const endpoint =
+		page.dataset.annualEndpoint || "/api/method/gris.api.transparencia.get_arquivos_por_ano";
 	const yearTrigger = document.getElementById(`${yearFilter.id}-trigger`);
 
 	const escapeHtml = (value) => {
@@ -36,7 +37,9 @@ frappe.ready(() => {
 				</div>
 			</section>
 			<footer>
-				<a href="${escapeHtml(doc.arquivo || "#")}" target="_blank" rel="noopener" class="btn-sm-primary transparencia-doc-card__action">
+				<a href="${escapeHtml(
+					doc.arquivo || "#"
+				)}" target="_blank" rel="noopener" class="btn-sm-primary transparencia-doc-card__action">
 					${icon("arrow-up-right", "sm")}
 					<span>Abrir arquivo</span>
 				</a>
@@ -79,20 +82,26 @@ frappe.ready(() => {
 		areasContainer.innerHTML = `
 			<div class="transparencia-area-list">
 				${entries
-					.map(([area, arquivos]) => `
+					.map(
+						([area, arquivos]) => `
 						<section class="transparencia-area">
 							<div class="transparencia-area__header">
 								<div>
 									<h3 class="transparencia-area__title">${escapeHtml(area)}</h3>
-									<p class="transparencia-area__meta">${arquivos.length} documento${arquivos.length === 1 ? "" : "s"} publicado${arquivos.length === 1 ? "" : "s"}.</p>
+									<p class="transparencia-area__meta">${arquivos.length} documento${
+							arquivos.length === 1 ? "" : "s"
+						} publicado${arquivos.length === 1 ? "" : "s"}.</p>
 								</div>
-								<span class="badge badge-secondary">${arquivos.length} item${arquivos.length === 1 ? "" : "s"}</span>
+								<span class="badge badge-secondary">${arquivos.length} item${
+							arquivos.length === 1 ? "" : "s"
+						}</span>
 							</div>
 							<div class="transparencia-doc-grid">
 								${arquivos.map((doc) => renderDocumentCard(doc, "Documento anual")).join("")}
 							</div>
 						</section>
-					`)
+					`
+					)
 					.join("")}
 			</div>
 		`;
@@ -125,9 +134,12 @@ frappe.ready(() => {
 		areasContainer.innerHTML = renderLoadingState();
 
 		try {
-			const response = await fetch(`${endpoint}?ano_referencia=${encodeURIComponent(year)}`, {
-				headers: { Accept: "application/json" },
-			});
+			const response = await fetch(
+				`${endpoint}?ano_referencia=${encodeURIComponent(year)}`,
+				{
+					headers: { Accept: "application/json" },
+				}
+			);
 
 			if (!response.ok) {
 				throw new Error(`Falha ao carregar documentos: ${response.status}`);

@@ -205,9 +205,7 @@ def _enviar_convite_individual(
 	link = f"{frappe.utils.get_url()}/festas/avaliacao_individual?token={token}"
 	titulo = "Lembrete de Avaliação" if lembrete else "Avaliação de Festa"
 	subject = (
-		f"Lembrete: Avaliação da festa {festa_titulo}"
-		if lembrete
-		else f"Avaliação da festa: {festa_titulo}"
+		f"Lembrete: Avaliação da festa {festa_titulo}" if lembrete else f"Avaliação da festa: {festa_titulo}"
 	)
 	message = f"""
 	<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
@@ -275,9 +273,7 @@ def _serialize_avaliacao(avaliacao_doc) -> dict[str, Any]:
 			"email": row.email,
 			"avaliacao_concluida": cint(row.avaliacao_concluida),
 			"resultado_festa": row.resultado_festa if cint(row.avaliacao_concluida) else None,
-			"satisfacao_colaboracao": row.satisfacao_colaboracao
-			if cint(row.avaliacao_concluida)
-			else None,
+			"satisfacao_colaboracao": row.satisfacao_colaboracao if cint(row.avaliacao_concluida) else None,
 			"muito_bom": row.muito_bom if cint(row.avaliacao_concluida) else None,
 			"pontos_melhoria": row.pontos_melhoria if cint(row.avaliacao_concluida) else None,
 		}
@@ -516,9 +512,7 @@ def iniciar_avaliacao_festa(festa_name: str) -> dict[str, Any]:
 	festa_titulo = festa_doc.nome_festa or festa_doc.name
 	phone_by_email = {m["email"].lower(): m["telefone"] for m in team}
 	for row in avaliacao_doc.avaliacoes_individuais:
-		_enviar_convite_individual(
-			festa_titulo, row, phone_by_email.get((row.email or "").lower(), "")
-		)
+		_enviar_convite_individual(festa_titulo, row, phone_by_email.get((row.email or "").lower(), ""))
 
 	return {"ok": True, "avaliacao_name": avaliacao_doc.name}
 
@@ -532,9 +526,7 @@ def reenviar_email_avaliacao_festa(festa_name: str, avaliador_idx: int) -> dict[
 	if not avaliacao_doc:
 		frappe.throw(_("Nenhuma avaliação encontrada para esta festa."))
 
-	target = next(
-		(r for r in avaliacao_doc.avaliacoes_individuais if r.idx == cint(avaliador_idx)), None
-	)
+	target = next((r for r in avaliacao_doc.avaliacoes_individuais if r.idx == cint(avaliador_idx)), None)
 	if not target:
 		frappe.throw(_("Avaliador não encontrado."))
 	if cint(target.avaliacao_concluida):
@@ -605,16 +597,12 @@ def solicitar_resumo_avaliacoes_individuais_festa(festa_name: str) -> dict[str, 
 
 @frappe.whitelist()
 def solicitar_resumo_avaliacao_completa_festa(festa_name: str) -> dict[str, Any]:
-	return _solicitar_resumo(
-		festa_name, "resumo_avaliacao_completa", "processar_resumo_completo_festa"
-	)
+	return _solicitar_resumo(festa_name, "resumo_avaliacao_completa", "processar_resumo_completo_festa")
 
 
 @frappe.whitelist()
 def solicitar_resumo_avaliacoes_convidados_festa(festa_name: str) -> dict[str, Any]:
-	return _solicitar_resumo(
-		festa_name, "resumo_avaliacoes_convidados", "processar_resumo_convidados_festa"
-	)
+	return _solicitar_resumo(festa_name, "resumo_avaliacoes_convidados", "processar_resumo_convidados_festa")
 
 
 @frappe.whitelist()

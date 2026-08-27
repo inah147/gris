@@ -50,9 +50,7 @@ class Festa(Document):
 		if self.is_new():
 			self._cenario_antes = self.cenario_simulacao or "Intermediário"
 			return
-		self._cenario_antes = (
-			frappe.db.get_value("Festa", self.name, "cenario_simulacao") or "Intermediário"
-		)
+		self._cenario_antes = frappe.db.get_value("Festa", self.name, "cenario_simulacao") or "Intermediário"
 
 	# ---------- Status ----------
 
@@ -72,13 +70,9 @@ class Festa(Document):
 		if self.tipo_coord_geral != "Associado" or not self.associado_coord_geral:
 			return
 
-		nascimento = frappe.db.get_value(
-			"Associado", self.associado_coord_geral, "data_de_nascimento"
-		)
+		nascimento = frappe.db.get_value("Associado", self.associado_coord_geral, "data_de_nascimento")
 		if not nascimento:
-			frappe.throw(
-				_("Associado selecionado nao possui data de nascimento cadastrada.")
-			)
+			frappe.throw(_("Associado selecionado nao possui data de nascimento cadastrada."))
 
 		referencia = self.data or date.today()
 		_calcular_idade(getdate(nascimento), getdate(referencia))
@@ -121,9 +115,7 @@ class Festa(Document):
 		if not self.data_limite_vendas:
 			return
 		if self.data and getdate(self.data_limite_vendas) > getdate(self.data):
-			frappe.throw(
-				_("A data limite de vendas não pode ser posterior à data da festa.")
-			)
+			frappe.throw(_("A data limite de vendas não pode ser posterior à data da festa."))
 
 	# ---------- Portaria obrigatória ----------
 
@@ -145,9 +137,7 @@ class Festa(Document):
 			as_dict=True,
 		)
 		if not portaria:
-			frappe.throw(
-				_("A área Portaria é obrigatória e ainda não foi criada para esta festa.")
-			)
+			frappe.throw(_("A área Portaria é obrigatória e ainda não foi criada para esta festa."))
 
 		if portaria.tipo_coord == "Responsavel" and not portaria.responsavel_coord:
 			frappe.throw(_("A área Portaria precisa de um coordenador responsável."))
@@ -156,11 +146,7 @@ class Festa(Document):
 		if portaria.tipo_coord == "Outro" and not (
 			portaria.nome_coord and portaria.email_coord and portaria.telefone_coord
 		):
-			frappe.throw(
-				_(
-					"A área Portaria precisa de coordenador com nome, e-mail e telefone preenchidos."
-				)
-			)
+			frappe.throw(_("A área Portaria precisa de coordenador com nome, e-mail e telefone preenchidos."))
 
 	# ---------- Receitas / Despesas por area ----------
 
@@ -226,9 +212,7 @@ class Festa(Document):
 				continue
 			ajuste = flt(p.preco_venda) if p.faz_parte_convite else 0.0
 			receitas[area]["min"] += flt(p.receita_total_min) - ajuste * publico_min
-			receitas[area]["intermediario"] += (
-				flt(p.receita_total_intermediario) - ajuste * publico_inter
-			)
+			receitas[area]["intermediario"] += flt(p.receita_total_intermediario) - ajuste * publico_inter
 			receitas[area]["max"] += flt(p.receita_total_max) - ajuste * publico_max
 
 		for c in compras:
@@ -382,12 +366,8 @@ class Festa(Document):
 			filters={"festa": self.name, "faz_parte_convite": 1},
 			fields=["preco_custo", "preco_venda", "qtd_no_convite"],
 		)
-		self.preco_min_convite = sum(
-			flt(p.preco_custo) * (flt(p.qtd_no_convite) or 1) for p in produtos
-		)
-		self.preco_sugerido_convite = sum(
-			flt(p.preco_venda) * (flt(p.qtd_no_convite) or 1) for p in produtos
-		)
+		self.preco_min_convite = sum(flt(p.preco_custo) * (flt(p.qtd_no_convite) or 1) for p in produtos)
+		self.preco_sugerido_convite = sum(flt(p.preco_venda) * (flt(p.qtd_no_convite) or 1) for p in produtos)
 
 	# ---------- Lotes de convite (planejamento) ----------
 
@@ -406,9 +386,7 @@ class Festa(Document):
 			)
 		for lote in self.lotes_convite:
 			if flt(lote.valor_consumacao) > flt(lote.valor_convite):
-				frappe.throw(
-					_("O valor de consumação de um lote não pode ser maior que o valor do convite.")
-				)
+				frappe.throw(_("O valor de consumação de um lote não pode ser maior que o valor do convite."))
 
 	def _preco_medio_convite_por_lotes(self) -> float:
 		"""Preço médio ponderado do convite pela expectativa de vendas de cada lote."""
@@ -416,8 +394,7 @@ class Festa(Document):
 		if total_pct <= 0:
 			return 0.0
 		soma = sum(
-			flt(lote.valor_convite) * flt(lote.expectativa_percentual)
-			for lote in self.lotes_convite or []
+			flt(lote.valor_convite) * flt(lote.expectativa_percentual) for lote in self.lotes_convite or []
 		)
 		return soma / total_pct
 
@@ -427,8 +404,7 @@ class Festa(Document):
 		if total_pct <= 0:
 			return 0.0
 		soma = sum(
-			flt(lote.valor_consumacao) * flt(lote.expectativa_percentual)
-			for lote in self.lotes_convite or []
+			flt(lote.valor_consumacao) * flt(lote.expectativa_percentual) for lote in self.lotes_convite or []
 		)
 		return soma / total_pct
 
@@ -442,9 +418,7 @@ class Festa(Document):
 			preco_convite = flt(self.preco_convite)
 
 		for chave in CENARIOS:
-			receita_produtos = sum(
-				flt(r.get(f"esperado_{chave}")) for r in self.receitas_por_area or []
-			)
+			receita_produtos = sum(flt(r.get(f"esperado_{chave}")) for r in self.receitas_por_area or [])
 			despesa_area = sum(flt(d.get(f"esperado_{chave}")) for d in self.despesas_por_area or [])
 			publico = flt(self.get(f"expectativa_publico_{chave}"))
 			receita_convite = preco_convite * publico
@@ -487,9 +461,7 @@ class Festa(Document):
 			if not cot:
 				continue
 			try:
-				qtd_cot_em_compra = converter(
-					flt(cot.quantidade), cot.unidade_medida, compra.unidade_compra
-				)
+				qtd_cot_em_compra = converter(flt(cot.quantidade), cot.unidade_medida, compra.unidade_compra)
 			except Exception:
 				continue
 			if qtd_cot_em_compra <= 0:

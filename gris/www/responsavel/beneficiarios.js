@@ -1,4 +1,4 @@
-frappe.ready(function() {
+frappe.ready(function () {
 	const scheduleDialog = document.getElementById("modalAgendamento");
 	const addDialog = document.getElementById("modalAdicionar");
 	const cancelDialog = document.getElementById("modalCancelarAgendamento");
@@ -14,7 +14,9 @@ frappe.ready(function() {
 	const inputNome = document.getElementById("add_nome_jovem");
 	const inputCpf = document.getElementById("add_cpf_jovem");
 	const birthDatePicker = document.getElementById("add_data_nascimento_jovem");
-	const responsavelCpf = (document.getElementById("responsavel-data")?.dataset.cpf || "").replace(/\D/g, "");
+	const responsavelCpf = (
+		document.getElementById("responsavel-data")?.dataset.cpf || ""
+	).replace(/\D/g, "");
 	let isReschedule = false;
 
 	const openDialog = (dialog) => {
@@ -42,15 +44,17 @@ frappe.ready(function() {
 	};
 
 	const showToast = (category, title, description) => {
-		document.dispatchEvent(new CustomEvent("basecoat:toast", {
-			detail: {
-				config: {
-					category,
-					title: escapeHtml(title),
-					description: escapeHtml(description || "")
-				}
-			}
-		}));
+		document.dispatchEvent(
+			new CustomEvent("basecoat:toast", {
+				detail: {
+					config: {
+						category,
+						title: escapeHtml(title),
+						description: escapeHtml(description || ""),
+					},
+				},
+			})
+		);
 	};
 
 	const setLoading = (button, loading, label) => {
@@ -136,7 +140,7 @@ frappe.ready(function() {
 	}
 
 	if (inputCpf) {
-		inputCpf.addEventListener("input", function() {
+		inputCpf.addEventListener("input", function () {
 			let value = this.value.replace(/\D/g, "").slice(0, 11);
 			if (value.length > 9) {
 				value = value.replace(/^(\d{3})(\d{3})(\d{3})(\d{1,2}).*/, "$1.$2.$3-$4");
@@ -168,9 +172,11 @@ frappe.ready(function() {
 		formAdicionar?.querySelectorAll("[aria-invalid='true']").forEach((element) => {
 			element.removeAttribute("aria-invalid");
 		});
-		formAdicionar?.querySelectorAll(".datepicker-trigger[aria-invalid='true']").forEach((element) => {
-			element.removeAttribute("aria-invalid");
-		});
+		formAdicionar
+			?.querySelectorAll(".datepicker-trigger[aria-invalid='true']")
+			.forEach((element) => {
+				element.removeAttribute("aria-invalid");
+			});
 		formAdicionar?.querySelectorAll("[data-field-error]").forEach((element) => {
 			element.textContent = "";
 			element.hidden = true;
@@ -214,12 +220,17 @@ frappe.ready(function() {
 		const nome = (inputNome?.value || "").trim();
 		const cpfValue = (inputCpf?.value || "").trim();
 		const cpfLimpo = cpfValue.replace(/\D/g, "");
-		const dataNascimento = birthDatePicker?.value || formAdicionar?.elements.data_nascimento_jovem?.value || "";
+		const dataNascimento =
+			birthDatePicker?.value || formAdicionar?.elements.data_nascimento_jovem?.value || "";
 		const today = new Date(new Date().toISOString().split("T")[0]);
 		const birthDate = dataNascimento ? new Date(dataNascimento) : null;
 
 		if (!nome || !/^[A-Za-zÀ-ÿ\s]+$/.test(nome)) {
-			setFieldInvalid("nome_jovem", inputNome, "Informe um nome válido usando apenas letras e espaços.");
+			setFieldInvalid(
+				"nome_jovem",
+				inputNome,
+				"Informe um nome válido usando apenas letras e espaços."
+			);
 			valid = false;
 		}
 
@@ -227,12 +238,20 @@ frappe.ready(function() {
 			setFieldInvalid("cpf_jovem", inputCpf, "Informe um CPF válido.");
 			valid = false;
 		} else if (responsavelCpf && cpfLimpo === responsavelCpf) {
-			setFieldInvalid("cpf_jovem", inputCpf, "O CPF do jovem não pode ser o mesmo do responsável.");
+			setFieldInvalid(
+				"cpf_jovem",
+				inputCpf,
+				"O CPF do jovem não pode ser o mesmo do responsável."
+			);
 			valid = false;
 		}
 
 		if (!birthDate || birthDate >= today) {
-			setFieldInvalid("data_nascimento_jovem", birthDatePicker, "Informe uma data anterior a hoje.");
+			setFieldInvalid(
+				"data_nascimento_jovem",
+				birthDatePicker,
+				"Informe uma data anterior a hoje."
+			);
 			valid = false;
 		}
 
@@ -250,21 +269,29 @@ frappe.ready(function() {
 			args: {
 				nome_jovem: (formData.get("nome_jovem") || "").trim(),
 				cpf_jovem: (formData.get("cpf_jovem") || "").trim(),
-				data_nascimento_jovem: formData.get("data_nascimento_jovem") || ""
+				data_nascimento_jovem: formData.get("data_nascimento_jovem") || "",
 			},
-			callback: function(r) {
+			callback: function (r) {
 				if (r.message && r.message.ok) {
 					closeDialog(addDialog);
-					showToast("success", "Beneficiário adicionado", r.message.message || "Cadastro iniciado com sucesso.");
+					showToast(
+						"success",
+						"Beneficiário adicionado",
+						r.message.message || "Cadastro iniciado com sucesso."
+					);
 					reloadSoon();
 				}
 			},
-			error: function() {
-				showToast("error", "Não foi possível adicionar", "Revise os dados e tente novamente.");
+			error: function () {
+				showToast(
+					"error",
+					"Não foi possível adicionar",
+					"Revise os dados e tente novamente."
+				);
 			},
-			always: function() {
+			always: function () {
 				setLoading(btnConfirmarAdicionar, false);
-			}
+			},
 		});
 	}
 
@@ -273,20 +300,24 @@ frappe.ready(function() {
 		frappe.call({
 			method: "gris.www.responsavel.beneficiarios.schedule_visit",
 			args: { date: date },
-			callback: function(r) {
+			callback: function (r) {
 				if (!r.exc) {
 					closeDialog(scheduleDialog);
 					showToast("success", "Visita agendada", "A visita foi agendada com sucesso.");
 					reloadSoon();
 				}
 			},
-			error: function() {
-				showToast("error", "Não foi possível agendar", "A data selecionada pode não estar mais disponível.");
+			error: function () {
+				showToast(
+					"error",
+					"Não foi possível agendar",
+					"A data selecionada pode não estar mais disponível."
+				);
 			},
-			always: function() {
+			always: function () {
 				setLoading(btnConfirmarAgendamento, false);
 				updateScheduleButton();
-			}
+			},
 		});
 	}
 
@@ -295,20 +326,28 @@ frappe.ready(function() {
 		frappe.call({
 			method: "gris.www.responsavel.beneficiarios.reschedule_visit",
 			args: { date: date },
-			callback: function(r) {
+			callback: function (r) {
 				if (!r.exc) {
 					closeDialog(scheduleDialog);
-					showToast("success", "Visita reagendada", "A nova data foi salva com sucesso.");
+					showToast(
+						"success",
+						"Visita reagendada",
+						"A nova data foi salva com sucesso."
+					);
 					reloadSoon();
 				}
 			},
-			error: function() {
-				showToast("error", "Não foi possível reagendar", "A data selecionada pode não estar mais disponível.");
+			error: function () {
+				showToast(
+					"error",
+					"Não foi possível reagendar",
+					"A data selecionada pode não estar mais disponível."
+				);
 			},
-			always: function() {
+			always: function () {
 				setLoading(btnConfirmarAgendamento, false);
 				updateScheduleButton();
-			}
+			},
 		});
 	}
 
@@ -316,19 +355,23 @@ frappe.ready(function() {
 		setLoading(btnConfirmarCancelamento, true, "Cancelando...");
 		frappe.call({
 			method: "gris.www.responsavel.beneficiarios.cancel_visit",
-			callback: function(r) {
+			callback: function (r) {
 				if (!r.exc) {
 					closeDialog(cancelDialog);
-					showToast("success", "Agendamento cancelado", "A visita foi removida da agenda.");
+					showToast(
+						"success",
+						"Agendamento cancelado",
+						"A visita foi removida da agenda."
+					);
 					reloadSoon();
 				}
 			},
-			error: function() {
+			error: function () {
 				showToast("error", "Não foi possível cancelar", "Tente novamente em instantes.");
 			},
-			always: function() {
+			always: function () {
 				setLoading(btnConfirmarCancelamento, false);
-			}
+			},
 		});
 	}
 

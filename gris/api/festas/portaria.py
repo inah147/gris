@@ -187,9 +187,7 @@ def marcar_entrada_manual(festa: str, codigo: str) -> dict:
 	if not row:
 		return {"valido": False}
 
-	resultado = ListaEntradaFesta.marcar_entrada(
-		row.name, user=frappe.session.user, manual=True
-	)
+	resultado = ListaEntradaFesta.marcar_entrada(row.name, user=frappe.session.user, manual=True)
 
 	row = _carregar_entrada(row.name)
 	hidratado = _hidratar_entrada(row, pagador=_dados_pagador(row.convite))
@@ -351,9 +349,7 @@ def editar_dados_convidado(
 			as_dict=True,
 		)
 		if dono and dono.parenttype == "Convite Festa" and dono.parent == row.convite:
-			frappe.db.set_value(
-				"Convidado Convite Festa", row.convidado_row, updates
-			)
+			frappe.db.set_value("Convidado Convite Festa", row.convidado_row, updates)
 
 	atualizado = _carregar_entrada(lista_entrada_name)
 	return {
@@ -535,9 +531,7 @@ def get_url_venda_porta(festa: str) -> dict:
 
 	venda_ativa = frappe.db.get_value("Festa", festa, "venda_na_portaria")
 	if not venda_ativa:
-		frappe.throw(
-			_("O modo 'Venda na portaria' não está ativo para esta festa.")
-		)
+		frappe.throw(_("O modo 'Venda na portaria' não está ativo para esta festa."))
 
 	host = frappe.utils.get_url().rstrip("/")
 	# urlencode evita XSS/quebra para nomes de festa com espaços ou acentos.
@@ -601,9 +595,7 @@ def _sanitizar_convidados_presencial(convidados, quantidade: int) -> list[dict]:
 	if not isinstance(convidados, list):
 		frappe.throw(_("Lista de convidados inválida."))
 	if len(convidados) != quantidade:
-		frappe.throw(
-			_("Informe exatamente {0} convidado(s) (1 por convite).").format(quantidade)
-		)
+		frappe.throw(_("Informe exatamente {0} convidado(s) (1 por convite).").format(quantidade))
 	resultado: list[dict] = []
 	for idx, item in enumerate(convidados, start=1):
 		if not isinstance(item, dict):
@@ -612,9 +604,7 @@ def _sanitizar_convidados_presencial(convidados, quantidade: int) -> list[dict]:
 		if not nome:
 			frappe.throw(_("Convidado #{0} precisa de nome.").format(idx))
 		if not _nome_completo(nome):
-			frappe.throw(
-				_("Convidado #{0}: informe o nome completo (nome e sobrenome).").format(idx)
-			)
+			frappe.throw(_("Convidado #{0}: informe o nome completo (nome e sobrenome).").format(idx))
 		resultado.append({"nome": nome})
 	return resultado
 
@@ -645,15 +635,11 @@ def criar_convite_presencial(
 
 	venda_ativa = frappe.db.get_value("Festa", festa, "venda_na_portaria")
 	if not venda_ativa:
-		frappe.throw(
-			_("O modo 'Venda na portaria' não está ativo para esta festa.")
-		)
+		frappe.throw(_("O modo 'Venda na portaria' não está ativo para esta festa."))
 
 	meio_pagamento = (meio_pagamento or "").strip()
 	if meio_pagamento not in _MEIOS_PAGAMENTO_PRESENCIAL:
-		frappe.throw(
-			_("Meio de pagamento inválido: escolha Dinheiro ou Cartão.")
-		)
+		frappe.throw(_("Meio de pagamento inválido: escolha Dinheiro ou Cartão."))
 
 	try:
 		quantidade_int = int(quantidade)
@@ -672,9 +658,7 @@ def criar_convite_presencial(
 		as_dict=True,
 	)
 	if not opcao:
-		frappe.throw(
-			_("Não há Opção de Convite ativa do tipo Portaria para esta festa.")
-		)
+		frappe.throw(_("Não há Opção de Convite ativa do tipo Portaria para esta festa."))
 
 	convite = frappe.get_doc(
 		{

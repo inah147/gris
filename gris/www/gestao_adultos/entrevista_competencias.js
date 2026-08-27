@@ -45,11 +45,17 @@ frappe.ready(() => {
 
 		tbody.innerHTML = rows
 			.map((row) => {
-				const associado = frappe.utils.escape_html(row.associado_nome || row.associado || "-");
+				const associado = frappe.utils.escape_html(
+					row.associado_nome || row.associado || "-"
+				);
 				const atualizacao = row.data_da_ultima_atualizacao
-					? frappe.utils.escape_html(frappe.datetime.str_to_user(row.data_da_ultima_atualizacao))
+					? frappe.utils.escape_html(
+							frappe.datetime.str_to_user(row.data_da_ultima_atualizacao)
+					  )
 					: "-";
-				const href = `/gestao_adultos/respostas_entrevista?name=${encodeURIComponent(row.name)}`;
+				const href = `/gestao_adultos/respostas_entrevista?name=${encodeURIComponent(
+					row.name
+				)}`;
 				return `
 					<tr>
 						<td>${associado}</td>
@@ -105,7 +111,9 @@ frappe.ready(() => {
 		});
 		const data = response.message || {};
 		if (data.name) {
-			window.location.href = `/gestao_adultos/respostas_entrevista?name=${encodeURIComponent(data.name)}`;
+			window.location.href = `/gestao_adultos/respostas_entrevista?name=${encodeURIComponent(
+				data.name
+			)}`;
 		}
 	};
 
@@ -138,7 +146,7 @@ function getSelectValue(element) {
 		return "";
 	}
 	const value = element.value;
-	return Array.isArray(value) ? value[0] || "" : (value || "");
+	return Array.isArray(value) ? value[0] || "" : value || "";
 }
 
 function repopulateSelect(id, items) {
@@ -149,7 +157,7 @@ function repopulateSelect(id, items) {
 
 	const listbox = oldElement.querySelector('[role="listbox"]');
 	const hiddenInput = oldElement.querySelector('input[type="hidden"]');
-	const triggerLabel = oldElement.querySelector(':scope > button > span');
+	const triggerLabel = oldElement.querySelector(":scope > button > span");
 	if (!listbox || !hiddenInput || !triggerLabel) {
 		return;
 	}
@@ -159,7 +167,9 @@ function repopulateSelect(id, items) {
 			const attrs = Object.entries(item.attrs || {})
 				.map(([key, value]) => ` ${key}="${escapeAttribute(String(value))}"`)
 				.join("");
-			return `<div id="${id}-items-${index + 1}" role="option" data-value="${escapeAttribute(String(item.value ?? ""))}"${attrs}>${frappe.utils.escape_html(item.label || "")}</div>`;
+			return `<div id="${id}-items-${index + 1}" role="option" data-value="${escapeAttribute(
+				String(item.value ?? "")
+			)}"${attrs}>${frappe.utils.escape_html(item.label || "")}</div>`;
 		})
 		.join("");
 

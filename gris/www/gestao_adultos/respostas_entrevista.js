@@ -121,8 +121,14 @@ frappe.ready(async () => {
 				const hasAlert = alertSelectionKeys.has(key);
 				indicator.classList.toggle("hidden", !hasAlert);
 				indicator.disabled = !hasAlert;
-				indicator.setAttribute("title", hasAlert ? "Ver motivo do alerta" : "Resposta sem alerta");
-				indicator.setAttribute("aria-label", hasAlert ? "Ver motivo do alerta" : "Resposta sem alerta");
+				indicator.setAttribute(
+					"title",
+					hasAlert ? "Ver motivo do alerta" : "Resposta sem alerta"
+				);
+				indicator.setAttribute(
+					"aria-label",
+					hasAlert ? "Ver motivo do alerta" : "Resposta sem alerta"
+				);
 				const questionCard = select.closest(".entrevista-question");
 				if (questionCard) {
 					questionCard.classList.toggle("entrevista-question--has-alert", hasAlert);
@@ -136,7 +142,9 @@ frappe.ready(async () => {
 			return;
 		}
 
-		modalAlertaMensagem.innerHTML = frappe.utils.escape_html(message || "Motivo do alerta não informado.").replace(/\n/g, "<br>");
+		modalAlertaMensagem.innerHTML = frappe.utils
+			.escape_html(message || "Motivo do alerta não informado.")
+			.replace(/\n/g, "<br>");
 		if (typeof modalAlerta.showModal === "function") {
 			modalAlerta.showModal();
 		}
@@ -148,7 +156,9 @@ frappe.ready(async () => {
 		}
 
 		modalObservacaoPergunta.textContent = question || "Pergunta";
-		modalObservacaoMensagem.innerHTML = frappe.utils.escape_html(message || "Sem observações para esta resposta.").replace(/\n/g, "<br>");
+		modalObservacaoMensagem.innerHTML = frappe.utils
+			.escape_html(message || "Sem observações para esta resposta.")
+			.replace(/\n/g, "<br>");
 		if (typeof modalObservacao.showModal === "function") {
 			modalObservacao.showModal();
 		}
@@ -163,8 +173,17 @@ frappe.ready(async () => {
 
 			const existing = document.querySelector('script[data-gris-echarts="1"]');
 			if (existing) {
-				existing.addEventListener("load", () => (window.echarts ? resolve() : reject(new Error("ECharts não disponível"))), { once: true });
-				existing.addEventListener("error", () => reject(new Error("Falha ao carregar ECharts")), { once: true });
+				existing.addEventListener(
+					"load",
+					() =>
+						window.echarts ? resolve() : reject(new Error("ECharts não disponível")),
+					{ once: true }
+				);
+				existing.addEventListener(
+					"error",
+					() => reject(new Error("Falha ao carregar ECharts")),
+					{ once: true }
+				);
 				return;
 			}
 
@@ -218,7 +237,9 @@ frappe.ready(async () => {
 				const select = document.getElementById(field.fieldname);
 				const obs = document.getElementById(field.observation_fieldname);
 				const indicator = document.getElementById(`alert-indicator-${field.fieldname}`);
-				const observationIndicator = document.getElementById(`obs-indicator-${field.fieldname}`);
+				const observationIndicator = document.getElementById(
+					`obs-indicator-${field.fieldname}`
+				);
 				if (select) {
 					select.value = entrevista[field.fieldname] || "";
 					select.addEventListener("change", () => {
@@ -234,7 +255,9 @@ frappe.ready(async () => {
 						}
 
 						const key = buildAlertKey(field.label, select.value);
-						const reason = alertReasonBySelectionKey.get(key) || "Motivo do alerta não informado.";
+						const reason =
+							alertReasonBySelectionKey.get(key) ||
+							"Motivo do alerta não informado.";
 						openAlertReasonModal(reason);
 					});
 				}
@@ -252,7 +275,10 @@ frappe.ready(async () => {
 							return;
 						}
 
-						openObservationModal(field.label, obs.value || "Sem observações para esta resposta.");
+						openObservationModal(
+							field.label,
+							obs.value || "Sem observações para esta resposta."
+						);
 					});
 				}
 			});
@@ -274,8 +300,14 @@ frappe.ready(async () => {
 				const hasObservation = String(obs.value || "").trim().length > 0;
 				indicator.disabled = !hasObservation;
 				indicator.classList.toggle("hidden", editMode || !hasObservation);
-				indicator.setAttribute("title", hasObservation ? "Ver observação" : "Sem observações");
-				indicator.setAttribute("aria-label", hasObservation ? "Ver observação" : "Sem observações");
+				indicator.setAttribute(
+					"title",
+					hasObservation ? "Ver observação" : "Sem observações"
+				);
+				indicator.setAttribute(
+					"aria-label",
+					hasObservation ? "Ver observação" : "Sem observações"
+				);
 			});
 		});
 	}
@@ -321,8 +353,9 @@ frappe.ready(async () => {
 
 	function getChartSeriesData() {
 		const target = document.getElementById("grafico-pontuacoes");
-		const generalAlertsCount = (entrevista.alertas || []).filter((alerta) =>
-			Array.isArray(alerta.categorias) && alerta.categorias.includes("alerta_geral")
+		const generalAlertsCount = (entrevista.alertas || []).filter(
+			(alerta) =>
+				Array.isArray(alerta.categorias) && alerta.categorias.includes("alerta_geral")
 		).length;
 
 		return {
@@ -335,7 +368,14 @@ frappe.ready(async () => {
 		};
 	}
 
-	function renderEcharts(target, labels, scores, alertsByCategory, alertsTotal, generalAlertsCount) {
+	function renderEcharts(
+		target,
+		labels,
+		scores,
+		alertsByCategory,
+		alertsTotal,
+		generalAlertsCount
+	) {
 		const styles = getComputedStyle(document.documentElement);
 		const barColor = styles.getPropertyValue("--color-chart-1").trim() || "#4477AA";
 		const markColor = styles.getPropertyValue("--warning").trim() || "#fde6d4";
@@ -438,12 +478,14 @@ frappe.ready(async () => {
 	}
 
 	async function renderChart() {
-		const { target, labels, scores, alertsByCategory, alertsTotal, generalAlertsCount } = getChartSeriesData();
+		const { target, labels, scores, alertsByCategory, alertsTotal, generalAlertsCount } =
+			getChartSeriesData();
 		if (!target) {
 			return;
 		}
 		if (!labels.length) {
-			target.innerHTML = '<p class="text-sm text-muted-foreground">Nenhuma pontuação calculada para exibir.</p>';
+			target.innerHTML =
+				'<p class="text-sm text-muted-foreground">Nenhuma pontuação calculada para exibir.</p>';
 			return;
 		}
 
@@ -463,14 +505,19 @@ frappe.ready(async () => {
 		container.querySelectorAll("*").forEach((node) => {
 			Array.from(node.attributes).forEach((attribute) => {
 				const name = String(attribute.name || "").toLowerCase();
-				const value = String(attribute.value || "").trim().toLowerCase();
+				const value = String(attribute.value || "")
+					.trim()
+					.toLowerCase();
 
 				if (name.startsWith("on") || name === "srcdoc") {
 					node.removeAttribute(attribute.name);
 					return;
 				}
 
-				if ((name === "href" || name === "src") && (value.startsWith("javascript:") || value.startsWith("data:text/html"))) {
+				if (
+					(name === "href" || name === "src") &&
+					(value.startsWith("javascript:") || value.startsWith("data:text/html"))
+				) {
 					node.removeAttribute(attribute.name);
 				}
 			});
@@ -546,7 +593,11 @@ frappe.ready(async () => {
 					payload: JSON.stringify(payload),
 				},
 			});
-			showToast("success", "Entrevista salva", "As alterações foram registradas com sucesso.");
+			showToast(
+				"success",
+				"Entrevista salva",
+				"As alterações foram registradas com sucesso."
+			);
 			window.setTimeout(() => {
 				window.location.reload();
 			}, 700);

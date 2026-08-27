@@ -158,12 +158,15 @@ def get_status(c: str | None = None, t: str | None = None) -> dict:
 			"atualizado_em": row.modified.isoformat() if row.modified else None,
 		}
 
-	cobranca = frappe.db.get_value(
-		"Cobranca Infinitepay",
-		row.cobranca_infinitepay,
-		["status", "modified"],
-		as_dict=True,
-	) or {}
+	cobranca = (
+		frappe.db.get_value(
+			"Cobranca Infinitepay",
+			row.cobranca_infinitepay,
+			["status", "modified"],
+			as_dict=True,
+		)
+		or {}
+	)
 	status = cobranca.get("status") or "Pendente"
 	modified = cobranca.get("modified")
 	return {

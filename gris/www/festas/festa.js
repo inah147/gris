@@ -10,7 +10,9 @@
 	let contratacoes = (window._festaData.contratacoes || []).slice();
 	let barracasItems = window._festaData.barracasItems || [];
 	let areasItems = window._festaData.areasItems || [];
-	let areasItemsObrigatorio = areasItems.filter(function (it) { return it.value; });
+	let areasItemsObrigatorio = areasItems.filter(function (it) {
+		return it.value;
+	});
 	let produtosItems = window._festaData.produtosItems || [];
 	let unidadesItems = window._festaData.unidadesItems || [];
 	let valorArrecadadoFesta = Number(window._festaData.valorArrecadadoFesta || 0);
@@ -25,7 +27,9 @@
 	function toast(message, category) {
 		document.dispatchEvent(
 			new CustomEvent("basecoat:toast", {
-				detail: { config: { category: category || "info", description: message, duration: 3500 } },
+				detail: {
+					config: { category: category || "info", description: message, duration: 3500 },
+				},
 			})
 		);
 	}
@@ -150,27 +154,39 @@
 		opts = opts || {};
 		var attrs = "";
 		if (opts.sortType) attrs += ' data-sort-type="' + opts.sortType + '"';
-		return '<th data-sortable' + attrs + '>'
-			+ '<button type="button" class="table-sort-trigger">'
-			+ escHtml(label)
-			+ '<svg class="table-sort-icon ds-lucide ds-lucide--xs" viewBox="0 0 24 24" aria-hidden="true">'
-			+ '<use href="/assets/gris/design_system/icons/lucide/sprite.svg#chevrons-up-down"></use>'
-			+ '</svg>'
-			+ '</button>'
-			+ '</th>';
+		return (
+			"<th data-sortable" +
+			attrs +
+			">" +
+			'<button type="button" class="table-sort-trigger">' +
+			escHtml(label) +
+			'<svg class="table-sort-icon ds-lucide ds-lucide--xs" viewBox="0 0 24 24" aria-hidden="true">' +
+			'<use href="/assets/gris/design_system/icons/lucide/sprite.svg#chevrons-up-down"></use>' +
+			"</svg>" +
+			"</button>" +
+			"</th>"
+		);
 	}
 
 	function buildSortableTable(headers, bodyHtml) {
-		var ths = headers.map(function (h) {
-			if (h.sortable === false) return '<th>' + (h.label || "") + '</th>';
-			return sortHeaderHtml(h.label || "", { sortType: h.sortType });
-		}).join("");
-		return '<div class="festa-table-scroll">'
-			+ '<table class="festa-table" data-table-sortable>'
-			+ '<thead><tr>' + ths + '</tr></thead>'
-			+ '<tbody>' + bodyHtml + '</tbody>'
-			+ '</table>'
-			+ '</div>';
+		var ths = headers
+			.map(function (h) {
+				if (h.sortable === false) return "<th>" + (h.label || "") + "</th>";
+				return sortHeaderHtml(h.label || "", { sortType: h.sortType });
+			})
+			.join("");
+		return (
+			'<div class="festa-table-scroll">' +
+			'<table class="festa-table" data-table-sortable>' +
+			"<thead><tr>" +
+			ths +
+			"</tr></thead>" +
+			"<tbody>" +
+			bodyHtml +
+			"</tbody>" +
+			"</table>" +
+			"</div>"
+		);
 	}
 
 	function notifyDesignSystem() {
@@ -189,11 +205,25 @@
 		if (!el) return;
 		var listbox = el.querySelector("[role='listbox']");
 		if (!listbox) return;
-		listbox.innerHTML = items.map(function (item, idx) {
-			var value = item.value == null ? "" : String(item.value);
-			var sel = value === String(selectedValue || "") ? ' aria-selected="true"' : "";
-			return '<div id="' + id + '-items-' + idx + '" role="option" data-value="' + escHtml(value) + '"' + sel + '>' + escHtml(item.label || value) + '</div>';
-		}).join("");
+		listbox.innerHTML = items
+			.map(function (item, idx) {
+				var value = item.value == null ? "" : String(item.value);
+				var sel = value === String(selectedValue || "") ? ' aria-selected="true"' : "";
+				return (
+					'<div id="' +
+					id +
+					"-items-" +
+					idx +
+					'" role="option" data-value="' +
+					escHtml(value) +
+					'"' +
+					sel +
+					">" +
+					escHtml(item.label || value) +
+					"</div>"
+				);
+			})
+			.join("");
 		var hidden = el.querySelector(":scope > input[type='hidden']");
 		var span = el.querySelector(":scope > button span.truncate");
 		var currentValue = hidden ? hidden.value : "";
@@ -338,18 +368,28 @@
 			new MutationObserver(function () {
 				if (content.getAttribute("aria-hidden") === "false") {
 					var r = trigger.getBoundingClientRect();
-					content.style.cssText = "position:fixed;margin:0;inset:auto;"
-						+ "top:" + (r.bottom + 4) + "px;"
-						+ "right:" + (window.innerWidth - r.right) + "px;";
-					if (hasPopoverAPI) try { content.showPopover(); } catch (_e) {}
+					content.style.cssText =
+						"position:fixed;margin:0;inset:auto;" +
+						"top:" +
+						(r.bottom + 4) +
+						"px;" +
+						"right:" +
+						(window.innerWidth - r.right) +
+						"px;";
+					if (hasPopoverAPI)
+						try {
+							content.showPopover();
+						} catch (_e) {}
 				} else {
 					content.style.cssText = "";
-					if (hasPopoverAPI) try { content.hidePopover(); } catch (_e) {}
+					if (hasPopoverAPI)
+						try {
+							content.hidePopover();
+						} catch (_e) {}
 				}
 			}).observe(content, { attributes: true, attributeFilter: ["aria-hidden"] });
 		});
 	}
-
 
 	function selectLabelFor(items, value, fallback) {
 		for (var i = 0; i < items.length; i++) {
@@ -359,13 +399,32 @@
 	}
 
 	function renderNativeSelect(dataField, items, selectedValue, extraClass) {
-		var opts = items.map(function (item) {
-			var value = item.value === undefined || item.value === null ? "" : String(item.value);
-			var selected = value === String(selectedValue || "") ? " selected" : "";
-			return '<option value="' + escHtml(value) + '"' + selected + ">" + escHtml(item.label || value) + "</option>";
-		}).join("");
+		var opts = items
+			.map(function (item) {
+				var value =
+					item.value === undefined || item.value === null ? "" : String(item.value);
+				var selected = value === String(selectedValue || "") ? " selected" : "";
+				return (
+					'<option value="' +
+					escHtml(value) +
+					'"' +
+					selected +
+					">" +
+					escHtml(item.label || value) +
+					"</option>"
+				);
+			})
+			.join("");
 		var cls = "select" + (extraClass ? " " + extraClass : "");
-		return '<select class="' + cls + '" data-field="' + escHtml(dataField) + '">' + opts + "</select>";
+		return (
+			'<select class="' +
+			cls +
+			'" data-field="' +
+			escHtml(dataField) +
+			'">' +
+			opts +
+			"</select>"
+		);
 	}
 
 	// Gera o markup de um select do design system (Basecoat) para uso dinâmico
@@ -384,30 +443,72 @@
 		var selected = String(selectedValue == null ? "" : selectedValue);
 		var matched = null;
 		for (var i = 0; i < items.length; i++) {
-			if (String(items[i].value == null ? "" : items[i].value) === selected) { matched = items[i]; break; }
+			if (String(items[i].value == null ? "" : items[i].value) === selected) {
+				matched = items[i];
+				break;
+			}
 		}
 		var def = matched || items[0] || null;
 		var defValue = def ? String(def.value == null ? "" : def.value) : "";
-		var defLabel = def ? (def.label || defValue) : "";
-		var optionsHtml = items.map(function (item, idx) {
-			var value = item.value == null ? "" : String(item.value);
-			var sel = (matched && value === selected) ? ' aria-selected="true"' : "";
-			var meta = optionMeta ? optionMeta(value) : null;
-			var disabled = (meta && meta.disabled && value !== selected) ? ' aria-disabled="true"' : "";
-			var title = (meta && meta.title) ? ' title="' + escHtml(meta.title) + '"' : "";
-			return '<div id="' + id + '-items-' + idx + '" role="option" data-value="' + escHtml(value) + '"' + sel + disabled + title + '>' + escHtml(item.label || value) + '</div>';
-		}).join("");
-		return '<div id="' + id + '" class="select">'
-			+ '<button type="button" class="btn-outline w-full" id="' + id + '-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="' + id + '-listbox">'
-			+ '<span class="truncate">' + escHtml(defLabel) + '</span>'
-			+ lucideSvg("chevron-down", "sm", "text-muted-foreground opacity-50 shrink-0")
-			+ '</button>'
-			+ '<div id="' + id + '-popover" data-popover aria-hidden="true">'
-			+ '<div role="listbox" id="' + id + '-listbox" aria-orientation="vertical" aria-labelledby="' + id + '-trigger">'
-			+ optionsHtml
-			+ '</div></div>'
-			+ '<input type="hidden" name="' + id + '-value" value="' + escHtml(defValue) + '" data-field="' + escHtml(dataField) + '">'
-			+ '</div>';
+		var defLabel = def ? def.label || defValue : "";
+		var optionsHtml = items
+			.map(function (item, idx) {
+				var value = item.value == null ? "" : String(item.value);
+				var sel = matched && value === selected ? ' aria-selected="true"' : "";
+				var meta = optionMeta ? optionMeta(value) : null;
+				var disabled =
+					meta && meta.disabled && value !== selected ? ' aria-disabled="true"' : "";
+				var title = meta && meta.title ? ' title="' + escHtml(meta.title) + '"' : "";
+				return (
+					'<div id="' +
+					id +
+					"-items-" +
+					idx +
+					'" role="option" data-value="' +
+					escHtml(value) +
+					'"' +
+					sel +
+					disabled +
+					title +
+					">" +
+					escHtml(item.label || value) +
+					"</div>"
+				);
+			})
+			.join("");
+		return (
+			'<div id="' +
+			id +
+			'" class="select">' +
+			'<button type="button" class="btn-outline w-full" id="' +
+			id +
+			'-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="' +
+			id +
+			'-listbox">' +
+			'<span class="truncate">' +
+			escHtml(defLabel) +
+			"</span>" +
+			lucideSvg("chevron-down", "sm", "text-muted-foreground opacity-50 shrink-0") +
+			"</button>" +
+			'<div id="' +
+			id +
+			'-popover" data-popover aria-hidden="true">' +
+			'<div role="listbox" id="' +
+			id +
+			'-listbox" aria-orientation="vertical" aria-labelledby="' +
+			id +
+			'-trigger">' +
+			optionsHtml +
+			"</div></div>" +
+			'<input type="hidden" name="' +
+			id +
+			'-value" value="' +
+			escHtml(defValue) +
+			'" data-field="' +
+			escHtml(dataField) +
+			'">' +
+			"</div>"
+		);
 	}
 
 	// ─── Equipe form helpers ─────────────────────────────────────────────────────
@@ -438,14 +539,23 @@
 		popoverEl.dataset.editIdx = editIdx;
 
 		const m = editIdx >= 0 ? equipe[editIdx] : null;
-		const tipo = m ? (m.tipo_pessoa || "Outro") : "Outro";
-		const tipoLabel = tipo === "Responsavel" ? "Respons\u00e1vel" : tipo === "Associado" ? "Associado" : "Outro";
+		const tipo = m ? m.tipo_pessoa || "Outro" : "Outro";
+		const tipoLabel =
+			tipo === "Responsavel"
+				? "Respons\u00e1vel"
+				: tipo === "Associado"
+				? "Associado"
+				: "Outro";
 
 		setSelectValue("eq-" + short + "-tipo", tipo, tipoLabel);
 		updateEqPickers(renderPrefix, tipo);
 
 		if (tipo === "Responsavel") {
-			setSelectValue("eq-" + short + "-select-responsavel", m.responsavel || "", m.nome || "");
+			setSelectValue(
+				"eq-" + short + "-select-responsavel",
+				m.responsavel || "",
+				m.nome || ""
+			);
 			var eEmailEl = document.getElementById("eq-" + short + "-resp-email");
 			var eTelEl = document.getElementById("eq-" + short + "-resp-telefone");
 			if (eEmailEl) eEmailEl.value = m.email || "";
@@ -460,13 +570,13 @@
 			const nomeEl = document.getElementById("eq-" + short + "-outro-nome");
 			const emailEl = document.getElementById("eq-" + short + "-outro-email");
 			const telEl = document.getElementById("eq-" + short + "-outro-telefone");
-			if (nomeEl) nomeEl.value = m ? (m.nome || "") : "";
-			if (emailEl) emailEl.value = m ? (m.email || "") : "";
-			if (telEl) telEl.value = m ? (m.telefone || "") : "";
+			if (nomeEl) nomeEl.value = m ? m.nome || "" : "";
+			if (emailEl) emailEl.value = m ? m.email || "" : "";
+			if (telEl) telEl.value = m ? m.telefone || "" : "";
 		}
 
 		const funcaoEl = document.getElementById("eq-" + short + "-funcao");
-		if (funcaoEl) funcaoEl.value = m ? (m.funcao || "") : "";
+		if (funcaoEl) funcaoEl.value = m ? m.funcao || "" : "";
 	}
 
 	// Abre o popover de equipe via design system, populando os campos antes
@@ -498,28 +608,34 @@
 	function initEquipeTriggers() {
 		if (document._festaEqTriggers) return;
 		document._festaEqTriggers = true;
-		document.addEventListener("click", function (e) {
-			const trigger = e.target.closest("#btn-add-area-membro, #btn-add-barraca-membro");
-			if (!trigger) return;
-			// Se est\u00e1 fechando (toggle off), n\u00e3o precisa popular.
-			if (trigger.getAttribute("aria-expanded") === "true") return;
+		document.addEventListener(
+			"click",
+			function (e) {
+				const trigger = e.target.closest("#btn-add-area-membro, #btn-add-barraca-membro");
+				if (!trigger) return;
+				// Se est\u00e1 fechando (toggle off), n\u00e3o precisa popular.
+				if (trigger.getAttribute("aria-expanded") === "true") return;
 
-			const isArea = trigger.id === "btn-add-area-membro";
-			const short = isArea ? "area" : "barraca";
-			const dlg = document.getElementById("dialog-edit-" + short);
-			if (!dlg) return;
-			const idx = parseInt(dlg.dataset[isArea ? "areaIdx" : "barracaIdx"], 10);
-			const item = (isArea ? areas : barracas)[idx];
-			if (!item) return;
-			if (!item._editEquipe) item._editEquipe = [];
-			const container = dlg.querySelector("#edit-" + short + "-equipe-container");
+				const isArea = trigger.id === "btn-add-area-membro";
+				const short = isArea ? "area" : "barraca";
+				const dlg = document.getElementById("dialog-edit-" + short);
+				if (!dlg) return;
+				const idx = parseInt(dlg.dataset[isArea ? "areaIdx" : "barracaIdx"], 10);
+				const item = (isArea ? areas : barracas)[idx];
+				if (!item) return;
+				if (!item._editEquipe) item._editEquipe = [];
+				const container = dlg.querySelector("#edit-" + short + "-equipe-container");
 
-			const popoverEl = document.getElementById("eq-" + short + "-popover");
-			const editIdx = popoverEl ? parseInt(popoverEl.dataset.pendingEditIdx || "-1", 10) : -1;
-			if (popoverEl) delete popoverEl.dataset.pendingEditIdx;
+				const popoverEl = document.getElementById("eq-" + short + "-popover");
+				const editIdx = popoverEl
+					? parseInt(popoverEl.dataset.pendingEditIdx || "-1", 10)
+					: -1;
+				if (popoverEl) delete popoverEl.dataset.pendingEditIdx;
 
-			populateEquipeForm("edit-" + short, item._editEquipe, container, editIdx);
-		}, true);
+				populateEquipeForm("edit-" + short, item._editEquipe, container, editIdx);
+			},
+			true
+		);
 	}
 
 	function closeEquipeForm(renderPrefix) {
@@ -549,23 +665,40 @@
 
 		if (tipo === "Responsavel") {
 			linkedValue = getSelectValue("eq-" + short + "-select-responsavel");
-			if (!linkedValue) { toast("Selecione o respons\u00e1vel.", "error"); return; }
+			if (!linkedValue) {
+				toast("Selecione o respons\u00e1vel.", "error");
+				return;
+			}
 			const sel = document.getElementById("eq-" + short + "-select-responsavel");
-			nome = sel ? sel.querySelector(":scope > button span.truncate").textContent.trim() : linkedValue;
+			nome = sel
+				? sel.querySelector(":scope > button span.truncate").textContent.trim()
+				: linkedValue;
 			email = (document.getElementById("eq-" + short + "-resp-email") || {}).value || "";
-			telefone = (document.getElementById("eq-" + short + "-resp-telefone") || {}).value || "";
+			telefone =
+				(document.getElementById("eq-" + short + "-resp-telefone") || {}).value || "";
 		} else if (tipo === "Associado") {
 			linkedValue = getSelectValue("eq-" + short + "-select-associado");
-			if (!linkedValue) { toast("Selecione o associado.", "error"); return; }
+			if (!linkedValue) {
+				toast("Selecione o associado.", "error");
+				return;
+			}
 			const sel = document.getElementById("eq-" + short + "-select-associado");
-			nome = sel ? sel.querySelector(":scope > button span.truncate").textContent.trim() : linkedValue;
+			nome = sel
+				? sel.querySelector(":scope > button span.truncate").textContent.trim()
+				: linkedValue;
 			email = (document.getElementById("eq-" + short + "-assoc-email") || {}).value || "";
-			telefone = (document.getElementById("eq-" + short + "-assoc-telefone") || {}).value || "";
+			telefone =
+				(document.getElementById("eq-" + short + "-assoc-telefone") || {}).value || "";
 		} else {
 			nome = (document.getElementById("eq-" + short + "-outro-nome").value || "").trim();
 			email = (document.getElementById("eq-" + short + "-outro-email").value || "").trim();
-			telefone = (document.getElementById("eq-" + short + "-outro-telefone").value || "").trim();
-			if (!nome) { toast("Informe o nome do membro.", "error"); return; }
+			telefone = (
+				document.getElementById("eq-" + short + "-outro-telefone").value || ""
+			).trim();
+			if (!nome) {
+				toast("Informe o nome do membro.", "error");
+				return;
+			}
 		}
 
 		const funcao = (document.getElementById("eq-" + short + "-funcao").value || "").trim();
@@ -692,7 +825,9 @@
 <tr data-area-idx="${i}">
 	<td>${escHtml(a.nome_area)}</td>
 	<td>${escHtml(a.nome_coord || "—")}</td>
-	${canEdit ? `
+	${
+		canEdit
+			? `
 	<td class="festa-table-actions">
 		<div class="popover" id="area-pop-${i}">
 			<button type="button" class="btn-sm-ghost festa-actions-btn" aria-expanded="false" aria-controls="area-pop-${i}-popover">…</button>
@@ -701,7 +836,9 @@
 				<button type="button" class="festa-popover-item festa-popover-item--destructive" data-area-action="delete" data-area-idx="${i}">Apagar</button>
 			</div>
 		</div>
-	</td>` : ""}
+	</td>`
+			: ""
+	}
 </tr>`;
 			})
 			.join("");
@@ -746,18 +883,27 @@
 		dlg.querySelector("#edit-area-descricao").value = area.descricao || "";
 
 		const tipo = area.tipo_coord || "Outro";
-		const tipoLabel = tipo === "Responsavel" ? "Responsável" : tipo === "Associado" ? "Associado" : "Outro";
+		const tipoLabel =
+			tipo === "Responsavel" ? "Responsável" : tipo === "Associado" ? "Associado" : "Outro";
 		setSelectValue("edit-area-tipo-coord", tipo, tipoLabel);
 		updateAreaCoordPickers(tipo);
 
 		if (tipo === "Responsavel") {
-			setSelectValue("edit-area-select-responsavel", area.responsavel_coord || "", area.nome_coord || "");
+			setSelectValue(
+				"edit-area-select-responsavel",
+				area.responsavel_coord || "",
+				area.nome_coord || ""
+			);
 			const eEl = dlg.querySelector("#edit-area-coord-resp-email");
 			const tEl = dlg.querySelector("#edit-area-coord-resp-telefone");
 			if (eEl) eEl.value = area.email_coord || "";
 			if (tEl) tEl.value = area.telefone_coord || "";
 		} else if (tipo === "Associado") {
-			setSelectValue("edit-area-select-associado", area.associado_coord || "", area.nome_coord || "");
+			setSelectValue(
+				"edit-area-select-associado",
+				area.associado_coord || "",
+				area.nome_coord || ""
+			);
 			const eEl = dlg.querySelector("#edit-area-coord-assoc-email");
 			const tEl = dlg.querySelector("#edit-area-coord-assoc-telefone");
 			if (eEl) eEl.value = area.email_coord || "";
@@ -772,7 +918,11 @@
 		}
 
 		const equipeContainer = dlg.querySelector("#edit-area-equipe-container");
-		const equipe = area.equipe ? area.equipe.map(function (m) { return Object.assign({}, m); }) : [];
+		const equipe = area.equipe
+			? area.equipe.map(function (m) {
+					return Object.assign({}, m);
+			  })
+			: [];
 		area._editEquipe = equipe;
 		renderEquipeTable(equipeContainer, equipe, "edit-area");
 
@@ -825,7 +975,11 @@
 		<img src="/assets/gris/images/gris-character/gris-search.png" alt="Personagem Gris procurando" class="empty-image empty-image--sm" loading="lazy" decoding="async" />
 	</div>
 	<h2>Nenhuma barraca</h2>
-	<p>${canEdit ? "Adicione a primeira barraca usando o botão acima." : "Nenhuma barraca cadastrada."}</p>
+	<p>${
+		canEdit
+			? "Adicione a primeira barraca usando o botão acima."
+			: "Nenhuma barraca cadastrada."
+	}</p>
 </section>`;
 			return;
 		}
@@ -837,7 +991,9 @@
 	<td>${escHtml(b.nome_barraca)}</td>
 	<td>${escHtml(b.nome_area || "—")}</td>
 	<td>${escHtml(b.nome_coord || "—")}</td>
-	${canEdit ? `
+	${
+		canEdit
+			? `
 	<td class="festa-table-actions">
 		<div class="popover" id="barraca-pop-${i}">
 			<button type="button" class="btn-sm-ghost festa-actions-btn" aria-expanded="false" aria-controls="barraca-pop-${i}-popover">…</button>
@@ -846,7 +1002,9 @@
 				<button type="button" class="festa-popover-item festa-popover-item--destructive" data-barraca-action="delete" data-barraca-idx="${i}">Apagar</button>
 			</div>
 		</div>
-	</td>` : ""}
+	</td>`
+			: ""
+	}
 </tr>`;
 			})
 			.join("");
@@ -892,18 +1050,27 @@
 		setSelectValue("edit-barraca-area", barraca.area || "", barraca.nome_area || "");
 
 		const tipo = barraca.tipo_coord || "Outro";
-		const tipoLabel = tipo === "Responsavel" ? "Responsável" : tipo === "Associado" ? "Associado" : "Outro";
+		const tipoLabel =
+			tipo === "Responsavel" ? "Responsável" : tipo === "Associado" ? "Associado" : "Outro";
 		setSelectValue("edit-barraca-tipo-coord", tipo, tipoLabel);
 		updateBarracaCoordPickers(tipo);
 
 		if (tipo === "Responsavel") {
-			setSelectValue("edit-barraca-select-responsavel", barraca.responsavel_coord || "", barraca.nome_coord || "");
+			setSelectValue(
+				"edit-barraca-select-responsavel",
+				barraca.responsavel_coord || "",
+				barraca.nome_coord || ""
+			);
 			const eEl = dlg.querySelector("#edit-barraca-coord-resp-email");
 			const tEl = dlg.querySelector("#edit-barraca-coord-resp-telefone");
 			if (eEl) eEl.value = barraca.email_coord || "";
 			if (tEl) tEl.value = barraca.telefone_coord || "";
 		} else if (tipo === "Associado") {
-			setSelectValue("edit-barraca-select-associado", barraca.associado_coord || "", barraca.nome_coord || "");
+			setSelectValue(
+				"edit-barraca-select-associado",
+				barraca.associado_coord || "",
+				barraca.nome_coord || ""
+			);
 			const eEl = dlg.querySelector("#edit-barraca-coord-assoc-email");
 			const tEl = dlg.querySelector("#edit-barraca-coord-assoc-telefone");
 			if (eEl) eEl.value = barraca.email_coord || "";
@@ -918,7 +1085,11 @@
 		}
 
 		const equipeContainer = dlg.querySelector("#edit-barraca-equipe-container");
-		const equipe = barraca.equipe ? barraca.equipe.map(function (m) { return Object.assign({}, m); }) : [];
+		const equipe = barraca.equipe
+			? barraca.equipe.map(function (m) {
+					return Object.assign({}, m);
+			  })
+			: [];
 		barraca._editEquipe = equipe;
 		renderEquipeTable(equipeContainer, equipe, "edit-barraca");
 
@@ -945,12 +1116,16 @@
 			confirmLabel: "Apagar",
 		}).then(function (ok) {
 			if (!ok) return;
-			api("gris.api.festas.excluir_barraca", { barraca_name: barraca.name, festa_name: festaName })
+			api("gris.api.festas.excluir_barraca", {
+				barraca_name: barraca.name,
+				festa_name: festaName,
+			})
 				.then(function (res) {
 					if (res && res.ok === false && res.bloqueado === "produtos") {
 						infoDialog({
 							title: "Não é possível excluir a barraca",
-							message: "Existem produtos de venda vinculados a esta barraca. A barraca só pode ser apagada depois de desvincular os produtos abaixo:",
+							message:
+								"Existem produtos de venda vinculados a esta barraca. A barraca só pode ser apagada depois de desvincular os produtos abaixo:",
 							items: res.itens,
 						});
 						return;
@@ -996,7 +1171,8 @@
 				coordenador: coordenador,
 			})
 				.then(function (r) {
-					document.getElementById("display-nome-coord").textContent = r.nome_coord || coordenador;
+					document.getElementById("display-nome-coord").textContent =
+						r.nome_coord || coordenador;
 					document.getElementById("display-tipo-coord").textContent = tipo;
 					document.getElementById("dialog-coord").close();
 					return refreshFestaData();
@@ -1065,10 +1241,17 @@
 		btn.addEventListener("click", function () {
 			const nome = (document.getElementById("add-area-nome").value || "").trim();
 			const descricao = (document.getElementById("add-area-descricao").value || "").trim();
-			if (!nome) { toast("Informe o nome da área.", "error"); return; }
+			if (!nome) {
+				toast("Informe o nome da área.", "error");
+				return;
+			}
 
 			btn.disabled = true;
-			api("gris.api.festas.criar_area", { festa_name: festaName, nome_area: nome, descricao: descricao })
+			api("gris.api.festas.criar_area", {
+				festa_name: festaName,
+				nome_area: nome,
+				descricao: descricao,
+			})
 				.then(function () {
 					document.getElementById("dialog-add-area").close();
 					document.getElementById("add-area-nome").value = "";
@@ -1081,7 +1264,9 @@
 				.catch(function (err) {
 					toast(err.message || "Erro ao criar área.", "error");
 				})
-				.finally(function () { btn.disabled = false; });
+				.finally(function () {
+					btn.disabled = false;
+				});
 		});
 	}
 
@@ -1093,14 +1278,19 @@
 		const tipoCoordEl = document.getElementById("edit-area-tipo-coord");
 		if (tipoCoordEl) {
 			tipoCoordEl.addEventListener("change", function (e) {
-				updateAreaCoordPickers(e.detail ? e.detail.value : getSelectValue("edit-area-tipo-coord"));
+				updateAreaCoordPickers(
+					e.detail ? e.detail.value : getSelectValue("edit-area-tipo-coord")
+				);
 			});
 		}
 
 		const eqTipoEl = document.getElementById("eq-area-tipo");
 		if (eqTipoEl) {
 			eqTipoEl.addEventListener("change", function (e) {
-				updateEqPickers("edit-area", e.detail ? e.detail.value : getSelectValue("eq-area-tipo"));
+				updateEqPickers(
+					"edit-area",
+					e.detail ? e.detail.value : getSelectValue("eq-area-tipo")
+				);
 			});
 		}
 
@@ -1108,23 +1298,29 @@
 		const selAreaResp = document.getElementById("edit-area-select-responsavel");
 		if (selAreaResp) {
 			selAreaResp.addEventListener("change", function (e) {
-				const val = e.detail ? e.detail.value : getSelectValue("edit-area-select-responsavel");
+				const val = e.detail
+					? e.detail.value
+					: getSelectValue("edit-area-select-responsavel");
 				const opt = selAreaResp.querySelector('[role="option"][data-value="' + val + '"]');
 				const eEl = document.getElementById("edit-area-coord-resp-email");
 				const tEl = document.getElementById("edit-area-coord-resp-telefone");
-				if (eEl) eEl.value = opt ? (opt.dataset.email || "") : "";
-				if (tEl) tEl.value = opt ? (opt.dataset.telefone || "") : "";
+				if (eEl) eEl.value = opt ? opt.dataset.email || "" : "";
+				if (tEl) tEl.value = opt ? opt.dataset.telefone || "" : "";
 			});
 		}
 		const selAreaAssoc = document.getElementById("edit-area-select-associado");
 		if (selAreaAssoc) {
 			selAreaAssoc.addEventListener("change", function (e) {
-				const val = e.detail ? e.detail.value : getSelectValue("edit-area-select-associado");
-				const opt = selAreaAssoc.querySelector('[role="option"][data-value="' + val + '"]');
+				const val = e.detail
+					? e.detail.value
+					: getSelectValue("edit-area-select-associado");
+				const opt = selAreaAssoc.querySelector(
+					'[role="option"][data-value="' + val + '"]'
+				);
 				const eEl = document.getElementById("edit-area-coord-assoc-email");
 				const tEl = document.getElementById("edit-area-coord-assoc-telefone");
-				if (eEl) eEl.value = opt ? (opt.dataset.email || "") : "";
-				if (tEl) tEl.value = opt ? (opt.dataset.telefone || "") : "";
+				if (eEl) eEl.value = opt ? opt.dataset.email || "" : "";
+				if (tEl) tEl.value = opt ? opt.dataset.telefone || "" : "";
 			});
 		}
 
@@ -1132,34 +1328,44 @@
 		const selEqAreaResp = document.getElementById("eq-area-select-responsavel");
 		if (selEqAreaResp) {
 			selEqAreaResp.addEventListener("change", function (e) {
-				const val = e.detail ? e.detail.value : getSelectValue("eq-area-select-responsavel");
-				const opt = selEqAreaResp.querySelector('[role="option"][data-value="' + val + '"]');
+				const val = e.detail
+					? e.detail.value
+					: getSelectValue("eq-area-select-responsavel");
+				const opt = selEqAreaResp.querySelector(
+					'[role="option"][data-value="' + val + '"]'
+				);
 				const eEl = document.getElementById("eq-area-resp-email");
 				const tEl = document.getElementById("eq-area-resp-telefone");
-				if (eEl) eEl.value = opt ? (opt.dataset.email || "") : "";
-				if (tEl) tEl.value = opt ? (opt.dataset.telefone || "") : "";
+				if (eEl) eEl.value = opt ? opt.dataset.email || "" : "";
+				if (tEl) tEl.value = opt ? opt.dataset.telefone || "" : "";
 			});
 		}
 		const selEqAreaAssoc = document.getElementById("eq-area-select-associado");
 		if (selEqAreaAssoc) {
 			selEqAreaAssoc.addEventListener("change", function (e) {
 				const val = e.detail ? e.detail.value : getSelectValue("eq-area-select-associado");
-				const opt = selEqAreaAssoc.querySelector('[role="option"][data-value="' + val + '"]');
+				const opt = selEqAreaAssoc.querySelector(
+					'[role="option"][data-value="' + val + '"]'
+				);
 				const eEl = document.getElementById("eq-area-assoc-email");
 				const tEl = document.getElementById("eq-area-assoc-telefone");
-				if (eEl) eEl.value = opt ? (opt.dataset.email || "") : "";
-				if (tEl) tEl.value = opt ? (opt.dataset.telefone || "") : "";
+				if (eEl) eEl.value = opt ? opt.dataset.email || "" : "";
+				if (tEl) tEl.value = opt ? opt.dataset.telefone || "" : "";
 			});
 		}
 
 		const btnEqCancelar = document.getElementById("btn-eq-area-cancelar");
 		if (btnEqCancelar) {
-			btnEqCancelar.addEventListener("click", function () { closeEquipeForm("edit-area"); });
+			btnEqCancelar.addEventListener("click", function () {
+				closeEquipeForm("edit-area");
+			});
 		}
 
 		const btnEqConfirmar = document.getElementById("btn-eq-area-confirmar");
 		if (btnEqConfirmar) {
-			btnEqConfirmar.addEventListener("click", function () { confirmEquipeForm("edit-area"); });
+			btnEqConfirmar.addEventListener("click", function () {
+				confirmEquipeForm("edit-area");
+			});
 		}
 
 		// Trigger "Adicionar membro" e click-outside são tratados pelo design
@@ -1175,22 +1381,42 @@
 
 			const tipo = getSelectValue("edit-area-tipo-coord") || "Outro";
 			let coordenador = "";
-			if (tipo === "Responsavel") coordenador = getSelectValue("edit-area-select-responsavel");
-			else if (tipo === "Associado") coordenador = getSelectValue("edit-area-select-associado");
+			if (tipo === "Responsavel")
+				coordenador = getSelectValue("edit-area-select-responsavel");
+			else if (tipo === "Associado")
+				coordenador = getSelectValue("edit-area-select-associado");
 
 			const dados = {
 				nome_area: dlg.querySelector("#edit-area-nome").value.trim(),
 				descricao: dlg.querySelector("#edit-area-descricao").value.trim(),
 				tipo_coord: tipo,
 				coordenador: coordenador,
-				nome_coord: tipo === "Outro" ? (dlg.querySelector("#edit-area-coord-outro-nome").value || "").trim() : "",
-				email_coord: tipo === "Outro" ? ((dlg.querySelector("#edit-area-coord-outro-email") || {}).value || "").trim() : "",
-				telefone_coord: tipo === "Outro" ? ((dlg.querySelector("#edit-area-coord-outro-telefone") || {}).value || "").trim() : "",
+				nome_coord:
+					tipo === "Outro"
+						? (dlg.querySelector("#edit-area-coord-outro-nome").value || "").trim()
+						: "",
+				email_coord:
+					tipo === "Outro"
+						? (
+								(dlg.querySelector("#edit-area-coord-outro-email") || {}).value ||
+								""
+						  ).trim()
+						: "",
+				telefone_coord:
+					tipo === "Outro"
+						? (
+								(dlg.querySelector("#edit-area-coord-outro-telefone") || {})
+									.value || ""
+						  ).trim()
+						: "",
 				equipe: area._editEquipe || [],
 			};
 
 			btnSalvar.disabled = true;
-			api("gris.api.festas.salvar_area", { area_name: area.name, dados_json: JSON.stringify(dados) })
+			api("gris.api.festas.salvar_area", {
+				area_name: area.name,
+				dados_json: JSON.stringify(dados),
+			})
 				.then(function () {
 					dlg.close();
 					return refreshFestaData();
@@ -1201,7 +1427,9 @@
 				.catch(function (err) {
 					toast(err.message || "Erro ao salvar área.", "error");
 				})
-				.finally(function () { btnSalvar.disabled = false; });
+				.finally(function () {
+					btnSalvar.disabled = false;
+				});
 		});
 	}
 
@@ -1213,13 +1441,26 @@
 		if (!btn) return;
 		btn.addEventListener("click", function () {
 			const nome = (document.getElementById("add-barraca-nome").value || "").trim();
-			const descricao = (document.getElementById("add-barraca-descricao").value || "").trim();
+			const descricao = (
+				document.getElementById("add-barraca-descricao").value || ""
+			).trim();
 			const area = (getSelectValue("add-barraca-area") || "").trim();
-			if (!nome) { toast("Informe o nome da barraca.", "error"); return; }
-			if (!area) { toast("Selecione a área da barraca.", "error"); return; }
+			if (!nome) {
+				toast("Informe o nome da barraca.", "error");
+				return;
+			}
+			if (!area) {
+				toast("Selecione a área da barraca.", "error");
+				return;
+			}
 
 			btn.disabled = true;
-			api("gris.api.festas.criar_barraca", { festa_name: festaName, nome_barraca: nome, descricao: descricao, area: area })
+			api("gris.api.festas.criar_barraca", {
+				festa_name: festaName,
+				nome_barraca: nome,
+				descricao: descricao,
+				area: area,
+			})
 				.then(function () {
 					document.getElementById("dialog-add-barraca").close();
 					document.getElementById("add-barraca-nome").value = "";
@@ -1233,7 +1474,9 @@
 				.catch(function (err) {
 					toast(err.message || "Erro ao criar barraca.", "error");
 				})
-				.finally(function () { btn.disabled = false; });
+				.finally(function () {
+					btn.disabled = false;
+				});
 		});
 	}
 
@@ -1245,14 +1488,19 @@
 		const tipoCoordEl = document.getElementById("edit-barraca-tipo-coord");
 		if (tipoCoordEl) {
 			tipoCoordEl.addEventListener("change", function (e) {
-				updateBarracaCoordPickers(e.detail ? e.detail.value : getSelectValue("edit-barraca-tipo-coord"));
+				updateBarracaCoordPickers(
+					e.detail ? e.detail.value : getSelectValue("edit-barraca-tipo-coord")
+				);
 			});
 		}
 
 		const eqTipoEl = document.getElementById("eq-barraca-tipo");
 		if (eqTipoEl) {
 			eqTipoEl.addEventListener("change", function (e) {
-				updateEqPickers("edit-barraca", e.detail ? e.detail.value : getSelectValue("eq-barraca-tipo"));
+				updateEqPickers(
+					"edit-barraca",
+					e.detail ? e.detail.value : getSelectValue("eq-barraca-tipo")
+				);
 			});
 		}
 
@@ -1260,23 +1508,31 @@
 		const selBarracaResp = document.getElementById("edit-barraca-select-responsavel");
 		if (selBarracaResp) {
 			selBarracaResp.addEventListener("change", function (e) {
-				const val = e.detail ? e.detail.value : getSelectValue("edit-barraca-select-responsavel");
-				const opt = selBarracaResp.querySelector('[role="option"][data-value="' + val + '"]');
+				const val = e.detail
+					? e.detail.value
+					: getSelectValue("edit-barraca-select-responsavel");
+				const opt = selBarracaResp.querySelector(
+					'[role="option"][data-value="' + val + '"]'
+				);
 				const eEl = document.getElementById("edit-barraca-coord-resp-email");
 				const tEl = document.getElementById("edit-barraca-coord-resp-telefone");
-				if (eEl) eEl.value = opt ? (opt.dataset.email || "") : "";
-				if (tEl) tEl.value = opt ? (opt.dataset.telefone || "") : "";
+				if (eEl) eEl.value = opt ? opt.dataset.email || "" : "";
+				if (tEl) tEl.value = opt ? opt.dataset.telefone || "" : "";
 			});
 		}
 		const selBarracaAssoc = document.getElementById("edit-barraca-select-associado");
 		if (selBarracaAssoc) {
 			selBarracaAssoc.addEventListener("change", function (e) {
-				const val = e.detail ? e.detail.value : getSelectValue("edit-barraca-select-associado");
-				const opt = selBarracaAssoc.querySelector('[role="option"][data-value="' + val + '"]');
+				const val = e.detail
+					? e.detail.value
+					: getSelectValue("edit-barraca-select-associado");
+				const opt = selBarracaAssoc.querySelector(
+					'[role="option"][data-value="' + val + '"]'
+				);
 				const eEl = document.getElementById("edit-barraca-coord-assoc-email");
 				const tEl = document.getElementById("edit-barraca-coord-assoc-telefone");
-				if (eEl) eEl.value = opt ? (opt.dataset.email || "") : "";
-				if (tEl) tEl.value = opt ? (opt.dataset.telefone || "") : "";
+				if (eEl) eEl.value = opt ? opt.dataset.email || "" : "";
+				if (tEl) tEl.value = opt ? opt.dataset.telefone || "" : "";
 			});
 		}
 
@@ -1284,34 +1540,46 @@
 		const selEqBarracaResp = document.getElementById("eq-barraca-select-responsavel");
 		if (selEqBarracaResp) {
 			selEqBarracaResp.addEventListener("change", function (e) {
-				const val = e.detail ? e.detail.value : getSelectValue("eq-barraca-select-responsavel");
-				const opt = selEqBarracaResp.querySelector('[role="option"][data-value="' + val + '"]');
+				const val = e.detail
+					? e.detail.value
+					: getSelectValue("eq-barraca-select-responsavel");
+				const opt = selEqBarracaResp.querySelector(
+					'[role="option"][data-value="' + val + '"]'
+				);
 				const eEl = document.getElementById("eq-barraca-resp-email");
 				const tEl = document.getElementById("eq-barraca-resp-telefone");
-				if (eEl) eEl.value = opt ? (opt.dataset.email || "") : "";
-				if (tEl) tEl.value = opt ? (opt.dataset.telefone || "") : "";
+				if (eEl) eEl.value = opt ? opt.dataset.email || "" : "";
+				if (tEl) tEl.value = opt ? opt.dataset.telefone || "" : "";
 			});
 		}
 		const selEqBarracaAssoc = document.getElementById("eq-barraca-select-associado");
 		if (selEqBarracaAssoc) {
 			selEqBarracaAssoc.addEventListener("change", function (e) {
-				const val = e.detail ? e.detail.value : getSelectValue("eq-barraca-select-associado");
-				const opt = selEqBarracaAssoc.querySelector('[role="option"][data-value="' + val + '"]');
+				const val = e.detail
+					? e.detail.value
+					: getSelectValue("eq-barraca-select-associado");
+				const opt = selEqBarracaAssoc.querySelector(
+					'[role="option"][data-value="' + val + '"]'
+				);
 				const eEl = document.getElementById("eq-barraca-assoc-email");
 				const tEl = document.getElementById("eq-barraca-assoc-telefone");
-				if (eEl) eEl.value = opt ? (opt.dataset.email || "") : "";
-				if (tEl) tEl.value = opt ? (opt.dataset.telefone || "") : "";
+				if (eEl) eEl.value = opt ? opt.dataset.email || "" : "";
+				if (tEl) tEl.value = opt ? opt.dataset.telefone || "" : "";
 			});
 		}
 
 		const btnEqCancelar = document.getElementById("btn-eq-barraca-cancelar");
 		if (btnEqCancelar) {
-			btnEqCancelar.addEventListener("click", function () { closeEquipeForm("edit-barraca"); });
+			btnEqCancelar.addEventListener("click", function () {
+				closeEquipeForm("edit-barraca");
+			});
 		}
 
 		const btnEqConfirmar = document.getElementById("btn-eq-barraca-confirmar");
 		if (btnEqConfirmar) {
-			btnEqConfirmar.addEventListener("click", function () { confirmEquipeForm("edit-barraca"); });
+			btnEqConfirmar.addEventListener("click", function () {
+				confirmEquipeForm("edit-barraca");
+			});
 		}
 
 		// Trigger e click-outside delegados ao design system (initEquipeTriggers).
@@ -1325,11 +1593,16 @@
 
 			const tipo = getSelectValue("edit-barraca-tipo-coord") || "Outro";
 			let coordenador = "";
-			if (tipo === "Responsavel") coordenador = getSelectValue("edit-barraca-select-responsavel");
-			else if (tipo === "Associado") coordenador = getSelectValue("edit-barraca-select-associado");
+			if (tipo === "Responsavel")
+				coordenador = getSelectValue("edit-barraca-select-responsavel");
+			else if (tipo === "Associado")
+				coordenador = getSelectValue("edit-barraca-select-associado");
 
 			const area = (getSelectValue("edit-barraca-area") || "").trim();
-			if (!area) { toast("Selecione a área da barraca.", "error"); return; }
+			if (!area) {
+				toast("Selecione a área da barraca.", "error");
+				return;
+			}
 
 			const dados = {
 				nome_barraca: dlg.querySelector("#edit-barraca-nome").value.trim(),
@@ -1337,14 +1610,32 @@
 				area: area,
 				tipo_coord: tipo,
 				coordenador: coordenador,
-				nome_coord: tipo === "Outro" ? (dlg.querySelector("#edit-barraca-coord-outro-nome").value || "").trim() : "",
-				email_coord: tipo === "Outro" ? ((dlg.querySelector("#edit-barraca-coord-outro-email") || {}).value || "").trim() : "",
-				telefone_coord: tipo === "Outro" ? ((dlg.querySelector("#edit-barraca-coord-outro-telefone") || {}).value || "").trim() : "",
+				nome_coord:
+					tipo === "Outro"
+						? (dlg.querySelector("#edit-barraca-coord-outro-nome").value || "").trim()
+						: "",
+				email_coord:
+					tipo === "Outro"
+						? (
+								(dlg.querySelector("#edit-barraca-coord-outro-email") || {})
+									.value || ""
+						  ).trim()
+						: "",
+				telefone_coord:
+					tipo === "Outro"
+						? (
+								(dlg.querySelector("#edit-barraca-coord-outro-telefone") || {})
+									.value || ""
+						  ).trim()
+						: "",
 				equipe: barraca._editEquipe || [],
 			};
 
 			btnSalvar.disabled = true;
-			api("gris.api.festas.salvar_barraca", { barraca_name: barraca.name, dados_json: JSON.stringify(dados) })
+			api("gris.api.festas.salvar_barraca", {
+				barraca_name: barraca.name,
+				dados_json: JSON.stringify(dados),
+			})
 				.then(function () {
 					dlg.close();
 					return refreshFestaData();
@@ -1355,7 +1646,9 @@
 				.catch(function (err) {
 					toast(err.message || "Erro ao salvar barraca.", "error");
 				})
-				.finally(function () { btnSalvar.disabled = false; });
+				.finally(function () {
+					btnSalvar.disabled = false;
+				});
 		});
 	}
 
@@ -1391,7 +1684,9 @@
 				.catch(function (err) {
 					toast(err.message || "Erro ao salvar cenário.", "error");
 				})
-				.finally(function () { btnSalvar.disabled = false; });
+				.finally(function () {
+					btnSalvar.disabled = false;
+				});
 		});
 	}
 
@@ -1400,7 +1695,9 @@
 	// ─── Formatação de moeda / número ────────────────────────────────────────────
 
 	function fmtCurrency(val) {
-		return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val || 0);
+		return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
+			val || 0
+		);
 	}
 
 	function fmtNum(val) {
@@ -1411,7 +1708,9 @@
 	function parseCurrencyBR(value) {
 		if (value == null) return 0;
 		if (typeof value === "number") return value;
-		var s = String(value).trim().replace(/[^\d,.-]/g, "");
+		var s = String(value)
+			.trim()
+			.replace(/[^\d,.-]/g, "");
 		if (!s) return 0;
 		if (s.indexOf(",") !== -1) {
 			s = s.replace(/\./g, "").replace(",", ".");
@@ -1422,11 +1721,16 @@
 
 	// SVG inline de um ícone Lucide a partir do sprite do design system.
 	function lucideSvg(name, size, extraClass) {
-		return '<svg class="ds-lucide ds-lucide--' + (size || "sm")
-			+ (extraClass ? " " + extraClass : "")
-			+ '" aria-hidden="true" focusable="false" viewBox="0 0 24 24">'
-			+ '<use href="/assets/gris/design_system/icons/lucide/sprite.svg#' + name + '"></use>'
-			+ '</svg>';
+		return (
+			'<svg class="ds-lucide ds-lucide--' +
+			(size || "sm") +
+			(extraClass ? " " + extraClass : "") +
+			'" aria-hidden="true" focusable="false" viewBox="0 0 24 24">' +
+			'<use href="/assets/gris/design_system/icons/lucide/sprite.svg#' +
+			name +
+			'"></use>' +
+			"</svg>"
+		);
 	}
 
 	// ─── Calcula margem de lucro no frontend ──────────────────────────────────────
@@ -1451,14 +1755,23 @@
 		<img src="/assets/gris/images/gris-character/gris-search.png" alt="Personagem Gris procurando" class="empty-image empty-image--sm" loading="lazy" decoding="async" />
 	</div>
 	<h2>Nenhum produto</h2>
-	<p>${canEdit ? "Adicione o primeiro produto usando o botão acima." : "Nenhum produto cadastrado."}</p>
+	<p>${
+		canEdit
+			? "Adicione o primeiro produto usando o botão acima."
+			: "Nenhum produto cadastrado."
+	}</p>
 </section>`;
 			return;
 		}
 
 		var rows = produtos
 			.map(function (p, i) {
-				var conviteIcon = '<label class="switch" aria-label="' + (p.faz_parte_convite ? 'Sim' : 'Não') + '"><input type="checkbox" role="switch" class="input" disabled' + (p.faz_parte_convite ? ' checked' : '') + '></label>';
+				var conviteIcon =
+					'<label class="switch" aria-label="' +
+					(p.faz_parte_convite ? "Sim" : "Não") +
+					'"><input type="checkbox" role="switch" class="input" disabled' +
+					(p.faz_parte_convite ? " checked" : "") +
+					"></label>";
 				var margem = p.margem_lucro != null ? fmtNum(p.margem_lucro) + "%" : "—";
 				return `
 <tr data-produto-idx="${i}">
@@ -1468,7 +1781,9 @@
 	<td data-sort-value="${Number(p.preco_venda) || 0}">${fmtCurrency(p.preco_venda)}</td>
 	<td data-sort-value="${Number(p.margem_lucro) || 0}">${margem}</td>
 	<td class="festa-switch-cell" data-sort-value="${p.faz_parte_convite ? 1 : 0}">${conviteIcon}</td>
-	${canEdit ? `
+	${
+		canEdit
+			? `
 	<td class="festa-table-actions">
 		<div class="popover" id="produto-pop-${i}">
 			<button type="button" class="btn-sm-ghost festa-actions-btn" aria-expanded="false" aria-controls="produto-pop-${i}-popover">…</button>
@@ -1477,7 +1792,9 @@
 				<button type="button" class="festa-popover-item festa-popover-item--destructive" data-produto-action="delete" data-produto-idx="${i}">Excluir</button>
 			</div>
 		</div>
-	</td>` : ""}
+	</td>`
+			: ""
+	}
 </tr>`;
 			})
 			.join("");
@@ -1512,7 +1829,6 @@
 				else if (action === "delete") deleteProduto(idx);
 			});
 		});
-
 	}
 
 	function calcCenariosLocal(precoCusto, precoVenda, expectativaVendaPorPessoa) {
@@ -1534,10 +1850,30 @@
 
 	function updateCenariosTable(produto) {
 		var fields = [
-			{ prefix: "cen-qtd-", min: fmtNum(produto.qtd_min), int: fmtNum(produto.qtd_intermediario), max: fmtNum(produto.qtd_max) },
-			{ prefix: "cen-custo-", min: fmtCurrency(produto.custo_total_min), int: fmtCurrency(produto.custo_total_intermediario), max: fmtCurrency(produto.custo_total_max) },
-			{ prefix: "cen-receita-", min: fmtCurrency(produto.receita_total_min), int: fmtCurrency(produto.receita_total_intermediario), max: fmtCurrency(produto.receita_total_max) },
-			{ prefix: "cen-superavit-", min: fmtCurrency(produto.superavit_min), int: fmtCurrency(produto.superavit_intermediario), max: fmtCurrency(produto.superavit_max) },
+			{
+				prefix: "cen-qtd-",
+				min: fmtNum(produto.qtd_min),
+				int: fmtNum(produto.qtd_intermediario),
+				max: fmtNum(produto.qtd_max),
+			},
+			{
+				prefix: "cen-custo-",
+				min: fmtCurrency(produto.custo_total_min),
+				int: fmtCurrency(produto.custo_total_intermediario),
+				max: fmtCurrency(produto.custo_total_max),
+			},
+			{
+				prefix: "cen-receita-",
+				min: fmtCurrency(produto.receita_total_min),
+				int: fmtCurrency(produto.receita_total_intermediario),
+				max: fmtCurrency(produto.receita_total_max),
+			},
+			{
+				prefix: "cen-superavit-",
+				min: fmtCurrency(produto.superavit_min),
+				int: fmtCurrency(produto.superavit_intermediario),
+				max: fmtCurrency(produto.superavit_max),
+			},
 		];
 		fields.forEach(function (f) {
 			var minEl = document.getElementById(f.prefix + "min");
@@ -1595,22 +1931,42 @@
 			});
 		});
 
-		console.log("[compras-vinculadas] produto.name=", produto.name, "linhas=", linhas.length, linhas);
+		console.log(
+			"[compras-vinculadas] produto.name=",
+			produto.name,
+			"linhas=",
+			linhas.length,
+			linhas
+		);
 
 		if (!linhas.length) {
-			container.innerHTML = '<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhuma compra vinculada.</p>';
+			container.innerHTML =
+				'<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhuma compra vinculada.</p>';
 			return;
 		}
 
-		var rows = linhas.map(function (l) {
-			var qtdLabel = fmtNum(l.uso.quantidade_usada) + " " + (l.uso.unidade_medida_uso || "unidade");
-			return "<tr><td>" + escHtml(l.nome_item) + "</td><td>" + escHtml(qtdLabel) + "</td><td>" + fmtCurrency(l.uso.valor_uso) + "</td></tr>";
-		}).join("");
+		var rows = linhas
+			.map(function (l) {
+				var qtdLabel =
+					fmtNum(l.uso.quantidade_usada) + " " + (l.uso.unidade_medida_uso || "unidade");
+				return (
+					"<tr><td>" +
+					escHtml(l.nome_item) +
+					"</td><td>" +
+					escHtml(qtdLabel) +
+					"</td><td>" +
+					fmtCurrency(l.uso.valor_uso) +
+					"</td></tr>"
+				);
+			})
+			.join("");
 
 		container.innerHTML =
 			'<div class="festa-table-scroll"><table class="festa-table">' +
 			"<thead><tr><th>Item</th><th>Qtd usada</th><th>Preço de custo</th></tr></thead>" +
-			"<tbody>" + rows + "</tbody>" +
+			"<tbody>" +
+			rows +
+			"</tbody>" +
 			"</table></div>";
 	}
 
@@ -1618,16 +1974,23 @@
 		var produto = produtos[idx];
 		confirmDialog({
 			title: "Excluir produto",
-			message: "Excluir o produto \"" + produto.nome_produto + "\"? Esta ação não pode ser desfeita.",
+			message:
+				'Excluir o produto "' +
+				produto.nome_produto +
+				'"? Esta ação não pode ser desfeita.',
 			confirmLabel: "Excluir",
 		}).then(function (ok) {
 			if (!ok) return;
-			api("gris.api.festas.excluir_produto", { produto_name: produto.name, festa_name: festaName })
+			api("gris.api.festas.excluir_produto", {
+				produto_name: produto.name,
+				festa_name: festaName,
+			})
 				.then(function (res) {
 					if (res && res.ok === false && res.bloqueado === "compras") {
 						infoDialog({
 							title: "Não é possível excluir o produto",
-							message: "Este produto de venda só pode ser excluído se não houver nenhum item de compra vinculado. Itens de compra vinculados:",
+							message:
+								"Este produto de venda só pode ser excluído se não houver nenhum item de compra vinculado. Itens de compra vinculados:",
 							items: res.itens,
 						});
 						return;
@@ -1654,12 +2017,22 @@
 			var barraca = getSelectValue("add-produto-barraca");
 			var conviteEl = document.querySelector("#add-produto-convite input[type='checkbox']");
 			var faz_parte_convite = conviteEl && conviteEl.checked ? "1" : "0";
-			var preco_venda = (document.getElementById("add-produto-preco-venda").value || "0").trim();
-			var expectativa = (document.getElementById("add-produto-expectativa").value || "0").trim();
+			var preco_venda = (
+				document.getElementById("add-produto-preco-venda").value || "0"
+			).trim();
+			var expectativa = (
+				document.getElementById("add-produto-expectativa").value || "0"
+			).trim();
 
-			if (!nome) { toast("Informe o nome do produto.", "error"); return; }
+			if (!nome) {
+				toast("Informe o nome do produto.", "error");
+				return;
+			}
 			if (faz_parte_convite === "1" && (parseFloat(expectativa) || 0) < 1) {
-				toast("Produtos do convite exigem expectativa de venda por pessoa maior ou igual a 1.", "error");
+				toast(
+					"Produtos do convite exigem expectativa de venda por pessoa maior ou igual a 1.",
+					"error"
+				);
 				return;
 			}
 
@@ -1675,7 +2048,9 @@
 				.then(function () {
 					document.getElementById("dialog-add-produto").close();
 					document.getElementById("add-produto-nome").value = "";
-					var conviteReset = document.querySelector("#add-produto-convite input[type='checkbox']");
+					var conviteReset = document.querySelector(
+						"#add-produto-convite input[type='checkbox']"
+					);
 					if (conviteReset) conviteReset.checked = false;
 					document.getElementById("add-produto-preco-venda").value = "";
 					document.getElementById("add-produto-expectativa").value = "";
@@ -1688,7 +2063,9 @@
 				.catch(function (err) {
 					toast(err.message || "Erro ao criar produto.", "error");
 				})
-				.finally(function () { btn.disabled = false; });
+				.finally(function () {
+					btn.disabled = false;
+				});
 		});
 	}
 
@@ -1725,7 +2102,10 @@
 			var produto = produtos[idx];
 
 			var nome = (dlg.querySelector("#edit-produto-nome").value || "").trim();
-			if (!nome) { toast("Informe o nome do produto.", "error"); return; }
+			if (!nome) {
+				toast("Informe o nome do produto.", "error");
+				return;
+			}
 
 			var barraca = getSelectValue("edit-produto-barraca");
 			var conviteEl = dlg.querySelector("#edit-produto-convite input[type='checkbox']");
@@ -1734,7 +2114,10 @@
 			var expectativa = (dlg.querySelector("#edit-produto-expectativa").value || "0").trim();
 
 			if (faz_parte_convite && (parseFloat(expectativa) || 0) < 1) {
-				toast("Produtos do convite exigem expectativa de venda por pessoa maior ou igual a 1.", "error");
+				toast(
+					"Produtos do convite exigem expectativa de venda por pessoa maior ou igual a 1.",
+					"error"
+				);
 				return;
 			}
 
@@ -1747,7 +2130,10 @@
 			};
 
 			btnSalvar.disabled = true;
-			api("gris.api.festas.salvar_produto", { produto_name: produto.name, dados_json: JSON.stringify(dados) })
+			api("gris.api.festas.salvar_produto", {
+				produto_name: produto.name,
+				dados_json: JSON.stringify(dados),
+			})
 				.then(function () {
 					dlg.close();
 					return refreshFestaData();
@@ -1758,7 +2144,9 @@
 				.catch(function (err) {
 					toast(err.message || "Erro ao salvar produto.", "error");
 				})
-				.finally(function () { btnSalvar.disabled = false; });
+				.finally(function () {
+					btnSalvar.disabled = false;
+				});
 		});
 	}
 
@@ -1788,7 +2176,9 @@
 	}
 
 	function unitLabel(value) {
-		var found = (unidadesItems || []).find(function (it) { return String(it.value) === String(value); });
+		var found = (unidadesItems || []).find(function (it) {
+			return String(it.value) === String(value);
+		});
 		return (found && found.label) || value;
 	}
 
@@ -1800,8 +2190,12 @@
 			if (unitsCompatible(value, generalUnit)) return null;
 			return {
 				disabled: true,
-				title: "Indisponível: a unidade geral do produto (" + unitLabel(generalUnit)
-					+ ") não pode ser convertida para " + unitLabel(value) + ".",
+				title:
+					"Indisponível: a unidade geral do produto (" +
+					unitLabel(generalUnit) +
+					") não pode ser convertida para " +
+					unitLabel(value) +
+					".",
 			};
 		};
 	}
@@ -1815,15 +2209,28 @@
 		var unidadeCompra = getSelectValue("compra-unidade") || "unidade";
 		var variaComPublico = getSwitchChecked("compra-varia-publico");
 		var usadoEmProdutos = getSwitchChecked("compra-usado-produtos");
-		var finalQty = parseFloat((document.getElementById("compra-quantidade-final") || {}).value || "0") || 0;
+		var finalQty =
+			parseFloat((document.getElementById("compra-quantidade-final") || {}).value || "0") ||
+			0;
 
-		var escolhida = compraDraftCotacoes.find(function (c) { return c.escolhida; }) || null;
+		var escolhida =
+			compraDraftCotacoes.find(function (c) {
+				return c.escolhida;
+			}) || null;
 		// Em doações, mantemos a quantidade do pacote (para preservar as quantidades
 		// sugeridas) e zeramos apenas o valor.
-		var qtdPacote = 0, valorPacote = 0;
+		var qtdPacote = 0,
+			valorPacote = 0;
 		if (escolhida && (escolhida.quantidade || 0) > 0) {
-			var conv = convertUnit(escolhida.quantidade, escolhida.unidade_medida || "unidade", unidadeCompra);
-			if (conv !== null && conv > 0) { qtdPacote = conv; valorPacote = escolhida.doacao ? 0 : (escolhida.valor || 0); }
+			var conv = convertUnit(
+				escolhida.quantidade,
+				escolhida.unidade_medida || "unidade",
+				unidadeCompra
+			);
+			if (conv !== null && conv > 0) {
+				qtdPacote = conv;
+				valorPacote = escolhida.doacao ? 0 : escolhida.valor || 0;
+			}
 		}
 
 		var prodQtdMap = {};
@@ -1848,7 +2255,11 @@
 				var somaCenario = 0;
 				compraDraftUsos.forEach(function (uso) {
 					if (!uso.produto || !uso.quantidade_usada || !uso.unidade_medida_uso) return;
-					var qtdUso = convertUnit(Number(uso.quantidade_usada), uso.unidade_medida_uso, unidadeCompra);
+					var qtdUso = convertUnit(
+						Number(uso.quantidade_usada),
+						uso.unidade_medida_uso,
+						unidadeCompra
+					);
 					if (qtdUso === null) return;
 					var qtdProdCenario = (prodQtdMap[uso.produto] || {})[chave] || 0;
 					somaCenario += qtdUso * qtdProdCenario;
@@ -1905,7 +2316,9 @@
 		if (!container) return;
 
 		// Aba de planejamento mostra apenas itens previstos; não previstos só no Fechamento.
-		var comprasVisiveis = compras.filter(function (c) { return c.previsto !== false; });
+		var comprasVisiveis = compras.filter(function (c) {
+			return c.previsto !== false;
+		});
 		if (!comprasVisiveis.length) {
 			container.innerHTML = `
 <section class="empty">
@@ -1918,23 +2331,30 @@
 			return;
 		}
 
-		var rows = compras.map(function (c, i) {
-			if (c.previsto === false) return "";
-			var qtd = Number(c.quantidade_compra_final) || 0;
-			var valor = Number(c.valor_total_compra) || 0;
-			var nCot = (c.cotacoes || []).length;
-			var nUso = (c.usos_em_produto || []).length;
-			// "Quantidade de compra" é a contagem de cotações; o total na unidade
-			// geral do produto = contagem × quantidade da cotação escolhida
-			// (convertida para a unidade geral).
-			var escolhida = (c.cotacoes || []).find(function (x) { return x.escolhida; });
-			var qtdPacote = 0;
-			if (escolhida && Number(escolhida.quantidade) > 0) {
-				var conv = convertUnit(Number(escolhida.quantidade), escolhida.unidade_medida || "unidade", c.unidade_compra || "unidade");
-				if (conv !== null && conv > 0) qtdPacote = conv;
-			}
-			var total = qtd * qtdPacote;
-			return `
+		var rows = compras
+			.map(function (c, i) {
+				if (c.previsto === false) return "";
+				var qtd = Number(c.quantidade_compra_final) || 0;
+				var valor = Number(c.valor_total_compra) || 0;
+				var nCot = (c.cotacoes || []).length;
+				var nUso = (c.usos_em_produto || []).length;
+				// "Quantidade de compra" é a contagem de cotações; o total na unidade
+				// geral do produto = contagem × quantidade da cotação escolhida
+				// (convertida para a unidade geral).
+				var escolhida = (c.cotacoes || []).find(function (x) {
+					return x.escolhida;
+				});
+				var qtdPacote = 0;
+				if (escolhida && Number(escolhida.quantidade) > 0) {
+					var conv = convertUnit(
+						Number(escolhida.quantidade),
+						escolhida.unidade_medida || "unidade",
+						c.unidade_compra || "unidade"
+					);
+					if (conv !== null && conv > 0) qtdPacote = conv;
+				}
+				var total = qtd * qtdPacote;
+				return `
 <tr data-compra-idx="${i}">
 	<td>${escHtml(c.nome_item)}</td>
 	<td data-sort-value="${qtd}">${fmtNum(c.quantidade_compra_final)}</td>
@@ -1942,7 +2362,9 @@
 	<td data-sort-value="${valor}">${fmtCurrency(c.valor_total_compra)}</td>
 	<td data-sort-value="${nCot}"><span class="badge">${nCot}</span></td>
 	<td data-sort-value="${nUso}"><span class="badge">${nUso}</span></td>
-	${canEdit ? `
+	${
+		canEdit
+			? `
 	<td class="festa-table-actions">
 		<div class="popover" id="compra-pop-${i}">
 			<button type="button" class="btn-sm-ghost festa-actions-btn" aria-expanded="false" aria-controls="compra-pop-${i}-popover">…</button>
@@ -1951,9 +2373,12 @@
 				<button type="button" class="festa-popover-item festa-popover-item--destructive" data-compra-action="delete" data-compra-idx="${i}">Excluir</button>
 			</div>
 		</div>
-	</td>` : ""}
+	</td>`
+			: ""
+	}
 </tr>`;
-		}).join("");
+			})
+			.join("");
 
 		var headers = [
 			{ label: "Item", sortType: "text" },
@@ -2005,18 +2430,34 @@
 		var title = document.getElementById("dialog-compra-title");
 		if (title) title.textContent = idx >= 0 ? "Editar compra" : "Adicionar compra";
 		document.getElementById("compra-nome-item").value = compra.nome_item || "";
-		setSelectValue("compra-area", compra.area || "", compra.nome_area || selectLabelFor(areasItems, "", "Sem área"));
-		setSelectValue("compra-unidade", compra.unidade_compra || "unidade", compra.unidade_compra || "unidade");
-		document.getElementById("compra-quantidade-sugerida").value = fmtNum(compra.quantidade_compra);
+		setSelectValue(
+			"compra-area",
+			compra.area || "",
+			compra.nome_area || selectLabelFor(areasItems, "", "Sem área")
+		);
+		setSelectValue(
+			"compra-unidade",
+			compra.unidade_compra || "unidade",
+			compra.unidade_compra || "unidade"
+		);
+		document.getElementById("compra-quantidade-sugerida").value = fmtNum(
+			compra.quantidade_compra
+		);
 		var finalEl = document.getElementById("compra-quantidade-final");
 		finalEl.value = compra.quantidade_compra_final || "";
 		finalEl.dataset.autoFinal = idx >= 0 ? "0" : "1";
-		document.getElementById("compra-valor-total").value = fmtCurrency(compra.valor_total_compra);
+		document.getElementById("compra-valor-total").value = fmtCurrency(
+			compra.valor_total_compra
+		);
 		setSwitchChecked("compra-varia-publico", compra.varia_com_publico);
 		setSwitchChecked("compra-usado-produtos", compra.usado_em_produtos);
 
-		compraDraftCotacoes = (compra.cotacoes || []).map(function (c) { return Object.assign({}, c); });
-		compraDraftUsos = (compra.usos_em_produto || []).map(function (u) { return Object.assign({}, u); });
+		compraDraftCotacoes = (compra.cotacoes || []).map(function (c) {
+			return Object.assign({}, c);
+		});
+		compraDraftUsos = (compra.usos_em_produto || []).map(function (u) {
+			return Object.assign({}, u);
+		});
 		renderCompraCotacoes();
 		renderCompraUsos();
 		updateCompraUsosVisibility();
@@ -2030,8 +2471,10 @@
 			compraDraftCotacoes.push({
 				fornecedor: (row.querySelector("[data-field='fornecedor']").value || "").trim(),
 				valor: parseFloat(row.querySelector("[data-field='valor']").value || "0") || 0,
-				quantidade: parseFloat(row.querySelector("[data-field='quantidade']").value || "0") || 0,
-				unidade_medida: (row.querySelector("[data-field='unidade_medida']") || {}).value || "unidade",
+				quantidade:
+					parseFloat(row.querySelector("[data-field='quantidade']").value || "0") || 0,
+				unidade_medida:
+					(row.querySelector("[data-field='unidade_medida']") || {}).value || "unidade",
 				escolhida: !!row.querySelector("[data-field='escolhida']").checked,
 				doacao: !!row.querySelector("[data-field='doacao']").checked,
 			});
@@ -2043,8 +2486,13 @@
 			compraDraftUsos.push({
 				produto: produtoVal,
 				produto_label: selectLabelFor(produtosItems, produtoVal, ""),
-				quantidade_usada: parseFloat(row.querySelector("[data-field='quantidade_usada']").value || "0") || 0,
-				unidade_medida_uso: (row.querySelector("[data-field='unidade_medida_uso']") || {}).value || "unidade",
+				quantidade_usada:
+					parseFloat(
+						row.querySelector("[data-field='quantidade_usada']").value || "0"
+					) || 0,
+				unidade_medida_uso:
+					(row.querySelector("[data-field='unidade_medida_uso']") || {}).value ||
+					"unidade",
 			});
 		});
 	}
@@ -2053,28 +2501,53 @@
 		var container = document.getElementById("compra-cotacoes-container");
 		if (!container) return;
 		if (!compraDraftCotacoes.length) {
-			container.innerHTML = '<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhuma cotação adicionada.</p>';
+			container.innerHTML =
+				'<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhuma cotação adicionada.</p>';
 			return;
 		}
 		var unidadeGeral = getSelectValue("compra-unidade") || "unidade";
 		var metaUnidade = unitOptionMeta(unidadeGeral);
-		var rows = compraDraftCotacoes.map(function (c, idx) {
-			var valUnit = (c.quantidade > 0 && !c.doacao)
-				? (new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format((c.valor || 0) / c.quantidade)
-					+ " / " + (c.unidade_medida || "unidade"))
-				: "—";
-			return `
+		var rows = compraDraftCotacoes
+			.map(function (c, idx) {
+				var valUnit =
+					c.quantidade > 0 && !c.doacao
+						? new Intl.NumberFormat("pt-BR", {
+								style: "currency",
+								currency: "BRL",
+						  }).format((c.valor || 0) / c.quantidade) +
+						  " / " +
+						  (c.unidade_medida || "unidade")
+						: "—";
+				return `
 <tr data-compra-cotacao-row>
-	<td><input class="input festa-compact-input" data-field="fornecedor" value="${escHtml(c.fornecedor || "")}" placeholder="Fornecedor"></td>
-	<td>${window.GrisCurrencyInput.render({ field: "valor", value: c.valor, class: "festa-compact-input" })}</td>
-	<td><input class="input festa-compact-input" data-field="quantidade" type="text" inputmode="decimal" data-numeric-input value="${escHtml(c.quantidade || "")}"></td>
-	<td>${renderBasecoatSelect("unidade_medida", unidadesItems, c.unidade_medida || "unidade", metaUnidade)}</td>
+	<td><input class="input festa-compact-input" data-field="fornecedor" value="${escHtml(
+		c.fornecedor || ""
+	)}" placeholder="Fornecedor"></td>
+	<td>${window.GrisCurrencyInput.render({
+		field: "valor",
+		value: c.valor,
+		class: "festa-compact-input",
+	})}</td>
+	<td><input class="input festa-compact-input" data-field="quantidade" type="text" inputmode="decimal" data-numeric-input value="${escHtml(
+		c.quantidade || ""
+	)}"></td>
+	<td>${renderBasecoatSelect(
+		"unidade_medida",
+		unidadesItems,
+		c.unidade_medida || "unidade",
+		metaUnidade
+	)}</td>
 	<td class="text-sm text-muted-foreground" data-valor-unitario>${escHtml(valUnit)}</td>
-	<td class="festa-switch-cell"><label class="switch" aria-label="Cotação escolhida"><input type="checkbox" role="switch" class="input" data-field="escolhida"${c.escolhida ? " checked" : ""}></label></td>
-	<td class="festa-switch-cell"><label class="switch" aria-label="Doação"><input type="checkbox" role="switch" class="input" data-field="doacao"${c.doacao ? " checked" : ""}></label></td>
+	<td class="festa-switch-cell"><label class="switch" aria-label="Cotação escolhida"><input type="checkbox" role="switch" class="input" data-field="escolhida"${
+		c.escolhida ? " checked" : ""
+	}></label></td>
+	<td class="festa-switch-cell"><label class="switch" aria-label="Doação"><input type="checkbox" role="switch" class="input" data-field="doacao"${
+		c.doacao ? " checked" : ""
+	}></label></td>
 	<td class="festa-table-actions"><button type="button" class="btn-sm-ghost festa-actions-btn" data-compra-remove-cotacao="${idx}" aria-label="Remover cotação">×</button></td>
 </tr>`;
-		}).join("");
+			})
+			.join("");
 		container.innerHTML = `
 <div class="festa-table-scroll">
 <table class="festa-table festa-edit-table">
@@ -2123,20 +2596,30 @@
 		var container = document.getElementById("compra-usos-container");
 		if (!container) return;
 		if (!compraDraftUsos.length) {
-			container.innerHTML = '<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhum produto vinculado.</p>';
+			container.innerHTML =
+				'<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhum produto vinculado.</p>';
 			return;
 		}
 		var unidadeGeral = getSelectValue("compra-unidade") || "unidade";
 		var metaUnidade = unitOptionMeta(unidadeGeral);
-		var rows = compraDraftUsos.map(function (u, idx) {
-			return `
+		var rows = compraDraftUsos
+			.map(function (u, idx) {
+				return `
 <tr data-compra-uso-row>
 	<td>${renderNativeSelect("produto", produtosItems, u.produto || "", "compra-select-produto")}</td>
-	<td><input class="input festa-compact-input" data-field="quantidade_usada" type="text" inputmode="decimal" data-numeric-input value="${escHtml(u.quantidade_usada || "")}"></td>
-	<td>${renderBasecoatSelect("unidade_medida_uso", unidadesItems, u.unidade_medida_uso || "unidade", metaUnidade)}</td>
+	<td><input class="input festa-compact-input" data-field="quantidade_usada" type="text" inputmode="decimal" data-numeric-input value="${escHtml(
+		u.quantidade_usada || ""
+	)}"></td>
+	<td>${renderBasecoatSelect(
+		"unidade_medida_uso",
+		unidadesItems,
+		u.unidade_medida_uso || "unidade",
+		metaUnidade
+	)}</td>
 	<td class="festa-table-actions"><button type="button" class="btn-sm-ghost festa-actions-btn" data-compra-remove-uso="${idx}" aria-label="Remover uso">×</button></td>
 </tr>`;
-		}).join("");
+			})
+			.join("");
 		container.innerHTML = `
 <div class="festa-table-scroll">
 <table class="festa-table festa-edit-table">
@@ -2180,22 +2663,32 @@
 		// Update valor unitário cells reactively
 		var cotacaoContainer = document.getElementById("compra-cotacoes-container");
 		if (cotacaoContainer) {
-			cotacaoContainer.querySelectorAll("[data-compra-cotacao-row]").forEach(function (row, idx) {
-				var cell = row.querySelector("[data-valor-unitario]");
-				if (!cell) return;
-				var draft = compraDraftCotacoes[idx];
-				if (!draft) return;
-				var qty = Number(draft.quantidade) || 0;
-				var val = Number(draft.valor) || 0;
-				var unit = draft.unidade_medida || "unidade";
-				cell.textContent = (qty > 0 && !draft.doacao)
-					? (new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val / qty) + " / " + unit)
-					: "—";
-			});
+			cotacaoContainer
+				.querySelectorAll("[data-compra-cotacao-row]")
+				.forEach(function (row, idx) {
+					var cell = row.querySelector("[data-valor-unitario]");
+					if (!cell) return;
+					var draft = compraDraftCotacoes[idx];
+					if (!draft) return;
+					var qty = Number(draft.quantidade) || 0;
+					var val = Number(draft.valor) || 0;
+					var unit = draft.unidade_medida || "unidade";
+					cell.textContent =
+						qty > 0 && !draft.doacao
+							? new Intl.NumberFormat("pt-BR", {
+									style: "currency",
+									currency: "BRL",
+							  }).format(val / qty) +
+							  " / " +
+							  unit
+							: "—";
+				});
 		}
 
 		var cen = calcCompraCenarios();
-		var cenarioKey = { "Mínimo": "min", "Intermediário": "intermediario", "Máximo": "max" }[cenarioSimulacao] || "intermediario";
+		var cenarioKey =
+			{ Mínimo: "min", Intermediário: "intermediario", Máximo: "max" }[cenarioSimulacao] ||
+			"intermediario";
 		var qtdSugeridaCenario = cen[cenarioKey].qtd_sugerida;
 
 		var sugeridaEl = document.getElementById("compra-quantidade-sugerida");
@@ -2210,18 +2703,56 @@
 
 		// "Cotações a comprar" é uma contagem de cotações (sem unidade); "Total" e
 		// "Sobra individual" são quantidades na unidade de medida escolhida.
-		function fmtQtdUnidade(v, un) { return un ? (fmtNum(v) + " " + un) : fmtNum(v); }
+		function fmtQtdUnidade(v, un) {
+			return un ? fmtNum(v) + " " + un : fmtNum(v);
+		}
 		var cenFields = [
-			{ min: "compra-cen-qtd-min", int: "compra-cen-qtd-int", max: "compra-cen-qtd-max",
-			  vMin: fmtNum(cen.min.qtd_sugerida), vInt: fmtNum(cen.intermediario.qtd_sugerida), vMax: fmtNum(cen.max.qtd_sugerida) },
-			{ min: "compra-cen-total-min", int: "compra-cen-total-int", max: "compra-cen-total-max",
-			  vMin: fmtQtdUnidade(cen.min.qtd_total_compra, cen.min.unidade_compra), vInt: fmtQtdUnidade(cen.intermediario.qtd_total_compra, cen.intermediario.unidade_compra), vMax: fmtQtdUnidade(cen.max.qtd_total_compra, cen.max.unidade_compra) },
-			{ min: "compra-cen-valor-min", int: "compra-cen-valor-int", max: "compra-cen-valor-max",
-			  vMin: fmtCurrency(cen.min.valor_total), vInt: fmtCurrency(cen.intermediario.valor_total), vMax: fmtCurrency(cen.max.valor_total) },
-			{ min: "compra-cen-sobra-qtd-min", int: "compra-cen-sobra-qtd-int", max: "compra-cen-sobra-qtd-max",
-			  vMin: fmtQtdUnidade(cen.min.qtd_sobra_individual, cen.min.unidade_compra), vInt: fmtQtdUnidade(cen.intermediario.qtd_sobra_individual, cen.intermediario.unidade_compra), vMax: fmtQtdUnidade(cen.max.qtd_sobra_individual, cen.max.unidade_compra) },
-			{ min: "compra-cen-sobra-valor-min", int: "compra-cen-sobra-valor-int", max: "compra-cen-sobra-valor-max",
-			  vMin: fmtCurrency(cen.min.valor_sobra), vInt: fmtCurrency(cen.intermediario.valor_sobra), vMax: fmtCurrency(cen.max.valor_sobra) },
+			{
+				min: "compra-cen-qtd-min",
+				int: "compra-cen-qtd-int",
+				max: "compra-cen-qtd-max",
+				vMin: fmtNum(cen.min.qtd_sugerida),
+				vInt: fmtNum(cen.intermediario.qtd_sugerida),
+				vMax: fmtNum(cen.max.qtd_sugerida),
+			},
+			{
+				min: "compra-cen-total-min",
+				int: "compra-cen-total-int",
+				max: "compra-cen-total-max",
+				vMin: fmtQtdUnidade(cen.min.qtd_total_compra, cen.min.unidade_compra),
+				vInt: fmtQtdUnidade(
+					cen.intermediario.qtd_total_compra,
+					cen.intermediario.unidade_compra
+				),
+				vMax: fmtQtdUnidade(cen.max.qtd_total_compra, cen.max.unidade_compra),
+			},
+			{
+				min: "compra-cen-valor-min",
+				int: "compra-cen-valor-int",
+				max: "compra-cen-valor-max",
+				vMin: fmtCurrency(cen.min.valor_total),
+				vInt: fmtCurrency(cen.intermediario.valor_total),
+				vMax: fmtCurrency(cen.max.valor_total),
+			},
+			{
+				min: "compra-cen-sobra-qtd-min",
+				int: "compra-cen-sobra-qtd-int",
+				max: "compra-cen-sobra-qtd-max",
+				vMin: fmtQtdUnidade(cen.min.qtd_sobra_individual, cen.min.unidade_compra),
+				vInt: fmtQtdUnidade(
+					cen.intermediario.qtd_sobra_individual,
+					cen.intermediario.unidade_compra
+				),
+				vMax: fmtQtdUnidade(cen.max.qtd_sobra_individual, cen.max.unidade_compra),
+			},
+			{
+				min: "compra-cen-sobra-valor-min",
+				int: "compra-cen-sobra-valor-int",
+				max: "compra-cen-sobra-valor-max",
+				vMin: fmtCurrency(cen.min.valor_sobra),
+				vInt: fmtCurrency(cen.intermediario.valor_sobra),
+				vMax: fmtCurrency(cen.max.valor_sobra),
+			},
 		];
 		cenFields.forEach(function (f) {
 			var elMin = document.getElementById(f.min);
@@ -2232,8 +2763,12 @@
 			if (elMax) elMax.textContent = f.vMax;
 		});
 
-		var finalQty = parseFloat((document.getElementById("compra-quantidade-final") || {}).value || "0") || 0;
-		var escolhida = compraDraftCotacoes.find(function (c) { return c.escolhida; });
+		var finalQty =
+			parseFloat((document.getElementById("compra-quantidade-final") || {}).value || "0") ||
+			0;
+		var escolhida = compraDraftCotacoes.find(function (c) {
+			return c.escolhida;
+		});
 		var total = 0;
 		if (escolhida && !escolhida.doacao && finalQty > 0) {
 			total = finalQty * (escolhida.valor || 0);
@@ -2245,9 +2780,17 @@
 	function collectCompraDados() {
 		readCompraDrafts();
 		var nome = (document.getElementById("compra-nome-item").value || "").trim();
-		if (!nome) { toast("Informe o nome do item.", "error"); return null; }
-		var finalQty = parseFloat((document.getElementById("compra-quantidade-final").value || "0").trim()) || 0;
-		if (finalQty < 0) { toast("A quantidade final deve ser não-negativa.", "error"); return null; }
+		if (!nome) {
+			toast("Informe o nome do item.", "error");
+			return null;
+		}
+		var finalQty =
+			parseFloat((document.getElementById("compra-quantidade-final").value || "0").trim()) ||
+			0;
+		if (finalQty < 0) {
+			toast("A quantidade final deve ser não-negativa.", "error");
+			return null;
+		}
 		return {
 			nome_item: nome,
 			area: getSelectValue("compra-area"),
@@ -2264,13 +2807,21 @@
 		var compra = compras[idx];
 		confirmDialog({
 			title: "Excluir compra",
-			message: "Excluir a compra \"" + compra.nome_item + "\"? Esta ação não pode ser desfeita.",
+			message:
+				'Excluir a compra "' + compra.nome_item + '"? Esta ação não pode ser desfeita.',
 			confirmLabel: "Excluir",
 		}).then(function (ok) {
 			if (!ok) return;
-			api("gris.api.festas.excluir_compra", { compra_name: compra.name, festa_name: festaName })
-				.then(function () { return refreshFestaData(); })
-				.then(function () { toast("Compra removida.", "success"); })
+			api("gris.api.festas.excluir_compra", {
+				compra_name: compra.name,
+				festa_name: festaName,
+			})
+				.then(function () {
+					return refreshFestaData();
+				})
+				.then(function () {
+					toast("Compra removida.", "success");
+				})
 				.catch(function (err) {
 					toast(err.message || "Erro ao remover compra.", "error");
 				});
@@ -2284,8 +2835,9 @@
 		// por isso é vinculado antes do early-return de canEdit.
 		document.querySelectorAll("[data-action='gerar-lista-compras']").forEach(function (btn) {
 			btn.addEventListener("click", function () {
-				var url = "/api/method/gris.api.festas.lista_compras.download_lista_compras_pdf?festa_name="
-					+ encodeURIComponent(festaName);
+				var url =
+					"/api/method/gris.api.festas.lista_compras.download_lista_compras_pdf?festa_name=" +
+					encodeURIComponent(festaName);
 				window.open(url, "_blank");
 			});
 		});
@@ -2293,66 +2845,75 @@
 		if (!canEdit) return;
 
 		document.querySelectorAll("[data-action='add-compra']").forEach(function (btn) {
-			btn.addEventListener("click", function () { openCompraDialog(-1); });
+			btn.addEventListener("click", function () {
+				openCompraDialog(-1);
+			});
 		});
 
 		var usadoEl = document.querySelector("#compra-usado-produtos input[type='checkbox']");
-		if (usadoEl) usadoEl.addEventListener("change", function () {
-			updateCompraUsosVisibility();
-			syncCompraCalculatedFields();
-		});
+		if (usadoEl)
+			usadoEl.addEventListener("change", function () {
+				updateCompraUsosVisibility();
+				syncCompraCalculatedFields();
+			});
 		var variaEl = document.querySelector("#compra-varia-publico input[type='checkbox']");
 		if (variaEl) variaEl.addEventListener("change", syncCompraCalculatedFields);
 		var unidadeEl = document.getElementById("compra-unidade");
-		if (unidadeEl) unidadeEl.addEventListener("change", function () {
-			// Ao trocar a unidade geral, reavaliamos as unidades de cotação e de
-			// uso: as que deixaram de ser conversíveis voltam para a unidade geral
-			// e os selects são redesenhados para refletir as opções ativas.
-			readCompraDrafts();
-			var gen = getSelectValue("compra-unidade") || "unidade";
-			compraDraftCotacoes.forEach(function (c) {
-				if (!unitsCompatible(c.unidade_medida || "unidade", gen)) c.unidade_medida = gen;
+		if (unidadeEl)
+			unidadeEl.addEventListener("change", function () {
+				// Ao trocar a unidade geral, reavaliamos as unidades de cotação e de
+				// uso: as que deixaram de ser conversíveis voltam para a unidade geral
+				// e os selects são redesenhados para refletir as opções ativas.
+				readCompraDrafts();
+				var gen = getSelectValue("compra-unidade") || "unidade";
+				compraDraftCotacoes.forEach(function (c) {
+					if (!unitsCompatible(c.unidade_medida || "unidade", gen))
+						c.unidade_medida = gen;
+				});
+				compraDraftUsos.forEach(function (u) {
+					if (!unitsCompatible(u.unidade_medida_uso || "unidade", gen))
+						u.unidade_medida_uso = gen;
+				});
+				renderCompraCotacoes();
+				renderCompraUsos();
+				syncCompraCalculatedFields();
 			});
-			compraDraftUsos.forEach(function (u) {
-				if (!unitsCompatible(u.unidade_medida_uso || "unidade", gen)) u.unidade_medida_uso = gen;
-			});
-			renderCompraCotacoes();
-			renderCompraUsos();
-			syncCompraCalculatedFields();
-		});
 		var finalEl = document.getElementById("compra-quantidade-final");
-		if (finalEl) finalEl.addEventListener("input", function () {
-			finalEl.dataset.autoFinal = "0";
-			syncCompraCalculatedFields();
-		});
+		if (finalEl)
+			finalEl.addEventListener("input", function () {
+				finalEl.dataset.autoFinal = "0";
+				syncCompraCalculatedFields();
+			});
 
 		var addCotacao = document.getElementById("btn-compra-add-cotacao");
-		if (addCotacao) addCotacao.addEventListener("click", function () {
-			readCompraDrafts();
-			compraDraftCotacoes.push({
-				fornecedor: "",
-				valor: 0,
-				quantidade: 0,
-				unidade_medida: getSelectValue("compra-unidade") || "unidade",
-				escolhida: compraDraftCotacoes.length === 0,
-				doacao: false,
+		if (addCotacao)
+			addCotacao.addEventListener("click", function () {
+				readCompraDrafts();
+				compraDraftCotacoes.push({
+					fornecedor: "",
+					valor: 0,
+					quantidade: 0,
+					unidade_medida: getSelectValue("compra-unidade") || "unidade",
+					escolhida: compraDraftCotacoes.length === 0,
+					doacao: false,
+				});
+				renderCompraCotacoes();
+				syncCompraCalculatedFields();
 			});
-			renderCompraCotacoes();
-			syncCompraCalculatedFields();
-		});
 
 		var addUso = document.getElementById("btn-compra-add-uso");
-		if (addUso) addUso.addEventListener("click", function () {
-			readCompraDrafts();
-			compraDraftUsos.push({
-				produto: "",
-				produto_label: "",
-				quantidade_usada: 0,
-				unidade_medida_uso: getSelectValue("compra-unidade") || "unidade",
+		if (addUso)
+			addUso.addEventListener("click", function () {
+				readCompraDrafts();
+				compraDraftUsos.push({
+					produto: "",
+					produto_label: "",
+					quantidade_usada: 0,
+					unidade_medida_uso: getSelectValue("compra-unidade") || "unidade",
+				});
+				renderCompraUsos();
+				syncCompraCalculatedFields();
 			});
-			renderCompraUsos();
-			syncCompraCalculatedFields();
-		});
 
 		var btnSalvar = document.getElementById("btn-compra-salvar");
 		if (!btnSalvar) return;
@@ -2363,9 +2924,16 @@
 			if (!dados) return;
 
 			btnSalvar.disabled = true;
-			var request = idx >= 0
-				? api("gris.api.festas.salvar_compra", { compra_name: compras[idx].name, dados_json: JSON.stringify(dados) })
-				: api("gris.api.festas.criar_compra", { festa_name: festaName, dados_json: JSON.stringify(dados) });
+			var request =
+				idx >= 0
+					? api("gris.api.festas.salvar_compra", {
+							compra_name: compras[idx].name,
+							dados_json: JSON.stringify(dados),
+					  })
+					: api("gris.api.festas.criar_compra", {
+							festa_name: festaName,
+							dados_json: JSON.stringify(dados),
+					  });
 			request
 				.then(function () {
 					dlg.close();
@@ -2377,7 +2945,9 @@
 				.catch(function (err) {
 					toast(err.message || "Erro ao salvar compra.", "error");
 				})
-				.finally(function () { btnSalvar.disabled = false; });
+				.finally(function () {
+					btnSalvar.disabled = false;
+				});
 		});
 	}
 
@@ -2399,7 +2969,9 @@
 		if (!container) return;
 
 		// Aba de planejamento mostra apenas itens previstos; não previstos só no Fechamento.
-		var contratacoesVisiveis = contratacoes.filter(function (c) { return c.previsto !== false; });
+		var contratacoesVisiveis = contratacoes.filter(function (c) {
+			return c.previsto !== false;
+		});
 		if (!contratacoesVisiveis.length) {
 			container.innerHTML = `
 <section class="empty">
@@ -2407,21 +2979,28 @@
 		<img src="/assets/gris/images/gris-character/gris-search.png" alt="Personagem Gris procurando" class="empty-image empty-image--sm" loading="lazy" decoding="async" />
 	</div>
 	<h2>Nenhuma contratação</h2>
-	<p>${canEdit ? "Adicione a primeira contratação usando o botão acima." : "Nenhuma contratação cadastrada."}</p>
+	<p>${
+		canEdit
+			? "Adicione a primeira contratação usando o botão acima."
+			: "Nenhuma contratação cadastrada."
+	}</p>
 </section>`;
 			return;
 		}
 
-		var rows = contratacoes.map(function (c, i) {
-			if (c.previsto === false) return "";
-			var valor = Number(c.valor_total_contratacao) || 0;
-			var nCot = (c.cotacoes || []).length;
-			return `
+		var rows = contratacoes
+			.map(function (c, i) {
+				if (c.previsto === false) return "";
+				var valor = Number(c.valor_total_contratacao) || 0;
+				var nCot = (c.cotacoes || []).length;
+				return `
 <tr data-contratacao-idx="${i}">
 	<td>${escHtml(c.nome_item)}</td>
 	<td data-sort-value="${valor}">${fmtCurrency(c.valor_total_contratacao)}</td>
 	<td data-sort-value="${nCot}"><span class="badge">${nCot}</span></td>
-	${canEdit ? `
+	${
+		canEdit
+			? `
 	<td class="festa-table-actions">
 		<div class="popover" id="contratacao-pop-${i}">
 			<button type="button" class="btn-sm-ghost festa-actions-btn" aria-expanded="false" aria-controls="contratacao-pop-${i}-popover">…</button>
@@ -2430,9 +3009,12 @@
 				<button type="button" class="festa-popover-item festa-popover-item--destructive" data-contratacao-action="delete" data-contratacao-idx="${i}">Excluir</button>
 			</div>
 		</div>
-	</td>` : ""}
+	</td>`
+			: ""
+	}
 </tr>`;
-		}).join("");
+			})
+			.join("");
 
 		var headers = [
 			{ label: "Item", sortType: "text" },
@@ -2464,10 +3046,18 @@
 		var title = document.getElementById("dialog-contratacao-title");
 		if (title) title.textContent = idx >= 0 ? "Editar contratação" : "Adicionar contratação";
 		document.getElementById("contratacao-nome-item").value = contratacao.nome_item || "";
-		setSelectValue("contratacao-area", contratacao.area || "", contratacao.nome_area || selectLabelFor(areasItems, "", "Sem área"));
-		document.getElementById("contratacao-valor-total").value = fmtCurrency(contratacao.valor_total_contratacao);
+		setSelectValue(
+			"contratacao-area",
+			contratacao.area || "",
+			contratacao.nome_area || selectLabelFor(areasItems, "", "Sem área")
+		);
+		document.getElementById("contratacao-valor-total").value = fmtCurrency(
+			contratacao.valor_total_contratacao
+		);
 
-		contratacaoDraftCotacoes = (contratacao.cotacoes || []).map(function (c) { return Object.assign({}, c); });
+		contratacaoDraftCotacoes = (contratacao.cotacoes || []).map(function (c) {
+			return Object.assign({}, c);
+		});
 		renderContratacaoCotacoes();
 		syncContratacaoValorTotal();
 		dlg.showModal();
@@ -2488,18 +3078,29 @@
 		var container = document.getElementById("contratacao-cotacoes-container");
 		if (!container) return;
 		if (!contratacaoDraftCotacoes.length) {
-			container.innerHTML = '<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhuma cotação adicionada.</p>';
+			container.innerHTML =
+				'<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhuma cotação adicionada.</p>';
 			return;
 		}
-		var rows = contratacaoDraftCotacoes.map(function (c, idx) {
-			return `
+		var rows = contratacaoDraftCotacoes
+			.map(function (c, idx) {
+				return `
 <tr data-contratacao-cotacao-row>
-	<td><input class="input festa-compact-input" data-field="fornecedor" value="${escHtml(c.fornecedor || "")}" placeholder="Fornecedor"></td>
-	<td>${window.GrisCurrencyInput.render({ field: "valor", value: c.valor, class: "festa-compact-input" })}</td>
-	<td class="festa-switch-cell"><label class="switch" aria-label="Cotação escolhida"><input type="checkbox" role="switch" class="input" data-field="escolhida"${c.escolhida ? " checked" : ""}></label></td>
+	<td><input class="input festa-compact-input" data-field="fornecedor" value="${escHtml(
+		c.fornecedor || ""
+	)}" placeholder="Fornecedor"></td>
+	<td>${window.GrisCurrencyInput.render({
+		field: "valor",
+		value: c.valor,
+		class: "festa-compact-input",
+	})}</td>
+	<td class="festa-switch-cell"><label class="switch" aria-label="Cotação escolhida"><input type="checkbox" role="switch" class="input" data-field="escolhida"${
+		c.escolhida ? " checked" : ""
+	}></label></td>
 	<td class="festa-table-actions"><button type="button" class="btn-sm-ghost festa-actions-btn" data-contratacao-remove-cotacao="${idx}" aria-label="Remover cotação">×</button></td>
 </tr>`;
-		}).join("");
+			})
+			.join("");
 		container.innerHTML = `
 <div class="festa-table-scroll">
 <table class="festa-table festa-edit-table">
@@ -2531,7 +3132,10 @@
 		container.querySelectorAll("[data-contratacao-remove-cotacao]").forEach(function (btn) {
 			btn.addEventListener("click", function () {
 				readContratacaoDrafts();
-				contratacaoDraftCotacoes.splice(parseInt(btn.dataset.contratacaoRemoveCotacao, 10), 1);
+				contratacaoDraftCotacoes.splice(
+					parseInt(btn.dataset.contratacaoRemoveCotacao, 10),
+					1
+				);
 				renderContratacaoCotacoes();
 				syncContratacaoValorTotal();
 			});
@@ -2540,8 +3144,10 @@
 
 	function syncContratacaoValorTotal() {
 		readContratacaoDrafts();
-		var escolhida = contratacaoDraftCotacoes.find(function (c) { return c.escolhida; });
-		var total = escolhida ? (Number(escolhida.valor) || 0) : 0;
+		var escolhida = contratacaoDraftCotacoes.find(function (c) {
+			return c.escolhida;
+		});
+		var total = escolhida ? Number(escolhida.valor) || 0 : 0;
 		var totalEl = document.getElementById("contratacao-valor-total");
 		if (totalEl) totalEl.value = fmtCurrency(total);
 	}
@@ -2549,7 +3155,10 @@
 	function collectContratacaoDados() {
 		readContratacaoDrafts();
 		var nome = (document.getElementById("contratacao-nome-item").value || "").trim();
-		if (!nome) { toast("Informe o nome do item.", "error"); return null; }
+		if (!nome) {
+			toast("Informe o nome do item.", "error");
+			return null;
+		}
 		return {
 			nome_item: nome,
 			area: getSelectValue("contratacao-area"),
@@ -2561,13 +3170,23 @@
 		var contratacao = contratacoes[idx];
 		confirmDialog({
 			title: "Excluir contratação",
-			message: "Excluir a contratação \"" + contratacao.nome_item + "\"? Esta ação não pode ser desfeita.",
+			message:
+				'Excluir a contratação "' +
+				contratacao.nome_item +
+				'"? Esta ação não pode ser desfeita.',
 			confirmLabel: "Excluir",
 		}).then(function (ok) {
 			if (!ok) return;
-			api("gris.api.festas.excluir_contratacao", { contratacao_name: contratacao.name, festa_name: festaName })
-				.then(function () { return refreshFestaData(); })
-				.then(function () { toast("Contratação removida.", "success"); })
+			api("gris.api.festas.excluir_contratacao", {
+				contratacao_name: contratacao.name,
+				festa_name: festaName,
+			})
+				.then(function () {
+					return refreshFestaData();
+				})
+				.then(function () {
+					toast("Contratação removida.", "success");
+				})
 				.catch(function (err) {
 					toast(err.message || "Erro ao remover contratação.", "error");
 				});
@@ -2579,20 +3198,23 @@
 		if (!canEdit) return;
 
 		document.querySelectorAll("[data-action='add-contratacao']").forEach(function (btn) {
-			btn.addEventListener("click", function () { openContratacaoDialog(-1); });
+			btn.addEventListener("click", function () {
+				openContratacaoDialog(-1);
+			});
 		});
 
 		var addCotacao = document.getElementById("btn-contratacao-add-cotacao");
-		if (addCotacao) addCotacao.addEventListener("click", function () {
-			readContratacaoDrafts();
-			contratacaoDraftCotacoes.push({
-				fornecedor: "",
-				valor: 0,
-				escolhida: contratacaoDraftCotacoes.length === 0,
+		if (addCotacao)
+			addCotacao.addEventListener("click", function () {
+				readContratacaoDrafts();
+				contratacaoDraftCotacoes.push({
+					fornecedor: "",
+					valor: 0,
+					escolhida: contratacaoDraftCotacoes.length === 0,
+				});
+				renderContratacaoCotacoes();
+				syncContratacaoValorTotal();
 			});
-			renderContratacaoCotacoes();
-			syncContratacaoValorTotal();
-		});
 
 		var btnSalvar = document.getElementById("btn-contratacao-salvar");
 		if (!btnSalvar) return;
@@ -2603,9 +3225,16 @@
 			if (!dados) return;
 
 			btnSalvar.disabled = true;
-			var request = idx >= 0
-				? api("gris.api.festas.salvar_contratacao", { contratacao_name: contratacoes[idx].name, dados_json: JSON.stringify(dados) })
-				: api("gris.api.festas.criar_contratacao", { festa_name: festaName, dados_json: JSON.stringify(dados) });
+			var request =
+				idx >= 0
+					? api("gris.api.festas.salvar_contratacao", {
+							contratacao_name: contratacoes[idx].name,
+							dados_json: JSON.stringify(dados),
+					  })
+					: api("gris.api.festas.criar_contratacao", {
+							festa_name: festaName,
+							dados_json: JSON.stringify(dados),
+					  });
 			request
 				.then(function () {
 					dlg.close();
@@ -2617,7 +3246,9 @@
 				.catch(function (err) {
 					toast(err.message || "Erro ao salvar contratação.", "error");
 				})
-				.finally(function () { btnSalvar.disabled = false; });
+				.finally(function () {
+					btnSalvar.disabled = false;
+				});
 		});
 	}
 
@@ -2657,22 +3288,67 @@
 
 	function renderOrcamentoCenarios() {
 		const totais = window._festaData.totais || {};
-		const min = totais.min || {}, inter = totais.intermediario || {}, max = totais.max || {};
+		const min = totais.min || {},
+			inter = totais.intermediario || {},
+			max = totais.max || {};
 
 		const resultado = [
-			{ label: "Convites (entrada)", min: min.receita_entrada, intermediario: inter.receita_entrada, max: max.receita_entrada },
-			{ label: "Convites (consumação)", min: min.receita_consumacao, intermediario: inter.receita_consumacao, max: max.receita_consumacao },
-			{ label: "Receita de produtos", min: min.receita_produtos, intermediario: inter.receita_produtos, max: max.receita_produtos },
-			{ label: "Receita total", min: min.receita, intermediario: inter.receita, max: max.receita, cellClass: "festa-cenarios-cell--success" },
-			{ label: "Despesa total", min: min.despesa, intermediario: inter.despesa, max: max.despesa, cellClass: "festa-cenarios-cell--danger" },
-			{ label: "Saldo", min: min.saldo, intermediario: inter.saldo, max: max.saldo, total: true, negativeIsDanger: true },
+			{
+				label: "Convites (entrada)",
+				min: min.receita_entrada,
+				intermediario: inter.receita_entrada,
+				max: max.receita_entrada,
+			},
+			{
+				label: "Convites (consumação)",
+				min: min.receita_consumacao,
+				intermediario: inter.receita_consumacao,
+				max: max.receita_consumacao,
+			},
+			{
+				label: "Receita de produtos",
+				min: min.receita_produtos,
+				intermediario: inter.receita_produtos,
+				max: max.receita_produtos,
+			},
+			{
+				label: "Receita total",
+				min: min.receita,
+				intermediario: inter.receita,
+				max: max.receita,
+				cellClass: "festa-cenarios-cell--success",
+			},
+			{
+				label: "Despesa total",
+				min: min.despesa,
+				intermediario: inter.despesa,
+				max: max.despesa,
+				cellClass: "festa-cenarios-cell--danger",
+			},
+			{
+				label: "Saldo",
+				min: min.saldo,
+				intermediario: inter.saldo,
+				max: max.saldo,
+				total: true,
+				negativeIsDanger: true,
+			},
 		];
-		document.getElementById("orc-resultado-table").innerHTML = buildCenarioTable(resultado, { headerLabel: "" });
+		document.getElementById("orc-resultado-table").innerHTML = buildCenarioTable(resultado, {
+			headerLabel: "",
+		});
 
 		const margem = [
-			{ label: "Margem de segurança", min: min.margem, intermediario: inter.margem, max: max.margem },
+			{
+				label: "Margem de segurança",
+				min: min.margem,
+				intermediario: inter.margem,
+				max: max.margem,
+			},
 		];
-		document.getElementById("orc-margem-table").innerHTML = buildCenarioTable(margem, { headerLabel: "" });
+		document.getElementById("orc-margem-table").innerHTML = buildCenarioTable(margem, {
+			headerLabel: "",
+		});
 	}
 
 	function renderBreakdownTable(selector, items, headerLabel) {
@@ -2689,21 +3365,44 @@
 			totals.intermediario += it.esperado_intermediario || 0;
 			totals.max += it.esperado_max || 0;
 		});
-		rows.push({ label: "Total", min: totals.min, intermediario: totals.intermediario, max: totals.max, total: true });
+		rows.push({
+			label: "Total",
+			min: totals.min,
+			intermediario: totals.intermediario,
+			max: totals.max,
+			total: true,
+		});
 		const target = document.querySelector(selector);
 		if (!target) return;
 		if (!items || !items.length) {
-			target.innerHTML = '<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhum registro.</p>';
+			target.innerHTML =
+				'<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhum registro.</p>';
 			return;
 		}
 		target.innerHTML = buildCenarioTable(rows, { headerLabel: headerLabel || "" });
 	}
 
 	function renderOrcamentoBreakdowns() {
-		renderBreakdownTable("#orc-receitas-area-table", window._festaData.receitasPorArea, "Área");
-		renderBreakdownTable("#orc-despesas-area-table", window._festaData.despesasPorArea, "Área");
-		renderBreakdownTable("#orc-receitas-barraca-table", window._festaData.receitasPorBarraca, "Barraca");
-		renderBreakdownTable("#orc-despesas-barraca-table", window._festaData.despesasPorBarraca, "Barraca");
+		renderBreakdownTable(
+			"#orc-receitas-area-table",
+			window._festaData.receitasPorArea,
+			"Área"
+		);
+		renderBreakdownTable(
+			"#orc-despesas-area-table",
+			window._festaData.despesasPorArea,
+			"Área"
+		);
+		renderBreakdownTable(
+			"#orc-receitas-barraca-table",
+			window._festaData.receitasPorBarraca,
+			"Barraca"
+		);
+		renderBreakdownTable(
+			"#orc-despesas-barraca-table",
+			window._festaData.despesasPorBarraca,
+			"Barraca"
+		);
 	}
 
 	function renderOrcamentoTab() {
@@ -2715,7 +3414,9 @@
 	// ── Convite por lotes (planejamento) ──
 
 	function lotesConviteSomaPct() {
-		return lotesConvite.reduce(function (s, l) { return s + Number(l.expectativa_percentual || 0); }, 0);
+		return lotesConvite.reduce(function (s, l) {
+			return s + Number(l.expectativa_percentual || 0);
+		}, 0);
 	}
 
 	function atualizarSomaLotesConvite() {
@@ -2731,7 +3432,11 @@
 			soma = lotesConviteSomaPct();
 		}
 		var ok = Math.abs(soma - 100) < 0.01;
-		el.textContent = "Soma das expectativas: " + soma.toLocaleString("pt-BR") + "%" + (ok ? " ✓" : " (deve ser 100%)");
+		el.textContent =
+			"Soma das expectativas: " +
+			soma.toLocaleString("pt-BR") +
+			"%" +
+			(ok ? " ✓" : " (deve ser 100%)");
 		el.classList.toggle("festa-cenarios-cell--danger", !ok);
 		el.classList.toggle("festa-cenarios-cell--success", ok);
 	}
@@ -2744,26 +3449,63 @@
 		var container = document.getElementById("lotes-convite-container");
 		if (!container) return;
 		if (!lotesConvite.length) {
-			container.innerHTML = '<p class="text-sm text-muted-foreground">Nenhum lote cadastrado. Clique em "Adicionar lote".</p>';
+			container.innerHTML =
+				'<p class="text-sm text-muted-foreground">Nenhum lote cadastrado. Clique em "Adicionar lote".</p>';
 			atualizarSomaLotesConvite();
 			return;
 		}
 		var editable = canEdit;
-		var ro = editable ? "" : " readonly tabindex=\"-1\"";
-		var rows = lotesConvite.map(function (l, i) {
-			return '<tr>' +
-				'<td><input type="text" class="input" data-lote-nome="' + i + '" value="' + escHtml(l.nome_lote || "") + '" placeholder="Ex.: 1º lote"' + ro + ' /></td>' +
-				'<td><input type="text" class="input" data-numeric-input="1" data-lote-valor="' + i + '" value="' + escHtml(String(l.valor_convite != null ? l.valor_convite : "")) + '" placeholder="0"' + ro + ' /></td>' +
-				'<td><input type="text" class="input" data-numeric-input="1" data-lote-consumacao="' + i + '" value="' + escHtml(String(l.valor_consumacao != null ? l.valor_consumacao : "")) + '" placeholder="0"' + ro + ' /></td>' +
-				'<td><input type="text" class="input" data-numeric-input="1" data-lote-pct="' + i + '" value="' + escHtml(String(l.expectativa_percentual != null ? l.expectativa_percentual : "")) + '" placeholder="0"' + ro + ' /></td>' +
-				(editable ? '<td class="festa-table-actions"><button type="button" class="btn-sm-outline" data-lote-remover="' + i + '">Remover</button></td>' : "") +
-				'</tr>';
-		}).join("");
+		var ro = editable ? "" : ' readonly tabindex="-1"';
+		var rows = lotesConvite
+			.map(function (l, i) {
+				return (
+					"<tr>" +
+					'<td><input type="text" class="input" data-lote-nome="' +
+					i +
+					'" value="' +
+					escHtml(l.nome_lote || "") +
+					'" placeholder="Ex.: 1º lote"' +
+					ro +
+					" /></td>" +
+					'<td><input type="text" class="input" data-numeric-input="1" data-lote-valor="' +
+					i +
+					'" value="' +
+					escHtml(String(l.valor_convite != null ? l.valor_convite : "")) +
+					'" placeholder="0"' +
+					ro +
+					" /></td>" +
+					'<td><input type="text" class="input" data-numeric-input="1" data-lote-consumacao="' +
+					i +
+					'" value="' +
+					escHtml(String(l.valor_consumacao != null ? l.valor_consumacao : "")) +
+					'" placeholder="0"' +
+					ro +
+					" /></td>" +
+					'<td><input type="text" class="input" data-numeric-input="1" data-lote-pct="' +
+					i +
+					'" value="' +
+					escHtml(
+						String(l.expectativa_percentual != null ? l.expectativa_percentual : "")
+					) +
+					'" placeholder="0"' +
+					ro +
+					" /></td>" +
+					(editable
+						? '<td class="festa-table-actions"><button type="button" class="btn-sm-outline" data-lote-remover="' +
+						  i +
+						  '">Remover</button></td>'
+						: "") +
+					"</tr>"
+				);
+			})
+			.join("");
 		container.innerHTML =
 			'<table class="festa-cenarios-table"><thead><tr>' +
-			'<th>Nome</th><th>Valor do convite</th><th>Consumação</th><th>Expectativa (%)</th>' +
+			"<th>Nome</th><th>Valor do convite</th><th>Consumação</th><th>Expectativa (%)</th>" +
 			(editable ? "<th></th>" : "") +
-			'</tr></thead><tbody>' + rows + '</tbody></table>';
+			"</tr></thead><tbody>" +
+			rows +
+			"</tbody></table>";
 		atualizarSomaLotesConvite();
 	}
 
@@ -2777,7 +3519,9 @@
 			novos.push({
 				nome_lote: nome.value.trim(),
 				valor_convite: parseCurrencyBR(tr.querySelector("[data-lote-valor]").value),
-				valor_consumacao: parseCurrencyBR(tr.querySelector("[data-lote-consumacao]").value),
+				valor_consumacao: parseCurrencyBR(
+					tr.querySelector("[data-lote-consumacao]").value
+				),
 				expectativa_percentual: Number(tr.querySelector("[data-lote-pct]").value || 0),
 			});
 		});
@@ -2789,14 +3533,23 @@
 		if (!canEdit) return;
 
 		// O macro switch coloca o id no <label>; o checkbox real está dentro dele.
-		var toggleInput = document.querySelector("#convite-por-lotes-toggle input[type='checkbox']");
+		var toggleInput = document.querySelector(
+			"#convite-por-lotes-toggle input[type='checkbox']"
+		);
 		if (toggleInput) {
 			toggleInput.addEventListener("change", function () {
 				convitePorLotes = toggleInput.checked;
 				var wrap = document.getElementById("lotes-convite-wrap");
 				if (wrap) wrap.hidden = !convitePorLotes;
 				if (convitePorLotes && !lotesConvite.length) {
-					lotesConvite = [{ nome_lote: "", valor_convite: "", valor_consumacao: "", expectativa_percentual: "" }];
+					lotesConvite = [
+						{
+							nome_lote: "",
+							valor_convite: "",
+							valor_consumacao: "",
+							expectativa_percentual: "",
+						},
+					];
 				}
 				renderLotesConvite();
 			});
@@ -2806,7 +3559,12 @@
 		if (addBtn) {
 			addBtn.addEventListener("click", function () {
 				lotesConvite = coletarLotesConviteDoDom();
-				lotesConvite.push({ nome_lote: "", valor_convite: "", valor_consumacao: "", expectativa_percentual: "" });
+				lotesConvite.push({
+					nome_lote: "",
+					valor_convite: "",
+					valor_consumacao: "",
+					expectativa_percentual: "",
+				});
 				renderLotesConvite();
 			});
 		}
@@ -2814,7 +3572,8 @@
 		var container = document.getElementById("lotes-convite-container");
 		if (container) {
 			container.addEventListener("input", function (ev) {
-				if (ev.target && ev.target.hasAttribute("data-lote-pct")) atualizarSomaLotesConvite();
+				if (ev.target && ev.target.hasAttribute("data-lote-pct"))
+					atualizarSomaLotesConvite();
 			});
 			container.addEventListener("click", function (ev) {
 				var btn = ev.target.closest("[data-lote-remover]");
@@ -2840,8 +3599,12 @@
 						toast("Lotes do convite salvos.", "success");
 						return refreshFestaData();
 					})
-					.catch(function (err) { toast(err.message || "Erro ao salvar lotes.", "error"); })
-					.finally(function () { salvarBtn.disabled = false; });
+					.catch(function (err) {
+						toast(err.message || "Erro ao salvar lotes.", "error");
+					})
+					.finally(function () {
+						salvarBtn.disabled = false;
+					});
 			});
 		}
 	}
@@ -2862,7 +3625,9 @@
 			const valor = precoInput.value;
 			precoInput.disabled = true;
 			api("gris.api.festas.update_preco_convite", { festa_name: festaName, preco: valor })
-				.then(function () { return refreshFestaData(); })
+				.then(function () {
+					return refreshFestaData();
+				})
 				.then(function () {
 					precoInput.value = window._festaData.precoConvite;
 					toast("Preço do convite atualizado.", "success");
@@ -2870,7 +3635,9 @@
 				.catch(function (err) {
 					toast(err.message || "Erro ao atualizar preço do convite.", "error");
 				})
-				.finally(function () { precoInput.disabled = false; });
+				.finally(function () {
+					precoInput.disabled = false;
+				});
 		});
 
 		const margemInput = document.getElementById("margem-seguranca");
@@ -2878,8 +3645,13 @@
 			margemInput.addEventListener("change", function () {
 				const valor = margemInput.value;
 				margemInput.disabled = true;
-				api("gris.api.festas.update_margem_seguranca", { festa_name: festaName, margem: valor })
-					.then(function () { return refreshFestaData(); })
+				api("gris.api.festas.update_margem_seguranca", {
+					festa_name: festaName,
+					margem: valor,
+				})
+					.then(function () {
+						return refreshFestaData();
+					})
 					.then(function () {
 						margemInput.value = window._festaData.margemSeguranca;
 						toast("Margem de segurança atualizada.", "success");
@@ -2887,7 +3659,9 @@
 					.catch(function (err) {
 						toast(err.message || "Erro ao atualizar margem de segurança.", "error");
 					})
-					.finally(function () { margemInput.disabled = false; });
+					.finally(function () {
+						margemInput.disabled = false;
+					});
 			});
 		}
 	}
@@ -2895,12 +3669,21 @@
 	// ─── Convites tab ────────────────────────────────────────────────────────
 
 	const CHART_PALETTE = [
-		"#0072B2", "#E69F00", "#009E73", "#D55E00",
-		"#56B4E9", "#CC79A7", "#F0E442", "#000000",
+		"#0072B2",
+		"#E69F00",
+		"#009E73",
+		"#D55E00",
+		"#56B4E9",
+		"#CC79A7",
+		"#F0E442",
+		"#000000",
 	];
 	let convitesDashboard = window._festaData.convitesDashboard || {
-		opcoes: [], convites: [], series_por_dia: [],
-		aceitar_doacoes: false, data_limite_vendas: "",
+		opcoes: [],
+		convites: [],
+		series_por_dia: [],
+		aceitar_doacoes: false,
+		data_limite_vendas: "",
 		link_publico: "/festas/venda_convite",
 		totais: { qtd_por_opcao: {}, valor_por_opcao: {}, total_doacoes_valor: 0 },
 	};
@@ -2927,7 +3710,9 @@
 				if (window.echarts) resolve();
 				else reject(new Error("ECharts não carregou."));
 			};
-			script.onerror = function () { reject(new Error("Falha ao carregar ECharts.")); };
+			script.onerror = function () {
+				reject(new Error("Falha ao carregar ECharts."));
+			};
 			document.head.appendChild(script);
 		});
 		return echartsLoading;
@@ -2935,7 +3720,9 @@
 
 	function fmtMoeda(valor) {
 		return new Intl.NumberFormat("pt-BR", {
-			style: "currency", currency: "BRL", minimumFractionDigits: 2,
+			style: "currency",
+			currency: "BRL",
+			minimumFractionDigits: 2,
 		}).format(Number(valor) || 0);
 	}
 
@@ -2945,9 +3732,9 @@
 
 	function badgeStatus(status) {
 		const map = {
-			"Pago": "success",
-			"Pendente": "secondary",
-			"Erro": "destructive",
+			Pago: "success",
+			Pendente: "secondary",
+			Erro: "destructive",
 		};
 		const variant = map[status] || "secondary";
 		return '<span class="badge badge-' + variant + '">' + (status || "Pendente") + "</span>";
@@ -2957,23 +3744,35 @@
 		const container = document.getElementById("convites-config-summary");
 		if (!container) return;
 		const data = convitesDashboard.data_limite_vendas
-			? new Date(convitesDashboard.data_limite_vendas + "T00:00:00").toLocaleDateString("pt-BR")
+			? new Date(convitesDashboard.data_limite_vendas + "T00:00:00").toLocaleDateString(
+					"pt-BR"
+			  )
 			: "—";
 		const doacoes = convitesDashboard.aceitar_doacoes ? "Sim" : "Não";
-		const tiposAtivos = (convitesDashboard.opcoes || []).filter(function (o) { return o.ativo; }).length;
+		const tiposAtivos = (convitesDashboard.opcoes || []).filter(function (o) {
+			return o.ativo;
+		}).length;
 		const tiposTotal = (convitesDashboard.opcoes || []).length;
 		container.innerHTML =
-			'<div><dt>Tipos cadastrados</dt><dd>' + tiposAtivos + " ativos / " + tiposTotal + " no total</dd></div>" +
-			'<div><dt>Aceita doações</dt><dd>' + doacoes + "</dd></div>" +
-			"<div><dt>Limite de vendas</dt><dd>" + data + "</dd></div>";
+			"<div><dt>Tipos cadastrados</dt><dd>" +
+			tiposAtivos +
+			" ativos / " +
+			tiposTotal +
+			" no total</dd></div>" +
+			"<div><dt>Aceita doações</dt><dd>" +
+			doacoes +
+			"</dd></div>" +
+			"<div><dt>Limite de vendas</dt><dd>" +
+			data +
+			"</dd></div>";
 	}
 
 	function expectativaPublicoCenario() {
 		const fd = window._festaData || {};
 		const mapa = {
-			"Mínimo": fd.publicoMin,
-			"Intermediário": fd.publicoIntermediario,
-			"Máximo": fd.publicoMax,
+			Mínimo: fd.publicoMin,
+			Intermediário: fd.publicoIntermediario,
+			Máximo: fd.publicoMax,
 		};
 		const cenario = convitesDashboard.cenario_simulacao || "Intermediário";
 		return { cenario: cenario, esperado: Number(mapa[cenario] || 0) };
@@ -2997,22 +3796,36 @@
 		const exp = expectativaPublicoCenario();
 		const taxa = exp.esperado > 0 ? (totalVendidos / exp.esperado) * 100 : null;
 		const taxaValor = taxa === null ? "—" : taxa.toFixed(1) + "%";
-		const taxaHint = exp.esperado > 0
-			? fmtInt(totalVendidos) + " de " + fmtInt(exp.esperado) + " esperados (cenário " + escapeHtml(exp.cenario) + ")"
-			: "Defina a expectativa de público do cenário";
+		const taxaHint =
+			exp.esperado > 0
+				? fmtInt(totalVendidos) +
+				  " de " +
+				  fmtInt(exp.esperado) +
+				  " esperados (cenário " +
+				  escapeHtml(exp.cenario) +
+				  ")"
+				: "Defina a expectativa de público do cenário";
 		container.innerHTML =
 			'<div class="festa-kpi-item">' +
-				'<span class="festa-kpi-label">Convites vendidos</span>' +
-				'<span class="festa-kpi-value">' + fmtInt(totalVendidos) + "</span>" +
+			'<span class="festa-kpi-label">Convites vendidos</span>' +
+			'<span class="festa-kpi-value">' +
+			fmtInt(totalVendidos) +
+			"</span>" +
 			"</div>" +
 			'<div class="festa-kpi-item">' +
-				'<span class="festa-kpi-label">Receita arrecadada</span>' +
-				'<span class="festa-kpi-value">' + fmtMoeda(receitaTotal) + "</span>" +
+			'<span class="festa-kpi-label">Receita arrecadada</span>' +
+			'<span class="festa-kpi-value">' +
+			fmtMoeda(receitaTotal) +
+			"</span>" +
 			"</div>" +
 			'<div class="festa-kpi-item">' +
-				'<span class="festa-kpi-label">Taxa vs. expectativa</span>' +
-				'<span class="festa-kpi-value">' + taxaValor + "</span>" +
-				'<span class="festa-kpi-hint">' + taxaHint + "</span>" +
+			'<span class="festa-kpi-label">Taxa vs. expectativa</span>' +
+			'<span class="festa-kpi-value">' +
+			taxaValor +
+			"</span>" +
+			'<span class="festa-kpi-hint">' +
+			taxaHint +
+			"</span>" +
 			"</div>";
 	}
 
@@ -3024,28 +3837,31 @@
 			return;
 		}
 		const porRamo = convitesDashboard.por_ramo || {};
-		const linhas = RAMOS_ORDEM
-			.map(function (ramo) {
-				const info = porRamo[ramo] || {};
-				return {
-					ramo: ramo,
-					vendidos: Number(info.qtd_vendida || 0),
-					meta: Number(info.qtd_esperada || 0),
-					beneficiarios: Number(info.beneficiarios_ativos || 0),
-				};
-			})
-			.filter(function (r) { return r.meta > 0 || r.vendidos > 0 || r.beneficiarios > 0; });
+		const linhas = RAMOS_ORDEM.map(function (ramo) {
+			const info = porRamo[ramo] || {};
+			return {
+				ramo: ramo,
+				vendidos: Number(info.qtd_vendida || 0),
+				meta: Number(info.qtd_esperada || 0),
+				beneficiarios: Number(info.beneficiarios_ativos || 0),
+			};
+		}).filter(function (r) {
+			return r.meta > 0 || r.vendidos > 0 || r.beneficiarios > 0;
+		});
 		if (!linhas.length) {
-			container.innerHTML = '<p class="text-sm text-muted-foreground">Nenhuma meta por ramo definida ainda.</p>';
+			container.innerHTML =
+				'<p class="text-sm text-muted-foreground">Nenhuma meta por ramo definida ainda.</p>';
 			return;
 		}
 		const metaCell = function (vendidos, meta) {
 			if (meta <= 0) return "<td>—</td>";
 			const pct = (vendidos / meta) * 100;
-			const cls = pct >= 100 ? "festa-cenarios-cell--success" : "festa-cenarios-cell--danger";
+			const cls =
+				pct >= 100 ? "festa-cenarios-cell--success" : "festa-cenarios-cell--danger";
 			return '<td class="' + cls + '">' + pct.toFixed(1) + "%</td>";
 		};
-		let totalVend = 0, totalMeta = 0;
+		let totalVend = 0,
+			totalMeta = 0;
 		let html = '<table class="festa-cenarios-table"><thead><tr>';
 		html += "<th>Ramo</th><th>Vendidos</th><th>Meta</th><th>% da meta</th><th>Faltam</th>";
 		html += "</tr></thead><tbody>";
@@ -3076,68 +3892,81 @@
 	function renderConvitesBarras() {
 		const el = document.getElementById("chart-convites-barras");
 		if (!el) return;
-		ensureECharts().then(function () {
-			if (!chartBarrasInstance) {
-				chartBarrasInstance = window.echarts.init(el);
-				window.addEventListener("resize", function () {
-					if (chartBarrasInstance) chartBarrasInstance.resize();
+		ensureECharts()
+			.then(function () {
+				if (!chartBarrasInstance) {
+					chartBarrasInstance = window.echarts.init(el);
+					window.addEventListener("resize", function () {
+						if (chartBarrasInstance) chartBarrasInstance.resize();
+					});
+				}
+				const opcoes = convitesDashboard.opcoes || [];
+				const isValor = convitesBarrasMode === "valor";
+				const totais = convitesDashboard.totais || {};
+				const dataMap = isValor
+					? totais.valor_por_opcao || {}
+					: totais.qtd_por_opcao || {};
+				const categorias = opcoes.map(function (o) {
+					return o.nome_convite || o.name;
 				});
-			}
-			const opcoes = convitesDashboard.opcoes || [];
-			const isValor = convitesBarrasMode === "valor";
-			const totais = convitesDashboard.totais || {};
-			const dataMap = isValor ? (totais.valor_por_opcao || {}) : (totais.qtd_por_opcao || {});
-			const categorias = opcoes.map(function (o) { return o.nome_convite || o.name; });
-			const valores = opcoes.map(function (o) {
-				return Number(dataMap[o.name] || 0);
-			});
-			if (isValor && convitesDashboard.aceitar_doacoes) {
-				categorias.push("Doações");
-				valores.push(Number(totais.total_doacoes_valor || 0));
-			}
-			const formatter = isValor ? fmtMoeda : fmtInt;
-			chartBarrasInstance.setOption({
-				aria: { enabled: true },
-				color: CHART_PALETTE,
-				tooltip: {
-					trigger: "axis",
-					axisPointer: { type: "shadow" },
-					formatter: function (params) {
-						const p = params[0];
-						return p.name + "<br/>" + p.marker + " " + formatter(p.value);
-					},
-				},
-				legend: { show: false },
-				grid: { left: 16, right: 24, top: 24, bottom: 48, containLabel: true },
-				xAxis: {
-					type: "category",
-					data: categorias,
-					axisLabel: { interval: 0, rotate: categorias.length > 4 ? 20 : 0 },
-				},
-				yAxis: {
-					type: "value",
-					name: isValor ? "Valor (R$)" : "Quantidade",
-					nameLocation: "middle",
-					nameGap: 56,
-					nameRotate: 90,
-					nameTextStyle: { fontSize: 12 },
-					axisLabel: {
-						formatter: function (v) {
-							return isValor ? "R$ " + Number(v).toLocaleString("pt-BR") : Number(v).toLocaleString("pt-BR");
+				const valores = opcoes.map(function (o) {
+					return Number(dataMap[o.name] || 0);
+				});
+				if (isValor && convitesDashboard.aceitar_doacoes) {
+					categorias.push("Doações");
+					valores.push(Number(totais.total_doacoes_valor || 0));
+				}
+				const formatter = isValor ? fmtMoeda : fmtInt;
+				chartBarrasInstance.setOption(
+					{
+						aria: { enabled: true },
+						color: CHART_PALETTE,
+						tooltip: {
+							trigger: "axis",
+							axisPointer: { type: "shadow" },
+							formatter: function (params) {
+								const p = params[0];
+								return p.name + "<br/>" + p.marker + " " + formatter(p.value);
+							},
 						},
+						legend: { show: false },
+						grid: { left: 16, right: 24, top: 24, bottom: 48, containLabel: true },
+						xAxis: {
+							type: "category",
+							data: categorias,
+							axisLabel: { interval: 0, rotate: categorias.length > 4 ? 20 : 0 },
+						},
+						yAxis: {
+							type: "value",
+							name: isValor ? "Valor (R$)" : "Quantidade",
+							nameLocation: "middle",
+							nameGap: 56,
+							nameRotate: 90,
+							nameTextStyle: { fontSize: 12 },
+							axisLabel: {
+								formatter: function (v) {
+									return isValor
+										? "R$ " + Number(v).toLocaleString("pt-BR")
+										: Number(v).toLocaleString("pt-BR");
+								},
+							},
+						},
+						series: [
+							{
+								name: isValor ? "Valor" : "Quantidade",
+								type: "bar",
+								data: valores,
+								barMaxWidth: 64,
+								itemStyle: { borderRadius: [4, 4, 0, 0] },
+							},
+						],
 					},
-				},
-				series: [{
-					name: isValor ? "Valor" : "Quantidade",
-					type: "bar",
-					data: valores,
-					barMaxWidth: 64,
-					itemStyle: { borderRadius: [4, 4, 0, 0] },
-				}],
-			}, true);
-		}).catch(function (err) {
-			toast(err.message || "Erro ao carregar gráficos.", "error");
-		});
+					true
+				);
+			})
+			.catch(function (err) {
+				toast(err.message || "Erro ao carregar gráficos.", "error");
+			});
 	}
 
 	function renderChartConvitesPorRamo() {
@@ -3149,117 +3978,155 @@
 			return;
 		}
 		card.hidden = false;
-		ensureECharts().then(function () {
-			if (!chartConvitesPorRamoInstance) {
-				chartConvitesPorRamoInstance = window.echarts.init(el);
-				window.addEventListener("resize", function () {
-					if (chartConvitesPorRamoInstance) chartConvitesPorRamoInstance.resize();
+		ensureECharts()
+			.then(function () {
+				if (!chartConvitesPorRamoInstance) {
+					chartConvitesPorRamoInstance = window.echarts.init(el);
+					window.addEventListener("resize", function () {
+						if (chartConvitesPorRamoInstance) chartConvitesPorRamoInstance.resize();
+					});
+				}
+				const porRamo = convitesDashboard.por_ramo || {};
+				const media = Number(convitesDashboard.convites_por_associado || 0);
+				const entries = RAMOS_ORDEM.map(function (ramo) {
+					const info = porRamo[ramo] || {};
+					const beneficiarios = Number(info.beneficiarios_ativos || 0);
+					const vendidos = Number(info.qtd_vendida || 0);
+					const esperado = Number(info.qtd_esperada || 0);
+					return {
+						ramo: ramo,
+						valor: beneficiarios > 0 ? vendidos / beneficiarios : 0,
+						pct: esperado > 0 ? (vendidos / esperado) * 100 : null,
+					};
 				});
-			}
-			const porRamo = convitesDashboard.por_ramo || {};
-			const media = Number(convitesDashboard.convites_por_associado || 0);
-			const entries = RAMOS_ORDEM.map(function (ramo) {
-				const info = porRamo[ramo] || {};
-				const beneficiarios = Number(info.beneficiarios_ativos || 0);
-				const vendidos = Number(info.qtd_vendida || 0);
-				const esperado = Number(info.qtd_esperada || 0);
-				return {
-					ramo: ramo,
-					valor: beneficiarios > 0 ? vendidos / beneficiarios : 0,
-					pct: esperado > 0 ? (vendidos / esperado) * 100 : null,
-				};
+				entries.sort(function (a, b) {
+					return b.valor - a.valor;
+				});
+				const ramosOrdenados = entries.map(function (e) {
+					return e.ramo;
+				});
+				const valores = entries.map(function (e) {
+					return e.valor;
+				});
+				const pctVendido = entries.map(function (e) {
+					return e.pct;
+				});
+				const markPointData = entries
+					.map(function (e, idx) {
+						if (e.pct === null) return null;
+						return {
+							name: e.ramo,
+							value: Math.round(e.pct) + "%",
+							xAxis: idx,
+							yAxis: e.valor,
+						};
+					})
+					.filter(function (d) {
+						return d !== null;
+					});
+				el.setAttribute(
+					"aria-label",
+					"Convites vendidos por beneficiário em cada ramo; linha tracejada indica a média de " +
+						media.toFixed(2) +
+						" convites por associado. Cada gota indica o percentual vendido em relação ao esperado."
+				);
+				chartConvitesPorRamoInstance.setOption(
+					{
+						aria: { enabled: true },
+						color: [CHART_PALETTE[0]],
+						tooltip: {
+							trigger: "axis",
+							axisPointer: { type: "shadow" },
+							formatter: function (params) {
+								const p = params[0];
+								const ramo = p.name;
+								const info = porRamo[ramo] || {};
+								const esperado = Number(info.qtd_esperada || 0);
+								const vendidos = Number(info.qtd_vendida || 0);
+								const pct = esperado > 0 ? (vendidos / esperado) * 100 : null;
+								const pctLine =
+									pct === null
+										? "Esperado: — · Vendidos: " + fmtInt(vendidos)
+										: "Vendidos / esperado: " +
+										  fmtInt(vendidos) +
+										  " / " +
+										  fmtInt(esperado) +
+										  " (" +
+										  pct.toFixed(1) +
+										  "%)";
+								return (
+									ramo +
+									"<br/>" +
+									p.marker +
+									" " +
+									Number(p.value).toFixed(2) +
+									" convite(s) / beneficiário<br/>" +
+									pctLine +
+									"<br/>" +
+									"Benef. ativos: " +
+									fmtInt(info.beneficiarios_ativos || 0)
+								);
+							},
+						},
+						legend: { show: false },
+						grid: { left: 16, right: 32, top: 48, bottom: 48, containLabel: true },
+						xAxis: {
+							type: "category",
+							data: ramosOrdenados,
+							axisLabel: { interval: 0 },
+						},
+						yAxis: {
+							type: "value",
+							name: "Convites / beneficiário",
+							nameLocation: "middle",
+							nameGap: 48,
+							nameRotate: 90,
+							nameTextStyle: { fontSize: 12 },
+						},
+						series: [
+							{
+								name: "Convites por beneficiário",
+								type: "bar",
+								data: valores,
+								barMaxWidth: 64,
+								itemStyle: { borderRadius: [4, 4, 0, 0] },
+								markPoint: {
+									symbol: "pin",
+									symbolSize: 52,
+									itemStyle: { color: CHART_PALETTE[3] },
+									label: {
+										show: true,
+										color: "#fff",
+										fontSize: 11,
+										fontWeight: 600,
+										formatter: "{c}",
+									},
+									data: markPointData,
+								},
+								markLine: {
+									symbol: "none",
+									silent: true,
+									lineStyle: {
+										type: "dashed",
+										color: CHART_PALETTE[7],
+										width: 2,
+									},
+									label: {
+										show: true,
+										position: "end",
+										formatter: "Média/assoc: " + media.toFixed(2),
+									},
+									data: [{ yAxis: media, name: "Média por associado" }],
+								},
+							},
+						],
+					},
+					true
+				);
+			})
+			.catch(function (err) {
+				toast(err.message || "Erro ao carregar gráfico de ramos.", "error");
 			});
-			entries.sort(function (a, b) { return b.valor - a.valor; });
-			const ramosOrdenados = entries.map(function (e) { return e.ramo; });
-			const valores = entries.map(function (e) { return e.valor; });
-			const pctVendido = entries.map(function (e) { return e.pct; });
-			const markPointData = entries.map(function (e, idx) {
-				if (e.pct === null) return null;
-				return {
-					name: e.ramo,
-					value: Math.round(e.pct) + "%",
-					xAxis: idx,
-					yAxis: e.valor,
-				};
-			}).filter(function (d) { return d !== null; });
-			el.setAttribute(
-				"aria-label",
-				"Convites vendidos por beneficiário em cada ramo; linha tracejada indica a média de " +
-				media.toFixed(2) + " convites por associado. Cada gota indica o percentual vendido em relação ao esperado."
-			);
-			chartConvitesPorRamoInstance.setOption({
-				aria: { enabled: true },
-				color: [CHART_PALETTE[0]],
-				tooltip: {
-					trigger: "axis",
-					axisPointer: { type: "shadow" },
-					formatter: function (params) {
-						const p = params[0];
-						const ramo = p.name;
-						const info = porRamo[ramo] || {};
-						const esperado = Number(info.qtd_esperada || 0);
-						const vendidos = Number(info.qtd_vendida || 0);
-						const pct = esperado > 0 ? (vendidos / esperado) * 100 : null;
-						const pctLine = pct === null
-							? "Esperado: — · Vendidos: " + fmtInt(vendidos)
-							: "Vendidos / esperado: " + fmtInt(vendidos) + " / " + fmtInt(esperado) +
-								" (" + pct.toFixed(1) + "%)";
-						return ramo + "<br/>" +
-							p.marker + " " + Number(p.value).toFixed(2) + " convite(s) / beneficiário<br/>" +
-							pctLine + "<br/>" +
-							"Benef. ativos: " + fmtInt(info.beneficiarios_ativos || 0);
-					},
-				},
-				legend: { show: false },
-				grid: { left: 16, right: 32, top: 48, bottom: 48, containLabel: true },
-				xAxis: {
-					type: "category",
-					data: ramosOrdenados,
-					axisLabel: { interval: 0 },
-				},
-				yAxis: {
-					type: "value",
-					name: "Convites / beneficiário",
-					nameLocation: "middle",
-					nameGap: 48,
-					nameRotate: 90,
-					nameTextStyle: { fontSize: 12 },
-				},
-				series: [{
-					name: "Convites por beneficiário",
-					type: "bar",
-					data: valores,
-					barMaxWidth: 64,
-					itemStyle: { borderRadius: [4, 4, 0, 0] },
-					markPoint: {
-						symbol: "pin",
-						symbolSize: 52,
-						itemStyle: { color: CHART_PALETTE[3] },
-						label: {
-							show: true,
-							color: "#fff",
-							fontSize: 11,
-							fontWeight: 600,
-							formatter: "{c}",
-						},
-						data: markPointData,
-					},
-					markLine: {
-						symbol: "none",
-						silent: true,
-						lineStyle: { type: "dashed", color: CHART_PALETTE[7], width: 2 },
-						label: {
-							show: true,
-							position: "end",
-							formatter: "Média/assoc: " + media.toFixed(2),
-						},
-						data: [{ yAxis: media, name: "Média por associado" }],
-					},
-				}],
-			}, true);
-		}).catch(function (err) {
-			toast(err.message || "Erro ao carregar gráfico de ramos.", "error");
-		});
 	}
 
 	function updateConvitesPorRamoButtonVisibility() {
@@ -3271,92 +4138,105 @@
 	function renderConvitesLinha() {
 		const el = document.getElementById("chart-convites-linha");
 		if (!el) return;
-		ensureECharts().then(function () {
-			if (!chartLinhaInstance) {
-				chartLinhaInstance = window.echarts.init(el);
-				window.addEventListener("resize", function () {
-					if (chartLinhaInstance) chartLinhaInstance.resize();
-				});
-			}
-			const linhas = convitesDashboard.series_por_dia || [];
-			const diasSet = new Set();
-			const opcoesMap = new Map();
-			linhas.forEach(function (row) {
-				diasSet.add(row.dia);
-				const key = row.opcao_convite || row.tipo_convite;
-				if (!opcoesMap.has(key)) {
-					opcoesMap.set(key, { label: row.tipo_convite || key, por_dia: {} });
-				}
-				opcoesMap.get(key).por_dia[row.dia] = Number(row.quantidade || 0);
-			});
-			const dias = Array.from(diasSet).sort();
-			let series = [];
-			if (convitesLinhaMode === "total") {
-				const totalPorDia = dias.map(function (d) {
-					return linhas
-						.filter(function (l) { return l.dia === d; })
-						.reduce(function (acc, l) { return acc + Number(l.quantidade || 0); }, 0);
-				});
-				series = [{
-					name: "Total",
-					type: "line",
-					smooth: true,
-					symbol: "circle",
-					data: totalPorDia,
-				}];
-			} else {
-				series = Array.from(opcoesMap.entries()).map(function (entry, idx) {
-					const info = entry[1];
-					return {
-						name: info.label,
-						type: "line",
-						smooth: true,
-						symbol: ["circle", "rect", "triangle", "diamond"][idx % 4],
-						lineStyle: { type: ["solid", "dashed", "dotted"][idx % 3] },
-						data: dias.map(function (d) { return Number(info.por_dia[d] || 0); }),
-					};
-				});
-			}
-			const acumulado = convitesLinhaAcum === "acumulado";
-			if (acumulado) {
-				series = series.map(function (s) {
-					let soma = 0;
-					return Object.assign({}, s, {
-						data: (s.data || []).map(function (v) {
-							soma += Number(v || 0);
-							return soma;
-						}),
+		ensureECharts()
+			.then(function () {
+				if (!chartLinhaInstance) {
+					chartLinhaInstance = window.echarts.init(el);
+					window.addEventListener("resize", function () {
+						if (chartLinhaInstance) chartLinhaInstance.resize();
 					});
+				}
+				const linhas = convitesDashboard.series_por_dia || [];
+				const diasSet = new Set();
+				const opcoesMap = new Map();
+				linhas.forEach(function (row) {
+					diasSet.add(row.dia);
+					const key = row.opcao_convite || row.tipo_convite;
+					if (!opcoesMap.has(key)) {
+						opcoesMap.set(key, { label: row.tipo_convite || key, por_dia: {} });
+					}
+					opcoesMap.get(key).por_dia[row.dia] = Number(row.quantidade || 0);
 				});
-			}
-			chartLinhaInstance.setOption({
-				aria: { enabled: true },
-				color: CHART_PALETTE,
-				tooltip: { trigger: "axis" },
-				legend: { show: convitesLinhaMode !== "total", bottom: 0 },
-				grid: { left: 16, right: 24, top: 24, bottom: 48, containLabel: true },
-				xAxis: {
-					type: "category",
-					boundaryGap: false,
-					data: dias.map(function (d) {
-						const parts = d.split("-");
-						return parts.length === 3 ? parts[2] + "/" + parts[1] : d;
-					}),
-				},
-				yAxis: {
-					type: "value",
-					name: acumulado ? "Convites (acumulado)" : "Convites",
-					nameLocation: "middle",
-					nameGap: 40,
-					nameRotate: 90,
-					nameTextStyle: { fontSize: 12 },
-					minInterval: 1,
-				},
-				series: series,
-			}, true);
-		}).catch(function (err) {
-			toast(err.message || "Erro ao carregar gráficos.", "error");
-		});
+				const dias = Array.from(diasSet).sort();
+				let series = [];
+				if (convitesLinhaMode === "total") {
+					const totalPorDia = dias.map(function (d) {
+						return linhas
+							.filter(function (l) {
+								return l.dia === d;
+							})
+							.reduce(function (acc, l) {
+								return acc + Number(l.quantidade || 0);
+							}, 0);
+					});
+					series = [
+						{
+							name: "Total",
+							type: "line",
+							smooth: true,
+							symbol: "circle",
+							data: totalPorDia,
+						},
+					];
+				} else {
+					series = Array.from(opcoesMap.entries()).map(function (entry, idx) {
+						const info = entry[1];
+						return {
+							name: info.label,
+							type: "line",
+							smooth: true,
+							symbol: ["circle", "rect", "triangle", "diamond"][idx % 4],
+							lineStyle: { type: ["solid", "dashed", "dotted"][idx % 3] },
+							data: dias.map(function (d) {
+								return Number(info.por_dia[d] || 0);
+							}),
+						};
+					});
+				}
+				const acumulado = convitesLinhaAcum === "acumulado";
+				if (acumulado) {
+					series = series.map(function (s) {
+						let soma = 0;
+						return Object.assign({}, s, {
+							data: (s.data || []).map(function (v) {
+								soma += Number(v || 0);
+								return soma;
+							}),
+						});
+					});
+				}
+				chartLinhaInstance.setOption(
+					{
+						aria: { enabled: true },
+						color: CHART_PALETTE,
+						tooltip: { trigger: "axis" },
+						legend: { show: convitesLinhaMode !== "total", bottom: 0 },
+						grid: { left: 16, right: 24, top: 24, bottom: 48, containLabel: true },
+						xAxis: {
+							type: "category",
+							boundaryGap: false,
+							data: dias.map(function (d) {
+								const parts = d.split("-");
+								return parts.length === 3 ? parts[2] + "/" + parts[1] : d;
+							}),
+						},
+						yAxis: {
+							type: "value",
+							name: acumulado ? "Convites (acumulado)" : "Convites",
+							nameLocation: "middle",
+							nameGap: 40,
+							nameRotate: 90,
+							nameTextStyle: { fontSize: 12 },
+							minInterval: 1,
+						},
+						series: series,
+					},
+					true
+				);
+			})
+			.catch(function (err) {
+				toast(err.message || "Erro ao carregar gráficos.", "error");
+			});
 	}
 
 	function renderConvitesTable() {
@@ -3364,7 +4244,8 @@
 		if (!container) return;
 		const linhas = convitesDashboard.convites || [];
 		if (!linhas.length) {
-			container.innerHTML = '<p class="text-sm text-muted-foreground">Nenhum convite registrado para esta festa ainda.</p>';
+			container.innerHTML =
+				'<p class="text-sm text-muted-foreground">Nenhum convite registrado para esta festa ainda.</p>';
 			return;
 		}
 		const headers = [
@@ -3375,20 +4256,38 @@
 			{ label: "Status", sortType: "text" },
 			{ label: '<span class="sr-only">Ações</span>', sortable: false },
 		];
-		const body = linhas.map(function (row) {
-			const pedidoName = row.pedido_name || "";
-			const actions = pedidoName
-				? '<button type="button" class="btn-sm-outline" data-pedido-detalhes="' + escHtml(pedidoName) + '">Detalhes</button>'
-				: "";
-			return "<tr>" +
-				"<td>" + frappe.utils.escape_html(row.nome_pagador || "—") + "</td>" +
-				"<td>" + frappe.utils.escape_html(row.email_pagador || "—") + "</td>" +
-				"<td>" + frappe.utils.escape_html(row.tipo_convite || "—") + "</td>" +
-				"<td>" + fmtInt(row.quantidade) + "</td>" +
-				"<td>" + badgeStatus(row.status_pagamento) + "</td>" +
-				'<td class="festa-table-actions">' + actions + "</td>" +
-				"</tr>";
-		}).join("");
+		const body = linhas
+			.map(function (row) {
+				const pedidoName = row.pedido_name || "";
+				const actions = pedidoName
+					? '<button type="button" class="btn-sm-outline" data-pedido-detalhes="' +
+					  escHtml(pedidoName) +
+					  '">Detalhes</button>'
+					: "";
+				return (
+					"<tr>" +
+					"<td>" +
+					frappe.utils.escape_html(row.nome_pagador || "—") +
+					"</td>" +
+					"<td>" +
+					frappe.utils.escape_html(row.email_pagador || "—") +
+					"</td>" +
+					"<td>" +
+					frappe.utils.escape_html(row.tipo_convite || "—") +
+					"</td>" +
+					"<td>" +
+					fmtInt(row.quantidade) +
+					"</td>" +
+					"<td>" +
+					badgeStatus(row.status_pagamento) +
+					"</td>" +
+					'<td class="festa-table-actions">' +
+					actions +
+					"</td>" +
+					"</tr>"
+				);
+			})
+			.join("");
 		container.innerHTML = buildSortableTable(headers, body);
 		container.querySelectorAll("[data-pedido-detalhes]").forEach(function (btn) {
 			btn.addEventListener("click", function () {
@@ -3450,21 +4349,34 @@
 		const container = document.getElementById("detalhes-pedido-itens-container");
 		if (!container) return;
 		if (!itens.length) {
-			container.innerHTML = '<p class="text-sm text-muted-foreground">Nenhum item neste pedido.</p>';
+			container.innerHTML =
+				'<p class="text-sm text-muted-foreground">Nenhum item neste pedido.</p>';
 			return;
 		}
-		const rows = itens.map(function (it) {
-			return "<tr>" +
-				"<td>" + escHtml(it.tipo_convite || "—") + "</td>" +
-				"<td>" + fmtInt(it.quantidade) + "</td>" +
-				"<td>" + fmtMoeda(it.valor) + "</td>" +
-				"</tr>";
-		}).join("");
+		const rows = itens
+			.map(function (it) {
+				return (
+					"<tr>" +
+					"<td>" +
+					escHtml(it.tipo_convite || "—") +
+					"</td>" +
+					"<td>" +
+					fmtInt(it.quantidade) +
+					"</td>" +
+					"<td>" +
+					fmtMoeda(it.valor) +
+					"</td>" +
+					"</tr>"
+				);
+			})
+			.join("");
 		container.innerHTML =
 			'<div class="festa-table-scroll">' +
 			'<table class="festa-table">' +
-			'<thead><tr><th>Item</th><th>Qtd.</th><th>Valor unit.</th></tr></thead>' +
-			"<tbody>" + rows + "</tbody>" +
+			"<thead><tr><th>Item</th><th>Qtd.</th><th>Valor unit.</th></tr></thead>" +
+			"<tbody>" +
+			rows +
+			"</tbody>" +
 			"</table></div>";
 	}
 
@@ -3472,60 +4384,96 @@
 		const container = document.getElementById("detalhes-pedido-convidados-container");
 		if (!container) return;
 		if (!convidados.length) {
-			container.innerHTML = '<p class="text-sm text-muted-foreground">Nenhum convidado registrado neste pedido.</p>';
+			container.innerHTML =
+				'<p class="text-sm text-muted-foreground">Nenhum convidado registrado neste pedido.</p>';
 			return;
 		}
-		const podePago = (detalhesPedidoAtual && detalhesPedidoAtual.status_pagamento === "Pago");
-		const rows = convidados.map(function (c) {
-			const convRow = c.convidado_row || "";
-			const ja = !!c.ja_entrou;
-			const statusBadge = ja
-				? '<span class="badge badge-success">Entrou</span>'
-				: '<span class="badge badge-secondary">Não entrou</span>';
-			let acoes = "";
-			if (canEdit && convRow) {
-				if (detalhesEdicaoConvRow === convRow) {
-					acoes =
-						'<button type="button" class="btn-sm-primary" data-conv-salvar="' + escHtml(convRow) + '">Salvar</button> ' +
-						'<button type="button" class="btn-sm-outline" data-conv-cancelar="' + escHtml(convRow) + '">Cancelar</button>';
-				} else {
-					acoes =
-						'<button type="button" class="btn-sm-outline" data-conv-editar="' + escHtml(convRow) + '">Editar</button>';
-					if (podePago) {
-						acoes += ' <button type="button" class="btn-sm-outline" data-conv-reenviar="' + escHtml(convRow) + '">Reenviar QR</button>';
+		const podePago = detalhesPedidoAtual && detalhesPedidoAtual.status_pagamento === "Pago";
+		const rows = convidados
+			.map(function (c) {
+				const convRow = c.convidado_row || "";
+				const ja = !!c.ja_entrou;
+				const statusBadge = ja
+					? '<span class="badge badge-success">Entrou</span>'
+					: '<span class="badge badge-secondary">Não entrou</span>';
+				let acoes = "";
+				if (canEdit && convRow) {
+					if (detalhesEdicaoConvRow === convRow) {
+						acoes =
+							'<button type="button" class="btn-sm-primary" data-conv-salvar="' +
+							escHtml(convRow) +
+							'">Salvar</button> ' +
+							'<button type="button" class="btn-sm-outline" data-conv-cancelar="' +
+							escHtml(convRow) +
+							'">Cancelar</button>';
+					} else {
+						acoes =
+							'<button type="button" class="btn-sm-outline" data-conv-editar="' +
+							escHtml(convRow) +
+							'">Editar</button>';
+						if (podePago) {
+							acoes +=
+								' <button type="button" class="btn-sm-outline" data-conv-reenviar="' +
+								escHtml(convRow) +
+								'">Reenviar QR</button>';
+						}
 					}
 				}
-			}
-			let emailCell;
-			let telCell;
-			if (detalhesEdicaoConvRow === convRow) {
-				emailCell =
-					'<input type="email" class="input festa-detalhes-edit-input" id="conv-edit-email-' + escHtml(convRow) +
-					'" value="' + escHtml(c.email || "") + '" placeholder="email@exemplo.com" />';
-				telCell =
-					'<input type="tel" class="input festa-detalhes-edit-input" id="conv-edit-tel-' + escHtml(convRow) +
-					'" value="' + escHtml(c.telefone || "") + '" placeholder="(00) 00000-0000" />';
-			} else {
-				emailCell = escHtml(c.email || "—");
-				telCell = escHtml(c.telefone || "—");
-			}
-			return "<tr>" +
-				"<td>" + escHtml(c.nome_convidado || "—") + "</td>" +
-				"<td>" + emailCell + "</td>" +
-				"<td>" + telCell + "</td>" +
-				'<td><code class="festa-codigo-mono">' + escHtml(c.codigo_convite || "—") + "</code></td>" +
-				"<td>" + statusBadge + "</td>" +
-				'<td class="festa-table-actions">' + acoes + "</td>" +
-				"</tr>";
-		}).join("");
+				let emailCell;
+				let telCell;
+				if (detalhesEdicaoConvRow === convRow) {
+					emailCell =
+						'<input type="email" class="input festa-detalhes-edit-input" id="conv-edit-email-' +
+						escHtml(convRow) +
+						'" value="' +
+						escHtml(c.email || "") +
+						'" placeholder="email@exemplo.com" />';
+					telCell =
+						'<input type="tel" class="input festa-detalhes-edit-input" id="conv-edit-tel-' +
+						escHtml(convRow) +
+						'" value="' +
+						escHtml(c.telefone || "") +
+						'" placeholder="(00) 00000-0000" />';
+				} else {
+					emailCell = escHtml(c.email || "—");
+					telCell = escHtml(c.telefone || "—");
+				}
+				return (
+					"<tr>" +
+					"<td>" +
+					escHtml(c.nome_convidado || "—") +
+					"</td>" +
+					"<td>" +
+					emailCell +
+					"</td>" +
+					"<td>" +
+					telCell +
+					"</td>" +
+					'<td><code class="festa-codigo-mono">' +
+					escHtml(c.codigo_convite || "—") +
+					"</code></td>" +
+					"<td>" +
+					statusBadge +
+					"</td>" +
+					'<td class="festa-table-actions">' +
+					acoes +
+					"</td>" +
+					"</tr>"
+				);
+			})
+			.join("");
 		const headers = canEdit
 			? "<th>Nome</th><th>E-mail</th><th>Telefone</th><th>Código</th><th>Status</th><th>Ações</th>"
 			: "<th>Nome</th><th>E-mail</th><th>Telefone</th><th>Código</th><th>Status</th><th></th>";
 		container.innerHTML =
 			'<div class="festa-table-scroll">' +
 			'<table class="festa-table">' +
-			"<thead><tr>" + headers + "</tr></thead>" +
-			"<tbody>" + rows + "</tbody>" +
+			"<thead><tr>" +
+			headers +
+			"</tr></thead>" +
+			"<tbody>" +
+			rows +
+			"</tbody>" +
 			"</table></div>";
 
 		container.querySelectorAll("[data-conv-editar]").forEach(function (btn) {
@@ -3567,7 +4515,9 @@
 			.then(function (resp) {
 				const atualizado = (resp && resp.convidado) || {};
 				if (detalhesPedidoAtual && detalhesPedidoAtual.convidados) {
-					detalhesPedidoAtual.convidados = detalhesPedidoAtual.convidados.map(function (c) {
+					detalhesPedidoAtual.convidados = detalhesPedidoAtual.convidados.map(function (
+						c
+					) {
 						if (c.convidado_row !== convRow) return c;
 						return Object.assign({}, c, {
 							email: atualizado.email || "",
@@ -3615,29 +4565,64 @@
 			return;
 		}
 		if (!opcaoLocalList.length) {
-			container.innerHTML = '<p class="text-sm text-muted-foreground">Nenhum tipo de convite cadastrado.</p>';
+			container.innerHTML =
+				'<p class="text-sm text-muted-foreground">Nenhum tipo de convite cadastrado.</p>';
 			updateConvitesPorRamoButtonVisibility();
 			return;
 		}
-		const headers = ["Nome", "Valor", "Esperado", "Vendido", "Ativo", '<span class="sr-only">Ações</span>'];
-		const body = opcaoLocalList.map(function (op, idx) {
-			const actions = canEdit
-				? '<button type="button" class="btn-sm-outline" data-opcao-edit="' + idx + '" aria-label="Editar">✎</button>' +
-				  ' <button type="button" class="btn-sm-outline" data-opcao-delete="' + idx + '" aria-label="Excluir">🗑</button>'
-				: "";
-			return "<tr>" +
-				"<td>" + frappe.utils.escape_html(op.nome_convite) + "</td>" +
-				"<td>" + fmtMoeda(op.valor) + "</td>" +
-				"<td>" + fmtInt(op.quantidade_esperada) + "</td>" +
-				"<td>" + fmtInt(op.quantidade_vendida) + "</td>" +
-				"<td>" + (op.ativo ? "Sim" : "Não") + "</td>" +
-				"<td class=\"festa-table-actions\">" + actions + "</td>" +
-				"</tr>";
-		}).join("");
-		container.innerHTML = '<div class="festa-table-scroll">' +
+		const headers = [
+			"Nome",
+			"Valor",
+			"Esperado",
+			"Vendido",
+			"Ativo",
+			'<span class="sr-only">Ações</span>',
+		];
+		const body = opcaoLocalList
+			.map(function (op, idx) {
+				const actions = canEdit
+					? '<button type="button" class="btn-sm-outline" data-opcao-edit="' +
+					  idx +
+					  '" aria-label="Editar">✎</button>' +
+					  ' <button type="button" class="btn-sm-outline" data-opcao-delete="' +
+					  idx +
+					  '" aria-label="Excluir">🗑</button>'
+					: "";
+				return (
+					"<tr>" +
+					"<td>" +
+					frappe.utils.escape_html(op.nome_convite) +
+					"</td>" +
+					"<td>" +
+					fmtMoeda(op.valor) +
+					"</td>" +
+					"<td>" +
+					fmtInt(op.quantidade_esperada) +
+					"</td>" +
+					"<td>" +
+					fmtInt(op.quantidade_vendida) +
+					"</td>" +
+					"<td>" +
+					(op.ativo ? "Sim" : "Não") +
+					"</td>" +
+					'<td class="festa-table-actions">' +
+					actions +
+					"</td>" +
+					"</tr>"
+				);
+			})
+			.join("");
+		container.innerHTML =
+			'<div class="festa-table-scroll">' +
 			'<table class="festa-table"><thead><tr>' +
-			headers.map(function (h) { return "<th>" + h + "</th>"; }).join("") +
-			"</tr></thead><tbody>" + body + "</tbody></table></div>";
+			headers
+				.map(function (h) {
+					return "<th>" + h + "</th>";
+				})
+				.join("") +
+			"</tr></thead><tbody>" +
+			body +
+			"</tbody></table></div>";
 
 		updateConvitesPorRamoButtonVisibility();
 
@@ -3704,7 +4689,8 @@
 			if (removeBtn) removeBtn.hidden = false;
 			if (triggerSpan) triggerSpan.textContent = "Substituir imagem";
 		} else {
-			preview.innerHTML = '<span class="opcao-imagem-empty">Nenhuma imagem selecionada.</span>';
+			preview.innerHTML =
+				'<span class="opcao-imagem-empty">Nenhuma imagem selecionada.</span>';
 			if (removeBtn) removeBtn.hidden = true;
 			if (triggerSpan) triggerSpan.textContent = "Selecionar imagem";
 		}
@@ -3713,12 +4699,25 @@
 	function openOpcaoForm(opcao) {
 		const form = document.getElementById("opcao-convite-form");
 		if (!form) return;
-		opcaoDraft = opcao ? Object.assign({}, opcao) : { name: "", nome_convite: "", valor: 0, valor_consumacao: 0, quantidade_esperada: 0, ativo: true, portaria: false, imagem_capa: "", lotes: [] };
+		opcaoDraft = opcao
+			? Object.assign({}, opcao)
+			: {
+					name: "",
+					nome_convite: "",
+					valor: 0,
+					valor_consumacao: 0,
+					quantidade_esperada: 0,
+					ativo: true,
+					portaria: false,
+					imagem_capa: "",
+					lotes: [],
+			  };
 		document.getElementById("opcao-nome-convite").value = opcaoDraft.nome_convite || "";
 		document.getElementById("opcao-valor").value = opcaoDraft.valor || 0;
 		const consumacaoEl = document.getElementById("opcao-valor-consumacao");
 		if (consumacaoEl) consumacaoEl.value = opcaoDraft.valor_consumacao || 0;
-		document.getElementById("opcao-quantidade-esperada").value = opcaoDraft.quantidade_esperada || 0;
+		document.getElementById("opcao-quantidade-esperada").value =
+			opcaoDraft.quantidade_esperada || 0;
 		const hiddenUrl = document.getElementById("opcao-imagem-capa");
 		if (hiddenUrl) hiddenUrl.value = opcaoDraft.imagem_capa || "";
 		renderOpcaoImagemPreview(opcaoDraft.imagem_capa || "");
@@ -3736,27 +4735,65 @@
 		const isPortaria = !!(opcaoDraft && opcaoDraft.portaria);
 		if (wrap) wrap.hidden = isPortaria;
 		if (!container) return;
-		if (isPortaria) { container.innerHTML = ""; return; }
-		const editable = canEdit;
-		const ro = editable ? "" : " readonly tabindex=\"-1\"";
-		if (!opcaoLotesDraft.length) {
-			container.innerHTML = '<p class="text-sm text-muted-foreground">Sem lotes: o valor acima é usado diretamente.</p>';
+		if (isPortaria) {
+			container.innerHTML = "";
 			return;
 		}
-		const rows = opcaoLotesDraft.map(function (l, i) {
-			return '<tr>' +
-				'<td><input type="date" class="input" data-opcao-lote-inicio="' + i + '" value="' + escHtml(l.data_inicio || "") + '"' + ro + ' /></td>' +
-				'<td><input type="date" class="input" data-opcao-lote-fim="' + i + '" value="' + escHtml(l.data_fim || "") + '"' + ro + ' /></td>' +
-				'<td><input type="text" class="input" data-numeric-input="1" data-opcao-lote-valor="' + i + '" value="' + escHtml(String(l.valor != null ? l.valor : "")) + '" placeholder="0"' + ro + ' /></td>' +
-				'<td><input type="text" class="input" data-numeric-input="1" data-opcao-lote-consumacao="' + i + '" value="' + escHtml(String(l.valor_consumacao != null ? l.valor_consumacao : "")) + '" placeholder="0"' + ro + ' /></td>' +
-				(editable ? '<td class="festa-table-actions"><button type="button" class="btn-sm-outline" data-opcao-lote-remover="' + i + '">Remover</button></td>' : "") +
-				'</tr>';
-		}).join("");
+		const editable = canEdit;
+		const ro = editable ? "" : ' readonly tabindex="-1"';
+		if (!opcaoLotesDraft.length) {
+			container.innerHTML =
+				'<p class="text-sm text-muted-foreground">Sem lotes: o valor acima é usado diretamente.</p>';
+			return;
+		}
+		const rows = opcaoLotesDraft
+			.map(function (l, i) {
+				return (
+					"<tr>" +
+					'<td><input type="date" class="input" data-opcao-lote-inicio="' +
+					i +
+					'" value="' +
+					escHtml(l.data_inicio || "") +
+					'"' +
+					ro +
+					" /></td>" +
+					'<td><input type="date" class="input" data-opcao-lote-fim="' +
+					i +
+					'" value="' +
+					escHtml(l.data_fim || "") +
+					'"' +
+					ro +
+					" /></td>" +
+					'<td><input type="text" class="input" data-numeric-input="1" data-opcao-lote-valor="' +
+					i +
+					'" value="' +
+					escHtml(String(l.valor != null ? l.valor : "")) +
+					'" placeholder="0"' +
+					ro +
+					" /></td>" +
+					'<td><input type="text" class="input" data-numeric-input="1" data-opcao-lote-consumacao="' +
+					i +
+					'" value="' +
+					escHtml(String(l.valor_consumacao != null ? l.valor_consumacao : "")) +
+					'" placeholder="0"' +
+					ro +
+					" /></td>" +
+					(editable
+						? '<td class="festa-table-actions"><button type="button" class="btn-sm-outline" data-opcao-lote-remover="' +
+						  i +
+						  '">Remover</button></td>'
+						: "") +
+					"</tr>"
+				);
+			})
+			.join("");
 		container.innerHTML =
 			'<table class="festa-cenarios-table"><thead><tr>' +
-			'<th>Início</th><th>Término</th><th>Valor</th><th>Consumação</th>' +
+			"<th>Início</th><th>Término</th><th>Valor</th><th>Consumação</th>" +
 			(editable ? "<th></th>" : "") +
-			'</tr></thead><tbody>' + rows + '</tbody></table>';
+			"</tr></thead><tbody>" +
+			rows +
+			"</tbody></table>";
 	}
 
 	function coletarOpcaoLotesDoDom() {
@@ -3770,7 +4807,9 @@
 				data_inicio: inicio.value,
 				data_fim: tr.querySelector("[data-opcao-lote-fim]").value,
 				valor: parseCurrencyBR(tr.querySelector("[data-opcao-lote-valor]").value),
-				valor_consumacao: parseCurrencyBR(tr.querySelector("[data-opcao-lote-consumacao]").value),
+				valor_consumacao: parseCurrencyBR(
+					tr.querySelector("[data-opcao-lote-consumacao]").value
+				),
 			});
 		});
 		return novos;
@@ -3870,11 +4909,18 @@
 		const copyBtn = document.getElementById("btn-copy-link-vendas");
 		if (copyBtn) {
 			copyBtn.addEventListener("click", function () {
-				const url = window.location.origin + (convitesDashboard.link_publico || "/festas/venda_convite");
+				const url =
+					window.location.origin +
+					(convitesDashboard.link_publico || "/festas/venda_convite");
 				if (navigator.clipboard && navigator.clipboard.writeText) {
-					navigator.clipboard.writeText(url).then(function () {
-						toast("Link copiado.", "success");
-					}).catch(function () { toast("Não foi possível copiar.", "error"); });
+					navigator.clipboard
+						.writeText(url)
+						.then(function () {
+							toast("Link copiado.", "success");
+						})
+						.catch(function () {
+							toast("Não foi possível copiar.", "error");
+						});
 				} else {
 					toast(url, "info");
 				}
@@ -3883,13 +4929,16 @@
 
 		// Exportação da tabela de pedidos de convite em Excel (disponível para todos
 		// que enxergam a aba; é um download somente leitura).
-		document.querySelectorAll("[data-action='exportar-convites-xlsx']").forEach(function (btn) {
-			btn.addEventListener("click", function () {
-				const url = "/api/method/gris.api.festas.convites.export_convites_excel?festa_name="
-					+ encodeURIComponent(festaName);
-				window.open(url, "_blank");
+		document
+			.querySelectorAll("[data-action='exportar-convites-xlsx']")
+			.forEach(function (btn) {
+				btn.addEventListener("click", function () {
+					const url =
+						"/api/method/gris.api.festas.convites.export_convites_excel?festa_name=" +
+						encodeURIComponent(festaName);
+					window.open(url, "_blank");
+				});
 			});
-		});
 
 		if (!canEdit) return;
 
@@ -3899,14 +4948,18 @@
 		dlg.addEventListener("close", closeOpcaoForm);
 
 		const addBtn = document.getElementById("btn-add-opcao-convite");
-		if (addBtn) addBtn.addEventListener("click", function () { openOpcaoForm(null); });
+		if (addBtn)
+			addBtn.addEventListener("click", function () {
+				openOpcaoForm(null);
+			});
 
 		const porRamoBtn = document.getElementById("btn-convites-por-ramo");
 		if (porRamoBtn) {
 			porRamoBtn.addEventListener("click", function () {
 				confirmDialog({
 					title: "Criar convites por ramo",
-					message: "Criar uma opção de convite para cada ramo com beneficiários ativos? Diretoria será sempre criada.",
+					message:
+						"Criar uma opção de convite para cada ramo com beneficiários ativos? Diretoria será sempre criada.",
 					confirmLabel: "Criar",
 				}).then(function (ok) {
 					if (!ok) return;
@@ -3921,7 +4974,9 @@
 						.catch(function (err) {
 							toast(err.message || "Falha ao criar opções por ramo.", "error");
 						})
-						.finally(function () { porRamoBtn.disabled = false; });
+						.finally(function () {
+							porRamoBtn.disabled = false;
+						});
 				});
 			});
 		}
@@ -3933,7 +4988,12 @@
 		if (addLoteBtn) {
 			addLoteBtn.addEventListener("click", function () {
 				opcaoLotesDraft = coletarOpcaoLotesDoDom();
-				opcaoLotesDraft.push({ data_inicio: "", data_fim: "", valor: "", valor_consumacao: "" });
+				opcaoLotesDraft.push({
+					data_inicio: "",
+					data_fim: "",
+					valor: "",
+					valor_consumacao: "",
+				});
 				renderOpcaoLotes();
 			});
 		}
@@ -3980,13 +5040,17 @@
 				const consumacaoEl = document.getElementById("opcao-valor-consumacao");
 				const payload = {
 					name: opcaoDraft.name || "",
-					nome_convite: (document.getElementById("opcao-nome-convite").value || "").trim(),
+					nome_convite: (
+						document.getElementById("opcao-nome-convite").value || ""
+					).trim(),
 					valor: Number(document.getElementById("opcao-valor").value || 0),
 					valor_consumacao: Number((consumacaoEl && consumacaoEl.value) || 0),
-					quantidade_esperada: Number(document.getElementById("opcao-quantidade-esperada").value || 0),
+					quantidade_esperada: Number(
+						document.getElementById("opcao-quantidade-esperada").value || 0
+					),
 					ativo: getSwitchChecked("opcao-ativo"),
 					imagem_capa: (document.getElementById("opcao-imagem-capa").value || "").trim(),
-					lotes: (opcaoDraft.portaria ? [] : coletarOpcaoLotesDoDom()),
+					lotes: opcaoDraft.portaria ? [] : coletarOpcaoLotesDoDom(),
 				};
 				confirmBtn.disabled = true;
 				api("gris.api.festas.convites.upsert_opcao", {
@@ -3996,7 +5060,9 @@
 					.then(function (resp) {
 						const opcao = resp && resp.opcao;
 						if (!opcao) return;
-						const idx = opcaoLocalList.findIndex(function (o) { return o.name === opcao.name; });
+						const idx = opcaoLocalList.findIndex(function (o) {
+							return o.name === opcao.name;
+						});
 						if (idx >= 0) opcaoLocalList[idx] = opcao;
 						else opcaoLocalList.push(opcao);
 						closeOpcaoForm();
@@ -4006,12 +5072,16 @@
 					.catch(function (err) {
 						toast(err.message || "Não foi possível salvar.", "error");
 					})
-					.finally(function () { confirmBtn.disabled = false; });
+					.finally(function () {
+						confirmBtn.disabled = false;
+					});
 			});
 		}
 
 		// Inicializa os campos de config quando o dialog abre
-		dlg.addEventListener("toggle", function () { hydrateConfigDialog(); });
+		dlg.addEventListener("toggle", function () {
+			hydrateConfigDialog();
+		});
 		const triggerBtn = document.getElementById("btn-config-convites");
 		if (triggerBtn) triggerBtn.addEventListener("click", hydrateConfigDialog);
 
@@ -4019,7 +5089,9 @@
 		if (saveCfgBtn) {
 			saveCfgBtn.addEventListener("click", function () {
 				const aceita = getSwitchChecked("cfg-aceitar-doacoes");
-				const data = (document.getElementById("cfg-data-limite-vendas").value || "").trim();
+				const data = (
+					document.getElementById("cfg-data-limite-vendas").value || ""
+				).trim();
 				const vendaPortariaDesejado = getSwitchChecked("cfg-venda-portaria");
 				const vendaPortariaAtual = !!convitesDashboard.venda_na_portaria;
 				const mudouPortaria = vendaPortariaDesejado !== vendaPortariaAtual;
@@ -4058,7 +5130,9 @@
 						.catch(function (err) {
 							toast(err.message || "Não foi possível salvar.", "error");
 						})
-						.finally(function () { saveCfgBtn.disabled = false; });
+						.finally(function () {
+							saveCfgBtn.disabled = false;
+						});
 				};
 
 				if (mudouPortaria) {
@@ -4066,7 +5140,9 @@
 						? "Ativar 'Venda na portaria' irá desativar todos os outros tipos de convite ativos e habilitar apenas o tipo 'Portaria'. Continuar?"
 						: "Desativar o modo 'Venda na portaria' irá desativar o tipo 'Portaria'. Os demais tipos permanecem como estão (você precisará reativá-los manualmente). Continuar?";
 					confirmDialog({
-						title: vendaPortariaDesejado ? "Ativar venda na portaria" : "Desativar venda na portaria",
+						title: vendaPortariaDesejado
+							? "Ativar venda na portaria"
+							: "Desativar venda na portaria",
 						message: msg,
 						confirmLabel: "Salvar e continuar",
 						variant: vendaPortariaDesejado ? "primary" : undefined,
@@ -4095,7 +5171,10 @@
 	var fechamentoCompraUsos = [];
 
 	function fechamentoCenarioKey() {
-		return { "Mínimo": "min", "Intermediário": "intermediario", "Máximo": "max" }[cenarioSimulacao] || "intermediario";
+		return (
+			{ Mínimo: "min", Intermediário: "intermediario", Máximo: "max" }[cenarioSimulacao] ||
+			"intermediario"
+		);
 	}
 
 	function fechamentoSetText(id, text) {
@@ -4104,7 +5183,9 @@
 	}
 
 	function fechamentoEmpty(msg) {
-		return '<p class="text-sm text-muted-foreground festa-equipe-empty">' + escHtml(msg) + '</p>';
+		return (
+			'<p class="text-sm text-muted-foreground festa-equipe-empty">' + escHtml(msg) + "</p>"
+		);
 	}
 
 	function renderFechamentoTab() {
@@ -4138,8 +5219,12 @@
 					toast("Fechamento de caixa salvo.", "success");
 					return refreshFestaData();
 				})
-				.catch(function (err) { toast(err.message || "Erro ao salvar.", "error"); })
-				.finally(function () { btn.disabled = false; });
+				.catch(function (err) {
+					toast(err.message || "Erro ao salvar.", "error");
+				})
+				.finally(function () {
+					btn.disabled = false;
+				});
 		});
 	}
 
@@ -4148,29 +5233,41 @@
 	function renderFechamentoCompras() {
 		var container = document.getElementById("fechamento-compras-container");
 		if (!container) return;
-		if (!compras.length) { container.innerHTML = fechamentoEmpty("Nenhuma compra cadastrada."); return; }
+		if (!compras.length) {
+			container.innerHTML = fechamentoEmpty("Nenhuma compra cadastrada.");
+			return;
+		}
 
-		var rows = compras.map(function (c, i) {
-			var tag = c.previsto === false ? ' <span class="badge">Sem previsão</span>' : "";
-			var cancelBadge = c.cancelado ? ' <span class="badge festa-badge-cancelado">Cancelado</span>' : "";
-			var detalhes = canEdit
-				? `<td class="festa-table-actions"><button type="button" class="btn-sm-outline" data-fechamento-compra="${i}">Detalhes</button></td>`
-				: "";
-			// O valor cotado é o valor total de compra (mesmo dado exibido no
-			// diálogo de detalhes), independente do cenário de simulação.
-			var valorCotado = Number(c.valor_total_compra) || 0;
-			// "Quantidade de compra" é a contagem de cotações; o total previsto na
-			// unidade geral do produto = contagem × quantidade da cotação escolhida
-			// (convertida para a unidade geral). Mesmo cálculo da aba de compras.
-			var qtd = Number(c.quantidade_compra_final) || 0;
-			var escolhida = (c.cotacoes || []).find(function (x) { return x.escolhida; });
-			var qtdPacote = 0;
-			if (escolhida && Number(escolhida.quantidade) > 0) {
-				var conv = convertUnit(Number(escolhida.quantidade), escolhida.unidade_medida || "unidade", c.unidade_compra || "unidade");
-				if (conv !== null && conv > 0) qtdPacote = conv;
-			}
-			var totalPrevisto = qtd * qtdPacote;
-			return `
+		var rows = compras
+			.map(function (c, i) {
+				var tag = c.previsto === false ? ' <span class="badge">Sem previsão</span>' : "";
+				var cancelBadge = c.cancelado
+					? ' <span class="badge festa-badge-cancelado">Cancelado</span>'
+					: "";
+				var detalhes = canEdit
+					? `<td class="festa-table-actions"><button type="button" class="btn-sm-outline" data-fechamento-compra="${i}">Detalhes</button></td>`
+					: "";
+				// O valor cotado é o valor total de compra (mesmo dado exibido no
+				// diálogo de detalhes), independente do cenário de simulação.
+				var valorCotado = Number(c.valor_total_compra) || 0;
+				// "Quantidade de compra" é a contagem de cotações; o total previsto na
+				// unidade geral do produto = contagem × quantidade da cotação escolhida
+				// (convertida para a unidade geral). Mesmo cálculo da aba de compras.
+				var qtd = Number(c.quantidade_compra_final) || 0;
+				var escolhida = (c.cotacoes || []).find(function (x) {
+					return x.escolhida;
+				});
+				var qtdPacote = 0;
+				if (escolhida && Number(escolhida.quantidade) > 0) {
+					var conv = convertUnit(
+						Number(escolhida.quantidade),
+						escolhida.unidade_medida || "unidade",
+						c.unidade_compra || "unidade"
+					);
+					if (conv !== null && conv > 0) qtdPacote = conv;
+				}
+				var totalPrevisto = qtd * qtdPacote;
+				return `
 <tr>
 	<td>${escHtml(c.nome_item)}${tag}${cancelBadge}</td>
 	<td>${fmtNum(c.quantidade_compra_final)}</td>
@@ -4179,29 +5276,40 @@
 	<td>${fmtCurrency(c.valor_total_realizado)}</td>
 	${detalhes}
 </tr>`;
-		}).join("");
+			})
+			.join("");
 
 		var actionTh = canEdit ? "<th></th>" : "";
 		container.innerHTML = `<div class="festa-table-scroll"><table class="festa-table"><thead><tr><th>Item</th><th>Quantidade de compra</th><th>Total previsto</th><th>Valor cotado</th><th>Valor gasto</th>${actionTh}</tr></thead><tbody>${rows}</tbody></table></div>`;
 		notifyDesignSystem();
 		if (!canEdit) return;
 		container.querySelectorAll("[data-fechamento-compra]").forEach(function (btn) {
-			btn.addEventListener("click", function () { openCompraFechamentoDialog(parseInt(btn.dataset.fechamentoCompra, 10)); });
+			btn.addEventListener("click", function () {
+				openCompraFechamentoDialog(parseInt(btn.dataset.fechamentoCompra, 10));
+			});
 		});
 	}
 
 	function setRealizadoCompra(c) {
-		document.getElementById("fechamento-compra-real-fornecedor").value = c.fornecedor_realizado || "";
-		document.getElementById("fechamento-compra-real-valor").value = c.valor_individual_realizado || "";
-		document.getElementById("fechamento-compra-real-cotqtd").value = c.quantidade_cotacao_realizada || "";
-		setSelectValue("fechamento-compra-real-unidade", c.unidade_medida_realizado || "unidade", c.unidade_medida_realizado || "unidade");
+		document.getElementById("fechamento-compra-real-fornecedor").value =
+			c.fornecedor_realizado || "";
+		document.getElementById("fechamento-compra-real-valor").value =
+			c.valor_individual_realizado || "";
+		document.getElementById("fechamento-compra-real-cotqtd").value =
+			c.quantidade_cotacao_realizada || "";
+		setSelectValue(
+			"fechamento-compra-real-unidade",
+			c.unidade_medida_realizado || "unidade",
+			c.unidade_medida_realizado || "unidade"
+		);
 		document.getElementById("fechamento-compra-real-qtd").value = c.quantidade_realizada || "";
 		var totalEl = document.getElementById("fechamento-compra-real-total");
 		totalEl.value = c.valor_total_realizado || "";
 		// O total é automático quando ainda não foi informado; ao reabrir um
 		// realizado já preenchido, preservamos o valor digitado pelo gestor.
 		totalEl.dataset.autoTotal = Number(c.valor_total_realizado) > 0 ? "0" : "1";
-		document.getElementById("fechamento-compra-real-obs").value = c.observacoes_realizado || "";
+		document.getElementById("fechamento-compra-real-obs").value =
+			c.observacoes_realizado || "";
 		setSwitchChecked("fechamento-compra-comprado", !c.cancelado);
 		syncFechamentoRealizado();
 	}
@@ -4209,18 +5317,22 @@
 	// Recalcula o valor unitário exibido e, enquanto o total estiver em modo
 	// automático, o valor total gasto (= quantidade de compra × valor por pacote).
 	function syncFechamentoRealizado() {
-		var valor = parseFloat((document.getElementById("fechamento-compra-real-valor") || {}).value) || 0;
-		var cotQtd = parseFloat((document.getElementById("fechamento-compra-real-cotqtd") || {}).value) || 0;
+		var valor =
+			parseFloat((document.getElementById("fechamento-compra-real-valor") || {}).value) || 0;
+		var cotQtd =
+			parseFloat((document.getElementById("fechamento-compra-real-cotqtd") || {}).value) ||
+			0;
 		var unidade = getSelectValue("fechamento-compra-real-unidade") || "unidade";
 		var unitarioEl = document.getElementById("fechamento-compra-real-valor-unitario");
 		if (unitarioEl) {
-			unitarioEl.textContent = cotQtd > 0
-				? fmtCurrency(valor / cotQtd) + " / " + unitLabel(unidade)
-				: "—";
+			unitarioEl.textContent =
+				cotQtd > 0 ? fmtCurrency(valor / cotQtd) + " / " + unitLabel(unidade) : "—";
 		}
 		var totalEl = document.getElementById("fechamento-compra-real-total");
 		if (totalEl && totalEl.dataset.autoTotal === "1") {
-			var qtdCompra = parseFloat((document.getElementById("fechamento-compra-real-qtd") || {}).value) || 0;
+			var qtdCompra =
+				parseFloat((document.getElementById("fechamento-compra-real-qtd") || {}).value) ||
+				0;
 			totalEl.value = qtdCompra * valor;
 		}
 	}
@@ -4241,7 +5353,11 @@
 			blocoOrc.hidden = true;
 			if (btnRemover) btnRemover.hidden = true;
 			document.getElementById("fechamento-compra-nome-item").value = "";
-			setSelectValue("fechamento-compra-area", "", selectLabelFor(areasItems, "", "Sem área"));
+			setSelectValue(
+				"fechamento-compra-area",
+				"",
+				selectLabelFor(areasItems, "", "Sem área")
+			);
 			setSwitchChecked("fechamento-compra-usado-produtos", false);
 			fechamentoCompraUsos = [];
 			renderFechamentoCompraUsos();
@@ -4256,8 +5372,13 @@
 			if (semPrevisao) {
 				blocoIdent.hidden = false;
 				blocoOrc.hidden = true;
-				document.getElementById("fechamento-compra-nome-item").value = compra.nome_item || "";
-				setSelectValue("fechamento-compra-area", compra.area || "", compra.nome_area || selectLabelFor(areasItems, "", "Sem área"));
+				document.getElementById("fechamento-compra-nome-item").value =
+					compra.nome_item || "";
+				setSelectValue(
+					"fechamento-compra-area",
+					compra.area || "",
+					compra.nome_area || selectLabelFor(areasItems, "", "Sem área")
+				);
 				setSwitchChecked("fechamento-compra-usado-produtos", !!compra.usado_em_produtos);
 				fechamentoCompraUsos = (compra.usos_em_produto || []).map(function (u) {
 					return {
@@ -4271,15 +5392,33 @@
 			} else {
 				blocoIdent.hidden = true;
 				blocoOrc.hidden = false;
-				var escolhida = (compra.cotacoes || []).find(function (x) { return x.escolhida; });
-				var valIndividual = escolhida && Number(escolhida.quantidade) > 0 && !escolhida.doacao
-					? (Number(escolhida.valor) || 0) / Number(escolhida.quantidade) : 0;
-				fechamentoSetText("fechamento-compra-orc-valor",
-					escolhida ? (escolhida.doacao ? "Doação" : fmtCurrency(escolhida.valor)) : "—");
-				fechamentoSetText("fechamento-compra-orc-cotqtd",
-					escolhida ? fmtNum(escolhida.quantidade) + " " + unitLabel(escolhida.unidade_medida || "unidade") : "—");
-				fechamentoSetText("fechamento-compra-orc-individual",
-					escolhida ? fmtCurrency(valIndividual) + " / " + unitLabel(escolhida.unidade_medida || "unidade") : "—");
+				var escolhida = (compra.cotacoes || []).find(function (x) {
+					return x.escolhida;
+				});
+				var valIndividual =
+					escolhida && Number(escolhida.quantidade) > 0 && !escolhida.doacao
+						? (Number(escolhida.valor) || 0) / Number(escolhida.quantidade)
+						: 0;
+				fechamentoSetText(
+					"fechamento-compra-orc-valor",
+					escolhida ? (escolhida.doacao ? "Doação" : fmtCurrency(escolhida.valor)) : "—"
+				);
+				fechamentoSetText(
+					"fechamento-compra-orc-cotqtd",
+					escolhida
+						? fmtNum(escolhida.quantidade) +
+								" " +
+								unitLabel(escolhida.unidade_medida || "unidade")
+						: "—"
+				);
+				fechamentoSetText(
+					"fechamento-compra-orc-individual",
+					escolhida
+						? fmtCurrency(valIndividual) +
+								" / " +
+								unitLabel(escolhida.unidade_medida || "unidade")
+						: "—"
+				);
 				// Quantidade de compra = quantidade final (mesma da tabela), não a sugerida.
 				var qtdCompraFinal = Number(compra.quantidade_compra_final) || 0;
 				fechamentoSetText("fechamento-compra-orc-qtd", fmtNum(qtdCompraFinal));
@@ -4287,13 +5426,25 @@
 				// (convertido para a unidade geral do produto). Mesmo cálculo da tabela.
 				var qtdPacoteOrc = 0;
 				if (escolhida && Number(escolhida.quantidade) > 0) {
-					var convOrc = convertUnit(Number(escolhida.quantidade), escolhida.unidade_medida || "unidade", compra.unidade_compra || "unidade");
+					var convOrc = convertUnit(
+						Number(escolhida.quantidade),
+						escolhida.unidade_medida || "unidade",
+						compra.unidade_compra || "unidade"
+					);
 					if (convOrc !== null && convOrc > 0) qtdPacoteOrc = convOrc;
 				}
-				fechamentoSetText("fechamento-compra-orc-totalqtd",
-					fmtNum(qtdCompraFinal * qtdPacoteOrc) + " " + (compra.unidade_compra || ""));
-				fechamentoSetText("fechamento-compra-orc-total", fmtCurrency(compra.valor_total_compra));
-				fechamentoSetText("fechamento-compra-orc-fornecedor", escolhida ? (escolhida.fornecedor || "—") : "—");
+				fechamentoSetText(
+					"fechamento-compra-orc-totalqtd",
+					fmtNum(qtdCompraFinal * qtdPacoteOrc) + " " + (compra.unidade_compra || "")
+				);
+				fechamentoSetText(
+					"fechamento-compra-orc-total",
+					fmtCurrency(compra.valor_total_compra)
+				);
+				fechamentoSetText(
+					"fechamento-compra-orc-fornecedor",
+					escolhida ? escolhida.fornecedor || "—" : "—"
+				);
 			}
 			setRealizadoCompra(compra);
 		}
@@ -4302,31 +5453,47 @@
 
 	function readFechamentoCompraUsos() {
 		fechamentoCompraUsos = [];
-		document.querySelectorAll("#fechamento-compra-usos-container [data-fechamento-uso-row]").forEach(function (row) {
-			fechamentoCompraUsos.push({
-				produto: (row.querySelector("[data-field='produto']") || {}).value || "",
-				quantidade_usada: parseFloat(row.querySelector("[data-field='quantidade_usada']").value || "0") || 0,
-				unidade_medida_uso: (row.querySelector("[data-field='unidade_medida_uso']") || {}).value || "unidade",
+		document
+			.querySelectorAll("#fechamento-compra-usos-container [data-fechamento-uso-row]")
+			.forEach(function (row) {
+				fechamentoCompraUsos.push({
+					produto: (row.querySelector("[data-field='produto']") || {}).value || "",
+					quantidade_usada:
+						parseFloat(
+							row.querySelector("[data-field='quantidade_usada']").value || "0"
+						) || 0,
+					unidade_medida_uso:
+						(row.querySelector("[data-field='unidade_medida_uso']") || {}).value ||
+						"unidade",
+				});
 			});
-		});
 	}
 
 	function renderFechamentoCompraUsos() {
 		var container = document.getElementById("fechamento-compra-usos-container");
 		if (!container) return;
 		if (!fechamentoCompraUsos.length) {
-			container.innerHTML = '<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhum produto vinculado.</p>';
+			container.innerHTML =
+				'<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhum produto vinculado.</p>';
 			return;
 		}
-		var rows = fechamentoCompraUsos.map(function (u, idx) {
-			return `
+		var rows = fechamentoCompraUsos
+			.map(function (u, idx) {
+				return `
 <tr data-fechamento-uso-row>
 	<td>${renderBasecoatSelect("produto", produtosItems, u.produto || "")}</td>
-	<td><input class="input festa-compact-input" data-field="quantidade_usada" type="text" inputmode="decimal" data-numeric-input value="${escHtml(u.quantidade_usada || "")}"></td>
-	<td>${renderBasecoatSelect("unidade_medida_uso", unidadesItems, u.unidade_medida_uso || "unidade")}</td>
+	<td><input class="input festa-compact-input" data-field="quantidade_usada" type="text" inputmode="decimal" data-numeric-input value="${escHtml(
+		u.quantidade_usada || ""
+	)}"></td>
+	<td>${renderBasecoatSelect(
+		"unidade_medida_uso",
+		unidadesItems,
+		u.unidade_medida_uso || "unidade"
+	)}</td>
 	<td class="festa-table-actions"><button type="button" class="btn-sm-ghost festa-actions-btn" data-fechamento-remove-uso="${idx}" aria-label="Remover uso">×</button></td>
 </tr>`;
-		}).join("");
+			})
+			.join("");
 		container.innerHTML = `<div class="festa-table-scroll"><table class="festa-table festa-edit-table"><thead><tr><th>Produto</th><th>Quantidade usada</th><th>Unidade</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 		notifyDesignSystem();
 		container.querySelectorAll("[data-fechamento-remove-uso]").forEach(function (btn) {
@@ -4345,13 +5512,22 @@
 
 	function collectCompraRealizado() {
 		return {
-			valor_individual_realizado: parseFloat(document.getElementById("fechamento-compra-real-valor").value) || 0,
-			quantidade_cotacao_realizada: parseFloat(document.getElementById("fechamento-compra-real-cotqtd").value) || 0,
-			unidade_medida_realizado: getSelectValue("fechamento-compra-real-unidade") || "unidade",
-			quantidade_realizada: parseFloat(document.getElementById("fechamento-compra-real-qtd").value) || 0,
-			valor_total_realizado: parseFloat(document.getElementById("fechamento-compra-real-total").value) || 0,
-			fornecedor_realizado: (document.getElementById("fechamento-compra-real-fornecedor").value || "").trim(),
-			observacoes_realizado: (document.getElementById("fechamento-compra-real-obs").value || "").trim(),
+			valor_individual_realizado:
+				parseFloat(document.getElementById("fechamento-compra-real-valor").value) || 0,
+			quantidade_cotacao_realizada:
+				parseFloat(document.getElementById("fechamento-compra-real-cotqtd").value) || 0,
+			unidade_medida_realizado:
+				getSelectValue("fechamento-compra-real-unidade") || "unidade",
+			quantidade_realizada:
+				parseFloat(document.getElementById("fechamento-compra-real-qtd").value) || 0,
+			valor_total_realizado:
+				parseFloat(document.getElementById("fechamento-compra-real-total").value) || 0,
+			fornecedor_realizado: (
+				document.getElementById("fechamento-compra-real-fornecedor").value || ""
+			).trim(),
+			observacoes_realizado: (
+				document.getElementById("fechamento-compra-real-obs").value || ""
+			).trim(),
 			cancelado: getSwitchChecked("fechamento-compra-comprado") ? 0 : 1,
 		};
 	}
@@ -4364,25 +5540,47 @@
 		if (idx < 0 || compras[idx].previsto === false) {
 			// Criação (idx<0) ou edição de item sem previsão: nome/área/usos editáveis.
 			var nome = (document.getElementById("fechamento-compra-nome-item").value || "").trim();
-			if (!nome) { toast("Informe o nome do item.", "error"); return; }
+			if (!nome) {
+				toast("Informe o nome do item.", "error");
+				return;
+			}
 			readFechamentoCompraUsos();
 			dados.nome_item = nome;
 			dados.area = getSelectValue("fechamento-compra-area");
 			dados.usado_em_produtos = getSwitchChecked("fechamento-compra-usado-produtos");
 			dados.usos_em_produto = dados.usado_em_produtos ? fechamentoCompraUsos : [];
-			request = idx < 0
-				? api("gris.api.festas.criar_compra_sem_previsao", { festa_name: festaName, dados_json: JSON.stringify(dados) })
-				: api("gris.api.festas.salvar_compra_sem_previsao", { compra_name: compras[idx].name, dados_json: JSON.stringify(dados) });
+			request =
+				idx < 0
+					? api("gris.api.festas.criar_compra_sem_previsao", {
+							festa_name: festaName,
+							dados_json: JSON.stringify(dados),
+					  })
+					: api("gris.api.festas.salvar_compra_sem_previsao", {
+							compra_name: compras[idx].name,
+							dados_json: JSON.stringify(dados),
+					  });
 		} else {
-			request = api("gris.api.festas.salvar_realizado_compra", { compra_name: compras[idx].name, dados_json: JSON.stringify(dados) });
+			request = api("gris.api.festas.salvar_realizado_compra", {
+				compra_name: compras[idx].name,
+				dados_json: JSON.stringify(dados),
+			});
 		}
 		var btn = document.getElementById("btn-fechamento-compra-salvar");
 		btn.disabled = true;
 		request
-			.then(function () { dlg.close(); return refreshFestaData(); })
-			.then(function () { toast("Fechamento salvo.", "success"); })
-			.catch(function (err) { toast(err.message || "Erro ao salvar.", "error"); })
-			.finally(function () { btn.disabled = false; });
+			.then(function () {
+				dlg.close();
+				return refreshFestaData();
+			})
+			.then(function () {
+				toast("Fechamento salvo.", "success");
+			})
+			.catch(function (err) {
+				toast(err.message || "Erro ao salvar.", "error");
+			})
+			.finally(function () {
+				btn.disabled = false;
+			});
 	}
 
 	function removerCompraFechamento() {
@@ -4392,14 +5590,25 @@
 		var compra = compras[idx];
 		confirmDialog({
 			title: "Remover item",
-			message: "Remover a compra \"" + compra.nome_item + "\"? Esta ação não pode ser desfeita.",
+			message:
+				'Remover a compra "' + compra.nome_item + '"? Esta ação não pode ser desfeita.',
 			confirmLabel: "Remover",
 		}).then(function (ok) {
 			if (!ok) return;
-			api("gris.api.festas.excluir_compra", { compra_name: compra.name, festa_name: festaName })
-				.then(function () { dlg.close(); return refreshFestaData(); })
-				.then(function () { toast("Item removido.", "success"); })
-				.catch(function (err) { toast(err.message || "Erro ao remover item.", "error"); });
+			api("gris.api.festas.excluir_compra", {
+				compra_name: compra.name,
+				festa_name: festaName,
+			})
+				.then(function () {
+					dlg.close();
+					return refreshFestaData();
+				})
+				.then(function () {
+					toast("Item removido.", "success");
+				})
+				.catch(function (err) {
+					toast(err.message || "Erro ao remover item.", "error");
+				});
 		});
 	}
 
@@ -4408,36 +5617,48 @@
 	function renderFechamentoContratacoes() {
 		var container = document.getElementById("fechamento-contratacoes-container");
 		if (!container) return;
-		if (!contratacoes.length) { container.innerHTML = fechamentoEmpty("Nenhuma contratação cadastrada."); return; }
+		if (!contratacoes.length) {
+			container.innerHTML = fechamentoEmpty("Nenhuma contratação cadastrada.");
+			return;
+		}
 
-		var rows = contratacoes.map(function (c, i) {
-			var tag = c.previsto === false ? ' <span class="badge">Sem previsão</span>' : "";
-			var cancelBadge = c.cancelado ? ' <span class="badge festa-badge-cancelado">Cancelado</span>' : "";
-			var detalhes = canEdit
-				? `<td class="festa-table-actions"><button type="button" class="btn-sm-outline" data-fechamento-contratacao="${i}">Detalhes</button></td>`
-				: "";
-			return `
+		var rows = contratacoes
+			.map(function (c, i) {
+				var tag = c.previsto === false ? ' <span class="badge">Sem previsão</span>' : "";
+				var cancelBadge = c.cancelado
+					? ' <span class="badge festa-badge-cancelado">Cancelado</span>'
+					: "";
+				var detalhes = canEdit
+					? `<td class="festa-table-actions"><button type="button" class="btn-sm-outline" data-fechamento-contratacao="${i}">Detalhes</button></td>`
+					: "";
+				return `
 <tr>
 	<td>${escHtml(c.nome_item)}${tag}${cancelBadge}</td>
 	<td>${fmtCurrency(c.valor_total_contratacao)}</td>
 	<td>${fmtCurrency(c.valor_total_realizado)}</td>
 	${detalhes}
 </tr>`;
-		}).join("");
+			})
+			.join("");
 
 		var actionTh = canEdit ? "<th></th>" : "";
 		container.innerHTML = `<div class="festa-table-scroll"><table class="festa-table"><thead><tr><th>Item</th><th>Valor cotado</th><th>Valor gasto</th>${actionTh}</tr></thead><tbody>${rows}</tbody></table></div>`;
 		notifyDesignSystem();
 		if (!canEdit) return;
 		container.querySelectorAll("[data-fechamento-contratacao]").forEach(function (btn) {
-			btn.addEventListener("click", function () { openContratacaoFechamentoDialog(parseInt(btn.dataset.fechamentoContratacao, 10)); });
+			btn.addEventListener("click", function () {
+				openContratacaoFechamentoDialog(parseInt(btn.dataset.fechamentoContratacao, 10));
+			});
 		});
 	}
 
 	function setRealizadoContratacao(c) {
-		document.getElementById("fechamento-contratacao-real-total").value = c.valor_total_realizado || "";
-		document.getElementById("fechamento-contratacao-real-fornecedor").value = c.fornecedor_realizado || "";
-		document.getElementById("fechamento-contratacao-real-obs").value = c.observacoes_realizado || "";
+		document.getElementById("fechamento-contratacao-real-total").value =
+			c.valor_total_realizado || "";
+		document.getElementById("fechamento-contratacao-real-fornecedor").value =
+			c.fornecedor_realizado || "";
+		document.getElementById("fechamento-contratacao-real-obs").value =
+			c.observacoes_realizado || "";
 		setSwitchChecked("fechamento-contratacao-comprado", !c.cancelado);
 	}
 
@@ -4457,7 +5678,11 @@
 			blocoOrc.hidden = true;
 			if (btnRemover) btnRemover.hidden = true;
 			document.getElementById("fechamento-contratacao-nome-item").value = "";
-			setSelectValue("fechamento-contratacao-area", "", selectLabelFor(areasItems, "", "Sem área"));
+			setSelectValue(
+				"fechamento-contratacao-area",
+				"",
+				selectLabelFor(areasItems, "", "Sem área")
+			);
 			setRealizadoContratacao({});
 		} else {
 			var c = contratacoes[idx];
@@ -4467,14 +5692,27 @@
 			if (semPrevisao) {
 				blocoIdent.hidden = false;
 				blocoOrc.hidden = true;
-				document.getElementById("fechamento-contratacao-nome-item").value = c.nome_item || "";
-				setSelectValue("fechamento-contratacao-area", c.area || "", c.nome_area || selectLabelFor(areasItems, "", "Sem área"));
+				document.getElementById("fechamento-contratacao-nome-item").value =
+					c.nome_item || "";
+				setSelectValue(
+					"fechamento-contratacao-area",
+					c.area || "",
+					c.nome_area || selectLabelFor(areasItems, "", "Sem área")
+				);
 			} else {
 				blocoIdent.hidden = true;
 				blocoOrc.hidden = false;
-				var escolhida = (c.cotacoes || []).find(function (x) { return x.escolhida; });
-				fechamentoSetText("fechamento-contratacao-orc-total", fmtCurrency(c.valor_total_contratacao));
-				fechamentoSetText("fechamento-contratacao-orc-fornecedor", escolhida ? (escolhida.fornecedor || "—") : "—");
+				var escolhida = (c.cotacoes || []).find(function (x) {
+					return x.escolhida;
+				});
+				fechamentoSetText(
+					"fechamento-contratacao-orc-total",
+					fmtCurrency(c.valor_total_contratacao)
+				);
+				fechamentoSetText(
+					"fechamento-contratacao-orc-fornecedor",
+					escolhida ? escolhida.fornecedor || "—" : "—"
+				);
 			}
 			setRealizadoContratacao(c);
 		}
@@ -4485,31 +5723,61 @@
 		var dlg = document.getElementById("dialog-contratacao-fechamento");
 		var idx = parseInt(dlg.dataset.contratacaoIdx, 10);
 		var dados = {
-			valor_total_realizado: parseFloat(document.getElementById("fechamento-contratacao-real-total").value) || 0,
-			fornecedor_realizado: (document.getElementById("fechamento-contratacao-real-fornecedor").value || "").trim(),
-			observacoes_realizado: (document.getElementById("fechamento-contratacao-real-obs").value || "").trim(),
+			valor_total_realizado:
+				parseFloat(document.getElementById("fechamento-contratacao-real-total").value) ||
+				0,
+			fornecedor_realizado: (
+				document.getElementById("fechamento-contratacao-real-fornecedor").value || ""
+			).trim(),
+			observacoes_realizado: (
+				document.getElementById("fechamento-contratacao-real-obs").value || ""
+			).trim(),
 			cancelado: getSwitchChecked("fechamento-contratacao-comprado") ? 0 : 1,
 		};
 		var request;
 		if (idx < 0 || contratacoes[idx].previsto === false) {
 			// Criação (idx<0) ou edição de item sem previsão: nome/área editáveis.
-			var nome = (document.getElementById("fechamento-contratacao-nome-item").value || "").trim();
-			if (!nome) { toast("Informe o nome do item.", "error"); return; }
+			var nome = (
+				document.getElementById("fechamento-contratacao-nome-item").value || ""
+			).trim();
+			if (!nome) {
+				toast("Informe o nome do item.", "error");
+				return;
+			}
 			dados.nome_item = nome;
 			dados.area = getSelectValue("fechamento-contratacao-area");
-			request = idx < 0
-				? api("gris.api.festas.criar_contratacao_sem_previsao", { festa_name: festaName, dados_json: JSON.stringify(dados) })
-				: api("gris.api.festas.salvar_contratacao_sem_previsao", { contratacao_name: contratacoes[idx].name, dados_json: JSON.stringify(dados) });
+			request =
+				idx < 0
+					? api("gris.api.festas.criar_contratacao_sem_previsao", {
+							festa_name: festaName,
+							dados_json: JSON.stringify(dados),
+					  })
+					: api("gris.api.festas.salvar_contratacao_sem_previsao", {
+							contratacao_name: contratacoes[idx].name,
+							dados_json: JSON.stringify(dados),
+					  });
 		} else {
-			request = api("gris.api.festas.salvar_realizado_contratacao", { contratacao_name: contratacoes[idx].name, dados_json: JSON.stringify(dados) });
+			request = api("gris.api.festas.salvar_realizado_contratacao", {
+				contratacao_name: contratacoes[idx].name,
+				dados_json: JSON.stringify(dados),
+			});
 		}
 		var btn = document.getElementById("btn-fechamento-contratacao-salvar");
 		btn.disabled = true;
 		request
-			.then(function () { dlg.close(); return refreshFestaData(); })
-			.then(function () { toast("Fechamento salvo.", "success"); })
-			.catch(function (err) { toast(err.message || "Erro ao salvar.", "error"); })
-			.finally(function () { btn.disabled = false; });
+			.then(function () {
+				dlg.close();
+				return refreshFestaData();
+			})
+			.then(function () {
+				toast("Fechamento salvo.", "success");
+			})
+			.catch(function (err) {
+				toast(err.message || "Erro ao salvar.", "error");
+			})
+			.finally(function () {
+				btn.disabled = false;
+			});
 	}
 
 	function removerContratacaoFechamento() {
@@ -4519,14 +5787,25 @@
 		var c = contratacoes[idx];
 		confirmDialog({
 			title: "Remover item",
-			message: "Remover a contratação \"" + c.nome_item + "\"? Esta ação não pode ser desfeita.",
+			message:
+				'Remover a contratação "' + c.nome_item + '"? Esta ação não pode ser desfeita.',
 			confirmLabel: "Remover",
 		}).then(function (ok) {
 			if (!ok) return;
-			api("gris.api.festas.excluir_contratacao", { contratacao_name: c.name, festa_name: festaName })
-				.then(function () { dlg.close(); return refreshFestaData(); })
-				.then(function () { toast("Item removido.", "success"); })
-				.catch(function (err) { toast(err.message || "Erro ao remover item.", "error"); });
+			api("gris.api.festas.excluir_contratacao", {
+				contratacao_name: c.name,
+				festa_name: festaName,
+			})
+				.then(function () {
+					dlg.close();
+					return refreshFestaData();
+				})
+				.then(function () {
+					toast("Item removido.", "success");
+				})
+				.catch(function (err) {
+					toast(err.message || "Erro ao remover item.", "error");
+				});
 		});
 	}
 
@@ -4536,14 +5815,19 @@
 		if (!produtosBarraca.length) {
 			return '<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhum produto nesta barraca.</p>';
 		}
-		var itens = produtosBarraca.map(function (p, j) {
-			var preco = Number(p.preco_venda) || 0;
-			var qtdEsp = Number(p["qtd_" + key]) || 0;
-			var qtdReal = Number(p.qtd_realizada_vendas) || 0;
-			var qtdInput = canEdit
-				? `<input class="input festa-compact-input" type="text" inputmode="decimal" data-numeric-input data-item-barraca="${bi}" data-item-idx="${j}" data-item-produto="${escHtml(p.name)}" data-item-preco="${preco}" value="${escHtml(p.qtd_realizada_vendas || "")}">`
-				: fmtNum(qtdReal);
-			return `
+		var itens = produtosBarraca
+			.map(function (p, j) {
+				var preco = Number(p.preco_venda) || 0;
+				var qtdEsp = Number(p["qtd_" + key]) || 0;
+				var qtdReal = Number(p.qtd_realizada_vendas) || 0;
+				var qtdInput = canEdit
+					? `<input class="input festa-compact-input" type="text" inputmode="decimal" data-numeric-input data-item-barraca="${bi}" data-item-idx="${j}" data-item-produto="${escHtml(
+							p.name
+					  )}" data-item-preco="${preco}" value="${escHtml(
+							p.qtd_realizada_vendas || ""
+					  )}">`
+					: fmtNum(qtdReal);
+				return `
 <tr>
 	<td>${escHtml(p.nome_produto)}</td>
 	<td>${fmtCurrency(preco)}</td>
@@ -4552,28 +5836,43 @@
 	<td>${qtdInput}</td>
 	<td data-item-total="${bi}-${j}">${fmtCurrency(qtdReal * preco)}</td>
 </tr>`;
-		}).join("");
+			})
+			.join("");
 		return `<table class="festa-table festa-edit-table"><thead><tr><th>Item</th><th>Valor individual</th><th>Qtd esperada</th><th>Total esperado</th><th>Qtd realizada</th><th>Total arrecadado</th></tr></thead><tbody>${itens}</tbody></table>`;
 	}
 
 	function renderFechamentoBarracas() {
 		var container = document.getElementById("fechamento-barracas-container");
 		if (!container) return;
-		if (!barracas.length) { container.innerHTML = fechamentoEmpty("Nenhuma barraca cadastrada."); return; }
+		if (!barracas.length) {
+			container.innerHTML = fechamentoEmpty("Nenhuma barraca cadastrada.");
+			return;
+		}
 
 		var key = fechamentoCenarioKey();
 		var espMap = {};
-		(window._festaData.receitasPorBarraca || []).forEach(function (r) { espMap[r.name] = r["esperado_" + key] || 0; });
+		(window._festaData.receitasPorBarraca || []).forEach(function (r) {
+			espMap[r.name] = r["esperado_" + key] || 0;
+		});
 
-		var rows = barracas.map(function (b, i) {
-			var produtosBarraca = produtos.filter(function (p) { return p.barraca === b.name; });
-			var realizadoCalc = produtosBarraca.reduce(function (s, p) { return s + (Number(p.valor_total_arrecadado) || 0); }, 0);
-			var realVal = Number(b.valor_arrecadado_realizado_real) || 0;
-			var realInput = canEdit
-				? `<input class="input festa-compact-input" type="text" inputmode="decimal" data-barraca-real="${i}" value="${realVal ? escHtml(fmtCurrency(realVal)) : ""}">`
-				: fmtCurrency(b.valor_arrecadado_realizado_real);
-			var salvarBtn = canEdit ? `<button type="button" class="btn-sm-outline" data-barraca-salvar="${i}">Salvar</button>` : "";
-			return `
+		var rows = barracas
+			.map(function (b, i) {
+				var produtosBarraca = produtos.filter(function (p) {
+					return p.barraca === b.name;
+				});
+				var realizadoCalc = produtosBarraca.reduce(function (s, p) {
+					return s + (Number(p.valor_total_arrecadado) || 0);
+				}, 0);
+				var realVal = Number(b.valor_arrecadado_realizado_real) || 0;
+				var realInput = canEdit
+					? `<input class="input festa-compact-input" type="text" inputmode="decimal" data-barraca-real="${i}" value="${
+							realVal ? escHtml(fmtCurrency(realVal)) : ""
+					  }">`
+					: fmtCurrency(b.valor_arrecadado_realizado_real);
+				var salvarBtn = canEdit
+					? `<button type="button" class="btn-sm-outline" data-barraca-salvar="${i}">Salvar</button>`
+					: "";
+				return `
 <tr>
 	<td><button type="button" class="btn-sm-ghost festa-actions-btn" data-barraca-toggle="${i}" aria-expanded="false" aria-label="Expandir itens">${lucideSvg("chevron-right")}</button></td>
 	<td>${escHtml(b.nome_barraca)}</td>
@@ -4583,7 +5882,8 @@
 	<td class="festa-table-actions">${salvarBtn}</td>
 </tr>
 <tr data-barraca-detail="${i}" hidden><td colspan="6">${renderBarracaItens(produtosBarraca, i, key)}</td></tr>`;
-		}).join("");
+			})
+			.join("");
 
 		container.innerHTML = `<div class="festa-table-scroll"><table class="festa-table"><thead><tr><th></th><th>Barraca</th><th>Arrecadação esperada</th><th>Arrecadação realizada</th><th>Realizado real</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 		notifyDesignSystem();
@@ -4622,13 +5922,20 @@
 			inp.addEventListener("input", function () {
 				var bi = inp.dataset.itemBarraca;
 				var preco = Number(inp.dataset.itemPreco) || 0;
-				var totalCell = container.querySelector('[data-item-total="' + bi + "-" + inp.dataset.itemIdx + '"]');
-				if (totalCell) totalCell.textContent = fmtCurrency((parseFloat(inp.value) || 0) * preco);
+				var totalCell = container.querySelector(
+					'[data-item-total="' + bi + "-" + inp.dataset.itemIdx + '"]'
+				);
+				if (totalCell)
+					totalCell.textContent = fmtCurrency((parseFloat(inp.value) || 0) * preco);
 				var sum = 0;
-				container.querySelectorAll('[data-item-barraca="' + bi + '"]').forEach(function (o) {
-					sum += (parseFloat(o.value) || 0) * (Number(o.dataset.itemPreco) || 0);
-				});
-				var realizadoCell = container.querySelector('[data-barraca-realizado="' + bi + '"]');
+				container
+					.querySelectorAll('[data-item-barraca="' + bi + '"]')
+					.forEach(function (o) {
+						sum += (parseFloat(o.value) || 0) * (Number(o.dataset.itemPreco) || 0);
+					});
+				var realizadoCell = container.querySelector(
+					'[data-barraca-realizado="' + bi + '"]'
+				);
 				if (realizadoCell) realizadoCell.textContent = fmtCurrency(sum);
 			});
 		});
@@ -4638,17 +5945,37 @@
 				var bi = btn.dataset.barracaSalvar;
 				var barraca = barracas[parseInt(bi, 10)];
 				var itens = [];
-				container.querySelectorAll('[data-item-barraca="' + bi + '"]').forEach(function (o) {
-					itens.push({ produto: o.dataset.itemProduto, qtd_realizada: parseFloat(o.value) || 0 });
-				});
+				container
+					.querySelectorAll('[data-item-barraca="' + bi + '"]')
+					.forEach(function (o) {
+						itens.push({
+							produto: o.dataset.itemProduto,
+							qtd_realizada: parseFloat(o.value) || 0,
+						});
+					});
 				var realEl = container.querySelector('[data-barraca-real="' + bi + '"]');
-				var dados = { valor_realizado_real: realEl ? parseCurrencyBR(realEl.value) : 0, itens: itens };
+				var dados = {
+					valor_realizado_real: realEl ? parseCurrencyBR(realEl.value) : 0,
+					itens: itens,
+				};
 				btn.disabled = true;
-				api("gris.api.festas.salvar_fechamento_barraca", { festa_name: festaName, barraca_name: barraca.name, dados_json: JSON.stringify(dados) })
-					.then(function () { return refreshFestaData(); })
-					.then(function () { toast("Barraca salva.", "success"); })
-					.catch(function (err) { toast(err.message || "Erro ao salvar barraca.", "error"); })
-					.finally(function () { btn.disabled = false; });
+				api("gris.api.festas.salvar_fechamento_barraca", {
+					festa_name: festaName,
+					barraca_name: barraca.name,
+					dados_json: JSON.stringify(dados),
+				})
+					.then(function () {
+						return refreshFestaData();
+					})
+					.then(function () {
+						toast("Barraca salva.", "success");
+					})
+					.catch(function (err) {
+						toast(err.message || "Erro ao salvar barraca.", "error");
+					})
+					.finally(function () {
+						btn.disabled = false;
+					});
 			});
 		});
 	}
@@ -4672,18 +5999,20 @@
 
 		var totalQtd = 0;
 		var totalVal = 0;
-		var rows = opcoes.map(function (o) {
-			var qtd = Number(qtdMap[o.name] || 0);
-			var val = Number(valMap[o.name] || 0);
-			totalQtd += qtd;
-			totalVal += val;
-			return `
+		var rows = opcoes
+			.map(function (o) {
+				var qtd = Number(qtdMap[o.name] || 0);
+				var val = Number(valMap[o.name] || 0);
+				totalQtd += qtd;
+				totalVal += val;
+				return `
 <tr>
 	<td>${escHtml(o.nome_convite || o.name)}</td>
 	<td>${fmtNum(qtd)}</td>
 	<td>${fmtCurrency(val)}</td>
 </tr>`;
-		}).join("");
+			})
+			.join("");
 
 		var totalRow = `
 <tr class="festa-fechamento-total-row">
@@ -4692,12 +6021,15 @@
 	<td>${fmtCurrency(totalVal)}</td>
 </tr>`;
 
-		var doacoesRow = doacoes > 0 ? `
+		var doacoesRow =
+			doacoes > 0
+				? `
 <tr>
 	<td>Doações</td>
 	<td>—</td>
 	<td>${fmtCurrency(doacoes)}</td>
-</tr>` : "";
+</tr>`
+				: "";
 
 		container.innerHTML = `<div class="festa-table-scroll"><table class="festa-table"><thead><tr><th>Tipo de convite</th><th>Qtd. (Pago)</th><th>Valor arrecadado</th></tr></thead><tbody>${rows}${totalRow}${doacoesRow}</tbody></table></div>`;
 		notifyDesignSystem();
@@ -4719,12 +6051,21 @@
 		var portariaValor = Number(totais.total_portaria_valor || 0);
 		var fechamentoCaixa = valorArrecadadoFesta - portariaValor;
 		var barracasLinhas = barracas.map(function (b) {
-			return { label: b.nome_barraca || b.name, valor: Number(b.valor_arrecadado_realizado_real) || 0 };
+			return {
+				label: b.nome_barraca || b.name,
+				valor: Number(b.valor_arrecadado_realizado_real) || 0,
+			};
 		});
-		var barracasTotal = barracasLinhas.reduce(function (s, r) { return s + r.valor; }, 0);
+		var barracasTotal = barracasLinhas.reduce(function (s, r) {
+			return s + r.valor;
+		}, 0);
 		// Itens cancelados (não comprados) não entram nas despesas.
-		var comprasTotal = compras.reduce(function (s, c) { return s + (c.cancelado ? 0 : Number(c.valor_total_realizado) || 0); }, 0);
-		var contratacoesTotal = contratacoes.reduce(function (s, c) { return s + (c.cancelado ? 0 : Number(c.valor_total_realizado) || 0); }, 0);
+		var comprasTotal = compras.reduce(function (s, c) {
+			return s + (c.cancelado ? 0 : Number(c.valor_total_realizado) || 0);
+		}, 0);
+		var contratacoesTotal = contratacoes.reduce(function (s, c) {
+			return s + (c.cancelado ? 0 : Number(c.valor_total_realizado) || 0);
+		}, 0);
 		var entradas = consumacao + entrada + fechamentoCaixa + doacoes;
 		var saidas = comprasTotal + contratacoesTotal;
 		return {
@@ -4752,11 +6093,21 @@
 		var rowCls = opts.total ? ' class="festa-cenarios-row--total"' : "";
 		var cellCls = opts.cellClass || "";
 		if (opts.negativeIsDanger) {
-			cellCls = Number(valor) < 0 ? "festa-cenarios-cell--danger" : "festa-cenarios-cell--success";
+			cellCls =
+				Number(valor) < 0 ? "festa-cenarios-cell--danger" : "festa-cenarios-cell--success";
 		}
 		var cellAttr = ' class="festa-resumo-value' + (cellCls ? " " + cellCls : "") + '"';
-		return "<tr" + rowCls + '><td class="festa-cenarios-label">' + escHtml(label) +
-			"</td><td" + cellAttr + ">" + fmtCurrency(valor) + "</td></tr>";
+		return (
+			"<tr" +
+			rowCls +
+			'><td class="festa-cenarios-label">' +
+			escHtml(label) +
+			"</td><td" +
+			cellAttr +
+			">" +
+			fmtCurrency(valor) +
+			"</td></tr>"
+		);
 	}
 
 	function renderFechamentoResumo() {
@@ -4773,23 +6124,39 @@
 		var html = '<table class="festa-cenarios-table festa-resumo-table"><tbody>';
 		html += fechamentoResumoGroup("Receitas");
 		html += receitasRows;
-		html += fechamentoResumoRow("Total de receitas", r.entradas, { total: true, cellClass: "festa-cenarios-cell--success" });
+		html += fechamentoResumoRow("Total de receitas", r.entradas, {
+			total: true,
+			cellClass: "festa-cenarios-cell--success",
+		});
 		html += fechamentoResumoGroup("Saídas");
 		html += fechamentoResumoRow("Compras", r.comprasTotal);
 		html += fechamentoResumoRow("Contratações", r.contratacoesTotal);
-		html += fechamentoResumoRow("Total de saídas", r.saidas, { total: true, cellClass: "festa-cenarios-cell--danger" });
-		html += fechamentoResumoRow("Resultado", r.resultado, { total: true, negativeIsDanger: true });
-		html += fechamentoResumoRow("Fichas não gastas", r.fichasNaoGastas, { negativeIsDanger: true });
+		html += fechamentoResumoRow("Total de saídas", r.saidas, {
+			total: true,
+			cellClass: "festa-cenarios-cell--danger",
+		});
+		html += fechamentoResumoRow("Resultado", r.resultado, {
+			total: true,
+			negativeIsDanger: true,
+		});
+		html += fechamentoResumoRow("Fichas não gastas", r.fichasNaoGastas, {
+			negativeIsDanger: true,
+		});
 		html += "</tbody></table>";
 
 		// Arrecadação de cada barraca (referência; não entra no resultado).
 		html += '<table class="festa-cenarios-table festa-resumo-table"><tbody>';
 		html += fechamentoResumoGroup("Arrecadação por barraca");
 		if (r.barracasLinhas.length) {
-			html += r.barracasLinhas.map(function (b) { return fechamentoResumoRow(b.label, b.valor); }).join("");
+			html += r.barracasLinhas
+				.map(function (b) {
+					return fechamentoResumoRow(b.label, b.valor);
+				})
+				.join("");
 			html += fechamentoResumoRow("Total das barracas", r.barracasTotal, { total: true });
 		} else {
-			html += '<tr><td class="festa-cenarios-label" colspan="2">Nenhuma barraca cadastrada.</td></tr>';
+			html +=
+				'<tr><td class="festa-cenarios-label" colspan="2">Nenhuma barraca cadastrada.</td></tr>';
 		}
 		html += "</tbody></table>";
 		container.innerHTML = html;
@@ -4801,91 +6168,108 @@
 	function renderFechamentoWaterfall() {
 		var el = document.getElementById("chart-fechamento-resumo");
 		if (!el) return;
-		ensureECharts().then(function () {
-			if (!chartFechamentoResumoInstance) {
-				chartFechamentoResumoInstance = window.echarts.init(el);
-				window.addEventListener("resize", function () {
-					if (chartFechamentoResumoInstance) chartFechamentoResumoInstance.resize();
-				});
-			}
-			var r = computeFechamentoResumo();
-			var E = r.entradas, S = r.saidas, R = r.resultado;
-			var cats = ["Entradas", "Saídas", "Resultado"];
-			var COR_ENTRADA = "#009E73";
-			var COR_SAIDA = "#D55E00";
-			var cores = [COR_ENTRADA, COR_SAIDA, R >= 0 ? COR_ENTRADA : COR_SAIDA];
-			// Cada barra é desenhada como retângulo flutuante [início, fim] via custom
-			// series — robusto inclusive quando o Resultado é negativo.
-			// value = [índice da categoria, início, fim, valor exibido]
-			var dados = [
-				{ value: [0, 0, E, E] },
-				{ value: [1, E, R, S] },
-				{ value: [2, 0, R, R] },
-			];
+		ensureECharts()
+			.then(function () {
+				if (!chartFechamentoResumoInstance) {
+					chartFechamentoResumoInstance = window.echarts.init(el);
+					window.addEventListener("resize", function () {
+						if (chartFechamentoResumoInstance) chartFechamentoResumoInstance.resize();
+					});
+				}
+				var r = computeFechamentoResumo();
+				var E = r.entradas,
+					S = r.saidas,
+					R = r.resultado;
+				var cats = ["Entradas", "Saídas", "Resultado"];
+				var COR_ENTRADA = "#009E73";
+				var COR_SAIDA = "#D55E00";
+				var cores = [COR_ENTRADA, COR_SAIDA, R >= 0 ? COR_ENTRADA : COR_SAIDA];
+				// Cada barra é desenhada como retângulo flutuante [início, fim] via custom
+				// series — robusto inclusive quando o Resultado é negativo.
+				// value = [índice da categoria, início, fim, valor exibido]
+				var dados = [
+					{ value: [0, 0, E, E] },
+					{ value: [1, E, R, S] },
+					{ value: [2, 0, R, R] },
+				];
 
-			chartFechamentoResumoInstance.setOption({
-				aria: { enabled: true },
-				tooltip: {
-					trigger: "item",
-					formatter: function (p) {
-						var i = p.value[0];
-						return cats[i] + "<br/>" + fmtMoeda(p.value[3]);
-					},
-				},
-				grid: { left: 16, right: 24, top: 32, bottom: 48, containLabel: true },
-				xAxis: { type: "category", data: cats },
-				yAxis: {
-					type: "value",
-					name: "Valor (R$)",
-					nameLocation: "middle",
-					nameGap: 56,
-					nameRotate: 90,
-					nameTextStyle: { fontSize: 12 },
-					axisLabel: {
-						formatter: function (v) { return "R$ " + Number(v).toLocaleString("pt-BR"); },
-					},
-				},
-				series: [{
-					type: "custom",
-					encode: { x: 0, y: [1, 2] },
-					data: dados,
-					renderItem: function (params, api) {
-						var catIndex = api.value(0);
-						var pStart = api.coord([catIndex, api.value(1)]);
-						var pEnd = api.coord([catIndex, api.value(2)]);
-						var bandWidth = api.size([1, 0])[0];
-						var width = Math.min(bandWidth * 0.5, 64);
-						var yTop = Math.min(pStart[1], pEnd[1]);
-						var height = Math.abs(pStart[1] - pEnd[1]);
-						return {
-							type: "group",
-							children: [
-								{
-									type: "rect",
-									shape: { x: pStart[0] - width / 2, y: yTop, width: width, height: height, r: [4, 4, 0, 0] },
-									style: { fill: cores[catIndex] },
+				chartFechamentoResumoInstance.setOption(
+					{
+						aria: { enabled: true },
+						tooltip: {
+							trigger: "item",
+							formatter: function (p) {
+								var i = p.value[0];
+								return cats[i] + "<br/>" + fmtMoeda(p.value[3]);
+							},
+						},
+						grid: { left: 16, right: 24, top: 32, bottom: 48, containLabel: true },
+						xAxis: { type: "category", data: cats },
+						yAxis: {
+							type: "value",
+							name: "Valor (R$)",
+							nameLocation: "middle",
+							nameGap: 56,
+							nameRotate: 90,
+							nameTextStyle: { fontSize: 12 },
+							axisLabel: {
+								formatter: function (v) {
+									return "R$ " + Number(v).toLocaleString("pt-BR");
 								},
-								{
-									type: "text",
-									style: {
-										text: fmtMoeda(api.value(3)),
-										x: pStart[0],
-										y: yTop - 6,
-										textAlign: "center",
-										textVerticalAlign: "bottom",
-										fontSize: 12,
-										fontWeight: 600,
-										fill: "#1f2937",
-									},
+							},
+						},
+						series: [
+							{
+								type: "custom",
+								encode: { x: 0, y: [1, 2] },
+								data: dados,
+								renderItem: function (params, api) {
+									var catIndex = api.value(0);
+									var pStart = api.coord([catIndex, api.value(1)]);
+									var pEnd = api.coord([catIndex, api.value(2)]);
+									var bandWidth = api.size([1, 0])[0];
+									var width = Math.min(bandWidth * 0.5, 64);
+									var yTop = Math.min(pStart[1], pEnd[1]);
+									var height = Math.abs(pStart[1] - pEnd[1]);
+									return {
+										type: "group",
+										children: [
+											{
+												type: "rect",
+												shape: {
+													x: pStart[0] - width / 2,
+													y: yTop,
+													width: width,
+													height: height,
+													r: [4, 4, 0, 0],
+												},
+												style: { fill: cores[catIndex] },
+											},
+											{
+												type: "text",
+												style: {
+													text: fmtMoeda(api.value(3)),
+													x: pStart[0],
+													y: yTop - 6,
+													textAlign: "center",
+													textVerticalAlign: "bottom",
+													fontSize: 12,
+													fontWeight: 600,
+													fill: "#1f2937",
+												},
+											},
+										],
+									};
 								},
-							],
-						};
+							},
+						],
 					},
-				}],
-			}, true);
-		}).catch(function (err) {
-			toast(err.message || "Erro ao carregar gráficos.", "error");
-		});
+					true
+				);
+			})
+			.catch(function (err) {
+				toast(err.message || "Erro ao carregar gráficos.", "error");
+			});
 	}
 
 	function initFechamento() {
@@ -4903,26 +6287,45 @@
 
 		if (!canEdit) return;
 
-		document.querySelectorAll("[data-action='add-compra-sem-previsao']").forEach(function (btn) {
-			btn.addEventListener("click", function () { openCompraFechamentoDialog(-1); });
-		});
-		document.querySelectorAll("[data-action='add-contratacao-sem-previsao']").forEach(function (btn) {
-			btn.addEventListener("click", function () { openContratacaoFechamentoDialog(-1); });
-		});
+		document
+			.querySelectorAll("[data-action='add-compra-sem-previsao']")
+			.forEach(function (btn) {
+				btn.addEventListener("click", function () {
+					openCompraFechamentoDialog(-1);
+				});
+			});
+		document
+			.querySelectorAll("[data-action='add-contratacao-sem-previsao']")
+			.forEach(function (btn) {
+				btn.addEventListener("click", function () {
+					openContratacaoFechamentoDialog(-1);
+				});
+			});
 
-		var usadoEl = document.querySelector("#fechamento-compra-usado-produtos input[type='checkbox']");
+		var usadoEl = document.querySelector(
+			"#fechamento-compra-usado-produtos input[type='checkbox']"
+		);
 		if (usadoEl) usadoEl.addEventListener("change", updateFechamentoCompraUsosVisibility);
 
 		var addUso = document.getElementById("btn-fechamento-compra-add-uso");
-		if (addUso) addUso.addEventListener("click", function () {
-			readFechamentoCompraUsos();
-			fechamentoCompraUsos.push({ produto: "", quantidade_usada: 0, unidade_medida_uso: "unidade" });
-			renderFechamentoCompraUsos();
-		});
+		if (addUso)
+			addUso.addEventListener("click", function () {
+				readFechamentoCompraUsos();
+				fechamentoCompraUsos.push({
+					produto: "",
+					quantidade_usada: 0,
+					unidade_medida_uso: "unidade",
+				});
+				renderFechamentoCompraUsos();
+			});
 
 		// Ao editar a cotação realizada, reativa o cálculo automático do total e
 		// recalcula valor unitário + total gasto.
-		["fechamento-compra-real-valor", "fechamento-compra-real-cotqtd", "fechamento-compra-real-qtd"].forEach(function (id) {
+		[
+			"fechamento-compra-real-valor",
+			"fechamento-compra-real-cotqtd",
+			"fechamento-compra-real-qtd",
+		].forEach(function (id) {
 			var el = document.getElementById(id);
 			if (!el) return;
 			el.addEventListener("input", function () {
@@ -4935,7 +6338,10 @@
 		if (unidadeReal) unidadeReal.addEventListener("change", syncFechamentoRealizado);
 		// Ao digitar o total manualmente, deixa de ser automático (resposta final do gestor).
 		var totalReal = document.getElementById("fechamento-compra-real-total");
-		if (totalReal) totalReal.addEventListener("input", function () { totalReal.dataset.autoTotal = "0"; });
+		if (totalReal)
+			totalReal.addEventListener("input", function () {
+				totalReal.dataset.autoTotal = "0";
+			});
 
 		var btnCompra = document.getElementById("btn-fechamento-compra-salvar");
 		if (btnCompra) btnCompra.addEventListener("click", saveCompraFechamento);
@@ -4945,7 +6351,8 @@
 		var btnRemoverCompra = document.getElementById("btn-fechamento-compra-remover");
 		if (btnRemoverCompra) btnRemoverCompra.addEventListener("click", removerCompraFechamento);
 		var btnRemoverContr = document.getElementById("btn-fechamento-contratacao-remover");
-		if (btnRemoverContr) btnRemoverContr.addEventListener("click", removerContratacaoFechamento);
+		if (btnRemoverContr)
+			btnRemoverContr.addEventListener("click", removerContratacaoFechamento);
 	}
 
 	document.addEventListener("DOMContentLoaded", function () {
@@ -5027,7 +6434,10 @@
 				return { tarefas: data.tarefas || [] };
 			},
 			onMoveTask: async (tarefaName, status) => {
-				const data = await callApi(METHODS.updateStatus, { tarefa_name: tarefaName, status });
+				const data = await callApi(METHODS.updateStatus, {
+					tarefa_name: tarefaName,
+					status,
+				});
 				return { tarefas: data.tarefas || [] };
 			},
 			onLoadComments: async (tarefaName) => {
@@ -5039,11 +6449,16 @@
 				return { comentarios: data.comentarios || [] };
 			},
 			onEditComment: async (commentName, texto) => {
-				const data = await callApi(METHODS.editComment, { comentario_name: commentName, texto });
+				const data = await callApi(METHODS.editComment, {
+					comentario_name: commentName,
+					texto,
+				});
 				return { comentarios: data.comentarios || [] };
 			},
 			onDeleteComment: async (commentName) => {
-				const data = await callApi(METHODS.deleteComment, { comentario_name: commentName });
+				const data = await callApi(METHODS.deleteComment, {
+					comentario_name: commentName,
+				});
 				return { comentarios: data.comentarios || [] };
 			},
 		});

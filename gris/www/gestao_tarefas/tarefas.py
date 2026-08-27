@@ -62,12 +62,15 @@ def get_context(context):
 			raise frappe.Redirect
 		if not frappe.has_permission("Board", doc=board_param, ptype="read"):
 			frappe.throw(_("Sem permissao para acessar este quadro."), frappe.PermissionError)
-		board_meta = frappe.db.get_value(
-			"Board",
-			board_param,
-			["titulo", "referencia_doctype", "referencia_nome"],
-			as_dict=True,
-		) or {}
+		board_meta = (
+			frappe.db.get_value(
+				"Board",
+				board_param,
+				["titulo", "referencia_doctype", "referencia_nome"],
+				as_dict=True,
+			)
+			or {}
+		)
 		ref_dt = (board_meta.get("referencia_doctype") or "").strip()
 		ref_nome = (board_meta.get("referencia_nome") or "").strip()
 		if ref_dt == "Projeto" and ref_nome:
@@ -82,11 +85,14 @@ def get_context(context):
 		context.page_title = titulo
 		context.page_subtitle = "Tarefas deste quadro."
 		context.is_quadro_solto = not ref_dt
-		nivel_atual = frappe.db.get_value(
-			"Board User",
-			{"parent": board_param, "parenttype": "Board", "user": frappe.session.user},
-			"nivel_acesso",
-		) or ""
+		nivel_atual = (
+			frappe.db.get_value(
+				"Board User",
+				{"parent": board_param, "parenttype": "Board", "user": frappe.session.user},
+				"nivel_acesso",
+			)
+			or ""
+		)
 		is_sm = "System Manager" in frappe.get_roles(frappe.session.user)
 		context.board_nivel_atual = nivel_atual or ("Gerenciar" if is_sm else "")
 		context.pode_gerir_membros = (is_sm or nivel_atual == "Gerenciar") and not ref_dt

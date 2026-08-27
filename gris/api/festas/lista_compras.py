@@ -99,9 +99,7 @@ def build_lista_compras_payload(festa_name: str) -> dict:
 				qtd_pacote = 0.0
 			total = flt(c.quantidade_compra_final) * qtd_pacote
 			# Especificação completa: nome + quantidade da cotação + unidade da cotação.
-			especificacao = " ".join(
-				p for p in [c.nome_item, _fmt_num(cot.quantidade), unidade_cot] if p
-			)
+			especificacao = " ".join(p for p in [c.nome_item, _fmt_num(cot.quantidade), unidade_cot] if p)
 			rows.append(
 				{
 					"especificacao": especificacao,

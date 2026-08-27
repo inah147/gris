@@ -109,8 +109,7 @@ def _buscar_sugestoes_contribuicao(doc):
 
 	# Filtrar por valor próximo (±R$1)
 	candidatos_valor = [
-		b for b in beneficiarios
-		if abs(valor_transacao - float(b.valor_contribuicao or 0)) <= 1.0
+		b for b in beneficiarios if abs(valor_transacao - float(b.valor_contribuicao or 0)) <= 1.0
 	]
 
 	if not candidatos_valor:
@@ -138,9 +137,7 @@ def _buscar_sugestoes_contribuicao(doc):
 	# Mapear responsáveis por associado
 	resp_por_associado = {}
 	for v in vinculos:
-		resp_por_associado.setdefault(v.beneficiario_associado, []).append(
-			resp_nomes.get(v.responsavel, "")
-		)
+		resp_por_associado.setdefault(v.beneficiario_associado, []).append(resp_nomes.get(v.responsavel, ""))
 
 	candidatos_com_score = []
 	for b in candidatos_valor:
@@ -165,10 +162,7 @@ def _buscar_sugestoes_contribuicao(doc):
 
 	# Ordenar por proximidade (menor distância primeiro) e limitar a 5
 	candidatos_com_score.sort(key=lambda c: c["dist"])
-	return [
-		{"name": c["name"], "nome_completo": c["nome_completo"]}
-		for c in candidatos_com_score[:5]
-	]
+	return [{"name": c["name"], "nome_completo": c["nome_completo"]} for c in candidatos_com_score[:5]]
 
 
 def get_context(context):
@@ -259,6 +253,7 @@ def get_context(context):
 		# Encontrar todas as transações deste mês que têm conta_fixa preenchido
 		primeiro_dia = mes_ref
 		import calendar
+
 		ultimo_dia = mes_ref.replace(day=calendar.monthrange(mes_ref.year, mes_ref.month)[1])
 
 		used_accounts = frappe.get_all(
@@ -266,16 +261,14 @@ def get_context(context):
 			filters={
 				"data_transacao": ["between", [primeiro_dia, ultimo_dia]],
 				"conta_fixa": ["is", "set"],
-				"name": ["!=", doc.name]  # Excluir a própria transação
+				"name": ["!=", doc.name],  # Excluir a própria transação
 			},
-			pluck="conta_fixa"
+			pluck="conta_fixa",
 		)
 
 		# Remover das opções
 		if used_accounts:
 			# context.opcoes_conta_fixa é uma lista de strings (names)
-			context.opcoes_conta_fixa = [
-				op for op in context.opcoes_conta_fixa if op not in used_accounts
-			]
+			context.opcoes_conta_fixa = [op for op in context.opcoes_conta_fixa if op not in used_accounts]
 
 	return context

@@ -20,16 +20,12 @@ class TestFestaPortaria(FrappeTestCase):
 
 	def test_portaria_auto_criada(self):
 		festa = self._criar_festa()
-		self.assertTrue(
-			frappe.db.exists("Area da Festa", f"{festa.name} - Portaria")
-		)
+		self.assertTrue(frappe.db.exists("Area da Festa", f"{festa.name} - Portaria"))
 
 	def test_save_festa_sem_coordenador_portaria_falha(self):
 		festa = self._criar_festa()
 		festa.expectativa_publico_max = 99
-		self.assertRaises(
-			frappe.ValidationError, festa.save, ignore_permissions=True
-		)
+		self.assertRaises(frappe.ValidationError, festa.save, ignore_permissions=True)
 
 	def test_save_festa_apos_preencher_portaria_funciona(self):
 		festa = self._criar_festa()
@@ -46,9 +42,7 @@ class TestFestaPortaria(FrappeTestCase):
 	def test_deletar_portaria_eh_bloqueado(self):
 		festa = self._criar_festa()
 		portaria = frappe.get_doc("Area da Festa", f"{festa.name} - Portaria")
-		self.assertRaises(
-			frappe.ValidationError, portaria.delete, ignore_permissions=True
-		)
+		self.assertRaises(frappe.ValidationError, portaria.delete, ignore_permissions=True)
 
 	def test_deletar_festa_remove_portaria_automaticamente(self):
 		festa = self._criar_festa()
@@ -63,6 +57,4 @@ class TestFestaPortaria(FrappeTestCase):
 		festa = self._criar_festa()
 		portaria = frappe.get_doc("Area da Festa", f"{festa.name} - Portaria")
 		portaria.descricao = "ajuste"
-		self.assertRaises(
-			frappe.ValidationError, portaria.save, ignore_permissions=True
-		)
+		self.assertRaises(frappe.ValidationError, portaria.save, ignore_permissions=True)

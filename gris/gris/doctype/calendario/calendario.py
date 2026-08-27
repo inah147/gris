@@ -5,7 +5,16 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-_CAMPOS_MONITORADOS = ("atividade", "inicio", "termino", "local", "secao", "nivel", "sem_atividade", "abertura_geral")
+_CAMPOS_MONITORADOS = (
+	"atividade",
+	"inicio",
+	"termino",
+	"local",
+	"secao",
+	"nivel",
+	"sem_atividade",
+	"abertura_geral",
+)
 
 
 class Calendario(Document):
@@ -79,4 +88,3 @@ class Calendario(Document):
 			)
 		except Exception:
 			frappe.log_error(frappe.get_traceback(), f"Notificacao on_trash Calendario {self.name}")
-

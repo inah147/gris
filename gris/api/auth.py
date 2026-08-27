@@ -49,7 +49,11 @@ def enforce_no_desk_redirect():
 	request = getattr(frappe.local, "request", None)
 	request_path = (getattr(request, "path", "") or "").strip().lower()
 
-	if request_path in {"/app", "/desk"} or request_path.startswith("/app/") or request_path.startswith("/desk/"):
+	if (
+		request_path in {"/app", "/desk"}
+		or request_path.startswith("/app/")
+		or request_path.startswith("/desk/")
+	):
 		raise TemporaryRedirect(location="/inicio")
 
 

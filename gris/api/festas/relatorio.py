@@ -69,9 +69,7 @@ def _membros_por_pai(parenttype: str, nomes: list[str]) -> dict[str, list[dict]]
 	)
 	mapa: dict[str, list[dict]] = {}
 	for row in rows:
-		mapa.setdefault(row.parent, []).append(
-			{"nome": row.nome or "", "funcao": row.funcao or ""}
-		)
+		mapa.setdefault(row.parent, []).append({"nome": row.nome or "", "funcao": row.funcao or ""})
 	return mapa
 
 
@@ -251,9 +249,7 @@ def _montar_avaliacoes(avaliacao: dict | None) -> dict | None:
 		if i.get("satisfacao_colaboracao") not in (None, "")
 	]
 	notas_resultado = [
-		cint(i.get("resultado_festa"))
-		for i in individuais
-		if i.get("resultado_festa") not in (None, "")
+		cint(i.get("resultado_festa")) for i in individuais if i.get("resultado_festa") not in (None, "")
 	]
 
 	return {
@@ -405,9 +401,7 @@ def build_relatorio_payload(festa_name: str) -> dict:
 		],
 		order_by="nome_item asc",
 	)
-	forn_compra = _fornecedor_escolhido(
-		"Cotacao Compra Festa", "Compra Festa", [c.name for c in compras]
-	)
+	forn_compra = _fornecedor_escolhido("Cotacao Compra Festa", "Compra Festa", [c.name for c in compras])
 	forn_contr = _fornecedor_escolhido(
 		"Cotacao Contratacao Festa", "Contratacao Festa", [c.name for c in contratacoes]
 	)
@@ -631,79 +625,79 @@ _CORPO_TEMPLATE = "templates/pages/relatorio_festa_pdf_corpo.html"
 # blocos aqui, estimando a altura de cada linha, de modo que cada bloco (uma
 # `.rot-canvas`) caiba em uma folha. Estimativas conservadoras (poucos caracteres
 # por linha → mais linhas previstas) preferem sobrar espaço a cortar conteúdo.
-_PAG_ALTURA_MM = 184.0      # espaço de empilhamento por folha (largura útil do retrato)
-_PAG_MARGEM_MM = 12.0       # folga de segurança
-_PAG_SEC_HEAD_MM = 22.0     # sec_head + h3 (só na 1ª folha das compras)
-_PAG_H3_MM = 8.0            # h3 "Contratações" / "(continuação)"
-_PAG_THEAD_MM = 16.0        # cabeçalho da tabela (repetido por folha; rótulos quebram em 2-3 linhas)
-_PAG_LINHA_MM = 4.4         # altura de uma linha de texto a 8pt
-_PAG_ROW_PAD_MM = 4.2       # padding vertical de uma <tr>
+_PAG_ALTURA_MM = 184.0  # espaço de empilhamento por folha (largura útil do retrato)
+_PAG_MARGEM_MM = 12.0  # folga de segurança
+_PAG_SEC_HEAD_MM = 22.0  # sec_head + h3 (só na 1ª folha das compras)
+_PAG_H3_MM = 8.0  # h3 "Contratações" / "(continuação)"
+_PAG_THEAD_MM = 16.0  # cabeçalho da tabela (repetido por folha; rótulos quebram em 2-3 linhas)
+_PAG_LINHA_MM = 4.4  # altura de uma linha de texto a 8pt
+_PAG_ROW_PAD_MM = 4.2  # padding vertical de uma <tr>
 
 
 def _altura_linha(celulas: list[tuple[str, int]]) -> float:
-    """Altura estimada (mm) de uma `<tr>`: a célula que mais quebra define a altura.
+	"""Altura estimada (mm) de uma `<tr>`: a célula que mais quebra define a altura.
 
-    `celulas`: pares ``(texto, caracteres_por_linha_da_coluna)``.
-    """
-    linhas = 1
-    for texto, cpl in celulas:
-        if texto:
-            linhas = max(linhas, math.ceil(len(str(texto)) / cpl))
-    return linhas * _PAG_LINHA_MM + _PAG_ROW_PAD_MM
+	`celulas`: pares ``(texto, caracteres_por_linha_da_coluna)``.
+	"""
+	linhas = 1
+	for texto, cpl in celulas:
+		if texto:
+			linhas = max(linhas, math.ceil(len(str(texto)) / cpl))
+	return linhas * _PAG_LINHA_MM + _PAG_ROW_PAD_MM
 
 
 def _paginar(linhas: list[dict], celulas_de, extra_primeira_mm: float) -> list[list[dict]]:
-    """Quebra `linhas` em blocos que cabem numa folha rotacionada.
+	"""Quebra `linhas` em blocos que cabem numa folha rotacionada.
 
-    `celulas_de(linha)` devolve os pares ``(texto, cpl)`` que estimam a altura da
-    linha. `extra_primeira_mm` é o cabeçalho extra que só aparece na 1ª folha.
-    Devolve sempre ao menos um bloco (vazio quando não há linhas) para o template
-    renderizar o estado "nenhum item cadastrado".
-    """
-    if not linhas:
-        return [[]]
-    cap_primeira = _PAG_ALTURA_MM - _PAG_MARGEM_MM - extra_primeira_mm - _PAG_THEAD_MM
-    cap_demais = _PAG_ALTURA_MM - _PAG_MARGEM_MM - _PAG_H3_MM - _PAG_THEAD_MM
-    paginas: list[list[dict]] = []
-    atual: list[dict] = []
-    restante = cap_primeira
-    for ln in linhas:
-        altura = _altura_linha(celulas_de(ln))
-        if atual and altura > restante:
-            paginas.append(atual)
-            atual = []
-            restante = cap_demais
-        atual.append(ln)
-        restante -= altura
-    paginas.append(atual)
-    return paginas
+	`celulas_de(linha)` devolve os pares ``(texto, cpl)`` que estimam a altura da
+	linha. `extra_primeira_mm` é o cabeçalho extra que só aparece na 1ª folha.
+	Devolve sempre ao menos um bloco (vazio quando não há linhas) para o template
+	renderizar o estado "nenhum item cadastrado".
+	"""
+	if not linhas:
+		return [[]]
+	cap_primeira = _PAG_ALTURA_MM - _PAG_MARGEM_MM - extra_primeira_mm - _PAG_THEAD_MM
+	cap_demais = _PAG_ALTURA_MM - _PAG_MARGEM_MM - _PAG_H3_MM - _PAG_THEAD_MM
+	paginas: list[list[dict]] = []
+	atual: list[dict] = []
+	restante = cap_primeira
+	for ln in linhas:
+		altura = _altura_linha(celulas_de(ln))
+		if atual and altura > restante:
+			paginas.append(atual)
+			atual = []
+			restante = cap_demais
+		atual.append(ln)
+		restante -= altura
+	paginas.append(atual)
+	return paginas
 
 
 # caracteres-por-linha de cada coluna que quebra (≈ largura útil / largura do
 # caractere a 8pt). Valores conservadores — derivados das larguras fixas do
 # `<colgroup>` no template — para superestimar a altura e nunca cortar linhas.
 def _paginar_compras(compras: list[dict]) -> list[list[dict]]:
-    def celulas(c: dict) -> list[tuple[str, int]]:
-        return [
-            (c.get("observacoes"), 38),       # obs: col. 68mm
-            (c.get("nome_item"), 14),         # item: col. 26mm
-            (c.get("fornecedor_orcado"), 15),  # fornecedor: col. 28mm
-            (c.get("fornecedor_realizado"), 15),
-        ]
+	def celulas(c: dict) -> list[tuple[str, int]]:
+		return [
+			(c.get("observacoes"), 38),  # obs: col. 68mm
+			(c.get("nome_item"), 14),  # item: col. 26mm
+			(c.get("fornecedor_orcado"), 15),  # fornecedor: col. 28mm
+			(c.get("fornecedor_realizado"), 15),
+		]
 
-    return _paginar(compras, celulas, _PAG_SEC_HEAD_MM)
+	return _paginar(compras, celulas, _PAG_SEC_HEAD_MM)
 
 
 def _paginar_contratacoes(contratacoes: list[dict]) -> list[list[dict]]:
-    def celulas(c: dict) -> list[tuple[str, int]]:
-        return [
-            (c.get("observacoes"), 38),       # obs: col. 68mm
-            (c.get("nome_item"), 20),         # nome: col. 42mm
-            (c.get("fornecedor_orcado"), 22),  # fornecedor: col. 46mm
-            (c.get("fornecedor_realizado"), 22),
-        ]
+	def celulas(c: dict) -> list[tuple[str, int]]:
+		return [
+			(c.get("observacoes"), 38),  # obs: col. 68mm
+			(c.get("nome_item"), 20),  # nome: col. 42mm
+			(c.get("fornecedor_orcado"), 22),  # fornecedor: col. 46mm
+			(c.get("fornecedor_realizado"), 22),
+		]
 
-    return _paginar(contratacoes, celulas, _PAG_H3_MM)
+	return _paginar(contratacoes, celulas, _PAG_H3_MM)
 
 
 def _logo_uel_data_uri() -> str:
@@ -879,11 +873,7 @@ def _serie(linha: list[dict], modo: str) -> dict | None:
 	for p in linha:
 		b = str(p.get("bin") or "")
 		rotulos.append(b[11:16] if len(b) >= 16 else b)
-	marcas = [
-		{"x": x_de(i), "label": rotulos[i]}
-		for i in sorted({0, n // 2, n - 1})
-		if 0 <= i < n
-	]
+	marcas = [{"x": x_de(i), "label": rotulos[i]} for i in sorted({0, n // 2, n - 1}) if 0 <= i < n]
 	return {
 		"width": largura,
 		"height": altura,
@@ -909,13 +899,25 @@ def _build_pdf_visuais(payload: dict) -> dict:
 			[
 				{"label": "Entrou", "value": cint(pizza.get("entrou")), "color": _COR_ENTROU},
 				{"label": "Não entrou", "value": cint(pizza.get("nao_entrou")), "color": _COR_NAO_ENTROU},
-				{"label": "Comprou na portaria", "value": cint(pizza.get("comprou_portaria")), "color": _COR_PORTARIA},
+				{
+					"label": "Comprou na portaria",
+					"value": cint(pizza.get("comprou_portaria")),
+					"color": _COR_PORTARIA,
+				},
 			]
 		),
 		"donut_origem": _donut(
 			[
-				{"label": "Compra prévia", "value": cint(origem.get("compra_previa")), "color": _COR_COMPRA_PREVIA},
-				{"label": "Compra na portaria", "value": cint(origem.get("compra_portaria")), "color": _COR_COMPRA_PORTARIA},
+				{
+					"label": "Compra prévia",
+					"value": cint(origem.get("compra_previa")),
+					"color": _COR_COMPRA_PREVIA,
+				},
+				{
+					"label": "Compra na portaria",
+					"value": cint(origem.get("compra_portaria")),
+					"color": _COR_COMPRA_PORTARIA,
+				},
 			]
 		),
 		"donut_previa": _donut(

@@ -30,7 +30,16 @@ def copy_calendar_data(source_year, target_year):
 	events = frappe.get_all(
 		"Calendario",
 		filters={"inicio": ["between", [f"{source_year}-01-01", f"{source_year}-12-31"]]},
-		fields=["atividade", "inicio", "termino", "secao", "local", "nivel", "sem_atividade", "abertura_geral"],
+		fields=[
+			"atividade",
+			"inicio",
+			"termino",
+			"secao",
+			"local",
+			"nivel",
+			"sem_atividade",
+			"abertura_geral",
+		],
 	)
 
 	if not events:

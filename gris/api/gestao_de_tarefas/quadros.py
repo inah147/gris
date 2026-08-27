@@ -31,7 +31,9 @@ def _badge_for(board: dict[str, Any]) -> tuple[str, str, str]:
 	return ("solto", "", "outline")
 
 
-def _resolve_titulo(board: dict[str, Any], projeto_titulos: dict[str, str], festa_titulos: dict[str, str]) -> str:
+def _resolve_titulo(
+	board: dict[str, Any], projeto_titulos: dict[str, str], festa_titulos: dict[str, str]
+) -> str:
 	ref_dt = (board.get("referencia_doctype") or "").strip()
 	ref_nome = (board.get("referencia_nome") or "").strip()
 	if ref_dt == "Projeto" and ref_nome:
@@ -55,10 +57,7 @@ def listar_quadros_publicos() -> list[dict[str, Any]]:
 		order_by="modified desc",
 		limit_page_length=0,
 	)
-	rows = [
-		row for row in rows
-		if (row.get("referencia_doctype") or "").strip() != "User"
-	]
+	rows = [row for row in rows if (row.get("referencia_doctype") or "").strip() != "User"]
 
 	projeto_names = {
 		row.get("referencia_nome")
@@ -229,10 +228,7 @@ def salvar_tarefa_quadro(tarefa: str | dict[str, Any]) -> dict[str, Any]:
 		previous_status = (existing.status or "").strip()
 
 	if existing:
-		clean = {
-			field: _clean_value(payload.get(field, existing.get(field)))
-			for field in TASK_CLIENT_FIELDS
-		}
+		clean = {field: _clean_value(payload.get(field, existing.get(field))) for field in TASK_CLIENT_FIELDS}
 	else:
 		clean = {field: _clean_value(payload.get(field)) for field in TASK_CLIENT_FIELDS}
 

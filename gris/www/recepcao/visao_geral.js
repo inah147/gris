@@ -230,7 +230,9 @@ function bindRamoSelect(id) {
 			args: { name: currentCardId, ramo: ramo },
 			callback: function (r) {
 				if (!r.exc) {
-					const card = document.querySelector(`.kanban-card[data-id="${currentCardId}"]`);
+					const card = document.querySelector(
+						`.kanban-card[data-id="${currentCardId}"]`
+					);
 					if (card) card.dataset.ramo = ramo;
 					frappe.show_alert({ message: "Ramo atualizado", indicator: "green" });
 				}
@@ -436,11 +438,7 @@ function renderTimeline(containerId, steps) {
 			<div class="timeline-marker"></div>
 			<div class="timeline-content">
 				<span class="timeline-label">${labelHtml}</span>
-				${
-					!completed
-						? '<small class="timeline-helper">Clique para marcar como concluído</small>'
-						: ""
-				}
+				${!completed ? '<small class="timeline-helper">Clique para marcar como concluído</small>' : ""}
 			</div>
 		`;
 

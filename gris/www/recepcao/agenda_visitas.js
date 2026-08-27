@@ -99,7 +99,9 @@ function openVisitModal(eventDetail, data) {
 	currentVisitId = eventDetail.id;
 	document.getElementById("modal-child-name").textContent = data.name || eventDetail.title;
 	document.getElementById("modal-child-age").textContent = data.age || "";
-	document.getElementById("btn-open-file").href = `/recepcao/ficha_registro?name=${data.jovem || ""}`;
+	document.getElementById("btn-open-file").href = `/recepcao/ficha_registro?name=${
+		data.jovem || ""
+	}`;
 
 	const statusContainer = document.getElementById("modal-status-container");
 	const btnConfirm = document.getElementById("btn-confirm");
@@ -150,7 +152,10 @@ function initVisitModalActions() {
 			args: { visit_name: currentVisitId },
 			callback: (r) => {
 				if (r.exc) return;
-				frappe.show_alert({ message: "Visita confirmada com sucesso!", indicator: "green" });
+				frappe.show_alert({
+					message: "Visita confirmada com sucesso!",
+					indicator: "green",
+				});
 				setVisitConfirmed(currentVisitId, true);
 				closeDialog("visit-modal");
 			},
@@ -215,7 +220,10 @@ function initRescheduleListeners() {
 			args: { visit_name: visitId, new_date: selectedDate },
 			callback: (r) => {
 				if (r.exc) return;
-				frappe.show_alert({ message: "Visita reagendada com sucesso!", indicator: "green" });
+				frappe.show_alert({
+					message: "Visita reagendada com sucesso!",
+					indicator: "green",
+				});
 				updateCalendarEvent(visitId, (evt) => {
 					evt.start = selectedDate;
 					evt.end = null;

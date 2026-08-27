@@ -1,101 +1,110 @@
 (function () {
-    const METHODS = {
-        bootstrap: "gris.gestao_de_projetos.doctype.projeto.projeto.get_projeto_form_data",
-        getContatoPessoa: "gris.gestao_de_projetos.doctype.projeto.projeto.get_contato_pessoa",
-        getMandatoryAprovadores:
-            "gris.gestao_de_projetos.doctype.projeto.projeto.get_aprovadores_obrigatorios_preview",
-        salvarRascunho: "gris.gestao_de_projetos.doctype.projeto.projeto.salvar_rascunho_projeto",
-        submeter: "gris.gestao_de_projetos.doctype.projeto.projeto.submeter_projeto",
-        resolverComentarioRevisao: "gris.gestao_de_projetos.doctype.projeto.projeto.resolver_comentario_revisao",
-        solicitarIA: "gris.gestao_de_projetos.doctype.projeto.projeto.solicitar_avaliacao_tap_llm",
-        consultarIA: "gris.gestao_de_projetos.doctype.projeto.projeto.consultar_avaliacao_tap",
-    };
+	const METHODS = {
+		bootstrap: "gris.gestao_de_projetos.doctype.projeto.projeto.get_projeto_form_data",
+		getContatoPessoa: "gris.gestao_de_projetos.doctype.projeto.projeto.get_contato_pessoa",
+		getMandatoryAprovadores:
+			"gris.gestao_de_projetos.doctype.projeto.projeto.get_aprovadores_obrigatorios_preview",
+		salvarRascunho: "gris.gestao_de_projetos.doctype.projeto.projeto.salvar_rascunho_projeto",
+		submeter: "gris.gestao_de_projetos.doctype.projeto.projeto.submeter_projeto",
+		resolverComentarioRevisao:
+			"gris.gestao_de_projetos.doctype.projeto.projeto.resolver_comentario_revisao",
+		solicitarIA: "gris.gestao_de_projetos.doctype.projeto.projeto.solicitar_avaliacao_tap_llm",
+		consultarIA: "gris.gestao_de_projetos.doctype.projeto.projeto.consultar_avaliacao_tap",
+	};
 
-    const TABLE_CONFIG = {
-        equipe_de_interesse: {
-            fields: ["tipo_pessoa", "associado", "responsavel", "nome", "email", "telefone", "funcao"],
-        },
-        aprovadores: {
-            fields: [
-                "tipo_pessoa",
-                "associado",
-                "responsavel",
-                "nome",
-                "email",
-                "telefone",
-                "origem_regra",
-                "permite_remover",
-            ],
-        },
-        objetivos: {
-            fields: ["objetivo", "metrica_de_sucesso"],
-        },
-        ods: {
-            fields: ["ods"],
-        },
-        cronograma: {
-            fields: ["data_inicio", "data_termino", "tarefa"],
-        },
-        recursos: {
-            fields: ["recurso"],
-        },
-        riscos: {
-            fields: ["risco", "mitigacao"],
-        },
-    };
+	const TABLE_CONFIG = {
+		equipe_de_interesse: {
+			fields: [
+				"tipo_pessoa",
+				"associado",
+				"responsavel",
+				"nome",
+				"email",
+				"telefone",
+				"funcao",
+			],
+		},
+		aprovadores: {
+			fields: [
+				"tipo_pessoa",
+				"associado",
+				"responsavel",
+				"nome",
+				"email",
+				"telefone",
+				"origem_regra",
+				"permite_remover",
+			],
+		},
+		objetivos: {
+			fields: ["objetivo", "metrica_de_sucesso"],
+		},
+		ods: {
+			fields: ["ods"],
+		},
+		cronograma: {
+			fields: ["data_inicio", "data_termino", "tarefa"],
+		},
+		recursos: {
+			fields: ["recurso"],
+		},
+		riscos: {
+			fields: ["risco", "mitigacao"],
+		},
+	};
 
-    const INFO_CONTENT = {
-        justificativa: {
-            title: "Descrição e Justificativa",
-            body: `
+	const INFO_CONTENT = {
+		justificativa: {
+			title: "Descrição e Justificativa",
+			body: `
                 <p>Explique com clareza o problema/oportunidade e por que o projeto é necessário agora.</p>
                 <p><strong>O que incluir:</strong> contexto, público impactado, dor principal e resultado esperado.</p>
                 <p><strong>Exemplo:</strong> "Observamos baixa participação de jovens nas atividades de fim de semana. O projeto busca elevar a adesão com trilhas práticas e acompanhamento de responsáveis, fortalecendo permanência e desenvolvimento progressivo."</p>
             `,
-        },
-        alinhamento_com_escotismo: {
-            title: "Alinhamento com o Escotismo",
-            body: `
+		},
+		alinhamento_com_escotismo: {
+			title: "Alinhamento com o Escotismo",
+			body: `
                 <p>Descreva como o projeto aplica valores, método e propósito educativo do escotismo.</p>
                 <p><strong>O que incluir:</strong> protagonismo juvenil, aprendizagem pela prática, vida em equipe, serviço e relação com a comunidade.</p>
                 <p><strong>Exemplo:</strong> "As atividades serão conduzidas em patrulhas, com definição de papéis e ciclos de reflexão pós-atividade, reforçando autonomia, cooperação e cidadania ativa."</p>
             `,
-        },
-        equipe_de_interesse: {
-            title: "Equipe de Interesse",
-            body: `
+		},
+		equipe_de_interesse: {
+			title: "Equipe de Interesse",
+			body: `
                 <p>Registre as pessoas-chave envolvidas no projeto e a função de cada uma.</p>
                 <p><strong>O que incluir:</strong> nome, contato atualizado e papel esperado (coordenação, execução, apoio técnico, comunicação etc.).</p>
                 <p><strong>Exemplo:</strong> "Maria Silva - Coordenação Geral; João Costa - Logística; Ana Souza - Comunicação com famílias."</p>
             `,
-        },
-        objetivos: {
-            title: "Objetivos",
-            body: `
+		},
+		objetivos: {
+			title: "Objetivos",
+			body: `
                 <p>Cadastre objetivos específicos, mensuráveis e conectados ao propósito do projeto.</p>
                 <p><strong>O que incluir:</strong> objetivo claro + métrica de sucesso para comprovar resultado.</p>
                 <p><strong>Exemplo:</strong> "Aumentar participação média mensal de 40 para 55 jovens até dezembro"; métrica: "presença registrada por encontro".</p>
             `,
-        },
-        competencias: {
-            title: "Competências e Blocos de Aprendizagem",
-            body: `
+		},
+		competencias: {
+			title: "Competências e Blocos de Aprendizagem",
+			body: `
                 <p>Indique quais competências serão desenvolvidas e quais blocos de aprendizagem serão trabalhados.</p>
                 <p><strong>O que incluir:</strong> competências socioemocionais, técnicas e atitudes esperadas ao final.</p>
                 <p><strong>Exemplo:</strong> "Trabalho em equipe, liderança situacional, planejamento de atividade, comunicação não violenta e resolução de conflitos."</p>
             `,
-        },
-        especialidade: {
-            title: "Especialidades",
-            body: `
+		},
+		especialidade: {
+			title: "Especialidades",
+			body: `
                 <p>Informe as especialidades relacionadas ao projeto e como elas contribuem para a proposta.</p>
                 <p><strong>O que incluir:</strong> nomes de especialidades e vínculo prático com as atividades.</p>
                 <p><strong>Exemplo:</strong> "Primeiros Socorros, Acampamento e Conservação Ambiental, aplicadas em oficinas práticas e saídas de campo."</p>
             `,
-        },
-        ods: {
-            title: "ODS (Objetivos de Desenvolvimento Sustentável)",
-            body: `
+		},
+		ods: {
+			title: "ODS (Objetivos de Desenvolvimento Sustentável)",
+			body: `
                 <p>Selecione apenas os ODS que tenham relação direta com os resultados do projeto.</p>
                 <p><strong>Orientação:</strong> prefira poucos ODS bem justificados, em vez de marcar muitos sem conexão clara.</p>
                 <p><strong>Lista completa dos 17 ODS:</strong></p>
@@ -120,241 +129,252 @@
                 </ol>
                 <p><strong>Exemplo:</strong> projeto de formação ambiental pode marcar ODS 4, 12, 13 e 15 quando houver atividades e metas concretas para cada um.</p>
             `,
-        },
-        cronograma: {
-            title: "Cronograma",
-            body: `
+		},
+		cronograma: {
+			title: "Cronograma",
+			body: `
                 <p>Detalhe etapas do projeto com datas de início e término e a tarefa correspondente.</p>
                 <p><strong>O que incluir:</strong> marcos principais, sequência lógica e prazo realista para cada entrega.</p>
                 <p><strong>Exemplo:</strong> "01/04 a 15/04 - Planejamento"; "16/04 a 30/06 - Execução das oficinas"; "01/07 a 15/07 - Avaliação final".</p>
             `,
-        },
-        recursos: {
-            title: "Recursos",
-            body: `
+		},
+		recursos: {
+			title: "Recursos",
+			body: `
                 <p>Liste recursos necessários para viabilizar o projeto.</p>
                 <p><strong>O que incluir:</strong> recursos humanos, materiais, infraestrutura, parcerias e serviços.</p>
                 <p><strong>Exemplo:</strong> "2 facilitadores voluntários, kit de primeiros socorros, transporte local para saída de campo e apoio de parceiro comunitário."</p>
             `,
-        },
-        riscos: {
-            title: "Riscos",
-            body: `
+		},
+		riscos: {
+			title: "Riscos",
+			body: `
                 <p>Registre os principais riscos do projeto e a estratégia de mitigação para cada um.</p>
                 <p><strong>O que incluir:</strong> risco objetivo, impacto esperado e ação preventiva/corretiva.</p>
                 <p><strong>Exemplo:</strong> risco: "baixa adesão nas primeiras semanas"; mitigação: "campanha prévia com responsáveis, calendário divulgado com antecedência e acompanhamento por equipe de comunicação".</p>
             `,
-        },
-    };
+		},
+	};
 
-    const state = {
-        projetoName: "",
-        isCoordinator: false,
-        choices: {
-            associados: [],
-            associados_padrinho: [],
-            responsaveis: [],
-            ods: [],
-        },
-        pollingId: null,
-        pollingAttempts: 0,
-        saving: false,
-        reviewComments: [],
-        defaultAprovadores: [],
-        cronogramaSeq: 0,
-        ganttDrag: null,
-        cronogramaTableDragId: "",
-    };
+	const state = {
+		projetoName: "",
+		isCoordinator: false,
+		choices: {
+			associados: [],
+			associados_padrinho: [],
+			responsaveis: [],
+			ods: [],
+		},
+		pollingId: null,
+		pollingAttempts: 0,
+		saving: false,
+		reviewComments: [],
+		defaultAprovadores: [],
+		cronogramaSeq: 0,
+		ganttDrag: null,
+		cronogramaTableDragId: "",
+	};
 
-    const MS_PER_DAY = 24 * 60 * 60 * 1000;
-    const API_TIMEOUT_MS = 30000;
-    const APROVADOR_ORIGEM_LABELS = {
-        manual: "Adicionado manualmente",
-        diretor_presidente: "Diretor presidente (padrão)",
-        padrinho_orientador: "Padrinho/orientador (obrigatório)",
-        chefe_secao: "Chefe de seção (obrigatório)",
-    };
-    const SELECT_RUNTIME_CONFIG = {
-        coordenador: {
-            isCombobox: true,
-            searchPlaceholder: "Buscar coordenador...",
-            triggerClass: "project-select__trigger w-full",
-        },
-        padrinho_associado: {
-            isCombobox: true,
-            searchPlaceholder: "Buscar associado...",
-            triggerClass: "project-select__trigger w-full",
-        },
-        padrinho_responsavel: {
-            isCombobox: true,
-            searchPlaceholder: "Buscar responsável...",
-            triggerClass: "project-select__trigger w-full",
-        },
-        equipe_associado: {
-            isCombobox: true,
-            searchPlaceholder: "Buscar associado...",
-            triggerClass: "project-select__trigger w-full",
-        },
-        equipe_responsavel: {
-            isCombobox: true,
-            searchPlaceholder: "Buscar responsável...",
-            triggerClass: "project-select__trigger w-full",
-        },
-        aprovador_associado: {
-            isCombobox: true,
-            searchPlaceholder: "Buscar associado...",
-            triggerClass: "project-select__trigger w-full",
-        },
-        aprovador_responsavel: {
-            isCombobox: true,
-            searchPlaceholder: "Buscar responsável...",
-            triggerClass: "project-select__trigger w-full",
-        },
-        ods: {
-            isCombobox: false,
-            searchPlaceholder: "Buscar ODS...",
-            triggerClass: "project-table__select-trigger w-full",
-        },
-    };
+	const MS_PER_DAY = 24 * 60 * 60 * 1000;
+	const API_TIMEOUT_MS = 30000;
+	const APROVADOR_ORIGEM_LABELS = {
+		manual: "Adicionado manualmente",
+		diretor_presidente: "Diretor presidente (padrão)",
+		padrinho_orientador: "Padrinho/orientador (obrigatório)",
+		chefe_secao: "Chefe de seção (obrigatório)",
+	};
+	const SELECT_RUNTIME_CONFIG = {
+		coordenador: {
+			isCombobox: true,
+			searchPlaceholder: "Buscar coordenador...",
+			triggerClass: "project-select__trigger w-full",
+		},
+		padrinho_associado: {
+			isCombobox: true,
+			searchPlaceholder: "Buscar associado...",
+			triggerClass: "project-select__trigger w-full",
+		},
+		padrinho_responsavel: {
+			isCombobox: true,
+			searchPlaceholder: "Buscar responsável...",
+			triggerClass: "project-select__trigger w-full",
+		},
+		equipe_associado: {
+			isCombobox: true,
+			searchPlaceholder: "Buscar associado...",
+			triggerClass: "project-select__trigger w-full",
+		},
+		equipe_responsavel: {
+			isCombobox: true,
+			searchPlaceholder: "Buscar responsável...",
+			triggerClass: "project-select__trigger w-full",
+		},
+		aprovador_associado: {
+			isCombobox: true,
+			searchPlaceholder: "Buscar associado...",
+			triggerClass: "project-select__trigger w-full",
+		},
+		aprovador_responsavel: {
+			isCombobox: true,
+			searchPlaceholder: "Buscar responsável...",
+			triggerClass: "project-select__trigger w-full",
+		},
+		ods: {
+			isCombobox: false,
+			searchPlaceholder: "Buscar ODS...",
+			triggerClass: "project-table__select-trigger w-full",
+		},
+	};
 
-    function normalizeEquipeTipoPessoa(value) {
-        const raw = String(value || "").trim();
-        if (!raw) return "Outro";
+	function normalizeEquipeTipoPessoa(value) {
+		const raw = String(value || "").trim();
+		if (!raw) return "Outro";
 
-        if (raw === "Associado" || raw === "Responsavel" || raw === "Outro") {
-            return raw;
-        }
+		if (raw === "Associado" || raw === "Responsavel" || raw === "Outro") {
+			return raw;
+		}
 
-        if (raw.toLowerCase() === "nome livre") {
-            return "Outro";
-        }
+		if (raw.toLowerCase() === "nome livre") {
+			return "Outro";
+		}
 
-        return "Outro";
-    }
+		return "Outro";
+	}
 
-    function toFlag(value, defaultValue) {
-        if (value === null || value === undefined || value === "") {
-            return defaultValue ? 1 : 0;
-        }
-        return Number(value) === 1 ? 1 : 0;
-    }
+	function toFlag(value, defaultValue) {
+		if (value === null || value === undefined || value === "") {
+			return defaultValue ? 1 : 0;
+		}
+		return Number(value) === 1 ? 1 : 0;
+	}
 
-    function normalizeAprovadorTipoPessoa(value) {
-        return String(value || "").trim() === "Responsavel" ? "Responsavel" : "Associado";
-    }
+	function normalizeAprovadorTipoPessoa(value) {
+		return String(value || "").trim() === "Responsavel" ? "Responsavel" : "Associado";
+	}
 
-    function splitRowsFromEnvolvidos(envolvidos) {
-        const sourceRows = Array.isArray(envolvidos) ? envolvidos : [];
+	function splitRowsFromEnvolvidos(envolvidos) {
+		const sourceRows = Array.isArray(envolvidos) ? envolvidos : [];
 
-        const equipeRows = sourceRows
-            .filter((row) => toFlag(row?.aprovador, 0) !== 1 && toFlag(row?.coordenador, 0) !== 1)
-            .map((row) => {
-                const tipoPessoa = normalizeEquipeTipoPessoa(row?.tipo_pessoa);
-                return {
-                    tipo_pessoa: tipoPessoa,
-                    associado: tipoPessoa === "Associado" ? String(row?.associado || "").trim() : "",
-                    responsavel: tipoPessoa === "Responsavel" ? String(row?.responsavel || "").trim() : "",
-                    nome: String(row?.nome || "").trim(),
-                    email: String(row?.email || "").trim(),
-                    telefone: String(row?.telefone || "").trim(),
-                    funcao: String(row?.funcao || "").trim(),
-                };
-            });
+		const equipeRows = sourceRows
+			.filter((row) => toFlag(row?.aprovador, 0) !== 1 && toFlag(row?.coordenador, 0) !== 1)
+			.map((row) => {
+				const tipoPessoa = normalizeEquipeTipoPessoa(row?.tipo_pessoa);
+				return {
+					tipo_pessoa: tipoPessoa,
+					associado:
+						tipoPessoa === "Associado" ? String(row?.associado || "").trim() : "",
+					responsavel:
+						tipoPessoa === "Responsavel" ? String(row?.responsavel || "").trim() : "",
+					nome: String(row?.nome || "").trim(),
+					email: String(row?.email || "").trim(),
+					telefone: String(row?.telefone || "").trim(),
+					funcao: String(row?.funcao || "").trim(),
+				};
+			});
 
-        const aprovadorRows = sourceRows
-            .filter((row) => toFlag(row?.aprovador, 0) === 1)
-            .map((row) => {
-                const tipoPessoa = normalizeAprovadorTipoPessoa(row?.tipo_pessoa);
-                const origemRegra =
-                    String(row?.origem_regra_aprovador || row?.origem_regra || "manual").trim() || "manual";
+		const aprovadorRows = sourceRows
+			.filter((row) => toFlag(row?.aprovador, 0) === 1)
+			.map((row) => {
+				const tipoPessoa = normalizeAprovadorTipoPessoa(row?.tipo_pessoa);
+				const origemRegra =
+					String(row?.origem_regra_aprovador || row?.origem_regra || "manual").trim() ||
+					"manual";
 
-                let permiteRemover = toFlag(row?.permite_remover, 1);
-                if (origemRegra === "padrinho_orientador" || origemRegra === "chefe_secao") {
-                    permiteRemover = 0;
-                }
+				let permiteRemover = toFlag(row?.permite_remover, 1);
+				if (origemRegra === "padrinho_orientador" || origemRegra === "chefe_secao") {
+					permiteRemover = 0;
+				}
 
-                return {
-                    tipo_pessoa: tipoPessoa,
-                    associado: tipoPessoa === "Associado" ? String(row?.associado || "").trim() : "",
-                    responsavel: tipoPessoa === "Responsavel" ? String(row?.responsavel || "").trim() : "",
-                    nome: String(row?.nome || "").trim(),
-                    email: String(row?.email || "").trim(),
-                    telefone: String(row?.telefone || "").trim(),
-                    origem_regra: origemRegra,
-                    permite_remover: permiteRemover,
-                };
-            })
-            .filter((row) => {
-                if (row.tipo_pessoa === "Associado") {
-                    return Boolean(row.associado);
-                }
-                return Boolean(row.responsavel);
-            });
+				return {
+					tipo_pessoa: tipoPessoa,
+					associado:
+						tipoPessoa === "Associado" ? String(row?.associado || "").trim() : "",
+					responsavel:
+						tipoPessoa === "Responsavel" ? String(row?.responsavel || "").trim() : "",
+					nome: String(row?.nome || "").trim(),
+					email: String(row?.email || "").trim(),
+					telefone: String(row?.telefone || "").trim(),
+					origem_regra: origemRegra,
+					permite_remover: permiteRemover,
+				};
+			})
+			.filter((row) => {
+				if (row.tipo_pessoa === "Associado") {
+					return Boolean(row.associado);
+				}
+				return Boolean(row.responsavel);
+			});
 
-        return {
-            equipeRows,
-            aprovadorRows,
-        };
-    }
+		return {
+			equipeRows,
+			aprovadorRows,
+		};
+	}
 
-    function escapeHtml(value) {
-        return String(value || "")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/\"/g, "&quot;")
-            .replace(/'/g, "&#39;");
-    }
+	function escapeHtml(value) {
+		return String(value || "")
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/\"/g, "&quot;")
+			.replace(/'/g, "&#39;");
+	}
 
-    function nextRuntimeFieldId(prefix) {
-        state.cronogramaSeq += 1;
-        return `${prefix}_${state.cronogramaSeq}`;
-    }
+	function nextRuntimeFieldId(prefix) {
+		state.cronogramaSeq += 1;
+		return `${prefix}_${state.cronogramaSeq}`;
+	}
 
-    function getFieldElementById(fieldId) {
-        return document.getElementById(fieldId);
-    }
+	function getFieldElementById(fieldId) {
+		return document.getElementById(fieldId);
+	}
 
-    function getFieldValueById(fieldId) {
-        const element = getFieldElementById(fieldId);
-        if (!element) return "";
-        return element.value || "";
-    }
+	function getFieldValueById(fieldId) {
+		const element = getFieldElementById(fieldId);
+		if (!element) return "";
+		return element.value || "";
+	}
 
-    function setFieldValueWhenReady(element, value) {
-        if (!element) return;
+	function setFieldValueWhenReady(element, value) {
+		if (!element) return;
 
-        const apply = () => {
-            element.value = value || "";
-        };
+		const apply = () => {
+			element.value = value || "";
+		};
 
-        if (
-            (element.classList?.contains("select") && element.dataset.selectInitialized === "true") ||
-            (element.classList?.contains("datepicker") && element.dataset.datepickerInitialized === "true") ||
-            (!element.classList?.contains("select") && !element.classList?.contains("datepicker") && typeof element.value !== "undefined")
-        ) {
-            apply();
-            return;
-        }
+		if (
+			(element.classList?.contains("select") &&
+				element.dataset.selectInitialized === "true") ||
+			(element.classList?.contains("datepicker") &&
+				element.dataset.datepickerInitialized === "true") ||
+			(!element.classList?.contains("select") &&
+				!element.classList?.contains("datepicker") &&
+				typeof element.value !== "undefined")
+		) {
+			apply();
+			return;
+		}
 
-        element.addEventListener("basecoat:initialized", apply, { once: true });
-    }
+		element.addEventListener("basecoat:initialized", apply, { once: true });
+	}
 
-    function getSelectConfig(selectId) {
-        return SELECT_RUNTIME_CONFIG[selectId] || {
-            isCombobox: false,
-            searchPlaceholder: "Buscar opção...",
-            triggerClass: "project-select__trigger w-full",
-        };
-    }
+	function getSelectConfig(selectId) {
+		return (
+			SELECT_RUNTIME_CONFIG[selectId] || {
+				isCombobox: false,
+				searchPlaceholder: "Buscar opção...",
+				triggerClass: "project-select__trigger w-full",
+			}
+		);
+	}
 
-    function renderSelectOptionsHtml(selectId, options, selectedValue) {
-        return (options || [])
-            .map((opt, index) => {
-                const value = String(opt?.value || "");
-                const label = String(opt?.label || opt?.value || "");
-                const isSelected = value === String(selectedValue || "");
-                return `
+	function renderSelectOptionsHtml(selectId, options, selectedValue) {
+		return (options || [])
+			.map((opt, index) => {
+				const value = String(opt?.value || "");
+				const label = String(opt?.label || opt?.value || "");
+				const isSelected = value === String(selectedValue || "");
+				return `
                     <div
                         id="${escapeHtml(selectId)}-items-${index + 1}"
                         role="option"
@@ -364,49 +384,58 @@
                         ${escapeHtml(label)}
                     </div>
                 `;
-            })
-            .join("");
-    }
+			})
+			.join("");
+	}
 
-    function renderSelectComponentHtml(selectId, options, placeholder, selectedValue, extraAttrs) {
-        const config = getSelectConfig(selectId);
-        const normalizedOptions = [
-            { value: "", label: placeholder || "Selecione..." },
-            ...((options || []).map((opt) => ({
-                value: String(opt?.value || ""),
-                label: String(opt?.label || opt?.value || ""),
-            }))),
-        ];
-        const selectedOption =
-            normalizedOptions.find((opt) => opt.value === String(selectedValue || "")) || normalizedOptions[0];
-        const icon = config.isCombobox
-            ? '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevrons-up-down-icon lucide-chevrons-up-down text-muted-foreground opacity-50 shrink-0"><path d="m7 15 5 5 5-5"></path><path d="m7 9 5-5 5 5"></path></svg>'
-            : '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down-icon lucide-chevron-down text-muted-foreground opacity-50 shrink-0"><path d="m6 9 6 6 6-6"></path></svg>';
-        const attrs = Object.entries(extraAttrs || {})
-            .map(([key, val]) => `${key}="${escapeHtml(val)}"`)
-            .join(" ");
+	function renderSelectComponentHtml(selectId, options, placeholder, selectedValue, extraAttrs) {
+		const config = getSelectConfig(selectId);
+		const normalizedOptions = [
+			{ value: "", label: placeholder || "Selecione..." },
+			...(options || []).map((opt) => ({
+				value: String(opt?.value || ""),
+				label: String(opt?.label || opt?.value || ""),
+			})),
+		];
+		const selectedOption =
+			normalizedOptions.find((opt) => opt.value === String(selectedValue || "")) ||
+			normalizedOptions[0];
+		const icon = config.isCombobox
+			? '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevrons-up-down-icon lucide-chevrons-up-down text-muted-foreground opacity-50 shrink-0"><path d="m7 15 5 5 5-5"></path><path d="m7 9 5-5 5 5"></path></svg>'
+			: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down-icon lucide-chevron-down text-muted-foreground opacity-50 shrink-0"><path d="m6 9 6 6 6-6"></path></svg>';
+		const attrs = Object.entries(extraAttrs || {})
+			.map(([key, val]) => `${key}="${escapeHtml(val)}"`)
+			.join(" ");
 
-        return `
+		return `
             <div id="${escapeHtml(selectId)}" class="select project-select" ${attrs}>
                 <button
                     type="button"
-                    class="btn-outline ${escapeHtml(config.triggerClass || "project-select__trigger w-full")}" 
+                    class="btn-outline ${escapeHtml(
+						config.triggerClass || "project-select__trigger w-full"
+					)}"
                     id="${escapeHtml(selectId)}-trigger"
                     aria-haspopup="listbox"
                     aria-expanded="false"
                     aria-controls="${escapeHtml(selectId)}-listbox"
                 >
-                    <span class="truncate${selectedOption?.value ? "" : " text-muted-foreground"}">${escapeHtml(selectedOption?.label || placeholder || "Selecione...")}</span>
+                    <span class="truncate${
+						selectedOption?.value ? "" : " text-muted-foreground"
+					}">${escapeHtml(selectedOption?.label || placeholder || "Selecione...")}</span>
                     ${icon}
                 </button>
                 <div id="${escapeHtml(selectId)}-popover" data-popover aria-hidden="true">
-                    ${config.isCombobox ? `
+                    ${
+						config.isCombobox
+							? `
                         <header>
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search-icon lucide-search"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
                             <input
                                 type="text"
                                 value=""
-                                placeholder="${escapeHtml(config.searchPlaceholder || "Buscar opção...")}"
+                                placeholder="${escapeHtml(
+									config.searchPlaceholder || "Buscar opção..."
+								)}"
                                 autocomplete="off"
                                 autocorrect="off"
                                 spellcheck="false"
@@ -417,19 +446,31 @@
                                 aria-labelledby="${escapeHtml(selectId)}-trigger"
                             >
                         </header>
-                    ` : ""}
-                    <div role="listbox" id="${escapeHtml(selectId)}-listbox" aria-orientation="vertical" aria-labelledby="${escapeHtml(selectId)}-trigger">
-                        ${renderSelectOptionsHtml(selectId, normalizedOptions, selectedOption?.value || "")}
+                    `
+							: ""
+					}
+                    <div role="listbox" id="${escapeHtml(
+						selectId
+					)}-listbox" aria-orientation="vertical" aria-labelledby="${escapeHtml(
+			selectId
+		)}-trigger">
+                        ${renderSelectOptionsHtml(
+							selectId,
+							normalizedOptions,
+							selectedOption?.value || ""
+						)}
                     </div>
                 </div>
-                <input type="hidden" name="${escapeHtml(selectId)}" value="${escapeHtml(selectedOption?.value || "")}">
+                <input type="hidden" name="${escapeHtml(selectId)}" value="${escapeHtml(
+			selectedOption?.value || ""
+		)}">
             </div>
         `;
-    }
+	}
 
-    function renderDatepickerComponentHtml(componentId, fieldname, value, placeholder) {
-        const isoValue = parseBrToIsoDate(value || "") || String(value || "").trim();
-        return `
+	function renderDatepickerComponentHtml(componentId, fieldname, value, placeholder) {
+		const isoValue = parseBrToIsoDate(value || "") || String(value || "").trim();
+		return `
             <div
                 id="${escapeHtml(componentId)}"
                 class="datepicker project-datepicker"
@@ -437,7 +478,7 @@
                 data-datepicker
                 data-mode="single"
                 data-locale="pt-BR"
-                data-placeholder="${escapeHtml(placeholder || "Selecione uma data")}" 
+                data-placeholder="${escapeHtml(placeholder || "Selecione uma data")}"
             >
                 <button
                     type="button"
@@ -449,7 +490,9 @@
                     <svg class="ds-lucide ds-lucide--sm datepicker-trigger__icon" viewBox="0 0 24 24" aria-hidden="true">
                         <use href="/assets/gris/design_system/icons/lucide/sprite.svg#calendar"></use>
                     </svg>
-                    <span class="datepicker-trigger__label" data-datepicker-label>${escapeHtml(placeholder || "Selecione uma data")}</span>
+                    <span class="datepicker-trigger__label" data-datepicker-label>${escapeHtml(
+						placeholder || "Selecione uma data"
+					)}</span>
                 </button>
                 <input type="hidden" data-datepicker-value value="${escapeHtml(isoValue || "")}">
                 <div
@@ -483,330 +526,363 @@
                 </div>
             </div>
         `;
-    }
+	}
 
-    function openDialogById(dialogId) {
-        const dialog = document.getElementById(dialogId);
-        if (dialog && typeof dialog.showModal === "function" && !dialog.open) {
-            dialog.showModal();
-        }
-    }
+	function openDialogById(dialogId) {
+		const dialog = document.getElementById(dialogId);
+		if (dialog && typeof dialog.showModal === "function" && !dialog.open) {
+			dialog.showModal();
+		}
+	}
 
-    function closeDialogById(dialogId) {
-        const dialog = document.getElementById(dialogId);
-        if (dialog && typeof dialog.close === "function" && dialog.open) {
-            dialog.close();
-        }
-    }
+	function closeDialogById(dialogId) {
+		const dialog = document.getElementById(dialogId);
+		if (dialog && typeof dialog.close === "function" && dialog.open) {
+			dialog.close();
+		}
+	}
 
-    function showToast(message, category) {
-        document.dispatchEvent(
-            new CustomEvent("basecoat:toast", {
-                detail: {
-                    config: {
-                        category: category || "success",
-                        title: message,
-                    },
-                },
-            })
-        );
-    }
+	function showToast(message, category) {
+		document.dispatchEvent(
+			new CustomEvent("basecoat:toast", {
+				detail: {
+					config: {
+						category: category || "success",
+						title: message,
+					},
+				},
+			})
+		);
+	}
 
-    function showToast(message, category) {
-        document.dispatchEvent(
-            new CustomEvent("basecoat:toast", {
-                detail: {
-                    config: {
-                        category: category || "success",
-                        title: message,
-                    },
-                },
-            })
-        );
-    }
+	function showToast(message, category) {
+		document.dispatchEvent(
+			new CustomEvent("basecoat:toast", {
+				detail: {
+					config: {
+						category: category || "success",
+						title: message,
+					},
+				},
+			})
+		);
+	}
 
-    function updateGoogleDriveButton(link) {
-        const button = document.getElementById("btnAbrirGoogleDrive");
-        if (!button) return;
+	function updateGoogleDriveButton(link) {
+		const button = document.getElementById("btnAbrirGoogleDrive");
+		if (!button) return;
 
-        const url = String(link || "").trim();
-        if (!url) {
-            button.classList.add("d-none");
-            button.setAttribute("href", "#");
-            button.setAttribute("aria-hidden", "true");
-            return;
-        }
+		const url = String(link || "").trim();
+		if (!url) {
+			button.classList.add("d-none");
+			button.setAttribute("href", "#");
+			button.setAttribute("aria-hidden", "true");
+			return;
+		}
 
-        button.classList.remove("d-none");
-        button.setAttribute("href", url);
-        button.setAttribute("aria-hidden", "false");
-    }
+		button.classList.remove("d-none");
+		button.setAttribute("href", url);
+		button.setAttribute("aria-hidden", "false");
+	}
 
-    function formatIsoToBrDate(value) {
-        const iso = String(value || "").trim();
-        const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (!match) return "";
-        return `${match[3]}/${match[2]}/${match[1]}`;
-    }
+	function formatIsoToBrDate(value) {
+		const iso = String(value || "").trim();
+		const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+		if (!match) return "";
+		return `${match[3]}/${match[2]}/${match[1]}`;
+	}
 
-    function parseBrToIsoDate(value) {
-        const br = String(value || "").trim();
-        if (!br) return "";
+	function parseBrToIsoDate(value) {
+		const br = String(value || "").trim();
+		if (!br) return "";
 
-        const isoMatch = br.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+		const isoMatch = br.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+		if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
 
-        const match = br.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-        if (!match) return "";
+		const match = br.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+		if (!match) return "";
 
-        const day = Number(match[1]);
-        const month = Number(match[2]);
-        const year = Number(match[3]);
-        const date = new Date(year, month - 1, day);
-        if (Number.isNaN(date.getTime())) return "";
-        if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
-            return "";
-        }
+		const day = Number(match[1]);
+		const month = Number(match[2]);
+		const year = Number(match[3]);
+		const date = new Date(year, month - 1, day);
+		if (Number.isNaN(date.getTime())) return "";
+		if (
+			date.getDate() !== day ||
+			date.getMonth() !== month - 1 ||
+			date.getFullYear() !== year
+		) {
+			return "";
+		}
 
-        return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    }
+		return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(
+			day
+		).padStart(2, "0")}`;
+	}
 
-    function normalizeDateDisplayValue(value) {
-        const raw = String(value || "").trim();
-        if (!raw) return "";
+	function normalizeDateDisplayValue(value) {
+		const raw = String(value || "").trim();
+		if (!raw) return "";
 
-        const fromIso = formatIsoToBrDate(raw);
-        if (fromIso) return fromIso;
+		const fromIso = formatIsoToBrDate(raw);
+		if (fromIso) return fromIso;
 
-        const fromBr = parseBrToIsoDate(raw);
-        if (fromBr) return formatIsoToBrDate(fromBr);
+		const fromBr = parseBrToIsoDate(raw);
+		if (fromBr) return formatIsoToBrDate(fromBr);
 
-        return raw;
-    }
+		return raw;
+	}
 
-    function applyDateMask(rawValue) {
-        const digits = String(rawValue || "").replace(/\D/g, "").slice(0, 8);
-        if (digits.length <= 2) return digits;
-        if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-        return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
-    }
+	function applyDateMask(rawValue) {
+		const digits = String(rawValue || "")
+			.replace(/\D/g, "")
+			.slice(0, 8);
+		if (digits.length <= 2) return digits;
+		if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+		return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+	}
 
-    function attachDateMask(input) {
-        if (!input || input.tagName !== "INPUT" || input.type !== "text" || input.dataset.dateMaskBound === "1") return;
-        input.dataset.dateMaskBound = "1";
+	function attachDateMask(input) {
+		if (
+			!input ||
+			input.tagName !== "INPUT" ||
+			input.type !== "text" ||
+			input.dataset.dateMaskBound === "1"
+		)
+			return;
+		input.dataset.dateMaskBound = "1";
 
-        input.addEventListener("input", () => {
-            const previous = input.value;
-            const masked = applyDateMask(previous);
-            if (masked !== previous) {
-                input.value = masked;
-            }
-        });
+		input.addEventListener("input", () => {
+			const previous = input.value;
+			const masked = applyDateMask(previous);
+			if (masked !== previous) {
+				input.value = masked;
+			}
+		});
 
-        input.addEventListener("blur", () => {
-            input.value = normalizeDateDisplayValue(input.value);
-        });
-    }
+		input.addEventListener("blur", () => {
+			input.value = normalizeDateDisplayValue(input.value);
+		});
+	}
 
-    function getPendingReviewComments() {
-        return (state.reviewComments || []).filter((row) => {
-            const tipo = String(row?.tipo_revisao || "").trim();
-            const resolvido = Number(row?.resolvido || 0) === 1;
-            return tipo === "Solicitacao de alteracoes" && !resolvido;
-        });
-    }
+	function getPendingReviewComments() {
+		return (state.reviewComments || []).filter((row) => {
+			const tipo = String(row?.tipo_revisao || "").trim();
+			const resolvido = Number(row?.resolvido || 0) === 1;
+			return tipo === "Solicitacao de alteracoes" && !resolvido;
+		});
+	}
 
-    function renderPendingReviewRows() {
-        const tbody = document.getElementById("rows_pending_review_comments");
-        if (!tbody) return;
+	function renderPendingReviewRows() {
+		const tbody = document.getElementById("rows_pending_review_comments");
+		if (!tbody) return;
 
-        const pending = getPendingReviewComments();
-        if (!pending.length) {
-            tbody.innerHTML = "<tr><td colspan='5'>Nenhum comentário pendente.</td></tr>";
-            return;
-        }
+		const pending = getPendingReviewComments();
+		if (!pending.length) {
+			tbody.innerHTML = "<tr><td colspan='5'>Nenhum comentário pendente.</td></tr>";
+			return;
+		}
 
-        tbody.innerHTML = pending
-            .map(
-                (row) => `
+		tbody.innerHTML = pending
+			.map(
+				(row) => `
                 <tr>
                     <td>${escapeHtml(row.aprovador_label || row.aprovador || "-")}</td>
                     <td>${escapeHtml(row.etapa_label || row.etapa_aprovacao || "-")}</td>
                     <td>${escapeHtml(row.comentarios || "-")}</td>
                     <td>${escapeHtml(row.data_da_revisao || "-")}</td>
                     <td>
-                        ${state.isCoordinator ? `<button
+                        ${
+							state.isCoordinator
+								? `<button
                             type="button"
                             class="btn-sm-outline"
                             data-resolve-review-comment="${escapeHtml(row.name || "")}"
                         >
                             Resolver
-                        </button>` : "-"}
+                        </button>`
+								: "-"
+						}
                     </td>
                 </tr>
             `
-            )
-            .join("");
-    }
+			)
+			.join("");
+	}
 
-    function updatePendingReviewBanner() {
-        const banner = document.getElementById("pendingReviewBanner");
-        const countLabel = document.getElementById("pendingReviewCount");
-        if (!banner || !countLabel) return;
+	function updatePendingReviewBanner() {
+		const banner = document.getElementById("pendingReviewBanner");
+		const countLabel = document.getElementById("pendingReviewCount");
+		if (!banner || !countLabel) return;
 
-        const pendingCount = getPendingReviewComments().length;
-        if (!pendingCount) {
-            banner.classList.add("d-none");
-            countLabel.textContent = "";
-            return;
-        }
+		const pendingCount = getPendingReviewComments().length;
+		if (!pendingCount) {
+			banner.classList.add("d-none");
+			countLabel.textContent = "";
+			return;
+		}
 
-        banner.classList.remove("d-none");
-        countLabel.textContent = `${pendingCount} comentário(s) pendente(s)`;
-    }
+		banner.classList.remove("d-none");
+		countLabel.textContent = `${pendingCount} comentário(s) pendente(s)`;
+	}
 
-    function openPendingReviewModal() {
-        renderPendingReviewRows();
-        openDialogById("pendingReviewModal");
-    }
+	function openPendingReviewModal() {
+		renderPendingReviewRows();
+		openDialogById("pendingReviewModal");
+	}
 
-    function closePendingReviewModal() {
-        closeDialogById("pendingReviewModal");
-    }
+	function closePendingReviewModal() {
+		closeDialogById("pendingReviewModal");
+	}
 
-    async function resolveReviewComment(commentName) {
-        if (!state.projetoName || !commentName) {
-            return;
-        }
+	async function resolveReviewComment(commentName) {
+		if (!state.projetoName || !commentName) {
+			return;
+		}
 
-        try {
-            await callApi(METHODS.resolverComentarioRevisao, {
-                projeto_name: state.projetoName,
-                comentario_name: commentName,
-            });
+		try {
+			await callApi(METHODS.resolverComentarioRevisao, {
+				projeto_name: state.projetoName,
+				comentario_name: commentName,
+			});
 
-            state.reviewComments = (state.reviewComments || []).map((row) => {
-                if ((row?.name || "") !== commentName) {
-                    return row;
-                }
-                return {
-                    ...row,
-                    resolvido: 1,
-                };
-            });
+			state.reviewComments = (state.reviewComments || []).map((row) => {
+				if ((row?.name || "") !== commentName) {
+					return row;
+				}
+				return {
+					...row,
+					resolvido: 1,
+				};
+			});
 
-            renderPendingReviewRows();
-            updatePendingReviewBanner();
-            showToast("Comentário marcado como resolvido.", "success");
-        } catch (error) {
-            showToast(error.message || "Falha ao resolver comentário.", "error");
-        }
-    }
+			renderPendingReviewRows();
+			updatePendingReviewBanner();
+			showToast("Comentário marcado como resolvido.", "success");
+		} catch (error) {
+			showToast(error.message || "Falha ao resolver comentário.", "error");
+		}
+	}
 
-    function setButtonsDisabled(disabled) {
-        ["btnSalvarRascunho", "btnSubmeter", "btnAvaliacaoIA", "btnConfirmSubmitProjeto"].forEach((id) => {
-            const btn = document.getElementById(id);
-            if (btn) {
-                btn.disabled = disabled;
-            }
-        });
-    }
+	function setButtonsDisabled(disabled) {
+		["btnSalvarRascunho", "btnSubmeter", "btnAvaliacaoIA", "btnConfirmSubmitProjeto"].forEach(
+			(id) => {
+				const btn = document.getElementById(id);
+				if (btn) {
+					btn.disabled = disabled;
+				}
+			}
+		);
+	}
 
-    function resetActionState() {
-        state.saving = false;
-        setButtonsDisabled(false);
-    }
+	function resetActionState() {
+		state.saving = false;
+		setButtonsDisabled(false);
+	}
 
-    function openSubmitConfirmModal() {
-        openDialogById("submitConfirmModal");
-    }
+	function openSubmitConfirmModal() {
+		openDialogById("submitConfirmModal");
+	}
 
-    function closeSubmitConfirmModal() {
-        closeDialogById("submitConfirmModal");
-    }
+	function closeSubmitConfirmModal() {
+		closeDialogById("submitConfirmModal");
+	}
 
-    function redirectToApprovalPage() {
-        if (!state.projetoName) return;
-        window.location.assign(`/projetos/aprovacao_projeto?projeto=${encodeURIComponent(state.projetoName)}`);
-    }
+	function redirectToApprovalPage() {
+		if (!state.projetoName) return;
+		window.location.assign(
+			`/projetos/aprovacao_projeto?projeto=${encodeURIComponent(state.projetoName)}`
+		);
+	}
 
-    function extractServerMessage(response) {
-        if (!response) return "";
+	function extractServerMessage(response) {
+		if (!response) return "";
 
-        let serverMessages = response._server_messages;
-        if (typeof serverMessages === "string" && serverMessages.trim()) {
-            try {
-                serverMessages = JSON.parse(serverMessages);
-            } catch (e) {
-                serverMessages = [];
-            }
-        }
+		let serverMessages = response._server_messages;
+		if (typeof serverMessages === "string" && serverMessages.trim()) {
+			try {
+				serverMessages = JSON.parse(serverMessages);
+			} catch (e) {
+				serverMessages = [];
+			}
+		}
 
-        if (Array.isArray(serverMessages) && serverMessages.length) {
-            try {
-                const raw = JSON.parse(serverMessages[0]);
-                if (raw && raw.message) {
-                    return raw.message;
-                }
-            } catch (e) {
-                // Ignore parse errors and fallback to generic message.
-            }
-        }
+		if (Array.isArray(serverMessages) && serverMessages.length) {
+			try {
+				const raw = JSON.parse(serverMessages[0]);
+				if (raw && raw.message) {
+					return raw.message;
+				}
+			} catch (e) {
+				// Ignore parse errors and fallback to generic message.
+			}
+		}
 
-        if (typeof response.message === "string" && response.message.trim()) {
-            return response.message.trim();
-        }
+		if (typeof response.message === "string" && response.message.trim()) {
+			return response.message.trim();
+		}
 
-        return "";
-    }
+		return "";
+	}
 
-    function callApi(method, args) {
-        return new Promise((resolve, reject) => {
-            const timerId = setTimeout(() => {
-                reject(new Error("Tempo limite excedido ao processar requisição. Tente novamente."));
-            }, API_TIMEOUT_MS);
+	function callApi(method, args) {
+		return new Promise((resolve, reject) => {
+			const timerId = setTimeout(() => {
+				reject(
+					new Error("Tempo limite excedido ao processar requisição. Tente novamente.")
+				);
+			}, API_TIMEOUT_MS);
 
-            frappe.call({
-                method,
-                args,
-                callback: (r) => {
-                    clearTimeout(timerId);
-                    if (r.exc) {
-                        reject(new Error(extractServerMessage(r) || "Erro ao processar requisição."));
-                        return;
-                    }
-                    resolve(r.message || {});
-                },
-                error: (err) => {
-                    clearTimeout(timerId);
-                    const message = err && err.message ? err.message : "Erro de comunicação com o servidor.";
-                    reject(new Error(message));
-                },
-            });
-        });
-    }
+			frappe.call({
+				method,
+				args,
+				callback: (r) => {
+					clearTimeout(timerId);
+					if (r.exc) {
+						reject(
+							new Error(extractServerMessage(r) || "Erro ao processar requisição.")
+						);
+						return;
+					}
+					resolve(r.message || {});
+				},
+				error: (err) => {
+					clearTimeout(timerId);
+					const message =
+						err && err.message ? err.message : "Erro de comunicação com o servidor.";
+					reject(new Error(message));
+				},
+			});
+		});
+	}
 
-    function fillSelect(selectId, options, placeholder) {
-        const select = document.getElementById(selectId);
-        if (!select) return;
+	function fillSelect(selectId, options, placeholder) {
+		const select = document.getElementById(selectId);
+		if (!select) return;
 
-        const selectedValue = select.value || "";
-        select.outerHTML = renderSelectComponentHtml(selectId, options, placeholder, selectedValue);
-    }
+		const selectedValue = select.value || "";
+		select.outerHTML = renderSelectComponentHtml(
+			selectId,
+			options,
+			placeholder,
+			selectedValue
+		);
+	}
 
-    function updateCommentsCardVisibility(value) {
-        const card = document.getElementById("project-comments-card");
-        if (!card) return;
+	function updateCommentsCardVisibility(value) {
+		const card = document.getElementById("project-comments-card");
+		if (!card) return;
 
-        const content = typeof value === "string"
-            ? value
-            : document.getElementById("observacoes_e_comentarios")?.value || "";
+		const content =
+			typeof value === "string"
+				? value
+				: document.getElementById("observacoes_e_comentarios")?.value || "";
 
-        card.classList.toggle("d-none", !String(content || "").trim());
-    }
+		card.classList.toggle("d-none", !String(content || "").trim());
+	}
 
-    function getTrashButtonHtml() {
-        return `
+	function getTrashButtonHtml() {
+		return `
             <button type="button" class="btn-icon-destructive btn-delete-row" aria-label="Remover linha" title="Remover linha">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <polyline points="3 6 5 6 21 6"></polyline>
@@ -817,318 +893,338 @@
                 </svg>
             </button>
         `;
-    }
+	}
 
-    function updateSponsorVisibility() {
-        const tipo = document.getElementById("tipo_padrinho_ou_orientador")?.value || "Associado";
-        const fieldAssoc = document.getElementById("fieldPadrinhoAssociado");
-        const fieldResp = document.getElementById("fieldPadrinhoResponsavel");
+	function updateSponsorVisibility() {
+		const tipo = document.getElementById("tipo_padrinho_ou_orientador")?.value || "Associado";
+		const fieldAssoc = document.getElementById("fieldPadrinhoAssociado");
+		const fieldResp = document.getElementById("fieldPadrinhoResponsavel");
 
-        if (!fieldAssoc || !fieldResp) return;
+		if (!fieldAssoc || !fieldResp) return;
 
-        if (tipo === "Responsavel") {
-            fieldAssoc.classList.add("d-none");
-            fieldResp.classList.remove("d-none");
-        } else {
-            fieldAssoc.classList.remove("d-none");
-            fieldResp.classList.add("d-none");
-        }
-    }
+		if (tipo === "Responsavel") {
+			fieldAssoc.classList.add("d-none");
+			fieldResp.classList.remove("d-none");
+		} else {
+			fieldAssoc.classList.remove("d-none");
+			fieldResp.classList.add("d-none");
+		}
+	}
 
-    function getBasicPayload() {
-        return {
-            nome_do_projeto: document.getElementById("nome_do_projeto")?.value || "",
-            coordenador: getFieldValueById("coordenador") || "",
-            data_de_inicio: parseBrToIsoDate(getFieldValueById("data_de_inicio") || ""),
-            data_de_termino: parseBrToIsoDate(getFieldValueById("data_de_termino") || ""),
-            tipo_padrinho_ou_orientador: getFieldValueById("tipo_padrinho_ou_orientador") || "Associado",
-            padrinho_associado: getFieldValueById("padrinho_associado") || "",
-            padrinho_responsavel: getFieldValueById("padrinho_responsavel") || "",
-            justificativa: document.getElementById("justificativa")?.value || "",
-            alinhamento_com_escotismo: document.getElementById("alinhamento_com_escotismo")?.value || "",
-            competencias: document.getElementById("competencias")?.value || "",
-            especialidade: document.getElementById("especialidade")?.value || "",
-            observacoes_e_comentarios: document.getElementById("observacoes_e_comentarios")?.value || "",
-        };
-    }
+	function getBasicPayload() {
+		return {
+			nome_do_projeto: document.getElementById("nome_do_projeto")?.value || "",
+			coordenador: getFieldValueById("coordenador") || "",
+			data_de_inicio: parseBrToIsoDate(getFieldValueById("data_de_inicio") || ""),
+			data_de_termino: parseBrToIsoDate(getFieldValueById("data_de_termino") || ""),
+			tipo_padrinho_ou_orientador:
+				getFieldValueById("tipo_padrinho_ou_orientador") || "Associado",
+			padrinho_associado: getFieldValueById("padrinho_associado") || "",
+			padrinho_responsavel: getFieldValueById("padrinho_responsavel") || "",
+			justificativa: document.getElementById("justificativa")?.value || "",
+			alinhamento_com_escotismo:
+				document.getElementById("alinhamento_com_escotismo")?.value || "",
+			competencias: document.getElementById("competencias")?.value || "",
+			especialidade: document.getElementById("especialidade")?.value || "",
+			observacoes_e_comentarios:
+				document.getElementById("observacoes_e_comentarios")?.value || "",
+		};
+	}
 
-    function parseRows(tableKey) {
-        const tbody = document.getElementById(`rows_${tableKey}`);
-        if (!tbody) return [];
+	function parseRows(tableKey) {
+		const tbody = document.getElementById(`rows_${tableKey}`);
+		if (!tbody) return [];
 
-        const fields = TABLE_CONFIG[tableKey].fields;
-        const rows = [];
+		const fields = TABLE_CONFIG[tableKey].fields;
+		const rows = [];
 
-        tbody.querySelectorAll("tr").forEach((tr) => {
-            const row = {};
-            fields.forEach((fieldname) => {
-                const input = tr.querySelector(`[data-field='${fieldname}']`);
-                row[fieldname] = input ? input.value || "" : "";
-            });
+		tbody.querySelectorAll("tr").forEach((tr) => {
+			const row = {};
+			fields.forEach((fieldname) => {
+				const input = tr.querySelector(`[data-field='${fieldname}']`);
+				row[fieldname] = input ? input.value || "" : "";
+			});
 
-            if (tableKey === "equipe_de_interesse") {
-                row.tipo_pessoa = normalizeEquipeTipoPessoa(row.tipo_pessoa);
-            }
+			if (tableKey === "equipe_de_interesse") {
+				row.tipo_pessoa = normalizeEquipeTipoPessoa(row.tipo_pessoa);
+			}
 
-            if (tableKey === "aprovadores") {
-                row.tipo_pessoa = row.tipo_pessoa === "Responsavel" ? "Responsavel" : "Associado";
-                if (row.tipo_pessoa === "Associado") {
-                    row.responsavel = "";
-                } else {
-                    row.associado = "";
-                }
-                row.origem_regra = row.origem_regra || "manual";
-                row.permite_remover = Number(row.permite_remover || 0) === 1 ? 1 : 0;
-            }
+			if (tableKey === "aprovadores") {
+				row.tipo_pessoa = row.tipo_pessoa === "Responsavel" ? "Responsavel" : "Associado";
+				if (row.tipo_pessoa === "Associado") {
+					row.responsavel = "";
+				} else {
+					row.associado = "";
+				}
+				row.origem_regra = row.origem_regra || "manual";
+				row.permite_remover = Number(row.permite_remover || 0) === 1 ? 1 : 0;
+			}
 
-            if (tableKey === "cronograma") {
-                row.data_inicio = parseBrToIsoDate(row.data_inicio || "");
-                row.data_termino = parseBrToIsoDate(row.data_termino || "");
-            }
+			if (tableKey === "cronograma") {
+				row.data_inicio = parseBrToIsoDate(row.data_inicio || "");
+				row.data_termino = parseBrToIsoDate(row.data_termino || "");
+			}
 
-            rows.push(row);
-        });
+			rows.push(row);
+		});
 
-        return rows;
-    }
+		return rows;
+	}
 
-    function buildEnvolvidosPayload(basicPayload, equipeRows, aprovadorRows) {
-        const envolvidos = [];
+	function buildEnvolvidosPayload(basicPayload, equipeRows, aprovadorRows) {
+		const envolvidos = [];
 
-        const coordenador = String(basicPayload?.coordenador || "").trim();
-        if (coordenador) {
-            envolvidos.push({
-                tipo_pessoa: "Associado",
-                associado: coordenador,
-                responsavel: "",
-                nome: "",
-                email: "",
-                telefone: "",
-                funcao: "",
-                coordenador: 1,
-                padrinho_orientador: 0,
-                aprovador: 0,
-                origem_regra_aprovador: "",
-                permite_remover: 1,
-                participa_avaliacao: 1,
-            });
-        }
+		const coordenador = String(basicPayload?.coordenador || "").trim();
+		if (coordenador) {
+			envolvidos.push({
+				tipo_pessoa: "Associado",
+				associado: coordenador,
+				responsavel: "",
+				nome: "",
+				email: "",
+				telefone: "",
+				funcao: "",
+				coordenador: 1,
+				padrinho_orientador: 0,
+				aprovador: 0,
+				origem_regra_aprovador: "",
+				permite_remover: 1,
+				participa_avaliacao: 1,
+			});
+		}
 
-        const tipoPadrinho =
-            String(basicPayload?.tipo_padrinho_ou_orientador || "Associado").trim() === "Responsavel"
-                ? "Responsavel"
-                : "Associado";
-        const padrinhoAssociado =
-            tipoPadrinho === "Associado" ? String(basicPayload?.padrinho_associado || "").trim() : "";
-        const padrinhoResponsavel =
-            tipoPadrinho === "Responsavel" ? String(basicPayload?.padrinho_responsavel || "").trim() : "";
+		const tipoPadrinho =
+			String(basicPayload?.tipo_padrinho_ou_orientador || "Associado").trim() ===
+			"Responsavel"
+				? "Responsavel"
+				: "Associado";
+		const padrinhoAssociado =
+			tipoPadrinho === "Associado"
+				? String(basicPayload?.padrinho_associado || "").trim()
+				: "";
+		const padrinhoResponsavel =
+			tipoPadrinho === "Responsavel"
+				? String(basicPayload?.padrinho_responsavel || "").trim()
+				: "";
 
-        if (padrinhoAssociado || padrinhoResponsavel) {
-            envolvidos.push({
-                tipo_pessoa: tipoPadrinho,
-                associado: padrinhoAssociado,
-                responsavel: padrinhoResponsavel,
-                nome: "",
-                email: "",
-                telefone: "",
-                funcao: "",
-                coordenador: 0,
-                padrinho_orientador: 1,
-                aprovador: 1,
-                origem_regra_aprovador: "padrinho_orientador",
-                permite_remover: 0,
-                participa_avaliacao: 1,
-            });
-        }
+		if (padrinhoAssociado || padrinhoResponsavel) {
+			envolvidos.push({
+				tipo_pessoa: tipoPadrinho,
+				associado: padrinhoAssociado,
+				responsavel: padrinhoResponsavel,
+				nome: "",
+				email: "",
+				telefone: "",
+				funcao: "",
+				coordenador: 0,
+				padrinho_orientador: 1,
+				aprovador: 1,
+				origem_regra_aprovador: "padrinho_orientador",
+				permite_remover: 0,
+				participa_avaliacao: 1,
+			});
+		}
 
-        (equipeRows || []).forEach((row) => {
-            const tipoPessoa = normalizeEquipeTipoPessoa(row?.tipo_pessoa);
-            envolvidos.push({
-                tipo_pessoa: tipoPessoa,
-                associado: tipoPessoa === "Associado" ? String(row?.associado || "").trim() : "",
-                responsavel: tipoPessoa === "Responsavel" ? String(row?.responsavel || "").trim() : "",
-                nome: String(row?.nome || "").trim(),
-                email: String(row?.email || "").trim(),
-                telefone: String(row?.telefone || "").trim(),
-                funcao: String(row?.funcao || "").trim(),
-                coordenador: 0,
-                padrinho_orientador: 0,
-                aprovador: 0,
-                origem_regra_aprovador: "",
-                permite_remover: 1,
-                participa_avaliacao: 1,
-            });
-        });
+		(equipeRows || []).forEach((row) => {
+			const tipoPessoa = normalizeEquipeTipoPessoa(row?.tipo_pessoa);
+			envolvidos.push({
+				tipo_pessoa: tipoPessoa,
+				associado: tipoPessoa === "Associado" ? String(row?.associado || "").trim() : "",
+				responsavel:
+					tipoPessoa === "Responsavel" ? String(row?.responsavel || "").trim() : "",
+				nome: String(row?.nome || "").trim(),
+				email: String(row?.email || "").trim(),
+				telefone: String(row?.telefone || "").trim(),
+				funcao: String(row?.funcao || "").trim(),
+				coordenador: 0,
+				padrinho_orientador: 0,
+				aprovador: 0,
+				origem_regra_aprovador: "",
+				permite_remover: 1,
+				participa_avaliacao: 1,
+			});
+		});
 
-        (aprovadorRows || []).forEach((row) => {
-            const tipoPessoa = normalizeAprovadorTipoPessoa(row?.tipo_pessoa);
-            const associado = tipoPessoa === "Associado" ? String(row?.associado || "").trim() : "";
-            const responsavel = tipoPessoa === "Responsavel" ? String(row?.responsavel || "").trim() : "";
-            if (!associado && !responsavel) {
-                return;
-            }
+		(aprovadorRows || []).forEach((row) => {
+			const tipoPessoa = normalizeAprovadorTipoPessoa(row?.tipo_pessoa);
+			const associado =
+				tipoPessoa === "Associado" ? String(row?.associado || "").trim() : "";
+			const responsavel =
+				tipoPessoa === "Responsavel" ? String(row?.responsavel || "").trim() : "";
+			if (!associado && !responsavel) {
+				return;
+			}
 
-            let origemRegra = String(row?.origem_regra || "manual").trim() || "manual";
-            if (!["manual", "diretor_presidente", "padrinho_orientador", "chefe_secao"].includes(origemRegra)) {
-                origemRegra = "manual";
-            }
+			let origemRegra = String(row?.origem_regra || "manual").trim() || "manual";
+			if (
+				!["manual", "diretor_presidente", "padrinho_orientador", "chefe_secao"].includes(
+					origemRegra
+				)
+			) {
+				origemRegra = "manual";
+			}
 
-            let permiteRemover = toFlag(row?.permite_remover, 1);
-            if (origemRegra === "padrinho_orientador" || origemRegra === "chefe_secao") {
-                permiteRemover = 0;
-            }
+			let permiteRemover = toFlag(row?.permite_remover, 1);
+			if (origemRegra === "padrinho_orientador" || origemRegra === "chefe_secao") {
+				permiteRemover = 0;
+			}
 
-            envolvidos.push({
-                tipo_pessoa: tipoPessoa,
-                associado,
-                responsavel,
-                nome: String(row?.nome || "").trim(),
-                email: String(row?.email || "").trim(),
-                telefone: String(row?.telefone || "").trim(),
-                funcao: "",
-                coordenador: 0,
-                padrinho_orientador: 0,
-                aprovador: 1,
-                origem_regra_aprovador: origemRegra,
-                permite_remover: permiteRemover,
-                participa_avaliacao: 1,
-            });
-        });
+			envolvidos.push({
+				tipo_pessoa: tipoPessoa,
+				associado,
+				responsavel,
+				nome: String(row?.nome || "").trim(),
+				email: String(row?.email || "").trim(),
+				telefone: String(row?.telefone || "").trim(),
+				funcao: "",
+				coordenador: 0,
+				padrinho_orientador: 0,
+				aprovador: 1,
+				origem_regra_aprovador: origemRegra,
+				permite_remover: permiteRemover,
+				participa_avaliacao: 1,
+			});
+		});
 
-        return envolvidos;
-    }
+		return envolvidos;
+	}
 
-    function buildPayload() {
-        const basicPayload = getBasicPayload();
-        const equipeRows = parseRows("equipe_de_interesse");
-        const aprovadorRows = parseRows("aprovadores");
+	function buildPayload() {
+		const basicPayload = getBasicPayload();
+		const equipeRows = parseRows("equipe_de_interesse");
+		const aprovadorRows = parseRows("aprovadores");
 
-        return {
-            ...basicPayload,
-            envolvidos: buildEnvolvidosPayload(basicPayload, equipeRows, aprovadorRows),
-            equipe_de_interesse: equipeRows,
-            aprovadores: aprovadorRows,
-            objetivos: parseRows("objetivos"),
-            ods: parseRows("ods"),
-            cronograma: parseRows("cronograma"),
-            recursos: parseRows("recursos"),
-            riscos: parseRows("riscos"),
-        };
-    }
+		return {
+			...basicPayload,
+			envolvidos: buildEnvolvidosPayload(basicPayload, equipeRows, aprovadorRows),
+			equipe_de_interesse: equipeRows,
+			aprovadores: aprovadorRows,
+			objetivos: parseRows("objetivos"),
+			ods: parseRows("ods"),
+			cronograma: parseRows("cronograma"),
+			recursos: parseRows("recursos"),
+			riscos: parseRows("riscos"),
+		};
+	}
 
-    function setEquipeFieldsReadOnly(readOnly) {
-        ["equipe_nome", "equipe_email", "equipe_telefone"].forEach((id) => {
-            const input = document.getElementById(id);
-            if (input) {
-                input.readOnly = readOnly;
-            }
-        });
-    }
+	function setEquipeFieldsReadOnly(readOnly) {
+		["equipe_nome", "equipe_email", "equipe_telefone"].forEach((id) => {
+			const input = document.getElementById(id);
+			if (input) {
+				input.readOnly = readOnly;
+			}
+		});
+	}
 
-    function clearEquipeBuilderPersonalFields() {
-        ["equipe_nome", "equipe_email", "equipe_telefone"].forEach((id) => {
-            const input = document.getElementById(id);
-            if (input) {
-                input.value = "";
-            }
-        });
-    }
+	function clearEquipeBuilderPersonalFields() {
+		["equipe_nome", "equipe_email", "equipe_telefone"].forEach((id) => {
+			const input = document.getElementById(id);
+			if (input) {
+				input.value = "";
+			}
+		});
+	}
 
-    function setAprovadorFieldsReadOnly(readOnly) {
-        ["aprovador_nome", "aprovador_email", "aprovador_telefone"].forEach((id) => {
-            const input = document.getElementById(id);
-            if (input) {
-                input.readOnly = readOnly;
-            }
-        });
-    }
+	function setAprovadorFieldsReadOnly(readOnly) {
+		["aprovador_nome", "aprovador_email", "aprovador_telefone"].forEach((id) => {
+			const input = document.getElementById(id);
+			if (input) {
+				input.readOnly = readOnly;
+			}
+		});
+	}
 
-    function clearAprovadorBuilderPersonalFields() {
-        ["aprovador_nome", "aprovador_email", "aprovador_telefone"].forEach((id) => {
-            const input = document.getElementById(id);
-            if (input) {
-                input.value = "";
-            }
-        });
-    }
+	function clearAprovadorBuilderPersonalFields() {
+		["aprovador_nome", "aprovador_email", "aprovador_telefone"].forEach((id) => {
+			const input = document.getElementById(id);
+			if (input) {
+				input.value = "";
+			}
+		});
+	}
 
-    function getAprovadorOrigemLabel(origemRegra) {
-        const key = String(origemRegra || "manual").trim() || "manual";
-        return APROVADOR_ORIGEM_LABELS[key] || APROVADOR_ORIGEM_LABELS.manual;
-    }
+	function getAprovadorOrigemLabel(origemRegra) {
+		const key = String(origemRegra || "manual").trim() || "manual";
+		return APROVADOR_ORIGEM_LABELS[key] || APROVADOR_ORIGEM_LABELS.manual;
+	}
 
-    function getAprovadorKeyFromRowData(rowData) {
-        const tipo = rowData?.tipo_pessoa === "Responsavel" ? "Responsavel" : "Associado";
-        const docname = tipo === "Associado" ? rowData?.associado || "" : rowData?.responsavel || "";
-        if (!docname) return "";
-        return `${tipo}:${docname}`;
-    }
+	function getAprovadorKeyFromRowData(rowData) {
+		const tipo = rowData?.tipo_pessoa === "Responsavel" ? "Responsavel" : "Associado";
+		const docname =
+			tipo === "Associado" ? rowData?.associado || "" : rowData?.responsavel || "";
+		if (!docname) return "";
+		return `${tipo}:${docname}`;
+	}
 
-    function updateAprovadorBuilderMode() {
-        const tipo = document.getElementById("aprovador_tipo_pessoa")?.value || "Associado";
-        const fieldAssociado = document.getElementById("aprovador_field_associado");
-        const fieldResponsavel = document.getElementById("aprovador_field_responsavel");
+	function updateAprovadorBuilderMode() {
+		const tipo = document.getElementById("aprovador_tipo_pessoa")?.value || "Associado";
+		const fieldAssociado = document.getElementById("aprovador_field_associado");
+		const fieldResponsavel = document.getElementById("aprovador_field_responsavel");
 
-        if (fieldAssociado && fieldResponsavel) {
-            fieldAssociado.classList.toggle("d-none", tipo !== "Associado");
-            fieldResponsavel.classList.toggle("d-none", tipo !== "Responsavel");
-        }
+		if (fieldAssociado && fieldResponsavel) {
+			fieldAssociado.classList.toggle("d-none", tipo !== "Associado");
+			fieldResponsavel.classList.toggle("d-none", tipo !== "Responsavel");
+		}
 
-        setAprovadorFieldsReadOnly(true);
-        clearAprovadorBuilderPersonalFields();
-    }
+		setAprovadorFieldsReadOnly(true);
+		clearAprovadorBuilderPersonalFields();
+	}
 
-    async function preencherAprovadorPeloCadastro(tipoPessoa, docname) {
-        if (!docname) {
-            clearAprovadorBuilderPersonalFields();
-            return;
-        }
+	async function preencherAprovadorPeloCadastro(tipoPessoa, docname) {
+		if (!docname) {
+			clearAprovadorBuilderPersonalFields();
+			return;
+		}
 
-        try {
-            const doctypeName = tipoPessoa === "Associado" ? "Associado" : "Responsavel";
-            const contato = await callApi(METHODS.getContatoPessoa, {
-                doctype_name: doctypeName,
-                docname,
-            });
+		try {
+			const doctypeName = tipoPessoa === "Associado" ? "Associado" : "Responsavel";
+			const contato = await callApi(METHODS.getContatoPessoa, {
+				doctype_name: doctypeName,
+				docname,
+			});
 
-            const nome = document.getElementById("aprovador_nome");
-            const email = document.getElementById("aprovador_email");
-            const telefone = document.getElementById("aprovador_telefone");
-            if (nome) nome.value = contato.nome || "";
-            if (email) email.value = contato.email || "";
-            if (telefone) telefone.value = contato.telefone || "";
-        } catch (error) {
-            showToast(error.message || "Falha ao obter dados do aprovador selecionado.", "error");
-        }
-    }
+			const nome = document.getElementById("aprovador_nome");
+			const email = document.getElementById("aprovador_email");
+			const telefone = document.getElementById("aprovador_telefone");
+			if (nome) nome.value = contato.nome || "";
+			if (email) email.value = contato.email || "";
+			if (telefone) telefone.value = contato.telefone || "";
+		} catch (error) {
+			showToast(error.message || "Falha ao obter dados do aprovador selecionado.", "error");
+		}
+	}
 
-    function createAprovadorRow(rowData) {
-        const tipoPessoa = rowData?.tipo_pessoa === "Responsavel" ? "Responsavel" : "Associado";
-        const associado = rowData?.associado || "";
-        const responsavel = rowData?.responsavel || "";
-        const nome = escapeHtml(rowData?.nome || "");
-        const email = escapeHtml(rowData?.email || "");
-        const telefone = escapeHtml(rowData?.telefone || "");
-        const origemRegra = (rowData?.origem_regra || "manual").trim() || "manual";
-        const podeRemover = Number(rowData?.permite_remover || 0) === 1;
-        const origemLabel = escapeHtml(getAprovadorOrigemLabel(origemRegra));
-        const aprovadorKey = getAprovadorKeyFromRowData({
-            tipo_pessoa: tipoPessoa,
-            associado,
-            responsavel,
-        });
+	function createAprovadorRow(rowData) {
+		const tipoPessoa = rowData?.tipo_pessoa === "Responsavel" ? "Responsavel" : "Associado";
+		const associado = rowData?.associado || "";
+		const responsavel = rowData?.responsavel || "";
+		const nome = escapeHtml(rowData?.nome || "");
+		const email = escapeHtml(rowData?.email || "");
+		const telefone = escapeHtml(rowData?.telefone || "");
+		const origemRegra = (rowData?.origem_regra || "manual").trim() || "manual";
+		const podeRemover = Number(rowData?.permite_remover || 0) === 1;
+		const origemLabel = escapeHtml(getAprovadorOrigemLabel(origemRegra));
+		const aprovadorKey = getAprovadorKeyFromRowData({
+			tipo_pessoa: tipoPessoa,
+			associado,
+			responsavel,
+		});
 
-        const tr = document.createElement("tr");
-        tr.dataset.canRemove = podeRemover ? "1" : "0";
-        tr.dataset.origemRegra = origemRegra;
-        tr.dataset.aprovadorKey = aprovadorKey;
-        tr.innerHTML = `
+		const tr = document.createElement("tr");
+		tr.dataset.canRemove = podeRemover ? "1" : "0";
+		tr.dataset.origemRegra = origemRegra;
+		tr.dataset.aprovadorKey = aprovadorKey;
+		tr.innerHTML = `
             <td>
                 <input type="hidden" data-field="tipo_pessoa" value="${escapeHtml(tipoPessoa)}" />
                 <input type="hidden" data-field="associado" value="${escapeHtml(associado)}" />
                 <input type="hidden" data-field="responsavel" value="${escapeHtml(responsavel)}" />
-                <input type="hidden" data-field="origem_regra" value="${escapeHtml(origemRegra)}" />
-                <input type="hidden" data-field="permite_remover" value="${podeRemover ? "1" : "0"}" />
+                <input type="hidden" data-field="origem_regra" value="${escapeHtml(
+					origemRegra
+				)}" />
+                <input type="hidden" data-field="permite_remover" value="${
+					podeRemover ? "1" : "0"
+				}" />
                 <input type="text" data-field="nome" value="${nome}" readonly />
             </td>
             <td><input type="text" data-field="email" value="${email}" readonly /></td>
@@ -1137,166 +1233,171 @@
             <td>${getTrashButtonHtml()}</td>
         `;
 
-        const deleteButton = tr.querySelector(".btn-delete-row");
-        if (deleteButton && !podeRemover) {
-            deleteButton.disabled = true;
-            deleteButton.title = "Este aprovador é obrigatório e não pode ser removido.";
-            deleteButton.setAttribute("aria-label", "Aprovador obrigatório");
-        }
+		const deleteButton = tr.querySelector(".btn-delete-row");
+		if (deleteButton && !podeRemover) {
+			deleteButton.disabled = true;
+			deleteButton.title = "Este aprovador é obrigatório e não pode ser removido.";
+			deleteButton.setAttribute("aria-label", "Aprovador obrigatório");
+		}
 
-        return tr;
-    }
+		return tr;
+	}
 
-    async function syncSponsorAprovadorRowInTable() {
-        const tbody = document.getElementById("rows_aprovadores");
-        if (!tbody) return;
+	async function syncSponsorAprovadorRowInTable() {
+		const tbody = document.getElementById("rows_aprovadores");
+		if (!tbody) return;
 
-        Array.from(tbody.querySelectorAll("tr")).forEach((tr) => {
-            if (["padrinho_orientador", "chefe_secao"].includes(tr.dataset.origemRegra || "")) {
-                tr.remove();
-            }
-        });
+		Array.from(tbody.querySelectorAll("tr")).forEach((tr) => {
+			if (["padrinho_orientador", "chefe_secao"].includes(tr.dataset.origemRegra || "")) {
+				tr.remove();
+			}
+		});
 
-        try {
-            const result = await callApi(METHODS.getMandatoryAprovadores, {
-                payload: JSON.stringify({
-                    coordenador: document.getElementById("coordenador")?.value || "",
-                    tipo_padrinho_ou_orientador:
-                        document.getElementById("tipo_padrinho_ou_orientador")?.value || "Associado",
-                    padrinho_associado: document.getElementById("padrinho_associado")?.value || "",
-                    padrinho_responsavel: document.getElementById("padrinho_responsavel")?.value || "",
-                }),
-            });
+		try {
+			const result = await callApi(METHODS.getMandatoryAprovadores, {
+				payload: JSON.stringify({
+					coordenador: document.getElementById("coordenador")?.value || "",
+					tipo_padrinho_ou_orientador:
+						document.getElementById("tipo_padrinho_ou_orientador")?.value ||
+						"Associado",
+					padrinho_associado: document.getElementById("padrinho_associado")?.value || "",
+					padrinho_responsavel:
+						document.getElementById("padrinho_responsavel")?.value || "",
+				}),
+			});
 
-            const mandatoryRows = result.mandatory_aprovadores || [];
-            const mandatoryKeys = new Set(
-                mandatoryRows
-                    .map((row) => getAprovadorKeyFromRowData(row))
-                    .filter((key) => String(key || "").trim())
-            );
+			const mandatoryRows = result.mandatory_aprovadores || [];
+			const mandatoryKeys = new Set(
+				mandatoryRows
+					.map((row) => getAprovadorKeyFromRowData(row))
+					.filter((key) => String(key || "").trim())
+			);
 
-            Array.from(tbody.querySelectorAll("tr")).forEach((tr) => {
-                if (mandatoryKeys.has(tr.dataset.aprovadorKey || "")) {
-                    tr.remove();
-                }
-            });
+			Array.from(tbody.querySelectorAll("tr")).forEach((tr) => {
+				if (mandatoryKeys.has(tr.dataset.aprovadorKey || "")) {
+					tr.remove();
+				}
+			});
 
-            mandatoryRows
-                .slice()
-                .reverse()
-                .forEach((row) => {
-                    tbody.prepend(
-                        createAprovadorRow({
-                            ...row,
-                            permite_remover: 0,
-                        })
-                    );
-                });
-        } catch (error) {
-            showToast(
-                error.message || "Falha ao sincronizar aprovadores obrigatórios.",
-                "error"
-            );
-        }
-    }
+			mandatoryRows
+				.slice()
+				.reverse()
+				.forEach((row) => {
+					tbody.prepend(
+						createAprovadorRow({
+							...row,
+							permite_remover: 0,
+						})
+					);
+				});
+		} catch (error) {
+			showToast(error.message || "Falha ao sincronizar aprovadores obrigatórios.", "error");
+		}
+	}
 
-    function updateEquipeBuilderMode() {
-        const tipo = document.getElementById("equipe_tipo_pessoa")?.value || "Associado";
-        const fieldAssociado = document.getElementById("equipe_field_associado");
-        const fieldResponsavel = document.getElementById("equipe_field_responsavel");
+	function updateEquipeBuilderMode() {
+		const tipo = document.getElementById("equipe_tipo_pessoa")?.value || "Associado";
+		const fieldAssociado = document.getElementById("equipe_field_associado");
+		const fieldResponsavel = document.getElementById("equipe_field_responsavel");
 
-        if (fieldAssociado && fieldResponsavel) {
-            fieldAssociado.classList.toggle("d-none", tipo !== "Associado");
-            fieldResponsavel.classList.toggle("d-none", tipo !== "Responsavel");
-        }
+		if (fieldAssociado && fieldResponsavel) {
+			fieldAssociado.classList.toggle("d-none", tipo !== "Associado");
+			fieldResponsavel.classList.toggle("d-none", tipo !== "Responsavel");
+		}
 
-        if (tipo === "Outro") {
-            clearEquipeBuilderPersonalFields();
-            setEquipeFieldsReadOnly(false);
-            return;
-        }
+		if (tipo === "Outro") {
+			clearEquipeBuilderPersonalFields();
+			setEquipeFieldsReadOnly(false);
+			return;
+		}
 
-        setEquipeFieldsReadOnly(true);
-        clearEquipeBuilderPersonalFields();
-    }
+		setEquipeFieldsReadOnly(true);
+		clearEquipeBuilderPersonalFields();
+	}
 
-    async function preencherEquipePeloCadastro(tipoPessoa, docname) {
-        if (!docname) {
-            clearEquipeBuilderPersonalFields();
-            return;
-        }
+	async function preencherEquipePeloCadastro(tipoPessoa, docname) {
+		if (!docname) {
+			clearEquipeBuilderPersonalFields();
+			return;
+		}
 
-        try {
-            const doctypeName = tipoPessoa === "Associado" ? "Associado" : "Responsavel";
-            const contato = await callApi(METHODS.getContatoPessoa, {
-                doctype_name: doctypeName,
-                docname,
-            });
+		try {
+			const doctypeName = tipoPessoa === "Associado" ? "Associado" : "Responsavel";
+			const contato = await callApi(METHODS.getContatoPessoa, {
+				doctype_name: doctypeName,
+				docname,
+			});
 
-            const nome = document.getElementById("equipe_nome");
-            const email = document.getElementById("equipe_email");
-            const telefone = document.getElementById("equipe_telefone");
-            if (nome) nome.value = contato.nome || "";
-            if (email) email.value = contato.email || "";
-            if (telefone) telefone.value = contato.telefone || "";
-        } catch (error) {
-            showToast(error.message || "Falha ao obter dados da pessoa selecionada.", "error");
-        }
-    }
+			const nome = document.getElementById("equipe_nome");
+			const email = document.getElementById("equipe_email");
+			const telefone = document.getElementById("equipe_telefone");
+			if (nome) nome.value = contato.nome || "";
+			if (email) email.value = contato.email || "";
+			if (telefone) telefone.value = contato.telefone || "";
+		} catch (error) {
+			showToast(error.message || "Falha ao obter dados da pessoa selecionada.", "error");
+		}
+	}
 
-    function createInput(fieldname, value) {
-        const safeValue = escapeHtml(value || "");
+	function createInput(fieldname, value) {
+		const safeValue = escapeHtml(value || "");
 
-        if (fieldname === "ods") {
-            return renderSelectComponentHtml(
-                nextRuntimeFieldId("ods"),
-                state.choices.ods || [],
-                "Selecione um ODS...",
-                safeValue,
-                { "data-field": fieldname }
-            );
-        }
+		if (fieldname === "ods") {
+			return renderSelectComponentHtml(
+				nextRuntimeFieldId("ods"),
+				state.choices.ods || [],
+				"Selecione um ODS...",
+				safeValue,
+				{ "data-field": fieldname }
+			);
+		}
 
-        if (fieldname.includes("data_")) {
-            return renderDatepickerComponentHtml(
-                nextRuntimeFieldId(fieldname),
-                fieldname,
-                safeValue,
-                "Selecione a data"
-            );
-        }
+		if (fieldname.includes("data_")) {
+			return renderDatepickerComponentHtml(
+				nextRuntimeFieldId(fieldname),
+				fieldname,
+				safeValue,
+				"Selecione a data"
+			);
+		}
 
-        return `<input type="text" class="input" data-field="${fieldname}" value="${safeValue}" />`;
-    }
+		return `<input type="text" class="input" data-field="${fieldname}" value="${safeValue}" />`;
+	}
 
-    function createEquipeRow(rowData) {
-        const tipoPessoa = normalizeEquipeTipoPessoa(rowData?.tipo_pessoa);
-        const associado = rowData?.associado || "";
-        const responsavel = rowData?.responsavel || "";
-        const nome = escapeHtml(rowData?.nome || "");
-        const email = escapeHtml(rowData?.email || "");
-        const telefone = escapeHtml(rowData?.telefone || "");
-        const funcao = escapeHtml(rowData?.funcao || "");
-        const isReadOnly = tipoPessoa === "Associado" || tipoPessoa === "Responsavel";
+	function createEquipeRow(rowData) {
+		const tipoPessoa = normalizeEquipeTipoPessoa(rowData?.tipo_pessoa);
+		const associado = rowData?.associado || "";
+		const responsavel = rowData?.responsavel || "";
+		const nome = escapeHtml(rowData?.nome || "");
+		const email = escapeHtml(rowData?.email || "");
+		const telefone = escapeHtml(rowData?.telefone || "");
+		const funcao = escapeHtml(rowData?.funcao || "");
+		const isReadOnly = tipoPessoa === "Associado" || tipoPessoa === "Responsavel";
 
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
+		const tr = document.createElement("tr");
+		tr.innerHTML = `
             <td>
                 <input type="hidden" data-field="tipo_pessoa" value="${escapeHtml(tipoPessoa)}" />
                 <input type="hidden" data-field="associado" value="${escapeHtml(associado)}" />
                 <input type="hidden" data-field="responsavel" value="${escapeHtml(responsavel)}" />
-                <input type="text" class="input" data-field="nome" value="${nome}" ${isReadOnly ? "readonly" : ""} />
+                <input type="text" class="input" data-field="nome" value="${nome}" ${
+			isReadOnly ? "readonly" : ""
+		} />
             </td>
-            <td><input type="text" class="input" data-field="email" value="${email}" ${isReadOnly ? "readonly" : ""} /></td>
-            <td><input type="text" class="input" data-field="telefone" value="${telefone}" ${isReadOnly ? "readonly" : ""} /></td>
+            <td><input type="text" class="input" data-field="email" value="${email}" ${
+			isReadOnly ? "readonly" : ""
+		} /></td>
+            <td><input type="text" class="input" data-field="telefone" value="${telefone}" ${
+			isReadOnly ? "readonly" : ""
+		} /></td>
             <td><input type="text" class="input" data-field="funcao" value="${funcao}" /></td>
             <td>${getTrashButtonHtml()}</td>
         `;
-        return tr;
-    }
+		return tr;
+	}
 
-    function getCronogramaDragHandleHtml() {
-        return `
+	function getCronogramaDragHandleHtml() {
+		return `
             <button
                 type="button"
                 class="cronograma-row-handle"
@@ -1310,1097 +1411,1174 @@
                 <span></span><span></span>
             </button>
         `;
-    }
+	}
 
-    function createCronogramaRow(rowData) {
-        const inicio = rowData?.data_inicio || "";
-        const termino = rowData?.data_termino || "";
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
+	function createCronogramaRow(rowData) {
+		const inicio = rowData?.data_inicio || "";
+		const termino = rowData?.data_termino || "";
+		const tr = document.createElement("tr");
+		tr.innerHTML = `
             <td class="cronograma-cell-handle">${getCronogramaDragHandleHtml()}</td>
-            <td>${renderDatepickerComponentHtml(nextRuntimeFieldId("cronograma_inicio"), "data_inicio", inicio, "Data inicial")}</td>
-            <td>${renderDatepickerComponentHtml(nextRuntimeFieldId("cronograma_termino"), "data_termino", termino, "Data final")}</td>
-            <td><input type="text" class="input" data-field="tarefa" value="${escapeHtml(rowData?.tarefa || "")}" /></td>
+            <td>${renderDatepickerComponentHtml(
+				nextRuntimeFieldId("cronograma_inicio"),
+				"data_inicio",
+				inicio,
+				"Data inicial"
+			)}</td>
+            <td>${renderDatepickerComponentHtml(
+				nextRuntimeFieldId("cronograma_termino"),
+				"data_termino",
+				termino,
+				"Data final"
+			)}</td>
+            <td><input type="text" class="input" data-field="tarefa" value="${escapeHtml(
+				rowData?.tarefa || ""
+			)}" /></td>
             <td>${getTrashButtonHtml()}</td>
         `;
-        return tr;
-    }
+		return tr;
+	}
 
-    function parseDateIso(value) {
-        const iso = parseBrToIsoDate(value);
-        if (!iso) return null;
-        const parts = String(iso).split("-");
-        if (parts.length !== 3) return null;
-        const year = Number(parts[0]);
-        const month = Number(parts[1]);
-        const day = Number(parts[2]);
-        if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null;
-        const date = new Date(year, month - 1, day);
-        if (Number.isNaN(date.getTime())) return null;
-        date.setHours(0, 0, 0, 0);
-        return date;
-    }
+	function parseDateIso(value) {
+		const iso = parseBrToIsoDate(value);
+		if (!iso) return null;
+		const parts = String(iso).split("-");
+		if (parts.length !== 3) return null;
+		const year = Number(parts[0]);
+		const month = Number(parts[1]);
+		const day = Number(parts[2]);
+		if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day))
+			return null;
+		const date = new Date(year, month - 1, day);
+		if (Number.isNaN(date.getTime())) return null;
+		date.setHours(0, 0, 0, 0);
+		return date;
+	}
 
-    function formatDateIso(date) {
-        if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
-        const y = String(date.getFullYear());
-        const m = String(date.getMonth() + 1).padStart(2, "0");
-        const d = String(date.getDate()).padStart(2, "0");
-        return `${y}-${m}-${d}`;
-    }
+	function formatDateIso(date) {
+		if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+		const y = String(date.getFullYear());
+		const m = String(date.getMonth() + 1).padStart(2, "0");
+		const d = String(date.getDate()).padStart(2, "0");
+		return `${y}-${m}-${d}`;
+	}
 
-    function addDays(date, days) {
-        const result = new Date(date);
-        result.setDate(result.getDate() + days);
-        result.setHours(0, 0, 0, 0);
-        return result;
-    }
+	function addDays(date, days) {
+		const result = new Date(date);
+		result.setDate(result.getDate() + days);
+		result.setHours(0, 0, 0, 0);
+		return result;
+	}
 
-    function diffDays(start, end) {
-        return Math.round((end.getTime() - start.getTime()) / MS_PER_DAY);
-    }
+	function diffDays(start, end) {
+		return Math.round((end.getTime() - start.getTime()) / MS_PER_DAY);
+	}
 
-    function ensureCronogramaRowId(tr) {
-        if (!tr) return "";
-        if (!tr.dataset.cronogramaId) {
-            state.cronogramaSeq += 1;
-            tr.dataset.cronogramaId = `crono_${state.cronogramaSeq}`;
-        }
-        return tr.dataset.cronogramaId;
-    }
+	function ensureCronogramaRowId(tr) {
+		if (!tr) return "";
+		if (!tr.dataset.cronogramaId) {
+			state.cronogramaSeq += 1;
+			tr.dataset.cronogramaId = `crono_${state.cronogramaSeq}`;
+		}
+		return tr.dataset.cronogramaId;
+	}
 
-    function getCronogramaRows() {
-        const tbody = document.getElementById("rows_cronograma");
-        if (!tbody) return [];
+	function getCronogramaRows() {
+		const tbody = document.getElementById("rows_cronograma");
+		if (!tbody) return [];
 
-        return Array.from(tbody.querySelectorAll("tr")).map((tr) => {
-            const id = ensureCronogramaRowId(tr);
-            const startInput = tr.querySelector("[data-field='data_inicio']");
-            const endInput = tr.querySelector("[data-field='data_termino']");
-            const tarefaInput = tr.querySelector("[data-field='tarefa']");
+		return Array.from(tbody.querySelectorAll("tr")).map((tr) => {
+			const id = ensureCronogramaRowId(tr);
+			const startInput = tr.querySelector("[data-field='data_inicio']");
+			const endInput = tr.querySelector("[data-field='data_termino']");
+			const tarefaInput = tr.querySelector("[data-field='tarefa']");
 
-            const start = parseDateIso(startInput?.value || "");
-            const end = parseDateIso(endInput?.value || "");
-            const tarefa = (tarefaInput?.value || "").trim();
+			const start = parseDateIso(startInput?.value || "");
+			const end = parseDateIso(endInput?.value || "");
+			const tarefa = (tarefaInput?.value || "").trim();
 
-            return {
-                id,
-                tr,
-                startInput,
-                endInput,
-                tarefaInput,
-                tarefa,
-                start,
-                end,
-            };
-        });
-    }
+			return {
+				id,
+				tr,
+				startInput,
+				endInput,
+				tarefaInput,
+				tarefa,
+				start,
+				end,
+			};
+		});
+	}
 
-    function applyCronogramaDatesToRow(task, startDate, endDate) {
-        if (!task?.startInput || !task?.endInput) return;
-        task.startInput.value = formatDateIso(startDate);
-        task.endInput.value = formatDateIso(endDate);
-    }
+	function applyCronogramaDatesToRow(task, startDate, endDate) {
+		if (!task?.startInput || !task?.endInput) return;
+		task.startInput.value = formatDateIso(startDate);
+		task.endInput.value = formatDateIso(endDate);
+	}
 
-    function renderCronogramaGantt() {
-        const container = document.getElementById("cronogramaGantt");
-        if (!container) return;
-        const drag = state.ganttDrag;
+	function renderCronogramaGantt() {
+		const container = document.getElementById("cronogramaGantt");
+		if (!container) return;
+		const drag = state.ganttDrag;
 
-        const rows = getCronogramaRows();
-        const tasks = rows
-            .filter((row) => row.start && row.end && row.tarefa)
-            .map((row) => {
-                const end = row.end < row.start ? row.start : row.end;
-                return {
-                    ...row,
-                    end,
-                };
-            });
+		const rows = getCronogramaRows();
+		const tasks = rows
+			.filter((row) => row.start && row.end && row.tarefa)
+			.map((row) => {
+				const end = row.end < row.start ? row.start : row.end;
+				return {
+					...row,
+					end,
+				};
+			});
 
-        if (!tasks.length) {
-            container.innerHTML = `
+		if (!tasks.length) {
+			container.innerHTML = `
                 <div class="cronograma-gantt__empty">
                     Preencha tarefa, data inicial e data final para visualizar o Gantt.
                 </div>
             `;
-            return;
-        }
+			return;
+		}
 
-        const minStart = tasks.reduce((acc, task) => (task.start < acc ? task.start : acc), tasks[0].start);
-        const maxEnd = tasks.reduce((acc, task) => (task.end > acc ? task.end : acc), tasks[0].end);
-        const chartStart = addDays(minStart, -1);
-        const chartEnd = addDays(maxEnd, 1);
-        const totalDays = Math.max(diffDays(chartStart, chartEnd) + 1, 2);
+		const minStart = tasks.reduce(
+			(acc, task) => (task.start < acc ? task.start : acc),
+			tasks[0].start
+		);
+		const maxEnd = tasks.reduce(
+			(acc, task) => (task.end > acc ? task.end : acc),
+			tasks[0].end
+		);
+		const chartStart = addDays(minStart, -1);
+		const chartEnd = addDays(maxEnd, 1);
+		const totalDays = Math.max(diffDays(chartStart, chartEnd) + 1, 2);
 
-        const tickEvery = totalDays > 45 ? 7 : totalDays > 20 ? 3 : 1;
-        const tickWidthPct = (tickEvery / totalDays) * 100;
-        const ticks = [];
-        for (let day = 0; day < totalDays; day += tickEvery) {
-            const date = addDays(chartStart, day);
-            const daysInCell = Math.min(tickEvery, totalDays - day);
-            const cellWidthPct = (daysInCell / totalDays) * 100;
-            ticks.push(`
+		const tickEvery = totalDays > 45 ? 7 : totalDays > 20 ? 3 : 1;
+		const tickWidthPct = (tickEvery / totalDays) * 100;
+		const ticks = [];
+		for (let day = 0; day < totalDays; day += tickEvery) {
+			const date = addDays(chartStart, day);
+			const daysInCell = Math.min(tickEvery, totalDays - day);
+			const cellWidthPct = (daysInCell / totalDays) * 100;
+			ticks.push(`
                 <div class="cronograma-gantt__tick" style="width:${cellWidthPct.toFixed(4)}%">
-                    <span>${date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}</span>
+                    <span>${date.toLocaleDateString("pt-BR", {
+						day: "2-digit",
+						month: "2-digit",
+					})}</span>
                 </div>
             `);
-        }
+		}
 
-        const rowsHtml = tasks
-            .map((task) => {
-                const offsetDays = diffDays(chartStart, task.start);
-                const durationDays = Math.max(diffDays(task.start, task.end) + 1, 1);
-                const leftPct = (offsetDays / totalDays) * 100;
-                const widthPct = (durationDays / totalDays) * 100;
-                const isDraggingRow = drag && drag.rowId === task.id;
-                const isDropTarget = drag && drag.mode === "move" && drag.targetRowId === task.id && drag.rowId !== task.id;
-                const rowClasses = ["cronograma-gantt__row"];
-                const barClasses = ["cronograma-gantt__bar"];
-                if (isDraggingRow) {
-                    rowClasses.push("is-drag-source");
-                    barClasses.push("is-dragging-source");
-                }
-                if (isDropTarget) {
-                    rowClasses.push("is-drop-target");
-                }
+		const rowsHtml = tasks
+			.map((task) => {
+				const offsetDays = diffDays(chartStart, task.start);
+				const durationDays = Math.max(diffDays(task.start, task.end) + 1, 1);
+				const leftPct = (offsetDays / totalDays) * 100;
+				const widthPct = (durationDays / totalDays) * 100;
+				const isDraggingRow = drag && drag.rowId === task.id;
+				const isDropTarget =
+					drag &&
+					drag.mode === "move" &&
+					drag.targetRowId === task.id &&
+					drag.rowId !== task.id;
+				const rowClasses = ["cronograma-gantt__row"];
+				const barClasses = ["cronograma-gantt__bar"];
+				if (isDraggingRow) {
+					rowClasses.push("is-drag-source");
+					barClasses.push("is-dragging-source");
+				}
+				if (isDropTarget) {
+					rowClasses.push("is-drop-target");
+				}
 
-                return `
+				return `
                     <div class="${rowClasses.join(" ")}" data-row-id="${escapeHtml(task.id)}">
-                        <div class="cronograma-gantt__label" title="${escapeHtml(task.tarefa)}">${escapeHtml(task.tarefa)}</div>
+                        <div class="cronograma-gantt__label" title="${escapeHtml(
+							task.tarefa
+						)}">${escapeHtml(task.tarefa)}</div>
                         <div class="cronograma-gantt__lane" data-row-id="${escapeHtml(task.id)}">
-                            <div class="${barClasses.join(" ")}" data-row-id="${escapeHtml(task.id)}" style="left:${leftPct}%;width:${widthPct}%;">
+                            <div class="${barClasses.join(" ")}" data-row-id="${escapeHtml(
+					task.id
+				)}" style="left:${leftPct}%;width:${widthPct}%;">
                                 <button type="button" class="cronograma-gantt__handle cronograma-gantt__handle--start" data-drag-mode="resize-start" aria-label="Ajustar data inicial"></button>
-                                <span class="cronograma-gantt__bar-text">${escapeHtml(task.tarefa)}</span>
+                                <span class="cronograma-gantt__bar-text">${escapeHtml(
+									task.tarefa
+								)}</span>
                                 <button type="button" class="cronograma-gantt__handle cronograma-gantt__handle--end" data-drag-mode="resize-end" aria-label="Ajustar data final"></button>
-                                <button type="button" class="cronograma-gantt__delete" data-delete-row="${escapeHtml(task.id)}" aria-label="Excluir atividade" title="Excluir atividade">×</button>
+                                <button type="button" class="cronograma-gantt__delete" data-delete-row="${escapeHtml(
+									task.id
+								)}" aria-label="Excluir atividade" title="Excluir atividade">×</button>
                             </div>
                         </div>
                     </div>
                 `;
-            })
-            .join("");
+			})
+			.join("");
 
-        let dragHint = "";
-        if (drag) {
-            if (drag.mode === "move") {
-                dragHint = `<span class="cronograma-gantt__drag-hint">Reordenando: solte sobre a linha destacada</span>`;
-            } else {
-                dragHint = `<span class="cronograma-gantt__drag-hint">Ajustando datas: arraste a extremidade da barra</span>`;
-            }
-        }
+		let dragHint = "";
+		if (drag) {
+			if (drag.mode === "move") {
+				dragHint = `<span class="cronograma-gantt__drag-hint">Reordenando: solte sobre a linha destacada</span>`;
+			} else {
+				dragHint = `<span class="cronograma-gantt__drag-hint">Ajustando datas: arraste a extremidade da barra</span>`;
+			}
+		}
 
-        container.innerHTML = `
+		container.innerHTML = `
             <div class="cronograma-gantt__header">
                 <div class="cronograma-gantt__header-label">Tarefa</div>
                 <div class="cronograma-gantt__timeline">${ticks.join("")}</div>
             </div>
             ${dragHint}
-            <div class="cronograma-gantt__body" data-chart-start="${formatDateIso(chartStart)}" data-total-days="${totalDays}" style="--gantt-tick-width:${tickWidthPct.toFixed(4)}%">
+            <div class="cronograma-gantt__body" data-chart-start="${formatDateIso(
+				chartStart
+			)}" data-total-days="${totalDays}" style="--gantt-tick-width:${tickWidthPct.toFixed(
+			4
+		)}%">
                 ${rowsHtml}
             </div>
         `;
-    }
-
-    function findCronogramaTaskById(rowId) {
-        return getCronogramaRows().find((row) => row.id === rowId) || null;
-    }
-
-    function reorderCronogramaRows(draggedId, targetId) {
-        if (!draggedId || !targetId || draggedId === targetId) return;
-
-        const tbody = document.getElementById("rows_cronograma");
-        if (!tbody) return;
-
-        const dragged = tbody.querySelector(`tr[data-cronograma-id='${draggedId}']`);
-        const target = tbody.querySelector(`tr[data-cronograma-id='${targetId}']`);
-        if (!dragged || !target) return;
-
-        const rows = Array.from(tbody.querySelectorAll("tr"));
-        const draggedIndex = rows.indexOf(dragged);
-        const targetIndex = rows.indexOf(target);
-        if (draggedIndex === -1 || targetIndex === -1 || draggedIndex === targetIndex) return;
-
-        if (draggedIndex < targetIndex) {
-            tbody.insertBefore(dragged, target.nextSibling);
-        } else {
-            tbody.insertBefore(dragged, target);
-        }
-    }
-
-    function bindCronogramaTableDrag() {
-        const tbody = document.getElementById("rows_cronograma");
-        if (!tbody || tbody.dataset.dragBound === "1") return;
-        tbody.dataset.dragBound = "1";
-
-        tbody.addEventListener("dragstart", (event) => {
-            const handle = event.target.closest("[data-row-drag-handle]");
-            if (!handle) {
-                event.preventDefault();
-                return;
-            }
-
-            const tr = handle.closest("tr");
-            if (!tr) {
-                event.preventDefault();
-                return;
-            }
-
-            const rowId = ensureCronogramaRowId(tr);
-            state.cronogramaTableDragId = rowId;
-            tr.classList.add("is-drag-source");
-            if (event.dataTransfer) {
-                event.dataTransfer.effectAllowed = "move";
-                event.dataTransfer.setData("text/plain", rowId);
-            }
-        });
-
-        tbody.addEventListener("dragover", (event) => {
-            if (!state.cronogramaTableDragId) return;
-            event.preventDefault();
-
-            const target = event.target.closest("tr");
-            if (!target) return;
-            const targetId = ensureCronogramaRowId(target);
-
-            tbody.querySelectorAll("tr").forEach((row) => {
-                row.classList.remove("is-drop-target-before", "is-drop-target-after");
-            });
-
-            if (targetId === state.cronogramaTableDragId) return;
-
-            const rect = target.getBoundingClientRect();
-            const placeAfter = event.clientY > rect.top + rect.height / 2;
-            target.classList.add(placeAfter ? "is-drop-target-after" : "is-drop-target-before");
-        });
-
-        tbody.addEventListener("drop", (event) => {
-            if (!state.cronogramaTableDragId) return;
-            event.preventDefault();
-
-            const target = event.target.closest("tr");
-            const dragged = tbody.querySelector(`tr[data-cronograma-id='${state.cronogramaTableDragId}']`);
-            if (!target || !dragged || target === dragged) {
-                renderCronogramaGantt();
-                return;
-            }
-
-            const rect = target.getBoundingClientRect();
-            const placeAfter = event.clientY > rect.top + rect.height / 2;
-            if (placeAfter) {
-                tbody.insertBefore(dragged, target.nextSibling);
-            } else {
-                tbody.insertBefore(dragged, target);
-            }
-
-            renderCronogramaGantt();
-        });
-
-        tbody.addEventListener("dragend", () => {
-            state.cronogramaTableDragId = "";
-            tbody.querySelectorAll("tr").forEach((row) => {
-                row.classList.remove("is-drag-source", "is-drop-target-before", "is-drop-target-after");
-            });
-        });
-    }
-
-    function bindCronogramaGanttEvents() {
-        const container = document.getElementById("cronogramaGantt");
-        if (!container || container.dataset.bound === "1") return;
-        container.dataset.bound = "1";
-
-        container.addEventListener("click", (event) => {
-            const deleteBtn = event.target.closest("[data-delete-row]");
-            if (!deleteBtn) return;
-
-            const rowId = deleteBtn.getAttribute("data-delete-row") || "";
-            const row = document.querySelector(`#rows_cronograma tr[data-cronograma-id='${rowId}']`);
-            if (row) {
-                row.remove();
-                renderCronogramaGantt();
-            }
-        });
-
-        container.addEventListener("mousedown", (event) => {
-            const bar = event.target.closest(".cronograma-gantt__bar");
-            if (!bar) return;
-
-            const rowId = bar.getAttribute("data-row-id") || "";
-            const task = findCronogramaTaskById(rowId);
-            if (!task || !task.start || !task.end) return;
-
-            const body = container.querySelector(".cronograma-gantt__body");
-            if (!body) return;
-            const totalDays = Number(body.dataset.totalDays || 0);
-            if (!totalDays) return;
-
-            const lane = bar.closest(".cronograma-gantt__lane");
-            if (!lane) return;
-            const laneRect = lane.getBoundingClientRect();
-            const dayWidth = laneRect.width / totalDays;
-            if (!dayWidth) return;
-
-            const mode = event.target.matches("[data-drag-mode='resize-start']")
-                ? "resize-start"
-                : event.target.matches("[data-drag-mode='resize-end']")
-                  ? "resize-end"
-                  : "move";
-
-            state.ganttDrag = {
-                rowId,
-                mode,
-                startX: event.clientX,
-                dayWidth,
-                origStart: task.start,
-                origEnd: task.end,
-                workingStart: task.start,
-                workingEnd: task.end,
-                targetRowId: rowId,
-            };
-
-            bar.classList.add("is-dragging");
-            document.body.classList.add("gantt-is-dragging");
-            event.preventDefault();
-        });
-
-        document.addEventListener("mousemove", (event) => {
-            if (!state.ganttDrag) return;
-            const drag = state.ganttDrag;
-
-            const deltaDays = Math.round((event.clientX - drag.startX) / drag.dayWidth);
-            let nextStart = drag.origStart;
-            let nextEnd = drag.origEnd;
-
-            if (drag.mode === "resize-start") {
-                nextStart = addDays(drag.origStart, deltaDays);
-                if (nextStart > drag.origEnd) nextStart = new Date(drag.origEnd);
-            } else if (drag.mode === "resize-end") {
-                nextEnd = addDays(drag.origEnd, deltaDays);
-                if (nextEnd < drag.origStart) nextEnd = new Date(drag.origStart);
-            } else {
-                nextStart = addDays(drag.origStart, deltaDays);
-                nextEnd = addDays(drag.origEnd, deltaDays);
-
-                const hoverRow = event.target.closest(".cronograma-gantt__row");
-                drag.targetRowId = hoverRow?.getAttribute("data-row-id") || drag.rowId;
-            }
-
-            drag.workingStart = nextStart;
-            drag.workingEnd = nextEnd;
-
-            const task = findCronogramaTaskById(drag.rowId);
-            if (task) {
-                applyCronogramaDatesToRow(task, nextStart, nextEnd);
-                renderCronogramaGantt();
-            }
-        });
-
-        document.addEventListener("mouseup", () => {
-            if (!state.ganttDrag) return;
-            const drag = state.ganttDrag;
-
-            if (drag.mode === "move" && drag.targetRowId && drag.targetRowId !== drag.rowId) {
-                reorderCronogramaRows(drag.rowId, drag.targetRowId);
-            }
-            document.body.classList.remove("gantt-is-dragging");
-            state.ganttDrag = null;
-            renderCronogramaGantt();
-        });
-    }
-
-    function bindCronogramaTableSync() {
-        const tbody = document.getElementById("rows_cronograma");
-        if (!tbody || tbody.dataset.syncBound === "1") return;
-        tbody.dataset.syncBound = "1";
-
-        ["input", "change"].forEach((evtName) => {
-            tbody.addEventListener(evtName, () => {
-                renderCronogramaGantt();
-            });
-        });
-    }
-
-    function addRow(tableKey, rowData) {
-        const tbody = document.getElementById(`rows_${tableKey}`);
-        if (!tbody) return;
-
-        if (tableKey === "equipe_de_interesse") {
-            tbody.appendChild(createEquipeRow(rowData || {}));
-            return;
-        }
-
-        if (tableKey === "aprovadores") {
-            if (!rowData) return;
-            tbody.appendChild(createAprovadorRow(rowData));
-            return;
-        }
-
-        const fields = TABLE_CONFIG[tableKey].fields;
-        const tr = tableKey === "cronograma" ? createCronogramaRow(rowData) : document.createElement("tr");
-
-        if (tableKey !== "cronograma") {
-            const cells = fields
-                .map((fieldname) => `<td>${createInput(fieldname, rowData?.[fieldname] || "")}</td>`)
-                .join("");
-
-            tr.innerHTML = `${cells}<td>${getTrashButtonHtml()}</td>`;
-        }
-        tbody.appendChild(tr);
-
-        if (tableKey === "cronograma") {
-            ensureCronogramaRowId(tr);
-        }
-
-        if (rowData && tableKey !== "cronograma") {
-            fields.forEach((fieldname) => {
-                const input = tr.querySelector(`[data-field='${fieldname}']`);
-                if (input) {
-                    setFieldValueWhenReady(input, rowData[fieldname] || "");
-                }
-            });
-        }
-
-        if (tableKey === "cronograma") {
-            renderCronogramaGantt();
-        }
-    }
-
-    function replaceRows(tableKey, rows) {
-        const tbody = document.getElementById(`rows_${tableKey}`);
-        if (!tbody) return;
-        tbody.innerHTML = "";
-
-        if ((rows || []).length === 0 && tableKey !== "equipe_de_interesse" && tableKey !== "aprovadores") {
-            addRow(tableKey, {});
-            return;
-        }
-
-        rows.forEach((row) => addRow(tableKey, row));
-
-        if (tableKey === "cronograma") {
-            renderCronogramaGantt();
-        }
-    }
-
-    function fillForm(data) {
-        if (!data) return;
-
-        state.reviewComments = data.comentarios_revisao_aprovacao || [];
-        updatePendingReviewBanner();
-        updateGoogleDriveButton(data.link_pasta_google_drive);
-
-        [
-            "nome_do_projeto",
-            "coordenador",
-            "tipo_padrinho_ou_orientador",
-            "padrinho_associado",
-            "padrinho_responsavel",
-            "justificativa",
-            "alinhamento_com_escotismo",
-            "competencias",
-            "especialidade",
-            "observacoes_e_comentarios",
-        ].forEach((fieldname) => {
-            const input = document.getElementById(fieldname);
-            if (input && data[fieldname] !== undefined && data[fieldname] !== null) {
-                setFieldValueWhenReady(input, data[fieldname]);
-            }
-        });
-
-        updateCommentsCardVisibility(data.observacoes_e_comentarios || "");
-
-        const dataInicio = document.getElementById("data_de_inicio");
-        const dataTermino = document.getElementById("data_de_termino");
-        if (dataInicio) setFieldValueWhenReady(dataInicio, data.data_de_inicio || "");
-        if (dataTermino) setFieldValueWhenReady(dataTermino, data.data_de_termino || "");
-
-        updateSponsorVisibility();
-
-        let equipeRows = data.equipe_de_interesse || [];
-        let aprovadorRows = data.aprovadores || [];
-        if (Array.isArray(data.envolvidos) && data.envolvidos.length) {
-            const rowsFromEnvolvidos = splitRowsFromEnvolvidos(data.envolvidos);
-            equipeRows = rowsFromEnvolvidos.equipeRows;
-            aprovadorRows = rowsFromEnvolvidos.aprovadorRows;
-        }
-
-        replaceRows("equipe_de_interesse", equipeRows);
-        replaceRows("aprovadores", aprovadorRows);
-        replaceRows("objetivos", data.objetivos || []);
-        replaceRows("ods", data.ods || []);
-        replaceRows("cronograma", data.cronograma || []);
-        replaceRows("recursos", data.recursos || []);
-        replaceRows("riscos", data.riscos || []);
-
-        const avaliacao = data.avaliacao_tap || "";
-        if (avaliacao) {
-            showAvaliacao(avaliacao);
-            if (avaliacao === "Gerando avaliação...") {
-                startPolling();
-            }
-        }
-    }
-
-    function sanitizeRenderedHtml(html) {
-        const container = document.createElement("div");
-        container.innerHTML = html || "";
-
-        container
-            .querySelectorAll("script, style, iframe, object, embed, link, meta, base, form")
-            .forEach((node) => node.remove());
-
-        container.querySelectorAll("*").forEach((node) => {
-            Array.from(node.attributes).forEach((attribute) => {
-                const name = String(attribute.name || "").toLowerCase();
-                const value = String(attribute.value || "").trim().toLowerCase();
-
-                if (name.startsWith("on") || name === "srcdoc") {
-                    node.removeAttribute(attribute.name);
-                    return;
-                }
-
-                if ((name === "href" || name === "src") && (value.startsWith("javascript:") || value.startsWith("data:text/html"))) {
-                    node.removeAttribute(attribute.name);
-                }
-            });
-        });
-
-        return container.innerHTML;
-    }
-
-    function renderSimpleMarkdown(texto) {
-        const escaped = escapeHtml(texto || "");
-        return escaped
-            .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-            .replace(/\*(.+?)\*/g, "<em>$1</em>")
-            .replace(/\n/g, "<br>");
-    }
-
-    function renderMarkdown(texto) {
-        if (window.frappe && typeof frappe.markdown === "function") {
-            return frappe.markdown(texto);
-        }
-        return renderSimpleMarkdown(texto);
-    }
-
-    function showAvaliacao(value) {
-        const section = document.getElementById("avaliacaoSection");
-        const container = document.getElementById("avaliacao_tap_markdown");
-        if (!section || !container) return;
-
-        const textValue = String(value || "").trim();
-        if (!textValue) return;
-
-        const html = renderMarkdown(textValue);
-        container.innerHTML = sanitizeRenderedHtml(html);
-        section.classList.remove("d-none");
-    }
-
-    function stopPolling() {
-        if (state.pollingId) {
-            clearInterval(state.pollingId);
-            state.pollingId = null;
-        }
-        state.pollingAttempts = 0;
-    }
-
-    async function pollAvaliacao() {
-        if (!state.projetoName) return;
-
-        try {
-            const result = await callApi(METHODS.consultarIA, {
-                projeto_name: state.projetoName,
-            });
-
-            if (result.avaliacao_tap) {
-                showAvaliacao(result.avaliacao_tap);
-            }
-
-            if (!result.pending) {
-                stopPolling();
-                showToast("Revisão por IA concluída.", "success");
-            }
-        } catch (error) {
-            stopPolling();
-            showToast(error.message || "Falha ao consultar revisão por IA.", "error");
-        }
-
-        state.pollingAttempts += 1;
-        if (state.pollingAttempts > 90) {
-            stopPolling();
-            showToast("A avaliação está demorando mais que o esperado. Tente atualizar a página em instantes.", "error");
-        }
-    }
-
-    function startPolling() {
-        stopPolling();
-        state.pollingId = setInterval(pollAvaliacao, 4000);
-    }
-
-    async function saveDraft(silent) {
-        if (state.saving) return false;
-
-        state.saving = true;
-        setButtonsDisabled(true);
-
-        try {
-            const payload = buildPayload();
-            const result = await callApi(METHODS.salvarRascunho, {
-                projeto_name: state.projetoName || null,
-                payload: JSON.stringify(payload),
-            });
-
-            syncProjetoReference(result.name);
-
-            if (!silent) {
-                showToast("Rascunho salvo com sucesso.", "success");
-            }
-            return true;
-        } catch (error) {
-            resetActionState();
-            showToast(error.message || "Falha ao salvar rascunho.", "error");
-            return false;
-        } finally {
-            resetActionState();
-        }
-    }
-
-    async function submitProject() {
-        if (state.saving) return;
-
-        const pendingComments = getPendingReviewComments();
-        if (pendingComments.length > 0) {
-            showToast("Resolva todos os comentários pendentes antes de submeter novamente para aprovação.", "error");
-            return;
-        }
-
-        state.saving = true;
-        setButtonsDisabled(true);
-
-        try {
-            const payload = buildPayload();
-            const result = await callApi(METHODS.submeter, {
-                projeto_name: state.projetoName || null,
-                payload: JSON.stringify(payload),
-            });
-
-            syncProjetoReference(result.name);
-            redirectToApprovalPage();
-        } catch (error) {
-            resetActionState();
-            showToast(error.message || "Falha ao submeter projeto.", "error");
-        } finally {
-            resetActionState();
-        }
-    }
-
-    async function runAvaliacaoIA() {
-        if (!state.projetoName) {
-            const ok = await saveDraft(true);
-            if (!ok) {
-                showToast("Não foi possível iniciar avaliação sem salvar o projeto.", "error");
-                return;
-            }
-        }
-
-        setButtonsDisabled(true);
-
-        try {
-            const result = await callApi(METHODS.solicitarIA, {
-                projeto_name: state.projetoName,
-            });
-
-            showAvaliacao(result.avaliacao_tap || "Gerando avaliação...");
-            showToast("Revisão por IA iniciada. Aguarde o processamento.", "success");
-            startPolling();
-        } catch (error) {
-            setButtonsDisabled(false);
-            showToast(error.message || "Falha ao iniciar revisão por IA.", "error");
-        } finally {
-            setButtonsDisabled(false);
-        }
-    }
-
-    function bindTableEvents() {
-        document.querySelectorAll("[data-add-row]").forEach((btn) => {
-            btn.addEventListener("click", () => {
-                const tableKey = btn.getAttribute("data-add-row");
-                addRow(tableKey, {});
-                if (tableKey === "cronograma") {
-                    renderCronogramaGantt();
-                }
-            });
-        });
-
-        document.querySelectorAll("tbody[id^='rows_']").forEach((tbody) => {
-            tbody.addEventListener("click", (event) => {
-                const deleteBtn = event.target?.closest?.(".btn-delete-row");
-                if (deleteBtn) {
-                    event.preventDefault();
-                    const row = deleteBtn.closest("tr");
-                    if (row) {
-                        if (tbody.id === "rows_aprovadores" && (row.dataset.canRemove || "0") !== "1") {
-                            showToast("Este aprovador é obrigatório e não pode ser removido.", "error");
-                            return;
-                        }
-                        row.remove();
-                        if (tbody.id === "rows_cronograma") {
-                            renderCronogramaGantt();
-                        }
-                    }
-                }
-            });
-        });
-    }
-
-    function bindEquipeBuilderActions() {
-        const tipoSelect = document.getElementById("equipe_tipo_pessoa");
-        const associadoSelect = document.getElementById("equipe_associado");
-        const responsavelSelect = document.getElementById("equipe_responsavel");
-        const btnAdicionar = document.getElementById("btnAdicionarEquipe");
-
-        if (tipoSelect) {
-            tipoSelect.addEventListener("change", updateEquipeBuilderMode);
-        }
-
-        if (associadoSelect) {
-            associadoSelect.addEventListener("change", () => {
-                if ((tipoSelect?.value || "") === "Associado") {
-                    preencherEquipePeloCadastro("Associado", associadoSelect.value || "");
-                }
-            });
-        }
-
-        if (responsavelSelect) {
-            responsavelSelect.addEventListener("change", () => {
-                if ((tipoSelect?.value || "") === "Responsavel") {
-                    preencherEquipePeloCadastro("Responsavel", responsavelSelect.value || "");
-                }
-            });
-        }
-
-        if (btnAdicionar) {
-            btnAdicionar.addEventListener("click", () => {
-                const tipo = tipoSelect?.value || "Associado";
-                const associado = document.getElementById("equipe_associado")?.value || "";
-                const responsavel = document.getElementById("equipe_responsavel")?.value || "";
-                const nome = document.getElementById("equipe_nome")?.value || "";
-                const email = document.getElementById("equipe_email")?.value || "";
-                const telefone = document.getElementById("equipe_telefone")?.value || "";
-                const funcao = document.getElementById("equipe_funcao")?.value || "";
-
-                if (tipo === "Associado" && !associado) {
-                    showToast("Selecione o associado para adicionar na equipe.", "error");
-                    return;
-                }
-
-                if (tipo === "Responsavel" && !responsavel) {
-                    showToast("Selecione o responsável para adicionar na equipe.", "error");
-                    return;
-                }
-
-                if (!nome || !email || !telefone) {
-                    showToast("Preencha nome, email e telefone para adicionar na equipe.", "error");
-                    return;
-                }
-
-                addRow("equipe_de_interesse", {
-                    tipo_pessoa: tipo,
-                    associado: tipo === "Associado" ? associado : "",
-                    responsavel: tipo === "Responsavel" ? responsavel : "",
-                    nome,
-                    email,
-                    telefone,
-                    funcao,
-                });
-
-                document.getElementById("equipe_associado").value = "";
-                document.getElementById("equipe_responsavel").value = "";
-                clearEquipeBuilderPersonalFields();
-                document.getElementById("equipe_funcao").value = "";
-                updateEquipeBuilderMode();
-            });
-        }
-    }
-
-    function hasAprovadorKeyInTable(aprovadorKey) {
-        const key = String(aprovadorKey || "").trim();
-        if (!key) return false;
-        const tbody = document.getElementById("rows_aprovadores");
-        if (!tbody) return false;
-        return Array.from(tbody.querySelectorAll("tr")).some(
-            (tr) => (tr.dataset.aprovadorKey || "") === key
-        );
-    }
-
-    function bindAprovadorBuilderActions() {
-        const tipoSelect = document.getElementById("aprovador_tipo_pessoa");
-        const associadoSelect = document.getElementById("aprovador_associado");
-        const responsavelSelect = document.getElementById("aprovador_responsavel");
-        const btnAdicionar = document.getElementById("btnAdicionarAprovador");
-
-        if (tipoSelect) {
-            tipoSelect.addEventListener("change", updateAprovadorBuilderMode);
-        }
-
-        if (associadoSelect) {
-            associadoSelect.addEventListener("change", () => {
-                if ((tipoSelect?.value || "") === "Associado") {
-                    preencherAprovadorPeloCadastro("Associado", associadoSelect.value || "");
-                }
-            });
-        }
-
-        if (responsavelSelect) {
-            responsavelSelect.addEventListener("change", () => {
-                if ((tipoSelect?.value || "") === "Responsavel") {
-                    preencherAprovadorPeloCadastro("Responsavel", responsavelSelect.value || "");
-                }
-            });
-        }
-
-        if (btnAdicionar) {
-            btnAdicionar.addEventListener("click", () => {
-                const tipo = tipoSelect?.value === "Responsavel" ? "Responsavel" : "Associado";
-                const associado = (associadoSelect?.value || "").trim();
-                const responsavel = (responsavelSelect?.value || "").trim();
-                const nome = (document.getElementById("aprovador_nome")?.value || "").trim();
-                const email = (document.getElementById("aprovador_email")?.value || "").trim();
-                const telefone = (document.getElementById("aprovador_telefone")?.value || "").trim();
-
-                if (tipo === "Associado" && !associado) {
-                    showToast("Selecione o associado para adicionar o aprovador.", "error");
-                    return;
-                }
-                if (tipo === "Responsavel" && !responsavel) {
-                    showToast("Selecione o responsável para adicionar o aprovador.", "error");
-                    return;
-                }
-                if (!nome || !email || !telefone) {
-                    showToast("Nome, email e telefone do aprovador são obrigatórios.", "error");
-                    return;
-                }
-
-                const aprovadorKey = `${tipo}:${tipo === "Associado" ? associado : responsavel}`;
-                if (hasAprovadorKeyInTable(aprovadorKey)) {
-                    showToast("Este aprovador já está na lista.", "error");
-                    return;
-                }
-
-                addRow("aprovadores", {
-                    tipo_pessoa: tipo,
-                    associado: tipo === "Associado" ? associado : "",
-                    responsavel: tipo === "Responsavel" ? responsavel : "",
-                    nome,
-                    email,
-                    telefone,
-                    origem_regra: "manual",
-                    permite_remover: 1,
-                });
-
-                if (associadoSelect) associadoSelect.value = "";
-                if (responsavelSelect) responsavelSelect.value = "";
-                clearAprovadorBuilderPersonalFields();
-                updateAprovadorBuilderMode();
-            });
-        }
-    }
-
-    function bindActions() {
-        const btnSalvar = document.getElementById("btnSalvarRascunho");
-        const btnSubmeter = document.getElementById("btnSubmeter");
-        const btnIA = document.getElementById("btnAvaliacaoIA");
-        const btnPendencias = document.getElementById("btnPendenciasRevisao");
-        const btnConfirmSubmit = document.getElementById("btnConfirmSubmitProjeto");
-        const coordenador = document.getElementById("coordenador");
-        const tipo = document.getElementById("tipo_padrinho_ou_orientador");
-        const padrinhoAssociado = document.getElementById("padrinho_associado");
-        const padrinhoResponsavel = document.getElementById("padrinho_responsavel");
-
-        if (btnSalvar) {
-            btnSalvar.addEventListener("click", () => saveDraft(false));
-        }
-        if (btnSubmeter) {
-            btnSubmeter.addEventListener("click", openSubmitConfirmModal);
-        }
-        if (btnConfirmSubmit) {
-            btnConfirmSubmit.addEventListener("click", submitProject);
-        }
-        if (btnIA) {
-            btnIA.addEventListener("click", runAvaliacaoIA);
-        }
-        if (btnPendencias) {
-            btnPendencias.addEventListener("click", openPendingReviewModal);
-        }
-        if (coordenador) {
-            coordenador.addEventListener("change", async () => {
-                await syncSponsorAprovadorRowInTable();
-            });
-        }
-        if (tipo) {
-            tipo.addEventListener("change", async () => {
-                updateSponsorVisibility();
-                await syncSponsorAprovadorRowInTable();
-            });
-        }
-        if (padrinhoAssociado) {
-            padrinhoAssociado.addEventListener("change", async () => {
-                await syncSponsorAprovadorRowInTable();
-            });
-        }
-        if (padrinhoResponsavel) {
-            padrinhoResponsavel.addEventListener("change", async () => {
-                await syncSponsorAprovadorRowInTable();
-            });
-        }
-
-        document.querySelectorAll("[data-pending-review-close]").forEach((btn) => {
-            btn.addEventListener("click", closePendingReviewModal);
-        });
-
-        document.querySelectorAll("[data-submit-confirm-close]").forEach((btn) => {
-            btn.addEventListener("click", closeSubmitConfirmModal);
-        });
-
-        const pendingTable = document.getElementById("rows_pending_review_comments");
-        if (pendingTable) {
-            pendingTable.addEventListener("click", (event) => {
-                const button = event.target.closest("[data-resolve-review-comment]");
-                if (!button) return;
-                const commentName = button.getAttribute("data-resolve-review-comment") || "";
-                resolveReviewComment(commentName);
-            });
-        }
-
-        bindEquipeBuilderActions();
-        bindAprovadorBuilderActions();
-    }
-
-    function openInfoModal(key) {
-        const title = document.getElementById("infoModalTitle");
-        const body = document.getElementById("infoModalBody");
-        const data = INFO_CONTENT[key];
-        if (!title || !body || !data) return;
-
-        title.textContent = data.title;
-        body.innerHTML = data.body;
-        openDialogById("infoModal");
-    }
-
-    function closeInfoModal() {
-        closeDialogById("infoModal");
-    }
-
-    function bindInfoModal() {
-        document.querySelectorAll("[data-info-key]").forEach((btn) => {
-            btn.addEventListener("click", () => {
-                const key = btn.getAttribute("data-info-key") || "";
-                openInfoModal(key);
-            });
-        });
-
-        document.querySelectorAll("[data-info-close]").forEach((btn) => {
-            btn.addEventListener("click", closeInfoModal);
-        });
-
-        document.addEventListener("keydown", (event) => {
-            if (event.key === "Escape") {
-                closeInfoModal();
-                closePendingReviewModal();
-                closeSubmitConfirmModal();
-            }
-        });
-    }
-
-    function syncProjetoReference(projetoName) {
-        const normalized = String(projetoName || "").trim();
-        if (!normalized) {
-            return;
-        }
-
-        state.projetoName = normalized;
-
-        const hidden = document.getElementById("projetoName");
-        if (hidden) {
-            hidden.value = normalized;
-        }
-
-        const url = new URL(window.location.href);
-        if (url.searchParams.get("projeto") !== normalized) {
-            url.searchParams.set("projeto", normalized);
-            const nextUrl = `${url.pathname}?${url.searchParams.toString()}${url.hash}`;
-            window.history.replaceState({}, "", nextUrl);
-        }
-    }
-
-    function getProjetoNameFromPage() {
-        const hidden = (document.getElementById("projetoName")?.value || "").trim();
-        if (hidden) return hidden;
-
-        const params = new URLSearchParams(window.location.search);
-        return (params.get("projeto") || "").trim();
-    }
-
-    async function bootstrap() {
-        bindInfoModal();
-
-        state.projetoName = getProjetoNameFromPage();
-
-        try {
-            const result = await callApi(METHODS.bootstrap, {
-                projeto_name: state.projetoName || null,
-            });
-
-            state.choices = result.choices || state.choices;
-            state.defaultAprovadores = result.default_aprovadores || [];
-            state.isCoordinator = Boolean(result.is_coordinator);
-
-            fillSelect("coordenador", state.choices.associados, "Selecione...");
-            fillSelect(
-                "padrinho_associado",
-                state.choices.associados_padrinho || state.choices.associados,
-                "Selecione..."
-            );
-            fillSelect("padrinho_responsavel", state.choices.responsaveis, "Selecione...");
-            fillSelect("equipe_associado", state.choices.associados, "Selecione...");
-            fillSelect("equipe_responsavel", state.choices.responsaveis, "Selecione...");
-            fillSelect("aprovador_associado", state.choices.associados, "Selecione...");
-            fillSelect("aprovador_responsavel", state.choices.responsaveis, "Selecione...");
-
-            bindActions();
-            bindTableEvents();
-            bindCronogramaTableSync();
-            bindCronogramaTableDrag();
-            bindCronogramaGanttEvents();
-            updateEquipeBuilderMode();
-            updateAprovadorBuilderMode();
-            updateSponsorVisibility();
-
-            const projeto = result.projeto;
-            if (projeto) {
-                syncProjetoReference(projeto.name);
-                fillForm(projeto);
-                await syncSponsorAprovadorRowInTable();
-            } else {
-                updateGoogleDriveButton("");
-                state.reviewComments = [];
-                updatePendingReviewBanner();
-                updateCommentsCardVisibility("");
-                replaceRows("equipe_de_interesse", []);
-                replaceRows("aprovadores", state.defaultAprovadores || []);
-                replaceRows("objetivos", []);
-                replaceRows("ods", []);
-                replaceRows("cronograma", []);
-                replaceRows("recursos", []);
-                replaceRows("riscos", []);
-                await syncSponsorAprovadorRowInTable();
-            }
-
-            renderCronogramaGantt();
-        } catch (error) {
-            showToast(error.message || "Falha ao carregar dados do formulário.", "error");
-        }
-    }
-
-    document.addEventListener("DOMContentLoaded", bootstrap);
+	}
+
+	function findCronogramaTaskById(rowId) {
+		return getCronogramaRows().find((row) => row.id === rowId) || null;
+	}
+
+	function reorderCronogramaRows(draggedId, targetId) {
+		if (!draggedId || !targetId || draggedId === targetId) return;
+
+		const tbody = document.getElementById("rows_cronograma");
+		if (!tbody) return;
+
+		const dragged = tbody.querySelector(`tr[data-cronograma-id='${draggedId}']`);
+		const target = tbody.querySelector(`tr[data-cronograma-id='${targetId}']`);
+		if (!dragged || !target) return;
+
+		const rows = Array.from(tbody.querySelectorAll("tr"));
+		const draggedIndex = rows.indexOf(dragged);
+		const targetIndex = rows.indexOf(target);
+		if (draggedIndex === -1 || targetIndex === -1 || draggedIndex === targetIndex) return;
+
+		if (draggedIndex < targetIndex) {
+			tbody.insertBefore(dragged, target.nextSibling);
+		} else {
+			tbody.insertBefore(dragged, target);
+		}
+	}
+
+	function bindCronogramaTableDrag() {
+		const tbody = document.getElementById("rows_cronograma");
+		if (!tbody || tbody.dataset.dragBound === "1") return;
+		tbody.dataset.dragBound = "1";
+
+		tbody.addEventListener("dragstart", (event) => {
+			const handle = event.target.closest("[data-row-drag-handle]");
+			if (!handle) {
+				event.preventDefault();
+				return;
+			}
+
+			const tr = handle.closest("tr");
+			if (!tr) {
+				event.preventDefault();
+				return;
+			}
+
+			const rowId = ensureCronogramaRowId(tr);
+			state.cronogramaTableDragId = rowId;
+			tr.classList.add("is-drag-source");
+			if (event.dataTransfer) {
+				event.dataTransfer.effectAllowed = "move";
+				event.dataTransfer.setData("text/plain", rowId);
+			}
+		});
+
+		tbody.addEventListener("dragover", (event) => {
+			if (!state.cronogramaTableDragId) return;
+			event.preventDefault();
+
+			const target = event.target.closest("tr");
+			if (!target) return;
+			const targetId = ensureCronogramaRowId(target);
+
+			tbody.querySelectorAll("tr").forEach((row) => {
+				row.classList.remove("is-drop-target-before", "is-drop-target-after");
+			});
+
+			if (targetId === state.cronogramaTableDragId) return;
+
+			const rect = target.getBoundingClientRect();
+			const placeAfter = event.clientY > rect.top + rect.height / 2;
+			target.classList.add(placeAfter ? "is-drop-target-after" : "is-drop-target-before");
+		});
+
+		tbody.addEventListener("drop", (event) => {
+			if (!state.cronogramaTableDragId) return;
+			event.preventDefault();
+
+			const target = event.target.closest("tr");
+			const dragged = tbody.querySelector(
+				`tr[data-cronograma-id='${state.cronogramaTableDragId}']`
+			);
+			if (!target || !dragged || target === dragged) {
+				renderCronogramaGantt();
+				return;
+			}
+
+			const rect = target.getBoundingClientRect();
+			const placeAfter = event.clientY > rect.top + rect.height / 2;
+			if (placeAfter) {
+				tbody.insertBefore(dragged, target.nextSibling);
+			} else {
+				tbody.insertBefore(dragged, target);
+			}
+
+			renderCronogramaGantt();
+		});
+
+		tbody.addEventListener("dragend", () => {
+			state.cronogramaTableDragId = "";
+			tbody.querySelectorAll("tr").forEach((row) => {
+				row.classList.remove(
+					"is-drag-source",
+					"is-drop-target-before",
+					"is-drop-target-after"
+				);
+			});
+		});
+	}
+
+	function bindCronogramaGanttEvents() {
+		const container = document.getElementById("cronogramaGantt");
+		if (!container || container.dataset.bound === "1") return;
+		container.dataset.bound = "1";
+
+		container.addEventListener("click", (event) => {
+			const deleteBtn = event.target.closest("[data-delete-row]");
+			if (!deleteBtn) return;
+
+			const rowId = deleteBtn.getAttribute("data-delete-row") || "";
+			const row = document.querySelector(
+				`#rows_cronograma tr[data-cronograma-id='${rowId}']`
+			);
+			if (row) {
+				row.remove();
+				renderCronogramaGantt();
+			}
+		});
+
+		container.addEventListener("mousedown", (event) => {
+			const bar = event.target.closest(".cronograma-gantt__bar");
+			if (!bar) return;
+
+			const rowId = bar.getAttribute("data-row-id") || "";
+			const task = findCronogramaTaskById(rowId);
+			if (!task || !task.start || !task.end) return;
+
+			const body = container.querySelector(".cronograma-gantt__body");
+			if (!body) return;
+			const totalDays = Number(body.dataset.totalDays || 0);
+			if (!totalDays) return;
+
+			const lane = bar.closest(".cronograma-gantt__lane");
+			if (!lane) return;
+			const laneRect = lane.getBoundingClientRect();
+			const dayWidth = laneRect.width / totalDays;
+			if (!dayWidth) return;
+
+			const mode = event.target.matches("[data-drag-mode='resize-start']")
+				? "resize-start"
+				: event.target.matches("[data-drag-mode='resize-end']")
+				? "resize-end"
+				: "move";
+
+			state.ganttDrag = {
+				rowId,
+				mode,
+				startX: event.clientX,
+				dayWidth,
+				origStart: task.start,
+				origEnd: task.end,
+				workingStart: task.start,
+				workingEnd: task.end,
+				targetRowId: rowId,
+			};
+
+			bar.classList.add("is-dragging");
+			document.body.classList.add("gantt-is-dragging");
+			event.preventDefault();
+		});
+
+		document.addEventListener("mousemove", (event) => {
+			if (!state.ganttDrag) return;
+			const drag = state.ganttDrag;
+
+			const deltaDays = Math.round((event.clientX - drag.startX) / drag.dayWidth);
+			let nextStart = drag.origStart;
+			let nextEnd = drag.origEnd;
+
+			if (drag.mode === "resize-start") {
+				nextStart = addDays(drag.origStart, deltaDays);
+				if (nextStart > drag.origEnd) nextStart = new Date(drag.origEnd);
+			} else if (drag.mode === "resize-end") {
+				nextEnd = addDays(drag.origEnd, deltaDays);
+				if (nextEnd < drag.origStart) nextEnd = new Date(drag.origStart);
+			} else {
+				nextStart = addDays(drag.origStart, deltaDays);
+				nextEnd = addDays(drag.origEnd, deltaDays);
+
+				const hoverRow = event.target.closest(".cronograma-gantt__row");
+				drag.targetRowId = hoverRow?.getAttribute("data-row-id") || drag.rowId;
+			}
+
+			drag.workingStart = nextStart;
+			drag.workingEnd = nextEnd;
+
+			const task = findCronogramaTaskById(drag.rowId);
+			if (task) {
+				applyCronogramaDatesToRow(task, nextStart, nextEnd);
+				renderCronogramaGantt();
+			}
+		});
+
+		document.addEventListener("mouseup", () => {
+			if (!state.ganttDrag) return;
+			const drag = state.ganttDrag;
+
+			if (drag.mode === "move" && drag.targetRowId && drag.targetRowId !== drag.rowId) {
+				reorderCronogramaRows(drag.rowId, drag.targetRowId);
+			}
+			document.body.classList.remove("gantt-is-dragging");
+			state.ganttDrag = null;
+			renderCronogramaGantt();
+		});
+	}
+
+	function bindCronogramaTableSync() {
+		const tbody = document.getElementById("rows_cronograma");
+		if (!tbody || tbody.dataset.syncBound === "1") return;
+		tbody.dataset.syncBound = "1";
+
+		["input", "change"].forEach((evtName) => {
+			tbody.addEventListener(evtName, () => {
+				renderCronogramaGantt();
+			});
+		});
+	}
+
+	function addRow(tableKey, rowData) {
+		const tbody = document.getElementById(`rows_${tableKey}`);
+		if (!tbody) return;
+
+		if (tableKey === "equipe_de_interesse") {
+			tbody.appendChild(createEquipeRow(rowData || {}));
+			return;
+		}
+
+		if (tableKey === "aprovadores") {
+			if (!rowData) return;
+			tbody.appendChild(createAprovadorRow(rowData));
+			return;
+		}
+
+		const fields = TABLE_CONFIG[tableKey].fields;
+		const tr =
+			tableKey === "cronograma"
+				? createCronogramaRow(rowData)
+				: document.createElement("tr");
+
+		if (tableKey !== "cronograma") {
+			const cells = fields
+				.map(
+					(fieldname) => `<td>${createInput(fieldname, rowData?.[fieldname] || "")}</td>`
+				)
+				.join("");
+
+			tr.innerHTML = `${cells}<td>${getTrashButtonHtml()}</td>`;
+		}
+		tbody.appendChild(tr);
+
+		if (tableKey === "cronograma") {
+			ensureCronogramaRowId(tr);
+		}
+
+		if (rowData && tableKey !== "cronograma") {
+			fields.forEach((fieldname) => {
+				const input = tr.querySelector(`[data-field='${fieldname}']`);
+				if (input) {
+					setFieldValueWhenReady(input, rowData[fieldname] || "");
+				}
+			});
+		}
+
+		if (tableKey === "cronograma") {
+			renderCronogramaGantt();
+		}
+	}
+
+	function replaceRows(tableKey, rows) {
+		const tbody = document.getElementById(`rows_${tableKey}`);
+		if (!tbody) return;
+		tbody.innerHTML = "";
+
+		if (
+			(rows || []).length === 0 &&
+			tableKey !== "equipe_de_interesse" &&
+			tableKey !== "aprovadores"
+		) {
+			addRow(tableKey, {});
+			return;
+		}
+
+		rows.forEach((row) => addRow(tableKey, row));
+
+		if (tableKey === "cronograma") {
+			renderCronogramaGantt();
+		}
+	}
+
+	function fillForm(data) {
+		if (!data) return;
+
+		state.reviewComments = data.comentarios_revisao_aprovacao || [];
+		updatePendingReviewBanner();
+		updateGoogleDriveButton(data.link_pasta_google_drive);
+
+		[
+			"nome_do_projeto",
+			"coordenador",
+			"tipo_padrinho_ou_orientador",
+			"padrinho_associado",
+			"padrinho_responsavel",
+			"justificativa",
+			"alinhamento_com_escotismo",
+			"competencias",
+			"especialidade",
+			"observacoes_e_comentarios",
+		].forEach((fieldname) => {
+			const input = document.getElementById(fieldname);
+			if (input && data[fieldname] !== undefined && data[fieldname] !== null) {
+				setFieldValueWhenReady(input, data[fieldname]);
+			}
+		});
+
+		updateCommentsCardVisibility(data.observacoes_e_comentarios || "");
+
+		const dataInicio = document.getElementById("data_de_inicio");
+		const dataTermino = document.getElementById("data_de_termino");
+		if (dataInicio) setFieldValueWhenReady(dataInicio, data.data_de_inicio || "");
+		if (dataTermino) setFieldValueWhenReady(dataTermino, data.data_de_termino || "");
+
+		updateSponsorVisibility();
+
+		let equipeRows = data.equipe_de_interesse || [];
+		let aprovadorRows = data.aprovadores || [];
+		if (Array.isArray(data.envolvidos) && data.envolvidos.length) {
+			const rowsFromEnvolvidos = splitRowsFromEnvolvidos(data.envolvidos);
+			equipeRows = rowsFromEnvolvidos.equipeRows;
+			aprovadorRows = rowsFromEnvolvidos.aprovadorRows;
+		}
+
+		replaceRows("equipe_de_interesse", equipeRows);
+		replaceRows("aprovadores", aprovadorRows);
+		replaceRows("objetivos", data.objetivos || []);
+		replaceRows("ods", data.ods || []);
+		replaceRows("cronograma", data.cronograma || []);
+		replaceRows("recursos", data.recursos || []);
+		replaceRows("riscos", data.riscos || []);
+
+		const avaliacao = data.avaliacao_tap || "";
+		if (avaliacao) {
+			showAvaliacao(avaliacao);
+			if (avaliacao === "Gerando avaliação...") {
+				startPolling();
+			}
+		}
+	}
+
+	function sanitizeRenderedHtml(html) {
+		const container = document.createElement("div");
+		container.innerHTML = html || "";
+
+		container
+			.querySelectorAll("script, style, iframe, object, embed, link, meta, base, form")
+			.forEach((node) => node.remove());
+
+		container.querySelectorAll("*").forEach((node) => {
+			Array.from(node.attributes).forEach((attribute) => {
+				const name = String(attribute.name || "").toLowerCase();
+				const value = String(attribute.value || "")
+					.trim()
+					.toLowerCase();
+
+				if (name.startsWith("on") || name === "srcdoc") {
+					node.removeAttribute(attribute.name);
+					return;
+				}
+
+				if (
+					(name === "href" || name === "src") &&
+					(value.startsWith("javascript:") || value.startsWith("data:text/html"))
+				) {
+					node.removeAttribute(attribute.name);
+				}
+			});
+		});
+
+		return container.innerHTML;
+	}
+
+	function renderSimpleMarkdown(texto) {
+		const escaped = escapeHtml(texto || "");
+		return escaped
+			.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+			.replace(/\*(.+?)\*/g, "<em>$1</em>")
+			.replace(/\n/g, "<br>");
+	}
+
+	function renderMarkdown(texto) {
+		if (window.frappe && typeof frappe.markdown === "function") {
+			return frappe.markdown(texto);
+		}
+		return renderSimpleMarkdown(texto);
+	}
+
+	function showAvaliacao(value) {
+		const section = document.getElementById("avaliacaoSection");
+		const container = document.getElementById("avaliacao_tap_markdown");
+		if (!section || !container) return;
+
+		const textValue = String(value || "").trim();
+		if (!textValue) return;
+
+		const html = renderMarkdown(textValue);
+		container.innerHTML = sanitizeRenderedHtml(html);
+		section.classList.remove("d-none");
+	}
+
+	function stopPolling() {
+		if (state.pollingId) {
+			clearInterval(state.pollingId);
+			state.pollingId = null;
+		}
+		state.pollingAttempts = 0;
+	}
+
+	async function pollAvaliacao() {
+		if (!state.projetoName) return;
+
+		try {
+			const result = await callApi(METHODS.consultarIA, {
+				projeto_name: state.projetoName,
+			});
+
+			if (result.avaliacao_tap) {
+				showAvaliacao(result.avaliacao_tap);
+			}
+
+			if (!result.pending) {
+				stopPolling();
+				showToast("Revisão por IA concluída.", "success");
+			}
+		} catch (error) {
+			stopPolling();
+			showToast(error.message || "Falha ao consultar revisão por IA.", "error");
+		}
+
+		state.pollingAttempts += 1;
+		if (state.pollingAttempts > 90) {
+			stopPolling();
+			showToast(
+				"A avaliação está demorando mais que o esperado. Tente atualizar a página em instantes.",
+				"error"
+			);
+		}
+	}
+
+	function startPolling() {
+		stopPolling();
+		state.pollingId = setInterval(pollAvaliacao, 4000);
+	}
+
+	async function saveDraft(silent) {
+		if (state.saving) return false;
+
+		state.saving = true;
+		setButtonsDisabled(true);
+
+		try {
+			const payload = buildPayload();
+			const result = await callApi(METHODS.salvarRascunho, {
+				projeto_name: state.projetoName || null,
+				payload: JSON.stringify(payload),
+			});
+
+			syncProjetoReference(result.name);
+
+			if (!silent) {
+				showToast("Rascunho salvo com sucesso.", "success");
+			}
+			return true;
+		} catch (error) {
+			resetActionState();
+			showToast(error.message || "Falha ao salvar rascunho.", "error");
+			return false;
+		} finally {
+			resetActionState();
+		}
+	}
+
+	async function submitProject() {
+		if (state.saving) return;
+
+		const pendingComments = getPendingReviewComments();
+		if (pendingComments.length > 0) {
+			showToast(
+				"Resolva todos os comentários pendentes antes de submeter novamente para aprovação.",
+				"error"
+			);
+			return;
+		}
+
+		state.saving = true;
+		setButtonsDisabled(true);
+
+		try {
+			const payload = buildPayload();
+			const result = await callApi(METHODS.submeter, {
+				projeto_name: state.projetoName || null,
+				payload: JSON.stringify(payload),
+			});
+
+			syncProjetoReference(result.name);
+			redirectToApprovalPage();
+		} catch (error) {
+			resetActionState();
+			showToast(error.message || "Falha ao submeter projeto.", "error");
+		} finally {
+			resetActionState();
+		}
+	}
+
+	async function runAvaliacaoIA() {
+		if (!state.projetoName) {
+			const ok = await saveDraft(true);
+			if (!ok) {
+				showToast("Não foi possível iniciar avaliação sem salvar o projeto.", "error");
+				return;
+			}
+		}
+
+		setButtonsDisabled(true);
+
+		try {
+			const result = await callApi(METHODS.solicitarIA, {
+				projeto_name: state.projetoName,
+			});
+
+			showAvaliacao(result.avaliacao_tap || "Gerando avaliação...");
+			showToast("Revisão por IA iniciada. Aguarde o processamento.", "success");
+			startPolling();
+		} catch (error) {
+			setButtonsDisabled(false);
+			showToast(error.message || "Falha ao iniciar revisão por IA.", "error");
+		} finally {
+			setButtonsDisabled(false);
+		}
+	}
+
+	function bindTableEvents() {
+		document.querySelectorAll("[data-add-row]").forEach((btn) => {
+			btn.addEventListener("click", () => {
+				const tableKey = btn.getAttribute("data-add-row");
+				addRow(tableKey, {});
+				if (tableKey === "cronograma") {
+					renderCronogramaGantt();
+				}
+			});
+		});
+
+		document.querySelectorAll("tbody[id^='rows_']").forEach((tbody) => {
+			tbody.addEventListener("click", (event) => {
+				const deleteBtn = event.target?.closest?.(".btn-delete-row");
+				if (deleteBtn) {
+					event.preventDefault();
+					const row = deleteBtn.closest("tr");
+					if (row) {
+						if (
+							tbody.id === "rows_aprovadores" &&
+							(row.dataset.canRemove || "0") !== "1"
+						) {
+							showToast(
+								"Este aprovador é obrigatório e não pode ser removido.",
+								"error"
+							);
+							return;
+						}
+						row.remove();
+						if (tbody.id === "rows_cronograma") {
+							renderCronogramaGantt();
+						}
+					}
+				}
+			});
+		});
+	}
+
+	function bindEquipeBuilderActions() {
+		const tipoSelect = document.getElementById("equipe_tipo_pessoa");
+		const associadoSelect = document.getElementById("equipe_associado");
+		const responsavelSelect = document.getElementById("equipe_responsavel");
+		const btnAdicionar = document.getElementById("btnAdicionarEquipe");
+
+		if (tipoSelect) {
+			tipoSelect.addEventListener("change", updateEquipeBuilderMode);
+		}
+
+		if (associadoSelect) {
+			associadoSelect.addEventListener("change", () => {
+				if ((tipoSelect?.value || "") === "Associado") {
+					preencherEquipePeloCadastro("Associado", associadoSelect.value || "");
+				}
+			});
+		}
+
+		if (responsavelSelect) {
+			responsavelSelect.addEventListener("change", () => {
+				if ((tipoSelect?.value || "") === "Responsavel") {
+					preencherEquipePeloCadastro("Responsavel", responsavelSelect.value || "");
+				}
+			});
+		}
+
+		if (btnAdicionar) {
+			btnAdicionar.addEventListener("click", () => {
+				const tipo = tipoSelect?.value || "Associado";
+				const associado = document.getElementById("equipe_associado")?.value || "";
+				const responsavel = document.getElementById("equipe_responsavel")?.value || "";
+				const nome = document.getElementById("equipe_nome")?.value || "";
+				const email = document.getElementById("equipe_email")?.value || "";
+				const telefone = document.getElementById("equipe_telefone")?.value || "";
+				const funcao = document.getElementById("equipe_funcao")?.value || "";
+
+				if (tipo === "Associado" && !associado) {
+					showToast("Selecione o associado para adicionar na equipe.", "error");
+					return;
+				}
+
+				if (tipo === "Responsavel" && !responsavel) {
+					showToast("Selecione o responsável para adicionar na equipe.", "error");
+					return;
+				}
+
+				if (!nome || !email || !telefone) {
+					showToast(
+						"Preencha nome, email e telefone para adicionar na equipe.",
+						"error"
+					);
+					return;
+				}
+
+				addRow("equipe_de_interesse", {
+					tipo_pessoa: tipo,
+					associado: tipo === "Associado" ? associado : "",
+					responsavel: tipo === "Responsavel" ? responsavel : "",
+					nome,
+					email,
+					telefone,
+					funcao,
+				});
+
+				document.getElementById("equipe_associado").value = "";
+				document.getElementById("equipe_responsavel").value = "";
+				clearEquipeBuilderPersonalFields();
+				document.getElementById("equipe_funcao").value = "";
+				updateEquipeBuilderMode();
+			});
+		}
+	}
+
+	function hasAprovadorKeyInTable(aprovadorKey) {
+		const key = String(aprovadorKey || "").trim();
+		if (!key) return false;
+		const tbody = document.getElementById("rows_aprovadores");
+		if (!tbody) return false;
+		return Array.from(tbody.querySelectorAll("tr")).some(
+			(tr) => (tr.dataset.aprovadorKey || "") === key
+		);
+	}
+
+	function bindAprovadorBuilderActions() {
+		const tipoSelect = document.getElementById("aprovador_tipo_pessoa");
+		const associadoSelect = document.getElementById("aprovador_associado");
+		const responsavelSelect = document.getElementById("aprovador_responsavel");
+		const btnAdicionar = document.getElementById("btnAdicionarAprovador");
+
+		if (tipoSelect) {
+			tipoSelect.addEventListener("change", updateAprovadorBuilderMode);
+		}
+
+		if (associadoSelect) {
+			associadoSelect.addEventListener("change", () => {
+				if ((tipoSelect?.value || "") === "Associado") {
+					preencherAprovadorPeloCadastro("Associado", associadoSelect.value || "");
+				}
+			});
+		}
+
+		if (responsavelSelect) {
+			responsavelSelect.addEventListener("change", () => {
+				if ((tipoSelect?.value || "") === "Responsavel") {
+					preencherAprovadorPeloCadastro("Responsavel", responsavelSelect.value || "");
+				}
+			});
+		}
+
+		if (btnAdicionar) {
+			btnAdicionar.addEventListener("click", () => {
+				const tipo = tipoSelect?.value === "Responsavel" ? "Responsavel" : "Associado";
+				const associado = (associadoSelect?.value || "").trim();
+				const responsavel = (responsavelSelect?.value || "").trim();
+				const nome = (document.getElementById("aprovador_nome")?.value || "").trim();
+				const email = (document.getElementById("aprovador_email")?.value || "").trim();
+				const telefone = (
+					document.getElementById("aprovador_telefone")?.value || ""
+				).trim();
+
+				if (tipo === "Associado" && !associado) {
+					showToast("Selecione o associado para adicionar o aprovador.", "error");
+					return;
+				}
+				if (tipo === "Responsavel" && !responsavel) {
+					showToast("Selecione o responsável para adicionar o aprovador.", "error");
+					return;
+				}
+				if (!nome || !email || !telefone) {
+					showToast("Nome, email e telefone do aprovador são obrigatórios.", "error");
+					return;
+				}
+
+				const aprovadorKey = `${tipo}:${tipo === "Associado" ? associado : responsavel}`;
+				if (hasAprovadorKeyInTable(aprovadorKey)) {
+					showToast("Este aprovador já está na lista.", "error");
+					return;
+				}
+
+				addRow("aprovadores", {
+					tipo_pessoa: tipo,
+					associado: tipo === "Associado" ? associado : "",
+					responsavel: tipo === "Responsavel" ? responsavel : "",
+					nome,
+					email,
+					telefone,
+					origem_regra: "manual",
+					permite_remover: 1,
+				});
+
+				if (associadoSelect) associadoSelect.value = "";
+				if (responsavelSelect) responsavelSelect.value = "";
+				clearAprovadorBuilderPersonalFields();
+				updateAprovadorBuilderMode();
+			});
+		}
+	}
+
+	function bindActions() {
+		const btnSalvar = document.getElementById("btnSalvarRascunho");
+		const btnSubmeter = document.getElementById("btnSubmeter");
+		const btnIA = document.getElementById("btnAvaliacaoIA");
+		const btnPendencias = document.getElementById("btnPendenciasRevisao");
+		const btnConfirmSubmit = document.getElementById("btnConfirmSubmitProjeto");
+		const coordenador = document.getElementById("coordenador");
+		const tipo = document.getElementById("tipo_padrinho_ou_orientador");
+		const padrinhoAssociado = document.getElementById("padrinho_associado");
+		const padrinhoResponsavel = document.getElementById("padrinho_responsavel");
+
+		if (btnSalvar) {
+			btnSalvar.addEventListener("click", () => saveDraft(false));
+		}
+		if (btnSubmeter) {
+			btnSubmeter.addEventListener("click", openSubmitConfirmModal);
+		}
+		if (btnConfirmSubmit) {
+			btnConfirmSubmit.addEventListener("click", submitProject);
+		}
+		if (btnIA) {
+			btnIA.addEventListener("click", runAvaliacaoIA);
+		}
+		if (btnPendencias) {
+			btnPendencias.addEventListener("click", openPendingReviewModal);
+		}
+		if (coordenador) {
+			coordenador.addEventListener("change", async () => {
+				await syncSponsorAprovadorRowInTable();
+			});
+		}
+		if (tipo) {
+			tipo.addEventListener("change", async () => {
+				updateSponsorVisibility();
+				await syncSponsorAprovadorRowInTable();
+			});
+		}
+		if (padrinhoAssociado) {
+			padrinhoAssociado.addEventListener("change", async () => {
+				await syncSponsorAprovadorRowInTable();
+			});
+		}
+		if (padrinhoResponsavel) {
+			padrinhoResponsavel.addEventListener("change", async () => {
+				await syncSponsorAprovadorRowInTable();
+			});
+		}
+
+		document.querySelectorAll("[data-pending-review-close]").forEach((btn) => {
+			btn.addEventListener("click", closePendingReviewModal);
+		});
+
+		document.querySelectorAll("[data-submit-confirm-close]").forEach((btn) => {
+			btn.addEventListener("click", closeSubmitConfirmModal);
+		});
+
+		const pendingTable = document.getElementById("rows_pending_review_comments");
+		if (pendingTable) {
+			pendingTable.addEventListener("click", (event) => {
+				const button = event.target.closest("[data-resolve-review-comment]");
+				if (!button) return;
+				const commentName = button.getAttribute("data-resolve-review-comment") || "";
+				resolveReviewComment(commentName);
+			});
+		}
+
+		bindEquipeBuilderActions();
+		bindAprovadorBuilderActions();
+	}
+
+	function openInfoModal(key) {
+		const title = document.getElementById("infoModalTitle");
+		const body = document.getElementById("infoModalBody");
+		const data = INFO_CONTENT[key];
+		if (!title || !body || !data) return;
+
+		title.textContent = data.title;
+		body.innerHTML = data.body;
+		openDialogById("infoModal");
+	}
+
+	function closeInfoModal() {
+		closeDialogById("infoModal");
+	}
+
+	function bindInfoModal() {
+		document.querySelectorAll("[data-info-key]").forEach((btn) => {
+			btn.addEventListener("click", () => {
+				const key = btn.getAttribute("data-info-key") || "";
+				openInfoModal(key);
+			});
+		});
+
+		document.querySelectorAll("[data-info-close]").forEach((btn) => {
+			btn.addEventListener("click", closeInfoModal);
+		});
+
+		document.addEventListener("keydown", (event) => {
+			if (event.key === "Escape") {
+				closeInfoModal();
+				closePendingReviewModal();
+				closeSubmitConfirmModal();
+			}
+		});
+	}
+
+	function syncProjetoReference(projetoName) {
+		const normalized = String(projetoName || "").trim();
+		if (!normalized) {
+			return;
+		}
+
+		state.projetoName = normalized;
+
+		const hidden = document.getElementById("projetoName");
+		if (hidden) {
+			hidden.value = normalized;
+		}
+
+		const url = new URL(window.location.href);
+		if (url.searchParams.get("projeto") !== normalized) {
+			url.searchParams.set("projeto", normalized);
+			const nextUrl = `${url.pathname}?${url.searchParams.toString()}${url.hash}`;
+			window.history.replaceState({}, "", nextUrl);
+		}
+	}
+
+	function getProjetoNameFromPage() {
+		const hidden = (document.getElementById("projetoName")?.value || "").trim();
+		if (hidden) return hidden;
+
+		const params = new URLSearchParams(window.location.search);
+		return (params.get("projeto") || "").trim();
+	}
+
+	async function bootstrap() {
+		bindInfoModal();
+
+		state.projetoName = getProjetoNameFromPage();
+
+		try {
+			const result = await callApi(METHODS.bootstrap, {
+				projeto_name: state.projetoName || null,
+			});
+
+			state.choices = result.choices || state.choices;
+			state.defaultAprovadores = result.default_aprovadores || [];
+			state.isCoordinator = Boolean(result.is_coordinator);
+
+			fillSelect("coordenador", state.choices.associados, "Selecione...");
+			fillSelect(
+				"padrinho_associado",
+				state.choices.associados_padrinho || state.choices.associados,
+				"Selecione..."
+			);
+			fillSelect("padrinho_responsavel", state.choices.responsaveis, "Selecione...");
+			fillSelect("equipe_associado", state.choices.associados, "Selecione...");
+			fillSelect("equipe_responsavel", state.choices.responsaveis, "Selecione...");
+			fillSelect("aprovador_associado", state.choices.associados, "Selecione...");
+			fillSelect("aprovador_responsavel", state.choices.responsaveis, "Selecione...");
+
+			bindActions();
+			bindTableEvents();
+			bindCronogramaTableSync();
+			bindCronogramaTableDrag();
+			bindCronogramaGanttEvents();
+			updateEquipeBuilderMode();
+			updateAprovadorBuilderMode();
+			updateSponsorVisibility();
+
+			const projeto = result.projeto;
+			if (projeto) {
+				syncProjetoReference(projeto.name);
+				fillForm(projeto);
+				await syncSponsorAprovadorRowInTable();
+			} else {
+				updateGoogleDriveButton("");
+				state.reviewComments = [];
+				updatePendingReviewBanner();
+				updateCommentsCardVisibility("");
+				replaceRows("equipe_de_interesse", []);
+				replaceRows("aprovadores", state.defaultAprovadores || []);
+				replaceRows("objetivos", []);
+				replaceRows("ods", []);
+				replaceRows("cronograma", []);
+				replaceRows("recursos", []);
+				replaceRows("riscos", []);
+				await syncSponsorAprovadorRowInTable();
+			}
+
+			renderCronogramaGantt();
+		} catch (error) {
+			showToast(error.message || "Falha ao carregar dados do formulário.", "error");
+		}
+	}
+
+	document.addEventListener("DOMContentLoaded", bootstrap);
 })();

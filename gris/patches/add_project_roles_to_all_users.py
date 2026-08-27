@@ -9,9 +9,7 @@ EXCLUDED_USERS = ("Guest",)
 
 
 def execute():
-	available_roles = tuple(
-		frappe.get_all("Role", filters={"name": ("in", PROJECT_ROLES)}, pluck="name")
-	)
+	available_roles = tuple(frappe.get_all("Role", filters={"name": ("in", PROJECT_ROLES)}, pluck="name"))
 	if not available_roles:
 		return
 

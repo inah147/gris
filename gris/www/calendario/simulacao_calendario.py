@@ -7,7 +7,6 @@ from frappe.utils import cint, format_date, getdate, today
 
 from gris.api.portal_access import enrich_context
 
-
 SECTION_COLOR_BY_RAMO = {
 	"diretoria": "var(--chart-1)",
 	"filhotes": "var(--chart-2)",
@@ -225,7 +224,9 @@ def get_context(context):
 			as_dict=True,
 		)
 		context.source_years = [y.year for y in source_years_data]
-		context.source_year_items = [{"label": str(item.year), "value": str(item.year)} for item in source_years_data]
+		context.source_year_items = [
+			{"label": str(item.year), "value": str(item.year)} for item in source_years_data
+		]
 
 	sections = {event.secao if event.secao else "Diretoria" for event in events}
 
@@ -273,7 +274,9 @@ def get_context(context):
 		)
 
 	serialized_events = [
-		_serialize_simulated_event(event, section_colors.get(event.secao or "Diretoria", SECTION_COLOR_BY_RAMO["default"]))
+		_serialize_simulated_event(
+			event, section_colors.get(event.secao or "Diretoria", SECTION_COLOR_BY_RAMO["default"])
+		)
 		for event in events
 	]
 	serialized_holidays = [_serialize_holiday_event(holiday) for holiday in feriados]
@@ -353,7 +356,9 @@ def get_calendar_events(year=None):
 		)
 
 	serialized_events = [
-		_serialize_simulated_event(event, section_colors.get(event.secao or "Diretoria", SECTION_COLOR_BY_RAMO["default"]))
+		_serialize_simulated_event(
+			event, section_colors.get(event.secao or "Diretoria", SECTION_COLOR_BY_RAMO["default"])
+		)
 		for event in events
 	]
 	serialized_holidays = [_serialize_holiday_event(holiday) for holiday in feriados]

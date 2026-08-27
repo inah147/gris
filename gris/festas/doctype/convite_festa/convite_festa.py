@@ -510,9 +510,7 @@ def enviar_qr_codes(
 
 def _carregar_template(doc, festa) -> dict:
 	template = frappe.get_doc("Email Template", EMAIL_TEMPLATE_CONVITE)
-	numero = (
-		frappe.db.get_single_value("Configuracoes WhatsApp", "telefone_contato") or ""
-	).strip()
+	numero = (frappe.db.get_single_value("Configuracoes WhatsApp", "telefone_contato") or "").strip()
 	numero_digits = re.sub(r"\D", "", numero)
 	whatsapp_link = f"https://wa.me/{numero_digits}" if numero_digits else ""
 	return {

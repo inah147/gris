@@ -66,7 +66,7 @@ def get_context(context):
 			resp_doc = frappe.get_doc("Responsavel", v.responsavel)
 			responsaveis.append({"vinculo": v, "doc": resp_doc})
 
-	responsaveis.sort(key=lambda x: (x["doc"].nome_completo or ""))
+	responsaveis.sort(key=lambda x: x["doc"].nome_completo or "")
 	context.responsaveis = responsaveis
 
 	# Flow steps for infographic

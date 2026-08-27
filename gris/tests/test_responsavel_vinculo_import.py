@@ -45,24 +45,30 @@ def _create_associado(cpf: str) -> str:
 	name = _md5(cpf)
 	if frappe.db.exists("Associado", name):
 		return name
-	doc = frappe.get_doc({
-		"doctype": "Associado",
-		"cpf": cpf,
-		"nome_completo": f"Assoc {cpf}",
-		"data_de_nascimento": "2015-01-01",
-	})
+	doc = frappe.get_doc(
+		{
+			"doctype": "Associado",
+			"cpf": cpf,
+			"nome_completo": f"Assoc {cpf}",
+			"data_de_nascimento": "2015-01-01",
+		}
+	)
 	doc.insert(ignore_permissions=True)
 	return doc.name
 
 
-def _create_vinculo(responsavel_name: str, novo_associado_name: str = None, associado_name: str = None) -> str:
-	doc = frappe.get_doc({
-		"doctype": "Responsavel Vinculo",
-		"responsavel": responsavel_name,
-		"beneficiario_novo_associado": novo_associado_name,
-		"beneficiario_associado": associado_name,
-		"é_guardiao_legal": 1,
-	})
+def _create_vinculo(
+	responsavel_name: str, novo_associado_name: str = None, associado_name: str = None
+) -> str:
+	doc = frappe.get_doc(
+		{
+			"doctype": "Responsavel Vinculo",
+			"responsavel": responsavel_name,
+			"beneficiario_novo_associado": novo_associado_name,
+			"beneficiario_associado": associado_name,
+			"é_guardiao_legal": 1,
+		}
+	)
 	doc.insert(ignore_permissions=True)
 	return doc.name
 

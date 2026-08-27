@@ -75,8 +75,16 @@ def _parse_lotes_opcao(raw) -> list[dict]:
 	for item in raw:
 		if not isinstance(item, dict):
 			frappe.throw("Lote inválido.")
-		inicio = (item.get("data_inicio") or "").strip() if isinstance(item.get("data_inicio"), str) else item.get("data_inicio")
-		fim = (item.get("data_fim") or "").strip() if isinstance(item.get("data_fim"), str) else item.get("data_fim")
+		inicio = (
+			(item.get("data_inicio") or "").strip()
+			if isinstance(item.get("data_inicio"), str)
+			else item.get("data_inicio")
+		)
+		fim = (
+			(item.get("data_fim") or "").strip()
+			if isinstance(item.get("data_fim"), str)
+			else item.get("data_fim")
+		)
 		if not inicio or not fim:
 			frappe.throw("Cada lote precisa de data de início e término.")
 		try:
@@ -175,21 +183,24 @@ def build_dashboard(festa_name: str) -> dict:
 	Reutilizado tanto por `get_dashboard` (chamada API) quanto pelo
 	`build_festa_payload` para hidratar a página inicial sem chamada extra.
 	"""
-	festa = frappe.db.get_value(
-		"Festa",
-		festa_name,
-		[
-			"aceitar_doacoes",
-			"data_limite_vendas",
-			"convites_por_ramo",
-			"cenario_simulacao",
-			"expectativa_publico_min",
-			"expectativa_publico_intermediario",
-			"expectativa_publico_max",
-			"venda_na_portaria",
-		],
-		as_dict=True,
-	) or {}
+	festa = (
+		frappe.db.get_value(
+			"Festa",
+			festa_name,
+			[
+				"aceitar_doacoes",
+				"data_limite_vendas",
+				"convites_por_ramo",
+				"cenario_simulacao",
+				"expectativa_publico_min",
+				"expectativa_publico_intermediario",
+				"expectativa_publico_max",
+				"venda_na_portaria",
+			],
+			as_dict=True,
+		)
+		or {}
+	)
 
 	opcoes_rows = frappe.get_all(
 		"Opcao Convite Festa",
@@ -350,9 +361,7 @@ def build_dashboard(festa_name: str) -> dict:
 	opcoes_portaria = {op["name"] for op in opcoes if op.get("portaria")}
 	total_consumacao = sum(consumacao_por_opcao.values())
 	total_valor_convites = sum(valor_por_opcao.values())
-	total_portaria_valor = sum(
-		v for k, v in valor_por_opcao.items() if k in opcoes_portaria
-	)
+	total_portaria_valor = sum(v for k, v in valor_por_opcao.items() if k in opcoes_portaria)
 
 	# Total de doações (itens com eh_convite=0) em pedidos pagos.
 	doacoes_row = frappe.db.sql(
@@ -381,13 +390,9 @@ def build_dashboard(festa_name: str) -> dict:
 	if convites_por_ramo:
 		contagem_ramos = _contagem_beneficiarios_por_ramo()
 		total_beneficiarios = sum(contagem_ramos.values())
-		cenario_field = CENARIO_PARA_CAMPO.get(
-			cenario_simulacao, "expectativa_publico_intermediario"
-		)
+		cenario_field = CENARIO_PARA_CAMPO.get(cenario_simulacao, "expectativa_publico_intermediario")
 		expectativa = int(festa.get(cenario_field) or 0)
-		convites_por_associado = (
-			(expectativa / total_beneficiarios) if total_beneficiarios > 0 else 0.0
-		)
+		convites_por_associado = (expectativa / total_beneficiarios) if total_beneficiarios > 0 else 0.0
 
 		# Soma qtd_vendida e qtd_esperada por ramo a partir das opções carregadas.
 		for ramo in RAMOS_CONVITE:
@@ -400,9 +405,7 @@ def build_dashboard(festa_name: str) -> dict:
 			ramo = op.get("ramo")
 			if not ramo or ramo not in por_ramo:
 				continue
-			por_ramo[ramo]["qtd_vendida"] += int(
-				qtd_por_opcao.get(op["name"], 0)
-			)
+			por_ramo[ramo]["qtd_vendida"] += int(qtd_por_opcao.get(op["name"], 0))
 			por_ramo[ramo]["qtd_esperada"] += int(op["quantidade_esperada"] or 0)
 
 	return {
@@ -525,7 +528,9 @@ def update_config(festa_name: str, aceitar_doacoes, data_limite_vendas) -> dict:
 	_validate_festa(festa_name)
 
 	flag = 1 if aceitar_doacoes in ("1", "true", "True", True, 1) else 0
-	data_value = (data_limite_vendas or "").strip() if isinstance(data_limite_vendas, str) else data_limite_vendas
+	data_value = (
+		(data_limite_vendas or "").strip() if isinstance(data_limite_vendas, str) else data_limite_vendas
+	)
 	if data_value:
 		try:
 			datetime.strptime(str(data_value), "%Y-%m-%d")
@@ -648,9 +653,7 @@ def delete_opcao(opcao_name: str) -> dict:
 		)
 
 	# Bloqueia exclusão se houver itens de convite vinculados (pedidos pendentes).
-	em_uso = frappe.db.exists(
-		"Item Convite Festa", {"opcao_convite": opcao_name}
-	)
+	em_uso = frappe.db.exists("Item Convite Festa", {"opcao_convite": opcao_name})
 	if em_uso:
 		frappe.throw(
 			"Esta opção está vinculada a um ou mais pedidos. Marque como inativa em vez de excluir.",
@@ -689,9 +692,7 @@ def criar_opcoes_por_ramo(festa_name: str) -> dict:
 	)
 	expectativa = int(festa.get(cenario_field) or 0)
 
-	convites_por_associado = (
-		(expectativa / total_beneficiarios) if total_beneficiarios > 0 else 0.0
-	)
+	convites_por_associado = (expectativa / total_beneficiarios) if total_beneficiarios > 0 else 0.0
 
 	ramos_a_criar = [
 		*(r for r in RAMOS_ESCOTEIROS if contagem.get(r, 0) > 0),
@@ -740,9 +741,7 @@ def toggle_venda_portaria(festa_name: str, ativo) -> dict:
 	ativo_bool = ativo in ("1", "true", "True", True, 1)
 
 	# Verifica estado atual; se já está como solicitado, no-op.
-	estado_atual = bool(
-		frappe.db.get_value("Festa", festa_name, "venda_na_portaria")
-	)
+	estado_atual = bool(frappe.db.get_value("Festa", festa_name, "venda_na_portaria"))
 	if estado_atual == ativo_bool:
 		return {"ok": True, "venda_na_portaria": ativo_bool, "no_op": True}
 
@@ -869,8 +868,7 @@ def get_detalhes_pedido(pedido_name: str) -> dict:
 	status_pagamento = "Pendente"
 	if convite.cobranca_infinitepay:
 		status_pagamento = (
-			frappe.db.get_value("Cobranca Infinitepay", convite.cobranca_infinitepay, "status")
-			or "Pendente"
+			frappe.db.get_value("Cobranca Infinitepay", convite.cobranca_infinitepay, "status") or "Pendente"
 		)
 
 	itens_rows = frappe.db.sql(
@@ -1013,9 +1011,7 @@ def editar_dados_convidado_pedido(
 		# Fonte da verdade: Convidado Convite Festa.
 		frappe.db.set_value("Convidado Convite Festa", convidado_row, updates)
 		# Propaga para Lista Entrada Festa, se já existir (pedido pago).
-		lef_name = frappe.db.get_value(
-			"Lista Entrada Festa", {"convidado_row": convidado_row}, "name"
-		)
+		lef_name = frappe.db.get_value("Lista Entrada Festa", {"convidado_row": convidado_row}, "name")
 		if lef_name:
 			frappe.db.set_value("Lista Entrada Festa", lef_name, updates)
 

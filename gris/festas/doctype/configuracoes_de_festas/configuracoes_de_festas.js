@@ -21,8 +21,7 @@ function atualizar_campos_obrigatorios(frm) {
 async function carregar_opcoes_drive_compartilhado(frm) {
 	try {
 		const response = await frappe.call({
-			method:
-				"gris.festas.doctype.configuracoes_de_festas.configuracoes_de_festas.get_opcoes_drives_compartilhados_festas",
+			method: "gris.festas.doctype.configuracoes_de_festas.configuracoes_de_festas.get_opcoes_drives_compartilhados_festas",
 		});
 		const opcoes = Array.isArray(response.message) ? response.message : [];
 

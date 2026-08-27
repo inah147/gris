@@ -40,9 +40,7 @@ def seed_entrevistas(n: int):
 	)
 	if not candidatos:
 		# fallback: qualquer ativo
-		candidatos = frappe.get_all(
-			"Associado", filters={"status_no_grupo": "Ativo"}, limit=n, pluck="name"
-		)
+		candidatos = frappe.get_all("Associado", filters={"status_no_grupo": "Ativo"}, limit=n, pluck="name")
 	if not candidatos:
 		print("  → 0 Entrevista por Competencias (sem associados)")
 		return

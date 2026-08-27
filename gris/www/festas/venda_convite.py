@@ -41,9 +41,7 @@ def get_context(context):
 				"nome_festa": row.nome_festa or row.name,
 				"data": row.data.isoformat() if row.data else "",
 				"aceitar_doacoes": bool(row.aceitar_doacoes),
-				"data_limite_vendas": row.data_limite_vendas.isoformat()
-				if row.data_limite_vendas
-				else "",
+				"data_limite_vendas": row.data_limite_vendas.isoformat() if row.data_limite_vendas else "",
 			}
 		)
 

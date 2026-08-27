@@ -21,8 +21,7 @@ function atualizar_campos_obrigatorios(frm) {
 async function carregar_opcoes_drive_compartilhado(frm) {
 	try {
 		const response = await frappe.call({
-			method:
-				"gris.gris.doctype.configuracoes_de_projetos.configuracoes_de_projetos.get_opcoes_drives_compartilhados_projetos",
+			method: "gris.gris.doctype.configuracoes_de_projetos.configuracoes_de_projetos.get_opcoes_drives_compartilhados_projetos",
 		});
 		const opcoes = Array.isArray(response.message) ? response.message : [];
 

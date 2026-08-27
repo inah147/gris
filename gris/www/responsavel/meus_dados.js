@@ -17,13 +17,17 @@ frappe.ready(function () {
 	const submitBtn = document.getElementById("btn-salvar-meus-dados");
 
 	function escapeHtml(value) {
-		return String(value).replace(/[&<>"']/g, (ch) => ({
-			"&": "&amp;",
-			"<": "&lt;",
-			">": "&gt;",
-			'"': "&quot;",
-			"'": "&#39;",
-		}[ch]));
+		return String(value).replace(
+			/[&<>"']/g,
+			(ch) =>
+				({
+					"&": "&amp;",
+					"<": "&lt;",
+					">": "&gt;",
+					'"': "&quot;",
+					"'": "&#39;",
+				}[ch])
+		);
 	}
 
 	function lucideSvg(name, size) {
@@ -107,7 +111,11 @@ frappe.ready(function () {
 		if (!value) return false;
 		if (isAlreadySelected(value)) {
 			if (!silent) {
-				showToast("warning", "Habilidade já adicionada", `“${value}” já está na sua lista.`);
+				showToast(
+					"warning",
+					"Habilidade já adicionada",
+					`“${value}” já está na sua lista.`
+				);
 			}
 			return false;
 		}
@@ -199,11 +207,7 @@ frappe.ready(function () {
 					submitBtn.disabled = false;
 					submitBtn.textContent = originalLabel;
 				}
-				showToast(
-					"error",
-					"Não foi possível salvar",
-					"Tente novamente em instantes."
-				);
+				showToast("error", "Não foi possível salvar", "Tente novamente em instantes.");
 			},
 		});
 	});

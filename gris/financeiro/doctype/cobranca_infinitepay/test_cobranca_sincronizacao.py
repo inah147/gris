@@ -60,9 +60,7 @@ class TestSincronizarPagamento(FrappeTestCase):
 				return "test-handle"
 			return None
 
-		handle_patcher = patch(
-			"frappe.db.get_single_value", side_effect=_fake_get_single
-		)
+		handle_patcher = patch("frappe.db.get_single_value", side_effect=_fake_get_single)
 		handle_patcher.start()
 		self.addCleanup(handle_patcher.stop)
 
@@ -154,19 +152,22 @@ class TestSincronizarPagamento(FrappeTestCase):
 			}
 		).insert(ignore_permissions=True)
 
-		with patch(
-			"gris.api.financeiro.infinitepay_checkout._verificar_pagamento",
-			return_value={
-				"success": True,
-				"paid": True,
-				"amount": 5000,
-				"paid_amount": 5000,
-				"installments": 1,
-				"capture_method": "credit_card",
-			},
-		), patch(
-			"gris.festas.doctype.lista_entrada_festa.lista_entrada_festa.ListaEntradaFesta.validate",
-			side_effect=Exception("falha simulada ao criar entrada"),
+		with (
+			patch(
+				"gris.api.financeiro.infinitepay_checkout._verificar_pagamento",
+				return_value={
+					"success": True,
+					"paid": True,
+					"amount": 5000,
+					"paid_amount": 5000,
+					"installments": 1,
+					"capture_method": "credit_card",
+				},
+			),
+			patch(
+				"gris.festas.doctype.lista_entrada_festa.lista_entrada_festa.ListaEntradaFesta.validate",
+				side_effect=Exception("falha simulada ao criar entrada"),
+			),
 		):
 			self.assertRaises(
 				frappe.ValidationError,
@@ -175,6 +176,4 @@ class TestSincronizarPagamento(FrappeTestCase):
 			)
 
 		# Nenhuma entrada deve ter sido materializada (sem sucesso parcial silencioso).
-		self.assertFalse(
-			frappe.db.exists("Lista Entrada Festa", {"convite": convite.name})
-		)
+		self.assertFalse(frappe.db.exists("Lista Entrada Festa", {"convite": convite.name}))

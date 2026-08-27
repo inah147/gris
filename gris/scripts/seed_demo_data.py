@@ -100,8 +100,18 @@ def _seed_funcoes_voluntario():
 
 def _seed_feriados():
 	feriados = [
-		{"id": "DEMO-FERIADO-001", "nome": "Feriado Demo - Tiradentes", "data": "2026-04-21", "tipo": "Nacional"},
-		{"id": "DEMO-FERIADO-002", "nome": "Feriado Demo - Aniversário da Cidade", "data": "2026-08-09", "tipo": "Municipal"},
+		{
+			"id": "DEMO-FERIADO-001",
+			"nome": "Feriado Demo - Tiradentes",
+			"data": "2026-04-21",
+			"tipo": "Nacional",
+		},
+		{
+			"id": "DEMO-FERIADO-002",
+			"nome": "Feriado Demo - Aniversário da Cidade",
+			"data": "2026-08-09",
+			"tipo": "Municipal",
+		},
 	]
 	for feriado in feriados:
 		if frappe.db.exists("Feriados", feriado["id"]):
@@ -410,9 +420,9 @@ def _seed_instituicoes_financeiras():
 	for nome in ("Portão 3", "Espécie", "BTG Empresas", "Infinitepay"):
 		if frappe.db.exists("Instituicao Financeira", nome):
 			continue
-		frappe.get_doc(
-			{"doctype": "Instituicao Financeira", "nome": nome, "ativa": 1}
-		).insert(ignore_permissions=True)
+		frappe.get_doc({"doctype": "Instituicao Financeira", "nome": nome, "ativa": 1}).insert(
+			ignore_permissions=True
+		)
 
 
 def _seed_carteiras():

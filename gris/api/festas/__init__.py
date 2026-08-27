@@ -137,9 +137,7 @@ def totais_payload(doc) -> dict:
 	própria consumação, o que for maior), evitando contá-la duas vezes — mesma
 	lógica de resultado aplicada no fechamento.
 	"""
-	consumacao_media = (
-		doc._consumacao_media_convite_por_lotes() if doc.convite_por_lotes else 0.0
-	)
+	consumacao_media = doc._consumacao_media_convite_por_lotes() if doc.convite_por_lotes else 0.0
 	payload = {}
 	for chave in _CENARIOS_KEYS:
 		receita_convite = flt(doc.get(f"receita_convite_{chave}"))
@@ -231,12 +229,8 @@ def _parse_lotes_convite(raw) -> list[dict]:
 		if not isinstance(item, dict):
 			frappe.throw("Lote inválido.")
 		valor_convite = _as_non_negative_float(item.get("valor_convite", 0), "Valor do convite")
-		valor_consumacao = _as_non_negative_float(
-			item.get("valor_consumacao", 0), "Valor de consumação"
-		)
-		expectativa = _as_non_negative_float(
-			item.get("expectativa_percentual", 0), "Expectativa de vendas"
-		)
+		valor_consumacao = _as_non_negative_float(item.get("valor_consumacao", 0), "Valor de consumação")
+		expectativa = _as_non_negative_float(item.get("expectativa_percentual", 0), "Expectativa de vendas")
 		lotes.append(
 			{
 				"nome_lote": (item.get("nome_lote") or "").strip(),
@@ -647,9 +641,7 @@ def criar_produto(
 
 	convite_flag = 1 if faz_parte_convite in ("1", "true", True) else 0
 	if convite_flag and v_expectativa < 1:
-		frappe.throw(
-			"Produtos do convite exigem expectativa de venda por pessoa maior ou igual a 1."
-		)
+		frappe.throw("Produtos do convite exigem expectativa de venda por pessoa maior ou igual a 1.")
 
 	doc = frappe.new_doc("Produto de Venda Festa")
 	doc.festa = festa_name
@@ -706,9 +698,7 @@ def salvar_produto(produto_name: str, dados_json: str) -> dict:
 		frappe.throw("Os valores devem ser não-negativos.")
 
 	if doc.faz_parte_convite and v_expectativa < 1:
-		frappe.throw(
-			"Produtos do convite exigem expectativa de venda por pessoa maior ou igual a 1."
-		)
+		frappe.throw("Produtos do convite exigem expectativa de venda por pessoa maior ou igual a 1.")
 
 	doc.preco_venda = v_preco_venda
 	doc.expectativa_venda_por_pessoa = v_expectativa
@@ -1201,9 +1191,7 @@ def criar_compra_sem_previsao(festa_name: str, dados_json: str) -> dict:
 	doc.nome_item = nome_item
 	doc.area = _validate_area_festa(dados.get("area"), festa_name)
 	doc.usado_em_produtos = _as_bool(dados.get("usado_em_produtos"))
-	doc.unidade_compra = _validate_unidade(
-		dados.get("unidade_medida_realizado") or "unidade"
-	)
+	doc.unidade_compra = _validate_unidade(dados.get("unidade_medida_realizado") or "unidade")
 	_apply_compra_usos_sem_previsao(doc, dados, festa_name)
 	_apply_compra_realizado(doc, dados)
 	doc.insert()
@@ -1227,9 +1215,7 @@ def salvar_compra_sem_previsao(compra_name: str, dados_json: str) -> dict:
 	doc.nome_item = nome_item
 	doc.area = _validate_area_festa(dados.get("area"), doc.festa)
 	doc.usado_em_produtos = _as_bool(dados.get("usado_em_produtos"))
-	doc.unidade_compra = _validate_unidade(
-		dados.get("unidade_medida_realizado") or "unidade"
-	)
+	doc.unidade_compra = _validate_unidade(dados.get("unidade_medida_realizado") or "unidade")
 	_apply_compra_usos_sem_previsao(doc, dados, doc.festa)
 	_apply_compra_realizado(doc, dados)
 	doc.save()
@@ -1331,8 +1317,6 @@ def salvar_fechamento_barraca(festa_name: str, barraca_name: str, dados_json: st
 	valor_real = _as_non_negative_float(
 		dados.get("valor_realizado_real", 0), "Valor arrecadado realizado real"
 	)
-	frappe.db.set_value(
-		"Barraca da Festa", barraca_name, "valor_arrecadado_realizado_real", valor_real
-	)
+	frappe.db.set_value("Barraca da Festa", barraca_name, "valor_arrecadado_realizado_real", valor_real)
 
 	return {"ok": True}

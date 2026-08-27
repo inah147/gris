@@ -27,9 +27,7 @@ class TestOpcaoConviteFesta(FrappeTestCase):
 				"valor": 80,
 			}
 		)
-		self.assertRaises(
-			frappe.ValidationError, duplicada.insert, ignore_permissions=True
-		)
+		self.assertRaises(frappe.ValidationError, duplicada.insert, ignore_permissions=True)
 
 	def test_ativo_default_true(self):
 		festa = _nova_festa()

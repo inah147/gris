@@ -87,9 +87,9 @@ def create_festa_folder_async(festa_name: str, attempt: int = 1) -> dict[str, st
 	if not _is_feature_enabled(settings):
 		return {"status": "disabled"}
 
-	parent_folder_id = extract_drive_folder_id(settings.pasta_festas_id) or (
-		settings.pasta_festas_id or ""
-	).strip()
+	parent_folder_id = (
+		extract_drive_folder_id(settings.pasta_festas_id) or (settings.pasta_festas_id or "").strip()
+	)
 	drive_id = (settings.drive_compartilhado_festas or "").strip()
 	if not parent_folder_id or not drive_id:
 		_logger().warning(

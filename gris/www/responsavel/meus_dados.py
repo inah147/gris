@@ -80,10 +80,7 @@ def update_meus_dados(o_que_gosta_de_fazer_no_dia_a_dia, habilidades):
 	for hab in habilidades_list:
 		if not frappe.db.exists("Habilidade", hab):
 			try:
-				new_hab = frappe.get_doc({
-					"doctype": "Habilidade",
-					"habilidade": hab
-				})
+				new_hab = frappe.get_doc({"doctype": "Habilidade", "habilidade": hab})
 				new_hab.insert(ignore_permissions=True)
 			except Exception:
 				# Fallback or ignore if creation fails (e.g. permission or duplicate handled by exists)

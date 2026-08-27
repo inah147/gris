@@ -56,21 +56,27 @@ def get_context(context):
 	if not convite_row:
 		frappe.throw("Página indisponível", frappe.PageDoesNotExistError)
 
-	festa_row = frappe.db.get_value(
-		"Festa",
-		convite_row.festa,
-		["nome_festa", "data", "horario_inicio", "horario_termino"],
-		as_dict=True,
-	) or {}
+	festa_row = (
+		frappe.db.get_value(
+			"Festa",
+			convite_row.festa,
+			["nome_festa", "data", "horario_inicio", "horario_termino"],
+			as_dict=True,
+		)
+		or {}
+	)
 
 	cobranca_row = {}
 	if convite_row.cobranca_infinitepay:
-		cobranca_row = frappe.db.get_value(
-			"Cobranca Infinitepay",
-			convite_row.cobranca_infinitepay,
-			["status", "receipt_url"],
-			as_dict=True,
-		) or {}
+		cobranca_row = (
+			frappe.db.get_value(
+				"Cobranca Infinitepay",
+				convite_row.cobranca_infinitepay,
+				["status", "receipt_url"],
+				as_dict=True,
+			)
+			or {}
+		)
 
 	status = (cobranca_row.get("status") or "Pendente").strip()
 	if status == STATUS_PAGO:

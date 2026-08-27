@@ -1,108 +1,116 @@
 (() => {
-  const initSidebar = (sidebarComponent) => {
-    const initialOpen = sidebarComponent.dataset.initialOpen !== 'false';
-    const initialMobileOpen = sidebarComponent.dataset.initialMobileOpen === 'true';
-    const breakpoint = parseInt(sidebarComponent.dataset.breakpoint) || 768;
+	const initSidebar = (sidebarComponent) => {
+		const initialOpen = sidebarComponent.dataset.initialOpen !== "false";
+		const initialMobileOpen = sidebarComponent.dataset.initialMobileOpen === "true";
+		const breakpoint = parseInt(sidebarComponent.dataset.breakpoint) || 768;
 
-    const isMobileViewport = () => breakpoint > 0 && window.innerWidth < breakpoint;
+		const isMobileViewport = () => breakpoint > 0 && window.innerWidth < breakpoint;
 
-    let mobileViewport = isMobileViewport();
-    let open = mobileViewport ? initialMobileOpen : initialOpen;
-    
-    const updateState = () => {
-      sidebarComponent.dataset.sidebarViewport = mobileViewport ? 'mobile' : 'desktop';
-      sidebarComponent.dataset.sidebarState = open ? 'open' : 'closed';
-      sidebarComponent.setAttribute('aria-hidden', !open);
-      if (open) {
-        sidebarComponent.removeAttribute('inert');
-      } else {
-        sidebarComponent.setAttribute('inert', '');
-      }
-    };
+		let mobileViewport = isMobileViewport();
+		let open = mobileViewport ? initialMobileOpen : initialOpen;
 
-    const emitStateChange = (reason) => {
-      const detail = {
-        id: sidebarComponent.id,
-        open,
-        viewport: mobileViewport ? 'mobile' : 'desktop',
-        reason,
-      };
+		const updateState = () => {
+			sidebarComponent.dataset.sidebarViewport = mobileViewport ? "mobile" : "desktop";
+			sidebarComponent.dataset.sidebarState = open ? "open" : "closed";
+			sidebarComponent.setAttribute("aria-hidden", !open);
+			if (open) {
+				sidebarComponent.removeAttribute("inert");
+			} else {
+				sidebarComponent.setAttribute("inert", "");
+			}
+		};
 
-      sidebarComponent.dispatchEvent(new CustomEvent('basecoat:sidebar-state', { detail }));
-      document.dispatchEvent(new CustomEvent('basecoat:sidebar-state', { detail }));
-    };
+		const emitStateChange = (reason) => {
+			const detail = {
+				id: sidebarComponent.id,
+				open,
+				viewport: mobileViewport ? "mobile" : "desktop",
+				reason,
+			};
 
-    const setState = (state, reason = 'toggle') => {
-      open = state;
-      updateState();
-      emitStateChange(reason);
-    };
+			sidebarComponent.dispatchEvent(new CustomEvent("basecoat:sidebar-state", { detail }));
+			document.dispatchEvent(new CustomEvent("basecoat:sidebar-state", { detail }));
+		};
 
-    const syncToViewport = (reason = 'breakpoint') => {
-      const nextMobileViewport = isMobileViewport();
+		const setState = (state, reason = "toggle") => {
+			open = state;
+			updateState();
+			emitStateChange(reason);
+		};
 
-      if (nextMobileViewport === mobileViewport) {
-        return;
-      }
+		const syncToViewport = (reason = "breakpoint") => {
+			const nextMobileViewport = isMobileViewport();
 
-      mobileViewport = nextMobileViewport;
-      setState(mobileViewport ? initialMobileOpen : initialOpen, reason);
-    };
+			if (nextMobileViewport === mobileViewport) {
+				return;
+			}
 
-    const sidebarId = sidebarComponent.id;
+			mobileViewport = nextMobileViewport;
+			setState(mobileViewport ? initialMobileOpen : initialOpen, reason);
+		};
 
-    document.addEventListener('basecoat:sidebar', (event) => {
-      if (event.detail?.id && event.detail.id !== sidebarId) return;
+		const sidebarId = sidebarComponent.id;
 
-      switch (event.detail?.action) {
-        case 'open':
-          setState(true);
-          break;
-        case 'close':
-          setState(false);
-          break;
-        default:
-          setState(!open);
-          break;
-      }
-    });
-    
-    sidebarComponent.addEventListener('click', (event) => {
-      const target = event.target;
-      const nav = sidebarComponent.querySelector('nav');
+		document.addEventListener("basecoat:sidebar", (event) => {
+			if (event.detail?.id && event.detail.id !== sidebarId) return;
 
-      const isMobile = mobileViewport;
+			switch (event.detail?.action) {
+				case "open":
+					setState(true);
+					break;
+				case "close":
+					setState(false);
+					break;
+				default:
+					setState(!open);
+					break;
+			}
+		});
 
-      if (isMobile && (target.closest('a, button') && !target.closest('[data-keep-mobile-sidebar-open]'))) {
-        if (document.activeElement) document.activeElement.blur();
-        setState(false, 'navigation');
-        return;
-      }
+		sidebarComponent.addEventListener("click", (event) => {
+			const target = event.target;
+			const nav = sidebarComponent.querySelector("nav");
 
-      if (target === sidebarComponent || (nav && !nav.contains(target))) {
-        if (document.activeElement) document.activeElement.blur();
-        setState(false, 'backdrop');
-      }
-    });
+			const isMobile = mobileViewport;
 
-    let resizeFrame = null;
-    window.addEventListener('resize', () => {
-      if (resizeFrame !== null) {
-        window.cancelAnimationFrame(resizeFrame);
-      }
+			if (
+				isMobile &&
+				target.closest("a, button") &&
+				!target.closest("[data-keep-mobile-sidebar-open]")
+			) {
+				if (document.activeElement) document.activeElement.blur();
+				setState(false, "navigation");
+				return;
+			}
 
-      resizeFrame = window.requestAnimationFrame(() => {
-        resizeFrame = null;
-        syncToViewport();
-      });
-    });
+			if (target === sidebarComponent || (nav && !nav.contains(target))) {
+				if (document.activeElement) document.activeElement.blur();
+				setState(false, "backdrop");
+			}
+		});
 
-    updateState();
-    sidebarComponent.dataset.sidebarInitialized = true;
-    sidebarComponent.dispatchEvent(new CustomEvent('basecoat:initialized'));
-  };
+		let resizeFrame = null;
+		window.addEventListener("resize", () => {
+			if (resizeFrame !== null) {
+				window.cancelAnimationFrame(resizeFrame);
+			}
 
-  if (window.basecoat) {
-    window.basecoat.register('sidebar', '.sidebar:not([data-sidebar-initialized])', initSidebar);
-  }
+			resizeFrame = window.requestAnimationFrame(() => {
+				resizeFrame = null;
+				syncToViewport();
+			});
+		});
+
+		updateState();
+		sidebarComponent.dataset.sidebarInitialized = true;
+		sidebarComponent.dispatchEvent(new CustomEvent("basecoat:initialized"));
+	};
+
+	if (window.basecoat) {
+		window.basecoat.register(
+			"sidebar",
+			".sidebar:not([data-sidebar-initialized])",
+			initSidebar
+		);
+	}
 })();

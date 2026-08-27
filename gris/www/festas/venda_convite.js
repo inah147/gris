@@ -28,14 +28,18 @@
 	function toast(message, category) {
 		document.dispatchEvent(
 			new CustomEvent("basecoat:toast", {
-				detail: { config: { category: category || "info", description: message, duration: 3500 } },
+				detail: {
+					config: { category: category || "info", description: message, duration: 3500 },
+				},
 			})
 		);
 	}
 
 	function fmtMoeda(valor) {
 		return new Intl.NumberFormat("pt-BR", {
-			style: "currency", currency: "BRL", minimumFractionDigits: 2,
+			style: "currency",
+			currency: "BRL",
+			minimumFractionDigits: 2,
 		}).format(Number(valor) || 0);
 	}
 
@@ -49,7 +53,8 @@
 					else reject(new Error("Resposta inesperada."));
 				},
 				error: function (err) {
-					const msg = (err && err._server_messages) || err.message || "Erro de servidor.";
+					const msg =
+						(err && err._server_messages) || err.message || "Erro de servidor.";
 					reject(new Error(typeof msg === "string" ? msg : "Erro de servidor."));
 				},
 			});
@@ -64,7 +69,9 @@
 
 	function totalConvitesNoCarrinho() {
 		let total = 0;
-		carrinho.forEach(function (q) { total += Number(q || 0); });
+		carrinho.forEach(function (q) {
+			total += Number(q || 0);
+		});
 		return total;
 	}
 
@@ -114,7 +121,10 @@
 		if (subEl) {
 			if (festaInfo.data) {
 				const parts = festaInfo.data.split("-");
-				const dataLabel = parts.length === 3 ? parts[2] + "/" + parts[1] + "/" + parts[0] : festaInfo.data;
+				const dataLabel =
+					parts.length === 3
+						? parts[2] + "/" + parts[1] + "/" + parts[0]
+						: festaInfo.data;
 				subEl.textContent = "Festa em " + dataLabel + ".";
 			} else {
 				subEl.textContent = "";
@@ -159,7 +169,9 @@
 				return Promise.resolve(false);
 			}
 		}
-		return carregarFesta(novaFesta).then(function () { return true; });
+		return carregarFesta(novaFesta).then(function () {
+			return true;
+		});
 	}
 
 	// ─── Vitrine ────────────────────────────────────────────────────────────
@@ -184,36 +196,62 @@
 	function renderCardConvite(opcao) {
 		const qtd = getQty(opcao.name);
 		const imagem = opcao.imagem_capa
-			? '<img class="vc-card-convite__imagem" src="' + escapeHtml(opcao.imagem_capa) + '" alt="' + escapeHtml(opcao.nome_convite) + '" />'
+			? '<img class="vc-card-convite__imagem" src="' +
+			  escapeHtml(opcao.imagem_capa) +
+			  '" alt="' +
+			  escapeHtml(opcao.nome_convite) +
+			  '" />'
 			: '<div class="vc-card-convite__imagem vc-card-convite__imagem--placeholder" aria-hidden="true">' +
 			  '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2 9a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4 2 2 0 0 0-2 2v2a2 2 0 0 0 2 2 4 4 0 0 1-4 4H6a4 4 0 0 1-4-4 2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2Z"/></svg>' +
 			  "</div>";
-		return '<article class="vc-card-convite" data-vc-opcao="' + escapeHtml(opcao.name) + '">' +
+		return (
+			'<article class="vc-card-convite" data-vc-opcao="' +
+			escapeHtml(opcao.name) +
+			'">' +
 			imagem +
 			'<div class="vc-card-convite__body">' +
-			'<h3 class="vc-card-convite__title">' + escapeHtml(opcao.nome_convite) + "</h3>" +
-			'<p class="vc-card-convite__price">' + fmtMoeda(opcao.valor) + "</p>" +
+			'<h3 class="vc-card-convite__title">' +
+			escapeHtml(opcao.nome_convite) +
+			"</h3>" +
+			'<p class="vc-card-convite__price">' +
+			fmtMoeda(opcao.valor) +
+			"</p>" +
 			'<div class="vc-qty">' +
-			'<button type="button" class="btn-sm-outline" data-vc-decr="' + escapeHtml(opcao.name) + '" aria-label="Diminuir">−</button>' +
-			'<input type="number" min="0" step="1" value="' + qtd + '" class="vc-qty__input" data-vc-qty="' + escapeHtml(opcao.name) + '" inputmode="numeric" />' +
-			'<button type="button" class="btn-sm-outline" data-vc-incr="' + escapeHtml(opcao.name) + '" aria-label="Aumentar">+</button>' +
+			'<button type="button" class="btn-sm-outline" data-vc-decr="' +
+			escapeHtml(opcao.name) +
+			'" aria-label="Diminuir">−</button>' +
+			'<input type="number" min="0" step="1" value="' +
+			qtd +
+			'" class="vc-qty__input" data-vc-qty="' +
+			escapeHtml(opcao.name) +
+			'" inputmode="numeric" />' +
+			'<button type="button" class="btn-sm-outline" data-vc-incr="' +
+			escapeHtml(opcao.name) +
+			'" aria-label="Aumentar">+</button>' +
 			"</div>" +
-			"</div></article>";
+			"</div></article>"
+		);
 	}
 
 	function bindCardHandlers(cardEl) {
 		const opcaoName = cardEl.getAttribute("data-vc-opcao");
-		const input = cardEl.querySelector('[data-vc-qty]');
-		const decr = cardEl.querySelector('[data-vc-decr]');
-		const incr = cardEl.querySelector('[data-vc-incr]');
+		const input = cardEl.querySelector("[data-vc-qty]");
+		const decr = cardEl.querySelector("[data-vc-decr]");
+		const incr = cardEl.querySelector("[data-vc-incr]");
 
 		function aplicar(valor) {
 			setQty(opcaoName, valor);
 			if (input) input.value = String(getQty(opcaoName));
 		}
 
-		if (incr) incr.addEventListener("click", function () { aplicar(getQty(opcaoName) + 1); });
-		if (decr) decr.addEventListener("click", function () { aplicar(getQty(opcaoName) - 1); });
+		if (incr)
+			incr.addEventListener("click", function () {
+				aplicar(getQty(opcaoName) + 1);
+			});
+		if (decr)
+			decr.addEventListener("click", function () {
+				aplicar(getQty(opcaoName) - 1);
+			});
 		if (input) {
 			input.addEventListener("input", function () {
 				setQty(opcaoName, input.value);
@@ -228,7 +266,8 @@
 		const container = document.getElementById("vc-vitrine");
 		if (!container) return;
 		if (!opcoes.length) {
-			container.innerHTML = '<p class="text-sm text-muted-foreground">Nenhuma opção disponível.</p>';
+			container.innerHTML =
+				'<p class="text-sm text-muted-foreground">Nenhuma opção disponível.</p>';
 			atualizarBotaoIrParaPedido();
 			return;
 		}
@@ -252,31 +291,43 @@
 		(resumo.itens || []).forEach(function (it) {
 			linhas.push(
 				"<tr>" +
-				"<td>" + escapeHtml(it.nome_convite) + "</td>" +
-				"<td>" + escapeHtml(String(it.quantidade)) + "</td>" +
-				'<td class="vc-col-num">' + fmtMoeda(it.subtotal) + "</td>" +
-				"</tr>"
+					"<td>" +
+					escapeHtml(it.nome_convite) +
+					"</td>" +
+					"<td>" +
+					escapeHtml(String(it.quantidade)) +
+					"</td>" +
+					'<td class="vc-col-num">' +
+					fmtMoeda(it.subtotal) +
+					"</td>" +
+					"</tr>"
 			);
 		});
 		linhas.push(
 			'<tr class="vc-tabela-subtotal" data-vc-row="subtotal">' +
-			'<td colspan="2">Subtotal de convites</td>' +
-			'<td class="vc-col-num">' + fmtMoeda(resumo.subtotal_convites) + "</td>" +
-			"</tr>"
+				'<td colspan="2">Subtotal de convites</td>' +
+				'<td class="vc-col-num">' +
+				fmtMoeda(resumo.subtotal_convites) +
+				"</td>" +
+				"</tr>"
 		);
 		if (resumo.valor_doacao > 0) {
 			linhas.push(
 				'<tr data-vc-row="doacao">' +
-				'<td colspan="2">Doação</td>' +
-				'<td class="vc-col-num">' + fmtMoeda(resumo.valor_doacao) + "</td>" +
-				"</tr>"
+					'<td colspan="2">Doação</td>' +
+					'<td class="vc-col-num">' +
+					fmtMoeda(resumo.valor_doacao) +
+					"</td>" +
+					"</tr>"
 			);
 		}
 		linhas.push(
 			'<tr class="vc-tabela-total" data-vc-row="total">' +
-			'<td colspan="2"><strong>Total</strong></td>' +
-			'<td class="vc-col-num"><strong>' + fmtMoeda(resumo.total) + "</strong></td>" +
-			"</tr>"
+				'<td colspan="2"><strong>Total</strong></td>' +
+				'<td class="vc-col-num"><strong>' +
+				fmtMoeda(resumo.total) +
+				"</strong></td>" +
+				"</tr>"
 		);
 		tbody.innerHTML = linhas.join("");
 	}
@@ -294,7 +345,9 @@
 		if (valor > 0) {
 			const html =
 				'<td colspan="2">Doação</td>' +
-				'<td class="vc-col-num">' + fmtMoeda(valor) + "</td>";
+				'<td class="vc-col-num">' +
+				fmtMoeda(valor) +
+				"</td>";
 			if (linhaDoacao) {
 				linhaDoacao.innerHTML = html;
 			} else if (linhaTotal) {
@@ -309,7 +362,9 @@
 		if (linhaTotal) {
 			linhaTotal.innerHTML =
 				'<td colspan="2"><strong>Total</strong></td>' +
-				'<td class="vc-col-num"><strong>' + fmtMoeda(ultimoResumo.total) + "</strong></td>";
+				'<td class="vc-col-num"><strong>' +
+				fmtMoeda(ultimoResumo.total) +
+				"</strong></td>";
 		}
 	}
 
@@ -318,7 +373,8 @@
 		if (!tbody) return;
 		const itens = carrinhoComoArray();
 		if (!itens.length) {
-			tbody.innerHTML = '<tr><td colspan="3" class="text-sm text-muted-foreground">Adicione convites para ver o resumo.</td></tr>';
+			tbody.innerHTML =
+				'<tr><td colspan="3" class="text-sm text-muted-foreground">Adicione convites para ver o resumo.</td></tr>';
 			ultimoResumo = null;
 			const btn = document.getElementById("btn-pedido-continuar");
 			if (btn) btn.disabled = true;
@@ -328,14 +384,19 @@
 			festa_name: festaSelecionada,
 			itens: JSON.stringify(itens),
 			doacao_valor: doarFlag ? doacaoValor : 0,
-		}).then(function (resumo) {
-			ultimoResumo = resumo;
-			renderPedidoTabela(resumo);
-			atualizarBotaoContinuarPedido();
-		}).catch(function (err) {
-			tbody.innerHTML = '<tr><td colspan="3" class="text-sm text-destructive">' + escapeHtml(err.message || "Erro ao calcular pedido.") + "</td></tr>";
-			atualizarBotaoContinuarPedido();
-		});
+		})
+			.then(function (resumo) {
+				ultimoResumo = resumo;
+				renderPedidoTabela(resumo);
+				atualizarBotaoContinuarPedido();
+			})
+			.catch(function (err) {
+				tbody.innerHTML =
+					'<tr><td colspan="3" class="text-sm text-destructive">' +
+					escapeHtml(err.message || "Erro ao calcular pedido.") +
+					"</td></tr>";
+				atualizarBotaoContinuarPedido();
+			});
 	}
 
 	const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -469,7 +530,9 @@
 		const novos = [];
 		const tiposExpandidos = [];
 		carrinho.forEach(function (q, opcaoName) {
-			const opcao = opcoes.find(function (o) { return o.name === opcaoName; });
+			const opcao = opcoes.find(function (o) {
+				return o.name === opcaoName;
+			});
 			const label = opcao ? opcao.nome_convite : opcaoName;
 			for (let i = 0; i < q; i += 1) tiposExpandidos.push(label);
 		});
@@ -506,18 +569,36 @@
 		const btnUsar = document.getElementById("vc-usar-dados-pagador");
 		if (btnUsar) btnUsar.hidden = convidados.length !== 1;
 		if (!lista) return;
-		lista.innerHTML = convidados.map(function (c, idx) {
-			const tipo = c.tipo_convite ? ' <span class="vc-nomes-pagador-recebe__tipo">· ' + escapeHtml(c.tipo_convite) + "</span>" : "";
-			const valor = escapeHtml(c.nome || "");
-			const inputId = "vc-pr-nome-" + idx;
-			return '<div class="vc-nomes-pagador-recebe__item">'
-				+ '<label class="vc-nomes-pagador-recebe__label" for="' + inputId + '">'
-				+ "Convite " + (idx + 1) + tipo
-				+ "</label>"
-				+ '<input class="input" type="text" id="' + inputId + '" data-vc-pr-idx="' + idx + '"'
-				+ ' value="' + valor + '" required autocomplete="name" placeholder="Nome do convidado">'
-				+ "</div>";
-		}).join("");
+		lista.innerHTML = convidados
+			.map(function (c, idx) {
+				const tipo = c.tipo_convite
+					? ' <span class="vc-nomes-pagador-recebe__tipo">· ' +
+					  escapeHtml(c.tipo_convite) +
+					  "</span>"
+					: "";
+				const valor = escapeHtml(c.nome || "");
+				const inputId = "vc-pr-nome-" + idx;
+				return (
+					'<div class="vc-nomes-pagador-recebe__item">' +
+					'<label class="vc-nomes-pagador-recebe__label" for="' +
+					inputId +
+					'">' +
+					"Convite " +
+					(idx + 1) +
+					tipo +
+					"</label>" +
+					'<input class="input" type="text" id="' +
+					inputId +
+					'" data-vc-pr-idx="' +
+					idx +
+					'"' +
+					' value="' +
+					valor +
+					'" required autocomplete="name" placeholder="Nome do convidado">' +
+					"</div>"
+				);
+			})
+			.join("");
 		const inputs = lista.querySelectorAll("input[data-vc-pr-idx]");
 		inputs.forEach(function (inp) {
 			inp.addEventListener("input", function () {
@@ -541,7 +622,11 @@
 		const tel = document.getElementById("vc-convidado-telefone");
 		if (!tel) return;
 		function aplicar() {
-			try { tel.value = valor || ""; } catch (e) { /* setter ainda não definido */ }
+			try {
+				tel.value = valor || "";
+			} catch (e) {
+				/* setter ainda não definido */
+			}
 		}
 		if (tel.dataset.phoneInputInitialized === "true") {
 			aplicar();
@@ -558,7 +643,8 @@
 		const email = document.getElementById("vc-convidado-email");
 		const emailErro = document.getElementById("vc-convidado-email-erro");
 		const c = convidados[convidadoIdx] || {};
-		if (indicator) indicator.textContent = "Convidado " + (convidadoIdx + 1) + "/" + convidados.length;
+		if (indicator)
+			indicator.textContent = "Convidado " + (convidadoIdx + 1) + "/" + convidados.length;
 		if (tipo) tipo.textContent = c.tipo_convite ? "Convite: " + c.tipo_convite : "";
 		if (nome) nome.value = c.nome || "";
 		if (email) {
@@ -574,8 +660,8 @@
 		const c = convidados[convidadoIdx] || {};
 		const nome = document.getElementById("vc-convidado-nome");
 		const email = document.getElementById("vc-convidado-email");
-		c.nome = (nome && nome.value || "").trim();
-		c.email = (email && email.value || "").trim();
+		c.nome = ((nome && nome.value) || "").trim();
+		c.email = ((email && email.value) || "").trim();
 		c.telefone = lerTelefoneConvidadoDOM();
 		convidados[convidadoIdx] = c;
 	}
@@ -584,15 +670,19 @@
 		const btn = document.getElementById("btn-convidados-continuar");
 		if (!btn) return;
 		if (pagadorRecebe) {
-			const valido = convidados.length > 0 && convidados.every(function (c) {
-				return c.nome && c.nome.trim().length > 0;
-			});
+			const valido =
+				convidados.length > 0 &&
+				convidados.every(function (c) {
+					return c.nome && c.nome.trim().length > 0;
+				});
 			btn.disabled = !valido;
 			return;
 		}
-		const valido = convidados.length > 0 && convidados.every(function (c) {
-			return c.nome && emailValido(c.email);
-		});
+		const valido =
+			convidados.length > 0 &&
+			convidados.every(function (c) {
+				return c.nome && emailValido(c.email);
+			});
 		btn.disabled = !valido;
 	}
 
@@ -611,16 +701,18 @@
 		if (recebeInput) recebeInput.addEventListener("change", onSwitchChange);
 		const prev = document.getElementById("vc-galeria-prev");
 		const next = document.getElementById("vc-galeria-next");
-		if (prev) prev.addEventListener("click", function () {
-			salvarConvidadoAtual();
-			if (convidadoIdx > 0) convidadoIdx -= 1;
-			renderGaleriaAtual();
-		});
-		if (next) next.addEventListener("click", function () {
-			salvarConvidadoAtual();
-			if (convidadoIdx < convidados.length - 1) convidadoIdx += 1;
-			renderGaleriaAtual();
-		});
+		if (prev)
+			prev.addEventListener("click", function () {
+				salvarConvidadoAtual();
+				if (convidadoIdx > 0) convidadoIdx -= 1;
+				renderGaleriaAtual();
+			});
+		if (next)
+			next.addEventListener("click", function () {
+				salvarConvidadoAtual();
+				if (convidadoIdx < convidados.length - 1) convidadoIdx += 1;
+				renderGaleriaAtual();
+			});
 		// Nome
 		const nomeConvEl = document.getElementById("vc-convidado-nome");
 		if (nomeConvEl) {
@@ -686,26 +778,47 @@
 		const dl = document.getElementById("vc-revisao-pagador");
 		if (dl) {
 			dl.innerHTML =
-				'<div><dt>Nome</dt><dd>' + escapeHtml(pagador.nome || "—") + "</dd></div>" +
-				'<div><dt>E-mail</dt><dd>' + escapeHtml(pagador.email || "—") + "</dd></div>" +
-				'<div><dt>Telefone</dt><dd>' + escapeHtml(pagador.telefone || "—") + "</dd></div>";
+				"<div><dt>Nome</dt><dd>" +
+				escapeHtml(pagador.nome || "—") +
+				"</dd></div>" +
+				"<div><dt>E-mail</dt><dd>" +
+				escapeHtml(pagador.email || "—") +
+				"</dd></div>" +
+				"<div><dt>Telefone</dt><dd>" +
+				escapeHtml(pagador.telefone || "—") +
+				"</dd></div>";
 		}
 
 		const ul = document.getElementById("vc-revisao-convites");
 		if (ul) {
 			if (!convidados.length) {
-				ul.innerHTML = '<li class="text-sm text-muted-foreground">Nenhum convite no pedido.</li>';
+				ul.innerHTML =
+					'<li class="text-sm text-muted-foreground">Nenhum convite no pedido.</li>';
 			} else {
-				ul.innerHTML = convidados.map(function (c, idx) {
-					const nomeHtml = "<strong>" + escapeHtml(c.nome || "Convidado " + (idx + 1)) + "</strong>";
-					const detalhe = pagadorRecebe
-						? ' <span class="text-sm text-muted-foreground">· QR no e-mail do pagador</span>'
-						: ' <span class="text-sm text-muted-foreground">· ' + escapeHtml(c.email || "—") + "</span>";
-					return '<li class="vc-revisao-convite">' +
-						'<span class="vc-revisao-convite__tipo">' + escapeHtml(c.tipo_convite || "Convite") + "</span>" +
-						'<span class="vc-revisao-convite__destino">' + nomeHtml + detalhe + "</span>" +
-						"</li>";
-				}).join("");
+				ul.innerHTML = convidados
+					.map(function (c, idx) {
+						const nomeHtml =
+							"<strong>" +
+							escapeHtml(c.nome || "Convidado " + (idx + 1)) +
+							"</strong>";
+						const detalhe = pagadorRecebe
+							? ' <span class="text-sm text-muted-foreground">· QR no e-mail do pagador</span>'
+							: ' <span class="text-sm text-muted-foreground">· ' +
+							  escapeHtml(c.email || "—") +
+							  "</span>";
+						return (
+							'<li class="vc-revisao-convite">' +
+							'<span class="vc-revisao-convite__tipo">' +
+							escapeHtml(c.tipo_convite || "Convite") +
+							"</span>" +
+							'<span class="vc-revisao-convite__destino">' +
+							nomeHtml +
+							detalhe +
+							"</span>" +
+							"</li>"
+						);
+					})
+					.join("");
 			}
 		}
 
@@ -732,10 +845,14 @@
 						festa_name: festaSelecionada,
 						itens: JSON.stringify(itens),
 						doacao_valor: doarFlag ? doacaoValor : 0,
-					}).then(function (resumo) {
-						ultimoResumo = resumo;
-						totalEl.textContent = fmtMoeda(resumo.total);
-					}).catch(function () { /* mantém */ });
+					})
+						.then(function (resumo) {
+							ultimoResumo = resumo;
+							totalEl.textContent = fmtMoeda(resumo.total);
+						})
+						.catch(function () {
+							/* mantém */
+						});
 				}
 			}
 		}
@@ -754,7 +871,11 @@
 		if (body) {
 			body.innerHTML =
 				'<div class="vc-pagamento-loading">' +
-				'<img class="vc-pagamento-logo" src="' + escapeHtml(data.portal_logo || "/assets/gris/images/gris-character/gris-logo.png") + '" alt="Logo" />' +
+				'<img class="vc-pagamento-logo" src="' +
+				escapeHtml(
+					data.portal_logo || "/assets/gris/images/gris-character/gris-logo.png"
+				) +
+				'" alt="Logo" />' +
 				'<p class="vc-pagamento-status">Carregando…</p>' +
 				"</div>";
 		}
@@ -776,11 +897,17 @@
 		body.innerHTML =
 			'<div class="vc-pagamento-pronto">' +
 			'<p class="vc-pagamento-status">Pedido criado!</p>' +
-			'<a href="' + escapeHtml(linkPagamento) + '" target="_blank" rel="noopener" class="btn-primary vc-pagamento-cta">' +
+			'<a href="' +
+			escapeHtml(linkPagamento) +
+			'" target="_blank" rel="noopener" class="btn-primary vc-pagamento-cta">' +
 			cartaoIcone +
-			'<span>Ir para pagamento</span>' +
+			"<span>Ir para pagamento</span>" +
 			"</a>" +
-			(pedidoNome ? '<p class="text-sm text-muted-foreground">Pedido #' + escapeHtml(pedidoNome) + "</p>" : "") +
+			(pedidoNome
+				? '<p class="text-sm text-muted-foreground">Pedido #' +
+				  escapeHtml(pedidoNome) +
+				  "</p>"
+				: "") +
 			"</div>";
 	}
 
@@ -826,21 +953,31 @@
 		pollTries = 0;
 		pollTimer = setInterval(function () {
 			pollTries += 1;
-			if (pollTries > 20) { stopPolling(); return; }
+			if (pollTries > 20) {
+				stopPolling();
+				return;
+			}
 			api("gris.api.festas.venda_convite.get_status_pagamento", {
 				convite_name: pedidoNome,
-			}).then(function (resp) {
-				if (resp.link_pagamento) {
-					linkPagamento = resp.link_pagamento;
-					renderDialogComLink();
-					stopPolling();
-				}
-			}).catch(function () { /* ignora */ });
+			})
+				.then(function (resp) {
+					if (resp.link_pagamento) {
+						linkPagamento = resp.link_pagamento;
+						renderDialogComLink();
+						stopPolling();
+					}
+				})
+				.catch(function () {
+					/* ignora */
+				});
 		}, 3000);
 	}
 
 	function stopPolling() {
-		if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+		if (pollTimer) {
+			clearInterval(pollTimer);
+			pollTimer = null;
+		}
 	}
 
 	// ─── Boot ───────────────────────────────────────────────────────────────
@@ -872,7 +1009,9 @@
 		const dlg = dialogPagamentoEl();
 		if (!dlg) return;
 		// Bloqueia fechamento via ESC (close_on_overlay_click=false já cobre o overlay).
-		dlg.addEventListener("cancel", function (e) { e.preventDefault(); });
+		dlg.addEventListener("cancel", function (e) {
+			e.preventDefault();
+		});
 	}
 
 	function getFestaSelectValue() {
@@ -901,10 +1040,12 @@
 		bindDialogGuard();
 		bloquearAbas();
 		// Prioridade: ?festa=<name> (validado no backend) > select (>1 festa) > única festa.
-		const inicial = (data.festa_pre_selecionada || "")
-			|| getFestaSelectValue()
-			|| (data.festas[0] && data.festas[0].name)
-			|| "";
+		const inicial =
+			data.festa_pre_selecionada ||
+			"" ||
+			getFestaSelectValue() ||
+			(data.festas[0] && data.festas[0].name) ||
+			"";
 		if (inicial) {
 			// Se houve pré-seleção via query param, reflete no select também (quando existir).
 			if (data.festa_pre_selecionada) {

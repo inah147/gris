@@ -182,9 +182,7 @@ def _hydrate_compra(doc, produto_labels: dict[str, str]) -> dict:
 		"qtd_sobra_individual_max": flt(doc.qtd_sobra_individual_max),
 		"valor_sobra_max": flt(doc.valor_sobra_max),
 		"cotacoes": [_hydrate_cotacao_compra(c) for c in (doc.cotacoes or [])],
-		"usos_em_produto": [
-			_hydrate_uso_compra(uso, produto_labels) for uso in (doc.usos_em_produto or [])
-		],
+		"usos_em_produto": [_hydrate_uso_compra(uso, produto_labels) for uso in (doc.usos_em_produto or [])],
 	}
 
 
@@ -334,12 +332,8 @@ def build_festa_payload(festa_name: str) -> dict:
 
 	areas_labels = {a["name"]: a["nome_area"] for a in areas}
 	barracas_labels = {b["name"]: b["nome_barraca"] for b in barracas}
-	payload["receitas_por_area"] = _serializar_orcamento_linhas(
-		doc.receitas_por_area, "area", areas_labels
-	)
-	payload["despesas_por_area"] = _serializar_orcamento_linhas(
-		doc.despesas_por_area, "area", areas_labels
-	)
+	payload["receitas_por_area"] = _serializar_orcamento_linhas(doc.receitas_por_area, "area", areas_labels)
+	payload["despesas_por_area"] = _serializar_orcamento_linhas(doc.despesas_por_area, "area", areas_labels)
 	payload["receitas_por_barraca"] = _serializar_orcamento_linhas(
 		doc.receitas_por_barraca, "barraca", barracas_labels
 	)
@@ -353,9 +347,7 @@ def build_festa_payload(festa_name: str) -> dict:
 		fields=["name"],
 		order_by="nome_produto asc",
 	)
-	produtos = [
-		_hydrate_produto(frappe.get_doc("Produto de Venda Festa", r.name)) for r in produtos_refs
-	]
+	produtos = [_hydrate_produto(frappe.get_doc("Produto de Venda Festa", r.name)) for r in produtos_refs]
 	payload["produtos"] = produtos
 	payload["produtos_items"] = [{"label": "Selecionar produto", "value": "", "type": "item"}] + sorted(
 		[{"label": p["nome_produto"], "value": p["name"], "type": "item"} for p in produtos],
@@ -370,8 +362,7 @@ def build_festa_payload(festa_name: str) -> dict:
 		order_by="nome_item asc",
 	)
 	payload["compras"] = [
-		_hydrate_compra(frappe.get_doc("Compra Festa", r.name), produto_labels)
-		for r in compras_refs
+		_hydrate_compra(frappe.get_doc("Compra Festa", r.name), produto_labels) for r in compras_refs
 	]
 
 	contratacoes_refs = frappe.get_all(
@@ -381,13 +372,10 @@ def build_festa_payload(festa_name: str) -> dict:
 		order_by="nome_item asc",
 	)
 	payload["contratacoes"] = [
-		_hydrate_contratacao(frappe.get_doc("Contratacao Festa", r.name))
-		for r in contratacoes_refs
+		_hydrate_contratacao(frappe.get_doc("Contratacao Festa", r.name)) for r in contratacoes_refs
 	]
 
-	payload["unidades_items"] = [
-		{"label": unidade, "value": unidade, "type": "item"} for unidade in UNIDADES
-	]
+	payload["unidades_items"] = [{"label": unidade, "value": unidade, "type": "item"} for unidade in UNIDADES]
 	payload["associados_items"] = _select_items_associados()
 	payload["responsaveis_items"] = _select_items_responsaveis()
 	payload["convites_dashboard"] = build_convites_dashboard(doc.name)

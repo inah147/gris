@@ -133,7 +133,9 @@ def get_context(context):
 
 def _notificar_gestores_novo_associado(nome_associado: str) -> None:
 	"""Notifica usuários com role 'Gestor de Associado' para criarem o registro no PAXTU."""
-	primeiro_nome_associado = (nome_associado or "").strip().split()[0] if nome_associado else "novo associado"
+	primeiro_nome_associado = (
+		(nome_associado or "").strip().split()[0] if nome_associado else "novo associado"
+	)
 
 	for gestor in buscar_destinatarios_gestores():
 		nome_gestor = gestor.get("nome") or "Gestor"
@@ -425,4 +427,3 @@ def update_novo_associado(novo_associado_name, data, responsaveis_data=None):
 
 	_notificar_gestores_novo_associado(doc.nome_completo or str(novo_associado_name))
 	return {"status": "success"}
-

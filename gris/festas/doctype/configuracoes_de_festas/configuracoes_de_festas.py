@@ -52,9 +52,7 @@ def get_opcoes_drives_compartilhados_festas() -> list[dict[str, str]]:
 	if not frappe.has_permission("Configuracoes de Festas", "read"):
 		frappe.throw(_("Sem permissao para consultar configuracoes de festas."), frappe.PermissionError)
 
-	return [
-		{"label": label, "value": drive_id} for drive_id, label in _get_active_party_drive_map().items()
-	]
+	return [{"label": label, "value": drive_id} for drive_id, label in _get_active_party_drive_map().items()]
 
 
 def _get_active_party_drive_map() -> dict[str, str]:

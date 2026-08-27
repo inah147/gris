@@ -2377,9 +2377,7 @@ def _assert_task_payload(payload: dict[str, Any], team_user_ids: set[str]) -> di
 
 	responsavel = (payload.get("responsavel") or "").strip()
 	if responsavel and responsavel not in team_user_ids:
-		frappe.throw(
-			_("Responsável da tarefa deve ser um envolvido do projeto com usuário vinculado.")
-		)
+		frappe.throw(_("Responsável da tarefa deve ser um envolvido do projeto com usuário vinculado."))
 	payload["responsavel"] = responsavel
 
 	if payload.get("data_inicio") and payload.get("prazo"):
@@ -3151,9 +3149,7 @@ def salvar_tarefa_projeto_execucao(projeto_name: str, tarefa: str | dict[str, An
 			for fieldname in TASK_CLIENT_FIELDS
 		}
 	else:
-		task_payload = {
-			fieldname: _clean_value(payload.get(fieldname)) for fieldname in TASK_CLIENT_FIELDS
-		}
+		task_payload = {fieldname: _clean_value(payload.get(fieldname)) for fieldname in TASK_CLIENT_FIELDS}
 
 	team_user_ids = _get_responsavel_user_ids(doc)
 	task_payload = _normalize_task_start_date(task_payload, previous_status=previous_status)

@@ -100,7 +100,7 @@ def gerar_resposta_modelo(
 			{
 				"role": "user",
 				"content": user_prompt,
-			}
+			},
 		],
 	}
 

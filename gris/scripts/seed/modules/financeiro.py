@@ -89,9 +89,7 @@ def seed_pagamentos_conta_fixa(conta_fixa_names: list[str]):
 		for offset, status in zip([-2, 0, -1], statuses, strict=False):
 			mes_ref = first_of_month(offset)
 			# Idempotência por chave de negócio (controller sobrescreve titulo p/ mês em PT-BR)
-			if frappe.db.exists(
-				"Pagamento Conta Fixa", {"conta": nome_conta, "mes_referencia": mes_ref}
-			):
+			if frappe.db.exists("Pagamento Conta Fixa", {"conta": nome_conta, "mes_referencia": mes_ref}):
 				continue
 			try:
 				# titulo será ajustado pelo controller em before_insert/validate
@@ -206,8 +204,12 @@ def seed_transacao_extrato_geral(n: int):
 					"instituicao": random.choice(instituicoes) if instituicoes else None,
 					"categoria": random.choice(categorias) if categorias else None,
 					"fixo_variavel": random.choice(["Fixo", "Variável"]),
-					"conta_fixa": random.choice(contas_fixas) if contas_fixas and random.random() < 0.3 else None,
-					"beneficiario": random.choice(beneficiarios) if beneficiarios and random.random() < 0.3 else None,
+					"conta_fixa": random.choice(contas_fixas)
+					if contas_fixas and random.random() < 0.3
+					else None,
+					"beneficiario": random.choice(beneficiarios)
+					if beneficiarios and random.random() < 0.3
+					else None,
 					"centro_de_custo": random.choice(centros) if centros else None,
 					"ordinaria_extraordinaria": random.choice(["Ordinária", "Extraordinária"]),
 					"repasse_entre_contas": 0,
@@ -278,9 +280,7 @@ def seed_transacao_infinitepay_recebimento(n: int):
 		total_parcelas = (i % 12) + 1
 		numero_liquidacao = f"LIQ{i:08d}"
 		# Idempotência por chave de negócio (numero_liquidacao é único nos dados gerados)
-		if frappe.db.exists(
-			"Transacao Infinitepay recebimento", {"numero_liquidacao": numero_liquidacao}
-		):
+		if frappe.db.exists("Transacao Infinitepay recebimento", {"numero_liquidacao": numero_liquidacao}):
 			continue
 		try:
 			frappe.get_doc(

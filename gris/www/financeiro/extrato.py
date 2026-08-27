@@ -18,11 +18,7 @@ def get_context(context):
 		]
 
 	def get_master_options(doctype, field="name", order_by="name"):
-		return [
-			r[field]
-			for r in frappe.get_all(doctype, fields=[field], order_by=order_by)
-			if r.get(field)
-		]
+		return [r[field] for r in frappe.get_all(doctype, fields=[field], order_by=order_by) if r.get(field)]
 
 	context.opcoes_instituicao = get_distinct("instituicao")
 	context.opcoes_carteira = get_distinct("carteira")

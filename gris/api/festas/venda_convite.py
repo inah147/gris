@@ -64,9 +64,7 @@ def _festa_aberta(festa_name: str) -> dict:
 		"nome_festa": row.nome_festa or row.name,
 		"data": row.data.isoformat() if row.data else "",
 		"aceitar_doacoes": bool(row.aceitar_doacoes),
-		"data_limite_vendas": row.data_limite_vendas.isoformat()
-		if row.data_limite_vendas
-		else "",
+		"data_limite_vendas": row.data_limite_vendas.isoformat() if row.data_limite_vendas else "",
 	}
 
 
@@ -134,9 +132,7 @@ def _validar_itens(festa_name: str, itens_raw) -> tuple[list[dict], float, int]:
 
 	# Regra de negócio: convite de portaria não pode ser misturado com outros.
 	if tem_portaria and tem_nao_portaria:
-		frappe.throw(
-			"Convites de portaria não podem ser comprados junto com outros tipos."
-		)
+		frappe.throw("Convites de portaria não podem ser comprados junto com outros tipos.")
 
 	return resumo_itens, subtotal, total_convites
 
@@ -175,7 +171,9 @@ def _validar_pagador(pagador_raw) -> dict:
 	return {"nome": nome, "email": email, "telefone": telefone}
 
 
-def _validar_convidados(convidados_raw, total_convites: int, pagador_recebe: bool, pagador: dict) -> list[dict]:
+def _validar_convidados(
+	convidados_raw, total_convites: int, pagador_recebe: bool, pagador: dict
+) -> list[dict]:
 	"""Valida e normaliza a lista de convidados.
 
 	Em qualquer cenário o front envia uma linha por convite com pelo menos o
@@ -185,9 +183,7 @@ def _validar_convidados(convidados_raw, total_convites: int, pagador_recebe: boo
 	"""
 	convidados = _parse_json(convidados_raw, "Lista de convidados")
 	if not isinstance(convidados, list) or len(convidados) != total_convites:
-		frappe.throw(
-			f"Informe o nome de exatamente {total_convites} convidado(s)."
-		)
+		frappe.throw(f"Informe o nome de exatamente {total_convites} convidado(s).")
 	saida: list[dict] = []
 	for c in convidados:
 		if not isinstance(c, dict):
@@ -230,9 +226,7 @@ def listar_festas_abertas() -> list[dict]:
 			"nome_festa": r.nome_festa or r.name,
 			"data": r.data.isoformat() if r.data else "",
 			"aceitar_doacoes": bool(r.aceitar_doacoes),
-			"data_limite_vendas": r.data_limite_vendas.isoformat()
-			if r.data_limite_vendas
-			else "",
+			"data_limite_vendas": r.data_limite_vendas.isoformat() if r.data_limite_vendas else "",
 		}
 		for r in rows
 	]
@@ -300,9 +294,7 @@ def criar_convite(
 	resumo_itens, _, total_convites = _validar_itens(festa_name, itens)
 	valor_doacao = _validar_doacao(festa, doacao_valor)
 	pagador_recebe_flag = 1 if pagador_recebe_qr_codes in ("1", "true", "True", True, 1) else 0
-	convidados_data = _validar_convidados(
-		convidados, total_convites, bool(pagador_recebe_flag), pagador_data
-	)
+	convidados_data = _validar_convidados(convidados, total_convites, bool(pagador_recebe_flag), pagador_data)
 
 	itens_doc = [
 		{
@@ -352,10 +344,7 @@ def criar_convite(
 	link_pagamento = ""
 	if convite.cobranca_infinitepay:
 		link_pagamento = (
-			frappe.db.get_value(
-				"Cobranca Infinitepay", convite.cobranca_infinitepay, "link_pagamento"
-			)
-			or ""
+			frappe.db.get_value("Cobranca Infinitepay", convite.cobranca_infinitepay, "link_pagamento") or ""
 		)
 
 	return {
@@ -369,17 +358,18 @@ def criar_convite(
 def get_status_pagamento(convite_name: str) -> dict:
 	if not convite_name:
 		frappe.throw("Parâmetro 'convite_name' obrigatório.")
-	cobranca_name = frappe.db.get_value(
-		"Convite Festa", convite_name, "cobranca_infinitepay"
-	)
+	cobranca_name = frappe.db.get_value("Convite Festa", convite_name, "cobranca_infinitepay")
 	if not cobranca_name:
 		return {"status": "Pendente", "link_pagamento": ""}
-	row = frappe.db.get_value(
-		"Cobranca Infinitepay",
-		cobranca_name,
-		["status", "link_pagamento"],
-		as_dict=True,
-	) or {}
+	row = (
+		frappe.db.get_value(
+			"Cobranca Infinitepay",
+			cobranca_name,
+			["status", "link_pagamento"],
+			as_dict=True,
+		)
+		or {}
+	)
 	return {
 		"status": row.get("status") or "Pendente",
 		"link_pagamento": row.get("link_pagamento") or "",

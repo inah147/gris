@@ -73,9 +73,7 @@ def _build_projeto_data(status: str, idx: int) -> dict:
 		)
 
 	# ODS table (Table MultiSelect)
-	ods_rows = (
-		[{"ods": ods_disponiveis[0]}] if ods_disponiveis else []
-	)
+	ods_rows = [{"ods": ods_disponiveis[0]}] if ods_disponiveis else []
 
 	objetivos = [
 		{

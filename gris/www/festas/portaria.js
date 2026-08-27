@@ -77,7 +77,9 @@
 					}
 					if (first && first.message) return first.message;
 				}
-			} catch (e) { /* fallback */ }
+			} catch (e) {
+				/* fallback */
+			}
 		}
 		if (err.message) return err.message;
 		return "Erro de servidor.";
@@ -153,7 +155,7 @@
 				"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
 				"X-Frappe-CSRF-Token": (window.frappe && frappe.csrf_token) || "",
 				"X-Frappe-CMD": method,
-				"Accept": "application/json",
+				Accept: "application/json",
 				"X-Requested-With": "XMLHttpRequest",
 			},
 			body: params.toString(),
@@ -161,7 +163,11 @@
 			return response.text().then(function (text) {
 				let data = null;
 				if (text) {
-					try { data = JSON.parse(text); } catch (e) { /* corpo não-JSON */ }
+					try {
+						data = JSON.parse(text);
+					} catch (e) {
+						/* corpo não-JSON */
+					}
 				}
 				if (!response.ok) {
 					throw new Error(extractServerMessage(data || {}));
@@ -221,7 +227,9 @@
 			const args = arguments;
 			const self = this;
 			clearTimeout(t);
-			t = setTimeout(function () { fn.apply(self, args); }, ms);
+			t = setTimeout(function () {
+				fn.apply(self, args);
+			}, ms);
 		};
 	}
 
@@ -235,7 +243,9 @@
 				if (window.echarts) resolve();
 				else reject(new Error("ECharts não carregou."));
 			};
-			s.onerror = function () { reject(new Error("Falha ao carregar ECharts.")); };
+			s.onerror = function () {
+				reject(new Error("Falha ao carregar ECharts."));
+			};
 			document.head.appendChild(s);
 		});
 		return echartsLoading;
@@ -251,7 +261,9 @@
 				if (window.jsQR) resolve();
 				else reject(new Error("jsQR não carregou."));
 			};
-			s.onerror = function () { reject(new Error("Falha ao carregar jsQR.")); };
+			s.onerror = function () {
+				reject(new Error("Falha ao carregar jsQR."));
+			};
 			document.head.appendChild(s);
 		});
 		return jsqrLoading;
@@ -263,8 +275,12 @@
 		festaAtual = festaName || null;
 		try {
 			if (festaName) sessionStorage.setItem(STORAGE_KEY_FESTA, festaName);
-		} catch (e) { /* sessionStorage indisponível */ }
-		const festaObj = (data.festas || []).find(function (x) { return x.name === festaName; });
+		} catch (e) {
+			/* sessionStorage indisponível */
+		}
+		const festaObj = (data.festas || []).find(function (x) {
+			return x.name === festaName;
+		});
 		const sub = document.getElementById("portaria-festa-subtitle");
 		if (sub) {
 			sub.textContent = festaObj
@@ -277,9 +293,10 @@
 		if (btnVender) {
 			const vendaAtiva = !!(festaObj && festaObj.venda_na_portaria);
 			btnVender.disabled = !festaName || !vendaAtiva;
-			btnVender.title = (!festaName || vendaAtiva)
-				? ""
-				: "Venda na portaria não está ativa para esta festa.";
+			btnVender.title =
+				!festaName || vendaAtiva
+					? ""
+					: "Venda na portaria não está ativa para esta festa.";
 		}
 		if (festaName) {
 			carregarLista();
@@ -297,8 +314,14 @@
 
 		// >1 festa: usa o sessionStorage se válido; senão deixa o select
 		let inicial = "";
-		try { inicial = sessionStorage.getItem(STORAGE_KEY_FESTA) || ""; } catch (e) { /* idem */ }
-		const valida = festas.find(function (f) { return f.name === inicial; });
+		try {
+			inicial = sessionStorage.getItem(STORAGE_KEY_FESTA) || "";
+		} catch (e) {
+			/* idem */
+		}
+		const valida = festas.find(function (f) {
+			return f.name === inicial;
+		});
 		if (valida) {
 			setSelectValue("portaria-festa", inicial);
 			setFestaAtual(inicial);
@@ -369,18 +392,18 @@
 		const decoderReady = detectorScan
 			? Promise.resolve()
 			: ensureJsQR().catch(function (err) {
-				if (statusEl) {
-					statusEl.textContent =
-						"Não foi possível carregar o leitor de QR. Use o campo manual abaixo.";
-				}
-				if (wrapper) wrapper.hidden = true;
-				if (manual) manual.hidden = false;
-				if (manualHint) {
-					manualHint.textContent =
-						"Não foi possível carregar o leitor de QR. Digite o código manualmente:";
-				}
-				throw err;
-			});
+					if (statusEl) {
+						statusEl.textContent =
+							"Não foi possível carregar o leitor de QR. Use o campo manual abaixo.";
+					}
+					if (wrapper) wrapper.hidden = true;
+					if (manual) manual.hidden = false;
+					if (manualHint) {
+						manualHint.textContent =
+							"Não foi possível carregar o leitor de QR. Digite o código manualmente:";
+					}
+					throw err;
+			  });
 
 		decoderReady
 			.then(function () {
@@ -411,7 +434,9 @@
 									}
 								}
 							})
-							.catch(function () { /* frames inválidos */ });
+							.catch(function () {
+								/* frames inválidos */
+							});
 						return;
 					}
 					// Fallback jsQR: copia frame para canvas e decodifica.
@@ -455,7 +480,9 @@
 			scanInterval = null;
 		}
 		if (scanStream) {
-			scanStream.getTracks().forEach(function (t) { t.stop(); });
+			scanStream.getTracks().forEach(function (t) {
+				t.stop();
+			});
 			scanStream = null;
 		}
 		const video = document.getElementById("portaria-scan-video");
@@ -518,7 +545,8 @@
 		const dlg = document.getElementById("dlg-portaria-codigo-invalido");
 		const msg = document.getElementById("portaria-codigo-invalido-mensagem");
 		// Mensagem genérica do backend; nunca expõe se o código existe em outra festa.
-		if (msg) msg.textContent = mensagem || "Este código de convite não é válido para esta festa.";
+		if (msg)
+			msg.textContent = mensagem || "Este código de convite não é válido para esta festa.";
 		if (!dlg || typeof dlg.showModal !== "function") return;
 		if (dlg.open) return;
 		dlg.showModal();
@@ -583,9 +611,10 @@
 				const statusBadge = e.ja_entrou
 					? '<span class="badge badge-success">Entrou</span>'
 					: '<span class="badge badge-secondary">Não entrou</span>';
-				const origemBadge = e.origem === "portaria"
-					? '<span class="badge badge-success">Portaria</span>'
-					: '<span class="badge badge-secondary">Prévia</span>';
+				const origemBadge =
+					e.origem === "portaria"
+						? '<span class="badge badge-success">Portaria</span>'
+						: '<span class="badge badge-secondary">Prévia</span>';
 				const hora = e.hora_entrada ? fmtHora(e.hora_entrada) : "—";
 				const acoes =
 					'<button type="button" class="btn-sm-outline" data-acao="detalhes" data-name="' +
@@ -593,11 +622,21 @@
 					'">Detalhes</button>';
 				return (
 					"<tr>" +
-					"<td>" + escapeHtml(e.nome_convidado || "—") + "</td>" +
-					"<td>" + statusBadge + "</td>" +
-					"<td>" + origemBadge + "</td>" +
-					"<td>" + hora + "</td>" +
-					"<td>" + acoes + "</td>" +
+					"<td>" +
+					escapeHtml(e.nome_convidado || "—") +
+					"</td>" +
+					"<td>" +
+					statusBadge +
+					"</td>" +
+					"<td>" +
+					origemBadge +
+					"</td>" +
+					"<td>" +
+					hora +
+					"</td>" +
+					"<td>" +
+					acoes +
+					"</td>" +
 					"</tr>"
 				);
 			})
@@ -612,15 +651,19 @@
 			"<th>Hora de entrada</th>" +
 			"<th>Ações</th>" +
 			"</tr></thead>" +
-			"<tbody>" + linhasHtml + "</tbody>" +
+			"<tbody>" +
+			linhasHtml +
+			"</tbody>" +
 			"</table>";
 
 		// Bind das ações
-		container.querySelectorAll('[data-acao]').forEach(function (btn) {
+		container.querySelectorAll("[data-acao]").forEach(function (btn) {
 			btn.addEventListener("click", function () {
 				const acao = btn.getAttribute("data-acao");
 				const name = btn.getAttribute("data-name");
-				const entrada = convitesCache.find(function (e) { return e.name === name; });
+				const entrada = convitesCache.find(function (e) {
+					return e.name === name;
+				});
 				if (!entrada) return;
 				if (acao === "detalhes") abrirDetalhes(entrada);
 			});
@@ -690,8 +733,10 @@
 		const nome = entrada.nome_convidado || "este convidado";
 		confirmDialog({
 			title: "Confirmar entrada manual?",
-			message: "Esta ação irá confirmar a entrada de " + nome
-				+ " mesmo sem apresentar o QR code. Use apenas quando o convidado realmente comprou o convite.",
+			message:
+				"Esta ação irá confirmar a entrada de " +
+				nome +
+				" mesmo sem apresentar o QR code. Use apenas quando o convidado realmente comprou o convite.",
 			confirmLabel: "Confirmar entrada",
 			variant: "destructive",
 		}).then(function (ok) {
@@ -710,7 +755,10 @@
 					if (resp.ja_entrou_antes) {
 						toast("Entrada já estava confirmada.", "info");
 					} else {
-						toast("Entrada manual confirmada: " + (resp.nome_convidado || ""), "success");
+						toast(
+							"Entrada manual confirmada: " + (resp.nome_convidado || ""),
+							"success"
+						);
 					}
 					const dlgDet = document.getElementById("dlg-portaria-detalhes");
 					if (dlgDet && dlgDet.open) dlgDet.close();
@@ -766,7 +814,11 @@
 	}
 
 	function confirmarReenvio(entrada) {
-		if (!window.confirm("Reenviar QR code para " + (entrada.email || entrada.nome_convidado) + "?")) {
+		if (
+			!window.confirm(
+				"Reenviar QR code para " + (entrada.email || entrada.nome_convidado) + "?"
+			)
+		) {
 			return;
 		}
 		api("gris.api.festas.portaria.reenviar_convite", {
@@ -850,7 +902,10 @@
 	}
 
 	function nomeCompleto(valor) {
-		const partes = String(valor || "").trim().split(/\s+/).filter(Boolean);
+		const partes = String(valor || "")
+			.trim()
+			.split(/\s+/)
+			.filter(Boolean);
 		return partes.length >= 2;
 	}
 
@@ -1013,8 +1068,12 @@
 		salvarConvidadoAtualPresencial();
 		limparErrosPresencial();
 
-		const nome = ((document.getElementById("presencial-pagador-nome") || {}).value || "").trim();
-		const email = ((document.getElementById("presencial-pagador-email") || {}).value || "").trim();
+		const nome = (
+			(document.getElementById("presencial-pagador-nome") || {}).value || ""
+		).trim();
+		const email = (
+			(document.getElementById("presencial-pagador-email") || {}).value || ""
+		).trim();
 		const telefone = lerTelefonePresencialDOM();
 
 		const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1022,21 +1081,29 @@
 		let erros = 0;
 
 		if (!nome) {
-			marcarErro("presencial-pagador-nome-wrap", "presencial-pagador-nome-erro", "Informe o nome do pagador.");
+			marcarErro(
+				"presencial-pagador-nome-wrap",
+				"presencial-pagador-nome-erro",
+				"Informe o nome do pagador."
+			);
 			primeiroErro = primeiroErro || "presencial-pagador-nome";
 			erros += 1;
 		} else if (!nomeCompleto(nome)) {
 			marcarErro(
 				"presencial-pagador-nome-wrap",
 				"presencial-pagador-nome-erro",
-				"Informe o nome completo (nome e sobrenome).",
+				"Informe o nome completo (nome e sobrenome)."
 			);
 			primeiroErro = primeiroErro || "presencial-pagador-nome";
 			erros += 1;
 		}
 
 		if (email && !EMAIL_RE.test(email)) {
-			marcarErro("presencial-pagador-email-wrap", "presencial-pagador-email-erro", "E-mail inválido.");
+			marcarErro(
+				"presencial-pagador-email-wrap",
+				"presencial-pagador-email-erro",
+				"E-mail inválido."
+			);
 			primeiroErro = primeiroErro || "presencial-pagador-email";
 			erros += 1;
 		}
@@ -1045,7 +1112,7 @@
 			marcarErro(
 				"presencial-pagador-telefone-wrap",
 				"presencial-pagador-telefone-erro",
-				"Telefone inválido.",
+				"Telefone inválido."
 			);
 			primeiroErro = primeiroErro || "presencial-pagador-telefone-number";
 			erros += 1;
@@ -1055,7 +1122,7 @@
 			marcarErro(
 				"presencial-meio-wrap",
 				"presencial-meio-erro",
-				"Escolha a forma de pagamento (Dinheiro ou Cartão).",
+				"Escolha a forma de pagamento (Dinheiro ou Cartão)."
 			);
 			erros += 1;
 		}
@@ -1081,7 +1148,7 @@
 			marcarErro(
 				"presencial-convidado-nome-wrap",
 				"presencial-convidado-nome-erro",
-				convidadoErroMsg,
+				convidadoErroMsg
 			);
 			primeiroErro = primeiroErro || "presencial-convidado-nome";
 			erros += 1;
@@ -1105,13 +1172,19 @@
 			pagador: { nome: nome, email: email, telefone: telefone },
 			quantidade: presencialState.quantidade,
 			meio_pagamento: presencialState.meioPagamento,
-			convidados: presencialState.convidados.slice(0, presencialState.quantidade).map(function (c) {
-				return { nome: c.nome };
-			}),
+			convidados: presencialState.convidados
+				.slice(0, presencialState.quantidade)
+				.map(function (c) {
+					return { nome: c.nome };
+				}),
 		})
 			.then(function (resp) {
 				toast(
-					"Venda registrada (" + formatarMoeda(resp.valor_total) + ", " + (resp.meio_pagamento || "") + ").",
+					"Venda registrada (" +
+						formatarMoeda(resp.valor_total) +
+						", " +
+						(resp.meio_pagamento || "") +
+						").",
 					"success"
 				);
 				const dlg = document.getElementById("dlg-portaria-vender-presencial");
@@ -1120,7 +1193,10 @@
 				if (tabAtiva() === TAB_ACOMPANHAMENTO_IDX) carregarAcompanhamento();
 			})
 			.catch(function (err) {
-				toast(extractServerMessage(err) || "Falha ao registrar venda presencial.", "error");
+				toast(
+					extractServerMessage(err) || "Falha ao registrar venda presencial.",
+					"error"
+				);
 			})
 			.finally(function () {
 				presencialState.submetendo = false;
@@ -1169,10 +1245,11 @@
 		if (extra) {
 			if (totalPrevia > 0) {
 				const pct = Math.round((previa / totalPrevia) * 1000) / 10;
-				extra.textContent = pct.toLocaleString("pt-BR", {
-					minimumFractionDigits: pct % 1 === 0 ? 0 : 1,
-					maximumFractionDigits: 1,
-				}) + "% das compras prévias";
+				extra.textContent =
+					pct.toLocaleString("pt-BR", {
+						minimumFractionDigits: pct % 1 === 0 ? 0 : 1,
+						maximumFractionDigits: 1,
+					}) + "% das compras prévias";
 			} else {
 				extra.textContent = "Sem compras prévias registradas";
 			}
@@ -1185,7 +1262,8 @@
 		const extraGeral = document.getElementById("portaria-indicador-total-geral-extra");
 		if (extraGeral) {
 			if (totalEntrou > 0) {
-				extraGeral.textContent = previa + " com compra prévia · " + portaria + " na portaria";
+				extraGeral.textContent =
+					previa + " com compra prévia · " + portaria + " na portaria";
 			} else {
 				extraGeral.textContent = "Sem entradas registradas";
 			}
@@ -1229,18 +1307,21 @@
 					],
 				},
 			],
-			graphic: total === 0 ? [
-				{
-					type: "text",
-					left: "center",
-					top: "middle",
-					style: {
-						text: "Sem dados ainda",
-						fill: "#888",
-						font: "14px sans-serif",
-					},
-				},
-			] : undefined,
+			graphic:
+				total === 0
+					? [
+							{
+								type: "text",
+								left: "center",
+								top: "middle",
+								style: {
+									text: "Sem dados ainda",
+									fill: "#888",
+									font: "14px sans-serif",
+								},
+							},
+					  ]
+					: undefined,
 		});
 	}
 
@@ -1279,18 +1360,21 @@
 					],
 				},
 			],
-			graphic: total === 0 ? [
-				{
-					type: "text",
-					left: "center",
-					top: "middle",
-					style: {
-						text: "Sem entradas registradas",
-						fill: "#888",
-						font: "14px sans-serif",
-					},
-				},
-			] : undefined,
+			graphic:
+				total === 0
+					? [
+							{
+								type: "text",
+								left: "center",
+								top: "middle",
+								style: {
+									text: "Sem entradas registradas",
+									fill: "#888",
+									font: "14px sans-serif",
+								},
+							},
+					  ]
+					: undefined,
 		});
 	}
 
@@ -1303,7 +1387,7 @@
 				if (chartLinha) chartLinha.resize();
 			});
 		}
-		const linha = (linhaRaw || []);
+		const linha = linhaRaw || [];
 		const xs = linha.map(function (p) {
 			const dt = new Date(p.bin);
 			return dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -1378,7 +1462,9 @@
 		const btnValidarManual = document.getElementById("btn-portaria-validar-codigo");
 		if (btnValidarManual) {
 			btnValidarManual.addEventListener("click", function () {
-				const codigo = ((document.getElementById("portaria-scan-codigo-manual") || {}).value || "").trim();
+				const codigo = (
+					(document.getElementById("portaria-scan-codigo-manual") || {}).value || ""
+				).trim();
 				if (!codigo) {
 					toast("Digite o código.", "error");
 					return;
@@ -1459,7 +1545,10 @@
 				if (!modo) return;
 				linhaModo = modo;
 				document.querySelectorAll(".portaria-chart-mode").forEach(function (b) {
-					b.setAttribute("aria-pressed", b.getAttribute("data-modo") === modo ? "true" : "false");
+					b.setAttribute(
+						"aria-pressed",
+						b.getAttribute("data-modo") === modo ? "true" : "false"
+					);
 				});
 				carregarAcompanhamento();
 			});
@@ -1479,65 +1568,97 @@
 
 		// Fechar dialog do scanner solta a câmera.
 		const dlgScan = document.getElementById("dlg-portaria-scan");
-		if (dlgScan) dlgScan.addEventListener("close", function () { pararCamera(); });
+		if (dlgScan)
+			dlgScan.addEventListener("close", function () {
+				pararCamera();
+			});
 
 		// ─── Fluxo "Vender na porta" ────────────────────────────────────────
 		const btnModoLink = document.getElementById("btn-portaria-modo-link");
-		if (btnModoLink) btnModoLink.addEventListener("click", function () { escolherModoVenda("link"); });
+		if (btnModoLink)
+			btnModoLink.addEventListener("click", function () {
+				escolherModoVenda("link");
+			});
 		const btnModoPresencial = document.getElementById("btn-portaria-modo-presencial");
-		if (btnModoPresencial) btnModoPresencial.addEventListener("click", function () { escolherModoVenda("presencial"); });
+		if (btnModoPresencial)
+			btnModoPresencial.addEventListener("click", function () {
+				escolherModoVenda("presencial");
+			});
 
 		const btnQtdMenos = document.getElementById("btn-presencial-quantidade-menos");
-		if (btnQtdMenos) btnQtdMenos.addEventListener("click", function () { ajustarQuantidadePresencial(-1); });
+		if (btnQtdMenos)
+			btnQtdMenos.addEventListener("click", function () {
+				ajustarQuantidadePresencial(-1);
+			});
 		const btnQtdMais = document.getElementById("btn-presencial-quantidade-mais");
-		if (btnQtdMais) btnQtdMais.addEventListener("click", function () { ajustarQuantidadePresencial(1); });
+		if (btnQtdMais)
+			btnQtdMais.addEventListener("click", function () {
+				ajustarQuantidadePresencial(1);
+			});
 		const qtdInput = document.getElementById("presencial-quantidade");
 		if (qtdInput) {
-			qtdInput.addEventListener("change", function () { definirQuantidadePresencial(qtdInput.value); });
-			qtdInput.addEventListener("blur", function () { definirQuantidadePresencial(qtdInput.value); });
+			qtdInput.addEventListener("change", function () {
+				definirQuantidadePresencial(qtdInput.value);
+			});
+			qtdInput.addEventListener("blur", function () {
+				definirQuantidadePresencial(qtdInput.value);
+			});
 		}
 
 		const btnMeioDin = document.getElementById("btn-presencial-meio-dinheiro");
-		if (btnMeioDin) btnMeioDin.addEventListener("click", function () {
-			selecionarMeioPagamentoPresencial("Dinheiro");
-			limparErro("presencial-meio-wrap", "presencial-meio-erro");
-		});
+		if (btnMeioDin)
+			btnMeioDin.addEventListener("click", function () {
+				selecionarMeioPagamentoPresencial("Dinheiro");
+				limparErro("presencial-meio-wrap", "presencial-meio-erro");
+			});
 		const btnMeioCartao = document.getElementById("btn-presencial-meio-cartao");
-		if (btnMeioCartao) btnMeioCartao.addEventListener("click", function () {
-			selecionarMeioPagamentoPresencial("Cartão");
-			limparErro("presencial-meio-wrap", "presencial-meio-erro");
-		});
+		if (btnMeioCartao)
+			btnMeioCartao.addEventListener("click", function () {
+				selecionarMeioPagamentoPresencial("Cartão");
+				limparErro("presencial-meio-wrap", "presencial-meio-erro");
+			});
 
 		const pagadorNomeInput = document.getElementById("presencial-pagador-nome");
-		if (pagadorNomeInput) pagadorNomeInput.addEventListener("input", function () {
-			limparErro("presencial-pagador-nome-wrap", "presencial-pagador-nome-erro");
-		});
+		if (pagadorNomeInput)
+			pagadorNomeInput.addEventListener("input", function () {
+				limparErro("presencial-pagador-nome-wrap", "presencial-pagador-nome-erro");
+			});
 		const pagadorEmailInput = document.getElementById("presencial-pagador-email");
-		if (pagadorEmailInput) pagadorEmailInput.addEventListener("input", function () {
-			limparErro("presencial-pagador-email-wrap", "presencial-pagador-email-erro");
-		});
+		if (pagadorEmailInput)
+			pagadorEmailInput.addEventListener("input", function () {
+				limparErro("presencial-pagador-email-wrap", "presencial-pagador-email-erro");
+			});
 		const pagadorTelInput = document.getElementById("presencial-pagador-telefone-number");
-		if (pagadorTelInput) pagadorTelInput.addEventListener("input", function () {
-			limparErro("presencial-pagador-telefone-wrap", "presencial-pagador-telefone-erro");
-		});
+		if (pagadorTelInput)
+			pagadorTelInput.addEventListener("input", function () {
+				limparErro("presencial-pagador-telefone-wrap", "presencial-pagador-telefone-erro");
+			});
 
 		const galPrev = document.getElementById("presencial-galeria-prev");
-		if (galPrev) galPrev.addEventListener("click", function () { navegarConvidadoPresencial(-1); });
+		if (galPrev)
+			galPrev.addEventListener("click", function () {
+				navegarConvidadoPresencial(-1);
+			});
 		const galNext = document.getElementById("presencial-galeria-next");
-		if (galNext) galNext.addEventListener("click", function () { navegarConvidadoPresencial(1); });
+		if (galNext)
+			galNext.addEventListener("click", function () {
+				navegarConvidadoPresencial(1);
+			});
 		const nomeConv = document.getElementById("presencial-convidado-nome");
 		if (nomeConv) {
 			nomeConv.addEventListener("blur", salvarConvidadoAtualPresencial);
 			nomeConv.addEventListener("input", function () {
 				const idx = presencialState.convidadoIdx;
-				if (!presencialState.convidados[idx]) presencialState.convidados[idx] = { nome: "" };
+				if (!presencialState.convidados[idx])
+					presencialState.convidados[idx] = { nome: "" };
 				presencialState.convidados[idx].nome = (nomeConv.value || "").trim();
 				limparErro("presencial-convidado-nome-wrap", "presencial-convidado-nome-erro");
 			});
 		}
 
 		const btnConfirmarPresencial = document.getElementById("btn-presencial-confirmar");
-		if (btnConfirmarPresencial) btnConfirmarPresencial.addEventListener("click", confirmarVendaPresencial);
+		if (btnConfirmarPresencial)
+			btnConfirmarPresencial.addEventListener("click", confirmarVendaPresencial);
 	}
 
 	document.addEventListener("DOMContentLoaded", function () {

@@ -6,7 +6,7 @@ frappe.ready(() => {
 	const activitySearch = document.getElementById("activity-search");
 	const exportButton = document.getElementById("btn-export-calendar");
 	const sourceEvents = calendar ? (calendar.events || []).map(cloneEvent) : [];
-	const allSections = calendar ? (calendar.activeCategories || []) : [];
+	const allSections = calendar ? calendar.activeCategories || [] : [];
 
 	const applyFilters = ({ resetAnchor = false } = {}) => {
 		const year = Number(getSelectValue(yearFilter) || new Date().getFullYear());
@@ -108,7 +108,10 @@ frappe.ready(() => {
 				sections: JSON.stringify(sections),
 			});
 
-			window.open(`/api/method/gris.www.calendario.visualizar.export_calendar?${params.toString()}`, "_blank");
+			window.open(
+				`/api/method/gris.www.calendario.visualizar.export_calendar?${params.toString()}`,
+				"_blank"
+			);
 		});
 	}
 
@@ -119,8 +122,14 @@ frappe.ready(() => {
 		}
 
 		setText("holiday-modal-name", holidayButton.dataset.holidayName || "Feriado");
-		setText("holiday-modal-desc", holidayButton.dataset.holidayDesc || "Sem descrição disponível.");
-		setHolidayBadge(holidayButton.dataset.holidayType || "Geral", holidayButton.dataset.holidayBadgeVariant || "outline");
+		setText(
+			"holiday-modal-desc",
+			holidayButton.dataset.holidayDesc || "Sem descrição disponível."
+		);
+		setHolidayBadge(
+			holidayButton.dataset.holidayType || "Geral",
+			holidayButton.dataset.holidayBadgeVariant || "outline"
+		);
 		openDialog("holiday-dialog");
 	});
 
@@ -139,7 +148,7 @@ function getSelectValue(element) {
 		return "";
 	}
 	const value = element.value;
-	return Array.isArray(value) ? value[0] || "" : (value || "");
+	return Array.isArray(value) ? value[0] || "" : value || "";
 }
 
 function getMultipleSelectValue(element) {
@@ -203,7 +212,9 @@ function getDefaultAnchorDate(year) {
 }
 
 function formatDateKey(date) {
-	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+		date.getDate()
+	).padStart(2, "0")}`;
 }
 
 function formatTimeWindow(start, end) {
@@ -279,8 +290,5 @@ function getCalendarShowAllDays(calendar) {
 }
 
 function normalizeText(text) {
-	return String(text)
-		.toLowerCase()
-		.normalize("NFD")
-		.replace(/\p{M}/gu, "");
+	return String(text).toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
 }

@@ -33,9 +33,7 @@ class ProdutodeVendaFesta(Document):
 		if not self.faz_parte_convite:
 			return
 		if flt(self.expectativa_venda_por_pessoa) < 1:
-			frappe.throw(
-				_("Produtos do convite exigem expectativa de venda por pessoa maior ou igual a 1.")
-			)
+			frappe.throw(_("Produtos do convite exigem expectativa de venda por pessoa maior ou igual a 1."))
 
 	def _calcular_preco_custo(self):
 		if not self.name or self.is_new():

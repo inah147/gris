@@ -38,9 +38,7 @@ def _create_board_for_projeto(projeto_name: str) -> None:
 		"name",
 	)
 	if existing_board:
-		frappe.db.set_value(
-			"Projeto", projeto_name, "board_tarefas", existing_board, update_modified=False
-		)
+		frappe.db.set_value("Projeto", projeto_name, "board_tarefas", existing_board, update_modified=False)
 		return
 
 	board = frappe.get_doc(
@@ -52,6 +50,4 @@ def _create_board_for_projeto(projeto_name: str) -> None:
 		}
 	).insert(ignore_permissions=True)
 
-	frappe.db.set_value(
-		"Projeto", projeto_name, "board_tarefas", board.name, update_modified=False
-	)
+	frappe.db.set_value("Projeto", projeto_name, "board_tarefas", board.name, update_modified=False)

@@ -5,7 +5,11 @@ frappe.ui.form.on("Previsao Orcamentaria", {
 	refresh(frm) {
 		if (frm.doc.name && !frm.is_new()) {
 			frm.add_custom_button(__("Abrir no Portal"), () => {
-				window.open(`/financeiro/previsao_orcamentaria?previsao=${encodeURIComponent(frm.doc.name)}`);
+				window.open(
+					`/financeiro/previsao_orcamentaria?previsao=${encodeURIComponent(
+						frm.doc.name
+					)}`
+				);
 			});
 		}
 	},

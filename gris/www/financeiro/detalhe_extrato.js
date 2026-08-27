@@ -64,7 +64,8 @@ document.addEventListener("DOMContentLoaded", () => {
 		return data;
 	};
 
-	const hasChanges = (currentData) => Object.keys(currentData).some((key) => currentData[key] !== initialData[key]);
+	const hasChanges = (currentData) =>
+		Object.keys(currentData).some((key) => currentData[key] !== initialData[key]);
 
 	const updateSaveVisibility = () => {
 		const currentData = getFormData();
@@ -153,11 +154,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
 		const data = getFormData();
 		const qsDocname = new URLSearchParams(window.location.search).get("name");
-		const docname = normalizeDocname((window.frappe && frappe.form_dict && frappe.form_dict.name) || qsDocname);
+		const docname = normalizeDocname(
+			(window.frappe && frappe.form_dict && frappe.form_dict.name) || qsDocname
+		);
 
 		if (!docname) {
 			if (window.frappe && typeof frappe.show_alert === "function") {
-				frappe.show_alert({ message: "ID do documento não encontrado.", indicator: "red" });
+				frappe.show_alert({
+					message: "ID do documento não encontrado.",
+					indicator: "red",
+				});
 			} else {
 				alert("ID do documento não encontrado.");
 			}
@@ -192,7 +198,10 @@ document.addEventListener("DOMContentLoaded", () => {
 							setHidden(footerSalvar, true);
 							frappe.show_alert("Alterações salvas com sucesso!");
 						} else {
-							frappe.show_alert({ message: `Erro ao salvar: ${saveResponse.exc}`, indicator: "red" });
+							frappe.show_alert({
+								message: `Erro ao salvar: ${saveResponse.exc}`,
+								indicator: "red",
+							});
 						}
 						btnSalvar.disabled = false;
 						btnSalvar.textContent = "Salvar";

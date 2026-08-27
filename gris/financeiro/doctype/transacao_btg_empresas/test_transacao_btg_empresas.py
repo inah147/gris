@@ -11,9 +11,9 @@ class TestTransacaoBTGEmpresas(FrappeTestCase):
 
 	def setUp(self):
 		if not frappe.db.exists("Instituicao Financeira", "BTG Empresas"):
-			frappe.get_doc(
-				{"doctype": "Instituicao Financeira", "nome": "BTG Empresas", "ativa": 1}
-			).insert(ignore_permissions=True)
+			frappe.get_doc({"doctype": "Instituicao Financeira", "nome": "BTG Empresas", "ativa": 1}).insert(
+				ignore_permissions=True
+			)
 		if not frappe.db.exists("Carteira", "BTG Empresas"):
 			frappe.get_doc(
 				{

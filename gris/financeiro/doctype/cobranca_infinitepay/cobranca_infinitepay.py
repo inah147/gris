@@ -54,15 +54,11 @@ class CobrancaInfinitepay(Document):
 						break
 
 			frappe.db.set_value("Cobranca Infinitepay", self.name, "link_pagamento", link)
-			frappe.logger().info(
-				f"Link de pagamento criado para {self.name}: {link}"
-			)
+			frappe.logger().info(f"Link de pagamento criado para {self.name}: {link}")
 
 		except requests.exceptions.RequestException as e:
 			frappe.db.set_value("Cobranca Infinitepay", self.name, "status", "Erro")
-			frappe.logger().error(
-				f"Erro ao criar link InfinitePay para {self.name}: {e}"
-			)
+			frappe.logger().error(f"Erro ao criar link InfinitePay para {self.name}: {e}")
 			frappe.throw("Erro ao criar link de pagamento na InfinitePay. Tente novamente.")
 
 	def _montar_payload(self, handle):
@@ -150,11 +146,7 @@ def sincronizar_pagamento(
 	try:
 		verificacao = _verificar_pagamento(handle, doc.name, tx, slug_final)
 	except (requests.exceptions.RequestException, ValueError) as exc:
-		frappe.throw(
-			_("Não foi possível confirmar o pagamento na InfinitePay: {0}").format(
-				str(exc)
-			)
-		)
+		frappe.throw(_("Não foi possível confirmar o pagamento na InfinitePay: {0}").format(str(exc)))
 
 	if not verificacao.get("paid"):
 		return {
@@ -164,23 +156,19 @@ def sincronizar_pagamento(
 		}
 
 	valor_esperado_centavos = sum(
-		int(item.quantidade or 0) * round(float(item.preco) * 100)
-		for item in doc.itens
+		int(item.quantidade or 0) * round(float(item.preco) * 100) for item in doc.itens
 	)
 	paid_amount = verificacao.get("paid_amount", 0)
 	if paid_amount < valor_esperado_centavos:
 		frappe.throw(
-			_(
-				"Valor pago ({0}) menor que o esperado ({1}). Pagamento não foi sincronizado."
-			).format(paid_amount, valor_esperado_centavos)
+			_("Valor pago ({0}) menor que o esperado ({1}). Pagamento não foi sincronizado.").format(
+				paid_amount, valor_esperado_centavos
+			)
 		)
 
 	doc.update(
 		{
-			"invoice_slug": verificacao.get("invoice_slug")
-			or slug_final
-			or doc.invoice_slug
-			or "",
+			"invoice_slug": verificacao.get("invoice_slug") or slug_final or doc.invoice_slug or "",
 			"amount": verificacao.get("amount", 0),
 			"paid_amount": paid_amount,
 			"installments": verificacao.get("installments", 0),
@@ -201,9 +189,7 @@ def sincronizar_pagamento(
 
 
 @frappe.whitelist()
-def marcar_pago_manualmente(
-	name: str, transaction_nsu: str, justificativa: str
-) -> dict:
+def marcar_pago_manualmente(name: str, transaction_nsu: str, justificativa: str) -> dict:
 	"""Marca a Cobranca como Paga sem consultar a InfinitePay.
 
 	Escape hatch para quando o webhook falhou e o `payment_check` não consegue
@@ -211,23 +197,17 @@ def marcar_pago_manualmente(
 	Restrito a System Manager; loga quem fez e a justificativa via Comment.
 	"""
 	if "System Manager" not in frappe.get_roles():
-		frappe.throw(
-			_("Apenas administradores podem marcar pagamento manualmente.")
-		)
+		frappe.throw(_("Apenas administradores podem marcar pagamento manualmente."))
 	if not transaction_nsu or len(transaction_nsu.strip()) < 8:
 		frappe.throw(_("Informe o Transaction NSU real da InfinitePay."))
 	if not justificativa or len(justificativa.strip()) < 10:
-		frappe.throw(
-			_("Informe uma justificativa detalhada (mínimo 10 caracteres).")
-		)
+		frappe.throw(_("Informe uma justificativa detalhada (mínimo 10 caracteres)."))
 
 	doc = frappe.get_doc("Cobranca Infinitepay", name)
 	if doc.status == "Pago":
 		return {"ok": True, "message": _("Cobrança já está paga.")}
 
-	valor_centavos = sum(
-		int(it.quantidade or 0) * round(float(it.preco) * 100) for it in doc.itens
-	)
+	valor_centavos = sum(int(it.quantidade or 0) * round(float(it.preco) * 100) for it in doc.itens)
 	doc.update(
 		{
 			"transaction_nsu": transaction_nsu.strip(),

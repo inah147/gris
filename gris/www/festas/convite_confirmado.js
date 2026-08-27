@@ -35,8 +35,10 @@
 		try {
 			const url =
 				"/api/method/gris.api.festas.convite_confirmado.get_status" +
-				"?c=" + encodeURIComponent(convite) +
-				"&t=" + encodeURIComponent(token);
+				"?c=" +
+				encodeURIComponent(convite) +
+				"&t=" +
+				encodeURIComponent(token);
 			const response = await fetch(url, {
 				method: "GET",
 				headers: { "X-Requested-With": "XMLHttpRequest" },
@@ -61,7 +63,12 @@
 				window.location.reload();
 				return;
 			}
-			if (status === "Erro" || status === "Cancelado" || status === "Estornado" || status === "Expirado") {
+			if (
+				status === "Erro" ||
+				status === "Cancelado" ||
+				status === "Estornado" ||
+				status === "Expirado"
+			) {
 				stop();
 				window.location.reload();
 				return;

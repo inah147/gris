@@ -163,9 +163,7 @@ def get_festa_convidado_por_token(token: str) -> dict[str, Any]:
 	if not token or len(token) < 16:
 		frappe.throw(_("Link de avaliação inválido."))
 
-	row = frappe.db.get_value(
-		"Avaliacao Festa", {"token_convidado": token}, ["name", "festa"], as_dict=True
-	)
+	row = frappe.db.get_value("Avaliacao Festa", {"token_convidado": token}, ["name", "festa"], as_dict=True)
 	if not row:
 		frappe.throw(_("Link de avaliação inválido ou expirado."))
 

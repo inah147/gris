@@ -1,4 +1,4 @@
-frappe.ready(function() {
+frappe.ready(function () {
 	const form = document.getElementById("registro-form");
 	if (!form) return;
 
@@ -15,28 +15,91 @@ frappe.ready(function() {
 	const readOnly = form.dataset.readOnly === "true";
 
 	const mainMandatoryFields = [
-		"nome_completo", "data_de_nascimento", "etnia", "sexo",
-		"pais_nascimento", "uf_de_nascimento", "cidade_de_nascimento",
-		"rg", "orgao_expedidor", "cpf", "estado_civil", "religiao", "escolaridade",
-		"cep", "endereco", "numero", "bairro", "estado", "cidade", "email", "celular",
-		"email_cobranca", "telefone_cobranca"
+		"nome_completo",
+		"data_de_nascimento",
+		"etnia",
+		"sexo",
+		"pais_nascimento",
+		"uf_de_nascimento",
+		"cidade_de_nascimento",
+		"rg",
+		"orgao_expedidor",
+		"cpf",
+		"estado_civil",
+		"religiao",
+		"escolaridade",
+		"cep",
+		"endereco",
+		"numero",
+		"bairro",
+		"estado",
+		"cidade",
+		"email",
+		"celular",
+		"email_cobranca",
+		"telefone_cobranca",
 	];
 
 	const mainDataFields = [
-		"nome_completo", "data_de_nascimento", "etnia", "sexo", "pais_nascimento",
-		"uf_de_nascimento", "cidade_de_nascimento", "rg", "orgao_expedidor", "cpf",
-		"estado_civil", "religiao", "escolaridade", "profissao", "local_de_trabalho",
-		"cep", "endereco", "numero", "complemento", "estado", "cidade", "bairro",
-		"email", "celular", "telefone_secundario", "email_cobranca", "telefone_cobranca"
+		"nome_completo",
+		"data_de_nascimento",
+		"etnia",
+		"sexo",
+		"pais_nascimento",
+		"uf_de_nascimento",
+		"cidade_de_nascimento",
+		"rg",
+		"orgao_expedidor",
+		"cpf",
+		"estado_civil",
+		"religiao",
+		"escolaridade",
+		"profissao",
+		"local_de_trabalho",
+		"cep",
+		"endereco",
+		"numero",
+		"complemento",
+		"estado",
+		"cidade",
+		"bairro",
+		"email",
+		"celular",
+		"telefone_secundario",
+		"email_cobranca",
+		"telefone_cobranca",
 	];
 
 	const responsavelMandatoryFields = [
-		"nome_completo", "cpf", "rg", "orgao_expedidor", "data_de_nascimento",
-		"sexo", "estado_civil", "escolaridade", "profissao", "local_de_trabalho",
-		"cep", "endereco", "numero", "bairro", "cidade", "estado", "email", "celular"
+		"nome_completo",
+		"cpf",
+		"rg",
+		"orgao_expedidor",
+		"data_de_nascimento",
+		"sexo",
+		"estado_civil",
+		"escolaridade",
+		"profissao",
+		"local_de_trabalho",
+		"cep",
+		"endereco",
+		"numero",
+		"bairro",
+		"cidade",
+		"estado",
+		"email",
+		"celular",
 	];
 
-	const addressFields = ["cep", "endereco", "numero", "complemento", "bairro", "cidade", "estado"];
+	const addressFields = [
+		"cep",
+		"endereco",
+		"numero",
+		"complemento",
+		"bairro",
+		"cidade",
+		"estado",
+	];
 	let pendingSave = null;
 	let movingToConfirmation = false;
 	let saving = false;
@@ -54,7 +117,7 @@ frappe.ready(function() {
 		guarda_unilateral: "Guarda unilateral",
 		somente_um_responsavel: "Somente um responsável",
 		local_de_trabalho: "Local de trabalho",
-		"é_guardiao_legal": "É guardião legal",
+		é_guardiao_legal: "É guardião legal",
 		cpf: "CPF",
 		rg: "RG",
 		cep: "CEP",
@@ -74,7 +137,7 @@ frappe.ready(function() {
 		religiao: "Religião",
 		escolaridade: "Escolaridade",
 		profissao: "Profissão",
-		estrangeiro: "Estrangeiro"
+		estrangeiro: "Estrangeiro",
 	};
 
 	function escapeHtml(value) {
@@ -84,15 +147,17 @@ frappe.ready(function() {
 	}
 
 	function showToast(category, title, description) {
-		document.dispatchEvent(new CustomEvent("basecoat:toast", {
-			detail: {
-				config: {
-					category,
-					title: escapeHtml(title),
-					description: escapeHtml(description || "")
-				}
-			}
-		}));
+		document.dispatchEvent(
+			new CustomEvent("basecoat:toast", {
+				detail: {
+					config: {
+						category,
+						title: escapeHtml(title),
+						description: escapeHtml(description || ""),
+					},
+				},
+			})
+		);
 	}
 
 	function openDialog(dialog) {
@@ -120,7 +185,9 @@ frappe.ready(function() {
 		}
 		button.disabled = loading;
 		button.setAttribute("aria-busy", loading ? "true" : "false");
-		button.innerHTML = loading ? escapeHtml(label || "Carregando...") : button.dataset.originalHtml;
+		button.innerHTML = loading
+			? escapeHtml(label || "Carregando...")
+			: button.dataset.originalHtml;
 	}
 
 	function reloadSoon() {
@@ -132,9 +199,14 @@ frappe.ready(function() {
 	}
 
 	function findFieldControl(scope, fieldName, fieldScope) {
-		return allFieldControls(scope).find((control) => {
-			return control.dataset.fieldname === fieldName && (!fieldScope || control.dataset.fieldScope === fieldScope);
-		}) || null;
+		return (
+			allFieldControls(scope).find((control) => {
+				return (
+					control.dataset.fieldname === fieldName &&
+					(!fieldScope || control.dataset.fieldScope === fieldScope)
+				);
+			}) || null
+		);
 	}
 
 	function getMainControl(fieldName) {
@@ -153,13 +225,19 @@ frappe.ready(function() {
 		if (!control) return "";
 		if (control.type === "checkbox") return control.checked ? 1 : 0;
 		if (control.classList.contains("select")) {
-			return "value" in control ? (control.value || "") : getHiddenValue(control, ":scope > input[type='hidden']");
+			return "value" in control
+				? control.value || ""
+				: getHiddenValue(control, ":scope > input[type='hidden']");
 		}
 		if (control.classList.contains("datepicker")) {
-			return "value" in control ? (control.value || "") : getHiddenValue(control, "[data-datepicker-value]");
+			return "value" in control
+				? control.value || ""
+				: getHiddenValue(control, "[data-datepicker-value]");
 		}
 		if (control.classList.contains("phone-input")) {
-			return "value" in control ? (control.value || "") : getHiddenValue(control, "[data-phone-input-value]");
+			return "value" in control
+				? control.value || ""
+				: getHiddenValue(control, "[data-phone-input-value]");
 		}
 		return control.value || "";
 	}
@@ -172,7 +250,11 @@ frappe.ready(function() {
 			control.dispatchEvent(new Event("change", { bubbles: true }));
 			return;
 		}
-		if (control.classList.contains("select") || control.classList.contains("datepicker") || control.classList.contains("phone-input")) {
+		if (
+			control.classList.contains("select") ||
+			control.classList.contains("datepicker") ||
+			control.classList.contains("phone-input")
+		) {
 			if ("value" in control) {
 				control.value = nextValue;
 			} else if (control.classList.contains("select")) {
@@ -195,8 +277,10 @@ frappe.ready(function() {
 	function getFocusable(control) {
 		if (!control) return null;
 		if (control.classList.contains("select")) return control.querySelector(":scope > button");
-		if (control.classList.contains("datepicker")) return control.querySelector(".datepicker-trigger");
-		if (control.classList.contains("phone-input")) return control.querySelector("[data-phone-input-number]");
+		if (control.classList.contains("datepicker"))
+			return control.querySelector(".datepicker-trigger");
+		if (control.classList.contains("phone-input"))
+			return control.querySelector("[data-phone-input-number]");
 		return typeof control.focus === "function" ? control : null;
 	}
 
@@ -210,7 +294,9 @@ frappe.ready(function() {
 			control.querySelector(".datepicker-trigger")?.setAttribute("aria-invalid", "true");
 		}
 		if (control.classList.contains("phone-input")) {
-			control.querySelector("[data-phone-input-number]")?.setAttribute("aria-invalid", "true");
+			control
+				.querySelector("[data-phone-input-number]")
+				?.setAttribute("aria-invalid", "true");
 		}
 		const error = control.closest(".registro-field")?.querySelector("[data-field-error]");
 		if (error && message) {
@@ -222,7 +308,9 @@ frappe.ready(function() {
 	function clearInvalidControl(control) {
 		if (!control) return;
 		control.removeAttribute("aria-invalid");
-		control.querySelectorAll("[aria-invalid='true']").forEach((item) => item.removeAttribute("aria-invalid"));
+		control
+			.querySelectorAll("[aria-invalid='true']")
+			.forEach((item) => item.removeAttribute("aria-invalid"));
 		const error = control.closest(".registro-field")?.querySelector("[data-field-error]");
 		if (error) {
 			error.textContent = "";
@@ -231,7 +319,9 @@ frappe.ready(function() {
 	}
 
 	function clearValidation() {
-		form.querySelectorAll("[aria-invalid='true']").forEach((control) => control.removeAttribute("aria-invalid"));
+		form.querySelectorAll("[aria-invalid='true']").forEach((control) =>
+			control.removeAttribute("aria-invalid")
+		);
 		form.querySelectorAll("[data-field-error]").forEach((error) => {
 			error.textContent = "";
 			error.hidden = true;
@@ -284,13 +374,16 @@ frappe.ready(function() {
 	}
 
 	function visibleGuardianChecks() {
-		return Array.from(document.querySelectorAll(".guardiao-legal-check[data-fieldname='é_guardiao_legal']"))
-			.filter((check) => !check.closest(".responsavel-wrapper")?.hidden);
+		return Array.from(
+			document.querySelectorAll(".guardiao-legal-check[data-fieldname='é_guardiao_legal']")
+		).filter((check) => !check.closest(".responsavel-wrapper")?.hidden);
 	}
 
 	function toggleGuardiaoLegal() {
 		const isUnilateral = getControlValue(getMainControl("guarda_unilateral")) === 1;
-		const checks = Array.from(document.querySelectorAll(".guardiao-legal-check[data-fieldname='é_guardiao_legal']"));
+		const checks = Array.from(
+			document.querySelectorAll(".guardiao-legal-check[data-fieldname='é_guardiao_legal']")
+		);
 		const visibleChecks = visibleGuardianChecks();
 
 		document.querySelectorAll(".registro-responsavel-vinculo").forEach((section) => {
@@ -322,7 +415,9 @@ frappe.ready(function() {
 		document.querySelectorAll(".responsavel-wrapper").forEach((wrapper, index) => {
 			wrapper.hidden = Boolean(onlyOne && index > 0);
 			if (wrapper.hidden) {
-				const check = wrapper.querySelector(".guardiao-legal-check[data-fieldname='é_guardiao_legal']");
+				const check = wrapper.querySelector(
+					".guardiao-legal-check[data-fieldname='é_guardiao_legal']"
+				);
 				if (check) check.checked = false;
 			}
 		});
@@ -365,7 +460,9 @@ frappe.ready(function() {
 	}
 
 	function setAddressLocked(card, locked) {
-		addressFields.forEach((fieldName) => setControlLocked(getResponsavelControl(card, fieldName), locked));
+		addressFields.forEach((fieldName) =>
+			setControlLocked(getResponsavelControl(card, fieldName), locked)
+		);
 	}
 
 	function setReadOnlyMode() {
@@ -459,23 +556,34 @@ frappe.ready(function() {
 		}
 
 		const billingEmailControl = getMainControl("email_cobranca");
-		if (getControlValue(billingEmailControl) && !validateEmail(getControlValue(billingEmailControl))) {
+		if (
+			getControlValue(billingEmailControl) &&
+			!validateEmail(getControlValue(billingEmailControl))
+		) {
 			markInvalid(billingEmailControl, "Informe um email de cobrança válido.");
 		}
 
 		const celularControl = getMainControl("celular");
-		if (getControlValue(celularControl) && getControlValue(celularControl).replace(/\D/g, "").length < 10) {
+		if (
+			getControlValue(celularControl) &&
+			getControlValue(celularControl).replace(/\D/g, "").length < 10
+		) {
 			markInvalid(celularControl, "Informe um celular válido.");
 		}
 
 		const billingPhoneControl = getMainControl("telefone_cobranca");
-		if (getControlValue(billingPhoneControl) && getControlValue(billingPhoneControl).replace(/\D/g, "").length < 10) {
+		if (
+			getControlValue(billingPhoneControl) &&
+			getControlValue(billingPhoneControl).replace(/\D/g, "").length < 10
+		) {
 			markInvalid(billingPhoneControl, "Informe um telefone de cobrança válido.");
 		}
 
 		document.querySelectorAll(".responsavel-card").forEach((card) => {
 			if (isWrapperHidden(card)) return;
-			const name = card.querySelector(".responsavel-card__title")?.textContent?.trim() || "Responsável";
+			const name =
+				card.querySelector(".responsavel-card__title")?.textContent?.trim() ||
+				"Responsável";
 			const cpf = getResponsavelControl(card, "cpf");
 			if (getControlValue(cpf) && !validateCPF(getControlValue(cpf))) {
 				markInvalid(cpf, `Informe um CPF válido para ${name}.`);
@@ -489,7 +597,11 @@ frappe.ready(function() {
 		const cpfEntries = [];
 		const mainCpfRaw = getControlValue(cpfControl);
 		if (mainCpfRaw) {
-			cpfEntries.push({ digits: mainCpfRaw.replace(/\D/g, ""), label: "Novo Associado", control: cpfControl });
+			cpfEntries.push({
+				digits: mainCpfRaw.replace(/\D/g, ""),
+				label: "Novo Associado",
+				control: cpfControl,
+			});
 		}
 		document.querySelectorAll(".responsavel-card").forEach((card) => {
 			if (isWrapperHidden(card)) return;
@@ -498,8 +610,10 @@ frappe.ready(function() {
 			if (value) {
 				cpfEntries.push({
 					digits: value.replace(/\D/g, ""),
-					label: card.querySelector(".responsavel-card__title")?.textContent?.trim() || "Responsável",
-					control
+					label:
+						card.querySelector(".responsavel-card__title")?.textContent?.trim() ||
+						"Responsável",
+					control,
 				});
 			}
 		});
@@ -515,17 +629,26 @@ frappe.ready(function() {
 			}
 		});
 		if (duplicates.length) {
-			[...new Set(duplicates)].forEach((entry) => markInvalid(entry.control, "CPF duplicado."));
+			[...new Set(duplicates)].forEach((entry) =>
+				markInvalid(entry.control, "CPF duplicado.")
+			);
 		}
 
 		const isUnilateral = getControlValue(getMainControl("guarda_unilateral")) === 1;
-		if (isUnilateral && visibleGuardianChecks().filter((check) => check.checked).length !== 1) {
+		if (
+			isUnilateral &&
+			visibleGuardianChecks().filter((check) => check.checked).length !== 1
+		) {
 			const guardian = visibleGuardianChecks()[0];
 			markInvalid(guardian, "Selecione exatamente um guardião legal.");
 		}
 
 		if (!valid) {
-			showToast("error", "Revise os campos", "Preencha os campos obrigatórios e corrija os dados destacados.");
+			showToast(
+				"error",
+				"Revise os campos",
+				"Preencha os campos obrigatórios e corrija os dados destacados."
+			);
 			focusControl(firstInvalid);
 		}
 		return valid;
@@ -556,12 +679,16 @@ frappe.ready(function() {
 			if (key === "name" || seen.has(key)) return;
 			rows.push([formatLabel(key), formatValue(data[key])]);
 		});
-		return rows.map(([label, value]) => `
+		return rows
+			.map(
+				([label, value]) => `
 			<tr>
 				<th scope="row">${escapeHtml(label)}</th>
 				<td>${escapeHtml(value)}</td>
 			</tr>
-		`).join("");
+		`
+			)
+			.join("");
 	}
 
 	function renderSummarySection(title, rowsHtml) {
@@ -585,13 +712,30 @@ frappe.ready(function() {
 		confirmSaveButton.disabled = true;
 
 		const mainOrder = [
-			"tipo_de_registro", "nome_completo", "cpf", "rg", "data_de_nascimento", "email", "celular",
-			"email_cobranca", "telefone_cobranca", "cep", "endereco", "numero", "complemento", "bairro", "cidade", "estado"
+			"tipo_de_registro",
+			"nome_completo",
+			"cpf",
+			"rg",
+			"data_de_nascimento",
+			"email",
+			"celular",
+			"email_cobranca",
+			"telefone_cobranca",
+			"cep",
+			"endereco",
+			"numero",
+			"complemento",
+			"bairro",
+			"cidade",
+			"estado",
 		];
 		let html = renderSummarySection("Novo Associado", renderRows(payload.formData, mainOrder));
 		payload.responsaveisData.forEach((responsavel, index) => {
 			if (!responsavel.nome_completo && !responsavel.cpf) return;
-			html += renderSummarySection(`Responsável ${index + 1}`, renderRows(responsavel, mainOrder));
+			html += renderSummarySection(
+				`Responsável ${index + 1}`,
+				renderRows(responsavel, mainOrder)
+			);
 		});
 		confirmationSummary.innerHTML = html;
 		openDialog(confirmationDialog);
@@ -650,7 +794,10 @@ frappe.ready(function() {
 
 	document.addEventListener("change", (event) => {
 		if (event.target.matches(".guardiao-legal-check[data-fieldname='é_guardiao_legal']")) {
-			if (getControlValue(getMainControl("guarda_unilateral")) === 1 && event.target.checked) {
+			if (
+				getControlValue(getMainControl("guarda_unilateral")) === 1 &&
+				event.target.checked
+			) {
 				visibleGuardianChecks().forEach((check) => {
 					if (check !== event.target) check.checked = false;
 				});
@@ -678,8 +825,15 @@ frappe.ready(function() {
 	});
 
 	document.addEventListener("input", (event) => {
-		if (!event.target.matches("input[data-fieldname='nome_completo'][data-field-scope='responsavel']")) return;
-		const title = event.target.closest(".responsavel-card")?.querySelector(".responsavel-card__title");
+		if (
+			!event.target.matches(
+				"input[data-fieldname='nome_completo'][data-field-scope='responsavel']"
+			)
+		)
+			return;
+		const title = event.target
+			.closest(".responsavel-card")
+			?.querySelector(".responsavel-card__title");
 		if (title) title.textContent = event.target.value || "Novo Responsável";
 	});
 
@@ -723,23 +877,31 @@ frappe.ready(function() {
 			args: {
 				novo_associado_name: pendingSave.novoAssociadoName,
 				data: JSON.stringify(pendingSave.formData),
-				responsaveis_data: JSON.stringify(pendingSave.responsaveisData)
+				responsaveis_data: JSON.stringify(pendingSave.responsaveisData),
 			},
 			freeze: true,
 			freeze_message: "Salvando...",
-			callback: function(r) {
+			callback: function (r) {
 				if (!r.exc) {
-					showToast("success", "Dados atualizados", "As informações foram salvas com sucesso.");
+					showToast(
+						"success",
+						"Dados atualizados",
+						"As informações foram salvas com sucesso."
+					);
 					reloadSoon();
 				}
 			},
-			error: function() {
-				showToast("error", "Não foi possível salvar", "Revise os dados e tente novamente.");
+			error: function () {
+				showToast(
+					"error",
+					"Não foi possível salvar",
+					"Revise os dados e tente novamente."
+				);
 			},
-			always: function() {
+			always: function () {
 				saving = false;
 				setLoading(pendingSave?.submitButton, false);
-			}
+			},
 		});
 	});
 
@@ -763,9 +925,11 @@ frappe.ready(function() {
 		const formData = collectMainData();
 		const responsaveisData = collectResponsaveisData();
 		if (formData.guarda_unilateral !== 1) {
-			document.querySelectorAll(".guardiao-legal-check[data-fieldname='é_guardiao_legal']").forEach((check) => {
-				check.checked = true;
-			});
+			document
+				.querySelectorAll(".guardiao-legal-check[data-fieldname='é_guardiao_legal']")
+				.forEach((check) => {
+					check.checked = true;
+				});
 			responsaveisData.forEach((responsavel) => {
 				if (responsavel.nome_completo || responsavel.cpf || responsavel.name) {
 					responsavel["é_guardiao_legal"] = 1;
@@ -777,7 +941,7 @@ frappe.ready(function() {
 			novoAssociadoName,
 			formData,
 			responsaveisData,
-			submitButton
+			submitButton,
 		});
 	});
 

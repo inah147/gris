@@ -26,17 +26,13 @@ def lote_vigente(lotes: list, hoje=None) -> dict | None:
 def _ultimo_lote(lotes: list) -> dict | None:
 	"""Retorna o lote com a maior data de término (referência quando não há vigente)."""
 	validos = [
-		lote
-		for lote in (lotes or [])
-		if (lote.get("data_fim") if isinstance(lote, dict) else lote.data_fim)
+		lote for lote in (lotes or []) if (lote.get("data_fim") if isinstance(lote, dict) else lote.data_fim)
 	]
 	if not validos:
 		return None
 	return max(
 		validos,
-		key=lambda lote: getdate(
-			lote.get("data_fim") if isinstance(lote, dict) else lote.data_fim
-		),
+		key=lambda lote: getdate(lote.get("data_fim") if isinstance(lote, dict) else lote.data_fim),
 	)
 
 
@@ -53,9 +49,7 @@ class OpcaoConviteFesta(Document):
 		if not self.is_new() and self.name == nome_esperado:
 			return
 		if frappe.db.exists("Opcao Convite Festa", nome_esperado):
-			frappe.throw(
-				_("Já existe uma opção de convite com este nome para a festa selecionada.")
-			)
+			frappe.throw(_("Já existe uma opção de convite com este nome para a festa selecionada."))
 
 	def _aplicar_lote_vigente(self):
 		"""Define ``valor``/``valor_consumacao``/``ativo`` a partir dos lotes.

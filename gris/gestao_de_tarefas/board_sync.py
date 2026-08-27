@@ -50,7 +50,7 @@ def _coletar_usuarios_do_projeto(projeto) -> dict[str, str]:
 	"""Retorna {user_email: nivel_acesso} a partir dos envolvidos e coordenador."""
 	usuarios: dict[str, str] = {}
 
-	for envolvido in (getattr(projeto, "envolvidos", None) or []):
+	for envolvido in getattr(projeto, "envolvidos", None) or []:
 		user = (getattr(envolvido, "user", None) or "").strip()
 		if not user:
 			email = (getattr(envolvido, "email", None) or "").strip()
@@ -76,10 +76,7 @@ def _peso(nivel: str) -> int:
 
 
 def _unir_usuarios(board, usuarios: dict[str, str]) -> None:
-	existentes = {
-		(row.user or "").strip(): row
-		for row in (board.usuarios_autorizados or [])
-	}
+	existentes = {(row.user or "").strip(): row for row in (board.usuarios_autorizados or [])}
 	mudou = False
 	for user, nivel in usuarios.items():
 		if not user:

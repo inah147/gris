@@ -62,11 +62,7 @@ def gestao_de_tarefas_permission_query_conditions(user: str | None = None) -> st
 
 	escaped_user = frappe.db.escape(user)
 	board_clause = _board_visibility_clause("tabBoard", escaped_user)
-	return (
-		f"`tabGestao de Tarefas`.`board` IN ("
-		f"SELECT `name` FROM `tabBoard` WHERE {board_clause}"
-		f")"
-	)
+	return f"`tabGestao de Tarefas`.`board` IN (SELECT `name` FROM `tabBoard` WHERE {board_clause})"
 
 
 def gestao_de_tarefas_has_permission(doc, ptype: str | None = None, user: str | None = None) -> bool:

@@ -10,9 +10,7 @@ from gris.financeiro.utils.cobranca_eventos import status_mudou_para
 class _FakeDoc:
 	def __init__(self, status: str, old_status: str | None = None):
 		self.status = status
-		self._old = (
-			SimpleNamespace(status=old_status) if old_status is not None else None
-		)
+		self._old = SimpleNamespace(status=old_status) if old_status is not None else None
 
 	def get_doc_before_save(self):
 		return self._old

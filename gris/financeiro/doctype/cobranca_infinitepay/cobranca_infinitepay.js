@@ -16,7 +16,7 @@ frappe.ui.form.on("Cobranca Infinitepay", {
 							fieldtype: "Data",
 							reqd: 1,
 							description: __(
-								"NSU exato da transação aprovada (visível no painel da InfinitePay).",
+								"NSU exato da transação aprovada (visível no painel da InfinitePay)."
 							),
 						},
 						{
@@ -25,19 +25,18 @@ frappe.ui.form.on("Cobranca Infinitepay", {
 							fieldtype: "Small Text",
 							reqd: 1,
 							description: __(
-								"Por que estamos marcando manualmente? (ex.: webhook não chegou; pagamento confirmado no painel da InfinitePay)",
+								"Por que estamos marcando manualmente? (ex.: webhook não chegou; pagamento confirmado no painel da InfinitePay)"
 							),
 						},
 					],
 					(values) => {
 						frappe.confirm(
 							__(
-								"Tem certeza? Esta ação ignora a verificação automática da InfinitePay.",
+								"Tem certeza? Esta ação ignora a verificação automática da InfinitePay."
 							),
 							() => {
 								frappe.call({
-									method:
-										"gris.financeiro.doctype.cobranca_infinitepay.cobranca_infinitepay.marcar_pago_manualmente",
+									method: "gris.financeiro.doctype.cobranca_infinitepay.cobranca_infinitepay.marcar_pago_manualmente",
 									args: {
 										name: frm.doc.name,
 										transaction_nsu: values.transaction_nsu,
@@ -54,14 +53,14 @@ frappe.ui.form.on("Cobranca Infinitepay", {
 										if (r.message.ok) frm.reload_doc();
 									},
 								});
-							},
+							}
 						);
 					},
 					__("Marcar pagamento manualmente"),
-					__("Confirmar"),
+					__("Confirmar")
 				);
 			},
-			__("InfinitePay"),
+			__("InfinitePay")
 		);
 
 		frm.add_custom_button(
@@ -74,7 +73,7 @@ frappe.ui.form.on("Cobranca Infinitepay", {
 							fieldname: "transaction_nsu",
 							fieldtype: "Data",
 							description: __(
-								"NSU da transação aprovada (visível no painel da InfinitePay).",
+								"NSU da transação aprovada (visível no painel da InfinitePay)."
 							),
 						},
 						{
@@ -82,14 +81,13 @@ frappe.ui.form.on("Cobranca Infinitepay", {
 							fieldname: "slug",
 							fieldtype: "Data",
 							description: __(
-								"Slug da fatura na InfinitePay. Só chega via webhook ou pela URL de redirect após o pagamento. Se já estiver salvo no campo Invoice Slug, deixe em branco.",
+								"Slug da fatura na InfinitePay. Só chega via webhook ou pela URL de redirect após o pagamento. Se já estiver salvo no campo Invoice Slug, deixe em branco."
 							),
 						},
 					],
 					(values) => {
 						frappe.call({
-							method:
-								"gris.financeiro.doctype.cobranca_infinitepay.cobranca_infinitepay.sincronizar_pagamento",
+							method: "gris.financeiro.doctype.cobranca_infinitepay.cobranca_infinitepay.sincronizar_pagamento",
 							args: {
 								name: frm.doc.name,
 								transaction_nsu: values.transaction_nsu || null,
@@ -109,10 +107,10 @@ frappe.ui.form.on("Cobranca Infinitepay", {
 						});
 					},
 					__("Sincronizar pagamento"),
-					__("Confirmar"),
+					__("Confirmar")
 				);
 			},
-			__("InfinitePay"),
+			__("InfinitePay")
 		);
 	},
 });

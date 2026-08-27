@@ -160,7 +160,13 @@ class TestCompraFesta(FrappeTestCase):
 					"unidade_medida_realizado": "kg",
 					"quantidade_compra_final": 5,
 					"cotacoes": [
-						{"fornecedor": "A", "valor": 10, "quantidade": 1, "unidade_medida": "kg", "escolhida": 1}
+						{
+							"fornecedor": "A",
+							"valor": 10,
+							"quantidade": 1,
+							"unidade_medida": "kg",
+							"escolhida": 1,
+						}
 					],
 				}
 			),

@@ -33,9 +33,7 @@ JANELA_DIAS = 5
 def _verificar_permissao():
 	"""Conciliar altera totais; exige permissão de escrita no doctype."""
 	if not frappe.has_permission("Transacao Extrato Geral", ptype="write"):
-		frappe.throw(
-			"Sem permissão para conciliar transações.", frappe.PermissionError
-		)
+		frappe.throw("Sem permissão para conciliar transações.", frappe.PermissionError)
 
 
 def _normalizar(texto):
@@ -142,8 +140,8 @@ def get_candidatos_planilha(sistema_id):
 	valor = float(sistema.get("valor") or 0)
 	valor_abs = abs(valor)
 	# Data de referência para janela de proximidade.
-	data_ref = sistema.get("data_deposito") or sistema.get("timestamp_transacao") or sistema.get(
-		"data_transacao"
+	data_ref = (
+		sistema.get("data_deposito") or sistema.get("timestamp_transacao") or sistema.get("data_transacao")
 	)
 
 	params = {
@@ -233,9 +231,7 @@ def conciliar(
 			None,
 			"",
 		):
-			frappe.throw(
-				f"A transação {d.name} já está conciliada com {d.transacao_conciliada}."
-			)
+			frappe.throw(f"A transação {d.name} já está conciliada com {d.transacao_conciliada}.")
 
 	mantido = doc_sistema if manter == "sistema" else doc_planilha
 	excluido = doc_planilha if manter == "sistema" else doc_sistema

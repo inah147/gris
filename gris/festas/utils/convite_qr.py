@@ -68,13 +68,9 @@ def _abrir_logo_url(url: str) -> Image.Image | None:
 		return None
 	path = None
 	if url.startswith("/files/"):
-		path = os.path.join(
-			frappe.get_site_path("public", "files"), url[len("/files/") :]
-		)
+		path = os.path.join(frappe.get_site_path("public", "files"), url[len("/files/") :])
 	elif url.startswith("/private/files/"):
-		path = os.path.join(
-			frappe.get_site_path("private", "files"), url[len("/private/files/") :]
-		)
+		path = os.path.join(frappe.get_site_path("private", "files"), url[len("/private/files/") :])
 	if not path or not os.path.exists(path):
 		return None
 	try:

@@ -135,9 +135,7 @@ class TestConviteFesta(FrappeTestCase):
 		"""Mudar a quantidade do item sem ajustar os convidados é recusado."""
 		festa = _nova_festa()
 		opcao = _opcao(festa.name)
-		doc = frappe.get_doc(_convite_payload(festa.name, opcao)).insert(
-			ignore_permissions=True
-		)
+		doc = frappe.get_doc(_convite_payload(festa.name, opcao)).insert(ignore_permissions=True)
 		self.assertEqual(len(doc.convidados), 2)
 
 		doc.reload()
@@ -209,9 +207,7 @@ class TestConviteFesta(FrappeTestCase):
 	def test_after_insert_cria_cobranca_com_itens(self):
 		festa = _nova_festa()
 		opcao = _opcao(festa.name)
-		doc = frappe.get_doc(_convite_payload(festa.name, opcao)).insert(
-			ignore_permissions=True
-		)
+		doc = frappe.get_doc(_convite_payload(festa.name, opcao)).insert(ignore_permissions=True)
 		self.assertTrue(doc.cobranca_infinitepay)
 		cobranca = frappe.get_doc("Cobranca Infinitepay", doc.cobranca_infinitepay)
 		self.assertEqual(len(cobranca.itens), 1)
@@ -222,13 +218,9 @@ class TestConviteFesta(FrappeTestCase):
 	def test_virtual_field_status_pagamento_le_da_cobranca(self):
 		festa = _nova_festa()
 		opcao = _opcao(festa.name)
-		doc = frappe.get_doc(_convite_payload(festa.name, opcao)).insert(
-			ignore_permissions=True
-		)
+		doc = frappe.get_doc(_convite_payload(festa.name, opcao)).insert(ignore_permissions=True)
 		self.assertEqual(doc.status_pagamento, "Pendente")
-		frappe.db.set_value(
-			"Cobranca Infinitepay", doc.cobranca_infinitepay, "status", "Pago"
-		)
+		frappe.db.set_value("Cobranca Infinitepay", doc.cobranca_infinitepay, "status", "Pago")
 		doc.reload()
 		self.assertEqual(doc.status_pagamento, "Pago")
 
@@ -243,9 +235,7 @@ class TestConviteFesta(FrappeTestCase):
 	def test_payload_qr_code_gerado_para_cada_convidado(self):
 		festa = _nova_festa()
 		opcao = _opcao(festa.name)
-		doc = frappe.get_doc(_convite_payload(festa.name, opcao)).insert(
-			ignore_permissions=True
-		)
+		doc = frappe.get_doc(_convite_payload(festa.name, opcao)).insert(ignore_permissions=True)
 		payloads = {c.qr_code_payload for c in doc.convidados}
 		self.assertEqual(len(payloads), 2)
 		self.assertTrue(all(p for p in payloads))

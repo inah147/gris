@@ -45,9 +45,7 @@ class NovoAssociado(Document):
 			pluck="name",
 		)
 		for vinculo_name in vinculos:
-			frappe.db.set_value(
-				"Responsavel Vinculo", vinculo_name, "beneficiario_novo_associado", None
-			)
+			frappe.db.set_value("Responsavel Vinculo", vinculo_name, "beneficiario_novo_associado", None)
 
 
 def _ramo_por_data_de_nascimento(data_de_nascimento):

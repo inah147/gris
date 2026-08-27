@@ -29,9 +29,7 @@ def get_context(context):
 		raise frappe.Redirect
 
 	if not user_has_access("/festas/todas_festas"):
-		frappe.throw(
-			"Você não tem permissão para acessar Festas.", frappe.PermissionError
-		)
+		frappe.throw("Você não tem permissão para acessar Festas.", frappe.PermissionError)
 
 	uel_data = get_uel_cached()
 	if uel_data:

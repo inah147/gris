@@ -40,9 +40,7 @@ def get_context(context):
 	uel_data = get_uel_cached() or {}
 	context.portal_logo = uel_data.get("logo")
 	nome_uel = uel_data.get("nome_da_uel")
-	context.sidebar_title = (
-		f"{uel_data.get('tipo_uel')} {nome_uel}" if nome_uel else "Portal"
-	)
+	context.sidebar_title = f"{uel_data.get('tipo_uel')} {nome_uel}" if nome_uel else "Portal"
 
 	context.portal_breadcrumbs = [
 		{"label": "Festas", "url": "/festas/todas_festas"},

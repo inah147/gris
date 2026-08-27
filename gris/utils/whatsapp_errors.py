@@ -8,4 +8,5 @@ class WhatsAppRequestError(Exception):
 
 class WhatsAppNumberNotFoundError(Exception):
 	"""Raised when the destination number is not registered on WhatsApp."""
+
 	pass

@@ -68,12 +68,15 @@ def coletar_usuarios_da_festa(festa_name: str) -> dict[str, str]:
 	coordenadores/equipes de areas e barracas da festa."""
 	usuarios: dict[str, str] = {}
 
-	festa = frappe.db.get_value(
-		"Festa",
-		festa_name,
-		["tipo_coord_geral", "associado_coord_geral", "responsavel_coord_geral", "email_coord_geral"],
-		as_dict=True,
-	) or {}
+	festa = (
+		frappe.db.get_value(
+			"Festa",
+			festa_name,
+			["tipo_coord_geral", "associado_coord_geral", "responsavel_coord_geral", "email_coord_geral"],
+			as_dict=True,
+		)
+		or {}
+	)
 	_registrar(
 		usuarios,
 		_resolver_email(

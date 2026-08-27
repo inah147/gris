@@ -47,9 +47,7 @@ def _buscar_telefones_por_roles(roles: tuple[str, ...]) -> list[dict]:
 	)
 
 	return [
-		{"nome": a.nome_completo, "telefone": a.telefone}
-		for a in associados
-		if (a.telefone or "").strip()
+		{"nome": a.nome_completo, "telefone": a.telefone} for a in associados if (a.telefone or "").strip()
 	]
 
 
@@ -99,9 +97,11 @@ def notificar_alteracao_calendario(
 			)
 			return
 
-		icone = {"criado": "🗓️ Novo evento", "atualizado": "✏️ Evento atualizado", "excluido": "🗑️ Evento removido"}.get(
-			tipo_alteracao, "📅 Alteração no calendário"
-		)
+		icone = {
+			"criado": "🗓️ Novo evento",
+			"atualizado": "✏️ Evento atualizado",
+			"excluido": "🗑️ Evento removido",
+		}.get(tipo_alteracao, "📅 Alteração no calendário")
 
 		linhas = [icone, ""]
 

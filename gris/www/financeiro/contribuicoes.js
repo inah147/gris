@@ -1,8 +1,8 @@
 // Contribuições mensais — gráficos ECharts, filtros da tabela e detalhe por contribuinte.
 (function () {
-	'use strict';
+	"use strict";
 
-	const CHART_COLORS = ['#0072B2', '#E69F00', '#009E73', '#D55E00', '#56B4E9', '#CC79A7'];
+	const CHART_COLORS = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#56B4E9", "#CC79A7"];
 	const LINHAS_POR_PAGINA = 15;
 
 	let assocAtual = null;
@@ -11,49 +11,49 @@
 	// ─────────────────────────── utilitários ───────────────────────────
 
 	function parseNumber(valor) {
-		const numero = typeof valor === 'number' ? valor : parseFloat(valor || 0);
+		const numero = typeof valor === "number" ? valor : parseFloat(valor || 0);
 		return Number.isFinite(numero) ? numero : 0;
 	}
 
 	function formatarMoeda(valor) {
-		return parseNumber(valor).toLocaleString('pt-BR', {
+		return parseNumber(valor).toLocaleString("pt-BR", {
 			minimumFractionDigits: 2,
 			maximumFractionDigits: 2,
 		});
 	}
 
 	function formatarMoedaCompleta(valor) {
-		return parseNumber(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+		return parseNumber(valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 	}
 
 	function formatarPercentual(valor) {
-		return `${parseNumber(valor).toFixed(1).replace('.', ',')}%`;
+		return `${parseNumber(valor).toFixed(1).replace(".", ",")}%`;
 	}
 
 	function formatarData(iso) {
-		if (!iso) return '—';
-		const partes = String(iso).split('-');
+		if (!iso) return "—";
+		const partes = String(iso).split("-");
 		if (partes.length !== 3) return iso;
 		return `${partes[2]}/${partes[1]}/${partes[0]}`;
 	}
 
 	// Escapa também aspas: o resultado é interpolado em atributos, não só em texto.
 	function escapeHtml(texto) {
-		return String(texto == null ? '' : texto)
-			.replace(/&/g, '&amp;')
-			.replace(/</g, '&lt;')
-			.replace(/>/g, '&gt;')
-			.replace(/"/g, '&quot;')
-			.replace(/'/g, '&#39;');
+		return String(texto == null ? "" : texto)
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/"/g, "&quot;")
+			.replace(/'/g, "&#39;");
 	}
 
 	function showToast(mensagem, indicador) {
-		const categorias = { green: 'success', red: 'error', orange: 'warning', blue: 'info' };
+		const categorias = { green: "success", red: "error", orange: "warning", blue: "info" };
 		document.dispatchEvent(
-			new CustomEvent('basecoat:toast', {
+			new CustomEvent("basecoat:toast", {
 				detail: {
 					config: {
-						category: categorias[indicador] || 'info',
+						category: categorias[indicador] || "info",
 						title: mensagem,
 						duration: 3000,
 					},
@@ -77,20 +77,26 @@
 			const existente = document.querySelector('script[data-gris-echarts="1"]');
 			if (existente) {
 				existente.addEventListener(
-					'load',
-					() => (window.echarts ? resolve() : reject(new Error('ECharts não disponível'))),
+					"load",
+					() =>
+						window.echarts ? resolve() : reject(new Error("ECharts não disponível")),
 					{ once: true }
 				);
-				existente.addEventListener('error', () => reject(new Error('Falha ao carregar ECharts')), {
-					once: true,
-				});
+				existente.addEventListener(
+					"error",
+					() => reject(new Error("Falha ao carregar ECharts")),
+					{
+						once: true,
+					}
+				);
 				return;
 			}
-			const script = document.createElement('script');
-			script.dataset.grisEcharts = '1';
-			script.src = '/assets/gris/vendor/echarts/echarts.min.js';
-			script.onload = () => (window.echarts ? resolve() : reject(new Error('ECharts não disponível')));
-			script.onerror = () => reject(new Error('Falha ao carregar ECharts'));
+			const script = document.createElement("script");
+			script.dataset.grisEcharts = "1";
+			script.src = "/assets/gris/vendor/echarts/echarts.min.js";
+			script.onload = () =>
+				window.echarts ? resolve() : reject(new Error("ECharts não disponível"));
+			script.onerror = () => reject(new Error("Falha ao carregar ECharts"));
 			document.head.appendChild(script);
 		});
 	}
@@ -101,12 +107,12 @@
 			color: CHART_COLORS,
 			animationDuration: 400,
 			tooltip: {
-				trigger: 'axis',
+				trigger: "axis",
 				confine: true,
-				className: 'echarts-tooltip-modern',
-				axisPointer: { type: 'shadow' },
+				className: "echarts-tooltip-modern",
+				axisPointer: { type: "shadow" },
 			},
-			legend: { type: 'scroll', top: 4 },
+			legend: { type: "scroll", top: 4 },
 			grid: {
 				top: 52,
 				left: 14,
@@ -115,7 +121,7 @@
 				containLabel: true,
 			},
 			xAxis: {
-				type: 'category',
+				type: "category",
 				axisTick: { alignWithLabel: true },
 				axisLabel: {
 					interval: 0,
@@ -124,7 +130,7 @@
 					fontSize: isMobile() ? 10 : 12,
 				},
 			},
-			yAxis: { type: 'value', name: yAxisName },
+			yAxis: { type: "value", name: yAxisName },
 		};
 	}
 
@@ -133,7 +139,7 @@
 		if (!alvo || !window.echarts) return null;
 		const existente = window.echarts.getInstanceByDom(alvo);
 		if (existente) return existente;
-		alvo.innerHTML = '';
+		alvo.innerHTML = "";
 		return window.echarts.init(alvo);
 	}
 
@@ -144,7 +150,9 @@
 			const existente = window.echarts.getInstanceByDom(alvo);
 			if (existente) existente.dispose();
 		}
-		alvo.innerHTML = `<div class="text-sm text-muted-foreground px-2 pt-3">${escapeHtml(texto)}</div>`;
+		alvo.innerHTML = `<div class="text-sm text-muted-foreground px-2 pt-3">${escapeHtml(
+			texto
+		)}</div>`;
 	}
 
 	function temDados(valores) {
@@ -152,50 +160,52 @@
 	}
 
 	function renderRecebidoEsperado(series) {
-		const id = 'chart-contrib-recebido-esperado';
+		const id = "chart-contrib-recebido-esperado";
 		const semDados =
-			!temDados(series.recebido) && !temDados(series.esperado) && !temDados(series.nao_vinculado);
+			!temDados(series.recebido) &&
+			!temDados(series.esperado) &&
+			!temDados(series.nao_vinculado);
 		if (semDados) {
-			setChartMessage(id, 'Nenhuma contribuição registrada no período.');
+			setChartMessage(id, "Nenhuma contribuição registrada no período.");
 			return;
 		}
 		const chart = getChart(id);
 		if (!chart) return;
 
 		chart.setOption(
-			Object.assign(baseOption('R$'), {
+			Object.assign(baseOption("R$"), {
 				tooltip: {
-					trigger: 'axis',
+					trigger: "axis",
 					confine: true,
-					className: 'echarts-tooltip-modern',
-					axisPointer: { type: 'shadow' },
+					className: "echarts-tooltip-modern",
+					axisPointer: { type: "shadow" },
 					valueFormatter: (valor) => formatarMoedaCompleta(valor),
 				},
 				xAxis: Object.assign(baseOption().xAxis, { data: series.labels }),
 				series: [
 					{
-						name: 'Recebido (identificado)',
-						type: 'bar',
-						stack: 'recebido',
-						emphasis: { focus: 'series' },
-						itemStyle: { borderColor: 'transparent', borderWidth: 1 },
+						name: "Recebido (identificado)",
+						type: "bar",
+						stack: "recebido",
+						emphasis: { focus: "series" },
+						itemStyle: { borderColor: "transparent", borderWidth: 1 },
 						data: series.recebido,
 					},
 					{
-						name: 'Recebido (a identificar)',
-						type: 'bar',
-						stack: 'recebido',
-						emphasis: { focus: 'series' },
-						itemStyle: { borderColor: 'transparent', borderWidth: 1 },
+						name: "Recebido (a identificar)",
+						type: "bar",
+						stack: "recebido",
+						emphasis: { focus: "series" },
+						itemStyle: { borderColor: "transparent", borderWidth: 1 },
 						data: series.nao_vinculado,
 					},
 					{
-						name: 'Esperado',
-						type: 'line',
+						name: "Esperado",
+						type: "line",
 						smooth: false,
-						symbol: 'diamond',
+						symbol: "diamond",
 						symbolSize: 8,
-						lineStyle: { type: 'dashed', width: 2 },
+						lineStyle: { type: "dashed", width: 2 },
 						data: series.esperado,
 					},
 				],
@@ -205,31 +215,31 @@
 	}
 
 	function renderAdimplencia(series) {
-		const id = 'chart-contrib-adimplencia';
+		const id = "chart-contrib-adimplencia";
 		if (!temDados(series.adimplencia)) {
-			setChartMessage(id, 'Sem meses apurados para calcular adimplência.');
+			setChartMessage(id, "Sem meses apurados para calcular adimplência.");
 			return;
 		}
 		const chart = getChart(id);
 		if (!chart) return;
 
 		chart.setOption(
-			Object.assign(baseOption('%'), {
+			Object.assign(baseOption("%"), {
 				tooltip: {
-					trigger: 'axis',
+					trigger: "axis",
 					confine: true,
-					className: 'echarts-tooltip-modern',
-					axisPointer: { type: 'line' },
+					className: "echarts-tooltip-modern",
+					axisPointer: { type: "line" },
 					valueFormatter: (valor) => formatarPercentual(valor),
 				},
 				xAxis: Object.assign(baseOption().xAxis, { data: series.labels }),
-				yAxis: { type: 'value', name: '%', max: 100, min: 0 },
+				yAxis: { type: "value", name: "%", max: 100, min: 0 },
 				series: [
 					{
-						name: 'Meses quitados',
-						type: 'line',
+						name: "Meses quitados",
+						type: "line",
 						smooth: false,
-						symbol: 'circle',
+						symbol: "circle",
 						symbolSize: 8,
 						lineStyle: { width: 2 },
 						areaStyle: { opacity: 0.12 },
@@ -242,15 +252,21 @@
 	}
 
 	function initGraficos() {
-		const bloco = document.getElementById('contrib-dados-graficos');
+		const bloco = document.getElementById("contrib-dados-graficos");
 		if (!bloco) return;
 
 		let dados;
 		try {
-			dados = JSON.parse(bloco.textContent || '{}');
+			dados = JSON.parse(bloco.textContent || "{}");
 		} catch (e) {
-			setChartMessage('chart-contrib-recebido-esperado', 'Não foi possível ler os dados do período.');
-			setChartMessage('chart-contrib-adimplencia', 'Não foi possível ler os dados do período.');
+			setChartMessage(
+				"chart-contrib-recebido-esperado",
+				"Não foi possível ler os dados do período."
+			);
+			setChartMessage(
+				"chart-contrib-adimplencia",
+				"Não foi possível ler os dados do período."
+			);
 			return;
 		}
 
@@ -261,15 +277,21 @@
 				renderAdimplencia(series);
 			})
 			.catch(() => {
-				setChartMessage('chart-contrib-recebido-esperado', 'Não foi possível carregar os gráficos.');
-				setChartMessage('chart-contrib-adimplencia', 'Não foi possível carregar os gráficos.');
+				setChartMessage(
+					"chart-contrib-recebido-esperado",
+					"Não foi possível carregar os gráficos."
+				);
+				setChartMessage(
+					"chart-contrib-adimplencia",
+					"Não foi possível carregar os gráficos."
+				);
 			});
 
 		let redimensionando = null;
-		window.addEventListener('resize', () => {
+		window.addEventListener("resize", () => {
 			clearTimeout(redimensionando);
 			redimensionando = setTimeout(() => {
-				['chart-contrib-recebido-esperado', 'chart-contrib-adimplencia'].forEach((id) => {
+				["chart-contrib-recebido-esperado", "chart-contrib-adimplencia"].forEach((id) => {
 					const alvo = document.getElementById(id);
 					if (!alvo || !window.echarts) return;
 					const instancia = window.echarts.getInstanceByDom(alvo);
@@ -282,23 +304,25 @@
 	// ─────────────────────────── tabela ───────────────────────────
 
 	function getLinhas() {
-		return Array.from(document.querySelectorAll('#contribTabela tbody > tr.contrib-linha'));
+		return Array.from(document.querySelectorAll("#contribTabela tbody > tr.contrib-linha"));
 	}
 
 	function linhasVisiveis() {
-		return getLinhas().filter((linha) => !linha.classList.contains('filter-hidden'));
+		return getLinhas().filter((linha) => !linha.classList.contains("filter-hidden"));
 	}
 
 	function aplicarFiltros() {
-		const termo = (document.getElementById('filtroAssociado')?.value || '').trim().toLowerCase();
+		const termo = (document.getElementById("filtroAssociado")?.value || "")
+			.trim()
+			.toLowerCase();
 		const situacao =
-			document.querySelector('#filtroSituacao > input[type="hidden"]')?.value || '';
+			document.querySelector('#filtroSituacao > input[type="hidden"]')?.value || "";
 
 		getLinhas().forEach((linha) => {
-			const nome = (linha.getAttribute('data-nome') || '').toLowerCase();
+			const nome = (linha.getAttribute("data-nome") || "").toLowerCase();
 			const casaNome = !termo || nome.includes(termo);
-			const casaSituacao = !situacao || linha.getAttribute('data-situacao') === situacao;
-			linha.classList.toggle('filter-hidden', !(casaNome && casaSituacao));
+			const casaSituacao = !situacao || linha.getAttribute("data-situacao") === situacao;
+			linha.classList.toggle("filter-hidden", !(casaNome && casaSituacao));
 		});
 
 		paginaAtual = 1;
@@ -310,36 +334,36 @@
 		const totalPaginas = Math.max(1, Math.ceil(visiveis.length / LINHAS_POR_PAGINA));
 		if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
 
-		getLinhas().forEach((linha) => linha.classList.add('hidden-by-page'));
+		getLinhas().forEach((linha) => linha.classList.add("hidden-by-page"));
 		visiveis.forEach((linha, indice) => {
 			const pagina = Math.floor(indice / LINHAS_POR_PAGINA) + 1;
-			linha.classList.toggle('hidden-by-page', pagina !== paginaAtual);
+			linha.classList.toggle("hidden-by-page", pagina !== paginaAtual);
 		});
 
-		const aviso = document.getElementById('contribSemResultado');
-		if (aviso) aviso.classList.toggle('hidden', visiveis.length > 0);
+		const aviso = document.getElementById("contribSemResultado");
+		if (aviso) aviso.classList.toggle("hidden", visiveis.length > 0);
 
 		renderControlesPaginacao(totalPaginas, visiveis.length);
 	}
 
 	function renderControlesPaginacao(totalPaginas, totalLinhas) {
-		const container = document.getElementById('contribPaginacao');
+		const container = document.getElementById("contribPaginacao");
 		if (!container) return;
-		container.innerHTML = '';
+		container.innerHTML = "";
 		if (totalLinhas === 0 || totalPaginas <= 1) return;
-		container.classList.add('btn-group');
+		container.classList.add("btn-group");
 
 		const addBotao = (rotulo, pagina, desabilitado, ativo) => {
-			const botao = document.createElement('button');
-			botao.type = 'button';
+			const botao = document.createElement("button");
+			botao.type = "button";
 			botao.textContent = rotulo;
-			botao.className = ativo ? 'btn-sm-primary' : 'btn-sm-outline';
-			if (ativo) botao.setAttribute('aria-current', 'page');
+			botao.className = ativo ? "btn-sm-primary" : "btn-sm-outline";
+			if (ativo) botao.setAttribute("aria-current", "page");
 			if (desabilitado) {
 				botao.disabled = true;
-				botao.setAttribute('aria-disabled', 'true');
+				botao.setAttribute("aria-disabled", "true");
 			} else if (!ativo) {
-				botao.addEventListener('click', () => {
+				botao.addEventListener("click", () => {
 					paginaAtual = pagina;
 					atualizarPaginacao();
 				});
@@ -347,8 +371,8 @@
 			container.appendChild(botao);
 		};
 
-		addBotao('«', 1, paginaAtual === 1, false);
-		addBotao('‹', paginaAtual - 1, paginaAtual === 1, false);
+		addBotao("«", 1, paginaAtual === 1, false);
+		addBotao("‹", paginaAtual - 1, paginaAtual === 1, false);
 		const janela = 5;
 		let inicio = Math.max(1, paginaAtual - Math.floor(janela / 2));
 		let fim = Math.min(totalPaginas, inicio + janela - 1);
@@ -356,14 +380,14 @@
 		for (let pagina = inicio; pagina <= fim; pagina += 1) {
 			addBotao(String(pagina), pagina, false, pagina === paginaAtual);
 		}
-		addBotao('›', paginaAtual + 1, paginaAtual === totalPaginas, false);
-		addBotao('»', totalPaginas, paginaAtual === totalPaginas, false);
+		addBotao("›", paginaAtual + 1, paginaAtual === totalPaginas, false);
+		addBotao("»", totalPaginas, paginaAtual === totalPaginas, false);
 	}
 
 	// ─────────────────────────── detalhe ───────────────────────────
 
 	function getDialog() {
-		return document.getElementById('detalheModal');
+		return document.getElementById("detalheModal");
 	}
 
 	function setTexto(id, valor) {
@@ -372,29 +396,35 @@
 	}
 
 	function renderMeses(assoc) {
-		const tbody = document.getElementById('detalheMeses');
+		const tbody = document.getElementById("detalheMeses");
 		if (!tbody) return;
-		tbody.innerHTML = '';
+		tbody.innerHTML = "";
 
 		(assoc.linhas || []).forEach((linha) => {
-			const tr = document.createElement('tr');
+			const tr = document.createElement("tr");
 			const marcaCredito = linha.usou_credito
 				? ' <span class="text-xs text-muted-foreground">(crédito)</span>'
-				: '';
+				: "";
 			tr.innerHTML = [
 				`<td class="whitespace-nowrap">${escapeHtml(linha.rotulo)}</td>`,
-				`<td><span class="badge contrib-badge contrib-badge--${escapeHtml(linha.status_slug)}">${escapeHtml(linha.status)}</span>${marcaCredito}</td>`,
-				`<td class="text-right whitespace-nowrap contrib-num">R$ ${formatarMoeda(linha.esperado)}</td>`,
-				`<td class="text-right whitespace-nowrap contrib-num">R$ ${formatarMoeda(linha.recebido)}</td>`,
-			].join('');
+				`<td><span class="badge contrib-badge contrib-badge--${escapeHtml(
+					linha.status_slug
+				)}">${escapeHtml(linha.status)}</span>${marcaCredito}</td>`,
+				`<td class="text-right whitespace-nowrap contrib-num">R$ ${formatarMoeda(
+					linha.esperado
+				)}</td>`,
+				`<td class="text-right whitespace-nowrap contrib-num">R$ ${formatarMoeda(
+					linha.recebido
+				)}</td>`,
+			].join("");
 			tbody.appendChild(tr);
 		});
 	}
 
 	function renderTransacoes(transacoes) {
-		const tbody = document.getElementById('detalheTransacoes');
+		const tbody = document.getElementById("detalheTransacoes");
 		if (!tbody) return;
-		tbody.innerHTML = '';
+		tbody.innerHTML = "";
 
 		if (!transacoes || !transacoes.length) {
 			tbody.innerHTML =
@@ -403,27 +433,30 @@
 		}
 
 		transacoes.forEach((transacao) => {
-			const tr = document.createElement('tr');
+			const tr = document.createElement("tr");
 			const url = `/financeiro/detalhe_extrato?name=${encodeURIComponent(transacao.name)}`;
 			tr.innerHTML = [
 				`<td class="whitespace-nowrap">${escapeHtml(formatarData(transacao.data))}</td>`,
-				`<td>${escapeHtml(transacao.descricao || '—')}</td>`,
-				`<td class="text-right whitespace-nowrap contrib-num">R$ ${formatarMoeda(transacao.valor)}</td>`,
+				`<td>${escapeHtml(transacao.descricao || "—")}</td>`,
+				`<td class="text-right whitespace-nowrap contrib-num">R$ ${formatarMoeda(
+					transacao.valor
+				)}</td>`,
 				`<td class="text-right"><a class="btn-sm-outline" href="${url}">Abrir</a></td>`,
-			].join('');
+			].join("");
 			tbody.appendChild(tr);
 		});
 	}
 
 	function carregarTransacoes(assoc) {
-		const tbody = document.getElementById('detalheTransacoes');
+		const tbody = document.getElementById("detalheTransacoes");
 		if (tbody) {
-			tbody.innerHTML = '<tr><td colspan="4" class="text-sm text-muted-foreground">Carregando…</td></tr>';
+			tbody.innerHTML =
+				'<tr><td colspan="4" class="text-sm text-muted-foreground">Carregando…</td></tr>';
 		}
 
 		frappe
 			.call({
-				method: 'gris.api.financeiro.contribuicoes.get_extrato_do_associado',
+				method: "gris.api.financeiro.contribuicoes.get_extrato_do_associado",
 				args: { associado: assoc.id, meses: window.contribMeses },
 			})
 			.then((resposta) => {
@@ -439,36 +472,37 @@
 	}
 
 	function atualizarAcoesCadastro(assoc) {
-		const btnRealizado = document.getElementById('btnCadastroRealizado');
-		const btnCancelado = document.getElementById('btnCadastroCancelado');
-		if (btnRealizado) btnRealizado.classList.toggle('hidden', assoc.acao_cadastro !== 'Cadastrar');
+		const btnRealizado = document.getElementById("btnCadastroRealizado");
+		const btnCancelado = document.getElementById("btnCadastroCancelado");
+		if (btnRealizado)
+			btnRealizado.classList.toggle("hidden", assoc.acao_cadastro !== "Cadastrar");
 		if (btnCancelado) {
-			btnCancelado.classList.toggle('hidden', assoc.status_cobranca !== 'Ativo');
+			btnCancelado.classList.toggle("hidden", assoc.status_cobranca !== "Ativo");
 		}
 	}
 
 	function mostrarDetalhes(linha) {
-		const assoc = JSON.parse(linha.getAttribute('data-assoc'));
+		const assoc = JSON.parse(linha.getAttribute("data-assoc"));
 		assocAtual = assoc;
 
 		const dialog = getDialog();
-		const titulo = dialog ? dialog.querySelector('h2#detalheModal-title') : null;
-		if (titulo) titulo.textContent = assoc.nome || 'Detalhes do contribuinte';
+		const titulo = dialog ? dialog.querySelector("h2#detalheModal-title") : null;
+		if (titulo) titulo.textContent = assoc.nome || "Detalhes do contribuinte";
 
 		// Desfaz edições em aberto de um contribuinte anterior antes de preencher os campos:
 		// os spans só existem depois que os formulários inline saem da tela.
 		cancelarEdicaoValor();
 		restaurarCobranca();
 
-		setTexto('detalheValor', formatarMoeda(assoc.esperado_mensal));
-		setTexto('detalheRecebido', formatarMoeda(assoc.total_recebido));
-		setTexto('detalheCredito', formatarMoeda(assoc.credito));
+		setTexto("detalheValor", formatarMoeda(assoc.esperado_mensal));
+		setTexto("detalheRecebido", formatarMoeda(assoc.total_recebido));
+		setTexto("detalheCredito", formatarMoeda(assoc.credito));
 
 		renderMeses(assoc);
 		atualizarAcoesCadastro(assoc);
 		carregarTransacoes(assoc);
 
-		if (dialog && typeof dialog.showModal === 'function' && !dialog.open) {
+		if (dialog && typeof dialog.showModal === "function" && !dialog.open) {
 			dialog.showModal();
 		}
 	}
@@ -477,7 +511,7 @@
 
 	function semPermissao() {
 		if (window.canManageContrib) return false;
-		showToast('Sem permissão para esta ação.', 'red');
+		showToast("Sem permissão para esta ação.", "red");
 		return true;
 	}
 
@@ -487,23 +521,23 @@
 			.then((resposta) => {
 				const dados = (resposta && resposta.message) || {};
 				if (!dados.ok) {
-					showToast('Não foi possível concluir a ação.', 'red');
+					showToast("Não foi possível concluir a ação.", "red");
 					return;
 				}
-				showToast(mensagemSucesso, 'green');
+				showToast(mensagemSucesso, "green");
 				// A apuração é calculada no servidor: recarregar mantém tela e números coerentes.
 				window.setTimeout(() => window.location.reload(), 600);
 			})
-			.catch(() => showToast('Erro ao executar a ação.', 'red'));
+			.catch(() => showToast("Erro ao executar a ação.", "red"));
 	}
 
 	function alterarValor() {
 		if (semPermissao() || !assocAtual) return;
-		const container = document.getElementById('valorContainer');
-		const acoes = document.getElementById('acoesValor');
-		if (!container || !acoes || container.querySelector('input')) return;
+		const container = document.getElementById("valorContainer");
+		const acoes = document.getElementById("acoesValor");
+		if (!container || !acoes || container.querySelector("input")) return;
 
-		container.classList.remove('hidden');
+		container.classList.remove("hidden");
 		container.innerHTML = `
 			<div class="field">
 				<label class="label" for="inputNovoValor">Novo valor esperado por mês (R$)</label>
@@ -518,11 +552,11 @@
 	}
 
 	function cancelarEdicaoValor() {
-		const container = document.getElementById('valorContainer');
-		const acoes = document.getElementById('acoesValor');
+		const container = document.getElementById("valorContainer");
+		const acoes = document.getElementById("acoesValor");
 		if (container) {
-			container.innerHTML = '';
-			container.classList.add('hidden');
+			container.innerHTML = "";
+			container.classList.add("hidden");
 		}
 		if (acoes && window.canManageContrib) {
 			acoes.innerHTML =
@@ -532,67 +566,71 @@
 
 	function salvarNovoValor() {
 		if (semPermissao() || !assocAtual) return;
-		const input = document.getElementById('inputNovoValor');
+		const input = document.getElementById("inputNovoValor");
 		if (!input) return;
 		const novoValor = parseFloat(input.value);
 		if (!Number.isFinite(novoValor) || novoValor < 0) {
-			showToast('Informe um valor válido.', 'orange');
+			showToast("Informe um valor válido.", "orange");
 			return;
 		}
 		frappe
 			.call({
-				method: 'gris.api.financeiro.monthly_payments.update_contribution_value',
+				method: "gris.api.financeiro.monthly_payments.update_contribution_value",
 				args: { associate_id: assocAtual.id, new_value: novoValor },
 				freeze: true,
 			})
 			.then((resposta) => {
 				const dados = (resposta && resposta.message) || {};
 				if (!dados.ok) {
-					showToast('Não foi possível salvar o valor.', 'red');
+					showToast("Não foi possível salvar o valor.", "red");
 					return;
 				}
-				showToast('Valor atualizado', 'green');
+				showToast("Valor atualizado", "green");
 				window.setTimeout(() => window.location.reload(), 600);
 			})
-			.catch(() => showToast('Erro ao salvar valor.', 'red'));
+			.catch(() => showToast("Erro ao salvar valor.", "red"));
 	}
 
 	function cadastroRealizado() {
 		if (semPermissao() || !assocAtual) return;
 		chamarApi(
-			'gris.api.financeiro.monthly_payments.activate_billing_status',
+			"gris.api.financeiro.monthly_payments.activate_billing_status",
 			{ associate_id: assocAtual.id },
-			'Cobrança ativada'
+			"Cobrança ativada"
 		);
 	}
 
 	function cadastroCancelado() {
 		if (semPermissao() || !assocAtual) return;
 		chamarApi(
-			'gris.api.financeiro.monthly_payments.deactivate_billing_status',
+			"gris.api.financeiro.monthly_payments.deactivate_billing_status",
 			{ associate_id: assocAtual.id },
-			'Cobrança inativada'
+			"Cobrança inativada"
 		);
 	}
 
 	function editarCobranca() {
 		if (semPermissao() || !assocAtual) return;
-		const container = document.getElementById('cobrancaContainer');
-		const acoes = document.getElementById('acoesCobranca');
-		if (!container || !acoes || container.querySelector('input')) return;
+		const container = document.getElementById("cobrancaContainer");
+		const acoes = document.getElementById("acoesCobranca");
+		if (!container || !acoes || container.querySelector("input")) return;
 
-		const email = assocAtual.email_cobranca || '';
-		const telefone = assocAtual.telefone_cobranca || '';
-		const alvo = container.querySelector('.flex-1');
+		const email = assocAtual.email_cobranca || "";
+		const telefone = assocAtual.telefone_cobranca || "";
+		const alvo = container.querySelector(".flex-1");
 		if (alvo) {
 			alvo.innerHTML = `
 				<div class="field">
 					<label class="label" for="inputEmailCobranca">E-mail de cobrança</label>
-					<input type="email" id="inputEmailCobranca" class="input" value="${escapeHtml(email)}" placeholder="email@exemplo.com" />
+					<input type="email" id="inputEmailCobranca" class="input" value="${escapeHtml(
+						email
+					)}" placeholder="email@exemplo.com" />
 				</div>
 				<div class="field">
 					<label class="label" for="inputFoneCobranca">Telefone de cobrança</label>
-					<input type="text" id="inputFoneCobranca" class="input" value="${escapeHtml(telefone)}" placeholder="(xx) xxxxx-xxxx" />
+					<input type="text" id="inputFoneCobranca" class="input" value="${escapeHtml(
+						telefone
+					)}" placeholder="(xx) xxxxx-xxxx" />
 				</div>
 			`;
 		}
@@ -603,14 +641,18 @@
 	}
 
 	function restaurarCobranca() {
-		const container = document.getElementById('cobrancaContainer');
-		const acoes = document.getElementById('acoesCobranca');
+		const container = document.getElementById("cobrancaContainer");
+		const acoes = document.getElementById("acoesCobranca");
 		if (container && assocAtual) {
-			const alvo = container.querySelector('.flex-1');
+			const alvo = container.querySelector(".flex-1");
 			if (alvo) {
 				alvo.innerHTML = `
-					<div class="text-sm"><strong>E-mail de cobrança:</strong> <span id="emailCobranca">${escapeHtml(assocAtual.email_cobranca || '—')}</span></div>
-					<div class="text-sm"><strong>Telefone de cobrança:</strong> <span id="foneCobranca">${escapeHtml(assocAtual.telefone_cobranca || '—')}</span></div>
+					<div class="text-sm"><strong>E-mail de cobrança:</strong> <span id="emailCobranca">${escapeHtml(
+						assocAtual.email_cobranca || "—"
+					)}</span></div>
+					<div class="text-sm"><strong>Telefone de cobrança:</strong> <span id="foneCobranca">${escapeHtml(
+						assocAtual.telefone_cobranca || "—"
+					)}</span></div>
 				`;
 			}
 		}
@@ -622,58 +664,58 @@
 
 	function salvarDadosCobranca() {
 		if (semPermissao() || !assocAtual) return;
-		const email = document.getElementById('inputEmailCobranca')?.value.trim() || '';
-		const telefone = document.getElementById('inputFoneCobranca')?.value.trim() || '';
+		const email = document.getElementById("inputEmailCobranca")?.value.trim() || "";
+		const telefone = document.getElementById("inputFoneCobranca")?.value.trim() || "";
 
 		frappe
 			.call({
-				method: 'gris.api.financeiro.monthly_payments.update_billing_contacts',
+				method: "gris.api.financeiro.monthly_payments.update_billing_contacts",
 				args: { associate_id: assocAtual.id, email: email, phone: telefone },
 				freeze: true,
 			})
 			.then((resposta) => {
 				const dados = (resposta && resposta.message) || {};
 				if (!dados.ok) {
-					showToast('Não foi possível salvar os dados de cobrança.', 'red');
+					showToast("Não foi possível salvar os dados de cobrança.", "red");
 					return;
 				}
 				assocAtual.email_cobranca = dados.email;
 				assocAtual.telefone_cobranca = dados.phone;
 				restaurarCobranca();
-				showToast('Dados de cobrança atualizados', 'green');
+				showToast("Dados de cobrança atualizados", "green");
 			})
-			.catch(() => showToast('Erro ao salvar dados de cobrança.', 'red'));
+			.catch(() => showToast("Erro ao salvar dados de cobrança.", "red"));
 	}
 
 	// ─────────────────────────── ligações ───────────────────────────
 
 	const ACOES = {
-		detalhes: (elemento) => mostrarDetalhes(elemento.closest('tr')),
-		'alterar-valor': alterarValor,
-		'salvar-valor': salvarNovoValor,
-		'cancelar-valor': cancelarEdicaoValor,
-		'editar-cobranca': editarCobranca,
-		'salvar-cobranca': salvarDadosCobranca,
-		'cancelar-cobranca': restaurarCobranca,
-		'cadastro-realizado': cadastroRealizado,
-		'cadastro-cancelado': cadastroCancelado,
+		detalhes: (elemento) => mostrarDetalhes(elemento.closest("tr")),
+		"alterar-valor": alterarValor,
+		"salvar-valor": salvarNovoValor,
+		"cancelar-valor": cancelarEdicaoValor,
+		"editar-cobranca": editarCobranca,
+		"salvar-cobranca": salvarDadosCobranca,
+		"cancelar-cobranca": restaurarCobranca,
+		"cadastro-realizado": cadastroRealizado,
+		"cadastro-cancelado": cadastroCancelado,
 	};
 
 	function init() {
 		initGraficos();
 
-		const filtroNome = document.getElementById('filtroAssociado');
-		if (filtroNome) filtroNome.addEventListener('input', aplicarFiltros);
+		const filtroNome = document.getElementById("filtroAssociado");
+		if (filtroNome) filtroNome.addEventListener("input", aplicarFiltros);
 
 		// O macro `select` dispara `change` no próprio componente (não no input hidden,
 		// que é filho dele) e só então atualiza o valor do hidden.
-		const filtroSituacao = document.getElementById('filtroSituacao');
-		if (filtroSituacao) filtroSituacao.addEventListener('change', aplicarFiltros);
+		const filtroSituacao = document.getElementById("filtroSituacao");
+		if (filtroSituacao) filtroSituacao.addEventListener("change", aplicarFiltros);
 
-		document.addEventListener('click', (evento) => {
-			const alvo = evento.target.closest('[data-acao]');
+		document.addEventListener("click", (evento) => {
+			const alvo = evento.target.closest("[data-acao]");
 			if (!alvo) return;
-			const acao = ACOES[alvo.getAttribute('data-acao')];
+			const acao = ACOES[alvo.getAttribute("data-acao")];
 			if (!acao) return;
 			evento.preventDefault();
 			acao(alvo);
@@ -682,8 +724,8 @@
 		atualizarPaginacao();
 	}
 
-	if (document.readyState === 'loading') {
-		document.addEventListener('DOMContentLoaded', init);
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", init);
 	} else {
 		init();
 	}

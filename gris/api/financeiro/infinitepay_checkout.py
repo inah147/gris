@@ -90,9 +90,7 @@ def webhook_infinitepay():
 	# Idempotência: transaction_nsu preenchido significa que este pagamento
 	# já foi confirmado e persistido anteriormente.
 	if doc.transaction_nsu:
-		frappe.logger().info(
-			f"Webhook InfinitePay ignorado (já processado) para order_nsu={order_nsu}"
-		)
+		frappe.logger().info(f"Webhook InfinitePay ignorado (já processado) para order_nsu={order_nsu}")
 		return {"ok": True}
 
 	handle = frappe.db.get_single_value("Configuracao infinitepay", "handle")
@@ -107,13 +105,14 @@ def webhook_infinitepay():
 	transaction_nsu_webhook = data.get("transaction_nsu") or None
 	invoice_slug_webhook = data.get("invoice_slug") or doc.invoice_slug or None
 	try:
-		verificacao = _verificar_pagamento(
-			handle, order_nsu, transaction_nsu_webhook, invoice_slug_webhook
-		)
+		verificacao = _verificar_pagamento(handle, order_nsu, transaction_nsu_webhook, invoice_slug_webhook)
 	except (requests.exceptions.RequestException, ValueError) as e:
 		frappe.logger().error(f"Falha na verificação InfinitePay para order_nsu={order_nsu}: {e}")
 		frappe.local.response.http_status_code = 400
-		return {"ok": False, "error": {"code": "VERIFICATION_FAILED", "message": "Não foi possível confirmar o pagamento."}}
+		return {
+			"ok": False,
+			"error": {"code": "VERIFICATION_FAILED", "message": "Não foi possível confirmar o pagamento."},
+		}
 
 	# Validação de pagamento efetivo
 	if not verificacao.get("paid"):
@@ -123,9 +122,7 @@ def webhook_infinitepay():
 
 	# Validação cruzada de valor: paid_amount deve cobrir o total dos itens.
 	# paid_amount pode ser maior que o esperado (juros de parcelamento são aceitos).
-	valor_esperado_centavos = sum(
-		item.quantidade * round(item.preco * 100) for item in doc.itens
-	)
+	valor_esperado_centavos = sum(item.quantidade * round(item.preco * 100) for item in doc.itens)
 	paid_amount = verificacao.get("paid_amount", 0)
 	if paid_amount < valor_esperado_centavos:
 		frappe.logger().warning(

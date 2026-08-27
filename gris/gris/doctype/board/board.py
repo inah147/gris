@@ -36,9 +36,7 @@ class Board(Document):
 			return
 
 		if not referencia_doctype or not referencia_nome:
-			frappe.throw(
-				_("Informe o tipo e o registro do dono ou deixe ambos em branco para quadro solto.")
-			)
+			frappe.throw(_("Informe o tipo e o registro do dono ou deixe ambos em branco para quadro solto."))
 
 		if referencia_doctype not in BOARD_REFERENCIA_PERMITIDAS:
 			frappe.throw(

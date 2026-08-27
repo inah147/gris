@@ -21,4 +21,3 @@ class ConfiguracoesGoogleWorkspace(Document):
 			import frappe
 
 			frappe.throw("Dias para expiração do acesso restrito deve ser maior que zero.")
-

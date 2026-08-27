@@ -126,10 +126,12 @@ def _find_permissions_for_email(drive, drive_id: str, email: str) -> list[dict]:
 		response = _execute_with_retry(lambda: drive.permissions().list(**params).execute())
 		for permission in response.get("permissions", []):
 			if _normalize_email(permission.get("emailAddress")) == email:
-				permissions_for_email.append({
-					"id": permission.get("id"),
-					"role": (permission.get("role") or "").strip().lower(),
-				})
+				permissions_for_email.append(
+					{
+						"id": permission.get("id"),
+						"role": (permission.get("role") or "").strip().lower(),
+					}
+				)
 
 		page_token = response.get("nextPageToken")
 		if not page_token:
@@ -228,9 +230,7 @@ def _sync_global_access_for_associate(associate_name: str):
 
 	email = _normalize_email(associate.id_escoteiros)
 	if not _is_institutional_email(email, settings):
-		_logger().info(
-			"[GLOBAL SYNC] skip associate=%s reason=invalid_email email=%s", associate_name, email
-		)
+		_logger().info("[GLOBAL SYNC] skip associate=%s reason=invalid_email email=%s", associate_name, email)
 		return
 
 	global_drives = _get_global_drives(settings)
@@ -369,7 +369,9 @@ def run_daily_restricted_access_cleanup():
 	expiration_days = settings.dias_expiracao_acesso_restrito or 365
 	today = getdate()
 
-	associate_names = {row.associado for row in (settings.concessoes_manuais or []) if row.ativo and row.associado}
+	associate_names = {
+		row.associado for row in (settings.concessoes_manuais or []) if row.ativo and row.associado
+	}
 	associate_map = {}
 	if associate_names:
 		associate_rows = frappe.get_all(

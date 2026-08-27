@@ -15,9 +15,7 @@ frappe.ui.form.on("Convite Festa", {
 
 		const convidados = frm.doc.convidados || [];
 		const algumEnviado = convidados.some((c) => c.status_envio === "Enviado");
-		const label = algumEnviado
-			? __("Reenviar QR codes")
-			: __("Enviar QR codes");
+		const label = algumEnviado ? __("Reenviar QR codes") : __("Enviar QR codes");
 
 		frm.add_custom_button(
 			label,
@@ -47,8 +45,7 @@ frappe.ui.form.on("Convite Festa", {
 					primary_action: (values) => {
 						dialog.hide();
 						frappe.call({
-							method:
-								"gris.festas.doctype.convite_festa.convite_festa.reenviar_qr_codes",
+							method: "gris.festas.doctype.convite_festa.convite_festa.reenviar_qr_codes",
 							args: {
 								convite_name: frm.doc.name,
 								forcar_todos: values.alvo === "todos" ? 1 : 0,
@@ -59,7 +56,7 @@ frappe.ui.form.on("Convite Festa", {
 								if (!r.message || !r.message.ok) return;
 								frappe.show_alert({
 									message: __(
-										"Envio enfileirado. Os e-mails saem em background.",
+										"Envio enfileirado. Os e-mails saem em background."
 									),
 									indicator: "green",
 								});
@@ -69,7 +66,7 @@ frappe.ui.form.on("Convite Festa", {
 				});
 				dialog.show();
 			},
-			__("Convidados"),
+			__("Convidados")
 		);
 	},
 });
@@ -79,10 +76,7 @@ frappe.ui.form.on("Item Convite Festa", {
 		const row = locals[cdt][cdn];
 		if (!row.eh_convite || !row.opcao_convite) return;
 		frappe.db
-			.get_value("Opcao Convite Festa", row.opcao_convite, [
-				"nome_convite",
-				"valor",
-			])
+			.get_value("Opcao Convite Festa", row.opcao_convite, ["nome_convite", "valor"])
 			.then((r) => {
 				if (!r || !r.message) return;
 				frappe.model.set_value(cdt, cdn, "descricao", r.message.nome_convite);

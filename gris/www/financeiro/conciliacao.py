@@ -29,11 +29,7 @@ def get_context(context):
 	context.title = _("Conciliação")
 
 	def get_master_options(doctype):
-		return [
-			r["name"]
-			for r in frappe.get_all(doctype, fields=["name"], order_by="name")
-			if r.get("name")
-		]
+		return [r["name"] for r in frappe.get_all(doctype, fields=["name"], order_by="name") if r.get("name")]
 
 	context.opcoes_categoria = get_master_options("Categoria de Transacao")
 	context.opcoes_centro_de_custo = get_master_options("Centro de Custo")

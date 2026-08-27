@@ -212,7 +212,10 @@ def _format_row_summary(row) -> str:
 		("Email", row.get("Email", "")),
 		("Nome Responsável", row.get("Nome_responsavel", "")),
 		("CPF Responsável", row.get("CPF_responsavel", "")),
-		("Celular Responsável", row.get("Celular_responsavel", "") or row.get("Telefone_Residencial_responsavel", "")),
+		(
+			"Celular Responsável",
+			row.get("Celular_responsavel", "") or row.get("Telefone_Residencial_responsavel", ""),
+		),
 	]
 	parts = [f"{label}: {str(value).strip()}" for label, value in fields if value and str(value).strip()]
 	return " | ".join(parts) if parts else "sem dados"
@@ -466,7 +469,7 @@ def parse_associates_report(path_pdf: str) -> dict:
 		"vinculo_updated": 0,
 		"vinculo_skipped": 0,
 		"usuario_created": 0,
-		"usuario_skipped": 0
+		"usuario_skipped": 0,
 	}
 
 	# Processar cada registro
@@ -647,7 +650,9 @@ def parse_associates_report(path_pdf: str) -> dict:
 						results[f"responsavel_{responsavel_action}"] += 1
 
 						if responsavel_name:
-							vinculo_action = _upsert_responsavel_vinculo(responsavel_name, associado_name, cpf)
+							vinculo_action = _upsert_responsavel_vinculo(
+								responsavel_name, associado_name, cpf
+							)
 							results[f"vinculo_{vinculo_action}"] += 1
 						else:
 							results["vinculo_skipped"] += 1
@@ -665,8 +670,14 @@ def parse_associates_report(path_pdf: str) -> dict:
 					# Criar usuário: usa email do responsável ou, na ausência, email do associado
 					try:
 						email_for_user = responsavel_payload.get("email") or associate_data.get("email") or ""
-						nome_for_user = responsavel_payload.get("nome_completo") or associate_data.get("nome_completo") or ""
-						usuario_action = _upsert_portal_user(email_for_user, nome_for_user, doc, _resp_name_for_user)
+						nome_for_user = (
+							responsavel_payload.get("nome_completo")
+							or associate_data.get("nome_completo")
+							or ""
+						)
+						usuario_action = _upsert_portal_user(
+							email_for_user, nome_for_user, doc, _resp_name_for_user
+						)
 						results[f"usuario_{usuario_action}"] += 1
 					except Exception as e:
 						frappe.clear_messages()

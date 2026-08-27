@@ -100,9 +100,7 @@ def run_daily_backup():
 		try:
 			retention_summary = _apply_retention_policy(drive, settings)
 		except Exception:
-			retention_summary["warning"] = _(
-				"Retencao nao foi concluida. Verifique Error Log para detalhes."
-			)
+			retention_summary["warning"] = _("Retencao nao foi concluida. Verifique Error Log para detalhes.")
 			retention_traceback = frappe.get_traceback()
 			frappe.log_error(retention_traceback, "Shared Drive Retention Failure")
 			logger.warning(
@@ -409,14 +407,12 @@ def _new_retention_summary():
 
 def _build_retention_warning(summary):
 	if summary.get("failed_count"):
-		return _(
-			"Retencao executada com avisos. Nao foi possivel remover {0} snapshot(s)."
-		).format(summary["failed_count"])
+		return _("Retencao executada com avisos. Nao foi possivel remover {0} snapshot(s).").format(
+			summary["failed_count"]
+		)
 
 	if summary.get("already_missing_count"):
-		return _("Retencao encontrou {0} snapshot(s) ja ausente(s).").format(
-			summary["already_missing_count"]
-		)
+		return _("Retencao encontrou {0} snapshot(s) ja ausente(s).").format(summary["already_missing_count"])
 
 	return ""
 

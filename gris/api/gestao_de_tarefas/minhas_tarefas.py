@@ -286,10 +286,7 @@ def salvar_tarefa_pessoal(tarefa: str | dict[str, Any]) -> dict[str, Any]:
 		previous_status = (existing.status or "").strip()
 
 	if existing:
-		clean = {
-			field: _clean_value(payload.get(field, existing.get(field)))
-			for field in TASK_CLIENT_FIELDS
-		}
+		clean = {field: _clean_value(payload.get(field, existing.get(field))) for field in TASK_CLIENT_FIELDS}
 	else:
 		clean = {field: _clean_value(payload.get(field)) for field in TASK_CLIENT_FIELDS}
 

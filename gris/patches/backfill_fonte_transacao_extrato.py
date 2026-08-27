@@ -27,8 +27,7 @@ def execute():
 
 	if frappe.db.has_column(doctype, "excluir_do_total"):
 		frappe.db.sql(
-			"UPDATE `tabTransacao Extrato Geral` SET `excluir_do_total` = 0 "
-			"WHERE `excluir_do_total` IS NULL"
+			"UPDATE `tabTransacao Extrato Geral` SET `excluir_do_total` = 0 WHERE `excluir_do_total` IS NULL"
 		)
 
 	frappe.db.commit()

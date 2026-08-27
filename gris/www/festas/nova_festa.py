@@ -16,9 +16,7 @@ ALLOWED_ROLES = {"Gestor de festas", "System Manager"}
 def _ensure_gestor_access() -> None:
 	roles = set(frappe.get_roles(frappe.session.user))
 	if not (roles & ALLOWED_ROLES):
-		frappe.throw(
-			"Você não tem permissão para cadastrar festas.", frappe.PermissionError
-		)
+		frappe.throw("Você não tem permissão para cadastrar festas.", frappe.PermissionError)
 
 
 def _select_items_associados() -> list[dict[str, str]]:

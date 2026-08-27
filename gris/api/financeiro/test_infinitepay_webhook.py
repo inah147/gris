@@ -40,9 +40,7 @@ def _convite(festa_name: str, opcao_name: str, quantidade: int = 2):
 					"valor": 50,
 				}
 			],
-			"convidados": [
-				{"nome": "p", "email": "p@example.com"} for _ in range(quantidade)
-			],
+			"convidados": [{"nome": "p", "email": "p@example.com"} for _ in range(quantidade)],
 		}
 	).insert(ignore_permissions=True)
 
@@ -79,9 +77,7 @@ class TestInfinitepayWebhook(FrappeTestCase):
 				return "test-handle"
 			return real_get_single(doctype, fieldname, *args, **kwargs)
 
-		handle_patcher = patch(
-			"frappe.db.get_single_value", side_effect=_fake_get_single
-		)
+		handle_patcher = patch("frappe.db.get_single_value", side_effect=_fake_get_single)
 		handle_patcher.start()
 		self.addCleanup(handle_patcher.stop)
 

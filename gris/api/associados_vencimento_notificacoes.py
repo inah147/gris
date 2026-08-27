@@ -43,7 +43,9 @@ def _buscar_links_responsavel(associado_names: list[str]) -> dict[str, list[frap
 	return links_por_associado
 
 
-def _buscar_contatos_responsavel(links_por_associado: dict[str, list[frappe._dict]]) -> dict[str, frappe._dict]:
+def _buscar_contatos_responsavel(
+	links_por_associado: dict[str, list[frappe._dict]],
+) -> dict[str, frappe._dict]:
 	responsavel_names: set[str] = set()
 	for links in links_por_associado.values():
 		for link in links:

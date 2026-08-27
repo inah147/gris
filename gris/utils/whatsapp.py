@@ -105,15 +105,9 @@ def _post(endpoint: str, payload: dict, *, config: dict | None = None) -> dict:
 					isinstance(m, dict) and m.get("exists") is False for m in messages
 				):
 					number = messages[0].get("number", "") if messages else ""
-					raise WhatsAppNumberNotFoundError(
-						f"Número {number} não está registrado no WhatsApp."
-					)
-				raise WhatsAppRequestError(
-					f"Evolution API retornou HTTP {response.status_code}: {detail}"
-				)
-			raise WhatsAppRequestError(
-				f"Evolution API retornou HTTP {response.status_code}: {detail}"
-			)
+					raise WhatsAppNumberNotFoundError(f"Número {number} não está registrado no WhatsApp.")
+				raise WhatsAppRequestError(f"Evolution API retornou HTTP {response.status_code}: {detail}")
+			raise WhatsAppRequestError(f"Evolution API retornou HTTP {response.status_code}: {detail}")
 
 		logger.warning(
 			f"Evolution API HTTP {response.status_code} na tentativa {attempt}/{MAX_RETRIES}. Retentando..."
@@ -156,9 +150,7 @@ def _get(
 				detail = response.json()
 			except ValueError:
 				detail = response.text or "Sem detalhes."
-			raise WhatsAppRequestError(
-				f"Evolution API retornou HTTP {response.status_code}: {detail}"
-			)
+			raise WhatsAppRequestError(f"Evolution API retornou HTTP {response.status_code}: {detail}")
 
 		logger.warning(
 			f"Evolution API HTTP {response.status_code} na tentativa {attempt}/{MAX_RETRIES}. Retentando..."

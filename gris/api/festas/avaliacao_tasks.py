@@ -43,9 +43,7 @@ def _processar(avaliacao_name: str, campo: str, gerar: Callable[[str], str]) -> 
 
 def processar_resumo_individuais_festa(avaliacao_name: str) -> None:
 	"""Background job: gera o resumo das avaliações individuais da equipe."""
-	_processar(
-		avaliacao_name, "resumo_avaliacoes_individuais", gerar_resumo_avaliacoes_individuais_festa
-	)
+	_processar(avaliacao_name, "resumo_avaliacoes_individuais", gerar_resumo_avaliacoes_individuais_festa)
 
 
 def processar_resumo_completo_festa(avaliacao_name: str) -> None:
@@ -55,6 +53,4 @@ def processar_resumo_completo_festa(avaliacao_name: str) -> None:
 
 def processar_resumo_convidados_festa(avaliacao_name: str) -> None:
 	"""Background job: gera o resumo das avaliações dos convidados."""
-	_processar(
-		avaliacao_name, "resumo_avaliacoes_convidados", gerar_resumo_avaliacoes_convidados_festa
-	)
+	_processar(avaliacao_name, "resumo_avaliacoes_convidados", gerar_resumo_avaliacoes_convidados_festa)

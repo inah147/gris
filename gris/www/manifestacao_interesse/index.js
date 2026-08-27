@@ -6,7 +6,8 @@ frappe.ready(function () {
 	function setFieldError(input, message) {
 		if (!input) return;
 		input.classList.add("is-invalid");
-		const fieldEl = input.closest(".field") || input.closest(".jovem-entry") || input.parentElement;
+		const fieldEl =
+			input.closest(".field") || input.closest(".jovem-entry") || input.parentElement;
 		if (!fieldEl) return;
 		let error = fieldEl.querySelector(":scope > .field__error");
 		if (!error) {
@@ -20,7 +21,8 @@ frappe.ready(function () {
 	function clearFieldError(input) {
 		if (!input) return;
 		input.classList.remove("is-invalid");
-		const fieldEl = input.closest(".field") || input.closest(".jovem-entry") || input.parentElement;
+		const fieldEl =
+			input.closest(".field") || input.closest(".jovem-entry") || input.parentElement;
 		const error = fieldEl ? fieldEl.querySelector(":scope > .field__error") : null;
 		if (error) error.remove();
 	}
@@ -102,7 +104,8 @@ frappe.ready(function () {
 	function maskCPF(input) {
 		let value = input.value.replace(/\D/g, "");
 		if (value.length > 11) value = value.slice(0, 11);
-		if (value.length > 9) value = value.replace(/^(\d{3})(\d{3})(\d{3})(\d{1,2}).*/, "$1.$2.$3-$4");
+		if (value.length > 9)
+			value = value.replace(/^(\d{3})(\d{3})(\d{3})(\d{1,2}).*/, "$1.$2.$3-$4");
 		else if (value.length > 6) value = value.replace(/^(\d{3})(\d{3})(\d{1,3}).*/, "$1.$2.$3");
 		else if (value.length > 3) value = value.replace(/^(\d{3})(\d{1,3}).*/, "$1.$2");
 		input.value = value;
@@ -171,7 +174,7 @@ frappe.ready(function () {
 				event.preventDefault();
 			}
 		},
-		true,
+		true
 	);
 
 	// ===================== Validation per tab =====================
@@ -184,7 +187,10 @@ frappe.ready(function () {
 
 		const nameField = document.getElementById("nome_responsavel");
 		if (!validateName(nameField.value)) {
-			setFieldError(nameField, "Por favor, insira um nome válido (somente letras e espaços).");
+			setFieldError(
+				nameField,
+				"Por favor, insira um nome válido (somente letras e espaços)."
+			);
 			isValid = false;
 		}
 
@@ -230,14 +236,19 @@ frappe.ready(function () {
 		if (!panel) return false;
 		panel.querySelectorAll(".is-invalid").forEach((el) => clearFieldError(el));
 		// remove erros do datepicker também
-		panel.querySelectorAll(".datepicker.is-invalid").forEach((el) => el.classList.remove("is-invalid"));
+		panel
+			.querySelectorAll(".datepicker.is-invalid")
+			.forEach((el) => el.classList.remove("is-invalid"));
 		panel.querySelectorAll(".jovem-entry .field__error").forEach((el) => el.remove());
 
 		const entries = panel.querySelectorAll(".jovem-entry");
 		entries.forEach((entry) => {
 			const nameField = entry.querySelector(".nome_jovem");
 			if (!validateName(nameField.value)) {
-				setFieldError(nameField, "Por favor, insira um nome válido (somente letras e espaços).");
+				setFieldError(
+					nameField,
+					"Por favor, insira um nome válido (somente letras e espaços)."
+				);
 				isValid = false;
 			}
 
@@ -298,31 +309,34 @@ frappe.ready(function () {
 			if (validateResponsavel()) {
 				showTab("jovem");
 			}
-		}),
+		})
 	);
 
 	document.querySelectorAll(".btn-prev").forEach((btn) =>
 		btn.addEventListener("click", function () {
 			showTab("responsavel");
-		}),
+		})
 	);
 
 	document.querySelectorAll(".btn-prev-confirmacao").forEach((btn) =>
 		btn.addEventListener("click", function () {
 			showTab("jovem");
-		}),
+		})
 	);
 
 	function buildSummary() {
-		document.getElementById("summary_nome_responsavel").textContent = document.getElementById("nome_responsavel").value;
-		document.getElementById("summary_email_responsavel").textContent = document.getElementById("email_responsavel").value;
+		document.getElementById("summary_nome_responsavel").textContent =
+			document.getElementById("nome_responsavel").value;
+		document.getElementById("summary_email_responsavel").textContent =
+			document.getElementById("email_responsavel").value;
 		const phoneRoot = document.getElementById("celular_responsavel_input");
 		const phoneFull = phoneRoot ? phoneRoot.value : "";
 		const phoneVisible = document.getElementById("celular_responsavel").value;
 		document.getElementById("summary_celular_responsavel").textContent = phoneFull
 			? phoneFull + (phoneVisible ? " (" + phoneVisible + ")" : "")
 			: "";
-		document.getElementById("summary_cpf_responsavel").textContent = document.getElementById("cpf_responsavel").value;
+		document.getElementById("summary_cpf_responsavel").textContent =
+			document.getElementById("cpf_responsavel").value;
 
 		const summaryContainer = document.getElementById("summary-jovens-container");
 		summaryContainer.innerHTML = "";
@@ -346,9 +360,9 @@ frappe.ready(function () {
 				(index + 1) +
 				"</h4>" +
 				'<dl class="manifestacao__summary-grid">' +
-				'<div><dt>Nome</dt><dd></dd></div>' +
-				'<div><dt>CPF</dt><dd></dd></div>' +
-				'<div><dt>Data de nascimento</dt><dd></dd></div>' +
+				"<div><dt>Nome</dt><dd></dd></div>" +
+				"<div><dt>CPF</dt><dd></dd></div>" +
+				"<div><dt>Data de nascimento</dt><dd></dd></div>" +
 				"</dl>";
 			const dds = wrapper.querySelectorAll("dd");
 			dds[0].textContent = nome;
@@ -379,7 +393,9 @@ frappe.ready(function () {
 			Object.keys(seen).forEach((cpf) => {
 				if (seen[cpf].length > 1) {
 					hasDuplicates = true;
-					seen[cpf].forEach((f) => setFieldError(f, "Este CPF está duplicado em outro campo."));
+					seen[cpf].forEach((f) =>
+						setFieldError(f, "Este CPF está duplicado em outro campo.")
+					);
 				}
 			});
 
@@ -387,14 +403,15 @@ frappe.ready(function () {
 				frappe.msgprint({
 					title: "Erro de validação",
 					indicator: "red",
-					message: "Existem CPFs duplicados (Responsável ou Jovens). Cada pessoa deve ter um CPF único.",
+					message:
+						"Existem CPFs duplicados (Responsável ou Jovens). Cada pessoa deve ter um CPF único.",
 				});
 				return;
 			}
 
 			buildSummary();
 			showTab("confirmacao");
-		}),
+		})
 	);
 
 	// ===================== Submit =====================

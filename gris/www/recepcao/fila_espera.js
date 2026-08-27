@@ -45,15 +45,20 @@
 					() => (window.echarts ? resolve() : reject(new Error("ECharts indisponível"))),
 					{ once: true }
 				);
-				existing.addEventListener("error", () => reject(new Error("Falha ao carregar ECharts")), {
-					once: true,
-				});
+				existing.addEventListener(
+					"error",
+					() => reject(new Error("Falha ao carregar ECharts")),
+					{
+						once: true,
+					}
+				);
 				return;
 			}
 			const script = document.createElement("script");
 			script.dataset.grisEcharts = "1";
 			script.src = "/assets/gris/vendor/echarts/echarts.min.js";
-			script.onload = () => (window.echarts ? resolve() : reject(new Error("ECharts indisponível")));
+			script.onload = () =>
+				window.echarts ? resolve() : reject(new Error("ECharts indisponível"));
 			script.onerror = () => reject(new Error("Falha ao carregar ECharts"));
 			document.head.appendChild(script);
 		});
@@ -76,7 +81,9 @@
 				formatter: (params) => {
 					const item = Array.isArray(params) ? params[0] : params;
 					const v = typeof item.value === "number" ? item.value : 0;
-					return `<strong>${frappe.utils.escape_html(item.name)}</strong><br/>Vagas: ${v}`;
+					return `<strong>${frappe.utils.escape_html(
+						item.name
+					)}</strong><br/>Vagas: ${v}`;
 				},
 			},
 			legend: { show: false },
@@ -151,9 +158,11 @@
 		currentAssociadoId = card.dataset.associado;
 
 		document.getElementById("modalAssociadoNome").textContent = card.dataset.nome || "";
-		document.getElementById("modalResponsavelNome").textContent = card.dataset.responsavel || "";
+		document.getElementById("modalResponsavelNome").textContent =
+			card.dataset.responsavel || "";
 		document.getElementById("modalPosicao").textContent = "#" + (card.dataset.posicao || "");
-		document.getElementById("modalPrevisao").textContent = card.dataset.previsao || "Sem previsão";
+		document.getElementById("modalPrevisao").textContent =
+			card.dataset.previsao || "Sem previsão";
 		document.getElementById("modalDataInclusao").textContent = card.dataset.dataInclusao || "";
 
 		openDialog("modalFilaEspera");
@@ -161,7 +170,9 @@
 
 	function abrirFicha() {
 		if (currentAssociadoId) {
-			window.location.href = `/recepcao/ficha_registro?name=${encodeURIComponent(currentAssociadoId)}`;
+			window.location.href = `/recepcao/ficha_registro?name=${encodeURIComponent(
+				currentAssociadoId
+			)}`;
 		}
 	}
 
@@ -226,7 +237,8 @@
 		document.getElementById("vagasAtivos").textContent = button.dataset.ativos ?? "—";
 		document.getElementById("vagasNovos").textContent = button.dataset.novos ?? "—";
 		document.getElementById("vagasSaindo").textContent = button.dataset.saindo ?? "—";
-		document.getElementById("vagasDisponiveis").textContent = button.dataset.disponiveis ?? "—";
+		document.getElementById("vagasDisponiveis").textContent =
+			button.dataset.disponiveis ?? "—";
 
 		let labels = [];
 		let values = [];
@@ -262,8 +274,12 @@
 			?.addEventListener("click", abrirConfirmarDesistencia);
 
 		// Ações do modal de confirmação
-		document.getElementById("btnCancelarDesistencia")?.addEventListener("click", cancelarDesistencia);
-		document.getElementById("btnConfirmarDesistencia")?.addEventListener("click", confirmarDesistencia);
+		document
+			.getElementById("btnCancelarDesistencia")
+			?.addEventListener("click", cancelarDesistencia);
+		document
+			.getElementById("btnConfirmarDesistencia")
+			?.addEventListener("click", confirmarDesistencia);
 
 		// Botão "Fechar" dos dialogs (atributo data-dialog-close)
 		document.addEventListener("click", (event) => {

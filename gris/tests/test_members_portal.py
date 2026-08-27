@@ -24,7 +24,9 @@ class TestMembersPortal(TestCase):
 				return_value={"pais_divorciados": 1, "telefone": "+5511999999999", "area": "X"},
 			),
 			patch.object(members_portal.frappe.db, "commit"),
-			patch.object(members_portal.frappe, "session", SimpleNamespace(user="resp@example.com"), create=True),
+			patch.object(
+				members_portal.frappe, "session", SimpleNamespace(user="resp@example.com"), create=True
+			),
 		):
 			result = members_portal.update_member(
 				"ASSOC-1",
@@ -45,7 +47,9 @@ class TestMembersPortal(TestCase):
 			patch.object(members_portal, "_is_linked_responsavel", return_value=False),
 			patch.object(members_portal.frappe, "get_doc", return_value=doc),
 			patch.object(members_portal.frappe, "parse_json", return_value={"pais_divorciados": 1}),
-			patch.object(members_portal.frappe, "session", SimpleNamespace(user="resp@example.com"), create=True),
+			patch.object(
+				members_portal.frappe, "session", SimpleNamespace(user="resp@example.com"), create=True
+			),
 		):
 			result = members_portal.update_member("ASSOC-1", '{"pais_divorciados": 1}')
 

@@ -12,7 +12,8 @@ Linguagem de comunicação e documentação: **Português (PT-BR)**.
 gris/
 ├── hooks.py                    # Hooks, scheduler, overrides
 ├── api/                        # Endpoints REST (@frappe.whitelist)
-│   └── mcp/                    # Ferramentas expostas ao Claude (MCP)
+│   ├── mcp/                    # Ferramentas expostas ao Claude (MCP)
+│   └── recepcao_funil.py       # Etapas e cadência do funil (portal + MCP)
 ├── www/                        # Páginas de portal web (Jinja + Python)
 ├── gris/doctype/               # DocTypes do módulo Gris
 ├── financeiro/doctype/         # DocTypes do módulo Financeiro

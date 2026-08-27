@@ -17,7 +17,10 @@ mcp_server/gris_mcp.py          ponte fina, sem dependências externas
 gris.api.mcp.endpoints          catálogo, autorização e validação
         │
         ▼
-DocTypes do Frappe (Associado, Transacao Extrato Geral, ...)
+serviços do app (gris.api.financeiro, gris.api.recepcao, ...)
+        │
+        ▼
+DocTypes do Frappe (Associado, Transacao Extrato Geral, Novo Associado, ...)
 ```
 
 O catálogo de ferramentas vive **no servidor** (`gris/api/mcp/registry.py`).
@@ -87,6 +90,32 @@ atualizado — sem mexer na máquina de quem usa.
 | `salvar_item_previsao` ✎ | Cria ou atualiza um item de receita/despesa | Gestor Financeiro |
 | `excluir_item_previsao` ✎ | Remove um item de previsão não encerrada | Gestor Financeiro |
 
+### Recepção (funil de novos associados)
+
+| Ferramenta | O que faz | Papéis |
+|---|---|---|
+| `listar_novos_associados` | Funil com progresso das etapas; filtra por status, ramo, responsável, etapa pendente e `somente_atrasados` | Recepcao |
+| `obter_novo_associado` | Ficha completa: contato, etapas com data estimada, visita e responsáveis legais | Recepcao |
+| `funil_recepcao` | Panorama: por status, ramo e responsável, quantos atrasados e quais etapas travam | Recepcao |
+| `atualizar_etapa_recepcao` ✎ | Marca/desmarca uma etapa (com os mesmos efeitos de status do portal) | Recepcao |
+| `atualizar_novo_associado` ✎ | Status do funil, ramo pretendido e responsável de recepção | Recepcao |
+| `comentar_novo_associado` ✎ | Comentário interno no registro | Recepcao |
+| `enviar_para_fila_espera` ✎ | Move para a fila de espera do ramo | Recepcao |
+| `listar_fila_espera` | Fila por ramo, na ordem de entrada, com posição | Recepcao |
+| `chamar_da_fila_espera` ✎ | Tira da fila e devolve ao início do funil | Recepcao |
+| `listar_respostas_pesquisa_recepcao` | Respostas da pesquisa de novas famílias | Recepcao |
+| `obter_resposta_pesquisa_recepcao` | Uma resposta completa, com textos abertos e beneficiários | Recepcao |
+| `nps_recepcao` | NPS consolidado e série por período | Recepcao |
+
+### Agenda de visitas
+
+| Ferramenta | O que faz | Papéis |
+|---|---|---|
+| `listar_visitas` | Visitas por período, ramo e confirmação | Recepcao |
+| `datas_disponiveis_visita` | Sábados livres nos próximos 60 dias para o ramo (ou para remarcar uma visita) | Recepcao |
+| `agendar_visita` ✎ | Agenda a primeira visita em data disponível | Recepcao |
+| `atualizar_visita` ✎ | Confirmar, desconfirmar, remarcar ou cancelar | Recepcao |
+
 ### Apoio
 
 | Ferramenta | O que faz | Papéis |
@@ -95,9 +124,10 @@ atualizado — sem mexer na máquina de quem usa.
 | `diagnostico_conexao` | Local da ponte: testa URL, credenciais e conectividade | — |
 
 As ferramentas marcadas com ✎ gravam dados e aceitam `simular=true` (veja
-[Simulação](#simulação-dry-run)). Exclusão de previsão inteira, cadastro de
-contas fixas e importação de extratos continuam só pelo portal — são operações
-raras ou que dependem de upload de arquivo.
+[Simulação](#simulação-dry-run)). Continuam só pelo portal: **desistência de
+novo associado** (apaga registros e anonimiza o login do responsável, por LGPD),
+exclusão de previsão inteira, cadastro de contas fixas e importação de extratos
+— operações irreversíveis, raras ou que dependem de upload de arquivo.
 
 `System Manager` enxerga todas as ferramentas, seguindo o mesmo critério de
 `gris.api.portal_access.user_has_access`.
@@ -215,6 +245,14 @@ Exemplos de pedidos que funcionam bem:
 - *"Baixa o pagamento desses três associados"* → `marcar_contribuicoes_pagas`
 - *"Sobe a contribuição da Ana para R$ 75 a partir de agora"* → `atualizar_cobranca_associado`
 
+**Recepção**
+- *"Quem está travado no funil e em qual etapa?"* → `funil_recepcao`, depois `listar_novos_associados` com `somente_atrasados=true`
+- *"Quem ainda não fez a ficha médica?"* → `listar_novos_associados` com `etapa_pendente='ficha_medica_preenchida'`
+- *"Marca a reunião de acolhida da Ana como feita"* → `obter_novo_associado` + `atualizar_etapa_recepcao`
+- *"Que sábados estão livres para o Lobinho? Agenda dia 14 para o João"* → `datas_disponiveis_visita` + `agendar_visita`
+- *"Abriu vaga no Lobinho — quem é o próximo da fila?"* → `listar_fila_espera` + `chamar_da_fila_espera`
+- *"Como está o NPS da recepção?"* → `nps_recepcao`
+
 **Orçamento**
 - *"Como está a execução do orçamento deste ano?"* → `comparar_previsto_realizado`
 - *"Cria o orçamento de 2027 com as mesmas linhas de 2026 e 8% a mais em manutenção"* → `obter_previsao_orcamentaria` + `criar_previsao_orcamentaria`
@@ -257,8 +295,8 @@ passar. Simulações não entram no log de auditoria (não alteram nada).
 ## Adicionar uma ferramenta nova
 
 1. Escolha o módulo em `gris/api/mcp/` (`associados`, `financeiro`, `conciliacao`,
-   `contribuicoes`, `contas_fixas`, `orcamento`, `geral`) ou crie um novo e
-   registre-o em `MODULOS_DE_FERRAMENTAS`.
+   `contribuicoes`, `contas_fixas`, `orcamento`, `recepcao`, `visitas`, `geral`)
+   ou crie um novo e registre-o em `MODULOS_DE_FERRAMENTAS`.
 2. Decore a função com `@ferramenta(...)`, declarando `parametros`
    (JSON Schema simplificado), `roles` e `somente_leitura`.
 3. Escreva o handler retornando um `dict` serializável. Com
@@ -289,9 +327,12 @@ Nada precisa ser alterado na ponte local nem na configuração do Claude.
 cd mcp_server && python3 -m unittest discover -s tests
 
 # camada do app (dentro do bench)
-for modulo in registry ferramentas http contribuicoes conciliacao orcamento; do
+for modulo in registry ferramentas http contribuicoes conciliacao orcamento recepcao visitas; do
   bench --site <seu-site> run-tests --app gris --module gris.tests.test_mcp_$modulo
 done
+
+# regra do funil de recepção, compartilhada com o portal
+bench --site <seu-site> run-tests --app gris --module gris.tests.test_recepcao_funil
 ```
 
 ## Diagnóstico rápido

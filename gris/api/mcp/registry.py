@@ -35,6 +35,8 @@ MODULOS_DE_FERRAMENTAS = (
 	"gris.api.mcp.conciliacao",
 	"gris.api.mcp.contas_fixas",
 	"gris.api.mcp.orcamento",
+	"gris.api.mcp.recepcao",
+	"gris.api.mcp.visitas",
 )
 
 LIMITE_PADRAO = 25

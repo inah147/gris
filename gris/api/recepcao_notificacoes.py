@@ -13,6 +13,7 @@ from __future__ import annotations
 import frappe
 from frappe.utils import add_days, get_url, getdate, today
 
+from gris.api.recepcao import nomes_desistentes
 from gris.utils.whatsapp import enviar_mensagem_formatada, enviar_para_grupo, enviar_texto
 
 
@@ -188,9 +189,15 @@ def enviar_lembretes_visita() -> None:
 	logger = frappe.logger("recepcao_notificacoes", allow_site=True)
 
 	data_alvo = add_days(today(), 2)
+	# Quem desistiu mantém a visita registrada, mas não recebe lembrete.
+	filtros = {"data_da_visita": data_alvo, "visita_confirmada": 0}
+	desistentes = nomes_desistentes()
+	if desistentes:
+		filtros["jovem"] = ["not in", list(desistentes)]
+
 	visitas = frappe.get_all(
 		"Agenda de Visitas",
-		filters={"data_da_visita": data_alvo, "visita_confirmada": 0},
+		filters=filtros,
 		fields=["name", "jovem", "data_da_visita"],
 	)
 

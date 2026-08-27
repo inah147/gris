@@ -24,8 +24,10 @@ def update_waiting_list_branch():
 	for item in waiting_list:
 		if not item.associado:
 			continue
-		assoc = frappe.get_value("Novo Associado", item.associado, ["data_de_nascimento", "ramo"])
-		if not assoc or not assoc[0]:
+		assoc = frappe.get_value("Novo Associado", item.associado, ["data_de_nascimento", "ramo", "desistiu"])
+		# Quem desistiu continua na fila no banco, mas fora das telas: não faz
+		# sentido continuar promovendo o ramo dele.
+		if not assoc or not assoc[0] or assoc[2]:
 			continue
 		birth = getdate(assoc[0])
 		today_dt = getdate(today())

@@ -72,8 +72,11 @@ def get_context(context):
 		*field_interval_map.keys(),
 	]
 
+	# Quem desistiu fica de fora do funil: o registro continua no banco, apenas
+	# desativado (ver gris.api.recepcao.processar_desistencia).
 	novos_associados = frappe.get_all(
 		"Novo Associado",
+		filters={"desistiu": 0},
 		fields=fields_to_fetch,
 		order_by="modified desc",
 	)

@@ -604,7 +604,7 @@ function confirmarDesistencia() {
 		callback: function (r) {
 			if (!r.exc) {
 				frappe.show_alert({
-					message: "Desistência registrada e dados removidos.",
+					message: "Desistência registrada. O cadastro foi desativado, sem perda de dados.",
 					indicator: "green",
 				});
 				window.location.reload();

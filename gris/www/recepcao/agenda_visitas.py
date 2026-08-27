@@ -5,6 +5,7 @@ from frappe import _
 from frappe.utils import add_days, cint, format_date, getdate, today
 
 from gris.api.portal_access import enrich_context, user_has_access
+from gris.api.recepcao import nomes_desistentes
 
 no_cache = 1
 
@@ -53,9 +54,15 @@ def get_context(context):
 			start_date = limit_date
 	end_date = date(year + 1, 3, 1) - timedelta(days=1)
 
+	# A visita de quem desistiu continua registrada, mas sai do calendário.
+	visit_filters = {"data_da_visita": ["between", [start_date, end_date]]}
+	desistentes = nomes_desistentes()
+	if desistentes:
+		visit_filters["jovem"] = ["not in", list(desistentes)]
+
 	visits = frappe.get_all(
 		"Agenda de Visitas",
-		filters={"data_da_visita": ["between", [start_date, end_date]]},
+		filters=visit_filters,
 		fields=[
 			"name",
 			"jovem",
@@ -270,7 +277,7 @@ def get_available_visit_dates_for_reschedule(visit_name):
 def get_associates_for_scheduling():
 	return frappe.get_all(
 		"Novo Associado",
-		filters={"visita_agendada": 0, "status": ["!=", "Desistência"]},
+		filters={"visita_agendada": 0, "desistiu": 0},
 		fields=["name", "nome_completo", "ramo", "data_de_nascimento"],
 	)
 

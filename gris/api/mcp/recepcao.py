@@ -5,9 +5,9 @@ o mesmo módulo que alimenta o kanban de ``/recepcao/visao_geral``. As ações
 delegam para os serviços já existentes em ``gris.api.recepcao`` e nas páginas do
 portal.
 
-Fora do escopo por serem irreversíveis: ``processar_desistencia`` e
-``registrar_desistencia`` da fila apagam registros e anonimizam o login do
-responsável (LGPD). Continuam só pelo portal.
+Fora do escopo: ``processar_desistencia`` e ``registrar_desistencia`` da fila.
+Elas não apagam nada — desativam o registro, que some das listagens daqui — mas
+continuam só pelo portal, onde a recepção confirma a decisão com a família.
 """
 
 from __future__ import annotations
@@ -194,7 +194,9 @@ def listar_novos_associados(
 	limite: int = 25,
 	inicio: int = 0,
 ) -> dict:
-	filtros: dict[str, Any] = {}
+	# Quem desistiu está desativado (o registro continua no banco) e não entra nas
+	# listagens do funil.
+	filtros: dict[str, Any] = {"desistiu": 0}
 	if status:
 		filtros["status"] = status
 	if ramo:
@@ -428,7 +430,7 @@ def atualizar_etapa_recepcao(name: str, etapa: str, concluida: bool = True, simu
 	titulo="Atualizar cadastro do funil",
 	descricao=(
 		"Ajusta status (coluna do funil), ramo pretendido e responsável de recepção. "
-		"Para desistências, use o portal: elas apagam e anonimizam dados pessoais."
+		"Para desistências, use o portal: elas desativam o registro no fluxo."
 	),
 	parametros={
 		"name": {"type": "string", "description": "Identificador do Novo Associado."},
@@ -565,6 +567,10 @@ def listar_fila_espera(ramo: str | None = None) -> dict:
 		fields=["name", "associado", "ramo", "dt_inclusao_fila"],
 		order_by="dt_inclusao_fila asc",
 	)
+
+	# A entrada de quem desistiu continua registrada, mas fora da fila exibida.
+	desistentes = servico.nomes_desistentes([linha["associado"] for linha in fila if linha.get("associado")])
+	fila = [linha for linha in fila if linha.get("associado") not in desistentes]
 
 	nomes = [linha["associado"] for linha in fila if linha.get("associado")]
 	pessoas = (

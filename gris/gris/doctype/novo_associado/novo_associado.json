@@ -58,7 +58,11 @@
   "id_escoteiros_criado",
   "registro_definitivo_pago",
   "registro_definitivo_efetivado",
-  "reuniao_de_acolhida_realizada"
+  "reuniao_de_acolhida_realizada",
+  "desistencia_section",
+  "desistiu",
+  "data_desistencia",
+  "motivo_desistencia"
  ],
  "fields": [
   {
@@ -357,12 +361,38 @@
    "fieldtype": "Link",
    "label": "Respons\u00e1vel pela recep\u00e7\u00e3o",
    "options": "User"
+  },
+  {
+   "fieldname": "desistencia_section",
+   "fieldtype": "Section Break",
+   "label": "Desist\u00eancia"
+  },
+  {
+   "default": "0",
+   "description": "Registro desativado por desist\u00eancia: os dados s\u00e3o preservados, mas ele deixa de aparecer no funil, na fila de espera e na agenda de visitas.",
+   "fieldname": "desistiu",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Desistiu"
+  },
+  {
+   "depends_on": "eval:doc.desistiu",
+   "fieldname": "data_desistencia",
+   "fieldtype": "Date",
+   "label": "Data da desist\u00eancia",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.desistiu",
+   "fieldname": "motivo_desistencia",
+   "fieldtype": "Small Text",
+   "label": "Motivo da desist\u00eancia"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-08 12:00:00.000000",
+ "modified": "2026-08-27 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Novo Associado",

@@ -13,6 +13,7 @@ import frappe
 from frappe.utils import getdate
 
 from gris.api.mcp.registry import ErroDeFerramenta, ferramenta, normalizar_limite
+from gris.api.recepcao import nomes_desistentes
 
 DOCTYPE = "Agenda de Visitas"
 DOCTYPE_NOVO = "Novo Associado"
@@ -104,6 +105,11 @@ def listar_visitas(
 		filtros["ramo"] = ramo
 	if confirmada is not None:
 		filtros["visita_confirmada"] = 1 if confirmada else 0
+
+	# A visita de quem desistiu continua registrada, mas sai da listagem.
+	desistentes = nomes_desistentes()
+	if desistentes:
+		filtros["jovem"] = ["not in", list(desistentes)]
 
 	visitas = frappe.get_all(
 		DOCTYPE,

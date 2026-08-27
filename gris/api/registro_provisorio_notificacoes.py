@@ -174,6 +174,7 @@ def enviar_avisos_seguimento_registro_provisorio() -> None:
 			"registro_definitivo_efetivado": 0,
 			"registro_definitivo_pago": 0,
 			"status": ["not in", STATUS_IGNORADOS],
+			"desistiu": 0,
 			"data_registro_provisorio_efetivado": ["<=", data_limite],
 			"data_aviso_seguimento_provisorio": ["is", "not set"],
 		},

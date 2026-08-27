@@ -47,6 +47,8 @@ class TestListarNovosAssociados(TestCase):
 		filtros = get_all.call_args.kwargs["filters"]
 		self.assertEqual(filtros["status"], "Aguardar Dados")
 		self.assertEqual(filtros["ficha_medica_preenchida"], 0)
+		# Quem desistiu está desativado e fica fora do funil
+		self.assertEqual(filtros["desistiu"], 0)
 
 	def test_etapa_inexistente(self):
 		with self.assertRaises(ErroDeFerramenta) as ctx:
@@ -260,12 +262,30 @@ class TestFilaDeEspera(TestCase):
 			{"name": "NA-2", "nome_completo": "Bruno"},
 			{"name": "NA-3", "nome_completo": "Carla"},
 		]
-		with patch.object(recepcao.frappe, "get_all", side_effect=[fila, pessoas]):
+		with (
+			patch.object(recepcao.frappe, "get_all", side_effect=[fila, pessoas]),
+			patch.object(recepcao.servico, "nomes_desistentes", return_value=set()),
+		):
 			resultado = recepcao.listar_fila_espera()
 
 		self.assertEqual(resultado["fila"][1]["posicao_no_ramo"], 2)
 		self.assertEqual(resultado["fila"][2]["posicao_no_ramo"], 1)
 		self.assertEqual(resultado["fila"][0]["nome_completo"], "Ana")
+
+	def test_quem_desistiu_sai_da_fila_listada(self):
+		fila = [
+			{"name": "F1", "associado": "NA-1", "ramo": "Lobinho", "dt_inclusao_fila": "2026-01-01"},
+			{"name": "F2", "associado": "NA-2", "ramo": "Lobinho", "dt_inclusao_fila": "2026-02-01"},
+		]
+		pessoas = [{"name": "NA-2", "nome_completo": "Bruno"}]
+		with (
+			patch.object(recepcao.frappe, "get_all", side_effect=[fila, pessoas]),
+			patch.object(recepcao.servico, "nomes_desistentes", return_value={"NA-1"}),
+		):
+			resultado = recepcao.listar_fila_espera()
+
+		self.assertEqual(resultado["total"], 1)
+		self.assertEqual(resultado["fila"][0]["associado"], "NA-2")
 
 	def test_chamar_da_fila_inexistente(self):
 		with patch.object(recepcao.frappe.db, "get_value", return_value=None):

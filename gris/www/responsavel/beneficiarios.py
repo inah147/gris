@@ -4,6 +4,7 @@ import frappe
 from frappe.utils import add_days, cint, getdate, now, today
 
 from gris.api.portal_access import enrich_context
+from gris.api.recepcao import filtrar_ativos
 from gris.api.recepcao_notificacoes import notificar_nova_manifestacao_no_grupo_recepcao
 
 no_cache = 1
@@ -79,16 +80,30 @@ def _is_date_available_for_ramo(ramo, date_value):
 	return True
 
 
-def _get_available_visit_dates_for_responsavel(responsavel_name, include_scheduled=False):
+def _novo_associado_names(responsavel_name):
+	"""Beneficiários do responsável ainda em integração, sem os que desistiram.
+
+	A desistência não apaga o vínculo nem o cadastro: apenas desativa o registro
+	(``desistiu``), que por isso some do painel do responsável.
+	"""
 	if not responsavel_name:
 		return []
 
 	vinculos = frappe.get_all(
 		"Responsavel Vinculo",
 		filters={"responsavel": responsavel_name},
-		fields=["beneficiario_novo_associado"],
+		pluck="beneficiario_novo_associado",
 	)
-	novo_associado_names = [v.beneficiario_novo_associado for v in vinculos if v.beneficiario_novo_associado]
+	nomes = [nome for nome in vinculos if nome]
+
+	return filtrar_ativos(nomes)
+
+
+def _get_available_visit_dates_for_responsavel(responsavel_name, include_scheduled=False):
+	if not responsavel_name:
+		return []
+
+	novo_associado_names = _novo_associado_names(responsavel_name)
 
 	if not novo_associado_names:
 		return []
@@ -185,7 +200,9 @@ def get_context(context):
 	)
 
 	associado_names = [v.beneficiario_associado for v in vinculos if v.beneficiario_associado]
-	novo_associado_names = [v.beneficiario_novo_associado for v in vinculos if v.beneficiario_novo_associado]
+	novo_associado_names = filtrar_ativos(
+		[v.beneficiario_novo_associado for v in vinculos if v.beneficiario_novo_associado]
+	)
 
 	# Fetch Configuration
 	try:
@@ -370,12 +387,7 @@ def schedule_visit(date):
 		frappe.throw("Responsável não encontrado.")
 
 	# Get beneficiaries in integration who need visit
-	vinculos = frappe.get_all(
-		"Responsavel Vinculo",
-		filters={"responsavel": responsavel_name},
-		fields=["beneficiario_novo_associado"],
-	)
-	novo_associado_names = [v.beneficiario_novo_associado for v in vinculos if v.beneficiario_novo_associado]
+	novo_associado_names = _novo_associado_names(responsavel_name)
 
 	if not novo_associado_names:
 		frappe.throw("Nenhum beneficiário em integração encontrado.")
@@ -419,12 +431,7 @@ def cancel_visit():
 	if not responsavel_name:
 		frappe.throw("Responsável não encontrado.")
 
-	vinculos = frappe.get_all(
-		"Responsavel Vinculo",
-		filters={"responsavel": responsavel_name},
-		fields=["beneficiario_novo_associado"],
-	)
-	novo_associado_names = [v.beneficiario_novo_associado for v in vinculos if v.beneficiario_novo_associado]
+	novo_associado_names = _novo_associado_names(responsavel_name)
 
 	if not novo_associado_names:
 		return
@@ -458,6 +465,41 @@ def _status_badge_meta(status):
 	if status == "vencido":
 		return {"variant": "destructive", "outline": False}
 	return {"variant": "secondary", "outline": False}
+
+
+def _reativar_beneficiario_desistente(
+	novo_associado_name, responsavel_name, nome_jovem, data_nascimento_jovem
+):
+	"""Reativa o registro de um beneficiário que havia desistido, se for do responsável.
+
+	A desistência não apaga o Novo Associado: ela apenas o desativa. Quando a
+	família volta, o mesmo registro é reativado como estava (o CPF gera sempre o
+	mesmo ``name``), preservando o histórico do fluxo — inclusive a posição na
+	fila de espera. Registros de outra família continuam barrados.
+	"""
+	doc = frappe.get_doc("Novo Associado", novo_associado_name)
+	if not doc.desistiu:
+		return None
+
+	vinculo = frappe.db.exists(
+		"Responsavel Vinculo",
+		{"responsavel": responsavel_name, "beneficiario_novo_associado": doc.name},
+	)
+	if not vinculo:
+		return None
+
+	doc.desistiu = 0
+	doc.save(ignore_permissions=True)
+
+	responsavel_doc = frappe.get_doc("Responsavel", responsavel_name)
+	notificar_nova_manifestacao_no_grupo_recepcao(
+		nome_jovem=nome_jovem,
+		nome_responsavel=responsavel_doc.nome_completo or responsavel_name,
+		data_nascimento_jovem=data_nascimento_jovem,
+		contexto="adicionar_beneficiario",
+	)
+
+	return {"ok": True, "message": "Beneficiário reativado com sucesso!"}
 
 
 @frappe.whitelist()
@@ -515,6 +557,12 @@ def adicionar_beneficiario(nome_jovem, cpf_jovem, data_nascimento_jovem):
 	# Verificar se já existe Novo Associado com o mesmo CPF
 	existing_novo_associado = frappe.db.exists("Novo Associado", {"cpf": cpf_jovem})
 	if existing_novo_associado:
+		reativado = _reativar_beneficiario_desistente(
+			existing_novo_associado, responsavel_name, nome_jovem, data_nascimento_jovem
+		)
+		if reativado:
+			return reativado
+
 		frappe.throw(
 			"Já existe um jovem cadastrado com este CPF. Verifique os dados ou entre em contato com o grupo."
 		)

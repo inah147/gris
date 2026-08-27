@@ -131,9 +131,10 @@ beneficiário definido.
 
 As ferramentas marcadas com ✎ gravam dados e aceitam `simular=true` (veja
 [Simulação](#simulação-dry-run)). Continuam só pelo portal: **desistência de
-novo associado** (apaga registros e anonimiza o login do responsável, por LGPD),
-exclusão de previsão inteira, cadastro de contas fixas e importação de extratos
-— operações irreversíveis, raras ou que dependem de upload de arquivo.
+novo associado** (não apaga nada — desativa o registro, que sai das listagens —
+mas é uma decisão que a recepção confirma com a família), exclusão de previsão
+inteira, cadastro de contas fixas e importação de extratos — operações
+irreversíveis, raras ou que dependem de upload de arquivo.
 
 `System Manager` enxerga todas as ferramentas, seguindo o mesmo critério de
 `gris.api.portal_access.user_has_access`.

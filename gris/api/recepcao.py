@@ -1,10 +1,15 @@
+import hashlib
+import re
+
 import frappe
 from frappe import _
-from frappe.utils import format_datetime, get_fullname, strip_html
+from frappe.utils import format_datetime, get_fullname, getdate, strip_html, today
 
 
 @frappe.whitelist()
-def update_novo_associado(name, responsavel_recepcao=None, status=None, ramo=None, motivo_desistencia=None):
+def update_novo_associado(name, responsavel_recepcao=None, status=None, ramo=None):
+	"""Ajusta os campos do funil. O motivo da desistência é gravado por
+	``processar_desistencia``, que é quem registra a desativação do registro."""
 	doc = frappe.get_doc("Novo Associado", name)
 	if responsavel_recepcao:
 		doc.responsavel_recepcao = responsavel_recepcao
@@ -12,199 +17,142 @@ def update_novo_associado(name, responsavel_recepcao=None, status=None, ramo=Non
 		doc.status = status
 	if ramo:
 		doc.ramo = ramo
-	if motivo_desistencia:
-		doc.motivo_desistencia = motivo_desistencia
 	doc.save()
 	return doc.as_dict()
 
 
-def _anonimizar_user(user_email):
-	"""Anonimiza o login do responsável que desistiu (LGPD).
+def nomes_desistentes(nomes: list[str] | None = None) -> set[str]:
+	"""Nomes de Novo Associado desativados por desistência.
 
-	Não é possível excluir o User: ele tem um Board pessoal criado pelo hook
-	`after_insert` (gris.gestao_de_tarefas.user_board.criar_board_pessoal) cujo
-	Dynamic Link dispara LinkExistsError. Então removemos o Board pessoal — que
-	também guarda o nome no título — e anonimizamos o User, inclusive renomeando
-	o email/login para um identificador anônimo.
+	Sem ``nomes``, devolve todos os desistentes; com ``nomes``, apenas os desse
+	conjunto — usado para filtrar registros ligados ao funil (visitas, fila de
+	espera, vínculos) que não têm o flag próprio.
 	"""
-	# Remove o Board pessoal (Dynamic Link bloqueador + título com o nome) e suas tarefas
-	boards = frappe.get_all(
-		"Board",
-		filters={"referencia_doctype": "User", "referencia_nome": user_email},
-		pluck="name",
-	)
-	for board in boards:
-		frappe.db.delete("Gestao de Tarefas", {"board": board})
-		frappe.delete_doc("Board", board, ignore_permissions=True)
+	filtros: dict = {"desistiu": 1}
+	if nomes is not None:
+		if not nomes:
+			return set()
+		filtros["name"] = ["in", list(nomes)]
 
-	# Renomeia o login para um identificador anônimo (atualiza os links que apontam
-	# ao User). Usa o rename_doc interno: o wrapper público `frappe.rename_doc` não
-	# expõe `ignore_permissions`, necessário aqui porque a recepção não tem permissão
-	# de escrita em User.
-	from frappe.model.rename_doc import rename_doc
-
-	anon_email = f"desativado-{frappe.generate_hash(length=10)}@anonimizado.invalid"
-	rename_doc("User", user_email, anon_email, force=True, ignore_permissions=True)
-
-	# Limpa os dados pessoais remanescentes e desativa o acesso
-	frappe.db.set_value(
-		"User",
-		anon_email,
-		{
-			"enabled": 0,
-			"email": anon_email,
-			# username e mobile_no são UNIQUE em tabUser. Gravar "" (literal, via set_value,
-			# que não passa pela conversão da ORM) colide com outros Users já anonimizados
-			# ("Duplicate entry '' for key '<campo>'"). NULL é permitido em múltiplas linhas
-			# no índice UNIQUE. (api_key também é UNIQUE, mas não é tocado aqui.)
-			"username": None,
-			"first_name": "ANONIMIZADO",
-			"last_name": "",
-			"full_name": "ANONIMIZADO",
-			"mobile_no": None,
-			"phone": "",
-			"birth_date": None,
-			"location": "",
-			"bio": "",
-		},
-	)
+	return set(frappe.get_all("Novo Associado", filters=filtros, pluck="name"))
 
 
-def _desvincular_referencias(doctype, name):
-	"""Limpa todas as referências Link a ``name`` antes de excluí-lo.
+def filtrar_ativos(nomes: list[str]) -> list[str]:
+	"""Remove da lista os Novo Associado que desistiram, preservando a ordem."""
+	if not nomes:
+		return []
 
-	- child table (meta.istable): apaga as linhas que referenciam o registro;
-	- single doctype: zera o campo no Single;
-	- doc normal: seta o campo para NULL em todas as linhas que apontam ao registro.
+	desistentes = nomes_desistentes(nomes)
+	return [nome for nome in nomes if nome not in desistentes]
 
-	Usa ``get_link_fields`` (o mesmo mapa que ``check_if_doc_is_linked`` usa para
-	detectar os bloqueios de exclusão) para não depender de uma lista fixa de
-	DocTypes — qualquer DocType futuro que aponte para ``doctype`` é tratado
-	automaticamente. Dynamic Links remanescentes (Comment, ToDo, File…) já estão
-	em ``ignore_links_on_delete`` do Frappe e não bloqueiam a exclusão.
+
+def _desligar_associado(novo_associado) -> None:
+	"""Marca como inativo o Associado já efetivado, sem apagar nem anonimizar nada.
+
+	O ``validate`` do Associado deriva ``status_no_grupo`` do histórico no grupo:
+	fechar o último período com a data de desligamento é o que o torna inativo.
 	"""
-	from frappe.model.rename_doc import get_link_fields
+	if not (novo_associado.registro_provisorio_efetivado or novo_associado.registro_definitivo_efetivado):
+		return
 
-	for lf in get_link_fields(doctype):
-		link_dt, link_field, issingle = lf["parent"], lf["fieldname"], lf["issingle"]
-		if link_dt == doctype:  # auto-referência: ignora
+	if not novo_associado.cpf:
+		return
+
+	cpf_limpo = re.sub(r"\D", "", novo_associado.cpf)
+	associado_name = hashlib.md5(cpf_limpo.encode("utf-8")).hexdigest()
+	if not frappe.db.exists("Associado", associado_name):
+		return
+
+	assoc_doc = frappe.get_doc("Associado", associado_name)
+	periodos = [linha for linha in (assoc_doc.historico_no_grupo or []) if linha.data_de_ingresso]
+
+	if periodos:
+		ultimo = sorted(periodos, key=lambda linha: getdate(linha.data_de_ingresso))[-1]
+	else:
+		# Sem período registrado o Associado continuaria "Ativo" no `validate`;
+		# usa a criação do cadastro como ingresso para fechar o histórico.
+		ultimo = assoc_doc.append("historico_no_grupo", {"data_de_ingresso": getdate(assoc_doc.creation)})
+
+	if not ultimo.data_de_desligamento:
+		ultimo.data_de_desligamento = today()
+
+	assoc_doc.save(ignore_permissions=True)
+
+
+def _responsavel_tem_beneficiario_ativo(responsavel_id: str, ignorar: str) -> bool:
+	"""Diz se o responsável ainda acompanha alguém — no funil ou já associado."""
+	vinculos = frappe.get_all(
+		"Responsavel Vinculo",
+		filters={"responsavel": responsavel_id},
+		fields=["beneficiario_novo_associado", "beneficiario_associado"],
+	)
+
+	for vinculo in vinculos:
+		associado = vinculo.get("beneficiario_associado")
+		if associado and frappe.db.get_value("Associado", associado, "status_no_grupo") == "Ativo":
+			return True
+
+		novo_associado = vinculo.get("beneficiario_novo_associado")
+		if (
+			novo_associado
+			and novo_associado != ignorar
+			and not frappe.db.get_value("Novo Associado", novo_associado, "desistiu")
+		):
+			return True
+
+	return False
+
+
+def _desativar_acesso_responsaveis(novo_associado_name: str) -> None:
+	"""Desativa o login dos responsáveis que ficaram sem beneficiário ativo.
+
+	O cadastro (Responsavel, vínculos e User) é preservado: só o acesso ao portal
+	é desligado, e apenas para quem não acompanha mais ninguém.
+	"""
+	vinculos = frappe.get_all(
+		"Responsavel Vinculo",
+		filters={"beneficiario_novo_associado": novo_associado_name},
+		pluck="responsavel",
+	)
+
+	for responsavel_id in {vinculo for vinculo in vinculos if vinculo}:
+		if _responsavel_tem_beneficiario_ativo(responsavel_id, ignorar=novo_associado_name):
 			continue
-		if issingle:
-			if frappe.db.get_single_value(link_dt, link_field) == name:
-				frappe.db.set_single_value(link_dt, link_field, None)
-			continue
-		if frappe.get_meta(link_dt).istable:
-			frappe.db.delete(link_dt, {link_field: name})
-			continue
-		frappe.db.set_value(link_dt, {link_field: name}, link_field, None, update_modified=False)
+
+		email = frappe.db.get_value("Responsavel", responsavel_id, "email")
+		if email and frappe.db.exists("User", email):
+			frappe.db.set_value("User", email, "enabled", 0)
 
 
 @frappe.whitelist()
 def processar_desistencia(novo_associado_name, motivo=None):
-	# 1. Get Novo Associado
+	"""Desativa o registro do fluxo de novo associado — sem apagar dados.
+
+	Nada é excluído nem anonimizado: o Novo Associado é marcado com ``desistiu``
+	e some das telas do fluxo (funil, fila de espera, agenda de visitas, portal
+	do responsável), enquanto visitas, vínculos e cadastros continuam no banco
+	para consulta e histórico. Quando o registro já havia sido efetivado, o
+	Associado correspondente é desligado (inativo). O login do responsável só é
+	desativado se ele não acompanhar mais nenhum beneficiário ativo.
+	"""
 	if not frappe.db.exists("Novo Associado", novo_associado_name):
 		return
 
-	novo_associado = frappe.get_doc("Novo Associado", novo_associado_name)
-	cpf = novo_associado.cpf
+	doc = frappe.get_doc("Novo Associado", novo_associado_name)
+	if not doc.has_permission("write"):
+		frappe.throw(_("Você não tem permissão para registrar a desistência."), frappe.PermissionError)
 
-	# 2. Delete scheduled visits
-	frappe.db.delete("Agenda de Visitas", {"jovem": novo_associado_name})
+	if doc.desistiu:
+		return {"status": "success", "ja_registrada": True}
 
-	# 3. Handle Associado (Anonimizar + Desligamento context)
-	# Check if effective
-	is_effective = (
-		novo_associado.registro_provisorio_efetivado or novo_associado.registro_definitivo_efetivado
-	)
+	doc.desistiu = 1
+	doc.data_desistencia = today()
+	if motivo:
+		doc.motivo_desistencia = motivo
+	doc.save()
 
-	if is_effective and cpf:
-		# Try to find Associado by Name (CPF)
-		associado_name = cpf
-		if frappe.db.exists("Associado", associado_name):
-			assoc_doc = frappe.get_doc("Associado", associado_name)
-
-			# Anonimize fields
-			fields_to_anonymize = [
-				"nome_completo",
-				"email",
-				"telefone",
-				"cep_residencia",
-				"numero_residencia",
-				"nome_responsavel_1",
-				"cpf_responsavel_1",
-				"email_responsavel_1",
-				"telefone_responsavel_1",
-				"nome_responsavel_2",
-				"cpf_responsavel_2",
-				"email_responsavel_2",
-				"telefone_responsavel_2",
-				"religiao",
-				"etnia",
-			]
-
-			for field in fields_to_anonymize:
-				if assoc_doc.meta.has_field(field):
-					assoc_doc.set(field, "ANONIMIZADO")
-
-			# Historico de Desligamento
-			has_open_history = False
-			if assoc_doc.historico_no_grupo:
-				for row in assoc_doc.historico_no_grupo:
-					if not row.data_de_desligamento:
-						row.data_de_desligamento = frappe.utils.today()
-						has_open_history = True
-						break
-
-			assoc_doc.save(ignore_permissions=True)
-
-	# 4. Find and Clean Responsavel Vinculo
-	vinculos = frappe.get_all(
-		"Responsavel Vinculo",
-		filters={"beneficiario_novo_associado": novo_associado_name},
-		fields=["name", "responsavel"],
-	)
-
-	for vinculo in vinculos:
-		responsavel_id = vinculo.responsavel
-
-		# Delete the link
-		frappe.delete_doc("Responsavel Vinculo", vinculo.name, ignore_permissions=True)
-
-		# Check if Responsavel has other links (Vinculo)
-		other_links_count = frappe.db.count("Responsavel Vinculo", {"responsavel": responsavel_id})
-
-		if other_links_count == 0:
-			# Check if Responsavel has Survey Answer
-			# Note: Doctype has a typo 'Pesqusa' which is correct in the system
-			if frappe.db.exists("Pesqusa de Novos Associados", {"responsavel": responsavel_id}):
-				# Unlink Responsavel from Survey to keep the survey data but allow user deletion
-				frappe.db.set_value(
-					"Pesqusa de Novos Associados", {"responsavel": responsavel_id}, "responsavel", None
-				)
-
-			# No other links, delete Responsavel and User
-			if frappe.db.exists("Responsavel", responsavel_id):
-				responsavel_doc = frappe.get_doc("Responsavel", responsavel_id)
-				user_email = responsavel_doc.email
-
-				# O Responsavel pode estar vinculado a outros contextos além do associado
-				# (ex.: coordenador geral de Festa, padrinho de Projeto, membro de equipe).
-				# Nesses casos o delete dispara LinkExistsError. Política: não preservar —
-				# desvinculamos todas as referências e excluímos o cadastro de fato.
-				try:
-					frappe.delete_doc("Responsavel", responsavel_id, ignore_permissions=True)
-				except frappe.LinkExistsError:
-					_desvincular_referencias("Responsavel", responsavel_id)
-					frappe.delete_doc("Responsavel", responsavel_id, ignore_permissions=True)
-
-				if user_email and frappe.db.exists("User", user_email):
-					_anonimizar_user(user_email)
-
-	# 5. Cleanup Fila de Espera (if any)
-	frappe.db.delete("Fila de Espera", {"associado": novo_associado_name})
-
-	# 6. Delete Novo Associado
-	frappe.delete_doc("Novo Associado", novo_associado_name, ignore_permissions=True)
+	_desligar_associado(doc)
+	_desativar_acesso_responsaveis(doc.name)
 
 	return {"status": "success"}
 

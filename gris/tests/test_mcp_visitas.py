@@ -26,6 +26,7 @@ class TestListarVisitas(TestCase):
 		with (
 			patch.object(visitas.frappe, "get_all", return_value=[]) as get_all,
 			patch.object(visitas.frappe.db, "count", return_value=0),
+			patch.object(visitas, "nomes_desistentes", return_value=set()),
 		):
 			visitas.listar_visitas(data_inicio="2026-03-01", data_fim="2026-03-31", confirmada=False)
 
@@ -39,10 +40,21 @@ class TestListarVisitas(TestCase):
 		with (
 			patch.object(visitas.frappe, "get_all", side_effect=[agendadas, pessoas]),
 			patch.object(visitas.frappe.db, "count", return_value=1),
+			patch.object(visitas, "nomes_desistentes", return_value=set()),
 		):
 			resultado = visitas.listar_visitas()
 
 		self.assertEqual(resultado["visitas"][0]["nome_completo"], "Ana")
+
+	def test_visitas_de_quem_desistiu_ficam_fora_da_listagem(self):
+		with (
+			patch.object(visitas.frappe, "get_all", return_value=[]) as get_all,
+			patch.object(visitas.frappe.db, "count", return_value=0),
+			patch.object(visitas, "nomes_desistentes", return_value={"NA-9"}),
+		):
+			visitas.listar_visitas()
+
+		self.assertEqual(get_all.call_args.kwargs["filters"]["jovem"], ["not in", ["NA-9"]])
 
 
 class TestDatasDisponiveis(TestCase):

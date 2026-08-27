@@ -22,6 +22,7 @@ class NovoAssociado(Document):
 
 	def validate(self):
 		self._sincronizar_data_registro_provisorio()
+		self._sincronizar_desistencia()
 
 	def _sincronizar_data_registro_provisorio(self):
 		"""Mantém a data de ativação do registro provisório em sincronia com o flag.
@@ -36,6 +37,20 @@ class NovoAssociado(Document):
 		else:
 			self.data_registro_provisorio_efetivado = None
 			self.data_aviso_seguimento_provisorio = None
+
+	def _sincronizar_desistencia(self):
+		"""Mantém a data da desistência em sincronia com o flag ``desistiu``.
+
+		Desistir desativa o registro (ele some das telas do fluxo) sem apagar nada.
+		Ao desmarcar o flag, o registro volta a aparecer e os dados da desistência
+		anterior são limpos para que um novo ciclo recomece do zero.
+		"""
+		if self.desistiu:
+			if not self.data_desistencia:
+				self.data_desistencia = today()
+		else:
+			self.data_desistencia = None
+			self.motivo_desistencia = None
 
 	def on_trash(self):
 		"""Limpa referências em Responsavel Vinculo ao excluir Novo Associado."""

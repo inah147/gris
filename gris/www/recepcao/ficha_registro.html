@@ -39,6 +39,21 @@
     ) }}
   {% else %}
 
+    {% if doc.desistiu %}
+      {% set desistencia_texto %}
+        Os dados foram preservados, mas o registro não aparece no funil, na fila de espera nem na agenda de visitas.
+        {% if doc.data_desistencia %}Desistência registrada em {{ frappe.format_date(doc.data_desistencia, 'dd/MM/yyyy') }}.{% endif %}
+        {% if doc.motivo_desistencia %}Motivo: {{ doc.motivo_desistencia }}{% endif %}
+      {% endset %}
+      {{ alert(
+        icon=lucide_icon("door-open", size="sm"),
+        title="Registro desativado por desistência",
+        description=desistencia_texto,
+        variant="warning",
+        attrs={"class": "mb-4"}
+      ) }}
+    {% endif %}
+
     <!-- Cabeçalho do Associado -->
     {% call card(attrs={"class": "mb-4"}) %}
       <div class="ficha-header">

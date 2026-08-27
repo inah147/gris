@@ -34,7 +34,18 @@ def submit_interest(
 		return {"status": "error", "message": "E-mail é obrigatório."}
 
 	# Check if user exists
-	if frappe.db.exists("User", email_responsavel):
+	usuario_existente = frappe.db.get_value("User", email_responsavel, ["name", "enabled"], as_dict=True)
+	if usuario_existente:
+		if not usuario_existente.enabled:
+			# Acesso desativado (ex.: após desistência, quando o cadastro é
+			# preservado e apenas desativado). Só a recepção reativa.
+			return {
+				"status": "error",
+				"message": (
+					"Já existe um usuário com este e-mail, mas o acesso está desativado. "
+					"Entre em contato com o grupo para reativá-lo."
+				),
+			}
 		return {
 			"status": "error",
 			"message": "Já existe um usuário com este e-mail. Por favor, faça login para acompanhar seu processo.",
@@ -117,6 +128,12 @@ def submit_interest(
 				existing_jovem = frappe.db.exists("Novo Associado", {"cpf": cpf_jovem})
 				if existing_jovem:
 					novo_associado_doc = frappe.get_doc("Novo Associado", existing_jovem)
+					if novo_associado_doc.desistiu:
+						# A desistência apenas desativou o registro: no retorno da
+						# família ele é reativado como estava, sem perder histórico.
+						novo_associado_doc.desistiu = 0
+						novo_associado_doc.save(ignore_permissions=True)
+						novo_associado_criado = True
 				else:
 					novo_associado_doc = frappe.get_doc(
 						{

@@ -2,7 +2,7 @@ import frappe
 from frappe.utils import add_months, getdate, today
 
 from gris.api.portal_access import enrich_context
-from gris.api.recepcao import processar_desistencia
+from gris.api.recepcao import nomes_desistentes, processar_desistencia
 
 no_cache = 1
 
@@ -51,6 +51,11 @@ def get_context(context):
 		order_by="dt_inclusao_fila asc",
 	)
 
+	# Quem desistiu continua na tabela (nada é apagado), mas sai da fila exibida
+	# e das contas de vagas.
+	desistentes = nomes_desistentes([item.associado for item in fila_items if item.associado])
+	fila_items = [item for item in fila_items if item.associado not in desistentes]
+
 	# Group fila items by ramo for prediction calculation
 	fila_by_ramo = {r: [] for r in ramos}
 	for item in fila_items:
@@ -90,7 +95,9 @@ def get_context(context):
 		ativos = len(associados_ativos)
 
 		# New associates in the ramo (not in queue)
-		novos = frappe.db.count("Novo Associado", {"ramo": ramo, "status": ["!=", "Fila de Espera"]})
+		novos = frappe.db.count(
+			"Novo Associado", {"ramo": ramo, "status": ["!=", "Fila de Espera"], "desistiu": 0}
+		)
 
 		# Calculate future exits
 		saidas_futuras = []
@@ -238,11 +245,8 @@ def registrar_desistencia(fila_id, motivo=None):
 	if not fila_item.associado:
 		frappe.throw("Associado não encontrado na fila")
 
-	# Process withdrawal using the shared API
+	# Desativa o registro (nada é apagado); a entrada da fila permanece no banco
+	# e deixa de ser exibida por causa do flag `desistiu` do Novo Associado.
 	processar_desistencia(fila_item.associado, motivo=motivo)
-
-	# Ensure Fila de Espera is gone (processar_desistencia handles it, but just in case)
-	if frappe.db.exists("Fila de Espera", fila_id):
-		frappe.delete_doc("Fila de Espera", fila_id)
 
 	return "Ok"

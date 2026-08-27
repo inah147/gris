@@ -454,7 +454,7 @@ def build_relatorio_payload(festa_name: str) -> dict:
 
 	# ── Arrecadação e resultado por área ────────────────────────────────────
 	# Receita realizada de cada barraca agrupada pela área a que pertence e o
-	# resultado por área (receita das barracas − despesas de compras/contratações).
+	# resultado por área (receita das barracas menos despesas de compras/contratações).
 	# Áreas seguem a ordem de cadastro; barracas/despesas sem área vão ao final.
 	ordem_areas = [a.name for a in areas]
 
@@ -508,7 +508,7 @@ def build_relatorio_payload(festa_name: str) -> dict:
 	despesas = sum(x["valor"] for x in despesas_por_area)
 	resultado = arrecadacao - despesas
 
-	# Fichas não gastas: consumação vendida + caixa − arrecadação das barracas.
+	# Fichas não gastas: consumação vendida + caixa - arrecadação das barracas.
 	fichas_nao_gastas = consumacao_convites + fechamento_caixa - arrecadacao_barracas
 
 	# Previsão do cenário escolhido (totais esperados gravados no doc Festa).
@@ -521,7 +521,7 @@ def build_relatorio_payload(festa_name: str) -> dict:
 	}
 
 	# Passos do waterfall: as 3 receitas segmentadas (+), doações (+) e despesas
-	# por área (−); o JS acumula e fecha com a barra de Resultado.
+	# por área (negativo); o JS acumula e fecha com a barra de Resultado.
 	waterfall = [
 		{"label": "Consumação", "valor": consumacao_convites},
 		{"label": "Entrada", "valor": entrada_convites},

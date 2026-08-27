@@ -555,19 +555,6 @@
 		);
 	}
 
-	function showToast(message, category) {
-		document.dispatchEvent(
-			new CustomEvent("basecoat:toast", {
-				detail: {
-					config: {
-						category: category || "success",
-						title: message,
-					},
-				},
-			})
-		);
-	}
-
 	function updateGoogleDriveButton(link) {
 		const button = document.getElementById("btnAbrirGoogleDrive");
 		if (!button) return;

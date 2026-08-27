@@ -379,13 +379,17 @@
 					if (hasPopoverAPI)
 						try {
 							content.showPopover();
-						} catch (_e) {}
+						} catch (_e) {
+							// Popover já aberto ou não suportado: seguir sem interromper.
+						}
 				} else {
 					content.style.cssText = "";
 					if (hasPopoverAPI)
 						try {
 							content.hidePopover();
-						} catch (_e) {}
+						} catch (_e) {
+							// Popover já fechado ou não suportado: seguir sem interromper.
+						}
 				}
 			}).observe(content, { attributes: true, attributeFilter: ["aria-hidden"] });
 		});
@@ -556,14 +560,14 @@
 				m.responsavel || "",
 				m.nome || ""
 			);
-			var eEmailEl = document.getElementById("eq-" + short + "-resp-email");
-			var eTelEl = document.getElementById("eq-" + short + "-resp-telefone");
+			const eEmailEl = document.getElementById("eq-" + short + "-resp-email");
+			const eTelEl = document.getElementById("eq-" + short + "-resp-telefone");
 			if (eEmailEl) eEmailEl.value = m.email || "";
 			if (eTelEl) eTelEl.value = m.telefone || "";
 		} else if (tipo === "Associado") {
 			setSelectValue("eq-" + short + "-select-associado", m.associado || "", m.nome || "");
-			var eEmailEl = document.getElementById("eq-" + short + "-assoc-email");
-			var eTelEl = document.getElementById("eq-" + short + "-assoc-telefone");
+			const eEmailEl = document.getElementById("eq-" + short + "-assoc-email");
+			const eTelEl = document.getElementById("eq-" + short + "-assoc-telefone");
 			if (eEmailEl) eEmailEl.value = m.email || "";
 			if (eTelEl) eTelEl.value = m.telefone || "";
 		} else {
@@ -2290,16 +2294,6 @@
 			};
 		});
 		return result;
-	}
-
-	function getSwitchChecked(id) {
-		var el = document.querySelector("#" + id + " input[type='checkbox']");
-		return !!(el && el.checked);
-	}
-
-	function setSwitchChecked(id, checked) {
-		var el = document.querySelector("#" + id + " input[type='checkbox']");
-		if (el) el.checked = !!checked;
 	}
 
 	function closeActionPopover(prefix, idx) {

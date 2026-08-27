@@ -14,7 +14,8 @@ dependencies = [
     # `bench get-app` — que roda `pip install -U` — sobe o cryptography acima da faixa
     # suportada e o pyOpenSSL do Frappe quebra com
     # "module 'lib' has no attribute 'GEN_EMAIL'", derrubando o bench inteiro.
-    "cryptography~=44.0.1",
+    # Ao atualizar, conferir a faixa em apps/frappe/pyproject.toml do bench.
+    "cryptography~=50.0.0",
     "pandas",
     "dateparser",
     "ofxparse",

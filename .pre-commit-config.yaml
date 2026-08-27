@@ -9,7 +9,14 @@ repos:
     hooks:
       - id: trailing-whitespace
         files: "gris.*"
-        exclude: ".*json$|.*txt$|.*csv|.*md|.*svg"
+        # Além dos formatos binários/gerados, ignora as bibliotecas de terceiros
+        # copiadas por `npm run design-system:sync`.
+        exclude: |
+            (?x)(
+                .*json$|.*txt$|.*csv|.*md|.*svg|
+                ^gris/public/vendor/.*|
+                ^gris/public/design_system/js/basecoat/.*
+            )
       - id: check-merge-conflict
       - id: check-ast
       - id: check-json
@@ -18,7 +25,7 @@ repos:
       - id: debug-statements
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.1
+    rev: v0.16.4
     hooks:
       - id: ruff
         name: "Run ruff import sorter"
@@ -35,10 +42,16 @@ repos:
     hooks:
       - id: prettier
         types_or: [javascript, vue, scss]
-        # Ignore any files that might contain jinja / bundles
+        # Ignore any files that might contain jinja / bundles.
+        # gris/public/vendor e design_system/js/basecoat: bibliotecas de terceiros
+        # (ECharts, jsQR, ToastUI, Basecoat) copiadas por
+        # `npm run design-system:sync` — formatá-las só criaria diferença que o
+        # próximo sync desfaz. design_system/js/components é código nosso e entra.
         exclude: |
             (?x)^(
                 gris/public/dist/.*|
+                gris/public/vendor/.*|
+                gris/public/design_system/js/basecoat/.*|
                 .*node_modules.*|
                 .*boilerplate.*|
                 gris/templates/includes/.*|
@@ -56,6 +69,8 @@ repos:
         exclude: |
             (?x)^(
                 gris/public/dist/.*|
+                gris/public/vendor/.*|
+                gris/public/design_system/js/basecoat/.*|
                 cypress/.*|
                 .*node_modules.*|
                 .*boilerplate.*|

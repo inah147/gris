@@ -267,7 +267,8 @@ def obter_associado(cpf: str) -> dict:
 	descricao=(
 		"Atualiza campos de um associado. Aceita apenas os campos listados em "
 		"'campos_editaveis' de 'obter_associado'; valores de campos Select e Link "
-		"são validados contra o schema antes de gravar."
+		"são validados contra o schema antes de gravar. Use simular=true para conferir "
+		"o antes/depois sem gravar."
 	),
 	parametros={
 		"cpf": {"type": "string", "description": "CPF do associado a atualizar."},
@@ -280,7 +281,7 @@ def obter_associado(cpf: str) -> dict:
 	roles=ROLES_ESCRITA,
 	somente_leitura=False,
 )
-def atualizar_associado(cpf: str, campos: dict) -> dict:
+def atualizar_associado(cpf: str, campos: dict, simular: bool = False) -> dict:
 	if not campos:
 		raise ErroDeFerramenta("ARGUMENTO_INVALIDO", "Informe ao menos um campo para atualizar.")
 
@@ -305,14 +306,17 @@ def atualizar_associado(cpf: str, campos: dict) -> dict:
 		anterior = doc.get(campo)
 		if anterior == valor_validado:
 			continue
-		doc.set(campo, valor_validado)
+		if not simular:
+			doc.set(campo, valor_validado)
 		alteracoes[campo] = {"de": anterior, "para": valor_validado}
 
 	if not alteracoes:
 		return {"atualizado": False, "motivo": "Nenhum valor diferente do atual.", "alteracoes": {}}
 
+	if simular:
+		return {"simulacao": True, "atualizado": False, "cpf": doc.name, "alteracoes": alteracoes}
+
 	doc.save()
-	frappe.db.commit()
 
 	return {"atualizado": True, "cpf": doc.name, "alteracoes": alteracoes}
 

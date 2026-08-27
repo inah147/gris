@@ -256,3 +256,55 @@ class TestResumoFinanceiro(TestCase):
 			resultado = financeiro.resumo_financeiro(agrupar_por="carteira")
 
 		self.assertEqual(resultado["totais"]["debito"], 300.0)
+
+
+class TestSimulacaoNasEscritas(TestCase):
+	def test_atualizar_associado_simulado_nao_salva(self):
+		doc = MagicMock()
+		doc.name = "123"
+		doc.get.return_value = "antigo"
+		meta = MagicMock()
+		meta.get_field.return_value = _campo("Data")
+		with (
+			patch.object(associados.frappe.db, "exists", return_value=True),
+			patch.object(associados.frappe, "get_doc", return_value=doc),
+			patch.object(associados.frappe, "get_meta", return_value=meta),
+		):
+			resultado = associados.atualizar_associado("123", {"telefone": "11988887777"}, simular=True)
+
+		doc.save.assert_not_called()
+		doc.set.assert_not_called()
+		self.assertTrue(resultado["simulacao"])
+		self.assertEqual(resultado["alteracoes"]["telefone"], {"de": "antigo", "para": "11988887777"})
+
+	def test_categorizar_simulado_monta_previa_sem_abrir_documentos(self):
+		def get_value(_doctype, name, _campos, as_dict=True):
+			if name == "T2":
+				return None
+			return {"categoria": "Outros"}
+
+		with (
+			patch.object(financeiro.frappe.db, "exists", return_value=True),
+			patch.object(financeiro.frappe, "has_permission", return_value=True),
+			patch.object(financeiro.frappe.db, "get_value", side_effect=get_value),
+			patch.object(financeiro.frappe, "get_doc") as get_doc,
+		):
+			resultado = financeiro.categorizar_transacoes(["T1", "T2"], categoria="Doações", simular=True)
+
+		get_doc.assert_not_called()
+		self.assertTrue(resultado["simulacao"])
+		self.assertEqual(resultado["atualizadas"], 0)
+		self.assertEqual(
+			resultado["previa"][0]["alteracoes"]["categoria"], {"de": "Outros", "para": "Doações"}
+		)
+		self.assertEqual(resultado["falhas"][0]["id"], "T2")
+
+	def test_categorizar_simulado_sem_permissao_de_escrita(self):
+		with (
+			patch.object(financeiro.frappe.db, "exists", return_value=True),
+			patch.object(financeiro.frappe, "has_permission", return_value=False),
+		):
+			with self.assertRaises(ErroDeFerramenta) as ctx:
+				financeiro.categorizar_transacoes(["T1"], categoria="Doações", simular=True)
+
+		self.assertEqual(ctx.exception.codigo, "PERMISSAO_NEGADA")

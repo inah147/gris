@@ -31,10 +31,27 @@ MODULOS_DE_FERRAMENTAS = (
 	"gris.api.mcp.geral",
 	"gris.api.mcp.associados",
 	"gris.api.mcp.financeiro",
+	"gris.api.mcp.contribuicoes",
+	"gris.api.mcp.conciliacao",
+	"gris.api.mcp.contas_fixas",
+	"gris.api.mcp.orcamento",
 )
 
 LIMITE_PADRAO = 25
 LIMITE_MAXIMO = 100
+
+# Toda ferramenta de escrita ganha automaticamente o parâmetro de simulação
+# (dry-run): o handler calcula o que mudaria e devolve o antes/depois sem gravar.
+PARAMETRO_SIMULACAO = {
+	"simular": {
+		"type": "boolean",
+		"default": False,
+		"description": (
+			"Se verdadeiro, apenas simula: mostra o que seria alterado, sem gravar nada. "
+			"Use antes de operações em lote para conferir o resultado."
+		),
+	}
+}
 
 
 class ErroDeFerramenta(Exception):
@@ -64,10 +81,16 @@ class Ferramenta:
 	roles: tuple[str, ...] = ()
 	somente_leitura: bool = True
 
+	def parametros_efetivos(self) -> dict:
+		"""Parâmetros declarados + os injetados pelo registro (simulação)."""
+		if self.somente_leitura:
+			return self.parametros
+		return {**self.parametros, **PARAMETRO_SIMULACAO}
+
 	def input_schema(self) -> dict:
 		return {
 			"type": "object",
-			"properties": self.parametros,
+			"properties": self.parametros_efetivos(),
 			"required": list(self.obrigatorios),
 			"additionalProperties": False,
 		}
@@ -223,7 +246,7 @@ def _converter(nome_campo: str, valor: Any, esquema: dict) -> Any:
 
 def validar_argumentos(ferramenta_obj: Ferramenta, argumentos: dict | None) -> dict:
 	argumentos = dict(argumentos or {})
-	esquemas = ferramenta_obj.parametros
+	esquemas = ferramenta_obj.parametros_efetivos()
 
 	desconhecidos = sorted(set(argumentos) - set(esquemas))
 	if desconhecidos:
@@ -287,7 +310,8 @@ def executar(nome: str, argumentos: dict | None = None) -> dict:
 	validados = validar_argumentos(ferramenta_obj, argumentos)
 	dados = ferramenta_obj.handler(**validados)
 
-	if not ferramenta_obj.somente_leitura:
+	# Simulação não altera nada — só mutação real entra no log de auditoria.
+	if not ferramenta_obj.somente_leitura and not validados.get("simular"):
 		frappe.logger("gris_mcp").info(
 			{
 				"evento": "ferramenta_mutacao",

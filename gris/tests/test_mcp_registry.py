@@ -198,3 +198,46 @@ class TestCatalogo(TestCase):
 		finally:
 			registry._REGISTRO.clear()
 			registry._REGISTRO.update(catalogo_original)
+
+
+class TestSimulacao(TestCase):
+	def test_ferramenta_de_escrita_ganha_parametro_simular(self):
+		ferramenta = _ferramenta(parametros={"cpf": {"type": "string"}}, somente_leitura=False)
+		propriedades = ferramenta.input_schema()["properties"]
+		self.assertIn("simular", propriedades)
+		self.assertFalse(propriedades["simular"]["default"])
+
+	def test_ferramenta_de_leitura_nao_ganha_simular(self):
+		ferramenta = _ferramenta(parametros={"cpf": {"type": "string"}})
+		self.assertNotIn("simular", ferramenta.input_schema()["properties"])
+		with self.assertRaises(registry.ErroDeFerramenta):
+			registry.validar_argumentos(ferramenta, {"simular": True})
+
+	def test_handler_de_escrita_recebe_simular_false_por_padrao(self):
+		handler = MagicMock(return_value={"atualizado": True})
+		ferramenta = _ferramenta(nome="gravar", handler=handler, somente_leitura=False)
+		sessao, papeis = _com_sessao()
+		with (
+			sessao,
+			papeis,
+			patch.object(registry, "carregar_ferramentas", return_value={"gravar": ferramenta}),
+		):
+			registry.executar("gravar", {})
+
+		handler.assert_called_once_with(simular=False)
+
+	def test_simulacao_nao_entra_no_log_de_auditoria(self):
+		ferramenta = _ferramenta(
+			nome="gravar", handler=lambda **kw: {"simulacao": True}, somente_leitura=False
+		)
+		logger = MagicMock()
+		sessao, papeis = _com_sessao()
+		with (
+			sessao,
+			papeis,
+			patch.object(registry, "carregar_ferramentas", return_value={"gravar": ferramenta}),
+			patch.object(registry.frappe, "logger", return_value=logger),
+		):
+			registry.executar("gravar", {"simular": True})
+
+		logger.info.assert_not_called()

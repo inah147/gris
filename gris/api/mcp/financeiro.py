@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from typing import Any
 
 import frappe
@@ -215,13 +216,42 @@ def listar_opcoes_financeiras() -> dict:
 	}
 
 
+def _simular_categorizacao(ids: list[str], atualizacoes: dict) -> dict:
+	"""Monta o antes/depois da categorização sem tocar em nenhum documento."""
+	if not frappe.has_permission(DOCTYPE, ptype="write"):
+		raise ErroDeFerramenta("PERMISSAO_NEGADA", "Sem permissão de escrita no extrato geral.")
+
+	previa, falhas = [], []
+	for transacao_id in ids:
+		atuais = frappe.db.get_value(DOCTYPE, transacao_id, list(atualizacoes), as_dict=True)
+		if atuais is None:
+			falhas.append({"id": transacao_id, "erro": "Transação não encontrada."})
+			continue
+		mudancas = {
+			campo: {"de": atuais.get(campo), "para": valor}
+			for campo, valor in atualizacoes.items()
+			if atuais.get(campo) != valor
+		}
+		previa.append({"id": transacao_id, "alteracoes": mudancas, "sem_mudanca": not mudancas})
+
+	return {
+		"simulacao": True,
+		"atualizadas": 0,
+		"solicitadas": len(ids),
+		"campos_aplicados": atualizacoes,
+		"previa": previa,
+		"falhas": falhas,
+	}
+
+
 @ferramenta(
 	nome="categorizar_transacoes",
 	titulo="Categorizar transações em lote",
 	descricao=(
 		"Aplica categoria, centro de custo, classificação ordinária/extraordinária, descrição "
 		"reduzida e/ou marcação de revisada a uma lista de transações (máx. 200 por chamada). "
-		"Informe ao menos um campo além dos IDs."
+		"Informe ao menos um campo além dos IDs. Use simular=true para conferir o antes/depois "
+		"antes de gravar em lote."
 	),
 	parametros={
 		"ids": {
@@ -253,6 +283,7 @@ def categorizar_transacoes(
 	ordinaria_extraordinaria: str | None = None,
 	descricao_reduzida: str | None = None,
 	marcar_revisada: bool | None = None,
+	simular: bool = False,
 ) -> dict:
 	ids = [str(item).strip() for item in ids if str(item).strip()]
 	if not ids:
@@ -287,6 +318,9 @@ def categorizar_transacoes(
 				{"campo": campo, "doctype": doctype_link},
 			)
 
+	if simular:
+		return _simular_categorizacao(ids, atualizacoes)
+
 	atualizadas: list[str] = []
 	falhas: list[dict] = []
 
@@ -302,9 +336,6 @@ def categorizar_transacoes(
 			falhas.append({"id": transacao_id, "erro": "Transação não encontrada."})
 		except frappe.PermissionError:
 			falhas.append({"id": transacao_id, "erro": "Sem permissão de escrita."})
-
-	if atualizadas:
-		frappe.db.commit()
 
 	return {
 		"atualizadas": len(atualizadas),
@@ -392,3 +423,107 @@ def resumo_financeiro(
 		},
 		"grupos": sorted(grupos.values(), key=lambda g: abs(g["saldo"]), reverse=True),
 	}
+
+
+# ---------------------------------------------------------------------------
+# Séries mensais (reaproveitam gris.api.financeiro.dashboard)
+# ---------------------------------------------------------------------------
+
+SERIES_DISPONIVEIS: dict[str, str] = {
+	"entradas_saidas": "get_entradas_saidas_mensal",
+	"entradas_por_categoria": "get_entradas_credito_mensal_por_categoria",
+	"entradas_por_centro_de_custo": "get_entradas_credito_mensal_por_centro_custo",
+	"entradas_por_tipo": "get_entradas_credito_mensal_por_tipo",
+	"saidas_por_categoria": "get_saidas_debito_mensal_por_categoria",
+	"saidas_por_centro_de_custo": "get_saidas_debito_mensal_por_centro_custo",
+	"saidas_por_tipo": "get_saidas_debito_mensal_por_tipo",
+	"contribuicoes_por_status": "get_contribuicoes_mensais_por_status",
+	"inadimplencia_mensal": "get_contribuicoes_mensais_inadimplencia",
+}
+
+
+def _tabular(payload: dict) -> dict:
+	"""Converte o formato de gráfico (labels + datasets) em linhas por mês."""
+	labels = payload.get("labels") or []
+	datasets = payload.get("datasets") or []
+
+	por_mes = []
+	for indice, mes in enumerate(labels):
+		linha = {"mes": mes}
+		for dataset in datasets:
+			valores = dataset.get("values") or []
+			linha[dataset.get("name", "serie")] = valores[indice] if indice < len(valores) else 0
+		por_mes.append(linha)
+
+	totais = {
+		dataset.get("name", "serie"): round(sum(dataset.get("values") or []), 2) for dataset in datasets
+	}
+	return {"meses": labels, "por_mes": por_mes, "totais": totais}
+
+
+@ferramenta(
+	nome="serie_financeira",
+	titulo="Série mensal do financeiro",
+	descricao=(
+		"Séries dos últimos 12 meses usadas no painel financeiro: entradas x saídas, entradas ou "
+		"saídas por categoria/centro de custo/tipo, contribuições por status e inadimplência. "
+		"Retorna uma linha por mês, pronta para comparação. O período é sempre os 12 meses "
+		"encerrados no mês atual — para recortes livres use 'resumo_financeiro'."
+	),
+	parametros={
+		"serie": {
+			"type": "string",
+			"enum": list(SERIES_DISPONIVEIS),
+			"default": "entradas_saidas",
+			"description": "Qual série calcular.",
+		},
+		"categoria": {"type": "string", "description": "Filtra por Categoria de Transacao."},
+		"centro_de_custo": {"type": "string", "description": "Filtra por Centro de Custo."},
+		"carteira": {"type": "string", "description": "Filtra por Carteira."},
+		"instituicao": {"type": "string", "description": "Filtra por Instituição Financeira."},
+		"ordinaria_extraordinaria": {
+			"type": "string",
+			"enum": ["Ordinária", "Extraordinária"],
+			"description": "Filtra por classificação da transação.",
+		},
+	},
+	roles=ROLES_LEITURA,
+)
+def serie_financeira(
+	serie: str = "entradas_saidas",
+	categoria: str | None = None,
+	centro_de_custo: str | None = None,
+	carteira: str | None = None,
+	instituicao: str | None = None,
+	ordinaria_extraordinaria: str | None = None,
+) -> dict:
+	from gris.api.financeiro import dashboard
+
+	nome_funcao = SERIES_DISPONIVEIS.get(serie)
+	if not nome_funcao:
+		raise ErroDeFerramenta(
+			"ARGUMENTO_INVALIDO",
+			f"Série inválida. Opções: {', '.join(SERIES_DISPONIVEIS)}.",
+			{"opcoes": list(SERIES_DISPONIVEIS)},
+		)
+
+	funcao = getattr(dashboard, nome_funcao)
+	filtros = {
+		"categoria": categoria,
+		"centro_de_custo": centro_de_custo,
+		"carteira": carteira,
+		"instituicao": instituicao,
+		"ordinaria_extraordinaria": ordinaria_extraordinaria,
+	}
+	# Cada série aceita um subconjunto diferente de filtros; passamos só o que existe
+	# na assinatura para não quebrar quando o painel evoluir.
+	aceitos = inspect.signature(funcao).parameters
+	argumentos = {campo: valor for campo, valor in filtros.items() if valor and campo in aceitos}
+	ignorados = sorted(campo for campo, valor in filtros.items() if valor and campo not in aceitos)
+
+	resultado = _tabular(funcao(**argumentos))
+	resultado["serie"] = serie
+	resultado["filtros_aplicados"] = argumentos
+	if ignorados:
+		resultado["filtros_ignorados"] = ignorados
+	return resultado

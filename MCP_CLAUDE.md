@@ -27,19 +27,77 @@ atualizado — sem mexer na máquina de quem usa.
 
 ## Ferramentas disponíveis
 
+### Associados
+
+| Ferramenta | O que faz | Papéis |
+|---|---|---|
+| `listar_associados` | Lista associados com filtros (ramo, seção, área, status) e busca por nome/CPF/e-mail | Gestor de Associados, Visualizador Associados |
+| `obter_associado` | Ficha completa por CPF, com responsáveis, contribuição e histórico | Gestor de Associados, Visualizador Associados |
+| `atualizar_associado` ✎ | Grava campos do associado (lista fechada de campos editáveis) | Gestor de Associados |
+| `estatisticas_associados` | Totais por ramo, categoria, seção e status | + Visualizador de Métricas de Associados |
+| `listar_unidades_organizacionais` | Unidades organizacionais e hierarquia | Gestor/Visualizador Associados, Gestor da UEL |
+
+### Extrato e categorização
+
+| Ferramenta | O que faz | Papéis |
+|---|---|---|
+| `listar_transacoes` | Extrato com filtros de período, categoria, carteira, revisão e `sem_categoria` | Gestor Financeiro, Visualizador Financeiro |
+| `listar_opcoes_financeiras` | Valores válidos: categorias, centros de custo, carteiras, instituições, contas fixas | Gestor Financeiro, Visualizador Financeiro |
+| `categorizar_transacoes` ✎ | Categoriza até 200 transações por chamada | Gestor Financeiro |
+| `resumo_financeiro` | Totais de crédito/débito por período, agrupados por categoria, centro de custo ou carteira | Gestor Financeiro, Visualizador Financeiro |
+| `serie_financeira` | Séries dos últimos 12 meses do painel (entradas x saídas, por categoria/centro/tipo, contribuições, inadimplência) | Gestor Financeiro, Visualizador Financeiro |
+
+### Conciliação
+
+| Ferramenta | O que faz | Papéis |
+|---|---|---|
+| `listar_pendentes_conciliacao` | Transações de Sistema ainda não conciliadas com a planilha | Gestor Financeiro |
+| `sugerir_candidatos_conciliacao` | Candidatos de planilha para uma pendência (valor ±R$1, data ±5 dias), ordenados | Gestor Financeiro |
+| `conciliar_transacoes` ✎ | Vincula o par, define quem conta no total e categoriza o mantido | Gestor Financeiro |
+| `marcar_sem_duplicata` ✎ | Resolve a pendência que não tem par na planilha | Gestor Financeiro |
+| `desfazer_conciliacao` ✎ | Desfaz o vínculo e devolve os dois registros aos totais | Gestor Financeiro |
+
+### Contribuições mensais
+
+| Ferramenta | O que faz | Papéis |
+|---|---|---|
+| `listar_contribuicoes` | Contribuições por associado, status e mês (ou intervalo) | Gestor/Visualizador Contribuição Mensal |
+| `resumo_inadimplencia` | Consolidado do mês: quantidade e valor por status, % de inadimplência e lista de devedores | Gestor/Visualizador Contribuição Mensal |
+| `marcar_contribuicoes_pagas` ✎ | Marca até 200 pagamentos como 'Pago' | Gestor Contribuição Mensal |
+| `atualizar_cobranca_associado` ✎ | Valor da contribuição, situação da cobrança e contatos de cobrança | Gestor Contribuição Mensal |
+| `gerar_contribuicoes_do_mes` ✎ | Cria os registros do mês para os beneficiários ativos (idempotente) | Gestor Contribuição Mensal |
+
+### Contas fixas
+
+| Ferramenta | O que faz | Papéis |
+|---|---|---|
+| `listar_contas_fixas` | Despesas recorrentes com valor, vencimento e custo mensal somado | Gestor Financeiro, Visualizador Financeiro |
+| `listar_pagamentos_contas_fixas` | Pagamentos por conta, status e mês | Gestor Financeiro, Visualizador Financeiro |
+| `marcar_contas_fixas_pagas` ✎ | Marca até 100 pagamentos como 'Pago' | Gestor Financeiro |
+
+### Previsão orçamentária
+
+| Ferramenta | O que faz | Papéis |
+|---|---|---|
+| `listar_previsoes_orcamentarias` | Previsões cadastradas com totais previstos | Gestor Financeiro, Visualizador Financeiro |
+| `obter_previsao_orcamentaria` | Uma previsão com todos os itens | Gestor Financeiro, Visualizador Financeiro |
+| `comparar_previsto_realizado` | Previsto x realizado do período: desvios, execução e quebra por categoria/centro | Gestor Financeiro, Visualizador Financeiro |
+| `criar_previsao_orcamentaria` ✎ | Cria a previsão, opcionalmente já com itens | Gestor Financeiro |
+| `atualizar_previsao_orcamentaria` ✎ | Dados gerais da previsão (título, período, status, centro) | Gestor Financeiro |
+| `salvar_item_previsao` ✎ | Cria ou atualiza um item de receita/despesa | Gestor Financeiro |
+| `excluir_item_previsao` ✎ | Remove um item de previsão não encerrada | Gestor Financeiro |
+
+### Apoio
+
 | Ferramenta | O que faz | Papéis |
 |---|---|---|
 | `quem_sou_eu` | Mostra usuário conectado, papéis e ferramentas liberadas | qualquer usuário autenticado |
-| `listar_associados` | Lista associados com filtros (ramo, seção, área, status) e busca por nome/CPF/e-mail | Gestor de Associados, Visualizador Associados |
-| `obter_associado` | Ficha completa por CPF, com responsáveis, contribuição e histórico | Gestor de Associados, Visualizador Associados |
-| `atualizar_associado` | Grava campos do associado (lista fechada de campos editáveis) | Gestor de Associados |
-| `estatisticas_associados` | Totais por ramo, categoria, seção e status | + Visualizador de Métricas de Associados |
-| `listar_unidades_organizacionais` | Unidades organizacionais e hierarquia | Gestor/Visualizador Associados, Gestor da UEL |
-| `listar_transacoes` | Extrato com filtros de período, categoria, carteira, revisão e `sem_categoria` | Gestor Financeiro, Visualizador Financeiro |
-| `listar_opcoes_financeiras` | Valores válidos: categorias, centros de custo, carteiras, instituições, contas fixas | Gestor Financeiro, Visualizador Financeiro |
-| `categorizar_transacoes` | Categoriza até 200 transações por chamada (categoria, centro de custo, ordinária/extraordinária, descrição reduzida, revisada) | Gestor Financeiro |
-| `resumo_financeiro` | Totais de crédito/débito por período, agrupados por categoria, centro de custo ou carteira | Gestor Financeiro, Visualizador Financeiro |
 | `diagnostico_conexao` | Local da ponte: testa URL, credenciais e conectividade | — |
+
+As ferramentas marcadas com ✎ gravam dados e aceitam `simular=true` (veja
+[Simulação](#simulação-dry-run)). Exclusão de previsão inteira, cadastro de
+contas fixas e importação de extratos continuam só pelo portal — são operações
+raras ou que dependem de upload de arquivo.
 
 `System Manager` enxerga todas as ferramentas, seguindo o mesmo critério de
 `gris.api.portal_access.user_has_access`.
@@ -135,15 +193,31 @@ e as mesmas permissões da ponte stdio.
 
 Exemplos de pedidos que funcionam bem:
 
+**Associados**
 - *"Quantos associados ativos temos por ramo?"* → `estatisticas_associados`
 - *"Lista os lobinhos com registro vencido"* → `listar_associados`
 - *"Atualiza o telefone da associada do CPF 123.456.789-00 para (11) 98888-7777"* → `obter_associado` + `atualizar_associado`
-- *"Mostra as transações de janeiro que ainda estão sem categoria"* → `listar_transacoes` com `sem_categoria=true`
-- *"Categoriza essas cinco transações como Doações, centro de custo Sede, e marca como revisadas"* → `listar_opcoes_financeiras` + `categorizar_transacoes`
-- *"Fecha o resumo de fevereiro por centro de custo"* → `resumo_financeiro`
 
-Peça sempre para o Claude **confirmar antes de gravar** — as ferramentas de
-escrita retornam o antes/depois de cada campo alterado, o que facilita revisar.
+**Extrato**
+- *"Mostra as transações de janeiro que ainda estão sem categoria"* → `listar_transacoes` com `sem_categoria=true`
+- *"Categoriza essas cinco como Doações, centro de custo Sede, e marca como revisadas"* → `listar_opcoes_financeiras` + `categorizar_transacoes`
+- *"Compara os gastos deste ano com o anterior por centro de custo"* → `serie_financeira` / `resumo_financeiro`
+
+**Conciliação** — o fluxo em que o modelo mais agrega:
+1. `listar_pendentes_conciliacao` traz o que o sistema registrou e a planilha ainda não casou;
+2. `sugerir_candidatos_conciliacao` devolve os candidatos por valor e data;
+3. o Claude lê as descrições ("PIX RECEBIDO M S SILVA" x "Contribuição Ago/Mariana Silva") e propõe o par;
+4. você confirma e ele chama `conciliar_transacoes` — ou `marcar_sem_duplicata` quando não há par.
+
+**Contribuições**
+- *"Como está a inadimplência de março?"* → `resumo_inadimplencia`
+- *"Quem está atrasado há mais de dois meses?"* → `listar_contribuicoes` com intervalo e `status='Atrasado'`
+- *"Baixa o pagamento desses três associados"* → `marcar_contribuicoes_pagas`
+- *"Sobe a contribuição da Ana para R$ 75 a partir de agora"* → `atualizar_cobranca_associado`
+
+**Orçamento**
+- *"Como está a execução do orçamento deste ano?"* → `comparar_previsto_realizado`
+- *"Cria o orçamento de 2027 com as mesmas linhas de 2026 e 8% a mais em manutenção"* → `obter_previsao_orcamentaria` + `criar_previsao_orcamentaria`
 
 ## Segurança
 
@@ -156,6 +230,8 @@ escrita retornam o antes/depois de cada campo alterado, o que facilita revisar.
   validados contra o schema antes do save.
 - **Modo somente leitura**: defina `GRIS_MCP_SOMENTE_LEITURA=1` no ambiente da
   ponte para esconder e bloquear todas as ferramentas de escrita.
+- **Simulação (dry-run)**: toda ferramenta de escrita aceita `simular=true` e
+  devolve o antes/depois sem gravar nada.
 - **Auditoria**: toda execução de ferramenta que grava dados gera um registro
   no logger `gris_mcp` com usuário, ferramenta e argumentos.
 - **Descrição bruta do extrato** continua restrita ao `Gestor Financeiro`,
@@ -163,14 +239,34 @@ escrita retornam o antes/depois de cada campo alterado, o que facilita revisar.
 - As credenciais ficam apenas na máquina que roda a ponte. Nunca comite
   `api_secret` no repositório.
 
+## Simulação (dry-run)
+
+Toda ferramenta que grava ganha automaticamente o parâmetro `simular` — o
+registro injeta no schema, e o handler devolve o que mudaria sem tocar no banco:
+
+```
+"Categoriza como Doações as 40 transações de novembro sem categoria, mas simula primeiro"
+→ categorizar_transacoes(ids=[...], categoria="Doações", simular=true)
+→ {"simulacao": true, "atualizadas": 0, "previa": [{"id": "...", "alteracoes": {...}}]}
+```
+
+Validações de permissão, de campo Select e de existência de Link rodam também na
+simulação — então um `simular=true` limpo é boa evidência de que a gravação vai
+passar. Simulações não entram no log de auditoria (não alteram nada).
+
 ## Adicionar uma ferramenta nova
 
-1. Escolha o módulo (`gris/api/mcp/associados.py`, `financeiro.py`, `geral.py`)
-   ou crie um novo e registre-o em `MODULOS_DE_FERRAMENTAS`.
+1. Escolha o módulo em `gris/api/mcp/` (`associados`, `financeiro`, `conciliacao`,
+   `contribuicoes`, `contas_fixas`, `orcamento`, `geral`) ou crie um novo e
+   registre-o em `MODULOS_DE_FERRAMENTAS`.
 2. Decore a função com `@ferramenta(...)`, declarando `parametros`
    (JSON Schema simplificado), `roles` e `somente_leitura`.
-3. Escreva o handler retornando um `dict` serializável.
-4. Cubra com teste em `gris/tests/test_mcp_ferramentas.py`.
+3. Escreva o handler retornando um `dict` serializável. Com
+   `somente_leitura=False` o handler precisa aceitar `simular: bool = False` e
+   devolver o antes/depois sem gravar quando for verdadeiro.
+4. Reaproveite o serviço que já existe em `gris/api/...` em vez de reescrever a
+   regra de negócio — as ferramentas desta integração são casca fina.
+5. Cubra com teste em `gris/tests/test_mcp_*.py`.
 
 ```python
 @ferramenta(
@@ -193,9 +289,9 @@ Nada precisa ser alterado na ponte local nem na configuração do Claude.
 cd mcp_server && python3 -m unittest discover -s tests
 
 # camada do app (dentro do bench)
-bench --site <seu-site> run-tests --app gris --module gris.tests.test_mcp_registry
-bench --site <seu-site> run-tests --app gris --module gris.tests.test_mcp_ferramentas
-bench --site <seu-site> run-tests --app gris --module gris.tests.test_mcp_http
+for modulo in registry ferramentas http contribuicoes conciliacao orcamento; do
+  bench --site <seu-site> run-tests --app gris --module gris.tests.test_mcp_$modulo
+done
 ```
 
 ## Diagnóstico rápido
@@ -206,4 +302,5 @@ bench --site <seu-site> run-tests --app gris --module gris.tests.test_mcp_http
 | `[CONEXAO] Credenciais recusadas` | `GRIS_API_KEY`/`GRIS_API_SECRET` errados ou usuário desativado |
 | `Endpoint não encontrado (HTTP 404)` | Site ainda não está na versão com `gris.api.mcp` |
 | `[PERMISSAO_NEGADA]` | Usuário da API não tem o papel exigido — rode `quem_sou_eu` |
+| `[VALIDACAO]` na conciliação | A transação já está conciliada com outra — use `desfazer_conciliacao` |
 | Ferramenta de escrita sumiu | `GRIS_MCP_SOMENTE_LEITURA` está ativo |

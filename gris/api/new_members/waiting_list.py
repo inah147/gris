@@ -37,7 +37,7 @@ def update_waiting_list_branch():
 			years -= 1
 			months += 12
 		decimal_age = years + months / 12
-		for idx, (branch_name, transition_age) in enumerate(branches):
+		for idx, (branch_name, _transition_age) in enumerate(branches):
 			if idx == len(branches) - 1 or decimal_age < branches[idx + 1][1]:
 				if item.ramo != branch_name:
 					frappe.db.set_value("Fila de Espera", item.name, "ramo", branch_name)

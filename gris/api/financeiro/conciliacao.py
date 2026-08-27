@@ -172,9 +172,10 @@ def get_candidatos_planilha(sistema_id):
 
 	where_sql = " AND ".join(conditions)
 	campos_sql = ", ".join(f"`{c}`" for c in _CAMPOS_LISTA)
+	# A interpolação é segura: os campos vêm de _CAMPOS_LISTA e as condições são
+	# literais deste módulo — todo valor de usuário entra por `params`.
 	rows = frappe.db.sql(
-		f"SELECT {campos_sql} FROM `tabTransacao Extrato Geral` "  # noqa: S608 (campos são lista fixa)
-		f"WHERE {where_sql} LIMIT 50",
+		f"SELECT {campos_sql} FROM `tabTransacao Extrato Geral` WHERE {where_sql} LIMIT 50",
 		params,
 		as_dict=True,
 	)
@@ -205,7 +206,7 @@ def conciliar(
 	centro_de_custo=None,
 	ordinaria_extraordinaria=None,
 ):
-	"""Vincula o par sistema×planilha, define qual conta no total e categoriza o mantido.
+	"""Vincula o par sistema/planilha, define qual conta no total e categoriza o mantido.
 
 	Args:
 		sistema_id, planilha_id: nomes das transações a conciliar.

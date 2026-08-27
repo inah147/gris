@@ -229,7 +229,7 @@ function initRescheduleListeners() {
 					evt.end = null;
 					return evt;
 				});
-				closeRescheduleModal();
+				window.closeRescheduleModal();
 			},
 		});
 	});
@@ -339,7 +339,7 @@ window.confirmSchedule = function () {
 		callback: (r) => {
 			if (r.exc) return;
 			frappe.show_alert({ message: "Visita agendada com sucesso!", indicator: "green" });
-			closeScheduleModal();
+			window.closeScheduleModal();
 			setTimeout(() => window.location.reload(), 800);
 		},
 	});

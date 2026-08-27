@@ -116,7 +116,7 @@ class CompraFesta(Document):
 		for chave in CENARIOS:
 			# ---------- quantidade sugerida ----------
 			if self.usado_em_produtos:
-				# soma: para cada uso, converter qtd para unidade_compra × qtd do produto no cenário
+				# soma: para cada uso, converter qtd para unidade_compra x qtd do produto no cenário
 				soma_cenario = 0.0
 				for uso in self.usos_em_produto or []:
 					if not uso.produto or not uso.quantidade_usada or not uso.unidade_medida_uso:
@@ -128,7 +128,7 @@ class CompraFesta(Document):
 					soma_cenario += qtd_uso_em_compra * qtd_produto_cenario
 				qtd_sugerida = _ceil_pacotes(soma_cenario, qtd_pacote)
 			elif self.varia_com_publico:
-				# qtd_compra_final é "por pessoa" × expectativa do cenário
+				# qtd_compra_final é "por pessoa" x expectativa do cenário
 				qtd_sugerida = _ceil_pacotes(flt(self.quantidade_compra_final) * publicos[chave], qtd_pacote)
 			else:
 				# constante: mesmo valor para todos os cenários

@@ -744,10 +744,10 @@
 		// Telefone via phone-input do design system (mesmos listeners redundantes)
 		const telConvWrap = document.getElementById("vc-convidado-telefone");
 		if (telConvWrap) {
-			function onTelConvChange() {
+			const onTelConvChange = () => {
 				salvarConvidadoAtual();
 				atualizarBotaoConvidadosContinuar();
-			}
+			};
 			telConvWrap.addEventListener("phone-input:change", onTelConvChange);
 			const hiddenConv = telConvWrap.querySelector("[data-phone-input-value]");
 			if (hiddenConv) hiddenConv.addEventListener("change", onTelConvChange);

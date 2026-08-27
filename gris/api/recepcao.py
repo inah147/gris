@@ -147,12 +147,10 @@ def processar_desistencia(novo_associado_name, motivo=None):
 					assoc_doc.set(field, "ANONIMIZADO")
 
 			# Historico de Desligamento
-			has_open_history = False
 			if assoc_doc.historico_no_grupo:
 				for row in assoc_doc.historico_no_grupo:
 					if not row.data_de_desligamento:
 						row.data_de_desligamento = frappe.utils.today()
-						has_open_history = True
 						break
 
 			assoc_doc.save(ignore_permissions=True)

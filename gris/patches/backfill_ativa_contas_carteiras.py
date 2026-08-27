@@ -12,6 +12,7 @@ def execute():
 			continue
 		if not frappe.db.has_column(doctype, "ativa"):
 			continue
-		frappe.db.sql(f"UPDATE `tab{doctype}` SET `ativa` = 1 WHERE `ativa` IS NULL OR `ativa` = 0")  # noqa: S608
+		# Interpolação segura: `doctype` vem da tupla literal acima.
+		frappe.db.sql(f"UPDATE `tab{doctype}` SET `ativa` = 1 WHERE `ativa` IS NULL OR `ativa` = 0")
 
 	frappe.db.commit()

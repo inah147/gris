@@ -58,7 +58,9 @@ def _create_associado(cpf: str) -> str:
 
 
 def _create_vinculo(
-	responsavel_name: str, novo_associado_name: str = None, associado_name: str = None
+	responsavel_name: str,
+	novo_associado_name: str | None = None,
+	associado_name: str | None = None,
 ) -> str:
 	doc = frappe.get_doc(
 		{
@@ -220,7 +222,7 @@ class TestResponsavelVinculoImport(FrappeTestCase):
 		na_name = _create_novo_associado(CPF_JOVEM)
 
 		# Vínculo via recepção: name = resp_hash + "" + na_hash
-		vinculo_name = _create_vinculo(resp_name, novo_associado_name=na_name)
+		_create_vinculo(resp_name, novo_associado_name=na_name)
 		frappe.db.commit()
 
 		# Criar Associado com mesmo CPF (importação)

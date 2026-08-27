@@ -132,7 +132,7 @@ def totais_payload(doc) -> dict:
 	"""Retorna receita/despesa/margem/saldo por cenário a partir do doc Festa.
 
 	A receita de convites é segmentada em entrada e consumação usando a
-	expectativa de vendas de cada lote (consumação média ponderada × público).
+	expectativa de vendas de cada lote (consumação média ponderada x público).
 	A receita de produtos considera apenas o excedente sobre a consumação (ou a
 	própria consumação, o que for maior), evitando contá-la duas vezes — mesma
 	lógica de resultado aplicada no fechamento.

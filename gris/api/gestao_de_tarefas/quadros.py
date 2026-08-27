@@ -384,7 +384,7 @@ def adicionar_membro(board_name: str, user: str, nivel_acesso: str = "Editar") -
 
 @frappe.whitelist()
 def atualizar_nivel_membro(board_name: str, user: str, nivel_acesso: str) -> dict[str, Any]:
-	current_user, board_name = _assert_pode_gerenciar(board_name)
+	_, board_name = _assert_pode_gerenciar(board_name)
 	_assert_board_solto(board_name)
 	user = (user or "").strip()
 	nivel_acesso = (nivel_acesso or "").strip()
@@ -411,7 +411,7 @@ def atualizar_nivel_membro(board_name: str, user: str, nivel_acesso: str) -> dic
 
 @frappe.whitelist()
 def remover_membro(board_name: str, user: str) -> dict[str, Any]:
-	current_user, board_name = _assert_pode_gerenciar(board_name)
+	_, board_name = _assert_pode_gerenciar(board_name)
 	_assert_board_solto(board_name)
 	user = (user or "").strip()
 	if not user:
@@ -449,7 +449,7 @@ def buscar_usuarios(board_name: str, query: str = "") -> dict[str, Any]:
 	filters = [
 		["enabled", "=", 1],
 		["user_type", "=", "System User"],
-		["name", "not in", ja_membros + ["Administrator", "Guest"]],
+		["name", "not in", [*ja_membros, "Administrator", "Guest"]],
 	]
 	or_filters = None
 	if query:

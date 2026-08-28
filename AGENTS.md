@@ -99,6 +99,14 @@ Ao trabalhar em tarefas específicas, consulte a skill correspondente em `.claud
 
 ## Qualidade
 
+- **Antes de commitar, rode `gris-lint`.** Ele reproduz o job "Frappe Linter" do
+  CI: `pre-commit run --all-files` (Ruff, Prettier e ESLint nas versões fixadas
+  em `.pre-commit-config.yaml`) e o semgrep com as regras do Frappe. Rodar o
+  `prettier` ou o `ruff` do `node_modules`/`PATH` não serve: as versões diferem
+  das fixadas e o CI reprova formatação feita com outra versão
+- Nunca monte SQL com f-string dentro de `frappe.db.sql` — o semgrep barra
+  (`frappe-sql-format-injection`) mesmo quando a interpolação é uma constante.
+  Use `frappe.qb`
 - Código novo deve passar nos linters configurados (Ruff, ESLint, Prettier)
 - `console.log` / `print` apenas para debug temporário — remover antes de merge
 - Mudanças críticas (permissões, regras de negócio, API, financeiro) exigem cobertura de teste

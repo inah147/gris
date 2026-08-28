@@ -14,9 +14,11 @@
 #   bench-gris run-tests --app gris
 #   bench-gris run-tests --module gris.tests.test_contribuicoes_transacoes
 #
-# Lint:
+# Lint, antes de commitar (roda o mesmo que o job "Frappe Linter" do CI):
+#   gris-lint
+#
+# Checagem rápida durante a edição (não substitui o gris-lint):
 #   ruff check gris/ && ruff format --check gris/
-#   eslint gris/www/<rota>.js
 set -euo pipefail
 
 # Só faz sentido no ambiente remoto; na máquina local o bench é o do Frappe Manager.
@@ -27,6 +29,7 @@ fi
 REPO="${CLAUDE_PROJECT_DIR:-/home/user/gris}"
 BENCH=/home/frappe/bench
 SITE=test.localhost
+SEMGREP_RULES=/opt/frappe-semgrep-rules
 CA=/etc/ssl/certs/ccr-ca-bundle.crt
 export DEBIAN_FRONTEND=noninteractive
 
@@ -169,7 +172,18 @@ fi
 su - frappe -c "cd $BENCH && bench --site $SITE set-config pause_scheduler 1 && bench --site $SITE set-config mute_emails 1" >/dev/null 2>&1 || true
 
 # ── 9. Linters ──────────────────────────────────────────────────────────────
-# ruff normalmente já vem na imagem; garantir não custa nada.
+# O job "Frappe Linter" do CI roda duas coisas, nesta ordem:
+#   1. pre-commit run --all-files
+#   2. semgrep ci --config ./frappe-semgrep-rules/rules --config r/python.lang.correctness
+#      (o segundo --config vem de semgrep.dev, inalcançável daqui — ver o gris-lint)
+#
+# As duas precisam existir aqui, senão o erro só aparece depois de abrir o PR.
+# E não basta ter as ferramentas: o pre-commit fixa as versões em
+# .pre-commit-config.yaml (prettier 2.7.1, eslint 8.44, ruff 0.16.4) e formatar
+# com outra versão reprova o CI — por isso o `gris-lint` chama o pre-commit em
+# vez dos binários soltos.
+
+# ruff e eslint soltos: úteis para uma checagem rápida durante a edição.
 command -v ruff >/dev/null 2>&1 || pip install -q ruff >/dev/null 2>&1 || true
 
 # O repositório usa `.eslintrc` (formato legado). A imagem traz o ESLint 10, que
@@ -181,7 +195,34 @@ if [ -z "$eslint_major" ] || [ "$eslint_major" -ge 9 ] 2>/dev/null; then
   npm install -g --silent eslint@8 >/dev/null 2>&1 || log "aviso: eslint não instalado"
 fi
 
-# ── 10. Atalho para rodar comandos do bench ─────────────────────────────────
+command -v pre-commit >/dev/null 2>&1 || {
+  log "instalando pre-commit"
+  pip install -q pre-commit >/dev/null 2>&1 || log "aviso: pre-commit não instalado"
+}
+
+# Baixa os ambientes dos hooks agora: eles entram no cache do container, então o
+# primeiro `gris-lint` da sessão não gasta um minuto montando node/venv.
+if command -v pre-commit >/dev/null 2>&1 && [ ! -d "$HOME/.cache/pre-commit" ]; then
+  log "preparando os ambientes do pre-commit (uma vez só)"
+  (cd "$REPO" && pre-commit install-hooks) >/dev/null 2>&1 || \
+    log "aviso: falha ao preparar os hooks; o gris-lint vai montá-los na primeira execução"
+fi
+
+# --ignore-installed PyJWT: a imagem traz o PyJWT do apt, sem RECORD, e o pip
+# aborta a instalação inteira ao tentar desinstalá-lo.
+if ! command -v semgrep >/dev/null 2>&1; then
+  log "instalando semgrep"
+  pip install -q --ignore-installed PyJWT semgrep >/dev/null 2>&1 || log "aviso: semgrep não instalado"
+fi
+
+if [ ! -d "$SEMGREP_RULES/rules" ]; then
+  log "baixando as regras de semgrep do Frappe"
+  rm -rf "$SEMGREP_RULES"
+  git clone --depth 1 -q https://github.com/frappe/semgrep-rules.git "$SEMGREP_RULES" 2>/dev/null || \
+    log "aviso: regras de semgrep não baixadas; o gris-lint vai avisar"
+fi
+
+# ── 10. Atalhos ─────────────────────────────────────────────────────────────
 cat > /usr/local/bin/bench-gris <<BENCHEOF
 #!/bin/sh
 # Roda um comando do bench contra o site de testes, como o usuário frappe.
@@ -189,4 +230,55 @@ exec su - frappe -c "export PATH=/opt/nofrontend:\\\$PATH; cd $BENCH && bench --
 BENCHEOF
 chmod +x /usr/local/bin/bench-gris
 
-log "pronto — use: bench-gris run-tests --app gris"
+# Heredoc citado de propósito: nada é expandido aqui, então o `$falhou` do
+# script chega inteiro. Os dois caminhos entram logo abaixo, via sed.
+cat > /usr/local/bin/gris-lint <<'LINTEOF'
+#!/bin/bash
+# Reproduz o job "Frappe Linter" do CI, na mesma ordem e com as mesmas versões.
+# Rode antes de commitar: o que passar aqui passa lá.
+#
+# O pre-commit corrige o que consegue (formatação) e sai com erro quando mexeu
+# em algum arquivo — nesse caso é só conferir o diff e rodar de novo.
+set -uo pipefail
+cd "@REPO@" || exit 1
+
+falhou=0
+
+echo "== pre-commit: ruff, prettier 2.7.1, eslint 8 (versões fixadas no .pre-commit-config.yaml) =="
+if command -v pre-commit >/dev/null 2>&1; then
+  pre-commit run --all-files || falhou=1
+else
+  echo "pre-commit não instalado — rode: pip install pre-commit"
+  falhou=1
+fi
+
+echo
+echo "== semgrep: regras do Frappe (SQL cru, permissões, correção) =="
+if ! command -v semgrep >/dev/null 2>&1; then
+  echo "semgrep não instalado — rode: pip install --ignore-installed PyJWT semgrep"
+  falhou=1
+elif [ ! -d "@RULES@/rules" ]; then
+  echo "regras ausentes — rode: git clone --depth 1 https://github.com/frappe/semgrep-rules.git @RULES@"
+  falhou=1
+else
+  # --error é obrigatório: sem ele o semgrep lista os findings e mesmo assim sai 0.
+  #
+  # O CI acrescenta `--config r/python.lang.correctness`, que baixa as regras de
+  # semgrep.dev. Aqui esse host é barrado pela política de egresso do ambiente
+  # (403 no proxy), então essa parte fica só no CI. As regras do Frappe — as que
+  # pegam SQL montado à mão, permissão frouxa e afins — rodam offline daqui.
+  semgrep scan --config "@RULES@/rules" --metrics=off --error --quiet . || falhou=1
+fi
+
+echo
+if [ "$falhou" -eq 0 ]; then
+  echo "gris-lint: tudo limpo."
+else
+  echo "gris-lint: há pendências acima — corrija antes de commitar."
+fi
+exit "$falhou"
+LINTEOF
+sed -i "s|@REPO@|$REPO|g; s|@RULES@|$SEMGREP_RULES|g" /usr/local/bin/gris-lint
+chmod +x /usr/local/bin/gris-lint
+
+log "pronto — testes: bench-gris run-tests --app gris | lint: gris-lint"

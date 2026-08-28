@@ -14,6 +14,7 @@ from typing import Any
 
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Count, Date, Max, Sum
 from frappe.utils import add_days, cint, flt, now_datetime, today
 
 from gris.utils.job_logger import DOCTYPE as DOCTYPE_LOG
@@ -89,16 +90,18 @@ def _jobs_agendados() -> list[dict]:
 
 
 def _estatisticas_por_metodo(desde: str) -> dict[str, dict]:
-	linhas = frappe.db.sql(
-		f"""
-		SELECT metodo, status, COUNT(*) AS total, SUM(duracao) AS soma_duracao
-		FROM `tab{DOCTYPE_LOG}`
-		WHERE inicio >= %(desde)s
-		GROUP BY metodo, status
-		""",
-		{"desde": desde},
-		as_dict=True,
-	)
+	log = frappe.qb.DocType(DOCTYPE_LOG)
+	linhas = (
+		frappe.qb.from_(log)
+		.select(
+			log.metodo,
+			log.status,
+			Count(log.name).as_("total"),
+			Sum(log.duracao).as_("soma_duracao"),
+		)
+		.where(log.inicio >= desde)
+		.groupby(log.metodo, log.status)
+	).run(as_dict=True)
 
 	estatisticas: dict[str, dict] = {}
 	for linha in linhas:
@@ -122,19 +125,33 @@ def _estatisticas_por_metodo(desde: str) -> dict[str, dict]:
 
 
 def _ultima_execucao_por_metodo() -> dict[str, dict]:
-	linhas = frappe.db.sql(
-		f"""
-		SELECT log.name, log.job, log.metodo, log.status, log.inicio, log.duracao,
-			log.resumo, log.total_erros, log.total_avisos
-		FROM `tab{DOCTYPE_LOG}` log
-		INNER JOIN (
-			SELECT metodo, MAX(inicio) AS inicio
-			FROM `tab{DOCTYPE_LOG}`
-			GROUP BY metodo
-		) ultima ON ultima.metodo = log.metodo AND ultima.inicio = log.inicio
-		""",
-		as_dict=True,
+	log = frappe.qb.DocType(DOCTYPE_LOG)
+	agrupado = frappe.qb.DocType(DOCTYPE_LOG).as_("agrupado")
+
+	# Uma passada só: o subselect acha o `inicio` mais recente de cada método e o
+	# join traz a linha inteira daquela execução, sem N+1 por job.
+	mais_recentes = (
+		frappe.qb.from_(agrupado)
+		.select(agrupado.metodo, Max(agrupado.inicio).as_("inicio"))
+		.groupby(agrupado.metodo)
 	)
+
+	linhas = (
+		frappe.qb.from_(log)
+		.inner_join(mais_recentes)
+		.on((mais_recentes.metodo == log.metodo) & (mais_recentes.inicio == log.inicio))
+		.select(
+			log.name,
+			log.job,
+			log.metodo,
+			log.status,
+			log.inicio,
+			log.duracao,
+			log.resumo,
+			log.total_erros,
+			log.total_avisos,
+		)
+	).run(as_dict=True)
 
 	ultimas: dict[str, dict] = {}
 	for linha in linhas:
@@ -289,17 +306,19 @@ def resumo_geral(dias: Any = 7) -> dict:
 	dias = _normalizar_dias(dias)
 	desde = _data_de_corte(dias)
 
-	linhas = frappe.db.sql(
-		f"""
-		SELECT DATE(inicio) AS dia, status, COUNT(*) AS total, SUM(duracao) AS soma_duracao
-		FROM `tab{DOCTYPE_LOG}`
-		WHERE inicio >= %(desde)s
-		GROUP BY DATE(inicio), status
-		ORDER BY dia ASC
-		""",
-		{"desde": desde},
-		as_dict=True,
-	)
+	log = frappe.qb.DocType(DOCTYPE_LOG)
+	linhas = (
+		frappe.qb.from_(log)
+		.select(
+			Date(log.inicio).as_("dia"),
+			log.status,
+			Count(log.name).as_("total"),
+			Sum(log.duracao).as_("soma_duracao"),
+		)
+		.where(log.inicio >= desde)
+		.groupby(Date(log.inicio), log.status)
+		.orderby(Date(log.inicio))
+	).run(as_dict=True)
 
 	por_dia: dict[str, dict[str, int]] = {}
 	totais: dict[str, int] = {}

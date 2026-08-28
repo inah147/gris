@@ -269,8 +269,10 @@ before_request = ["gris.api.auth.enforce_no_desk_redirect"]
 
 # Job Events
 # ----------
-# before_job = ["gris.utils.before_job"]
-# after_job = ["gris.utils.after_job"]
+# Abrem e fecham um "Log de Execucao de Job" para cada job rodado por um worker
+# (agendado ou enfileirado). Detalhes em gris/utils/job_logger.py.
+before_job = ["gris.utils.job_logger.before_job"]
+after_job = ["gris.utils.job_logger.after_job"]
 
 # User Data Protection
 # --------------------
@@ -306,9 +308,10 @@ before_request = ["gris.api.auth.enforce_no_desk_redirect"]
 # Automatically update python controller files with type annotations for this app.
 # export_python_type_annotations = True
 
-# default_log_clearing_doctypes = {
-# 	"Logging DocType Name": 30  # days to retain logs
-# }
+# Retencao dos logs de execucao de jobs (dias). Ajustavel em "Log Settings".
+default_log_clearing_doctypes = {
+	"Log de Execucao de Job": 90,
+}
 
 
 # Fixtures

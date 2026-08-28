@@ -14,6 +14,8 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 
+from gris.utils.job_logger import definir_resumo, metrica, obter_logger
+
 SETTINGS_DOCTYPE = "Configuracoes Backup Google Drive"
 RETRYABLE_STATUS_CODES = {403, 429, 500, 502, 503, 504}
 MAX_RETRIES = 5
@@ -21,10 +23,15 @@ DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive"]
 
 
 def enqueue_daily_backup():
+	logger = obter_logger("shared_drive_backup")
 	settings = _get_settings()
 	if not settings.enable_backup:
+		logger.warning("Backup diario desativado em Configuracoes Backup Google Drive.")
+		definir_resumo("Backup diário desativado nas configurações — nada foi enfileirado.")
 		return
 
+	logger.info("Enfileirando o backup diario na fila longa.")
+	definir_resumo("Backup diário enviado para a fila longa.")
 	enqueue(
 		"gris.api.backup.google_shared_drive.run_daily_backup",
 		queue="long",
@@ -71,19 +78,24 @@ def diagnose_destination_folder():
 
 
 def run_daily_backup():
+	logger = obter_logger("shared_drive_backup")
 	settings = _get_settings()
 	if not settings.enable_backup:
+		logger.warning("Backup diario desativado em Configuracoes Backup Google Drive.")
+		definir_resumo("Backup diário desativado nas configurações.")
 		return
 
-	logger = frappe.logger("shared_drive_backup")
 	try:
 		_validate_settings(settings)
 
 		drive = _get_google_drive_service()
 		_validate_destination_folder(drive, settings)
 		snapshot_folder = _create_snapshot_folder(drive, settings)
+		logger.info("Snapshot criado no Shared Drive: %s.", snapshot_folder["name"])
 
 		backup_paths = _generate_backups(settings)
+		logger.info("%s arquivo(s) de backup gerados localmente.", len(backup_paths))
+
 		uploaded_files = []
 		for backup_path in backup_paths:
 			if not backup_path:
@@ -95,6 +107,7 @@ def run_daily_backup():
 				parent_folder_id=snapshot_folder["id"],
 			)
 			uploaded_files.append(uploaded)
+			logger.info("Arquivo enviado ao Shared Drive: %s.", os.path.basename(backup_path))
 
 		retention_summary = _new_retention_summary()
 		try:
@@ -103,6 +116,7 @@ def run_daily_backup():
 			retention_summary["warning"] = _("Retencao nao foi concluida. Verifique Error Log para detalhes.")
 			retention_traceback = frappe.get_traceback()
 			frappe.log_error(retention_traceback, "Shared Drive Retention Failure")
+			metrica("falhas_na_retencao")
 			logger.warning(
 				"Retencao com falha no Shared Drive. site=%s warning=%s",
 				frappe.local.site,
@@ -128,6 +142,16 @@ def run_daily_backup():
 			retention_summary["failed_count"],
 		)
 
+		metrica("arquivos_enviados", len(uploaded_files), incrementar=False)
+		metrica("snapshots_removidos", retention_summary["deleted_count"], incrementar=False)
+		metrica("snapshots_ja_ausentes", retention_summary["already_missing_count"], incrementar=False)
+		metrica("remocoes_com_falha", retention_summary["failed_count"], incrementar=False)
+		definir_resumo(
+			f"Backup concluído no snapshot {snapshot_folder['name']}: "
+			f"{len(uploaded_files)} arquivo(s) enviado(s) e "
+			f"{retention_summary['deleted_count']} snapshot(s) removido(s) por retenção."
+		)
+
 		notification_message = _(
 			"Backup concluido com sucesso. Snapshot: {0}. Arquivos enviados: {1}. "
 			"Snapshots removidos por retencao: {2}. Snapshots ja ausentes: {3}. "
@@ -150,6 +174,8 @@ def run_daily_backup():
 		)
 	except Exception:
 		error_message = frappe.get_traceback()
+		logger.exception("Falha no backup diario para o Shared Drive.")
+		definir_resumo("O backup diário para o Shared Drive falhou.")
 		frappe.log_error(error_message, "Shared Drive Backup Failure")
 		frappe.db.set_single_value(
 			SETTINGS_DOCTYPE,

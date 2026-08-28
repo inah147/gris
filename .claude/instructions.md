@@ -55,6 +55,8 @@ Skills disponíveis em: `.claude/skills/<skill-name>/SKILL.md`.
 - Em SQL, usar consultas parametrizadas e evitar interpolação de string.
 - Evitar N+1: não executar consultas em loop quando houver alternativa agregada.
 - Processos pesados devem ir para fila (`frappe.enqueue`) quando apropriado.
+- Jobs devem registrar o que fizeram via `gris.utils.job_logger` (`obter_logger`,
+  `metrica`, `definir_resumo`); o resultado aparece em `/app/monitor-de-jobs`.
 
 ## 🖥️ Convenções de frontend (Desk + Portal)
 
@@ -81,6 +83,8 @@ Skills disponíveis em: `.claude/skills/<skill-name>/SKILL.md`.
 - Para performance de leitura, priorizar modelagem de consulta, índices e pré-processamento assíncrono quando necessário.
 - Jobs longos e integrações externas devem rodar em background.
 - Evitar regressões em rotinas agendadas (`scheduler_events`).
+- Job novo em `scheduler_events` entra com log detalhado e rótulo em
+  `ROTULOS_DE_JOBS` (`gris/utils/job_logger.py`).
 
 ## ✅ Qualidade e validação
 

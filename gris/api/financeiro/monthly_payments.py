@@ -2,6 +2,8 @@ import datetime
 
 import frappe
 
+from gris.utils.job_logger import definir_resumo, metrica, obter_logger
+
 REQUIRED_MANAGER_ROLE = "Gestor Contribuição Mensal"
 
 
@@ -29,6 +31,7 @@ def generate_monthly_payments():
 	"""Create 'Em Aberto' payment records for all active beneficiary associates for current month.
 	Idempotent per month.
 	"""
+	logger = obter_logger("pagamento_contribuicao_mensal")
 	month_ref = _first_day_of_month()
 	month_ref_str = month_ref.strftime("%Y-%m-%d")
 
@@ -38,7 +41,11 @@ def generate_monthly_payments():
 		fields=["name", "valor_contribuicao"],
 	)
 	if not associates:
+		logger.warning("Nenhum associado ativo beneficiario encontrado — nada a gerar.")
+		definir_resumo(f"Nenhum associado beneficiário ativo para {month_ref_str}.")
 		return 0
+
+	logger.info(f"{len(associates)} associado(s) beneficiario(s) ativo(s) em {month_ref_str}.")
 
 	existing = frappe.get_all(
 		"Pagamento Contribuicao Mensal",
@@ -62,13 +69,16 @@ def generate_monthly_payments():
 		)
 		doc.insert()
 		created += 1
+		logger.info(f"Contribuicao criada para {a.name} (R$ {a.valor_contribuicao or 0}).")
 
-	frappe.logger("pagamento_contribuicao_mensal").info(
-		{
-			"event": "generate_monthly_payments",
-			"month_reference": month_ref_str,
-			"created": created,
-		}
+	metrica("criados", created, incrementar=False)
+	metrica("ja_existentes", len(existing_set), incrementar=False)
+	logger.info(
+		f"Geracao mensal concluida para {month_ref_str}: {created} criada(s), "
+		f"{len(existing_set)} ja existiam."
+	)
+	definir_resumo(
+		f"{created} contribuição(ões) criada(s) para {month_ref_str} ({len(existing_set)} já existiam)."
 	)
 	return created
 
@@ -183,11 +193,14 @@ def _is_holiday(date_obj: datetime.date) -> bool:
 
 @frappe.whitelist()
 def update_status_monthly_payment() -> None:
+	logger = obter_logger("pagamento_contribuicao_mensal")
+
 	# 1. Fetch configured due day (default 10 if missing / invalid)
 	try:
 		config = frappe.get_single("Configuracoes Contribuicao Mensal")
 		due_day = int(getattr(config, "dia_vencimento", 10) or 10)
 	except Exception:
+		logger.warning("Nao foi possivel ler o dia de vencimento configurado; usando o padrao (10).")
 		due_day = 10
 	if due_day < 1 or due_day > 28:  # keep inside safe month window
 		due_day = 10
@@ -201,8 +214,12 @@ def update_status_monthly_payment() -> None:
 	while adjusted_due.weekday() >= 5 or _is_holiday(adjusted_due):  # 5=Sat 6=Sun
 		adjusted_due += datetime.timedelta(days=1)
 
+	logger.info(f"Vencimento considerado para o mes: {adjusted_due.isoformat()}.")
+
 	# 5. If still before or on adjusted due date, exit
 	if today <= adjusted_due:
+		logger.info("Ainda dentro do prazo — nenhum pagamento marcado como atrasado.")
+		definir_resumo(f"Nada a fazer: o vencimento ({adjusted_due.isoformat()}) ainda não passou.")
 		return
 
 	# 6. Query open payments possibly in current month window
@@ -229,10 +246,16 @@ def update_status_monthly_payment() -> None:
 			if ref_date and ref_date.year == today.year and ref_date.month == today.month:
 				current_month_open.append(row)
 		except Exception:
+			logger.warning(f"Mes de referencia invalido no pagamento {row.get('name')}; ignorado.")
+			metrica("referencias_invalidas")
 			continue
 
 	if not current_month_open:
+		logger.info("Nenhuma contribuicao em aberto do mes corrente apos o vencimento.")
+		definir_resumo("Nenhuma contribuição em aberto para marcar como atrasada.")
 		return
+
+	logger.info(f"{len(current_month_open)} contribuicao(oes) em aberto a avaliar.")
 
 	# 7. Update each payment (status and increment value)
 	updated = 0
@@ -247,16 +270,17 @@ def update_status_monthly_payment() -> None:
 			pay_doc.valor = new_value
 			pay_doc.save(ignore_permissions=True)  # triggers on_update
 			updated += 1
+			logger.info(
+				f"Contribuicao {row['name']} ({row.get('associado')}) marcada como atrasada; "
+				f"valor ajustado para R$ {new_value}."
+			)
 		except Exception:
+			logger.exception(f"Falha ao marcar como atrasada a contribuicao {row.get('name')}.")
+			metrica("falhas")
 			continue
 
-	try:
-		frappe.logger("pagamento_contribuicao_mensal").info(
-			{
-				"event": "update_status_monthly_payment",
-				"updated": updated,
-				"due_date": adjusted_due.isoformat(),
-			}
-		)
-	except Exception:
-		pass
+	metrica("marcados_como_atrasado", updated, incrementar=False)
+	metrica("avaliados", len(current_month_open), incrementar=False)
+	definir_resumo(
+		f"{updated} contribuição(ões) marcada(s) como atrasada(s) (vencimento em {adjusted_due.isoformat()})."
+	)

@@ -1,0 +1,257 @@
+{
+ "actions": [],
+ "allow_copy": 0,
+ "autoname": "hash",
+ "creation": "2026-08-28 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "secao_identificacao",
+  "job",
+  "metodo",
+  "origem",
+  "coluna_identificacao",
+  "status",
+  "inicio",
+  "fim",
+  "duracao",
+  "secao_resultado",
+  "resumo",
+  "coluna_resultado",
+  "total_eventos",
+  "total_avisos",
+  "total_erros",
+  "secao_detalhes",
+  "visualizacao",
+  "eventos",
+  "metricas",
+  "secao_erro",
+  "erro",
+  "error_log",
+  "secao_tecnica",
+  "usuario",
+  "fila",
+  "coluna_tecnica",
+  "job_id",
+  "parametros"
+ ],
+ "fields": [
+  {
+   "fieldname": "secao_identificacao",
+   "fieldtype": "Section Break",
+   "label": "Identificação"
+  },
+  {
+   "bold": 1,
+   "fieldname": "job",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Job",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "description": "Caminho completo do método Python executado.",
+   "fieldname": "metodo",
+   "fieldtype": "Data",
+   "label": "Método",
+   "read_only": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "default": "Fila",
+   "fieldname": "origem",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Origem",
+   "options": "Agendado\nFila\nManual",
+   "read_only": 1
+  },
+  {
+   "fieldname": "coluna_identificacao",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Em Execucao",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Em Execucao\nSucesso\nSucesso com Avisos\nConcluido com Erros\nErro",
+   "read_only": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "inicio",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Início",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "fim",
+   "fieldtype": "Datetime",
+   "label": "Fim",
+   "read_only": 1
+  },
+  {
+   "description": "Duração total da execução em segundos.",
+   "fieldname": "duracao",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Duração (s)",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "fieldname": "secao_resultado",
+   "fieldtype": "Section Break",
+   "label": "Resultado"
+  },
+  {
+   "fieldname": "resumo",
+   "fieldtype": "Small Text",
+   "label": "Resumo",
+   "read_only": 1
+  },
+  {
+   "fieldname": "coluna_resultado",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_eventos",
+   "fieldtype": "Int",
+   "label": "Eventos Registrados",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_avisos",
+   "fieldtype": "Int",
+   "label": "Avisos",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_erros",
+   "fieldtype": "Int",
+   "label": "Erros",
+   "read_only": 1
+  },
+  {
+   "fieldname": "secao_detalhes",
+   "fieldtype": "Section Break",
+   "label": "O que o job fez"
+  },
+  {
+   "fieldname": "visualizacao",
+   "fieldtype": "HTML",
+   "label": "Linha do Tempo"
+  },
+  {
+   "description": "Lista de eventos em JSON, na ordem em que ocorreram.",
+   "fieldname": "eventos",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Eventos (JSON)",
+   "read_only": 1
+  },
+  {
+   "description": "Contadores registrados pelo job (ex.: criados, atualizados, ignorados).",
+   "fieldname": "metricas",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Métricas (JSON)",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "collapsible_depends_on": "erro",
+   "depends_on": "erro",
+   "fieldname": "secao_erro",
+   "fieldtype": "Section Break",
+   "label": "Erro"
+  },
+  {
+   "fieldname": "erro",
+   "fieldtype": "Code",
+   "label": "Traceback",
+   "options": "Text",
+   "read_only": 1
+  },
+  {
+   "fieldname": "error_log",
+   "fieldtype": "Link",
+   "label": "Error Log",
+   "options": "Error Log",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "secao_tecnica",
+   "fieldtype": "Section Break",
+   "label": "Detalhes Técnicos"
+  },
+  {
+   "fieldname": "usuario",
+   "fieldtype": "Data",
+   "label": "Usuário",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fila",
+   "fieldtype": "Data",
+   "label": "Fila",
+   "read_only": 1
+  },
+  {
+   "fieldname": "coluna_tecnica",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "job_id",
+   "fieldtype": "Data",
+   "label": "ID do Job (RQ)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "parametros",
+   "fieldtype": "Code",
+   "label": "Parâmetros",
+   "options": "JSON",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "in_create": 1,
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-08-28 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Log de Execucao de Job",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "inicio",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "job",
+ "track_changes": 0
+}

@@ -23,6 +23,7 @@ from gris.utils.contato import (
 	_get_responsavel_payload,
 )
 from gris.utils.contato import get_contato_pessoa as _shared_get_contato_pessoa
+from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 from gris.utils.whatsapp import enviar_mensagem_formatada, enviar_texto
 
 
@@ -1803,7 +1804,7 @@ def enviar_notificacao_whatsapp_alteracoes_solicitadas(projeto_name: str, coment
 
 
 def enviar_lembretes_whatsapp_aprovacao_projetos() -> None:
-	logger = frappe.logger("projetos_whatsapp", allow_site=True)
+	logger = obter_logger("projetos_whatsapp")
 	projetos = frappe.get_all(
 		"Projeto",
 		filters={"status": STATUS_EM_APROVACAO},
@@ -1811,9 +1812,15 @@ def enviar_lembretes_whatsapp_aprovacao_projetos() -> None:
 		limit_page_length=500,
 	)
 	if not projetos:
+		logger.info("Nenhum projeto em aprovacao — nenhum lembrete a enviar.")
+		definir_resumo("Nenhum projeto aguardando aprovação.")
 		return
 
+	logger.info(f"{len(projetos)} projeto(s) em aprovacao para avaliar.")
+	metrica("projetos_avaliados", len(projetos), incrementar=False)
+
 	total_enviadas = 0
+	projetos_com_pendencia = 0
 	for row in projetos:
 		projeto_name = (row.get("name") or "").strip()
 		if not projeto_name:
@@ -1826,6 +1833,8 @@ def enviar_lembretes_whatsapp_aprovacao_projetos() -> None:
 			if not current_stage or not pending_approvers:
 				continue
 
+			projetos_com_pendencia += 1
+
 			projeto_titulo = (doc.get("nome_do_projeto") or "").strip() or doc.name
 			etapa_label = (current_stage.get("label") or "").strip() or _("Etapa atual")
 			link = _build_project_portal_link("/projetos/aprovacao_projeto", doc.name)
@@ -1833,6 +1842,11 @@ def enviar_lembretes_whatsapp_aprovacao_projetos() -> None:
 			for approver in pending_approvers:
 				numero = (approver.get("telefone") or "").strip()
 				if not numero:
+					logger.warning(
+						f"Aprovador sem telefone no projeto {doc.name}: "
+						f"{approver.get('nome') or approver.get('associado') or '—'}."
+					)
+					metrica("aprovadores_sem_telefone")
 					continue
 
 				nome = (
@@ -1853,13 +1867,25 @@ def enviar_lembretes_whatsapp_aprovacao_projetos() -> None:
 					contexto=f"lembrete_aprovacao:{doc.name}",
 				):
 					total_enviadas += 1
+					logger.info(
+						f"Lembrete de aprovacao enviado para {primeiro_nome} "
+						f"(projeto {projeto_titulo}, etapa {etapa_label})."
+					)
 		except Exception:
+			logger.exception(f"Falha no lembrete de aprovacao do projeto {projeto_name}.")
+			metrica("falhas_no_envio")
 			frappe.log_error(
 				message=frappe.get_traceback(),
 				title=f"Falha no lembrete de aprovacao via WhatsApp ({projeto_name})",
 			)
 
+	metrica("lembretes_enviados", total_enviadas, incrementar=False)
+	metrica("projetos_com_aprovacao_pendente", projetos_com_pendencia, incrementar=False)
 	logger.info(f"Lembretes de aprovacao enviados via WhatsApp: {total_enviadas}")
+	definir_resumo(
+		f"{total_enviadas} lembrete(s) enviado(s) para {projetos_com_pendencia} projeto(s) "
+		f"com aprovação pendente (de {len(projetos)} em aprovação)."
+	)
 
 
 def _require_authenticated_user() -> str:

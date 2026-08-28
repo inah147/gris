@@ -9,6 +9,7 @@ from frappe import _
 from frappe.utils import date_diff, getdate, today
 
 from gris.utils.gestores import buscar_destinatarios_gestores
+from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 from gris.utils.whatsapp import enviar_texto
 
 CAMPO_POR_MARCO = {
@@ -164,7 +165,7 @@ def _montar_mensagem_gestor_vencimento(
 
 def enviar_lembretes_vencimento_registro_associados() -> None:
 	"""Scheduler diario para lembretes de vencimento (30 dias, 7 dias e no vencimento)."""
-	logger = frappe.logger("associados_vencimento_notificacoes", allow_site=True)
+	logger = obter_logger("associados_vencimento_notificacoes")
 	data_hoje = getdate(today())
 
 	associados = frappe.get_all(
@@ -183,7 +184,11 @@ def enviar_lembretes_vencimento_registro_associados() -> None:
 
 	if not associados:
 		logger.info("Lembretes de vencimento nao enviados: nenhum associado com validade_registro.")
+		definir_resumo("Nenhum associado com validade de registro cadastrada.")
 		return
+
+	logger.info(f"Avaliando {len(associados)} associado(s) com validade de registro.")
+	metrica("associados_avaliados", len(associados), incrementar=False)
 
 	associado_names = [str(row.get("name")) for row in associados if row.get("name")]
 	links_por_associado = _buscar_links_responsavel(associado_names)
@@ -212,6 +217,7 @@ def enviar_lembretes_vencimento_registro_associados() -> None:
 		destinatario = _resolver_destinatario(associado, links_por_associado, contatos_responsavel)
 		if not destinatario:
 			logger.warning(f"Lembrete nao enviado: associado {associado.name} sem telefone elegivel.")
+			metrica("sem_telefone")
 			pulados += 1
 			continue
 
@@ -231,6 +237,11 @@ def enviar_lembretes_vencimento_registro_associados() -> None:
 				update_modified=False,
 			)
 			enviados += 1
+			logger.info(
+				f"Lembrete de vencimento enviado para {destinatario.telefone} "
+				f"(associado {associado.name}, {dias_para_vencer} dia(s) para vencer)."
+			)
+			metrica(f"enviados_marco_{dias_para_vencer}_dias")
 			if dias_para_vencer == 0:
 				for gestor in gestores_associado:
 					try:
@@ -243,19 +254,31 @@ def enviar_lembretes_vencimento_registro_associados() -> None:
 							),
 						)
 					except Exception:
+						logger.exception(
+							f"Falha ao avisar o gestor {gestor.get('nome')} sobre o associado {associado.name}."
+						)
+						metrica("falhas_no_aviso_ao_gestor")
 						frappe.log_error(
 							frappe.get_traceback(),
 							f"Aviso gestor vencimento: gestor={gestor.get('nome')}, associado={associado.name}",
 						)
 		except Exception:
+			logger.exception(f"Falha ao enviar o lembrete de vencimento do associado {associado.name}.")
+			metrica("falhas_no_envio")
 			frappe.log_error(
 				frappe.get_traceback(),
 				f"Lembrete vencimento registro associado: {associado.name}",
 			)
 
+	metrica("enviados", enviados, incrementar=False)
+	metrica("pulados", pulados, incrementar=False)
 	logger.info(
 		"Lembretes de vencimento processados: "
 		f"total={len(associados)}, enviados={enviados}, pulados={pulados}."
+	)
+	definir_resumo(
+		f"{enviados} lembrete(s) de vencimento enviado(s); "
+		f"{pulados} associado(s) sem disparo hoje (de {len(associados)} avaliados)."
 	)
 
 

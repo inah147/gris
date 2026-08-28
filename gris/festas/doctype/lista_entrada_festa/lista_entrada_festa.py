@@ -90,7 +90,10 @@ class ListaEntradaFesta(Document):
 		linhas = getattr(cursor, "rowcount", 0) if cursor else 0
 
 		if linhas:
-			frappe.db.commit()
+			# Commit explícito: o UPDATE condicional acima é a trava de concorrência da
+			# portaria. Liberar a linha imediatamente evita que leituras simultâneas do
+			# mesmo QR code fiquem bloqueadas até o fim do request.
+			frappe.db.commit()  # nosemgrep
 			return {
 				"ok": True,
 				"ja_entrou_antes": False,

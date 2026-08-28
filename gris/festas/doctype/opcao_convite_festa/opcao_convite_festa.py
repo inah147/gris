@@ -131,6 +131,4 @@ def atualizar_lotes_opcoes_convite() -> dict[str, int]:
 		if mudou:
 			frappe.db.set_value("Opcao Convite Festa", nome, mudou, update_modified=False)
 			atualizadas += 1
-	if atualizadas:
-		frappe.db.commit()
 	return {"avaliadas": avaliadas, "atualizadas": atualizadas}

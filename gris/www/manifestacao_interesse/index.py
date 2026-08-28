@@ -41,7 +41,7 @@ def submit_interest(
 		}
 
 	celular_responsavel_fmt = format_phone(celular_responsavel)
-	phone_digits = "".join(filter(str.isdigit, str(celular_responsavel_fmt or celular_responsavel)))
+	phone_digits = "".join(c for c in str(celular_responsavel_fmt or celular_responsavel) if c.isdigit())
 	if len(phone_digits) not in (12, 13):
 		return {"status": "error", "message": "Celular inválido. Informe DDD + número (ex: 11 91234-5678)."}
 	celular_responsavel = celular_responsavel_fmt or celular_responsavel

@@ -148,7 +148,10 @@ def webhook_infinitepay():
 	# consumidores) reajam à transição de status.
 	doc.update(campos_webhook)
 	doc.save(ignore_permissions=True)
-	frappe.db.commit()
+	# Commit explícito: a InfinitePay não reenvia o webhook depois de receber 200.
+	# O pagamento precisa estar persistido antes da resposta, mesmo que uma etapa
+	# posterior deste handler falhe.
+	frappe.db.commit()  # nosemgrep
 
 	frappe.logger().info(f"Webhook InfinitePay processado para order_nsu={order_nsu}")
 

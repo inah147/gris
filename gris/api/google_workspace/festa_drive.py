@@ -242,7 +242,9 @@ def _find_existing_festa_folder(drive, settings, parent_folder_id: str, folder_n
 
 def _update_festa_drive_link(festa_name: str, link: str) -> None:
 	frappe.db.set_value(FESTA_DOCTYPE, festa_name, "link_drive", link, update_modified=True)
-	frappe.db.commit()
+	# Commit explícito: a pasta já existe no Drive. Se o job falhar depois daqui, o
+	# link não pode se perder — senão a próxima execução cria uma pasta duplicada.
+	frappe.db.commit()  # nosemgrep
 
 
 def _get_festa_settings():

@@ -225,8 +225,8 @@ class ConviteFesta(Document):
 				],
 			}
 		).insert(ignore_permissions=True)
-		frappe.db.set_value(self.doctype, self.name, "cobranca_infinitepay", cobranca.name)
-		self.cobranca_infinitepay = cobranca.name
+		# db_set grava no banco e sincroniza o documento em memória de uma vez só.
+		self.db_set("cobranca_infinitepay", cobranca.name)
 
 
 # ---------- doc_events handler (Cobranca Infinitepay.on_update) ----------
@@ -492,7 +492,10 @@ def enviar_qr_codes(
 				falhas.append((convidado.nome, convidado.email, str(exc)))
 
 	doc.save(ignore_permissions=True)
-	frappe.db.commit()
+	# Commit explícito: os e-mails com os QR codes já saíram. As marcações de
+	# enviado/erro precisam sobreviver a uma falha no aviso ao coordenador logo
+	# abaixo, senão a próxima execução reenvia convites já entregues.
+	frappe.db.commit()  # nosemgrep
 
 	if falhas:
 		coordenador = get_coordenador_portaria(doc.festa)

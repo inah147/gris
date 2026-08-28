@@ -649,6 +649,4 @@ def marcar_festas_realizadas() -> dict[str, int]:
 	)
 	for festa in pendentes:
 		frappe.db.set_value("Festa", festa.name, "status", "Realizada", update_modified=False)
-	if pendentes:
-		frappe.db.commit()
 	return {"atualizadas": len(pendentes)}

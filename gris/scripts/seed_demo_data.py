@@ -66,7 +66,9 @@ def run():
 	_seed_avaliacao_de_projeto(projeto)
 	_seed_entrevista_por_competencias(associados)
 
-	frappe.db.commit()
+	# Script de linha de comando (bench execute/console): não há ciclo de request
+	# nem worker para fechar a transação, o commit tem que ser explícito.
+	frappe.db.commit()  # nosemgrep
 	print("Seed de dados concluído.")
 
 

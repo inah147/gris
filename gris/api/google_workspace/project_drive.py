@@ -274,7 +274,9 @@ def _delete_folder_idempotent(drive, folder_id: str) -> str:
 
 def _update_project_drive_link(projeto_name: str, link: str) -> None:
 	frappe.db.set_value(PROJECT_DOCTYPE, projeto_name, "link_pasta_google_drive", link, update_modified=True)
-	frappe.db.commit()
+	# Commit explícito: a pasta já existe no Drive. Se o job falhar depois daqui, o
+	# link não pode se perder — senão a próxima execução cria uma pasta duplicada.
+	frappe.db.commit()  # nosemgrep
 
 
 def _get_project_settings():

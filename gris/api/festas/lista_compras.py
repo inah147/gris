@@ -39,8 +39,10 @@ def _logo_uel_data_uri() -> str:
 
 def _render_pdf_template(rel_path: str, ctx: dict) -> str:
 	path = os.path.join(frappe.get_app_path("gris"), rel_path)
-	with open(path, encoding="utf-8") as fh:
-		return frappe.render_template(fh.read(), ctx)
+	# Caminho e template são internos da app (`rel_path` vem de constante do módulo),
+	# nunca de entrada do usuário.
+	with open(path, encoding="utf-8") as fh:  # nosemgrep
+		return frappe.render_template(fh.read(), ctx)  # nosemgrep
 
 
 def _fmt_num(val) -> str:

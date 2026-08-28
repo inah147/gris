@@ -5,7 +5,10 @@ import numpy as np
 import pandas as pd
 
 
-@frappe.whitelist()
+# Sem @frappe.whitelist(): esta função abre um caminho de arquivo do servidor
+# e só é chamada pelos controladores das páginas de /financeiro, que resolvem o
+# caminho a partir de um File já validado. Exposta como endpoint, qualquer
+# usuário logado poderia ler arquivo arbitrário do site.
 def get_portao3_bank_statement_df(file_path, filter_date: str | None = None):
 	df = pd.read_csv(file_path)
 

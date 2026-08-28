@@ -30,6 +30,8 @@ def build_areas_por_ano(ano_referencia):
 	return areas
 
 
-@frappe.whitelist(allow_guest=True)
+# Público por intenção: é a página de transparência do grupo, cujos arquivos são
+# publicados justamente para consulta aberta.
+@frappe.whitelist(allow_guest=True)  # nosemgrep
 def get_arquivos_por_ano(ano_referencia):
 	return {"areas": build_areas_por_ano(ano_referencia)}

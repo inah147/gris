@@ -57,7 +57,9 @@ def enforce_no_desk_redirect():
 		raise TemporaryRedirect(location="/inicio")
 
 
-@frappe.whitelist(allow_guest=True, methods=["POST"])
+# Público por necessidade: é o fluxo de redefinição de senha, chamado com o `key`
+# recebido por e-mail antes de existir sessão. A validação fica no core do Frappe.
+@frappe.whitelist(allow_guest=True, methods=["POST"])  # nosemgrep
 def update_password(
 	new_password: str, logout_all_sessions: int = 0, key: str | None = None, old_password: str | None = None
 ):

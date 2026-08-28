@@ -26,7 +26,8 @@ def load_credentials() -> dict:
 		print("⚠️  Nem .credentials nem .credentials.example encontrados, usando dict vazio")
 		return {}
 
-	with open(source, encoding="utf-8") as f:
+	# Script de seed local: `source` é o .credentials do próprio repositório.
+	with open(source, encoding="utf-8") as f:  # nosemgrep
 		data = yaml.safe_load(f) or {}
 
 	return data

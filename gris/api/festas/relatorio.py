@@ -937,8 +937,10 @@ def _build_pdf_visuais(payload: dict) -> dict:
 
 def _render_pdf_template(rel_path: str, ctx: dict) -> str:
 	path = os.path.join(frappe.get_app_path("gris"), rel_path)
-	with open(path, encoding="utf-8") as fh:
-		return frappe.render_template(fh.read(), ctx)
+	# Caminho e template são internos da app (`rel_path` vem de constante do módulo),
+	# nunca de entrada do usuário.
+	with open(path, encoding="utf-8") as fh:  # nosemgrep
+		return frappe.render_template(fh.read(), ctx)  # nosemgrep
 
 
 def _gerar_relatorio_pdf_bytes(festa_name: str) -> bytes:

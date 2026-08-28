@@ -528,8 +528,10 @@ def _carregar_template(doc, festa) -> dict:
 
 
 def _enviar_email(*, destinatarios, contexto, attachments):
-	subject = frappe.render_template(contexto["_template_subject"], contexto)
-	message = frappe.render_template(contexto["_template_response"], contexto)
+	# Os templates vêm do DocType Email Template, editável só no Desk por quem tem
+	# permissão nele — mesma origem de confiança que o frappe.sendmail padrão usa.
+	subject = frappe.render_template(contexto["_template_subject"], contexto)  # nosemgrep
+	message = frappe.render_template(contexto["_template_response"], contexto)  # nosemgrep
 	frappe.sendmail(
 		recipients=destinatarios,
 		subject=subject,

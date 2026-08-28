@@ -1,6 +1,6 @@
 import frappe
 
-from gris.api.portal_access import enrich_context
+from gris.api.portal_access import enrich_context, pode_conciliar
 from gris.api.portal_cache_utils import get_uel_cached
 
 no_cache = 1
@@ -30,16 +30,11 @@ def get_context(context):
 	enrich_context(context, "/financeiro/contas")
 
 	# Flag de permissão para exibir/ocultar ações de upload/conciliação
-	context.can_reconcile_intinitepay = all(
-		[
-			frappe.has_permission(dt, ptype="create") and frappe.has_permission(dt, ptype="write")
-			for dt in [
-				"Transacao Infinitepay extrato",
-				"Transacao Infinitepay vendas",
-				"Transacao Infinitepay recebimento",
-				"Transacao Extrato Geral",
-			]
-		]
+	context.can_reconcile_intinitepay = pode_conciliar(
+		"Transacao Infinitepay extrato",
+		"Transacao Infinitepay vendas",
+		"Transacao Infinitepay recebimento",
+		"Transacao Extrato Geral",
 	)
 
 	# Opcional: disponibiliza no boot (para acesso fácil no JS global)

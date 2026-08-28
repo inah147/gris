@@ -197,3 +197,25 @@ class TestAssociadosVencimentoNotificacoes(FrappeTestCase):
 
 		self.assertEqual(enviadas, [])
 		self.assertEqual(atualizacoes, [])
+
+	def test_envia_quando_data_hoje_e_a_data_real_e_campo_nunca_notificado(self):
+		"""Regressao: getdate(None) devolve a data de hoje e bloqueava todos os envios em producao."""
+		data_hoje = frappe.utils.today()
+		associados = [
+			{
+				"name": "ASSOC-006",
+				"nome_completo": "Ana Prado",
+				"telefone": "+5511944443333",
+				"validade_registro": frappe.utils.add_days(data_hoje, 30),
+				"data_notificacao_vencimento_30_dias": None,
+				"data_notificacao_vencimento_7_dias": None,
+				"data_notificacao_vencimento": None,
+			}
+		]
+
+		enviadas, atualizacoes = self._executar_rotina(associados, data_hoje=data_hoje)
+
+		self.assertEqual(len(enviadas), 1)
+		self.assertEqual(enviadas[0]["numero"], "+5511944443333")
+		self.assertEqual(len(atualizacoes), 1)
+		self.assertEqual(atualizacoes[0]["fieldname"], "data_notificacao_vencimento_30_dias")

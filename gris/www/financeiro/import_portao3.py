@@ -46,7 +46,7 @@ def get_context(context):
 
 
 @frappe.whitelist()
-def process_uploaded_file_portao3(file_url):
+def process_uploaded_file_portao3(file_url: str):
 	# Permissão: apenas usuários com permissão de criação/edição
 	if not frappe.has_permission("Transacao Portao 3", ptype="create") or not frappe.has_permission(
 		"Transacao Portao 3", ptype="write"

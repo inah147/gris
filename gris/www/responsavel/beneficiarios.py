@@ -364,7 +364,7 @@ def get_available_visit_dates():
 
 
 @frappe.whitelist()
-def schedule_visit(date):
+def schedule_visit(date: str):
 	user = frappe.session.user
 	responsavel_name = _get_responsavel_name(user)
 	if not responsavel_name:
@@ -447,7 +447,7 @@ def cancel_visit():
 
 
 @frappe.whitelist()
-def reschedule_visit(date):
+def reschedule_visit(date: str):
 	cancel_visit()
 	return schedule_visit(date)
 
@@ -462,7 +462,7 @@ def _status_badge_meta(status):
 
 
 @frappe.whitelist()
-def adicionar_beneficiario(nome_jovem, cpf_jovem, data_nascimento_jovem):
+def adicionar_beneficiario(nome_jovem: str, cpf_jovem: str, data_nascimento_jovem: str):
 	"""Adiciona um novo beneficiário (jovem) vinculado ao responsável logado.
 
 	Cria Novo Associado com status 'Conversa Inicial', registra auditoria

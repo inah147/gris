@@ -269,7 +269,7 @@ def get_context(context):
 
 
 @frappe.whitelist()
-def confirmar_registro_paxtu(novo_associado_name):
+def confirmar_registro_paxtu(novo_associado_name: str):
 	if not novo_associado_name:
 		frappe.throw(_("Novo Associado não especificado."))
 
@@ -283,7 +283,7 @@ def confirmar_registro_paxtu(novo_associado_name):
 
 
 @frappe.whitelist()
-def update_step_status(novo_associado_name, field, value):
+def update_step_status(novo_associado_name: str, field: str, value: str | int):
 	if not novo_associado_name:
 		frappe.throw(_("Novo Associado não especificado."))
 
@@ -302,7 +302,7 @@ def update_step_status(novo_associado_name, field, value):
 
 
 @frappe.whitelist()
-def finalizar_processo_recepcao(novo_associado_name):
+def finalizar_processo_recepcao(novo_associado_name: str):
 	if not novo_associado_name:
 		frappe.throw(_("Novo Associado não especificado."))
 

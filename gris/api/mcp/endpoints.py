@@ -70,7 +70,7 @@ def listar_ferramentas(incluir_indisponiveis: int | str | bool = 0) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
-def executar_ferramenta(ferramenta: str | None = None, argumentos=None) -> dict:
+def executar_ferramenta(ferramenta: str | None = None, argumentos: str | dict | None = None) -> dict:
 	"""Executa uma ferramenta do catálogo com os argumentos informados."""
 
 	def _executar() -> dict:

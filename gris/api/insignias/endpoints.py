@@ -169,7 +169,7 @@ def _normalizar_itens(itens_brutos: Any) -> list[dict]:
 
 
 @frappe.whitelist(methods=["POST"])
-def salvar_item_catalogo(payload):
+def salvar_item_catalogo(payload: str | dict):
 	"""Cria ou edita um item do catálogo a partir do portal.
 
 	O nome é a chave do documento (autoname), então só pode ser definido na
@@ -222,7 +222,7 @@ def salvar_item_catalogo(payload):
 
 
 @frappe.whitelist(methods=["POST"])
-def alternar_item_catalogo(payload):
+def alternar_item_catalogo(payload: str | dict):
 	"""Ativa ou inativa um item. Não há exclusão: itens podem estar em pedidos antigos."""
 	permissoes.garantir_gestor_catalogo()
 	dados = _parse_payload(payload)
@@ -239,7 +239,7 @@ def alternar_item_catalogo(payload):
 
 
 @frappe.whitelist(methods=["POST"])
-def criar_solicitacao(payload):
+def criar_solicitacao(payload: str | dict):
 	permissoes.garantir_solicitante()
 	dados = _parse_payload(payload)
 
@@ -267,7 +267,7 @@ def criar_solicitacao(payload):
 
 
 @frappe.whitelist(methods=["POST"])
-def registrar_compra(payload):
+def registrar_compra(payload: str | dict):
 	"""Financeiro informa que a compra foi realizada."""
 	permissoes.garantir_financeiro()
 	dados = _parse_payload(payload)
@@ -289,7 +289,7 @@ def registrar_compra(payload):
 
 
 @frappe.whitelist(methods=["POST"])
-def registrar_recebimento(payload):
+def registrar_recebimento(payload: str | dict):
 	"""Financeiro confirma que o material chegou ao grupo."""
 	permissoes.garantir_financeiro()
 	dados = _parse_payload(payload)
@@ -307,7 +307,7 @@ def registrar_recebimento(payload):
 
 
 @frappe.whitelist(methods=["POST"])
-def registrar_entrega(payload):
+def registrar_entrega(payload: str | dict):
 	"""Solicitante (ou gestão) confirma que recebeu o material em mãos."""
 	dados = _parse_payload(payload)
 	doc = _carregar(dados.get("name"))
@@ -328,7 +328,7 @@ def registrar_entrega(payload):
 
 
 @frappe.whitelist(methods=["POST"])
-def cancelar_solicitacao(payload):
+def cancelar_solicitacao(payload: str | dict):
 	dados = _parse_payload(payload)
 	doc = _carregar(dados.get("name"))
 

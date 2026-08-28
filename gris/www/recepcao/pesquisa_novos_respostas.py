@@ -40,7 +40,7 @@ def get_surveys():
 
 
 @frappe.whitelist()
-def get_survey_details(survey_name):
+def get_survey_details(survey_name: str):
 	if "Recepcao" not in frappe.get_roles():
 		frappe.throw(_("Acesso negado"))
 
@@ -80,7 +80,7 @@ def get_survey_details(survey_name):
 
 
 @frappe.whitelist()
-def get_nps_chart_data(period="monthly"):
+def get_nps_chart_data(period: str = "monthly"):
 	if "Recepcao" not in frappe.get_roles():
 		frappe.throw(_("Acesso negado"))
 

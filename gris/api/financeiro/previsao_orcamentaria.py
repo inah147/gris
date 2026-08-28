@@ -199,7 +199,7 @@ def criar_previsao(
 	status: str = "Rascunho",
 	centro_de_custo: str | None = None,
 	observacoes: str | None = None,
-	itens=None,
+	itens: str | list | None = None,
 ) -> dict:
 	"""Cria uma previsão orçamentária (opcionalmente já com itens)."""
 	_exigir_gestao()

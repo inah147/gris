@@ -99,7 +99,9 @@ _CAMPOS_LISTA = [
 
 
 @frappe.whitelist()
-def get_sistema_pendentes(carteira=None, instituicao=None, limit=100):
+def get_sistema_pendentes(
+	carteira: str | None = None, instituicao: str | None = None, limit: str | int = 100
+):
 	"""Lista transações de Sistema ainda não conciliadas."""
 	_verificar_permissao()
 	filtros = {
@@ -122,7 +124,7 @@ def get_sistema_pendentes(carteira=None, instituicao=None, limit=100):
 
 
 @frappe.whitelist()
-def get_candidatos_planilha(sistema_id):
+def get_candidatos_planilha(sistema_id: str):
 	"""Retorna candidatos de Planilha para a transação de sistema informada.
 
 	Casa por valor absoluto próximo (±R$1) e data próxima (janela de dias), ranqueando
@@ -202,13 +204,13 @@ def get_candidatos_planilha(sistema_id):
 
 @frappe.whitelist()
 def conciliar(
-	sistema_id,
-	planilha_id,
-	manter="sistema",
-	categoria=None,
-	descricao_reduzida=None,
-	centro_de_custo=None,
-	ordinaria_extraordinaria=None,
+	sistema_id: str,
+	planilha_id: str,
+	manter: str = "sistema",
+	categoria: str | None = None,
+	descricao_reduzida: str | None = None,
+	centro_de_custo: str | None = None,
+	ordinaria_extraordinaria: str | None = None,
 ):
 	"""Vincula o par sistema/planilha, define qual conta no total e categoriza o mantido.
 
@@ -274,11 +276,11 @@ def conciliar(
 
 @frappe.whitelist()
 def marcar_sem_duplicata(
-	sistema_id,
-	categoria=None,
-	descricao_reduzida=None,
-	centro_de_custo=None,
-	ordinaria_extraordinaria=None,
+	sistema_id: str,
+	categoria: str | None = None,
+	descricao_reduzida: str | None = None,
+	centro_de_custo: str | None = None,
+	ordinaria_extraordinaria: str | None = None,
 ):
 	"""Marca a transação de sistema como resolvida sem par (não é duplicata).
 
@@ -309,7 +311,7 @@ def marcar_sem_duplicata(
 
 
 @frappe.whitelist()
-def desconciliar(transacao_id):
+def desconciliar(transacao_id: str):
 	"""Desfaz uma conciliação, devolvendo ambos os registros aos totais."""
 	_verificar_permissao()
 

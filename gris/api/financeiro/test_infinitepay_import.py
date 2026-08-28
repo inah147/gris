@@ -86,15 +86,17 @@ _TAG_VENDAS = (
 	"_plano_nsu_origem_nome"
 )
 
+# Cada item é uma linha de CSV só, quebrada em duas partes por causa do tamanho —
+# daí a concatenação explícita com `+`, para não parecer vírgula esquecida.
 _LINHAS_VENDAS = [
 	"30/05/2026 17:39,Crédito,mastercard,À Vista,Maquininha,NS: PB1F252H77225,374112,Aprovada,"
-	'""13,30"",""12,50"",""\'- 0,80"",6.01,Nitro,SPB1F252H7722521900320260530170009,""""',
+	+ '""13,30"",""12,50"",""\'- 0,80"",6.01,Nitro,SPB1F252H7722521900320260530170009,""""',
 	"30/05/2026 17:46,Dinheiro,money,À Vista,Maquininha,NS: PB1F252H77225,85811635,Aprovada,"
-	'""5,00"",""5,00"",""0,00"",0,Outro,"""",""""',
+	+ '""5,00"",""5,00"",""0,00"",0,Outro,"""",""""',
 	"30/05/2026 17:49,Pix,Pix,À Vista,Maquininha,NS: PB1F252H77225,E607469482026,Aprovada,"
-	'""26,50"",""26,50"",""0,00"",0,Outro,2189843481,MARCELO ALVES BARBOSA',
+	+ '""26,50"",""26,50"",""0,00"",0,Outro,2189843481,MARCELO ALVES BARBOSA',
 	"29/05/2026 10:00,Crédito,visa,À Vista,Maquininha,NS: PB1F252H77225,999111,Negada,"
-	'""99,00"",""99,00"",""0,00"",0,Nitro,SPB-NEGADA,""""',
+	+ '""99,00"",""99,00"",""0,00"",0,Nitro,SPB-NEGADA,""""',
 ]
 
 VENDAS_XML = (

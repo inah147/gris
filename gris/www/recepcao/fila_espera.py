@@ -213,7 +213,7 @@ def get_context(context):
 
 
 @frappe.whitelist()
-def chamar_associado(fila_id):
+def chamar_associado(fila_id: str):
 	if not fila_id:
 		frappe.throw(_("ID da fila não fornecido"))
 
@@ -231,7 +231,7 @@ def chamar_associado(fila_id):
 
 
 @frappe.whitelist()
-def registrar_desistencia(fila_id, motivo=None):
+def registrar_desistencia(fila_id: str, motivo: str | None = None):
 	if not fila_id:
 		frappe.throw(_("ID da fila não fornecido"))
 

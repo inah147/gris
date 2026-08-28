@@ -22,7 +22,7 @@ def _validate_activity_flags(sem_atividade, abertura_geral):
 
 
 @frappe.whitelist()
-def copy_calendar_data(source_year, target_year):
+def copy_calendar_data(source_year: str | int, target_year: str | int):
 	source_year = int(source_year)
 	target_year = int(target_year)
 	year_diff = target_year - source_year
@@ -81,14 +81,14 @@ def copy_calendar_data(source_year, target_year):
 
 @frappe.whitelist()
 def create_simulation_event(
-	atividade,
-	inicio,
-	termino,
-	secoes,
-	local=None,
-	nivel=None,
-	sem_atividade=0,
-	abertura_geral=0,
+	atividade: str,
+	inicio: str,
+	termino: str,
+	secoes: str | list,
+	local: str | None = None,
+	nivel: str | None = None,
+	sem_atividade: str | int = 0,
+	abertura_geral: str | int = 0,
 ):
 	if isinstance(secoes, str):
 		secoes = frappe.parse_json(secoes)
@@ -143,15 +143,15 @@ def create_simulation_event(
 
 @frappe.whitelist()
 def update_simulation_event(
-	event_id,
-	atividade,
-	inicio,
-	termino,
-	secao,
-	local=None,
-	nivel=None,
-	sem_atividade=0,
-	abertura_geral=0,
+	event_id: str,
+	atividade: str,
+	inicio: str,
+	termino: str,
+	secao: str,
+	local: str | None = None,
+	nivel: str | None = None,
+	sem_atividade: str | int = 0,
+	abertura_geral: str | int = 0,
 ):
 	sem_atividade = cint(sem_atividade)
 	abertura_geral = cint(abertura_geral)
@@ -189,6 +189,6 @@ def update_simulation_event(
 
 
 @frappe.whitelist()
-def delete_simulation_event(event_id):
+def delete_simulation_event(event_id: str):
 	frappe.delete_doc("Calendario Simulado", event_id)
 	return {"success": True, "message": "Evento excluído com sucesso."}

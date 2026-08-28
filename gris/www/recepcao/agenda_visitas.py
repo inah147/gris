@@ -141,17 +141,17 @@ def get_context(context):
 
 
 @frappe.whitelist()
-def confirm_visit(visit_name):
+def confirm_visit(visit_name: str):
 	frappe.db.set_value("Agenda de Visitas", visit_name, "visita_confirmada", 1)
 
 
 @frappe.whitelist()
-def unconfirm_visit(visit_name):
+def unconfirm_visit(visit_name: str):
 	frappe.db.set_value("Agenda de Visitas", visit_name, "visita_confirmada", 0)
 
 
 @frappe.whitelist()
-def cancel_visit(visit_name):
+def cancel_visit(visit_name: str):
 	visit = frappe.get_doc("Agenda de Visitas", visit_name)
 	associate_name = visit.jovem
 	frappe.delete_doc("Agenda de Visitas", visit_name)
@@ -160,7 +160,7 @@ def cancel_visit(visit_name):
 
 
 @frappe.whitelist()
-def reschedule_visit(visit_name, new_date):
+def reschedule_visit(visit_name: str, new_date: str):
 	visit = frappe.get_doc("Agenda de Visitas", visit_name)
 	if not _is_date_available_for_ramo(visit.ramo, new_date):
 		frappe.throw(_("A data selecionada não está disponível para o ramo da visita."))
@@ -245,12 +245,12 @@ def _is_date_available_for_ramo(ramo, date_value):
 
 
 @frappe.whitelist()
-def get_available_dates_for_ramo(ramo):
+def get_available_dates_for_ramo(ramo: str):
 	return _get_available_dates(ramo)
 
 
 @frappe.whitelist()
-def get_available_visit_dates_for_reschedule(visit_name):
+def get_available_visit_dates_for_reschedule(visit_name: str):
 	visit = frappe.get_doc("Agenda de Visitas", visit_name)
 	if not visit:
 		return []
@@ -276,7 +276,7 @@ def get_associates_for_scheduling():
 
 
 @frappe.whitelist()
-def schedule_visit(associate, date):
+def schedule_visit(associate: str, date: str):
 	if not user_has_access("/recepcao"):
 		frappe.throw(_("Sem permissão"), frappe.PermissionError)
 

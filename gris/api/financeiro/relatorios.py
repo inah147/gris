@@ -396,7 +396,7 @@ def create_excel_response(wb):
 
 
 @frappe.whitelist()
-def export_relatorio_contabil(data_inicio=None, data_fim=None):
+def export_relatorio_contabil(data_inicio: str | None = None, data_fim: str | None = None):
 	"""Exporta o relatório contábil preenchendo o template Excel.
 
 	Args:

@@ -244,7 +244,9 @@ def _parse_lotes_convite(raw) -> list[dict]:
 
 
 @frappe.whitelist()
-def update_lotes_convite(festa_name: str, convite_por_lotes, lotes=None) -> dict:
+def update_lotes_convite(
+	festa_name: str, convite_por_lotes: str | int | bool, lotes: str | list | None = None
+) -> dict:
 	_ensure_gestor()
 	_validate_festa(festa_name)
 
@@ -272,7 +274,7 @@ def update_lotes_convite(festa_name: str, convite_por_lotes, lotes=None) -> dict
 
 
 @frappe.whitelist()
-def salvar_fechamento_caixa(festa_name: str, valor) -> dict:
+def salvar_fechamento_caixa(festa_name: str, valor: str | int | float) -> dict:
 	_ensure_gestor()
 	_validate_festa(festa_name)
 

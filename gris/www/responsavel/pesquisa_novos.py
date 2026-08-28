@@ -58,7 +58,7 @@ def get_context(context):
 
 
 @frappe.whitelist()
-def submit_survey(data):
+def submit_survey(data: str):
 	if frappe.session.user == "Guest":
 		frappe.throw(_("Não autorizado"))
 

@@ -42,7 +42,11 @@ def _apply_fonte_filter(conditions, params):
 
 @frappe.whitelist()
 def get_entradas_saidas_mensal(
-	categoria=None, instituicao=None, carteira=None, centro_de_custo=None, ordinaria_extraordinaria=None
+	categoria: str | None = None,
+	instituicao: str | None = None,
+	carteira: str | None = None,
+	centro_de_custo: str | None = None,
+	ordinaria_extraordinaria: str | None = None,
 ):
 	months, labels, min_day, next_month = _build_month_sequence()
 	conditions = [
@@ -105,7 +109,11 @@ def get_entradas_saidas_mensal(
 
 @frappe.whitelist()
 def get_entradas_credito_mensal(
-	categoria=None, instituicao=None, carteira=None, centro_de_custo=None, ordinaria_extraordinaria=None
+	categoria: str | None = None,
+	instituicao: str | None = None,
+	carteira: str | None = None,
+	centro_de_custo: str | None = None,
+	ordinaria_extraordinaria: str | None = None,
 ):
 	months, labels, min_day, next_month = _build_month_sequence()
 	conditions = [
@@ -160,7 +168,10 @@ def get_entradas_credito_mensal(
 
 @frappe.whitelist()
 def get_entradas_credito_mensal_por_categoria(
-	instituicao=None, carteira=None, centro_de_custo=None, ordinaria_extraordinaria=None
+	instituicao: str | None = None,
+	carteira: str | None = None,
+	centro_de_custo: str | None = None,
+	ordinaria_extraordinaria: str | None = None,
 ):
 	months, labels, min_day, next_month = _build_month_sequence()
 	conditions = [
@@ -217,7 +228,10 @@ def get_entradas_credito_mensal_por_categoria(
 
 @frappe.whitelist()
 def get_entradas_credito_mensal_por_centro_custo(
-	instituicao=None, carteira=None, categoria=None, ordinaria_extraordinaria=None
+	instituicao: str | None = None,
+	carteira: str | None = None,
+	categoria: str | None = None,
+	ordinaria_extraordinaria: str | None = None,
 ):
 	months, labels, min_day, next_month = _build_month_sequence()
 	conditions = [
@@ -274,7 +288,10 @@ def get_entradas_credito_mensal_por_centro_custo(
 
 @frappe.whitelist()
 def get_entradas_credito_mensal_por_tipo(
-	instituicao=None, carteira=None, categoria=None, centro_de_custo=None
+	instituicao: str | None = None,
+	carteira: str | None = None,
+	categoria: str | None = None,
+	centro_de_custo: str | None = None,
 ):
 	months, labels, min_day, next_month = _build_month_sequence()
 	conditions = [
@@ -333,7 +350,11 @@ def get_entradas_credito_mensal_por_tipo(
 
 @frappe.whitelist()
 def get_saidas_debito_mensal(
-	categoria=None, instituicao=None, carteira=None, centro_de_custo=None, ordinaria_extraordinaria=None
+	categoria: str | None = None,
+	instituicao: str | None = None,
+	carteira: str | None = None,
+	centro_de_custo: str | None = None,
+	ordinaria_extraordinaria: str | None = None,
 ):
 	months, labels, min_day, next_month = _build_month_sequence()
 	conditions = [
@@ -388,7 +409,10 @@ def get_saidas_debito_mensal(
 
 @frappe.whitelist()
 def get_saidas_debito_mensal_por_categoria(
-	instituicao=None, carteira=None, centro_de_custo=None, ordinaria_extraordinaria=None
+	instituicao: str | None = None,
+	carteira: str | None = None,
+	centro_de_custo: str | None = None,
+	ordinaria_extraordinaria: str | None = None,
 ):
 	months, labels, min_day, next_month = _build_month_sequence()
 	conditions = [
@@ -445,7 +469,10 @@ def get_saidas_debito_mensal_por_categoria(
 
 @frappe.whitelist()
 def get_saidas_debito_mensal_por_centro_custo(
-	instituicao=None, carteira=None, categoria=None, ordinaria_extraordinaria=None
+	instituicao: str | None = None,
+	carteira: str | None = None,
+	categoria: str | None = None,
+	ordinaria_extraordinaria: str | None = None,
 ):
 	months, labels, min_day, next_month = _build_month_sequence()
 	conditions = [
@@ -501,7 +528,12 @@ def get_saidas_debito_mensal_por_centro_custo(
 
 
 @frappe.whitelist()
-def get_saidas_debito_mensal_por_tipo(instituicao=None, carteira=None, categoria=None, centro_de_custo=None):
+def get_saidas_debito_mensal_por_tipo(
+	instituicao: str | None = None,
+	carteira: str | None = None,
+	categoria: str | None = None,
+	centro_de_custo: str | None = None,
+):
 	months, labels, min_day, next_month = _build_month_sequence()
 	conditions = [
 		"COALESCE(data_deposito, timestamp_transacao) >= %(min_day)s",

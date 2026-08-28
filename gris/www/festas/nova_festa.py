@@ -78,7 +78,7 @@ def get_context(context):
 
 
 @frappe.whitelist()
-def criar_festa(payload):
+def criar_festa(payload: str | dict):
 	_ensure_gestor_access()
 
 	if isinstance(payload, str):

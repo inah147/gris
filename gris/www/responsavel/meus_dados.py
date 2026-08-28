@@ -63,7 +63,7 @@ def get_context(context):
 
 
 @frappe.whitelist()
-def update_meus_dados(o_que_gosta_de_fazer_no_dia_a_dia, habilidades):
+def update_meus_dados(o_que_gosta_de_fazer_no_dia_a_dia: str, habilidades: str):
 	user = frappe.session.user
 	responsavel_name = frappe.db.get_value("Responsavel", {"email": user}, "name")
 	if not responsavel_name:

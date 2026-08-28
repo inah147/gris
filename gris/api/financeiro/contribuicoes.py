@@ -607,7 +607,7 @@ def _assert_acesso_leitura() -> None:
 
 
 @frappe.whitelist()
-def get_apuracao(meses=MESES_PADRAO):
+def get_apuracao(meses: str | int = MESES_PADRAO):
 	"""Apuração completa do período, para consumo do portal."""
 	_assert_acesso_leitura()
 	pode_ver_cobranca = ROLE_GESTOR in frappe.get_roles()
@@ -615,7 +615,7 @@ def get_apuracao(meses=MESES_PADRAO):
 
 
 @frappe.whitelist()
-def get_extrato_do_associado(associado: str, meses=MESES_PADRAO):
+def get_extrato_do_associado(associado: str, meses: str | int = MESES_PADRAO):
 	"""Transações de contribuição de um associado no período apurado."""
 	_assert_acesso_leitura()
 	if not associado:

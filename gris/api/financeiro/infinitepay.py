@@ -690,7 +690,8 @@ def get_infinitepay_receipts_df(file_path: str, filter_dt: str | None = None) ->
 # Bank Reconcilliation helper methods
 
 
-@frappe.whitelist()
+# Sem @frappe.whitelist(): trabalha com DataFrames do pandas, que não trafegam por
+# HTTP. Chamada só pelo controlador de /financeiro/contas.
 def bank_reconcilliation(df_bank_statement, df_receipts, df_sales):
 	# Agrega df_receipts por infinite_id
 	df_receipts_agg = df_receipts.groupby("infinite_id", as_index=False).agg(

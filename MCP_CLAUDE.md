@@ -122,6 +122,13 @@ beneficiário definido.
 | `agendar_visita` ✎ | Agenda a primeira visita em data disponível | Recepcao |
 | `atualizar_visita` ✎ | Confirmar, desconfirmar, remarcar ou cancelar | Recepcao |
 
+### Usuários e papéis
+
+| Ferramenta | O que faz | Papéis |
+|---|---|---|
+| `listar_usuarios` | Usuários do sistema com seus papéis; filtra por busca (nome/e-mail) ou por um papel exato | System Manager (auditoria de acesso) |
+| `listar_papeis` | Papéis (roles) cadastrados, para descobrir o nome exato antes de usar `listar_usuarios` com `papel` | System Manager (auditoria de acesso) |
+
 ### Apoio
 
 | Ferramenta | O que faz | Papéis |
@@ -264,6 +271,9 @@ Exemplos de pedidos que funcionam bem:
 - *"Como está a execução do orçamento deste ano?"* → `comparar_previsto_realizado`
 - *"Cria o orçamento de 2027 com as mesmas linhas de 2026 e 8% a mais em manutenção"* → `obter_previsao_orcamentaria` + `criar_previsao_orcamentaria`
 
+**Usuários e papéis**
+- *"Quem tem o papel Gestor de Metodos hoje?"* → `listar_usuarios` com `papel='Gestor de Metodos'`
+
 ## Segurança
 
 - **Sem acesso guest.** Todo chamado exige API key/secret de um usuário real.
@@ -281,6 +291,8 @@ Exemplos de pedidos que funcionam bem:
   no logger `gris_mcp` com usuário, ferramenta e argumentos.
 - **Descrição bruta do extrato** continua restrita ao `Gestor Financeiro`,
   igual à página `/financeiro/extrato`.
+- **Usuários e papéis de terceiros** só são consultáveis por `System Manager`
+  (`listar_usuarios`, `listar_papeis`) — é dado sensível de acesso ao sistema.
 - As credenciais ficam apenas na máquina que roda a ponte. Nunca comite
   `api_secret` no repositório.
 
@@ -335,7 +347,7 @@ cd mcp_server && python3 -m unittest discover -s tests
 
 # camada do app (dentro do bench; nas sessões web use `bench-gris`, montado pelo
 # hook .claude/hooks/session-start.sh)
-for modulo in registry ferramentas http contribuicoes conciliacao orcamento recepcao visitas; do
+for modulo in registry ferramentas http contribuicoes conciliacao orcamento recepcao visitas geral; do
   bench --site <seu-site> run-tests --module gris.tests.test_mcp_$modulo
 done
 

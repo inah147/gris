@@ -253,7 +253,12 @@ def get_context(context):
 
 
 @frappe.whitelist()
-def export_calendar(year=None, month=None, show_empty_days=1, sections=None):
+def export_calendar(
+	year: str | int | None = None,
+	month: str | int | None = None,
+	show_empty_days: str | int = 1,
+	sections: str | list | None = None,
+):
 	roles = frappe.get_roles(frappe.session.user)
 	if not any(role in roles for role in ["Visualizador Calendario", "Gestor Calendario", "System Manager"]):
 		frappe.throw(_("Você não tem permissão para acessar esta funcionalidade."), frappe.PermissionError)

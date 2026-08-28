@@ -619,10 +619,10 @@ def _sanitizar_convidados_presencial(convidados, quantidade: int) -> list[dict]:
 @rate_limit(key="portaria-presencial", limit=30, seconds=60)
 def criar_convite_presencial(
 	festa: str,
-	pagador,
-	quantidade,
+	pagador: str | dict,
+	quantidade: str | int,
 	meio_pagamento: str,
-	convidados,
+	convidados: str | list,
 ) -> dict:
 	"""Registra uma venda presencial (dinheiro/cartão físico) na portaria.
 

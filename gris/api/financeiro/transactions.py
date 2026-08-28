@@ -9,7 +9,7 @@ from frappe import _
 
 
 @frappe.whitelist()
-def batch_update_transactions(transaction_ids, updates):
+def batch_update_transactions(transaction_ids: str | list, updates: str | dict):
 	"""
 	Atualiza múltiplas transações de uma vez
 

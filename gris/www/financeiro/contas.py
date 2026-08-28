@@ -62,7 +62,7 @@ def _get_inner_account_transfer_infinitepay(description):
 
 
 @frappe.whitelist()
-def process_uploaded_files(extrato_file_url, vendas_file_url, recebimentos_file_url):
+def process_uploaded_files(extrato_file_url: str, vendas_file_url: str, recebimentos_file_url: str):
 	# Permissão: apenas usuários com permissão de criação/edição nos doctypes afetados
 	required_doctypes = [
 		"Transacao Infinitepay extrato",
@@ -83,8 +83,9 @@ def process_uploaded_files(extrato_file_url, vendas_file_url, recebimentos_file_
 		try:
 			if v is None:
 				return None
-			# NaN/NaT comparações não são iguais a si próprios
-			if v != v:
+			# NaN/NaT comparações não são iguais a si próprios — a desigualdade consigo
+			# mesmo é justamente o teste de NaN, não um engano.
+			if v != v:  # nosemgrep
 				return None
 		except Exception:
 			pass

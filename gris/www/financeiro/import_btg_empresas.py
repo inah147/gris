@@ -44,7 +44,7 @@ def get_context(context):
 
 
 @frappe.whitelist()
-def process_uploaded_btg_file(file_url):
+def process_uploaded_btg_file(file_url: str):
 	import hashlib
 	import os
 

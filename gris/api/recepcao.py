@@ -4,7 +4,13 @@ from frappe.utils import format_datetime, get_fullname, strip_html
 
 
 @frappe.whitelist()
-def update_novo_associado(name, responsavel_recepcao=None, status=None, ramo=None, motivo_desistencia=None):
+def update_novo_associado(
+	name: str,
+	responsavel_recepcao: str | None = None,
+	status: str | None = None,
+	ramo: str | None = None,
+	motivo_desistencia: str | None = None,
+):
 	doc = frappe.get_doc("Novo Associado", name)
 	if responsavel_recepcao:
 		doc.responsavel_recepcao = responsavel_recepcao
@@ -100,7 +106,7 @@ def _desvincular_referencias(doctype, name):
 
 
 @frappe.whitelist()
-def processar_desistencia(novo_associado_name, motivo=None):
+def processar_desistencia(novo_associado_name: str, motivo: str | None = None):
 	# 1. Get Novo Associado
 	if not frappe.db.exists("Novo Associado", novo_associado_name):
 		return
@@ -208,7 +214,7 @@ def processar_desistencia(novo_associado_name, motivo=None):
 
 
 @frappe.whitelist()
-def enviar_para_fila_espera(novo_associado_name):
+def enviar_para_fila_espera(novo_associado_name: str):
 	if not frappe.db.exists("Novo Associado", novo_associado_name):
 		frappe.throw(_("Novo Associado não encontrado"))
 
@@ -233,7 +239,7 @@ def enviar_para_fila_espera(novo_associado_name):
 
 
 @frappe.whitelist()
-def confirmar_visita(novo_associado_name):
+def confirmar_visita(novo_associado_name: str):
 	# Find the latest visit for this associate
 	visits = frappe.get_all(
 		"Agenda de Visitas",
@@ -252,7 +258,7 @@ def confirmar_visita(novo_associado_name):
 
 
 @frappe.whitelist()
-def remover_confirmacao_visita(novo_associado_name):
+def remover_confirmacao_visita(novo_associado_name: str):
 	# Find the latest visit for this associate
 	visits = frappe.get_all(
 		"Agenda de Visitas",
@@ -271,7 +277,7 @@ def remover_confirmacao_visita(novo_associado_name):
 
 
 @frappe.whitelist()
-def registrar_recepcao_realizada(novo_associado_name):
+def registrar_recepcao_realizada(novo_associado_name: str):
 	if not frappe.db.exists("Novo Associado", novo_associado_name):
 		frappe.throw(_("Novo Associado não encontrado"))
 

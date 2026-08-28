@@ -140,7 +140,9 @@ def _define_role_profile(associate):
 	)
 
 
-@frappe.whitelist()
+# Sem @frappe.whitelist(): recebe o Document do Associado e roda via frappe.enqueue
+# (que não exige whitelist). A porta de entrada do cliente é
+# create_associate_user_manually.
 def create_associate_user(associate=None, associate_name=None, force=False):
 	if associate_name and not associate:
 		associate = frappe.get_doc("Associado", associate_name)
@@ -249,7 +251,7 @@ def create_missing_associate_users():
 
 
 @frappe.whitelist()
-def create_associate_user_manually(associate_name):
+def create_associate_user_manually(associate_name: str):
 	user = frappe.session.user if getattr(frappe.local, "session", None) else "Guest"
 	if not _has_desk_access(user):
 		frappe.throw(_("Sem permissão para criar usuários de associados."), frappe.PermissionError)
@@ -286,7 +288,7 @@ def create_associate_user_manually(associate_name):
 		raise
 
 
-@frappe.whitelist()
+# Sem @frappe.whitelist(): recebe o Document do Associado, uso interno do módulo.
 def activate_associate_user(associate):
 	user_doc = frappe.get_doc("User", associate.id_escoteiros)
 	user_doc.enabled = 1
@@ -295,7 +297,7 @@ def activate_associate_user(associate):
 	save_user_preserving_roles(user_doc)
 
 
-@frappe.whitelist()
+# Sem @frappe.whitelist(): recebe o Document do User, uso interno do módulo.
 def deactivate_associate_user(user):
 	user_doc = frappe.get_doc("User", user.name)
 	user_doc.enabled = 0
@@ -343,7 +345,8 @@ def _sync_role_profile(user, associate, old_categoria=None, old_funcao=None, log
 	)
 
 
-@frappe.whitelist()
+# Sem @frappe.whitelist(): roda via frappe.enqueue a partir do on_update do
+# Associado (enqueue não exige whitelist).
 def update_associate_user(
 	associate_name,
 	old_funcao_categoria=None,

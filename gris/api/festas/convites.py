@@ -523,7 +523,7 @@ def export_convites_excel(festa_name: str) -> None:
 
 
 @frappe.whitelist()
-def update_config(festa_name: str, aceitar_doacoes, data_limite_vendas) -> dict:
+def update_config(festa_name: str, aceitar_doacoes: str | int | bool, data_limite_vendas: str | None) -> dict:
 	_ensure_gestor()
 	_validate_festa(festa_name)
 
@@ -561,7 +561,7 @@ def update_config(festa_name: str, aceitar_doacoes, data_limite_vendas) -> dict:
 
 
 @frappe.whitelist()
-def upsert_opcao(festa_name: str, payload) -> dict:
+def upsert_opcao(festa_name: str, payload: str | dict) -> dict:
 	_ensure_gestor()
 	_validate_festa(festa_name)
 
@@ -726,7 +726,7 @@ def criar_opcoes_por_ramo(festa_name: str) -> dict:
 
 
 @frappe.whitelist()
-def toggle_venda_portaria(festa_name: str, ativo) -> dict:
+def toggle_venda_portaria(festa_name: str, ativo: str | int | bool) -> dict:
 	"""Liga ou desliga o modo 'Venda na portaria' de uma festa.
 
 	Liga: desativa todos os outros tipos de convite e cria (ou reativa) o tipo

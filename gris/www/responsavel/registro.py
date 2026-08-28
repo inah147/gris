@@ -157,7 +157,9 @@ def _notificar_gestores_novo_associado(nome_associado: str) -> None:
 
 
 @frappe.whitelist()
-def update_novo_associado(novo_associado_name, data, responsaveis_data=None):
+def update_novo_associado(
+	novo_associado_name: str, data: str | dict, responsaveis_data: str | list | None = None
+):
 	user = frappe.session.user
 	if user == "Guest":
 		frappe.throw(_("Você precisa estar logado."), frappe.PermissionError)

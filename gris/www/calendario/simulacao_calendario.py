@@ -300,7 +300,7 @@ def _validate_activity_flags(sem_atividade, abertura_geral):
 
 
 @frappe.whitelist()
-def get_calendar_events(year=None):
+def get_calendar_events(year: str | int | None = None):
 	"""Retorna os eventos serializados + categorias do calendário simulado do ano.
 
 	Usado para atualização in-place no cliente após criar/editar/excluir um evento,
@@ -371,7 +371,7 @@ def get_calendar_events(year=None):
 
 
 @frappe.whitelist()
-def get_reconciliation_data(year=None):
+def get_reconciliation_data(year: str | int | None = None):
 	if not year:
 		year = getdate(today()).year
 
@@ -489,7 +489,7 @@ def get_reconciliation_data(year=None):
 
 
 @frappe.whitelist()
-def reconcile_calendar(actions):
+def reconcile_calendar(actions: str | list):
 	"""
 	actions: list of dicts { 'action': 'add'|'delete'|'update', 'doc': {...}, 'name': '...' }
 	"""

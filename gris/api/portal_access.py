@@ -508,7 +508,8 @@ def build_sidebar(user: str | None = None) -> list[dict[str, object]]:
 	return _filter_items(SIDEBAR_STRUCTURE, roles, has_minha_entrevista)
 
 
-@frappe.whitelist()
+# Sem @frappe.whitelist(): recebe o objeto de contexto Jinja da página e só é
+# chamada pelos controladores em gris/www.
 def enrich_context(context, current_path: str):
 	# Sidebar items
 	sidebar_items = build_sidebar()

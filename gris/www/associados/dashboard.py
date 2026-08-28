@@ -68,7 +68,9 @@ def get_context(context):
 
 
 @frappe.whitelist()
-def get_associados_dashboard(categoria=None, ramo=None, secao=None, funcao=None):
+def get_associados_dashboard(
+	categoria: str | None = None, ramo: str | None = None, secao: str | None = None, funcao: str | None = None
+):
 	"""Retorna estatísticas para cards + dados de gráfico (ativos por ramo e categoria).
 
 	Novas métricas:

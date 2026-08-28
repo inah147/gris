@@ -11,6 +11,7 @@ import json
 from typing import Any
 
 import frappe
+from frappe import _
 from frappe.utils import flt, getdate, today
 
 from gris.api.insignias import permissoes
@@ -64,9 +65,9 @@ def _parse_payload(payload: Any) -> dict:
 		try:
 			payload = json.loads(payload)
 		except ValueError:
-			frappe.throw("Dados inválidos.")
+			frappe.throw(_("Dados inválidos."))
 	if not isinstance(payload, dict):
-		frappe.throw("Dados inválidos.")
+		frappe.throw(_("Dados inválidos."))
 	return payload
 
 
@@ -102,26 +103,26 @@ def _valor_positivo(valor: Any, rotulo: str) -> float:
 def _carregar(name: str):
 	nome = _texto(name, 140)
 	if not nome or not frappe.db.exists(DOCTYPE, nome):
-		frappe.throw("Solicitação não encontrada.")
+		frappe.throw(_("Solicitação não encontrada."))
 	return frappe.get_doc(DOCTYPE, nome)
 
 
 def _normalizar_itens(itens_brutos: Any) -> list[dict]:
 	if not isinstance(itens_brutos, list) or not itens_brutos:
-		frappe.throw("Inclua ao menos um item na solicitação.")
+		frappe.throw(_("Inclua ao menos um item na solicitação."))
 	if len(itens_brutos) > MAX_ITENS:
-		frappe.throw(f"Uma solicitação pode ter no máximo {MAX_ITENS} itens.")
+		frappe.throw(_("Uma solicitação pode ter no máximo {0} itens.").format(MAX_ITENS))
 
 	catalogo_cache: dict[str, dict] = {}
 	itens: list[dict] = []
 
 	for bruto in itens_brutos:
 		if not isinstance(bruto, dict):
-			frappe.throw("Item inválido na solicitação.")
+			frappe.throw(_("Item inválido na solicitação."))
 
 		insignia = _texto(bruto.get("insignia"), 140)
 		if not insignia:
-			frappe.throw("Selecione a insígnia ou distintivo de cada item.")
+			frappe.throw(_("Selecione a insígnia ou distintivo de cada item."))
 
 		if insignia not in catalogo_cache:
 			registro = frappe.db.get_value(
@@ -149,7 +150,7 @@ def _normalizar_itens(itens_brutos: Any) -> list[dict]:
 
 		beneficiario = _texto(bruto.get("beneficiario"), 140)
 		if beneficiario and not frappe.db.exists("Associado", beneficiario):
-			frappe.throw("Beneficiário selecionado não existe.")
+			frappe.throw(_("Beneficiário selecionado não existe."))
 
 		itens.append(
 			{
@@ -179,11 +180,11 @@ def salvar_item_catalogo(payload):
 
 	tipo = _texto(dados.get("tipo"), 60)
 	if tipo not in TIPOS_VALIDOS:
-		frappe.throw("Selecione um tipo válido.")
+		frappe.throw(_("Selecione um tipo válido."))
 
 	ramo = _texto(dados.get("ramo"), 60)
 	if ramo not in RAMOS_CATALOGO_VALIDOS:
-		frappe.throw("Selecione um ramo válido.")
+		frappe.throw(_("Selecione um ramo válido."))
 
 	valor_unitario = _valor_positivo(dados.get("valor_unitario"), "O valor unitário")
 	codigo = _texto(dados.get("codigo"), 140)
@@ -192,13 +193,13 @@ def salvar_item_catalogo(payload):
 	name = _texto(dados.get("name"), 140)
 	if name:
 		if not frappe.db.exists(CATALOGO_DOCTYPE, name):
-			frappe.throw("Item do catálogo não encontrado.")
+			frappe.throw(_("Item do catálogo não encontrado."))
 		doc = frappe.get_doc(CATALOGO_DOCTYPE, name)
 		criado = False
 	else:
 		nome = _texto(dados.get("nome"), 140)
 		if not nome or len(nome) < 3:
-			frappe.throw("Informe um nome com pelo menos 3 caracteres.")
+			frappe.throw(_("Informe um nome com pelo menos 3 caracteres."))
 		if frappe.db.exists(CATALOGO_DOCTYPE, nome):
 			frappe.throw(f"Já existe um item chamado '{nome}'.")
 		doc = frappe.new_doc(CATALOGO_DOCTYPE)
@@ -228,7 +229,7 @@ def alternar_item_catalogo(payload):
 
 	name = _texto(dados.get("name"), 140)
 	if not name or not frappe.db.exists(CATALOGO_DOCTYPE, name):
-		frappe.throw("Item do catálogo não encontrado.")
+		frappe.throw(_("Item do catálogo não encontrado."))
 
 	doc = frappe.get_doc(CATALOGO_DOCTYPE, name)
 	doc.ativo = 0 if doc.ativo else 1
@@ -244,7 +245,7 @@ def criar_solicitacao(payload):
 
 	ramo = _texto(dados.get("ramo"), 60)
 	if ramo not in RAMOS_VALIDOS:
-		frappe.throw("Selecione o ramo ou seção da solicitação.")
+		frappe.throw(_("Selecione o ramo ou seção da solicitação."))
 
 	itens = _normalizar_itens(dados.get("itens"))
 
@@ -295,7 +296,7 @@ def registrar_recebimento(payload):
 
 	doc = _carregar(dados.get("name"))
 	if doc.status != STATUS_COMPRADA:
-		frappe.throw("Só é possível registrar o recebimento de uma solicitação comprada.")
+		frappe.throw(_("Só é possível registrar o recebimento de uma solicitação comprada."))
 
 	doc.data_recebimento = _data_valida(dados.get("data_recebimento"), "a data de recebimento")
 	doc.recebido_por = frappe.session.user
@@ -313,7 +314,7 @@ def registrar_entrega(payload):
 
 	if not permissoes.pode_registrar_entrega(doc):
 		frappe.throw(
-			"Você não tem permissão para registrar a entrega desta solicitação.",
+			_("Você não tem permissão para registrar a entrega desta solicitação."),
 			frappe.PermissionError,
 		)
 
@@ -332,11 +333,11 @@ def cancelar_solicitacao(payload):
 	doc = _carregar(dados.get("name"))
 
 	if not permissoes.pode_cancelar(doc):
-		frappe.throw("Você não tem permissão para cancelar esta solicitação.", frappe.PermissionError)
+		frappe.throw(_("Você não tem permissão para cancelar esta solicitação."), frappe.PermissionError)
 
 	motivo = _texto(dados.get("motivo"), 1000)
 	if not motivo:
-		frappe.throw("Informe o motivo do cancelamento.")
+		frappe.throw(_("Informe o motivo do cancelamento."))
 
 	doc.motivo_cancelamento = motivo
 	doc.cancelada_por = frappe.session.user

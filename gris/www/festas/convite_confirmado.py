@@ -15,6 +15,7 @@ from __future__ import annotations
 from datetime import date, datetime, time, timedelta
 
 import frappe
+from frappe import _
 
 from gris.api.festas.convite_confirmado import (
 	_is_safe_receipt_url,
@@ -39,7 +40,7 @@ def get_context(context):
 	token = (frappe.form_dict.get("t") or "").strip()
 
 	if not _validate_token(convite_name, token):
-		frappe.throw("Página indisponível", frappe.PageDoesNotExistError)
+		frappe.throw(_("Página indisponível"), frappe.PageDoesNotExistError)
 
 	convite_row = frappe.db.get_value(
 		"Convite Festa",
@@ -54,7 +55,7 @@ def get_context(context):
 		as_dict=True,
 	)
 	if not convite_row:
-		frappe.throw("Página indisponível", frappe.PageDoesNotExistError)
+		frappe.throw(_("Página indisponível"), frappe.PageDoesNotExistError)
 
 	festa_row = (
 		frappe.db.get_value(

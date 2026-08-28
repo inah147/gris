@@ -210,7 +210,7 @@ def processar_desistencia(novo_associado_name, motivo=None):
 @frappe.whitelist()
 def enviar_para_fila_espera(novo_associado_name):
 	if not frappe.db.exists("Novo Associado", novo_associado_name):
-		frappe.throw("Novo Associado não encontrado")
+		frappe.throw(_("Novo Associado não encontrado"))
 
 	doc = frappe.get_doc("Novo Associado", novo_associado_name)
 
@@ -243,7 +243,7 @@ def confirmar_visita(novo_associado_name):
 	)
 
 	if not visits:
-		frappe.throw("Nenhuma visita agendada encontrada para este associado.")
+		frappe.throw(_("Nenhuma visita agendada encontrada para este associado."))
 
 	visit_name = visits[0].name
 	frappe.db.set_value("Agenda de Visitas", visit_name, "visita_confirmada", 1)
@@ -262,7 +262,7 @@ def remover_confirmacao_visita(novo_associado_name):
 	)
 
 	if not visits:
-		frappe.throw("Nenhuma visita agendada encontrada para este associado.")
+		frappe.throw(_("Nenhuma visita agendada encontrada para este associado."))
 
 	visit_name = visits[0].name
 	frappe.db.set_value("Agenda de Visitas", visit_name, "visita_confirmada", 0)
@@ -273,7 +273,7 @@ def remover_confirmacao_visita(novo_associado_name):
 @frappe.whitelist()
 def registrar_recepcao_realizada(novo_associado_name):
 	if not frappe.db.exists("Novo Associado", novo_associado_name):
-		frappe.throw("Novo Associado não encontrado")
+		frappe.throw(_("Novo Associado não encontrado"))
 
 	doc = frappe.get_doc("Novo Associado", novo_associado_name)
 	doc.status = "Aguardar Dados"

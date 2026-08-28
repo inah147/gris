@@ -27,12 +27,15 @@ falham na validação de link em um site novo.
 """
 
 import frappe
+from frappe import _
 from frappe.utils import add_days, add_months, add_years, get_first_day, now, nowdate
 
 
 def run():
 	if not frappe.conf.get("developer_mode"):
-		frappe.throw("Seed de dados só deve ser executado em ambiente de desenvolvimento (developer_mode).")
+		frappe.throw(
+			_("Seed de dados só deve ser executado em ambiente de desenvolvimento (developer_mode).")
+		)
 
 	unidades = _seed_unidades_organizacionais()
 	_seed_habilidades()

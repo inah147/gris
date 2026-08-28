@@ -18,6 +18,7 @@ As funções abaixo permitem:
 import json
 
 import frappe
+from frappe import _
 from frappe.utils import add_days, cint, now_datetime
 
 # Perfil sem nenhum papel associado. Usado como "sem mapeamento" na criação de
@@ -165,7 +166,7 @@ def diagnosticar_papeis_removidos(email: str | None = None, dias: int = 90, apli
 	conferida antes de ser aplicada.
 	"""
 	if "System Manager" not in frappe.get_roles(frappe.session.user):
-		frappe.throw("Sem permissão para diagnosticar papéis de usuários.", frappe.PermissionError)
+		frappe.throw(_("Sem permissão para diagnosticar papéis de usuários."), frappe.PermissionError)
 
 	aplicar = cint(aplicar)
 	dias = cint(dias) or 90

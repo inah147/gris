@@ -1,6 +1,7 @@
 from urllib.parse import quote
 
 import frappe
+from frappe import _
 
 from gris.api.portal_access import enrich_context, user_has_access
 from gris.api.portal_cache_utils import get_uel_cached
@@ -40,15 +41,15 @@ def get_context(context):
 		raise frappe.Redirect
 
 	if not user_has_access("/projetos/projeto"):
-		frappe.throw("Você não tem permissão para acessar esta página.", frappe.PermissionError)
+		frappe.throw(_("Você não tem permissão para acessar esta página."), frappe.PermissionError)
 
 	projeto_name = (frappe.form_dict.get("projeto") or "").strip()
 	if not projeto_name:
-		frappe.throw("Projeto não informado.")
+		frappe.throw(_("Projeto não informado."))
 
 	doc = frappe.get_doc("Projeto", projeto_name)
 	if not doc.has_permission("read"):
-		frappe.throw("Você não tem permissão para visualizar este projeto.", frappe.PermissionError)
+		frappe.throw(_("Você não tem permissão para visualizar este projeto."), frappe.PermissionError)
 
 	status = doc.get("status")
 	if status not in STATUS_ALLOWED_ON_PROJECT_PAGE:

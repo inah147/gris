@@ -211,7 +211,7 @@ function initRescheduleListeners() {
 	btnSave.addEventListener("click", () => {
 		const selectedDate = getSelectValue("reschedule-date-combobox");
 		if (!selectedDate) {
-			frappe.msgprint("Por favor, selecione uma data.");
+			frappe.msgprint(__("Por favor, selecione uma data."));
 			return;
 		}
 		const visitId = currentVisitId;
@@ -251,7 +251,7 @@ function loadRescheduleDates() {
 				repopulateSelect(
 					"reschedule-date-combobox",
 					[],
-					"Nenhuma data disponível nos próximos 60 dias."
+					"Nenhuma data disponível nos próximos 60 dias.",
 				);
 			}
 		},
@@ -329,7 +329,7 @@ window.confirmSchedule = function () {
 	const date = getSelectValue("schedule-date-combobox");
 
 	if (!associate || !date) {
-		frappe.msgprint("Selecione um associado e uma data.");
+		frappe.msgprint(__("Selecione um associado e uma data."));
 		return;
 	}
 

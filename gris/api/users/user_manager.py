@@ -1,6 +1,7 @@
 import uuid
 
 import frappe
+from frappe import _
 from frappe.utils import cint
 
 from gris.api.users.roles import PERFIL_SEM_ACESSO, apply_role_profile, save_user_preserving_roles
@@ -181,7 +182,7 @@ def create_associate_user(associate=None, associate_name=None, force=False):
 def create_missing_associate_users():
 	user = frappe.session.user if getattr(frappe.local, "session", None) else "Guest"
 	if not _has_desk_access(user):
-		frappe.throw("Sem permissão para criar usuários de associados.", frappe.PermissionError)
+		frappe.throw(_("Sem permissão para criar usuários de associados."), frappe.PermissionError)
 
 	associates = _get_associados()
 	associate_emails = {
@@ -251,25 +252,25 @@ def create_missing_associate_users():
 def create_associate_user_manually(associate_name):
 	user = frappe.session.user if getattr(frappe.local, "session", None) else "Guest"
 	if not _has_desk_access(user):
-		frappe.throw("Sem permissão para criar usuários de associados.", frappe.PermissionError)
+		frappe.throw(_("Sem permissão para criar usuários de associados."), frappe.PermissionError)
 
 	if not associate_name:
-		frappe.throw("Associado não informado.")
+		frappe.throw(_("Associado não informado."))
 
 	associate = frappe.get_doc("Associado", associate_name)
 	email = (associate.id_escoteiros or "").strip().lower()
 
 	if not email:
-		frappe.throw("Associado sem ID Escoteiros informado.")
+		frappe.throw(_("Associado sem ID Escoteiros informado."))
 
 	if not email.endswith("@escoteiros.org.br"):
-		frappe.throw("ID Escoteiros inválido. Use um e-mail @escoteiros.org.br.")
+		frappe.throw(_("ID Escoteiros inválido. Use um e-mail @escoteiros.org.br."))
 
 	if not _is_valid_associate(associate):
-		frappe.throw("Associado com registro inválido para criação de usuário.")
+		frappe.throw(_("Associado com registro inválido para criação de usuário."))
 
 	if not associate.registro or not associate.nome_completo:
-		frappe.throw("Dados incompletos do associado para criação de usuário.")
+		frappe.throw(_("Dados incompletos do associado para criação de usuário."))
 
 	if frappe.db.exists("User", email):
 		return {"created": 0, "already_exists": 1, "email": email}

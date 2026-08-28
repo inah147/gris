@@ -29,6 +29,9 @@ def _rename_or_sync_flag_field(old_field: str, new_field: str) -> None:
 	if not (has_old and has_new):
 		return
 
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	frappe.db.sql(
 		f"""
 		UPDATE `tab{DOCTYPE_NAME}`

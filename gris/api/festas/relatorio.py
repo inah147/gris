@@ -14,6 +14,7 @@ import math
 import os
 
 import frappe
+from frappe import _
 from frappe.utils import cint, flt, format_date, today
 
 from gris.api.festas.avaliacao import _get_avaliacao_for_festa, _serialize_avaliacao
@@ -583,11 +584,11 @@ def build_relatorio_payload(festa_name: str) -> dict:
 def get_relatorio_payload(festa_name: str) -> dict:
 	"""Versão exposta para refresh client-side, com checagem de permissão."""
 	if not festa_name:
-		frappe.throw("Parâmetro 'festa_name' obrigatório.", frappe.ValidationError)
+		frappe.throw(_("Parâmetro 'festa_name' obrigatório."), frappe.ValidationError)
 	if not frappe.has_permission("Festa", "read", festa_name):
-		frappe.throw("Sem permissão para acessar esta festa.", frappe.PermissionError)
+		frappe.throw(_("Sem permissão para acessar esta festa."), frappe.PermissionError)
 	if not relatorio_disponivel(festa_name):
-		frappe.throw("Relatório indisponível: a avaliação da equipe ainda não foi iniciada.")
+		frappe.throw(_("Relatório indisponível: a avaliação da equipe ainda não foi iniciada."))
 	return build_relatorio_payload(festa_name)
 
 
@@ -800,7 +801,7 @@ def _waterfall(steps: list[dict], resultado: float) -> dict | None:
 	pontos.append(("Resultado", 0.0, flt(resultado), flt(resultado)))
 
 	valores_eixo = [0.0]
-	for _, inicio, fim, _ in pontos:
+	for _rotulo, inicio, fim, _acumulado in pontos:
 		valores_eixo += [inicio, fim]
 	vmin, vmax = min(valores_eixo), max(valores_eixo)
 	if vmax == vmin:
@@ -975,11 +976,11 @@ def _gerar_relatorio_pdf_bytes(festa_name: str) -> bytes:
 def download_relatorio_pdf(festa_name: str) -> None:
 	"""Gera e disponibiliza o relatório completo da festa em PDF (capa + corpo)."""
 	if not festa_name:
-		frappe.throw("Parâmetro 'festa_name' obrigatório.", frappe.ValidationError)
+		frappe.throw(_("Parâmetro 'festa_name' obrigatório."), frappe.ValidationError)
 	if not frappe.has_permission("Festa", "read", festa_name):
-		frappe.throw("Sem permissão para acessar esta festa.", frappe.PermissionError)
+		frappe.throw(_("Sem permissão para acessar esta festa."), frappe.PermissionError)
 	if not relatorio_disponivel(festa_name):
-		frappe.throw("Relatório indisponível: a avaliação da equipe ainda não foi iniciada.")
+		frappe.throw(_("Relatório indisponível: a avaliação da equipe ainda não foi iniciada."))
 
 	nome_festa = frappe.db.get_value("Festa", festa_name, "nome_festa") or festa_name
 	frappe.local.response.filename = f"relatorio-{frappe.scrub(nome_festa)}.pdf"

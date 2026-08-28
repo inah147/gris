@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 import frappe
+from frappe import _
 from frappe.utils import flt
 
 from gris.festas.doctype.festa.festa import AREA_PORTARIA_NOME
@@ -14,17 +15,17 @@ ALLOWED_ROLES = {"Gestor de festas", "System Manager"}
 def _ensure_gestor() -> None:
 	roles = set(frappe.get_roles(frappe.session.user))
 	if not (roles & ALLOWED_ROLES):
-		frappe.throw("Permissão negada.", frappe.PermissionError)
+		frappe.throw(_("Permissão negada."), frappe.PermissionError)
 
 
 def _validate_festa(festa_name: str) -> None:
 	if not frappe.db.exists("Festa", festa_name):
-		frappe.throw("Festa não encontrada.", frappe.DoesNotExistError)
+		frappe.throw(_("Festa não encontrada."), frappe.DoesNotExistError)
 
 
 def _validate_tipo_coord(tipo: str) -> None:
 	if tipo not in {"Responsavel", "Associado", "Outro"}:
-		frappe.throw("Tipo de coordenador inválido.")
+		frappe.throw(_("Tipo de coordenador inválido."))
 
 
 def _associado_email(name: str) -> str:
@@ -47,19 +48,19 @@ def update_coordenador(festa_name: str, tipo_coord: str, coordenador: str) -> di
 
 	coordenador = coordenador.strip()
 	if not coordenador:
-		frappe.throw("Informe o coordenador.")
+		frappe.throw(_("Informe o coordenador."))
 
 	doc = frappe.get_doc("Festa", festa_name)
 
 	if tipo_coord == "Responsavel":
 		if not frappe.db.exists("Responsavel", coordenador):
-			frappe.throw("Responsável não encontrado.")
+			frappe.throw(_("Responsável não encontrado."))
 		doc.tipo_coord_geral = "Responsavel"
 		doc.responsavel_coord_geral = coordenador
 		doc.associado_coord_geral = None
 	else:
 		if not frappe.db.exists("Associado", coordenador):
-			frappe.throw("Associado não encontrado.")
+			frappe.throw(_("Associado não encontrado."))
 		doc.tipo_coord_geral = "Associado"
 		doc.associado_coord_geral = coordenador
 		doc.responsavel_coord_geral = None
@@ -84,10 +85,10 @@ def update_estimativas(festa_name: str, min_val: str, intermediario_val: str, ma
 		v_int = int(intermediario_val)
 		v_max = int(max_val)
 	except (ValueError, TypeError):
-		frappe.throw("Os valores devem ser números inteiros.")
+		frappe.throw(_("Os valores devem ser números inteiros."))
 
 	if v_min < 0 or v_int < 0 or v_max < 0:
-		frappe.throw("Os valores devem ser não-negativos.")
+		frappe.throw(_("Os valores devem ser não-negativos."))
 
 	frappe.db.set_value(
 		"Festa",
@@ -114,7 +115,7 @@ def update_cenario_simulacao(festa_name: str, cenario: str) -> dict:
 	_validate_festa(festa_name)
 
 	if cenario not in _CENARIOS_VALIDOS:
-		frappe.throw("Cenário inválido.")
+		frappe.throw(_("Cenário inválido."))
 
 	frappe.db.set_value("Festa", festa_name, "cenario_simulacao", cenario)
 	return {"ok": True}
@@ -170,10 +171,10 @@ def update_margem_seguranca(festa_name: str, margem: str) -> dict:
 	try:
 		valor = flt(margem)
 	except (ValueError, TypeError):
-		frappe.throw("Valor da margem inválido.")
+		frappe.throw(_("Valor da margem inválido."))
 
 	if valor < 0 or valor > 100:
-		frappe.throw("A margem de segurança deve estar entre 0 e 100.")
+		frappe.throw(_("A margem de segurança deve estar entre 0 e 100."))
 
 	doc = frappe.get_doc("Festa", festa_name)
 	doc.margem_seguranca = valor
@@ -194,10 +195,10 @@ def update_preco_convite(festa_name: str, preco: str) -> dict:
 	try:
 		valor = flt(preco)
 	except (ValueError, TypeError):
-		frappe.throw("Valor do preço inválido.")
+		frappe.throw(_("Valor do preço inválido."))
 
 	if valor < 0:
-		frappe.throw("O preço do convite deve ser não-negativo.")
+		frappe.throw(_("O preço do convite deve ser não-negativo."))
 
 	doc = frappe.get_doc("Festa", festa_name)
 	doc.preco_convite = valor
@@ -220,14 +221,14 @@ def _parse_lotes_convite(raw) -> list[dict]:
 		try:
 			raw = json.loads(raw)
 		except (ValueError, TypeError):
-			frappe.throw("Lotes inválidos.")
+			frappe.throw(_("Lotes inválidos."))
 	if not isinstance(raw, list):
-		frappe.throw("Lotes inválidos.")
+		frappe.throw(_("Lotes inválidos."))
 
 	lotes: list[dict] = []
 	for item in raw:
 		if not isinstance(item, dict):
-			frappe.throw("Lote inválido.")
+			frappe.throw(_("Lote inválido."))
 		valor_convite = _as_non_negative_float(item.get("valor_convite", 0), "Valor do convite")
 		valor_consumacao = _as_non_negative_float(item.get("valor_consumacao", 0), "Valor de consumação")
 		expectativa = _as_non_negative_float(item.get("expectativa_percentual", 0), "Expectativa de vendas")
@@ -293,7 +294,7 @@ def criar_area(festa_name: str, nome_area: str, descricao: str) -> dict:
 
 	nome_area = nome_area.strip()
 	if not nome_area:
-		frappe.throw("Informe o nome da área.")
+		frappe.throw(_("Informe o nome da área."))
 
 	doc = frappe.new_doc("Area da Festa")
 	doc.festa = festa_name
@@ -314,16 +315,16 @@ def salvar_area(area_name: str, dados_json: str) -> dict:
 	try:
 		dados = json.loads(dados_json) if isinstance(dados_json, str) else dados_json
 	except (ValueError, TypeError):
-		frappe.throw("Dados inválidos.")
+		frappe.throw(_("Dados inválidos."))
 
 	if not isinstance(dados, dict):
-		frappe.throw("Dados inválidos.")
+		frappe.throw(_("Dados inválidos."))
 
 	doc = frappe.get_doc("Area da Festa", area_name)
 
 	nome = (dados.get("nome_area") or "").strip()
 	if not nome:
-		frappe.throw("Informe o nome da área.")
+		frappe.throw(_("Informe o nome da área."))
 	doc.nome_area = nome
 	doc.descricao = (dados.get("descricao") or "").strip()
 
@@ -334,7 +335,7 @@ def salvar_area(area_name: str, dados_json: str) -> dict:
 	if tipo_coord == "Responsavel":
 		coord = (dados.get("coordenador") or "").strip()
 		if not frappe.db.exists("Responsavel", coord):
-			frappe.throw("Responsável não encontrado.")
+			frappe.throw(_("Responsável não encontrado."))
 		doc.responsavel_coord = coord
 		doc.associado_coord = None
 		nome_coord = frappe.db.get_value("Responsavel", coord, "nome_completo") or coord
@@ -344,7 +345,7 @@ def salvar_area(area_name: str, dados_json: str) -> dict:
 	elif tipo_coord == "Associado":
 		coord = (dados.get("coordenador") or "").strip()
 		if not frappe.db.exists("Associado", coord):
-			frappe.throw("Associado não encontrado.")
+			frappe.throw(_("Associado não encontrado."))
 		doc.associado_coord = coord
 		doc.responsavel_coord = None
 		nome_coord = frappe.db.get_value("Associado", coord, "nome_completo") or coord
@@ -386,7 +387,7 @@ def salvar_area(area_name: str, dados_json: str) -> dict:
 			entry["responsavel"] = None
 
 		if not entry["nome"]:
-			frappe.throw("Todo membro da equipe deve ter nome.")
+			frappe.throw(_("Todo membro da equipe deve ter nome."))
 
 		doc.append("equipe", entry)
 
@@ -400,7 +401,7 @@ def excluir_area(area_name: str, festa_name: str) -> dict:
 
 	doc = frappe.get_doc("Area da Festa", area_name)
 	if doc.festa != festa_name:
-		frappe.throw("Área não pertence a esta festa.")
+		frappe.throw(_("Área não pertence a esta festa."))
 	if doc.nome_area == AREA_PORTARIA_NOME:
 		frappe.throw(f"A área {AREA_PORTARIA_NOME} é obrigatória e não pode ser excluída.")
 
@@ -420,11 +421,11 @@ def criar_barraca(festa_name: str, nome_barraca: str, descricao: str, area: str)
 
 	nome_barraca = nome_barraca.strip()
 	if not nome_barraca:
-		frappe.throw("Informe o nome da barraca.")
+		frappe.throw(_("Informe o nome da barraca."))
 
 	area_validada = _validate_area_festa(area, festa_name)
 	if not area_validada:
-		frappe.throw("Selecione a área da barraca.")
+		frappe.throw(_("Selecione a área da barraca."))
 
 	doc = frappe.new_doc("Barraca da Festa")
 	doc.festa = festa_name
@@ -454,22 +455,22 @@ def salvar_barraca(barraca_name: str, dados_json: str) -> dict:
 	try:
 		dados = json.loads(dados_json) if isinstance(dados_json, str) else dados_json
 	except (ValueError, TypeError):
-		frappe.throw("Dados inválidos.")
+		frappe.throw(_("Dados inválidos."))
 
 	if not isinstance(dados, dict):
-		frappe.throw("Dados inválidos.")
+		frappe.throw(_("Dados inválidos."))
 
 	doc = frappe.get_doc("Barraca da Festa", barraca_name)
 
 	nome = (dados.get("nome_barraca") or "").strip()
 	if not nome:
-		frappe.throw("Informe o nome da barraca.")
+		frappe.throw(_("Informe o nome da barraca."))
 	doc.nome_barraca = nome
 	doc.descricao = (dados.get("descricao") or "").strip()
 
 	area_validada = _validate_area_festa(dados.get("area"), doc.festa)
 	if not area_validada:
-		frappe.throw("Selecione a área da barraca.")
+		frappe.throw(_("Selecione a área da barraca."))
 	doc.area = area_validada
 
 	tipo_coord = (dados.get("tipo_coord") or "Outro").strip()
@@ -479,7 +480,7 @@ def salvar_barraca(barraca_name: str, dados_json: str) -> dict:
 	if tipo_coord == "Responsavel":
 		coord = (dados.get("coordenador") or "").strip()
 		if not frappe.db.exists("Responsavel", coord):
-			frappe.throw("Responsável não encontrado.")
+			frappe.throw(_("Responsável não encontrado."))
 		doc.responsavel_coord = coord
 		doc.associado_coord = None
 		nome_coord = frappe.db.get_value("Responsavel", coord, "nome_completo") or coord
@@ -489,7 +490,7 @@ def salvar_barraca(barraca_name: str, dados_json: str) -> dict:
 	elif tipo_coord == "Associado":
 		coord = (dados.get("coordenador") or "").strip()
 		if not frappe.db.exists("Associado", coord):
-			frappe.throw("Associado não encontrado.")
+			frappe.throw(_("Associado não encontrado."))
 		doc.associado_coord = coord
 		doc.responsavel_coord = None
 		nome_coord = frappe.db.get_value("Associado", coord, "nome_completo") or coord
@@ -531,7 +532,7 @@ def salvar_barraca(barraca_name: str, dados_json: str) -> dict:
 			entry["responsavel"] = None
 
 		if not entry["nome"]:
-			frappe.throw("Todo membro da equipe deve ter nome.")
+			frappe.throw(_("Todo membro da equipe deve ter nome."))
 
 		doc.append("equipe", entry)
 
@@ -545,7 +546,7 @@ def excluir_barraca(barraca_name: str, festa_name: str) -> dict:
 
 	doc = frappe.get_doc("Barraca da Festa", barraca_name)
 	if doc.festa != festa_name:
-		frappe.throw("Barraca não pertence a esta festa.")
+		frappe.throw(_("Barraca não pertence a esta festa."))
 
 	produtos = frappe.get_all(
 		"Produto de Venda Festa",
@@ -620,28 +621,28 @@ def criar_produto(
 
 	nome_produto = nome_produto.strip()
 	if not nome_produto:
-		frappe.throw("Informe o nome do produto.")
+		frappe.throw(_("Informe o nome do produto."))
 
 	barraca = (barraca or "").strip()
 	if barraca and not frappe.db.exists("Barraca da Festa", barraca):
-		frappe.throw("Barraca não encontrada.")
+		frappe.throw(_("Barraca não encontrada."))
 	if barraca:
 		festa_da_barraca = frappe.db.get_value("Barraca da Festa", barraca, "festa")
 		if festa_da_barraca != festa_name:
-			frappe.throw("A barraca selecionada não pertence a esta festa.")
+			frappe.throw(_("A barraca selecionada não pertence a esta festa."))
 
 	try:
 		v_preco_venda = flt(preco_venda)
 		v_expectativa = flt(expectativa_venda_por_pessoa)
 	except (ValueError, TypeError):
-		frappe.throw("Valores numéricos inválidos.")
+		frappe.throw(_("Valores numéricos inválidos."))
 
 	if v_preco_venda < 0 or v_expectativa < 0:
-		frappe.throw("Os valores devem ser não-negativos.")
+		frappe.throw(_("Os valores devem ser não-negativos."))
 
 	convite_flag = 1 if faz_parte_convite in ("1", "true", True) else 0
 	if convite_flag and v_expectativa < 1:
-		frappe.throw("Produtos do convite exigem expectativa de venda por pessoa maior ou igual a 1.")
+		frappe.throw(_("Produtos do convite exigem expectativa de venda por pessoa maior ou igual a 1."))
 
 	doc = frappe.new_doc("Produto de Venda Festa")
 	doc.festa = festa_name
@@ -664,25 +665,25 @@ def salvar_produto(produto_name: str, dados_json: str) -> dict:
 	try:
 		dados = json.loads(dados_json) if isinstance(dados_json, str) else dados_json
 	except (ValueError, TypeError):
-		frappe.throw("Dados inválidos.")
+		frappe.throw(_("Dados inválidos."))
 
 	if not isinstance(dados, dict):
-		frappe.throw("Dados inválidos.")
+		frappe.throw(_("Dados inválidos."))
 
 	doc = frappe.get_doc("Produto de Venda Festa", produto_name)
 
 	nome_produto = (dados.get("nome_produto") or "").strip()
 	if not nome_produto:
-		frappe.throw("Informe o nome do produto.")
+		frappe.throw(_("Informe o nome do produto."))
 	doc.nome_produto = nome_produto
 
 	barraca = (dados.get("barraca") or "").strip()
 	if barraca and not frappe.db.exists("Barraca da Festa", barraca):
-		frappe.throw("Barraca não encontrada.")
+		frappe.throw(_("Barraca não encontrada."))
 	if barraca:
 		festa_da_barraca = frappe.db.get_value("Barraca da Festa", barraca, "festa")
 		if festa_da_barraca != doc.festa:
-			frappe.throw("A barraca selecionada não pertence a esta festa.")
+			frappe.throw(_("A barraca selecionada não pertence a esta festa."))
 	doc.barraca = barraca or None
 
 	faz_parte = dados.get("faz_parte_convite")
@@ -692,13 +693,13 @@ def salvar_produto(produto_name: str, dados_json: str) -> dict:
 		v_preco_venda = flt(dados.get("preco_venda", 0))
 		v_expectativa = flt(dados.get("expectativa_venda_por_pessoa", 0))
 	except (ValueError, TypeError):
-		frappe.throw("Valores numéricos inválidos.")
+		frappe.throw(_("Valores numéricos inválidos."))
 
 	if v_preco_venda < 0 or v_expectativa < 0:
-		frappe.throw("Os valores devem ser não-negativos.")
+		frappe.throw(_("Os valores devem ser não-negativos."))
 
 	if doc.faz_parte_convite and v_expectativa < 1:
-		frappe.throw("Produtos do convite exigem expectativa de venda por pessoa maior ou igual a 1.")
+		frappe.throw(_("Produtos do convite exigem expectativa de venda por pessoa maior ou igual a 1."))
 
 	doc.preco_venda = v_preco_venda
 	doc.expectativa_venda_por_pessoa = v_expectativa
@@ -713,7 +714,7 @@ def excluir_produto(produto_name: str, festa_name: str) -> dict:
 
 	doc = frappe.get_doc("Produto de Venda Festa", produto_name)
 	if doc.festa != festa_name:
-		frappe.throw("Produto não pertence a esta festa.")
+		frappe.throw(_("Produto não pertence a esta festa."))
 
 	usos = frappe.get_all(
 		"Uso em Produto Festa",
@@ -747,10 +748,10 @@ def _parse_json_dict(dados_json) -> dict:
 	try:
 		dados = json.loads(dados_json) if isinstance(dados_json, str) else dados_json
 	except (ValueError, TypeError):
-		frappe.throw("Dados inválidos.")
+		frappe.throw(_("Dados inválidos."))
 
 	if not isinstance(dados, dict):
-		frappe.throw("Dados inválidos.")
+		frappe.throw(_("Dados inválidos."))
 	return dados
 
 
@@ -782,22 +783,22 @@ def _validate_area_festa(area: str, festa_name: str) -> str | None:
 	if not area:
 		return None
 	if not frappe.db.exists("Area da Festa", area):
-		frappe.throw("Área não encontrada.")
+		frappe.throw(_("Área não encontrada."))
 	festa_da_area = frappe.db.get_value("Area da Festa", area, "festa")
 	if festa_da_area != festa_name:
-		frappe.throw("A área selecionada não pertence a esta festa.")
+		frappe.throw(_("A área selecionada não pertence a esta festa."))
 	return area
 
 
 def _validate_produto_festa(produto: str, festa_name: str) -> str:
 	produto = (produto or "").strip()
 	if not produto:
-		frappe.throw("Selecione o produto usado.")
+		frappe.throw(_("Selecione o produto usado."))
 	if not frappe.db.exists("Produto de Venda Festa", produto):
-		frappe.throw("Produto não encontrado.")
+		frappe.throw(_("Produto não encontrado."))
 	festa_do_produto = frappe.db.get_value("Produto de Venda Festa", produto, "festa")
 	if festa_do_produto != festa_name:
-		frappe.throw("O produto selecionado não pertence a esta festa.")
+		frappe.throw(_("O produto selecionado não pertence a esta festa."))
 	return produto
 
 
@@ -880,7 +881,7 @@ def _hydrate_compra(doc) -> dict:
 def _apply_compra_dados(doc, dados: dict, festa_name: str) -> set[str]:
 	nome_item = (dados.get("nome_item") or "").strip()
 	if not nome_item:
-		frappe.throw("Informe o nome do item.")
+		frappe.throw(_("Informe o nome do item."))
 
 	doc.nome_item = nome_item
 	doc.area = _validate_area_festa(dados.get("area"), festa_name)
@@ -894,17 +895,17 @@ def _apply_compra_dados(doc, dados: dict, festa_name: str) -> set[str]:
 
 	cotacoes = dados.get("cotacoes") or []
 	if not isinstance(cotacoes, list):
-		frappe.throw("Cotações inválidas.")
+		frappe.throw(_("Cotações inválidas."))
 	if sum(1 for row in cotacoes if _as_bool(row.get("escolhida"))) > 1:
-		frappe.throw("Apenas uma cotação pode ser marcada como escolhida.")
+		frappe.throw(_("Apenas uma cotação pode ser marcada como escolhida."))
 
 	doc.cotacoes = []
 	for row in cotacoes:
 		if not isinstance(row, dict):
-			frappe.throw("Cotação inválida.")
+			frappe.throw(_("Cotação inválida."))
 		fornecedor = (row.get("fornecedor") or "").strip()
 		if not fornecedor:
-			frappe.throw("Informe o fornecedor de todas as cotações.")
+			frappe.throw(_("Informe o fornecedor de todas as cotações."))
 		doc.append(
 			"cotacoes",
 			{
@@ -928,10 +929,10 @@ def _apply_compra_dados(doc, dados: dict, festa_name: str) -> set[str]:
 	if doc.usado_em_produtos:
 		usos = dados.get("usos_em_produto") or []
 		if not isinstance(usos, list):
-			frappe.throw("Usos em produto inválidos.")
+			frappe.throw(_("Usos em produto inválidos."))
 		for row in usos:
 			if not isinstance(row, dict):
-				frappe.throw("Uso em produto inválido.")
+				frappe.throw(_("Uso em produto inválido."))
 			doc.append(
 				"usos_em_produto",
 				{
@@ -996,7 +997,7 @@ def excluir_compra(compra_name: str, festa_name: str) -> dict:
 
 	doc = frappe.get_doc("Compra Festa", compra_name)
 	if doc.festa != festa_name:
-		frappe.throw("Compra não pertence a esta festa.")
+		frappe.throw(_("Compra não pertence a esta festa."))
 
 	frappe.delete_doc("Compra Festa", compra_name)
 	return {"ok": True}
@@ -1038,23 +1039,23 @@ def _hydrate_contratacao(doc) -> dict:
 def _apply_contratacao_dados(doc, dados: dict, festa_name: str) -> None:
 	nome_item = (dados.get("nome_item") or "").strip()
 	if not nome_item:
-		frappe.throw("Informe o nome do item.")
+		frappe.throw(_("Informe o nome do item."))
 	doc.nome_item = nome_item
 	doc.area = _validate_area_festa(dados.get("area"), festa_name)
 
 	cotacoes = dados.get("cotacoes") or []
 	if not isinstance(cotacoes, list):
-		frappe.throw("Cotações inválidas.")
+		frappe.throw(_("Cotações inválidas."))
 	if sum(1 for row in cotacoes if _as_bool(row.get("escolhida"))) > 1:
-		frappe.throw("Apenas uma cotação pode ser marcada como escolhida.")
+		frappe.throw(_("Apenas uma cotação pode ser marcada como escolhida."))
 
 	doc.cotacoes = []
 	for row in cotacoes:
 		if not isinstance(row, dict):
-			frappe.throw("Cotação inválida.")
+			frappe.throw(_("Cotação inválida."))
 		fornecedor = (row.get("fornecedor") or "").strip()
 		if not fornecedor:
-			frappe.throw("Informe o fornecedor de todas as cotações.")
+			frappe.throw(_("Informe o fornecedor de todas as cotações."))
 		doc.append(
 			"cotacoes",
 			{
@@ -1098,7 +1099,7 @@ def excluir_contratacao(contratacao_name: str, festa_name: str) -> dict:
 
 	doc = frappe.get_doc("Contratacao Festa", contratacao_name)
 	if doc.festa != festa_name:
-		frappe.throw("Contratação não pertence a esta festa.")
+		frappe.throw(_("Contratação não pertence a esta festa."))
 
 	frappe.delete_doc("Contratacao Festa", contratacao_name)
 	return {"ok": True}
@@ -1145,10 +1146,10 @@ def _apply_compra_usos_sem_previsao(doc, dados: dict, festa_name: str) -> None:
 		return
 	usos = dados.get("usos_em_produto") or []
 	if not isinstance(usos, list):
-		frappe.throw("Usos em produto inválidos.")
+		frappe.throw(_("Usos em produto inválidos."))
 	for row in usos:
 		if not isinstance(row, dict):
-			frappe.throw("Uso em produto inválido.")
+			frappe.throw(_("Uso em produto inválido."))
 		doc.append(
 			"usos_em_produto",
 			{
@@ -1183,7 +1184,7 @@ def criar_compra_sem_previsao(festa_name: str, dados_json: str) -> dict:
 
 	nome_item = (dados.get("nome_item") or "").strip()
 	if not nome_item:
-		frappe.throw("Informe o nome do item.")
+		frappe.throw(_("Informe o nome do item."))
 
 	doc = frappe.new_doc("Compra Festa")
 	doc.festa = festa_name
@@ -1206,11 +1207,11 @@ def salvar_compra_sem_previsao(compra_name: str, dados_json: str) -> dict:
 
 	doc = frappe.get_doc("Compra Festa", compra_name)
 	if doc.previsto:
-		frappe.throw("Apenas itens sem previsão podem ser editados aqui.")
+		frappe.throw(_("Apenas itens sem previsão podem ser editados aqui."))
 
 	nome_item = (dados.get("nome_item") or "").strip()
 	if not nome_item:
-		frappe.throw("Informe o nome do item.")
+		frappe.throw(_("Informe o nome do item."))
 
 	doc.nome_item = nome_item
 	doc.area = _validate_area_festa(dados.get("area"), doc.festa)
@@ -1243,7 +1244,7 @@ def criar_contratacao_sem_previsao(festa_name: str, dados_json: str) -> dict:
 
 	nome_item = (dados.get("nome_item") or "").strip()
 	if not nome_item:
-		frappe.throw("Informe o nome do item.")
+		frappe.throw(_("Informe o nome do item."))
 
 	doc = frappe.new_doc("Contratacao Festa")
 	doc.festa = festa_name
@@ -1263,11 +1264,11 @@ def salvar_contratacao_sem_previsao(contratacao_name: str, dados_json: str) -> d
 
 	doc = frappe.get_doc("Contratacao Festa", contratacao_name)
 	if doc.previsto:
-		frappe.throw("Apenas itens sem previsão podem ser editados aqui.")
+		frappe.throw(_("Apenas itens sem previsão podem ser editados aqui."))
 
 	nome_item = (dados.get("nome_item") or "").strip()
 	if not nome_item:
-		frappe.throw("Informe o nome do item.")
+		frappe.throw(_("Informe o nome do item."))
 
 	doc.nome_item = nome_item
 	doc.area = _validate_area_festa(dados.get("area"), doc.festa)
@@ -1284,7 +1285,7 @@ def salvar_fechamento_barraca(festa_name: str, barraca_name: str, dados_json: st
 	dados = _parse_json_dict(dados_json)
 
 	if frappe.db.get_value("Barraca da Festa", barraca_name, "festa") != festa_name:
-		frappe.throw("Barraca não pertence a esta festa.")
+		frappe.throw(_("Barraca não pertence a esta festa."))
 
 	precos = {
 		p.name: flt(p.preco_venda)
@@ -1297,13 +1298,13 @@ def salvar_fechamento_barraca(festa_name: str, barraca_name: str, dados_json: st
 
 	itens = dados.get("itens") or []
 	if not isinstance(itens, list):
-		frappe.throw("Itens inválidos.")
+		frappe.throw(_("Itens inválidos."))
 	for row in itens:
 		if not isinstance(row, dict):
-			frappe.throw("Item inválido.")
+			frappe.throw(_("Item inválido."))
 		produto = (row.get("produto") or "").strip()
 		if produto not in precos:
-			frappe.throw("Produto não pertence a esta barraca.")
+			frappe.throw(_("Produto não pertence a esta barraca."))
 		qtd = _as_non_negative_float(row.get("qtd_realizada", 0), "Quantidade realizada")
 		frappe.db.set_value(
 			"Produto de Venda Festa",

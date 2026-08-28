@@ -5,6 +5,7 @@ import time
 
 import frappe
 import requests
+from frappe import _
 from frappe.utils import now_datetime
 
 from .whatsapp_errors import WhatsAppConfigurationError, WhatsAppNumberNotFoundError, WhatsAppRequestError
@@ -312,7 +313,7 @@ def listar_grupos_whatsapp_para_select() -> list[dict[str, str]]:
 	"""Retorna opções de grupos WhatsApp para uso em campos Select no Desk."""
 	if not frappe.has_permission("Configuracoes de Recepcao", ptype="write"):
 		frappe.throw(
-			"Sem permissão para editar Configurações de Recepção.",
+			_("Sem permissão para editar Configurações de Recepção."),
 			frappe.PermissionError,
 		)
 

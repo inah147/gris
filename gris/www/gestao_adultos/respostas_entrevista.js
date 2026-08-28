@@ -9,7 +9,7 @@ frappe.ready(async () => {
 		boot = JSON.parse(dataElement.textContent || "{}");
 	} catch (error) {
 		console.error("Falha ao carregar os dados iniciais da entrevista.", error);
-		frappe.msgprint("Não foi possível carregar os dados iniciais da entrevista.");
+		frappe.msgprint(__("Não foi possível carregar os dados iniciais da entrevista."));
 		return;
 	}
 
@@ -80,7 +80,7 @@ frappe.ready(async () => {
 		});
 		alertSelectionKeys = keys;
 		alertReasonBySelectionKey = new Map(
-			Array.from(reasonMap.entries()).map(([key, reasons]) => [key, reasons.join("\n\n")])
+			Array.from(reasonMap.entries()).map(([key, reasons]) => [key, reasons.join("\n\n")]),
 		);
 	}
 
@@ -100,7 +100,7 @@ frappe.ready(async () => {
 						description: escapeHtml(description || ""),
 					},
 				},
-			})
+			}),
 		);
 	}
 
@@ -123,11 +123,11 @@ frappe.ready(async () => {
 				indicator.disabled = !hasAlert;
 				indicator.setAttribute(
 					"title",
-					hasAlert ? "Ver motivo do alerta" : "Resposta sem alerta"
+					hasAlert ? "Ver motivo do alerta" : "Resposta sem alerta",
 				);
 				indicator.setAttribute(
 					"aria-label",
-					hasAlert ? "Ver motivo do alerta" : "Resposta sem alerta"
+					hasAlert ? "Ver motivo do alerta" : "Resposta sem alerta",
 				);
 				const questionCard = select.closest(".entrevista-question");
 				if (questionCard) {
@@ -177,12 +177,12 @@ frappe.ready(async () => {
 					"load",
 					() =>
 						window.echarts ? resolve() : reject(new Error("ECharts não disponível")),
-					{ once: true }
+					{ once: true },
 				);
 				existing.addEventListener(
 					"error",
 					() => reject(new Error("Falha ao carregar ECharts")),
-					{ once: true }
+					{ once: true },
 				);
 				return;
 			}
@@ -238,7 +238,7 @@ frappe.ready(async () => {
 				const obs = document.getElementById(field.observation_fieldname);
 				const indicator = document.getElementById(`alert-indicator-${field.fieldname}`);
 				const observationIndicator = document.getElementById(
-					`obs-indicator-${field.fieldname}`
+					`obs-indicator-${field.fieldname}`,
 				);
 				if (select) {
 					select.value = entrevista[field.fieldname] || "";
@@ -277,7 +277,7 @@ frappe.ready(async () => {
 
 						openObservationModal(
 							field.label,
-							obs.value || "Sem observações para esta resposta."
+							obs.value || "Sem observações para esta resposta.",
 						);
 					});
 				}
@@ -302,11 +302,11 @@ frappe.ready(async () => {
 				indicator.classList.toggle("hidden", editMode || !hasObservation);
 				indicator.setAttribute(
 					"title",
-					hasObservation ? "Ver observação" : "Sem observações"
+					hasObservation ? "Ver observação" : "Sem observações",
 				);
 				indicator.setAttribute(
 					"aria-label",
-					hasObservation ? "Ver observação" : "Sem observações"
+					hasObservation ? "Ver observação" : "Sem observações",
 				);
 			});
 		});
@@ -355,7 +355,7 @@ frappe.ready(async () => {
 		const target = document.getElementById("grafico-pontuacoes");
 		const generalAlertsCount = (entrevista.alertas || []).filter(
 			(alerta) =>
-				Array.isArray(alerta.categorias) && alerta.categorias.includes("alerta_geral")
+				Array.isArray(alerta.categorias) && alerta.categorias.includes("alerta_geral"),
 		).length;
 
 		return {
@@ -374,7 +374,7 @@ frappe.ready(async () => {
 		scores,
 		alertsByCategory,
 		alertsTotal,
-		generalAlertsCount
+		generalAlertsCount,
 	) {
 		const styles = getComputedStyle(document.documentElement);
 		const barColor = styles.getPropertyValue("--color-chart-1").trim() || "#4477AA";
@@ -596,7 +596,7 @@ frappe.ready(async () => {
 			showToast(
 				"success",
 				"Entrevista salva",
-				"As alterações foram registradas com sucesso."
+				"As alterações foram registradas com sucesso.",
 			);
 			window.setTimeout(() => {
 				window.location.reload();
@@ -605,7 +605,7 @@ frappe.ready(async () => {
 			console.error(error);
 			button.disabled = false;
 			button.removeAttribute("aria-busy");
-			frappe.msgprint("Não foi possível salvar a entrevista.");
+			frappe.msgprint(__("Não foi possível salvar a entrevista."));
 		}
 	});
 
@@ -617,6 +617,6 @@ frappe.ready(async () => {
 		setEditMode(false);
 	} catch (error) {
 		console.error(error);
-		frappe.msgprint("Não foi possível carregar a entrevista.");
+		frappe.msgprint(__("Não foi possível carregar a entrevista."));
 	}
 });

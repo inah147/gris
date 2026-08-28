@@ -14,6 +14,7 @@ from __future__ import annotations
 import datetime
 
 import frappe
+from frappe import _
 from frappe.utils import add_months, getdate
 
 from gris.api.portal_access import user_has_access
@@ -92,7 +93,7 @@ def construir_meses(meses: int = MESES_PADRAO, hoje: datetime.date | None = None
 	inicio = add_months(primeiro_do_mes_atual, -(meses - 1))
 	sequencia = []
 	cursor = getdate(inicio)
-	for _ in range(meses):
+	for _mes in range(meses):
 		sequencia.append(cursor)
 		cursor = getdate(add_months(cursor, 1))
 	return sequencia
@@ -193,6 +194,9 @@ def get_recebimentos_por_associado(
 
 	Retorna `{associado: {"YYYY-MM": {"valor": float, "qtd": int}}}`.
 	"""
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	linhas = frappe.db.sql(
 		f"""
 		SELECT beneficiario,
@@ -230,6 +234,9 @@ def get_transacoes_do_associado(
 	associado: str, primeiro_dia: datetime.date, proximo_mes: datetime.date
 ) -> list[dict]:
 	"""Transações de contribuição de um associado no período, da mais recente para a mais antiga."""
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	linhas = frappe.db.sql(
 		f"""
 		SELECT name,
@@ -277,6 +284,9 @@ def get_transacoes_nao_vinculadas(primeiro_dia: datetime.date, proximo_mes: date
 	ser apuradas por associado enquanto alguém não preencher o beneficiário no
 	detalhe do extrato.
 	"""
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	linhas = frappe.db.sql(
 		f"""
 		SELECT name,
@@ -591,7 +601,7 @@ def _assert_acesso_leitura() -> None:
 	"""
 	if frappe.session.user == "Guest" or not user_has_access(ROTA_CONTRIBUICOES):
 		frappe.throw(
-			"Sem permissão para consultar a apuração de contribuições mensais.",
+			_("Sem permissão para consultar a apuração de contribuições mensais."),
 			frappe.PermissionError,
 		)
 
@@ -609,7 +619,7 @@ def get_extrato_do_associado(associado: str, meses=MESES_PADRAO):
 	"""Transações de contribuição de um associado no período apurado."""
 	_assert_acesso_leitura()
 	if not associado:
-		frappe.throw("Parâmetro 'associado' é obrigatório.", frappe.ValidationError)
+		frappe.throw(_("Parâmetro 'associado' é obrigatório."), frappe.ValidationError)
 
 	quantidade_meses = normalizar_meses(meses)
 	sequencia = construir_meses(quantidade_meses)

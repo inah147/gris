@@ -1,6 +1,7 @@
 import json
 
 import frappe
+from frappe import _
 
 from gris.api.portal_access import enrich_context, user_has_access
 
@@ -13,7 +14,7 @@ def get_context(context):
 		raise frappe.Redirect
 
 	if not user_has_access("/responsavel/meus_dados"):
-		frappe.throw("Você não tem permissão para acessar esta página.", frappe.PermissionError)
+		frappe.throw(_("Você não tem permissão para acessar esta página."), frappe.PermissionError)
 
 	user = frappe.session.user
 	responsavel_name = frappe.db.get_value("Responsavel", {"email": user}, "name")
@@ -66,7 +67,7 @@ def update_meus_dados(o_que_gosta_de_fazer_no_dia_a_dia, habilidades):
 	user = frappe.session.user
 	responsavel_name = frappe.db.get_value("Responsavel", {"email": user}, "name")
 	if not responsavel_name:
-		frappe.throw("Responsável não encontrado.")
+		frappe.throw(_("Responsável não encontrado."))
 
 	doc = frappe.get_doc("Responsavel", responsavel_name)
 	doc.o_que_gosta_de_fazer_no_dia_a_dia = o_que_gosta_de_fazer_no_dia_a_dia

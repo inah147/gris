@@ -8,6 +8,7 @@ Reaproveita os papéis já existentes no Gris:
 from __future__ import annotations
 
 import frappe
+from frappe import _
 
 ROLES_SOLICITANTE = ("Equipe de Metodos", "Gestor de Metodos")
 ROLES_GESTOR_METODOS = ("Gestor de Metodos",)
@@ -48,7 +49,7 @@ def pode_gerenciar_catalogo(user: str | None = None) -> bool:
 def garantir_gestor_catalogo(user: str | None = None) -> None:
 	if not pode_gerenciar_catalogo(user):
 		frappe.throw(
-			"Apenas a gestão de métodos pode manter o catálogo de insígnias e distintivos.",
+			_("Apenas a gestão de métodos pode manter o catálogo de insígnias e distintivos."),
 			frappe.PermissionError,
 		)
 
@@ -56,7 +57,7 @@ def garantir_gestor_catalogo(user: str | None = None) -> None:
 def garantir_solicitante(user: str | None = None) -> None:
 	if not pode_solicitar(user):
 		frappe.throw(
-			"Você não tem permissão para solicitar insígnias e distintivos.",
+			_("Você não tem permissão para solicitar insígnias e distintivos."),
 			frappe.PermissionError,
 		)
 
@@ -64,7 +65,7 @@ def garantir_solicitante(user: str | None = None) -> None:
 def garantir_financeiro(user: str | None = None) -> None:
 	if not pode_comprar(user):
 		frappe.throw(
-			"Apenas o responsável do financeiro pode registrar a compra.",
+			_("Apenas o responsável do financeiro pode registrar a compra."),
 			frappe.PermissionError,
 		)
 
@@ -76,7 +77,7 @@ def pode_ver_solicitacao(doc, user: str | None = None) -> bool:
 
 def garantir_acesso_solicitacao(doc, user: str | None = None) -> None:
 	if not pode_ver_solicitacao(doc, user):
-		frappe.throw("Você não tem acesso a esta solicitação.", frappe.PermissionError)
+		frappe.throw(_("Você não tem acesso a esta solicitação."), frappe.PermissionError)
 
 
 def pode_cancelar(doc, user: str | None = None) -> bool:

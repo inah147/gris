@@ -1,6 +1,7 @@
 # Copyright (c) 2026, Grupo Escoteiro Professora Inah de Mello - 47/SP and contributors
 # For license information, please see license.txt
 
+from frappe import _
 from frappe.model.document import Document
 
 
@@ -20,4 +21,4 @@ class ConfiguracoesGoogleWorkspace(Document):
 		if self.dias_expiracao_acesso_restrito and self.dias_expiracao_acesso_restrito < 1:
 			import frappe
 
-			frappe.throw("Dias para expiração do acesso restrito deve ser maior que zero.")
+			frappe.throw(_("Dias para expiração do acesso restrito deve ser maior que zero."))

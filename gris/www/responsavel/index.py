@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 
 from gris.api.portal_access import enrich_context, user_has_access
 
@@ -9,7 +10,7 @@ def get_context(context):
 		raise frappe.Redirect
 
 	if not user_has_access("/responsavel"):
-		frappe.throw("Você não tem permissão para acessar esta página.", frappe.PermissionError)
+		frappe.throw(_("Você não tem permissão para acessar esta página."), frappe.PermissionError)
 
 	context.sidebar_title = "Painel do Responsável"
 	context.active_link = "/responsavel"

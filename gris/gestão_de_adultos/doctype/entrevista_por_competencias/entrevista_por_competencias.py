@@ -3,6 +3,7 @@ from __future__ import annotations
 import unicodedata
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import now_datetime
 
@@ -283,7 +284,7 @@ class EntrevistaporCompetencias(Document):
 			"name",
 		)
 		if existing_name:
-			frappe.throw("Já existe entrevista cadastrada para este associado.")
+			frappe.throw(_("Já existe entrevista cadastrada para este associado."))
 
 	def calculate_scores_and_alerts(self):
 		score_totals = {fieldname: 0 for fieldname in SCORE_FIELDS}

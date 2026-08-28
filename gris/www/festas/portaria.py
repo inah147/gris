@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import frappe
+from frappe import _
 
 from gris.api.portal_access import enrich_context
 from gris.api.portal_cache_utils import get_uel_cached
@@ -29,7 +30,7 @@ def get_context(context):
 	tem_acesso_global = user_pode_operar_portaria(frappe.session.user)
 	if not tem_acesso_global and not festas:
 		frappe.throw(
-			"Você não tem permissão para acessar a Portaria.",
+			_("Você não tem permissão para acessar a Portaria."),
 			frappe.PermissionError,
 		)
 

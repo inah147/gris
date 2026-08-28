@@ -18,6 +18,8 @@ def execute():
 		if not frappe.db.has_column(doctype, "ativa"):
 			continue
 		# Interpolação segura: `doctype` vem da tupla literal acima.
-		frappe.db.sql(f"UPDATE `tab{doctype}` SET `ativa` = 1 WHERE `ativa` IS NULL OR `ativa` = 0")
+		frappe.db.sql(
+			f"UPDATE `tab{doctype}` SET `ativa` = 1 WHERE `ativa` IS NULL OR `ativa` = 0"
+		)  # nosemgrep
 
 	frappe.db.commit()

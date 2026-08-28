@@ -36,7 +36,7 @@ def get_context(context):
 	context.no_cache = 1
 
 	if not user_has_access("/recepcao"):
-		frappe.throw("Você não tem permissão para acessar esta página.", frappe.PermissionError)
+		frappe.throw(_("Você não tem permissão para acessar esta página."), frappe.PermissionError)
 
 	try:
 		year = int(frappe.form_dict.year)
@@ -278,7 +278,7 @@ def get_associates_for_scheduling():
 @frappe.whitelist()
 def schedule_visit(associate, date):
 	if not user_has_access("/recepcao"):
-		frappe.throw("Sem permissão", frappe.PermissionError)
+		frappe.throw(_("Sem permissão"), frappe.PermissionError)
 
 	associate_doc = frappe.get_doc("Novo Associado", associate)
 	if not _is_date_available_for_ramo(associate_doc.ramo, date):

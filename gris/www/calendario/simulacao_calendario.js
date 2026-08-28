@@ -309,7 +309,7 @@ function initCopyData() {
 		const targetYear = copyButton.getAttribute("data-target-year");
 
 		if (!sourceYear) {
-			frappe.msgprint("Selecione um ano de origem.");
+			frappe.msgprint(__("Selecione um ano de origem."));
 			return;
 		}
 
@@ -336,7 +336,7 @@ function initCopyData() {
 						showApiError(result, "Erro ao copiar os dados.");
 					},
 				});
-			}
+			},
 		);
 	});
 }
@@ -421,7 +421,7 @@ function initNewEventDialog() {
 		const inicioDate = getFieldValueById("modal-inicio");
 		const terminoDate = getFieldValueById("modal-termino");
 		const secoes = Array.from(
-			document.querySelectorAll('input[name="modal-secao"]:checked')
+			document.querySelectorAll('input[name="modal-secao"]:checked'),
 		).map((item) => item.value);
 		const local = document.getElementById("modal-local")?.value || "";
 		const nivel = getFieldValueById("modal-nivel");
@@ -429,12 +429,12 @@ function initNewEventDialog() {
 		const aberturaGeral = document.getElementById("modal-abertura-geral")?.checked ? 1 : 0;
 
 		if (!atividade || !inicioDate || !terminoDate || secoes.length === 0) {
-			frappe.msgprint("Preencha todos os campos obrigatórios.");
+			frappe.msgprint(__("Preencha todos os campos obrigatórios."));
 			return;
 		}
 
 		if (normalizeDateValue(terminoDate) < normalizeDateValue(inicioDate)) {
-			frappe.msgprint("A data de término não pode ser anterior à data de início.");
+			frappe.msgprint(__("A data de término não pode ser anterior à data de início."));
 			return;
 		}
 
@@ -481,11 +481,11 @@ function openEditDialog(data) {
 
 	setFieldValueWhenReady(
 		document.getElementById("edit-inicio"),
-		normalizeDateValue(data.inicio)
+		normalizeDateValue(data.inicio),
 	);
 	setFieldValueWhenReady(
 		document.getElementById("edit-termino"),
-		normalizeDateValue(data.termino)
+		normalizeDateValue(data.termino),
 	);
 	setFieldValueWhenReady(document.getElementById("edit-secao"), data.secao || "Diretoria");
 	setFieldValueWhenReady(document.getElementById("edit-nivel"), data.nivel || DEFAULT_LEVEL);
@@ -530,12 +530,12 @@ function initEditEventDialog() {
 		const aberturaGeral = document.getElementById("edit-abertura-geral")?.checked ? 1 : 0;
 
 		if (!eventId || !atividade || !inicioDate || !terminoDate || !secao) {
-			frappe.msgprint("Preencha todos os campos obrigatórios.");
+			frappe.msgprint(__("Preencha todos os campos obrigatórios."));
 			return;
 		}
 
 		if (normalizeDateValue(terminoDate) < normalizeDateValue(inicioDate)) {
-			frappe.msgprint("A data de término não pode ser anterior à data de início.");
+			frappe.msgprint(__("A data de término não pode ser anterior à data de início."));
 			return;
 		}
 
@@ -824,7 +824,7 @@ function initReconciliation() {
                                 <span>${formatDiffValue(diff.simulated?.[field])}</span>
                             </span>
                         </li>
-                    `
+                    `,
 					)
 					.join("");
 
@@ -834,7 +834,7 @@ function initReconciliation() {
                     <div class="simulation-reconcile-change-list-wrap">
                         <ul class="simulation-reconcile-change-list">${changeItems}</ul>
                     </div>
-                `
+                `,
 				);
 			}
 
@@ -879,7 +879,7 @@ function initReconciliation() {
 			});
 
 			if (!actions.length) {
-				frappe.msgprint("Nenhuma alteração selecionada para aplicação.");
+				frappe.msgprint(__("Nenhuma alteração selecionada para aplicação."));
 				return;
 			}
 
@@ -897,9 +897,8 @@ function submitReconciliation(actions) {
 		callback(result) {
 			if (result.message?.count !== undefined) {
 				closeDialogById("reconcile-modal");
-				document.getElementById(
-					"success-message"
-				).textContent = `${result.message.count} alterações aplicadas com sucesso.`;
+				document.getElementById("success-message").textContent =
+					`${result.message.count} alterações aplicadas com sucesso.`;
 				openDialogById("success-modal");
 				return;
 			}

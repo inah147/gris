@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 
 import frappe
+from frappe import _
 from frappe.utils import date_diff, getdate, today
 
 from gris.utils.gestores import buscar_destinatarios_gestores
@@ -267,12 +268,12 @@ def notificar_vencimento_manual(associado_name: str) -> dict:
 	Não atualiza campos de idempotência (envio pode ser repetido pelo usuário).
 	"""
 	if not frappe.has_permission("Associado", "read", associado_name):
-		frappe.throw("Sem permissão para acessar este Associado.", frappe.PermissionError)
+		frappe.throw(_("Sem permissão para acessar este Associado."), frappe.PermissionError)
 
 	associado = frappe.get_doc("Associado", associado_name)
 
 	if not associado.validade_registro:
-		frappe.throw("Este associado não possui validade de registro informada.")
+		frappe.throw(_("Este associado não possui validade de registro informada."))
 
 	data_hoje = getdate(today())
 	dias_para_vencer = date_diff(getdate(associado.validade_registro), data_hoje)
@@ -291,7 +292,7 @@ def notificar_vencimento_manual(associado_name: str) -> dict:
 	destinatario = _resolver_destinatario(associado_dict, links_por_associado, contatos_responsavel)
 
 	if not destinatario:
-		frappe.throw("Não foi possível encontrar um número de telefone elegível para o aviso.")
+		frappe.throw(_("Não foi possível encontrar um número de telefone elegível para o aviso."))
 
 	mensagem = _montar_mensagem_aviso(
 		dias_para_vencer=dias_para_vencer,

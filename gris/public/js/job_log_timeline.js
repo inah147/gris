@@ -85,7 +85,9 @@ gris.job_logs.html_metricas = function (metricas) {
 
 gris.job_logs.html_eventos = function (eventos) {
 	if (!eventos || !eventos.length) {
-		return `<div class="text-muted">${__("Este job não registrou nenhum detalhe nesta execução.")}</div>`;
+		return `<div class="text-muted">${__(
+			"Este job não registrou nenhum detalhe nesta execução."
+		)}</div>`;
 	}
 
 	const linhas = eventos
@@ -96,15 +98,15 @@ gris.job_logs.html_eventos = function (eventos) {
 			let contexto = "";
 			if (evento.contexto && Object.keys(evento.contexto).length) {
 				contexto = `<div class="gris-job-evento-contexto">${gris.job_logs.escapar(
-					JSON.stringify(evento.contexto),
+					JSON.stringify(evento.contexto)
 				)}</div>`;
 			}
 
 			return `<div class="gris-job-evento gris-job-evento-${cor}">
 				<div class="gris-job-evento-horario">${gris.job_logs.escapar(horario)}</div>
 				<div class="gris-job-evento-nivel"><span class="indicator-pill ${cor}">${gris.job_logs.escapar(
-					nivel,
-				)}</span></div>
+				nivel
+			)}</span></div>
 				<div class="gris-job-evento-mensagem">${gris.job_logs.escapar(evento.mensagem)}${contexto}</div>
 			</div>`;
 		})

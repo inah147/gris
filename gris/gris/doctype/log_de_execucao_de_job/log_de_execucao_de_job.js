@@ -20,7 +20,7 @@ frappe.ui.form.on("Log de Execucao de Job", {
 function aplicar_indicador(frm) {
 	frm.page.set_indicator(
 		gris.job_logs.rotulo_status(frm.doc.status),
-		gris.job_logs.cor_status(frm.doc.status),
+		gris.job_logs.cor_status(frm.doc.status)
 	);
 }
 

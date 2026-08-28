@@ -282,7 +282,8 @@ def export_calendar(year=None, month=None, show_empty_days=1, sections=None):
 		if uel_settings.logo:
 			file_path = frappe.utils.file_manager.get_file_path(uel_settings.logo)
 			mime_type = mimetypes.guess_type(file_path)[0] or "image/png"
-			with open(file_path, "rb") as f:
+			# Caminho devolvido pelo file_manager do Frappe para um File do site.
+			with open(file_path, "rb") as f:  # nosemgrep
 				encoded_string = base64.b64encode(f.read()).decode()
 				uel_logo = f"data:{mime_type};base64,{encoded_string}"
 	except Exception:
@@ -432,10 +433,12 @@ def export_calendar(year=None, month=None, show_empty_days=1, sections=None):
 
 	# Render Template
 	template_path = frappe.get_app_path("gris", "templates/pages/calendar_pdf.html")
-	with open(template_path) as f:
+	# Template interno da app, montado com frappe.get_app_path logo acima.
+	with open(template_path) as f:  # nosemgrep
 		template_content = f.read()
 
-	html_content = frappe.render_template(
+	# `template_content` é o HTML interno da app lido logo acima.
+	html_content = frappe.render_template(  # nosemgrep
 		template_content,
 		{
 			"uel_name": uel_name,

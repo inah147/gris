@@ -22,7 +22,9 @@ def get_context(context):
 		context.subtitle = f"{uel_data.get('tipo_uel', '')} {uel_data.get('nome_da_uel', '')} - {uel_data.get('numeral', '')}/{uel_data.get('regiao', '')}".strip()
 
 
-@frappe.whitelist(allow_guest=True)
+# Público por intenção: é o formulário de interesse de novas famílias, que por
+# definição é preenchido por quem ainda não tem conta.
+@frappe.whitelist(allow_guest=True)  # nosemgrep
 def submit_interest(
 	nome_responsavel,
 	email_responsavel,
@@ -174,8 +176,10 @@ def submit_interest(
 				# Fix potential HTML entities in Jinja logic if loaded from JSON
 				template_content = email_template.response.replace("&gt;", ">").replace("&lt;", "<")
 
-				message = frappe.render_template(template_content, context)
-				subject = frappe.render_template(email_template.subject, context)
+				# Os templates vêm do DocType Email Template, editável só no Desk por quem
+				# tem permissão nele — não são conteúdo enviado pelo formulário público.
+				message = frappe.render_template(template_content, context)  # nosemgrep
+				subject = frappe.render_template(email_template.subject, context)  # nosemgrep
 
 				frappe.sendmail(recipients=[email_responsavel], subject=subject, message=message, now=True)
 				frappe.log_error("DEBUG EMAIL SUCCESS", f"Email sent to {email_responsavel}")

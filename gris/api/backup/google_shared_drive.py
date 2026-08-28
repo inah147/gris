@@ -458,7 +458,8 @@ def _validate_uploaded_checksum(local_path, remote_md5, file_name):
 		return
 
 	hash_md5 = hashlib.md5()  # nosec B324
-	with open(local_path, "rb") as file_handle:
+	# `local_path` é o arquivo de backup gerado pelo próprio bench nesta execução.
+	with open(local_path, "rb") as file_handle:  # nosemgrep
 		for chunk in iter(lambda: file_handle.read(1024 * 1024), b""):
 			hash_md5.update(chunk)
 

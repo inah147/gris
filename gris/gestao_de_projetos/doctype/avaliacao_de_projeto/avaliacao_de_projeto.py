@@ -86,7 +86,9 @@ def get_avaliadores_permitidos(projeto: str) -> list[str]:
 	return _get_allowed_reviewer_names(projeto)
 
 
-@frappe.whitelist(allow_guest=True)
+# Público por necessidade: formulário de avaliação aberto por link. O acesso é
+# controlado pelo token único de no mínimo 16 caracteres.
+@frappe.whitelist(allow_guest=True)  # nosemgrep
 def get_avaliacao_individual_por_token(token: str) -> dict[str, Any]:
 	"""Retorna dados mínimos de uma avaliação individual via token único (público)."""
 	token = (token or "").strip()
@@ -115,7 +117,9 @@ def get_avaliacao_individual_por_token(token: str) -> dict[str, Any]:
 	}
 
 
-@frappe.whitelist(allow_guest=True)
+# Público por necessidade: envio da avaliação pelo link, controlado pelo token único
+# e não reutilizável, como diz a docstring.
+@frappe.whitelist(allow_guest=True)  # nosemgrep
 def submeter_avaliacao_individual(
 	token: str,
 	resultado_projeto: str,

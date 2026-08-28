@@ -52,7 +52,10 @@ def _verificar_pagamento(
 	return data
 
 
-@frappe.whitelist(allow_guest=True, methods=["POST"])
+# Público por necessidade: quem chama é a InfinitePay, que não tem sessão Frappe. O
+# fluxo de segurança está descrito na docstring — o pagamento é reconfirmado
+# server-to-server antes de ser persistido.
+@frappe.whitelist(allow_guest=True, methods=["POST"])  # nosemgrep
 def webhook_infinitepay():
 	"""Endpoint para receber notificações de pagamento da InfinitePay.
 

@@ -128,7 +128,9 @@ def _is_safe_receipt_url(url: str | None) -> bool:
 # ─── Endpoint AJAX para polling ───────────────────────────────────────────────
 
 
-@frappe.whitelist(allow_guest=True)
+# Público por necessidade: polling da página de confirmação, acessada pelo comprador
+# sem login. Exige o par convite+token, tem rate limit e devolve só status e data.
+@frappe.whitelist(allow_guest=True)  # nosemgrep
 @rate_limit(key="convite-confirmado-status", limit=30, seconds=60)
 def get_status(c: str | None = None, t: str | None = None) -> dict:
 	"""Retorna apenas o status de pagamento + timestamp. Sem dados sensíveis.

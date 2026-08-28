@@ -357,7 +357,8 @@ def gerar_pdf_qr_convidados(festa_name: str) -> None:
 	link = _public_link(avaliacao_doc)
 	festa_titulo = festa_doc.nome_festa or festa_doc.name
 	qr_b64 = base64.b64encode(gerar_png(link)).decode()
-	html = frappe.render_template(
+	# QR_PDF_TEMPLATE é constante deste módulo; o contexto não é interpretado como template.
+	html = frappe.render_template(  # nosemgrep
 		QR_PDF_TEMPLATE, {"festa_titulo": festa_titulo, "qr_b64": qr_b64, "link": link}
 	)
 

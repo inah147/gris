@@ -37,3 +37,11 @@ tests/
 # o campo em silêncio a cada papel novo, então a leitura ampla é intencional.
 # JSON não aceita comentário, por isso a exceção mora aqui.
 gris/gris/doctype/unidade_organizacional/unidade_organizacional.json
+
+# regras do Frappe em geral
+#
+# .github/skills/ é ferramental local do Claude Code (scripts de benchmark e
+# avaliação de skills), não código da app Frappe: roda na máquina de quem
+# desenvolve, lendo os diretórios de resultado que ele mesmo monta. As regras
+# deste conjunto — pensadas para request handlers do Frappe — não se aplicam.
+.github/skills/

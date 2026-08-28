@@ -33,7 +33,8 @@ FORMATO_CSV = "csv"
 
 def _read_text(file_path: str) -> str:
 	"""Lê o arquivo como texto, tolerando UTF-8 (com ou sem BOM) e Latin-1."""
-	with open(file_path, "rb") as f:
+	# Helper privado: só recebe caminhos resolvidos no servidor a partir de um File.
+	with open(file_path, "rb") as f:  # nosemgrep
 		raw = f.read()
 	for encoding in ("utf-8-sig", "latin-1"):
 		try:
@@ -286,7 +287,8 @@ def _bank_statement_rows_from_html(file_path: str) -> list[dict]:
 
 
 def _bank_statement_rows_from_ofx(file_path: str) -> list[dict]:
-	with open(file_path) as f:
+	# Helper privado: só recebe caminhos resolvidos no servidor a partir de um File.
+	with open(file_path) as f:  # nosemgrep
 		ofx = OfxParser.parse(f)
 
 	return [
@@ -303,7 +305,10 @@ def _bank_statement_rows_from_ofx(file_path: str) -> list[dict]:
 	]
 
 
-@frappe.whitelist()
+# Sem @frappe.whitelist(): esta função abre um caminho de arquivo do servidor
+# e só é chamada pelos controladores das páginas de /financeiro, que resolvem o
+# caminho a partir de um File já validado. Exposta como endpoint, qualquer
+# usuário logado poderia ler arquivo arbitrário do site.
 def get_infinitepay_bank_statement_df(file: str, filter_dt: str | None = None) -> pd.DataFrame:
 	"""Extrato bancário Infinitepay: aceita o OFX antigo e o relatório HTML atual."""
 	formato = _detect_format(file)
@@ -442,7 +447,10 @@ def _prepare_sales_df(df: pd.DataFrame, filter_dt: str | None = None) -> pd.Data
 	return df
 
 
-@frappe.whitelist()
+# Sem @frappe.whitelist(): esta função abre um caminho de arquivo do servidor
+# e só é chamada pelos controladores das páginas de /financeiro, que resolvem o
+# caminho a partir de um File já validado. Exposta como endpoint, qualquer
+# usuário logado poderia ler arquivo arbitrário do site.
 def get_infinitepay_sales_df(file_path: str, filter_dt: str | None = None):
 	"""Relatório de vendas Infinitepay: aceita o CSV antigo e o XML atual."""
 	formato = _detect_format(file_path)
@@ -657,7 +665,10 @@ def _prepare_receipts_df(df: pd.DataFrame) -> pd.DataFrame:
 	)
 
 
-@frappe.whitelist()
+# Sem @frappe.whitelist(): esta função abre um caminho de arquivo do servidor
+# e só é chamada pelos controladores das páginas de /financeiro, que resolvem o
+# caminho a partir de um File já validado. Exposta como endpoint, qualquer
+# usuário logado poderia ler arquivo arbitrário do site.
 def get_infinitepay_receipts_df(file_path: str, filter_dt: str | None = None) -> pd.DataFrame:
 	"""Relatório de recebimentos Infinitepay: aceita o CSV antigo e os XML atuais."""
 	formato = _detect_format(file_path)

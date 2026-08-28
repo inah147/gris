@@ -5,7 +5,7 @@ from gris.api.financeiro.btg import get_btg_bank_statement_df
 no_cache = 1
 
 
-from gris.api.portal_access import enrich_context
+from gris.api.portal_access import enrich_context, pode_conciliar
 from gris.api.portal_cache_utils import get_uel_cached
 
 
@@ -30,9 +30,7 @@ def get_context(context):
 	enrich_context(context, "/financeiro/contas")
 
 	# Permissão para conciliação/upload
-	context.can_reconcile_btg_empresas = frappe.has_permission(
-		"Transacao BTG Empresas", ptype="create"
-	) and frappe.has_permission("Transacao BTG Empresas", ptype="write")
+	context.can_reconcile_btg_empresas = pode_conciliar("Transacao BTG Empresas")
 
 	# Opcional: injeta no boot para JS
 	try:

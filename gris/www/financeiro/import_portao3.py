@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 
 from gris.api.financeiro.portao3 import get_portao3_bank_statement_df
-from gris.api.portal_access import enrich_context
+from gris.api.portal_access import enrich_context, pode_conciliar
 from gris.api.portal_cache_utils import get_uel_cached
 
 no_cache = 1
@@ -32,9 +32,7 @@ def get_context(context):
 	enrich_context(context, "/financeiro/contas")
 
 	# Permissão para conciliação/upload
-	context.can_reconcile_portao3 = frappe.has_permission(
-		"Transacao Portao 3", ptype="create"
-	) and frappe.has_permission("Transacao Portao 3", ptype="write")
+	context.can_reconcile_portao3 = pode_conciliar("Transacao Portao 3")
 
 	# Opcional: injeta no boot para JS
 	try:

@@ -212,7 +212,9 @@ def _validar_convidados(
 # ---------------------------------------------------------------------------
 
 
-@frappe.whitelist(allow_guest=True)
+# Público por necessidade: vitrine de festas com venda aberta. Só devolve dados que
+# já são públicos na página de vendas.
+@frappe.whitelist(allow_guest=True)  # nosemgrep
 def listar_festas_abertas() -> list[dict]:
 	rows = frappe.get_all(
 		"Festa",
@@ -235,7 +237,9 @@ def listar_festas_abertas() -> list[dict]:
 	]
 
 
-@frappe.whitelist(allow_guest=True)
+# Público por necessidade: opções de convite à venda, exibidas na página pública.
+# Só lista opções ativas de festa com venda aberta.
+@frappe.whitelist(allow_guest=True)  # nosemgrep
 def listar_opcoes(festa_name: str) -> dict:
 	festa = _festa_aberta(festa_name)
 	opcoes_rows = frappe.get_all(
@@ -267,7 +271,9 @@ def listar_opcoes(festa_name: str) -> dict:
 	}
 
 
-@frappe.whitelist(allow_guest=True)
+# Público por necessidade: cálculo do carrinho antes do login. Não grava nada e
+# revalida no servidor os itens e o valor da doação.
+@frappe.whitelist(allow_guest=True)  # nosemgrep
 def get_resumo_carrinho(festa_name: str, itens, doacao_valor=0) -> dict:
 	festa = _festa_aberta(festa_name)
 	resumo_itens, subtotal, total_convites = _validar_itens(festa_name, itens)
@@ -282,7 +288,9 @@ def get_resumo_carrinho(festa_name: str, itens, doacao_valor=0) -> dict:
 	}
 
 
-@frappe.whitelist(allow_guest=True)
+# Público por necessidade: é a compra de convite pelo visitante. Tem rate limit e
+# revalida no servidor festa, itens, valores e dados do pagador.
+@frappe.whitelist(allow_guest=True)  # nosemgrep
 @rate_limit(key="venda-convite", limit=10, seconds=60)
 def criar_convite(
 	festa_name: str,
@@ -357,7 +365,9 @@ def criar_convite(
 	}
 
 
-@frappe.whitelist(allow_guest=True)
+# Público por necessidade: o comprador acompanha o pagamento sem login. Devolve só
+# status e link de pagamento do próprio convite.
+@frappe.whitelist(allow_guest=True)  # nosemgrep
 def get_status_pagamento(convite_name: str) -> dict:
 	if not convite_name:
 		frappe.throw(_("Parâmetro 'convite_name' obrigatório."))

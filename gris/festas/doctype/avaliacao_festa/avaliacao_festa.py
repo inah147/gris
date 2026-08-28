@@ -59,7 +59,9 @@ class AvaliacaoFesta(Document):
 		)
 
 
-@frappe.whitelist(allow_guest=True)
+# Público por necessidade: formulário de avaliação aberto por link. O acesso é
+# controlado pelo token único de no mínimo 16 caracteres.
+@frappe.whitelist(allow_guest=True)  # nosemgrep
 def get_avaliacao_individual_festa_por_token(token: str) -> dict[str, Any]:
 	"""Retorna dados mínimos de uma avaliação individual via token único (público)."""
 	token = (token or "").strip()
@@ -88,7 +90,9 @@ def get_avaliacao_individual_festa_por_token(token: str) -> dict[str, Any]:
 	}
 
 
-@frappe.whitelist(allow_guest=True)
+# Público por necessidade: envio da avaliação pelo link. O acesso é controlado pelo
+# token único e não reutilizável, como diz a docstring.
+@frappe.whitelist(allow_guest=True)  # nosemgrep
 def submeter_avaliacao_individual_festa(
 	token: str,
 	resultado_festa: str,
@@ -156,7 +160,9 @@ def submeter_avaliacao_individual_festa(
 	return {"ok": True}
 
 
-@frappe.whitelist(allow_guest=True)
+# Público por necessidade: valida o link de avaliação do convidado. Só devolve o
+# nome da festa e exige o token único.
+@frappe.whitelist(allow_guest=True)  # nosemgrep
 def get_festa_convidado_por_token(token: str) -> dict[str, Any]:
 	"""Valida o token público de convidados e retorna o título da festa."""
 	token = (token or "").strip()
@@ -171,7 +177,9 @@ def get_festa_convidado_por_token(token: str) -> dict[str, Any]:
 	return {"ok": True, "festa_titulo": festa_titulo}
 
 
-@frappe.whitelist(allow_guest=True)
+# Público por necessidade: coleta anônima pelo link do convidado, controlada pelo
+# token único da festa.
+@frappe.whitelist(allow_guest=True)  # nosemgrep
 def submeter_avaliacao_convidado(
 	token: str,
 	recomendacao: str,

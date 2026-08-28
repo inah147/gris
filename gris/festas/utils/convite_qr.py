@@ -141,10 +141,12 @@ def gerar_pdf_convite(convite, convidado, *, item_convite=None) -> bytes:
 		"convite_festa_qr",
 		"convite_festa_qr.html",
 	)
-	with open(template_path, encoding="utf-8") as fh:
+	# Template interno da app, montado com frappe.get_app_path logo acima.
+	with open(template_path, encoding="utf-8") as fh:  # nosemgrep
 		template = fh.read()
 
-	html = frappe.render_template(
+	# `template` é o HTML interno da app lido logo acima.
+	html = frappe.render_template(  # nosemgrep
 		template,
 		{
 			"festa": festa,

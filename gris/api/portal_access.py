@@ -568,3 +568,18 @@ def enrich_context(context, current_path: str):
 		context.is_guest_user = True
 
 	return context
+
+
+def pode_conciliar(*doctypes: str) -> bool:
+	"""True quando o usuário pode criar E editar todos os DocTypes informados.
+
+	Usado pelas páginas de importação de extrato do /financeiro apenas para
+	mostrar ou esconder as ações de upload; quem faz valer a permissão é o
+	método de servidor que processa o arquivo.
+	"""
+	for doctype in doctypes:
+		pode_criar = frappe.has_permission(doctype, ptype="create")
+		pode_editar = frappe.has_permission(doctype, ptype="write")
+		if not (pode_criar and pode_editar):
+			return False
+	return True

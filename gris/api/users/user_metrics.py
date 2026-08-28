@@ -156,5 +156,4 @@ def update_associates_time_series():
 			doc.insert()
 			# doc.insert(ignore_permissions=True)
 
-	frappe.db.commit()
 	return results

@@ -68,6 +68,4 @@ def batch_update_transactions(transaction_ids, updates):
 			frappe.log_error(f"Erro ao atualizar transação {transaction_id}: {e!s}")
 			continue
 
-	frappe.db.commit()
-
 	return {"success": True, "updated_count": updated_count, "total_requested": len(transaction_ids)}

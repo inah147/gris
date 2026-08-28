@@ -1,0 +1,39 @@
+# Padrões que o `semgrep ci` do CI (.github/workflows/linter.yml) deve ignorar.
+#
+# ATENÇÃO: a existência deste arquivo substitui a lista padrão do semgrep, então
+# ela é repetida aqui na íntegra antes das exceções do projeto.
+
+# --- padrão do semgrep -------------------------------------------------------
+.gitignore
+.git/
+
+node_modules/
+build/
+dist/
+vendor/
+.env/
+.venv/
+.tox/
+*.min.js
+.npm/
+.yarn/
+
+test/
+tests/
+*_test.go
+
+.semgrep
+.semgrep_logs/
+
+# --- exceções do GRIS --------------------------------------------------------
+
+# regra: relaxed-permissions ("role": "All")
+#
+# "Unidade Organizacional" é a tabela de referência das seções/ramos do grupo:
+# só nomes de unidade, nenhum dado pessoal. O campo `area` do Associado é um
+# Link para ela, então todo papel que edita um associado no Desk — e os
+# Responsáveis que abrem /associados/detalhe no portal — precisam de leitura
+# para o dropdown funcionar. Trocar "All" por uma lista fixa de papéis quebraria
+# o campo em silêncio a cada papel novo, então a leitura ampla é intencional.
+# JSON não aceita comentário, por isso a exceção mora aqui.
+gris/gris/doctype/unidade_organizacional/unidade_organizacional.json

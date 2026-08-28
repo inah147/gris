@@ -222,7 +222,6 @@ def criar_previsao(
 		}
 	)
 	doc.insert()
-	frappe.db.commit()
 	return {"success": True, "name": doc.name}
 
 
@@ -257,7 +256,6 @@ def atualizar_previsao(
 		doc.observacoes = observacoes or None
 
 	doc.save()
-	frappe.db.commit()
 	return {"success": True, "name": doc.name}
 
 
@@ -266,7 +264,6 @@ def excluir_previsao(name: str) -> dict:
 	"""Remove uma previsão e seus itens."""
 	_exigir_gestao()
 	frappe.delete_doc("Previsao Orcamentaria", name)
-	frappe.db.commit()
 	return {"success": True}
 
 
@@ -312,7 +309,6 @@ def salvar_item(
 		doc.append("itens", dados)
 
 	doc.save()
-	frappe.db.commit()
 	return {"success": True, "name": doc.name}
 
 
@@ -335,7 +331,6 @@ def excluir_item(previsao: str, item_name: str) -> dict:
 		item.idx = posicao
 	doc.set("itens", restantes)
 	doc.save()
-	frappe.db.commit()
 	return {"success": True}
 
 
@@ -373,7 +368,6 @@ def duplicar_previsao(name: str, titulo: str, exercicio: int, data_inicio: str, 
 		}
 	)
 	doc.insert()
-	frappe.db.commit()
 	return {"success": True, "name": doc.name}
 
 

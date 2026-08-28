@@ -413,10 +413,12 @@ def run_daily_restricted_access_cleanup():
 
 	if changed:
 		settings.save(ignore_permissions=True)
-		frappe.db.commit()
+		# Commit explícito: as concessões já foram efetivadas na API do Google. Sem
+		# persistir agora, uma falha adiante desfaria só o nosso lado e o próximo ciclo
+		# tentaria conceder de novo o que já existe.
+		frappe.db.commit()  # nosemgrep
 
 	frappe.db.set_single_value(SETTINGS_DOCTYPE, {"ultimo_sync_em": now_datetime(), "ultimo_erro": ""})
-	frappe.db.commit()
 
 
 def run_daily_inactive_access_cleanup():
@@ -439,4 +441,3 @@ def run_daily_inactive_access_cleanup():
 			revoke_drive_access_if_exists(drive, email, drive_row.drive_id)
 
 	frappe.db.set_single_value(SETTINGS_DOCTYPE, {"ultimo_sync_em": now_datetime(), "ultimo_erro": ""})
-	frappe.db.commit()

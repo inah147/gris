@@ -163,14 +163,18 @@ def _get(
 
 def _registrar_sucesso() -> None:
 	frappe.db.set_single_value(SETTINGS_DOCTYPE, {"ultimo_envio_em": now_datetime(), "ultimo_erro": ""})
-	frappe.db.commit()
+	# Commit explícito: a mensagem já foi entregue pelo provedor. O marcador de
+	# último envio não pode ser desfeito por um rollback do chamador.
+	frappe.db.commit()  # nosemgrep
 
 
 def _registrar_erro(contexto: str) -> None:
 	tb = frappe.get_traceback()
 	frappe.log_error(tb, f"WhatsApp:{contexto}")
 	frappe.db.set_single_value(SETTINGS_DOCTYPE, {"ultimo_erro": tb[-5000:]})
-	frappe.db.commit()
+	# Commit explícito: o chamador propaga a exceção logo em seguida e o rollback
+	# apagaria justamente o registro do erro que se quer diagnosticar.
+	frappe.db.commit()  # nosemgrep
 
 
 # ─── Funções síncronas (chamadas diretamente ou via enqueue) ──────────────────

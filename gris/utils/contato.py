@@ -16,7 +16,7 @@ def format_phone(phone):
 	if not phone:
 		return phone
 
-	digits = "".join(filter(str.isdigit, str(phone)))
+	digits = "".join(c for c in str(phone) if c.isdigit())
 
 	if not digits:
 		return ""

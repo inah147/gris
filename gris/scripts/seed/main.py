@@ -81,5 +81,7 @@ def seed_test_data(
 		frappe.db.rollback()
 		print("=== DRY-RUN: rollback executado, nenhum dado persistido ===\n")
 	else:
-		frappe.db.commit()
+		# Script de linha de comando (bench execute/console): não há ciclo de request
+		# nem worker para fechar a transação, o commit tem que ser explícito.
+		frappe.db.commit()  # nosemgrep
 		print("=== SEED concluído (commit) ===\n")

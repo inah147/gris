@@ -71,8 +71,6 @@ def generate_monthly_fixed_payments():
 		)
 		doc.insert(ignore_permissions=True)
 		created += 1
-	if created:
-		frappe.db.commit()
 	return created
 
 
@@ -128,7 +126,6 @@ def update_conta_fixa(
 			frappe.throw(_("'data_inicio' não pode ser maior que 'data_termino'"))
 	if changed:
 		doc.save(ignore_permissions=False)
-		frappe.db.commit()
 	return {"ok": True, "name": doc.name}
 
 
@@ -174,7 +171,6 @@ def marcar_pagamento_pago(pagamento: str):
 		return {"ok": True, "status": doc.status}
 	doc.status = "Pago"
 	doc.save(ignore_permissions=False)
-	frappe.db.commit()
 	return {"ok": True, "status": doc.status}
 
 
@@ -238,5 +234,4 @@ def create_conta_fixa(
 			}
 		).insert(ignore_permissions=True)
 
-	frappe.db.commit()
 	return {"ok": True, "name": doc.name}

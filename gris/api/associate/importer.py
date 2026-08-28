@@ -700,9 +700,7 @@ def parse_associates_report(path_pdf: str) -> dict:
 			)
 			results["error_details"].append(f"Linha {idx + 1} - {error_msg}")
 
-	# Commit das alterações
 	_registrar_log_importacao(path_pdf, results)
-	frappe.db.commit()
 
 	return results
 

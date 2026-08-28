@@ -690,7 +690,6 @@ def criar_convite_presencial(
 		}
 	)
 	convite.insert(ignore_permissions=True)
-	frappe.db.commit()
 
 	return {
 		"ok": True,

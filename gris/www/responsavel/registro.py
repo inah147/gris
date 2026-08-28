@@ -194,7 +194,7 @@ def update_novo_associado(novo_associado_name, data, responsaveis_data=None):
 		frappe.throw(_("Email de cobrança inválido."))
 
 	telefone_cobranca_fmt = format_phone(telefone_cobranca)
-	phone_digits = "".join(filter(str.isdigit, str(telefone_cobranca_fmt or telefone_cobranca)))
+	phone_digits = "".join(c for c in str(telefone_cobranca_fmt or telefone_cobranca) if c.isdigit())
 	if len(phone_digits) not in (12, 13):
 		frappe.throw(_("Telefone de cobrança inválido. Informe DDD + número (ex: 11 91234-5678)."))
 

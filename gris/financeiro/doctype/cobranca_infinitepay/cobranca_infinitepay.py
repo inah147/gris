@@ -179,7 +179,6 @@ def sincronizar_pagamento(
 		}
 	)
 	doc.save(ignore_permissions=True)
-	frappe.db.commit()
 
 	return {
 		"ok": True,
@@ -225,6 +224,5 @@ def marcar_pago_manualmente(name: str, transaction_nsu: str, justificativa: str)
 			f"Justificativa: {justificativa.strip()}"
 		),
 	)
-	frappe.db.commit()
 
 	return {"ok": True, "message": _("Cobrança marcada como Paga manualmente.")}

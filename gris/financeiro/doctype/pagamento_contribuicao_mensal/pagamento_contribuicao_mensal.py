@@ -36,16 +36,10 @@ class PagamentoContribuicaoMensal(Document):
 			},
 			update_modified=False,
 		)
-		frappe.db.commit()
-
-	def after_save(self):
-		# Mantido temporariamente caso exista chamada externa esperando after_save.
-		# Porém o evento confiável para atualizar contadores será on_update.
-		self._update_beneficiary_payments()
 
 	def on_update(self):
-		# on_update dispara em toda inserção/atualização; garante execução mesmo se after_save não estiver sendo chamado.
-
+		# `after_save` não é hook de controller do Frappe (nunca era disparado pelo
+		# framework). `on_update` roda em toda inserção e atualização.
 		self._update_beneficiary_payments()
 
 	# uma vez por dia:

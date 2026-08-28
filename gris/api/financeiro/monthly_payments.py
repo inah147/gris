@@ -90,7 +90,6 @@ def update_contribution_value(associate_id: str, new_value: float):
 	_assert_doc_permission("Associado", associate_id, perm_type="write")
 	doc.valor_contribuicao = new_value_f
 	doc.save(ignore_permissions=False)
-	frappe.db.commit()
 	return {"ok": True, "value": new_value_f}
 
 
@@ -106,7 +105,6 @@ def mark_payment_as_paid(payment_id: str):
 		return {"ok": True, "status": doc.status}
 	doc.status = "Pago"
 	doc.save(ignore_permissions=False)
-	frappe.db.commit()
 	return {"ok": True, "status": "Pago"}
 
 
@@ -126,7 +124,6 @@ def activate_billing_status(associate_id: str):
 		return {"ok": True, "previous": prev, "current": prev}
 	assoc.status_cobranca = "Ativo"
 	assoc.save(ignore_permissions=False)
-	frappe.db.commit()
 	return {"ok": True, "previous": prev, "current": "Ativo"}
 
 
@@ -146,7 +143,6 @@ def deactivate_billing_status(associate_id: str):
 		return {"ok": True, "previous": prev, "current": prev}
 	assoc.status_cobranca = "Inativo"
 	assoc.save(ignore_permissions=False)
-	frappe.db.commit()
 	return {"ok": True, "previous": prev, "current": "Inativo"}
 
 
@@ -167,7 +163,6 @@ def update_billing_contacts(associate_id: str, email: str | None = None, phone: 
 	if phone is not None:
 		assoc.telefone_cobranca = (phone or "").strip() or None
 	assoc.save(ignore_permissions=False)
-	frappe.db.commit()
 	return {"ok": True, "email": assoc.email_cobranca, "phone": assoc.telefone_cobranca}
 
 
@@ -255,7 +250,6 @@ def update_status_monthly_payment() -> None:
 		except Exception:
 			continue
 
-	frappe.db.commit()
 	try:
 		frappe.logger("pagamento_contribuicao_mensal").info(
 			{

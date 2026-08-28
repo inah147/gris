@@ -42,5 +42,7 @@ def update_waiting_list_branch():
 				if item.ramo != branch_name:
 					frappe.db.set_value("Fila de Espera", item.name, "ramo", branch_name)
 					frappe.db.set_value("Novo Associado", item.associado, "ramo", branch_name)
-					frappe.db.commit()
+					# Commit por item: a promoção de ramo de cada criança é independente.
+					# Um erro em um registro adiante não pode desfazer os já promovidos.
+					frappe.db.commit()  # nosemgrep
 				break

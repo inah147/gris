@@ -223,5 +223,4 @@ def parse_calendario_report(path_pdf: str) -> dict:
 			results["error_details"].append(f"Erro ao importar evento '{evento.get('atividade')}': {e!s}")
 			frappe.log_error(f"Erro importação calendário: {e!s}")
 
-	frappe.db.commit()
 	return results

@@ -251,7 +251,7 @@ function loadRescheduleDates() {
 				repopulateSelect(
 					"reschedule-date-combobox",
 					[],
-					"Nenhuma data disponível nos próximos 60 dias.",
+					"Nenhuma data disponível nos próximos 60 dias."
 				);
 			}
 		},

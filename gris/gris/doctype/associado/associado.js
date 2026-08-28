@@ -179,14 +179,14 @@ frappe.ui.form.on("Associado", {
 											message: `Aviso enviado para ${destinatario_nome} (${tipo_label}) — registro ${prazo}.`,
 											indicator: "green",
 										},
-										8,
+										8
 									);
 								},
 							});
-						},
+						}
 					);
 				},
-				"Notificações",
+				"Notificações"
 			);
 		}
 	},

@@ -27,7 +27,7 @@
 							description,
 						},
 					},
-				}),
+				})
 			);
 			return;
 		}
@@ -134,7 +134,7 @@
 							.map((l) => l.replace(/^\s+/, ""))
 							.filter(Boolean)
 							.map(
-								(l) => `<span class="import-error-detail">${escapeHtml(l)}</span>`,
+								(l) => `<span class="import-error-detail">${escapeHtml(l)}</span>`
 							)
 							.join("");
 						return `<li>${escapeHtml(mainLine)}${extra ? `<br>${extra}` : ""}</li>`;
@@ -144,8 +144,8 @@
 				const moreText =
 					data.error_details.length > 50
 						? `<p class="import-errors__more">+${escapeHtml(
-								data.error_details.length - 50,
-							)} erros adicionais. Consulte o Error Log para ver a lista completa.</p>`
+								data.error_details.length - 50
+						  )} erros adicionais. Consulte o Error Log para ver a lista completa.</p>`
 						: "";
 
 				errorsList.innerHTML = `<ul>${errorItems}</ul>${moreText}`;
@@ -188,7 +188,7 @@
 					showToast(
 						"success",
 						"Importação concluída",
-						"Os dados dos associados foram processados com sucesso.",
+						"Os dados dos associados foram processados com sucesso."
 					);
 				}
 			},

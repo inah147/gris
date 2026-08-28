@@ -34,7 +34,7 @@ function closeAllDialogs() {
 
 function getOpenDialogId(exceptId) {
 	const open = Array.from(document.querySelectorAll("dialog[open]")).find(
-		(d) => !exceptId || d.id !== exceptId,
+		(d) => !exceptId || d.id !== exceptId
 	);
 	return open ? open.id : null;
 }
@@ -60,7 +60,7 @@ function setSelectValue(id, value) {
 	const target = value == null ? "" : String(value);
 	const options = Array.from(el.querySelectorAll('[role="option"]'));
 	const matched = options.find(
-		(opt) => (opt.dataset.value ?? opt.textContent.trim()) === target,
+		(opt) => (opt.dataset.value ?? opt.textContent.trim()) === target
 	);
 	const hidden = el.querySelector('input[type="hidden"]');
 	const triggerLabel = el.querySelector(":scope > button > span");
@@ -160,7 +160,7 @@ frappe.ready(function () {
 					responsavelAssociado,
 					ramo,
 					visitaData,
-					visitaConfirmada,
+					visitaConfirmada
 				);
 			} else if (status === "Aguardar Dados") {
 				openAguardarDadosModal(id, responsavel, nome, responsavelAssociado, steps);
@@ -231,7 +231,7 @@ function bindRamoSelect(id) {
 			callback: function (r) {
 				if (!r.exc) {
 					const card = document.querySelector(
-						`.kanban-card[data-id="${currentCardId}"]`,
+						`.kanban-card[data-id="${currentCardId}"]`
 					);
 					if (card) card.dataset.ramo = ramo;
 					frappe.show_alert({ message: "Ramo atualizado", indicator: "green" });
@@ -284,7 +284,7 @@ function openVisitaAgendadaModal(
 	responsavelAssociado,
 	ramo,
 	visitaData,
-	visitaConfirmada,
+	visitaConfirmada
 ) {
 	currentCardId = id;
 	updateWhatsappButtonState();
@@ -416,7 +416,7 @@ function renderTimeline(containerId, steps) {
 		let labelHtml = escapeHtml(step.label);
 		if (step.estimated_date && !completed) {
 			labelHtml += ` <span class="${dateClass}">(${dateLabel}: ${escapeHtml(
-				step.estimated_date,
+				step.estimated_date
 			)})${iconHtml}</span>`;
 		}
 
@@ -733,7 +733,7 @@ function toggleStep(field, element) {
 function finalizarRecepcao() {
 	if (!currentCardId) return;
 	const ok = window.confirm(
-		"Tem certeza? Isso vinculará o Responsável ao Associado, anonimizará os dados do Responsável e excluirá o Novo Associado.",
+		"Tem certeza? Isso vinculará o Responsável ao Associado, anonimizará os dados do Responsável e excluirá o Novo Associado."
 	);
 	if (!ok) return;
 	frappe.call({

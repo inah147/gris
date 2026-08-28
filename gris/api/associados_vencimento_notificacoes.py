@@ -205,8 +205,7 @@ def enviar_lembretes_vencimento_registro_associados() -> None:
 			continue
 
 		campo_notificacao = CAMPO_POR_MARCO[dias_para_vencer]
-		data_ultima_notificacao = associado.get(campo_notificacao)
-		if data_ultima_notificacao and getdate(data_ultima_notificacao) == data_hoje:
+		if getdate(associado.get(campo_notificacao)) == data_hoje:
 			pulados += 1
 			continue
 

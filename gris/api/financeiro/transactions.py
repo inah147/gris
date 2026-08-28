@@ -5,6 +5,7 @@ API para gerenciamento de transações financeiras em lote
 import json
 
 import frappe
+from frappe import _
 
 
 @frappe.whitelist()
@@ -27,10 +28,10 @@ def batch_update_transactions(transaction_ids, updates):
 		updates = json.loads(updates)
 
 	if not transaction_ids or not isinstance(transaction_ids, list):
-		frappe.throw("IDs de transações inválidos")
+		frappe.throw(_("IDs de transações inválidos"))
 
 	if not updates or not isinstance(updates, dict):
-		frappe.throw("Dados de atualização inválidos")
+		frappe.throw(_("Dados de atualização inválidos"))
 
 	# Campos permitidos para atualização em lote
 	allowed_fields = [

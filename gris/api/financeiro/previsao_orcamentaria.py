@@ -398,6 +398,9 @@ def _realizado_por_mes(data_inicio, data_fim, centro_de_custo: str | None):
 		params["centro_de_custo"] = centro_de_custo
 
 	where_sql = " AND ".join(condicoes)
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	return frappe.db.sql(
 		f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,

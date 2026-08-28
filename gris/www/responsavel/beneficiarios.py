@@ -1,6 +1,7 @@
 import re
 
 import frappe
+from frappe import _
 from frappe.utils import add_days, cint, getdate, now, today
 
 from gris.api.portal_access import enrich_context
@@ -367,7 +368,7 @@ def schedule_visit(date):
 	user = frappe.session.user
 	responsavel_name = _get_responsavel_name(user)
 	if not responsavel_name:
-		frappe.throw("Responsável não encontrado.")
+		frappe.throw(_("Responsável não encontrado."))
 
 	# Get beneficiaries in integration who need visit
 	vinculos = frappe.get_all(
@@ -378,7 +379,7 @@ def schedule_visit(date):
 	novo_associado_names = [v.beneficiario_novo_associado for v in vinculos if v.beneficiario_novo_associado]
 
 	if not novo_associado_names:
-		frappe.throw("Nenhum beneficiário em integração encontrado.")
+		frappe.throw(_("Nenhum beneficiário em integração encontrado."))
 
 	beneficiaries = frappe.get_all(
 		"Novo Associado",
@@ -387,11 +388,11 @@ def schedule_visit(date):
 	)
 
 	if not beneficiaries:
-		frappe.throw("Todos os beneficiários já possuem visita agendada.")
+		frappe.throw(_("Todos os beneficiários já possuem visita agendada."))
 
 	for b in beneficiaries:
 		if not _is_date_available_for_ramo(b.ramo, date):
-			frappe.throw("A data selecionada não está disponível para o ramo do beneficiário.")
+			frappe.throw(_("A data selecionada não está disponível para o ramo do beneficiário."))
 
 	# Create Agenda de Visitas for each
 	for b in beneficiaries:
@@ -417,7 +418,7 @@ def cancel_visit():
 	user = frappe.session.user
 	responsavel_name = _get_responsavel_name(user)
 	if not responsavel_name:
-		frappe.throw("Responsável não encontrado.")
+		frappe.throw(_("Responsável não encontrado."))
 
 	vinculos = frappe.get_all(
 		"Responsavel Vinculo",
@@ -469,14 +470,14 @@ def adicionar_beneficiario(nome_jovem, cpf_jovem, data_nascimento_jovem):
 	"""
 	user = frappe.session.user
 	if user == "Guest":
-		frappe.throw("Acesso negado.", frappe.PermissionError)
+		frappe.throw(_("Acesso negado."), frappe.PermissionError)
 
 	if "Responsavel" not in frappe.get_roles(user):
-		frappe.throw("Você não tem permissão para esta operação.", frappe.PermissionError)
+		frappe.throw(_("Você não tem permissão para esta operação."), frappe.PermissionError)
 
 	responsavel_name = _get_responsavel_name(user)
 	if not responsavel_name:
-		frappe.throw("Responsável não encontrado para o usuário logado.")
+		frappe.throw(_("Responsável não encontrado para o usuário logado."))
 
 	# Validar campos obrigatórios
 	nome_jovem = (nome_jovem or "").strip()
@@ -484,25 +485,25 @@ def adicionar_beneficiario(nome_jovem, cpf_jovem, data_nascimento_jovem):
 	data_nascimento_jovem = (data_nascimento_jovem or "").strip()
 
 	if not nome_jovem or not cpf_jovem or not data_nascimento_jovem:
-		frappe.throw("Todos os campos são obrigatórios: nome, CPF e data de nascimento.")
+		frappe.throw(_("Todos os campos são obrigatórios: nome, CPF e data de nascimento."))
 
 	# Validar formato do nome (somente letras, espaços e acentos)
 	if not re.match(r"^[A-Za-zÀ-ÿ\s]+$", nome_jovem):
-		frappe.throw("Nome do jovem deve conter apenas letras e espaços.")
+		frappe.throw(_("Nome do jovem deve conter apenas letras e espaços."))
 
 	# Normalizar CPF (remover formatação)
 	cpf_limpo = re.sub(r"\D", "", cpf_jovem)
 	if len(cpf_limpo) != 11:
-		frappe.throw("CPF do jovem deve conter 11 dígitos.")
+		frappe.throw(_("CPF do jovem deve conter 11 dígitos."))
 
 	# Validar data de nascimento (deve ser anterior a hoje)
 	try:
 		data_nasc = getdate(data_nascimento_jovem)
 	except Exception:
-		frappe.throw("Data de nascimento inválida.")
+		frappe.throw(_("Data de nascimento inválida."))
 
 	if data_nasc >= getdate(today()):
-		frappe.throw("Data de nascimento deve ser anterior a hoje.")
+		frappe.throw(_("Data de nascimento deve ser anterior a hoje."))
 
 	# Buscar dados do responsável
 	responsavel_doc = frappe.get_doc("Responsavel", responsavel_name)
@@ -510,13 +511,15 @@ def adicionar_beneficiario(nome_jovem, cpf_jovem, data_nascimento_jovem):
 	# CPF do jovem não pode ser igual ao do responsável
 	cpf_responsavel_limpo = re.sub(r"\D", "", responsavel_doc.cpf or "")
 	if cpf_limpo == cpf_responsavel_limpo:
-		frappe.throw("O CPF do jovem não pode ser o mesmo do responsável.")
+		frappe.throw(_("O CPF do jovem não pode ser o mesmo do responsável."))
 
 	# Verificar se já existe Novo Associado com o mesmo CPF
 	existing_novo_associado = frappe.db.exists("Novo Associado", {"cpf": cpf_jovem})
 	if existing_novo_associado:
 		frappe.throw(
-			"Já existe um jovem cadastrado com este CPF. Verifique os dados ou entre em contato com o grupo."
+			_(
+				"Já existe um jovem cadastrado com este CPF. Verifique os dados ou entre em contato com o grupo."
+			)
 		)
 
 	savepoint_name = f"add_beneficiario_{frappe.generate_hash(length=8)}"
@@ -573,4 +576,4 @@ def adicionar_beneficiario(nome_jovem, cpf_jovem, data_nascimento_jovem):
 	except Exception:
 		frappe.db.rollback(save_point=savepoint_name)
 		frappe.log_error("Erro ao adicionar beneficiário")
-		frappe.throw("Ocorreu um erro ao adicionar o beneficiário. Tente novamente.")
+		frappe.throw(_("Ocorreu um erro ao adicionar o beneficiário. Tente novamente."))

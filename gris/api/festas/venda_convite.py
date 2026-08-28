@@ -13,6 +13,7 @@ import json
 import re
 
 import frappe
+from frappe import _
 from frappe.rate_limiter import rate_limit
 from frappe.utils import flt, getdate, today
 
@@ -52,13 +53,13 @@ def _festa_aberta(festa_name: str) -> dict:
 		as_dict=True,
 	)
 	if not row:
-		frappe.throw("Festa não encontrada.", frappe.DoesNotExistError)
+		frappe.throw(_("Festa não encontrada."), frappe.DoesNotExistError)
 	if not row.data_limite_vendas:
-		frappe.throw("As vendas para esta festa ainda não foram abertas.")
+		frappe.throw(_("As vendas para esta festa ainda não foram abertas."))
 	if getdate(today()) > getdate(row.data_limite_vendas):
-		frappe.throw("O período de vendas para esta festa foi encerrado.")
+		frappe.throw(_("O período de vendas para esta festa foi encerrado."))
 	if row.status and row.status != "Em andamento":
-		frappe.throw("Esta festa não está mais aceitando vendas.")
+		frappe.throw(_("Esta festa não está mais aceitando vendas."))
 	return {
 		"name": row.name,
 		"nome_festa": row.nome_festa or row.name,
@@ -71,27 +72,27 @@ def _festa_aberta(festa_name: str) -> dict:
 def _validar_itens(festa_name: str, itens_raw) -> tuple[list[dict], float, int]:
 	itens = _parse_json(itens_raw, "Itens")
 	if not isinstance(itens, list) or not itens:
-		frappe.throw("Adicione pelo menos um convite ao carrinho.")
+		frappe.throw(_("Adicione pelo menos um convite ao carrinho."))
 
 	# Agrega quantidades por opção (evita duplicatas no payload).
 	agregado: dict[str, int] = {}
 	for item in itens:
 		if not isinstance(item, dict):
-			frappe.throw("Item inválido.")
+			frappe.throw(_("Item inválido."))
 		opcao_name = (item.get("opcao_convite") or "").strip()
 		quantidade = item.get("quantidade")
 		if not opcao_name:
-			frappe.throw("Selecione uma opção de convite válida.")
+			frappe.throw(_("Selecione uma opção de convite válida."))
 		try:
 			quantidade = int(quantidade)
 		except (ValueError, TypeError):
-			frappe.throw("Quantidade inválida.")
+			frappe.throw(_("Quantidade inválida."))
 		if quantidade <= 0:
 			continue
 		agregado[opcao_name] = agregado.get(opcao_name, 0) + quantidade
 
 	if not agregado:
-		frappe.throw("Adicione pelo menos um convite ao carrinho.")
+		frappe.throw(_("Adicione pelo menos um convite ao carrinho."))
 
 	opcoes = frappe.get_all(
 		"Opcao Convite Festa",
@@ -108,9 +109,9 @@ def _validar_itens(festa_name: str, itens_raw) -> tuple[list[dict], float, int]:
 	for opcao_name, quantidade in agregado.items():
 		opcao = indexado.get(opcao_name)
 		if not opcao:
-			frappe.throw("Opção de convite inválida.")
+			frappe.throw(_("Opção de convite inválida."))
 		if opcao.festa != festa_name:
-			frappe.throw("Opção de convite não pertence a esta festa.")
+			frappe.throw(_("Opção de convite não pertence a esta festa."))
 		if not opcao.ativo:
 			frappe.throw(f"A opção '{opcao.nome_convite}' está inativa.")
 		if opcao.portaria:
@@ -132,7 +133,7 @@ def _validar_itens(festa_name: str, itens_raw) -> tuple[list[dict], float, int]:
 
 	# Regra de negócio: convite de portaria não pode ser misturado com outros.
 	if tem_portaria and tem_nao_portaria:
-		frappe.throw("Convites de portaria não podem ser comprados junto com outros tipos.")
+		frappe.throw(_("Convites de portaria não podem ser comprados junto com outros tipos."))
 
 	return resumo_itens, subtotal, total_convites
 
@@ -143,14 +144,16 @@ def _validar_doacao(festa: dict, doacao_valor) -> float:
 	try:
 		valor = flt(doacao_valor)
 	except (ValueError, TypeError):
-		frappe.throw("Valor da doação inválido.")
+		frappe.throw(_("Valor da doação inválido."))
 	if valor <= 0:
 		return 0.0
 	if not festa.get("aceitar_doacoes"):
-		frappe.throw("Esta festa não aceita doações.")
+		frappe.throw(_("Esta festa não aceita doações."))
 	if valor < DOACAO_MIN_VALOR or valor > DOACAO_MAX_VALOR:
 		frappe.throw(
-			f"O valor da doação deve estar entre R$ {DOACAO_MIN_VALOR:.0f} e R$ {DOACAO_MAX_VALOR:.0f}."
+			_("O valor da doação deve estar entre R$ {0} e R$ {1}.").format(
+				f"{DOACAO_MIN_VALOR:.0f}", f"{DOACAO_MAX_VALOR:.0f}"
+			)
 		)
 	return float(valor)
 
@@ -158,16 +161,16 @@ def _validar_doacao(festa: dict, doacao_valor) -> float:
 def _validar_pagador(pagador_raw) -> dict:
 	pagador = _parse_json(pagador_raw, "Dados do pagador")
 	if not isinstance(pagador, dict):
-		frappe.throw("Dados do pagador inválidos.")
+		frappe.throw(_("Dados do pagador inválidos."))
 	nome = (pagador.get("nome") or "").strip()
 	email = (pagador.get("email") or "").strip().lower()
 	telefone = re.sub(r"\D", "", (pagador.get("telefone") or ""))
 	if not nome:
-		frappe.throw("Informe o nome do pagador.")
+		frappe.throw(_("Informe o nome do pagador."))
 	if not email or not EMAIL_REGEX.match(email):
-		frappe.throw("E-mail do pagador inválido.")
+		frappe.throw(_("E-mail do pagador inválido."))
 	if not telefone or len(telefone) < 10:
-		frappe.throw("Telefone do pagador inválido.")
+		frappe.throw(_("Telefone do pagador inválido."))
 	return {"nome": nome, "email": email, "telefone": telefone}
 
 
@@ -187,12 +190,12 @@ def _validar_convidados(
 	saida: list[dict] = []
 	for c in convidados:
 		if not isinstance(c, dict):
-			frappe.throw("Convidado inválido.")
+			frappe.throw(_("Convidado inválido."))
 		nome = (c.get("nome") or "").strip()
 		email = (c.get("email") or "").strip().lower()
 		telefone = re.sub(r"\D", "", (c.get("telefone") or ""))
 		if not nome:
-			frappe.throw("Todo convidado precisa de nome.")
+			frappe.throw(_("Todo convidado precisa de nome."))
 		if pagador_recebe:
 			# QR codes vão todos para o e-mail do pagador; ignoramos email/tel
 			# individuais para evitar coleta desnecessária de dado pessoal.
@@ -339,7 +342,7 @@ def criar_convite(
 		)
 		if isinstance(exc, frappe.ValidationError):
 			raise
-		frappe.throw("Não foi possível registrar o pedido. Tente novamente.")
+		frappe.throw(_("Não foi possível registrar o pedido. Tente novamente."))
 
 	link_pagamento = ""
 	if convite.cobranca_infinitepay:
@@ -357,7 +360,7 @@ def criar_convite(
 @frappe.whitelist(allow_guest=True)
 def get_status_pagamento(convite_name: str) -> dict:
 	if not convite_name:
-		frappe.throw("Parâmetro 'convite_name' obrigatório.")
+		frappe.throw(_("Parâmetro 'convite_name' obrigatório."))
 	cobranca_name = frappe.db.get_value("Convite Festa", convite_name, "cobranca_infinitepay")
 	if not cobranca_name:
 		return {"status": "Pendente", "link_pagamento": ""}

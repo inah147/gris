@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt, get_fullname, today
 
@@ -46,7 +47,7 @@ class SolicitacaodeInsignias(Document):
 	def _validar_transicao_de_status(self):
 		if self.is_new():
 			if self.status != STATUS_SOLICITADA:
-				frappe.throw("Uma nova solicitação precisa ser criada com o status 'Solicitada'.")
+				frappe.throw(_("Uma nova solicitação precisa ser criada com o status 'Solicitada'."))
 			return
 
 		anterior = self.get_doc_before_save()
@@ -80,12 +81,12 @@ class SolicitacaodeInsignias(Document):
 
 	def _validar_itens(self):
 		if not self.itens:
-			frappe.throw("Inclua ao menos um item na solicitação.")
+			frappe.throw(_("Inclua ao menos um item na solicitação."))
 
 		vistos: set[tuple[str, str | None]] = set()
 		for item in self.itens:
 			if not item.insignia:
-				frappe.throw("Todo item precisa de uma insígnia ou distintivo.")
+				frappe.throw(_("Todo item precisa de uma insígnia ou distintivo."))
 
 			quantidade = int(item.quantidade or 0)
 			if quantidade < 1:
@@ -106,7 +107,7 @@ class SolicitacaodeInsignias(Document):
 		for item in self.itens:
 			valor_unitario = flt(item.valor_unitario)
 			if valor_unitario < 0:
-				frappe.throw("O valor unitário não pode ser negativo.")
+				frappe.throw(_("O valor unitário não pode ser negativo."))
 			item.valor_total = flt(valor_unitario * int(item.quantidade or 0), 2)
 			total += item.valor_total
 

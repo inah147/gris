@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 
 from gris.api.portal_access import enrich_context, user_has_access
 from gris.api.portal_cache_utils import get_uel_cached
@@ -11,7 +12,7 @@ def get_context(context):
 
 	roles = frappe.get_roles(frappe.session.user)
 	if not any(role in roles for role in ["Visualizador Calendario", "Gestor Calendario", "System Manager"]):
-		frappe.throw("Você não tem permissão para acessar esta página.", frappe.PermissionError)
+		frappe.throw(_("Você não tem permissão para acessar esta página."), frappe.PermissionError)
 
 	uel_data = get_uel_cached()
 	if uel_data:

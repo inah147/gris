@@ -1,15 +1,16 @@
 import frappe
+from frappe import _
 
 from gris.api.portal_access import enrich_context
 
 
 def get_context(context):
 	if frappe.session.user == "Guest":
-		frappe.throw("Não autorizado", frappe.PermissionError)
+		frappe.throw(_("Não autorizado"), frappe.PermissionError)
 
 	# Check permissions
 	if "Recepcao" not in frappe.get_roles():
-		frappe.throw("Acesso negado", frappe.PermissionError)
+		frappe.throw(_("Acesso negado"), frappe.PermissionError)
 
 	context.sidebar_title = "Recepção"
 	context.active_link = "/recepcao"
@@ -19,7 +20,7 @@ def get_context(context):
 @frappe.whitelist()
 def get_surveys():
 	if "Recepcao" not in frappe.get_roles():
-		frappe.throw("Acesso negado")
+		frappe.throw(_("Acesso negado"))
 
 	surveys = frappe.get_all(
 		"Pesqusa de Novos Associados",
@@ -41,7 +42,7 @@ def get_surveys():
 @frappe.whitelist()
 def get_survey_details(survey_name):
 	if "Recepcao" not in frappe.get_roles():
-		frappe.throw("Acesso negado")
+		frappe.throw(_("Acesso negado"))
 
 	survey_doc = frappe.get_doc("Pesqusa de Novos Associados", survey_name)
 	survey = survey_doc.as_dict()
@@ -81,7 +82,7 @@ def get_survey_details(survey_name):
 @frappe.whitelist()
 def get_nps_chart_data(period="monthly"):
 	if "Recepcao" not in frappe.get_roles():
-		frappe.throw("Acesso negado")
+		frappe.throw(_("Acesso negado"))
 
 	surveys = frappe.get_all(
 		"Pesqusa de Novos Associados",

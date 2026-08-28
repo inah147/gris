@@ -145,7 +145,7 @@ frappe.ui.form.on("Associado", {
 
 		if (!frm.doc.__islocal && frm.doc.validade_registro) {
 			frm.add_custom_button(
-				"Avisar Vencimento",
+				__("Avisar Vencimento"),
 				() => {
 					frappe.confirm(
 						"Enviar aviso de vencimento de registro via WhatsApp para o responsável (ou o próprio associado)?",
@@ -179,14 +179,14 @@ frappe.ui.form.on("Associado", {
 											message: `Aviso enviado para ${destinatario_nome} (${tipo_label}) — registro ${prazo}.`,
 											indicator: "green",
 										},
-										8
+										8,
 									);
 								},
 							});
-						}
+						},
 					);
 				},
-				"Notificações"
+				"Notificações",
 			);
 		}
 	},

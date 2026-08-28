@@ -18,11 +18,11 @@ class CobrancaInfinitepay(Document):
 
 	def _validar_itens(self):
 		if not self.itens:
-			frappe.throw("É necessário adicionar pelo menos 1 item na cobrança.")
+			frappe.throw(_("É necessário adicionar pelo menos 1 item na cobrança."))
 
 		for item in self.itens:
 			if not item.descricao:
-				frappe.throw("Todos os itens devem ter uma descrição.")
+				frappe.throw(_("Todos os itens devem ter uma descrição."))
 			if not item.quantidade or item.quantidade <= 0:
 				frappe.throw(f"Item '{item.descricao}': quantidade deve ser maior que zero.")
 			if not item.preco or item.preco <= 0:
@@ -32,7 +32,7 @@ class CobrancaInfinitepay(Document):
 		handle = frappe.db.get_single_value("Configuracao infinitepay", "handle")
 		if not handle:
 			frappe.db.set_value("Cobranca Infinitepay", self.name, "status", "Erro")
-			frappe.throw("Handle não configurado em Configuracao infinitepay.")
+			frappe.throw(_("Handle não configurado em Configuracao infinitepay."))
 
 		payload = self._montar_payload(handle)
 
@@ -59,7 +59,7 @@ class CobrancaInfinitepay(Document):
 		except requests.exceptions.RequestException as e:
 			frappe.db.set_value("Cobranca Infinitepay", self.name, "status", "Erro")
 			frappe.logger().error(f"Erro ao criar link InfinitePay para {self.name}: {e}")
-			frappe.throw("Erro ao criar link de pagamento na InfinitePay. Tente novamente.")
+			frappe.throw(_("Erro ao criar link de pagamento na InfinitePay. Tente novamente."))
 
 	def _montar_payload(self, handle):
 		webhook_url = (

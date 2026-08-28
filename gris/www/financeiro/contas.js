@@ -72,7 +72,7 @@
 
 	window.enviarArquivosImportados = function () {
 		if (!window._extratoFileUrl || !window._vendasFileUrl || !window._recebimentosFileUrl) {
-			frappe.msgprint("Faça o upload dos três arquivos antes de enviar.");
+			frappe.msgprint(__("Faça o upload dos três arquivos antes de enviar."));
 			return;
 		}
 		const loadingIndicator = qs("contas-infinitepay-loading-indicator");
@@ -92,7 +92,7 @@
 				if (btnConciliar) btnConciliar.disabled = false;
 				if (r && r.exc) {
 					console.error("Erro process_uploaded_files", r.exc);
-					frappe.msgprint("Erro ao processar: ver console.");
+					frappe.msgprint(__("Erro ao processar: ver console."));
 				} else {
 					frappe.msgprint(r.message || "Arquivos enviados e processados!");
 					frappe.show_alert({ message: "Conciliação concluída", indicator: "green" }, 5);
@@ -106,7 +106,7 @@
 			const btn = e.target.closest("#" + btnId);
 			if (!btn) return;
 			if (typeof frappe === "undefined" || !frappe.ui || !frappe.ui.FileUploader) {
-				frappe.msgprint("Uploader indisponível.");
+				frappe.msgprint(__("Uploader indisponível."));
 				return;
 			}
 			new frappe.ui.FileUploader({
@@ -150,7 +150,7 @@
 			"uploadRecebimentosBtn",
 			"nomeRecebimentosInfinitepay",
 			"checkRecebimentosInfinitepay",
-			["csv"]
+			["csv"],
 		);
 	}
 
@@ -305,7 +305,7 @@
 				window.location.href = "/financeiro/import_btg_empresas";
 				return;
 			}
-			frappe.msgprint("Funcionalidade em construção.");
+			frappe.msgprint(__("Funcionalidade em construção."));
 			return;
 		}
 
@@ -329,7 +329,7 @@
 			(async function () {
 				const nome = qs("novaInstituicaoNome").value.trim();
 				if (!nome) {
-					frappe.msgprint("Informe o nome.");
+					frappe.msgprint(__("Informe o nome."));
 					return;
 				}
 				try {
@@ -345,7 +345,7 @@
 					}
 				} catch (err) {
 					console.error(err);
-					frappe.msgprint("Erro ao criar instituição.");
+					frappe.msgprint(__("Erro ao criar instituição."));
 				}
 			})();
 			return;
@@ -373,7 +373,7 @@
 				const centro = (selectValue("nc_centro") || "").trim();
 				const pix = qs("nc_pix").value.trim();
 				if (!nome || !instituicao || !descricao || !responsavel || !centro) {
-					frappe.msgprint("Preencha todos os campos obrigatórios.");
+					frappe.msgprint(__("Preencha todos os campos obrigatórios."));
 					return;
 				}
 				try {
@@ -399,7 +399,7 @@
 					}
 				} catch (err) {
 					console.error(err);
-					frappe.msgprint("Erro ao criar carteira.");
+					frappe.msgprint(__("Erro ao criar carteira."));
 				}
 			})();
 			return;
@@ -413,12 +413,12 @@
 				rebuildSelect(
 					"carteiraInputCentro",
 					buildItems(centros, "—"),
-					curCentro === "—" ? "" : curCentro
+					curCentro === "—" ? "" : curCentro,
 				);
 				rebuildSelect(
 					"carteiraInputResponsavel",
 					buildItems(users, "—"),
-					curResp === "—" ? "" : curResp
+					curResp === "—" ? "" : curResp,
 				);
 			});
 			return;
@@ -441,7 +441,7 @@
 			if (!name) return;
 			if (
 				!confirm(
-					`Desativar a carteira "${nomeTitulo}"?\n\nEla deixará de aparecer no portal. É possível reativá-la pelo Desk.`
+					`Desativar a carteira "${nomeTitulo}"?\n\nEla deixará de aparecer no portal. É possível reativá-la pelo Desk.`,
 				)
 			)
 				return;
@@ -450,7 +450,7 @@
 				args: { doctype: "Carteira", name },
 				callback: function (r) {
 					if (r && r.exc) {
-						frappe.msgprint("Erro ao desativar carteira.");
+						frappe.msgprint(__("Erro ao desativar carteira."));
 						return;
 					}
 					closeDialog("carteiraDetalheModal");
@@ -469,7 +469,7 @@
 			if (!name) return;
 			if (
 				!confirm(
-					`Desativar a instituição "${nome}"?\n\nEla deixará de aparecer no portal. É possível reativá-la pelo Desk.`
+					`Desativar a instituição "${nome}"?\n\nEla deixará de aparecer no portal. É possível reativá-la pelo Desk.`,
 				)
 			)
 				return;
@@ -478,12 +478,12 @@
 				args: { doctype: "Instituicao Financeira", name },
 				callback: function (r) {
 					if (r && r.exc) {
-						frappe.msgprint("Erro ao desativar instituição.");
+						frappe.msgprint(__("Erro ao desativar instituição."));
 						return;
 					}
 					frappe.show_alert(
 						{ message: "Instituição desativada", indicator: "orange" },
-						4
+						4,
 					);
 					setTimeout(() => window.location.reload(), 600);
 				},

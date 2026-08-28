@@ -5,6 +5,7 @@ import unicodedata
 from datetime import date, timedelta
 
 import frappe
+from frappe import _
 from frappe.utils import format_date, getdate, today
 from frappe.utils.pdf import get_pdf
 
@@ -223,7 +224,7 @@ def get_context(context):
 
 	roles = frappe.get_roles(frappe.session.user)
 	if not any(role in roles for role in ["Visualizador Calendario", "Gestor Calendario", "System Manager"]):
-		frappe.throw("Você não tem permissão para acessar esta página.", frappe.PermissionError)
+		frappe.throw(_("Você não tem permissão para acessar esta página."), frappe.PermissionError)
 
 	year = _get_selected_year()
 	selected_month = _get_selected_month()
@@ -255,7 +256,7 @@ def get_context(context):
 def export_calendar(year=None, month=None, show_empty_days=1, sections=None):
 	roles = frappe.get_roles(frappe.session.user)
 	if not any(role in roles for role in ["Visualizador Calendario", "Gestor Calendario", "System Manager"]):
-		frappe.throw("Você não tem permissão para acessar esta funcionalidade.", frappe.PermissionError)
+		frappe.throw(_("Você não tem permissão para acessar esta funcionalidade."), frappe.PermissionError)
 
 	if not year:
 		year = getdate(today()).year

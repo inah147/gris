@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import frappe
+from frappe import _
 
 _ALLOWED_DOCTYPES = {"Carteira", "Instituicao Financeira"}
 _ALLOWED_ROLES = {"Gestor Financeiro", "System Manager"}
@@ -24,7 +25,7 @@ def desativar(doctype: str, name: str) -> dict:
 	roles = set(frappe.get_roles())
 	if not (_ALLOWED_ROLES & roles):
 		frappe.throw(
-			"Sem permissão para desativar. Requer role Gestor Financeiro ou System Manager.",
+			_("Sem permissão para desativar. Requer role Gestor Financeiro ou System Manager."),
 			frappe.PermissionError,
 		)
 
@@ -57,7 +58,7 @@ def reativar(doctype: str, name: str) -> dict:
 	roles = set(frappe.get_roles())
 	if not (_ALLOWED_ROLES & roles):
 		frappe.throw(
-			"Sem permissão para reativar. Requer role Gestor Financeiro ou System Manager.",
+			_("Sem permissão para reativar. Requer role Gestor Financeiro ou System Manager."),
 			frappe.PermissionError,
 		)
 

@@ -46,15 +46,15 @@ frappe.ready(() => {
 		tbody.innerHTML = rows
 			.map((row) => {
 				const associado = frappe.utils.escape_html(
-					row.associado_nome || row.associado || "-"
+					row.associado_nome || row.associado || "-",
 				);
 				const atualizacao = row.data_da_ultima_atualizacao
 					? frappe.utils.escape_html(
-							frappe.datetime.str_to_user(row.data_da_ultima_atualizacao)
-					  )
+							frappe.datetime.str_to_user(row.data_da_ultima_atualizacao),
+						)
 					: "-";
 				const href = `/gestao_adultos/respostas_entrevista?name=${encodeURIComponent(
-					row.name
+					row.name,
 				)}`;
 				return `
 					<tr>
@@ -101,7 +101,7 @@ frappe.ready(() => {
 	const abrirOuCriarEntrevista = async () => {
 		const associado = getSelectValue(getModalSelect());
 		if (!associado) {
-			frappe.msgprint("Selecione um associado para continuar.");
+			frappe.msgprint(__("Selecione um associado para continuar."));
 			return;
 		}
 
@@ -112,7 +112,7 @@ frappe.ready(() => {
 		const data = response.message || {};
 		if (data.name) {
 			window.location.href = `/gestao_adultos/respostas_entrevista?name=${encodeURIComponent(
-				data.name
+				data.name,
 			)}`;
 		}
 	};
@@ -137,7 +137,7 @@ frappe.ready(() => {
 		.catch((error) => {
 			console.error(error);
 			setState("empty");
-			frappe.msgprint("Não foi possível carregar a página de entrevistas.");
+			frappe.msgprint(__("Não foi possível carregar a página de entrevistas."));
 		});
 });
 
@@ -168,7 +168,7 @@ function repopulateSelect(id, items) {
 				.map(([key, value]) => ` ${key}="${escapeAttribute(String(value))}"`)
 				.join("");
 			return `<div id="${id}-items-${index + 1}" role="option" data-value="${escapeAttribute(
-				String(item.value ?? "")
+				String(item.value ?? ""),
 			)}"${attrs}>${frappe.utils.escape_html(item.label || "")}</div>`;
 		})
 		.join("");

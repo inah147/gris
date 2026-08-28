@@ -2,6 +2,7 @@ import json
 import re
 
 import frappe
+from frappe import _
 from frappe.utils import cint
 
 from gris.api.portal_access import enrich_context
@@ -39,12 +40,12 @@ def get_context(context):
 	# Get Novo Associado ID from request
 	novo_associado_name = frappe.form_dict.get("novo_associado")
 	if not novo_associado_name:
-		frappe.throw("Novo Associado não especificado.")
+		frappe.throw(_("Novo Associado não especificado."))
 
 	# Find Responsavel linked to current user
 	responsavel = frappe.get_value("Responsavel", {"email": user}, "name")
 	if not responsavel:
-		frappe.throw("Perfil de Responsável não encontrado para este usuário.")
+		frappe.throw(_("Perfil de Responsável não encontrado para este usuário."))
 
 	# Check permission via Responsavel Vinculo
 	has_permission = frappe.db.exists(
@@ -53,7 +54,7 @@ def get_context(context):
 	)
 
 	if not has_permission:
-		frappe.throw("Você não tem permissão para editar este associado.")
+		frappe.throw(_("Você não tem permissão para editar este associado."))
 
 	# Fetch Novo Associado data
 	novo_associado = frappe.get_doc("Novo Associado", novo_associado_name)
@@ -159,11 +160,11 @@ def _notificar_gestores_novo_associado(nome_associado: str) -> None:
 def update_novo_associado(novo_associado_name, data, responsaveis_data=None):
 	user = frappe.session.user
 	if user == "Guest":
-		frappe.throw("Você precisa estar logado.", frappe.PermissionError)
+		frappe.throw(_("Você precisa estar logado."), frappe.PermissionError)
 
 	responsavel = frappe.get_value("Responsavel", {"email": user}, "name")
 	if not responsavel:
-		frappe.throw("Perfil de Responsável não encontrado.")
+		frappe.throw(_("Perfil de Responsável não encontrado."))
 
 	has_permission = frappe.db.exists(
 		"Responsavel Vinculo",
@@ -171,7 +172,7 @@ def update_novo_associado(novo_associado_name, data, responsaveis_data=None):
 	)
 
 	if not has_permission:
-		frappe.throw("Você não tem permissão para editar este associado.")
+		frappe.throw(_("Você não tem permissão para editar este associado."))
 
 	# Update Novo Associado
 	doc = frappe.get_doc("Novo Associado", novo_associado_name)
@@ -187,15 +188,15 @@ def update_novo_associado(novo_associado_name, data, responsaveis_data=None):
 	telefone_cobranca = data.get("telefone_cobranca") or ""
 
 	if not email_cobranca:
-		frappe.throw("Email de cobrança é obrigatório.")
+		frappe.throw(_("Email de cobrança é obrigatório."))
 
 	if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", email_cobranca):
-		frappe.throw("Email de cobrança inválido.")
+		frappe.throw(_("Email de cobrança inválido."))
 
 	telefone_cobranca_fmt = format_phone(telefone_cobranca)
 	phone_digits = "".join(filter(str.isdigit, str(telefone_cobranca_fmt or telefone_cobranca)))
 	if len(phone_digits) not in (12, 13):
-		frappe.throw("Telefone de cobrança inválido. Informe DDD + número (ex: 11 91234-5678).")
+		frappe.throw(_("Telefone de cobrança inválido. Informe DDD + número (ex: 11 91234-5678)."))
 
 	data["email_cobranca"] = email_cobranca
 
@@ -418,7 +419,7 @@ def update_novo_associado(novo_associado_name, data, responsaveis_data=None):
 		guardioes = [v for v in all_vinculos if cint(v.get("\u00e9_guardiao_legal")) == 1]
 		if len(guardioes) != 1:
 			frappe.throw(
-				"Com guarda unilateral, exatamente um responsável deve ser marcado como guardião legal."
+				_("Com guarda unilateral, exatamente um responsável deve ser marcado como guardião legal.")
 			)
 	else:
 		for v in all_vinculos:

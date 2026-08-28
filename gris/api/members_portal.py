@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 from frappe.utils import today
 
 from gris.api.portal_access import _responsavel_has_associado_access
@@ -42,7 +43,7 @@ RESPONSAVEL_ALLOWED_UPDATE_FIELDS = COMMON_ALLOWED_UPDATE_FIELDS
 
 def _ensure_logged_in():
 	if frappe.session.user == "Guest":
-		frappe.throw("Session expired. Please login again.", frappe.PermissionError)
+		frappe.throw(_("Session expired. Please login again."), frappe.PermissionError)
 
 
 def _can_manage_member(doc):
@@ -67,7 +68,7 @@ def update_member(name: str, changes: str):
 	try:
 		doc = frappe.get_doc("Associado", name)
 	except frappe.DoesNotExistError:
-		frappe.throw("Member not found", frappe.DoesNotExistError)
+		frappe.throw(_("Member not found"), frappe.DoesNotExistError)
 
 	can_manage_member = _can_manage_member(doc)
 	is_linked_responsavel = _is_linked_responsavel(doc)
@@ -83,10 +84,10 @@ def update_member(name: str, changes: str):
 	try:
 		data = frappe.parse_json(changes) if isinstance(changes, str) else changes
 	except Exception:  # pragma: no cover
-		frappe.throw("Invalid JSON in 'changes'")
+		frappe.throw(_("Invalid JSON in 'changes'"))
 
 	if not isinstance(data, dict):
-		frappe.throw("Invalid changes format")
+		frappe.throw(_("Invalid changes format"))
 
 	applied = {}
 	for field, val in data.items():
@@ -125,10 +126,10 @@ def set_member_leave(name: str):
 	try:
 		doc = frappe.get_doc("Associado", name)
 	except frappe.DoesNotExistError:
-		frappe.throw("Member not found", frappe.DoesNotExistError)
+		frappe.throw(_("Member not found"), frappe.DoesNotExistError)
 
 	if not _can_manage_member(doc):
-		frappe.throw("No permission to edit", frappe.PermissionError)
+		frappe.throw(_("No permission to edit"), frappe.PermissionError)
 
 	applied_date = None
 	for row in doc.get("historico_no_grupo") or []:
@@ -155,10 +156,10 @@ def get_member_history(name: str):
 	try:
 		doc = frappe.get_doc("Associado", name)
 	except frappe.DoesNotExistError:
-		frappe.throw("Member not found", frappe.DoesNotExistError)
+		frappe.throw(_("Member not found"), frappe.DoesNotExistError)
 
 	if not _can_manage_member(doc):
-		frappe.throw("No permission to view", frappe.PermissionError)
+		frappe.throw(_("No permission to view"), frappe.PermissionError)
 
 	history = []
 	for row in doc.get("historico_no_grupo") or []:
@@ -179,10 +180,10 @@ def update_member_history(name: str, history: str):
 	try:
 		doc = frappe.get_doc("Associado", name)
 	except frappe.DoesNotExistError:
-		frappe.throw("Member not found", frappe.DoesNotExistError)
+		frappe.throw(_("Member not found"), frappe.DoesNotExistError)
 
 	if not _can_manage_member(doc):
-		frappe.throw("No permission to edit", frappe.PermissionError)
+		frappe.throw(_("No permission to edit"), frappe.PermissionError)
 
 	import json
 

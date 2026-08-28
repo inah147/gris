@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import frappe
+from frappe import _
 
 from gris.api.festas.relatorio import build_relatorio_payload, relatorio_disponivel
 from gris.api.portal_access import enrich_context, user_has_access
@@ -15,7 +16,7 @@ def get_context(context):
 		raise frappe.Redirect
 
 	if not user_has_access("/festas/relatorio"):
-		frappe.throw("Você não tem permissão para acessar esta página.", frappe.PermissionError)
+		frappe.throw(_("Você não tem permissão para acessar esta página."), frappe.PermissionError)
 
 	uel_data = get_uel_cached()
 	if uel_data:
@@ -41,7 +42,7 @@ def get_context(context):
 		return context
 
 	if not frappe.has_permission("Festa", "read", festa_name):
-		frappe.throw("Sem permissão para acessar esta festa.", frappe.PermissionError)
+		frappe.throw(_("Sem permissão para acessar esta festa."), frappe.PermissionError)
 
 	nome_festa = frappe.db.get_value("Festa", festa_name, "nome_festa") or festa_name
 	context.festa_name = festa_name

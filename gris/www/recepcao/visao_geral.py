@@ -3,6 +3,7 @@ import json
 import re
 
 import frappe
+from frappe import _
 from frappe.utils import format_date, getdate
 
 from gris.api.portal_access import enrich_context
@@ -270,7 +271,7 @@ def get_context(context):
 @frappe.whitelist()
 def confirmar_registro_paxtu(novo_associado_name):
 	if not novo_associado_name:
-		frappe.throw("Novo Associado não especificado.")
+		frappe.throw(_("Novo Associado não especificado."))
 
 	frappe.db.set_value(
 		"Novo Associado",
@@ -284,13 +285,13 @@ def confirmar_registro_paxtu(novo_associado_name):
 @frappe.whitelist()
 def update_step_status(novo_associado_name, field, value):
 	if not novo_associado_name:
-		frappe.throw("Novo Associado não especificado.")
+		frappe.throw(_("Novo Associado não especificado."))
 
 	# Validate field against allowed steps
 	allowed_fields = [s["field"] for s in STEPS_DEF]
 
 	if field not in allowed_fields:
-		frappe.throw("Campo inválido.")
+		frappe.throw(_("Campo inválido."))
 
 	doc = frappe.get_doc("Novo Associado", novo_associado_name)
 	doc.set(field, int(value))
@@ -303,13 +304,13 @@ def update_step_status(novo_associado_name, field, value):
 @frappe.whitelist()
 def finalizar_processo_recepcao(novo_associado_name):
 	if not novo_associado_name:
-		frappe.throw("Novo Associado não especificado.")
+		frappe.throw(_("Novo Associado não especificado."))
 
 	na_doc = frappe.get_doc("Novo Associado", novo_associado_name)
 
 	# Find Associado by hashed CPF (as name)
 	if not na_doc.cpf:
-		frappe.throw("Novo Associado sem CPF. Não é possível vincular ao Associado.")
+		frappe.throw(_("Novo Associado sem CPF. Não é possível vincular ao Associado."))
 
 	cpf_clean = re.sub(r"\D", "", na_doc.cpf)
 	associado_name = hashlib.md5(cpf_clean.encode("utf-8")).hexdigest()

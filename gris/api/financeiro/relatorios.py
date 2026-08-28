@@ -5,6 +5,7 @@ import unicodedata
 from datetime import datetime, timedelta
 
 import frappe
+from frappe import _
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 from openpyxl.utils.cell import column_index_from_string, coordinate_from_string
@@ -169,7 +170,9 @@ def get_template_path():
 	)
 
 	if not files:
-		frappe.throw(f"Template '{template_name}' não encontrado como File. Faça upload com este nome.")
+		frappe.throw(
+			_("Template '{0}' não encontrado como File. Faça upload com este nome.").format(template_name)
+		)
 
 	file_doc = frappe.get_doc("File", files[0].get("name"))
 	file_url = file_doc.file_url
@@ -404,7 +407,7 @@ def export_relatorio_contabil(data_inicio=None, data_fim=None):
 		Arquivo Excel para download
 	"""
 	if frappe.session.user == "Guest":
-		frappe.throw("Login necessário", frappe.PermissionError)
+		frappe.throw(_("Login necessário"), frappe.PermissionError)
 
 	# 1. Buscar dados
 	instituicoes_nomes = get_instituicoes()

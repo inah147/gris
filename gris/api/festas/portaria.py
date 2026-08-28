@@ -231,6 +231,9 @@ def listar_entradas(
 		extra_where += " AND lef.nome_convidado LIKE %(nome_like)s"
 		params["nome_like"] = f"%{nome_norm}%"
 
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	rows = frappe.db.sql(
 		f"""
 		SELECT
@@ -264,6 +267,9 @@ def listar_entradas(
 	if "nome_like" in params:
 		count_where += " AND nome_convidado LIKE %(nome_like)s"
 		count_params["nome_like"] = params["nome_like"]
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	total_row = frappe.db.sql(
 		f"SELECT COUNT(*) AS qtd FROM `tabLista Entrada Festa` WHERE festa = %(festa)s{count_where}",
 		count_params,

@@ -51,11 +51,11 @@ def _parse_payload(payload) -> dict:
 		try:
 			data = json.loads(payload)
 		except (ValueError, TypeError):
-			frappe.throw("Dados inválidos.")
+			frappe.throw(_("Dados inválidos."))
 	else:
 		data = payload
 	if not isinstance(data, dict):
-		frappe.throw("Dados inválidos.")
+		frappe.throw(_("Dados inválidos."))
 	return data
 
 
@@ -67,14 +67,14 @@ def _parse_lotes_opcao(raw) -> list[dict]:
 		try:
 			raw = json.loads(raw)
 		except (ValueError, TypeError):
-			frappe.throw("Lotes inválidos.")
+			frappe.throw(_("Lotes inválidos."))
 	if not isinstance(raw, list):
-		frappe.throw("Lotes inválidos.")
+		frappe.throw(_("Lotes inválidos."))
 
 	lotes: list[dict] = []
 	for item in raw:
 		if not isinstance(item, dict):
-			frappe.throw("Lote inválido.")
+			frappe.throw(_("Lote inválido."))
 		inicio = (
 			(item.get("data_inicio") or "").strip()
 			if isinstance(item.get("data_inicio"), str)
@@ -86,18 +86,18 @@ def _parse_lotes_opcao(raw) -> list[dict]:
 			else item.get("data_fim")
 		)
 		if not inicio or not fim:
-			frappe.throw("Cada lote precisa de data de início e término.")
+			frappe.throw(_("Cada lote precisa de data de início e término."))
 		try:
 			valor = flt(item.get("valor", 0))
 			consumacao = flt(item.get("valor_consumacao", 0))
 		except (ValueError, TypeError):
-			frappe.throw("Valores do lote inválidos.")
+			frappe.throw(_("Valores do lote inválidos."))
 		if valor < 0 or consumacao < 0:
-			frappe.throw("Valores do lote não podem ser negativos.")
+			frappe.throw(_("Valores do lote não podem ser negativos."))
 		if getdate(fim) < getdate(inicio):
-			frappe.throw("A data de término do lote não pode ser anterior à de início.")
+			frappe.throw(_("A data de término do lote não pode ser anterior à de início."))
 		if consumacao > valor:
-			frappe.throw("O valor de consumação do lote não pode ser maior que o valor do convite.")
+			frappe.throw(_("O valor de consumação do lote não pode ser maior que o valor do convite."))
 		lotes.append(
 			{
 				"data_inicio": getdate(inicio),
@@ -436,9 +436,9 @@ def build_dashboard(festa_name: str) -> dict:
 @frappe.whitelist()
 def get_dashboard(festa_name: str) -> dict:
 	if not festa_name:
-		frappe.throw("Parâmetro 'festa_name' obrigatório.")
+		frappe.throw(_("Parâmetro 'festa_name' obrigatório."))
 	if not frappe.has_permission("Festa", "read", festa_name):
-		frappe.throw("Sem permissão para acessar esta festa.", frappe.PermissionError)
+		frappe.throw(_("Sem permissão para acessar esta festa."), frappe.PermissionError)
 	_validate_festa(festa_name)
 	return build_dashboard(festa_name)
 
@@ -456,9 +456,9 @@ def export_convites_excel(festa_name: str) -> None:
 	from openpyxl.utils import get_column_letter
 
 	if not festa_name:
-		frappe.throw("Parâmetro 'festa_name' obrigatório.")
+		frappe.throw(_("Parâmetro 'festa_name' obrigatório."))
 	if not frappe.has_permission("Festa", "read", festa_name):
-		frappe.throw("Sem permissão para acessar esta festa.", frappe.PermissionError)
+		frappe.throw(_("Sem permissão para acessar esta festa."), frappe.PermissionError)
 	_validate_festa(festa_name)
 
 	dashboard = build_dashboard(festa_name)
@@ -535,7 +535,7 @@ def update_config(festa_name: str, aceitar_doacoes, data_limite_vendas) -> dict:
 		try:
 			datetime.strptime(str(data_value), "%Y-%m-%d")
 		except ValueError:
-			frappe.throw("Data limite de vendas inválida.")
+			frappe.throw(_("Data limite de vendas inválida."))
 		if getdate(data_value) < getdate(today()):
 			# Permite manter datas no passado para não bloquear correções administrativas;
 			# o bloqueio efetivo é feito no controller de Convite Festa.
@@ -568,21 +568,21 @@ def upsert_opcao(festa_name: str, payload) -> dict:
 	data = _parse_payload(payload)
 	nome_convite = (data.get("nome_convite") or "").strip()
 	if not nome_convite:
-		frappe.throw("Informe o nome do convite.")
+		frappe.throw(_("Informe o nome do convite."))
 
 	try:
 		valor = flt(data.get("valor", 0))
 	except (ValueError, TypeError):
-		frappe.throw("Valor inválido.")
+		frappe.throw(_("Valor inválido."))
 	if valor < 0:
-		frappe.throw("Valor não pode ser negativo.")
+		frappe.throw(_("Valor não pode ser negativo."))
 
 	try:
 		valor_consumacao = flt(data.get("valor_consumacao", 0))
 	except (ValueError, TypeError):
-		frappe.throw("Valor de consumação inválido.")
+		frappe.throw(_("Valor de consumação inválido."))
 	if valor_consumacao < 0:
-		frappe.throw("Valor de consumação não pode ser negativo.")
+		frappe.throw(_("Valor de consumação não pode ser negativo."))
 
 	lotes = _parse_lotes_opcao(data.get("lotes"))
 
@@ -592,9 +592,9 @@ def upsert_opcao(festa_name: str, payload) -> dict:
 	try:
 		qtd_esperada = int(qtd_esperada)
 	except (ValueError, TypeError):
-		frappe.throw("Quantidade esperada inválida.")
+		frappe.throw(_("Quantidade esperada inválida."))
 	if qtd_esperada < 0:
-		frappe.throw("Quantidade esperada não pode ser negativa.")
+		frappe.throw(_("Quantidade esperada não pode ser negativa."))
 
 	ativo = 1 if data.get("ativo") in ("1", "true", "True", True, 1, None) else 0
 	if data.get("ativo") in (0, "0", "false", "False", False):
@@ -604,13 +604,13 @@ def upsert_opcao(festa_name: str, payload) -> dict:
 	ramo_presente = "ramo" in data
 	ramo = (data.get("ramo") or "").strip() or None
 	if ramo and ramo not in RAMOS_CONVITE:
-		frappe.throw("Ramo inválido.")
+		frappe.throw(_("Ramo inválido."))
 
 	name = (data.get("name") or "").strip()
 	if name:
 		doc = frappe.get_doc("Opcao Convite Festa", name)
 		if doc.festa != festa_name:
-			frappe.throw("Opção pertence a outra festa.")
+			frappe.throw(_("Opção pertence a outra festa."))
 		doc.nome_convite = nome_convite
 		if ramo_presente:
 			doc.ramo = ramo
@@ -649,14 +649,14 @@ def delete_opcao(opcao_name: str) -> dict:
 	doc = frappe.get_doc("Opcao Convite Festa", opcao_name)
 	if int(doc.quantidade_vendida or 0) > 0:
 		frappe.throw(
-			"Esta opção já possui vendas confirmadas. Marque como inativa em vez de excluir.",
+			_("Esta opção já possui vendas confirmadas. Marque como inativa em vez de excluir."),
 		)
 
 	# Bloqueia exclusão se houver itens de convite vinculados (pedidos pendentes).
 	em_uso = frappe.db.exists("Item Convite Festa", {"opcao_convite": opcao_name})
 	if em_uso:
 		frappe.throw(
-			"Esta opção está vinculada a um ou mais pedidos. Marque como inativa em vez de excluir.",
+			_("Esta opção está vinculada a um ou mais pedidos. Marque como inativa em vez de excluir."),
 		)
 
 	frappe.delete_doc("Opcao Convite Festa", opcao_name)
@@ -679,7 +679,7 @@ def criar_opcoes_por_ramo(festa_name: str) -> dict:
 	_validate_festa(festa_name)
 
 	if frappe.db.count("Opcao Convite Festa", {"festa": festa_name}):
-		frappe.throw("Esta festa já possui tipos de convite cadastrados.")
+		frappe.throw(_("Esta festa já possui tipos de convite cadastrados."))
 
 	festa = frappe.get_doc("Festa", festa_name)
 

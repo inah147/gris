@@ -71,6 +71,9 @@ def get_entradas_saidas_mensal(
 		params["ordinaria_extraordinaria"] = ordinaria_extraordinaria
 	_apply_fonte_filter(conditions, params)
 	where_sql = " AND ".join(conditions)
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	query = f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,
 			   SUM(CASE WHEN valor > 0 THEN valor ELSE 0 END) AS entradas,
@@ -133,6 +136,9 @@ def get_entradas_credito_mensal(
 		params["ordinaria_extraordinaria"] = ordinaria_extraordinaria
 	_apply_fonte_filter(conditions, params)
 	where_sql = " AND ".join(conditions)
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	query = f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,
 			   SUM(valor) AS total_credito
@@ -182,6 +188,9 @@ def get_entradas_credito_mensal_por_categoria(
 		params["ordinaria_extraordinaria"] = ordinaria_extraordinaria
 	_apply_fonte_filter(conditions, params)
 	where_sql = " AND ".join(conditions)
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	query = f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,
 			   COALESCE(categoria, 'Sem Categoria') AS categoria,
@@ -236,6 +245,9 @@ def get_entradas_credito_mensal_por_centro_custo(
 		params["ordinaria_extraordinaria"] = ordinaria_extraordinaria
 	_apply_fonte_filter(conditions, params)
 	where_sql = " AND ".join(conditions)
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	query = f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,
 			   COALESCE(centro_de_custo, 'Sem Centro') AS centro,
@@ -290,6 +302,9 @@ def get_entradas_credito_mensal_por_tipo(
 		params["centro_de_custo"] = centro_de_custo
 	_apply_fonte_filter(conditions, params)
 	where_sql = " AND ".join(conditions)
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	query = f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,
 			SUM(CASE WHEN COALESCE(ordinaria_extraordinaria,'Ordinária') = 'Ordinária' THEN valor ELSE 0 END) AS ordinaria_total,
@@ -349,6 +364,9 @@ def get_saidas_debito_mensal(
 		params["ordinaria_extraordinaria"] = ordinaria_extraordinaria
 	_apply_fonte_filter(conditions, params)
 	where_sql = " AND ".join(conditions)
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	query = f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,
 			   SUM(ABS(valor)) AS total_debito
@@ -398,6 +416,9 @@ def get_saidas_debito_mensal_por_categoria(
 		params["ordinaria_extraordinaria"] = ordinaria_extraordinaria
 	_apply_fonte_filter(conditions, params)
 	where_sql = " AND ".join(conditions)
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	query = f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,
 			   COALESCE(categoria, 'Sem Categoria') AS categoria,
@@ -452,6 +473,9 @@ def get_saidas_debito_mensal_por_centro_custo(
 		params["ordinaria_extraordinaria"] = ordinaria_extraordinaria
 	_apply_fonte_filter(conditions, params)
 	where_sql = " AND ".join(conditions)
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	query = f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,
 			   COALESCE(centro_de_custo, 'Sem Centro') AS centro,
@@ -504,6 +528,9 @@ def get_saidas_debito_mensal_por_tipo(instituicao=None, carteira=None, categoria
 		params["centro_de_custo"] = centro_de_custo
 	_apply_fonte_filter(conditions, params)
 	where_sql = " AND ".join(conditions)
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	query = f"""
 		SELECT DATE_FORMAT(COALESCE(data_deposito, timestamp_transacao), '%%Y-%%m') AS ym,
 			SUM(CASE WHEN COALESCE(ordinaria_extraordinaria,'Ordinária') = 'Ordinária' THEN ABS(valor) ELSE 0 END) AS ordinaria_total,

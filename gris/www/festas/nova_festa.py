@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 import frappe
+from frappe import _
 from frappe.utils import add_days, get_time, getdate
 
 from gris.api.portal_access import enrich_context
@@ -16,7 +17,7 @@ ALLOWED_ROLES = {"Gestor de festas", "System Manager"}
 def _ensure_gestor_access() -> None:
 	roles = set(frappe.get_roles(frappe.session.user))
 	if not (roles & ALLOWED_ROLES):
-		frappe.throw("Você não tem permissão para cadastrar festas.", frappe.PermissionError)
+		frappe.throw(_("Você não tem permissão para cadastrar festas."), frappe.PermissionError)
 
 
 def _select_items_associados() -> list[dict[str, str]]:
@@ -84,25 +85,25 @@ def criar_festa(payload):
 		try:
 			payload = json.loads(payload)
 		except ValueError:
-			frappe.throw("Dados invalidos.")
+			frappe.throw(_("Dados invalidos."))
 
 	if not isinstance(payload, dict):
-		frappe.throw("Dados invalidos.")
+		frappe.throw(_("Dados invalidos."))
 
 	nome = (payload.get("nome_festa") or "").strip()
 	if len(nome) < 3:
-		frappe.throw("Informe um nome de festa com pelo menos 3 caracteres.")
+		frappe.throw(_("Informe um nome de festa com pelo menos 3 caracteres."))
 
 	if frappe.db.exists("Festa", nome):
 		frappe.throw(f"Ja existe uma festa com o nome '{nome}'.")
 
 	data_raw = (payload.get("data") or "").strip()
 	if not data_raw:
-		frappe.throw("Informe a data da festa.")
+		frappe.throw(_("Informe a data da festa."))
 	try:
 		data_festa = getdate(data_raw)
 	except Exception:
-		frappe.throw("Data invalida.")
+		frappe.throw(_("Data invalida."))
 
 	horario_inicio_raw = (payload.get("horario_inicio") or "").strip() or None
 	horario_termino_raw = (payload.get("horario_termino") or "").strip() or None
@@ -110,15 +111,15 @@ def criar_festa(payload):
 	horario_termino = get_time(horario_termino_raw) if horario_termino_raw else None
 
 	if horario_inicio and horario_termino and horario_termino <= horario_inicio:
-		frappe.throw("O horario de termino deve ser posterior ao de inicio.")
+		frappe.throw(_("O horario de termino deve ser posterior ao de inicio."))
 
 	tipo_coord = (payload.get("tipo_coord_geral") or "").strip()
 	if tipo_coord not in {"Responsavel", "Associado"}:
-		frappe.throw("Selecione o tipo de coordenador.")
+		frappe.throw(_("Selecione o tipo de coordenador."))
 
 	coordenador = (payload.get("coordenador") or "").strip()
 	if not coordenador:
-		frappe.throw("Selecione o coordenador da festa.")
+		frappe.throw(_("Selecione o coordenador da festa."))
 
 	doc = frappe.new_doc("Festa")
 	doc.nome_festa = nome
@@ -130,11 +131,11 @@ def criar_festa(payload):
 	doc.tipo_coord_geral = tipo_coord
 	if tipo_coord == "Responsavel":
 		if not frappe.db.exists("Responsavel", coordenador):
-			frappe.throw("Responsavel selecionado nao existe.")
+			frappe.throw(_("Responsavel selecionado nao existe."))
 		doc.responsavel_coord_geral = coordenador
 	else:
 		if not frappe.db.exists("Associado", coordenador):
-			frappe.throw("Associado selecionado nao existe.")
+			frappe.throw(_("Associado selecionado nao existe."))
 		doc.associado_coord_geral = coordenador
 
 	doc.insert()

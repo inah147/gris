@@ -17,6 +17,7 @@ import io
 import os
 
 import frappe
+from frappe import _
 from frappe.utils import flt, format_date, get_fullname, today
 
 from gris.festas.utils.unidades import converter
@@ -138,9 +139,9 @@ def _gerar_lista_compras_pdf_bytes(festa_name: str) -> bytes:
 def download_lista_compras_pdf(festa_name: str) -> None:
 	"""Gera e disponibiliza a lista de compras da festa em PDF (documento de apoio)."""
 	if not festa_name:
-		frappe.throw("Parâmetro 'festa_name' obrigatório.", frappe.ValidationError)
+		frappe.throw(_("Parâmetro 'festa_name' obrigatório."), frappe.ValidationError)
 	if not frappe.has_permission("Festa", "read", festa_name):
-		frappe.throw("Sem permissão para acessar esta festa.", frappe.PermissionError)
+		frappe.throw(_("Sem permissão para acessar esta festa."), frappe.PermissionError)
 
 	nome_festa = frappe.db.get_value("Festa", festa_name, "nome_festa") or festa_name
 	frappe.local.response.filename = f"lista-compras-{frappe.scrub(nome_festa)}.pdf"

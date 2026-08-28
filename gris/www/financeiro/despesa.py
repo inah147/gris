@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 
 import frappe
+from frappe import _
 
 from gris.api.portal_access import enrich_context
 from gris.api.portal_cache_utils import get_uel_cached
@@ -18,7 +19,7 @@ def get_context(context):
 	context.active_link = "/financeiro/despesas"
 
 	if not conta_name:
-		frappe.throw("Conta não informada")
+		frappe.throw(_("Conta não informada"))
 
 	doc = frappe.get_doc("Conta Fixa", conta_name)
 

@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 
 from gris.api.portal_access import enrich_context
 from gris.api.portal_cache_utils import get_uel_cached
@@ -12,7 +13,7 @@ ALLOWED_ROLES = {"Editor de projetos", "System Manager"}
 def _ensure_editor_access() -> None:
 	roles = set(frappe.get_roles(frappe.session.user))
 	if not (roles & ALLOWED_ROLES):
-		frappe.throw("Você não tem permissão para cadastrar ou editar projetos.", frappe.PermissionError)
+		frappe.throw(_("Você não tem permissão para cadastrar ou editar projetos."), frappe.PermissionError)
 
 
 def get_context(context):

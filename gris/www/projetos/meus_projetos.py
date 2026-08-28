@@ -1,6 +1,7 @@
 from urllib.parse import quote
 
 import frappe
+from frappe import _
 
 from gris.api.portal_access import enrich_context, user_has_access
 from gris.api.portal_cache_utils import get_uel_cached
@@ -118,7 +119,7 @@ def get_context(context):
 		raise frappe.Redirect
 
 	if not user_has_access("/projetos/meus_projetos"):
-		frappe.throw("Você não tem permissão para acessar esta página.", frappe.PermissionError)
+		frappe.throw(_("Você não tem permissão para acessar esta página."), frappe.PermissionError)
 
 	uel_data = get_uel_cached()
 	if uel_data:

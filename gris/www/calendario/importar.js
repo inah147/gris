@@ -22,7 +22,7 @@
 			e.stopPropagation();
 
 			if (typeof frappe === "undefined" || !frappe.ui || !frappe.ui.FileUploader) {
-				frappe.msgprint("Uploader indisponível.");
+				frappe.msgprint(__("Uploader indisponível."));
 				return;
 			}
 
@@ -115,7 +115,7 @@
 					data.error_details.length > 50
 						? `<div class="text-muted mt-2">(+${
 								data.error_details.length - 50
-						  } erros adicionais... ver Error Log)</div>`
+							} erros adicionais... ver Error Log)</div>`
 						: "";
 
 				errorsList.innerHTML = `<ul class="mb-0">${errorItems}</ul>${moreText}`;
@@ -126,7 +126,7 @@
 
 	function importCalendario() {
 		if (!window._uploadedFileUrl) {
-			frappe.msgprint("Selecione um arquivo antes de importar.");
+			frappe.msgprint(__("Selecione um arquivo antes de importar."));
 			return;
 		}
 

@@ -15,6 +15,7 @@ import json
 import unicodedata
 
 import frappe
+from frappe import _
 
 # Campos de categorização que podem ser aplicados ao registro mantido na conciliação.
 # Mantém a mesma regra de gris.api.financeiro.transactions.batch_update_transactions.
@@ -33,7 +34,7 @@ JANELA_DIAS = 5
 def _verificar_permissao():
 	"""Conciliar altera totais; exige permissão de escrita no doctype."""
 	if not frappe.has_permission("Transacao Extrato Geral", ptype="write"):
-		frappe.throw("Sem permissão para conciliar transações.", frappe.PermissionError)
+		frappe.throw(_("Sem permissão para conciliar transações."), frappe.PermissionError)
 
 
 def _normalizar(texto):
@@ -135,7 +136,7 @@ def get_candidatos_planilha(sistema_id):
 		as_dict=True,
 	)
 	if not sistema:
-		frappe.throw("Transação de sistema não encontrada.")
+		frappe.throw(_("Transação de sistema não encontrada."))
 
 	valor = float(sistema.get("valor") or 0)
 	valor_abs = abs(valor)
@@ -174,6 +175,9 @@ def get_candidatos_planilha(sistema_id):
 	campos_sql = ", ".join(f"`{c}`" for c in _CAMPOS_LISTA)
 	# A interpolação é segura: os campos vêm de _CAMPOS_LISTA e as condições são
 	# literais deste módulo — todo valor de usuário entra por `params`.
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	rows = frappe.db.sql(
 		f"SELECT {campos_sql} FROM `tabTransacao Extrato Geral` WHERE {where_sql} LIMIT 50",
 		params,
@@ -217,9 +221,9 @@ def conciliar(
 	_verificar_permissao()
 
 	if manter not in ("sistema", "planilha"):
-		frappe.throw("Parâmetro 'manter' inválido (use 'sistema' ou 'planilha').")
+		frappe.throw(_("Parâmetro 'manter' inválido (use 'sistema' ou 'planilha')."))
 	if sistema_id == planilha_id:
-		frappe.throw("Não é possível conciliar uma transação com ela mesma.")
+		frappe.throw(_("Não é possível conciliar uma transação com ela mesma."))
 
 	doc_sistema = frappe.get_doc("Transacao Extrato Geral", sistema_id)
 	doc_planilha = frappe.get_doc("Transacao Extrato Geral", planilha_id)

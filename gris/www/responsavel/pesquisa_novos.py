@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 
 from gris.api.portal_access import enrich_context, user_has_access
 
@@ -37,7 +38,7 @@ def get_context(context):
 	responsavel_name = _get_responsavel_name(user)
 
 	if not responsavel_name:
-		frappe.throw("Responsável não encontrado para este usuário.")
+		frappe.throw(_("Responsável não encontrado para este usuário."))
 
 	# Check if survey already exists
 	survey_name = frappe.db.exists("Pesqusa de Novos Associados", {"responsavel": responsavel_name})
@@ -59,11 +60,11 @@ def get_context(context):
 @frappe.whitelist()
 def submit_survey(data):
 	if frappe.session.user == "Guest":
-		frappe.throw("Não autorizado")
+		frappe.throw(_("Não autorizado"))
 
 	if not user_has_access("/responsavel/pesquisa_novos"):
 		frappe.throw(
-			"Pesquisa disponível apenas para responsáveis com beneficiários em processo de integração.",
+			_("Pesquisa disponível apenas para responsáveis com beneficiários em processo de integração."),
 			frappe.PermissionError,
 		)
 
@@ -71,11 +72,11 @@ def submit_survey(data):
 	responsavel_name = _get_responsavel_name(user)
 
 	if not responsavel_name:
-		frappe.throw("Responsável não encontrado.")
+		frappe.throw(_("Responsável não encontrado."))
 
 	# Check if already exists
 	if frappe.db.exists("Pesqusa de Novos Associados", {"responsavel": responsavel_name}):
-		frappe.throw("Pesquisa já respondida.")
+		frappe.throw(_("Pesquisa já respondida."))
 
 	import json
 

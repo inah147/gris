@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 
 from gris.api.portal_access import enrich_context
 from gris.api.portal_cache_utils import get_uel_cached
@@ -7,7 +8,7 @@ no_cache = 1
 
 
 def get_context(context):
-	frappe.throw("Página indisponível", frappe.PageDoesNotExistError)
+	frappe.throw(_("Página indisponível"), frappe.PageDoesNotExistError)
 
 	# Bloqueio para usuários não autenticados
 	if frappe.session.user == "Guest":
@@ -16,7 +17,7 @@ def get_context(context):
 
 	roles = frappe.get_roles(frappe.session.user)
 	if "Gestor Calendario" not in roles and "System Manager" not in roles:
-		frappe.throw("Acesso permitido apenas para Gestor de Calendário.", frappe.PermissionError)
+		frappe.throw(_("Acesso permitido apenas para Gestor de Calendário."), frappe.PermissionError)
 
 	# Enrich + permissão
 	enrich_context(context, "/calendario/importar")

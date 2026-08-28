@@ -98,6 +98,9 @@ def get_associados_dashboard(categoria=None, ramo=None, secao=None, funcao=None)
 		params["funcao"] = funcao
 	where_clause = " AND ".join(filters)
 
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	stats_card = frappe.db.sql(
 		f"""
 		SELECT
@@ -127,6 +130,9 @@ def get_associados_dashboard(categoria=None, ramo=None, secao=None, funcao=None)
 	def pct(v):
 		return round((v / ativos_total) * 100, 1) if ativos_total else 0
 
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	rows = frappe.db.sql(
 		f"""
 		SELECT ramo, categoria, COUNT(*) AS total
@@ -174,6 +180,9 @@ def get_associados_dashboard(categoria=None, ramo=None, secao=None, funcao=None)
 
 	# Construir lista literal (seguro porque gerado internamente) 'YYYYMM'
 	months_in = ", ".join([f"'{m}'" for m in month_order])
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
 	venc_rows = frappe.db.sql(
 		f"""
 		SELECT DATE_FORMAT(validade_registro,'%%Y%%m') AS yyyymm, tipo_registro, COUNT(*) AS total

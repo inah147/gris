@@ -2,6 +2,7 @@ import hashlib
 import os
 
 import frappe
+from frappe import _
 
 from gris.api.financeiro.portao3 import get_portao3_bank_statement_df
 from gris.api.portal_access import enrich_context
@@ -53,7 +54,7 @@ def process_uploaded_file_portao3(file_url):
 		"Transacao Portao 3", ptype="write"
 	):
 		frappe.throw(
-			"Sem permissão para conciliação: requer criar/editar em 'Transacao Portao 3'.",
+			_("Sem permissão para conciliação: requer criar/editar em 'Transacao Portao 3'."),
 			frappe.PermissionError,
 		)
 
@@ -76,7 +77,7 @@ def process_uploaded_file_portao3(file_url):
 	stats = {"total": len(df), "inserted": 0, "skipped_exist": 0, "failed": 0}
 	errors = []
 
-	for _, row in df.iterrows():
+	for _indice, row in df.iterrows():
 		try:
 			tx_id_str = (
 				f"{row.get('Date')}{row.get('Descrição')}{row.get('Valor')}{row.get('Entrada/Saída')}"

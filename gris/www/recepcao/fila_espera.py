@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 from frappe.utils import add_months, getdate, today
 
 from gris.api.portal_access import enrich_context
@@ -16,7 +17,7 @@ def get_context(context):
 		not frappe.db.exists("Has Role", {"parent": frappe.session.user, "role": "Recepcao"})
 		and frappe.session.user != "Administrator"
 	):
-		frappe.throw("Acesso negado", frappe.PermissionError)
+		frappe.throw(_("Acesso negado"), frappe.PermissionError)
 
 	ramos = ["Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro"]
 
@@ -150,7 +151,7 @@ def get_context(context):
 
 		# 1. Immediate spots
 		if vagas_reais_agora > 0:
-			for _ in range(vagas_reais_agora):
+			for _vaga in range(vagas_reais_agora):
 				availability_timeline.append(getdate(today()))
 
 		# 2. Future spots from exits
@@ -214,11 +215,11 @@ def get_context(context):
 @frappe.whitelist()
 def chamar_associado(fila_id):
 	if not fila_id:
-		frappe.throw("ID da fila não fornecido")
+		frappe.throw(_("ID da fila não fornecido"))
 
 	fila_item = frappe.get_doc("Fila de Espera", fila_id)
 	if not fila_item.associado:
-		frappe.throw("Associado não encontrado na fila")
+		frappe.throw(_("Associado não encontrado na fila"))
 
 	# Update Novo Associado status to 'Novo Contato' (restarting the flow)
 	frappe.db.set_value("Novo Associado", fila_item.associado, "status", "Novo Contato")
@@ -232,11 +233,11 @@ def chamar_associado(fila_id):
 @frappe.whitelist()
 def registrar_desistencia(fila_id, motivo=None):
 	if not fila_id:
-		frappe.throw("ID da fila não fornecido")
+		frappe.throw(_("ID da fila não fornecido"))
 
 	fila_item = frappe.get_doc("Fila de Espera", fila_id)
 	if not fila_item.associado:
-		frappe.throw("Associado não encontrado na fila")
+		frappe.throw(_("Associado não encontrado na fila"))
 
 	# Process withdrawal using the shared API
 	processar_desistencia(fila_item.associado, motivo=motivo)

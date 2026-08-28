@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import frappe
+from frappe import _
 from frappe.utils import flt, format_date
 
 from gris.api.festas import totais_payload
@@ -393,9 +394,9 @@ def build_festa_payload(festa_name: str) -> dict:
 def get_festa_payload(festa_name: str) -> dict:
 	"""Retorna o payload completo para o front-end refazer o estado após mutações."""
 	if not festa_name:
-		frappe.throw("Parâmetro 'festa_name' obrigatório.", frappe.ValidationError)
+		frappe.throw(_("Parâmetro 'festa_name' obrigatório."), frappe.ValidationError)
 	if not frappe.has_permission("Festa", "read", festa_name):
-		frappe.throw("Sem permissão para acessar esta festa.", frappe.PermissionError)
+		frappe.throw(_("Sem permissão para acessar esta festa."), frappe.PermissionError)
 	return build_festa_payload(festa_name)
 
 
@@ -405,7 +406,7 @@ def get_context(context):
 		raise frappe.Redirect
 
 	if not user_has_access("/festas/festa"):
-		frappe.throw("Você não tem permissão para acessar esta página.", frappe.PermissionError)
+		frappe.throw(_("Você não tem permissão para acessar esta página."), frappe.PermissionError)
 
 	uel_data = get_uel_cached()
 	if uel_data:

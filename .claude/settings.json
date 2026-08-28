@@ -34,7 +34,10 @@
       "Bash(bench --site gris.localhost run-tests:*)",
       "Bash(bench --site gris.local run-tests:*)",
       "Bash(npm run design-system:sync:*)",
-      "Bash(docker compose exec backend bench --site gris.local run-tests:*)"
+      "Bash(docker compose exec backend bench --site gris.local run-tests:*)",
+      "Bash(gris-lint)",
+      "Bash(bench-gris run-tests:*)",
+      "Bash(pre-commit run:*)"
     ],
     "soft_deny": [
       "$defaults",

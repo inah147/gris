@@ -34,7 +34,7 @@ Este arquivo é o ponto de entrada do Claude Code neste repositório. Ele **não
 | Setup inicial do ambiente no Windows (WSL2, Docker, `fm`) | [WINDOWS_SETUP.md](WINDOWS_SETUP.md) |
 | Dados de fixtures (roles, categorias, UOs) | [FIXTURES.md](FIXTURES.md) |
 | Permissões e ambiente do auto mode do Claude Code | [.claude/settings.json](.claude/settings.json) |
-| Bench para rodar testes nas sessões do Claude Code na web | [.claude/hooks/session-start.sh](.claude/hooks/session-start.sh) |
+| Rodar os testes e o lint do CI numa sessão do Claude Code na web (`bench-gris run-tests --app gris` e `gris-lint`) | [.claude/hooks/session-start.sh](.claude/hooks/session-start.sh) |
 
 ## Regra de manutenção deste índice
 

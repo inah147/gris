@@ -16,7 +16,7 @@ frappe.pages["monitor-de-jobs"].on_page_load = function (wrapper) {
 		["/assets/gris/js/job_log_timeline.js", "/assets/gris/vendor/echarts/echarts.min.js"],
 		() => {
 			wrapper.monitor_de_jobs = new MonitorDeJobs(page);
-		},
+		}
 	);
 };
 
@@ -93,7 +93,7 @@ class MonitorDeJobs {
 				{ label: __("Últimos 30 dias"), value: "30" },
 				{ label: __("Últimos 90 dias"), value: "90" },
 			],
-			"7",
+			"7"
 		);
 		this.campo_periodo.val("7").on("change", () => {
 			this.filtros.dias = cint(this.campo_periodo.val()) || 7;
@@ -106,9 +106,9 @@ class MonitorDeJobs {
 				ORDEM_DOS_STATUS.map((status) => ({
 					label: gris.job_logs.rotulo_status(status),
 					value: status,
-				})),
+				}))
 			),
-			"",
+			""
 		);
 		this.campo_status.on("change", () => {
 			this.filtros.status = this.campo_status.val();
@@ -251,9 +251,9 @@ class MonitorDeJobs {
 							${gris.job_logs.escapar(card.valor)}
 						</div>
 						<div class="gris-monitor-card-rotulo">${gris.job_logs.escapar(card.rotulo)}</div>
-					</div>`,
+					</div>`
 				)
-				.join(""),
+				.join("")
 		);
 	}
 
@@ -266,7 +266,7 @@ class MonitorDeJobs {
 		this.corpo.find(".gris-monitor-grafico-wrapper").show();
 
 		const series = ORDEM_DOS_STATUS.filter((status) =>
-			(resumo.serie || []).some((linha) => linha[status]),
+			(resumo.serie || []).some((linha) => linha[status])
 		).map((status) => ({
 			name: gris.job_logs.rotulo_status(status),
 			type: "bar",
@@ -295,7 +295,7 @@ class MonitorDeJobs {
 				yAxis: { type: "value", minInterval: 1, name: __("Execuções") },
 				series: series,
 			},
-			true,
+			true
 		);
 	}
 
@@ -304,7 +304,7 @@ class MonitorDeJobs {
 			this.area_jobs.html(
 				`<div class="gris-monitor-vazio text-muted">
 					${__("Nenhum job foi executado ainda. Assim que o scheduler rodar, as execuções aparecem aqui.")}
-				</div>`,
+				</div>`
 			);
 			return;
 		}
@@ -326,11 +326,12 @@ class MonitorDeJobs {
 				const falhas = job.falhas
 					? `<span class="text-danger">${job.falhas}</span>`
 					: `<span class="text-muted">0</span>`;
+				const metodo = gris.job_logs.escapar(job.metodo);
 
-				return `<tr data-metodo="${gris.job_logs.escapar(job.metodo)}" class="gris-monitor-linha">
+				return `<tr data-metodo="${metodo}" class="gris-monitor-linha">
 					<td>
 						<div class="gris-monitor-job-nome">${gris.job_logs.escapar(job.rotulo)}</div>
-						<div class="gris-monitor-job-metodo">${gris.job_logs.escapar(job.metodo)}</div>
+						<div class="gris-monitor-job-metodo">${metodo}</div>
 					</td>
 					<td>${agenda}</td>
 					<td>${status}</td>
@@ -412,8 +413,8 @@ class MonitorDeJobs {
 		if (!this.execucoes || !this.execucoes.length) {
 			this.area_execucoes.html(
 				`<div class="gris-monitor-vazio text-muted">${__(
-					"Nenhuma execução encontrada com os filtros atuais.",
-				)}</div>`,
+					"Nenhuma execução encontrada com os filtros atuais."
+				)}</div>`
 			);
 			return;
 		}
@@ -423,16 +424,23 @@ class MonitorDeJobs {
 				const alertas = [];
 				if (execucao.total_erros) {
 					alertas.push(
-						`<span class="indicator-pill red">${execucao.total_erros} ${__("erro(s)")}</span>`,
+						`<span class="indicator-pill red">${execucao.total_erros} ${__(
+							"erro(s)"
+						)}</span>`
 					);
 				}
 				if (execucao.total_avisos) {
 					alertas.push(
-						`<span class="indicator-pill orange">${execucao.total_avisos} ${__("aviso(s)")}</span>`,
+						`<span class="indicator-pill orange">${execucao.total_avisos} ${__(
+							"aviso(s)"
+						)}</span>`
 					);
 				}
 
-				return `<tr class="gris-monitor-execucao" data-name="${gris.job_logs.escapar(execucao.name)}">
+				// Escapado uma vez: `name` global do browser nao entra aqui.
+				const nome_do_log = gris.job_logs.escapar(execucao.name);
+
+				return `<tr class="gris-monitor-execucao" data-name="${nome_do_log}">
 					<td>
 						<div>${gris.job_logs.escapar(execucao.job)}</div>
 						<div class="gris-monitor-job-metodo">${gris.job_logs.escapar(execucao.origem)}</div>
@@ -527,7 +535,7 @@ class MonitorDeJobs {
 
 		gris.job_logs.render_detalhe(
 			this.area_detalhe.find(".gris-monitor-detalhe-conteudo"),
-			execucao,
+			execucao
 		);
 
 		this.area_detalhe.find(".gris-monitor-fechar").on("click", () => this.fechar_detalhe());

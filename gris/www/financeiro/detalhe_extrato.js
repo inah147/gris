@@ -155,7 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		const data = getFormData();
 		const qsDocname = new URLSearchParams(window.location.search).get("name");
 		const docname = normalizeDocname(
-			(window.frappe && frappe.form_dict && frappe.form_dict.name) || qsDocname,
+			(window.frappe && frappe.form_dict && frappe.form_dict.name) || qsDocname
 		);
 
 		if (!docname) {

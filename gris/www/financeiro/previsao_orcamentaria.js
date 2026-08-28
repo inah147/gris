@@ -118,12 +118,12 @@
 					"load",
 					() =>
 						window.echarts ? resolve() : reject(new Error("ECharts não disponível")),
-					{ once: true },
+					{ once: true }
 				);
 				existing.addEventListener(
 					"error",
 					() => reject(new Error("Falha ao carregar ECharts")),
-					{ once: true },
+					{ once: true }
 				);
 				return;
 			}
@@ -198,8 +198,8 @@
 			.map(
 				(item) =>
 					`${item.marker}${item.seriesName}: <strong>${formatCurrency(
-						item.value,
-					)}</strong>`,
+						item.value
+					)}</strong>`
 			)
 			.join("<br/>");
 		return `<strong>${params[0] ? params[0].axisValue : ""}</strong><br/>${linhas}`;
@@ -254,7 +254,7 @@
 					},
 				],
 			},
-			true,
+			true
 		);
 	}
 
@@ -282,7 +282,7 @@
 		const previstoAcum = acumular(resultadoPrevisto);
 		// O realizado só faz sentido até o mês corrente; meses futuros ficam sem ponto.
 		const realizadoAcum = acumular(resultadoRealizado).map((v, i) =>
-			i < mesesDecorridos ? v : null,
+			i < mesesDecorridos ? v : null
 		);
 		const base = baseOption({ yAxisName: "R$", axisPointer: "line" });
 		chart.setOption(
@@ -326,7 +326,7 @@
 					},
 				],
 			},
-			true,
+			true
 		);
 	}
 
@@ -383,7 +383,7 @@
 					},
 				],
 			},
-			true,
+			true
 		);
 	}
 
@@ -398,27 +398,27 @@
 		setTexto("kpi-receitas-realizadas", formatCurrency(totais.receitas_realizadas));
 		setTexto(
 			"kpi-receitas-previstas",
-			`Previsto: ${formatCurrency(totais.receitas_previstas)}`,
+			`Previsto: ${formatCurrency(totais.receitas_previstas)}`
 		);
 		setTexto(
 			"kpi-receitas-execucao",
-			`Execução até hoje: ${formatPercent(totais.execucao_receitas)}`,
+			`Execução até hoje: ${formatPercent(totais.execucao_receitas)}`
 		);
 
 		setTexto("kpi-despesas-realizadas", formatCurrency(totais.despesas_realizadas));
 		setTexto(
 			"kpi-despesas-previstas",
-			`Previsto: ${formatCurrency(totais.despesas_previstas)}`,
+			`Previsto: ${formatCurrency(totais.despesas_previstas)}`
 		);
 		setTexto(
 			"kpi-despesas-execucao",
-			`Execução até hoje: ${formatPercent(totais.execucao_despesas)}`,
+			`Execução até hoje: ${formatPercent(totais.execucao_despesas)}`
 		);
 
 		setTexto("kpi-resultado-realizado", formatCurrency(totais.resultado_realizado));
 		setTexto(
 			"kpi-resultado-previsto",
-			`Previsto: ${formatCurrency(totais.resultado_previsto)}`,
+			`Previsto: ${formatCurrency(totais.resultado_previsto)}`
 		);
 
 		const desvio = parseNumber(totais.desvio_despesas);
@@ -429,8 +429,8 @@
 			desvio > 0
 				? "Acima do previsto"
 				: desvio < 0
-					? "Abaixo do previsto"
-					: "Em linha com o previsto",
+				? "Abaixo do previsto"
+				: "Em linha com o previsto"
 		);
 		const el = qs("kpi-desvio-despesas");
 		if (el) {
@@ -448,7 +448,7 @@
 			await ensureEcharts();
 		} catch (e) {
 			CHART_IDS.forEach((id) =>
-				setChartMessage(id, "Não foi possível carregar os gráficos."),
+				setChartMessage(id, "Não foi possível carregar os gráficos.")
 			);
 			return;
 		}
@@ -462,7 +462,7 @@
 			dados = r.message;
 		} catch (e) {
 			CHART_IDS.forEach((id) =>
-				setChartMessage(id, "Erro ao carregar os dados do comparativo."),
+				setChartMessage(id, "Erro ao carregar os dados do comparativo.")
 			);
 			return;
 		}
@@ -527,7 +527,7 @@
 			const valor = selectValue("previsao-seletor");
 			if (!valor || valor === previsaoAtual) return;
 			window.location.href = `/financeiro/previsao_orcamentaria?previsao=${encodeURIComponent(
-				valor,
+				valor
 			)}`;
 		});
 	}
@@ -597,7 +597,7 @@
 			const nome = r.message && r.message.name;
 			closeDialog("modalPrevisao");
 			window.location.href = `/financeiro/previsao_orcamentaria?previsao=${encodeURIComponent(
-				nome || previsaoAtual,
+				nome || previsaoAtual
 			)}`;
 		} catch (e) {
 			alertaErro("Não foi possível salvar a previsão.");
@@ -697,7 +697,7 @@
 			const nome = r.message && r.message.name;
 			closeDialog("modalDuplicar");
 			window.location.href = `/financeiro/previsao_orcamentaria?previsao=${encodeURIComponent(
-				nome || "",
+				nome || ""
 			)}`;
 		} catch (e) {
 			alertaErro("Não foi possível duplicar a previsão.");

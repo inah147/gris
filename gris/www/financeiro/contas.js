@@ -150,7 +150,7 @@
 			"uploadRecebimentosBtn",
 			"nomeRecebimentosInfinitepay",
 			"checkRecebimentosInfinitepay",
-			["csv"],
+			["csv"]
 		);
 	}
 
@@ -413,12 +413,12 @@
 				rebuildSelect(
 					"carteiraInputCentro",
 					buildItems(centros, "—"),
-					curCentro === "—" ? "" : curCentro,
+					curCentro === "—" ? "" : curCentro
 				);
 				rebuildSelect(
 					"carteiraInputResponsavel",
 					buildItems(users, "—"),
-					curResp === "—" ? "" : curResp,
+					curResp === "—" ? "" : curResp
 				);
 			});
 			return;
@@ -441,7 +441,7 @@
 			if (!name) return;
 			if (
 				!confirm(
-					`Desativar a carteira "${nomeTitulo}"?\n\nEla deixará de aparecer no portal. É possível reativá-la pelo Desk.`,
+					`Desativar a carteira "${nomeTitulo}"?\n\nEla deixará de aparecer no portal. É possível reativá-la pelo Desk.`
 				)
 			)
 				return;
@@ -469,7 +469,7 @@
 			if (!name) return;
 			if (
 				!confirm(
-					`Desativar a instituição "${nome}"?\n\nEla deixará de aparecer no portal. É possível reativá-la pelo Desk.`,
+					`Desativar a instituição "${nome}"?\n\nEla deixará de aparecer no portal. É possível reativá-la pelo Desk.`
 				)
 			)
 				return;
@@ -483,7 +483,7 @@
 					}
 					frappe.show_alert(
 						{ message: "Instituição desativada", indicator: "orange" },
-						4,
+						4
 					);
 					setTimeout(() => window.location.reload(), 600);
 				},

@@ -336,7 +336,7 @@ function initCopyData() {
 						showApiError(result, "Erro ao copiar os dados.");
 					},
 				});
-			},
+			}
 		);
 	});
 }
@@ -421,7 +421,7 @@ function initNewEventDialog() {
 		const inicioDate = getFieldValueById("modal-inicio");
 		const terminoDate = getFieldValueById("modal-termino");
 		const secoes = Array.from(
-			document.querySelectorAll('input[name="modal-secao"]:checked'),
+			document.querySelectorAll('input[name="modal-secao"]:checked')
 		).map((item) => item.value);
 		const local = document.getElementById("modal-local")?.value || "";
 		const nivel = getFieldValueById("modal-nivel");
@@ -481,11 +481,11 @@ function openEditDialog(data) {
 
 	setFieldValueWhenReady(
 		document.getElementById("edit-inicio"),
-		normalizeDateValue(data.inicio),
+		normalizeDateValue(data.inicio)
 	);
 	setFieldValueWhenReady(
 		document.getElementById("edit-termino"),
-		normalizeDateValue(data.termino),
+		normalizeDateValue(data.termino)
 	);
 	setFieldValueWhenReady(document.getElementById("edit-secao"), data.secao || "Diretoria");
 	setFieldValueWhenReady(document.getElementById("edit-nivel"), data.nivel || DEFAULT_LEVEL);
@@ -824,7 +824,7 @@ function initReconciliation() {
                                 <span>${formatDiffValue(diff.simulated?.[field])}</span>
                             </span>
                         </li>
-                    `,
+                    `
 					)
 					.join("");
 
@@ -834,7 +834,7 @@ function initReconciliation() {
                     <div class="simulation-reconcile-change-list-wrap">
                         <ul class="simulation-reconcile-change-list">${changeItems}</ul>
                     </div>
-                `,
+                `
 				);
 			}
 
@@ -897,8 +897,9 @@ function submitReconciliation(actions) {
 		callback(result) {
 			if (result.message?.count !== undefined) {
 				closeDialogById("reconcile-modal");
-				document.getElementById("success-message").textContent =
-					`${result.message.count} alterações aplicadas com sucesso.`;
+				document.getElementById(
+					"success-message"
+				).textContent = `${result.message.count} alterações aplicadas com sucesso.`;
 				openDialogById("success-modal");
 				return;
 			}

@@ -6,6 +6,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, flt, getdate, nowdate
 
+from gris.utils.job_logger import definir_resumo, metrica, obter_logger
+
 
 def lote_vigente(lotes: list, hoje=None) -> dict | None:
 	"""Retorna o lote cujo período contém ``hoje`` (ou None se nenhum for válido).
@@ -97,8 +99,11 @@ def atualizar_lotes_opcoes_convite() -> dict[str, int]:
 	Recalcula valor/consumação/ativo conforme a data atual, para festas em
 	andamento. Só toca opções não-portaria que possuem lotes cadastrados.
 	"""
+	logger = obter_logger("festas")
 	festas = frappe.get_all("Festa", filters={"status": "Em andamento"}, pluck="name")
 	if not festas:
+		logger.info("Nenhuma festa em andamento — nenhuma opcao de convite a reavaliar.")
+		definir_resumo("Nenhuma festa em andamento.")
 		return {"avaliadas": 0, "atualizadas": 0}
 
 	opcoes = frappe.get_all(
@@ -106,6 +111,7 @@ def atualizar_lotes_opcoes_convite() -> dict[str, int]:
 		filters={"festa": ("in", festas), "portaria": 0},
 		pluck="name",
 	)
+	logger.info(f"{len(opcoes)} opcao(oes) de convite em {len(festas)} festa(s) em andamento.")
 	avaliadas = 0
 	atualizadas = 0
 	for nome in opcoes:
@@ -131,4 +137,11 @@ def atualizar_lotes_opcoes_convite() -> dict[str, int]:
 		if mudou:
 			frappe.db.set_value("Opcao Convite Festa", nome, mudou, update_modified=False)
 			atualizadas += 1
+			logger.info(f"Opcao {nome} atualizada pelo lote vigente: {mudou}.")
+
+	metrica("avaliadas", avaliadas, incrementar=False)
+	metrica("atualizadas", atualizadas, incrementar=False)
+	definir_resumo(
+		f"{atualizadas} de {avaliadas} opção(ões) com lote tiveram valor/consumação/ativo ajustados."
+	)
 	return {"avaliadas": avaliadas, "atualizadas": atualizadas}

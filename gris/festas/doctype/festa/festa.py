@@ -10,6 +10,7 @@ from frappe.model.document import Document
 from frappe.utils import flt, getdate
 
 from gris.festas.utils.unidades import converter
+from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 
 CENARIOS = ("min", "intermediario", "max")
 AREA_PORTARIA_NOME = "Portaria"
@@ -641,12 +642,22 @@ def _recalcular_compra(compra_name: str) -> None:
 
 def marcar_festas_realizadas() -> dict[str, int]:
 	"""Job diario: festas com data passada e status 'Em andamento' viram 'Realizada'."""
+	logger = obter_logger("festas")
 	hoje = getdate()
 	pendentes = frappe.get_all(
 		"Festa",
 		filters={"status": "Em andamento", "data": ["<", hoje]},
-		fields=["name"],
+		fields=["name", "data"],
 	)
+	if not pendentes:
+		logger.info(f"Nenhuma festa em andamento com data anterior a {hoje}.")
+		definir_resumo("Nenhuma festa a marcar como realizada.")
+		return {"atualizadas": 0}
+
 	for festa in pendentes:
 		frappe.db.set_value("Festa", festa.name, "status", "Realizada", update_modified=False)
+		logger.info(f"Festa {festa.name} ({festa.data}) marcada como Realizada.")
+
+	metrica("atualizadas", len(pendentes), incrementar=False)
+	definir_resumo(f"{len(pendentes)} festa(s) marcada(s) como realizada(s).")
 	return {"atualizadas": len(pendentes)}

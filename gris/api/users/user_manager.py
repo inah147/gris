@@ -5,10 +5,11 @@ from frappe import _
 from frappe.utils import cint
 
 from gris.api.users.roles import PERFIL_SEM_ACESSO, apply_role_profile, save_user_preserving_roles
+from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 
 
 def _logger():
-	return frappe.logger("associate_user", allow_site=True, file_count=10)
+	return obter_logger("associate_user", file_count=10)
 
 
 def _should_auto_create_users() -> bool:
@@ -398,19 +399,54 @@ def update_associate_user(
 
 @frappe.whitelist()
 def manage_associate_users():
+	"""Job diario: cria, reativa e desativa os usuarios dos associados."""
+	logger = _logger()
 	associates = _get_associados()
 	users = _get_users()
 
 	users_to_create, users_to_activate = _associate_users_to_create_or_activate(associates, users)
 	users_to_deactivate = _associate_users_to_deactivate(associates, users)
 
-	print(users_to_deactivate)
+	logger.info(
+		f"{len(associates)} associado(s) e {len(users)} usuario(s) avaliados: "
+		f"{len(users_to_create)} a criar, {len(users_to_activate)} a reativar, "
+		f"{len(users_to_deactivate)} a desativar."
+	)
+
+	criados = 0
+	reativados = 0
+	desativados = 0
 
 	for associate in users_to_create:
-		create_associate_user(associate)
+		try:
+			create_associate_user(associate)
+			criados += 1
+			logger.info(f"Usuario criado para o associado {associate.get('name')}.")
+		except Exception:
+			logger.exception(f"Falha ao criar o usuario do associado {associate.get('name')}.")
+			metrica("falhas_na_criacao")
 
 	for associate in users_to_activate:
-		activate_associate_user(associate)
+		try:
+			activate_associate_user(associate)
+			reativados += 1
+			logger.info(f"Usuario reativado para o associado {associate.get('name')}.")
+		except Exception:
+			logger.exception(f"Falha ao reativar o usuario do associado {associate.get('name')}.")
+			metrica("falhas_na_reativacao")
 
 	for user in users_to_deactivate:
-		deactivate_associate_user(user)
+		try:
+			deactivate_associate_user(user)
+			desativados += 1
+			logger.info(f"Usuario desativado: {user.get('name')}.")
+		except Exception:
+			logger.exception(f"Falha ao desativar o usuario {user.get('name')}.")
+			metrica("falhas_na_desativacao")
+
+	metrica("criados", criados, incrementar=False)
+	metrica("reativados", reativados, incrementar=False)
+	metrica("desativados", desativados, incrementar=False)
+	definir_resumo(
+		f"{criados} usuário(s) criado(s), {reativados} reativado(s) e {desativados} desativado(s)."
+	)

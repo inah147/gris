@@ -76,6 +76,10 @@ Ao trabalhar em tarefas específicas, consulte a skill correspondente em `.claud
 - SQL **sempre parametrizado** — nunca interpolação de string
 - Evitar N+1: preferir queries agregadas
 - Processos pesados devem usar `frappe.enqueue`
+- **Jobs** (agendados ou enfileirados) devem narrar o que fizeram com
+  `gris.utils.job_logger`: use `obter_logger(...)` no lugar de `frappe.logger(...)`,
+  `metrica(...)` para contadores e `definir_resumo(...)` para a frase final. Cada
+  execução vira um "Log de Execucao de Job", visível em `/app/monitor-de-jobs`
 - **Não usar `frappe.cache`** neste projeto
 - Respostas de API retornam dicts com chave `"success"`
 - Validar permissões com `frappe.get_roles()` antes de mutações
@@ -110,6 +114,8 @@ Ao trabalhar em tarefas específicas, consulte a skill correspondente em `.claud
   manualmente. Use os utilitários de `gris/api/users/roles.py`
 - Regra de negócio extensa dentro de handlers de UI
 - Logs permanentes ruidosos sem valor operacional
+- Job novo que termina em silêncio: sem resumo nem contadores, o Monitor de Jobs
+  não consegue dizer o que aquela execução fez
 
 ## Referências
 

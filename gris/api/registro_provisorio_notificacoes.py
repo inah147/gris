@@ -20,6 +20,7 @@ from collections import defaultdict
 import frappe
 from frappe.utils import add_days, date_diff, format_date, get_url, getdate, today
 
+from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 from gris.utils.whatsapp import enviar_texto
 
 SETTINGS_DOCTYPE = "Configuracoes de Recepcao"
@@ -161,7 +162,7 @@ def _montar_mensagem_aviso(
 
 def enviar_avisos_seguimento_registro_provisorio() -> None:
 	"""Scheduler diário: avisa o responsável administrativo sobre registros provisórios parados."""
-	logger = frappe.logger("registro_provisorio_notificacoes", allow_site=True)
+	logger = obter_logger("registro_provisorio_notificacoes")
 	data_hoje = getdate(today())
 	dias_limite = _dias_para_aviso()
 	data_limite = add_days(data_hoje, -dias_limite)
@@ -185,7 +186,11 @@ def enviar_avisos_seguimento_registro_provisorio() -> None:
 			"Aviso de seguimento do registro provisório: nenhum novo associado elegível "
 			f"({dias_limite} dia(s) de espera)."
 		)
+		definir_resumo(f"Nenhum registro provisório parado há mais de {dias_limite} dia(s) — nada a avisar.")
 		return
+
+	logger.info(f"{len(novos_associados)} registro(s) provisório(s) elegíveis para aviso.")
+	metrica("elegiveis", len(novos_associados), incrementar=False)
 
 	responsavel_administrativo = _buscar_responsavel_administrativo()
 	if not responsavel_administrativo:
@@ -193,6 +198,7 @@ def enviar_avisos_seguimento_registro_provisorio() -> None:
 			"Aviso de seguimento do registro provisório não enviado: responsavel_administrativo "
 			f"não configurado em {SETTINGS_DOCTYPE}."
 		)
+		definir_resumo("Responsável administrativo não configurado — nenhum aviso enviado.")
 		return
 
 	telefone_administrativo = (responsavel_administrativo.get("telefone") or "").strip()
@@ -201,6 +207,7 @@ def enviar_avisos_seguimento_registro_provisorio() -> None:
 			"Aviso de seguimento do registro provisório não enviado: associado "
 			f"{responsavel_administrativo.get('name')} sem telefone cadastrado."
 		)
+		definir_resumo("Responsável administrativo sem telefone — nenhum aviso enviado.")
 		return
 
 	contatos = _buscar_contatos_responsaveis([str(na.name) for na in novos_associados])
@@ -226,13 +233,24 @@ def enviar_avisos_seguimento_registro_provisorio() -> None:
 				update_modified=False,
 			)
 			enviados += 1
+			logger.info(
+				f"Aviso enviado sobre {novo_associado.nome_completo or novo_associado.name} "
+				f"({date_diff(data_hoje, data_ativacao)} dia(s) desde a ativação)."
+			)
 		except Exception:
+			logger.exception(f"Falha ao avisar sobre o registro provisório {novo_associado.name}.")
+			metrica("falhas_no_envio")
 			frappe.log_error(
 				frappe.get_traceback(),
 				f"Aviso seguimento registro provisório: {novo_associado.name}",
 			)
 
+	metrica("enviados", enviados, incrementar=False)
 	logger.info(
 		"Avisos de seguimento do registro provisório processados: "
 		f"elegiveis={len(novos_associados)}, enviados={enviados}, espera={dias_limite} dia(s)."
+	)
+	definir_resumo(
+		f"{enviados} de {len(novos_associados)} aviso(s) de seguimento enviado(s) "
+		f"(espera de {dias_limite} dia(s))."
 	)

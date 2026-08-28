@@ -13,6 +13,7 @@ from __future__ import annotations
 import frappe
 from frappe.utils import add_days, get_url, getdate, today
 
+from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 from gris.utils.whatsapp import enviar_mensagem_formatada, enviar_para_grupo, enviar_texto
 
 
@@ -185,7 +186,7 @@ def enviar_lembretes_visita() -> None:
 	Envia mensagem formatada com botões de confirmação para visitas ainda não confirmadas.
 	Em caso de erro por visita, registra e continua as demais.
 	"""
-	logger = frappe.logger("recepcao_notificacoes", allow_site=True)
+	logger = obter_logger("recepcao_notificacoes")
 
 	data_alvo = add_days(today(), 2)
 	visitas = frappe.get_all(
@@ -195,20 +196,25 @@ def enviar_lembretes_visita() -> None:
 	)
 
 	if not visitas:
+		logger.info(f"Nenhuma visita nao confirmada marcada para {data_alvo}.")
+		definir_resumo(f"Nenhuma visita a confirmar em {data_alvo}.")
 		return
 
 	logger.info(f"Enviando {len(visitas)} lembrete(s) de visita para {data_alvo}.")
+	metrica("visitas_avaliadas", len(visitas), incrementar=False)
 
 	botoes = [
 		{"buttonId": "confirmar", "buttonText": {"displayText": "Sim, irei! ✅"}, "type": "reply"},
 		{"buttonId": "cancelar", "buttonText": {"displayText": "Não poderei ir ❌"}, "type": "reply"},
 	]
 
+	enviados = 0
 	for visita in visitas:
 		try:
 			telefone = _buscar_telefone_responsavel(visita.jovem)
 			if not telefone:
 				logger.warning(f"Lembrete não enviado: nenhum telefone encontrado para {visita.jovem}.")
+				metrica("sem_telefone")
 				continue
 
 			nome = frappe.db.get_value("Novo Associado", visita.jovem, "nome_completo") or visita.jovem
@@ -227,9 +233,16 @@ def enviar_lembretes_visita() -> None:
 				),
 				botoes=botoes,
 			)
+			enviados += 1
+			logger.info(f"Lembrete de visita enviado para {nome} ({visita.name}).")
 
 		except Exception:
+			logger.exception(f"Falha ao enviar o lembrete da visita {visita.name} ({visita.jovem}).")
+			metrica("falhas_no_envio")
 			frappe.log_error(
 				frappe.get_traceback(),
 				f"Lembrete de visita: {visita.jovem} ({visita.name})",
 			)
+
+	metrica("enviados", enviados, incrementar=False)
+	definir_resumo(f"{enviados} de {len(visitas)} lembrete(s) de visita enviado(s) para {data_alvo}.")

@@ -5,6 +5,8 @@ from datetime import date
 import frappe
 from frappe import _
 
+from gris.utils.job_logger import definir_resumo, metrica, obter_logger
+
 
 def generate_monthly_fixed_payments():
 	"""Create a monthly payment entry (Pagamento Conta Fixa) for each active fixed account.
@@ -48,9 +50,16 @@ def generate_monthly_fixed_payments():
 		fields=["name"],
 	)
 
+	logger = obter_logger("conta_fixa")
 	accounts = [r["name"] for r in continuous] + [r["name"] for r in temporary]
 	if not accounts:
+		logger.warning("Nenhuma conta fixa ativa encontrada — nada a gerar.")
+		definir_resumo(f"Nenhuma conta fixa ativa em {month_start}.")
 		return 0
+
+	logger.info(
+		f"{len(continuous)} conta(s) continua(s) e {len(temporary)} temporaria(s) ativas em {month_start}."
+	)
 
 	created = 0
 	for acc in accounts:
@@ -71,6 +80,15 @@ def generate_monthly_fixed_payments():
 		)
 		doc.insert(ignore_permissions=True)
 		created += 1
+		logger.info(f"Pagamento gerado para a conta fixa {acc} ({month_start}).")
+
+	metrica("criados", created, incrementar=False)
+	metrica("contas_ativas", len(accounts), incrementar=False)
+	metrica("ja_existentes", len(accounts) - created, incrementar=False)
+	definir_resumo(
+		f"{created} pagamento(s) de conta fixa gerado(s) para {month_start} "
+		f"(de {len(accounts)} conta(s) ativa(s))."
+	)
 	return created
 
 

@@ -1,0 +1,21 @@
+{
+ "creation": "2026-08-28 00:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Page",
+ "icon": "small-file",
+ "idx": 0,
+ "modified": "2026-08-28 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "monitor-de-jobs",
+ "owner": "Administrator",
+ "page_name": "monitor-de-jobs",
+ "roles": [
+  {
+   "role": "System Manager"
+  }
+ ],
+ "standard": "Yes",
+ "system_page": 0,
+ "title": "Monitor de Jobs"
+}

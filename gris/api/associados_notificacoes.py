@@ -8,6 +8,7 @@ from __future__ import annotations
 import frappe
 from frappe.utils import date_diff, get_datetime, today
 
+from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 from gris.utils.whatsapp import enviar_texto
 
 
@@ -67,18 +68,24 @@ def _extrair_primeiro_nome(nome_completo: str | None) -> str:
 
 def enviar_lembrete_atualizacao_associados() -> None:
 	"""Envia lembrete de atualizacao dos associados para o responsavel configurado."""
-	logger = frappe.logger("associados_notificacoes", allow_site=True)
+	logger = obter_logger("associados_notificacoes")
 
 	try:
 		dias_desde_ultima_importacao = _buscar_dias_desde_ultima_importacao()
 		if dias_desde_ultima_importacao is None:
 			logger.info("Lembrete nao enviado: nenhuma importacao de associados encontrada.")
+			definir_resumo("Nenhuma importação de associados encontrada — nada a lembrar.")
 			return
+
+		metrica("dias_desde_a_ultima_importacao", dias_desde_ultima_importacao, incrementar=False)
 
 		if not _deve_enviar_lembrete(dias_desde_ultima_importacao):
 			logger.info(
 				"Lembrete nao enviado: regua sem disparo para "
 				f"{dias_desde_ultima_importacao} dia(s) desde a ultima importacao."
+			)
+			definir_resumo(
+				f"Régua sem disparo hoje ({dias_desde_ultima_importacao} dia(s) desde a última importação)."
 			)
 			return
 
@@ -88,11 +95,13 @@ def enviar_lembrete_atualizacao_associados() -> None:
 				"Lembrete nao enviado: responsavel_atualizacao nao configurado "
 				"em Configuracoes de Associados."
 			)
+			definir_resumo("Responsável pela atualização não configurado — nenhum lembrete enviado.")
 			return
 
 		telefone = (responsavel.get("telefone") or "").strip()
 		if not telefone:
 			logger.warning(f"Lembrete nao enviado: associado {responsavel.get('name')} sem telefone.")
+			definir_resumo("Responsável configurado está sem telefone — nenhum lembrete enviado.")
 			return
 
 		primeiro_nome = _extrair_primeiro_nome(responsavel.get("nome_completo"))
@@ -104,10 +113,16 @@ def enviar_lembrete_atualizacao_associados() -> None:
 		)
 
 		enviar_texto(telefone, mensagem)
+		metrica("lembretes_enviados")
 		logger.info(
 			"Lembrete de atualizacao enfileirado para "
 			f"{responsavel.get('name')} ({dias_desde_ultima_importacao} dia(s))."
 		)
+		definir_resumo(
+			f"1 lembrete enviado para {responsavel.get('nome_completo') or responsavel.get('name')} "
+			f"({dias_desde_ultima_importacao} dia(s) desde a última importação)."
+		)
 
 	except Exception:
+		logger.exception("Falha ao enviar o lembrete de atualizacao de associados.")
 		frappe.log_error(frappe.get_traceback(), "Lembrete atualizacao de associados")

@@ -8,6 +8,8 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+from gris.utils.job_logger import definir_resumo, metrica, obter_logger
+
 SETTINGS_DOCTYPE = "Configuracoes Google Workspace"
 DEFAULT_DOMAIN = "escoteiros.org.br"
 DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive"]
@@ -18,7 +20,7 @@ ADMIN_ROLES = {"System Manager", "Administrator"}
 
 
 def _logger():
-	return frappe.logger("google_workspace_access", allow_site=True, file_count=10)
+	return obter_logger("google_workspace_access", file_count=10)
 
 
 def _is_integration_enabled(settings=None) -> bool:
@@ -297,6 +299,8 @@ def revoke_all_access_for_associate(associate_name: str):
 
 
 def enqueue_daily_global_access_sync():
+	_logger().info("Enfileirando a sincronizacao diaria de acessos do Google Workspace.")
+	definir_resumo("Sincronização de acessos do Workspace enviada para a fila longa.")
 	enqueue(
 		"gris.api.google_workspace.access_manager.run_daily_global_access_sync",
 		queue="long",
@@ -306,6 +310,8 @@ def enqueue_daily_global_access_sync():
 
 
 def enqueue_daily_restricted_access_cleanup():
+	_logger().info("Enfileirando a limpeza diaria de acessos restritos.")
+	definir_resumo("Limpeza de acessos restritos enviada para a fila longa.")
 	enqueue(
 		"gris.api.google_workspace.access_manager.run_daily_restricted_access_cleanup",
 		queue="long",
@@ -315,6 +321,8 @@ def enqueue_daily_restricted_access_cleanup():
 
 
 def enqueue_daily_inactive_access_cleanup():
+	_logger().info("Enfileirando a limpeza diaria de acessos de associados inativos.")
+	definir_resumo("Limpeza de acessos de inativos enviada para a fila longa.")
 	enqueue(
 		"gris.api.google_workspace.access_manager.run_daily_inactive_access_cleanup",
 		queue="long",
@@ -324,8 +332,11 @@ def enqueue_daily_inactive_access_cleanup():
 
 
 def run_daily_global_access_sync():
+	logger = _logger()
 	settings = _get_settings()
 	if not _is_integration_enabled(settings):
+		logger.warning("Integracao com o Google Workspace desativada — sincronizacao ignorada.")
+		definir_resumo("Integração com o Google Workspace desativada.")
 		return
 
 	associates = frappe.get_all(
@@ -333,10 +344,22 @@ def run_daily_global_access_sync():
 		filters={"status_no_grupo": "Ativo"},
 		fields=["name", "id_escoteiros"],
 	)
+	logger.info(f"Sincronizando acessos de {len(associates)} associado(s) ativo(s).")
+
+	sincronizados = 0
+	sem_email = 0
 	for associate in associates:
 		if not associate.id_escoteiros:
+			sem_email += 1
 			continue
 		sync_global_access_for_associate(associate.name)
+		sincronizados += 1
+
+	metrica("sincronizados", sincronizados, incrementar=False)
+	metrica("sem_id_escoteiros", sem_email, incrementar=False)
+	definir_resumo(
+		f"{sincronizados} associado(s) sincronizado(s) no Google Workspace; {sem_email} sem ID Escoteiros."
+	)
 
 
 def _is_workspace_admin(email: str) -> bool:
@@ -355,14 +378,19 @@ def _is_manual_grant_expired(row, expiration_days: int, today) -> bool:
 
 
 def run_daily_restricted_access_cleanup():
+	logger = _logger()
 	settings = _get_settings()
 	if not _is_integration_enabled(settings):
+		logger.warning("Integracao com o Google Workspace desativada — limpeza ignorada.")
+		definir_resumo("Integração com o Google Workspace desativada.")
 		return
 
 	drive_rows = _get_configured_drives(settings)
 	global_drive_ids = {row.drive_id for row in drive_rows if row.conceder_a_todos}
 	drive_ids = {row.drive_id for row in drive_rows}
 	if not drive_ids:
+		logger.warning("Nenhum drive compartilhado configurado — nada a revisar.")
+		definir_resumo("Nenhum drive compartilhado configurado.")
 		return
 
 	drive = _get_google_drive_service(settings)
@@ -404,9 +432,12 @@ def run_daily_restricted_access_cleanup():
 			revoke_drive_access_if_exists(drive, email, row.drive_id)
 			row.ativo = 0
 			changed = True
+			logger.info("Acesso restrito revogado por expiracao: %s no drive %s.", email, row.drive_id)
+			metrica("acessos_revogados")
 			continue
 
 		grant_drive_access_if_missing(drive, email, row.drive_id, row.tipo_acesso or "reader")
+		metrica("acessos_revalidados")
 		if not row.concedido_em:
 			row.concedido_em = now_datetime()
 			changed = True
@@ -419,11 +450,15 @@ def run_daily_restricted_access_cleanup():
 		frappe.db.commit()  # nosemgrep
 
 	frappe.db.set_single_value(SETTINGS_DOCTYPE, {"ultimo_sync_em": now_datetime(), "ultimo_erro": ""})
+	definir_resumo(f"{len(drive_ids)} drive(s) revisado(s); concessões manuais expiradas foram revogadas.")
 
 
 def run_daily_inactive_access_cleanup():
+	logger = _logger()
 	settings = _get_settings()
 	if not _is_integration_enabled(settings):
+		logger.warning("Integracao com o Google Workspace desativada — limpeza ignorada.")
+		definir_resumo("Integração com o Google Workspace desativada.")
 		return
 
 	inactive_associates = frappe.get_all(
@@ -431,13 +466,24 @@ def run_daily_inactive_access_cleanup():
 		filters={"status_no_grupo": "Inativo"},
 		fields=["id_escoteiros"],
 	)
+	logger.info(f"Revisando acessos de {len(inactive_associates)} associado(s) inativo(s).")
 
 	drive = _get_google_drive_service(settings)
+	revogados = 0
+	ignorados = 0
 	for associate in inactive_associates:
 		email = _normalize_email(associate.id_escoteiros)
 		if not _is_institutional_email(email, settings):
+			ignorados += 1
 			continue
 		for drive_row in _get_configured_drives(settings):
 			revoke_drive_access_if_exists(drive, email, drive_row.drive_id)
+		revogados += 1
+		logger.info("Acessos revogados para o associado inativo %s.", email)
 
+	metrica("inativos_processados", revogados, incrementar=False)
+	metrica("sem_email_institucional", ignorados, incrementar=False)
 	frappe.db.set_single_value(SETTINGS_DOCTYPE, {"ultimo_sync_em": now_datetime(), "ultimo_erro": ""})
+	definir_resumo(
+		f"Acessos revisados para {revogados} associado(s) inativo(s); {ignorados} sem e-mail institucional."
+	)

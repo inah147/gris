@@ -1,5 +1,5 @@
 {% extends "templates/web_sidebar_base.html" %}
-{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import empty %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, empty %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 {% from "public/design_system/components/generated/select.html.jinja" import select %}
 {% from "public/design_system/components/generated/popover.html.jinja" import popover %}
@@ -67,62 +67,74 @@
 	{"label": "Não", "value": "0"}
 ] %}
 
-<article class="card mb-4">
+<article class="card mb-4 extrato-filtros-card">
 	<section>
-		<form method="get" class="extrato-filtros">
-			<div class="field">
-				<label class="label" for="extrato-filter-data-inicio">Data início</label>
-				{{ datepicker(id="extrato-filter-data-inicio", name="data_inicio", value=(filtros_ativos.data_inicio or ''), placeholder="Selecione a data") }}
-			</div>
-			<div class="field">
-				<label class="label" for="extrato-filter-data-fim">Data fim</label>
-				{{ datepicker(id="extrato-filter-data-fim", name="data_fim", value=(filtros_ativos.data_fim or ''), placeholder="Selecione a data") }}
-			</div>
-			<div class="field">
-				<label class="label" for="extrato-filter-instituicao">Instituição</label>
-				{{ select(id="extrato-filter-instituicao", name="instituicao", items=ns.instituicao, selected=filtros_ativos.instituicao or '') }}
-			</div>
-			<div class="field">
-				<label class="label" for="extrato-filter-carteira">Carteira</label>
-				{{ select(id="extrato-filter-carteira", name="carteira", items=ns.carteira, selected=filtros_ativos.carteira or '', is_combobox=true, search_placeholder="Buscar carteira…") }}
-			</div>
-			<div class="field">
-				<label class="label" for="extrato-filter-categoria">Categoria</label>
-				{{ select(id="extrato-filter-categoria", name="categoria", items=ns.categoria, selected=filtros_ativos.categoria or '', is_combobox=true, search_placeholder="Buscar categoria…") }}
-			</div>
-			<div class="field">
-				<label class="label" for="extrato-filter-centro">Centro de custo</label>
-				{{ select(id="extrato-filter-centro", name="centro_de_custo", items=ns.centro, selected=filtros_ativos.centro_de_custo or '', is_combobox=true, search_placeholder="Buscar centro…") }}
-			</div>
-			<div class="field">
-				<label class="label" for="extrato-filter-fixo-variavel">Fixo/Variável</label>
-				{{ select(id="extrato-filter-fixo-variavel", name="fixo_variavel", items=fixo_variavel_items, selected=filtros_ativos.fixo_variavel or '') }}
-			</div>
-			<div class="field">
-				<label class="label" for="extrato-filter-ord-extra">Ordinária/Extraordinária</label>
-				{{ select(id="extrato-filter-ord-extra", name="ordinaria_extraordinaria", items=ord_extra_items, selected=filtros_ativos.ordinaria_extraordinaria or '') }}
-			</div>
-			<div class="field">
-				<label class="label" for="extrato-filter-conta-fixa">Conta fixa</label>
-				{{ select(id="extrato-filter-conta-fixa", name="conta_fixa", items=ns.conta_fixa, selected=filtros_ativos.conta_fixa or '') }}
-			</div>
-			<div class="field">
-				<label class="label" for="extrato-filter-repasse">Repasse entre contas</label>
-				{{ select(id="extrato-filter-repasse", name="repasse_entre_contas", items=sim_nao_items, selected=filtros_ativos.repasse_entre_contas or '') }}
-			</div>
-			<div class="field">
-				<label class="label" for="extrato-filter-revisada">Transação revisada</label>
-				{{ select(id="extrato-filter-revisada", name="transacao_revisada", items=sim_nao_items, selected=filtros_ativos.transacao_revisada or '') }}
-			</div>
-			<div class="field">
-				<label class="label" for="extrato-filter-fonte">Fonte</label>
-				{{ select(id="extrato-filter-fonte", name="fonte", items=fonte_items, selected=filtros_ativos.fonte or '') }}
-			</div>
-			<div class="extrato-filtros__actions">
-				<button type="submit" class="btn-sm-primary">Filtrar</button>
-				<a class="btn-sm-outline" href="/financeiro/extrato">Limpar</a>
-			</div>
-		</form>
+		<details id="extratoFiltros" class="extrato-filtros-details" {{ 'open' if filtros_ativos_count else '' }}>
+			<summary class="extrato-filtros__summary">
+				<span class="extrato-filtros__summary-label">
+					{{ lucide_icon("sliders-horizontal", size="sm") }}
+					Filtros
+				</span>
+				{% if filtros_ativos_count %}
+					{{ badge(('1 filtro ativo' if filtros_ativos_count == 1 else (filtros_ativos_count|string) ~ ' filtros ativos'), variant="info", outline=true) }}
+				{% endif %}
+				{{ lucide_icon("chevron-down", size="sm", class_name="extrato-filtros__chevron") }}
+			</summary>
+			<form method="get" class="extrato-filtros">
+				<div class="field">
+					<label class="label" for="extrato-filter-data-inicio">Data início</label>
+					{{ datepicker(id="extrato-filter-data-inicio", name="data_inicio", value=(filtros_ativos.data_inicio or ''), placeholder="Selecione a data") }}
+				</div>
+				<div class="field">
+					<label class="label" for="extrato-filter-data-fim">Data fim</label>
+					{{ datepicker(id="extrato-filter-data-fim", name="data_fim", value=(filtros_ativos.data_fim or ''), placeholder="Selecione a data") }}
+				</div>
+				<div class="field">
+					<label class="label" for="extrato-filter-instituicao">Instituição</label>
+					{{ select(id="extrato-filter-instituicao", name="instituicao", items=ns.instituicao, selected=filtros_ativos.instituicao or '') }}
+				</div>
+				<div class="field">
+					<label class="label" for="extrato-filter-carteira">Carteira</label>
+					{{ select(id="extrato-filter-carteira", name="carteira", items=ns.carteira, selected=filtros_ativos.carteira or '', is_combobox=true, search_placeholder="Buscar carteira…") }}
+				</div>
+				<div class="field">
+					<label class="label" for="extrato-filter-categoria">Categoria</label>
+					{{ select(id="extrato-filter-categoria", name="categoria", items=ns.categoria, selected=filtros_ativos.categoria or '', is_combobox=true, search_placeholder="Buscar categoria…") }}
+				</div>
+				<div class="field">
+					<label class="label" for="extrato-filter-centro">Centro de custo</label>
+					{{ select(id="extrato-filter-centro", name="centro_de_custo", items=ns.centro, selected=filtros_ativos.centro_de_custo or '', is_combobox=true, search_placeholder="Buscar centro…") }}
+				</div>
+				<div class="field">
+					<label class="label" for="extrato-filter-fixo-variavel">Fixo/Variável</label>
+					{{ select(id="extrato-filter-fixo-variavel", name="fixo_variavel", items=fixo_variavel_items, selected=filtros_ativos.fixo_variavel or '') }}
+				</div>
+				<div class="field">
+					<label class="label" for="extrato-filter-ord-extra">Ordinária/Extraordinária</label>
+					{{ select(id="extrato-filter-ord-extra", name="ordinaria_extraordinaria", items=ord_extra_items, selected=filtros_ativos.ordinaria_extraordinaria or '') }}
+				</div>
+				<div class="field">
+					<label class="label" for="extrato-filter-conta-fixa">Conta fixa</label>
+					{{ select(id="extrato-filter-conta-fixa", name="conta_fixa", items=ns.conta_fixa, selected=filtros_ativos.conta_fixa or '') }}
+				</div>
+				<div class="field">
+					<label class="label" for="extrato-filter-repasse">Repasse entre contas</label>
+					{{ select(id="extrato-filter-repasse", name="repasse_entre_contas", items=sim_nao_items, selected=filtros_ativos.repasse_entre_contas or '') }}
+				</div>
+				<div class="field">
+					<label class="label" for="extrato-filter-revisada">Transação revisada</label>
+					{{ select(id="extrato-filter-revisada", name="transacao_revisada", items=sim_nao_items, selected=filtros_ativos.transacao_revisada or '') }}
+				</div>
+				<div class="field">
+					<label class="label" for="extrato-filter-fonte">Fonte</label>
+					{{ select(id="extrato-filter-fonte", name="fonte", items=fonte_items, selected=filtros_ativos.fonte or '') }}
+				</div>
+				<div class="extrato-filtros__actions">
+					<button type="submit" class="btn-sm-primary">Filtrar</button>
+					<a class="btn-sm-outline" href="/financeiro/extrato">Limpar</a>
+				</div>
+			</form>
+		</details>
 	</section>
 </article>
 

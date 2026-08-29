@@ -71,6 +71,8 @@ def get_context(context):
 		colunas=context.colunas,
 	)
 	context.filtros_ativos = request_args
+	# Quantos filtros a URL trouxe: define se o painel abre e alimenta o badge.
+	context.filtros_ativos_count = len(filters)
 	context.paginacao = {
 		"tamanho_pagina": EXTRATO_PAGE_SIZE,
 		"total": total_transacoes,

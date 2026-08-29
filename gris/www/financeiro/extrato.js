@@ -24,6 +24,8 @@
 		"fonte",
 	];
 
+	const COLUNAS_STORAGE_KEY = "gris_extrato_colunas_v1";
+
 	const state = {
 		carregadas: 0,
 		total: 0,
@@ -158,6 +160,92 @@
 			{ rootMargin: "400px 0px" }
 		);
 		observer.observe(sentinela);
+	}
+
+	// -----------------------------------------------------------------------
+	// Seletor de colunas
+	//
+	// Todas as colunas vêm renderizadas do servidor; mostrar/esconder é só CSS
+	// sobre `data-col`, então a troca é imediata e vale também para as linhas
+	// que o scroll infinito ainda vai carregar.
+	// -----------------------------------------------------------------------
+
+	function getColunaCheckboxes() {
+		return Array.from(document.querySelectorAll("[data-col-toggle]"));
+	}
+
+	function lerPreferenciaColunas() {
+		try {
+			const salvo = JSON.parse(window.localStorage.getItem(COLUNAS_STORAGE_KEY) || "null");
+			return salvo && typeof salvo === "object" ? salvo : null;
+		} catch (_erro) {
+			return null;
+		}
+	}
+
+	function salvarPreferenciaColunas(visiveis) {
+		try {
+			window.localStorage.setItem(COLUNAS_STORAGE_KEY, JSON.stringify(visiveis));
+		} catch (_erro) {
+			// Preferência é conveniência; sem storage a tela segue no padrão.
+		}
+	}
+
+	function aplicarColunas() {
+		const style = document.getElementById("extratoColunasStyle");
+		if (!style) return;
+		const ocultas = getColunaCheckboxes()
+			.filter(function (cb) {
+				return !cb.checked;
+			})
+			.map(function (cb) {
+				return '[data-col="' + cb.dataset.colToggle + '"]{display:none}';
+			});
+		style.textContent = ocultas.join("");
+	}
+
+	function iniciarSeletorDeColunas() {
+		const checkboxes = getColunaCheckboxes();
+		if (!checkboxes.length) return;
+
+		const preferencia = lerPreferenciaColunas();
+		if (preferencia) {
+			checkboxes.forEach(function (cb) {
+				const escolha = preferencia[cb.dataset.colToggle];
+				// Coluna nova (ainda não conhecida pela preferência) entra no padrão.
+				if (typeof escolha === "boolean") cb.checked = escolha;
+			});
+		}
+		aplicarColunas();
+
+		checkboxes.forEach(function (cb) {
+			cb.addEventListener("change", function () {
+				aplicarColunas();
+				salvarPreferenciaColunas(
+					Object.fromEntries(
+						getColunaCheckboxes().map(function (item) {
+							return [item.dataset.colToggle, item.checked];
+						})
+					)
+				);
+			});
+		});
+
+		const restaurar = document.getElementById("extratoColunasPadrao");
+		if (restaurar) {
+			restaurar.addEventListener("click", function () {
+				checkboxes.forEach(function (cb) {
+					// `defaultChecked` guarda o padrão renderizado pelo servidor.
+					cb.checked = cb.defaultChecked;
+				});
+				aplicarColunas();
+				try {
+					window.localStorage.removeItem(COLUNAS_STORAGE_KEY);
+				} catch (_erro) {
+					// Sem storage não há preferência para remover.
+				}
+			});
+		}
 	}
 
 	// -----------------------------------------------------------------------
@@ -314,7 +402,7 @@
 		if (carregarMaisBtn) carregarMaisBtn.addEventListener("click", carregarProximoLote);
 	}
 
-	document.addEventListener("DOMContentLoaded", function () {
+	function iniciar() {
 		tbody = document.getElementById("extratoTbody");
 		sentinela = document.getElementById("extratoSentinela");
 		loadingEl = document.getElementById("extratoSentinelaLoading");
@@ -325,8 +413,17 @@
 
 		if (!tbody) return;
 
+		iniciarSeletorDeColunas();
 		ligarEventosDoGrid();
 		sincronizarSelectAll();
 		iniciarScrollInfinito();
-	});
+	}
+
+	// O script da rota é carregado depois da tabela, então normalmente já dá
+	// para aplicar as colunas antes da primeira pintura.
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", iniciar);
+	} else {
+		iniciar();
+	}
 })();

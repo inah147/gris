@@ -5,6 +5,7 @@ import frappe
 from gris.api.financeiro.transactions import (
 	EXTRATO_PAGE_SIZE,
 	build_extrato_filters,
+	get_extrato_colunas,
 	get_extrato_transacoes,
 )
 from gris.api.portal_access import enrich_context
@@ -58,13 +59,16 @@ def get_context(context):
 	# Total apenas para o contador da tela; a navegação é por scroll infinito.
 	total_transacoes = frappe.db.count("Transacao Extrato Geral", filters=filters)
 
+	# Todas as colunas são renderizadas; o seletor da tela apenas mostra/esconde.
+	context.colunas = get_extrato_colunas(context.can_view_full_description)
+
 	# Primeiro lote renderizado no servidor; os seguintes chegam via
 	# gris.api.financeiro.transactions.get_extrato_rows.
 	context.transacoes = get_extrato_transacoes(
 		filters,
 		start=0,
 		page_length=EXTRATO_PAGE_SIZE,
-		with_descricao=context.can_view_full_description,
+		colunas=context.colunas,
 	)
 	context.filtros_ativos = request_args
 	context.paginacao = {

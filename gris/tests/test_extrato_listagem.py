@@ -8,10 +8,12 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from gris.api.financeiro.transactions import (
+	EXTRATO_COLUNAS,
 	EXTRATO_MAX_PAGE_SIZE,
 	EXTRATO_ORDER_BY,
 	EXTRATO_PAGE_SIZE,
 	build_extrato_filters,
+	get_extrato_colunas,
 	get_extrato_rows,
 	render_extrato_rows,
 )
@@ -58,7 +60,7 @@ class TestExtratoFiltros(FrappeTestCase):
 
 class TestExtratoLinhas(FrappeTestCase):
 	def test_render_sem_transacoes_devolve_html_vazio(self):
-		self.assertEqual(render_extrato_rows([], False).strip(), "")
+		self.assertEqual(render_extrato_rows([], get_extrato_colunas()).strip(), "")
 
 	def test_render_usa_id_da_transacao_e_escapa_descricao(self):
 		transacoes = [
@@ -76,7 +78,7 @@ class TestExtratoLinhas(FrappeTestCase):
 				"status_conciliacao": None,
 			}
 		]
-		html = render_extrato_rows(transacoes, False)
+		html = render_extrato_rows(transacoes, get_extrato_colunas())
 		self.assertIn('data-transaction-id="TX-0001"', html)
 		self.assertIn("R$ 1.234,50", html)
 		# O Jinja do Frappe não tem autoescape: a escapagem é explícita no template.
@@ -99,9 +101,39 @@ class TestExtratoLinhas(FrappeTestCase):
 				"status_conciliacao": None,
 			}
 		]
-		html = render_extrato_rows(transacoes, False)
+		html = render_extrato_rows(transacoes, get_extrato_colunas())
 		self.assertNotIn("<img", html)
 		self.assertIn("&lt;img", html)
+
+	def test_todas_as_colunas_do_doctype_estao_disponiveis(self):
+		meta = frappe.get_meta(DOCTYPE)
+		campos_do_doctype = {
+			f.fieldname
+			for f in meta.fields
+			if f.fieldtype not in ("Section Break", "Column Break", "Tab Break", "HTML", "Table")
+		}
+		self.assertEqual(campos_do_doctype - {c["key"] for c in EXTRATO_COLUNAS}, set())
+
+	def test_colunas_padrao_sao_um_subconjunto_util(self):
+		padrao = [c for c in EXTRATO_COLUNAS if c.get("padrao")]
+		self.assertTrue(padrao)
+		self.assertLess(len(padrao), len(EXTRATO_COLUNAS))
+		# As demais existem, mas entram escondidas até o usuário ligar.
+		self.assertIn("observacoes", {c["key"] for c in EXTRATO_COLUNAS if not c.get("padrao")})
+
+	def test_coluna_restrita_so_aparece_para_gestor_financeiro(self):
+		chaves_livres = {c["key"] for c in get_extrato_colunas(False)}
+		chaves_gestor = {c["key"] for c in get_extrato_colunas(True)}
+		self.assertNotIn("descricao", chaves_livres)
+		self.assertIn("descricao", chaves_gestor)
+
+	def test_render_marca_cada_celula_com_a_chave_da_coluna(self):
+		colunas = get_extrato_colunas()
+		html = render_extrato_rows(
+			[{"name": "TX-0004", "descricao_reduzida": "Compra", "fonte": "Sistema"}], colunas
+		)
+		for coluna in colunas:
+			self.assertIn(f'data-col="{coluna["key"]}"', html)
 
 	def test_render_so_inclui_descricao_completa_quando_permitido(self):
 		transacoes = [
@@ -120,8 +152,12 @@ class TestExtratoLinhas(FrappeTestCase):
 				"status_conciliacao": None,
 			}
 		]
-		self.assertIn("Descricao completa da compra", render_extrato_rows(transacoes, True))
-		self.assertNotIn("Descricao completa da compra", render_extrato_rows(transacoes, False))
+		self.assertIn(
+			"Descricao completa da compra", render_extrato_rows(transacoes, get_extrato_colunas(True))
+		)
+		self.assertNotIn(
+			"Descricao completa da compra", render_extrato_rows(transacoes, get_extrato_colunas())
+		)
 
 
 class TestExtratoRowsEndpoint(FrappeTestCase):

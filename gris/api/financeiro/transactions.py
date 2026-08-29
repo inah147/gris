@@ -101,24 +101,87 @@ EXTRATO_FILTER_FIELDS = (
 	"fonte",
 )
 
-#: Campos lidos do DocType para montar cada linha do grid.
-EXTRATO_FIELDS = (
-	"name",
-	"transacao_revisada",
-	"timestamp_transacao",
-	"valor",
-	"descricao_reduzida",
-	"instituicao",
-	"carteira",
-	"centro_de_custo",
-	"categoria",
-	"fixo_variavel",
-	"ordinaria_extraordinaria",
-	"conta_fixa",
-	"repasse_entre_contas",
-	"data_deposito",
-	"fonte",
-	"status_conciliacao",
+#: Colunas do grid do extrato, na ordem em que aparecem na tabela.
+#:
+#: Todas as informações da transação estão disponíveis; `padrao` define quais
+#: já vêm visíveis e as demais são ligadas pelo seletor de colunas da tela.
+#: `restrita` marca colunas visíveis apenas para o Gestor Financeiro.
+EXTRATO_COLUNAS = (
+	{"key": "transacao_revisada", "label": "Revisão", "tipo": "revisao", "padrao": True},
+	{"key": "timestamp_transacao", "label": "Data/Hora", "tipo": "datahora", "padrao": True},
+	{
+		"key": "descricao_reduzida",
+		"label": "Descrição reduzida",
+		"tipo": "texto",
+		"destaque": True,
+		"padrao": True,
+	},
+	{
+		"key": "descricao",
+		"label": "Descrição",
+		"tipo": "texto",
+		"largura": "lg",
+		"padrao": True,
+		"restrita": True,
+	},
+	{"key": "valor", "label": "Valor", "tipo": "moeda", "padrao": True},
+	{"key": "instituicao", "label": "Instituição", "tipo": "instituicao", "padrao": True},
+	{"key": "fonte", "label": "Fonte", "tipo": "fonte", "padrao": True},
+	{
+		"key": "status_conciliacao",
+		"label": "Conciliação",
+		"tipo": "badge",
+		"variante": "success",
+		"outline": True,
+		"padrao": True,
+	},
+	{"key": "carteira", "label": "Carteira", "tipo": "badge", "variante": "secondary", "padrao": True},
+	{
+		"key": "categoria",
+		"label": "Categoria",
+		"tipo": "badge",
+		"variante": "default",
+		"outline": True,
+		"padrao": True,
+	},
+	{
+		"key": "centro_de_custo",
+		"label": "Centro de custo",
+		"tipo": "badge",
+		"variante": "info",
+		"outline": True,
+		"padrao": True,
+	},
+	{"key": "id", "label": "ID", "tipo": "texto"},
+	{"key": "debito_credito", "label": "Débito/Crédito", "tipo": "badge", "variante": "secondary"},
+	{"key": "metodo", "label": "Método", "tipo": "badge", "variante": "secondary", "outline": True},
+	{"key": "origem", "label": "Origem", "tipo": "texto"},
+	{"key": "destino", "label": "Destino", "tipo": "texto"},
+	{"key": "valor_absoluto", "label": "Valor absoluto", "tipo": "moeda"},
+	{"key": "data_transacao", "label": "Data da transação", "tipo": "data"},
+	{"key": "data_deposito", "label": "Data de depósito", "tipo": "datahora"},
+	{
+		"key": "fixo_variavel",
+		"label": "Fixo/Variável",
+		"tipo": "badge",
+		"variante": "secondary",
+		"outline": True,
+	},
+	{
+		"key": "ordinaria_extraordinaria",
+		"label": "Ordinária/Extraordinária",
+		"tipo": "badge",
+		"variante": "secondary",
+		"outline": True,
+	},
+	{"key": "conta_fixa", "label": "Conta fixa", "tipo": "badge", "variante": "secondary", "outline": True},
+	{"key": "beneficiario", "label": "Beneficiário", "tipo": "texto"},
+	{"key": "repasse_entre_contas", "label": "Repasse entre contas", "tipo": "sim_nao"},
+	{"key": "excluir_do_total", "label": "Excluir do total", "tipo": "sim_nao"},
+	{"key": "numero_liquidacao", "label": "Número de liquidação", "tipo": "texto"},
+	{"key": "nome_atividade", "label": "Nome da atividade", "tipo": "texto"},
+	{"key": "observacoes", "label": "Observações", "tipo": "texto", "largura": "lg"},
+	{"key": "transacao_conciliada", "label": "Transação conciliada", "tipo": "texto"},
 )
 
 #: Ordenação com desempate por `name` para paginação estável no scroll infinito.
@@ -162,13 +225,18 @@ def build_extrato_filters(request_args: dict | None) -> dict:
 	return filters
 
 
+def get_extrato_colunas(can_view_full_description: bool = False) -> list[dict]:
+	"""Colunas disponíveis no grid para o usuário atual."""
+	return [coluna for coluna in EXTRATO_COLUNAS if can_view_full_description or not coluna.get("restrita")]
+
+
 def get_extrato_transacoes(
-	filters: dict, start: int = 0, page_length: int = EXTRATO_PAGE_SIZE, with_descricao: bool = False
+	filters: dict, start: int = 0, page_length: int = EXTRATO_PAGE_SIZE, colunas: list[dict] | None = None
 ) -> list[dict]:
 	"""Busca um lote de transações do extrato já ordenado para paginação estável."""
-	fields = list(EXTRATO_FIELDS)
-	if with_descricao:
-		fields.insert(4, "descricao")
+	colunas = colunas if colunas is not None else get_extrato_colunas()
+	# `name` é o identificador usado na seleção e no link para o detalhe.
+	fields = ["name"] + [coluna["key"] for coluna in colunas if coluna["key"] != "name"]
 
 	return frappe.get_all(
 		"Transacao Extrato Geral",
@@ -180,12 +248,12 @@ def get_extrato_transacoes(
 	)
 
 
-def render_extrato_rows(transacoes: list[dict], can_view_full_description: bool) -> str:
+def render_extrato_rows(transacoes: list[dict], colunas: list[dict]) -> str:
 	"""Renderiza as linhas do grid com o mesmo template usado no carregamento inicial."""
 	# Template interno da app (constante deste módulo); o contexto não é interpretado como template.
 	return frappe.render_template(  # nosemgrep
 		EXTRATO_ROWS_TEMPLATE,
-		{"transacoes": transacoes, "can_view_full_description": can_view_full_description},
+		{"transacoes": transacoes, "colunas": colunas},
 		is_path=True,
 	)
 
@@ -218,20 +286,20 @@ def get_extrato_rows(filtros: str | dict | None = None, start: int = 0, page_len
 	page_length = cint(page_length) or EXTRATO_PAGE_SIZE
 	page_length = max(1, min(page_length, EXTRATO_MAX_PAGE_SIZE))
 
-	can_view_full_description = "Gestor Financeiro" in frappe.get_roles()
+	colunas = get_extrato_colunas("Gestor Financeiro" in frappe.get_roles())
 
 	# Busca uma linha extra para saber se ainda há próximo lote sem novo count().
 	transacoes = get_extrato_transacoes(
 		build_extrato_filters(filtros),
 		start=start,
 		page_length=page_length + 1,
-		with_descricao=can_view_full_description,
+		colunas=colunas,
 	)
 	has_more = len(transacoes) > page_length
 	transacoes = transacoes[:page_length]
 
 	return {
-		"html": render_extrato_rows(transacoes, can_view_full_description),
+		"html": render_extrato_rows(transacoes, colunas),
 		"count": len(transacoes),
 		"has_more": has_more,
 	}

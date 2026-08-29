@@ -172,42 +172,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* --- Toggle de colunas --- */
-.col-toggle-panel {
-  width: 16rem;
-  background: var(--popover);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-md);
-  z-index: 50;
-}
-
-.col-toggle-list {
-  display: flex;
-  flex-direction: column;
-  gap: calc(var(--spacing) * 1);
-  padding: calc(var(--spacing) * 2);
-}
-
-.col-toggle-item {
-  display: flex;
-  align-items: center;
-  gap: calc(var(--spacing) * 2);
-  padding: calc(var(--spacing) * 1) calc(var(--spacing) * 1);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 0.875rem;
-  color: var(--foreground);
-  user-select: none;
-}
-
-.col-toggle-item:hover {
-  background: var(--muted);
-}
-
-.col-toggle-item input[type="checkbox"] {
-  flex-shrink: 0;
-}
+/* Painel de colunas: estilos no design system (design_system/css/column-toggle.css). */
 
 /* --- Urgência de dias restantes --- */
 .dias-ok {

@@ -91,7 +91,7 @@
 {% elif variant not in ["default", "secondary"] %}
   {% set classes = classes ~ " badge-" ~ ("destructive" if variant in ["error", "danger"] else variant) %}
 {% endif %}
-<span class="{{ classes }} {{ attrs.class }}"
+<span class="{{ classes }} {{ attrs.get('class', '') }}"
   {% for key, value in attrs.items() %}
     {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
   {% endfor %}

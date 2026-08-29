@@ -63,15 +63,22 @@
 	}
 }
 
-.extrato-row .cursor-pointer {
-	cursor: pointer;
-}
-
-/* Garante que a tabela do extrato fique com scroll horizontal interno ao card,
-   sem extrapolar a largura do container quando não couber na tela. */
+/* ---------------------------------------------------------------------------
+   Grid do extrato: layout compacto com cabeçalho fixo e scroll infinito.
+   O card mantém `overflow: visible` (dropdowns/popovers dos filtros), e o
+   scroll acontece no contêiner interno.
+   --------------------------------------------------------------------------- */
 .extrato-tabela__card {
 	min-width: 0;
 	max-width: 100%;
+}
+
+.extrato-tabela__toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	flex-wrap: wrap;
 }
 
 .extrato-tabela__section {
@@ -84,8 +91,133 @@
 	max-width: 100%;
 	min-width: 0;
 	overflow-x: auto;
+	overflow-y: auto;
+	overscroll-behavior: contain;
 }
 
 .extrato-tabela__scroll > .extrato-tabela {
 	min-width: max-content;
+}
+
+/* Em telas grandes o grid rola dentro do card, mantendo filtros e cabeçalho
+   sempre visíveis. No mobile a rolagem continua sendo a da página. */
+@media (min-width: 48rem) {
+	.extrato-tabela__scroll {
+		max-height: calc(100vh - 16rem);
+		min-height: 24rem;
+	}
+}
+
+/* Densidade compacta: mais linhas por tela sem perder legibilidade. */
+.extrato-tabela--compacta {
+	font-size: 0.8125rem;
+	line-height: 1.25rem;
+}
+
+.extrato-tabela--compacta th {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	height: auto;
+	padding: 0.375rem 0.5rem;
+	font-size: 0.75rem;
+	background-color: var(--card, var(--background));
+	box-shadow: inset 0 -1px 0 var(--border);
+}
+
+.extrato-tabela--compacta td {
+	padding: 0.25rem 0.5rem;
+}
+
+.extrato-tabela--compacta .badge,
+.extrato-tabela--compacta .badge-primary,
+.extrato-tabela--compacta .badge-secondary,
+.extrato-tabela--compacta .badge-destructive,
+.extrato-tabela--compacta .badge-outline {
+	padding-inline: 0.375rem;
+	padding-block: 0;
+	font-size: 0.6875rem;
+	line-height: 1.125rem;
+}
+
+.extrato-tabela--compacta .review-dot {
+	width: 0.5rem;
+	height: 0.5rem;
+	box-shadow: none;
+}
+
+.extrato-col-select {
+	width: 34px;
+}
+
+/* `.table th` do Basecoat força `text-align: left`; a coluna de valor precisa
+   vencer essa especificidade. */
+.extrato-tabela th.text-right,
+.extrato-tabela td.text-right {
+	text-align: right;
+}
+
+.extrato-cell {
+	cursor: pointer;
+}
+
+/* Descrições truncadas por CSS (o texto completo fica no `title`), o que
+   mantém a linha em uma única altura. */
+.extrato-truncate {
+	display: inline-block;
+	max-width: 18rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	vertical-align: middle;
+}
+
+.extrato-truncate--lg {
+	max-width: 26rem;
+	color: var(--muted-foreground);
+}
+
+/* Sentinela do scroll infinito. */
+.extrato-sentinela {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	min-height: 2.5rem;
+	padding: 0.75rem;
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+}
+
+.extrato-sentinela__erro {
+	color: var(--destructive);
+}
+
+.extrato-sentinela__loading {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+/* O bundle Basecoat não traz spinner utilitário; este é local da rota. */
+.extrato-sentinela__spinner {
+	display: inline-block;
+	width: 0.875rem;
+	height: 0.875rem;
+	border: 2px solid var(--border);
+	border-top-color: var(--primary);
+	border-radius: 9999px;
+	animation: extrato-spin 0.7s linear infinite;
+}
+
+@keyframes extrato-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.extrato-sentinela__spinner {
+		animation-duration: 2.4s;
+	}
 }

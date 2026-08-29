@@ -128,6 +128,13 @@
 .text-destructive { color: var(--color-destructive); }
 .text-inherit { color: inherit; }
 
+/* --- Text align / wrapping --- */
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.whitespace-nowrap { white-space: nowrap; }
+.whitespace-normal { white-space: normal; }
+
 /* --- Text size --- */
 .text-xs { font-size: var(--text-xs); line-height: var(--text-xs--line-height); }
 .text-sm { font-size: var(--text-sm); line-height: var(--text-sm--line-height); }

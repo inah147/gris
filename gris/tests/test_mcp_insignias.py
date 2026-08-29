@@ -4,10 +4,10 @@ from types import SimpleNamespace
 from unittest import TestCase
 from unittest.mock import patch
 
-SESSAO_ESCOTISTA = SimpleNamespace(user="escotista@exemplo.com")
-
 from gris.api.mcp import insignias
 from gris.api.mcp.registry import ErroDeFerramenta
+
+SESSAO_ESCOTISTA = SimpleNamespace(user="escotista@exemplo.com")
 
 CATALOGO = [
 	{
@@ -53,16 +53,12 @@ class TestSalvarItemCatalogo(TestCase):
 
 	def test_recusa_ramo_invalido(self):
 		with self.assertRaises(ErroDeFerramenta) as ctx:
-			insignias.salvar_item_catalogo_insignias(
-				tipo="Especialidade", ramo="Marte", valor_unitario=1
-			)
+			insignias.salvar_item_catalogo_insignias(tipo="Especialidade", ramo="Marte", valor_unitario=1)
 		self.assertEqual(ctx.exception.codigo, "ARGUMENTO_INVALIDO")
 
 	def test_recusa_valor_negativo(self):
 		with self.assertRaises(ErroDeFerramenta) as ctx:
-			insignias.salvar_item_catalogo_insignias(
-				tipo="Especialidade", ramo="Todos", valor_unitario=-1
-			)
+			insignias.salvar_item_catalogo_insignias(tipo="Especialidade", ramo="Todos", valor_unitario=-1)
 		self.assertEqual(ctx.exception.codigo, "ARGUMENTO_INVALIDO")
 
 	def test_criacao_exige_nome_com_tres_caracteres(self):
@@ -197,7 +193,9 @@ class TestCriarSolicitacaoInsignias(TestCase):
 			patch.object(insignias.endpoints, "criar_solicitacao") as criar,
 		):
 			resultado = insignias.criar_solicitacao_insignias(
-				ramo="Lobinho", itens=[{"insignia": "Distintivo de Progressão I", "quantidade": 2}], simular=True
+				ramo="Lobinho",
+				itens=[{"insignia": "Distintivo de Progressão I", "quantidade": 2}],
+				simular=True,
 			)
 
 		criar.assert_not_called()

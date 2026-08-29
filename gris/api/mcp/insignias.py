@@ -127,7 +127,9 @@ def salvar_item_catalogo_insignias(
 		)
 	if ramo not in endpoints.RAMOS_CATALOGO_VALIDOS:
 		raise ErroDeFerramenta(
-			"ARGUMENTO_INVALIDO", "Selecione um ramo válido.", {"opcoes": list(endpoints.RAMOS_CATALOGO_VALIDOS)}
+			"ARGUMENTO_INVALIDO",
+			"Selecione um ramo válido.",
+			{"opcoes": list(endpoints.RAMOS_CATALOGO_VALIDOS)},
 		)
 	if flt(valor_unitario) < 0:
 		raise ErroDeFerramenta("ARGUMENTO_INVALIDO", "O valor unitário não pode ser negativo.")
@@ -310,13 +312,13 @@ def criar_solicitacao_insignias(
 ) -> dict:
 	if ramo not in endpoints.RAMOS_VALIDOS:
 		raise ErroDeFerramenta(
-			"ARGUMENTO_INVALIDO", "Selecione o ramo ou seção da solicitação.", {"opcoes": list(endpoints.RAMOS_VALIDOS)}
+			"ARGUMENTO_INVALIDO",
+			"Selecione o ramo ou seção da solicitação.",
+			{"opcoes": list(endpoints.RAMOS_VALIDOS)},
 		)
 
 	itens_normalizados = endpoints._normalizar_itens(itens)
-	valor_estimado = flt(
-		sum(item["valor_unitario"] * item["quantidade"] for item in itens_normalizados), 2
-	)
+	valor_estimado = flt(sum(item["valor_unitario"] * item["quantidade"] for item in itens_normalizados), 2)
 
 	if simular:
 		return {
@@ -439,7 +441,10 @@ def registrar_recebimento_insignias(name: str, data_recebimento: str, simular: b
 	),
 	parametros={
 		"name": {"type": "string", "description": "Identificador da solicitação."},
-		"data_entrega": {"type": "string", "description": "Data da entrega (AAAA-MM-DD, não pode ser futura)."},
+		"data_entrega": {
+			"type": "string",
+			"description": "Data da entrega (AAAA-MM-DD, não pode ser futura).",
+		},
 		"observacoes_entrega": {"type": "string", "description": "Observações da entrega."},
 	},
 	obrigatorios=("name", "data_entrega"),

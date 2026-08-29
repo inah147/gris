@@ -99,6 +99,9 @@ def comparar_previsto_realizado(name: str, incluir_series_mensais: bool = False)
 	resultado: dict[str, Any] = {
 		"previsao": comparativo.get("previsao"),
 		"meses_decorridos": comparativo.get("meses_decorridos"),
+		# Mês em que a base do comparativo é cortada: os desvios de `totais` e das quebras
+		# medem o realizado contra o previsto até aqui, não contra o do período inteiro.
+		"mes_corte": comparativo.get("mes_corte"),
 		"totais": comparativo.get("totais"),
 		"por_categoria": comparativo.get("por_categoria"),
 		"por_centro_de_custo": comparativo.get("por_centro_de_custo"),

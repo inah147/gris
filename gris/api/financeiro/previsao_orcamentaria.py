@@ -18,9 +18,12 @@ from frappe.utils import add_months, flt, getdate
 from gris.financeiro.doctype.previsao_orcamentaria.previsao_orcamentaria import (
 	DISTRIBUICAO_MES_ESPECIFICO,
 	DISTRIBUICAO_UNIFORME,
+	distribuicao_do_item,
 	meses_do_periodo,
 	primeiro_dia_do_mes,
 )
+
+STATUS_ENCERRADA = "Encerrada"
 
 ROLES_LEITURA = ("Visualizador Financeiro", "Gestor Financeiro", "System Manager")
 ROLES_GESTAO = ("Gestor Financeiro", "System Manager")
@@ -59,6 +62,19 @@ def _exigir_gestao():
 	_autenticado()
 	if not pode_gerir():
 		frappe.throw(_("Sem permissão para editar a previsão orçamentária"), frappe.PermissionError)
+
+
+def _exigir_editavel(doc, novo_status: str | None = None):
+	"""Recusa alterações numa previsão encerrada.
+
+	A única escrita que uma previsão encerrada aceita é a que a reabre — sem isso não
+	haveria como corrigir um orçamento fechado por engano.
+	"""
+	if doc.status != STATUS_ENCERRADA:
+		return
+	if novo_status and novo_status != STATUS_ENCERRADA:
+		return
+	frappe.throw(_("Previsão encerrada: reabra-a (mude o status) antes de alterá-la."))
 
 
 def _mes_label(mes_iso: str) -> str:
@@ -240,8 +256,14 @@ def atualizar_previsao(
 	_exigir_gestao()
 
 	doc = frappe.get_doc("Previsao Orcamentaria", name)
-	if titulo is not None:
-		doc.titulo = titulo.strip()
+	_exigir_editavel(doc, status)
+
+	# O DocType usa `autoname: field:titulo`: num documento já gravado o `save()` realinha
+	# o campo com o `name` e descarta a alteração. Trocar o título é renomear o documento.
+	novo_titulo = titulo.strip() if titulo is not None else None
+	if novo_titulo is not None and not novo_titulo:
+		frappe.throw(_("Título é obrigatório"))
+
 	if exercicio is not None:
 		doc.exercicio = int(exercicio)
 	if data_inicio is not None:
@@ -256,6 +278,9 @@ def atualizar_previsao(
 		doc.observacoes = observacoes or None
 
 	doc.save()
+
+	if novo_titulo and novo_titulo != doc.name:
+		return {"success": True, "name": frappe.rename_doc("Previsao Orcamentaria", doc.name, novo_titulo)}
 	return {"success": True, "name": doc.name}
 
 
@@ -263,6 +288,8 @@ def atualizar_previsao(
 def excluir_previsao(name: str) -> dict:
 	"""Remove uma previsão e seus itens."""
 	_exigir_gestao()
+	doc = frappe.get_doc("Previsao Orcamentaria", name)
+	_exigir_editavel(doc)
 	frappe.delete_doc("Previsao Orcamentaria", name)
 	return {"success": True}
 
@@ -297,8 +324,7 @@ def salvar_item(
 	)
 
 	doc = frappe.get_doc("Previsao Orcamentaria", previsao)
-	if doc.status == "Encerrada":
-		frappe.throw(_("Não é possível alterar itens de uma previsão encerrada"))
+	_exigir_editavel(doc)
 
 	if item_name:
 		alvo = next((i for i in doc.itens if i.name == item_name), None)
@@ -318,8 +344,7 @@ def excluir_item(previsao: str, item_name: str) -> dict:
 	_exigir_gestao()
 
 	doc = frappe.get_doc("Previsao Orcamentaria", previsao)
-	if doc.status == "Encerrada":
-		frappe.throw(_("Não é possível alterar itens de uma previsão encerrada"))
+	_exigir_editavel(doc)
 
 	restantes = [i for i in doc.itens if i.name != item_name]
 	if len(restantes) == len(doc.itens):
@@ -382,6 +407,9 @@ def _realizado_por_mes(data_inicio, data_fim, centro_de_custo: str | None):
 		"COALESCE(data_deposito, timestamp_transacao) < %(fim_exclusivo)s",
 		"metodo != 'Dinheiro'",
 		"COALESCE(repasse_entre_contas, 0) = 0",
+		# Marca que a conciliação põe na cópia redundante quando a mesma transação chega
+		# pela planilha e pelo sistema — sem isto a duplicata é somada duas vezes.
+		"COALESCE(excluir_do_total, 0) = 0",
 	]
 	params: dict[str, object] = {
 		"inicio": primeiro_dia_do_mes(data_inicio),
@@ -411,21 +439,32 @@ def _realizado_por_mes(data_inicio, data_fim, centro_de_custo: str | None):
 	)
 
 
-def _agrupar(previsto: dict[str, float], realizado: dict[str, float], rotulo_vazio: str) -> list[dict]:
-	"""Junta previsto e realizado de uma dimensão (categoria/centro) em linhas comparáveis."""
-	chaves = set(previsto) | set(realizado)
+def _agrupar(
+	previsto: dict[str, float],
+	previsto_ate_hoje: dict[str, float],
+	realizado: dict[str, float],
+	rotulo_vazio: str,
+) -> list[dict]:
+	"""Junta previsto e realizado de uma dimensão (categoria/centro) em linhas comparáveis.
+
+	O desvio usa o previsto até o mês corrente, não o do período inteiro: comparar um
+	realizado parcial com o orçamento anual faria toda linha parecer economia.
+	"""
+	chaves = set(previsto) | set(previsto_ate_hoje) | set(realizado)
 	linhas = []
 	for chave in chaves:
 		valor_previsto = flt(previsto.get(chave, 0.0), 2)
+		valor_ate_hoje = flt(previsto_ate_hoje.get(chave, 0.0), 2)
 		valor_realizado = flt(realizado.get(chave, 0.0), 2)
-		if not valor_previsto and not valor_realizado:
+		if not valor_previsto and not valor_ate_hoje and not valor_realizado:
 			continue
 		linhas.append(
 			{
 				"rotulo": chave or rotulo_vazio,
 				"previsto": valor_previsto,
+				"previsto_ate_hoje": valor_ate_hoje,
 				"realizado": valor_realizado,
-				"desvio": flt(valor_realizado - valor_previsto, 2),
+				"desvio": flt(valor_realizado - valor_ate_hoje, 2),
 			}
 		)
 	linhas.sort(key=lambda linha: max(linha["previsto"], linha["realizado"]), reverse=True)
@@ -448,17 +487,31 @@ def obter_comparativo(previsao: str) -> dict:
 
 	distribuicao = doc.distribuicao_mensal()
 
-	# Previsto por dimensão
+	# Meses já decorridos: o mês corrente conta inteiro, então a base do comparativo vai
+	# até o fim dele — é o que os rótulos da tela informam ao usuário.
+	mes_atual = getdate().strftime("%Y-%m")
+	meses_decorridos = sum(1 for mes in meses if mes <= mes_atual)
+	meses_ate_hoje = set(meses[:meses_decorridos])
+
+	# Previsto por dimensão, no período inteiro e até o mês corrente.
 	previsto_categoria: dict[str, dict[str, float]] = {"Receita": {}, "Despesa": {}}
 	previsto_centro: dict[str, dict[str, float]] = {"Receita": {}, "Despesa": {}}
+	ate_hoje_categoria: dict[str, dict[str, float]] = {"Receita": {}, "Despesa": {}}
+	ate_hoje_centro: dict[str, dict[str, float]] = {"Receita": {}, "Despesa": {}}
 	for item in doc.itens or []:
 		alvo = "Receita" if item.tipo == "Receita" else "Despesa"
 		categoria = item.categoria or ""
 		centro = item.centro_de_custo or doc.centro_de_custo or ""
-		previsto_categoria[alvo][categoria] = previsto_categoria[alvo].get(categoria, 0.0) + flt(
-			item.valor_previsto
-		)
-		previsto_centro[alvo][centro] = previsto_centro[alvo].get(centro, 0.0) + flt(item.valor_previsto)
+		por_mes = distribuicao_do_item(item, meses)
+		total = sum(por_mes.values())
+		ate_hoje = sum(valor for mes, valor in por_mes.items() if mes in meses_ate_hoje)
+		for destino, chave, valor in (
+			(previsto_categoria[alvo], categoria, total),
+			(previsto_centro[alvo], centro, total),
+			(ate_hoje_categoria[alvo], categoria, ate_hoje),
+			(ate_hoje_centro[alvo], centro, ate_hoje),
+		):
+			destino[chave] = destino.get(chave, 0.0) + valor
 
 	# Realizado por dimensão
 	realizado_mes = {mes: {"receitas": 0.0, "despesas": 0.0} for mes in meses}
@@ -482,9 +535,6 @@ def obter_comparativo(previsao: str) -> dict:
 		)
 		realizado_centro["Receita"][centro] = realizado_centro["Receita"].get(centro, 0.0) + receitas
 		realizado_centro["Despesa"][centro] = realizado_centro["Despesa"].get(centro, 0.0) + despesas
-
-	mes_atual = getdate().strftime("%Y-%m")
-	meses_decorridos = sum(1 for mes in meses if mes <= mes_atual)
 
 	receitas_previstas = [flt(distribuicao[mes]["receitas"], 2) for mes in meses]
 	despesas_previstas = [flt(distribuicao[mes]["despesas"], 2) for mes in meses]
@@ -519,6 +569,7 @@ def obter_comparativo(previsao: str) -> dict:
 		"meses": meses,
 		"labels": [_mes_label(mes) for mes in meses],
 		"meses_decorridos": meses_decorridos,
+		"mes_corte": _mes_label(meses[meses_decorridos - 1]) if meses_decorridos else None,
 		"series": {
 			"receitas_previstas": receitas_previstas,
 			"receitas_realizadas": receitas_realizadas,
@@ -538,8 +589,11 @@ def obter_comparativo(previsao: str) -> dict:
 			"despesas_realizadas": total_despesas_realizadas,
 			"resultado_previsto": flt(total_receitas_previstas - total_despesas_previstas, 2),
 			"resultado_realizado": flt(total_receitas_realizadas - total_despesas_realizadas, 2),
-			"desvio_receitas": flt(total_receitas_realizadas - total_receitas_previstas, 2),
-			"desvio_despesas": flt(total_despesas_realizadas - total_despesas_previstas, 2),
+			# O desvio compara janelas iguais: realizado até hoje contra previsto até hoje.
+			# Contra o previsto do período inteiro, todo orçamento em andamento pareceria
+			# estar sobrando — e contradiria o percentual de execução ao lado.
+			"desvio_receitas": flt(total_receitas_realizadas - previsto_ate_hoje_receitas, 2),
+			"desvio_despesas": flt(total_despesas_realizadas - previsto_ate_hoje_despesas, 2),
 			"execucao_receitas": _percentual(total_receitas_realizadas, previsto_ate_hoje_receitas),
 			"execucao_despesas": _percentual(total_despesas_realizadas, previsto_ate_hoje_despesas),
 			"previsto_ate_hoje_receitas": previsto_ate_hoje_receitas,
@@ -547,14 +601,30 @@ def obter_comparativo(previsao: str) -> dict:
 		},
 		"por_categoria": {
 			"receitas": _agrupar(
-				previsto_categoria["Receita"], realizado_categoria["Receita"], "Sem categoria"
+				previsto_categoria["Receita"],
+				ate_hoje_categoria["Receita"],
+				realizado_categoria["Receita"],
+				"Sem categoria",
 			),
 			"despesas": _agrupar(
-				previsto_categoria["Despesa"], realizado_categoria["Despesa"], "Sem categoria"
+				previsto_categoria["Despesa"],
+				ate_hoje_categoria["Despesa"],
+				realizado_categoria["Despesa"],
+				"Sem categoria",
 			),
 		},
 		"por_centro_de_custo": {
-			"receitas": _agrupar(previsto_centro["Receita"], realizado_centro["Receita"], "Sem centro"),
-			"despesas": _agrupar(previsto_centro["Despesa"], realizado_centro["Despesa"], "Sem centro"),
+			"receitas": _agrupar(
+				previsto_centro["Receita"],
+				ate_hoje_centro["Receita"],
+				realizado_centro["Receita"],
+				"Sem centro",
+			),
+			"despesas": _agrupar(
+				previsto_centro["Despesa"],
+				ate_hoje_centro["Despesa"],
+				realizado_centro["Despesa"],
+				"Sem centro",
+			),
 		},
 	}

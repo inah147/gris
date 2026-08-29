@@ -61,21 +61,12 @@ def _get_inner_account_transfer_infinitepay(description):
 	return {"categoria": None, "repasse_entre_contas": 0}
 
 
-@frappe.whitelist()
-def process_uploaded_files(extrato_file_url: str, vendas_file_url: str, recebimentos_file_url: str):
-	# Permissão: apenas usuários com permissão de criação/edição nos doctypes afetados
-	required_doctypes = [
-		"Transacao Infinitepay extrato",
-		"Transacao Infinitepay vendas",
-		"Transacao Infinitepay recebimento",
-		"Transacao Extrato Geral",
-	]
-	for dt in required_doctypes:
-		if not frappe.has_permission(dt, ptype="create") or not frappe.has_permission(dt, ptype="write"):
-			frappe.throw(
-				f"Sem permissão para conciliação: requer criar/editar em '{dt}'.",
-				frappe.PermissionError,
-			)
+def reconciliar_e_inserir_infinitepay(extrato_path: str, vendas_path: str, recebimentos_path: str) -> dict:
+	"""Lê os 3 arquivos Infinitepay (caminhos já resolvidos no servidor), concilia e insere.
+
+	Reaproveitada tanto pelo upload manual (`process_uploaded_files`, abaixo) quanto pela
+	importação automática via e-mail (`gris.api.financeiro.infinitepay_email_import`).
+	"""
 
 	# Helpers para normalizar valores provenientes de pandas (NaN/NaT) e compor strings
 	def nv(v):
@@ -102,44 +93,7 @@ def process_uploaded_files(extrato_file_url: str, vendas_file_url: str, recebime
 		except Exception:
 			return None
 
-	def _resolve_path(file_url: str) -> str:
-		"""Converte a file_url (public ou private) em caminho absoluto correto.
-
-		Casos:
-		- /files/xxx -> sites/<site>/public/files/xxx
-		- /private/files/xxx -> sites/<site>/private/files/xxx
-		- qualquer outro -> assume public/<file_url>
-		"""
-		if not file_url:
-			return ""
-		file_url = file_url.strip()
-		if file_url.startswith("/private/files/"):
-			return frappe.get_site_path(file_url.lstrip("/"))  # já aponta para private/files
-		if file_url.startswith("/files/"):
-			# remover prefixo /files/ e apontar para public/files
-			inner = file_url.split("/files/", 1)[1]
-			return frappe.get_site_path("public", "files", inner)
-		# fallback: tratar como relativo a public
-		return frappe.get_site_path("public", file_url.lstrip("/"))
-
-	extrato_path = _resolve_path(extrato_file_url)
-	vendas_path = _resolve_path(vendas_file_url)
-	recebimentos_path = _resolve_path(recebimentos_file_url)
 	try:
-		# Validação de existência
-		missing = [
-			p
-			for p in [
-				("extrato", extrato_path),
-				("vendas", vendas_path),
-				("recebimentos", recebimentos_path),
-			]
-			if not (p[1] and os.path.exists(p[1]))
-		]
-		if missing:
-			msgs = ", ".join(f"{k}: {v}" for k, v in missing)
-			raise FileNotFoundError(f"Arquivos não encontrados -> {msgs}")
-
 		# Extrai dataframes dos arquivos
 		df_extrato = get_infinitepay_bank_statement_df(extrato_path)
 		df_vendas = get_infinitepay_sales_df(vendas_path)
@@ -364,6 +318,70 @@ def process_uploaded_files(extrato_file_url: str, vendas_file_url: str, recebime
 			"stats": stats,
 			"errors": errors,
 		}
+	except Exception as e:
+		frappe.log_error(str(e), "Erro ao processar arquivos importados")
+		return {
+			"summary_text": f"Erro ao processar arquivos: {e!s}",
+			"stats": None,
+			"errors": {"extrato": [], "vendas": [], "recebimentos": [], "geral": []},
+		}
+
+
+def _resolve_uploaded_path(file_url: str) -> str:
+	"""Converte a file_url (public ou private) em caminho absoluto correto.
+
+	Casos:
+	- /files/xxx -> sites/<site>/public/files/xxx
+	- /private/files/xxx -> sites/<site>/private/files/xxx
+	- qualquer outro -> assume public/<file_url>
+	"""
+	if not file_url:
+		return ""
+	file_url = file_url.strip()
+	if file_url.startswith("/private/files/"):
+		return frappe.get_site_path(file_url.lstrip("/"))  # já aponta para private/files
+	if file_url.startswith("/files/"):
+		# remover prefixo /files/ e apontar para public/files
+		inner = file_url.split("/files/", 1)[1]
+		return frappe.get_site_path("public", "files", inner)
+	# fallback: tratar como relativo a public
+	return frappe.get_site_path("public", file_url.lstrip("/"))
+
+
+@frappe.whitelist()
+def process_uploaded_files(extrato_file_url: str, vendas_file_url: str, recebimentos_file_url: str):
+	# Permissão: apenas usuários com permissão de criação/edição nos doctypes afetados
+	required_doctypes = [
+		"Transacao Infinitepay extrato",
+		"Transacao Infinitepay vendas",
+		"Transacao Infinitepay recebimento",
+		"Transacao Extrato Geral",
+	]
+	for dt in required_doctypes:
+		if not frappe.has_permission(dt, ptype="create") or not frappe.has_permission(dt, ptype="write"):
+			frappe.throw(
+				f"Sem permissão para conciliação: requer criar/editar em '{dt}'.",
+				frappe.PermissionError,
+			)
+
+	extrato_path = _resolve_uploaded_path(extrato_file_url)
+	vendas_path = _resolve_uploaded_path(vendas_file_url)
+	recebimentos_path = _resolve_uploaded_path(recebimentos_file_url)
+	try:
+		missing = [
+			p
+			for p in [
+				("extrato", extrato_path),
+				("vendas", vendas_path),
+				("recebimentos", recebimentos_path),
+			]
+			if not (p[1] and os.path.exists(p[1]))
+		]
+		if missing:
+			msgs = ", ".join(f"{k}: {v}" for k, v in missing)
+			raise FileNotFoundError(f"Arquivos não encontrados -> {msgs}")
+
+		return reconciliar_e_inserir_infinitepay(extrato_path, vendas_path, recebimentos_path)
 	except Exception as e:
 		frappe.log_error(str(e), "Erro ao processar arquivos importados")
 		return {

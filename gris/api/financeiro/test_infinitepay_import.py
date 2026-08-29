@@ -17,12 +17,17 @@ from gris.api.financeiro.infinitepay import (
 	FORMATO_HTML,
 	FORMATO_OFX,
 	FORMATO_XML,
+	TIPO_EXTRATO,
+	TIPO_RECEBIMENTOS,
+	TIPO_VENDAS,
 	_detect_format,
 	bank_reconcilliation,
 	get_infinitepay_bank_statement_df,
 	get_infinitepay_receipts_df,
 	get_infinitepay_sales_df,
+	identificar_tipo_arquivo,
 )
+from gris.www.financeiro.contas import reconciliar_e_inserir_infinitepay
 
 # Extrato "Relatório de movimentações" da Conta Web: tabela externa de página,
 # uma tabela por dia, data no cabeçalho e linha de "Saldo do dia" no fim.
@@ -355,3 +360,98 @@ class TestInfinitepayImport(FrappeTestCase):
 		self.assertEqual(
 			enviado["origem_nome"], "GRUPO ESCOTEIRO PROFESSORA INAH DE MELO N 147. - INFINITEPAY"
 		)
+
+	# ------------------------------------------------------------------
+	# Identificação do tipo de anexo (usada pela importação via e-mail, que não
+	# pode confiar no nome do arquivo)
+
+	def test_identifica_extrato_html_e_ofx(self):
+		self.assertEqual(identificar_tipo_arquivo(self.arquivo(EXTRATO_HTML, ".ofx")), TIPO_EXTRATO)
+		self.assertEqual(identificar_tipo_arquivo(self.arquivo(EXTRATO_OFX, ".ofx")), TIPO_EXTRATO)
+
+	def test_identifica_vendas_xml_e_csv(self):
+		self.assertEqual(identificar_tipo_arquivo(self.arquivo(VENDAS_XML, ".xml")), TIPO_VENDAS)
+		csv_vendas_legado = ",".join(
+			[
+				"Data e Hora",
+				"Meio (Meio)",
+				"Meio (Bandeira)",
+				"Meio (Parcelas)",
+				"Tipo (Origem)",
+				"Status",
+				"Valor (R$)",
+				"NSU",
+			]
+		)
+		self.assertEqual(identificar_tipo_arquivo(self.arquivo(csv_vendas_legado, ".csv")), TIPO_VENDAS)
+
+	def test_identifica_recebimentos_xml_e_csv(self):
+		self.assertEqual(identificar_tipo_arquivo(self.arquivo(RECEBIMENTOS_XML, ".xml")), TIPO_RECEBIMENTOS)
+		self.assertEqual(identificar_tipo_arquivo(self.arquivo(COMPROVANTE_XML, ".xml")), TIPO_RECEBIMENTOS)
+		self.assertEqual(identificar_tipo_arquivo(self.arquivo(RECEBIMENTOS_CSV, ".csv")), TIPO_RECEBIMENTOS)
+
+	def test_identifica_arquivo_desconhecido_como_none(self):
+		self.assertIsNone(identificar_tipo_arquivo(self.arquivo("<algo_outro/>", ".xml")))
+		self.assertIsNone(identificar_tipo_arquivo(self.arquivo("<nao e xml valido", ".xml")))
+		# Texto solto sem cara de CSV de relatório (poucas colunas) não deve ser
+		# classificado por eliminação — evita que um anexo qualquer no mesmo
+		# e-mail (ex.: assinatura, logo) roube o lugar do relatório de verdade.
+		self.assertIsNone(identificar_tipo_arquivo(self.arquivo("não é um relatório Infinitepay", ".txt")))
+
+
+class TestReconciliarEInserirInfinitepay(FrappeTestCase):
+	"""`reconciliar_e_inserir_infinitepay` é o núcleo reaproveitado pelo upload manual
+	(`process_uploaded_files`) e pela importação automática via e-mail."""
+
+	def setUp(self):
+		self._temporarios = []
+
+	def tearDown(self):
+		for caminho in self._temporarios:
+			try:
+				os.remove(caminho)
+			except OSError:
+				pass
+
+	def arquivo(self, conteudo: str, sufixo: str) -> str:
+		caminho = _arquivo(conteudo, sufixo)
+		self._temporarios.append(caminho)
+		return caminho
+
+	def test_insere_as_tres_tabelas_de_origem_e_e_idempotente(self):
+		extrato = self.arquivo(EXTRATO_HTML, ".ofx")
+		vendas = self.arquivo(VENDAS_XML, ".xml")
+		recebimentos = self.arquivo(RECEBIMENTOS_XML, ".xml")
+
+		primeiro = reconciliar_e_inserir_infinitepay(extrato, vendas, recebimentos)
+		self.assertIsNotNone(primeiro["stats"])
+		# 4 lançamentos no extrato, 3 vendas aprovadas (a "Negada" é descartada) e
+		# 1 recebimento — ver `test_conciliacao_com_os_formatos_novos` acima.
+		self.assertEqual(
+			primeiro["stats"]["extrato"], {"total": 4, "inserted": 4, "skipped_exist": 0, "failed": 0}
+		)
+		self.assertEqual(
+			primeiro["stats"]["vendas"], {"total": 3, "inserted": 3, "skipped_exist": 0, "failed": 0}
+		)
+		self.assertEqual(
+			primeiro["stats"]["recebimentos"], {"total": 1, "inserted": 1, "skipped_exist": 0, "failed": 0}
+		)
+		self.assertEqual(primeiro["stats"]["geral"]["total"], 5)
+
+		# Reimportar os mesmos 3 arquivos não duplica nada.
+		segundo = reconciliar_e_inserir_infinitepay(extrato, vendas, recebimentos)
+		self.assertEqual(segundo["stats"]["extrato"]["skipped_exist"], 4)
+		self.assertEqual(segundo["stats"]["vendas"]["skipped_exist"], 3)
+		self.assertEqual(segundo["stats"]["recebimentos"]["skipped_exist"], 1)
+		self.assertEqual(segundo["stats"]["extrato"]["inserted"], 0)
+		self.assertEqual(segundo["stats"]["vendas"]["inserted"], 0)
+		self.assertEqual(segundo["stats"]["recebimentos"]["inserted"], 0)
+
+	def test_formato_invalido_devolve_erro_sem_lancar_excecao(self):
+		resultado = reconciliar_e_inserir_infinitepay(
+			self.arquivo("não é um extrato", ".ofx"),
+			self.arquivo(VENDAS_XML, ".xml"),
+			self.arquivo(RECEBIMENTOS_XML, ".xml"),
+		)
+		self.assertIsNone(resultado["stats"])
+		self.assertIn("Erro ao processar arquivos", resultado["summary_text"])

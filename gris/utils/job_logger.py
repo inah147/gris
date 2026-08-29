@@ -107,6 +107,12 @@ ROTULOS_DE_JOBS = {
 	"gris.api.financeiro.conta_fixa.generate_monthly_fixed_payments": (
 		"Geração mensal de pagamentos de contas fixas"
 	),
+	"gris.api.financeiro.infinitepay_email_import.enqueue_infinitepay_email_import": (
+		"Importação do fechamento Infinitepay por e-mail (agendamento)"
+	),
+	"gris.api.financeiro.infinitepay_email_import.run_infinitepay_email_import": (
+		"Importação do fechamento Infinitepay por e-mail"
+	),
 	"gris.api.financeiro.monthly_payments.generate_monthly_payments": ("Geração mensal de contribuições"),
 	"gris.api.financeiro.monthly_payments.update_status_monthly_payment": (
 		"Atualização de status das contribuições"

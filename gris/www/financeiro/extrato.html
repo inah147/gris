@@ -2,6 +2,7 @@
 {% from "public/design_system/components/composed/basecoat-composed.html.jinja" import empty %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 {% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/popover.html.jinja" import popover %}
 {% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
 
 {% block title %}Extrato{% endblock %}
@@ -169,32 +170,51 @@
 			de <strong class="text-foreground">{{ paginacao.total }}</strong>
 			{{ 'transação' if paginacao.total == 1 else 'transações' }}
 		</p>
+		{% call popover(
+			trigger=(lucide_icon("columns-3", size="sm") ~ " Colunas"),
+			id="extrato-colunas",
+			trigger_attrs={"class": "btn-sm-outline"},
+			popover_attrs={"class": "col-toggle-panel"}
+		) %}
+			<div class="col-toggle-list col-toggle-list--scroll" id="extratoColunasLista">
+				{% for coluna in colunas %}
+					<label class="col-toggle-item">
+						<input type="checkbox" data-col-toggle="{{ coluna.key }}" {{ 'checked' if coluna.padrao else '' }} />
+						{{ coluna.label }}
+					</label>
+				{% endfor %}
+			</div>
+			<div class="col-toggle-footer">
+				<button type="button" class="btn-sm-ghost" id="extratoColunasPadrao">Restaurar padrão</button>
+			</div>
+		{% endcall %}
 	</header>
 	<section class="p-0 extrato-tabela__section">
+		{#
+			Estado das colunas ocultas. Nasce com o padrão do servidor (sem
+			piscar colunas na carga) e é reescrito pelo extrato.js com a
+			preferência do usuário. É estado dinâmico, não estilo da rota.
+		#}
+		<style id="extratoColunasStyle">
+			{%- for coluna in colunas if not coluna.padrao -%}
+			[data-col="{{ coluna.key }}"]{display:none}
+			{%- endfor -%}
+		</style>
 		<div class="extrato-tabela__scroll" id="extratoScroll">
 			<table class="table extrato-tabela extrato-tabela--compacta">
 				<thead>
 					<tr>
 						<th class="extrato-col-select"><input type="checkbox" id="selectAll" aria-label="Selecionar todas as transações carregadas" /></th>
-						<th style="width:28px;" aria-label="Status de revisão"></th>
-						<th style="width:126px;">Data/Hora</th>
-						<th>Descrição reduzida</th>
-						{% if can_view_full_description %}
-						<th>Descrição</th>
-						{% endif %}
-						<th class="text-right" style="width:120px;">Valor</th>
-						<th>Instituição</th>
-						<th>Fonte</th>
-						<th>Carteira</th>
-						<th>Categoria</th>
-						<th>Centro de custo</th>
+						{% for coluna in colunas %}
+							<th data-col="{{ coluna.key }}" class="{{ 'text-right' if coluna.tipo == 'moeda' else '' }}">{{ coluna.label }}</th>
+						{% endfor %}
 					</tr>
 				</thead>
 				<tbody id="extratoTbody">
 					{% include "templates/includes/financeiro/extrato_linhas.html" %}
 					{% if not transacoes %}
 						<tr>
-							<td colspan="{{ 11 if can_view_full_description else 10 }}">
+							<td colspan="{{ colunas | length + 1 }}">
 								{{ empty(
 									title="Nenhuma transação encontrada",
 									description="Tente ajustar os filtros acima.",

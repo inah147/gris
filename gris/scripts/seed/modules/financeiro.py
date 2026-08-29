@@ -442,6 +442,91 @@ def seed_cobranca_infinitepay(n: int):
 
 
 # ===========================================================================
+# Previsão Orçamentária
+# ===========================================================================
+
+
+def seed_previsoes_orcamentarias(n_exercicios: int):
+	"""Cria previsões anuais cobrindo os três status do DocType.
+
+	O exercício corrente entra como "Aprovada" (é o que a página do portal abre
+	por padrão), os anteriores como "Encerrada" e o seguinte como "Rascunho" —
+	assim o comparativo previsto vs. realizado tem um caso com realizado parcial,
+	um fechado e um totalmente sem realizado.
+	"""
+	categorias = all_names("Categoria de Transacao", limit=8)
+	centros = all_names("Centro de Custo", limit=4)
+
+	def _cat(i):
+		return categorias[i % len(categorias)] if categorias else None
+
+	def _centro(i):
+		return centros[i % len(centros)] if centros else None
+
+	# (tipo, descrição, valor anual, distribuição, mês da distribuição pontual)
+	modelo = [
+		("Receita", "Contribuições mensais dos associados", 96000, "Uniforme no período", None),
+		("Receita", "Taxa de inscrição em atividades", 24000, "Uniforme no período", None),
+		("Receita", "Doações e patrocínios", 18000, "Uniforme no período", None),
+		("Receita", "Arrecadação da festa junina", 12000, "Mês específico", 6),
+		("Despesa", "Aluguel da sede", 42000, "Uniforme no período", None),
+		("Despesa", "Água, luz e internet", 14400, "Uniforme no período", None),
+		("Despesa", "Materiais de atividade", 16800, "Uniforme no período", None),
+		("Despesa", "Registro anual UEB", 21000, "Mês específico", 3),
+		("Despesa", "Acampamento de inverno", 16000, "Mês específico", 7),
+		("Despesa", "Manutenção da sede", 24000, "Mês específico", 9),
+	]
+
+	ano_atual = date.today().year
+	# Um exercício futuro (rascunho) e o restante do passado para trás.
+	anos = [ano_atual + 1] + [ano_atual - i for i in range(max(n_exercicios - 1, 1))]
+
+	created = 0
+	for ano in anos:
+		titulo = f"Orçamento {ano}"
+		if frappe.db.exists("Previsao Orcamentaria", titulo):
+			continue
+		if ano > ano_atual:
+			status = "Rascunho"
+		elif ano == ano_atual:
+			status = "Aprovada"
+		else:
+			status = "Encerrada"
+
+		# Reajuste de ~6% ao ano para que os exercícios não fiquem idênticos.
+		fator = 1.06 ** (ano - ano_atual)
+		itens = [
+			{
+				"tipo": tipo,
+				"descricao": descricao,
+				"categoria": _cat(i),
+				"centro_de_custo": _centro(i),
+				"valor_previsto": round(valor * fator, 2),
+				"distribuicao": distribuicao,
+				"mes_referencia": date(ano, mes, 1) if mes else None,
+			}
+			for i, (tipo, descricao, valor, distribuicao, mes) in enumerate(modelo)
+		]
+		try:
+			safe_insert(
+				{
+					"doctype": "Previsao Orcamentaria",
+					"titulo": titulo,
+					"exercicio": ano,
+					"status": status,
+					"data_inicio": date(ano, 1, 1),
+					"data_fim": date(ano, 12, 31),
+					"observacoes": "Previsão gerada pelo seed de dados de teste.",
+					"itens": itens,
+				}
+			)
+			created += 1
+		except Exception as e:
+			print(f"  ⚠️  Previsao Orcamentaria {ano}: {e}")
+	print(f"  → {created} Previsao Orcamentaria (+ Item Previsao Orcamentaria)")
+
+
+# ===========================================================================
 # Singles do módulo Financeiro
 # ===========================================================================
 
@@ -482,3 +567,4 @@ def seed_financeiro(creds: dict, n: dict):
 	seed_transacao_infinitepay_vendas(n["transacao_infinitepay_vendas"])
 	seed_transacao_portao_3(n["transacao_portao_3"])
 	seed_cobranca_infinitepay(n["cobranca_infinitepay"])
+	seed_previsoes_orcamentarias(n["previsao_orcamentaria"])

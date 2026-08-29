@@ -28,6 +28,7 @@ PRESETS = {
 		"transacao_infinitepay_vendas": 4,
 		"transacao_portao_3": 4,
 		"cobranca_infinitepay": 3,
+		"previsao_orcamentaria": 3,
 		"projeto_por_status": 1,  # x 6 status
 		"entrevista": 3,
 	},
@@ -56,6 +57,7 @@ PRESETS = {
 		"transacao_infinitepay_vendas": 20,
 		"transacao_portao_3": 20,
 		"cobranca_infinitepay": 10,
+		"previsao_orcamentaria": 4,
 		"projeto_por_status": 2,
 		"entrevista": 12,
 	},
@@ -84,6 +86,7 @@ PRESETS = {
 		"transacao_infinitepay_vendas": 100,
 		"transacao_portao_3": 100,
 		"cobranca_infinitepay": 40,
+		"previsao_orcamentaria": 6,
 		"projeto_por_status": 4,
 		"entrevista": 50,
 	},

@@ -49,9 +49,7 @@ class TestExtratoCamposEditaveis(FrappeTestCase):
 		opcoes = get_extrato_opcoes_editaveis()
 		esperados = {c for c, m in EXTRATO_CAMPOS_EDITAVEIS.items() if m["tipo"] == "opcoes"}
 		self.assertEqual(set(opcoes), esperados)
-		self.assertEqual(
-			opcoes["ordinaria_extraordinaria"], ["Ordinária", "Extraordinária"]
-		)
+		self.assertEqual(opcoes["ordinaria_extraordinaria"], ["Ordinária", "Extraordinária"])
 
 	def test_grid_marca_as_celulas_editaveis(self):
 		colunas = get_extrato_colunas()
@@ -101,28 +99,21 @@ class TestUpdateExtratoCelulas(FrappeTestCase):
 
 	def test_valor_invalido_para_campo_de_selecao_e_recusado(self):
 		with self.assertRaises(frappe.ValidationError):
-			update_extrato_celulas(
-				json.dumps(["TX-0001"]), "ordinaria_extraordinaria", "Inexistente"
-			)
+			update_extrato_celulas(json.dumps(["TX-0001"]), "ordinaria_extraordinaria", "Inexistente")
 
 	def test_link_inexistente_e_recusado(self):
 		with self.assertRaises(frappe.ValidationError):
-			update_extrato_celulas(
-				json.dumps(["TX-0001"]), "categoria", "Categoria que não existe"
-			)
+			update_extrato_celulas(json.dumps(["TX-0001"]), "categoria", "Categoria que não existe")
 
 	def test_transacao_inexistente_conta_como_falha_sem_quebrar(self):
-		resposta = update_extrato_celulas(
-			json.dumps(["TX-INEXISTENTE"]), "descricao_reduzida", "Aluguel"
-		)
+		resposta = update_extrato_celulas(json.dumps(["TX-INEXISTENTE"]), "descricao_reduzida", "Aluguel")
 		self.assertEqual(resposta["updated_count"], 0)
 		self.assertEqual(resposta["falhas"], 1)
 		self.assertEqual(resposta["html"].strip(), "")
 
 	def test_edicao_em_lote_grava_e_devolve_as_linhas(self):
 		nomes = [
-			doc.name
-			for doc in frappe.get_all(DOCTYPE, fields=["name"], limit=2, order_by="creation desc")
+			doc.name for doc in frappe.get_all(DOCTYPE, fields=["name"], limit=2, order_by="creation desc")
 		]
 		if len(nomes) < 2:
 			self.skipTest("site sem transações suficientes para o teste em lote")

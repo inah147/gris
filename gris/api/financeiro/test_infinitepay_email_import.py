@@ -21,13 +21,10 @@ from gris.api.financeiro.test_infinitepay_import import (
 class _ConfigFake:
 	"""Dublê de 'Configuracao infinitepay', só com os campos que o job lê."""
 
-	def __init__(
-		self, email_account=None, remetente_contem=None, assunto_contem=None, ultimo_mes_importado=None
-	):
+	def __init__(self, email_account=None, remetente_contem=None, assunto_contem=None):
 		self.email_account = email_account
 		self.remetente_contem = remetente_contem
 		self.assunto_contem = assunto_contem
-		self.ultimo_mes_importado = ultimo_mes_importado
 
 
 class TestDiaUtil(FrappeTestCase):
@@ -61,43 +58,9 @@ class TestDiaUtil(FrappeTestCase):
 		self.assertEqual(job._enesimo_dia_util_do_mes(mes, 5), datetime.date(2026, 8, 7))
 
 
-class TestDeveImportar(FrappeTestCase):
-	def test_sem_email_account_configurada(self):
-		deve, _mes, motivo = job._deve_importar(_ConfigFake(), datetime.date(2026, 8, 10))
-		self.assertFalse(deve)
-		self.assertIn("Conta de e-mail", motivo)
-
-	def test_antes_do_quinto_dia_util(self):
-		config = _ConfigFake(email_account="conta@example.com")
-		# 03/08/2026 é o 1º dia útil de agosto/2026.
-		deve, _mes, motivo = job._deve_importar(config, datetime.date(2026, 8, 3))
-		self.assertFalse(deve)
-		self.assertIn("dia útil", motivo)
-
-	def test_mes_ja_importado(self):
-		config = _ConfigFake(
-			email_account="conta@example.com",
-			ultimo_mes_importado=datetime.date(2026, 8, 1),
-		)
-		deve, mes, motivo = job._deve_importar(config, datetime.date(2026, 8, 20))
-		self.assertFalse(deve)
-		self.assertEqual(mes, datetime.date(2026, 8, 1))
-		self.assertIn("já foi importado", motivo)
-
-	def test_deve_importar_a_partir_do_quinto_dia_util(self):
-		config = _ConfigFake(email_account="conta@example.com")
-		# 07/08/2026 é o 5º dia útil de agosto/2026.
-		deve, mes, motivo = job._deve_importar(config, datetime.date(2026, 8, 7))
-		self.assertTrue(deve)
-		self.assertIsNone(motivo)
-		self.assertEqual(mes, datetime.date(2026, 8, 1))
-
-
-class TestBuscaEClassificacaoDeAnexos(FrappeTestCase):
-	def _criar_email_account(self, email_id):
-		existente = frappe.db.exists("Email Account", {"email_id": email_id})
-		if existente:
-			return existente
+class TestBuscaClassificacaoEMarcador(FrappeTestCase):
+	def _criar_email_account(self, prefixo):
+		email_id = f"{prefixo}-{frappe.generate_hash(length=8)}@example.com"
 		doc = frappe.get_doc(
 			{
 				"doctype": "Email Account",
@@ -138,7 +101,7 @@ class TestBuscaEClassificacaoDeAnexos(FrappeTestCase):
 		return comunicacao
 
 	def test_busca_filtra_por_remetente_assunto_e_data(self):
-		conta = self._criar_email_account("fechamento-teste-busca@example.com")
+		conta = self._criar_email_account("fechamento-teste-busca")
 		config = _ConfigFake(email_account=conta, remetente_contem="infinitepay", assunto_contem="Fechamento")
 		desde = datetime.date(2026, 8, 7)
 
@@ -159,8 +122,8 @@ class TestBuscaEClassificacaoDeAnexos(FrappeTestCase):
 
 		self.assertEqual([c["name"] for c in encontradas], [valida.name])
 
-	def test_coleta_classifica_os_tres_anexos_e_ignora_o_resto(self):
-		conta = self._criar_email_account("fechamento-teste-anexos@example.com")
+	def test_anexos_de_uma_comunicacao_classifica_os_tres_e_ignora_o_resto(self):
+		conta = self._criar_email_account("fechamento-teste-anexos")
 		comunicacao = self._criar_comunicacao(
 			conta,
 			"contato@infinitepay.com.br",
@@ -174,21 +137,31 @@ class TestBuscaEClassificacaoDeAnexos(FrappeTestCase):
 			],
 		)
 
-		anexos = job._coletar_anexos_classificados([{"name": comunicacao.name}])
+		anexos = job._anexos_de_uma_comunicacao(comunicacao.name)
 
 		self.assertEqual(set(anexos.keys()), {TIPO_EXTRATO, TIPO_VENDAS, TIPO_RECEBIMENTOS})
 		for caminho in anexos.values():
 			self.assertTrue(os.path.exists(caminho))
 
+	def test_marcador_de_importado(self):
+		conta = self._criar_email_account("fechamento-teste-marcador")
+		comunicacao = self._criar_comunicacao(
+			conta, "contato@infinitepay.com.br", "Fechamento de agosto", datetime.datetime(2026, 8, 7, 9, 0)
+		)
+
+		self.assertFalse(job._ja_importada(comunicacao.name))
+		job._marcar_importada(comunicacao.name, "resumo de teste")
+		self.assertTrue(job._ja_importada(comunicacao.name))
+
 
 class TestRunInfinitepayEmailImport(FrappeTestCase):
 	"""Roda o job de ponta a ponta, fixando "hoje" para não depender do relógio real.
 
-	`run_infinitepay_email_import` dá um `frappe.db.commit()` explícito ao marcar o
-	mês como importado (para o marcador sobreviver a um rollback do job) — o que,
-	sem cuidado, também comitaria os dados do teste. Por isso todo teste aqui roda
-	com `frappe.db.commit` neutralizado, preservando o rollback automático do
-	`FrappeTestCase` no fim do teste.
+	`run_infinitepay_email_import` dá um `frappe.db.commit()` explícito ao marcar
+	cada e-mail como importado (para o marcador sobreviver a um rollback do job) —
+	o que, sem cuidado, também comitaria os dados do teste. Por isso todo teste
+	aqui roda com `frappe.db.commit` neutralizado, preservando o rollback
+	automático do `FrappeTestCase` no fim do teste.
 	"""
 
 	def setUp(self):
@@ -221,13 +194,8 @@ class TestRunInfinitepayEmailImport(FrappeTestCase):
 		config.save(ignore_permissions=True)
 		return config
 
-	def test_sem_anexos_completos_nao_marca_o_mes_como_importado(self):
-		conta = self._criar_email_account("fechamento-run-incompleto")
-		self._configurar(
-			email_account=conta, remetente_contem=None, assunto_contem=None, ultimo_mes_importado=None
-		)
-
-		frappe.get_doc(
+	def _criar_comunicacao(self, conta, assunto, quando, anexos=()):
+		comunicacao = frappe.get_doc(
 			{
 				"doctype": "Communication",
 				"communication_medium": "Email",
@@ -235,52 +203,13 @@ class TestRunInfinitepayEmailImport(FrappeTestCase):
 				"status": "Open",
 				"email_account": conta,
 				"sender": "contato@infinitepay.com.br",
-				"subject": "Fechamento de agosto",
-				"communication_date": datetime.datetime(2026, 8, 7, 9, 0),
+				"subject": assunto,
+				"communication_date": quando,
 				"content": "corpo do e-mail de teste",
 			}
-		).insert(ignore_permissions=True)
-
-		# 07/08/2026 é o 5º dia útil de agosto/2026 (ver TestDiaUtil).
-		with patch.object(job, "getdate", return_value=datetime.date(2026, 8, 7)):
-			job.run_infinitepay_email_import()
-
-		config_final = frappe.get_single("Configuracao infinitepay")
-		self.assertFalse(config_final.ultimo_mes_importado)
-
-	def test_com_os_tres_anexos_insere_e_marca_o_mes_como_importado(self):
-		conta = self._criar_email_account("fechamento-run-completo")
-		self._configurar(
-			email_account=conta, remetente_contem=None, assunto_contem=None, ultimo_mes_importado=None
 		)
-		antes = {
-			dt: frappe.db.count(dt)
-			for dt in (
-				"Transacao Infinitepay extrato",
-				"Transacao Infinitepay vendas",
-				"Transacao Infinitepay recebimento",
-			)
-		}
-
-		frappe.get_doc(
-			{
-				"doctype": "Communication",
-				"communication_medium": "Email",
-				"sent_or_received": "Received",
-				"status": "Open",
-				"email_account": conta,
-				"sender": "contato@infinitepay.com.br",
-				"subject": "Fechamento de agosto",
-				"communication_date": datetime.datetime(2026, 8, 7, 9, 0),
-				"content": "corpo do e-mail de teste",
-			}
-		).insert(ignore_permissions=True)
-		comunicacao = frappe.get_last_doc("Communication", filters={"email_account": conta})
-		for nome_arquivo, conteudo in (
-			("extrato.ofx", EXTRATO_HTML),
-			("vendas.xml", VENDAS_XML),
-			("recebimentos.xml", RECEBIMENTOS_XML),
-		):
+		comunicacao.insert(ignore_permissions=True)
+		for nome_arquivo, conteudo in anexos:
 			frappe.get_doc(
 				{
 					"doctype": "File",
@@ -291,12 +220,47 @@ class TestRunInfinitepayEmailImport(FrappeTestCase):
 					"content": conteudo,
 				}
 			).insert(ignore_permissions=True)
+		return comunicacao
+
+	def test_sem_anexos_completos_nao_marca_como_importado(self):
+		conta = self._criar_email_account("fechamento-run-incompleto")
+		self._configurar(email_account=conta, remetente_contem=None, assunto_contem=None)
+		comunicacao = self._criar_comunicacao(
+			conta, "Fechamento de agosto", datetime.datetime(2026, 8, 7, 9, 0)
+		)
+
+		# 07/08/2026 é o 5º dia útil de agosto/2026 (ver TestDiaUtil).
+		with patch.object(job, "getdate", return_value=datetime.date(2026, 8, 7)):
+			job.run_infinitepay_email_import()
+
+		self.assertFalse(job._ja_importada(comunicacao.name))
+
+	def test_com_os_tres_anexos_insere_e_marca_como_importado(self):
+		conta = self._criar_email_account("fechamento-run-completo")
+		self._configurar(email_account=conta, remetente_contem=None, assunto_contem=None)
+		antes = {
+			dt: frappe.db.count(dt)
+			for dt in (
+				"Transacao Infinitepay extrato",
+				"Transacao Infinitepay vendas",
+				"Transacao Infinitepay recebimento",
+			)
+		}
+		comunicacao = self._criar_comunicacao(
+			conta,
+			"Fechamento de agosto",
+			datetime.datetime(2026, 8, 7, 9, 0),
+			anexos=[
+				("extrato.ofx", EXTRATO_HTML),
+				("vendas.xml", VENDAS_XML),
+				("recebimentos.xml", RECEBIMENTOS_XML),
+			],
+		)
 
 		with patch.object(job, "getdate", return_value=datetime.date(2026, 8, 7)):
 			job.run_infinitepay_email_import()
 
-		config_final = frappe.get_single("Configuracao infinitepay")
-		self.assertEqual(frappe.utils.getdate(config_final.ultimo_mes_importado), datetime.date(2026, 8, 1))
+		self.assertTrue(job._ja_importada(comunicacao.name))
 		self.assertEqual(
 			frappe.db.count("Transacao Infinitepay extrato") - antes["Transacao Infinitepay extrato"], 4
 		)
@@ -308,9 +272,32 @@ class TestRunInfinitepayEmailImport(FrappeTestCase):
 			1,
 		)
 
-		# Rodar de novo no mesmo mês não busca o e-mail outra vez (nada muda).
+		# Rodar de novo não reabre o mesmo e-mail (já está marcado) — nada muda.
 		with patch.object(job, "getdate", return_value=datetime.date(2026, 8, 20)):
 			job.run_infinitepay_email_import()
 		self.assertEqual(
 			frappe.db.count("Transacao Infinitepay extrato") - antes["Transacao Infinitepay extrato"], 4
 		)
+
+	def test_dois_emails_pendentes_no_mesmo_dia_sao_importados_e_marcados_juntos(self):
+		conta = self._criar_email_account("fechamento-run-dois-emails")
+		self._configurar(email_account=conta, remetente_contem=None, assunto_contem=None)
+		anexos = [
+			("extrato.ofx", EXTRATO_HTML),
+			("vendas.xml", VENDAS_XML),
+			("recebimentos.xml", RECEBIMENTOS_XML),
+		]
+		# Simula um reenvio: dois e-mails de fechamento chegaram sem serem
+		# processados ainda (ex.: a conta ficou sem configuração por alguns dias).
+		primeiro = self._criar_comunicacao(
+			conta, "Fechamento de agosto (1)", datetime.datetime(2026, 8, 7, 9, 0), anexos=anexos
+		)
+		segundo = self._criar_comunicacao(
+			conta, "Fechamento de agosto (2)", datetime.datetime(2026, 8, 10, 9, 0), anexos=anexos
+		)
+
+		with patch.object(job, "getdate", return_value=datetime.date(2026, 8, 20)):
+			job.run_infinitepay_email_import()
+
+		self.assertTrue(job._ja_importada(primeiro.name))
+		self.assertTrue(job._ja_importada(segundo.name))

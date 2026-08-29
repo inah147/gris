@@ -3,24 +3,28 @@
 
 """Importação automática do fechamento mensal da Infinitepay recebido por e-mail.
 
-A Infinitepay envia, todo 5º dia útil do mês, um e-mail com os três relatórios
-(extrato, vendas e recebimentos) usados na conciliação — hoje feita manualmente
-em `/financeiro/contas` (`process_uploaded_files`). Este módulo automatiza o
-mesmo fluxo: aguarda o 5º dia útil, busca o e-mail na Conta de e-mail configurada
-em "Configuracao infinitepay", identifica os três anexos pelo conteúdo (o
-cliente de e-mail pode renomear o arquivo) e reaproveita
-`reconciliar_e_inserir_infinitepay` para inserir as transações.
+A Infinitepay envia, a partir do 5º dia útil do mês, um e-mail com os três
+relatórios (extrato, vendas e recebimentos) usados na conciliação — hoje feita
+manualmente em `/financeiro/contas` (`process_uploaded_files`). Este módulo
+automatiza o mesmo fluxo: a cada execução, busca na Conta de e-mail configurada
+em "Configuracao infinitepay" os e-mails candidatos do mês corrente ainda não
+importados, identifica os três anexos de cada um pelo conteúdo (o cliente de
+e-mail pode renomear o arquivo) e reaproveita `reconciliar_e_inserir_infinitepay`
+para inserir as transações.
 
-A inserção já é idempotente por si só (cada doctype de origem verifica
-`frappe.db.exists` antes de inserir), então rodar o job mais de uma vez no mesmo
-dia não duplica nada. `ultimo_mes_importado` só evita ficar buscando o e-mail
-todo dia pelo resto do mês depois que o fechamento já foi importado.
+Cada e-mail processado com sucesso vira um registro em "Infinitepay Email
+Importado" — é esse marcador (não uma data ou um mês) que decide se um e-mail já
+foi tratado, então mais de um fechamento pendente (reenvio, atraso, mês anterior
+que chegou fora de época) é importado no mesmo dia sem esperar o próximo mês. A
+inserção em si já é idempotente por doctype de origem, então mesmo sem o
+marcador rodar o job de novo não duplicaria nada — o marcador só evita reabrir e
+reclassificar os mesmos anexos a cada execução.
 """
 
 from datetime import date, timedelta
 
 import frappe
-from frappe.utils import getdate
+from frappe.utils import getdate, now_datetime
 from frappe.utils.background_jobs import enqueue
 
 from gris.api.financeiro.infinitepay import (
@@ -33,6 +37,7 @@ from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 from gris.www.financeiro.contas import reconciliar_e_inserir_infinitepay
 
 CONFIG_DOCTYPE = "Configuracao infinitepay"
+MARCADOR_DOCTYPE = "Infinitepay Email Importado"
 N_ESIMO_DIA_UTIL = 5
 
 
@@ -55,35 +60,13 @@ def _enesimo_dia_util_do_mes(mes_de_referencia: date, n: int) -> date:
 		dia += timedelta(days=1)
 
 
-def _deve_importar(config, hoje: date) -> tuple[bool, date, str | None]:
-	"""Decide se o job deve seguir agora. Devolve (deve_seguir, mes_referencia, motivo_do_nao)."""
-	mes_referencia = hoje.replace(day=1)
-
-	if not config.email_account:
-		return False, mes_referencia, "Conta de e-mail não configurada em Configuracao infinitepay."
-
-	quinto_dia_util = _enesimo_dia_util_do_mes(hoje, N_ESIMO_DIA_UTIL)
-	if hoje < quinto_dia_util:
-		return (
-			False,
-			mes_referencia,
-			f"Ainda não chegou o {N_ESIMO_DIA_UTIL}º dia útil do mês ({quinto_dia_util}).",
-		)
-
-	# `ultimo_mes_importado` volta do banco como string ("2026-08-01") em vez de
-	# `date`; comparar direto com `mes_referencia` nunca bateria.
-	if config.ultimo_mes_importado and getdate(config.ultimo_mes_importado) == mes_referencia:
-		return (
-			False,
-			mes_referencia,
-			f"Fechamento de {mes_referencia.strftime('%m/%Y')} já foi importado.",
-		)
-
-	return True, mes_referencia, None
-
-
 def _buscar_comunicacoes_candidatas(config, desde: date) -> list[dict]:
-	"""E-mails recebidos na conta configurada, desde o início do 5º dia útil do mês."""
+	"""E-mails recebidos na conta configurada, desde o início do 5º dia útil do mês corrente.
+
+	`desde` é só o ponto de partida da busca (evita varrer a caixa de entrada
+	inteira a cada execução) — não bloqueia a importação: como nenhum e-mail tem
+	data futura, a busca não encontra nada antes do 5º dia útil de qualquer forma.
+	"""
 	filtros = {
 		"communication_medium": "Email",
 		"sent_or_received": "Received",
@@ -100,33 +83,47 @@ def _buscar_comunicacoes_candidatas(config, desde: date) -> list[dict]:
 	)
 
 
-def _coletar_anexos_classificados(comunicacoes: list[dict]) -> dict[str, str]:
-	"""Varre os anexos das comunicações candidatas e devolve o caminho mais recente de cada tipo.
+def _ja_importada(comunicacao_name: str) -> bool:
+	return bool(frappe.db.exists(MARCADOR_DOCTYPE, comunicacao_name))
 
-	Comunicações mais recentes são varridas por último, então um reenvio (ex.: o
-	contador corrige e reenvia o mesmo relatório) sempre prevalece sobre o anterior.
-	"""
+
+def _marcar_importada(comunicacao_name: str, resumo: str) -> None:
+	frappe.get_doc(
+		{
+			"doctype": MARCADOR_DOCTYPE,
+			"communication": comunicacao_name,
+			"importado_em": now_datetime(),
+			"resumo": resumo,
+		}
+	).insert(ignore_permissions=True)
+	frappe.db.set_single_value(CONFIG_DOCTYPE, "ultima_importacao_em", now_datetime())
+	# O marcador precisa sobreviver a um rollback de um item seguinte no mesmo job
+	# (cada e-mail é processado em sua própria transação — ver `run_infinitepay_email_import`).
+	frappe.db.commit()  # nosemgrep
+
+
+def _anexos_de_uma_comunicacao(comunicacao_name: str) -> dict[str, str]:
+	"""Classifica os anexos de UM e-mail pelo conteúdo. Ignora o que não reconhece."""
 	anexos: dict[str, str] = {}
-	for comunicacao in comunicacoes:
-		arquivos = frappe.get_all(
-			"File",
-			filters={"attached_to_doctype": "Communication", "attached_to_name": comunicacao["name"]},
-			fields=["name"],
-		)
-		for arquivo in arquivos:
-			caminho = frappe.get_doc("File", arquivo["name"]).get_full_path()
-			tipo = identificar_tipo_arquivo(caminho)
-			if tipo:
-				anexos[tipo] = caminho
+	arquivos = frappe.get_all(
+		"File",
+		filters={"attached_to_doctype": "Communication", "attached_to_name": comunicacao_name},
+		fields=["name"],
+	)
+	for arquivo in arquivos:
+		caminho = frappe.get_doc("File", arquivo["name"]).get_full_path()
+		tipo = identificar_tipo_arquivo(caminho)
+		if tipo:
+			anexos[tipo] = caminho
 	return anexos
 
 
 def enqueue_infinitepay_email_import():
-	"""Job diário: decide se hoje é o dia de buscar o fechamento e, se for, enfileira a busca."""
+	"""Job diário: se houver conta de e-mail configurada, enfileira a busca na fila longa."""
 	logger = obter_logger("infinitepay_email_import")
 	config = frappe.get_single(CONFIG_DOCTYPE)
-	deve_seguir, _mes_referencia, motivo = _deve_importar(config, getdate())
-	if not deve_seguir:
+	if not config.email_account:
+		motivo = "Conta de e-mail não configurada em Configuracao infinitepay."
 		logger.info(motivo)
 		definir_resumo(motivo)
 		return
@@ -142,63 +139,85 @@ def enqueue_infinitepay_email_import():
 
 
 def run_infinitepay_email_import():
-	"""Busca o e-mail do fechamento, identifica os anexos e insere as transações."""
+	"""Busca e-mails do fechamento ainda não importados e insere as transações de cada um."""
 	logger = obter_logger("infinitepay_email_import")
 	config = frappe.get_single(CONFIG_DOCTYPE)
-	deve_seguir, mes_referencia, motivo = _deve_importar(config, getdate())
-	if not deve_seguir:
+	if not config.email_account:
+		motivo = "Conta de e-mail não configurada em Configuracao infinitepay."
 		logger.info(motivo)
 		definir_resumo(motivo)
 		return
 
 	try:
 		conta = frappe.get_doc("Email Account", config.email_account)
-
-		try:
-			conta.receive()
-		except Exception:
-			# Erro de conexão/POP3/IMAP não impede seguir com o que já estiver
-			# sincronizado (o próprio Frappe também tenta sincronizar periodicamente).
-			logger.warning(
-				"Falha ao buscar novas mensagens em %s; seguindo com o que já está sincronizado.",
-				config.email_account,
-			)
-
-		desde = _enesimo_dia_util_do_mes(getdate(), N_ESIMO_DIA_UTIL)
-		comunicacoes = _buscar_comunicacoes_candidatas(config, desde)
-		logger.info("%s e-mail(s) candidato(s) encontrados desde %s.", len(comunicacoes), desde)
-
-		anexos = _coletar_anexos_classificados(comunicacoes)
-		faltando = [tipo for tipo in (TIPO_EXTRATO, TIPO_VENDAS, TIPO_RECEBIMENTOS) if tipo not in anexos]
-		if faltando:
-			resumo = f"E-mail do fechamento ainda não chegou por completo (faltam: {', '.join(faltando)})."
-			logger.warning(resumo)
-			definir_resumo(resumo)
-			return
-
-		resultado = reconciliar_e_inserir_infinitepay(
-			anexos[TIPO_EXTRATO], anexos[TIPO_VENDAS], anexos[TIPO_RECEBIMENTOS]
-		)
-		if not resultado.get("stats"):
-			raise frappe.ValidationError(
-				resultado.get("summary_text") or "Falha ao processar os anexos do fechamento."
-			)
-
-		frappe.db.set_single_value(CONFIG_DOCTYPE, "ultimo_mes_importado", mes_referencia)
-		frappe.db.commit()  # nosemgrep — o marcador do mês precisa sobreviver a um rollback do job
-
-		for secao, valores in resultado["stats"].items():
-			metrica(f"{secao}_inseridas", valores.get("inserted", 0), incrementar=False)
-			metrica(f"{secao}_erros", valores.get("failed", 0), incrementar=False)
-
-		logger.info(resultado["summary_text"])
-		primeira_linha = next(iter(resultado["summary_text"].splitlines()[1:2]), "")
-		definir_resumo(
-			f"Fechamento de {mes_referencia.strftime('%m/%Y')} importado. {primeira_linha}".strip()
-		)
-	except Exception:
-		error_message = frappe.get_traceback()
-		logger.exception("Falha na importação por e-mail do fechamento Infinitepay.")
-		definir_resumo("A importação por e-mail do fechamento Infinitepay falhou.")
-		frappe.log_error(error_message, "Infinitepay Email Import Failure")
+	except frappe.DoesNotExistError:
+		logger.error("Email Account configurada (%s) não existe mais.", config.email_account)
+		definir_resumo("Conta de e-mail configurada não foi encontrada.")
 		raise
+
+	try:
+		conta.receive()
+	except Exception:
+		# Erro de conexão/POP3/IMAP não impede seguir com o que já estiver
+		# sincronizado (o próprio Frappe também tenta sincronizar periodicamente).
+		logger.warning(
+			"Falha ao buscar novas mensagens em %s; seguindo com o que já está sincronizado.",
+			config.email_account,
+		)
+
+	desde = _enesimo_dia_util_do_mes(getdate(), N_ESIMO_DIA_UTIL)
+	comunicacoes = _buscar_comunicacoes_candidatas(config, desde)
+	pendentes = [c["name"] for c in comunicacoes if not _ja_importada(c["name"])]
+	logger.info(
+		"%s e-mail(s) candidato(s) desde %s, %s ainda não importado(s).",
+		len(comunicacoes),
+		desde,
+		len(pendentes),
+	)
+
+	if not pendentes:
+		definir_resumo("Nenhum e-mail novo do fechamento Infinitepay para importar.")
+		return
+
+	importados, incompletos, com_falha = 0, 0, 0
+	for comunicacao_name in pendentes:
+		try:
+			anexos = _anexos_de_uma_comunicacao(comunicacao_name)
+			faltando = [tipo for tipo in (TIPO_EXTRATO, TIPO_VENDAS, TIPO_RECEBIMENTOS) if tipo not in anexos]
+			if faltando:
+				incompletos += 1
+				logger.warning(
+					"E-mail %s ainda incompleto (faltam: %s) — será reavaliado na próxima execução.",
+					comunicacao_name,
+					", ".join(faltando),
+				)
+				continue
+
+			resultado = reconciliar_e_inserir_infinitepay(
+				anexos[TIPO_EXTRATO], anexos[TIPO_VENDAS], anexos[TIPO_RECEBIMENTOS]
+			)
+			if not resultado.get("stats"):
+				raise frappe.ValidationError(
+					resultado.get("summary_text") or "Falha ao processar os anexos do fechamento."
+				)
+
+			for secao, valores in resultado["stats"].items():
+				metrica(f"{secao}_inseridas", valores.get("inserted", 0))
+				metrica(f"{secao}_erros", valores.get("failed", 0))
+
+			_marcar_importada(comunicacao_name, resultado["summary_text"])
+			importados += 1
+			logger.info("E-mail %s importado. %s", comunicacao_name, resultado["summary_text"])
+		except Exception:
+			com_falha += 1
+			logger.exception("Falha ao importar o e-mail %s.", comunicacao_name)
+			frappe.log_error(frappe.get_traceback(), "Infinitepay Email Import Failure")
+
+	definir_resumo(
+		f"{importados} e-mail(s) importado(s), {incompletos} incompleto(s) "
+		f"(aguardando anexos) e {com_falha} com falha."
+	)
+	if com_falha:
+		raise frappe.ValidationError(
+			f"{com_falha} e-mail(s) do fechamento Infinitepay falharam ao importar — ver Error Log."
+		)

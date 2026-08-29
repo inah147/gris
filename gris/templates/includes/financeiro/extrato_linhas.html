@@ -1,0 +1,105 @@
+{#
+	Linhas do grid do extrato.
+
+	Compartilhado entre o render inicial (`www/financeiro/extrato.html`) e o
+	scroll infinito (`gris.api.financeiro.transactions.get_extrato_rows`), para
+	que as linhas carregadas sob demanda sejam idênticas às da primeira página.
+
+	Contexto esperado: `transacoes`, `can_view_full_description`.
+
+	O ambiente Jinja do Frappe não tem autoescape e a macro `badge` imprime o
+	texto com `| safe`, então todo dado vindo do banco é escapado aqui com `| e`.
+#}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge %}
+{% for transacao in transacoes %}
+	<tr data-transaction-id="{{ transacao.name | e }}" class="extrato-row">
+		<td class="extrato-col-select">
+			<input type="checkbox" class="transaction-checkbox" value="{{ transacao.name | e }}" aria-label="Selecionar transação" />
+		</td>
+		<td class="extrato-cell">
+			{% if transacao.transacao_revisada %}
+				<span class="review-dot review-dot--reviewed" title="Transação revisada" aria-label="Transação revisada"></span>
+			{% else %}
+				<span class="review-dot review-dot--pending" title="Aguardando revisão" aria-label="Aguardando revisão"></span>
+			{% endif %}
+		</td>
+		<td class="extrato-cell whitespace-nowrap">
+			{% if transacao.timestamp_transacao %}
+				<span class="text-foreground">{{ transacao.timestamp_transacao.strftime('%d/%m/%Y') }}</span>
+				<span class="text-muted-foreground">{{ transacao.timestamp_transacao.strftime('%H:%M') }}</span>
+			{% else %}
+				<span class="text-muted-foreground">—</span>
+			{% endif %}
+		</td>
+		<td class="extrato-cell">
+			<span class="extrato-truncate font-medium text-foreground" title="{{ (transacao.descricao_reduzida or '') | e }}">
+				{{ (transacao.descricao_reduzida or '—') | e }}
+			</span>
+		</td>
+		{% if can_view_full_description %}
+		<td class="extrato-cell">
+			<span class="extrato-truncate extrato-truncate--lg text-foreground" title="{{ (transacao.descricao or '') | e }}">
+				{{ (transacao.descricao or '—') | e }}
+			</span>
+		</td>
+		{% endif %}
+		<td class="extrato-cell text-right whitespace-nowrap font-semibold">
+			{% if transacao.valor is not none %}
+				R$ {{ '{:,.2f}'.format(transacao.valor|float).replace(',', 'X').replace('.', ',').replace('X', '.') }}
+			{% else %}
+				—
+			{% endif %}
+		</td>
+		<td class="extrato-cell">
+			{% if transacao.instituicao %}
+				{% set inst = transacao.instituicao.lower() %}
+				{% if 'btg empresas' in inst %}
+					{{ badge(transacao.instituicao | e, variant="default") }}
+				{% elif 'btg investimentos' in inst %}
+					{{ badge(transacao.instituicao | e, variant="default", outline=true) }}
+				{% elif 'portão 3' in inst or 'portao 3' in inst %}
+					{{ badge(transacao.instituicao | e, variant="info") }}
+				{% elif 'infinitepay' in inst or 'inifinitepay' in inst %}
+					{{ badge(transacao.instituicao | e, variant="success") }}
+				{% elif 'pagbank' in inst %}
+					{{ badge(transacao.instituicao | e, variant="warning") }}
+				{% else %}
+					{{ badge(transacao.instituicao | e, variant="secondary") }}
+				{% endif %}
+			{% else %}
+				<span class="text-muted-foreground">—</span>
+			{% endif %}
+		</td>
+		<td class="extrato-cell whitespace-nowrap">
+			{% if transacao.fonte == 'Sistema' %}
+				{{ badge('Sistema', variant="info") }}
+			{% else %}
+				{{ badge('Planilha', variant="secondary", outline=true) }}
+			{% endif %}
+			{% if transacao.status_conciliacao == 'Conciliada' %}
+				{{ badge('Conciliada', variant="success", outline=true) }}
+			{% endif %}
+		</td>
+		<td class="extrato-cell">
+			{% if transacao.carteira %}
+				{{ badge(transacao.carteira | e, variant="secondary") }}
+			{% else %}
+				<span class="text-muted-foreground">—</span>
+			{% endif %}
+		</td>
+		<td class="extrato-cell">
+			{% if transacao.categoria %}
+				{{ badge(transacao.categoria | e, variant="default", outline=true) }}
+			{% else %}
+				<span class="text-muted-foreground">—</span>
+			{% endif %}
+		</td>
+		<td class="extrato-cell">
+			{% if transacao.centro_de_custo %}
+				{{ badge(transacao.centro_de_custo | e, variant="info", outline=true) }}
+			{% else %}
+				<span class="text-muted-foreground">—</span>
+			{% endif %}
+		</td>
+	</tr>
+{% endfor %}

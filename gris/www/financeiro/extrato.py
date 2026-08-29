@@ -2,7 +2,12 @@ no_cache = 1
 
 import frappe
 
-from gris.api.portal_access import enrich_context, user_has_access
+from gris.api.financeiro.transactions import (
+	EXTRATO_PAGE_SIZE,
+	build_extrato_filters,
+	get_extrato_transacoes,
+)
+from gris.api.portal_access import enrich_context
 from gris.api.portal_cache_utils import get_uel_cached
 
 no_cache = 1
@@ -46,86 +51,27 @@ def get_context(context):
 	roles = frappe.get_roles()
 	context.can_view_full_description = "Gestor Financeiro" in roles
 
-	# Filtros vindos da query string
-	filters = {}
+	# Filtros vindos da query string (mesmas chaves usadas pelo scroll infinito)
 	request_args = frappe.local.form_dict or {}
+	filters = build_extrato_filters(request_args)
 
-	# Paginação
-	try:
-		page = int(request_args.get("page", 1))
-		if page < 1:
-			page = 1
-	except Exception:
-		page = 1
-	page_size = 50
-	offset = (page - 1) * page_size
-
-	# Filtro de data: usar chaves distintas para evitar estrutura inválida
-	data_inicio = request_args.get("data_inicio")
-	data_fim = request_args.get("data_fim")
-	if data_inicio and data_fim:
-		filters["data_deposito"] = ["between", [data_inicio, data_fim]]
-	elif data_inicio:
-		filters["data_deposito"] = [">=", data_inicio]
-	elif data_fim:
-		filters["data_deposito"] = ["<=", data_fim]
-
-	for campo in [
-		"instituicao",
-		"carteira",
-		"categoria",
-		"centro_de_custo",
-		"fixo_variavel",
-		"ordinaria_extraordinaria",
-		"conta_fixa",
-		"repasse_entre_contas",
-		"transacao_revisada",
-		"fonte",
-	]:
-		valor = request_args.get(campo)
-		if valor not in (None, "", "null"):
-			filters[campo] = valor
-
-	# Buscar total de transações para paginação
+	# Total apenas para o contador da tela; a navegação é por scroll infinito.
 	total_transacoes = frappe.db.count("Transacao Extrato Geral", filters=filters)
 
-	fields = [
-		"name",
-		"transacao_revisada",
-		"timestamp_transacao",
-		"valor",
-		"descricao_reduzida",
-		"instituicao",
-		"carteira",
-		"centro_de_custo",
-		"categoria",
-		"fixo_variavel",
-		"ordinaria_extraordinaria",
-		"conta_fixa",
-		"repasse_entre_contas",
-		"data_deposito",
-		"fonte",
-		"status_conciliacao",
-	]
-	if context.can_view_full_description:
-		fields.insert(4, "descricao")
-
-	transacoes = frappe.get_all(
-		"Transacao Extrato Geral",
-		fields=fields,
-		filters=filters,
-		order_by="timestamp_transacao desc",
-		limit=page_size,
-		start=offset,
+	# Primeiro lote renderizado no servidor; os seguintes chegam via
+	# gris.api.financeiro.transactions.get_extrato_rows.
+	context.transacoes = get_extrato_transacoes(
+		filters,
+		start=0,
+		page_length=EXTRATO_PAGE_SIZE,
+		with_descricao=context.can_view_full_description,
 	)
-	context.transacoes = transacoes
 	context.filtros_ativos = request_args
 	context.paginacao = {
-		"pagina_atual": page,
-		"tamanho_pagina": page_size,
+		"tamanho_pagina": EXTRATO_PAGE_SIZE,
 		"total": total_transacoes,
-		"tem_proxima": offset + page_size < total_transacoes,
-		"tem_anterior": page > 1,
+		"carregadas": len(context.transacoes),
+		"tem_mais": len(context.transacoes) < total_transacoes,
 	}
 
 	return context

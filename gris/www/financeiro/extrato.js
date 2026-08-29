@@ -1,5 +1,5 @@
 /**
- * Extrato financeiro: grid compacto com scroll infinito e edição em lote.
+ * Extrato financeiro: grid compacto, scroll infinito e edição em lote na célula.
  *
  * As linhas são renderizadas pelo mesmo template Jinja no servidor
  * (`templates/includes/financeiro/extrato_linhas.html`), tanto no primeiro
@@ -300,8 +300,34 @@
 	}
 
 	// -----------------------------------------------------------------------
-	// Seleção e edição em lote
+	// Seleção e edição em lote direto na célula
+	//
+	// Toda coluna editável carrega `data-editavel` e `data-valor` na célula.
+	// Clicar abre o editor ali mesmo; se a linha estiver selecionada, o valor
+	// escolhido vai para todas as linhas selecionadas numa única chamada.
 	// -----------------------------------------------------------------------
+
+	let opcoesEditaveis = {};
+	let editorAberto = null;
+
+	function lerOpcoesEditaveis() {
+		const el = document.getElementById("extratoOpcoesEditaveis");
+		if (!el) return {};
+		try {
+			return JSON.parse(el.textContent || "{}") || {};
+		} catch (_erro) {
+			// Sem opções o editor de select fica vazio, mas a tela segue usável.
+			return {};
+		}
+	}
+
+	function idsSelecionados() {
+		return Array.from(document.querySelectorAll(".transaction-checkbox:checked")).map(
+			function (cb) {
+				return cb.value;
+			}
+		);
+	}
 
 	function sincronizarSelectAll() {
 		const todos = document.querySelectorAll(".transaction-checkbox");
@@ -311,14 +337,14 @@
 			selectAll.checked = todos.length > 0 && marcados.length === todos.length;
 			selectAll.indeterminate = marcados.length > 0 && marcados.length < todos.length;
 		}
-		atualizarPainelSelecao(marcados.length);
+		atualizarBarraSelecao(marcados.length);
 	}
 
-	function atualizarPainelSelecao(quantidade) {
-		const painel = document.getElementById("batchEditPanel");
+	function atualizarBarraSelecao(quantidade) {
+		const barra = document.getElementById("extratoSelecao");
 		const contador = document.getElementById("selectedCount");
 		if (contador) contador.textContent = quantidade;
-		if (painel) painel.classList.toggle("hidden", quantidade === 0);
+		if (barra) barra.classList.toggle("hidden", quantidade === 0);
 	}
 
 	function toggleSelectAll(marcado) {
@@ -328,92 +354,196 @@
 		sincronizarSelectAll();
 	}
 
-	function cancelarSelecao() {
+	function limparSelecao() {
 		document.querySelectorAll(".transaction-checkbox").forEach(function (cb) {
 			cb.checked = false;
 		});
 		sincronizarSelectAll();
+	}
 
-		const descricao = document.getElementById("batch_descricao_reduzida");
-		if (descricao) descricao.value = "";
-		[
-			"batch_categoria",
-			"batch_centro_de_custo",
-			"batch_ordinaria_extraordinaria",
-			"batch_transacao_revisada",
-		].forEach(function (id) {
-			const wrapper = document.getElementById(id);
-			if (!wrapper) return;
-			const hidden = wrapper.querySelector('input[type="hidden"]');
-			if (hidden) hidden.value = "";
-			const trigger = wrapper.querySelector('[id$="-trigger"] .truncate');
-			if (trigger) trigger.textContent = "Não alterar";
+	/** Linhas que recebem a edição: a seleção inteira, ou só a linha clicada. */
+	function alvosDaEdicao(td) {
+		const linha = td.closest("tr[data-transaction-id]");
+		if (!linha) return [];
+		const checkbox = linha.querySelector(".transaction-checkbox");
+		if (checkbox && checkbox.checked) {
+			const selecionados = idsSelecionados();
+			if (selecionados.length) return selecionados;
+		}
+		return [linha.dataset.transactionId];
+	}
+
+	function marcarSalvando(ids, salvando) {
+		ids.forEach(function (id) {
+			const linha = tbody.querySelector('tr[data-transaction-id="' + CSS.escape(id) + '"]');
+			if (!linha) return;
+			linha.classList.toggle("extrato-row--salvando", salvando);
+			if (salvando) linha.setAttribute("aria-busy", "true");
+			else linha.removeAttribute("aria-busy");
 		});
 	}
 
-	function getBatchSelectValue(wrapperId) {
-		const wrapper = document.getElementById(wrapperId);
-		if (!wrapper) return "";
-		const hidden = wrapper.querySelector('input[type="hidden"]');
-		return hidden ? hidden.value : "";
+	/** Troca as linhas alteradas pelo HTML recém-renderizado, mantendo a seleção. */
+	function substituirLinhas(html) {
+		const parser = document.createElement("tbody");
+		parser.innerHTML = html || "";
+		Array.from(parser.querySelectorAll("tr[data-transaction-id]")).forEach(function (nova) {
+			const id = nova.getAttribute("data-transaction-id");
+			const atual = tbody.querySelector('tr[data-transaction-id="' + CSS.escape(id) + '"]');
+			if (!atual) return;
+			const marcada = atual.querySelector(".transaction-checkbox");
+			const novaCheckbox = nova.querySelector(".transaction-checkbox");
+			if (marcada && novaCheckbox) novaCheckbox.checked = marcada.checked;
+			atual.replaceWith(nova);
+		});
+		sincronizarSelectAll();
 	}
 
-	function salvarEdicaoLote() {
-		const selecionadas = Array.from(
-			document.querySelectorAll(".transaction-checkbox:checked")
-		).map(function (cb) {
-			return cb.value;
-		});
-
-		if (selecionadas.length === 0) {
-			frappe.msgprint(__("Nenhuma transação selecionada"));
-			return;
-		}
-
-		const updates = {};
-		const descricaoEl = document.getElementById("batch_descricao_reduzida");
-		const descricao = descricaoEl ? descricaoEl.value.trim() : "";
-		const categoria = getBatchSelectValue("batch_categoria");
-		const centroCusto = getBatchSelectValue("batch_centro_de_custo");
-		const ordinaria = getBatchSelectValue("batch_ordinaria_extraordinaria");
-		const revisada = getBatchSelectValue("batch_transacao_revisada");
-
-		if (descricao) updates.descricao_reduzida = descricao;
-		if (categoria) updates.categoria = categoria;
-		if (centroCusto) updates.centro_de_custo = centroCusto;
-		if (ordinaria) updates.ordinaria_extraordinaria = ordinaria;
-		if (revisada) updates.transacao_revisada = parseInt(revisada, 10);
-
-		if (Object.keys(updates).length === 0) {
-			frappe.msgprint(__("Selecione pelo menos um campo para alterar"));
-			return;
-		}
-
+	function salvarCampo(ids, campo, valor) {
+		if (!ids.length) return;
+		marcarSalvando(ids, true);
 		frappe.call({
-			method: "gris.api.financeiro.transactions.batch_update_transactions",
+			method: "gris.api.financeiro.transactions.update_extrato_celulas",
 			args: {
-				transaction_ids: JSON.stringify(selecionadas),
-				updates: JSON.stringify(updates),
+				transaction_ids: JSON.stringify(ids),
+				campo: campo,
+				valor: valor,
 			},
-			freeze: true,
-			freeze_message: __("Atualizando transações..."),
 			callback: function (r) {
-				if (r.message && r.message.success) {
+				const dados = r && r.message;
+				if (!dados) return;
+				substituirLinhas(dados.html);
+				frappe.show_alert({
+					message:
+						dados.updated_count === 1
+							? __("1 transação atualizada")
+							: __("{0} transações atualizadas", [dados.updated_count]),
+					indicator: "green",
+				});
+				if (dados.falhas) {
 					frappe.show_alert({
-						message: __("{0} transações atualizadas com sucesso", [
-							r.message.updated_count,
-						]),
-						indicator: "green",
+						message: __("{0} transações não puderam ser alteradas", [dados.falhas]),
+						indicator: "orange",
 					});
-					setTimeout(function () {
-						window.location.reload();
-					}, 1500);
 				}
 			},
-			error: function () {
-				frappe.msgprint(__("Erro ao atualizar transações"));
+			always: function () {
+				marcarSalvando(ids, false);
 			},
 		});
+	}
+
+	function fecharEditor(restaurar) {
+		if (!editorAberto) return;
+		const { td, conteudo } = editorAberto;
+		editorAberto = null;
+		if (restaurar !== false) td.innerHTML = conteudo;
+		td.classList.remove("extrato-cell--editando");
+	}
+
+	function confirmarEdicao() {
+		if (!editorAberto) return;
+		const { td, campo, alvos, controle } = editorAberto;
+		const novoValor = controle.value;
+		const valorAtual = td.dataset.valor || "";
+		fecharEditor();
+		if (novoValor === valorAtual) return;
+		salvarCampo(alvos, campo, novoValor);
+	}
+
+	function montarControle(tipo, campo, valorAtual) {
+		if (tipo !== "opcoes") {
+			const input = document.createElement("input");
+			input.type = "text";
+			input.className = "extrato-editor__campo";
+			input.value = valorAtual;
+			return input;
+		}
+
+		const select = document.createElement("select");
+		select.className = "extrato-editor__campo";
+		select.appendChild(new Option(__("— Sem valor —"), ""));
+		const opcoes = opcoesEditaveis[campo] || [];
+		opcoes.forEach(function (opcao) {
+			select.appendChild(new Option(opcao, opcao));
+		});
+		// Valor legado fora da lista continua selecionável, para não ser apagado sem querer.
+		if (valorAtual && opcoes.indexOf(valorAtual) === -1) {
+			select.appendChild(new Option(valorAtual, valorAtual));
+		}
+		select.value = valorAtual;
+		return select;
+	}
+
+	function abrirEditor(td) {
+		if (editorAberto && editorAberto.td === td) return;
+		fecharEditor();
+
+		const campo = td.dataset.col;
+		const tipo = td.dataset.editavel;
+		const valorAtual = td.dataset.valor || "";
+		const alvos = alvosDaEdicao(td);
+		if (!alvos.length) return;
+
+		const controle = montarControle(tipo, campo, valorAtual);
+		const wrapper = document.createElement("div");
+		wrapper.className = "extrato-editor";
+		wrapper.appendChild(controle);
+		if (alvos.length > 1) {
+			const marcador = document.createElement("span");
+			marcador.className = "extrato-editor__lote";
+			marcador.textContent = __("{0} linhas", [alvos.length]);
+			wrapper.appendChild(marcador);
+		}
+
+		editorAberto = {
+			td: td,
+			conteudo: td.innerHTML,
+			campo: campo,
+			alvos: alvos,
+			controle: controle,
+		};
+		td.innerHTML = "";
+		td.appendChild(wrapper);
+		td.classList.add("extrato-cell--editando");
+
+		controle.addEventListener("keydown", function (event) {
+			if (event.key === "Enter") {
+				event.preventDefault();
+				confirmarEdicao();
+			} else if (event.key === "Escape") {
+				event.preventDefault();
+				fecharEditor();
+				td.focus();
+			}
+		});
+		if (tipo === "opcoes") {
+			controle.addEventListener("change", confirmarEdicao);
+			// Sair sem escolher nada não altera nada.
+			controle.addEventListener("blur", function () {
+				fecharEditor();
+			});
+		} else {
+			// Texto salva ao sair do campo, como numa planilha.
+			controle.addEventListener("blur", confirmarEdicao);
+		}
+
+		// A célula já está visível; rolar o grid ao focar tiraria o contexto de vista.
+		controle.focus({ preventScroll: true });
+		if (typeof controle.select === "function") controle.select();
+	}
+
+	/** Campo booleano não abre editor: o clique já alterna o valor. */
+	function alternarBooleano(td) {
+		const alvos = alvosDaEdicao(td);
+		if (!alvos.length) return;
+		const novoValor = td.dataset.valor === "1" ? "0" : "1";
+		salvarCampo(alvos, td.dataset.col, novoValor);
+	}
+
+	function editarCelula(td) {
+		if (td.dataset.editavel === "booleano") alternarBooleano(td);
+		else abrirEditor(td);
 	}
 
 	// -----------------------------------------------------------------------
@@ -424,13 +554,31 @@
 		if (!tbody) return;
 
 		tbody.addEventListener("click", function (event) {
+			const celula = event.target.closest("td[data-editavel]");
+			if (celula) {
+				// Célula editável abre o editor no lugar de navegar.
+				editarCelula(celula);
+				return;
+			}
 			const linha = event.target.closest("tr[data-transaction-id]");
 			if (!linha) return;
 			// Checkbox e demais controles não navegam para o detalhe.
-			if (event.target.closest(".extrato-col-select, a, button, input, label")) return;
+			if (event.target.closest(".extrato-col-select, a, button, input, select, label"))
+				return;
 			window.location.href =
 				"/financeiro/detalhe_extrato?name=" +
 				encodeURIComponent(linha.dataset.transactionId);
+		});
+
+		tbody.addEventListener("keydown", function (event) {
+			const celula = event.target.closest("td[data-editavel]");
+			// Só a própria célula responde ao teclado; dentro do editor os
+			// atalhos são do controle (Enter salva, Esc cancela).
+			if (!celula || celula !== event.target) return;
+			if (event.key === "Enter" || event.key === " ") {
+				event.preventDefault();
+				editarCelula(celula);
+			}
 		});
 
 		tbody.addEventListener("change", function (event) {
@@ -444,11 +592,8 @@
 			});
 		}
 
-		const cancelar = document.getElementById("batchCancelar");
-		if (cancelar) cancelar.addEventListener("click", cancelarSelecao);
-
-		const salvar = document.getElementById("batchSalvar");
-		if (salvar) salvar.addEventListener("click", salvarEdicaoLote);
+		const limpar = document.getElementById("extratoLimparSelecao");
+		if (limpar) limpar.addEventListener("click", limparSelecao);
 
 		if (carregarMaisBtn) carregarMaisBtn.addEventListener("click", carregarProximoLote);
 	}
@@ -465,6 +610,7 @@
 
 		if (!tbody) return;
 
+		opcoesEditaveis = lerOpcoesEditaveis();
 		iniciarPainelDeFiltros();
 		iniciarSeletorDeColunas();
 		ajustarAlturaDoGrid();

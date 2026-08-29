@@ -52,21 +52,6 @@
 	{"label": "Planilha", "value": "Planilha"},
 	{"label": "Sistema", "value": "Sistema"}
 ] %}
-{% set batch_categoria_items = [{"label": "Não alterar", "value": ""}] %}
-{% for v in opcoes_categoria %}{% set batch_categoria_items = batch_categoria_items + [{"label": v, "value": v}] %}{% endfor %}
-{% set batch_centro_items = [{"label": "Não alterar", "value": ""}] %}
-{% for v in opcoes_centro_de_custo %}{% set batch_centro_items = batch_centro_items + [{"label": v, "value": v}] %}{% endfor %}
-{% set batch_ord_items = [
-	{"label": "Não alterar", "value": ""},
-	{"label": "Ordinária", "value": "Ordinária"},
-	{"label": "Extraordinária", "value": "Extraordinária"}
-] %}
-{% set batch_revisada_items = [
-	{"label": "Não alterar", "value": ""},
-	{"label": "Sim", "value": "1"},
-	{"label": "Não", "value": "0"}
-] %}
-
 <article class="card mb-4 extrato-filtros-card">
 	<section>
 		<details id="extratoFiltros" class="extrato-filtros-details" {{ 'open' if filtros_ativos_count else '' }}>
@@ -138,43 +123,6 @@
 	</section>
 </article>
 
-<article id="batchEditPanel" class="card mb-4 hidden">
-	<header class="flex items-center justify-between gap-3 flex-wrap">
-		<div class="flex flex-col gap-1">
-			<h3 class="m-0 text-lg font-semibold text-foreground">Edição em lote</h3>
-			<p class="m-0 text-sm text-muted-foreground"><span id="selectedCount">0</span> transações selecionadas</p>
-		</div>
-		<button type="button" class="btn-sm-outline" id="batchCancelar">Cancelar</button>
-	</header>
-	<section>
-		<form id="batchEditForm" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-			<div class="field">
-				<label class="label" for="batch_descricao_reduzida">Descrição reduzida</label>
-				<input type="text" id="batch_descricao_reduzida" class="input" placeholder="Deixe em branco para não alterar" />
-			</div>
-			<div class="field">
-				<label class="label" for="batch_categoria">Categoria</label>
-				{{ select(id="batch_categoria", name="batch_categoria", items=batch_categoria_items, is_combobox=true, search_placeholder="Buscar categoria…") }}
-			</div>
-			<div class="field">
-				<label class="label" for="batch_centro_de_custo">Centro de custo</label>
-				{{ select(id="batch_centro_de_custo", name="batch_centro_de_custo", items=batch_centro_items, is_combobox=true, search_placeholder="Buscar centro…") }}
-			</div>
-			<div class="field">
-				<label class="label" for="batch_ordinaria_extraordinaria">Ordinária/Extraordinária</label>
-				{{ select(id="batch_ordinaria_extraordinaria", name="batch_ordinaria_extraordinaria", items=batch_ord_items) }}
-			</div>
-			<div class="field">
-				<label class="label" for="batch_transacao_revisada">Transação revisada</label>
-				{{ select(id="batch_transacao_revisada", name="batch_transacao_revisada", items=batch_revisada_items) }}
-			</div>
-			<div class="md:col-span-2">
-				<button type="button" class="btn-sm-primary" id="batchSalvar">Salvar alterações</button>
-			</div>
-		</form>
-	</section>
-</article>
-
 <article class="card extrato-tabela__card">
 	<header class="extrato-tabela__toolbar">
 		<p class="m-0 text-sm text-muted-foreground">
@@ -182,6 +130,12 @@
 			de <strong class="text-foreground">{{ paginacao.total }}</strong>
 			{{ 'transação' if paginacao.total == 1 else 'transações' }}
 		</p>
+		<div id="extratoSelecao" class="extrato-selecao hidden" role="status" aria-live="polite">
+			{{ lucide_icon("list-checks", size="sm") }}
+			<span><strong id="selectedCount">0</strong> selecionadas</span>
+			<span class="extrato-selecao__dica">edite uma célula destacada para aplicar a todas</span>
+			<button type="button" class="btn-sm-ghost" id="extratoLimparSelecao">Limpar seleção</button>
+		</div>
 		{% call popover(
 			trigger=(lucide_icon("columns-3", size="sm") ~ " Colunas"),
 			id="extrato-colunas",
@@ -207,6 +161,11 @@
 			piscar colunas na carga) e é reescrito pelo extrato.js com a
 			preferência do usuário. É estado dinâmico, não estilo da rota.
 		#}
+		{#
+			Opções dos campos editáveis (Link e Select), lidas pelo editor
+			inline. `tojson` escapa `<`, `>` e `&`, então é seguro no script.
+		#}
+		<script type="application/json" id="extratoOpcoesEditaveis">{{ opcoes_editaveis | tojson }}</script>
 		<style id="extratoColunasStyle">
 			{%- for coluna in colunas if not coluna.padrao -%}
 			[data-col="{{ coluna.key }}"]{display:none}
@@ -218,7 +177,9 @@
 					<tr>
 						<th class="extrato-col-select"><input type="checkbox" id="selectAll" aria-label="Selecionar todas as transações carregadas" /></th>
 						{% for coluna in colunas %}
-							<th data-col="{{ coluna.key }}" class="{{ 'text-right' if coluna.tipo == 'moeda' else '' }}">{{ coluna.label }}</th>
+							<th data-col="{{ coluna.key }}"
+								class="{{ 'text-right' if coluna.tipo == 'moeda' else '' }}{{ ' extrato-th--editavel' if coluna.editavel else '' }}"
+								{%- if coluna.editavel %} title="Editável direto no grid"{% endif %}>{{ coluna.label }}{% if coluna.editavel %} {{ lucide_icon("pencil", size="sm", class_name="extrato-th__pencil") }}{% endif %}</th>
 						{% endfor %}
 					</tr>
 				</thead>

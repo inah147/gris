@@ -330,7 +330,7 @@
 		);
 	}
 
-	function renderCategorias({ id, linhas }) {
+	function renderCategorias({ id, linhas, mesCorte }) {
 		const dados = (linhas || []).slice(0, 10);
 		if (!dados.length) {
 			setChartMessage(id, "Nenhuma despesa prevista ou realizada por categoria.");
@@ -340,8 +340,12 @@
 		if (!chart) return;
 		// Barras horizontais: eixo Y invertido para a maior categoria ficar no topo.
 		const rotulos = dados.map((l) => l.rotulo).reverse();
-		const previsto = dados.map((l) => parseNumber(l.previsto)).reverse();
+		// Previsto até o mês corrente: contra o previsto do período inteiro toda
+		// categoria de um orçamento em andamento apareceria como economia.
+		const previsto = dados.map((l) => parseNumber(l.previsto_ate_hoje)).reverse();
 		const realizado = dados.map((l) => parseNumber(l.realizado)).reverse();
+		const previstoPeriodo = dados.map((l) => parseNumber(l.previsto)).reverse();
+		const nomePrevisto = mesCorte ? `Previsto até ${mesCorte}` : "Previsto até aqui";
 		chart.setOption(
 			{
 				aria: { enabled: true },
@@ -351,7 +355,10 @@
 					confine: true,
 					className: "echarts-tooltip-modern",
 					axisPointer: { type: "shadow" },
-					formatter: tooltipMoeda,
+					formatter: (params) =>
+						`${tooltipMoeda(params)}<br/>Previsto no período: <strong>${formatCurrency(
+							previstoPeriodo[params[0] ? params[0].dataIndex : 0]
+						)}</strong>`,
 				},
 				legend: { type: "scroll", top: 4 },
 				grid: { top: 44, left: 14, right: 24, bottom: 24, containLabel: true },
@@ -363,7 +370,7 @@
 				},
 				series: [
 					{
-						name: "Previsto",
+						name: nomePrevisto,
 						type: "bar",
 						barMaxWidth: 16,
 						itemStyle: {
@@ -394,7 +401,7 @@
 		if (el) el.textContent = texto;
 	}
 
-	function renderKpis(totais) {
+	function renderKpis(totais, mesCorte) {
 		setTexto("kpi-receitas-realizadas", formatCurrency(totais.receitas_realizadas));
 		setTexto(
 			"kpi-receitas-previstas",
@@ -427,10 +434,20 @@
 		setTexto(
 			"kpi-desvio-despesas-desc",
 			desvio > 0
-				? "Acima do previsto"
+				? "Acima do previsto até aqui"
 				: desvio < 0
-				? "Abaixo do previsto"
-				: "Em linha com o previsto"
+				? "Abaixo do previsto até aqui"
+				: "Em linha com o previsto até aqui"
+		);
+		// A base do desvio é o previsto até o mês corrente, não o do período inteiro —
+		// deixá-la à vista evita a leitura de que sobrou o orçamento do ano todo.
+		setTexto(
+			"kpi-desvio-despesas-base",
+			mesCorte
+				? `Base: ${formatCurrency(
+						totais.previsto_ate_hoje_despesas
+				  )} previstos até ${mesCorte}`
+				: "O período ainda não começou"
 		);
 		const el = qs("kpi-desvio-despesas");
 		if (el) {
@@ -471,7 +488,7 @@
 			return;
 		}
 
-		renderKpis(dados.totais || {});
+		renderKpis(dados.totais || {}, dados.mes_corte);
 
 		const labels = dados.labels || [];
 		const series = dados.series || {};
@@ -502,6 +519,7 @@
 		renderCategorias({
 			id: "chart-previsao-categorias",
 			linhas: (dados.por_categoria || {}).despesas,
+			mesCorte: dados.mes_corte,
 		});
 	}
 

@@ -1,4 +1,5 @@
 import frappe
+from frappe.utils import getdate
 
 from gris.api.financeiro.previsao_orcamentaria import pode_gerir
 from gris.api.portal_access import enrich_context
@@ -7,6 +8,25 @@ from gris.api.portal_cache_utils import get_uel_cached
 no_cache = 1
 
 PAGE_PATH = "/financeiro/previsao_orcamentaria"
+
+
+def previsao_padrao(previsoes: list[dict]) -> str | None:
+	"""Previsão aberta quando a URL não pede uma específica.
+
+	Prioriza a que cobre a data de hoje — ordenar só por exercício abriria o rascunho
+	do ano seguinte, uma tela de zeros, e esconderia o orçamento vigente no seletor.
+	Sem previsão vigente, cai na mais recente já aprovada e, por fim, na primeira da
+	lista (que vem ordenada do maior exercício para o menor).
+	"""
+	if not previsoes:
+		return None
+
+	hoje = getdate()
+	vigentes = [p for p in previsoes if getdate(p["data_inicio"]) <= hoje <= getdate(p["data_fim"])]
+	candidatas = [p for p in vigentes if p["status"] == "Aprovada"] or vigentes
+	if not candidatas:
+		candidatas = [p for p in previsoes if p["status"] == "Aprovada"] or previsoes
+	return candidatas[0]["name"]
 
 
 def get_context(context):
@@ -44,12 +64,12 @@ def get_context(context):
 	)
 	context.previsoes = previsoes
 
-	# Previsão exibida: a informada na query string ou a mais recente cadastrada.
+	# Previsão exibida: a informada na query string ou a escolhida por `previsao_padrao`.
 	request_args = frappe.local.form_dict or {}
 	selecionada = request_args.get("previsao")
 	nomes = {p["name"] for p in previsoes}
 	if selecionada not in nomes:
-		selecionada = previsoes[0]["name"] if previsoes else None
+		selecionada = previsao_padrao(previsoes)
 	context.previsao_selecionada = selecionada
 
 	context.previsao = frappe.get_doc("Previsao Orcamentaria", selecionada) if selecionada else None

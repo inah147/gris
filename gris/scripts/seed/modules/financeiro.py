@@ -454,27 +454,104 @@ def seed_previsoes_orcamentarias(n_exercicios: int):
 	assim o comparativo previsto vs. realizado tem um caso com realizado parcial,
 	um fechado e um totalmente sem realizado.
 	"""
-	categorias = all_names("Categoria de Transacao", limit=8)
+	categorias = all_names("Categoria de Transacao")
 	centros = all_names("Centro de Custo", limit=4)
 
-	def _cat(i):
-		return categorias[i % len(categorias)] if categorias else None
+	def _cat(preferidas: tuple[str, ...]) -> str | None:
+		"""Primeira categoria existente entre as preferidas do item.
+
+		As categorias vêm de fixture e variam por instalação; ciclar a lista pelo índice
+		colocaria "Registro anual UEB" em "Contribuições Associativas" e tornaria a
+		quebra por categoria da tela ilegível. Sem nenhuma das preferidas, fica sem
+		categoria — que é um estado que a tela também precisa saber exibir.
+		"""
+		return next((c for c in preferidas if c in categorias), None)
 
 	def _centro(i):
 		return centros[i % len(centros)] if centros else None
 
-	# (tipo, descrição, valor anual, distribuição, mês da distribuição pontual)
+	# (tipo, descrição, valor anual, distribuição, mês pontual, categorias preferidas)
 	modelo = [
-		("Receita", "Contribuições mensais dos associados", 96000, "Uniforme no período", None),
-		("Receita", "Taxa de inscrição em atividades", 24000, "Uniforme no período", None),
-		("Receita", "Doações e patrocínios", 18000, "Uniforme no período", None),
-		("Receita", "Arrecadação da festa junina", 12000, "Mês específico", 6),
-		("Despesa", "Aluguel da sede", 42000, "Uniforme no período", None),
-		("Despesa", "Água, luz e internet", 14400, "Uniforme no período", None),
-		("Despesa", "Materiais de atividade", 16800, "Uniforme no período", None),
-		("Despesa", "Registro anual UEB", 21000, "Mês específico", 3),
-		("Despesa", "Acampamento de inverno", 16000, "Mês específico", 7),
-		("Despesa", "Manutenção da sede", 24000, "Mês específico", 9),
+		(
+			"Receita",
+			"Contribuições mensais dos associados",
+			96000,
+			"Uniforme no período",
+			None,
+			("Contribuição Mensal", "Contribuicoes Associativas"),
+		),
+		(
+			"Receita",
+			"Taxa de inscrição em atividades",
+			24000,
+			"Uniforme no período",
+			None,
+			("Eventos e Atividades", "Festas"),
+		),
+		(
+			"Receita",
+			"Doações e patrocínios",
+			18000,
+			"Uniforme no período",
+			None,
+			("Doação", "Doacoes e Patrocinios"),
+		),
+		(
+			"Receita",
+			"Arrecadação da festa junina",
+			12000,
+			"Mês específico",
+			6,
+			("Festas", "Eventos e Atividades"),
+		),
+		(
+			"Despesa",
+			"Aluguel da sede",
+			42000,
+			"Uniforme no período",
+			None,
+			("Contas Ordinárias", "Aluguel da Sede"),
+		),
+		(
+			"Despesa",
+			"Água, luz e internet",
+			14400,
+			"Uniforme no período",
+			None,
+			("Contas Ordinárias", "Servicos e Utilidades"),
+		),
+		(
+			"Despesa",
+			"Materiais de atividade",
+			16800,
+			"Uniforme no período",
+			None,
+			("Materiais de Atividade", "Outros"),
+		),
+		(
+			"Despesa",
+			"Registro anual UEB",
+			21000,
+			"Mês específico",
+			3,
+			("Registro UEB", "Contas Ordinárias"),
+		),
+		(
+			"Despesa",
+			"Acampamento de inverno",
+			16000,
+			"Mês específico",
+			7,
+			("Eventos e Atividades", "Festas"),
+		),
+		(
+			"Despesa",
+			"Manutenção da sede",
+			24000,
+			"Mês específico",
+			9,
+			("Manutenção", "Manutencao e Reformas"),
+		),
 	]
 
 	ano_atual = date.today().year
@@ -499,13 +576,13 @@ def seed_previsoes_orcamentarias(n_exercicios: int):
 			{
 				"tipo": tipo,
 				"descricao": descricao,
-				"categoria": _cat(i),
+				"categoria": _cat(preferidas),
 				"centro_de_custo": _centro(i),
 				"valor_previsto": round(valor * fator, 2),
 				"distribuicao": distribuicao,
 				"mes_referencia": date(ano, mes, 1) if mes else None,
 			}
-			for i, (tipo, descricao, valor, distribuicao, mes) in enumerate(modelo)
+			for i, (tipo, descricao, valor, distribuicao, mes, preferidas) in enumerate(modelo)
 		]
 		try:
 			safe_insert(

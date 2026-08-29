@@ -9,7 +9,7 @@
   "email_account",
   "remetente_contem",
   "assunto_contem",
-  "ultimo_mes_importado"
+  "ultima_importacao_em"
  ],
  "fields": [
   {
@@ -44,11 +44,11 @@
    "description": "Filtro opcional: s\u00f3 considera e-mails cujo assunto cont\u00e9m este texto."
   },
   {
-   "fieldname": "ultimo_mes_importado",
-   "fieldtype": "Date",
-   "label": "\u00daltimo m\u00eas importado",
+   "fieldname": "ultima_importacao_em",
+   "fieldtype": "Datetime",
+   "label": "\u00daltima importa\u00e7\u00e3o em",
    "read_only": 1,
-   "description": "Preenchido automaticamente pelo job mensal de importa\u00e7\u00e3o por e-mail (primeiro dia do m\u00eas do \u00faltimo fechamento importado com sucesso)."
+   "description": "Preenchido automaticamente sempre que a importa\u00e7\u00e3o por e-mail processa um fechamento com sucesso. Cada e-mail importado fica registrado em \"Infinitepay Email Importado\"."
   }
  ],
  "index_web_pages_for_search": 1,

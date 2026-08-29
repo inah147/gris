@@ -210,6 +210,7 @@ scheduler_events = {
 	# 	"gris.tasks.all"
 	# ],
 	"daily": [
+		"gris.api.financeiro.infinitepay_email_import.enqueue_infinitepay_email_import",
 		"gris.api.financeiro.monthly_payments.update_status_monthly_payment",
 		"gris.api.new_members.waiting_list.update_waiting_list_branch",
 		"gris.api.calendario.sync_feriados.sync_feriados",

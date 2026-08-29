@@ -56,6 +56,53 @@ def _detect_format(file_path: str) -> str:
 	return FORMATO_CSV
 
 
+# Tipos de anexo Infinitepay reconhecidos por `identificar_tipo_arquivo`.
+TIPO_EXTRATO = "extrato"
+TIPO_VENDAS = "vendas"
+TIPO_RECEBIMENTOS = "recebimentos"
+
+_RAIZES_XML_VENDAS = {"sales_report"}
+_RAIZES_XML_RECEBIMENTOS = {"transaction_payments", "proof_of_transfer"}
+
+
+def identificar_tipo_arquivo(file_path: str) -> str | None:
+	"""Identifica se um arquivo Infinitepay é o extrato, as vendas ou os recebimentos.
+
+	Usada pela importação automática via e-mail, que recebe os três anexos sem nome
+	de arquivo confiável (o cliente de e-mail pode renomeá-los) e precisa distinguir
+	o conteúdo antes de escolher o parser certo. Devolve ``None`` quando o conteúdo
+	não corresponde a nenhum dos três relatórios (ex.: PDF de capa do e-mail).
+	"""
+	formato = _detect_format(file_path)
+	if formato in (FORMATO_HTML, FORMATO_OFX):
+		return TIPO_EXTRATO
+	if formato == FORMATO_XML:
+		try:
+			raiz = ET.fromstring(_read_text(file_path)).tag
+		except ET.ParseError:
+			return None
+		if raiz in _RAIZES_XML_VENDAS:
+			return TIPO_VENDAS
+		if raiz in _RAIZES_XML_RECEBIMENTOS:
+			return TIPO_RECEBIMENTOS
+		return None
+	if formato == FORMATO_CSV:
+		# O CSV de recebimentos é sempre lido com delimitador ";" (ver
+		# `get_infinitepay_receipts_df`); o de vendas usa o padrão "," do pandas.
+		# Um limiar de colunas evita classificar como relatório qualquer texto
+		# solto que caia no formato CSV por eliminação (ex.: anexo não relacionado
+		# no mesmo e-mail do fechamento).
+		texto = _read_text(file_path)
+		primeira_linha = texto.splitlines()[0] if texto else ""
+		colunas_minimas = len(COLUNAS_VENDAS) // 3
+		if primeira_linha.count(";") >= colunas_minimas:
+			return TIPO_RECEBIMENTOS
+		if primeira_linha.count(",") >= colunas_minimas:
+			return TIPO_VENDAS
+		return None
+	return None
+
+
 def _limpar_espacos(texto: str) -> str:
 	"""Normaliza espaços (inclui NBSP) e remove sobras nas pontas."""
 	return re.sub(r"\s+", " ", (texto or "").replace("\xa0", " ")).strip()

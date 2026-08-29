@@ -4,7 +4,12 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "handle"
+  "handle",
+  "email_import_section",
+  "email_account",
+  "remetente_contem",
+  "assunto_contem",
+  "ultimo_mes_importado"
  ],
  "fields": [
   {
@@ -13,12 +18,43 @@
    "label": "Handle",
    "reqd": 1,
    "description": "Sua InfiniteTag (nome de usu\u00e1rio no App InfinitePay), sem o s\u00edmbolo $ do in\u00edcio"
+  },
+  {
+   "fieldname": "email_import_section",
+   "fieldtype": "Section Break",
+   "label": "Importa\u00e7\u00e3o autom\u00e1tica por e-mail"
+  },
+  {
+   "fieldname": "email_account",
+   "fieldtype": "Link",
+   "label": "Conta de e-mail",
+   "options": "Email Account",
+   "description": "Conta de e-mail (com recebimento habilitado) que recebe o fechamento mensal da Infinitepay. Sem isso, o job mensal de importa\u00e7\u00e3o por e-mail fica desativado."
+  },
+  {
+   "fieldname": "remetente_contem",
+   "fieldtype": "Data",
+   "label": "Remetente cont\u00e9m",
+   "description": "Filtro opcional: s\u00f3 considera e-mails cujo remetente cont\u00e9m este texto."
+  },
+  {
+   "fieldname": "assunto_contem",
+   "fieldtype": "Data",
+   "label": "Assunto cont\u00e9m",
+   "description": "Filtro opcional: s\u00f3 considera e-mails cujo assunto cont\u00e9m este texto."
+  },
+  {
+   "fieldname": "ultimo_mes_importado",
+   "fieldtype": "Date",
+   "label": "\u00daltimo m\u00eas importado",
+   "read_only": 1,
+   "description": "Preenchido automaticamente pelo job mensal de importa\u00e7\u00e3o por e-mail (primeiro dia do m\u00eas do \u00faltimo fechamento importado com sucesso)."
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-04-13 12:38:25.975032",
+ "modified": "2026-08-29 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Configuracao infinitepay",

@@ -6,6 +6,7 @@ from gris.api.financeiro.transactions import (
 	EXTRATO_PAGE_SIZE,
 	build_extrato_filters,
 	get_extrato_colunas,
+	get_extrato_opcoes_editaveis,
 	get_extrato_transacoes,
 )
 from gris.api.portal_access import enrich_context
@@ -61,6 +62,9 @@ def get_context(context):
 
 	# Todas as colunas são renderizadas; o seletor da tela apenas mostra/esconde.
 	context.colunas = get_extrato_colunas(context.can_view_full_description)
+
+	# Opções dos campos editáveis direto na célula (edição em lote no grid).
+	context.opcoes_editaveis = get_extrato_opcoes_editaveis()
 
 	# Primeiro lote renderizado no servidor; os seguintes chegam via
 	# gris.api.financeiro.transactions.get_extrato_rows.

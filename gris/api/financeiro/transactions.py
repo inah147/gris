@@ -36,18 +36,10 @@ def batch_update_transactions(transaction_ids: str | list, updates: str | dict):
 	if not updates or not isinstance(updates, dict):
 		frappe.throw(_("Dados de atualização inválidos"))
 
-	# Campos permitidos para atualização em lote
-	allowed_fields = [
-		"descricao_reduzida",
-		"categoria",
-		"centro_de_custo",
-		"ordinaria_extraordinaria",
-		"transacao_revisada",
-	]
-
-	# Valida que apenas campos permitidos estão sendo atualizados
+	# Campos permitidos para atualização em lote (mesmo registro usado pela
+	# edição inline do grid, em EXTRATO_COLUNAS).
 	for field in updates.keys():
-		if field not in allowed_fields:
+		if field not in EXTRATO_CAMPOS_EDITAVEIS:
 			frappe.throw(f"Campo '{field}' não permitido para atualização em lote")
 
 	updated_count = 0
@@ -107,7 +99,13 @@ EXTRATO_FILTER_FIELDS = (
 #: já vêm visíveis e as demais são ligadas pelo seletor de colunas da tela.
 #: `restrita` marca colunas visíveis apenas para o Gestor Financeiro.
 EXTRATO_COLUNAS = (
-	{"key": "transacao_revisada", "label": "Revisão", "tipo": "revisao", "padrao": True},
+	{
+		"key": "transacao_revisada",
+		"label": "Revisão",
+		"tipo": "revisao",
+		"padrao": True,
+		"editavel": {"tipo": "booleano"},
+	},
 	{"key": "timestamp_transacao", "label": "Data/Hora", "tipo": "datahora", "padrao": True},
 	{
 		"key": "descricao_reduzida",
@@ -115,6 +113,7 @@ EXTRATO_COLUNAS = (
 		"tipo": "texto",
 		"destaque": True,
 		"padrao": True,
+		"editavel": {"tipo": "texto"},
 	},
 	{
 		"key": "descricao",
@@ -143,6 +142,7 @@ EXTRATO_COLUNAS = (
 		"variante": "default",
 		"outline": True,
 		"padrao": True,
+		"editavel": {"tipo": "opcoes", "doctype": "Categoria de Transacao"},
 	},
 	{
 		"key": "centro_de_custo",
@@ -151,6 +151,7 @@ EXTRATO_COLUNAS = (
 		"variante": "info",
 		"outline": True,
 		"padrao": True,
+		"editavel": {"tipo": "opcoes", "doctype": "Centro de Custo"},
 	},
 	{"key": "id", "label": "ID", "tipo": "texto"},
 	{"key": "debito_credito", "label": "Débito/Crédito", "tipo": "badge", "variante": "secondary"},
@@ -173,6 +174,7 @@ EXTRATO_COLUNAS = (
 		"tipo": "badge",
 		"variante": "secondary",
 		"outline": True,
+		"editavel": {"tipo": "opcoes", "opcoes": ["Ordinária", "Extraordinária"]},
 	},
 	{"key": "conta_fixa", "label": "Conta fixa", "tipo": "badge", "variante": "secondary", "outline": True},
 	{"key": "beneficiario", "label": "Beneficiário", "tipo": "texto"},
@@ -186,6 +188,17 @@ EXTRATO_COLUNAS = (
 
 #: Ordenação com desempate por `name` para paginação estável no scroll infinito.
 EXTRATO_ORDER_BY = "timestamp_transacao desc, name desc"
+
+#: Campos que a tela permite alterar direto na célula (e em lote na seleção).
+#:
+#: Fonte única da verdade: o mesmo registro alimenta o `data-editavel` do grid,
+#: as opções entregues ao editor inline e a validação do que pode ser gravado.
+EXTRATO_CAMPOS_EDITAVEIS = {
+	coluna["key"]: coluna["editavel"] for coluna in EXTRATO_COLUNAS if coluna.get("editavel")
+}
+
+#: Teto de transações alteradas numa única edição em lote.
+EXTRATO_MAX_EDICAO_LOTE = 200
 
 
 def _parse_data_extrato(valor) -> str | None:
@@ -302,4 +315,119 @@ def get_extrato_rows(filtros: str | dict | None = None, start: int = 0, page_len
 		"html": render_extrato_rows(transacoes, colunas),
 		"count": len(transacoes),
 		"has_more": has_more,
+	}
+
+
+# ---------------------------------------------------------------------------
+# Edição em lote direto no grid
+# ---------------------------------------------------------------------------
+
+
+def get_extrato_opcoes_editaveis() -> dict:
+	"""Opções de cada campo editável, para o editor inline montar o select.
+
+	Campos `Link` buscam a lista no doctype de origem; campos `Select` já
+	trazem as opções fixas no registro de colunas.
+	"""
+	opcoes: dict[str, list[str]] = {}
+	for campo, meta in EXTRATO_CAMPOS_EDITAVEIS.items():
+		if meta["tipo"] != "opcoes":
+			continue
+		if meta.get("doctype"):
+			opcoes[campo] = frappe.get_all(meta["doctype"], pluck="name", order_by="name")
+		else:
+			opcoes[campo] = list(meta.get("opcoes") or [])
+	return opcoes
+
+
+def _normalizar_valor_editavel(campo: str, valor):
+	"""Valida e converte o valor recebido do grid para o tipo do campo.
+
+	Devolve `None` quando o usuário limpa o campo (opção "Sem valor" ou texto
+	vazio), que é uma alteração legítima em lote.
+	"""
+	meta = EXTRATO_CAMPOS_EDITAVEIS.get(campo)
+	if not meta:
+		frappe.throw(_("Campo '{0}' não é editável no extrato").format(campo))
+
+	if meta["tipo"] == "booleano":
+		return cint(valor)
+
+	valor = (valor or "").strip() if isinstance(valor, str) else valor
+	if not valor:
+		return None
+
+	if meta["tipo"] == "opcoes":
+		if meta.get("doctype"):
+			if not frappe.db.exists(meta["doctype"], valor):
+				frappe.throw(_("Valor inválido para {0}").format(campo))
+		elif valor not in (meta.get("opcoes") or []):
+			frappe.throw(_("Valor inválido para {0}").format(campo))
+
+	return valor
+
+
+@frappe.whitelist()
+def update_extrato_celulas(transaction_ids: str | list, campo: str, valor: str | int | None = None):
+	"""Grava um campo editável em uma ou mais transações e devolve as linhas atualizadas.
+
+	É o endpoint da edição inline do grid: o mesmo caminho atende a alteração
+	de uma célula e a aplicação do valor a toda a seleção.
+
+	Args:
+		transaction_ids: nomes das transações (JSON string ou lista).
+		campo: chave em `EXTRATO_CAMPOS_EDITAVEIS`.
+		valor: novo valor; vazio limpa o campo (exceto em booleano).
+
+	Returns:
+		dict: `updated_count`, `falhas` e o `html` das linhas já regravadas.
+	"""
+	if frappe.session.user == "Guest" or not user_has_access("/financeiro/extrato"):
+		frappe.throw(_("Sem permissão para editar o extrato"), frappe.PermissionError)
+
+	if isinstance(transaction_ids, str):
+		try:
+			transaction_ids = json.loads(transaction_ids)
+		except ValueError:
+			transaction_ids = []
+
+	if not transaction_ids or not isinstance(transaction_ids, list):
+		frappe.throw(_("Nenhuma transação selecionada"))
+
+	if len(transaction_ids) > EXTRATO_MAX_EDICAO_LOTE:
+		frappe.throw(_("Selecione no máximo {0} transações por edição").format(EXTRATO_MAX_EDICAO_LOTE))
+
+	novo_valor = _normalizar_valor_editavel(campo, valor)
+
+	atualizadas: list[str] = []
+	falhas = 0
+	for transaction_id in transaction_ids:
+		try:
+			doc = frappe.get_doc("Transacao Extrato Geral", transaction_id)
+			setattr(doc, campo, novo_valor)
+			doc.save(ignore_permissions=False)
+			atualizadas.append(transaction_id)
+		except frappe.PermissionError:
+			# Sem permissão de escrita não há edição em lote possível: avisa e para.
+			raise
+		except Exception as erro:
+			falhas += 1
+			frappe.log_error(f"Erro ao editar transação {transaction_id}: {erro!s}")
+
+	colunas = get_extrato_colunas("Gestor Financeiro" in frappe.get_roles())
+	linhas = (
+		get_extrato_transacoes(
+			{"name": ["in", atualizadas]},
+			start=0,
+			page_length=len(atualizadas),
+			colunas=colunas,
+		)
+		if atualizadas
+		else []
+	)
+
+	return {
+		"updated_count": len(atualizadas),
+		"falhas": falhas,
+		"html": render_extrato_rows(linhas, colunas),
 	}

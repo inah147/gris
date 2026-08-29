@@ -98,7 +98,18 @@
 			<input type="checkbox" class="transaction-checkbox" value="{{ transacao.name | e }}" aria-label="Selecionar transação" />
 		</td>
 		{% for coluna in colunas %}
-			<td class="extrato-cell{{ ' text-right' if coluna.tipo == 'moeda' else '' }}" data-col="{{ coluna.key }}">{{ celula(coluna, transacao) }}</td>
+			{% set editavel = coluna.editavel %}
+			{% set valor_editavel = '' %}
+			{% if editavel %}
+				{% if editavel.tipo == 'booleano' %}
+					{% set valor_editavel = '1' if transacao.get(coluna.key) else '0' %}
+				{% else %}
+					{% set valor_editavel = transacao.get(coluna.key) or '' %}
+				{% endif %}
+			{% endif %}
+			<td class="extrato-cell{{ ' text-right' if coluna.tipo == 'moeda' else '' }}{{ ' extrato-cell--editavel' if editavel else '' }}"
+				data-col="{{ coluna.key }}"
+				{%- if editavel %} data-editavel="{{ editavel.tipo }}" data-valor="{{ valor_editavel | e }}" tabindex="0" title="Editar {{ coluna.label | e }}"{% endif %}>{{ celula(coluna, transacao) }}</td>
 		{% endfor %}
 	</tr>
 {% endfor %}

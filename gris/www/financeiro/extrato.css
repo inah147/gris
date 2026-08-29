@@ -24,6 +24,65 @@
 	box-shadow: 0 0 0 3px var(--extrato-status-pending-review-ring);
 }
 
+/* ---------------------------------------------------------------------------
+   Filtros recolhíveis: o painel completo ocupa boa parte da tela, então fica
+   fechado por padrão e só abre sozinho quando há filtro ativo na URL.
+   Usa <details> para continuar funcionando sem JS.
+   --------------------------------------------------------------------------- */
+.extrato-filtros__summary {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	cursor: pointer;
+	list-style: none;
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: var(--foreground);
+	user-select: none;
+}
+
+.extrato-filtros__summary::-webkit-details-marker {
+	display: none;
+}
+
+.extrato-filtros__summary:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 2px;
+	border-radius: var(--radius-sm);
+}
+
+.extrato-filtros__summary-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+/* O chevron fica à direita e gira ao abrir. */
+.extrato-filtros__chevron {
+	margin-left: auto;
+	color: var(--muted-foreground);
+	transition: transform 150ms ease;
+}
+
+.extrato-filtros-details[open] .extrato-filtros__chevron {
+	transform: rotate(180deg);
+}
+
+.extrato-filtros-details[open] .extrato-filtros__summary {
+	margin-bottom: 1rem;
+}
+
+/* Fechado, o card encolhe para a altura da própria linha de resumo. */
+.extrato-filtros-card:has(.extrato-filtros-details:not([open])) {
+	padding-block: 0.875rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.extrato-filtros__chevron {
+		transition: none;
+	}
+}
+
 .extrato-filtros {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

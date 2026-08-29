@@ -25,6 +25,7 @@
 	];
 
 	const COLUNAS_STORAGE_KEY = "gris_extrato_colunas_v1";
+	const FILTROS_STORAGE_KEY = "gris_extrato_filtros_abertos_v1";
 
 	const state = {
 		carregadas: 0,
@@ -39,6 +40,7 @@
 	let sentinela = null;
 	let loadingEl = null;
 	let fimEl = null;
+	let scrollEl = null;
 	let erroEl = null;
 	let carregarMaisBtn = null;
 	let contadorEl = null;
@@ -160,6 +162,55 @@
 			{ rootMargin: "400px 0px" }
 		);
 		observer.observe(sentinela);
+	}
+
+	/**
+	 * Encaixa a área rolável do grid no que sobra da viewport.
+	 *
+	 * O cabeçalho é `position: sticky`, e como `overflow-x: auto` já torna o
+	 * contêiner um scrollport vertical, ele só gruda se o contêiner couber na
+	 * tela — caso contrário quem rola é a página e o cabeçalho sai junto. A
+	 * altura depende de onde o grid começa (o card de filtros varia com a
+	 * largura), então só o cliente sabe calcular.
+	 */
+	function ajustarAlturaDoGrid() {
+		if (!scrollEl) return;
+		// Abaixo de 48rem a rolagem é a da página, como define o CSS da rota.
+		if (window.innerWidth < 768) {
+			scrollEl.style.maxHeight = "";
+			return;
+		}
+		const topo = scrollEl.getBoundingClientRect().top;
+		const disponivel = window.innerHeight - topo - 24;
+		scrollEl.style.maxHeight = Math.max(disponivel, 320) + "px";
+	}
+
+	/**
+	 * Lembra se o painel de filtros fica aberto ou fechado.
+	 *
+	 * O servidor já abre o painel quando a URL traz filtro ativo; a escolha
+	 * explícita do usuário, quando existe, tem precedência.
+	 */
+	function iniciarPainelDeFiltros() {
+		const painel = document.getElementById("extratoFiltros");
+		if (!painel) return;
+
+		try {
+			const salvo = window.localStorage.getItem(FILTROS_STORAGE_KEY);
+			if (salvo === "1" || salvo === "0") painel.open = salvo === "1";
+		} catch (_erro) {
+			// Sem storage, vale o padrão do servidor.
+		}
+
+		painel.addEventListener("toggle", function () {
+			try {
+				window.localStorage.setItem(FILTROS_STORAGE_KEY, painel.open ? "1" : "0");
+			} catch (_erro) {
+				// Preferência é conveniência; ignorar falha de storage.
+			}
+			// Abrir/fechar move o grid na página, então a altura é recalculada.
+			ajustarAlturaDoGrid();
+		});
 	}
 
 	// -----------------------------------------------------------------------
@@ -407,13 +458,17 @@
 		sentinela = document.getElementById("extratoSentinela");
 		loadingEl = document.getElementById("extratoSentinelaLoading");
 		fimEl = document.getElementById("extratoSentinelaFim");
+		scrollEl = document.getElementById("extratoScroll");
 		erroEl = document.getElementById("extratoSentinelaErro");
 		carregarMaisBtn = document.getElementById("extratoCarregarMais");
 		contadorEl = document.getElementById("extratoCarregadas");
 
 		if (!tbody) return;
 
+		iniciarPainelDeFiltros();
 		iniciarSeletorDeColunas();
+		ajustarAlturaDoGrid();
+		window.addEventListener("resize", ajustarAlturaDoGrid);
 		ligarEventosDoGrid();
 		sincronizarSelectAll();
 		iniciarScrollInfinito();

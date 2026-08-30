@@ -501,6 +501,7 @@
 		renderMeses(assoc);
 		atualizarAcoesCadastro(assoc);
 		carregarTransacoes(assoc);
+		carregarCobranca(assoc);
 
 		if (dialog && typeof dialog.showModal === "function" && !dialog.open) {
 			dialog.showModal();
@@ -687,6 +688,182 @@
 			.catch(() => showToast("Erro ao salvar dados de cobrança.", "red"));
 	}
 
+	// ─────────────────────────── cobrança InfinitePay ───────────────────────────
+
+	function elementosCobranca() {
+		return {
+			secao: document.getElementById("cobrancaInfinitepay"),
+			pendentes: document.getElementById("cobrancaPendentes"),
+			acoes: document.getElementById("cobrancaAcoes"),
+			total: document.getElementById("cobrancaTotal"),
+			emitidas: document.getElementById("cobrancaEmitidas"),
+		};
+	}
+
+	function competenciasMarcadas() {
+		const marcadas = document.querySelectorAll(".contrib-cobranca__competencia:checked");
+		return Array.prototype.map.call(marcadas, (item) => item.value);
+	}
+
+	function atualizarTotalCobranca() {
+		const { total } = elementosCobranca();
+		if (!total) return;
+		const marcadas = document.querySelectorAll(".contrib-cobranca__competencia:checked");
+		const soma = Array.prototype.reduce.call(
+			marcadas,
+			(acumulado, item) => acumulado + parseNumber(item.getAttribute("data-valor")),
+			0
+		);
+		total.textContent = marcadas.length ? `Total: R$ ${formatarMoeda(soma)}` : "";
+	}
+
+	function renderPendentes(pendentes) {
+		const { pendentes: caixa, acoes } = elementosCobranca();
+		if (!caixa) return;
+
+		if (!pendentes || !pendentes.length) {
+			caixa.innerHTML =
+				'<p class="m-0 text-sm text-muted-foreground">Nenhuma competência em aberto no período apurado.</p>';
+			if (acoes) acoes.classList.add("hidden");
+			return;
+		}
+
+		caixa.innerHTML = pendentes
+			.map(
+				(pendente) => `
+				<label class="contrib-cobranca__item">
+					<input type="checkbox" class="contrib-cobranca__competencia" checked
+						value="${escapeHtml(pendente.ym)}" data-valor="${escapeHtml(pendente.valor)}" />
+					<span>${escapeHtml(pendente.rotulo)}</span>
+					<span class="badge contrib-badge contrib-badge--${escapeHtml(pendente.status_slug)}">${escapeHtml(
+					pendente.status
+				)}</span>
+					<span class="contrib-num text-muted-foreground">R$ ${formatarMoeda(pendente.valor)}</span>
+				</label>`
+			)
+			.join("");
+
+		if (acoes) acoes.classList.remove("hidden");
+		atualizarTotalCobranca();
+	}
+
+	function renderCobrancasEmitidas(cobrancas) {
+		const { emitidas } = elementosCobranca();
+		if (!emitidas) return;
+
+		const pendentesComLink = (cobrancas || []).filter(
+			(cobranca) => cobranca.status === "Pendente" && cobranca.link_pagamento
+		);
+		if (!pendentesComLink.length) {
+			emitidas.innerHTML = "";
+			return;
+		}
+
+		emitidas.innerHTML = `
+			<h4 class="text-xs font-semibold text-muted-foreground mb-2">Cobranças em aberto</h4>
+			${pendentesComLink
+				.map(
+					(cobranca) => `
+				<div class="contrib-cobranca__emitida">
+					<a href="${escapeHtml(cobranca.link_pagamento)}" target="_blank" rel="noopener noreferrer">
+						${escapeHtml(cobranca.name)}
+					</a>
+					<span class="text-xs text-muted-foreground">${escapeHtml(cobranca.competencias || "")}</span>
+					<button type="button" class="btn-sm-outline" data-acao="reenviar-cobranca"
+						data-cobranca="${escapeHtml(cobranca.name)}">Reenviar no WhatsApp</button>
+				</div>`
+				)
+				.join("")}`;
+	}
+
+	function carregarCobranca(assoc) {
+		const { secao, pendentes, acoes, emitidas } = elementosCobranca();
+		if (!secao) return;
+
+		if (pendentes) {
+			pendentes.innerHTML = '<p class="m-0 text-sm text-muted-foreground">Carregando…</p>';
+		}
+		if (acoes) acoes.classList.add("hidden");
+		if (emitidas) emitidas.innerHTML = "";
+
+		frappe
+			.call({
+				method: "gris.api.financeiro.cobranca_contribuicao.get_cobranca_do_associado",
+				args: { associado: assoc.id, meses: window.contribMeses },
+			})
+			.then((resposta) => {
+				const dados = (resposta && resposta.message) || {};
+				renderPendentes(dados.pendentes);
+				renderCobrancasEmitidas(dados.cobrancas);
+			})
+			.catch(() => {
+				if (pendentes) {
+					pendentes.innerHTML =
+						'<p class="m-0 text-sm text-muted-foreground">Não foi possível carregar as competências em aberto.</p>';
+				}
+			});
+	}
+
+	function relatarEnvio(whatsapp) {
+		if (!whatsapp) return;
+		if (whatsapp.enviado) {
+			showToast(`Link enviado no WhatsApp para ${whatsapp.telefone}.`, "green");
+			return;
+		}
+		// A cobrança foi criada mesmo assim: o gestor ainda pode copiar o link da lista.
+		showToast(`Cobrança criada, mas o WhatsApp falhou: ${whatsapp.motivo}`, "orange");
+	}
+
+	function gerarCobranca(enviarWhatsapp) {
+		if (semPermissao() || !assocAtual) return;
+		const competencias = competenciasMarcadas();
+		if (!competencias.length) {
+			showToast("Selecione ao menos uma competência para cobrar.", "orange");
+			return;
+		}
+
+		frappe
+			.call({
+				method: "gris.api.financeiro.cobranca_contribuicao.gerar_cobranca",
+				args: {
+					associado: assocAtual.id,
+					competencias: competencias.join(","),
+					enviar_whatsapp: enviarWhatsapp ? 1 : 0,
+					meses: window.contribMeses,
+				},
+				freeze: true,
+			})
+			.then((resposta) => {
+				const dados = (resposta && resposta.message) || {};
+				if (!dados.success) {
+					showToast("Não foi possível gerar a cobrança.", "red");
+					return;
+				}
+				if (!enviarWhatsapp) showToast("Link de pagamento gerado.", "green");
+				relatarEnvio(dados.whatsapp);
+				carregarCobranca(assocAtual);
+			})
+			.catch(() => showToast("Erro ao gerar a cobrança.", "red"));
+	}
+
+	function reenviarCobranca(elemento) {
+		if (semPermissao()) return;
+		const name = elemento.getAttribute("data-cobranca");
+		if (!name) return;
+
+		frappe
+			.call({
+				method: "gris.api.financeiro.cobranca_contribuicao.enviar_cobranca_whatsapp",
+				args: { name: name },
+				freeze: true,
+			})
+			.then((resposta) => {
+				const dados = (resposta && resposta.message) || {};
+				relatarEnvio(dados.whatsapp);
+			})
+			.catch(() => showToast("Erro ao reenviar a cobrança.", "red"));
+	}
+
 	// ─────────────────────────── ligações ───────────────────────────
 
 	const ACOES = {
@@ -699,6 +876,9 @@
 		"cancelar-cobranca": restaurarCobranca,
 		"cadastro-realizado": cadastroRealizado,
 		"cadastro-cancelado": cadastroCancelado,
+		"cobrar-whatsapp": () => gerarCobranca(true),
+		"cobrar-link": () => gerarCobranca(false),
+		"reenviar-cobranca": reenviarCobranca,
 	};
 
 	function init() {
@@ -711,6 +891,12 @@
 		// que é filho dele) e só então atualiza o valor do hidden.
 		const filtroSituacao = document.getElementById("filtroSituacao");
 		if (filtroSituacao) filtroSituacao.addEventListener("change", aplicarFiltros);
+
+		document.addEventListener("change", (evento) => {
+			if (evento.target.classList.contains("contrib-cobranca__competencia")) {
+				atualizarTotalCobranca();
+			}
+		});
 
 		document.addEventListener("click", (evento) => {
 			const alvo = evento.target.closest("[data-acao]");

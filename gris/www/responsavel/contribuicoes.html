@@ -1,0 +1,176 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+
+{% block title %}Contribuições{% endblock %}
+
+{% set active_link = '/responsavel/contribuicoes' %}
+
+{% block head_include %}
+	{{ super() }}
+	<link rel="stylesheet" href="/responsavel/contribuicoes.css">
+{% endblock %}
+
+{% macro brl(valor) %}{{ frappe.utils.fmt_money(valor or 0, currency="BRL") }}{% endmacro %}
+
+{% macro situacao_badge(situacao, slug) %}
+<span class="badge resp-contrib-badge resp-contrib-badge--{{ slug }}">{{ situacao }}</span>
+{% endmacro %}
+
+{% block page_header %}
+<section class="resp-contrib-page-header" aria-labelledby="resp-contrib-title">
+	<div class="flex flex-col gap-2 max-w-2xl">
+		<h1 id="resp-contrib-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Contribuições</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">
+			Acompanhe mês a mês o que já foi pago e o que está em aberto na contribuição mensal
+			de cada beneficiário vinculado a você.
+		</p>
+	</div>
+</section>
+{% endblock %}
+
+{% block main %}
+{% if not tem_vinculo %}
+	{{ empty(
+		title="Nenhum beneficiário vinculado",
+		description="Quando um beneficiário estiver vinculado ao seu cadastro, a contribuição mensal dele aparece aqui.",
+		icon=lucide_icon("users", size="lg")
+	) }}
+{% elif not beneficiarios %}
+	{{ empty(
+		title="Nenhuma contribuição a acompanhar",
+		description="Os beneficiários vinculados a você não estão em categorias que contribuem mensalmente.",
+		icon=lucide_icon("circle-check", size="lg")
+	) }}
+{% else %}
+
+<article class="card mb-4">
+	<section>
+		<form method="get" id="resp-contrib-filtro" class="resp-contrib-filtros">
+			<div class="field">
+				<label class="label" for="resp-contrib-periodo">Período</label>
+				{{ select(id="resp-contrib-periodo", name="meses", items=opcoes_periodo, selected=meses_selecionado) }}
+			</div>
+			<div class="resp-contrib-filtros__actions">
+				<button type="submit" class="btn-sm-primary">Aplicar</button>
+			</div>
+		</form>
+	</section>
+</article>
+
+{% if total_pendente > 0 %}
+<article class="card resp-contrib-aviso resp-contrib-aviso--pendente mb-4">
+	<section class="flex items-start gap-3">
+		{{ lucide_icon("triangle-alert", size="md") }}
+		<div>
+			<p class="m-0 font-medium text-foreground">Há {{ brl(total_pendente) }} em aberto no período.</p>
+			<p class="m-0 mt-1 text-sm text-muted-foreground">
+				O detalhe por beneficiário está abaixo. Quando o grupo emitir uma cobrança, o botão de
+				pagamento aparece no cartão correspondente.
+			</p>
+		</div>
+	</section>
+</article>
+{% elif em_dia %}
+<article class="card resp-contrib-aviso resp-contrib-aviso--ok mb-4">
+	<section class="flex items-start gap-3">
+		{{ lucide_icon("circle-check", size="md") }}
+		<p class="m-0 font-medium text-foreground">Tudo em dia no período apurado. Obrigado!</p>
+	</section>
+</article>
+{% endif %}
+
+{% for beneficiario in beneficiarios %}
+<article class="card resp-contrib-card mb-4">
+	<section>
+		<header class="resp-contrib-card__header">
+			<div class="min-w-0">
+				<h2 class="m-0 text-xl font-semibold leading-tight text-foreground">{{ beneficiario.nome }}</h2>
+				<p class="m-0 mt-1 text-sm text-muted-foreground">
+					{{ beneficiario.categoria or 'Beneficiário' }}
+					{% if beneficiario.secao %}&middot; {{ beneficiario.secao }}{% endif %}
+				</p>
+			</div>
+			{{ situacao_badge(beneficiario.situacao, beneficiario.situacao_slug) }}
+		</header>
+
+		<dl class="resp-contrib-resumo">
+			<div>
+				<dt>Valor mensal</dt>
+				<dd class="resp-contrib-num">{{ brl(beneficiario.esperado_mensal) }}</dd>
+			</div>
+			<div>
+				<dt>Pago no período</dt>
+				<dd class="resp-contrib-num">{{ brl(beneficiario.total_recebido) }}</dd>
+			</div>
+			<div>
+				<dt>Meses quitados</dt>
+				<dd class="resp-contrib-num">{{ beneficiario.meses_quitados }}/{{ beneficiario.meses_devidos }}</dd>
+			</div>
+			<div>
+				<dt>Em aberto</dt>
+				<dd class="resp-contrib-num {% if beneficiario.total_pendente > 0 %}resp-contrib-num--alerta{% endif %}">
+					{{ brl(beneficiario.total_pendente) }}
+				</dd>
+			</div>
+		</dl>
+
+		{% if beneficiario.credito > 0 %}
+		<p class="m-0 mb-3 text-sm text-muted-foreground">
+			Há {{ brl(beneficiario.credito) }} de crédito a favor deste beneficiário, que abate os próximos meses.
+		</p>
+		{% endif %}
+
+		{% if beneficiario.link_pagamento %}
+		<p class="m-0 mb-4">
+			<a class="btn-sm-primary" href="{{ beneficiario.link_pagamento }}" target="_blank" rel="noopener noreferrer">
+				Pagar contribuição em aberto
+			</a>
+		</p>
+		{% elif beneficiario.total_pendente > 0 %}
+		<p class="m-0 mb-4 text-sm text-muted-foreground">
+			Ainda não há link de pagamento emitido. Fale com a tesouraria do grupo para receber a cobrança.
+		</p>
+		{% endif %}
+
+		<div class="overflow-x-auto">
+			<table class="table resp-contrib-tabela">
+				<caption class="sr-only">Contribuição mês a mês de {{ beneficiario.nome }}</caption>
+				<thead>
+					<tr>
+						<th scope="col">Mês</th>
+						<th scope="col">Situação</th>
+						<th scope="col" class="text-right">Esperado</th>
+						<th scope="col" class="text-right">Pago</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for linha in beneficiario.linhas_recentes %}
+					<tr>
+						<th scope="row" class="font-medium whitespace-nowrap">{{ linha.rotulo }}</th>
+						<td>{{ situacao_badge(linha.status, linha.status_slug) }}</td>
+						<td class="text-right whitespace-nowrap resp-contrib-num">
+							{% if linha.esperado > 0 %}{{ brl(linha.esperado) }}{% else %}—{% endif %}
+						</td>
+						<td class="text-right whitespace-nowrap resp-contrib-num">
+							{% if linha.recebido > 0 %}{{ brl(linha.recebido) }}{% else %}—{% endif %}
+							{% if linha.usou_credito %}
+								<span class="text-xs text-muted-foreground block">quitado com crédito</span>
+							{% endif %}
+						</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</section>
+</article>
+{% endfor %}
+
+<p class="text-sm text-muted-foreground">
+	A situação de cada mês vem dos pagamentos identificados no extrato do grupo. Se você pagou e o mês
+	continua em aberto, fale com a tesouraria — pode ser um pagamento ainda sem identificação.
+</p>
+{% endif %}
+{% endblock %}

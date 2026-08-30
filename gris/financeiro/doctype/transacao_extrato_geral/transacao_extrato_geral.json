@@ -31,6 +31,7 @@
   "fixo_variavel",
   "conta_fixa",
   "beneficiario",
+  "mes_competencia",
   "nome_atividade",
   "column_break_ufvr",
   "centro_de_custo",
@@ -158,6 +159,12 @@
    "options": "Associado"
   },
   {
+   "description": "M\u00eas a que a transa\u00e7\u00e3o se refere, quando diferente da data de caixa. Base da apura\u00e7\u00e3o da contribui\u00e7\u00e3o mensal.",
+   "fieldname": "mes_competencia",
+   "fieldtype": "Date",
+   "label": "M\u00eas de compet\u00eancia"
+  },
+  {
    "fieldname": "column_break_ufvr",
    "fieldtype": "Column Break"
   },
@@ -251,7 +258,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-14 07:00:51.412363",
+ "modified": "2026-08-30 21:00:00.000000",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Transacao Extrato Geral",

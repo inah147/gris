@@ -107,6 +107,7 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 		"children": [
 			{"label": "Meus dados", "path": "/responsavel/meus_dados"},
 			{"label": "Beneficiários", "path": "/responsavel/beneficiarios"},
+			{"label": "Contribuições", "path": "/responsavel/contribuicoes"},
 			{"label": "Pesquisa de Novos Associados", "path": "/responsavel/pesquisa_novos"},
 		],
 	},
@@ -158,6 +159,7 @@ SIDEBAR_ICON_MAP: dict[str, str] = {
 	"/projetos/cadastrar_novo_projeto": "upload",
 	"/responsavel/meus_dados": "shield-user",
 	"/responsavel/beneficiarios": "users",
+	"/responsavel/contribuicoes": "wallet-cards",
 	"/responsavel/pesquisa_novos": "search",
 	"/festas/nova_festa": "calendar-plus",
 	"/festas/todas_festas": "list",
@@ -177,6 +179,7 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/responsavel": ["Responsavel"],
 	"/responsavel/meus_dados": ["Responsavel"],
 	"/responsavel/beneficiarios": ["Responsavel"],
+	"/responsavel/contribuicoes": ["Responsavel"],
 	"/responsavel/pesquisa_novos": ["Responsavel"],
 	"/associados": [
 		"Gestor de Associados",

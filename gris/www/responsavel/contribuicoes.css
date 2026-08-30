@@ -1,0 +1,118 @@
+/* Contribuições dos beneficiários — visão do responsável.
+   Reaproveita os tokens do design system; as cores de situação são as mesmas da
+   tela do financeiro, escolhidas na paleta segura para daltonismo. */
+
+.resp-contrib-page-header {
+	margin-bottom: calc(var(--spacing) * 6);
+}
+
+.resp-contrib-filtros {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: calc(var(--spacing) * 4);
+}
+
+.resp-contrib-filtros .field {
+	min-width: 14rem;
+}
+
+.resp-contrib-filtros__actions {
+	display: flex;
+	gap: calc(var(--spacing) * 2);
+}
+
+.resp-contrib-card__header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 3);
+	flex-wrap: wrap;
+	margin-bottom: calc(var(--spacing) * 4);
+}
+
+.resp-contrib-resumo {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: calc(var(--spacing) * 4);
+	margin: 0 0 calc(var(--spacing) * 4);
+}
+
+@media (min-width: 48rem) {
+	.resp-contrib-resumo {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+}
+
+.resp-contrib-resumo dt {
+	font-size: 0.75rem;
+	color: var(--muted-foreground);
+}
+
+.resp-contrib-resumo dd {
+	margin: calc(var(--spacing) * 1) 0 0;
+	font-size: 1.125rem;
+	font-weight: 600;
+	color: var(--foreground);
+}
+
+/* Números tabulares mantêm as colunas de valor alinhadas na vertical. */
+.resp-contrib-num {
+	font-variant-numeric: tabular-nums;
+}
+
+.resp-contrib-num--alerta {
+	color: color-mix(in oklab, #d55e00 78%, var(--foreground));
+}
+
+.resp-contrib-tabela th[scope="row"] {
+	font-weight: 500;
+}
+
+.resp-contrib-aviso section {
+	align-items: flex-start;
+}
+
+.resp-contrib-aviso--pendente {
+	border-color: color-mix(in oklab, #d55e00 40%, var(--border));
+}
+
+.resp-contrib-aviso--ok {
+	border-color: color-mix(in oklab, #009e73 40%, var(--border));
+}
+
+.resp-contrib-badge {
+	white-space: nowrap;
+	border: 1px solid transparent;
+}
+
+.resp-contrib-badge--pago {
+	background-color: color-mix(in oklab, #009e73 16%, var(--background));
+	border-color: color-mix(in oklab, #009e73 45%, var(--background));
+	color: color-mix(in oklab, #009e73 75%, var(--foreground));
+}
+
+.resp-contrib-badge--parcial {
+	background-color: color-mix(in oklab, #e69f00 18%, var(--background));
+	border-color: color-mix(in oklab, #e69f00 50%, var(--background));
+	color: color-mix(in oklab, #b37c00 70%, var(--foreground));
+}
+
+.resp-contrib-badge--aberto {
+	background-color: color-mix(in oklab, #0072b2 14%, var(--background));
+	border-color: color-mix(in oklab, #0072b2 45%, var(--background));
+	color: color-mix(in oklab, #0072b2 75%, var(--foreground));
+}
+
+.resp-contrib-badge--atrasado {
+	background-color: color-mix(in oklab, #d55e00 16%, var(--background));
+	border-color: color-mix(in oklab, #d55e00 50%, var(--background));
+	color: color-mix(in oklab, #d55e00 78%, var(--foreground));
+}
+
+.resp-contrib-badge--aguardando,
+.resp-contrib-badge--na {
+	background-color: var(--muted);
+	border-color: var(--border);
+	color: var(--muted-foreground);
+}

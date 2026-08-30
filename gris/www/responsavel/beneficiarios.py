@@ -6,31 +6,13 @@ from frappe.utils import add_days, cint, getdate, now, today
 
 from gris.api.portal_access import enrich_context
 from gris.api.recepcao_notificacoes import notificar_nova_manifestacao_no_grupo_recepcao
+from gris.api.responsavel_acesso import get_responsavel_do_usuario
 
 no_cache = 1
 
 
 def _get_responsavel_name(user):
-	if not user or user == "Guest":
-		return None
-
-	responsavel_name = frappe.db.get_value("Responsavel", {"email": user}, "name")
-	if responsavel_name:
-		return responsavel_name
-
-	# Fallback para contas com login id@escoteiros associadas a um registro no doctype Associado
-	associado_name = frappe.db.get_value("Associado", {"id_escoteiros": user}, "name")
-	if not associado_name:
-		return None
-
-	associado_cpf_hash = frappe.db.get_value("Associado", associado_name, "cpf")
-	if associado_cpf_hash and frappe.db.exists("Responsavel", associado_cpf_hash):
-		return associado_cpf_hash
-
-	# Último fallback: tentar via vínculo já existente do associado
-	return frappe.db.get_value(
-		"Responsavel Vinculo", {"beneficiario_associado": associado_name}, "responsavel"
-	)
+	return get_responsavel_do_usuario(user)
 
 
 def _get_sections_by_ramos(ramos):

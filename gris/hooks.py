@@ -154,6 +154,7 @@ doc_events = {
 	"Cobranca Infinitepay": {
 		"on_update": [
 			"gris.festas.doctype.convite_festa.convite_festa.on_cobranca_atualizada",
+			"gris.api.financeiro.cobranca_contribuicao.on_cobranca_atualizada",
 		],
 	},
 	"User": {

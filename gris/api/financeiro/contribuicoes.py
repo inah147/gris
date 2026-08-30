@@ -26,9 +26,14 @@ CATEGORIA_CONTRIBUICAO = "Contribuição Mensal"
 # por não estar nesta tupla, jamais entra na apuração nem nos totais.
 CATEGORIAS_CONTRIBUINTES = ("Beneficiário", "Escotista")
 
-# Data de competência da contribuição: a data da transação é a informação mais
-# confiável do extrato; depósito e timestamp entram só como fallback.
-SQL_DATA_COMPETENCIA = "COALESCE(data_transacao, DATE(data_deposito), DATE(timestamp_transacao))"
+# Data de competência da contribuição. `mes_competencia` vem primeiro porque é o
+# único campo que diz explicitamente a qual mês a contribuição se refere — é ele
+# que separa a data em que o dinheiro entrou do mês que está sendo quitado, no
+# pagamento em atraso e no adiantamento. Sem ele, a data da transação é a
+# informação mais confiável do extrato; depósito e timestamp entram só como fallback.
+SQL_DATA_COMPETENCIA = (
+	"COALESCE(mes_competencia, data_transacao, DATE(data_deposito), DATE(timestamp_transacao))"
+)
 
 # Janela padrão de apuração, em meses (inclui o mês corrente).
 MESES_PADRAO = 12
@@ -136,6 +141,20 @@ def calcular_vencimento(mes: datetime.date, dia_vencimento: int) -> datetime.dat
 	return vencimento
 
 
+CAMPOS_CONTRIBUINTE = (
+	"name",
+	"nome_completo",
+	"categoria",
+	"secao",
+	"inicio_do_pagamento",
+	"valor_contribuicao",
+	"status_no_grupo",
+	"status_cobranca",
+	"email_cobranca",
+	"telefone_cobranca",
+)
+
+
 def get_contribuintes() -> list[dict]:
 	"""Associados que devem contribuir.
 
@@ -143,18 +162,7 @@ def get_contribuintes() -> list[dict]:
 	estão com cobrança ativa — são justamente os que precisam ser cancelados e
 	sumiriam da tela se filtrássemos só por ativos.
 	"""
-	campos = [
-		"name",
-		"nome_completo",
-		"categoria",
-		"secao",
-		"inicio_do_pagamento",
-		"valor_contribuicao",
-		"status_no_grupo",
-		"status_cobranca",
-		"email_cobranca",
-		"telefone_cobranca",
-	]
+	campos = list(CAMPOS_CONTRIBUINTE)
 	ativos = frappe.get_all(
 		"Associado",
 		filters={
@@ -188,12 +196,30 @@ def get_contribuintes() -> list[dict]:
 
 
 def get_recebimentos_por_associado(
-	primeiro_dia: datetime.date, proximo_mes: datetime.date
+	primeiro_dia: datetime.date,
+	proximo_mes: datetime.date,
+	associados: list[str] | None = None,
 ) -> dict[str, dict[str, dict]]:
 	"""Soma as contribuições recebidas por associado e mês de competência.
 
+	`associados` restringe a consulta a um conjunto conhecido de associados — é o
+	caminho usado pelas telas que apuram poucas pessoas (o responsável vendo os
+	filhos, a cobrança de um contribuinte) em vez do grupo inteiro.
+
 	Retorna `{associado: {"YYYY-MM": {"valor": float, "qtd": int}}}`.
 	"""
+	params: dict = {
+		"categoria": CATEGORIA_CONTRIBUICAO,
+		"primeiro_dia": primeiro_dia,
+		"proximo_mes": proximo_mes,
+	}
+	filtro_associados = ""
+	if associados is not None:
+		if not associados:
+			return {}
+		filtro_associados = "AND beneficiario IN %(associados)s"
+		params["associados"] = tuple(associados)
+
 	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
 	# condições literais). Todo valor vindo do usuário é passado por `params`.
 	# nosemgrep
@@ -210,13 +236,10 @@ def get_recebimentos_por_associado(
 		  AND COALESCE(beneficiario, '') != ''
 		  AND {SQL_DATA_COMPETENCIA} >= %(primeiro_dia)s
 		  AND {SQL_DATA_COMPETENCIA} < %(proximo_mes)s
+		  {filtro_associados}
 		GROUP BY beneficiario, ym
 		""",
-		{
-			"categoria": CATEGORIA_CONTRIBUICAO,
-			"primeiro_dia": primeiro_dia,
-			"proximo_mes": proximo_mes,
-		},
+		params,
 		as_dict=True,
 	)
 
@@ -583,6 +606,104 @@ def apurar(
 			"transacoes_nao_vinculadas": len(nao_vinculadas),
 		},
 	}
+
+
+def apurar_associados(
+	nomes: list[str],
+	meses=MESES_PADRAO,
+	hoje: datetime.date | None = None,
+) -> list[dict]:
+	"""Apura a contribuição de um conjunto fechado de associados.
+
+	Mesma regra da apuração geral, mas sem varrer o grupo inteiro: serve às telas
+	que já sabem de quem estão falando — o responsável olhando os beneficiários
+	vinculados a ele e a cobrança de um contribuinte específico.
+
+	Associados de categoria não contribuinte (Dirigente) são descartados aqui
+	pelo mesmo motivo de sempre: eles não pagam contribuição mensal.
+	"""
+	if not nomes:
+		return []
+
+	quantidade_meses = normalizar_meses(meses)
+	hoje = hoje or getdate()
+	sequencia = construir_meses(quantidade_meses, hoje)
+	primeiro_dia = sequencia[0]
+	proximo_mes = getdate(add_months(sequencia[-1], 1))
+
+	dia_vencimento = get_dia_vencimento()
+	vencimentos = {chave_mes(mes): calcular_vencimento(mes, dia_vencimento) for mes in sequencia}
+	valor_base = get_valor_base()
+
+	contribuintes = frappe.get_all(
+		"Associado",
+		filters={
+			"name": ["in", list(nomes)],
+			"categoria": ["in", list(CATEGORIAS_CONTRIBUINTES)],
+		},
+		fields=list(CAMPOS_CONTRIBUINTE),
+		order_by="nome_completo asc",
+		limit_page_length=0,
+	)
+	if not contribuintes:
+		return []
+
+	recebimentos = get_recebimentos_por_associado(
+		primeiro_dia, proximo_mes, [c["name"] for c in contribuintes]
+	)
+
+	apurados = []
+	for contribuinte in contribuintes:
+		grade = montar_grade(
+			contribuinte,
+			sequencia,
+			recebimentos.get(contribuinte["name"], {}),
+			hoje,
+			vencimentos,
+			valor_base,
+		)
+		inicio = contribuinte.get("inicio_do_pagamento")
+		apurados.append(
+			{
+				"id": contribuinte["name"],
+				"nome": contribuinte.get("nome_completo") or contribuinte["name"],
+				"categoria": contribuinte.get("categoria"),
+				"secao": contribuinte.get("secao"),
+				"status_no_grupo": contribuinte.get("status_no_grupo"),
+				"status_cobranca": contribuinte.get("status_cobranca"),
+				"inicio_do_pagamento": getdate(inicio).isoformat() if inicio else None,
+				"dia_vencimento": dia_vencimento,
+				**grade,
+			}
+		)
+	return apurados
+
+
+def competencias_pendentes(apuracao: dict) -> list[dict]:
+	"""Meses do associado que ainda não foram quitados, do mais antigo ao mais novo.
+
+	Um mês parcial entra pelo que falta, não pelo valor cheio — cobrar de novo o
+	que já foi pago viraria crédito e empurraria a dívida para o mês seguinte.
+	"""
+	pendentes = []
+	for linha in apuracao.get("linhas", []):
+		if linha["status"] not in (STATUS_ATRASADO, STATUS_EM_ABERTO, STATUS_PARCIAL):
+			continue
+		falta = round(float(linha["esperado"]) - float(linha["recebido"]), 2)
+		if falta <= 0:
+			continue
+		pendentes.append(
+			{
+				"ym": linha["ym"],
+				"rotulo": linha["rotulo"],
+				"status": linha["status"],
+				"status_slug": linha["status_slug"],
+				"esperado": linha["esperado"],
+				"recebido": linha["recebido"],
+				"valor": falta,
+			}
+		)
+	return pendentes
 
 
 # Role que pode ver e editar dados de cobrança na página de contribuições.

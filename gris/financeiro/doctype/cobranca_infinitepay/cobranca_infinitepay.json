@@ -10,6 +10,12 @@
   "status",
   "column_break_pedido",
   "link_pagamento",
+  "section_contribuicao",
+  "finalidade",
+  "associado",
+  "column_break_contribuicao",
+  "competencias",
+  "transacao_extrato",
   "section_itens",
   "itens",
   "section_redirecionamento",
@@ -67,6 +73,48 @@
    "fieldname": "link_pagamento",
    "fieldtype": "Small Text",
    "label": "Link de Pagamento",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_contribuicao",
+   "fieldtype": "Section Break",
+   "label": "Contribui\u00e7\u00e3o mensal"
+  },
+  {
+   "default": "Avulsa",
+   "description": "\"Contribui\u00e7\u00e3o Mensal\" faz o pagamento confirmado dar baixa autom\u00e1tica nas compet\u00eancias cobradas.",
+   "fieldname": "finalidade",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Finalidade",
+   "options": "Avulsa\nContribui\u00e7\u00e3o Mensal"
+  },
+  {
+   "depends_on": "eval:doc.finalidade == \"Contribui\u00e7\u00e3o Mensal\"",
+   "fieldname": "associado",
+   "fieldtype": "Link",
+   "label": "Associado",
+   "mandatory_depends_on": "eval:doc.finalidade == \"Contribui\u00e7\u00e3o Mensal\"",
+   "options": "Associado"
+  },
+  {
+   "fieldname": "column_break_contribuicao",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.finalidade == \"Contribui\u00e7\u00e3o Mensal\"",
+   "description": "Compet\u00eancias cobradas, em AAAA-MM separadas por v\u00edrgula, da mais antiga para a mais nova.",
+   "fieldname": "competencias",
+   "fieldtype": "Small Text",
+   "label": "Compet\u00eancias cobradas"
+  },
+  {
+   "depends_on": "eval:doc.finalidade == \"Contribui\u00e7\u00e3o Mensal\"",
+   "description": "Lan\u00e7amento gerado no extrato quando o pagamento foi confirmado. Preenchido garante que a baixa n\u00e3o se repete.",
+   "fieldname": "transacao_extrato",
+   "fieldtype": "Link",
+   "label": "Transa\u00e7\u00e3o lan\u00e7ada no extrato",
+   "options": "Transacao Extrato Geral",
    "read_only": 1
   },
   {
@@ -213,7 +261,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-13 12:39:42.009925",
+ "modified": "2026-08-30 21:00:00.000000",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Cobranca Infinitepay",
@@ -229,6 +277,17 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor Contribui\u00e7\u00e3o Mensal",
    "share": 1,
    "write": 1
   }

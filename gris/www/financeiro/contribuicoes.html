@@ -310,6 +310,27 @@
 		<button type="button" id="btnCadastroRealizado" class="btn-sm-primary hidden" data-acao="cadastro-realizado">Cadastro realizado</button>
 		<button type="button" id="btnCadastroCancelado" class="btn-sm-destructive hidden" data-acao="cadastro-cancelado">Cadastro cancelado</button>
 	</div>
+
+	<section id="cobrancaInfinitepay" class="contrib-cobranca mb-4" data-manage-only="1">
+		<h3 class="text-sm font-semibold mb-2">Cobrar pela InfinitePay</h3>
+		<p class="m-0 mb-3 text-xs text-muted-foreground">
+			Marque as competências a cobrar. O link é gerado na InfinitePay e o pagamento confirmado
+			quita automaticamente os meses cobrados.
+		</p>
+		<div id="cobrancaPendentes" class="contrib-cobranca__pendentes mb-3">
+			<p class="m-0 text-sm text-muted-foreground">Carregando…</p>
+		</div>
+		<div id="cobrancaAcoes" class="flex gap-2 flex-wrap items-center hidden">
+			<button type="button" id="btnCobrarWhatsapp" class="btn-sm-primary" data-acao="cobrar-whatsapp">
+				Gerar link e enviar no WhatsApp
+			</button>
+			<button type="button" id="btnCobrarSomenteLink" class="btn-sm-outline" data-acao="cobrar-link">
+				Só gerar o link
+			</button>
+			<span id="cobrancaTotal" class="text-sm text-muted-foreground contrib-num"></span>
+		</div>
+		<div id="cobrancaEmitidas" class="mt-3"></div>
+	</section>
 	{% endif %}
 
 	<h3 class="text-sm font-semibold mb-2">Apuração mês a mês</h3>

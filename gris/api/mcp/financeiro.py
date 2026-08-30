@@ -532,9 +532,8 @@ def _tabular(payload: dict) -> dict:
 	descricao=(
 		"Séries dos últimos 12 meses usadas no painel financeiro: entradas x saídas, entradas ou "
 		"saídas por categoria/centro de custo/tipo, contribuições por status e inadimplência. "
-		"Atenção: as duas séries de contribuição vêm do fluxo de cobrança (Pagamento "
-		"Contribuicao Mensal); a apuração pelo dinheiro que entrou está em "
-		"'resumo_contribuicoes'. "
+		"As duas séries de contribuição saem da mesma apuração de 'resumo_contribuicoes': "
+		"o dinheiro que entrou no extrato, não o fluxo de cobrança. "
 		"Retorna uma linha por mês, pronta para comparação. O período é sempre os 12 meses "
 		"encerrados no mês atual — para recortes livres use 'resumo_financeiro'."
 	),

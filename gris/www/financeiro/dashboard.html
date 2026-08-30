@@ -194,7 +194,7 @@
 
 <h2 id="fin-section-contribuicoes" class="financeiro-section-title">Contribuições Mensais</h2>
 <div id="fin-row-contribuicoes-status" class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-	{% call card(title="Contribuições por Status (Qtd) — Empilhado", attrs={"class": "chart-card"}) %}
+	{% call card(title="Contribuições por situação (meses devidos) — Empilhado", attrs={"class": "chart-card"}) %}
 		<div id="chart-contribuicoes-status-mensal" class="financeiro-chart" style="min-height:360px;">
 			<div class="financeiro-chart__loading">
 				<span class="spinner" role="status" aria-label="Carregando"></span>
@@ -202,7 +202,7 @@
 			</div>
 		</div>
 	{% endcall %}
-	{% call card(title="% Inadimplência (Atrasado / Total)", attrs={"class": "chart-card"}) %}
+	{% call card(title="% Inadimplência (meses vencidos sem quitar)", attrs={"class": "chart-card"}) %}
 		<div id="chart-contribuicoes-inadimplencia-mensal" class="financeiro-chart" style="min-height:360px;">
 			<div class="financeiro-chart__loading">
 				<span class="spinner" role="status" aria-label="Carregando"></span>

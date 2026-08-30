@@ -5,8 +5,10 @@ transação de crédito com `categoria = "Contribuição Mensal"` e `beneficiari
 preenchido conta como contribuição recebida do associado no mês de competência.
 
 O DocType `Pagamento Contribuicao Mensal` continua existindo para o fluxo de
-cobrança (schedulers e gráficos do dashboard), mas **não** participa do cálculo
-feito aqui — o dinheiro que entrou é o que manda.
+cobrança (os schedulers que geram e atualizam os registros), mas **não**
+participa do cálculo feito aqui — o dinheiro que entrou é o que manda. Desde a
+migração do painel financeiro, nenhum gráfico lê mais aquele DocType: tudo passa
+por esta apuração.
 """
 
 from __future__ import annotations
@@ -55,6 +57,14 @@ SLUG_SITUACAO = {
 	STATUS_AGUARDANDO: "aguardando",
 	STATUS_NAO_APLICAVEL: "na",
 }
+
+# Situações de um mês que já venceu sem ter sido quitado. Atrasado é sempre
+# vencido por construção; Parcial só entra quando o prazo passou — quem pagou
+# parte do mês corrente antes do vencimento ainda não é inadimplente.
+SITUACOES_INADIMPLENTES = (STATUS_ATRASADO, STATUS_PARCIAL)
+
+# Situações que um mês devido pode assumir, na ordem em que empilham no gráfico.
+SITUACOES_DO_MES_DEVIDO = (STATUS_PAGO, STATUS_PARCIAL, STATUS_EM_ABERTO, STATUS_ATRASADO)
 
 # Ordem de severidade usada para resumir a situação do associado no período.
 ORDEM_SITUACAO = [
@@ -422,6 +432,7 @@ def montar_grade(
 						STATUS_AGUARDANDO if comeca_no_futuro else STATUS_NAO_APLICAVEL
 					],
 					"usou_credito": False,
+					"vencido": False,
 				}
 			)
 			continue
@@ -430,6 +441,10 @@ def montar_grade(
 		total_esperado += esperado
 		disponivel = recebido + credito
 		usou_credito = False
+		# O prazo já passou? Vale para qualquer situação, não só para quem não pagou
+		# nada: é o que separa o mês parcial que virou inadimplência do parcial que
+		# ainda está dentro do prazo.
+		vencido = mes < mes_atual or hoje > vencimentos[ym]
 
 		if esperado <= 0:
 			status = STATUS_PAGO if recebido > 0 else STATUS_NAO_APLICAVEL
@@ -443,7 +458,6 @@ def montar_grade(
 			usou_credito = credito > 0
 			credito = 0.0
 		else:
-			vencido = mes < mes_atual or hoje > vencimentos[ym]
 			status = STATUS_ATRASADO if vencido else STATUS_EM_ABERTO
 			credito = 0.0
 
@@ -462,6 +476,7 @@ def montar_grade(
 				"status": status,
 				"status_slug": SLUG_SITUACAO[status],
 				"usou_credito": usou_credito,
+				"vencido": vencido,
 			}
 		)
 
@@ -515,6 +530,8 @@ def apurar(
 	esperado_mes = dict.fromkeys(chaves, 0.0)
 	devidos_mes = dict.fromkeys(chaves, 0)
 	quitados_mes = dict.fromkeys(chaves, 0)
+	inadimplentes_mes = dict.fromkeys(chaves, 0)
+	status_mes = {situacao: dict.fromkeys(chaves, 0) for situacao in SITUACOES_DO_MES_DEVIDO}
 
 	associados = []
 	for contribuinte in contribuintes:
@@ -534,6 +551,10 @@ def apurar(
 				devidos_mes[ym] += 1
 				if linha["status"] == STATUS_PAGO:
 					quitados_mes[ym] += 1
+				if linha["status"] in status_mes:
+					status_mes[linha["status"]][ym] += 1
+				if linha["status"] in SITUACOES_INADIMPLENTES and linha["vencido"]:
+					inadimplentes_mes[ym] += 1
 
 		inicio = contribuinte.get("inicio_do_pagamento")
 		dados_cobranca = (
@@ -571,7 +592,14 @@ def apurar(
 	total_devidos = sum(devidos_mes.values())
 	total_quitados = sum(quitados_mes.values())
 
-	com_pendencia = [a for a in associados if a["situacao"] in (STATUS_ATRASADO, STATUS_PARCIAL)]
+	com_pendencia = [a for a in associados if a["situacao"] in SITUACOES_INADIMPLENTES]
+	# Inadimplente é quem tem ao menos um mês vencido e não quitado — a situação
+	# resumida sozinha não basta, porque ela também marca o parcial no prazo.
+	inadimplentes = [
+		a
+		for a in associados
+		if any(linha["status"] in SITUACOES_INADIMPLENTES and linha["vencido"] for linha in a["linhas"])
+	]
 
 	return {
 		"meses": [{"ym": chave_mes(mes), "rotulo": rotulo_mes(mes)} for mes in sequencia],
@@ -589,6 +617,14 @@ def apurar(
 				round((quitados_mes[ym] / devidos_mes[ym]) * 100, 2) if devidos_mes[ym] else 0.0
 				for ym in chaves
 			],
+			"inadimplencia": [
+				round((inadimplentes_mes[ym] / devidos_mes[ym]) * 100, 2) if devidos_mes[ym] else 0.0
+				for ym in chaves
+			],
+			"meses_devidos": [devidos_mes[ym] for ym in chaves],
+			"por_situacao": {
+				situacao: [status_mes[situacao][ym] for ym in chaves] for situacao in SITUACOES_DO_MES_DEVIDO
+			},
 		},
 		"totais": {
 			"contribuintes": len(associados),
@@ -601,6 +637,10 @@ def apurar(
 			"meses_quitados": total_quitados,
 			"adimplencia": round((total_quitados / total_devidos) * 100, 2) if total_devidos else 0.0,
 			"com_pendencia": len(com_pendencia),
+			"inadimplentes": len(inadimplentes),
+			"inadimplencia_associados": (
+				round((len(inadimplentes) / len(associados)) * 100, 2) if associados else 0.0
+			),
 			"a_cadastrar": len([a for a in associados if a["acao_cadastro"] == "Cadastrar"]),
 			"a_cancelar": len([a for a in associados if a["acao_cadastro"] == "Cancelar"]),
 			"transacoes_nao_vinculadas": len(nao_vinculadas),

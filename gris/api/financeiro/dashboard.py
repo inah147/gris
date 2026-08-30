@@ -1,6 +1,12 @@
 import frappe
 from frappe.utils import add_months, getdate
 
+from gris.api.financeiro.contribuicoes import (
+	MESES_PADRAO,
+	SITUACOES_DO_MES_DEVIDO,
+	apurar,
+)
+
 # API Financeiro - funções whitelisted migradas de `gris/www/financeiro/dashboard.py`.
 # Mantemos assinatura e lógica originais para minimizar impacto no frontend.
 
@@ -589,76 +595,83 @@ def get_saidas_debito_mensal_por_tipo(
 	return {"labels": labels, "datasets": datasets}
 
 
+# ─────────────────── contribuições mensais ───────────────────
+#
+# Estas três séries vêm da apuração de `gris.api.financeiro.contribuicoes`, a
+# mesma que alimenta a página /financeiro/contribuicoes: um mês está quitado
+# quando o crédito da categoria "Contribuição Mensal" atribuído ao associado,
+# somado ao que sobrou dos meses anteriores, alcança o valor esperado.
+#
+# Antes elas contavam registros de `Pagamento Contribuicao Mensal`, alimentado
+# por schedulers e por marcação manual — o que fazia o painel e a página darem
+# números diferentes para a mesma competência. O DocType segue existindo para o
+# fluxo de cobrança, mas não manda mais em nenhum gráfico.
+
+
+def _apuracao_contribuicoes():
+	"""Apuração dos 12 meses do painel.
+
+	Cada endpoint faz a sua: o painel dispara as chamadas em paralelo, então não
+	há requisição comum onde guardar o resultado. O custo é o mesmo da página de
+	contribuições.
+	"""
+	return apurar(MESES_PADRAO)
+
+
+def _rotulos_curtos(dados):
+	"""Rótulos de mês no formato do painel (MM/AA).
+
+	A apuração rotula em MM/AAAA, que é o certo na página de contribuições. Aqui
+	os gráficos ficam lado a lado com os demais, todos em MM/AA — misturar os dois
+	formatos no mesmo painel salta aos olhos.
+	"""
+	return [f"{mes['ym'][5:]}/{mes['ym'][2:4]}" for mes in dados["meses"]]
+
+
 @frappe.whitelist()
 def get_contribuicoes_mensais_por_status():
-	months, labels, min_day, next_month = _build_month_sequence()
-	query = """
-		SELECT DATE_FORMAT(mes_de_referencia, '%%Y-%%m') AS ym,
-		       COALESCE(status, 'Sem Status') AS status,
-		       COUNT(name) AS qty
-		FROM `tabPagamento Contribuicao Mensal`
-		WHERE mes_de_referencia >= %(min_day)s AND mes_de_referencia < %(next_month)s
-		GROUP BY ym, status
+	"""Quantidade de meses devidos em cada situação, mês a mês.
+
+	Conta obrigações, não associados: um associado com três meses em atraso pesa
+	três. Meses fora da vigência da cobrança não entram — não há o que cobrar
+	neles, e empilhá-los achataria as barras que interessam.
 	"""
-	rows = frappe.db.sql(query, {"min_day": min_day, "next_month": next_month}, as_dict=True)
-	status_month_map = {}
-	statuses = set()
-	for r in rows:
-		statuses.add(r.status)
-		status_month_map.setdefault(r.status, {})[r.ym] = int(r.qty) if r.qty else 0
-	statuses = sorted(statuses)
-	datasets = []
-	for st in statuses:
-		vals = []
-		for m in months:
-			vals.append(status_month_map.get(st, {}).get(m.strftime("%Y-%m"), 0))
-		datasets.append({"name": st, "chartType": "bar", "values": vals})
-	return {"labels": labels, "datasets": datasets}
+	dados = _apuracao_contribuicoes()
+	por_situacao = dados["series"]["por_situacao"]
+
+	datasets = [
+		{"name": situacao, "chartType": "bar", "values": por_situacao[situacao]}
+		for situacao in SITUACOES_DO_MES_DEVIDO
+		if any(por_situacao[situacao])
+	]
+	return {"labels": _rotulos_curtos(dados), "datasets": datasets}
 
 
 @frappe.whitelist()
 def get_contribuicoes_mensais_inadimplencia():
-	months, labels, min_day, next_month = _build_month_sequence()
-	query = """
-		SELECT DATE_FORMAT(mes_de_referencia, '%%Y-%%m') AS ym,
-		       COUNT(name) AS total,
-		       SUM(CASE WHEN status = 'Atrasado' THEN 1 ELSE 0 END) AS atrasados
-		FROM `tabPagamento Contribuicao Mensal`
-		WHERE mes_de_referencia >= %(min_day)s AND mes_de_referencia < %(next_month)s
-		GROUP BY ym
-	"""
-	rows = frappe.db.sql(query, {"min_day": min_day, "next_month": next_month}, as_dict=True)
-	row_map = {r.ym: r for r in rows}
-	values = []
-	for m in months:
-		row = row_map.get(m.strftime("%Y-%m"))
-		if row and row.total:
-			pct = (float(row.atrasados or 0) / float(row.total)) * 100.0
-		else:
-			pct = 0.0
-		values.append(round(pct, 2))
+	"""Percentual de meses vencidos e não quitados sobre os meses devidos."""
+	dados = _apuracao_contribuicoes()
 	return {
-		"labels": labels,
-		"datasets": [{"name": "Inadimplência (%)", "chartType": "line", "values": values}],
+		"labels": _rotulos_curtos(dados),
+		"datasets": [
+			{
+				"name": "Inadimplência (%)",
+				"chartType": "line",
+				"values": dados["series"]["inadimplencia"],
+			}
+		],
 	}
 
 
 @frappe.whitelist()
 def get_inadimplencia_historica_12m():  # Renomeado de *_6m mantendo 12 meses
-	_, _labels, min_day, next_month = _build_month_sequence()
-	query = """
-		SELECT
-		  (SELECT COUNT(DISTINCT associado) FROM `tabPagamento Contribuicao Mensal`
-		    WHERE mes_de_referencia >= %(min_day)s AND mes_de_referencia < %(next_month)s) AS total_associados,
-		  (SELECT COUNT(DISTINCT associado) FROM `tabPagamento Contribuicao Mensal`
-		    WHERE mes_de_referencia >= %(min_day)s AND mes_de_referencia < %(next_month)s
-		      AND status = 'Atrasado') AS atrasados
-	"""
-	row = frappe.db.sql(query, {"min_day": min_day, "next_month": next_month}, as_dict=True)
-	total_ass = float(row[0].total_associados) if row and row[0].total_associados else 0.0
-	atrasados = float(row[0].atrasados) if row and row[0].atrasados else 0.0
-	pct = (atrasados / total_ass * 100.0) if total_ass else 0.0
-	return {"percent": round(pct, 2), "atrasado": int(atrasados), "total": int(total_ass)}
+	"""Associados com ao menos um mês vencido e não quitado no período."""
+	totais = _apuracao_contribuicoes()["totais"]
+	return {
+		"percent": totais["inadimplencia_associados"],
+		"atrasado": totais["inadimplentes"],
+		"total": totais["contribuintes"],
+	}
 
 
 # Alias para compatibilidade temporária (frontend ainda chama *_6m)

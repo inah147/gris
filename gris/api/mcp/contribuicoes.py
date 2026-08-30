@@ -3,7 +3,7 @@
 A apuração é a de ``gris.api.financeiro.contribuicoes``: a fonte de verdade são
 as transações de crédito do extrato com categoria "Contribuição Mensal" e
 beneficiário preenchido — não o DocType ``Pagamento Contribuicao Mensal``, que
-continua servindo ao fluxo de cobrança (schedulers e gráficos do painel).
+continua servindo apenas ao fluxo de cobrança (schedulers).
 
 Por isso, a forma de fazer uma contribuição "contar" é vincular a transação ao
 associado: use 'listar_contribuicoes_nao_vinculadas' e depois

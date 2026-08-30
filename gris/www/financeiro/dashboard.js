@@ -233,7 +233,7 @@
 			if (typeof data.percent === "number") {
 				el.textContent = formatPercent(data.percent, 2);
 				if (desc && typeof data.atrasado === "number" && typeof data.total === "number") {
-					desc.textContent = `Últimos 12 meses • ${data.atrasado}/${data.total} associados`;
+					desc.textContent = `Últimos 12 meses • ${data.atrasado}/${data.total} contribuintes`;
 				}
 			} else {
 				el.textContent = "0,00%";
@@ -590,12 +590,13 @@
 			method: "gris.api.financeiro.dashboard.get_contribuicoes_mensais_por_status",
 		});
 		const payload = resp.message || resp || {};
+		// Situações da apuração de contribuições, na mesma paleta segura para
+		// daltonismo usada em /financeiro/contribuicoes.
 		const colorMap = {
-			"Em Aberto": "#E69F00",
 			Pago: "#009E73",
+			Parcial: "#E69F00",
+			"Em Aberto": "#0072B2",
 			Atrasado: "#D55E00",
-			Cancelado: "#000000",
-			"Sem Status": "#56B4E9",
 		};
 
 		if (
@@ -623,7 +624,7 @@
 								(item) =>
 									`${item.marker}${item.seriesName}: <strong>${formatNumber(
 										item.value
-									)}</strong> contrib.`
+									)}</strong> meses`
 							)
 							.join("<br/>");
 						return `<strong>${params[0]?.axisValue || ""}</strong><br/>${rows}`;

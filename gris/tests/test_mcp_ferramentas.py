@@ -352,7 +352,7 @@ class TestBeneficiarioNaCategorizacao(TestCase):
 		doc = MagicMock()
 		with (
 			patch.object(financeiro.frappe.db, "exists", return_value=True),
-			patch.object(financeiro.frappe.db, "get_value", return_value="Escotista"),
+			patch.object(financeiro.frappe.db, "get_value", return_value="Beneficiário"),
 			patch.object(financeiro.frappe, "get_all", return_value=[]),
 			patch.object(financeiro.frappe, "get_doc", return_value=doc),
 		):

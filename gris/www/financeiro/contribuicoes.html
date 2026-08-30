@@ -84,7 +84,7 @@
 			<p class="m-0 text-sm text-muted-foreground">Contribuintes</p>
 			<p class="m-0 mt-1 text-2xl font-semibold text-foreground contrib-num">{{ totais.contribuintes }}</p>
 			<p class="m-0 mt-2 text-xs text-muted-foreground">
-				{{ totais.com_pendencia }} com pendência &middot; Dirigentes não contribuem
+				{{ totais.com_pendencia }} com pendência &middot; Escotistas e Dirigentes não contribuem
 			</p>
 		</section>
 	</article>
@@ -197,7 +197,7 @@
 {% else %}
 	{{ empty(
 		title="Nenhum contribuinte cadastrado",
-		description="Associados ativos das categorias Beneficiário e Escotista aparecem aqui. Dirigentes não contribuem.",
+		description="Associados ativos da categoria Beneficiário aparecem aqui. Escotistas e Dirigentes não contribuem.",
 		icon=lucide_icon("users", size="md")
 	) }}
 {% endif %}

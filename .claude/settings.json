@@ -37,6 +37,8 @@
       "Bash(docker compose exec backend bench --site gris.local run-tests:*)",
       "Bash(gris-lint)",
       "Bash(bench-gris run-tests:*)",
+      "Bash(gris-test)",
+      "Bash(gris-test:*)",
       "Bash(pre-commit run:*)"
     ],
     "soft_deny": [

@@ -97,31 +97,34 @@ class TestSeriesDaApuracao(FrappeTestCase):
 		self.assertLessEqual(totais["inadimplentes"], totais["contribuintes"])
 
 
+# Apuração de dois meses com um de cada situação relevante, para checar o
+# contrato dos endpoints sem depender do que existe no banco.
+APURACAO_FALSA = {
+	"meses": [{"ym": "2026-07", "rotulo": "07/2026"}, {"ym": "2026-08", "rotulo": "08/2026"}],
+	"series": {
+		"labels": ["07/2026", "08/2026"],
+		"inadimplencia": [50.0, 25.0],
+		"meses_devidos": [4, 4],
+		"por_situacao": {
+			STATUS_PAGO: [2, 3],
+			STATUS_PARCIAL: [1, 0],
+			STATUS_EM_ABERTO: [0, 0],
+			STATUS_ATRASADO: [1, 1],
+		},
+	},
+	"totais": {
+		"contribuintes": 4,
+		"inadimplentes": 1,
+		"inadimplencia_associados": 25.0,
+	},
+}
+
+
 class TestEndpointsDoPainel(FrappeTestCase):
 	"""Contrato de resposta dos três endpoints, com a apuração controlada."""
 
-	APURACAO = {
-		"meses": [{"ym": "2026-07", "rotulo": "07/2026"}, {"ym": "2026-08", "rotulo": "08/2026"}],
-		"series": {
-			"labels": ["07/2026", "08/2026"],
-			"inadimplencia": [50.0, 25.0],
-			"meses_devidos": [4, 4],
-			"por_situacao": {
-				STATUS_PAGO: [2, 3],
-				STATUS_PARCIAL: [1, 0],
-				STATUS_EM_ABERTO: [0, 0],
-				STATUS_ATRASADO: [1, 1],
-			},
-		},
-		"totais": {
-			"contribuintes": 4,
-			"inadimplentes": 1,
-			"inadimplencia_associados": 25.0,
-		},
-	}
-
 	def _com_apuracao(self):
-		return mock.patch.object(dashboard, "apurar", return_value=self.APURACAO)
+		return mock.patch.object(dashboard, "apurar", return_value=APURACAO_FALSA)
 
 	def test_status_por_mes_devolve_uma_serie_por_situacao_presente(self):
 		with self._com_apuracao():
@@ -154,9 +157,7 @@ class TestEndpointsDoPainel(FrappeTestCase):
 		self.assertEqual(payload, {"percent": 25.0, "atrasado": 1, "total": 4})
 
 	def test_alias_de_6m_continua_apontando_para_o_de_12m(self):
-		self.assertIs(
-			dashboard.get_inadimplencia_historica_6m, dashboard.get_inadimplencia_historica_12m
-		)
+		self.assertIs(dashboard.get_inadimplencia_historica_6m, dashboard.get_inadimplencia_historica_12m)
 
 	def test_painel_sem_contribuintes_nao_quebra(self):
 		vazio = {

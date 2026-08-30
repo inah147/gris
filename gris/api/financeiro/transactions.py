@@ -160,6 +160,7 @@ EXTRATO_COLUNAS = (
 	{"key": "destino", "label": "Destino", "tipo": "texto"},
 	{"key": "valor_absoluto", "label": "Valor absoluto", "tipo": "moeda"},
 	{"key": "data_transacao", "label": "Data da transação", "tipo": "data"},
+	{"key": "mes_competencia", "label": "Mês de competência", "tipo": "data"},
 	{"key": "data_deposito", "label": "Data de depósito", "tipo": "datahora"},
 	{
 		"key": "fixo_variavel",

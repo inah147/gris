@@ -14,8 +14,6 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import getdate
 
-from gris.financeiro.doctype.cobranca_infinitepay import cobranca_infinitepay as cobranca_doctype
-
 from gris.api.financeiro.cobranca_contribuicao import (
 	FINALIDADE_CONTRIBUICAO,
 	PREFIXO_ID_TRANSACAO,
@@ -38,6 +36,7 @@ from gris.api.financeiro.contribuicoes import (
 	montar_grade,
 )
 from gris.api.responsavel_acesso import get_beneficiarios_associados
+from gris.financeiro.doctype.cobranca_infinitepay import cobranca_infinitepay as cobranca_doctype
 
 HOJE = datetime.date(2026, 8, 22)
 VALOR = 60.0
@@ -200,16 +199,12 @@ class TestBaixaDaCobranca(FrappeTestCase):
 
 		self.assertEqual(primeira, segunda)
 		self.assertEqual(primeira, f"{PREFIXO_ID_TRANSACAO}{cobranca.name}")
-		self.assertEqual(
-			frappe.db.count("Transacao Extrato Geral", {"beneficiario": self.associado}), 1
-		)
+		self.assertEqual(frappe.db.count("Transacao Extrato Geral", {"beneficiario": self.associado}), 1)
 
 	def test_handler_ignora_cobranca_que_nao_foi_paga(self):
 		cobranca = self._criar_cobranca("2026-06", status="Pendente")
 		on_cobranca_atualizada(cobranca)
-		self.assertEqual(
-			frappe.db.count("Transacao Extrato Geral", {"beneficiario": self.associado}), 0
-		)
+		self.assertEqual(frappe.db.count("Transacao Extrato Geral", {"beneficiario": self.associado}), 0)
 
 	def test_handler_ignora_cobranca_avulsa(self):
 		cobranca = self._criar_cobranca("2026-06", status="Pendente")
@@ -217,9 +212,7 @@ class TestBaixaDaCobranca(FrappeTestCase):
 		cobranca.status = "Pago"
 		cobranca.paid_amount = 6000
 		on_cobranca_atualizada(cobranca)
-		self.assertEqual(
-			frappe.db.count("Transacao Extrato Geral", {"beneficiario": self.associado}), 0
-		)
+		self.assertEqual(frappe.db.count("Transacao Extrato Geral", {"beneficiario": self.associado}), 0)
 
 	def test_confirmacao_de_pagamento_da_baixa_pelo_doc_event(self):
 		"""O caminho real: o webhook salva a cobrança como Paga e o extrato recebe o crédito.
@@ -228,21 +221,15 @@ class TestBaixaDaCobranca(FrappeTestCase):
 		`on_update` registrado em `doc_events`.
 		"""
 		cobranca = self._criar_cobranca("2026-06", status="Pendente")
-		self.assertEqual(
-			frappe.db.count("Transacao Extrato Geral", {"beneficiario": self.associado}), 0
-		)
+		self.assertEqual(frappe.db.count("Transacao Extrato Geral", {"beneficiario": self.associado}), 0)
 
 		cobranca.status = "Pago"
 		cobranca.paid_amount = 6000
 		with self._sem_rede():
 			cobranca.save(ignore_permissions=True)
 
-		self.assertEqual(
-			frappe.db.count("Transacao Extrato Geral", {"beneficiario": self.associado}), 1
-		)
-		self.assertTrue(
-			frappe.db.get_value("Cobranca Infinitepay", cobranca.name, "transacao_extrato")
-		)
+		self.assertEqual(frappe.db.count("Transacao Extrato Geral", {"beneficiario": self.associado}), 1)
+		self.assertTrue(frappe.db.get_value("Cobranca Infinitepay", cobranca.name, "transacao_extrato"))
 
 	def test_pagamento_quita_o_mes_atrasado_na_apuracao(self):
 		antes = apurar_associados([self.associado], 6, HOJE)[0]

@@ -74,9 +74,7 @@ def get_context(context):
 	context.beneficiarios = apuracoes
 	context.tem_vinculo = bool(beneficiarios)
 	context.total_pendente = round(sum(a["total_pendente"] for a in apuracoes), 2)
-	context.em_dia = all(
-		a["situacao"] not in (STATUS_ATRASADO, STATUS_PARCIAL) for a in apuracoes
-	)
+	context.em_dia = all(a["situacao"] not in (STATUS_ATRASADO, STATUS_PARCIAL) for a in apuracoes)
 
 	return context
 

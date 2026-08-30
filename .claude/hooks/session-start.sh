@@ -11,8 +11,10 @@
 # em cache e as sessões seguintes reaproveitam.
 #
 # Como rodar os testes depois que o hook termina:
-#   bench-gris run-tests --app gris
-#   bench-gris run-tests --module gris.tests.test_contribuicoes_transacoes
+#   gris-test                   suíte inteira do app (~18s)
+#   gris-test contribuicao      só o sistema de contribuição mensal (~4s)
+#   gris-test test_extrato_listagem     um módulo avulso
+#   bench-gris run-tests --app gris     a forma longa, se precisar de outras flags
 #
 # Lint, antes de commitar (roda o mesmo que o job "Frappe Linter" do CI):
 #   gris-lint
@@ -139,6 +141,20 @@ if [ ! -d "$BENCH/apps/frappe" ]; then
       && bench set-config -g redis_socketio 'redis://127.0.0.1:12000'"
 fi
 
+# ── 6b. Manifesto de assets vazio ───────────────────────────────────────────
+# `bench run-tests --app gris` cria usuários de teste, e o Frappe monta o e-mail
+# de boas-vindas de cada um. Montar esse e-mail passa por `bundled_asset()`, que
+# lê `sites/assets/assets.json` — arquivo que o `bench build` geraria e que este
+# bench, sem frontend, nunca gera. Sem ele a leitura devolve None e a suíte
+# inteira morre no bootstrap com `AttributeError: 'NoneType' object has no
+# attribute 'get'`, antes do primeiro teste.
+#
+# Um objeto vazio basta: nenhum teste de backend resolve caminho de asset, e o
+# `bundled_asset` cai no fallback de devolver o caminho original.
+mkdir -p "$BENCH/sites/assets"
+[ -f "$BENCH/sites/assets/assets.json" ] || printf '{}' > "$BENCH/sites/assets/assets.json"
+chown -R frappe:frappe "$BENCH/sites/assets"
+
 # ── 7. O app é um symlink para o repositório: editou, vale na hora ──────────
 chmod o+rx /home/user "$REPO" 2>/dev/null || true
 if [ ! -L "$BENCH/apps/gris" ]; then
@@ -230,6 +246,50 @@ exec su - frappe -c "export PATH=/opt/nofrontend:\\\$PATH; cd $BENCH && bench --
 BENCHEOF
 chmod +x /usr/local/bin/bench-gris
 
+cat > /usr/local/bin/gris-test <<'TESTEOF'
+#!/bin/bash
+# Atalho para os testes, com os nomes de módulo que mais se repetem.
+#
+#   gris-test                 suíte inteira do app (~18s)
+#   gris-test contribuicao    só o sistema de contribuição mensal (~4s)
+#   gris-test test_extrato_listagem gris.api.financeiro.test_conciliacao
+#                             módulos avulsos; nome curto vira gris.tests.<nome>
+#
+# Vale a pena rodar o conjunto pequeno enquanto se edita e a suíte inteira antes
+# de commitar: a diferença é de segundos, e a suíte pega o que o recorte não vê
+# (foi um teste de outro módulo que apanhou a última regressão de schema).
+set -uo pipefail
+
+# Módulos que cobrem a contribuição mensal ponta a ponta: apuração, cobrança
+# InfinitePay, baixa no extrato, séries do painel e ferramentas MCP.
+CONTRIBUICAO="
+gris.tests.test_contribuicoes_transacoes
+gris.tests.test_cobranca_contribuicao
+gris.tests.test_dashboard_contribuicoes
+gris.tests.test_mcp_contribuicoes
+"
+
+if [ "$#" -eq 0 ]; then
+  exec bench-gris run-tests --app gris
+fi
+
+if [ "$1" = "contribuicao" ] || [ "$1" = "contrib" ]; then
+  set -- $CONTRIBUICAO
+fi
+
+falhou=0
+for modulo in "$@"; do
+  case "$modulo" in
+    *.*) ;;                        # já veio com o caminho completo
+    *) modulo="gris.tests.$modulo" ;;
+  esac
+  echo "== $modulo =="
+  bench-gris run-tests --module "$modulo" || falhou=1
+done
+exit "$falhou"
+TESTEOF
+chmod +x /usr/local/bin/gris-test
+
 # Heredoc citado de propósito: nada é expandido aqui, então o `$falhou` do
 # script chega inteiro. Os dois caminhos entram logo abaixo, via sed.
 cat > /usr/local/bin/gris-lint <<'LINTEOF'
@@ -281,4 +341,13 @@ LINTEOF
 sed -i "s|@REPO@|$REPO|g; s|@RULES@|$SEMGREP_RULES|g" /usr/local/bin/gris-lint
 chmod +x /usr/local/bin/gris-lint
 
-log "pronto — testes: bench-gris run-tests --app gris | lint: gris-lint"
+# Caminhos do bench ficam disponíveis para o resto da sessão, para quem precisar
+# chamar o bench direto em vez de pelos atalhos.
+if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+  {
+    echo "export GRIS_BENCH=$BENCH"
+    echo "export GRIS_SITE=$SITE"
+  } >> "$CLAUDE_ENV_FILE"
+fi
+
+log "pronto — testes: gris-test (tudo) ou gris-test contribuicao | lint: gris-lint"

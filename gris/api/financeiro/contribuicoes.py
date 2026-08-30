@@ -24,9 +24,10 @@ from gris.api.portal_access import user_has_access
 # Categoria da transação que representa a contribuição mensal.
 CATEGORIA_CONTRIBUICAO = "Contribuição Mensal"
 
-# Categorias de associado que contribuem. Dirigente não paga contribuição e,
-# por não estar nesta tupla, jamais entra na apuração nem nos totais.
-CATEGORIAS_CONTRIBUINTES = ("Beneficiário", "Escotista")
+# Categorias de associado que contribuem. Só Beneficiário paga contribuição
+# mensal — Dirigente e Escotista não estão nesta tupla e jamais entram na
+# apuração nem nos totais.
+CATEGORIAS_CONTRIBUINTES = ("Beneficiário",)
 
 # Data de competência da contribuição. `mes_competencia` vem primeiro porque é o
 # único campo que diz explicitamente a qual mês a contribuição se refere — é ele
@@ -659,8 +660,9 @@ def apurar_associados(
 	que já sabem de quem estão falando — o responsável olhando os beneficiários
 	vinculados a ele e a cobrança de um contribuinte específico.
 
-	Associados de categoria não contribuinte (Dirigente) são descartados aqui
-	pelo mesmo motivo de sempre: eles não pagam contribuição mensal.
+	Associados de categoria não contribuinte (Dirigente, Escotista) são
+	descartados aqui pelo mesmo motivo de sempre: eles não pagam contribuição
+	mensal.
 	"""
 	if not nomes:
 		return []

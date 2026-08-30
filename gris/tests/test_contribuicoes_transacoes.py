@@ -70,9 +70,10 @@ class TestApuracaoContribuicoes(FrappeTestCase):
 
 	# ── apuração mês a mês ───────────────────────────────────────────
 
-	def test_dirigente_fora_das_categorias_contribuintes(self):
+	def test_apenas_beneficiario_contribui(self):
 		self.assertNotIn("Dirigente", CATEGORIAS_CONTRIBUINTES)
-		self.assertEqual(set(CATEGORIAS_CONTRIBUINTES), {"Beneficiário", "Escotista"})
+		self.assertNotIn("Escotista", CATEGORIAS_CONTRIBUINTES)
+		self.assertEqual(set(CATEGORIAS_CONTRIBUINTES), {"Beneficiário"})
 
 	def test_pagamento_em_dia_quita_todos_os_meses(self):
 		grade = self._grade(self._todos_os_meses())

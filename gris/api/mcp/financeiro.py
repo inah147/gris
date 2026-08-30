@@ -225,8 +225,8 @@ def listar_opcoes_financeiras() -> dict:
 def _validar_beneficiario(ids: list[str], beneficiario: str, categoria: str | None) -> None:
 	"""O beneficiário só vale para contribuição mensal e para quem contribui.
 
-	Atribuir a um Dirigente (ou a uma transação de outra categoria) faria o valor
-	sumir da apuração sem erro nenhum — melhor recusar aqui.
+	Atribuir a um Dirigente ou Escotista (ou a uma transação de outra categoria)
+	faria o valor sumir da apuração sem erro nenhum — melhor recusar aqui.
 	"""
 	from gris.api.financeiro.contribuicoes import CATEGORIAS_CONTRIBUINTES
 

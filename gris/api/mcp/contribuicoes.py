@@ -119,7 +119,7 @@ def resumo_contribuicoes(meses: int = servico.MESES_PADRAO) -> dict:
 		"categoria": {
 			"type": "string",
 			"enum": list(servico.CATEGORIAS_CONTRIBUINTES),
-			"description": "Categoria do associado (Dirigente não contribui).",
+			"description": "Categoria do associado (Dirigente e Escotista não contribuem).",
 		},
 		"busca": {"type": "string", "description": "Parte do nome do associado."},
 		"incluir_meses": {

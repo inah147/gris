@@ -200,7 +200,7 @@ def get_context(context):
 	context.opcoes_centro_de_custo = get_distinct("Centro de Custo", "name")
 	context.opcoes_conta_fixa = get_distinct("Conta Fixa", "name")
 
-	# Beneficiários: associados das categorias que contribuem (Dirigente não paga).
+	# Beneficiários: associados das categorias que contribuem (Dirigente e Escotista não pagam).
 	context.opcoes_beneficiario = [
 		{"name": r["name"], "nome_completo": r.get("nome_completo", r["name"])}
 		for r in frappe.get_all(

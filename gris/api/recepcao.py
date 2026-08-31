@@ -316,7 +316,7 @@ def adicionar_comentario(novo_associado_name: str, content: str):
 			"content": content,
 		}
 	)
-	comment.insert()
+	comment.insert(ignore_permissions=True)
 
 	clean_text = strip_html((content or "").replace("</p>", "\n").replace("<br>", "\n"))
 
@@ -358,7 +358,7 @@ def editar_comentario(comment_name: str, content: str):
 		frappe.throw(_("Você não tem permissão para editar este comentário."), frappe.PermissionError)
 
 	comment.content = content
-	comment.save()
+	comment.save(ignore_permissions=True)
 
 	clean_text = strip_html((content or "").replace("</p>", "\n").replace("<br>", "\n"))
 

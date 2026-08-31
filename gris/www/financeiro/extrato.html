@@ -67,6 +67,10 @@
 			</summary>
 			<form method="get" class="extrato-filtros">
 				<div class="field">
+					<label class="label" for="extrato-filter-descricao">Descrição contém</label>
+					<input type="search" id="extrato-filter-descricao" name="descricao" class="input" placeholder="Buscar na descrição…" value="{{ filtros_ativos.descricao or '' }}" />
+				</div>
+				<div class="field">
 					<label class="label" for="extrato-filter-data-inicio">Data início</label>
 					{{ datepicker(id="extrato-filter-data-inicio", name="data_inicio", value=(filtros_ativos.data_inicio or ''), placeholder="Selecione a data") }}
 				</div>

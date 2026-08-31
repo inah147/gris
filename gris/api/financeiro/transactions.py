@@ -93,6 +93,11 @@ EXTRATO_FILTER_FIELDS = (
 	"fonte",
 )
 
+#: Campo usado na busca textual por descrição; é o mesmo exibido por padrão
+#: no grid (`descricao_reduzida`), então a busca não vaza o conteúdo da
+#: coluna `descricao`, restrita ao Gestor Financeiro.
+EXTRATO_BUSCA_DESCRICAO_CAMPO = "descricao_reduzida"
+
 #: Colunas do grid do extrato, na ordem em que aparecem na tabela.
 #:
 #: Todas as informações da transação estão disponíveis; `padrao` define quais
@@ -216,8 +221,8 @@ def build_extrato_filters(request_args: dict | None) -> dict:
 	"""Monta os filtros do extrato a partir dos argumentos da requisição.
 
 	Apenas campos previstos em `EXTRATO_FILTER_FIELDS` (mais o intervalo de
-	datas) são considerados, então valores arbitrários do cliente não viram
-	filtro de banco.
+	datas e a busca textual por descrição) são considerados, então valores
+	arbitrários do cliente não viram filtro de banco.
 	"""
 	request_args = request_args or {}
 	filters: dict = {}
@@ -235,6 +240,13 @@ def build_extrato_filters(request_args: dict | None) -> dict:
 		valor = request_args.get(campo)
 		if valor not in (None, "", "null"):
 			filters[campo] = valor
+
+	busca_descricao = request_args.get("descricao")
+	if busca_descricao not in (None, "", "null"):
+		# Escapa curingas do LIKE (%, _) para o texto ser tratado como literal;
+		# o collation padrão do MySQL já torna a comparação case-insensitive.
+		termo = busca_descricao.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+		filters[EXTRATO_BUSCA_DESCRICAO_CAMPO] = ["like", f"%{termo}%"]
 
 	return filters
 

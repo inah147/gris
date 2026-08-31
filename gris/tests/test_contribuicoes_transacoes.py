@@ -257,19 +257,28 @@ class TestValorEmAtraso(FrappeTestCase):
 		self.assertEqual(linha["status"], STATUS_PAGO)
 		self.assertFalse(linha["em_atraso"])
 
-	def test_pagamento_do_valor_base_depois_do_vencimento_deixa_a_diferenca(self):
-		"""Quem paga 60 depois do vencimento fica devendo os 10 do atraso."""
+	def test_pagamento_do_valor_base_depois_do_vencimento_quita_o_mes(self):
+		"""Pagar 60 depois do vencimento fecha o mês: o acréscimo é o que se cobra."""
 		grade = self._grade({"2026-03": _mes(_pagamento(VALOR, "2026-04-02"))})
 		linha = self._linha(grade, "2026-03")
 		self.assertEqual(linha["esperado"], VALOR_ATRASO)
+		self.assertEqual(linha["status"], STATUS_PAGO)
+		self.assertEqual(linha["falta"], 0.0)
+		self.assertTrue(linha["quitado_sem_acrescimo"])
+
+	def test_pagamento_menor_que_o_valor_em_dia_nao_quita(self):
+		grade = self._grade({"2026-03": _mes(_pagamento(30.0, "2026-04-02"))})
+		linha = self._linha(grade, "2026-03")
 		self.assertEqual(linha["status"], STATUS_PARCIAL)
-		self.assertEqual(linha["falta"], round(VALOR_ATRASO - VALOR, 2))
+		# A cobrança do que falta continua saindo pelo valor cheio do mês vencido.
+		self.assertEqual(linha["falta"], round(VALOR_ATRASO - 30.0, 2))
 
 	def test_pagamento_do_valor_de_atraso_quita_o_mes(self):
 		grade = self._grade({"2026-03": _mes(_pagamento(VALOR_ATRASO, "2026-04-02"))})
 		linha = self._linha(grade, "2026-03")
 		self.assertEqual(linha["esperado"], VALOR_ATRASO)
 		self.assertEqual(linha["status"], STATUS_PAGO)
+		self.assertFalse(linha["quitado_sem_acrescimo"])
 
 	def test_mes_corrente_antes_do_vencimento_nao_encarece(self):
 		grade = self._grade({}, hoje=datetime.date(2026, 8, 5))
@@ -419,15 +428,26 @@ class TestQuitacaoRetroativa(FrappeTestCase):
 		self.assertEqual(status["2026-08"], STATUS_ATRASADO)
 		self.assertEqual(grade["credito"], 0.0)
 
-	def test_multiplo_do_valor_base_quita_o_que_alcanca(self):
-		"""180 = três mensalidades em dia, mas os meses atrasados custam 70."""
+	def test_multiplo_do_valor_base_fecha_tres_meses(self):
+		"""180 = três mensalidades: quitar mais um mês vale mais que o acréscimo."""
 		grade = self._grade({"2026-08": _mes(_pagamento(3 * VALOR, "2026-08-05", infinitepay=True))})
 		linhas = {linha["ym"]: linha for linha in grade["linhas"]}
 		self.assertEqual(linhas["2026-03"]["status"], STATUS_PAGO)
 		self.assertEqual(linhas["2026-04"]["status"], STATUS_PAGO)
-		self.assertEqual(linhas["2026-05"]["status"], STATUS_PARCIAL)
-		self.assertEqual(linhas["2026-05"]["falta"], 30.0)
+		self.assertEqual(linhas["2026-05"]["status"], STATUS_PAGO)
+		self.assertEqual(linhas["2026-05"]["coberto"], VALOR)
+		self.assertEqual(linhas["2026-05"]["falta"], 0.0)
+		self.assertEqual(linhas["2026-06"]["status"], STATUS_ATRASADO)
 		self.assertTrue(linhas["2026-03"]["quitacao_retroativa"])
+
+	def test_multiplo_do_valor_de_atraso_paga_o_acrescimo_dos_mesmos_meses(self):
+		"""210 fecha os mesmos três meses pelo valor cheio, sem tocar num quarto."""
+		grade = self._grade({"2026-08": _mes(_pagamento(3 * VALOR_ATRASO, "2026-08-05", infinitepay=True))})
+		linhas = {linha["ym"]: linha for linha in grade["linhas"]}
+		self.assertEqual(linhas["2026-05"]["coberto"], VALOR_ATRASO)
+		self.assertFalse(linhas["2026-05"]["quitado_sem_acrescimo"])
+		self.assertEqual(linhas["2026-06"]["coberto"], 0.0)
+		self.assertEqual(linhas["2026-06"]["status"], STATUS_ATRASADO)
 
 	def test_pagamento_fora_da_infinitepay_continua_virando_credito(self):
 		grade = self._grade({"2026-08": _mes(_pagamento(3 * VALOR_ATRASO, "2026-08-05"))})

@@ -56,7 +56,8 @@
 	// Página de anos mostrada quando o usuário abre a seleção de ano.
 	const YEARS_PER_PAGE = 12;
 
-	const yearPageStart = (year) => year - (((year % YEARS_PER_PAGE) + YEARS_PER_PAGE) % YEARS_PER_PAGE);
+	const yearPageStart = (year) =>
+		year - (((year % YEARS_PER_PAGE) + YEARS_PER_PAGE) % YEARS_PER_PAGE);
 
 	const weekdayLabels = (locale) => {
 		const base = new Date(2024, 11, 1); // Sunday
@@ -328,7 +329,10 @@
 			if (monthRow) monthRow.hidden = !isDaysView;
 			// As setas do ano andam de ano em ano no calendário e de página em página
 			// quando a lista de anos está aberta.
-			yearPrevBtn?.setAttribute("aria-label", isDaysView ? "Ano anterior" : "Anos anteriores");
+			yearPrevBtn?.setAttribute(
+				"aria-label",
+				isDaysView ? "Ano anterior" : "Anos anteriores"
+			);
 			yearNextBtn?.setAttribute("aria-label", isDaysView ? "Próximo ano" : "Próximos anos");
 			yearToggle?.setAttribute("aria-expanded", isDaysView ? "false" : "true");
 			gridEl.classList.toggle("datepicker-popover__grid--compact", !isDaysView);

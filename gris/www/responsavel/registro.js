@@ -719,7 +719,10 @@ frappe.ready(function () {
 					return;
 				}
 
-				setCpfSearchStatus(card, "Dados recuperados do cadastro existente. Revise antes de salvar.");
+				setCpfSearchStatus(
+					card,
+					"Dados recuperados do cadastro existente. Revise antes de salvar."
+				);
 				showToast(
 					"success",
 					"Responsável encontrado",

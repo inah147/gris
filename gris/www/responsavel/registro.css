@@ -101,6 +101,53 @@
 	line-height: var(--leading-normal);
 }
 
+.registro-field-hint,
+.registro-card-hint {
+	margin: calc(var(--spacing) * 1) 0 0;
+	color: var(--color-muted-foreground);
+	font-size: var(--text-sm);
+	line-height: var(--leading-normal);
+}
+
+.registro-field-hint--error {
+	color: var(--color-destructive);
+}
+
+.registro-cpf-group {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+}
+
+.registro-cpf-group .input {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.registro-cpf-search {
+	flex: 0 0 auto;
+	white-space: nowrap;
+}
+
+.registro-add-responsavel {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: calc(var(--spacing) * 3);
+	margin-block-start: calc(var(--spacing) * 4);
+}
+
+.registro-add-responsavel .registro-card-hint {
+	margin: 0;
+}
+
+.responsavel-card__header-actions {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+	flex-shrink: 0;
+}
+
 .registro-field [aria-invalid="true"],
 .registro-control[aria-invalid="true"],
 .registro-select[aria-invalid="true"] > button,
@@ -237,6 +284,13 @@
 .registro-dialog > * > footer,
 .registro-dialog--wide > * > footer {
 	flex-shrink: 0;
+}
+
+.registro-dialog-message {
+	margin: 0;
+	color: var(--color-foreground);
+	font-size: var(--text-base);
+	line-height: var(--leading-relaxed);
 }
 
 .registro-dialog-body {

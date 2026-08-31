@@ -76,9 +76,50 @@
 
 .datepicker-popover__header {
   display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin-bottom: 0.5rem;
+}
+
+.datepicker-popover__row {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.5rem;
+  gap: 0.25rem;
+}
+
+/* Ano em cima: é o atalho para trocar de ano sem navegar mês a mês. */
+.datepicker-popover__year {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  appearance: none;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.datepicker-popover__year:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.datepicker-popover__year:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.datepicker-popover__year[aria-expanded="true"] {
+  background: var(--accent);
+  color: var(--accent-foreground);
 }
 
 .datepicker-popover__title {
@@ -132,6 +173,16 @@
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 2px;
+}
+
+/* Seleção de mês e de ano: 3 colunas no lugar das 7 do calendário. */
+.datepicker-popover__grid--compact {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.datepicker-cell--wide {
+  height: 2.5rem;
 }
 
 .datepicker-cell {

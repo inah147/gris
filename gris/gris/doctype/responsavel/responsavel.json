@@ -52,7 +52,7 @@
    "fieldname": "sexo",
    "fieldtype": "Select",
    "label": "Sexo",
-   "options": "Femin\u00ednio\nMasculino"
+   "options": "Feminino\nMasculino"
   },
   {
    "fieldname": "estado_civil",
@@ -172,7 +172,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-03 13:42:13.695388",
+ "modified": "2026-08-31 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Responsavel",

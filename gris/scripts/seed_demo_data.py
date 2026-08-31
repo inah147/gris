@@ -262,7 +262,7 @@ def _seed_novos_associados():
 			"nome_completo": "Fernanda Lima Rocha",
 			"cpf": "66666666666",
 			"data_de_nascimento": add_years(nowdate(), -10),
-			"sexo": "Feminínio",
+			"sexo": "Feminino",
 			"ramo": "Lobinho",
 			"status": "Visita Agendada",
 			"visita_agendada": 1,

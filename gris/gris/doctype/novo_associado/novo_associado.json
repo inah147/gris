@@ -81,7 +81,7 @@
    "fieldname": "sexo",
    "fieldtype": "Select",
    "label": "Sexo",
-   "options": "Femin\u00ednio\nMasculino"
+   "options": "Feminino\nMasculino"
   },
   {
    "default": "0",
@@ -151,7 +151,7 @@
    "fieldname": "escolaridade",
    "fieldtype": "Select",
    "label": "Escolaridade",
-   "options": "Ensino fundamental incompleto\nEnsino fundamental completo\nEnsino m\u00e9dio incompleto\nEnsino m\u00e9dio completo\nEncino superior incompleto\nEnsino superior completo\nEspecializa\u00e7\u00e3o completa\nEspecializa\u00e7\u00e3o incompleta\nMestrado incompleto\nMestrado completo\nDoutorado incompleto\nDoutorado completo\nP\u00f3s doutorado incompleto\nP\u00f3s doutorado completo"
+   "options": "Ensino fundamental incompleto\nEnsino fundamental completo\nEnsino m\u00e9dio incompleto\nEnsino m\u00e9dio completo\nEnsino superior incompleto\nEnsino superior completo\nEspecializa\u00e7\u00e3o completa\nEspecializa\u00e7\u00e3o incompleta\nMestrado incompleto\nMestrado completo\nDoutorado incompleto\nDoutorado completo\nP\u00f3s doutorado incompleto\nP\u00f3s doutorado completo"
   },
   {
    "fieldname": "profissao",
@@ -362,7 +362,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-08 12:00:00.000000",
+ "modified": "2026-08-31 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Novo Associado",

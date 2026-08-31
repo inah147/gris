@@ -5,6 +5,43 @@
    Basecoat (gris/public/design_system).
    --------------------------------------------------------------- */
 
+/* Cabeçalho com filtro à direita ---------------------------------*/
+.page-header-row {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 4);
+	flex-wrap: wrap;
+}
+
+.page-header-actions {
+	display: flex;
+	gap: calc(var(--spacing) * 2);
+	margin-left: auto;
+}
+
+.kanban-filtro {
+	min-width: 15rem;
+}
+
+.kanban-filtro .select,
+.kanban-filtro .select > button {
+	width: 100%;
+}
+
+/* Card escondido pelo filtro de ramo */
+.kanban-card.filter-hidden {
+	display: none;
+}
+
+.kanban-column__vazio {
+	margin: 0;
+	padding: calc(var(--spacing) * 4) 0;
+	text-align: center;
+	font-size: 0.8125rem;
+	color: var(--color-muted-foreground);
+}
+
 /* Kanban ---------------------------------------------------------*/
 .kanban-container {
 	display: flex;
@@ -435,6 +472,20 @@ dialog.dialog > div > section {
 
 /* Responsivo ------------------------------------------------------*/
 @media (max-width: 768px) {
+	.page-header-row {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.page-header-actions {
+		margin-left: 0;
+		width: 100%;
+	}
+
+	.kanban-filtro {
+		width: 100%;
+	}
+
 	.kanban-column {
 		flex: 0 0 280px;
 		max-height: none;

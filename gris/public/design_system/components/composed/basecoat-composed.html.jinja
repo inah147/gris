@@ -113,15 +113,15 @@
 {% endmacro %}
 
 {% macro button(text, variant="primary", size="default", attrs={}) %}
-{% set classes = "btn" %}
-{% if variant in ["primary", "default"] %}
-  {% set classes = "btn-primary" %}
-{% elif variant in ["secondary", "outline", "ghost", "link", "destructive"] %}
-  {% set classes = "btn-" ~ variant %}
-{% endif %}
-{% if size in ["sm", "lg", "icon", "sm-icon", "lg-icon"] %}
-  {% set classes = classes ~ " btn-" ~ size %}
-{% endif %}
+{# O bundle Basecoat só estiliza a classe combinada (btn-sm-outline). A forma decomposta
+   (btn-outline btn-sm) herda a cor de texto do variant de tamanho e sai apagada — ver
+   docs/components-catalog.md. #}
+{% set variant_part = "primary" if variant in ["primary", "default"] else (variant if variant in ["secondary", "outline", "ghost", "link", "destructive"] else "") %}
+{% set size_part = size if size in ["sm", "lg", "icon", "sm-icon", "lg-icon"] else "" %}
+{% set partes = ["btn"] %}
+{% if size_part %}{% set partes = partes + [size_part] %}{% endif %}
+{% if variant_part %}{% set partes = partes + [variant_part] %}{% endif %}
+{% set classes = partes | join("-") %}
 <button type="button" class="{{ classes }} {{ attrs.class }}"
   {% for key, value in attrs.items() %}
     {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}

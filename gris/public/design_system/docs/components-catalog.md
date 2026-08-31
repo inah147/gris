@@ -162,6 +162,10 @@ Exemplos:
 Eventos: `datepicker:change` no elemento raiz com `detail.value` (string ISO no `single`, `{start, end}` no `range`).
 API pública via DOM: `el.value` (getter/setter), `el.open()`, `el.close()`.
 
+Cabeçalho do popover: duas linhas, cada uma com suas setas `‹ ›`. Em cima o **ano** (as setas andam de ano em ano; clicar no número abre a lista de anos); embaixo o **mês** (setas de mês em mês). Na lista de anos, as setas do ano passam a paginar de 12 em 12 e escolher um ano apenas troca o ano do calendário — o popover continua aberto, no mesmo mês, e volta para a grade de dias. `min`/`max` desabilitam anos cujo período inteiro está fora do intervalo. Datas distantes (nascimento, por exemplo) não exigem navegar mês a mês.
+
+Quem monta o markup do datepicker fora da macro (kanban de tarefas, cadastro de projeto) precisa reproduzir as duas linhas do cabeçalho: `data-datepicker-year-toggle`, `data-datepicker-year-label`, `data-datepicker-year-prev/next` e `data-datepicker-month-row`.
+
 Visual: o gatilho do datepicker tem borda padrão `1px solid var(--color-input)` e radius `--radius-md`, alinhada com `<input>` e `<select>` adjacentes em formulários. Foco e estado expandido usam `--color-ring` (borda + outline).
 
 ### table

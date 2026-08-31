@@ -306,7 +306,9 @@
 
 		// Ações dos modais de confirmação
 		document.getElementById("btnCancelarChamada")?.addEventListener("click", cancelarChamada);
-		document.getElementById("btnConfirmarChamada")?.addEventListener("click", confirmarChamada);
+		document
+			.getElementById("btnConfirmarChamada")
+			?.addEventListener("click", confirmarChamada);
 		document
 			.getElementById("btnCancelarDesistencia")
 			?.addEventListener("click", cancelarDesistencia);

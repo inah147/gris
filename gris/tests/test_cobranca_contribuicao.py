@@ -40,6 +40,7 @@ from gris.financeiro.doctype.cobranca_infinitepay import cobranca_infinitepay as
 
 HOJE = datetime.date(2026, 8, 22)
 VALOR = 60.0
+VALOR_ATRASO = 70.0
 
 
 def _apagar(doctype: str, filtros: dict) -> None:
@@ -123,6 +124,12 @@ class TestBaixaDaCobranca(FrappeTestCase):
 		_apagar("Cobranca Infinitepay", {"associado": self.associado})
 		_apagar("Transacao Extrato Geral", {"beneficiario": self.associado})
 		frappe.db.set_single_value("Configuracao infinitepay", "handle", "grupo-teste")
+		# A apuração cobra o valor de atraso do mês vencido: o teste fixa os dois
+		# valores para não depender do que estiver configurado no site.
+		frappe.db.set_single_value(
+			"Configuracoes Contribuicao Mensal",
+			{"valor_base": VALOR, "valor_atraso": VALOR_ATRASO, "dia_vencimento": 10},
+		)
 
 	def _criar_associado(self) -> str:
 		nome = _nome_por_cpf(self.CPF)
@@ -237,17 +244,30 @@ class TestBaixaDaCobranca(FrappeTestCase):
 		self.assertEqual(situacao_antes["2026-06"], STATUS_ATRASADO)
 		self.assertEqual(situacao_antes["2026-07"], STATUS_ATRASADO)
 
-		cobranca = self._criar_cobranca("2026-06,2026-07", status="Pago", paid_amount=12000)
+		# Dois meses vencidos custam o valor de atraso, não o valor em dia.
+		total = round(2 * VALOR_ATRASO * 100)
+		cobranca = self._criar_cobranca("2026-06,2026-07", status="Pago", paid_amount=total)
 		lancar_baixa(cobranca)
 
 		depois = apurar_associados([self.associado], 6, HOJE)[0]
 		situacao_depois = {linha["ym"]: linha["status"] for linha in depois["linhas"]}
 		self.assertEqual(situacao_depois["2026-06"], STATUS_PAGO)
 		self.assertEqual(situacao_depois["2026-07"], STATUS_PAGO)
-		self.assertEqual(depois["total_recebido"], 120.0)
+		self.assertEqual(depois["total_recebido"], 2 * VALOR_ATRASO)
+
+	def test_pagamento_do_valor_em_dia_nao_quita_o_mes_atrasado(self):
+		"""Pagar 60 num mês que já vencido deixa a diferença do atraso em aberto."""
+		cobranca = self._criar_cobranca("2026-06", status="Pago", paid_amount=int(VALOR * 100))
+		lancar_baixa(cobranca)
+
+		depois = apurar_associados([self.associado], 6, HOJE)[0]
+		junho = next(linha for linha in depois["linhas"] if linha["ym"] == "2026-06")
+		self.assertEqual(junho["status"], STATUS_PARCIAL)
+		self.assertEqual(junho["esperado"], VALOR_ATRASO)
+		self.assertEqual(junho["falta"], round(VALOR_ATRASO - VALOR, 2))
 
 	def test_montar_cobranca_recusa_competencia_ja_quitada(self):
-		cobranca = self._criar_cobranca("2026-06", status="Pago", paid_amount=6000)
+		cobranca = self._criar_cobranca("2026-06", status="Pago", paid_amount=int(VALOR_ATRASO * 100))
 		lancar_baixa(cobranca)
 
 		with self.assertRaises(frappe.ValidationError), self._sem_rede():
@@ -262,7 +282,8 @@ class TestBaixaDaCobranca(FrappeTestCase):
 		self.assertEqual(emitida.associado, self.associado)
 		self.assertEqual(emitida.competencias, "2026-06,2026-07")
 		self.assertEqual(len(emitida.itens), 2)
-		self.assertEqual(resultado["valor_total"], 120.0)
+		# Os dois meses já venceram: a cobrança sai pelo valor de atraso.
+		self.assertEqual(resultado["valor_total"], 2 * VALOR_ATRASO)
 
 
 class TestRecorteDoResponsavel(FrappeTestCase):

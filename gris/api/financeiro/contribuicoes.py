@@ -9,11 +9,29 @@ cobrança (os schedulers que geram e atualizam os registros), mas **não**
 participa do cálculo feito aqui — o dinheiro que entrou é o que manda. Desde a
 migração do painel financeiro, nenhum gráfico lê mais aquele DocType: tudo passa
 por esta apuração.
+
+Três regras de negócio governam o cálculo, todas parametrizáveis em
+`Configuracoes Contribuicao Mensal`:
+
+1. **Valor do mês.** A contribuição custa o valor base (R$ 60) enquanto está
+   dentro do prazo e passa a custar o valor de atraso (R$ 70) quando o mês vence
+   sem ter sido quitado. Quem tem valor próprio no cadastro paga o mesmo
+   acréscimo, não o valor de atraso fixo.
+2. **Carência de registro.** O associado não deve contribuição nos primeiros
+   meses depois do ingresso: quem entra como provisório paga o registro
+   provisório no 1º mês, o definitivo mais o uniforme no 2º e só contribui a
+   partir do 3º; quem entra como definitivo paga o registro no 1º mês e
+   contribui a partir do 2º. `inicio_do_pagamento` no cadastro do associado
+   continua mandando quando está preenchido.
+3. **Quitação retroativa.** Pagamento da InfinitePay em múltiplo de mensalidade
+   quita os meses anteriores em aberto, do mais antigo para o mais novo, antes de
+   sobrar como crédito para os meses seguintes.
 """
 
 from __future__ import annotations
 
 import datetime
+from dataclasses import dataclass
 
 import frappe
 from frappe import _
@@ -37,6 +55,37 @@ CATEGORIAS_CONTRIBUINTES = ("Beneficiário",)
 SQL_DATA_COMPETENCIA = (
 	"COALESCE(mes_competencia, data_transacao, DATE(data_deposito), DATE(timestamp_transacao))"
 )
+
+# Data em que o dinheiro efetivamente entrou. Diferente da competência: é ela que
+# diz se o mês foi quitado dentro do prazo (contribuição normal) ou depois dele
+# (contribuição em atraso, que custa mais).
+SQL_DATA_PAGAMENTO = "COALESCE(data_transacao, DATE(data_deposito), DATE(timestamp_transacao))"
+
+# Carteiras/instituições cujos pagamentos quitam meses anteriores antes de virar
+# crédito para os próximos. Na InfinitePay o responsável paga o link de cobrança
+# com o valor cheio da dívida, então um pagamento de 180 é "três meses atrasados",
+# nunca "este mês e mais dois adiantados".
+CARTEIRAS_RETROATIVAS = ("infinitepay",)
+
+# Tolerância de centavos nas comparações de dinheiro.
+TOLERANCIA = 0.005
+
+# Carência padrão, em meses cheios contados do ingresso, antes da primeira
+# contribuição mensal:
+#
+# - Provisório: 1º mês paga o registro provisório, 2º o registro definitivo mais
+#   o uniforme e só no 3º começa a contribuição mensal (carência de 2 meses).
+# - Definitivo: 1º mês paga o registro definitivo e no 2º começa a contribuição
+#   mensal (carência de 1 mês).
+#
+# Ambas são parametrizáveis em `Configuracoes Contribuicao Mensal`.
+CARENCIA_PROVISORIO = 2
+CARENCIA_DEFINITIVO = 1
+
+# O que se paga em cada mês de carência, na ordem em que eles acontecem.
+MOTIVOS_CARENCIA_PROVISORIO = ("Registro provisório", "Registro definitivo + uniforme")
+MOTIVOS_CARENCIA_DEFINITIVO = ("Registro definitivo",)
+MOTIVO_CARENCIA_GENERICO = "Carência de registro"
 
 # Janela padrão de apuração, em meses (inclui o mês corrente).
 MESES_PADRAO = 12
@@ -123,25 +172,92 @@ def rotulo_mes(data: datetime.date) -> str:
 	return data.strftime("%m/%Y")
 
 
-def get_dia_vencimento() -> int:
-	"""Dia de vencimento configurado, limitado à janela segura do mês."""
+@dataclass(frozen=True)
+class ParametrosContribuicao:
+	"""Regras parametrizáveis da contribuição mensal.
+
+	Tudo o que muda de valor com o tempo (quanto custa o mês, quanto custa o mês
+	em atraso, quando vence e quanta carência o novato tem) mora aqui, para que a
+	apuração continue sendo uma função pura de dados de entrada.
+	"""
+
+	valor_base: float = 0.0
+	valor_atraso: float = 0.0
+	dia_vencimento: int = 10
+	carencia_provisorio: int = CARENCIA_PROVISORIO
+	carencia_definitivo: int = CARENCIA_DEFINITIVO
+
+	@property
+	def acrescimo_atraso(self) -> float:
+		"""Quanto o mês encarece quando vence sem quitação."""
+		return max(0.0, round(float(self.valor_atraso) - float(self.valor_base), 2))
+
+	def valor_em_atraso(self, esperado_mensal: float) -> float:
+		"""Valor do mês vencido sem quitação.
+
+		Quem tem valor próprio no cadastro paga o mesmo acréscimo de quem paga o
+		valor base — é o acréscimo que a configuração define, não um valor fixo.
+		"""
+		return round(float(esperado_mensal) + self.acrescimo_atraso, 2)
+
+	def unidades_de_pagamento(self) -> tuple[float, ...]:
+		"""Valores de um mês avulso, do maior para o menor.
+
+		É contra eles que se testa se um pagamento da InfinitePay é múltiplo de
+		mensalidades: o responsável tanto paga 70 pelo mês atrasado quanto 60 pelo
+		mês em dia, e as duas coisas são pagamento de mês.
+		"""
+		valores = {round(float(self.valor_base), 2), round(float(self.valor_atraso), 2)}
+		return tuple(sorted((valor for valor in valores if valor > 0), reverse=True))
+
+
+def get_parametros() -> ParametrosContribuicao:
+	"""Lê as configurações da contribuição mensal numa única consulta."""
+	valor_base = 0.0
+	valor_atraso = 0.0
+	dia = 10
+	carencia_provisorio = CARENCIA_PROVISORIO
+	carencia_definitivo = CARENCIA_DEFINITIVO
 	try:
 		config = frappe.get_single("Configuracoes Contribuicao Mensal")
+		valor_base = float(getattr(config, "valor_base", 0) or 0)
+		valor_atraso = float(getattr(config, "valor_atraso", 0) or 0)
 		dia = int(getattr(config, "dia_vencimento", 10) or 10)
+		carencia_provisorio = int(
+			getattr(config, "meses_carencia_provisorio", CARENCIA_PROVISORIO) or CARENCIA_PROVISORIO
+		)
+		carencia_definitivo = int(
+			getattr(config, "meses_carencia_definitivo", CARENCIA_DEFINITIVO) or CARENCIA_DEFINITIVO
+		)
 	except Exception:
-		dia = 10
+		pass
 	if dia < 1 or dia > 28:
 		dia = 10
-	return dia
+	# Sem valor de atraso configurado, o mês atrasado custa o mesmo do mês em dia.
+	if valor_atraso < valor_base:
+		valor_atraso = valor_base
+	return ParametrosContribuicao(
+		valor_base=valor_base,
+		valor_atraso=valor_atraso,
+		dia_vencimento=dia,
+		carencia_provisorio=max(0, carencia_provisorio),
+		carencia_definitivo=max(0, carencia_definitivo),
+	)
+
+
+def get_dia_vencimento() -> int:
+	"""Dia de vencimento configurado, limitado à janela segura do mês."""
+	return get_parametros().dia_vencimento
 
 
 def get_valor_base() -> float:
 	"""Valor base da contribuição, usado quando o associado não tem valor próprio."""
-	try:
-		config = frappe.get_single("Configuracoes Contribuicao Mensal")
-		return float(getattr(config, "valor_base", 0) or 0)
-	except Exception:
-		return 0.0
+	return get_parametros().valor_base
+
+
+def get_valor_atraso() -> float:
+	"""Valor da contribuição depois do vencimento."""
+	return get_parametros().valor_atraso
 
 
 def calcular_vencimento(mes: datetime.date, dia_vencimento: int) -> datetime.date:
@@ -157,6 +273,7 @@ CAMPOS_CONTRIBUINTE = (
 	"nome_completo",
 	"categoria",
 	"secao",
+	"tipo_registro",
 	"inicio_do_pagamento",
 	"valor_contribuicao",
 	"status_no_grupo",
@@ -164,6 +281,122 @@ CAMPOS_CONTRIBUINTE = (
 	"email_cobranca",
 	"telefone_cobranca",
 )
+
+
+def get_datas_de_ingresso(nomes: list[str]) -> dict[str, datetime.date]:
+	"""Data de ingresso vigente de cada associado, numa consulta só.
+
+	É dela que sai a carência de registro de quem ainda não tem
+	`inicio_do_pagamento` preenchido. Entre vários históricos, vale o ingresso
+	mais recente ainda sem desligamento; se todos estiverem encerrados, vale o
+	mais recente deles.
+	"""
+	if not nomes:
+		return {}
+
+	linhas = frappe.get_all(
+		"Historico no Grupo",
+		filters={
+			"parenttype": "Associado",
+			"parent": ["in", list(nomes)],
+			"data_de_ingresso": ["is", "set"],
+		},
+		fields=["parent", "data_de_ingresso", "data_de_desligamento"],
+		limit_page_length=0,
+	)
+
+	melhores: dict[str, tuple[int, datetime.date]] = {}
+	for linha in linhas:
+		data = getdate(linha["data_de_ingresso"])
+		# Um período ainda aberto vence qualquer período já encerrado; entre iguais,
+		# vence o ingresso mais recente.
+		candidato = (0 if linha.get("data_de_desligamento") else 1, data)
+		atual = melhores.get(linha["parent"])
+		if atual is None or candidato > atual:
+			melhores[linha["parent"]] = candidato
+	return {nome: candidato[1] for nome, candidato in melhores.items()}
+
+
+def _com_datas_de_ingresso(contribuintes: list[dict]) -> list[dict]:
+	"""Anexa a data de ingresso a cada contribuinte (usada na carência)."""
+	ingressos = get_datas_de_ingresso([c["name"] for c in contribuintes])
+	for contribuinte in contribuintes:
+		contribuinte["data_de_ingresso"] = ingressos.get(contribuinte["name"])
+	return contribuintes
+
+
+def primeiro_dia_do_mes(data: datetime.date) -> datetime.date:
+	return datetime.date(data.year, data.month, 1)
+
+
+def _e_provisorio(tipo_registro) -> bool:
+	return (tipo_registro or "").strip().lower().startswith("provis")
+
+
+def meses_de_carencia(tipo_registro, parametros: ParametrosContribuicao) -> int:
+	"""Meses entre o ingresso e a primeira contribuição mensal."""
+	if _e_provisorio(tipo_registro):
+		return max(0, int(parametros.carencia_provisorio))
+	return max(0, int(parametros.carencia_definitivo))
+
+
+def resolver_inicio_do_pagamento(
+	contribuinte: dict, parametros: ParametrosContribuicao | None = None
+) -> datetime.date | None:
+	"""Primeiro mês em que o associado deve a contribuição mensal.
+
+	O cadastro manda quando `inicio_do_pagamento` está preenchido. Sem ele, a data
+	sai do ingresso mais a carência do tipo de registro — é o que evita cobrar
+	contribuição de quem ainda está pagando registro e uniforme.
+	"""
+	parametros = parametros or ParametrosContribuicao()
+	inicio = contribuinte.get("inicio_do_pagamento")
+	if inicio:
+		return getdate(inicio)
+
+	ingresso = contribuinte.get("data_de_ingresso")
+	if not ingresso:
+		return None
+
+	carencia = meses_de_carencia(contribuinte.get("tipo_registro"), parametros)
+	return getdate(add_months(primeiro_dia_do_mes(getdate(ingresso)), carencia))
+
+
+def motivos_de_carencia(
+	contribuinte: dict,
+	parametros: ParametrosContribuicao,
+	inicio: datetime.date | None,
+) -> dict[str, str]:
+	"""O que o associado paga em cada mês antes da primeira contribuição.
+
+	Serve para a tela não mostrar um "não aplicável" mudo nos primeiros meses: o
+	mês tem, sim, uma cobrança — registro provisório, registro definitivo, uniforme
+	—, só não é a contribuição mensal.
+	"""
+	ingresso = contribuinte.get("data_de_ingresso")
+	if not ingresso:
+		return {}
+
+	carencia = meses_de_carencia(contribuinte.get("tipo_registro"), parametros)
+	if carencia <= 0:
+		return {}
+
+	rotulos = (
+		MOTIVOS_CARENCIA_PROVISORIO
+		if _e_provisorio(contribuinte.get("tipo_registro"))
+		else MOTIVOS_CARENCIA_DEFINITIVO
+	)
+	ingresso_mes = primeiro_dia_do_mes(getdate(ingresso))
+
+	motivos: dict[str, str] = {}
+	for indice in range(carencia):
+		mes = getdate(add_months(ingresso_mes, indice))
+		# Início manual anterior ao fim da carência: quem manda é o cadastro, e o
+		# mês já cobrado não recebe rótulo de carência.
+		if inicio is not None and mes >= primeiro_dia_do_mes(inicio):
+			break
+		motivos[chave_mes(mes)] = rotulos[indice] if indice < len(rotulos) else MOTIVO_CARENCIA_GENERICO
+	return motivos
 
 
 def get_contribuintes() -> list[dict]:
@@ -217,7 +450,11 @@ def get_recebimentos_por_associado(
 	caminho usado pelas telas que apuram poucas pessoas (o responsável vendo os
 	filhos, a cobrança de um contribuinte) em vez do grupo inteiro.
 
-	Retorna `{associado: {"YYYY-MM": {"valor": float, "qtd": int}}}`.
+	Retorna `{associado: {"YYYY-MM": {"valor": float, "qtd": int, "transacoes": [...]}}}`.
+	Cada transação carrega a data em que o dinheiro entrou e se ela veio de uma
+	carteira de quitação retroativa — as duas informações que a apuração precisa
+	para saber se o mês foi pago dentro do prazo e se o excedente quita meses
+	anteriores em vez de adiantar os próximos.
 	"""
 	params: dict = {
 		"categoria": CATEGORIA_CONTRIBUICAO,
@@ -238,8 +475,10 @@ def get_recebimentos_por_associado(
 		f"""
 		SELECT beneficiario,
 		       DATE_FORMAT({SQL_DATA_COMPETENCIA}, '%%Y-%%m') AS ym,
-		       SUM(ABS(valor)) AS valor,
-		       COUNT(name) AS qtd
+		       ABS(valor) AS valor,
+		       {SQL_DATA_PAGAMENTO} AS data_pagamento,
+		       carteira,
+		       instituicao
 		FROM `tabTransacao Extrato Geral`
 		WHERE categoria = %(categoria)s
 		  AND debito_credito = 'Crédito'
@@ -248,7 +487,7 @@ def get_recebimentos_por_associado(
 		  AND {SQL_DATA_COMPETENCIA} >= %(primeiro_dia)s
 		  AND {SQL_DATA_COMPETENCIA} < %(proximo_mes)s
 		  {filtro_associados}
-		GROUP BY beneficiario, ym
+		ORDER BY beneficiario, ym, data_pagamento
 		""",
 		params,
 		as_dict=True,
@@ -257,11 +496,24 @@ def get_recebimentos_por_associado(
 	recebimentos: dict[str, dict[str, dict]] = {}
 	for linha in linhas:
 		por_mes = recebimentos.setdefault(linha.beneficiario, {})
-		por_mes[linha.ym] = {
-			"valor": float(linha.valor or 0),
-			"qtd": int(linha.qtd or 0),
-		}
+		mes = por_mes.setdefault(linha.ym, {"valor": 0.0, "qtd": 0, "transacoes": []})
+		valor = float(linha.valor or 0)
+		mes["valor"] += valor
+		mes["qtd"] += 1
+		mes["transacoes"].append(
+			{
+				"valor": valor,
+				"data": getdate(linha.data_pagamento) if linha.data_pagamento else None,
+				"retroativa": e_carteira_retroativa(linha.carteira, linha.instituicao),
+			}
+		)
 	return recebimentos
+
+
+def e_carteira_retroativa(carteira, instituicao) -> bool:
+	"""A transação veio de uma carteira cujo pagamento quita meses anteriores?"""
+	alvo = f"{carteira or ''} {instituicao or ''}".lower()
+	return any(nome in alvo for nome in CARTEIRAS_RETROATIVAS)
 
 
 def get_transacoes_do_associado(
@@ -358,7 +610,9 @@ def get_transacoes_nao_vinculadas(primeiro_dia: datetime.date, proximo_mes: date
 	]
 
 
-def _acao_de_cadastro(contribuinte: dict, hoje: datetime.date) -> str | None:
+def _acao_de_cadastro(
+	contribuinte: dict, hoje: datetime.date, inicio: datetime.date | None = None
+) -> str | None:
 	"""Pendência de cadastro da cobrança, independente do que as transações mostram.
 
 	- "Cancelar": saiu do grupo mas a cobrança continua ativa.
@@ -371,7 +625,9 @@ def _acao_de_cadastro(contribuinte: dict, hoje: datetime.date) -> str | None:
 		return "Cancelar"
 
 	if status_grupo == "Ativo" and status_cobranca != "Ativo":
-		inicio = contribuinte.get("inicio_do_pagamento")
+		# Sem início no cadastro, vale o mês que a carência de registro calcula.
+		if inicio is None:
+			inicio = resolver_inicio_do_pagamento(contribuinte)
 		if not inicio:
 			return "Cadastrar"
 		inicio = getdate(inicio)
@@ -381,6 +637,93 @@ def _acao_de_cadastro(contribuinte: dict, hoje: datetime.date) -> str | None:
 	return None
 
 
+def _e_multiplo(valor: float, unidades: tuple[float, ...]) -> bool:
+	"""O pagamento fecha um número inteiro de mensalidades?"""
+	for unidade in unidades:
+		if unidade <= 0:
+			continue
+		multiplo = valor / unidade
+		if multiplo < 1:
+			continue
+		if abs(multiplo - round(multiplo)) * unidade <= 0.01:
+			return True
+	return False
+
+
+def _valor_retroativo(transacoes: list[dict], unidades: tuple[float, ...]) -> float:
+	"""Quanto do mês veio em pagamentos que quitam meses anteriores.
+
+	Só entram as transações de carteira retroativa cujo valor é múltiplo de uma
+	mensalidade — tanto do valor em dia quanto do valor em atraso, porque o
+	responsável às vezes paga o mês atrasado pelo valor cheio e às vezes pelo
+	valor normal.
+	"""
+	total = 0.0
+	for transacao in transacoes:
+		if not transacao.get("retroativa"):
+			continue
+		valor = float(transacao.get("valor") or 0)
+		if valor > 0 and _e_multiplo(valor, unidades):
+			total += valor
+	return round(total, 2)
+
+
+def _recebido_ate(transacoes: list[dict], limite: datetime.date) -> float:
+	"""Quanto do mês entrou até a data limite (transação sem data conta como em dia)."""
+	total = 0.0
+	for transacao in transacoes:
+		data = transacao.get("data")
+		if data is None or getdate(data) <= limite:
+			total += float(transacao.get("valor") or 0)
+	return round(total, 2)
+
+
+def _ultima_data(transacoes: list[dict]) -> datetime.date | None:
+	datas = [getdate(transacao["data"]) for transacao in transacoes if transacao.get("data")]
+	return max(datas) if datas else None
+
+
+def _maior_data(atual: datetime.date | None, nova: datetime.date | None) -> datetime.date | None:
+	if atual is None:
+		return nova
+	if nova is None:
+		return atual
+	return max(atual, nova)
+
+
+def _quitar_meses_anteriores(linhas: list[dict], valor: float) -> float:
+	"""Aplica o pagamento aos meses anteriores em aberto, do mais antigo ao mais novo.
+
+	Devolve o que sobrou depois de zerar a dívida passada — é esse resto que fica
+	disponível para o mês da própria transação e, só então, para os próximos.
+	"""
+	restante = round(float(valor or 0), 2)
+	if restante <= TOLERANCIA:
+		return 0.0
+
+	for linha in linhas:
+		if linha["esperado"] <= 0:
+			continue
+		falta = round(linha["esperado"] - linha["coberto"], 2)
+		if falta <= TOLERANCIA:
+			continue
+		aplicado = min(falta, restante)
+		linha["coberto"] = round(linha["coberto"] + aplicado, 2)
+		linha["quitacao_retroativa"] = True
+		restante = round(restante - aplicado, 2)
+		if restante <= TOLERANCIA:
+			return 0.0
+	return restante
+
+
+def _status_do_mes(linha: dict) -> str:
+	if linha["coberto"] + TOLERANCIA >= linha["esperado"]:
+		return STATUS_PAGO
+	if linha["coberto"] > TOLERANCIA:
+		return STATUS_PARCIAL
+	return STATUS_ATRASADO if linha["vencido"] else STATUS_EM_ABERTO
+
+
 def montar_grade(
 	contribuinte: dict,
 	meses: list[datetime.date],
@@ -388,32 +731,47 @@ def montar_grade(
 	hoje: datetime.date,
 	vencimentos: dict[str, datetime.date],
 	valor_base: float = 0.0,
+	parametros: ParametrosContribuicao | None = None,
 ) -> dict:
 	"""Apura mês a mês a situação de um associado a partir do que ele pagou.
 
-	Um mês é considerado quitado quando o recebido (somado ao crédito que sobrou
-	dos meses anteriores) alcança o valor esperado. Quem paga a mais acumula
-	crédito, que abate os meses seguintes.
-	"""
-	esperado_mensal = float(contribuinte.get("valor_contribuicao") or 0) or float(valor_base or 0)
-	inicio_raw = contribuinte.get("inicio_do_pagamento")
-	inicio = getdate(inicio_raw) if inicio_raw else None
-	inicio_mes = datetime.date(inicio.year, inicio.month, 1) if inicio else None
-	mes_atual = datetime.date(hoje.year, hoje.month, 1)
+	Três regras governam a apuração:
 
-	linhas = []
+	1. **Valor do mês.** Vale o valor do cadastro do associado ou, na falta dele, o
+	   valor base configurado. O mês que vence sem dinheiro suficiente passa a valer
+	   o valor de atraso — o acréscimo é o mesmo para quem tem valor próprio.
+	2. **Carência de registro.** Os primeiros meses depois do ingresso não têm
+	   contribuição mensal: quem entra como provisório paga o registro provisório,
+	   depois o definitivo mais o uniforme, e só então começa a contribuir; quem
+	   entra como definitivo paga o registro e contribui a partir do mês seguinte.
+	3. **Quitação retroativa.** Pagamento de carteira retroativa (InfinitePay) em
+	   múltiplo de mensalidade quita primeiro os meses anteriores em aberto; só o
+	   que sobra depois disso fica no mês da transação e, aí sim, vira crédito para
+	   os meses seguintes.
+	"""
+	parametros = parametros or ParametrosContribuicao(valor_base=valor_base, valor_atraso=valor_base)
+	esperado_mensal = float(contribuinte.get("valor_contribuicao") or 0) or float(parametros.valor_base or 0)
+	inicio = resolver_inicio_do_pagamento(contribuinte, parametros)
+	inicio_mes = primeiro_dia_do_mes(inicio) if inicio else None
+	mes_atual = primeiro_dia_do_mes(hoje)
+	unidades = parametros.unidades_de_pagamento()
+	motivos = motivos_de_carencia(contribuinte, parametros, inicio)
+
+	linhas: list[dict] = []
 	credito = 0.0
+	# Data do dinheiro que virou crédito: é ela que diz se o crédito já estava
+	# disponível antes do vencimento do mês que ele vai quitar.
+	credito_data: datetime.date | None = None
 	total_recebido = 0.0
-	total_esperado = 0.0
-	meses_devidos = 0
-	meses_quitados = 0
 
 	for mes in meses:
 		ym = chave_mes(mes)
 		dados = recebido_por_mes.get(ym) or {}
 		recebido = float(dados.get("valor") or 0)
 		qtd = int(dados.get("qtd") or 0)
+		transacoes = dados.get("transacoes") or []
 		total_recebido += recebido
+		vencimento = vencimentos[ym]
 
 		antes_do_inicio = inicio_mes is not None and mes < inicio_mes
 		comeca_no_futuro = inicio is not None and mes == inicio_mes and inicio > hoje
@@ -421,51 +779,61 @@ def montar_grade(
 		if antes_do_inicio or comeca_no_futuro:
 			# Fora da vigência da cobrança: o que porventura entrou vira crédito.
 			credito += recebido
+			if transacoes:
+				credito_data = _maior_data(credito_data, _ultima_data(transacoes))
+			status = STATUS_AGUARDANDO if comeca_no_futuro else STATUS_NAO_APLICAVEL
 			linhas.append(
 				{
 					"ym": ym,
 					"rotulo": rotulo_mes(mes),
 					"esperado": 0.0,
 					"recebido": recebido,
+					"coberto": 0.0,
 					"qtd_transacoes": qtd,
-					"status": STATUS_AGUARDANDO if comeca_no_futuro else STATUS_NAO_APLICAVEL,
-					"status_slug": SLUG_SITUACAO[
-						STATUS_AGUARDANDO if comeca_no_futuro else STATUS_NAO_APLICAVEL
-					],
+					"status_fixo": status,
 					"usou_credito": False,
+					"quitacao_retroativa": False,
+					"em_atraso": False,
+					"motivo": motivos.get(ym),
 					"vencido": False,
 				}
 			)
 			continue
 
+		# 1) o dinheiro da carteira retroativa quita a dívida mais antiga primeiro.
+		retroativo = _valor_retroativo(transacoes, unidades)
+		sobra_retroativa = _quitar_meses_anteriores(linhas, retroativo)
+		do_mes = round(recebido - retroativo + sobra_retroativa, 2)
+
+		vencido = mes < mes_atual or hoje > vencimento
 		esperado = esperado_mensal
-		total_esperado += esperado
-		disponivel = recebido + credito
-		usou_credito = False
-		# O prazo já passou? Vale para qualquer situação, não só para quem não pagou
-		# nada: é o que separa o mês parcial que virou inadimplência do parcial que
-		# ainda está dentro do prazo.
-		vencido = mes < mes_atual or hoje > vencimentos[ym]
+		em_atraso = False
 
+		# 2) o mês que vence sem dinheiro suficiente passa a valer o valor de atraso.
+		if esperado > 0 and vencido:
+			credito_em_dia = credito if (credito_data is None or credito_data <= vencimento) else 0.0
+			disponivel_em_dia = min(do_mes, _recebido_ate(transacoes, vencimento)) + credito_em_dia
+			if disponivel_em_dia + TOLERANCIA < esperado_mensal:
+				esperado = parametros.valor_em_atraso(esperado_mensal)
+				em_atraso = esperado > esperado_mensal
+
+		disponivel = round(do_mes + credito, 2)
+		status_fixo = None
 		if esperado <= 0:
-			status = STATUS_PAGO if recebido > 0 else STATUS_NAO_APLICAVEL
+			coberto = 0.0
+			usou_credito = False
 			credito = disponivel
-		elif disponivel >= esperado:
-			status = STATUS_PAGO
-			usou_credito = recebido < esperado
-			credito = disponivel - esperado
-		elif disponivel > 0:
-			status = STATUS_PARCIAL
-			usou_credito = credito > 0
-			credito = 0.0
+			status_fixo = STATUS_PAGO if recebido > 0 else STATUS_NAO_APLICAVEL
 		else:
-			status = STATUS_ATRASADO if vencido else STATUS_EM_ABERTO
-			credito = 0.0
+			coberto = round(min(disponivel, esperado), 2)
+			usou_credito = coberto > do_mes + TOLERANCIA
+			credito = round(disponivel - coberto, 2)
 
-		if esperado > 0:
-			meses_devidos += 1
-			if status == STATUS_PAGO:
-				meses_quitados += 1
+		if credito <= TOLERANCIA:
+			credito = 0.0
+			credito_data = None
+		elif transacoes:
+			credito_data = _maior_data(credito_data, _ultima_data(transacoes))
 
 		linhas.append(
 			{
@@ -473,13 +841,32 @@ def montar_grade(
 				"rotulo": rotulo_mes(mes),
 				"esperado": esperado,
 				"recebido": recebido,
+				"coberto": coberto,
 				"qtd_transacoes": qtd,
-				"status": status,
-				"status_slug": SLUG_SITUACAO[status],
+				"status_fixo": status_fixo,
 				"usou_credito": usou_credito,
+				"quitacao_retroativa": False,
+				"em_atraso": em_atraso,
+				"motivo": motivos.get(ym),
 				"vencido": vencido,
 			}
 		)
+
+	# A situação de cada mês só fecha no fim: um mês já percorrido ainda pode ser
+	# quitado pelo pagamento retroativo de um mês posterior.
+	total_esperado = 0.0
+	meses_devidos = 0
+	meses_quitados = 0
+	for linha in linhas:
+		status = linha.pop("status_fixo", None) or _status_do_mes(linha)
+		linha["status"] = status
+		linha["status_slug"] = SLUG_SITUACAO[status]
+		linha["falta"] = round(max(0.0, linha["esperado"] - linha["coberto"]), 2)
+		total_esperado += linha["esperado"]
+		if linha["esperado"] > 0:
+			meses_devidos += 1
+			if status == STATUS_PAGO:
+				meses_quitados += 1
 
 	situacao = STATUS_NAO_APLICAVEL
 	status_presentes = {linha["status"] for linha in linhas}
@@ -499,6 +886,9 @@ def montar_grade(
 		"meses_devidos": meses_devidos,
 		"meses_quitados": meses_quitados,
 		"esperado_mensal": esperado_mensal,
+		"valor_em_atraso": parametros.valor_em_atraso(esperado_mensal),
+		"inicio_do_pagamento": inicio.isoformat() if inicio else None,
+		"inicio_calculado": bool(inicio and not contribuinte.get("inicio_do_pagamento")),
 	}
 
 
@@ -518,11 +908,12 @@ def apurar(
 	primeiro_dia = sequencia[0]
 	proximo_mes = getdate(add_months(sequencia[-1], 1))
 
-	dia_vencimento = get_dia_vencimento()
+	parametros = get_parametros()
+	dia_vencimento = parametros.dia_vencimento
 	vencimentos = {chave_mes(mes): calcular_vencimento(mes, dia_vencimento) for mes in sequencia}
-	valor_base = get_valor_base()
+	valor_base = parametros.valor_base
 
-	contribuintes = get_contribuintes()
+	contribuintes = _com_datas_de_ingresso(get_contribuintes())
 	recebimentos = get_recebimentos_por_associado(primeiro_dia, proximo_mes)
 	nao_vinculadas = get_transacoes_nao_vinculadas(primeiro_dia, proximo_mes)
 
@@ -543,6 +934,7 @@ def apurar(
 			hoje,
 			vencimentos,
 			valor_base,
+			parametros,
 		)
 		for linha in grade["linhas"]:
 			ym = linha["ym"]
@@ -557,7 +949,7 @@ def apurar(
 				if linha["status"] in SITUACOES_INADIMPLENTES and linha["vencido"]:
 					inadimplentes_mes[ym] += 1
 
-		inicio = contribuinte.get("inicio_do_pagamento")
+		inicio = grade["inicio_do_pagamento"]
 		dados_cobranca = (
 			{
 				"email_cobranca": contribuinte.get("email_cobranca"),
@@ -574,8 +966,7 @@ def apurar(
 				"secao": contribuinte.get("secao"),
 				"status_no_grupo": contribuinte.get("status_no_grupo"),
 				"status_cobranca": contribuinte.get("status_cobranca"),
-				"inicio_do_pagamento": getdate(inicio).isoformat() if inicio else None,
-				"acao_cadastro": _acao_de_cadastro(contribuinte, hoje),
+				"acao_cadastro": _acao_de_cadastro(contribuinte, hoje, getdate(inicio) if inicio else None),
 				**dados_cobranca,
 				**grade,
 			}
@@ -673,9 +1064,10 @@ def apurar_associados(
 	primeiro_dia = sequencia[0]
 	proximo_mes = getdate(add_months(sequencia[-1], 1))
 
-	dia_vencimento = get_dia_vencimento()
+	parametros = get_parametros()
+	dia_vencimento = parametros.dia_vencimento
 	vencimentos = {chave_mes(mes): calcular_vencimento(mes, dia_vencimento) for mes in sequencia}
-	valor_base = get_valor_base()
+	valor_base = parametros.valor_base
 
 	contribuintes = frappe.get_all(
 		"Associado",
@@ -690,6 +1082,7 @@ def apurar_associados(
 	if not contribuintes:
 		return []
 
+	contribuintes = _com_datas_de_ingresso(contribuintes)
 	recebimentos = get_recebimentos_por_associado(
 		primeiro_dia, proximo_mes, [c["name"] for c in contribuintes]
 	)
@@ -703,8 +1096,8 @@ def apurar_associados(
 			hoje,
 			vencimentos,
 			valor_base,
+			parametros,
 		)
-		inicio = contribuinte.get("inicio_do_pagamento")
 		apurados.append(
 			{
 				"id": contribuinte["name"],
@@ -713,7 +1106,6 @@ def apurar_associados(
 				"secao": contribuinte.get("secao"),
 				"status_no_grupo": contribuinte.get("status_no_grupo"),
 				"status_cobranca": contribuinte.get("status_cobranca"),
-				"inicio_do_pagamento": getdate(inicio).isoformat() if inicio else None,
 				"dia_vencimento": dia_vencimento,
 				**grade,
 			}
@@ -731,7 +1123,10 @@ def competencias_pendentes(apuracao: dict) -> list[dict]:
 	for linha in apuracao.get("linhas", []):
 		if linha["status"] not in (STATUS_ATRASADO, STATUS_EM_ABERTO, STATUS_PARCIAL):
 			continue
-		falta = round(float(linha["esperado"]) - float(linha["recebido"]), 2)
+		# `coberto` (e não `recebido`) é o que já quitou o mês: ele inclui o crédito
+		# de meses anteriores e o pagamento retroativo feito num mês posterior.
+		coberto = float(linha.get("coberto", linha["recebido"]))
+		falta = round(float(linha["esperado"]) - coberto, 2)
 		if falta <= 0:
 			continue
 		pendentes.append(
@@ -742,6 +1137,7 @@ def competencias_pendentes(apuracao: dict) -> list[dict]:
 				"status_slug": linha["status_slug"],
 				"esperado": linha["esperado"],
 				"recebido": linha["recebido"],
+				"coberto": coberto,
 				"valor": falta,
 			}
 		)

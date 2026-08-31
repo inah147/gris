@@ -8,21 +8,27 @@
   "valor_base",
   "dia_vencimento",
   "column_break_eone",
-  "valor_atraso"
+  "valor_atraso",
+  "carencia_section",
+  "meses_carencia_provisorio",
+  "column_break_carencia",
+  "meses_carencia_definitivo"
  ],
  "fields": [
   {
    "default": "60",
    "fieldname": "valor_base",
    "fieldtype": "Currency",
-   "label": "Valor base da contribui\u00e7\u00e3o"
+   "label": "Valor base da contribui\u00e7\u00e3o",
+   "description": "Valor da contribui\u00e7\u00e3o mensal paga dentro do prazo."
   },
   {
    "default": "10",
    "fieldname": "dia_vencimento",
    "fieldtype": "Int",
    "label": "Dia de vencimento",
-   "non_negative": 1
+   "non_negative": 1,
+   "description": "Dia do m\u00eas em que a contribui\u00e7\u00e3o vence (adiado para o pr\u00f3ximo dia \u00fatil)."
   },
   {
    "fieldname": "column_break_eone",
@@ -32,14 +38,41 @@
    "default": "70",
    "fieldname": "valor_atraso",
    "fieldtype": "Currency",
-   "label": "Valor em atraso da contribui\u00e7\u00e3o"
+   "label": "Valor em atraso da contribui\u00e7\u00e3o",
+   "description": "Valor da contribui\u00e7\u00e3o do m\u00eas que vence sem quita\u00e7\u00e3o. A diferen\u00e7a para o valor base \u00e9 o acr\u00e9scimo aplicado tamb\u00e9m a quem tem valor pr\u00f3prio no cadastro."
+  },
+  {
+   "fieldname": "carencia_section",
+   "fieldtype": "Section Break",
+   "label": "Car\u00eancia de registro",
+   "description": "Meses entre o ingresso e a primeira contribui\u00e7\u00e3o mensal. Usados quando o associado n\u00e3o tem 'In\u00edcio do Pagamento' preenchido."
+  },
+  {
+   "default": "2",
+   "description": "1\u00ba m\u00eas: registro provis\u00f3rio. 2\u00ba m\u00eas: registro definitivo + uniforme. 3\u00ba m\u00eas: primeira contribui\u00e7\u00e3o mensal.",
+   "fieldname": "meses_carencia_provisorio",
+   "fieldtype": "Int",
+   "label": "Meses de car\u00eancia (registro provis\u00f3rio)",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "column_break_carencia",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "description": "1\u00ba m\u00eas: registro definitivo. 2\u00ba m\u00eas: primeira contribui\u00e7\u00e3o mensal.",
+   "fieldname": "meses_carencia_definitivo",
+   "fieldtype": "Int",
+   "label": "Meses de car\u00eancia (registro definitivo)",
+   "non_negative": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-09-19 07:28:37.753926",
+ "modified": "2026-08-31 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Configuracoes Contribuicao Mensal",

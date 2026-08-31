@@ -402,17 +402,30 @@
 
 		(assoc.linhas || []).forEach((linha) => {
 			const tr = document.createElement("tr");
-			const marcaCredito = linha.usou_credito
-				? ' <span class="text-xs text-muted-foreground">(crédito)</span>'
+			let marca = "";
+			if (linha.usou_credito) {
+				marca = ' <span class="text-xs text-muted-foreground">(crédito)</span>';
+			} else if (linha.quitacao_retroativa) {
+				marca = ' <span class="text-xs text-muted-foreground">(pago depois)</span>';
+			}
+			// Motivo aparece nos meses de carência de registro; "atraso" avisa que o
+			// mês passou a valer o valor cheio do vencido.
+			const motivo = linha.motivo
+				? ` <span class="text-xs text-muted-foreground">(${escapeHtml(
+						linha.motivo
+				  )})</span>`
+				: "";
+			const marcaAtraso = linha.em_atraso
+				? ' <span class="text-xs text-muted-foreground">(atraso)</span>'
 				: "";
 			tr.innerHTML = [
 				`<td class="whitespace-nowrap">${escapeHtml(linha.rotulo)}</td>`,
 				`<td><span class="badge contrib-badge contrib-badge--${escapeHtml(
 					linha.status_slug
-				)}">${escapeHtml(linha.status)}</span>${marcaCredito}</td>`,
+				)}">${escapeHtml(linha.status)}</span>${marca}${motivo}</td>`,
 				`<td class="text-right whitespace-nowrap contrib-num">R$ ${formatarMoeda(
 					linha.esperado
-				)}</td>`,
+				)}${marcaAtraso}</td>`,
 				`<td class="text-right whitespace-nowrap contrib-num">R$ ${formatarMoeda(
 					linha.recebido
 				)}</td>`,

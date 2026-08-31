@@ -11,6 +11,11 @@ frappe.ready(function () {
 	const confirmationSummary = document.getElementById("confirmation-summary");
 	const confirmDataCheck = document.getElementById("confirm-data-check");
 	const confirmImageCheck = document.getElementById("confirm-image-check");
+	const addResponsavelContainer = document.getElementById("add-responsavel-container");
+	const unicoResponsavelDialog = document.getElementById("unicoResponsavelDialog");
+	const errorDialog = document.getElementById("erroDialog");
+	const errorDialogTitle = document.getElementById("erroDialog-title");
+	const errorDialogMessage = document.getElementById("erro-dialog-message");
 	const novoAssociadoName = document.getElementById("novo-associado-name")?.value || "";
 	const readOnly = form.dataset.readOnly === "true";
 
@@ -115,7 +120,6 @@ frappe.ready(function () {
 		estado_civil: "Estado civil",
 		telefone_secundario: "Telefone secundário",
 		guarda_unilateral: "Guarda unilateral",
-		somente_um_responsavel: "Somente um responsável",
 		local_de_trabalho: "Local de trabalho",
 		é_guardiao_legal: "É guardião legal",
 		cpf: "CPF",
@@ -192,6 +196,54 @@ frappe.ready(function () {
 
 	function reloadSoon() {
 		window.setTimeout(() => window.location.reload(), 1200);
+	}
+
+	const ERRO_GENERICO =
+		"Não foi possível concluir a ação. Verifique sua conexão e tente novamente.";
+
+	// As mensagens do servidor chegam como JSON aninhado em _server_messages e podem trazer
+	// marcação HTML; aqui viram texto puro para entrar no diálogo com segurança.
+	function serverMessages(response) {
+		const raw = response && response._server_messages;
+		if (!raw) return [];
+		try {
+			return JSON.parse(raw)
+				.map((item) => {
+					try {
+						return JSON.parse(item).message || "";
+					} catch (e) {
+						return item;
+					}
+				})
+				.map((message) =>
+					String(message || "")
+						.replace(/<[^>]*>/g, " ")
+						.replace(/\s+/g, " ")
+						.trim()
+				)
+				.filter(Boolean);
+		} catch (e) {
+			return [];
+		}
+	}
+
+	function showErrorDialog(message, title) {
+		const text = message || ERRO_GENERICO;
+
+		if (!errorDialog || !errorDialogMessage) {
+			showToast("error", title || "Não foi possível continuar", text);
+			return;
+		}
+
+		if (errorDialogTitle) {
+			errorDialogTitle.textContent = title || "Não foi possível continuar";
+		}
+		errorDialogMessage.textContent = text;
+		openDialog(errorDialog);
+	}
+
+	function showServerError(response, title) {
+		showErrorDialog(serverMessages(response)[0], title);
 	}
 
 	function allFieldControls(scope) {
@@ -410,17 +462,61 @@ frappe.ready(function () {
 		});
 	}
 
-	function toggleFamilyInfo() {
-		const onlyOne = getControlValue(getMainControl("somente_um_responsavel")) === 1;
-		document.querySelectorAll(".responsavel-wrapper").forEach((wrapper, index) => {
-			wrapper.hidden = Boolean(onlyOne && index > 0);
-			if (wrapper.hidden) {
-				const check = wrapper.querySelector(
-					".guardiao-legal-check[data-fieldname='é_guardiao_legal']"
-				);
-				if (check) check.checked = false;
-			}
-		});
+	function visibleResponsavelCards() {
+		return Array.from(document.querySelectorAll(".responsavel-card")).filter(
+			(card) => !isWrapperHidden(card)
+		);
+	}
+
+	function hiddenResponsavelWrapper() {
+		return Array.from(document.querySelectorAll(".responsavel-wrapper")).find(
+			(wrapper) => wrapper.hidden
+		);
+	}
+
+	// O botão de adicionar só aparece enquanto houver um card de responsável escondido.
+	function syncAddResponsavelButton() {
+		if (!addResponsavelContainer) return;
+		addResponsavelContainer.hidden = !hiddenResponsavelWrapper();
+	}
+
+	function addResponsavel() {
+		const wrapper = hiddenResponsavelWrapper();
+		if (!wrapper) return;
+
+		wrapper.hidden = false;
+		syncAddResponsavelButton();
+		toggleGuardiaoLegal();
+
+		const card = wrapper.querySelector(".responsavel-card");
+		focusControl(getResponsavelControl(card, "nome_completo"));
+	}
+
+	function removeResponsavel(card) {
+		const wrapper = card.closest(".responsavel-wrapper");
+		if (!wrapper) return;
+
+		wrapper.hidden = true;
+		card.dataset.responsavelId = "";
+
+		allFieldControls(card)
+			.filter((control) => control.dataset.fieldScope === "responsavel")
+			.forEach((control) => {
+				setControlValue(control, control.type === "checkbox" ? 0 : "");
+				clearInvalidControl(control);
+			});
+
+		const sameAddress = card.querySelector(".same-address-check");
+		if (sameAddress) {
+			sameAddress.checked = false;
+			setAddressLocked(card, false);
+		}
+
+		const title = card.querySelector(".responsavel-card__title");
+		if (title) title.textContent = "Novo Responsável";
+		setCpfSearchStatus(card, "");
+
+		syncAddResponsavelButton();
 		toggleGuardiaoLegal();
 	}
 
@@ -506,7 +602,9 @@ frappe.ready(function () {
 	}
 
 	function collectResponsaveisData() {
-		return Array.from(document.querySelectorAll(".responsavel-card")).map((card) => {
+		// Card escondido é responsável que não foi adicionado (ou foi removido): enviá-lo
+		// vincularia ao jovem alguém que o usuário deixou de fora.
+		return visibleResponsavelCards().map((card) => {
 			const data = { name: card.dataset.responsavelId || "" };
 			allFieldControls(card)
 				.filter((control) => control.dataset.fieldScope === "responsavel")
@@ -514,6 +612,127 @@ frappe.ready(function () {
 					data[control.dataset.fieldname] = getControlValue(control);
 				});
 			return data;
+		});
+	}
+
+	function setCpfSearchStatus(card, message, variant) {
+		const status = card.querySelector("[data-cpf-search-status]");
+		if (!status) return;
+		status.textContent = message || "";
+		status.hidden = !message;
+		status.classList.toggle("registro-field-hint--error", variant === "error");
+	}
+
+	function applyResponsavelData(card, dados) {
+		Object.keys(dados || {}).forEach((fieldName) => {
+			const control = getResponsavelControl(card, fieldName);
+			if (!control) return;
+			setControlValue(control, dados[fieldName]);
+			clearInvalidControl(control);
+		});
+	}
+
+	function buscarResponsavelPorCpf(button) {
+		const card = button.closest(".responsavel-card");
+		if (!card) return;
+
+		const cpfControl = getResponsavelControl(card, "cpf");
+		const cpf = getControlValue(cpfControl);
+
+		if (!validateCPF(cpf)) {
+			setInvalid(cpfControl, "Informe um CPF válido para buscar.");
+			focusControl(cpfControl);
+			return;
+		}
+
+		setCpfSearchStatus(card, "");
+		setLoading(button, true, "Buscando...");
+
+		frappe.call({
+			method: "gris.www.responsavel.registro.buscar_responsavel_por_cpf",
+			args: { novo_associado_name: novoAssociadoName, cpf: cpf },
+			// O msgprint do Frappe não funciona neste portal: os erros são mostrados aqui.
+			silent: true,
+			callback: function (r) {
+				setLoading(button, false);
+
+				const resultado = r && r.message;
+				if (!resultado) {
+					showErrorDialog(ERRO_GENERICO);
+					return;
+				}
+
+				if (!resultado.encontrado) {
+					const bloqueios = {
+						cpf_invalido: "Informe um CPF válido para buscar o responsável.",
+						cpf_do_jovem:
+							"Este é o CPF do próprio jovem. Informe o CPF do responsável.",
+						ja_vinculado: `${
+							resultado.nome || "Este responsável"
+						} já está no formulário deste jovem. Preencha o outro card ou revise os dados já preenchidos.`,
+					};
+
+					if (bloqueios[resultado.motivo]) {
+						setCpfSearchStatus(card, bloqueios[resultado.motivo], "error");
+						showErrorDialog(bloqueios[resultado.motivo]);
+						return;
+					}
+
+					setCpfSearchStatus(
+						card,
+						"Nenhum responsável cadastrado com este CPF. Preencha os dados abaixo."
+					);
+					showToast(
+						"info",
+						"Responsável não encontrado",
+						"Preencha os dados manualmente."
+					);
+					return;
+				}
+
+				applyResponsavelData(card, resultado.dados);
+				// É o id que faz o save vincular o cadastro existente em vez de criar outro.
+				card.dataset.responsavelId = resultado.name || "";
+
+				const title = card.querySelector(".responsavel-card__title");
+				if (title) {
+					title.textContent =
+						(resultado.dados && resultado.dados.nome_completo) || "Novo Responsável";
+				}
+
+				const sameAddress = card.querySelector(".same-address-check");
+				if (sameAddress && sameAddress.checked) {
+					sameAddress.checked = false;
+					setAddressLocked(card, false);
+				}
+
+				if (resultado.vazio) {
+					setCpfSearchStatus(
+						card,
+						"Responsável encontrado, mas sem dados salvos. Preencha os campos abaixo."
+					);
+					showToast(
+						"info",
+						"Responsável encontrado",
+						"O cadastro está sem dados salvos. Preencha os campos."
+					);
+					return;
+				}
+
+				setCpfSearchStatus(card, "Dados recuperados do cadastro existente. Revise antes de salvar.");
+				showToast(
+					"success",
+					"Responsável encontrado",
+					"Os dados foram preenchidos. Revise antes de salvar."
+				);
+			},
+			error: function (response) {
+				setLoading(button, false);
+				showServerError(response, "Não foi possível buscar o responsável");
+			},
+			always: function () {
+				setLoading(button, false);
+			},
 		});
 	}
 
@@ -790,7 +1009,8 @@ frappe.ready(function () {
 	form.addEventListener("phone-input:change", (event) => clearInvalidControl(event.target));
 
 	getMainControl("guarda_unilateral")?.addEventListener("change", toggleGuardiaoLegal);
-	getMainControl("somente_um_responsavel")?.addEventListener("change", toggleFamilyInfo);
+
+	document.getElementById("btn-add-responsavel")?.addEventListener("click", addResponsavel);
 
 	document.addEventListener("change", (event) => {
 		if (event.target.matches(".guardiao-legal-check[data-fieldname='é_guardiao_legal']")) {
@@ -837,6 +1057,24 @@ frappe.ready(function () {
 		if (title) title.textContent = event.target.value || "Novo Responsável";
 	});
 
+	form.addEventListener("click", (event) => {
+		if (readOnly) return;
+
+		const buscar = event.target.closest("[data-buscar-cpf]");
+		if (buscar) {
+			event.preventDefault();
+			buscarResponsavelPorCpf(buscar);
+			return;
+		}
+
+		const remover = event.target.closest("[data-remover-responsavel]");
+		if (remover) {
+			event.preventDefault();
+			const card = remover.closest(".responsavel-card");
+			if (card) removeResponsavel(card);
+		}
+	});
+
 	document.querySelectorAll("[data-close-dialog]").forEach((button) => {
 		button.addEventListener("click", () => {
 			const dialog = document.getElementById(button.dataset.closeDialog);
@@ -856,6 +1094,26 @@ frappe.ready(function () {
 
 	confirmDataCheck?.addEventListener("change", updateConfirmButton);
 	confirmImageCheck?.addEventListener("change", updateConfirmButton);
+
+	document.getElementById("btn-adicionar-do-dialogo")?.addEventListener("click", () => {
+		movingToConfirmation = true;
+		closeDialog(unicoResponsavelDialog);
+		movingToConfirmation = false;
+		resetPendingSubmit();
+		addResponsavel();
+	});
+
+	document.getElementById("btn-confirmar-unico-responsavel")?.addEventListener("click", () => {
+		if (!pendingSave) return;
+		movingToConfirmation = true;
+		closeDialog(unicoResponsavelDialog);
+		openTipoRegistroModal(pendingSave);
+		movingToConfirmation = false;
+	});
+
+	unicoResponsavelDialog?.addEventListener("close", () => {
+		if (!movingToConfirmation) resetPendingSubmit();
+	});
 
 	confirmTipoButton?.addEventListener("click", () => {
 		if (!pendingSave || !selectedTipoInput.value) return;
@@ -881,6 +1139,8 @@ frappe.ready(function () {
 			},
 			freeze: true,
 			freeze_message: "Salvando...",
+			// O msgprint do Frappe não funciona neste portal: os erros são mostrados aqui.
+			silent: true,
 			callback: function (r) {
 				if (!r.exc) {
 					showToast(
@@ -891,12 +1151,11 @@ frappe.ready(function () {
 					reloadSoon();
 				}
 			},
-			error: function () {
-				showToast(
-					"error",
-					"Não foi possível salvar",
-					"Revise os dados e tente novamente."
-				);
+			error: function (response) {
+				saving = false;
+				setLoading(pendingSave?.submitButton, false);
+				// A mensagem do servidor diz o que corrigir (CPF repetido, guardião legal, etc.).
+				showServerError(response, "Não foi possível salvar");
 			},
 			always: function () {
 				saving = false;
@@ -937,14 +1196,20 @@ frappe.ready(function () {
 			});
 		}
 
-		openTipoRegistroModal({
-			novoAssociadoName,
-			formData,
-			responsaveisData,
-			submitButton,
-		});
+		const payload = { novoAssociadoName, formData, responsaveisData, submitButton };
+
+		// Segundo responsável é opcional, mas salvar sem ele merece uma confirmação.
+		if (visibleResponsavelCards().length < 2) {
+			pendingSave = payload;
+			setLoading(submitButton, false);
+			openDialog(unicoResponsavelDialog);
+			return;
+		}
+
+		openTipoRegistroModal(payload);
 	});
 
-	toggleFamilyInfo();
+	syncAddResponsavelButton();
+	toggleGuardiaoLegal();
 	if (readOnly) setReadOnlyMode();
 });

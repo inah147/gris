@@ -235,9 +235,16 @@
   <input type="hidden" data-datepicker-value value="${safeValue}">
   <div id="${popoverId}" class="datepicker-popover" data-datepicker-popover role="dialog" aria-modal="false" aria-label="Selecionar data" hidden>
     <header class="datepicker-popover__header">
-      <button type="button" class="datepicker-popover__nav" data-datepicker-prev aria-label="Mes anterior"><svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="${spriteBase}#chevron-left"></use></svg></button>
-      <span class="datepicker-popover__title" data-datepicker-title aria-live="polite"></span>
-      <button type="button" class="datepicker-popover__nav" data-datepicker-next aria-label="Proximo mes"><svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="${spriteBase}#chevron-right"></use></svg></button>
+      <div class="datepicker-popover__row datepicker-popover__row--year">
+        <button type="button" class="datepicker-popover__nav" data-datepicker-year-prev aria-label="Ano anterior"><svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="${spriteBase}#chevron-left"></use></svg></button>
+        <button type="button" class="datepicker-popover__year" data-datepicker-year-toggle aria-expanded="false" title="Escolher o ano"><span data-datepicker-year-label aria-live="polite"></span></button>
+        <button type="button" class="datepicker-popover__nav" data-datepicker-year-next aria-label="Proximo ano"><svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="${spriteBase}#chevron-right"></use></svg></button>
+      </div>
+      <div class="datepicker-popover__row datepicker-popover__row--month" data-datepicker-month-row>
+        <button type="button" class="datepicker-popover__nav" data-datepicker-prev aria-label="Mes anterior"><svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="${spriteBase}#chevron-left"></use></svg></button>
+        <span class="datepicker-popover__title" data-datepicker-title aria-live="polite"></span>
+        <button type="button" class="datepicker-popover__nav" data-datepicker-next aria-label="Proximo mes"><svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="${spriteBase}#chevron-right"></use></svg></button>
+      </div>
     </header>
     <div class="datepicker-popover__weekdays" aria-hidden="true" data-datepicker-weekdays></div>
     <div class="datepicker-popover__grid" role="grid" data-datepicker-grid></div>

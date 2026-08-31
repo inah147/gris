@@ -18,6 +18,17 @@
 		<h1 class="text-3xl font-bold tracking-tight">Visão Geral</h1>
 		<p class="text-muted-foreground">Acompanhe o fluxo de novos associados.</p>
 	</div>
+	<div class="page-header-actions">
+		<div class="field kanban-filtro">
+			<label class="label" for="filtroRamo-trigger">Filtrar por ramo</label>
+			{{ select(
+				id="filtroRamo",
+				name="filtro_ramo",
+				items=ramo_filtro_items,
+				main_attrs={"data-placeholder": "Todos os ramos"}
+			) }}
+		</div>
+	</div>
 </div>
 {% endblock %}
 
@@ -69,9 +80,10 @@
 			<h3 class="kanban-column__title">
 				{% if status == 'Aguardar Dados' %}Aguardando dados{% else %}{{ status }}{% endif %}
 			</h3>
-			{{ badge(kanban_data[status]|length|string, variant="secondary") }}
+			{{ badge(kanban_data[status]|length|string, variant="secondary", attrs={"class": "js-column-count"}) }}
 		</div>
 		<div class="kanban-column__body">
+			<p class="kanban-column__vazio hidden">Nenhum associado neste ramo.</p>
 			{% for card in kanban_data[status] %}
 			<article
 				class="card kanban-card"
@@ -91,6 +103,9 @@
 				<div class="kanban-card__top">
 					{% if card.ramo %}
 						{{ badge(card.ramo, variant=card.ramo_variant) }}
+					{% endif %}
+					{% if card.idade %}
+						{{ badge(card.idade, outline=true, attrs={"title": "Idade do beneficiário"}) }}
 					{% endif %}
 					{% if card.visita_confirmada %}
 						{{ badge("Visita Confirmada", variant="success") }}

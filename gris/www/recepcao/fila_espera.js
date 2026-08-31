@@ -7,6 +7,7 @@
 
 	let currentFilaId = null;
 	let currentAssociadoId = null;
+	let currentAssociadoNome = "";
 	let vagasChart = null;
 
 	// ---------- Helpers de dialog --------------------------------------------
@@ -156,6 +157,7 @@
 	function openFilaModal(card) {
 		currentFilaId = card.dataset.id;
 		currentAssociadoId = card.dataset.associado;
+		currentAssociadoNome = card.dataset.nome || "este associado";
 
 		document.getElementById("modalAssociadoNome").textContent = card.dataset.nome || "";
 		document.getElementById("modalResponsavelNome").textContent =
@@ -176,27 +178,46 @@
 		}
 	}
 
-	function chamarAssociado() {
+	// ---------- Modal de confirmação de chamada ------------------------------
+
+	function abrirConfirmarChamada() {
 		if (!currentFilaId) return;
-		frappe.confirm(
-			"Tem certeza que deseja chamar este associado? Ele sairá da fila de espera.",
-			() => {
-				frappe.call({
-					method: "gris.www.recepcao.fila_espera.chamar_associado",
-					args: { fila_id: currentFilaId },
-					callback: function (r) {
-						if (!r.exc) {
-							frappe.show_alert({
-								message: "Associado chamado com sucesso",
-								indicator: "green",
-							});
-							closeDialog("modalFilaEspera");
-							setTimeout(() => window.location.reload(), 800);
-						}
-					},
+		document.getElementById("modalChamadaNome").textContent = currentAssociadoNome;
+		closeDialog("modalFilaEspera");
+		openDialog("modalConfirmarChamada");
+	}
+
+	function cancelarChamada() {
+		closeDialog("modalConfirmarChamada");
+		// Reabre o modal anterior caso ainda haja contexto.
+		if (currentFilaId) openDialog("modalFilaEspera");
+	}
+
+	function confirmarChamada() {
+		if (!currentFilaId) return;
+		// Fecha antes de chamar o servidor: com um <dialog> aberto via showModal()
+		// o restante da página fica inerte e mensagens do Frappe não apareceriam.
+		closeDialog("modalConfirmarChamada");
+		frappe.call({
+			method: "gris.www.recepcao.fila_espera.chamar_associado",
+			args: { fila_id: currentFilaId },
+			freeze: true,
+			freeze_message: "Chamando associado...",
+			callback: function (r) {
+				if (r.exc) return;
+				frappe.show_alert({
+					message: "Associado chamado com sucesso",
+					indicator: "green",
 				});
-			}
-		);
+				setTimeout(() => window.location.reload(), 800);
+			},
+			error: function () {
+				frappe.show_alert({
+					message: "Não foi possível chamar o associado",
+					indicator: "red",
+				});
+			},
+		});
 	}
 
 	// ---------- Modal de confirmação de desistência --------------------------
@@ -215,15 +236,23 @@
 
 	function confirmarDesistencia() {
 		if (!currentFilaId) return;
+		// Mesmo motivo de confirmarChamada: fechar o dialog antes da chamada.
+		closeDialog("modalConfirmarDesistencia");
 		frappe.call({
 			method: "gris.www.recepcao.fila_espera.registrar_desistencia",
 			args: { fila_id: currentFilaId },
+			freeze: true,
+			freeze_message: "Registrando desistência...",
 			callback: function (r) {
-				if (!r.exc) {
-					frappe.show_alert({ message: "Desistência registrada", indicator: "green" });
-					closeDialog("modalConfirmarDesistencia");
-					setTimeout(() => window.location.reload(), 800);
-				}
+				if (r.exc) return;
+				frappe.show_alert({ message: "Desistência registrada", indicator: "green" });
+				setTimeout(() => window.location.reload(), 800);
+			},
+			error: function () {
+				frappe.show_alert({
+					message: "Não foi possível registrar a desistência",
+					indicator: "red",
+				});
 			},
 		});
 	}
@@ -267,13 +296,17 @@
 		});
 
 		// Ações do modal de fila de espera
-		document.getElementById("btnChamarAssociado")?.addEventListener("click", chamarAssociado);
+		document
+			.getElementById("btnChamarAssociado")
+			?.addEventListener("click", abrirConfirmarChamada);
 		document.getElementById("btnAbrirFicha")?.addEventListener("click", abrirFicha);
 		document
 			.getElementById("btnRegistrarDesistencia")
 			?.addEventListener("click", abrirConfirmarDesistencia);
 
-		// Ações do modal de confirmação
+		// Ações dos modais de confirmação
+		document.getElementById("btnCancelarChamada")?.addEventListener("click", cancelarChamada);
+		document.getElementById("btnConfirmarChamada")?.addEventListener("click", confirmarChamada);
 		document
 			.getElementById("btnCancelarDesistencia")
 			?.addEventListener("click", cancelarDesistencia);

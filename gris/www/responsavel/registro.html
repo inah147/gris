@@ -4,7 +4,7 @@
 {% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
 {% from "public/design_system/components/generated/phone-input.html.jinja" import phone_input %}
 {% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
-{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, button, card, checkbox, field, form, input, table %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, badge, button, card, checkbox, field, form, input, table %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
 {% block title %}Registro de Novo Associado{% endblock %}
@@ -97,6 +97,39 @@
 	{% endcall %}
 {% endmacro %}
 
+{% macro cpf_search_control(fieldname, label, value="", required=false, scope="responsavel", field_id=None, class_name="") %}
+	{% set control_id = field_id or fieldname %}
+	{% set attrs = {
+		"id": control_id,
+		"data-fieldname": fieldname,
+		"data-field-scope": scope,
+		"class": "registro-control",
+		"inputmode": "numeric",
+		"maxlength": "14",
+		"placeholder": "000.000.000-00",
+		"autocomplete": "off"
+	} %}
+	{% if required %}{% set _ = attrs.update({"required": "required"}) %}{% endif %}
+	{% set search_label %}{{ lucide_icon("search", size="sm") }}<span>Buscar</span>{% endset %}
+	{% call field(label=required_label(label, required), attrs={"class": "registro-field " ~ class_name}) %}
+		<div class="registro-cpf-group">
+			{{ input(type="text", value=value or "", attrs=attrs) }}
+			{{ button(
+				search_label,
+				variant="outline",
+				size="sm",
+				attrs={
+					"class": "registro-cpf-search",
+					"data-buscar-cpf": "true",
+					"title": "Buscar responsável já cadastrado pelo CPF"
+				}
+			) }}
+		</div>
+		<p class="registro-field-hint" data-cpf-search-status hidden></p>
+		<p class="registro-field-error" data-field-error="{{ fieldname }}" hidden></p>
+	{% endcall %}
+{% endmacro %}
+
 {% macro checkbox_control(fieldname, label, checked=false, scope="main", field_id=None, include_name=true, class_name="") %}
 	{% set control_id = field_id or fieldname %}
 	{% set attrs = {
@@ -110,10 +143,10 @@
 	</div>
 {% endmacro %}
 
-{% block head_include %}
-	{{ super() }}
-	<link rel="stylesheet" href="/responsavel/registro.css">
-{% endblock %}
+{# registro.css e registro.js são injetados pelo Frappe por serem co-localizados com a página:
+   referenciá-los aqui duplicaria o CSS e ainda dispararia um request extra para
+   /responsavel/registro.css, que o roteador do portal responde com erro por faltar o
+   parâmetro novo_associado. #}
 
 {% block page_header %}
 	<section class="registro-page-header" aria-labelledby="registro-page-title">
@@ -202,7 +235,6 @@
 		{% call card(title="Informações Familiares", attrs={"class": "registro-section-card"}) %}
 			<div class="registro-toggle-grid">
 				{{ checkbox_control("guarda_unilateral", "A guarda do jovem é unilateral?", family_info.guarda_unilateral) }}
-				{{ checkbox_control("somente_um_responsavel", "Somente um responsável legal", false) }}
 			</div>
 		{% endcall %}
 
@@ -210,29 +242,45 @@
 			{% call card(title="Responsáveis", attrs={"class": "registro-section-card"}) %}
 				<div class="registro-responsaveis" id="responsaveis-list">
 					{% for item in responsaveis %}
-						<div class="responsavel-wrapper">
+						{# O segundo responsável é opcional: quando não há ninguém cadastrado, o card
+						   nasce escondido e só aparece pelo botão "Adicionar segundo responsável". #}
+						<div class="responsavel-wrapper" {% if item.is_placeholder %}hidden{% endif %}>
 							{% call card(attrs={"class": "responsavel-card", "data-responsavel-id": item.doc.name or ""}) %}
 								<div class="responsavel-card__header">
 									<h3 class="responsavel-card__title">{{ item.doc.nome_completo or "Novo Responsável" }}</h3>
+									<div class="responsavel-card__header-actions">
+										{% if item.origem == "familia" %}
+											{{ badge("Recuperado de outro cadastro da família", variant="secondary", outline=true) }}
+										{% endif %}
+										{% if not read_only and not loop.first %}
+											{% set remover_label %}{{ lucide_icon("x", size="sm") }}<span>Remover</span>{% endset %}
+											{{ button(remover_label, variant="ghost", size="sm", attrs={"class": "responsavel-card__remove", "data-remover-responsavel": "true"}) }}
+										{% endif %}
+									</div>
 								</div>
+								{% if not read_only %}
+									<p class="registro-card-hint">
+										Já cadastrado? Informe o CPF e clique em <strong>Buscar</strong> para trazer os dados.
+									</p>
+								{% endif %}
 
 								<section class="registro-subsection" aria-label="Dados pessoais do responsável">
 									<h4>Dados pessoais</h4>
 									<div class="registro-grid registro-grid--4">
 										{{ text_control("nome_completo", "Nome completo", item.doc.nome_completo, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-nome-completo", include_name=false) }}
-										{{ text_control("cpf", "CPF", item.doc.cpf, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-cpf", include_name=false, inputmode="numeric", maxlength="14", placeholder="000.000.000-00", autocomplete="off") }}
+										{{ cpf_search_control("cpf", "CPF", item.doc.cpf, required=true, field_id="resp-" ~ loop.index ~ "-cpf") }}
 										{{ text_control("rg", "RG", item.doc.rg, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-rg", include_name=false) }}
 										{{ text_control("orgao_expedidor", "Órgão expedidor", item.doc.orgao_expedidor, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-orgao-expedidor", include_name=false) }}
 										{{ date_control("data_de_nascimento", "Data de nascimento", item.doc.data_de_nascimento, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-data-nascimento", include_name=false) }}
-										{{ select_control("sexo", "Sexo", options.sexo, item.doc.sexo, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-sexo", include_name=false) }}
-										{{ select_control("estado_civil", "Estado civil", options.estado_civil, item.doc.estado_civil, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-estado-civil", include_name=false) }}
+										{{ select_control("sexo", "Sexo", options_responsavel.sexo, item.doc.sexo, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-sexo", include_name=false) }}
+										{{ select_control("estado_civil", "Estado civil", options_responsavel.estado_civil, item.doc.estado_civil, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-estado-civil", include_name=false) }}
 									</div>
 								</section>
 
 								<section class="registro-subsection" aria-label="Dados profissionais do responsável">
 									<h4>Profissional e acadêmico</h4>
 									<div class="registro-grid registro-grid--3">
-										{{ select_control("escolaridade", "Escolaridade", options.escolaridade, item.doc.escolaridade, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-escolaridade", include_name=false) }}
+										{{ select_control("escolaridade", "Escolaridade", options_responsavel.escolaridade, item.doc.escolaridade, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-escolaridade", include_name=false) }}
 										{{ text_control("profissao", "Profissão", item.doc.get("profissão"), required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-profissao", include_name=false) }}
 										{{ text_control("local_de_trabalho", "Local de trabalho", item.doc.local_de_trabalho, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-local-trabalho", include_name=false) }}
 									</div>
@@ -251,7 +299,7 @@
 										{{ text_control("complemento", "Complemento", item.doc.complemento, scope="responsavel", field_id="resp-" ~ loop.index ~ "-complemento", include_name=false) }}
 										{{ text_control("bairro", "Bairro", item.doc.bairro, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-bairro", include_name=false) }}
 										{{ text_control("cidade", "Cidade", item.doc.cidade, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-cidade", include_name=false) }}
-										{{ select_control("estado", "Estado", options.estado, item.doc.estado, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-estado", include_name=false) }}
+										{{ select_control("estado", "Estado", options_responsavel.estado, item.doc.estado, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-estado", include_name=false) }}
 										{{ text_control("cep", "CEP", item.doc.cep, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-cep", include_name=false, inputmode="numeric", maxlength="9", placeholder="00000-000") }}
 										{{ text_control("email", "Email", item.doc.email, type="email", required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-email", include_name=false, autocomplete="email") }}
 										{{ phone_control("celular", "Celular", item.phone.celular, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-celular", include_name=false) }}
@@ -269,6 +317,15 @@
 						</div>
 					{% endfor %}
 				</div>
+
+				{% if not read_only %}
+					{% set slot_livre = responsaveis | selectattr("origem", "equalto", "novo") | list %}
+					<div class="registro-add-responsavel" id="add-responsavel-container" {% if not slot_livre %}hidden{% endif %}>
+						{% set adicionar_label %}{{ lucide_icon("user-plus", size="sm") }}<span>Adicionar segundo responsável</span>{% endset %}
+						{{ button(adicionar_label, variant="outline", size="sm", attrs={"id": "btn-add-responsavel"}) }}
+						<p class="registro-card-hint">O segundo responsável é opcional.</p>
+					</div>
+				{% endif %}
 			{% endcall %}
 		{% endif %}
 
@@ -280,6 +337,39 @@
 				</button>
 			</div>
 		{% endif %}
+	{% endcall %}
+
+	{% set unico_footer %}
+		{{ button("Adicionar segundo responsável", variant="outline", attrs={"id": "btn-adicionar-do-dialogo"}) }}
+		{{ button("Salvar com um responsável", variant="primary", attrs={"id": "btn-confirmar-unico-responsavel"}) }}
+	{% endset %}
+	{% call dialog(
+		id="unicoResponsavelDialog",
+		title="Salvar com apenas um responsável?",
+		footer=unico_footer,
+		dialog_attrs={"class": "registro-dialog"},
+		close_button=true
+	) %}
+		<p class="registro-dialog-message">
+			Você preencheu somente um responsável para este jovem. Se houver um segundo responsável
+			legal, é melhor cadastrá-lo agora.
+		</p>
+	{% endcall %}
+
+	{# Erros do servidor são mostrados aqui: o msgprint do Frappe depende do CSS do Desk e,
+	   no portal, o texto vaza solto no fim da página e a tela fica presa no estado de
+	   carregando. #}
+	{% set erro_footer %}
+		{{ button("Ok, entendi", variant="primary", attrs={"data-close-dialog": "erroDialog"}) }}
+	{% endset %}
+	{% call dialog(
+		id="erroDialog",
+		title="Não foi possível continuar",
+		footer=erro_footer,
+		dialog_attrs={"class": "registro-dialog"},
+		close_button=true
+	) %}
+		<p class="registro-dialog-message" id="erro-dialog-message" aria-live="polite"></p>
 	{% endcall %}
 
 	{% set confirmation_footer %}

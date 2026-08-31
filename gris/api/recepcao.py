@@ -1,6 +1,45 @@
 import frappe
 from frappe import _
-from frappe.utils import format_datetime, get_fullname, strip_html
+from frappe.utils import format_datetime, get_fullname, getdate, strip_html
+
+
+def formatar_idade(data_nascimento) -> str | None:
+	"""Idade completa em anos e meses, por extenso (ex.: "6 anos e 1 mês").
+
+	Sempre calculada a partir da data de hoje — nunca persistir o resultado,
+	para que as telas mostrem a idade atualizada a cada carregamento.
+	Retorna None quando a data é ausente, inválida ou está no futuro.
+	"""
+	if not data_nascimento:
+		return None
+
+	try:
+		nascimento = getdate(data_nascimento)
+	except Exception:
+		return None
+
+	hoje = getdate()
+	if not nascimento or nascimento > hoje:
+		return None
+
+	anos = hoje.year - nascimento.year
+	meses = hoje.month - nascimento.month
+	if hoje.day < nascimento.day:
+		meses -= 1
+	if meses < 0:
+		anos -= 1
+		meses += 12
+
+	if not anos and not meses:
+		return "Menos de 1 mês"
+
+	partes = []
+	if anos:
+		partes.append(f"{anos} ano" if anos == 1 else f"{anos} anos")
+	if meses:
+		partes.append(f"{meses} mês" if meses == 1 else f"{meses} meses")
+
+	return " e ".join(partes)
 
 
 @frappe.whitelist()

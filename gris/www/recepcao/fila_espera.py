@@ -3,7 +3,7 @@ from frappe import _
 from frappe.utils import add_months, getdate, today
 
 from gris.api.portal_access import enrich_context
-from gris.api.recepcao import processar_desistencia
+from gris.api.recepcao import formatar_idade, processar_desistencia
 
 no_cache = 1
 
@@ -170,10 +170,13 @@ def get_context(context):
 		for i, item in enumerate(queue_items):
 			if item.associado:
 				associado = frappe.db.get_value(
-					"Novo Associado", item.associado, ["nome_completo"], as_dict=True
+					"Novo Associado", item.associado, ["nome_completo", "data_de_nascimento"], as_dict=True
 				)
 				if associado:
 					item.nome_completo = associado.nome_completo
+
+					# Idade recalculada a cada carregamento da página
+					item.idade = formatar_idade(associado.data_de_nascimento)
 
 					responsavel_vinculo = frappe.get_all(
 						"Responsavel Vinculo",

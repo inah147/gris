@@ -60,6 +60,9 @@
 			>
 				<div class="kanban-card__top">
 					{{ badge("#" ~ card.posicao, variant=ramo_variant_map.get(ramo, "secondary")) }}
+					{% if card.idade %}
+						{{ badge(card.idade, outline=true, attrs={"title": "Idade do beneficiário"}) }}
+					{% endif %}
 				</div>
 				<div class="kanban-card__main">
 					<h4 class="kanban-card__title">{{ card.nome_completo }}</h4>
@@ -118,6 +121,30 @@
 			{{ lucide_icon("door-open", size="sm") }} Desistência
 		</button>
 	</div>
+{% endcall %}
+
+{# ----------- Modal Confirmar Chamada ----------- #}
+{% set chamada_footer %}
+	<button type="button" class="btn-ghost" id="btnCancelarChamada">Cancelar</button>
+	<button type="button" class="btn-primary" id="btnConfirmarChamada">Confirmar Chamada</button>
+{% endset %}
+
+{% call dialog(
+	id="modalConfirmarChamada",
+	title="Confirmar Chamada",
+	footer=chamada_footer,
+	close_button=false,
+	close_on_overlay_click=false
+) %}
+	{{ alert(
+		icon=lucide_icon("phone-call", size="sm"),
+		description="Ao confirmar, o associado sai da fila de espera e volta para o fluxo de atendimento com status <strong>Novo Contato</strong>.",
+		variant="info",
+		attrs={"class": "mb-4"}
+	) }}
+	<p class="text-muted-foreground text-sm">
+		Deseja chamar <span class="font-medium text-foreground" id="modalChamadaNome"></span>?
+	</p>
 {% endcall %}
 
 {# ----------- Modal Confirmar Desistência ----------- #}

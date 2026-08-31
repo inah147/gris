@@ -213,7 +213,7 @@ scheduler_events = {
 	"daily": [
 		"gris.api.financeiro.infinitepay_email_import.enqueue_infinitepay_email_import",
 		"gris.api.financeiro.monthly_payments.update_status_monthly_payment",
-		"gris.api.new_members.waiting_list.update_waiting_list_branch",
+		"gris.gris.doctype.novo_associado.novo_associado.atualizar_ramos_por_idade",
 		"gris.api.calendario.sync_feriados.sync_feriados",
 		"gris.api.backup.google_shared_drive.enqueue_daily_backup",
 		"gris.api.google_workspace.access_manager.enqueue_daily_global_access_sync",

@@ -117,6 +117,63 @@ function repopulateSelect(id, items, selectedValue) {
 	}
 }
 
+// ---------- Filtro de ramo -------------------------------------------------
+
+// Filtra os cards já renderizados pelo servidor (nenhuma ida ao backend).
+// Precisa espelhar RAMO_FILTRO_SEM_RAMO em visao_geral.py.
+const RAMO_FILTRO_SEM_RAMO = "__sem_ramo__";
+const RAMO_FILTRO_STORAGE_KEY = "recepcao:visao_geral:filtro_ramo";
+
+function lerFiltroRamoSalvo() {
+	// Várias ações da página recarregam a tela; sem isso o filtro se perderia.
+	try {
+		return sessionStorage.getItem(RAMO_FILTRO_STORAGE_KEY) || "";
+	} catch (err) {
+		return "";
+	}
+}
+
+function salvarFiltroRamo(valor) {
+	try {
+		if (valor) {
+			sessionStorage.setItem(RAMO_FILTRO_STORAGE_KEY, valor);
+		} else {
+			sessionStorage.removeItem(RAMO_FILTRO_STORAGE_KEY);
+		}
+	} catch (err) {
+		// sessionStorage indisponível (aba privada): filtro segue funcionando.
+	}
+}
+
+function cardVisivelNoFiltro(card, filtro) {
+	if (!filtro) return true;
+	const ramo = card.dataset.ramo || "";
+	if (filtro === RAMO_FILTRO_SEM_RAMO) return !ramo;
+	return ramo === filtro;
+}
+
+function aplicarFiltroRamo() {
+	const filtro = getSelectValue("filtroRamo");
+
+	document.querySelectorAll(".kanban-column").forEach((coluna) => {
+		let visiveis = 0;
+
+		coluna.querySelectorAll(".kanban-card").forEach((card) => {
+			const visivel = cardVisivelNoFiltro(card, filtro);
+			card.classList.toggle("filter-hidden", !visivel);
+			if (visivel) visiveis += 1;
+		});
+
+		const contador = coluna.querySelector(".js-column-count");
+		if (contador) contador.textContent = String(visiveis);
+
+		// A mensagem só faz sentido quando o filtro escondeu tudo; sem filtro,
+		// uma coluna vazia continua vazia como antes.
+		const vazio = coluna.querySelector(".kanban-column__vazio");
+		if (vazio) vazio.classList.toggle("hidden", !filtro || visiveis > 0);
+	});
+}
+
 // ---------- Listeners globais ---------------------------------------------
 
 frappe.ready(function () {
@@ -198,6 +255,20 @@ frappe.ready(function () {
 	bindResponsavelSelect("ac_responsavel_recepcao");
 	bindResponsavelSelect("ci_responsavel_acompanhamento");
 
+	// Filtro de ramo do cabeçalho
+	const filtroRamoSelect = document.getElementById("filtroRamo");
+	if (filtroRamoSelect) {
+		const salvo = lerFiltroRamoSalvo();
+		if (salvo) setSelectValue("filtroRamo", salvo);
+
+		filtroRamoSelect.addEventListener("change", function (e) {
+			salvarFiltroRamo(e.detail ? e.detail.value : getSelectValue("filtroRamo"));
+			aplicarFiltroRamo();
+		});
+
+		aplicarFiltroRamo();
+	}
+
 	// Botão "Conversar no WhatsApp" no chooser
 	const btnAbrirWhatsapp = document.getElementById("btnAbrirWhatsappContato");
 	if (btnAbrirWhatsapp) {
@@ -234,6 +305,7 @@ function bindRamoSelect(id) {
 						`.kanban-card[data-id="${currentCardId}"]`
 					);
 					if (card) card.dataset.ramo = ramo;
+					aplicarFiltroRamo();
 					frappe.show_alert({ message: "Ramo atualizado", indicator: "green" });
 				}
 			},

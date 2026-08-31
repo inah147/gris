@@ -7,6 +7,7 @@ from frappe import _
 from frappe.utils import format_date, getdate
 
 from gris.api.portal_access import enrich_context
+from gris.api.recepcao import formatar_idade
 from gris.api.recepcao_funil import (
 	FIELD_INTERVAL_MAP,
 	STEPS_DEF,
@@ -15,6 +16,11 @@ from gris.api.recepcao_funil import (
 )
 
 no_cache = 1
+
+RAMOS = ["Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro"]
+
+# Valor sentinela do filtro de ramo para cards ainda sem ramo definido
+RAMO_FILTRO_SEM_RAMO = "__sem_ramo__"
 
 
 def _normalize_whatsapp_phone(phone):
@@ -63,6 +69,7 @@ def get_context(context):
 	fields_to_fetch = [
 		"name",
 		"nome_completo",
+		"data_de_nascimento",
 		"status",
 		"ramo",
 		"owner",
@@ -234,6 +241,9 @@ def get_context(context):
 				format_date(visit_rec.data_da_visita) if visit_rec and visit_rec.data_da_visita else None
 			)
 
+			# Idade recalculada a cada carregamento da página
+			associado.idade = formatar_idade(associado.data_de_nascimento)
+
 			# Set ramo class
 			associado.ramo_class = ramo_map.get(associado.ramo, "default")
 			associado.ramo_variant = ramo_variant_map.get(associado.ramo, "secondary")
@@ -261,9 +271,26 @@ def get_context(context):
 	context.recepcao_user_items = [
 		{"label": u.full_name or u.name, "value": u.name} for u in context.recepcao_users
 	]
-	context.ramo_items = [
-		{"label": r, "value": r} for r in ["Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro"]
-	]
+	context.ramo_items = [{"label": r, "value": r} for r in RAMOS]
+
+	# Items do filtro de ramo do cabeçalho (aplicado no cliente sobre os cards
+	# já renderizados). A contagem ajuda a dimensionar o volume de cada ramo.
+	contagem_por_ramo = dict.fromkeys(RAMOS, 0)
+	sem_ramo = 0
+	for cards in kanban_data.values():
+		for card in cards:
+			if card.ramo in contagem_por_ramo:
+				contagem_por_ramo[card.ramo] += 1
+			else:
+				sem_ramo += 1
+
+	total_cards = sum(contagem_por_ramo.values()) + sem_ramo
+	ramo_filtro_items = [{"label": f"Todos os ramos ({total_cards})", "value": ""}]
+	ramo_filtro_items += [{"label": f"{r} ({contagem_por_ramo[r]})", "value": r} for r in RAMOS]
+	if sem_ramo:
+		ramo_filtro_items.append({"label": f"Sem ramo ({sem_ramo})", "value": RAMO_FILTRO_SEM_RAMO})
+
+	context.ramo_filtro_items = ramo_filtro_items
 
 	return context
 

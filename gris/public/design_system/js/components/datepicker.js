@@ -48,10 +48,15 @@
 			year: "numeric",
 		}).format(d);
 
-	const formatTitle = (d, locale) => {
-		const txt = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(d);
+	const formatMonth = (d, locale) => {
+		const txt = new Intl.DateTimeFormat(locale, { month: "long" }).format(d);
 		return txt.charAt(0).toUpperCase() + txt.slice(1);
 	};
+
+	// Página de anos mostrada quando o usuário abre a seleção de ano.
+	const YEARS_PER_PAGE = 12;
+
+	const yearPageStart = (year) => year - (((year % YEARS_PER_PAGE) + YEARS_PER_PAGE) % YEARS_PER_PAGE);
 
 	const weekdayLabels = (locale) => {
 		const base = new Date(2024, 11, 1); // Sunday
@@ -76,6 +81,11 @@
 		const labelEl = root.querySelector("[data-datepicker-label]");
 		const prevBtn = root.querySelector("[data-datepicker-prev]");
 		const nextBtn = root.querySelector("[data-datepicker-next]");
+		const monthRow = root.querySelector("[data-datepicker-month-row]");
+		const yearToggle = root.querySelector("[data-datepicker-year-toggle]");
+		const yearLabel = root.querySelector("[data-datepicker-year-label]");
+		const yearPrevBtn = root.querySelector("[data-datepicker-year-prev]");
+		const yearNextBtn = root.querySelector("[data-datepicker-year-next]");
 		const clearBtn = root.querySelector("[data-datepicker-clear]");
 		const todayBtn = root.querySelector("[data-datepicker-today]");
 		const timeInput = root.querySelector("[data-datepicker-time]");
@@ -101,6 +111,9 @@
 		const initialTime = withTime ? parseTimeFromISO(initialSingleRaw) : null;
 
 		const state = {
+			// "days" | "years": o ano no topo abre a lista de anos, para não obrigar o
+			// usuário a navegar mês a mês até o ano desejado.
+			view: "days",
 			cursor: new Date(),
 			single: parseISO(initialSingleRaw),
 			start: parseISO(startInput?.value || ""),
@@ -130,6 +143,17 @@
 			if (maxDate && stripTime(d) > stripTime(maxDate)) return true;
 			return false;
 		};
+
+		// Mês/ano só ficam indisponíveis quando o período inteiro está fora de min/max.
+		const spanDisabled = (first, last) => {
+			if (minDate && stripTime(last) < stripTime(minDate)) return true;
+			if (maxDate && stripTime(first) > stripTime(maxDate)) return true;
+			return false;
+		};
+
+		const yearDisabled = (year) => spanDisabled(new Date(year, 0, 1), new Date(year, 11, 31));
+
+		const selectedDate = () => (mode === "single" ? state.single : state.start);
 
 		const updateLabel = () => {
 			if (mode === "single") {
@@ -201,10 +225,11 @@
 			);
 		};
 
-		const renderGrid = () => {
+		const renderDays = () => {
 			const year = state.cursor.getFullYear();
 			const month = state.cursor.getMonth();
-			titleEl.textContent = formatTitle(state.cursor, locale);
+			// O ano fica na linha de cima; aqui sobra só o mês, navegado pelas setas.
+			titleEl.textContent = formatMonth(state.cursor, locale);
 
 			const firstOfMonth = new Date(year, month, 1);
 			const startOffset = firstOfMonth.getDay();
@@ -272,6 +297,54 @@
 			gridEl.innerHTML = cells.join("");
 		};
 
+		const renderYears = () => {
+			const first = yearPageStart(state.cursor.getFullYear());
+			const last = first + YEARS_PER_PAGE - 1;
+			const thisYear = new Date().getFullYear();
+			const selected = selectedDate();
+
+			if (yearLabel) yearLabel.textContent = `${first} – ${last}`;
+
+			const cells = [];
+			for (let year = first; year <= last; year++) {
+				const disabled = yearDisabled(year);
+				const classes = ["datepicker-cell", "datepicker-cell--wide"];
+				if (disabled) classes.push("is-disabled");
+				if (year === thisYear) classes.push("is-today");
+				if (selected && selected.getFullYear() === year) classes.push("is-selected");
+				cells.push(
+					`<button type="button" class="${classes.join(" ")}" data-year="${year}"` +
+						(disabled ? ' disabled aria-disabled="true"' : "") +
+						`>${year}</button>`
+				);
+			}
+			gridEl.innerHTML = cells.join("");
+		};
+
+		const renderGrid = () => {
+			const isDaysView = state.view === "days";
+
+			if (weekdaysEl) weekdaysEl.hidden = !isDaysView;
+			if (monthRow) monthRow.hidden = !isDaysView;
+			// As setas do ano andam de ano em ano no calendário e de página em página
+			// quando a lista de anos está aberta.
+			yearPrevBtn?.setAttribute("aria-label", isDaysView ? "Ano anterior" : "Anos anteriores");
+			yearNextBtn?.setAttribute("aria-label", isDaysView ? "Próximo ano" : "Próximos anos");
+			yearToggle?.setAttribute("aria-expanded", isDaysView ? "false" : "true");
+			gridEl.classList.toggle("datepicker-popover__grid--compact", !isDaysView);
+
+			if (isDaysView && yearLabel) {
+				yearLabel.textContent = String(state.cursor.getFullYear());
+			}
+
+			return isDaysView ? renderDays() : renderYears();
+		};
+
+		const setView = (view) => {
+			state.view = view;
+			renderGrid();
+		};
+
 		const setSingle = (d) => {
 			state.single = new Date(d);
 			if (withTime && !isValidTime(state.time)) {
@@ -317,6 +390,7 @@
 			);
 			trigger.setAttribute("aria-expanded", "true");
 			popover.hidden = false;
+			state.view = "days";
 			renderGrid();
 		};
 
@@ -338,13 +412,33 @@
 			}
 		});
 
-		prevBtn?.addEventListener("click", () => {
-			state.cursor = new Date(state.cursor.getFullYear(), state.cursor.getMonth() - 1, 1);
+		const stepMonth = (direction) => {
+			state.cursor = new Date(
+				state.cursor.getFullYear(),
+				state.cursor.getMonth() + direction,
+				1
+			);
 			renderGrid();
-		});
-		nextBtn?.addEventListener("click", () => {
-			state.cursor = new Date(state.cursor.getFullYear(), state.cursor.getMonth() + 1, 1);
+		};
+
+		const stepYear = (direction) => {
+			const salto = state.view === "years" ? YEARS_PER_PAGE : 1;
+			state.cursor = new Date(
+				state.cursor.getFullYear() + direction * salto,
+				state.cursor.getMonth(),
+				1
+			);
 			renderGrid();
+		};
+
+		prevBtn?.addEventListener("click", () => stepMonth(-1));
+		nextBtn?.addEventListener("click", () => stepMonth(1));
+
+		yearPrevBtn?.addEventListener("click", () => stepYear(-1));
+		yearNextBtn?.addEventListener("click", () => stepYear(1));
+
+		yearToggle?.addEventListener("click", () => {
+			setView(state.view === "days" ? "years" : "days");
 		});
 
 		clearBtn?.addEventListener("click", () => {
@@ -363,6 +457,7 @@
 		todayBtn?.addEventListener("click", () => {
 			const today = new Date();
 			if (isDisabled(today)) return;
+			state.view = "days";
 			state.cursor = new Date(today.getFullYear(), today.getMonth(), 1);
 			if (mode === "single") {
 				if (withTime) {
@@ -391,6 +486,16 @@
 		});
 
 		gridEl.addEventListener("click", (e) => {
+			// Escolher o ano só troca o ano do calendário: o popover continua aberto,
+			// no mesmo mês, para o usuário seguir escolhendo o dia.
+			const yearCell = e.target.closest("[data-year]");
+			if (yearCell) {
+				if (yearCell.disabled) return;
+				state.cursor = new Date(Number(yearCell.dataset.year), state.cursor.getMonth(), 1);
+				setView("days");
+				return;
+			}
+
 			const cell = e.target.closest("[data-date]");
 			if (!cell || cell.disabled) return;
 			const d = parseISO(cell.dataset.date);
@@ -415,6 +520,7 @@
 				close(true);
 				return;
 			}
+			if (state.view !== "days") return;
 			const focused = document.activeElement;
 			if (!focused || !gridEl.contains(focused)) return;
 			const current = parseISO(focused.dataset.date);
@@ -492,7 +598,13 @@
 		});
 
 		document.addEventListener("click", (e) => {
-			if (!root.contains(e.target)) close();
+			// `root.contains(e.target)` não serve sozinho: quando o clique é numa célula do
+			// calendário, o re-render troca o innerHTML e o alvo já saiu do DOM antes de o
+			// evento chegar aqui — o popover fechava no meio da navegação. O caminho do
+			// evento é capturado no dispatch e continua apontando para o componente.
+			const path = typeof e.composedPath === "function" ? e.composedPath() : [];
+			if (path.includes(root) || root.contains(e.target)) return;
+			close();
 		});
 
 		document.addEventListener("basecoat:popover", (e) => {

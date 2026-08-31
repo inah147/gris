@@ -275,10 +275,25 @@
 		<div>
 			<span class="text-xs text-muted-foreground block">Valor esperado por mês</span>
 			<strong class="text-sm contrib-num">R$ <span id="detalheValor">—</span></strong>
+			<span class="text-xs text-muted-foreground block" id="detalheValorAtrasoLinha">
+				R$ <span class="contrib-num" id="detalheValorAtraso">—</span> depois do vencimento
+			</span>
 		</div>
 		<div>
 			<span class="text-xs text-muted-foreground block">Recebido no período</span>
 			<strong class="text-sm contrib-num">R$ <span id="detalheRecebido">—</span></strong>
+			<span class="text-xs text-muted-foreground block">
+				<span id="detalheQuitados">—</span> meses quitados
+			</span>
+		</div>
+		<div>
+			<span class="text-xs text-muted-foreground block">Em aberto</span>
+			<strong class="text-sm contrib-num" id="detalhePendenteBloco">
+				R$ <span id="detalhePendente">—</span>
+			</strong>
+			<span class="text-xs text-muted-foreground block">
+				<span id="detalheMesesPendentes">—</span> meses a quitar
+			</span>
 		</div>
 		<div>
 			<span class="text-xs text-muted-foreground block">Crédito acumulado</span>
@@ -334,14 +349,16 @@
 	{% endif %}
 
 	<h3 class="text-sm font-semibold mb-2">Apuração mês a mês</h3>
-	<div class="overflow-x-auto mb-4">
+	<div class="contrib-tabela-scroll mb-4">
 		<table class="table contrib-meses-tabela">
+			<caption class="sr-only">Situação de cada mês do período apurado</caption>
 			<thead>
 				<tr>
-					<th>Mês</th>
-					<th>Situação</th>
-					<th class="text-right">Esperado</th>
-					<th class="text-right">Recebido</th>
+					<th scope="col">Mês</th>
+					<th scope="col">Situação</th>
+					<th scope="col" class="text-right">Esperado</th>
+					<th scope="col" class="text-right">Recebido</th>
+					<th scope="col" class="text-right">Falta</th>
 				</tr>
 			</thead>
 			<tbody id="detalheMeses"></tbody>
@@ -349,19 +366,30 @@
 	</div>
 
 	<h3 class="text-sm font-semibold mb-2">Transações do período</h3>
-	<div class="overflow-x-auto">
+	<div class="contrib-tabela-scroll">
 		<table class="table contrib-transacoes-tabela">
+			<caption class="sr-only">Transações de contribuição identificadas no período</caption>
 			<thead>
 				<tr>
-					<th>Data</th>
-					<th>Descrição</th>
-					<th class="text-right">Valor</th>
-					<th class="text-right"></th>
+					<th scope="col">Data</th>
+					<th scope="col">Descrição</th>
+					<th scope="col">Competência</th>
+					<th scope="col" class="text-right">Valor</th>
+					<th scope="col"><span class="sr-only">Ações</span></th>
 				</tr>
 			</thead>
 			<tbody id="detalheTransacoes">
-				<tr><td colspan="4" class="text-sm text-muted-foreground">—</td></tr>
+				<tr><td colspan="5" class="text-sm text-muted-foreground">—</td></tr>
 			</tbody>
+			<tfoot id="detalheTransacoesRodape" class="hidden">
+				<tr>
+					<th scope="row" colspan="3">Total identificado</th>
+					<td class="text-right whitespace-nowrap contrib-num">
+						R$ <span id="detalheTransacoesTotal">0,00</span>
+					</td>
+					<td></td>
+				</tr>
+			</tfoot>
 		</table>
 	</div>
 {% endcall %}

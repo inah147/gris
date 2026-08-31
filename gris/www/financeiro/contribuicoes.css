@@ -156,12 +156,15 @@
 .contrib-detalhe-resumo {
 	display: flex;
 	flex-wrap: wrap;
-	align-items: flex-end;
+	/* Cada bloco tem uma linha de apoio própria: alinhados pelo topo, os títulos
+	   ficam na mesma altura em vez de escalonados pelo rodapé. */
+	align-items: flex-start;
 	gap: calc(var(--spacing) * 5);
 }
 
 .contrib-detalhe-resumo > #acoesValor {
 	margin-left: auto;
+	align-self: center;
 }
 
 .contrib-meses-tabela,
@@ -177,6 +180,124 @@
 	.contrib-detalhe-resumo > #acoesValor {
 		margin-left: 0;
 		width: 100%;
+	}
+}
+
+/*
+ * Tabelas do diálogo de detalhe. As duas ficam em caixas de altura limitada com
+ * o cabeçalho fixo: sem isso o diálogo vira um scroll único e o mês a mês some
+ * assim que a lista de transações cresce.
+ */
+.contrib-tabela-scroll {
+	max-height: 20rem;
+	overflow: auto;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+}
+
+.contrib-tabela-scroll > table {
+	margin: 0;
+}
+
+.contrib-tabela-scroll thead th {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	background-color: var(--card, var(--background));
+}
+
+.contrib-tabela-scroll tfoot th,
+.contrib-tabela-scroll tfoot td {
+	position: sticky;
+	bottom: 0;
+	background-color: var(--card, var(--background));
+	border-top: 1px solid var(--border);
+	font-weight: 600;
+}
+
+/* Nota curta sob o valor: explica a linha sem abrir mais uma coluna. */
+.contrib-nota {
+	display: block;
+	font-size: var(--text-xs);
+	font-weight: 400;
+	color: var(--muted-foreground);
+	white-space: normal;
+}
+
+/* O que falta é a informação que puxa a ação: fica na cor de alerta do tema. */
+.contrib-falta {
+	color: var(--destructive);
+}
+
+/*
+ * Faixa de situação na borda da linha. É reforço do badge, que continua trazendo
+ * o texto — quem não distingue as cores lê a situação do mesmo jeito.
+ */
+.contrib-mes > td:first-child {
+	border-left: 3px solid transparent;
+}
+
+.contrib-mes--pago > td:first-child {
+	border-left-color: color-mix(in oklab, #009e73 60%, var(--background));
+}
+
+.contrib-mes--parcial > td:first-child {
+	border-left-color: color-mix(in oklab, #e69f00 60%, var(--background));
+}
+
+.contrib-mes--aberto > td:first-child {
+	border-left-color: color-mix(in oklab, #0072b2 60%, var(--background));
+}
+
+.contrib-mes--atrasado > td:first-child {
+	border-left-color: color-mix(in oklab, #d55e00 60%, var(--background));
+}
+
+/*
+ * Transações: largura fixa e descrição com reticências, porque a descrição do
+ * extrato é longa e empurrava o valor para fora do diálogo.
+ */
+.contrib-transacoes-tabela {
+	table-layout: fixed;
+}
+
+.contrib-transacoes-tabela th:nth-child(1),
+.contrib-transacoes-tabela td:nth-child(1) {
+	width: 6.5rem;
+}
+
+.contrib-transacoes-tabela th:nth-child(3),
+.contrib-transacoes-tabela td:nth-child(3) {
+	width: 6.5rem;
+}
+
+.contrib-transacoes-tabela th:nth-child(4),
+.contrib-transacoes-tabela td:nth-child(4) {
+	width: 7rem;
+}
+
+.contrib-transacoes-tabela th:nth-child(5),
+.contrib-transacoes-tabela td:nth-child(5) {
+	width: 5.5rem;
+}
+
+.contrib-transacao__descricao {
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+@media (max-width: 40rem) {
+	/* No celular a competência sai: ela repete o mês que a tabela de cima já mostra. */
+	.contrib-transacoes-tabela th:nth-child(3),
+	.contrib-transacoes-tabela td:nth-child(3) {
+		display: none;
+	}
+
+	.contrib-transacoes-tabela th:nth-child(1),
+	.contrib-transacoes-tabela td:nth-child(1) {
+		width: 5.5rem;
 	}
 }
 

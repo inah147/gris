@@ -402,36 +402,58 @@
 
 		(assoc.linhas || []).forEach((linha) => {
 			const tr = document.createElement("tr");
-			let marca = "";
+			tr.className = `contrib-mes contrib-mes--${linha.status_slug}`;
+
+			// Cada nota fica na coluna que ela explica: o motivo da carência ao lado do
+			// mês, o acréscimo ao lado do esperado e a origem da quitação ao lado do
+			// recebido — o mês que ninguém pagou diretamente precisa dizer como fechou.
+			const motivoHtml = linha.motivo
+				? `<span class="contrib-nota">${escapeHtml(linha.motivo)}</span>`
+				: "";
+			let quitacao = "";
 			if (linha.usou_credito) {
-				marca = ' <span class="text-xs text-muted-foreground">(crédito)</span>';
+				quitacao = "quitado com crédito";
 			} else if (linha.quitacao_retroativa) {
-				marca = ' <span class="text-xs text-muted-foreground">(pago depois)</span>';
+				quitacao = "quitado por pagamento posterior";
 			}
-			// Motivo aparece nos meses de carência de registro; "atraso" avisa que o
-			// mês passou a valer o valor cheio do vencido.
-			const motivo = linha.motivo
-				? ` <span class="text-xs text-muted-foreground">(${escapeHtml(
-						linha.motivo
-				  )})</span>`
+			const quitacaoHtml = quitacao
+				? `<span class="contrib-nota">${escapeHtml(quitacao)}</span>`
 				: "";
-			const marcaAtraso = linha.em_atraso
-				? ' <span class="text-xs text-muted-foreground">(atraso)</span>'
+			const atrasoHtml = linha.em_atraso
+				? '<span class="contrib-nota">valor em atraso</span>'
 				: "";
+			const esperado =
+				linha.esperado > 0 ? `R$ ${formatarMoeda(linha.esperado)}${atrasoHtml}` : "—";
+			const falta =
+				linha.falta > 0
+					? `<span class="contrib-falta">R$ ${formatarMoeda(linha.falta)}</span>`
+					: "—";
+
 			tr.innerHTML = [
-				`<td class="whitespace-nowrap">${escapeHtml(linha.rotulo)}</td>`,
+				`<td class="whitespace-nowrap">${escapeHtml(linha.rotulo)}${motivoHtml}</td>`,
 				`<td><span class="badge contrib-badge contrib-badge--${escapeHtml(
 					linha.status_slug
-				)}">${escapeHtml(linha.status)}</span>${marca}${motivo}</td>`,
-				`<td class="text-right whitespace-nowrap contrib-num">R$ ${formatarMoeda(
-					linha.esperado
-				)}${marcaAtraso}</td>`,
+				)}">${escapeHtml(linha.status)}</span></td>`,
+				`<td class="text-right whitespace-nowrap contrib-num">${esperado}</td>`,
 				`<td class="text-right whitespace-nowrap contrib-num">R$ ${formatarMoeda(
 					linha.recebido
-				)}</td>`,
+				)}${quitacaoHtml}</td>`,
+				`<td class="text-right whitespace-nowrap contrib-num">${falta}</td>`,
 			].join("");
 			tbody.appendChild(tr);
 		});
+	}
+
+	function rotuloCompetencia(ym) {
+		if (!ym || ym.length < 7) return "—";
+		return `${ym.slice(5, 7)}/${ym.slice(0, 4)}`;
+	}
+
+	function mostrarRodapeTransacoes(total) {
+		const rodape = document.getElementById("detalheTransacoesRodape");
+		const soma = document.getElementById("detalheTransacoesTotal");
+		if (soma) soma.textContent = formatarMoeda(total);
+		if (rodape) rodape.classList.toggle("hidden", total <= 0);
 	}
 
 	function renderTransacoes(transacoes) {
@@ -441,16 +463,31 @@
 
 		if (!transacoes || !transacoes.length) {
 			tbody.innerHTML =
-				'<tr><td colspan="4" class="text-sm text-muted-foreground">Nenhuma transação de contribuição no período.</td></tr>';
+				'<tr><td colspan="5" class="text-sm text-muted-foreground">Nenhuma transação de contribuição no período.</td></tr>';
+			mostrarRodapeTransacoes(0);
 			return;
 		}
 
+		let total = 0;
 		transacoes.forEach((transacao) => {
+			total += parseNumber(transacao.valor);
 			const tr = document.createElement("tr");
 			const url = `/financeiro/detalhe_extrato?name=${encodeURIComponent(transacao.name)}`;
+			const descricao = transacao.descricao || "—";
+			// Método e carteira ficam sob a descrição: é o que identifica de onde veio o
+			// dinheiro sem alargar a tabela dentro do diálogo.
+			const origem = [transacao.metodo, transacao.carteira].filter(Boolean).join(" · ");
+			const origemHtml = origem
+				? `<span class="contrib-nota">${escapeHtml(origem)}</span>`
+				: "";
 			tr.innerHTML = [
 				`<td class="whitespace-nowrap">${escapeHtml(formatarData(transacao.data))}</td>`,
-				`<td>${escapeHtml(transacao.descricao || "—")}</td>`,
+				`<td><span class="contrib-transacao__descricao" title="${escapeHtml(
+					descricao
+				)}">${escapeHtml(descricao)}</span>${origemHtml}</td>`,
+				`<td class="whitespace-nowrap">${escapeHtml(
+					rotuloCompetencia(transacao.ym)
+				)}</td>`,
 				`<td class="text-right whitespace-nowrap contrib-num">R$ ${formatarMoeda(
 					transacao.valor
 				)}</td>`,
@@ -458,13 +495,14 @@
 			].join("");
 			tbody.appendChild(tr);
 		});
+		mostrarRodapeTransacoes(total);
 	}
 
 	function carregarTransacoes(assoc) {
 		const tbody = document.getElementById("detalheTransacoes");
 		if (tbody) {
 			tbody.innerHTML =
-				'<tr><td colspan="4" class="text-sm text-muted-foreground">Carregando…</td></tr>';
+				'<tr><td colspan="5" class="text-sm text-muted-foreground">Carregando…</td></tr>';
 		}
 
 		frappe
@@ -479,7 +517,7 @@
 			.catch(() => {
 				if (tbody) {
 					tbody.innerHTML =
-						'<tr><td colspan="4" class="text-sm text-muted-foreground">Não foi possível carregar as transações.</td></tr>';
+						'<tr><td colspan="5" class="text-sm text-muted-foreground">Não foi possível carregar as transações.</td></tr>';
 				}
 			});
 	}
@@ -510,6 +548,26 @@
 		setTexto("detalheValor", formatarMoeda(assoc.esperado_mensal));
 		setTexto("detalheRecebido", formatarMoeda(assoc.total_recebido));
 		setTexto("detalheCredito", formatarMoeda(assoc.credito));
+		setTexto("detalheValorAtraso", formatarMoeda(assoc.valor_em_atraso));
+		setTexto("detalheQuitados", `${assoc.meses_quitados}/${assoc.meses_devidos}`);
+
+		// O que falta é a soma dos meses ainda não quitados — inclui a diferença do
+		// mês parcial, não só o mês que ninguém pagou.
+		const pendentes = (assoc.linhas || []).filter((linha) => parseNumber(linha.falta) > 0);
+		const totalFalta = pendentes.reduce((soma, linha) => soma + parseNumber(linha.falta), 0);
+		setTexto("detalhePendente", formatarMoeda(totalFalta));
+		setTexto("detalheMesesPendentes", String(pendentes.length));
+
+		// A linha do valor de atraso só aparece quando ele é maior que o valor em dia.
+		const linhaAtraso = document.getElementById("detalheValorAtrasoLinha");
+		if (linhaAtraso) {
+			linhaAtraso.classList.toggle(
+				"hidden",
+				!(parseNumber(assoc.valor_em_atraso) > parseNumber(assoc.esperado_mensal))
+			);
+		}
+		const blocoPendente = document.getElementById("detalhePendenteBloco");
+		if (blocoPendente) blocoPendente.classList.toggle("contrib-falta", totalFalta > 0);
 
 		renderMeses(assoc);
 		atualizarAcoesCadastro(assoc);

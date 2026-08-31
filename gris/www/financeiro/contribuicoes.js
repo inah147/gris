@@ -415,6 +415,8 @@
 				quitacao = "quitado com crédito";
 			} else if (linha.quitacao_retroativa) {
 				quitacao = "quitado por pagamento posterior";
+			} else if (linha.quitado_sem_acrescimo) {
+				quitacao = "quitado sem o acréscimo";
 			}
 			const quitacaoHtml = quitacao
 				? `<span class="contrib-nota">${escapeHtml(quitacao)}</span>`

@@ -255,19 +255,20 @@ class TestBaixaDaCobranca(FrappeTestCase):
 		self.assertEqual(situacao_depois["2026-07"], STATUS_PAGO)
 		self.assertEqual(depois["total_recebido"], 2 * VALOR_ATRASO)
 
-	def test_pagamento_do_valor_em_dia_nao_quita_o_mes_atrasado(self):
-		"""Pagar 60 num mês que já vencido deixa a diferença do atraso em aberto."""
+	def test_pagamento_do_valor_em_dia_quita_o_mes_atrasado(self):
+		"""Pagar 60 num mês já vencido fecha o mês: o acréscimo é o que se cobra."""
 		cobranca = self._criar_cobranca("2026-06", status="Pago", paid_amount=int(VALOR * 100))
 		lancar_baixa(cobranca)
 
 		depois = apurar_associados([self.associado], 6, HOJE)[0]
 		junho = next(linha for linha in depois["linhas"] if linha["ym"] == "2026-06")
-		self.assertEqual(junho["status"], STATUS_PARCIAL)
+		self.assertEqual(junho["status"], STATUS_PAGO)
 		self.assertEqual(junho["esperado"], VALOR_ATRASO)
-		self.assertEqual(junho["falta"], round(VALOR_ATRASO - VALOR, 2))
+		self.assertEqual(junho["falta"], 0.0)
+		self.assertTrue(junho["quitado_sem_acrescimo"])
 
 	def test_montar_cobranca_recusa_competencia_ja_quitada(self):
-		cobranca = self._criar_cobranca("2026-06", status="Pago", paid_amount=int(VALOR_ATRASO * 100))
+		cobranca = self._criar_cobranca("2026-06", status="Pago", paid_amount=int(VALOR * 100))
 		lancar_baixa(cobranca)
 
 		with self.assertRaises(frappe.ValidationError), self._sem_rede():

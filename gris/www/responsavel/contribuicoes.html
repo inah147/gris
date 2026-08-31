@@ -175,6 +175,10 @@
 								<span class="text-xs text-muted-foreground block">
 									quitado por pagamento posterior
 								</span>
+							{% elif linha.quitado_sem_acrescimo %}
+								<span class="text-xs text-muted-foreground block">
+									quitado sem o acréscimo
+								</span>
 							{% endif %}
 						</td>
 						<td class="text-right whitespace-nowrap resp-contrib-num">

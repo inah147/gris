@@ -16,7 +16,9 @@ Três regras de negócio governam o cálculo, todas parametrizáveis em
 1. **Valor do mês.** A contribuição custa o valor base (R$ 60) enquanto está
    dentro do prazo e passa a custar o valor de atraso (R$ 70) quando o mês vence
    sem ter sido quitado. Quem tem valor próprio no cadastro paga o mesmo
-   acréscimo, não o valor de atraso fixo.
+   acréscimo, não o valor de atraso fixo. O acréscimo é o que se **cobra**: o mês
+   é dado por quitado assim que a cobertura alcança o valor em dia, porque pagar
+   os 60 em atraso é comum e fecha o mês.
 2. **Carência de registro.** O associado não deve contribuição nos primeiros
    meses depois do ingresso: quem entra como provisório paga o registro
    provisório no 1º mês, o definitivo mais o uniforme no 2º e só contribui a
@@ -694,30 +696,74 @@ def _maior_data(atual: datetime.date | None, nova: datetime.date | None) -> date
 def _quitar_meses_anteriores(linhas: list[dict], valor: float) -> float:
 	"""Aplica o pagamento aos meses anteriores em aberto, do mais antigo ao mais novo.
 
-	Devolve o que sobrou depois de zerar a dívida passada — é esse resto que fica
-	disponível para o mês da própria transação e, só então, para os próximos.
+	Três passadas, nesta ordem, porque quitar mais um mês vale mais do que pagar o
+	acréscimo de atraso de outro:
+
+	1. quita cada mês pelo mínimo (o valor em dia), enquanto sobrar dinheiro para um
+	   mês inteiro — é o que faz um pagamento de 180 fechar três meses atrasados;
+	2. completa o acréscimo de atraso dos meses já quitados — é o que faz um
+	   pagamento de 210 fechar os mesmos três meses pelo valor cheio, em vez de
+	   deixar um quarto mês pela metade;
+	3. o que ainda sobrar cobre parcialmente os meses mais antigos que restarem.
+
+	Devolve o que sobrou depois disso — é esse resto que fica disponível para o mês
+	da própria transação e, só então, para os próximos.
 	"""
 	restante = round(float(valor or 0), 2)
 	if restante <= TOLERANCIA:
 		return 0.0
 
-	for linha in linhas:
-		if linha["esperado"] <= 0:
+	devidos = [linha for linha in linhas if linha["esperado"] > 0]
+
+	def aplicar(linha: dict, quanto: float) -> None:
+		nonlocal restante
+		if quanto <= TOLERANCIA:
+			return
+		linha["coberto"] = round(linha["coberto"] + quanto, 2)
+		linha["quitacao_retroativa"] = True
+		restante = round(restante - quanto, 2)
+
+	# 1) quitação: mês por mês, só quando dá para fechar um mês inteiro.
+	for linha in devidos:
+		falta_minimo = round(linha["minimo"] - linha["coberto"], 2)
+		if falta_minimo <= TOLERANCIA:
+			continue
+		if falta_minimo > restante + TOLERANCIA:
+			break
+		aplicar(linha, falta_minimo)
+		if restante <= TOLERANCIA:
+			return 0.0
+
+	# 2) acréscimo de atraso dos meses que a passada anterior já fechou.
+	for linha in devidos:
+		if linha["coberto"] + TOLERANCIA < linha["minimo"]:
 			continue
 		falta = round(linha["esperado"] - linha["coberto"], 2)
 		if falta <= TOLERANCIA:
 			continue
-		aplicado = min(falta, restante)
-		linha["coberto"] = round(linha["coberto"] + aplicado, 2)
-		linha["quitacao_retroativa"] = True
-		restante = round(restante - aplicado, 2)
+		aplicar(linha, min(falta, restante))
 		if restante <= TOLERANCIA:
 			return 0.0
-	return restante
+
+	# 3) o resto abate o que puder, do mês mais antigo em diante.
+	for linha in devidos:
+		falta = round(linha["esperado"] - linha["coberto"], 2)
+		if falta <= TOLERANCIA:
+			continue
+		aplicar(linha, min(falta, restante))
+		if restante <= TOLERANCIA:
+			return 0.0
+
+	return max(0.0, restante)
 
 
 def _status_do_mes(linha: dict) -> str:
-	if linha["coberto"] + TOLERANCIA >= linha["esperado"]:
+	"""Situação do mês a partir do que já foi coberto.
+
+	O que quita é o mínimo (o valor em dia), não o valor cobrado: quem paga 60
+	depois do vencimento fecha o mês, ainda que a cobrança fosse de 70.
+	"""
+	if linha["coberto"] + TOLERANCIA >= linha["minimo"]:
 		return STATUS_PAGO
 	if linha["coberto"] > TOLERANCIA:
 		return STATUS_PARCIAL
@@ -739,7 +785,9 @@ def montar_grade(
 
 	1. **Valor do mês.** Vale o valor do cadastro do associado ou, na falta dele, o
 	   valor base configurado. O mês que vence sem dinheiro suficiente passa a valer
-	   o valor de atraso — o acréscimo é o mesmo para quem tem valor próprio.
+	   o valor de atraso — o acréscimo é o mesmo para quem tem valor próprio —, mas
+	   quita com o valor em dia: `esperado` é o que se cobra e `minimo` é o que
+	   fecha o mês.
 	2. **Carência de registro.** Os primeiros meses depois do ingresso não têm
 	   contribuição mensal: quem entra como provisório paga o registro provisório,
 	   depois o definitivo mais o uniforme, e só então começa a contribuir; quem
@@ -787,6 +835,7 @@ def montar_grade(
 					"ym": ym,
 					"rotulo": rotulo_mes(mes),
 					"esperado": 0.0,
+					"minimo": 0.0,
 					"recebido": recebido,
 					"coberto": 0.0,
 					"qtd_transacoes": qtd,
@@ -840,6 +889,8 @@ def montar_grade(
 				"ym": ym,
 				"rotulo": rotulo_mes(mes),
 				"esperado": esperado,
+				# O que se cobra é `esperado`; o que fecha o mês é `minimo`.
+				"minimo": esperado_mensal,
 				"recebido": recebido,
 				"coberto": coberto,
 				"qtd_transacoes": qtd,
@@ -861,7 +912,13 @@ def montar_grade(
 		status = linha.pop("status_fixo", None) or _status_do_mes(linha)
 		linha["status"] = status
 		linha["status_slug"] = SLUG_SITUACAO[status]
-		linha["falta"] = round(max(0.0, linha["esperado"] - linha["coberto"]), 2)
+		# Mês quitado não deve nada, nem o acréscimo de atraso que ninguém pagou.
+		linha["falta"] = (
+			0.0 if status == STATUS_PAGO else round(max(0.0, linha["esperado"] - linha["coberto"]), 2)
+		)
+		linha["quitado_sem_acrescimo"] = bool(
+			status == STATUS_PAGO and linha["coberto"] + TOLERANCIA < linha["esperado"]
+		)
 		total_esperado += linha["esperado"]
 		if linha["esperado"] > 0:
 			meses_devidos += 1
@@ -1126,7 +1183,7 @@ def competencias_pendentes(apuracao: dict) -> list[dict]:
 		# `coberto` (e não `recebido`) é o que já quitou o mês: ele inclui o crédito
 		# de meses anteriores e o pagamento retroativo feito num mês posterior.
 		coberto = float(linha.get("coberto", linha["recebido"]))
-		falta = round(float(linha["esperado"]) - coberto, 2)
+		falta = round(float(linha.get("falta", float(linha["esperado"]) - coberto)), 2)
 		if falta <= 0:
 			continue
 		pendentes.append(

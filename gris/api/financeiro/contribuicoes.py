@@ -1101,12 +1101,18 @@ def apurar_associados(
 	nomes: list[str],
 	meses=MESES_PADRAO,
 	hoje: datetime.date | None = None,
+	incluir_gestao: bool = False,
 ) -> list[dict]:
 	"""Apura a contribuição de um conjunto fechado de associados.
 
 	Mesma regra da apuração geral, mas sem varrer o grupo inteiro: serve às telas
 	que já sabem de quem estão falando — o responsável olhando os beneficiários
-	vinculados a ele e a cobrança de um contribuinte específico.
+	vinculados a ele, a cobrança de um contribuinte específico e o detalhe de um
+	associado no financeiro.
+
+	`incluir_gestao` acrescenta a pendência de cadastro e os dados de cobrança
+	(e-mail/telefone) — informação de gestão, que só a tela do financeiro mostra
+	e só para quem tem a role de gestor da contribuição mensal.
 
 	Associados de categoria não contribuinte (Dirigente, Escotista) são
 	descartados aqui pelo mesmo motivo de sempre: eles não pagam contribuição
@@ -1155,6 +1161,14 @@ def apurar_associados(
 			valor_base,
 			parametros,
 		)
+		dados_gestao = {}
+		if incluir_gestao:
+			inicio = grade["inicio_do_pagamento"]
+			dados_gestao = {
+				"acao_cadastro": _acao_de_cadastro(contribuinte, hoje, getdate(inicio) if inicio else None),
+				"email_cobranca": contribuinte.get("email_cobranca"),
+				"telefone_cobranca": contribuinte.get("telefone_cobranca"),
+			}
 		apurados.append(
 			{
 				"id": contribuinte["name"],
@@ -1164,6 +1178,7 @@ def apurar_associados(
 				"status_no_grupo": contribuinte.get("status_no_grupo"),
 				"status_cobranca": contribuinte.get("status_cobranca"),
 				"dia_vencimento": dia_vencimento,
+				**dados_gestao,
 				**grade,
 			}
 		)

@@ -6,7 +6,6 @@ import frappe
 
 from gris.api.financeiro.contribuicoes import (
 	MESES_PADRAO,
-	ROLE_GESTOR,
 	STATUS_AGUARDANDO,
 	STATUS_ATRASADO,
 	STATUS_EM_ABERTO,
@@ -65,11 +64,10 @@ def get_context(context):
 	context.active_link = "/financeiro/contribuicoes"
 	context.titulo = "Contribuições Mensais"
 
-	context.can_manage_contributions = ROLE_GESTOR in frappe.get_roles()
-
 	meses = normalizar_meses(frappe.form_dict.get("meses") or MESES_PADRAO)
-	# Dados de cobrança (e-mail/telefone) só entram no payload para quem pode geri-los.
-	apuracao = apurar(meses, incluir_dados_cobranca=context.can_manage_contributions)
+	# Sem dados de cobrança: e-mail e telefone são do detalhe do contribuinte
+	# (/financeiro/contribuicao), que só os entrega a quem pode geri-los.
+	apuracao = apurar(meses)
 
 	context.meses_selecionado = str(meses)
 	context.opcoes_periodo = OPCOES_PERIODO

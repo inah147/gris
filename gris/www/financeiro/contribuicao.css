@@ -1,0 +1,258 @@
+/* Página /financeiro/contribuicao — detalhe da contribuição mensal de um associado.
+ *
+ * O que é comum às duas telas de contribuição (badges de situação, números
+ * tabulares, notas e faixa de situação da linha) está repetido em
+ * contribuicoes.css: o CSS de rota em `www` é embutido por página, então não há
+ * como uma importar a outra. Ao mexer nas cores de situação, mexa nas duas.
+ */
+
+.financeiro-page-header {
+	margin-bottom: calc(var(--spacing) * 6);
+}
+
+/* Cabeçalho: nome e situação à esquerda, volta para a lista à direita. */
+.contrib-detalhe-cabecalho {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 4);
+}
+
+.contrib-detalhe-cabecalho__acoes {
+	display: flex;
+	gap: calc(var(--spacing) * 2);
+	flex-shrink: 0;
+}
+
+/* Filtro de período — mesmo layout da lista de contribuições. */
+.contrib-filtros {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 4);
+	align-items: flex-end;
+}
+
+.contrib-filtros > .field {
+	flex: 0 0 16rem;
+	max-width: 100%;
+}
+
+.contrib-filtros > .field .select,
+.contrib-filtros > .field .select > button {
+	width: 100%;
+}
+
+.contrib-filtros > .field .select > button {
+	justify-content: space-between;
+}
+
+.contrib-filtros__actions {
+	display: flex;
+	gap: calc(var(--spacing) * 2);
+	margin-left: auto;
+}
+
+@media (max-width: 48rem) {
+	.contrib-filtros {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.contrib-filtros > .field {
+		flex: 0 0 auto;
+		width: 100%;
+	}
+
+	.contrib-filtros__actions {
+		margin-left: 0;
+		width: 100%;
+	}
+}
+
+.metric-card section {
+	padding: calc(var(--spacing) * 4) calc(var(--spacing) * 5);
+}
+
+/* Números alinhados: dígitos de largura fixa evitam a coluna "dançando" */
+.contrib-num {
+	font-variant-numeric: tabular-nums;
+}
+
+.contrib-input-valor {
+	max-width: 12rem;
+}
+
+/*
+ * Badges de situação. O bundle Basecoat só traz badge-primary/secondary/destructive
+ * e outline, então as cores de estado ficam aqui, sobre os tokens do tema.
+ * A cor é reforço: o texto da situação está sempre presente no badge.
+ */
+.contrib-badge {
+	white-space: nowrap;
+	border: 1px solid transparent;
+}
+
+.contrib-badge--pago {
+	background-color: color-mix(in oklab, #009e73 16%, var(--background));
+	border-color: color-mix(in oklab, #009e73 45%, var(--background));
+	color: color-mix(in oklab, #009e73 75%, var(--foreground));
+}
+
+.contrib-badge--parcial {
+	background-color: color-mix(in oklab, #e69f00 18%, var(--background));
+	border-color: color-mix(in oklab, #e69f00 50%, var(--background));
+	color: color-mix(in oklab, #b37c00 70%, var(--foreground));
+}
+
+.contrib-badge--aberto {
+	background-color: color-mix(in oklab, #0072b2 14%, var(--background));
+	border-color: color-mix(in oklab, #0072b2 45%, var(--background));
+	color: color-mix(in oklab, #0072b2 75%, var(--foreground));
+}
+
+.contrib-badge--atrasado {
+	background-color: color-mix(in oklab, #d55e00 16%, var(--background));
+	border-color: color-mix(in oklab, #d55e00 50%, var(--background));
+	color: color-mix(in oklab, #d55e00 78%, var(--foreground));
+}
+
+.contrib-badge--aguardando,
+.contrib-badge--na {
+	background-color: var(--muted);
+	border-color: var(--border);
+	color: var(--muted-foreground);
+}
+
+/* Nota curta sob o valor: explica a linha sem abrir mais uma coluna. */
+.contrib-nota {
+	display: block;
+	font-size: var(--text-xs);
+	font-weight: 400;
+	color: var(--muted-foreground);
+	white-space: normal;
+}
+
+/* O que falta é a informação que puxa a ação: fica na cor de alerta do tema. */
+.contrib-falta {
+	color: var(--destructive);
+}
+
+.contrib-meses-tabela,
+.contrib-transacoes-tabela {
+	width: 100%;
+}
+
+/*
+ * Faixa de situação na borda da linha. É reforço do badge, que continua trazendo
+ * o texto — quem não distingue as cores lê a situação do mesmo jeito.
+ */
+.contrib-mes > td:first-child {
+	border-left: 3px solid transparent;
+}
+
+.contrib-mes--pago > td:first-child {
+	border-left-color: color-mix(in oklab, #009e73 60%, var(--background));
+}
+
+.contrib-mes--parcial > td:first-child {
+	border-left-color: color-mix(in oklab, #e69f00 60%, var(--background));
+}
+
+.contrib-mes--aberto > td:first-child {
+	border-left-color: color-mix(in oklab, #0072b2 60%, var(--background));
+}
+
+.contrib-mes--atrasado > td:first-child {
+	border-left-color: color-mix(in oklab, #d55e00 60%, var(--background));
+}
+
+/*
+ * Transações: descrição com reticências, porque a descrição do extrato é longa
+ * e empurraria o valor para fora da tabela.
+ */
+.contrib-transacoes-tabela {
+	table-layout: fixed;
+}
+
+.contrib-transacoes-tabela th:nth-child(1),
+.contrib-transacoes-tabela td:nth-child(1) {
+	width: 7rem;
+}
+
+.contrib-transacoes-tabela th:nth-child(3),
+.contrib-transacoes-tabela td:nth-child(3) {
+	width: 7rem;
+}
+
+.contrib-transacoes-tabela th:nth-child(4),
+.contrib-transacoes-tabela td:nth-child(4) {
+	width: 8rem;
+}
+
+.contrib-transacoes-tabela th:nth-child(5),
+.contrib-transacoes-tabela td:nth-child(5) {
+	width: 6rem;
+}
+
+.contrib-transacao__descricao {
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+@media (max-width: 40rem) {
+	/* No celular a competência sai: ela repete o mês que a tabela de cima já mostra. */
+	.contrib-transacoes-tabela th:nth-child(3),
+	.contrib-transacoes-tabela td:nth-child(3) {
+		display: none;
+	}
+
+	.contrib-transacoes-tabela th:nth-child(1),
+	.contrib-transacoes-tabela td:nth-child(1) {
+		width: 5.5rem;
+	}
+}
+
+/* Cobrança InfinitePay */
+.contrib-cobranca__pendentes {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 1);
+	max-height: 18rem;
+	overflow-y: auto;
+}
+
+.contrib-cobranca__item {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+	padding: calc(var(--spacing) * 1) 0;
+	font-size: 0.875rem;
+	cursor: pointer;
+}
+
+/* O valor encosta na direita para as competências ficarem comparáveis de relance. */
+.contrib-cobranca__item > span:last-child {
+	margin-left: auto;
+}
+
+.contrib-cobranca__emitida {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 2);
+	padding: calc(var(--spacing) * 1) 0;
+	font-size: 0.875rem;
+}
+
+.contrib-cobranca__emitida > button {
+	margin-left: auto;
+}
+
+@media (max-width: 48rem) {
+	.contrib-detalhe-cabecalho__acoes {
+		width: 100%;
+	}
+}

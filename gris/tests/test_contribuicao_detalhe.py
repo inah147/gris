@@ -134,9 +134,7 @@ class TestContextoDaPaginaDeDetalhe(FrappeTestCase):
 
 	def test_pagina_renderiza_o_mes_a_mes_sem_javascript(self):
 		"""A tela nasce pronta: o mês a mês vem no HTML, não de uma chamada depois."""
-		conteudo = self._renderizar(
-			"/financeiro/contribuicao", associado=self.associado, meses="6"
-		)
+		conteudo = self._renderizar("/financeiro/contribuicao", associado=self.associado, meses="6")
 
 		# O cadastro normaliza o nome (capitalização), então o teste compara com o
 		# que está gravado, não com o que foi digitado.

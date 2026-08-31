@@ -261,10 +261,12 @@ cat > /usr/local/bin/gris-test <<'TESTEOF'
 set -uo pipefail
 
 # Módulos que cobrem a contribuição mensal ponta a ponta: apuração, cobrança
-# InfinitePay, baixa no extrato, séries do painel e ferramentas MCP.
+# InfinitePay, baixa no extrato, séries do painel, tela de detalhe do
+# contribuinte e ferramentas MCP.
 CONTRIBUICAO="
 gris.tests.test_contribuicoes_transacoes
 gris.tests.test_cobranca_contribuicao
+gris.tests.test_contribuicao_detalhe
 gris.tests.test_dashboard_contribuicoes
 gris.tests.test_mcp_contribuicoes
 "

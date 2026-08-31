@@ -203,6 +203,7 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/financeiro": ["Visualizador Financeiro", "Gestor Financeiro"],
 	"/financeiro/dashboard": ["Visualizador Financeiro", "Gestor Financeiro"],
 	"/financeiro/contribuicoes": ["Gestor Contribuição Mensal", "Visualizador Contribuição Mensal"],
+	"/financeiro/contribuicao": ["Gestor Contribuição Mensal", "Visualizador Contribuição Mensal"],
 	"/financeiro/contas": ["Visualizador Financeiro", "Gestor Financeiro"],
 	"/financeiro/extrato": ["Visualizador Financeiro", "Gestor Financeiro"],
 	"/financeiro/conciliacao": ["Gestor Financeiro"],
@@ -242,6 +243,7 @@ PAGE_ROLES: dict[str, list[str]] = {
 # Páginas marcadas como "estritas": mesmo System Manager deve ter uma das roles listadas.
 STRICT_PORTAL_PAGES = {
 	"/financeiro/contribuicoes",
+	"/financeiro/contribuicao",
 	"/responsavel",
 	"/responsavel/meus_dados",
 	"/responsavel/beneficiarios",

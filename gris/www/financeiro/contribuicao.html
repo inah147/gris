@@ -1,0 +1,289 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+
+{% block title %}{{ assoc.nome if assoc else 'Contribuição do associado' }}{% endblock %}
+
+{% set active_link = '/financeiro/contribuicoes' %}
+
+{% macro brl(valor) %}{{ frappe.utils.fmt_money(valor or 0, currency="BRL") }}{% endmacro %}
+
+{% macro situacao_badge(situacao, slug) %}
+<span class="badge contrib-badge contrib-badge--{{ slug }}">{{ situacao }}</span>
+{% endmacro %}
+
+{% block page_header %}
+<section class="financeiro-page-header" aria-labelledby="contrib-detalhe-title">
+	<div class="contrib-detalhe-cabecalho">
+		<div class="flex flex-col gap-2 min-w-0">
+			<h1 id="contrib-detalhe-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">
+				{{ assoc.nome if assoc else 'Contribuição do associado' }}
+			</h1>
+			{% if assoc %}
+			<p class="m-0 flex flex-wrap items-center gap-2 text-base leading-relaxed text-muted-foreground">
+				{{ situacao_badge(assoc.situacao, assoc.situacao_slug) }}
+				<span>
+					{{ assoc.categoria or 'Contribuinte' }}
+					{% if assoc.secao %}&middot; {{ assoc.secao }}{% endif %}
+					&middot; Vencimento todo dia {{ assoc.dia_vencimento }}
+				</span>
+			</p>
+			{% else %}
+			<p class="m-0 text-base leading-relaxed text-muted-foreground">
+				Detalhe da contribuição mensal apurada pelas transações do extrato geral.
+			</p>
+			{% endif %}
+		</div>
+		<div class="contrib-detalhe-cabecalho__acoes">
+			<a href="{{ voltar_url }}" class="btn-sm-ghost">
+				{{ lucide_icon("arrow-left", size="sm") }} Voltar às contribuições
+			</a>
+		</div>
+	</div>
+</section>
+{% endblock %}
+
+{% block main %}
+{% if not_found %}
+	{{ empty(
+		title="Contribuição não encontrada",
+		description=missing_reason or 'Não foi possível carregar a contribuição deste associado.',
+		icon=lucide_icon("wallet-cards", size="md")
+	) }}
+{% else %}
+<script>
+	window.canManageContrib = JSON.parse('{{ can_manage_contributions | tojson }}');
+	window.contribMeses = JSON.parse('{{ meses_selecionado | tojson }}');
+	window.contribAssociado = JSON.parse('{{ assoc.id | tojson }}');
+	window.contribEsperadoMensal = JSON.parse('{{ assoc.esperado_mensal | tojson }}');
+	window.contribEmailCobranca = JSON.parse('{{ (assoc.email_cobranca or "") | tojson }}');
+	window.contribTelefoneCobranca = JSON.parse('{{ (assoc.telefone_cobranca or "") | tojson }}');
+</script>
+
+<article class="card mb-4">
+	<section>
+		<form method="get" id="contrib-filtro-periodo" class="contrib-filtros">
+			<input type="hidden" name="associado" value="{{ assoc.id }}" />
+			<div class="field">
+				<label class="label" for="contrib-periodo">Período apurado</label>
+				{{ select(id="contrib-periodo", name="meses", items=opcoes_periodo, selected=meses_selecionado) }}
+			</div>
+			<div class="contrib-filtros__actions">
+				<button type="submit" class="btn-sm-primary">Aplicar</button>
+			</div>
+		</form>
+	</section>
+</article>
+
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
+	<article class="card metric-card">
+		<section>
+			<p class="m-0 text-sm text-muted-foreground">Valor esperado por mês</p>
+			<p class="m-0 mt-1 text-2xl font-semibold text-foreground contrib-num">{{ brl(assoc.esperado_mensal) }}</p>
+			{% if assoc.mostrar_valor_atraso %}
+			<p class="m-0 mt-2 text-xs text-muted-foreground contrib-num">
+				{{ brl(assoc.valor_em_atraso) }} depois do vencimento
+			</p>
+			{% endif %}
+			<div id="acoesValor" class="mt-3">
+				{% if can_manage_contributions %}
+				<button type="button" id="btnAlterarValor" class="btn-sm-outline" data-acao="alterar-valor">Alterar valor</button>
+				{% endif %}
+			</div>
+			<div id="valorContainer" class="hidden mt-3"></div>
+		</section>
+	</article>
+	<article class="card metric-card">
+		<section>
+			<p class="m-0 text-sm text-muted-foreground">Recebido no período</p>
+			<p class="m-0 mt-1 text-2xl font-semibold text-foreground contrib-num">{{ brl(assoc.total_recebido) }}</p>
+			<p class="m-0 mt-2 text-xs text-muted-foreground">
+				{{ assoc.meses_quitados }} de {{ assoc.meses_devidos }} meses quitados
+			</p>
+		</section>
+	</article>
+	<article class="card metric-card">
+		<section>
+			<p class="m-0 text-sm text-muted-foreground">Em aberto</p>
+			<p class="m-0 mt-1 text-2xl font-semibold contrib-num {% if assoc.total_falta > 0 %}contrib-falta{% else %}text-foreground{% endif %}">
+				{{ brl(assoc.total_falta) }}
+			</p>
+			<p class="m-0 mt-2 text-xs text-muted-foreground">
+				{{ assoc.meses_pendentes }} {{ 'mês a quitar' if assoc.meses_pendentes == 1 else 'meses a quitar' }}
+			</p>
+		</section>
+	</article>
+	<article class="card metric-card">
+		<section>
+			<p class="m-0 text-sm text-muted-foreground">Crédito acumulado</p>
+			<p class="m-0 mt-1 text-2xl font-semibold text-foreground contrib-num">{{ brl(assoc.credito) }}</p>
+			<p class="m-0 mt-2 text-xs text-muted-foreground">
+				Adiantamento que quita os próximos meses
+			</p>
+		</section>
+	</article>
+</div>
+
+{% if can_manage_contributions %}
+{% call card(title="Cadastro da cobrança", attrs={"class": "mb-4"}) %}
+	<div id="cobrancaContainer" class="flex items-start justify-between gap-3 flex-wrap" data-manage-only="1">
+		<div class="flex-1 min-w-0 flex flex-col gap-1">
+			<div class="text-sm"><strong>E-mail de cobrança:</strong> <span id="emailCobranca">{{ assoc.email_cobranca or '—' }}</span></div>
+			<div class="text-sm"><strong>Telefone de cobrança:</strong> <span id="foneCobranca">{{ assoc.telefone_cobranca or '—' }}</span></div>
+		</div>
+		<div id="acoesCobranca">
+			<button type="button" id="btnEditarCobranca" class="btn-sm-outline" data-acao="editar-cobranca">Editar cobrança</button>
+		</div>
+	</div>
+
+	<div id="acoesCadastro" class="flex gap-2 flex-wrap mt-4" data-manage-only="1">
+		<button type="button" id="btnCadastroRealizado" class="btn-sm-primary {% if assoc.acao_cadastro != 'Cadastrar' %}hidden{% endif %}"
+			data-acao="cadastro-realizado">Cadastro realizado</button>
+		<button type="button" id="btnCadastroCancelado" class="btn-sm-destructive {% if assoc.status_cobranca != 'Ativo' %}hidden{% endif %}"
+			data-acao="cadastro-cancelado">Cadastro cancelado</button>
+	</div>
+{% endcall %}
+
+{% call card(
+	title="Cobrar pela InfinitePay",
+	description="Marque as competências a cobrar. O link é gerado na InfinitePay e o pagamento confirmado quita automaticamente os meses cobrados.",
+	attrs={"class": "mb-4"}
+) %}
+	<section id="cobrancaInfinitepay" class="contrib-cobranca" data-manage-only="1">
+		<div id="cobrancaPendentes" class="contrib-cobranca__pendentes mb-3">
+			<p class="m-0 text-sm text-muted-foreground">Carregando…</p>
+		</div>
+		<div id="cobrancaAcoes" class="flex gap-2 flex-wrap items-center hidden">
+			<button type="button" id="btnCobrarWhatsapp" class="btn-sm-primary" data-acao="cobrar-whatsapp">
+				Gerar link e enviar no WhatsApp
+			</button>
+			<button type="button" id="btnCobrarSomenteLink" class="btn-sm-outline" data-acao="cobrar-link">
+				Só gerar o link
+			</button>
+			<span id="cobrancaTotal" class="text-sm text-muted-foreground contrib-num"></span>
+		</div>
+		<div id="cobrancaEmitidas" class="mt-3"></div>
+	</section>
+{% endcall %}
+{% endif %}
+
+<article class="card mb-4">
+	<header>
+		<h2>Apuração mês a mês</h2>
+		<p>Situação de cada mês do período apurado.</p>
+	</header>
+	<section class="p-0 min-w-0">
+		<div class="overflow-x-auto">
+			<table class="table contrib-meses-tabela">
+				<thead>
+					<tr>
+						<th scope="col">Mês</th>
+						<th scope="col">Situação</th>
+						<th scope="col" class="text-right">Esperado</th>
+						<th scope="col" class="text-right">Recebido</th>
+						<th scope="col" class="text-right">Falta</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for linha in assoc.linhas %}
+					<tr class="contrib-mes contrib-mes--{{ linha.status_slug }}">
+						<td class="whitespace-nowrap">
+							{{ linha.rotulo }}
+							{% if linha.motivo %}<span class="contrib-nota">{{ linha.motivo }}</span>{% endif %}
+						</td>
+						<td>{{ situacao_badge(linha.status, linha.status_slug) }}</td>
+						<td class="text-right whitespace-nowrap contrib-num">
+							{% if linha.esperado > 0 %}
+								{{ brl(linha.esperado) }}
+								{% if linha.em_atraso %}<span class="contrib-nota">valor em atraso</span>{% endif %}
+							{% else %}—{% endif %}
+						</td>
+						<td class="text-right whitespace-nowrap contrib-num">
+							{{ brl(linha.recebido) }}
+							{# Cada nota fica na coluna que ela explica: o mês que ninguém pagou
+							   diretamente precisa dizer como fechou. #}
+							{% if linha.usou_credito %}
+								<span class="contrib-nota">quitado com crédito</span>
+							{% elif linha.quitacao_retroativa %}
+								<span class="contrib-nota">quitado por pagamento posterior</span>
+							{% elif linha.quitado_sem_acrescimo %}
+								<span class="contrib-nota">quitado sem o acréscimo</span>
+							{% endif %}
+						</td>
+						<td class="text-right whitespace-nowrap contrib-num">
+							{% if linha.falta > 0 %}
+								<span class="contrib-falta">{{ brl(linha.falta) }}</span>
+							{% else %}—{% endif %}
+						</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</section>
+</article>
+
+<article class="card">
+	<header>
+		<h2>Transações do período</h2>
+		<p>Créditos da categoria &ldquo;Contribuição Mensal&rdquo; identificados para este associado.</p>
+	</header>
+	<section class="p-0 min-w-0">
+		{% if transacoes %}
+		<div class="overflow-x-auto">
+			<table class="table contrib-transacoes-tabela">
+				<thead>
+					<tr>
+						<th scope="col">Data</th>
+						<th scope="col">Descrição</th>
+						<th scope="col">Competência</th>
+						<th scope="col" class="text-right">Valor</th>
+						<th scope="col"><span class="sr-only">Ações</span></th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for transacao in transacoes %}
+					<tr>
+						<td class="whitespace-nowrap">{{ frappe.utils.formatdate(transacao.data) if transacao.data else '—' }}</td>
+						<td>
+							<span class="contrib-transacao__descricao" title="{{ transacao.descricao or '—' }}">
+								{{ transacao.descricao or '—' }}
+							</span>
+							{# Método e carteira ficam sob a descrição: é o que identifica de onde
+							   veio o dinheiro sem alargar a tabela. #}
+							{% set origem = [transacao.metodo, transacao.carteira] | reject("equalto", "") | join(' · ') %}
+							{% if origem %}<span class="contrib-nota">{{ origem }}</span>{% endif %}
+						</td>
+						<td class="whitespace-nowrap">
+							{{ (transacao.ym[5:7] ~ '/' ~ transacao.ym[0:4]) if transacao.ym else '—' }}
+						</td>
+						<td class="text-right whitespace-nowrap contrib-num">{{ brl(transacao.valor) }}</td>
+						<td class="text-right">
+							<a class="btn-sm-outline" href="/financeiro/detalhe_extrato?name={{ transacao.name | urlencode }}">Abrir</a>
+						</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+				<tfoot>
+					<tr>
+						<th scope="row" colspan="3">Total identificado</th>
+						<td class="text-right whitespace-nowrap contrib-num">{{ brl(total_transacoes) }}</td>
+						<td></td>
+					</tr>
+				</tfoot>
+			</table>
+		</div>
+		{% else %}
+		<div class="p-4">
+			{{ empty(
+				title="Nenhuma transação no período",
+				description="Nenhum crédito de contribuição mensal foi identificado para este associado no período apurado.",
+				icon=lucide_icon("receipt-text", size="md")
+			) }}
+		</div>
+		{% endif %}
+	</section>
+</article>
+{% endif %}
+{% endblock %}

@@ -49,9 +49,21 @@ class TestExtratoFiltros(FrappeTestCase):
 
 	def test_valores_vazios_e_campos_desconhecidos_sao_descartados(self):
 		filtros = build_extrato_filters(
-			{"instituicao": "", "carteira": "null", "categoria": None, "descricao": "x", "page": "3"}
+			{"instituicao": "", "carteira": "null", "categoria": None, "page": "3"}
 		)
 		self.assertEqual(filtros, {})
+
+	def test_busca_por_descricao_gera_like_case_insensitive_na_descricao_reduzida(self):
+		filtros = build_extrato_filters({"descricao": "Pix"})
+		self.assertEqual(filtros["descricao_reduzida"], ["like", "%Pix%"])
+
+	def test_busca_por_descricao_vazia_e_ignorada(self):
+		self.assertEqual(build_extrato_filters({"descricao": ""}), {})
+		self.assertEqual(build_extrato_filters({"descricao": "null"}), {})
+
+	def test_busca_por_descricao_escapa_curingas_do_like(self):
+		filtros = build_extrato_filters({"descricao": "50%_off"})
+		self.assertEqual(filtros["descricao_reduzida"], ["like", r"%50\%\_off%"])
 
 	def test_ordenacao_tem_desempate_para_paginacao_estavel(self):
 		# Sem o desempate por `name`, lotes com timestamps iguais repetiriam linhas.

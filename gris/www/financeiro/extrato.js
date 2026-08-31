@@ -10,6 +10,7 @@
 	"use strict";
 
 	const FILTER_KEYS = [
+		"descricao",
 		"data_inicio",
 		"data_fim",
 		"instituicao",

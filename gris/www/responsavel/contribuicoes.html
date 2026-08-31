@@ -99,6 +99,11 @@
 			<div>
 				<dt>Valor mensal</dt>
 				<dd class="resp-contrib-num">{{ brl(beneficiario.esperado_mensal) }}</dd>
+				{% if beneficiario.valor_em_atraso > beneficiario.esperado_mensal %}
+				<dd class="text-xs text-muted-foreground">
+					{{ brl(beneficiario.valor_em_atraso) }} depois do vencimento
+				</dd>
+				{% endif %}
 			</div>
 			<div>
 				<dt>Pago no período</dt>
@@ -149,14 +154,26 @@
 					{% for linha in beneficiario.linhas_recentes %}
 					<tr>
 						<th scope="row" class="font-medium whitespace-nowrap">{{ linha.rotulo }}</th>
-						<td>{{ situacao_badge(linha.status, linha.status_slug) }}</td>
+						<td>
+							{{ situacao_badge(linha.status, linha.status_slug) }}
+							{% if linha.motivo %}
+								<span class="text-xs text-muted-foreground block">{{ linha.motivo }}</span>
+							{% endif %}
+						</td>
 						<td class="text-right whitespace-nowrap resp-contrib-num">
 							{% if linha.esperado > 0 %}{{ brl(linha.esperado) }}{% else %}—{% endif %}
+							{% if linha.em_atraso %}
+								<span class="text-xs text-muted-foreground block">valor em atraso</span>
+							{% endif %}
 						</td>
 						<td class="text-right whitespace-nowrap resp-contrib-num">
 							{% if linha.recebido > 0 %}{{ brl(linha.recebido) }}{% else %}—{% endif %}
 							{% if linha.usou_credito %}
 								<span class="text-xs text-muted-foreground block">quitado com crédito</span>
+							{% elif linha.quitacao_retroativa %}
+								<span class="text-xs text-muted-foreground block">
+									quitado por pagamento posterior
+								</span>
 							{% endif %}
 						</td>
 					</tr>

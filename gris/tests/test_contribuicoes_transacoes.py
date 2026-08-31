@@ -18,16 +18,19 @@ from gris.api.financeiro.contribuicoes import (
 	STATUS_NAO_APLICAVEL,
 	STATUS_PAGO,
 	STATUS_PARCIAL,
+	ParametrosContribuicao,
 	_acao_de_cadastro,
 	calcular_vencimento,
 	chave_mes,
 	construir_meses,
 	montar_grade,
 	normalizar_meses,
+	resolver_inicio_do_pagamento,
 )
 
 HOJE = datetime.date(2026, 8, 22)
 VALOR = 60.0
+VALOR_ATRASO = 70.0
 
 
 class TestApuracaoContribuicoes(FrappeTestCase):
@@ -193,3 +196,268 @@ class TestApuracaoContribuicoes(FrappeTestCase):
 	def test_cobranca_ja_ativa_nao_gera_pendencia(self):
 		acao = _acao_de_cadastro({"status_no_grupo": "Ativo", "status_cobranca": "Ativo"}, HOJE)
 		self.assertIsNone(acao)
+
+
+def _pagamento(valor: float, data: str | None = None, infinitepay: bool = False) -> dict:
+	"""Uma transação de contribuição como a apuração a enxerga."""
+	return {
+		"valor": float(valor),
+		"data": datetime.date.fromisoformat(data) if data else None,
+		"retroativa": infinitepay,
+	}
+
+
+def _mes(*pagamentos: dict) -> dict:
+	"""Entrada de um mês do dicionário de recebimentos."""
+	return {
+		"valor": round(sum(p["valor"] for p in pagamentos), 2),
+		"qtd": len(pagamentos),
+		"transacoes": list(pagamentos),
+	}
+
+
+PARAMETROS = ParametrosContribuicao(
+	valor_base=VALOR,
+	valor_atraso=VALOR_ATRASO,
+	dia_vencimento=10,
+	carencia_provisorio=2,
+	carencia_definitivo=1,
+)
+
+
+class TestValorEmAtraso(FrappeTestCase):
+	"""O mês que vence sem quitação passa a valer o valor de atraso."""
+
+	def setUp(self):
+		self.meses = construir_meses(6, HOJE)
+		self.vencimentos = {chave_mes(mes): calcular_vencimento(mes, 10) for mes in self.meses}
+
+	def _grade(self, recebido, contribuinte=None, hoje=HOJE):
+		contribuinte = contribuinte or {
+			"valor_contribuicao": VALOR,
+			"inicio_do_pagamento": "2026-01-01",
+		}
+		return montar_grade(contribuinte, self.meses, recebido, hoje, self.vencimentos, VALOR, PARAMETROS)
+
+	def _linha(self, grade, ym):
+		return next(linha for linha in grade["linhas"] if linha["ym"] == ym)
+
+	def test_mes_vencido_sem_pagamento_custa_o_valor_de_atraso(self):
+		grade = self._grade({})
+		self.assertEqual(self._linha(grade, "2026-03")["esperado"], VALOR_ATRASO)
+		self.assertEqual(self._linha(grade, "2026-03")["status"], STATUS_ATRASADO)
+		self.assertTrue(self._linha(grade, "2026-03")["em_atraso"])
+		# Seis meses vencidos, todos pelo valor de atraso.
+		self.assertEqual(grade["total_esperado"], 6 * VALOR_ATRASO)
+
+	def test_mes_pago_no_prazo_continua_valendo_o_valor_base(self):
+		grade = self._grade({"2026-03": _mes(_pagamento(VALOR, "2026-03-08"))})
+		linha = self._linha(grade, "2026-03")
+		self.assertEqual(linha["esperado"], VALOR)
+		self.assertEqual(linha["status"], STATUS_PAGO)
+		self.assertFalse(linha["em_atraso"])
+
+	def test_pagamento_do_valor_base_depois_do_vencimento_deixa_a_diferenca(self):
+		"""Quem paga 60 depois do vencimento fica devendo os 10 do atraso."""
+		grade = self._grade({"2026-03": _mes(_pagamento(VALOR, "2026-04-02"))})
+		linha = self._linha(grade, "2026-03")
+		self.assertEqual(linha["esperado"], VALOR_ATRASO)
+		self.assertEqual(linha["status"], STATUS_PARCIAL)
+		self.assertEqual(linha["falta"], round(VALOR_ATRASO - VALOR, 2))
+
+	def test_pagamento_do_valor_de_atraso_quita_o_mes(self):
+		grade = self._grade({"2026-03": _mes(_pagamento(VALOR_ATRASO, "2026-04-02"))})
+		linha = self._linha(grade, "2026-03")
+		self.assertEqual(linha["esperado"], VALOR_ATRASO)
+		self.assertEqual(linha["status"], STATUS_PAGO)
+
+	def test_mes_corrente_antes_do_vencimento_nao_encarece(self):
+		grade = self._grade({}, hoje=datetime.date(2026, 8, 5))
+		linha = self._linha(grade, "2026-08")
+		self.assertEqual(linha["esperado"], VALOR)
+		self.assertEqual(linha["status"], STATUS_EM_ABERTO)
+
+	def test_valor_proprio_do_associado_recebe_o_mesmo_acrescimo(self):
+		grade = self._grade(
+			{},
+			contribuinte={"valor_contribuicao": 100.0, "inicio_do_pagamento": "2026-01-01"},
+		)
+		self.assertEqual(grade["esperado_mensal"], 100.0)
+		self.assertEqual(self._linha(grade, "2026-03")["esperado"], 110.0)
+
+	def test_sem_valor_de_atraso_configurado_o_mes_nao_encarece(self):
+		parametros = ParametrosContribuicao(valor_base=VALOR, valor_atraso=VALOR, dia_vencimento=10)
+		grade = montar_grade(
+			{"valor_contribuicao": VALOR, "inicio_do_pagamento": "2026-01-01"},
+			self.meses,
+			{},
+			HOJE,
+			self.vencimentos,
+			VALOR,
+			parametros,
+		)
+		self.assertEqual(grade["total_esperado"], 6 * VALOR)
+
+
+class TestCarenciaDeRegistro(FrappeTestCase):
+	"""Os primeiros meses depois do ingresso pagam registro, não contribuição."""
+
+	def setUp(self):
+		self.meses = construir_meses(6, HOJE)
+		self.vencimentos = {chave_mes(mes): calcular_vencimento(mes, 10) for mes in self.meses}
+
+	def _grade(self, contribuinte, recebido=None):
+		return montar_grade(
+			contribuinte, self.meses, recebido or {}, HOJE, self.vencimentos, VALOR, PARAMETROS
+		)
+
+	def _motivos(self, grade):
+		return {linha["ym"]: linha["motivo"] for linha in grade["linhas"] if linha["motivo"]}
+
+	def test_provisorio_so_contribui_no_terceiro_mes(self):
+		grade = self._grade(
+			{
+				"valor_contribuicao": VALOR,
+				"tipo_registro": "Provisório",
+				"data_de_ingresso": "2026-03-15",
+			}
+		)
+		status = {linha["ym"]: linha["status"] for linha in grade["linhas"]}
+		self.assertEqual(status["2026-03"], STATUS_NAO_APLICAVEL)
+		self.assertEqual(status["2026-04"], STATUS_NAO_APLICAVEL)
+		self.assertEqual(status["2026-05"], STATUS_ATRASADO)
+		self.assertEqual(grade["meses_devidos"], 4)
+		self.assertEqual(grade["inicio_do_pagamento"], "2026-05-01")
+		self.assertTrue(grade["inicio_calculado"])
+
+	def test_provisorio_explica_o_que_se_paga_na_carencia(self):
+		grade = self._grade(
+			{
+				"valor_contribuicao": VALOR,
+				"tipo_registro": "Provisório",
+				"data_de_ingresso": "2026-03-15",
+			}
+		)
+		self.assertEqual(
+			self._motivos(grade),
+			{"2026-03": "Registro provisório", "2026-04": "Registro definitivo + uniforme"},
+		)
+
+	def test_definitivo_contribui_a_partir_do_segundo_mes(self):
+		grade = self._grade(
+			{
+				"valor_contribuicao": VALOR,
+				"tipo_registro": "Definitivo",
+				"data_de_ingresso": "2026-03-15",
+			}
+		)
+		status = {linha["ym"]: linha["status"] for linha in grade["linhas"]}
+		self.assertEqual(status["2026-03"], STATUS_NAO_APLICAVEL)
+		self.assertEqual(status["2026-04"], STATUS_ATRASADO)
+		self.assertEqual(grade["meses_devidos"], 5)
+		self.assertEqual(self._motivos(grade), {"2026-03": "Registro definitivo"})
+
+	def test_inicio_do_cadastro_prevalece_sobre_a_carencia(self):
+		grade = self._grade(
+			{
+				"valor_contribuicao": VALOR,
+				"tipo_registro": "Provisório",
+				"data_de_ingresso": "2026-03-15",
+				"inicio_do_pagamento": "2026-04-01",
+			}
+		)
+		self.assertEqual(grade["inicio_do_pagamento"], "2026-04-01")
+		self.assertFalse(grade["inicio_calculado"])
+		self.assertEqual(grade["meses_devidos"], 5)
+		# O mês já cobrado não recebe rótulo de carência.
+		self.assertEqual(self._motivos(grade), {"2026-03": "Registro provisório"})
+
+	def test_sem_ingresso_e_sem_inicio_todos_os_meses_sao_devidos(self):
+		grade = self._grade({"valor_contribuicao": VALOR, "tipo_registro": "Definitivo"})
+		self.assertEqual(grade["meses_devidos"], 6)
+		self.assertIsNone(grade["inicio_do_pagamento"])
+
+	def test_resolver_inicio_conta_a_carencia_a_partir_do_mes_do_ingresso(self):
+		provisorio = resolver_inicio_do_pagamento(
+			{"tipo_registro": "Provisório", "data_de_ingresso": "2026-03-31"}, PARAMETROS
+		)
+		definitivo = resolver_inicio_do_pagamento(
+			{"tipo_registro": "Definitivo", "data_de_ingresso": "2026-03-01"}, PARAMETROS
+		)
+		self.assertEqual(provisorio, datetime.date(2026, 5, 1))
+		self.assertEqual(definitivo, datetime.date(2026, 4, 1))
+
+
+class TestQuitacaoRetroativa(FrappeTestCase):
+	"""Pagamento da InfinitePay em múltiplo de mensalidade quita o passado."""
+
+	def setUp(self):
+		self.meses = construir_meses(6, HOJE)
+		self.vencimentos = {chave_mes(mes): calcular_vencimento(mes, 10) for mes in self.meses}
+
+	def _grade(self, recebido):
+		return montar_grade(
+			{"valor_contribuicao": VALOR, "inicio_do_pagamento": "2026-01-01"},
+			self.meses,
+			recebido,
+			HOJE,
+			self.vencimentos,
+			VALOR,
+			PARAMETROS,
+		)
+
+	def _status(self, grade):
+		return {linha["ym"]: linha["status"] for linha in grade["linhas"]}
+
+	def test_multiplo_do_valor_de_atraso_quita_os_meses_mais_antigos(self):
+		grade = self._grade({"2026-08": _mes(_pagamento(3 * VALOR_ATRASO, "2026-08-05", infinitepay=True))})
+		status = self._status(grade)
+		self.assertEqual(status["2026-03"], STATUS_PAGO)
+		self.assertEqual(status["2026-04"], STATUS_PAGO)
+		self.assertEqual(status["2026-05"], STATUS_PAGO)
+		self.assertEqual(status["2026-06"], STATUS_ATRASADO)
+		self.assertEqual(status["2026-08"], STATUS_ATRASADO)
+		self.assertEqual(grade["credito"], 0.0)
+
+	def test_multiplo_do_valor_base_quita_o_que_alcanca(self):
+		"""180 = três mensalidades em dia, mas os meses atrasados custam 70."""
+		grade = self._grade({"2026-08": _mes(_pagamento(3 * VALOR, "2026-08-05", infinitepay=True))})
+		linhas = {linha["ym"]: linha for linha in grade["linhas"]}
+		self.assertEqual(linhas["2026-03"]["status"], STATUS_PAGO)
+		self.assertEqual(linhas["2026-04"]["status"], STATUS_PAGO)
+		self.assertEqual(linhas["2026-05"]["status"], STATUS_PARCIAL)
+		self.assertEqual(linhas["2026-05"]["falta"], 30.0)
+		self.assertTrue(linhas["2026-03"]["quitacao_retroativa"])
+
+	def test_pagamento_fora_da_infinitepay_continua_virando_credito(self):
+		grade = self._grade({"2026-08": _mes(_pagamento(3 * VALOR_ATRASO, "2026-08-05"))})
+		status = self._status(grade)
+		self.assertEqual(status["2026-03"], STATUS_ATRASADO)
+		self.assertEqual(status["2026-08"], STATUS_PAGO)
+		# Pagou 210 no mês corrente, que custa 60: sobram 150 de crédito.
+		self.assertEqual(grade["credito"], 150.0)
+
+	def test_valor_que_nao_fecha_mensalidade_nao_quita_o_passado(self):
+		grade = self._grade({"2026-08": _mes(_pagamento(45.0, "2026-08-05", infinitepay=True))})
+		linhas = {linha["ym"]: linha for linha in grade["linhas"]}
+		self.assertEqual(linhas["2026-03"]["status"], STATUS_ATRASADO)
+		self.assertEqual(linhas["2026-08"]["status"], STATUS_PARCIAL)
+		self.assertEqual(linhas["2026-08"]["coberto"], 45.0)
+
+	def test_sem_divida_no_passado_o_excedente_vira_credito(self):
+		recebido = {
+			chave: _mes(_pagamento(VALOR, f"{chave}-05", infinitepay=True)) for chave in self.vencimentos
+		}
+		recebido["2026-08"] = _mes(
+			_pagamento(VALOR, "2026-08-05", infinitepay=True),
+			_pagamento(2 * VALOR, "2026-08-05", infinitepay=True),
+		)
+		grade = self._grade(recebido)
+		self.assertEqual(grade["situacao"], STATUS_PAGO)
+		self.assertEqual(grade["credito"], 2 * VALOR)
+
+	def test_pagamento_retroativo_de_um_mes_so_prioriza_a_divida_mais_antiga(self):
+		grade = self._grade({"2026-08": _mes(_pagamento(VALOR_ATRASO, "2026-08-05", infinitepay=True))})
+		status = self._status(grade)
+		self.assertEqual(status["2026-03"], STATUS_PAGO)
+		self.assertEqual(status["2026-08"], STATUS_ATRASADO)

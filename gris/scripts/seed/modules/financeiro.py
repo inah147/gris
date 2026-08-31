@@ -619,7 +619,10 @@ def seed_singles_financeiro(_creds: dict):
 		{
 			"valor_base": 60.0,
 			"dia_vencimento": 10,
-			"valor_atraso": 5.0,
+			# Valor cheio do mês que vence sem quitação (não é um acréscimo solto).
+			"valor_atraso": 70.0,
+			"meses_carencia_provisorio": 2,
+			"meses_carencia_definitivo": 1,
 		},
 	)
 	print("  → Configuracoes Contribuicao Mensal atualizado")

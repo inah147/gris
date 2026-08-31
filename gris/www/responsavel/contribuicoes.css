@@ -116,3 +116,8 @@
 	border-color: var(--border);
 	color: var(--muted-foreground);
 }
+
+/* O que falta no mês puxa a ação de quem paga: cor de alerta do tema. */
+.resp-contrib-falta {
+	color: var(--destructive);
+}

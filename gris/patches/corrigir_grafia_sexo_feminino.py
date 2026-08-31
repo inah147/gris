@@ -18,9 +18,7 @@ def execute():
 		if not frappe.db.table_exists(doctype) or not frappe.db.has_column(doctype, "sexo"):
 			continue
 
-		frappe.db.sql(
-			f"UPDATE `tab{doctype}` SET `sexo` = %(novo)s WHERE `sexo` = %(antigo)s",
-			{"novo": VALOR_NOVO, "antigo": VALOR_ANTIGO},
-		)
+		tabela = frappe.qb.DocType(doctype)
+		(frappe.qb.update(tabela).set(tabela.sexo, VALOR_NOVO).where(tabela.sexo == VALOR_ANTIGO)).run()
 
 	frappe.db.commit()

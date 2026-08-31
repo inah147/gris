@@ -98,6 +98,11 @@ EXTRATO_FILTER_FIELDS = (
 #: coluna `descricao`, restrita ao Gestor Financeiro.
 EXTRATO_BUSCA_DESCRICAO_CAMPO = "descricao_reduzida"
 
+#: Campo da busca textual pela descrição completa; só é aplicado quando o
+#: usuário pode ver a coluna `descricao` (Gestor Financeiro), senão a busca
+#: vazaria o conteúdo de uma coluna restrita através do resultado filtrado.
+EXTRATO_BUSCA_DESCRICAO_COMPLETA_CAMPO = "descricao"
+
 #: Colunas do grid do extrato, na ordem em que aparecem na tabela.
 #:
 #: Todas as informações da transação estão disponíveis; `padrao` define quais
@@ -217,12 +222,24 @@ def _parse_data_extrato(valor) -> str | None:
 		return None
 
 
-def build_extrato_filters(request_args: dict | None) -> dict:
+def _termo_like(valor: str) -> str:
+	"""Escapa curingas do LIKE (%, _) para o texto ser tratado como literal.
+
+	O collation padrão do MySQL já torna a comparação case-insensitive.
+	"""
+	return valor.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+
+
+def build_extrato_filters(request_args: dict | None, pode_buscar_descricao_completa: bool = False) -> dict:
 	"""Monta os filtros do extrato a partir dos argumentos da requisição.
 
 	Apenas campos previstos em `EXTRATO_FILTER_FIELDS` (mais o intervalo de
-	datas e a busca textual por descrição) são considerados, então valores
+	datas e as buscas textuais por descrição) são considerados, então valores
 	arbitrários do cliente não viram filtro de banco.
+
+	`pode_buscar_descricao_completa` habilita a busca na coluna `descricao`
+	(texto completo); ela é restrita ao Gestor Financeiro, então o chamador
+	deve repassar essa checagem de papel — nunca um valor vindo do cliente.
 	"""
 	request_args = request_args or {}
 	filters: dict = {}
@@ -243,10 +260,14 @@ def build_extrato_filters(request_args: dict | None) -> dict:
 
 	busca_descricao = request_args.get("descricao")
 	if busca_descricao not in (None, "", "null"):
-		# Escapa curingas do LIKE (%, _) para o texto ser tratado como literal;
-		# o collation padrão do MySQL já torna a comparação case-insensitive.
-		termo = busca_descricao.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
-		filters[EXTRATO_BUSCA_DESCRICAO_CAMPO] = ["like", f"%{termo}%"]
+		filters[EXTRATO_BUSCA_DESCRICAO_CAMPO] = ["like", f"%{_termo_like(busca_descricao)}%"]
+
+	busca_descricao_completa = request_args.get("descricao_completa")
+	if pode_buscar_descricao_completa and busca_descricao_completa not in (None, "", "null"):
+		filters[EXTRATO_BUSCA_DESCRICAO_COMPLETA_CAMPO] = [
+			"like",
+			f"%{_termo_like(busca_descricao_completa)}%",
+		]
 
 	return filters
 
@@ -312,11 +333,12 @@ def get_extrato_rows(filtros: str | dict | None = None, start: int = 0, page_len
 	page_length = cint(page_length) or EXTRATO_PAGE_SIZE
 	page_length = max(1, min(page_length, EXTRATO_MAX_PAGE_SIZE))
 
-	colunas = get_extrato_colunas("Gestor Financeiro" in frappe.get_roles())
+	pode_ver_descricao_completa = "Gestor Financeiro" in frappe.get_roles()
+	colunas = get_extrato_colunas(pode_ver_descricao_completa)
 
 	# Busca uma linha extra para saber se ainda há próximo lote sem novo count().
 	transacoes = get_extrato_transacoes(
-		build_extrato_filters(filtros),
+		build_extrato_filters(filtros, pode_buscar_descricao_completa=pode_ver_descricao_completa),
 		start=start,
 		page_length=page_length + 1,
 		colunas=colunas,

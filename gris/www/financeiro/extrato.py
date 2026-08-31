@@ -55,7 +55,9 @@ def get_context(context):
 
 	# Filtros vindos da query string (mesmas chaves usadas pelo scroll infinito)
 	request_args = frappe.local.form_dict or {}
-	filters = build_extrato_filters(request_args)
+	filters = build_extrato_filters(
+		request_args, pode_buscar_descricao_completa=context.can_view_full_description
+	)
 
 	# Total apenas para o contador da tela; a navegação é por scroll infinito.
 	total_transacoes = frappe.db.count("Transacao Extrato Geral", filters=filters)

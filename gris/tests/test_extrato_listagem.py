@@ -65,6 +65,31 @@ class TestExtratoFiltros(FrappeTestCase):
 		filtros = build_extrato_filters({"descricao": "50%_off"})
 		self.assertEqual(filtros["descricao_reduzida"], ["like", r"%50\%\_off%"])
 
+	def test_busca_por_descricao_completa_e_ignorada_sem_permissao(self):
+		filtros = build_extrato_filters({"descricao_completa": "Pix"})
+		self.assertEqual(filtros, {})
+		filtros = build_extrato_filters({"descricao_completa": "Pix"}, pode_buscar_descricao_completa=False)
+		self.assertEqual(filtros, {})
+
+	def test_busca_por_descricao_completa_gera_like_quando_permitido(self):
+		filtros = build_extrato_filters({"descricao_completa": "Pix"}, pode_buscar_descricao_completa=True)
+		self.assertEqual(filtros["descricao"], ["like", "%Pix%"])
+
+	def test_busca_por_descricao_completa_vazia_e_ignorada(self):
+		self.assertEqual(
+			build_extrato_filters({"descricao_completa": ""}, pode_buscar_descricao_completa=True), {}
+		)
+		self.assertEqual(
+			build_extrato_filters({"descricao_completa": "null"}, pode_buscar_descricao_completa=True),
+			{},
+		)
+
+	def test_busca_por_descricao_completa_escapa_curingas_do_like(self):
+		filtros = build_extrato_filters(
+			{"descricao_completa": "50%_off"}, pode_buscar_descricao_completa=True
+		)
+		self.assertEqual(filtros["descricao"], ["like", r"%50\%\_off%"])
+
 	def test_ordenacao_tem_desempate_para_paginacao_estavel(self):
 		# Sem o desempate por `name`, lotes com timestamps iguais repetiriam linhas.
 		self.assertIn("name desc", EXTRATO_ORDER_BY)

@@ -11,6 +11,7 @@
 
 	const FILTER_KEYS = [
 		"descricao",
+		"descricao_completa",
 		"data_inicio",
 		"data_fim",
 		"instituicao",

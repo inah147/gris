@@ -67,9 +67,15 @@
 			</summary>
 			<form method="get" class="extrato-filtros">
 				<div class="field">
-					<label class="label" for="extrato-filter-descricao">Descrição contém</label>
-					<input type="search" id="extrato-filter-descricao" name="descricao" class="input" placeholder="Buscar na descrição…" value="{{ filtros_ativos.descricao or '' }}" />
+					<label class="label" for="extrato-filter-descricao">Descrição reduzida contém</label>
+					<input type="search" id="extrato-filter-descricao" name="descricao" class="input" placeholder="Buscar na descrição reduzida…" value="{{ filtros_ativos.descricao or '' }}" />
 				</div>
+				{% if can_view_full_description %}
+				<div class="field">
+					<label class="label" for="extrato-filter-descricao-completa">Descrição completa contém</label>
+					<input type="search" id="extrato-filter-descricao-completa" name="descricao_completa" class="input" placeholder="Buscar na descrição completa…" value="{{ filtros_ativos.descricao_completa or '' }}" />
+				</div>
+				{% endif %}
 				<div class="field">
 					<label class="label" for="extrato-filter-data-inicio">Data início</label>
 					{{ datepicker(id="extrato-filter-data-inicio", name="data_inicio", value=(filtros_ativos.data_inicio or ''), placeholder="Selecione a data") }}

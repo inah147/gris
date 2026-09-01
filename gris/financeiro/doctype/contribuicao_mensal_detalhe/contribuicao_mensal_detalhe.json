@@ -1,0 +1,65 @@
+{
+ "actions": [],
+ "creation": "2026-09-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "mes_referencia",
+  "valor",
+  "em_atraso",
+  "column_break_cmd1",
+  "pagamento_contribuicao_mensal"
+ ],
+ "fields": [
+  {
+   "description": "Mês coberto por esta parte do pagamento. Uma transação pode quitar mais de um mês.",
+   "fieldname": "mes_referencia",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Mês de Referência",
+   "reqd": 1
+  },
+  {
+   "fieldname": "valor",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Valor",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "Este mês foi pago depois do vencimento.",
+   "fieldname": "em_atraso",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Em atraso"
+  },
+  {
+   "fieldname": "column_break_cmd1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Registro de cobrança correspondente, atualizado automaticamente ao salvar.",
+   "fieldname": "pagamento_contribuicao_mensal",
+   "fieldtype": "Link",
+   "label": "Pagamento Contribuição Mensal",
+   "options": "Pagamento Contribuicao Mensal",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Financeiro",
+ "name": "Contribuicao Mensal Detalhe",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

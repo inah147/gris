@@ -3,11 +3,16 @@
 A apuração é a de ``gris.api.financeiro.contribuicoes``: a fonte de verdade são
 as transações de crédito do extrato com categoria "Contribuição Mensal" e
 beneficiário preenchido — não o DocType ``Pagamento Contribuicao Mensal``, que
-continua servindo apenas ao fluxo de cobrança (schedulers).
+serve ao fluxo de cobrança e é atualizado (status, valor, vínculo com a
+transação) sempre que a transação correspondente é salva.
 
 Por isso, a forma de fazer uma contribuição "contar" é vincular a transação ao
 associado: use 'listar_contribuicoes_nao_vinculadas' e depois
 'categorizar_transacoes' com o campo beneficiario.
+
+Quando um único pagamento quita mais de um mês (ex.: R$ 70 do mês em atraso +
+R$ 60 do mês em dia), use 'definir_competencias_transacao' para declarar o
+valor de cada mês — 'competencias_transacao' lê o que já está declarado.
 """
 
 from __future__ import annotations
@@ -345,3 +350,223 @@ def atualizar_cobranca_associado(
 		)
 
 	return {"atualizado": True, "cpf": cpf, "alteracoes": alteracoes}
+
+
+@ferramenta(
+	nome="competencias_transacao",
+	titulo="Meses cobertos por uma transação de contribuição",
+	descricao=(
+		"Mostra os meses declarados numa transação de contribuição mensal que cobre mais de "
+		"um mês (ex.: R$ 70 do mês atrasado + R$ 60 do mês em dia). Lista vazia significa que "
+		"a transação não tem detalhamento e segue o comportamento padrão (mês de competência "
+		"com o valor cheio)."
+	),
+	parametros={"transacao": {"type": "string", "description": "ID da 'Transacao Extrato Geral' (name)."}},
+	obrigatorios=("transacao",),
+	roles=ROLES_LEITURA,
+)
+def competencias_transacao(transacao: str) -> dict:
+	if not frappe.db.exists("Transacao Extrato Geral", transacao):
+		raise ErroDeFerramenta("NAO_ENCONTRADO", f"Nenhuma transação com o ID '{transacao}'.")
+	return servico.get_competencias_transacao(transacao)
+
+
+@ferramenta(
+	nome="definir_competencias_transacao",
+	titulo="Definir meses cobertos por uma transação de contribuição",
+	descricao=(
+		"Declara quais meses uma transação de contribuição mensal quita e quanto de cada — "
+		"use quando um único pagamento cobre mais de um mês, por exemplo R$ 70 do mês em "
+		"atraso mais R$ 60 do mês em dia. A soma dos valores precisa bater com o valor da "
+		"transação. A transação precisa ter categoria 'Contribuição Mensal' e beneficiário "
+		"definido (use 'categorizar_transacoes' antes, se preciso). Uma lista vazia remove o "
+		"detalhamento. Ao salvar, o(s) Pagamento Contribuicao Mensal correspondente(s) são "
+		"criados ou atualizados como 'Pago' e vinculados a esta transação."
+	),
+	parametros={
+		"transacao": {"type": "string", "description": "ID da 'Transacao Extrato Geral' (name)."},
+		"competencias": {
+			"type": "array",
+			"maxItems": 24,
+			"description": (
+				'Lista de meses cobertos: [{"mes": "AAAA-MM", "valor": 70, '
+				'"em_atraso": true}, {"mes": "AAAA-MM", "valor": 60, "em_atraso": false}]. '
+				"Lista vazia remove o detalhamento."
+			),
+		},
+	},
+	obrigatorios=("transacao", "competencias"),
+	roles=ROLES_ESCRITA,
+	somente_leitura=False,
+)
+def definir_competencias_transacao(transacao: str, competencias: list, simular: bool = False) -> dict:
+	if not frappe.db.exists("Transacao Extrato Geral", transacao):
+		raise ErroDeFerramenta("NAO_ENCONTRADO", f"Nenhuma transação com o ID '{transacao}'.")
+
+	itens = competencias if isinstance(competencias, list) else []
+	if any(not isinstance(item, dict) for item in itens):
+		raise ErroDeFerramenta(
+			"ARGUMENTO_INVALIDO",
+			"Cada item de 'competencias' precisa ser um objeto com 'mes', 'valor' e 'em_atraso'.",
+		)
+
+	antes = servico.get_competencias_transacao(transacao)
+
+	if simular:
+		try:
+			doc = frappe.get_doc("Transacao Extrato Geral", transacao)
+			doc.check_permission("write")
+		except frappe.PermissionError as erro:
+			raise ErroDeFerramenta("PERMISSAO_NEGADA", str(erro)) from erro
+		return {
+			"simulacao": True,
+			"transacao": transacao,
+			"antes": antes["competencias"],
+			"depois": itens,
+		}
+
+	try:
+		resultado = servico.definir_competencias_transacao(transacao, itens)
+	except frappe.PermissionError as erro:
+		raise ErroDeFerramenta("PERMISSAO_NEGADA", str(erro)) from erro
+	except frappe.ValidationError as erro:
+		raise ErroDeFerramenta("VALIDACAO", str(erro)) from erro
+
+	return {"transacao": transacao, "antes": antes["competencias"], "depois": resultado["competencias"]}
+
+
+CAMPOS_PAGAMENTO_MENSAL = ("status", "valor", "atrasou", "transacao_extrato")
+
+
+@ferramenta(
+	nome="listar_pagamentos_contribuicao_mensal",
+	titulo="Listar registros de cobrança da contribuição mensal",
+	descricao=(
+		"Lista os registros do DocType 'Pagamento Contribuicao Mensal' (fluxo de cobrança e "
+		"vínculo com a transação que quitou cada mês). Para a apuração de quanto foi pago e "
+		"quanto falta, use 'apuracao_contribuicoes' — este DocType é o registro de cobrança, "
+		"não a fonte de verdade do que entrou."
+	),
+	parametros={
+		"associado": {"type": "string", "description": "CPF do associado."},
+		"status": {"type": "string", "enum": ["Pago", "Em Aberto", "Atrasado"]},
+		"limite": {"type": "integer", "default": 25, "minimum": 1, "maximum": 100},
+		"inicio": {"type": "integer", "default": 0, "minimum": 0},
+	},
+	roles=ROLES_LEITURA,
+)
+def listar_pagamentos_contribuicao_mensal(
+	associado: str | None = None,
+	status: str | None = None,
+	limite: int = 25,
+	inicio: int = 0,
+) -> dict:
+	filtros: dict[str, Any] = {}
+	if associado:
+		filtros["associado"] = associado
+	if status:
+		filtros["status"] = status
+
+	limite = normalizar_limite(limite)
+	inicio = max(0, int(inicio or 0))
+
+	registros = frappe.get_all(
+		"Pagamento Contribuicao Mensal",
+		filters=filtros,
+		fields=["name", "associado", "status", "mes_de_referencia", "valor", "atrasou", "transacao_extrato"],
+		order_by="mes_de_referencia desc",
+		limit_page_length=limite,
+		limit_start=inicio,
+	)
+	total = frappe.db.count("Pagamento Contribuicao Mensal", filters=filtros)
+
+	return {
+		"pagamentos": registros,
+		"paginacao": {"inicio": inicio, "limite": limite, "retornados": len(registros), "total": total},
+	}
+
+
+@ferramenta(
+	nome="atualizar_pagamento_contribuicao_mensal",
+	titulo="Atualizar registro de cobrança da contribuição mensal",
+	descricao=(
+		"Ajusta um registro do DocType 'Pagamento Contribuicao Mensal': status, valor, se foi em "
+		"atraso e a transação do extrato que o quitou. Informe ao menos um campo."
+	),
+	parametros={
+		"name": {
+			"type": "string",
+			"description": "Nome do registro (retornado por 'listar_pagamentos_contribuicao_mensal').",
+		},
+		"status": {"type": "string", "enum": ["Pago", "Em Aberto", "Atrasado"]},
+		"valor": {"type": "number", "description": "Novo valor do mês."},
+		"atrasou": {"type": "boolean", "description": "Se este mês foi pago em atraso."},
+		"transacao_extrato": {
+			"type": "string",
+			"description": "ID da 'Transacao Extrato Geral' que quitou este mês (vazio para desvincular).",
+		},
+	},
+	obrigatorios=("name",),
+	roles=ROLES_ESCRITA,
+	somente_leitura=False,
+)
+def atualizar_pagamento_contribuicao_mensal(
+	name: str,
+	status: str | None = None,
+	valor: float | None = None,
+	atrasou: bool | None = None,
+	transacao_extrato: str | None = None,
+	simular: bool = False,
+) -> dict:
+	if not frappe.db.exists("Pagamento Contribuicao Mensal", name):
+		raise ErroDeFerramenta("NAO_ENCONTRADO", f"Nenhum registro de pagamento com o nome '{name}'.")
+
+	solicitado: dict[str, Any] = {}
+	if status is not None:
+		solicitado["status"] = status
+	if valor is not None:
+		if flt(valor) < 0:
+			raise ErroDeFerramenta("ARGUMENTO_INVALIDO", "O valor não pode ser negativo.")
+		solicitado["valor"] = flt(valor)
+	if atrasou is not None:
+		solicitado["atrasou"] = 1 if atrasou else 0
+	if transacao_extrato is not None:
+		if transacao_extrato and not frappe.db.exists("Transacao Extrato Geral", transacao_extrato):
+			raise ErroDeFerramenta(
+				"NAO_ENCONTRADO",
+				f"Nenhuma transação com o ID '{transacao_extrato}'.",
+				{"campo": "transacao_extrato"},
+			)
+		solicitado["transacao_extrato"] = transacao_extrato or None
+
+	if not solicitado:
+		raise ErroDeFerramenta(
+			"ARGUMENTO_INVALIDO",
+			"Informe ao menos um campo para atualizar.",
+			{"campos_aceitos": list(CAMPOS_PAGAMENTO_MENSAL)},
+		)
+
+	atuais = frappe.db.get_value(
+		"Pagamento Contribuicao Mensal", name, list(CAMPOS_PAGAMENTO_MENSAL), as_dict=True
+	)
+	alteracoes = {
+		campo: {"de": atuais.get(campo), "para": valor}
+		for campo, valor in solicitado.items()
+		if atuais.get(campo) != valor
+	}
+	if not alteracoes:
+		return {"atualizado": False, "motivo": "Nenhum valor diferente do atual.", "alteracoes": {}}
+
+	if simular:
+		return {"simulacao": True, "atualizado": False, "name": name, "alteracoes": alteracoes}
+
+	doc = frappe.get_doc("Pagamento Contribuicao Mensal", name)
+	try:
+		doc.check_permission("write")
+	except frappe.PermissionError as erro:
+		raise ErroDeFerramenta("PERMISSAO_NEGADA", str(erro)) from erro
+	for campo, valor in solicitado.items():
+		doc.set(campo, valor)
+	doc.save()
+
+	return {"atualizado": True, "name": name, "alteracoes": alteracoes}

@@ -312,20 +312,22 @@ def _montar_lembrete_dados(
 	sexo_jovem: str | None,
 	recepcionista: frappe._dict | None,
 ) -> str:
-	partes = [
-		f"Olá, {primeiro_nome_responsavel}!\n",
-		(
-			f"Vi que ainda não preencheu os dados para fazer o registro "
-			f"{genero.de(sexo_jovem)} {primeiro_nome_jovem}. "
-			"Esta etapa é essencial para seguirmos com a integração!"
-		),
-		(
-			"Os dados devem ser preenchidos no Gris. Se estiver com dificuldades, aqui estão alguns "
-			"tutoriais que podem ajudar:\n"
-		),
-		f"*Como fazer login no Gris*\n{TUTORIAL_LOGIN}\n",
-		f"*Como preencher os dados para registro*\n{TUTORIAL_DADOS_REGISTRO}\n",
-	]
+	# Cada parágrafo é nomeado antes de entrar na lista: strings concatenadas implicitamente
+	# dentro de um literal de lista escondem uma vírgula esquecida (semgrep string-concat-in-list).
+	abertura = f"Olá, {primeiro_nome_responsavel}!\n"
+	cobranca = (
+		f"Vi que ainda não preencheu os dados para fazer o registro "
+		f"{genero.de(sexo_jovem)} {primeiro_nome_jovem}. "
+		"Esta etapa é essencial para seguirmos com a integração!"
+	)
+	chamada_tutoriais = (
+		"Os dados devem ser preenchidos no Gris. Se estiver com dificuldades, aqui estão alguns "
+		"tutoriais que podem ajudar:\n"
+	)
+	tutorial_login = f"*Como fazer login no Gris*\n{TUTORIAL_LOGIN}\n"
+	tutorial_dados = f"*Como preencher os dados para registro*\n{TUTORIAL_DADOS_REGISTRO}\n"
+
+	partes = [abertura, cobranca, chamada_tutoriais, tutorial_login, tutorial_dados]
 
 	if recepcionista and recepcionista.get("nome"):
 		para_recepcionista = genero.para(recepcionista.get("sexo"))

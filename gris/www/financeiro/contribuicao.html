@@ -31,7 +31,7 @@
 			</p>
 			{% else %}
 			<p class="m-0 text-base leading-relaxed text-muted-foreground">
-				Detalhe da contribuição mensal apurada pelas transações do extrato geral.
+				Detalhe da contribuição mensal apurada pelos registros de cobrança.
 			</p>
 			{% endif %}
 		</div>
@@ -76,16 +76,11 @@
 	</section>
 </article>
 
-<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-4">
 	<article class="card metric-card">
 		<section>
 			<p class="m-0 text-sm text-muted-foreground">Valor esperado por mês</p>
 			<p class="m-0 mt-1 text-2xl font-semibold text-foreground contrib-num">{{ brl(assoc.esperado_mensal) }}</p>
-			{% if assoc.mostrar_valor_atraso %}
-			<p class="m-0 mt-2 text-xs text-muted-foreground contrib-num">
-				{{ brl(assoc.valor_em_atraso) }} depois do vencimento
-			</p>
-			{% endif %}
 			<div id="acoesValor" class="mt-3">
 				{% if can_manage_contributions %}
 				<button type="button" id="btnAlterarValor" class="btn-sm-outline" data-acao="alterar-valor">Alterar valor</button>
@@ -99,7 +94,7 @@
 			<p class="m-0 text-sm text-muted-foreground">Recebido no período</p>
 			<p class="m-0 mt-1 text-2xl font-semibold text-foreground contrib-num">{{ brl(assoc.total_recebido) }}</p>
 			<p class="m-0 mt-2 text-xs text-muted-foreground">
-				{{ assoc.meses_quitados }} de {{ assoc.meses_devidos }} meses quitados
+				{{ assoc.meses_quitados }} de {{ assoc.meses_gerados }} meses gerados quitados
 			</p>
 		</section>
 	</article>
@@ -118,20 +113,11 @@
 				<li class="contrib-pendentes__item">
 					<span>{{ pendente.rotulo }}</span>
 					{{ situacao_badge(pendente.status, pendente.status_slug) }}
-					<span class="contrib-num contrib-falta">{{ brl(pendente.falta) }}</span>
+					<span class="contrib-num contrib-falta">{{ brl(pendente.valor) }}</span>
 				</li>
 				{% endfor %}
 			</ul>
 			{% endif %}
-		</section>
-	</article>
-	<article class="card metric-card">
-		<section>
-			<p class="m-0 text-sm text-muted-foreground">Crédito acumulado</p>
-			<p class="m-0 mt-1 text-2xl font-semibold text-foreground contrib-num">{{ brl(assoc.credito) }}</p>
-			<p class="m-0 mt-2 text-xs text-muted-foreground">
-				Adiantamento que quita os próximos meses
-			</p>
 		</section>
 	</article>
 </div>
@@ -182,51 +168,43 @@
 <article class="card mb-4">
 	<header>
 		<h2>Apuração mês a mês</h2>
-		<p>Situação de cada mês do período apurado.</p>
+		<p>Situação de cada mês do período, lida do Pagamento Contribuicao Mensal.
+			{% if can_manage_contributions %}Clique em "Editar" para trocar o status ou vincular a transação certa.{% endif %}</p>
 	</header>
 	<section class="p-0 min-w-0">
 		<div class="overflow-x-auto">
-			<table class="table contrib-meses-tabela">
+			<table class="table contrib-meses-tabela" id="contribMesesTabela">
 				<thead>
 					<tr>
 						<th scope="col">Mês</th>
 						<th scope="col">Situação</th>
-						<th scope="col" class="text-right">Esperado</th>
-						<th scope="col" class="text-right">Recebido</th>
-						<th scope="col" class="text-right">Falta</th>
+						<th scope="col" class="text-right">Valor</th>
+						<th scope="col">Transação vinculada</th>
+						{% if can_manage_contributions %}<th scope="col"><span class="sr-only">Ações</span></th>{% endif %}
 					</tr>
 				</thead>
 				<tbody>
 					{% for linha in assoc.linhas %}
-					<tr class="contrib-mes contrib-mes--{{ linha.status_slug }}">
-						<td class="whitespace-nowrap">
-							{{ linha.rotulo }}
-							{% if linha.motivo %}<span class="contrib-nota">{{ linha.motivo }}</span>{% endif %}
+					<tr class="contrib-mes contrib-mes--{{ linha.status_slug }}"
+						data-ym="{{ linha.ym }}" data-name="{{ linha.name or '' }}"
+						data-status="{{ linha.status }}" data-valor="{{ linha.valor }}"
+						data-atrasou="{{ 1 if linha.atrasou else 0 }}"
+						data-transacao="{{ linha.transacao_extrato or '' }}">
+						<td class="whitespace-nowrap">{{ linha.rotulo }}</td>
+						<td class="contrib-mes__situacao">{{ situacao_badge(linha.status, linha.status_slug) }}</td>
+						<td class="text-right whitespace-nowrap contrib-num contrib-mes__valor">
+							{% if linha.valor > 0 %}{{ brl(linha.valor) }}{% else %}—{% endif %}
 						</td>
-						<td>{{ situacao_badge(linha.status, linha.status_slug) }}</td>
-						<td class="text-right whitespace-nowrap contrib-num">
-							{% if linha.esperado > 0 %}
-								{{ brl(linha.esperado) }}
-								{% if linha.em_atraso %}<span class="contrib-nota">valor em atraso</span>{% endif %}
+						<td class="contrib-mes__transacao">
+							{% if linha.transacao_extrato %}
+								<a class="btn-sm-outline" href="/financeiro/detalhe_extrato?name={{ linha.transacao_extrato | urlencode }}">{{ linha.transacao_extrato }}</a>
 							{% else %}—{% endif %}
 						</td>
-						<td class="text-right whitespace-nowrap contrib-num">
-							{{ brl(linha.recebido) }}
-							{# Cada nota fica na coluna que ela explica: o mês que ninguém pagou
-							   diretamente precisa dizer como fechou. Crédito e pagamento
-							   retroativo são, para quem lê a tela, a mesma coisa: dinheiro que
-							   entrou em outro mês e cobriu este — por isso uma nota só. #}
-							{% if linha.usou_credito or linha.quitacao_retroativa %}
-								<span class="contrib-nota">quitado por pagamento posterior</span>
-							{% elif linha.quitado_sem_acrescimo %}
-								<span class="contrib-nota">quitado sem o acréscimo</span>
-							{% endif %}
+						{% if can_manage_contributions %}
+						<td class="text-right">
+							<button type="button" class="btn-sm-outline contrib-mes__editar" data-acao="editar-mes">Editar</button>
 						</td>
-						<td class="text-right whitespace-nowrap contrib-num">
-							{% if linha.falta > 0 %}
-								<span class="contrib-falta">{{ brl(linha.falta) }}</span>
-							{% else %}—{% endif %}
-						</td>
+						{% endif %}
 					</tr>
 					{% endfor %}
 				</tbody>

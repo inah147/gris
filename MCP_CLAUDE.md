@@ -62,29 +62,36 @@ atualizado — sem mexer na máquina de quem usa.
 
 ### Contribuições mensais
 
-A apuração vem das **transações do extrato** (crédito com categoria "Contribuição
-Mensal" e beneficiário preenchido), não do DocType `Pagamento Contribuicao
-Mensal` — que segue existindo para o fluxo de cobrança e para os gráficos do
-painel, agora vinculado à transação que quitou cada mês (`transacao_extrato`).
-Para uma contribuição contar para alguém, a transação precisa ter o
-beneficiário definido.
+A apuração voltou a ser a do DocType `Pagamento Contribuicao Mensal`: um
+registro por associado e mês, com status (Pago/Em Aberto/Atrasado), valor e —
+quando pago — a transação do extrato que quitou (`transacao_extrato`). Sem
+carência de registro, valor de atraso escalonado ou crédito retroativo: o que
+está gravado no registro é o que a tela e o MCP mostram. Um mês sem registro
+ainda gerado aparece como "Não gerado".
+
+A tela (`/financeiro/contribuicoes` e `/financeiro/contribuicao`) lê e edita
+os mesmos registros — trocar status e vincular a transação certa também
+funciona por lá, além do MCP.
 
 Uma transação pode quitar mais de um mês num único pagamento (ex.: R$ 70 do mês
 em atraso + R$ 60 do mês em dia). Isso fica declarado no campo "Meses cobertos
-por esta transação" da própria transação (tela do extrato no Desk) e pode ser
-lido/editado por `competencias_transacao` e `definir_competencias_transacao`.
+por esta transação" da própria transação (tela do extrato no Desk); ao salvar,
+um Pagamento Contribuicao Mensal é criado/atualizado por mês declarado,
+vinculado a ela. `competencias_transacao`/`definir_competencias_transacao`
+leem e escrevem esse detalhamento.
 
 | Ferramenta | O que faz | Papéis |
 |---|---|---|
-| `resumo_contribuicoes` | Recebido (vinculado e não vinculado), esperado, adimplência e pendências de cadastro no período | Gestor/Visualizador Contribuição Mensal |
-| `apuracao_contribuicoes` | Situação de cada contribuinte: esperado, recebido, saldo, crédito e situação; filtra por situação, pendência e ação de cadastro | Gestor/Visualizador Contribuição Mensal |
-| `extrato_contribuicoes_associado` | Transações de contribuição atribuídas a um associado no período (uma linha por mês, quando a transação detalha mais de um) | Gestor/Visualizador Contribuição Mensal |
+| `resumo_contribuicoes` | Recebido, esperado, adimplência e pendências de cadastro no período, a partir dos registros de cobrança | Gestor/Visualizador Contribuição Mensal |
+| `apuracao_contribuicoes` | Situação de cada contribuinte: esperado, recebido, saldo e situação (Atrasado, Em Aberto, Pago, Não gerado); filtra por situação, pendência e ação de cadastro | Gestor/Visualizador Contribuição Mensal |
+| `extrato_contribuicoes_associado` | Transações de contribuição atribuídas a um associado no período (evidência do extrato, ao lado do mês a mês) | Gestor/Visualizador Contribuição Mensal |
 | `listar_contribuicoes_nao_vinculadas` | Contribuições que entraram na conta e ainda não têm associado | Gestor/Visualizador Contribuição Mensal |
 | `atualizar_cobranca_associado` ✎ | Valor da contribuição, situação da cobrança e contatos de cobrança | Gestor Contribuição Mensal |
 | `competencias_transacao` | Meses declarados numa transação que quita mais de um mês | Gestor/Visualizador Contribuição Mensal |
 | `definir_competencias_transacao` ✎ | Declara os meses e o valor de cada um numa transação (mês atrasado + mês em dia, por exemplo); a soma precisa bater com o valor da transação | Gestor Contribuição Mensal |
 | `listar_pagamentos_contribuicao_mensal` | Registros de cobrança (`Pagamento Contribuicao Mensal`), com a transação que quitou cada um | Gestor/Visualizador Contribuição Mensal |
-| `atualizar_pagamento_contribuicao_mensal` ✎ | Ajusta status, valor, atraso e vínculo com a transação de um registro de cobrança | Gestor Contribuição Mensal |
+| `atualizar_pagamento_contribuicao_mensal` ✎ | Ajusta status, valor, atraso e vínculo com a transação de um registro existente (por `name`) | Gestor Contribuição Mensal |
+| `definir_pagamento_mensal` ✎ | Cria ou atualiza o pagamento de um mês por associado + mês (AAAA-MM) — não precisa do `name`, serve para meses "Não gerado" | Gestor Contribuição Mensal |
 
 ### Contas fixas
 
@@ -296,6 +303,7 @@ Exemplos de pedidos que funcionam bem:
 - *"Quem entrou no grupo e ainda não tem cobrança cadastrada?"* → `apuracao_contribuicoes` com `acao_cadastro='Cadastrar'`
 - *"Sobe a contribuição da Ana para R$ 75"* → `atualizar_cobranca_associado`
 - *"Esse Pix de R$ 130 foi o mês de julho atrasado (R$ 70) mais agosto em dia (R$ 60)"* → `definir_competencias_transacao` com `competencias=[{"mes":"2026-07","valor":70,"em_atraso":true},{"mes":"2026-08","valor":60,"em_atraso":false}]`
+- *"Marca julho da Ana como pago e vincula à transação TX-0001"* → `definir_pagamento_mensal` com `associado`, `mes="2026-07"`, `status="Pago"`, `transacao_extrato="TX-0001"`
 
 **Orçamento**
 - *"Como está a execução do orçamento deste ano?"* → `comparar_previsto_realizado`

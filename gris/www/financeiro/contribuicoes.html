@@ -19,8 +19,8 @@
 	<div class="flex flex-col gap-2 max-w-2xl">
 		<h1 id="financeiro-contrib-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Contribuições Mensais</h1>
 		<p class="m-0 text-base leading-relaxed text-muted-foreground">
-			Apurado a partir das transações do extrato geral: cada crédito da categoria
-			&ldquo;Contribuição Mensal&rdquo; vinculado a um associado conta como contribuição recebida.
+			Apurado a partir dos registros de cobrança (Pagamento Contribuicao Mensal): o status e
+			o valor de cada mês são o que está gravado no registro, editável na tela do contribuinte.
 		</p>
 	</div>
 </section>
@@ -70,7 +70,7 @@
 				{{ '{:.1f}'.format(totais.adimplencia|float).replace('.', ',') }}%
 			</p>
 			<p class="m-0 mt-2 text-xs text-muted-foreground">
-				{{ totais.meses_quitados }} de {{ totais.meses_devidos }} meses quitados
+				{{ totais.meses_quitados }} de {{ totais.meses_devidos }} meses gerados quitados
 			</p>
 		</section>
 	</article>
@@ -173,7 +173,7 @@
 							<td>{{ situacao_badge(assoc.situacao, assoc.situacao_slug) }}</td>
 							<td class="text-right whitespace-nowrap contrib-num">{{ brl(assoc.esperado_mensal) }}</td>
 							<td class="text-right whitespace-nowrap contrib-num">{{ brl(assoc.total_recebido) }}</td>
-							<td class="text-right whitespace-nowrap contrib-num">{{ assoc.meses_quitados }}/{{ assoc.meses_devidos }}</td>
+							<td class="text-right whitespace-nowrap contrib-num">{{ assoc.meses_quitados }}/{{ assoc.meses_gerados }}</td>
 							<td class="text-right">
 								<a class="btn-sm-outline" href="{{ detalhe_url }}">Detalhes</a>
 							</td>

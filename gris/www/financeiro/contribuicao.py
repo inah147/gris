@@ -1,17 +1,20 @@
 """Detalhe da contribuição mensal de um associado.
 
 Tela cheia aberta pela lista de `/financeiro/contribuicoes`. A apuração aqui é a
-mesma da lista (`gris.api.financeiro.contribuicoes`), recortada num contribuinte
-só: mês a mês, transações identificadas no período e as ações de gestão
+mesma da lista (`gris.api.financeiro.pagamentos_contribuicao`), recortada num
+contribuinte só: mês a mês (lido do Pagamento Contribuicao Mensal, editável por
+quem gerencia), transações identificadas no período e as ações de gestão
 (valor, dados de cobrança e cobrança pela InfinitePay).
 
 O mês a mês e as transações são renderizados no servidor — a tela nasce pronta,
-sem depender de JavaScript para mostrar o que já foi apurado.
+sem depender de JavaScript para mostrar o que já foi apurado. A edição (trocar
+status, vincular a transação certa) é que precisa de JavaScript, em
+`contribuicao.js`.
 """
 
 import frappe
 
-from gris.api.financeiro.contribuicoes import (
+from gris.api.financeiro.pagamentos_contribuicao import (
 	MESES_PADRAO,
 	ROLE_GESTOR,
 	apurar_associados,
@@ -88,16 +91,11 @@ def get_context(context):
 
 	assoc = apuracoes[0]
 
-	# O que falta é a soma dos meses ainda não quitados — inclui a diferença do
-	# mês parcial, não só o mês que ninguém pagou.
-	pendentes = [linha for linha in assoc["linhas"] if float(linha["falta"] or 0) > 0]
-	assoc["total_falta"] = round(sum(float(linha["falta"]) for linha in pendentes), 2)
-	assoc["meses_pendentes"] = len(pendentes)
-	# Lista os meses em aberto na própria métrica — "5 meses a quitar" sozinho
-	# não diz quais, e é justo isso que quem cobra precisa saber de cara.
+	# Meses gerados e ainda não pagos (Em Aberto ou Atrasado) — "Não gerado" não
+	# entra aqui: sem registro, não há o que cobrar ainda.
+	pendentes = [linha for linha in assoc["linhas"] if linha["status"] in ("Em Aberto", "Atrasado")]
+	assoc["total_falta"] = round(sum(float(linha["valor"]) for linha in pendentes), 2)
 	assoc["pendentes"] = pendentes
-	# A linha do valor de atraso só interessa quando ele é maior que o valor em dia.
-	assoc["mostrar_valor_atraso"] = float(assoc["valor_em_atraso"]) > float(assoc["esperado_mensal"])
 
 	context.assoc = assoc
 

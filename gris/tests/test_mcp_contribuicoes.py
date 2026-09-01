@@ -1,8 +1,8 @@
 """Testes das ferramentas MCP de contribuição mensal e contas fixas.
 
-A apuração da contribuição vem das transações do extrato
-(gris.api.financeiro.contribuicoes); aqui checamos o recorte, os filtros e as
-guardas das ferramentas.
+A apuração da contribuição vem do Pagamento Contribuicao Mensal
+(gris.api.financeiro.pagamentos_contribuicao); aqui checamos o recorte, os
+filtros e as guardas das ferramentas.
 """
 
 from unittest import TestCase
@@ -44,11 +44,11 @@ APURACAO = {
 			"nome": "Carla",
 			"categoria": "Beneficiário",
 			"secao": "Alcateia",
-			"situacao": "Parcial",
+			"situacao": "Em Aberto",
 			"acao_cadastro": "Cadastrar",
 			"total_recebido": 30.0,
 			"total_esperado": 180.0,
-			"linhas": [{"ym": "2026-01", "status": "Parcial"}],
+			"linhas": [{"ym": "2026-01", "status": "Em Aberto"}],
 		},
 	],
 	"nao_vinculadas": [
@@ -317,7 +317,7 @@ class TestCompetenciasTransacao(TestCase):
 		with (
 			patch.object(contribuicoes.frappe.db, "exists", return_value=True),
 			patch.object(
-				contribuicoes.servico, "get_competencias_transacao", return_value=esperado
+				contribuicoes.transacoes_servico, "get_competencias_transacao", return_value=esperado
 			) as servico,
 		):
 			resultado = contribuicoes.competencias_transacao("T1")
@@ -342,9 +342,9 @@ class TestDefinirCompetenciasTransacao(TestCase):
 		itens = [{"mes": "2026-01", "valor": 70.0, "em_atraso": True}]
 		with (
 			patch.object(contribuicoes.frappe.db, "exists", return_value=True),
-			patch.object(contribuicoes.servico, "get_competencias_transacao", return_value=antes),
+			patch.object(contribuicoes.transacoes_servico, "get_competencias_transacao", return_value=antes),
 			patch.object(contribuicoes.frappe, "get_doc") as get_doc,
-			patch.object(contribuicoes.servico, "definir_competencias_transacao") as definir,
+			patch.object(contribuicoes.transacoes_servico, "definir_competencias_transacao") as definir,
 		):
 			resultado = contribuicoes.definir_competencias_transacao("T1", itens, simular=True)
 
@@ -359,9 +359,9 @@ class TestDefinirCompetenciasTransacao(TestCase):
 		itens = [{"mes": "2026-01", "valor": 70.0, "em_atraso": True}]
 		with (
 			patch.object(contribuicoes.frappe.db, "exists", return_value=True),
-			patch.object(contribuicoes.servico, "get_competencias_transacao", return_value=antes),
+			patch.object(contribuicoes.transacoes_servico, "get_competencias_transacao", return_value=antes),
 			patch.object(
-				contribuicoes.servico, "definir_competencias_transacao", return_value=depois
+				contribuicoes.transacoes_servico, "definir_competencias_transacao", return_value=depois
 			) as definir,
 		):
 			resultado = contribuicoes.definir_competencias_transacao("T1", itens)
@@ -443,6 +443,7 @@ class TestRegistroDeFerramentas(TestCase):
 			"definir_competencias_transacao",
 			"listar_pagamentos_contribuicao_mensal",
 			"atualizar_pagamento_contribuicao_mensal",
+			"definir_pagamento_mensal",
 		}
 		self.assertTrue(esperadas.issubset(nomes), esperadas - nomes)
 

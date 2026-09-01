@@ -21,6 +21,8 @@ CAMPOS_DE_TRANSICAO = (
 	("Pioneiro", "idade_transicao_pioneiro"),
 )
 
+STATUS_AGUARDAR_DADOS = "Aguardar Dados"
+
 
 class NovoAssociado(Document):
 	def autoname(self):
@@ -35,6 +37,21 @@ class NovoAssociado(Document):
 
 	def validate(self):
 		self._sincronizar_data_registro_provisorio()
+		self._sincronizar_data_aguardar_dados()
+
+	def _sincronizar_data_aguardar_dados(self):
+		"""Marca desde quando o jovem está parado em "Aguardar Dados".
+
+		A data é a base da escada de lembretes de preenchimento (ver
+		``gris.api.recepcao_mensagens.enviar_lembretes_dados_registro``). Sair do status
+		zera a data e o controle de envio para que um retorno recomece a cadência do zero.
+		"""
+		if self.status == STATUS_AGUARDAR_DADOS:
+			if not self.data_status_aguardar_dados:
+				self.data_status_aguardar_dados = today()
+		else:
+			self.data_status_aguardar_dados = None
+			self.data_lembrete_dados = None
 
 	def _sincronizar_data_registro_provisorio(self):
 		"""Mantém a data de ativação do registro provisório em sincronia com o flag.

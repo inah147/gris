@@ -58,7 +58,16 @@
   "id_escoteiros_criado",
   "registro_definitivo_pago",
   "registro_definitivo_efetivado",
-  "reuniao_de_acolhida_realizada"
+  "reuniao_de_acolhida_realizada",
+  "controle_de_mensagens_section",
+  "data_status_aguardar_dados",
+  "data_lembrete_dados",
+  "data_lembrete_pesquisa",
+  "data_lembrete_ficha_medica",
+  "data_lembrete_id_escoteiros",
+  "data_lembrete_acolhida",
+  "data_mensagem_visita_realizada",
+  "data_mensagem_registro_criado"
  ],
  "fields": [
   {
@@ -351,6 +360,68 @@
    "fieldname": "reuniao_de_acolhida_realizada",
    "fieldtype": "Check",
    "label": "Reuni\u00e3o de acolhida realizada"
+  },
+  {
+   "fieldname": "controle_de_mensagens_section",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Controle de mensagens autom\u00e1ticas"
+  },
+  {
+   "fieldname": "data_status_aguardar_dados",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "Status \"Aguardar Dados\" desde",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_lembrete_dados",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "\u00daltimo lembrete de dados enviado em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_lembrete_pesquisa",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "\u00daltimo lembrete de pesquisa enviado em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_lembrete_ficha_medica",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "\u00daltimo lembrete de ficha m\u00e9dica enviado em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_lembrete_id_escoteiros",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "\u00daltimo lembrete de id@escoteiros enviado em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_lembrete_acolhida",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "\u00daltimo aviso de acolhida enviado em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_mensagem_visita_realizada",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "Aviso de recep\u00e7\u00e3o realizada enviado em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_mensagem_registro_criado",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "Aviso de registro criado enviado em",
+   "read_only": 1
   },
   {
    "fieldname": "responsavel_recepcao",

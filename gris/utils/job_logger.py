@@ -135,6 +135,18 @@ ROTULOS_DE_JOBS = {
 	"gris.api.google_workspace.access_manager.run_daily_restricted_access_cleanup": (
 		"Limpeza de acessos restritos do Workspace"
 	),
+	"gris.api.recepcao_mensagens.enviar_lembretes_acolhida_lenco": ("Avisos de acolhida e entrega do lenço"),
+	"gris.api.recepcao_mensagens.enviar_lembretes_dados_registro": (
+		"Lembretes de preenchimento dos dados de registro"
+	),
+	"gris.api.recepcao_mensagens.enviar_lembretes_ficha_medica": (
+		"Lembretes de preenchimento da ficha médica"
+	),
+	"gris.api.recepcao_mensagens.enviar_lembretes_id_escoteiros": ("Lembretes de criação do id@escoteiros"),
+	"gris.api.recepcao_mensagens.enviar_lembretes_pesquisa_novos_associados": (
+		"Lembretes da pesquisa de novos associados"
+	),
+	"gris.api.recepcao_mensagens.notificar_visitas_do_dia": "Visitas do dia no grupo de chefes",
 	"gris.api.recepcao_notificacoes.enviar_lembretes_visita": "Lembretes de visita da recepção",
 	"gris.api.registro_provisorio_notificacoes.enviar_avisos_seguimento_registro_provisorio": (
 		"Avisos de seguimento do registro provisório"

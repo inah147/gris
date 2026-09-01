@@ -305,6 +305,13 @@
 	gap: calc(var(--spacing) * 4);
 }
 
+/* Ramo Filhotes: só o registro definitivo é oferecido. Sem isto o card sobra na
+   primeira coluna de um grid de duas e fica encostado à esquerda. */
+.registro-type-options--single {
+	grid-template-columns: minmax(0, 22rem);
+	justify-content: center;
+}
+
 .registro-option-card {
 	cursor: pointer;
 	transition:
@@ -430,6 +437,129 @@
 .registro-link:focus-visible {
 	outline: 2px solid var(--color-ring);
 	outline-offset: 3px;
+}
+
+/* Os documentos são servidos pelo GRIS, então o gatilho é um botão, não um link.
+   Isto tira a aparência de botão e mantém a de link. */
+.registro-link--button {
+	padding: 0;
+	border: 0;
+	background: none;
+	font: inherit;
+	cursor: pointer;
+}
+
+.registro-link--button[aria-busy="true"] {
+	cursor: progress;
+	opacity: 0.7;
+}
+
+/* Ramo Filhotes: registro do responsável, documentos e declaração de idoneidade.
+   Os blocos são renderizados sempre — assim trazem o que já está gravado e o registro de
+   um irmão mais velho não apaga o cadastro do responsável. Quem decide a visibilidade é o
+   `data-filhotes` do form: nasce calculado no servidor (sem piscar no primeiro paint) e o
+   JS o reescreve quando a data de nascimento muda. */
+
+.registro-form:not([data-filhotes="true"]) .registro-filhotes-registro,
+.registro-form:not([data-filhotes="true"]) .registro-field--filhotes {
+	display: none;
+}
+
+.registro-declaracao-banner {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: calc(var(--spacing) * 3);
+	margin-bottom: calc(var(--spacing) * 5);
+}
+
+.registro-filhotes-registro {
+	padding: calc(var(--spacing) * 4);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-lg);
+	background: var(--color-muted);
+}
+
+.registro-documento {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+}
+
+.registro-documento__status {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+	margin: 0;
+	color: var(--color-muted-foreground);
+	font-size: var(--text-sm);
+}
+
+.registro-filhotes-total {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 1.5);
+	padding: calc(var(--spacing) * 4);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-lg);
+}
+
+.registro-filhotes-total__linha {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 3);
+}
+
+.registro-filhotes-total__linha strong {
+	font-size: var(--text-xl);
+	font-weight: var(--font-weight-semibold);
+}
+
+.registro-passo {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+}
+
+.registro-passo h3 {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+	margin: 0;
+	font-size: var(--text-base);
+	font-weight: var(--font-weight-semibold);
+}
+
+.registro-passo p {
+	margin: 0;
+	color: var(--color-muted-foreground);
+	font-size: var(--text-sm);
+	line-height: 1.5;
+}
+
+.registro-declaracao-lista {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 3);
+}
+
+.registro-declaracao-item {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	padding: calc(var(--spacing) * 3);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-lg);
+}
+
+.registro-declaracao-item__nome {
+	font-size: var(--text-sm);
+	font-weight: var(--font-weight-semibold);
+}
+
+.registro-declaracao-item button {
+	width: fit-content;
 }
 
 @media (max-width: 64rem) {

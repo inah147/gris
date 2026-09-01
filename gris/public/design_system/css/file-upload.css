@@ -215,7 +215,38 @@
   color: var(--success);
 }
 
+/* Câmera ao vivo (getUserMedia). O input com `capture` fica de reserva para quando o
+   navegador não libera o stream. */
+.file-upload__camera {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 3);
+}
+
+.file-upload__camera-video {
+  width: 100%;
+  max-height: 60vh;
+  border-radius: var(--radius-lg);
+  background: var(--color-muted);
+  object-fit: contain;
+}
+
+.file-upload__camera-actions {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  justify-content: center;
+}
+
 @media (max-width: 47.9375rem) {
+  .file-upload__camera-actions {
+    flex-direction: column;
+  }
+
+  .file-upload__camera-actions > * {
+    width: 100%;
+    justify-content: center;
+  }
+
   .file-upload__summary {
     grid-template-columns: 1fr;
     align-items: stretch;

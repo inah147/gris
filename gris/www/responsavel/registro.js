@@ -19,6 +19,23 @@ frappe.ready(function () {
 	const novoAssociadoName = document.getElementById("novo-associado-name")?.value || "";
 	const readOnly = form.dataset.readOnly === "true";
 
+	// Ramo Filhotes: a idade de transição vem do Single Vagas, pelo dataset do form.
+	const idadeTransicaoFilhotes = Number(form.dataset.idadeTransicaoFilhotes || 0);
+	const filhotesAviso = document.querySelector(".registro-filhotes-aviso");
+	const filhotesTotal = document.getElementById("filhotes-total");
+	const filhotesTotalValor = document.getElementById("filhotes-total-valor");
+	const filhotesTotalDetalhe = document.getElementById("filhotes-total-detalhe");
+	const filhotesCiencia = document.getElementById("filhotes-ciencia");
+	const cienciaPagamentoCheck = document.getElementById("ciencia-pagamento-check");
+	const cienciaAcompanhamentoCheck = document.getElementById("ciencia-acompanhamento-check");
+	const tipoOptions = document.getElementById("registro-type-options");
+	const provisorioCard = document.querySelector(
+		'.registro-option-card[data-value="Provisório"]'
+	);
+	const proximosPassosDialog = document.getElementById("proximosPassosDialog");
+	const proximosPassosLista = document.getElementById("proximos-passos-declaracoes");
+	const enviarDeclaracaoDialog = document.getElementById("enviarDeclaracaoDialog");
+
 	const mainMandatoryFields = [
 		"nome_completo",
 		"data_de_nascimento",
@@ -111,6 +128,10 @@ frappe.ready(function () {
 
 	const labelMap = {
 		tipo_de_registro: "Tipo de registro",
+		sera_registrado: "Será registrado",
+		link_documento_identificacao: "Documento de identificação",
+		ciente_registro_responsavel_filhotes: "Ciente do pagamento dos dois registros",
+		ciente_acompanhamento_filhotes: "Ciente do acompanhamento no ramo Filhotes",
 		nome_completo: "Nome completo",
 		data_de_nascimento: "Data de nascimento",
 		pais_nascimento: "País de nascimento",
@@ -468,6 +489,99 @@ frappe.ready(function () {
 		);
 	}
 
+	// ----------------------------------------------------------------------------------
+	// Ramo Filhotes
+	//
+	// O ramo é decidido pela data de nascimento, e ela é editável nesta tela: ler o campo
+	// `ramo` gravado deixaria a UI defasada de quem corrigiu a data agora. Os blocos do
+	// ramo são renderizados sempre e escondidos aqui — assim eles trazem o que já está
+	// gravado e o registro de um irmão mais velho não apaga o cadastro do responsável.
+	// ----------------------------------------------------------------------------------
+
+	function parseIsoDate(value) {
+		const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value || ""));
+		if (!match) return null;
+		const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+		return Number.isNaN(date.getTime()) ? null : date;
+	}
+
+	// Espelha idade_decimal() de novo_associado.py: anos inteiros + fração de meses.
+	function idadeDecimal(value) {
+		const nascimento = parseIsoDate(value);
+		if (!nascimento) return null;
+
+		const hoje = new Date();
+		let anos = hoje.getFullYear() - nascimento.getFullYear();
+		let meses = hoje.getMonth() - nascimento.getMonth();
+		if (hoje.getDate() < nascimento.getDate()) meses -= 1;
+		if (meses < 0) {
+			anos -= 1;
+			meses += 12;
+		}
+		return anos + meses / 12;
+	}
+
+	function isFilhotes() {
+		if (!idadeTransicaoFilhotes) return false;
+		const idade = idadeDecimal(getControlValue(getMainControl("data_de_nascimento")));
+		return idade !== null && idade <= idadeTransicaoFilhotes;
+	}
+
+	function seraRegistradoChecks() {
+		return Array.from(
+			document.querySelectorAll(".sera-registrado-check[data-fieldname='sera_registrado']")
+		).filter((check) => !check.closest(".responsavel-wrapper")?.hidden);
+	}
+
+	function formatBRL(value) {
+		return `R$ ${Number(value || 0)
+			.toFixed(2)
+			.replace(".", ",")
+			.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+	}
+
+	// Erros dos campos do ramo ficam fora de `.registro-field`, então não passam pelo
+	// setInvalid genérico; `clearValidation` ainda limpa os dois, por [data-field-error].
+	function setFilhotesError(scope, fieldName, message) {
+		const error = scope?.querySelector(`[data-field-error="${fieldName}"]`);
+		if (!error) return;
+		error.textContent = message;
+		error.hidden = false;
+	}
+
+	function syncSeraRegistrado() {
+		const checks = seraRegistradoChecks();
+		// Com um responsável só não há escolha a fazer: é ele quem será registrado.
+		const unico = checks.length === 1;
+		checks.forEach((check) => {
+			if (unico) check.checked = true;
+			check.disabled = readOnly || unico;
+		});
+	}
+
+	function applyFilhotesMode() {
+		const filhotes = isFilhotes();
+		// A visibilidade dos blocos do ramo é do CSS, por este atributo: no primeiro paint
+		// ele já vem com o valor calculado no servidor.
+		form.dataset.filhotes = filhotes ? "true" : "false";
+		if (filhotes) syncSeraRegistrado();
+	}
+
+	function atualizarTotalFilhotes() {
+		if (!filhotesTotal) return;
+
+		const valor = Number(filhotesTotal.dataset.valorDefinitivo || 0);
+		const marcados = seraRegistradoChecks().filter((check) => check.checked).length;
+
+		if (filhotesTotalValor) filhotesTotalValor.textContent = formatBRL(valor * (1 + marcados));
+		if (filhotesTotalDetalhe) {
+			const plural = marcados === 1 ? "responsável" : "responsáveis";
+			filhotesTotalDetalhe.textContent =
+				`${formatBRL(valor)} do jovem + ${marcados} ${plural} × ${formatBRL(valor)}. ` +
+				"O pagamento é combinado com a secretaria depois do envio dos dados.";
+		}
+	}
+
 	function hiddenResponsavelWrapper() {
 		return Array.from(document.querySelectorAll(".responsavel-wrapper")).find(
 			(wrapper) => wrapper.hidden
@@ -487,6 +601,7 @@ frappe.ready(function () {
 		wrapper.hidden = false;
 		syncAddResponsavelButton();
 		toggleGuardiaoLegal();
+		applyFilhotesMode();
 
 		const card = wrapper.querySelector(".responsavel-card");
 		focusControl(getResponsavelControl(card, "nome_completo"));
@@ -516,8 +631,13 @@ frappe.ready(function () {
 		if (title) title.textContent = "Novo Responsável";
 		setCpfSearchStatus(card, "");
 
+		// Sobrou um responsável só: ele volta a ser obrigatoriamente o registrado.
+		const status = card.querySelector("[data-documento-status]");
+		if (status) status.hidden = true;
+
 		syncAddResponsavelButton();
 		toggleGuardiaoLegal();
+		applyFilhotesMode();
 	}
 
 	function syncAddressToCard(card) {
@@ -699,6 +819,12 @@ frappe.ready(function () {
 					title.textContent =
 						(resultado.dados && resultado.dados.nome_completo) || "Novo Responsável";
 				}
+				card.dispatchEvent(
+					new CustomEvent("gris:responsavel-preenchido", {
+						bubbles: true,
+						detail: { card },
+					})
+				);
 
 				const sameAddress = card.querySelector(".same-address-check");
 				if (sameAddress && sameAddress.checked) {
@@ -865,6 +991,55 @@ frappe.ready(function () {
 			markInvalid(guardian, "Selecione exatamente um guardião legal.");
 		}
 
+		if (isFilhotes()) {
+			const checks = seraRegistradoChecks();
+			if (!checks.some((check) => check.checked)) {
+				setFilhotesError(
+					checks[0]?.closest(".registro-filhotes-registro"),
+					"sera_registrado",
+					"Selecione ao menos um responsável que será registrado."
+				);
+				valid = false;
+				if (!firstInvalid) firstInvalid = checks[0];
+			}
+
+			// Naturalidade é obrigatória para todo responsável do ramo, não só para quem
+			// será registrado: é o dado que a declaração de idoneidade exige.
+			visibleResponsavelCards().forEach((card) => {
+				["cidade_de_nascimento", "uf_de_nascimento"].forEach((fieldName) => {
+					const control = getResponsavelControl(card, fieldName);
+					if (!String(getControlValue(control) || "").trim()) {
+						markInvalid(control, "Campo obrigatório.");
+					}
+				});
+			});
+
+			visibleResponsavelCards().forEach((card) => {
+				const check = card.querySelector(
+					".sera-registrado-check[data-fieldname='sera_registrado']"
+				);
+				if (!check?.checked) return;
+
+				const nome =
+					card.querySelector(".responsavel-card__title")?.textContent?.trim() ||
+					"o responsável";
+
+				const documento = card.querySelector("[data-documento-identificacao]");
+				const link = documento
+					?.querySelector("input[data-fieldname='link_documento_identificacao']")
+					?.value?.trim();
+				if (!link) {
+					setFilhotesError(
+						documento,
+						"link_documento_identificacao",
+						`Envie o documento de identificação com foto de ${nome}.`
+					);
+					valid = false;
+					if (!firstInvalid) firstInvalid = documento;
+				}
+			});
+		}
+
 		if (!valid) {
 			showToast(
 				"error",
@@ -888,6 +1063,10 @@ frappe.ready(function () {
 		return String(value);
 	}
 
+	// A URL do Drive não diz nada a quem está conferindo os dados; o card já mostra o
+	// estado do envio com um link clicável.
+	const summarySkipFields = new Set(["name", "link_documento_identificacao"]);
+
 	function renderRows(data, orderedFields) {
 		const seen = new Set();
 		const rows = [];
@@ -898,7 +1077,7 @@ frappe.ready(function () {
 			}
 		});
 		Object.keys(data).forEach((key) => {
-			if (key === "name" || seen.has(key)) return;
+			if (summarySkipFields.has(key) || seen.has(key)) return;
 			rows.push([formatLabel(key), formatValue(data[key])]);
 		});
 		return rows
@@ -976,22 +1155,159 @@ frappe.ready(function () {
 	}
 
 	function selectTipoCard(card) {
+		if (card.hidden) return;
 		document.querySelectorAll(".registro-option-card").forEach((item) => {
 			item.setAttribute("aria-selected", item === card ? "true" : "false");
 		});
 		selectedTipoInput.value = card.dataset.value || "";
-		confirmTipoButton.disabled = !selectedTipoInput.value;
+		updateTipoContinueButton();
+	}
+
+	// No ramo Filhotes o "Continuar" também depende das duas ciências sobre o registro
+	// do responsável, que é o que muda de fato no fluxo desse ramo.
+	function updateTipoContinueButton() {
+		const cienciasOk =
+			!isFilhotes() ||
+			Boolean(cienciaPagamentoCheck?.checked && cienciaAcompanhamentoCheck?.checked);
+		confirmTipoButton.disabled = !(selectedTipoInput.value && cienciasOk);
 	}
 
 	function openTipoRegistroModal(payload) {
 		pendingSave = payload;
 		resetTipoSelection();
+
+		const filhotes = isFilhotes();
+		if (filhotesAviso) filhotesAviso.hidden = !filhotes;
+		if (filhotesTotal) filhotesTotal.hidden = !filhotes;
+		if (filhotesCiencia) filhotesCiencia.hidden = !filhotes;
+		if (provisorioCard) provisorioCard.hidden = filhotes;
+		// Com uma opção só, o grid de duas colunas deixaria o card encostado à esquerda.
+		tipoOptions?.classList.toggle("registro-type-options--single", filhotes);
+
+		if (filhotes) {
+			if (cienciaPagamentoCheck) cienciaPagamentoCheck.checked = false;
+			if (cienciaAcompanhamentoCheck) cienciaAcompanhamentoCheck.checked = false;
+			atualizarTotalFilhotes();
+			// Definitivo é a única opção do ramo: já entra selecionado.
+			const definitivo = document.querySelector(
+				'.registro-option-card[data-value="Definitivo"]'
+			);
+			if (definitivo) selectTipoCard(definitivo);
+		}
+
+		updateTipoContinueButton();
 		openDialog(tipoDialog);
 	}
 
 	function resetPendingSubmit() {
 		if (!pendingSave || saving) return;
 		setLoading(pendingSave.submitButton, false);
+	}
+
+	function renderProximosPassos(responsaveis) {
+		if (!proximosPassosLista) return;
+
+		proximosPassosLista.innerHTML = responsaveis
+			.map(
+				(responsavel) => `
+			<div class="registro-declaracao-item" data-responsavel="${escapeHtml(responsavel.name)}">
+				<strong class="registro-declaracao-item__nome">${escapeHtml(responsavel.nome_completo)}</strong>
+				<button type="button" class="btn-sm-outline" data-baixar-declaracao="${escapeHtml(
+					responsavel.name
+				)}">Baixar declaração</button>
+			</div>
+		`
+			)
+			.join("");
+	}
+
+	// A geração é síncrona de propósito: quem clica está esperando o arquivo. O endpoint é
+	// idempotente, então clicar de novo devolve o mesmo PDF em vez de gerar outro.
+	// O arquivo vem pelo GRIS, não pelo link do Drive: a pasta é de acesso restrito e o
+	// responsável não tem conta no drive do grupo. Usamos fetch em vez de abrir a URL numa
+	// aba para manter o estado de carregando e mostrar o erro no diálogo da página — numa
+	// aba nova a falha apareceria como JSON cru.
+	async function baixarArquivoDoServidor(button, method, args, rotuloCarregando, tituloErro) {
+		setLoading(button, true, rotuloCarregando);
+
+		try {
+			const resposta = await fetch(`/api/method/${method}`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Accept: "application/pdf, application/json",
+					"X-Frappe-CSRF-Token": frappe.csrf_token || "",
+				},
+				credentials: "same-origin",
+				body: JSON.stringify(args),
+			});
+
+			// Erro vem como JSON; sucesso vem como o arquivo.
+			const tipo = resposta.headers.get("Content-Type") || "";
+			if (!resposta.ok || tipo.includes("application/json")) {
+				let mensagem = "";
+				try {
+					mensagem = serverMessages(await resposta.json())[0];
+				} catch (e) {
+					mensagem = "";
+				}
+				showErrorDialog(mensagem, tituloErro);
+				return;
+			}
+
+			const blob = await resposta.blob();
+			const url = URL.createObjectURL(blob);
+			const nome = nomeDoContentDisposition(resposta) || "documento.pdf";
+			const link = document.createElement("a");
+			link.href = url;
+			link.download = nome;
+			document.body.appendChild(link);
+			link.click();
+			link.remove();
+			// Revogar na hora cancelaria o download em alguns navegadores.
+			window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+		} catch (error) {
+			showErrorDialog("", tituloErro);
+		} finally {
+			setLoading(button, false);
+		}
+	}
+
+	function nomeDoContentDisposition(resposta) {
+		const header = resposta.headers.get("Content-Disposition") || "";
+		const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(header);
+		if (!match) return "";
+		try {
+			return decodeURIComponent(match[1]);
+		} catch (e) {
+			return match[1];
+		}
+	}
+
+	function baixarDeclaracao(button) {
+		const responsavelName = button.dataset.baixarDeclaracao;
+		if (!responsavelName) return;
+
+		baixarArquivoDoServidor(
+			button,
+			"gris.www.responsavel.registro.baixar_declaracao_idoneidade",
+			{ novo_associado_name: novoAssociadoName, responsavel_name: responsavelName },
+			"Gerando...",
+			"Não foi possível gerar a declaração"
+		);
+	}
+
+	function baixarDocumentoIdentificacao(button) {
+		const responsavelName = button.dataset.baixarDocumento;
+		if (!responsavelName) return;
+
+		baixarArquivoDoServidor(
+			button,
+			"gris.www.responsavel.registro.baixar_documento_identificacao",
+			{ novo_associado_name: novoAssociadoName, responsavel_name: responsavelName },
+			"Abrindo...",
+			"Não foi possível abrir o documento"
+		);
 	}
 
 	form.addEventListener("input", (event) => {
@@ -1054,10 +1370,34 @@ frappe.ready(function () {
 			)
 		)
 			return;
-		const title = event.target
-			.closest(".responsavel-card")
-			?.querySelector(".responsavel-card__title");
+		const card = event.target.closest(".responsavel-card");
+		const title = card?.querySelector(".responsavel-card__title");
 		if (title) title.textContent = event.target.value || "Novo Responsável";
+		sincronizarNomeNoUpload(card);
+	});
+
+	// O nome do arquivo no Drive é "Documento de identidade - <nome do responsável>", e o
+	// upload acontece antes do save: o nome tem que vir do card, atualizado enquanto digita.
+	function sincronizarNomeNoUpload(card) {
+		const componente = card?.querySelector(
+			"[data-documento-identificacao] [data-file-upload]"
+		);
+		if (!componente) return;
+
+		let params = {};
+		try {
+			params = JSON.parse(componente.dataset.extraParams || "{}");
+		} catch (e) {
+			params = {};
+		}
+		params.responsavel_nome =
+			getControlValue(getResponsavelControl(card, "nome_completo")) || "";
+		componente.dataset.extraParams = JSON.stringify(params);
+	}
+
+	// Busca por CPF preenche o nome sem passar pelo evento de digitação.
+	document.addEventListener("gris:responsavel-preenchido", (event) => {
+		sincronizarNomeNoUpload(event.detail?.card);
 	});
 
 	form.addEventListener("click", (event) => {
@@ -1097,6 +1437,90 @@ frappe.ready(function () {
 
 	confirmDataCheck?.addEventListener("change", updateConfirmButton);
 	confirmImageCheck?.addEventListener("change", updateConfirmButton);
+	cienciaPagamentoCheck?.addEventListener("change", updateTipoContinueButton);
+	cienciaAcompanhamentoCheck?.addEventListener("change", updateTipoContinueButton);
+
+	// A data de nascimento decide o ramo, e ela é editável: a UI do ramo Filhotes acompanha
+	// a mudança sem exigir reload.
+	const dataNascimentoControl = getMainControl("data_de_nascimento");
+	dataNascimentoControl?.addEventListener("datepicker:change", applyFilhotesMode);
+	dataNascimentoControl?.addEventListener("change", applyFilhotesMode);
+
+	document.addEventListener("change", (event) => {
+		if (event.target.matches(".sera-registrado-check[data-fieldname='sera_registrado']")) {
+			atualizarTotalFilhotes();
+		}
+	});
+
+	document.getElementById("btn-abrir-declaracao")?.addEventListener("click", () => {
+		openDialog(enviarDeclaracaoDialog);
+	});
+
+	document.addEventListener("click", (event) => {
+		const baixarDecl = event.target.closest("[data-baixar-declaracao]");
+		if (baixarDecl) {
+			event.preventDefault();
+			baixarDeclaracao(baixarDecl);
+			return;
+		}
+
+		const baixarDoc = event.target.closest("[data-baixar-documento]");
+		if (baixarDoc) {
+			event.preventDefault();
+			baixarDocumentoIdentificacao(baixarDoc);
+		}
+	});
+
+	// O componente de upload manda o arquivo direto para o Drive e devolve o link; aqui só
+	// guardamos o link no card, para o save amarrá-lo ao responsável.
+	document.addEventListener("gris:file-upload:success", (event) => {
+		const link = event.detail?.files?.[0]?.file_url || "";
+		if (!link) return;
+
+		const documento = event.target.closest("[data-documento-identificacao]");
+		if (documento) {
+			const hidden = documento.querySelector(
+				"input[data-fieldname='link_documento_identificacao']"
+			);
+			if (hidden) hidden.value = link;
+
+			const status = documento.querySelector("[data-documento-status]");
+			if (status) status.hidden = false;
+
+			// O botão baixa pelo `name` do Responsavel, que só existe depois do save: num
+			// card de responsável novo ele fica escondido até a página recarregar.
+			const botao = documento.querySelector("[data-documento-link]");
+			const responsavelId =
+				documento.closest(".responsavel-card")?.dataset.responsavelId || "";
+			if (botao) {
+				botao.dataset.baixarDocumento = responsavelId;
+				botao.hidden = !responsavelId;
+			}
+
+			const erro = documento.querySelector(
+				"[data-field-error='link_documento_identificacao']"
+			);
+			if (erro) {
+				erro.textContent = "";
+				erro.hidden = true;
+			}
+			return;
+		}
+
+		if (event.target.closest(".registro-declaracao-item")) {
+			showToast(
+				"success",
+				"Declaração enviada",
+				"A declaração de idoneidade assinada foi recebida."
+			);
+			reloadSoon();
+		}
+	});
+
+	proximosPassosDialog?.addEventListener("close", () => {
+		// O reload é adiado até aqui para o responsável conseguir baixar as declarações.
+		window.location.reload();
+	});
 
 	document.getElementById("btn-adicionar-do-dialogo")?.addEventListener("click", () => {
 		movingToConfirmation = true;
@@ -1121,6 +1545,12 @@ frappe.ready(function () {
 	confirmTipoButton?.addEventListener("click", () => {
 		if (!pendingSave || !selectedTipoInput.value) return;
 		pendingSave.formData.tipo_de_registro = selectedTipoInput.value;
+		if (isFilhotes()) {
+			pendingSave.formData.ciente_registro_responsavel_filhotes =
+				cienciaPagamentoCheck?.checked ? 1 : 0;
+			pendingSave.formData.ciente_acompanhamento_filhotes =
+				cienciaAcompanhamentoCheck?.checked ? 1 : 0;
+		}
 		movingToConfirmation = true;
 		closeDialog(tipoDialog);
 		showConfirmationModal(pendingSave);
@@ -1145,14 +1575,29 @@ frappe.ready(function () {
 			// O msgprint do Frappe não funciona neste portal: os erros são mostrados aqui.
 			silent: true,
 			callback: function (r) {
-				if (!r.exc) {
-					showToast(
-						"success",
-						"Dados atualizados",
-						"As informações foram salvas com sucesso."
-					);
-					reloadSoon();
+				if (r.exc) return;
+
+				showToast(
+					"success",
+					"Dados atualizados",
+					"As informações foram salvas com sucesso."
+				);
+
+				// No ramo Filhotes ainda faltam o curso e a declaração de idoneidade: o
+				// dialog explica os dois e o reload só acontece quando ele é fechado.
+				const resultado = r.message || {};
+				const paraRegistro = resultado.responsaveis_para_registro || [];
+				if (
+					Number(resultado.is_filhotes) === 1 &&
+					paraRegistro.length &&
+					proximosPassosDialog
+				) {
+					renderProximosPassos(paraRegistro);
+					openDialog(proximosPassosDialog);
+					return;
 				}
+
+				reloadSoon();
 			},
 			error: function (response) {
 				saving = false;
@@ -1214,5 +1659,10 @@ frappe.ready(function () {
 
 	syncAddResponsavelButton();
 	toggleGuardiaoLegal();
+	applyFilhotesMode();
 	if (readOnly) setReadOnlyMode();
+
+	// Registro salvo e declaração assinada pendente: é o momento em que o responsável tem o
+	// arquivo em mãos, então o pedido aparece sem depender de ele achar o banner.
+	if (enviarDeclaracaoDialog) openDialog(enviarDeclaracaoDialog);
 });

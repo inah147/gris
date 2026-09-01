@@ -38,7 +38,18 @@
   "acompanhamento_registro_provisorio_section",
   "responsavel_administrativo",
   "column_break_acomp_prov",
-  "dias_aviso_seguimento_provisorio"
+  "dias_aviso_seguimento_provisorio",
+  "documentos_drive_section",
+  "habilitar_documentos_drive",
+  "drive_compartilhado_acesso_restrito",
+  "pasta_documentos_identificacao_id",
+  "column_break_documentos_drive",
+  "pasta_declaracoes_nao_assinadas_id",
+  "pasta_declaracoes_assinadas_id",
+  "ramo_filhotes_section",
+  "link_curso_protecao_infanto_juvenil",
+  "column_break_ramo_filhotes",
+  "link_template_declaracao_idoneidade"
  ],
  "fields": [
   {
@@ -235,6 +246,68 @@
    "fieldname": "dias_aviso_seguimento_provisorio",
    "fieldtype": "Int",
    "label": "Dias para aviso de seguimento do registro provisório"
+  },
+  {
+   "description": "Documentos enviados pelos responsáveis no portal vão direto para o Google Drive, sem gravar arquivo no GRIS.",
+   "fieldname": "documentos_drive_section",
+   "fieldtype": "Section Break",
+   "label": "Documentos no Google Drive"
+  },
+  {
+   "default": "0",
+   "fieldname": "habilitar_documentos_drive",
+   "fieldtype": "Check",
+   "label": "Habilitar envio de documentos para o Google Drive"
+  },
+  {
+   "description": "Selecione um dos drives ativos cadastrados em Configuracoes Google Workspace. Os documentos pessoais dos responsáveis vão para um drive de acesso restrito, não para um drive aberto a todos.",
+   "fieldname": "drive_compartilhado_acesso_restrito",
+   "fieldtype": "Select",
+   "label": "Drive compartilhado de acesso restrito"
+  },
+  {
+   "description": "ID da pasta, como 1HT4u_pRhaEG0qql7sxY87uY4kAJb6rx7.",
+   "fieldname": "pasta_documentos_identificacao_id",
+   "fieldtype": "Data",
+   "label": "ID da pasta de documentos de identificação"
+  },
+  {
+   "fieldname": "column_break_documentos_drive",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pasta_declaracoes_nao_assinadas_id",
+   "fieldtype": "Data",
+   "label": "ID da pasta de declarações de idoneidade não assinadas"
+  },
+  {
+   "fieldname": "pasta_declaracoes_assinadas_id",
+   "fieldtype": "Data",
+   "label": "ID da pasta de declarações de idoneidade assinadas"
+  },
+  {
+   "fieldname": "ramo_filhotes_section",
+   "fieldtype": "Section Break",
+   "label": "Ramo Filhotes"
+  },
+  {
+   "default": "https://ead.escoteiros.org.br/enrol/index.php?id=390",
+   "description": "Curso obrigatório para o responsável que será registrado. A conclusão fica atrelada ao CPF dele.",
+   "fieldname": "link_curso_protecao_infanto_juvenil",
+   "fieldtype": "Data",
+   "label": "Link do curso de proteção infanto-juvenil",
+   "options": "URL"
+  },
+  {
+   "fieldname": "column_break_ramo_filhotes",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Documento do Google Docs montado sobre o papel timbrado (Configuracoes de Comunicacao). Marcadores esperados: <<Nome do Associado>>, <<Data de nascimento do Associado>>, <<Cidade de Nascimento do Associado>>, <<UF de nascimento do Associado>>, <<CPF do Associado>>, <<RG do Associado>> e <<Data de Início>>.",
+   "fieldname": "link_template_declaracao_idoneidade",
+   "fieldtype": "Data",
+   "label": "Link do modelo da declaração de idoneidade",
+   "options": "URL"
   }
  ],
  "grid_page_length": 50,

@@ -1,0 +1,50 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-09-01 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "papel_timbrado_section",
+  "link_papel_timbrado"
+ ],
+ "fields": [
+  {
+   "description": "Documento do Google Docs com o papel timbrado do grupo, base dos modelos de documento das demais áreas. Compartilhe com o e-mail da service account configurada em Configuracoes Google Workspace.",
+   "fieldname": "papel_timbrado_section",
+   "fieldtype": "Section Break",
+   "label": "Papel timbrado"
+  },
+  {
+   "fieldname": "link_papel_timbrado",
+   "fieldtype": "Data",
+   "label": "Link do papel timbrado (Google Docs)",
+   "options": "URL"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-09-01 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Configuracoes de Comunicacao",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

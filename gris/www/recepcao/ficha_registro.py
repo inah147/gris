@@ -1,10 +1,20 @@
 import frappe
 from frappe import _
+from frappe.rate_limiter import rate_limit
 from frappe.utils import add_days, cint, format_date, format_datetime, get_fullname, getdate, strip_html
 
 from gris.api.portal_access import enrich_context
 
 no_cache = 1
+
+# Documentos do responsável hospedados no Drive, e o campo que guarda o link de cada um.
+# A ficha serve os arquivos pelo GRIS: o drive é de acesso restrito e nem toda a equipe
+# da recepção tem conta com acesso a ele.
+DOCUMENTOS_DO_RESPONSAVEL = {
+	"identificacao": ("link_documento_identificacao", "Documento de identificacao"),
+	"declaracao": ("link_declaracao_idoneidade", "Declaracao de Idoneidade"),
+	"declaracao_assinada": ("link_declaracao_idoneidade_assinada", "Declaracao de Idoneidade assinada"),
+}
 
 
 def get_context(context):
@@ -64,10 +74,24 @@ def get_context(context):
 	for v in vinculos:
 		if v.responsavel:
 			resp_doc = frappe.get_doc("Responsavel", v.responsavel)
-			responsaveis.append({"vinculo": v, "doc": resp_doc})
+			responsaveis.append(
+				{
+					"vinculo": v,
+					"doc": resp_doc,
+					"sera_registrado": cint(v.get("sera_registrado")),
+					# Só se o documento existe: o link do Drive não vai para a página, porque
+					# o download passa pelo GRIS (drive de acesso restrito).
+					"documentos": {
+						tipo: bool((resp_doc.get(campo) or "").strip())
+						for tipo, (campo, _rotulo) in DOCUMENTOS_DO_RESPONSAVEL.items()
+					},
+				}
+			)
 
 	responsaveis.sort(key=lambda x: x["doc"].nome_completo or "")
 	context.responsaveis = responsaveis
+	# A seção de documentos só faz sentido no ramo que exige o registro do responsável.
+	context.is_filhotes = (doc.ramo or "") == "Filhotes"
 
 	# Flow steps for infographic
 	flow_steps = [
@@ -172,3 +196,40 @@ def get_context(context):
 	context.current_user = frappe.session.user
 
 	return context
+
+
+@frappe.whitelist()
+@rate_limit(key="ficha-baixar-documento", limit=60, seconds=60)
+def baixar_documento_do_responsavel(novo_associado_name: str, responsavel_name: str, tipo: str):
+	"""Entrega pelo GRIS um documento do responsável hospedado no Drive.
+
+	Os arquivos ficam num drive de **acesso restrito**, então o link do Google não abre
+	para quem não é membro dele. Servir por aqui mantém o acesso preso à permissão de
+	leitura do Novo Associado, que é onde a regra já vive.
+	"""
+	from gris.api.google_workspace import recepcao_drive
+
+	campo_e_rotulo = DOCUMENTOS_DO_RESPONSAVEL.get(tipo)
+	if not campo_e_rotulo:
+		frappe.throw(_("Tipo de documento inválido."))
+	campo, rotulo = campo_e_rotulo
+
+	if not frappe.has_permission("Novo Associado", "read", novo_associado_name):
+		frappe.throw(_("Sem permissão para acessar este registro."), frappe.PermissionError)
+
+	if not frappe.db.exists(
+		"Responsavel Vinculo",
+		{"responsavel": responsavel_name, "beneficiario_novo_associado": novo_associado_name},
+	):
+		frappe.throw(_("Responsável não vinculado a este jovem."), frappe.PermissionError)
+
+	link = (frappe.db.get_value("Responsavel", responsavel_name, campo) or "").strip()
+	if not link:
+		frappe.throw(_("Documento não enviado."))
+
+	conteudo, _nome_no_drive, mimetype = recepcao_drive.download_file(link)
+	nome_responsavel = frappe.db.get_value("Responsavel", responsavel_name, "nome_completo") or ""
+
+	frappe.local.response.filename = f"{rotulo} - {nome_responsavel}".strip(" -")
+	frappe.local.response.filecontent = conteudo
+	frappe.local.response.type = "pdf" if mimetype == "application/pdf" else "download"

@@ -5,6 +5,7 @@
 {% from "public/design_system/components/generated/phone-input.html.jinja" import phone_input %}
 {% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
 {% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, badge, button, card, checkbox, field, form, input, table %}
+{% from "public/design_system/components/composed/file-upload.html.jinja" import file_upload %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
 {% block title %}Registro de Novo Associado{% endblock %}
@@ -181,7 +182,36 @@
 		) }}
 	{% endif %}
 
-	{% call form(attrs={"id": "registro-form", "class": "registro-form", "novalidate": "novalidate", "data-read-only": "true" if read_only else "false"}) %}
+	{# Registro já enviado, declaração de idoneidade ainda não: o aviso fica no topo até o
+	   arquivo assinado chegar, porque sem ele o registro do responsável não se completa. #}
+	{% if declaracao_pendente %}
+		{% call alert(
+			title="Falta enviar a declaração de idoneidade assinada",
+			icon=lucide_icon("triangle-alert", size="sm"),
+			variant="warning",
+			attrs={"class": "registro-declaracao-banner", "id": "declaracao-banner"}
+		) %}
+			<p>
+				Os dados do registro já foram enviados. Para concluir o registro
+				{% if responsaveis_pendentes_declaracao | length > 1 %}dos responsáveis{% else %}do responsável{% endif %},
+				falta a declaração de idoneidade assinada via gov.br.
+			</p>
+			{% set banner_label %}{{ lucide_icon("upload", size="sm") }}<span>Enviar declaração assinada</span>{% endset %}
+			{{ button(banner_label, variant="primary", size="sm", attrs={"id": "btn-abrir-declaracao"}) }}
+		{% endcall %}
+	{% endif %}
+
+	{# `data-filhotes` nasce com o valor calculado no servidor para o CSS já esconder os
+	   blocos do ramo no primeiro paint; o JS reavalia a cada mudança da data de nascimento,
+	   usando a idade de transição que vai junto no dataset. #}
+	{% call form(attrs={
+		"id": "registro-form",
+		"class": "registro-form",
+		"novalidate": "novalidate",
+		"data-read-only": "true" if read_only else "false",
+		"data-filhotes": "true" if is_filhotes else "false",
+		"data-idade-transicao-filhotes": idade_transicao_filhotes
+	}) %}
 		<input type="hidden" id="novo-associado-name" name="name" value="{{ novo_associado.name }}">
 
 		{% call card(title="Dados do Associado", attrs={"class": "registro-section-card"}) %}
@@ -272,10 +302,56 @@
 										{{ text_control("rg", "RG", item.doc.rg, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-rg", include_name=false) }}
 										{{ text_control("orgao_expedidor", "Órgão expedidor", item.doc.orgao_expedidor, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-orgao-expedidor", include_name=false) }}
 										{{ date_control("data_de_nascimento", "Data de nascimento", item.doc.data_de_nascimento, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-data-nascimento", include_name=false) }}
+										{# Exigidos pela declaração de idoneidade, que só existe no ramo Filhotes. Sempre
+										   renderizados e sempre preenchidos com o que está gravado: o JS mostra ou esconde
+										   conforme a data de nascimento do jovem, e um card escondido devolve o valor atual
+										   em vez de apagar o cadastro do responsável no registro de um irmão mais velho. #}
+										{{ text_control("cidade_de_nascimento", "Cidade de nascimento", item.doc.cidade_de_nascimento, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-cidade-nascimento", include_name=false, class_name="registro-field--filhotes") }}
+										{{ select_control("uf_de_nascimento", "UF de nascimento", options_responsavel.uf_de_nascimento, item.doc.uf_de_nascimento, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-uf-nascimento", include_name=false, class_name="registro-field--filhotes") }}
 										{{ select_control("sexo", "Sexo", options_responsavel.sexo, item.doc.sexo, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-sexo", include_name=false) }}
 										{{ select_control("estado_civil", "Estado civil", options_responsavel.estado_civil, item.doc.estado_civil, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-estado-civil", include_name=false) }}
 									</div>
 								</section>
+
+								{# No ramo Filhotes só o adulto registrado acompanha a criança: quem for
+								   registrado precisa marcar aqui e enviar o documento com foto. O JS
+								   revela a seção conforme a data de nascimento do jovem. #}
+								<section class="registro-subsection registro-filhotes-registro" aria-label="Registro do responsável">
+										<h4>Registro do responsável</h4>
+										{{ checkbox_control("sera_registrado", "Este responsável também será registrado", item.vinculo.sera_registrado, scope="responsavel", field_id="resp-" ~ loop.index ~ "-sera-registrado", include_name=false, class_name="sera-registrado-check registro-checkbox--full") }}
+										<p class="registro-field-error" data-field-error="sera_registrado" hidden></p>
+
+										<div class="registro-documento" data-documento-identificacao>
+											<input type="hidden" data-fieldname="link_documento_identificacao" data-field-scope="responsavel" value="{{ item.doc.link_documento_identificacao or '' }}">
+											{% if not read_only %}
+												{{ file_upload(
+													id="doc-identificacao-" ~ loop.index,
+													label="Documento de identificação com foto",
+													description="RG, CNH ou outro documento oficial com foto. PDF, JPG ou PNG, até 10 MB.",
+													trigger_label="Enviar documento",
+													dialog_title="Documento de identificação",
+													dialog_description="Envie um documento oficial com foto do responsável.",
+													accept=".pdf,.jpg,.jpeg,.png",
+													allowed_extensions=["pdf", "jpg", "jpeg", "png"],
+													allow_take_photo=true,
+													method="gris.www.responsavel.registro.upload_documento_identificacao",
+													extra_params={
+														"novo_associado": novo_associado.name,
+														"responsavel_slot": loop.index,
+														"responsavel_nome": item.doc.nome_completo or ""
+													}
+												) }}
+											{% endif %}
+											<p class="registro-documento__status" data-documento-status {% if not item.doc.link_documento_identificacao %}hidden{% endif %}>
+												{{ lucide_icon("circle-check-big", size="sm") }}
+												<span>Documento enviado.</span>
+													{# Servido pelo GRIS, não pelo link do Drive: a pasta é de acesso
+												   restrito e o responsável não tem conta no drive do grupo. #}
+												<button type="button" class="registro-link registro-link--button" data-baixar-documento="{{ item.doc.name or '' }}" data-documento-link {% if not item.doc.name %}hidden{% endif %}>Ver documento</button>
+											</p>
+											<p class="registro-field-error" data-field-error="link_documento_identificacao" hidden></p>
+										</div>
+									</section>
 
 								<section class="registro-subsection" aria-label="Dados profissionais do responsável">
 									<h4>Profissional e acadêmico</h4>
@@ -414,7 +490,15 @@
 		dialog_attrs={"class": "registro-dialog"},
 		close_button=true
 	) %}
-		<div class="registro-type-options" role="listbox" aria-label="Tipo de registro">
+		<div class="registro-dialog-body">
+		{# No ramo Filhotes não há escolha: só o registro definitivo existe, e o responsável
+		   indicado é registrado junto, pelo mesmo valor. O JS revela este bloco e esconde a
+		   opção de provisório conforme a data de nascimento informada no formulário. #}
+		<p class="registro-dialog-message registro-filhotes-aviso" hidden>
+			No ramo Filhotes só está disponível o <strong>registro definitivo</strong>. O responsável
+			indicado também será registrado, e o registro dele custa o mesmo valor do registro do jovem.
+		</p>
+		<div class="registro-type-options" id="registro-type-options" role="listbox" aria-label="Tipo de registro">
 			{% call card(attrs={"class": "registro-option-card", "data-value": "Provisório", "role": "option", "tabindex": "0", "aria-selected": "false"}) %}
 				<div class="registro-option-card__icon" aria-hidden="true">
 					{{ lucide_icon("clock", size="lg") }}
@@ -432,7 +516,113 @@
 				<p>Registro anual válido por 12 meses. Ideal para quem já tem certeza que vai continuar.</p>
 			{% endcall %}
 		</div>
+		<div class="registro-filhotes-total" id="filhotes-total" data-valor-definitivo="{{ valor_registro_definitivo or 0 }}" hidden>
+			<div class="registro-filhotes-total__linha">
+				<span>Total a pagar</span>
+				<strong id="filhotes-total-valor" aria-live="polite">{{ valor_registro_definitivo_fmt }}</strong>
+			</div>
+			<p class="registro-field-hint" id="filhotes-total-detalhe"></p>
+		</div>
+		<div class="registro-confirm-box registro-filhotes-ciencia" id="filhotes-ciencia" hidden>
+			{{ checkbox(
+				"ciencia-pagamento-check",
+				"Estou ciente de que deverei pagar o registro definitivo do jovem e o meu próprio registro."
+			) }}
+			{{ checkbox(
+				"ciencia-acompanhamento-check",
+				"Estou ciente de que somente o responsável que tem registro poderá acompanhar o jovem nas atividades do ramo Filhotes."
+			) }}
+		</div>
+		</div>
 		<input type="hidden" id="selected-tipo-registro" value="">
 	{% endcall %}
+
+	{% macro passo_curso() %}
+		<section class="registro-passo">
+			<h3>{{ lucide_icon("graduation-cap", size="sm") }} Curso de proteção infanto-juvenil</h3>
+			<p>
+				Cada responsável que será registrado precisa concluir o curso de proteção
+				infanto-juvenil. É necessário se cadastrar na plataforma Campo Escola Virtual, e a
+				conclusão do curso fica atrelada ao <strong>CPF do responsável</strong>.
+			</p>
+			{% if curso_protecao_url %}
+				<a href="{{ curso_protecao_url }}" target="_blank" rel="noopener noreferrer" class="registro-link">
+					Acessar o curso {{ lucide_icon("external-link", size="sm") }}
+				</a>
+			{% endif %}
+		</section>
+	{% endmacro %}
+
+	{% if not read_only %}
+		{# Abre logo após o save: o responsável ainda não tem o que enviar, só o que baixar.
+		   A lista vem da resposta do save, porque a página foi renderizada antes dele. #}
+		{% set proximos_passos_footer %}
+			{{ button("Entendi", variant="primary", attrs={"data-close-dialog": "proximosPassosDialog"}) }}
+		{% endset %}
+		{% call dialog(
+			id="proximosPassosDialog",
+			title="Faltam dois passos para concluir o registro",
+			description="Exigências do ramo Filhotes para cada responsável que será registrado.",
+			footer=proximos_passos_footer,
+			dialog_attrs={"class": "registro-dialog registro-dialog--wide"},
+			close_button=true
+		) %}
+			<div class="registro-dialog-body">
+				{{ passo_curso() }}
+				<section class="registro-passo">
+					<h3>{{ lucide_icon("file-pen-line", size="sm") }} Declaração de idoneidade</h3>
+					<p>
+						Baixe a declaração, assine digitalmente pelo <strong>gov.br</strong> e
+						<strong>volte a esta página</strong> para enviar o arquivo assinado.
+					</p>
+					<div id="proximos-passos-declaracoes" class="registro-declaracao-lista" aria-live="polite"></div>
+				</section>
+			</div>
+		{% endcall %}
+	{% endif %}
+
+	{% if declaracao_pendente %}
+		{# Abre sozinho quando o responsável volta com o registro salvo e a declaração
+		   assinada ainda pendente — o momento em que ele tem o arquivo em mãos. #}
+		{% set enviar_declaracao_footer %}
+			{{ button("Enviar depois", variant="outline", attrs={"data-close-dialog": "enviarDeclaracaoDialog"}) }}
+		{% endset %}
+		{% call dialog(
+			id="enviarDeclaracaoDialog",
+			title="Envie a declaração de idoneidade assinada",
+			description="Assine o PDF pelo gov.br e envie o arquivo aqui.",
+			footer=enviar_declaracao_footer,
+			dialog_attrs={"class": "registro-dialog registro-dialog--wide"},
+			close_button=true
+		) %}
+			<div class="registro-dialog-body">
+				{{ passo_curso() }}
+				<section class="registro-passo">
+					<h3>{{ lucide_icon("file-pen-line", size="sm") }} Declaração de idoneidade</h3>
+					<div class="registro-declaracao-lista">
+						{% for pendente in responsaveis_pendentes_declaracao %}
+							<div class="registro-declaracao-item" data-responsavel="{{ pendente.name }}">
+								<strong class="registro-declaracao-item__nome">{{ pendente.nome_completo }}</strong>
+								{% set baixar_label %}{{ lucide_icon("download", size="sm") }}<span>Baixar declaração</span>{% endset %}
+								{{ button(baixar_label, variant="outline", size="sm", attrs={"data-baixar-declaracao": pendente.name}) }}
+								{{ file_upload(
+									id="declaracao-assinada-" ~ loop.index,
+									label="Declaração assinada",
+									description="PDF assinado pelo gov.br, até 10 MB.",
+									trigger_label="Enviar declaração assinada",
+									dialog_title="Declaração de idoneidade assinada",
+									dialog_description="Envie o PDF assinado digitalmente pelo gov.br.",
+									accept=".pdf",
+									allowed_extensions=["pdf"],
+									method="gris.www.responsavel.registro.upload_declaracao_assinada",
+									extra_params={"novo_associado": novo_associado.name, "responsavel": pendente.name}
+								) }}
+							</div>
+						{% endfor %}
+					</div>
+				</section>
+			</div>
+		{% endcall %}
+	{% endif %}
 </div>
 {% endblock %}

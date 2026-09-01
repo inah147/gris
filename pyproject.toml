@@ -26,6 +26,11 @@ dependencies = [
     "PyYAML>=6.0",
     "qrcode[pil]>=7.4",
     "PyMuPDF>=1.23",  # rodapé (degradê + nº de página) do relatório em PDF
+    # Integrações com Google Drive e Google Docs. Já vinham do ambiente do bench, mas
+    # agora são usadas em caminho de request do portal (envio de documentos da recepção),
+    # não só em job de backup: declarar evita um ambiente sem elas quebrar a tela.
+    "google-api-python-client>=2.100",
+    "google-auth>=2.23",
 ]
 
 [build-system]

@@ -14,6 +14,15 @@ SETTINGS_DOCTYPE = "Configuracoes Google Workspace"
 DEFAULT_DOMAIN = "escoteiros.org.br"
 DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive"]
 RETRYABLE_STATUS_CODES = {403, 429, 500, 502, 503, 504}
+# 403 com um destes motivos é definitivo: API desligada no projeto ou falta de permissão.
+PERMANENT_403_REASONS = {
+	"accessnotconfigured",
+	"servicedisabled",
+	"forbidden",
+	"insufficientpermissions",
+	"insufficientfilepermissions",
+	"domainpolicy",
+}
 MAX_RETRIES = 5
 VOLUNTEER_CATEGORIES = {"Dirigente", "Escotista", "Colaboradores", "Profissional Escoteiro"}
 ADMIN_ROLES = {"System Manager", "Administrator"}
@@ -61,7 +70,14 @@ def _get_settings():
 	return frappe.get_single(SETTINGS_DOCTYPE)
 
 
-def _get_google_drive_service(settings=None):
+def get_service_account_credentials(settings=None):
+	"""Credenciais da service account configurada no Single de Workspace.
+
+	Exposta separadamente do cliente do Drive porque o mesmo escopo ``auth/drive`` serve
+	para a Docs API (usada na geração da declaracao de idoneidade em ``recepcao_drive``):
+	recuperar as credenciais de dentro de um cliente ja construido depende de detalhe
+	interno da googleapiclient.
+	"""
 	settings = settings or _get_settings()
 	service_account_json = settings.get_password("service_account_json", raise_exception=False)
 	if not service_account_json:
@@ -79,11 +95,42 @@ def _get_google_drive_service(settings=None):
 			"Service Account JSON incompleto. Campos ausentes: {}".format(", ".join(missing))
 		)
 
-	credentials = service_account.Credentials.from_service_account_info(
+	return service_account.Credentials.from_service_account_info(
 		service_account_info,
 		scopes=DRIVE_SCOPES,
 	)
+
+
+def _get_google_drive_service(settings=None):
+	credentials = get_service_account_credentials(settings)
 	return build("drive", "v3", credentials=credentials, static_discovery=False)
+
+
+def _motivos_do_erro(exc: HttpError) -> set[str]:
+	"""Códigos de ``reason`` que o Google devolve no corpo do erro, normalizados.
+
+	O mesmo motivo aparece em grafias diferentes conforme a API: ``SERVICE_DISABLED`` na
+	Docs, ``accessNotConfigured`` na Drive. Descartar separadores e caixa deixa a
+	comparação depender só das letras.
+	"""
+	motivos = set()
+	for detalhe in getattr(exc, "error_details", None) or []:
+		if not isinstance(detalhe, dict):
+			continue
+		valor = detalhe.get("reason")
+		if isinstance(valor, str) and valor.strip():
+			motivos.add(valor.strip().lower().replace("_", "").replace("-", ""))
+	return motivos
+
+
+def _e_403_permanente(exc: HttpError) -> bool:
+	"""Distingue os dois 403 opostos do Google.
+
+	O mesmo status cobre limite de taxa (transitório, vale repetir) e API desabilitada ou
+	sem permissão (permanente). Repetir o segundo caso só faz o usuário esperar os cinco
+	ciclos de backoff antes de ver um erro que já era definitivo na primeira tentativa.
+	"""
+	return bool(_motivos_do_erro(exc) & PERMANENT_403_REASONS)
 
 
 def _execute_with_retry(operation):
@@ -94,6 +141,8 @@ def _execute_with_retry(operation):
 		except HttpError as exc:
 			status_code = getattr(getattr(exc, "resp", None), "status", None)
 			if status_code not in RETRYABLE_STATUS_CODES or attempt == MAX_RETRIES:
+				raise
+			if status_code == 403 and _e_403_permanente(exc):
 				raise
 			last_exc = exc
 			time.sleep(2 ** (attempt - 1))

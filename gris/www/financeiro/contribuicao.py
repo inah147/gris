@@ -93,6 +93,9 @@ def get_context(context):
 	pendentes = [linha for linha in assoc["linhas"] if float(linha["falta"] or 0) > 0]
 	assoc["total_falta"] = round(sum(float(linha["falta"]) for linha in pendentes), 2)
 	assoc["meses_pendentes"] = len(pendentes)
+	# Lista os meses em aberto na própria métrica — "5 meses a quitar" sozinho
+	# não diz quais, e é justo isso que quem cobra precisa saber de cara.
+	assoc["pendentes"] = pendentes
 	# A linha do valor de atraso só interessa quando ele é maior que o valor em dia.
 	assoc["mostrar_valor_atraso"] = float(assoc["valor_em_atraso"]) > float(assoc["esperado_mensal"])
 

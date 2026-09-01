@@ -169,9 +169,7 @@
 						</td>
 						<td class="text-right whitespace-nowrap resp-contrib-num">
 							{% if linha.recebido > 0 %}{{ brl(linha.recebido) }}{% else %}—{% endif %}
-							{% if linha.usou_credito %}
-								<span class="text-xs text-muted-foreground block">quitado com crédito</span>
-							{% elif linha.quitacao_retroativa %}
+							{% if linha.usou_credito or linha.quitacao_retroativa %}
 								<span class="text-xs text-muted-foreground block">
 									quitado por pagamento posterior
 								</span>

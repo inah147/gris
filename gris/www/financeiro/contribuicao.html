@@ -112,6 +112,17 @@
 			<p class="m-0 mt-2 text-xs text-muted-foreground">
 				{{ assoc.meses_pendentes }} {{ 'mês a quitar' if assoc.meses_pendentes == 1 else 'meses a quitar' }}
 			</p>
+			{% if assoc.pendentes %}
+			<ul class="contrib-pendentes mt-3">
+				{% for pendente in assoc.pendentes %}
+				<li class="contrib-pendentes__item">
+					<span>{{ pendente.rotulo }}</span>
+					{{ situacao_badge(pendente.status, pendente.status_slug) }}
+					<span class="contrib-num contrib-falta">{{ brl(pendente.falta) }}</span>
+				</li>
+				{% endfor %}
+			</ul>
+			{% endif %}
 		</section>
 	</article>
 	<article class="card metric-card">
@@ -202,10 +213,10 @@
 						<td class="text-right whitespace-nowrap contrib-num">
 							{{ brl(linha.recebido) }}
 							{# Cada nota fica na coluna que ela explica: o mês que ninguém pagou
-							   diretamente precisa dizer como fechou. #}
-							{% if linha.usou_credito %}
-								<span class="contrib-nota">quitado com crédito</span>
-							{% elif linha.quitacao_retroativa %}
+							   diretamente precisa dizer como fechou. Crédito e pagamento
+							   retroativo são, para quem lê a tela, a mesma coisa: dinheiro que
+							   entrou em outro mês e cobriu este — por isso uma nota só. #}
+							{% if linha.usou_credito or linha.quitacao_retroativa %}
 								<span class="contrib-nota">quitado por pagamento posterior</span>
 							{% elif linha.quitado_sem_acrescimo %}
 								<span class="contrib-nota">quitado sem o acréscimo</span>

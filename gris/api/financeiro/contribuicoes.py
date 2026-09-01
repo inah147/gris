@@ -72,6 +72,23 @@ CARTEIRAS_RETROATIVAS = ("infinitepay",)
 # Tolerância de centavos nas comparações de dinheiro.
 TOLERANCIA = 0.005
 
+# Diferença máxima, em reais, que ainda conta como "centavo quebrado" de tarifa
+# bancária/PIX. Contribuição é sempre em real cheio (R$ 60, R$ 70…); um Pix que
+# chega como R$ 59,97 ou R$ 140,02 é o mesmo pagamento de sempre com um resíduo
+# de tarifa — arredondar para o real cheio evita que esse resíduo vire "falta"
+# ou crédito fracionado que nunca fecha no batimento seguinte.
+TOLERANCIA_ARREDONDAMENTO_CENTAVOS = 0.05
+
+
+def arredondar_centavos_quebrados(valor: float) -> float:
+	"""Arredonda para o real cheio quando a diferença é só resíduo de tarifa."""
+	valor = float(valor or 0)
+	mais_proximo = round(valor)
+	if abs(valor - mais_proximo) <= TOLERANCIA_ARREDONDAMENTO_CENTAVOS:
+		return float(mais_proximo)
+	return round(valor, 2)
+
+
 # Carência padrão, em meses cheios contados do ingresso, antes da primeira
 # contribuição mensal:
 #
@@ -499,7 +516,7 @@ def get_recebimentos_por_associado(
 	for linha in linhas:
 		por_mes = recebimentos.setdefault(linha.beneficiario, {})
 		mes = por_mes.setdefault(linha.ym, {"valor": 0.0, "qtd": 0, "transacoes": []})
-		valor = float(linha.valor or 0)
+		valor = arredondar_centavos_quebrados(linha.valor)
 		mes["valor"] += valor
 		mes["qtd"] += 1
 		mes["transacoes"].append(
@@ -509,6 +526,9 @@ def get_recebimentos_por_associado(
 				"retroativa": e_carteira_retroativa(linha.carteira, linha.instituicao),
 			}
 		)
+	for por_mes in recebimentos.values():
+		for mes in por_mes.values():
+			mes["valor"] = round(mes["valor"], 2)
 	return recebimentos
 
 
@@ -556,7 +576,7 @@ def get_transacoes_do_associado(
 			"name": linha.name,
 			"data": linha.data_competencia.isoformat() if linha.data_competencia else None,
 			"ym": linha.ym,
-			"valor": float(linha.valor or 0),
+			"valor": arredondar_centavos_quebrados(linha.valor),
 			"descricao": linha.descricao or "",
 			"metodo": linha.metodo or "",
 			"carteira": linha.carteira or "",
@@ -603,7 +623,7 @@ def get_transacoes_nao_vinculadas(primeiro_dia: datetime.date, proximo_mes: date
 		{
 			"name": linha.name,
 			"data": linha.data_competencia.isoformat() if linha.data_competencia else None,
-			"valor": float(linha.valor or 0),
+			"valor": arredondar_centavos_quebrados(linha.valor),
 			"descricao": linha.descricao or "",
 			"metodo": linha.metodo or "",
 			"carteira": linha.carteira or "",

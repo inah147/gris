@@ -174,7 +174,7 @@ class TestRegistroResponsavel(FrappeTestCase):
 		return context
 
 	def _salvar(self, novo_associado, cards, data=None):
-		with mock.patch.object(registro, "_notificar_gestores_novo_associado"):
+		with mock.patch.object(registro, "_notificar_dados_preenchidos"):
 			return registro.update_novo_associado(
 				novo_associado,
 				json.dumps(data or _dados_associado()),

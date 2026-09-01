@@ -24,6 +24,17 @@
   "valor_registro_definitivo",
   "whatsapp_recepcao_section",
   "grupo_recepcao_whatsapp",
+  "grupo_chefes_secao_whatsapp",
+  "column_break_grupos_wa",
+  "grupo_recados_gerais_whatsapp",
+  "cadencia_mensagens_section",
+  "lembrete_dados_dias_iniciais",
+  "lembrete_dados_intervalo_dias",
+  "lembrete_pesquisa_intervalo_dias",
+  "column_break_cadencia",
+  "lembrete_ficha_medica_intervalo_dias",
+  "lembrete_id_escoteiros_intervalo_dias",
+  "lembrete_acolhida_intervalo_dias",
   "acompanhamento_registro_provisorio_section",
   "responsavel_administrativo",
   "column_break_acomp_prov",
@@ -127,13 +138,80 @@
   {
    "fieldname": "whatsapp_recepcao_section",
    "fieldtype": "Section Break",
-   "label": "WhatsApp da Recepção"
+   "label": "Grupos de WhatsApp"
   },
   {
    "description": "Grupo da recepção para envio de mensagens aos responsáveis pela recepção.",
    "fieldname": "grupo_recepcao_whatsapp",
    "fieldtype": "Select",
    "label": "Grupo de recepção (WhatsApp)"
+  },
+  {
+   "description": "Grupo dos chefes de seção: recebe as visitas do dia, os avisos de recepção realizada e os pedidos de acolhida.",
+   "fieldname": "grupo_chefes_secao_whatsapp",
+   "fieldtype": "Select",
+   "label": "Grupo de chefes de seção (WhatsApp)"
+  },
+  {
+   "fieldname": "column_break_grupos_wa",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Grupo geral da UEL: o responsável é adicionado automaticamente após a recepção realizada. Deixe vazio para não adicionar ninguém.",
+   "fieldname": "grupo_recados_gerais_whatsapp",
+   "fieldtype": "Select",
+   "label": "Grupo de recados gerais (WhatsApp)"
+  },
+  {
+   "fieldname": "cadencia_mensagens_section",
+   "fieldtype": "Section Break",
+   "label": "Cadência de mensagens automáticas"
+  },
+  {
+   "default": "4,6,8",
+   "description": "Dias após o status virar \"Aguardar Dados\" para os primeiros lembretes, separados por vírgula.",
+   "fieldname": "lembrete_dados_dias_iniciais",
+   "fieldtype": "Data",
+   "label": "Lembrete de dados: dias iniciais"
+  },
+  {
+   "default": "5",
+   "description": "Intervalo entre os lembretes de dados após os dias iniciais.",
+   "fieldname": "lembrete_dados_intervalo_dias",
+   "fieldtype": "Int",
+   "label": "Lembrete de dados: intervalo (dias)"
+  },
+  {
+   "default": "3",
+   "description": "Intervalo entre os pedidos para responder a pesquisa de novos associados.",
+   "fieldname": "lembrete_pesquisa_intervalo_dias",
+   "fieldtype": "Int",
+   "label": "Lembrete de pesquisa: intervalo (dias)"
+  },
+  {
+   "fieldname": "column_break_cadencia",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "3",
+   "description": "Intervalo entre os pedidos de preenchimento da ficha médica no Paxtu.",
+   "fieldname": "lembrete_ficha_medica_intervalo_dias",
+   "fieldtype": "Int",
+   "label": "Lembrete de ficha médica: intervalo (dias)"
+  },
+  {
+   "default": "5",
+   "description": "Intervalo entre os pedidos de criação do id@escoteiros.",
+   "fieldname": "lembrete_id_escoteiros_intervalo_dias",
+   "fieldtype": "Int",
+   "label": "Lembrete de id@escoteiros: intervalo (dias)"
+  },
+  {
+   "default": "7",
+   "description": "Intervalo entre os avisos de acolhida e entrega do lenço no grupo de chefes de seção.",
+   "fieldname": "lembrete_acolhida_intervalo_dias",
+   "fieldtype": "Int",
+   "label": "Lembrete de acolhida: intervalo (dias)"
   },
   {
    "fieldname": "acompanhamento_registro_provisorio_section",

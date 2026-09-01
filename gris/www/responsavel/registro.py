@@ -7,11 +7,10 @@ from frappe.rate_limiter import rate_limit
 from frappe.utils import cint
 
 from gris.api.portal_access import enrich_context
+from gris.api.recepcao_mensagens import notificar_dados_preenchidos_no_grupo_recepcao
 from gris.api.responsavel_acesso import get_responsavel_do_usuario
 from gris.utils.contato import format_phone
 from gris.utils.documento import cpf_valido, id_por_cpf, limpar_cpf
-from gris.utils.gestores import buscar_destinatarios_gestores
-from gris.utils.whatsapp import enviar_texto
 
 # Campos do responsável editáveis pelo formulário, no nome usado pelo frontend.
 CAMPOS_RESPONSAVEL = [
@@ -334,28 +333,13 @@ def get_context(context):
 	enrich_context(context, "/responsavel/beneficiarios")
 
 
-def _notificar_gestores_novo_associado(nome_associado: str) -> None:
-	"""Notifica usuários com role 'Gestor de Associado' para criarem o registro no PAXTU."""
-	primeiro_nome_associado = (
-		(nome_associado or "").strip().split()[0] if nome_associado else "novo associado"
-	)
+def _notificar_dados_preenchidos(novo_associado_name: str) -> None:
+	"""Avisa o grupo da recepção, com menção geral, que os dados de registro chegaram.
 
-	for gestor in buscar_destinatarios_gestores():
-		nome_gestor = gestor.get("nome") or "Gestor"
-		primeiro_nome_gestor = nome_gestor.split()[0]
-		mensagem = (
-			f"Oi, {primeiro_nome_gestor}!\n\n"
-			f"O responsável preencheu os dados de *{primeiro_nome_associado}*."
-			" Por favor, crie o registro do novo associado no PAXTU.\n\n"
-			"_Mensagem automática do Gris_"
-		)
-		try:
-			enviar_texto(gestor.telefone, mensagem)
-		except Exception:
-			frappe.log_error(
-				frappe.get_traceback(),
-				f"Notificação gestor novo associado: gestor={gestor.get('nome')}, novo_associado={nome_associado}",
-			)
+	Antes o aviso ia individualmente para cada usuário com o papel de gestor de associados;
+	agora vai para o grupo configurado em Configurações de Recepção, onde toda a equipe vê.
+	"""
+	notificar_dados_preenchidos_no_grupo_recepcao(novo_associado_name)
 
 
 def _sincronizar_vinculo(novo_associado_name, resp_id, guarda_unilateral, resp_item):
@@ -573,7 +557,7 @@ def update_novo_associado(
 			if cint(v.get("é_guardiao_legal")) != 1:
 				frappe.db.set_value("Responsavel Vinculo", v.name, "é_guardiao_legal", 1)
 
-	_notificar_gestores_novo_associado(doc.nome_completo or str(novo_associado_name))
+	_notificar_dados_preenchidos(str(novo_associado_name))
 	return {"status": "success"}
 
 

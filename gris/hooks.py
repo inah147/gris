@@ -167,6 +167,11 @@ doc_events = {
 			"gris.gestao_de_tarefas.board_sync.sync_projeto_envolvidos",
 		],
 	},
+	"Novo Associado": {
+		"on_update": [
+			"gris.api.recepcao_mensagens.on_novo_associado_atualizado",
+		],
+	},
 	"Festa": {
 		"after_insert": [
 			"gris.api.festas.avaliacao.criar_avaliacao_festa_automatica",
@@ -205,7 +210,14 @@ scheduler_events = {
 			"gris.api.associados_notificacoes.enviar_lembrete_atualizacao_associados",
 			"gris.api.associados_vencimento_notificacoes.enviar_lembretes_vencimento_registro_associados",
 			"gris.api.registro_provisorio_notificacoes.enviar_avisos_seguimento_registro_provisorio",
+			"gris.api.recepcao_mensagens.enviar_lembretes_dados_registro",
+			"gris.api.recepcao_mensagens.enviar_lembretes_pesquisa_novos_associados",
+			"gris.api.recepcao_mensagens.enviar_lembretes_ficha_medica",
+			"gris.api.recepcao_mensagens.enviar_lembretes_id_escoteiros",
+			"gris.api.recepcao_mensagens.enviar_lembretes_acolhida_lenco",
 		],
+		# Sábado de manhã, antes da reunião: as visitas do dia no grupo de chefes de seção.
+		"0 10 * * 6": ["gris.api.recepcao_mensagens.notificar_visitas_do_dia"],
 	},
 	# "all": [
 	# 	"gris.tasks.all"

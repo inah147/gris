@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import unicodedata
 from typing import Any
 from urllib.parse import quote
 
@@ -18,6 +17,9 @@ from gris.gris.doctype.gestao_de_tarefas.gestao_de_tarefas import (
 	TASK_FIELDS,
 	TASK_STATUS_OPTIONS,
 )
+from gris.utils.chefes import buscar_chefes_de_secao as _get_section_chief_associados
+from gris.utils.chefes import eh_funcao_chefe_de_secao as _is_section_chief_function
+from gris.utils.chefes import normalizar_texto as _normalize_text
 from gris.utils.contato import (
 	_get_associado_payload,
 	_get_responsavel_payload,
@@ -26,22 +28,11 @@ from gris.utils.contato import get_contato_pessoa as _shared_get_contato_pessoa
 from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 from gris.utils.whatsapp import enviar_mensagem_formatada, enviar_texto
 
+__all__ = ["_get_section_chief_associados", "_is_section_chief_function", "_normalize_text"]
+
 
 def _is_beneficiario_categoria(categoria: str | None) -> bool:
 	return bool((categoria or "").strip().lower().startswith("benefici"))
-
-
-def _normalize_text(value: str | None) -> str:
-	text = (value or "").strip().lower()
-	if not text:
-		return ""
-	decomposed = unicodedata.normalize("NFKD", text)
-	return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
-
-
-def _is_section_chief_function(value: str | None) -> bool:
-	normalized = _normalize_text(value)
-	return "chefe" in normalized and "secao" in normalized
 
 
 class Projeto(Document):
@@ -843,42 +834,6 @@ def _get_coordinator_profile(doc: Document) -> dict[str, str]:
 		"secao": (data.get("secao") or "").strip(),
 		"ramo": (data.get("ramo") or "").strip(),
 	}
-
-
-def _get_section_chief_associados(secao: str, ramo: str = "") -> list[str]:
-	candidates = frappe.get_all(
-		"Associado",
-		filters={"funcao": ["like", "%Chefe%"]},
-		fields=["name", "funcao", "secao", "ramo"],
-		order_by="modified desc",
-		limit_page_length=500,
-	)
-
-	section_chiefs = [
-		row for row in candidates if row.get("name") and _is_section_chief_function(row.get("funcao"))
-	]
-	if not section_chiefs:
-		return []
-
-	normalized_secao = _normalize_text(secao)
-	if normalized_secao:
-		matched_by_secao = [
-			row.get("name") for row in section_chiefs if _normalize_text(row.get("secao")) == normalized_secao
-		]
-		matched_by_secao = [name for name in matched_by_secao if name]
-		if matched_by_secao:
-			return list(dict.fromkeys(matched_by_secao))
-
-	normalized_ramo = _normalize_text(ramo)
-	if normalized_ramo:
-		matched_by_ramo = [
-			row.get("name") for row in section_chiefs if _normalize_text(row.get("ramo")) == normalized_ramo
-		]
-		matched_by_ramo = [name for name in matched_by_ramo if name]
-		if matched_by_ramo:
-			return list(dict.fromkeys(matched_by_ramo))
-
-	return []
 
 
 def _get_section_chief_approver_identities(doc: Document, strict: bool = False) -> list[dict[str, Any]]:

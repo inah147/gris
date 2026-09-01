@@ -76,7 +76,13 @@ def _normalize_phone(number: str) -> str:
 	return f"55{digits}"
 
 
-def _post(endpoint: str, payload: dict, *, config: dict | None = None) -> dict:
+def _post(
+	endpoint: str,
+	payload: dict,
+	*,
+	params: dict | None = None,
+	config: dict | None = None,
+) -> dict:
 	"""Executa POST na Evolution API com retry automático para erros transitórios."""
 	if config is None:
 		config = _get_config()
@@ -87,7 +93,9 @@ def _post(endpoint: str, payload: dict, *, config: dict | None = None) -> dict:
 
 	for attempt in range(1, MAX_RETRIES + 1):
 		try:
-			response = requests.post(url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT)
+			response = requests.post(
+				url, headers=headers, params=params, json=payload, timeout=DEFAULT_TIMEOUT
+			)
 		except requests.RequestException as exc:
 			raise WhatsAppRequestError(f"Falha de conexão ao chamar Evolution API: {exc}") from exc
 
@@ -227,11 +235,18 @@ def _enviar_para_grupo_sync(
 	mensagem: str,
 	*,
 	mencionar_todos: bool = False,
+	mencionar: list[str] | None = None,
 ) -> dict:
 	config = _get_config()
 	payload = {"number": grupo_jid, "text": mensagem}
+	# `mentionsEveryOne` só entra no payload quando verdadeiro: a Evolution menciona todo
+	# mundo mesmo quando a chave chega com `false`.
 	if mencionar_todos:
 		payload["mentionsEveryOne"] = True
+	if mencionar:
+		numeros = [_normalize_phone(numero) for numero in mencionar if (numero or "").strip()]
+		if numeros:
+			payload["mentioned"] = list(dict.fromkeys(numeros))
 
 	try:
 		result = _post(f"/message/sendText/{config['nome_instancia']}", payload, config=config)
@@ -241,6 +256,29 @@ def _enviar_para_grupo_sync(
 
 	_registrar_sucesso()
 	_logger().info(f"Mensagem enviada para grupo {grupo_jid}.")
+	return result
+
+
+def _adicionar_participantes_no_grupo_sync(grupo_jid: str, numeros: list[str]) -> dict:
+	config = _get_config()
+	participantes = [_normalize_phone(numero) for numero in numeros if (numero or "").strip()]
+	participantes = list(dict.fromkeys(participantes))
+	if not participantes:
+		raise WhatsAppRequestError("Nenhum número válido para adicionar ao grupo.")
+
+	try:
+		result = _post(
+			f"/group/updateParticipant/{config['nome_instancia']}",
+			{"action": "add", "participants": participantes},
+			params={"groupJid": grupo_jid},
+			config=config,
+		)
+	except Exception:
+		_registrar_erro(f"adicionar_participantes_no_grupo:{grupo_jid}")
+		raise
+
+	_registrar_sucesso()
+	_logger().info(f"{len(participantes)} participante(s) adicionado(s) ao grupo {grupo_jid}.")
 	return result
 
 
@@ -401,6 +439,7 @@ def enviar_para_grupo(
 	mensagem: str,
 	*,
 	mencionar_todos: bool = False,
+	mencionar: list[str] | None = None,
 	enqueue: bool = True,
 ) -> dict | None:
 	"""Envia mensagem de texto para um grupo WhatsApp.
@@ -409,6 +448,8 @@ def enviar_para_grupo(
 		grupo_jid: JID do grupo no formato Evolution API (ex.: "5511999999999-1234567890@g.us").
 		mensagem: Texto a enviar.
 		mencionar_todos: Quando True, envia com menção geral para todos os participantes do grupo.
+		mencionar: Números a mencionar individualmente. O corpo da mensagem precisa conter
+			``@<números>`` para o WhatsApp desenhar a menção.
 		enqueue: Se True (padrão), processa em background.
 
 	Returns:
@@ -426,13 +467,51 @@ def enviar_para_grupo(
 			grupo_jid=grupo_jid,
 			mensagem=mensagem,
 			mencionar_todos=mencionar_todos,
+			mencionar=mencionar,
 		)
 		return None
 	return _enviar_para_grupo_sync(
 		grupo_jid,
 		mensagem,
 		mencionar_todos=mencionar_todos,
+		mencionar=mencionar,
 	)
+
+
+def adicionar_participantes_no_grupo(
+	grupo_jid: str,
+	numeros: list[str],
+	*,
+	enqueue: bool = True,
+) -> dict | None:
+	"""Adiciona participantes a um grupo WhatsApp.
+
+	A adição pode ser recusada pela configuração de privacidade de quem seria adicionado —
+	nesse caso a Evolution responde com o status por participante, sem erro de HTTP. Quem
+	chama deve tratar a falha como não fatal.
+
+	Args:
+		grupo_jid: JID do grupo no formato Evolution API (ex.: "1203630000000000@g.us").
+		numeros: Telefones a adicionar, em qualquer formato aceito por ``_normalize_phone``.
+		enqueue: Se True (padrão), processa em background.
+
+	Returns:
+		Resposta da Evolution API (dict) no modo síncrono, ou None quando enfileirado.
+
+	Raises:
+		WhatsAppConfigurationError: Integração desabilitada ou configuração incompleta.
+		WhatsAppRequestError: Nenhum número válido, falha de rede ou HTTP (modo síncrono).
+	"""
+	if enqueue:
+		frappe.enqueue(
+			"gris.utils.whatsapp._adicionar_participantes_no_grupo_sync",
+			queue="short",
+			timeout=60,
+			grupo_jid=grupo_jid,
+			numeros=numeros,
+		)
+		return None
+	return _adicionar_participantes_no_grupo_sync(grupo_jid, numeros)
 
 
 def enviar_mensagem_formatada(

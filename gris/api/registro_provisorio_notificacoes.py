@@ -15,24 +15,16 @@ do Novo Associado registra o envio e é limpo caso o registro provisório seja d
 
 from __future__ import annotations
 
-from collections import defaultdict
-
 import frappe
 from frappe.utils import add_days, date_diff, format_date, get_url, getdate, today
 
+from gris.api.recepcao_mensagens import _buscar_contatos_responsaveis, _extrair_primeiro_nome
 from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 from gris.utils.whatsapp import enviar_texto
 
 SETTINGS_DOCTYPE = "Configuracoes de Recepcao"
 DIAS_PADRAO_AVISO = 20
 STATUS_IGNORADOS = ["Fila de espera", "Concluído"]
-
-
-def _extrair_primeiro_nome(nome_completo: str | None) -> str:
-	nome = (nome_completo or "").strip()
-	if not nome:
-		return "amigo"
-	return nome.split()[0]
 
 
 def _dias_para_aviso() -> int:
@@ -58,74 +50,6 @@ def _buscar_responsavel_administrativo() -> frappe._dict | None:
 		["name", "nome_completo", "telefone"],
 		as_dict=True,
 	)
-
-
-def _buscar_contatos_responsaveis(novo_associado_names: list[str]) -> dict[str, frappe._dict]:
-	"""Retorna o responsável prioritário de cada Novo Associado.
-
-	Prioridade: guardião legal > primeiro responsável. Usa ``celular`` com fallback em
-	``telefone_secundario``. Consultas agregadas para evitar N+1.
-	"""
-	if not novo_associado_names:
-		return {}
-
-	links = frappe.get_all(
-		"Responsavel Vinculo",
-		filters={"beneficiario_novo_associado": ["in", novo_associado_names]},
-		fields=["beneficiario_novo_associado", "responsavel", "é_guardiao_legal", "primeiro_responsavel"],
-	)
-
-	links_por_associado: dict[str, list[frappe._dict]] = defaultdict(list)
-	responsavel_names: set[str] = set()
-	for link in links:
-		associado_name = link.get("beneficiario_novo_associado")
-		responsavel_name = link.get("responsavel")
-		if not associado_name or not responsavel_name:
-			continue
-		links_por_associado[str(associado_name)].append(link)
-		responsavel_names.add(str(responsavel_name))
-
-	if not responsavel_names:
-		return {}
-
-	responsaveis = frappe.get_all(
-		"Responsavel",
-		filters={"name": ["in", list(responsavel_names)]},
-		fields=["name", "nome_completo", "celular", "telefone_secundario"],
-	)
-	responsavel_por_name = {str(row.get("name")): row for row in responsaveis if row.get("name")}
-
-	contatos: dict[str, frappe._dict] = {}
-	for associado_name, associado_links in links_por_associado.items():
-		links_ordenados = sorted(
-			associado_links,
-			key=lambda lnk: (
-				1 if lnk.get("é_guardiao_legal") else 0,
-				1 if lnk.get("primeiro_responsavel") else 0,
-			),
-			reverse=True,
-		)
-
-		for link in links_ordenados:
-			responsavel = responsavel_por_name.get(str(link.get("responsavel")))
-			if not responsavel:
-				continue
-
-			telefone = (responsavel.get("celular") or responsavel.get("telefone_secundario") or "").strip()
-			contato = frappe._dict(
-				{
-					"nome": (responsavel.get("nome_completo") or "").strip(),
-					"telefone": telefone,
-				}
-			)
-
-			# Prefere o primeiro responsável com telefone; senão mantém o de maior prioridade.
-			if telefone or associado_name not in contatos:
-				contatos[associado_name] = contato
-			if telefone:
-				break
-
-	return contatos
 
 
 def _montar_mensagem_aviso(

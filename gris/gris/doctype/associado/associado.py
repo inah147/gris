@@ -147,6 +147,59 @@ class Associado(Document):
 		if dirty:
 			na_doc.save(ignore_permissions=True)
 
+	def _novo_associado_vinculado(self) -> str | None:
+		"""Nome do ``Novo Associado`` correspondente, se o jovem ainda está no funil.
+
+		``Associado`` e ``Novo Associado`` são nomeados pelo md5 do CPF, então compartilham o
+		nome. O registro do funil some quando a recepção é finalizada — depois disso não há
+		mais etapa a atualizar nem mensagem a enviar.
+		"""
+		if not frappe.db.exists("Novo Associado", self.name):
+			return None
+		return self.name
+
+	def _sincronizar_id_escoteiros_novo_associado(self, na_name: str):
+		"""Marca a etapa "id@escoteiros criado" assim que o e-mail institucional aparece."""
+		if not self.id_escoteiros:
+			return
+
+		if frappe.db.get_value("Novo Associado", na_name, "id_escoteiros_criado"):
+			return
+
+		frappe.db.set_value("Novo Associado", na_name, "id_escoteiros_criado", 1)
+
+	def _notificar_registro_criado(self, na_name: str):
+		"""Avisa o responsável, uma única vez, que o registro do jovem foi criado.
+
+		Roda no insert e no update porque o número de registro nem sempre chega junto com o
+		cadastro. O envio único é garantido pelo carimbo em ``Novo Associado``, conferido aqui
+		e de novo dentro do job — a checagem antecipada evita enfileirar um job por linha numa
+		importação em massa de associados.
+		"""
+		if not self.registro:
+			return
+
+		if frappe.db.get_value("Novo Associado", na_name, "data_mensagem_registro_criado"):
+			return
+
+		frappe.enqueue(
+			"gris.api.recepcao_mensagens.notificar_registro_criado",
+			queue="short",
+			timeout=120,
+			job_name=f"notificar_registro_criado:{na_name}",
+			associado_name=na_name,
+			enqueue_after_commit=True,
+		)
+
+	def _processar_vinculo_com_recepcao(self):
+		"""Reflete no funil de recepção o que mudou no cadastro do associado."""
+		na_name = self._novo_associado_vinculado()
+		if not na_name:
+			return
+
+		self._sincronizar_id_escoteiros_novo_associado(na_name)
+		self._notificar_registro_criado(na_name)
+
 	def before_insert(self):
 		self._handle_novo_associado_pre()
 		self._anonymize_cpfs()
@@ -189,6 +242,7 @@ class Associado(Document):
 
 	def after_insert(self):
 		self._handle_novo_associado_post()
+		self._processar_vinculo_com_recepcao()
 		if cint(frappe.db.get_single_value("Configuracoes de Associados", "criar_usuarios")) != 1:
 			pass
 		else:
@@ -215,6 +269,7 @@ class Associado(Document):
 		# Ignora primeira criação: after_insert já tratou
 		if self.flags.get("in_insert"):
 			return
+		self._processar_vinculo_com_recepcao()
 		log = _assoc_logger()
 		log.info(
 			f"[ENQUEUE UPDATE] {self.name} old='{getattr(self.flags, 'old_funcao_categoria', None)}' "

@@ -18,6 +18,10 @@ from frappe.utils import add_days, format_date, getdate
 
 DOCTYPE = "Novo Associado"
 
+# Ramos na ordem crescente de idade, como aparecem no Select de ``Novo Associado``.
+# Ordem canônica para qualquer listagem por ramo do fluxo de recepção.
+RAMOS: tuple[str, ...] = ("Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro")
+
 STEPS_DEF: list[dict[str, Any]] = [
 	{"field": "visita_agendada", "label": "Visita Agendada"},
 	{"field": "primeira_visita_realizada", "label": "Primeira Visita Realizada"},

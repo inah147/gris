@@ -22,9 +22,53 @@ const CAMPOS_DE_GRUPO = [
 
 frappe.ui.form.on("Configuracoes de Recepcao", {
 	async refresh(frm) {
-		await carregar_opcoes_dos_grupos(frm);
+		atualizar_campos_obrigatorios(frm);
+		await Promise.all([
+			carregar_opcoes_dos_grupos(frm),
+			carregar_opcoes_drive_compartilhado(frm),
+		]);
+	},
+	habilitar_documentos_drive(frm) {
+		atualizar_campos_obrigatorios(frm);
 	},
 });
+
+// Espelha o `validate()` do controller: os campos do Drive só são exigidos com o envio ligado.
+function atualizar_campos_obrigatorios(frm) {
+	const habilitado = Number(frm.doc.habilitar_documentos_drive || 0) === 1;
+	[
+		"drive_compartilhado_acesso_restrito",
+		"pasta_documentos_identificacao_id",
+		"pasta_declaracoes_nao_assinadas_id",
+		"pasta_declaracoes_assinadas_id",
+	].forEach((fieldname) => frm.toggle_reqd(fieldname, habilitado));
+}
+
+// O Select não tem `options` no JSON: a lista vem dos drives ativos de
+// Configuracoes Google Workspace, mesma fonte usada por festas e projetos.
+async function carregar_opcoes_drive_compartilhado(frm) {
+	try {
+		const response = await frappe.call({
+			method: "gris.gris.doctype.configuracoes_de_recepcao.configuracoes_de_recepcao.get_opcoes_drives_compartilhados_recepcao",
+		});
+		const opcoes = Array.isArray(response.message) ? response.message : [];
+
+		const values = [];
+		opcoes.forEach((item) => {
+			const driveId = String(item.value || "").trim();
+			if (driveId) {
+				values.push(driveId);
+			}
+		});
+
+		frm.set_df_property("drive_compartilhado_acesso_restrito", "options", values.join("\n"));
+		frm.refresh_field("drive_compartilhado_acesso_restrito");
+	} catch (error) {
+		console.warn("Não foi possível carregar os drives compartilhados.", error);
+		frm.set_df_property("drive_compartilhado_acesso_restrito", "options", "");
+		frm.refresh_field("drive_compartilhado_acesso_restrito");
+	}
+}
 
 async function carregar_opcoes_dos_grupos(frm) {
 	let grupos = null;

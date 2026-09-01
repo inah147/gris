@@ -81,6 +81,36 @@
 		);
 	}
 
+	const ERRO_GENERICO = "Não foi possível enviar o arquivo. Tente novamente.";
+
+	// O motivo real da recusa vem em `_server_messages`, um JSON aninhado que pode trazer
+	// HTML. Sem desempacotar isso, toda falha aparece igual na tela — tipo de arquivo
+	// recusado, permissão, configuração ausente — e não há como o usuário se corrigir.
+	function serverMessage(error) {
+		const raw = error && error._server_messages;
+		if (!raw) return error?.exception || "";
+
+		try {
+			const mensagens = JSON.parse(raw)
+				.map((item) => {
+					try {
+						return JSON.parse(item).message || "";
+					} catch (e) {
+						return String(item || "");
+					}
+				})
+				.filter(Boolean);
+
+			if (!mensagens.length) return "";
+
+			const div = document.createElement("div");
+			div.innerHTML = mensagens[0];
+			return (div.textContent || "").trim();
+		} catch (e) {
+			return "";
+		}
+	}
+
 	function getOptions(component) {
 		const sources = splitList(component.dataset.sources || "local");
 		const allowTakePhoto = bool(component.dataset.allowTakePhoto);
@@ -106,7 +136,22 @@
 			docname: component.dataset.docname || "",
 			fieldname: component.dataset.fieldname || "",
 			method: component.dataset.method || "",
+			extraParams: parseExtraParams(component.dataset.extraParams),
 		};
+	}
+
+	// Campos avulsos do FormData, usados por handlers de `method` que precisam saber a que
+	// registro o arquivo pertence. Um JSON quebrado não pode derrubar o componente inteiro.
+	function parseExtraParams(raw) {
+		if (!raw) return {};
+
+		try {
+			const parsed = JSON.parse(raw);
+			return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+		} catch (error) {
+			console.warn("data-extra-params inválido no file-upload.", error);
+			return {};
+		}
 	}
 
 	function updateHiddenValue(component, files) {
@@ -264,6 +309,13 @@
 			}
 			if (options.fieldname) formData.append("fieldname", options.fieldname);
 			if (options.method) formData.append("method", options.method);
+			// Relido do DOM a cada envio: alguns campos extras dependem do que o usuário
+			// digitou depois da página carregar (ex.: o nome que vai no nome do arquivo).
+			Object.entries(parseExtraParams(component.dataset.extraParams)).forEach(
+				([key, value]) => {
+					if (value !== null && value !== undefined) formData.append(key, String(value));
+				}
+			);
 			if (options.allowOptimize && getOptimizeValue(component))
 				formData.append("optimize", "true");
 
@@ -370,18 +422,15 @@
 			);
 			dialog?.close();
 		} catch (error) {
-			setMessage(component, "Não foi possível enviar o arquivo. Tente novamente.", "error");
+			const motivo = serverMessage(error) || ERRO_GENERICO;
+			setMessage(component, motivo, "error");
 			component.dispatchEvent(
 				new CustomEvent("gris:file-upload:error", {
 					bubbles: true,
-					detail: { error },
+					detail: { error, message: motivo },
 				})
 			);
-			toast(
-				"error",
-				"Falha no upload",
-				"Não foi possível enviar o arquivo. Tente novamente."
-			);
+			toast("error", "Falha no upload", motivo);
 		} finally {
 			submitButton.disabled = false;
 		}
@@ -418,6 +467,8 @@
 				state.files = [];
 				if (input) input.value = "";
 				if (cameraInput) cameraInput.value = "";
+				// Sair da aba da câmera precisa desligar o stream, não só esconder o painel.
+				pararCamera();
 				component.querySelectorAll("[data-file-upload-source]").forEach((button) => {
 					button.setAttribute(
 						"aria-pressed",
@@ -450,7 +501,84 @@
 			renderFiles(component, state);
 		});
 
-		cameraTrigger?.addEventListener("click", () => cameraInput?.click());
+		// Câmera de verdade. O `capture` do input só funciona no celular; no desktop o
+		// navegador o ignora e abre o seletor de arquivos, que não é tirar foto. O
+		// getUserMedia cobre os dois, e ainda entrega sempre JPEG — o que evita o HEIC do
+		// iPhone, recusado pela allowlist de MIME do Frappe.
+		const camera = component.querySelector("[data-file-upload-camera]");
+		const cameraVideo = component.querySelector("[data-file-upload-camera-video]");
+		const cameraShoot = component.querySelector("[data-file-upload-camera-shoot]");
+		const cameraCancel = component.querySelector("[data-file-upload-camera-cancel]");
+
+		function pararCamera() {
+			const stream = cameraVideo?.srcObject;
+			if (stream) {
+				stream.getTracks().forEach((track) => track.stop());
+				cameraVideo.srcObject = null;
+			}
+			if (camera) camera.hidden = true;
+			if (cameraTrigger) cameraTrigger.hidden = false;
+		}
+
+		async function abrirCamera() {
+			if (!camera || !cameraVideo || !navigator.mediaDevices?.getUserMedia) {
+				cameraInput?.click();
+				return;
+			}
+
+			try {
+				const stream = await navigator.mediaDevices.getUserMedia({
+					video: {
+						facingMode: { ideal: component.dataset.cameraFacing || "environment" },
+					},
+					audio: false,
+				});
+				cameraVideo.srcObject = stream;
+				await cameraVideo.play().catch(() => {});
+				camera.hidden = false;
+				cameraTrigger.hidden = true;
+				setMessage(component, "");
+			} catch (error) {
+				// Permissão negada, sem câmera ou origem insegura: sobra o seletor nativo.
+				setMessage(
+					component,
+					"Não foi possível abrir a câmera. Selecione uma imagem do dispositivo.",
+					"error"
+				);
+				cameraInput?.click();
+			}
+		}
+
+		function capturarFoto() {
+			if (!cameraVideo?.videoWidth) return;
+
+			const canvas = document.createElement("canvas");
+			canvas.width = cameraVideo.videoWidth;
+			canvas.height = cameraVideo.videoHeight;
+			canvas.getContext("2d").drawImage(cameraVideo, 0, 0, canvas.width, canvas.height);
+
+			canvas.toBlob(
+				(blob) => {
+					if (!blob) return;
+					const arquivo = new File([blob], `foto-${Date.now()}.jpg`, {
+						type: "image/jpeg",
+						lastModified: Date.now(),
+					});
+					state.files = validateFiles(component, [arquivo], options);
+					renderFiles(component, state);
+					pararCamera();
+				},
+				"image/jpeg",
+				0.92
+			);
+		}
+
+		cameraTrigger?.addEventListener("click", abrirCamera);
+		cameraShoot?.addEventListener("click", capturarFoto);
+		cameraCancel?.addEventListener("click", pararCamera);
+		// A luz da câmera não pode continuar acesa depois que o usuário sai do envio.
+		dialog?.addEventListener("close", pararCamera);
+
 		cameraInput?.addEventListener("change", () => {
 			state.files = validateFiles(component, Array.from(cameraInput.files || []), options);
 			renderFiles(component, state);

@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"5v81V6oWKZ\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Configura\u00e7\u00f5es</span>\",\"col\":12}},{\"id\":\"VZFDdRNGVw\",\"type\":\"card\",\"data\":{\"card_name\":\"Geral\",\"col\":4}},{\"id\":\"5MURehvsxe\",\"type\":\"card\",\"data\":{\"card_name\":\"Financeiro\",\"col\":4}},{\"id\":\"ZAu1xHtYKv\",\"type\":\"card\",\"data\":{\"card_name\":\"Recep\u00e7\u00e3o\",\"col\":4}},{\"id\":\"YHi2vbvuYr\",\"type\":\"card\",\"data\":{\"card_name\":\"Calend\u00e1rio\",\"col\":4}},{\"id\":\"kKxjD_jgFP\",\"type\":\"card\",\"data\":{\"card_name\":\"Associados\",\"col\":4}},{\"id\":\"6mMmEsszIP\",\"type\":\"card\",\"data\":{\"card_name\":\"LLM\",\"col\":4}},{\"id\":\"UDloHc5RXv\",\"type\":\"card\",\"data\":{\"card_name\":\"Google\",\"col\":4}},{\"id\":\"XL3_quF1tF\",\"type\":\"card\",\"data\":{\"card_name\":\"Whatsapp\",\"col\":4}},{\"id\":\"ottnOA_jp9\",\"type\":\"card\",\"data\":{\"card_name\":\"Projetos\",\"col\":4}},{\"id\":\"uGsSimzAQ8\",\"type\":\"card\",\"data\":{\"card_name\":\"Festas\",\"col\":4}},{\"id\":\"grisMonitorJobs\",\"type\":\"card\",\"data\":{\"card_name\":\"Monitoramento\",\"col\":4}}]",
+ "content": "[{\"id\":\"5v81V6oWKZ\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Configura\u00e7\u00f5es</span>\",\"col\":12}},{\"id\":\"VZFDdRNGVw\",\"type\":\"card\",\"data\":{\"card_name\":\"Geral\",\"col\":4}},{\"id\":\"5MURehvsxe\",\"type\":\"card\",\"data\":{\"card_name\":\"Financeiro\",\"col\":4}},{\"id\":\"ZAu1xHtYKv\",\"type\":\"card\",\"data\":{\"card_name\":\"Recep\u00e7\u00e3o\",\"col\":4}},{\"id\":\"YHi2vbvuYr\",\"type\":\"card\",\"data\":{\"card_name\":\"Calend\u00e1rio\",\"col\":4}},{\"id\":\"kKxjD_jgFP\",\"type\":\"card\",\"data\":{\"card_name\":\"Associados\",\"col\":4}},{\"id\":\"6mMmEsszIP\",\"type\":\"card\",\"data\":{\"card_name\":\"LLM\",\"col\":4}},{\"id\":\"UDloHc5RXv\",\"type\":\"card\",\"data\":{\"card_name\":\"Google\",\"col\":4}},{\"id\":\"XL3_quF1tF\",\"type\":\"card\",\"data\":{\"card_name\":\"Whatsapp\",\"col\":4}},{\"id\":\"ottnOA_jp9\",\"type\":\"card\",\"data\":{\"card_name\":\"Projetos\",\"col\":4}},{\"id\":\"uGsSimzAQ8\",\"type\":\"card\",\"data\":{\"card_name\":\"Festas\",\"col\":4}},{\"id\":\"grisMonitorJobs\",\"type\":\"card\",\"data\":{\"card_name\":\"Monitoramento\",\"col\":4}},{\"id\":\"6jXtIuS2yL\",\"type\":\"card\",\"data\":{\"card_name\":\"Comunica\u00e7\u00e3o\",\"col\":4}}]",
  "creation": "2025-09-07 10:18:31.190067",
  "custom_blocks": [],
  "docstatus": 0,
@@ -251,9 +251,28 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Comunica\u00e7\u00e3o",
+   "link_count": 1,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Configura\u00e7\u00f5es de Comunica\u00e7\u00e3o",
+   "link_count": 0,
+   "link_to": "Configuracoes de Comunicacao",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-08-28 00:00:00.000000",
+ "modified": "2026-09-01 12:51:23.708808",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Configura\u00e7\u00f5es",

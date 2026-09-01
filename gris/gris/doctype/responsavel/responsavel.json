@@ -8,6 +8,8 @@
   "informa\u00e7\u00f5es_pessoais_section",
   "nome_completo",
   "data_de_nascimento",
+  "cidade_de_nascimento",
+  "uf_de_nascimento",
   "sexo",
   "estado_civil",
   "cpf",
@@ -30,7 +32,14 @@
   "hobbies_e_interesses_section",
   "o_que_gosta_de_fazer_no_dia_a_dia",
   "habilidades",
-  "telefone_secundario"
+  "telefone_secundario",
+  "documentos_section",
+  "link_documento_identificacao",
+  "documento_identificacao_enviado_em",
+  "column_break_documentos",
+  "link_declaracao_idoneidade",
+  "link_declaracao_idoneidade_assinada",
+  "declaracao_idoneidade_assinada_em"
  ],
  "fields": [
   {
@@ -47,6 +56,17 @@
    "fieldname": "data_de_nascimento",
    "fieldtype": "Date",
    "label": "Data de nascimento"
+  },
+  {
+   "fieldname": "cidade_de_nascimento",
+   "fieldtype": "Data",
+   "label": "Cidade de nascimento"
+  },
+  {
+   "fieldname": "uf_de_nascimento",
+   "fieldtype": "Select",
+   "label": "UF de nascimento",
+   "options": "\nAC\nAL\nAP\nAM\nBA\nCE\nDF\nES\nGO\nMA\nMT\nMS\nMG\nPA\nPB\nPR\nPE\nPI\nRJ\nRN\nRS\nRO\nRR\nSC\nSP\nSE\nTO"
   },
   {
    "fieldname": "sexo",
@@ -167,6 +187,48 @@
    "fieldtype": "Table MultiSelect",
    "label": "Habilidades",
    "options": "Responsavel Habilidade"
+  },
+  {
+   "description": "Arquivos hospedados no Google Drive do grupo, nunca no banco do GRIS.",
+   "fieldname": "documentos_section",
+   "fieldtype": "Section Break",
+   "label": "Documentos"
+  },
+  {
+   "fieldname": "link_documento_identificacao",
+   "fieldtype": "Data",
+   "label": "Documento de identificação com foto",
+   "options": "URL"
+  },
+  {
+   "fieldname": "documento_identificacao_enviado_em",
+   "fieldtype": "Datetime",
+   "label": "Documento enviado em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_documentos",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "link_declaracao_idoneidade",
+   "fieldtype": "Data",
+   "label": "Declaração de idoneidade (não assinada)",
+   "options": "URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "link_declaracao_idoneidade_assinada",
+   "fieldtype": "Data",
+   "label": "Declaração de idoneidade assinada",
+   "options": "URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "declaracao_idoneidade_assinada_em",
+   "fieldtype": "Datetime",
+   "label": "Declaração assinada enviada em",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

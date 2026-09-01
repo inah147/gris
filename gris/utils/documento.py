@@ -20,6 +20,19 @@ def limpar_cpf(cpf: str | None) -> str:
 	return re.sub(r"\D", "", cpf or "")
 
 
+def formatar_cpf(cpf: str | None) -> str:
+	"""CPF pontuado (``000.000.000-00``), para exibição em tela e em documento gerado.
+
+	Devolve o valor original quando não há 11 dígitos: cadastros antigos guardam o CPF
+	nos dois formatos, e mascarar um valor incompleto esconderia o problema.
+	"""
+	digitos = limpar_cpf(cpf)
+	if len(digitos) != 11:
+		return (cpf or "").strip()
+
+	return f"{digitos[:3]}.{digitos[3:6]}.{digitos[6:9]}-{digitos[9:]}"
+
+
 def cpf_valido(cpf: str | None) -> bool:
 	"""Valida os dígitos verificadores do CPF (espelho de ``validateCPF`` no registro.js)."""
 	digitos = limpar_cpf(cpf)

@@ -227,6 +227,9 @@
               {% if is_primary %}
                 {{ badge("1º Responsável", variant="primary") }}
               {% endif %}
+              {% if is_filhotes and item.sera_registrado %}
+                {{ badge("Será registrado", variant="secondary") }}
+              {% endif %}
             </header>
 
             <h4 class="responsavel-card__section-title">Dados Pessoais</h4>
@@ -328,6 +331,32 @@
                 <input type="text" class="input" value="{{ 'Sim' if item.vinculo.é_guardiao_legal else 'Não' }}" disabled>
               </div>
             </div>
+
+            {% if is_filhotes and item.sera_registrado %}
+              {# Arquivos ficam no Drive do grupo; aqui só o link para abrir. #}
+              <h4 class="responsavel-card__section-title">Documentos</h4>
+              <ul class="ficha-documentos" data-novo-associado="{{ doc.name }}">
+                {% for rotulo, tipo in [
+                  ("Documento de identificação com foto", "identificacao"),
+                  ("Declaração de idoneidade (não assinada)", "declaracao"),
+                  ("Declaração de idoneidade assinada", "declaracao_assinada")
+                ] %}
+                  <li class="ficha-documentos__item">
+                    <span>{{ rotulo }}</span>
+                    {% if item.documentos[tipo] %}
+                      <button type="button" class="btn-sm-outline ficha-documentos__botao"
+                              data-baixar-documento="{{ tipo }}"
+                              data-responsavel="{{ item.doc.name }}">
+                        {{ lucide_icon("download", size="sm") }}
+                        <span>Baixar</span>
+                      </button>
+                    {% else %}
+                      {{ badge("Pendente", variant="secondary", outline=true) }}
+                    {% endif %}
+                  </li>
+                {% endfor %}
+              </ul>
+            {% endif %}
           </article>
         {% endfor %}
       </div>

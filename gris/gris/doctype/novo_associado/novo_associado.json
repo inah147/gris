@@ -59,6 +59,11 @@
   "registro_definitivo_pago",
   "registro_definitivo_efetivado",
   "reuniao_de_acolhida_realizada",
+  "ramo_filhotes_section",
+  "ciente_registro_responsavel_filhotes",
+  "ciente_acompanhamento_filhotes",
+  "column_break_ciencia_filhotes",
+  "data_ciencia_filhotes",
   "controle_de_mensagens_section",
   "data_status_aguardar_dados",
   "data_lembrete_dados",
@@ -360,6 +365,37 @@
    "fieldname": "reuniao_de_acolhida_realizada",
    "fieldtype": "Check",
    "label": "Reuni\u00e3o de acolhida realizada"
+  },
+  {
+   "depends_on": "eval:doc.ramo == \"Filhotes\"",
+   "description": "Ci\u00eancias dadas pelo respons\u00e1vel ao enviar os dados de registro de um jovem do ramo Filhotes.",
+   "fieldname": "ramo_filhotes_section",
+   "fieldtype": "Section Break",
+   "label": "Ramo Filhotes"
+  },
+  {
+   "default": "0",
+   "fieldname": "ciente_registro_responsavel_filhotes",
+   "fieldtype": "Check",
+   "label": "Ciente de que pagar\u00e1 o registro definitivo do jovem e do respons\u00e1vel",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "ciente_acompanhamento_filhotes",
+   "fieldtype": "Check",
+   "label": "Ciente de que s\u00f3 o respons\u00e1vel com registro acompanha o jovem",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ciencia_filhotes",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "data_ciencia_filhotes",
+   "fieldtype": "Datetime",
+   "label": "Ci\u00eancias registradas em",
+   "read_only": 1
   },
   {
    "fieldname": "controle_de_mensagens_section",

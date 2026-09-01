@@ -12,6 +12,7 @@
   "pais_divorciados",
   "tipo_guarda",
   "\u00e9_guardiao_legal",
+  "sera_registrado",
   "primeiro_responsavel"
  ],
  "fields": [
@@ -61,6 +62,13 @@
    "fieldname": "\u00e9_guardiao_legal",
    "fieldtype": "Check",
    "label": "\u00c9 guardi\u00e3o legal"
+  },
+  {
+   "default": "0",
+   "description": "Exigido no ramo Filhotes: só o responsável com registro pode acompanhar o jovem nas atividades.",
+   "fieldname": "sera_registrado",
+   "fieldtype": "Check",
+   "label": "Será registrado"
   },
   {
    "default": "0",

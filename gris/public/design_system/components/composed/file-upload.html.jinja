@@ -27,6 +27,7 @@
   fieldname=None,
   method=None,
   name=None,
+  extra_params={},
   attrs={},
   trigger_attrs={}
 ) %}
@@ -46,12 +47,17 @@
   data-allow-private-choice="{{ 'true' if effective_allow_private_choice else 'false' }}"
   data-allow-private-toggle="{{ 'true' if effective_allow_private_choice else 'false' }}"
   data-allow-take-photo="{{ 'true' if allow_take_photo else 'false' }}"
+  data-camera-facing="{{ camera_capture }}"
   data-allow-optimize="{{ 'true' if allow_optimize else 'false' }}"
   data-folder="{{ folder }}"
   {% if doctype %}data-doctype="{{ doctype }}"{% endif %}
   {% if docname %}data-docname="{{ docname }}"{% endif %}
   {% if fieldname %}data-fieldname="{{ fieldname }}"{% endif %}
   {% if method %}data-method="{{ method }}"{% endif %}
+  {# Campos extras do FormData, para o handler de `method` saber a que registro o arquivo pertence.
+     `forceescape` é obrigatório: `tojson` devolve Markup (o `e` padrão vira no-op) com aspas
+     duplas, que encerrariam o atributo no primeiro par e truncariam o JSON. #}
+  {% if extra_params %}data-extra-params="{{ extra_params | tojson | forceescape }}"{% endif %}
   {% for key, value in attrs.items() %}
     {% if key != "class" %}{{ key }}="{{ value }}"{% endif %}
   {% endfor %}
@@ -110,6 +116,8 @@
         </div>
 
         <div class="file-upload__panel" data-file-upload-panel="camera" hidden>
+          {# Fallback: no celular o `capture` abre a câmera nativa; no desktop o navegador
+             ignora o atributo, por isso o caminho principal é o getUserMedia abaixo. #}
           <input
             type="file"
             class="file-upload__input"
@@ -123,6 +131,16 @@
             <span class="file-upload__dropzone-title">Tirar foto</span>
             <span class="file-upload__dropzone-description">Use a câmera do dispositivo para capturar uma imagem.</span>
           </button>
+          <div class="file-upload__camera" data-file-upload-camera hidden>
+            <video class="file-upload__camera-video" data-file-upload-camera-video playsinline muted autoplay></video>
+            <div class="file-upload__camera-actions">
+              <button type="button" class="btn" data-file-upload-camera-shoot>
+                {{ lucide_icon("camera", size="sm") }}
+                <span>Capturar</span>
+              </button>
+              <button type="button" class="btn-outline" data-file-upload-camera-cancel>Cancelar</button>
+            </div>
+          </div>
         </div>
 
         <div class="file-upload__panel" data-file-upload-panel="web_link" hidden>

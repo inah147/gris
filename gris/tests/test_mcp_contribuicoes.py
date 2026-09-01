@@ -305,6 +305,129 @@ class TestContasFixas(TestCase):
 		self.assertEqual(real["marcadas_como_pagas"], 1)
 
 
+class TestCompetenciasTransacao(TestCase):
+	def test_transacao_inexistente(self):
+		with patch.object(contribuicoes.frappe.db, "exists", return_value=False):
+			with self.assertRaises(ErroDeFerramenta) as ctx:
+				contribuicoes.competencias_transacao("T-999")
+		self.assertEqual(ctx.exception.codigo, "NAO_ENCONTRADO")
+
+	def test_le_a_transacao_pelo_servico(self):
+		esperado = {"transacao": "T1", "competencias": [{"ym": "2026-01", "valor": 70.0}]}
+		with (
+			patch.object(contribuicoes.frappe.db, "exists", return_value=True),
+			patch.object(
+				contribuicoes.servico, "get_competencias_transacao", return_value=esperado
+			) as servico,
+		):
+			resultado = contribuicoes.competencias_transacao("T1")
+		servico.assert_called_once_with("T1")
+		self.assertEqual(resultado, esperado)
+
+
+class TestDefinirCompetenciasTransacao(TestCase):
+	def test_transacao_inexistente(self):
+		with patch.object(contribuicoes.frappe.db, "exists", return_value=False):
+			with self.assertRaises(ErroDeFerramenta) as ctx:
+				contribuicoes.definir_competencias_transacao("T-999", [])
+		self.assertEqual(ctx.exception.codigo, "NAO_ENCONTRADO")
+
+	def test_recusa_item_que_nao_e_objeto(self):
+		with patch.object(contribuicoes.frappe.db, "exists", return_value=True):
+			with self.assertRaises(ErroDeFerramenta):
+				contribuicoes.definir_competencias_transacao("T1", ["2026-01"])
+
+	def test_simulacao_nao_grava(self):
+		antes = {"transacao": "T1", "competencias": []}
+		itens = [{"mes": "2026-01", "valor": 70.0, "em_atraso": True}]
+		with (
+			patch.object(contribuicoes.frappe.db, "exists", return_value=True),
+			patch.object(contribuicoes.servico, "get_competencias_transacao", return_value=antes),
+			patch.object(contribuicoes.frappe, "get_doc") as get_doc,
+			patch.object(contribuicoes.servico, "definir_competencias_transacao") as definir,
+		):
+			resultado = contribuicoes.definir_competencias_transacao("T1", itens, simular=True)
+
+		get_doc.return_value.check_permission.assert_called_once_with("write")
+		definir.assert_not_called()
+		self.assertTrue(resultado["simulacao"])
+		self.assertEqual(resultado["depois"], itens)
+
+	def test_delega_a_gravacao_para_o_servico(self):
+		antes = {"transacao": "T1", "competencias": []}
+		depois = {"transacao": "T1", "competencias": [{"ym": "2026-01", "valor": 70.0}]}
+		itens = [{"mes": "2026-01", "valor": 70.0, "em_atraso": True}]
+		with (
+			patch.object(contribuicoes.frappe.db, "exists", return_value=True),
+			patch.object(contribuicoes.servico, "get_competencias_transacao", return_value=antes),
+			patch.object(
+				contribuicoes.servico, "definir_competencias_transacao", return_value=depois
+			) as definir,
+		):
+			resultado = contribuicoes.definir_competencias_transacao("T1", itens)
+
+		definir.assert_called_once_with("T1", itens)
+		self.assertEqual(resultado["depois"], depois["competencias"])
+
+
+class TestPagamentosContribuicaoMensal(TestCase):
+	def test_lista_com_filtros_e_paginacao(self):
+		registros = [{"name": "PG1", "associado": "111", "status": "Pago"}]
+		with (
+			patch.object(contribuicoes.frappe, "get_all", return_value=registros) as get_all,
+			patch.object(contribuicoes.frappe.db, "count", return_value=1),
+		):
+			resultado = contribuicoes.listar_pagamentos_contribuicao_mensal(associado="111", status="Pago")
+
+		self.assertEqual(get_all.call_args.kwargs["filters"], {"associado": "111", "status": "Pago"})
+		self.assertEqual(resultado["paginacao"]["total"], 1)
+
+	def test_atualizar_exige_registro_existente(self):
+		with patch.object(contribuicoes.frappe.db, "exists", return_value=False):
+			with self.assertRaises(ErroDeFerramenta) as ctx:
+				contribuicoes.atualizar_pagamento_contribuicao_mensal("PG1", status="Pago")
+		self.assertEqual(ctx.exception.codigo, "NAO_ENCONTRADO")
+
+	def test_atualizar_exige_algum_campo(self):
+		with patch.object(contribuicoes.frappe.db, "exists", return_value=True):
+			with self.assertRaises(ErroDeFerramenta):
+				contribuicoes.atualizar_pagamento_contribuicao_mensal("PG1")
+
+	def test_sem_mudanca_nao_grava(self):
+		atuais = {"status": "Pago", "valor": 60.0, "atrasou": 0, "transacao_extrato": None}
+		with (
+			patch.object(contribuicoes.frappe.db, "exists", return_value=True),
+			patch.object(contribuicoes.frappe.db, "get_value", return_value=atuais),
+		):
+			resultado = contribuicoes.atualizar_pagamento_contribuicao_mensal("PG1", status="Pago")
+		self.assertFalse(resultado["atualizado"])
+
+	def test_simulacao_mostra_antes_e_depois(self):
+		atuais = {"status": "Em Aberto", "valor": 60.0, "atrasou": 0, "transacao_extrato": None}
+		with (
+			patch.object(contribuicoes.frappe.db, "exists", return_value=True),
+			patch.object(contribuicoes.frappe.db, "get_value", return_value=atuais),
+		):
+			resultado = contribuicoes.atualizar_pagamento_contribuicao_mensal(
+				"PG1", status="Pago", simular=True
+			)
+		self.assertTrue(resultado["simulacao"])
+		self.assertEqual(resultado["alteracoes"]["status"], {"de": "Em Aberto", "para": "Pago"})
+
+	def test_grava_via_doc(self):
+		atuais = {"status": "Em Aberto", "valor": 60.0, "atrasou": 0, "transacao_extrato": None}
+		with (
+			patch.object(contribuicoes.frappe.db, "exists", return_value=True),
+			patch.object(contribuicoes.frappe.db, "get_value", return_value=atuais),
+			patch.object(contribuicoes.frappe, "get_doc") as get_doc,
+		):
+			resultado = contribuicoes.atualizar_pagamento_contribuicao_mensal("PG1", status="Pago")
+
+		get_doc.return_value.check_permission.assert_called_once_with("write")
+		get_doc.return_value.save.assert_called_once()
+		self.assertTrue(resultado["atualizado"])
+
+
 class TestRegistroDeFerramentas(TestCase):
 	def test_catalogo_reflete_a_apuracao_por_transacoes(self):
 		from gris.api.mcp import registry
@@ -316,10 +439,15 @@ class TestRegistroDeFerramentas(TestCase):
 			"extrato_contribuicoes_associado",
 			"listar_contribuicoes_nao_vinculadas",
 			"atualizar_cobranca_associado",
+			"competencias_transacao",
+			"definir_competencias_transacao",
+			"listar_pagamentos_contribuicao_mensal",
+			"atualizar_pagamento_contribuicao_mensal",
 		}
 		self.assertTrue(esperadas.issubset(nomes), esperadas - nomes)
 
-		# Ferramentas que escreviam em Pagamento Contribuicao Mensal saíram do
-		# catálogo: aquele DocType não é mais a fonte de verdade da apuração.
+		# Ferramentas antigas que escreviam direto em Pagamento Contribuicao Mensal sem
+		# vínculo com a transação saíram do catálogo — a apuração continua vindo das
+		# transações; o DocType volta só como registro de cobrança vinculado a elas.
 		aposentadas = {"listar_contribuicoes", "resumo_inadimplencia", "marcar_contribuicoes_pagas"}
 		self.assertFalse(aposentadas & nomes)

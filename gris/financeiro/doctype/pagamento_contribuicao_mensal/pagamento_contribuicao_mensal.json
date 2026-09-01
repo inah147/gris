@@ -10,7 +10,8 @@
   "atrasou",
   "column_break_ybpx",
   "mes_de_referencia",
-  "valor"
+  "valor",
+  "transacao_extrato"
  ],
  "fields": [
   {
@@ -51,12 +52,19 @@
    "fieldname": "atrasou",
    "fieldtype": "Check",
    "label": "Atrasou no m\u00eas"
+  },
+  {
+   "description": "Transa\u00e7\u00e3o do extrato que quitou este m\u00eas.",
+   "fieldname": "transacao_extrato",
+   "fieldtype": "Link",
+   "label": "Transa\u00e7\u00e3o do Extrato",
+   "options": "Transacao Extrato Geral"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-08 12:49:12.451669",
+ "modified": "2026-09-01 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Pagamento Contribuicao Mensal",

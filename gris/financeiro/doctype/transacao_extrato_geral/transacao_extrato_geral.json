@@ -32,6 +32,7 @@
   "conta_fixa",
   "beneficiario",
   "mes_competencia",
+  "competencias_contribuicao",
   "nome_atividade",
   "column_break_ufvr",
   "centro_de_custo",
@@ -159,10 +160,18 @@
    "options": "Associado"
   },
   {
-   "description": "M\u00eas a que a transa\u00e7\u00e3o se refere, quando diferente da data de caixa. Base da apura\u00e7\u00e3o da contribui\u00e7\u00e3o mensal.",
+   "description": "M\u00eas a que a transa\u00e7\u00e3o se refere, quando diferente da data de caixa. Base da apura\u00e7\u00e3o da contribui\u00e7\u00e3o mensal quando a transa\u00e7\u00e3o n\u00e3o tem meses detalhados abaixo.",
    "fieldname": "mes_competencia",
    "fieldtype": "Date",
    "label": "M\u00eas de compet\u00eancia"
+  },
+  {
+   "depends_on": "eval:doc.categoria == \"Contribui\u00e7\u00e3o Mensal\"",
+   "description": "Use quando um \u00fanico pagamento quita mais de um m\u00eas (ex.: R$ 70 do m\u00eas atrasado + R$ 60 do m\u00eas em dia). Quando preenchido, substitui o \"M\u00eas de compet\u00eancia\" na apura\u00e7\u00e3o e a soma dos valores precisa bater com o valor da transa\u00e7\u00e3o.",
+   "fieldname": "competencias_contribuicao",
+   "fieldtype": "Table",
+   "label": "Meses cobertos por esta transa\u00e7\u00e3o",
+   "options": "Contribuicao Mensal Detalhe"
   },
   {
    "fieldname": "column_break_ufvr",
@@ -258,7 +267,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-30 21:00:00.000000",
+ "modified": "2026-09-01 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Transacao Extrato Geral",

@@ -73,63 +73,65 @@ class TransacaoExtratoGeral(Document):
 			# aqui quebraria o rollback dos testes, persistindo dados de teste no site.
 			frappe.db.set_value("Carteira", self.carteira, "saldo", saldo_atual)
 
-	def _update_pagamento_contribuicao_mensal(self):
-		"""Atualiza o status de Pagamento Contribuicao Mensal quando beneficiario é preenchido."""
-		# Log para debug
-		frappe.logger().info(
-			f"_update_pagamento_contribuicao_mensal chamado. beneficiario={self.beneficiario}, data_transacao={self.data_transacao}"
+	def _upsert_pagamento_contribuicao_mensal(self, mes_referencia, valor, atrasou: bool) -> None:
+		"""Cria ou atualiza o Pagamento Contribuicao Mensal de um mês, vinculado a esta transação."""
+		pagamentos = frappe.get_all(
+			"Pagamento Contribuicao Mensal",
+			filters={"associado": self.beneficiario, "mes_de_referencia": mes_referencia},
+			limit=1,
 		)
+		if pagamentos:
+			pagamento = frappe.get_doc("Pagamento Contribuicao Mensal", pagamentos[0].name)
+		else:
+			pagamento = frappe.new_doc("Pagamento Contribuicao Mensal")
+			pagamento.associado = self.beneficiario
+			pagamento.mes_de_referencia = mes_referencia
 
-		if not self.beneficiario or not self.data_transacao:
-			frappe.logger().info("Retornando: beneficiario ou data_transacao está vazio")
+		if (
+			pagamento.status == "Pago"
+			and pagamento.transacao_extrato == self.name
+			and float(pagamento.valor or 0) == float(valor or 0)
+			and bool(pagamento.atrasou) == bool(atrasou)
+		):
 			return
 
-		# Verifica se o beneficiário mudou
-		if self.has_value_changed("beneficiario") and self.beneficiario:
-			frappe.logger().info(f"Beneficiário mudou para: {self.beneficiario}")
+		pagamento.status = "Pago"
+		pagamento.valor = valor
+		pagamento.atrasou = 1 if atrasou else 0
+		pagamento.transacao_extrato = self.name
+		pagamento.save(ignore_permissions=True)
+		frappe.msgprint(
+			f"Pagamento de contribuição mensal marcado como Pago para {getdate(mes_referencia).strftime('%m/%Y')}",
+			alert=True,
+		)
 
-			# Extrai o mês de referência da data da transação
-			data = getdate(self.data_transacao)
-			# Primeiro dia do mês da transação
-			mes_referencia = data.replace(day=1)
+	def _update_pagamento_contribuicao_mensal(self):
+		"""Atualiza o(s) Pagamento Contribuicao Mensal quitado(s) por esta transação.
 
-			frappe.logger().info(
-				f"Buscando pagamento para associado={self.beneficiario}, mes_referencia={mes_referencia}"
-			)
+		Quando a transação detalha os meses cobertos em `competencias_contribuicao`
+		(um pagamento que quita mais de um mês, ex.: mês atrasado + mês em dia), cada
+		linha gera ou atualiza o Pagamento Contribuicao Mensal do mês correspondente,
+		vinculado a esta transação. Sem detalhamento, mantém o comportamento anterior:
+		um único mês, o da data da transação.
+		"""
+		if not self.beneficiario:
+			return
 
-			# Busca o registro de Pagamento Contribuicao Mensal
-			pagamentos = frappe.get_all(
-				"Pagamento Contribuicao Mensal",
-				filters={
-					"associado": self.beneficiario,
-					"mes_de_referencia": mes_referencia,
-				},
-				limit=1,
-			)
-
-			frappe.logger().info(f"Pagamentos encontrados: {pagamentos}")
-
-			if pagamentos:
-				# Atualiza o status para "Pago"
-				pagamento = frappe.get_doc("Pagamento Contribuicao Mensal", pagamentos[0].name)
-				frappe.logger().info(f"Status atual do pagamento: {pagamento.status}")
-
-				if pagamento.status != "Pago":
-					pagamento.status = "Pago"
-					pagamento.save(ignore_permissions=True)
-					frappe.logger().info("Pagamento atualizado para Pago")
-					frappe.msgprint(
-						f"Pagamento de contribuição mensal marcado como Pago para {mes_referencia.strftime('%m/%Y')}",
-						alert=True,
-					)
-				else:
-					frappe.logger().info("Pagamento já estava como Pago")
-			else:
-				frappe.logger().warning(
-					f"Nenhum pagamento encontrado para {self.beneficiario} no mês {mes_referencia}"
+		if self.competencias_contribuicao:
+			for linha in self.competencias_contribuicao:
+				if not linha.mes_referencia:
+					continue
+				self._upsert_pagamento_contribuicao_mensal(
+					getdate(linha.mes_referencia).replace(day=1), linha.valor, bool(linha.em_atraso)
 				)
-		else:
-			frappe.logger().info("Beneficiário não mudou ou está vazio")
+			return
+
+		if not self.data_transacao:
+			return
+
+		if self.has_value_changed("beneficiario") and self.beneficiario:
+			mes_referencia = getdate(self.data_transacao).replace(day=1)
+			self._upsert_pagamento_contribuicao_mensal(mes_referencia, abs(self.valor or 0), False)
 
 	def after_insert(self):
 		self._update_wallet()

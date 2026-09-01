@@ -33,6 +33,7 @@ Três regras de negócio governam o cálculo, todas parametrizáveis em
 from __future__ import annotations
 
 import datetime
+import re
 from dataclasses import dataclass
 
 import frappe
@@ -474,6 +475,12 @@ def get_recebimentos_por_associado(
 	carteira de quitação retroativa — as duas informações que a apuração precisa
 	para saber se o mês foi pago dentro do prazo e se o excedente quita meses
 	anteriores em vez de adiantar os próximos.
+
+	Uma transação pode detalhar os meses que cobre em `competencias_contribuicao`
+	(pagamento único que quita mais de um mês, ex.: mês atrasado + mês em dia).
+	Quando isso acontece, o valor de cada linha vai direto para o mês declarado —
+	sem passar pela quitação retroativa implícita, que é para quando a transação
+	*não* diz a que meses se refere.
 	"""
 	params: dict = {
 		"categoria": CATEGORIA_CONTRIBUICAO,
@@ -484,7 +491,7 @@ def get_recebimentos_por_associado(
 	if associados is not None:
 		if not associados:
 			return {}
-		filtro_associados = "AND beneficiario IN %(associados)s"
+		filtro_associados = "AND t.beneficiario IN %(associados)s"
 		params["associados"] = tuple(associados)
 
 	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
@@ -492,29 +499,58 @@ def get_recebimentos_por_associado(
 	# nosemgrep
 	linhas = frappe.db.sql(
 		f"""
-		SELECT beneficiario,
+		SELECT t.name AS name,
+		       t.beneficiario AS beneficiario,
 		       DATE_FORMAT({SQL_DATA_COMPETENCIA}, '%%Y-%%m') AS ym,
-		       ABS(valor) AS valor,
+		       ABS(t.valor) AS valor,
 		       {SQL_DATA_PAGAMENTO} AS data_pagamento,
-		       carteira,
-		       instituicao
-		FROM `tabTransacao Extrato Geral`
-		WHERE categoria = %(categoria)s
-		  AND debito_credito = 'Crédito'
-		  AND COALESCE(excluir_do_total, 0) = 0
-		  AND COALESCE(beneficiario, '') != ''
-		  AND {SQL_DATA_COMPETENCIA} >= %(primeiro_dia)s
-		  AND {SQL_DATA_COMPETENCIA} < %(proximo_mes)s
+		       t.carteira AS carteira,
+		       t.instituicao AS instituicao
+		FROM `tabTransacao Extrato Geral` t
+		WHERE t.categoria = %(categoria)s
+		  AND t.debito_credito = 'Crédito'
+		  AND COALESCE(t.excluir_do_total, 0) = 0
+		  AND COALESCE(t.beneficiario, '') != ''
+		  AND (
+		        ({SQL_DATA_COMPETENCIA} >= %(primeiro_dia)s AND {SQL_DATA_COMPETENCIA} < %(proximo_mes)s)
+		        OR EXISTS (
+		            SELECT 1 FROM `tabContribuicao Mensal Detalhe` d
+		            WHERE d.parent = t.name AND d.parenttype = 'Transacao Extrato Geral'
+		              AND d.mes_referencia >= %(primeiro_dia)s AND d.mes_referencia < %(proximo_mes)s
+		        )
+		      )
 		  {filtro_associados}
-		ORDER BY beneficiario, ym, data_pagamento
+		ORDER BY t.beneficiario, ym, data_pagamento
 		""",
 		params,
 		as_dict=True,
 	)
 
+	detalhes_por_transacao = get_competencias_por_transacao([linha.name for linha in linhas])
+
 	recebimentos: dict[str, dict[str, dict]] = {}
 	for linha in linhas:
 		por_mes = recebimentos.setdefault(linha.beneficiario, {})
+		data_pagamento = getdate(linha.data_pagamento) if linha.data_pagamento else None
+		retroativa = e_carteira_retroativa(linha.carteira, linha.instituicao)
+		detalhes = detalhes_por_transacao.get(linha.name)
+
+		if detalhes:
+			for detalhe in detalhes:
+				mes = por_mes.setdefault(detalhe["ym"], {"valor": 0.0, "qtd": 0, "transacoes": []})
+				valor = arredondar_centavos_quebrados(detalhe["valor"])
+				mes["valor"] += valor
+				mes["qtd"] += 1
+				mes["transacoes"].append(
+					{
+						"valor": valor,
+						"data": data_pagamento,
+						"retroativa": False,
+						"em_atraso": detalhe["em_atraso"],
+					}
+				)
+			continue
+
 		mes = por_mes.setdefault(linha.ym, {"valor": 0.0, "qtd": 0, "transacoes": []})
 		valor = arredondar_centavos_quebrados(linha.valor)
 		mes["valor"] += valor
@@ -522,14 +558,43 @@ def get_recebimentos_por_associado(
 		mes["transacoes"].append(
 			{
 				"valor": valor,
-				"data": getdate(linha.data_pagamento) if linha.data_pagamento else None,
-				"retroativa": e_carteira_retroativa(linha.carteira, linha.instituicao),
+				"data": data_pagamento,
+				"retroativa": retroativa,
 			}
 		)
 	for por_mes in recebimentos.values():
 		for mes in por_mes.values():
 			mes["valor"] = round(mes["valor"], 2)
 	return recebimentos
+
+
+def get_competencias_por_transacao(transacoes: list[str]) -> dict[str, list[dict]]:
+	"""Meses declarados em `competencias_contribuicao`, agrupados por transação.
+
+	Devolve `{}` para uma transação sem detalhamento — é o sinal para quem chama
+	usar o `mes_competencia`/valor cheio da transação (comportamento legado).
+	"""
+	nomes = [nome for nome in dict.fromkeys(transacoes) if nome]
+	if not nomes:
+		return {}
+
+	linhas = frappe.get_all(
+		"Contribuicao Mensal Detalhe",
+		filters={"parent": ["in", nomes], "parenttype": "Transacao Extrato Geral"},
+		fields=["parent", "mes_referencia", "valor", "em_atraso"],
+		order_by="parent asc, idx asc",
+	)
+
+	agrupado: dict[str, list[dict]] = {}
+	for linha in linhas:
+		agrupado.setdefault(linha.parent, []).append(
+			{
+				"ym": chave_mes(getdate(linha.mes_referencia)),
+				"valor": float(linha.valor or 0),
+				"em_atraso": bool(linha.em_atraso),
+			}
+		)
+	return agrupado
 
 
 def e_carteira_retroativa(carteira, instituicao) -> bool:
@@ -541,26 +606,38 @@ def e_carteira_retroativa(carteira, instituicao) -> bool:
 def get_transacoes_do_associado(
 	associado: str, primeiro_dia: datetime.date, proximo_mes: datetime.date
 ) -> list[dict]:
-	"""Transações de contribuição de um associado no período, da mais recente para a mais antiga."""
+	"""Transações de contribuição de um associado no período, da mais recente para a mais antiga.
+
+	Uma transação com meses detalhados em `competencias_contribuicao` vira uma
+	linha por mês coberto, cada uma com o valor e a situação (em atraso ou não)
+	daquele mês — é como a tela mostra "esta transação pagou o mês 1 em atraso e
+	o mês 2 no dia".
+	"""
 	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
 	# condições literais). Todo valor vindo do usuário é passado por `params`.
 	# nosemgrep
 	linhas = frappe.db.sql(
 		f"""
-		SELECT name,
+		SELECT t.name AS name,
 		       {SQL_DATA_COMPETENCIA} AS data_competencia,
 		       DATE_FORMAT({SQL_DATA_COMPETENCIA}, '%%Y-%%m') AS ym,
-		       ABS(valor) AS valor,
-		       descricao,
-		       metodo,
-		       carteira
-		FROM `tabTransacao Extrato Geral`
-		WHERE categoria = %(categoria)s
-		  AND debito_credito = 'Crédito'
-		  AND COALESCE(excluir_do_total, 0) = 0
-		  AND beneficiario = %(associado)s
-		  AND {SQL_DATA_COMPETENCIA} >= %(primeiro_dia)s
-		  AND {SQL_DATA_COMPETENCIA} < %(proximo_mes)s
+		       ABS(t.valor) AS valor,
+		       t.descricao AS descricao,
+		       t.metodo AS metodo,
+		       t.carteira AS carteira
+		FROM `tabTransacao Extrato Geral` t
+		WHERE t.categoria = %(categoria)s
+		  AND t.debito_credito = 'Crédito'
+		  AND COALESCE(t.excluir_do_total, 0) = 0
+		  AND t.beneficiario = %(associado)s
+		  AND (
+		        ({SQL_DATA_COMPETENCIA} >= %(primeiro_dia)s AND {SQL_DATA_COMPETENCIA} < %(proximo_mes)s)
+		        OR EXISTS (
+		            SELECT 1 FROM `tabContribuicao Mensal Detalhe` d
+		            WHERE d.parent = t.name AND d.parenttype = 'Transacao Extrato Geral'
+		              AND d.mes_referencia >= %(primeiro_dia)s AND d.mes_referencia < %(proximo_mes)s
+		        )
+		      )
 		ORDER BY data_competencia DESC
 		""",
 		{
@@ -571,18 +648,40 @@ def get_transacoes_do_associado(
 		},
 		as_dict=True,
 	)
-	return [
-		{
+
+	detalhes_por_transacao = get_competencias_por_transacao([linha.name for linha in linhas])
+
+	resultado: list[dict] = []
+	for linha in linhas:
+		base = {
 			"name": linha.name,
-			"data": linha.data_competencia.isoformat() if linha.data_competencia else None,
-			"ym": linha.ym,
-			"valor": arredondar_centavos_quebrados(linha.valor),
 			"descricao": linha.descricao or "",
 			"metodo": linha.metodo or "",
 			"carteira": linha.carteira or "",
 		}
-		for linha in linhas
-	]
+		detalhes = detalhes_por_transacao.get(linha.name)
+		if detalhes:
+			for detalhe in detalhes:
+				resultado.append(
+					{
+						**base,
+						"data": f"{detalhe['ym']}-01",
+						"ym": detalhe["ym"],
+						"valor": arredondar_centavos_quebrados(detalhe["valor"]),
+						"em_atraso": detalhe["em_atraso"],
+					}
+				)
+			continue
+		resultado.append(
+			{
+				**base,
+				"data": linha.data_competencia.isoformat() if linha.data_competencia else None,
+				"ym": linha.ym,
+				"valor": arredondar_centavos_quebrados(linha.valor),
+				"em_atraso": None,
+			}
+		)
+	return resultado
 
 
 def get_transacoes_nao_vinculadas(primeiro_dia: datetime.date, proximo_mes: datetime.date) -> list[dict]:
@@ -1276,3 +1375,111 @@ def get_extrato_do_associado(associado: str, meses: str | int = MESES_PADRAO):
 	sequencia = construir_meses(quantidade_meses)
 	transacoes = get_transacoes_do_associado(associado, sequencia[0], getdate(add_months(sequencia[-1], 1)))
 	return {"success": True, "transacoes": transacoes}
+
+
+# ---------------------------------------------------------------------------
+# Detalhamento por mês de uma transação (transação que quita mais de um mês)
+# ---------------------------------------------------------------------------
+
+# Formato AAAA-MM aceito para identificar um mês de referência.
+PADRAO_COMPETENCIA = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
+
+# Diferença máxima, em reais, tolerada entre a soma dos meses declarados e o
+# valor da transação (mesma tolerância de arredondamento usada no resto do módulo).
+TOLERANCIA_SOMA_COMPETENCIAS = 0.01
+
+
+def _linha_competencia(row) -> dict:
+	return {
+		"ym": chave_mes(getdate(row.mes_referencia)),
+		"mes_referencia": getdate(row.mes_referencia).isoformat(),
+		"rotulo": rotulo_mes(getdate(row.mes_referencia)),
+		"valor": round(float(row.valor or 0), 2),
+		"em_atraso": bool(row.em_atraso),
+		"pagamento_contribuicao_mensal": row.pagamento_contribuicao_mensal or None,
+	}
+
+
+def get_competencias_transacao(transacao: str) -> dict:
+	"""Meses declarados por uma transação de contribuição mensal, prontos para exibição.
+
+	Serve tanto ao detalhe do extrato quanto à ferramenta MCP de leitura — uma
+	transação sem detalhamento devolve `competencias: []`, o que significa que ela
+	segue o comportamento legado (`mes_competencia` com o valor cheio).
+	"""
+	doc = frappe.get_doc("Transacao Extrato Geral", transacao)
+	return {
+		"transacao": doc.name,
+		"categoria": doc.categoria,
+		"beneficiario": doc.beneficiario,
+		"valor": round(abs(float(doc.valor or 0)), 2),
+		"mes_competencia": doc.mes_competencia.isoformat() if doc.mes_competencia else None,
+		"competencias": [_linha_competencia(row) for row in doc.competencias_contribuicao],
+	}
+
+
+def definir_competencias_transacao(transacao: str, competencias: list[dict]) -> dict:
+	"""Substitui os meses declarados de uma transação de contribuição mensal.
+
+	`competencias` é uma lista de `{"mes": "AAAA-MM", "valor": float, "em_atraso": bool}`.
+	A soma dos valores precisa bater com o valor (absoluto) da transação — é o que
+	garante que "mês 1 em atraso (R$ 70) + mês 2 no dia (R$ 60)" sempre soma R$ 130,
+	o que de fato entrou. Uma lista vazia remove o detalhamento e devolve a
+	transação ao comportamento legado (um único mês, o de `mes_competencia`).
+
+	Quem chama (portal ou MCP) já validou papel/autenticação; aqui só se checa a
+	permissão de escrita no próprio documento, como o resto das ferramentas que
+	editam o extrato.
+	"""
+	doc = frappe.get_doc("Transacao Extrato Geral", transacao)
+	doc.check_permission("write")
+
+	if doc.categoria != CATEGORIA_CONTRIBUICAO:
+		frappe.throw(_("A transação {0} não é de categoria '{1}'.").format(transacao, CATEGORIA_CONTRIBUICAO))
+	if not doc.beneficiario:
+		frappe.throw(
+			_("Defina o beneficiário da transação {0} antes de detalhar os meses cobertos.").format(transacao)
+		)
+
+	normalizadas: list[dict] = []
+	vistos: set[str] = set()
+	for item in competencias or []:
+		item = item or {}
+		ym = str(item.get("mes") or "").strip()
+		if not PADRAO_COMPETENCIA.match(ym):
+			frappe.throw(_("Mês de referência inválido: '{0}'. Use o formato AAAA-MM.").format(ym))
+		if ym in vistos:
+			frappe.throw(_("O mês {0} foi informado mais de uma vez.").format(ym))
+		vistos.add(ym)
+		try:
+			valor = round(float(item.get("valor")), 2)
+		except (TypeError, ValueError):
+			frappe.throw(_("Valor inválido para o mês {0}.").format(ym))
+		if valor <= 0:
+			frappe.throw(_("O valor do mês {0} precisa ser maior que zero.").format(ym))
+		normalizadas.append({"ym": ym, "valor": valor, "em_atraso": bool(item.get("em_atraso"))})
+
+	if normalizadas:
+		soma = round(sum(item["valor"] for item in normalizadas), 2)
+		esperado = round(abs(float(doc.valor or 0)), 2)
+		if abs(soma - esperado) > TOLERANCIA_SOMA_COMPETENCIAS:
+			frappe.throw(
+				_("A soma dos meses (R$ {0}) não bate com o valor da transação (R$ {1}).").format(
+					soma, esperado
+				)
+			)
+
+	doc.set("competencias_contribuicao", [])
+	for item in sorted(normalizadas, key=lambda linha: linha["ym"]):
+		doc.append(
+			"competencias_contribuicao",
+			{
+				"mes_referencia": f"{item['ym']}-01",
+				"valor": item["valor"],
+				"em_atraso": 1 if item["em_atraso"] else 0,
+			},
+		)
+	doc.save()
+	doc.reload()
+
+	return get_competencias_transacao(doc.name)

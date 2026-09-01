@@ -13,7 +13,8 @@ import hashlib
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from gris.api.financeiro import monthly_payments, pagamentos_contribuicao as servico
+from gris.api.financeiro import monthly_payments
+from gris.api.financeiro import pagamentos_contribuicao as servico
 
 CPF_BENEFICIARIO = "99000000301"
 
@@ -72,7 +73,9 @@ class TestMontarGradePagamentos(FrappeTestCase):
 	def test_situacao_e_o_pior_status_presente(self):
 		pagamentos = {
 			"2026-01": frappe._dict(name="P1", status="Pago", valor=60.0, atrasou=0, transacao_extrato=None),
-			"2026-02": frappe._dict(name="P2", status="Atrasado", valor=70.0, atrasou=1, transacao_extrato=None),
+			"2026-02": frappe._dict(
+				name="P2", status="Atrasado", valor=70.0, atrasou=1, transacao_extrato=None
+			),
 		}
 		grade = servico.montar_grade_pagamentos(self.meses, pagamentos)
 		self.assertEqual(grade["situacao"], servico.STATUS_ATRASADO)
@@ -83,9 +86,7 @@ class TestMontarGradePagamentos(FrappeTestCase):
 
 	def test_linha_paga_carrega_a_transacao_vinculada(self):
 		pagamentos = {
-			"2026-01": frappe._dict(
-				name="P1", status="Pago", valor=70.0, atrasou=1, transacao_extrato="TX-1"
-			)
+			"2026-01": frappe._dict(name="P1", status="Pago", valor=70.0, atrasou=1, transacao_extrato="TX-1")
 		}
 		grade = servico.montar_grade_pagamentos(self.meses, pagamentos)
 		self.assertEqual(grade["linhas"][0]["transacao_extrato"], "TX-1")

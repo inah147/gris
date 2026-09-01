@@ -233,6 +233,120 @@
 			.catch(() => showToast("Erro ao salvar dados de cobrança.", "red"));
 	}
 
+	// ─────────────────────────── mês a mês (status e transação vinculada) ───────────────────────────
+
+	const STATUS_OPCOES = ["Em Aberto", "Atrasado", "Pago"];
+
+	function editarMes(botao) {
+		if (semPermissao()) return;
+		const linha = botao.closest("tr.contrib-mes");
+		if (!linha || linha.querySelector(".contrib-mes__editor")) return;
+
+		const statusAtual = linha.getAttribute("data-status") || "Em Aberto";
+		const valorAtual = parseNumber(linha.getAttribute("data-valor"));
+		const transacaoAtual = linha.getAttribute("data-transacao") || "";
+		const atrasouAtual = linha.getAttribute("data-atrasou") === "1";
+
+		const opcoesStatus = STATUS_OPCOES.map(
+			(opcao) =>
+				`<option value="${opcao}" ${
+					opcao === statusAtual ? "selected" : ""
+				}>${opcao}</option>`
+		).join("");
+
+		const editor = document.createElement("tr");
+		editor.className = "contrib-mes__editor";
+		const colspan = window.canManageContrib ? 5 : 4;
+		editor.innerHTML = `
+			<td colspan="${colspan}">
+				<div class="flex flex-wrap items-end gap-2 py-2">
+					<div class="field">
+						<label class="label" for="editStatus-${linha.getAttribute("data-ym")}">Status</label>
+						<select id="editStatus-${linha.getAttribute(
+							"data-ym"
+						)}" class="input contrib-edit-status">${opcoesStatus}</select>
+					</div>
+					<div class="field">
+						<label class="label" for="editValor-${linha.getAttribute("data-ym")}">Valor (R$)</label>
+						<input type="number" min="0" step="0.01" id="editValor-${linha.getAttribute(
+							"data-ym"
+						)}" class="input contrib-edit-valor" value="${valorAtual}" />
+					</div>
+					<label class="flex items-center gap-2 text-sm">
+						<input type="checkbox" class="contrib-edit-atrasou" ${atrasouAtual ? "checked" : ""} />
+						Pago em atraso
+					</label>
+					<div class="field flex-1 min-w-[220px]">
+						<label class="label" for="editTransacao-${linha.getAttribute(
+							"data-ym"
+						)}">ID da transação vinculada</label>
+						<input type="text" id="editTransacao-${linha.getAttribute(
+							"data-ym"
+						)}" class="input contrib-edit-transacao" value="${escapeHtml(
+			transacaoAtual
+		)}" placeholder="deixe em branco para desvincular" />
+					</div>
+					<button type="button" class="btn-sm-primary" data-acao="salvar-mes">Salvar</button>
+					<button type="button" class="btn-sm-outline" data-acao="cancelar-mes">Cancelar</button>
+				</div>
+			</td>
+		`;
+		linha.after(editor);
+		botao.classList.add("hidden");
+	}
+
+	function cancelarEdicaoMes(botao) {
+		const editor = botao.closest("tr.contrib-mes__editor");
+		if (!editor) return;
+		const linha = editor.previousElementSibling;
+		editor.remove();
+		if (linha) {
+			const botaoEditar = linha.querySelector(".contrib-mes__editar");
+			if (botaoEditar) botaoEditar.classList.remove("hidden");
+		}
+	}
+
+	function salvarMes(botao) {
+		if (semPermissao()) return;
+		const editor = botao.closest("tr.contrib-mes__editor");
+		const linha = editor && editor.previousElementSibling;
+		if (!editor || !linha) return;
+
+		const status = editor.querySelector(".contrib-edit-status")?.value;
+		const valor = parseFloat(editor.querySelector(".contrib-edit-valor")?.value);
+		const atrasou = editor.querySelector(".contrib-edit-atrasou")?.checked;
+		const transacao = (editor.querySelector(".contrib-edit-transacao")?.value || "").trim();
+
+		if (!Number.isFinite(valor) || valor < 0) {
+			showToast("Informe um valor válido.", "orange");
+			return;
+		}
+
+		frappe
+			.call({
+				method: "gris.api.financeiro.monthly_payments.definir_pagamento",
+				args: {
+					associado: associado,
+					mes_de_referencia: `${linha.getAttribute("data-ym")}-01`,
+					status: status,
+					valor: valor,
+					atrasou: atrasou ? 1 : 0,
+					transacao_extrato: transacao,
+				},
+				freeze: true,
+			})
+			.then((resposta) => {
+				const dados = (resposta && resposta.message) || {};
+				if (!dados.ok) {
+					showToast("Não foi possível salvar o mês.", "red");
+					return;
+				}
+				showToast("Mês atualizado", "green");
+				window.setTimeout(() => window.location.reload(), 600);
+			})
+			.catch(() => showToast("Erro ao salvar o mês.", "red"));
+	}
+
 	// ─────────────────────────── cobrança InfinitePay ───────────────────────────
 
 	function elementosCobranca() {
@@ -415,6 +529,9 @@
 		"alterar-valor": alterarValor,
 		"salvar-valor": salvarNovoValor,
 		"cancelar-valor": cancelarEdicaoValor,
+		"editar-mes": editarMes,
+		"salvar-mes": salvarMes,
+		"cancelar-mes": cancelarEdicaoMes,
 		"editar-cobranca": editarCobranca,
 		"salvar-cobranca": salvarDadosCobranca,
 		"cancelar-cobranca": restaurarCobranca,

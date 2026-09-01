@@ -1,6 +1,7 @@
 import datetime
 
 import frappe
+from frappe import _
 
 from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 
@@ -101,6 +102,78 @@ def update_contribution_value(associate_id: str, new_value: float):
 	doc.valor_contribuicao = new_value_f
 	doc.save(ignore_permissions=False)
 	return {"ok": True, "value": new_value_f}
+
+
+STATUS_VALIDOS = ("Pago", "Em Aberto", "Atrasado")
+
+
+@frappe.whitelist()
+def definir_pagamento(
+	associado: str,
+	mes_de_referencia: str | datetime.date,
+	status: str | None = None,
+	valor: float | None = None,
+	atrasou: bool | int | None = None,
+	transacao_extrato: str | None = None,
+):
+	"""Cria ou atualiza o Pagamento Contribuicao Mensal de um mês, e devolve o registro.
+
+	Usado tanto pela tela (trocar status, vincular a transação certa) quanto pelo
+	MCP: sempre que o mês ainda não tem registro gerado ("Não gerado" na tela),
+	esta é a porta para criar um direto, sem esperar o scheduler mensal.
+	"""
+	_assert_manager_role()
+	if not associado:
+		raise frappe.ValidationError("Parameter 'associado' is required")
+
+	mes = frappe.utils.getdate(mes_de_referencia).replace(day=1)
+
+	if status is not None and status not in STATUS_VALIDOS:
+		frappe.throw(_("Status inválido: {0}. Use um de {1}.").format(status, ", ".join(STATUS_VALIDOS)))
+	if transacao_extrato and not frappe.db.exists("Transacao Extrato Geral", transacao_extrato):
+		frappe.throw(_("Transação '{0}' não encontrada.").format(transacao_extrato))
+
+	existentes = frappe.get_all(
+		"Pagamento Contribuicao Mensal",
+		filters={"associado": associado, "mes_de_referencia": mes},
+		limit=1,
+	)
+	if existentes:
+		doc = frappe.get_doc("Pagamento Contribuicao Mensal", existentes[0].name)
+		_assert_doc_permission("Pagamento Contribuicao Mensal", doc.name, perm_type="write")
+	else:
+		_assert_doc_permission("Associado", associado, perm_type="read")
+		doc = frappe.new_doc("Pagamento Contribuicao Mensal")
+		doc.associado = associado
+		doc.mes_de_referencia = mes
+		doc.status = "Em Aberto"
+		doc.valor = frappe.db.get_value("Associado", associado, "valor_contribuicao") or 0
+
+	if status is not None:
+		doc.status = status
+	if valor is not None:
+		valor_f = float(valor)
+		if valor_f < 0:
+			frappe.throw(_("O valor não pode ser negativo."))
+		doc.valor = valor_f
+	if atrasou is not None:
+		doc.atrasou = 1 if frappe.utils.cint(atrasou) else 0
+	if transacao_extrato is not None:
+		doc.transacao_extrato = transacao_extrato or None
+
+	if doc.is_new():
+		doc.insert(ignore_permissions=False)
+	else:
+		doc.save(ignore_permissions=False)
+
+	return {
+		"ok": True,
+		"name": doc.name,
+		"status": doc.status,
+		"valor": doc.valor,
+		"atrasou": bool(doc.atrasou),
+		"transacao_extrato": doc.transacao_extrato,
+	}
 
 
 @frappe.whitelist()
@@ -257,23 +330,20 @@ def update_status_monthly_payment() -> None:
 
 	logger.info(f"{len(current_month_open)} contribuicao(oes) em aberto a avaliar.")
 
-	# 7. Update each payment (status and increment value)
+	# 7. Update each payment (status). O valor não é mais escalonado automaticamente
+	#    — quem cobra ajusta o valor pela tela ou pelo MCP quando fizer sentido.
 	updated = 0
 	for row in current_month_open:
 		try:
-			new_value = (row.get("valor") or 0) + 10
 			pay_doc = frappe.get_doc("Pagamento Contribuicao Mensal", row["name"])
-			# Skip if already Atrasado (avoid double increment if function reruns)
+			# Skip if already Atrasado (avoid redundant save if function reruns)
 			if pay_doc.status == "Atrasado":
 				continue
 			pay_doc.status = "Atrasado"
-			pay_doc.valor = new_value
+			pay_doc.atrasou = 1
 			pay_doc.save(ignore_permissions=True)  # triggers on_update
 			updated += 1
-			logger.info(
-				f"Contribuicao {row['name']} ({row.get('associado')}) marcada como atrasada; "
-				f"valor ajustado para R$ {new_value}."
-			)
+			logger.info(f"Contribuicao {row['name']} ({row.get('associado')}) marcada como atrasada.")
 		except Exception:
 			logger.exception(f"Falha ao marcar como atrasada a contribuicao {row.get('name')}.")
 			metrica("falhas")

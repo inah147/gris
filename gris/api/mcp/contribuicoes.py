@@ -1,40 +1,41 @@
 """Ferramentas MCP da contribuição mensal.
 
-A apuração é a de ``gris.api.financeiro.contribuicoes``: a fonte de verdade são
-as transações de crédito do extrato com categoria "Contribuição Mensal" e
-beneficiário preenchido — não o DocType ``Pagamento Contribuicao Mensal``, que
-serve ao fluxo de cobrança e é atualizado (status, valor, vínculo com a
-transação) sempre que a transação correspondente é salva.
-
-Por isso, a forma de fazer uma contribuição "contar" é vincular a transação ao
-associado: use 'listar_contribuicoes_nao_vinculadas' e depois
-'categorizar_transacoes' com o campo beneficiario.
+A apuração é a de ``gris.api.financeiro.pagamentos_contribuicao``: a fonte de
+verdade voltou a ser o DocType ``Pagamento Contribuicao Mensal`` — um registro
+por associado e mês, com status (Pago/Em Aberto/Atrasado), valor e a transação
+do extrato que quitou (`transacao_extrato`). Sem carência de registro, valor de
+atraso escalonado ou crédito retroativo: o que está gravado no registro é o que
+a apuração mostra, editável por 'definir_pagamento_mensal' e
+'atualizar_pagamento_contribuicao_mensal'.
 
 Quando um único pagamento quita mais de um mês (ex.: R$ 70 do mês em atraso +
-R$ 60 do mês em dia), use 'definir_competencias_transacao' para declarar o
-valor de cada mês — 'competencias_transacao' lê o que já está declarado.
+R$ 60 do mês em dia), use 'definir_competencias_transacao' na transação — ao
+salvar, um Pagamento Contribuicao Mensal é criado/atualizado por mês declarado,
+vinculado a ela. 'competencias_transacao' lê o que já está declarado.
 """
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import frappe
 from frappe.utils import flt
 
-from gris.api.financeiro import contribuicoes as servico
+from gris.api.financeiro import contribuicoes as transacoes_servico
+from gris.api.financeiro import pagamentos_contribuicao as servico
 from gris.api.mcp.registry import ErroDeFerramenta, ferramenta, normalizar_limite
+
+PADRAO_COMPETENCIA_MES = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
 
 ROLES_LEITURA = ("Gestor Contribuição Mensal", "Visualizador Contribuição Mensal")
 ROLES_ESCRITA = ("Gestor Contribuição Mensal",)
 
 SITUACOES = (
 	servico.STATUS_ATRASADO,
-	servico.STATUS_PARCIAL,
 	servico.STATUS_EM_ABERTO,
 	servico.STATUS_PAGO,
-	servico.STATUS_AGUARDANDO,
-	servico.STATUS_NAO_APLICAVEL,
+	servico.STATUS_NAO_GERADO,
 )
 
 ACOES_CADASTRO = ("Cadastrar", "Cancelar")
@@ -66,7 +67,7 @@ def _apurar(meses: int) -> dict:
 		"Consolida a contribuição mensal do período: quanto foi recebido (vinculado e não "
 		"vinculado a associado), quanto era esperado, adimplência, quantos associados estão "
 		"com pendência e quantos cadastros de cobrança precisam ser criados ou cancelados. "
-		"A apuração vem das transações do extrato, não dos registros de cobrança."
+		"A apuração vem do registro de cobrança (Pagamento Contribuicao Mensal)."
 	),
 	parametros={"meses": PARAMETRO_MESES},
 	roles=ROLES_LEITURA,
@@ -99,8 +100,8 @@ def resumo_contribuicoes(meses: int = servico.MESES_PADRAO) -> dict:
 	nome="apuracao_contribuicoes",
 	titulo="Apuração por associado",
 	descricao=(
-		"Situação de cada contribuinte no período: esperado, recebido, saldo, crédito "
-		"acumulado e situação (Atrasado, Parcial, Em Aberto, Pago, Aguardando). "
+		"Situação de cada contribuinte no período: esperado, recebido, saldo e situação "
+		"(Atrasado, Em Aberto, Pago, Não gerado — quando o mês ainda não tem registro). "
 		"Use situacao='Atrasado' ou com_pendencia=true para a lista de cobrança e "
 		"acao_cadastro para quem precisa ter a cobrança criada ou cancelada."
 	),
@@ -113,7 +114,7 @@ def resumo_contribuicoes(meses: int = servico.MESES_PADRAO) -> dict:
 		},
 		"com_pendencia": {
 			"type": "boolean",
-			"description": "Atalho para situação Atrasado ou Parcial.",
+			"description": "Atalho para situação Atrasado ou Em Aberto.",
 		},
 		"acao_cadastro": {
 			"type": "string",
@@ -161,7 +162,7 @@ def apuracao_contribuicoes(
 	if situacao:
 		associados = [a for a in associados if a.get("situacao") == situacao]
 	if com_pendencia:
-		pendentes = (servico.STATUS_ATRASADO, servico.STATUS_PARCIAL)
+		pendentes = (servico.STATUS_ATRASADO, servico.STATUS_EM_ABERTO)
 		associados = [a for a in associados if a.get("situacao") in pendentes]
 	if acao_cadastro:
 		associados = [a for a in associados if a.get("acao_cadastro") == acao_cadastro]
@@ -368,7 +369,7 @@ def atualizar_cobranca_associado(
 def competencias_transacao(transacao: str) -> dict:
 	if not frappe.db.exists("Transacao Extrato Geral", transacao):
 		raise ErroDeFerramenta("NAO_ENCONTRADO", f"Nenhuma transação com o ID '{transacao}'.")
-	return servico.get_competencias_transacao(transacao)
+	return transacoes_servico.get_competencias_transacao(transacao)
 
 
 @ferramenta(
@@ -410,7 +411,7 @@ def definir_competencias_transacao(transacao: str, competencias: list, simular: 
 			"Cada item de 'competencias' precisa ser um objeto com 'mes', 'valor' e 'em_atraso'.",
 		)
 
-	antes = servico.get_competencias_transacao(transacao)
+	antes = transacoes_servico.get_competencias_transacao(transacao)
 
 	if simular:
 		try:
@@ -426,7 +427,7 @@ def definir_competencias_transacao(transacao: str, competencias: list, simular: 
 		}
 
 	try:
-		resultado = servico.definir_competencias_transacao(transacao, itens)
+		resultado = transacoes_servico.definir_competencias_transacao(transacao, itens)
 	except frappe.PermissionError as erro:
 		raise ErroDeFerramenta("PERMISSAO_NEGADA", str(erro)) from erro
 	except frappe.ValidationError as erro:
@@ -436,6 +437,94 @@ def definir_competencias_transacao(transacao: str, competencias: list, simular: 
 
 
 CAMPOS_PAGAMENTO_MENSAL = ("status", "valor", "atrasou", "transacao_extrato")
+
+
+@ferramenta(
+	nome="definir_pagamento_mensal",
+	titulo="Definir o pagamento de um mês (cria se não existir)",
+	descricao=(
+		"Cria ou atualiza o Pagamento Contribuicao Mensal de um associado num mês, por "
+		"associado + mês — não é preciso saber o 'name' do registro. Use quando o mês ainda "
+		"não tem registro gerado ('Não gerado' na apuração/tela) e precisa ser criado direto, "
+		"por exemplo para marcar como Pago e vincular a transação que quitou."
+	),
+	parametros={
+		"associado": {"type": "string", "description": "CPF do associado."},
+		"mes": {"type": "string", "description": "Mês de referência, formato AAAA-MM."},
+		"status": {"type": "string", "enum": ["Pago", "Em Aberto", "Atrasado"]},
+		"valor": {
+			"type": "number",
+			"description": "Valor do mês (padrão: valor_contribuicao do associado, se novo).",
+		},
+		"atrasou": {"type": "boolean", "description": "Se este mês foi pago em atraso."},
+		"transacao_extrato": {
+			"type": "string",
+			"description": "ID da 'Transacao Extrato Geral' que quitou este mês.",
+		},
+	},
+	obrigatorios=("associado", "mes"),
+	roles=ROLES_ESCRITA,
+	somente_leitura=False,
+)
+def definir_pagamento_mensal(
+	associado: str,
+	mes: str,
+	status: str | None = None,
+	valor: float | None = None,
+	atrasou: bool | None = None,
+	transacao_extrato: str | None = None,
+	simular: bool = False,
+) -> dict:
+	if not frappe.db.exists("Associado", associado):
+		raise ErroDeFerramenta("NAO_ENCONTRADO", f"Nenhum associado com o CPF '{associado}'.")
+	if not PADRAO_COMPETENCIA_MES.match(mes or ""):
+		raise ErroDeFerramenta("ARGUMENTO_INVALIDO", "Mês inválido. Use o formato AAAA-MM.")
+	if transacao_extrato and not frappe.db.exists("Transacao Extrato Geral", transacao_extrato):
+		raise ErroDeFerramenta(
+			"NAO_ENCONTRADO",
+			f"Nenhuma transação com o ID '{transacao_extrato}'.",
+			{"campo": "transacao_extrato"},
+		)
+
+	existente = frappe.db.get_value(
+		"Pagamento Contribuicao Mensal",
+		{"associado": associado, "mes_de_referencia": f"{mes}-01"},
+		list(CAMPOS_PAGAMENTO_MENSAL),
+		as_dict=True,
+	)
+
+	if simular:
+		return {
+			"simulacao": True,
+			"associado": associado,
+			"mes": mes,
+			"existia": existente is not None,
+			"antes": existente or {},
+			"depois": {
+				"status": status,
+				"valor": valor,
+				"atrasou": atrasou,
+				"transacao_extrato": transacao_extrato,
+			},
+		}
+
+	from gris.api.financeiro import monthly_payments
+
+	try:
+		resultado = monthly_payments.definir_pagamento(
+			associado,
+			f"{mes}-01",
+			status=status,
+			valor=valor,
+			atrasou=atrasou,
+			transacao_extrato=transacao_extrato,
+		)
+	except frappe.PermissionError as erro:
+		raise ErroDeFerramenta("PERMISSAO_NEGADA", str(erro)) from erro
+	except frappe.ValidationError as erro:
+		raise ErroDeFerramenta("VALIDACAO", str(erro)) from erro
+
+	return {"associado": associado, "mes": mes, "existia": existente is not None, **resultado}
 
 
 @ferramenta(

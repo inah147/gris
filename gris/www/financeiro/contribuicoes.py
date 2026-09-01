@@ -1,17 +1,15 @@
-"""Contribuições mensais apuradas a partir das transações do extrato geral."""
+"""Contribuições mensais apuradas a partir do Pagamento Contribuicao Mensal."""
 
 import json
 
 import frappe
 
-from gris.api.financeiro.contribuicoes import (
+from gris.api.financeiro.pagamentos_contribuicao import (
 	MESES_PADRAO,
-	STATUS_AGUARDANDO,
 	STATUS_ATRASADO,
 	STATUS_EM_ABERTO,
-	STATUS_NAO_APLICAVEL,
+	STATUS_NAO_GERADO,
 	STATUS_PAGO,
-	STATUS_PARCIAL,
 	apurar,
 	normalizar_meses,
 )
@@ -30,11 +28,9 @@ OPCOES_PERIODO = [
 # Ordem de exibição na tela, do mais urgente ao resolvido.
 ORDEM_EXIBICAO = [
 	STATUS_ATRASADO,
-	STATUS_PARCIAL,
 	STATUS_EM_ABERTO,
-	STATUS_AGUARDANDO,
+	STATUS_NAO_GERADO,
 	STATUS_PAGO,
-	STATUS_NAO_APLICAVEL,
 ]
 
 

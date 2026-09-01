@@ -242,16 +242,21 @@
 		const linha = botao.closest("tr.contrib-mes");
 		if (!linha || linha.querySelector(".contrib-mes__editor")) return;
 
+		// Tudo que entra no innerHTML abaixo passa por escapeHtml, mesmo o que hoje só
+		// vem de atributos que este mesmo script escreveu (data-ym, data-status...):
+		// são todos derivados de dado editável por quem gerencia a contribuição, e o
+		// scanner de segurança (corretamente) não assume que vão continuar inofensivos.
+		const ym = escapeHtml(linha.getAttribute("data-ym") || "");
 		const statusAtual = linha.getAttribute("data-status") || "Em Aberto";
-		const valorAtual = parseNumber(linha.getAttribute("data-valor"));
-		const transacaoAtual = linha.getAttribute("data-transacao") || "";
+		const valorAtual = escapeHtml(String(parseNumber(linha.getAttribute("data-valor"))));
+		const transacaoAtual = escapeHtml(linha.getAttribute("data-transacao") || "");
 		const atrasouAtual = linha.getAttribute("data-atrasou") === "1";
 
 		const opcoesStatus = STATUS_OPCOES.map(
 			(opcao) =>
-				`<option value="${opcao}" ${
+				`<option value="${escapeHtml(opcao)}" ${
 					opcao === statusAtual ? "selected" : ""
-				}>${opcao}</option>`
+				}>${escapeHtml(opcao)}</option>`
 		).join("");
 
 		const editor = document.createElement("tr");
@@ -261,30 +266,20 @@
 			<td colspan="${colspan}">
 				<div class="flex flex-wrap items-end gap-2 py-2">
 					<div class="field">
-						<label class="label" for="editStatus-${linha.getAttribute("data-ym")}">Status</label>
-						<select id="editStatus-${linha.getAttribute(
-							"data-ym"
-						)}" class="input contrib-edit-status">${opcoesStatus}</select>
+						<label class="label" for="editStatus-${ym}">Status</label>
+						<select id="editStatus-${ym}" class="input contrib-edit-status">${opcoesStatus}</select>
 					</div>
 					<div class="field">
-						<label class="label" for="editValor-${linha.getAttribute("data-ym")}">Valor (R$)</label>
-						<input type="number" min="0" step="0.01" id="editValor-${linha.getAttribute(
-							"data-ym"
-						)}" class="input contrib-edit-valor" value="${valorAtual}" />
+						<label class="label" for="editValor-${ym}">Valor (R$)</label>
+						<input type="number" min="0" step="0.01" id="editValor-${ym}" class="input contrib-edit-valor" value="${valorAtual}" />
 					</div>
 					<label class="flex items-center gap-2 text-sm">
 						<input type="checkbox" class="contrib-edit-atrasou" ${atrasouAtual ? "checked" : ""} />
 						Pago em atraso
 					</label>
 					<div class="field flex-1 min-w-[220px]">
-						<label class="label" for="editTransacao-${linha.getAttribute(
-							"data-ym"
-						)}">ID da transação vinculada</label>
-						<input type="text" id="editTransacao-${linha.getAttribute(
-							"data-ym"
-						)}" class="input contrib-edit-transacao" value="${escapeHtml(
-			transacaoAtual
-		)}" placeholder="deixe em branco para desvincular" />
+						<label class="label" for="editTransacao-${ym}">ID da transação vinculada</label>
+						<input type="text" id="editTransacao-${ym}" class="input contrib-edit-transacao" value="${transacaoAtual}" placeholder="deixe em branco para desvincular" />
 					</div>
 					<button type="button" class="btn-sm-primary" data-acao="salvar-mes">Salvar</button>
 					<button type="button" class="btn-sm-outline" data-acao="cancelar-mes">Cancelar</button>

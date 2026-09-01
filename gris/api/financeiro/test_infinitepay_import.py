@@ -21,6 +21,7 @@ from gris.api.financeiro.infinitepay import (
 	TIPO_RECEBIMENTOS,
 	TIPO_VENDAS,
 	_detect_format,
+	_get_transaction_type,
 	bank_reconcilliation,
 	get_infinitepay_bank_statement_df,
 	get_infinitepay_receipts_df,
@@ -250,6 +251,37 @@ class TestInfinitepayImport(FrappeTestCase):
 		self.assertEqual(list(df["fitid"]), ["FIT-1", "FIT-2", "FIT-3"])
 		self.assertEqual(list(df["transaction_type"]), ["PIX", "PIX", "Depósito de vendas"])
 		self.assertEqual(float(df.iloc[1]["value"]), -1234.56)
+
+	def test_get_transaction_type_reconhece_venda_nitro(self):
+		# A Infinitepay nomeia o lançamento de liquidação de cartão "Venda Nitro" no
+		# extrato (não o literal "Vendas"). Sem esse reconhecimento a linha caía em
+		# "Outro", passava pelo filtro de `bank_reconcilliation` e duplicava a mesma
+		# venda que já entra pelo relatório de vendas.
+		self.assertEqual(_get_transaction_type("Venda Nitro"), "Depósito de vendas")
+		self.assertEqual(_get_transaction_type("Vendas"), "Depósito de vendas")
+		self.assertEqual(_get_transaction_type("Pix Fulano"), "PIX")
+		self.assertEqual(_get_transaction_type("Tarifa mensal"), "Outro")
+
+	def test_venda_nitro_no_extrato_nao_duplica_a_venda(self):
+		"""Regressão: a liquidação de cartão no extrato, nomeada 'Venda Nitro' pela
+		Infinitepay (não o literal 'Vendas'), não pode duplicar a mesma venda que já
+		chega pelo relatório de vendas."""
+		ofx_com_venda_nitro = EXTRATO_OFX.replace(
+			"<FITID>FIT-3<NAME>Vendas<MEMO>", "<FITID>FIT-3<NAME>Venda Nitro<MEMO>"
+		)
+		df_extrato = get_infinitepay_bank_statement_df(self.arquivo(ofx_com_venda_nitro, ".ofx"))
+		self.assertEqual(list(df_extrato["transaction_type"]), ["PIX", "PIX", "Depósito de vendas"])
+
+		df_vendas = get_infinitepay_sales_df(self.arquivo(VENDAS_XML, ".xml"))
+		df_recebimentos = get_infinitepay_receipts_df(self.arquivo(RECEBIMENTOS_XML, ".xml"))
+
+		df = bank_reconcilliation(df_extrato, df_recebimentos, df_vendas)
+
+		# A venda de cartão entra uma única vez (pelo relatório de vendas); a linha
+		# "Venda Nitro" do extrato fica de fora, pois já é a mesma venda.
+		vendas_cartao = df[df["valor_liquido"] == 12.50]
+		self.assertEqual(len(vendas_cartao), 1)
+		self.assertEqual(vendas_cartao.iloc[0]["infinite_id"], "SPB1F252H7722521900320260530170009")
 
 	def test_extrato_em_formato_invalido_falha_com_mensagem(self):
 		with self.assertRaises(ValueError):

@@ -158,7 +158,11 @@ def _parse_numero_flex(texto) -> float | None:
 def _get_transaction_type(name):
 	if name.startswith("Pix "):
 		return "PIX"
-	elif name == "Vendas":
+	elif name == "Vendas" or "venda" in name.lower():
+		# A Infinitepay nomeia o lançamento de liquidação de cartão como "Venda Nitro"
+		# (não o literal "Vendas" checado acima). Sem esse casamento, a linha cai em
+		# "Outro", passa pelo filtro de `bank_reconcilliation` e duplica a mesma venda
+		# que já entra pelo relatório de vendas (ver memória "gris-infinitepay-feed-duplicado").
 		return "Depósito de vendas"
 	else:
 		return "Outro"

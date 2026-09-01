@@ -215,6 +215,29 @@
 	}
 }
 
+/* Lista de meses em aberto sob a métrica — mostra quais, não só quantos. */
+.contrib-pendentes {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 1);
+	max-height: 10rem;
+	overflow-y: auto;
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.contrib-pendentes__item {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+	font-size: var(--text-xs);
+}
+
+.contrib-pendentes__item > span:last-child {
+	margin-left: auto;
+}
+
 /* Cobrança InfinitePay */
 .contrib-cobranca__pendentes {
 	display: flex;

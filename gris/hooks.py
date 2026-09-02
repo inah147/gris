@@ -161,6 +161,9 @@ doc_events = {
 		"after_insert": [
 			"gris.gestao_de_tarefas.user_board.criar_board_pessoal",
 		],
+		"on_update": [
+			"gris.gestao_de_tarefas.board_sync_sugestoes.on_user_update",
+		],
 	},
 	"Projeto": {
 		"on_update": [
@@ -194,6 +197,22 @@ doc_events = {
 		],
 		"on_update": [
 			"gris.gestao_de_tarefas.board_sync_festa.sync_from_barraca",
+		],
+	},
+	# Sync bidirecional entre a solicitação e a tarefa espelho. Os dois handlers
+	# se protegem por `frappe.flags.gris_sync_sugestao_tarefa` — ver
+	# `board_sync_sugestoes`.
+	"Sugestao ou Problema": {
+		"on_update": [
+			"gris.gestao_de_tarefas.board_sync_sugestoes.sincronizar_tarefa_da_sugestao",
+		],
+	},
+	"Gestao de Tarefas": {
+		"on_update": [
+			"gris.gestao_de_tarefas.board_sync_sugestoes.sincronizar_sugestao_da_tarefa",
+		],
+		"on_trash": [
+			"gris.gestao_de_tarefas.board_sync_sugestoes.soltar_vinculo_da_tarefa",
 		],
 	},
 }
@@ -364,6 +383,7 @@ fixtures = [
 					"Gestor de festas",
 					"Visualizador de festas",
 					"Portaria",
+					"Desenvolvedor",
 				],
 			]
 		],

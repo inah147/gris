@@ -24,3 +24,4 @@ gris.patches.backfill_data_registro_provisorio_efetivado
 gris.patches.backfill_fonte_transacao_extrato
 gris.patches.corrigir_grafia_sexo_feminino
 gris.patches.backfill_data_status_aguardar_dados
+gris.patches.criar_role_e_board_desenvolvedor

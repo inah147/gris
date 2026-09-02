@@ -5,6 +5,7 @@ def after_install():
 	# Define o template de boas vindas padrão no System Settings
 	frappe.db.set_single_value("System Settings", "welcome_email_template", "Boas Vindas Gris")
 	_garantir_role_portaria()
+	_garantir_role_desenvolvedor()
 
 
 def _garantir_role_portaria():
@@ -17,6 +18,25 @@ def _garantir_role_portaria():
 			"role_name": "Portaria",
 			"desk_access": 0,
 			"home_page": "/festas/portaria",
+		}
+	)
+	role.insert(ignore_permissions=True)
+
+
+def _garantir_role_desenvolvedor():
+	"""Cria a role Desenvolvedor (quem tria e executa em /sugestoes/acompanhamento).
+
+	Só quem tem esta role pode ser alocado como responsável por uma
+	"Sugestao ou Problema" e mover cards no quadro.
+	"""
+	if frappe.db.exists("Role", "Desenvolvedor"):
+		return
+	role = frappe.get_doc(
+		{
+			"doctype": "Role",
+			"role_name": "Desenvolvedor",
+			"desk_access": 0,
+			"home_page": "/sugestoes/acompanhamento",
 		}
 	)
 	role.insert(ignore_permissions=True)

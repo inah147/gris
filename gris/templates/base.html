@@ -1,6 +1,6 @@
 {% extends "frappe/templates/base.html" %}
 
-{% set design_system_asset_version = "20260901-file-upload-camera" %}
+{% set design_system_asset_version = "20260902-sugestoes-e-problemas" %}
 {% set current_page_path = pathname if pathname is defined and pathname else (path if path is defined else "") %}
 {# Frappe entrega `pathname` sem a barra inicial (ex.: "inicio", "projetos/abc"). Normalizamos para comparar com segurança independentemente do contexto. #}
 {% set normalized_page_path = current_page_path.lstrip("/") %}
@@ -17,7 +17,7 @@
     "associados", "calendario", "festas", "financeiro",
     "gestao_adultos", "gestao_tarefas", "insignias",
     "manifestacao_interesse",
-    "projetos", "recepcao", "responsavel",
+    "projetos", "recepcao", "responsavel", "sugestoes",
 ] %}
 {% set ns = namespace(is_gris_page=false) %}
 {% for prefix in gris_route_prefixes %}

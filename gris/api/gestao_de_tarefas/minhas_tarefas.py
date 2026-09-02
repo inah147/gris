@@ -338,17 +338,32 @@ def atualizar_status(tarefa_name: str, status: str) -> dict[str, Any]:
 		)
 
 	previous_status = (current.get("status") or "").strip()
-	updates: dict[str, Any] = {"status": status}
-	if status != "Nao iniciado" and previous_status == "Nao iniciado" and not current.get("data_inicio"):
-		updates["data_inicio"] = nowdate()
-	updates["data_entrega"] = nowdate() if status == "Concluido" else None
-
-	frappe.db.set_value("Gestao de Tarefas", tarefa_name, updates)
+	_gravar_status(tarefa_name, status, previous_status, current.get("data_inicio"))
 
 	return {
 		"ok": True,
 		"tarefas": _listar_tarefas_do_usuario(user, apenas_urgentes=False),
 	}
+
+
+def _gravar_status(tarefa_name: str, status: str, previous_status: str, data_inicio: Any) -> None:
+	"""Aplica o novo status pelo documento, nao por `frappe.db.set_value`.
+
+	`set_value` grava direto na tabela e nao dispara `on_update`, entao os hooks
+	registrados para "Gestao de Tarefas" — hoje o sync com "Sugestao ou
+	Problema" — ficariam sem rodar justamente no caminho que a interface usa.
+
+	`ignore_permissions` porque a autorizacao ja foi feita acima (responsavel da
+	tarefa, ou acesso ao quadro): um Desenvolvedor de portal nao tem permissao
+	de `write` no DocType, que so e concedida a System Manager e Editor de
+	projetos.
+	"""
+	tarefa = frappe.get_doc("Gestao de Tarefas", tarefa_name)
+	tarefa.status = status
+	if status != "Nao iniciado" and previous_status == "Nao iniciado" and not data_inicio:
+		tarefa.data_inicio = nowdate()
+	tarefa.data_entrega = nowdate() if status == "Concluido" else None
+	tarefa.save(ignore_permissions=True)
 
 
 def _can_user_access_tarefa(tarefa, user: str) -> bool:

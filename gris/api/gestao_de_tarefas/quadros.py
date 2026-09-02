@@ -16,6 +16,7 @@ from gris.api.gestao_de_tarefas.minhas_tarefas import (
 	_assert_payload,
 	_clean_value,
 	_enrich_tarefas_com_board,
+	_gravar_status,
 	_normalize_dates,
 	_parse_payload,
 	_require_logged_user,
@@ -279,12 +280,9 @@ def atualizar_status_quadro(tarefa_name: str, status: str) -> dict[str, Any]:
 	board_name = _assert_board_acessivel(current.get("board") or "")
 
 	previous_status = (current.get("status") or "").strip()
-	updates: dict[str, Any] = {"status": status}
-	if status != "Nao iniciado" and previous_status == "Nao iniciado" and not current.get("data_inicio"):
-		updates["data_inicio"] = nowdate()
-	updates["data_entrega"] = nowdate() if status == "Concluido" else None
-
-	frappe.db.set_value("Gestao de Tarefas", tarefa_name, updates)
+	# Grava pelo documento (e nao com `frappe.db.set_value`) para os hooks de
+	# `on_update` rodarem — ver `_gravar_status` em `minhas_tarefas`.
+	_gravar_status(tarefa_name, status, previous_status, current.get("data_inicio"))
 	return {
 		"ok": True,
 		"tarefas": _listar_tarefas_do_quadro(board_name),

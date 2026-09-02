@@ -1,0 +1,113 @@
+/* /sugestoes/nova — layout do formulário de nova solicitação. */
+
+/* O formulário é uma coluna estreita dentro de uma área de conteúdo larga.
+   `.page-container` ocupa toda a largura, então sem `margin-inline: auto` o
+   bloco encosta na esquerda e deixa um vazio enorme à direita. O cabeçalho usa
+   a mesma largura para as bordas coincidirem. */
+.sugestoes-nova__header,
+.sugestoes-nova {
+	width: 100%;
+	max-width: 56rem;
+	margin-inline: auto;
+}
+
+.sugestoes-nova__header {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.sugestoes-nova {
+	display: flex;
+	flex-direction: column;
+}
+
+.sugestoes-form {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+}
+
+.sugestoes-card__header {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	margin-bottom: 1rem;
+}
+
+.sugestoes-card__title {
+	margin: 0;
+	font-size: 1.125rem;
+	font-weight: 600;
+	line-height: 1.3;
+	color: var(--foreground);
+}
+
+.sugestoes-card__subtitle {
+	margin: 0;
+	font-size: 0.875rem;
+	line-height: 1.5;
+	color: var(--muted-foreground);
+}
+
+.sugestoes-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 1rem;
+}
+
+@media (min-width: 640px) {
+	.sugestoes-grid {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+/* Orientação de preenchimento: some junto com o tipo, então precisa ocupar
+   espaço só quando visível — `hidden` sozinho perde para `display: flex`. */
+.sugestoes-hint {
+	display: flex;
+	gap: 0.5rem;
+	align-items: flex-start;
+	margin: 0 0 0.625rem;
+	padding: 0.625rem 0.75rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--muted);
+	font-size: 0.8125rem;
+	line-height: 1.5;
+	color: var(--muted-foreground);
+}
+
+.sugestoes-hint[hidden] {
+	display: none;
+}
+
+.sugestoes-hint .ds-lucide {
+	flex-shrink: 0;
+	margin-top: 0.125rem;
+}
+
+.sugestoes-editor {
+	border-radius: var(--radius);
+	overflow: hidden;
+}
+
+.sugestoes-actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 0.75rem;
+}
+
+/* No celular os dois botões ocupam a largura toda: alvo de toque maior e
+   hierarquia mais clara que dois botões pequenos lado a lado. */
+@media (max-width: 480px) {
+	.sugestoes-actions {
+		flex-direction: column-reverse;
+	}
+
+	.sugestoes-actions > * {
+		width: 100%;
+		justify-content: center;
+	}
+}

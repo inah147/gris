@@ -1377,6 +1377,73 @@ def get_extrato_do_associado(associado: str, meses: str | int = MESES_PADRAO):
 	return {"success": True, "transacoes": transacoes}
 
 
+@frappe.whitelist()
+def buscar_transacoes_para_vincular(associado: str, mes_de_referencia: str, valor: float | None = None):
+	"""Transações candidatas a vincular a um mês da apuração de um associado.
+
+	Junta as que ainda não têm beneficiário (podem ser deste associado) com as que
+	já estão atribuídas a ele no período — é a lista que a tela de contribuição
+	oferece para escolher, em vez de exigir o ID da transação digitado à mão.
+	Ordenada pela proximidade do valor informado, depois pela data mais recente.
+	"""
+	_assert_acesso_leitura()
+	if ROLE_GESTOR not in frappe.get_roles():
+		frappe.throw(_("Requer acesso Gestor Contribuição Mensal para esta ação."), frappe.PermissionError)
+	if not associado:
+		frappe.throw(_("Parâmetro 'associado' é obrigatório."), frappe.ValidationError)
+
+	mes = getdate(mes_de_referencia).replace(day=1)
+	primeiro_dia = add_months(mes, -2)
+	proximo_mes = add_months(mes, 3)
+
+	# Interpolação auditada: só entram fragmentos SQL montados neste módulo (nomes de coluna e
+	# condições literais). Todo valor vindo do usuário é passado por `params`.
+	# nosemgrep
+	linhas = frappe.db.sql(
+		f"""
+		SELECT name,
+		       {SQL_DATA_COMPETENCIA} AS data_competencia,
+		       ABS(valor) AS valor,
+		       descricao,
+		       metodo,
+		       carteira,
+		       beneficiario
+		FROM `tabTransacao Extrato Geral`
+		WHERE categoria = %(categoria)s
+		  AND debito_credito = 'Crédito'
+		  AND COALESCE(excluir_do_total, 0) = 0
+		  AND (COALESCE(beneficiario, '') = '' OR beneficiario = %(associado)s)
+		  AND {SQL_DATA_COMPETENCIA} >= %(primeiro_dia)s
+		  AND {SQL_DATA_COMPETENCIA} < %(proximo_mes)s
+		ORDER BY ABS(ABS(valor) - %(valor_alvo)s) ASC, data_competencia DESC
+		LIMIT 30
+		""",
+		{
+			"categoria": CATEGORIA_CONTRIBUICAO,
+			"associado": associado,
+			"primeiro_dia": primeiro_dia,
+			"proximo_mes": proximo_mes,
+			"valor_alvo": float(valor or 0),
+		},
+		as_dict=True,
+	)
+	return {
+		"success": True,
+		"transacoes": [
+			{
+				"name": linha.name,
+				"data": linha.data_competencia.isoformat() if linha.data_competencia else None,
+				"valor": arredondar_centavos_quebrados(linha.valor),
+				"descricao": linha.descricao,
+				"metodo": linha.metodo,
+				"carteira": linha.carteira,
+				"vinculada": bool(linha.beneficiario),
+			}
+			for linha in linhas
+		],
+	}
+
+
 # ---------------------------------------------------------------------------
 # Detalhamento por mês de uma transação (transação que quita mais de um mês)
 # ---------------------------------------------------------------------------

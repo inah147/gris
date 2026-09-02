@@ -174,9 +174,9 @@
    "write": 1
   },
   {
-   "create": 1,
    "read": 1,
-   "role": "All"
+   "report": 1,
+   "role": "Acompanhamento de Sugestoes"
   }
  ],
  "row_format": "Dynamic",

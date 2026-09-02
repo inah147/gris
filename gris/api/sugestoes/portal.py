@@ -7,9 +7,15 @@ Contrato de resposta segue o mesmo formato de `gris.api.gestao_de_tarefas`:
 sucesso devolve `{"ok": True, ...}` e falha usa `frappe.throw`, que o helper
 `callApi` das paginas de portal ja traduz em toast de erro.
 
-Nenhum endpoint aqui e `allow_guest`. As leituras respeitam as permissoes do
-DocType (a role `All` tem `read` e `create`); as mutacoes de triagem exigem a
-role `Desenvolvedor` explicitamente, alem da permissao de `write`.
+Nenhum endpoint aqui e `allow_guest`. Tres niveis de acesso:
+
+* **submeter** — qualquer usuario autenticado, sem exigir papel nenhum;
+* **acompanhar** (ler o quadro e os detalhes) — papel `Acompanhamento de
+  Sugestoes`, concedido automaticamente a todo Associado;
+* **triar** (mover, reordenar, alocar, reclassificar) — papel `Desenvolvedor`.
+
+O papel `All` do Frappe nao e usado de proposito: ele inclui Website User, que
+aqui sao os responsaveis, e exporia o quadro interno a eles.
 """
 
 from __future__ import annotations
@@ -25,6 +31,7 @@ from gris.api.sugestoes.constantes import (
 	DESCRICAO_MAX,
 	LIMITE_ENVIOS_POR_HORA,
 	MODULOS,
+	ROLE_ACOMPANHAMENTO,
 	ROLE_DESENVOLVEDOR,
 	TIPOS,
 	TITULO_MAX,
@@ -61,10 +68,30 @@ def _require_logged_user() -> str:
 	return user
 
 
+def pode_acompanhar(user: str | None = None) -> bool:
+	"""Quem enxerga o quadro.
+
+	Submeter é aberto a qualquer usuário autenticado; acompanhar não, para o
+	quadro interno não ficar visível aos responsáveis (Website Users).
+	"""
+	roles = frappe.get_roles(user or frappe.session.user)
+	return ROLE_ACOMPANHAMENTO in roles or ROLE_DESENVOLVEDOR in roles or "System Manager" in roles
+
+
 def pode_triar(user: str | None = None) -> bool:
 	"""Quem move cards e aloca responsável no quadro."""
 	roles = frappe.get_roles(user or frappe.session.user)
 	return ROLE_DESENVOLVEDOR in roles or "System Manager" in roles
+
+
+def _require_acompanhamento() -> str:
+	user = _require_logged_user()
+	if not pode_acompanhar(user):
+		frappe.throw(
+			_("Você não tem permissão para acompanhar as solicitações."),
+			frappe.PermissionError,
+		)
+	return user
 
 
 def _require_desenvolvedor() -> str:
@@ -146,7 +173,7 @@ def listar_board() -> dict[str, Any]:
 	O volume é de dezenas de registros, então uma consulta única sem paginação
 	é adequada e deixa o filtro de tipo/módulo acontecer no cliente.
 	"""
-	_require_logged_user()
+	_require_acompanhamento()
 
 	linhas = frappe.get_all(
 		DOCTYPE,
@@ -175,10 +202,9 @@ def listar_board() -> dict[str, Any]:
 
 @frappe.whitelist()
 def detalhes(name: str) -> dict[str, Any]:
-	_require_logged_user()
+	_require_acompanhamento()
 
 	doc = _carregar(name)
-	doc.check_permission("read")
 
 	responsavel = (doc.responsavel or "").strip()
 	dados = _resolver_usuarios({responsavel}).get(responsavel, {})
@@ -301,6 +327,11 @@ def submeter_solicitacao(payload: Any) -> dict[str, Any]:
 
 	_checar_rate_limit(user)
 
+	# `ignore_permissions` porque a regra de negócio é justamente "todo mundo com
+	# login pode reportar", e o DocType não concede `create` a ninguém além da
+	# equipe — dar `create` ao papel "All" exporia também a leitura do quadro aos
+	# responsáveis. A autorização aqui é `_require_logged_user` mais o rate limit
+	# acima; o conteúdo é validado pelo controller.
 	doc = frappe.get_doc(
 		{
 			"doctype": DOCTYPE,
@@ -309,9 +340,15 @@ def submeter_solicitacao(payload: Any) -> dict[str, Any]:
 			"modulo": modulo,
 			"descricao": descricao,
 		}
-	).insert()
+	).insert(ignore_permissions=True)
 
-	return {"ok": True, "name": doc.name, "status": doc.status}
+	return {
+		"ok": True,
+		"name": doc.name,
+		"status": doc.status,
+		# O formulário só manda para o quadro quem consegue vê-lo.
+		"pode_acompanhar": pode_acompanhar(),
+	}
 
 
 @frappe.whitelist()
@@ -496,15 +533,14 @@ def _serializar_comentarios(name: str) -> list[dict[str, Any]]:
 
 @frappe.whitelist()
 def get_comentarios(name: str) -> dict[str, Any]:
-	_require_logged_user()
+	_require_acompanhamento()
 	doc = _carregar(name)
-	doc.check_permission("read")
 	return {"ok": True, "comentarios": _serializar_comentarios(doc.name)}
 
 
 @frappe.whitelist()
 def adicionar_comentario(name: str, texto: str) -> dict[str, Any]:
-	user = _require_logged_user()
+	user = _require_acompanhamento()
 
 	texto = (texto or "").strip()
 	if not texto:
@@ -513,7 +549,6 @@ def adicionar_comentario(name: str, texto: str) -> dict[str, Any]:
 		frappe.throw(_("O comentário deve ter no máximo 5000 caracteres."))
 
 	doc = _carregar(name)
-	doc.check_permission("read")
 
 	frappe.get_doc(
 		{

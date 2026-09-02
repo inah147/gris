@@ -18,10 +18,13 @@ from gris.api.sugestoes import constantes as c
 from gris.api.sugestoes.portal import (
 	CARD_ORDER_BY,
 	atualizar_descricao,
+	atualizar_status,
 	detalhes,
 	get_comentarios,
+	listar_board,
 	reclassificar,
 	reordenar,
+	submeter_solicitacao,
 )
 from gris.gestao_de_tarefas import board_sync_sugestoes as board_sync
 from gris.gestao_de_tarefas.board_sync_sugestoes import (
@@ -301,6 +304,61 @@ class TestSugestaoOuProblema(FrappeTestCase):
 				atualizar_descricao(doc.name, "<p>Invadindo o relato alheio.</p>")
 		finally:
 			frappe.set_user(usuario_original)
+
+	# ────────────────────── níveis de acesso ──────────────────────
+
+	def test_qualquer_autenticado_pode_submeter(self):
+		"""Sem papel nenhum: reportar é aberto a quem tem login."""
+		usuario_original = frappe.session.user
+		frappe.set_user(self.nao_dev)
+		try:
+			resposta = submeter_solicitacao(
+				{
+					"tipo": c.TIPO_PROBLEMA,
+					"modulo": "Festas",
+					"titulo": "Não consigo abrir o boleto",
+					"descricao": "<p>A tela fica girando.</p>",
+				}
+			)
+			self.assertTrue(resposta["ok"])
+			# Sem o papel de acompanhamento, não faz sentido mandá-lo ao quadro.
+			self.assertFalse(resposta["pode_acompanhar"])
+		finally:
+			frappe.set_user(usuario_original)
+
+	def test_sem_papel_nao_ve_o_quadro(self):
+		"""O papel `All` do Frappe incluiria Website User (os responsáveis)."""
+		doc = self._nova()
+		usuario_original = frappe.session.user
+		frappe.set_user(self.nao_dev)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				listar_board()
+			with self.assertRaises(frappe.PermissionError):
+				detalhes(doc.name)
+		finally:
+			frappe.set_user(usuario_original)
+
+	def test_papel_de_acompanhamento_ve_mas_nao_tria(self):
+		observador = _criar_user("observador.sugestoes@teste.gris", [c.ROLE_ACOMPANHAMENTO])
+		doc = self._nova()
+
+		usuario_original = frappe.session.user
+		frappe.set_user(observador)
+		try:
+			self.assertTrue(listar_board()["ok"])
+			self.assertFalse(listar_board()["pode_triar"])
+			with self.assertRaises(frappe.PermissionError):
+				atualizar_status(doc.name, c.COLUNA_SELECIONADO)
+		finally:
+			frappe.set_user(usuario_original)
+
+	def test_doctype_nao_concede_papel_all(self):
+		"""Guarda contra a regressão que o semgrep pegou: `All` inclui Website
+		User, e daria a qualquer responsável leitura do quadro interno."""
+		papeis = {linha.role for linha in frappe.get_meta("Sugestao ou Problema").permissions}
+		self.assertNotIn("All", papeis)
+		self.assertIn(c.ROLE_ACOMPANHAMENTO, papeis)
 
 	# ────────────────────── ordenação ──────────────────────
 

@@ -249,12 +249,12 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/festas/festa": ["Visualizador de festas", "Gestor de festas"],
 	"/festas/relatorio": ["Visualizador de festas", "Gestor de festas"],
 	"/festas/portaria": ["Gestor de festas", "Portaria"],
-	# Qualquer pessoa autenticada reporta um problema e acompanha o quadro; a
-	# permissão de triagem (mover card, alocar responsável) é verificada nos
-	# endpoints, não na rota.
-	"/sugestoes": ["All"],
+	# Reportar é aberto a qualquer pessoa autenticada; acompanhar o quadro exige
+	# papel, para não expor a discussão interna aos responsáveis. A permissão de
+	# triagem (mover card, alocar responsável) é verificada nos endpoints.
+	"/sugestoes": ["Acompanhamento de Sugestoes", "Desenvolvedor"],
 	"/sugestoes/nova": ["All"],
-	"/sugestoes/acompanhamento": ["All"],
+	"/sugestoes/acompanhamento": ["Acompanhamento de Sugestoes", "Desenvolvedor"],
 }
 
 # Páginas marcadas como "estritas": mesmo System Manager deve ter uma das roles listadas.

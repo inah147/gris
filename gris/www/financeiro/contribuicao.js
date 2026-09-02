@@ -253,7 +253,9 @@
 			(transacao.descricao ? ` · ${transacao.descricao}` : "") +
 			(transacao.vinculada ? "" : " · não vinculada");
 		const selecionada = transacao.name === transacaoSelecionada ? "selected" : "";
-		return `<option value="${escapeHtml(transacao.name)}" ${selecionada}>${escapeHtml(rotulo)}</option>`;
+		return `<option value="${escapeHtml(transacao.name)}" ${selecionada}>${escapeHtml(
+			rotulo
+		)}</option>`;
 	}
 
 	function alternarInputManual(select, manual) {
@@ -276,10 +278,14 @@
 			.then((resposta) => {
 				const dados = (resposta && resposta.message) || {};
 				const transacoes = dados.transacoes || [];
-				const encontrouAtual = transacoes.some((transacao) => transacao.name === transacaoAtual);
+				const encontrouAtual = transacoes.some(
+					(transacao) => transacao.name === transacaoAtual
+				);
 
 				const opcoes = ['<option value="">— nenhuma —</option>'];
-				transacoes.forEach((transacao) => opcoes.push(montarOpcaoTransacao(transacao, transacaoAtual)));
+				transacoes.forEach((transacao) =>
+					opcoes.push(montarOpcaoTransacao(transacao, transacaoAtual))
+				);
 				if (transacaoAtual && !encontrouAtual) {
 					opcoes.push(
 						`<option value="${escapeHtml(transacaoAtual)}" selected>${escapeHtml(
@@ -287,7 +293,9 @@
 						)} (fora da janela buscada)</option>`
 					);
 				}
-				opcoes.push(`<option value="${VALOR_TRANSACAO_MANUAL}">Outro (informar ID manualmente)…</option>`);
+				opcoes.push(
+					`<option value="${VALOR_TRANSACAO_MANUAL}">Outro (informar ID manualmente)…</option>`
+				);
 
 				select.innerHTML = opcoes.join("");
 				alternarInputManual(select, manual);

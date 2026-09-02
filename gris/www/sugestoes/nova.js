@@ -134,11 +134,28 @@
 					showToast("error", (dados && dados.error) || "Não foi possível enviar.");
 					return;
 				}
-				showToast("success", "Solicitação enviada. Redirecionando para o quadro...");
-				window.setTimeout(() => {
-					window.location.href =
-						"/sugestoes/acompanhamento?item=" + encodeURIComponent(dados.name);
-				}, 900);
+				// Quem não tem o papel de acompanhamento não enxerga o quadro:
+				// mandá-lo para lá daria 403 logo depois de um envio bem-sucedido.
+				if (dados.pode_acompanhar) {
+					showToast("success", "Solicitação enviada. Redirecionando para o quadro...");
+					window.setTimeout(() => {
+						window.location.href =
+							"/sugestoes/acompanhamento?item=" + encodeURIComponent(dados.name);
+					}, 900);
+					return;
+				}
+
+				showToast(
+					"success",
+					`Solicitação ${dados.name} enviada. Obrigado! Vamos analisar e trabalhar nela.`
+				);
+				form.reset();
+				form.querySelectorAll(".select").forEach((el) => {
+					el.value = "";
+				});
+				if (editor) editor.setHTML("");
+				aplicarRegrasDoTipo();
+				submitBtn.disabled = false;
 			},
 			error: (xhr) => {
 				submitBtn.disabled = false;

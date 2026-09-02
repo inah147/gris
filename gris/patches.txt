@@ -25,3 +25,4 @@ gris.patches.backfill_fonte_transacao_extrato
 gris.patches.corrigir_grafia_sexo_feminino
 gris.patches.backfill_data_status_aguardar_dados
 gris.patches.criar_role_e_board_desenvolvedor
+gris.patches.conceder_acompanhamento_sugestoes_aos_associados

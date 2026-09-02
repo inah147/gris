@@ -384,6 +384,7 @@ fixtures = [
 					"Visualizador de festas",
 					"Portaria",
 					"Desenvolvedor",
+					"Acompanhamento de Sugestoes",
 				],
 			]
 		],

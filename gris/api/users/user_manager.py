@@ -4,7 +4,13 @@ import frappe
 from frappe import _
 from frappe.utils import cint
 
-from gris.api.users.roles import PERFIL_SEM_ACESSO, apply_role_profile, save_user_preserving_roles
+from gris.api.sugestoes.constantes import ROLE_ACOMPANHAMENTO as ROLE_ACOMPANHAMENTO_SUGESTOES
+from gris.api.users.roles import (
+	PERFIL_SEM_ACESSO,
+	add_user_roles,
+	apply_role_profile,
+	save_user_preserving_roles,
+)
 from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 
 
@@ -179,6 +185,10 @@ def create_associate_user(associate=None, associate_name=None, force=False):
 			}
 		)
 		user.insert()
+		# Todo associado acompanha o quadro de sugestões. Concedido de forma
+		# aditiva (e não pelo Role Profile) porque gravar `role_profile_name`
+		# repopula a lista de papéis e apagaria concessões manuais.
+		add_user_roles(user.name, [ROLE_ACOMPANHAMENTO_SUGESTOES])
 
 
 @frappe.whitelist()

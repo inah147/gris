@@ -76,6 +76,12 @@ MODULOS_POR_TIPO: dict[str, tuple[str, ...]] = {
 
 ROLE_DESENVOLVEDOR = "Desenvolvedor"
 
+# Quem enxerga o quadro. Submeter e' liberado a qualquer usuario autenticado,
+# mas acompanhar exige este papel — concedido automaticamente a todo Associado.
+# Nao usamos o papel "All" do Frappe: ele inclui Website User, que aqui sao os
+# responsaveis, e exporia o quadro interno a eles.
+ROLE_ACOMPANHAMENTO = "Acompanhamento de Sugestoes"
+
 TITULO_MAX = 140
 DESCRICAO_MAX = 10_000
 

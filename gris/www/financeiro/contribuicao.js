@@ -237,6 +237,67 @@
 
 	const STATUS_OPCOES = ["Em Aberto", "Atrasado", "Pago"];
 
+	// A escolha manual (opção "Outro…") continua existindo para o caso raro de a
+	// transação certa cair fora da janela buscada pelo servidor (5 meses ao redor
+	// do mês de referência). No dia a dia, o gestor escolhe da lista.
+	const VALOR_TRANSACAO_MANUAL = "__manual__";
+
+	function formatarDataCurta(iso) {
+		const partes = String(iso || "").split("-");
+		return partes.length === 3 ? `${partes[2]}/${partes[1]}` : iso || "";
+	}
+
+	function montarOpcaoTransacao(transacao, transacaoSelecionada) {
+		const rotulo =
+			`${formatarDataCurta(transacao.data)} · R$ ${formatarMoeda(transacao.valor)}` +
+			(transacao.descricao ? ` · ${transacao.descricao}` : "") +
+			(transacao.vinculada ? "" : " · não vinculada");
+		const selecionada = transacao.name === transacaoSelecionada ? "selected" : "";
+		return `<option value="${escapeHtml(transacao.name)}" ${selecionada}>${escapeHtml(rotulo)}</option>`;
+	}
+
+	function alternarInputManual(select, manual) {
+		if (!manual) return;
+		manual.classList.toggle("hidden", select.value !== VALOR_TRANSACAO_MANUAL);
+	}
+
+	function carregarTransacoesCandidatas(editor, ym, transacaoAtual, valorAtual) {
+		const select = editor.querySelector(".contrib-edit-transacao");
+		const manual = editor.querySelector(".contrib-edit-transacao-manual");
+		if (!select) return;
+
+		select.addEventListener("change", () => alternarInputManual(select, manual));
+
+		frappe
+			.call({
+				method: "gris.api.financeiro.contribuicoes.buscar_transacoes_para_vincular",
+				args: { associado: associado, mes_de_referencia: `${ym}-01`, valor: valorAtual },
+			})
+			.then((resposta) => {
+				const dados = (resposta && resposta.message) || {};
+				const transacoes = dados.transacoes || [];
+				const encontrouAtual = transacoes.some((transacao) => transacao.name === transacaoAtual);
+
+				const opcoes = ['<option value="">— nenhuma —</option>'];
+				transacoes.forEach((transacao) => opcoes.push(montarOpcaoTransacao(transacao, transacaoAtual)));
+				if (transacaoAtual && !encontrouAtual) {
+					opcoes.push(
+						`<option value="${escapeHtml(transacaoAtual)}" selected>${escapeHtml(
+							transacaoAtual
+						)} (fora da janela buscada)</option>`
+					);
+				}
+				opcoes.push(`<option value="${VALOR_TRANSACAO_MANUAL}">Outro (informar ID manualmente)…</option>`);
+
+				select.innerHTML = opcoes.join("");
+				alternarInputManual(select, manual);
+			})
+			.catch(() => {
+				select.innerHTML = `<option value="${VALOR_TRANSACAO_MANUAL}" selected>Outro (informar ID manualmente)…</option>`;
+				alternarInputManual(select, manual);
+			});
+	}
+
 	function editarMes(botao) {
 		if (semPermissao()) return;
 		const linha = botao.closest("tr.contrib-mes");
@@ -248,8 +309,9 @@
 		// scanner de segurança (corretamente) não assume que vão continuar inofensivos.
 		const ym = escapeHtml(linha.getAttribute("data-ym") || "");
 		const statusAtual = linha.getAttribute("data-status") || "Em Aberto";
-		const valorAtual = escapeHtml(String(parseNumber(linha.getAttribute("data-valor"))));
-		const transacaoAtual = escapeHtml(linha.getAttribute("data-transacao") || "");
+		const valorNumerico = parseNumber(linha.getAttribute("data-valor"));
+		const valorAtual = escapeHtml(String(valorNumerico));
+		const transacaoAtual = linha.getAttribute("data-transacao") || "";
 		const atrasouAtual = linha.getAttribute("data-atrasou") === "1";
 
 		const opcoesStatus = STATUS_OPCOES.map(
@@ -277,9 +339,13 @@
 						<input type="checkbox" class="contrib-edit-atrasou" ${atrasouAtual ? "checked" : ""} />
 						Pago em atraso
 					</label>
-					<div class="field flex-1 min-w-[220px]">
-						<label class="label" for="editTransacao-${ym}">ID da transação vinculada</label>
-						<input type="text" id="editTransacao-${ym}" class="input contrib-edit-transacao" value="${transacaoAtual}" placeholder="deixe em branco para desvincular" />
+					<div class="field flex-1 min-w-[260px]">
+						<label class="label" for="editTransacao-${ym}">Transação vinculada</label>
+						<select id="editTransacao-${ym}" class="input contrib-edit-transacao">
+							<option value="">Carregando transações do período…</option>
+						</select>
+						<input type="text" class="input contrib-edit-transacao-manual hidden mt-1"
+							value="${escapeHtml(transacaoAtual)}" placeholder="ID da transação" />
 					</div>
 					<button type="button" class="btn-sm-primary" data-acao="salvar-mes">Salvar</button>
 					<button type="button" class="btn-sm-outline" data-acao="cancelar-mes">Cancelar</button>
@@ -288,6 +354,8 @@
 		`;
 		linha.after(editor);
 		botao.classList.add("hidden");
+
+		carregarTransacoesCandidatas(editor, ym, transacaoAtual, valorNumerico);
 	}
 
 	function cancelarEdicaoMes(botao) {
@@ -310,7 +378,11 @@
 		const status = editor.querySelector(".contrib-edit-status")?.value;
 		const valor = parseFloat(editor.querySelector(".contrib-edit-valor")?.value);
 		const atrasou = editor.querySelector(".contrib-edit-atrasou")?.checked;
-		const transacao = (editor.querySelector(".contrib-edit-transacao")?.value || "").trim();
+		const selectTransacao = editor.querySelector(".contrib-edit-transacao");
+		const transacao =
+			selectTransacao?.value === VALOR_TRANSACAO_MANUAL
+				? (editor.querySelector(".contrib-edit-transacao-manual")?.value || "").trim()
+				: (selectTransacao?.value || "").trim();
 
 		if (!Number.isFinite(valor) || valor < 0) {
 			showToast("Informe um valor válido.", "orange");

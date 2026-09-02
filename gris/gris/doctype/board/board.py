@@ -5,7 +5,9 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import nowdate
 
-BOARD_REFERENCIA_PERMITIDAS: set[str] = {"Projeto", "Festa", "User"}
+# "Module Def" permite um quadro fixo pertencente a um módulo do app (e não a um
+# registro de negócio), como o quadro de desenvolvimento de "Sugestoes e Problemas".
+BOARD_REFERENCIA_PERMITIDAS: set[str] = {"Projeto", "Festa", "User", "Module Def"}
 NIVEIS_ACESSO: set[str] = {"Gerenciar", "Editar", "Visualizar"}
 NIVEL_PESO: dict[str, int] = {"Visualizar": 1, "Editar": 2, "Gerenciar": 3}
 

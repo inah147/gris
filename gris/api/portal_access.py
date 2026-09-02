@@ -111,6 +111,14 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 			{"label": "Pesquisa de Novos Associados", "path": "/responsavel/pesquisa_novos"},
 		],
 	},
+	{
+		"label": "Sugestões e Problemas",
+		"path": "/sugestoes",
+		"children": [
+			{"label": "Nova solicitação", "path": "/sugestoes/nova"},
+			{"label": "Acompanhamento", "path": "/sugestoes/acompanhamento"},
+		],
+	},
 	{"label": "Transparência", "path": "/portal_transparencia"},
 ]
 
@@ -126,6 +134,7 @@ PORTAL_MODULE_ICON_MAP: dict[str, str] = {
 	"/portal_transparencia": "file-text",
 	"/festas": "party-popper",
 	"/gestao_tarefas": "list-checks",
+	"/sugestoes": "message-square-warning",
 }
 
 SIDEBAR_ICON_MAP: dict[str, str] = {
@@ -166,6 +175,8 @@ SIDEBAR_ICON_MAP: dict[str, str] = {
 	"/festas/festa": "party-popper",
 	"/festas/portaria": "scan-qr-code",
 	"/gestao_tarefas/tarefas": "square-check-big",
+	"/sugestoes/nova": "file-plus",
+	"/sugestoes/acompanhamento": "square-kanban",
 }
 
 # Mapping: path -> allowed roles.
@@ -238,6 +249,12 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/festas/festa": ["Visualizador de festas", "Gestor de festas"],
 	"/festas/relatorio": ["Visualizador de festas", "Gestor de festas"],
 	"/festas/portaria": ["Gestor de festas", "Portaria"],
+	# Qualquer pessoa autenticada reporta um problema e acompanha o quadro; a
+	# permissão de triagem (mover card, alocar responsável) é verificada nos
+	# endpoints, não na rota.
+	"/sugestoes": ["All"],
+	"/sugestoes/nova": ["All"],
+	"/sugestoes/acompanhamento": ["All"],
 }
 
 # Páginas marcadas como "estritas": mesmo System Manager deve ter uma das roles listadas.

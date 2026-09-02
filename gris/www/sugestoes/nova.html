@@ -1,0 +1,108 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, card, field, form, input %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Nova solicitação{% endblock %}
+
+{% set active_link = "/sugestoes/nova" %}
+
+{# nova.css/.js são injetados automaticamente pelo Frappe (co-location).
+   Não referenciar manualmente: duplica o carregamento e roda o script 2x. #}
+{% block head_include %}
+{{ super() }}
+<script src="/assets/gris/design_system/js/components/toastui-editor.js?v={{ design_system_asset_version }}" defer></script>
+{% endblock %}
+
+{% block page_header %}
+{# Mesma largura e centralização do formulário (nova.css) para as duas bordas
+   ficarem alinhadas — largura diferente aqui desalinha o título dos cards. #}
+<section class="sugestoes-nova__header" aria-labelledby="sugestoes-nova-titulo">
+	<h1 id="sugestoes-nova-titulo" class="m-0 text-3xl font-semibold leading-tight text-foreground">Nova solicitação</h1>
+	<p class="m-0 text-base leading-relaxed text-muted-foreground">Encontrou um erro no Gris ou sentiu falta de alguma funcionalidade? Conte aqui! Sua solicitação entra no quadro de acompanhamento e você vê o andamento até a entrega.</p>
+</section>
+{% endblock %}
+
+{% block main %}
+<div class="sugestoes-nova">
+	{{ toaster() }}
+
+	{% call form(attrs={"id": "sugestoes-form", "novalidate": "novalidate", "class": "sugestoes-form"}) %}
+
+		{% call card(attrs={"class": "sugestoes-card"}) %}
+			<header class="sugestoes-card__header">
+				<h2 class="sugestoes-card__title">O que você quer fazer</h2>
+				<p class="sugestoes-card__subtitle">Isso define em qual fila a solicitação entra e ajuda a priorizar.</p>
+			</header>
+
+			<div class="sugestoes-grid">
+				{% call field(
+					label="O que deseja fazer?",
+					hint="Relate um problema quando algo não funciona como deveria. Peça uma funcionalidade quando algo ainda não existe."
+				) %}
+					{{ select(
+						id="sugestoes-tipo",
+						name="tipo",
+						items=tipo_items,
+						trigger_attrs={"class": "w-full"}
+					) }}
+				{% endcall %}
+
+				{% call field(
+					label="Módulo",
+					hint="Em que parte do GRIS isso acontece? Se estiver pedindo algo que ainda não existe em lugar nenhum, escolha “Novo módulo”."
+				) %}
+					{{ select(
+						id="sugestoes-modulo",
+						name="modulo",
+						items=modulo_items,
+						trigger_attrs={"class": "w-full"}
+					) }}
+				{% endcall %}
+			</div>
+		{% endcall %}
+
+		{% call card(attrs={"class": "sugestoes-card"}) %}
+			<header class="sugestoes-card__header">
+				<h2 class="sugestoes-card__title">Conte o que aconteceu</h2>
+				<p class="sugestoes-card__subtitle">Quanto mais específico, mais rápido a gente resolve. Um relato vago costuma voltar como pergunta.</p>
+			</header>
+
+			{% call field(
+				label="Título",
+				hint="Uma frase curta que resuma o assunto. Ex.: “Erro ao salvar contribuição mensal”."
+			) %}
+				{{ input(name="titulo", attrs={
+					"id": "sugestoes-titulo",
+					"maxlength": "140",
+					"placeholder": "Resuma em uma frase",
+					"class": "w-full"
+				}) }}
+			{% endcall %}
+
+			{% call field(label="Descrição") %}
+				<p class="sugestoes-hint" data-hint-problema>
+					{{ lucide_icon("bug", size="sm") }}
+					<span>Descreva o <strong>passo a passo</strong> que levou ao erro, o que você esperava que acontecesse e o que aconteceu no lugar. Se apareceu alguma mensagem na tela, copie o texto dela.</span>
+				</p>
+				<p class="sugestoes-hint" data-hint-funcionalidade hidden>
+					{{ lucide_icon("lightbulb", size="sm") }}
+					<span>Conte <strong>o que você precisa fazer e por quê</strong>. Entender o objetivo costuma render uma solução melhor do que descrever a tela pronta.</span>
+				</p>
+				<div id="sugestoes-descricao-editor" class="sugestoes-editor"></div>
+				<input type="hidden" name="descricao" id="sugestoes-descricao-input" />
+			{% endcall %}
+		{% endcall %}
+
+		<div class="sugestoes-actions">
+			<a class="btn-outline" href="/sugestoes/acompanhamento">Ver o quadro</a>
+			<button type="submit" class="btn-primary" id="sugestoes-submit">
+				{{ lucide_icon("send", size="sm") }}
+				<span>Enviar solicitação</span>
+			</button>
+		</div>
+
+	{% endcall %}
+</div>
+{% endblock %}

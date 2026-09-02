@@ -1,0 +1,15 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Sugestões e Problemas{% endblock %}
+
+{% set active_link = "/sugestoes" %}
+
+{# index.py redireciona para /sugestoes/acompanhamento antes de renderizar.
+   Este template existe porque o Frappe só resolve a rota quando há um template
+   com o mesmo basename — sem ele, /sugestoes devolve 404. #}
+
+{% block main %}
+<p class="text-muted-foreground">
+	Redirecionando para o <a href="/sugestoes/acompanhamento">quadro de acompanhamento</a>...
+</p>
+{% endblock %}

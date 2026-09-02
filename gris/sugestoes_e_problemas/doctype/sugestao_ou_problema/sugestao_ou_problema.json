@@ -1,0 +1,188 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "SUG-.#####",
+ "creation": "2026-09-02 00:00:00",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "titulo",
+  "tipo",
+  "modulo",
+  "status",
+  "ordem",
+  "descricao_section",
+  "descricao",
+  "submissao_section",
+  "solicitante",
+  "solicitante_nome",
+  "data_submissao",
+  "desenvolvimento_section",
+  "responsavel",
+  "tarefa",
+  "data_inicio_desenvolvimento",
+  "data_conclusao"
+ ],
+ "fields": [
+  {
+   "fieldname": "titulo",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Titulo",
+   "length": 140,
+   "reqd": 1
+  },
+  {
+   "fieldname": "tipo",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Tipo",
+   "options": "\nProblema\nNova funcionalidade",
+   "reqd": 1
+  },
+  {
+   "fieldname": "modulo",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Modulo",
+   "options": "\nInício\nAssociados\nNovos Associados\nFinanceiro\nCalendário\nGestão de Adultos\nInsígnias e Distintivos\nProjetos\nGestão de Tarefas\nFestas\nPainel do Responsável\nTransparência\nSugestões e Problemas\nAcesso e login\nAparência / PWA\nOutro / não sei\nNovo módulo",
+   "reqd": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Problemas reportados\nSolicitações de funcionalidades\nSelecionado para desenvolvimento\nEm desenvolvimento\nConcluído\nNão será feito",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "Prioridade dentro da coluna do quadro. Definida arrastando os cards; menor vem primeiro.",
+   "fieldname": "ordem",
+   "fieldtype": "Int",
+   "label": "Ordem na coluna",
+   "read_only": 1
+  },
+  {
+   "fieldname": "descricao_section",
+   "fieldtype": "Section Break",
+   "label": "Descricao"
+  },
+  {
+   "description": "Conteúdo do editor WYSIWYG do Portal. Text Editor faz o Frappe sanitizar o HTML no save.",
+   "fieldname": "descricao",
+   "fieldtype": "Text Editor",
+   "label": "Descricao",
+   "reqd": 1
+  },
+  {
+   "fieldname": "submissao_section",
+   "fieldtype": "Section Break",
+   "label": "Submissao"
+  },
+  {
+   "fieldname": "solicitante",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Solicitante",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "solicitante_nome",
+   "fieldtype": "Data",
+   "label": "Nome do solicitante",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_submissao",
+   "fieldtype": "Datetime",
+   "label": "Data da submissao",
+   "read_only": 1
+  },
+  {
+   "fieldname": "desenvolvimento_section",
+   "fieldtype": "Section Break",
+   "label": "Desenvolvimento"
+  },
+  {
+   "fieldname": "responsavel",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Responsavel",
+   "options": "User"
+  },
+  {
+   "description": "Tarefa espelho criada no quadro Desenvolvimento do GRIS.",
+   "fieldname": "tarefa",
+   "fieldtype": "Link",
+   "label": "Tarefa vinculada",
+   "options": "Gestao de Tarefas",
+   "read_only": 1
+  },
+  {
+   "description": "Preenchida automaticamente quando o item entra em Em desenvolvimento.",
+   "fieldname": "data_inicio_desenvolvimento",
+   "fieldtype": "Datetime",
+   "label": "Inicio do desenvolvimento",
+   "read_only": 1
+  },
+  {
+   "description": "Preenchida automaticamente quando o item entra em Concluido.",
+   "fieldname": "data_conclusao",
+   "fieldtype": "Datetime",
+   "label": "Data de conclusao",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 20,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-02 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Sugestoes e Problemas",
+ "name": "Sugestao ou Problema",
+ "naming_rule": "Expression (Old Style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Desenvolvedor",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "All"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "titulo",
+ "track_changes": 1
+}

@@ -1,0 +1,56 @@
+{
+ "actions": [],
+ "creation": "2026-09-03 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "whatsapp_section",
+  "habilitar_avisos_whatsapp",
+  "grupo_desenvolvimento_whatsapp"
+ ],
+ "fields": [
+  {
+   "fieldname": "whatsapp_section",
+   "fieldtype": "Section Break",
+   "label": "Avisos por WhatsApp"
+  },
+  {
+   "default": "1",
+   "description": "Desligue para suspender os dois avisos automaticos do modulo: o aviso de nova solicitacao no grupo e o aviso de conclusao para quem solicitou.",
+   "fieldname": "habilitar_avisos_whatsapp",
+   "fieldtype": "Check",
+   "label": "Habilitar avisos automaticos por WhatsApp"
+  },
+  {
+   "description": "Grupo que recebe o aviso de cada nova solicitacao. A lista vem da instancia conectada na Evolution API.",
+   "fieldname": "grupo_desenvolvimento_whatsapp",
+   "fieldtype": "Select",
+   "label": "Grupo de desenvolvimento (WhatsApp)"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-09-03 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Sugestoes e Problemas",
+ "name": "Configuracoes de Desenvolvimento",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

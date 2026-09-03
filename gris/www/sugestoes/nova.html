@@ -1,5 +1,5 @@
 {% extends "templates/web_sidebar_base.html" %}
-{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, card, field, form, input %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, card, checkbox, field, form, input %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 {% from "public/design_system/components/generated/select.html.jinja" import select %}
 {% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
@@ -93,6 +93,35 @@
 				<div id="sugestoes-descricao-editor" class="sugestoes-editor"></div>
 				<input type="hidden" name="descricao" id="sugestoes-descricao-input" />
 			{% endcall %}
+		{% endcall %}
+
+		{% call card(attrs={"class": "sugestoes-card"}) %}
+			<header class="sugestoes-card__header">
+				<h2 class="sugestoes-card__title">Aviso de conclusão</h2>
+				<p class="sugestoes-card__subtitle">A gente te manda um WhatsApp quando esta solicitação for entregue, sem você precisar ficar conferindo o quadro.</p>
+			</header>
+
+			{% if tem_telefone %}
+				{{ checkbox(
+					id="sugestoes-avisar",
+					label="Quero ser avisado por WhatsApp no número " ~ telefone_aviso,
+					checked=true,
+					attrs={"name": "avisar_por_whatsapp"}
+				) }}
+			{% else %}
+				{{ checkbox(
+					id="sugestoes-avisar",
+					label="Quero ser avisado por WhatsApp",
+					checked=false,
+					attrs={"name": "avisar_por_whatsapp", "disabled": "disabled"}
+				) }}
+				{{ alert(
+					description="Não encontramos um telefone no seu cadastro, então não temos para onde mandar o aviso. Fale com a secretaria para atualizar o seu número.",
+					icon=lucide_icon("phone-off", size="sm"),
+					variant="warning",
+					attrs={"class": "sugestoes-aviso-sem-telefone"}
+				) }}
+			{% endif %}
 		{% endcall %}
 
 		<div class="sugestoes-actions">

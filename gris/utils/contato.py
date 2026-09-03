@@ -40,6 +40,44 @@ def format_phone(phone):
 	return phone
 
 
+def telefone_do_usuario(user: str | None) -> str:
+	"""Telefone de um User, na ordem em que o GRIS costuma encontrá-lo.
+
+	1. ``User.mobile_no`` — o campo padrão do Frappe, raramente preenchido aqui.
+	2. ``Associado.telefone`` casado por ``id_escoteiros``: o login do associado é
+	   o id@escoteiros, não o e-mail comum (mesma resolução de
+	   ``gris.utils.gestores`` e de ``recepcao_mensagens``).
+	3. ``Responsavel.celular`` casado por ``email``: os responsáveis são Website
+	   Users e não têm registro de Associado nenhum.
+
+	Retorna string vazia quando a pessoa não tem telefone em lugar nenhum — quem
+	chama decide se isso é um erro ou apenas motivo para não enviar nada.
+	"""
+	user = (user or "").strip()
+	if not user or user == "Guest":
+		return ""
+
+	mobile_no = frappe.db.get_value("User", user, "mobile_no")
+	if (mobile_no or "").strip():
+		return str(mobile_no).strip()
+
+	telefone = frappe.db.get_value("Associado", {"id_escoteiros": user}, "telefone")
+	if (telefone or "").strip():
+		return str(telefone).strip()
+
+	responsavel = frappe.db.get_value(
+		"Responsavel", {"email": user}, ["celular", "telefone_secundario"], as_dict=True
+	)
+	if responsavel:
+		telefone = (responsavel.get("celular") or "").strip() or (
+			responsavel.get("telefone_secundario") or ""
+		).strip()
+		if telefone:
+			return telefone
+
+	return ""
+
+
 @frappe.whitelist()
 def get_contato_pessoa(doctype_name: str, docname: str) -> dict[str, Any]:
 	if doctype_name not in {"Associado", "Responsavel"}:

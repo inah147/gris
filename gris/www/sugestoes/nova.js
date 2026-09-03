@@ -13,8 +13,13 @@
 	const inputTitulo = document.getElementById("sugestoes-titulo");
 	const inputDescricao = document.getElementById("sugestoes-descricao-input");
 	const submitBtn = document.getElementById("sugestoes-submit");
+	const checkAvisar = document.getElementById("sugestoes-avisar");
 	const hintProblema = form.querySelector("[data-hint-problema]");
 	const hintFuncionalidade = form.querySelector("[data-hint-funcionalidade]");
+
+	// Sem telefone no cadastro o campo vem `disabled` do servidor, e prometer o
+	// aviso seria mentira. O servidor revalida no `before_insert`.
+	const podeAvisar = !!(checkAvisar && !checkAvisar.disabled);
 
 	let editor = null;
 
@@ -121,6 +126,7 @@
 					modulo: valorSelect(selectModulo),
 					titulo: (inputTitulo.value || "").trim(),
 					descricao: inputDescricao.value,
+					avisar_por_whatsapp: podeAvisar && checkAvisar.checked,
 				},
 			},
 			// Sem `silent`, o erro do servidor abre o modal do Desk, que no portal
@@ -145,10 +151,15 @@
 					return;
 				}
 
+				const promessa = dados.avisar_por_whatsapp
+					? " Te avisamos por WhatsApp quando estiver pronta."
+					: "";
 				showToast(
 					"success",
-					`Solicitação ${dados.name} enviada. Obrigado! Vamos analisar e trabalhar nela.`
+					`Solicitação ${dados.name} enviada. Obrigado! Vamos analisar e trabalhar nela.${promessa}`
 				);
+				// `form.reset()` devolve o checkbox ao estado do HTML — marcado
+				// quando há telefone, desmarcado e desabilitado quando não há.
 				form.reset();
 				form.querySelectorAll(".select").forEach((el) => {
 					el.value = "";

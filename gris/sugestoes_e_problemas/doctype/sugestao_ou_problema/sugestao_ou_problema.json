@@ -18,11 +18,16 @@
   "solicitante",
   "solicitante_nome",
   "data_submissao",
+  "avisar_por_whatsapp",
+  "telefone_aviso",
   "desenvolvimento_section",
   "responsavel",
   "tarefa",
   "data_inicio_desenvolvimento",
-  "data_conclusao"
+  "data_conclusao",
+  "notificacoes_section",
+  "aviso_grupo_enviado_em",
+  "aviso_conclusao_enviado_em"
  ],
  "fields": [
   {
@@ -106,6 +111,20 @@
    "read_only": 1
   },
   {
+   "default": "1",
+   "description": "Escolhido por quem abriu, no formulario do portal. Zerado automaticamente quando nao ha telefone para avisar.",
+   "fieldname": "avisar_por_whatsapp",
+   "fieldtype": "Check",
+   "label": "Avisar por WhatsApp na conclusao"
+  },
+  {
+   "description": "Telefone do solicitante no momento da abertura. Serve de auditoria e de fallback quando a resolucao no envio vem vazia.",
+   "fieldname": "telefone_aviso",
+   "fieldtype": "Data",
+   "label": "Telefone para o aviso",
+   "read_only": 1
+  },
+  {
    "fieldname": "desenvolvimento_section",
    "fieldtype": "Section Break",
    "label": "Desenvolvimento"
@@ -137,6 +156,25 @@
    "fieldname": "data_conclusao",
    "fieldtype": "Datetime",
    "label": "Data de conclusao",
+   "read_only": 1
+  },
+  {
+   "fieldname": "notificacoes_section",
+   "fieldtype": "Section Break",
+   "label": "Avisos enviados"
+  },
+  {
+   "description": "Momento em que o aviso de nova solicitacao foi enfileirado para o grupo de desenvolvimento. Preenchido, impede reenvio.",
+   "fieldname": "aviso_grupo_enviado_em",
+   "fieldtype": "Datetime",
+   "label": "Aviso ao grupo enviado em",
+   "read_only": 1
+  },
+  {
+   "description": "Momento em que o aviso de conclusao foi enfileirado para o solicitante. Preenchido, impede reenvio mesmo se o card for reaberto e concluido de novo.",
+   "fieldname": "aviso_conclusao_enviado_em",
+   "fieldtype": "Datetime",
+   "label": "Aviso de conclusao enviado em",
    "read_only": 1
   }
  ],

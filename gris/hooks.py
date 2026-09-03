@@ -203,8 +203,12 @@ doc_events = {
 	# se protegem por `frappe.flags.gris_sync_sugestao_tarefa` — ver
 	# `board_sync_sugestoes`.
 	"Sugestao ou Problema": {
+		"after_insert": [
+			"gris.api.sugestoes.notificacoes.on_sugestao_criada",
+		],
 		"on_update": [
 			"gris.gestao_de_tarefas.board_sync_sugestoes.sincronizar_tarefa_da_sugestao",
+			"gris.api.sugestoes.notificacoes.on_sugestao_atualizada",
 		],
 	},
 	"Gestao de Tarefas": {

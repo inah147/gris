@@ -1,5 +1,5 @@
 {% extends "templates/web_sidebar_base.html" %}
-{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, alert %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, alert, input %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 {% from "public/design_system/components/composed/simple_icons.html.jinja" import simple_icon %}
 {% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
@@ -19,6 +19,19 @@
 		<p class="text-muted-foreground">Acompanhe o fluxo de novos associados.</p>
 	</div>
 	<div class="page-header-actions">
+		<div class="field kanban-filtro">
+			<label class="label" for="filtroNome">Filtrar por nome</label>
+			{{ input(
+				type="search",
+				name="filtro_nome",
+				attrs={
+					"id": "filtroNome",
+					"class": "kanban-filtro__busca",
+					"placeholder": "Nome ou parte do nome…",
+					"autocomplete": "off"
+				}
+			) }}
+		</div>
 		<div class="field kanban-filtro">
 			<label class="label" for="filtroRamo-trigger">Filtrar por ramo</label>
 			{{ select(
@@ -51,6 +64,15 @@
 		<div class="dialog-people__info">
 			<span class="dialog-field__label">Responsável</span>
 			<span class="dialog-field__value" id="{{ responsavel_id }}"></span>
+		</div>
+	</div>
+	<div class="dialog-people__row">
+		<button type="button" class="btn-icon-outline" onclick="abrirObservacoesDoCardAtual()" title="Ver observações" aria-label="Ver observações">
+			{{ lucide_icon("message-square", size="sm") }}
+		</button>
+		<div class="dialog-people__info">
+			<span class="dialog-field__label">Observações</span>
+			<span class="dialog-field__value js-dialog-observacoes-total">Nenhuma</span>
 		</div>
 	</div>
 </div>
@@ -99,6 +121,7 @@
 				data-whatsapp-contatos="{{ card.whatsapp_contatos_json|e }}"
 				data-whatsapp-disponivel="{{ 1 if card.whatsapp_disponivel else 0 }}"
 				data-whatsapp-motivo="{{ card.whatsapp_motivo_indisponivel or '' }}"
+				data-observacoes="{{ card.observacoes_count }}"
 			>
 				<div class="kanban-card__top">
 					{% if card.ramo %}
@@ -110,6 +133,16 @@
 					{% if card.visita_confirmada %}
 						{{ badge("Visita Confirmada", variant="success") }}
 					{% endif %}
+					{# Só aparece quando há observação: o balão vazio seria ruído em todo card. #}
+					<button
+						type="button"
+						class="kanban-card__observacoes js-observacoes-badge {{ '' if card.observacoes_count else 'hidden' }}"
+						title="Ver observações"
+						aria-label="Ver observações deste associado"
+					>
+						{{ lucide_icon("message-square", size="sm") }}
+						<span class="js-observacoes-total">{{ card.observacoes_count }}</span>
+					</button>
 				</div>
 				<div class="kanban-card__main">
 					<h4 class="kanban-card__title">{{ card.nome_completo }}</h4>
@@ -194,9 +227,9 @@
 ) %}
 	{{ people_header("ci_associado_nome", "ci_responsavel_nome") }}
 	<div class="dialog-fields-row">
-		<div class="field">
-			<label class="label" for="ci_ramo-trigger">Ramo</label>
-			{{ select(id="ci_ramo", name="ramo", items=ramo_items, placeholder="Selecione…") }}
+		<div class="dialog-field">
+			<span class="dialog-field__label">Ramo</span>
+			<span class="dialog-field__value" id="ci_ramo"></span>
 		</div>
 		<div class="field">
 			<label class="label" for="ci_responsavel_acompanhamento-trigger">Responsável pelo Acompanhamento</label>
@@ -295,9 +328,9 @@
 		</div>
 	</div>
 	<div class="dialog-fields-row">
-		<div class="field">
-			<label class="label" for="va_ramo-trigger">Ramo</label>
-			{{ select(id="va_ramo", name="ramo", items=ramo_items, placeholder="Selecione…") }}
+		<div class="dialog-field">
+			<span class="dialog-field__label">Ramo</span>
+			<span class="dialog-field__value" id="va_ramo"></span>
 		</div>
 		<div class="field">
 			<label class="label" for="va_responsavel_recepcao-trigger">Responsável pela Recepção</label>
@@ -370,6 +403,28 @@
 			Registro Criado no Paxtu
 		</button>
 	</div>
+{% endcall %}
+
+{# ----------- Modal Observações ----------- #}
+{% call dialog(
+	id="modalObservacoes",
+	title="Observações",
+	footer='<button type="button" class="btn-ghost" onclick="fecharObservacoes()">Fechar</button>',
+	close_button=false,
+	close_on_overlay_click=false
+) %}
+	<p class="dialog-field__value mb-4" id="obs_associado_nome"></p>
+
+	<form id="obs_form" class="comment-form hidden">
+		<label class="label" for="obs_texto">Nova observação</label>
+		<textarea id="obs_texto" class="textarea" rows="3" placeholder="Escreva uma observação…"></textarea>
+		<div class="comment-form__actions">
+			<button type="submit" id="obs_submit" class="btn-sm-primary">Adicionar</button>
+			<span id="obs_erro" class="text-destructive text-sm" hidden></span>
+		</div>
+	</form>
+
+	<div id="obs_lista" class="comment-list"></div>
 {% endcall %}
 
 {# ----------- Modal Acompanhamento ----------- #}

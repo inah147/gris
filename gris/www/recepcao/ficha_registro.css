@@ -56,6 +56,15 @@
   gap: 1rem;
 }
 
+/* Os campos da ficha são `readonly`, e não `disabled`, de propósito: input desabilitado
+   não recebe foco nem cursor de texto, o que impede selecionar só um pedaço do valor — e a
+   recepção precisa copiar pedaços (o telefone sem o DDI, que o Paxtu não usa). O Basecoat
+   só estiliza `input:disabled`, então a aparência de "campo travado" é reposta aqui. */
+.input[readonly] {
+  background-color: var(--color-muted);
+  cursor: text;
+}
+
 @media (max-width: 640px) {
   .ficha-fields-grid {
     grid-template-columns: 1fr;
@@ -183,9 +192,11 @@
   background: var(--card);
 }
 
+/* O 1º responsável se distingue só pelo contorno: o fundo tingido de primary competia
+   com os campos brancos por cima dele e deixava a leitura pesada. */
 .responsavel-card--primary {
   border-color: var(--primary);
-  background: color-mix(in oklab, var(--primary) 5%, var(--card));
+  background: transparent;
 }
 
 .responsavel-card__header {

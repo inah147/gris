@@ -47,16 +47,19 @@ def update_novo_associado(
 	name: str,
 	responsavel_recepcao: str | None = None,
 	status: str | None = None,
-	ramo: str | None = None,
 	motivo_desistencia: str | None = None,
 ):
+	"""Campos do Novo Associado que a recepção edita à mão.
+
+	``ramo`` não entra aqui de propósito: ele é derivado da idade em ``before_insert`` e
+	recalculado todo dia por ``atualizar_ramos_por_idade``, então qualquer escrita manual
+	era desfeita no ciclo seguinte. Para corrigir o ramo, corrija a data de nascimento.
+	"""
 	doc = frappe.get_doc("Novo Associado", name)
 	if responsavel_recepcao:
 		doc.responsavel_recepcao = responsavel_recepcao
 	if status:
 		doc.status = status
-	if ramo:
-		doc.ramo = ramo
 	if motivo_desistencia:
 		doc.motivo_desistencia = motivo_desistencia
 	doc.save()
@@ -328,6 +331,62 @@ def registrar_recepcao_realizada(novo_associado_name: str):
 	return {"status": "success"}
 
 
+# Teto da listagem de observações. O mesmo valor da ficha (ficha_registro.py): a caixa
+# é de acompanhamento, não de histórico completo.
+LIMITE_DE_COMENTARIOS = 50
+
+
+def _texto_do_comentario(content: str | None) -> str:
+	"""Conteúdo do Comment em texto puro, preservando as quebras de linha do editor."""
+	return strip_html((content or "").replace("</p>", "\n").replace("<br>", "\n"))
+
+
+@frappe.whitelist()
+def listar_comentarios(novo_associado_name: str):
+	"""Observações internas de um Novo Associado, da mais recente para a mais antiga.
+
+	Mesmo formato devolvido por ``adicionar_comentario``/``editar_comentario``, para que a
+	visão geral renderize item carregado e item recém-criado com um único caminho.
+	"""
+	if not novo_associado_name:
+		frappe.throw(_("Informe o registro do associado."))
+
+	if not frappe.has_permission("Novo Associado", "read", novo_associado_name):
+		frappe.throw(_("Sem permissão para acessar este registro."), frappe.PermissionError)
+
+	filtros = {
+		"reference_doctype": "Novo Associado",
+		"reference_name": novo_associado_name,
+		"comment_type": "Comment",
+	}
+
+	comentarios = frappe.get_all(
+		"Comment",
+		filters=filtros,
+		fields=["name", "content", "owner", "creation"],
+		order_by="creation desc",
+		limit=LIMITE_DE_COMENTARIOS,
+	)
+
+	return {
+		"pode_comentar": bool(frappe.has_permission("Novo Associado", "write", novo_associado_name)),
+		"usuario_atual": frappe.session.user,
+		# `total` é a contagem real: a lista vem truncada e o balão do card mostra o total.
+		"total": frappe.db.count("Comment", filtros),
+		"comentarios": [
+			{
+				"name": c.name,
+				"content": c.content,
+				"content_text": _texto_do_comentario(c.content),
+				"owner": c.owner,
+				"owner_fullname": get_fullname(c.owner),
+				"creation": format_datetime(c.creation, "dd/MM/yyyy HH:mm"),
+			}
+			for c in comentarios
+		],
+	}
+
+
 @frappe.whitelist()
 def adicionar_comentario(novo_associado_name: str, content: str):
 	"""Cria um Comment vinculado ao Novo Associado para uso interno da recepção."""
@@ -357,7 +416,7 @@ def adicionar_comentario(novo_associado_name: str, content: str):
 	)
 	comment.insert(ignore_permissions=True)
 
-	clean_text = strip_html((content or "").replace("</p>", "\n").replace("<br>", "\n"))
+	clean_text = _texto_do_comentario(content)
 
 	return {
 		"name": comment.name,
@@ -399,7 +458,7 @@ def editar_comentario(comment_name: str, content: str):
 	comment.content = content
 	comment.save(ignore_permissions=True)
 
-	clean_text = strip_html((content or "").replace("</p>", "\n").replace("<br>", "\n"))
+	clean_text = _texto_do_comentario(content)
 
 	return {
 		"name": comment.name,

@@ -92,47 +92,47 @@
       <div class="ficha-fields-grid">
         <div class="field">
           <label class="label">Data de Nascimento</label>
-          <input type="text" class="input" value="{{ frappe.format_date(doc.data_de_nascimento, 'dd/MM/yyyy') if doc.data_de_nascimento else '-' }}" disabled>
+          <input type="text" class="input" value="{{ frappe.format_date(doc.data_de_nascimento, 'dd/MM/yyyy') if doc.data_de_nascimento else '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">Sexo</label>
-          <input type="text" class="input" value="{{ doc.sexo or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.sexo or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">Etnia</label>
-          <input type="text" class="input" value="{{ doc.etnia or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.etnia or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">CPF</label>
-          <input type="text" class="input" value="{{ doc.cpf or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.cpf or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">RG</label>
-          <input type="text" class="input" value="{{ doc.rg or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.rg or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">Órgão Expedidor</label>
-          <input type="text" class="input" value="{{ doc.orgao_expedidor or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.orgao_expedidor or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">Estado Civil</label>
-          <input type="text" class="input" value="{{ doc.estado_civil or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.estado_civil or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">Religião</label>
-          <input type="text" class="input" value="{{ doc.religiao or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.religiao or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">Nacionalidade</label>
-          <input type="text" class="input" value="{{ 'Estrangeiro' if doc.estrangeiro else 'Brasileiro' }}" disabled>
+          <input type="text" class="input" value="{{ 'Estrangeiro' if doc.estrangeiro else 'Brasileiro' }}" readonly>
         </div>
         <div class="field">
           <label class="label">Cidade de Nascimento</label>
-          <input type="text" class="input" value="{{ doc.cidade_de_nascimento or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.cidade_de_nascimento or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">UF de Nascimento</label>
-          <input type="text" class="input" value="{{ doc.uf_de_nascimento or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.uf_de_nascimento or '-' }}" readonly>
         </div>
       </div>
     {% endcall %}
@@ -142,15 +142,15 @@
       <div class="ficha-fields-grid">
         <div class="field">
           <label class="label">Escolaridade</label>
-          <input type="text" class="input" value="{{ doc.escolaridade or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.escolaridade or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">Profissão</label>
-          <input type="text" class="input" value="{{ doc.profissao or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.profissao or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">Local de Trabalho</label>
-          <input type="text" class="input" value="{{ doc.local_de_trabalho or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.local_de_trabalho or '-' }}" readonly>
         </div>
       </div>
     {% endcall %}
@@ -160,43 +160,43 @@
       <div class="ficha-fields-grid">
         <div class="field">
           <label class="label">Endereço</label>
-          <input type="text" class="input" value="{{ doc.endereco or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.endereco or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">Número</label>
-          <input type="text" class="input" value="{{ doc.numero or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.numero or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">Complemento</label>
-          <input type="text" class="input" value="{{ doc.complemento or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.complemento or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">Bairro</label>
-          <input type="text" class="input" value="{{ doc.bairro or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.bairro or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">Cidade</label>
-          <input type="text" class="input" value="{{ doc.cidade or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.cidade or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">Estado</label>
-          <input type="text" class="input" value="{{ doc.estado or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.estado or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">CEP</label>
-          <input type="text" class="input" value="{{ doc.cep or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.cep or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">Email</label>
-          <input type="text" class="input" value="{{ doc.email or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.email or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">Celular</label>
-          <input type="text" class="input" value="{{ doc.celular or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.celular or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">Tel. Secundário</label>
-          <input type="text" class="input" value="{{ doc.telefone_secundario or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.telefone_secundario or '-' }}" readonly>
         </div>
       </div>
     {% endcall %}
@@ -206,11 +206,11 @@
       <div class="ficha-fields-grid">
         <div class="field">
           <label class="label">Email de Cobrança</label>
-          <input type="text" class="input" value="{{ doc.email_cobranca or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.email_cobranca or '-' }}" readonly>
         </div>
         <div class="field">
           <label class="label">Telefone de Cobrança</label>
-          <input type="text" class="input" value="{{ doc.telefone_cobranca or '-' }}" disabled>
+          <input type="text" class="input" value="{{ doc.telefone_cobranca or '-' }}" readonly>
         </div>
       </div>
     {% endcall %}
@@ -236,27 +236,27 @@
             <div class="ficha-fields-grid mb-4">
               <div class="field">
                 <label class="label">CPF</label>
-                <input type="text" class="input" value="{{ item.doc.cpf or '-' }}" disabled>
+                <input type="text" class="input" value="{{ item.doc.cpf or '-' }}" readonly>
               </div>
               <div class="field">
                 <label class="label">RG</label>
-                <input type="text" class="input" value="{{ item.doc.rg or '-' }}" disabled>
+                <input type="text" class="input" value="{{ item.doc.rg or '-' }}" readonly>
               </div>
               <div class="field">
                 <label class="label">Órgão Expedidor</label>
-                <input type="text" class="input" value="{{ item.doc.orgao_expedidor or '-' }}" disabled>
+                <input type="text" class="input" value="{{ item.doc.orgao_expedidor or '-' }}" readonly>
               </div>
               <div class="field">
                 <label class="label">Data de Nascimento</label>
-                <input type="text" class="input" value="{{ frappe.format_date(item.doc.data_de_nascimento, 'dd/MM/yyyy') if item.doc.data_de_nascimento else '-' }}" disabled>
+                <input type="text" class="input" value="{{ frappe.format_date(item.doc.data_de_nascimento, 'dd/MM/yyyy') if item.doc.data_de_nascimento else '-' }}" readonly>
               </div>
               <div class="field">
                 <label class="label">Sexo</label>
-                <input type="text" class="input" value="{{ item.doc.sexo or '-' }}" disabled>
+                <input type="text" class="input" value="{{ item.doc.sexo or '-' }}" readonly>
               </div>
               <div class="field">
                 <label class="label">Estado Civil</label>
-                <input type="text" class="input" value="{{ item.doc.estado_civil or '-' }}" disabled>
+                <input type="text" class="input" value="{{ item.doc.estado_civil or '-' }}" readonly>
               </div>
             </div>
 
@@ -264,15 +264,15 @@
             <div class="ficha-fields-grid mb-4">
               <div class="field">
                 <label class="label">Escolaridade</label>
-                <input type="text" class="input" value="{{ item.doc.escolaridade or '-' }}" disabled>
+                <input type="text" class="input" value="{{ item.doc.escolaridade or '-' }}" readonly>
               </div>
               <div class="field">
                 <label class="label">Profissão</label>
-                <input type="text" class="input" value="{{ item.doc.get('profissão') or '-' }}" disabled>
+                <input type="text" class="input" value="{{ item.doc.get('profissão') or '-' }}" readonly>
               </div>
               <div class="field">
                 <label class="label">Local de Trabalho</label>
-                <input type="text" class="input" value="{{ item.doc.local_de_trabalho or '-' }}" disabled>
+                <input type="text" class="input" value="{{ item.doc.local_de_trabalho or '-' }}" readonly>
               </div>
             </div>
 
@@ -280,43 +280,43 @@
             <div class="ficha-fields-grid mb-4">
               <div class="field">
                 <label class="label">Endereço</label>
-                <input type="text" class="input" value="{{ item.doc.get('endereço') or '-' }}" disabled>
+                <input type="text" class="input" value="{{ item.doc.get('endereço') or '-' }}" readonly>
               </div>
               <div class="field">
                 <label class="label">Número</label>
-                <input type="text" class="input" value="{{ item.doc.get('número') or '-' }}" disabled>
+                <input type="text" class="input" value="{{ item.doc.get('número') or '-' }}" readonly>
               </div>
               <div class="field">
                 <label class="label">Complemento</label>
-                <input type="text" class="input" value="{{ item.doc.complemento or '-' }}" disabled>
+                <input type="text" class="input" value="{{ item.doc.complemento or '-' }}" readonly>
               </div>
               <div class="field">
                 <label class="label">Bairro</label>
-                <input type="text" class="input" value="{{ item.doc.bairro or '-' }}" disabled>
+                <input type="text" class="input" value="{{ item.doc.bairro or '-' }}" readonly>
               </div>
               <div class="field">
                 <label class="label">Cidade</label>
-                <input type="text" class="input" value="{{ item.doc.cidade or '-' }}" disabled>
+                <input type="text" class="input" value="{{ item.doc.cidade or '-' }}" readonly>
               </div>
               <div class="field">
                 <label class="label">Estado</label>
-                <input type="text" class="input" value="{{ item.doc.estado or '-' }}" disabled>
+                <input type="text" class="input" value="{{ item.doc.estado or '-' }}" readonly>
               </div>
               <div class="field">
                 <label class="label">CEP</label>
-                <input type="text" class="input" value="{{ item.doc.cep or '-' }}" disabled>
+                <input type="text" class="input" value="{{ item.doc.cep or '-' }}" readonly>
               </div>
               <div class="field">
                 <label class="label">Email</label>
-                <input type="text" class="input" value="{{ item.doc.email or '-' }}" disabled>
+                <input type="text" class="input" value="{{ item.doc.email or '-' }}" readonly>
               </div>
               <div class="field">
                 <label class="label">Celular</label>
-                <input type="text" class="input" value="{{ item.doc.celular or '-' }}" disabled>
+                <input type="text" class="input" value="{{ item.doc.celular or '-' }}" readonly>
               </div>
               <div class="field">
                 <label class="label">Tel. Secundário</label>
-                <input type="text" class="input" value="{{ item.doc.get('telefone_secundario') or '-' }}" disabled>
+                <input type="text" class="input" value="{{ item.doc.get('telefone_secundario') or '-' }}" readonly>
               </div>
             </div>
 
@@ -324,11 +324,11 @@
             <div class="ficha-fields-grid">
               <div class="field">
                 <label class="label">Guarda Unilateral?</label>
-                <input type="text" class="input" value="{{ 'Sim' if guarda_unilateral else 'Não' }}" disabled>
+                <input type="text" class="input" value="{{ 'Sim' if guarda_unilateral else 'Não' }}" readonly>
               </div>
               <div class="field">
                 <label class="label">Guardião Legal?</label>
-                <input type="text" class="input" value="{{ 'Sim' if item.vinculo.é_guardiao_legal else 'Não' }}" disabled>
+                <input type="text" class="input" value="{{ 'Sim' if item.vinculo.é_guardiao_legal else 'Não' }}" readonly>
               </div>
             </div>
 

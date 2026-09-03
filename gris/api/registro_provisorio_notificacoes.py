@@ -18,7 +18,11 @@ from __future__ import annotations
 import frappe
 from frappe.utils import add_days, date_diff, format_date, get_url, getdate, today
 
-from gris.api.recepcao_mensagens import _buscar_contatos_responsaveis, _extrair_primeiro_nome
+from gris.api.recepcao_mensagens import (
+	_buscar_contatos_responsaveis,
+	_buscar_responsavel_administrativo,
+	_extrair_primeiro_nome,
+)
 from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 from gris.utils.whatsapp import enviar_texto
 
@@ -36,20 +40,6 @@ def _dias_para_aviso() -> int:
 		return DIAS_PADRAO_AVISO
 
 	return dias if dias > 0 else DIAS_PADRAO_AVISO
-
-
-def _buscar_responsavel_administrativo() -> frappe._dict | None:
-	"""Associado configurado como responsável administrativo em Configurações de Recepção."""
-	associado_name = frappe.db.get_single_value(SETTINGS_DOCTYPE, "responsavel_administrativo")
-	if not associado_name:
-		return None
-
-	return frappe.db.get_value(
-		"Associado",
-		associado_name,
-		["name", "nome_completo", "telefone"],
-		as_dict=True,
-	)
 
 
 def _montar_mensagem_aviso(

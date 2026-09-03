@@ -264,10 +264,12 @@
    "options": "Novo Contato\nConversa Inicial\nVisita Agendada\nAguardar Dados\nFazer Registro\nAcompanhamento\nFila de espera\nConclu\u00eddo"
   },
   {
+   "description": "Derivado da idade e recalculado diariamente. Para corrigir, ajuste a data de nascimento.",
    "fieldname": "ramo",
    "fieldtype": "Select",
    "label": "Ramo",
-   "options": "Filhotes\nLobinho\nEscoteiro\nS\u00eanior\nPioneiro"
+   "options": "\nFilhotes\nLobinho\nEscoteiro\nS\u00eanior\nPioneiro",
+   "read_only": 1
   },
   {
    "fieldname": "tipo_de_registro",

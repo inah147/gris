@@ -7,6 +7,8 @@ Todos os cenários rodam sem banco: as consultas e o transporte são substituíd
 e ``today`` é congelado, de modo que a aritmética da cadência seja exata.
 """
 
+from unittest.mock import patch
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
@@ -539,6 +541,120 @@ class TestMensagens(FrappeTestCase):
 		self.assertEqual(recepcao_mensagens._mencao("(11) 98888-7777"), "@5511988887777")
 		self.assertEqual(recepcao_mensagens._mencao("+55 11 98888-7777"), "@5511988887777")
 		self.assertEqual(recepcao_mensagens._mencao(""), "")
+
+
+class TestLinksNasMensagens(FrappeTestCase):
+	"""Quem recebe a cobrança precisa do link junto: pedir sem dizer onde não resolve."""
+
+	def test_lembrete_de_dados_leva_o_link_do_gris(self):
+		mensagem = recepcao_mensagens._montar_lembrete_dados(
+			primeiro_nome_responsavel="Maria",
+			primeiro_nome_jovem="Joãozinho",
+			sexo_jovem="Masculino",
+			recepcionista=None,
+		)
+
+		self.assertIn(recepcao_mensagens.CAMINHO_GRIS_REGISTRO, mensagem)
+
+	def test_ficha_medica_leva_o_link_do_paxtu(self):
+		with patch.object(recepcao_mensagens, "_buscar_responsavel_administrativo", return_value=None):
+			mensagem = recepcao_mensagens._montar_lembrete_ficha_medica(
+				primeiro_nome_responsavel="Maria",
+				primeiro_nome_jovem="Joãozinho",
+				sexo_jovem="Masculino",
+			)
+
+		self.assertIn(recepcao_mensagens.PAXTU_BASE, mensagem)
+
+	def test_registro_criado_leva_o_paxtu_do_dia_a_dia(self):
+		with patch.object(recepcao_mensagens, "_buscar_responsavel_administrativo", return_value=None):
+			mensagem = recepcao_mensagens._montar_registro_criado(
+				primeiro_nome_responsavel="Maria",
+				primeiro_nome_jovem="Joãozinho",
+				sexo_jovem="Masculino",
+				sexo_responsavel="Feminino",
+				tipo_registro="Provisório",
+				numero_registro="123456-7",
+			)
+
+		self.assertIn(recepcao_mensagens.PAXTU_PRIMEIRO_ACESSO, mensagem)
+		self.assertIn(f"o Paxtu fica em {recepcao_mensagens.PAXTU_BASE}", mensagem)
+
+
+class TestContatoDoAdministrativo(FrappeTestCase):
+	"""Sem saber o número de registro, o responsável trava — a mensagem tem que dizer a quem perguntar."""
+
+	ADMINISTRATIVO = frappe._dict(
+		{
+			"name": "A-1",
+			"nome_completo": "Ana Administrativo",
+			"sexo": "Feminino",
+			"telefone": "+5511977776666",
+		}
+	)
+
+	def _ficha_medica(self, administrativo):
+		with patch.object(
+			recepcao_mensagens, "_buscar_responsavel_administrativo", return_value=administrativo
+		):
+			return recepcao_mensagens._montar_lembrete_ficha_medica(
+				primeiro_nome_responsavel="Maria",
+				primeiro_nome_jovem="Joãozinho",
+				sexo_jovem="Masculino",
+			)
+
+	def _id_escoteiros(self, administrativo):
+		with patch.object(
+			recepcao_mensagens, "_buscar_responsavel_administrativo", return_value=administrativo
+		):
+			return recepcao_mensagens._montar_lembrete_id_escoteiros("Maria")
+
+	def _registro_criado(self, administrativo):
+		with patch.object(
+			recepcao_mensagens, "_buscar_responsavel_administrativo", return_value=administrativo
+		):
+			return recepcao_mensagens._montar_registro_criado(
+				primeiro_nome_responsavel="Maria",
+				primeiro_nome_jovem="Joãozinho",
+				sexo_jovem="Masculino",
+				sexo_responsavel="Feminino",
+				tipo_registro="Provisório",
+				numero_registro="123456-7",
+			)
+
+	def test_as_tres_mensagens_citam_o_administrativo(self):
+		for rotulo, montar in (
+			("ficha médica", self._ficha_medica),
+			("id@escoteiros", self._id_escoteiros),
+			("registro criado", self._registro_criado),
+		):
+			with self.subTest(mensagem=rotulo):
+				mensagem = montar(self.ADMINISTRATIVO)
+
+				# "Fale a Ana" (Feminino), não "Fale ao Ana".
+				self.assertIn("Fale a Ana Administrativo", mensagem)
+				self.assertIn("+5511977776666", mensagem)
+
+	def test_sem_administrativo_configurado_o_paragrafo_some(self):
+		for rotulo, montar in (
+			("ficha médica", self._ficha_medica),
+			("id@escoteiros", self._id_escoteiros),
+		):
+			with self.subTest(mensagem=rotulo):
+				mensagem = montar(None)
+
+				self.assertNotIn("do administrativo", mensagem)
+				self.assertIn("Grande abraço!", mensagem)
+
+	def test_administrativo_sem_telefone_nao_entra(self):
+		sem_telefone = frappe._dict(dict(self.ADMINISTRATIVO, telefone=""))
+
+		self.assertNotIn("do administrativo", self._ficha_medica(sem_telefone))
+
+	def test_registro_criado_mantem_a_saida_antiga_sem_administrativo(self):
+		mensagem = self._registro_criado(None)
+
+		self.assertIn("perguntar para algum escotista da seção", mensagem)
 
 
 class TestConcordanciaDeGenero(FrappeTestCase):

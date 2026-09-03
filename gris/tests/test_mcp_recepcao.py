@@ -147,31 +147,32 @@ class TestAtualizarEtapa(TestCase):
 		self.assertTrue(resultado["simulacao"])
 		self.assertIn("Acompanhamento", resultado["efeito_colateral"])
 
-	def test_paxtu_usa_o_servico_que_move_o_status(self):
+	def test_simulacao_anuncia_o_efeito_de_cada_etapa_de_virada(self):
+		from gris.www.recepcao import visao_geral
+
+		for etapa, status in visao_geral.STATUS_POR_ETAPA.items():
+			with self.subTest(etapa=etapa):
+				with (
+					patch.object(recepcao.frappe.db, "exists", return_value=True),
+					patch.object(recepcao.frappe.db, "get_value", return_value=0),
+				):
+					resultado = recepcao.atualizar_etapa_recepcao("NA-1", etapa, True, simular=True)
+
+				self.assertIn(status, resultado["efeito_colateral"])
+
+	def test_todas_as_etapas_passam_por_update_step_status(self):
 		from gris.www.recepcao import visao_geral
 
 		with (
 			patch.object(recepcao.frappe.db, "exists", return_value=True),
 			patch.object(recepcao.frappe.db, "get_value", return_value=0),
-			patch.object(visao_geral, "confirmar_registro_paxtu") as paxtu,
 			patch.object(visao_geral, "update_step_status") as generico,
 		):
 			recepcao.atualizar_etapa_recepcao("NA-1", "registro_criado_no_paxtu", True)
 
-		paxtu.assert_called_once_with("NA-1")
-		generico.assert_not_called()
+		generico.assert_called_once_with("NA-1", "registro_criado_no_paxtu", 1)
 
-	def test_primeira_visita_usa_registrar_recepcao_realizada(self):
-		with (
-			patch.object(recepcao.frappe.db, "exists", return_value=True),
-			patch.object(recepcao.frappe.db, "get_value", return_value=0),
-			patch.object(recepcao.servico, "registrar_recepcao_realizada") as servico,
-		):
-			recepcao.atualizar_etapa_recepcao("NA-1", "primeira_visita_realizada", True)
-
-		servico.assert_called_once_with("NA-1")
-
-	def test_demais_etapas_usam_update_step_status(self):
+	def test_demais_etapas_nao_anunciam_efeito_colateral(self):
 		from gris.www.recepcao import visao_geral
 
 		with (
@@ -179,9 +180,21 @@ class TestAtualizarEtapa(TestCase):
 			patch.object(recepcao.frappe.db, "get_value", return_value=0),
 			patch.object(visao_geral, "update_step_status") as generico,
 		):
-			recepcao.atualizar_etapa_recepcao("NA-1", "ficha_medica_preenchida", True)
+			resultado = recepcao.atualizar_etapa_recepcao("NA-1", "ficha_medica_preenchida", True)
 
 		generico.assert_called_once_with("NA-1", "ficha_medica_preenchida", 1)
+		self.assertIsNone(resultado["efeito_colateral"])
+
+	def test_desmarcar_nao_anuncia_mudanca_de_status(self):
+		with (
+			patch.object(recepcao.frappe.db, "exists", return_value=True),
+			patch.object(recepcao.frappe.db, "get_value", return_value=1),
+		):
+			resultado = recepcao.atualizar_etapa_recepcao(
+				"NA-1", "registro_criado_no_paxtu", False, simular=True
+			)
+
+		self.assertIsNone(resultado["efeito_colateral"])
 
 
 class TestAtualizarNovoAssociado(TestCase):

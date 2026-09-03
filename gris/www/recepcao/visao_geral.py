@@ -22,6 +22,21 @@ RAMOS = ["Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro"]
 # Valor sentinela do filtro de ramo para cards ainda sem ramo definido
 RAMO_FILTRO_SEM_RAMO = "__sem_ramo__"
 
+# Etapas que também movem a coluna do funil ao serem concluídas.
+#
+# A regra existia espalhada pelos pontos de entrada — ``confirmar_registro_paxtu`` aqui,
+# ``gris.api.recepcao.registrar_recepcao_realizada`` e ``gris.www.responsavel.registro`` —
+# e a bolinha da timeline não passava por nenhum deles: marcava a etapa e deixava o card
+# parado na coluna antiga. Centralizar em ``update_step_status``, por onde todos os
+# caminhos passam, é o que mantém etapa e status em sincronia.
+#
+# Desmarcar não reverte o status: voltar de coluna é decisão explícita da recepção.
+STATUS_POR_ETAPA = {
+	"primeira_visita_realizada": "Aguardar Dados",
+	"dados_para_registro_enviados": "Fazer Registro",
+	"registro_criado_no_paxtu": "Acompanhamento",
+}
+
 
 def _normalize_whatsapp_phone(phone):
 	if not phone:
@@ -172,6 +187,24 @@ def get_context(context):
 
 			whatsapp_contatos_map[associado_name] = contatos
 
+	# Observações (Comment) por associado, para o balão do card. Uma consulta agregada:
+	# o conteúdo só é carregado quando alguém abre o dialog.
+	observacoes_map = {}
+	if names:
+		observacoes_map = {
+			linha.reference_name: linha.total
+			for linha in frappe.get_all(
+				"Comment",
+				filters={
+					"reference_doctype": "Novo Associado",
+					"reference_name": ["in", names],
+					"comment_type": "Comment",
+				},
+				fields=["reference_name", "count(name) as total"],
+				group_by="reference_name",
+			)
+		}
+
 	# Fetch User Names
 	user_names_map = {}
 	user_ids = set(n.responsavel_recepcao for n in novos_associados if n.responsavel_recepcao)
@@ -244,6 +277,8 @@ def get_context(context):
 			# Idade recalculada a cada carregamento da página
 			associado.idade = formatar_idade(associado.data_de_nascimento)
 
+			associado.observacoes_count = observacoes_map.get(associado.name, 0)
+
 			# Set ramo class
 			associado.ramo_class = ramo_map.get(associado.ramo, "default")
 			associado.ramo_variant = ramo_variant_map.get(associado.ramo, "secondary")
@@ -271,8 +306,6 @@ def get_context(context):
 	context.recepcao_user_items = [
 		{"label": u.full_name or u.name, "value": u.name} for u in context.recepcao_users
 	]
-	context.ramo_items = [{"label": r, "value": r} for r in RAMOS]
-
 	# Items do filtro de ramo do cabeçalho (aplicado no cliente sobre os cards
 	# já renderizados). A contagem ajuda a dimensionar o volume de cada ramo.
 	contagem_por_ramo = dict.fromkeys(RAMOS, 0)
@@ -297,14 +330,12 @@ def get_context(context):
 
 @frappe.whitelist()
 def confirmar_registro_paxtu(novo_associado_name: str):
-	if not novo_associado_name:
-		frappe.throw(_("Novo Associado não especificado."))
+	"""Botão "Registro Criado no Paxtu": atalho para concluir a etapa homônima.
 
-	frappe.db.set_value(
-		"Novo Associado",
-		novo_associado_name,
-		{"registro_criado_no_paxtu": 1, "status": "Acompanhamento"},
-	)
+	O efeito (marcar a etapa e mover para "Acompanhamento") vem de ``STATUS_POR_ETAPA``,
+	então o botão e a bolinha da timeline fazem exatamente a mesma coisa.
+	"""
+	update_step_status(novo_associado_name, "registro_criado_no_paxtu", 1)
 
 	return "Registro confirmado com sucesso."
 
@@ -320,8 +351,12 @@ def update_step_status(novo_associado_name: str, field: str, value: str | int):
 	if field not in allowed_fields:
 		frappe.throw(_("Campo inválido."))
 
+	concluida = bool(int(value))
+
 	doc = frappe.get_doc("Novo Associado", novo_associado_name)
-	doc.set(field, int(value))
+	doc.set(field, 1 if concluida else 0)
+	if concluida and field in STATUS_POR_ETAPA:
+		doc.status = STATUS_POR_ETAPA[field]
 
 	doc.save()
 

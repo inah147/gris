@@ -5,8 +5,12 @@ Mesma regra usada pelo kanban de /recepcao/visao_geral e pelas ferramentas MCP.
 
 from datetime import date
 from unittest import TestCase
+from unittest.mock import patch
+
+import frappe
 
 from gris.api import recepcao_funil
+from gris.www.recepcao import visao_geral
 
 CONFIG = {
 	"dados_para_registro_enviados": 5,
@@ -104,3 +108,69 @@ class TestResumoEtapas(TestCase):
 		self.assertEqual(resumo["pendentes"], 0)
 		self.assertIsNone(resumo["proxima_etapa"])
 		self.assertEqual(resumo["atrasadas"], 0)
+
+
+class _DocFalso:
+	"""Novo Associado suficiente para observar o que ``update_step_status`` grava."""
+
+	def __init__(self, status="Aguardar Dados"):
+		self.status = status
+		self.campos = {}
+		self.salvo = False
+
+	def set(self, campo, valor):
+		self.campos[campo] = valor
+
+	def save(self):
+		self.salvo = True
+
+
+class TestUpdateStepStatus(TestCase):
+	"""Marcar a etapa pela bolinha da timeline tem que mover a coluna do funil.
+
+	Antes a virada de status só acontecia nos atalhos (botão do Paxtu, botão de recepção
+	realizada, formulário do responsável), e quem usava a timeline ficava com o card parado.
+	"""
+
+	def _executar(self, campo, valor=1, status_inicial="Aguardar Dados"):
+		doc = _DocFalso(status_inicial)
+		with patch.object(visao_geral.frappe, "get_doc", return_value=doc):
+			visao_geral.update_step_status("NA-1", campo, valor)
+		return doc
+
+	def test_cada_etapa_de_virada_move_o_status(self):
+		for campo, status in visao_geral.STATUS_POR_ETAPA.items():
+			with self.subTest(etapa=campo):
+				doc = self._executar(campo, status_inicial="Novo Contato")
+
+				self.assertEqual(doc.campos[campo], 1)
+				self.assertEqual(doc.status, status)
+				self.assertTrue(doc.salvo)
+
+	def test_etapa_fora_do_mapa_nao_mexe_no_status(self):
+		doc = self._executar("ficha_medica_preenchida", status_inicial="Acompanhamento")
+
+		self.assertEqual(doc.campos["ficha_medica_preenchida"], 1)
+		self.assertEqual(doc.status, "Acompanhamento")
+
+	def test_desmarcar_nao_reverte_o_status(self):
+		doc = self._executar("registro_criado_no_paxtu", valor=0, status_inicial="Acompanhamento")
+
+		self.assertEqual(doc.campos["registro_criado_no_paxtu"], 0)
+		self.assertEqual(doc.status, "Acompanhamento")
+
+	def test_botao_do_paxtu_faz_o_mesmo_que_a_bolinha(self):
+		doc = _DocFalso("Fazer Registro")
+		with patch.object(visao_geral.frappe, "get_doc", return_value=doc):
+			visao_geral.confirmar_registro_paxtu("NA-1")
+
+		self.assertEqual(doc.campos["registro_criado_no_paxtu"], 1)
+		self.assertEqual(doc.status, "Acompanhamento")
+
+	def test_campo_invalido_e_recusado(self):
+		with self.assertRaises(frappe.ValidationError):
+			visao_geral.update_step_status("NA-1", "status", 1)
+
+	def test_sem_registro_informado_e_recusado(self):
+		with self.assertRaises(frappe.ValidationError):
+			visao_geral.update_step_status("", "registro_criado_no_paxtu", 1)

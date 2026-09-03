@@ -63,8 +63,13 @@ TUTORIAL_FICHA_MEDICA = (
 	"https://outline.gepim.com.br/s/f2ffe755-12d2-4b1b-85f0-c52ddc131a50/doc/"
 	"alteracao-de-ficha-medica-oGSZcBwr2N"
 )
-PAXTU_PRIMEIRO_ACESSO = "https://paxtu100.escoteiros.org.br/primeiro_acesso"
+PAXTU_BASE = "https://paxtu100.escoteiros.org.br"
+PAXTU_PRIMEIRO_ACESSO = f"{PAXTU_BASE}/primeiro_acesso"
 AJUDA_ID_ESCOTEIROS = "https://id.escoteiros.org.br/pages/ajuda.php"
+
+# Landing do responsável no Gris: é de onde ele escolhe o filho e cai no formulário de
+# registro, e é para onde o login já redireciona (ver ``gris.www.responsavel.registro``).
+CAMINHO_GRIS_REGISTRO = "/responsavel/beneficiarios"
 
 
 # ─── Contatos ─────────────────────────────────────────────────────────────────
@@ -176,6 +181,24 @@ def _buscar_contato_do_recepcionista(user_id: str | None) -> frappe._dict | None
 	return frappe._dict({"nome": nome, "sexo": (associado.get("sexo") or "").strip(), "telefone": telefone})
 
 
+def _buscar_responsavel_administrativo() -> frappe._dict | None:
+	"""Associado configurado como responsável administrativo em Configurações de Recepção.
+
+	É quem sabe responder sobre número de registro — a dúvida que o responsável tem quando
+	recebe um pedido de ficha médica ou de id@escoteiros e não faz ideia de qual registro usar.
+	"""
+	associado_name = frappe.db.get_single_value(SETTINGS_DOCTYPE, "responsavel_administrativo")
+	if not associado_name:
+		return None
+
+	return frappe.db.get_value(
+		"Associado",
+		associado_name,
+		["name", "nome_completo", "sexo", "telefone"],
+		as_dict=True,
+	)
+
+
 # ─── Configuração ─────────────────────────────────────────────────────────────
 
 
@@ -273,6 +296,36 @@ def _ficha_do_jovem(jovem: frappe._dict, contato: frappe._dict | None) -> str:
 	)
 
 
+def _paragrafo_duvidas_administrativo() -> str:
+	"""Convite a falar com o administrativo sobre registro; vazio quando não há quem contatar.
+
+	Toda mensagem que pede algo baseado no número de registro (ficha médica, id@escoteiros)
+	esbarra em responsáveis que não sabem qual é o registro — nem o do jovem, nem o deles.
+	Sem responsável administrativo configurado, ou sem telefone dele, o parágrafo some em vez
+	de mandar a família procurar alguém inexistente.
+	"""
+	administrativo = _buscar_responsavel_administrativo()
+	if not administrativo:
+		return ""
+
+	nome = (administrativo.get("nome_completo") or "").strip()
+	telefone = (administrativo.get("telefone") or "").strip()
+	if not nome or not telefone:
+		return ""
+
+	para_administrativo = genero.para(administrativo.get("sexo"))
+	return (
+		f"Ficou em dúvida sobre o número de registro? Fale {para_administrativo} {nome}, "
+		f"do administrativo, pelo telefone {telefone}."
+	)
+
+
+def _bloco_duvidas_administrativo() -> str:
+	"""``_paragrafo_duvidas_administrativo`` já com a quebra de linha para entrar no corpo."""
+	paragrafo = _paragrafo_duvidas_administrativo()
+	return f"{paragrafo}\n\n" if paragrafo else ""
+
+
 def _montar_dados_preenchidos(nome_jovem: str, nome_responsavel: str, sexo_jovem: str | None) -> str:
 	novo_associado = genero.flexionar(
 		sexo_jovem, "da nova associada", "do novo associado", "do(a) novo(a) associado(a)"
@@ -320,14 +373,14 @@ def _montar_lembrete_dados(
 		f"{genero.de(sexo_jovem)} {primeiro_nome_jovem}. "
 		"Esta etapa é essencial para seguirmos com a integração!"
 	)
-	chamada_tutoriais = (
-		"Os dados devem ser preenchidos no Gris. Se estiver com dificuldades, aqui estão alguns "
-		"tutoriais que podem ajudar:\n"
+	link_gris = (
+		f"Os dados devem ser preenchidos no Gris, o link é este aqui:\n{get_url(CAMINHO_GRIS_REGISTRO)}\n"
 	)
+	chamada_tutoriais = "Se estiver com dificuldades, aqui estão alguns tutoriais que podem ajudar:\n"
 	tutorial_login = f"*Como fazer login no Gris*\n{TUTORIAL_LOGIN}\n"
 	tutorial_dados = f"*Como preencher os dados para registro*\n{TUTORIAL_DADOS_REGISTRO}\n"
 
-	partes = [abertura, cobranca, chamada_tutoriais, tutorial_login, tutorial_dados]
+	partes = [abertura, cobranca, link_gris, chamada_tutoriais, tutorial_login, tutorial_dados]
 
 	if recepcionista and recepcionista.get("nome"):
 		para_recepcionista = genero.para(recepcionista.get("sexo"))
@@ -376,6 +429,13 @@ def _montar_registro_criado(
 	# "a jovem pela qual você é responsável" concorda com o jovem, não com quem lê.
 	por_jovem = genero.por(sexo_jovem)
 	de_responsavel = genero.de(sexo_responsavel)
+
+	# Sem administrativo configurado a mensagem não pode ficar sem saída: o texto antigo
+	# (escotista da seção / diretoria) continua valendo como alternativa.
+	saida_para_duvidas = _bloco_duvidas_administrativo() or (
+		"Outra opção é perguntar para algum escotista da seção ou para a diretoria qual é o seu registro!\n\n"
+	)
+
 	return (
 		f"Olá, {primeiro_nome_responsavel}!\n\n"
 		f"Venho trazer ótimas notícias, o registro {tipo} de {primeiro_nome_jovem} já foi criado!\n\n"
@@ -383,13 +443,14 @@ def _montar_registro_criado(
 		f"{numero_registro}\n\n"
 		f"O próximo passo é fazer o primeiro acesso {de_jovem} jovem no Paxtu, que é o sistema "
 		f"oficial dos Escoteiros do Brasil, através do link {PAXTU_PRIMEIRO_ACESSO}. Ao acessar, "
-		f"informe o número do registro acima e o CPF {de_jovem} jovem.\n\n"
+		f"informe o número do registro acima e o CPF {de_jovem} jovem. Depois desse primeiro "
+		f"acesso, o Paxtu fica em {PAXTU_BASE}.\n\n"
 		"Você também deve fazer o seu primeiro acesso como responsável no Paxtu! O link é o mesmo "
 		f"({PAXTU_PRIMEIRO_ACESSO}), mas o registro é diferente, é o seu registro como responsável. "
 		f"Para saber qual é este registro, entre com o acesso do Paxtu 100 {de_jovem} jovem "
 		f"{por_jovem} qual você é responsável, navegue até a aba de responsáveis e lá você vai "
-		f"encontrar o número de registro {de_responsavel} responsável. Outra opção é perguntar para "
-		"algum escotista da seção ou para a diretoria qual é o seu registro!\n\n"
+		f"encontrar o número de registro {de_responsavel} responsável.\n\n"
+		f"{saida_para_duvidas}"
 		f"{ASSINATURA}"
 	)
 
@@ -411,25 +472,30 @@ def _montar_lembrete_pesquisa(primeiro_nome_responsavel: str) -> str:
 def _montar_lembrete_ficha_medica(
 	*, primeiro_nome_responsavel: str, primeiro_nome_jovem: str, sexo_jovem: str | None
 ) -> str:
+	duvidas = _bloco_duvidas_administrativo()
 	return (
 		f"Olá, {primeiro_nome_responsavel}!\n\n"
 		f"Agora que o registro {genero.de(sexo_jovem)} {primeiro_nome_jovem} já foi processado, "
 		f"precisamos preencher os dados da ficha médica {genero.dele(sexo_jovem)}! Estes dados são "
-		"essenciais para zelarmos pela segurança dos jovens. O preenchimento é pelo Paxtu, aqui está "
-		"um tutorial de como fazer isso para te ajudar:\n"
+		"essenciais para zelarmos pela segurança dos jovens. O preenchimento é pelo Paxtu, o link "
+		f"é este aqui:\n{PAXTU_BASE}\n\n"
+		"Para te ajudar, aqui está um tutorial de como fazer isso:\n"
 		f"{TUTORIAL_FICHA_MEDICA}\n\n"
+		f"{duvidas}"
 		"Grande abraço!\n"
 		f"{ASSINATURA}"
 	)
 
 
 def _montar_lembrete_id_escoteiros(primeiro_nome_responsavel: str) -> str:
+	duvidas = _bloco_duvidas_administrativo()
 	return (
 		f"Olá, {primeiro_nome_responsavel}!\n\n"
 		"Todos os associados dos Escoteiros do Brasil têm direito a um e-mail institucional, e ele é "
 		"super importante! Para criar, acesse o site id.escoteiros.org.br.\n"
 		"Para te ajudar, aqui está um passo a passo de como fazer a criação:\n"
 		f"{AJUDA_ID_ESCOTEIROS}\n\n"
+		f"{duvidas}"
 		"Grande abraço!\n"
 		f"{ASSINATURA}"
 	)

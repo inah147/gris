@@ -357,9 +357,10 @@ def funil_recepcao() -> dict:
 	nome="atualizar_etapa_recepcao",
 	titulo="Marcar etapa do funil",
 	descricao=(
-		"Marca ou desmarca uma etapa do funil de recepção. Duas etapas movem o status "
-		"junto, como no portal: 'primeira_visita_realizada' leva para 'Aguardar Dados' e "
-		"'registro_criado_no_paxtu' leva para 'Acompanhamento'."
+		"Marca ou desmarca uma etapa do funil de recepção. Três etapas movem o status "
+		"junto, como no portal: 'primeira_visita_realizada' leva para 'Aguardar Dados', "
+		"'dados_para_registro_enviados' leva para 'Fazer Registro' e "
+		"'registro_criado_no_paxtu' leva para 'Acompanhamento'. Desmarcar não reverte o status."
 	),
 	parametros={
 		"name": {"type": "string", "description": "Identificador do Novo Associado."},
@@ -389,11 +390,10 @@ def atualizar_etapa_recepcao(name: str, etapa: str, concluida: bool = True, simu
 			"motivo": f"A etapa '{ROTULOS_DE_ETAPA.get(etapa, etapa)}' já está nesse estado.",
 		}
 
-	efeito_colateral = None
-	if concluida and etapa == "registro_criado_no_paxtu":
-		efeito_colateral = "status passa para 'Acompanhamento'"
-	elif concluida and etapa == "primeira_visita_realizada":
-		efeito_colateral = "status passa para 'Aguardar Dados'"
+	from gris.www.recepcao import visao_geral
+
+	novo_status = visao_geral.STATUS_POR_ETAPA.get(etapa) if concluida else None
+	efeito_colateral = f"status passa para '{novo_status}'" if novo_status else None
 
 	if simular:
 		return {
@@ -405,14 +405,8 @@ def atualizar_etapa_recepcao(name: str, etapa: str, concluida: bool = True, simu
 			"efeito_colateral": efeito_colateral,
 		}
 
-	from gris.www.recepcao import visao_geral
-
-	if concluida and etapa == "registro_criado_no_paxtu":
-		visao_geral.confirmar_registro_paxtu(name)
-	elif concluida and etapa == "primeira_visita_realizada":
-		servico.registrar_recepcao_realizada(name)
-	else:
-		visao_geral.update_step_status(name, etapa, 1 if concluida else 0)
+	# Rota única: o efeito no status vive em STATUS_POR_ETAPA, não aqui.
+	visao_geral.update_step_status(name, etapa, 1 if concluida else 0)
 
 	return {
 		"atualizado": True,
@@ -427,8 +421,9 @@ def atualizar_etapa_recepcao(name: str, etapa: str, concluida: bool = True, simu
 	nome="atualizar_novo_associado",
 	titulo="Atualizar cadastro do funil",
 	descricao=(
-		"Ajusta status (coluna do funil), ramo pretendido e responsável de recepção. "
-		"Para desistências, use o portal: elas apagam e anonimizam dados pessoais."
+		"Ajusta status (coluna do funil) e responsável de recepção. O ramo não é editável: "
+		"ele vem da idade e é recalculado diariamente — para mudá-lo, corrija a data de "
+		"nascimento. Para desistências, use o portal: elas apagam e anonimizam dados pessoais."
 	),
 	parametros={
 		"name": {"type": "string", "description": "Identificador do Novo Associado."},
@@ -437,7 +432,6 @@ def atualizar_etapa_recepcao(name: str, etapa: str, concluida: bool = True, simu
 			"enum": list(STATUS_VALIDOS),
 			"description": "Nova coluna do funil.",
 		},
-		"ramo": {"type": "string", "enum": list(RAMOS), "description": "Novo ramo pretendido."},
 		"responsavel_recepcao": {
 			"type": "string",
 			"description": "E-mail do usuário responsável (precisa ter o papel Recepcao).",
@@ -450,13 +444,12 @@ def atualizar_etapa_recepcao(name: str, etapa: str, concluida: bool = True, simu
 def atualizar_novo_associado(
 	name: str,
 	status: str | None = None,
-	ramo: str | None = None,
 	responsavel_recepcao: str | None = None,
 	simular: bool = False,
 ) -> dict:
 	_garantir_registro(name)
 
-	solicitado = {"status": status, "ramo": ramo, "responsavel_recepcao": responsavel_recepcao}
+	solicitado = {"status": status, "responsavel_recepcao": responsavel_recepcao}
 	solicitado = {campo: valor for campo, valor in solicitado.items() if valor}
 	if not solicitado:
 		raise ErroDeFerramenta("ARGUMENTO_INVALIDO", "Informe ao menos um campo para atualizar.")

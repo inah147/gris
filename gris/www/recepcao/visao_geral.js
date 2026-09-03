@@ -117,49 +117,69 @@ function repopulateSelect(id, items, selectedValue) {
 	}
 }
 
-// ---------- Filtro de ramo -------------------------------------------------
+// ---------- Filtros do cabeçalho -------------------------------------------
 
-// Filtra os cards já renderizados pelo servidor (nenhuma ida ao backend).
+// Filtram os cards já renderizados pelo servidor (nenhuma ida ao backend).
 // Precisa espelhar RAMO_FILTRO_SEM_RAMO em visao_geral.py.
 const RAMO_FILTRO_SEM_RAMO = "__sem_ramo__";
 const RAMO_FILTRO_STORAGE_KEY = "recepcao:visao_geral:filtro_ramo";
+const NOME_FILTRO_STORAGE_KEY = "recepcao:visao_geral:filtro_nome";
 
-function lerFiltroRamoSalvo() {
+function lerFiltroSalvo(chave) {
 	// Várias ações da página recarregam a tela; sem isso o filtro se perderia.
 	try {
-		return sessionStorage.getItem(RAMO_FILTRO_STORAGE_KEY) || "";
+		return sessionStorage.getItem(chave) || "";
 	} catch (err) {
 		return "";
 	}
 }
 
-function salvarFiltroRamo(valor) {
+function salvarFiltro(chave, valor) {
 	try {
 		if (valor) {
-			sessionStorage.setItem(RAMO_FILTRO_STORAGE_KEY, valor);
+			sessionStorage.setItem(chave, valor);
 		} else {
-			sessionStorage.removeItem(RAMO_FILTRO_STORAGE_KEY);
+			sessionStorage.removeItem(chave);
 		}
 	} catch (err) {
 		// sessionStorage indisponível (aba privada): filtro segue funcionando.
 	}
 }
 
-function cardVisivelNoFiltro(card, filtro) {
-	if (!filtro) return true;
-	const ramo = card.dataset.ramo || "";
-	if (filtro === RAMO_FILTRO_SEM_RAMO) return !ramo;
-	return ramo === filtro;
+// "José" e "jose" precisam se encontrar: quem busca digita sem acento e sem caixa.
+function normalizarTexto(valor) {
+	return String(valor || "")
+		.normalize("NFD")
+		.replace(/\p{Diacritic}/gu, "")
+		.toLowerCase()
+		.trim();
 }
 
-function aplicarFiltroRamo() {
-	const filtro = getSelectValue("filtroRamo");
+function cardVisivelNoFiltro(card, filtroRamo, filtroNome) {
+	if (filtroRamo) {
+		const ramo = card.dataset.ramo || "";
+		const combina = filtroRamo === RAMO_FILTRO_SEM_RAMO ? !ramo : ramo === filtroRamo;
+		if (!combina) return false;
+	}
+
+	if (filtroNome && !normalizarTexto(card.dataset.nome).includes(filtroNome)) {
+		return false;
+	}
+
+	return true;
+}
+
+function aplicarFiltros() {
+	const filtroRamo = getSelectValue("filtroRamo");
+	const campoNome = document.getElementById("filtroNome");
+	const filtroNome = normalizarTexto(campoNome ? campoNome.value : "");
+	const temFiltro = Boolean(filtroRamo || filtroNome);
 
 	document.querySelectorAll(".kanban-column").forEach((coluna) => {
 		let visiveis = 0;
 
 		coluna.querySelectorAll(".kanban-card").forEach((card) => {
-			const visivel = cardVisivelNoFiltro(card, filtro);
+			const visivel = cardVisivelNoFiltro(card, filtroRamo, filtroNome);
 			card.classList.toggle("filter-hidden", !visivel);
 			if (visivel) visiveis += 1;
 		});
@@ -167,10 +187,10 @@ function aplicarFiltroRamo() {
 		const contador = coluna.querySelector(".js-column-count");
 		if (contador) contador.textContent = String(visiveis);
 
-		// A mensagem só faz sentido quando o filtro escondeu tudo; sem filtro,
+		// A mensagem só faz sentido quando um filtro escondeu tudo; sem filtro,
 		// uma coluna vazia continua vazia como antes.
 		const vazio = coluna.querySelector(".kanban-column__vazio");
-		if (vazio) vazio.classList.toggle("hidden", !filtro || visiveis > 0);
+		if (vazio) vazio.classList.toggle("hidden", !temFiltro || visiveis > 0);
 	});
 }
 
@@ -189,6 +209,20 @@ frappe.ready(function () {
 	// Não limpamos `currentCardId`/`currentCardElement` aqui porque o stack
 	// de modais (fechar pai → abrir filho) deixaria o estado nulo entre os
 	// passos. Esses valores são sobrescritos no próximo clique de card.
+
+	// Balão de observações do card: atalho direto, sem passar pelo modal de status.
+	// Precisa de stopPropagation, senão o listener do card abre os dois.
+	document.querySelectorAll(".js-observacoes-badge").forEach((botao) => {
+		botao.addEventListener("click", function (e) {
+			e.preventDefault();
+			e.stopPropagation();
+			const cardEl = botao.closest(".kanban-card");
+			if (!cardEl) return;
+			currentCardElement = cardEl;
+			currentCardId = cardEl.dataset.id;
+			abrirObservacoes();
+		});
+	});
 
 	// Clique no card → abre o modal correto
 	document.querySelectorAll(".kanban-card").forEach((cardEl) => {
@@ -246,28 +280,42 @@ frappe.ready(function () {
 		});
 	}
 
-	bindRamoSelect("ci_ramo");
-	bindRamoSelect("va_ramo");
-
 	bindResponsavelSelect("va_responsavel_recepcao");
 	bindResponsavelSelect("ad_responsavel_recepcao");
 	bindResponsavelSelect("fr_responsavel_recepcao");
 	bindResponsavelSelect("ac_responsavel_recepcao");
 	bindResponsavelSelect("ci_responsavel_acompanhamento");
 
-	// Filtro de ramo do cabeçalho
+	// Filtros do cabeçalho (ramo e nome)
 	const filtroRamoSelect = document.getElementById("filtroRamo");
 	if (filtroRamoSelect) {
-		const salvo = lerFiltroRamoSalvo();
+		const salvo = lerFiltroSalvo(RAMO_FILTRO_STORAGE_KEY);
 		if (salvo) setSelectValue("filtroRamo", salvo);
 
 		filtroRamoSelect.addEventListener("change", function (e) {
-			salvarFiltroRamo(e.detail ? e.detail.value : getSelectValue("filtroRamo"));
-			aplicarFiltroRamo();
+			salvarFiltro(
+				RAMO_FILTRO_STORAGE_KEY,
+				e.detail ? e.detail.value : getSelectValue("filtroRamo")
+			);
+			aplicarFiltros();
 		});
-
-		aplicarFiltroRamo();
 	}
+
+	const filtroNomeInput = document.getElementById("filtroNome");
+	if (filtroNomeInput) {
+		filtroNomeInput.value = lerFiltroSalvo(NOME_FILTRO_STORAGE_KEY);
+
+		// `input` (e não `change`) para filtrar enquanto digita.
+		filtroNomeInput.addEventListener("input", function () {
+			salvarFiltro(NOME_FILTRO_STORAGE_KEY, filtroNomeInput.value);
+			aplicarFiltros();
+		});
+	}
+
+	if (filtroRamoSelect || filtroNomeInput) aplicarFiltros();
+
+	const formObservacoes = document.getElementById("obs_form");
+	if (formObservacoes) formObservacoes.addEventListener("submit", enviarObservacao);
 
 	// Botão "Conversar no WhatsApp" no chooser
 	const btnAbrirWhatsapp = document.getElementById("btnAbrirWhatsappContato");
@@ -290,29 +338,6 @@ frappe.ready(function () {
 	}
 });
 
-function bindRamoSelect(id) {
-	const el = document.getElementById(id);
-	if (!el) return;
-	el.addEventListener("change", function (e) {
-		const ramo = e.detail ? e.detail.value : getSelectValue(id);
-		if (!ramo || !currentCardId) return;
-		frappe.call({
-			method: "gris.api.recepcao.update_novo_associado",
-			args: { name: currentCardId, ramo: ramo },
-			callback: function (r) {
-				if (!r.exc) {
-					const card = document.querySelector(
-						`.kanban-card[data-id="${currentCardId}"]`
-					);
-					if (card) card.dataset.ramo = ramo;
-					aplicarFiltroRamo();
-					frappe.show_alert({ message: "Ramo atualizado", indicator: "green" });
-				}
-			},
-		});
-	});
-}
-
 function bindResponsavelSelect(id) {
 	const el = document.getElementById(id);
 	if (!el) return;
@@ -326,7 +351,7 @@ function bindResponsavelSelect(id) {
 
 function openModal(id, responsavel, nome, responsavelAssociado, ramo) {
 	currentCardId = id;
-	updateWhatsappButtonState();
+	sincronizarCabecalhoDoDialog();
 	document.getElementById("modalAssociadoNome").textContent = nome;
 	document.getElementById("modalResponsavelNome").textContent = responsavelAssociado || "-";
 	document.getElementById("modalRamo").textContent = ramo || "-";
@@ -340,10 +365,10 @@ function openModal(id, responsavel, nome, responsavelAssociado, ramo) {
 
 function openConversaInicialModal(id, responsavel, nome, responsavelAssociado, ramo) {
 	currentCardId = id;
-	updateWhatsappButtonState();
+	sincronizarCabecalhoDoDialog();
 	document.getElementById("ci_associado_nome").textContent = nome;
 	document.getElementById("ci_responsavel_nome").textContent = responsavelAssociado || "-";
-	setSelectValue("ci_ramo", ramo);
+	document.getElementById("ci_ramo").textContent = ramo || "-";
 	setSelectValue("ci_responsavel_acompanhamento", responsavel);
 
 	openDialog("modalConversaInicial");
@@ -359,10 +384,10 @@ function openVisitaAgendadaModal(
 	visitaConfirmada
 ) {
 	currentCardId = id;
-	updateWhatsappButtonState();
+	sincronizarCabecalhoDoDialog();
 	document.getElementById("va_associado_nome").textContent = nome;
 	document.getElementById("va_responsavel_nome").textContent = responsavelAssociado || "-";
-	setSelectValue("va_ramo", ramo);
+	document.getElementById("va_ramo").textContent = ramo || "-";
 	setSelectValue("va_responsavel_recepcao", responsavel);
 	document.getElementById("va_data_visita").textContent = visitaData || "-";
 
@@ -387,7 +412,7 @@ function openVisitaAgendadaModal(
 
 function openAguardarDadosModal(id, responsavel, nome, responsavelAssociado, steps) {
 	currentCardId = id;
-	updateWhatsappButtonState();
+	sincronizarCabecalhoDoDialog();
 	document.getElementById("ad_associado_nome").textContent = nome;
 	document.getElementById("ad_responsavel_nome").textContent = responsavelAssociado || "-";
 	setSelectValue("ad_responsavel_recepcao", responsavel);
@@ -402,7 +427,7 @@ function openAguardarDadosModal(id, responsavel, nome, responsavelAssociado, ste
 
 function openFazerRegistroModal(id, responsavel, nome, responsavelAssociado, steps) {
 	currentCardId = id;
-	updateWhatsappButtonState();
+	sincronizarCabecalhoDoDialog();
 	document.getElementById("fr_associado_nome").textContent = nome;
 	document.getElementById("fr_responsavel_nome").textContent = responsavelAssociado || "-";
 	setSelectValue("fr_responsavel_recepcao", responsavel);
@@ -415,7 +440,7 @@ function openFazerRegistroModal(id, responsavel, nome, responsavelAssociado, ste
 
 function openAcompanhamentoModal(id, responsavel, nome, responsavelAssociado, steps) {
 	currentCardId = id;
-	updateWhatsappButtonState();
+	sincronizarCabecalhoDoDialog();
 	document.getElementById("ac_associado_nome").textContent = nome;
 	document.getElementById("ac_responsavel_nome").textContent = responsavelAssociado || "-";
 	setSelectValue("ac_responsavel_recepcao", responsavel);
@@ -564,14 +589,13 @@ function openFicha() {
 }
 
 function openAgendarVisita() {
-	const ramo =
-		(currentCardElement && currentCardElement.dataset.ramo) ||
-		getSelectValue("ci_ramo") ||
-		getSelectValue("va_ramo");
+	const ramo = currentCardElement && currentCardElement.dataset.ramo;
 
+	// O ramo vem da idade, então card sem ramo é card sem data de nascimento — e é lá,
+	// na ficha, que a recepção resolve; não há mais campo de ramo para preencher aqui.
 	if (!ramo) {
 		frappe.show_alert({
-			message: "Defina o Ramo antes de agendar.",
+			message: "Sem ramo definido. Preencha a data de nascimento na ficha do associado.",
 			indicator: "orange",
 		});
 		return;
@@ -822,6 +846,184 @@ function finalizarRecepcao() {
 				closeAllDialogs();
 				setTimeout(() => window.location.reload(), 1000);
 			}
+		},
+	});
+}
+
+// ---------- Observações -----------------------------------------------------
+
+let observacoesSourceModalId = null;
+
+// A macro `people_header` é usada pelos seis modais de card, então o rótulo existe
+// seis vezes no DOM. Só um modal fica aberto por vez: atualizar todos é o correto.
+function atualizarRotuloObservacoes() {
+	const total = contarObservacoesDoCardAtual();
+	document.querySelectorAll(".js-dialog-observacoes-total").forEach((el) => {
+		el.textContent = total ? String(total) : "Nenhuma";
+	});
+}
+
+// Cabeçalho compartilhado pelos modais de card (WhatsApp + observações).
+function sincronizarCabecalhoDoDialog() {
+	updateWhatsappButtonState();
+	atualizarRotuloObservacoes();
+}
+
+function contarObservacoesDoCardAtual() {
+	if (!currentCardElement) return 0;
+	const total = parseInt(currentCardElement.dataset.observacoes, 10);
+	return Number.isNaN(total) ? 0 : total;
+}
+
+// Mantém card, balão e rótulo dos modais na mesma contagem, sem recarregar a página.
+function definirTotalDeObservacoes(total) {
+	if (!currentCardElement) return;
+	currentCardElement.dataset.observacoes = String(total);
+
+	const balao = currentCardElement.querySelector(".js-observacoes-badge");
+	if (balao) {
+		balao.classList.toggle("hidden", total < 1);
+		const numero = balao.querySelector(".js-observacoes-total");
+		if (numero) numero.textContent = String(total);
+	}
+
+	atualizarRotuloObservacoes();
+}
+
+function abrirObservacoesDoCardAtual() {
+	if (!currentCardId) {
+		frappe.msgprint(__("Nenhum associado selecionado."));
+		return;
+	}
+	abrirObservacoes();
+}
+
+function abrirObservacoes() {
+	// showModal() põe o dialog na top layer e torna o resto inerte: o modal de
+	// origem precisa fechar antes e reabrir depois (mesmo padrão do chooser de WhatsApp).
+	observacoesSourceModalId = getOpenDialogId("modalObservacoes");
+	if (observacoesSourceModalId) closeDialog(observacoesSourceModalId);
+
+	const nome = (currentCardElement && currentCardElement.dataset.nome) || "";
+	document.getElementById("obs_associado_nome").textContent = nome;
+
+	const form = document.getElementById("obs_form");
+	const texto = document.getElementById("obs_texto");
+	const erro = document.getElementById("obs_erro");
+	if (texto) texto.value = "";
+	if (erro) erro.hidden = true;
+	if (form) form.classList.add("hidden");
+
+	const lista = document.getElementById("obs_lista");
+	lista.innerHTML = '<p class="text-muted-foreground">Carregando…</p>';
+
+	openDialog("modalObservacoes");
+
+	frappe.call({
+		method: "gris.api.recepcao.listar_comentarios",
+		args: { novo_associado_name: currentCardId },
+		callback: function (r) {
+			if (r.exc) {
+				lista.innerHTML =
+					'<p class="text-destructive">Não foi possível carregar as observações.</p>';
+				return;
+			}
+
+			const dados = r.message || {};
+			const comentarios = dados.comentarios || [];
+			if (form) form.classList.toggle("hidden", !dados.pode_comentar);
+			renderObservacoes(comentarios);
+			// `total` é a contagem real; a lista pode vir truncada pelo limite do backend.
+			definirTotalDeObservacoes(
+				dados.total === undefined ? comentarios.length : dados.total
+			);
+		},
+	});
+}
+
+function fecharObservacoes() {
+	closeDialog("modalObservacoes");
+	if (observacoesSourceModalId) {
+		const anterior = observacoesSourceModalId;
+		observacoesSourceModalId = null;
+		openDialog(anterior);
+	}
+}
+
+function renderObservacoes(comentarios) {
+	const lista = document.getElementById("obs_lista");
+	if (!lista) return;
+	lista.innerHTML = "";
+
+	if (!comentarios || comentarios.length === 0) {
+		lista.innerHTML =
+			'<p class="text-muted-foreground js-observacoes-vazio">Nenhuma observação ainda.</p>';
+		return;
+	}
+
+	comentarios.forEach((c) => lista.appendChild(montarItemDeObservacao(c)));
+}
+
+function montarItemDeObservacao(comentario) {
+	const item = document.createElement("div");
+	item.className = "comment-item";
+	item.dataset.commentName = comentario.name;
+	item.innerHTML = `
+		<div class="comment-item__meta">
+			<span class="comment-item__author">${escapeHtml(comentario.owner_fullname)}</span>
+			<span>•</span>
+			<span>${escapeHtml(comentario.creation)}</span>
+		</div>
+		<div class="comment-item__content">${escapeHtml(comentario.content_text).replace(
+			/\n/g,
+			"<br>"
+		)}</div>
+	`;
+	return item;
+}
+
+function enviarObservacao(event) {
+	event.preventDefault();
+	if (!currentCardId) return;
+
+	const texto = document.getElementById("obs_texto");
+	const erro = document.getElementById("obs_erro");
+	const submit = document.getElementById("obs_submit");
+	const conteudo = (texto.value || "").trim();
+
+	if (!conteudo) {
+		erro.textContent = "Escreva algo antes de adicionar.";
+		erro.hidden = false;
+		return;
+	}
+
+	erro.hidden = true;
+	submit.disabled = true;
+	submit.textContent = "Enviando…";
+
+	frappe.call({
+		method: "gris.api.recepcao.adicionar_comentario",
+		args: { novo_associado_name: currentCardId, content: conteudo },
+		always: function () {
+			submit.disabled = false;
+			submit.textContent = "Adicionar";
+		},
+		callback: function (r) {
+			if (r.exc || !r.message) {
+				erro.textContent = "Não foi possível salvar a observação.";
+				erro.hidden = false;
+				return;
+			}
+
+			const lista = document.getElementById("obs_lista");
+			const vazio = lista.querySelector(".js-observacoes-vazio");
+			if (vazio) vazio.remove();
+
+			// Mais recente primeiro, como a listagem do backend.
+			lista.prepend(montarItemDeObservacao(r.message));
+			texto.value = "";
+			definirTotalDeObservacoes(contarObservacoesDoCardAtual() + 1);
+			frappe.show_alert({ message: "Observação adicionada", indicator: "green" });
 		},
 	});
 }

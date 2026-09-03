@@ -11,6 +11,13 @@ from frappe.utils import now_datetime
 from .whatsapp_errors import WhatsAppConfigurationError, WhatsAppNumberNotFoundError, WhatsAppRequestError
 
 SETTINGS_DOCTYPE = "Configuracoes WhatsApp"
+
+# Telas de configuração que têm um Select de grupo alimentado pela Evolution API.
+# `listar_grupos_whatsapp_para_select` só aceita permissão vinda de uma delas.
+DOCTYPES_COM_SELECT_DE_GRUPO: frozenset[str] = frozenset(
+	{"Configuracoes de Recepcao", "Configuracoes de Desenvolvimento"}
+)
+
 DEFAULT_TIMEOUT = 30
 MAX_RETRIES = 3
 RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
@@ -351,11 +358,22 @@ def listar_grupos_whatsapp(*, get_participants: bool = False) -> list[dict[str, 
 
 
 @frappe.whitelist()
-def listar_grupos_whatsapp_para_select() -> list[dict[str, str]]:
-	"""Retorna opções de grupos WhatsApp para uso em campos Select no Desk."""
-	if not frappe.has_permission("Configuracoes de Recepcao", ptype="write"):
+def listar_grupos_whatsapp_para_select(
+	doctype: str = "Configuracoes de Recepcao",
+) -> list[dict[str, str]]:
+	"""Retorna opções de grupos WhatsApp para uso em campos Select no Desk.
+
+	`doctype` diz de qual tela de configuração veio a chamada, para a permissão
+	ser checada no documento que a pessoa está de fato editando. A allowlist
+	existe porque o parâmetro vem do cliente: sem ela, qualquer DocType em que o
+	usuário tenha `write` liberaria a listagem dos grupos da instância.
+	"""
+	if doctype not in DOCTYPES_COM_SELECT_DE_GRUPO:
+		frappe.throw(_("DocType inválido para seleção de grupo: {0}.").format(doctype or "vazio"))
+
+	if not frappe.has_permission(doctype, ptype="write"):
 		frappe.throw(
-			_("Sem permissão para editar Configurações de Recepção."),
+			_("Sem permissão para editar {0}.").format(_(doctype)),
 			frappe.PermissionError,
 		)
 

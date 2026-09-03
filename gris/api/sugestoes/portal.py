@@ -126,6 +126,22 @@ def _texto(payload: dict[str, Any], campo: str) -> str:
 	return valor.strip() if isinstance(valor, str) else ""
 
 
+def _booleano(payload: dict[str, Any], campo: str, *, padrao: bool) -> bool:
+	"""Lê um campo de marcar do payload.
+
+	`cint` não serve: ele devolve 0 para a string "true", e o valor chega ora
+	como booleano JSON (pelo `frappe.call` da página), ora como string (por quem
+	monta a chamada na mão).
+	"""
+	if campo not in payload:
+		return padrao
+
+	valor = payload.get(campo)
+	if isinstance(valor, str):
+		return valor.strip().lower() in {"1", "true", "yes", "on"}
+	return bool(valor)
+
+
 def _carregar(name: str):
 	"""Carrega a solicitação recusando o 404 do `frappe.get_doc`.
 
@@ -339,6 +355,10 @@ def submeter_solicitacao(payload: Any) -> dict[str, Any]:
 			"tipo": tipo,
 			"modulo": modulo,
 			"descricao": descricao,
+			# O `before_insert` zera isto de novo quando não há telefone para
+			# avisar: o formulário desabilita a opção, mas o cliente pode ser
+			# contornado e a promessa ficaria gravada sem ter como cumprir.
+			"avisar_por_whatsapp": int(_booleano(dados, "avisar_por_whatsapp", padrao=True)),
 		}
 	).insert(ignore_permissions=True)
 
@@ -346,6 +366,9 @@ def submeter_solicitacao(payload: Any) -> dict[str, Any]:
 		"ok": True,
 		"name": doc.name,
 		"status": doc.status,
+		# Pode ter sido zerado no `before_insert` por falta de telefone; o cliente
+		# usa isto para não prometer um aviso que não vai acontecer.
+		"avisar_por_whatsapp": bool(doc.avisar_por_whatsapp),
 		# O formulário só manda para o quadro quem consegue vê-lo.
 		"pode_acompanhar": pode_acompanhar(),
 	}

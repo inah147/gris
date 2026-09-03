@@ -7,6 +7,9 @@ Guarda o relato de quem usa o sistema (bug ou pedido de funcionalidade) e serve
 de fonte para o kanban em `/sugestoes/acompanhamento`. Quando um responsavel e
 alocado, `gris.gestao_de_tarefas.board_sync_sugestoes` cria a tarefa espelho no
 quadro "Desenvolvimento do GRIS" para o item aparecer em "Minhas tarefas".
+
+Os avisos por WhatsApp (grupo de desenvolvimento na abertura, solicitante na
+conclusao) ficam em `gris.api.sugestoes.notificacoes`, ligados por `doc_events`.
 """
 
 from __future__ import annotations
@@ -29,6 +32,7 @@ from gris.api.sugestoes.constantes import (
 	coluna_inicial,
 	modulos_para_tipo,
 )
+from gris.utils.contato import telefone_do_usuario
 
 
 class SugestaoouProblema(Document):
@@ -43,6 +47,16 @@ class SugestaoouProblema(Document):
 
 		if not self.data_submissao:
 			self.data_submissao = now_datetime()
+
+		# Snapshot do telefone de quem abriu: e o numero a que a pessoa consentiu
+		# no formulario, e serve de fallback caso a resolucao falhe la na frente.
+		if self.solicitante and not self.telefone_aviso:
+			self.telefone_aviso = telefone_do_usuario(self.solicitante)
+
+		# Sem telefone nao ha aviso a prometer. O formulario ja desabilita a opcao,
+		# mas o cliente pode ser contornado e a promessa ficaria no registro.
+		if not (self.telefone_aviso or "").strip():
+			self.avisar_por_whatsapp = 0
 
 		# O Select preenche a primeira opcao sozinho quando o `options` nao comeca
 		# com quebra de linha. Toda submissao nova entra na coluna de triagem do

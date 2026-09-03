@@ -92,6 +92,12 @@
 	overflow: hidden;
 }
 
+/* O alerta só aparece para quem não tem telefone; sem a margem ele cola no
+   checkbox desabilitado logo acima e os dois viram um bloco só. */
+.sugestoes-aviso-sem-telefone {
+	margin-top: 0.75rem;
+}
+
 .sugestoes-actions {
 	display: flex;
 	flex-wrap: wrap;

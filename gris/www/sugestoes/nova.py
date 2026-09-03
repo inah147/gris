@@ -9,6 +9,7 @@ from gris.api.sugestoes.constantes import (
 	TIPO_FUNCIONALIDADE,
 	TIPO_PROBLEMA,
 )
+from gris.utils.contato import telefone_do_usuario
 
 no_cache = 1
 
@@ -32,6 +33,12 @@ def get_context(context):
 		context.sidebar_title = "Portal"
 
 	context.active_link = "/sugestoes/nova"
+
+	# O aviso de conclusão só pode ser prometido a quem tem telefone no cadastro.
+	# Resolver aqui, no servidor, evita um endpoint só para o formulário saber se
+	# deve mostrar a opção marcada ou o alerta de cadastro incompleto.
+	context.telefone_aviso = telefone_do_usuario(frappe.session.user)
+	context.tem_telefone = bool(context.telefone_aviso)
 
 	# A opção vazia à frente evita que o formulário abra com um tipo já
 	# escolhido — o macro `select` pré-seleciona o primeiro item sem ela.

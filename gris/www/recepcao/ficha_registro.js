@@ -287,6 +287,104 @@
 			}
 		}
 
+		// ---- Números de registro (jovem e responsáveis) --------------------
+		//
+		// Seção própria com o jovem e cada responsável que também será registrado.
+		// Um botão só grava todos, e fica desabilitado enquanto nada muda: numa
+		// página que é de leitura, um botão sempre ativo convidaria a salvar sem
+		// ter editado nada.
+		const registroSalvarBtn = document.getElementById("registro-salvar");
+		const registroFeedback = document.getElementById("registro-feedback");
+
+		function camposDeRegistro() {
+			return Array.from(
+				document.querySelectorAll("[data-registro-jovem], [data-registro-responsavel]")
+			);
+		}
+
+		function registrosAlterados() {
+			return camposDeRegistro().filter(
+				(campo) => campo.value.trim() !== (campo.dataset.valorOriginal || "")
+			);
+		}
+
+		function sincronizarBotaoDeRegistro() {
+			if (!registroSalvarBtn) return;
+			registroSalvarBtn.disabled = registrosAlterados().length === 0;
+		}
+
+		function mostrarFeedbackDeRegistro(texto, erro) {
+			if (!registroFeedback) return;
+			registroFeedback.textContent = texto;
+			registroFeedback.hidden = !texto;
+			registroFeedback.classList.toggle("ficha-registro__feedback--erro", Boolean(erro));
+		}
+
+		if (registroSalvarBtn) {
+			camposDeRegistro().forEach(function (campo) {
+				campo.addEventListener("input", function () {
+					mostrarFeedbackDeRegistro("");
+					sincronizarBotaoDeRegistro();
+				});
+			});
+
+			registroSalvarBtn.addEventListener("click", salvarNumerosDeRegistro);
+		}
+
+		async function salvarNumerosDeRegistro() {
+			const novoAssociado = registroSalvarBtn.dataset.novoAssociado;
+			if (!novoAssociado) return;
+
+			const jovem = document.querySelector("[data-registro-jovem]");
+			const responsaveis = {};
+			document.querySelectorAll("[data-registro-responsavel]").forEach(function (campo) {
+				responsaveis[campo.dataset.registroResponsavel] = campo.value.trim();
+			});
+
+			registroSalvarBtn.disabled = true;
+			mostrarFeedbackDeRegistro("");
+
+			try {
+				const resposta = await fetch(
+					"/api/method/gris.api.recepcao.salvar_numeros_de_registro",
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							"X-Frappe-CSRF-Token":
+								(window.frappe && window.frappe.csrf_token) || "",
+						},
+						credentials: "same-origin",
+						body: JSON.stringify({
+							novo_associado_name: novoAssociado,
+							numero_jovem: jovem ? jovem.value.trim() : "",
+							responsaveis: JSON.stringify(responsaveis),
+						}),
+					}
+				);
+
+				const dados = await resposta.json();
+				if (!resposta.ok || dados.exc) {
+					throw new Error("Não foi possível salvar os números de registro.");
+				}
+
+				// O valor gravado passa a ser o novo "original", senão o botão
+				// continuaria aceso depois de um salvamento bem-sucedido.
+				camposDeRegistro().forEach(function (campo) {
+					campo.value = campo.value.trim();
+					campo.dataset.valorOriginal = campo.value;
+				});
+				sincronizarBotaoDeRegistro();
+				mostrarFeedbackDeRegistro("Números de registro salvos.");
+			} catch (erro) {
+				mostrarFeedbackDeRegistro(erro.message || "Erro ao salvar.", true);
+			} finally {
+				// Depois de gravar não há mais alteração pendente, então quem decide
+				// se o botão volta a ficar ativo é o estado dos campos.
+				sincronizarBotaoDeRegistro();
+			}
+		}
+
 		function startEditing(name, content) {
 			if (!name || !commentTextarea || !submitBtn) return;
 			openModal();

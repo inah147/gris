@@ -51,12 +51,10 @@ def get_context(context):
 	field_interval_map = {
 		"dados_para_registro_enviados": "dados_para_registro_enviados",
 		"registro_criado_no_paxtu": "registro_criado_no_paxtu",
-		"registro_provisorio_pago": "registro_provisorio_pago",
 		"registro_provisorio_efetivado": "registro_provisorio_efetivado",
 		"pesquisa_de_novos_associados_respondida": "pesquisa_de_novos_associados_respondida",
 		"ficha_medica_preenchida": "ficha_medica_preenchida",
 		"id_escoteiros_criado": "id_escoteiros_criado",
-		"registro_definitivo_pago": "registro_definitivo_pago",
 		"registro_definitivo_efetivado": "registro_definitivo_efetivado",
 		"reuniao_de_acolhida_realizada": "reuniao_de_acolhida_realizada",
 	}
@@ -90,6 +88,11 @@ def get_context(context):
 
 	responsaveis.sort(key=lambda x: x["doc"].nome_completo or "")
 	context.responsaveis = responsaveis
+	# A seção de números de registro só lista quem de fato tira registro: o jovem
+	# sempre, e os responsáveis marcados como ``sera_registrado`` no vínculo — o que
+	# hoje só acontece no ramo Filhotes. É a mesma regra da pendência conferida em
+	# ``gris.api.recepcao.numeros_de_registro_pendentes``.
+	context.responsaveis_com_registro = [item for item in responsaveis if item["sera_registrado"]]
 	# A seção de documentos só faz sentido no ramo que exige o registro do responsável.
 	context.is_filhotes = (doc.ramo or "") == "Filhotes"
 
@@ -99,12 +102,10 @@ def get_context(context):
 		{"field": "primeira_visita_realizada", "label": "Primeira Visita"},
 		{"field": "dados_para_registro_enviados", "label": "Dados Enviados"},
 		{"field": "registro_criado_no_paxtu", "label": "Registro Paxtu"},
-		{"field": "registro_provisorio_pago", "label": "Prov. Pago"},
 		{"field": "registro_provisorio_efetivado", "label": "Prov. Efetivado"},
 		{"field": "pesquisa_de_novos_associados_respondida", "label": "Pesquisa Respondida"},
 		{"field": "ficha_medica_preenchida", "label": "Ficha Médica"},
 		{"field": "id_escoteiros_criado", "label": "ID Criado"},
-		{"field": "registro_definitivo_pago", "label": "Def. Pago"},
 		{"field": "registro_definitivo_efetivado", "label": "Def. Efetivado"},
 		{"field": "reuniao_de_acolhida_realizada", "label": "Acolhida"},
 	]
@@ -116,11 +117,7 @@ def get_context(context):
 	if not dados_enviados:
 		final_steps = flow_steps[:4]
 	elif doc.get("tipo_de_registro") == "Definitivo":
-		final_steps = [
-			s
-			for s in flow_steps
-			if s["field"] not in ["registro_provisorio_pago", "registro_provisorio_efetivado"]
-		]
+		final_steps = [s for s in flow_steps if s["field"] != "registro_provisorio_efetivado"]
 	else:
 		final_steps = flow_steps
 
@@ -193,6 +190,9 @@ def get_context(context):
 	]
 	context.comments_count = len(comments)
 	context.can_add_comments = doc.has_permission("write")
+	# Mesma permissão do comentário, mas com nome próprio: quem só lê a ficha vê os
+	# números de registro como texto, sem campo editável nem botão de salvar.
+	context.pode_editar_registro = doc.has_permission("write")
 	context.current_user = frappe.session.user
 
 	return context

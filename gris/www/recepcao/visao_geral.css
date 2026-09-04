@@ -326,6 +326,29 @@
 	border-color: var(--color-primary);
 }
 
+/* Ícone de informação das etapas concluídas: a data e o autor da conclusão
+   ficam no `title` nativo (ver infoDeConclusao em visao_geral.js). */
+.timeline-info {
+	display: inline-flex;
+	align-items: center;
+	margin-left: calc(var(--spacing) * 1);
+	color: var(--color-muted-foreground);
+	vertical-align: text-bottom;
+	cursor: help;
+}
+
+.timeline-info:hover,
+.timeline-info:focus-visible {
+	color: var(--color-primary);
+}
+
+/* Diálogo dos números de registro (etapas de efetivação) ----------*/
+.registro-numeros {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 4);
+}
+
 /* Dialogs com conteúdo rolável: cabeçalho e rodapé permanecem fixos,
    e a seção do meio (corpo do dialog) rola se ultrapassar a altura
    máxima da viewport. */

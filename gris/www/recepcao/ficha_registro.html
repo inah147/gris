@@ -87,6 +87,69 @@
       </div>
     {% endcall %}
 
+    <!-- Números de Registro -->
+    {% set registro_footer %}
+      <div class="registro-numeros__acoes">
+        <span id="registro-feedback" class="ficha-registro__feedback" hidden></span>
+        <button
+          type="button"
+          id="registro-salvar"
+          class="btn-sm-primary"
+          data-novo-associado="{{ doc.name }}"
+          disabled
+        >
+          {{ lucide_icon("save", size="sm") }}
+          <span>Salvar</span>
+        </button>
+      </div>
+    {% endset %}
+    {% call card(
+      title="Números de Registro",
+      description="Registro escoteiro do jovem e de cada responsável que também será registrado.",
+      footer=registro_footer if pode_editar_registro else None,
+      attrs={"class": "mb-4"}
+    ) %}
+      <div class="ficha-fields-grid">
+        <div class="field">
+          <label class="label" for="registro-jovem">{{ doc.nome_completo or 'Jovem' }}</label>
+          <input
+            type="text"
+            class="input"
+            id="registro-jovem"
+            value="{{ doc.numero_de_registro or '' }}"
+            data-registro-jovem
+            data-valor-original="{{ doc.numero_de_registro or '' }}"
+            placeholder="{{ 'Sem registro' if pode_editar_registro else '-' }}"
+            autocomplete="off"
+            {% if not pode_editar_registro %}readonly{% endif %}
+          >
+          <p class="text-muted-foreground text-xs mt-1">Jovem</p>
+        </div>
+        {% for item in responsaveis_com_registro %}
+        <div class="field">
+          <label class="label" for="registro-responsavel-{{ loop.index }}">{{ item.doc.nome_completo }}</label>
+          <input
+            type="text"
+            class="input"
+            id="registro-responsavel-{{ loop.index }}"
+            value="{{ item.doc.numero_de_registro or '' }}"
+            data-registro-responsavel="{{ item.doc.name }}"
+            data-valor-original="{{ item.doc.numero_de_registro or '' }}"
+            placeholder="{{ 'Sem registro' if pode_editar_registro else '-' }}"
+            autocomplete="off"
+            {% if not pode_editar_registro %}readonly{% endif %}
+          >
+          <p class="text-muted-foreground text-xs mt-1">Responsável</p>
+        </div>
+        {% endfor %}
+      </div>
+      {% if not responsaveis_com_registro %}
+        <p class="text-muted-foreground text-sm mt-4">
+          Nenhum responsável será registrado junto com o jovem.
+        </p>
+      {% endif %}
+    {% endcall %}
+
     <!-- Dados do Associado -->
     {% call card(title="Dados do Associado", description="Informações pessoais", attrs={"class": "mb-4"}) %}
       <div class="ficha-fields-grid">

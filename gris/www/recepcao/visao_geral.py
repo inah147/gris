@@ -4,15 +4,20 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import format_date, getdate
+from frappe.utils import format_date, format_datetime, getdate
 
 from gris.api.portal_access import enrich_context
-from gris.api.recepcao import formatar_idade
+from gris.api.recepcao import formatar_idade, numeros_de_registro_pendentes
 from gris.api.recepcao_funil import (
+	CAMPOS_DE_EFETIVACAO,
+	COLUNAS_DE_ACOMPANHAMENTO,
 	FIELD_INTERVAL_MAP,
+	STATUS_ACOMPANHAMENTO,
 	STEPS_DEF,
+	anexar_historico,
 	calcular_etapas,
 	carregar_configuracao,
+	coluna_de_acompanhamento,
 )
 
 no_cache = 1
@@ -59,6 +64,29 @@ def _normalize_whatsapp_phone(phone):
 	return normalized
 
 
+def _historico_de_etapas(nomes: list[str]) -> dict[str, dict[str, dict]]:
+	"""Mapa ``Novo Associado`` -> etapa -> ``{"concluida_em", "concluido_por"}``.
+
+	Uma consulta na tabela filha inteira em vez de abrir um documento por card do
+	kanban.
+	"""
+	if not nomes:
+		return {}
+
+	historico: dict[str, dict[str, dict]] = {}
+	linhas = frappe.get_all(
+		"Etapa do Fluxo Concluida",
+		filters={"parenttype": "Novo Associado", "parent": ["in", nomes]},
+		fields=["parent", "etapa", "concluida_em", "concluido_por"],
+	)
+	for linha in linhas:
+		historico.setdefault(linha.parent, {})[linha.etapa] = {
+			"concluida_em": linha.concluida_em,
+			"concluido_por": linha.concluido_por,
+		}
+	return historico
+
+
 def get_context(context):
 	# Disable cache to always show fresh data
 	context.no_cache = 1
@@ -66,14 +94,17 @@ def get_context(context):
 	context.active_link = "/recepcao"
 	enrich_context(context, "/recepcao")
 
-	# Statuses as requested by the user
-	statuses = [
+	# Colunas do kanban. As duas últimas são as duas faces do mesmo status
+	# "Acompanhamento": a separação sai de ``coluna_de_acompanhamento`` e não do
+	# campo ``status``, então o card migra sozinho da lista provisória para a
+	# definitiva quando o registro provisório é efetivado.
+	colunas = [
 		"Novo Contato",
 		"Conversa Inicial",
 		"Visita Agendada",
 		"Aguardar Dados",
 		"Fazer Registro",
-		"Acompanhamento",
+		*COLUNAS_DE_ACOMPANHAMENTO,
 	]
 
 	# Intervalos entre etapas (mesma regra usada pela integração MCP)
@@ -90,6 +121,7 @@ def get_context(context):
 		"owner",
 		"responsavel_recepcao",
 		"tipo_de_registro",
+		"numero_de_registro",
 		"visita_agendada",
 		"primeira_visita_realizada",
 		*field_interval_map.keys(),
@@ -205,9 +237,20 @@ def get_context(context):
 			)
 		}
 
+	# Quem concluiu cada etapa e quando, para o ícone de informação da timeline.
+	# Uma consulta na tabela filha inteira, em vez de abrir um documento por card.
+	historico_map = _historico_de_etapas(names)
+
 	# Fetch User Names
 	user_names_map = {}
 	user_ids = set(n.responsavel_recepcao for n in novos_associados if n.responsavel_recepcao)
+	# Os autores das conclusões também precisam do nome legível para a dica.
+	user_ids.update(
+		linha["concluido_por"]
+		for etapas in historico_map.values()
+		for linha in etapas.values()
+		if linha.get("concluido_por")
+	)
 	if user_ids:
 		users = frappe.get_all("User", filters={"name": ["in", list(user_ids)]}, fields=["name", "full_name"])
 		user_names_map = {u.name: (u.full_name or u.name) for u in users}
@@ -231,14 +274,18 @@ def get_context(context):
 	}
 
 	# Group by status
-	kanban_data = {status: [] for status in statuses}
+	kanban_data = {coluna: [] for coluna in colunas}
 
 	today = getdate()
 
 	for associado in novos_associados:
-		status_key = associado.status
+		coluna = (
+			coluna_de_acompanhamento(associado)
+			if associado.status == STATUS_ACOMPANHAMENTO
+			else associado.status
+		)
 
-		if status_key in kanban_data:
+		if coluna in kanban_data:
 			# Get visit info from map
 			visit_rec = visits_map.get(associado.name)
 
@@ -248,6 +295,15 @@ def get_context(context):
 
 			# Process steps
 			associado.steps = calcular_etapas(associado, config, base_date, today)
+			anexar_historico(associado.steps, historico_map.get(associado.name, {}))
+			for etapa in associado.steps:
+				autor = etapa.get("concluido_por")
+				if autor:
+					etapa["concluido_por_nome"] = user_names_map.get(autor, autor)
+				if etapa.get("concluida_em"):
+					etapa["concluida_em_formatada"] = format_datetime(
+						etapa["concluida_em"], "dd/MM/yyyy HH:mm"
+					)
 
 			associado.steps_json = json.dumps(associado.steps, default=str)
 
@@ -283,10 +339,13 @@ def get_context(context):
 			associado.ramo_class = ramo_map.get(associado.ramo, "default")
 			associado.ramo_variant = ramo_variant_map.get(associado.ramo, "secondary")
 
-			kanban_data[status_key].append(associado)
+			kanban_data[coluna].append(associado)
 
-	context.kanban_columns = statuses
+	context.kanban_columns = colunas
 	context.kanban_data = kanban_data
+	# As duas listas de acompanhamento abrem o mesmo dialog; o template precisa
+	# saber quais colunas são elas para marcar os cards.
+	context.colunas_de_acompanhamento = list(COLUNAS_DE_ACOMPANHAMENTO)
 
 	# Fetch users with role 'Recepcao'
 	recepcao_role_users = frappe.get_all("Has Role", filters={"role": "Recepcao"}, fields=["parent"])
@@ -352,6 +411,16 @@ def update_step_status(novo_associado_name: str, field: str, value: str | int):
 		frappe.throw(_("Campo inválido."))
 
 	concluida = bool(int(value))
+
+	# Efetivar o registro exige o número de registro em mãos. A trava fica aqui, e não
+	# no controller de Novo Associado, porque a criação do Associado também marca a
+	# etapa — e nesse caminho o número vem do próprio Associado, sem diálogo a exibir.
+	if concluida and field in CAMPOS_DE_EFETIVACAO:
+		pendentes = numeros_de_registro_pendentes(novo_associado_name)
+		if pendentes:
+			frappe.throw(
+				_("Informe o número de registro antes de efetivar: {0}.").format(", ".join(pendentes))
+			)
 
 	doc = frappe.get_doc("Novo Associado", novo_associado_name)
 	doc.set(field, 1 if concluida else 0)

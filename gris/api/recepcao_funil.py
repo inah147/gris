@@ -27,7 +27,6 @@ STEPS_DEF: list[dict[str, Any]] = [
 	{"field": "primeira_visita_realizada", "label": "Primeira Visita Realizada"},
 	{"field": "dados_para_registro_enviados", "label": "Dados Enviados"},
 	{"field": "registro_criado_no_paxtu", "label": "Registro no Paxtu"},
-	{"field": "registro_provisorio_pago", "label": "Registro Provisório Pago", "conditional": True},
 	{
 		"field": "registro_provisorio_efetivado",
 		"label": "Registro Provisório Efetivado",
@@ -36,7 +35,6 @@ STEPS_DEF: list[dict[str, Any]] = [
 	{"field": "pesquisa_de_novos_associados_respondida", "label": "Pesquisa Respondida"},
 	{"field": "ficha_medica_preenchida", "label": "Ficha Médica"},
 	{"field": "id_escoteiros_criado", "label": "ID Escoteiros Criado"},
-	{"field": "registro_definitivo_pago", "label": "Registro Definitivo Pago"},
 	{"field": "registro_definitivo_efetivado", "label": "Registro Definitivo Efetivado"},
 	{"field": "reuniao_de_acolhida_realizada", "label": "Reunião de Acolhida"},
 ]
@@ -45,17 +43,68 @@ STEPS_DEF: list[dict[str, Any]] = [
 FIELD_INTERVAL_MAP: dict[str, str] = {
 	"dados_para_registro_enviados": "dados_para_registro_enviados",
 	"registro_criado_no_paxtu": "registro_criado_no_paxtu",
-	"registro_provisorio_pago": "registro_provisorio_pago",
 	"registro_provisorio_efetivado": "registro_provisorio_efetivado",
 	"pesquisa_de_novos_associados_respondida": "pesquisa_de_novos_associados_respondida",
 	"ficha_medica_preenchida": "ficha_medica_preenchida",
 	"id_escoteiros_criado": "id_escoteiros_criado",
-	"registro_definitivo_pago": "registro_definitivo_pago",
 	"registro_definitivo_efetivado": "registro_definitivo_efetivado",
 	"reuniao_de_acolhida_realizada": "reuniao_de_acolhida_realizada",
 }
 
 CAMPOS_DE_ETAPA: tuple[str, ...] = tuple(step["field"] for step in STEPS_DEF)
+
+# Etapas que efetivam o registro do jovem. As duas exigem o número de registro do
+# jovem (e dos responsáveis que serão registrados) antes de serem marcadas — ver
+# ``gris.www.recepcao.visao_geral.update_step_status``.
+CAMPOS_DE_EFETIVACAO: tuple[str, ...] = (
+	"registro_provisorio_efetivado",
+	"registro_definitivo_efetivado",
+)
+
+# A coluna "Acompanhamento" do kanban é dividida em duas listas. A separação é
+# derivada dos dados, não gravada em ``status``: quem ainda espera o registro
+# provisório fica na lista provisória e migra sozinho para a definitiva assim que
+# ``registro_provisorio_efetivado`` é marcado. Quem já entrou como Definitivo
+# nunca passa pela lista provisória.
+STATUS_ACOMPANHAMENTO = "Acompanhamento"
+COLUNA_ACOMPANHAMENTO_PROVISORIO = "Acompanhamento Provisório"
+COLUNA_ACOMPANHAMENTO_DEFINITIVO = "Acompanhamento Definitivo"
+COLUNAS_DE_ACOMPANHAMENTO = (
+	COLUNA_ACOMPANHAMENTO_PROVISORIO,
+	COLUNA_ACOMPANHAMENTO_DEFINITIVO,
+)
+
+
+def coluna_de_acompanhamento(dados) -> str:
+	"""Qual das duas listas de acompanhamento recebe o card.
+
+	Mesma condição de ``calcular_etapas``: só quem não é "Definitivo" enxerga a
+	etapa do registro provisório, então só esse grupo pode ficar na lista provisória
+	— e sai dela quando a etapa é concluída.
+	"""
+	e_definitivo = dados.get("tipo_de_registro") == "Definitivo"
+	if not e_definitivo and not dados.get("registro_provisorio_efetivado"):
+		return COLUNA_ACOMPANHAMENTO_PROVISORIO
+	return COLUNA_ACOMPANHAMENTO_DEFINITIVO
+
+
+def anexar_historico(etapas: list[dict], historico: dict) -> list[dict]:
+	"""Acrescenta às etapas concluídas quem marcou a conclusão e quando.
+
+	``historico`` mapeia campo da etapa -> ``{"concluida_em", "concluido_por"}``
+	(ver a tabela ``historico_de_etapas`` de ``Novo Associado``). Etapas concluídas
+	antes de o histórico passar a ser gravado ficam sem as chaves, e a interface
+	mostra isso em vez de inventar uma data.
+	"""
+	for etapa in etapas:
+		if not etapa.get("completed"):
+			continue
+		registro = historico.get(etapa["field"]) or {}
+		if registro.get("concluida_em"):
+			etapa["concluida_em"] = registro["concluida_em"]
+		if registro.get("concluido_por"):
+			etapa["concluido_por"] = registro["concluido_por"]
+	return etapas
 
 
 def carregar_configuracao() -> dict:

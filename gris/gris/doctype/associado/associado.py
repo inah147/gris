@@ -129,19 +129,20 @@ class Associado(Document):
 			na_doc.status = "Acompanhamento"
 			dirty = True
 
+		# O número de registro vem junto: é ele que a visão geral cobra antes de deixar
+		# marcar a etapa de efetivação, e por este caminho ela é marcada sem passar
+		# pelo diálogo.
+		if self.registro and not na_doc.numero_de_registro:
+			na_doc.numero_de_registro = self.registro
+			dirty = True
+
 		if self.tipo_registro == "Provisório":
 			if not na_doc.registro_provisorio_efetivado:
 				na_doc.registro_provisorio_efetivado = 1
 				dirty = True
-			if not na_doc.registro_provisorio_pago:
-				na_doc.registro_provisorio_pago = 1
-				dirty = True
 		elif self.tipo_registro == "Definitivo":
 			if not na_doc.registro_definitivo_efetivado:
 				na_doc.registro_definitivo_efetivado = 1
-				dirty = True
-			if not na_doc.registro_definitivo_pago:
-				na_doc.registro_definitivo_pago = 1
 				dirty = True
 
 		if dirty:
@@ -159,14 +160,21 @@ class Associado(Document):
 		return self.name
 
 	def _sincronizar_id_escoteiros_novo_associado(self, na_name: str):
-		"""Marca a etapa "id@escoteiros criado" assim que o e-mail institucional aparece."""
+		"""Marca a etapa "id@escoteiros criado" assim que o e-mail institucional aparece.
+
+		Passa pelo documento, e não por ``frappe.db.set_value``, para que o controller de
+		Novo Associado registre a conclusão da etapa no histórico como em qualquer outro
+		caminho.
+		"""
 		if not self.id_escoteiros:
 			return
 
 		if frappe.db.get_value("Novo Associado", na_name, "id_escoteiros_criado"):
 			return
 
-		frappe.db.set_value("Novo Associado", na_name, "id_escoteiros_criado", 1)
+		na_doc = frappe.get_doc("Novo Associado", na_name)
+		na_doc.id_escoteiros_criado = 1
+		na_doc.save(ignore_permissions=True)
 
 	def _notificar_registro_criado(self, na_name: str):
 		"""Avisa o responsável, uma única vez, que o registro do jovem foi criado.

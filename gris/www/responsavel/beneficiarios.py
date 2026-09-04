@@ -180,12 +180,10 @@ def get_context(context):
 	field_interval_map = {
 		"dados_para_registro_enviados": "dados_para_registro_enviados",
 		"registro_criado_no_paxtu": "registro_criado_no_paxtu",
-		"registro_provisorio_pago": "registro_provisorio_pago",
 		"registro_provisorio_efetivado": "registro_provisorio_efetivado",
 		"pesquisa_de_novos_associados_respondida": "pesquisa_de_novos_associados_respondida",
 		"ficha_medica_preenchida": "ficha_medica_preenchida",
 		"id_escoteiros_criado": "id_escoteiros_criado",
-		"registro_definitivo_pago": "registro_definitivo_pago",
 		"registro_definitivo_efetivado": "registro_definitivo_efetivado",
 		"reuniao_de_acolhida_realizada": "reuniao_de_acolhida_realizada",
 	}
@@ -243,7 +241,6 @@ def get_context(context):
 			{"field": "primeira_visita_realizada", "label": "Primeira Visita Realizada"},
 			{"field": "dados_para_registro_enviados", "label": "Dados Enviados"},
 			{"field": "registro_criado_no_paxtu", "label": "Registro no Paxtu"},
-			{"field": "registro_provisorio_pago", "label": "Registro Provisório Pago", "conditional": True},
 			{
 				"field": "registro_provisorio_efetivado",
 				"label": "Registro Provisório Efetivado",
@@ -252,7 +249,6 @@ def get_context(context):
 			{"field": "pesquisa_de_novos_associados_respondida", "label": "Pesquisa Respondida"},
 			{"field": "ficha_medica_preenchida", "label": "Ficha Médica"},
 			{"field": "id_escoteiros_criado", "label": "ID Escoteiros Criado"},
-			{"field": "registro_definitivo_pago", "label": "Registro Definitivo Pago"},
 			{"field": "registro_definitivo_efetivado", "label": "Registro Definitivo Efetivado"},
 			{"field": "reuniao_de_acolhida_realizada", "label": "Reunião de Acolhida"},
 		]

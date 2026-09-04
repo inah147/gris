@@ -87,7 +87,6 @@ def enviar_avisos_seguimento_registro_provisorio() -> None:
 			"tipo_de_registro": "Provisório",
 			"registro_provisorio_efetivado": 1,
 			"registro_definitivo_efetivado": 0,
-			"registro_definitivo_pago": 0,
 			"status": ["not in", STATUS_IGNORADOS],
 			"data_registro_provisorio_efetivado": ["<=", data_limite],
 			"data_aviso_seguimento_provisorio": ["is", "not set"],

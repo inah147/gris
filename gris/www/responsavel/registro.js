@@ -35,6 +35,9 @@ frappe.ready(function () {
 	const proximosPassosDialog = document.getElementById("proximosPassosDialog");
 	const proximosPassosLista = document.getElementById("proximos-passos-declaracoes");
 	const enviarDeclaracaoDialog = document.getElementById("enviarDeclaracaoDialog");
+	const conferenciaDialog = document.getElementById("conferenciaDialog");
+	const conferenciaProgresso = document.getElementById("conferencia-progresso");
+	const conferenciaProximoButton = document.getElementById("btn-conferencia-proximo");
 
 	const mainMandatoryFields = [
 		"nome_completo",
@@ -1051,6 +1054,375 @@ frappe.ready(function () {
 		return valid;
 	}
 
+	// ----------------------------------------------------------------------------------
+	// Conferência por dupla digitação
+	//
+	// Errar um dígito do CPF ou o ano de nascimento é o engano mais comum deste formulário, e
+	// nem o dígito verificador nem o resumo final pegam isso: só redigitar pega. Antes de
+	// qualquer outro diálogo do save, quem mexeu nesses dois campos redigita os dois; se o que
+	// foi digitado divergir do formulário, as duas versões aparecem e o usuário escolhe a certa.
+	//
+	// No primeiro envio todo mundo confere, porque nada ali passou por conferência ainda — o
+	// que o servidor renderizou veio da recepção ou de um preenchimento anterior, e é
+	// exatamente onde mora o erro que este passo existe para pegar. Depois de enviado, só
+	// confere quem teve CPF ou data alterados: cobrar tudo de novo de quem voltou só para
+	// arrumar o endereço seria atrito sem ganho.
+	// ----------------------------------------------------------------------------------
+
+	const CONFERENCIA_CAMPOS = ["cpf", "data_de_nascimento"];
+	const CONFERENCIA_ROTULOS = { cpf: "CPF", data_de_nascimento: "Data de nascimento" };
+
+	const registroJaEnviado = form.dataset.registroEnviado === "true";
+	const conferenciaBaseline = new Map();
+	const conferenciaConferidos = new Set();
+	let conferenciaEtapas = [];
+	let conferenciaIndice = 0;
+	let conferenciaFase = "digitar";
+	let conferenciaDivergencias = [];
+	let conferenciaEscolhas = {};
+	let conferenciaConcluindo = false;
+
+	function digitosCpf(value) {
+		return String(value == null ? "" : value).replace(/\D/g, "");
+	}
+
+	// `null` é o beneficiário; um card é o responsável daquele card.
+	function controleDoFormulario(card, fieldName) {
+		return card ? getResponsavelControl(card, fieldName) : getMainControl(fieldName);
+	}
+
+	function valoresDeConferencia(card) {
+		return {
+			cpf: digitosCpf(getControlValue(controleDoFormulario(card, "cpf"))),
+			data_de_nascimento: String(
+				getControlValue(controleDoFormulario(card, "data_de_nascimento")) || ""
+			),
+		};
+	}
+
+	function registrarBaselineConferencia(card) {
+		conferenciaBaseline.set(card || "main", valoresDeConferencia(card));
+	}
+
+	// Chamado ao fim de cada etapa: o valor confirmado vira o novo baseline e a pessoa fica
+	// marcada como conferida nesta sessão.
+	function marcarConferido(card) {
+		registrarBaselineConferencia(card);
+		conferenciaConferidos.add(card || "main");
+	}
+
+	function conferenciaPendente(card) {
+		const baseline = conferenciaBaseline.get(card || "main");
+		// Sem baseline (card que nem existia no primeiro paint) o lado seguro é conferir.
+		if (!baseline) return true;
+
+		const atual = valoresDeConferencia(card);
+		return (
+			baseline.cpf !== atual.cpf || baseline.data_de_nascimento !== atual.data_de_nascimento
+		);
+	}
+
+	function precisaConferir(card) {
+		// Mexeu no CPF ou na data agora: confere, mesmo que já tenha conferido antes.
+		if (conferenciaPendente(card)) return true;
+
+		// Primeiro envio: confere uma vez por pessoa. O `Set` é o que evita repetir tudo se o
+		// save falhar por outro motivo (telefone de cobrança inválido, por exemplo) e o
+		// responsável corrigir e salvar de novo sem sair da página.
+		return !registroJaEnviado && !conferenciaConferidos.has(card || "main");
+	}
+
+	function etapasDeConferencia() {
+		if (!conferenciaDialog) return [];
+
+		const etapas = [];
+		if (precisaConferir(null)) etapas.push({ slot: "main", card: null });
+
+		// Card escondido é responsável que não será salvo: conferir os dados dele não faz
+		// sentido. O índice do slot acompanha a ordem em que o template renderizou os cards.
+		const todos = Array.from(document.querySelectorAll(".responsavel-card"));
+		visibleResponsavelCards().forEach((card) => {
+			if (!precisaConferir(card)) return;
+			etapas.push({ slot: `responsavel-${todos.indexOf(card) + 1}`, card });
+		});
+
+		return etapas;
+	}
+
+	function blocoDaEtapa(etapa) {
+		return conferenciaDialog.querySelector(`[data-conferencia-slot="${etapa.slot}"]`);
+	}
+
+	function faseDaEtapa(etapa, fase) {
+		return blocoDaEtapa(etapa).querySelector(`[data-conferencia-fase="${fase}"]`);
+	}
+
+	function campoDigitado(etapa, fieldName) {
+		return blocoDaEtapa(etapa).querySelector(`[data-conferencia-campo="${fieldName}"]`);
+	}
+
+	function nomeDaEtapa(etapa) {
+		const nome = String(
+			getControlValue(controleDoFormulario(etapa.card, "nome_completo")) || ""
+		).trim();
+		if (nome) return nome;
+		return etapa.card ? "Responsável" : "Novo Associado";
+	}
+
+	function formatarDataBR(value) {
+		const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value || ""));
+		return match ? `${match[3]}/${match[2]}/${match[1]}` : String(value || "");
+	}
+
+	function aplicarMascaraData(input) {
+		let value = input.value.replace(/\D/g, "").slice(0, 8);
+		if (value.length > 4) {
+			value = value.replace(/^(\d{2})(\d{2})(\d{1,4}).*/, "$1/$2/$3");
+		} else if (value.length > 2) {
+			value = value.replace(/^(\d{2})(\d{1,2}).*/, "$1/$2");
+		}
+		input.value = value;
+	}
+
+	// "dd/mm/aaaa" -> "aaaa-mm-dd", o formato em que o formulário guarda a data. Devolve vazio
+	// quando a data não existe no calendário: o Date normaliza 31/02 para 03/03 em silêncio, e
+	// aceitar isso gravaria uma data que ninguém digitou.
+	function dataDigitadaParaIso(value) {
+		const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(value || "").trim());
+		if (!match) return "";
+
+		const [, dia, mes, ano] = match;
+		const data = new Date(Number(ano), Number(mes) - 1, Number(dia));
+		const confere =
+			data.getFullYear() === Number(ano) &&
+			data.getMonth() === Number(mes) - 1 &&
+			data.getDate() === Number(dia);
+
+		return confere ? `${ano}-${mes}-${dia}` : "";
+	}
+
+	// O CPF é comparado como está; a data digitada vira ISO para bater com o formulário.
+	function valorDigitadoNaConferencia(etapa, fieldName) {
+		const bruto = String(getControlValue(campoDigitado(etapa, fieldName)) || "").trim();
+		return fieldName === "data_de_nascimento" ? dataDigitadaParaIso(bruto) : bruto;
+	}
+
+	function formatarValorConferencia(fieldName, value) {
+		if (!value) return "Em branco";
+		return fieldName === "data_de_nascimento" ? formatarDataBR(value) : String(value);
+	}
+
+	function validarEtapaConferencia(etapa) {
+		let valido = true;
+
+		const cpfControl = campoDigitado(etapa, "cpf");
+		const cpf = String(getControlValue(cpfControl) || "").trim();
+		if (!cpf) {
+			setInvalid(cpfControl, "Digite o CPF novamente.");
+			valido = false;
+		} else if (!validateCPF(cpf)) {
+			// Barrar aqui evita que um erro de digitação da própria conferência vire uma
+			// "divergência" e acabe oferecido como opção correta.
+			setInvalid(cpfControl, "CPF inválido. Confira a digitação.");
+			valido = false;
+		}
+
+		const dataControl = campoDigitado(etapa, "data_de_nascimento");
+		const data = String(getControlValue(dataControl) || "").trim();
+		if (!data) {
+			setInvalid(dataControl, "Digite a data de nascimento novamente.");
+			valido = false;
+		} else if (!dataDigitadaParaIso(data)) {
+			// Mesmo motivo do CPF: erro de digitação da própria conferência não pode virar
+			// uma "divergência" e acabar oferecido como opção correta.
+			setInvalid(dataControl, "Data inválida. Use o formato dd/mm/aaaa.");
+			valido = false;
+		}
+
+		return valido;
+	}
+
+	function divergenciasDaEtapa(etapa) {
+		return CONFERENCIA_CAMPOS.map((fieldName) => {
+			const atual = String(
+				getControlValue(controleDoFormulario(etapa.card, fieldName)) || ""
+			);
+			const digitado = valorDigitadoNaConferencia(etapa, fieldName);
+			// Reformatar o CPF não é alterar o CPF.
+			const iguais =
+				fieldName === "cpf"
+					? digitosCpf(atual) === digitosCpf(digitado)
+					: atual === digitado;
+			return iguais ? null : { campo: fieldName, atual, digitado };
+		}).filter(Boolean);
+	}
+
+	function opcaoDivergenciaHtml(fieldName, origem, rotulo, value) {
+		return `
+			<button type="button" class="registro-conferencia-opcao" role="radio" aria-checked="false"
+				data-conferencia-opcao="${escapeHtml(fieldName)}"
+				data-conferencia-origem="${escapeHtml(origem)}">
+				<span class="registro-conferencia-opcao__rotulo">${escapeHtml(rotulo)}</span>
+				<span class="registro-conferencia-opcao__valor">${escapeHtml(
+					formatarValorConferencia(fieldName, value)
+				)}</span>
+			</button>
+		`;
+	}
+
+	function renderDivergencias(etapa) {
+		faseDaEtapa(etapa, "digitar").hidden = true;
+
+		const alvo = faseDaEtapa(etapa, "divergencia");
+		alvo.innerHTML =
+			`<p class="registro-conferencia-aviso">
+				O que você digitou não confere com o formulário. Toque na informação correta.
+			</p>` +
+			conferenciaDivergencias
+				.map((item) => {
+					const rotulo = CONFERENCIA_ROTULOS[item.campo];
+					return `
+				<div class="registro-conferencia-campo">
+					<p class="registro-conferencia-campo__titulo">${escapeHtml(rotulo)}</p>
+					<div class="registro-conferencia-opcoes" role="radiogroup" aria-label="${escapeHtml(
+						`${rotulo} correto`
+					)}">
+						${opcaoDivergenciaHtml(item.campo, "formulario", "O que está no formulário", item.atual)}
+						${opcaoDivergenciaHtml(item.campo, "digitado", "O que você acabou de digitar", item.digitado)}
+					</div>
+				</div>
+			`;
+				})
+				.join("");
+		alvo.hidden = false;
+	}
+
+	function atualizarBotaoConferencia() {
+		if (!conferenciaProximoButton) return;
+
+		if (conferenciaFase === "divergencia") {
+			conferenciaProximoButton.textContent = "Confirmar e continuar";
+			conferenciaProximoButton.disabled = conferenciaDivergencias.some(
+				(item) => !conferenciaEscolhas[item.campo]
+			);
+			return;
+		}
+
+		const ultima = conferenciaIndice === conferenciaEtapas.length - 1;
+		conferenciaProximoButton.textContent = ultima ? "Confirmar dados" : "Próximo";
+		conferenciaProximoButton.disabled = false;
+	}
+
+	// Limpa todos os blocos, não só o da etapa: o que foi digitado e as opções de divergência
+	// carregam CPF e data, e não têm por que continuar no DOM depois que a etapa passou.
+	function limparBlocosConferencia() {
+		conferenciaDialog.querySelectorAll("[data-conferencia-slot]").forEach((bloco) => {
+			bloco.hidden = true;
+			bloco.querySelector("[data-conferencia-fase='digitar']").hidden = false;
+
+			const divergencia = bloco.querySelector("[data-conferencia-fase='divergencia']");
+			divergencia.hidden = true;
+			divergencia.innerHTML = "";
+
+			bloco.querySelectorAll("[data-conferencia-campo]").forEach((control) => {
+				setControlValue(control, "");
+				clearInvalidControl(control);
+			});
+		});
+	}
+
+	function renderEtapaConferencia() {
+		const etapa = conferenciaEtapas[conferenciaIndice];
+		if (!etapa) return;
+
+		conferenciaFase = "digitar";
+		conferenciaDivergencias = [];
+		conferenciaEscolhas = {};
+
+		limparBlocosConferencia();
+
+		const bloco = blocoDaEtapa(etapa);
+		bloco.hidden = false;
+		bloco.querySelector("[data-conferencia-nome]").textContent = nomeDaEtapa(etapa);
+
+		if (conferenciaProgresso) {
+			conferenciaProgresso.textContent = `Etapa ${conferenciaIndice + 1} de ${
+				conferenciaEtapas.length
+			}`;
+		}
+
+		atualizarBotaoConferencia();
+		window.setTimeout(() => campoDigitado(etapa, "cpf")?.focus(), 100);
+	}
+
+	function aplicarEscolhasConferencia(etapa) {
+		conferenciaDivergencias.forEach((item) => {
+			if (conferenciaEscolhas[item.campo] !== "digitado") return;
+			// Escrever no controle do formulário é o que faz a correção chegar ao save: as
+			// coletoras do payload leem o formulário depois da conferência.
+			const control = controleDoFormulario(etapa.card, item.campo);
+			setControlValue(control, item.digitado);
+			clearInvalidControl(control);
+		});
+	}
+
+	function proximaEtapaConferencia() {
+		if (conferenciaIndice < conferenciaEtapas.length - 1) {
+			conferenciaIndice += 1;
+			renderEtapaConferencia();
+			return;
+		}
+		concluirConferencia();
+	}
+
+	function concluirConferencia() {
+		conferenciaConcluindo = true;
+		closeDialog(conferenciaDialog);
+		conferenciaConcluindo = false;
+		conferenciaEtapas = [];
+		limparBlocosConferencia();
+
+		// A correção pode ter criado um problema novo: um CPF que agora duplica o de outra
+		// pessoa, ou uma data que joga o jovem no ramo Filhotes e passa a exigir naturalidade e
+		// documento com foto. Revalidar aqui devolve o usuário ao campo certo, em vez de deixar
+		// o erro aparecer só na resposta do servidor.
+		if (!validateForm()) return;
+		continuarSubmit();
+	}
+
+	function avancarConferencia() {
+		const etapa = conferenciaEtapas[conferenciaIndice];
+		if (!etapa) return;
+
+		if (conferenciaFase === "divergencia") {
+			aplicarEscolhasConferencia(etapa);
+			marcarConferido(etapa.card);
+			proximaEtapaConferencia();
+			return;
+		}
+
+		if (!validarEtapaConferencia(etapa)) return;
+
+		conferenciaDivergencias = divergenciasDaEtapa(etapa);
+		if (!conferenciaDivergencias.length) {
+			marcarConferido(etapa.card);
+			proximaEtapaConferencia();
+			return;
+		}
+
+		conferenciaFase = "divergencia";
+		conferenciaEscolhas = {};
+		renderDivergencias(etapa);
+		atualizarBotaoConferencia();
+	}
+
+	function abrirConferencia(etapas) {
+		conferenciaEtapas = etapas;
+		conferenciaIndice = 0;
+		renderEtapaConferencia();
+		openDialog(conferenciaDialog);
+	}
+
 	function formatLabel(key) {
 		if (labelMap[key]) return labelMap[key];
 		return key.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -1435,6 +1807,42 @@ frappe.ready(function () {
 		});
 	});
 
+	// Os controles da conferência ficam fora do <form>, então não passam pelos ouvintes
+	// delegados dele: máscara e limpeza de erro são ligadas aqui.
+	conferenciaDialog?.addEventListener("input", (event) => {
+		const campo = event.target.dataset?.conferenciaCampo;
+		if (!campo) return;
+		if (campo === "cpf") applyCPFMask(event.target);
+		if (campo === "data_de_nascimento") aplicarMascaraData(event.target);
+		clearInvalidControl(event.target);
+	});
+
+	conferenciaDialog?.addEventListener("click", (event) => {
+		const opcao = event.target.closest("[data-conferencia-opcao]");
+		if (!opcao) return;
+
+		conferenciaEscolhas[opcao.dataset.conferenciaOpcao] = opcao.dataset.conferenciaOrigem;
+		opcao
+			.closest(".registro-conferencia-opcoes")
+			.querySelectorAll("[data-conferencia-opcao]")
+			.forEach((item) => {
+				item.setAttribute("aria-checked", item === opcao ? "true" : "false");
+			});
+		atualizarBotaoConferencia();
+	});
+
+	conferenciaProximoButton?.addEventListener("click", avancarConferencia);
+
+	// Fechar o diálogo cancela o save. O botão de salvar já voltou ao estado normal antes de
+	// ele abrir, então só o estado da conferência precisa ser descartado.
+	conferenciaDialog?.addEventListener("close", () => {
+		if (conferenciaConcluindo) return;
+		conferenciaEtapas = [];
+		conferenciaDivergencias = [];
+		conferenciaEscolhas = {};
+		limparBlocosConferencia();
+	});
+
 	confirmDataCheck?.addEventListener("change", updateConfirmButton);
 	confirmImageCheck?.addEventListener("change", updateConfirmButton);
 	cienciaPagamentoCheck?.addEventListener("change", updateTipoContinueButton);
@@ -1620,15 +2028,8 @@ frappe.ready(function () {
 		if (!saving) resetPendingSubmit();
 	});
 
-	form.addEventListener("submit", (event) => {
-		event.preventDefault();
-		if (readOnly) return;
-		setLoading(submitButton, true, "Validando...");
-		if (!validateForm()) {
-			setLoading(submitButton, false);
-			return;
-		}
-
+	// Roda depois da conferência: o payload precisa ser coletado do formulário já corrigido.
+	function continuarSubmit() {
 		const formData = collectMainData();
 		const responsaveisData = collectResponsaveisData();
 		if (formData.guarda_unilateral !== 1) {
@@ -1655,11 +2056,41 @@ frappe.ready(function () {
 		}
 
 		openTipoRegistroModal(payload);
+	}
+
+	form.addEventListener("submit", (event) => {
+		event.preventDefault();
+		if (readOnly) return;
+		setLoading(submitButton, true, "Validando...");
+		if (!validateForm()) {
+			setLoading(submitButton, false);
+			return;
+		}
+		setLoading(submitButton, false);
+
+		// A conferência vem antes da coleta do payload de propósito: ela corrige os controles
+		// do formulário, e as coletoras leem o formulário. Ninguém mexeu em CPF nem em data de
+		// nascimento? Então não há o que conferir, e o fluxo segue como sempre foi.
+		const etapas = etapasDeConferencia();
+		if (!etapas.length) {
+			continuarSubmit();
+			return;
+		}
+
+		abrirConferencia(etapas);
 	});
 
 	syncAddResponsavelButton();
 	toggleGuardiaoLegal();
 	applyFilhotesMode();
+
+	// O baseline é o que o servidor renderizou: é contra ele que a conferência decide quem
+	// precisa redigitar CPF e data de nascimento.
+	registrarBaselineConferencia(null);
+	document
+		.querySelectorAll(".responsavel-card")
+		.forEach((card) => registrarBaselineConferencia(card));
+
 	if (readOnly) setReadOnlyMode();
 
 	// Registro salvo e declaração assinada pendente: é o momento em que o responsável tem o

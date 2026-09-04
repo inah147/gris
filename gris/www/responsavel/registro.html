@@ -210,7 +210,8 @@
 		"novalidate": "novalidate",
 		"data-read-only": "true" if read_only else "false",
 		"data-filhotes": "true" if is_filhotes else "false",
-		"data-idade-transicao-filhotes": idade_transicao_filhotes
+		"data-idade-transicao-filhotes": idade_transicao_filhotes,
+		"data-registro-enviado": "true" if novo_associado.dados_para_registro_enviados else "false"
 	}) %}
 		<input type="hidden" id="novo-associado-name" name="name" value="{{ novo_associado.name }}">
 
@@ -415,6 +416,81 @@
 		{% endif %}
 	{% endcall %}
 
+	{# Conferência por dupla digitação de CPF e data de nascimento, o primeiro passo do save.
+	   Errar um dígito do CPF ou o ano de nascimento é o engano mais comum deste formulário, e
+	   nem o dígito verificador nem o resumo final pegam isso: só redigitar pega.
+
+	   Os blocos de etapa são renderizados aqui, um por escopo possível, e o JS só alterna qual
+	   fica visível. O datepicker é inicializado pelo MutationObserver do basecoat, que roda em
+	   microtask: injetar o componente por innerHTML deixaria o setter `value` indisponível no
+	   instante seguinte. #}
+	{% if not read_only %}
+		{% macro conferencia_etapa(slot) %}
+			<div class="registro-conferencia-etapa" data-conferencia-slot="{{ slot }}" hidden>
+				<h3 class="registro-conferencia-etapa__nome" data-conferencia-nome></h3>
+
+				{# Nunca mostra o valor que está no formulário: ler o CPF aqui transformaria a
+				   conferência em cópia. Só o nome situa quem está sendo conferido.
+
+				   Os rótulos são curtos de propósito: o "digite de novo" já está na descrição
+				   do diálogo, e um rótulo de duas linhas desalinharia os dois campos. #}
+				<div class="registro-conferencia-campos" data-conferencia-fase="digitar">
+					{% call field(label="CPF", attrs={"class": "registro-field"}) %}
+						{{ input(type="text", attrs={
+							"id": "conferencia-" ~ slot ~ "-cpf",
+							"class": "registro-control",
+							"data-conferencia-campo": "cpf",
+							"inputmode": "numeric",
+							"maxlength": "14",
+							"placeholder": "000.000.000-00",
+							"autocomplete": "off"
+						}) }}
+						<p class="registro-field-error" data-field-error="cpf" hidden></p>
+					{% endcall %}
+					{# Digitado, não datepicker: navegar um calendário até 1985 é lento, e escolher
+					   numa grade não exercita a memória do dado — que é justamente o ponto da
+					   conferência. De quebra evita o popover, que não cabe neste diálogo. #}
+					{% call field(label="Data de nascimento", attrs={"class": "registro-field"}) %}
+						{{ input(type="text", attrs={
+							"id": "conferencia-" ~ slot ~ "-data",
+							"class": "registro-control",
+							"data-conferencia-campo": "data_de_nascimento",
+							"inputmode": "numeric",
+							"maxlength": "10",
+							"placeholder": "dd/mm/aaaa",
+							"autocomplete": "off"
+						}) }}
+						<p class="registro-field-error" data-field-error="data_de_nascimento" hidden></p>
+					{% endcall %}
+				</div>
+
+				{# Preenchido pelo JS só com os campos que divergiram. #}
+				<div class="registro-conferencia-divergencia" data-conferencia-fase="divergencia" hidden></div>
+			</div>
+		{% endmacro %}
+
+		{% set conferencia_footer %}
+			{{ button("Cancelar", variant="ghost", attrs={"data-close-dialog": "conferenciaDialog"}) }}
+			{{ button("Próximo", variant="primary", attrs={"id": "btn-conferencia-proximo"}) }}
+		{% endset %}
+		{% call dialog(
+			id="conferenciaDialog",
+			title="Confirme os dados",
+			description="Para evitar erro de digitação, informe de novo o CPF e a data de nascimento.",
+			footer=conferencia_footer,
+			dialog_attrs={"class": "registro-dialog registro-dialog--conferencia"},
+			close_button=true
+		) %}
+			<div class="registro-dialog-body">
+				<p class="registro-conferencia-progresso" id="conferencia-progresso" aria-live="polite"></p>
+				{{ conferencia_etapa("main") }}
+				{% for indice in range(responsaveis | length) %}
+					{{ conferencia_etapa("responsavel-" ~ (indice + 1)) }}
+				{% endfor %}
+			</div>
+		{% endcall %}
+	{% endif %}
+
 	{% set unico_footer %}
 		{{ button("Adicionar segundo responsável", variant="outline", attrs={"id": "btn-adicionar-do-dialogo"}) }}
 		{{ button("Salvar com um responsável", variant="primary", attrs={"id": "btn-confirmar-unico-responsavel"}) }}
@@ -463,9 +539,11 @@
 		<div class="registro-dialog-body">
 			<div id="confirmation-summary" class="registro-summary" aria-live="polite"></div>
 			<div class="registro-confirm-box">
+				{# CPF e data de nascimento já passaram pela conferência por dupla digitação, um
+				   passo antes: repetir isso aqui faria os dois passos dizerem a mesma coisa. #}
 				{{ checkbox(
 					"confirm-data-check",
-					"Confirmo que todos os dados estão corretos, especialmente os CPFs e datas de nascimento do associado e dos responsáveis."
+					"Confirmo que todos os dados do associado e dos responsáveis estão corretos."
 				) }}
 				{{ checkbox(
 					"confirm-image-check",

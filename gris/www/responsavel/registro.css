@@ -293,6 +293,113 @@
 	line-height: var(--leading-relaxed);
 }
 
+.registro-conferencia-progresso {
+	margin: 0;
+	color: var(--color-muted-foreground);
+	font-size: var(--text-sm);
+	font-weight: var(--font-weight-medium);
+}
+
+.registro-conferencia-etapa {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 5);
+}
+
+/* O JS alterna etapa e fase pelo atributo `hidden`, e `display` de classe ganha dele. */
+.registro-conferencia-etapa[hidden],
+.registro-conferencia-campos[hidden],
+.registro-conferencia-divergencia[hidden] {
+	display: none;
+}
+
+.registro-conferencia-etapa__nome {
+	margin: 0;
+	color: var(--color-foreground);
+	font-size: var(--text-lg);
+	font-weight: var(--font-weight-semibold);
+	line-height: 1.25;
+}
+
+/* `start` para o rótulo mandar na posição do controle: esticado, um rótulo que quebrasse em
+   duas linhas empurraria só o seu campo para baixo e os dois sairiam desalinhados. */
+.registro-conferencia-campos {
+	display: grid;
+	align-items: start;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: calc(var(--spacing) * 4);
+}
+
+.registro-conferencia-divergencia {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 5);
+}
+
+.registro-conferencia-aviso {
+	margin: 0;
+	color: var(--color-foreground);
+	font-size: var(--text-sm);
+	line-height: var(--leading-relaxed);
+}
+
+.registro-conferencia-campo {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+}
+
+.registro-conferencia-campo__titulo {
+	margin: 0;
+	color: var(--color-muted-foreground);
+	font-size: var(--text-sm);
+	font-weight: var(--font-weight-medium);
+}
+
+.registro-conferencia-opcoes {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: calc(var(--spacing) * 3);
+}
+
+.registro-conferencia-opcao {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: calc(var(--spacing) * 1);
+	padding: calc(var(--spacing) * 4);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-lg);
+	background: var(--color-card);
+	text-align: left;
+	cursor: pointer;
+	transition:
+		border-color var(--default-transition-duration) var(--default-transition-timing-function),
+		box-shadow var(--default-transition-duration) var(--default-transition-timing-function);
+}
+
+.registro-conferencia-opcao:hover,
+.registro-conferencia-opcao:focus-visible,
+.registro-conferencia-opcao[aria-checked="true"] {
+	border-color: var(--color-ring);
+}
+
+.registro-conferencia-opcao[aria-checked="true"] {
+	box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-ring) 24%, transparent);
+}
+
+.registro-conferencia-opcao__rotulo {
+	color: var(--color-muted-foreground);
+	font-size: var(--text-sm);
+}
+
+.registro-conferencia-opcao__valor {
+	color: var(--color-foreground);
+	font-size: var(--text-lg);
+	font-weight: var(--font-weight-semibold);
+	overflow-wrap: anywhere;
+}
+
 .registro-dialog-body {
 	display: flex;
 	flex-direction: column;
@@ -589,7 +696,9 @@
 	.registro-grid--3,
 	.registro-grid--4,
 	.registro-toggle-grid,
-	.registro-type-options {
+	.registro-type-options,
+	.registro-conferencia-campos,
+	.registro-conferencia-opcoes {
 		grid-template-columns: minmax(0, 1fr);
 	}
 

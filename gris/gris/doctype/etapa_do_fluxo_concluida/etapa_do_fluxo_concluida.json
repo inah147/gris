@@ -1,0 +1,52 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-09-04 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "etapa",
+  "concluida_em",
+  "concluido_por"
+ ],
+ "fields": [
+  {
+   "description": "Fieldname da etapa do fluxo, como aparece em gris.api.recepcao_funil.STEPS_DEF.",
+   "fieldname": "etapa",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Etapa",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "concluida_em",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Concluída em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "concluido_por",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Concluída por",
+   "options": "User",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-04 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Etapa do Fluxo Concluida",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

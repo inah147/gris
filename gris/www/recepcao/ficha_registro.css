@@ -358,3 +358,21 @@
 .tracking-tight { letter-spacing: -0.02em; }
 .text-muted-foreground { color: var(--muted-foreground); }
 .text-destructive { color: var(--destructive); }
+
+/* Seção "Números de Registro" -------------------------------------------*/
+.registro-numeros__acoes {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+}
+
+.ficha-registro__feedback {
+	font-size: 0.8rem;
+	color: var(--muted-foreground);
+}
+
+.ficha-registro__feedback--erro {
+	color: var(--destructive);
+}

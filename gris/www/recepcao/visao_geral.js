@@ -7,6 +7,16 @@ let currentWhatsappContatos = [];
 let currentCardElement = null;
 let whatsappSourceModalId = null;
 
+// As duas listas de acompanhamento são o mesmo status "Acompanhamento" no banco,
+// separado por gris.api.recepcao_funil.coluna_de_acompanhamento. Aqui elas só
+// precisam abrir o mesmo dialog. Mantenha em sincronia com
+// COLUNAS_DE_ACOMPANHAMENTO no Python.
+const COLUNAS_DE_ACOMPANHAMENTO = ["Acompanhamento Provisório", "Acompanhamento Definitivo"];
+
+// Etapas que exigem o número de registro antes de serem marcadas
+// (gris.api.recepcao_funil.CAMPOS_DE_EFETIVACAO).
+const CAMPOS_DE_EFETIVACAO = ["registro_provisorio_efetivado", "registro_definitivo_efetivado"];
+
 // ---------- Helpers de dialog ---------------------------------------------
 
 function openDialog(id) {
@@ -257,8 +267,15 @@ frappe.ready(function () {
 				openAguardarDadosModal(id, responsavel, nome, responsavelAssociado, steps);
 			} else if (status === "Fazer Registro") {
 				openFazerRegistroModal(id, responsavel, nome, responsavelAssociado, steps);
-			} else if (status === "Acompanhamento") {
-				openAcompanhamentoModal(id, responsavel, nome, responsavelAssociado, steps);
+			} else if (COLUNAS_DE_ACOMPANHAMENTO.includes(status)) {
+				openAcompanhamentoModal(
+					id,
+					responsavel,
+					nome,
+					responsavelAssociado,
+					steps,
+					status
+				);
 			} else {
 				window.location.href = `/recepcao/detalhes?id=${id}`;
 			}
@@ -438,9 +455,13 @@ function openFazerRegistroModal(id, responsavel, nome, responsavelAssociado, ste
 	openDialog("modalFazerRegistro");
 }
 
-function openAcompanhamentoModal(id, responsavel, nome, responsavelAssociado, steps) {
+function openAcompanhamentoModal(id, responsavel, nome, responsavelAssociado, steps, coluna) {
 	currentCardId = id;
 	sincronizarCabecalhoDoDialog();
+
+	// O dialog é um só para as duas listas; o título diz em qual delas o card está.
+	const titulo = document.getElementById("modalAcompanhamento-title");
+	if (titulo) titulo.textContent = coluna || "Acompanhamento";
 	document.getElementById("ac_associado_nome").textContent = nome;
 	document.getElementById("ac_responsavel_nome").textContent = responsavelAssociado || "-";
 	setSelectValue("ac_responsavel_recepcao", responsavel);
@@ -479,6 +500,30 @@ function parseSteps(steps) {
 	}
 }
 
+// Dica de conclusão da etapa: data e autor, no `title` nativo.
+//
+// O tooltip CSS do Basecoat é desenhado com `::before` posicionado para fora do
+// item, e o corpo do dialog rola (`overflow-y: auto` em .dialog > div > section):
+// numa timeline longa a dica seria recortada justamente nas etapas do topo. O
+// `title` é desenhado pelo navegador, então nunca é cortado e aceita quebra de
+// linha.
+function infoDeConclusao(step) {
+	const partes = [];
+	if (step.concluida_em_formatada) partes.push(`Concluído em ${step.concluida_em_formatada}`);
+	if (step.concluido_por_nome) partes.push(`Por ${step.concluido_por_nome}`);
+
+	const texto = partes.length
+		? partes.join("\n")
+		: "Concluído antes de o sistema passar a registrar data e autor.";
+
+	return (
+		` <span class="timeline-info" tabindex="0" role="img"` +
+		` title="${escapeHtml(texto)}" aria-label="${escapeHtml(texto)}">` +
+		'<svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true">' +
+		'<use href="/assets/gris/design_system/icons/lucide/sprite.svg#info"/></svg></span>'
+	);
+}
+
 function renderTimeline(containerId, steps) {
 	const container = document.getElementById(containerId);
 	if (!container) return;
@@ -515,6 +560,9 @@ function renderTimeline(containerId, steps) {
 			labelHtml += ` <span class="${dateClass}">(${dateLabel}: ${escapeHtml(
 				step.estimated_date
 			)})${iconHtml}</span>`;
+		}
+		if (completed) {
+			labelHtml += infoDeConclusao(step);
 		}
 
 		const item = document.createElement("div");
@@ -808,6 +856,19 @@ function confirmarRegistroCriado() {
 
 function toggleStep(field, element) {
 	if (!currentCardId || !field) return;
+
+	// Efetivar o registro passa antes pelo diálogo dos números de registro. O
+	// backend recusa a etapa sem eles de qualquer jeito (update_step_status);
+	// aqui é só para pedir o dado em vez de mostrar um erro.
+	if (CAMPOS_DE_EFETIVACAO.includes(field)) {
+		abrirNumerosDeRegistro(field, element);
+		return;
+	}
+
+	marcarEtapa(field, element);
+}
+
+function marcarEtapa(field, element) {
 	frappe.call({
 		method: "gris.www.recepcao.visao_geral.update_step_status",
 		args: { novo_associado_name: currentCardId, field: field, value: 1 },
@@ -822,6 +883,165 @@ function toggleStep(field, element) {
 				}
 				setTimeout(() => window.location.reload(), 1000);
 			}
+		},
+	});
+}
+
+// ---------- Números de registro (etapas de efetivação) ---------------------
+
+let numerosSourceModalId = null;
+let numerosEtapaPendente = null;
+let numerosElementoPendente = null;
+
+// Abre o diálogo dos números de registro; se nada estiver faltando, marca a
+// etapa direto, sem interromper quem já preencheu tudo antes.
+function abrirNumerosDeRegistro(field, element) {
+	numerosEtapaPendente = field;
+	numerosElementoPendente = element;
+
+	frappe.call({
+		method: "gris.api.recepcao.obter_numeros_de_registro",
+		args: { novo_associado_name: currentCardId },
+		callback: function (r) {
+			if (r.exc) return;
+			const dados = r.message || {};
+			if (!(dados.pendentes || []).length) {
+				marcarEtapa(field, element);
+				return;
+			}
+			renderizarCamposDeRegistro(dados);
+			numerosSourceModalId = getOpenDialogId("modalNumerosDeRegistro");
+			if (numerosSourceModalId) closeDialog(numerosSourceModalId);
+			openDialog("modalNumerosDeRegistro");
+		},
+	});
+}
+
+function renderizarCamposDeRegistro(dados) {
+	const container = document.getElementById("nr_campos");
+	if (!container) return;
+	container.innerHTML = "";
+	definirErroDeRegistro("");
+
+	const jovem = dados.jovem || {};
+	container.appendChild(
+		campoDeRegistro({
+			id: "nr_jovem",
+			rotulo: `${jovem.nome || "Jovem"} (jovem)`,
+			valor: jovem.numero_de_registro || "",
+			obrigatorio: true,
+		})
+	);
+
+	(dados.responsaveis || []).forEach((responsavel, indice) => {
+		const campo = campoDeRegistro({
+			id: `nr_responsavel_${indice}`,
+			rotulo: responsavel.nome,
+			valor: responsavel.numero_de_registro || "",
+			obrigatorio: responsavel.sera_registrado,
+			ajuda: responsavel.sera_registrado
+				? "Será registrado junto com o jovem."
+				: "Opcional.",
+		});
+		campo.querySelector("input").dataset.responsavel = responsavel.responsavel;
+		container.appendChild(campo);
+	});
+}
+
+function campoDeRegistro({ id, rotulo, valor, obrigatorio, ajuda }) {
+	const wrapper = document.createElement("div");
+	wrapper.className = "field registro-numeros__campo";
+
+	const label = document.createElement("label");
+	label.className = "label";
+	label.setAttribute("for", id);
+	label.textContent = obrigatorio ? `${rotulo} *` : rotulo;
+
+	const input = document.createElement("input");
+	input.type = "text";
+	input.className = "input";
+	input.id = id;
+	input.value = valor;
+	input.autocomplete = "off";
+	input.placeholder = "Número de registro";
+	if (obrigatorio) input.dataset.obrigatorio = "1";
+
+	wrapper.appendChild(label);
+	wrapper.appendChild(input);
+
+	if (ajuda) {
+		const dica = document.createElement("p");
+		dica.className = "text-muted-foreground text-xs mt-1";
+		dica.textContent = ajuda;
+		wrapper.appendChild(dica);
+	}
+
+	return wrapper;
+}
+
+function definirErroDeRegistro(mensagem) {
+	const erro = document.getElementById("nr_erro");
+	if (!erro) return;
+	erro.textContent = mensagem || "";
+	erro.hidden = !mensagem;
+}
+
+function fecharNumerosDeRegistro() {
+	closeDialog("modalNumerosDeRegistro");
+	numerosEtapaPendente = null;
+	numerosElementoPendente = null;
+	if (numerosSourceModalId) {
+		const anterior = numerosSourceModalId;
+		numerosSourceModalId = null;
+		openDialog(anterior);
+	}
+}
+
+function salvarNumerosDeRegistro() {
+	const jovemInput = document.getElementById("nr_jovem");
+	if (!jovemInput) return;
+
+	const faltando = Array.from(
+		document.querySelectorAll('#nr_campos input[data-obrigatorio="1"]')
+	).filter((input) => !input.value.trim());
+
+	if (faltando.length) {
+		definirErroDeRegistro("Preencha o número de registro de todos os campos obrigatórios.");
+		faltando[0].focus();
+		return;
+	}
+
+	const responsaveis = {};
+	document.querySelectorAll("#nr_campos input[data-responsavel]").forEach((input) => {
+		responsaveis[input.dataset.responsavel] = input.value.trim();
+	});
+
+	const botao = document.getElementById("btnSalvarNumerosDeRegistro");
+	if (botao) botao.disabled = true;
+	definirErroDeRegistro("");
+
+	const etapa = numerosEtapaPendente;
+	const elemento = numerosElementoPendente;
+
+	frappe.call({
+		method: "gris.api.recepcao.salvar_numeros_de_registro",
+		args: {
+			novo_associado_name: currentCardId,
+			numero_jovem: jovemInput.value.trim(),
+			responsaveis: JSON.stringify(responsaveis),
+		},
+		callback: function (r) {
+			if (botao) botao.disabled = false;
+			if (r.exc) return;
+
+			closeDialog("modalNumerosDeRegistro");
+			numerosSourceModalId = null;
+			numerosEtapaPendente = null;
+			numerosElementoPendente = null;
+			if (etapa) marcarEtapa(etapa, elemento);
+		},
+		error: function () {
+			if (botao) botao.disabled = false;
 		},
 	});
 }

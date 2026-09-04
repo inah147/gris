@@ -7,7 +7,6 @@
  "field_order": [
   "fluxo_de_registro_section",
   "dados_para_registro_enviados",
-  "registro_provisorio_pago",
   "pesquisa_de_novos_associados_respondida",
   "id_escoteiros_criado",
   "registro_definitivo_efetivado",
@@ -16,7 +15,6 @@
   "registro_criado_no_paxtu",
   "registro_provisorio_efetivado",
   "ficha_medica_preenchida",
-  "registro_definitivo_pago",
   "reuniao_de_acolhida_realizada",
   "valores_de_registro_section",
   "valor_registro_provisorio",
@@ -71,22 +69,10 @@
    "options": "1"
   },
   {
-   "default": "1",
-   "fieldname": "registro_definitivo_pago",
-   "fieldtype": "Int",
-   "label": "Registro definitivo pago"
-  },
-  {
    "default": "7",
    "fieldname": "registro_definitivo_efetivado",
    "fieldtype": "Int",
    "label": "Registro definitivo efetivado"
-  },
-  {
-   "default": "1",
-   "fieldname": "registro_provisorio_pago",
-   "fieldtype": "Int",
-   "label": "Registro provis\u00f3rio pago"
   },
   {
    "default": "3",

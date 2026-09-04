@@ -100,7 +100,9 @@
 	<div class="kanban-column" data-status="{{ status }}">
 		<div class="kanban-column__header">
 			<h3 class="kanban-column__title">
-				{% if status == 'Aguardar Dados' %}Aguardando dados{% else %}{{ status }}{% endif %}
+				{% if status == 'Aguardar Dados' %}Aguardando dados
+				{%- elif status in colunas_de_acompanhamento %}Acomp. {{ status.split(' ')[1] }}
+				{%- else %}{{ status }}{% endif %}
 			</h3>
 			{{ badge(kanban_data[status]|length|string, variant="secondary", attrs={"class": "js-column-count"}) }}
 		</div>
@@ -425,6 +427,21 @@
 	</form>
 
 	<div id="obs_lista" class="comment-list"></div>
+{% endcall %}
+
+{# ----------- Modal Números de Registro -----------
+   Abre por cima do dialog de acompanhamento quando falta o número de registro
+   para concluir a etapa de efetivação. As linhas são montadas pelo JS. #}
+{% call dialog(
+	id="modalNumerosDeRegistro",
+	title="Números de registro",
+	description="Informe o número de registro antes de marcar o registro como efetivado.",
+	footer='<button type="button" class="btn-ghost" onclick="fecharNumerosDeRegistro()">Cancelar</button><button type="button" class="btn-primary" id="btnSalvarNumerosDeRegistro" onclick="salvarNumerosDeRegistro()">Salvar e efetivar</button>',
+	close_button=false,
+	close_on_overlay_click=false
+) %}
+	<div id="nr_campos" class="registro-numeros"></div>
+	<p id="nr_erro" class="text-destructive text-sm mt-3" hidden></p>
 {% endcall %}
 
 {# ----------- Modal Acompanhamento ----------- #}

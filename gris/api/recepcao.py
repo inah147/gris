@@ -1,3 +1,5 @@
+import json
+
 import frappe
 from frappe import _
 from frappe.utils import format_datetime, get_fullname, getdate, strip_html
@@ -329,6 +331,145 @@ def registrar_recepcao_realizada(novo_associado_name: str):
 	doc.save()
 
 	return {"status": "success"}
+
+
+# ---------------------------------------------------------------------------
+# Números de registro do jovem e dos responsáveis
+#
+# Usados pela visão geral (diálogo da etapa de efetivação) e pela ficha de
+# registro (edição direta), então moram aqui e não numa das duas páginas.
+# ---------------------------------------------------------------------------
+
+
+def _vinculos_do_novo_associado(novo_associado_name: str) -> list[dict]:
+	"""Responsáveis vinculados ao jovem, com o número de registro de cada um.
+
+	Primeiro responsável na frente, depois por nome: o diálogo e a mensagem de
+	pendência listam sempre na mesma ordem.
+	"""
+	vinculos = frappe.get_all(
+		"Responsavel Vinculo",
+		filters={"beneficiario_novo_associado": novo_associado_name},
+		fields=["responsavel", "sera_registrado", "primeiro_responsavel"],
+	)
+
+	responsavel_ids = [v.responsavel for v in vinculos if v.responsavel]
+	if not responsavel_ids:
+		return []
+
+	dados = {
+		r.name: r
+		for r in frappe.get_all(
+			"Responsavel",
+			filters={"name": ["in", responsavel_ids]},
+			fields=["name", "nome_completo", "numero_de_registro"],
+		)
+	}
+
+	responsaveis = []
+	vistos = set()
+	for vinculo in vinculos:
+		responsavel = dados.get(vinculo.responsavel)
+		if not responsavel or responsavel.name in vistos:
+			continue
+		vistos.add(responsavel.name)
+		responsaveis.append(
+			{
+				"responsavel": responsavel.name,
+				"nome": responsavel.nome_completo or responsavel.name,
+				"numero_de_registro": responsavel.numero_de_registro or "",
+				"sera_registrado": bool(vinculo.sera_registrado),
+				"primeiro_responsavel": bool(vinculo.primeiro_responsavel),
+			}
+		)
+
+	responsaveis.sort(key=lambda r: (not r["primeiro_responsavel"], r["nome"]))
+	return responsaveis
+
+
+def numeros_de_registro_pendentes(novo_associado_name: str) -> list[str]:
+	"""Quem ainda está sem número de registro entre os que precisam ter um.
+
+	O jovem sempre precisa. Entre os responsáveis, só os marcados como
+	``sera_registrado`` no vínculo — os demais acompanham o jovem sem tirar
+	registro próprio, e exigir um número deles travaria a recepção.
+	"""
+	pendentes = []
+
+	if not (frappe.db.get_value("Novo Associado", novo_associado_name, "numero_de_registro") or "").strip():
+		pendentes.append(_("o jovem"))
+
+	pendentes += [
+		responsavel["nome"]
+		for responsavel in _vinculos_do_novo_associado(novo_associado_name)
+		if responsavel["sera_registrado"] and not responsavel["numero_de_registro"].strip()
+	]
+
+	return pendentes
+
+
+@frappe.whitelist()
+def obter_numeros_de_registro(novo_associado_name: str):
+	"""Números de registro do jovem e dos responsáveis vinculados."""
+	if not novo_associado_name:
+		frappe.throw(_("Novo Associado não especificado."))
+
+	if not frappe.has_permission("Novo Associado", "read", novo_associado_name):
+		frappe.throw(_("Sem permissão para acessar este registro."), frappe.PermissionError)
+
+	jovem = frappe.db.get_value(
+		"Novo Associado", novo_associado_name, ["nome_completo", "numero_de_registro"], as_dict=True
+	)
+	if not jovem:
+		frappe.throw(_("Novo Associado não encontrado."))
+
+	return {
+		"jovem": {
+			"nome": jovem.nome_completo or novo_associado_name,
+			"numero_de_registro": jovem.numero_de_registro or "",
+		},
+		"responsaveis": _vinculos_do_novo_associado(novo_associado_name),
+		"pendentes": numeros_de_registro_pendentes(novo_associado_name),
+	}
+
+
+@frappe.whitelist()
+def salvar_numeros_de_registro(
+	novo_associado_name: str, numero_jovem: str, responsaveis: dict | str | None = None
+):
+	"""Grava os números de registro do jovem e dos responsáveis vinculados.
+
+	``responsaveis`` é um mapa ``{name do Responsavel: número}`` (JSON quando vem do
+	navegador). Só grava quem está de fato vinculado a este jovem: o mapa chega do
+	cliente e não pode virar uma porta para editar qualquer Responsavel.
+
+	Aceita número vazio — é assim que a ficha de registro corrige um valor errado. A
+	exigência do número mora na trava da etapa de efetivação
+	(``gris.www.recepcao.visao_geral.update_step_status``), não aqui.
+	"""
+	if not novo_associado_name:
+		frappe.throw(_("Novo Associado não especificado."))
+
+	if not frappe.has_permission("Novo Associado", "write", novo_associado_name):
+		frappe.throw(_("Sem permissão para alterar este registro."), frappe.PermissionError)
+
+	if isinstance(responsaveis, str):
+		responsaveis = json.loads(responsaveis or "{}")
+	responsaveis = responsaveis or {}
+
+	frappe.db.set_value(
+		"Novo Associado", novo_associado_name, "numero_de_registro", (numero_jovem or "").strip() or None
+	)
+
+	vinculados = {r["responsavel"] for r in _vinculos_do_novo_associado(novo_associado_name)}
+	for responsavel_name, numero in responsaveis.items():
+		if responsavel_name not in vinculados:
+			frappe.throw(_("Responsável não vinculado a este jovem."), frappe.PermissionError)
+		doc = frappe.get_doc("Responsavel", responsavel_name)
+		doc.numero_de_registro = (numero or "").strip() or None
+		doc.save()
+
+	return {"pendentes": numeros_de_registro_pendentes(novo_associado_name)}
 
 
 # Teto da listagem de observações. O mesmo valor da ficha (ficha_registro.py): a caixa

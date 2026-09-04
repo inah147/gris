@@ -43,22 +43,22 @@
   "status",
   "ramo",
   "tipo_de_registro",
+  "numero_de_registro",
   "responsavel_recepcao",
   "etapas_do_fluxo_section",
   "visita_agendada",
   "primeira_visita_realizada",
   "dados_para_registro_enviados",
   "registro_criado_no_paxtu",
-  "registro_provisorio_pago",
   "registro_provisorio_efetivado",
   "data_registro_provisorio_efetivado",
   "data_aviso_seguimento_provisorio",
   "pesquisa_de_novos_associados_respondida",
   "ficha_medica_preenchida",
   "id_escoteiros_criado",
-  "registro_definitivo_pago",
   "registro_definitivo_efetivado",
   "reuniao_de_acolhida_realizada",
+  "historico_de_etapas",
   "ramo_filhotes_section",
   "ciente_registro_responsavel_filhotes",
   "ciente_acompanhamento_filhotes",
@@ -278,6 +278,12 @@
    "options": "Provis\u00f3rio\nDefinitivo"
   },
   {
+   "description": "N\u00famero do registro escoteiro do jovem, exigido para marcar a etapa de registro efetivado.",
+   "fieldname": "numero_de_registro",
+   "fieldtype": "Data",
+   "label": "N\u00famero de registro"
+  },
+  {
    "fieldname": "etapas_do_fluxo_section",
    "fieldtype": "Section Break",
    "label": "Etapas do fluxo"
@@ -308,12 +314,6 @@
   },
   {
    "default": "0",
-   "fieldname": "registro_definitivo_pago",
-   "fieldtype": "Check",
-   "label": "Registro definitivo pago"
-  },
-  {
-   "default": "0",
    "fieldname": "registro_definitivo_efetivado",
    "fieldtype": "Check",
    "label": "Registro definitivo efetivado"
@@ -323,12 +323,6 @@
    "fieldname": "registro_criado_no_paxtu",
    "fieldtype": "Check",
    "label": "Registro criado no paxtu"
-  },
-  {
-   "default": "0",
-   "fieldname": "registro_provisorio_pago",
-   "fieldtype": "Check",
-   "label": "Registro provis\u00f3rio pago"
   },
   {
    "default": "0",
@@ -367,6 +361,14 @@
    "fieldname": "reuniao_de_acolhida_realizada",
    "fieldtype": "Check",
    "label": "Reuni\u00e3o de acolhida realizada"
+  },
+  {
+   "description": "Preenchido pelo controller a cada virada de etapa: alimenta o \u00edcone de informa\u00e7\u00e3o da timeline em /recepcao/visao_geral.",
+   "fieldname": "historico_de_etapas",
+   "fieldtype": "Table",
+   "label": "Hist\u00f3rico das etapas",
+   "options": "Etapa do Fluxo Concluida",
+   "read_only": 1
   },
   {
    "depends_on": "eval:doc.ramo == \"Filhotes\"",

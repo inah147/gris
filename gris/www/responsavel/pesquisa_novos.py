@@ -107,10 +107,15 @@ def submit_survey(data: str):
 		filters={"responsavel": responsavel_name},
 		fields=["beneficiario_novo_associado"],
 	)
+	# Pelo documento, e não por ``frappe.db.set_value``: é assim que o controller de
+	# Novo Associado consegue registrar quem concluiu a etapa e quando.
 	for v in vinculos:
-		if v.beneficiario_novo_associado:
-			frappe.db.set_value(
-				"Novo Associado", v.beneficiario_novo_associado, "pesquisa_de_novos_associados_respondida", 1
-			)
+		if not v.beneficiario_novo_associado:
+			continue
+		novo_associado = frappe.get_doc("Novo Associado", v.beneficiario_novo_associado)
+		if novo_associado.pesquisa_de_novos_associados_respondida:
+			continue
+		novo_associado.pesquisa_de_novos_associados_respondida = 1
+		novo_associado.save(ignore_permissions=True)
 
 	return "Pesquisa enviada com sucesso!"

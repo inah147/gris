@@ -6,8 +6,9 @@ import re
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import getdate, today
+from frappe.utils import getdate, now_datetime, today
 
+from gris.api.recepcao_funil import CAMPOS_DE_ETAPA
 from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 
 # Ramos em ordem crescente de idade e o campo do Single ``Vagas`` que guarda a
@@ -38,6 +39,39 @@ class NovoAssociado(Document):
 	def validate(self):
 		self._sincronizar_data_registro_provisorio()
 		self._sincronizar_data_aguardar_dados()
+		self._sincronizar_historico_de_etapas()
+
+	def _sincronizar_historico_de_etapas(self):
+		"""Carimba quem concluiu cada etapa e quando, para o ícone de informação da timeline.
+
+		Mora no ``validate`` de propósito: é o único ponto por onde passam todos os
+		caminhos que marcam etapa (bolinha da timeline, botões da visão geral, formulário
+		do responsável, criação do Associado e as ferramentas MCP), então nenhum deles
+		precisa lembrar de registrar o histórico.
+
+		Desmarcar apaga a linha, para que remarcar produza um carimbo novo em vez de
+		ressuscitar o antigo. Etapas que já estavam concluídas antes desta rotina existir
+		entram sem data nem autor: a interface diz que o dado não foi registrado em vez de
+		atribuir a conclusão a quem apenas salvou o documento depois.
+		"""
+		anterior = self.get_doc_before_save()
+		registradas = {linha.etapa: linha for linha in self.historico_de_etapas}
+
+		for campo in CAMPOS_DE_ETAPA:
+			if self.get(campo):
+				if campo in registradas:
+					continue
+				ja_estava_concluida = bool(anterior.get(campo)) if anterior else False
+				self.append(
+					"historico_de_etapas",
+					{
+						"etapa": campo,
+						"concluida_em": None if ja_estava_concluida else now_datetime(),
+						"concluido_por": None if ja_estava_concluida else frappe.session.user,
+					},
+				)
+			elif campo in registradas:
+				self.historico_de_etapas.remove(registradas[campo])
 
 	def _sincronizar_data_aguardar_dados(self):
 		"""Marca desde quando o jovem está parado em "Aguardar Dados".

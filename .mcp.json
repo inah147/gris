@@ -1,0 +1,15 @@
+{
+	"mcpServers": {
+		"gris": {
+			"command": "python3",
+			"args": ["${CLAUDE_PROJECT_DIR:-.}/mcp_server/gris_mcp.py"],
+			"env": {
+				"GRIS_URL": "${GRIS_URL:-}",
+				"GRIS_API_KEY": "${GRIS_API_KEY:-}",
+				"GRIS_API_SECRET": "${GRIS_API_SECRET:-}",
+				"GRIS_MCP_SOMENTE_LEITURA": "${GRIS_MCP_SOMENTE_LEITURA:-}",
+				"GRIS_MCP_TIMEOUT": "${GRIS_MCP_TIMEOUT:-30}"
+			}
+		}
+	}
+}

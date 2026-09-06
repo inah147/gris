@@ -20,12 +20,16 @@ from frappe.model.document import Document
 from frappe.utils import get_fullname, now_datetime, strip_html
 
 from gris.api.sugestoes.constantes import (
+	BRANCH_MAX,
 	COLUNA_CONCLUIDO,
 	COLUNA_EM_DESENVOLVIMENTO,
+	COLUNA_NAO_SERA_FEITO,
 	COLUNAS,
 	COLUNAS_DE_TRIAGEM,
 	DESCRICAO_MAX,
 	MODULOS,
+	PULL_REQUEST_ESQUEMAS,
+	PULL_REQUEST_MAX,
 	ROLE_DESENVOLVEDOR,
 	TIPOS,
 	TITULO_MAX,
@@ -69,7 +73,37 @@ class SugestaoouProblema(Document):
 		self._validar_tipo_e_modulo()
 		self._validar_status()
 		self._validar_responsavel()
+		self._validar_desenvolvimento()
 		self._marcar_datas_do_fluxo()
+
+	def _validar_desenvolvimento(self) -> None:
+		"""Normaliza branch e pull request, e encerra a pergunta pendente.
+
+		Os dois campos sao gravados pelos endpoints do portal e do MCP durante o
+		trabalho (`assumir`, `registrar_pull_request`), mas continuam editaveis no
+		Desk para corrigir um erro de digitacao — entao a validacao mora aqui, no
+		unico ponto por onde todo save passa.
+		"""
+		self.branch = (self.branch or "").strip()
+		self.pull_request = (self.pull_request or "").strip()
+
+		if len(self.branch) > BRANCH_MAX:
+			frappe.throw(_("O nome da branch deve ter no máximo {0} caracteres.").format(BRANCH_MAX))
+		if " " in self.branch:
+			frappe.throw(_("O nome da branch não pode conter espaços."))
+
+		if self.pull_request:
+			if len(self.pull_request) > PULL_REQUEST_MAX:
+				frappe.throw(
+					_("O link do pull request deve ter no máximo {0} caracteres.").format(PULL_REQUEST_MAX)
+				)
+			if not self.pull_request.lower().startswith(PULL_REQUEST_ESQUEMAS):
+				frappe.throw(_("O pull request precisa ser um link começando com https://."))
+
+		# Uma pergunta em aberto nao sobrevive ao fim do fluxo: o card saiu da mesa,
+		# e a marca so serviria para o item nunca sumir do filtro de pendencias.
+		if (self.status or "").strip() in (COLUNA_CONCLUIDO, COLUNA_NAO_SERA_FEITO):
+			self.aguardando_esclarecimento = 0
 
 	def _marcar_datas_do_fluxo(self) -> None:
 		"""Carimba as datas que alimentam a linha do tempo do dialog.

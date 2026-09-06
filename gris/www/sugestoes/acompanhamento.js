@@ -195,6 +195,11 @@
 				<div class="sugestoes-card__badges">
 					<span class="sugestoes-badge" data-tipo="${escapeHtml(item.tipo)}">${escapeHtml(tipoCurto)}</span>
 					<span class="sugestoes-badge sugestoes-badge--modulo">${escapeHtml(item.modulo)}</span>
+					${
+						item.aguardando_esclarecimento
+							? '<span class="sugestoes-badge sugestoes-badge--espera" title="Quem desenvolve fez uma pergunta e espera resposta">Aguardando resposta</span>'
+							: ""
+					}
 				</div>
 				<div class="task-card__footer">
 					<span class="sugestoes-card__codigo">${escapeHtml(item.name)}</span>
@@ -508,6 +513,29 @@
 		return dias === 1 ? "em 1 dia" : `em ${dias} dias`;
 	}
 
+	/* ─────────────── branch, pull request e pendência ─────────────── */
+
+	/** Mostra onde o trabalho está acontecendo e se alguém espera resposta. */
+	function pintarDesenvolvimento(item) {
+		const espera = dialogo.querySelector("[data-detalhe-espera]");
+		if (espera) espera.hidden = !item.aguardando_esclarecimento;
+
+		const branch = dialogo.querySelector("[data-detalhe-branch]");
+		if (branch) {
+			branch.hidden = !item.branch;
+			branch.textContent = item.branch ? `Branch: ${item.branch}` : "";
+		}
+
+		const linkPr = document.getElementById("detalhe-abrir-pr");
+		if (linkPr) {
+			// `href` só é preenchido quando há valor: sem isso o botão ficaria
+			// apontando para "#". O esquema do link já foi restringido a http(s)
+			// no servidor, e o `rel="noopener"` está no HTML.
+			linkPr.hidden = !item.pull_request;
+			if (item.pull_request) linkPr.href = item.pull_request;
+		}
+	}
+
 	// As opções já vêm renderizadas do servidor (acompanhamento.py): o select.js
 	// só reconhece os `[role="option"]` presentes na inicialização, então
 	// injetá-las aqui faria o clique e o setter de `.value` não terem efeito.
@@ -630,6 +658,8 @@
 					linkTarefa.hidden = !item.tarefa;
 					if (item.tarefa) linkTarefa.href = "/gestao_tarefas/tarefas";
 				}
+
+				pintarDesenvolvimento(item);
 
 				pintarComentarios(dados.comentarios);
 				dialogo.showModal();

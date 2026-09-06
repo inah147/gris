@@ -85,6 +85,17 @@ ROLE_ACOMPANHAMENTO = "Acompanhamento de Sugestoes"
 TITULO_MAX = 140
 DESCRICAO_MAX = 10_000
 
+# Campos do trabalho de desenvolvimento. O limite e o do `Data` do Frappe (140):
+# nome de branch e URL de pull request cabem folgados, e cortar antes evita um
+# erro de banco no save.
+BRANCH_MAX = 140
+PULL_REQUEST_MAX = 140
+
+# Esquemas aceitos na URL do pull request. Guardar `javascript:` num campo que a
+# tela renderiza como link seria XSS armazenado; a lista fechada corta isso na
+# entrada, alem de recusar o engano de colar um titulo no lugar do link.
+PULL_REQUEST_ESQUEMAS: tuple[str, ...] = ("https://", "http://")
+
 # Teto contra loop acidental de script, nao freio de uso legitimo: quem esta
 # testando o sistema e acha oito problemas numa tarde passa sem esbarrar.
 LIMITE_ENVIOS_POR_HORA = 20

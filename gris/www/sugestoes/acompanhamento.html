@@ -104,6 +104,7 @@
 
 {% set detalhe_footer %}
 <a class="btn-sm-outline" id="detalhe-abrir-tarefa" href="#" hidden>Abrir tarefa</a>
+<a class="btn-sm-outline" id="detalhe-abrir-pr" href="#" target="_blank" rel="noopener" hidden>Ver pull request</a>
 <button type="button" class="btn-sm-primary" id="btn-salvar-descricao" hidden>Salvar descrição</button>
 <button type="button" class="btn-sm-outline" data-dialog-close>Fechar</button>
 {% endset %}
@@ -118,6 +119,8 @@
 	<span class="sugestoes-badge" data-detalhe-tipo></span>
 	<span class="sugestoes-badge sugestoes-badge--modulo" data-detalhe-modulo></span>
 	<span class="sugestoes-badge sugestoes-badge--status" data-detalhe-status></span>
+	<span class="sugestoes-badge sugestoes-badge--espera" data-detalhe-espera hidden
+		title="Quem desenvolve fez uma pergunta e espera resposta">Aguardando resposta</span>
 	<span data-detalhe-meta></span>
 </p>
 
@@ -162,6 +165,8 @@
 				</div>
 			</div>
 		</div>
+
+		<p class="sugestoes-detalhe__branch" data-detalhe-branch hidden></p>
 
 		{% call field(label="Descrição", attrs={"class": "sugestoes-descricao-field"}) %}
 			<div class="meeting-editor-host" data-detalhe-editor-host hidden></div>

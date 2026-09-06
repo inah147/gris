@@ -105,6 +105,22 @@
 	color: color-mix(in oklab, var(--color-primary) 82%, var(--color-foreground));
 }
 
+/* Espera por resposta de quem abriu: cor de atenção mais o rótulo escrito, para
+   quem tria varrer a coluna e ver de relance o que está travado. */
+.sugestoes-badge--espera {
+	border-color: color-mix(in oklab, var(--warning) 45%, var(--color-border));
+	background: color-mix(in oklab, var(--warning) 18%, var(--color-card));
+	color: color-mix(in oklab, var(--warning) 30%, var(--color-foreground));
+}
+
+.sugestoes-detalhe__branch {
+	margin: 0.5rem 0 0;
+	color: var(--color-muted-foreground);
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+	overflow-wrap: anywhere;
+}
+
 /* Indicador da posição de entrada ao arrastar. Usa outline em vez de borda
    para não deslocar os cards vizinhos enquanto o cursor se move. */
 .task-card.is-drop-before,

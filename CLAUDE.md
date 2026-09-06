@@ -34,6 +34,7 @@ Este arquivo é o ponto de entrada do Claude Code neste repositório. Ele **não
 | Setup inicial do ambiente no Windows (WSL2, Docker, `fm`) | [WINDOWS_SETUP.md](WINDOWS_SETUP.md) |
 | Dados de fixtures (roles, categorias, UOs) | [FIXTURES.md](FIXTURES.md) |
 | Registro do servidor MCP do GRIS como servidor de projeto | [.mcp.json](.mcp.json) |
+| Plano para trocar a autenticação do MCP de API key por OAuth | [PLANO_OAUTH_MCP.md](PLANO_OAUTH_MCP.md) |
 | Permissões e ambiente do auto mode do Claude Code | [.claude/settings.json](.claude/settings.json) |
 | Rodar os testes e o lint do CI numa sessão do Claude Code na web (`gris-test`, `gris-test contribuicao` e `gris-lint`) | [.claude/hooks/session-start.sh](.claude/hooks/session-start.sh) |
 

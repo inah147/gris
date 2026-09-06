@@ -219,6 +219,14 @@ doc_events = {
 			"gris.gestao_de_tarefas.board_sync_sugestoes.soltar_vinculo_da_tarefa",
 		],
 	},
+	# Um hook so em `Comment`, filtrado por `reference_doctype` dentro do
+	# handler, cobre os tres jeitos de comentar numa Sugestao ou Problema
+	# (portal, MCP e Desk) sem duplicar o aviso em cada endpoint de escrita.
+	"Comment": {
+		"after_insert": [
+			"gris.api.sugestoes.notificacoes.on_comentario_criado",
+		],
+	},
 }
 
 # Scheduled Tasks

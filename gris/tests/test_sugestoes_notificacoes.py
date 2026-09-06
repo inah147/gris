@@ -44,6 +44,21 @@ def _criar_user(email: str, *, mobile_no: str = "") -> str:
 	return user.name
 
 
+def _criar_desenvolvedor(email: str, *, mobile_no: str = "") -> str:
+	"""Usuário com o papel Desenvolvedor — único aceito no campo `responsavel`."""
+	if not frappe.db.exists("Role", c.ROLE_DESENVOLVEDOR):
+		frappe.get_doc({"doctype": "Role", "role_name": c.ROLE_DESENVOLVEDOR, "desk_access": 0}).insert(
+			ignore_permissions=True
+		)
+
+	user = _criar_user(email, mobile_no=mobile_no)
+	user_doc = frappe.get_doc("User", user)
+	if c.ROLE_DESENVOLVEDOR not in {linha.role for linha in user_doc.roles}:
+		user_doc.append("roles", {"role": c.ROLE_DESENVOLVEDOR})
+		user_doc.save(ignore_permissions=True)
+	return user
+
+
 class TestSugestoesNotificacoes(FrappeTestCase):
 	def setUp(self):
 		self.solicitante = _criar_user(SOLICITANTE_EMAIL, mobile_no="+5511988887777")
@@ -271,6 +286,96 @@ class TestSugestoesNotificacoes(FrappeTestCase):
 			self.assertTrue(resposta["avisar_por_whatsapp"])
 
 	# ────────────────── conclusão vinda da tarefa espelho ──────────────────
+
+	# ───────────────────────── aviso de comentário ─────────────────────────
+
+	def _comentar(self, doc, texto: str, autor: str) -> None:
+		frappe.get_doc(
+			{
+				"doctype": "Comment",
+				"comment_type": "Comment",
+				"reference_doctype": "Sugestao ou Problema",
+				"reference_name": doc.name,
+				"content": texto,
+				"comment_email": autor,
+				"comment_by": autor,
+			}
+		).insert(ignore_permissions=True)
+
+	def test_comentario_de_terceiro_avisa_solicitante_e_responsavel(self):
+		responsavel = _criar_desenvolvedor("responsavel.avisos@teste.gris", mobile_no="+5511977778888")
+		terceiro = _criar_user("terceiro.avisos@teste.gris", mobile_no="+5511966665555")
+
+		doc = self._nova()
+		doc.responsavel = responsavel
+		doc.save(ignore_permissions=True)
+		doc.reload()
+
+		self._comentar(doc, "Já comecei a olhar isso.", terceiro)
+
+		self.assertEqual(len(self.textos), 2)
+		numeros = {envio["numero"] for envio in self.textos}
+		self.assertEqual(numeros, {"+5511988887777", "+5511977778888"})
+		self.assertIn("Já comecei a olhar isso.", self.textos[0]["mensagem"])
+
+	def test_comentario_do_proprio_solicitante_nao_avisa_ele_mesmo(self):
+		responsavel = _criar_desenvolvedor("responsavel2.avisos@teste.gris", mobile_no="+5511977778888")
+
+		doc = self._nova()
+		doc.responsavel = responsavel
+		doc.save(ignore_permissions=True)
+		doc.reload()
+
+		self._comentar(doc, "Só complementando o relato.", self.solicitante)
+
+		self.assertEqual(len(self.textos), 1)
+		self.assertEqual(self.textos[0]["numero"], "+5511977778888")
+
+	def test_comentario_do_responsavel_nao_avisa_ele_mesmo(self):
+		responsavel = _criar_desenvolvedor("responsavel3.avisos@teste.gris", mobile_no="+5511977778888")
+
+		doc = self._nova()
+		doc.responsavel = responsavel
+		doc.save(ignore_permissions=True)
+		doc.reload()
+
+		self._comentar(doc, "Já já resolvo.", responsavel)
+
+		self.assertEqual(len(self.textos), 1)
+		self.assertEqual(self.textos[0]["numero"], "+5511988887777")
+
+	def test_comentario_sem_responsavel_avisa_so_o_solicitante(self):
+		doc = self._nova()
+
+		self._comentar(doc, "Alguém vai olhar em breve.", "terceiro.sem.role@teste.gris")
+
+		self.assertEqual(len(self.textos), 1)
+		self.assertEqual(self.textos[0]["numero"], "+5511988887777")
+
+	def test_avisos_desabilitados_nao_avisam_no_comentario(self):
+		notificacoes._avisos_habilitados = lambda: False
+
+		doc = self._nova()
+		self._comentar(doc, "Comentário qualquer.", "terceiro.sem.role@teste.gris")
+
+		self.assertEqual(self.textos, [])
+
+	def test_comentario_de_outro_tipo_nao_dispara_aviso(self):
+		"""Um `comment_type` diferente de "Comment" (ex.: log automático) não é um recado."""
+		doc = self._nova()
+
+		frappe.get_doc(
+			{
+				"doctype": "Comment",
+				"comment_type": "Info",
+				"reference_doctype": "Sugestao ou Problema",
+				"reference_name": doc.name,
+				"content": "Status alterado.",
+				"comment_email": "sistema@teste.gris",
+			}
+		).insert(ignore_permissions=True)
+
+		self.assertEqual(self.textos, [])
 
 	def test_conclusao_pela_tarefa_espelho_tambem_avisa(self):
 		"""O dev marca a tarefa como concluída em "Minhas tarefas", não no quadro.

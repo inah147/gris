@@ -414,6 +414,60 @@ Exemplos de pedidos que funcionam bem:
 - As credenciais ficam apenas na máquina que roda a ponte. Nunca comite
   `api_secret` no repositório.
 
+## OAuth: o que falta para virar connector
+
+Hoje a integração autentica por **API key** (`Authorization: token <key>:<secret>`),
+o que obriga cada máquina a registrar a ponte. Um **connector customizado** na
+conta do Claude cobriria Desktop, claude.ai e sessões remotas de uma vez só —
+mas o cadastro de connector faz **descoberta OAuth**, não aceita header fixo.
+
+### O endpoint não precisa mudar
+
+`frappe/auth.py` (`validate_oauth`) já trata `Authorization: Bearer <token>`:
+valida contra o DocType `OAuth Bearer Token`, confere os escopos e chama
+`frappe.set_user()`. Como `gris.api.mcp.http.mcp` é um whitelist comum que roda
+sob `frappe.session.user`, **um access token OAuth autentica exatamente como a
+API key** — e as checagens de papel do `registry` continuam valendo.
+
+Isso está coberto por `gris/tests/test_mcp_oauth.py`, que exercita o caminho
+real de autenticação contra registros de verdade (token válido, revogado,
+expirado e inexistente).
+
+### O que o Frappe já entrega
+
+| Peça | Onde |
+|---|---|
+| Authorization Code flow | `frappe/integrations/oauth2.py` — `authorize`, `get_token` |
+| PKCE (`s256` e `plain`) | `frappe/oauth.py` — grava no `OAuth Authorization Code` e verifica na troca |
+| Revogação e introspecção | `oauth2.py` — `revoke_token`, `introspect_token` |
+| Descoberta OpenID | `oauth2.py:openid_configuration`, roteada em `frappe/hooks.py` |
+| Cadastro de cliente | DocType `OAuth Client` (manual, pelo Desk) |
+
+### O que falta
+
+1. **`/.well-known/oauth-protected-resource`** (RFC 9728) — não existe. É o
+   ponto de partida da descoberta: diz qual é o authorization server.
+2. **`/.well-known/oauth-authorization-server`** (RFC 8414) — não existe; só há
+   `openid-configuration`, e ele **não anuncia** `code_challenge_methods_supported`,
+   `grant_types_supported`, `token_endpoint_auth_methods_supported` nem
+   `scopes_supported`. Sem o primeiro, o cliente não descobre que há PKCE.
+3. **`WWW-Authenticate` no 401** — nenhum ponto do Frappe emite esse header. A
+   spec espera `Bearer resource_metadata="..."` numa chamada sem token.
+4. **Dynamic Client Registration** (RFC 7591) — não existe endpoint `register`.
+   É item de decisão, não necessariamente de código: se o cadastro de connector
+   aceitar Client ID/Secret preenchidos à mão, basta um `OAuth Client` no Desk.
+
+Os itens 1–3 cabem num módulo só (ex. `gris/api/mcp/oauth.py`). O item 4 é o
+que pode dobrar o esforço — **verifique-o primeiro**, porque decide o escopo.
+
+### Atenção ao registrar o cliente
+
+`frappe/oauth.py` (`authenticate_client`) **carrega o cliente pelo `client_id`
+sem conferir o `client_secret`**. Na prática o provider trata todo cliente como
+público, então o PKCE passa a ser a única proteção do fluxo: registre a
+`redirect_uri` de forma estrita e não trate o secret como segunda barreira.
+Prefira também um escopo dedicado no `OAuth Client` em vez de `all`.
+
 ## Simulação (dry-run)
 
 Toda ferramenta que grava ganha automaticamente o parâmetro `simular` — o
@@ -465,7 +519,7 @@ cd mcp_server && python3 -m unittest discover -s tests
 
 # camada do app (dentro do bench; nas sessões web use `bench-gris`, montado pelo
 # hook .claude/hooks/session-start.sh)
-for modulo in registry ferramentas http contribuicoes conciliacao orcamento recepcao visitas insignias geral sugestoes; do
+for modulo in registry ferramentas http oauth contribuicoes conciliacao orcamento recepcao visitas insignias geral sugestoes; do
   bench --site <seu-site> run-tests --module gris.tests.test_mcp_$modulo
 done
 

@@ -21,6 +21,13 @@ Gere a API key/secret no Desk: `/app/user/<email>` → **API Access** →
 
 ## Registrar no Claude Code
 
+O repositório traz um `.mcp.json` na raiz que já registra esta ponte como
+servidor de projeto — abrir o Claude Code no repo basta, e as credenciais vêm
+das variáveis de ambiente acima. Sem elas a ponte sobe mesmo assim, expondo só
+`diagnostico_conexao`.
+
+Para registrar manualmente (fora do repo, ou em outro cliente):
+
 ```bash
 claude mcp add gris \
   --env GRIS_URL=https://<seu-site> \

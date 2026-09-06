@@ -306,6 +306,34 @@ claude mcp add --transport http gris \
 O endpoint responde JSON-RPC puro (sem SSE) e usa exatamente o mesmo catálogo
 e as mesmas permissões da ponte stdio.
 
+### 3d. Claude Code na web (sessão remota)
+
+O repositório já traz um `.mcp.json` na raiz que registra a ponte como servidor
+**de projeto**: qualquer sessão do Claude Code aberta neste repo — local ou na
+web — enxerga o servidor `gris` sem `claude mcp add`. O arquivo não guarda
+segredo nenhum: ele só referencia as variáveis de ambiente.
+
+Sem as variáveis definidas, a ponte ainda sobe e expõe apenas
+`diagnostico_conexao` — nada quebra numa sessão que não precisa de produção.
+
+Para uma sessão da web falar com o site, o **ambiente** precisa de duas coisas,
+configuradas em claude.ai/code → ambiente:
+
+1. **Variáveis de ambiente**: `GRIS_URL`, `GRIS_API_KEY`, `GRIS_API_SECRET`
+   (e `GRIS_MCP_SOMENTE_LEITURA=1` quando a sessão só precisa consultar).
+   Defina-as ali, nunca no chat nem em arquivo versionado.
+2. **Política de rede**: o host do site (ex.: `gris.gepim.com.br`) precisa estar
+   liberado no egresso do ambiente. Sem isso o proxy recusa a conexão com
+   `403 / connect_rejected` antes de qualquer autenticação.
+
+As duas valem a partir da **próxima** sessão: o container é provisionado no
+início da sessão, então uma sessão já aberta não enxerga a mudança.
+
+> Sessão remota fala com **produção**: dados reais de associados, incluindo
+> menores. Prefira um usuário de API com os papéis mínimos e
+> `GRIS_MCP_SOMENTE_LEITURA=1`, e só relaxe para escrita quando a tarefa
+> realmente exigir gravação.
+
 ## Uso no dia a dia
 
 Exemplos de pedidos que funcionam bem:
@@ -452,6 +480,7 @@ bench --site <seu-site> run-tests --module gris.tests.test_recepcao_funil
 | Claude não mostra nenhuma ferramenta do GRIS | Ponte não conseguiu falar com o site — peça `diagnostico_conexao` |
 | `[CONEXAO] Credenciais recusadas` | `GRIS_API_KEY`/`GRIS_API_SECRET` errados ou usuário desativado |
 | `Endpoint não encontrado (HTTP 404)` | Site ainda não está na versão com `gris.api.mcp` |
+| Sessão da web: conexão recusada antes de autenticar (`403`, `connect_rejected`) | Host do site não liberado na política de rede do ambiente — veja [3d](#3d-claude-code-na-web-sessão-remota) |
 | `[PERMISSAO_NEGADA]` | Usuário da API não tem o papel exigido — rode `quem_sou_eu` |
 | `[VALIDACAO]` na conciliação | A transação já está conciliada com outra — use `desfazer_conciliacao` |
 | Ferramenta de escrita sumiu | `GRIS_MCP_SOMENTE_LEITURA` está ativo |

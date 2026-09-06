@@ -158,6 +158,20 @@ de métodos e financeiro enxergam a fila completa.
 | `registrar_entrega_insignias` ✎ | Confirma a entrega ao solicitante (pelo próprio ou pela gestão) | Equipe/Gestor de Metodos, Gestor Financeiro |
 | `cancelar_solicitacao_insignias` ✎ | Cancela um pedido ainda não recebido | Equipe/Gestor de Metodos, Gestor Financeiro |
 
+### Sugestões e Problemas
+
+Quadro interno de feedback (`/sugestoes/acompanhamento`). Comentar dispara
+aviso por WhatsApp para quem abriu a solicitação e para o responsável pelo
+desenvolvimento (quando há um e não é quem comentou) — mesmo hook usado pelo
+portal e pelo Desk, então vale para os três caminhos.
+
+| Ferramenta | O que faz | Papéis |
+|---|---|---|
+| `listar_sugestoes` | Lista o quadro com filtros de status, tipo, módulo, responsável e busca por título | Acompanhamento de Sugestoes, Desenvolvedor |
+| `obter_sugestao` | Ficha completa: descrição, linha do tempo e comentários | Acompanhamento de Sugestoes, Desenvolvedor |
+| `atualizar_sugestao` ✎ | Move de coluna, reclassifica o tipo, aloca responsável ou reescreve a descrição | Desenvolvedor |
+| `comentar_sugestao` ✎ | Comenta na solicitação e dispara o aviso por WhatsApp | Acompanhamento de Sugestoes, Desenvolvedor |
+
 ### Usuários e papéis
 
 | Ferramenta | O que faz | Papéis |
@@ -317,6 +331,10 @@ Exemplos de pedidos que funcionam bem:
 - *"Chegou o material da SOL-INS-2026-0001, marca como recebido"* → `registrar_recebimento_insignias`
 - *"Já entreguei os distintivos para a Ana"* → `registrar_entrega_insignias`
 
+**Sugestões e Problemas**
+- *"O que está selecionado para desenvolvimento?"* → `listar_sugestoes` com `status='Selecionado para desenvolvimento'`
+- *"Aloca a Ana na SUG-00012 e comenta que ela já pode começar"* → `atualizar_sugestao` com `responsavel` + `comentar_sugestao`
+
 **Usuários e papéis**
 - *"Quem tem o papel Gestor de Metodos hoje?"* → `listar_usuarios` com `papel='Gestor de Metodos'`
 
@@ -393,7 +411,7 @@ cd mcp_server && python3 -m unittest discover -s tests
 
 # camada do app (dentro do bench; nas sessões web use `bench-gris`, montado pelo
 # hook .claude/hooks/session-start.sh)
-for modulo in registry ferramentas http contribuicoes conciliacao orcamento recepcao visitas insignias geral; do
+for modulo in registry ferramentas http contribuicoes conciliacao orcamento recepcao visitas insignias geral sugestoes; do
   bench --site <seu-site> run-tests --module gris.tests.test_mcp_$modulo
 done
 

@@ -3,23 +3,30 @@
 
 """Avisos por WhatsApp do modulo Sugestoes e Problemas.
 
-Dois avisos, os dois disparados por `doc_events` registrados em `hooks.py`:
+Tres avisos, todos disparados por `doc_events` registrados em `hooks.py`:
 
-1. **Nova solicitacao** (`after_insert`) — publica no grupo de desenvolvimento
-   quem pediu, tipo, modulo, titulo e descricao, com link para o card.
-2. **Conclusao** (`on_update`) — avisa quem abriu quando o card chega em
-   `Concluido`, se a pessoa marcou a opcao no formulario.
+1. **Nova solicitacao** (`after_insert` de `Sugestao ou Problema`) — publica no
+   grupo de desenvolvimento quem pediu, tipo, modulo, titulo e descricao, com
+   link para o card.
+2. **Conclusao** (`on_update` de `Sugestao ou Problema`) — avisa quem abriu
+   quando o card chega em `Concluido`, se a pessoa marcou a opcao no formulario.
+3. **Comentario** (`after_insert` de `Comment`, filtrado por
+   `reference_doctype`) — avisa quem abriu e o responsavel pelo
+   desenvolvimento (quando ha um, e quando nao e a propria pessoa que
+   comentou). Um hook em `Comment` em vez de um em cada caminho de escrita
+   cobre o portal, o MCP e o Desk com um handler so.
 
-O envio nunca pode derrubar o save do card: tudo passa por `try/except` com
-`frappe.log_error`, e a entrega em si e enfileirada por `gris.utils.whatsapp`.
-Por isso os carimbos `aviso_*_enviado_em` significam "enfileirado em", e nao
-"entregue em" — mesma semantica de `whatsapp_notificado_em` em `Convite Festa`.
+O envio nunca pode derrubar o save do card nem o insert do comentario: tudo
+passa por `try/except` com `frappe.log_error`, e a entrega em si e enfileirada
+por `gris.utils.whatsapp`. Por isso os carimbos `aviso_*_enviado_em` significam
+"enfileirado em", e nao "entregue em" — mesma semantica de
+`whatsapp_notificado_em` em `Convite Festa`.
 """
 
 from __future__ import annotations
 
 import frappe
-from frappe.utils import get_url, now_datetime, strip_html
+from frappe.utils import get_fullname, get_url, now_datetime, strip_html
 
 from gris.api.sugestoes.constantes import COLUNA_CONCLUIDO
 from gris.utils.contato import telefone_do_usuario
@@ -114,6 +121,29 @@ def _montar_mensagem_conclusao(doc) -> str:
 	)
 
 
+def _montar_mensagem_comentario_solicitante(doc, texto: str) -> str:
+	return (
+		f"Olá, {_primeiro_nome(doc)}!\n\n"
+		"Chegou um novo comentário na sua solicitação:\n"
+		f"{doc.titulo}\n\n"
+		f"{texto}\n\n"
+		f"Abrir no quadro: {_link_do_card(doc.name)}\n\n"
+		"_Esta é uma mensagem automática_"
+	)
+
+
+def _montar_mensagem_comentario_responsavel(doc, texto: str) -> str:
+	nome = (get_fullname(doc.responsavel) or doc.responsavel or "").split()[0]
+	return (
+		f"Olá, {nome}!\n\n"
+		"Novo comentário na solicitação que você está desenvolvendo:\n"
+		f"{doc.titulo}\n\n"
+		f"{texto}\n\n"
+		f"Abrir no quadro: {_link_do_card(doc.name)}\n\n"
+		"_Esta é uma mensagem automática_"
+	)
+
+
 # ───────────────────────────── envio ─────────────────────────────
 
 
@@ -190,6 +220,61 @@ def notificar_conclusao(doc) -> None:
 	_logger().info(f"Aviso de conclusão enfileirado para {doc.solicitante} ({doc.name}).")
 
 
+def _avisar_por_texto(destinatario: str, papel: str, mensagem: str, nome_do_card: str) -> None:
+	"""Resolve o telefone e envia, sem deixar uma falha isolada quebrar o resto."""
+	telefone = telefone_do_usuario(destinatario)
+	if not telefone:
+		_logger().warning(
+			f"Aviso de comentário não enviado ({nome_do_card}, {papel}): "
+			f"nenhum telefone encontrado para {destinatario}."
+		)
+		return
+
+	try:
+		enviar_texto(telefone, mensagem)
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), f"Aviso de comentário ({papel}): {nome_do_card}")
+		return
+
+	_logger().info(f"Aviso de comentário enfileirado para {papel} ({nome_do_card}).")
+
+
+def notificar_comentario(comment) -> None:
+	"""Avisa quem abriu e o responsável pelo desenvolvimento de um novo comentário.
+
+	Nunca avisa quem escreveu o próprio comentário — comentar na sua própria
+	solicitação, ou na que você mesmo desenvolve, não merece uma mensagem sobre
+	si mesmo. Os dois avisos são independentes: solicitante e responsável podem
+	ser a mesma pessoa (então só um é enviado) ou nenhum ter telefone.
+	"""
+	if not _avisos_habilitados():
+		return
+
+	try:
+		sugestao = frappe.get_doc("Sugestao ou Problema", comment.reference_name)
+	except frappe.DoesNotExistError:
+		return
+
+	autor = (comment.comment_email or comment.owner or "").strip()
+	texto = _descricao_em_texto(comment.content)
+
+	if sugestao.solicitante and sugestao.solicitante != autor:
+		_avisar_por_texto(
+			sugestao.solicitante,
+			"solicitante",
+			_montar_mensagem_comentario_solicitante(sugestao, texto),
+			sugestao.name,
+		)
+
+	if sugestao.responsavel and sugestao.responsavel != autor and sugestao.responsavel != sugestao.solicitante:
+		_avisar_por_texto(
+			sugestao.responsavel,
+			"responsável",
+			_montar_mensagem_comentario_responsavel(sugestao, texto),
+			sugestao.name,
+		)
+
+
 # ───────────────────────────── hooks ─────────────────────────────
 
 
@@ -228,3 +313,20 @@ def on_sugestao_atualizada(doc, method=None) -> None:
 
 	if doc.status == COLUNA_CONCLUIDO and anterior.status != COLUNA_CONCLUIDO:
 		notificar_conclusao(doc)
+
+
+def on_comentario_criado(doc, method=None) -> None:
+	"""`doc_events` `after_insert` de `Comment`, filtrado a este DocType.
+
+	Um hook em `Comment` em vez de um em cada endpoint que comenta (portal,
+	MCP) cobre também quem comenta direto pelo Desk com o mesmo handler.
+	"""
+	if _fora_de_operacao_normal():
+		return
+
+	if doc.reference_doctype != "Sugestao ou Problema" or not doc.reference_name:
+		return
+	if doc.comment_type != "Comment":
+		return
+
+	notificar_comentario(doc)

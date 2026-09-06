@@ -94,7 +94,9 @@ class TestAtualizarSugestao(TestCase):
 				return_value={"ok": True, "responsavel": "dev@example.com", "responsavel_nome": "Dev"},
 			) as alocar,
 		):
-			resultado = sugestoes.atualizar_sugestao("SUG-1", status="Concluído", responsavel="dev@example.com")
+			resultado = sugestoes.atualizar_sugestao(
+				"SUG-1", status="Concluído", responsavel="dev@example.com"
+			)
 
 		atualizar_status.assert_called_once_with("SUG-1", "Concluído")
 		alocar.assert_called_once_with("SUG-1", "dev@example.com")
@@ -135,3 +137,133 @@ class TestComentarSugestao(TestCase):
 		adicionar.assert_called_once_with("SUG-1", "Já comecei a olhar isso.")
 		self.assertTrue(resultado["comentado"])
 		self.assertEqual(resultado["comentarios"], [{"texto": "Já comecei a olhar isso."}])
+
+
+class TestAssumirSugestao(TestCase):
+	def test_simulacao_nao_chama_o_servico(self):
+		with (
+			patch.object(sugestoes.frappe.db, "exists", return_value=True),
+			patch.object(
+				sugestoes.frappe.db,
+				"get_value",
+				return_value={
+					"status": "Selecionado para desenvolvimento",
+					"responsavel": None,
+					"branch": None,
+				},
+			),
+			patch.object(sugestoes.servico, "assumir") as assumir,
+		):
+			resultado = sugestoes.assumir_sugestao("SUG-1", branch="claude/x", simular=True)
+
+		assumir.assert_not_called()
+		self.assertTrue(resultado["simulacao"])
+		self.assertFalse(resultado["assumido"])
+
+	def test_repassa_branch_responsavel_e_forcar(self):
+		with (
+			patch.object(sugestoes.frappe.db, "exists", return_value=True),
+			patch.object(
+				sugestoes.servico,
+				"assumir",
+				return_value={"ok": True, "name": "SUG-1", "status": "Em desenvolvimento"},
+			) as assumir,
+			patch.object(sugestoes.servico, "adicionar_comentario") as comentar,
+		):
+			resultado = sugestoes.assumir_sugestao(
+				"SUG-1", branch="claude/x", responsavel="dev@example.com", forcar=True
+			)
+
+		assumir.assert_called_once_with(
+			"SUG-1", branch="claude/x", responsavel="dev@example.com", forcar=True
+		)
+		comentar.assert_not_called()
+		self.assertTrue(resultado["assumido"])
+		self.assertNotIn("ok", resultado)
+
+	def test_comentario_opcional_vai_junto(self):
+		with (
+			patch.object(sugestoes.frappe.db, "exists", return_value=True),
+			patch.object(sugestoes.servico, "assumir", return_value={"ok": True, "name": "SUG-1"}),
+			patch.object(sugestoes.servico, "adicionar_comentario") as comentar,
+		):
+			sugestoes.assumir_sugestao("SUG-1", comentario="Peguei para desenvolver hoje.")
+
+		comentar.assert_called_once_with("SUG-1", "Peguei para desenvolver hoje.")
+
+
+class TestRegistrarPullRequest(TestCase):
+	def test_simulacao_mostra_a_troca_sem_gravar(self):
+		with (
+			patch.object(sugestoes.frappe.db, "exists", return_value=True),
+			patch.object(sugestoes.frappe.db, "get_value", return_value=""),
+			patch.object(sugestoes.servico, "registrar_pull_request") as registrar,
+		):
+			resultado = sugestoes.registrar_pull_request(
+				"SUG-1", "https://github.com/inah147/gris/pull/42", simular=True
+			)
+
+		registrar.assert_not_called()
+		self.assertEqual(resultado["para"], "https://github.com/inah147/gris/pull/42")
+
+	def test_delega_ao_portal_e_comenta_quando_pedido(self):
+		with (
+			patch.object(sugestoes.frappe.db, "exists", return_value=True),
+			patch.object(
+				sugestoes.servico,
+				"registrar_pull_request",
+				return_value={"ok": True, "name": "SUG-1", "pull_request": "https://x/pull/1"},
+			) as registrar,
+			patch.object(sugestoes.servico, "adicionar_comentario") as comentar,
+		):
+			resultado = sugestoes.registrar_pull_request(
+				"SUG-1", " https://x/pull/1 ", comentario="PR aberto."
+			)
+
+		registrar.assert_called_once_with("SUG-1", "https://x/pull/1")
+		comentar.assert_called_once_with("SUG-1", "PR aberto.")
+		self.assertTrue(resultado["registrado"])
+
+
+class TestPedirEsclarecimento(TestCase):
+	def test_pergunta_vazia_e_recusada(self):
+		with patch.object(sugestoes.frappe.db, "exists", return_value=True):
+			with self.assertRaises(ErroDeFerramenta) as ctx:
+				sugestoes.pedir_esclarecimento("SUG-1", "   ")
+		self.assertEqual(ctx.exception.codigo, "ARGUMENTO_INVALIDO")
+
+	def test_delega_ao_portal(self):
+		with (
+			patch.object(sugestoes.frappe.db, "exists", return_value=True),
+			patch.object(
+				sugestoes.servico,
+				"pedir_esclarecimento",
+				return_value={"ok": True, "comentarios": [{"texto": "Em qual navegador?"}]},
+			) as pedir,
+		):
+			resultado = sugestoes.pedir_esclarecimento("SUG-1", "Em qual navegador?")
+
+		pedir.assert_called_once_with("SUG-1", "Em qual navegador?")
+		self.assertTrue(resultado["perguntado"])
+		self.assertTrue(resultado["aguardando_esclarecimento"])
+
+
+class TestFiltroDePendencia(TestCase):
+	def test_aguardando_esclarecimento_vira_zero_ou_um(self):
+		for valor, esperado in ((True, 1), (False, 0)):
+			with (
+				patch.object(sugestoes.frappe.db, "count", return_value=0),
+				patch.object(sugestoes.frappe, "get_all", return_value=[]) as get_all,
+			):
+				sugestoes.listar_sugestoes(aguardando_esclarecimento=valor)
+
+			self.assertEqual(get_all.call_args.kwargs["filters"]["aguardando_esclarecimento"], esperado)
+
+	def test_sem_o_filtro_nao_entra_no_where(self):
+		with (
+			patch.object(sugestoes.frappe.db, "count", return_value=0),
+			patch.object(sugestoes.frappe, "get_all", return_value=[]) as get_all,
+		):
+			sugestoes.listar_sugestoes()
+
+		self.assertNotIn("aguardando_esclarecimento", get_all.call_args.kwargs["filters"])

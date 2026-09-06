@@ -167,10 +167,34 @@ portal e pelo Desk, então vale para os três caminhos.
 
 | Ferramenta | O que faz | Papéis |
 |---|---|---|
-| `listar_sugestoes` | Lista o quadro com filtros de status, tipo, módulo, responsável e busca por título | Acompanhamento de Sugestoes, Desenvolvedor |
-| `obter_sugestao` | Ficha completa: descrição, linha do tempo e comentários | Acompanhamento de Sugestoes, Desenvolvedor |
+| `listar_sugestoes` | Lista o quadro com filtros de status, tipo, módulo, responsável, pendência de esclarecimento e busca por título | Acompanhamento de Sugestoes, Desenvolvedor |
+| `obter_sugestao` | Ficha completa: descrição, linha do tempo, branch, pull request e comentários | Acompanhamento de Sugestoes, Desenvolvedor |
 | `atualizar_sugestao` ✎ | Move de coluna, reclassifica o tipo, aloca responsável ou reescreve a descrição | Desenvolvedor |
+| `assumir_sugestao` ✎ | Pega a demanda: aloca, move para "Em desenvolvimento" e grava a branch, num passo só | Desenvolvedor |
+| `pedir_esclarecimento` ✎ | Pergunta sobre a demanda e marca o card como aguardando resposta de quem abriu | Desenvolvedor |
+| `registrar_pull_request` ✎ | Grava no card o link do PR que entrega a solicitação | Desenvolvedor |
 | `comentar_sugestao` ✎ | Comenta na solicitação e dispara o aviso por WhatsApp | Acompanhamento de Sugestoes, Desenvolvedor |
+
+#### Levar uma demanda do quadro até o pull request
+
+O ciclo que essas ferramentas fecham, quando o Claude trabalha uma solicitação:
+
+1. `listar_sugestoes` com `status='Selecionado para desenvolvimento'` e
+   `sem_responsavel=true` — o que está liberado para pegar.
+2. `obter_sugestao` — descrição e conversa até aqui.
+3. **Se a demanda não está clara**, `pedir_esclarecimento`: a pergunta vira
+   comentário, quem abriu recebe por WhatsApp e o card fica marcado como
+   *Aguardando esclarecimento* (badge no quadro). A marca cai sozinha quando
+   essa pessoa responde, então `listar_sugestoes` com
+   `aguardando_esclarecimento=false` mostra o que já pode voltar para a fila.
+4. **Se está clara**, `assumir_sugestao` com a `branch` do trabalho: aloca,
+   move o card e cria a tarefa espelho em "Minhas tarefas" de uma vez. Assumir
+   por cima de outro responsável é recusado sem `forcar=true`, para duas
+   sessões não trabalharem na mesma coisa sem saber.
+5. Abrir o PR e chamar `registrar_pull_request` com a URL — o link passa a
+   aparecer no dialog do card, para quem abriu acompanhar a entrega.
+6. Depois do merge, `atualizar_sugestao` com `status='Concluído'` dispara o
+   aviso de conclusão para quem pediu.
 
 ### Usuários e papéis
 
@@ -334,6 +358,8 @@ Exemplos de pedidos que funcionam bem:
 **Sugestões e Problemas**
 - *"O que está selecionado para desenvolvimento?"* → `listar_sugestoes` com `status='Selecionado para desenvolvimento'`
 - *"Aloca a Ana na SUG-00012 e comenta que ela já pode começar"* → `atualizar_sugestao` com `responsavel` + `comentar_sugestao`
+- *"Pega a SUG-00012 para você e trabalha na branch claude/sug-12"* → `assumir_sugestao` com `branch`
+- *"O que está travado esperando resposta de quem pediu?"* → `listar_sugestoes` com `aguardando_esclarecimento=true`
 
 **Usuários e papéis**
 - *"Quem tem o papel Gestor de Metodos hoje?"* → `listar_usuarios` com `papel='Gestor de Metodos'`

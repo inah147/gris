@@ -17,12 +17,16 @@ from gris.api.gestao_de_tarefas.minhas_tarefas import (
 from gris.api.sugestoes import constantes as c
 from gris.api.sugestoes.portal import (
 	CARD_ORDER_BY,
+	adicionar_comentario,
+	assumir,
 	atualizar_descricao,
 	atualizar_status,
 	detalhes,
 	get_comentarios,
 	listar_board,
+	pedir_esclarecimento,
 	reclassificar,
+	registrar_pull_request,
 	reordenar,
 	submeter_solicitacao,
 )
@@ -359,6 +363,179 @@ class TestSugestaoOuProblema(FrappeTestCase):
 		papeis = {linha.role for linha in frappe.get_meta("Sugestao ou Problema").permissions}
 		self.assertNotIn("All", papeis)
 		self.assertIn(c.ROLE_ACOMPANHAMENTO, papeis)
+
+	# ─────────────── fluxo de quem desenvolve ───────────────
+
+	def test_assumir_aloca_move_e_grava_a_branch(self):
+		doc = self._nova()
+
+		resposta = assumir(doc.name, branch="claude/erro-ao-salvar", responsavel=self.dev)
+
+		doc.reload()
+		self.assertEqual(doc.responsavel, self.dev)
+		self.assertEqual(doc.status, c.COLUNA_EM_DESENVOLVIMENTO)
+		self.assertEqual(doc.branch, "claude/erro-ao-salvar")
+		self.assertTrue(doc.data_inicio_desenvolvimento)
+		# A tarefa espelho sai do mesmo save, sem um segundo passo.
+		self.assertTrue(resposta["tarefa"])
+
+	def test_assumir_sem_responsavel_pega_para_quem_chama(self):
+		doc = self._nova()
+
+		usuario_original = frappe.session.user
+		frappe.set_user(self.dev)
+		try:
+			assumir(doc.name)
+		finally:
+			frappe.set_user(usuario_original)
+
+		doc.reload()
+		self.assertEqual(doc.responsavel, self.dev)
+
+	def test_assumir_por_cima_de_outro_responsavel_e_recusado(self):
+		outro = _criar_user("outra.dev.sugestoes@teste.gris", [c.ROLE_DESENVOLVEDOR])
+		doc = self._nova()
+		assumir(doc.name, responsavel=outro)
+
+		with self.assertRaises(frappe.ValidationError):
+			assumir(doc.name, responsavel=self.dev)
+
+		doc.reload()
+		self.assertEqual(doc.responsavel, outro)
+
+	def test_assumir_com_forcar_retoma_o_item_parado(self):
+		outro = _criar_user("outra.dev.sugestoes@teste.gris", [c.ROLE_DESENVOLVEDOR])
+		doc = self._nova()
+		assumir(doc.name, responsavel=outro)
+
+		assumir(doc.name, responsavel=self.dev, forcar=True)
+
+		doc.reload()
+		self.assertEqual(doc.responsavel, self.dev)
+
+	def test_assumir_exige_papel_de_triagem(self):
+		doc = self._nova()
+
+		usuario_original = frappe.session.user
+		frappe.set_user(self.nao_dev)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				assumir(doc.name)
+		finally:
+			frappe.set_user(usuario_original)
+
+	def test_branch_com_espaco_e_recusada(self):
+		doc = self._nova()
+		with self.assertRaises(frappe.ValidationError):
+			assumir(doc.name, branch="claude/erro ao salvar", responsavel=self.dev)
+
+	def test_registrar_pull_request_grava_e_apaga(self):
+		doc = self._nova()
+		url = "https://github.com/inah147/gris/pull/42"
+
+		registrar_pull_request(doc.name, url)
+		doc.reload()
+		self.assertEqual(doc.pull_request, url)
+		self.assertEqual(detalhes(doc.name)["item"]["pull_request"], url)
+
+		registrar_pull_request(doc.name, "")
+		doc.reload()
+		self.assertFalse(doc.pull_request)
+
+	def test_pull_request_precisa_ser_link_http(self):
+		"""O campo vira `href` no dialog: `javascript:` ali seria XSS armazenado."""
+		doc = self._nova()
+		with self.assertRaises(frappe.ValidationError):
+			registrar_pull_request(doc.name, "javascript:alert(1)")
+
+	# ─────────────── esclarecimento sobre a demanda ───────────────
+
+	def _solicitante_que_acompanha(self) -> str:
+		return _criar_user("quem.abriu.sugestoes@teste.gris", [c.ROLE_ACOMPANHAMENTO])
+
+	def test_pedir_esclarecimento_comenta_e_marca_a_espera(self):
+		doc = self._nova()
+
+		usuario_original = frappe.session.user
+		frappe.set_user(self.dev)
+		try:
+			pedir_esclarecimento(doc.name, "Esse erro acontece em qual navegador?")
+		finally:
+			frappe.set_user(usuario_original)
+
+		doc.reload()
+		self.assertTrue(doc.aguardando_esclarecimento)
+		self.assertEqual(doc.esclarecimento_pedido_por, self.dev)
+		self.assertTrue(doc.esclarecimento_pedido_em)
+
+		comentarios = get_comentarios(doc.name)["comentarios"]
+		self.assertIn("navegador", comentarios[-1]["texto"])
+		self.assertTrue(detalhes(doc.name)["item"]["aguardando_esclarecimento"])
+
+	def test_resposta_de_quem_abriu_encerra_a_espera(self):
+		solicitante = self._solicitante_que_acompanha()
+		doc = self._nova(solicitante=solicitante)
+
+		usuario_original = frappe.session.user
+		try:
+			frappe.set_user(self.dev)
+			pedir_esclarecimento(doc.name, "Em qual navegador?")
+			frappe.set_user(solicitante)
+			adicionar_comentario(doc.name, "No Chrome do celular.")
+		finally:
+			frappe.set_user(usuario_original)
+
+		doc.reload()
+		self.assertFalse(doc.aguardando_esclarecimento)
+		# A data de quando a dúvida surgiu fica como histórico.
+		self.assertTrue(doc.esclarecimento_pedido_em)
+
+	def test_quem_perguntou_comentando_de_novo_nao_encerra_a_espera(self):
+		doc = self._nova()
+
+		usuario_original = frappe.session.user
+		frappe.set_user(self.dev)
+		try:
+			pedir_esclarecimento(doc.name, "Em qual navegador?")
+			adicionar_comentario(doc.name, "Complementando: e em qual tela?")
+		finally:
+			frappe.set_user(usuario_original)
+
+		doc.reload()
+		self.assertTrue(doc.aguardando_esclarecimento)
+
+	def test_concluir_encerra_a_espera(self):
+		doc = self._nova()
+
+		usuario_original = frappe.session.user
+		frappe.set_user(self.dev)
+		try:
+			pedir_esclarecimento(doc.name, "Em qual navegador?")
+		finally:
+			frappe.set_user(usuario_original)
+
+		atualizar_status(doc.name, c.COLUNA_CONCLUIDO)
+
+		doc.reload()
+		self.assertFalse(doc.aguardando_esclarecimento)
+
+	def test_pendencia_aparece_no_card_do_quadro(self):
+		doc = self._nova()
+
+		usuario_original = frappe.session.user
+		frappe.set_user(self.dev)
+		try:
+			pedir_esclarecimento(doc.name, "Em qual navegador?")
+		finally:
+			frappe.set_user(usuario_original)
+
+		itens = [
+			item
+			for coluna in listar_board()["colunas"]
+			for item in coluna["itens"]
+			if item["name"] == doc.name
+		]
+		self.assertTrue(itens[0]["aguardando_esclarecimento"])
 
 	# ────────────────────── ordenação ──────────────────────
 

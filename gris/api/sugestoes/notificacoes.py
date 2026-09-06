@@ -266,7 +266,11 @@ def notificar_comentario(comment) -> None:
 			sugestao.name,
 		)
 
-	if sugestao.responsavel and sugestao.responsavel != autor and sugestao.responsavel != sugestao.solicitante:
+	if (
+		sugestao.responsavel
+		and sugestao.responsavel != autor
+		and sugestao.responsavel != sugestao.solicitante
+	):
 		_avisar_por_texto(
 			sugestao.responsavel,
 			"responsável",

@@ -23,8 +23,13 @@
   "desenvolvimento_section",
   "responsavel",
   "tarefa",
+  "branch",
+  "pull_request",
   "data_inicio_desenvolvimento",
   "data_conclusao",
+  "aguardando_esclarecimento",
+  "esclarecimento_pedido_por",
+  "esclarecimento_pedido_em",
   "notificacoes_section",
   "aviso_grupo_enviado_em",
   "aviso_conclusao_enviado_em"
@@ -145,6 +150,19 @@
    "read_only": 1
   },
   {
+   "description": "Branch onde o trabalho esta sendo feito (preenchida ao assumir a solicitacao).",
+   "fieldname": "branch",
+   "fieldtype": "Data",
+   "label": "Branch de desenvolvimento"
+  },
+  {
+   "description": "URL do pull request que entrega esta solicitacao.",
+   "fieldname": "pull_request",
+   "fieldtype": "Data",
+   "label": "Pull request",
+   "options": "URL"
+  },
+  {
    "description": "Preenchida automaticamente quando o item entra em Em desenvolvimento.",
    "fieldname": "data_inicio_desenvolvimento",
    "fieldtype": "Datetime",
@@ -156,6 +174,28 @@
    "fieldname": "data_conclusao",
    "fieldtype": "Datetime",
    "label": "Data de conclusao",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Marcado quando quem desenvolve pergunta algo a quem abriu; limpa sozinho na resposta.",
+   "fieldname": "aguardando_esclarecimento",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Aguardando esclarecimento",
+   "read_only": 1
+  },
+  {
+   "fieldname": "esclarecimento_pedido_por",
+   "fieldtype": "Link",
+   "label": "Esclarecimento pedido por",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "esclarecimento_pedido_em",
+   "fieldtype": "Datetime",
+   "label": "Esclarecimento pedido em",
    "read_only": 1
   },
   {

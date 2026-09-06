@@ -43,6 +43,13 @@ def _garantir_registro(name: str) -> None:
 			"type": "boolean",
 			"description": "Se true, traz apenas quem ainda não tem responsável alocado.",
 		},
+		"aguardando_esclarecimento": {
+			"type": "boolean",
+			"description": (
+				"Se true, traz apenas o que está esperando resposta de quem abriu; "
+				"se false, apenas o que não está."
+			),
+		},
 		"busca": {"type": "string", "description": "Parte do título."},
 		"limite": {
 			"type": "integer",
@@ -61,6 +68,7 @@ def listar_sugestoes(
 	modulo: str | None = None,
 	responsavel: str | None = None,
 	sem_responsavel: bool | None = None,
+	aguardando_esclarecimento: bool | None = None,
 	busca: str | None = None,
 	limite: int = 25,
 	inicio: int = 0,
@@ -76,6 +84,8 @@ def listar_sugestoes(
 		filtros["responsavel"] = ["in", [None, ""]]
 	elif responsavel:
 		filtros["responsavel"] = responsavel
+	if aguardando_esclarecimento is not None:
+		filtros["aguardando_esclarecimento"] = 1 if aguardando_esclarecimento else 0
 	if busca:
 		filtros["titulo"] = ["like", f"%{busca}%"]
 
@@ -183,6 +193,138 @@ def atualizar_sugestao(
 		resultado["descricao"] = servico.atualizar_descricao(name, descricao).get("descricao")
 
 	return {"atualizado": True, **resultado}
+
+
+@ferramenta(
+	nome="assumir_sugestao",
+	titulo="Assumir uma sugestão ou problema",
+	descricao=(
+		"Pega a solicitação para desenvolver num passo só: aloca o responsável (por padrão "
+		"quem está chamando), move para 'Em desenvolvimento' e grava a branch do trabalho. "
+		"Recusa se já houver outro responsável, a menos que 'forcar' seja true."
+	),
+	parametros={
+		"name": {"type": "string", "description": "Identificador da solicitação."},
+		"branch": {"type": "string", "description": "Branch onde o trabalho vai acontecer."},
+		"responsavel": {
+			"type": "string",
+			"description": "E-mail de quem vai desenvolver. Vazio assume para o usuário da sessão.",
+		},
+		"comentario": {
+			"type": "string",
+			"description": "Recado opcional para quem abriu, publicado junto (avisa por WhatsApp).",
+		},
+		"forcar": {
+			"type": "boolean",
+			"description": "Assume mesmo que a solicitação já tenha outro responsável.",
+		},
+	},
+	obrigatorios=("name",),
+	roles=ROLES_TRIAGEM,
+	somente_leitura=False,
+)
+def assumir_sugestao(
+	name: str,
+	branch: str | None = None,
+	responsavel: str | None = None,
+	comentario: str | None = None,
+	forcar: bool = False,
+	simular: bool = False,
+) -> dict:
+	_garantir_registro(name)
+
+	if simular:
+		atual = frappe.db.get_value(DOCTYPE, name, ["status", "responsavel", "branch"], as_dict=True) or {}
+		return {
+			"simulacao": True,
+			"assumido": False,
+			"name": name,
+			"atual": atual,
+			"comentario": (comentario or "").strip() or None,
+		}
+
+	resultado = servico.assumir(name, branch=branch, responsavel=responsavel, forcar=forcar)
+	resultado.pop("ok", None)
+
+	comentario = (comentario or "").strip()
+	if comentario:
+		servico.adicionar_comentario(name, comentario)
+		resultado["comentario"] = comentario
+
+	return {"assumido": True, **resultado}
+
+
+@ferramenta(
+	nome="registrar_pull_request",
+	titulo="Registrar o pull request de uma sugestão",
+	descricao=(
+		"Grava no card o link do pull request que entrega a solicitação, para quem abriu "
+		"acompanhar pelo quadro. Uma URL vazia apaga o registro."
+	),
+	parametros={
+		"name": {"type": "string", "description": "Identificador da solicitação."},
+		"url": {"type": "string", "description": "Link do pull request (https://...)."},
+		"comentario": {
+			"type": "string",
+			"description": "Recado opcional publicado junto (avisa por WhatsApp).",
+		},
+	},
+	obrigatorios=("name", "url"),
+	roles=ROLES_TRIAGEM,
+	somente_leitura=False,
+)
+def registrar_pull_request(name: str, url: str, comentario: str | None = None, simular: bool = False) -> dict:
+	_garantir_registro(name)
+
+	url = (url or "").strip()
+	if simular:
+		atual = frappe.db.get_value(DOCTYPE, name, "pull_request")
+		return {"simulacao": True, "registrado": False, "name": name, "de": atual or "", "para": url}
+
+	resultado = servico.registrar_pull_request(name, url)
+	resultado.pop("ok", None)
+
+	comentario = (comentario or "").strip()
+	if comentario:
+		servico.adicionar_comentario(name, comentario)
+		resultado["comentario"] = comentario
+
+	return {"registrado": True, **resultado}
+
+
+@ferramenta(
+	nome="pedir_esclarecimento",
+	titulo="Pedir esclarecimento sobre uma sugestão",
+	descricao=(
+		"Publica uma dúvida sobre a demanda e marca a solicitação como aguardando resposta "
+		"de quem abriu (que recebe o aviso por WhatsApp). A marca cai sozinha quando essa "
+		"pessoa responde, e 'listar_sugestoes' filtra por ela."
+	),
+	parametros={
+		"name": {"type": "string", "description": "Identificador da solicitação."},
+		"texto": {"type": "string", "description": "As perguntas, em texto claro para quem abriu."},
+	},
+	obrigatorios=("name", "texto"),
+	roles=ROLES_TRIAGEM,
+	somente_leitura=False,
+)
+def pedir_esclarecimento(name: str, texto: str, simular: bool = False) -> dict:
+	_garantir_registro(name)
+
+	texto = (texto or "").strip()
+	if not texto:
+		raise ErroDeFerramenta("ARGUMENTO_INVALIDO", "A pergunta não pode estar vazia.")
+
+	if simular:
+		return {"simulacao": True, "perguntado": False, "name": name, "texto": texto}
+
+	resposta = servico.pedir_esclarecimento(name, texto)
+	return {
+		"perguntado": True,
+		"name": name,
+		"aguardando_esclarecimento": True,
+		"comentarios": resposta.get("comentarios", []),
+	}
 
 
 @ferramenta(

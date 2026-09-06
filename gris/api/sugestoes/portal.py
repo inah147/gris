@@ -24,9 +24,10 @@ from typing import Any
 
 import frappe
 from frappe import _
-from frappe.utils import add_to_date, get_fullname, now_datetime, strip_html
+from frappe.utils import add_to_date, get_fullname, now_datetime, sbool, strip_html
 
 from gris.api.sugestoes.constantes import (
+	COLUNA_EM_DESENVOLVIMENTO,
 	COLUNAS,
 	DESCRICAO_MAX,
 	LIMITE_ENVIOS_POR_HORA,
@@ -53,6 +54,7 @@ CARD_FIELDS: tuple[str, ...] = (
 	"solicitante_nome",
 	"data_submissao",
 	"tarefa",
+	"aguardando_esclarecimento",
 )
 
 # `ordem` é a prioridade definida arrastando; entre itens de mesma ordem (o
@@ -243,6 +245,10 @@ def detalhes(name: str) -> dict[str, Any]:
 			"responsavel_nome": dados.get("nome", ""),
 			"responsavel_avatar": dados.get("avatar", ""),
 			"tarefa": doc.tarefa or "",
+			"branch": doc.branch or "",
+			"pull_request": doc.pull_request or "",
+			"aguardando_esclarecimento": bool(doc.aguardando_esclarecimento),
+			"esclarecimento_pedido_em": doc.esclarecimento_pedido_em,
 		},
 		"comentarios": _serializar_comentarios(doc.name),
 		"pode_triar": pode_triar(),
@@ -516,6 +522,141 @@ def alocar_responsavel(name: str, user: str | None = None) -> dict[str, Any]:
 		"responsavel_avatar": dados.get("avatar", ""),
 		"tarefa": doc.tarefa or "",
 	}
+
+
+# ─────────────── fluxo de quem desenvolve (MCP e Desk) ───────────────
+#
+# Os três serviços abaixo não são `@frappe.whitelist()`: quem chama é a camada
+# MCP (`gris.api.mcp.sugestoes`), que roda no servidor, e o Desk, que edita os
+# campos direto no DocType. Sem tela do portal chamando, um endpoint HTTP a mais
+# seria superfície exposta sem uso. A autorização mora aqui de todo jeito, para
+# a regra não depender de quem chama.
+
+
+def assumir(
+	name: str, branch: str | None = None, responsavel: str | None = None, forcar: Any = False
+) -> dict[str, Any]:
+	"""Pega a solicitação para desenvolver: aloca, move para a coluna e grava a branch.
+
+	Existe como um passo só porque os três acontecem juntos e sempre na mesma
+	ordem — quem começa a trabalhar não deveria ter de lembrar de mover o card
+	depois. Sem `responsavel`, assume para quem está chamando.
+
+	`forcar` é a saída para retomar um item parado no nome de outra pessoa; sem
+	ele, assumir por cima de um responsável já alocado é recusado, para duas
+	sessões trabalhando ao mesmo tempo não se atropelarem em silêncio.
+	"""
+	user = _require_desenvolvedor()
+
+	alvo = (responsavel or "").strip() or user
+	if ROLE_DESENVOLVEDOR not in frappe.get_roles(alvo):
+		frappe.throw(_("{0} não tem o papel '{1}'.").format(get_fullname(alvo) or alvo, ROLE_DESENVOLVEDOR))
+
+	doc = _carregar(name)
+
+	atual = (doc.responsavel or "").strip()
+	# `forcar` chega como string quando vem do HTTP; `sbool` devolve o valor
+	# intacto quando ja e booleano (chamada interna ou pelo MCP).
+	if atual and atual != alvo and not sbool(forcar):
+		frappe.throw(
+			_("A solicitação já está com {0}. Use 'forcar' para assumir mesmo assim.").format(
+				get_fullname(atual) or atual
+			)
+		)
+
+	doc.responsavel = alvo
+	doc.status = COLUNA_EM_DESENVOLVIMENTO
+	if branch is not None:
+		doc.branch = (branch or "").strip()
+	doc.save()
+	doc.reload()
+
+	dados = _resolver_usuarios({alvo}).get(alvo, {})
+	return {
+		"ok": True,
+		"name": doc.name,
+		"status": doc.status,
+		"responsavel": alvo,
+		"responsavel_nome": dados.get("nome", ""),
+		"branch": doc.branch or "",
+		"tarefa": doc.tarefa or "",
+	}
+
+
+def registrar_pull_request(name: str, url: str | None = None) -> dict[str, Any]:
+	"""Grava (ou apaga, com `url` vazia) o link do pull request da solicitação.
+
+	O formato é validado no controller, junto com todo save do DocType, para o
+	Desk não ser um caminho por fora.
+	"""
+	_require_desenvolvedor()
+
+	doc = _carregar(name)
+	doc.pull_request = (url or "").strip()
+	doc.save()
+
+	return {"ok": True, "name": doc.name, "pull_request": doc.pull_request or ""}
+
+
+def pedir_esclarecimento(name: str, texto: str) -> dict[str, Any]:
+	"""Comenta uma dúvida sobre a demanda e marca o card como aguardando resposta.
+
+	O comentário já avisa quem abriu por WhatsApp (hook em `Comment`); a marca é
+	o que deixa a espera visível no quadro e filtrável depois — sem ela, uma
+	pergunta feita e não respondida se perde no meio da conversa.
+	"""
+	user = _require_desenvolvedor()
+
+	resposta = adicionar_comentario(name, texto)
+
+	# `db.set_value` em vez de `doc.save()`: perguntar não muda o andamento do
+	# card, então não deve empurrar a tarefa espelho nem gerar versão de
+	# `track_changes`. Mesmo motivo de `reordenar`.
+	frappe.db.set_value(
+		DOCTYPE,
+		name,
+		{
+			"aguardando_esclarecimento": 1,
+			"esclarecimento_pedido_por": user,
+			"esclarecimento_pedido_em": now_datetime(),
+		},
+		update_modified=False,
+	)
+
+	return {
+		"ok": True,
+		"name": name,
+		"aguardando_esclarecimento": True,
+		"comentarios": resposta.get("comentarios", []),
+	}
+
+
+def limpar_esclarecimento_ao_responder(doc, method=None) -> None:
+	"""`doc_events` `after_insert` de `Comment`: a resposta encerra a espera.
+
+	Quem perguntou continua conversando sem desmarcar nada — só o comentário de
+	outra pessoa (na prática, quem abriu a solicitação) tira o card da fila de
+	pendências. Assim o filtro `aguardando_esclarecimento` responde à pergunta
+	que interessa: "o que ainda depende de alguém me responder?".
+	"""
+	if doc.reference_doctype != DOCTYPE or not doc.reference_name:
+		return
+	if doc.comment_type != "Comment":
+		return
+
+	pendencia = frappe.db.get_value(
+		DOCTYPE,
+		doc.reference_name,
+		["aguardando_esclarecimento", "esclarecimento_pedido_por"],
+		as_dict=True,
+	)
+	if not pendencia or not pendencia.get("aguardando_esclarecimento"):
+		return
+	if (doc.owner or "") == (pendencia.get("esclarecimento_pedido_por") or ""):
+		return
+
+	# `esclarecimento_pedido_em` fica: vira o registro de quando a dúvida surgiu.
+	frappe.db.set_value(DOCTYPE, doc.reference_name, "aguardando_esclarecimento", 0, update_modified=False)
 
 
 # ──────────────────────────── comentários ────────────────────────────

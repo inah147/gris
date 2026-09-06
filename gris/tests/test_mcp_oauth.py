@@ -142,9 +142,7 @@ class TestOAuthNoTransporteMCP(FrappeTestCase):
 		self.assertEqual(self._autenticar("token-mcp-papeis"), EMAIL)
 
 		nomes = {ferramenta["nome"] for ferramenta in registry.listar()}
-		catalogo_inteiro = {
-			ferramenta["nome"] for ferramenta in registry.listar(incluir_indisponiveis=True)
-		}
+		catalogo_inteiro = {ferramenta["nome"] for ferramenta in registry.listar(incluir_indisponiveis=True)}
 
 		# Guarda contra asserção vazia: a ferramenta do financeiro existe no
 		# catálogo, então ficar de fora acima é filtro de papel, não ausência.

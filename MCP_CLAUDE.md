@@ -334,6 +334,61 @@ início da sessão, então uma sessão já aberta não enxerga a mudança.
 > `GRIS_MCP_SOMENTE_LEITURA=1`, e só relaxe para escrita quando a tarefa
 > realmente exigir gravação.
 
+### 3e. Connector no claude.ai / Desktop (OAuth)
+
+Só funciona depois que a camada de descoberta (`gris/api/mcp/oauth.py`,
+[PLANO_OAUTH_MCP.md](PLANO_OAUTH_MCP.md)) estiver implantada no site que você
+vai conectar — hoje ela está na branch, ainda não em produção. Cobre
+claude.ai (chat), Desktop e o Claude Code CLI local; **não** cobre sessões
+remotas do Claude Code na web (use a seção 3d para essa). Vantagem sobre as
+opções acima: cadastra uma vez na conta, sem `claude mcp add` por máquina.
+
+**1. Escolha o usuário que vai autorizar.** Não use o Administrator — crie
+(ou reaproveite) um usuário do GRIS só com os papéis das ferramentas que o
+Claude deve acessar. O token fica com a identidade desse usuário; é o mesmo
+princípio de "papéis mínimos" da API key.
+
+**2. Crie o `OAuth Client` no Desk** (Desk → OAuth Client → Novo):
+
+| Campo | Valor |
+|---|---|
+| App Name | algo identificável, ex. `Claude — GRIS MCP` |
+| Redirect URIs | `https://claude.ai/api/mcp/auth_callback` (ver nota abaixo) |
+| Default Redirect URI | o mesmo valor |
+| Scopes | `gris.mcp` — **não** use `all` |
+| Grant Type | `Authorization Code` |
+| Response Type | `Code` |
+| Skip Authorization | **desmarcado** — em produção a tela de consentimento é o ponto em que o usuário do passo 1 aprova o acesso; só as suítes de teste usam `skip_authorization=1` |
+
+Salve e copie o `Client ID` gerado (o `Client Secret` não é conferido pelo
+provider — ver *Atenção ao registrar o cliente* abaixo — então não precisa
+guardá-lo com o mesmo cuidado de um segredo real).
+
+> **Sobre o Redirect URI**: `https://claude.ai/api/mcp/auth_callback` é o
+> valor mais bem documentado para o fluxo web do claude.ai, mas vem de
+> levantamento externo (não da documentação oficial, bloqueada para busca
+> automatizada neste ambiente) e pode mudar. O Frappe exige match **exato**
+> — se o cadastro no passo 3 falhar com algo como "redirect_uri inválido" ou
+> similar, é esse o campo a conferir e ajustar no `OAuth Client`.
+
+**3. Cadastre o connector no claude.ai**: Customize → Connectors (conta
+individual) ou Organization settings → Connectors (Team/Enterprise) → Add
+custom connector.
+
+- **Remote MCP server URL**: `https://<seu-site>/api/method/gris.api.mcp.http.mcp`
+  (não precisa digitar os `.well-known` — o Claude descobre sozinho a partir
+  do 401 nessa URL).
+- **Advanced settings → OAuth Client ID**: cole o `client_id` do passo 2.
+- **OAuth Client Secret**: deixe em branco (opcional; nosso provider não
+  confere).
+
+**4. Autorize**: ao salvar, o Claude deve redirecionar para a tela de login
+do GRIS. Entre com o usuário do passo 1 e aprove o escopo.
+
+**5. Teste**: peça algo que use uma ferramenta do catálogo (ex. "liste os
+associados do ramo Lobinho") e confirme que a resposta reflete os papéis
+desse usuário — não os do Administrator.
+
 ## Uso no dia a dia
 
 Exemplos de pedidos que funcionam bem:

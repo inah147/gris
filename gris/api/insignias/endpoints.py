@@ -43,7 +43,7 @@ CATALOGO_DOCTYPE = "Insignia ou Distintivo"
 TIPOS_VALIDOS = {
 	"Distintivo de Progressão",
 	"Especialidade",
-	"Insígnia Especial",
+	"Insígnia de Interesse Especial",
 	"Distintivo de Identificação",
 	"Distintivo de Função",
 	"Outro",

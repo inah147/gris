@@ -9,7 +9,7 @@ no_cache = 1
 TIPOS = [
 	"Distintivo de Progressão",
 	"Especialidade",
-	"Insígnia Especial",
+	"Insígnia de Interesse Especial",
 	"Distintivo de Identificação",
 	"Distintivo de Função",
 	"Outro",

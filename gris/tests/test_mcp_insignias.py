@@ -51,6 +51,27 @@ class TestSalvarItemCatalogo(TestCase):
 			insignias.salvar_item_catalogo_insignias(tipo="Fantasia", ramo="Todos", valor_unitario=1)
 		self.assertEqual(ctx.exception.codigo, "ARGUMENTO_INVALIDO")
 
+	def test_recusa_grafia_antiga_insignia_especial(self):
+		with self.assertRaises(ErroDeFerramenta) as ctx:
+			insignias.salvar_item_catalogo_insignias(tipo="Insígnia Especial", ramo="Todos", valor_unitario=1)
+		self.assertEqual(ctx.exception.codigo, "ARGUMENTO_INVALIDO")
+
+	def test_aceita_insignia_de_interesse_especial(self):
+		with (
+			patch.object(insignias.frappe.db, "exists", return_value=False),
+			patch.object(
+				insignias.endpoints,
+				"salvar_item_catalogo",
+				return_value={"success": True, "name": "Item Novo", "criado": True},
+			) as salvar,
+		):
+			resultado = insignias.salvar_item_catalogo_insignias(
+				nome="Item Novo", tipo="Insígnia de Interesse Especial", ramo="Todos", valor_unitario=5
+			)
+
+		salvar.assert_called_once()
+		self.assertTrue(resultado["salvo"])
+
 	def test_recusa_ramo_invalido(self):
 		with self.assertRaises(ErroDeFerramenta) as ctx:
 			insignias.salvar_item_catalogo_insignias(tipo="Especialidade", ramo="Marte", valor_unitario=1)

@@ -5,6 +5,7 @@ from frappe import _
 from frappe.utils import add_days, cint, getdate, now, today
 
 from gris.api.portal_access import enrich_context
+from gris.api.recepcao import limpar_sinal_de_reagendamento
 from gris.api.recepcao_notificacoes import notificar_nova_manifestacao_no_grupo_recepcao
 from gris.api.responsavel_acesso import get_responsavel_do_usuario
 
@@ -387,6 +388,7 @@ def schedule_visit(date: str):
 
 		# Update Novo Associado
 		frappe.db.set_value("Novo Associado", b.name, {"visita_agendada": 1, "status": "Visita Agendada"})
+		limpar_sinal_de_reagendamento(b.name)
 
 	return "Visita agendada com sucesso."
 

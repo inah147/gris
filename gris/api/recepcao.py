@@ -2,7 +2,9 @@ import json
 
 import frappe
 from frappe import _
-from frappe.utils import format_datetime, get_fullname, getdate, strip_html
+from frappe.utils import format_datetime, get_fullname, getdate, strip_html, today
+
+from gris.api.recepcao_funil import STATUS_ANTES_DA_VISITA
 
 
 def formatar_idade(data_nascimento) -> str | None:
@@ -318,6 +320,66 @@ def remover_confirmacao_visita(novo_associado_name: str):
 	frappe.db.set_value("Agenda de Visitas", visit_name, "visita_confirmada", 0)
 
 	return {"status": "success"}
+
+
+@frappe.whitelist()
+def sinalizar_reagendamento_de_visita(novo_associado_name: str, motivo: str | None = None):
+	"""Marca que a visita caiu e precisa ser remarcada, devolvendo o card à coluna anterior.
+
+	A visita agendada é apagada — a data volta a ficar livre na agenda e o jovem
+	reaparece na lista de quem pode ser agendado — e o card volta para
+	``Conversa Inicial``, que é a coluna onde a recepção tem o botão de agendar.
+	O sinal ``reagendamento_pendente`` fica ligado para o card não se misturar com
+	quem nunca teve visita marcada; ele é desligado ao agendar a próxima visita
+	(ver ``gris.www.recepcao.agenda_visitas.schedule_visit``).
+	"""
+	if not frappe.db.exists("Novo Associado", novo_associado_name):
+		frappe.throw(_("Novo Associado não encontrado"))
+
+	doc = frappe.get_doc("Novo Associado", novo_associado_name)
+	if not doc.has_permission("write"):
+		frappe.throw(_("Você não tem permissão para alterar este registro."), frappe.PermissionError)
+
+	# Quem já recebeu a primeira visita seguiu o fluxo; devolver o card para o
+	# começo aqui apagaria etapas concluídas em vez de lembrar de uma remarcação.
+	if doc.primeira_visita_realizada:
+		frappe.throw(_("A primeira visita já foi realizada — não há visita a reagendar."))
+
+	visitas = frappe.get_all(
+		"Agenda de Visitas",
+		filters={"jovem": novo_associado_name},
+		order_by="data_da_visita desc",
+		limit=1,
+	)
+	visita_removida = None
+	if visitas:
+		visita_removida = visitas[0].name
+		frappe.delete_doc("Agenda de Visitas", visita_removida)
+
+	doc.visita_agendada = 0
+	doc.reagendamento_pendente = 1
+	doc.data_pedido_reagendamento = today()
+	doc.status = STATUS_ANTES_DA_VISITA
+	doc.save()
+
+	motivo = (motivo or "").strip()
+	if motivo:
+		adicionar_comentario(novo_associado_name, f"Visita a reagendar: {motivo}")
+
+	return {
+		"status": "success",
+		"novo_status": doc.status,
+		"visita_removida": visita_removida,
+	}
+
+
+def limpar_sinal_de_reagendamento(novo_associado_name: str) -> None:
+	"""Desliga o sinal de reagendamento; chamado por quem agenda uma nova visita."""
+	frappe.db.set_value(
+		"Novo Associado",
+		novo_associado_name,
+		{"reagendamento_pendente": 0, "data_pedido_reagendamento": None},
+	)
 
 
 @frappe.whitelist()

@@ -124,6 +124,8 @@ def get_context(context):
 		"numero_de_registro",
 		"visita_agendada",
 		"primeira_visita_realizada",
+		"reagendamento_pendente",
+		"data_pedido_reagendamento",
 		*field_interval_map.keys(),
 	]
 
@@ -328,6 +330,15 @@ def get_context(context):
 			associado.visita_confirmada = bool(visit_rec.visita_confirmada) if visit_rec else False
 			associado.visita_data = (
 				format_date(visit_rec.data_da_visita) if visit_rec and visit_rec.data_da_visita else None
+			)
+
+			# Sinal de reagendamento: o card volta para "Conversa Inicial" carregando
+			# desde quando a visita está esperando ser remarcada.
+			associado.reagendamento_pendente = bool(associado.reagendamento_pendente)
+			associado.reagendamento_data = (
+				format_date(associado.data_pedido_reagendamento)
+				if associado.data_pedido_reagendamento
+				else None
 			)
 
 			# Idade recalculada a cada carregamento da página

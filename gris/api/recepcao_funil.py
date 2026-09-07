@@ -61,6 +61,12 @@ CAMPOS_DE_EFETIVACAO: tuple[str, ...] = (
 	"registro_definitivo_efetivado",
 )
 
+# Colunas do kanban envolvidas na visita. Quando a visita cai e precisa ser
+# remarcada, o card volta para a coluna anterior — é lá que a recepção tem o
+# botão de agendar — carregando o sinal ``reagendamento_pendente``.
+STATUS_VISITA_AGENDADA = "Visita Agendada"
+STATUS_ANTES_DA_VISITA = "Conversa Inicial"
+
 # A coluna "Acompanhamento" do kanban é dividida em duas listas. A separação é
 # derivada dos dados, não gravada em ``status``: quem ainda espera o registro
 # provisório fica na lista provisória e migra sozinho para a definitiva assim que

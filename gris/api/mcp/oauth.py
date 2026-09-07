@@ -57,6 +57,13 @@ def oauth_authorization_server() -> None:
 	servidor suporta PKCE — e como o ``OAuth Client`` do Frappe não confere
 	``client_secret`` (ver MCP_CLAUDE.md), o PKCE é a única proteção real do
 	fluxo.
+
+	``scopes_supported`` só anuncia ``gris.mcp`` — não ``all``/``openid`` — de
+	propósito: um cliente MCP que peça exatamente o que aqui é anunciado tem
+	que continuar batendo com o escopo estreito cadastrado no ``OAuth Client``
+	(ver Fase 2 do plano). Anunciar escopos que esse cliente não tem cadastrado
+	faz `validate_authorization_request` do Frappe recusar com
+	``invalid_scope`` assim que o cliente pede o que foi anunciado.
 	"""
 	openid_configuration()
 	frappe.local.response.update(
@@ -64,7 +71,7 @@ def oauth_authorization_server() -> None:
 			"code_challenge_methods_supported": ["S256", "plain"],
 			"grant_types_supported": ["authorization_code", "refresh_token"],
 			"token_endpoint_auth_methods_supported": ["none"],
-			"scopes_supported": [ESCOPO_MCP, "all", "openid"],
+			"scopes_supported": [ESCOPO_MCP],
 		}
 	)
 

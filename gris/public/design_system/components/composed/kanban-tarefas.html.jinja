@@ -45,6 +45,10 @@
 
 {% call _card(title=titulo) %}
     <div class="kanban-tarefas-actions card-actions card-actions--end mb-sm" data-kanban-actions>
+        <label class="kanban-tarefas-toggle" data-kanban-hide-done-wrapper>
+            <input type="checkbox" data-kanban-hide-done />
+            <span>Ocultar concluidos</span>
+        </label>
         {% for action in custom_actions %}
             {% set variant = action.variant or "outline" %}
             <button type="button" id="{{ action.id }}" class="btn-sm-{{ variant }}">{{ action.label }}</button>

@@ -324,9 +324,10 @@
 		 * @param {string} options.currentUserFullName
 		 * @param {boolean} [options.canEdit=true]
 		 * @param {Array<{user:string,full_name:string}>} [options.responsavelOptions]
-		 * @param {() => Promise<{tarefas:any[], responsavelOptions?:any[], canEdit?:boolean}>} options.onLoad
-		 * @param {(payload:object) => Promise<{tarefas:any[]}>} options.onSaveTask
-		 * @param {(name:string,status:string) => Promise<{tarefas:any[]}>} options.onMoveTask
+		 * @param {(opts:{ocultarConcluidos:boolean}) => Promise<{tarefas:any[], responsavelOptions?:any[], canEdit?:boolean}>} options.onLoad
+		 * @param {(payload:object, opts:{ocultarConcluidos:boolean}) => Promise<{tarefas:any[]}>} options.onSaveTask
+		 * @param {(name:string,status:string, opts:{ocultarConcluidos:boolean}) => Promise<{tarefas:any[]}>} options.onMoveTask
+		 * @param {(name:string, opts:{ocultarConcluidos:boolean}) => Promise<{tarefas:any[]}>} options.onDeleteTask
 		 * @param {(name:string) => Promise<{comentarios:any[]}>} options.onLoadComments
 		 * @param {(name:string,texto:string) => Promise<{comentarios:any[]}>} options.onAddComment
 		 * @param {(commentName:string,texto:string) => Promise<{comentarios:any[]}>} options.onEditComment
@@ -368,9 +369,11 @@
 			this.statusBeforeChange = "Nao iniciado";
 			this.observacoesEditor = null;
 			this.responsavelFallback = {};
+			this.ocultarConcluidos = this._loadOcultarConcluidosPref();
 
 			this._initEditor();
 			this._bindEvents();
+			this._initHideDoneToggle();
 			this._updateNewButtonState();
 		}
 
@@ -395,10 +398,45 @@
 			if (hintEl) hintEl.textContent = String(text || "");
 		}
 
+		/* ── Filtro "ocultar concluidos" (server-side, persistido no navegador) ── */
+		_hideDoneStorageKey() {
+			return "gris:kanban-tarefas:ocultar-concluidos";
+		}
+
+		_loadOcultarConcluidosPref() {
+			try {
+				return localStorage.getItem(this._hideDoneStorageKey()) === "1";
+			} catch (_e) {
+				return false;
+			}
+		}
+
+		_saveOcultarConcluidosPref(value) {
+			try {
+				localStorage.setItem(this._hideDoneStorageKey(), value ? "1" : "0");
+			} catch (_e) {
+				/* navegador sem storage (modo privado etc.): preferencia so nao persiste */
+			}
+		}
+
+		_initHideDoneToggle() {
+			const toggle = this.container.parentElement?.querySelector("[data-kanban-hide-done]");
+			this.hideDoneToggle = toggle || null;
+			if (!toggle) return;
+			toggle.checked = this.ocultarConcluidos;
+			toggle.addEventListener("change", () => {
+				this.ocultarConcluidos = toggle.checked;
+				this._saveOcultarConcluidosPref(this.ocultarConcluidos);
+				this.refresh();
+			});
+		}
+
 		async refresh() {
 			if (typeof this.options.onLoad !== "function") return;
 			try {
-				const data = await this.options.onLoad();
+				const data = await this.options.onLoad({
+					ocultarConcluidos: this.ocultarConcluidos,
+				});
 				this.tarefas = data?.tarefas || [];
 				if (Array.isArray(data?.responsavelOptions)) {
 					this.responsavelOptions = data.responsavelOptions;
@@ -472,13 +510,18 @@
 				});
 			});
 
-			this.container.innerHTML = TASK_STATUS_ORDER.map((status) => {
-				const tasks = byStatus[status] || [];
-				const bodyHtml = tasks.length
-					? tasks.map((t) => this._renderCardHtml(t)).join("")
-					: "";
-				const taskWord = tasks.length !== 1 ? "tarefas" : "tarefa";
-				return `
+			const visibleStatuses = this.ocultarConcluidos
+				? TASK_STATUS_ORDER.filter((status) => status !== "Concluido")
+				: TASK_STATUS_ORDER;
+
+			this.container.innerHTML = visibleStatuses
+				.map((status) => {
+					const tasks = byStatus[status] || [];
+					const bodyHtml = tasks.length
+						? tasks.map((t) => this._renderCardHtml(t)).join("")
+						: "";
+					const taskWord = tasks.length !== 1 ? "tarefas" : "tarefa";
+					return `
                     <section class="task-column" data-task-column="${escapeHtml(status)}">
                         <header class="task-column__header">
                             <div class="task-column__heading">
@@ -494,7 +537,8 @@
                         </div>
                     </section>
                 `;
-			}).join("");
+				})
+				.join("");
 		}
 
 		_renderCardHtml(task) {
@@ -524,13 +568,26 @@
 				)}">${escapeHtml(initials)}</span>`;
 			}
 
+			const deleteBtnHtml = this.canEdit
+				? `<button type="button" class="task-card__delete" data-task-delete
+                        aria-label="Excluir tarefa" title="Excluir tarefa">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M6 6h12"></path>
+                            <path d="M7 6v13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6"></path>
+                        </svg>
+                    </button>`
+				: "";
+
 			return `
                 <article class="task-card" data-task-name="${escapeHtml(
 					task.name || ""
 				)}" draggable="${draggable}">
-                    <h4 class="task-card__title" title="${escapeHtml(
-						task.descricao || "-"
-					)}">${escapeHtml(task.descricao || "-")}</h4>
+                    <div class="task-card__header">
+                        <h4 class="task-card__title" title="${escapeHtml(
+							task.descricao || "-"
+						)}">${escapeHtml(task.descricao || "-")}</h4>
+                        ${deleteBtnHtml}
+                    </div>
                     ${extraTopHtml}
                     <div class="task-card__footer">
                         <span class="task-card__deadline" title="Prazo">
@@ -910,7 +967,9 @@
 			this.saving = true;
 			if (saveBtn) saveBtn.disabled = true;
 			try {
-				const data = await this.options.onSaveTask(payload);
+				const data = await this.options.onSaveTask(payload, {
+					ocultarConcluidos: this.ocultarConcluidos,
+				});
 				this.tarefas = data?.tarefas || this.tarefas;
 				this._renderKanban();
 				this._closeDialog();
@@ -932,13 +991,35 @@
 			task.status = nextStatus;
 			this._renderKanban();
 			try {
-				const data = await this.options.onMoveTask(taskName, nextStatus);
+				const data = await this.options.onMoveTask(taskName, nextStatus, {
+					ocultarConcluidos: this.ocultarConcluidos,
+				});
 				this.tarefas = data?.tarefas || this.tarefas;
 				this._renderKanban();
 			} catch (err) {
 				task.status = previous;
 				this._renderKanban();
 				showToast(err?.message || "Falha ao mover tarefa.", "error");
+			}
+		}
+
+		/* ── Excluir tarefa ── */
+		async _deleteTask(taskName) {
+			if (!this.canEdit || !taskName) return;
+			if (typeof this.options.onDeleteTask !== "function") return;
+			const task = this._getTaskByName(taskName);
+			const label = task?.descricao ? `"${task.descricao}"` : "esta tarefa";
+			if (!window.confirm(`Excluir ${label}? Essa acao nao pode ser desfeita.`)) return;
+			try {
+				const data = await this.options.onDeleteTask(taskName, {
+					ocultarConcluidos: this.ocultarConcluidos,
+				});
+				this.tarefas = data?.tarefas || this.tarefas.filter((t) => t.name !== taskName);
+				if (this.activeTask?.name === taskName) this._closeDialog();
+				this._renderKanban();
+				showToast("Tarefa excluida.", "success");
+			} catch (err) {
+				showToast(err?.message || "Falha ao excluir tarefa.", "error");
 			}
 		}
 
@@ -1230,6 +1311,14 @@
 
 			// Click handlers do quadro (cards)
 			this.container.addEventListener("click", (event) => {
+				const deleteBtn = event.target.closest("[data-task-delete]");
+				if (deleteBtn && this.container.contains(deleteBtn)) {
+					event.stopPropagation();
+					if (this.isDragging) return;
+					const card = deleteBtn.closest(".task-card");
+					this._deleteTask(card?.dataset.taskName || "");
+					return;
+				}
 				const card = event.target.closest(".task-card");
 				if (card && this.container.contains(card)) {
 					if (this.isDragging) return;
@@ -1239,6 +1328,10 @@
 
 			// Drag-and-drop
 			this.container.addEventListener("dragstart", (event) => {
+				if (event.target.closest("[data-task-delete]")) {
+					event.preventDefault();
+					return;
+				}
 				const card = event.target.closest(".task-card");
 				if (!card || !this.canEdit) return;
 				this.dragTaskName = card.dataset.taskName || "";

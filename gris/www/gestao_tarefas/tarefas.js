@@ -6,12 +6,14 @@
 		bootstrap: "gris.api.gestao_de_tarefas.minhas_tarefas.bootstrap_gestao_tarefas",
 		saveTask: "gris.api.gestao_de_tarefas.minhas_tarefas.salvar_tarefa_pessoal",
 		updateStatus: "gris.api.gestao_de_tarefas.minhas_tarefas.atualizar_status",
+		deleteTask: "gris.api.gestao_de_tarefas.minhas_tarefas.excluir_tarefa_pessoal",
 	};
 
 	const METHODS_QUADRO = {
 		bootstrap: "gris.api.gestao_de_tarefas.quadros.bootstrap_quadro",
 		saveTask: "gris.api.gestao_de_tarefas.quadros.salvar_tarefa_quadro",
 		updateStatus: "gris.api.gestao_de_tarefas.quadros.atualizar_status_quadro",
+		deleteTask: "gris.api.gestao_de_tarefas.quadros.excluir_tarefa_quadro",
 	};
 
 	const METHODS_COMUM = {
@@ -386,24 +388,36 @@
 			currentUser: $("currentUser")?.value || "",
 			currentUserFullName: $("currentUserFullName")?.value || "",
 			canEdit: true,
-			onLoad: async () => {
+			onLoad: async (opts) => {
 				const args = modo === "projeto" ? { board_name: boardName } : {};
+				args.ocultar_concluidos = opts?.ocultarConcluidos ? 1 : 0;
 				const data = await callApi(methods.bootstrap, args);
 				return {
 					tarefas: data.tarefas || [],
 					responsavelOptions: data.responsavel_options || [],
 				};
 			},
-			onSaveTask: async (payload) => {
+			onSaveTask: async (payload, opts) => {
 				const taskPayload =
 					modo === "projeto" ? { ...payload, board: boardName } : payload;
-				const data = await callApi(methods.saveTask, { tarefa: taskPayload });
+				const data = await callApi(methods.saveTask, {
+					tarefa: taskPayload,
+					ocultar_concluidos: opts?.ocultarConcluidos ? 1 : 0,
+				});
 				return { tarefas: data.tarefas || [] };
 			},
-			onMoveTask: async (tarefaName, status) => {
+			onMoveTask: async (tarefaName, status, opts) => {
 				const data = await callApi(methods.updateStatus, {
 					tarefa_name: tarefaName,
 					status,
+					ocultar_concluidos: opts?.ocultarConcluidos ? 1 : 0,
+				});
+				return { tarefas: data.tarefas || [] };
+			},
+			onDeleteTask: async (tarefaName, opts) => {
+				const data = await callApi(methods.deleteTask, {
+					tarefa_name: tarefaName,
+					ocultar_concluidos: opts?.ocultarConcluidos ? 1 : 0,
 				});
 				return { tarefas: data.tarefas || [] };
 			},

@@ -17,6 +17,7 @@ from frappe.utils import add_days, getdate, nowdate, strip_html
 from gris.gestao_de_tarefas.user_board import ensure_user_board
 from gris.gris.doctype.gestao_de_tarefas.gestao_de_tarefas import (
 	TASK_FIELDS,
+	TASK_STATUS_DONE,
 	TASK_STATUS_OPTIONS,
 )
 
@@ -106,10 +107,13 @@ def _listar_tarefas_do_usuario(
 	*,
 	apenas_urgentes: bool,
 	limite: int | None = None,
+	ocultar_concluidos: bool = False,
 ) -> list[dict[str, Any]]:
 	filters: dict[str, Any] = {
 		"responsavel": user,
 	}
+	if ocultar_concluidos:
+		filters["status"] = ["!=", TASK_STATUS_DONE]
 
 	rows = frappe.get_all(
 		"Gestao de Tarefas",
@@ -186,10 +190,12 @@ def list_proximos_7_dias() -> dict[str, Any]:
 
 
 @frappe.whitelist()
-def bootstrap_gestao_tarefas() -> dict[str, Any]:
+def bootstrap_gestao_tarefas(ocultar_concluidos: str | int | bool = 0) -> dict[str, Any]:
 	user = _require_logged_user()
 	user_board_name = _ensure_board_pessoal(user)
-	tarefas = _listar_tarefas_do_usuario(user, apenas_urgentes=False)
+	tarefas = _listar_tarefas_do_usuario(
+		user, apenas_urgentes=False, ocultar_concluidos=bool(frappe.utils.cint(ocultar_concluidos))
+	)
 	return {
 		"ok": True,
 		"user": user,
@@ -273,7 +279,39 @@ def _get_tarefa_for_user(tarefa_name: str, user: str) -> Any:
 
 
 @frappe.whitelist()
-def salvar_tarefa_pessoal(tarefa: str | dict[str, Any]) -> dict[str, Any]:
+def excluir_tarefa_pessoal(tarefa_name: str, ocultar_concluidos: str | int | bool = 0) -> dict[str, Any]:
+	user = _require_logged_user()
+	tarefa = _get_tarefa_for_user(tarefa_name, user)
+
+	# Board pessoal tem `referencia_doctype == "User"` (ver `_ensure_board_pessoal`);
+	# qualquer outro valor (vazio = quadro solto, ou "Projeto"/"Festa") e um quadro
+	# compartilhado, com membros e nivel de acesso proprios — a exclusao la exige
+	# nivel Editar/Gerenciar (`excluir_tarefa_quadro`), mais restrito do que "ser
+	# responsavel", entao nao pode ser contornada por aqui.
+	board_ref_dt = (
+		(frappe.db.get_value("Board", tarefa.board, "referencia_doctype") or "").strip()
+		if tarefa.board
+		else ""
+	)
+	if board_ref_dt != "User":
+		frappe.throw(
+			_("Esta tarefa pertence a um quadro compartilhado; exclua-a a partir do quadro."),
+			frappe.PermissionError,
+		)
+
+	frappe.delete_doc("Gestao de Tarefas", tarefa.name, ignore_permissions=True)
+	return {
+		"ok": True,
+		"tarefas": _listar_tarefas_do_usuario(
+			user, apenas_urgentes=False, ocultar_concluidos=bool(frappe.utils.cint(ocultar_concluidos))
+		),
+	}
+
+
+@frappe.whitelist()
+def salvar_tarefa_pessoal(
+	tarefa: str | dict[str, Any], ocultar_concluidos: str | int | bool = 0
+) -> dict[str, Any]:
 	user = _require_logged_user()
 	user_board = _ensure_board_pessoal(user)
 	payload = _parse_payload(tarefa)
@@ -310,12 +348,16 @@ def salvar_tarefa_pessoal(tarefa: str | dict[str, Any]) -> dict[str, Any]:
 
 	return {
 		"ok": True,
-		"tarefas": _listar_tarefas_do_usuario(user, apenas_urgentes=False),
+		"tarefas": _listar_tarefas_do_usuario(
+			user, apenas_urgentes=False, ocultar_concluidos=bool(frappe.utils.cint(ocultar_concluidos))
+		),
 	}
 
 
 @frappe.whitelist()
-def atualizar_status(tarefa_name: str, status: str) -> dict[str, Any]:
+def atualizar_status(
+	tarefa_name: str, status: str, ocultar_concluidos: str | int | bool = 0
+) -> dict[str, Any]:
 	user = _require_logged_user()
 	status = (status or "").strip()
 	if status not in TASK_STATUS_OPTIONS:
@@ -342,7 +384,9 @@ def atualizar_status(tarefa_name: str, status: str) -> dict[str, Any]:
 
 	return {
 		"ok": True,
-		"tarefas": _listar_tarefas_do_usuario(user, apenas_urgentes=False),
+		"tarefas": _listar_tarefas_do_usuario(
+			user, apenas_urgentes=False, ocultar_concluidos=bool(frappe.utils.cint(ocultar_concluidos))
+		),
 	}
 
 

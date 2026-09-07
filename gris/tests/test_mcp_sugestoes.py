@@ -20,6 +20,25 @@ class TestListarSugestoes(TestCase):
 		self.assertEqual(filtros["tipo"], "Problema")
 		self.assertEqual(filtros["modulo"], "Financeiro")
 
+	def test_prioridade_vira_where(self):
+		with (
+			patch.object(sugestoes.frappe.db, "count", return_value=0),
+			patch.object(sugestoes.frappe, "get_all", return_value=[]) as get_all,
+		):
+			sugestoes.listar_sugestoes(prioridade="Urgente")
+
+		self.assertEqual(get_all.call_args.kwargs["filters"]["prioridade"], "Urgente")
+
+	def test_ordena_da_mais_urgente_para_a_menos(self):
+		"""Quem chama pelo MCP pagina o resultado, então a ordem tem de vir do banco."""
+		with (
+			patch.object(sugestoes.frappe.db, "count", return_value=0),
+			patch.object(sugestoes.frappe, "get_all", return_value=[]) as get_all,
+		):
+			sugestoes.listar_sugestoes()
+
+		self.assertTrue(get_all.call_args.kwargs["order_by"].startswith("prioridade_peso asc"))
+
 	def test_sem_responsavel_filtra_vazios_e_ignora_responsavel(self):
 		with (
 			patch.object(sugestoes.frappe.db, "count", return_value=0),
@@ -81,6 +100,18 @@ class TestAtualizarSugestao(TestCase):
 		self.assertEqual(
 			resultado["alteracoes"]["status"], {"de": "Problemas reportados", "para": "Em desenvolvimento"}
 		)
+
+	def test_prioridade_delega_ao_endpoint_do_portal(self):
+		with (
+			patch.object(sugestoes.frappe.db, "exists", return_value=True),
+			patch.object(
+				sugestoes.servico, "definir_prioridade", return_value={"ok": True, "prioridade": "Urgente"}
+			) as definir,
+		):
+			resultado = sugestoes.atualizar_sugestao("SUG-1", prioridade="Urgente")
+
+		definir.assert_called_once_with("SUG-1", "Urgente")
+		self.assertEqual(resultado["prioridade"], "Urgente")
 
 	def test_delega_cada_campo_ao_endpoint_do_portal(self):
 		with (

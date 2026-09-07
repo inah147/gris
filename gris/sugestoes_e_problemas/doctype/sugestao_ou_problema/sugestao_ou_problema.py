@@ -29,6 +29,8 @@ from gris.api.sugestoes.constantes import (
 	COLUNAS_DE_TRIAGEM,
 	DESCRICAO_MAX,
 	MODULOS,
+	PRIORIDADE_PADRAO,
+	PRIORIDADES,
 	PULL_REQUEST_ESQUEMAS,
 	PULL_REQUEST_MAX,
 	ROLE_DESENVOLVEDOR,
@@ -36,6 +38,7 @@ from gris.api.sugestoes.constantes import (
 	TITULO_MAX,
 	coluna_inicial,
 	modulos_para_tipo,
+	peso_prioridade,
 )
 from gris.utils.contato import telefone_do_usuario
 
@@ -73,9 +76,24 @@ class SugestaoouProblema(Document):
 		self._normalizar_texto()
 		self._validar_tipo_e_modulo()
 		self._validar_status()
+		self._validar_prioridade()
 		self._validar_responsavel()
 		self._validar_desenvolvimento()
 		self._marcar_datas_do_fluxo()
+
+	def _validar_prioridade(self) -> None:
+		"""Fecha a prioridade na lista conhecida e deriva o peso que ordena o quadro.
+
+		O peso e derivado aqui, e nao gravado por quem chama, porque todo save
+		passa por este ponto — Desk, portal e MCP. Fosse responsabilidade de quem
+		escreve, uma edicao pelo Desk deixaria o card ordenando pelo peso antigo.
+		"""
+		prioridade = (self.prioridade or "").strip() or PRIORIDADE_PADRAO
+		if prioridade not in PRIORIDADES:
+			frappe.throw(_("Prioridade inválida: {0}.").format(prioridade))
+
+		self.prioridade = prioridade
+		self.prioridade_peso = peso_prioridade(prioridade)
 
 	def _validar_desenvolvimento(self) -> None:
 		"""Normaliza branch e pull request, e encerra a pergunta pendente.

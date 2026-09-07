@@ -23,6 +23,7 @@ from gris.api.sugestoes.portal import (
 	assumir,
 	atualizar_descricao,
 	atualizar_status,
+	definir_prioridade,
 	detalhes,
 	get_comentarios,
 	listar_board,
@@ -151,6 +152,79 @@ class TestSugestaoOuProblema(FrappeTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			doc.save(ignore_permissions=True)
 
+	# ───────────────────────── prioridade ─────────────────────────
+
+	def test_submissao_nova_entra_com_a_prioridade_padrao(self):
+		"""Quem abre não escolhe urgência: entra no meio da fila e a triagem decide."""
+		doc = self._nova()
+		self.assertEqual(doc.prioridade, c.PRIORIDADE_PADRAO)
+		self.assertEqual(doc.prioridade_peso, c.peso_prioridade(c.PRIORIDADE_PADRAO))
+
+	def test_peso_acompanha_a_prioridade_em_todo_save(self):
+		"""O peso é derivado no controller, então vale também para edição no Desk."""
+		doc = self._nova()
+		doc.prioridade = c.PRIORIDADE_URGENTE
+		doc.save(ignore_permissions=True)
+
+		self.assertEqual(
+			frappe.db.get_value("Sugestao ou Problema", doc.name, "prioridade_peso"),
+			c.peso_prioridade(c.PRIORIDADE_URGENTE),
+		)
+		self.assertEqual(c.peso_prioridade(c.PRIORIDADE_URGENTE), 0)
+
+	def test_prioridade_invalida_e_rejeitada(self):
+		doc = self._nova()
+		doc.prioridade = "Altíssima"
+		with self.assertRaises(frappe.ValidationError):
+			doc.save(ignore_permissions=True)
+
+	def test_definir_prioridade_grava_e_reordena_a_coluna(self):
+		antiga = self._nova(titulo="Antiga")
+		nova = self._nova(titulo="Nova")
+		# Sem prioridade, a mais recente vem primeiro (ver CARD_ORDER_BY).
+		self.assertEqual(self._nomes_na_coluna(c.COLUNA_PROBLEMAS), [nova.name, antiga.name])
+
+		definir_prioridade(antiga.name, c.PRIORIDADE_URGENTE)
+
+		self.assertEqual(self._nomes_na_coluna(c.COLUNA_PROBLEMAS), [antiga.name, nova.name])
+
+	def test_prioridade_vence_a_ordem_do_arrasto(self):
+		"""`ordem` desempata dentro da urgência; não passa por cima dela."""
+		urgente = self._nova(titulo="Urgente", prioridade=c.PRIORIDADE_URGENTE)
+		baixa = self._nova(titulo="Baixa", prioridade=c.PRIORIDADE_BAIXA)
+
+		# Arrasta a de baixa prioridade para o topo da coluna.
+		reordenar(c.COLUNA_PROBLEMAS, [baixa.name, urgente.name])
+
+		self.assertEqual(self._nomes_na_coluna(c.COLUNA_PROBLEMAS), [urgente.name, baixa.name])
+
+	def test_definir_prioridade_exige_papel_de_triagem(self):
+		doc = self._nova()
+		usuario_original = frappe.session.user
+		frappe.set_user(self.nao_dev)
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				definir_prioridade(doc.name, c.PRIORIDADE_URGENTE)
+		finally:
+			frappe.set_user(usuario_original)
+
+	def test_definir_prioridade_recusa_valor_desconhecido(self):
+		doc = self._nova()
+		with self.assertRaises(frappe.ValidationError):
+			definir_prioridade(doc.name, "Altíssima")
+
+	def test_detalhes_devolve_a_prioridade(self):
+		doc = self._nova(prioridade=c.PRIORIDADE_ALTA)
+		self.assertEqual(detalhes(doc.name)["item"]["prioridade"], c.PRIORIDADE_ALTA)
+
+	def test_board_devolve_prioridade_e_peso_no_card(self):
+		"""O cliente reordena a coluna no arrasto usando o peso; sem ele o card
+		largado no topo só voltaria ao lugar no próximo carregamento."""
+		self._nova(prioridade=c.PRIORIDADE_ALTA)
+		coluna = next(col for col in listar_board()["colunas"] if col["status"] == c.COLUNA_PROBLEMAS)
+		self.assertEqual(coluna["itens"][0]["prioridade"], c.PRIORIDADE_ALTA)
+		self.assertEqual(coluna["itens"][0]["prioridade_peso"], c.peso_prioridade(c.PRIORIDADE_ALTA))
+
 	def test_opcoes_do_doctype_batem_com_as_constantes(self):
 		"""O Select do JSON e as constantes são duas listas escritas à mão.
 
@@ -165,6 +239,7 @@ class TestSugestaoOuProblema(FrappeTestCase):
 		self.assertEqual(opcoes("tipo"), list(c.TIPOS))
 		self.assertEqual(opcoes("modulo"), list(c.MODULOS))
 		self.assertEqual(opcoes("status"), list(c.COLUNAS))
+		self.assertEqual(opcoes("prioridade"), list(c.PRIORIDADES))
 
 	def test_modulos_cobrem_o_sidebar(self):
 		from gris.api.portal_access import SIDEBAR_STRUCTURE

@@ -3,7 +3,7 @@ from frappe import _
 
 from gris.api.portal_access import enrich_context, user_has_access
 from gris.api.portal_cache_utils import get_uel_cached
-from gris.api.sugestoes.constantes import COLUNAS, MODULOS, TIPOS, coluna_inicial
+from gris.api.sugestoes.constantes import COLUNAS, MODULOS, PRIORIDADES, TIPOS, coluna_inicial
 from gris.api.sugestoes.portal import desenvolvedores, pode_triar
 
 no_cache = 1
@@ -42,6 +42,14 @@ def get_context(context):
 		{"label": "Todos os módulos", "value": "", "type": "item"},
 		*[{"label": modulo, "value": modulo, "type": "item"} for modulo in MODULOS],
 	]
+	context.filtro_prioridade_items = [
+		{"label": "Todas as prioridades", "value": "", "type": "item"},
+		*[{"label": p, "value": p, "type": "item"} for p in PRIORIDADES],
+	]
+
+	# Select do dialog: sem a opção vazia, porque toda solicitação tem prioridade
+	# (o controller preenche a padrão quando ninguém escolheu).
+	context.prioridade_items = [{"label": p, "value": p, "type": "item"} for p in PRIORIDADES]
 
 	# As opções do select de responsável precisam existir no HTML inicial: o
 	# select.js do Basecoat captura a lista de `[role="option"]` uma única vez,

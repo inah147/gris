@@ -58,9 +58,17 @@
 	margin-bottom: 1rem;
 }
 
+/* Três filtros mais o botão. Em telas médias eles quebram em duas linhas de
+   dois; só na larga a linha inteira cabe de uma vez. */
 @media (min-width: 640px) {
 	.sugestoes-filtros {
-		grid-template-columns: minmax(0, 14rem) minmax(0, 16rem) auto;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (min-width: 1024px) {
+	.sugestoes-filtros {
+		grid-template-columns: minmax(0, 14rem) minmax(0, 16rem) minmax(0, 12rem) auto;
 	}
 }
 
@@ -111,6 +119,48 @@
 	border-color: color-mix(in oklab, var(--warning) 45%, var(--color-border));
 	background: color-mix(in oklab, var(--warning) 18%, var(--color-card));
 	color: color-mix(in oklab, var(--warning) 30%, var(--color-foreground));
+}
+
+/* Prioridade: é por ela que o quadro ordena, então precisa ser lida de relance
+   no card. Cor + rótulo escrito, nunca cor sozinha — quem não distingue as
+   matizes continua lendo "Urgente". */
+.sugestoes-badge--prioridade[data-prioridade="Urgente"] {
+	border-color: color-mix(in oklab, var(--color-destructive) 55%, var(--color-border));
+	background: color-mix(in oklab, var(--color-destructive) 16%, var(--color-card));
+	color: color-mix(in oklab, var(--color-destructive) 82%, var(--color-foreground));
+}
+
+.sugestoes-badge--prioridade[data-prioridade="Alta"] {
+	border-color: color-mix(in oklab, var(--warning) 50%, var(--color-border));
+	background: color-mix(in oklab, var(--warning) 18%, var(--color-card));
+	color: color-mix(in oklab, var(--warning) 30%, var(--color-foreground));
+}
+
+/* Média é o padrão de toda submissão: some no cinza de propósito, para o que
+   foi priorizado de fato se destacar. */
+.sugestoes-badge--prioridade[data-prioridade="Média"] {
+	border-color: var(--color-border);
+	background: var(--color-muted);
+	color: var(--color-muted-foreground);
+}
+
+.sugestoes-badge--prioridade[data-prioridade="Baixa"] {
+	border-color: var(--color-border);
+	background: transparent;
+	color: var(--color-muted-foreground);
+	font-weight: 500;
+}
+
+/* A linha de campos do dialog de tarefa é um grid de 3 colunas (status, datas).
+   Aqui são dois campos: responsável e prioridade. */
+.sugestoes-dialog .task-meta-row {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 768px) {
+	.sugestoes-dialog .task-meta-row {
+		grid-template-columns: 1fr;
+	}
 }
 
 .sugestoes-detalhe__branch {

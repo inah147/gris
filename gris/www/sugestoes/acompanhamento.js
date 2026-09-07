@@ -19,6 +19,7 @@
 		descricao: "gris.api.sugestoes.portal.atualizar_descricao",
 		reclassificar: "gris.api.sugestoes.portal.reclassificar",
 		reordenar: "gris.api.sugestoes.portal.reordenar",
+		prioridade: "gris.api.sugestoes.portal.definir_prioridade",
 	};
 
 	// {tipo: coluna de triagem}, renderizado pelo servidor.
@@ -37,6 +38,8 @@
 	const selectResponsavel = document.getElementById("detalhe-responsavel");
 	const filtroTipo = document.getElementById("filtro-tipo");
 	const filtroModulo = document.getElementById("filtro-modulo");
+	const filtroPrioridade = document.getElementById("filtro-prioridade");
+	const selectPrioridade = document.getElementById("detalhe-prioridade");
 
 	// Nomes das colunas vindos do esqueleto que o servidor já renderizou, para
 	// conseguir desenhar o quadro vazio mesmo quando a carga falha.
@@ -164,8 +167,12 @@
 	function itensVisiveis(itens) {
 		const tipo = valorSelect(filtroTipo);
 		const modulo = valorSelect(filtroModulo);
+		const prioridade = valorSelect(filtroPrioridade);
 		return itens.filter(
-			(item) => (!tipo || item.tipo === tipo) && (!modulo || item.modulo === modulo)
+			(item) =>
+				(!tipo || item.tipo === tipo) &&
+				(!modulo || item.modulo === modulo) &&
+				(!prioridade || item.prioridade === prioridade)
 		);
 	}
 
@@ -184,6 +191,15 @@
 		)}</span>`;
 	}
 
+	/** Badge de urgência. É o primeiro critério de ordem da coluna, então precisa
+	 *  ser lido de relance — inclusive o "Média" do padrão, para a ausência de
+	 *  badge nunca ser confundida com "ninguém priorizou". */
+	function prioridadeHtml(prioridade) {
+		if (!prioridade) return "";
+		const valor = escapeHtml(prioridade);
+		return `<span class="sugestoes-badge sugestoes-badge--prioridade" data-prioridade="${valor}" title="Prioridade: ${valor}">${valor}</span>`;
+	}
+
 	function cardHtml(item) {
 		const arrastavel = podeTriar ? "true" : "false";
 		const tipoCurto = item.tipo === "Problema" ? "Problema" : "Funcionalidade";
@@ -193,6 +209,7 @@
 			)}" draggable="${arrastavel}">
 				<h4 class="task-card__title" title="${escapeHtml(item.titulo)}">${escapeHtml(item.titulo)}</h4>
 				<div class="sugestoes-card__badges">
+					${prioridadeHtml(item.prioridade)}
 					<span class="sugestoes-badge" data-tipo="${escapeHtml(item.tipo)}">${escapeHtml(tipoCurto)}</span>
 					<span class="sugestoes-badge sugestoes-badge--modulo">${escapeHtml(item.modulo)}</span>
 					${
@@ -269,7 +286,17 @@
 		return Object.keys(TRIAGEM).find((tipo) => TRIAGEM[tipo] === status) || "";
 	}
 
-	/** Persiste a prioridade da coluna na ordem em que ela está na tela. */
+	/** Reagrupa a coluna por urgência, preservando a ordem atual dentro de cada
+	 *  grupo (o sort do JS é estável).
+	 *
+	 *  Espelha o `CARD_ORDER_BY` do servidor: sem isto, largar um card "Baixa" no
+	 *  topo o mostraria lá até o próximo carregamento, quando ele voltaria para
+	 *  baixo dos urgentes sozinho. */
+	function ordenarPorPrioridade(itens) {
+		return itens.sort((a, b) => (a.prioridade_peso || 0) - (b.prioridade_peso || 0));
+	}
+
+	/** Persiste a posição manual dos cards da coluna, na ordem em que estão na tela. */
 	function salvarOrdem(status) {
 		const coluna = colunas.find((c) => c.status === status);
 		if (!coluna) return Promise.resolve();
@@ -309,6 +336,9 @@
 
 		movido.status = novoStatus;
 		destino.itens.splice(Math.max(0, Math.min(alvo, destino.itens.length)), 0, movido);
+		// A urgência manda na coluna: o card cai dentro do seu grupo de prioridade,
+		// na posição em que foi solto. É o que o servidor vai devolver depois.
+		ordenarPorPrioridade(destino.itens);
 		renderizar();
 
 		const aposMudanca = mudouDeColuna
@@ -541,6 +571,7 @@
 	// injetá-las aqui faria o clique e o setter de `.value` não terem efeito.
 	// Aqui só posicionamos a seleção do item aberto.
 	let preenchendoResponsavel = false;
+	let preenchendoPrioridade = false;
 
 	function preencherResponsaveis(selecionado) {
 		if (!selectResponsavel) return;
@@ -552,6 +583,31 @@
 		} finally {
 			window.setTimeout(() => {
 				preenchendoResponsavel = false;
+			}, 0);
+		}
+	}
+
+	/** Posiciona o select de prioridade (ou o campo de leitura, para quem não tria). */
+	function preencherPrioridade(valor) {
+		const badge = dialogo.querySelector("[data-detalhe-prioridade-badge]");
+		if (badge) {
+			badge.hidden = !valor;
+			badge.textContent = valor || "";
+			badge.setAttribute("data-prioridade", valor || "");
+		}
+
+		const display = dialogo.querySelector("[data-detalhe-prioridade-display]");
+		if (display) display.value = valor || "";
+
+		if (!selectPrioridade) return;
+		// Mesma trava do responsável: o setter dispara "change" como se fosse
+		// escolha do usuário, e abrir um card regravaria a prioridade.
+		preenchendoPrioridade = true;
+		try {
+			selectPrioridade.value = valor || "";
+		} finally {
+			window.setTimeout(() => {
+				preenchendoPrioridade = false;
 			}, 0);
 		}
 	}
@@ -650,6 +706,8 @@
 				const display = q("[data-detalhe-responsavel-display]");
 				if (display) display.value = item.responsavel_nome || "Sem responsável";
 
+				preencherPrioridade(item.prioridade || "");
+
 				pintarTimeline(item);
 				montarDescricao(item, Boolean(dados.pode_editar));
 
@@ -705,6 +763,33 @@
 		});
 	}
 
+	if (selectPrioridade) {
+		selectPrioridade.addEventListener("change", (event) => {
+			if (preenchendoPrioridade || !itemAberto) return;
+
+			const escolhida = (event.detail && event.detail.value) || "";
+			const atual = (
+				colunas
+					.flatMap((coluna) => coluna.itens || [])
+					.find((item) => item.name === itemAberto) || {}
+			).prioridade;
+			if (!escolhida || escolhida === atual) return;
+
+			chamar(METODOS.prioridade, { name: itemAberto, prioridade: escolhida })
+				.then(() => {
+					preencherPrioridade(escolhida);
+					showToast("success", `Prioridade: ${escolhida}.`);
+					// Recarrega porque a urgência é o primeiro critério de ordem:
+					// o card muda de lugar na coluna.
+					return carregarBoard();
+				})
+				.catch((err) => {
+					showToast("error", err.message);
+					carregarBoard();
+				});
+		});
+	}
+
 	const btnComentar = document.getElementById("btn-comentar");
 	if (btnComentar) {
 		btnComentar.addEventListener("click", () => {
@@ -734,7 +819,7 @@
 
 	/* ──────────────────────── filtros ──────────────────────── */
 
-	[filtroTipo, filtroModulo].forEach((el) => {
+	[filtroTipo, filtroModulo, filtroPrioridade].forEach((el) => {
 		if (!el) return;
 		el.addEventListener("click", () => window.setTimeout(renderizar, 0));
 	});

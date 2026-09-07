@@ -11,6 +11,8 @@
   "tipo",
   "modulo",
   "status",
+  "prioridade",
+  "prioridade_peso",
   "ordem",
   "descricao_section",
   "descricao",
@@ -71,8 +73,28 @@
    "reqd": 1
   },
   {
+   "default": "Média",
+   "description": "Urgência da demanda, definida por quem tria. É o primeiro critério de ordem do quadro: dentro da coluna, o mais urgente aparece em cima.",
+   "fieldname": "prioridade",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Prioridade",
+   "options": "Urgente\nAlta\nMédia\nBaixa",
+   "reqd": 1
+  },
+  {
+   "default": "2",
+   "description": "Posição de `prioridade` na lista de urgências (0 = Urgente). Existe porque ordenar pelo texto do Select seria alfabético; o controller mantém os dois em sincronia.",
+   "fieldname": "prioridade_peso",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "Peso da prioridade",
+   "read_only": 1
+  },
+  {
    "default": "0",
-   "description": "Prioridade dentro da coluna do quadro. Definida arrastando os cards; menor vem primeiro.",
+   "description": "Posição manual dentro da coluna, definida arrastando os cards. Desempata itens de mesma prioridade; menor vem primeiro.",
    "fieldname": "ordem",
    "fieldtype": "Int",
    "label": "Ordem na coluna",

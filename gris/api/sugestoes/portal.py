@@ -12,7 +12,8 @@ Nenhum endpoint aqui e `allow_guest`. Tres niveis de acesso:
 * **submeter** — qualquer usuario autenticado, sem exigir papel nenhum;
 * **acompanhar** (ler o quadro e os detalhes) — papel `Acompanhamento de
   Sugestoes`, concedido automaticamente a todo Associado;
-* **triar** (mover, reordenar, alocar, reclassificar) — papel `Desenvolvedor`.
+* **triar** (mover, priorizar, reordenar, alocar, reclassificar) — papel
+  `Desenvolvedor`.
 
 O papel `All` do Frappe nao e usado de proposito: ele inclui Website User, que
 aqui sao os responsaveis, e exporia o quadro interno a eles.
@@ -32,6 +33,7 @@ from gris.api.sugestoes.constantes import (
 	DESCRICAO_MAX,
 	LIMITE_ENVIOS_POR_HORA,
 	MODULOS,
+	PRIORIDADES,
 	ROLE_ACOMPANHAMENTO,
 	ROLE_DESENVOLVEDOR,
 	TIPOS,
@@ -48,6 +50,8 @@ CARD_FIELDS: tuple[str, ...] = (
 	"tipo",
 	"modulo",
 	"status",
+	"prioridade",
+	"prioridade_peso",
 	"ordem",
 	"responsavel",
 	"solicitante",
@@ -57,10 +61,13 @@ CARD_FIELDS: tuple[str, ...] = (
 	"aguardando_esclarecimento",
 )
 
-# `ordem` é a prioridade definida arrastando; entre itens de mesma ordem (o
-# padrão 0 de quem nunca foi arrastado) o mais recente vem primeiro, para uma
-# submissão nova aparecer no topo da coluna de triagem em vez de se enterrar.
-CARD_ORDER_BY = "ordem asc, creation desc"
+# A urgência manda: dentro da coluna, quem tria olha de cima para baixo e pega o
+# primeiro. `prioridade_peso` é numérico justamente para isso (ordenar pelo texto
+# do Select daria ordem alfabética). `ordem` desempata dentro da mesma prioridade
+# e é o que o arrasto grava; entre itens de mesma ordem (o padrão 0 de quem nunca
+# foi arrastado) o mais recente vem primeiro, para uma submissão nova aparecer no
+# topo da coluna de triagem em vez de se enterrar.
+CARD_ORDER_BY = "prioridade_peso asc, ordem asc, creation desc"
 
 
 def _require_logged_user() -> str:
@@ -235,6 +242,7 @@ def detalhes(name: str) -> dict[str, Any]:
 			"tipo": doc.tipo,
 			"modulo": doc.modulo,
 			"status": doc.status,
+			"prioridade": doc.prioridade,
 			"descricao": doc.descricao or "",
 			"solicitante": doc.solicitante or "",
 			"solicitante_nome": doc.solicitante_nome or "",
@@ -400,12 +408,40 @@ def atualizar_status(name: str, status: str) -> dict[str, Any]:
 
 
 @frappe.whitelist()
+def definir_prioridade(name: str, prioridade: str) -> dict[str, Any]:
+	"""Grava a urgência da demanda. É o que decide o que se pega primeiro.
+
+	Ao contrário de `reordenar`, aqui é `doc.save()` mesmo: mudar a urgência é
+	decisão de triagem, e deve constar no histórico de `track_changes` — não é
+	arrumação de tela como a posição do card na coluna.
+	"""
+	_require_desenvolvedor()
+
+	prioridade = (prioridade or "").strip()
+	if prioridade not in PRIORIDADES:
+		frappe.throw(_("Prioridade inválida: {0}.").format(prioridade or "vazia"))
+
+	doc = _carregar(name)
+	if doc.prioridade == prioridade:
+		return {"ok": True, "prioridade": doc.prioridade, "prioridade_peso": doc.prioridade_peso}
+
+	doc.prioridade = prioridade
+	doc.save()
+
+	return {"ok": True, "prioridade": doc.prioridade, "prioridade_peso": doc.prioridade_peso}
+
+
+@frappe.whitelist()
 def reordenar(status: str, nomes: Any) -> dict[str, Any]:
-	"""Grava a prioridade dos cards de uma coluna, na ordem recebida.
+	"""Grava a posição manual dos cards de uma coluna, na ordem recebida.
 
 	Recebe a coluna inteira em vez de uma posição só: reescrever `0..n` de uma
 	vez é idempotente e imune a empates, enquanto ajustar um índice isolado vai
 	acumulando furos e desempates ambíguos a cada arrasto.
+
+	Não confundir com `prioridade`: esta é a ordem dentro de uma mesma urgência.
+	O cliente manda a coluna já ordenada por prioridade, então gravar `0..n` na
+	sequência recebida preserva os grupos de urgência.
 	"""
 	_require_desenvolvedor()
 

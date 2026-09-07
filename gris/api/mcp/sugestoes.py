@@ -12,7 +12,14 @@ import frappe
 
 from gris.api.mcp.registry import ErroDeFerramenta, ferramenta, normalizar_limite
 from gris.api.sugestoes import portal as servico
-from gris.api.sugestoes.constantes import COLUNAS, MODULOS, ROLE_ACOMPANHAMENTO, ROLE_DESENVOLVEDOR, TIPOS
+from gris.api.sugestoes.constantes import (
+	COLUNAS,
+	MODULOS,
+	PRIORIDADES,
+	ROLE_ACOMPANHAMENTO,
+	ROLE_DESENVOLVEDOR,
+	TIPOS,
+)
 
 DOCTYPE = "Sugestao ou Problema"
 
@@ -32,12 +39,18 @@ def _garantir_registro(name: str) -> None:
 	titulo="Listar sugestões e problemas",
 	descricao=(
 		"Lista o quadro de Sugestões e Problemas com filtros por status (coluna), tipo, "
-		"módulo, responsável e busca por título."
+		"módulo, prioridade, responsável e busca por título. O resultado já vem da mais "
+		"urgente para a menos, que é a ordem em que as demandas devem ser pegas."
 	),
 	parametros={
 		"status": {"type": "string", "enum": list(COLUNAS), "description": "Coluna do quadro."},
 		"tipo": {"type": "string", "enum": list(TIPOS), "description": "Problema ou Nova funcionalidade."},
 		"modulo": {"type": "string", "enum": list(MODULOS), "description": "Módulo do sistema."},
+		"prioridade": {
+			"type": "string",
+			"enum": list(PRIORIDADES),
+			"description": "Urgência da demanda.",
+		},
 		"responsavel": {"type": "string", "description": "E-mail de quem está desenvolvendo."},
 		"sem_responsavel": {
 			"type": "boolean",
@@ -66,6 +79,7 @@ def listar_sugestoes(
 	status: str | None = None,
 	tipo: str | None = None,
 	modulo: str | None = None,
+	prioridade: str | None = None,
 	responsavel: str | None = None,
 	sem_responsavel: bool | None = None,
 	aguardando_esclarecimento: bool | None = None,
@@ -80,6 +94,8 @@ def listar_sugestoes(
 		filtros["tipo"] = tipo
 	if modulo:
 		filtros["modulo"] = modulo
+	if prioridade:
+		filtros["prioridade"] = prioridade
 	if sem_responsavel:
 		filtros["responsavel"] = ["in", [None, ""]]
 	elif responsavel:
@@ -133,13 +149,19 @@ def obter_sugestao(name: str) -> dict:
 	nome="atualizar_sugestao",
 	titulo="Atualizar sugestão ou problema",
 	descricao=(
-		"Move de coluna (status), reclassifica o tipo, aloca um responsável ou reescreve a "
-		"descrição. Informe só os campos que quer alterar. Reservado a quem tria o quadro."
+		"Move de coluna (status), define a prioridade, reclassifica o tipo, aloca um "
+		"responsável ou reescreve a descrição. Informe só os campos que quer alterar. "
+		"Reservado a quem tria o quadro."
 	),
 	parametros={
 		"name": {"type": "string", "description": "Identificador da solicitação."},
 		"status": {"type": "string", "enum": list(COLUNAS), "description": "Nova coluna do quadro."},
 		"tipo": {"type": "string", "enum": list(TIPOS), "description": "Reclassifica o tipo."},
+		"prioridade": {
+			"type": "string",
+			"enum": list(PRIORIDADES),
+			"description": "Urgência da demanda; decide o que é pego primeiro dentro da coluna.",
+		},
 		"responsavel": {
 			"type": "string",
 			"description": "E-mail de quem vai desenvolver (precisa ter o papel Desenvolvedor).",
@@ -154,22 +176,28 @@ def atualizar_sugestao(
 	name: str,
 	status: str | None = None,
 	tipo: str | None = None,
+	prioridade: str | None = None,
 	responsavel: str | None = None,
 	descricao: str | None = None,
 	simular: bool = False,
 ) -> dict:
 	_garantir_registro(name)
 
-	if not any([status, tipo, responsavel, descricao]):
+	if not any([status, tipo, prioridade, responsavel, descricao]):
 		raise ErroDeFerramenta("ARGUMENTO_INVALIDO", "Informe ao menos um campo para atualizar.")
 
 	if simular:
-		atual = frappe.db.get_value(DOCTYPE, name, ["status", "tipo", "responsavel"], as_dict=True) or {}
+		atual = (
+			frappe.db.get_value(DOCTYPE, name, ["status", "tipo", "prioridade", "responsavel"], as_dict=True)
+			or {}
+		)
 		alteracoes: dict = {}
 		if status and status != atual.get("status"):
 			alteracoes["status"] = {"de": atual.get("status"), "para": status}
 		if tipo and tipo != atual.get("tipo"):
 			alteracoes["tipo"] = {"de": atual.get("tipo"), "para": tipo}
+		if prioridade and prioridade != atual.get("prioridade"):
+			alteracoes["prioridade"] = {"de": atual.get("prioridade"), "para": prioridade}
 		if responsavel and responsavel != atual.get("responsavel"):
 			alteracoes["responsavel"] = {"de": atual.get("responsavel"), "para": responsavel}
 		if descricao:
@@ -185,6 +213,8 @@ def atualizar_sugestao(
 		saida = servico.reclassificar(name, tipo)
 		resultado["tipo"] = saida.get("tipo")
 		resultado["status"] = saida.get("status")
+	if prioridade:
+		resultado["prioridade"] = servico.definir_prioridade(name, prioridade).get("prioridade")
 	if responsavel:
 		saida = servico.alocar_responsavel(name, responsavel)
 		resultado["responsavel"] = saida.get("responsavel")

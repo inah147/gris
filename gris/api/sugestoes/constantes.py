@@ -48,6 +48,27 @@ COLUNA_INICIAL_POR_TIPO: dict[str, str] = {
 
 COLUNAS_DE_TRIAGEM: frozenset[str] = frozenset({COLUNA_PROBLEMAS, COLUNA_FUNCIONALIDADES})
 
+PRIORIDADE_URGENTE = "Urgente"
+PRIORIDADE_ALTA = "Alta"
+PRIORIDADE_MEDIA = "Média"
+PRIORIDADE_BAIXA = "Baixa"
+
+# Da mais urgente para a menos: a **posicao** de cada rotulo nesta tupla e o
+# numero gravado em `prioridade_peso`, e e por ele que o quadro ordena. Ordenar
+# pelo texto do Select colocaria "Alta, Baixa, Média, Urgente" — alfabetico, sem
+# relacao com urgencia. Inserir um rotulo no meio muda o peso dos seguintes;
+# `gris.patches.backfill_prioridade_sugestoes` reescreve os pesos no migrate.
+PRIORIDADES: tuple[str, ...] = (
+	PRIORIDADE_URGENTE,
+	PRIORIDADE_ALTA,
+	PRIORIDADE_MEDIA,
+	PRIORIDADE_BAIXA,
+)
+
+# Quem abre a solicitacao nao escolhe a urgencia — se escolhesse, tudo chegaria
+# urgente. Toda submissao entra no meio da fila e quem tria ajusta depois.
+PRIORIDADE_PADRAO = PRIORIDADE_MEDIA
+
 MODULO_NOVO = "Novo módulo"
 MODULO_OUTRO = "Outro / não sei"
 
@@ -142,6 +163,18 @@ COLUNA_POR_STATUS_TAREFA: dict[str, str] = {
 def coluna_inicial(tipo: str) -> str:
 	"""Coluna de triagem para uma submissao nova."""
 	return COLUNA_INICIAL_POR_TIPO.get((tipo or "").strip(), COLUNA_PROBLEMAS)
+
+
+def peso_prioridade(prioridade: str) -> int:
+	"""Numero por onde o banco ordena a urgencia. Menor = mais urgente.
+
+	Um valor desconhecido (registro antigo, campo em branco) cai no peso do
+	padrao, para nunca fabricar uma urgencia que ninguem definiu.
+	"""
+	rotulo = (prioridade or "").strip()
+	if rotulo not in PRIORIDADES:
+		rotulo = PRIORIDADE_PADRAO
+	return PRIORIDADES.index(rotulo)
 
 
 def modulos_para_tipo(tipo: str) -> tuple[str, ...]:

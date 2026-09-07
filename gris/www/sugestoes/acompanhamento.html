@@ -21,7 +21,7 @@
 <section class="sugestoes-quadro__header" aria-labelledby="sugestoes-quadro-titulo">
 	<div class="sugestoes-quadro__header-texto">
 		<h1 id="sugestoes-quadro-titulo" class="m-0 text-3xl font-semibold leading-tight text-foreground">Acompanhamento</h1>
-		<p class="m-0 text-base leading-relaxed text-muted-foreground">Tudo que foi reportado ou pedido, e em que pé está.{% if pode_triar %} Arraste os cards para mudar o andamento e a prioridade.{% endif %}</p>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">Tudo que foi reportado ou pedido, e em que pé está. Dentro de cada coluna, o mais urgente aparece em cima.{% if pode_triar %} Arraste os cards para mudar o andamento e desempatar quem tem a mesma prioridade.{% endif %}</p>
 	</div>
 	<div class="sugestoes-quadro__header-acoes">
 		<a class="btn-primary" href="/sugestoes/nova">
@@ -50,6 +50,11 @@
 			<div class="sugestoes-filtros__campo">
 				{% call field(label="Módulo") %}
 					{{ select(id="filtro-modulo", name="filtro_modulo", items=filtro_modulo_items, trigger_attrs={"class": "w-full"}) }}
+				{% endcall %}
+			</div>
+			<div class="sugestoes-filtros__campo">
+				{% call field(label="Prioridade") %}
+					{{ select(id="filtro-prioridade", name="filtro_prioridade", items=filtro_prioridade_items, trigger_attrs={"class": "w-full"}) }}
 				{% endcall %}
 			</div>
 			<button type="button" class="btn-sm-outline sugestoes-filtros__acao" id="btn-atualizar">
@@ -119,6 +124,7 @@
 	<span class="sugestoes-badge" data-detalhe-tipo></span>
 	<span class="sugestoes-badge sugestoes-badge--modulo" data-detalhe-modulo></span>
 	<span class="sugestoes-badge sugestoes-badge--status" data-detalhe-status></span>
+	<span class="sugestoes-badge sugestoes-badge--prioridade" data-detalhe-prioridade-badge hidden></span>
 	<span class="sugestoes-badge sugestoes-badge--espera" data-detalhe-espera hidden
 		title="Quem desenvolve fez uma pergunta e espera resposta">Aguardando resposta</span>
 	<span data-detalhe-meta></span>
@@ -134,6 +140,13 @@
 					{{ select(id="detalhe-responsavel", name="detalhe_responsavel", items=responsavel_items, trigger_attrs={"class": "w-full"}) }}
 				{% else %}
 					<input class="input w-full" type="text" data-detalhe-responsavel-display readonly />
+				{% endif %}
+			{% endcall %}
+			{% call field(label="Prioridade") %}
+				{% if pode_triar %}
+					{{ select(id="detalhe-prioridade", name="detalhe_prioridade", items=prioridade_items, trigger_attrs={"class": "w-full"}) }}
+				{% else %}
+					<input class="input w-full" type="text" data-detalhe-prioridade-display readonly />
 				{% endif %}
 			{% endcall %}
 		</div>

@@ -7,9 +7,11 @@ from __future__ import annotations
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
+from frappe.utils import add_days, nowdate
 
 from gris.api.gestao_de_tarefas.minhas_tarefas import (
 	_listar_tarefas_do_usuario,
+	count_minhas_tarefas_urgentes,
 )
 from gris.api.gestao_de_tarefas.minhas_tarefas import (
 	atualizar_status as atualizar_status_tarefa,
@@ -34,6 +36,10 @@ from gris.gestao_de_tarefas import board_sync_sugestoes as board_sync
 from gris.gestao_de_tarefas.board_sync_sugestoes import (
 	ensure_board_desenvolvimento,
 	sincronizar_desenvolvedores_no_board,
+)
+from gris.gris.doctype.gestao_de_tarefas.gestao_de_tarefas import (
+	TASK_STATUS_OPTIONS,
+	validar_tarefas_atrasadas,
 )
 
 DEV_EMAIL = "dev.sugestoes@teste.gris"
@@ -242,6 +248,80 @@ class TestSugestaoOuProblema(FrappeTestCase):
 		self.assertEqual(doc.status, c.COLUNA_CONCLUIDO)
 		self.assertEqual(frappe.db.get_value("Gestao de Tarefas", doc.tarefa, "status"), c.TAREFA_CONCLUIDO)
 
+	# ────────────────────── status "Validar" ──────────────────────
+
+	def test_status_das_tarefas_batem_com_as_constantes(self):
+		"""O Select da tarefa e o mapa de colunas são listas escritas à mão.
+
+		Divergir faria o sync empurrar para a tarefa um status que o DocType
+		recusa — e o save da sugestão quebraria com ele.
+		"""
+		opcoes = [
+			linha
+			for linha in (frappe.get_meta("Gestao de Tarefas").get_field("status").options or "").split("\n")
+			if linha
+		]
+		self.assertEqual(set(opcoes), set(TASK_STATUS_OPTIONS))
+		self.assertTrue(set(c.STATUS_TAREFA_POR_COLUNA.values()) <= TASK_STATUS_OPTIONS)
+		self.assertTrue(set(c.COLUNA_POR_STATUS_TAREFA) <= TASK_STATUS_OPTIONS)
+
+	def test_validar_espelha_nos_dois_sentidos(self):
+		"""A coluna "Validar" e o status "Validar" são o mesmo estado: quem move
+		o card e quem mexe na tarefa precisam ver a mesma coisa."""
+		doc = self._nova()
+		doc.responsavel = self.dev
+		doc.save(ignore_permissions=True)
+		doc.reload()
+
+		doc.status = c.COLUNA_VALIDAR
+		doc.save(ignore_permissions=True)
+		self.assertEqual(frappe.db.get_value("Gestao de Tarefas", doc.tarefa, "status"), c.TAREFA_VALIDAR)
+
+		tarefa = frappe.get_doc("Gestao de Tarefas", doc.tarefa)
+		tarefa.status = c.TAREFA_EM_ANDAMENTO
+		tarefa.save(ignore_permissions=True)
+		doc.reload()
+		self.assertEqual(doc.status, c.COLUNA_EM_DESENVOLVIMENTO)
+
+		tarefa.reload()
+		tarefa.status = c.TAREFA_VALIDAR
+		tarefa.save(ignore_permissions=True)
+		doc.reload()
+		self.assertEqual(doc.status, c.COLUNA_VALIDAR)
+
+	def test_validar_nao_e_status_final(self):
+		"""O item continua na lista de "Minhas tarefas": alguém ainda tem de
+		conferir e concluir."""
+		doc = self._nova()
+		doc.responsavel = self.dev
+		doc.save(ignore_permissions=True)
+		doc.reload()
+
+		doc.status = c.COLUNA_VALIDAR
+		doc.save(ignore_permissions=True)
+
+		nomes = {t["name"] for t in _listar_tarefas_do_usuario(self.dev, apenas_urgentes=False)}
+		self.assertIn(doc.tarefa, nomes)
+
+	def test_tarefa_em_validacao_nao_cobra_prazo(self):
+		"""Entregue o trabalho, o prazo deixa de ser da pessoa que desenvolveu:
+		nem vira "Atrasado" no cron, nem entra na contagem de urgências."""
+		doc = self._nova()
+		doc.responsavel = self.dev
+		doc.save(ignore_permissions=True)
+		doc.reload()
+
+		tarefa = frappe.get_doc("Gestao de Tarefas", doc.tarefa)
+		tarefa.status = c.TAREFA_VALIDAR
+		tarefa.data_inicio = add_days(nowdate(), -10)
+		tarefa.prazo = add_days(nowdate(), -3)
+		tarefa.save(ignore_permissions=True)
+
+		self.assertEqual(count_minhas_tarefas_urgentes(self.dev), 0)
+
+		validar_tarefas_atrasadas()
+		self.assertEqual(frappe.db.get_value("Gestao de Tarefas", tarefa.name, "status"), c.TAREFA_VALIDAR)
+
 	# ─────────────────── datas da linha do tempo ───────────────────
 
 	def test_datas_do_fluxo_nascem_vazias(self):
@@ -253,6 +333,15 @@ class TestSugestaoOuProblema(FrappeTestCase):
 	def test_entrar_em_desenvolvimento_carimba_o_inicio(self):
 		doc = self._nova()
 		doc.status = c.COLUNA_EM_DESENVOLVIMENTO
+		doc.save(ignore_permissions=True)
+		self.assertTrue(doc.data_inicio_desenvolvimento)
+		self.assertFalse(doc.data_conclusao)
+
+	def test_entrar_em_validacao_carimba_o_inicio(self):
+		"""Item pequeno pode ir de "Selecionado" direto para validação, e a linha
+		do tempo não pode ficar sem o início do desenvolvimento."""
+		doc = self._nova()
+		doc.status = c.COLUNA_VALIDAR
 		doc.save(ignore_permissions=True)
 		self.assertTrue(doc.data_inicio_desenvolvimento)
 		self.assertFalse(doc.data_conclusao)

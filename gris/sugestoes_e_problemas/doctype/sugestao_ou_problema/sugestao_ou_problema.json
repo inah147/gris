@@ -67,7 +67,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
-   "options": "Problemas reportados\nSolicitações de funcionalidades\nSelecionado para desenvolvimento\nEm desenvolvimento\nConcluído\nNão será feito",
+   "options": "Problemas reportados\nSolicitações de funcionalidades\nSelecionado para desenvolvimento\nEm desenvolvimento\nValidar\nConcluído\nNão será feito",
    "reqd": 1
   },
   {
@@ -163,7 +163,7 @@
    "options": "URL"
   },
   {
-   "description": "Preenchida automaticamente quando o item entra em Em desenvolvimento.",
+   "description": "Preenchida automaticamente quando o item entra em Em desenvolvimento ou Validar.",
    "fieldname": "data_inicio_desenvolvimento",
    "fieldtype": "Datetime",
    "label": "Inicio do desenvolvimento",

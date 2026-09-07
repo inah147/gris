@@ -193,8 +193,11 @@ O ciclo que essas ferramentas fecham, quando o Claude trabalha uma solicitação
    sessões não trabalharem na mesma coisa sem saber.
 5. Abrir o PR e chamar `registrar_pull_request` com a URL — o link passa a
    aparecer no dialog do card, para quem abriu acompanhar a entrega.
-6. Depois do merge, `atualizar_sugestao` com `status='Concluído'` dispara o
-   aviso de conclusão para quem pediu.
+6. Com o desenvolvimento pronto, `atualizar_sugestao` com `status='Validar'`:
+   o card sai da fila de quem desenvolve e fica esperando a conferência de
+   quem pediu. Mover o card também muda o status da tarefa espelho, e vice-versa.
+7. Validado, `atualizar_sugestao` com `status='Concluído'` dispara o aviso de
+   conclusão para quem pediu.
 
 ### Usuários e papéis
 

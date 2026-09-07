@@ -20,6 +20,11 @@ COLUNA_PROBLEMAS = "Problemas reportados"
 COLUNA_FUNCIONALIDADES = "Solicitações de funcionalidades"
 COLUNA_SELECIONADO = "Selecionado para desenvolvimento"
 COLUNA_EM_DESENVOLVIMENTO = "Em desenvolvimento"
+# Desenvolvimento pronto e entregue, esperando conferencia de quem pediu (ou de
+# quem tria) antes de virar "Concluído" — que e o que dispara o aviso de
+# conclusao por WhatsApp. Sem esta coluna, "pronto" e "conferido" eram o mesmo
+# estado e o aviso saia antes de alguem ter olhado.
+COLUNA_VALIDAR = "Validar"
 COLUNA_CONCLUIDO = "Concluído"
 COLUNA_NAO_SERA_FEITO = "Não será feito"
 
@@ -29,6 +34,7 @@ COLUNAS: tuple[str, ...] = (
 	COLUNA_FUNCIONALIDADES,
 	COLUNA_SELECIONADO,
 	COLUNA_EM_DESENVOLVIMENTO,
+	COLUNA_VALIDAR,
 	COLUNA_CONCLUIDO,
 	COLUNA_NAO_SERA_FEITO,
 )
@@ -106,6 +112,7 @@ BOARD_DESENVOLVIMENTO_TITULO = "Desenvolvimento do GRIS"
 TAREFA_NAO_INICIADO = "Nao iniciado"
 TAREFA_EM_ANDAMENTO = "Em andamento"
 TAREFA_ATRASADO = "Atrasado"
+TAREFA_VALIDAR = "Validar"
 TAREFA_CONCLUIDO = "Concluido"
 TAREFA_CANCELADO = "Cancelado"
 
@@ -114,6 +121,7 @@ STATUS_TAREFA_POR_COLUNA: dict[str, str] = {
 	COLUNA_FUNCIONALIDADES: TAREFA_NAO_INICIADO,
 	COLUNA_SELECIONADO: TAREFA_NAO_INICIADO,
 	COLUNA_EM_DESENVOLVIMENTO: TAREFA_EM_ANDAMENTO,
+	COLUNA_VALIDAR: TAREFA_VALIDAR,
 	COLUNA_CONCLUIDO: TAREFA_CONCLUIDO,
 	COLUNA_NAO_SERA_FEITO: TAREFA_CANCELADO,
 }
@@ -125,6 +133,7 @@ STATUS_TAREFA_POR_COLUNA: dict[str, str] = {
 COLUNA_POR_STATUS_TAREFA: dict[str, str] = {
 	TAREFA_NAO_INICIADO: COLUNA_SELECIONADO,
 	TAREFA_EM_ANDAMENTO: COLUNA_EM_DESENVOLVIMENTO,
+	TAREFA_VALIDAR: COLUNA_VALIDAR,
 	TAREFA_CONCLUIDO: COLUNA_CONCLUIDO,
 	TAREFA_CANCELADO: COLUNA_NAO_SERA_FEITO,
 }

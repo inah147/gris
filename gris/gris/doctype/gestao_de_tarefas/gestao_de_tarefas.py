@@ -19,12 +19,15 @@ TASK_FIELDS: tuple[str, ...] = (
 )
 
 TASK_STATUS_OPTIONS: frozenset[str] = frozenset(
-	{"Nao iniciado", "Em andamento", "Atrasado", "Concluido", "Cancelado"}
+	{"Nao iniciado", "Em andamento", "Atrasado", "Validar", "Concluido", "Cancelado"}
 )
 
 TASK_STATUS_NOT_STARTED = "Nao iniciado"
 TASK_STATUS_DONE = "Concluido"
 TASK_STATUS_LATE = "Atrasado"
+# Trabalho entregue, esperando conferencia de quem pediu. Nao e final: a tarefa
+# so sai de "Minhas tarefas" em Concluido ou Cancelado.
+TASK_STATUS_VALIDATE = "Validar"
 TASK_STATUS_CANCELLED = "Cancelado"
 
 
@@ -53,6 +56,11 @@ def validar_tarefas_atrasadas() -> None:
 	Substitui o scheduler antigo que iterava projeto-a-projeto. Uma unica query
 	agregada localiza candidatos e o update e feito por documento para preservar
 	hooks (track_changes, version) e a permissao do scheduler.
+
+	'Validar' fica de fora junto com os status finais: o trabalho ja foi
+	entregue e o que falta e a conferencia de outra pessoa, entao cobrar o prazo
+	de quem desenvolveu seria errado — e apagaria da tela o unico sinal de que o
+	item esta esperando validacao.
 	"""
 	logger = obter_logger("gestao_de_tarefas")
 	hoje = nowdate()
@@ -60,7 +68,7 @@ def validar_tarefas_atrasadas() -> None:
 		"""
 		SELECT name
 		FROM `tabGestao de Tarefas`
-		WHERE status NOT IN ('Concluido', 'Cancelado', 'Atrasado')
+		WHERE status NOT IN ('Concluido', 'Cancelado', 'Atrasado', 'Validar')
 			AND prazo IS NOT NULL
 			AND prazo < %s
 		""",

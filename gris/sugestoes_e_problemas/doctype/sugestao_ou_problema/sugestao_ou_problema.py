@@ -24,6 +24,7 @@ from gris.api.sugestoes.constantes import (
 	COLUNA_CONCLUIDO,
 	COLUNA_EM_DESENVOLVIMENTO,
 	COLUNA_NAO_SERA_FEITO,
+	COLUNA_VALIDAR,
 	COLUNAS,
 	COLUNAS_DE_TRIAGEM,
 	DESCRICAO_MAX,
@@ -115,7 +116,9 @@ class SugestaoouProblema(Document):
 
 		# Uma vez iniciado, o inicio nao se apaga: se o item voltar para triagem
 		# e avancar de novo, a data que interessa continua sendo a primeira.
-		if status == COLUNA_EM_DESENVOLVIMENTO and not self.data_inicio_desenvolvimento:
+		# "Validar" entra aqui porque tambem pressupoe desenvolvimento feito: um
+		# item pequeno pode ir direto de "Selecionado" para validacao.
+		if status in (COLUNA_EM_DESENVOLVIMENTO, COLUNA_VALIDAR) and not self.data_inicio_desenvolvimento:
 			self.data_inicio_desenvolvimento = now_datetime()
 
 		if status == COLUNA_CONCLUIDO:

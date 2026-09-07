@@ -21,6 +21,7 @@ from gris.api.gestao_de_tarefas.minhas_tarefas import (
 	_parse_payload,
 	_require_logged_user,
 )
+from gris.gris.doctype.gestao_de_tarefas.gestao_de_tarefas import TASK_STATUS_DONE, TASK_STATUS_OPTIONS
 
 
 def _badge_for(board: dict[str, Any]) -> tuple[str, str, str]:
@@ -168,10 +169,13 @@ def _assert_board_solto(board_name: str) -> None:
 		)
 
 
-def _listar_tarefas_do_quadro(board_name: str) -> list[dict[str, Any]]:
+def _listar_tarefas_do_quadro(board_name: str, *, ocultar_concluidos: bool = False) -> list[dict[str, Any]]:
+	filters: dict[str, Any] = {"board": board_name}
+	if ocultar_concluidos:
+		filters["status"] = ["!=", TASK_STATUS_DONE]
 	rows = frappe.get_all(
 		"Gestao de Tarefas",
-		filters={"board": board_name},
+		filters=filters,
 		fields=["name", "board", *TASK_CLIENT_FIELDS],
 		order_by="prazo asc, creation asc",
 		limit_page_length=0,
@@ -181,7 +185,7 @@ def _listar_tarefas_do_quadro(board_name: str) -> list[dict[str, Any]]:
 
 
 @frappe.whitelist()
-def bootstrap_quadro(board_name: str) -> dict[str, Any]:
+def bootstrap_quadro(board_name: str, ocultar_concluidos: str | int | bool = 0) -> dict[str, Any]:
 	user = _require_logged_user()
 	board_name = _assert_board_acessivel(board_name)
 	board = frappe.db.get_value(
@@ -196,7 +200,9 @@ def bootstrap_quadro(board_name: str) -> dict[str, Any]:
 		"user_full_name": frappe.db.get_value("User", user, "full_name") or user,
 		"user_board_name": board_name,
 		"board": board,
-		"tarefas": _listar_tarefas_do_quadro(board_name),
+		"tarefas": _listar_tarefas_do_quadro(
+			board_name, ocultar_concluidos=bool(frappe.utils.cint(ocultar_concluidos))
+		),
 		"responsavel_options": _responsavel_options_do_quadro(board_name),
 	}
 
@@ -212,7 +218,9 @@ def _responsavel_options_do_quadro(board_name: str) -> list[dict[str, Any]]:
 
 
 @frappe.whitelist()
-def salvar_tarefa_quadro(tarefa: str | dict[str, Any]) -> dict[str, Any]:
+def salvar_tarefa_quadro(
+	tarefa: str | dict[str, Any], ocultar_concluidos: str | int | bool = 0
+) -> dict[str, Any]:
 	_require_logged_user()
 	payload = _parse_payload(tarefa)
 	board_name = _assert_board_acessivel((payload.get("board") or "").strip())
@@ -252,16 +260,16 @@ def salvar_tarefa_quadro(tarefa: str | dict[str, Any]) -> dict[str, Any]:
 
 	return {
 		"ok": True,
-		"tarefas": _listar_tarefas_do_quadro(board_name),
+		"tarefas": _listar_tarefas_do_quadro(
+			board_name, ocultar_concluidos=bool(frappe.utils.cint(ocultar_concluidos))
+		),
 	}
 
 
 @frappe.whitelist()
-def atualizar_status_quadro(tarefa_name: str, status: str) -> dict[str, Any]:
-	from frappe.utils import nowdate
-
-	from gris.gris.doctype.gestao_de_tarefas.gestao_de_tarefas import TASK_STATUS_OPTIONS
-
+def atualizar_status_quadro(
+	tarefa_name: str, status: str, ocultar_concluidos: str | int | bool = 0
+) -> dict[str, Any]:
 	_require_logged_user()
 	status = (status or "").strip()
 	if status not in TASK_STATUS_OPTIONS:
@@ -285,7 +293,46 @@ def atualizar_status_quadro(tarefa_name: str, status: str) -> dict[str, Any]:
 	_gravar_status(tarefa_name, status, previous_status, current.get("data_inicio"))
 	return {
 		"ok": True,
-		"tarefas": _listar_tarefas_do_quadro(board_name),
+		"tarefas": _listar_tarefas_do_quadro(
+			board_name, ocultar_concluidos=bool(frappe.utils.cint(ocultar_concluidos))
+		),
+	}
+
+
+def _assert_pode_editar_tarefa(board_name: str) -> tuple[str, str]:
+	"""Exige nivel Editar/Gerenciar (ou System Manager) no quadro.
+
+	Mais restritivo que `_assert_board_acessivel` (usado por salvar/mover, que
+	so exige leitura): exclusao e destrutiva e irreversivel, entao aqui vale a
+	pena divergir da lassidao pre-existente das demais mutacoes do quadro.
+	"""
+	user = _require_logged_user()
+	board_name = _assert_board_acessivel(board_name)
+	if "System Manager" in frappe.get_roles(user):
+		return user, board_name
+	if _nivel_do_usuario(board_name, user) not in {"Editar", "Gerenciar"}:
+		frappe.throw(
+			_("Apenas membros com nivel Editar ou Gerenciar podem excluir tarefas."),
+			frappe.PermissionError,
+		)
+	return user, board_name
+
+
+@frappe.whitelist()
+def excluir_tarefa_quadro(tarefa_name: str, ocultar_concluidos: str | int | bool = 0) -> dict[str, Any]:
+	if not tarefa_name:
+		frappe.throw(_("Tarefa nao informada."))
+	board_name = frappe.db.get_value("Gestao de Tarefas", tarefa_name, "board")
+	if not board_name:
+		frappe.throw(_("Tarefa nao encontrada."))
+	_unused_user, board_name = _assert_pode_editar_tarefa(board_name)
+
+	frappe.delete_doc("Gestao de Tarefas", tarefa_name, ignore_permissions=True)
+	return {
+		"ok": True,
+		"tarefas": _listar_tarefas_do_quadro(
+			board_name, ocultar_concluidos=bool(frappe.utils.cint(ocultar_concluidos))
+		),
 	}
 
 

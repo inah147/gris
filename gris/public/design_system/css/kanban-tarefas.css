@@ -115,16 +115,67 @@
     transform: scale(0.97);
 }
 
+.task-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.375rem;
+    margin: 0 0 0.5rem;
+}
+
 .task-card__title {
     font-size: 0.9375rem;
     font-weight: 600;
     line-height: 1.45;
     color: var(--color-card-foreground);
-    margin: 0 0 0.5rem;
+    margin: 0;
+    flex: 1;
+    min-width: 0;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+}
+
+.task-card__delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--color-muted-foreground);
+    cursor: pointer;
+    opacity: 0;
+    transition:
+        opacity 0.15s,
+        color 0.15s,
+        background-color 0.15s;
+}
+
+.task-card:hover .task-card__delete,
+.task-card__delete:focus-visible {
+    opacity: 1;
+}
+
+.task-card__delete:hover,
+.task-card__delete:focus-visible {
+    color: var(--color-destructive, hsl(0 84% 60%));
+    background: color-mix(in oklab, var(--color-destructive, hsl(0 84% 60%)) 10%, transparent);
+}
+
+.task-card__delete svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 .task-card__footer {
@@ -674,6 +725,24 @@
 .kanban-tarefas-actions .btn-sm-primary,
 .kanban-tarefas-actions .btn-sm-outline {
     min-height: 36px;
+}
+
+.kanban-tarefas-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-right: auto;
+    font-size: 0.8125rem;
+    color: var(--color-muted-foreground);
+    cursor: pointer;
+    user-select: none;
+}
+
+.kanban-tarefas-toggle input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--color-primary);
+    cursor: pointer;
 }
 
 /* ── Responsivo ──────────────────────────────────────────── */

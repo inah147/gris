@@ -22,7 +22,11 @@ from gris.gris.doctype.gestao_de_tarefas.gestao_de_tarefas import (
 
 TASK_CLIENT_FIELDS = tuple(f for f in TASK_FIELDS if f != "board")
 
-_TASK_STATUS_FINAL = {"Concluido", "Cancelado"}
+# Status que nao entram na fila de urgencias. Alem dos dois finais, "Validar":
+# ali o trabalho ja foi entregue e o que falta e a conferencia de outra pessoa,
+# entao cobrar o prazo de quem desenvolveu seria cobrar a pessoa errada. A
+# tarefa continua na lista completa de "Minhas tarefas" — so nao cobra.
+_TASK_STATUS_SEM_COBRANCA = {"Concluido", "Cancelado", "Validar"}
 
 
 def _require_logged_user() -> str:
@@ -125,7 +129,7 @@ def _listar_tarefas_do_usuario(
 		rows = [
 			row
 			for row in rows
-			if row.get("status") not in _TASK_STATUS_FINAL
+			if row.get("status") not in _TASK_STATUS_SEM_COBRANCA
 			and (
 				row.get("status") == "Atrasado"
 				or (row.get("prazo") and getdate(row.get("prazo")) <= getdate(limite_data))
@@ -145,7 +149,7 @@ def count_minhas_tarefas_urgentes(user: str | None = None) -> int:
 		"Gestao de Tarefas",
 		filters={
 			"responsavel": user,
-			"status": ["not in", list(_TASK_STATUS_FINAL)],
+			"status": ["not in", list(_TASK_STATUS_SEM_COBRANCA)],
 		},
 		fields=["name", "status", "prazo"],
 		limit_page_length=0,

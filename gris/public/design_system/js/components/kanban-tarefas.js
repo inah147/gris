@@ -9,6 +9,7 @@
 		"Nao iniciado",
 		"Em andamento",
 		"Atrasado",
+		"Validar",
 		"Concluido",
 		"Cancelado",
 	];
@@ -16,6 +17,7 @@
 		"Nao iniciado": "Nao iniciado",
 		"Em andamento": "Em andamento",
 		Atrasado: "Atrasado",
+		Validar: "Validar",
 		Concluido: "Concluido",
 		Cancelado: "Cancelado",
 	};
@@ -690,7 +692,10 @@
 
 			const isCompleted = status === "Concluido";
 			if (!isCompleted) {
-				if (endDateEl) endDateEl.textContent = "Em execucao";
+				// "Validar" ja tem o desenvolvimento entregue; o que falta e a
+				// conferencia, e a linha do tempo diz isso em vez de "Em execucao".
+				if (endDateEl)
+					endDateEl.textContent = status === "Validar" ? "Em validacao" : "Em execucao";
 				return;
 			}
 

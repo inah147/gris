@@ -45,7 +45,7 @@ class TestRenomearInsigniaEspecial(TestCase):
 
 		qb.update.assert_called_once()
 		query.set.assert_called_once()
-		set_field, set_valor = query.set.call_args[0]
+		_, set_valor = query.set.call_args[0]
 		self.assertEqual(set_valor, "Insígnia de Interesse Especial")
 
 		query.where.assert_called_once()

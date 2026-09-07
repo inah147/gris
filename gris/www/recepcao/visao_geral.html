@@ -119,6 +119,8 @@
 				data-ramo="{{ card.ramo or '' }}"
 				data-visita-data="{{ card.visita_data or '' }}"
 				data-visita-confirmada="{{ 1 if card.visita_confirmada else 0 }}"
+				data-reagendamento-pendente="{{ 1 if card.reagendamento_pendente else 0 }}"
+				data-reagendamento-data="{{ card.reagendamento_data or '' }}"
 				data-steps="{{ card.steps_json|e }}"
 				data-whatsapp-contatos="{{ card.whatsapp_contatos_json|e }}"
 				data-whatsapp-disponivel="{{ 1 if card.whatsapp_disponivel else 0 }}"
@@ -134,6 +136,15 @@
 					{% endif %}
 					{% if card.visita_confirmada %}
 						{{ badge("Visita Confirmada", variant="success") }}
+					{% endif %}
+					{% if card.reagendamento_pendente %}
+						{{ badge(
+							lucide_icon("calendar-clock", size="sm") ~ "<span>Reagendar visita</span>",
+							attrs={
+								"class": "badge-reagendar",
+								"title": "Visita a reagendar" ~ (" desde " ~ card.reagendamento_data if card.reagendamento_data else "")
+							}
+						) }}
 					{% endif %}
 					{# Só aparece quando há observação: o balão vazio seria ruído em todo card. #}
 					<button
@@ -245,6 +256,15 @@
 			) }}
 		</div>
 	</div>
+	<div id="ci_aviso_reagendamento" class="hidden">
+		{{ alert(
+			icon=lucide_icon("calendar-clock", size="sm"),
+			title="Visita a reagendar",
+			description='<span id="ci_reagendamento_texto"></span>',
+			variant="warning",
+			attrs={"class": "mt-4"}
+		) }}
+	</div>
 	<div class="dialog-actions">
 		<button type="button" class="btn-primary" onclick="openAgendarVisita()">Agendar Visita</button>
 	</div>
@@ -355,6 +375,41 @@
 		</button>
 		<button type="button" class="btn-primary" onclick="registrarRecepcaoRealizada()">Recepção Realizada</button>
 		<button type="button" class="btn-outline" onclick="openAgendarVisita()">Reagendar Visita</button>
+		<button type="button" class="btn-outline" onclick="sinalizarReagendamento()">
+			Reagendar Depois
+		</button>
+	</div>
+{% endcall %}
+
+{# ----------- Modal Reagendar Depois ----------- #}
+{% call dialog(
+	id="modalReagendarDepois",
+	title="Reagendar Depois",
+	footer='<button type="button" class="btn-ghost" onclick="closeReagendarDepois()">Cancelar</button><button type="button" class="btn-primary" id="btnConfirmarReagendamento" onclick="confirmarReagendamento()">Confirmar</button>',
+	close_button=false,
+	close_on_overlay_click=false
+) %}
+	{{ alert(
+		icon=lucide_icon("calendar-clock", size="sm"),
+		description="A visita marcada será cancelada e o card volta para <strong>Conversa Inicial</strong> com o selo &quot;Reagendar visita&quot;, para a recepção lembrar de marcar uma nova data.",
+		variant="warning",
+		attrs={"class": "mb-4"}
+	) }}
+	<div class="field">
+		<label class="label" for="rd_motivo">Motivo (opcional)</label>
+		{{ input(
+			type="text",
+			name="motivo_reagendamento",
+			attrs={
+				"id": "rd_motivo",
+				"placeholder": "Ex.: família pediu para remarcar",
+				"maxlength": "140",
+				"autocomplete": "off"
+			}
+		) }}
+		<p class="text-muted-foreground text-xs mt-1">
+			Quando preenchido, o motivo vira uma observação no card.
+		</p>
 	</div>
 {% endcall %}
 

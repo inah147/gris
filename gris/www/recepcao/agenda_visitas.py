@@ -5,6 +5,8 @@ from frappe import _
 from frappe.utils import add_days, cint, format_date, getdate, today
 
 from gris.api.portal_access import enrich_context, user_has_access
+from gris.api.recepcao import limpar_sinal_de_reagendamento
+from gris.api.recepcao_funil import STATUS_VISITA_AGENDADA
 
 no_cache = 1
 
@@ -296,7 +298,10 @@ def schedule_visit(associate: str, date: str):
 	visit.insert()
 
 	associate_doc.visita_agendada = 1
-	associate_doc.status = "Visita Agendada"
+	associate_doc.status = STATUS_VISITA_AGENDADA
 	associate_doc.save()
+
+	# A visita nova encerra a pendência de reagendamento, se houver.
+	limpar_sinal_de_reagendamento(associate)
 
 	return visit.name

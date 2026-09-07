@@ -137,7 +137,7 @@ leem e escrevem esse detalhamento.
 | `listar_visitas` | Visitas por período, ramo e confirmação | Recepcao |
 | `datas_disponiveis_visita` | Sábados livres nos próximos 60 dias para o ramo (ou para remarcar uma visita) | Recepcao |
 | `agendar_visita` ✎ | Agenda a primeira visita em data disponível | Recepcao |
-| `atualizar_visita` ✎ | Confirmar, desconfirmar, remarcar ou cancelar | Recepcao |
+| `atualizar_visita` ✎ | Confirmar, desconfirmar, remarcar, cancelar ou sinalizar reagendamento | Recepcao |
 
 ### Insígnias e distintivos
 

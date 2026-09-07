@@ -45,6 +45,8 @@
   "tipo_de_registro",
   "numero_de_registro",
   "responsavel_recepcao",
+  "reagendamento_pendente",
+  "data_pedido_reagendamento",
   "etapas_do_fluxo_section",
   "visita_agendada",
   "primeira_visita_realizada",
@@ -284,6 +286,21 @@
    "label": "N\u00famero de registro"
   },
   {
+   "default": "0",
+   "description": "Sinaliza que a visita precisa ser remarcada. \u00c9 ligado ao devolver o card para \"Conversa Inicial\" e desligado sozinho quando uma nova visita \u00e9 agendada.",
+   "fieldname": "reagendamento_pendente",
+   "fieldtype": "Check",
+   "label": "Reagendamento pendente",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.reagendamento_pendente",
+   "fieldname": "data_pedido_reagendamento",
+   "fieldtype": "Date",
+   "label": "Sinalizado para reagendar em",
+   "read_only": 1
+  },
+  {
    "fieldname": "etapas_do_fluxo_section",
    "fieldtype": "Section Break",
    "label": "Etapas do fluxo"
@@ -473,7 +490,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-31 13:00:00.000000",
+ "modified": "2026-09-07 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Novo Associado",

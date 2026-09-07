@@ -21,7 +21,7 @@ ROLES = ("Recepcao",)
 
 RAMOS = ("Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro")
 
-ACOES = ("confirmar", "desconfirmar", "remarcar", "cancelar")
+ACOES = ("confirmar", "desconfirmar", "remarcar", "cancelar", "reagendar_depois")
 
 
 def _servico():
@@ -213,11 +213,12 @@ def agendar_visita(novo_associado: str, data: str, simular: bool = False) -> dic
 
 @ferramenta(
 	nome="atualizar_visita",
-	titulo="Confirmar, remarcar ou cancelar visita",
+	titulo="Confirmar, remarcar, cancelar ou sinalizar reagendamento",
 	descricao=(
 		"Age sobre uma visita já agendada: 'confirmar' e 'desconfirmar' mudam a confirmação, "
-		"'remarcar' exige nova_data disponível para o ramo e 'cancelar' apaga a visita e "
-		"desmarca a etapa 'visita_agendada' da pessoa."
+		"'remarcar' exige nova_data disponível para o ramo, 'cancelar' apaga a visita e "
+		"desmarca a etapa 'visita_agendada' da pessoa e 'reagendar_depois' apaga a visita e "
+		"devolve a pessoa para 'Conversa Inicial' sinalizada para reagendar."
 	),
 	parametros={
 		"visita": {"type": "string", "description": "Identificador da visita."},
@@ -230,12 +231,22 @@ def agendar_visita(novo_associado: str, data: str, simular: bool = False) -> dic
 			"type": "string",
 			"description": "Nova data (AAAA-MM-DD), obrigatória para 'remarcar'.",
 		},
+		"motivo": {
+			"type": "string",
+			"description": "Motivo do reagendamento; vira observação no card ('reagendar_depois').",
+		},
 	},
 	obrigatorios=("visita", "acao"),
 	roles=ROLES,
 	somente_leitura=False,
 )
-def atualizar_visita(visita: str, acao: str, nova_data: str | None = None, simular: bool = False) -> dict:
+def atualizar_visita(
+	visita: str,
+	acao: str,
+	nova_data: str | None = None,
+	motivo: str | None = None,
+	simular: bool = False,
+) -> dict:
 	dados = _carregar_visita(visita)
 
 	if acao == "remarcar":
@@ -259,6 +270,10 @@ def atualizar_visita(visita: str, acao: str, nova_data: str | None = None, simul
 		servico.unconfirm_visit(visita)
 	elif acao == "remarcar":
 		servico.reschedule_visit(visita, nova_data)
+	elif acao == "reagendar_depois":
+		from gris.api.recepcao import sinalizar_reagendamento_de_visita
+
+		sinalizar_reagendamento_de_visita(dados.get("jovem"), motivo)
 	else:
 		servico.cancel_visit(visita)
 

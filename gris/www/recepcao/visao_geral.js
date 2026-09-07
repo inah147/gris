@@ -247,12 +247,22 @@ frappe.ready(function () {
 			const ramo = cardEl.dataset.ramo || "";
 			const visitaData = cardEl.dataset.visitaData || "";
 			const visitaConfirmada = cardEl.dataset.visitaConfirmada || "0";
+			const reagendamentoPendente = cardEl.dataset.reagendamentoPendente === "1";
+			const reagendamentoData = cardEl.dataset.reagendamentoData || "";
 			const steps = cardEl.dataset.steps || "[]";
 
 			if (status === "Novo Contato") {
 				openModal(id, responsavel, nome, responsavelAssociado, ramo);
 			} else if (status === "Conversa Inicial") {
-				openConversaInicialModal(id, responsavel, nome, responsavelAssociado, ramo);
+				openConversaInicialModal(
+					id,
+					responsavel,
+					nome,
+					responsavelAssociado,
+					ramo,
+					reagendamentoPendente,
+					reagendamentoData
+				);
 			} else if (status === "Visita Agendada") {
 				openVisitaAgendadaModal(
 					id,
@@ -380,13 +390,32 @@ function openModal(id, responsavel, nome, responsavelAssociado, ramo) {
 	openDialog("modalNovoContato");
 }
 
-function openConversaInicialModal(id, responsavel, nome, responsavelAssociado, ramo) {
+function openConversaInicialModal(
+	id,
+	responsavel,
+	nome,
+	responsavelAssociado,
+	ramo,
+	reagendamentoPendente,
+	reagendamentoData
+) {
 	currentCardId = id;
 	sincronizarCabecalhoDoDialog();
 	document.getElementById("ci_associado_nome").textContent = nome;
 	document.getElementById("ci_responsavel_nome").textContent = responsavelAssociado || "-";
 	document.getElementById("ci_ramo").textContent = ramo || "-";
 	setSelectValue("ci_responsavel_acompanhamento", responsavel);
+
+	// Quem voltou por causa de uma visita que caiu chega aqui com o aviso ligado,
+	// para a recepção agendar a nova data sem precisar abrir o histórico.
+	const aviso = document.getElementById("ci_aviso_reagendamento");
+	const texto = document.getElementById("ci_reagendamento_texto");
+	if (aviso) aviso.classList.toggle("hidden", !reagendamentoPendente);
+	if (texto) {
+		texto.textContent = reagendamentoData
+			? `Sinalizada para reagendar em ${reagendamentoData}. Agende uma nova data.`
+			: "Agende uma nova data para a visita.";
+	}
 
 	openDialog("modalConversaInicial");
 }
@@ -814,6 +843,54 @@ function removerConfirmacaoVisita() {
 				closeAllDialogs();
 				setTimeout(() => window.location.reload(), 500);
 			}
+		},
+	});
+}
+
+function sinalizarReagendamento() {
+	if (!currentCardId) return;
+	previousModalId = getOpenDialogId("modalReagendarDepois");
+	if (previousModalId) closeDialog(previousModalId);
+	const motivo = document.getElementById("rd_motivo");
+	if (motivo) motivo.value = "";
+	openDialog("modalReagendarDepois");
+}
+
+function closeReagendarDepois() {
+	closeDialog("modalReagendarDepois");
+	if (previousModalId) {
+		const prev = previousModalId;
+		previousModalId = null;
+		openDialog(prev);
+	}
+}
+
+function confirmarReagendamento() {
+	if (!currentCardId) return;
+	const campoMotivo = document.getElementById("rd_motivo");
+	const botao = document.getElementById("btnConfirmarReagendamento");
+	if (botao) botao.disabled = true;
+
+	frappe.call({
+		method: "gris.api.recepcao.sinalizar_reagendamento_de_visita",
+		args: {
+			novo_associado_name: currentCardId,
+			motivo: campoMotivo ? campoMotivo.value : "",
+		},
+		callback: function (r) {
+			if (!r.exc) {
+				frappe.show_alert({
+					message: "Visita a reagendar. Card movido para Conversa Inicial.",
+					indicator: "orange",
+				});
+				closeAllDialogs();
+				setTimeout(() => window.location.reload(), 500);
+			} else if (botao) {
+				botao.disabled = false;
+			}
+		},
+		error: function () {
+			if (botao) botao.disabled = false;
 		},
 	});
 }

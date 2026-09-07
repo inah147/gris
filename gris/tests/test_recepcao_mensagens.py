@@ -421,6 +421,39 @@ class TestLembretesRecorrentes(FrappeTestCase):
 		self.assertEqual(definitivo["registro_definitivo_efetivado"], 1)
 		self.assertIn("ficha médica", ambiente.textos[0]["mensagem"])
 
+	def test_ficha_medica_so_cobra_quem_ja_recebeu_o_numero_de_registro(self):
+		ambiente = self._rodar(
+			recepcao_mensagens.enviar_lembretes_ficha_medica,
+			[
+				{
+					"name": "NA-1",
+					"nome_completo": "Joãozinho",
+					"sexo": "Masculino",
+					"data_lembrete_ficha_medica": None,
+				}
+			],
+		)
+
+		# A etapa de efetivação é marcada na mão; o carimbo da mensagem de registro criado é o
+		# único sinal de que o responsável já sabe o número que a ficha médica pede.
+		for filtros in ambiente.filtros_usados:
+			self.assertEqual(filtros["data_mensagem_registro_criado"], ["is", "set"])
+
+	def test_id_escoteiros_so_cobra_quem_ja_recebeu_o_numero_de_registro(self):
+		ambiente = self._rodar(
+			recepcao_mensagens.enviar_lembretes_id_escoteiros,
+			[
+				{
+					"name": "NA-1",
+					"nome_completo": "Joãozinho",
+					"sexo": "Masculino",
+					"data_lembrete_id_escoteiros": None,
+				}
+			],
+		)
+
+		self.assertEqual(ambiente.filtros_usados[0]["data_mensagem_registro_criado"], ["is", "set"])
+
 	def test_consultas_ignoram_fila_de_espera_e_concluidos(self):
 		ambiente = self._rodar(
 			recepcao_mensagens.enviar_lembretes_id_escoteiros,

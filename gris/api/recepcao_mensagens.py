@@ -40,6 +40,12 @@ STATUS_IGNORADOS = ["Fila de espera", "Concluído"]
 STATUS_AGUARDAR_DADOS = "Aguardar Dados"
 ASSINATURA = "_Esta é uma mensagem automática_"
 
+# Filtro dos lembretes que só fazem sentido depois que o responsável recebeu o número de
+# registro: ficha médica e id@escoteiros são preenchidos com ele no Paxtu. O carimbo só é
+# gravado por ``notificar_registro_criado``, que exige um ``Associado`` com registro atrelado
+# ao jovem — cobrar antes disso é pedir um dado que o responsável ainda não tem.
+ESPERAR_REGISTRO_AVISADO = {"data_mensagem_registro_criado": ["is", "set"]}
+
 DIAS_INICIAIS_PADRAO = (4, 6, 8)
 INTERVALO_DADOS_PADRAO = 5
 INTERVALO_PESQUISA_PADRAO = 3
@@ -942,9 +948,13 @@ def enviar_lembretes_ficha_medica() -> None:
 
 	Registro provisório e definitivo têm etapas de efetivação distintas: cada tipo é filtrado
 	pela sua, mantendo a seleção no SQL.
+
+	A etapa de efetivação é marcada na mão pela recepção, então sozinha ela não garante que o
+	responsável já saiba o número de registro — e a ficha médica é justamente preenchida com
+	esse número. Por isso a cobrança também espera ``ESPERAR_REGISTRO_AVISADO``.
 	"""
 	intervalo = _intervalo("lembrete_ficha_medica_intervalo_dias", INTERVALO_FICHA_MEDICA_PADRAO)
-	base = {"ficha_medica_preenchida": 0}
+	base = {"ficha_medica_preenchida": 0, **ESPERAR_REGISTRO_AVISADO}
 
 	enviados = 0
 	elegiveis = 0
@@ -974,10 +984,19 @@ def enviar_lembretes_ficha_medica() -> None:
 
 
 def enviar_lembretes_id_escoteiros() -> None:
-	"""Cobra a criação do id@escoteiros de quem já preencheu a ficha médica."""
+	"""Cobra a criação do id@escoteiros de quem já preencheu a ficha médica.
+
+	O primeiro acesso ao Paxtu pede o número de registro, então a cobrança também espera
+	``ESPERAR_REGISTRO_AVISADO`` — a ficha médica pode ter sido marcada na mão pela recepção
+	sem que o responsável tenha recebido o número.
+	"""
 	_enviar_lembretes_para_responsavel(
 		rotulo="id@escoteiros",
-		filtros={"ficha_medica_preenchida": 1, "id_escoteiros_criado": 0},
+		filtros={
+			"ficha_medica_preenchida": 1,
+			"id_escoteiros_criado": 0,
+			**ESPERAR_REGISTRO_AVISADO,
+		},
 		campo_carimbo="data_lembrete_id_escoteiros",
 		intervalo=_intervalo("lembrete_id_escoteiros_intervalo_dias", INTERVALO_ID_ESCOTEIROS_PADRAO),
 		montar_mensagem=lambda jovem, contato: _montar_lembrete_id_escoteiros(

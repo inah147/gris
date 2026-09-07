@@ -66,6 +66,19 @@ home_page = "/inicio"
 # 	"Role": "home_page"
 # }
 
+# Descoberta OAuth do transporte MCP (RFC 9728 / RFC 8414) — ver
+# gris/api/mcp/oauth.py e a seção de OAuth em MCP_CLAUDE.md.
+website_redirects = [
+	{
+		"source": "/.well-known/oauth-protected-resource",
+		"target": "/api/method/gris.api.mcp.oauth.oauth_protected_resource",
+	},
+	{
+		"source": "/.well-known/oauth-authorization-server",
+		"target": "/api/method/gris.api.mcp.oauth.oauth_authorization_server",
+	},
+]
+
 # Generators
 # ----------
 
@@ -312,7 +325,7 @@ override_whitelisted_methods = {
 # Request Events
 # ----------------
 before_request = ["gris.api.auth.enforce_no_desk_redirect"]
-# after_request = ["gris.utils.after_request"]
+after_request = ["gris.api.mcp.oauth.anunciar_recurso_protegido"]
 
 # Job Events
 # ----------

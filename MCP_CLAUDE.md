@@ -443,22 +443,37 @@ expirado e inexistente).
 | Descoberta OpenID | `oauth2.py:openid_configuration`, roteada em `frappe/hooks.py` |
 | Cadastro de cliente | DocType `OAuth Client` (manual, pelo Desk) |
 
+### O que já foi feito
+
+`gris/api/mcp/oauth.py` implementa a camada de descoberta (Fase 1 do
+[PLANO_OAUTH_MCP.md](PLANO_OAUTH_MCP.md)), coberta por
+`gris/tests/test_mcp_oauth.py`:
+
+1. **`/.well-known/oauth-protected-resource`** (RFC 9728) — roteado em
+   `gris/hooks.py` (`website_redirects`) para `oauth_protected_resource`.
+   Aponta o authorization server e o escopo dedicado (`gris.mcp`).
+2. **`/.well-known/oauth-authorization-server`** (RFC 8414) — roteado do mesmo
+   jeito para `oauth_authorization_server`, que chama o `openid_configuration`
+   do Frappe (sem alterá-lo) e acrescenta o que ele não anuncia:
+   `code_challenge_methods_supported`, `grant_types_supported`,
+   `token_endpoint_auth_methods_supported` e `scopes_supported`.
+3. **`WWW-Authenticate` no 401** — hook `after_request`
+   (`anunciar_recurso_protegido`) restrito ao caminho do MCP. Cobre tanto o
+   401 que `validate_auth` já levanta para um Bearer inválido/expirado/revogado
+   quanto o 403 que `is_whitelisted` devolve pra Guest sem nenhum
+   `Authorization` — as duas são a mesma falta de credencial válida, então as
+   duas viram 401 com o header.
+
 ### O que falta
 
-1. **`/.well-known/oauth-protected-resource`** (RFC 9728) — não existe. É o
-   ponto de partida da descoberta: diz qual é o authorization server.
-2. **`/.well-known/oauth-authorization-server`** (RFC 8414) — não existe; só há
-   `openid-configuration`, e ele **não anuncia** `code_challenge_methods_supported`,
-   `grant_types_supported`, `token_endpoint_auth_methods_supported` nem
-   `scopes_supported`. Sem o primeiro, o cliente não descobre que há PKCE.
-3. **`WWW-Authenticate` no 401** — nenhum ponto do Frappe emite esse header. A
-   spec espera `Bearer resource_metadata="..."` numa chamada sem token.
-4. **Dynamic Client Registration** (RFC 7591) — não existe endpoint `register`.
-   É item de decisão, não necessariamente de código: se o cadastro de connector
-   aceitar Client ID/Secret preenchidos à mão, basta um `OAuth Client` no Desk.
-
-Os itens 1–3 cabem num módulo só (ex. `gris/api/mcp/oauth.py`). O item 4 é o
-que pode dobrar o esforço — **verifique-o primeiro**, porque decide o escopo.
+1. **Fase 0** — verificar se o cadastro de connector do claude.ai aceita
+   Client ID/Secret preenchidos à mão. Se não aceitar, entra a Fase 5
+   (**Dynamic Client Registration**, RFC 7591) — não existe endpoint
+   `register`, e isso pode dobrar o esforço.
+2. **Fase 2** — cadastrar o `OAuth Client` com o escopo `gris.mcp` e
+   `redirect_uri` estrita (ver *Atenção ao registrar o cliente* abaixo).
+3. **Fases 3–4** — rodar o fluxo ponta a ponta local e cadastrar o connector
+   de produção.
 
 ### Atenção ao registrar o cliente
 

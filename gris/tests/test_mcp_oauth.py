@@ -6,9 +6,11 @@ API key**. Como ``gris.api.mcp.http.mcp`` é um whitelist comum que roda sob
 ``frappe.session.user``, o endpoint não precisa de mudança nenhuma — e as
 checagens de papel do ``registry`` continuam valendo sob a identidade do token.
 
-O que falta para o fluxo OAuth completo não é o endpoint, e sim a camada de
-descoberta na frente dele (metadados RFC 9728 / RFC 8414 e o header
-``WWW-Authenticate`` no 401). Veja a seção de OAuth em MCP_CLAUDE.md.
+A camada de descoberta na frente dele (metadados RFC 9728 / RFC 8414 e o
+header ``WWW-Authenticate`` no 401), implementada em ``gris.api.mcp.oauth``,
+é coberta nas classes ``TestMetadadosDeDescoberta`` e
+``TestAnuncioDoRecursoProtegidoNo401`` abaixo. Veja a seção de OAuth em
+MCP_CLAUDE.md.
 
 Estes testes exercitam o caminho real de `frappe.auth.validate_oauth` contra
 registros de verdade — sem mock do que está sendo verificado.
@@ -16,11 +18,14 @@ registros de verdade — sem mock do que está sendo verificado.
 
 import frappe
 from frappe.auth import validate_oauth
+from frappe.oauth import get_server_url
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_to_date, now_datetime
 from werkzeug.test import EnvironBuilder
 from werkzeug.wrappers import Request as RequisicaoWerkzeug
+from werkzeug.wrappers import Response as RespostaWerkzeug
 
+from gris.api.mcp import oauth as mcp_oauth
 from gris.api.mcp import registry
 from gris.api.sugestoes.constantes import ROLE_ACOMPANHAMENTO, ROLE_DESENVOLVEDOR
 
@@ -163,3 +168,104 @@ class TestOAuthNoTransporteMCP(FrappeTestCase):
 
 	def test_token_inexistente_nao_autentica(self):
 		self.assertEqual(self._autenticar("token-que-nunca-existiu"), "Guest")
+
+
+def _requisicao(caminho: str) -> RequisicaoWerkzeug:
+	construtor = EnvironBuilder(path=caminho, method="GET", base_url="http://test.localhost")
+	return RequisicaoWerkzeug(construtor.get_environ())
+
+
+class TestMetadadosDeDescoberta(FrappeTestCase):
+	"""RFC 9728 e RFC 8414 — os documentos que fazem o cliente MCP descobrir o
+	authorization server sozinho, a partir de um 401 no endpoint."""
+
+	def setUp(self):
+		self.request_anterior = getattr(frappe.local, "request", None)
+		self.form_dict_anterior = getattr(frappe.local, "form_dict", None)
+		frappe.local.request = _requisicao_mcp("irrelevante-para-descoberta")
+		frappe.local.form_dict = frappe._dict()
+
+	def tearDown(self):
+		frappe.local.request = self.request_anterior
+		frappe.local.form_dict = self.form_dict_anterior
+
+	def test_recurso_protegido_aponta_para_o_endpoint_mcp(self):
+		mcp_oauth.oauth_protected_resource()
+		resposta = frappe.local.response
+		servidor = get_server_url()
+
+		self.assertEqual(resposta["resource"], f"{servidor}{CAMINHO_MCP}")
+		self.assertEqual(resposta["authorization_servers"], [servidor])
+		self.assertIn(mcp_oauth.ESCOPO_MCP, resposta["scopes_supported"])
+		self.assertEqual(resposta["bearer_methods_supported"], ["header"])
+
+	def test_authorization_server_espelha_o_openid_configuration(self):
+		mcp_oauth.oauth_authorization_server()
+		resposta = frappe.local.response
+
+		# Espelhado do frappe.integrations.oauth2.openid_configuration.
+		self.assertIn("authorization_endpoint", resposta)
+		self.assertIn("token_endpoint", resposta)
+
+	def test_authorization_server_anuncia_o_que_o_openid_configuration_nao_anuncia(self):
+		mcp_oauth.oauth_authorization_server()
+		resposta = frappe.local.response
+
+		self.assertEqual(set(resposta["code_challenge_methods_supported"]), {"S256", "plain"})
+		self.assertIn("authorization_code", resposta["grant_types_supported"])
+		self.assertEqual(resposta["token_endpoint_auth_methods_supported"], ["none"])
+		self.assertIn(mcp_oauth.ESCOPO_MCP, resposta["scopes_supported"])
+
+
+class TestAnuncioDoRecursoProtegidoNo401(FrappeTestCase):
+	"""``WWW-Authenticate`` só na chamada sem token válido ao endpoint MCP."""
+
+	def setUp(self):
+		self.request_anterior = getattr(frappe.local, "request", None)
+
+	def tearDown(self):
+		frappe.local.request = self.request_anterior
+
+	def _header_esperado(self) -> str:
+		return f'Bearer resource_metadata="{get_server_url()}/.well-known/oauth-protected-resource"'
+
+	def test_401_no_mcp_ganha_o_header(self):
+		frappe.local.request = _requisicao_mcp("irrelevante")
+		resposta = RespostaWerkzeug(status=401)
+
+		mcp_oauth.anunciar_recurso_protegido(resposta, frappe.local.request)
+
+		self.assertEqual(resposta.status_code, 401)
+		self.assertEqual(resposta.headers["WWW-Authenticate"], self._header_esperado())
+
+	def test_403_no_mcp_vira_401_com_o_header(self):
+		"""403 é o que ``is_whitelisted`` devolve pra Guest sem Authorization —
+		mesma falta de credencial que o 401, então ganha o mesmo tratamento."""
+		frappe.local.request = _requisicao_mcp("irrelevante")
+		resposta = RespostaWerkzeug(status=403)
+
+		mcp_oauth.anunciar_recurso_protegido(resposta, frappe.local.request)
+
+		self.assertEqual(resposta.status_code, 401)
+		self.assertEqual(resposta.headers["WWW-Authenticate"], self._header_esperado())
+
+	def test_outro_caminho_nao_ganha_o_header(self):
+		frappe.local.request = _requisicao("/api/method/frappe.auth.get_logged_user")
+		resposta = RespostaWerkzeug(status=401)
+
+		mcp_oauth.anunciar_recurso_protegido(resposta, frappe.local.request)
+
+		self.assertNotIn("WWW-Authenticate", resposta.headers)
+		self.assertEqual(resposta.status_code, 401)
+
+	def test_200_no_mcp_nao_ganha_o_header(self):
+		frappe.local.request = _requisicao_mcp("irrelevante")
+		resposta = RespostaWerkzeug(status=200)
+
+		mcp_oauth.anunciar_recurso_protegido(resposta, frappe.local.request)
+
+		self.assertNotIn("WWW-Authenticate", resposta.headers)
+
+	def test_sem_resposta_nao_quebra(self):
+		frappe.local.request = _requisicao_mcp("irrelevante")
+		mcp_oauth.anunciar_recurso_protegido(None, frappe.local.request)

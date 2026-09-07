@@ -29,7 +29,7 @@ do claude.ai aceita **Client ID e Client Secret preenchidos à mão**.
 Enquanto essa resposta não vier, as Fases 1 a 4 seguem válidas nos dois
 cenários — não há motivo para esperar por ela para começar.
 
-## Fase 1 — Metadados de descoberta e desafio de autenticação
+## Fase 1 — Metadados de descoberta e desafio de autenticação (concluída)
 
 Módulo novo: `gris/api/mcp/oauth.py`. Só camada de protocolo; nenhuma regra de
 negócio, no mesmo espírito de `gris/api/mcp/http.py`.
@@ -61,6 +61,13 @@ resposta 401 do site.
 **Validação**: testes em `gris/tests/test_mcp_oauth.py` cobrindo o conteúdo dos
 dois documentos de descoberta (incluindo o anúncio de PKCE) e a presença do
 header no 401 do endpoint MCP.
+
+**Feito**: `gris/api/mcp/oauth.py` implementa os três itens;
+`website_redirects` e `after_request` cadastrados em `gris/hooks.py`;
+`gris-test test_mcp_oauth` e `gris-lint` limpos. O 403 que `is_whitelisted`
+devolve pra Guest sem `Authorization` (o `validate_auth` só levanta 401
+quando já existe um header `Bearer` malformado ou inválido) também vira 401
+com o header — as duas situações são a mesma falta de credencial válida.
 
 ## Fase 2 — Cliente e escopo
 

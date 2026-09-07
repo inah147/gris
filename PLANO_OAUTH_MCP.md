@@ -69,7 +69,7 @@ devolve pra Guest sem `Authorization` (o `validate_auth` só levanta 401
 quando já existe um header `Bearer` malformado ou inválido) também vira 401
 com o header — as duas situações são a mesma falta de credencial válida.
 
-## Fase 2 — Cliente e escopo
+## Fase 2 — Cliente e escopo (validação de código concluída; cadastro é manual)
 
 - Criar um escopo dedicado (ex. `gris.mcp`) em vez de reaproveitar `all`. O
   `validate_bearer_token` do Frappe confere o escopo do token contra os escopos
@@ -82,6 +82,17 @@ com o header — as duas situações são a mesma falta de credencial válida.
 
 **Validação**: um token emitido com o escopo novo autentica; um token com escopo
 fora da lista do cliente não autentica.
+
+**Feito**: `ESCOPO_MCP = "gris.mcp"` já definido em `gris/api/mcp/oauth.py` e
+usado nos metadados da Fase 1. `TestEscopoDedicadoRestringeOToken` em
+`gris/tests/test_mcp_oauth.py` prova a restrição contra o caminho real de
+`validate_oauth`/`validate_bearer_token`: token com o escopo do cliente
+autentica, token com escopo fora da lista (total ou parcialmente) não.
+
+**Falta**: o cadastro em si do `OAuth Client` — de teste (Fase 3) e de
+produção (Fase 4) — é uma ação no Desk, não código; não há fixture porque
+o registro carrega segredo. Ver *Atenção ao registrar o cliente* em
+MCP_CLAUDE.md para o que preencher.
 
 ## Fase 3 — Fluxo ponta a ponta local
 

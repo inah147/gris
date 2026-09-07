@@ -84,14 +84,16 @@ def _criar_cenario() -> str:
 	return cliente.name
 
 
-def _criar_token(access_token: str, cliente: str, *, status: str = "Active", horas: int = 1) -> None:
+def _criar_token(
+	access_token: str, cliente: str, *, status: str = "Active", horas: int = 1, escopos: str = ESCOPOS
+) -> None:
 	frappe.db.delete("OAuth Bearer Token", {"access_token": access_token})
 	frappe.get_doc(
 		{
 			"doctype": "OAuth Bearer Token",
 			"client": cliente,
 			"user": EMAIL,
-			"scopes": ESCOPOS,
+			"scopes": escopos,
 			"access_token": access_token,
 			"refresh_token": f"refresh-{access_token}",
 			"expires_in": 3600,
@@ -99,6 +101,27 @@ def _criar_token(access_token: str, cliente: str, *, status: str = "Active", hor
 			"status": status,
 		}
 	).insert(ignore_permissions=True)
+
+
+def _criar_cliente_com_escopo(nome_cliente: str, escopos: str) -> str:
+	"""Um segundo ``OAuth Client``, com escopo próprio — para provar que o
+	escopo de um cliente não vaza pro token de outro (Fase 2 do plano)."""
+	frappe.db.delete("OAuth Client", {"name": nome_cliente})
+	cliente = frappe.get_doc(
+		{
+			"doctype": "OAuth Client",
+			"name": nome_cliente,
+			"app_name": "MCP de teste — escopo dedicado",
+			"user": "Administrator",
+			"scopes": escopos,
+			"redirect_uris": "https://exemplo.invalid/callback",
+			"default_redirect_uri": "https://exemplo.invalid/callback",
+			"grant_type": "Authorization Code",
+			"response_type": "Code",
+			"skip_authorization": 1,
+		}
+	).insert(ignore_permissions=True)
+	return cliente.name
 
 
 def _requisicao_mcp(token: str) -> RequisicaoWerkzeug:
@@ -168,6 +191,48 @@ class TestOAuthNoTransporteMCP(FrappeTestCase):
 
 	def test_token_inexistente_nao_autentica(self):
 		self.assertEqual(self._autenticar("token-que-nunca-existiu"), "Guest")
+
+
+class TestEscopoDedicadoRestringeOToken(FrappeTestCase):
+	"""Fase 2 do plano: um escopo próprio (``gris.mcp``) de fato limita o
+	token — não é só documentação, ``validate_bearer_token`` confere o escopo
+	do token contra o do ``OAuth Client`` (``frappe/oauth.py``)."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		_criar_cenario()  # garante o usuário EMAIL, usado pelo token abaixo
+		cls.cliente = _criar_cliente_com_escopo("mcp-teste-escopo-dedicado", mcp_oauth.ESCOPO_MCP)
+
+	def setUp(self):
+		self.request_anterior = getattr(frappe.local, "request", None)
+		self.form_dict_anterior = getattr(frappe.local, "form_dict", None)
+
+	def tearDown(self):
+		frappe.local.request = self.request_anterior
+		frappe.local.form_dict = self.form_dict_anterior
+		frappe.set_user("Administrator")
+
+	def _autenticar(self, token: str) -> str:
+		frappe.local.request = _requisicao_mcp(token)
+		frappe.local.form_dict = frappe._dict()
+		frappe.set_user("Guest")
+		validate_oauth(["Bearer", token])
+		return frappe.session.user
+
+	def test_token_com_o_escopo_do_cliente_autentica(self):
+		_criar_token("token-escopo-valido", self.cliente, escopos=mcp_oauth.ESCOPO_MCP)
+		self.assertEqual(self._autenticar("token-escopo-valido"), EMAIL)
+
+	def test_token_com_escopo_fora_do_cliente_nao_autentica(self):
+		"""O token carrega um escopo (``all``) que o cliente nunca declarou —
+		mesmo com o resto do token válido, a checagem de escopo barra."""
+		_criar_token("token-escopo-alheio", self.cliente, escopos="all")
+		self.assertEqual(self._autenticar("token-escopo-alheio"), "Guest")
+
+	def test_token_com_escopo_parcialmente_fora_do_cliente_nao_autentica(self):
+		_criar_token("token-escopo-misto", self.cliente, escopos=f"{mcp_oauth.ESCOPO_MCP} all")
+		self.assertEqual(self._autenticar("token-escopo-misto"), "Guest")
 
 
 def _requisicao(caminho: str) -> RequisicaoWerkzeug:

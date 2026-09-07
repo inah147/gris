@@ -418,8 +418,16 @@ Exemplos de pedidos que funcionam bem:
 
 Hoje a integração autentica por **API key** (`Authorization: token <key>:<secret>`),
 o que obriga cada máquina a registrar a ponte. Um **connector customizado** na
-conta do Claude cobriria Desktop, claude.ai e sessões remotas de uma vez só —
-mas o cadastro de connector faz **descoberta OAuth**, não aceita header fixo.
+conta do Claude cobre claude.ai (chat), Desktop e o Claude Code CLI local de
+uma vez só — mas o cadastro de connector faz **descoberta OAuth**, não aceita
+header fixo.
+
+**Sessões remotas do Claude Code na web (esta modalidade) ficam de fora**: a
+Fase 0 do plano achou que um connector cadastrado na conta ainda não chega a
+elas — lacuna aberta do lado do Claude Code
+([issue #22726](https://github.com/anthropics/claude-code/issues/22726)), não
+deste app. Para essa superfície o caminho segue sendo o de sempre: stdio ou
+HTTP com header fixo (seções abaixo).
 
 ### O endpoint não precisa mudar
 
@@ -464,16 +472,31 @@ expirado e inexistente).
    `Authorization` — as duas são a mesma falta de credencial válida, então as
    duas viram 401 com o header.
 
+**Fase 0 verificada**: o cadastro de connector do claude.ai aceita Client
+ID/Secret preenchidos à mão (Advanced settings, secret opcional) — **Fase 5
+(Dynamic Client Registration) descartada** para claude.ai e Desktop. Duas
+issues abertas do Claude Code sugerem que o `claude mcp add` da CLI pode
+exigir DCR mesmo com `client_id` pré-configurado
+([#26675](https://github.com/anthropics/claude-code/issues/26675),
+[#38102](https://github.com/anthropics/claude-code/issues/38102)) — só
+afetaria o uso local por CLI, não claude.ai nem Desktop. Detalhes e fontes na
+Fase 0 do plano.
+
+**Fase 3 verificada localmente**: `TestDescobertaAtravesDoAppReal` e
+`TestFluxoOAuthPontaAPonta`, em `gris/tests/test_mcp_oauth.py`, rodam o
+Authorization Code + PKCE completo contra `test.localhost` pelo app WSGI de
+verdade (não só chamando as funções em isolamento) — `authorize` → `get_token`
+→ `tools/list` autenticado só pelo access token, e os dois `.well-known`
+redirecionando para o JSON certo.
+
 ### O que falta
 
-1. **Fase 0** — verificar se o cadastro de connector do claude.ai aceita
-   Client ID/Secret preenchidos à mão. Se não aceitar, entra a Fase 5
-   (**Dynamic Client Registration**, RFC 7591) — não existe endpoint
-   `register`, e isso pode dobrar o esforço.
-2. **Fase 2** — cadastrar o `OAuth Client` com o escopo `gris.mcp` e
-   `redirect_uri` estrita (ver *Atenção ao registrar o cliente* abaixo).
-3. **Fases 3–4** — rodar o fluxo ponta a ponta local e cadastrar o connector
-   de produção.
+1. **Fase 2** — cadastrar o `OAuth Client` de teste/produção com o escopo
+   `gris.mcp` e `redirect_uri` estrita (ver *Atenção ao registrar o cliente*
+   abaixo). É ação manual no Desk, não código: não vira fixture porque o
+   registro carrega segredo.
+2. **Fase 4** — deploy, cadastro do connector de produção e validação nas
+   superfícies que este plano de fato alcança (claude.ai, Desktop, CLI local).
 
 ### Atenção ao registrar o cliente
 

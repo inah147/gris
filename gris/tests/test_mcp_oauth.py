@@ -16,11 +16,17 @@ Estes testes exercitam o caminho real de `frappe.auth.validate_oauth` contra
 registros de verdade — sem mock do que está sendo verificado.
 """
 
+import base64
+import hashlib
+import json
+from urllib.parse import parse_qs
+
 import frappe
-from frappe.auth import validate_oauth
+from frappe.auth import CookieManager, LoginManager, validate_oauth
 from frappe.oauth import get_server_url
+from frappe.tests.test_api import make_request
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import add_to_date, now_datetime
+from frappe.utils import add_to_date, get_test_client, now_datetime, set_request
 from werkzeug.test import EnvironBuilder
 from werkzeug.wrappers import Request as RequisicaoWerkzeug
 from werkzeug.wrappers import Response as RespostaWerkzeug
@@ -103,7 +109,9 @@ def _criar_token(
 	).insert(ignore_permissions=True)
 
 
-def _criar_cliente_com_escopo(nome_cliente: str, escopos: str) -> str:
+def _criar_cliente_com_escopo(
+	nome_cliente: str, escopos: str, *, redirect_uri: str = "https://exemplo.invalid/callback"
+) -> str:
 	"""Um segundo ``OAuth Client``, com escopo próprio — para provar que o
 	escopo de um cliente não vaza pro token de outro (Fase 2 do plano)."""
 	frappe.db.delete("OAuth Client", {"name": nome_cliente})
@@ -114,8 +122,8 @@ def _criar_cliente_com_escopo(nome_cliente: str, escopos: str) -> str:
 			"app_name": "MCP de teste — escopo dedicado",
 			"user": "Administrator",
 			"scopes": escopos,
-			"redirect_uris": "https://exemplo.invalid/callback",
-			"default_redirect_uri": "https://exemplo.invalid/callback",
+			"redirect_uris": redirect_uri,
+			"default_redirect_uri": redirect_uri,
 			"grant_type": "Authorization Code",
 			"response_type": "Code",
 			"skip_authorization": 1,
@@ -334,3 +342,152 @@ class TestAnuncioDoRecursoProtegidoNo401(FrappeTestCase):
 	def test_sem_resposta_nao_quebra(self):
 		frappe.local.request = _requisicao_mcp("irrelevante")
 		mcp_oauth.anunciar_recurso_protegido(None, frappe.local.request)
+
+
+FORM_HEADER = {"content-type": "application/x-www-form-urlencoded"}
+
+
+class TestDescobertaAtravesDoAppReal(FrappeTestCase):
+	"""As mesmas checagens de ``TestMetadadosDeDescoberta`` e
+	``TestAnuncioDoRecursoProtegidoNo401``, mas através do app WSGI de
+	verdade (``frappe.app.application``) em vez de chamar as funções em
+	isolamento — prova que o roteamento (``website_redirects``) e o hook
+	(``after_request``) cadastrados em ``gris/hooks.py`` estão de fato
+	ligados. Não grava nada no banco, então não precisa de commit/limpeza.
+	"""
+
+	site = frappe.local.site
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.TEST_CLIENT = get_test_client()
+
+	def _get(self, path, **kwargs):
+		return make_request(target=self.TEST_CLIENT.get, args=(path,), kwargs=kwargs, site=self.site)
+
+	def _post(self, path, data=None, **kwargs):
+		return make_request(
+			target=self.TEST_CLIENT.post, args=(path,), kwargs={"data": data, **kwargs}, site=self.site
+		)
+
+	def test_mcp_sem_token_devolve_401_com_www_authenticate(self):
+		resposta = self._post(
+			CAMINHO_MCP,
+			data=json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}),
+			headers={"Content-Type": "application/json"},
+		)
+		self.assertEqual(resposta.status_code, 401)
+		self.assertIn("oauth-protected-resource", resposta.headers.get("WWW-Authenticate", ""))
+
+	def test_recurso_protegido_redireciona_e_responde(self):
+		resposta = self._get("/.well-known/oauth-protected-resource", follow_redirects=True)
+		self.assertEqual(resposta.status_code, 200)
+		self.assertTrue(resposta.json["resource"].endswith(CAMINHO_MCP))
+
+	def test_authorization_server_redireciona_e_responde(self):
+		resposta = self._get("/.well-known/oauth-authorization-server", follow_redirects=True)
+		self.assertEqual(resposta.status_code, 200)
+		self.assertIn("S256", resposta.json["code_challenge_methods_supported"])
+
+
+class TestFluxoOAuthPontaAPonta(FrappeTestCase):
+	"""Fase 3 do plano: o Authorization Code + PKCE completo contra o site de
+	teste, do ``authorize`` até uma chamada ``tools/list`` autenticada por
+	Bearer — a mesma sequência que um cliente MCP de verdade percorre.
+
+	A requisição HTTP roda numa thread à parte (``make_request``), com sua
+	própria conexão de banco — por isso os fixtures são gravados com
+	``frappe.db.commit()`` e desfeitos manualmente no ``tearDown``: o
+	rollback automático do ``FrappeTestCase`` não alcança o que já foi
+	commitado (mesmo padrão de ``frappe/tests/test_oauth20.py``).
+	"""
+
+	site = frappe.local.site
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.TEST_CLIENT = get_test_client()
+
+	REDIRECT_URI = "http://localhost/callback"
+
+	def setUp(self):
+		_criar_cenario()
+		self.cliente = _criar_cliente_com_escopo(
+			"mcp-teste-fluxo-completo", mcp_oauth.ESCOPO_MCP, redirect_uri=self.REDIRECT_URI
+		)
+
+		set_request(path="/")
+		frappe.local.cookie_manager = CookieManager()
+		frappe.local.login_manager = LoginManager()
+		frappe.local.login_manager.login_as(EMAIL)
+		self.sid = frappe.session.sid
+
+		frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+		frappe.db.delete("OAuth Bearer Token", {"client": self.cliente})
+		frappe.db.delete("OAuth Authorization Code", {"client": self.cliente})
+		frappe.delete_doc("OAuth Client", self.cliente, force=True, ignore_permissions=True)
+		frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
+
+	def _get(self, path, params=None, **kwargs):
+		return make_request(
+			target=self.TEST_CLIENT.get, args=(path,), kwargs={"data": params, **kwargs}, site=self.site
+		)
+
+	def _post(self, path, data=None, **kwargs):
+		return make_request(
+			target=self.TEST_CLIENT.post, args=(path,), kwargs={"data": data, **kwargs}, site=self.site
+		)
+
+	def test_fluxo_completo_authorization_code_com_pkce(self):
+		redirect_uri = self.REDIRECT_URI
+		verificador = "verificador-de-teste-para-pkce-bem-longo-o-suficiente"
+		desafio = (
+			base64.urlsafe_b64encode(hashlib.sha256(verificador.encode()).digest()).rstrip(b"=").decode()
+		)
+
+		# 1. authorize — client de teste tem skip_authorization=1, então o
+		#    redirecionamento com o `code` acontece sem tela de consentimento.
+		self.TEST_CLIENT.set_cookie(key="sid", value=self.sid)
+		resposta_autorizacao = self._get(
+			"/api/method/frappe.integrations.oauth2.authorize",
+			{
+				"client_id": self.cliente,
+				"scope": mcp_oauth.ESCOPO_MCP,
+				"response_type": "code",
+				"redirect_uri": redirect_uri,
+				"code_challenge_method": "S256",
+				"code_challenge": desafio,
+			},
+			follow_redirects=True,
+		)
+		codigo = parse_qs(resposta_autorizacao.request.environ["QUERY_STRING"])["code"][0]
+
+		# 2. get_token — troca o code (+ o verifier do PKCE) por um access token.
+		resposta_token = self._post(
+			"/api/method/frappe.integrations.oauth2.get_token",
+			headers=FORM_HEADER,
+			data={
+				"grant_type": "authorization_code",
+				"code": codigo,
+				"redirect_uri": redirect_uri,
+				"client_id": self.cliente,
+				"scope": mcp_oauth.ESCOPO_MCP,
+				"code_verifier": verificador,
+			},
+		)
+		token = resposta_token.json
+		self.assertTrue(token.get("access_token"), token)
+
+		# 3. tools/list no endpoint MCP, autenticado só pelo access token.
+		resposta_mcp = self._post(
+			CAMINHO_MCP,
+			data=json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}),
+			headers={"Authorization": f"Bearer {token['access_token']}", "Content-Type": "application/json"},
+		)
+		self.assertEqual(resposta_mcp.status_code, 200)
+		self.assertIn("tools", resposta_mcp.json.get("result", {}))

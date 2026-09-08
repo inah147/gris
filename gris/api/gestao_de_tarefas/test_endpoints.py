@@ -176,7 +176,9 @@ class TestExcluirTarefaEOcultarConcluidos(FrappeTestCase):
 		# Tarefa de um quadro de projeto/solto atribuida ao editor: aparece na
 		# visao "Minhas tarefas" dele, mas so pode ser excluida pelo quadro
 		# (onde o nivel de acesso e checado), nao por aqui.
-		tarefa_name = _criar_tarefa(self.quadro.name, "Tarefa do quadro atribuida a mim", responsavel=self.editor)
+		tarefa_name = _criar_tarefa(
+			self.quadro.name, "Tarefa do quadro atribuida a mim", responsavel=self.editor
+		)
 		frappe.set_user(self.editor)
 
 		with self.assertRaises(frappe.PermissionError):

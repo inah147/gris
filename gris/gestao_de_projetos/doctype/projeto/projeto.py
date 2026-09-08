@@ -1,13 +1,25 @@
 from __future__ import annotations
 
+import base64
 import json
+import mimetypes
 from typing import Any
 from urllib.parse import quote
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import cint, get_datetime, get_fullname, getdate, now_datetime, nowdate, strip_html
+from frappe.utils import (
+	cint,
+	file_manager,
+	format_date,
+	get_datetime,
+	get_fullname,
+	getdate,
+	now_datetime,
+	nowdate,
+	strip_html,
+)
 
 from gris.api.google_workspace.project_drive import is_valid_drive_folder_link
 from gris.gestao_de_projetos.doctype.avaliacao_de_projeto.avaliacao_de_projeto import (
@@ -2988,6 +3000,70 @@ def get_projeto_execucao_data(projeto_name: str) -> dict[str, Any]:
 		},
 		"can_edit": can_edit,
 	}
+
+
+_PROJETO_PDF_TEMPLATE = "templates/pages/projeto_pdf.html"
+
+
+def _render_projeto_pdf_template(ctx: dict[str, Any]) -> str:
+	path = frappe.get_app_path("gris", _PROJETO_PDF_TEMPLATE)
+	# Caminho fixo do módulo (constante acima), não vem de entrada do usuário.
+	with open(path, encoding="utf-8") as fh:  # nosemgrep
+		return frappe.render_template(fh.read(), ctx)  # nosemgrep
+
+
+def _uel_logo_data_uri() -> str:
+	uel = frappe.get_cached_doc("Definicao da UEL")
+	if not uel.get("logo"):
+		return ""
+	try:
+		file_path = file_manager.get_file_path(uel.logo)
+		mime_type = mimetypes.guess_type(file_path)[0] or "image/png"
+		with open(file_path, "rb") as f:  # nosemgrep
+			return f"data:{mime_type};base64," + base64.b64encode(f.read()).decode()
+	except Exception:
+		frappe.log_error(message=frappe.get_traceback(), title="Falha ao carregar logo da UEL para PDF")
+		return ""
+
+
+@frappe.whitelist()
+def gerar_pdf_projeto(projeto_name: str) -> None:
+	"""Gera um PDF com os dados do projeto (TAP + acompanhamento), para compartilhar fora do sistema."""
+	from frappe.utils.pdf import get_pdf
+
+	_require_project_read_access()
+	if not projeto_name:
+		frappe.throw(_("Projeto não informado."))
+
+	doc = frappe.get_doc("Projeto", projeto_name)
+	if not doc.has_permission("read"):
+		frappe.throw(_("Você não tem permissão para visualizar este projeto."), frappe.PermissionError)
+
+	projeto = _serialize_projeto(doc)
+	projeto["data_de_inicio"] = (
+		format_date(projeto["data_de_inicio"], "dd/MM/yyyy") if projeto["data_de_inicio"] else ""
+	)
+	projeto["data_de_termino"] = (
+		format_date(projeto["data_de_termino"], "dd/MM/yyyy") if projeto["data_de_termino"] else ""
+	)
+	for row in projeto["cronograma"]:
+		row["data_inicio"] = format_date(row["data_inicio"], "dd/MM/yyyy") if row["data_inicio"] else ""
+		row["data_termino"] = format_date(row["data_termino"], "dd/MM/yyyy") if row["data_termino"] else ""
+
+	uel = frappe.get_cached_doc("Definicao da UEL")
+	ctx = {
+		"projeto": projeto,
+		"uel_logo": _uel_logo_data_uri(),
+		"uel_nome": uel.get("nome_da_uel") or "",
+		"uel_tipo": uel.get("tipo_uel") or "",
+		"gerado_em": format_date(nowdate(), "dd/MM/yyyy"),
+	}
+	html = _render_projeto_pdf_template(ctx)
+
+	nome_arquivo = projeto.get("nome_do_projeto") or doc.name
+	frappe.local.response.filename = f"projeto-{frappe.scrub(nome_arquivo)}.pdf"
+	frappe.local.response.filecontent = get_pdf(html)
+	frappe.local.response.type = "pdf"
 
 
 def _parse_envolvidos_rows_payload(

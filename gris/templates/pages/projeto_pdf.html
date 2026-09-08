@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{{ projeto.nome_do_projeto or projeto.name }}</title>
+    <style>
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 9pt;
+            color: #333;
+            line-height: 1.4;
+            margin-bottom: 30px;
+        }
+        .header {
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #E2E8F0;
+        }
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .header-logo {
+            width: 90px;
+            vertical-align: middle;
+        }
+        .header-logo img {
+            max-width: 90px;
+            max-height: 90px;
+        }
+        .header-content {
+            vertical-align: middle;
+            padding-left: 10px;
+        }
+        .uel-name {
+            font-size: 10pt;
+            font-weight: 500;
+            color: #718096;
+            margin: 0;
+        }
+        .doc-title {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #1A202C;
+            margin: 2px 0 0 0;
+        }
+        .doc-subtitle {
+            font-size: 9pt;
+            color: #A0AEC0;
+            margin-top: 3px;
+        }
+        .generated-tag {
+            display: inline-block;
+            padding: 1px 6px;
+            background-color: #EDF2F7;
+            color: #718096;
+            border-radius: 12px;
+            font-size: 6pt;
+            margin-top: 4px;
+            font-weight: 500;
+        }
+        section.block {
+            margin-bottom: 14px;
+            page-break-inside: avoid;
+        }
+        h2.block-title {
+            font-size: 10pt;
+            font-weight: 700;
+            color: #1E1B4B;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 0 0 6px 0;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #E2E8F0;
+        }
+        .field-grid {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .field-grid td {
+            vertical-align: top;
+            padding: 3px 12px 3px 0;
+        }
+        .field-label {
+            display: block;
+            font-size: 7pt;
+            font-weight: 700;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-bottom: 1px;
+        }
+        .field-value {
+            display: block;
+            color: #2D3748;
+            white-space: pre-wrap;
+        }
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8pt;
+        }
+        table.data-table th {
+            color: #718096;
+            font-weight: 700;
+            text-align: left;
+            padding: 6px 8px;
+            border-bottom: 1px solid #E2E8F0;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            font-size: 6pt;
+        }
+        table.data-table td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #EDF2F7;
+            vertical-align: top;
+            color: #2D3748;
+        }
+        .empty-hint {
+            color: #A0AEC0;
+            font-style: italic;
+            font-size: 8pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <table class="header-table">
+            <tr>
+                {% if uel_logo %}
+                <td class="header-logo"><img src="{{ uel_logo }}" alt="{{ uel_nome }}"></td>
+                {% endif %}
+                <td class="header-content">
+                    {% if uel_nome %}<p class="uel-name">{{ uel_tipo }} {{ uel_nome }}</p>{% endif %}
+                    <p class="doc-title">{{ projeto.nome_do_projeto or projeto.name }}</p>
+                    <p class="doc-subtitle">Status: {{ projeto.status or "-" }}</p>
+                    <span class="generated-tag">Gerado em {{ gerado_em }}</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <section class="block">
+        <h2 class="block-title">Dados gerais</h2>
+        <table class="field-grid">
+            <tr>
+                <td>
+                    <span class="field-label">Coordenador</span>
+                    <span class="field-value">{{ projeto.coordenador_label or "-" }}</span>
+                </td>
+                <td>
+                    <span class="field-label">Padrinho / orientador</span>
+                    <span class="field-value">{{ projeto.padrinho_nome or "-" }}</span>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <span class="field-label">Data de início</span>
+                    <span class="field-value">{{ projeto.data_de_inicio or "-" }}</span>
+                </td>
+                <td>
+                    <span class="field-label">Data de término</span>
+                    <span class="field-value">{{ projeto.data_de_termino or "-" }}</span>
+                </td>
+            </tr>
+        </table>
+    </section>
+
+    <section class="block">
+        <h2 class="block-title">Detalhamento</h2>
+        <table class="field-grid">
+            <tr>
+                <td colspan="2">
+                    <span class="field-label">Descrição e justificativa</span>
+                    <span class="field-value">{{ projeto.justificativa or "-" }}</span>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <span class="field-label">Alinhamento com o escotismo</span>
+                    <span class="field-value">{{ projeto.alinhamento_com_escotismo or "-" }}</span>
+                </td>
+            </tr>
+        </table>
+    </section>
+
+    <section class="block">
+        <h2 class="block-title">Equipe de interesse</h2>
+        {% if projeto.equipe_de_interesse %}
+        <table class="data-table">
+            <thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Função</th></tr></thead>
+            <tbody>
+                {% for row in projeto.equipe_de_interesse %}
+                <tr>
+                    <td>{{ row.nome or "-" }}</td>
+                    <td>{{ row.email or "-" }}</td>
+                    <td>{{ row.telefone or "-" }}</td>
+                    <td>{{ row.funcao or "-" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-hint">Nenhum envolvido cadastrado.</p>
+        {% endif %}
+    </section>
+
+    <section class="block">
+        <h2 class="block-title">Objetivos</h2>
+        {% if projeto.objetivos %}
+        <table class="data-table">
+            <thead><tr><th>Objetivo</th><th>Métrica de sucesso</th></tr></thead>
+            <tbody>
+                {% for row in projeto.objetivos %}
+                <tr>
+                    <td>{{ row.objetivo or "-" }}</td>
+                    <td>{{ row.metrica_de_sucesso or "-" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-hint">Nenhum objetivo cadastrado.</p>
+        {% endif %}
+    </section>
+
+    <section class="block">
+        <h2 class="block-title">Impacto</h2>
+        <table class="field-grid">
+            <tr>
+                <td>
+                    <span class="field-label">Competências e blocos</span>
+                    <span class="field-value">{{ projeto.competencias or "-" }}</span>
+                </td>
+                <td>
+                    <span class="field-label">Especialidade</span>
+                    <span class="field-value">{{ projeto.especialidade or "-" }}</span>
+                </td>
+            </tr>
+        </table>
+        {% if projeto.ods %}
+        <table class="data-table" style="margin-top:6px">
+            <thead><tr><th>ODS</th></tr></thead>
+            <tbody>
+                {% for row in projeto.ods %}
+                <tr><td>{{ row.ods or "-" }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </section>
+
+    <section class="block">
+        <h2 class="block-title">Cronograma</h2>
+        {% if projeto.cronograma %}
+        <table class="data-table">
+            <thead><tr><th>Data de início</th><th>Data de término</th><th>Tarefa</th></tr></thead>
+            <tbody>
+                {% for row in projeto.cronograma %}
+                <tr>
+                    <td>{{ row.data_inicio or "-" }}</td>
+                    <td>{{ row.data_termino or "-" }}</td>
+                    <td>{{ row.tarefa or "-" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-hint">Nenhuma atividade cadastrada.</p>
+        {% endif %}
+    </section>
+
+    <section class="block">
+        <h2 class="block-title">Recursos</h2>
+        {% if projeto.recursos %}
+        <table class="data-table">
+            <thead><tr><th>Recurso</th></tr></thead>
+            <tbody>
+                {% for row in projeto.recursos %}
+                <tr><td>{{ row.recurso or "-" }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-hint">Nenhum recurso cadastrado.</p>
+        {% endif %}
+    </section>
+
+    <section class="block">
+        <h2 class="block-title">Riscos</h2>
+        {% if projeto.riscos %}
+        <table class="data-table">
+            <thead><tr><th>Risco</th><th>Mitigação</th></tr></thead>
+            <tbody>
+                {% for row in projeto.riscos %}
+                <tr>
+                    <td>{{ row.risco or "-" }}</td>
+                    <td>{{ row.mitigacao or "-" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-hint">Nenhum risco cadastrado.</p>
+        {% endif %}
+    </section>
+
+    <section class="block">
+        <h2 class="block-title">Observações e comentários</h2>
+        <span class="field-value">{{ projeto.observacoes_e_comentarios or "-" }}</span>
+    </section>
+</body>
+</html>

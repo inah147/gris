@@ -84,7 +84,10 @@ class TestConviteFesta(FrappeTestCase):
 		self.assertEqual([c.email for c in doc.convidados], ["x@example.com", "y@example.com"])
 
 	def test_pagador_recebe_qr_codes_dispensa_email_do_convidado(self):
-		"""O envio vai todo para o e-mail do pagador; o convidado só precisa de nome."""
+		"""O envio em lote vai todo para o e-mail do pagador; o convidado só
+		precisa informar nome no formulário. Mas o registro do convidado herda
+		e-mail/telefone do pagador (em vez de ficar sem contato nenhum), para
+		permitir reenvio individual caso o convite não tenha chegado."""
 		festa = _nova_festa()
 		opcao = _opcao(festa.name)
 		doc = frappe.get_doc(
@@ -95,7 +98,8 @@ class TestConviteFesta(FrappeTestCase):
 			)
 		).insert(ignore_permissions=True)
 		self.assertEqual([c.nome for c in doc.convidados], ["X", "Y"])
-		self.assertFalse(any(c.email for c in doc.convidados))
+		self.assertTrue(all(c.email == doc.email_pagador for c in doc.convidados))
+		self.assertTrue(all(c.telefone == doc.telefone_pagador for c in doc.convidados))
 
 	def test_individual_exige_dados_dos_convidados(self):
 		festa = _nova_festa()

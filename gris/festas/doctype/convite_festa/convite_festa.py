@@ -154,9 +154,11 @@ class ConviteFesta(Document):
 	def _aplicar_pagador_aos_convidados(self):
 		"""Quando o pagador recebe todos os QR codes, garantimos que existe
 		uma linha de Convidado Convite Festa por convite (criando vazias
-		quando faltar), mas o nome de cada convidado vem do formulário e
-		email/telefone permanecem em branco — o envio do QR vai todo para o
-		e-mail do pagador.
+		quando faltar) — o nome de cada convidado vem do formulário. Cada
+		convidado sem e-mail/telefone próprios herda os dados do pagador
+		(que já são usados na entrega dos QR codes): isso permite reenviar
+		o convite individualmente pela portaria/Desk caso não tenha chegado,
+		em vez de deixar o registro do convidado sem contato nenhum.
 		"""
 		if not self.pagador_recebe_qr_codes:
 			return
@@ -168,6 +170,11 @@ class ConviteFesta(Document):
 			self.set("convidados", [])
 			for _ in range(total):
 				self.append("convidados", {})
+		for convidado in self.convidados or []:
+			if not convidado.email:
+				convidado.email = self.email_pagador
+			if not convidado.telefone:
+				convidado.telefone = self.telefone_pagador
 
 	def _validar_convidados(self):
 		total_convites = sum(int(it.quantidade or 0) for it in self.itens if it.eh_convite)

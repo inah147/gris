@@ -5309,7 +5309,8 @@
 	}
 
 	// Recalcula o valor unitário exibido e, enquanto o total estiver em modo
-	// automático, o valor total gasto (= quantidade de compra × valor por pacote).
+	// automático, o valor total gasto (= quantidade de compra × valor unitário,
+	// isto é, valor da cotação já dividido pela quantidade cotada).
 	function syncFechamentoRealizado() {
 		var valor =
 			parseFloat((document.getElementById("fechamento-compra-real-valor") || {}).value) || 0;
@@ -5327,7 +5328,8 @@
 			var qtdCompra =
 				parseFloat((document.getElementById("fechamento-compra-real-qtd") || {}).value) ||
 				0;
-			totalEl.value = qtdCompra * valor;
+			var valorUnitario = cotQtd > 0 ? valor / cotQtd : valor;
+			totalEl.value = qtdCompra * valorUnitario;
 		}
 	}
 

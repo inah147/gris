@@ -1441,6 +1441,18 @@
 			openParticipantButton.addEventListener("click", () => openParticipantModal());
 		}
 
+		const generatePdfButton = document.getElementById("btnGerarPdfProjeto");
+		if (generatePdfButton) {
+			generatePdfButton.addEventListener("click", () => {
+				// PDF gerado no servidor (template dedicado), não a impressão da página.
+				if (!state.projetoName) return;
+				const url =
+					"/api/method/gris.gestao_de_projetos.doctype.projeto.projeto.gerar_pdf_projeto?projeto_name=" +
+					encodeURIComponent(state.projetoName);
+				window.open(url, "_blank");
+			});
+		}
+
 		const concludeProjectButton = document.getElementById("btnConcluirProjeto");
 		if (concludeProjectButton) {
 			concludeProjectButton.addEventListener("click", () =>

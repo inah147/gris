@@ -1077,3 +1077,98 @@ class TestProjeto(FrappeTestCase):
 			projeto_module._require_project_execution_edit_access = original_require_exec_access
 			projeto_module._assert_project_in_execution = original_assert_execution
 			projeto_module._enqueue_project_drive_folder_cleanup = original_enqueue_cleanup
+
+	def test_gerar_pdf_projeto_requires_projeto_name(self):
+		original_require_read = projeto_module._require_project_read_access
+		projeto_module._require_project_read_access = lambda: "user@example.com"
+
+		try:
+			with self.assertRaises(frappe.ValidationError):
+				projeto_module.gerar_pdf_projeto("")
+		finally:
+			projeto_module._require_project_read_access = original_require_read
+
+	def test_gerar_pdf_projeto_denies_without_read_permission(self):
+		original_require_read = projeto_module._require_project_read_access
+		original_get_doc = projeto_module.frappe.get_doc
+
+		class _NoAccessDoc:
+			def has_permission(self, permission: str):
+				return False
+
+		projeto_module._require_project_read_access = lambda: "user@example.com"
+		projeto_module.frappe.get_doc = lambda doctype, name: _NoAccessDoc()
+
+		try:
+			with self.assertRaises(frappe.PermissionError):
+				projeto_module.gerar_pdf_projeto("PROJ-PDF-001")
+		finally:
+			projeto_module._require_project_read_access = original_require_read
+			projeto_module.frappe.get_doc = original_get_doc
+
+	def test_gerar_pdf_projeto_writes_pdf_response(self):
+		import frappe.utils.pdf as pdf_utils
+
+		original_require_read = projeto_module._require_project_read_access
+		original_get_doc = projeto_module.frappe.get_doc
+		original_serialize_projeto = projeto_module._serialize_projeto
+		original_render_template = projeto_module._render_projeto_pdf_template
+		original_uel_logo = projeto_module._uel_logo_data_uri
+		original_get_cached_doc = projeto_module.frappe.get_cached_doc
+		original_get_pdf = pdf_utils.get_pdf
+
+		class _ReadableDoc:
+			name = "PROJ-PDF-002"
+
+			def has_permission(self, permission: str):
+				return permission == "read"
+
+		render_calls: list[dict] = []
+
+		def fake_get_doc(doctype: str, name: str):
+			self.assertEqual(doctype, "Projeto")
+			self.assertEqual(name, "PROJ-PDF-002")
+			return _ReadableDoc()
+
+		def fake_serialize_projeto(_doc):
+			return {
+				"name": "PROJ-PDF-002",
+				"nome_do_projeto": "Reforma da sede",
+				"data_de_inicio": None,
+				"data_de_termino": None,
+				"cronograma": [],
+			}
+
+		def fake_render_template(ctx):
+			render_calls.append(ctx)
+			return "<html></html>"
+
+		def fake_get_cached_doc(doctype: str):
+			return frappe._dict({"nome_da_uel": "GE 47/SP", "tipo_uel": "Grupo Escoteiro", "logo": ""})
+
+		def fake_get_pdf(_html: str):
+			return b"%PDF-fake"
+
+		projeto_module._require_project_read_access = lambda: "user@example.com"
+		projeto_module.frappe.get_doc = fake_get_doc
+		projeto_module._serialize_projeto = fake_serialize_projeto
+		projeto_module._render_projeto_pdf_template = fake_render_template
+		projeto_module._uel_logo_data_uri = lambda: ""
+		projeto_module.frappe.get_cached_doc = fake_get_cached_doc
+		pdf_utils.get_pdf = fake_get_pdf
+
+		try:
+			projeto_module.gerar_pdf_projeto("PROJ-PDF-002")
+			self.assertEqual(frappe.local.response.filecontent, b"%PDF-fake")
+			self.assertEqual(frappe.local.response.type, "pdf")
+			self.assertEqual(frappe.local.response.filename, "projeto-reforma_da_sede.pdf")
+			self.assertEqual(len(render_calls), 1)
+			self.assertEqual(render_calls[0]["projeto"]["nome_do_projeto"], "Reforma da sede")
+		finally:
+			projeto_module._require_project_read_access = original_require_read
+			projeto_module.frappe.get_doc = original_get_doc
+			projeto_module._serialize_projeto = original_serialize_projeto
+			projeto_module._render_projeto_pdf_template = original_render_template
+			projeto_module._uel_logo_data_uri = original_uel_logo
+			projeto_module.frappe.get_cached_doc = original_get_cached_doc
+			pdf_utils.get_pdf = original_get_pdf

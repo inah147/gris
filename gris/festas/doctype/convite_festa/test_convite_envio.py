@@ -99,6 +99,28 @@ class TestConviteEnvio(FrappeTestCase):
 		for c in convite.convidados:
 			self.assertEqual(c.status_envio, "Enviado")
 
+	def test_reenvio_individual_usa_email_do_pagador_quando_convidado_nao_tem(self):
+		"""Convidado sem e-mail próprio (fluxo pagador_recebe_qr_codes) herda o
+		e-mail/telefone do pagador, então o reenvio individual pela portaria
+		consegue entregar o convite em vez de falhar por falta de contato."""
+		festa = _nova_festa()
+		opcao = _opcao(festa.name)
+		convite = _convite(
+			festa.name,
+			opcao.name,
+			pagador_recebe=True,
+			convidados=[{"nome": "X"}, {"nome": "Y"}],
+		)
+		_marcar_cobranca_paga(convite.cobranca_infinitepay)
+		convite.reload()
+		convidado_row = convite.convidados[0].name
+
+		enviar_qr_codes(convite.name, convidado_row_name=convidado_row)
+
+		self.assertEqual(self.mock_sendmail.call_count, 1)
+		kwargs = self.mock_sendmail.call_args.kwargs
+		self.assertEqual(kwargs["recipients"], [convite.email_pagador])
+
 	def test_individual_n_emails(self):
 		festa = _nova_festa()
 		opcao = _opcao(festa.name)

@@ -198,7 +198,9 @@ def _validar_convidados(
 			frappe.throw(_("Todo convidado precisa de nome."))
 		if pagador_recebe:
 			# QR codes vão todos para o e-mail do pagador; ignoramos email/tel
-			# individuais para evitar coleta desnecessária de dado pessoal.
+			# individuais para evitar coleta desnecessária de dado pessoal. O
+			# controller de Convite Festa preenche email/telefone de cada
+			# convidado com os dados do pagador, permitindo reenvio individual.
 			saida.append({"nome": nome, "email": "", "telefone": ""})
 			continue
 		if not email or not EMAIL_REGEX.match(email):

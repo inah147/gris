@@ -12,6 +12,7 @@ frappe.ready(() => {
 	initReconciliation();
 	initSuccessDialog();
 	initHolidayDialog();
+	initBackToTop();
 
 	// Visualização padrão: lista. Mobile (< 640px) usa variante "default"; desktop usa "category".
 	if (window.innerWidth < 640) {
@@ -654,6 +655,25 @@ function initCalendarInteractions() {
 		const date = event.detail?.date;
 		if (!date) return;
 		openNewEventDialogForDate(date);
+	});
+}
+
+function initBackToTop() {
+	const button = document.getElementById("btn-back-to-top");
+	if (!button) return;
+
+	// Só some visível depois de rolar o suficiente para o cabeçalho (com o
+	// botão "Conciliar") sair da viewport, evitando piscar em páginas curtas.
+	const SHOW_AFTER_PX = 480;
+	const toggleVisibility = () => {
+		button.classList.toggle("is-visible", window.scrollY > SHOW_AFTER_PX);
+	};
+
+	window.addEventListener("scroll", toggleVisibility, { passive: true });
+	toggleVisibility();
+
+	button.addEventListener("click", () => {
+		window.scrollTo({ top: 0, behavior: "smooth" });
 	});
 }
 

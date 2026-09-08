@@ -555,6 +555,40 @@
     }
 }
 
+/* Botão flutuante "voltar ao topo": em telas de calendário longas (mês/semana,
+ * ou lista com muitos dias) o cabeçalho com o botão "Conciliar" fica fora da
+ * viewport no mobile. Fica escondido por padrão e só some visível via JS
+ * (classe `.is-visible`) depois de rolar a página, e nunca aparece em telas
+ * largas — nelas o cabeçalho já está sempre à vista. */
+.simulation-back-to-top {
+    display: none;
+    position: fixed;
+    right: 1rem;
+    bottom: calc(var(--bottom-bar-height, 68px) + 32px + 1rem);
+    z-index: 25;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    box-shadow: var(--shadow-md, 0 6px 16px rgba(0, 0, 0, 0.18));
+    cursor: pointer;
+}
+
+.simulation-back-to-top.is-visible {
+    display: inline-flex;
+}
+
+@media (min-width: 1024px) {
+    .simulation-back-to-top {
+        display: none !important;
+    }
+}
+
 @media (max-width: 768px) {
     .simulation-table--reconcile {
         min-width: 30rem;

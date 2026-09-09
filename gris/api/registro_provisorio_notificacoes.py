@@ -18,6 +18,7 @@ from __future__ import annotations
 import frappe
 from frappe.utils import add_days, date_diff, format_date, get_url, getdate, today
 
+from gris.api.recepcao_funil import STATUS_FORA_DO_FUNIL, dias_para_registro_definitivo
 from gris.api.recepcao_mensagens import (
 	MENSAGEM_DESATIVADA,
 	_buscar_contatos_responsaveis,
@@ -30,19 +31,7 @@ from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 from gris.utils.whatsapp import enviar_texto
 
 SETTINGS_DOCTYPE = "Configuracoes de Recepcao"
-DIAS_PADRAO_AVISO = 20
-STATUS_IGNORADOS = ["Fila de espera", "Concluído"]
-
-
-def _dias_para_aviso() -> int:
-	"""Dias de espera configurados em Configurações de Recepção (padrão: 20)."""
-	valor = frappe.db.get_single_value(SETTINGS_DOCTYPE, "dias_aviso_seguimento_provisorio")
-	try:
-		dias = int(valor)
-	except (TypeError, ValueError):
-		return DIAS_PADRAO_AVISO
-
-	return dias if dias > 0 else DIAS_PADRAO_AVISO
+STATUS_IGNORADOS = list(STATUS_FORA_DO_FUNIL)
 
 
 def _montar_mensagem_aviso(
@@ -86,7 +75,7 @@ def enviar_avisos_seguimento_registro_provisorio() -> None:
 		return
 
 	data_hoje = getdate(today())
-	dias_limite = _dias_para_aviso()
+	dias_limite = dias_para_registro_definitivo()
 	data_limite = add_days(data_hoje, -dias_limite)
 
 	novos_associados = frappe.get_all(

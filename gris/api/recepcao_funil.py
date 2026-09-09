@@ -14,9 +14,12 @@ from __future__ import annotations
 from typing import Any
 
 import frappe
-from frappe.utils import add_days, format_date, getdate
+from frappe.utils import add_days, date_diff, format_date, getdate
 
 DOCTYPE = "Novo Associado"
+
+# Single com a cadência do funil e a espera do registro definitivo.
+DOCTYPE_CONFIGURACOES = "Configuracoes de Recepcao"
 
 # Ramos na ordem crescente de idade, como aparecem no Select de ``Novo Associado``.
 # Ordem canônica para qualquer listagem por ramo do fluxo de recepção.
@@ -99,6 +102,13 @@ ETAPAS_QUE_MOVEM_O_FUNIL: tuple[tuple[str, str], ...] = (
 	("registro_criado_no_paxtu", STATUS_ACOMPANHAMENTO),
 )
 
+# Espera até cobrar o registro definitivo de quem entrou com registro provisório.
+# É a mesma configuração do aviso por WhatsApp
+# (``gris.api.registro_provisorio_notificacoes``): o selo do kanban e a mensagem
+# contam o mesmo prazo, senão a recepção veria duas verdades para a mesma pessoa.
+CAMPO_DIAS_REGISTRO_DEFINITIVO = "dias_aviso_seguimento_provisorio"
+DIAS_PADRAO_REGISTRO_DEFINITIVO = 20
+
 # Status que não pertencem à esteira do funil: quem está neles saiu do fluxo por decisão da
 # recepção, e desmarcar uma etapa não pode arrastar o card de volta para uma coluna do kanban.
 STATUS_FORA_DO_FUNIL: tuple[str, ...] = ("Fila de espera", "Concluído")
@@ -136,6 +146,61 @@ def coluna_de_acompanhamento(dados) -> str:
 	if not e_definitivo and not dados.get("registro_provisorio_efetivado"):
 		return COLUNA_ACOMPANHAMENTO_PROVISORIO
 	return COLUNA_ACOMPANHAMENTO_DEFINITIVO
+
+
+def dias_para_registro_definitivo(config: dict | None = None) -> int:
+	"""Dias corridos entre efetivar o provisório e cobrar o registro definitivo.
+
+	Sai de ``Configuracoes de Recepcao``; valor ausente, inválido ou não positivo
+	cai para ``DIAS_PADRAO_REGISTRO_DEFINITIVO`` (20). ``config`` evita reabrir o
+	Single quando quem chama já carregou a configuração do funil.
+	"""
+	if config is None:
+		valor = frappe.db.get_single_value(DOCTYPE_CONFIGURACOES, CAMPO_DIAS_REGISTRO_DEFINITIVO)
+	else:
+		valor = config.get(CAMPO_DIAS_REGISTRO_DEFINITIVO)
+
+	try:
+		dias = int(valor)
+	except (TypeError, ValueError):
+		return DIAS_PADRAO_REGISTRO_DEFINITIVO
+
+	return dias if dias > 0 else DIAS_PADRAO_REGISTRO_DEFINITIVO
+
+
+def sinal_registro_definitivo(dados, dias_limite: int | None = None, hoje=None) -> dict:
+	"""Se já passou da hora de gerar o registro definitivo deste jovem.
+
+	Mesma condição do aviso por WhatsApp: registro provisório efetivado, definitivo
+	ainda não, fora dos status que saíram do funil e ``dias_limite`` dias corridos
+	desde ``data_registro_provisorio_efetivado``.
+
+	Devolve ``{"pendente", "dias", "desde"}`` — ``dias`` e ``desde`` só preenchidos
+	quando pendente, para a interface poder dizer desde quando o relógio corre.
+	"""
+	ausente = {"pendente": False, "dias": None, "desde": None}
+
+	if dados.get("tipo_de_registro") == "Definitivo":
+		return ausente
+
+	if not dados.get("registro_provisorio_efetivado") or dados.get("registro_definitivo_efetivado"):
+		return ausente
+
+	if dados.get("status") in STATUS_FORA_DO_FUNIL:
+		return ausente
+
+	efetivado_em = dados.get("data_registro_provisorio_efetivado")
+	if not efetivado_em:
+		return ausente
+
+	desde = getdate(efetivado_em)
+	dias = date_diff(getdate(hoje) if hoje else getdate(), desde)
+	limite = dias_limite if dias_limite is not None else dias_para_registro_definitivo()
+
+	if dias < limite:
+		return ausente
+
+	return {"pendente": True, "dias": dias, "desde": desde}
 
 
 def anexar_historico(etapas: list[dict], historico: dict) -> list[dict]:

@@ -45,7 +45,8 @@ frappe.ready(function () {
 				meses: button.dataset.meses || undefined,
 			},
 			callback: function (r) {
-				const link = r.message && r.message.success ? r.message.cobranca.link_pagamento : null;
+				const link =
+					r.message && r.message.success ? r.message.cobranca.link_pagamento : null;
 				if (link) {
 					showToast(
 						"success",

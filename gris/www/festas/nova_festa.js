@@ -61,6 +61,7 @@
 			horario_termino: (data.get("horario_termino") || "").trim(),
 			tipo_coord_geral: tipoCoord,
 			coordenador,
+			festa_origem: (data.get("festa_origem") || "").trim(),
 		};
 
 		if (payload.nome_festa.length < 3) {

@@ -4,8 +4,9 @@ import json
 
 import frappe
 from frappe import _
-from frappe.utils import add_days, get_time, getdate
+from frappe.utils import add_days, formatdate, get_time, getdate
 
+from gris.api.festas import copiar_dados_festa_anterior
 from gris.api.portal_access import enrich_context
 from gris.api.portal_cache_utils import get_uel_cached
 
@@ -53,6 +54,28 @@ def _select_items_responsaveis() -> list[dict[str, str]]:
 	]
 
 
+def _select_items_festas_anteriores() -> list[dict[str, str]]:
+	registros = frappe.get_all(
+		"Festa",
+		fields=["name", "nome_festa", "data"],
+		order_by="data desc",
+		limit_page_length=50,
+	)
+	return [
+		{"label": "Nenhuma — começar do zero", "value": "", "type": "item"},
+		*[
+			{
+				"label": f"{r.nome_festa or r.name} ({formatdate(r.data)})"
+				if r.data
+				else (r.nome_festa or r.name),
+				"value": r.name,
+				"type": "item",
+			}
+			for r in registros
+		],
+	]
+
+
 def get_context(context):
 	if frappe.session.user == "Guest":
 		frappe.local.flags.redirect_location = "/login?redirect-to=/festas/nova_festa"
@@ -73,6 +96,7 @@ def get_context(context):
 	context.active_link = "/festas/nova_festa"
 	context.associados_items = _select_items_associados()
 	context.responsaveis_items = _select_items_responsaveis()
+	context.festas_anteriores_items = _select_items_festas_anteriores()
 	enrich_context(context, "/festas/nova_festa")
 	return context
 
@@ -121,6 +145,10 @@ def criar_festa(payload: str | dict):
 	if not coordenador:
 		frappe.throw(_("Selecione o coordenador da festa."))
 
+	festa_origem = (payload.get("festa_origem") or "").strip()
+	if festa_origem and not frappe.db.exists("Festa", festa_origem):
+		frappe.throw(_("Festa de referência para cópia não encontrada."))
+
 	doc = frappe.new_doc("Festa")
 	doc.nome_festa = nome
 	doc.data = data_festa
@@ -139,5 +167,8 @@ def criar_festa(payload: str | dict):
 		doc.associado_coord_geral = coordenador
 
 	doc.insert()
+
+	if festa_origem:
+		copiar_dados_festa_anterior(doc.name, festa_origem)
 
 	return {"name": doc.name, "redirect": "/festas/todas_festas"}

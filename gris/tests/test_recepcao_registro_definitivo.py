@@ -83,7 +83,9 @@ class TestDiasParaRegistroDefinitivo(TestCase):
 	"""A espera sai das Configurações de Recepção, com 20 dias como piso seguro."""
 
 	def test_usa_o_valor_configurado(self):
-		self.assertEqual(recepcao_funil.dias_para_registro_definitivo({"dias_aviso_seguimento_provisorio": 30}), 30)
+		self.assertEqual(
+			recepcao_funil.dias_para_registro_definitivo({"dias_aviso_seguimento_provisorio": 30}), 30
+		)
 
 	def test_valor_ausente_invalido_ou_zerado_cai_no_padrao(self):
 		for valor in (None, "", 0, -5, "trinta"):

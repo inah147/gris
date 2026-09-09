@@ -321,3 +321,16 @@ class Associado(Document):
 				associate_name=self.name,
 				enqueue_after_commit=True,
 			)
+
+			# Só jovem tem chefe de seção para avisar. A desistência vinda do funil já mandou
+			# o aviso com o nome legível e marca ``ignore_notificacoes`` para não repetir aqui.
+			if (self.categoria or "").strip() == "Beneficiário" and not self.flags.get("ignore_notificacoes"):
+				frappe.enqueue(
+					"gris.api.recepcao_mensagens.notificar_desistencia",
+					job_name=f"aviso_desligamento_beneficiario:{self.name}",
+					queue="short",
+					enqueue_after_commit=True,
+					nome_completo=self.nome_completo,
+					sexo=self.sexo,
+					ramo=self.ramo,
+				)

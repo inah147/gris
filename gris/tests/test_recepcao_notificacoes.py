@@ -4,6 +4,16 @@ from frappe.tests.utils import FrappeTestCase
 from gris.api import recepcao_notificacoes
 
 
+def _configuracoes(**valores):
+	"""Dublê de ``get_single_value`` que responde por fieldname.
+
+	Os interruptores ``msg_*`` de Configurações de Recepção passam por aqui: um dublê que
+	devolve o mesmo valor para qualquer campo faria o Check ler o JID do grupo e desligar
+	a mensagem. Campo não informado volta ``None``, que conta como ligado.
+	"""
+	return lambda _doctype, fieldname, *args, **kwargs: valores.get(fieldname)
+
+
 class TestRecepcaoNotificacoes(FrappeTestCase):
 	def test_notificar_nova_manifestacao_envia_para_grupo_configurado(self):
 		original_get_single_value = recepcao_notificacoes.frappe.db.get_single_value
@@ -22,8 +32,8 @@ class TestRecepcaoNotificacoes(FrappeTestCase):
 			)
 
 		try:
-			recepcao_notificacoes.frappe.db.get_single_value = lambda *args, **kwargs: (
-				"120363408543428156@g.us"
+			recepcao_notificacoes.frappe.db.get_single_value = _configuracoes(
+				grupo_recepcao_whatsapp="120363408543428156@g.us"
 			)
 			recepcao_notificacoes.enviar_para_grupo = _fake_enviar_para_grupo
 			recepcao_notificacoes.today = lambda: "2026-04-14"
@@ -63,7 +73,7 @@ class TestRecepcaoNotificacoes(FrappeTestCase):
 			)
 
 		try:
-			recepcao_notificacoes.frappe.db.get_single_value = lambda *args, **kwargs: ""
+			recepcao_notificacoes.frappe.db.get_single_value = _configuracoes()
 			recepcao_notificacoes.enviar_para_grupo = _fake_enviar_para_grupo
 
 			recepcao_notificacoes.notificar_nova_manifestacao_no_grupo_recepcao(
@@ -94,8 +104,8 @@ class TestRecepcaoNotificacoes(FrappeTestCase):
 			)
 
 		try:
-			recepcao_notificacoes.frappe.db.get_single_value = lambda *args, **kwargs: (
-				"120363408543428156@g.us"
+			recepcao_notificacoes.frappe.db.get_single_value = _configuracoes(
+				grupo_recepcao_whatsapp="120363408543428156@g.us"
 			)
 			recepcao_notificacoes.enviar_para_grupo = _fake_enviar_para_grupo
 

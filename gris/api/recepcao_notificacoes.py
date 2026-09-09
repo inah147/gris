@@ -13,6 +13,7 @@ from __future__ import annotations
 import frappe
 from frappe.utils import add_days, get_url, getdate, today
 
+from gris.api.recepcao_mensagens import MENSAGEM_DESATIVADA, _mensagem_habilitada
 from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 from gris.utils.whatsapp import enviar_mensagem_formatada, enviar_para_grupo, enviar_texto
 
@@ -122,6 +123,9 @@ def notificar_nova_manifestacao_no_grupo_recepcao(
 	"""
 	logger = frappe.logger("recepcao_notificacoes", allow_site=True)
 
+	if not _mensagem_habilitada("msg_nova_manifestacao"):
+		return
+
 	grupo_jid = (
 		frappe.db.get_single_value("Configuracoes de Recepcao", "grupo_recepcao_whatsapp") or ""
 	).strip()
@@ -153,6 +157,9 @@ def notificar_visita_agendada(novo_associado_name: str, data_visita: str) -> Non
 	Falha silenciosa com log de aviso caso não haja telefone ou WhatsApp desabilitado.
 	"""
 	logger = frappe.logger("recepcao_notificacoes", allow_site=True)
+
+	if not _mensagem_habilitada("msg_visita_agendada"):
+		return
 
 	telefone = _buscar_telefone_responsavel(novo_associado_name)
 	if not telefone:
@@ -187,6 +194,10 @@ def enviar_lembretes_visita() -> None:
 	Em caso de erro por visita, registra e continua as demais.
 	"""
 	logger = obter_logger("recepcao_notificacoes")
+
+	if not _mensagem_habilitada("msg_lembrete_visita"):
+		definir_resumo(MENSAGEM_DESATIVADA)
+		return
 
 	data_alvo = add_days(today(), 2)
 	visitas = frappe.get_all(

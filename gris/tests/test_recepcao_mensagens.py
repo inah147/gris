@@ -7,6 +7,7 @@ Todos os cenários rodam sem banco: as consultas e o transporte são substituíd
 e ``today`` é congelado, de modo que a aritmética da cadência seja exata.
 """
 
+from typing import ClassVar
 from unittest.mock import patch
 
 import frappe
@@ -62,6 +63,7 @@ class _AmbienteDeTeste:
 		self._originais = {
 			"get_all": modulo.frappe.get_all,
 			"get_single_value": modulo.frappe.db.get_single_value,
+			"valor_bruto_do_single": modulo._valor_bruto_do_single,
 			"set_value": modulo.frappe.db.set_value,
 			"logger": modulo.frappe.logger,
 			"today": modulo.today,
@@ -88,6 +90,8 @@ class _AmbienteDeTeste:
 
 		modulo.frappe.get_all = _fake_get_all
 		modulo.frappe.db.get_single_value = lambda _doctype, fieldname: self.configuracoes.get(fieldname)
+		# Os interruptores msg_* leem tabSingles cru para distinguir 0 de linha ausente.
+		modulo._valor_bruto_do_single = lambda fieldname: self.configuracoes.get(fieldname)
 		modulo.frappe.db.set_value = lambda doctype, name, fieldname, valor, update_modified=True: (
 			self.atualizacoes.append(
 				{"doctype": doctype, "name": name, "fieldname": fieldname, "valor": str(valor)}
@@ -111,6 +115,7 @@ class _AmbienteDeTeste:
 		modulo = recepcao_mensagens
 		modulo.frappe.get_all = self._originais["get_all"]
 		modulo.frappe.db.get_single_value = self._originais["get_single_value"]
+		modulo._valor_bruto_do_single = self._originais["valor_bruto_do_single"]
 		modulo.frappe.db.set_value = self._originais["set_value"]
 		modulo.frappe.logger = self._originais["logger"]
 		modulo.today = self._originais["today"]
@@ -631,9 +636,29 @@ class TestContatoDoAdministrativo(FrappeTestCase):
 			with self.subTest(mensagem=rotulo):
 				mensagem = montar(self.ADMINISTRATIVO)
 
-				# "Fale a Ana" (Feminino), não "Fale ao Ana".
-				self.assertIn("Fale a Ana Administrativo", mensagem)
+				# "fale a Ana" (Feminino), não "fale ao Ana".
+				self.assertIn("a Ana Administrativo, do administrativo", mensagem)
 				self.assertIn("+5511977776666", mensagem)
+
+	def test_cobrancas_citam_o_administrativo_uma_vez_so(self):
+		"""Dúvida de registro e aviso de "já fiz" levam à mesma pessoa: um parágrafo, uma menção."""
+		for rotulo, montar in (
+			("ficha médica", self._ficha_medica),
+			("id@escoteiros", self._id_escoteiros),
+		):
+			with self.subTest(mensagem=rotulo):
+				mensagem = montar(self.ADMINISTRATIVO)
+
+				self.assertEqual(mensagem.count("Ana Administrativo"), 1)
+				self.assertEqual(mensagem.count("+5511977776666"), 1)
+				self.assertNotIn("Ficou em dúvida sobre o número de registro?", mensagem)
+
+	def test_registro_criado_mantem_o_paragrafo_de_duvidas(self):
+		"""A mensagem que entrega o número segue com o texto antigo, que não tem "já fez"."""
+		mensagem = self._registro_criado(self.ADMINISTRATIVO)
+
+		self.assertIn("Ficou em dúvida sobre o número de registro? Fale a Ana Administrativo", mensagem)
+		self.assertNotIn("Se você já fez esta ação", mensagem)
 
 	def test_sem_administrativo_configurado_o_paragrafo_some(self):
 		for rotulo, montar in (
@@ -779,3 +804,377 @@ class TestConcordanciaDeGenero(FrappeTestCase):
 			primeiro_nome_jovem="Alex", sexo_jovem=None, ficha="", mencao=""
 		)
 		self.assertIn("O registro definitivo do(a) jovem Alex", mensagem)
+
+
+class TestParagrafoAdministrativoDasCobrancas(FrappeTestCase):
+	"""Quem já cumpriu a tarefa precisa saber a quem avisar para a série parar."""
+
+	ADMINISTRATIVO = frappe._dict(
+		{
+			"name": "A-1",
+			"nome_completo": "Ana Administrativo",
+			"sexo": "Feminino",
+			"telefone": "+5511977776666",
+		}
+	)
+
+	def _montar(self, montador, administrativo):
+		with patch.object(
+			recepcao_mensagens, "_buscar_responsavel_administrativo", return_value=administrativo
+		):
+			return montador()
+
+	def _ficha_medica(self, administrativo):
+		return self._montar(
+			lambda: recepcao_mensagens._montar_lembrete_ficha_medica(
+				primeiro_nome_responsavel="Maria",
+				primeiro_nome_jovem="Joãozinho",
+				sexo_jovem="Masculino",
+			),
+			administrativo,
+		)
+
+	def _id_escoteiros(self, administrativo):
+		return self._montar(
+			lambda: recepcao_mensagens._montar_lembrete_id_escoteiros("Maria"),
+			administrativo,
+		)
+
+	def test_as_duas_cobrancas_dao_a_saida_com_nome_e_telefone(self):
+		for rotulo, montar in (
+			("ficha médica", self._ficha_medica),
+			("id@escoteiros", self._id_escoteiros),
+		):
+			with self.subTest(mensagem=rotulo):
+				mensagem = montar(self.ADMINISTRATIVO)
+
+				self.assertIn("Se você já fez esta ação, por favor desconsidere esta mensagem.", mensagem)
+				# "fale a Ana" (Feminino), não "fale ao Ana".
+				self.assertIn("fale a Ana Administrativo, do administrativo", mensagem)
+				self.assertIn("+5511977776666", mensagem)
+
+	def test_o_mesmo_paragrafo_cobre_a_duvida_de_registro(self):
+		"""O parágrafo é um só justamente porque as duas coisas levam à mesma pessoa."""
+		mensagem = self._ficha_medica(self.ADMINISTRATIVO)
+
+		self.assertIn("tirar dúvida sobre o número de registro", mensagem)
+
+	def test_frase_vem_antes_da_assinatura(self):
+		"""O pedido foi "ao final da mensagem, antes do aviso de mensagem automática"."""
+		mensagem = self._id_escoteiros(self.ADMINISTRATIVO)
+
+		self.assertLess(
+			mensagem.index("Se você já fez esta ação"),
+			mensagem.index(recepcao_mensagens.ASSINATURA),
+		)
+
+	def test_sem_administrativo_a_frase_permanece_na_forma_generica(self):
+		"""A saída vale mesmo sem contato cadastrado — só perde o nome e o telefone."""
+		for rotulo, montar in (
+			("ficha médica", self._ficha_medica),
+			("id@escoteiros", self._id_escoteiros),
+		):
+			with self.subTest(mensagem=rotulo):
+				mensagem = montar(None)
+
+				self.assertIn("Se você já fez esta ação, por favor desconsidere esta mensagem.", mensagem)
+				self.assertIn("avise o responsável pelo administrativo do grupo", mensagem)
+				self.assertNotIn("pelo telefone", mensagem)
+
+	def test_pesquisa_nao_ganha_a_frase(self):
+		"""Só as cobranças que dependem de marcar etapa no Paxtu levam a saída."""
+		self.assertNotIn(
+			"Se você já fez esta ação",
+			recepcao_mensagens._montar_lembrete_pesquisa("Maria"),
+		)
+
+
+class TestRepeticaoDoAvisoDeAcolhida(FrappeTestCase):
+	JOVEM: ClassVar[dict] = {
+		"name": "NA-1",
+		"nome_completo": "Joãozinho Feliz",
+		"sexo": "Masculino",
+		"data_de_nascimento": "2014-09-01",
+		"ramo": "Escoteiro",
+	}
+
+	def _enviar(self, data_lembrete_acolhida):
+		with _AmbienteDeTeste(
+			novos_associados=[dict(self.JOVEM, data_lembrete_acolhida=data_lembrete_acolhida)],
+			links=VINCULO_PADRAO,
+			responsaveis=RESPONSAVEL_PADRAO,
+			configuracoes={"grupo_chefes_secao_whatsapp": "120@g.us"},
+		) as ambiente:
+			recepcao_mensagens.enviar_lembretes_acolhida_lenco()
+
+		return ambiente.grupos[0]["mensagem"]
+
+	def test_primeiro_envio_anuncia_que_chegou_a_hora(self):
+		mensagem = self._enviar(None)
+
+		self.assertIn("foi efetivado!", mensagem)
+		self.assertIn("chegou a hora de fazer sua acolhida", mensagem)
+		self.assertNotIn("ainda não foi realizada", mensagem)
+
+	def test_repeticao_cobra_e_pede_para_marcar_no_gris(self):
+		"""Depois do primeiro aviso o anúncio não cabe mais: vira cobrança com saída."""
+		mensagem = self._enviar("2026-05-04")
+
+		self.assertIn("A acolhida do jovem Joãozinho ainda não foi realizada", mensagem)
+		self.assertIn("marque a etapa como concluída no Gris", mensagem)
+		self.assertNotIn("chegou a hora", mensagem)
+
+	def test_repeticao_mantem_a_ficha_e_a_assinatura(self):
+		mensagem = self._enviar("2026-05-04")
+
+		self.assertIn("*Responsável*: Maria Contente da Silva", mensagem)
+		self.assertIn(recepcao_mensagens.ASSINATURA, mensagem)
+
+
+class TestAvisoDeDesistencia(FrappeTestCase):
+	def _notificar(self, *, sexo="Masculino", ramo="Escoteiro", configuracoes=None, chefes=None):
+		with _AmbienteDeTeste(
+			configuracoes=configuracoes
+			if configuracoes is not None
+			else {"grupo_chefes_secao_whatsapp": "120@g.us"},
+			chefes=chefes or {},
+		) as ambiente:
+			recepcao_mensagens.notificar_desistencia(
+				nome_completo="Joãozinho Feliz da Silva", sexo=sexo, ramo=ramo
+			)
+
+		return ambiente
+
+	def test_menciona_o_chefe_do_ramo_no_corpo_e_no_payload(self):
+		"""O WhatsApp só marca alguém quando o número está no texto E no campo mencionar."""
+		ambiente = self._notificar(
+			chefes={"Escoteiro": [frappe._dict({"nome_completo": "Ana Chefe", "telefone": "+5511988887777"})]}
+		)
+
+		envio = ambiente.grupos[0]
+		self.assertEqual(envio["jid"], "120@g.us")
+		self.assertEqual(envio["mencionar"], ["+5511988887777"])
+		self.assertIn("@5511988887777", envio["mensagem"])
+
+	def test_texto_usa_o_nome_completo_e_flexiona_o_desligamento(self):
+		masculino = self._notificar(sexo="Masculino").grupos[0]["mensagem"]
+		feminino = self._notificar(sexo="Feminino").grupos[0]["mensagem"]
+
+		self.assertIn(
+			"Passando para informar que Joãozinho Feliz da Silva não continuará as atividades",
+			masculino,
+		)
+		self.assertIn("será desligado da UEL", masculino)
+		self.assertIn("será desligada da UEL", feminino)
+		self.assertIn(recepcao_mensagens.ASSINATURA, masculino)
+
+	def test_sem_sexo_nao_arrisca_um_genero(self):
+		self.assertIn("será desligado(a) da UEL", self._notificar(sexo=None).grupos[0]["mensagem"])
+
+	def test_sem_chefe_cadastrado_envia_sem_mencao(self):
+		envio = self._notificar(ramo="Escoteiro").grupos[0]
+
+		self.assertIsNone(envio["mencionar"])
+		self.assertNotIn("@55", envio["mensagem"])
+
+	def test_sem_grupo_configurado_nao_envia(self):
+		self.assertEqual(self._notificar(configuracoes={}).grupos, [])
+
+	def test_sem_nome_nao_envia(self):
+		"""Um aviso sem nome não informa nada e ainda assusta o grupo."""
+		with _AmbienteDeTeste(configuracoes={"grupo_chefes_secao_whatsapp": "120@g.us"}) as ambiente:
+			recepcao_mensagens.notificar_desistencia(nome_completo="   ")
+
+		self.assertEqual(ambiente.grupos, [])
+
+
+class TestOrientacaoPosVisita(FrappeTestCase):
+	JOVEM: ClassVar[dict] = {
+		"name": "NA-1",
+		"nome_completo": "Joãozinho Feliz",
+		"sexo": "Masculino",
+		"responsavel_recepcao": "ana@escoteiros.org.br",
+		"data_mensagem_orientacao_visita": None,
+	}
+
+	def _fake_get_value(self, jovem):
+		def _get_value(doctype, *_args, **_kwargs):
+			if doctype == "Novo Associado":
+				return frappe._dict(jovem) if jovem else None
+			if doctype == "User":
+				return frappe._dict(
+					{
+						"name": "ana@escoteiros.org.br",
+						"full_name": "Ana Recepção",
+						"mobile_no": "+5511966665555",
+					}
+				)
+			if doctype == "Associado":
+				return frappe._dict({"sexo": "Feminino", "telefone": "+5511966665555"})
+			return None
+
+		return _get_value
+
+	def _notificar(self, jovem=None, configuracoes=None):
+		jovem = self.JOVEM if jovem is None else jovem
+		with _AmbienteDeTeste(
+			links=VINCULO_PADRAO,
+			responsaveis=RESPONSAVEL_PADRAO,
+			configuracoes=configuracoes or {},
+		) as ambiente:
+			with patch.object(
+				recepcao_mensagens.frappe.db, "get_value", side_effect=self._fake_get_value(jovem)
+			):
+				recepcao_mensagens.notificar_orientacao_pos_visita("NA-1")
+
+		return ambiente
+
+	def test_orienta_o_responsavel_e_carimba(self):
+		ambiente = self._notificar()
+
+		self.assertEqual(len(ambiente.textos), 1)
+		envio = ambiente.textos[0]
+		self.assertEqual(envio["numero"], "+5511999992222")
+		self.assertIn("Olá, Maria!", envio["mensagem"])
+		self.assertIn("Foi muito bom receber vocês no Grupo Escoteiro hoje!", envio["mensagem"])
+		self.assertIn("preencher os dados do Joãozinho", envio["mensagem"])
+		self.assertIn(recepcao_mensagens.TUTORIAL_LOGIN, envio["mensagem"])
+		self.assertIn(recepcao_mensagens.TUTORIAL_DADOS_REGISTRO, envio["mensagem"])
+		self.assertEqual(
+			ambiente.atualizacoes[0]["fieldname"],
+			"data_mensagem_orientacao_visita",
+		)
+
+	def test_cita_o_recepcionista_com_a_concordancia_certa(self):
+		mensagem = self._notificar().textos[0]["mensagem"]
+
+		# "falar com a Ana" (Feminino), não "falar com o Ana".
+		self.assertIn("é só falar com a Ana Recepção", mensagem)
+		self.assertIn("+5511966665555", mensagem)
+
+	def test_nao_reenvia_quando_ja_carimbado(self):
+		ambiente = self._notificar(jovem=dict(self.JOVEM, data_mensagem_orientacao_visita="2026-05-10"))
+
+		self.assertEqual(ambiente.textos, [])
+		self.assertEqual(ambiente.atualizacoes, [])
+
+	def test_sem_telefone_nao_envia_nem_carimba(self):
+		with _AmbienteDeTeste(links=[], responsaveis=[]) as ambiente:
+			with patch.object(
+				recepcao_mensagens.frappe.db, "get_value", side_effect=self._fake_get_value(self.JOVEM)
+			):
+				recepcao_mensagens.notificar_orientacao_pos_visita("NA-1")
+
+		self.assertEqual(ambiente.textos, [])
+		self.assertEqual(ambiente.atualizacoes, [])
+
+	def test_sem_recepcionista_o_paragrafo_de_contato_some(self):
+		jovem = dict(self.JOVEM, responsavel_recepcao=None)
+		mensagem = self._notificar(jovem=jovem).textos[0]["mensagem"]
+
+		self.assertNotIn("está acompanhando sua recepção", mensagem)
+		self.assertIn("Grande abraço!", mensagem)
+
+
+class TestInterruptoresDeMensagem(FrappeTestCase):
+	"""Cada mensagem tem um Check próprio em Configurações de Recepção."""
+
+	JOVEM_ACOLHIDA: ClassVar[dict] = {
+		"name": "NA-1",
+		"nome_completo": "Joãozinho Feliz",
+		"sexo": "Masculino",
+		"data_de_nascimento": "2014-09-01",
+		"ramo": "Escoteiro",
+		"data_lembrete_acolhida": None,
+		"data_lembrete_pesquisa": None,
+		"data_lembrete_ficha_medica": None,
+		"data_lembrete_id_escoteiros": None,
+		"dados_para_registro_enviados": 1,
+		"tipo_de_registro": "Definitivo",
+	}
+	GRUPOS: ClassVar[dict] = {
+		"grupo_chefes_secao_whatsapp": "120@g.us",
+		"grupo_recepcao_whatsapp": "121@g.us",
+	}
+
+	# job -> (fieldname do Check, atributo do ambiente onde o envio aparece)
+	JOBS: ClassVar[tuple] = (
+		("enviar_lembretes_pesquisa_novos_associados", "msg_lembrete_pesquisa", "textos"),
+		("enviar_lembretes_ficha_medica", "msg_lembrete_ficha_medica", "textos"),
+		("enviar_lembretes_id_escoteiros", "msg_lembrete_id_escoteiros", "textos"),
+		("enviar_lembretes_acolhida_lenco", "msg_acolhida", "grupos"),
+	)
+
+	def _rodar(self, job, configuracoes):
+		with _AmbienteDeTeste(
+			novos_associados=[dict(self.JOVEM_ACOLHIDA)],
+			links=VINCULO_PADRAO,
+			responsaveis=RESPONSAVEL_PADRAO,
+			configuracoes={**self.GRUPOS, **configuracoes},
+		) as ambiente:
+			getattr(recepcao_mensagens, job)()
+
+		return ambiente
+
+	def test_check_desmarcado_suspende_o_job(self):
+		for job, campo, canal in self.JOBS:
+			with self.subTest(job=job):
+				ambiente = self._rodar(job, {campo: 0})
+
+				self.assertEqual(getattr(ambiente, canal), [])
+				self.assertEqual(ambiente.atualizacoes, [])
+
+	def test_check_marcado_deixa_enviar(self):
+		for job, campo, canal in self.JOBS:
+			with self.subTest(job=job):
+				self.assertTrue(getattr(self._rodar(job, {campo: 1}), canal))
+
+	def test_campo_ausente_conta_como_ligado(self):
+		"""Site que nunca salvou o Single não tem a linha em tabSingles — e não pode emudecer."""
+		for job, _campo, canal in self.JOBS:
+			with self.subTest(job=job):
+				self.assertTrue(getattr(self._rodar(job, {}), canal))
+
+	def test_um_check_nao_derruba_os_outros(self):
+		ambiente = self._rodar("enviar_lembretes_acolhida_lenco", {"msg_lembrete_id_escoteiros": 0})
+
+		self.assertTrue(ambiente.grupos)
+
+	def test_lembrete_de_dados_respeita_o_proprio_check(self):
+		jovem = {
+			"name": "NA-1",
+			"nome_completo": "Joãozinho Feliz",
+			"sexo": "Masculino",
+			"responsavel_recepcao": None,
+			"data_status_aguardar_dados": "2026-05-01",
+			"data_lembrete_dados": None,
+		}
+		for valor, esperado in ((0, 0), (1, 1)):
+			with self.subTest(msg_lembrete_dados=valor):
+				with _AmbienteDeTeste(
+					novos_associados=[dict(jovem)],
+					links=VINCULO_PADRAO,
+					responsaveis=RESPONSAVEL_PADRAO,
+					configuracoes={"msg_lembrete_dados": valor},
+				) as ambiente:
+					recepcao_mensagens.enviar_lembretes_dados_registro()
+
+				self.assertEqual(len(ambiente.textos), esperado)
+
+	def test_desistencia_respeita_o_proprio_check(self):
+		with _AmbienteDeTeste(configuracoes={**self.GRUPOS, "msg_desistencia": 0}) as ambiente:
+			recepcao_mensagens.notificar_desistencia(nome_completo="Joãozinho", ramo="Escoteiro")
+
+		self.assertEqual(ambiente.grupos, [])
+
+	def test_visitas_do_dia_respeita_o_proprio_check(self):
+		with _AmbienteDeTeste(configuracoes={**self.GRUPOS, "msg_visitas_do_dia": 0}) as ambiente:
+			recepcao_mensagens.notificar_visitas_do_dia()
+
+		self.assertEqual(ambiente.grupos, [])
+
+	def test_helper_le_o_check_do_single(self):
+		with _AmbienteDeTeste(configuracoes={"msg_acolhida": 0, "msg_desistencia": 1}):
+			self.assertFalse(recepcao_mensagens._mensagem_habilitada("msg_acolhida"))
+			self.assertTrue(recepcao_mensagens._mensagem_habilitada("msg_desistencia"))
+			self.assertTrue(recepcao_mensagens._mensagem_habilitada("msg_inexistente"))

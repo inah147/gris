@@ -19,9 +19,11 @@ import frappe
 from frappe.utils import add_days, date_diff, format_date, get_url, getdate, today
 
 from gris.api.recepcao_mensagens import (
+	MENSAGEM_DESATIVADA,
 	_buscar_contatos_responsaveis,
 	_buscar_responsavel_administrativo,
 	_extrair_primeiro_nome,
+	_mensagem_habilitada,
 )
 from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 from gris.utils.whatsapp import enviar_texto
@@ -77,6 +79,11 @@ def _montar_mensagem_aviso(
 def enviar_avisos_seguimento_registro_provisorio() -> None:
 	"""Scheduler diário: avisa o responsável administrativo sobre registros provisórios parados."""
 	logger = obter_logger("registro_provisorio_notificacoes")
+
+	if not _mensagem_habilitada("msg_seguimento_provisorio"):
+		definir_resumo(MENSAGEM_DESATIVADA)
+		return
+
 	data_hoje = getdate(today())
 	dias_limite = _dias_para_aviso()
 	data_limite = add_days(data_hoje, -dias_limite)

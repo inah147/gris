@@ -547,3 +547,105 @@
     width: 100%;
   }
 }
+
+/* ===================== Conferência de contato =====================
+   Espelha o bloco de conferência de /responsavel/registro (registro.css): dupla digitação
+   e, na divergência, os dois valores lado a lado para o responsável escolher. */
+
+.manifestacao-conferencia {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 5);
+}
+
+/* O JS alterna as fases pelo atributo `hidden`, e `display` de classe ganha dele. */
+.manifestacao-conferencia__campos[hidden],
+.manifestacao-conferencia__divergencia[hidden] {
+  display: none;
+}
+
+/* `start` para o rótulo mandar na posição do controle: esticado, um rótulo que quebrasse em
+   duas linhas empurraria só o seu campo para baixo e os dois sairiam desalinhados. */
+.manifestacao-conferencia__campos {
+  display: grid;
+  align-items: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(var(--spacing) * 4);
+}
+
+.manifestacao-conferencia__divergencia {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 5);
+}
+
+.manifestacao-conferencia__aviso {
+  margin: 0;
+  color: var(--color-foreground);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+.manifestacao-conferencia__campo {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 2);
+}
+
+.manifestacao-conferencia__campo-titulo {
+  margin: 0;
+  color: var(--color-muted-foreground);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.manifestacao-conferencia__opcoes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(var(--spacing) * 3);
+}
+
+.manifestacao-conferencia__opcao {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: calc(var(--spacing) * 1);
+  padding: calc(var(--spacing) * 4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-card);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--default-transition-duration) var(--default-transition-timing-function),
+    box-shadow var(--default-transition-duration) var(--default-transition-timing-function);
+}
+
+.manifestacao-conferencia__opcao:hover,
+.manifestacao-conferencia__opcao:focus-visible,
+.manifestacao-conferencia__opcao[aria-checked="true"] {
+  border-color: var(--color-ring);
+}
+
+.manifestacao-conferencia__opcao[aria-checked="true"] {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-ring) 24%, transparent);
+}
+
+.manifestacao-conferencia__opcao-rotulo {
+  color: var(--color-muted-foreground);
+  font-size: var(--text-sm);
+}
+
+.manifestacao-conferencia__opcao-valor {
+  color: var(--color-foreground);
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .manifestacao-conferencia__campos,
+  .manifestacao-conferencia__opcoes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

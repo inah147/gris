@@ -22,7 +22,7 @@ class TestRecepcaoNotificacoes(FrappeTestCase):
 
 		enviadas = []
 
-		def _fake_enviar_para_grupo(grupo_jid, mensagem, mencionar_todos=False):
+		def _fake_enviar_para_grupo(grupo_jid, mensagem, mencionar_todos=False, contexto=None):
 			enviadas.append(
 				{
 					"grupo_jid": grupo_jid,
@@ -63,7 +63,7 @@ class TestRecepcaoNotificacoes(FrappeTestCase):
 
 		enviadas = []
 
-		def _fake_enviar_para_grupo(grupo_jid, mensagem, mencionar_todos=False):
+		def _fake_enviar_para_grupo(grupo_jid, mensagem, mencionar_todos=False, contexto=None):
 			enviadas.append(
 				{
 					"grupo_jid": grupo_jid,
@@ -94,7 +94,7 @@ class TestRecepcaoNotificacoes(FrappeTestCase):
 
 		enviadas = []
 
-		def _fake_enviar_para_grupo(grupo_jid, mensagem, mencionar_todos=False):
+		def _fake_enviar_para_grupo(grupo_jid, mensagem, mencionar_todos=False, contexto=None):
 			enviadas.append(
 				{
 					"grupo_jid": grupo_jid,

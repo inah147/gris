@@ -1,0 +1,131 @@
+/*
+ * Diálogo "Mensagens enviadas" — compartilhado pela ficha de registro e pelos
+ * cards da visão geral da recepção. Carregado por
+ * templates/includes/mensagens_enviadas_dialog.html.
+ */
+
+/* Uma lista de cartões, não uma tabela: o conteúdo da mensagem é o campo mais
+   longo de todos e numa tabela ele espremeria as outras colunas. */
+
+.ficha-mensagens-dialog {
+  max-width: min(760px, 94vw);
+  width: 100%;
+}
+
+.ficha-mensagens__aviso {
+  margin: 0;
+  color: var(--color-muted-foreground);
+  font-size: var(--text-sm);
+}
+
+.ficha-mensagens {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ficha-mensagem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  border-left-width: 3px;
+  border-radius: var(--radius-lg);
+  background: var(--color-card);
+}
+
+.ficha-mensagem.is-enviada {
+  border-left-color: var(--color-primary);
+}
+
+.ficha-mensagem.is-falhou {
+  border-left-color: var(--color-destructive);
+}
+
+.ficha-mensagem__topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ficha-mensagem__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.ficha-mensagem.is-enviada .ficha-mensagem__status {
+  color: var(--color-primary);
+}
+
+.ficha-mensagem.is-falhou .ficha-mensagem__status {
+  color: var(--color-destructive);
+}
+
+.ficha-mensagem__quando {
+  color: var(--color-muted-foreground);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.ficha-mensagem__assunto {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Nome, tipo e número numa linha só, separados por ponto médio. */
+.ficha-mensagem__destinatario {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin: 0;
+  color: var(--color-muted-foreground);
+  font-size: var(--text-xs);
+}
+
+.ficha-mensagem__nome {
+  color: var(--color-foreground);
+  font-weight: var(--font-weight-medium);
+}
+
+.ficha-mensagem__tipo::before,
+.ficha-mensagem__numero::before {
+  content: "·";
+  margin-right: 0.375rem;
+}
+
+.ficha-mensagem__numero {
+  font-variant-numeric: tabular-nums;
+}
+
+/* `pre` para preservar as quebras de linha que a mensagem tem no WhatsApp,
+   com wrap para o texto não estourar a largura do diálogo. */
+.ficha-mensagem__conteudo {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: var(--color-muted);
+  color: var(--color-foreground);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ficha-mensagem__erro {
+  margin: 0;
+  color: var(--color-destructive);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}

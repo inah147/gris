@@ -244,13 +244,16 @@ class TestSalvarNumerosDeRegistro(TestCase):
 class _DocFalso:
 	"""Novo Associado suficiente para observar o que ``update_step_status`` grava."""
 
-	def __init__(self, status="Aguardar Dados"):
+	def __init__(self, status="Aguardar Dados", **etapas):
 		self.status = status
-		self.campos = {}
+		self.campos = dict(etapas)
 		self.salvo = False
 
 	def set(self, campo, valor):
 		self.campos[campo] = valor
+
+	def get(self, campo, padrao=None):
+		return self.campos.get(campo, padrao)
 
 	def save(self):
 		self.salvo = True
@@ -263,10 +266,14 @@ class TestUpdateStepStatus(TestCase):
 	realizada, formulário do responsável), e quem usava a timeline ficava com o card parado.
 	"""
 
-	def _executar(self, campo, valor=1, status_inicial="Aguardar Dados"):
-		doc = _DocFalso(status_inicial)
-		with patch.object(visao_geral.frappe, "get_doc", return_value=doc):
+	def _executar(self, campo, valor=1, status_inicial="Aguardar Dados", **etapas):
+		doc = _DocFalso(status_inicial, **etapas)
+		with (
+			patch.object(visao_geral.frappe, "get_doc", return_value=doc),
+			patch.object(visao_geral, "remover_visita_do_jovem") as remover,
+		):
 			visao_geral.update_step_status("NA-1", campo, valor)
+		doc.visita_removida = remover.called
 		return doc
 
 	def test_cada_etapa_de_virada_move_o_status(self):
@@ -284,10 +291,66 @@ class TestUpdateStepStatus(TestCase):
 		self.assertEqual(doc.campos["ficha_medica_preenchida"], 1)
 		self.assertEqual(doc.status, "Acompanhamento")
 
-	def test_desmarcar_nao_reverte_o_status(self):
-		doc = self._executar("registro_criado_no_paxtu", valor=0, status_inicial="Acompanhamento")
+	def test_desmarcar_devolve_o_card_para_a_etapa_anterior_concluida(self):
+		doc = self._executar(
+			"registro_criado_no_paxtu",
+			valor=0,
+			status_inicial="Acompanhamento",
+			visita_agendada=1,
+			primeira_visita_realizada=1,
+			dados_para_registro_enviados=1,
+		)
 
 		self.assertEqual(doc.campos["registro_criado_no_paxtu"], 0)
+		self.assertEqual(doc.status, "Fazer Registro")
+
+	def test_desmarcar_pula_as_etapas_que_nunca_foram_concluidas(self):
+		# Ninguém enviou os dados nem fez a visita: a volta é para "Visita Agendada",
+		# não para a coluna imediatamente anterior no mapa.
+		doc = self._executar(
+			"registro_criado_no_paxtu",
+			valor=0,
+			status_inicial="Acompanhamento",
+			visita_agendada=1,
+		)
+
+		self.assertEqual(doc.status, "Visita Agendada")
+
+	def test_desmarcar_a_primeira_etapa_volta_para_conversa_inicial(self):
+		doc = self._executar("visita_agendada", valor=0, status_inicial="Visita Agendada")
+
+		self.assertEqual(doc.status, "Conversa Inicial")
+
+	def test_desmarcar_visita_agendada_cancela_a_visita(self):
+		doc = self._executar("visita_agendada", valor=0, status_inicial="Visita Agendada")
+
+		self.assertTrue(doc.visita_removida)
+
+	def test_desmarcar_outra_etapa_nao_mexe_na_visita(self):
+		doc = self._executar(
+			"ficha_medica_preenchida", valor=0, status_inicial="Acompanhamento", visita_agendada=1
+		)
+
+		self.assertFalse(doc.visita_removida)
+
+	def test_card_fora_do_funil_nao_e_arrastado_de_volta(self):
+		for status in recepcao_funil.STATUS_FORA_DO_FUNIL:
+			with self.subTest(status=status):
+				doc = self._executar("registro_criado_no_paxtu", valor=0, status_inicial=status)
+
+				self.assertEqual(doc.status, status)
+
+	def test_desmarcar_etapa_sem_coluna_propria_recalcula_pelo_que_sobrou(self):
+		doc = self._executar(
+			"ficha_medica_preenchida",
+			valor=0,
+			status_inicial="Acompanhamento",
+			visita_agendada=1,
+			primeira_visita_realizada=1,
+			dados_para_registro_enviados=1,
+			registro_criado_no_paxtu=1,
+		)
+
 		self.assertEqual(doc.status, "Acompanhamento")
 
 	def test_botao_do_paxtu_faz_o_mesmo_que_a_bolinha(self):

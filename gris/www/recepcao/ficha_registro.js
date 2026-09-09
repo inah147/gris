@@ -59,6 +59,15 @@
 			openBtn.addEventListener("click", openModal);
 		}
 
+		// Mensagens enviadas: marcação, estilo e renderização são compartilhados com a
+		// visão geral (templates/includes/mensagens_enviadas_dialog.html).
+		const mensagensBtn = document.getElementById("mensagens-modal-open");
+		if (mensagensBtn) {
+			mensagensBtn.addEventListener("click", function () {
+				window.grisMensagensEnviadas.abrir(mensagensBtn.dataset.docname);
+			});
+		}
+
 		if (dialogEl) {
 			dialogEl.addEventListener("close", clearEditingState);
 		}

@@ -359,16 +359,17 @@ def sinalizar_reagendamento_de_visita(novo_associado_name: str, motivo: str | No
 	if doc.primeira_visita_realizada:
 		frappe.throw(_("A primeira visita já foi realizada — não há visita a reagendar."))
 
+	# Sem ``limit``: hoje o jovem tem uma visita só (ver ``gris.api.recepcao_visitas``), mas
+	# um duplicado de legado que sobrasse aqui voltaria na mensagem de visitas do dia.
 	visitas = frappe.get_all(
 		"Agenda de Visitas",
 		filters={"jovem": novo_associado_name},
 		order_by="data_da_visita desc",
-		limit=1,
 	)
 	visita_removida = None
-	if visitas:
-		visita_removida = visitas[0].name
-		frappe.delete_doc("Agenda de Visitas", visita_removida)
+	for visita in visitas:
+		visita_removida = visita_removida or visita.name
+		frappe.delete_doc("Agenda de Visitas", visita.name)
 
 	doc.visita_agendada = 0
 	doc.reagendamento_pendente = 1

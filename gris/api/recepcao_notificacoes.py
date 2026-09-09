@@ -13,7 +13,13 @@ from __future__ import annotations
 import frappe
 from frappe.utils import add_days, get_url, getdate, today
 
-from gris.api.recepcao_mensagens import MENSAGEM_DESATIVADA, _mensagem_habilitada
+from gris.api.recepcao_mensagens import (
+	DESTINATARIO_RECEPCAO,
+	DESTINATARIO_RESPONSAVEL,
+	MENSAGEM_DESATIVADA,
+	_contexto_de_log,
+	_mensagem_habilitada,
+)
 from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 from gris.utils.whatsapp import enviar_mensagem_formatada, enviar_para_grupo, enviar_texto
 
@@ -115,6 +121,7 @@ def notificar_nova_manifestacao_no_grupo_recepcao(
 	nome_responsavel: str,
 	data_nascimento_jovem: str | None,
 	contexto: str,
+	novo_associado: str | None = None,
 ) -> None:
 	"""Envia aviso para o grupo WhatsApp da recepção sobre novo associado adicionado.
 
@@ -142,7 +149,16 @@ def notificar_nova_manifestacao_no_grupo_recepcao(
 	)
 
 	try:
-		enviar_para_grupo(grupo_jid, mensagem, mencionar_todos=True)
+		enviar_para_grupo(
+			grupo_jid,
+			mensagem,
+			mencionar_todos=True,
+			contexto=_contexto_de_log(
+				assunto="Nova manifestação de interesse",
+				tipo=DESTINATARIO_RECEPCAO,
+				novo_associado=novo_associado,
+			),
+		)
 	except Exception:
 		frappe.log_error(
 			frappe.get_traceback(),
@@ -150,10 +166,12 @@ def notificar_nova_manifestacao_no_grupo_recepcao(
 		)
 
 
-def notificar_visita_agendada(novo_associado_name: str, data_visita: str) -> None:
+def notificar_visita_agendada(novo_associado_name: str, data_visita: str, remarcada: bool = False) -> None:
 	"""Envia notificação de visita agendada para o responsável via WhatsApp.
 
-	Chamado pelo after_insert do DocType Agenda de Visitas.
+	Chamado pelo after_insert do DocType Agenda de Visitas e, com ``remarcada=True``, por
+	``gris.api.recepcao_visitas.agendar_ou_remarcar_visita`` quando a data muda — remarcar
+	altera a linha existente e não passa pelo after_insert.
 	Falha silenciosa com log de aviso caso não haja telefone ou WhatsApp desabilitado.
 	"""
 	logger = frappe.logger("recepcao_notificacoes", allow_site=True)
@@ -176,13 +194,22 @@ def notificar_visita_agendada(novo_associado_name: str, data_visita: str) -> Non
 	except Exception:
 		data_formatada = data_visita
 
+	verbo = "foi remarcada para o dia" if remarcada else "foi agendada para o dia"
 	mensagem = (
-		f"Olá! A visita de {nome} ao Grupo Escoteiro foi agendada para o dia "
+		f"Olá! A visita de {nome} ao Grupo Escoteiro {verbo} "
 		f"{data_formatada} no endereço {endereco}. Te esperamos lá! 😊"
 	)
 
 	try:
-		enviar_texto(telefone, mensagem)
+		enviar_texto(
+			telefone,
+			mensagem,
+			contexto=_contexto_de_log(
+				assunto="Visita remarcada" if remarcada else "Visita agendada",
+				tipo=DESTINATARIO_RESPONSAVEL,
+				novo_associado=novo_associado_name,
+			),
+		)
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), f"Notificação de agendamento: {novo_associado_name}")
 
@@ -243,6 +270,11 @@ def enviar_lembretes_visita() -> None:
 					f"Você confirma a presença?"
 				),
 				botoes=botoes,
+				contexto=_contexto_de_log(
+					assunto="Lembrete de visita",
+					tipo=DESTINATARIO_RESPONSAVEL,
+					novo_associado=str(visita.jovem),
+				),
 			)
 			enviados += 1
 			logger.info(f"Lembrete de visita enviado para {nome} ({visita.name}).")

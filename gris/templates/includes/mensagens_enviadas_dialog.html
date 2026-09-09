@@ -1,0 +1,31 @@
+{#
+  Diálogo "Mensagens enviadas", compartilhado pela ficha de registro e pelos cards da
+  visão geral da recepção.
+
+  Mora aqui, e não colado em cada página, porque as duas telas abrem exatamente o mesmo
+  histórico: duplicar a marcação, o CSS e a renderização deixaria duas cópias para manter
+  em sincronia. A página só precisa incluir este arquivo uma vez e chamar
+  `window.grisMensagensEnviadas.abrir(name)`.
+#}
+{% set mensagens_asset_version = "20260909-log-de-mensagem" %}
+<link
+  rel="stylesheet"
+  href="/assets/gris/css/mensagens_enviadas.css?v={{ mensagens_asset_version }}"
+/>
+<script src="/assets/gris/js/mensagens_enviadas.js?v={{ mensagens_asset_version }}"></script>
+
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog as _dialog_mensagens %}
+{% call _dialog_mensagens(
+  id="mensagens-modal",
+  title="Mensagens enviadas",
+  description="Tudo que o GRIS já tentou entregar sobre este jovem, do mais recente para o mais antigo.",
+  close_button=true,
+  dialog_attrs={"class": "ficha-mensagens-dialog"}
+) %}
+  <div id="mensagens-loading" class="ficha-mensagens__aviso">Carregando…</div>
+  <div id="mensagens-erro" class="ficha-mensagens__aviso text-destructive" hidden></div>
+  <p id="mensagens-vazio" class="ficha-mensagens__aviso" hidden>
+    Nenhuma mensagem registrada para este jovem.
+  </p>
+  <ul id="mensagens-lista" class="ficha-mensagens" hidden></ul>
+{% endcall %}

@@ -50,6 +50,28 @@ frappe.ready(function () {
 		document.dispatchEvent(new CustomEvent("gris:design-system:init"));
 	}
 
+	function openDialog(dialog) {
+		if (!dialog) return;
+		if (typeof dialog.showModal === "function") dialog.showModal();
+		else dialog.setAttribute("open", "open");
+	}
+
+	function closeDialog(dialog) {
+		if (!dialog) return;
+		if (typeof dialog.close === "function") dialog.close();
+		else dialog.removeAttribute("open");
+	}
+
+	function escapeHtml(value) {
+		if (value == null) return "";
+		return String(value)
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/"/g, "&quot;")
+			.replace(/'/g, "&#39;");
+	}
+
 	// ===================== Validators (puros) =====================
 
 	function validateCPF(cpf) {
@@ -302,13 +324,371 @@ frappe.ready(function () {
 		this.classList.remove("is-invalid");
 	});
 
+	// ===================== Conferência de contato =====================
+	//
+	// Errar um dígito do celular ou uma letra do e-mail é o engano mais comum deste
+	// formulário, e nenhuma validação de formato pega: o dado entra válido e errado, e a
+	// recepção fica sem como falar com a família. Só redigitar pega. Ao sair da aba do
+	// responsável, os dois campos são pedidos de novo; se o que foi digitado divergir do
+	// formulário, as duas versões aparecem e o responsável escolhe a certa.
+	//
+	// Mesmo desenho da conferência de CPF e data de nascimento em /responsavel/registro.
+
+	const CONFERENCIA_CAMPOS = ["email_responsavel", "celular_responsavel"];
+	const CONFERENCIA_ROTULOS = {
+		email_responsavel: "E-mail",
+		celular_responsavel: "Celular",
+	};
+
+	const conferenciaDialog = document.getElementById("conferenciaContatoDialog");
+	const conferenciaBotao = document.getElementById("btn-conferencia-contato");
+
+	let conferenciaFase = "digitar";
+	let conferenciaDivergencias = [];
+	let conferenciaEscolhas = {};
+	let conferenciaConcluindo = false;
+	let conferenciaConferido = null;
+
+	function digitosTelefone(value) {
+		return String(value == null ? "" : value).replace(/\D/g, "");
+	}
+
+	function normalizarEmail(value) {
+		return String(value == null ? "" : value)
+			.trim()
+			.toLowerCase();
+	}
+
+	function campoDoFormulario(fieldName) {
+		if (fieldName === "email_responsavel") return document.getElementById("email_responsavel");
+		return document.getElementById("celular_responsavel_input");
+	}
+
+	function campoDigitado(fieldName) {
+		return conferenciaDialog
+			? conferenciaDialog.querySelector('[data-conferencia-campo="' + fieldName + '"]')
+			: null;
+	}
+
+	// O phone-input expõe o valor completo (+55DDDNÚMERO) no elemento raiz, não no input
+	// visível; o e-mail é um input comum.
+	function valorDoCampo(fieldName, escopo) {
+		if (fieldName === "email_responsavel") {
+			const el =
+				escopo === "digitado" ? campoDigitado(fieldName) : campoDoFormulario(fieldName);
+			return el ? el.value : "";
+		}
+		if (escopo === "digitado") {
+			const raiz = document.getElementById("conferencia_celular_input");
+			return raiz ? raiz.value : "";
+		}
+		const raiz = document.getElementById("celular_responsavel_input");
+		return raiz ? raiz.value : "";
+	}
+
+	function valoresDeConferencia() {
+		return {
+			email_responsavel: normalizarEmail(valorDoCampo("email_responsavel", "formulario")),
+			celular_responsavel: digitosTelefone(
+				valorDoCampo("celular_responsavel", "formulario")
+			),
+		};
+	}
+
+	// Já conferiu e não mexeu em nada desde então: não pede de novo. Voltar para corrigir o
+	// e-mail, sim, faz o formulário conferir outra vez.
+	function precisaConferir() {
+		if (!conferenciaDialog) return false;
+		if (!conferenciaConferido) return true;
+
+		const atual = valoresDeConferencia();
+		return (
+			conferenciaConferido.email_responsavel !== atual.email_responsavel ||
+			conferenciaConferido.celular_responsavel !== atual.celular_responsavel
+		);
+	}
+
+	function marcarConferido() {
+		conferenciaConferido = valoresDeConferencia();
+	}
+
+	function faseConferencia(fase) {
+		return conferenciaDialog
+			? conferenciaDialog.querySelector('[data-conferencia-fase="' + fase + '"]')
+			: null;
+	}
+
+	function limparConferencia() {
+		conferenciaFase = "digitar";
+		conferenciaDivergencias = [];
+		conferenciaEscolhas = {};
+
+		const digitar = faseConferencia("digitar");
+		if (digitar) digitar.hidden = false;
+
+		const divergencia = faseConferencia("divergencia");
+		if (divergencia) {
+			divergencia.hidden = true;
+			divergencia.innerHTML = "";
+		}
+
+		// Não deixa e-mail nem telefone no DOM depois que a etapa passou.
+		CONFERENCIA_CAMPOS.forEach((campo) => {
+			const el = campoDigitado(campo);
+			if (!el) return;
+			el.value = "";
+			clearFieldError(el);
+		});
+		const raiz = document.getElementById("conferencia_celular_input");
+		if (raiz) raiz.classList.remove("is-invalid");
+	}
+
+	// Valida o que acabou de ser digitado ANTES de comparar: um erro de digitação da própria
+	// conferência não pode virar "divergência" e acabar oferecido como opção correta.
+	function validarDigitacaoDaConferencia() {
+		let valido = true;
+
+		const emailEl = campoDigitado("email_responsavel");
+		if (!validateEmail(emailEl ? emailEl.value : "")) {
+			setFieldError(emailEl, "Digite um e-mail válido.");
+			valido = false;
+		}
+
+		const celularEl = campoDigitado("celular_responsavel");
+		const raiz = document.getElementById("conferencia_celular_input");
+		if (digitosTelefone(raiz ? raiz.value : "").length < 6) {
+			if (raiz) raiz.classList.add("is-invalid");
+			setFieldError(celularEl, "Digite um número válido com DDD.");
+			valido = false;
+		} else if (raiz) {
+			raiz.classList.remove("is-invalid");
+		}
+
+		return valido;
+	}
+
+	function saoIguais(fieldName) {
+		const formulario = valorDoCampo(fieldName, "formulario");
+		const digitado = valorDoCampo(fieldName, "digitado");
+		if (fieldName === "email_responsavel") {
+			return normalizarEmail(formulario) === normalizarEmail(digitado);
+		}
+		// Reformatar o telefone não é trocar o telefone.
+		return digitosTelefone(formulario) === digitosTelefone(digitado);
+	}
+
+	function divergenciasDaConferencia() {
+		return CONFERENCIA_CAMPOS.map((fieldName) => {
+			if (saoIguais(fieldName)) return null;
+			return {
+				campo: fieldName,
+				formulario: valorDoCampo(fieldName, "formulario"),
+				digitado: valorDoCampo(fieldName, "digitado"),
+			};
+		}).filter(Boolean);
+	}
+
+	function formatarValorConferencia(fieldName, value) {
+		if (!value) return "Em branco";
+		if (fieldName === "email_responsavel") return String(value);
+		// Mostra o telefone como o componente o guarda, legível o suficiente para comparar.
+		const digitos = digitosTelefone(value);
+		const semPais = digitos.startsWith("55") ? digitos.slice(2) : digitos;
+		if (semPais.length < 10) return String(value);
+		return "(" + semPais.slice(0, 2) + ") " + semPais.slice(2, -4) + "-" + semPais.slice(-4);
+	}
+
+	function opcaoDivergenciaHtml(fieldName, origem, rotulo, value) {
+		return (
+			'<button type="button" class="manifestacao-conferencia__opcao" role="radio"' +
+			' aria-checked="false" data-conferencia-opcao="' +
+			escapeHtml(fieldName) +
+			'" data-conferencia-origem="' +
+			escapeHtml(origem) +
+			'">' +
+			'<span class="manifestacao-conferencia__opcao-rotulo">' +
+			escapeHtml(rotulo) +
+			"</span>" +
+			'<span class="manifestacao-conferencia__opcao-valor">' +
+			escapeHtml(formatarValorConferencia(fieldName, value)) +
+			"</span>" +
+			"</button>"
+		);
+	}
+
+	function renderDivergencias() {
+		const digitar = faseConferencia("digitar");
+		if (digitar) digitar.hidden = true;
+
+		const alvo = faseConferencia("divergencia");
+		if (!alvo) return;
+
+		alvo.innerHTML =
+			'<p class="manifestacao-conferencia__aviso">O que você digitou não confere com o' +
+			" formulário. Toque na informação correta.</p>" +
+			conferenciaDivergencias
+				.map((item) => {
+					const rotulo = CONFERENCIA_ROTULOS[item.campo];
+					return (
+						'<div class="manifestacao-conferencia__campo">' +
+						'<p class="manifestacao-conferencia__campo-titulo">' +
+						escapeHtml(rotulo) +
+						"</p>" +
+						'<div class="manifestacao-conferencia__opcoes" role="radiogroup" aria-label="' +
+						escapeHtml(rotulo + " correto") +
+						'">' +
+						opcaoDivergenciaHtml(
+							item.campo,
+							"formulario",
+							"O que está no formulário",
+							item.formulario
+						) +
+						opcaoDivergenciaHtml(
+							item.campo,
+							"digitado",
+							"O que você acabou de digitar",
+							item.digitado
+						) +
+						"</div></div>"
+					);
+				})
+				.join("");
+		alvo.hidden = false;
+	}
+
+	function atualizarBotaoConferencia() {
+		if (!conferenciaBotao) return;
+
+		if (conferenciaFase === "divergencia") {
+			conferenciaBotao.textContent = "Confirmar e continuar";
+			conferenciaBotao.disabled = conferenciaDivergencias.some(
+				(item) => !conferenciaEscolhas[item.campo]
+			);
+			return;
+		}
+
+		conferenciaBotao.textContent = "Confirmar";
+		conferenciaBotao.disabled = false;
+	}
+
+	// Escrever no controle do formulário é o que faz a correção chegar ao envio: o payload é
+	// montado a partir do formulário, depois da conferência.
+	function aplicarEscolhasConferencia() {
+		conferenciaDivergencias.forEach((item) => {
+			if (conferenciaEscolhas[item.campo] !== "digitado") return;
+
+			if (item.campo === "email_responsavel") {
+				const el = campoDoFormulario(item.campo);
+				if (el) {
+					el.value = item.digitado;
+					clearFieldError(el);
+				}
+				return;
+			}
+
+			const raiz = document.getElementById("celular_responsavel_input");
+			if (raiz) {
+				raiz.value = item.digitado;
+				raiz.classList.remove("is-invalid");
+				clearFieldError(document.getElementById("celular_responsavel"));
+			}
+		});
+	}
+
+	function concluirConferencia() {
+		conferenciaConcluindo = true;
+		closeDialog(conferenciaDialog);
+		conferenciaConcluindo = false;
+		limparConferencia();
+		marcarConferido();
+
+		// A escolha pode ter trocado o valor do formulário: revalida antes de seguir.
+		if (!validateResponsavel()) return;
+		showTab("jovem");
+	}
+
+	function avancarConferencia() {
+		if (conferenciaFase === "divergencia") {
+			aplicarEscolhasConferencia();
+			concluirConferencia();
+			return;
+		}
+
+		if (!validarDigitacaoDaConferencia()) return;
+
+		conferenciaDivergencias = divergenciasDaConferencia();
+		if (!conferenciaDivergencias.length) {
+			concluirConferencia();
+			return;
+		}
+
+		conferenciaFase = "divergencia";
+		conferenciaEscolhas = {};
+		renderDivergencias();
+		atualizarBotaoConferencia();
+	}
+
+	function abrirConferencia() {
+		limparConferencia();
+		atualizarBotaoConferencia();
+		openDialog(conferenciaDialog);
+		window.setTimeout(() => {
+			const email = campoDigitado("email_responsavel");
+			if (email) email.focus();
+		}, 100);
+	}
+
+	// Os controles da conferência ficam fora do <form>, então não passam pelos ouvintes
+	// delegados dele: a limpeza de erro é ligada aqui.
+	if (conferenciaDialog) {
+		conferenciaDialog.addEventListener("input", function (event) {
+			if (!event.target.dataset || !event.target.dataset.conferenciaCampo) return;
+			clearFieldError(event.target);
+			const raiz = document.getElementById("conferencia_celular_input");
+			if (raiz) raiz.classList.remove("is-invalid");
+		});
+
+		conferenciaDialog.addEventListener("click", function (event) {
+			const opcao = event.target.closest("[data-conferencia-opcao]");
+			if (!opcao) return;
+
+			conferenciaEscolhas[opcao.dataset.conferenciaOpcao] = opcao.dataset.conferenciaOrigem;
+			opcao
+				.closest(".manifestacao-conferencia__opcoes")
+				.querySelectorAll("[data-conferencia-opcao]")
+				.forEach((item) => {
+					item.setAttribute("aria-checked", item === opcao ? "true" : "false");
+				});
+			atualizarBotaoConferencia();
+		});
+
+		// Fechar o diálogo cancela a passagem de aba.
+		conferenciaDialog.addEventListener("close", function () {
+			if (conferenciaConcluindo) return;
+			limparConferencia();
+		});
+
+		conferenciaDialog.querySelectorAll("[data-close-dialog]").forEach((botao) => {
+			botao.addEventListener("click", function () {
+				closeDialog(document.getElementById(botao.dataset.closeDialog));
+			});
+		});
+	}
+
+	if (conferenciaBotao) conferenciaBotao.addEventListener("click", avancarConferencia);
+
 	// ===================== Navigation buttons =====================
 
 	document.querySelectorAll(".btn-next").forEach((btn) =>
 		btn.addEventListener("click", function () {
-			if (validateResponsavel()) {
+			if (!validateResponsavel()) return;
+
+			if (!precisaConferir()) {
 				showTab("jovem");
+				return;
 			}
+
+			abrirConferencia();
 		})
 	);
 

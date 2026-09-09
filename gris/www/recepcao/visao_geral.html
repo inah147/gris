@@ -75,6 +75,15 @@
 			<span class="dialog-field__value js-dialog-observacoes-total">Nenhuma</span>
 		</div>
 	</div>
+	<div class="dialog-people__row">
+		<button type="button" class="btn-icon-outline" onclick="abrirMensagensDoCardAtual()" title="Ver mensagens enviadas" aria-label="Ver mensagens enviadas">
+			{{ lucide_icon("send", size="sm") }}
+		</button>
+		<div class="dialog-people__info">
+			<span class="dialog-field__label">Mensagens</span>
+			<span class="dialog-field__value">Histórico de envios</span>
+		</div>
+	</div>
 </div>
 {% endmacro %}
 
@@ -411,6 +420,33 @@
 			Quando preenchido, o motivo vira uma observação no card.
 		</p>
 	</div>
+{% endcall %}
+
+{# Diálogo compartilhado com a ficha de registro. #}
+{% include "gris/templates/includes/mensagens_enviadas_dialog.html" %}
+
+{# ----------- Modal Desmarcar Etapa ----------- #}
+{#
+	Diálogo próprio, e não `frappe.confirm`: a timeline vive dentro dos modais das colunas,
+	abertos com showModal(). O dialog nativo vai para a top layer e torna o resto da página
+	inerte, então os modais Bootstrap do Frappe somem sem erro nenhum.
+#}
+{% call dialog(
+	id="modalDesmarcarEtapa",
+	title="Desmarcar etapa",
+	footer='<button type="button" class="btn-ghost" onclick="closeDesmarcarEtapa()">Cancelar</button><button type="button" class="btn-destructive" id="btnConfirmarDesmarcar" onclick="confirmarDesmarcarEtapa()">Desmarcar</button>',
+	close_button=false,
+	close_on_overlay_click=false
+) %}
+	{{ alert(
+		icon=lucide_icon("rotate-ccw", size="sm"),
+		description='Desmarcar apaga o registro de quem concluiu a etapa e de quando. <span id="de_efeitos"></span>',
+		variant="warning",
+		attrs={"class": "mb-4", "id": "de_alerta"}
+	) }}
+	<p class="text-sm">
+		Etapa: <strong id="de_etapa_nome"></strong>
+	</p>
 {% endcall %}
 
 {# ----------- Modal Aguardar Dados ----------- #}

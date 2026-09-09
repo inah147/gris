@@ -176,6 +176,55 @@ def _get(
 	raise WhatsAppRequestError("Número máximo de tentativas atingido.")  # pragma: no cover
 
 
+# ─── Log de mensagens ─────────────────────────────────────────────────────────
+
+LOG_DOCTYPE = "Log de Mensagem"
+
+TIPO_NAO_IDENTIFICADO = "Não identificado"
+
+
+def _registrar_log(
+	contexto: dict | None,
+	*,
+	numero: str,
+	conteudo: str,
+	status: str,
+	erro: str = "",
+) -> None:
+	"""Grava a linha do ``Log de Mensagem``.
+
+	``contexto`` é o que o chamador sabe e o transporte não: de qual jovem a mensagem fala,
+	que mensagem é essa e quem é o destinatário. Vem opcional porque nem todo envio do GRIS
+	nasce no funil de recepção — sem ele a linha ainda registra número, texto e status.
+
+	Grupos ficam sem nome aqui de propósito: só a Evolution API sabe o assunto do grupo, e
+	buscá-lo no envio poria uma chamada de rede no caminho de cada mensagem. Quem resolve o
+	nome é a leitura (``gris.www.recepcao.ficha_registro.listar_mensagens_enviadas``), uma vez
+	por consulta.
+
+	Nunca deixa uma falha do log derrubar o envio: a mensagem já foi (ou não foi) entregue, e
+	perder o registro é menos grave do que transformar isso em erro para o chamador.
+	"""
+	contexto = contexto or {}
+	try:
+		frappe.get_doc(
+			{
+				"doctype": LOG_DOCTYPE,
+				"enviada_em": now_datetime(),
+				"status": status,
+				"novo_associado": contexto.get("novo_associado"),
+				"assunto": contexto.get("assunto"),
+				"destinatario_tipo": contexto.get("destinatario_tipo") or TIPO_NAO_IDENTIFICADO,
+				"destinatario_nome": contexto.get("destinatario_nome") or "",
+				"destinatario_numero": numero,
+				"conteudo": conteudo,
+				"erro": erro[:2000] if erro else "",
+			}
+		).insert(ignore_permissions=True)
+	except Exception:
+		_logger().exception(f"Falha ao registrar o log da mensagem para {numero}.")
+
+
 def _registrar_sucesso() -> None:
 	frappe.db.set_single_value(SETTINGS_DOCTYPE, {"ultimo_envio_em": now_datetime(), "ultimo_erro": ""})
 	# Commit explícito: a mensagem já foi entregue pelo provedor. O marcador de
@@ -195,16 +244,18 @@ def _registrar_erro(contexto: str) -> None:
 # ─── Funções síncronas (chamadas diretamente ou via enqueue) ──────────────────
 
 
-def _enviar_texto_sync(numero: str, mensagem: str) -> dict:
+def _enviar_texto_sync(numero: str, mensagem: str, contexto: dict | None = None) -> dict:
 	config = _get_config()
 	payload = {"number": _normalize_phone(numero), "text": mensagem}
 
 	try:
 		result = _post(f"/message/sendText/{config['nome_instancia']}", payload, config=config)
-	except Exception:
+	except Exception as erro:
+		_registrar_log(contexto, numero=numero, conteudo=mensagem, status="Falhou", erro=str(erro))
 		_registrar_erro(f"enviar_texto:{numero}")
 		raise
 
+	_registrar_log(contexto, numero=numero, conteudo=mensagem, status="Enviada")
 	_registrar_sucesso()
 	_logger().info(f"Mensagem de texto enviada para {numero}.")
 	return result
@@ -243,6 +294,7 @@ def _enviar_para_grupo_sync(
 	*,
 	mencionar_todos: bool = False,
 	mencionar: list[str] | None = None,
+	contexto: dict | None = None,
 ) -> dict:
 	config = _get_config()
 	payload = {"number": grupo_jid, "text": mensagem}
@@ -257,10 +309,12 @@ def _enviar_para_grupo_sync(
 
 	try:
 		result = _post(f"/message/sendText/{config['nome_instancia']}", payload, config=config)
-	except Exception:
+	except Exception as erro:
+		_registrar_log(contexto, numero=grupo_jid, conteudo=mensagem, status="Falhou", erro=str(erro))
 		_registrar_erro(f"enviar_para_grupo:{grupo_jid}")
 		raise
 
+	_registrar_log(contexto, numero=grupo_jid, conteudo=mensagem, status="Enviada")
 	_registrar_sucesso()
 	_logger().info(f"Mensagem enviada para grupo {grupo_jid}.")
 	return result
@@ -294,6 +348,7 @@ def _enviar_mensagem_formatada_sync(
 	titulo: str,
 	descricao: str,
 	botoes: list[dict] | None = None,
+	contexto: dict | None = None,
 ) -> dict:
 	config = _get_config()
 	payload: dict = {
@@ -304,12 +359,15 @@ def _enviar_mensagem_formatada_sync(
 	if botoes:
 		payload["buttons"] = botoes
 
+	conteudo = f"*{titulo}*\n{descricao}" if titulo else descricao
 	try:
 		result = _post(f"/message/sendButtons/{config['nome_instancia']}", payload, config=config)
-	except Exception:
+	except Exception as erro:
+		_registrar_log(contexto, numero=numero, conteudo=conteudo, status="Falhou", erro=str(erro))
 		_registrar_erro(f"enviar_mensagem_formatada:{numero}")
 		raise
 
+	_registrar_log(contexto, numero=numero, conteudo=conteudo, status="Enviada")
 	_registrar_sucesso()
 	_logger().info(f"Mensagem formatada enviada para {numero}.")
 	return result
@@ -387,13 +445,18 @@ def listar_grupos_whatsapp_para_select(
 	]
 
 
-def enviar_texto(numero: str, mensagem: str, *, enqueue: bool = True) -> dict | None:
+def enviar_texto(
+	numero: str, mensagem: str, *, enqueue: bool = True, contexto: dict | None = None
+) -> dict | None:
 	"""Envia mensagem de texto para um número WhatsApp.
 
 	Args:
 		numero: Número no formato internacional (ex.: "5511999999999", "+55 11 99999-9999").
 		mensagem: Texto a enviar.
 		enqueue: Se True (padrão), processa em background. Se False, executa de forma síncrona.
+		contexto: O que o transporte não sabe e a ficha de registro precisa: de qual jovem
+			a mensagem fala (``novo_associado``), que mensagem é essa (``assunto``) e quem
+			recebe (``destinatario_tipo``, ``destinatario_nome``). Ver ``_registrar_log``.
 
 	Returns:
 		Resposta da Evolution API (dict) no modo síncrono, ou None quando enfileirado.
@@ -409,9 +472,10 @@ def enviar_texto(numero: str, mensagem: str, *, enqueue: bool = True) -> dict | 
 			timeout=60,
 			numero=numero,
 			mensagem=mensagem,
+			contexto=contexto,
 		)
 		return None
-	return _enviar_texto_sync(numero, mensagem)
+	return _enviar_texto_sync(numero, mensagem, contexto=contexto)
 
 
 def enviar_midia(
@@ -459,6 +523,7 @@ def enviar_para_grupo(
 	mencionar_todos: bool = False,
 	mencionar: list[str] | None = None,
 	enqueue: bool = True,
+	contexto: dict | None = None,
 ) -> dict | None:
 	"""Envia mensagem de texto para um grupo WhatsApp.
 
@@ -469,6 +534,9 @@ def enviar_para_grupo(
 		mencionar: Números a mencionar individualmente. O corpo da mensagem precisa conter
 			``@<números>`` para o WhatsApp desenhar a menção.
 		enqueue: Se True (padrão), processa em background.
+		contexto: O que o transporte não sabe e a ficha de registro precisa: de qual jovem
+			a mensagem fala (``novo_associado``), que mensagem é essa (``assunto``) e quem
+			recebe (``destinatario_tipo``, ``destinatario_nome``). Ver ``_registrar_log``.
 
 	Returns:
 		Resposta da Evolution API (dict) no modo síncrono, ou None quando enfileirado.
@@ -486,6 +554,7 @@ def enviar_para_grupo(
 			mensagem=mensagem,
 			mencionar_todos=mencionar_todos,
 			mencionar=mencionar,
+			contexto=contexto,
 		)
 		return None
 	return _enviar_para_grupo_sync(
@@ -493,6 +562,7 @@ def enviar_para_grupo(
 		mensagem,
 		mencionar_todos=mencionar_todos,
 		mencionar=mencionar,
+		contexto=contexto,
 	)
 
 
@@ -539,6 +609,7 @@ def enviar_mensagem_formatada(
 	botoes: list[dict] | None = None,
 	*,
 	enqueue: bool = True,
+	contexto: dict | None = None,
 ) -> dict | None:
 	"""Envia mensagem com título, descrição e botões interativos.
 
@@ -549,6 +620,9 @@ def enviar_mensagem_formatada(
 		botoes: Lista de botões conforme Evolution API v2.
 		        Exemplo: [{"buttonId": "1", "buttonText": {"displayText": "Confirmar"}, "type": "reply"}]
 		enqueue: Se True (padrão), processa em background.
+		contexto: O que o transporte não sabe e a ficha de registro precisa: de qual jovem
+			a mensagem fala (``novo_associado``), que mensagem é essa (``assunto``) e quem
+			recebe (``destinatario_tipo``, ``destinatario_nome``). Ver ``_registrar_log``.
 
 	Returns:
 		Resposta da Evolution API (dict) no modo síncrono, ou None quando enfileirado.
@@ -566,6 +640,7 @@ def enviar_mensagem_formatada(
 			titulo=titulo,
 			descricao=descricao,
 			botoes=botoes,
+			contexto=contexto,
 		)
 		return None
-	return _enviar_mensagem_formatada_sync(numero, titulo, descricao, botoes)
+	return _enviar_mensagem_formatada_sync(numero, titulo, descricao, botoes, contexto=contexto)

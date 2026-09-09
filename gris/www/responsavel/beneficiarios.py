@@ -7,6 +7,7 @@ from frappe.utils import add_days, cint, getdate, now, today
 from gris.api.portal_access import enrich_context
 from gris.api.recepcao import limpar_sinal_de_reagendamento
 from gris.api.recepcao_notificacoes import notificar_nova_manifestacao_no_grupo_recepcao
+from gris.api.recepcao_visitas import agendar_ou_remarcar_visita
 from gris.api.responsavel_acesso import get_responsavel_do_usuario
 
 no_cache = 1
@@ -369,28 +370,27 @@ def schedule_visit(date: str):
 	if not beneficiaries:
 		frappe.throw(_("Todos os beneficiários já possuem visita agendada."))
 
+	_marcar_visitas(beneficiaries, date)
+
+	return "Visita agendada com sucesso."
+
+
+def _marcar_visitas(beneficiaries, date: str) -> None:
+	"""Agenda (ou remarca) a visita de cada beneficiário e move o card para a coluna certa.
+
+	Passa pelo serviço de ``gris.api.recepcao_visitas``: cada jovem tem uma única visita, e
+	remarcar altera a data dela em vez de criar outra linha.
+	"""
 	for b in beneficiaries:
 		if not _is_date_available_for_ramo(b.ramo, date):
 			frappe.throw(_("A data selecionada não está disponível para o ramo do beneficiário."))
 
-	# Create Agenda de Visitas for each
 	for b in beneficiaries:
-		doc = frappe.get_doc(
-			{
-				"doctype": "Agenda de Visitas",
-				"jovem": b.name,
-				"data_da_visita": date,
-				"ramo": b.ramo,
-				"visita_confirmada": 0,
-			}
-		)
-		doc.insert(ignore_permissions=True)
+		agendar_ou_remarcar_visita(b.name, date, ramo=b.ramo, ignore_permissions=True)
 
 		# Update Novo Associado
 		frappe.db.set_value("Novo Associado", b.name, {"visita_agendada": 1, "status": "Visita Agendada"})
 		limpar_sinal_de_reagendamento(b.name)
-
-	return "Visita agendada com sucesso."
 
 
 @frappe.whitelist()
@@ -428,8 +428,38 @@ def cancel_visit():
 
 @frappe.whitelist()
 def reschedule_visit(date: str):
-	cancel_visit()
-	return schedule_visit(date)
+	"""Move a visita dos beneficiários para outra data.
+
+	Antes era ``cancel_visit()`` + ``schedule_visit()``: apagava e recriava, divergindo da
+	recepção, que remarca no lugar. Agora os dois portais alteram a data da mesma linha.
+	"""
+	user = frappe.session.user
+	responsavel_name = _get_responsavel_name(user)
+	if not responsavel_name:
+		frappe.throw(_("Responsável não encontrado."))
+
+	vinculos = frappe.get_all(
+		"Responsavel Vinculo",
+		filters={"responsavel": responsavel_name},
+		fields=["beneficiario_novo_associado"],
+	)
+	novo_associado_names = [v.beneficiario_novo_associado for v in vinculos if v.beneficiario_novo_associado]
+
+	if not novo_associado_names:
+		frappe.throw(_("Nenhum beneficiário em integração encontrado."))
+
+	beneficiaries = frappe.get_all(
+		"Novo Associado",
+		filters={"name": ["in", novo_associado_names]},
+		fields=["name", "ramo"],
+	)
+
+	if not beneficiaries:
+		frappe.throw(_("Nenhum beneficiário em integração encontrado."))
+
+	_marcar_visitas(beneficiaries, date)
+
+	return "Visita remarcada com sucesso."
 
 
 def _status_badge_meta(status):
@@ -549,6 +579,7 @@ def adicionar_beneficiario(nome_jovem: str, cpf_jovem: str, data_nascimento_jove
 			nome_responsavel=responsavel_doc.nome_completo or responsavel_name,
 			data_nascimento_jovem=data_nascimento_jovem,
 			contexto="adicionar_beneficiario",
+			novo_associado=novo_associado_doc.name,
 		)
 
 		return {"ok": True, "message": "Beneficiário adicionado com sucesso!"}

@@ -22,6 +22,7 @@ from gris.api.recepcao_mensagens import (
 	MENSAGEM_DESATIVADA,
 	_buscar_contatos_responsaveis,
 	_buscar_responsavel_administrativo,
+	_contexto_de_log,
 	_extrair_primeiro_nome,
 	_mensagem_habilitada,
 )
@@ -144,7 +145,16 @@ def enviar_avisos_seguimento_registro_provisorio() -> None:
 				contato_responsavel=contatos.get(str(novo_associado.name)),
 			)
 
-			enviar_texto(telefone_administrativo, mensagem)
+			enviar_texto(
+				telefone_administrativo,
+				mensagem,
+				contexto=_contexto_de_log(
+					assunto="Seguimento do registro provisório",
+					tipo="Responsável administrativo",
+					novo_associado=str(novo_associado.name),
+					nome=responsavel_administrativo.get("nome_completo"),
+				),
+			)
 			frappe.db.set_value(
 				"Novo Associado",
 				novo_associado.name,

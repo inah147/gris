@@ -77,10 +77,12 @@ class TestRegistroProvisorioNotificacoes(FrappeTestCase):
 				}
 			)
 
-		def _fake_enviar_texto(numero, mensagem, enqueue=True):
+		def _fake_enviar_texto(numero, mensagem, enqueue=True, contexto=None):
 			if sender:
 				sender(numero, mensagem)
-			enviadas.append({"numero": numero, "mensagem": mensagem, "enqueue": enqueue})
+			enviadas.append(
+				{"numero": numero, "mensagem": mensagem, "enqueue": enqueue, "contexto": contexto}
+			)
 
 		try:
 			modulo.frappe.get_all = _fake_get_all

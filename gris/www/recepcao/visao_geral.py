@@ -20,6 +20,8 @@ from gris.api.recepcao_funil import (
 	calcular_etapas,
 	carregar_configuracao,
 	coluna_de_acompanhamento,
+	dias_para_registro_definitivo,
+	sinal_registro_definitivo,
 	status_por_etapas_concluidas,
 )
 from gris.api.recepcao_visitas import remover_visita_do_jovem
@@ -119,6 +121,7 @@ def get_context(context):
 		"primeira_visita_realizada",
 		"reagendamento_pendente",
 		"data_pedido_reagendamento",
+		"data_registro_provisorio_efetivado",
 		*field_interval_map.keys(),
 	]
 
@@ -272,6 +275,8 @@ def get_context(context):
 	kanban_data = {coluna: [] for coluna in colunas}
 
 	today = getdate()
+	# Espera do registro definitivo lida uma vez, não por card.
+	dias_registro_definitivo = dias_para_registro_definitivo(config)
 
 	for associado in novos_associados:
 		coluna = (
@@ -332,6 +337,16 @@ def get_context(context):
 				format_date(associado.data_pedido_reagendamento)
 				if associado.data_pedido_reagendamento
 				else None
+			)
+
+			# Sinal "hora do registro definitivo": quem efetivou o provisório há mais
+			# tempo que o configurado ganha o selo no card, para a recepção ver a
+			# pendência na visão geral sem abrir perfil por perfil.
+			sinal_definitivo = sinal_registro_definitivo(associado, dias_registro_definitivo, today)
+			associado.registro_definitivo_pendente = sinal_definitivo["pendente"]
+			associado.registro_definitivo_dias = sinal_definitivo["dias"]
+			associado.registro_definitivo_desde = (
+				format_date(sinal_definitivo["desde"]) if sinal_definitivo["desde"] else None
 			)
 
 			# Idade recalculada a cada carregamento da página

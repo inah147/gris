@@ -255,6 +255,38 @@
 	border-color: color-mix(in srgb, #f59e0b 32%, transparent);
 }
 
+/* Selo "hora do registro definitivo" ------------------------------
+   Passados os dias configurados desde a efetivação do registro provisório,
+   o card avisa que chegou a hora do definitivo. Preenchimento sólido em
+   violeta: é a única cor fora da paleta dos ramos e do âmbar do
+   reagendamento, e o contraste alto é o "destaque" que a recepção pediu
+   para enxergar a pendência sem abrir cada perfil. */
+.badge.badge-registro-definitivo {
+	display: inline-flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 1);
+	background-color: #6d28d9;
+	color: #ffffff;
+	border-color: #5b21b6;
+	font-weight: 600;
+}
+.dark .badge.badge-registro-definitivo {
+	background-color: #7c3aed;
+	color: #f5f3ff;
+	border-color: #a78bfa;
+}
+
+/* A faixa lateral repete o sinal na moldura do card, para a pendência
+   aparecer mesmo com a coluna rolada e o selo fora do campo de visão. */
+.kanban-card--registro-definitivo {
+	border-color: #a78bfa;
+	box-shadow: inset 3px 0 0 0 #6d28d9;
+}
+.dark .kanban-card--registro-definitivo {
+	border-color: color-mix(in srgb, #a78bfa 45%, transparent);
+	box-shadow: inset 3px 0 0 0 #7c3aed;
+}
+
 /* Timeline (etapas da recepção) ----------------------------------*/
 .timeline-container {
 	position: relative;

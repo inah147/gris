@@ -15,6 +15,10 @@ Dois tipos de disparo convivem aqui:
 
 Todos os lembretes param sozinhos: ``finalizar_processo_recepcao`` apaga o ``Novo Associado``
 ao encerrar a integração, e uma desistência apaga o registro pelo mesmo caminho.
+
+Cada mensagem tem um interruptor próprio em ``Configuracoes de Recepcao`` (``msg_*``), lido
+por ``_mensagem_habilitada``: desmarcar suspende só aquela mensagem, sem tocar nas demais nem
+na integração de WhatsApp como um todo.
 """
 
 from __future__ import annotations
@@ -22,7 +26,7 @@ from __future__ import annotations
 from collections import defaultdict
 
 import frappe
-from frappe.utils import add_days, date_diff, get_url, getdate, today
+from frappe.utils import add_days, cint, date_diff, get_url, getdate, today
 
 from gris.api.recepcao import formatar_idade
 from gris.api.recepcao_funil import RAMOS
@@ -39,6 +43,28 @@ SETTINGS_DOCTYPE = "Configuracoes de Recepcao"
 STATUS_IGNORADOS = ["Fila de espera", "Concluído"]
 STATUS_AGUARDAR_DADOS = "Aguardar Dados"
 ASSINATURA = "_Esta é uma mensagem automática_"
+MENSAGEM_DESATIVADA = "Mensagem desativada nas configurações de recepção."
+
+# Interruptores por mensagem em ``Configuracoes de Recepcao``. A lista existe para o patch
+# que os liga em sites já criados (``gris.patches.ligar_interruptores_de_mensagens_da_recepcao``);
+# cada disparo cita o seu campo diretamente, para o grep achar quem usa o quê.
+CAMPOS_DE_INTERRUPTOR = (
+	"msg_nova_manifestacao",
+	"msg_visita_agendada",
+	"msg_lembrete_visita",
+	"msg_visitas_do_dia",
+	"msg_recepcao_realizada",
+	"msg_orientacao_pos_visita",
+	"msg_lembrete_dados",
+	"msg_dados_preenchidos",
+	"msg_registro_criado",
+	"msg_seguimento_provisorio",
+	"msg_lembrete_ficha_medica",
+	"msg_lembrete_id_escoteiros",
+	"msg_lembrete_pesquisa",
+	"msg_acolhida",
+	"msg_desistencia",
+)
 
 DIAS_INICIAIS_PADRAO = (4, 6, 8)
 INTERVALO_DADOS_PADRAO = 5
@@ -206,6 +232,31 @@ def _grupo(fieldname: str) -> str:
 	return (frappe.db.get_single_value(SETTINGS_DOCTYPE, fieldname) or "").strip()
 
 
+def _valor_bruto_do_single(fieldname: str):
+	"""Valor cru do campo em ``tabSingles`` — ``None`` quando a linha ainda não existe.
+
+	``frappe.db.get_single_value`` converte pelo fieldtype, e num Check isso transforma
+	"linha inexistente" em ``0``, indistinguível de um Check desmarcado de propósito. A linha
+	só nasce quando alguém salva o Single, então pela via convertida um deploy silenciaria
+	todas as mensagens até alguém abrir a tela de configurações. Lendo cru, ausência continua
+	sendo ausência.
+	"""
+	# ``order_by=None`` é obrigatório: ``tabSingles`` não tem coluna ``modified``, que é a
+	# ordenação padrão do ``get_value``.
+	return frappe.db.get_value(
+		"Singles",
+		{"doctype": SETTINGS_DOCTYPE, "field": fieldname},
+		"value",
+		order_by=None,
+	)
+
+
+def _mensagem_habilitada(fieldname: str) -> bool:
+	"""Interruptor da mensagem em Configurações de Recepção; ausente conta como ligado."""
+	valor = _valor_bruto_do_single(fieldname)
+	return True if valor is None else bool(cint(valor))
+
+
 def _intervalo(fieldname: str, padrao: int) -> int:
 	"""Intervalo configurado em dias; cai no padrão quando ausente ou não positivo."""
 	try:
@@ -299,8 +350,10 @@ def _ficha_do_jovem(jovem: frappe._dict, contato: frappe._dict | None) -> str:
 def _paragrafo_duvidas_administrativo() -> str:
 	"""Convite a falar com o administrativo sobre registro; vazio quando não há quem contatar.
 
-	Toda mensagem que pede algo baseado no número de registro (ficha médica, id@escoteiros)
-	esbarra em responsáveis que não sabem qual é o registro — nem o do jovem, nem o deles.
+	Serve o aviso de registro criado, que entrega o número e precisa dizer a quem recorrer
+	quando ele não bate ou não é entendido. As cobranças recorrentes usam o parágrafo
+	combinado de ``_paragrafo_administrativo_das_cobrancas``, que já cobre esta dúvida.
+
 	Sem responsável administrativo configurado, ou sem telefone dele, o parágrafo some em vez
 	de mandar a família procurar alguém inexistente.
 	"""
@@ -324,6 +377,34 @@ def _bloco_duvidas_administrativo() -> str:
 	"""``_paragrafo_duvidas_administrativo`` já com a quebra de linha para entrar no corpo."""
 	paragrafo = _paragrafo_duvidas_administrativo()
 	return f"{paragrafo}\n\n" if paragrafo else ""
+
+
+def _paragrafo_administrativo_das_cobrancas() -> str:
+	"""Fecha as cobranças recorrentes: saída para quem já fez, e a quem perguntar.
+
+	As cobranças de ficha médica e id@escoteiros só param quando alguém marca a etapa no
+	Gris, então a família que já fez a sua parte precisa saber para quem avisar. E as duas
+	dependem do número de registro, que o responsável frequentemente não sabe qual é.
+
+	As duas coisas levam à mesma pessoa, então viram um parágrafo só: citar nome e telefone
+	do administrativo duas vezes seguidas soava repetitivo na mensagem real.
+
+	Diferente de ``_paragrafo_duvidas_administrativo``, nunca volta vazio — o pedido de
+	desconsiderar vale mesmo sem responsável administrativo cadastrado.
+	"""
+	desconsidere = "Se você já fez esta ação, por favor desconsidere esta mensagem."
+
+	administrativo = _buscar_responsavel_administrativo()
+	nome = ((administrativo or {}).get("nome_completo") or "").strip()
+	telefone = ((administrativo or {}).get("telefone") or "").strip()
+	if not nome or not telefone:
+		return f"{desconsidere} Neste caso, avise o responsável pelo administrativo do grupo."
+
+	para_administrativo = genero.para(administrativo.get("sexo"))
+	return (
+		f"{desconsidere} Para avisar que já fez, ou tirar dúvida sobre o número de registro, "
+		f"fale {para_administrativo} {nome}, do administrativo, pelo telefone {telefone}."
+	)
 
 
 def _montar_dados_preenchidos(nome_jovem: str, nome_responsavel: str, sexo_jovem: str | None) -> str:
@@ -390,6 +471,55 @@ def _montar_lembrete_dados(
 		partes.append(
 			f"Se ainda tiver dificuldades ou se mudaram de ideia e não forem continuar, só avisar {contato}\n"
 		)
+
+	partes.append("Grande abraço!\n")
+	partes.append(ASSINATURA)
+	return "\n".join(partes)
+
+
+def _montar_orientacao_pos_visita(
+	*,
+	primeiro_nome_responsavel: str,
+	primeiro_nome_jovem: str,
+	sexo_jovem: str | None,
+	recepcionista: frappe._dict | None,
+) -> str:
+	"""Orientação enviada à família logo depois da visita ao grupo.
+
+	Mesma informação do lembrete de dados, em tom de próximo passo: a família acabou de sair
+	daqui e ainda não deve nada. A cobrança propriamente dita continua com
+	``enviar_lembretes_dados_registro``, que só começa no quarto dia.
+	"""
+	# Cada parágrafo é nomeado antes de entrar na lista: strings concatenadas implicitamente
+	# dentro de um literal de lista escondem uma vírgula esquecida (semgrep string-concat-in-list).
+	abertura = f"Olá, {primeiro_nome_responsavel}!\n"
+	agradecimento = "Foi muito bom receber vocês no Grupo Escoteiro hoje! 🙂\n"
+	proximo_passo = (
+		f"O próximo passo é preencher os dados {genero.de(sexo_jovem)} {primeiro_nome_jovem} "
+		f"para que possamos fazer o registro {genero.dele(sexo_jovem)}. "
+		"É essa etapa que nos permite seguir com a integração!\n"
+	)
+	link_gris = f"Os dados são preenchidos no Gris, o link é este aqui:\n{get_url(CAMINHO_GRIS_REGISTRO)}\n"
+	chamada_tutoriais = "Para te ajudar, aqui estão dois tutoriais:\n"
+	tutorial_login = f"*Como fazer login no Gris*\n{TUTORIAL_LOGIN}\n"
+	tutorial_dados = f"*Como preencher os dados para registro*\n{TUTORIAL_DADOS_REGISTRO}\n"
+
+	partes = [
+		abertura,
+		agradecimento,
+		proximo_passo,
+		link_gris,
+		chamada_tutoriais,
+		tutorial_login,
+		tutorial_dados,
+	]
+
+	if recepcionista and recepcionista.get("nome"):
+		contato = f"com {genero.artigo(recepcionista.get('sexo'))} {recepcionista.get('nome')}"
+		frase = f"Qualquer dúvida, é só falar {contato}, que está acompanhando sua recepção!"
+		if recepcionista.get("telefone"):
+			frase += f" O telefone é: {recepcionista.get('telefone')}"
+		partes.append(f"{frase}\n")
 
 	partes.append("Grande abraço!\n")
 	partes.append(ASSINATURA)
@@ -472,7 +602,6 @@ def _montar_lembrete_pesquisa(primeiro_nome_responsavel: str) -> str:
 def _montar_lembrete_ficha_medica(
 	*, primeiro_nome_responsavel: str, primeiro_nome_jovem: str, sexo_jovem: str | None
 ) -> str:
-	duvidas = _bloco_duvidas_administrativo()
 	return (
 		f"Olá, {primeiro_nome_responsavel}!\n\n"
 		f"Agora que o registro {genero.de(sexo_jovem)} {primeiro_nome_jovem} já foi processado, "
@@ -481,36 +610,73 @@ def _montar_lembrete_ficha_medica(
 		f"é este aqui:\n{PAXTU_BASE}\n\n"
 		"Para te ajudar, aqui está um tutorial de como fazer isso:\n"
 		f"{TUTORIAL_FICHA_MEDICA}\n\n"
-		f"{duvidas}"
+		f"{_paragrafo_administrativo_das_cobrancas()}\n\n"
 		"Grande abraço!\n"
 		f"{ASSINATURA}"
 	)
 
 
 def _montar_lembrete_id_escoteiros(primeiro_nome_responsavel: str) -> str:
-	duvidas = _bloco_duvidas_administrativo()
 	return (
 		f"Olá, {primeiro_nome_responsavel}!\n\n"
 		"Todos os associados dos Escoteiros do Brasil têm direito a um e-mail institucional, e ele é "
 		"super importante! Para criar, acesse o site id.escoteiros.org.br.\n"
 		"Para te ajudar, aqui está um passo a passo de como fazer a criação:\n"
 		f"{AJUDA_ID_ESCOTEIROS}\n\n"
-		f"{duvidas}"
+		f"{_paragrafo_administrativo_das_cobrancas()}\n\n"
 		"Grande abraço!\n"
 		f"{ASSINATURA}"
 	)
 
 
-def _montar_acolhida(*, primeiro_nome_jovem: str, sexo_jovem: str | None, ficha: str, mencao: str) -> str:
+def _montar_acolhida(
+	*,
+	primeiro_nome_jovem: str,
+	sexo_jovem: str | None,
+	ficha: str,
+	mencao: str,
+	repeticao: bool = False,
+) -> str:
+	"""Aviso de acolhida ao grupo de chefes, em duas versões.
+
+	O primeiro envio anuncia que a hora chegou. A partir da segunda passada o registro
+	definitivo já saiu faz tempo e o anúncio não cabe mais: o texto passa a dizer que a etapa
+	continua pendente e pede que ela seja marcada no Gris quando já tiver acontecido — sem
+	isso a série se repete indefinidamente para uma acolhida que já foi feita.
+	"""
 	cabecalho = f"{mencao}\n\n" if mencao else ""
 	de_jovem = genero.de(sexo_jovem)
+
+	if repeticao:
+		situacao = (
+			f"A acolhida {de_jovem} jovem {primeiro_nome_jovem} ainda não foi realizada.\n"
+			"O registro definitivo já está efetivado, então é hora de combinar a acolhida e a "
+			"entrega do lenço!\n\n"
+			"Se a acolhida já aconteceu, por favor marque a etapa como concluída no Gris."
+		)
+	else:
+		situacao = (
+			f"O registro definitivo {de_jovem} jovem {primeiro_nome_jovem} foi efetivado!\n"
+			"Isso significa que chegou a hora de fazer sua acolhida e entrega do lenço."
+		)
+
+	return f"Olá!\n\n{cabecalho}{situacao}\n\nAqui estão os dados {de_jovem} jovem:\n{ficha}\n\n{ASSINATURA}"
+
+
+def _montar_desistencia(*, nome_completo: str, sexo: str | None, mencao: str) -> str:
+	"""Aviso ao grupo de chefes de que alguém não segue no grupo.
+
+	Vale tanto para o jovem que desiste no funil quanto para o beneficiário afastado: para
+	o chefe de seção é a mesma notícia, e é a única forma de ele saber sem esperar a ausência
+	aparecer na reunião.
+	"""
+	cabecalho = f"{mencao}\n\n" if mencao else ""
+	desligado = genero.flexionar(sexo, "desligada", "desligado", "desligado(a)")
 	return (
 		"Olá!\n\n"
 		f"{cabecalho}"
-		f"O registro definitivo {de_jovem} jovem {primeiro_nome_jovem} foi efetivado!\n"
-		"Isso significa que chegou a hora de fazer sua acolhida e entrega do lenço.\n\n"
-		f"Aqui estão os dados {de_jovem} jovem:\n"
-		f"{ficha}\n\n"
+		f"Passando para informar que {nome_completo} não continuará as atividades e será "
+		f"{desligado} da UEL.\n\n"
 		f"{ASSINATURA}"
 	)
 
@@ -529,6 +695,9 @@ def notificar_dados_preenchidos_no_grupo_recepcao(novo_associado_name: str) -> N
 	Falha silenciosa com log: o cadastro do responsável não pode cair por causa do aviso.
 	"""
 	logger = _logger_de_evento()
+
+	if not _mensagem_habilitada("msg_dados_preenchidos"):
+		return
 
 	grupo_jid = _grupo("grupo_recepcao_whatsapp")
 	if not grupo_jid:
@@ -585,38 +754,130 @@ def notificar_recepcao_realizada(novo_associado_name: str) -> None:
 
 	contato = _buscar_contatos_responsaveis([novo_associado_name]).get(novo_associado_name)
 
-	grupo_jid = _grupo("grupo_chefes_secao_whatsapp")
-	if grupo_jid:
-		try:
-			chefes = buscar_contatos_chefes_por_ramo([jovem.get("ramo")]) if jovem.get("ramo") else {}
-			telefones_chefes = [
-				chefe.get("telefone") for chefe in chefes.get(jovem.get("ramo"), []) if chefe.get("telefone")
-			]
-			mencoes = " ".join(_mencao(telefone) for telefone in telefones_chefes).strip()
+	# A inclusão no grupo de recados gerais fica fora do interruptor: desligar o aviso aos
+	# chefes não deve desligar a entrada do responsável no grupo, que é outra coisa.
+	if _mensagem_habilitada("msg_recepcao_realizada"):
+		_avisar_chefes_da_recepcao(novo_associado_name, jovem, contato, logger)
 
-			enviar_para_grupo(
-				grupo_jid,
-				_montar_recepcao_realizada(
-					primeiro_nome_jovem=_extrair_primeiro_nome(jovem.get("nome_completo")),
-					sexo_jovem=jovem.get("sexo"),
-					mencao=mencoes,
-					ficha=_ficha_do_jovem(jovem, contato),
-				),
-				mencionar=telefones_chefes or None,
-			)
-			_carimbar(novo_associado_name, "data_mensagem_visita_realizada", getdate(today()))
-		except Exception:
-			frappe.log_error(
-				frappe.get_traceback(),
-				f"Aviso de recepção realizada (grupo chefes): {novo_associado_name}",
-			)
-	else:
+	_incluir_responsavel_no_grupo_geral(novo_associado_name, contato)
+
+
+def _avisar_chefes_da_recepcao(
+	novo_associado_name: str,
+	jovem: frappe._dict,
+	contato: frappe._dict | None,
+	logger,
+) -> None:
+	grupo_jid = _grupo("grupo_chefes_secao_whatsapp")
+	if not grupo_jid:
 		logger.warning(
 			"Aviso de recepção realizada não enviado: grupo de chefes de seção não configurado "
 			f"({novo_associado_name})."
 		)
+		return
 
-	_incluir_responsavel_no_grupo_geral(novo_associado_name, contato)
+	try:
+		chefes = buscar_contatos_chefes_por_ramo([jovem.get("ramo")]) if jovem.get("ramo") else {}
+		telefones_chefes = [
+			chefe.get("telefone") for chefe in chefes.get(jovem.get("ramo"), []) if chefe.get("telefone")
+		]
+		mencoes = " ".join(_mencao(telefone) for telefone in telefones_chefes).strip()
+
+		enviar_para_grupo(
+			grupo_jid,
+			_montar_recepcao_realizada(
+				primeiro_nome_jovem=_extrair_primeiro_nome(jovem.get("nome_completo")),
+				sexo_jovem=jovem.get("sexo"),
+				mencao=mencoes,
+				ficha=_ficha_do_jovem(jovem, contato),
+			),
+			mencionar=telefones_chefes or None,
+		)
+		_carimbar(novo_associado_name, "data_mensagem_visita_realizada", getdate(today()))
+	except Exception:
+		frappe.log_error(
+			frappe.get_traceback(),
+			f"Aviso de recepção realizada (grupo chefes): {novo_associado_name}",
+		)
+
+
+def notificar_orientacao_pos_visita(novo_associado_name: str) -> None:
+	"""Orienta o responsável, logo após a visita, sobre o preenchimento dos dados.
+
+	Disparado no mesmo evento do aviso aos chefes, mas com carimbo próprio: os dois têm
+	interruptores independentes e um pode estar ligado sem o outro.
+	"""
+	logger = _logger_de_evento()
+
+	if not _mensagem_habilitada("msg_orientacao_pos_visita"):
+		return
+
+	jovem = frappe.db.get_value(
+		"Novo Associado",
+		novo_associado_name,
+		["name", "nome_completo", "sexo", "responsavel_recepcao", "data_mensagem_orientacao_visita"],
+		as_dict=True,
+	)
+	if not jovem or jovem.get("data_mensagem_orientacao_visita"):
+		return
+
+	contato = _buscar_contatos_responsaveis([novo_associado_name]).get(novo_associado_name)
+	telefone = (contato or {}).get("telefone")
+	if not telefone:
+		logger.warning(f"Orientação pós-visita não enviada: nenhum telefone para {novo_associado_name}.")
+		return
+
+	try:
+		enviar_texto(
+			telefone,
+			_montar_orientacao_pos_visita(
+				primeiro_nome_responsavel=_extrair_primeiro_nome(contato.get("nome")),
+				primeiro_nome_jovem=_extrair_primeiro_nome(jovem.get("nome_completo")),
+				sexo_jovem=jovem.get("sexo"),
+				recepcionista=_buscar_contato_do_recepcionista(jovem.get("responsavel_recepcao")),
+			),
+		)
+		_carimbar(novo_associado_name, "data_mensagem_orientacao_visita", getdate(today()))
+	except Exception:
+		frappe.log_error(
+			frappe.get_traceback(),
+			f"Orientação pós-visita: {novo_associado_name}",
+		)
+
+
+def notificar_desistencia(nome_completo: str, sexo: str | None = None, ramo: str | None = None) -> None:
+	"""Avisa o grupo de chefes que alguém não segue no grupo.
+
+	Recebe os dados soltos, e não um docname, de propósito: nos dois caminhos que chamam
+	(desistência no funil e afastamento de beneficiário) o registro é apagado ou anonimizado
+	logo em seguida, e reler pelo nome traria "ANONIMIZADO" no lugar da pessoa.
+	"""
+	logger = _logger_de_evento()
+
+	if not _mensagem_habilitada("msg_desistencia"):
+		return
+
+	nome = (nome_completo or "").strip()
+	if not nome:
+		return
+
+	grupo_jid = _grupo("grupo_chefes_secao_whatsapp")
+	if not grupo_jid:
+		logger.warning(f"Aviso de desistência não enviado: grupo de chefes não configurado ({nome}).")
+		return
+
+	try:
+		chefes = buscar_contatos_chefes_por_ramo([ramo]) if ramo else {}
+		telefones_chefes = [chefe.get("telefone") for chefe in chefes.get(ramo, []) if chefe.get("telefone")]
+		mencoes = " ".join(_mencao(telefone) for telefone in telefones_chefes).strip()
+
+		enviar_para_grupo(
+			grupo_jid,
+			_montar_desistencia(nome_completo=nome, sexo=sexo, mencao=mencoes),
+			mencionar=telefones_chefes or None,
+		)
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), f"Aviso de desistência (grupo chefes): {nome}")
 
 
 def _incluir_responsavel_no_grupo_geral(novo_associado_name: str, contato: frappe._dict | None) -> None:
@@ -646,6 +907,9 @@ def notificar_registro_criado(associado_name: str) -> None:
 	o nome (md5 do CPF), então ``associado_name`` também identifica o jovem no funil.
 	"""
 	logger = _logger_de_evento()
+
+	if not _mensagem_habilitada("msg_registro_criado"):
+		return
 
 	jovem = frappe.db.get_value(
 		"Novo Associado",
@@ -685,7 +949,7 @@ def notificar_registro_criado(associado_name: str) -> None:
 
 
 def on_novo_associado_atualizado(doc, method=None) -> None:
-	"""``doc_events`` de ``Novo Associado``: dispara o aviso de recepção realizada.
+	"""``doc_events`` de ``Novo Associado``: dispara as mensagens da visita realizada.
 
 	Cobre todos os caminhos de escrita da etapa (portal da recepção, MCP e Desk) porque
 	todos passam por ``doc.save()``.
@@ -701,6 +965,7 @@ def on_novo_associado_atualizado(doc, method=None) -> None:
 
 	if doc.primeira_visita_realizada and not anterior.primeira_visita_realizada:
 		notificar_recepcao_realizada(doc.name)
+		notificar_orientacao_pos_visita(doc.name)
 
 
 # ─── Jobs agendados ───────────────────────────────────────────────────────────
@@ -714,6 +979,10 @@ def notificar_visitas_do_dia() -> None:
 	"""
 	logger = obter_logger("recepcao_mensagens")
 	data_hoje = getdate(today())
+
+	if not _mensagem_habilitada("msg_visitas_do_dia"):
+		definir_resumo(MENSAGEM_DESATIVADA)
+		return
 
 	grupo_jid = _grupo("grupo_chefes_secao_whatsapp")
 	if not grupo_jid:
@@ -784,6 +1053,10 @@ def enviar_lembretes_dados_registro() -> None:
 	"""
 	logger = obter_logger("recepcao_mensagens")
 	data_hoje = getdate(today())
+
+	if not _mensagem_habilitada("msg_lembrete_dados"):
+		definir_resumo(MENSAGEM_DESATIVADA)
+		return
 
 	pendentes = frappe.get_all(
 		"Novo Associado",
@@ -923,6 +1196,10 @@ def _enviar_lembretes_para_responsavel(
 
 def enviar_lembretes_pesquisa_novos_associados() -> None:
 	"""Pede a resposta da pesquisa de novos associados a quem já enviou os dados de registro."""
+	if not _mensagem_habilitada("msg_lembrete_pesquisa"):
+		definir_resumo(MENSAGEM_DESATIVADA)
+		return
+
 	_enviar_lembretes_para_responsavel(
 		rotulo="pesquisa de novos associados",
 		filtros={
@@ -943,6 +1220,10 @@ def enviar_lembretes_ficha_medica() -> None:
 	Registro provisório e definitivo têm etapas de efetivação distintas: cada tipo é filtrado
 	pela sua, mantendo a seleção no SQL.
 	"""
+	if not _mensagem_habilitada("msg_lembrete_ficha_medica"):
+		definir_resumo(MENSAGEM_DESATIVADA)
+		return
+
 	intervalo = _intervalo("lembrete_ficha_medica_intervalo_dias", INTERVALO_FICHA_MEDICA_PADRAO)
 	base = {"ficha_medica_preenchida": 0}
 
@@ -975,6 +1256,10 @@ def enviar_lembretes_ficha_medica() -> None:
 
 def enviar_lembretes_id_escoteiros() -> None:
 	"""Cobra a criação do id@escoteiros de quem já preencheu a ficha médica."""
+	if not _mensagem_habilitada("msg_lembrete_id_escoteiros"):
+		definir_resumo(MENSAGEM_DESATIVADA)
+		return
+
 	_enviar_lembretes_para_responsavel(
 		rotulo="id@escoteiros",
 		filtros={"ficha_medica_preenchida": 1, "id_escoteiros_criado": 0},
@@ -995,6 +1280,10 @@ def enviar_lembretes_acolhida_lenco() -> None:
 	logger = obter_logger("recepcao_mensagens")
 	data_hoje = getdate(today())
 	intervalo = _intervalo("lembrete_acolhida_intervalo_dias", INTERVALO_ACOLHIDA_PADRAO)
+
+	if not _mensagem_habilitada("msg_acolhida"):
+		definir_resumo(MENSAGEM_DESATIVADA)
+		return
 
 	grupo_jid = _grupo("grupo_chefes_secao_whatsapp")
 	if not grupo_jid:
@@ -1045,6 +1334,8 @@ def enviar_lembretes_acolhida_lenco() -> None:
 					sexo_jovem=jovem.get("sexo"),
 					ficha=_ficha_do_jovem(jovem, contatos.get(str(jovem.name))),
 					mencao=mencoes,
+					# Já houve um envio antes: o anúncio "chegou a hora" vira cobrança.
+					repeticao=bool(jovem.get("data_lembrete_acolhida")),
 				),
 				mencionar=telefones_chefes or None,
 			)

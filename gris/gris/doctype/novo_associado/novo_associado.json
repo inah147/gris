@@ -74,6 +74,7 @@
   "data_lembrete_id_escoteiros",
   "data_lembrete_acolhida",
   "data_mensagem_visita_realizada",
+  "data_mensagem_orientacao_visita",
   "data_mensagem_registro_criado"
  ],
  "fields": [
@@ -471,6 +472,13 @@
    "fieldtype": "Date",
    "hidden": 1,
    "label": "Aviso de recep\u00e7\u00e3o realizada enviado em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_mensagem_orientacao_visita",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "Orienta\u00e7\u00e3o p\u00f3s-visita enviada em",
    "read_only": 1
   },
   {

@@ -25,6 +25,24 @@
   "grupo_chefes_secao_whatsapp",
   "column_break_grupos_wa",
   "grupo_recados_gerais_whatsapp",
+  "mensagens_automaticas_section",
+  "msg_nova_manifestacao",
+  "msg_visita_agendada",
+  "msg_lembrete_visita",
+  "msg_visitas_do_dia",
+  "msg_recepcao_realizada",
+  "column_break_msgs_1",
+  "msg_orientacao_pos_visita",
+  "msg_lembrete_dados",
+  "msg_dados_preenchidos",
+  "msg_registro_criado",
+  "msg_seguimento_provisorio",
+  "column_break_msgs_2",
+  "msg_lembrete_ficha_medica",
+  "msg_lembrete_id_escoteiros",
+  "msg_lembrete_pesquisa",
+  "msg_acolhida",
+  "msg_desistencia",
   "cadencia_mensagens_section",
   "lembrete_dados_dias_iniciais",
   "lembrete_dados_intervalo_dias",
@@ -158,6 +176,125 @@
    "fieldname": "grupo_recados_gerais_whatsapp",
    "fieldtype": "Select",
    "label": "Grupo de recados gerais (WhatsApp)"
+  },
+  {
+   "description": "Desmarcar suspende apenas aquela mensagem. Para silenciar todo o WhatsApp de uma vez, use \"Habilitar integração\" em Configurações WhatsApp.",
+   "fieldname": "mensagens_automaticas_section",
+   "fieldtype": "Section Break",
+   "label": "Mensagens automáticas"
+  },
+  {
+   "default": "1",
+   "description": "Grupo da recepção, quando chega uma nova manifestação de interesse.",
+   "fieldname": "msg_nova_manifestacao",
+   "fieldtype": "Check",
+   "label": "Nova manifestação de interesse"
+  },
+  {
+   "default": "1",
+   "description": "Responsável, quando a visita é agendada.",
+   "fieldname": "msg_visita_agendada",
+   "fieldtype": "Check",
+   "label": "Visita agendada"
+  },
+  {
+   "default": "1",
+   "description": "Responsável, dois dias antes da visita, com botões de confirmação.",
+   "fieldname": "msg_lembrete_visita",
+   "fieldtype": "Check",
+   "label": "Lembrete de visita"
+  },
+  {
+   "default": "1",
+   "description": "Grupo de chefes de seção, sábado de manhã, com as visitas do dia.",
+   "fieldname": "msg_visitas_do_dia",
+   "fieldtype": "Check",
+   "label": "Visitas do dia"
+  },
+  {
+   "default": "1",
+   "description": "Grupo de chefes de seção, quando a visita é marcada como realizada. Não afeta a inclusão do responsável no grupo de recados gerais.",
+   "fieldname": "msg_recepcao_realizada",
+   "fieldtype": "Check",
+   "label": "Recepção realizada"
+  },
+  {
+   "fieldname": "column_break_msgs_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "description": "Responsável, logo após a visita, orientando o preenchimento dos dados.",
+   "fieldname": "msg_orientacao_pos_visita",
+   "fieldtype": "Check",
+   "label": "Orientação após a visita"
+  },
+  {
+   "default": "1",
+   "description": "Responsável, cobrando o preenchimento dos dados para registro.",
+   "fieldname": "msg_lembrete_dados",
+   "fieldtype": "Check",
+   "label": "Lembrete de dados para registro"
+  },
+  {
+   "default": "1",
+   "description": "Grupo da recepção, quando os dados para registro são preenchidos.",
+   "fieldname": "msg_dados_preenchidos",
+   "fieldtype": "Check",
+   "label": "Dados de registro preenchidos"
+  },
+  {
+   "default": "1",
+   "description": "Responsável, com o número de registro e as instruções do Paxtu.",
+   "fieldname": "msg_registro_criado",
+   "fieldtype": "Check",
+   "label": "Registro criado"
+  },
+  {
+   "default": "1",
+   "description": "Responsável administrativo, cobrando o seguimento do registro provisório.",
+   "fieldname": "msg_seguimento_provisorio",
+   "fieldtype": "Check",
+   "label": "Seguimento do registro provisório"
+  },
+  {
+   "fieldname": "column_break_msgs_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "description": "Responsável, cobrando o preenchimento da ficha médica no Paxtu.",
+   "fieldname": "msg_lembrete_ficha_medica",
+   "fieldtype": "Check",
+   "label": "Lembrete de ficha médica"
+  },
+  {
+   "default": "1",
+   "description": "Responsável, cobrando a criação do e-mail institucional.",
+   "fieldname": "msg_lembrete_id_escoteiros",
+   "fieldtype": "Check",
+   "label": "Lembrete de id@escoteiros"
+  },
+  {
+   "default": "1",
+   "description": "Responsável, pedindo a resposta da pesquisa de novos associados.",
+   "fieldname": "msg_lembrete_pesquisa",
+   "fieldtype": "Check",
+   "label": "Lembrete da pesquisa"
+  },
+  {
+   "default": "1",
+   "description": "Grupo de chefes de seção, sobre a acolhida e a entrega do lenço pendentes.",
+   "fieldname": "msg_acolhida",
+   "fieldtype": "Check",
+   "label": "Acolhida e entrega do lenço"
+  },
+  {
+   "default": "1",
+   "description": "Grupo de chefes de seção, quando um novo associado desiste ou um beneficiário é afastado.",
+   "fieldname": "msg_desistencia",
+   "fieldtype": "Check",
+   "label": "Desistência ou desligamento"
   },
   {
    "fieldname": "cadencia_mensagens_section",

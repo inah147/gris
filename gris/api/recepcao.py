@@ -160,6 +160,17 @@ def processar_desistencia(novo_associado_name: str, motivo: str | None = None):
 	novo_associado = frappe.get_doc("Novo Associado", novo_associado_name)
 	cpf = novo_associado.cpf
 
+	# 1b. Avisar os chefes de seção antes de qualquer escrita: daqui para baixo o jovem é
+	# anonimizado e apagado, e reler o nome depois traria "ANONIMIZADO".
+	# Import tardio: recepcao_mensagens importa formatar_idade deste módulo.
+	from gris.api.recepcao_mensagens import notificar_desistencia
+
+	notificar_desistencia(
+		nome_completo=novo_associado.nome_completo,
+		sexo=novo_associado.sexo,
+		ramo=novo_associado.ramo,
+	)
+
 	# 2. Delete scheduled visits
 	frappe.db.delete("Agenda de Visitas", {"jovem": novo_associado_name})
 
@@ -205,6 +216,9 @@ def processar_desistencia(novo_associado_name: str, motivo: str | None = None):
 						row.data_de_desligamento = frappe.utils.today()
 						break
 
+			# O desligamento aqui já foi avisado acima, com o nome ainda legível: sem esta
+			# flag o on_update do Associado mandaria uma segunda mensagem, com "ANONIMIZADO".
+			assoc_doc.flags.ignore_notificacoes = True
 			assoc_doc.save(ignore_permissions=True)
 
 	# 4. Find and Clean Responsavel Vinculo

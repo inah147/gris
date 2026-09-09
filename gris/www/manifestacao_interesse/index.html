@@ -6,6 +6,7 @@
 {% from "public/design_system/components/composed/basecoat-composed.html.jinja"
    import card, button, field, input, input_group, checkbox, alert, accordion, spinner %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
 
 {% set info_icon = lucide_icon("info", size="sm") %}
 {% set check_icon = lucide_icon("circle-check-big", size="md") %}
@@ -315,6 +316,56 @@
     </div>
   </article>
 </template>
+
+{#
+  Conferência de contato: antes de passar para os jovens, o responsável redigita e-mail e
+  celular. Errar um deles não gera erro nenhum — o formulário salva e a recepção perde o
+  contato —, e só redigitar pega. Mesmo padrão da ficha de registro do responsável
+  (gris/www/responsavel/registro.html), lá aplicado a CPF e data de nascimento.
+
+  As duas fases são renderizadas em Jinja, não injetadas por innerHTML: o phone-input é
+  inicializado pelo MutationObserver do basecoat, que roda em microtask, e o setter `value`
+  ficaria indisponível no instante seguinte à injeção.
+#}
+{% set conferencia_footer %}
+  {{ button("Cancelar", variant="ghost", attrs={"data-close-dialog": "conferenciaContatoDialog"}) }}
+  {{ button("Confirmar", variant="primary", attrs={"id": "btn-conferencia-contato"}) }}
+{% endset %}
+{% call dialog(
+  id="conferenciaContatoDialog",
+  title="Confirme seu contato",
+  description="Para evitar erro de digitação, informe de novo o e-mail e o celular.",
+  footer=conferencia_footer,
+  dialog_attrs={"class": "manifestacao-conferencia-dialog"},
+  close_button=true
+) %}
+  <div class="manifestacao-conferencia">
+    <div class="manifestacao-conferencia__campos" data-conferencia-fase="digitar">
+      {% call field(label="E-mail", attrs={"class": "manifestacao__field"}) %}
+        <input
+          type="email"
+          class="input"
+          id="conferencia_email"
+          data-conferencia-campo="email_responsavel"
+          autocomplete="off"
+        >
+      {% endcall %}
+
+      {% call field(label="Celular", attrs={"class": "manifestacao__field"}) %}
+        {{ phone_input(
+          id="conferencia_celular_input",
+          name="conferencia_celular",
+          default_country="BR",
+          placeholder="DDD + número",
+          input_attrs={"id": "conferencia_celular", "data-conferencia-campo": "celular_responsavel"}
+        ) }}
+      {% endcall %}
+    </div>
+
+    {# Preenchida pelo JS só com os campos que divergiram. #}
+    <div class="manifestacao-conferencia__divergencia" data-conferencia-fase="divergencia" hidden></div>
+  </div>
+{% endcall %}
 
 <div id="loading-overlay" class="loading-overlay" hidden aria-hidden="true">
   <div class="loading-overlay__box" role="status" aria-live="polite">

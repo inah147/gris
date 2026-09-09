@@ -529,13 +529,91 @@ function parseSteps(steps) {
 	}
 }
 
-// Dica de conclusão da etapa: data e autor, no `title` nativo.
+// ---------- Dica de conclusão da etapa -------------------------------------
 //
-// O tooltip CSS do Basecoat é desenhado com `::before` posicionado para fora do
-// item, e o corpo do dialog rola (`overflow-y: auto` em .dialog > div > section):
-// numa timeline longa a dica seria recortada justamente nas etapas do topo. O
-// `title` é desenhado pelo navegador, então nunca é cortado e aceita quebra de
-// linha.
+// O `[data-tooltip]` do Basecoat é puro CSS: um `::before` `position: absolute`
+// desenhado para fora do item. Aqui ele não serve como está — o corpo do dialog
+// rola (`overflow-y: auto` em .dialog > div > section, dentro de um
+// `overflow: hidden`), então a dica é recortada justamente nas etapas do topo, e
+// o `white-space: nowrap` do componente trunca as duas linhas (data + autor).
+//
+// A saída é usar a aparência do componente (os mesmos tokens, em
+// `.timeline-tooltip`) num nó único posicionado por JS e pendurado no próprio
+// `<dialog>`, irmão da área que rola: nada o recorta e a quebra de linha cabe.
+
+let timelineTooltipEl = null;
+
+function obterTimelineTooltip(dialog) {
+	if (!timelineTooltipEl) {
+		// `span`, e não `div`: o `dialog.dialog > div` deste arquivo (o painel que
+		// rola) casaria com a dica e traria `overflow: hidden` e `display: flex`.
+		timelineTooltipEl = document.createElement("span");
+		timelineTooltipEl.className = "timeline-tooltip";
+		timelineTooltipEl.setAttribute("role", "tooltip");
+		timelineTooltipEl.hidden = true;
+	}
+	// Pendurado no dialog aberto: no body ficaria atrás do backdrop da top layer.
+	if (dialog && timelineTooltipEl.parentElement !== dialog)
+		dialog.appendChild(timelineTooltipEl);
+	return timelineTooltipEl;
+}
+
+function mostrarTimelineTooltip(gatilho) {
+	const texto = gatilho.dataset.info;
+	if (!texto) return;
+
+	const tooltip = obterTimelineTooltip(gatilho.closest("dialog"));
+	tooltip.textContent = texto;
+	tooltip.hidden = false;
+	tooltip.classList.remove("is-visible");
+
+	// `offsetWidth/Height`, e não `getBoundingClientRect`: a dica entra em
+	// `scale: 95%` e o retângulo devolveria o tamanho já encolhido, deixando-a uns
+	// pixels fora do centro do ícone quando a escala chegasse a 100%.
+	const alvo = gatilho.getBoundingClientRect();
+	const largura = tooltip.offsetWidth;
+	const altura = tooltip.offsetHeight;
+	const margem = 8;
+
+	let topo = alvo.top - altura - margem;
+	if (topo < margem) topo = alvo.bottom + margem;
+
+	let esquerda = alvo.left + alvo.width / 2 - largura / 2;
+	esquerda = Math.max(margem, Math.min(esquerda, window.innerWidth - largura - margem));
+
+	tooltip.style.top = `${topo}px`;
+	tooltip.style.left = `${esquerda}px`;
+	// No frame seguinte para a transição de opacidade/escala do Basecoat rodar.
+	window.requestAnimationFrame(() => tooltip.classList.add("is-visible"));
+}
+
+function esconderTimelineTooltip() {
+	if (!timelineTooltipEl) return;
+	timelineTooltipEl.classList.remove("is-visible");
+	timelineTooltipEl.hidden = true;
+}
+
+// Um ouvinte por container, em vez de quatro por ícone: a timeline é redesenhada
+// a cada abertura de card e os ícones são recriados junto.
+function ligarTooltipsDaTimeline(container) {
+	container.addEventListener("mouseover", (evento) => {
+		const gatilho = evento.target.closest("[data-info]");
+		if (gatilho) mostrarTimelineTooltip(gatilho);
+	});
+	container.addEventListener("mouseout", (evento) => {
+		const gatilho = evento.target.closest("[data-info]");
+		// `relatedTarget` dentro do próprio gatilho é o mouse andando sobre o SVG.
+		if (gatilho && !gatilho.contains(evento.relatedTarget)) esconderTimelineTooltip();
+	});
+	container.addEventListener("focusin", (evento) => {
+		const gatilho = evento.target.closest("[data-info]");
+		if (gatilho) mostrarTimelineTooltip(gatilho);
+	});
+	container.addEventListener("focusout", esconderTimelineTooltip);
+	// Rolar move o gatilho e deixaria a dica flutuando solta.
+	container.addEventListener("scroll", esconderTimelineTooltip, true);
+}
+
 function infoDeConclusao(step) {
 	const partes = [];
 	if (step.concluida_em_formatada) partes.push(`Concluído em ${step.concluida_em_formatada}`);
@@ -547,7 +625,7 @@ function infoDeConclusao(step) {
 
 	return (
 		` <span class="timeline-info" tabindex="0" role="img"` +
-		` title="${escapeHtml(texto)}" aria-label="${escapeHtml(texto)}">` +
+		` data-info="${escapeHtml(texto)}" aria-label="${escapeHtml(texto)}">` +
 		'<svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true">' +
 		'<use href="/assets/gris/design_system/icons/lucide/sprite.svg#info"/></svg></span>'
 	);
@@ -557,6 +635,12 @@ function renderTimeline(containerId, steps) {
 	const container = document.getElementById(containerId);
 	if (!container) return;
 	container.innerHTML = "";
+	esconderTimelineTooltip();
+
+	if (!container.dataset.tooltipsLigados) {
+		ligarTooltipsDaTimeline(container);
+		container.dataset.tooltipsLigados = "true";
+	}
 
 	if (!steps || steps.length === 0) {
 		container.innerHTML = '<p class="text-muted-foreground">Nenhuma etapa encontrada.</p>';
@@ -570,7 +654,8 @@ function renderTimeline(containerId, steps) {
 		const completed = !!step.completed;
 		const overdue = !!step.is_overdue && !completed;
 		const fieldName = step.field;
-		const clickable = !completed && fieldName;
+		// Concluída também é clicável: é como a recepção desfaz um clique errado.
+		const clickable = !!fieldName;
 
 		let dateClass = "timeline-date";
 		let iconHtml = "";
@@ -605,14 +690,21 @@ function renderTimeline(containerId, steps) {
 			.join(" ");
 
 		if (clickable) {
-			item.addEventListener("click", () => toggleStep(fieldName, item));
+			item.addEventListener("click", (evento) => {
+				// O ícone de informação existe para mostrar a dica, não para virar a
+				// etapa: sem isto o clique nele sobe para o item e marca/desmarca.
+				if (evento.target.closest(".timeline-info")) return;
+				toggleStep(fieldName, item, completed, step.label);
+			});
 		}
+
+		const helper = completed ? "Clique para desmarcar" : "Clique para marcar como concluído";
 
 		item.innerHTML = `
 			<div class="timeline-marker"></div>
 			<div class="timeline-content">
 				<span class="timeline-label">${labelHtml}</span>
-				${!completed ? '<small class="timeline-helper">Clique para marcar como concluído</small>' : ""}
+				<small class="timeline-helper">${helper}</small>
 			</div>
 		`;
 
@@ -931,8 +1023,15 @@ function confirmarRegistroCriado() {
 	});
 }
 
-function toggleStep(field, element) {
+function toggleStep(field, element, completed, label) {
 	if (!currentCardId || !field) return;
+
+	// Desmarcar apaga o histórico da etapa, pode cancelar a visita e move o card de
+	// lista: confirma antes.
+	if (completed) {
+		abrirDesmarcarEtapa(field, element, label);
+		return;
+	}
 
 	// Efetivar o registro passa antes pelo diálogo dos números de registro. O
 	// backend recusa a etapa sem eles de qualquer jeito (update_step_status);
@@ -945,23 +1044,86 @@ function toggleStep(field, element) {
 	marcarEtapa(field, element);
 }
 
-function marcarEtapa(field, element) {
+function marcarEtapa(field, element, valor) {
+	const concluir = valor === undefined ? 1 : valor;
 	frappe.call({
 		method: "gris.www.recepcao.visao_geral.update_step_status",
-		args: { novo_associado_name: currentCardId, field: field, value: 1 },
+		args: { novo_associado_name: currentCardId, field: field, value: concluir },
 		callback: function (r) {
 			if (!r.exc) {
-				frappe.show_alert({ message: "Etapa atualizada", indicator: "green" });
-				if (element) {
-					element.classList.add("completed");
-					element.classList.remove("step-clickable");
-					const helper = element.querySelector(".timeline-helper");
-					if (helper) helper.remove();
-				}
+				frappe.show_alert({
+					message: concluir ? "Etapa atualizada" : "Etapa desmarcada",
+					indicator: concluir ? "green" : "orange",
+				});
+				if (element) element.classList.toggle("completed", !!concluir);
 				setTimeout(() => window.location.reload(), 1000);
 			}
 		},
 	});
+}
+
+// ---------- Desmarcar etapa ------------------------------------------------
+
+// Etapa -> coluna para onde o card volta quando ela é a última concluída. Espelha
+// ETAPAS_QUE_MOVEM_O_FUNIL (gris/api/recepcao_funil.py); serve só para o aviso do
+// diálogo — quem decide o status é o servidor.
+const COLUNA_ANTERIOR_POR_ETAPA = {
+	visita_agendada: "Conversa Inicial",
+	primeira_visita_realizada: "Visita Agendada",
+	dados_para_registro_enviados: "Aguardar Dados",
+	registro_criado_no_paxtu: "Fazer Registro",
+};
+
+let desmarcarEtapaPendente = null;
+let desmarcarElementoPendente = null;
+
+function abrirDesmarcarEtapa(field, element, label) {
+	desmarcarEtapaPendente = field;
+	desmarcarElementoPendente = element;
+
+	const nome = document.getElementById("de_etapa_nome");
+	if (nome) nome.textContent = label || field;
+
+	const efeitos = document.getElementById("de_efeitos");
+	if (efeitos) {
+		const partes = [];
+		const coluna = COLUNA_ANTERIOR_POR_ETAPA[field];
+		if (coluna) partes.push(`O card pode voltar para <strong>${escapeHtml(coluna)}</strong>.`);
+		if (field === "visita_agendada") partes.push("A visita marcada será cancelada.");
+		efeitos.innerHTML = partes.join(" ");
+	}
+
+	previousModalId = getOpenDialogId("modalDesmarcarEtapa");
+	if (previousModalId) closeDialog(previousModalId);
+	openDialog("modalDesmarcarEtapa");
+}
+
+function closeDesmarcarEtapa() {
+	closeDialog("modalDesmarcarEtapa");
+	desmarcarEtapaPendente = null;
+	desmarcarElementoPendente = null;
+	if (previousModalId) {
+		const prev = previousModalId;
+		previousModalId = null;
+		openDialog(prev);
+	}
+}
+
+function confirmarDesmarcarEtapa() {
+	const field = desmarcarEtapaPendente;
+	const element = desmarcarElementoPendente;
+	if (!field) return;
+
+	const botao = document.getElementById("btnConfirmarDesmarcar");
+	if (botao) botao.disabled = true;
+
+	closeDialog("modalDesmarcarEtapa");
+	desmarcarEtapaPendente = null;
+	desmarcarElementoPendente = null;
+	previousModalId = null;
+
+	marcarEtapa(field, element, 0);
+	if (botao) botao.disabled = false;
 }
 
 // ---------- Números de registro (etapas de efetivação) ---------------------
@@ -1185,6 +1347,25 @@ function definirTotalDeObservacoes(total) {
 	}
 
 	atualizarRotuloObservacoes();
+}
+
+function abrirMensagensDoCardAtual() {
+	if (!currentCardId) {
+		frappe.msgprint(__("Nenhum associado selecionado."));
+		return;
+	}
+
+	// Mesmo vaivém do chooser de WhatsApp e das observações: showModal() põe o
+	// diálogo na top layer e torna o resto inerte, então o modal do card fecha
+	// antes e reabre quando as mensagens saem de cena.
+	const origem = getOpenDialogId("mensagens-modal");
+	if (origem) closeDialog(origem);
+
+	window.grisMensagensEnviadas.abrir(currentCardId, {
+		aoFechar: function () {
+			if (origem) openDialog(origem);
+		},
+	});
 }
 
 function abrirObservacoesDoCardAtual() {
@@ -1428,6 +1609,9 @@ window.confirmarAgendamento = confirmarAgendamento;
 window.registrarDesistencia = registrarDesistencia;
 window.confirmarRegistroCriado = confirmarRegistroCriado;
 window.toggleStep = toggleStep;
+window.abrirMensagensDoCardAtual = abrirMensagensDoCardAtual;
+window.closeDesmarcarEtapa = closeDesmarcarEtapa;
+window.confirmarDesmarcarEtapa = confirmarDesmarcarEtapa;
 window.closeConfirmarDesistencia = closeConfirmarDesistencia;
 window.confirmarDesistencia = confirmarDesistencia;
 window.enviarFilaEspera = enviarFilaEspera;

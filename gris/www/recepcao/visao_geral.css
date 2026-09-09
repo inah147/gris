@@ -360,6 +360,53 @@
 	color: var(--color-primary);
 }
 
+/* Dica das etapas concluídas.
+   Mesmos tokens do `[data-tooltip]` do Basecoat (fundo `--color-foreground`,
+   texto `--color-background`, `--radius-md`, `--text-xs`, a mesma escala de
+   entrada), mas como nó próprio posicionado por JS: o `::before` do componente é
+   `position: absolute` e seria recortado pelo corpo rolável do dialog. Ver
+   `mostrarTimelineTooltip` em visao_geral.js.
+   Duas diferenças deliberadas: `pre-line` para caber "data" e "autor" em linhas
+   separadas (o componente é `nowrap` + reticências) e `position: fixed`, já que
+   as coordenadas vêm da viewport. */
+.timeline-tooltip {
+	position: fixed;
+	z-index: 60;
+	width: fit-content;
+	max-width: var(--container-xs);
+	padding-inline: calc(var(--spacing) * 3);
+	padding-block: calc(var(--spacing) * 1.5);
+	border-radius: var(--radius-md);
+	background-color: var(--color-foreground);
+	color: var(--color-background);
+	font-size: var(--text-xs);
+	line-height: var(--text-xs--line-height);
+	white-space: pre-line;
+	pointer-events: none;
+	opacity: 0;
+	scale: 95%;
+	transition-property: opacity, scale;
+	transition-duration: var(--default-transition-duration);
+	transition-timing-function: var(--default-transition-timing-function);
+
+	/* A dica é filha direta do <dialog> — é assim que ela escapa da área rolável —,
+	   então casa com o `.dialog > *` do Basecoat e herda o visual do painel. As
+	   propriedades acima já vencem por ordem de carga; estas três só existem no
+	   seletor do painel, e sem elas a dica saía com borda, sombra e meia largura
+	   deslocada para a esquerda (o `translate: -50%` que centraliza o modal).
+	   O `display: block` é para o `span` que a dica usa — ver
+	   `obterTimelineTooltip` em visao_geral.js. */
+	translate: none;
+	border: 0;
+	box-shadow: none;
+	display: block;
+}
+
+.timeline-tooltip.is-visible {
+	opacity: 1;
+	scale: 100%;
+}
+
 /* Diálogo dos números de registro (etapas de efetivação) ----------*/
 .registro-numeros {
 	display: flex;

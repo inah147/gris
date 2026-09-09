@@ -426,6 +426,44 @@ class TestLembretesRecorrentes(FrappeTestCase):
 		self.assertEqual(definitivo["registro_definitivo_efetivado"], 1)
 		self.assertIn("ficha médica", ambiente.textos[0]["mensagem"])
 
+	def test_ficha_medica_espera_o_aviso_do_numero_de_registro(self):
+		"""A etapa de efetivação é marcada à mão pela recepção e pode vir antes do aviso.
+
+		Sem esta trava, a família era mandada para o Paxtu sem ter recebido o número com
+		que entra nele.
+		"""
+		ambiente = self._rodar(
+			recepcao_mensagens.enviar_lembretes_ficha_medica,
+			[{"name": "NA-1", "nome_completo": "Joãozinho", "sexo": "Masculino"}],
+		)
+
+		for filtros in ambiente.filtros_usados:
+			self.assertEqual(filtros["data_mensagem_registro_criado"], ["is", "set"])
+
+	def test_id_escoteiros_espera_o_aviso_do_numero_de_registro(self):
+		ambiente = self._rodar(
+			recepcao_mensagens.enviar_lembretes_id_escoteiros,
+			[{"name": "NA-1", "nome_completo": "Joãozinho", "sexo": "Masculino"}],
+		)
+
+		self.assertEqual(ambiente.filtros_usados[0]["data_mensagem_registro_criado"], ["is", "set"])
+
+	def test_sem_a_mensagem_de_registro_as_cobrancas_nao_ficam_presas(self):
+		"""Com o aviso desligado o carimbo nunca é gravado: travar seria silenciar para sempre."""
+		for rotina in (
+			recepcao_mensagens.enviar_lembretes_ficha_medica,
+			recepcao_mensagens.enviar_lembretes_id_escoteiros,
+		):
+			with self.subTest(rotina=rotina.__name__):
+				ambiente = self._rodar(
+					rotina,
+					[{"name": "NA-1", "nome_completo": "Joãozinho", "sexo": "Masculino"}],
+					{"msg_registro_criado": 0},
+				)
+
+				for filtros in ambiente.filtros_usados:
+					self.assertNotIn("data_mensagem_registro_criado", filtros)
+
 	def test_consultas_ignoram_fila_de_espera_e_concluidos(self):
 		ambiente = self._rodar(
 			recepcao_mensagens.enviar_lembretes_id_escoteiros,
@@ -1178,3 +1216,114 @@ class TestInterruptoresDeMensagem(FrappeTestCase):
 			self.assertFalse(recepcao_mensagens._mensagem_habilitada("msg_acolhida"))
 			self.assertTrue(recepcao_mensagens._mensagem_habilitada("msg_desistencia"))
 			self.assertTrue(recepcao_mensagens._mensagem_habilitada("msg_inexistente"))
+
+
+class TestAvisoDoNumeroDeRegistro(FrappeTestCase):
+	"""O aviso com o número de registro e de onde ele tira o número.
+
+	Ele é a porta das cobranças de ficha médica e id@escoteiros: enquanto dependia só do
+	cadastro do ``Associado``, a família era cobrada antes de receber o número.
+	"""
+
+	JOVEM: ClassVar[dict] = {
+		"name": "NA-1",
+		"nome_completo": "Joãozinho Feliz",
+		"sexo": "Masculino",
+		"numero_de_registro": "",
+		"tipo_de_registro": "Definitivo",
+		"data_mensagem_registro_criado": None,
+	}
+
+	def _enviar(self, jovem=None, associado=None):
+		valores = {
+			"Novo Associado": frappe._dict({**self.JOVEM, **(jovem or {})}),
+			"Associado": frappe._dict(associado) if associado else None,
+		}
+		contato = {"nome": "Maria Feliz", "sexo": "Feminino", "telefone": "5511999999999"}
+
+		with _AmbienteDeTeste(links=VINCULO_PADRAO, responsaveis=RESPONSAVEL_PADRAO) as ambiente:
+			with (
+				patch.object(
+					recepcao_mensagens.frappe.db,
+					"get_value",
+					side_effect=lambda doctype, *_a, **_k: valores.get(doctype),
+				),
+				patch.object(
+					recepcao_mensagens,
+					"_buscar_contatos_responsaveis",
+					return_value={"NA-1": frappe._dict(contato)},
+				),
+			):
+				recepcao_mensagens.notificar_registro_criado("NA-1")
+
+		return ambiente
+
+	def test_usa_o_numero_do_associado_quando_ele_existe(self):
+		ambiente = self._enviar(associado={"registro": "123456", "tipo_registro": "Definitivo"})
+
+		self.assertIn("123456", ambiente.textos[0]["mensagem"])
+
+	def test_usa_o_numero_do_funil_quando_o_associado_ainda_nao_existe(self):
+		"""A recepção informa o número no diálogo da visão geral antes de efetivar."""
+		ambiente = self._enviar(jovem={"numero_de_registro": "654321"})
+
+		self.assertIn("654321", ambiente.textos[0]["mensagem"])
+		self.assertEqual(ambiente.atualizacoes[0]["fieldname"], "data_mensagem_registro_criado")
+
+	def test_o_numero_do_associado_tem_precedencia(self):
+		ambiente = self._enviar(
+			jovem={"numero_de_registro": "654321"},
+			associado={"registro": "123456", "tipo_registro": "Definitivo"},
+		)
+
+		self.assertIn("123456", ambiente.textos[0]["mensagem"])
+
+	def test_sem_numero_em_lugar_nenhum_nao_envia(self):
+		ambiente = self._enviar()
+
+		self.assertEqual(ambiente.textos, [])
+
+	def test_nao_repete_o_aviso_ja_carimbado(self):
+		ambiente = self._enviar(
+			jovem={"numero_de_registro": "654321", "data_mensagem_registro_criado": "2026-05-11"}
+		)
+
+		self.assertEqual(ambiente.textos, [])
+
+
+class TestGatilhoDoNumeroDeRegistro(FrappeTestCase):
+	"""``on_novo_associado_atualizado``: informar o número dispara o aviso."""
+
+	def _rodar(self, antes, depois):
+		doc = frappe._dict({"name": "NA-1", "flags": frappe._dict(), **depois})
+		doc.get_doc_before_save = lambda: frappe._dict(antes)
+
+		with patch.object(recepcao_mensagens.frappe, "enqueue") as enfileirar:
+			recepcao_mensagens.on_novo_associado_atualizado(doc)
+
+		return enfileirar
+
+	def test_numero_preenchido_enfileira_o_aviso(self):
+		enfileirar = self._rodar(
+			{"primeira_visita_realizada": 0, "numero_de_registro": ""},
+			{"primeira_visita_realizada": 0, "numero_de_registro": "123456"},
+		)
+
+		enfileirar.assert_called_once()
+		self.assertEqual(enfileirar.call_args.kwargs["associado_name"], "NA-1")
+
+	def test_numero_que_ja_estava_la_nao_reenvia(self):
+		enfileirar = self._rodar(
+			{"primeira_visita_realizada": 0, "numero_de_registro": "123456"},
+			{"primeira_visita_realizada": 0, "numero_de_registro": "123456"},
+		)
+
+		enfileirar.assert_not_called()
+
+	def test_numero_em_branco_nao_dispara(self):
+		enfileirar = self._rodar(
+			{"primeira_visita_realizada": 0, "numero_de_registro": None},
+			{"primeira_visita_realizada": 0, "numero_de_registro": "   "},
+		)
+
+		enfileirar.assert_not_called()

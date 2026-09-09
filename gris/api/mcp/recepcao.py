@@ -353,6 +353,40 @@ def funil_recepcao() -> dict:
 	}
 
 
+def _campos_do_funil(etapa: str) -> list[str]:
+	"""Uma leitura só serve para o estado atual da etapa e para prever a coluna do card."""
+	from gris.api.recepcao_funil import ETAPAS_QUE_MOVEM_O_FUNIL
+
+	campos = [etapa, "status", *(campo for campo, _alvo in ETAPAS_QUE_MOVEM_O_FUNIL)]
+	return list(dict.fromkeys(campos))
+
+
+def _efeito_no_funil(dados: dict, etapa: str, concluida: bool) -> str | None:
+	"""Como a coluna do funil reage a marcar/desmarcar esta etapa.
+
+	Desmarcar também move o card: o status é recalculado a partir das etapas que sobram
+	marcadas (ver ``gris.api.recepcao_funil.status_por_etapas_concluidas``).
+	"""
+	from gris.api.recepcao_funil import (
+		ETAPAS_QUE_MOVEM_O_FUNIL,
+		STATUS_FORA_DO_FUNIL,
+		status_por_etapas_concluidas,
+	)
+
+	if dados.get("status") in STATUS_FORA_DO_FUNIL:
+		return None
+
+	if concluida:
+		novo_status = dict(ETAPAS_QUE_MOVEM_O_FUNIL).get(etapa)
+	else:
+		novo_status = status_por_etapas_concluidas({**dados, etapa: 0})
+
+	if not novo_status or novo_status == dados.get("status"):
+		return None
+
+	return f"status passa para '{novo_status}'"
+
+
 @ferramenta(
 	nome="atualizar_etapa_recepcao",
 	titulo="Marcar etapa do funil",
@@ -383,7 +417,8 @@ def atualizar_etapa_recepcao(name: str, etapa: str, concluida: bool = True, simu
 	_garantir_registro(name)
 	_etapa_valida(etapa)
 
-	atual = bool(frappe.db.get_value(DOCTYPE, name, etapa))
+	dados = frappe.db.get_value(DOCTYPE, name, _campos_do_funil(etapa), as_dict=True) or {}
+	atual = bool(dados.get(etapa))
 	if atual == bool(concluida):
 		return {
 			"atualizado": False,
@@ -392,8 +427,7 @@ def atualizar_etapa_recepcao(name: str, etapa: str, concluida: bool = True, simu
 
 	from gris.www.recepcao import visao_geral
 
-	novo_status = visao_geral.STATUS_POR_ETAPA.get(etapa) if concluida else None
-	efeito_colateral = f"status passa para '{novo_status}'" if novo_status else None
+	efeito_colateral = _efeito_no_funil(dados, etapa, bool(concluida))
 
 	if simular:
 		return {

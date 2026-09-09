@@ -23,6 +23,15 @@
         <span>Observações</span>
         {{ badge(comments_count or 0, variant="secondary", attrs={"id": "comment-count"}) }}
       </button>
+      <button
+        type="button"
+        id="mensagens-modal-open"
+        class="btn-sm-outline"
+        data-docname="{{ doc.name if doc else '' }}"
+      >
+        {{ lucide_icon("send", size="sm") }}
+        <span>Mensagens</span>
+      </button>
       <a href="/recepcao/visao_geral" class="btn-sm-ghost">
         {{ lucide_icon("arrow-left", size="sm") }} Voltar
       </a>
@@ -425,6 +434,9 @@
       </div>
     {% endcall %}
     {% endif %}
+
+    {# Diálogo compartilhado com a visão geral da recepção. #}
+    {% include "gris/templates/includes/mensagens_enviadas_dialog.html" %}
 
     <!-- Modal de Observações -->
     {% call dialog(

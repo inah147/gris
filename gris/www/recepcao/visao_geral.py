@@ -11,14 +11,18 @@ from gris.api.recepcao import formatar_idade, numeros_de_registro_pendentes
 from gris.api.recepcao_funil import (
 	CAMPOS_DE_EFETIVACAO,
 	COLUNAS_DE_ACOMPANHAMENTO,
+	ETAPAS_QUE_MOVEM_O_FUNIL,
 	FIELD_INTERVAL_MAP,
 	STATUS_ACOMPANHAMENTO,
+	STATUS_FORA_DO_FUNIL,
 	STEPS_DEF,
 	anexar_historico,
 	calcular_etapas,
 	carregar_configuracao,
 	coluna_de_acompanhamento,
+	status_por_etapas_concluidas,
 )
+from gris.api.recepcao_visitas import remover_visita_do_jovem
 
 no_cache = 1
 
@@ -27,20 +31,9 @@ RAMOS = ["Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro"]
 # Valor sentinela do filtro de ramo para cards ainda sem ramo definido
 RAMO_FILTRO_SEM_RAMO = "__sem_ramo__"
 
-# Etapas que também movem a coluna do funil ao serem concluídas.
-#
-# A regra existia espalhada pelos pontos de entrada — ``confirmar_registro_paxtu`` aqui,
-# ``gris.api.recepcao.registrar_recepcao_realizada`` e ``gris.www.responsavel.registro`` —
-# e a bolinha da timeline não passava por nenhum deles: marcava a etapa e deixava o card
-# parado na coluna antiga. Centralizar em ``update_step_status``, por onde todos os
-# caminhos passam, é o que mantém etapa e status em sincronia.
-#
-# Desmarcar não reverte o status: voltar de coluna é decisão explícita da recepção.
-STATUS_POR_ETAPA = {
-	"primeira_visita_realizada": "Aguardar Dados",
-	"dados_para_registro_enviados": "Fazer Registro",
-	"registro_criado_no_paxtu": "Acompanhamento",
-}
+# Etapa -> coluna do funil, na forma de mapa. A ordem, que o desmarcar usa para recalcular
+# o status, mora em ``ETAPAS_QUE_MOVEM_O_FUNIL`` (``gris.api.recepcao_funil``).
+STATUS_POR_ETAPA = dict(ETAPAS_QUE_MOVEM_O_FUNIL)
 
 
 def _normalize_whatsapp_phone(phone):
@@ -435,10 +428,22 @@ def update_step_status(novo_associado_name: str, field: str, value: str | int):
 
 	doc = frappe.get_doc("Novo Associado", novo_associado_name)
 	doc.set(field, 1 if concluida else 0)
-	if concluida and field in STATUS_POR_ETAPA:
-		doc.status = STATUS_POR_ETAPA[field]
+
+	# Marcar empurra o card para a coluna da etapa; desmarcar recalcula a coluna a partir das
+	# etapas que sobraram marcadas, para o card não ficar numa lista que não é mais a dele.
+	# Quem está fora da esteira (fila de espera, concluído) não é arrastado de volta.
+	if doc.status not in STATUS_FORA_DO_FUNIL:
+		if concluida and field in STATUS_POR_ETAPA:
+			doc.status = STATUS_POR_ETAPA[field]
+		elif not concluida:
+			doc.status = status_por_etapas_concluidas(doc)
 
 	doc.save()
+
+	# A visita só é apagada depois do save: se a gravação falhar, o jovem não fica sem visita
+	# e com a etapa ainda marcada.
+	if not concluida and field == "visita_agendada":
+		remover_visita_do_jovem(novo_associado_name)
 
 	return "Status atualizado com sucesso."
 

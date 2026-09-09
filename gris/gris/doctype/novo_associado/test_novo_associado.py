@@ -211,3 +211,74 @@ class TestAtualizarRamosPorIdade(TestCase):
 			]
 		)
 		self.assertEqual(escritas, [("Novo Associado", "abc", "ramo", "Escoteiro")])
+
+
+class TestCarimbosDeMensagemAoDesmarcar(FrappeTestCase):
+	"""Desmarcar uma etapa solta as mensagens que ela já tinha disparado.
+
+	Os carimbos existem para não repetir mensagem. Mantê-los depois de desmarcar deixaria o
+	jovem num limbo: a etapa volta a ser cobrada na tela, mas a mensagem nunca mais sai.
+	"""
+
+	def tearDown(self):
+		# FrappeTestCase faz rollback por classe: sem isto o CPF vaza para o próximo teste.
+		frappe.db.rollback()
+
+	def _criar(self, cpf, **kwargs):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Novo Associado",
+				"nome_completo": "Jovem de Teste",
+				"cpf": cpf,
+				"data_de_nascimento": "2015-04-14",
+				"status": "Acompanhamento",
+				"tipo_de_registro": "Definitivo",
+				**kwargs,
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		return doc
+
+	def test_desmarcar_a_visita_realizada_solta_as_duas_mensagens(self):
+		doc = self._criar("555.555.555-55", primeira_visita_realizada=1)
+		doc.db_set("data_mensagem_visita_realizada", "2026-05-01")
+		doc.db_set("data_mensagem_orientacao_visita", "2026-05-01")
+		doc.reload()
+
+		doc.primeira_visita_realizada = 0
+		doc.save(ignore_permissions=True)
+
+		self.assertIsNone(doc.data_mensagem_visita_realizada)
+		self.assertIsNone(doc.data_mensagem_orientacao_visita)
+
+	def test_desmarcar_a_ficha_medica_solta_a_cadencia_do_lembrete(self):
+		doc = self._criar("666.666.666-66", ficha_medica_preenchida=1)
+		doc.db_set("data_lembrete_ficha_medica", "2026-05-01")
+		doc.reload()
+
+		doc.ficha_medica_preenchida = 0
+		doc.save(ignore_permissions=True)
+
+		self.assertIsNone(doc.data_lembrete_ficha_medica)
+
+	def test_carimbo_de_etapa_que_continua_marcada_e_preservado(self):
+		doc = self._criar("777.777.777-77", ficha_medica_preenchida=1, id_escoteiros_criado=1)
+		doc.db_set("data_lembrete_ficha_medica", "2026-05-01")
+		doc.db_set("data_lembrete_id_escoteiros", "2026-05-02")
+		doc.reload()
+
+		doc.id_escoteiros_criado = 0
+		doc.save(ignore_permissions=True)
+
+		self.assertIsNone(doc.data_lembrete_id_escoteiros)
+		self.assertEqual(str(doc.data_lembrete_ficha_medica), "2026-05-01")
+
+	def test_salvar_sem_mexer_em_etapa_nao_apaga_carimbo(self):
+		doc = self._criar("888.888.888-88", ficha_medica_preenchida=1)
+		doc.db_set("data_lembrete_ficha_medica", "2026-05-01")
+		doc.reload()
+
+		doc.nome_completo = "Jovem Renomeado"
+		doc.save(ignore_permissions=True)
+
+		self.assertEqual(str(doc.data_lembrete_ficha_medica), "2026-05-01")

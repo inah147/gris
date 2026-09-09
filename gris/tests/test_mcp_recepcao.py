@@ -121,6 +121,11 @@ class TestFunilRecepcao(TestCase):
 
 
 class TestAtualizarEtapa(TestCase):
+	@staticmethod
+	def _funil(status="Conversa Inicial", **etapas):
+		"""O que a leitura única de ``atualizar_etapa_recepcao`` devolve."""
+		return {"status": status, **etapas}
+
 	def test_etapa_invalida(self):
 		with patch.object(recepcao.frappe.db, "exists", return_value=True):
 			with self.assertRaises(ErroDeFerramenta):
@@ -129,7 +134,11 @@ class TestAtualizarEtapa(TestCase):
 	def test_estado_igual_nao_grava(self):
 		with (
 			patch.object(recepcao.frappe.db, "exists", return_value=True),
-			patch.object(recepcao.frappe.db, "get_value", return_value=1),
+			patch.object(
+				recepcao.frappe.db,
+				"get_value",
+				return_value=self._funil(ficha_medica_preenchida=1),
+			),
 		):
 			resultado = recepcao.atualizar_etapa_recepcao("NA-1", "ficha_medica_preenchida", True)
 
@@ -138,7 +147,7 @@ class TestAtualizarEtapa(TestCase):
 	def test_simulacao_anuncia_efeito_colateral(self):
 		with (
 			patch.object(recepcao.frappe.db, "exists", return_value=True),
-			patch.object(recepcao.frappe.db, "get_value", return_value=0),
+			patch.object(recepcao.frappe.db, "get_value", return_value=self._funil()),
 		):
 			resultado = recepcao.atualizar_etapa_recepcao(
 				"NA-1", "registro_criado_no_paxtu", True, simular=True
@@ -154,7 +163,7 @@ class TestAtualizarEtapa(TestCase):
 			with self.subTest(etapa=etapa):
 				with (
 					patch.object(recepcao.frappe.db, "exists", return_value=True),
-					patch.object(recepcao.frappe.db, "get_value", return_value=0),
+					patch.object(recepcao.frappe.db, "get_value", return_value=self._funil("Novo Contato")),
 				):
 					resultado = recepcao.atualizar_etapa_recepcao("NA-1", etapa, True, simular=True)
 
@@ -165,7 +174,7 @@ class TestAtualizarEtapa(TestCase):
 
 		with (
 			patch.object(recepcao.frappe.db, "exists", return_value=True),
-			patch.object(recepcao.frappe.db, "get_value", return_value=0),
+			patch.object(recepcao.frappe.db, "get_value", return_value=self._funil()),
 			patch.object(visao_geral, "update_step_status") as generico,
 		):
 			recepcao.atualizar_etapa_recepcao("NA-1", "registro_criado_no_paxtu", True)
@@ -177,7 +186,7 @@ class TestAtualizarEtapa(TestCase):
 
 		with (
 			patch.object(recepcao.frappe.db, "exists", return_value=True),
-			patch.object(recepcao.frappe.db, "get_value", return_value=0),
+			patch.object(recepcao.frappe.db, "get_value", return_value=self._funil()),
 			patch.object(visao_geral, "update_step_status") as generico,
 		):
 			resultado = recepcao.atualizar_etapa_recepcao("NA-1", "ficha_medica_preenchida", True)
@@ -185,10 +194,58 @@ class TestAtualizarEtapa(TestCase):
 		generico.assert_called_once_with("NA-1", "ficha_medica_preenchida", 1)
 		self.assertIsNone(resultado["efeito_colateral"])
 
-	def test_desmarcar_nao_anuncia_mudanca_de_status(self):
+	def test_desmarcar_anuncia_a_volta_de_coluna(self):
+		"""Desmarcar move o card: o anúncio tem que dizer para onde."""
 		with (
 			patch.object(recepcao.frappe.db, "exists", return_value=True),
-			patch.object(recepcao.frappe.db, "get_value", return_value=1),
+			patch.object(
+				recepcao.frappe.db,
+				"get_value",
+				return_value=self._funil(
+					"Acompanhamento",
+					visita_agendada=1,
+					primeira_visita_realizada=1,
+					dados_para_registro_enviados=1,
+					registro_criado_no_paxtu=1,
+				),
+			),
+		):
+			resultado = recepcao.atualizar_etapa_recepcao(
+				"NA-1", "registro_criado_no_paxtu", False, simular=True
+			)
+
+		self.assertIn("Fazer Registro", resultado["efeito_colateral"])
+
+	def test_desmarcar_etapa_sem_coluna_propria_nao_move_o_card(self):
+		with (
+			patch.object(recepcao.frappe.db, "exists", return_value=True),
+			patch.object(
+				recepcao.frappe.db,
+				"get_value",
+				return_value=self._funil(
+					"Acompanhamento",
+					visita_agendada=1,
+					primeira_visita_realizada=1,
+					dados_para_registro_enviados=1,
+					registro_criado_no_paxtu=1,
+					ficha_medica_preenchida=1,
+				),
+			),
+		):
+			resultado = recepcao.atualizar_etapa_recepcao(
+				"NA-1", "ficha_medica_preenchida", False, simular=True
+			)
+
+		self.assertIsNone(resultado["efeito_colateral"])
+
+	def test_card_fora_do_funil_nao_anuncia_mudanca(self):
+		with (
+			patch.object(recepcao.frappe.db, "exists", return_value=True),
+			patch.object(
+				recepcao.frappe.db,
+				"get_value",
+				return_value=self._funil("Fila de espera", registro_criado_no_paxtu=1),
+			),
 		):
 			resultado = recepcao.atualizar_etapa_recepcao(
 				"NA-1", "registro_criado_no_paxtu", False, simular=True

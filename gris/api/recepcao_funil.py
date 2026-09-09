@@ -66,6 +66,8 @@ CAMPOS_DE_EFETIVACAO: tuple[str, ...] = (
 # botão de agendar — carregando o sinal ``reagendamento_pendente``.
 STATUS_VISITA_AGENDADA = "Visita Agendada"
 STATUS_ANTES_DA_VISITA = "Conversa Inicial"
+STATUS_AGUARDAR_DADOS = "Aguardar Dados"
+STATUS_FAZER_REGISTRO = "Fazer Registro"
 
 # A coluna "Acompanhamento" do kanban é dividida em duas listas. A separação é
 # derivada dos dados, não gravada em ``status``: quem ainda espera o registro
@@ -79,6 +81,48 @@ COLUNAS_DE_ACOMPANHAMENTO = (
 	COLUNA_ACOMPANHAMENTO_PROVISORIO,
 	COLUNA_ACOMPANHAMENTO_DEFINITIVO,
 )
+
+# Etapas que também movem a coluna do funil, na ordem do fluxo.
+#
+# A regra existia espalhada pelos pontos de entrada — ``confirmar_registro_paxtu``,
+# ``gris.api.recepcao.registrar_recepcao_realizada`` e ``gris.www.responsavel.registro`` — e a
+# bolinha da timeline não passava por nenhum deles: marcava a etapa e deixava o card parado na
+# coluna antiga. Centralizar em ``update_step_status``, por onde todos os caminhos passam, é o
+# que mantém etapa e status em sincronia.
+#
+# É uma tupla ordenada, e não um dicionário, porque desmarcar precisa saber qual etapa vem
+# antes para devolver o card à lista certa (ver ``status_por_etapas_concluidas``).
+ETAPAS_QUE_MOVEM_O_FUNIL: tuple[tuple[str, str], ...] = (
+	("visita_agendada", STATUS_VISITA_AGENDADA),
+	("primeira_visita_realizada", STATUS_AGUARDAR_DADOS),
+	("dados_para_registro_enviados", STATUS_FAZER_REGISTRO),
+	("registro_criado_no_paxtu", STATUS_ACOMPANHAMENTO),
+)
+
+# Status que não pertencem à esteira do funil: quem está neles saiu do fluxo por decisão da
+# recepção, e desmarcar uma etapa não pode arrastar o card de volta para uma coluna do kanban.
+STATUS_FORA_DO_FUNIL: tuple[str, ...] = ("Fila de espera", "Concluído")
+
+
+def status_por_etapas_concluidas(dados) -> str:
+	"""Status derivado das etapas que continuam marcadas — a lista certa para o card.
+
+	Marcar uma etapa empurra o card para a frente; desmarcar tem de trazê-lo de volta, e não
+	necessariamente uma coluna: desmarcar "Registro no Paxtu" de quem nunca enviou os dados
+	devolve o card a "Visita Agendada", não a "Fazer Registro". Recalcular a partir do que
+	sobrou marcado acerta os dois casos com a mesma regra.
+
+	Nenhuma etapa marcada devolve ``STATUS_ANTES_DA_VISITA`` ("Conversa Inicial"), a coluna
+	onde a recepção tem o botão de agendar. A divisão de "Acompanhamento" entre as listas
+	provisória e definitiva continua com ``coluna_de_acompanhamento``: ela é derivada dos
+	dados, não do ``status``.
+	"""
+	status = STATUS_ANTES_DA_VISITA
+	for campo, alvo in ETAPAS_QUE_MOVEM_O_FUNIL:
+		if dados.get(campo):
+			status = alvo
+
+	return status
 
 
 def coluna_de_acompanhamento(dados) -> str:

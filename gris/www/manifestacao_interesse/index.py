@@ -157,6 +157,9 @@ def submit_interest(
 					{
 						"nome_jovem": str(jovem.get("nome_jovem") or ""),
 						"data_nascimento_jovem": str(jovem.get("data_nascimento_jovem") or ""),
+						# Amarra o aviso ao jovem no Log de Mensagem, para a mensagem
+						# aparecer na ficha de registro dele.
+						"novo_associado": novo_associado_doc.name,
 					}
 				)
 
@@ -192,6 +195,7 @@ def submit_interest(
 				nome_responsavel=nome_responsavel,
 				data_nascimento_jovem=payload.get("data_nascimento_jovem"),
 				contexto="manifestacao_interesse",
+				novo_associado=payload.get("novo_associado"),
 			)
 
 		return {

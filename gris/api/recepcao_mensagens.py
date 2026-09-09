@@ -257,6 +257,49 @@ def _mensagem_habilitada(fieldname: str) -> bool:
 	return True if valor is None else bool(cint(valor))
 
 
+# Rótulos do campo ``destinatario_tipo`` do ``Log de Mensagem``.
+DESTINATARIO_RESPONSAVEL = "Responsável"
+DESTINATARIO_CHEFES = "Grupo de chefes de seção"
+DESTINATARIO_RECEPCAO = "Grupo da recepção"
+DESTINATARIO_RECADOS = "Grupo de recados gerais"
+
+
+def _contexto_de_log(
+	*,
+	assunto: str,
+	tipo: str,
+	novo_associado: str | None = None,
+	nome: str | None = None,
+) -> dict:
+	"""O que o transporte não sabe e a ficha de registro mostra.
+
+	``novo_associado`` é o que amarra a mensagem ao jovem: sem ele a linha do log existe, mas
+	não aparece na ficha de ninguém — é o caso dos resumos que falam de vários jovens.
+	"""
+	return {
+		"assunto": assunto,
+		"destinatario_tipo": tipo,
+		"novo_associado": novo_associado,
+		"destinatario_nome": nome,
+	}
+
+
+def _filtro_registro_ja_comunicado() -> dict:
+	"""Filtro que segura as cobranças até o responsável ter recebido o número de registro.
+
+	Cobrar a ficha médica ou o id@escoteiros de quem ainda não sabe o número manda a família
+	para um Paxtu em que ela não consegue entrar. O carimbo de ``notificar_registro_criado``
+	é a prova de que o número já foi entregue.
+
+	Com a mensagem do registro desligada nas configurações o carimbo nunca é gravado: aí a
+	recepção avisa por fora e travar as cobranças para sempre seria pior do que soltá-las.
+	"""
+	if not _mensagem_habilitada("msg_registro_criado"):
+		return {}
+
+	return {"data_mensagem_registro_criado": ["is", "set"]}
+
+
 def _intervalo(fieldname: str, padrao: int) -> int:
 	"""Intervalo configurado em dias; cai no padrão quando ausente ou não positivo."""
 	try:
@@ -720,7 +763,16 @@ def notificar_dados_preenchidos_no_grupo_recepcao(novo_associado_name: str) -> N
 			nome_responsavel=(contato or {}).get("nome") or "não cadastrado",
 			sexo_jovem=jovem.get("sexo"),
 		)
-		enviar_para_grupo(grupo_jid, mensagem, mencionar_todos=True)
+		enviar_para_grupo(
+			grupo_jid,
+			mensagem,
+			mencionar_todos=True,
+			contexto=_contexto_de_log(
+				assunto="Dados de registro preenchidos",
+				tipo=DESTINATARIO_RECEPCAO,
+				novo_associado=novo_associado_name,
+			),
+		)
 	except Exception:
 		frappe.log_error(
 			frappe.get_traceback(),
@@ -792,6 +844,11 @@ def _avisar_chefes_da_recepcao(
 				ficha=_ficha_do_jovem(jovem, contato),
 			),
 			mencionar=telefones_chefes or None,
+			contexto=_contexto_de_log(
+				assunto="Recepção realizada",
+				tipo=DESTINATARIO_CHEFES,
+				novo_associado=novo_associado_name,
+			),
 		)
 		_carimbar(novo_associado_name, "data_mensagem_visita_realizada", getdate(today()))
 	except Exception:
@@ -836,6 +893,12 @@ def notificar_orientacao_pos_visita(novo_associado_name: str) -> None:
 				sexo_jovem=jovem.get("sexo"),
 				recepcionista=_buscar_contato_do_recepcionista(jovem.get("responsavel_recepcao")),
 			),
+			contexto=_contexto_de_log(
+				assunto="Orientação após a visita",
+				tipo=DESTINATARIO_RESPONSAVEL,
+				novo_associado=novo_associado_name,
+				nome=contato.get("nome"),
+			),
 		)
 		_carimbar(novo_associado_name, "data_mensagem_orientacao_visita", getdate(today()))
 	except Exception:
@@ -875,6 +938,9 @@ def notificar_desistencia(nome_completo: str, sexo: str | None = None, ramo: str
 			grupo_jid,
 			_montar_desistencia(nome_completo=nome, sexo=sexo, mencao=mencoes),
 			mencionar=telefones_chefes or None,
+			# Sem ``novo_associado``: o registro do funil é apagado logo depois do aviso,
+			# e um Link para documento inexistente quebraria a leitura da ficha.
+			contexto=_contexto_de_log(assunto="Desistência", tipo=DESTINATARIO_CHEFES),
 		)
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), f"Aviso de desistência (grupo chefes): {nome}")
@@ -903,8 +969,12 @@ def _incluir_responsavel_no_grupo_geral(novo_associado_name: str, contato: frapp
 def notificar_registro_criado(associado_name: str) -> None:
 	"""Avisa o responsável que o registro do jovem saiu, com o número para o Paxtu.
 
-	Chamado pelo controller de ``Associado``. ``Associado`` e ``Novo Associado`` compartilham
-	o nome (md5 do CPF), então ``associado_name`` também identifica o jovem no funil.
+	Chamado pelo controller de ``Associado`` e pela virada de ``numero_de_registro`` no funil
+	(ver ``on_novo_associado_atualizado``). ``Associado`` e ``Novo Associado`` compartilham o
+	nome (md5 do CPF), então ``associado_name`` também identifica o jovem no funil.
+
+	É esta mensagem que destrava as cobranças de ficha médica e id@escoteiros — ver
+	``_filtro_registro_ja_comunicado``.
 	"""
 	logger = _logger_de_evento()
 
@@ -914,16 +984,29 @@ def notificar_registro_criado(associado_name: str) -> None:
 	jovem = frappe.db.get_value(
 		"Novo Associado",
 		associado_name,
-		["name", "nome_completo", "sexo", "data_mensagem_registro_criado"],
+		[
+			"name",
+			"nome_completo",
+			"sexo",
+			"numero_de_registro",
+			"tipo_de_registro",
+			"data_mensagem_registro_criado",
+		],
 		as_dict=True,
 	)
 	if not jovem or jovem.get("data_mensagem_registro_criado"):
 		return
 
+	# O número chega por dois caminhos: o cadastro do ``Associado`` e o campo do próprio
+	# funil, que a recepção preenche no diálogo de números de registro. O do ``Associado``
+	# tem precedência por ser o registro oficial; o do funil é o que faz a mensagem sair
+	# assim que a recepção informa o número, sem esperar o ``Associado`` existir no Gris.
 	associado = frappe.db.get_value("Associado", associado_name, ["registro", "tipo_registro"], as_dict=True)
-	numero_registro = (associado or {}).get("registro") or ""
+	numero_registro = ((associado or {}).get("registro") or jovem.get("numero_de_registro") or "").strip()
 	if not numero_registro:
 		return
+
+	tipo_registro = (associado or {}).get("tipo_registro") or jovem.get("tipo_de_registro") or ""
 
 	contato = _buscar_contatos_responsaveis([associado_name]).get(associado_name)
 	telefone = (contato or {}).get("telefone")
@@ -939,8 +1022,14 @@ def notificar_registro_criado(associado_name: str) -> None:
 				primeiro_nome_jovem=_extrair_primeiro_nome(jovem.get("nome_completo")),
 				sexo_jovem=jovem.get("sexo"),
 				sexo_responsavel=contato.get("sexo"),
-				tipo_registro=(associado or {}).get("tipo_registro") or "",
+				tipo_registro=tipo_registro,
 				numero_registro=numero_registro,
+			),
+			contexto=_contexto_de_log(
+				assunto="Registro criado",
+				tipo=DESTINATARIO_RESPONSAVEL,
+				novo_associado=associado_name,
+				nome=contato.get("nome"),
 			),
 		)
 		_carimbar(associado_name, "data_mensagem_registro_criado", getdate(today()))
@@ -949,10 +1038,10 @@ def notificar_registro_criado(associado_name: str) -> None:
 
 
 def on_novo_associado_atualizado(doc, method=None) -> None:
-	"""``doc_events`` de ``Novo Associado``: dispara as mensagens da visita realizada.
+	"""``doc_events`` de ``Novo Associado``: dispara as mensagens da visita e do registro.
 
-	Cobre todos os caminhos de escrita da etapa (portal da recepção, MCP e Desk) porque
-	todos passam por ``doc.save()``.
+	Cobre todos os caminhos de escrita (portal da recepção, MCP e Desk) porque todos passam
+	por ``doc.save()``.
 	"""
 	if frappe.flags.in_install or frappe.flags.in_patch or frappe.flags.in_migrate:
 		return
@@ -966,6 +1055,20 @@ def on_novo_associado_atualizado(doc, method=None) -> None:
 	if doc.primeira_visita_realizada and not anterior.primeira_visita_realizada:
 		notificar_recepcao_realizada(doc.name)
 		notificar_orientacao_pos_visita(doc.name)
+
+	# O número de registro informado no funil é o gatilho do aviso que entrega o número ao
+	# responsável — e é esse aviso que destrava as cobranças de ficha médica e id@escoteiros.
+	# Antes, a mensagem dependia do cadastro do ``Associado``, que costuma chegar bem depois.
+	# Enfileirado como no controller de ``Associado``: o envio não pode segurar o save.
+	if (doc.numero_de_registro or "").strip() and not (anterior.numero_de_registro or "").strip():
+		frappe.enqueue(
+			"gris.api.recepcao_mensagens.notificar_registro_criado",
+			queue="short",
+			timeout=120,
+			job_name=f"notificar_registro_criado:{doc.name}",
+			associado_name=doc.name,
+			enqueue_after_commit=True,
+		)
 
 
 # ─── Jobs agendados ───────────────────────────────────────────────────────────
@@ -1011,7 +1114,15 @@ def notificar_visitas_do_dia() -> None:
 	contatos = _buscar_contatos_responsaveis(jovens_names)
 
 	visitas_por_ramo: dict[str, list[str]] = defaultdict(list)
+	# Cinto de segurança: cada jovem tem uma visita só (ver ``gris.api.recepcao_visitas``),
+	# mas um registro duplicado de legado não pode listar a mesma criança duas vezes.
+	ja_listados: set[str] = set()
 	for visita in visitas:
+		if str(visita.jovem) in ja_listados:
+			logger.warning(f"Visita {visita.name} ignorada: {visita.jovem} já está na lista do dia.")
+			metrica("visitas_duplicadas")
+			continue
+
 		jovem = jovem_por_name.get(str(visita.jovem)) or {}
 		# O ramo do jovem é recalculado diariamente pela idade; o da visita pode estar velho.
 		ramo = (jovem.get("ramo") or visita.get("ramo") or "").strip()
@@ -1028,10 +1139,17 @@ def notificar_visitas_do_dia() -> None:
 		visitas_por_ramo[ramo].append(
 			f"{nome} - {idade} - {_filiacao(jovem.get('sexo'))} {responsavel} ({confirmacao})"
 		)
+		ja_listados.add(str(visita.jovem))
 
 	listadas = sum(len(itens) for itens in visitas_por_ramo.values())
 	try:
-		enviar_para_grupo(grupo_jid, _montar_visitas_do_dia(data_hoje, visitas_por_ramo))
+		enviar_para_grupo(
+			grupo_jid,
+			_montar_visitas_do_dia(data_hoje, visitas_por_ramo),
+			# Sem ``novo_associado``: a mensagem lista as visitas do dia inteiro, então não
+			# é a mensagem de um jovem só e não entra na ficha de nenhum deles.
+			contexto=_contexto_de_log(assunto="Visitas do dia", tipo=DESTINATARIO_CHEFES),
+		)
 	except Exception:
 		logger.exception("Falha ao enviar as visitas do dia para o grupo de chefes de seção.")
 		metrica("falhas_no_envio")
@@ -1110,6 +1228,12 @@ def enviar_lembretes_dados_registro() -> None:
 					sexo_jovem=jovem.get("sexo"),
 					recepcionista=_buscar_contato_do_recepcionista(jovem.responsavel_recepcao),
 				),
+				contexto=_contexto_de_log(
+					assunto="Lembrete de dados para registro",
+					tipo=DESTINATARIO_RESPONSAVEL,
+					novo_associado=str(jovem.name),
+					nome=contato.get("nome"),
+				),
 			)
 			_carimbar(str(jovem.name), "data_lembrete_dados", data_hoje)
 			enviados += 1
@@ -1178,7 +1302,16 @@ def _enviar_lembretes_para_responsavel(
 				metrica("sem_telefone")
 				continue
 
-			enviar_texto(telefone, montar_mensagem(jovem, contato))
+			enviar_texto(
+				telefone,
+				montar_mensagem(jovem, contato),
+				contexto=_contexto_de_log(
+					assunto=f"Lembrete de {rotulo}",
+					tipo=DESTINATARIO_RESPONSAVEL,
+					novo_associado=str(jovem.name),
+					nome=(contato or {}).get("nome"),
+				),
+			)
 			_carimbar(str(jovem.name), campo_carimbo, data_hoje)
 			enviados += 1
 			logger.info(f"Lembrete de {rotulo} enviado sobre {jovem.nome_completo or jovem.name}.")
@@ -1219,13 +1352,16 @@ def enviar_lembretes_ficha_medica() -> None:
 
 	Registro provisório e definitivo têm etapas de efetivação distintas: cada tipo é filtrado
 	pela sua, mantendo a seleção no SQL.
+
+	A etapa de efetivação sozinha não basta: ela é marcada pela recepção e pode acontecer
+	antes de o responsável saber o número de registro. Ver ``_filtro_registro_ja_comunicado``.
 	"""
 	if not _mensagem_habilitada("msg_lembrete_ficha_medica"):
 		definir_resumo(MENSAGEM_DESATIVADA)
 		return
 
 	intervalo = _intervalo("lembrete_ficha_medica_intervalo_dias", INTERVALO_FICHA_MEDICA_PADRAO)
-	base = {"ficha_medica_preenchida": 0}
+	base = {"ficha_medica_preenchida": 0, **_filtro_registro_ja_comunicado()}
 
 	enviados = 0
 	elegiveis = 0
@@ -1255,14 +1391,22 @@ def enviar_lembretes_ficha_medica() -> None:
 
 
 def enviar_lembretes_id_escoteiros() -> None:
-	"""Cobra a criação do id@escoteiros de quem já preencheu a ficha médica."""
+	"""Cobra a criação do id@escoteiros de quem já preencheu a ficha médica.
+
+	Também espera o aviso do número de registro: a ficha médica pode ter sido marcada à mão
+	pela recepção, sem o responsável ter recebido nada. Ver ``_filtro_registro_ja_comunicado``.
+	"""
 	if not _mensagem_habilitada("msg_lembrete_id_escoteiros"):
 		definir_resumo(MENSAGEM_DESATIVADA)
 		return
 
 	_enviar_lembretes_para_responsavel(
 		rotulo="id@escoteiros",
-		filtros={"ficha_medica_preenchida": 1, "id_escoteiros_criado": 0},
+		filtros={
+			"ficha_medica_preenchida": 1,
+			"id_escoteiros_criado": 0,
+			**_filtro_registro_ja_comunicado(),
+		},
 		campo_carimbo="data_lembrete_id_escoteiros",
 		intervalo=_intervalo("lembrete_id_escoteiros_intervalo_dias", INTERVALO_ID_ESCOTEIROS_PADRAO),
 		montar_mensagem=lambda jovem, contato: _montar_lembrete_id_escoteiros(
@@ -1338,6 +1482,11 @@ def enviar_lembretes_acolhida_lenco() -> None:
 					repeticao=bool(jovem.get("data_lembrete_acolhida")),
 				),
 				mencionar=telefones_chefes or None,
+				contexto=_contexto_de_log(
+					assunto="Acolhida e entrega do lenço",
+					tipo=DESTINATARIO_CHEFES,
+					novo_associado=str(jovem.name),
+				),
 			)
 			_carimbar(str(jovem.name), "data_lembrete_acolhida", data_hoje)
 			enviados += 1

@@ -7,6 +7,7 @@ from frappe.utils import add_days, cint, format_date, getdate, today
 from gris.api.portal_access import enrich_context, user_has_access
 from gris.api.recepcao import limpar_sinal_de_reagendamento
 from gris.api.recepcao_funil import STATUS_VISITA_AGENDADA
+from gris.api.recepcao_visitas import agendar_ou_remarcar_visita
 
 no_cache = 1
 
@@ -167,7 +168,9 @@ def reschedule_visit(visit_name: str, new_date: str):
 	if not _is_date_available_for_ramo(visit.ramo, new_date):
 		frappe.throw(_("A data selecionada não está disponível para o ramo da visita."))
 
-	frappe.db.set_value("Agenda de Visitas", visit_name, "data_da_visita", new_date)
+	# Pelo serviço, e não por ``db.set_value``: é ele que zera a confirmação da data antiga
+	# e avisa o responsável da data nova.
+	agendar_ou_remarcar_visita(visit.jovem, new_date, ramo=visit.ramo)
 
 
 def _get_sections_by_ramos(ramos):
@@ -286,16 +289,9 @@ def schedule_visit(associate: str, date: str):
 	if not _is_date_available_for_ramo(associate_doc.ramo, date):
 		frappe.throw(_("A data selecionada não está disponível para o ramo do associado."))
 
-	visit = frappe.get_doc(
-		{
-			"doctype": "Agenda de Visitas",
-			"jovem": associate,
-			"data_da_visita": date,
-			"ramo": associate_doc.ramo,
-			"visita_confirmada": 0,
-		}
-	)
-	visit.insert()
+	# Agenda ou remarca: o botão "Reagendar Visita" da visão geral cai aqui, e criar um
+	# registro novo deixava o antigo na data velha, virando visita fantasma no sábado.
+	visit_name = agendar_ou_remarcar_visita(associate, date, ramo=associate_doc.ramo)
 
 	associate_doc.visita_agendada = 1
 	associate_doc.status = STATUS_VISITA_AGENDADA
@@ -304,4 +300,4 @@ def schedule_visit(associate: str, date: str):
 	# A visita nova encerra a pendência de reagendamento, se houver.
 	limpar_sinal_de_reagendamento(associate)
 
-	return visit.name
+	return visit_name

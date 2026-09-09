@@ -24,6 +24,20 @@ CAMPOS_DE_TRANSICAO = (
 
 STATUS_AGUARDAR_DADOS = "Aguardar Dados"
 
+# Etapa -> carimbos de mensagem a limpar quando ela é desmarcada.
+#
+# Os carimbos existem para não repetir mensagem. Desmarcar uma etapa é dizer que ela não
+# aconteceu — manter o carimbo deixaria o jovem num limbo: a etapa volta a ser cobrada na
+# tela, mas a mensagem que a acompanha nunca mais sai. Os de ``primeira_visita_realizada``
+# são de envio único; os demais controlam a cadência dos lembretes recorrentes.
+CARIMBOS_POR_ETAPA = {
+	"primeira_visita_realizada": ("data_mensagem_visita_realizada", "data_mensagem_orientacao_visita"),
+	"pesquisa_de_novos_associados_respondida": ("data_lembrete_pesquisa",),
+	"ficha_medica_preenchida": ("data_lembrete_ficha_medica",),
+	"id_escoteiros_criado": ("data_lembrete_id_escoteiros",),
+	"reuniao_de_acolhida_realizada": ("data_lembrete_acolhida",),
+}
+
 
 class NovoAssociado(Document):
 	def autoname(self):
@@ -40,6 +54,24 @@ class NovoAssociado(Document):
 		self._sincronizar_data_registro_provisorio()
 		self._sincronizar_data_aguardar_dados()
 		self._sincronizar_historico_de_etapas()
+		self._limpar_carimbos_de_etapa_desmarcada()
+
+	def _limpar_carimbos_de_etapa_desmarcada(self):
+		"""Solta as mensagens da etapa que acabou de ser desmarcada.
+
+		Mora no ``validate`` pelo mesmo motivo do histórico de etapas: é por aqui que passam
+		todos os caminhos que desmarcam (bolinha da timeline, ferramentas MCP e o Desk), e
+		nenhum deles precisa lembrar de limpar carimbo.
+		"""
+		anterior = self.get_doc_before_save()
+		if not anterior:
+			return
+
+		for campo, carimbos in CARIMBOS_POR_ETAPA.items():
+			if self.get(campo) or not anterior.get(campo):
+				continue
+			for carimbo in carimbos:
+				self.set(carimbo, None)
 
 	def _sincronizar_historico_de_etapas(self):
 		"""Carimba quem concluiu cada etapa e quando, para o ícone de informação da timeline.
@@ -110,6 +142,11 @@ class NovoAssociado(Document):
 		)
 		for vinculo_name in vinculos:
 			frappe.db.set_value("Responsavel Vinculo", vinculo_name, "beneficiario_novo_associado", None)
+
+		# O log guarda o texto das mensagens, com nome e telefone de quem recebeu. Sair do
+		# funil (desistência ou recepção finalizada) apaga o jovem; o histórico das mensagens
+		# dele não pode sobreviver a isso.
+		frappe.db.delete("Log de Mensagem", {"novo_associado": self.name})
 
 
 def obter_faixas_de_ramo():

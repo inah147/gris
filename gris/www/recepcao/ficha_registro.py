@@ -199,6 +199,84 @@ def get_context(context):
 
 
 @frappe.whitelist()
+@rate_limit(key="ficha-mensagens", limit=60, seconds=60)
+def listar_mensagens_enviadas(novo_associado_name: str) -> list[dict]:
+	"""Mensagens que o GRIS já tentou entregar a respeito deste jovem.
+
+	Lê o ``Log de Mensagem``, gravado por ``gris.utils.whatsapp`` no ponto em que o resultado
+	do provedor é conhecido. Só aparecem aqui os envios feitos depois que o log passou a
+	existir: não havia registro nenhum antes dele, e o histórico anterior não é recuperável.
+
+	Os avisos que falam de vários jovens de uma vez (as visitas do dia, por exemplo) ficam
+	sem ``novo_associado`` e por isso não entram na ficha de ninguém.
+	"""
+	if not novo_associado_name:
+		frappe.throw(_("Novo Associado não especificado."))
+
+	if not frappe.has_permission("Novo Associado", "read", novo_associado_name):
+		frappe.throw(_("Sem permissão para acessar este registro."), frappe.PermissionError)
+
+	mensagens = frappe.get_all(
+		"Log de Mensagem",
+		filters={"novo_associado": novo_associado_name},
+		fields=[
+			"name",
+			"enviada_em",
+			"status",
+			"assunto",
+			"destinatario_tipo",
+			"destinatario_nome",
+			"destinatario_numero",
+			"conteudo",
+			"erro",
+		],
+		order_by="enviada_em desc",
+		limit_page_length=200,
+	)
+
+	_resolver_nomes_de_grupo(mensagens)
+
+	for mensagem in mensagens:
+		mensagem["data"] = format_date(mensagem["enviada_em"])
+		mensagem["hora"] = format_datetime(mensagem["enviada_em"], "HH:mm")
+
+	return mensagens
+
+
+def _resolver_nomes_de_grupo(mensagens: list[dict]) -> None:
+	"""Troca o JID dos grupos pelo nome, para a ficha não mostrar "1203...@g.us".
+
+	Só a Evolution API sabe o assunto de cada grupo. A consulta acontece aqui, uma vez por
+	abertura do diálogo, e não a cada envio: no envio poria uma chamada de rede no caminho de
+	toda mensagem. Se a API não responder, cada linha fica com o JID — que é o que já estava
+	gravado — em vez de a ficha inteira falhar.
+	"""
+	jids = {
+		mensagem["destinatario_numero"]
+		for mensagem in mensagens
+		if not mensagem.get("destinatario_nome")
+		and (mensagem.get("destinatario_numero") or "").endswith("@g.us")
+	}
+	if not jids:
+		return
+
+	from gris.utils.whatsapp import listar_grupos_whatsapp
+
+	try:
+		nomes = {grupo["id"]: grupo.get("subject") or grupo["id"] for grupo in listar_grupos_whatsapp()}
+	except Exception:
+		frappe.logger("recepcao", allow_site=True).warning(
+			"Nomes dos grupos não resolvidos na ficha de registro; as linhas ficam com o JID."
+		)
+		nomes = {}
+
+	for mensagem in mensagens:
+		numero = mensagem.get("destinatario_numero") or ""
+		if not mensagem.get("destinatario_nome") and numero in jids:
+			mensagem["destinatario_nome"] = nomes.get(numero, numero)
+
+
+@frappe.whitelist()
 @rate_limit(key="ficha-baixar-documento", limit=60, seconds=60)
 def baixar_documento_do_responsavel(novo_associado_name: str, responsavel_name: str, tipo: str):
 	"""Entrega pelo GRIS um documento do responsável hospedado no Drive.

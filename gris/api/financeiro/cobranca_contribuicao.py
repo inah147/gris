@@ -9,7 +9,8 @@ O ciclo completo mora aqui:
 2. Uma `Cobranca Infinitepay` com `finalidade = "Contribuição Mensal"` é criada e
    o `after_insert` dela busca o link de pagamento na InfinitePay.
 3. O link vai para o responsável pelo WhatsApp, no telefone de cobrança do
-   associado.
+   associado. O próprio responsável também pode gerar o link sozinho, pela
+   tela `/responsavel/contribuicoes` — ver `gerar_cobranca_responsavel`.
 4. Quando a InfinitePay confirma o pagamento — pelo webhook ou pela sincronização
    manual — `on_cobranca_atualizada` lança no extrato o crédito que quita as
    competências cobradas.
@@ -144,12 +145,26 @@ def _dados_do_associado(associado: str) -> dict:
 def montar_cobranca(associado: str, competencias, meses=MESES_COBRANCA) -> dict:
 	"""Cria a `Cobranca Infinitepay` das competências pedidas e devolve o link.
 
+	Uso do gestor: cobra as competências que ele escolher. Ver `_montar_cobranca`
+	para a lógica compartilhada com o autoatendimento do responsável.
+	"""
+	_assert_gestor()
+	return _montar_cobranca(associado, competencias, meses)
+
+
+def _montar_cobranca(
+	associado: str, competencias, meses=MESES_COBRANCA, ignore_permissions: bool = False
+) -> dict:
+	"""Cria a `Cobranca Infinitepay` das competências pedidas e devolve o link.
+
 	As competências são conferidas contra a apuração no momento da emissão: só
 	entra na cobrança o mês que continua em aberto e pelo valor que ainda falta.
 	Cobrar um mês já quitado só geraria crédito e confundiria quem paga.
-	"""
-	_assert_gestor()
 
+	`ignore_permissions` é para o autoatendimento do responsável, que não tem
+	permissão de doctype sobre `Cobranca Infinitepay` — a autorização dele vem do
+	vínculo com o beneficiário, checado por quem chama antes de chegar aqui.
+	"""
 	pedidas = _normalizar_competencias(competencias)
 	if not pedidas:
 		frappe.throw(_("Selecione ao menos uma competência para cobrar."))
@@ -191,7 +206,7 @@ def montar_cobranca(associado: str, competencias, meses=MESES_COBRANCA) -> dict:
 			"itens": itens,
 		}
 	)
-	cobranca.insert()
+	cobranca.insert(ignore_permissions=ignore_permissions)
 	cobranca.reload()
 
 	return {
@@ -262,6 +277,40 @@ def gerar_cobranca(
 	if frappe.utils.cint(enviar_whatsapp):
 		resultado["whatsapp"] = _enviar_whatsapp(cobranca, associado)
 	return resultado
+
+
+@frappe.whitelist()
+def gerar_cobranca_responsavel(associado: str, meses: str | int = MESES_COBRANCA):
+	"""Autoatendimento: o responsável gera o link de pagamento dos meses que deve.
+
+	Diferente de `gerar_cobranca` (uso do gestor), aqui quem chama não precisa da
+	role de gestor — a autorização vem do vínculo `Responsavel Vinculo` entre o
+	usuário logado e o beneficiário, checado aqui dentro porque este método é
+	whitelisted e pode ser chamado direto, não só pela tela do responsável.
+	Cobra tudo que estiver atrasado ou em aberto: o responsável não escolhe
+	competência a competência, é a mesma pendência que a tela já mostra.
+	"""
+	from gris.api.responsavel_acesso import get_beneficiarios_associados, get_responsavel_do_usuario
+
+	if not associado:
+		frappe.throw(_("Parâmetro 'associado' é obrigatório."), frappe.ValidationError)
+
+	responsavel = get_responsavel_do_usuario(frappe.session.user)
+	if associado not in get_beneficiarios_associados(responsavel):
+		frappe.throw(
+			_("Você não tem permissão para gerar cobrança deste beneficiário."), frappe.PermissionError
+		)
+
+	situacao = get_situacao_para_cobranca(associado, meses)
+	pendentes = situacao["pendentes"]
+	if not pendentes:
+		frappe.throw(_("Não há competência em atraso ou em aberto para gerar cobrança."))
+
+	cobranca = _montar_cobranca(associado, [p["ym"] for p in pendentes], meses, ignore_permissions=True)
+	if not cobranca["link_pagamento"]:
+		frappe.throw(_("A InfinitePay não devolveu o link de pagamento. Tente novamente em instantes."))
+
+	return {"success": True, "cobranca": cobranca}
 
 
 @frappe.whitelist()

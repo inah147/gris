@@ -18,6 +18,7 @@ from gris.api.financeiro.cobranca_contribuicao import (
 	FINALIDADE_CONTRIBUICAO,
 	PREFIXO_ID_TRANSACAO,
 	_normalizar_competencias,
+	gerar_cobranca_responsavel,
 	lancar_baixa,
 	montar_cobranca,
 	montar_mensagem,
@@ -55,6 +56,14 @@ def _nome_por_cpf(cpf: str) -> str:
 	saber se o registro do teste já existe.
 	"""
 	return hashlib.md5(cpf.encode("utf-8")).hexdigest()
+
+
+def _sem_rede():
+	"""Substitui a chamada à InfinitePay do `after_insert` por um link falso."""
+	resposta = mock.Mock()
+	resposta.json.return_value = {"checkout_url": "https://pag.exemplo/teste"}
+	resposta.raise_for_status.return_value = None
+	return mock.patch.object(cobranca_doctype.requests, "post", return_value=resposta)
 
 
 class TestCompetenciasDaCobranca(FrappeTestCase):
@@ -153,11 +162,7 @@ class TestBaixaDaCobranca(FrappeTestCase):
 		return doc.name
 
 	def _sem_rede(self):
-		"""Substitui a chamada à InfinitePay do `after_insert` por um link falso."""
-		resposta = mock.Mock()
-		resposta.json.return_value = {"checkout_url": "https://pag.exemplo/teste"}
-		resposta.raise_for_status.return_value = None
-		return mock.patch.object(cobranca_doctype.requests, "post", return_value=resposta)
+		return _sem_rede()
 
 	def _criar_cobranca(self, competencias: str, status: str = "Pendente", paid_amount: int = 0):
 		"""Cobrança gravada sem sair para a rede."""
@@ -368,3 +373,120 @@ class TestRecorteDoResponsavel(FrappeTestCase):
 			self.assertEqual(apurados, [])
 		finally:
 			frappe.db.set_value("Associado", self.filho, "categoria", "Beneficiário")
+
+
+class TestGerarCobrancaResponsavel(FrappeTestCase):
+	"""Autoatendimento: o responsável gera a própria cobrança, sem role de gestor.
+
+	`gerar_cobranca_responsavel` é whitelisted e pode ser chamado direto — a
+	checagem de vínculo mora dentro dela, não na tela que a chama. Estes testes
+	rodam como o usuário do portal, não como Administrator, para provar que a
+	autorização por vínculo funciona sem a role Gestor Contribuição Mensal.
+	"""
+
+	CPF_RESPONSAVEL = "99000000020"
+	CPF_FILHO = "99000000021"
+	CPF_ALHEIO = "99000000022"
+	EMAIL_RESPONSAVEL = "responsavel.autoatendimento.teste@example.com"
+
+	def setUp(self):
+		frappe.set_user("Administrator")
+
+		if not frappe.db.exists("User", self.EMAIL_RESPONSAVEL):
+			user = frappe.new_doc("User")
+			user.email = self.EMAIL_RESPONSAVEL
+			user.first_name = "Responsável Autoatendimento"
+			user.send_welcome_email = 0
+			user.append("roles", {"role": "Responsavel"})
+			user.insert(ignore_permissions=True)
+
+		self.responsavel = self._criar_responsavel()
+		self.filho = self._criar_beneficiario(self.CPF_FILHO, "Filho do Autoatendimento")
+		self.alheio = self._criar_beneficiario(self.CPF_ALHEIO, "Beneficiário Alheio")
+		self._criar_vinculo(self.responsavel, self.filho)
+
+		_apagar("Cobranca Infinitepay", {"associado": ["in", [self.filho, self.alheio]]})
+		_apagar("Transacao Extrato Geral", {"beneficiario": ["in", [self.filho, self.alheio]]})
+		frappe.db.set_single_value("Configuracao infinitepay", "handle", "grupo-teste")
+		frappe.db.set_single_value(
+			"Configuracoes Contribuicao Mensal",
+			{"valor_base": VALOR, "valor_atraso": VALOR_ATRASO, "dia_vencimento": 10},
+		)
+
+		frappe.set_user(self.EMAIL_RESPONSAVEL)
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	def _criar_responsavel(self) -> str:
+		nome = _nome_por_cpf(self.CPF_RESPONSAVEL)
+		if frappe.db.exists("Responsavel", nome):
+			return nome
+		doc = frappe.get_doc(
+			{
+				"doctype": "Responsavel",
+				"cpf": self.CPF_RESPONSAVEL,
+				"nome_completo": "Responsável do Autoatendimento",
+				"email": self.EMAIL_RESPONSAVEL,
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		return doc.name
+
+	def _criar_beneficiario(self, cpf: str, nome: str) -> str:
+		registro = _nome_por_cpf(cpf)
+		if frappe.db.exists("Associado", registro):
+			return registro
+		doc = frappe.get_doc(
+			{
+				"doctype": "Associado",
+				"cpf": cpf,
+				"nome_completo": nome,
+				"data_de_nascimento": "2015-01-01",
+				"categoria": "Beneficiário",
+				"status_no_grupo": "Ativo",
+				"status_cobranca": "Ativo",
+				"valor_contribuicao": VALOR,
+				"inicio_do_pagamento": "2026-01-01",
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		return doc.name
+
+	def _criar_vinculo(self, responsavel: str, associado: str) -> None:
+		if frappe.db.exists(
+			"Responsavel Vinculo", {"responsavel": responsavel, "beneficiario_associado": associado}
+		):
+			return
+		frappe.get_doc(
+			{
+				"doctype": "Responsavel Vinculo",
+				"responsavel": responsavel,
+				"beneficiario_associado": associado,
+			}
+		).insert(ignore_permissions=True)
+
+	def test_responsavel_gera_cobranca_do_proprio_beneficiario(self):
+		with _sem_rede():
+			resultado = gerar_cobranca_responsavel(self.filho, meses=6)
+
+		self.assertTrue(resultado["success"])
+		self.assertTrue(resultado["cobranca"]["link_pagamento"])
+		emitida = frappe.get_doc("Cobranca Infinitepay", resultado["cobranca"]["name"])
+		self.assertEqual(emitida.associado, self.filho)
+		self.assertEqual(emitida.finalidade, FINALIDADE_CONTRIBUICAO)
+
+	def test_responsavel_nao_gera_cobranca_de_beneficiario_alheio(self):
+		with self.assertRaises(frappe.PermissionError):
+			gerar_cobranca_responsavel(self.alheio, meses=6)
+		self.assertEqual(frappe.db.count("Cobranca Infinitepay", {"associado": self.alheio}), 0)
+
+	def test_responsavel_sem_pendencia_nao_gera_cobranca(self):
+		frappe.db.set_value("Associado", self.filho, "inicio_do_pagamento", "2030-01-01")
+		try:
+			with self.assertRaises(frappe.ValidationError):
+				gerar_cobranca_responsavel(self.filho, meses=6)
+		finally:
+			frappe.set_user("Administrator")
+			frappe.db.set_value("Associado", self.filho, "inicio_do_pagamento", "2026-01-01")
+			frappe.set_user(self.EMAIL_RESPONSAVEL)

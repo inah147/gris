@@ -119,7 +119,7 @@
 			<p class="kanban-column__vazio hidden">Nenhum associado neste ramo.</p>
 			{% for card in kanban_data[status] %}
 			<article
-				class="card kanban-card"
+				class="card kanban-card{{ ' kanban-card--registro-definitivo' if card.registro_definitivo_pendente else '' }}"
 				data-id="{{ card.name }}"
 				data-status="{{ status }}"
 				data-responsavel="{{ card.responsavel_recepcao or '' }}"
@@ -135,6 +135,7 @@
 				data-whatsapp-disponivel="{{ 1 if card.whatsapp_disponivel else 0 }}"
 				data-whatsapp-motivo="{{ card.whatsapp_motivo_indisponivel or '' }}"
 				data-observacoes="{{ card.observacoes_count }}"
+				data-registro-definitivo-pendente="{{ 1 if card.registro_definitivo_pendente else 0 }}"
 			>
 				<div class="kanban-card__top">
 					{% if card.ramo %}
@@ -152,6 +153,17 @@
 							attrs={
 								"class": "badge-reagendar",
 								"title": "Visita a reagendar" ~ (" desde " ~ card.reagendamento_data if card.reagendamento_data else "")
+							}
+						) }}
+					{% endif %}
+					{% if card.registro_definitivo_pendente %}
+						{{ badge(
+							lucide_icon("id-card", size="sm") ~ "<span>Hora do registro definitivo!</span>",
+							attrs={
+								"class": "badge-registro-definitivo",
+								"title": "Registro provisório efetivado"
+									~ (" em " ~ card.registro_definitivo_desde if card.registro_definitivo_desde else "")
+									~ " — já são " ~ card.registro_definitivo_dias ~ " dia(s). Está na hora de gerar o registro definitivo."
 							}
 						) }}
 					{% endif %}

@@ -28,3 +28,4 @@ gris.patches.criar_role_e_board_desenvolvedor
 gris.patches.conceder_acompanhamento_sugestoes_aos_associados
 gris.patches.renomear_insignia_especial
 gris.patches.ligar_interruptores_de_mensagens_da_recepcao
+gris.patches.deduplicar_agenda_de_visitas

@@ -373,18 +373,27 @@ def schedule_visit(date: str):
 		if not _is_date_available_for_ramo(b.ramo, date):
 			frappe.throw(_("A data selecionada não está disponível para o ramo do beneficiário."))
 
-	# Create Agenda de Visitas for each
+	# Create Agenda de Visitas for each (reaproveitando um registro existente,
+	# se houver, em vez de criar um novo — evita órfão com data antiga).
 	for b in beneficiaries:
-		doc = frappe.get_doc(
-			{
-				"doctype": "Agenda de Visitas",
-				"jovem": b.name,
-				"data_da_visita": date,
-				"ramo": b.ramo,
-				"visita_confirmada": 0,
-			}
-		)
-		doc.insert(ignore_permissions=True)
+		existing_visit = frappe.db.exists("Agenda de Visitas", {"jovem": b.name})
+		if existing_visit:
+			frappe.db.set_value(
+				"Agenda de Visitas",
+				existing_visit,
+				{"data_da_visita": date, "ramo": b.ramo, "visita_confirmada": 0},
+			)
+		else:
+			doc = frappe.get_doc(
+				{
+					"doctype": "Agenda de Visitas",
+					"jovem": b.name,
+					"data_da_visita": date,
+					"ramo": b.ramo,
+					"visita_confirmada": 0,
+				}
+			)
+			doc.insert(ignore_permissions=True)
 
 		# Update Novo Associado
 		frappe.db.set_value("Novo Associado", b.name, {"visita_agendada": 1, "status": "Visita Agendada"})

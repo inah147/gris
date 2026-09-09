@@ -286,16 +286,29 @@ def schedule_visit(associate: str, date: str):
 	if not _is_date_available_for_ramo(associate_doc.ramo, date):
 		frappe.throw(_("A data selecionada não está disponível para o ramo do associado."))
 
-	visit = frappe.get_doc(
-		{
-			"doctype": "Agenda de Visitas",
-			"jovem": associate,
-			"data_da_visita": date,
-			"ramo": associate_doc.ramo,
-			"visita_confirmada": 0,
-		}
-	)
-	visit.insert()
+	# Reaproveita o registro existente em vez de criar um novo — evita órfãos
+	# com data antiga quando o fluxo chega aqui fora do endpoint de remarcação
+	# dedicado (ex.: agendamento repetido por um caminho que já tinha um registro).
+	existing_visit = frappe.db.exists("Agenda de Visitas", {"jovem": associate})
+	if existing_visit:
+		frappe.db.set_value(
+			"Agenda de Visitas",
+			existing_visit,
+			{"data_da_visita": date, "ramo": associate_doc.ramo, "visita_confirmada": 0},
+		)
+		visit_name = existing_visit
+	else:
+		visit = frappe.get_doc(
+			{
+				"doctype": "Agenda de Visitas",
+				"jovem": associate,
+				"data_da_visita": date,
+				"ramo": associate_doc.ramo,
+				"visita_confirmada": 0,
+			}
+		)
+		visit.insert()
+		visit_name = visit.name
 
 	associate_doc.visita_agendada = 1
 	associate_doc.status = STATUS_VISITA_AGENDADA
@@ -304,4 +317,4 @@ def schedule_visit(associate: str, date: str):
 	# A visita nova encerra a pendência de reagendamento, se houver.
 	limpar_sinal_de_reagendamento(associate)
 
-	return visit.name
+	return visit_name

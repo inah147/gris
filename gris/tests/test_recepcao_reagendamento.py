@@ -144,18 +144,42 @@ class TestLimparSinalAoAgendar(TestCase):
 	def test_agendar_visita_limpa_o_sinal(self):
 		associado = _DocFalso(name="NA-1", ramo="Lobinho")
 		visita = MagicMock()
+		visita.name = "VIS-9"
 
 		with (
 			patch.object(agenda_visitas, "user_has_access", return_value=True),
 			patch.object(agenda_visitas.frappe, "get_doc", side_effect=[associado, visita]),
 			patch.object(agenda_visitas, "_is_date_available_for_ramo", return_value=True),
+			patch.object(agenda_visitas.frappe.db, "exists", return_value=None),
 			patch.object(agenda_visitas, "limpar_sinal_de_reagendamento") as limpar,
 		):
-			agenda_visitas.schedule_visit("NA-1", "2026-03-14")
+			resultado = agenda_visitas.schedule_visit("NA-1", "2026-03-14")
 
 		limpar.assert_called_once_with("NA-1")
 		self.assertEqual(associado.visita_agendada, 1)
 		self.assertEqual(associado.status, recepcao_funil.STATUS_VISITA_AGENDADA)
+		self.assertEqual(resultado, "VIS-9")
+
+	def test_agendar_visita_reaproveita_registro_existente(self):
+		"""SUG-00046: sem visita anterior existente, evita órfão com data antiga."""
+		associado = _DocFalso(name="NA-1", ramo="Lobinho")
+
+		with (
+			patch.object(agenda_visitas, "user_has_access", return_value=True),
+			patch.object(agenda_visitas.frappe, "get_doc", return_value=associado),
+			patch.object(agenda_visitas, "_is_date_available_for_ramo", return_value=True),
+			patch.object(agenda_visitas.frappe.db, "exists", return_value="VIS-ANTIGA"),
+			patch.object(agenda_visitas.frappe.db, "set_value") as set_value,
+			patch.object(agenda_visitas, "limpar_sinal_de_reagendamento"),
+		):
+			resultado = agenda_visitas.schedule_visit("NA-1", "2026-03-14")
+
+		set_value.assert_called_once_with(
+			"Agenda de Visitas",
+			"VIS-ANTIGA",
+			{"data_da_visita": "2026-03-14", "ramo": "Lobinho", "visita_confirmada": 0},
+		)
+		self.assertEqual(resultado, "VIS-ANTIGA")
 
 	def test_limpar_apaga_marca_e_data(self):
 		with patch.object(recepcao.frappe.db, "set_value") as set_value:

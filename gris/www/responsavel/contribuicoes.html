@@ -2,6 +2,7 @@
 {% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 {% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
 
 {% block title %}Contribuições{% endblock %}
 
@@ -134,8 +135,15 @@
 			</a>
 		</p>
 		{% elif beneficiario.total_pendente > 0 %}
-		<p class="m-0 mb-4 text-sm text-muted-foreground">
-			Ainda não há link de pagamento emitido. Fale com a tesouraria do grupo para receber a cobrança.
+		<p class="m-0 mb-4">
+			<button
+				type="button"
+				class="btn-sm-primary resp-contrib-btn-gerar-link"
+				data-gerar-link-pagamento="{{ beneficiario.id }}"
+				data-meses="{{ meses_selecionado }}"
+			>
+				Gerar link de pagamento
+			</button>
 		</p>
 		{% endif %}
 
@@ -198,4 +206,9 @@
 	continua em aberto, fale com a tesouraria — pode ser um pagamento ainda sem identificação.
 </p>
 {% endif %}
+{{ toaster() }}
+{% endblock %}
+
+{% block script %}
+<script src="/responsavel/contribuicoes.js"></script>
 {% endblock %}

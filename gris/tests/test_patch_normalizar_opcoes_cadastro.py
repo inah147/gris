@@ -59,9 +59,7 @@ class TestPatchNormalizarOpcoesCadastro(FrappeTestCase):
 	def test_corrige_as_grafias_antigas(self):
 		self._executar()
 
-		doc = frappe.db.get_value(
-			"Novo Associado", self.novo_associado, ["etnia", "religiao"], as_dict=True
-		)
+		doc = frappe.db.get_value("Novo Associado", self.novo_associado, ["etnia", "religiao"], as_dict=True)
 		self.assertEqual(doc.etnia, "Não desejo informar")
 		self.assertEqual(doc.religiao, "Evangélico/Pentecostal")
 

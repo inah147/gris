@@ -35,6 +35,7 @@ UF_SIGLAS = [
 
 def baixar(uf: str) -> list[str]:
 	url = IBGE_MUNICIPIOS.format(uf=uf)
+	# URL fixa do IBGE, montada só com a sigla da UF.
 	with urllib.request.urlopen(url, timeout=30) as resposta:
 		dados = json.load(resposta)
 

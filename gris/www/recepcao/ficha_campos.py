@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Any
 
-import frappe
+from frappe.utils import format_date
 
 from gris.utils.contato import partes_telefone
 
@@ -150,7 +150,9 @@ def _montar_campo(doc, fieldname: str, label: str, tipo: str) -> list[dict[str, 
 		return _campos_de_telefone(valor, label)
 
 	if tipo == DATA:
-		texto = frappe.format_date(valor, "dd/MM/yyyy") if valor else ""
+		# ``format_date`` de ``frappe.utils``: o ``frappe.format_date`` que o template Jinja
+		# enxerga é do namespace do Jinja, e não existe no módulo importado aqui.
+		texto = format_date(valor, "dd/MM/yyyy") if valor else ""
 	elif tipo == SIM_NAO:
 		texto = "Sim" if valor else "Não"
 	else:

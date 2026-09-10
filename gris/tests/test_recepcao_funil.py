@@ -90,6 +90,61 @@ class TestCalcularEtapas(TestCase):
 		self.assertNotIn("data_estimada", _etapa(etapas, "visita_agendada"))
 
 
+class TestEtapaBoletoDefinitivo(TestCase):
+	"""A emissão do boleto do registro definitivo é etapa própria, antes da efetivação.
+
+	É o que deixa visível a fila entre gerar o boleto e o registro sair: boleto marcado e
+	efetivação pendente é boleto esperando pagamento.
+	"""
+
+	def test_boleto_vem_imediatamente_antes_da_efetivacao_definitiva(self):
+		campos = [etapa["field"] for etapa in recepcao_funil.STEPS_DEF]
+
+		self.assertEqual(
+			campos.index("boleto_definitivo_gerado") + 1,
+			campos.index("registro_definitivo_efetivado"),
+		)
+
+	def test_boleto_aparece_nos_dois_tipos_de_registro(self):
+		for tipo in ("Provisório", "Definitivo"):
+			with self.subTest(tipo=tipo):
+				etapas = recepcao_funil.calcular_etapas({"tipo_de_registro": tipo}, CONFIG)
+				campos = [etapa["field"] for etapa in etapas]
+
+				self.assertIn("boleto_definitivo_gerado", campos)
+
+	def test_intervalo_do_boleto_empurra_a_data_da_efetivacao(self):
+		config = {**CONFIG, "boleto_definitivo_gerado": 4, "registro_definitivo_efetivado": 6}
+		etapas = recepcao_funil.calcular_etapas(
+			{"tipo_de_registro": "Definitivo"}, config, BASE, hoje=date(2026, 1, 1)
+		)
+
+		boleto = _etapa(etapas, "boleto_definitivo_gerado")["data_estimada"]
+		efetivacao = _etapa(etapas, "registro_definitivo_efetivado")["data_estimada"]
+
+		self.assertEqual(boleto, "2026-01-25")
+		self.assertEqual(efetivacao, "2026-01-31")
+
+	def test_boleto_nao_e_etapa_de_efetivacao_nem_move_a_coluna(self):
+		# Marcar o boleto não exige número de registro (isso é da efetivação) e não
+		# empurra o card para outra lista do kanban.
+		self.assertNotIn("boleto_definitivo_gerado", recepcao_funil.CAMPOS_DE_EFETIVACAO)
+		self.assertNotIn("boleto_definitivo_gerado", dict(recepcao_funil.ETAPAS_QUE_MOVEM_O_FUNIL))
+
+	def test_marcar_o_boleto_pela_timeline_nao_pede_numero_de_registro(self):
+		doc = _DocFalso("Acompanhamento")
+		with (
+			patch.object(visao_geral, "numeros_de_registro_pendentes", return_value=["o jovem"]) as pendentes,
+			patch.object(visao_geral.frappe, "get_doc", return_value=doc),
+		):
+			visao_geral.update_step_status("NA-1", "boleto_definitivo_gerado", 1)
+
+		pendentes.assert_not_called()
+		self.assertEqual(doc.campos["boleto_definitivo_gerado"], 1)
+		self.assertEqual(doc.status, "Acompanhamento")
+		self.assertTrue(doc.salvo)
+
+
 class TestResumoEtapas(TestCase):
 	def test_consolida_progresso_e_proxima_etapa(self):
 		dados = {

@@ -235,6 +235,7 @@ def seed_novos_associados(por_ramo: int) -> list[str]:
 					"dados_para_registro_enviados": 1
 					if status in {"Fazer Registro", "Acompanhamento", "Concluído"}
 					else 0,
+					"boleto_definitivo_gerado": 1 if status == "Concluído" else 0,
 					"registro_definitivo_efetivado": 1 if status == "Concluído" else 0,
 				}
 			)
@@ -771,6 +772,7 @@ def seed_singles_gris(creds: dict):
 			"registro_definitivo_efetivado": 14,
 			"ficha_medica_preenchida": 14,
 			"id_escoteiros_criado": 7,
+			"boleto_definitivo_gerado": 3,
 			"intervalo_provisorio_definitivo": 60,
 			"registro_provisorio_efetivado": 7,
 			"reuniao_de_acolhida_realizada": 14,

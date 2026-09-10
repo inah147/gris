@@ -38,6 +38,10 @@ STEPS_DEF: list[dict[str, Any]] = [
 	{"field": "pesquisa_de_novos_associados_respondida", "label": "Pesquisa Respondida"},
 	{"field": "ficha_medica_preenchida", "label": "Ficha Médica"},
 	{"field": "id_escoteiros_criado", "label": "ID Escoteiros Criado"},
+	# Emitir o boleto do registro definitivo é uma etapa própria, e não parte da
+	# efetivação: entre gerar o boleto e o registro sair há a espera do pagamento, e é
+	# justamente essa fila que a recepção precisa enxergar no funil.
+	{"field": "boleto_definitivo_gerado", "label": "Boleto Definitivo Gerado"},
 	{"field": "registro_definitivo_efetivado", "label": "Registro Definitivo Efetivado"},
 	{"field": "reuniao_de_acolhida_realizada", "label": "Reunião de Acolhida"},
 ]
@@ -50,6 +54,7 @@ FIELD_INTERVAL_MAP: dict[str, str] = {
 	"pesquisa_de_novos_associados_respondida": "pesquisa_de_novos_associados_respondida",
 	"ficha_medica_preenchida": "ficha_medica_preenchida",
 	"id_escoteiros_criado": "id_escoteiros_criado",
+	"boleto_definitivo_gerado": "boleto_definitivo_gerado",
 	"registro_definitivo_efetivado": "registro_definitivo_efetivado",
 	"reuniao_de_acolhida_realizada": "reuniao_de_acolhida_realizada",
 }

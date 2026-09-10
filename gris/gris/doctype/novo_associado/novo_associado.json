@@ -62,6 +62,7 @@
   "pesquisa_de_novos_associados_respondida",
   "ficha_medica_preenchida",
   "id_escoteiros_criado",
+  "boleto_definitivo_gerado",
   "registro_definitivo_efetivado",
   "reuniao_de_acolhida_realizada",
   "historico_de_etapas",
@@ -403,6 +404,13 @@
   },
   {
    "default": "0",
+   "description": "Boleto do registro definitivo emitido; o registro só é efetivado depois do pagamento.",
+   "fieldname": "boleto_definitivo_gerado",
+   "fieldtype": "Check",
+   "label": "Boleto definitivo gerado"
+  },
+  {
+   "default": "0",
    "fieldname": "reuniao_de_acolhida_realizada",
    "fieldtype": "Check",
    "label": "Reuni\u00e3o de acolhida realizada"
@@ -525,7 +533,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-07 18:00:00.000000",
+ "modified": "2026-09-10 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Novo Associado",

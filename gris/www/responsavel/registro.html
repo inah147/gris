@@ -55,6 +55,42 @@
 	{% endcall %}
 {% endmacro %}
 
+{# Combobox = select com busca. Listas longas (país, município, profissão) ficam
+   impraticáveis sem digitar para filtrar; as curtas continuam no select_control. #}
+{% macro combo_control(fieldname, label, items, selected="", required=false, scope="main", field_id=None, include_name=true, class_name="", search_placeholder="Digite para buscar...") %}
+	{% set control_id = field_id or fieldname %}
+	{% set main_attrs = {
+		"class": "registro-control registro-select " ~ class_name,
+		"data-fieldname": fieldname,
+		"data-field-scope": scope
+	} %}
+	{% call field(label=required_label(label, required), attrs={"class": "registro-field " ~ class_name}) %}
+		{{ select(
+			id=control_id,
+			name=fieldname if include_name else None,
+			selected=selected or "",
+			items=items or [{"label": "Selecione...", "value": ""}],
+			main_attrs=main_attrs,
+			trigger_attrs={"class": "registro-select-trigger"},
+			is_combobox=true,
+			search_placeholder=search_placeholder
+		) }}
+		<p class="registro-field-error" data-field-error="{{ fieldname }}" hidden></p>
+	{% endcall %}
+{% endmacro %}
+
+{# Cidade depende da UF: os itens chegam do servidor para a UF já gravada, e o JS recarrega a
+   lista quando a UF muda. Sem a lista de municípios embarcada (ver gris/scripts/gerar_municipios.py)
+   o campo cai para texto livre, que é como era antes — melhor do que um seletor vazio que
+   impediria o responsável de terminar o cadastro. #}
+{% macro cidade_control(fieldname, label, items, value="", required=false, scope="main", field_id=None, include_name=true, class_name="") %}
+	{% if items and items | length > 1 %}
+		{{ combo_control(fieldname, label, items, value, required=required, scope=scope, field_id=field_id, include_name=include_name, class_name=class_name ~ " registro-field--cidade-select", search_placeholder="Digite para buscar a cidade...") }}
+	{% else %}
+		{{ text_control(fieldname, label, value, required=required, scope=scope, field_id=field_id, include_name=include_name, class_name=class_name) }}
+	{% endif %}
+{% endmacro %}
+
 {% macro date_control(fieldname, label, value="", required=false, scope="main", field_id=None, include_name=true, class_name="") %}
 	{% set control_id = field_id or fieldname %}
 	{% set main_attrs = {
@@ -218,39 +254,43 @@
 		{% call card(title="Dados do Associado", attrs={"class": "registro-section-card"}) %}
 			<div class="registro-grid registro-grid--3">
 				{{ text_control("nome_completo", "Nome completo", novo_associado.nome_completo, required=true, autocomplete="name", class_name="registro-field--full") }}
+				{{ text_control("apelido_ou_nome_social", "Apelido ou nome social", novo_associado.apelido_ou_nome_social) }}
 				{{ date_control("data_de_nascimento", "Data de nascimento", novo_associado.data_de_nascimento, required=true) }}
 				{{ select_control("etnia", "Etnia", options.etnia, novo_associado.etnia, required=true) }}
 				{{ select_control("sexo", "Sexo", options.sexo, novo_associado.sexo, required=true) }}
-				{{ checkbox_control("estrangeiro", "É estrangeiro?", novo_associado.estrangeiro, class_name="registro-checkbox--full") }}
-				{{ text_control("pais_nascimento", "País de nascimento", novo_associado.pais_nascimento, required=true) }}
-				{{ select_control("uf_de_nascimento", "UF de nascimento", options.uf_de_nascimento, novo_associado.uf_de_nascimento, required=true) }}
-				{{ text_control("cidade_de_nascimento", "Cidade de nascimento", novo_associado.cidade_de_nascimento, required=true) }}
+				{# ``estrangeiro`` deixou de ser pergunta: o servidor o deriva do país escolhido,
+				   e o campo fica aqui só como espelho do que foi respondido acima. #}
+				{{ combo_control("pais_nascimento", "País de nascimento", options.pais_nascimento, novo_associado.pais_nascimento or pais_padrao, required=true, class_name="registro-field--pais") }}
+				{{ select_control("uf_de_nascimento", "UF de nascimento", options.uf_de_nascimento, novo_associado.uf_de_nascimento, required=true, class_name="registro-field--uf-natal") }}
+				{{ cidade_control("cidade_de_nascimento", "Cidade de nascimento", options.cidade_de_nascimento, novo_associado.cidade_de_nascimento, required=true, class_name="registro-field--cidade-natal") }}
 				{{ text_control("rg", "RG", novo_associado.rg, required=true, autocomplete="off") }}
 				{{ text_control("orgao_expedidor", "Órgão expedidor", novo_associado.orgao_expedidor, required=true) }}
 				{{ text_control("cpf", "CPF", novo_associado.cpf, required=true, inputmode="numeric", maxlength="14", placeholder="000.000.000-00", autocomplete="off") }}
 				{{ select_control("estado_civil", "Estado civil", options.estado_civil, novo_associado.estado_civil, required=true) }}
 				{{ select_control("religiao", "Religião", options.religiao, novo_associado.religiao, required=true) }}
+				{{ select_control("denominacao", "Denominação", options.denominacao, novo_associado.denominacao) }}
 			</div>
 		{% endcall %}
 
 		{% call card(title="Informações Profissionais e Acadêmicas", attrs={"class": "registro-section-card"}) %}
 			<div class="registro-grid registro-grid--3">
 				{{ select_control("escolaridade", "Escolaridade", options.escolaridade, novo_associado.escolaridade, required=true) }}
-				{{ text_control("profissao", "Profissão", novo_associado.profissao) }}
-				{{ text_control("local_de_trabalho", "Local de trabalho", novo_associado.local_de_trabalho) }}
+				{{ combo_control("profissao", "Profissão", options.profissao, novo_associado.profissao, search_placeholder="Digite para buscar a profissão...") }}
+				{{ text_control("local_de_trabalho", "Área de Atuação", novo_associado.local_de_trabalho, placeholder="Digite o local de trabalho") }}
 			</div>
 		{% endcall %}
 
 		{% call card(title="Endereço e Dados de Contato", attrs={"class": "registro-section-card"}) %}
 			<div class="registro-grid registro-grid--3">
-				{{ text_control("cep", "CEP", novo_associado.cep, required=true, inputmode="numeric", maxlength="9", placeholder="00000-000") }}
+				{{ text_control("cep", "CEP do endereço residencial", novo_associado.cep, required=true, inputmode="numeric", maxlength="9", placeholder="00000-000", class_name="registro-field--cep") }}
 				{{ text_control("endereco", "Endereço", novo_associado.endereco, required=true, autocomplete="street-address", class_name="registro-field--span-2") }}
 				{{ text_control("numero", "Número", novo_associado.numero, type="number", required=true, inputmode="numeric") }}
 				{{ text_control("complemento", "Complemento", novo_associado.complemento, class_name="registro-field--span-2") }}
-				{{ select_control("estado", "Estado", options.estado, novo_associado.estado, required=true) }}
-				{{ text_control("cidade", "Cidade", novo_associado.cidade, required=true) }}
+				{{ select_control("estado", "Estado", options.estado, novo_associado.estado, required=true, class_name="registro-field--uf") }}
+				{{ cidade_control("cidade", "Cidade", options.cidade, novo_associado.cidade, required=true, class_name="registro-field--cidade") }}
 				{{ text_control("bairro", "Bairro", novo_associado.bairro, required=true) }}
 				{{ text_control("email", "Email", novo_associado.email, type="email", required=true, autocomplete="email") }}
+				{{ text_control("email_escoteiros", "E-mail Escoteiros do Brasil", novo_associado.email_escoteiros, type="email", autocomplete="off") }}
 				{{ phone_control("celular", "Celular", novo_associado_phone.celular, required=true) }}
 				{{ phone_control("telefone_secundario", "Telefone secundário", novo_associado_phone.telefone_secundario) }}
 			</div>
@@ -264,8 +304,17 @@
 		{% endcall %}
 
 		{% call card(title="Informações Familiares", attrs={"class": "registro-section-card"}) %}
-			<div class="registro-toggle-grid">
-				{{ checkbox_control("guarda_unilateral", "A guarda do jovem é unilateral?", family_info.guarda_unilateral) }}
+			<div class="registro-grid registro-grid--2">
+				{{ select_control("tipo_guarda", "Tipo de guarda do jovem", options_tipo_guarda, family_info.tipo_guarda, required=true) }}
+			</div>
+			{# Guarda alternada é o único caso em que os dois responsáveis são inscritos, cada um
+			   na sua inscrição. A recepção precisa saber disso antes de abrir o registro no Paxtu. #}
+			<div class="registro-guarda-aviso" data-guarda-alternada hidden>
+				{{ alert(
+					title="Pais separados com guarda alternada",
+					description="Nesse caso os dois responsáveis são inscritos, em inscrições separadas. Preencha os dados dos dois responsáveis abaixo.",
+					variant="info"
+				) }}
 			</div>
 		{% endcall %}
 
@@ -307,8 +356,8 @@
 										   renderizados e sempre preenchidos com o que está gravado: o JS mostra ou esconde
 										   conforme a data de nascimento do jovem, e um card escondido devolve o valor atual
 										   em vez de apagar o cadastro do responsável no registro de um irmão mais velho. #}
-										{{ text_control("cidade_de_nascimento", "Cidade de nascimento", item.doc.cidade_de_nascimento, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-cidade-nascimento", include_name=false, class_name="registro-field--filhotes") }}
-										{{ select_control("uf_de_nascimento", "UF de nascimento", options_responsavel.uf_de_nascimento, item.doc.uf_de_nascimento, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-uf-nascimento", include_name=false, class_name="registro-field--filhotes") }}
+										{{ select_control("uf_de_nascimento", "UF de nascimento", options_responsavel.uf_de_nascimento, item.doc.uf_de_nascimento, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-uf-nascimento", include_name=false, class_name="registro-field--filhotes registro-field--uf-natal") }}
+										{{ cidade_control("cidade_de_nascimento", "Cidade de nascimento", item.municipios.cidade_de_nascimento, item.doc.cidade_de_nascimento, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-cidade-nascimento", include_name=false, class_name="registro-field--filhotes registro-field--cidade-natal") }}
 										{{ select_control("sexo", "Sexo", options_responsavel.sexo, item.doc.sexo, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-sexo", include_name=false) }}
 										{{ select_control("estado_civil", "Estado civil", options_responsavel.estado_civil, item.doc.estado_civil, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-estado-civil", include_name=false) }}
 									</div>
@@ -358,8 +407,8 @@
 									<h4>Profissional e acadêmico</h4>
 									<div class="registro-grid registro-grid--3">
 										{{ select_control("escolaridade", "Escolaridade", options_responsavel.escolaridade, item.doc.escolaridade, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-escolaridade", include_name=false) }}
-										{{ text_control("profissao", "Profissão", item.doc.get("profissão"), required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-profissao", include_name=false) }}
-										{{ text_control("local_de_trabalho", "Local de trabalho", item.doc.local_de_trabalho, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-local-trabalho", include_name=false) }}
+										{{ combo_control("profissao", "Profissão", options_responsavel.profissão, item.doc.get("profissão"), required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-profissao", include_name=false, search_placeholder="Digite para buscar a profissão...") }}
+										{{ text_control("local_de_trabalho", "Área de Atuação", item.doc.local_de_trabalho, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-local-trabalho", include_name=false, placeholder="Digite o local de trabalho") }}
 									</div>
 								</section>
 
@@ -371,13 +420,15 @@
 										</div>
 									</div>
 									<div class="registro-grid registro-grid--4">
+										{# Mesma ordem do Paxtu, que começa pelo CEP: é a ordem em que a recepção
+										   transcreve, e é o CEP que preenche endereço, bairro, cidade e UF. #}
+										{{ text_control("cep", "CEP do endereço residencial", item.doc.cep, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-cep", include_name=false, inputmode="numeric", maxlength="9", placeholder="00000-000", class_name="registro-field--cep") }}
 										{{ text_control("endereco", "Endereço", item.doc.get("endereço"), required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-endereco", include_name=false, class_name="registro-field--span-2") }}
 										{{ text_control("numero", "Número", item.doc.get("número"), required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-numero", include_name=false) }}
 										{{ text_control("complemento", "Complemento", item.doc.complemento, scope="responsavel", field_id="resp-" ~ loop.index ~ "-complemento", include_name=false) }}
+										{{ select_control("estado", "Estado", options_responsavel.estado, item.doc.estado, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-estado", include_name=false, class_name="registro-field--uf") }}
+										{{ cidade_control("cidade", "Cidade", item.municipios.cidade, item.doc.cidade, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-cidade", include_name=false, class_name="registro-field--cidade") }}
 										{{ text_control("bairro", "Bairro", item.doc.bairro, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-bairro", include_name=false) }}
-										{{ text_control("cidade", "Cidade", item.doc.cidade, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-cidade", include_name=false) }}
-										{{ select_control("estado", "Estado", options_responsavel.estado, item.doc.estado, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-estado", include_name=false) }}
-										{{ text_control("cep", "CEP", item.doc.cep, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-cep", include_name=false, inputmode="numeric", maxlength="9", placeholder="00000-000") }}
 										{{ text_control("email", "Email", item.doc.email, type="email", required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-email", include_name=false, autocomplete="email") }}
 										{{ phone_control("celular", "Celular", item.phone.celular, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-celular", include_name=false) }}
 										{{ phone_control("telefone_secundario", "Telefone secundário", item.phone.telefone_secundario, scope="responsavel", field_id="resp-" ~ loop.index ~ "-telefone-secundario", include_name=false) }}

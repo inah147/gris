@@ -8,6 +8,7 @@
   "dados_do_associado_tab",
   "informacoes_pessoais",
   "nome_completo",
+  "apelido_ou_nome_social",
   "data_de_nascimento",
   "etnia",
   "sexo",
@@ -20,6 +21,7 @@
   "cpf",
   "estado_civil",
   "religiao",
+  "denominacao",
   "informacoes_profissionais_academicas",
   "escolaridade",
   "profissao",
@@ -33,12 +35,13 @@
   "cidade",
   "bairro",
   "email",
+  "email_escoteiros",
   "celular",
   "telefone_secundario",
   "dados_de_cobranca_section",
-    "email_cobranca",
+  "email_cobranca",
   "column_break_dados_cobranca",
-    "telefone_cobranca",
+  "telefone_cobranca",
   "fluxo_de_registro_tab",
   "status",
   "ramo",
@@ -85,6 +88,11 @@
    "label": "Nome Completo"
   },
   {
+   "fieldname": "apelido_ou_nome_social",
+   "fieldtype": "Data",
+   "label": "Apelido ou nome social"
+  },
+  {
    "fieldname": "data_de_nascimento",
    "fieldtype": "Date",
    "label": "Data de nascimento"
@@ -93,7 +101,7 @@
    "fieldname": "etnia",
    "fieldtype": "Select",
    "label": "Etnia",
-   "options": "Amarela\nBranca\nInd\u00edgena\nParda\nPreta\nN\u00e2o desejo informar"
+   "options": "\nAmarela\nBranca\nInd\u00edgena\nParda\nPreta\nN\u00e3o desejo informar"
   },
   {
    "fieldname": "sexo",
@@ -116,7 +124,7 @@
    "fieldname": "uf_de_nascimento",
    "fieldtype": "Select",
    "label": "UF de nascimento",
-   "options": "AC\nAL\nAP\nAM\nBA\nCE\nDF\nES\nGO\nMA\nMT\nMS\nMG\nPA\nPB\nPR\nPE\nPI\nRJ\nRN\nRS\nRO\nRR\nSC\nSP\nSE\nTO"
+   "options": "\nAC\nAL\nAP\nAM\nBA\nCE\nDF\nES\nGO\nMA\nMT\nMS\nMG\nPA\nPB\nPR\nPE\nPI\nRJ\nRN\nRS\nRO\nRR\nSC\nSP\nSE\nTO"
   },
   {
    "fieldname": "cidade_de_nascimento",
@@ -142,7 +150,7 @@
    "fieldname": "estado_civil",
    "fieldtype": "Select",
    "label": "Estado civil",
-   "options": "N\u00e3o informado\nSolteiro(a)\nCasado(a)\nDivorciado(a)\nVi\u00favo(a)"
+   "options": "\nN\u00e3o informado\nSolteiro(a)\nCasado(a)\nDivorciado(a)\nVi\u00favo(a)"
   },
   {
    "fieldname": "dados_do_associado_tab",
@@ -158,7 +166,13 @@
    "fieldname": "religiao",
    "fieldtype": "Select",
    "label": "Religi\u00e3o",
-   "options": "N\u00e3o desejo informar\nAnglicana\nAfro-Brasileira\nBudismo\nCat\u00f3lica\nEsp\u00edrita\nEspiritualista\nEvang\u00e9lico/Petencostal\nHinduismo\nIsl\u00e2mica\nJuda\u00edsmo\nMessi\u00e2nica\nM\u00f3rmom (Jesus Cristo dos Santos dos \u00daltimos Dias)\nProtestante\nTestemunha de Jeov\u00e1\nTradi\u00e7\u00f5es Esot\u00e9ricas\nTradi\u00e7\u00f5es Ind\u00edgenas\nXinto\u00edsmo\nSem Religi\u00e3o"
+   "options": "\nN\u00e3o desejo informar\nAnglicana\nAfro-Brasileira\nBudismo\nCat\u00f3lica\nEsp\u00edrita\nEspiritualista\nEvang\u00e9lico/Pentecostal\nHinduismo\nIsl\u00e2mica\nJuda\u00edsmo\nMessi\u00e2nica\nM\u00f3rmom (Jesus Cristo dos Santos dos \u00daltimos Dias)\nProtestante\nTestemunha de Jeov\u00e1\nTradi\u00e7\u00f5es Esot\u00e9ricas\nTradi\u00e7\u00f5es Ind\u00edgenas\nXinto\u00edsmo\nSem Religi\u00e3o"
+  },
+  {
+   "fieldname": "denominacao",
+   "fieldtype": "Select",
+   "label": "Denomina\u00e7\u00e3o",
+   "options": "\nN\u00e3o se aplica\nN\u00e3o desejo informar\nAssembleia de Deus\nBatista\nCongrega\u00e7\u00e3o Crist\u00e3 no Brasil\nUniversal do Reino de Deus\nLuterana\nMetodista\nPresbiteriana\nAdventista do S\u00e9timo Dia\nOutra"
   },
   {
    "fieldname": "informacoes_profissionais_academicas",
@@ -169,7 +183,7 @@
    "fieldname": "escolaridade",
    "fieldtype": "Select",
    "label": "Escolaridade",
-   "options": "Ensino fundamental incompleto\nEnsino fundamental completo\nEnsino m\u00e9dio incompleto\nEnsino m\u00e9dio completo\nEnsino superior incompleto\nEnsino superior completo\nEspecializa\u00e7\u00e3o completa\nEspecializa\u00e7\u00e3o incompleta\nMestrado incompleto\nMestrado completo\nDoutorado incompleto\nDoutorado completo\nP\u00f3s doutorado incompleto\nP\u00f3s doutorado completo"
+   "options": "\nN\u00e3o Informado\nEnsino fundamental incompleto\nEnsino fundamental completo\nEnsino m\u00e9dio incompleto\nEnsino m\u00e9dio completo\nEnsino superior incompleto\nEnsino superior completo\nEspecializa\u00e7\u00e3o incompleta\nEspecializa\u00e7\u00e3o completa\nMestrado incompleto\nMestrado completo\nDoutorado incompleto\nDoutorado completo\nP\u00f3s doutorado incompleto\nP\u00f3s doutorado completo"
   },
   {
    "fieldname": "profissao",
@@ -210,7 +224,7 @@
    "fieldname": "estado",
    "fieldtype": "Select",
    "label": "Estado",
-   "options": "AC\nAL\nAP\nAM\nBA\nCE\nDF\nES\nGO\nMA\nMT\nMS\nMG\nPA\nPB\nPR\nPE\nPI\nRJ\nRN\nRS\nRO\nRR\nSC\nSP\nSE\nTO"
+   "options": "\nAC\nAL\nAP\nAM\nBA\nCE\nDF\nES\nGO\nMA\nMT\nMS\nMG\nPA\nPB\nPR\nPE\nPI\nRJ\nRN\nRS\nRO\nRR\nSC\nSP\nSE\nTO"
   },
   {
    "fieldname": "cidade",
@@ -228,6 +242,11 @@
    "label": "Email"
   },
   {
+   "fieldname": "email_escoteiros",
+   "fieldtype": "Data",
+   "label": "E-mail Escoteiros do Brasil"
+  },
+  {
    "fieldname": "celular",
    "fieldtype": "Data",
    "label": "Celular"
@@ -242,20 +261,20 @@
    "fieldtype": "Section Break",
    "label": "Dados de Cobran\u00e7a"
   },
-    {
-     "fieldname": "email_cobranca",
-     "fieldtype": "Data",
-      "label": "Email de cobran\u00e7a"
-    },
+  {
+   "fieldname": "email_cobranca",
+   "fieldtype": "Data",
+   "label": "Email de cobran\u00e7a"
+  },
   {
    "fieldname": "column_break_dados_cobranca",
    "fieldtype": "Column Break"
   },
-    {
-     "fieldname": "telefone_cobranca",
-     "fieldtype": "Data",
-      "label": "Telefone de cobran\u00e7a"
-    },
+  {
+   "fieldname": "telefone_cobranca",
+   "fieldtype": "Data",
+   "label": "Telefone de cobran\u00e7a"
+  },
   {
    "fieldname": "fluxo_de_registro_tab",
    "fieldtype": "Tab Break",

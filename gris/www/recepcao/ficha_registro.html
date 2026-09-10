@@ -39,6 +39,33 @@
   </div>
 {% endblock %}
 
+{# Campo de leitura da ficha. O valor fica num input readonly (e não disabled) de propósito:
+   input desabilitado não recebe foco nem cursor de texto, e a recepção precisa poder
+   selecionar o que copia. O botão ao lado copia o valor inteiro de uma vez. #}
+{% macro campo_copiavel(label, valor, vazio=false) %}
+  <div class="field ficha-campo">
+    <label class="label">{{ label }}</label>
+    <div class="ficha-campo__controle">
+      <input type="text" class="input" value="{{ valor }}" readonly aria-label="{{ label }}">
+      {% if not vazio %}
+        <button type="button" class="btn-sm-ghost ficha-campo__copiar"
+                data-copiar="{{ valor }}" title="Copiar {{ label }}"
+                aria-label="Copiar {{ label }}">
+          {{ lucide_icon("copy", size="sm") }}
+        </button>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
+{% macro bloco_de_campos(bloco) %}
+  <div class="ficha-fields-grid">
+    {% for campo in bloco.campos %}
+      {{ campo_copiavel(campo.label, campo.valor, campo.vazio) }}
+    {% endfor %}
+  </div>
+{% endmacro %}
+
 {% block main %}
   {% if not_found %}
     {{ alert(
@@ -64,8 +91,16 @@
             {{ badge(doc.ramo or 'Sem Ramo', variant="secondary") }}
           </div>
           <div>
-            <div class="text-xs text-muted-foreground mb-1">Tipo</div>
-            {{ badge(doc.tipo_de_registro or 'Tipo não definido', outline=true) }}
+            <div class="text-xs text-muted-foreground mb-1">Tipo de registro</div>
+            {# Provisório e definitivo levam a caminhos diferentes no Paxtu, e o pedido é que
+               a diferença salte à vista em vez de sair no mesmo cinza dos outros selos. A cor
+               vem do ``data-tipo`` no CSS da página: o basecoat só traz badge primary,
+               secondary, outline e destructive. #}
+            {{ badge(
+              (doc.tipo_de_registro or 'Tipo não definido') | upper,
+              variant="secondary",
+              attrs={"class": "ficha-badge-registro", "data-tipo": doc.tipo_de_registro or ""}
+            ) }}
           </div>
           {# Escolha do responsável no envio dos dados: diz se a carteirinha deve ser
              solicitada junto com o registro. Antes de os dados chegarem não há escolha. #}
@@ -81,6 +116,16 @@
           </div>
         </div>
       </div>
+      {% if guarda_alternada %}
+        <div class="ficha-guarda-alerta">
+          {{ alert(
+            icon=lucide_icon("triangle-alert", size="sm"),
+            title="Pais separados com guarda alternada",
+            description="Os dois responsáveis devem ser inscritos, em inscrições separadas.",
+            variant="warning"
+          ) }}
+        </div>
+      {% endif %}
     {% endcall %}
 
     <!-- Fluxo de Registro -->
@@ -171,133 +216,13 @@
       {% endif %}
     {% endcall %}
 
-    <!-- Dados do Associado -->
-    {% call card(title="Dados do Associado", description="Informações pessoais", attrs={"class": "mb-4"}) %}
-      <div class="ficha-fields-grid">
-        <div class="field">
-          <label class="label">Data de Nascimento</label>
-          <input type="text" class="input" value="{{ frappe.format_date(doc.data_de_nascimento, 'dd/MM/yyyy') if doc.data_de_nascimento else '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">Sexo</label>
-          <input type="text" class="input" value="{{ doc.sexo or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">Etnia</label>
-          <input type="text" class="input" value="{{ doc.etnia or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">CPF</label>
-          <input type="text" class="input" value="{{ doc.cpf or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">RG</label>
-          <input type="text" class="input" value="{{ doc.rg or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">Órgão Expedidor</label>
-          <input type="text" class="input" value="{{ doc.orgao_expedidor or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">Estado Civil</label>
-          <input type="text" class="input" value="{{ doc.estado_civil or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">Religião</label>
-          <input type="text" class="input" value="{{ doc.religiao or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">Nacionalidade</label>
-          <input type="text" class="input" value="{{ 'Estrangeiro' if doc.estrangeiro else 'Brasileiro' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">Cidade de Nascimento</label>
-          <input type="text" class="input" value="{{ doc.cidade_de_nascimento or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">UF de Nascimento</label>
-          <input type="text" class="input" value="{{ doc.uf_de_nascimento or '-' }}" readonly>
-        </div>
-      </div>
-    {% endcall %}
-
-    <!-- Profissional / Acadêmico -->
-    {% call card(title="Profissional / Acadêmico", attrs={"class": "mb-4"}) %}
-      <div class="ficha-fields-grid">
-        <div class="field">
-          <label class="label">Escolaridade</label>
-          <input type="text" class="input" value="{{ doc.escolaridade or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">Profissão</label>
-          <input type="text" class="input" value="{{ doc.profissao or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">Local de Trabalho</label>
-          <input type="text" class="input" value="{{ doc.local_de_trabalho or '-' }}" readonly>
-        </div>
-      </div>
-    {% endcall %}
-
-    <!-- Endereço e Contato -->
-    {% call card(title="Endereço e Contato", attrs={"class": "mb-4"}) %}
-      <div class="ficha-fields-grid">
-        <div class="field">
-          <label class="label">Endereço</label>
-          <input type="text" class="input" value="{{ doc.endereco or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">Número</label>
-          <input type="text" class="input" value="{{ doc.numero or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">Complemento</label>
-          <input type="text" class="input" value="{{ doc.complemento or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">Bairro</label>
-          <input type="text" class="input" value="{{ doc.bairro or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">Cidade</label>
-          <input type="text" class="input" value="{{ doc.cidade or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">Estado</label>
-          <input type="text" class="input" value="{{ doc.estado or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">CEP</label>
-          <input type="text" class="input" value="{{ doc.cep or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">Email</label>
-          <input type="text" class="input" value="{{ doc.email or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">Celular</label>
-          <input type="text" class="input" value="{{ doc.celular or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">Tel. Secundário</label>
-          <input type="text" class="input" value="{{ doc.telefone_secundario or '-' }}" readonly>
-        </div>
-      </div>
-    {% endcall %}
-
-    <!-- Dados de Cobrança -->
-    {% call card(title="Dados de Cobrança", attrs={"class": "mb-4"}) %}
-      <div class="ficha-fields-grid">
-        <div class="field">
-          <label class="label">Email de Cobrança</label>
-          <input type="text" class="input" value="{{ doc.email_cobranca or '-' }}" readonly>
-        </div>
-        <div class="field">
-          <label class="label">Telefone de Cobrança</label>
-          <input type="text" class="input" value="{{ doc.telefone_cobranca or '-' }}" readonly>
-        </div>
-      </div>
-    {% endcall %}
+    {# Os quatro blocos do associado — pessoais, profissionais, endereço e cobrança — na
+       ordem definida em ``ficha_campos.py``, que é a do formulário do Paxtu. #}
+    {% for bloco in blocos %}
+      {% call card(title=bloco.titulo, description=bloco.descricao, attrs={"class": "mb-4"}) %}
+        {{ bloco_de_campos(bloco) }}
+      {% endcall %}
+    {% endfor %}
 
     <!-- Responsáveis -->
     {% if responsaveis %}
@@ -319,104 +244,15 @@
               {% endif %}
             </header>
 
-            <h4 class="responsavel-card__section-title">Dados Pessoais</h4>
-            <div class="ficha-fields-grid mb-4">
-              <div class="field">
-                <label class="label">CPF</label>
-                <input type="text" class="input" value="{{ item.doc.cpf or '-' }}" readonly>
-              </div>
-              <div class="field">
-                <label class="label">RG</label>
-                <input type="text" class="input" value="{{ item.doc.rg or '-' }}" readonly>
-              </div>
-              <div class="field">
-                <label class="label">Órgão Expedidor</label>
-                <input type="text" class="input" value="{{ item.doc.orgao_expedidor or '-' }}" readonly>
-              </div>
-              <div class="field">
-                <label class="label">Data de Nascimento</label>
-                <input type="text" class="input" value="{{ frappe.format_date(item.doc.data_de_nascimento, 'dd/MM/yyyy') if item.doc.data_de_nascimento else '-' }}" readonly>
-              </div>
-              <div class="field">
-                <label class="label">Sexo</label>
-                <input type="text" class="input" value="{{ item.doc.sexo or '-' }}" readonly>
-              </div>
-              <div class="field">
-                <label class="label">Estado Civil</label>
-                <input type="text" class="input" value="{{ item.doc.estado_civil or '-' }}" readonly>
-              </div>
-            </div>
-
-            <h4 class="responsavel-card__section-title">Profissional / Acadêmico</h4>
-            <div class="ficha-fields-grid mb-4">
-              <div class="field">
-                <label class="label">Escolaridade</label>
-                <input type="text" class="input" value="{{ item.doc.escolaridade or '-' }}" readonly>
-              </div>
-              <div class="field">
-                <label class="label">Profissão</label>
-                <input type="text" class="input" value="{{ item.doc.get('profissão') or '-' }}" readonly>
-              </div>
-              <div class="field">
-                <label class="label">Local de Trabalho</label>
-                <input type="text" class="input" value="{{ item.doc.local_de_trabalho or '-' }}" readonly>
-              </div>
-            </div>
-
-            <h4 class="responsavel-card__section-title">Endereço e Contato</h4>
-            <div class="ficha-fields-grid mb-4">
-              <div class="field">
-                <label class="label">Endereço</label>
-                <input type="text" class="input" value="{{ item.doc.get('endereço') or '-' }}" readonly>
-              </div>
-              <div class="field">
-                <label class="label">Número</label>
-                <input type="text" class="input" value="{{ item.doc.get('número') or '-' }}" readonly>
-              </div>
-              <div class="field">
-                <label class="label">Complemento</label>
-                <input type="text" class="input" value="{{ item.doc.complemento or '-' }}" readonly>
-              </div>
-              <div class="field">
-                <label class="label">Bairro</label>
-                <input type="text" class="input" value="{{ item.doc.bairro or '-' }}" readonly>
-              </div>
-              <div class="field">
-                <label class="label">Cidade</label>
-                <input type="text" class="input" value="{{ item.doc.cidade or '-' }}" readonly>
-              </div>
-              <div class="field">
-                <label class="label">Estado</label>
-                <input type="text" class="input" value="{{ item.doc.estado or '-' }}" readonly>
-              </div>
-              <div class="field">
-                <label class="label">CEP</label>
-                <input type="text" class="input" value="{{ item.doc.cep or '-' }}" readonly>
-              </div>
-              <div class="field">
-                <label class="label">Email</label>
-                <input type="text" class="input" value="{{ item.doc.email or '-' }}" readonly>
-              </div>
-              <div class="field">
-                <label class="label">Celular</label>
-                <input type="text" class="input" value="{{ item.doc.celular or '-' }}" readonly>
-              </div>
-              <div class="field">
-                <label class="label">Tel. Secundário</label>
-                <input type="text" class="input" value="{{ item.doc.get('telefone_secundario') or '-' }}" readonly>
-              </div>
-            </div>
+            {% for bloco in item.blocos %}
+              <h4 class="responsavel-card__section-title">{{ bloco.titulo }}</h4>
+              <div class="mb-4">{{ bloco_de_campos(bloco) }}</div>
+            {% endfor %}
 
             <h4 class="responsavel-card__section-title">Vínculo</h4>
             <div class="ficha-fields-grid">
-              <div class="field">
-                <label class="label">Guarda Unilateral?</label>
-                <input type="text" class="input" value="{{ 'Sim' if guarda_unilateral else 'Não' }}" readonly>
-              </div>
-              <div class="field">
-                <label class="label">Guardião Legal?</label>
-                <input type="text" class="input" value="{{ 'Sim' if item.vinculo.é_guardiao_legal else 'Não' }}" readonly>
-              </div>
+              {{ campo_copiavel("Tipo de Guarda", tipo_guarda or "Não informado", not tipo_guarda) }}
+              {{ campo_copiavel("Guardião Legal?", "Sim" if item.vinculo.é_guardiao_legal else "Não") }}
             </div>
 
             {% if is_filhotes and item.sera_registrado %}

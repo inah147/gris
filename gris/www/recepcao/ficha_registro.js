@@ -13,6 +13,46 @@
 			}
 		}
 
+		// Copiar campo a campo. A ficha é lida para ser transcrita no Paxtu, e cada valor sai
+		// inteiro num clique — inclusive o número do telefone, que fica num campo separado do
+		// DDI justamente porque o Paxtu não usa o +55 (ver ``ficha_campos.py``).
+		document.addEventListener("click", async function (event) {
+			const botao = event.target.closest("[data-copiar]");
+			if (!botao) return;
+
+			const valor = botao.dataset.copiar || "";
+			if (!valor) return;
+
+			try {
+				await navigator.clipboard.writeText(valor);
+			} catch (erro) {
+				// Sem permissão de área de transferência o campo continua selecionável à mão.
+				const campo = botao.closest(".ficha-campo")?.querySelector("input");
+				if (campo) {
+					campo.focus();
+					campo.select();
+				}
+				return;
+			}
+
+			marcarCopiado(botao);
+		});
+
+		function marcarCopiado(botao) {
+			const uso = botao.querySelector("use");
+			if (!uso) return;
+
+			const iconeOriginal = uso.getAttribute("href");
+			clearTimeout(botao.__timerCopiado);
+			botao.dataset.copiado = "true";
+			uso.setAttribute("href", iconeOriginal.replace(/#.*$/, "#check"));
+
+			botao.__timerCopiado = setTimeout(function () {
+				delete botao.dataset.copiado;
+				uso.setAttribute("href", iconeOriginal);
+			}, 1500);
+		}
+
 		const commentForm = document.getElementById("comment-form");
 		const commentTextarea = document.getElementById("comment-text");
 		const commentList = document.getElementById("comment-list");

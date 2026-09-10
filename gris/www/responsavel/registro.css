@@ -80,6 +80,11 @@
 	grid-column: span 2;
 }
 
+/* O aviso de guarda alternada ocupa a linha inteira do card de informações familiares. */
+.registro-guarda-aviso {
+	margin-top: calc(var(--spacing) * 3);
+}
+
 .registro-required {
 	color: var(--color-destructive);
 	font-weight: var(--font-weight-semibold);

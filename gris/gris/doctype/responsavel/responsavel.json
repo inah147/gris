@@ -79,7 +79,7 @@
    "fieldname": "estado_civil",
    "fieldtype": "Select",
    "label": "Estado Civil",
-   "options": "N\u00e3o informado\nSolteiro(a)\nCasado(a)\nDivorciado(a)\nVi\u00favo(a)"
+   "options": "\nN\u00e3o informado\nSolteiro(a)\nCasado(a)\nDivorciado(a)\nVi\u00favo(a)"
   },
   {
    "fieldname": "cpf",
@@ -136,7 +136,7 @@
    "fieldname": "estado",
    "fieldtype": "Select",
    "label": "Estado",
-   "options": "AC\nAL\nAP\nAM\nBA\nCE\nDF\nES\nGO\nMA\nMT\nMS\nMG\nPA\nPB\nPR\nPE\nPI\nRJ\nRN\nRS\nRO\nRR\nSC\nSP\nSE\nTO"
+   "options": "\nAC\nAL\nAP\nAM\nBA\nCE\nDF\nES\nGO\nMA\nMT\nMS\nMG\nPA\nPB\nPR\nPE\nPI\nRJ\nRN\nRS\nRO\nRR\nSC\nSP\nSE\nTO"
   },
   {
    "fieldname": "cidade",
@@ -167,7 +167,7 @@
    "fieldname": "escolaridade",
    "fieldtype": "Select",
    "label": "Escolaridade",
-   "options": "Ensino fundamental incompleto\nEnsino fundamental completo\nEnsino m\u00e9dio incompleto\nEnsino m\u00e9dio completo\nEnsino superior incompleto\nEnsino superior completo\nEspecializa\u00e7\u00e3o completa\nEspecializa\u00e7\u00e3o incompleta\nMestrado incompleto\nMestrado completo\nDoutorado incompleto\nDoutorado completo\nP\u00f3s doutorado incompleto\nP\u00f3s doutorado completo"
+   "options": "\nN\u00e3o Informado\nEnsino fundamental incompleto\nEnsino fundamental completo\nEnsino m\u00e9dio incompleto\nEnsino m\u00e9dio completo\nEnsino superior incompleto\nEnsino superior completo\nEspecializa\u00e7\u00e3o incompleta\nEspecializa\u00e7\u00e3o completa\nMestrado incompleto\nMestrado completo\nDoutorado incompleto\nDoutorado completo\nP\u00f3s doutorado incompleto\nP\u00f3s doutorado completo"
   },
   {
    "fieldname": "profiss\u00e3o",

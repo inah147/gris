@@ -58,11 +58,37 @@
 
 /* Os campos da ficha são `readonly`, e não `disabled`, de propósito: input desabilitado
    não recebe foco nem cursor de texto, o que impede selecionar só um pedaço do valor — e a
-   recepção precisa copiar pedaços (o telefone sem o DDI, que o Paxtu não usa). O Basecoat
-   só estiliza `input:disabled`, então a aparência de "campo travado" é reposta aqui. */
+   recepção às vezes precisa copiar só um pedaço. O Basecoat só estiliza `input:disabled`,
+   então a aparência de "campo travado" é reposta aqui. */
 .input[readonly] {
   background-color: var(--color-muted);
   cursor: text;
+}
+
+/* Campo com botão de copiar. O DDI e o número do telefone vêm em campos separados
+   (ver ``ficha_campos.py``), então cada um é copiável inteiro, sem seleção com o mouse. */
+.ficha-campo__controle {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.ficha-campo__controle .input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ficha-campo__copiar {
+  flex: 0 0 auto;
+  color: var(--muted-foreground);
+}
+
+.ficha-campo__copiar:hover {
+  color: var(--foreground);
+}
+
+.ficha-campo__copiar[data-copiado="true"] {
+  color: var(--primary);
 }
 
 @media (max-width: 640px) {
@@ -375,4 +401,33 @@
 
 .ficha-registro__feedback--erro {
 	color: var(--destructive);
+}
+
+/* Destaques do cabeçalho ------------------------------------------------*/
+
+/* Provisório e definitivo levam a caminhos diferentes no Paxtu, e a ficha precisa dizer qual
+   é sem que se tenha de procurar. O Basecoat não traz badge de aviso nem de sucesso, então a
+   cor vem daqui, pelo tipo gravado. */
+.ficha-badge-registro {
+	font-size: 0.85rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	padding: 0.3rem 0.7rem;
+}
+
+.ficha-badge-registro[data-tipo="Provisório"] {
+	background-color: color-mix(in srgb, var(--destructive) 15%, transparent);
+	color: var(--destructive);
+	border-color: color-mix(in srgb, var(--destructive) 40%, transparent);
+}
+
+.ficha-badge-registro[data-tipo="Definitivo"] {
+	background-color: color-mix(in srgb, var(--primary) 15%, transparent);
+	color: var(--primary);
+	border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+}
+
+/* Aviso de guarda alternada, o único caso em que os dois responsáveis tiram registro. */
+.ficha-guarda-alerta {
+	margin-top: 1rem;
 }

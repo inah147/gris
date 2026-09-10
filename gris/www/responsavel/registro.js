@@ -65,6 +65,7 @@ frappe.ready(function () {
 		"celular",
 		"email_cobranca",
 		"telefone_cobranca",
+		"tipo_guarda",
 	];
 
 	const mainDataFields = [
@@ -78,8 +79,10 @@ frappe.ready(function () {
 		"rg",
 		"orgao_expedidor",
 		"cpf",
+		"apelido_ou_nome_social",
 		"estado_civil",
 		"religiao",
+		"denominacao",
 		"escolaridade",
 		"profissao",
 		"local_de_trabalho",
@@ -91,6 +94,7 @@ frappe.ready(function () {
 		"cidade",
 		"bairro",
 		"email",
+		"email_escoteiros",
 		"celular",
 		"telefone_secundario",
 		"email_cobranca",
@@ -145,8 +149,11 @@ frappe.ready(function () {
 		orgao_expedidor: "Órgão expedidor",
 		estado_civil: "Estado civil",
 		telefone_secundario: "Telefone secundário",
-		guarda_unilateral: "Guarda unilateral",
-		local_de_trabalho: "Local de trabalho",
+		tipo_guarda: "Tipo de guarda",
+		apelido_ou_nome_social: "Apelido ou nome social",
+		denominacao: "Denominação",
+		email_escoteiros: "E-mail Escoteiros do Brasil",
+		local_de_trabalho: "Área de Atuação",
 		é_guardiao_legal: "É guardião legal",
 		cpf: "CPF",
 		rg: "RG",
@@ -447,6 +454,23 @@ frappe.ready(function () {
 		input.value = value;
 	}
 
+	function applyCEPMask(input) {
+		const digits = input.value.replace(/\D/g, "").slice(0, 8);
+		input.value = digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits;
+	}
+
+	// Cada bloco do formulário (o do jovem e o card de cada responsável) tem o seu próprio
+	// endereço: as buscas de CEP e de cidade precisam saber em qual deles estão mexendo.
+	function escopoDoControle(control) {
+		return control.closest(".responsavel-card") || form;
+	}
+
+	function campoDoEscopo(escopo, fieldName) {
+		return escopo === form
+			? getMainControl(fieldName)
+			: getResponsavelControl(escopo, fieldName);
+	}
+
 	function isWrapperHidden(card) {
 		return Boolean(card.closest(".responsavel-wrapper")?.hidden);
 	}
@@ -457,8 +481,20 @@ frappe.ready(function () {
 		).filter((check) => !check.closest(".responsavel-wrapper")?.hidden);
 	}
 
+	// A pergunta virou o tipo de guarda; "unilateral" continua sendo a condição que liga a
+	// escolha do guardião legal, aqui e no servidor.
+	function isGuardaUnilateral() {
+		return getControlValue(getMainControl("tipo_guarda")) === "Unilateral";
+	}
+
+	function toggleAvisoGuardaAlternada() {
+		const aviso = document.querySelector("[data-guarda-alternada]");
+		if (!aviso) return;
+		aviso.hidden = getControlValue(getMainControl("tipo_guarda")) !== "Alternada";
+	}
+
 	function toggleGuardiaoLegal() {
-		const isUnilateral = getControlValue(getMainControl("guarda_unilateral")) === 1;
+		const isUnilateral = isGuardaUnilateral();
 		const checks = Array.from(
 			document.querySelectorAll(".guardiao-legal-check[data-fieldname='é_guardiao_legal']")
 		);
@@ -790,8 +826,9 @@ frappe.ready(function () {
 		mainDataFields.forEach((fieldName) => {
 			data[fieldName] = getControlValue(getMainControl(fieldName));
 		});
-		data.estrangeiro = getControlValue(getMainControl("estrangeiro"));
-		data.guarda_unilateral = getControlValue(getMainControl("guarda_unilateral"));
+		// ``estrangeiro`` não é mais pergunta: o servidor o deriva do país de nascimento.
+		data.tipo_guarda = getControlValue(getMainControl("tipo_guarda"));
+		data.guarda_unilateral = isGuardaUnilateral() ? 1 : 0;
 		return data;
 	}
 
@@ -1056,7 +1093,7 @@ frappe.ready(function () {
 			);
 		}
 
-		const isUnilateral = getControlValue(getMainControl("guarda_unilateral")) === 1;
+		const isUnilateral = isGuardaUnilateral();
 		if (
 			isUnilateral &&
 			visibleGuardianChecks().filter((check) => check.checked).length !== 1
@@ -1803,6 +1840,9 @@ frappe.ready(function () {
 		if (event.target.matches("input[data-fieldname='cpf']")) {
 			applyCPFMask(event.target);
 		}
+		if (event.target.matches("input[data-fieldname='cep']")) {
+			applyCEPMask(event.target);
+		}
 	});
 
 	form.addEventListener("change", (event) => {
@@ -1810,19 +1850,141 @@ frappe.ready(function () {
 		clearInvalidControl(control);
 	});
 
+	// CEP preenche endereço, bairro, cidade e UF — a ordem em que o Paxtu pede o endereço
+	// começa pelo CEP justamente porque ele traz o resto. Serviço indisponível não trava
+	// nada: os campos seguem editáveis à mão.
+	form.addEventListener(
+		"blur",
+		(event) => {
+			if (event.target.matches("input[data-fieldname='cep']")) {
+				preencherPorCEP(event.target);
+			}
+		},
+		true
+	);
+
+	async function preencherPorCEP(input) {
+		const digits = input.value.replace(/\D/g, "");
+		if (digits.length !== 8 || digits === input.dataset.cepConsultado) return;
+		input.dataset.cepConsultado = digits;
+
+		let resposta;
+		try {
+			resposta = await frappe.call({
+				method: "gris.www.responsavel.registro.buscar_cep",
+				args: { cep: digits },
+				silent: true,
+			});
+		} catch (erro) {
+			return;
+		}
+
+		const endereco = resposta?.message?.endereco;
+		if (!endereco) {
+			setInvalid(input, "CEP não encontrado. Preencha o endereço manualmente.");
+			return;
+		}
+
+		const escopo = escopoDoControle(input);
+		["endereco", "bairro", "estado"].forEach((fieldName) => {
+			const control = campoDoEscopo(escopo, fieldName);
+			if (control && endereco[fieldName]) setControlValue(control, endereco[fieldName]);
+		});
+
+		// A cidade só entra depois da UF: é a UF que define quais municípios existem no seletor.
+		await recarregarCidades(escopo, endereco.estado, endereco.cidade);
+	}
+
+	// Trocar a UF troca a lista de municípios. Mandar os 5.570 de uma vez pesaria a página,
+	// então o seletor de cidade é recarregado sob demanda.
+	form.addEventListener("change", (event) => {
+		const control = event.target.closest("[data-fieldname]");
+		if (!control) return;
+		const fieldName = control.dataset.fieldname;
+		if (fieldName !== "estado" && fieldName !== "uf_de_nascimento") return;
+
+		const alvo = fieldName === "estado" ? "cidade" : "cidade_de_nascimento";
+		recarregarCidades(escopoDoControle(control), getControlValue(control), "", alvo);
+	});
+
+	async function recarregarCidades(escopo, uf, cidadeSelecionada = "", alvo = "cidade") {
+		const control = campoDoEscopo(escopo, alvo);
+		// Sem a lista de municípios embarcada o campo é um input de texto: nada a recarregar.
+		if (!control || !control.classList.contains("select")) {
+			if (control && cidadeSelecionada) setControlValue(control, cidadeSelecionada);
+			return;
+		}
+
+		if (!uf) return;
+
+		let resposta;
+		try {
+			resposta = await frappe.call({
+				method: "gris.www.responsavel.registro.municipios_da_uf",
+				args: { uf },
+				silent: true,
+			});
+		} catch (erro) {
+			return;
+		}
+
+		const municipios = resposta?.message?.municipios || [];
+		aplicarItensDeCidade(control, municipios, cidadeSelecionada);
+	}
+
+	// O select do design system captura a lista de opções no momento em que é inicializado, e
+	// só inicializa quem ainda não tem ``data-select-initialized``. Trocar os filhos do listbox
+	// no elemento vivo deixaria o componente com a lista antiga em memória, então o caminho é
+	// montar um elemento novo e deixar o MutationObserver do basecoat inicializá-lo.
+	function aplicarItensDeCidade(control, municipios, cidadeSelecionada) {
+		const listbox = control.querySelector("[role='listbox']");
+		if (!listbox) return;
+
+		const selecionada = municipios.includes(cidadeSelecionada) ? cidadeSelecionada : "";
+		const novo = control.cloneNode(true);
+		novo.removeAttribute("data-select-initialized");
+
+		const novoListbox = novo.querySelector("[role='listbox']");
+		novoListbox.textContent = "";
+		const itens = [{ label: "Selecione...", value: "" }].concat(
+			municipios.map((nome) => ({ label: nome, value: nome }))
+		);
+		itens.forEach((item, indice) => {
+			const option = document.createElement("div");
+			option.id = `${novoListbox.id}-item-${indice}`;
+			option.setAttribute("role", "option");
+			option.dataset.value = item.value;
+			if (item.value && item.value === selecionada) {
+				option.setAttribute("aria-selected", "true");
+			}
+			option.textContent = item.label;
+			novoListbox.appendChild(option);
+		});
+
+		const hidden = novo.querySelector(":scope > input[type='hidden']");
+		if (hidden) hidden.value = selecionada;
+		const rotulo = novo.querySelector("button .truncate");
+		if (rotulo) rotulo.textContent = selecionada || "Selecione...";
+
+		// Solta os listeners de window/document do componente antigo antes de descartá-lo.
+		control.__basecoatSelectCleanup?.();
+		control.replaceWith(novo);
+	}
+
 	form.addEventListener("datepicker:change", (event) => clearInvalidControl(event.target));
 	form.addEventListener("phone-input:change", (event) => clearInvalidControl(event.target));
 
-	getMainControl("guarda_unilateral")?.addEventListener("change", toggleGuardiaoLegal);
+	getMainControl("tipo_guarda")?.addEventListener("change", () => {
+		toggleGuardiaoLegal();
+		toggleAvisoGuardaAlternada();
+	});
+	toggleAvisoGuardaAlternada();
 
 	document.getElementById("btn-add-responsavel")?.addEventListener("click", addResponsavel);
 
 	document.addEventListener("change", (event) => {
 		if (event.target.matches(".guardiao-legal-check[data-fieldname='é_guardiao_legal']")) {
-			if (
-				getControlValue(getMainControl("guarda_unilateral")) === 1 &&
-				event.target.checked
-			) {
+			if (isGuardaUnilateral() && event.target.checked) {
 				visibleGuardianChecks().forEach((check) => {
 					if (check !== event.target) check.checked = false;
 				});

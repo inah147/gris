@@ -30,6 +30,7 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 		"path": "/recepcao",
 		"children": [
 			{"label": "Visão Geral", "path": "/recepcao/visao_geral"},
+			{"label": "Lista de Novos Associados", "path": "/recepcao/novos_associados"},
 			{"label": "Agenda de Visitas", "path": "/recepcao/agenda_visitas"},
 			{"label": "Fila de espera", "path": "/recepcao/fila_espera"},
 			{"label": "Respostas da Pesquisa", "path": "/recepcao/pesquisa_novos_respostas"},
@@ -144,6 +145,7 @@ SIDEBAR_ICON_MAP: dict[str, str] = {
 	"/associados/lista": "list",
 	"/associados/importar": "upload",
 	"/recepcao/visao_geral": "layout-dashboard",
+	"/recepcao/novos_associados": "table",
 	"/recepcao/agenda_visitas": "calendar-days",
 	"/recepcao/fila_espera": "clock-3",
 	"/recepcao/pesquisa_novos_respostas": "clipboard-list",
@@ -207,6 +209,7 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/associados/importar": ["Gestor de Associados"],
 	"/recepcao": ["Recepcao"],
 	"/recepcao/visao_geral": ["Recepcao"],
+	"/recepcao/novos_associados": ["Recepcao"],
 	"/recepcao/ficha_registro": ["Recepcao"],
 	"/recepcao/agenda_visitas": ["Recepcao"],
 	"/recepcao/fila_espera": ["Recepcao"],

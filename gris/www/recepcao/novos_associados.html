@@ -1,0 +1,123 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import empty, spinner, table %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{% block title %}Lista de Novos Associados - Recepção{% endblock %}
+
+{% set active_link = '/recepcao/novos_associados' %}
+
+{% block head_include %}
+	{{ super() }}
+	<link rel="stylesheet" href="/recepcao/novos_associados.css" />
+{% endblock %}
+
+{% block page_header %}
+	<div class="page-header-row mb-6">
+		<div>
+			<h1 class="text-3xl font-bold tracking-tight">Lista de Novos Associados</h1>
+			<p class="text-muted-foreground">
+				Todo mundo em integração, em qualquer status, com link para a ficha e para o
+				formulário de registro.
+			</p>
+		</div>
+		<div class="page-header-actions">
+			<a href="/recepcao/visao_geral" class="btn-sm-outline">
+				{{ lucide_icon("layout-dashboard", size="sm") }}
+				<span>Visão geral</span>
+			</a>
+		</div>
+	</div>
+{% endblock %}
+
+{% block main %}
+	<article class="card mb-4">
+		<section>
+			<form id="novos-filtros" class="novos-filtros">
+				<div class="field novos-filtros__busca">
+					<label class="label" for="f-busca">Nome</label>
+					<input id="f-busca" name="busca" type="text" class="input" placeholder="Buscar por nome…" />
+				</div>
+				<div class="field">
+					<label class="label" for="f-status">Status</label>
+					{{ select(id="f-status", name="status", items=itens_status) }}
+				</div>
+				<div class="field">
+					<label class="label" for="f-ramo">Ramo</label>
+					{{ select(id="f-ramo", name="ramo", items=itens_ramo) }}
+				</div>
+				<div class="field">
+					<label class="label" for="f-tipo-registro">Tipo de registro</label>
+					{{ select(id="f-tipo-registro", name="tipo_de_registro", items=itens_tipo_de_registro) }}
+				</div>
+				<div class="field">
+					<label class="label" for="f-dados">Dados de registro</label>
+					{{ select(id="f-dados", name="dados_enviados", items=itens_dados_enviados) }}
+				</div>
+				<div class="novos-filtros__actions">
+					<button type="submit" class="btn-sm-primary">Aplicar</button>
+					<button type="reset" id="btn-limpar" class="btn-sm-outline">Limpar</button>
+				</div>
+			</form>
+		</section>
+	</article>
+
+	<article class="card">
+		<section class="p-0 min-w-0">
+			<div id="novos-loading" class="novos-loading">
+				{{ spinner(attrs={"class": "novos-loading__spinner"}) }}
+				<span>Carregando…</span>
+			</div>
+
+			{# A descrição é trocada pelo JS: "sem resultado para o filtro" e "ninguém em
+			   integração" são estados diferentes e pedem leituras diferentes. #}
+			<div id="novos-empty" class="novos-empty" hidden>
+				{{ empty(
+					"Nenhum novo associado encontrado",
+					description="Revise a busca e os filtros aplicados.",
+					image="/assets/gris/images/gris-character/gris-search.png",
+					image_size="sm",
+					attrs={"id": "novos-empty-card"}
+				) }}
+			</div>
+
+			<div id="novos-tabela-wrap" class="novos-tabela-wrap" hidden>
+				{{ table(
+					headers=[
+						'Nome',
+						'Idade',
+						'Ramo',
+						'Status',
+						'Tipo de registro',
+						'Dados de registro',
+						'Responsável legal',
+						'Acompanhamento',
+						'Atualizado em',
+						'<span class="sr-only">Ações</span>'
+					],
+					rows=[],
+					sort_skip=[9],
+					attrs={"id": "novosAssociadosTable"}
+				) }}
+			</div>
+		</section>
+
+		<footer class="novos-rodape">
+			<p class="novos-rodape__contador" id="novos-contador" aria-live="polite"></p>
+			<div class="novos-rodape__paginacao">
+				<button type="button" id="btn-pagina-anterior" class="btn-sm-outline" disabled>
+					{{ lucide_icon("chevron-left", size="sm") }}
+					<span>Anterior</span>
+				</button>
+				<button type="button" id="btn-pagina-proxima" class="btn-sm-outline" disabled>
+					<span>Próxima</span>
+					{{ lucide_icon("chevron-right", size="sm") }}
+				</button>
+			</div>
+		</footer>
+	</article>
+{% endblock %}
+
+{% block extra_script %}
+	<script src="/recepcao/novos_associados.js"></script>
+{% endblock %}

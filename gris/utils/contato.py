@@ -40,6 +40,68 @@ def format_phone(phone):
 	return phone
 
 
+def partes_telefone(telefone: str | None) -> dict[str, str]:
+	"""Separa um telefone gravado em E.164 nas partes que cada sistema usa.
+
+	O GRIS guarda ``+5511912345678``; o Paxtu pede o número sem o código do país, e quem
+	transcreve precisa copiar só do DDD em diante. Um campo único com tudo junto obriga a
+	selecionar o pedaço com o mouse, que é lento e erra — daí a ficha da recepção exibir DDI e
+	número em campos separados, cada um copiável por inteiro.
+
+	Devolve ``ddi`` (com o ``+``), ``ddd``, ``numero`` e ``nacional_formatado``. Fora do Brasil
+	não se tenta adivinhar DDD: o número inteiro vai em ``numero``, porque cada país divide o
+	seu de um jeito e fatiar errado é pior do que não fatiar.
+	"""
+	vazio = {"ddi": "", "ddd": "", "numero": "", "nacional_formatado": ""}
+	if not telefone:
+		return vazio
+
+	bruto = str(telefone).strip()
+	digitos = "".join(c for c in bruto if c.isdigit())
+	if not digitos:
+		return vazio
+
+	if bruto.startswith("+"):
+		# Mesma resolução do componente phone-input: vence o DDI de prefixo mais longo.
+		dial = _maior_ddi(digitos)
+		if not dial:
+			return {"ddi": "", "ddd": "", "numero": digitos, "nacional_formatado": digitos}
+		resto = digitos[len(dial) :]
+		if dial != "55":
+			return {"ddi": f"+{dial}", "ddd": "", "numero": resto, "nacional_formatado": resto}
+	elif digitos.startswith("55") and len(digitos) in (12, 13):
+		resto = digitos[2:]
+	elif len(digitos) in (10, 11):
+		# Sem código de país e no tamanho brasileiro: o DDI implícito é o +55.
+		resto = digitos
+	else:
+		return {"ddi": "", "ddd": "", "numero": digitos, "nacional_formatado": digitos}
+
+	ddd, numero = resto[:2], resto[2:]
+
+	if len(numero) == 9:
+		formatado = f"({ddd}) {numero[0]} {numero[1:5]}-{numero[5:]}"
+	elif len(numero) == 8:
+		formatado = f"({ddd}) {numero[:4]}-{numero[4:]}"
+	else:
+		formatado = f"({ddd}) {numero}".strip()
+
+	return {"ddi": "+55", "ddd": ddd, "numero": numero, "nacional_formatado": formatado}
+
+
+def _maior_ddi(digitos: str) -> str:
+	"""DDI de prefixo mais longo que casa com ``digitos``, ou string vazia."""
+	from gris.utils.phone_countries import get_phone_countries
+
+	candidatos = {pais["dial"] for pais in get_phone_countries()}
+	for tamanho in (4, 3, 2, 1):
+		prefixo = digitos[:tamanho]
+		if prefixo in candidatos:
+			return prefixo
+
+	return ""
+
+
 def telefone_do_usuario(user: str | None) -> str:
 	"""Telefone de um User, na ordem em que o GRIS costuma encontrá-lo.
 

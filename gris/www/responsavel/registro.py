@@ -4,14 +4,22 @@ import re
 import frappe
 from frappe import _
 from frappe.rate_limiter import rate_limit
-from frappe.utils import cint, now_datetime
+from frappe.utils import cint, now_datetime, validate_email_address
 
 from gris.api.portal_access import enrich_context
 from gris.api.recepcao_mensagens import notificar_dados_preenchidos_no_grupo_recepcao
 from gris.api.responsavel_acesso import get_responsavel_do_usuario
 from gris.gris.doctype.novo_associado.novo_associado import ramo_por_data_de_nascimento
+from gris.utils import opcoes_cadastro
 from gris.utils.contato import format_phone
 from gris.utils.documento import cpf_valido, id_por_cpf, limpar_cpf
+from gris.utils.localidades import (
+	consultar_cep,
+	formatar_cep,
+	limpar_cep,
+	municipio_valido,
+	municipios_por_uf,
+)
 
 # Campos do responsável editáveis pelo formulário, no nome usado pelo frontend.
 CAMPOS_RESPONSAVEL = [
@@ -87,6 +95,173 @@ def _select_options_for(doctype):
 		if field.fieldtype == "Select" and field.options:
 			options[field.fieldname] = _select_items(field.options.split("\n"))
 	return options
+
+
+TIPOS_DE_GUARDA_VALIDOS = ("-", "Compartilhada", "Unilateral", "Alternada", "Nidal")
+
+# Cidade e UF andam em par: cada um valida a cidade contra a lista da UF que veio no mesmo bloco.
+PARES_CIDADE_UF = (("cidade", "estado"), ("cidade_de_nascimento", "uf_de_nascimento"))
+
+
+def _tipo_guarda_valido(valor):
+	"""Tipo de guarda vindo do formulário, ou ``-`` quando não foi informado.
+
+	``-`` é o valor que o ``Responsavel Vinculo`` sempre usou para "não informado"; recusar o
+	save por causa dele impediria de gravar cadastros antigos que nunca responderam a pergunta.
+	"""
+	valor = (valor or "").strip() or "-"
+	if valor not in TIPOS_DE_GUARDA_VALIDOS:
+		frappe.throw(_("Tipo de guarda inválido."))
+
+	return valor
+
+
+def _validar_email(valor, rotulo, obrigatorio=True):
+	"""Valida um e-mail com a mesma regra que o Frappe usa no resto do sistema.
+
+	Antes só o e-mail de cobrança era conferido, por uma regex própria; os demais entravam
+	como viessem e só apareciam quebrados quando a recepção tentava usá-los.
+	"""
+	valor = (valor or "").strip()
+	if not valor:
+		if obrigatorio:
+			frappe.throw(_("{0} é obrigatório.").format(rotulo))
+		return
+
+	if not validate_email_address(valor):
+		frappe.throw(_("{0} inválido: {1}").format(rotulo, valor))
+
+
+def _validar_cpf(cpf, nome=None):
+	"""Recusa CPF que não fecha nos dígitos verificadores.
+
+	O CPF é a chave de identidade das pessoas no GRIS (o ``name`` sai do md5 dele) e é
+	transcrito para o Paxtu como está. Até aqui a conferência só existia na busca por CPF, e
+	o save aceitava qualquer sequência de onze dígitos.
+	"""
+	if cpf_valido(cpf):
+		return
+
+	pessoa = (nome or "").strip()
+	if pessoa:
+		frappe.throw(_("CPF inválido para {0}. Confira os números digitados.").format(pessoa))
+
+	frappe.throw(_("CPF inválido. Confira os números digitados."))
+
+
+def _normalizar_naturalidade(data):
+	"""Deriva ``estrangeiro`` do país de nascimento e limpa a UF de quem nasceu fora.
+
+	Eram duas perguntas independentes, e dava para marcar "é estrangeiro" e ainda escolher uma
+	UF brasileira. Com o país virando seleção, ele passa a ser a única fonte da resposta.
+	"""
+	pais = (data.get("pais_nascimento") or "").strip()
+	if not pais:
+		return
+
+	estrangeiro = pais != opcoes_cadastro.pais_brasil()
+	data["estrangeiro"] = 1 if estrangeiro else 0
+	if estrangeiro:
+		data["uf_de_nascimento"] = ""
+
+
+def _validar_endereco(dados, de_quem):
+	"""Confere CEP e o par cidade/UF contra a lista de municípios do IBGE.
+
+	Sem a lista embarcada (ver ``gris/scripts/gerar_municipios.py``) a checagem de cidade não
+	roda — ``municipio_valido`` devolve ``True`` — e o cadastro segue como antes.
+	"""
+	cep = (dados.get("cep") or "").strip()
+	if cep:
+		if len(limpar_cep(cep)) != 8:
+			frappe.throw(_("CEP inválido {0}: {1}").format(de_quem, cep))
+		dados["cep"] = formatar_cep(cep)
+
+	for campo_cidade, campo_uf in PARES_CIDADE_UF:
+		cidade = (dados.get(campo_cidade) or "").strip()
+		uf = (dados.get(campo_uf) or "").strip()
+		if not cidade or not uf:
+			continue
+
+		if not municipio_valido(cidade, uf):
+			frappe.throw(_("Cidade {0} não existe em {1}. Escolha uma da lista.").format(cidade, uf))
+
+
+def _enriquecer_opcoes_do_formulario(context, novo_associado, responsaveis):
+	"""Monta as listas que não cabem como ``Select`` no schema do DocType.
+
+	País (250 itens) e município (5.570, e dependentes da UF escolhida) ficariam impraticáveis
+	no JSON; profissão continua ``Data`` porque a lista transcrita do Paxtu ainda está
+	incompleta, e um ``Select`` recusaria tanto uma profissão que falta aqui quanto os
+	cadastros antigos gravados como texto livre. Nos três casos a lista fechada é oferecida no
+	formulário, que é onde o documento pediu para não deixar campo aberto. O restante dos
+	``Select`` continua vindo do metadado.
+	"""
+	context.options["pais_nascimento"] = opcoes_cadastro.itens_paises()
+	context.pais_padrao = opcoes_cadastro.pais_brasil()
+
+	profissoes = _select_items(opcoes_cadastro.PROFISSAO)
+	context.options["profissao"] = profissoes
+	context.options_responsavel["profissão"] = profissoes
+
+	# O tipo de guarda mora no vínculo, não no Novo Associado; ``-`` é o "não informado" do
+	# schema e vira o placeholder do select em vez de virar uma opção escolhível.
+	tipos_de_guarda = frappe.get_meta("Responsavel Vinculo").get_field("tipo_guarda").options or ""
+	context.options_tipo_guarda = _select_items(
+		[t for t in tipos_de_guarda.split("\n") if t.strip() and t.strip() != "-"]
+	)
+
+	# UF com o nome do estado por extenso no rótulo, como o Paxtu exibe, e a sigla no valor,
+	# que é como o cadastro sempre gravou.
+	for opcoes in (context.options, context.options_responsavel):
+		for campo in ("uf_de_nascimento", "estado"):
+			if campo in opcoes:
+				opcoes[campo] = opcoes_cadastro.itens_uf()
+
+	# Só os municípios das UFs já gravadas: o resto chega por ``municipios_da_uf`` quando o
+	# responsável troca a UF. Mandar os 5.570 de uma vez pesaria a página inteira.
+	context.options["cidade"] = _itens_municipios(novo_associado.get("estado"))
+	context.options["cidade_de_nascimento"] = _itens_municipios(novo_associado.get("uf_de_nascimento"))
+	for item in responsaveis:
+		doc = item.get("doc") or {}
+		item["municipios"] = {
+			"cidade": _itens_municipios(doc.get("estado")),
+			"cidade_de_nascimento": _itens_municipios(doc.get("uf_de_nascimento")),
+		}
+
+
+def _itens_municipios(uf):
+	"""Itens de select para os municípios de uma UF, no formato da macro ``select``."""
+	return _select_items(municipios_por_uf(uf))
+
+
+@frappe.whitelist()
+@rate_limit(limit=60, seconds=60)
+def municipios_da_uf(uf: str) -> dict:
+	"""Municípios de uma UF, para o combobox de cidade recarregar quando a UF muda."""
+	if frappe.session.user == "Guest":
+		frappe.throw(_("Você precisa estar logado."), frappe.PermissionError)
+
+	return {"status": "success", "municipios": municipios_por_uf(uf)}
+
+
+@frappe.whitelist()
+@rate_limit(limit=30, seconds=60)
+def buscar_cep(cep: str) -> dict:
+	"""Endereço de um CEP, para o formulário preencher rua, bairro, cidade e UF sozinho.
+
+	A consulta sai do servidor e não do navegador: evita CORS, deixa o limite de taxa sob
+	controle do GRIS e não expõe ao ViaCEP quem está preenchendo o cadastro. Serviço fora do
+	ar devolve ``not_found`` — o formulário segue no preenchimento manual, sem travar.
+	"""
+	if frappe.session.user == "Guest":
+		frappe.throw(_("Você precisa estar logado."), frappe.PermissionError)
+
+	endereco = consultar_cep(cep)
+	if not endereco:
+		return {"status": "not_found"}
+
+	return {"status": "success", "endereco": endereco}
 
 
 def _responsavel_da_sessao():
@@ -208,7 +383,7 @@ def _responsaveis_da_familia(responsavel, excluir=None):
 		vinculos = frappe.get_all(
 			"Responsavel Vinculo",
 			filters=filtro,
-			fields=["responsavel", "guarda_unilateral", "é_guardiao_legal"],
+			fields=["responsavel", "guarda_unilateral", "tipo_guarda", "é_guardiao_legal"],
 			order_by="modified desc",
 		)
 		for v in vinculos:
@@ -448,18 +623,22 @@ def get_context(context):
 	while len(responsaveis) < 2:
 		responsaveis.append(_card_vazio())
 
-	guarda_unilateral = cint(
-		(vinculo_por_responsavel.get(responsavel) or (vinculos[0] if vinculos else {})).get(
-			"guarda_unilateral"
-		)
-	)
+	vinculo_de_referencia = vinculo_por_responsavel.get(responsavel) or (vinculos[0] if vinculos else {})
+	guarda_unilateral = cint(vinculo_de_referencia.get("guarda_unilateral"))
+	tipo_guarda = (vinculo_de_referencia.get("tipo_guarda") or "").strip()
 	# Jovem recém-adicionado nasce com o vínculo zerado: herda a informação da família
 	# enquanto os dados de registro não foram enviados.
 	if not guarda_unilateral and not cint(novo_associado.dados_para_registro_enviados) and da_familia:
 		guarda_unilateral = cint(da_familia[0][1].get("guarda_unilateral"))
+		tipo_guarda = tipo_guarda or (da_familia[0][1].get("tipo_guarda") or "").strip()
+
+	# Cadastros anteriores ao select só responderam o booleano; sem tipo gravado, "Unilateral"
+	# é a única leitura que o dado antigo permite, e o resto fica em branco para ser respondido.
+	if not tipo_guarda or tipo_guarda == "-":
+		tipo_guarda = "Unilateral" if guarda_unilateral else ""
 
 	context.responsaveis = responsaveis
-	context.family_info = {"guarda_unilateral": guarda_unilateral}
+	context.family_info = {"guarda_unilateral": guarda_unilateral, "tipo_guarda": tipo_guarda}
 
 	# Fetch options for Select fields.
 	# Cada escopo do formulário lê o metadado do DocType em que os dados serão gravados:
@@ -468,6 +647,7 @@ def get_context(context):
 	# dois schemas (ex.: uma opção com typo em apenas um deles) derrube o save.
 	context.options = _select_options_for("Novo Associado")
 	context.options_responsavel = _select_options_for("Responsavel")
+	_enriquecer_opcoes_do_formulario(context, novo_associado, responsaveis)
 
 	try:
 		config = frappe.get_doc("Configuracoes de Recepcao")
@@ -500,7 +680,7 @@ def _notificar_dados_preenchidos(novo_associado_name: str) -> None:
 	notificar_dados_preenchidos_no_grupo_recepcao(novo_associado_name)
 
 
-def _sincronizar_vinculo(novo_associado_name, resp_id, guarda_unilateral, resp_item):
+def _sincronizar_vinculo(novo_associado_name, resp_id, guarda_unilateral, resp_item, tipo_guarda="-"):
 	"""Garante o vínculo do responsável com o jovem e atualiza os dados do vínculo.
 
 	O card pode trazer um responsável que ainda não tem vínculo com este jovem (o outro
@@ -522,7 +702,7 @@ def _sincronizar_vinculo(novo_associado_name, resp_id, guarda_unilateral, resp_i
 		quer_carteirinha = 0
 
 	if link_name:
-		valores = {"guarda_unilateral": guarda_unilateral}
+		valores = {"guarda_unilateral": guarda_unilateral, "tipo_guarda": tipo_guarda}
 		if guardiao is not None:
 			valores["é_guardiao_legal"] = cint(guardiao)
 		if sera_registrado is not None:
@@ -536,6 +716,7 @@ def _sincronizar_vinculo(novo_associado_name, resp_id, guarda_unilateral, resp_i
 	novo_link.responsavel = resp_id
 	novo_link.beneficiario_novo_associado = novo_associado_name
 	novo_link.guarda_unilateral = guarda_unilateral
+	novo_link.tipo_guarda = tipo_guarda
 	if guardiao is not None:
 		novo_link.set("é_guardiao_legal", cint(guardiao))
 	if sera_registrado is not None:
@@ -611,7 +792,10 @@ def update_novo_associado(
 	if isinstance(responsaveis_data, str):
 		responsaveis_data = json.loads(responsaveis_data)
 
-	guarda_unilateral = cint(data.get("guarda_unilateral", 0))
+	tipo_guarda = _tipo_guarda_valido(data.get("tipo_guarda"))
+	# ``guarda_unilateral`` deixou de ser pergunta e virou consequência do tipo de guarda: as
+	# regras de guardião legal, aqui e na ficha da recepção, continuam lendo esse booleano.
+	guarda_unilateral = 1 if tipo_guarda == "Unilateral" else 0
 	data["guarda_unilateral"] = guarda_unilateral
 
 	# O ramo vem da data de nascimento enviada agora, não do campo gravado: é essa a
@@ -627,8 +811,21 @@ def update_novo_associado(
 	if not email_cobranca:
 		frappe.throw(_("Email de cobrança é obrigatório."))
 
-	if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", email_cobranca):
-		frappe.throw(_("Email de cobrança inválido."))
+	_validar_email(email_cobranca, _("Email de cobrança"))
+	_validar_email(data.get("email"), _("Email"), obrigatorio=False)
+	_validar_email(data.get("email_escoteiros"), _("E-mail Escoteiros do Brasil"), obrigatorio=False)
+
+	_validar_cpf(data.get("cpf"), data.get("nome_completo"))
+	for resp_item in responsaveis_data or []:
+		if resp_item.get("nome_completo") or resp_item.get("cpf"):
+			_validar_cpf(resp_item.get("cpf"), resp_item.get("nome_completo"))
+			_validar_email(resp_item.get("email"), _("Email do responsável"), obrigatorio=False)
+
+	_normalizar_naturalidade(data)
+	_validar_endereco(data, _("do associado"))
+	for resp_item in responsaveis_data or []:
+		if resp_item.get("nome_completo") or resp_item.get("cpf"):
+			_validar_endereco(resp_item, _("do responsável"))
 
 	telefone_cobranca_fmt = format_phone(telefone_cobranca)
 	phone_digits = "".join(c for c in str(telefone_cobranca_fmt or telefone_cobranca) if c.isdigit())
@@ -642,6 +839,7 @@ def update_novo_associado(
 		"tipo_de_registro",
 		"quer_carteirinha",
 		"nome_completo",
+		"apelido_ou_nome_social",
 		"data_de_nascimento",
 		"etnia",
 		"sexo",
@@ -654,6 +852,7 @@ def update_novo_associado(
 		"cpf",
 		"estado_civil",
 		"religiao",
+		"denominacao",
 		"escolaridade",
 		"profissao",
 		"local_de_trabalho",
@@ -665,6 +864,7 @@ def update_novo_associado(
 		"cidade",
 		"bairro",
 		"email",
+		"email_escoteiros",
 		"celular",
 		"telefone_secundario",
 		"email_cobranca",
@@ -746,7 +946,9 @@ def update_novo_associado(
 
 			_aplicar_documento_identificacao(resp_doc, resp_item)
 			resp_doc.save(ignore_permissions=True)
-			_sincronizar_vinculo(novo_associado_name, resp_doc.name, guarda_unilateral, resp_item)
+			_sincronizar_vinculo(
+				novo_associado_name, resp_doc.name, guarda_unilateral, resp_item, tipo_guarda
+			)
 			da_familia.add(resp_doc.name)
 
 	all_vinculos = frappe.get_all(

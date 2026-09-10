@@ -4,6 +4,7 @@ from frappe.rate_limiter import rate_limit
 from frappe.utils import add_days, cint, format_date, format_datetime, get_fullname, getdate, strip_html
 
 from gris.api.portal_access import enrich_context
+from gris.www.recepcao.ficha_campos import BLOCOS_DO_ASSOCIADO, BLOCOS_DO_RESPONSAVEL, montar_blocos
 
 no_cache = 1
 
@@ -61,6 +62,9 @@ def get_context(context):
 
 	context.doc = doc
 	context.title = doc.nome_completo
+	# A ordem dos campos vive em ``ficha_campos`` — é a mesma do formulário do Paxtu, e é
+	# conferida num lugar só em vez de campo a campo no template.
+	context.blocos = montar_blocos(doc, BLOCOS_DO_ASSOCIADO)
 
 	# Fetch Responsibles via Responsavel Vinculo
 	vinculos = frappe.get_all(
@@ -69,6 +73,13 @@ def get_context(context):
 
 	responsaveis = []
 	context.guarda_unilateral = cint(vinculos[0].guarda_unilateral) if vinculos else 0
+	context.tipo_guarda = (vinculos[0].get("tipo_guarda") or "").strip() if vinculos else ""
+	# Cadastros anteriores ao select de tipo de guarda só têm o booleano gravado.
+	if context.tipo_guarda in ("", "-") and context.guarda_unilateral:
+		context.tipo_guarda = "Unilateral"
+	# Guarda alternada é o único caso em que os dois responsáveis são inscritos, cada um na
+	# sua inscrição: a recepção precisa ver isso antes de abrir o registro no Paxtu.
+	context.guarda_alternada = context.tipo_guarda == "Alternada"
 	for v in vinculos:
 		if v.responsavel:
 			resp_doc = frappe.get_doc("Responsavel", v.responsavel)
@@ -76,6 +87,7 @@ def get_context(context):
 				{
 					"vinculo": v,
 					"doc": resp_doc,
+					"blocos": montar_blocos(resp_doc, BLOCOS_DO_RESPONSAVEL),
 					"sera_registrado": cint(v.get("sera_registrado")),
 					# Só se o documento existe: o link do Drive não vai para a página, porque
 					# o download passa pelo GRIS (drive de acesso restrito).

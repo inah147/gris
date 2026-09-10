@@ -53,8 +53,26 @@ class NovoAssociado(Document):
 	def validate(self):
 		self._sincronizar_data_registro_provisorio()
 		self._sincronizar_data_aguardar_dados()
+		self._implicar_boleto_do_registro_definitivo()
 		self._sincronizar_historico_de_etapas()
 		self._limpar_carimbos_de_etapa_desmarcada()
+
+	def _implicar_boleto_do_registro_definitivo(self):
+		"""Registro definitivo efetivado implica boleto definitivo gerado.
+
+		O boleto é a etapa imediatamente anterior à efetivação: não existe registro
+		definitivo sem boleto emitido e pago. Quem marca a efetivação direto — a bolinha da
+		timeline, o Desk, o MCP ou a criação do Associado — deixaria a etapa do boleto
+		aberta, e o funil cobraria um boleto de quem já está registrado. Justamente a lista
+		que a etapa existe para mostrar (boletos emitidos esperando pagamento) é a que ficaria
+		errada.
+
+		Mora no ``validate``, antes do histórico de etapas, pelo mesmo motivo dele: é o único
+		ponto por onde todos esses caminhos passam. Desmarcar a efetivação não desmarca o
+		boleto — ele continua tendo sido emitido.
+		"""
+		if self.registro_definitivo_efetivado and not self.boleto_definitivo_gerado:
+			self.boleto_definitivo_gerado = 1
 
 	def _limpar_carimbos_de_etapa_desmarcada(self):
 		"""Solta as mensagens da etapa que acabou de ser desmarcada.

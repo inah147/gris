@@ -13,6 +13,7 @@
   "tipo_guarda",
   "\u00e9_guardiao_legal",
   "sera_registrado",
+  "quer_carteirinha",
   "primeiro_responsavel"
  ],
  "fields": [
@@ -69,6 +70,14 @@
    "fieldname": "sera_registrado",
    "fieldtype": "Check",
    "label": "Será registrado"
+  },
+  {
+   "default": "1",
+   "depends_on": "sera_registrado",
+   "description": "Escolhido pelo responsável no envio dos dados: carteirinha física é opcional e só vale para quem também será registrado.",
+   "fieldname": "quer_carteirinha",
+   "fieldtype": "Check",
+   "label": "Quer carteirinha f\u00edsica"
   },
   {
    "default": "0",

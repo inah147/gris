@@ -473,12 +473,15 @@ def get_context(context):
 		config = frappe.get_doc("Configuracoes de Recepcao")
 		context.valor_registro_provisorio = config.get("valor_registro_provisorio")
 		context.valor_registro_definitivo = config.get("valor_registro_definitivo")
+		context.valor_carteirinha = config.get("valor_carteirinha")
 	except frappe.DoesNotExistError:
 		context.valor_registro_provisorio = 0
 		context.valor_registro_definitivo = 0
+		context.valor_carteirinha = 0
 
 	context.valor_registro_provisorio_fmt = _format_currency_brl(context.valor_registro_provisorio)
 	context.valor_registro_definitivo_fmt = _format_currency_brl(context.valor_registro_definitivo)
+	context.valor_carteirinha_fmt = _format_currency_brl(context.valor_carteirinha)
 
 	_enriquecer_contexto_filhotes(context, novo_associado, responsaveis)
 
@@ -512,6 +515,11 @@ def _sincronizar_vinculo(novo_associado_name, resp_id, guarda_unilateral, resp_i
 
 	guardiao = resp_item.get("é_guardiao_legal")
 	sera_registrado = resp_item.get("sera_registrado")
+	# Carteirinha de responsável só existe atrelada ao registro dele: se o card diz que este
+	# responsável não será registrado, a escolha de carteirinha que vier junto é descartada.
+	quer_carteirinha = resp_item.get("quer_carteirinha")
+	if sera_registrado is not None and not cint(sera_registrado):
+		quer_carteirinha = 0
 
 	if link_name:
 		valores = {"guarda_unilateral": guarda_unilateral}
@@ -519,6 +527,8 @@ def _sincronizar_vinculo(novo_associado_name, resp_id, guarda_unilateral, resp_i
 			valores["é_guardiao_legal"] = cint(guardiao)
 		if sera_registrado is not None:
 			valores["sera_registrado"] = cint(sera_registrado)
+		if quer_carteirinha is not None:
+			valores["quer_carteirinha"] = cint(quer_carteirinha)
 		frappe.db.set_value("Responsavel Vinculo", link_name, valores)
 		return link_name
 
@@ -530,6 +540,8 @@ def _sincronizar_vinculo(novo_associado_name, resp_id, guarda_unilateral, resp_i
 		novo_link.set("é_guardiao_legal", cint(guardiao))
 	if sera_registrado is not None:
 		novo_link.sera_registrado = cint(sera_registrado)
+	if quer_carteirinha is not None:
+		novo_link.quer_carteirinha = cint(quer_carteirinha)
 	novo_link.save(ignore_permissions=True)
 	return novo_link.name
 
@@ -628,6 +640,7 @@ def update_novo_associado(
 	# Allowed fields to update
 	allowed_fields = [
 		"tipo_de_registro",
+		"quer_carteirinha",
 		"nome_completo",
 		"data_de_nascimento",
 		"etnia",
@@ -663,6 +676,8 @@ def update_novo_associado(
 			val = data[field]
 			if field in ["celular", "telefone_secundario", "telefone_cobranca"]:
 				val = format_phone(val)
+			elif field == "quer_carteirinha":
+				val = cint(val)
 			doc.set(field, val)
 
 	# Update status and flag indicating data submission

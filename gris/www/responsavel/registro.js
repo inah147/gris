@@ -22,9 +22,11 @@ frappe.ready(function () {
 	// Ramo Filhotes: a idade de transição vem do Single Vagas, pelo dataset do form.
 	const idadeTransicaoFilhotes = Number(form.dataset.idadeTransicaoFilhotes || 0);
 	const filhotesAviso = document.querySelector(".registro-filhotes-aviso");
-	const filhotesTotal = document.getElementById("filhotes-total");
-	const filhotesTotalValor = document.getElementById("filhotes-total-valor");
-	const filhotesTotalDetalhe = document.getElementById("filhotes-total-detalhe");
+	const registroTotal = document.getElementById("registro-total");
+	const registroTotalValor = document.getElementById("registro-total-valor");
+	const registroTotalDetalhe = document.getElementById("registro-total-detalhe");
+	const carteirinhaJovemRotulo = document.querySelector('[data-carteirinha="jovem"]');
+	const carteirinhaJovemSwitch = carteirinhaJovemRotulo?.querySelector("input");
 	const filhotesCiencia = document.getElementById("filhotes-ciencia");
 	const cienciaPagamentoCheck = document.getElementById("ciencia-pagamento-check");
 	const cienciaAcompanhamentoCheck = document.getElementById("ciencia-acompanhamento-check");
@@ -570,17 +572,86 @@ frappe.ready(function () {
 		if (filhotes) syncSeraRegistrado();
 	}
 
-	function atualizarTotalFilhotes() {
-		if (!filhotesTotal) return;
+	// Wrappers dos responsáveis na ordem do DOM: é por esta posição que o card do formulário,
+	// o check de "será registrado" e o switch de carteirinha do diálogo se encontram.
+	function responsavelWrappers() {
+		return Array.from(document.querySelectorAll(".responsavel-wrapper"));
+	}
 
-		const valor = Number(filhotesTotal.dataset.valorDefinitivo || 0);
-		const marcados = seraRegistradoChecks().filter((check) => check.checked).length;
+	// O switch da macro Basecoat é um <label> com o <input> dentro: o rótulo carrega os
+	// data-attributes e é ele quem some quando o responsável não será registrado.
+	function carteirinhaRotulo(indice) {
+		return document.querySelector(
+			`[data-carteirinha="responsavel"][data-responsavel-indice="${indice}"]`
+		);
+	}
 
-		if (filhotesTotalValor) filhotesTotalValor.textContent = formatBRL(valor * (1 + marcados));
-		if (filhotesTotalDetalhe) {
-			const plural = marcados === 1 ? "responsável" : "responsáveis";
-			filhotesTotalDetalhe.textContent =
-				`${formatBRL(valor)} do jovem + ${marcados} ${plural} × ${formatBRL(valor)}. ` +
+	function carteirinhaSwitch(indice) {
+		return carteirinhaRotulo(indice)?.querySelector("input") || null;
+	}
+
+	// Quem entra no total: sempre o jovem, e — no ramo Filhotes — cada responsável de card
+	// visível marcado como "será registrado". Devolve a posição (1-based) de cada um, que é
+	// a mesma chave usada pelos switches de carteirinha.
+	function indicesDeResponsaveisRegistrados() {
+		if (!isFilhotes()) return [];
+		return responsavelWrappers()
+			.map((wrapper, posicao) => {
+				if (wrapper.hidden) return 0;
+				const check = wrapper.querySelector(
+					".sera-registrado-check[data-fieldname='sera_registrado']"
+				);
+				return check?.checked ? posicao + 1 : 0;
+			})
+			.filter(Boolean);
+	}
+
+	function atualizarTotal() {
+		if (!registroTotal) return;
+
+		const tipo = selectedTipoInput?.value || "";
+		const valorCarteirinha = Number(registroTotal.dataset.valorCarteirinha || 0);
+		const registrados = indicesDeResponsaveisRegistrados();
+
+		// Sem tipo escolhido não há o que somar: os dois valores de registro são diferentes.
+		if (!tipo) {
+			if (registroTotalValor) registroTotalValor.textContent = "—";
+			if (registroTotalDetalhe) {
+				registroTotalDetalhe.textContent = "Escolha o tipo de registro para ver o total.";
+			}
+			return;
+		}
+
+		const valorRegistro = Number(
+			tipo === "Provisório"
+				? registroTotal.dataset.valorProvisorio || 0
+				: registroTotal.dataset.valorDefinitivo || 0
+		);
+
+		let carteirinhas = carteirinhaJovemSwitch?.checked ? 1 : 0;
+		registrados.forEach((indice) => {
+			if (carteirinhaSwitch(indice)?.checked) carteirinhas += 1;
+		});
+
+		const pessoas = 1 + registrados.length;
+		if (registroTotalValor) {
+			registroTotalValor.textContent = formatBRL(
+				valorRegistro * pessoas + valorCarteirinha * carteirinhas
+			);
+		}
+
+		if (registroTotalDetalhe) {
+			const partes = [`${formatBRL(valorRegistro)} do jovem`];
+			if (registrados.length) {
+				const plural = registrados.length === 1 ? "responsável" : "responsáveis";
+				partes.push(`${registrados.length} ${plural} × ${formatBRL(valorRegistro)}`);
+			}
+			if (carteirinhas) {
+				const plural = carteirinhas === 1 ? "carteirinha física" : "carteirinhas físicas";
+				partes.push(`${carteirinhas} ${plural} × ${formatBRL(valorCarteirinha)}`);
+			}
+			registroTotalDetalhe.textContent =
+				`${partes.join(" + ")}. ` +
 				"O pagamento é combinado com a secretaria depois do envio dos dados.";
 		}
 	}
@@ -1533,6 +1604,7 @@ frappe.ready(function () {
 		});
 		selectedTipoInput.value = card.dataset.value || "";
 		updateTipoContinueButton();
+		atualizarTotal();
 	}
 
 	// No ramo Filhotes o "Continuar" também depende das duas ciências sobre o registro
@@ -1544,29 +1616,71 @@ frappe.ready(function () {
 		confirmTipoButton.disabled = !(selectedTipoInput.value && cienciasOk);
 	}
 
+	// Cada switch é nomeado: quem confere a conta precisa saber de quem é cada carteirinha,
+	// e "do jovem"/"deste responsável" só aparece enquanto o nome não foi digitado.
+	function nomearSwitchDeCarteirinha(elemento, nome, textoSemNome) {
+		const rotulo = elemento?.querySelector("span");
+		if (!rotulo) return;
+		const limpo = String(nome || "").trim();
+		rotulo.textContent = limpo ? `Quero a carteirinha física de ${limpo}` : textoSemNome;
+	}
+
+	// O diálogo abre com todos os switches ligados: a carteirinha é opt-out. Os switches dos
+	// responsáveis só aparecem para quem será registrado, e os rótulos usam o nome digitado
+	// agora — o formulário é editável, então o nome do primeiro paint pode estar defasado.
+	function sincronizarSwitchesDeCarteirinha() {
+		if (carteirinhaJovemSwitch) carteirinhaJovemSwitch.checked = true;
+		nomearSwitchDeCarteirinha(
+			carteirinhaJovemRotulo,
+			getControlValue(getMainControl("nome_completo")),
+			"Quero a carteirinha física do jovem"
+		);
+
+		const registrados = indicesDeResponsaveisRegistrados();
+		responsavelWrappers().forEach((wrapper, posicao) => {
+			const indice = posicao + 1;
+			const item = carteirinhaRotulo(indice);
+			if (!item) return;
+
+			const ativo = registrados.includes(indice);
+			item.hidden = !ativo;
+			if (!ativo) return;
+
+			const controle = carteirinhaSwitch(indice);
+			if (controle) controle.checked = true;
+
+			nomearSwitchDeCarteirinha(
+				item,
+				getControlValue(getResponsavelControl(wrapper, "nome_completo")),
+				"Quero a carteirinha física deste responsável"
+			);
+		});
+	}
+
 	function openTipoRegistroModal(payload) {
 		pendingSave = payload;
 		resetTipoSelection();
 
 		const filhotes = isFilhotes();
 		if (filhotesAviso) filhotesAviso.hidden = !filhotes;
-		if (filhotesTotal) filhotesTotal.hidden = !filhotes;
 		if (filhotesCiencia) filhotesCiencia.hidden = !filhotes;
 		if (provisorioCard) provisorioCard.hidden = filhotes;
 		// Com uma opção só, o grid de duas colunas deixaria o card encostado à esquerda.
 		tipoOptions?.classList.toggle("registro-type-options--single", filhotes);
 
+		sincronizarSwitchesDeCarteirinha();
+
 		if (filhotes) {
 			if (cienciaPagamentoCheck) cienciaPagamentoCheck.checked = false;
 			if (cienciaAcompanhamentoCheck) cienciaAcompanhamentoCheck.checked = false;
-			atualizarTotalFilhotes();
-			// Definitivo é a única opção do ramo: já entra selecionado.
+			// Definitivo é a única opção do ramo: já entra selecionado (e isso recalcula o total).
 			const definitivo = document.querySelector(
 				'.registro-option-card[data-value="Definitivo"]'
 			);
 			if (definitivo) selectTipoCard(definitivo);
 		}
 
+		atualizarTotal();
 		updateTipoContinueButton();
 		openDialog(tipoDialog);
 	}
@@ -1856,7 +1970,14 @@ frappe.ready(function () {
 
 	document.addEventListener("change", (event) => {
 		if (event.target.matches(".sera-registrado-check[data-fieldname='sera_registrado']")) {
-			atualizarTotalFilhotes();
+			// Marcar/desmarcar "será registrado" muda quem tem direito a carteirinha, então o
+			// diálogo precisa refazer a lista de switches antes de recalcular.
+			sincronizarSwitchesDeCarteirinha();
+			atualizarTotal();
+			return;
+		}
+		if (event.target.closest(".registro-carteirinha__switch")) {
+			atualizarTotal();
 		}
 	});
 
@@ -1953,6 +2074,17 @@ frappe.ready(function () {
 	confirmTipoButton?.addEventListener("click", () => {
 		if (!pendingSave || !selectedTipoInput.value) return;
 		pendingSave.formData.tipo_de_registro = selectedTipoInput.value;
+		pendingSave.formData.quer_carteirinha = carteirinhaJovemSwitch?.checked ? 1 : 0;
+		// `responsaveisData` sai de `collectResponsaveisData()`, que percorre os cards visíveis
+		// na ordem do DOM — a mesma ordem dos wrappers que numera os switches do diálogo.
+		const visiveis = responsavelWrappers().filter((wrapper) => !wrapper.hidden);
+		visiveis.forEach((wrapper, posicao) => {
+			const item = pendingSave.responsaveisData[posicao];
+			if (!item) return;
+			const indice = responsavelWrappers().indexOf(wrapper) + 1;
+			const controle = carteirinhaRotulo(indice)?.hidden ? null : carteirinhaSwitch(indice);
+			item.quer_carteirinha = controle?.checked ? 1 : 0;
+		});
 		if (isFilhotes()) {
 			pendingSave.formData.ciente_registro_responsavel_filhotes =
 				cienciaPagamentoCheck?.checked ? 1 : 0;

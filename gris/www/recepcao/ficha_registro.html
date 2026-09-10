@@ -67,6 +67,18 @@
             <div class="text-xs text-muted-foreground mb-1">Tipo</div>
             {{ badge(doc.tipo_de_registro or 'Tipo não definido', outline=true) }}
           </div>
+          {# Escolha do responsável no envio dos dados: diz se a carteirinha deve ser
+             solicitada junto com o registro. Antes de os dados chegarem não há escolha. #}
+          <div>
+            <div class="text-xs text-muted-foreground mb-1">Carteirinha física</div>
+            {% if not doc.dados_para_registro_enviados %}
+              {{ badge('Não informado', outline=true) }}
+            {% elif doc.quer_carteirinha %}
+              {{ badge('Sim', variant="success") }}
+            {% else %}
+              {{ badge('Não', variant="secondary") }}
+            {% endif %}
+          </div>
         </div>
       </div>
     {% endcall %}
@@ -301,6 +313,9 @@
               {% endif %}
               {% if is_filhotes and item.sera_registrado %}
                 {{ badge("Será registrado", variant="secondary") }}
+                {% if item.vinculo.quer_carteirinha %}
+                  {{ badge("Carteirinha física", variant="success") }}
+                {% endif %}
               {% endif %}
             </header>
 

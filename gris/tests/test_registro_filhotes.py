@@ -495,6 +495,26 @@ class TestRegistroFilhotes(FrappeTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			registro.upload_declaracao_assinada()
 
+	# ----------------------------------------------------------------------------------
+	# Carteirinha
+	# ----------------------------------------------------------------------------------
+
+	def test_carteirinha_e_escolhida_por_pessoa_registrada(self):
+		# No ramo Filhotes o jovem e cada responsável registrado têm switch próprio: a
+		# escolha de um não pode arrastar a do outro.
+		self._salvar(
+			self.crianca,
+			[
+				_card_mae(self.mae, quer_carteirinha=1),
+				_card(self.pai, nome_completo="Pai Filhotes", cpf=CPF_PAI, quer_carteirinha=0),
+			],
+			self._dados(_nascimento_com_idade(6), quer_carteirinha=0),
+		)
+
+		self.assertEqual(frappe.db.get_value("Novo Associado", self.crianca, "quer_carteirinha"), 0)
+		self.assertEqual(self._vinculo(self.mae, self.crianca, "quer_carteirinha"), 1)
+		self.assertEqual(self._vinculo(self.pai, self.crianca, "quer_carteirinha"), 0)
+
 
 class TestDeclaracaoIdoneidade(FrappeTestCase):
 	"""Geração do PDF da declaração, com o Google Drive/Docs mockado."""

@@ -56,6 +56,7 @@ def get_context(context):
 		"pesquisa_de_novos_associados_respondida": "pesquisa_de_novos_associados_respondida",
 		"ficha_medica_preenchida": "ficha_medica_preenchida",
 		"id_escoteiros_criado": "id_escoteiros_criado",
+		"boleto_definitivo_gerado": "boleto_definitivo_gerado",
 		"registro_definitivo_efetivado": "registro_definitivo_efetivado",
 		"reuniao_de_acolhida_realizada": "reuniao_de_acolhida_realizada",
 	}
@@ -118,6 +119,7 @@ def get_context(context):
 		{"field": "pesquisa_de_novos_associados_respondida", "label": "Pesquisa Respondida"},
 		{"field": "ficha_medica_preenchida", "label": "Ficha Médica"},
 		{"field": "id_escoteiros_criado", "label": "ID Criado"},
+		{"field": "boleto_definitivo_gerado", "label": "Boleto Gerado"},
 		{"field": "registro_definitivo_efetivado", "label": "Def. Efetivado"},
 		{"field": "reuniao_de_acolhida_realizada", "label": "Acolhida"},
 	]

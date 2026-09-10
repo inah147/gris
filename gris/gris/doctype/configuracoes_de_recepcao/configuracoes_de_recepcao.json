@@ -9,6 +9,7 @@
   "dados_para_registro_enviados",
   "pesquisa_de_novos_associados_respondida",
   "id_escoteiros_criado",
+  "boleto_definitivo_gerado",
   "registro_definitivo_efetivado",
   "intervalo_provisorio_definitivo",
   "column_break_lndt",
@@ -104,6 +105,12 @@
    "fieldname": "id_escoteiros_criado",
    "fieldtype": "Int",
    "label": "id@escoteiros criado"
+  },
+  {
+   "description": "Dias entre a etapa anterior e a emissão do boleto do registro definitivo. Zero deixa a etapa com a mesma data estimada da anterior.",
+   "fieldname": "boleto_definitivo_gerado",
+   "fieldtype": "Int",
+   "label": "Boleto definitivo gerado"
   },
   {
    "default": "30",
@@ -444,7 +451,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-08 12:00:00.000000",
+ "modified": "2026-09-10 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Configuracoes de Recepcao",

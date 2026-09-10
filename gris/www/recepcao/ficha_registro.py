@@ -249,7 +249,7 @@ def listar_mensagens_enviadas(novo_associado_name: str) -> list[dict]:
 	_resolver_nomes_de_grupo(mensagens)
 
 	for mensagem in mensagens:
-		mensagem["data"] = format_date(mensagem["enviada_em"])
+		mensagem["data"] = format_date(mensagem["enviada_em"], "dd/MM/yyyy")
 		mensagem["hora"] = format_datetime(mensagem["enviada_em"], "HH:mm")
 
 	return mensagens

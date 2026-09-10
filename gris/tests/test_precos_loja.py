@@ -80,9 +80,7 @@ class TestExtracaoDeProduto(FrappeTestCase):
 		self.assertEqual(produto["codigo"], "PRG-2")
 
 	def test_pagina_sem_produto_nao_vira_produto(self):
-		self.assertIsNone(
-			precos_loja.extrair_produto(_pagina_de_listagem(["/a", "/b"]), URL_CATEGORIA)
-		)
+		self.assertIsNone(precos_loja.extrair_produto(_pagina_de_listagem(["/a", "/b"]), URL_CATEGORIA))
 
 	def test_produto_sem_preco_e_descartado(self):
 		html = """
@@ -140,13 +138,9 @@ class TestColeta(FrappeTestCase):
 			"https://loja.exemplo.test/p/natacao": _pagina_json_ld("Natação", "13,50", "N-1"),
 		}
 
-		produtos = precos_loja.coletar_produtos(
-			URL_CATEGORIA, baixar=paginas.get, pausa=0
-		)
+		produtos = precos_loja.coletar_produtos(URL_CATEGORIA, baixar=paginas.get, pausa=0)
 
-		self.assertEqual(
-			sorted(produto["nome"] for produto in produtos), ["Acampamento", "Natação"]
-		)
+		self.assertEqual(sorted(produto["nome"] for produto in produtos), ["Acampamento", "Natação"])
 
 	def test_nao_expande_links_de_pagina_de_produto(self):
 		paginas = {
@@ -238,15 +232,11 @@ class TestCasamento(FrappeTestCase):
 
 class TestInferencia(FrappeTestCase):
 	def test_tipo_vem_do_nome_do_produto(self):
-		self.assertEqual(
-			precos_loja.inferir_tipo("Distintivo de Especialidade Acampamento"), "Especialidade"
-		)
+		self.assertEqual(precos_loja.inferir_tipo("Distintivo de Especialidade Acampamento"), "Especialidade")
 		self.assertEqual(
 			precos_loja.inferir_tipo("Distintivo de Progressão Lobinho"), "Distintivo de Progressão"
 		)
-		self.assertEqual(
-			precos_loja.inferir_tipo("Insígnia Mundial"), "Insígnia de Interesse Especial"
-		)
+		self.assertEqual(precos_loja.inferir_tipo("Insígnia Mundial"), "Insígnia de Interesse Especial")
 		self.assertEqual(precos_loja.inferir_tipo("Caneca do Grupo"), "Outro")
 
 	def test_ramo_vem_do_nome_do_produto(self):
@@ -285,15 +275,11 @@ class TestImportacao(FrappeTestCase):
 			"https://loja.exemplo.test/p/nova": _pagina_json_ld(
 				"Distintivo de Especialidade Teste Importação Astronomia", "13,50", "TI-2"
 			),
-			"https://loja.exemplo.test/p/caneca": _pagina_json_ld(
-				"Caneca Teste Importação", "25,00", "TI-3"
-			),
+			"https://loja.exemplo.test/p/caneca": _pagina_json_ld("Caneca Teste Importação", "25,00", "TI-3"),
 		}
 
 	def test_atualiza_o_que_existe_e_cria_o_que_falta(self):
-		relatorio = precos_loja.importar_precos_loja(
-			url=URL_CATEGORIA, baixar=self._paginas().get, pausa=0
-		)
+		relatorio = precos_loja.importar_precos_loja(url=URL_CATEGORIA, baixar=self._paginas().get, pausa=0)
 
 		self.assertEqual(relatorio["atualizados"], 1)
 		self.assertEqual(relatorio["criados"], 1)
@@ -310,9 +296,7 @@ class TestImportacao(FrappeTestCase):
 		self.assertEqual(criado.tipo, "Especialidade")
 
 	def test_nao_cria_o_que_nao_e_distintivo(self):
-		relatorio = precos_loja.importar_precos_loja(
-			url=URL_CATEGORIA, baixar=self._paginas().get, pausa=0
-		)
+		relatorio = precos_loja.importar_precos_loja(url=URL_CATEGORIA, baixar=self._paginas().get, pausa=0)
 
 		self.assertEqual(relatorio["ignorados"], 1)
 		self.assertFalse(frappe.db.exists(precos_loja.DOCTYPE, "Caneca Teste Importação"))
@@ -330,17 +314,13 @@ class TestImportacao(FrappeTestCase):
 		self.assertEqual(inalterado.valor_unitario, 1)
 		self.assertIsNone(inalterado.codigo)
 		self.assertFalse(
-			frappe.db.exists(
-				precos_loja.DOCTYPE, "Distintivo de Especialidade Teste Importação Astronomia"
-			)
+			frappe.db.exists(precos_loja.DOCTYPE, "Distintivo de Especialidade Teste Importação Astronomia")
 		)
 
 	def test_segunda_execucao_casa_pelo_codigo_e_nao_muda_nada(self):
 		precos_loja.importar_precos_loja(url=URL_CATEGORIA, baixar=self._paginas().get, pausa=0)
 
-		relatorio = precos_loja.importar_precos_loja(
-			url=URL_CATEGORIA, baixar=self._paginas().get, pausa=0
-		)
+		relatorio = precos_loja.importar_precos_loja(url=URL_CATEGORIA, baixar=self._paginas().get, pausa=0)
 
 		self.assertEqual(relatorio["atualizados"], 0)
 		self.assertEqual(relatorio["criados"], 0)

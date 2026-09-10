@@ -342,6 +342,14 @@ class TestFichaCampos(FrappeTestCase):
 		self.assertTrue(campo["vazio"])
 		self.assertEqual(campo["valor"], "-")
 
+	def test_data_e_formatada_no_padrao_brasileiro(self):
+		doc = frappe._dict({"data_de_nascimento": "2014-05-16"})
+		blocos = ficha_campos.montar_blocos(
+			doc,
+			[{"titulo": "Pessoais", "campos": [("data_de_nascimento", "Data", ficha_campos.DATA)]}],
+		)
+		self.assertEqual(blocos[0]["campos"][0]["valor"], "16/05/2014")
+
 	def test_estrangeiro_e_lido_como_sim_ou_nao(self):
 		for valor, esperado in ((1, "Sim"), (0, "Não")):
 			doc = frappe._dict({"estrangeiro": valor})
@@ -381,6 +389,7 @@ class TestFichaCampos(FrappeTestCase):
 				with self.subTest(fieldname=fieldname):
 					self.assertIsNotNone(meta.get_field(fieldname), f"{fieldname} não existe")
 
+
 class TestPaginasRenderizadas(FrappeTestCase):
 	"""Smoke test das duas telas: erro de Jinja não aparece em teste de unidade nenhum."""
 
@@ -419,6 +428,7 @@ class TestPaginasRenderizadas(FrappeTestCase):
 					"doctype": "Novo Associado",
 					"cpf": CPF_JOVEM,
 					"nome_completo": "Jovem Ficha",
+					"data_de_nascimento": "2014-05-16",
 					"celular": "+5511987654321",
 					"tipo_de_registro": "Provisório",
 					"estado": "SP",
@@ -459,6 +469,10 @@ class TestPaginasRenderizadas(FrappeTestCase):
 		self.assertIn("(11) 9 8765-4321", pagina)
 		# O botão copia o número já sem o +55, que é o que o Paxtu aceita.
 		self.assertIn('data-copiar="(11) 9 8765-4321"', pagina)
+
+	def test_ficha_formata_a_data_de_nascimento(self):
+		"""``frappe.format_date`` só existe no namespace do Jinja, não no módulo importado."""
+		self.assertIn("16/05/2014", self._ficha())
 
 	def test_ficha_destaca_o_tipo_de_registro(self):
 		pagina = self._ficha()

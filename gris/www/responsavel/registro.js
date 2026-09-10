@@ -445,6 +445,11 @@ frappe.ready(function () {
 		input.value = value;
 	}
 
+	function applyCepMask(input) {
+		const digits = input.value.replace(/\D/g, "").slice(0, 8);
+		input.value = digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits;
+	}
+
 	function isWrapperHidden(card) {
 		return Boolean(card.closest(".responsavel-wrapper")?.hidden);
 	}
@@ -650,6 +655,116 @@ frappe.ready(function () {
 			setControlValue(target, getControlValue(source));
 			clearInvalidControl(target);
 		});
+	}
+
+	// Campos que a busca por CEP preenche, com o mesmo nome da chave que volta do servidor.
+	// Número e complemento ficam de fora: o CEP não diz qual é a casa.
+	const camposDoCep = ["endereco", "bairro", "cidade", "estado"];
+
+	function cepDigits(input) {
+		return (input.value || "").replace(/\D/g, "");
+	}
+
+	function setCepStatus(input, message, variant) {
+		const status = input.closest(".registro-field")?.querySelector("[data-cep-status]");
+		if (!status) return;
+		status.textContent = message || "";
+		status.hidden = !message;
+		status.classList.toggle("registro-field-hint--error", variant === "error");
+	}
+
+	// Um CEP que chegou junto com o endereço (renderizado pelo servidor, copiado do jovem ou
+	// trazido pela busca por CPF) já tem o endereço dele: redigitar o mesmo CEP não pode
+	// sobrescrever o que alguém revisou à mão. Só um CEP diferente dispara a busca.
+	function memorizarCep(input) {
+		const cep = cepDigits(input);
+		if (cep.length === 8) input.dataset.cepConsultado = cep;
+		else delete input.dataset.cepConsultado;
+		setCepStatus(input, "");
+	}
+
+	async function buscarEnderecoPorCep(input) {
+		if (readOnly || input.readOnly) return;
+
+		const cep = cepDigits(input);
+		if (cep.length !== 8) {
+			setCepStatus(input, "");
+			return;
+		}
+		if (input.dataset.cepConsultado === cep) return;
+		input.dataset.cepConsultado = cep;
+
+		const card = input.closest(".responsavel-card");
+		const controlDe = (fieldName) =>
+			card ? getResponsavelControl(card, fieldName) : getMainControl(fieldName);
+
+		setCepStatus(input, "Buscando endereço…");
+		let resultado = null;
+		try {
+			// `fetch`, e não `frappe.call`: o do portal (website.js) nunca chama `error` e abre
+			// msgprint em 403/404, então uma falha deixaria o status preso em "Buscando".
+			const resposta = await fetch(
+				"/api/method/gris.www.responsavel.registro.buscar_endereco_por_cep",
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Accept: "application/json",
+						"X-Frappe-CSRF-Token": frappe.csrf_token || "",
+					},
+					credentials: "same-origin",
+					body: JSON.stringify({ novo_associado_name: novoAssociadoName, cep: cep }),
+				}
+			);
+			if (resposta.ok) resultado = (await resposta.json()).message || null;
+		} catch (error) {
+			resultado = null;
+		}
+
+		// O CEP pode ter sido trocado enquanto a busca estava no ar: a resposta vale só para ele.
+		if (cepDigits(input) !== cep) return;
+
+		if (resultado && resultado.encontrado) {
+			aplicarEnderecoDoCep(input, controlDe, resultado.endereco || {});
+		} else if (resultado && resultado.motivo === "nao_encontrado") {
+			setCepStatus(
+				input,
+				"CEP não encontrado. Confira o número ou preencha o endereço manualmente.",
+				"error"
+			);
+		} else {
+			// ViaCEP fora do ar, rate limit ou rede: esquecer o CEP deixa tentar de novo só
+			// redigitando.
+			delete input.dataset.cepConsultado;
+			setCepStatus(input, "Não foi possível buscar o endereço agora. Preencha manualmente.");
+		}
+	}
+
+	function aplicarEnderecoDoCep(input, controlDe, endereco) {
+		camposDoCep.forEach((fieldName) => {
+			const control = controlDe(fieldName);
+			if (!control) return;
+			const valor = endereco[fieldName] || "";
+			// CEP geral de cidade vem sem rua e bairro: apaga só o que uma busca anterior
+			// preencheu, nunca o que o usuário digitou.
+			if (!valor && control.dataset.preenchidoPorCep !== "true") return;
+			setControlValue(control, valor);
+			clearInvalidControl(control);
+			if (valor) control.dataset.preenchidoPorCep = "true";
+			else delete control.dataset.preenchidoPorCep;
+		});
+
+		setCepStatus(
+			input,
+			endereco.endereco
+				? "Endereço preenchido pelo CEP. Confira e informe o número."
+				: "Este CEP é da cidade inteira: informe rua e bairro."
+		);
+
+		const proximo = ["endereco", "bairro"]
+			.map(controlDe)
+			.find((control) => control && !getControlValue(control));
+		getFocusable(proximo || controlDe("numero"))?.focus();
 	}
 
 	function setControlLocked(control, locked) {
@@ -1689,6 +1804,18 @@ frappe.ready(function () {
 		if (event.target.matches("input[data-fieldname='cpf']")) {
 			applyCPFMask(event.target);
 		}
+		if (event.target.matches("input[data-fieldname='cep']")) {
+			applyCepMask(event.target);
+			// Só digitação de verdade busca. `setControlValue` dispara `input` sintético ao
+			// copiar o endereço do jovem, ao preencher um card pela busca por CPF e ao limpar
+			// um card — e nesses casos o endereço já veio junto com o CEP.
+			if (event.isTrusted) buscarEnderecoPorCep(event.target);
+			else memorizarCep(event.target);
+		}
+		if (event.isTrusted && event.target.dataset.preenchidoPorCep) {
+			// Editado à mão, o campo deixa de ser da busca: uma busca seguinte não o apaga.
+			delete event.target.dataset.preenchidoPorCep;
+		}
 	});
 
 	form.addEventListener("change", (event) => {
@@ -2083,6 +2210,7 @@ frappe.ready(function () {
 	syncAddResponsavelButton();
 	toggleGuardiaoLegal();
 	applyFilhotesMode();
+	form.querySelectorAll("input[data-fieldname='cep']").forEach(memorizarCep);
 
 	// O baseline é o que o servidor renderizou: é contra ele que a conferência decide quem
 	// precisa redigitar CPF e data de nascimento.

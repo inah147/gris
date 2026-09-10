@@ -131,6 +131,28 @@
 	{% endcall %}
 {% endmacro %}
 
+{# CEP que preenche rua, bairro, cidade e estado pela ViaCEP (via servidor) assim que chega
+   a 8 dígitos. O status da busca fica em `data-cep-status`, separado do erro de validação. #}
+{% macro cep_control(fieldname, label, value="", required=false, scope="main", field_id=None, include_name=true, class_name="") %}
+	{% set control_id = field_id or fieldname %}
+	{% set attrs = {
+		"id": control_id,
+		"data-fieldname": fieldname,
+		"data-field-scope": scope,
+		"class": "registro-control " ~ class_name,
+		"inputmode": "numeric",
+		"maxlength": "9",
+		"placeholder": "00000-000",
+		"autocomplete": "postal-code"
+	} %}
+	{% if required %}{% set _ = attrs.update({"required": "required"}) %}{% endif %}
+	{% call field(label=required_label(label, required), attrs={"class": "registro-field " ~ class_name}) %}
+		{{ input(name=fieldname if include_name else None, type="text", value=value or "", attrs=attrs) }}
+		<p class="registro-field-hint" data-cep-status role="status" hidden></p>
+		<p class="registro-field-error" data-field-error="{{ fieldname }}" hidden></p>
+	{% endcall %}
+{% endmacro %}
+
 {% macro checkbox_control(fieldname, label, checked=false, scope="main", field_id=None, include_name=true, class_name="") %}
 	{% set control_id = field_id or fieldname %}
 	{% set attrs = {
@@ -243,7 +265,7 @@
 
 		{% call card(title="Endereço e Dados de Contato", attrs={"class": "registro-section-card"}) %}
 			<div class="registro-grid registro-grid--3">
-				{{ text_control("cep", "CEP", novo_associado.cep, required=true, inputmode="numeric", maxlength="9", placeholder="00000-000") }}
+				{{ cep_control("cep", "CEP", novo_associado.cep, required=true) }}
 				{{ text_control("endereco", "Endereço", novo_associado.endereco, required=true, autocomplete="street-address", class_name="registro-field--span-2") }}
 				{{ text_control("numero", "Número", novo_associado.numero, type="number", required=true, inputmode="numeric") }}
 				{{ text_control("complemento", "Complemento", novo_associado.complemento, class_name="registro-field--span-2") }}
@@ -371,13 +393,13 @@
 										</div>
 									</div>
 									<div class="registro-grid registro-grid--4">
+										{{ cep_control("cep", "CEP", item.doc.cep, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-cep", include_name=false) }}
 										{{ text_control("endereco", "Endereço", item.doc.get("endereço"), required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-endereco", include_name=false, class_name="registro-field--span-2") }}
 										{{ text_control("numero", "Número", item.doc.get("número"), required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-numero", include_name=false) }}
 										{{ text_control("complemento", "Complemento", item.doc.complemento, scope="responsavel", field_id="resp-" ~ loop.index ~ "-complemento", include_name=false) }}
 										{{ text_control("bairro", "Bairro", item.doc.bairro, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-bairro", include_name=false) }}
 										{{ text_control("cidade", "Cidade", item.doc.cidade, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-cidade", include_name=false) }}
 										{{ select_control("estado", "Estado", options_responsavel.estado, item.doc.estado, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-estado", include_name=false) }}
-										{{ text_control("cep", "CEP", item.doc.cep, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-cep", include_name=false, inputmode="numeric", maxlength="9", placeholder="00000-000") }}
 										{{ text_control("email", "Email", item.doc.email, type="email", required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-email", include_name=false, autocomplete="email") }}
 										{{ phone_control("celular", "Celular", item.phone.celular, required=true, scope="responsavel", field_id="resp-" ~ loop.index ~ "-celular", include_name=false) }}
 										{{ phone_control("telefone_secundario", "Telefone secundário", item.phone.telefone_secundario, scope="responsavel", field_id="resp-" ~ loop.index ~ "-telefone-secundario", include_name=false) }}

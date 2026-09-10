@@ -7,12 +7,15 @@ Cenários cobertos:
 4. CPF de responsável já existente em card novo reaproveita o cadastro, sem duplicar
 5. Busca por CPF: encontrado, inexistente, CPF inválido e sem permissão sobre o jovem
 6. Cadastro de terceiro (fora da família) não é sobrescrito ao ser vinculado
+7. Busca por CEP (ViaCEP simulada): encontrado, CEP geral de cidade, inexistente, incompleto,
+   ViaCEP fora do ar e sem permissão sobre o jovem
 """
 
 import json
 from unittest import mock
 
 import frappe
+import requests
 from frappe.tests.utils import FrappeTestCase
 
 from gris.utils.documento import id_por_cpf
@@ -37,6 +40,30 @@ CPF_TERCEIRO = _gerar_cpf("246813579")
 CPF_DESCONHECIDO = _gerar_cpf("135792468")
 
 EMAIL_MAE = "mae.teste.registro@example.com"
+
+
+# Resposta real da ViaCEP para 01001-000, com o complemento que descreve a faixa do CEP.
+VIACEP_PRACA_DA_SE = {
+	"cep": "01001-000",
+	"logradouro": "Praça da Sé",
+	"complemento": "lado ímpar",
+	"unidade": "",
+	"bairro": "Sé",
+	"localidade": "São Paulo",
+	"uf": "SP",
+	"estado": "São Paulo",
+	"regiao": "Sudeste",
+	"ibge": "3550308",
+	"gia": "1004",
+	"ddd": "11",
+	"siafi": "7107",
+}
+
+
+def _resposta_viacep(corpo: dict) -> mock.Mock:
+	resposta = mock.Mock()
+	resposta.json.return_value = corpo
+	return resposta
 
 
 def _criar_responsavel(cpf: str, nome: str, **campos) -> str:
@@ -294,6 +321,74 @@ class TestRegistroResponsavel(FrappeTestCase):
 					_card(terceiro, nome_completo="Terceiro Teste", cpf=CPF_PAI),
 				],
 			)
+
+	def test_busca_por_cep_devolve_o_endereco_nos_campos_do_formulario(self):
+		with mock.patch(
+			"gris.utils.cep.requests.get", return_value=_resposta_viacep(VIACEP_PRACA_DA_SE)
+		) as get:
+			resultado = registro.buscar_endereco_por_cep(self.filho2, "01001-000")
+
+		self.assertIn("/ws/01001000/json/", get.call_args.args[0])
+		self.assertTrue(resultado["encontrado"])
+		# O complemento da ViaCEP ("lado ímpar") não é o da casa e não pode chegar ao formulário.
+		self.assertEqual(
+			resultado["endereco"],
+			{
+				"cep": "01001-000",
+				"endereco": "Praça da Sé",
+				"bairro": "Sé",
+				"cidade": "São Paulo",
+				"estado": "SP",
+			},
+		)
+
+	def test_busca_por_cep_geral_de_cidade_volta_sem_rua_e_bairro(self):
+		corpo = {**VIACEP_PRACA_DA_SE, "cep": "35617-000", "logradouro": "", "bairro": ""}
+		corpo.update({"complemento": "", "localidade": "Serra da Saudade", "uf": "MG"})
+		with mock.patch("gris.utils.cep.requests.get", return_value=_resposta_viacep(corpo)):
+			resultado = registro.buscar_endereco_por_cep(self.filho2, "35617000")
+
+		self.assertTrue(resultado["encontrado"])
+		self.assertEqual(resultado["endereco"]["endereco"], "")
+		self.assertEqual(resultado["endereco"]["bairro"], "")
+		self.assertEqual(resultado["endereco"]["cidade"], "Serra da Saudade")
+		self.assertEqual(resultado["endereco"]["estado"], "MG")
+
+	def test_busca_por_cep_inexistente(self):
+		# A ViaCEP responde 200 com ``erro`` — hoje como a string "true".
+		with mock.patch("gris.utils.cep.requests.get", return_value=_resposta_viacep({"erro": "true"})):
+			resultado = registro.buscar_endereco_por_cep(self.filho2, "99999-999")
+
+		self.assertFalse(resultado["encontrado"])
+		self.assertEqual(resultado["motivo"], "nao_encontrado")
+
+	def test_busca_por_cep_incompleto_nao_consulta_a_viacep(self):
+		with mock.patch("gris.utils.cep.requests.get") as get:
+			resultado = registro.buscar_endereco_por_cep(self.filho2, "1234")
+
+		get.assert_not_called()
+		self.assertFalse(resultado["encontrado"])
+		self.assertEqual(resultado["motivo"], "cep_invalido")
+
+	def test_viacep_fora_do_ar_volta_como_motivo_e_nao_excecao(self):
+		# Exceção no portal prende a tela: com a ViaCEP fora, o responsável digita à mão.
+		with mock.patch("gris.utils.cep.requests.get", side_effect=requests.Timeout("lenta")):
+			resultado = registro.buscar_endereco_por_cep(self.filho2, "01001-000")
+
+		self.assertFalse(resultado["encontrado"])
+		self.assertEqual(resultado["motivo"], "indisponivel")
+
+	def test_busca_por_cep_exige_permissao_sobre_o_jovem(self):
+		frappe.set_user("Administrator")
+		outro_jovem = _criar_novo_associado(_gerar_cpf("987654321"), "Jovem de Outra Família")
+		frappe.set_user(EMAIL_MAE)
+
+		# A consulta sai do servidor: sem permissão, a ViaCEP nem é chamada.
+		with mock.patch("gris.utils.cep.requests.get") as get:
+			with self.assertRaises(frappe.PermissionError):
+				registro.buscar_endereco_por_cep(outro_jovem, "01001-000")
+
+		get.assert_not_called()
 
 	def test_busca_por_cpf_retorna_os_dados_do_responsavel(self):
 		# O pai ainda não está vinculado ao segundo filho: é o caso de uso da busca.

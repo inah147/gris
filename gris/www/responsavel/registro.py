@@ -2,6 +2,7 @@ import json
 import re
 
 import frappe
+import requests
 from frappe import _
 from frappe.rate_limiter import rate_limit
 from frappe.utils import cint, now_datetime
@@ -10,6 +11,7 @@ from gris.api.portal_access import enrich_context
 from gris.api.recepcao_mensagens import notificar_dados_preenchidos_no_grupo_recepcao
 from gris.api.responsavel_acesso import get_responsavel_do_usuario
 from gris.gris.doctype.novo_associado.novo_associado import ramo_por_data_de_nascimento
+from gris.utils.cep import consultar_cep, limpar_cep
 from gris.utils.contato import format_phone
 from gris.utils.documento import cpf_valido, id_por_cpf, limpar_cpf
 
@@ -836,6 +838,43 @@ def buscar_responsavel_por_cpf(novo_associado_name: str, cpf: str):
 		"vazio": not any(valor for campo, valor in dados.items() if campo != "nome_completo"),
 		"dados": dados,
 	}
+
+
+@frappe.whitelist()
+@rate_limit(key="registro-busca-cep", limit=20, seconds=60)
+def buscar_endereco_por_cep(novo_associado_name: str, cep: str):
+	"""Rua, bairro, cidade e UF do CEP, para o formulário preencher o endereço sozinho.
+
+	A consulta à ViaCEP sai deste servidor, então o endpoint não pode virar um proxy aberto:
+	só atende quem pode editar o jovem, tem rate limit e não chama a ViaCEP para CEP
+	incompleto. Um bloqueio da ViaCEP por excesso de uso derrubaria a busca para todos.
+
+	Como na busca por CPF, os desfechos voltam em ``motivo`` e não como exceção. Uma ViaCEP
+	fora do ar vira ``indisponivel`` e o responsável preenche o endereço à mão.
+	"""
+	user = frappe.session.user
+	if user == "Guest":
+		frappe.throw(_("Você precisa estar logado."), frappe.PermissionError)
+
+	responsavel = _responsavel_da_sessao()
+	_assert_pode_editar(responsavel, novo_associado_name)
+
+	if len(limpar_cep(cep)) != 8:
+		return {"encontrado": False, "motivo": "cep_invalido"}
+
+	try:
+		endereco = consultar_cep(cep)
+	except (requests.RequestException, ValueError) as erro:
+		# Log de arquivo, não Error Log: uma queda da ViaCEP geraria um registro por busca.
+		frappe.logger("busca_cep", allow_site=True).warning(
+			f"ViaCEP indisponível: {type(erro).__name__}: {erro}"
+		)
+		return {"encontrado": False, "motivo": "indisponivel"}
+
+	if not endereco:
+		return {"encontrado": False, "motivo": "nao_encontrado"}
+
+	return {"encontrado": True, "motivo": None, "endereco": endereco}
 
 
 # --------------------------------------------------------------------------------------

@@ -301,9 +301,7 @@ def _valor_da_meta(metas: list[dict[str, str]], nomes: tuple[str, ...]) -> str |
 
 
 def _produto_das_metatags(leitor: _LeitorDeHtml) -> dict | None:
-	preco = _para_valor(
-		_valor_da_meta(leitor.metas, ("product:price:amount", "og:price:amount", "price"))
-	)
+	preco = _para_valor(_valor_da_meta(leitor.metas, ("product:price:amount", "og:price:amount", "price")))
 	if preco is None:
 		return None
 
@@ -312,7 +310,11 @@ def _produto_das_metatags(leitor: _LeitorDeHtml) -> dict | None:
 	if not nome:
 		return None
 
-	return {"nome": nome, "preco": preco, "codigo": _valor_da_meta(leitor.metas, ("sku", "product:retailer_item_id"))}
+	return {
+		"nome": nome,
+		"preco": preco,
+		"codigo": _valor_da_meta(leitor.metas, ("sku", "product:retailer_item_id")),
+	}
 
 
 def extrair_produto(html: str, url: str) -> dict | None:
@@ -587,7 +589,14 @@ def importar_precos_loja(
 			else:
 				relatorio["ignorados"] += 1
 
-		for chave in ("produtos_encontrados", "atualizados", "criados", "sem_alteracao", "ignorados", "ambiguos"):
+		for chave in (
+			"produtos_encontrados",
+			"atualizados",
+			"criados",
+			"sem_alteracao",
+			"ignorados",
+			"ambiguos",
+		):
 			metrica(chave, relatorio[chave], incrementar=False)
 
 		prefixo = "Simulação: " if simular else ""

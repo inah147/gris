@@ -175,6 +175,16 @@ class TestRegistroFilhotes(FrappeTestCase):
 		_vincular(self.mae, self.crianca)
 		_vincular(self.mae, self.adolescente)
 
+		# `db.set_value` pula o `validate` da Single, que exige um drive ativo cadastrado em
+		# Configuracoes Google Workspace — o upload em si é mockado, então não precisamos disso.
+		frappe.db.set_value("Configuracoes de Recepcao", None, "habilitar_documentos_drive", 1)
+		frappe.db.set_value(
+			"Configuracoes de Recepcao", None, "drive_compartilhado_acesso_restrito", "drive-teste"
+		)
+		frappe.db.set_value(
+			"Configuracoes de Recepcao", None, "pasta_documentos_identificacao_id", "pasta-teste"
+		)
+
 		frappe.set_user(EMAIL_MAE)
 
 	def tearDown(self):

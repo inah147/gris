@@ -282,3 +282,47 @@ class TestCarimbosDeMensagemAoDesmarcar(FrappeTestCase):
 		doc.save(ignore_permissions=True)
 
 		self.assertEqual(str(doc.data_lembrete_ficha_medica), "2026-05-01")
+
+
+class TestBoletoDoRegistroDefinitivo(FrappeTestCase):
+	"""Efetivar o registro definitivo implica o boleto que veio antes dele.
+
+	Sem isso, quem marca a efetivação direto (timeline, Desk, MCP, criação do Associado)
+	deixaria o jovem na lista de boletos esperando pagamento depois de já estar registrado.
+	"""
+
+	def tearDown(self):
+		frappe.db.rollback()
+
+	def _criar(self, cpf, **kwargs):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Novo Associado",
+				"nome_completo": "Jovem de Teste",
+				"cpf": cpf,
+				"data_de_nascimento": "2015-04-14",
+				"status": "Acompanhamento",
+				"tipo_de_registro": "Definitivo",
+				**kwargs,
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		return doc
+
+	def test_efetivar_o_definitivo_marca_o_boleto(self):
+		doc = self._criar("111.222.333-44", registro_definitivo_efetivado=1)
+
+		self.assertEqual(doc.boleto_definitivo_gerado, 1)
+
+	def test_boleto_sozinho_nao_efetiva_o_registro(self):
+		doc = self._criar("222.333.444-55", boleto_definitivo_gerado=1)
+
+		self.assertEqual(doc.registro_definitivo_efetivado, 0)
+
+	def test_desmarcar_a_efetivacao_nao_desmarca_o_boleto(self):
+		doc = self._criar("333.444.555-66", registro_definitivo_efetivado=1)
+
+		doc.registro_definitivo_efetivado = 0
+		doc.save(ignore_permissions=True)
+
+		self.assertEqual(doc.boleto_definitivo_gerado, 1)

@@ -9,7 +9,8 @@
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
 {% block title %}Registro de Novo Associado{% endblock %}
-{% set active_link = '/responsavel/beneficiarios' %}
+{# A sidebar acompanha quem abriu a tela: a recepção vem do módulo de novos associados. #}
+{% set active_link = '/recepcao' if pela_recepcao else '/responsavel/beneficiarios' %}
 {% set read_only = novo_associado.registro_criado_no_paxtu %}
 
 {% macro required_label(label, required=false) %}
@@ -192,14 +193,16 @@
 			<p>
 				{% if read_only %}
 					Visualização dos dados do registro.
+				{% elif pela_recepcao %}
+					Preenchimento pela recepção, em nome do responsável.
 				{% else %}
 					Preencha os dados para o registro do novo associado.
 				{% endif %}
 			</p>
 		</div>
-		<a href="/responsavel/beneficiarios" class="btn-sm-outline registro-page-header__back">
+		<a href="{{ voltar_url or '/responsavel/beneficiarios' }}" class="btn-sm-outline registro-page-header__back">
 			{{ lucide_icon("arrow-left", size="sm") }}
-			<span>Voltar</span>
+			<span>{{ voltar_label or "Voltar" }}</span>
 		</a>
 	</section>
 {% endblock %}
@@ -207,6 +210,22 @@
 {% block main %}
 <div class="registro-page">
 	{{ toaster() }}
+
+	{# A recepção preenche em nome da família quando ela não consegue usar o portal. O aviso
+	   deixa claro de quem são os dados em edição e o que o save provoca. #}
+	{% if pela_recepcao %}
+		{{ alert(
+			title="Você está preenchendo em nome do responsável",
+			description=(
+				"Os dados serão salvos no cadastro de " ~ responsavel_representado ~ " e do jovem, como se tivessem vindo do portal do responsável. Fica um comentário na ficha registrando quem preencheu."
+				if responsavel_representado else
+				"Este jovem ainda não tem responsável cadastrado: o que for preenchido aqui cria o cadastro do responsável e o vínculo com ele. Fica um comentário na ficha registrando quem preencheu."
+			),
+			icon=lucide_icon("user-pen", size="sm"),
+			variant="warning",
+			attrs={"class": "registro-recepcao-alert"}
+		) }}
+	{% endif %}
 
 	{% if read_only %}
 		{{ alert(

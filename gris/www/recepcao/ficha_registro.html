@@ -32,6 +32,17 @@
         {{ lucide_icon("send", size="sm") }}
         <span>Mensagens</span>
       </button>
+      {# Mesma tela que o responsável usa no portal. A recepção abre por aqui para preencher
+         em nome da família que não consegue usar o portal — e para conferir o formulário. #}
+      {% if doc and pode_editar_registro %}
+      <a
+        href="/responsavel/registro?novo_associado={{ doc.name | urlencode }}"
+        class="btn-sm-outline"
+      >
+        {{ lucide_icon("user-pen", size="sm") }}
+        <span>{% if doc.registro_criado_no_paxtu %}Formulário do responsável{% else %}Preencher registro{% endif %}</span>
+      </a>
+      {% endif %}
       <a href="/recepcao/visao_geral" class="btn-sm-ghost">
         {{ lucide_icon("arrow-left", size="sm") }} Voltar
       </a>

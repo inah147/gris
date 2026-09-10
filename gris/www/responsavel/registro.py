@@ -1,10 +1,11 @@
 import json
 import re
+from urllib.parse import quote
 
 import frappe
 from frappe import _
 from frappe.rate_limiter import rate_limit
-from frappe.utils import cint, now_datetime, validate_email_address
+from frappe.utils import cint, get_fullname, now_datetime, validate_email_address
 
 from gris.api.portal_access import enrich_context
 from gris.api.recepcao_mensagens import notificar_dados_preenchidos_no_grupo_recepcao
@@ -20,6 +21,12 @@ from gris.utils.localidades import (
 	municipio_valido,
 	municipios_por_uf,
 )
+
+# O Frappe cacheia o HTML das páginas de ``www`` por rota, sem olhar o usuário (ver
+# ``frappe.website.utils.cache_html``). Esta página mostra os dados de uma família: sem
+# ``no_cache`` o formulário renderizado para um responsável pode ser servido ao próximo que
+# abrir a rota — inclusive à recepção, que vê uma versão diferente da mesma tela.
+no_cache = 1
 
 # Campos do responsável editáveis pelo formulário, no nome usado pelo frontend.
 CAMPOS_RESPONSAVEL = [
@@ -52,6 +59,10 @@ CAMPOS_RESPONSAVEL = [
 MAPA_CAMPOS_RESPONSAVEL = {"endereco": "endereço", "numero": "número", "profissao": "profissão"}
 
 RAMO_FILHOTES = "Filhotes"
+
+# Papéis que preenchem este formulário em nome da família (ver ``_contexto_de_preenchimento``).
+# É o mesmo conjunto que abre a ficha do jovem em ``/recepcao``.
+PAPEIS_DA_RECEPCAO = ("Recepcao", "System Manager")
 
 # Extensões e tipos aceitos nos documentos enviados ao Drive. O responsável costuma
 # fotografar o RG pelo celular, então imagem entra junto com PDF.
@@ -264,25 +275,95 @@ def buscar_cep(cep: str) -> dict:
 	return {"status": "success", "endereco": endereco}
 
 
-def _responsavel_da_sessao():
-	"""Responsável do usuário logado, pela mesma cadeia usada no resto da área ``/responsavel``."""
-	responsavel = get_responsavel_do_usuario()
-	if not responsavel:
-		frappe.throw(_("Perfil de Responsável não encontrado para este usuário."))
-	return responsavel
+def _tem_vinculo(responsavel, novo_associado_name) -> bool:
+	"""Vínculo entre o responsável e o jovem — é o que autoriza mexer nos dados dele."""
+	return bool(
+		frappe.db.exists(
+			"Responsavel Vinculo",
+			{"responsavel": responsavel, "beneficiario_novo_associado": novo_associado_name},
+		)
+	)
 
 
-def _assert_pode_editar(responsavel, novo_associado_name):
-	"""Só quem tem vínculo com o jovem mexe nos dados dele."""
+def _pode_preencher_pela_recepcao(user: str | None = None) -> bool:
+	"""Quem da equipe pode preencher este formulário em nome da família."""
+	roles = frappe.get_roles(user or frappe.session.user)
+	return any(papel in roles for papel in PAPEIS_DA_RECEPCAO)
+
+
+def _responsavel_de_referencia(novo_associado_name: str) -> str:
+	"""Responsável em nome de quem a recepção preenche: o primeiro vinculado ao jovem.
+
+	Volta vazio quando o jovem ainda não tem responsável nenhum — aí o formulário abre com
+	os dois cards em branco e a recepção cadastra o primeiro ali mesmo.
+	"""
+	vinculos = frappe.get_all(
+		"Responsavel Vinculo",
+		filters={"beneficiario_novo_associado": novo_associado_name},
+		fields=["responsavel"],
+		order_by="primeiro_responsavel desc, creation asc",
+	)
+	for vinculo in vinculos:
+		if vinculo.responsavel:
+			return vinculo.responsavel
+
+	return ""
+
+
+def _contexto_de_preenchimento(novo_associado_name) -> tuple[str, bool]:
+	"""Em nome de quem o formulário está sendo preenchido, e se quem preenche é a recepção.
+
+	Dois caminhos chegam nesta tela. O responsável logado abre o registro do próprio
+	beneficiário, e o vínculo é a permissão. A equipe da recepção abre o registro de
+	qualquer jovem do funil e preenche em nome do responsável já vinculado: é o que
+	atende a família que não consegue usar o portal (sem e-mail, sem acesso, ou durante a
+	própria visita) e o que permite conferir esta tela sem depender de um jovem parado em
+	"Aguardar Dados".
+
+	A recepção não ganha com isso nenhum acesso que já não tivesse: o mesmo papel abre a
+	ficha completa do jovem em ``/recepcao/ficha_registro``.
+	"""
 	if not novo_associado_name:
 		frappe.throw(_("Novo Associado não especificado."))
 
-	tem_permissao = frappe.db.exists(
-		"Responsavel Vinculo",
-		{"responsavel": responsavel, "beneficiario_novo_associado": novo_associado_name},
-	)
-	if not tem_permissao:
-		frappe.throw(_("Você não tem permissão para editar este associado."), frappe.PermissionError)
+	responsavel = get_responsavel_do_usuario()
+	if responsavel and _tem_vinculo(responsavel, novo_associado_name):
+		return responsavel, False
+
+	if _pode_preencher_pela_recepcao():
+		if not frappe.db.exists("Novo Associado", novo_associado_name):
+			frappe.throw(_("Novo Associado não encontrado."))
+		return _responsavel_de_referencia(novo_associado_name), True
+
+	if not responsavel:
+		frappe.throw(_("Perfil de Responsável não encontrado para este usuário."))
+
+	frappe.throw(_("Você não tem permissão para editar este associado."), frappe.PermissionError)
+	return "", False  # pragma: no cover - frappe.throw encerra a requisição
+
+
+def _responsaveis_editaveis(novo_associado_name: str, responsavel: str) -> set[str]:
+	"""Responsáveis cujo cadastro este preenchimento pode atualizar por completo.
+
+	São os da família de quem preenche — e, quando é a recepção, os que já estão vinculados
+	ao jovem. Qualquer outro (trazido pela busca por CPF) só tem campos vazios preenchidos,
+	para que ninguém sobrescreva o cadastro de terceiros.
+	"""
+	editaveis = {
+		vinculo.responsavel
+		for vinculo in frappe.get_all(
+			"Responsavel Vinculo",
+			filters={"beneficiario_novo_associado": novo_associado_name},
+			fields=["responsavel"],
+		)
+		if vinculo.responsavel
+	}
+
+	if responsavel:
+		editaveis.add(responsavel)
+		editaveis.update(resp_name for resp_name, _vinculo in _responsaveis_da_familia(responsavel))
+
+	return editaveis
 
 
 def _aplicar_campos_responsavel(doc, item, somente_vazios=False):
@@ -569,8 +650,7 @@ def get_context(context):
 	# Get Novo Associado ID from request
 	novo_associado_name = frappe.form_dict.get("novo_associado")
 
-	responsavel = _responsavel_da_sessao()
-	_assert_pode_editar(responsavel, novo_associado_name)
+	responsavel, pela_recepcao = _contexto_de_preenchimento(novo_associado_name)
 
 	# Fetch Novo Associado data
 	novo_associado = frappe.get_doc("Novo Associado", novo_associado_name)
@@ -590,14 +670,19 @@ def get_context(context):
 
 	# A ordem dos cards é fixa: quem está preenchendo vem primeiro, sempre com os dados já
 	# salvos no cadastro dele. Ordenar por nome embaralharia os cards de um filho para o outro.
-	responsaveis = [
-		_card_responsavel(
-			frappe.get_doc("Responsavel", responsavel),
-			vinculo_por_responsavel.get(responsavel),
-			origem="sessao",
+	# Quando é a recepção preenchendo, o primeiro card é o responsável representado — e não
+	# existe card nenhum a fixar se o jovem ainda não tem responsável cadastrado.
+	responsaveis = []
+	ja_listados = set()
+	if responsavel:
+		responsaveis.append(
+			_card_responsavel(
+				frappe.get_doc("Responsavel", responsavel),
+				vinculo_por_responsavel.get(responsavel),
+				origem="vinculo" if pela_recepcao else "sessao",
+			)
 		)
-	]
-	ja_listados = {responsavel}
+		ja_listados.add(responsavel)
 
 	for v in vinculos:
 		if not v.responsavel or v.responsavel in ja_listados:
@@ -608,7 +693,7 @@ def get_context(context):
 	# Sem um segundo responsável neste jovem, recupera o que a família já cadastrou em
 	# outro beneficiário (o irmão registrado antes), editável e pronto para ser vinculado.
 	da_familia = []
-	if len(responsaveis) < 2:
+	if responsavel and len(responsaveis) < 2:
 		da_familia = _responsaveis_da_familia(responsavel, excluir=ja_listados)
 		for resp_name, vinculo_irmao in da_familia:
 			responsaveis.append(
@@ -665,10 +750,49 @@ def get_context(context):
 
 	_enriquecer_contexto_filhotes(context, novo_associado, responsaveis)
 
+	# Quem preenche em nome da família precisa ver de quem são os dados na tela, e voltar
+	# para onde veio. A sidebar e o "voltar" seguem o módulo de quem abriu: a recepção não
+	# tem o papel ``Responsavel`` e cairia em "Acesso negado" no contexto de /responsavel.
+	context.pela_recepcao = pela_recepcao
+	context.responsavel_representado = (
+		frappe.db.get_value("Responsavel", responsavel, "nome_completo") or "" if responsavel else ""
+	)
+	if pela_recepcao:
+		context.voltar_url = f"/recepcao/ficha_registro?name={quote(novo_associado_name)}"
+		context.voltar_label = "Voltar para a ficha"
+		context.active_link = "/recepcao"
+		enrich_context(context, "/recepcao")
+		return
+
+	context.voltar_url = "/responsavel/beneficiarios"
+	context.voltar_label = "Voltar"
+
 	# Sidebar context
 	context.sidebar_title = "Painel do Responsável"
 	context.active_link = "/responsavel/beneficiarios"
 	enrich_context(context, "/responsavel/beneficiarios")
+
+
+def _registrar_preenchimento_pela_recepcao(doc, responsavel: str) -> None:
+	"""Deixa na ficha do jovem quem preencheu os dados e em nome de quem.
+
+	O aviso com menção geral no grupo da recepção existe para contar à equipe que os dados
+	chegaram do portal. Quando é a própria equipe que preenche, quem precisava saber já sabe
+	e o "@todos" viraria ruído — o status indo para "Fazer Registro" já aparece no funil.
+	O comentário entra no lugar do aviso, e é o que permite auditar depois de onde partiu o
+	preenchimento.
+	"""
+	nome_responsavel = frappe.db.get_value("Responsavel", responsavel, "nome_completo") if responsavel else ""
+	quem_preencheu = get_fullname(frappe.session.user) or frappe.session.user
+
+	if nome_responsavel:
+		texto = _("Dados de registro preenchidos pela recepção ({0}), em nome de {1}.").format(
+			quem_preencheu, nome_responsavel
+		)
+	else:
+		texto = _("Dados de registro preenchidos pela recepção ({0}).").format(quem_preencheu)
+
+	doc.add_comment("Comment", texto)
 
 
 def _notificar_dados_preenchidos(novo_associado_name: str) -> None:
@@ -779,8 +903,7 @@ def update_novo_associado(
 	if user == "Guest":
 		frappe.throw(_("Você precisa estar logado."), frappe.PermissionError)
 
-	responsavel = _responsavel_da_sessao()
-	_assert_pode_editar(responsavel, novo_associado_name)
+	responsavel, pela_recepcao = _contexto_de_preenchimento(novo_associado_name)
 
 	# Update Novo Associado
 	doc = frappe.get_doc("Novo Associado", novo_associado_name)
@@ -913,8 +1036,7 @@ def update_novo_associado(
 
 		# Responsáveis que já pertencem à família de quem está editando podem ser atualizados
 		# por completo; os demais (trazidos pela busca por CPF) só têm campos vazios preenchidos.
-		da_familia = {resp_name for resp_name, _vinculo in _responsaveis_da_familia(responsavel)}
-		da_familia.add(responsavel)
+		da_familia = _responsaveis_editaveis(novo_associado_name, responsavel)
 
 		for resp_item in responsaveis_data:
 			resp_id = (resp_item.get("name") or "").strip()
@@ -968,7 +1090,10 @@ def update_novo_associado(
 			if cint(v.get("é_guardiao_legal")) != 1:
 				frappe.db.set_value("Responsavel Vinculo", v.name, "é_guardiao_legal", 1)
 
-	_notificar_dados_preenchidos(str(novo_associado_name))
+	if pela_recepcao:
+		_registrar_preenchimento_pela_recepcao(doc, responsavel)
+	else:
+		_notificar_dados_preenchidos(str(novo_associado_name))
 
 	# A página foi renderizada antes deste save, então quem será registrado só é conhecido
 	# agora: o dialog dos próximos passos monta a lista com o que volta daqui.
@@ -1014,8 +1139,7 @@ def buscar_responsavel_por_cpf(novo_associado_name: str, cpf: str):
 	if user == "Guest":
 		frappe.throw(_("Você precisa estar logado."), frappe.PermissionError)
 
-	responsavel = _responsavel_da_sessao()
-	_assert_pode_editar(responsavel, novo_associado_name)
+	_contexto_de_preenchimento(novo_associado_name)
 
 	if not cpf_valido(cpf):
 		return {"encontrado": False, "motivo": "cpf_invalido"}
@@ -1134,8 +1258,7 @@ def upload_documento_identificacao():
 		frappe.throw(_("Você precisa estar logado."), frappe.PermissionError)
 
 	novo_associado_name = (frappe.form_dict.get("novo_associado") or "").strip()
-	responsavel = _responsavel_da_sessao()
-	_assert_pode_editar(responsavel, novo_associado_name)
+	_contexto_de_preenchimento(novo_associado_name)
 
 	content, extensao = _ler_upload()
 	settings = assert_feature_enabled()
@@ -1184,8 +1307,7 @@ def upload_declaracao_assinada():
 		frappe.throw(_("Você precisa estar logado."), frappe.PermissionError)
 
 	novo_associado_name = (frappe.form_dict.get("novo_associado") or "").strip()
-	responsavel = _responsavel_da_sessao()
-	_assert_pode_editar(responsavel, novo_associado_name)
+	_contexto_de_preenchimento(novo_associado_name)
 
 	alvo = _responsavel_registrado_do_jovem(novo_associado_name, frappe.form_dict.get("responsavel"))
 
@@ -1240,8 +1362,7 @@ def baixar_declaracao_idoneidade(novo_associado_name: str, responsavel_name: str
 	if frappe.session.user == "Guest":
 		frappe.throw(_("Você precisa estar logado."), frappe.PermissionError)
 
-	responsavel = _responsavel_da_sessao()
-	_assert_pode_editar(responsavel, novo_associado_name)
+	_contexto_de_preenchimento(novo_associado_name)
 
 	alvo = _responsavel_registrado_do_jovem(novo_associado_name, responsavel_name)
 	link = recepcao_drive.gerar_declaracao_idoneidade(alvo)
@@ -1268,8 +1389,7 @@ def baixar_documento_identificacao(novo_associado_name: str, responsavel_name: s
 	if frappe.session.user == "Guest":
 		frappe.throw(_("Você precisa estar logado."), frappe.PermissionError)
 
-	responsavel = _responsavel_da_sessao()
-	_assert_pode_editar(responsavel, novo_associado_name)
+	_contexto_de_preenchimento(novo_associado_name)
 
 	alvo = (responsavel_name or "").strip()
 	if not frappe.db.exists(

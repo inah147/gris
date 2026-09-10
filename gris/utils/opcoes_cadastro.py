@@ -273,7 +273,7 @@ def opcoes_do_doctype(valores: list[str]) -> str:
 	primeiro item por conta própria — o Paxtu abre todos esses campos em "Selecione", e um
 	valor escolhido sem querer é justamente o erro que este trabalho quer evitar.
 	"""
-	return "\n".join([""] + list(valores))
+	return "\n".join(["", *valores])
 
 
 def itens_select(valores: list[str], placeholder: str = "Selecione...") -> list[dict]:

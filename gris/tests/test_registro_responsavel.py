@@ -339,3 +339,92 @@ class TestRegistroResponsavel(FrappeTestCase):
 
 		with self.assertRaises(frappe.PermissionError):
 			registro.buscar_responsavel_por_cpf(outro_jovem, CPF_PAI)
+
+	def test_contexto_expoe_o_valor_da_carteirinha_formatado(self):
+		frappe.set_user("Administrator")
+		frappe.db.set_single_value("Configuracoes de Recepcao", "valor_carteirinha", 25.0)
+		frappe.set_user(EMAIL_MAE)
+
+		context = self._get_context(self.filho2)
+
+		self.assertEqual(context.valor_carteirinha, 25.0)
+		self.assertEqual(context.valor_carteirinha_fmt, "R$ 25,00")
+
+	def test_escolha_da_carteirinha_do_jovem_e_gravada(self):
+		self._salvar(
+			self.filho2,
+			[_card(self.mae, nome_completo="Mãe Teste", cpf=CPF_MAE)],
+			data=_dados_associado(quer_carteirinha=1),
+		)
+
+		self.assertEqual(frappe.db.get_value("Novo Associado", self.filho2, "quer_carteirinha"), 1)
+
+	def test_recusar_a_carteirinha_grava_zero_e_nao_cai_no_default(self):
+		# O campo nasce com default 1 no schema: recusar precisa vencer o default.
+		self._salvar(
+			self.filho2,
+			[_card(self.mae, nome_completo="Mãe Teste", cpf=CPF_MAE)],
+			data=_dados_associado(quer_carteirinha=0),
+		)
+
+		self.assertEqual(frappe.db.get_value("Novo Associado", self.filho2, "quer_carteirinha"), 0)
+
+	def test_carteirinha_do_responsavel_vai_para_o_vinculo_certo(self):
+		self._salvar(
+			self.filho2,
+			[
+				_card(
+					self.mae, nome_completo="Mãe Teste", cpf=CPF_MAE, sera_registrado=1, quer_carteirinha=1
+				),
+				_card(
+					self.pai, nome_completo="Pai Teste", cpf=CPF_PAI, sera_registrado=1, quer_carteirinha=0
+				),
+			],
+		)
+
+		self.assertEqual(self._carteirinha_do_vinculo(self.mae), 1)
+		self.assertEqual(self._carteirinha_do_vinculo(self.pai), 0)
+
+	def test_responsavel_sem_registro_nao_fica_com_carteirinha(self):
+		# Regra de negócio no servidor: carteirinha de responsável só existe atrelada ao
+		# registro dele, mesmo que o payload venha marcado.
+		self._salvar(
+			self.filho2,
+			[_card(self.mae, nome_completo="Mãe Teste", cpf=CPF_MAE, sera_registrado=0, quer_carteirinha=1)],
+		)
+
+		self.assertEqual(self._carteirinha_do_vinculo(self.mae), 0)
+
+	def test_card_que_nao_envia_a_chave_preserva_a_carteirinha_gravada(self):
+		# Cards de ramo que não renderizam o campo não podem apagar a escolha do vínculo —
+		# é o mesmo cuidado que `sera_registrado` já tem.
+		# O `email` do card vai para o Responsavel, e é ele que resolve a sessão do portal:
+		# sem manter o da mãe, o segundo save não acharia mais o perfil de quem está logado.
+		self._salvar(
+			self.filho2,
+			[
+				_card(
+					self.mae,
+					nome_completo="Mãe Teste",
+					cpf=CPF_MAE,
+					email=EMAIL_MAE,
+					sera_registrado=1,
+					quer_carteirinha=1,
+				)
+			],
+		)
+
+		card_sem_carteirinha = _card(
+			self.mae, nome_completo="Mãe Teste", cpf=CPF_MAE, email=EMAIL_MAE, sera_registrado=1
+		)
+		card_sem_carteirinha.pop("quer_carteirinha", None)
+		self._salvar(self.filho2, [card_sem_carteirinha])
+
+		self.assertEqual(self._carteirinha_do_vinculo(self.mae), 1)
+
+	def _carteirinha_do_vinculo(self, responsavel: str):
+		return frappe.db.get_value(
+			"Responsavel Vinculo",
+			{"responsavel": responsavel, "beneficiario_novo_associado": self.filho2},
+			"quer_carteirinha",
+		)

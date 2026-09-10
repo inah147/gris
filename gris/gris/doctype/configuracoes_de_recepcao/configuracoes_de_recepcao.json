@@ -20,6 +20,7 @@
   "valor_registro_provisorio",
   "column_break_qwxy",
   "valor_registro_definitivo",
+  "valor_carteirinha",
   "whatsapp_recepcao_section",
   "grupo_recepcao_whatsapp",
   "grupo_chefes_secao_whatsapp",
@@ -149,6 +150,12 @@
    "fieldname": "valor_registro_definitivo",
    "fieldtype": "Currency",
    "label": "Registro Definitivo"
+  },
+  {
+   "description": "Valor adicional, cobrado por pessoa registrada que pedir a carteirinha f\u00edsica no envio dos dados.",
+   "fieldname": "valor_carteirinha",
+   "fieldtype": "Currency",
+   "label": "Carteirinha f\u00edsica"
   },
   {
    "fieldname": "whatsapp_recepcao_section",

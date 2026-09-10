@@ -4,7 +4,7 @@
 {% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
 {% from "public/design_system/components/generated/phone-input.html.jinja" import phone_input %}
 {% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
-{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, badge, button, card, checkbox, field, form, input, table %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, badge, button, card, checkbox, field, form, input, switch, table %}
 {% from "public/design_system/components/composed/file-upload.html.jinja" import file_upload %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
@@ -594,12 +594,45 @@
 				<p>Registro anual válido por 12 meses. Ideal para quem já tem certeza que vai continuar.</p>
 			{% endcall %}
 		</div>
-		<div class="registro-filhotes-total" id="filhotes-total" data-valor-definitivo="{{ valor_registro_definitivo or 0 }}" hidden>
-			<div class="registro-filhotes-total__linha">
-				<span>Total a pagar</span>
-				<strong id="filhotes-total-valor" aria-live="polite">{{ valor_registro_definitivo_fmt }}</strong>
+		{# Um switch por pessoa que será registrada. O do jovem vale em qualquer ramo; os dos
+		   responsáveis só aparecem quando o card correspondente está visível e marcado como
+		   "será registrado" — na prática, apenas no ramo Filhotes. São dois porque
+		   ``get_context`` sempre monta exatamente dois cards de responsável. #}
+		<div class="registro-carteirinha" id="registro-carteirinha">
+			<div class="registro-carteirinha__cabecalho">
+				<h3>Carteirinha física</h3>
+				<p class="registro-field-hint">
+					A carteirinha física é opcional. O valor adicional de {{ valor_carteirinha_fmt }} por
+					pessoa só entra na conta de quem quiser a carteirinha física.
+				</p>
 			</div>
-			<p class="registro-field-hint" id="filhotes-total-detalhe"></p>
+			<div class="registro-carteirinha__opcoes">
+				{{ switch(
+					label="Quero a carteirinha física do jovem",
+					checked=true,
+					attrs={"id": "carteirinha-jovem", "class": "registro-carteirinha__switch", "data-carteirinha": "jovem"}
+				) }}
+				{% for indice in [1, 2] %}
+					{{ switch(
+						label="Quero a carteirinha física deste responsável",
+						checked=true,
+						attrs={"id": "carteirinha-resp-" ~ indice, "class": "registro-carteirinha__switch", "data-carteirinha": "responsavel", "data-responsavel-indice": indice, "hidden": "hidden"}
+					) }}
+				{% endfor %}
+			</div>
+		</div>
+		<div
+			class="registro-total"
+			id="registro-total"
+			data-valor-provisorio="{{ valor_registro_provisorio or 0 }}"
+			data-valor-definitivo="{{ valor_registro_definitivo or 0 }}"
+			data-valor-carteirinha="{{ valor_carteirinha or 0 }}"
+		>
+			<div class="registro-total__linha">
+				<span>Total a pagar</span>
+				<strong id="registro-total-valor" aria-live="polite">—</strong>
+			</div>
+			<p class="registro-field-hint" id="registro-total-detalhe"></p>
 		</div>
 		<div class="registro-confirm-box registro-filhotes-ciencia" id="filhotes-ciencia" hidden>
 			{{ checkbox(

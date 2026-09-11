@@ -66,11 +66,12 @@
    "read_only": 1
   },
   {
-   "description": "Opcional: associado que receberá o item.",
+   "description": "Dado histórico: solicitações antigas podiam indicar o associado que receberia o item. O pedido hoje é por quantidade.",
    "fieldname": "beneficiario",
    "fieldtype": "Link",
    "label": "Beneficiário",
-   "options": "Associado"
+   "options": "Associado",
+   "read_only": 1
   },
   {
    "fieldname": "observacao",

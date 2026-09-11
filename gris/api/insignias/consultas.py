@@ -150,6 +150,8 @@ def carregar_solicitacao(name: str) -> dict | None:
 		}
 	)
 
+	# O pedido não tem mais beneficiário por item: a solicitação é por quantidade.
+	# A coluna continua resolvida aqui para não esconder o dado dos pedidos antigos.
 	beneficiarios = {item.beneficiario for item in doc.itens if item.beneficiario}
 	nomes_beneficiarios: dict[str, str] = {}
 	if beneficiarios:
@@ -174,6 +176,7 @@ def carregar_solicitacao(name: str) -> dict | None:
 		for item in doc.itens
 	]
 	dados["total_pecas"] = sum(int(item.quantidade or 0) for item in doc.itens)
+	dados["tem_beneficiario"] = bool(beneficiarios)
 
 	dados["pode_cancelar"] = permissoes.pode_cancelar(doc)
 	dados["pode_comprar"] = permissoes.pode_comprar() and doc.status == "Solicitada"
@@ -274,16 +277,3 @@ def precos_catalogo() -> dict[str, float]:
 			fields=["name", "valor_unitario"],
 		)
 	}
-
-
-def itens_associados() -> list[dict]:
-	registros = frappe.get_all(
-		"Associado",
-		filters={"status_no_grupo": "Ativo"},
-		fields=["name", "nome_completo"],
-		order_by="nome_completo asc",
-	)
-	return [
-		{"label": registro["nome_completo"] or registro["name"], "value": registro["name"], "type": "item"}
-		for registro in registros
-	]

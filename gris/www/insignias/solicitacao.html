@@ -82,7 +82,8 @@
 						<tr>
 							<th>Insígnia / distintivo</th>
 							<th>Tipo</th>
-							<th>Beneficiário</th>
+							{# Pedidos antigos podem ter beneficiário por item; os novos são por quantidade. #}
+							{% if solicitacao.tem_beneficiario %}<th>Beneficiário</th>{% endif %}
 							<th class="insignias-detalhe__num">Qtd.</th>
 							<th class="insignias-detalhe__num">Unitário</th>
 							<th class="insignias-detalhe__num">Total</th>
@@ -96,7 +97,7 @@
 								{% if item.observacao %}<span class="insignias-detalhe__obs">{{ item.observacao }}</span>{% endif %}
 							</td>
 							<td>{{ item.tipo }}</td>
-							<td>{{ item.beneficiario or "—" }}</td>
+							{% if solicitacao.tem_beneficiario %}<td>{{ item.beneficiario or "—" }}</td>{% endif %}
 							<td class="insignias-detalhe__num">{{ item.quantidade }}</td>
 							<td class="insignias-detalhe__num">{{ item.valor_unitario_fmt }}</td>
 							<td class="insignias-detalhe__num">{{ item.valor_total_fmt }}</td>

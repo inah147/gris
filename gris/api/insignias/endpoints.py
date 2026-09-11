@@ -148,10 +148,8 @@ def _normalizar_itens(itens_brutos: Any) -> list[dict]:
 		if quantidade > MAX_QUANTIDADE:
 			frappe.throw(f"A quantidade de '{insignia}' excede o limite de {MAX_QUANTIDADE}.")
 
-		beneficiario = _texto(bruto.get("beneficiario"), 140)
-		if beneficiario and not frappe.db.exists("Associado", beneficiario):
-			frappe.throw(_("Beneficiário selecionado não existe."))
-
+		# A solicitação é por quantidade: não há beneficiário por item. O controle de
+		# quem recebe cada peça é da seção, e um 'beneficiario' enviado aqui é ignorado.
 		itens.append(
 			{
 				"insignia": insignia,
@@ -160,7 +158,6 @@ def _normalizar_itens(itens_brutos: Any) -> list[dict]:
 				"quantidade": quantidade,
 				# Valor de referência vem sempre do catálogo — nunca do cliente.
 				"valor_unitario": flt(catalogo.valor_unitario),
-				"beneficiario": beneficiario,
 				"observacao": _texto(bruto.get("observacao"), 140),
 			}
 		)

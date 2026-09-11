@@ -11,6 +11,7 @@ from gris.gris.doctype.solicitacao_de_insignias.solicitacao_de_insignias import 
 	STATUS_RECEBIDA,
 	STATUS_SOLICITADA,
 	TRANSICOES_PERMITIDAS,
+	SolicitacaodeInsignias,
 )
 
 
@@ -122,7 +123,6 @@ class TestNormalizacaoDeItens(FrappeTestCase):
 	def setUp(self):
 		super().setUp()
 		original_get_value = endpoints.frappe.db.get_value
-		original_exists = endpoints.frappe.db.exists
 
 		def fake_get_value(doctype, name, fields=None, as_dict=False, **kwargs):
 			if doctype == "Insignia ou Distintivo":
@@ -130,15 +130,8 @@ class TestNormalizacaoDeItens(FrappeTestCase):
 				return frappe._dict(registro) if registro else None
 			return original_get_value(doctype, name, fields, as_dict=as_dict, **kwargs)
 
-		def fake_exists(doctype, name=None, **kwargs):
-			if doctype == "Associado":
-				return name == "ASSOC-001"
-			return original_exists(doctype, name, **kwargs)
-
 		endpoints.frappe.db.get_value = fake_get_value
-		endpoints.frappe.db.exists = fake_exists
 		self.addCleanup(lambda: setattr(endpoints.frappe.db, "get_value", original_get_value))
-		self.addCleanup(lambda: setattr(endpoints.frappe.db, "exists", original_exists))
 
 	def test_valor_unitario_vem_do_catalogo_e_ignora_o_cliente(self):
 		itens = endpoints._normalizar_itens(
@@ -178,19 +171,12 @@ class TestNormalizacaoDeItens(FrappeTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			endpoints._normalizar_itens([])
 
-	def test_recusa_beneficiario_inexistente(self):
-		with self.assertRaises(frappe.ValidationError):
-			endpoints._normalizar_itens(
-				[
-					{
-						"insignia": "Distintivo de Progressão I",
-						"quantidade": 1,
-						"beneficiario": "ASSOC-999",
-					}
-				]
-			)
+	def test_item_nao_tem_beneficiario(self):
+		itens = endpoints._normalizar_itens([{"insignia": "Distintivo de Progressão I", "quantidade": 2}])
+		self.assertNotIn("beneficiario", itens[0])
 
-	def test_aceita_beneficiario_valido(self):
+	def test_ignora_beneficiario_enviado_pelo_cliente(self):
+		# O pedido é por quantidade: quem recebe cada peça é controle da seção.
 		itens = endpoints._normalizar_itens(
 			[
 				{
@@ -200,7 +186,34 @@ class TestNormalizacaoDeItens(FrappeTestCase):
 				}
 			]
 		)
-		self.assertEqual(itens[0]["beneficiario"], "ASSOC-001")
+		self.assertNotIn("beneficiario", itens[0])
+
+
+class TestItensDoPedidoPorQuantidade(FrappeTestCase):
+	"""Sem beneficiário por item, a mesma insígnia precisa vir numa única linha."""
+
+	def _validar(self, itens):
+		doc = frappe._dict(itens=[frappe._dict(item) for item in itens])
+		SolicitacaodeInsignias._validar_itens(doc)
+		return doc
+
+	def test_recusa_a_mesma_insignia_em_duas_linhas(self):
+		with self.assertRaises(frappe.ValidationError):
+			self._validar(
+				[
+					{"insignia": "Distintivo de Progressão I", "quantidade": 1},
+					{"insignia": "Distintivo de Progressão I", "quantidade": 2},
+				]
+			)
+
+	def test_aceita_insignias_diferentes(self):
+		doc = self._validar(
+			[
+				{"insignia": "Distintivo de Progressão I", "quantidade": 1},
+				{"insignia": "Distintivo de Progressão II", "quantidade": 2},
+			]
+		)
+		self.assertEqual([item.quantidade for item in doc.itens], [1, 2])
 
 
 class TestTimelineEResumo(FrappeTestCase):

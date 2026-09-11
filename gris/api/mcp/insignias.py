@@ -286,9 +286,9 @@ def obter_solicitacao_insignias(name: str) -> dict:
 	descricao=(
 		"Abre uma solicitação de insígnias/distintivos para um ramo, com uma lista de itens. "
 		"Cada item precisa de 'insignia' (nome do item no catálogo) e 'quantidade'; "
-		"opcionalmente 'beneficiario' (associado) e 'observacao'. O valor unitário vem sempre "
-		"do catálogo, nunca do que for informado aqui. Use simular=true para ver o valor "
-		"estimado antes de gravar."
+		"'observacao' é opcional. O pedido é por quantidade: não há beneficiário por item. "
+		"O valor unitário vem sempre do catálogo, nunca do que for informado aqui. Use "
+		"simular=true para ver o valor estimado antes de gravar."
 	),
 	parametros={
 		"ramo": {
@@ -299,7 +299,7 @@ def obter_solicitacao_insignias(name: str) -> dict:
 		"itens": {
 			"type": "array",
 			"maxItems": endpoints.MAX_ITENS,
-			"description": "Lista de itens (objetos com insignia, quantidade, beneficiario, observacao).",
+			"description": "Lista de itens (objetos com insignia, quantidade e observacao).",
 		},
 		"justificativa": {"type": "string", "description": "Justificativa ou observações gerais."},
 	},

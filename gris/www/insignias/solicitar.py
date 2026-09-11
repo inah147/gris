@@ -46,10 +46,6 @@ def get_context(context):
 		{"label": "Selecione o item", "value": "", "type": "item"},
 		*catalogo,
 	]
-	context.associados_items = [
-		{"label": "Nenhum", "value": "", "type": "item"},
-		*consultas.itens_associados(),
-	]
 	context.ramo_items = [
 		{"label": "Selecione o ramo", "value": "", "type": "item"},
 		*[{"label": ramo, "value": ramo, "type": "item"} for ramo in RAMOS],

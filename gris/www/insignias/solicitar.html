@@ -71,7 +71,7 @@
 		{% call card(attrs={"class": "insignias-card"}) %}
 			<header class="insignias-card__header">
 				<h2 class="insignias-card__title">Itens solicitados</h2>
-				<p class="insignias-card__subtitle">Escolha cada insígnia e a quantidade. O beneficiário é opcional — use quando o item for de um associado específico.</p>
+				<p class="insignias-card__subtitle">Escolha cada insígnia e a quantidade total do pedido.</p>
 			</header>
 
 			<div id="insignias-itens" class="insignias-itens"></div>
@@ -112,16 +112,6 @@
 				{% endcall %}
 				{% call field(label="Quantidade") %}
 					{{ input(name="quantidade", type="number", value="1", attrs={"id": "insignias-qtd-__IDX__", "min": "1", "max": "999", "step": "1", "inputmode": "numeric"}) }}
-				{% endcall %}
-				{% call field(label="Beneficiário (opcional)") %}
-					{{ select(
-						id="insignias-benef-__IDX__",
-						name="beneficiario",
-						items=associados_items,
-						is_combobox=true,
-						search_placeholder="Buscar associado…",
-						trigger_attrs={"class": "w-full"}
-					) }}
 				{% endcall %}
 				{% call field(label="Observação (opcional)") %}
 					{{ input(name="observacao", attrs={"id": "insignias-obs-__IDX__", "maxlength": "140", "placeholder": "Ex.: tamanho ou detalhe do item"}) }}

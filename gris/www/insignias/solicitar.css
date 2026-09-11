@@ -126,7 +126,7 @@
 	flex-wrap: wrap;
 }
 
-/* Desktop: linha de item mais densa, com os quatro campos lado a lado. */
+/* Desktop: linha de item mais densa, com os três campos lado a lado. */
 @media (min-width: 60rem) {
 	.insignias-item {
 		flex-direction: row;
@@ -135,7 +135,7 @@
 
 	.insignias-item__grid {
 		flex: 1;
-		grid-template-columns: minmax(0, 2.5fr) minmax(0, 0.8fr) minmax(0, 2fr) minmax(0, 2fr);
+		grid-template-columns: minmax(0, 2.5fr) minmax(0, 0.8fr) minmax(0, 2.5fr);
 		gap: calc(var(--spacing) * 3);
 	}
 

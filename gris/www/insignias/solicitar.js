@@ -106,7 +106,6 @@
 			itens.push({
 				insignia: insignia,
 				quantidade: quantidade,
-				beneficiario: lerCampo(row, "beneficiario"),
 				observacao: lerCampo(row, "observacao"),
 			});
 		});

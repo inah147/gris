@@ -86,17 +86,19 @@
 				</div>`;
 		}
 
+		function linkDaFicha(linha) {
+			const nome = encodeURIComponent(linha.name);
+			const rotulo = escapeHtml(linha.nome_completo);
+			const url = `/recepcao/ficha_registro?name=${nome}`;
+			return `<a href="${url}" class="novos-nome">${rotulo}</a>`;
+		}
+
 		function renderLinhas(linhas) {
 			tbody.innerHTML = linhas
-				.map((linha) => {
-					const nome = encodeURIComponent(linha.name);
-					return `
+				.map(
+					(linha) => `
 						<tr>
-							<td data-coluna="nome">
-								<a href="/recepcao/ficha_registro?name=${nome}" class="novos-nome">${escapeHtml(
-									linha.nome_completo
-								)}</a>
-							</td>
+							<td data-coluna="nome">${linkDaFicha(linha)}</td>
 							<td>${textoOuTraco(linha.idade)}</td>
 							<td>${badgeRamo(linha)}</td>
 							<td>${textoOuTraco(linha.status)}</td>
@@ -106,8 +108,8 @@
 							<td>${textoOuTraco(linha.responsavel_recepcao)}</td>
 							<td>${textoOuTraco(linha.atualizado_em)}</td>
 							<td>${acoes(linha)}</td>
-						</tr>`;
-				})
+						</tr>`
+				)
 				.join("");
 		}
 

@@ -111,6 +111,14 @@
 		<h3 class="sugestoes-detalhe__titulo" data-detalhe-titulo></h3>
 
 		<div class="task-meta-row">
+			{# Quem abre a solicitação pode errar entre problema e nova funcionalidade,
+			   e nenhuma coluna do quadro representa tipo — então a correção mora aqui.
+			   Para quem só acompanha, o badge do subtítulo já mostra o tipo. #}
+			{% if pode_triar %}
+			{% call field(label="Tipo") %}
+				{{ select(id="detalhe-tipo", name="detalhe_tipo", items=tipo_items, trigger_attrs={"class": "w-full"}) }}
+			{% endcall %}
+			{% endif %}
 			{% call field(label="Responsável pelo desenvolvimento") %}
 				{% if pode_triar %}
 					{{ select(id="detalhe-responsavel", name="detalhe_responsavel", items=responsavel_items, trigger_attrs={"class": "w-full"}) }}

@@ -17,12 +17,14 @@
 		responsavel: "gris.api.sugestoes.portal.alocar_responsavel",
 		comentar: "gris.api.sugestoes.portal.adicionar_comentario",
 		descricao: "gris.api.sugestoes.portal.atualizar_descricao",
+		reclassificar: "gris.api.sugestoes.portal.reclassificar",
 		reordenar: "gris.api.sugestoes.portal.reordenar",
 	};
 
 	const podeTriar = raiz.dataset.podeTriar === "1";
 	const container = document.getElementById("sugestoesKanban");
 	const dialogo = document.getElementById("dialog-detalhe-sugestao");
+	const selectTipo = document.getElementById("detalhe-tipo");
 	const selectResponsavel = document.getElementById("detalhe-responsavel");
 	const filtroTipo = document.getElementById("filtro-tipo");
 	const filtroModulo = document.getElementById("filtro-modulo");
@@ -482,6 +484,7 @@
 	// injetá-las aqui faria o clique e o setter de `.value` não terem efeito.
 	// Aqui só posicionamos a seleção do item aberto.
 	let preenchendoResponsavel = false;
+	let preenchendoTipo = false;
 
 	function preencherResponsaveis(selecionado) {
 		if (!selectResponsavel) return;
@@ -495,6 +498,27 @@
 				preenchendoResponsavel = false;
 			}, 0);
 		}
+	}
+
+	function preencherTipo(selecionado) {
+		if (!selectTipo) return;
+		// Mesma trava do responsável: sem ela, abrir o card já reclassificaria.
+		preenchendoTipo = true;
+		try {
+			selectTipo.value = selecionado || "";
+		} finally {
+			window.setTimeout(() => {
+				preenchendoTipo = false;
+			}, 0);
+		}
+	}
+
+	/** O card do quadro, para comparar com o que o select acabou de escolher. */
+	function itemDoQuadro(nome) {
+		return (
+			colunas.flatMap((coluna) => coluna.itens || []).find((item) => item.name === nome) ||
+			{}
+		);
 	}
 
 	/* ────────────────── editor da descrição ────────────────── */
@@ -605,7 +629,10 @@
 				pintarComentarios(dados.comentarios);
 				dialogo.showModal();
 
-				if (podeTriar) preencherResponsaveis(item.responsavel || "");
+				if (podeTriar) {
+					preencherTipo(item.tipo || "");
+					preencherResponsaveis(item.responsavel || "");
+				}
 			})
 			.catch((err) => showToast("error", err.message));
 	}
@@ -616,6 +643,35 @@
 		abrirDetalhe(card.dataset.item || "");
 	});
 
+	if (selectTipo) {
+		selectTipo.addEventListener("change", (event) => {
+			if (preenchendoTipo || !itemAberto) return;
+
+			const escolhido = (event.detail && event.detail.value) || "";
+			const atual = itemDoQuadro(itemAberto).tipo || "";
+			if (!escolhido || escolhido === atual) return;
+
+			chamar(METODOS.reclassificar, { name: itemAberto, tipo: escolhido })
+				.then(() => {
+					showToast("success", `Reclassificada como ${escolhido}.`);
+					// O badge do subtítulo mostra o tipo com a cor dele: sem isto o
+					// dialog continuaria dizendo o tipo antigo até ser reaberto.
+					const badge = dialogo.querySelector("[data-detalhe-tipo]");
+					if (badge) {
+						badge.textContent = escolhido;
+						badge.setAttribute("data-tipo", escolhido);
+					}
+					return carregarBoard();
+				})
+				.catch((err) => {
+					showToast("error", err.message);
+					// Recusa legítima (um pedido em "Novo módulo" não pode virar
+					// problema): o select volta para o tipo que o registro tem.
+					preencherTipo(atual);
+				});
+		});
+	}
+
 	if (selectResponsavel) {
 		// O componente emite "change" com detail.value ao escolher uma opção —
 		// sinal confiável, ao contrário de ler o hidden input após o clique.
@@ -623,12 +679,7 @@
 			if (preenchendoResponsavel || !itemAberto) return;
 
 			const escolhido = (event.detail && event.detail.value) || "";
-			const atual =
-				(
-					colunas
-						.flatMap((coluna) => coluna.itens || [])
-						.find((item) => item.name === itemAberto) || {}
-				).responsavel || "";
+			const atual = itemDoQuadro(itemAberto).responsavel || "";
 			if (escolhido === atual) return;
 
 			chamar(METODOS.responsavel, { name: itemAberto, user: escolhido })

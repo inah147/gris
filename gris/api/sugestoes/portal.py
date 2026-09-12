@@ -443,9 +443,11 @@ def reordenar(status: str, nomes: Any) -> dict[str, Any]:
 def reclassificar(name: str, tipo: str) -> dict[str, Any]:
 	"""Troca o tipo da solicitação, sem mexer no andamento.
 
-	O quadro só tem colunas de andamento, então o tipo não tem coluna para onde
-	mover: um problema mal classificado como funcionalidade continua exatamente
-	onde está na fila. Usado pelo MCP (`atualizar_sugestao`).
+	Quem abre a solicitação pode errar entre problema e nova funcionalidade, e
+	nenhuma coluna do quadro representa tipo — então corrigir o tipo não mexe no
+	andamento: um item já em desenvolvimento continua exatamente onde está.
+	Chamado pelo select de tipo no dialog do quadro e pelo MCP
+	(`atualizar_sugestao`).
 	"""
 	_require_desenvolvedor()
 

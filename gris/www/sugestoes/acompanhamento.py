@@ -43,10 +43,12 @@ def get_context(context):
 		*[{"label": modulo, "value": modulo, "type": "item"} for modulo in MODULOS],
 	]
 
-	# As opções do select de responsável precisam existir no HTML inicial: o
+	# As opções dos selects do dialog precisam existir no HTML inicial: o
 	# select.js do Basecoat captura a lista de `[role="option"]` uma única vez,
 	# na inicialização, e ignora nós injetados depois — tanto no clique quanto
 	# no setter de `.value`.
+	context.tipo_items = [{"label": tipo, "value": tipo, "type": "item"} for tipo in TIPOS]
+
 	context.responsavel_items = [
 		{"label": "Sem responsável", "value": "", "type": "item"},
 		*[{"label": dev["nome"], "value": dev["email"], "type": "item"} for dev in desenvolvedores()],

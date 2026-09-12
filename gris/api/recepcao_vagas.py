@@ -56,9 +56,35 @@ STATUS_COM_SELO_SEM_VAGAS: tuple[str, ...] = (
 # Horizonte das saídas por idade que já contam como vaga disponível.
 MESES_DE_SAIDA_PREVISTA = 6
 
+# Meses do gráfico "Previsão de vagas" do dialog "Cálculo de Vagas".
+MESES_DE_PREVISAO = 12
+MESES_CURTOS = ("Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez")
+
+# O que o dialog "Cálculo de Vagas" mostra de cada ramo. As datas de saída ficam de fora:
+# só servem à previsão de posição da fila e não viajam para o navegador.
+CAMPOS_DO_DIALOG = ("limite", "ativos", "novos", "saindo", "disponiveis", "chart_labels", "chart_values")
+
 
 def ocupa_vaga(status: str | None) -> bool:
 	return bool(status) and status not in STATUS_QUE_NAO_OCUPAM_VAGA
+
+
+def previsao_mensal(vagas_agora: int, saidas_futuras: list, hoje) -> tuple[list[str], list[int]]:
+	"""Rótulos e valores do gráfico de previsão, mês a mês, a partir do mês corrente.
+
+	Mesma fórmula do total disponível: ``limite - ativos - novos`` (``vagas_agora``) mais
+	as saídas por idade de hoje até o fim de cada mês. Quem já passou da idade e continua
+	ativo segue ocupando a vaga.
+	"""
+	hoje = getdate(hoje)
+	inicio_do_mes = hoje.replace(day=1)
+	rotulos, valores = [], []
+	for i in range(MESES_DE_PREVISAO):
+		mes = getdate(add_months(inicio_do_mes, i))
+		proximo_mes = getdate(add_months(mes, 1))
+		rotulos.append(f"{MESES_CURTOS[mes.month - 1]}/{str(mes.year)[2:]}")
+		valores.append(vagas_agora + sum(1 for saida in saidas_futuras if hoje <= saida < proximo_mes))
+	return rotulos, valores
 
 
 def calcular_vagas_por_ramo(novos_associados: list | None = None, hoje=None) -> dict[str, frappe._dict]:
@@ -70,8 +96,9 @@ def calcular_vagas_por_ramo(novos_associados: list | None = None, hoje=None) -> 
 
 	Devolve, por ramo: ``limite``, ``ativos``, ``novos``, ``saindo`` (associados que
 	atingem a idade máxima nos próximos 6 meses), ``disponiveis``
-	(``limite - ativos - novos + saindo``) e ``saidas_futuras`` (datas de saída por
-	idade, em ordem), que a Fila de Espera usa na previsão.
+	(``limite - ativos - novos + saindo``), ``chart_labels``/``chart_values`` (gráfico de
+	``previsao_mensal``) e ``saidas_futuras`` (datas de saída por idade, em ordem), que a
+	Fila de Espera usa na previsão de posição.
 	"""
 	hoje = getdate(hoje or today())
 	fim_do_horizonte = getdate(add_months(hoje, MESES_DE_SAIDA_PREVISTA))
@@ -127,17 +154,33 @@ def calcular_vagas_por_ramo(novos_associados: list | None = None, hoje=None) -> 
 			)
 
 		saindo = sum(1 for saida in saidas_futuras if hoje <= saida <= fim_do_horizonte)
+		vagas_agora = limite - len(ativos) - novos
+		chart_labels, chart_values = previsao_mensal(vagas_agora, saidas_futuras, hoje)
 
 		resultado[ramo] = frappe._dict(
 			limite=limite,
 			ativos=len(ativos),
 			novos=novos,
 			saindo=saindo,
-			disponiveis=limite - len(ativos) - novos + saindo,
+			disponiveis=vagas_agora + saindo,
+			chart_labels=chart_labels,
+			chart_values=chart_values,
 			saidas_futuras=saidas_futuras,
 		)
 
 	return resultado
+
+
+def dados_do_dialog(vagas_por_ramo: dict) -> dict[str, dict]:
+	"""O que o dialog "Cálculo de Vagas" mostra de cada ramo.
+
+	A Fila de Espera e os modais dos cards da visão geral abrem o mesmo dialog
+	(``templates/includes/vagas_do_ramo_dialog.html``), que recebe isto como JSON.
+	"""
+	return {
+		ramo: {campo: dados.get(campo) for campo in CAMPOS_DO_DIALOG}
+		for ramo, dados in vagas_por_ramo.items()
+	}
 
 
 def ramo_sem_vagas(vagas_por_ramo: dict, ramo: str | None, status: str | None) -> bool:

@@ -563,6 +563,13 @@ dialog.dialog > div > section {
 	font-weight: 500;
 }
 
+/* Ramo + ícone que abre o dialog "Cálculo de Vagas" (o mesmo da Fila de Espera). */
+.dialog-field__ramo {
+	display: inline-flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 1);
+}
+
 .dialog-actions {
 	display: flex;
 	flex-wrap: wrap;

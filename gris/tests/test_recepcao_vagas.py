@@ -1,10 +1,11 @@
-"""Ocupação de vagas por ramo, o selo "Seção sem vagas" da visão geral e o gráfico da fila.
+"""Ocupação de vagas por ramo, o selo "Seção sem vagas" e o dialog "Cálculo de Vagas".
 
 Ocupam vaga os associados ativos e os novos associados da visita agendada em diante,
 cada pessoa uma vez só: o Novo Associado de quem já é Associado ativo não conta de
 novo. A Fila de Espera e a visão geral leem a mesma conta.
 """
 
+import json
 from datetime import date
 from itertools import count
 from unittest import TestCase
@@ -259,45 +260,83 @@ class TestSeloSemVagasNaVisaoGeral(TestCase):
 		self.assertIs(capturados["recebidas"], capturados["linhas"])
 
 
-class TestGraficoDaFilaDeEspera(TestCase):
+class TestPrevisaoDeVagas(TestCase):
 	"""O gráfico usa a fórmula do total: limite - ativos - novos + saídas de hoje em diante."""
 
-	def _grafico(self, saidas_futuras):
-		ocupacao = {
-			ramo: frappe._dict(limite=0, ativos=0, novos=0, saindo=0, disponiveis=0, saidas_futuras=[])
-			for ramo in recepcao_vagas.RAMOS
-		}
-		ocupacao["Lobinho"] = frappe._dict(
-			limite=10, ativos=4, novos=2, saindo=0, disponiveis=4, saidas_futuras=saidas_futuras
-		)
-
-		context = frappe._dict()
-		with (
-			patch.object(fila_espera, "enrich_context"),
-			patch.object(fila_espera, "calcular_vagas_por_ramo", return_value=ocupacao),
-			patch.object(fila_espera.frappe, "get_all", return_value=[]),
-			patch.object(fila_espera, "today", return_value=HOJE.isoformat()),
-		):
-			fila_espera.get_context(context)
-		return context.vagas_por_ramo["Lobinho"]
-
 	def test_saidas_que_ja_passaram_nao_somam_vaga(self):
-		grafico = self._grafico(
+		rotulos, valores = recepcao_vagas.previsao_mensal(
+			4,
 			[
 				date(2026, 1, 1),  # já passou da idade e continua ativo
 				date(2026, 9, 5),  # passou da idade neste mês, antes de hoje
 				date(2026, 9, 20),
 				date(2026, 11, 12),
 				date(2029, 1, 1),
-			]
+			],
+			HOJE,
 		)
 
-		self.assertEqual(grafico["chart_labels"][:3], ["Set/26", "Out/26", "Nov/26"])
-		# Base 10 - 4 - 2 = 4; soma 20/09 a partir de setembro e 12/11 a partir de novembro.
-		self.assertEqual(grafico["chart_values"], [5, 5] + [6] * 10)
+		self.assertEqual(len(rotulos), 12)
+		self.assertEqual(rotulos[:3], ["Set/26", "Out/26", "Nov/26"])
+		# Soma 20/09 a partir de setembro e 12/11 a partir de novembro.
+		self.assertEqual(valores, [5, 5] + [6] * 10)
 
 	def test_sem_saidas_futuras_o_grafico_repete_o_total(self):
-		grafico = self._grafico([date(2025, 3, 1), date(2026, 2, 1)])
+		_, valores = recepcao_vagas.previsao_mensal(4, [date(2025, 3, 1), date(2026, 2, 1)], HOJE)
 
-		self.assertEqual(grafico["chart_values"], [4] * 12)
-		self.assertEqual(grafico["disponiveis"], 4)
+		self.assertEqual(valores, [4] * 12)
+
+	def test_a_conta_entrega_o_grafico_de_cada_ramo(self):
+		vagas = {"limite_de_vagas_lobinho": 10, "idade_maxima_lobinho": 10}
+		associados = [{"name": "A1", "ramo": "Lobinho", "data_de_nascimento": date(2016, 11, 12)}]
+
+		resultado, _ = _calcular(associados=associados, vagas=vagas, novos_associados=[])
+
+		# 10 - 1 - 0 = 9 agora; A1 atinge a idade máxima em 12/11/2026.
+		self.assertEqual(resultado["Lobinho"].chart_labels[0], "Set/26")
+		self.assertEqual(resultado["Lobinho"].chart_values, [9, 9] + [10] * 10)
+
+
+def _ocupacao_de_exemplo():
+	vagas = {"limite_de_vagas_lobinho": 10, "idade_maxima_lobinho": 10, "limite_de_vagas_filhotes": 12}
+	associados = [{"name": "A1", "ramo": "Lobinho", "data_de_nascimento": date(2016, 11, 12)}]
+	resultado, _ = _calcular(associados=associados, vagas=vagas, novos_associados=[_novo("Visita Agendada")])
+	return resultado
+
+
+class TestDadosDoDialog(TestCase):
+	"""A Fila de Espera e os modais da visão geral abrem o mesmo dialog, com os mesmos números."""
+
+	def test_leva_o_que_o_dialog_mostra_sem_as_datas_de_saida(self):
+		dados = recepcao_vagas.dados_do_dialog(_ocupacao_de_exemplo())
+
+		self.assertEqual(set(dados["Lobinho"]), set(recepcao_vagas.CAMPOS_DO_DIALOG))
+		self.assertEqual(
+			(dados["Lobinho"]["limite"], dados["Lobinho"]["ativos"], dados["Lobinho"]["novos"]), (10, 1, 1)
+		)
+		# Vai para o template como JSON: nenhuma data pode sobrar.
+		self.assertEqual(json.loads(json.dumps(dados)), dados)
+
+	def test_fila_de_espera_e_visao_geral_entregam_os_mesmos_dados(self):
+		ocupacao = _ocupacao_de_exemplo()
+
+		fila = frappe._dict()
+		with (
+			patch.object(fila_espera, "enrich_context"),
+			patch.object(fila_espera, "calcular_vagas_por_ramo", return_value=ocupacao),
+			patch.object(fila_espera.frappe, "get_all", return_value=[]),
+		):
+			fila_espera.get_context(fila)
+
+		visao = frappe._dict()
+		with (
+			patch.object(visao_geral, "enrich_context"),
+			patch.object(visao_geral, "carregar_configuracao", return_value={}),
+			patch.object(visao_geral.frappe, "get_all", return_value=[]),
+			patch.object(visao_geral, "calcular_vagas_por_ramo", return_value=ocupacao),
+		):
+			visao_geral.get_context(visao)
+
+		esperado = recepcao_vagas.dados_do_dialog(ocupacao)
+		self.assertEqual(fila.vagas_por_ramo, esperado)
+		self.assertEqual(visao.vagas_por_ramo, esperado)

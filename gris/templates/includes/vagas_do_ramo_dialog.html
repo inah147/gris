@@ -1,0 +1,58 @@
+{#
+  Dialog "Cálculo de Vagas", compartilhado pela Fila de Espera (botão no cabeçalho de cada
+  coluna) e pelos modais dos cards da visão geral da recepção (ícone ao lado do ramo).
+
+  Mora aqui, e não colado em cada página, porque as duas telas abrem exatamente o mesmo
+  dialog: duplicar a marcação, o gráfico e o CSS deixaria duas cópias para manter em
+  sincronia. A página precisa ter `vagas_por_ramo` no contexto
+  (`gris.api.recepcao_vagas.dados_do_dialog`), incluir este arquivo uma vez e chamar
+  `window.grisVagasDoRamo.abrir(ramo)`.
+#}
+{% set vagas_asset_version = "20260912-vagas-do-ramo" %}
+<link
+  rel="stylesheet"
+  href="/assets/gris/css/vagas_do_ramo.css?v={{ vagas_asset_version }}"
+/>
+<script src="/assets/gris/js/vagas_do_ramo.js?v={{ vagas_asset_version }}"></script>
+<script type="application/json" id="vagas-do-ramo-dados">{{ vagas_por_ramo | tojson }}</script>
+
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog as _dialog_vagas %}
+{% call _dialog_vagas(
+  id="modalVagas",
+  title="Cálculo de Vagas",
+  footer='<button type="button" class="btn-ghost" data-dialog-close>Fechar</button>',
+  close_button=true,
+  dialog_attrs={"class": "vagas-dialog"}
+) %}
+  <p class="text-muted-foreground text-sm mb-4">
+    Ramo: <span class="font-medium text-foreground" id="modalVagasRamo"></span>
+  </p>
+
+  <dl class="vagas-breakdown">
+    <div class="vagas-breakdown__row">
+      <dt>Limite de vagas no ramo</dt>
+      <dd id="vagasLimite">—</dd>
+    </div>
+    <div class="vagas-breakdown__row">
+      <dt>(−) Associados ativos</dt>
+      <dd id="vagasAtivos">—</dd>
+    </div>
+    <div class="vagas-breakdown__row">
+      <dt>(−) Novos associados (da visita agendada em diante)</dt>
+      <dd id="vagasNovos">—</dd>
+    </div>
+    <div class="vagas-breakdown__row">
+      <dt>(+) Atingindo idade limite (6 meses)</dt>
+      <dd id="vagasSaindo">—</dd>
+    </div>
+    <div class="vagas-breakdown__row vagas-breakdown__row--total">
+      <dt>Total disponível</dt>
+      <dd id="vagasDisponiveis">—</dd>
+    </div>
+  </dl>
+
+  <section class="vagas-chart">
+    <h3 class="vagas-chart__title">Previsão de vagas (próximos 12 meses)</h3>
+    <div class="vagas-chart__canvas" id="vagasChart" role="img" aria-label="Previsão de vagas nos próximos 12 meses"></div>
+  </section>
+{% endcall %}

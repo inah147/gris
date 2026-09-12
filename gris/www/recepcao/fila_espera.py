@@ -1,10 +1,10 @@
 import frappe
 from frappe import _
-from frappe.utils import add_months, getdate, today
+from frappe.utils import getdate, today
 
 from gris.api.portal_access import enrich_context
 from gris.api.recepcao import formatar_idade, processar_desistencia
-from gris.api.recepcao_vagas import calcular_vagas_por_ramo
+from gris.api.recepcao_vagas import calcular_vagas_por_ramo, dados_do_dialog
 
 no_cache = 1
 
@@ -24,7 +24,6 @@ def get_context(context):
 
 	# Ocupação de cada ramo: a mesma conta que marca os cards da visão geral.
 	ocupacao_por_ramo = calcular_vagas_por_ramo()
-	vagas_por_ramo = {}
 
 	# Variantes do badge Basecoat (corresponde a .badge-ramo-* no CSS local).
 	# Mantém paridade com visao_geral.py.
@@ -74,43 +73,6 @@ def get_context(context):
 		ativos = ocupacao.ativos
 		novos = ocupacao.novos
 		saidas_futuras = ocupacao.saidas_futuras
-
-		# Chart Data: Next 12 months
-		chart_labels = []
-		chart_values = []
-
-		current_date = getdate(today())
-		start_of_month = current_date.replace(day=1)
-		months_short = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-
-		vagas_base = limite - ativos - novos
-
-		for i in range(12):
-			future_month = add_months(start_of_month, i)
-			month_idx = future_month.month - 1
-			label = f"{months_short[month_idx]}/{str(future_month.year)[2:]}"
-			chart_labels.append(label)
-
-			next_month = add_months(future_month, 1)
-
-			# Mesma fórmula do total disponível: só somam as saídas por idade de hoje em
-			# diante. Quem já passou da idade e continua ativo segue ocupando a vaga.
-			cumulative_exits = 0
-			for d in saidas_futuras:
-				d_date = getdate(d)
-				if current_date <= d_date < next_month:
-					cumulative_exits += 1
-			chart_values.append(vagas_base + cumulative_exits)
-
-		vagas_por_ramo[ramo] = {
-			"disponiveis": ocupacao.disponiveis,
-			"limite": limite,
-			"ativos": ativos,
-			"novos": novos,
-			"saindo": ocupacao.saindo,
-			"chart_labels": chart_labels,
-			"chart_values": chart_values,
-		}
 
 		# Prediction Logic
 		vagas_reais_agora = limite - (ativos + novos)
@@ -176,7 +138,8 @@ def get_context(context):
 
 	context.kanban_columns = ramos
 	context.kanban_data = kanban_data
-	context.vagas_por_ramo = vagas_por_ramo
+	# Números do cabeçalho de cada coluna e do dialog "Cálculo de Vagas" (include compartilhado).
+	context.vagas_por_ramo = dados_do_dialog(ocupacao_por_ramo)
 	context.ramo_variant_map = ramo_variant_map
 
 	return context

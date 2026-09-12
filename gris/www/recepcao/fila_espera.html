@@ -30,13 +30,6 @@
 					type="button"
 					class="kanban-column__vagas"
 					data-ramo="{{ ramo }}"
-					data-limite="{{ vagas_por_ramo[ramo].limite }}"
-					data-ativos="{{ vagas_por_ramo[ramo].ativos }}"
-					data-novos="{{ vagas_por_ramo[ramo].novos }}"
-					data-saindo="{{ vagas_por_ramo[ramo].saindo }}"
-					data-disponiveis="{{ vagas_por_ramo[ramo].disponiveis }}"
-					data-chart-labels='{{ vagas_por_ramo[ramo].chart_labels | tojson }}'
-					data-chart-values='{{ vagas_por_ramo[ramo].chart_values | tojson }}'
 					aria-label="Ver detalhes de vagas do ramo {{ ramo }}"
 				>
 					<span>{{ vagas_por_ramo[ramo].disponiveis }} vagas disponíveis</span>
@@ -172,50 +165,8 @@
 	</p>
 {% endcall %}
 
-{# ----------- Modal Detalhes de Vagas ----------- #}
-{% set vagas_footer %}
-	<button type="button" class="btn-ghost" data-dialog-close>Fechar</button>
-{% endset %}
-
-{% call dialog(
-	id="modalVagas",
-	title="Cálculo de Vagas",
-	footer=vagas_footer,
-	close_button=true,
-	dialog_attrs={"class": "fila-dialog fila-dialog--vagas"}
-) %}
-	<p class="text-muted-foreground text-sm mb-4">
-		Ramo: <span class="font-medium text-foreground" id="modalVagasRamo"></span>
-	</p>
-
-	<dl class="vagas-breakdown">
-		<div class="vagas-breakdown__row">
-			<dt>Limite de vagas no ramo</dt>
-			<dd id="vagasLimite">—</dd>
-		</div>
-		<div class="vagas-breakdown__row">
-			<dt>(−) Associados ativos</dt>
-			<dd id="vagasAtivos">—</dd>
-		</div>
-		<div class="vagas-breakdown__row">
-			<dt>(−) Novos associados (da visita agendada em diante)</dt>
-			<dd id="vagasNovos">—</dd>
-		</div>
-		<div class="vagas-breakdown__row">
-			<dt>(+) Atingindo idade limite (6 meses)</dt>
-			<dd id="vagasSaindo">—</dd>
-		</div>
-		<div class="vagas-breakdown__row vagas-breakdown__row--total">
-			<dt>Total disponível</dt>
-			<dd id="vagasDisponiveis">—</dd>
-		</div>
-	</dl>
-
-	<section class="vagas-chart">
-		<h3 class="vagas-chart__title">Previsão de vagas (próximos 12 meses)</h3>
-		<div class="vagas-chart__canvas" id="vagasChart" role="img" aria-label="Previsão de vagas nos próximos 12 meses"></div>
-	</section>
-{% endcall %}
+{# ----------- Modal Detalhes de Vagas (compartilhado com a visão geral) ----------- #}
+{% include "gris/templates/includes/vagas_do_ramo_dialog.html" %}
 {% endblock %}
 
 {% block script %}

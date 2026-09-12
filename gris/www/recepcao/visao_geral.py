@@ -24,7 +24,7 @@ from gris.api.recepcao_funil import (
 	sinal_registro_definitivo,
 	status_por_etapas_concluidas,
 )
-from gris.api.recepcao_vagas import calcular_vagas_por_ramo, ramo_sem_vagas
+from gris.api.recepcao_vagas import calcular_vagas_por_ramo, dados_do_dialog, ramo_sem_vagas
 from gris.api.recepcao_visitas import remover_visita_do_jovem
 
 no_cache = 1
@@ -374,6 +374,9 @@ def get_context(context):
 
 	context.kanban_columns = colunas
 	context.kanban_data = kanban_data
+	# O ícone ao lado do ramo, nos modais dos cards, abre o mesmo dialog "Cálculo de Vagas"
+	# da Fila de Espera (include compartilhado), com estes números.
+	context.vagas_por_ramo = dados_do_dialog(vagas_por_ramo)
 	# As duas listas de acompanhamento abrem o mesmo dialog; o template precisa
 	# saber quais colunas são elas para marcar os cards.
 	context.colunas_de_acompanhamento = list(COLUNAS_DE_ACOMPANHAMENTO)

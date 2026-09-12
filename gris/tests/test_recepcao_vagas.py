@@ -1,4 +1,4 @@
-"""Ocupação de vagas por ramo e o selo "Seção sem vagas" da visão geral.
+"""Ocupação de vagas por ramo, o selo "Seção sem vagas" da visão geral e o gráfico da fila.
 
 Ocupam vaga os associados ativos e os novos associados da visita agendada em diante,
 cada pessoa uma vez só: o Novo Associado de quem já é Associado ativo não conta de
@@ -14,7 +14,7 @@ import frappe
 
 from gris.api import recepcao_vagas
 from gris.utils.documento import id_por_cpf
-from gris.www.recepcao import visao_geral
+from gris.www.recepcao import fila_espera, visao_geral
 
 HOJE = date(2026, 9, 12)
 
@@ -257,3 +257,47 @@ class TestSeloSemVagasNaVisaoGeral(TestCase):
 
 		self.assertIn("cpf", capturados["fields"])
 		self.assertIs(capturados["recebidas"], capturados["linhas"])
+
+
+class TestGraficoDaFilaDeEspera(TestCase):
+	"""O gráfico usa a fórmula do total: limite - ativos - novos + saídas de hoje em diante."""
+
+	def _grafico(self, saidas_futuras):
+		ocupacao = {
+			ramo: frappe._dict(limite=0, ativos=0, novos=0, saindo=0, disponiveis=0, saidas_futuras=[])
+			for ramo in recepcao_vagas.RAMOS
+		}
+		ocupacao["Lobinho"] = frappe._dict(
+			limite=10, ativos=4, novos=2, saindo=0, disponiveis=4, saidas_futuras=saidas_futuras
+		)
+
+		context = frappe._dict()
+		with (
+			patch.object(fila_espera, "enrich_context"),
+			patch.object(fila_espera, "calcular_vagas_por_ramo", return_value=ocupacao),
+			patch.object(fila_espera.frappe, "get_all", return_value=[]),
+			patch.object(fila_espera, "today", return_value=HOJE.isoformat()),
+		):
+			fila_espera.get_context(context)
+		return context.vagas_por_ramo["Lobinho"]
+
+	def test_saidas_que_ja_passaram_nao_somam_vaga(self):
+		grafico = self._grafico(
+			[
+				date(2026, 1, 1),  # já passou da idade e continua ativo
+				date(2026, 9, 5),  # passou da idade neste mês, antes de hoje
+				date(2026, 9, 20),
+				date(2026, 11, 12),
+				date(2029, 1, 1),
+			]
+		)
+
+		self.assertEqual(grafico["chart_labels"][:3], ["Set/26", "Out/26", "Nov/26"])
+		# Base 10 - 4 - 2 = 4; soma 20/09 a partir de setembro e 12/11 a partir de novembro.
+		self.assertEqual(grafico["chart_values"], [5, 5] + [6] * 10)
+
+	def test_sem_saidas_futuras_o_grafico_repete_o_total(self):
+		grafico = self._grafico([date(2025, 3, 1), date(2026, 2, 1)])
+
+		self.assertEqual(grafico["chart_values"], [4] * 12)
+		self.assertEqual(grafico["disponiveis"], 4)

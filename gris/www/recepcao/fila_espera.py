@@ -93,10 +93,12 @@ def get_context(context):
 
 			next_month = add_months(future_month, 1)
 
+			# Mesma fórmula do total disponível: só somam as saídas por idade de hoje em
+			# diante. Quem já passou da idade e continua ativo segue ocupando a vaga.
 			cumulative_exits = 0
 			for d in saidas_futuras:
 				d_date = getdate(d)
-				if d_date < next_month:
+				if current_date <= d_date < next_month:
 					cumulative_exits += 1
 			chart_values.append(vagas_base + cumulative_exits)
 

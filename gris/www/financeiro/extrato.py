@@ -78,7 +78,13 @@ def get_context(context):
 	)
 	context.filtros_ativos = request_args
 	# Quantos filtros a URL trouxe: define se o painel abre e alimenta o badge.
-	context.filtros_ativos_count = len(filters)
+	# `excluir_do_total` é injetado por padrão em `build_extrato_filters` (não deve
+	# contar como filtro "ativo" escolhido pelo usuário, senão o badge/painel
+	# aparecem mesmo sem nenhum filtro na URL).
+	filtros_da_url_count = len(filters)
+	if request_args.get("excluir_do_total") in (None, "", "null"):
+		filtros_da_url_count -= 1
+	context.filtros_ativos_count = filtros_da_url_count
 	context.paginacao = {
 		"tamanho_pagina": EXTRATO_PAGE_SIZE,
 		"total": total_transacoes,

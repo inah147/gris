@@ -91,6 +91,7 @@ EXTRATO_FILTER_FIELDS = (
 	"repasse_entre_contas",
 	"transacao_revisada",
 	"fonte",
+	"excluir_do_total",
 )
 
 #: Campo usado na busca textual por descrição; é o mesmo exibido por padrão
@@ -268,6 +269,12 @@ def build_extrato_filters(request_args: dict | None, pode_buscar_descricao_compl
 			"like",
 			f"%{_termo_like(busca_descricao_completa)}%",
 		]
+
+	# Transações marcadas como duplicata conciliada não devem entrar no extrato
+	# nem no total, a não ser que o filtro `excluir_do_total` seja pedido
+	# explicitamente (ex.: para auditar as próprias duplicatas excluídas).
+	if "excluir_do_total" not in filters:
+		filters["excluir_do_total"] = 0
 
 	return filters
 

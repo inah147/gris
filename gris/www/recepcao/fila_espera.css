@@ -1,9 +1,9 @@
 /* ---------------------------------------------------------------
    Fila de Espera da Recepção
-   Estilos específicos do Kanban de fila de espera, breakdown de
-   vagas e gráfico de previsão. Componentes globais (card, badge,
-   dialog, alert, button) vêm do design system Basecoat
-   (gris/public/design_system).
+   Estilos específicos do Kanban de fila de espera. O dialog de
+   vagas é compartilhado (public/css/vagas_do_ramo.css). Componentes
+   globais (card, badge, dialog, alert, button) vêm do design system
+   Basecoat (gris/public/design_system).
    --------------------------------------------------------------- */
 
 /* Kanban -------------------------------------------------------- */
@@ -272,69 +272,8 @@ dialog.dialog.fila-dialog > div > section {
 	justify-content: center;
 }
 
-/* Breakdown de vagas (modal) ------------------------------------ */
-.vagas-breakdown {
-	display: flex;
-	flex-direction: column;
-	gap: 0;
-	margin: 0;
-}
-
-.vagas-breakdown__row {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	gap: calc(var(--spacing) * 3);
-	padding: calc(var(--spacing) * 2) 0;
-	border-bottom: 1px solid var(--color-border);
-}
-
-.vagas-breakdown__row > dt {
-	margin: 0;
-	color: var(--color-muted-foreground);
-	font-size: 0.875rem;
-}
-
-.vagas-breakdown__row > dd {
-	margin: 0;
-	color: var(--color-foreground);
-	font-weight: 600;
-	font-variant-numeric: tabular-nums;
-}
-
-.vagas-breakdown__row--total {
-	border-bottom: none;
-	border-top: 1px solid var(--color-border);
-	margin-top: calc(var(--spacing) * 1);
-	padding-top: calc(var(--spacing) * 3);
-}
-
-.vagas-breakdown__row--total > dt {
-	color: var(--color-foreground);
-	font-weight: 600;
-}
-
-.vagas-breakdown__row--total > dd {
-	color: var(--color-primary);
-	font-size: 1.05rem;
-}
-
-/* Gráfico ECharts (modal de vagas) ------------------------------ */
-.vagas-chart {
-	margin-top: calc(var(--spacing) * 6);
-}
-
-.vagas-chart__title {
-	font-size: 0.875rem;
-	font-weight: 600;
-	color: var(--color-foreground);
-	margin: 0 0 calc(var(--spacing) * 3);
-}
-
-.vagas-chart__canvas {
-	width: 100%;
-	min-height: 250px;
-}
+/* O dialog "Cálculo de Vagas" é compartilhado com a visão geral: seus estilos
+   moram em public/css/vagas_do_ramo.css. */
 
 /* Responsivo ---------------------------------------------------- */
 @media (max-width: 768px) {
@@ -355,9 +294,5 @@ dialog.dialog.fila-dialog > div > section {
 
 	.dialog-actions > * {
 		width: 100%;
-	}
-
-	.vagas-chart__canvas {
-		min-height: 220px;
 	}
 }

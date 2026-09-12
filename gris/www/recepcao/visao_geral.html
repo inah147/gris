@@ -87,6 +87,20 @@
 </div>
 {% endmacro %}
 
+{# ---- Macro local: campo Ramo, com o atalho para o dialog "Cálculo de Vagas" ----
+   O botão nasce escondido: o JS só o mostra quando o card tem ramo com vagas calculadas. #}
+{% macro campo_ramo(valor_id) %}
+<div class="dialog-field">
+	<span class="dialog-field__label">Ramo</span>
+	<span class="dialog-field__ramo">
+		<span class="dialog-field__value" id="{{ valor_id }}"></span>
+		<button type="button" class="btn-sm-icon-ghost js-vagas-do-ramo hidden" onclick="abrirVagasDoRamoAtual()" title="Ver vagas do ramo" aria-label="Ver vagas do ramo">
+			{{ lucide_icon("info", size="sm") }}
+		</button>
+	</span>
+</div>
+{% endmacro %}
+
 {# ---- Footers reutilizáveis ---- #}
 {% set footer_desistencia %}
 <button type="button" class="btn-destructive" onclick="registrarDesistencia()">
@@ -235,10 +249,7 @@
 ) %}
 	{{ people_header("modalAssociadoNome", "modalResponsavelNome") }}
 	<div class="dialog-info-grid">
-		<div class="dialog-field">
-			<span class="dialog-field__label">Ramo</span>
-			<span class="dialog-field__value" id="modalRamo"></span>
-		</div>
+		{{ campo_ramo("modalRamo") }}
 	</div>
 	<div class="field">
 		<label class="label" for="responsavelRecepcao-trigger">Responsável pela Recepção</label>
@@ -270,10 +281,7 @@
 ) %}
 	{{ people_header("ci_associado_nome", "ci_responsavel_nome") }}
 	<div class="dialog-fields-row">
-		<div class="dialog-field">
-			<span class="dialog-field__label">Ramo</span>
-			<span class="dialog-field__value" id="ci_ramo"></span>
-		</div>
+		{{ campo_ramo("ci_ramo") }}
 		<div class="field">
 			<label class="label" for="ci_responsavel_acompanhamento-trigger">Responsável pelo Acompanhamento</label>
 			{{ select(
@@ -380,10 +388,7 @@
 		</div>
 	</div>
 	<div class="dialog-fields-row">
-		<div class="dialog-field">
-			<span class="dialog-field__label">Ramo</span>
-			<span class="dialog-field__value" id="va_ramo"></span>
-		</div>
+		{{ campo_ramo("va_ramo") }}
 		<div class="field">
 			<label class="label" for="va_responsavel_recepcao-trigger">Responsável pela Recepção</label>
 			{{ select(
@@ -445,6 +450,7 @@
 
 {# Diálogo compartilhado com a ficha de registro. #}
 {% include "gris/templates/includes/mensagens_enviadas_dialog.html" %}
+{% include "gris/templates/includes/vagas_do_ramo_dialog.html" %}
 
 {# ----------- Modal Desmarcar Etapa ----------- #}
 {#

@@ -1,0 +1,99 @@
+/*
+ * Dialog "Cálculo de Vagas" — compartilhado pela Fila de Espera e pelos modais
+ * dos cards da visão geral da recepção. Carregado por
+ * templates/includes/vagas_do_ramo_dialog.html.
+ */
+
+/* Conteúdo rolável: cabeçalho e rodapé fixos, corpo rola. */
+dialog.dialog.vagas-dialog {
+	max-height: 90vh;
+	box-sizing: border-box;
+}
+
+dialog.dialog.vagas-dialog > div {
+	display: flex;
+	flex-direction: column;
+	max-height: inherit;
+	overflow: hidden;
+}
+
+dialog.dialog.vagas-dialog > div > header,
+dialog.dialog.vagas-dialog > div > footer {
+	flex-shrink: 0;
+}
+
+dialog.dialog.vagas-dialog > div > section {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	min-height: 0;
+}
+
+/* Breakdown de vagas ------------------------------------------- */
+.vagas-breakdown {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	margin: 0;
+}
+
+.vagas-breakdown__row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: calc(var(--spacing) * 3);
+	padding: calc(var(--spacing) * 2) 0;
+	border-bottom: 1px solid var(--color-border);
+}
+
+.vagas-breakdown__row > dt {
+	margin: 0;
+	color: var(--color-muted-foreground);
+	font-size: 0.875rem;
+}
+
+.vagas-breakdown__row > dd {
+	margin: 0;
+	color: var(--color-foreground);
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+.vagas-breakdown__row--total {
+	border-bottom: none;
+	border-top: 1px solid var(--color-border);
+	margin-top: calc(var(--spacing) * 1);
+	padding-top: calc(var(--spacing) * 3);
+}
+
+.vagas-breakdown__row--total > dt {
+	color: var(--color-foreground);
+	font-weight: 600;
+}
+
+.vagas-breakdown__row--total > dd {
+	color: var(--color-primary);
+	font-size: 1.05rem;
+}
+
+/* Gráfico ECharts ---------------------------------------------- */
+.vagas-chart {
+	margin-top: calc(var(--spacing) * 6);
+}
+
+.vagas-chart__title {
+	font-size: 0.875rem;
+	font-weight: 600;
+	color: var(--color-foreground);
+	margin: 0 0 calc(var(--spacing) * 3);
+}
+
+.vagas-chart__canvas {
+	width: 100%;
+	min-height: 250px;
+}
+
+@media (max-width: 768px) {
+	.vagas-chart__canvas {
+		min-height: 220px;
+	}
+}

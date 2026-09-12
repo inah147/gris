@@ -1326,6 +1326,33 @@ function atualizarRotuloObservacoes() {
 function sincronizarCabecalhoDoDialog() {
 	updateWhatsappButtonState();
 	atualizarRotuloObservacoes();
+	atualizarBotoesDeVagas();
+}
+
+// O ícone ao lado do ramo só aparece quando há vagas calculadas para o ramo do card.
+function atualizarBotoesDeVagas() {
+	const ramo = currentCardElement ? currentCardElement.dataset.ramo : "";
+	const disponivel = Boolean(window.grisVagasDoRamo && window.grisVagasDoRamo.temDados(ramo));
+	document.querySelectorAll(".js-vagas-do-ramo").forEach((botao) => {
+		botao.classList.toggle("hidden", !disponivel);
+	});
+}
+
+function abrirVagasDoRamoAtual() {
+	const ramo = currentCardElement ? currentCardElement.dataset.ramo : "";
+	if (!ramo || !window.grisVagasDoRamo) return;
+
+	// Mesmo vaivém das mensagens e das observações: showModal() põe o dialog na top
+	// layer e torna o resto inerte, então o modal do card fecha antes e reabre quando o
+	// cálculo de vagas sai de cena.
+	const origem = getOpenDialogId("modalVagas");
+	if (origem) closeDialog(origem);
+
+	window.grisVagasDoRamo.abrir(ramo, {
+		aoFechar: function () {
+			if (origem) openDialog(origem);
+		},
+	});
 }
 
 function contarObservacoesDoCardAtual() {

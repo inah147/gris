@@ -16,8 +16,9 @@ TIPO_FUNCIONALIDADE = "Nova funcionalidade"
 
 TIPOS: tuple[str, ...] = (TIPO_PROBLEMA, TIPO_FUNCIONALIDADE)
 
-COLUNA_PROBLEMAS = "Problemas reportados"
-COLUNA_FUNCIONALIDADES = "Solicitações de funcionalidades"
+# Toda submissao nova entra aqui: e onde a demanda e entendida, detalhada e
+# priorizada antes de alguem se comprometer a desenvolve-la.
+COLUNA_REFINAMENTO = "Refinamento"
 COLUNA_SELECIONADO = "Selecionado para desenvolvimento"
 COLUNA_EM_DESENVOLVIMENTO = "Em desenvolvimento"
 # Desenvolvimento pronto e entregue, esperando conferencia de quem pediu (ou de
@@ -28,10 +29,13 @@ COLUNA_VALIDAR = "Validar"
 COLUNA_CONCLUIDO = "Concluído"
 COLUNA_NAO_SERA_FEITO = "Não será feito"
 
-# Ordem das colunas no kanban de /sugestoes/acompanhamento.
+# Ordem das colunas no kanban de /sugestoes/acompanhamento. Toda coluna aqui e
+# de andamento: o tipo (problema ou funcionalidade) vive no badge do card e no
+# filtro da pagina, nao numa coluna propria — duas colunas por tipo dobravam a
+# fila de entrada e faziam o mesmo estado ("ainda nao olhamos isso") aparecer em
+# dois lugares.
 COLUNAS: tuple[str, ...] = (
-	COLUNA_PROBLEMAS,
-	COLUNA_FUNCIONALIDADES,
+	COLUNA_REFINAMENTO,
 	COLUNA_SELECIONADO,
 	COLUNA_EM_DESENVOLVIMENTO,
 	COLUNA_VALIDAR,
@@ -39,14 +43,8 @@ COLUNAS: tuple[str, ...] = (
 	COLUNA_NAO_SERA_FEITO,
 )
 
-# As duas primeiras colunas sao de triagem por tipo: uma submissao nova cai na
-# coluna do seu tipo, e so depois anda pelas colunas de status.
-COLUNA_INICIAL_POR_TIPO: dict[str, str] = {
-	TIPO_PROBLEMA: COLUNA_PROBLEMAS,
-	TIPO_FUNCIONALIDADE: COLUNA_FUNCIONALIDADES,
-}
-
-COLUNAS_DE_TRIAGEM: frozenset[str] = frozenset({COLUNA_PROBLEMAS, COLUNA_FUNCIONALIDADES})
+# Coluna de entrada de qualquer submissao nova, independente do tipo.
+COLUNA_INICIAL = COLUNA_REFINAMENTO
 
 MODULO_NOVO = "Novo módulo"
 MODULO_OUTRO = "Outro / não sei"
@@ -117,8 +115,7 @@ TAREFA_CONCLUIDO = "Concluido"
 TAREFA_CANCELADO = "Cancelado"
 
 STATUS_TAREFA_POR_COLUNA: dict[str, str] = {
-	COLUNA_PROBLEMAS: TAREFA_NAO_INICIADO,
-	COLUNA_FUNCIONALIDADES: TAREFA_NAO_INICIADO,
+	COLUNA_REFINAMENTO: TAREFA_NAO_INICIADO,
 	COLUNA_SELECIONADO: TAREFA_NAO_INICIADO,
 	COLUNA_EM_DESENVOLVIMENTO: TAREFA_EM_ANDAMENTO,
 	COLUNA_VALIDAR: TAREFA_VALIDAR,
@@ -137,11 +134,6 @@ COLUNA_POR_STATUS_TAREFA: dict[str, str] = {
 	TAREFA_CONCLUIDO: COLUNA_CONCLUIDO,
 	TAREFA_CANCELADO: COLUNA_NAO_SERA_FEITO,
 }
-
-
-def coluna_inicial(tipo: str) -> str:
-	"""Coluna de triagem para uma submissao nova."""
-	return COLUNA_INICIAL_POR_TIPO.get((tipo or "").strip(), COLUNA_PROBLEMAS)
 
 
 def modulos_para_tipo(tipo: str) -> tuple[str, ...]:

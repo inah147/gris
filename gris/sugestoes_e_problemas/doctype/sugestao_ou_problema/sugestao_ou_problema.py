@@ -23,10 +23,10 @@ from gris.api.sugestoes.constantes import (
 	BRANCH_MAX,
 	COLUNA_CONCLUIDO,
 	COLUNA_EM_DESENVOLVIMENTO,
+	COLUNA_INICIAL,
 	COLUNA_NAO_SERA_FEITO,
 	COLUNA_VALIDAR,
 	COLUNAS,
-	COLUNAS_DE_TRIAGEM,
 	DESCRICAO_MAX,
 	MODULOS,
 	PULL_REQUEST_ESQUEMAS,
@@ -34,7 +34,6 @@ from gris.api.sugestoes.constantes import (
 	ROLE_DESENVOLVEDOR,
 	TIPOS,
 	TITULO_MAX,
-	coluna_inicial,
 	modulos_para_tipo,
 )
 from gris.utils.contato import telefone_do_usuario
@@ -63,11 +62,11 @@ class SugestaoouProblema(Document):
 		if not (self.telefone_aviso or "").strip():
 			self.avisar_por_whatsapp = 0
 
-		# O Select preenche a primeira opcao sozinho quando o `options` nao comeca
-		# com quebra de linha. Toda submissao nova entra na coluna de triagem do
-		# seu tipo, entao o valor herdado so vale se ja for o correto.
-		if not self.status or self.status in COLUNAS_DE_TRIAGEM:
-			self.status = coluna_inicial(self.tipo)
+		# Toda submissao nova entra na coluna de entrada do quadro: quem abre
+		# relata, nao decide andamento. Um status vindo pronto (importacao, Desk)
+		# fica de pe.
+		if not self.status:
+			self.status = COLUNA_INICIAL
 
 	def validate(self) -> None:
 		self._normalizar_texto()
@@ -114,8 +113,9 @@ class SugestaoouProblema(Document):
 		"""
 		status = (self.status or "").strip()
 
-		# Uma vez iniciado, o inicio nao se apaga: se o item voltar para triagem
-		# e avancar de novo, a data que interessa continua sendo a primeira.
+		# Uma vez iniciado, o inicio nao se apaga: se o item voltar para o
+		# refinamento e avancar de novo, a data que interessa continua sendo a
+		# primeira.
 		# "Validar" entra aqui porque tambem pressupoe desenvolvimento feito: um
 		# item pequeno pode ir direto de "Selecionado" para validacao.
 		if status in (COLUNA_EM_DESENVOLVIMENTO, COLUNA_VALIDAR) and not self.data_inicio_desenvolvimento:
@@ -159,14 +159,10 @@ class SugestaoouProblema(Document):
 			frappe.throw(_("O módulo '{0}' não pode ser usado com o tipo '{1}'.").format(modulo, tipo))
 
 	def _validar_status(self) -> None:
+		# Todas as colunas valem para qualquer tipo: o quadro e so de andamento.
 		status = (self.status or "").strip()
 		if status not in COLUNAS:
 			frappe.throw(_("Status inválido: {0}.").format(status or "vazio"))
-
-		# Colunas de triagem sao definidas pelo tipo; deixar as duas abertas para
-		# qualquer tipo permitiria um bug parar em "Solicitações de funcionalidades".
-		if status in COLUNAS_DE_TRIAGEM and status != coluna_inicial(self.tipo):
-			frappe.throw(_("Um item do tipo '{0}' não pode ficar na coluna '{1}'.").format(self.tipo, status))
 
 	def _validar_responsavel(self) -> None:
 		responsavel = (self.responsavel or "").strip()

@@ -17,19 +17,8 @@
 		responsavel: "gris.api.sugestoes.portal.alocar_responsavel",
 		comentar: "gris.api.sugestoes.portal.adicionar_comentario",
 		descricao: "gris.api.sugestoes.portal.atualizar_descricao",
-		reclassificar: "gris.api.sugestoes.portal.reclassificar",
 		reordenar: "gris.api.sugestoes.portal.reordenar",
 	};
-
-	// {tipo: coluna de triagem}, renderizado pelo servidor.
-	const TRIAGEM = (() => {
-		const el = document.getElementById("sugestoes-triagem");
-		try {
-			return JSON.parse((el && el.textContent) || "{}");
-		} catch (e) {
-			return {};
-		}
-	})();
 
 	const podeTriar = raiz.dataset.podeTriar === "1";
 	const container = document.getElementById("sugestoesKanban");
@@ -264,11 +253,6 @@
 
 	/* ─────────────────────── drag and drop ─────────────────────── */
 
-	/** Tipo cuja coluna de triagem é esta, ou "" se for coluna de status. */
-	function tipoDaColuna(status) {
-		return Object.keys(TRIAGEM).find((tipo) => TRIAGEM[tipo] === status) || "";
-	}
-
 	/** Persiste a prioridade da coluna na ordem em que ela está na tela. */
 	function salvarOrdem(status) {
 		const coluna = colunas.find((c) => c.status === status);
@@ -286,18 +270,7 @@
 		const destino = colunas.find((coluna) => coluna.status === novoStatus);
 		if (!anterior || !destino) return;
 
-		const item = anterior.itens.find((i) => i.name === nome);
 		const mudouDeColuna = anterior.status !== novoStatus;
-
-		// As duas colunas de triagem representam o tipo. Soltar o card na coluna
-		// do outro tipo é pedido de reclassificação, não mudança de status — e
-		// isso precisa de confirmação, porque muda como o item é classificado.
-		const tipoDestino = tipoDaColuna(novoStatus);
-		if (mudouDeColuna && tipoDestino && item && item.tipo !== tipoDestino) {
-			// Nada é movido antes de confirmar: o card fica onde estava.
-			confirmarReclassificacao(item, tipoDestino);
-			return;
-		}
 
 		// Move otimista: o card acompanha o gesto na hora e volta se o servidor recusar.
 		const origem = anterior.itens.findIndex((i) => i.name === nome);
@@ -328,38 +301,6 @@
 				showToast("error", err.message);
 				carregarBoard();
 			});
-	}
-
-	function confirmarReclassificacao(item, tipoDestino) {
-		const dlg = document.getElementById("dialog-reclassificar");
-		if (!dlg) return;
-
-		dlg.querySelector("[data-reclassificar-texto]").textContent =
-			`“${item.titulo}” está registrada como ${item.tipo}. ` +
-			`Movê-la para “${TRIAGEM[tipoDestino]}” muda o tipo para ${tipoDestino}.`;
-
-		const confirmar = dlg.querySelector("[data-reclassificar-confirmar]");
-		const cancelar = dlg.querySelector("[data-reclassificar-cancelar]");
-
-		const encerrar = () => {
-			confirmar.removeEventListener("click", aoConfirmar);
-			cancelar.removeEventListener("click", encerrar);
-			dlg.close();
-		};
-
-		const aoConfirmar = () => {
-			encerrar();
-			chamar(METODOS.reclassificar, { name: item.name, tipo: tipoDestino })
-				.then(() => {
-					showToast("success", `Reclassificada como ${tipoDestino}.`);
-					return carregarBoard();
-				})
-				.catch((err) => showToast("error", err.message));
-		};
-
-		confirmar.addEventListener("click", aoConfirmar);
-		cancelar.addEventListener("click", encerrar);
-		dlg.showModal();
 	}
 
 	container.addEventListener("dragstart", (event) => {

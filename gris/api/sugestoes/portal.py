@@ -28,6 +28,7 @@ from frappe.utils import add_to_date, get_fullname, now_datetime, sbool, strip_h
 
 from gris.api.sugestoes.constantes import (
 	COLUNA_EM_DESENVOLVIMENTO,
+	COLUNA_INICIAL,
 	COLUNAS,
 	DESCRICAO_MAX,
 	LIMITE_ENVIOS_POR_HORA,
@@ -36,7 +37,6 @@ from gris.api.sugestoes.constantes import (
 	ROLE_DESENVOLVEDOR,
 	TIPOS,
 	TITULO_MAX,
-	coluna_inicial,
 	modulos_para_tipo,
 )
 
@@ -59,7 +59,7 @@ CARD_FIELDS: tuple[str, ...] = (
 
 # `ordem` é a prioridade definida arrastando; entre itens de mesma ordem (o
 # padrão 0 de quem nunca foi arrastado) o mais recente vem primeiro, para uma
-# submissão nova aparecer no topo da coluna de triagem em vez de se enterrar.
+# submissão nova aparecer no topo da coluna de entrada em vez de se enterrar.
 CARD_ORDER_BY = "ordem asc, creation desc"
 
 
@@ -208,7 +208,11 @@ def listar_board() -> dict[str, Any]:
 		dados = usuarios.get(responsavel, {})
 		linha["responsavel_nome"] = dados.get("nome", "")
 		linha["responsavel_avatar"] = dados.get("avatar", "")
-		colunas.setdefault(linha.get("status") or COLUNAS[0], []).append(linha)
+		# Status fora das colunas de hoje (registro de uma coluna que saiu do
+		# quadro, num site onde o patch ainda não rodou) entra na coluna inicial:
+		# melhor aparecer para ser triado do que desaparecer do quadro.
+		coluna = linha.get("status")
+		colunas[coluna if coluna in colunas else COLUNA_INICIAL].append(linha)
 
 	return {
 		"ok": True,
@@ -437,11 +441,11 @@ def reordenar(status: str, nomes: Any) -> dict[str, Any]:
 
 @frappe.whitelist()
 def reclassificar(name: str, tipo: str) -> dict[str, Any]:
-	"""Troca o tipo e move para a coluna de triagem correspondente.
+	"""Troca o tipo da solicitação, sem mexer no andamento.
 
-	As duas primeiras colunas do quadro representam o tipo, então arrastar um
-	card para a coluna do outro tipo é um pedido de reclassificação — não um
-	erro. O cliente confirma com o usuário antes de chamar isto.
+	O quadro só tem colunas de andamento, então o tipo não tem coluna para onde
+	mover: um problema mal classificado como funcionalidade continua exatamente
+	onde está na fila. Usado pelo MCP (`atualizar_sugestao`).
 	"""
 	_require_desenvolvedor()
 
@@ -464,7 +468,6 @@ def reclassificar(name: str, tipo: str) -> dict[str, Any]:
 		)
 
 	doc.tipo = tipo
-	doc.status = coluna_inicial(tipo)
 	doc.save()
 
 	return {"ok": True, "tipo": doc.tipo, "status": doc.status}

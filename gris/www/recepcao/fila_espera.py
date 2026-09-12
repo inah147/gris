@@ -4,6 +4,7 @@ from frappe.utils import add_months, getdate, today
 
 from gris.api.portal_access import enrich_context
 from gris.api.recepcao import formatar_idade, processar_desistencia
+from gris.api.recepcao_vagas import calcular_vagas_por_ramo
 
 no_cache = 1
 
@@ -21,17 +22,9 @@ def get_context(context):
 
 	ramos = ["Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro"]
 
-	# Calculate available spots per Ramo
-	vagas_settings = frappe.get_single("Vagas")
+	# Ocupação de cada ramo: a mesma conta que marca os cards da visão geral.
+	ocupacao_por_ramo = calcular_vagas_por_ramo()
 	vagas_por_ramo = {}
-
-	ramo_slugs = {
-		"Filhotes": "filhotes",
-		"Lobinho": "lobinho",
-		"Escoteiro": "escoteiro",
-		"Sênior": "senior",
-		"Pioneiro": "pioneiro",
-	}
 
 	# Variantes do badge Basecoat (corresponde a .badge-ramo-* no CSS local).
 	# Mantém paridade com visao_geral.py.
@@ -42,8 +35,6 @@ def get_context(context):
 		"Sênior": "ramo-senior",
 		"Pioneiro": "ramo-pioneiro",
 	}
-
-	six_months_from_now = add_months(today(), 6)
 
 	# Fetch Fila de Espera
 	fila_items = frappe.get_all(
@@ -78,36 +69,11 @@ def get_context(context):
 
 	# Recalculate stats and predictions per ramo
 	for ramo in ramos:
-		slug = ramo_slugs.get(ramo)
-		limite = vagas_settings.get(f"limite_de_vagas_{slug}") or 0
-		idade_maxima = vagas_settings.get(f"idade_maxima_{slug}") or 0
-
-		# Active associates in the ramo
-		associados_ativos = frappe.get_all(
-			"Associado",
-			filters={"ramo": ramo, "status_no_grupo": "Ativo", "categoria": "Beneficiário"},
-			fields=["data_de_nascimento"],
-		)
-		ativos = len(associados_ativos)
-
-		# New associates in the ramo (not in queue)
-		novos = frappe.db.count("Novo Associado", {"ramo": ramo, "status": ["!=", "Fila de Espera"]})
-
-		# Calculate future exits
-		saidas_futuras = []
-		if idade_maxima:
-			for assoc in associados_ativos:
-				if assoc.data_de_nascimento:
-					birth_date = getdate(assoc.data_de_nascimento)
-					max_age_date = add_months(birth_date, int(idade_maxima) * 12)
-					saidas_futuras.append(max_age_date)
-			saidas_futuras.sort()
-
-		# Associates aging out in next 6 months (for header stats)
-		saindo = 0
-		for d in saidas_futuras:
-			if getdate(d) <= getdate(six_months_from_now) and getdate(d) >= getdate(today()):
-				saindo += 1
+		ocupacao = ocupacao_por_ramo[ramo]
+		limite = ocupacao.limite
+		ativos = ocupacao.ativos
+		novos = ocupacao.novos
+		saidas_futuras = ocupacao.saidas_futuras
 
 		# Chart Data: Next 12 months
 		chart_labels = []
@@ -134,13 +100,12 @@ def get_context(context):
 					cumulative_exits += 1
 			chart_values.append(vagas_base + cumulative_exits)
 
-		disponiveis = limite - ativos - novos + saindo
 		vagas_por_ramo[ramo] = {
-			"disponiveis": disponiveis,
+			"disponiveis": ocupacao.disponiveis,
 			"limite": limite,
 			"ativos": ativos,
 			"novos": novos,
-			"saindo": saindo,
+			"saindo": ocupacao.saindo,
 			"chart_labels": chart_labels,
 			"chart_values": chart_values,
 		}

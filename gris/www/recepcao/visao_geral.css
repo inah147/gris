@@ -255,6 +255,24 @@
 	border-color: color-mix(in srgb, #f59e0b 32%, transparent);
 }
 
+/* Selo "seção sem vagas" ------------------------------------------
+   O ramo do jovem está com vagas disponíveis ≤ 0 (mesma conta da Fila
+   de Espera). Só marca o card, não trava nada. Vermelho suave: lê como
+   alerta sem se confundir com o âmbar do reagendamento. */
+.badge.badge-sem-vagas {
+	display: inline-flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 1);
+	background-color: #fee2e2;
+	color: #991b1b;
+	border-color: #fca5a5;
+}
+.dark .badge.badge-sem-vagas {
+	background-color: color-mix(in srgb, #ef4444 22%, transparent);
+	color: #fecaca;
+	border-color: color-mix(in srgb, #ef4444 32%, transparent);
+}
+
 /* Selo "hora do registro definitivo" ------------------------------
    Passados os dias configurados desde a efetivação do registro provisório,
    o card avisa que chegou a hora do definitivo. Preenchimento sólido em

@@ -261,9 +261,13 @@ class TestSeloSemVagasNaVisaoGeral(TestCase):
 
 
 class TestPrevisaoDeVagas(TestCase):
-	"""O gráfico usa a fórmula do total: limite - ativos - novos + saídas de hoje em diante."""
+	"""Cada ponto do gráfico é o total disponível calculado naquele mês.
 
-	def test_saidas_que_ja_passaram_nao_somam_vaga(self):
+	limite - ativos - novos + quem atinge a idade máxima até 6 meses depois do mês; o
+	ponto do mês atual é o próprio total do dialog.
+	"""
+
+	def test_cada_mes_soma_quem_sai_ate_6_meses_depois_dele(self):
 		rotulos, valores = recepcao_vagas.previsao_mensal(
 			4,
 			[
@@ -271,6 +275,7 @@ class TestPrevisaoDeVagas(TestCase):
 				date(2026, 9, 5),  # passou da idade neste mês, antes de hoje
 				date(2026, 9, 20),
 				date(2026, 11, 12),
+				date(2027, 5, 1),  # entra no horizonte a partir de novembro (12/11 + 6 meses)
 				date(2029, 1, 1),
 			],
 			HOJE,
@@ -278,23 +283,31 @@ class TestPrevisaoDeVagas(TestCase):
 
 		self.assertEqual(len(rotulos), 12)
 		self.assertEqual(rotulos[:3], ["Set/26", "Out/26", "Nov/26"])
-		# Soma 20/09 a partir de setembro e 12/11 a partir de novembro.
-		self.assertEqual(valores, [5, 5] + [6] * 10)
+		# Setembro já conta 20/09 e 12/11 (até 12/03/2027); 01/05/2027 entra em novembro.
+		self.assertEqual(valores, [6, 6] + [7] * 10)
 
 	def test_sem_saidas_futuras_o_grafico_repete_o_total(self):
 		_, valores = recepcao_vagas.previsao_mensal(4, [date(2025, 3, 1), date(2026, 2, 1)], HOJE)
 
 		self.assertEqual(valores, [4] * 12)
 
-	def test_a_conta_entrega_o_grafico_de_cada_ramo(self):
+	def test_o_mes_atual_e_o_total_disponivel(self):
 		vagas = {"limite_de_vagas_lobinho": 10, "idade_maxima_lobinho": 10}
-		associados = [{"name": "A1", "ramo": "Lobinho", "data_de_nascimento": date(2016, 11, 12)}]
+		associados = [
+			{"name": "A1", "ramo": "Lobinho", "data_de_nascimento": date(2016, 11, 12)},  # sai 12/11/2026
+			{"name": "A2", "ramo": "Lobinho", "data_de_nascimento": date(2017, 3, 12)},  # sai 12/03/2027
+			{"name": "A3", "ramo": "Lobinho", "data_de_nascimento": date(2017, 6, 1)},  # sai 01/06/2027
+		]
 
 		resultado, _ = _calcular(associados=associados, vagas=vagas, novos_associados=[])
 
-		# 10 - 1 - 0 = 9 agora; A1 atinge a idade máxima em 12/11/2026.
-		self.assertEqual(resultado["Lobinho"].chart_labels[0], "Set/26")
-		self.assertEqual(resultado["Lobinho"].chart_values, [9, 9] + [10] * 10)
+		lobinho = resultado["Lobinho"]
+		# 10 - 3 - 0 + 2 (A1 e A2, esta no último dia do horizonte de 6 meses).
+		self.assertEqual(lobinho.disponiveis, 9)
+		self.assertEqual(lobinho.chart_labels[0], "Set/26")
+		self.assertEqual(lobinho.chart_values[0], lobinho.disponiveis)
+		# A3 entra no horizonte em dezembro (12/12 + 6 meses = 12/06/2027).
+		self.assertEqual(lobinho.chart_values, [9, 9, 9, 10] + [10] * 8)
 
 
 def _ocupacao_de_exemplo():

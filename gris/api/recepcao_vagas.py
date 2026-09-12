@@ -69,21 +69,31 @@ def ocupa_vaga(status: str | None) -> bool:
 	return bool(status) and status not in STATUS_QUE_NAO_OCUPAM_VAGA
 
 
-def previsao_mensal(vagas_agora: int, saidas_futuras: list, hoje) -> tuple[list[str], list[int]]:
-	"""Rótulos e valores do gráfico de previsão, mês a mês, a partir do mês corrente.
+def saindo_ate(saidas_futuras: list, hoje, meses_a_frente: int = 0) -> int:
+	"""Associados que atingem a idade máxima de hoje até ``meses_a_frente`` + 6 meses.
 
-	Mesma fórmula do total disponível: ``limite - ativos - novos`` (``vagas_agora``) mais
-	as saídas por idade de hoje até o fim de cada mês. Quem já passou da idade e continua
-	ativo segue ocupando a vaga.
+	É o "(+) Atingindo idade limite (6 meses)" do total disponível — com
+	``meses_a_frente`` o mesmo termo visto daquele mês. Quem já passou da idade e continua
+	ativo segue ocupando a vaga, então só conta saída de hoje em diante.
 	"""
 	hoje = getdate(hoje)
-	inicio_do_mes = hoje.replace(day=1)
+	fim_do_horizonte = getdate(add_months(hoje, meses_a_frente + MESES_DE_SAIDA_PREVISTA))
+	return sum(1 for saida in saidas_futuras if hoje <= saida <= fim_do_horizonte)
+
+
+def previsao_mensal(vagas_agora: int, saidas_futuras: list, hoje) -> tuple[list[str], list[int]]:
+	"""Rótulos e valores do gráfico de previsão, mês a mês, a partir do mês atual.
+
+	Cada ponto é o total disponível calculado naquele mês, com a mesma fórmula do
+	dialog: ``limite - ativos - novos`` (``vagas_agora``) mais quem atinge a idade máxima
+	até 6 meses depois dele (``saindo_ate``). O ponto do mês atual é o próprio total.
+	"""
+	hoje = getdate(hoje)
 	rotulos, valores = [], []
 	for i in range(MESES_DE_PREVISAO):
-		mes = getdate(add_months(inicio_do_mes, i))
-		proximo_mes = getdate(add_months(mes, 1))
+		mes = getdate(add_months(hoje, i))
 		rotulos.append(f"{MESES_CURTOS[mes.month - 1]}/{str(mes.year)[2:]}")
-		valores.append(vagas_agora + sum(1 for saida in saidas_futuras if hoje <= saida < proximo_mes))
+		valores.append(vagas_agora + saindo_ate(saidas_futuras, hoje, meses_a_frente=i))
 	return rotulos, valores
 
 
@@ -101,7 +111,6 @@ def calcular_vagas_por_ramo(novos_associados: list | None = None, hoje=None) -> 
 	Fila de Espera usa na previsão de posição.
 	"""
 	hoje = getdate(hoje or today())
-	fim_do_horizonte = getdate(add_months(hoje, MESES_DE_SAIDA_PREVISTA))
 	vagas = frappe.get_single("Vagas")
 
 	associados = frappe.get_all(
@@ -153,7 +162,7 @@ def calcular_vagas_por_ramo(novos_associados: list | None = None, hoje=None) -> 
 				if associado.data_de_nascimento
 			)
 
-		saindo = sum(1 for saida in saidas_futuras if hoje <= saida <= fim_do_horizonte)
+		saindo = saindo_ate(saidas_futuras, hoje)
 		vagas_agora = limite - len(ativos) - novos
 		chart_labels, chart_values = previsao_mensal(vagas_agora, saidas_futuras, hoje)
 

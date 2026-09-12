@@ -167,6 +167,17 @@ class TestListarTransacoes(TestCase):
 		with self.assertRaises(ErroDeFerramenta):
 			financeiro.listar_transacoes(campo_data="criacao", data_inicio="2026-01-01")
 
+	def test_exclui_duplicatas_conciliadas_por_padrao(self):
+		with (
+			patch.object(financeiro, "_pode_ver_descricao_completa", return_value=False),
+			patch.object(financeiro.frappe, "get_all", return_value=[]) as get_all,
+			patch.object(financeiro.frappe.db, "count", return_value=0) as count,
+		):
+			financeiro.listar_transacoes()
+
+		self.assertEqual(get_all.call_args.kwargs["filters"]["excluir_do_total"], 0)
+		self.assertEqual(count.call_args.args[1]["excluir_do_total"], 0)
+
 
 class TestCategorizarTransacoes(TestCase):
 	def test_exige_algum_campo(self):

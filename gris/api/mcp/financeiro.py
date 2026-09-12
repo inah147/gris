@@ -149,6 +149,7 @@ def listar_transacoes(
 	inicio: int = 0,
 ) -> dict:
 	filtros: dict[str, Any] = _filtros_de_periodo(campo_data, data_inicio, data_fim)
+	filtros["excluir_do_total"] = 0
 
 	for campo, valor in (
 		("categoria", categoria),

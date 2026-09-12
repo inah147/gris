@@ -22,9 +22,15 @@ DOCTYPE = "Transacao Extrato Geral"
 
 
 class TestExtratoFiltros(FrappeTestCase):
-	def test_sem_argumentos_nao_gera_filtro(self):
-		self.assertEqual(build_extrato_filters(None), {})
-		self.assertEqual(build_extrato_filters({}), {})
+	def test_sem_argumentos_gera_apenas_o_filtro_padrao_de_exclusao(self):
+		# `excluir_do_total` é sempre aplicado por padrão para não contar/exibir
+		# duplicatas conciliadas, mesmo sem nenhum filtro explícito na URL.
+		self.assertEqual(build_extrato_filters(None), {"excluir_do_total": 0})
+		self.assertEqual(build_extrato_filters({}), {"excluir_do_total": 0})
+
+	def test_filtro_de_exclusao_pode_ser_sobrescrito_explicitamente(self):
+		filtros = build_extrato_filters({"excluir_do_total": "1"})
+		self.assertEqual(filtros["excluir_do_total"], "1")
 
 	def test_intervalo_de_datas_completo(self):
 		filtros = build_extrato_filters({"data_inicio": "2026-01-01", "data_fim": "2026-01-31"})
@@ -41,25 +47,25 @@ class TestExtratoFiltros(FrappeTestCase):
 		)
 
 	def test_data_invalida_e_ignorada(self):
-		self.assertEqual(build_extrato_filters({"data_inicio": "não é data"}), {})
+		self.assertEqual(build_extrato_filters({"data_inicio": "não é data"}), {"excluir_do_total": 0})
 
 	def test_campos_permitidos_viram_filtro_de_igualdade(self):
 		filtros = build_extrato_filters({"instituicao": "BTG Empresas", "fonte": "Sistema"})
-		self.assertEqual(filtros, {"instituicao": "BTG Empresas", "fonte": "Sistema"})
+		self.assertEqual(filtros, {"instituicao": "BTG Empresas", "fonte": "Sistema", "excluir_do_total": 0})
 
 	def test_valores_vazios_e_campos_desconhecidos_sao_descartados(self):
 		filtros = build_extrato_filters(
 			{"instituicao": "", "carteira": "null", "categoria": None, "page": "3"}
 		)
-		self.assertEqual(filtros, {})
+		self.assertEqual(filtros, {"excluir_do_total": 0})
 
 	def test_busca_por_descricao_gera_like_case_insensitive_na_descricao_reduzida(self):
 		filtros = build_extrato_filters({"descricao": "Pix"})
 		self.assertEqual(filtros["descricao_reduzida"], ["like", "%Pix%"])
 
 	def test_busca_por_descricao_vazia_e_ignorada(self):
-		self.assertEqual(build_extrato_filters({"descricao": ""}), {})
-		self.assertEqual(build_extrato_filters({"descricao": "null"}), {})
+		self.assertEqual(build_extrato_filters({"descricao": ""}), {"excluir_do_total": 0})
+		self.assertEqual(build_extrato_filters({"descricao": "null"}), {"excluir_do_total": 0})
 
 	def test_busca_por_descricao_escapa_curingas_do_like(self):
 		filtros = build_extrato_filters({"descricao": "50%_off"})
@@ -67,9 +73,9 @@ class TestExtratoFiltros(FrappeTestCase):
 
 	def test_busca_por_descricao_completa_e_ignorada_sem_permissao(self):
 		filtros = build_extrato_filters({"descricao_completa": "Pix"})
-		self.assertEqual(filtros, {})
+		self.assertEqual(filtros, {"excluir_do_total": 0})
 		filtros = build_extrato_filters({"descricao_completa": "Pix"}, pode_buscar_descricao_completa=False)
-		self.assertEqual(filtros, {})
+		self.assertEqual(filtros, {"excluir_do_total": 0})
 
 	def test_busca_por_descricao_completa_gera_like_quando_permitido(self):
 		filtros = build_extrato_filters({"descricao_completa": "Pix"}, pode_buscar_descricao_completa=True)
@@ -77,11 +83,12 @@ class TestExtratoFiltros(FrappeTestCase):
 
 	def test_busca_por_descricao_completa_vazia_e_ignorada(self):
 		self.assertEqual(
-			build_extrato_filters({"descricao_completa": ""}, pode_buscar_descricao_completa=True), {}
+			build_extrato_filters({"descricao_completa": ""}, pode_buscar_descricao_completa=True),
+			{"excluir_do_total": 0},
 		)
 		self.assertEqual(
 			build_extrato_filters({"descricao_completa": "null"}, pode_buscar_descricao_completa=True),
-			{},
+			{"excluir_do_total": 0},
 		)
 
 	def test_busca_por_descricao_completa_escapa_curingas_do_like(self):

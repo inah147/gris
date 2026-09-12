@@ -255,19 +255,6 @@
 	background: var(--color-primary);
 }
 
-/* ── Confirmação de reclassificação ──────────────────────── */
-
-.sugestoes-confirmar {
-	max-width: min(30rem, calc(100vw - 2rem));
-}
-
-.sugestoes-confirmar__texto {
-	margin: 0;
-	font-size: 0.9375rem;
-	line-height: 1.6;
-	color: var(--color-foreground);
-}
-
 /* ── Descrição ───────────────────────────────────────────── */
 
 .sugestoes-descricao-field {

@@ -31,3 +31,4 @@ gris.patches.ligar_interruptores_de_mensagens_da_recepcao
 gris.patches.backfill_quer_carteirinha
 gris.patches.normalizar_opcoes_cadastro
 gris.patches.backfill_boleto_definitivo_gerado
+gris.patches.unificar_colunas_de_sugestoes_em_refinamento

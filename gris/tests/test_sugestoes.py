@@ -103,12 +103,13 @@ class TestSugestaoOuProblema(FrappeTestCase):
 
 	# ───────────────────────── validação ─────────────────────────
 
-	def test_submissao_cai_na_coluna_de_triagem_do_tipo(self):
+	def test_submissao_cai_na_coluna_de_entrada_qualquer_que_seja_o_tipo(self):
+		"""O quadro só tem colunas de andamento: o tipo não escolhe coluna."""
 		problema = self._nova()
-		self.assertEqual(problema.status, c.COLUNA_PROBLEMAS)
+		self.assertEqual(problema.status, c.COLUNA_REFINAMENTO)
 
 		funcionalidade = self._nova(tipo=c.TIPO_FUNCIONALIDADE, modulo="Projetos")
-		self.assertEqual(funcionalidade.status, c.COLUNA_FUNCIONALIDADES)
+		self.assertEqual(funcionalidade.status, c.COLUNA_REFINAMENTO)
 
 	def test_registra_solicitante_e_data_de_submissao(self):
 		doc = self._nova()
@@ -132,18 +133,19 @@ class TestSugestaoOuProblema(FrappeTestCase):
 		doc = self._nova(tipo=c.TIPO_FUNCIONALIDADE, modulo=c.MODULO_NOVO)
 		self.assertEqual(doc.modulo, c.MODULO_NOVO)
 
-	def test_coluna_de_triagem_precisa_bater_com_o_tipo(self):
-		"""Na inserção o status é corrigido em silêncio; na edição, recusado.
+	def test_qualquer_coluna_do_quadro_vale_para_qualquer_tipo(self):
+		"""Nenhuma coluna representa tipo, então nenhuma é proibida a um tipo."""
+		doc = self._nova(tipo=c.TIPO_PROBLEMA, status=c.COLUNA_SELECIONADO)
+		self.assertEqual(doc.status, c.COLUNA_SELECIONADO)
 
-		São comportamentos diferentes de propósito: o Select preenche a primeira
-		opção sozinho, então throw no insert quebraria toda "Nova funcionalidade".
-		"""
-		doc = self._nova(tipo=c.TIPO_PROBLEMA, status=c.COLUNA_FUNCIONALIDADES)
-		self.assertEqual(doc.status, c.COLUNA_PROBLEMAS)
+		doc.tipo = c.TIPO_FUNCIONALIDADE
+		doc.save(ignore_permissions=True)
+		doc.reload()
+		self.assertEqual(doc.status, c.COLUNA_SELECIONADO)
 
-		doc.status = c.COLUNA_FUNCIONALIDADES
+	def test_status_fora_das_colunas_e_recusado(self):
 		with self.assertRaises(frappe.ValidationError):
-			doc.save(ignore_permissions=True)
+			self._nova(status="Problemas reportados")
 
 	def test_responsavel_sem_role_desenvolvedor_e_rejeitado(self):
 		doc = self._nova()
@@ -264,6 +266,10 @@ class TestSugestaoOuProblema(FrappeTestCase):
 		self.assertEqual(set(opcoes), set(TASK_STATUS_OPTIONS))
 		self.assertTrue(set(c.STATUS_TAREFA_POR_COLUNA.values()) <= TASK_STATUS_OPTIONS)
 		self.assertTrue(set(c.COLUNA_POR_STATUS_TAREFA) <= TASK_STATUS_OPTIONS)
+		# Coluna nova sem entrada no mapa deixaria a tarefa espelho com o status
+		# antigo, sem erro nenhum aparecer.
+		self.assertEqual(set(c.STATUS_TAREFA_POR_COLUNA), set(c.COLUNAS))
+		self.assertTrue(set(c.COLUNA_POR_STATUS_TAREFA.values()) <= set(c.COLUNAS))
 
 	def test_validar_espelha_nos_dois_sentidos(self):
 		"""A coluna "Validar" e o status "Validar" são o mesmo estado: quem move
@@ -645,9 +651,9 @@ class TestSugestaoOuProblema(FrappeTestCase):
 		b = self._nova(titulo="Segunda")
 		cc = self._nova(titulo="Terceira")
 
-		reordenar(c.COLUNA_PROBLEMAS, [cc.name, a.name, b.name])
+		reordenar(c.COLUNA_REFINAMENTO, [cc.name, a.name, b.name])
 
-		self.assertEqual(self._nomes_na_coluna(c.COLUNA_PROBLEMAS), [cc.name, a.name, b.name])
+		self.assertEqual(self._nomes_na_coluna(c.COLUNA_REFINAMENTO), [cc.name, a.name, b.name])
 
 	def test_reordenar_ignora_nomes_de_fora_da_coluna(self):
 		"""Quadro defasado não pode reordenar item que já saiu da coluna."""
@@ -656,9 +662,9 @@ class TestSugestaoOuProblema(FrappeTestCase):
 		outro.status = c.COLUNA_EM_DESENVOLVIMENTO
 		outro.save(ignore_permissions=True)
 
-		reordenar(c.COLUNA_PROBLEMAS, [outro.name, a.name, "SUG-99999"])
+		reordenar(c.COLUNA_REFINAMENTO, [outro.name, a.name, "SUG-99999"])
 
-		self.assertEqual(self._nomes_na_coluna(c.COLUNA_PROBLEMAS), [a.name])
+		self.assertEqual(self._nomes_na_coluna(c.COLUNA_REFINAMENTO), [a.name])
 		# O de fora não teve a ordem tocada.
 		self.assertEqual(frappe.db.get_value("Sugestao ou Problema", outro.name, "ordem"), 0)
 
@@ -692,19 +698,21 @@ class TestSugestaoOuProblema(FrappeTestCase):
 		solicitação nova se enterra embaixo das antigas."""
 		antiga = self._nova(titulo="Antiga")
 		nova = self._nova(titulo="Nova")
-		self.assertEqual(self._nomes_na_coluna(c.COLUNA_PROBLEMAS), [nova.name, antiga.name])
+		self.assertEqual(self._nomes_na_coluna(c.COLUNA_REFINAMENTO), [nova.name, antiga.name])
 
 	# ───────────────────── reclassificação ─────────────────────
 
-	def test_reclassificar_troca_tipo_e_coluna(self):
+	def test_reclassificar_troca_o_tipo_sem_mexer_no_andamento(self):
+		"""Nenhuma coluna representa tipo: trocar o tipo não pode rebobinar a fila."""
 		doc = self._nova(tipo=c.TIPO_FUNCIONALIDADE, modulo="Projetos")
-		self.assertEqual(doc.status, c.COLUNA_FUNCIONALIDADES)
+		doc.status = c.COLUNA_EM_DESENVOLVIMENTO
+		doc.save(ignore_permissions=True)
 
 		reclassificar(doc.name, c.TIPO_PROBLEMA)
 
 		doc.reload()
 		self.assertEqual(doc.tipo, c.TIPO_PROBLEMA)
-		self.assertEqual(doc.status, c.COLUNA_PROBLEMAS)
+		self.assertEqual(doc.status, c.COLUNA_EM_DESENVOLVIMENTO)
 
 	def test_reclassificar_com_novo_modulo_explica_o_bloqueio(self):
 		"""'Novo módulo' só vale para funcionalidade: reclassificar sem avisar
@@ -722,7 +730,7 @@ class TestSugestaoOuProblema(FrappeTestCase):
 		doc = self._nova(tipo=c.TIPO_PROBLEMA)
 		reclassificar(doc.name, c.TIPO_PROBLEMA)
 		doc.reload()
-		self.assertEqual(doc.status, c.COLUNA_PROBLEMAS)
+		self.assertEqual(doc.status, c.COLUNA_REFINAMENTO)
 
 	def test_reclassificar_exige_papel_de_triagem(self):
 		doc = self._nova(tipo=c.TIPO_FUNCIONALIDADE, modulo="Projetos")

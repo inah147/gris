@@ -70,7 +70,7 @@ class TestAtualizarSugestao(TestCase):
 			patch.object(
 				sugestoes.frappe.db,
 				"get_value",
-				return_value={"status": "Problemas reportados", "tipo": "Problema", "responsavel": None},
+				return_value={"status": "Refinamento", "tipo": "Problema", "responsavel": None},
 			),
 			patch.object(sugestoes.servico, "atualizar_status") as atualizar_status,
 		):
@@ -79,7 +79,7 @@ class TestAtualizarSugestao(TestCase):
 		atualizar_status.assert_not_called()
 		self.assertTrue(resultado["simulacao"])
 		self.assertEqual(
-			resultado["alteracoes"]["status"], {"de": "Problemas reportados", "para": "Em desenvolvimento"}
+			resultado["alteracoes"]["status"], {"de": "Refinamento", "para": "Em desenvolvimento"}
 		)
 
 	def test_delega_cada_campo_ao_endpoint_do_portal(self):

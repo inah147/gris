@@ -34,9 +34,6 @@
 
 {% block main %}
 {{ toaster() }}
-{# Mapa tipo -> coluna de triagem, para o JS reconhecer no drop que a coluna
-   destino representa um tipo diferente. `tojson` já escapa e marca como seguro. #}
-<script id="sugestoes-triagem" type="application/json">{{ coluna_de_triagem_por_tipo | tojson }}</script>
 
 <div class="sugestoes-quadro" data-pode-triar="{{ '1' if pode_triar else '0' }}">
 
@@ -87,21 +84,6 @@
    principal + lateral de comentários, mesmas classes .task-* para herdar o CSS
    já carregado em base.html. Sem os campos Status e Prazo — status se muda
    arrastando o card, e solicitação não tem prazo. #}
-{% set reclassificar_footer %}
-<button type="button" class="btn-sm-outline" data-reclassificar-cancelar>Cancelar</button>
-<button type="button" class="btn-sm-primary" data-reclassificar-confirmar>Reclassificar</button>
-{% endset %}
-
-{% call dialog(
-	id="dialog-reclassificar",
-	title="Mudar o tipo da solicitação?",
-	dialog_attrs={"class": "sugestoes-confirmar"},
-	footer=reclassificar_footer,
-	close_on_overlay_click=false
-) %}
-<p class="sugestoes-confirmar__texto" data-reclassificar-texto></p>
-{% endcall %}
-
 {% set detalhe_footer %}
 <a class="btn-sm-outline" id="detalhe-abrir-tarefa" href="#" hidden>Abrir tarefa</a>
 <a class="btn-sm-outline" id="detalhe-abrir-pr" href="#" target="_blank" rel="noopener" hidden>Ver pull request</a>

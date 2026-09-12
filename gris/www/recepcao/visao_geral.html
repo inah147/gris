@@ -156,6 +156,15 @@
 							}
 						) }}
 					{% endif %}
+					{% if card.sem_vagas %}
+						{{ badge(
+							lucide_icon("triangle-alert", size="sm") ~ "<span>Seção sem vagas</span>",
+							attrs={
+								"class": "badge-sem-vagas",
+								"title": card.ramo ~ " está com " ~ card.vagas_disponiveis ~ " vaga(s) disponível(is) — mesma conta da Fila de Espera."
+							}
+						) }}
+					{% endif %}
 					{% if card.registro_definitivo_pendente %}
 						{{ badge(
 							lucide_icon("id-card", size="sm") ~ "<span>Hora do registro definitivo!</span>",

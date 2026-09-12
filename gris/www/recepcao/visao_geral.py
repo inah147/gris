@@ -24,6 +24,7 @@ from gris.api.recepcao_funil import (
 	sinal_registro_definitivo,
 	status_por_etapas_concluidas,
 )
+from gris.api.recepcao_vagas import calcular_vagas_por_ramo, ramo_sem_vagas
 from gris.api.recepcao_visitas import remover_visita_do_jovem
 
 no_cache = 1
@@ -113,6 +114,7 @@ def get_context(context):
 		"data_de_nascimento",
 		"status",
 		"ramo",
+		"cpf",
 		"owner",
 		"responsavel_recepcao",
 		"tipo_de_registro",
@@ -130,6 +132,10 @@ def get_context(context):
 		fields=fields_to_fetch,
 		order_by="modified desc",
 	)
+
+	# Vagas de cada ramo, para o selo "Seção sem vagas". As linhas já carregadas vão
+	# junto para a conta não reconsultar o funil.
+	vagas_por_ramo = calcular_vagas_por_ramo(novos_associados)
 
 	# Bulk Data Fetching
 	names = [na.name for na in novos_associados]
@@ -347,6 +353,12 @@ def get_context(context):
 			associado.registro_definitivo_dias = sinal_definitivo["dias"]
 			associado.registro_definitivo_desde = (
 				format_date(sinal_definitivo["desde"]) if sinal_definitivo["desde"] else None
+			)
+
+			# Selo "Seção sem vagas": só marca o card, não trava nada no funil.
+			associado.sem_vagas = ramo_sem_vagas(vagas_por_ramo, associado.ramo, associado.status)
+			associado.vagas_disponiveis = (
+				vagas_por_ramo[associado.ramo].disponiveis if associado.sem_vagas else None
 			)
 
 			# Idade recalculada a cada carregamento da página

@@ -37,9 +37,35 @@
 	color: var(--color-foreground);
 }
 
-.insignias-detalhe__subtitulo {
+/*
+ * Quem pediu é a primeira coisa que se procura ao abrir um pedido: sai da linha
+ * cinza pequena que antes juntava ramo, nome e data, e vira uma linha própria
+ * logo abaixo do número do pedido.
+ */
+.insignias-detalhe__solicitante {
 	margin: 0;
-	font-size: var(--text-sm);
+	font-size: var(--text-lg);
+	line-height: 1.35;
+	color: var(--color-foreground);
+}
+
+.insignias-detalhe__solicitante strong {
+	font-weight: var(--font-weight-semibold);
+}
+
+/* Ramo e data do pedido acompanham o nome, um degrau abaixo no tamanho. */
+.insignias-detalhe__meta {
+	margin: 0;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+	font-size: var(--text-base);
+	font-weight: var(--font-weight-medium);
+	color: var(--color-foreground);
+}
+
+.insignias-detalhe__meta-separador {
 	color: var(--color-muted-foreground);
 }
 

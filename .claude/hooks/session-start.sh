@@ -266,6 +266,7 @@ set -uo pipefail
 CONTRIBUICAO="
 gris.tests.test_contribuicoes_transacoes
 gris.tests.test_cobranca_contribuicao
+gris.tests.test_cobranca_contribuicao_automatica
 gris.tests.test_contribuicao_detalhe
 gris.tests.test_dashboard_contribuicoes
 gris.tests.test_mcp_contribuicoes

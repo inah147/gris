@@ -92,6 +92,9 @@ leem e escrevem esse detalhamento.
 | `listar_pagamentos_contribuicao_mensal` | Registros de cobrança (`Pagamento Contribuicao Mensal`), com a transação que quitou cada um | Gestor/Visualizador Contribuição Mensal |
 | `atualizar_pagamento_contribuicao_mensal` ✎ | Ajusta status, valor, atraso e vínculo com a transação de um registro existente (por `name`) | Gestor Contribuição Mensal |
 | `definir_pagamento_mensal` ✎ | Cria ou atualiza o pagamento de um mês por associado + mês (AAAA-MM) — não precisa do `name`, serve para meses "Não gerado" | Gestor Contribuição Mensal |
+| `listar_cobrancas_contribuicao` | Cobranças por link InfinitePay (manuais e automáticas): situação, meses, valor, link, resultado do envio pelo WhatsApp e baixa no extrato; filtra por mês de emissão, status, origem e `sem_envio` | Gestor/Visualizador Contribuição Mensal |
+| `gerar_cobranca_contribuicao` ✎ | Emite o link dos meses em aberto de um associado e envia pelo WhatsApp; a cobrança pendente anterior vira "Substituída" | Gestor Contribuição Mensal |
+| `reenviar_cobranca_contribuicao` ✎ | Reenvia pelo WhatsApp o link de uma cobrança pendente (depois de corrigir o telefone, por exemplo) | Gestor Contribuição Mensal |
 
 ### Contas fixas
 
@@ -426,6 +429,7 @@ Exemplos de pedidos que funcionam bem:
 - *"Quais contribuições caíram na conta sem dono?"* → `listar_contribuicoes_nao_vinculadas`, depois `categorizar_transacoes` com `beneficiario`
 - *"Quem entrou no grupo e ainda não tem cobrança cadastrada?"* → `apuracao_contribuicoes` com `acao_cadastro='Cadastrar'`
 - *"Sobe a contribuição da Ana para R$ 75"* → `atualizar_cobranca_associado`
+- *"Quem ainda não recebeu o link deste mês?"* → `listar_cobrancas_contribuicao` com `mes` e `sem_envio=true`, corrigir o telefone com `atualizar_cobranca_associado` e `reenviar_cobranca_contribuicao`
 - *"Esse Pix de R$ 130 foi o mês de julho atrasado (R$ 70) mais agosto em dia (R$ 60)"* → `definir_competencias_transacao` com `competencias=[{"mes":"2026-07","valor":70,"em_atraso":true},{"mes":"2026-08","valor":60,"em_atraso":false}]`
 - *"Marca julho da Ana como pago e vincula à transação TX-0001"* → `definir_pagamento_mensal` com `associado`, `mes="2026-07"`, `status="Pago"`, `transacao_extrato="TX-0001"`
 

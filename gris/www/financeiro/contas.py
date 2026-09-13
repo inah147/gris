@@ -287,6 +287,17 @@ def reconciliar_e_inserir_infinitepay(extrato_path: str, vendas_path: str, receb
 				stats["geral"]["failed"] += 1
 				_capture_error("geral", str(row.get("infinite_id")) or "sem-id", e)
 
+		# A venda paga por link de cobrança já entrou no extrato pela baixa do webhook;
+		# concilia as duas para o dinheiro não contar em dobro. Uma falha aqui não
+		# desfaz a importação: o par fica na fila de conciliação manual.
+		conciliacao_cobrancas = {"conciliadas": 0, "sem_par": 0}
+		try:
+			from gris.api.financeiro.cobranca_contribuicao import conciliar_baixas_de_cobranca
+
+			conciliacao_cobrancas = conciliar_baixas_de_cobranca()
+		except Exception as e:
+			_capture_error("geral", "conciliação das baixas de cobrança", e)
+
 		# Monta resumo
 		def line(title, s):
 			return f"- {title}: total {s['total']}, inseridas {s['inserted']}, já existiam {s['skipped_exist']}, erro {s['failed']}"
@@ -311,12 +322,17 @@ def reconciliar_e_inserir_infinitepay(extrato_path: str, vendas_path: str, receb
 			*_error_section_lines("Recebimentos", errors["recebimentos"]),
 			line("Transacao Extrato Geral", stats["geral"]),
 			*_error_section_lines("Extrato Geral", errors["geral"]),
+			(
+				f"- Pagamentos por link de cobrança conciliados: {conciliacao_cobrancas['conciliadas']}, "
+				f"sem par: {conciliacao_cobrancas['sem_par']}"
+			),
 			"(Detalhes adicionais em: Error Log)",
 		]
 		return {
 			"summary_text": "\n".join(resumo),
 			"stats": stats,
 			"errors": errors,
+			"conciliacao_cobrancas": conciliacao_cobrancas,
 		}
 	except Exception as e:
 		frappe.log_error(str(e), "Erro ao processar arquivos importados")

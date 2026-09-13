@@ -248,12 +248,112 @@
 {% endif %}
 {% endset %}
 
+{% set painel_cobrancas %}
+{% set auto = cobrancas_mes.automatica %}
+<article class="card mb-4">
+	<section>
+		<h2 class="financeiro-section-title m-0 mb-2">Cobrança por link — {{ cobrancas_mes.mes }}</h2>
+		<p class="m-0 text-sm text-muted-foreground">
+			{% if auto.motivo_parada %}
+				{{ auto.motivo_parada }}
+			{% else %}
+				Cobrança automática ativa desde {{ auto.desde }}: a partir do dia {{ auto.dia_emissao }} de cada mês,
+				cada contribuinte com meses em aberto recebe o link pelo WhatsApp, e lembretes saem depois do vencimento.
+			{% endif %}
+			O pagamento pelo link dá baixa sozinho; ao importar o fechamento da InfinitePay, a venda é conciliada com a baixa.
+		</p>
+	</section>
+</article>
+
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+	<article class="card metric-card">
+		<section>
+			<p class="m-0 text-sm text-muted-foreground">Cobranças emitidas</p>
+			<p class="m-0 text-2xl font-semibold contrib-num">{{ cobrancas_mes.totais.emitidas }}</p>
+		</section>
+	</article>
+	<article class="card metric-card">
+		<section>
+			<p class="m-0 text-sm text-muted-foreground">Pagas pelo link</p>
+			<p class="m-0 text-2xl font-semibold contrib-num">{{ cobrancas_mes.totais.pagas }}</p>
+			<p class="m-0 text-sm text-muted-foreground contrib-num">{{ brl(cobrancas_mes.totais.valor_pago) }}</p>
+		</section>
+	</article>
+	<article class="card metric-card">
+		<section>
+			<p class="m-0 text-sm text-muted-foreground">Aguardando pagamento</p>
+			<p class="m-0 text-2xl font-semibold contrib-num">{{ cobrancas_mes.totais.pendentes }}</p>
+			<p class="m-0 text-sm text-muted-foreground contrib-num">{{ brl(cobrancas_mes.totais.valor_pendente) }}</p>
+		</section>
+	</article>
+	<article class="card metric-card">
+		<section>
+			<p class="m-0 text-sm text-muted-foreground">Sem mensagem enviada</p>
+			<p class="m-0 text-2xl font-semibold contrib-num">{{ cobrancas_mes.totais.sem_envio }}</p>
+		</section>
+	</article>
+</div>
+
+{% if cobrancas_mes.cobrancas %}
+<article class="card">
+	<section class="p-0 min-w-0">
+		<div class="overflow-x-auto">
+			<table class="table contrib-tabela">
+				<thead>
+					<tr>
+						<th>Contribuinte</th>
+						<th>Situação</th>
+						<th>Meses</th>
+						<th class="text-right">Valor</th>
+						<th>Envio pelo WhatsApp</th>
+						<th class="text-right">Ações</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for cobranca in cobrancas_mes.cobrancas %}
+					{% set detalhe_url = "/financeiro/contribuicao?associado=" ~ (cobranca.associado | urlencode) %}
+					<tr>
+						<td class="font-medium">
+							<a class="contrib-linha__nome" href="{{ detalhe_url }}">{{ cobranca.nome }}</a>
+							<span class="badge badge-outline contrib-badge--acao">{{ cobranca.origem }}</span>
+						</td>
+						<td>{{ situacao_badge(cobranca.status, cobranca.status_slug) }}</td>
+						<td class="whitespace-nowrap text-muted-foreground">{{ cobranca.competencias }}</td>
+						<td class="text-right whitespace-nowrap contrib-num">{{ brl(cobranca.valor) }}</td>
+						<td class="text-sm">
+							{{ cobranca.resultado_ultimo_envio or '—' }}
+							{% if cobranca.lembretes_enviados %}
+								<span class="text-muted-foreground">({{ cobranca.lembretes_enviados }} lembrete(s))</span>
+							{% endif %}
+						</td>
+						<td class="text-right">
+							{% if pode_cobrar and cobranca.status == "Pendente" %}
+								<button type="button" class="btn-sm-outline contrib-reenviar" data-cobranca="{{ cobranca.name }}">Reenviar</button>
+							{% endif %}
+						</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</section>
+</article>
+{% else %}
+	{{ empty(
+		title="Nenhuma cobrança emitida neste mês",
+		description="As cobranças por link aparecem aqui assim que são emitidas — pelo job mensal ou pela tela do contribuinte.",
+		icon=lucide_icon("link", size="md")
+	) }}
+{% endif %}
+{% endset %}
+
 {{ tabs(
 	id="contrib-tabs",
 	tabsets=[
 		{"id": "visao-geral", "tab": "Visão geral", "panel": painel_geral},
 		{"id": "por-associado", "tab": "Por associado", "panel": painel_associados},
-		{"id": "a-identificar", "tab": "A identificar (" ~ totais.transacoes_nao_vinculadas ~ ")", "panel": painel_identificar}
+		{"id": "a-identificar", "tab": "A identificar (" ~ totais.transacoes_nao_vinculadas ~ ")", "panel": painel_identificar},
+		{"id": "cobrancas-mes", "tab": "Cobranças do mês (" ~ cobrancas_mes.totais.pendentes ~ ")", "panel": painel_cobrancas}
 	]
 ) }}
 {% endblock %}

@@ -12,7 +12,14 @@
   "carencia_section",
   "meses_carencia_provisorio",
   "column_break_carencia",
-  "meses_carencia_definitivo"
+  "meses_carencia_definitivo",
+  "cobranca_automatica_section",
+  "cobranca_automatica_ativa",
+  "cobranca_automatica_desde",
+  "dia_emissao_cobranca",
+  "column_break_cobranca_automatica",
+  "dias_lembrete_apos_vencimento",
+  "max_lembretes"
  ],
  "fields": [
   {
@@ -66,13 +73,64 @@
    "fieldtype": "Int",
    "label": "Meses de car\u00eancia (registro definitivo)",
    "non_negative": 1
+  },
+  {
+   "description": "Emite todo m\u00eas um link de pagamento InfinitePay para cada contribuinte com cobran\u00e7a ativa e compet\u00eancias em aberto, e envia ao telefone de cobran\u00e7a pelo WhatsApp.",
+   "fieldname": "cobranca_automatica_section",
+   "fieldtype": "Section Break",
+   "label": "Cobran\u00e7a autom\u00e1tica por link"
+  },
+  {
+   "default": "0",
+   "fieldname": "cobranca_automatica_ativa",
+   "fieldtype": "Check",
+   "label": "Cobran\u00e7a autom\u00e1tica ativa"
+  },
+  {
+   "depends_on": "cobranca_automatica_ativa",
+   "description": "Primeiro m\u00eas com cobran\u00e7a autom\u00e1tica. Antes dele o job n\u00e3o emite nada \u2014 use para marcar o corte das assinaturas.",
+   "fieldname": "cobranca_automatica_desde",
+   "fieldtype": "Date",
+   "label": "Cobrar automaticamente a partir de",
+   "mandatory_depends_on": "cobranca_automatica_ativa"
+  },
+  {
+   "default": "1",
+   "depends_on": "cobranca_automatica_ativa",
+   "description": "Dia do m\u00eas a partir do qual as cobran\u00e7as do m\u00eas s\u00e3o emitidas e enviadas.",
+   "fieldname": "dia_emissao_cobranca",
+   "fieldtype": "Int",
+   "label": "Dia de emiss\u00e3o",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "column_break_cobranca_automatica",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "3",
+   "depends_on": "cobranca_automatica_ativa",
+   "description": "Dias depois do vencimento para reenviar o link a quem ainda n\u00e3o pagou. Os lembretes seguintes saem com o mesmo intervalo.",
+   "fieldname": "dias_lembrete_apos_vencimento",
+   "fieldtype": "Int",
+   "label": "Lembrete (dias ap\u00f3s o vencimento)",
+   "non_negative": 1
+  },
+  {
+   "default": "2",
+   "depends_on": "cobranca_automatica_ativa",
+   "description": "Quantos lembretes, no m\u00e1ximo, cada cobran\u00e7a recebe. Zero desliga os lembretes.",
+   "fieldname": "max_lembretes",
+   "fieldtype": "Int",
+   "label": "M\u00e1ximo de lembretes",
+   "non_negative": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-31 10:00:00.000000",
+ "modified": "2026-09-13 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Configuracoes Contribuicao Mensal",

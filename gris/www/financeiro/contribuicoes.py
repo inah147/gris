@@ -4,6 +4,8 @@ import json
 
 import frappe
 
+from gris.api.financeiro.cobranca_contribuicao_automatica import resumo_cobrancas_do_mes
+from gris.api.financeiro.contribuicoes import ROLE_GESTOR
 from gris.api.financeiro.pagamentos_contribuicao import (
 	MESES_PADRAO,
 	STATUS_ATRASADO,
@@ -72,6 +74,9 @@ def get_context(context):
 	context.nao_vinculadas = apuracao["nao_vinculadas"]
 	context.associados_por_situacao = _agrupar_por_situacao(apuracao["associados"])
 	context.ordem_situacao = ORDEM_EXIBICAO
+	context.cobrancas_mes = resumo_cobrancas_do_mes()
+	# Reenviar a cobrança é ação de gestor; o visualizador só acompanha.
+	context.pode_cobrar = ROLE_GESTOR in frappe.get_roles()
 	# Payload consumido pelos gráficos ECharts em contribuicoes.js. O escape de "<"
 	# impede que um "</script>" em qualquer valor feche o bloco antes da hora.
 	context.dados_graficos = json.dumps(

@@ -355,10 +355,57 @@
 		addBotao("»", totalPaginas, paginaAtual === totalPaginas, false);
 	}
 
+	// ─────────────────────────── cobranças do mês ───────────────────────────
+
+	function showToast(mensagem, indicador) {
+		const categorias = { green: "success", red: "error", orange: "warning", blue: "info" };
+		document.dispatchEvent(
+			new CustomEvent("basecoat:toast", {
+				detail: {
+					config: {
+						category: categorias[indicador] || "info",
+						title: mensagem,
+						duration: 3000,
+					},
+				},
+			})
+		);
+	}
+
+	function reenviarCobranca(botao) {
+		const nome = botao.getAttribute("data-cobranca");
+		if (!nome) return;
+		botao.disabled = true;
+		frappe
+			.call({
+				method: "gris.api.financeiro.cobranca_contribuicao.enviar_cobranca_whatsapp",
+				args: { name: nome },
+				freeze: true,
+			})
+			.then((resposta) => {
+				const whatsapp = ((resposta && resposta.message) || {}).whatsapp || {};
+				if (whatsapp.enviado) {
+					showToast("Cobrança reenviada pelo WhatsApp.", "green");
+					window.setTimeout(() => window.location.reload(), 600);
+					return;
+				}
+				showToast(whatsapp.motivo || "A mensagem não foi enviada.", "orange");
+				botao.disabled = false;
+			})
+			.catch(() => {
+				showToast("Erro ao reenviar a cobrança.", "red");
+				botao.disabled = false;
+			});
+	}
+
 	// ─────────────────────────── ligações ───────────────────────────
 
 	function init() {
 		initGraficos();
+
+		document.querySelectorAll(".contrib-reenviar").forEach((botao) => {
+			botao.addEventListener("click", () => reenviarCobranca(botao));
+		});
 
 		const filtroNome = document.getElementById("filtroAssociado");
 		if (filtroNome) filtroNome.addEventListener("input", aplicarFiltros);

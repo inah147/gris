@@ -659,3 +659,246 @@ def atualizar_pagamento_contribuicao_mensal(
 	doc.save()
 
 	return {"atualizado": True, "name": name, "alteracoes": alteracoes}
+
+
+# ─────────────────────────── cobrança por link InfinitePay ───────────────────────────
+
+STATUS_COBRANCA = ("Pendente", "Pago", "Erro", "Substituída")
+ORIGENS_COBRANCA = ("Manual", "Automática")
+
+
+def _resumo_cobranca(cobranca: dict, nomes: dict[str, str], valores: dict[str, float]) -> dict:
+	return {
+		"name": cobranca["name"],
+		"associado": cobranca["associado"],
+		"nome_associado": nomes.get(cobranca["associado"]),
+		"status": cobranca["status"],
+		"origem": cobranca["origem"],
+		"competencias": [ym for ym in (cobranca["competencias"] or "").split(",") if ym],
+		"valor_total": round(valores.get(cobranca["name"], 0.0), 2),
+		"link_pagamento": cobranca["link_pagamento"],
+		"mes_emissao": cobranca["mes_emissao"],
+		"ultimo_envio_whatsapp": cobranca["ultimo_envio_whatsapp"],
+		"resultado_ultimo_envio": cobranca["resultado_ultimo_envio"],
+		"lembretes_enviados": cobranca["lembretes_enviados"],
+		"transacao_extrato": cobranca["transacao_extrato"],
+		"criada_em": cobranca["creation"],
+	}
+
+
+@ferramenta(
+	nome="listar_cobrancas_contribuicao",
+	titulo="Listar cobranças da contribuição por link",
+	descricao=(
+		"Lista as cobranças de contribuição mensal emitidas por link InfinitePay (manuais e "
+		"automáticas), com situação, meses cobrados, valor, link, resultado do envio pelo WhatsApp "
+		"e a baixa lançada no extrato. Use mes='AAAA-MM' para o acompanhamento do mês e "
+		"sem_envio=true para quem ainda não recebeu a mensagem."
+	),
+	parametros={
+		"mes": {"type": "string", "description": "Mês de emissão, formato AAAA-MM."},
+		"status": {"type": "string", "enum": list(STATUS_COBRANCA)},
+		"origem": {"type": "string", "enum": list(ORIGENS_COBRANCA)},
+		"cpf": {"type": "string", "description": "CPF do associado."},
+		"sem_envio": {
+			"type": "boolean",
+			"description": "Só cobranças pendentes cuja mensagem ainda não saiu pelo WhatsApp.",
+		},
+		"limite": {"type": "integer", "default": 25, "minimum": 1, "maximum": 100},
+		"inicio": {"type": "integer", "default": 0, "minimum": 0},
+	},
+	roles=ROLES_LEITURA,
+)
+def listar_cobrancas_contribuicao(
+	mes: str | None = None,
+	status: str | None = None,
+	origem: str | None = None,
+	cpf: str | None = None,
+	sem_envio: bool = False,
+	limite: int = 25,
+	inicio: int = 0,
+) -> dict:
+	from gris.api.financeiro.cobranca_contribuicao import FINALIDADE_CONTRIBUICAO
+
+	filtros: dict[str, Any] = {"finalidade": FINALIDADE_CONTRIBUICAO}
+	if mes:
+		if not PADRAO_COMPETENCIA_MES.match(mes):
+			raise ErroDeFerramenta("ARGUMENTO_INVALIDO", f"Mês inválido: '{mes}'. Use AAAA-MM.")
+		filtros["mes_emissao"] = f"{mes}-01"
+	if status:
+		filtros["status"] = status
+	if origem:
+		filtros["origem"] = origem
+	if cpf:
+		filtros["associado"] = cpf
+	if sem_envio:
+		filtros["status"] = "Pendente"
+		filtros["ultimo_envio_whatsapp"] = ["is", "not set"]
+
+	limite = normalizar_limite(limite)
+	inicio = max(0, int(inicio or 0))
+
+	cobrancas = frappe.get_all(
+		"Cobranca Infinitepay",
+		filters=filtros,
+		fields=[
+			"name",
+			"associado",
+			"status",
+			"origem",
+			"competencias",
+			"link_pagamento",
+			"mes_emissao",
+			"ultimo_envio_whatsapp",
+			"resultado_ultimo_envio",
+			"lembretes_enviados",
+			"transacao_extrato",
+			"creation",
+		],
+		order_by="creation desc",
+		limit_page_length=limite,
+		limit_start=inicio,
+	)
+	total = frappe.db.count("Cobranca Infinitepay", filters=filtros)
+
+	valores: dict[str, float] = {}
+	nomes: dict[str, str] = {}
+	if cobrancas:
+		for item in frappe.get_all(
+			"Item Cobranca Infinitepay",
+			filters={
+				"parent": ["in", [c["name"] for c in cobrancas]],
+				"parenttype": "Cobranca Infinitepay",
+			},
+			fields=["parent", "quantidade", "preco"],
+		):
+			valores[item["parent"]] = valores.get(item["parent"], 0.0) + flt(item["quantidade"]) * flt(
+				item["preco"]
+			)
+		associados = list({c["associado"] for c in cobrancas if c["associado"]})
+		if associados:
+			nomes = dict(
+				frappe.get_all(
+					"Associado",
+					filters={"name": ["in", associados]},
+					fields=["name", "nome_completo"],
+					as_list=True,
+				)
+			)
+
+	por_status = frappe.get_all(
+		"Cobranca Infinitepay",
+		filters={campo: valor for campo, valor in filtros.items() if campo != "status"},
+		fields=["status", "count(name) as quantidade"],
+		group_by="status",
+	)
+
+	return {
+		"cobrancas": [_resumo_cobranca(c, nomes, valores) for c in cobrancas],
+		"por_status": {linha["status"]: linha["quantidade"] for linha in por_status},
+		"paginacao": {"inicio": inicio, "limite": limite, "retornados": len(cobrancas), "total": total},
+	}
+
+
+@ferramenta(
+	nome="gerar_cobranca_contribuicao",
+	titulo="Gerar cobrança da contribuição por link",
+	descricao=(
+		"Emite um link de pagamento InfinitePay para os meses em aberto de um associado e, se "
+		"pedido, envia pelo WhatsApp ao telefone de cobrança. Sem 'competencias', cobra todos os "
+		"meses em aberto dos últimos 12. A cobrança pendente anterior do associado passa a "
+		"'Substituída'. Quando a InfinitePay confirma o pagamento, a baixa entra sozinha no extrato."
+	),
+	parametros={
+		"cpf": {"type": "string", "description": "CPF do associado."},
+		"competencias": {
+			"type": "array",
+			"items": {"type": "string"},
+			"description": "Meses a cobrar, formato AAAA-MM. Vazio cobra todos os meses em aberto.",
+		},
+		"enviar_whatsapp": {"type": "boolean", "default": True},
+	},
+	obrigatorios=("cpf",),
+	roles=ROLES_ESCRITA,
+	somente_leitura=False,
+)
+def gerar_cobranca_contribuicao(
+	cpf: str,
+	competencias: list[str] | None = None,
+	enviar_whatsapp: bool = True,
+	simular: bool = False,
+) -> dict:
+	from gris.api.financeiro import cobranca_contribuicao as cobranca_servico
+
+	if not frappe.db.exists("Associado", cpf):
+		raise ErroDeFerramenta("NAO_ENCONTRADO", f"Nenhum associado encontrado com o CPF '{cpf}'.")
+
+	situacao = cobranca_servico.get_situacao_para_cobranca(cpf)
+	pendentes = situacao["pendentes"]
+	em_aberto = [p["ym"] for p in pendentes]
+	pedidas = list(competencias or em_aberto)
+	if not pedidas:
+		raise ErroDeFerramenta("ARGUMENTO_INVALIDO", "O associado não tem meses em aberto para cobrar.")
+	fora = [ym for ym in pedidas if ym not in em_aberto]
+	if fora:
+		raise ErroDeFerramenta(
+			"ARGUMENTO_INVALIDO",
+			"Estes meses não estão em aberto para o associado.",
+			{"fora": fora, "em_aberto": em_aberto},
+		)
+
+	valor_total = round(sum(p["valor"] for p in pendentes if p["ym"] in pedidas), 2)
+	if simular:
+		return {
+			"simulacao": True,
+			"cpf": cpf,
+			"competencias": sorted(pedidas),
+			"valor_total": valor_total,
+			"substituiria": [c["name"] for c in situacao["cobrancas"] if c["status"] == "Pendente"],
+		}
+
+	cobranca = cobranca_servico.emitir_cobranca(cpf, pedidas, pendentes=pendentes)
+	if not cobranca["link_pagamento"]:
+		raise ErroDeFerramenta(
+			"VALIDACAO", f"A InfinitePay não devolveu o link da cobrança {cobranca['name']}."
+		)
+	whatsapp = cobranca_servico.enviar_cobranca(cobranca["name"]) if enviar_whatsapp else None
+	return {"cobranca": cobranca, "whatsapp": whatsapp}
+
+
+@ferramenta(
+	nome="reenviar_cobranca_contribuicao",
+	titulo="Reenviar cobrança da contribuição pelo WhatsApp",
+	descricao=(
+		"Reenvia pelo WhatsApp o link de uma cobrança de contribuição mensal pendente, para o "
+		"telefone de cobrança atual do associado. Use depois de corrigir o telefone com "
+		"'atualizar_cobranca_associado'."
+	),
+	parametros={
+		"name": {
+			"type": "string",
+			"description": "Identificador da cobrança (retornado por 'listar_cobrancas_contribuicao').",
+		},
+	},
+	obrigatorios=("name",),
+	roles=ROLES_ESCRITA,
+	somente_leitura=False,
+)
+def reenviar_cobranca_contribuicao(name: str, simular: bool = False) -> dict:
+	from gris.api.financeiro import cobranca_contribuicao as cobranca_servico
+
+	cobranca = frappe.db.get_value(
+		"Cobranca Infinitepay", name, ["name", "status", "finalidade", "associado"], as_dict=True
+	)
+	if not cobranca or cobranca.finalidade != cobranca_servico.FINALIDADE_CONTRIBUICAO:
+		raise ErroDeFerramenta("NAO_ENCONTRADO", f"Nenhuma cobrança de contribuição com o nome '{name}'.")
+	if cobranca.status != "Pendente":
+		raise ErroDeFerramenta(
+			"ARGUMENTO_INVALIDO", f"A cobrança {name} está '{cobranca.status}' e não pode ser reenviada."
+		)
+
+	if simular:
+		telefone = frappe.db.get_value("Associado", cobranca.associado, "telefone_cobranca")
+		return {"simulacao": True, "name": name, "telefone_cobranca": telefone}
+
+	return {"name": name, "whatsapp": cobranca_servico.enviar_cobranca(name)}

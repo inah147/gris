@@ -12,12 +12,16 @@ from unittest import mock
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import getdate
+from frappe.utils import add_days, getdate
 
 from gris.api.financeiro.cobranca_contribuicao import (
 	FINALIDADE_CONTRIBUICAO,
+	ORIGEM_AUTOMATICA,
 	PREFIXO_ID_TRANSACAO,
 	_normalizar_competencias,
+	conciliar_baixas_de_cobranca,
+	emitir_cobranca,
+	enviar_cobranca,
 	lancar_baixa,
 	montar_cobranca,
 	montar_mensagem,
@@ -159,22 +163,36 @@ class TestBaixaDaCobranca(FrappeTestCase):
 		resposta.raise_for_status.return_value = None
 		return mock.patch.object(cobranca_doctype.requests, "post", return_value=resposta)
 
-	def _criar_cobranca(self, competencias: str, status: str = "Pendente", paid_amount: int = 0):
-		"""Cobrança gravada sem sair para a rede."""
+	def _criar_cobranca(
+		self,
+		competencias: str,
+		status: str = "Pendente",
+		paid_amount: int = 0,
+		preco: float = VALOR,
+		sufixo: str = "",
+		**campos,
+	):
+		"""Cobrança gravada sem sair para a rede, com um item por competência."""
 		with self._sem_rede():
 			doc = frappe.get_doc(
 				{
 					"doctype": "Cobranca Infinitepay",
-					"order_nsu": f"CM-teste-{competencias.replace(',', '-')}-{status}",
+					"order_nsu": f"CM-teste-{competencias.replace(',', '-')}-{status}{sufixo}",
 					"status": status,
 					"finalidade": FINALIDADE_CONTRIBUICAO,
 					"associado": self.associado,
 					"competencias": competencias,
 					"paid_amount": paid_amount,
 					"itens": [
-						{"descricao": f"Contribuição {ym}", "quantidade": 1, "preco": VALOR}
+						{
+							"descricao": f"Contribuição {ym}",
+							"quantidade": 1,
+							"preco": preco,
+							"competencia": f"{ym}-01",
+						}
 						for ym in competencias.split(",")
 					],
+					**campos,
 				}
 			)
 			doc.insert(ignore_permissions=True)
@@ -246,7 +264,9 @@ class TestBaixaDaCobranca(FrappeTestCase):
 
 		# Dois meses vencidos custam o valor de atraso, não o valor em dia.
 		total = round(2 * VALOR_ATRASO * 100)
-		cobranca = self._criar_cobranca("2026-06,2026-07", status="Pago", paid_amount=total)
+		cobranca = self._criar_cobranca(
+			"2026-06,2026-07", status="Pago", paid_amount=total, preco=VALOR_ATRASO
+		)
 		lancar_baixa(cobranca)
 
 		depois = apurar_associados([self.associado], 6, HOJE)[0]
@@ -273,6 +293,179 @@ class TestBaixaDaCobranca(FrappeTestCase):
 
 		with self.assertRaises(frappe.ValidationError), self._sem_rede():
 			montar_cobranca(self.associado, "2026-06", meses=6)
+
+	def test_baixa_declara_os_meses_e_marca_os_pagamentos_como_pagos(self):
+		"""A baixa detalha quanto quitou de cada mês, e a tela do gestor enxerga isso.
+
+		A tela do gestor e o MCP leem o `Pagamento Contribuicao Mensal`; sem o
+		detalhamento a baixa só aparecia na apuração pelas transações.
+		"""
+		_apagar("Pagamento Contribuicao Mensal", {"associado": self.associado})
+		cobranca = self._criar_cobranca(
+			"2026-06,2026-07", status="Pago", paid_amount=14500, preco=VALOR_ATRASO, capture_method="pix"
+		)
+		transacao = frappe.get_doc("Transacao Extrato Geral", lancar_baixa(cobranca))
+
+		# O valor é o cobrado; o que passar disso (juros de parcelamento) fica fora.
+		self.assertEqual(float(transacao.valor), 2 * VALOR_ATRASO)
+		self.assertEqual(transacao.metodo, "Pix")
+		self.assertEqual(
+			[(getdate(d.mes_referencia), float(d.valor)) for d in transacao.competencias_contribuicao],
+			[(datetime.date(2026, 6, 1), VALOR_ATRASO), (datetime.date(2026, 7, 1), VALOR_ATRASO)],
+		)
+		pagamentos = frappe.get_all(
+			"Pagamento Contribuicao Mensal",
+			filters={"associado": self.associado},
+			fields=["mes_de_referencia", "status", "transacao_extrato"],
+			order_by="mes_de_referencia asc",
+		)
+		self.assertEqual(
+			[(getdate(p.mes_de_referencia), p.status, p.transacao_extrato) for p in pagamentos],
+			[
+				(datetime.date(2026, 6, 1), "Pago", transacao.name),
+				(datetime.date(2026, 7, 1), "Pago", transacao.name),
+			],
+		)
+
+	def test_link_antigo_pago_depois_do_mes_quitado_entra_como_credito(self):
+		"""O mês já quitado por outro pagamento não é declarado de novo pela baixa."""
+		primeira = self._criar_cobranca("2026-06", status="Pago", paid_amount=6000, sufixo="-a")
+		lancar_baixa(primeira)
+
+		# Gravada já como Paga, a cobrança dispara a baixa pelo `on_update`.
+		with mock.patch.object(frappe, "log_error") as log_error:
+			antiga = self._criar_cobranca("2026-06", status="Pago", paid_amount=6000, sufixo="-b")
+			nome = lancar_baixa(antiga)
+
+		transacao = frappe.get_doc("Transacao Extrato Geral", nome)
+		self.assertEqual(transacao.competencias_contribuicao, [])
+		self.assertEqual(getdate(transacao.mes_competencia), datetime.date(2026, 6, 1))
+		log_error.assert_called_once()
+
+	def test_emitir_cobranca_substitui_a_pendente_anterior(self):
+		with self._sem_rede():
+			primeira = emitir_cobranca(self.associado, "2026-06", meses=12)
+		# As duas emissões caem no mesmo segundo; o order_nsu (que dá nome) precisa diferir.
+		with (
+			self._sem_rede(),
+			mock.patch(
+				"gris.api.financeiro.cobranca_contribuicao._proximo_order_nsu",
+				return_value="CM-teste-segunda",
+			),
+		):
+			segunda = emitir_cobranca(self.associado, "2026-06,2026-07", meses=12, origem=ORIGEM_AUTOMATICA)
+
+		self.assertEqual(segunda["substituidas"], [primeira["name"]])
+		self.assertEqual(
+			frappe.db.get_value("Cobranca Infinitepay", primeira["name"], "status"), "Substituída"
+		)
+		emitida = frappe.get_doc("Cobranca Infinitepay", segunda["name"])
+		self.assertEqual(emitida.origem, ORIGEM_AUTOMATICA)
+		self.assertEqual(
+			[(getdate(i.competencia), i.em_atraso) for i in emitida.itens],
+			[(datetime.date(2026, 6, 1), 1), (datetime.date(2026, 7, 1), 1)],
+		)
+
+	def test_envio_registra_o_resultado_na_cobranca(self):
+		cobranca = self._criar_cobranca("2026-06")
+
+		with mock.patch("gris.utils.whatsapp.enviar_texto") as enviar:
+			resultado = enviar_cobranca(cobranca.name, lembrete=True)
+		enviar.assert_called_once()
+		self.assertTrue(resultado["enviado"])
+		registrado = frappe.db.get_value(
+			"Cobranca Infinitepay",
+			cobranca.name,
+			["ultimo_envio_whatsapp", "lembretes_enviados", "resultado_ultimo_envio"],
+			as_dict=True,
+		)
+		self.assertTrue(registrado.ultimo_envio_whatsapp)
+		self.assertEqual(registrado.lembretes_enviados, 1)
+		self.assertIn("Lembrete", registrado.resultado_ultimo_envio)
+
+		frappe.db.set_value("Associado", self.associado, "telefone_cobranca", "")
+		frappe.db.set_value("Cobranca Infinitepay", cobranca.name, "customer_phone", "")
+		try:
+			resultado = enviar_cobranca(cobranca.name)
+		finally:
+			frappe.db.set_value("Associado", self.associado, "telefone_cobranca", "11999990000")
+		self.assertFalse(resultado["enviado"])
+		self.assertIn(
+			"Não enviado",
+			frappe.db.get_value("Cobranca Infinitepay", cobranca.name, "resultado_ultimo_envio"),
+		)
+
+	# ── conciliação com o fechamento importado ──
+
+	def _instituicao_infinitepay(self) -> None:
+		if not frappe.db.exists("Instituicao Financeira", "Infinitepay"):
+			frappe.get_doc({"doctype": "Instituicao Financeira", "nome": "Infinitepay"}).insert(
+				ignore_permissions=True
+			)
+
+	def _venda_importada(self, id_venda: str, valor: float, data: datetime.date | None = None) -> str:
+		"""A mesma venda como o fechamento da InfinitePay a grava: fonte Sistema, sem dono."""
+		from gris.financeiro.doctype.transacao_extrato_geral.transacao_extrato_geral import (
+			criar_transacao_de_sistema,
+		)
+
+		self._instituicao_infinitepay()
+		_apagar("Transacao Extrato Geral", {"id": id_venda})
+		return criar_transacao_de_sistema(
+			{
+				"id": id_venda,
+				"descricao": "Pagamento em PIX de FULANO",
+				"debito_credito": "Crédito",
+				"valor": valor,
+				"data_transacao": data or getdate(),
+				"instituicao": "Infinitepay",
+				"categoria": CATEGORIA_CONTRIBUICAO,
+			}
+		).name
+
+	def _baixa_paga(self, competencias: str, sufixo: str, transaction_nsu: str = "") -> str:
+		cobranca = self._criar_cobranca(
+			competencias, status="Pago", paid_amount=6000, sufixo=sufixo, transaction_nsu=transaction_nsu
+		)
+		return lancar_baixa(cobranca)
+
+	def _situacao(self, nome: str) -> tuple:
+		return frappe.db.get_value(
+			"Transacao Extrato Geral", nome, ["status_conciliacao", "excluir_do_total"]
+		)
+
+	def test_concilia_pelo_transaction_nsu_e_mantem_a_baixa(self):
+		baixa = self._baixa_paga("2026-06", "-nsu", transaction_nsu="nsu-teste-0001")
+		# Cartão: a importação traz o valor líquido da taxa.
+		venda = self._venda_importada("nsu-teste-0001", 57.3, add_days(getdate(), -1))
+
+		resultado = conciliar_baixas_de_cobranca()
+
+		self.assertGreaterEqual(resultado["conciliadas"], 1)
+		self.assertEqual(self._situacao(baixa), ("Conciliada", 0))
+		self.assertEqual(self._situacao(venda), ("Conciliada", 1))
+		self.assertEqual(frappe.db.get_value("Transacao Extrato Geral", venda, "transacao_conciliada"), baixa)
+
+	def test_sem_nsu_concilia_quando_ha_uma_so_venda_candidata(self):
+		baixa = self._baixa_paga("2026-06", "-pix")
+		venda = self._venda_importada("pix-teste-0001", 60.0)
+
+		conciliar_baixas_de_cobranca()
+
+		self.assertEqual(self._situacao(baixa), ("Conciliada", 0))
+		self.assertEqual(self._situacao(venda), ("Conciliada", 1))
+
+	def test_sem_nsu_nao_concilia_na_duvida(self):
+		"""Duas vendas de mesmo valor no mesmo dia para uma baixa só: fica para o gestor."""
+		baixa = self._baixa_paga("2026-06", "-duvida")
+		primeira = self._venda_importada("pix-teste-0002", 60.0)
+		segunda = self._venda_importada("pix-teste-0003", 60.0)
+
+		conciliar_baixas_de_cobranca()
+
+		self.assertEqual(self._situacao(baixa), ("Não conciliada", 0))
+		self.assertEqual(self._situacao(primeira), ("Não conciliada", 0))
+		self.assertEqual(self._situacao(segunda), ("Não conciliada", 0))
 
 	def test_montar_cobranca_cria_um_item_por_competencia(self):
 		with self._sem_rede():

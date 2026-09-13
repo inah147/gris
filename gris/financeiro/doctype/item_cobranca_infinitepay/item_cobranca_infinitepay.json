@@ -6,7 +6,9 @@
  "field_order": [
   "descricao",
   "quantidade",
-  "preco"
+  "preco",
+  "competencia",
+  "em_atraso"
  ],
  "fields": [
   {
@@ -31,12 +33,25 @@
    "label": "Pre\u00e7o",
    "non_negative": 1,
    "reqd": 1
+  },
+  {
+   "description": "M\u00eas de contribui\u00e7\u00e3o mensal que este item quita (primeiro dia do m\u00eas). Vazio em cobran\u00e7as avulsas.",
+   "fieldname": "competencia",
+   "fieldtype": "Date",
+   "label": "Compet\u00eancia"
+  },
+  {
+   "default": "0",
+   "description": "O m\u00eas j\u00e1 estava vencido quando a cobran\u00e7a foi emitida.",
+   "fieldname": "em_atraso",
+   "fieldtype": "Check",
+   "label": "Em atraso"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-04-13 12:42:25.514472",
+ "modified": "2026-09-13 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Item Cobranca Infinitepay",

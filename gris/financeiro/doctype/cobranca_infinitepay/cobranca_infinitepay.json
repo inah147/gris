@@ -16,6 +16,13 @@
   "column_break_contribuicao",
   "competencias",
   "transacao_extrato",
+  "section_envio",
+  "origem",
+  "mes_emissao",
+  "column_break_envio",
+  "lembretes_enviados",
+  "ultimo_envio_whatsapp",
+  "resultado_ultimo_envio",
   "section_itens",
   "itens",
   "section_redirecionamento",
@@ -62,8 +69,9 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Pendente\nPago\nErro",
-   "read_only": 1
+   "options": "Pendente\nPago\nErro\nSubstitu\u00edda",
+   "read_only": 1,
+   "description": "Substitu\u00edda: uma cobran\u00e7a mais nova do mesmo associado passou a valer. Se o link antigo for pago mesmo assim, o pagamento \u00e9 aceito."
   },
   {
    "fieldname": "column_break_pedido",
@@ -115,6 +123,55 @@
    "fieldtype": "Link",
    "label": "Transa\u00e7\u00e3o lan\u00e7ada no extrato",
    "options": "Transacao Extrato Geral",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "depends_on": "eval:doc.finalidade == \"Contribui\u00e7\u00e3o Mensal\"",
+   "fieldname": "section_envio",
+   "fieldtype": "Section Break",
+   "label": "Envio da cobran\u00e7a"
+  },
+  {
+   "default": "Manual",
+   "description": "Autom\u00e1tica: emitida pelo job mensal da contribui\u00e7\u00e3o. Manual: emitida pelo gestor.",
+   "fieldname": "origem",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Origem",
+   "options": "Manual\nAutom\u00e1tica",
+   "read_only": 1
+  },
+  {
+   "description": "M\u00eas em que a cobran\u00e7a foi emitida (primeiro dia). Garante uma cobran\u00e7a autom\u00e1tica por associado por m\u00eas.",
+   "fieldname": "mes_emissao",
+   "fieldtype": "Date",
+   "label": "M\u00eas de emiss\u00e3o",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_envio",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "lembretes_enviados",
+   "fieldtype": "Int",
+   "label": "Lembretes enviados",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "ultimo_envio_whatsapp",
+   "fieldtype": "Datetime",
+   "label": "\u00daltimo envio pelo WhatsApp",
+   "read_only": 1
+  },
+  {
+   "description": "O que aconteceu na \u00faltima tentativa de envio pelo WhatsApp.",
+   "fieldname": "resultado_ultimo_envio",
+   "fieldtype": "Small Text",
+   "label": "Resultado do \u00faltimo envio",
    "read_only": 1
   },
   {
@@ -261,7 +318,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-30 21:00:00.000000",
+ "modified": "2026-09-13 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Cobranca Infinitepay",

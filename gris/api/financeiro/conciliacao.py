@@ -222,6 +222,44 @@ def conciliar(
 	"""
 	_verificar_permissao()
 
+	# Categorização opcional aplicada ao registro mantido.
+	valores = {
+		"categoria": categoria,
+		"descricao_reduzida": descricao_reduzida,
+		"centro_de_custo": centro_de_custo,
+		"ordinaria_extraordinaria": ordinaria_extraordinaria,
+	}
+	mantido, excluido = vincular_par(
+		sistema_id,
+		planilha_id,
+		manter,
+		categorizacao={campo: valor for campo, valor in valores.items() if campo in CAMPOS_CATEGORIZACAO},
+	)
+
+	return {
+		"success": True,
+		"mantido": mantido,
+		"excluido": excluido,
+	}
+
+
+def vincular_par(
+	sistema_id: str,
+	planilha_id: str,
+	manter: str = "sistema",
+	*,
+	categorizacao: dict | None = None,
+	ignore_permissions: bool = False,
+) -> tuple[str, str]:
+	"""Núcleo da conciliação: vincula o par e tira o registro descartado dos totais.
+
+	Não checa papel — `conciliar` faz isso para quem clica na tela. A conciliação
+	automática das baixas de cobrança (`cobranca_contribuicao`) chama direto, com
+	`ignore_permissions`, porque roda depois de uma importação que já exigiu
+	permissão de escrita no extrato, ou num job sem usuário.
+
+	Devolve `(mantido, excluido)`.
+	"""
 	if manter not in ("sistema", "planilha"):
 		frappe.throw(_("Parâmetro 'manter' inválido (use 'sistema' ou 'planilha')."))
 	if sistema_id == planilha_id:
@@ -253,25 +291,14 @@ def conciliar(
 	excluido.excluir_do_total = 1
 	mantido.transacao_revisada = 1
 
-	# Categorização opcional aplicada ao registro mantido.
-	valores = {
-		"categoria": categoria,
-		"descricao_reduzida": descricao_reduzida,
-		"centro_de_custo": centro_de_custo,
-		"ordinaria_extraordinaria": ordinaria_extraordinaria,
-	}
-	for campo, valor in valores.items():
-		if campo in CAMPOS_CATEGORIZACAO and valor not in (None, ""):
+	for campo, valor in (categorizacao or {}).items():
+		if valor not in (None, ""):
 			setattr(mantido, campo, valor)
 
-	doc_sistema.save(ignore_permissions=False)
-	doc_planilha.save(ignore_permissions=False)
+	doc_sistema.save(ignore_permissions=ignore_permissions)
+	doc_planilha.save(ignore_permissions=ignore_permissions)
 
-	return {
-		"success": True,
-		"mantido": mantido.name,
-		"excluido": excluido.name,
-	}
+	return mantido.name, excluido.name
 
 
 @frappe.whitelist()

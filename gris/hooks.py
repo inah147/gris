@@ -261,6 +261,8 @@ scheduler_events = {
 			"gris.api.recepcao_mensagens.enviar_lembretes_ficha_medica",
 			"gris.api.recepcao_mensagens.enviar_lembretes_id_escoteiros",
 			"gris.api.recepcao_mensagens.enviar_lembretes_acolhida_lenco",
+			# Às 9h e não no "daily" (meia-noite): o link vai para o WhatsApp das famílias.
+			"gris.api.financeiro.cobranca_contribuicao_automatica.enqueue_cobrancas_automaticas",
 		],
 		# Sábado de manhã, antes da reunião: as visitas do dia no grupo de chefes de seção.
 		"0 10 * * 6": ["gris.api.recepcao_mensagens.notificar_visitas_do_dia"],

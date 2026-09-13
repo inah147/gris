@@ -322,9 +322,8 @@ def reconciliar_e_inserir_infinitepay(extrato_path: str, vendas_path: str, receb
 			*_error_section_lines("Recebimentos", errors["recebimentos"]),
 			line("Transacao Extrato Geral", stats["geral"]),
 			*_error_section_lines("Extrato Geral", errors["geral"]),
-			(
-				f"- Pagamentos por link de cobrança conciliados: {conciliacao_cobrancas['conciliadas']}, "
-				f"sem par: {conciliacao_cobrancas['sem_par']}"
+			"- Pagamentos por link de cobrança conciliados: {}, sem par: {}".format(
+				conciliacao_cobrancas["conciliadas"], conciliacao_cobrancas["sem_par"]
 			),
 			"(Detalhes adicionais em: Error Log)",
 		]

@@ -65,11 +65,11 @@
 						{% for solicitacao in solicitacoes_abertas %}
 						<tr>
 							<td><a class="insignias-tabela__link" href="/insignias/solicitacao?name={{ solicitacao.name }}">{{ solicitacao.name }}</a></td>
-							<td>{{ solicitacao.solicitante_nome or solicitacao.solicitante }}</td>
-							<td>{{ solicitacao.ramo }}</td>
+							<td class="insignias-tabela__solicitante">{{ solicitacao.solicitante_nome or solicitacao.solicitante }}</td>
+							<td class="insignias-tabela__destaque">{{ solicitacao.ramo }}</td>
 							<td class="insignias-tabela__num">{{ solicitacao.total_pecas }}</td>
 							<td class="insignias-tabela__num">{{ solicitacao.valor_estimado_fmt }}</td>
-							<td>{{ solicitacao.data_solicitacao_fmt }}</td>
+							<td class="insignias-tabela__destaque">{{ solicitacao.data_solicitacao_fmt }}</td>
 							<td>{{ badge(solicitacao.status, variant=solicitacao.status_variant) }}</td>
 							<td class="insignias-tabela__acoes">
 								{% if solicitacao.status == "Solicitada" %}
@@ -121,7 +121,7 @@
 						{% for solicitacao in solicitacoes_encerradas %}
 						<tr>
 							<td><a class="insignias-tabela__link" href="/insignias/solicitacao?name={{ solicitacao.name }}">{{ solicitacao.name }}</a></td>
-							<td>{{ solicitacao.solicitante_nome or solicitacao.solicitante }}</td>
+							<td class="insignias-tabela__solicitante">{{ solicitacao.solicitante_nome or solicitacao.solicitante }}</td>
 							<td class="insignias-tabela__num">{{ solicitacao.valor_pago_fmt }}</td>
 							<td>{{ solicitacao.data_compra_fmt }}</td>
 							<td>{{ solicitacao.data_entrega_fmt }}</td>

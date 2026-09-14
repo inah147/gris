@@ -25,14 +25,19 @@ def _etapa(etapas, campo):
 	return next(etapa for etapa in etapas if etapa["field"] == campo)
 
 
+def _campos(etapas):
+	return [etapa["field"] for etapa in etapas]
+
+
 class TestCalcularEtapas(TestCase):
-	def test_registro_definitivo_pula_etapas_condicionais(self):
+	def test_registro_definitivo_nao_tem_as_etapas_do_provisorio(self):
 		provisorio = recepcao_funil.calcular_etapas({"tipo_de_registro": "Provisório"}, CONFIG)
 		definitivo = recepcao_funil.calcular_etapas({"tipo_de_registro": "Definitivo"}, CONFIG)
 
-		campos_definitivo = [etapa["field"] for etapa in definitivo]
+		campos_definitivo = _campos(definitivo)
 		self.assertEqual(len(provisorio), len(recepcao_funil.STEPS_DEF))
-		self.assertEqual(len(definitivo), len(recepcao_funil.STEPS_DEF) - 1)
+		self.assertEqual(len(definitivo), len(recepcao_funil.STEPS_DEF) - 2)
+		self.assertNotIn("boleto_provisorio_gerado", campos_definitivo)
 		self.assertNotIn("registro_provisorio_efetivado", campos_definitivo)
 
 	def test_etapas_de_pagamento_foram_removidas_do_fluxo(self):
@@ -98,12 +103,14 @@ class TestEtapaBoletoDefinitivo(TestCase):
 	"""
 
 	def test_boleto_vem_imediatamente_antes_da_efetivacao_definitiva(self):
-		campos = [etapa["field"] for etapa in recepcao_funil.STEPS_DEF]
+		for tipo in ("Provisório", "Definitivo"):
+			with self.subTest(tipo=tipo):
+				campos = _campos(recepcao_funil.etapas_do_fluxo(tipo))
 
-		self.assertEqual(
-			campos.index("boleto_definitivo_gerado") + 1,
-			campos.index("registro_definitivo_efetivado"),
-		)
+				self.assertEqual(
+					campos.index("boleto_definitivo_gerado") + 1,
+					campos.index("registro_definitivo_efetivado"),
+				)
 
 	def test_boleto_aparece_nos_dois_tipos_de_registro(self):
 		for tipo in ("Provisório", "Definitivo"):
@@ -122,8 +129,9 @@ class TestEtapaBoletoDefinitivo(TestCase):
 		boleto = _etapa(etapas, "boleto_definitivo_gerado")["data_estimada"]
 		efetivacao = _etapa(etapas, "registro_definitivo_efetivado")["data_estimada"]
 
-		self.assertEqual(boleto, "2026-01-25")
-		self.assertEqual(efetivacao, "2026-01-31")
+		# No Definitivo o boleto vem logo depois do Paxtu (2026-01-18).
+		self.assertEqual(boleto, "2026-01-22")
+		self.assertEqual(efetivacao, "2026-01-28")
 
 	def test_boleto_nao_e_etapa_de_efetivacao_nem_move_a_coluna(self):
 		# Marcar o boleto não exige número de registro (isso é da efetivação) e não
@@ -145,6 +153,125 @@ class TestEtapaBoletoDefinitivo(TestCase):
 		self.assertTrue(doc.salvo)
 
 
+class TestEtapaBoletoProvisorio(TestCase):
+	"""O registro provisório também é pago: o boleto dele é etapa própria, antes da efetivação."""
+
+	def test_boleto_provisorio_vem_entre_o_paxtu_e_a_efetivacao_provisoria(self):
+		campos = _campos(recepcao_funil.etapas_do_fluxo("Provisório"))
+
+		self.assertEqual(
+			campos.index("registro_criado_no_paxtu") + 1,
+			campos.index("boleto_provisorio_gerado"),
+		)
+		self.assertEqual(
+			campos.index("boleto_provisorio_gerado") + 1,
+			campos.index("registro_provisorio_efetivado"),
+		)
+
+	def test_intervalo_do_boleto_provisorio_vem_da_configuracao(self):
+		config = {**CONFIG, "boleto_provisorio_gerado": 2}
+		etapas = recepcao_funil.calcular_etapas(
+			{"tipo_de_registro": "Provisório"}, config, BASE, hoje=date(2026, 1, 1)
+		)
+
+		# Paxtu em 2026-01-18, mais os 2 dias do boleto.
+		self.assertEqual(_etapa(etapas, "boleto_provisorio_gerado")["data_estimada"], "2026-01-20")
+
+	def test_boleto_provisorio_nao_e_etapa_de_efetivacao_nem_move_a_coluna(self):
+		self.assertNotIn("boleto_provisorio_gerado", recepcao_funil.CAMPOS_DE_EFETIVACAO)
+		self.assertNotIn("boleto_provisorio_gerado", dict(recepcao_funil.ETAPAS_QUE_MOVEM_O_FUNIL))
+
+	def test_marcar_o_boleto_provisorio_pela_timeline_nao_pede_numero_de_registro(self):
+		doc = _DocFalso("Acompanhamento")
+		with (
+			patch.object(visao_geral, "numeros_de_registro_pendentes", return_value=["o jovem"]) as pendentes,
+			patch.object(visao_geral.frappe, "get_doc", return_value=doc),
+		):
+			visao_geral.update_step_status("NA-1", "boleto_provisorio_gerado", 1)
+
+		pendentes.assert_not_called()
+		self.assertEqual(doc.campos["boleto_provisorio_gerado"], 1)
+		self.assertEqual(doc.status, "Acompanhamento")
+		self.assertTrue(doc.salvo)
+
+
+class TestOrdemDasEtapasPorTipo(TestCase):
+	"""Quem entra direto no definitivo efetiva o registro logo depois do Paxtu.
+
+	É o número de registro que abre a ficha médica no Paxtu; pesquisa, ficha, id@escoteiros
+	e acolhida ficam para depois, e são o que o "Acompanhamento Final" acompanha.
+	"""
+
+	def test_ordem_do_provisorio(self):
+		self.assertEqual(
+			_campos(recepcao_funil.etapas_do_fluxo("Provisório")),
+			[
+				"visita_agendada",
+				"primeira_visita_realizada",
+				"dados_para_registro_enviados",
+				"registro_criado_no_paxtu",
+				"boleto_provisorio_gerado",
+				"registro_provisorio_efetivado",
+				"pesquisa_de_novos_associados_respondida",
+				"ficha_medica_preenchida",
+				"id_escoteiros_criado",
+				"boleto_definitivo_gerado",
+				"registro_definitivo_efetivado",
+				"reuniao_de_acolhida_realizada",
+			],
+		)
+
+	def test_ordem_do_definitivo(self):
+		self.assertEqual(
+			_campos(recepcao_funil.etapas_do_fluxo("Definitivo")),
+			[
+				"visita_agendada",
+				"primeira_visita_realizada",
+				"dados_para_registro_enviados",
+				"registro_criado_no_paxtu",
+				"boleto_definitivo_gerado",
+				"registro_definitivo_efetivado",
+				"pesquisa_de_novos_associados_respondida",
+				"ficha_medica_preenchida",
+				"id_escoteiros_criado",
+				"reuniao_de_acolhida_realizada",
+			],
+		)
+
+	def test_tipo_ainda_nao_escolhido_segue_o_provisorio(self):
+		for tipo in (None, ""):
+			with self.subTest(tipo=tipo):
+				self.assertEqual(
+					recepcao_funil.etapas_do_fluxo(tipo),
+					recepcao_funil.etapas_do_fluxo("Provisório"),
+				)
+
+	def test_ordem_do_definitivo_tem_todas_as_etapas_menos_as_do_provisorio(self):
+		# Etapa nova em STEPS_DEF esquecida em ORDEM_DEFINITIVO sumiria do funil de quem
+		# entra direto no definitivo, sem erro nenhum.
+		esperadas = [
+			campo
+			for campo in recepcao_funil.CAMPOS_DE_ETAPA
+			if campo not in recepcao_funil.ETAPAS_DO_PROVISORIO
+		]
+
+		self.assertCountEqual(recepcao_funil.ORDEM_DEFINITIVO, esperadas)
+		self.assertEqual(len(recepcao_funil.ORDEM_DEFINITIVO), len(set(recepcao_funil.ORDEM_DEFINITIVO)))
+
+	def test_datas_estimadas_do_definitivo_seguem_a_ordem_dele(self):
+		config = {**CONFIG, "boleto_definitivo_gerado": 2, "registro_definitivo_efetivado": 3}
+		etapas = recepcao_funil.calcular_etapas(
+			{"tipo_de_registro": "Definitivo"}, config, BASE, hoje=date(2026, 1, 1)
+		)
+
+		# Paxtu em 2026-01-18 → boleto +2 → efetivação +3 → pesquisa +3.
+		self.assertEqual(_etapa(etapas, "boleto_definitivo_gerado")["data_estimada"], "2026-01-20")
+		self.assertEqual(_etapa(etapas, "registro_definitivo_efetivado")["data_estimada"], "2026-01-23")
+		self.assertEqual(
+			_etapa(etapas, "pesquisa_de_novos_associados_respondida")["data_estimada"], "2026-01-26"
+		)
+
+
 class TestResumoEtapas(TestCase):
 	def test_consolida_progresso_e_proxima_etapa(self):
 		dados = {
@@ -155,7 +282,7 @@ class TestResumoEtapas(TestCase):
 		etapas = recepcao_funil.calcular_etapas(dados, CONFIG, BASE, hoje=date(2026, 2, 1))
 		resumo = recepcao_funil.resumo_etapas(etapas)
 
-		self.assertEqual(resumo["total"], len(recepcao_funil.STEPS_DEF) - 1)
+		self.assertEqual(resumo["total"], len(recepcao_funil.ORDEM_DEFINITIVO))
 		self.assertEqual(resumo["concluidas"], 2)
 		self.assertEqual(resumo["proxima_etapa"], "dados_para_registro_enviados")
 		self.assertEqual(resumo["proxima_etapa_rotulo"], "Dados Enviados")
@@ -197,6 +324,111 @@ class TestColunaDeAcompanhamento(TestCase):
 			),
 			recepcao_funil.COLUNA_ACOMPANHAMENTO_DEFINITIVO,
 		)
+
+	def test_registro_definitivo_efetivado_vai_para_a_lista_final(self):
+		# Nos dois tipos, e com as pendências finais (pesquisa, ficha, id, acolhida) abertas.
+		for dados in (
+			{"tipo_de_registro": "Definitivo", "registro_definitivo_efetivado": 1},
+			{
+				"tipo_de_registro": "Provisório",
+				"registro_provisorio_efetivado": 1,
+				"registro_definitivo_efetivado": 1,
+			},
+		):
+			with self.subTest(tipo=dados["tipo_de_registro"]):
+				self.assertEqual(
+					recepcao_funil.coluna_de_acompanhamento(dados),
+					recepcao_funil.COLUNA_ACOMPANHAMENTO_FINAL,
+				)
+
+	def test_boleto_definitivo_sem_efetivacao_continua_na_lista_definitiva(self):
+		self.assertEqual(
+			recepcao_funil.coluna_de_acompanhamento(
+				{"tipo_de_registro": "Definitivo", "boleto_definitivo_gerado": 1}
+			),
+			recepcao_funil.COLUNA_ACOMPANHAMENTO_DEFINITIVO,
+		)
+
+	def test_quem_concluiu_tudo_fica_na_final_para_finalizar_a_recepcao(self):
+		dados = {"tipo_de_registro": "Definitivo"}
+		dados.update(dict.fromkeys(recepcao_funil.CAMPOS_DE_ETAPA, 1))
+
+		self.assertEqual(
+			recepcao_funil.coluna_de_acompanhamento(dados),
+			recepcao_funil.COLUNA_ACOMPANHAMENTO_FINAL,
+		)
+
+
+class TestColunasDoKanban(TestCase):
+	"""A visão geral monta as três listas de acompanhamento, com a final por último."""
+
+	def _contexto(self, jovens):
+		def _get_all(doctype, *args, **kwargs):
+			if doctype == "Novo Associado":
+				return [frappe._dict(j) for j in jovens]
+			return []
+
+		context = frappe._dict()
+		with (
+			patch.object(visao_geral, "enrich_context"),
+			patch.object(visao_geral, "carregar_configuracao", return_value={}),
+			patch.object(visao_geral.frappe, "get_all", side_effect=_get_all),
+		):
+			visao_geral.get_context(context)
+		return context
+
+	def test_as_tres_listas_de_acompanhamento_fecham_o_kanban(self):
+		context = self._contexto([])
+
+		self.assertEqual(
+			context.kanban_columns[-3:],
+			["Acompanhamento Provisório", "Acompanhamento Definitivo", "Acompanhamento Final"],
+		)
+		self.assertEqual(context.colunas_de_acompanhamento, context.kanban_columns[-3:])
+
+	def test_cada_card_de_acompanhamento_cai_na_sua_lista(self):
+		base = {"status": "Acompanhamento", "nome_completo": "Jovem"}
+		context = self._contexto(
+			[
+				{**base, "name": "NA-PROV", "tipo_de_registro": "Provisório"},
+				{
+					**base,
+					"name": "NA-DEF",
+					"tipo_de_registro": "Provisório",
+					"registro_provisorio_efetivado": 1,
+				},
+				{
+					**base,
+					"name": "NA-FINAL",
+					"tipo_de_registro": "Definitivo",
+					"registro_definitivo_efetivado": 1,
+				},
+			]
+		)
+
+		nomes = {coluna: [card.name for card in cards] for coluna, cards in context.kanban_data.items()}
+		self.assertEqual(nomes["Acompanhamento Provisório"], ["NA-PROV"])
+		self.assertEqual(nomes["Acompanhamento Definitivo"], ["NA-DEF"])
+		self.assertEqual(nomes["Acompanhamento Final"], ["NA-FINAL"])
+
+	def test_o_boleto_provisorio_e_buscado_do_banco(self):
+		"""Sem o campo na consulta a etapa apareceria sempre pendente — e o erro seria mudo."""
+		capturados = {}
+
+		def _get_all(doctype, *args, **kwargs):
+			if doctype == "Novo Associado":
+				capturados["fields"] = kwargs.get("fields") or []
+			return []
+
+		with (
+			patch.object(visao_geral, "enrich_context"),
+			patch.object(visao_geral, "carregar_configuracao", return_value={}),
+			patch.object(visao_geral.frappe, "get_all", side_effect=_get_all),
+		):
+			visao_geral.get_context(frappe._dict())
+
+		self.assertIn("boleto_provisorio_gerado", capturados["fields"])
+		self.assertIn("registro_definitivo_efetivado", capturados["fields"])
 
 
 class TestAnexarHistorico(TestCase):

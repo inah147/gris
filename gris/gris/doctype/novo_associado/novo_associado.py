@@ -24,6 +24,13 @@ CAMPOS_DE_TRANSICAO = (
 
 STATUS_AGUARDAR_DADOS = "Aguardar Dados"
 
+# Etapa de efetivação -> boleto que a precede. Os dois registros são pagos: não existe
+# registro efetivado sem o boleto dele emitido.
+BOLETO_POR_EFETIVACAO = {
+	"registro_provisorio_efetivado": "boleto_provisorio_gerado",
+	"registro_definitivo_efetivado": "boleto_definitivo_gerado",
+}
+
 # Etapa -> carimbos de mensagem a limpar quando ela é desmarcada.
 #
 # Os carimbos existem para não repetir mensagem. Desmarcar uma etapa é dizer que ela não
@@ -53,26 +60,27 @@ class NovoAssociado(Document):
 	def validate(self):
 		self._sincronizar_data_registro_provisorio()
 		self._sincronizar_data_aguardar_dados()
-		self._implicar_boleto_do_registro_definitivo()
+		self._implicar_boleto_da_efetivacao()
 		self._sincronizar_historico_de_etapas()
 		self._limpar_carimbos_de_etapa_desmarcada()
 
-	def _implicar_boleto_do_registro_definitivo(self):
-		"""Registro definitivo efetivado implica boleto definitivo gerado.
+	def _implicar_boleto_da_efetivacao(self):
+		"""Registro efetivado implica o boleto daquele registro gerado.
 
-		O boleto é a etapa imediatamente anterior à efetivação: não existe registro
-		definitivo sem boleto emitido e pago. Quem marca a efetivação direto — a bolinha da
-		timeline, o Desk, o MCP ou a criação do Associado — deixaria a etapa do boleto
-		aberta, e o funil cobraria um boleto de quem já está registrado. Justamente a lista
-		que a etapa existe para mostrar (boletos emitidos esperando pagamento) é a que ficaria
-		errada.
+		O boleto é a etapa imediatamente anterior à efetivação, no provisório e no
+		definitivo: não existe registro efetivado sem boleto emitido e pago. Quem marca a
+		efetivação direto — a bolinha da timeline, o Desk, o MCP ou a criação do Associado —
+		deixaria a etapa do boleto aberta, e o funil cobraria um boleto de quem já está
+		registrado. Justamente a lista que a etapa existe para mostrar (boletos emitidos
+		esperando pagamento) é a que ficaria errada.
 
 		Mora no ``validate``, antes do histórico de etapas, pelo mesmo motivo dele: é o único
 		ponto por onde todos esses caminhos passam. Desmarcar a efetivação não desmarca o
 		boleto — ele continua tendo sido emitido.
 		"""
-		if self.registro_definitivo_efetivado and not self.boleto_definitivo_gerado:
-			self.boleto_definitivo_gerado = 1
+		for efetivacao, boleto in BOLETO_POR_EFETIVACAO.items():
+			if self.get(efetivacao) and not self.get(boleto):
+				self.set(boleto, 1)
 
 	def _limpar_carimbos_de_etapa_desmarcada(self):
 		"""Solta as mensagens da etapa que acabou de ser desmarcada.

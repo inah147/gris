@@ -773,6 +773,7 @@ def seed_singles_gris(creds: dict):
 			"ficha_medica_preenchida": 14,
 			"id_escoteiros_criado": 7,
 			"boleto_definitivo_gerado": 3,
+			"boleto_provisorio_gerado": 3,
 			"intervalo_provisorio_definitivo": 60,
 			"registro_provisorio_efetivado": 7,
 			"reuniao_de_acolhida_realizada": 14,

@@ -156,9 +156,16 @@
     {% endif %}
 </div>
 
-<button id="btn-back-to-top" type="button" class="simulation-back-to-top" aria-label="Voltar ao topo da página">
-    {{ lucide_icon("arrow-up", size="md") }}
-</button>
+<div id="floating-actions" class="simulation-floating-actions">
+    <button id="btn-back-to-top" type="button" class="simulation-fab simulation-fab--neutral" aria-label="Voltar ao topo da página">
+        {{ lucide_icon("arrow-up", size="md") }}
+    </button>
+    {% if can_simulate %}
+    <button id="btn-reconcile-floating" type="button" class="simulation-fab simulation-fab--primary" aria-label="Conciliar com o calendário oficial">
+        {{ lucide_icon("refresh-cw", size="md") }}
+    </button>
+    {% endif %}
+</div>
 
 {% if can_simulate %}
 {% set new_event_footer %}

@@ -555,17 +555,34 @@
     }
 }
 
-/* Botão flutuante "voltar ao topo": em telas de calendário longas (mês/semana,
- * ou lista com muitos dias) o cabeçalho com o botão "Conciliar" fica fora da
- * viewport no mobile. Fica escondido por padrão e só some visível via JS
+/* Pilha de botões flutuantes: em telas de calendário longas (mês/semana, ou
+ * lista com muitos dias) o cabeçalho — com o botão "Conciliar" — fica fora da
+ * viewport no mobile. A pilha repete a ação principal e oferece o atalho de
+ * voltar ao topo. Fica escondida por padrão e só se torna visível via JS
  * (classe `.is-visible`) depois de rolar a página, e nunca aparece em telas
  * largas — nelas o cabeçalho já está sempre à vista. */
-.simulation-back-to-top {
+.simulation-floating-actions {
     display: none;
     position: fixed;
     right: 1rem;
     bottom: calc(var(--bottom-bar-height, 68px) + 32px + 1rem);
     z-index: 25;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.simulation-floating-actions.is-visible {
+    display: flex;
+}
+
+@media (min-width: 1024px) {
+    .simulation-floating-actions {
+        display: none !important;
+    }
+}
+
+.simulation-fab {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 3rem;
@@ -573,20 +590,20 @@
     padding: 0;
     border: none;
     border-radius: 999px;
-    background: var(--primary);
-    color: var(--primary-foreground);
     box-shadow: var(--shadow-md, 0 6px 16px rgba(0, 0, 0, 0.18));
     cursor: pointer;
 }
 
-.simulation-back-to-top.is-visible {
-    display: inline-flex;
+.simulation-fab--primary {
+    background: var(--primary);
+    color: var(--primary-foreground);
 }
 
-@media (min-width: 1024px) {
-    .simulation-back-to-top {
-        display: none !important;
-    }
+/* O atalho de navegação não compete com a ação principal da pilha. */
+.simulation-fab--neutral {
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--foreground);
 }
 
 @media (max-width: 768px) {

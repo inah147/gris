@@ -12,7 +12,7 @@ frappe.ready(() => {
 	initReconciliation();
 	initSuccessDialog();
 	initHolidayDialog();
-	initBackToTop();
+	initFloatingActions();
 
 	// Visualização padrão: lista. Mobile (< 640px) usa variante "default"; desktop usa "category".
 	if (window.innerWidth < 640) {
@@ -658,29 +658,33 @@ function initCalendarInteractions() {
 	});
 }
 
-function initBackToTop() {
-	const button = document.getElementById("btn-back-to-top");
-	if (!button) return;
+function initFloatingActions() {
+	const stack = document.getElementById("floating-actions");
+	const backToTop = document.getElementById("btn-back-to-top");
+	if (!stack) return;
 
-	// Só some visível depois de rolar o suficiente para o cabeçalho (com o
+	// Só fica visível depois de rolar o suficiente para o cabeçalho (com o
 	// botão "Conciliar") sair da viewport, evitando piscar em páginas curtas.
 	const SHOW_AFTER_PX = 480;
 	const toggleVisibility = () => {
-		button.classList.toggle("is-visible", window.scrollY > SHOW_AFTER_PX);
+		stack.classList.toggle("is-visible", window.scrollY > SHOW_AFTER_PX);
 	};
 
 	window.addEventListener("scroll", toggleVisibility, { passive: true });
 	toggleVisibility();
 
-	button.addEventListener("click", () => {
+	backToTop?.addEventListener("click", () => {
 		window.scrollTo({ top: 0, behavior: "smooth" });
 	});
 }
 
 function initReconciliation() {
-	const button = document.getElementById("btn-reconcile");
+	// O cabeçalho e a pilha flutuante do mobile abrem a mesma conciliação.
+	const buttons = ["btn-reconcile", "btn-reconcile-floating"]
+		.map((id) => document.getElementById(id))
+		.filter(Boolean);
 	const dialog = document.getElementById("reconcile-modal");
-	if (!button || !dialog) return;
+	if (!buttons.length || !dialog) return;
 
 	const loading = document.getElementById("reconcile-loading");
 	const empty = document.getElementById("reconcile-empty");
@@ -692,9 +696,11 @@ function initReconciliation() {
 
 	bindDialogCloseButtons("reconcile-modal", ".close-modal");
 
-	button.addEventListener("click", () => {
-		openDialogById("reconcile-modal");
-		fetchDifferences();
+	buttons.forEach((button) => {
+		button.addEventListener("click", () => {
+			openDialogById("reconcile-modal");
+			fetchDifferences();
+		});
 	});
 
 	selectAllButton?.addEventListener("click", () => {

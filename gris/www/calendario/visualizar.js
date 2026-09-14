@@ -133,8 +133,34 @@ frappe.ready(() => {
 		openDialog("holiday-dialog");
 	});
 
+	initFloatingActions();
+
 	applyFilters();
 });
+
+function initFloatingActions() {
+	const stack = document.getElementById("floating-actions");
+	const backToTop = document.getElementById("btn-back-to-top");
+	if (!stack) {
+		return;
+	}
+
+	// Só fica visível depois de rolar o suficiente para o cabeçalho (com o
+	// botão "Simular") sair da viewport, evitando piscar em páginas curtas.
+	const SHOW_AFTER_PX = 480;
+	const toggleVisibility = () => {
+		stack.classList.toggle("is-visible", window.scrollY > SHOW_AFTER_PX);
+	};
+
+	window.addEventListener("scroll", toggleVisibility, { passive: true });
+	toggleVisibility();
+
+	if (backToTop) {
+		backToTop.addEventListener("click", () => {
+			window.scrollTo({ top: 0, behavior: "smooth" });
+		});
+	}
+}
 
 function cloneEvent(event) {
 	return {

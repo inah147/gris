@@ -226,6 +226,57 @@
 	line-height: 1.7;
 }
 
+/* Pilha de botões flutuantes: a página cresce bastante no mobile (calendário em
+ * mês/semana, lista do ano inteiro e a lista de feriados logo abaixo), levando o
+ * cabeçalho — com o botão "Simular" — para fora da viewport. A pilha repete a
+ * ação principal e oferece o atalho de voltar ao topo. Fica escondida por padrão
+ * e só se torna visível via JS (classe `.is-visible`) depois de rolar a página, e
+ * nunca aparece em telas largas — nelas o cabeçalho já está sempre à vista. */
+.calendar-view-floating-actions {
+	display: none;
+	position: fixed;
+	right: 1rem;
+	bottom: calc(var(--bottom-bar-height, 68px) + 32px + 1rem);
+	z-index: 25;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.calendar-view-floating-actions.is-visible {
+	display: flex;
+}
+
+@media (min-width: 1024px) {
+	.calendar-view-floating-actions {
+		display: none !important;
+	}
+}
+
+.calendar-view-fab {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 3rem;
+	height: 3rem;
+	padding: 0;
+	border: none;
+	border-radius: 999px;
+	box-shadow: var(--shadow-md, 0 6px 16px rgba(0, 0, 0, 0.18));
+	cursor: pointer;
+}
+
+.calendar-view-fab--primary {
+	background: var(--primary);
+	color: var(--primary-foreground);
+}
+
+/* O atalho de navegação não compete com a ação principal da pilha. */
+.calendar-view-fab--neutral {
+	border: 1px solid var(--border);
+	background: var(--card);
+	color: var(--foreground);
+}
+
 @media (max-width: 900px) {
 	.calendar-view-filters__grid {
 		grid-template-columns: repeat(2, minmax(0, 1fr));

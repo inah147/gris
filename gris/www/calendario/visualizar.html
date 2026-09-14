@@ -159,6 +159,26 @@
 	{% endcall %}
 </div>
 
+<div id="floating-actions" class="calendar-view-floating-actions">
+	<button
+		id="btn-back-to-top"
+		type="button"
+		class="calendar-view-fab calendar-view-fab--neutral"
+		aria-label="Voltar ao topo da página"
+	>
+		{{ lucide_icon("arrow-up", size="md") }}
+	</button>
+	{% if can_simulate %}
+	<a
+		href="/calendario/simulacao_calendario"
+		class="calendar-view-fab calendar-view-fab--primary"
+		aria-label="Simular calendário"
+	>
+		{{ lucide_icon("sparkles", size="md") }}
+	</a>
+	{% endif %}
+</div>
+
 {% set activity_footer %}
 <button type="button" class="btn-outline" onclick="document.getElementById('activity-detail-dialog').close()">Fechar</button>
 {% endset %}

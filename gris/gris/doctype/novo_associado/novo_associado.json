@@ -56,6 +56,7 @@
   "primeira_visita_realizada",
   "dados_para_registro_enviados",
   "registro_criado_no_paxtu",
+  "boleto_provisorio_gerado",
   "registro_provisorio_efetivado",
   "data_registro_provisorio_efetivado",
   "data_aviso_seguimento_provisorio",
@@ -372,6 +373,13 @@
   },
   {
    "default": "0",
+   "description": "Boleto do registro provisório emitido; o registro só é efetivado depois do pagamento.",
+   "fieldname": "boleto_provisorio_gerado",
+   "fieldtype": "Check",
+   "label": "Boleto provisório gerado"
+  },
+  {
+   "default": "0",
    "fieldname": "registro_provisorio_efetivado",
    "fieldtype": "Check",
    "label": "Registro provis\u00f3rio efetivado"
@@ -533,7 +541,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-10 12:00:00.000000",
+ "modified": "2026-09-14 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Novo Associado",

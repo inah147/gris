@@ -326,3 +326,49 @@ class TestBoletoDoRegistroDefinitivo(FrappeTestCase):
 		doc.save(ignore_permissions=True)
 
 		self.assertEqual(doc.boleto_definitivo_gerado, 1)
+
+
+class TestBoletoDoRegistroProvisorio(FrappeTestCase):
+	"""Efetivar o registro provisório implica o boleto provisório, como no definitivo.
+
+	O caminho mais comum é a criação do Associado (``Associado._handle_novo_associado_post``),
+	que marca a efetivação sem passar pela timeline.
+	"""
+
+	def tearDown(self):
+		frappe.db.rollback()
+
+	def _criar(self, cpf, **kwargs):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Novo Associado",
+				"nome_completo": "Jovem de Teste",
+				"cpf": cpf,
+				"data_de_nascimento": "2015-04-14",
+				"status": "Acompanhamento",
+				"tipo_de_registro": "Provisório",
+				**kwargs,
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		return doc
+
+	def test_efetivar_o_provisorio_marca_o_boleto_provisorio(self):
+		doc = self._criar("444.555.666-77", registro_provisorio_efetivado=1)
+
+		self.assertEqual(doc.boleto_provisorio_gerado, 1)
+		# O boleto do definitivo é outro e continua em aberto.
+		self.assertEqual(doc.boleto_definitivo_gerado, 0)
+
+	def test_boleto_provisorio_sozinho_nao_efetiva_o_registro(self):
+		doc = self._criar("555.666.777-88", boleto_provisorio_gerado=1)
+
+		self.assertEqual(doc.registro_provisorio_efetivado, 0)
+
+	def test_desmarcar_a_efetivacao_nao_desmarca_o_boleto_provisorio(self):
+		doc = self._criar("666.777.888-99", registro_provisorio_efetivado=1)
+
+		doc.registro_provisorio_efetivado = 0
+		doc.save(ignore_permissions=True)
+
+		self.assertEqual(doc.boleto_provisorio_gerado, 1)

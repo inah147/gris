@@ -7,11 +7,15 @@ let currentWhatsappContatos = [];
 let currentCardElement = null;
 let whatsappSourceModalId = null;
 
-// As duas listas de acompanhamento são o mesmo status "Acompanhamento" no banco,
+// As três listas de acompanhamento são o mesmo status "Acompanhamento" no banco,
 // separado por gris.api.recepcao_funil.coluna_de_acompanhamento. Aqui elas só
 // precisam abrir o mesmo dialog. Mantenha em sincronia com
 // COLUNAS_DE_ACOMPANHAMENTO no Python.
-const COLUNAS_DE_ACOMPANHAMENTO = ["Acompanhamento Provisório", "Acompanhamento Definitivo"];
+const COLUNAS_DE_ACOMPANHAMENTO = [
+	"Acompanhamento Provisório",
+	"Acompanhamento Definitivo",
+	"Acompanhamento Final",
+];
 
 // Etapas que exigem o número de registro antes de serem marcadas
 // (gris.api.recepcao_funil.CAMPOS_DE_EFETIVACAO).
@@ -488,7 +492,7 @@ function openAcompanhamentoModal(id, responsavel, nome, responsavelAssociado, st
 	currentCardId = id;
 	sincronizarCabecalhoDoDialog();
 
-	// O dialog é um só para as duas listas; o título diz em qual delas o card está.
+	// O dialog é um só para as três listas; o título diz em qual delas o card está.
 	const titulo = document.getElementById("modalAcompanhamento-title");
 	if (titulo) titulo.textContent = coluna || "Acompanhamento";
 	document.getElementById("ac_associado_nome").textContent = nome;
@@ -1064,14 +1068,15 @@ function marcarEtapa(field, element, valor) {
 
 // ---------- Desmarcar etapa ------------------------------------------------
 
-// Etapa -> coluna para onde o card volta quando ela é a última concluída. Espelha
-// ETAPAS_QUE_MOVEM_O_FUNIL (gris/api/recepcao_funil.py); serve só para o aviso do
-// diálogo — quem decide o status é o servidor.
+// Etapa -> coluna para onde o card volta quando ela é desmarcada. Espelha
+// ETAPAS_QUE_MOVEM_O_FUNIL e coluna_de_acompanhamento (gris/api/recepcao_funil.py);
+// serve só para o aviso do diálogo — quem decide a coluna é o servidor.
 const COLUNA_ANTERIOR_POR_ETAPA = {
 	visita_agendada: "Conversa Inicial",
 	primeira_visita_realizada: "Visita Agendada",
 	dados_para_registro_enviados: "Aguardar Dados",
 	registro_criado_no_paxtu: "Fazer Registro",
+	registro_definitivo_efetivado: "Acompanhamento Definitivo",
 };
 
 let desmarcarEtapaPendente = null;

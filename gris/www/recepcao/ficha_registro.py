@@ -4,9 +4,27 @@ from frappe.rate_limiter import rate_limit
 from frappe.utils import add_days, cint, format_date, format_datetime, get_fullname, getdate, strip_html
 
 from gris.api.portal_access import enrich_context
+from gris.api.recepcao_funil import FIELD_INTERVAL_MAP, etapas_do_fluxo
 from gris.www.recepcao.ficha_campos import BLOCOS_DO_ASSOCIADO, BLOCOS_DO_RESPONSAVEL, montar_blocos
 
 no_cache = 1
+
+# Rótulos curtos do infográfico de etapas. A ordem, e quais etapas cada tipo de registro
+# tem, vêm de ``etapas_do_fluxo`` — a mesma do kanban da visão geral.
+ROTULOS_CURTOS_DAS_ETAPAS = {
+	"visita_agendada": "Visita Agendada",
+	"primeira_visita_realizada": "Primeira Visita",
+	"dados_para_registro_enviados": "Dados Enviados",
+	"registro_criado_no_paxtu": "Registro Paxtu",
+	"boleto_provisorio_gerado": "Boleto Prov.",
+	"registro_provisorio_efetivado": "Prov. Efetivado",
+	"pesquisa_de_novos_associados_respondida": "Pesquisa Respondida",
+	"ficha_medica_preenchida": "Ficha Médica",
+	"id_escoteiros_criado": "ID Criado",
+	"boleto_definitivo_gerado": "Boleto Def.",
+	"registro_definitivo_efetivado": "Def. Efetivado",
+	"reuniao_de_acolhida_realizada": "Acolhida",
+}
 
 # Documentos do responsável hospedados no Drive, e o campo que guarda o link de cada um.
 # A ficha serve os arquivos pelo GRIS: o drive é de acesso restrito e nem toda a equipe
@@ -49,17 +67,7 @@ def get_context(context):
 		config = {}
 
 	# Map Novo Associado fields to Config fields
-	field_interval_map = {
-		"dados_para_registro_enviados": "dados_para_registro_enviados",
-		"registro_criado_no_paxtu": "registro_criado_no_paxtu",
-		"registro_provisorio_efetivado": "registro_provisorio_efetivado",
-		"pesquisa_de_novos_associados_respondida": "pesquisa_de_novos_associados_respondida",
-		"ficha_medica_preenchida": "ficha_medica_preenchida",
-		"id_escoteiros_criado": "id_escoteiros_criado",
-		"boleto_definitivo_gerado": "boleto_definitivo_gerado",
-		"registro_definitivo_efetivado": "registro_definitivo_efetivado",
-		"reuniao_de_acolhida_realizada": "reuniao_de_acolhida_realizada",
-	}
+	field_interval_map = FIELD_INTERVAL_MAP
 
 	context.doc = doc
 	context.title = doc.nome_completo
@@ -109,31 +117,15 @@ def get_context(context):
 	# A seção de documentos só faz sentido no ramo que exige o registro do responsável.
 	context.is_filhotes = (doc.ramo or "") == "Filhotes"
 
-	# Flow steps for infographic
+	# Flow steps for infographic, na ordem do tipo de registro
 	flow_steps = [
-		{"field": "visita_agendada", "label": "Visita Agendada"},
-		{"field": "primeira_visita_realizada", "label": "Primeira Visita"},
-		{"field": "dados_para_registro_enviados", "label": "Dados Enviados"},
-		{"field": "registro_criado_no_paxtu", "label": "Registro Paxtu"},
-		{"field": "registro_provisorio_efetivado", "label": "Prov. Efetivado"},
-		{"field": "pesquisa_de_novos_associados_respondida", "label": "Pesquisa Respondida"},
-		{"field": "ficha_medica_preenchida", "label": "Ficha Médica"},
-		{"field": "id_escoteiros_criado", "label": "ID Criado"},
-		{"field": "boleto_definitivo_gerado", "label": "Boleto Gerado"},
-		{"field": "registro_definitivo_efetivado", "label": "Def. Efetivado"},
-		{"field": "reuniao_de_acolhida_realizada", "label": "Acolhida"},
+		{"field": etapa["field"], "label": ROTULOS_CURTOS_DAS_ETAPAS.get(etapa["field"], etapa["label"])}
+		for etapa in etapas_do_fluxo(doc.get("tipo_de_registro"))
 	]
 
-	# Filter steps based on logic
-	final_steps = []
+	# Antes do envio dos dados, só as etapas até "Registro Paxtu" (as quatro primeiras nos dois tipos)
 	dados_enviados = bool(doc.get("dados_para_registro_enviados"))
-
-	if not dados_enviados:
-		final_steps = flow_steps[:4]
-	elif doc.get("tipo_de_registro") == "Definitivo":
-		final_steps = [s for s in flow_steps if s["field"] != "registro_provisorio_efetivado"]
-	else:
-		final_steps = flow_steps
+	final_steps = flow_steps if dados_enviados else flow_steps[:4]
 
 	# Process steps state
 	steps_data = []

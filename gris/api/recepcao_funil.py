@@ -25,31 +25,52 @@ DOCTYPE_CONFIGURACOES = "Configuracoes de Recepcao"
 # Ordem canônica para qualquer listagem por ramo do fluxo de recepção.
 RAMOS: tuple[str, ...] = ("Filhotes", "Lobinho", "Escoteiro", "Sênior", "Pioneiro")
 
+# Todas as etapas do funil, na ordem de quem entra com registro provisório. A ordem de
+# quem entra direto no definitivo é outra — ver ``ORDEM_DEFINITIVO`` e ``etapas_do_fluxo``.
 STEPS_DEF: list[dict[str, Any]] = [
 	{"field": "visita_agendada", "label": "Visita Agendada"},
 	{"field": "primeira_visita_realizada", "label": "Primeira Visita Realizada"},
 	{"field": "dados_para_registro_enviados", "label": "Dados Enviados"},
 	{"field": "registro_criado_no_paxtu", "label": "Registro no Paxtu"},
-	{
-		"field": "registro_provisorio_efetivado",
-		"label": "Registro Provisório Efetivado",
-		"conditional": True,
-	},
+	# Emitir o boleto é uma etapa própria, e não parte da efetivação: entre gerar o boleto
+	# e o registro sair há a espera do pagamento, e é justamente essa fila que a recepção
+	# precisa enxergar no funil. Vale para os dois registros.
+	{"field": "boleto_provisorio_gerado", "label": "Boleto Provisório Gerado"},
+	{"field": "registro_provisorio_efetivado", "label": "Registro Provisório Efetivado"},
 	{"field": "pesquisa_de_novos_associados_respondida", "label": "Pesquisa Respondida"},
 	{"field": "ficha_medica_preenchida", "label": "Ficha Médica"},
 	{"field": "id_escoteiros_criado", "label": "ID Escoteiros Criado"},
-	# Emitir o boleto do registro definitivo é uma etapa própria, e não parte da
-	# efetivação: entre gerar o boleto e o registro sair há a espera do pagamento, e é
-	# justamente essa fila que a recepção precisa enxergar no funil.
 	{"field": "boleto_definitivo_gerado", "label": "Boleto Definitivo Gerado"},
 	{"field": "registro_definitivo_efetivado", "label": "Registro Definitivo Efetivado"},
 	{"field": "reuniao_de_acolhida_realizada", "label": "Reunião de Acolhida"},
 ]
 
+# Etapas que só existem para quem entra com registro provisório.
+ETAPAS_DO_PROVISORIO: tuple[str, ...] = ("boleto_provisorio_gerado", "registro_provisorio_efetivado")
+
+# Quem entra direto no definitivo paga e efetiva o registro logo depois do Paxtu, antes
+# das pendências que vêm com ele: a ficha médica só abre no Paxtu com o número de registro
+# (o lembrete dela espera a mesma efetivação, ver
+# ``gris.api.recepcao_mensagens.enviar_lembretes_ficha_medica``), e pesquisa, ficha,
+# id@escoteiros e acolhida são o que a coluna "Acompanhamento Final" acompanha.
+ORDEM_DEFINITIVO: tuple[str, ...] = (
+	"visita_agendada",
+	"primeira_visita_realizada",
+	"dados_para_registro_enviados",
+	"registro_criado_no_paxtu",
+	"boleto_definitivo_gerado",
+	"registro_definitivo_efetivado",
+	"pesquisa_de_novos_associados_respondida",
+	"ficha_medica_preenchida",
+	"id_escoteiros_criado",
+	"reuniao_de_acolhida_realizada",
+)
+
 # Campo da etapa -> campo de intervalo (em dias) nas Configuracoes de Recepcao.
 FIELD_INTERVAL_MAP: dict[str, str] = {
 	"dados_para_registro_enviados": "dados_para_registro_enviados",
 	"registro_criado_no_paxtu": "registro_criado_no_paxtu",
+	"boleto_provisorio_gerado": "boleto_provisorio_gerado",
 	"registro_provisorio_efetivado": "registro_provisorio_efetivado",
 	"pesquisa_de_novos_associados_respondida": "pesquisa_de_novos_associados_respondida",
 	"ficha_medica_preenchida": "ficha_medica_preenchida",
@@ -60,6 +81,8 @@ FIELD_INTERVAL_MAP: dict[str, str] = {
 }
 
 CAMPOS_DE_ETAPA: tuple[str, ...] = tuple(step["field"] for step in STEPS_DEF)
+
+_ETAPA_POR_CAMPO: dict[str, dict[str, Any]] = {step["field"]: step for step in STEPS_DEF}
 
 # Etapas que efetivam o registro do jovem. As duas exigem o número de registro do
 # jovem (e dos responsáveis que serão registrados) antes de serem marcadas — ver
@@ -77,17 +100,20 @@ STATUS_ANTES_DA_VISITA = "Conversa Inicial"
 STATUS_AGUARDAR_DADOS = "Aguardar Dados"
 STATUS_FAZER_REGISTRO = "Fazer Registro"
 
-# A coluna "Acompanhamento" do kanban é dividida em duas listas. A separação é
+# A coluna "Acompanhamento" do kanban é dividida em três listas. A separação é
 # derivada dos dados, não gravada em ``status``: quem ainda espera o registro
 # provisório fica na lista provisória e migra sozinho para a definitiva assim que
-# ``registro_provisorio_efetivado`` é marcado. Quem já entrou como Definitivo
-# nunca passa pela lista provisória.
+# ``registro_provisorio_efetivado`` é marcado; efetivado o registro definitivo, vai
+# para a final, onde restam pesquisa, ficha médica, id@escoteiros e acolhida. Quem já
+# entrou como Definitivo nunca passa pela lista provisória.
 STATUS_ACOMPANHAMENTO = "Acompanhamento"
 COLUNA_ACOMPANHAMENTO_PROVISORIO = "Acompanhamento Provisório"
 COLUNA_ACOMPANHAMENTO_DEFINITIVO = "Acompanhamento Definitivo"
+COLUNA_ACOMPANHAMENTO_FINAL = "Acompanhamento Final"
 COLUNAS_DE_ACOMPANHAMENTO = (
 	COLUNA_ACOMPANHAMENTO_PROVISORIO,
 	COLUNA_ACOMPANHAMENTO_DEFINITIVO,
+	COLUNA_ACOMPANHAMENTO_FINAL,
 )
 
 # Etapas que também movem a coluna do funil, na ordem do fluxo.
@@ -129,8 +155,8 @@ def status_por_etapas_concluidas(dados) -> str:
 
 	Nenhuma etapa marcada devolve ``STATUS_ANTES_DA_VISITA`` ("Conversa Inicial"), a coluna
 	onde a recepção tem o botão de agendar. A divisão de "Acompanhamento" entre as listas
-	provisória e definitiva continua com ``coluna_de_acompanhamento``: ela é derivada dos
-	dados, não do ``status``.
+	provisória, definitiva e final continua com ``coluna_de_acompanhamento``: ela é derivada
+	dos dados, não do ``status``.
 	"""
 	status = STATUS_ANTES_DA_VISITA
 	for campo, alvo in ETAPAS_QUE_MOVEM_O_FUNIL:
@@ -141,16 +167,33 @@ def status_por_etapas_concluidas(dados) -> str:
 
 
 def coluna_de_acompanhamento(dados) -> str:
-	"""Qual das duas listas de acompanhamento recebe o card.
+	"""Qual das três listas de acompanhamento recebe o card.
 
-	Mesma condição de ``calcular_etapas``: só quem não é "Definitivo" enxerga a
-	etapa do registro provisório, então só esse grupo pode ficar na lista provisória
-	— e sai dela quando a etapa é concluída.
+	Registro definitivo efetivado leva à lista final, nos dois tipos de registro: dali em
+	diante só restam as pendências que vêm depois dele. Antes disso, mesma condição de
+	``etapas_do_fluxo``: só quem não é "Definitivo" enxerga a etapa do registro provisório,
+	então só esse grupo pode ficar na lista provisória — e sai dela quando a etapa é
+	concluída.
 	"""
+	if dados.get("registro_definitivo_efetivado"):
+		return COLUNA_ACOMPANHAMENTO_FINAL
+
 	e_definitivo = dados.get("tipo_de_registro") == "Definitivo"
 	if not e_definitivo and not dados.get("registro_provisorio_efetivado"):
 		return COLUNA_ACOMPANHAMENTO_PROVISORIO
 	return COLUNA_ACOMPANHAMENTO_DEFINITIVO
+
+
+def etapas_do_fluxo(tipo_de_registro) -> list[dict[str, Any]]:
+	"""Definições das etapas (``field``/``label``) na ordem do tipo de registro.
+
+	Provisório — ou tipo ainda não escolhido — segue ``STEPS_DEF``; Definitivo segue
+	``ORDEM_DEFINITIVO``, sem as etapas do registro provisório. É a ordem única usada pelo
+	kanban, pela ficha de registro, pelo portal do responsável e pelo MCP.
+	"""
+	if tipo_de_registro != "Definitivo":
+		return list(STEPS_DEF)
+	return [_ETAPA_POR_CAMPO[campo] for campo in ORDEM_DEFINITIVO]
 
 
 def dias_para_registro_definitivo(config: dict | None = None) -> int:
@@ -238,7 +281,8 @@ def carregar_configuracao() -> dict:
 def calcular_etapas(dados, config: dict | None = None, data_base=None, hoje=None) -> list[dict]:
 	"""Etapas de uma pessoa, com data estimada e marcação de atraso.
 
-	``dados`` precisa conter ``tipo_de_registro`` e os campos de etapa.
+	``dados`` precisa conter ``tipo_de_registro`` e os campos de etapa; a ordem das
+	etapas, e portanto a das datas estimadas, é a de ``etapas_do_fluxo``.
 	``data_base`` é a data da visita mais recente (None desliga as estimativas).
 
 	As chaves ``label``/``completed``/``field``/``estimated_date``/``is_overdue``
@@ -247,15 +291,11 @@ def calcular_etapas(dados, config: dict | None = None, data_base=None, hoje=None
 	"""
 	config = config if config is not None else carregar_configuracao()
 	hoje = getdate(hoje) if hoje else getdate()
-	is_definitivo = dados.get("tipo_de_registro") == "Definitivo"
 
 	etapas: list[dict] = []
 	data_corrente = getdate(data_base) if data_base else None
 
-	for step in STEPS_DEF:
-		if step.get("conditional") and is_definitivo:
-			continue
-
+	for step in etapas_do_fluxo(dados.get("tipo_de_registro")):
 		concluida = bool(dados.get(step["field"]))
 		etapa = {"label": step["label"], "completed": concluida, "field": step["field"]}
 

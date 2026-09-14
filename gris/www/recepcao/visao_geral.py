@@ -90,10 +90,11 @@ def get_context(context):
 	context.active_link = "/recepcao"
 	enrich_context(context, "/recepcao")
 
-	# Colunas do kanban. As duas últimas são as duas faces do mesmo status
+	# Colunas do kanban. As três últimas são as faces do mesmo status
 	# "Acompanhamento": a separação sai de ``coluna_de_acompanhamento`` e não do
 	# campo ``status``, então o card migra sozinho da lista provisória para a
-	# definitiva quando o registro provisório é efetivado.
+	# definitiva quando o registro provisório é efetivado, e dela para a final
+	# quando o registro definitivo é efetivado.
 	colunas = [
 		"Novo Contato",
 		"Conversa Inicial",
@@ -377,7 +378,7 @@ def get_context(context):
 	# O ícone ao lado do ramo, nos modais dos cards, abre o mesmo dialog "Cálculo de Vagas"
 	# da Fila de Espera (include compartilhado), com estes números.
 	context.vagas_por_ramo = dados_do_dialog(vagas_por_ramo)
-	# As duas listas de acompanhamento abrem o mesmo dialog; o template precisa
+	# As listas de acompanhamento abrem o mesmo dialog; o template precisa
 	# saber quais colunas são elas para marcar os cards.
 	context.colunas_de_acompanhamento = list(COLUNAS_DE_ACOMPANHAMENTO)
 

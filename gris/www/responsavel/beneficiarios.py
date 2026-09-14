@@ -6,6 +6,7 @@ from frappe.utils import add_days, cint, getdate, now, today
 
 from gris.api.portal_access import enrich_context
 from gris.api.recepcao import limpar_sinal_de_reagendamento
+from gris.api.recepcao_funil import FIELD_INTERVAL_MAP, etapas_do_fluxo
 from gris.api.recepcao_notificacoes import notificar_nova_manifestacao_no_grupo_recepcao
 from gris.api.recepcao_visitas import agendar_ou_remarcar_visita
 from gris.api.responsavel_acesso import get_responsavel_do_usuario
@@ -179,17 +180,7 @@ def get_context(context):
 		config = {}
 
 	# Map Novo Associado fields to Config fields
-	field_interval_map = {
-		"dados_para_registro_enviados": "dados_para_registro_enviados",
-		"registro_criado_no_paxtu": "registro_criado_no_paxtu",
-		"registro_provisorio_efetivado": "registro_provisorio_efetivado",
-		"pesquisa_de_novos_associados_respondida": "pesquisa_de_novos_associados_respondida",
-		"ficha_medica_preenchida": "ficha_medica_preenchida",
-		"id_escoteiros_criado": "id_escoteiros_criado",
-		"boleto_definitivo_gerado": "boleto_definitivo_gerado",
-		"registro_definitivo_efetivado": "registro_definitivo_efetivado",
-		"reuniao_de_acolhida_realizada": "reuniao_de_acolhida_realizada",
-	}
+	field_interval_map = FIELD_INTERVAL_MAP
 
 	# Fetch Associados
 	beneficiarios_registrados = []
@@ -239,40 +230,19 @@ def get_context(context):
 			if v.jovem not in visits_map:
 				visits_map[v.jovem] = v.data_da_visita
 
-		steps_def = [
-			{"field": "visita_agendada", "label": "Visita Agendada"},
-			{"field": "primeira_visita_realizada", "label": "Primeira Visita Realizada"},
-			{"field": "dados_para_registro_enviados", "label": "Dados Enviados"},
-			{"field": "registro_criado_no_paxtu", "label": "Registro no Paxtu"},
-			{
-				"field": "registro_provisorio_efetivado",
-				"label": "Registro Provisório Efetivado",
-				"conditional": True,
-			},
-			{"field": "pesquisa_de_novos_associados_respondida", "label": "Pesquisa Respondida"},
-			{"field": "ficha_medica_preenchida", "label": "Ficha Médica"},
-			{"field": "id_escoteiros_criado", "label": "ID Escoteiros Criado"},
-			{"field": "boleto_definitivo_gerado", "label": "Boleto Definitivo Gerado"},
-			{"field": "registro_definitivo_efetivado", "label": "Registro Definitivo Efetivado"},
-			{"field": "reuniao_de_acolhida_realizada", "label": "Reunião de Acolhida"},
-		]
-
 		for b in beneficiarios_integracao:
 			if not b.visita_agendada:
 				show_schedule_button = True
 
 			b.steps = []
-			is_definitivo = b.tipo_de_registro == "Definitivo"
 			stop_adding = False
 
 			current_calc_date = visits_map.get(b.name)
 
-			for step in steps_def:
+			# Mesma ordem do kanban da recepção, que muda com o tipo de registro
+			for step in etapas_do_fluxo(b.tipo_de_registro):
 				if stop_adding:
 					break
-
-				if step.get("conditional") and is_definitivo:
-					continue
 
 				is_completed = bool(b.get(step["field"]))
 				step_data = {"label": step["label"], "completed": is_completed, "field": step["field"]}

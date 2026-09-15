@@ -28,6 +28,7 @@ from gris.api.financeiro.contribuicoes import (
 	CATEGORIAS_CONTRIBUINTES,
 	MESES_MAXIMO,
 	MESES_PADRAO,
+	MESES_PADRAO_TELA,
 	chave_mes,
 	construir_meses,
 	get_contribuintes,
@@ -154,6 +155,33 @@ def montar_grade_pagamentos(meses: list[datetime.date], pagamentos_do_associado:
 		"meses_quitados": meses_quitados,
 		"meses_pendentes": meses_gerados - meses_quitados,
 	}
+
+
+def competencias_pendentes(apuracao: dict) -> list[dict]:
+	"""Meses do contribuinte que a apuração mês a mês mostra em aberto.
+
+	É o que a tela oferece para cobrar: o mesmo recorte que a coluna "Situação"
+	do mês a mês, na mesma janela apurada. Mês sem registro gerado ("Não gerado")
+	fica de fora — não há valor apurado a cobrar até que o registro exista —, e o
+	valor cobrado é o que está gravado no `Pagamento Contribuicao Mensal`, não um
+	valor recalculado: é aquele que o gestor vê e edita na tela.
+	"""
+	return [
+		{
+			"ym": linha["ym"],
+			"rotulo": linha["rotulo"],
+			"status": linha["status"],
+			"status_slug": linha["status_slug"],
+			"valor": linha["valor"],
+		}
+		for linha in apuracao.get("linhas", [])
+		if linha["status"] in (STATUS_EM_ABERTO, STATUS_ATRASADO) and linha["valor"] > 0
+	]
+
+
+def competencias_quitadas(apuracao: dict) -> set[str]:
+	"""Meses já marcados como pagos no período apurado."""
+	return {linha["ym"] for linha in apuracao.get("linhas", []) if linha["status"] == STATUS_PAGO}
 
 
 def _acao_de_cadastro(contribuinte: dict) -> str | None:
@@ -380,6 +408,7 @@ def get_extrato_do_associado(associado: str, meses: str | int = MESES_PADRAO):
 __all__ = [
 	"MESES_MAXIMO",
 	"MESES_PADRAO",
+	"MESES_PADRAO_TELA",
 	"ORDEM_SITUACAO",
 	"ROLE_GESTOR",
 	"ROTA_CONTRIBUICOES",
@@ -390,6 +419,8 @@ __all__ = [
 	"STATUS_PAGO",
 	"apurar",
 	"apurar_associados",
+	"competencias_pendentes",
+	"competencias_quitadas",
 	"get_apuracao",
 	"get_extrato_do_associado",
 	"get_pagamentos_por_associado",

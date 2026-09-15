@@ -46,9 +46,29 @@ class TestCobrancaAutomatica(FrappeTestCase):
 				"max_lembretes": 2,
 			},
 		)
+		self._gerar_pagamentos()
 		self._sem_commit = mock.patch.object(automatica, "_commit")
 		self._sem_commit.start()
 		self.addCleanup(self._sem_commit.stop)
+
+	def _gerar_pagamentos(self) -> None:
+		"""A apuração mês a mês que o job lê — é dela que saem os meses a cobrar.
+
+		No site, quem grava esses registros é a geração mensal
+		(`monthly_payments.generate_monthly_payments`) e a virada de status depois
+		do vencimento; o job de cobrança não inventa mês nenhum fora deles.
+		"""
+		_apagar("Pagamento Contribuicao Mensal", {"associado": self.associado})
+		for ym, status in (("2026-07", "Atrasado"), ("2026-08", "Em Aberto"), ("2026-09", "Em Aberto")):
+			frappe.get_doc(
+				{
+					"doctype": "Pagamento Contribuicao Mensal",
+					"associado": self.associado,
+					"mes_de_referencia": f"{ym}-01",
+					"status": status,
+					"valor": VALOR,
+				}
+			).insert(ignore_permissions=True)
 
 	def _criar_associado(self) -> str:
 		nome = hashlib.md5(CPF.encode("utf-8")).hexdigest()
@@ -136,11 +156,12 @@ class TestCobrancaAutomatica(FrappeTestCase):
 		self.assertEqual(cobranca.competencias, "2026-07,2026-08")
 		self.assertEqual(cobranca.mes_emissao, datetime.date(2026, 8, 1))
 		self.assertTrue(cobranca.ultimo_envio_whatsapp)
-		# Julho venceu: vai pelo valor de atraso; agosto ainda não.
+		# Cada mês sai pelo valor gravado nele: o acréscimo de atraso é ajuste do
+		# gestor no mês a mês, não um recálculo da cobrança.
 		precos = frappe.get_all(
 			"Item Cobranca Infinitepay", filters={"parent": cobranca.name}, pluck="preco", order_by="idx"
 		)
-		self.assertEqual(precos, [VALOR_ATRASO, VALOR])
+		self.assertEqual(precos, [VALOR, VALOR])
 
 		# Rodar de novo no mesmo mês não emite nem manda de novo.
 		resultado, enviar = self._rodar("2026-08-06")
@@ -200,7 +221,7 @@ class TestCobrancaAutomatica(FrappeTestCase):
 		self.assertEqual(len(minhas), 1)
 		self.assertTrue(minhas[0]["sem_envio"])
 		self.assertEqual(minhas[0]["competencias"], "07/2026, 08/2026")
-		self.assertEqual(minhas[0]["valor"], VALOR_ATRASO + VALOR)
+		self.assertEqual(minhas[0]["valor"], 2 * VALOR)
 		self.assertTrue(resumo["cobrancas"][0]["sem_envio"])
 		self.assertGreaterEqual(resumo["totais"]["sem_envio"], 1)
 

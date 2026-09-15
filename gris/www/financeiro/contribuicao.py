@@ -3,8 +3,9 @@
 Tela cheia aberta pela lista de `/financeiro/contribuicoes`. A apuração aqui é a
 mesma da lista (`gris.api.financeiro.pagamentos_contribuicao`), recortada num
 contribuinte só: mês a mês (lido do Pagamento Contribuicao Mensal, editável por
-quem gerencia), transações identificadas no período e as ações de gestão
-(valor, dados de cobrança e cobrança pela InfinitePay).
+quem gerencia), transações identificadas no período e as ações de gestão (valor,
+quem recebe a cobrança, se o associado deve ser cobrado e a cobrança pela
+InfinitePay).
 
 O mês a mês e as transações são renderizados no servidor — a tela nasce pronta,
 sem depender de JavaScript para mostrar o que já foi apurado. A edição (trocar
@@ -14,8 +15,9 @@ status, vincular a transação certa) é que precisa de JavaScript, em
 
 import frappe
 
+from gris.api.financeiro.cobranca_contribuicao import get_destino_da_cobranca
 from gris.api.financeiro.pagamentos_contribuicao import (
-	MESES_PADRAO,
+	MESES_PADRAO_TELA,
 	ROLE_GESTOR,
 	apurar_associados,
 	get_extrato_do_associado,
@@ -66,7 +68,7 @@ def get_context(context):
 	context.titulo = "Contribuição do associado"
 	context.can_manage_contributions = ROLE_GESTOR in frappe.get_roles()
 
-	meses = normalizar_meses(frappe.form_dict.get("meses") or MESES_PADRAO)
+	meses = normalizar_meses(frappe.form_dict.get("meses"), MESES_PADRAO_TELA)
 	context.meses_selecionado = str(meses)
 	context.opcoes_periodo = OPCOES_PERIODO
 	# O período volta com o usuário para a lista: ele saiu de lá com essa janela.
@@ -98,6 +100,12 @@ def get_context(context):
 	assoc["pendentes"] = pendentes
 
 	context.assoc = assoc
+
+	# Responsáveis e destinatário do link: contato de família, só para quem
+	# gerencia a cobrança. Quem só acompanha a apuração não precisa vê-los.
+	context.destino_cobranca = (
+		get_destino_da_cobranca(associado) if context.can_manage_contributions else None
+	)
 
 	transacoes = get_extrato_do_associado(associado, meses)["transacoes"]
 	context.transacoes = transacoes

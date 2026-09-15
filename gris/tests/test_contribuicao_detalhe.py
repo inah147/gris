@@ -13,6 +13,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.website.serve import get_response_content
 
+from gris.api.financeiro.cobranca_contribuicao import get_destino_da_cobranca
 from gris.api.financeiro.contribuicoes import ROLE_GESTOR, apurar_associados
 from gris.www.financeiro import contribuicao
 
@@ -121,10 +122,16 @@ class TestContextoDaPaginaDeDetalhe(FrappeTestCase):
 		self.assertTrue(contexto.can_manage_contributions)
 		self.assertEqual(contexto.assoc["email_cobranca"], "cobranca@exemplo.com")
 
+	def test_periodo_padrao_da_tela_e_de_seis_meses(self):
+		"""Sem `meses` na URL, a tela abre no semestre corrente."""
+		contexto = self._contexto(associado=self.associado)
+		self.assertEqual(contexto.meses_selecionado, "6")
+		self.assertEqual(len(contexto.assoc["linhas"]), 6)
+
 	def test_periodo_invalido_cai_no_padrao(self):
 		contexto = self._contexto(associado=self.associado, meses="abacaxi")
-		self.assertEqual(contexto.meses_selecionado, "12")
-		self.assertEqual(len(contexto.assoc["linhas"]), 12)
+		self.assertEqual(contexto.meses_selecionado, "6")
+		self.assertEqual(len(contexto.assoc["linhas"]), 6)
 
 	def _renderizar(self, rota, **parametros):
 		"""Renderiza a rota do portal. O resolvedor não lê query string: os
@@ -149,6 +156,104 @@ class TestContextoDaPaginaDeDetalhe(FrappeTestCase):
 
 		self.assertIn(f"/financeiro/contribuicao?associado={self.associado}", conteudo)
 		self.assertNotIn("detalheModal", conteudo)
+
+	def test_pagina_mostra_responsaveis_e_destino_no_lugar_do_cadastro_de_cobranca(self):
+		"""O cadastro de cobrança saiu: o gestor precisa saber quem recebe o link."""
+		conteudo = self._renderizar("/financeiro/contribuicao", associado=self.associado, meses="6")
+
+		self.assertIn("Responsáveis e destino da cobrança", conteudo)
+		self.assertIn("A cobrança vai para", conteudo)
+		self.assertIn("cobranca@exemplo.com", conteudo)
+		self.assertNotIn("Cadastro da cobrança", conteudo)
+		self.assertNotIn("Cadastro realizado", conteudo)
+
+	def test_botao_de_cobranca_so_liga_e_desliga_a_cobranca_do_associado(self):
+		conteudo = self._renderizar("/financeiro/contribuicao", associado=self.associado, meses="6")
+		self.assertIn("Não cobrar este associado", conteudo)
+
+		frappe.db.set_value("Associado", self.associado, "status_cobranca", "Inativo")
+		try:
+			conteudo = self._renderizar("/financeiro/contribuicao", associado=self.associado, meses="6")
+			self.assertIn("Voltar a cobrar este associado", conteudo)
+			self.assertIn("o associado não é cobrado", conteudo)
+		finally:
+			frappe.db.set_value("Associado", self.associado, "status_cobranca", "Ativo")
+
+
+class TestDestinoDaCobranca(FrappeTestCase):
+	"""Quem recebe o link de pagamento, e os responsáveis por trás do contribuinte."""
+
+	CPF_RESPONSAVEL = "99000000103"
+
+	def setUp(self):
+		self.associado = _criar_associado(
+			CPF_BENEFICIARIO,
+			"Beneficiário do Detalhe",
+			categoria="Beneficiário",
+			email_cobranca="cobranca@exemplo.com",
+			telefone_cobranca="11999990101",
+		)
+		self.responsavel = self._criar_responsavel()
+
+	def _criar_responsavel(self) -> str:
+		nome = _nome_por_cpf(self.CPF_RESPONSAVEL)
+		if not frappe.db.exists("Responsavel", nome):
+			frappe.get_doc(
+				{
+					"doctype": "Responsavel",
+					"cpf": self.CPF_RESPONSAVEL,
+					"nome_completo": "Mãe do Beneficiário",
+					"email": "cobranca@exemplo.com",
+					"celular": "11999990101",
+				}
+			).insert(ignore_permissions=True)
+		if not frappe.db.exists(
+			"Responsavel Vinculo", {"responsavel": nome, "beneficiario_associado": self.associado}
+		):
+			frappe.get_doc(
+				{
+					"doctype": "Responsavel Vinculo",
+					"responsavel": nome,
+					"beneficiario_associado": self.associado,
+					"primeiro_responsavel": 1,
+				}
+			).insert(ignore_permissions=True)
+		return nome
+
+	def test_destinatario_e_o_responsavel_dono_do_contato_de_cobranca(self):
+		destino = get_destino_da_cobranca(self.associado)
+
+		self.assertEqual(destino["destinatario"]["nome"], "Mãe do Beneficiário")
+		self.assertEqual(destino["destinatario"]["email"], "cobranca@exemplo.com")
+		self.assertTrue(destino["destinatario"]["e_responsavel"])
+		self.assertEqual([r["nome"] for r in destino["responsaveis"]], ["Mãe do Beneficiário"])
+		self.assertTrue(destino["responsaveis"][0]["recebe"])
+		self.assertTrue(destino["responsaveis"][0]["primeiro"])
+
+	def test_contato_que_nao_e_de_nenhum_responsavel_fica_marcado(self):
+		"""Sem casar com um responsável, a tela precisa dizer que o contato é avulso."""
+		frappe.db.set_value("Associado", self.associado, "email_cobranca", "tesouraria@exemplo.com")
+		frappe.db.set_value("Associado", self.associado, "telefone_cobranca", "11333330000")
+		try:
+			destino = get_destino_da_cobranca(self.associado)
+		finally:
+			frappe.db.set_value("Associado", self.associado, "email_cobranca", "cobranca@exemplo.com")
+			frappe.db.set_value("Associado", self.associado, "telefone_cobranca", "11999990101")
+
+		self.assertFalse(destino["destinatario"]["e_responsavel"])
+		self.assertEqual(destino["destinatario"]["email"], "tesouraria@exemplo.com")
+		self.assertFalse(destino["responsaveis"][0]["recebe"])
+
+	def test_telefone_casa_mesmo_com_ddi_e_mascara_diferentes(self):
+		frappe.db.set_value("Associado", self.associado, "email_cobranca", "")
+		try:
+			destino = get_destino_da_cobranca(self.associado)
+		finally:
+			frappe.db.set_value("Associado", self.associado, "email_cobranca", "cobranca@exemplo.com")
+
+		# O cadastro normaliza o telefone do associado (ganha DDI); o do responsável
+		# ficou como foi digitado. Os dois são a mesma pessoa.
+		self.assertTrue(destino["destinatario"]["e_responsavel"])
 
 
 def _criar_associado(cpf: str, nome_completo: str, categoria: str, **campos) -> str:

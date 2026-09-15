@@ -7,9 +7,11 @@ contribuinte (`cobranca_contribuicao`):
 
 1. **Emissão.** A partir do dia de emissão configurado, cada contribuinte ativo
    com cobrança ativa e competências em aberto recebe uma `Cobranca Infinitepay`
-   com todas elas, e o link vai pelo WhatsApp. É uma cobrança automática por
-   associado por mês (`mes_emissao`); rodar de novo no mesmo mês só completa quem
-   ficou para trás — link que falhou, WhatsApp que não saiu.
+   com todas elas, e o link vai pelo WhatsApp. "Em aberto" é o que a apuração mês
+   a mês mostra na tela do contribuinte — o job cobra o mesmo que o gestor
+   cobraria à mão, nem um mês a mais. É uma cobrança automática por associado por
+   mês (`mes_emissao`); rodar de novo no mesmo mês só completa quem ficou para
+   trás — link que falhou, WhatsApp que não saiu.
 2. **Lembrete.** Depois do vencimento, a cada `dias_lembrete_apos_vencimento`
    dias, quem ainda não pagou o link do mês recebe o mesmo link de novo, até
    `max_lembretes` vezes.
@@ -42,10 +44,12 @@ from gris.api.financeiro.cobranca_contribuicao import (
 )
 from gris.api.financeiro.contribuicoes import (
 	CATEGORIAS_CONTRIBUINTES,
-	apurar_associados,
 	calcular_vencimento,
-	competencias_pendentes,
 	get_parametros,
+)
+from gris.api.financeiro.pagamentos_contribuicao import (
+	apurar_associados,
+	competencias_pendentes,
 )
 from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 

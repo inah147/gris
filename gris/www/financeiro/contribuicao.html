@@ -57,8 +57,6 @@
 	window.contribMeses = JSON.parse('{{ meses_selecionado | tojson }}');
 	window.contribAssociado = JSON.parse('{{ assoc.id | tojson }}');
 	window.contribEsperadoMensal = JSON.parse('{{ assoc.esperado_mensal | tojson }}');
-	window.contribEmailCobranca = JSON.parse('{{ (assoc.email_cobranca or "") | tojson }}');
-	window.contribTelefoneCobranca = JSON.parse('{{ (assoc.telefone_cobranca or "") | tojson }}');
 </script>
 
 <article class="card mb-4">
@@ -123,28 +121,72 @@
 </div>
 
 {% if can_manage_contributions %}
-{% call card(title="Cadastro da cobrança", attrs={"class": "mb-4"}) %}
-	<div id="cobrancaContainer" class="flex items-start justify-between gap-3 flex-wrap" data-manage-only="1">
-		<div class="flex-1 min-w-0 flex flex-col gap-1">
-			<div class="text-sm"><strong>E-mail de cobrança:</strong> <span id="emailCobranca">{{ assoc.email_cobranca or '—' }}</span></div>
-			<div class="text-sm"><strong>Telefone de cobrança:</strong> <span id="foneCobranca">{{ assoc.telefone_cobranca or '—' }}</span></div>
+{% set destinatario = destino_cobranca.destinatario %}
+{% call card(
+	title="Responsáveis e destino da cobrança",
+	description="Quem responde pelo contribuinte e para quem o link de pagamento é enviado.",
+	attrs={"class": "mb-4"}
+) %}
+	<div class="contrib-destino" data-manage-only="1">
+		<div class="contrib-destino__alvo">
+			<p class="m-0 text-sm text-muted-foreground">A cobrança vai para</p>
+			<p class="m-0 mt-1 text-base font-semibold text-foreground">{{ destinatario.nome }}</p>
+			<p class="m-0 mt-1 text-sm {% if destinatario.email %}text-foreground{% else %}contrib-falta{% endif %}">
+				{{ destinatario.email or 'Sem e-mail de cobrança cadastrado' }}
+			</p>
+			<p class="m-0 mt-1 text-sm {% if destinatario.telefone %}text-muted-foreground{% else %}contrib-falta{% endif %}">
+				WhatsApp: {{ destinatario.telefone or 'sem telefone de cobrança cadastrado' }}
+			</p>
+			{% if not destinatario.e_responsavel %}
+			<p class="m-0 mt-2 text-xs text-muted-foreground">
+				Este contato está no cadastro do associado e não bate com o de nenhum responsável vinculado.
+			</p>
+			{% endif %}
 		</div>
-		<div id="acoesCobranca">
-			<button type="button" id="btnEditarCobranca" class="btn-sm-outline" data-acao="editar-cobranca">Editar cobrança</button>
+
+		<div class="contrib-destino__responsaveis">
+			<p class="m-0 text-sm text-muted-foreground">Responsáveis vinculados</p>
+			{% if destino_cobranca.responsaveis %}
+			<ul class="contrib-responsaveis mt-2">
+				{% for responsavel in destino_cobranca.responsaveis %}
+				<li class="contrib-responsaveis__item">
+					<span class="contrib-responsaveis__nome">
+						{{ responsavel.nome }}
+						{% if responsavel.primeiro %}<span class="badge badge-outline">1º responsável</span>{% endif %}
+						{% if responsavel.recebe %}<span class="badge contrib-badge contrib-badge--pago">Recebe a cobrança</span>{% endif %}
+					</span>
+					<span class="contrib-responsaveis__contato">{{ responsavel.email or 'sem e-mail' }}</span>
+					{% if responsavel.telefone %}<span class="contrib-responsaveis__contato">{{ responsavel.telefone }}</span>{% endif %}
+				</li>
+				{% endfor %}
+			</ul>
+			{% else %}
+			<p class="m-0 mt-2 text-sm contrib-falta">Nenhum responsável vinculado a este contribuinte.</p>
+			{% endif %}
 		</div>
 	</div>
 
-	<div id="acoesCadastro" class="flex gap-2 flex-wrap mt-4" data-manage-only="1">
-		<button type="button" id="btnCadastroRealizado" class="btn-sm-primary {% if assoc.acao_cadastro != 'Cadastrar' %}hidden{% endif %}"
-			data-acao="cadastro-realizado">Cadastro realizado</button>
-		<button type="button" id="btnCadastroCancelado" class="btn-sm-destructive {% if assoc.status_cobranca != 'Ativo' %}hidden{% endif %}"
-			data-acao="cadastro-cancelado">Cadastro cancelado</button>
+	<div id="acoesCobrancaAtiva" class="contrib-destino__acoes" data-manage-only="1">
+		<div class="min-w-0">
+			<p class="m-0 text-sm">
+				<strong>Cobrança:</strong>
+				<span id="statusCobranca">{{ 'ativa — o associado é cobrado todo mês' if assoc.status_cobranca == 'Ativo' else 'inativa — o associado não é cobrado' }}</span>
+			</p>
+			{% if assoc.status_no_grupo != 'Ativo' and assoc.status_cobranca == 'Ativo' %}
+			<p class="m-0 mt-1 text-xs contrib-falta">Inativo no grupo e ainda sendo cobrado.</p>
+			{% endif %}
+		</div>
+		<button type="button" id="btnAlternarCobranca"
+			class="{% if assoc.status_cobranca == 'Ativo' %}btn-sm-destructive{% else %}btn-sm-primary{% endif %}"
+			data-acao="alternar-cobranca" data-ativo="{{ 1 if assoc.status_cobranca == 'Ativo' else 0 }}">
+			{{ 'Não cobrar este associado' if assoc.status_cobranca == 'Ativo' else 'Voltar a cobrar este associado' }}
+		</button>
 	</div>
 {% endcall %}
 
 {% call card(
 	title="Cobrar pela InfinitePay",
-	description="Marque as competências a cobrar. O link é gerado na InfinitePay e o pagamento confirmado quita automaticamente os meses cobrados.",
+	description="Só entram aqui os meses que a apuração mês a mês mostra em aberto no período apurado. Marque os que quer cobrar: o link é gerado na InfinitePay e o pagamento confirmado quita automaticamente os meses cobrados.",
 	attrs={"class": "mb-4"}
 ) %}
 	<section id="cobrancaInfinitepay" class="contrib-cobranca" data-manage-only="1">

@@ -12,7 +12,7 @@ from unittest import mock
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import add_days, getdate
+from frappe.utils import add_days, add_months, getdate
 
 from gris.api.financeiro.cobranca_contribuicao import (
 	FINALIDADE_CONTRIBUICAO,
@@ -31,13 +31,14 @@ from gris.api.financeiro.contribuicoes import (
 	CATEGORIA_CONTRIBUICAO,
 	STATUS_ATRASADO,
 	STATUS_PAGO,
-	STATUS_PARCIAL,
 	apurar_associados,
-	calcular_vencimento,
 	chave_mes,
-	competencias_pendentes,
 	construir_meses,
-	montar_grade,
+)
+from gris.api.financeiro.pagamentos_contribuicao import (
+	STATUS_EM_ABERTO,
+	competencias_pendentes,
+	montar_grade_pagamentos,
 )
 from gris.api.responsavel_acesso import get_beneficiarios_associados
 from gris.financeiro.doctype.cobranca_infinitepay import cobranca_infinitepay as cobranca_doctype
@@ -45,6 +46,16 @@ from gris.financeiro.doctype.cobranca_infinitepay import cobranca_infinitepay as
 HOJE = datetime.date(2026, 8, 22)
 VALOR = 60.0
 VALOR_ATRASO = 70.0
+
+# Apuração mês a mês de partida do contribuinte da baixa, como estaria gravada no
+# Pagamento Contribuicao Mensal — é dela que a cobrança lê o que está em aberto.
+# Junho saiu pelo valor de atraso porque alguém o ajustou na tela: o acréscimo é
+# decisão registrada no mês, não recálculo automático da cobrança.
+PAGAMENTOS_DA_BAIXA = {
+	"2026-06": ("Atrasado", VALOR_ATRASO),
+	"2026-07": ("Atrasado", VALOR),
+	"2026-08": ("Em Aberto", VALOR),
+}
 
 
 def _apagar(doctype: str, filtros: dict) -> None:
@@ -62,15 +73,31 @@ def _nome_por_cpf(cpf: str) -> str:
 
 
 class TestCompetenciasDaCobranca(FrappeTestCase):
-	"""Seleção das competências cobradas — lógica pura, sem banco."""
+	"""Seleção das competências cobradas — lógica pura, sem banco.
+
+	A cobrança lê a mesma apuração mês a mês que a tela do contribuinte mostra
+	(`pagamentos_contribuicao`, sobre o Pagamento Contribuicao Mensal): entra no
+	link o que está gravado ali, e só isso.
+	"""
 
 	def setUp(self):
 		self.meses = construir_meses(6, HOJE)
-		self.vencimentos = {chave_mes(mes): calcular_vencimento(mes, 10) for mes in self.meses}
 
-	def _grade(self, recebido):
-		contribuinte = {"valor_contribuicao": VALOR, "inicio_do_pagamento": "2026-01-01"}
-		return montar_grade(contribuinte, self.meses, recebido, HOJE, self.vencimentos, VALOR)
+	def _grade(self, registros: dict):
+		"""Grade a partir dos registros gravados, no formato `{"AAAA-MM": (status, valor)}`."""
+		pagamentos = {
+			ym: frappe._dict(
+				{
+					"name": f"PCM-{ym}",
+					"status": status,
+					"valor": valor,
+					"atrasou": 0,
+					"transacao_extrato": None,
+				}
+			)
+			for ym, (status, valor) in registros.items()
+		}
+		return montar_grade_pagamentos(self.meses, pagamentos)
 
 	def test_normalizar_aceita_csv_e_lista_sem_repetir(self):
 		self.assertEqual(_normalizar_competencias("2026-07,2026-06,2026-07"), ["2026-06", "2026-07"])
@@ -83,8 +110,8 @@ class TestCompetenciasDaCobranca(FrappeTestCase):
 			with self.assertRaises(frappe.ValidationError):
 				_normalizar_competencias(invalida)
 
-	def test_pendentes_listam_os_meses_nao_quitados(self):
-		grade = self._grade({})
+	def test_pendentes_listam_os_meses_com_registro_nao_quitado(self):
+		grade = self._grade({chave_mes(mes): (STATUS_EM_ABERTO, VALOR) for mes in self.meses})
 		pendentes = competencias_pendentes(grade)
 		self.assertEqual(
 			[p["ym"] for p in pendentes],
@@ -92,14 +119,23 @@ class TestCompetenciasDaCobranca(FrappeTestCase):
 		)
 		self.assertTrue(all(p["valor"] == VALOR for p in pendentes))
 
-	def test_mes_parcial_entra_pelo_que_falta(self):
-		grade = self._grade({"2026-07": {"valor": 20.0, "qtd": 1}})
-		pendentes = {p["ym"]: p for p in competencias_pendentes(grade)}
-		self.assertEqual(pendentes["2026-07"]["status"], STATUS_PARCIAL)
-		self.assertEqual(pendentes["2026-07"]["valor"], 40.0)
+	def test_mes_sem_registro_gerado_nao_entra_na_cobranca(self):
+		""" "Não gerado" não é dívida: sem registro no mês, não há valor apurado a cobrar."""
+		grade = self._grade({"2026-07": (STATUS_ATRASADO, VALOR)})
+		self.assertEqual([p["ym"] for p in competencias_pendentes(grade)], ["2026-07"])
+
+	def test_valor_cobrado_e_o_que_esta_gravado_no_mes(self):
+		"""O acréscimo de atraso é decisão registrada no mês, não recálculo da cobrança."""
+		grade = self._grade(
+			{"2026-06": (STATUS_ATRASADO, VALOR_ATRASO), "2026-07": (STATUS_EM_ABERTO, VALOR)}
+		)
+		self.assertEqual(
+			[(p["ym"], p["status"], p["valor"]) for p in competencias_pendentes(grade)],
+			[("2026-06", STATUS_ATRASADO, VALOR_ATRASO), ("2026-07", STATUS_EM_ABERTO, VALOR)],
+		)
 
 	def test_mes_quitado_fica_fora_da_cobranca(self):
-		grade = self._grade({"2026-07": {"valor": VALOR, "qtd": 1}})
+		grade = self._grade({"2026-07": (STATUS_PAGO, VALOR)})
 		self.assertNotIn("2026-07", [p["ym"] for p in competencias_pendentes(grade)])
 
 	def test_mensagem_traz_competencias_valor_e_link(self):
@@ -134,6 +170,21 @@ class TestBaixaDaCobranca(FrappeTestCase):
 			"Configuracoes Contribuicao Mensal",
 			{"valor_base": VALOR, "valor_atraso": VALOR_ATRASO, "dia_vencimento": 10},
 		)
+		self._gerar_pagamentos()
+
+	def _gerar_pagamentos(self, registros: dict | None = None) -> None:
+		"""Grava a apuração mês a mês que a tela mostra e a cobrança lê."""
+		_apagar("Pagamento Contribuicao Mensal", {"associado": self.associado})
+		for ym, (status, valor) in (registros if registros is not None else PAGAMENTOS_DA_BAIXA).items():
+			frappe.get_doc(
+				{
+					"doctype": "Pagamento Contribuicao Mensal",
+					"associado": self.associado,
+					"mes_de_referencia": f"{ym}-01",
+					"status": status,
+					"valor": valor,
+				}
+			).insert(ignore_permissions=True)
 
 	def _criar_associado(self) -> str:
 		nome = _nome_por_cpf(self.CPF)
@@ -299,8 +350,11 @@ class TestBaixaDaCobranca(FrappeTestCase):
 
 		A tela do gestor e o MCP leem o `Pagamento Contribuicao Mensal`; sem o
 		detalhamento a baixa só aparecia na apuração pelas transações.
+
+		Aqui os registros do mês nem existem — é o caso da cobrança emitida antes de
+		o registro ser gerado: quem os cria, já quitados, é a própria baixa.
 		"""
-		_apagar("Pagamento Contribuicao Mensal", {"associado": self.associado})
+		self._gerar_pagamentos({})
 		cobranca = self._criar_cobranca(
 			"2026-06,2026-07", status="Pago", paid_amount=14500, preco=VALOR_ATRASO, capture_method="pix"
 		)
@@ -476,8 +530,90 @@ class TestBaixaDaCobranca(FrappeTestCase):
 		self.assertEqual(emitida.associado, self.associado)
 		self.assertEqual(emitida.competencias, "2026-06,2026-07")
 		self.assertEqual(len(emitida.itens), 2)
-		# Os dois meses já venceram: a cobrança sai pelo valor de atraso.
-		self.assertEqual(resultado["valor_total"], 2 * VALOR_ATRASO)
+		# Cada mês entra pelo valor que está gravado nele, não por um valor recalculado.
+		self.assertEqual(resultado["valor_total"], VALOR_ATRASO + VALOR)
+
+	def test_montar_cobranca_recusa_mes_sem_registro_gerado(self):
+		"""Só se cobra o que a apuração mês a mês mostra em aberto no período."""
+		self._gerar_pagamentos({"2026-06": ("Em Aberto", VALOR)})
+
+		with self.assertRaises(frappe.ValidationError), self._sem_rede():
+			montar_cobranca(self.associado, "2026-06,2026-07", meses=12)
+
+
+class TestCompetenciasOferecidasParaCobrar(FrappeTestCase):
+	"""O que a aba "Cobrar pela InfinitePay" oferece.
+
+	São os meses que a apuração mês a mês mostra em aberto, dentro da janela que
+	a tela está apurando — nem um mês além dela, nem um mês que a tela dá por
+	pago, nem um mês que a tela mostra como "Não gerado".
+
+	Os meses são relativos a hoje de propósito: a janela apurada conta do mês
+	corrente para trás, e uma data fixa deixaria o teste verde só até virar o ano.
+	"""
+
+	CPF = "99000000002"
+
+	def setUp(self):
+		self.associado = _nome_por_cpf(self.CPF)
+		if not frappe.db.exists("Associado", self.associado):
+			frappe.get_doc(
+				{
+					"doctype": "Associado",
+					"cpf": self.CPF,
+					"nome_completo": "Beneficiário da Janela",
+					"data_de_nascimento": "2015-01-01",
+					"categoria": "Beneficiário",
+					"status_no_grupo": "Ativo",
+					"status_cobranca": "Ativo",
+					"valor_contribuicao": VALOR,
+				}
+			).insert(ignore_permissions=True)
+		_apagar("Pagamento Contribuicao Mensal", {"associado": self.associado})
+
+		# Do mês corrente (índice 0) para trás.
+		primeiro_do_mes = getdate().replace(day=1)
+		self.meses = [chave_mes(getdate(add_months(primeiro_do_mes, -n))) for n in range(4)]
+		for ym in self.meses:
+			self._gravar_mes(ym, "Em Aberto")
+
+	def _gravar_mes(self, ym: str, status: str) -> None:
+		frappe.get_doc(
+			{
+				"doctype": "Pagamento Contribuicao Mensal",
+				"associado": self.associado,
+				"mes_de_referencia": f"{ym}-01",
+				"status": status,
+				"valor": VALOR,
+			}
+		).insert(ignore_permissions=True)
+
+	def _oferecidos(self, meses: int) -> list[str]:
+		from gris.api.financeiro.cobranca_contribuicao import get_situacao_para_cobranca
+
+		return [p["ym"] for p in get_situacao_para_cobranca(self.associado, meses)["pendentes"]]
+
+	def test_so_entram_os_meses_da_janela_apurada(self):
+		self.assertEqual(self._oferecidos(2), sorted(self.meses[:2]))
+		self.assertEqual(self._oferecidos(4), sorted(self.meses))
+
+	def test_mes_dado_como_pago_no_mes_a_mes_nao_e_oferecido(self):
+		pago = self.meses[1]
+		frappe.db.set_value(
+			"Pagamento Contribuicao Mensal",
+			{"associado": self.associado, "mes_de_referencia": f"{pago}-01"},
+			"status",
+			"Pago",
+		)
+		self.assertNotIn(pago, self._oferecidos(4))
+
+	def test_mes_sem_registro_gerado_nao_e_oferecido(self):
+		sem_registro = self.meses[2]
+		_apagar(
+			"Pagamento Contribuicao Mensal",
+			{"associado": self.associado, "mes_de_referencia": f"{sem_registro}-01"},
+		)
+		self.assertNotIn(sem_registro, self._oferecidos(4))
 
 
 class TestRecorteDoResponsavel(FrappeTestCase):

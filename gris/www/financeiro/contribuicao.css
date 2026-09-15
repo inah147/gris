@@ -238,6 +238,78 @@
 	margin-left: auto;
 }
 
+/* Responsáveis e destino da cobrança — quem recebe o link, e quem mais responde
+   pelo contribuinte. As duas colunas viram uma pilha no celular. */
+.contrib-destino {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+	gap: calc(var(--spacing) * 4);
+}
+
+.contrib-destino__alvo {
+	border-left: 3px solid var(--primary);
+	padding-left: calc(var(--spacing) * 3);
+	min-width: 0;
+}
+
+.contrib-destino__alvo p {
+	overflow-wrap: anywhere;
+}
+
+.contrib-destino__responsaveis {
+	min-width: 0;
+}
+
+.contrib-responsaveis {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.contrib-responsaveis__item {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 0.5);
+	font-size: 0.875rem;
+	min-width: 0;
+}
+
+.contrib-responsaveis__nome {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 2);
+	font-weight: 500;
+}
+
+.contrib-responsaveis__contato {
+	color: var(--muted-foreground);
+	font-size: var(--text-xs);
+	overflow-wrap: anywhere;
+}
+
+/* A ação de ligar/desligar a cobrança fica separada dos contatos por uma régua:
+   é decisão, não informação. */
+.contrib-destino__acoes {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 3);
+	margin-top: calc(var(--spacing) * 4);
+	padding-top: calc(var(--spacing) * 3);
+	border-top: 1px solid var(--border);
+}
+
+@media (max-width: 48rem) {
+	.contrib-destino {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
 /* Cobrança InfinitePay */
 .contrib-cobranca__pendentes {
 	display: flex;

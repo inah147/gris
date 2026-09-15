@@ -111,6 +111,12 @@ MOTIVO_CARENCIA_GENERICO = "Carência de registro"
 MESES_PADRAO = 12
 MESES_MAXIMO = 36
 
+# Janela com que as telas de contribuição abrem. Menor que a das APIs de
+# propósito: quem acompanha a contribuição olha o semestre corrente, e uma
+# janela curta deixa o mês a mês legível sem rolagem. O filtro continua
+# oferecendo 12 e 24 meses para quem precisa do histórico.
+MESES_PADRAO_TELA = 6
+
 STATUS_PAGO = "Pago"
 STATUS_PARCIAL = "Parcial"
 STATUS_EM_ABERTO = "Em Aberto"
@@ -162,12 +168,17 @@ def _e_feriado(data: datetime.date) -> bool:
 	return data.strftime("%d-%m") in FERIADOS_FIXOS
 
 
-def normalizar_meses(meses) -> int:
-	"""Valida a janela de apuração pedida pelo usuário."""
+def normalizar_meses(meses, padrao: int = MESES_PADRAO) -> int:
+	"""Valida a janela de apuração pedida pelo usuário.
+
+	`padrao` é para onde cai o que não é um número — as telas passam o próprio
+	padrão delas, para que uma URL com `meses=abacaxi` abra na mesma janela que a
+	URL sem parâmetro nenhum.
+	"""
 	try:
 		valor = int(meses)
 	except (TypeError, ValueError):
-		return MESES_PADRAO
+		return padrao
 	return max(1, min(valor, MESES_MAXIMO))
 
 

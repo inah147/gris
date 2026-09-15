@@ -11,7 +11,7 @@ from frappe import _
 
 from gris.api.financeiro.cobranca_contribuicao import FINALIDADE_CONTRIBUICAO
 from gris.api.financeiro.contribuicoes import (
-	MESES_PADRAO,
+	MESES_PADRAO_TELA,
 	STATUS_ATRASADO,
 	STATUS_PARCIAL,
 	apurar_associados,
@@ -51,7 +51,7 @@ def get_context(context):
 	context.active_link = ROTA
 	context.titulo = "Contribuições dos meus beneficiários"
 
-	meses = normalizar_meses(frappe.form_dict.get("meses") or MESES_PADRAO)
+	meses = normalizar_meses(frappe.form_dict.get("meses"), MESES_PADRAO_TELA)
 	context.meses_selecionado = str(meses)
 	context.opcoes_periodo = OPCOES_PERIODO
 

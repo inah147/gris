@@ -6,9 +6,11 @@ O ciclo completo mora aqui:
 
 1. Uma `Cobranca Infinitepay` com `finalidade = "Contribuição Mensal"` é emitida
    para as competências em aberto de um contribuinte — pelo gestor, na tela do
-   contribuinte, ou pelo job mensal de `cobranca_contribuicao_automatica`. A
-   apuração de `gris.api.financeiro.contribuicoes` diz quais meses estão em
-   aberto e quanto falta em cada um. O `after_insert` da cobrança busca o link na
+   contribuinte, ou pelo job mensal de `cobranca_contribuicao_automatica`. Quais
+   meses estão em aberto e por quanto é o que a apuração mês a mês
+   (`gris.api.financeiro.pagamentos_contribuicao`, lida do `Pagamento
+   Contribuicao Mensal`) mostra na tela: cobra-se exatamente o que o gestor vê
+   ali, nem um mês a mais. O `after_insert` da cobrança busca o link na
    InfinitePay, e a cobrança pendente anterior do mesmo associado passa a
    "Substituída".
 2. O link vai para o responsável pelo WhatsApp, no telefone de cobrança do
@@ -40,11 +42,14 @@ from gris.api.financeiro.contribuicoes import (
 	CATEGORIA_CONTRIBUICAO,
 	MESES_MAXIMO,
 	ROLE_GESTOR,
+	chave_mes,
+	normalizar_meses,
+)
+from gris.api.financeiro.pagamentos_contribuicao import (
 	STATUS_ATRASADO,
 	apurar_associados,
-	chave_mes,
 	competencias_pendentes,
-	normalizar_meses,
+	competencias_quitadas,
 )
 
 # Valor de `finalidade` que liga a cobrança ao fluxo da contribuição mensal.
@@ -75,7 +80,9 @@ INSTITUICAO_INFINITEPAY = "Infinitepay"
 # funciona como trava contra baixa duplicada mesmo se o vínculo se perder.
 PREFIXO_ID_TRANSACAO = "COBIP-"
 
-# Quantos meses para trás a tela oferece para cobrar.
+# Janela apurada usada quando quem chama não informa a dele. A tela sempre passa
+# a sua (o período apurado que está na cara do gestor); é o MCP e a cobrança
+# automática que caem neste padrão.
 MESES_COBRANCA = 12
 
 # Conciliação com o fechamento importado. A importação grava o valor líquido da
@@ -136,7 +143,11 @@ def _meses_ate(ym: str, hoje: datetime.date) -> int:
 
 
 def get_situacao_para_cobranca(associado: str, meses=MESES_COBRANCA) -> dict:
-	"""Apuração de um contribuinte com as competências que podem ser cobradas."""
+	"""Apuração de um contribuinte com as competências que podem ser cobradas.
+
+	`meses` é a janela apurada: cobra-se dentro do mesmo período que a tela está
+	mostrando, não de uma janela própria da cobrança.
+	"""
 	apuracoes = apurar_associados([associado], normalizar_meses(meses))
 	if not apuracoes:
 		frappe.throw(
@@ -182,6 +193,129 @@ def _dados_do_associado(associado: str) -> dict:
 	if not dados:
 		frappe.throw(_("Associado {0} não encontrado.").format(associado), frappe.DoesNotExistError)
 	return dados
+
+
+def _so_digitos(valor: str | None) -> str:
+	return re.sub(r"\D", "", valor or "")
+
+
+def _mesmo_telefone(um: str | None, outro: str | None) -> bool:
+	"""Compara telefones pelo final.
+
+	O cadastro do associado normaliza o telefone de cobrança (ganha DDI), o do
+	responsável nem sempre; comparar os oito últimos dígitos casa os dois sem
+	depender de quem gravou com 55, com DDD ou com máscara.
+	"""
+	digitos_um, digitos_outro = _so_digitos(um), _so_digitos(outro)
+	if len(digitos_um) < 8 or len(digitos_outro) < 8:
+		return False
+	return digitos_um[-8:] == digitos_outro[-8:]
+
+
+def get_responsaveis_vinculados(associado: str) -> list[dict]:
+	"""Responsáveis ligados ao contribuinte, com o contato de cada um.
+
+	A ligação oficial é o `Responsavel Vinculo`, criado pelo portal de registro.
+	Cadastros antigos, importados antes dele, não têm vínculo — só os campos de
+	responsável no próprio `Associado`. Sem esse fallback a tela diria "nenhum
+	responsável vinculado" para famílias que têm responsável, sim.
+
+	A leitura não passa pela permissão do `Responsavel` de propósito: quem pode
+	cobrar não necessariamente administra associados, e sem isso a tela do gestor
+	esconderia justamente a informação que ela existe para mostrar. Quem chama já
+	está limitado — a página só monta este bloco para o Gestor Contribuição
+	Mensal, e a emissão passa por `_assert_gestor` ou roda no job. O que sai daqui
+	é o contato que a cobrança já carrega.
+	"""
+	vinculos = frappe.get_all(
+		"Responsavel Vinculo",
+		filters={"beneficiario_associado": associado},
+		fields=["responsavel", "primeiro_responsavel"],
+	)
+	nomes = [v.responsavel for v in vinculos if v.responsavel]
+	if nomes:
+		primeiros = {v.responsavel for v in vinculos if v.primeiro_responsavel}
+		cadastros = frappe.get_all(
+			"Responsavel",
+			filters={"name": ["in", nomes]},
+			fields=["name", "nome_completo", "email", "celular"],
+			limit_page_length=0,
+		)
+		responsaveis = [
+			{
+				"nome": cadastro.nome_completo or cadastro.name,
+				"email": (cadastro.email or "").strip(),
+				"telefone": (cadastro.celular or "").strip(),
+				"primeiro": cadastro.name in primeiros,
+				"origem": "vinculo",
+			}
+			for cadastro in cadastros
+		]
+		# O primeiro responsável encabeça a lista: é o contato de referência da família.
+		return sorted(responsaveis, key=lambda r: (not r["primeiro"], r["nome"].lower()))
+
+	cadastro = (
+		frappe.db.get_value(
+			"Associado",
+			associado,
+			[
+				"nome_responsavel_1",
+				"email_responsavel_1",
+				"telefone_responsavel_1",
+				"nome_responsavel_2",
+				"email_responsavel_2",
+				"telefone_responsavel_2",
+			],
+			as_dict=True,
+		)
+		or frappe._dict()
+	)
+	return [
+		{
+			"nome": (cadastro.get(f"nome_responsavel_{i}") or "").strip(),
+			"email": (cadastro.get(f"email_responsavel_{i}") or "").strip(),
+			"telefone": (cadastro.get(f"telefone_responsavel_{i}") or "").strip(),
+			"primeiro": i == 1,
+			"origem": "cadastro",
+		}
+		for i in (1, 2)
+		if (cadastro.get(f"nome_responsavel_{i}") or "").strip()
+	]
+
+
+def get_destino_da_cobranca(associado: str) -> dict:
+	"""Responsáveis vinculados ao contribuinte e para quem a cobrança vai.
+
+	A cobrança nasce com o contato de cobrança do associado (`email_cobranca` e
+	`telefone_cobranca`, com o contato pessoal como reserva): é esse par que vai
+	para a InfinitePay e para o WhatsApp. Quando ele bate com o de um responsável
+	vinculado, é o nome dele que a tela mostra como destinatário — é quem de fato
+	recebe o link. Sem bater com nenhum, o destinatário é o próprio contato do
+	associado, que é o nome que a cobrança carrega na InfinitePay.
+	"""
+	dados = _dados_do_associado(associado)
+	email = (dados.get("email_cobranca") or dados.get("email") or "").strip()
+	telefone = (dados.get("telefone_cobranca") or dados.get("telefone") or "").strip()
+
+	responsaveis = get_responsaveis_vinculados(associado)
+	for responsavel in responsaveis:
+		responsavel["recebe"] = bool(
+			(email and responsavel["email"].casefold() == email.casefold())
+			or (telefone and _mesmo_telefone(responsavel["telefone"], telefone))
+		)
+
+	recebedor = next((r for r in responsaveis if r["recebe"]), None)
+	return {
+		"responsaveis": responsaveis,
+		"destinatario": {
+			"nome": recebedor["nome"] if recebedor else (dados.get("nome_completo") or associado),
+			"email": email,
+			"telefone": telefone,
+			# Diz à tela se o link vai para um responsável identificado ou para o
+			# contato avulso gravado no associado — o gestor precisa saber a diferença.
+			"e_responsavel": bool(recebedor),
+		},
+	}
 
 
 def montar_cobranca(associado: str, competencias, meses=MESES_COBRANCA) -> dict:
@@ -232,6 +366,9 @@ def emitir_cobranca(
 
 	dados = _dados_do_associado(associado)
 	nome = dados.get("nome_completo") or associado
+	# Mesmo destino que a tela do contribuinte mostra: o que o gestor lê ali é
+	# para onde o link vai, sem uma segunda regra escondida aqui.
+	destino = get_destino_da_cobranca(associado)["destinatario"]
 
 	itens = [
 		{
@@ -265,8 +402,8 @@ def emitir_cobranca(
 			"origem": origem,
 			"mes_emissao": hoje.replace(day=1),
 			"customer_name": nome,
-			"customer_email": dados.get("email_cobranca") or dados.get("email") or "",
-			"customer_phone": dados.get("telefone_cobranca") or dados.get("telefone") or "",
+			"customer_email": destino["email"],
+			"customer_phone": destino["telefone"],
 			"itens": itens,
 		}
 	)
@@ -502,11 +639,15 @@ def _competencias_da_baixa(doc, competencias: list[str], hoje: datetime.date) ->
 	antes de o item guardar o mês são pareadas pela ordem, que é a mesma das
 	competências.
 
-	Sem detalhar é o caminho seguro quando algum mês cobrado já não está em aberto
-	— o link antigo pago depois de o mês ter sido quitado por outro pagamento.
+	Sem detalhar é o caminho seguro quando algum mês cobrado já consta como pago —
+	o link antigo pago depois de o mês ter sido quitado por outro pagamento.
 	Declarar o mês de novo tomaria o `Pagamento Contribuicao Mensal` de quem
 	realmente o quitou; sem detalhamento, o crédito entra pela competência mais
 	antiga e a apuração o trata como pagamento adiantado.
+
+	O impedimento é só o mês já pago, não o mês sem registro gerado: a cobrança
+	automática pode ter saído antes de o registro do mês existir, e é justamente o
+	detalhamento que faz a baixa criá-lo já quitado.
 	"""
 	itens = list(doc.itens)
 	por_ym: dict[str, dict] = {}
@@ -530,14 +671,14 @@ def _competencias_da_baixa(doc, competencias: list[str], hoje: datetime.date) ->
 		return []
 
 	apuracoes = apurar_associados([doc.associado], _meses_ate(competencias[0], hoje), hoje)
-	em_aberto = {p["ym"] for p in competencias_pendentes(apuracoes[0])} if apuracoes else set()
-	ja_quitadas = [ym for ym in competencias if ym not in em_aberto]
+	quitadas = competencias_quitadas(apuracoes[0]) if apuracoes else set()
+	ja_quitadas = [ym for ym in competencias if ym in quitadas]
 	if ja_quitadas:
 		frappe.log_error(
 			title="Cobrança de contribuição paga para mês já quitado",
 			message=(
 				f"cobranca={doc.name} associado={doc.associado}: "
-				f"{', '.join(_rotulo(ym) for ym in ja_quitadas)} já não estava(m) em aberto. "
+				f"{', '.join(_rotulo(ym) for ym in ja_quitadas)} já constava(m) como pago(s). "
 				"A baixa entrou como crédito, sem detalhar os meses."
 			),
 		)

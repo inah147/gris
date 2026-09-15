@@ -7,7 +7,7 @@ import frappe
 from gris.api.financeiro.cobranca_contribuicao_automatica import resumo_cobrancas_do_mes
 from gris.api.financeiro.contribuicoes import ROLE_GESTOR
 from gris.api.financeiro.pagamentos_contribuicao import (
-	MESES_PADRAO,
+	MESES_PADRAO_TELA,
 	STATUS_ATRASADO,
 	STATUS_EM_ABERTO,
 	STATUS_NAO_GERADO,
@@ -62,7 +62,7 @@ def get_context(context):
 	context.active_link = "/financeiro/contribuicoes"
 	context.titulo = "Contribuições Mensais"
 
-	meses = normalizar_meses(frappe.form_dict.get("meses") or MESES_PADRAO)
+	meses = normalizar_meses(frappe.form_dict.get("meses"), MESES_PADRAO_TELA)
 	# Sem dados de cobrança: e-mail e telefone são do detalhe do contribuinte
 	# (/financeiro/contribuicao), que só os entrega a quem pode geri-los.
 	apuracao = apurar(meses)

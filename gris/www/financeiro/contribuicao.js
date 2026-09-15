@@ -1,6 +1,7 @@
 // Detalhe da contribuição mensal de um associado — ações de gestão da tela cheia.
-// O mês a mês e as transações vêm renderizados do servidor; aqui ficam só as
-// ações: alterar o valor, editar os dados de cobrança e cobrar pela InfinitePay.
+// O mês a mês, os responsáveis e as transações vêm renderizados do servidor; aqui
+// ficam só as ações: alterar o valor, ligar e desligar a cobrança do associado e
+// cobrar pela InfinitePay.
 (function () {
 	"use strict";
 
@@ -10,8 +11,6 @@
 	// Espelho do que está na tela: o formulário inline volta a mostrar o valor
 	// corrente depois de um cancelamento ou de um salvamento bem-sucedido.
 	let esperadoMensal = window.contribEsperadoMensal || 0;
-	let emailCobranca = window.contribEmailCobranca || "";
-	let telefoneCobranca = window.contribTelefoneCobranca || "";
 
 	// ─────────────────────────── utilitários ───────────────────────────
 
@@ -137,100 +136,21 @@
 			.catch(() => showToast("Erro ao salvar valor.", "red"));
 	}
 
-	// ─────────────────────────── cadastro da cobrança ───────────────────────────
+	// ─────────────────────────── cobrar ou não o associado ───────────────────────────
 
-	function cadastroRealizado() {
+	// Um botão só, que diz respeito a uma coisa só: se este associado entra ou não
+	// na cobrança mensal. Quem está no grupo mas não deve ser cobrado (bolsista,
+	// irmão isento) sai daqui sem precisar sair do grupo.
+	function alternarCobranca(botao) {
 		if (semPermissao()) return;
+		const ativo = botao.getAttribute("data-ativo") === "1";
 		chamarApi(
-			"gris.api.financeiro.monthly_payments.activate_billing_status",
+			ativo
+				? "gris.api.financeiro.monthly_payments.deactivate_billing_status"
+				: "gris.api.financeiro.monthly_payments.activate_billing_status",
 			{ associate_id: associado },
-			"Cobrança ativada"
+			ativo ? "Associado não será mais cobrado" : "Associado voltou a ser cobrado"
 		);
-	}
-
-	function cadastroCancelado() {
-		if (semPermissao()) return;
-		chamarApi(
-			"gris.api.financeiro.monthly_payments.deactivate_billing_status",
-			{ associate_id: associado },
-			"Cobrança inativada"
-		);
-	}
-
-	function editarCobranca() {
-		if (semPermissao()) return;
-		const container = document.getElementById("cobrancaContainer");
-		const acoes = document.getElementById("acoesCobranca");
-		if (!container || !acoes || container.querySelector("input")) return;
-
-		const alvo = container.querySelector(".flex-1");
-		if (alvo) {
-			alvo.innerHTML = `
-				<div class="field">
-					<label class="label" for="inputEmailCobranca">E-mail de cobrança</label>
-					<input type="email" id="inputEmailCobranca" class="input" value="${escapeHtml(
-						emailCobranca
-					)}" placeholder="email@exemplo.com" />
-				</div>
-				<div class="field">
-					<label class="label" for="inputFoneCobranca">Telefone de cobrança</label>
-					<input type="text" id="inputFoneCobranca" class="input" value="${escapeHtml(
-						telefoneCobranca
-					)}" placeholder="(xx) xxxxx-xxxx" />
-				</div>
-			`;
-		}
-		acoes.innerHTML = `
-			<button type="button" class="btn-sm-primary" data-acao="salvar-cobranca">Salvar</button>
-			<button type="button" class="btn-sm-outline" data-acao="cancelar-cobranca">Cancelar</button>
-		`;
-	}
-
-	function restaurarCobranca() {
-		const container = document.getElementById("cobrancaContainer");
-		const acoes = document.getElementById("acoesCobranca");
-		if (container) {
-			const alvo = container.querySelector(".flex-1");
-			if (alvo) {
-				alvo.innerHTML = `
-					<div class="text-sm"><strong>E-mail de cobrança:</strong> <span id="emailCobranca">${escapeHtml(
-						emailCobranca || "—"
-					)}</span></div>
-					<div class="text-sm"><strong>Telefone de cobrança:</strong> <span id="foneCobranca">${escapeHtml(
-						telefoneCobranca || "—"
-					)}</span></div>
-				`;
-			}
-		}
-		if (acoes) {
-			acoes.innerHTML =
-				'<button type="button" id="btnEditarCobranca" class="btn-sm-outline" data-acao="editar-cobranca">Editar cobrança</button>';
-		}
-	}
-
-	function salvarDadosCobranca() {
-		if (semPermissao()) return;
-		const email = document.getElementById("inputEmailCobranca")?.value.trim() || "";
-		const telefone = document.getElementById("inputFoneCobranca")?.value.trim() || "";
-
-		frappe
-			.call({
-				method: "gris.api.financeiro.monthly_payments.update_billing_contacts",
-				args: { associate_id: associado, email: email, phone: telefone },
-				freeze: true,
-			})
-			.then((resposta) => {
-				const dados = (resposta && resposta.message) || {};
-				if (!dados.ok) {
-					showToast("Não foi possível salvar os dados de cobrança.", "red");
-					return;
-				}
-				emailCobranca = dados.email;
-				telefoneCobranca = dados.phone;
-				restaurarCobranca();
-				showToast("Dados de cobrança atualizados", "green");
-			})
-			.catch(() => showToast("Erro ao salvar dados de cobrança.", "red"));
 	}
 
 	// ─────────────────────────── mês a mês (status e transação vinculada) ───────────────────────────
@@ -607,11 +527,7 @@
 		"editar-mes": editarMes,
 		"salvar-mes": salvarMes,
 		"cancelar-mes": cancelarEdicaoMes,
-		"editar-cobranca": editarCobranca,
-		"salvar-cobranca": salvarDadosCobranca,
-		"cancelar-cobranca": restaurarCobranca,
-		"cadastro-realizado": cadastroRealizado,
-		"cadastro-cancelado": cadastroCancelado,
+		"alternar-cobranca": alternarCobranca,
 		"cobrar-whatsapp": () => gerarCobranca(true),
 		"cobrar-link": () => gerarCobranca(false),
 		"reenviar-cobranca": reenviarCobranca,

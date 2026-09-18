@@ -52,6 +52,8 @@ def _serialize_simulated_event(event, color):
 		icon = "circle-off"
 	elif cint(event.abertura_geral):
 		icon = "sparkles"
+	elif cint(event.permite_visita_novos_associados):
+		icon = "door-open"
 
 	section = event.secao if event.secao else "Diretoria"
 	return {
@@ -74,6 +76,7 @@ def _serialize_simulated_event(event, color):
 			"nivel": event.nivel or "",
 			"sem_atividade": cint(event.sem_atividade),
 			"abertura_geral": cint(event.abertura_geral),
+			"permite_visita_novos_associados": cint(event.permite_visita_novos_associados),
 			"is_official": bool(getattr(event, "is_official", False)),
 		},
 	}
@@ -152,6 +155,7 @@ def get_context(context):
 			"local",
 			"sem_atividade",
 			"abertura_geral",
+			"permite_visita_novos_associados",
 			"nivel",
 		],
 		order_by="inicio asc",
@@ -294,9 +298,14 @@ def get_context(context):
 	enrich_context(context, "/calendario/visualizar")
 
 
-def _validate_activity_flags(sem_atividade, abertura_geral):
+def _validate_activity_flags(sem_atividade, abertura_geral, permite_visita_novos_associados=0):
 	if cint(sem_atividade) and cint(abertura_geral):
 		frappe.throw(_("'Sem Atividade' e 'Abertura Geral' não podem ser marcados ao mesmo tempo."))
+
+	if cint(sem_atividade) and cint(permite_visita_novos_associados):
+		frappe.throw(
+			_("'Sem Atividade' e 'Permite Visita de Novos Associados' não podem ser marcados ao mesmo tempo.")
+		)
 
 
 @frappe.whitelist()
@@ -334,6 +343,7 @@ def get_calendar_events(year: str | int | None = None):
 			"local",
 			"sem_atividade",
 			"abertura_geral",
+			"permite_visita_novos_associados",
 			"nivel",
 		],
 		order_by="inicio asc",
@@ -393,6 +403,7 @@ def get_reconciliation_data(year: str | int | None = None):
 			"nivel",
 			"sem_atividade",
 			"abertura_geral",
+			"permite_visita_novos_associados",
 			"conciliado",
 		],
 	)
@@ -412,6 +423,7 @@ def get_reconciliation_data(year: str | int | None = None):
 			"id",
 			"sem_atividade",
 			"abertura_geral",
+			"permite_visita_novos_associados",
 		],
 	)
 
@@ -441,7 +453,15 @@ def get_reconciliation_data(year: str | int | None = None):
 			diffs = []
 
 			# Key fields to compare
-			fields_to_check = ["atividade", "secao", "local", "nivel", "sem_atividade", "abertura_geral"]
+			fields_to_check = [
+				"atividade",
+				"secao",
+				"local",
+				"nivel",
+				"sem_atividade",
+				"abertura_geral",
+				"permite_visita_novos_associados",
+			]
 			for field in fields_to_check:
 				if sim_evt.get(field) != off_evt.get(field):
 					diffs.append(field)
@@ -505,7 +525,11 @@ def reconcile_calendar(actions: str | list):
 
 		if action == "add":
 			doc_data = item.get("doc")
-			_validate_activity_flags(doc_data.get("sem_atividade"), doc_data.get("abertura_geral"))
+			_validate_activity_flags(
+				doc_data.get("sem_atividade"),
+				doc_data.get("abertura_geral"),
+				doc_data.get("permite_visita_novos_associados"),
+			)
 			# Create new Calendario
 			new_doc = frappe.new_doc("Calendario")
 			new_doc.update(
@@ -518,6 +542,7 @@ def reconcile_calendar(actions: str | list):
 					"nivel": doc_data.get("nivel"),
 					"sem_atividade": doc_data.get("sem_atividade"),
 					"abertura_geral": doc_data.get("abertura_geral"),
+					"permite_visita_novos_associados": doc_data.get("permite_visita_novos_associados"),
 					"id": item.get("sim_name"),  # Insert Sim Name into ID field
 				}
 			)
@@ -546,7 +571,11 @@ def reconcile_calendar(actions: str | list):
 
 			name = item.get("name")  # This is sim_name (== off.id == off.name if autoname works)
 			doc_data = item.get("doc")
-			_validate_activity_flags(doc_data.get("sem_atividade"), doc_data.get("abertura_geral"))
+			_validate_activity_flags(
+				doc_data.get("sem_atividade"),
+				doc_data.get("abertura_geral"),
+				doc_data.get("permite_visita_novos_associados"),
+			)
 
 			# Fallback: if get_doc fails with name, try finding by id?
 			# No, assume strong consistency if autoname used.
@@ -563,6 +592,7 @@ def reconcile_calendar(actions: str | list):
 						"nivel": doc_data.get("nivel"),
 						"sem_atividade": doc_data.get("sem_atividade"),
 						"abertura_geral": doc_data.get("abertura_geral"),
+						"permite_visita_novos_associados": doc_data.get("permite_visita_novos_associados"),
 					}
 				)
 				doc.save()

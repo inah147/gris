@@ -16,9 +16,14 @@ def get_ramo_class(secao):
 	return f"ramo-{normalized}"
 
 
-def _validate_activity_flags(sem_atividade, abertura_geral):
+def _validate_activity_flags(sem_atividade, abertura_geral, permite_visita_novos_associados=0):
 	if cint(sem_atividade) and cint(abertura_geral):
 		frappe.throw(_("'Sem Atividade' e 'Abertura Geral' não podem ser marcados ao mesmo tempo."))
+
+	if cint(sem_atividade) and cint(permite_visita_novos_associados):
+		frappe.throw(
+			_("'Sem Atividade' e 'Permite Visita de Novos Associados' não podem ser marcados ao mesmo tempo.")
+		)
 
 
 @frappe.whitelist()
@@ -39,6 +44,7 @@ def copy_calendar_data(source_year: str | int, target_year: str | int):
 			"nivel",
 			"sem_atividade",
 			"abertura_geral",
+			"permite_visita_novos_associados",
 		],
 	)
 
@@ -71,6 +77,7 @@ def copy_calendar_data(source_year: str | int, target_year: str | int):
 				"nivel": event.nivel,
 				"sem_atividade": cint(event.sem_atividade),
 				"abertura_geral": cint(event.abertura_geral),
+				"permite_visita_novos_associados": cint(event.permite_visita_novos_associados),
 			}
 		)
 		doc.insert()
@@ -89,13 +96,15 @@ def create_simulation_event(
 	nivel: str | None = None,
 	sem_atividade: str | int = 0,
 	abertura_geral: str | int = 0,
+	permite_visita_novos_associados: str | int = 0,
 ):
 	if isinstance(secoes, str):
 		secoes = frappe.parse_json(secoes)
 
 	sem_atividade = cint(sem_atividade)
 	abertura_geral = cint(abertura_geral)
-	_validate_activity_flags(sem_atividade, abertura_geral)
+	permite_visita_novos_associados = cint(permite_visita_novos_associados)
+	_validate_activity_flags(sem_atividade, abertura_geral, permite_visita_novos_associados)
 
 	if not secoes:
 		return {"success": False, "message": "Selecione pelo menos uma seção."}
@@ -113,6 +122,7 @@ def create_simulation_event(
 				"nivel": nivel,
 				"sem_atividade": sem_atividade,
 				"abertura_geral": abertura_geral,
+				"permite_visita_novos_associados": permite_visita_novos_associados,
 			}
 		)
 		doc.insert()
@@ -130,6 +140,7 @@ def create_simulation_event(
 				"nivel": doc.nivel,
 				"sem_atividade": cint(doc.sem_atividade),
 				"abertura_geral": cint(doc.abertura_geral),
+				"permite_visita_novos_associados": cint(doc.permite_visita_novos_associados),
 				"ramo_class": ramo_class,
 			}
 		)
@@ -152,10 +163,12 @@ def update_simulation_event(
 	nivel: str | None = None,
 	sem_atividade: str | int = 0,
 	abertura_geral: str | int = 0,
+	permite_visita_novos_associados: str | int = 0,
 ):
 	sem_atividade = cint(sem_atividade)
 	abertura_geral = cint(abertura_geral)
-	_validate_activity_flags(sem_atividade, abertura_geral)
+	permite_visita_novos_associados = cint(permite_visita_novos_associados)
+	_validate_activity_flags(sem_atividade, abertura_geral, permite_visita_novos_associados)
 
 	doc = frappe.get_doc("Calendario Simulado", event_id)
 	doc.atividade = atividade
@@ -166,6 +179,7 @@ def update_simulation_event(
 	doc.nivel = nivel
 	doc.sem_atividade = sem_atividade
 	doc.abertura_geral = abertura_geral
+	doc.permite_visita_novos_associados = permite_visita_novos_associados
 	doc.save()
 
 	ramo_class = get_ramo_class(doc.secao)
@@ -183,6 +197,7 @@ def update_simulation_event(
 			"nivel": doc.nivel,
 			"sem_atividade": cint(doc.sem_atividade),
 			"abertura_geral": cint(doc.abertura_geral),
+			"permite_visita_novos_associados": cint(doc.permite_visita_novos_associados),
 			"ramo_class": ramo_class,
 		},
 	}

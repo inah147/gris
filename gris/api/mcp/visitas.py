@@ -1,8 +1,9 @@
 """Ferramentas MCP da agenda de visitas da recepção.
 
 Delegam para ``gris.www.recepcao.agenda_visitas``, que já valida a
-disponibilidade da data para o ramo (sábados livres de atividade da seção nos
-próximos 60 dias) e mantém o campo ``visita_agendada`` do Novo Associado em dia.
+disponibilidade da data para o ramo (sábados dos próximos 60 dias livres de atividade da
+seção, salvo atividade de abertura geral ou marcada como liberada para visita de novos
+associados) e mantém o campo ``visita_agendada`` do Novo Associado em dia.
 """
 
 from __future__ import annotations
@@ -144,8 +145,9 @@ def listar_visitas(
 	titulo="Datas disponíveis para visita",
 	descricao=(
 		"Sábados livres nos próximos 60 dias para o ramo informado (exclui os dias com "
-		"atividade da seção que não seja de abertura geral). Informe 'ramo' ou 'visita' "
-		"— com 'visita', usa o ramo da visita que será remarcada."
+		"atividade da seção, salvo abertura geral ou atividade marcada como 'Permite Visita "
+		"de Novos Associados'). Informe 'ramo' ou 'visita' — com 'visita', usa o ramo da "
+		"visita que será remarcada."
 	),
 	parametros={
 		"ramo": {"type": "string", "enum": list(RAMOS), "description": "Ramo pretendido."},

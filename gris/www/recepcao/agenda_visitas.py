@@ -6,6 +6,12 @@ from frappe.utils import add_days, cint, format_date, getdate, today
 
 from gris.api.portal_access import enrich_context, user_has_access
 from gris.api.recepcao import limpar_sinal_de_reagendamento
+from gris.api.recepcao_disponibilidade import (
+	data_disponivel_para_ramo,
+	datas_disponiveis_para_ramo,
+	evento_libera_visita,
+	secoes_dos_ramos,
+)
 from gris.api.recepcao_funil import STATUS_VISITA_AGENDADA
 from gris.api.recepcao_visitas import agendar_ou_remarcar_visita
 
@@ -23,6 +29,10 @@ SECTION_COLORS = {
 }
 UNAVAILABLE_CATEGORY = "Indisponível"
 UNAVAILABLE_COLOR = "#475569"  # cinza ardósia (neutro, separa das categorias ativas)
+# Atividade da seção que ainda assim recebe visita: o dia tem programação, mas dá para
+# agendar. Sem esta categoria, o dia liberado aparecia cinza e contradizia o select.
+RELEASED_CATEGORY = "Visita liberada"
+RELEASED_COLOR = "#15803D"  # verde escuro (separa do verde escoteiro das seções)
 
 
 def _calc_age_str(visit_date, dob):
@@ -73,8 +83,21 @@ def get_context(context):
 	calendar_events = frappe.get_all(
 		"Calendario",
 		filters={"inicio": ["<=", end_date], "termino": [">=", start_date]},
-		fields=["name", "atividade", "inicio", "termino", "secao"],
+		fields=[
+			"name",
+			"atividade",
+			"inicio",
+			"termino",
+			"secao",
+			"abertura_geral",
+			"permite_visita_novos_associados",
+		],
 	)
+
+	# As seções que de fato bloqueiam algum ramo. `SECTION_COLORS` é indexado por nome de
+	# ramo, mas `Calendario.secao` guarda o nome real da seção ("Alcateia", "Tropa"): comparar
+	# com o dict deixava de pintar justamente as atividades que bloqueiam o agendamento.
+	blocking_sections = secoes_dos_ramos(SECTION_COLORS.keys())
 
 	events = []
 
@@ -105,18 +128,19 @@ def get_context(context):
 
 	for event in calendar_events:
 		section = event.secao
-		if not section or section not in SECTION_COLORS:
+		if not section or section not in blocking_sections:
 			continue
+		released = evento_libera_visita(event)
 		events.append(
 			{
 				"id": event.name,
-				"title": event.atividade or "Indisponível",
+				"title": event.atividade or UNAVAILABLE_CATEGORY,
 				"start": getdate(event.inicio).isoformat(),
 				"end": getdate(event.termino).isoformat(),
 				"all_day": True,
-				"category": UNAVAILABLE_CATEGORY,
+				"category": RELEASED_CATEGORY if released else UNAVAILABLE_CATEGORY,
 				"data": {
-					"type": "unavailable",
+					"type": "released_activity" if released else "unavailable",
 					"secao": section,
 					"atividade": event.atividade,
 				},
@@ -127,6 +151,7 @@ def get_context(context):
 	categories.append(
 		{"name": UNAVAILABLE_CATEGORY, "label": UNAVAILABLE_CATEGORY, "color": UNAVAILABLE_COLOR}
 	)
+	categories.append({"name": RELEASED_CATEGORY, "label": RELEASED_CATEGORY, "color": RELEASED_COLOR})
 
 	if year == current_today.year:
 		initial_date = current_today.isoformat()
@@ -173,80 +198,19 @@ def reschedule_visit(visit_name: str, new_date: str):
 	agendar_ou_remarcar_visita(visit.jovem, new_date, ramo=visit.ramo)
 
 
-def _get_sections_by_ramos(ramos):
-	valid_ramos = {ramo for ramo in (ramos or []) if ramo}
-	if not valid_ramos:
-		return set()
-
-	rows = frappe.get_all(
-		"Associado",
-		filters={"ramo": ["in", list(valid_ramos)], "secao": ["is", "set"]},
-		fields=["secao", "ramo"],
-		distinct=True,
-	)
-
-	sections = {row.secao for row in rows if row.secao}
-	sections.update(valid_ramos)
-	return sections
-
-
 def _get_available_dates(ramo):
-	start_date = getdate(today())
-	end_date = add_days(start_date, 60)
-
-	saturdays = []
-	current = start_date
-	while current <= end_date:
-		if current.weekday() == 5:
-			saturdays.append(current)
-		current = add_days(current, 1)
-
-	if not saturdays:
-		return []
-
-	target_sections = _get_sections_by_ramos({ramo})
-
-	activities = frappe.get_all(
-		"Calendario",
-		filters={
-			"inicio": ["<=", end_date],
-			"termino": [">=", start_date],
-		},
-		fields=["inicio", "termino", "secao", "abertura_geral"],
-	)
-
-	blocked_dates = set()
-	for act in activities:
-		if cint(act.abertura_geral):
-			continue
-
-		if not act.secao or act.secao not in target_sections:
-			continue
-
-		act_start = getdate(act.inicio)
-		act_end = getdate(act.termino)
-
-		for sat in saturdays:
-			if act_start <= sat <= act_end:
-				blocked_dates.add(sat)
-
+	"""Datas para o select do modal. A regra vive em ``gris.api.recepcao_disponibilidade``."""
 	return [
 		{
 			"value": sat.strftime("%Y-%m-%d"),
 			"label": format_date(sat),
 		}
-		for sat in saturdays
-		if sat not in blocked_dates
+		for sat in datas_disponiveis_para_ramo(ramo)
 	]
 
 
 def _is_date_available_for_ramo(ramo, date_value):
-	if not ramo or not date_value:
-		return False
-
-	target_date = getdate(date_value).strftime("%Y-%m-%d")
-	available_dates = _get_available_dates(ramo)
-	return any(item.get("value") == target_date for item in available_dates)
+	return data_disponivel_para_ramo(ramo, date_value)
 
 
 @frappe.whitelist()

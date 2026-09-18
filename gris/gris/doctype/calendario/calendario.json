@@ -13,8 +13,9 @@
   "local",
   "nivel",
   "id",
-    "sem_atividade",
-    "abertura_geral"
+  "sem_atividade",
+  "abertura_geral",
+  "permite_visita_novos_associados"
  ],
  "fields": [
   {
@@ -59,18 +60,26 @@
    "fieldname": "sem_atividade",
    "fieldtype": "Check",
    "label": "Sem Atividade"
-    },
-    {
-     "default": "0",
-     "fieldname": "abertura_geral",
-     "fieldtype": "Check",
-     "label": "Abertura Geral"
+  },
+  {
+   "default": "0",
+   "fieldname": "abertura_geral",
+   "fieldtype": "Check",
+   "label": "Abertura Geral"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:!doc.abertura_geral",
+   "description": "Libera o agendamento de visitas de novos associados neste dia, mesmo havendo atividade da seção.",
+   "fieldname": "permite_visita_novos_associados",
+   "fieldtype": "Check",
+   "label": "Permite Visita de Novos Associados"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-16 11:15:02.254152",
+ "modified": "2026-09-18 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Calendario",

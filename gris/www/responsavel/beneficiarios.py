@@ -6,6 +6,10 @@ from frappe.utils import add_days, cint, getdate, now, today
 
 from gris.api.portal_access import enrich_context
 from gris.api.recepcao import limpar_sinal_de_reagendamento
+from gris.api.recepcao_disponibilidade import (
+	data_disponivel_para_ramo,
+	datas_disponiveis_para_ramos,
+)
 from gris.api.recepcao_funil import FIELD_INTERVAL_MAP, etapas_do_fluxo
 from gris.api.recepcao_notificacoes import notificar_nova_manifestacao_no_grupo_recepcao
 from gris.api.recepcao_visitas import agendar_ou_remarcar_visita
@@ -18,51 +22,8 @@ def _get_responsavel_name(user):
 	return get_responsavel_do_usuario(user)
 
 
-def _get_sections_by_ramos(ramos):
-	valid_ramos = {ramo for ramo in (ramos or []) if ramo}
-	if not valid_ramos:
-		return set()
-
-	rows = frappe.get_all(
-		"Associado",
-		filters={"ramo": ["in", list(valid_ramos)], "secao": ["is", "set"]},
-		fields=["secao", "ramo"],
-		distinct=True,
-	)
-
-	sections = {row.secao for row in rows if row.secao}
-	sections.update(valid_ramos)
-	return sections
-
-
 def _is_date_available_for_ramo(ramo, date_value):
-	if not ramo or not date_value:
-		return False
-
-	start_date = getdate(today())
-	end_date = add_days(start_date, 60)
-	target_date = getdate(date_value)
-
-	if target_date < start_date or target_date > end_date or target_date.weekday() != 5:
-		return False
-
-	target_sections = _get_sections_by_ramos({ramo})
-	if not target_sections:
-		return True
-
-	activities = frappe.get_all(
-		"Calendario",
-		filters={"inicio": ["<=", target_date], "termino": [">=", target_date]},
-		fields=["secao", "abertura_geral"],
-	)
-
-	for act in activities:
-		if cint(act.abertura_geral):
-			continue
-		if act.secao and act.secao in target_sections:
-			return False
-
-	return True
+	return data_disponivel_para_ramo(ramo, date_value)
 
 
 def _get_available_visit_dates_for_responsavel(responsavel_name, include_scheduled=False):
@@ -93,52 +54,13 @@ def _get_available_visit_dates_for_responsavel(responsavel_name, include_schedul
 		)
 
 	target_ramos = {row.ramo for row in beneficiaries if row.ramo}
-	target_sections = _get_sections_by_ramos(target_ramos)
-
-	start_date = getdate(today())
-	end_date = add_days(start_date, 60)
-
-	saturdays = []
-	current = start_date
-	while current <= end_date:
-		if current.weekday() == 5:
-			saturdays.append(current)
-		current = add_days(current, 1)
-
-	if not saturdays:
-		return []
-
-	activities = frappe.get_all(
-		"Calendario",
-		filters={"inicio": ["<=", end_date], "termino": [">=", start_date]},
-		fields=["inicio", "termino", "secao", "abertura_geral"],
-	)
-
-	blocked_dates = set()
-	for act in activities:
-		if cint(act.abertura_geral):
-			continue
-
-		if not target_sections:
-			continue
-
-		if not act.secao or act.secao not in target_sections:
-			continue
-
-		act_start = getdate(act.inicio)
-		act_end = getdate(act.termino)
-
-		for sat in saturdays:
-			if act_start <= sat <= act_end:
-				blocked_dates.add(sat)
 
 	return [
 		{
 			"value": sat.strftime("%Y-%m-%d"),
 			"label": frappe.format_value(sat, {"fieldtype": "Date"}),
 		}
-		for sat in saturdays
-		if sat not in blocked_dates
+		for sat in datas_disponiveis_para_ramos(target_ramos)
 	]
 
 

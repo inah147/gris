@@ -209,8 +209,16 @@ function applySemAtividadeState(checkboxEl, localEl, levelFieldId) {
 	}
 }
 
-function applyAberturaGeralState(checkboxEl, atividadeEl) {
+function applyAberturaGeralState(checkboxEl, atividadeEl, permiteVisitaEl) {
 	const isAberturaGeral = checkboxEl ? checkboxEl.checked : false;
+
+	// A abertura geral já libera o dia para todos os ramos, e o validate zera o flag
+	// específico no save: desabilitar aqui evita oferecer um combo que some sozinho.
+	if (permiteVisitaEl) {
+		permiteVisitaEl.disabled = isAberturaGeral;
+		if (isAberturaGeral) permiteVisitaEl.checked = false;
+	}
+
 	if (!atividadeEl) return;
 
 	if (isAberturaGeral) {
@@ -360,6 +368,7 @@ function resetNewEventForm(defaultDate, selectedSection) {
 	const localInput = document.getElementById("modal-local");
 	const semAtividadeInput = document.getElementById("modal-sem-atividade");
 	const aberturaGeralInput = document.getElementById("modal-abertura-geral");
+	const permiteVisitaInput = document.getElementById("modal-permite-visita");
 	const inicioInput = document.getElementById("modal-inicio");
 	const terminoInput = document.getElementById("modal-termino");
 	const nivelInput = document.getElementById("modal-nivel");
@@ -374,6 +383,10 @@ function resetNewEventForm(defaultDate, selectedSection) {
 	}
 	if (semAtividadeInput) semAtividadeInput.checked = false;
 	if (aberturaGeralInput) aberturaGeralInput.checked = false;
+	if (permiteVisitaInput) {
+		permiteVisitaInput.checked = false;
+		permiteVisitaInput.disabled = false;
+	}
 
 	setFieldValueWhenReady(inicioInput, defaultDate);
 	setFieldValueWhenReady(terminoInput, defaultDate);
@@ -381,7 +394,7 @@ function resetNewEventForm(defaultDate, selectedSection) {
 	setSectionCheckboxes("modal-secao", selectedSection ? [selectedSection] : []);
 
 	applySemAtividadeState(semAtividadeInput, localInput, "modal-nivel");
-	applyAberturaGeralState(aberturaGeralInput, atividadeInput);
+	applyAberturaGeralState(aberturaGeralInput, atividadeInput, permiteVisitaInput);
 }
 
 function openNewEventDialogForDate(date) {
@@ -399,16 +412,19 @@ function initNewEventDialog() {
 	const saveButton = document.getElementById("save-modal");
 	const semAtividadeInput = document.getElementById("modal-sem-atividade");
 	const aberturaGeralInput = document.getElementById("modal-abertura-geral");
+	const permiteVisitaInput = document.getElementById("modal-permite-visita");
 	const atividadeInput = document.getElementById("modal-atividade");
 	const localInput = document.getElementById("modal-local");
 
 	setupMutualExclusion(semAtividadeInput, aberturaGeralInput);
+	// O backend recusa "sem atividade" junto com a liberação de visita.
+	setupMutualExclusion(semAtividadeInput, permiteVisitaInput);
 
 	semAtividadeInput?.addEventListener("change", () => {
 		applySemAtividadeState(semAtividadeInput, localInput, "modal-nivel");
 	});
 	aberturaGeralInput?.addEventListener("change", () => {
-		applyAberturaGeralState(aberturaGeralInput, atividadeInput);
+		applyAberturaGeralState(aberturaGeralInput, atividadeInput, permiteVisitaInput);
 	});
 
 	newEventButton?.addEventListener("click", () => {
@@ -428,6 +444,7 @@ function initNewEventDialog() {
 		const nivel = getFieldValueById("modal-nivel");
 		const semAtividade = document.getElementById("modal-sem-atividade")?.checked ? 1 : 0;
 		const aberturaGeral = document.getElementById("modal-abertura-geral")?.checked ? 1 : 0;
+		const permiteVisita = document.getElementById("modal-permite-visita")?.checked ? 1 : 0;
 
 		if (!atividade || !inicioDate || !terminoDate || secoes.length === 0) {
 			frappe.msgprint(__("Preencha todos os campos obrigatórios."));
@@ -449,6 +466,7 @@ function initNewEventDialog() {
 				nivel,
 				sem_atividade: semAtividade,
 				abertura_geral: aberturaGeral,
+				permite_visita_novos_associados: permiteVisita,
 				secoes: JSON.stringify(secoes),
 			},
 			freeze: true,
@@ -471,6 +489,7 @@ function openEditDialog(data) {
 
 	const semAtividadeInput = document.getElementById("edit-sem-atividade");
 	const aberturaGeralInput = document.getElementById("edit-abertura-geral");
+	const permiteVisitaInput = document.getElementById("edit-permite-visita");
 	const atividadeInput = document.getElementById("edit-atividade");
 	const localInput = document.getElementById("edit-local");
 
@@ -479,6 +498,10 @@ function openEditDialog(data) {
 	document.getElementById("edit-local").value = data.local || "";
 	if (semAtividadeInput) semAtividadeInput.checked = !!Number(data.sem_atividade || 0);
 	if (aberturaGeralInput) aberturaGeralInput.checked = !!Number(data.abertura_geral || 0);
+	if (permiteVisitaInput) {
+		permiteVisitaInput.checked = !!Number(data.permite_visita_novos_associados || 0);
+		permiteVisitaInput.disabled = false;
+	}
 
 	setFieldValueWhenReady(
 		document.getElementById("edit-inicio"),
@@ -492,7 +515,7 @@ function openEditDialog(data) {
 	setFieldValueWhenReady(document.getElementById("edit-nivel"), data.nivel || DEFAULT_LEVEL);
 
 	applySemAtividadeState(semAtividadeInput, localInput, "edit-nivel");
-	applyAberturaGeralState(aberturaGeralInput, atividadeInput);
+	applyAberturaGeralState(aberturaGeralInput, atividadeInput, permiteVisitaInput);
 	openDialogById("edit-activity-modal");
 }
 
@@ -505,16 +528,19 @@ function initEditEventDialog() {
 	const deleteButton = document.getElementById("delete-edit-modal");
 	const semAtividadeInput = document.getElementById("edit-sem-atividade");
 	const aberturaGeralInput = document.getElementById("edit-abertura-geral");
+	const permiteVisitaInput = document.getElementById("edit-permite-visita");
 	const atividadeInput = document.getElementById("edit-atividade");
 	const localInput = document.getElementById("edit-local");
 
 	setupMutualExclusion(semAtividadeInput, aberturaGeralInput);
+	// O backend recusa "sem atividade" junto com a liberação de visita.
+	setupMutualExclusion(semAtividadeInput, permiteVisitaInput);
 
 	semAtividadeInput?.addEventListener("change", () => {
 		applySemAtividadeState(semAtividadeInput, localInput, "edit-nivel");
 	});
 	aberturaGeralInput?.addEventListener("change", () => {
-		applyAberturaGeralState(aberturaGeralInput, atividadeInput);
+		applyAberturaGeralState(aberturaGeralInput, atividadeInput, permiteVisitaInput);
 	});
 
 	cancelButton?.addEventListener("click", () => closeDialogById("edit-activity-modal"));
@@ -529,6 +555,7 @@ function initEditEventDialog() {
 		const nivel = getFieldValueById("edit-nivel");
 		const semAtividade = document.getElementById("edit-sem-atividade")?.checked ? 1 : 0;
 		const aberturaGeral = document.getElementById("edit-abertura-geral")?.checked ? 1 : 0;
+		const permiteVisita = document.getElementById("edit-permite-visita")?.checked ? 1 : 0;
 
 		if (!eventId || !atividade || !inicioDate || !terminoDate || !secao) {
 			frappe.msgprint(__("Preencha todos os campos obrigatórios."));
@@ -552,6 +579,7 @@ function initEditEventDialog() {
 				nivel,
 				sem_atividade: semAtividade,
 				abertura_geral: aberturaGeral,
+				permite_visita_novos_associados: permiteVisita,
 			},
 			freeze: true,
 			freeze_message: "Atualizando...",

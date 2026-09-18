@@ -20,6 +20,7 @@ _LABEL_CAMPOS = {
 	"nivel": "Nível",
 	"sem_atividade": "Sem Atividade",
 	"abertura_geral": "Abertura Geral",
+	"permite_visita_novos_associados": "Permite Visita de Novos Associados",
 }
 
 

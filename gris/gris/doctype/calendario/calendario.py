@@ -14,6 +14,7 @@ _CAMPOS_MONITORADOS = (
 	"nivel",
 	"sem_atividade",
 	"abertura_geral",
+	"permite_visita_novos_associados",
 )
 
 
@@ -21,9 +22,19 @@ class Calendario(Document):
 	def validate(self):
 		if int(self.abertura_geral or 0):
 			self.atividade = "Abertura Geral"
+			# Abertura geral já libera o dia para qualquer ramo. Manter o flag específico ligado
+			# (e escondido pelo depends_on) deixaria o dia liberado depois de desmarcar a abertura.
+			self.permite_visita_novos_associados = 0
 
 		if int(self.sem_atividade or 0) and int(self.abertura_geral or 0):
 			frappe.throw(_("'Sem Atividade' e 'Abertura Geral' não podem ser marcados ao mesmo tempo."))
+
+		if int(self.sem_atividade or 0) and int(self.permite_visita_novos_associados or 0):
+			frappe.throw(
+				_(
+					"'Sem Atividade' e 'Permite Visita de Novos Associados' não podem ser marcados ao mesmo tempo."
+				)
+			)
 
 	def after_insert(self):
 		self.flags.notificacao_enviada = True

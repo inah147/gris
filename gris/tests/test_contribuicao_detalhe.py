@@ -255,6 +255,42 @@ class TestDestinoDaCobranca(FrappeTestCase):
 		# ficou como foi digitado. Os dois são a mesma pessoa.
 		self.assertTrue(destino["destinatario"]["e_responsavel"])
 
+	def test_segundo_responsavel_aparece_com_a_acao_de_assumir_a_cobranca(self):
+		"""Quem ainda não recebe ganha o botão; quem já recebe, não."""
+		pai = self._criar_segundo_responsavel()
+
+		frappe.local.form_dict = frappe._dict(associado=self.associado, meses="6")
+		conteudo = get_response_content("/financeiro/contribuicao")
+
+		self.assertIn("Passar a cobrança para este responsável", conteudo)
+		self.assertIn(f'data-destinatario="{pai}"', conteudo)
+		self.assertNotIn(f'data-destinatario="{self.responsavel}"', conteudo)
+
+	def _criar_segundo_responsavel(self) -> str:
+		cpf = "99000000104"
+		nome = _nome_por_cpf(cpf)
+		if not frappe.db.exists("Responsavel", nome):
+			frappe.get_doc(
+				{
+					"doctype": "Responsavel",
+					"cpf": cpf,
+					"nome_completo": "Pai do Beneficiário",
+					"email": "pai@exemplo.com",
+					"celular": "11999990104",
+				}
+			).insert(ignore_permissions=True)
+		if not frappe.db.exists(
+			"Responsavel Vinculo", {"responsavel": nome, "beneficiario_associado": self.associado}
+		):
+			frappe.get_doc(
+				{
+					"doctype": "Responsavel Vinculo",
+					"responsavel": nome,
+					"beneficiario_associado": self.associado,
+				}
+			).insert(ignore_permissions=True)
+		return nome
+
 
 def _criar_associado(cpf: str, nome_completo: str, categoria: str, **campos) -> str:
 	nome = _nome_por_cpf(cpf)

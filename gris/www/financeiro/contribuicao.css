@@ -291,6 +291,13 @@
 	overflow-wrap: anywhere;
 }
 
+/* A troca de destinatário só aparece em quem ainda não recebe, então o botão
+   fica alinhado à esquerda do item, sem esticar na largura do card. */
+.contrib-responsaveis__acao {
+	align-self: flex-start;
+	margin-top: calc(var(--spacing) * 1);
+}
+
 /* A ação de ligar/desligar a cobrança fica separada dos contatos por uma régua:
    é decisão, não informação. */
 .contrib-destino__acoes {

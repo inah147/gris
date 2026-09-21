@@ -51,6 +51,7 @@ from gris.api.financeiro.pagamentos_contribuicao import (
 	competencias_pendentes,
 	competencias_quitadas,
 )
+from gris.api.responsavel_acesso import get_beneficiarios_associados, get_responsavel_do_usuario
 
 # Valor de `finalidade` que liga a cobrança ao fluxo da contribuição mensal.
 FINALIDADE_CONTRIBUICAO = "Contribuição Mensal"
@@ -95,6 +96,10 @@ JANELA_DIAS_CONCILIACAO = 3
 DIAS_BUSCA_CONCILIACAO = 120
 
 PADRAO_COMPETENCIA = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
+
+# Identificador dos responsáveis que só existem nos campos do próprio `Associado`
+# (cadastros antigos, sem `Responsavel Vinculo`): `cadastro-1` e `cadastro-2`.
+PREFIXO_ID_CADASTRO = "cadastro-"
 
 
 def _assert_gestor() -> None:
@@ -223,9 +228,14 @@ def get_responsaveis_vinculados(associado: str) -> list[dict]:
 	A leitura não passa pela permissão do `Responsavel` de propósito: quem pode
 	cobrar não necessariamente administra associados, e sem isso a tela do gestor
 	esconderia justamente a informação que ela existe para mostrar. Quem chama já
-	está limitado — a página só monta este bloco para o Gestor Contribuição
-	Mensal, e a emissão passa por `_assert_gestor` ou roda no job. O que sai daqui
-	é o contato que a cobrança já carrega.
+	está limitado — a página do financeiro só monta este bloco para o Gestor
+	Contribuição Mensal, a do responsável só para os beneficiários dele, e a
+	emissão passa por `_assert_gestor` ou roda no job. O que sai daqui é o contato
+	que a cobrança já carrega.
+
+	Cada item leva um `id` estável, que é como a tela pede a troca do destinatário
+	sem mandar contato nenhum pela rede: o nome do `Responsavel` quando a ligação
+	é oficial, `cadastro-1`/`cadastro-2` quando só existem os campos do associado.
 	"""
 	vinculos = frappe.get_all(
 		"Responsavel Vinculo",
@@ -243,6 +253,7 @@ def get_responsaveis_vinculados(associado: str) -> list[dict]:
 		)
 		responsaveis = [
 			{
+				"id": cadastro.name,
 				"nome": cadastro.nome_completo or cadastro.name,
 				"email": (cadastro.email or "").strip(),
 				"telefone": (cadastro.celular or "").strip(),
@@ -272,6 +283,7 @@ def get_responsaveis_vinculados(associado: str) -> list[dict]:
 	)
 	return [
 		{
+			"id": f"{PREFIXO_ID_CADASTRO}{i}",
 			"nome": (cadastro.get(f"nome_responsavel_{i}") or "").strip(),
 			"email": (cadastro.get(f"email_responsavel_{i}") or "").strip(),
 			"telefone": (cadastro.get(f"telefone_responsavel_{i}") or "").strip(),
@@ -314,6 +326,72 @@ def get_destino_da_cobranca(associado: str) -> dict:
 			# Diz à tela se o link vai para um responsável identificado ou para o
 			# contato avulso gravado no associado — o gestor precisa saber a diferença.
 			"e_responsavel": bool(recebedor),
+			"id": recebedor["id"] if recebedor else "",
+		},
+	}
+
+
+def pode_definir_destinatario(associado: str) -> bool:
+	"""Quem pode dizer qual responsável recebe a cobrança deste contribuinte.
+
+	O gestor da contribuição, porque é ele quem cobra; e o responsável vinculado
+	ao contribuinte, porque a troca é entre ele e o outro responsável da mesma
+	família — escolher para quem o link vai é decisão da casa, não da tesouraria.
+	"""
+	if ROLE_GESTOR in frappe.get_roles():
+		return True
+
+	responsavel = get_responsavel_do_usuario()
+	return bool(responsavel and associado in get_beneficiarios_associados(responsavel))
+
+
+@frappe.whitelist(methods=["POST"])
+def definir_destinatario_da_cobranca(associado: str, destinatario: str) -> dict:
+	"""Passa o contato de cobrança do contribuinte para o responsável escolhido.
+
+	Vale para as próximas cobranças: a `Cobranca Infinitepay` já emitida guarda o
+	próprio `customer_phone`, então nada do que já foi enviado muda de dono.
+
+	O contato nunca vem do cliente — a tela manda só o `id` do responsável e o
+	e-mail e o telefone são lidos aqui, da mesma fonte que a tela mostrou.
+	"""
+	associado = (associado or "").strip()
+	destinatario = (destinatario or "").strip()
+	if not associado or not destinatario:
+		frappe.throw(_("Informe o contribuinte e o responsável que passa a receber a cobrança."))
+
+	eh_gestor = ROLE_GESTOR in frappe.get_roles()
+	if not pode_definir_destinatario(associado):
+		frappe.throw(
+			_("Você não pode trocar quem recebe a cobrança deste contribuinte."),
+			frappe.PermissionError,
+		)
+
+	escolhido = next((r for r in get_responsaveis_vinculados(associado) if r["id"] == destinatario), None)
+	if not escolhido:
+		frappe.throw(
+			_("Responsável não encontrado entre os vinculados a este contribuinte."),
+			frappe.DoesNotExistError,
+		)
+	if not escolhido["email"] and not escolhido["telefone"]:
+		frappe.throw(
+			_("{0} não tem e-mail nem telefone cadastrado para receber a cobrança.").format(escolhido["nome"])
+		)
+
+	doc = frappe.get_doc("Associado", associado)
+	doc.email_cobranca = escolhido["email"] or None
+	doc.telefone_cobranca = escolhido["telefone"] or None
+	# O responsável vinculado não administra o `Associado`, mas acabou de ser
+	# autorizado pelo vínculo logo acima e só encosta no contato de cobrança.
+	doc.save(ignore_permissions=not eh_gestor)
+
+	return {
+		"ok": True,
+		"destinatario": {
+			"id": escolhido["id"],
+			"nome": escolhido["nome"],
+			"email": doc.email_cobranca or "",
+			"telefone": doc.telefone_cobranca or "",
 		},
 	}
 

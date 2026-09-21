@@ -2,6 +2,7 @@
 {% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 {% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
 
 {% block title %}{{ assoc.nome if assoc else 'Contribuição do associado' }}{% endblock %}
 
@@ -157,9 +158,26 @@
 					</span>
 					<span class="contrib-responsaveis__contato">{{ responsavel.email or 'sem e-mail' }}</span>
 					{% if responsavel.telefone %}<span class="contrib-responsaveis__contato">{{ responsavel.telefone }}</span>{% endif %}
+					{% if not responsavel.recebe %}
+						{% if responsavel.email or responsavel.telefone %}
+						<button type="button" class="btn-sm-outline contrib-responsaveis__acao"
+							data-acao="definir-destinatario" data-destinatario="{{ responsavel.id }}"
+							data-nome="{{ responsavel.nome }}">
+							Passar a cobrança para este responsável
+						</button>
+						{% else %}
+						<span class="contrib-responsaveis__contato contrib-falta">
+							Sem contato cadastrado — não pode receber a cobrança.
+						</span>
+						{% endif %}
+					{% endif %}
 				</li>
 				{% endfor %}
 			</ul>
+			<p class="m-0 mt-2 text-xs text-muted-foreground">
+				Trocar o responsável muda o e-mail e o telefone de cobrança do contribuinte e vale
+				para as próximas cobranças. As já enviadas continuam com o contato que levaram.
+			</p>
 			{% else %}
 			<p class="m-0 mt-2 text-sm contrib-falta">Nenhum responsável vinculado a este contribuinte.</p>
 			{% endif %}
@@ -316,5 +334,6 @@
 		{% endif %}
 	</section>
 </article>
+{{ toaster() }}
 {% endif %}
 {% endblock %}

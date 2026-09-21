@@ -154,7 +154,11 @@
               {% endif %}
             </div>
             <div class="flow-step__label">{{ step.label }}</div>
-            {% if step.estimated_date and not step.done %}
+            {% if step.done %}
+              {% if step.concluida_em_formatada %}
+                <div class="flow-step__date">{{ step.concluida_em_formatada }}</div>
+              {% endif %}
+            {% elif step.estimated_date %}
               <div class="flow-step__date{% if step.is_overdue %} flow-step__date--overdue{% endif %}">
                 {{ 'Em atraso: ' if step.is_overdue else 'Previsto: ' }}{{ step.estimated_date }}
               </div>

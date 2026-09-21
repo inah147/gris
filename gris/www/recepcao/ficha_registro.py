@@ -1,10 +1,10 @@
 import frappe
 from frappe import _
 from frappe.rate_limiter import rate_limit
-from frappe.utils import add_days, cint, format_date, format_datetime, get_fullname, getdate, strip_html
+from frappe.utils import cint, format_date, format_datetime, get_fullname, getdate, strip_html
 
 from gris.api.portal_access import enrich_context
-from gris.api.recepcao_funil import FIELD_INTERVAL_MAP, etapas_do_fluxo
+from gris.api.recepcao_funil import anexar_historico, calcular_etapas
 from gris.www.recepcao.ficha_campos import BLOCOS_DO_ASSOCIADO, BLOCOS_DO_RESPONSAVEL, montar_blocos
 
 no_cache = 1
@@ -66,9 +66,6 @@ def get_context(context):
 	except (frappe.DoesNotExistError, ImportError):
 		config = {}
 
-	# Map Novo Associado fields to Config fields
-	field_interval_map = FIELD_INTERVAL_MAP
-
 	context.doc = doc
 	context.title = doc.nome_completo
 	# A ordem dos campos vive em ``ficha_campos`` — é a mesma do formulário do Paxtu, e é
@@ -117,21 +114,7 @@ def get_context(context):
 	# A seção de documentos só faz sentido no ramo que exige o registro do responsável.
 	context.is_filhotes = (doc.ramo or "") == "Filhotes"
 
-	# Flow steps for infographic, na ordem do tipo de registro
-	flow_steps = [
-		{"field": etapa["field"], "label": ROTULOS_CURTOS_DAS_ETAPAS.get(etapa["field"], etapa["label"])}
-		for etapa in etapas_do_fluxo(doc.get("tipo_de_registro"))
-	]
-
-	# Antes do envio dos dados, só as etapas até "Registro Paxtu" (as quatro primeiras nos dois tipos)
-	dados_enviados = bool(doc.get("dados_para_registro_enviados"))
-	final_steps = flow_steps if dados_enviados else flow_steps[:4]
-
-	# Process steps state
-	steps_data = []
-
-	# Initial date calculation base
-	# Try to find a visit date
+	# Data-base para as estimativas: a visita mais recente.
 	visit_date = None
 	visit_rec = frappe.get_all(
 		"Agenda de Visitas",
@@ -143,30 +126,39 @@ def get_context(context):
 	if visit_rec:
 		visit_date = visit_rec[0].data_da_visita
 
-	current_calc_date = visit_date
-	today = getdate()
+	# Mesmo cálculo do kanban da recepção: etapas na ordem do tipo de registro, com data
+	# estimada e atraso para quem ainda não concluiu.
+	etapas = calcular_etapas(doc, config, visit_date, getdate())
 
-	for step in final_steps:
-		is_done = bool(doc.get(step["field"]))
-		step_info = {"label": step["label"], "done": is_done, "field": step["field"]}
+	# Antes do envio dos dados, só as etapas até "Registro Paxtu" (as quatro primeiras nos dois tipos)
+	dados_enviados = bool(doc.get("dados_para_registro_enviados"))
+	final_etapas = etapas if dados_enviados else etapas[:4]
 
-		# Calculate dates for pending steps
-		if current_calc_date:
-			config_field_name = field_interval_map.get(step["field"])
-			if config_field_name:
-				days_val = config.get(config_field_name) or 0
-				try:
-					days_int = int(days_val)
-					current_calc_date = add_days(current_calc_date, days_int)
-					# If not completed, show the estimated date
-					if not is_done:
-						step_info["estimated_date"] = format_date(current_calc_date)
-						# Check if overdue
-						if current_calc_date < today:
-							step_info["is_overdue"] = True
-				except (ValueError, TypeError):
-					pass
+	# Quando cada etapa concluída foi marcada, para mostrar a data embaixo da bolinha.
+	historico = {
+		linha.etapa: {"concluida_em": linha.concluida_em}
+		for linha in frappe.get_all(
+			"Etapa do Fluxo Concluida",
+			filters={"parenttype": "Novo Associado", "parent": doc.name},
+			fields=["etapa", "concluida_em"],
+		)
+	}
+	anexar_historico(final_etapas, historico)
 
+	steps_data = []
+	for etapa in final_etapas:
+		step_info = {
+			"label": ROTULOS_CURTOS_DAS_ETAPAS.get(etapa["field"], etapa["label"]),
+			"done": etapa["completed"],
+			"field": etapa["field"],
+		}
+		if etapa.get("estimated_date"):
+			step_info["estimated_date"] = etapa["estimated_date"]
+		if etapa.get("is_overdue"):
+			step_info["is_overdue"] = True
+		# Etapas concluídas antes de o histórico passar a ser gravado ficam sem data.
+		if etapa.get("concluida_em"):
+			step_info["concluida_em_formatada"] = format_date(etapa["concluida_em"])
 		steps_data.append(step_info)
 
 	context.flow_steps = steps_data

@@ -3,8 +3,44 @@
 {% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
 {% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, badge, checkbox, alert, accordion %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/phone-input.html.jinja" import phone_input %}
 
 {% block title %}Associado - Detalhes{% endblock %}
+
+{# Campo dos blocos de guarda e de responsáveis. Telefone usa o mesmo controle
+   com máscara da tela de registro; sem permissão de edição o número vira texto
+   somente leitura, que não tem como o componente de máscara desabilitar. #}
+{% macro campo_responsavel(f) %}
+  {% if f.fieldtype == 'Check' %}
+    {{ checkbox(
+      id="check_" ~ f.fieldname,
+      label=f.label,
+      checked=f.value,
+      attrs=({"name": f.fieldname} if f.editable else {"name": f.fieldname, "disabled": ""})
+    ) }}
+  {% elif f.fieldtype == 'Select' %}
+    <label class="label">{{ f.label }}</label>
+    {{ select(
+      id="sel_" ~ f.fieldname,
+      name=f.fieldname,
+      selected=f.value or '',
+      items=f.options_items,
+      trigger_attrs=({"disabled": ""} if not f.editable else {})
+    ) }}
+  {% elif f.is_phone and f.editable %}
+    <label class="label" for="{{ f.fieldname }}-number">{{ f.label }}</label>
+    {{ phone_input(
+      id=f.fieldname,
+      name=f.fieldname,
+      value=f.value or '',
+      placeholder="DDD + número",
+      input_attrs={"id": f.fieldname ~ "-number"}
+    ) }}
+  {% else %}
+    <label class="label">{{ f.label }}</label>
+    <input type="text" class="input" name="{{ f.fieldname }}" value="{{ f.value or '' }}" {% if not f.editable %}disabled{% endif %}>
+  {% endif %}
+{% endmacro %}
 {% set active_link = '/associados' %}
 
 {% block page_header %}
@@ -101,34 +137,36 @@
     {% if is_beneficiario %}
     <!-- Responsáveis -->
     {% call card(title="Responsáveis", description="Informações dos responsáveis pelo beneficiário", attrs={"class": "mb-4"}) %}
-      <div class="detalhe-fields-grid">
-        {% for f in group_responsaveis %}
-          {% set is_guardian_flag = f.fieldname in ['guardiao_legal_responsavel_1','guardiao_legal_responsavel_2'] %}
-          {% if is_guardian_flag %}
-          <div class="field" data-guardian-field {% if not show_guardian_toggles %}style="display:none;"{% endif %}>
-          {% else %}
-          <div class="field">
-          {% endif %}
-            {% if f.fieldtype == 'Check' %}
-              {% if f.editable %}
-                {{ checkbox(id="check_" ~ f.fieldname, label=f.label, checked=f.value, attrs={"name": f.fieldname}) }}
-              {% else %}
-                {{ checkbox(id="check_" ~ f.fieldname, label=f.label, checked=f.value, attrs={"name": f.fieldname, "disabled": ""}) }}
-              {% endif %}
-            {% elif f.fieldtype == 'Select' %}
-              <label class="label">{{ f.label }}</label>
-              {{ select(
-                id="sel_" ~ f.fieldname,
-                name=f.fieldname,
-                selected=f.value or '',
-                items=f.options_items,
-                trigger_attrs=({"disabled": ""} if not f.editable else {})
-              ) }}
-            {% else %}
-              <label class="label">{{ f.label }}</label>
-              <input type="text" class="input" name="{{ f.fieldname }}" value="{{ f.value or '' }}" {% if not f.editable %}disabled{% endif %}>
-            {% endif %}
+      {% if group_guarda %}
+      <section class="detalhe-subsection" aria-label="Guarda do beneficiário">
+        <h4 class="detalhe-subsection__title">Guarda</h4>
+        <div class="detalhe-fields-grid">
+          {% for f in group_guarda %}
+          <div class="field">{{ campo_responsavel(f) }}</div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      <div class="detalhe-responsaveis">
+        {% for responsavel in grupos_responsaveis %}
+        {% call card(attrs={"class": "detalhe-responsavel-card"}) %}
+          <div class="detalhe-responsavel-card__header">
+            <h3 class="detalhe-responsavel-card__title">{{ responsavel.nome or responsavel.titulo }}</h3>
+            {{ badge(responsavel.titulo, outline=true) }}
           </div>
+          <div class="detalhe-fields-grid">
+            {% for f in responsavel.campos %}
+              {% if f.fieldname.startswith('guardiao_legal_') %}
+              <div class="field" data-guardian-field {% if not show_guardian_toggles %}style="display:none;"{% endif %}>
+              {% else %}
+              <div class="field">
+              {% endif %}
+                {{ campo_responsavel(f) }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endcall %}
         {% endfor %}
       </div>
     {% endcall %}

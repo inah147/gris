@@ -41,10 +41,23 @@
 		});
 		updateGuardianVisibility();
 
+		// Valor que o servidor renderizou em cada campo. O controle de telefone é
+		// montado pelo JS do design system e reescreve o próprio hidden ao iniciar;
+		// sem comparar com o original, essa reescrita abriria a tela já "suja".
+		const iniciais = {};
+		document.querySelectorAll(editableSelectors).forEach((el) => {
+			if (!el.name) return;
+			iniciais[el.name] = el.type === "checkbox" ? (el.checked ? 1 : 0) : el.value;
+		});
+
 		function markChanged(field, value) {
 			if (!CAN_EDIT) return;
-			changed[field] = value;
-			if (saveBtn && saveBtn.hidden) saveBtn.hidden = false;
+			if (String(value ?? "") === String(iniciais[field] ?? "")) {
+				delete changed[field];
+			} else {
+				changed[field] = value;
+			}
+			if (saveBtn) saveBtn.hidden = Object.keys(changed).length === 0;
 		}
 
 		// Configure form fields
@@ -175,7 +188,12 @@
 					saveBtn.textContent = "Salvar";
 					if (r.message && r.message.success) {
 						notify("Alterações salvas", "green");
-						for (const k in changed) delete changed[k];
+						// O que acabou de ser gravado vira a nova referência: desfazer
+						// uma edição depois disso não pode contar como alteração nova.
+						for (const k in changed) {
+							iniciais[k] = changed[k];
+							delete changed[k];
+						}
 						saveBtn.hidden = true;
 					} else {
 						notify("Falha ao salvar", "red");

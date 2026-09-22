@@ -686,6 +686,42 @@
 		}
 	}
 
+	// ----- confirmação de exclusão -----
+
+	// Ação aguardando confirmação no #modalExcluir: { executar, erro }.
+	let exclusaoPendente = null;
+
+	function abrirModalExcluir(titulo, mensagem, rotulo, executar, erro) {
+		const dlg = qs("modalExcluir");
+		if (!dlg) return;
+		exclusaoPendente = { executar: executar, erro: erro };
+		const h2 = dlg.querySelector("h2");
+		if (h2) h2.textContent = titulo;
+		const texto = qs("modalExcluirMensagem");
+		if (texto) texto.textContent = mensagem;
+		const botao = dlg.querySelector('[data-action="confirmar-exclusao"]');
+		if (botao) {
+			botao.textContent = rotulo;
+			botao.disabled = false;
+		}
+		openDialog("modalExcluir");
+	}
+
+	async function confirmarExclusao(botao) {
+		const acao = exclusaoPendente;
+		if (!acao) return;
+		botao.disabled = true;
+		try {
+			// Em caso de sucesso a página navega ou recarrega, então o diálogo não é fechado aqui.
+			await acao.executar();
+		} catch (e) {
+			closeDialog("modalExcluir");
+			alertaErro(acao.erro);
+		} finally {
+			botao.disabled = false;
+		}
+	}
+
 	function abrirModalDuplicar() {
 		const form = qs("formDuplicar");
 		if (!form) return;
@@ -728,6 +764,14 @@
 		const distribuicao = qs("itemDistribuicao");
 		if (distribuicao) distribuicao.addEventListener("change", alternarMesReferencia);
 
+		// Cancelar ou fechar com Esc descarta a ação pendente.
+		const dlgExcluir = qs("modalExcluir");
+		if (dlgExcluir) {
+			dlgExcluir.addEventListener("close", function () {
+				exclusaoPendente = null;
+			});
+		}
+
 		document.addEventListener("click", function (e) {
 			if (e.target.closest("#btnNovaPrevisao")) {
 				abrirModalPrevisao(null);
@@ -744,14 +788,16 @@
 
 			const btnExcluirPrevisao = e.target.closest("#btnExcluirPrevisao");
 			if (btnExcluirPrevisao) {
-				frappe.confirm("Excluir esta previsão e todos os seus itens?", async () => {
-					try {
+				abrirModalExcluir(
+					"Excluir previsão",
+					"A previsão e todos os seus itens serão excluídos.",
+					"Excluir previsão",
+					async () => {
 						await chamar("excluir_previsao", { name: previsaoAtual });
 						window.location.href = "/financeiro/previsao_orcamentaria";
-					} catch (err) {
-						alertaErro("Não foi possível excluir a previsão.");
-					}
-				});
+					},
+					"Não foi possível excluir a previsão."
+				);
 				return;
 			}
 
@@ -774,17 +820,20 @@
 			const btnExcluirItem = e.target.closest(".previsao-item-excluir");
 			if (btnExcluirItem) {
 				const descricao = btnExcluirItem.dataset.descricao || "este item";
-				frappe.confirm(`Excluir "${descricao}" do orçamento?`, async () => {
-					try {
+				const itemName = btnExcluirItem.dataset.name;
+				abrirModalExcluir(
+					"Excluir item",
+					`O item "${descricao}" será removido do orçamento.`,
+					"Excluir item",
+					async () => {
 						await chamar("excluir_item", {
 							previsao: previsaoAtual,
-							item_name: btnExcluirItem.dataset.name,
+							item_name: itemName,
 						});
 						window.location.reload();
-					} catch (err) {
-						alertaErro("Não foi possível excluir o item.");
-					}
-				});
+					},
+					"Não foi possível excluir o item."
+				);
 				return;
 			}
 
@@ -803,6 +852,12 @@
 			const duplicarBtn = e.target.closest('[data-action="confirmar-duplicar"]');
 			if (duplicarBtn) {
 				confirmarDuplicar(duplicarBtn);
+				return;
+			}
+
+			const excluirBtn = e.target.closest('[data-action="confirmar-exclusao"]');
+			if (excluirBtn) {
+				confirmarExclusao(excluirBtn);
 			}
 		});
 	}

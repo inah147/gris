@@ -151,6 +151,15 @@
 	border-color: var(--destructive, #d55e00);
 }
 
+/* Larguras dos modais, iguais às das demais páginas de Financeiro. */
+dialog.financeiro-dialog {
+	max-width: 32rem;
+}
+
+dialog.financeiro-dialog--lg {
+	max-width: 48rem;
+}
+
 @media (max-width: 48rem) {
 	.fin-filters {
 		flex-direction: column;

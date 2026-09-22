@@ -77,12 +77,18 @@ def get_context(context):
 		colunas=context.colunas,
 	)
 	context.filtros_ativos = request_args
+	context.mostrar_excluidas = str(request_args.get("mostrar_excluidas") or "").lower() in (
+		"1",
+		"true",
+		"on",
+	)
 	# Quantos filtros a URL trouxe: define se o painel abre e alimenta o badge.
 	# `excluir_do_total` é injetado por padrão em `build_extrato_filters` (não deve
 	# contar como filtro "ativo" escolhido pelo usuário, senão o badge/painel
-	# aparecem mesmo sem nenhum filtro na URL).
+	# aparecem mesmo sem nenhum filtro na URL). Quando `mostrar_excluidas` está
+	# ligada, esse filtro nem é injetado, então não há o que descontar.
 	filtros_da_url_count = len(filters)
-	if request_args.get("excluir_do_total") in (None, "", "null"):
+	if "excluir_do_total" in filters and request_args.get("excluir_do_total") in (None, "", "null"):
 		filtros_da_url_count -= 1
 	context.filtros_ativos_count = filtros_da_url_count
 	context.paginacao = {

@@ -368,6 +368,21 @@
 	pointer-events: none;
 }
 
+/* Transação excluída do total: visível apenas com "Mostrar excluídas"
+   ligado, então basta uma marca discreta para diferenciar da lista normal. */
+.extrato-row--excluida {
+	opacity: 0.6;
+}
+
+.extrato-row--excluida .extrato-truncate,
+.extrato-row--excluida td {
+	font-style: italic;
+}
+
+.extrato-tabela__mostrar-excluidas {
+	white-space: nowrap;
+}
+
 /* Barra de seleção: fica na mesma linha do contador, sem roubar altura útil. */
 .extrato-selecao {
 	display: flex;

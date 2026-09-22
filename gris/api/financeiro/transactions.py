@@ -272,8 +272,10 @@ def build_extrato_filters(request_args: dict | None, pode_buscar_descricao_compl
 
 	# Transações marcadas como duplicata conciliada não devem entrar no extrato
 	# nem no total, a não ser que o filtro `excluir_do_total` seja pedido
-	# explicitamente (ex.: para auditar as próprias duplicatas excluídas).
-	if "excluir_do_total" not in filters:
+	# explicitamente (ex.: para auditar as próprias duplicatas excluídas) ou
+	# que a flag `mostrar_excluidas` da tela peça para ver as duas juntas.
+	mostrar_excluidas = str(request_args.get("mostrar_excluidas") or "").lower() in ("1", "true", "on")
+	if "excluir_do_total" not in filters and not mostrar_excluidas:
 		filters["excluir_do_total"] = 0
 
 	return filters

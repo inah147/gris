@@ -1,4 +1,3 @@
-import hashlib
 import json
 import re
 
@@ -26,6 +25,7 @@ from gris.api.recepcao_funil import (
 )
 from gris.api.recepcao_vagas import calcular_vagas_por_ramo, dados_do_dialog, ramo_sem_vagas
 from gris.api.recepcao_visitas import remover_visita_do_jovem
+from gris.utils.documento import localizar_associado_por_cpf, localizar_associados_em_lote
 
 no_cache = 1
 
@@ -246,6 +246,19 @@ def get_context(context):
 	# Uma consulta na tabela filha inteira, em vez de abrir um documento por card.
 	historico_map = _historico_de_etapas(names)
 
+	# Cadastro de ``Associado`` de quem está em acompanhamento. É ele que libera o botão
+	# "Finalizar Recepção" no dialog do card: sem cadastro não há para onde migrar os
+	# vínculos, então o botão nem aparece. Resolvido em lote (ver
+	# ``gris.utils.documento.localizar_associados_em_lote``) para não consultar por card,
+	# e só para quem está em acompanhamento — antes disso o registro ainda não existe.
+	cadastro_associado_map = localizar_associados_em_lote(
+		[
+			{"chave": na.name, "cpf": na.cpf, "registro": na.numero_de_registro}
+			for na in novos_associados
+			if na.status == STATUS_ACOMPANHAMENTO
+		]
+	)
+
 	# Fetch User Names
 	user_names_map = {}
 	user_ids = set(n.responsavel_recepcao for n in novos_associados if n.responsavel_recepcao)
@@ -367,6 +380,9 @@ def get_context(context):
 
 			associado.observacoes_count = observacoes_map.get(associado.name, 0)
 
+			# Cadastro do Associado já criado (vazio = recepção ainda não pode ser finalizada).
+			associado.cadastro_associado = cadastro_associado_map.get(associado.name)
+
 			# Set ramo class
 			associado.ramo_class = ramo_map.get(associado.ramo, "default")
 			associado.ramo_variant = ramo_variant_map.get(associado.ramo, "secondary")
@@ -481,21 +497,37 @@ def update_step_status(novo_associado_name: str, field: str, value: str | int):
 
 @frappe.whitelist()
 def finalizar_processo_recepcao(novo_associado_name: str):
+	"""Tira o jovem do funil: migra os vínculos para o ``Associado`` e apaga o cadastro do funil.
+
+	Exige o cadastro de ``Associado`` já criado — é para ele que os vínculos do responsável
+	vão. O botão da visão geral só aparece quando o cadastro existe (ver
+	``cadastro_associado`` no ``get_context``); a checagem daqui é a que vale.
+	"""
 	if not novo_associado_name:
 		frappe.throw(_("Novo Associado não especificado."))
 
 	na_doc = frappe.get_doc("Novo Associado", novo_associado_name)
 
-	# Find Associado by hashed CPF (as name)
+	# Finalizar apaga o jovem do funil e reescreve o cadastro do responsável. A permissão
+	# de apagar o Novo Associado é a porta: hoje só "Recepcao" e "System Manager" a têm, e
+	# são os mesmos que escrevem em Responsavel e Responsavel Vinculo. O cadastro do
+	# Associado é só lido aqui — cobrar permissão nele trancaria a própria recepção, que
+	# não tem acesso a esse DocType.
+	if not na_doc.has_permission("delete"):
+		frappe.throw(_("Você não tem permissão para finalizar a recepção."), frappe.PermissionError)
+
 	if not na_doc.cpf:
 		frappe.throw(_("Novo Associado sem CPF. Não é possível vincular ao Associado."))
 
-	cpf_clean = re.sub(r"\D", "", na_doc.cpf)
-	associado_name = hashlib.md5(cpf_clean.encode("utf-8")).hexdigest()
+	# O cadastro pode ter sido nomeado pela convenção antiga (md5 do CPF pontuado), por isso
+	# a busca passa pelo resolver em vez de recalcular o hash aqui.
+	associado_name = localizar_associado_por_cpf(na_doc.cpf, na_doc.numero_de_registro)
 
-	if not frappe.db.exists("Associado", associado_name):
+	if not associado_name:
 		frappe.throw(
-			f"Associado com name/hash {associado_name} (CPF {na_doc.cpf}) não encontrado. Certifique-se de que o registro foi criado."
+			_(
+				"O cadastro do Associado de {0} ainda não existe. Crie o cadastro (ou importe do Paxtu) antes de finalizar a recepção."
+			).format(na_doc.nome_completo or novo_associado_name)
 		)
 
 	# Update Responsavel Vinculo
@@ -510,28 +542,52 @@ def finalizar_processo_recepcao(novo_associado_name: str):
 		if link_doc.responsavel:
 			responsavel_ids.append(link_doc.responsavel)
 
-	# Anonymize Responsavel
-	fields_to_keep = [
-		"o_que_gosta_de_fazer_no_dia_a_dia",
-		"habilidades",
-		"nome_completo",
-		"informacoes_pessoais_section",  # Keep section breaks to avoid UI issues
-		"hobbies_e_interesses_section",
-		"informacoes_profissionais_e_academicas_section",
-		"endereco_e_dados_de_contato_section",
-	]
+	_anonimizar_responsaveis(responsavel_ids)
+	_desvincular_registros_do_funil(na_doc.name)
 
-	# Get all fields of Responsavel
+	# Delete Novo Associado
+	frappe.delete_doc("Novo Associado", na_doc.name, ignore_permissions=True)
+
+	return "Recepção finalizada com sucesso."
+
+
+# Campos do ``Responsavel`` que sobrevivem à anonimização.
+#
+# Nome, hobbies e habilidades ficam porque é o que o grupo usa para lembrar quem é a
+# família e no que ela pode ajudar. E-mail e celular ficam por necessidade operacional:
+# o e-mail é a chave da sessão no portal (ver
+# ``gris.api.responsavel_acesso.get_responsavel_do_usuario``), então apagá-lo tranca a
+# família fora de ``/responsavel`` no mesmo instante em que o filho vira associado; o
+# celular é o canal de WhatsApp com ela. Documento, endereço e dados profissionais, que
+# só serviam para montar o registro, saem.
+CAMPOS_PRESERVADOS_DO_RESPONSAVEL = (
+	"o_que_gosta_de_fazer_no_dia_a_dia",
+	"habilidades",
+	"nome_completo",
+	"email",
+	"celular",
+	"informacoes_pessoais_section",  # Keep section breaks to avoid UI issues
+	"hobbies_e_interesses_section",
+	"informacoes_profissionais_e_academicas_section",
+	"endereco_e_dados_de_contato_section",
+)
+
+
+def _anonimizar_responsaveis(responsavel_ids: list[str]) -> None:
+	"""Limpa do ``Responsavel`` o que só existia para o processo de registro."""
 	meta = frappe.get_meta("Responsavel")
-	fields_to_clear = []
-	for field in meta.fields:
-		if field.fieldname not in fields_to_keep and field.fieldtype not in [
+	fields_to_clear = [
+		field.fieldname
+		for field in meta.fields
+		if field.fieldname not in CAMPOS_PRESERVADOS_DO_RESPONSAVEL
+		and field.fieldtype
+		not in [
 			"Section Break",
 			"Column Break",
 			"Tab Break",
 			"Table MultiSelect",
-		]:
-			fields_to_clear.append(field.fieldname)
+		]
+	]
 
 	for resp_id in set(responsavel_ids):
 		resp_doc = frappe.get_doc("Responsavel", resp_id)
@@ -540,10 +596,37 @@ def finalizar_processo_recepcao(novo_associado_name: str):
 			resp_doc.set(field, None)
 		resp_doc.save(ignore_permissions=True)
 
-	# Delete Agenda de Visitas records linked to this Novo Associado
-	frappe.db.delete("Agenda de Visitas", {"jovem": na_doc.name})
 
-	# Delete Novo Associado
-	frappe.delete_doc("Novo Associado", na_doc.name, ignore_permissions=True)
+# Quem aponta para o jovem do funil por campo ``Link`` e é apagado junto com ele, como
+# ``DocType -> fieldname``. Fora desta lista ficam só os dois tratados à parte:
+# ``Responsavel Vinculo``, que é migrado para o Associado em vez de apagado, e
+# ``Agenda de Visitas``, que sai pelo serviço de visitas. O teste de finalização confere
+# que nenhuma ligação nova ficou de fora (é ela que trava a exclusão).
+LIGACOES_APAGADAS_COM_O_FUNIL = (
+	("Log de Mensagem", "novo_associado"),
+	("Fila de Espera", "associado"),
+)
 
-	return "Recepção finalizada com sucesso."
+
+def _desvincular_registros_do_funil(novo_associado_name: str) -> None:
+	"""Apaga o que aponta para o jovem no funil, antes de apagar o próprio jovem.
+
+	``frappe.delete_doc`` recusa apagar um documento que ainda é destino de um campo
+	``Link`` (``LinkExistsError``), então a visita, o log de mensagens e a fila de espera
+	saem primeiro — senão a finalização quebra justamente em quem recebeu mensagem, que é
+	todo mundo que chegou até o fim do funil.
+
+	As observações do card são referência dinâmica, não ``Link``: nunca travaram a
+	exclusão, mas a limpeza delas pelo Frappe é um job enfileirado depois do commit. Aqui
+	elas saem na mesma transação, para não ficar comentário órfão apontando para um jovem
+	que não existe mais caso o job não rode.
+	"""
+	# A visita sai pelo serviço, e não por um delete direto, para passar pelos hooks dela.
+	remover_visita_do_jovem(novo_associado_name)
+
+	for doctype, fieldname in LIGACOES_APAGADAS_COM_O_FUNIL:
+		frappe.db.delete(doctype, {fieldname: novo_associado_name})
+
+	frappe.db.delete(
+		"Comment", {"reference_doctype": "Novo Associado", "reference_name": novo_associado_name}
+	)

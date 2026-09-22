@@ -505,16 +505,35 @@ function openAcompanhamentoModal(id, responsavel, nome, responsavelAssociado, st
 	const actions = document.getElementById("ac_actions");
 	const existingFinish = document.getElementById("btnFinalizarRecepcao");
 	if (existingFinish) existingFinish.remove();
+	const existingAviso = document.getElementById("ac_aviso_sem_cadastro");
+	if (existingAviso) existingAviso.remove();
+
+	// Finalizar migra os vínculos do responsável para o cadastro de Associado do jovem:
+	// sem cadastro não há para onde migrar, então o botão não aparece e o dialog explica
+	// o que falta. O `data-cadastro-associado` vem resolvido do servidor
+	// (`cadastro_associado`, no get_context), que aceita as duas convenções de hash do CPF.
+	const cadastroAssociado = currentCardElement
+		? currentCardElement.dataset.cadastroAssociado || ""
+		: "";
 
 	const allCompleted = parsedSteps.length > 0 && parsedSteps.every((s) => s.completed);
 	if (allCompleted && actions) {
-		const finishBtn = document.createElement("button");
-		finishBtn.type = "button";
-		finishBtn.className = "btn-primary";
-		finishBtn.id = "btnFinalizarRecepcao";
-		finishBtn.textContent = "Finalizar Recepção";
-		finishBtn.addEventListener("click", finalizarRecepcao);
-		actions.prepend(finishBtn);
+		if (cadastroAssociado) {
+			const finishBtn = document.createElement("button");
+			finishBtn.type = "button";
+			finishBtn.className = "btn-primary";
+			finishBtn.id = "btnFinalizarRecepcao";
+			finishBtn.textContent = "Finalizar Recepção";
+			finishBtn.addEventListener("click", finalizarRecepcao);
+			actions.prepend(finishBtn);
+		} else {
+			const aviso = document.createElement("p");
+			aviso.id = "ac_aviso_sem_cadastro";
+			aviso.className = "dialog-actions__aviso text-sm text-muted-foreground";
+			aviso.textContent =
+				"Etapas concluídas. O cadastro do Associado ainda não existe — crie o cadastro (ou importe do Paxtu) para liberar a finalização da recepção.";
+			actions.prepend(aviso);
+		}
 	}
 
 	openDialog("modalAcompanhamento");

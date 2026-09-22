@@ -7,7 +7,10 @@ números diferentes para o mesmo ramo.
 Ocupam vaga os associados ativos (beneficiários) e os novos associados da visita
 agendada em diante. Cada pessoa conta uma vez só: ``Associado`` e ``Novo Associado``
 são nomeados pelo md5 dos dígitos do CPF, então o jovem que já tem registro e ainda
-está no funil é reconhecido pelo mesmo identificador e conta pelo Associado.
+está no funil é reconhecido pelo mesmo identificador e conta pelo Associado. Cadastros
+criados antes da correção da convenção têm o nome vindo do CPF pontuado, por isso a
+comparação usa todos os identificadores possíveis daquele CPF — senão o jovem com
+registro entraria na conta duas vezes e o ramo pareceria mais cheio do que está.
 """
 
 from __future__ import annotations
@@ -22,7 +25,7 @@ from gris.api.recepcao_funil import (
 	STATUS_FAZER_REGISTRO,
 	STATUS_VISITA_AGENDADA,
 )
-from gris.utils.documento import id_por_cpf
+from gris.utils.documento import ids_possiveis_por_cpf
 
 # Sufixo dos campos do Single ``Vagas`` (``limite_de_vagas_<slug>``, ``idade_maxima_<slug>``).
 RAMO_SLUGS: dict[str, str] = {
@@ -135,11 +138,11 @@ def calcular_vagas_por_ramo(novos_associados: list | None = None, hoje=None) -> 
 		if ramo not in novos_por_ramo or not ocupa_vaga(novo.get("status")):
 			continue
 
-		chave = id_por_cpf(novo.get("cpf")) or novo.get("name")
-		if chave in contados:
+		chaves = ids_possiveis_por_cpf(novo.get("cpf")) or (novo.get("name"),)
+		if contados.intersection(chaves):
 			continue
 
-		contados.add(chave)
+		contados.update(chaves)
 		novos_por_ramo[ramo] += 1
 
 	associados_por_ramo = {ramo: [] for ramo in RAMOS}

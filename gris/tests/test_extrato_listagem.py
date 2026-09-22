@@ -32,6 +32,15 @@ class TestExtratoFiltros(FrappeTestCase):
 		filtros = build_extrato_filters({"excluir_do_total": "1"})
 		self.assertEqual(filtros["excluir_do_total"], "1")
 
+	def test_mostrar_excluidas_remove_o_filtro_padrao_de_exclusao(self):
+		self.assertEqual(build_extrato_filters({"mostrar_excluidas": "1"}), {})
+		self.assertEqual(build_extrato_filters({"mostrar_excluidas": "on"}), {})
+		self.assertEqual(build_extrato_filters({"mostrar_excluidas": "0"}), {"excluir_do_total": 0})
+
+	def test_mostrar_excluidas_nao_sobrescreve_filtro_explicito(self):
+		filtros = build_extrato_filters({"mostrar_excluidas": "1", "excluir_do_total": "1"})
+		self.assertEqual(filtros, {"excluir_do_total": "1"})
+
 	def test_intervalo_de_datas_completo(self):
 		filtros = build_extrato_filters({"data_inicio": "2026-01-01", "data_fim": "2026-01-31"})
 		self.assertEqual(filtros["data_deposito"], ["between", ["2026-01-01", "2026-01-31"]])

@@ -93,7 +93,7 @@
 {% endmacro %}
 
 {% for transacao in transacoes %}
-	<tr data-transaction-id="{{ transacao.name | e }}" class="extrato-row">
+	<tr data-transaction-id="{{ transacao.name | e }}" class="extrato-row{{ ' extrato-row--excluida' if transacao.get('excluir_do_total') else '' }}">
 		<td class="extrato-col-select">
 			<input type="checkbox" class="transaction-checkbox" value="{{ transacao.name | e }}" aria-label="Selecionar transação" />
 		</td>

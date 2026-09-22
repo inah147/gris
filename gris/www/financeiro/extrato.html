@@ -146,6 +146,10 @@
 			<span class="extrato-selecao__dica">edite uma célula destacada para aplicar a todas</span>
 			<button type="button" class="btn-sm-ghost" id="extratoLimparSelecao">Limpar seleção</button>
 		</div>
+		<label class="col-toggle-item extrato-tabela__mostrar-excluidas">
+			<input type="checkbox" id="extratoMostrarExcluidas" {{ 'checked' if mostrar_excluidas else '' }} />
+			Mostrar excluídas
+		</label>
 		{% call popover(
 			trigger=(lucide_icon("columns-3", size="sm") ~ " Colunas"),
 			id="extrato-colunas",

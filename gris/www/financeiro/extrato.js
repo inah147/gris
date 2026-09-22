@@ -24,6 +24,7 @@
 		"repasse_entre_contas",
 		"transacao_revisada",
 		"fonte",
+		"mostrar_excluidas",
 	];
 
 	const COLUNAS_STORAGE_KEY = "gris_extrato_colunas_v1";
@@ -212,6 +213,24 @@
 			}
 			// Abrir/fechar move o grid na página, então a altura é recalculada.
 			ajustarAlturaDoGrid();
+		});
+	}
+
+	/**
+	 * Alterna a flag "mostrar excluídas" recarregando a página com o parâmetro
+	 * atualizado na URL — o mesmo caminho do formulário de filtros, então a
+	 * primeira página já vem filtrada certa do servidor.
+	 */
+	function iniciarMostrarExcluidas() {
+		const checkbox = document.getElementById("extratoMostrarExcluidas");
+		if (!checkbox) return;
+
+		checkbox.addEventListener("change", function () {
+			const params = new URLSearchParams(window.location.search);
+			if (checkbox.checked) params.set("mostrar_excluidas", "1");
+			else params.delete("mostrar_excluidas");
+			const query = params.toString();
+			window.location.href = window.location.pathname + (query ? "?" + query : "");
 		});
 	}
 
@@ -614,6 +633,7 @@
 
 		opcoesEditaveis = lerOpcoesEditaveis();
 		iniciarPainelDeFiltros();
+		iniciarMostrarExcluidas();
 		iniciarSeletorDeColunas();
 		ajustarAlturaDoGrid();
 		window.addEventListener("resize", ajustarAlturaDoGrid);

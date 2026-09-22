@@ -66,6 +66,27 @@
 	white-space: nowrap;
 }
 
+/*
+ * Quem pediu é a informação que o financeiro procura primeiro na fila, então o
+ * nome sobe um degrau de tamanho e peso em relação ao resto da tabela.
+ */
+.insignias-tabela__solicitante {
+	font-size: var(--text-base);
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-foreground);
+	line-height: 1.3;
+}
+
+/*
+ * Ramo e data do pedido vêm logo atrás do nome. Ganham peso e cor cheia, mas
+ * mantêm o tamanho das demais colunas: subir os três de tamanho estourava a
+ * largura da tabela no desktop e empurrava a coluna de ação para fora da vista.
+ */
+.insignias-tabela__destaque {
+	font-weight: var(--font-weight-medium);
+	color: var(--color-foreground);
+}
+
 .insignias-tabela__aguardando {
 	font-size: var(--text-xs);
 	color: var(--color-muted-foreground);

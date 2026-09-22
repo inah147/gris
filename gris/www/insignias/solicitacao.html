@@ -33,8 +33,13 @@
 				<span>Voltar</span>
 			</a>
 			<h1 class="insignias-detalhe__titulo">{{ solicitacao.name }}</h1>
-			<p class="insignias-detalhe__subtitulo">
-				{{ solicitacao.ramo }} · solicitado por {{ solicitacao.solicitante_nome or solicitacao.solicitante }} em {{ solicitacao.data_solicitacao_fmt }}
+			<p class="insignias-detalhe__solicitante">
+				Solicitado por <strong>{{ solicitacao.solicitante_nome or solicitacao.solicitante }}</strong>
+			</p>
+			<p class="insignias-detalhe__meta">
+				<span>{{ solicitacao.ramo }}</span>
+				<span class="insignias-detalhe__meta-separador" aria-hidden="true">·</span>
+				<span>Pedido em {{ solicitacao.data_solicitacao_fmt }}</span>
 			</p>
 		</div>
 		<div class="insignias-detalhe__status">

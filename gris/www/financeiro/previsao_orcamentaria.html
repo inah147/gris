@@ -372,6 +372,28 @@
 		</div>
 	</form>
 {% endcall %}
+
+{# === Modal: Confirmar Exclusão ===
+	Diálogo próprio, e não `frappe.confirm`: o portal não carrega o CSS do Desk, então o modal
+	Bootstrap do Frappe aparece sem estilo — botão de fechar gigante e texto largado no fim da
+	página. O <dialog> nativo vai para a top layer e usa o mesmo visual dos demais modais daqui.
+	Título, mensagem e rótulo do botão são preenchidos pelo JS (previsão inteira × item).
+#}
+{% set excluir_footer %}
+<button type="button" class="btn-outline" onclick="this.closest('dialog').close()">Cancelar</button>
+<button type="button" class="btn-destructive" data-action="confirmar-exclusao">Excluir</button>
+{% endset %}
+{% call dialog(
+	id="modalExcluir",
+	title="Excluir",
+	footer=excluir_footer,
+	close_button=false,
+	close_on_overlay_click=false,
+	dialog_attrs={"class": "financeiro-dialog"}
+) %}
+	<p class="text-sm" id="modalExcluirMensagem"></p>
+	<p class="text-muted-foreground text-xs mt-2">Esta ação não pode ser desfeita.</p>
+{% endcall %}
 {% endif %}
 {% endblock %}
 

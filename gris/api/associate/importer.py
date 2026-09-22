@@ -1,4 +1,3 @@
-import hashlib
 import json
 import os
 import re
@@ -10,6 +9,7 @@ import pandas as pd
 import pdfplumber
 
 from gris.api.users.roles import add_user_roles
+from gris.utils.documento import id_por_cpf, ids_possiveis_por_cpf, localizar_associado_por_cpf
 
 
 def _extract_text_from_pdf(pdf_path: str) -> str:
@@ -255,7 +255,7 @@ def _upsert_responsavel(payload: dict) -> tuple[str | None, str]:
 	if not cpf:
 		return None, "skipped"
 
-	responsavel_name = hashlib.md5(cpf.encode("utf-8")).hexdigest()
+	responsavel_name = id_por_cpf(cpf)
 	if frappe.db.exists("Responsavel", responsavel_name):
 		resp_doc = frappe.get_doc("Responsavel", responsavel_name)
 		has_changes = False
@@ -308,8 +308,7 @@ def _upsert_responsavel_vinculo(responsavel_name: str, associado_name: str, cpf_
 
 	# 2. Buscar vínculo existente via Novo Associado (criado na recepção)
 	if cpf_raw:
-		cpf_clean = re.sub(r"\D", "", cpf_raw)
-		na_name = hashlib.md5(cpf_clean.encode("utf-8")).hexdigest()
+		na_name = id_por_cpf(cpf_raw)
 		na_link_name = frappe.db.get_value(
 			"Responsavel Vinculo",
 			{"responsavel": responsavel_name, "beneficiario_novo_associado": na_name},
@@ -482,20 +481,14 @@ def parse_associates_report(path_pdf: str) -> dict:
 				results["error_details"].append(f"Linha {idx + 1}: CPF não encontrado")
 				continue
 
-			# Calcular hash do CPF para busca (padrao do doctype Associado)
-			cpf_hash = hashlib.md5(cpf.encode("utf-8")).hexdigest()
-
-			# Verificar se o associado já existe (buscar pelo CPF como filtro)
-			# Também deve buscar pelo nome, já que o ID é baseado no nome/hash
-			filters = {"cpf": cpf_hash}
-			existing_docs = frappe.get_all("Associado", filters=filters, limit=1)
-
 			registro_ueb = row.get("Registro", "").strip()
-			if not existing_docs and registro_ueb:
-				# Tentar buscar pelo registro UEB se não achou por CPF
-				existing_docs = frappe.get_all("Associado", filters={"registro": registro_ueb}, limit=1)
 
-			existing = len(existing_docs) > 0
+			# Verificar se o associado já existe. O identificador sai do CPF (md5 dos
+			# dígitos), mas cadastros antigos foram nomeados pelo CPF pontuado e o registro
+			# na UEB é o último recurso — as três tentativas moram em
+			# ``localizar_associado_por_cpf``.
+			existing_name = localizar_associado_por_cpf(cpf, registro_ueb)
+			existing = bool(existing_name)
 
 			# Mapear campos do PDF para o doctype Associado
 			# Mantemos CPF cru no associate_data para que o save() do doctype gere o hash corretamente
@@ -556,22 +549,23 @@ def parse_associates_report(path_pdf: str) -> dict:
 
 			if existing:
 				# Atualizar registro existente apenas se houver diferenças
-				doc = frappe.get_doc("Associado", existing_docs[0].name)
+				doc = frappe.get_doc("Associado", existing_name)
 				has_changes = False
 
 				for key, value in associate_data.items():
 					if key != "doctype" and value:  # Apenas verificar campos com valor
 						current_value = getattr(doc, key, None)
 
-						# Special handling for CPF comparison (stored as hash vs input as raw)
+						# Special handling for CPF comparison (stored as hash vs input as raw).
+						# Aceita as convenções antigas de hash para não marcar alteração em
+						# cadastro que só tem o nome no formato velho.
 						if key == "cpf":
-							if current_value == cpf_hash:
+							if current_value in ids_possiveis_por_cpf(cpf):
 								continue  # Hash matches raw input, no change
 
 						# Special handling for CPF Responsavel comparison
 						if key == "cpf_responsavel_1" and value:
-							resp_hash = hashlib.md5(value.encode("utf-8")).hexdigest()
-							if current_value == resp_hash:
+							if current_value in ids_possiveis_por_cpf(value):
 								continue
 
 						# Comparar valores, considerando None e string vazia como equivalentes
@@ -616,13 +610,12 @@ def parse_associates_report(path_pdf: str) -> dict:
 
 								# Special handling for CPF comparison (stored as hash vs input as raw)
 								if key == "cpf":
-									if current_value == cpf_hash:
+									if current_value in ids_possiveis_por_cpf(cpf):
 										continue  # Hash matches raw input, no change
 
 								# Special handling for CPF Responsavel comparison
 								if key == "cpf_responsavel_1" and value:
-									resp_hash = hashlib.md5(value.encode("utf-8")).hexdigest()
-									if current_value == resp_hash:
+									if current_value in ids_possiveis_por_cpf(value):
 										continue
 
 								if _values_differ(current_value, value):

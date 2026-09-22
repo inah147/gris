@@ -149,6 +149,7 @@
 				data-whatsapp-disponivel="{{ 1 if card.whatsapp_disponivel else 0 }}"
 				data-whatsapp-motivo="{{ card.whatsapp_motivo_indisponivel or '' }}"
 				data-observacoes="{{ card.observacoes_count }}"
+				data-cadastro-associado="{{ card.cadastro_associado or '' }}"
 				data-registro-definitivo-pendente="{{ 1 if card.registro_definitivo_pendente else 0 }}"
 			>
 				<div class="kanban-card__top">

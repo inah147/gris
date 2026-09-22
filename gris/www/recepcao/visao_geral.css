@@ -582,6 +582,13 @@ dialog.dialog > div > section {
 	align-items: stretch;
 }
 
+/* Recado no lugar de um botão que não pode existir ainda (ex.: finalizar a recepção sem
+   o cadastro do Associado criado). Ocupa a linha inteira do flex para o texto quebrar. */
+.dialog-actions .dialog-actions__aviso {
+	flex-basis: 100%;
+	margin: 0;
+}
+
 .dialog-actions--vertical > * {
 	width: 100%;
 }

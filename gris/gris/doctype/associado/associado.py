@@ -1,10 +1,11 @@
 import datetime
-import hashlib
 import re
 
 import frappe
 from frappe.model.document import Document
 from frappe.utils import cint
+
+from gris.utils.documento import e_hash_de_cpf, id_por_cpf, localizar_novo_associado
 
 
 def _assoc_logger():
@@ -60,12 +61,21 @@ class Associado(Document):
 				self.status = "Desconhecido"
 
 	def _anonymize_cpfs(self):
-		if self.cpf:
-			self.cpf = hashlib.md5(self.cpf.encode("utf-8")).hexdigest()
-		if self.cpf_responsavel_1:
-			self.cpf_responsavel_1 = hashlib.md5(self.cpf_responsavel_1.encode("utf-8")).hexdigest()
-		if self.cpf_responsavel_2:
-			self.cpf_responsavel_2 = hashlib.md5(self.cpf_responsavel_2.encode("utf-8")).hexdigest()
+		"""Guarda o CPF só como identificador: o md5 dos dígitos (``id_por_cpf``).
+
+		Os dígitos são a única forma estável do número — hashear o CPF com a pontuação que
+		o operador digitou dava um identificador diferente do que ``Responsavel`` e
+		``Novo Associado`` derivam do mesmo CPF, e era isso que fazia a recepção não
+		encontrar o cadastro do jovem na hora de finalizar.
+
+		Idempotente de propósito: o que já é hash fica como está. Este método roda no
+		``before_insert`` e de novo em todo ``before_save``, então sem a checagem o campo
+		era re-hasheado a cada gravação e deixava de bater com o ``name`` do documento.
+		"""
+		for campo in ("cpf", "cpf_responsavel_1", "cpf_responsavel_2"):
+			valor = self.get(campo)
+			if valor and not e_hash_de_cpf(valor):
+				self.set(campo, id_por_cpf(valor))
 
 	def _serialize_hist(self, rows):
 		"""Serializa linhas do histórico em tuplas (ingresso, desligamento) para comparação.
@@ -81,6 +91,20 @@ class Associado(Document):
 			if (getattr(r, "data_de_ingresso", None) or getattr(r, "data_de_desligamento", None))
 		]
 
+	def autoname(self):
+		"""Nome do cadastro = identificador do CPF, o mesmo de ``Responsavel`` e do funil.
+
+		Explícito aqui, e não só no ``autoname: field:cpf`` do DocType, para o ``name`` sair
+		sempre dos dígitos do CPF. Sem CPF o nome fica vazio e o ``field:cpf`` cobra o
+		campo, como antes.
+
+		O nome é calculado depois do ``before_insert``, que já hasheou o campo, então o
+		valor aqui normalmente já é o identificador — ``id_por_cpf`` só entra quando o
+		documento chega com o CPF em claro.
+		"""
+		if self.cpf:
+			self.name = self.cpf if e_hash_de_cpf(self.cpf) else id_por_cpf(self.cpf)
+
 	def validate(self):
 		self._set_status()
 
@@ -88,8 +112,7 @@ class Associado(Document):
 		if not self.cpf:
 			return
 
-		clean_cpf = re.sub(r"\D", "", self.cpf)
-		na_name = hashlib.md5(clean_cpf.encode("utf-8")).hexdigest()
+		na_name = id_por_cpf(self.cpf)
 
 		if not frappe.db.exists("Novo Associado", na_name):
 			return
@@ -151,13 +174,14 @@ class Associado(Document):
 	def _novo_associado_vinculado(self) -> str | None:
 		"""Nome do ``Novo Associado`` correspondente, se o jovem ainda está no funil.
 
-		``Associado`` e ``Novo Associado`` são nomeados pelo md5 do CPF, então compartilham o
-		nome. O registro do funil some quando a recepção é finalizada — depois disso não há
-		mais etapa a atualizar nem mensagem a enviar.
+		``Associado`` e ``Novo Associado`` são nomeados pelo md5 do CPF, então normalmente
+		compartilham o nome. Cadastros criados antes da correção da convenção têm o nome
+		vindo do CPF pontuado, e para eles a busca passa pelo CPF que o funil guarda em
+		claro (ver ``gris.utils.documento.localizar_novo_associado``). O registro do funil
+		some quando a recepção é finalizada — depois disso não há mais etapa a atualizar
+		nem mensagem a enviar.
 		"""
-		if not frappe.db.exists("Novo Associado", self.name):
-			return None
-		return self.name
+		return localizar_novo_associado(self.name, self.cpf)
 
 	def _sincronizar_id_escoteiros_novo_associado(self, na_name: str):
 		"""Marca a etapa "id@escoteiros criado" assim que o e-mail institucional aparece.

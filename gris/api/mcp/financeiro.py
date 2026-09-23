@@ -32,6 +32,7 @@ CAMPOS_LISTA = [
 	"data_deposito",
 	"timestamp_transacao",
 	"metodo",
+	"origem_venda",
 	"instituicao",
 	"carteira",
 	"categoria",

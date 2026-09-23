@@ -67,6 +67,7 @@
 					{% call field(label="Valor") %}{{ render_read_value(doc.valor or "-") }}{% endcall %}
 					{% call field(label="Débito ou Crédito") %}{{ render_read_value(doc.debito_credito or "-") }}{% endcall %}
 					{% call field(label="Método") %}{{ render_read_value(doc.metodo or "-") }}{% endcall %}
+					{% call field(label="Origem da venda") %}{{ render_read_value(doc.origem_venda or "-") }}{% endcall %}
 					{% call field(label="Origem") %}{{ render_read_value(doc.origem or "-") }}{% endcall %}
 					{% call field(label="Destino") %}{{ render_read_value(doc.destino or "-") }}{% endcall %}
 					{% call field(label="Instituição") %}{{ render_read_value(doc.instituicao or "-") }}{% endcall %}

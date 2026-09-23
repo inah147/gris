@@ -423,6 +423,21 @@
 			return div.innerHTML;
 		}
 
+		/** Texto puro da mensagem que o servidor devolve em HTML.
+		 *
+		 * Pelo DOM, e não por regex: tirar `<...>` numa passada só pode reconstituir a
+		 * sequência perigosa (`<<script>script>` vira `<script>`). E o título do toast
+		 * é inserido com `innerHTML`, então aqui não pode sobrar marcação nenhuma.
+		 * `DOMParser` com "text/html" não executa script.
+		 */
+		function textoSimples(html) {
+			const doc = new DOMParser().parseFromString(
+				String(html == null ? "" : html),
+				"text/html"
+			);
+			return (doc.body.textContent || "").trim();
+		}
+
 		function valorDoSelect(id) {
 			const elemento = document.getElementById(id);
 			if (!elemento) return "";
@@ -550,9 +565,8 @@
 				renderizar((resultado && resultado.funcoes) || []);
 				toast("success", sucesso);
 			} catch (erro) {
-				// A mensagem vem do servidor e é o que explica o bloqueio; o HTML dela é
-				// removido para caber no toast.
-				toast("error", String(erro.message || erro).replace(/<[^>]*>/g, ""));
+				// A mensagem vem do servidor e é o que explica o bloqueio.
+				toast("error", textoSimples(erro.message || erro));
 			} finally {
 				botao.disabled = false;
 			}

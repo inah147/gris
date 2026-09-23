@@ -41,6 +41,18 @@
 		return rotulo ? rotulo.querySelector('input[type="checkbox"]') : null;
 	}
 
+	/** Texto puro da mensagem que o servidor devolve em HTML.
+	 *
+	 * Pelo DOM, e não por regex: tirar `<...>` numa passada só pode reconstituir a
+	 * sequência perigosa (`<<script>script>` vira `<script>`). E o título do toast
+	 * é inserido com `innerHTML`, então aqui não pode sobrar marcação nenhuma.
+	 * `DOMParser` com "text/html" não executa script.
+	 */
+	function textoSimples(html) {
+		const doc = new DOMParser().parseFromString(String(html == null ? "" : html), "text/html");
+		return (doc.body.textContent || "").trim();
+	}
+
 	function toast(categoria, titulo) {
 		document.dispatchEvent(
 			new CustomEvent("basecoat:toast", {
@@ -75,7 +87,7 @@
 			} catch (e) {
 				/* fica a mensagem genérica */
 			}
-			throw new Error(String(mensagem).replace(/<[^>]*>/g, ""));
+			throw new Error(textoSimples(mensagem));
 		}
 		return json.message;
 	}

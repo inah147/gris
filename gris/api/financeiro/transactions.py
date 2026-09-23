@@ -167,6 +167,13 @@ EXTRATO_COLUNAS = (
 	{"key": "id", "label": "ID", "tipo": "texto"},
 	{"key": "debito_credito", "label": "Débito/Crédito", "tipo": "badge", "variante": "secondary"},
 	{"key": "metodo", "label": "Método", "tipo": "badge", "variante": "secondary", "outline": True},
+	{
+		"key": "origem_venda",
+		"label": "Origem da venda",
+		"tipo": "badge",
+		"variante": "secondary",
+		"outline": True,
+	},
 	{"key": "origem", "label": "Origem", "tipo": "texto"},
 	{"key": "destino", "label": "Destino", "tipo": "texto"},
 	{"key": "valor_absoluto", "label": "Valor absoluto", "tipo": "moeda"},

@@ -741,6 +741,59 @@ def get_infinitepay_receipts_df(file_path: str, filter_dt: str | None = None) ->
 # Bank Reconcilliation helper methods
 
 
+# O extrato registra o Pix alguns segundos depois da venda (e a venda vem
+# truncada no minuto): a tolerância cobre essa diferença sem casar vendas de
+# horários distintos.
+_TOLERANCIA_PIX_VENDA = pd.Timedelta(minutes=2)
+
+
+def _nome_comparavel(nome) -> str:
+	nome = re.sub(r"^Pix ", "", str(nome or "")).strip()
+	nome = unicodedata.normalize("NFKD", nome).encode("ascii", "ignore").decode("ascii")
+	return " ".join(nome.casefold().split())
+
+
+def _origem_venda_dos_pix(df_pix_extrato: pd.DataFrame, df_sales: pd.DataFrame) -> pd.Series:
+	"""Descobre a origem da venda (`tipo_origem`) de cada Pix recebido no extrato.
+
+	O Pix entra no extrato geral pela linha do extrato bancário, que não traz
+	identificador da venda. Casa cada linha com uma venda Pix do mesmo valor
+	dentro da tolerância de horário, preferindo o mesmo nome e depois o horário
+	mais próximo; cada venda é usada uma única vez.
+	"""
+	origens = pd.Series(None, index=df_pix_extrato.index, dtype=object)
+	vendas = df_sales[df_sales["meio_meio"] == "Pix"]
+	if vendas.empty or df_pix_extrato.empty:
+		return origens
+
+	vendas = pd.DataFrame(
+		{
+			"data_hora": pd.to_datetime(vendas["data_hora"]),
+			"valor": vendas["valor"].astype(float).round(2),
+			"nome": vendas["origem_nome"].map(_nome_comparavel),
+			"tipo_origem": vendas["tipo_origem"],
+		}
+	)
+	usadas = set()
+	for idx, linha in df_pix_extrato.iterrows():
+		data = pd.Timestamp(linha["date"])
+		candidatas = vendas[
+			(vendas["valor"] == round(float(linha["value"]), 2))
+			& ((vendas["data_hora"] - data).abs() <= _TOLERANCIA_PIX_VENDA)
+			& ~vendas.index.isin(usadas)
+		]
+		if candidatas.empty:
+			continue
+		nome = _nome_comparavel(linha["name"])
+		escolhida = min(
+			candidatas.index,
+			key=lambda i: (candidatas.at[i, "nome"] != nome, abs(candidatas.at[i, "data_hora"] - data)),
+		)
+		usadas.add(escolhida)
+		origens.at[idx] = vendas.at[escolhida, "tipo_origem"]
+	return origens
+
+
 # Sem @frappe.whitelist(): trabalha com DataFrames do pandas, que não trafegam por
 # HTTP. Chamada só pelo controlador de /financeiro/contas.
 def bank_reconcilliation(df_bank_statement, df_receipts, df_sales):
@@ -754,6 +807,7 @@ def bank_reconcilliation(df_bank_statement, df_receipts, df_sales):
 	df_enrich["type"] = "credit"
 	df_enrich = df_enrich[df_enrich["meio_meio"] != "Pix"].copy()
 	df_enrich["conciliado"] = 0
+	df_enrich["origem_venda"] = df_enrich["tipo_origem"]
 
 	cols = [
 		"data_hora",
@@ -765,6 +819,7 @@ def bank_reconcilliation(df_bank_statement, df_receipts, df_sales):
 		"data_deposito",
 		"num_liquidacao",
 		"tipo_origem",
+		"origem_venda",
 	]
 	df_enrich = df_enrich[cols]
 
@@ -772,6 +827,14 @@ def bank_reconcilliation(df_bank_statement, df_receipts, df_sales):
 	df_bank_statement = df_bank_statement[
 		df_bank_statement["type"].eq("debit") | df_bank_statement["transaction_type"].isin(["PIX", "Outro"])
 	].copy()
+
+	mask_pix_recebido = df_bank_statement["type"].eq("credit") & df_bank_statement["transaction_type"].eq(
+		"PIX"
+	)
+	df_bank_statement["origem_venda"] = None
+	df_bank_statement.loc[mask_pix_recebido, "origem_venda"] = _origem_venda_dos_pix(
+		df_bank_statement[mask_pix_recebido], df_sales
+	)
 
 	df_bank_statement = df_bank_statement.rename(
 		columns={

@@ -1,0 +1,129 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, empty, spinner %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+
+{% block title %}Organograma{% endblock %}
+
+{% set active_link = "/gestao_adultos/organograma" %}
+
+{# organograma.css/.js são injetados automaticamente pelo Frappe (co-location). #}
+
+{% block page_header %}
+<section class="organograma-header" aria-labelledby="organograma-titulo">
+	<h1 id="organograma-titulo" class="m-0 text-3xl font-semibold leading-tight text-foreground">Organograma</h1>
+	<p class="m-0 text-base leading-relaxed text-muted-foreground">Visualize a estrutura de adultos do grupo.</p>
+</section>
+{% endblock %}
+
+{% block main %}
+<div class="organograma-page">
+	<div id="organograma-avisos" class="organograma-avisos" hidden></div>
+
+	<div class="organograma-filtro">
+		<label class="label organograma-filtro__rotulo" for="filtro-area-trigger">Área</label>
+		{{ select(
+			id="filtro-area",
+			items=opcoes_area,
+			selected="",
+			is_combobox=true,
+			search_placeholder="Buscar área..."
+		) }}
+	</div>
+
+	<div id="organograma-loading" class="organograma-estado">
+		{{ spinner() }}
+		<span>Carregando organograma...</span>
+	</div>
+
+	<div id="organograma-erro" class="organograma-estado" hidden>
+		{{ alert(
+			title="Não foi possível carregar o organograma",
+			description="Recarregue a página. Se continuar, avise a equipe de sistemas.",
+			variant="destructive"
+		) }}
+	</div>
+
+	<div class="organograma-palco" id="organograma-palco">
+	<div
+		id="organograma-viewport"
+		class="organograma-viewport"
+		tabindex="0"
+		role="application"
+		aria-label="Organograma do grupo. Arraste para mover, use a roda do mouse para dar zoom."
+		hidden
+	>
+		<div id="organograma-canvas" class="organograma-canvas"></div>
+
+		{# Estado vazio como sobreposição, e não no lugar do painel: trocar o painel
+		   inteiro faria a página saltar a cada troca de filtro. #}
+		<div id="organograma-vazio" class="organograma-sobreposicao" hidden>
+			{{ empty(
+				title="Nenhum adulto para mostrar",
+				description="O organograma usa os adultos ativos que não são beneficiários. Ajuste o filtro de área ou cadastre a lotação de cada pessoa.",
+				image="/assets/gris/images/gris-character/gris-search.png",
+				image_size="md"
+			) }}
+		</div>
+
+		<div id="organograma-recarregando" class="organograma-sobreposicao organograma-sobreposicao--veu" hidden>
+			{{ spinner() }}
+			<span>Aplicando filtro...</span>
+		</div>
+
+		{# Flutuam sobre o canvas: ficam fora do elemento transformado, senão
+		   andariam junto com o pan e mudariam de tamanho no zoom. #}
+		<div class="organograma-controles" role="group" aria-label="Controles de visualização">
+			<button type="button" class="btn-sm-outline" id="organograma-zoom-menos" aria-label="Diminuir zoom">
+				{{ lucide_icon("minus", size="sm") }}
+			</button>
+			<output class="organograma-zoom-nivel" id="organograma-zoom-nivel" aria-live="polite">100%</output>
+			<button type="button" class="btn-sm-outline" id="organograma-zoom-mais" aria-label="Aumentar zoom">
+				{{ lucide_icon("plus", size="sm") }}
+			</button>
+			<button type="button" class="btn-sm-outline" id="organograma-ajustar" aria-label="Ajustar à tela">
+				{{ lucide_icon("maximize", size="sm") }}
+				<span class="organograma-acao-texto">Ajustar</span>
+			</button>
+			<button type="button" class="btn-sm-outline" id="organograma-expandir" aria-label="Retrair tudo">
+				{{ lucide_icon("chevrons-down-up", size="sm") }}
+				<span class="organograma-acao-texto">Retrair tudo</span>
+			</button>
+		</div>
+	</div>
+
+	{# `<aside>`, não `<dialog>`: o painel divide o espaço com a árvore em vez de
+	   cobri-la, e um dialog modal deixaria o organograma inerte. #}
+	<aside
+		id="organograma-detalhe"
+		class="organograma-detalhe"
+		aria-labelledby="detalhe-nome"
+		data-pode-abrir-ficha="{{ 1 if pode_abrir_ficha else 0 }}"
+		hidden
+	>
+		<button type="button" class="btn-sm-ghost organograma-detalhe__fechar" id="detalhe-fechar" aria-label="Fechar detalhes">
+			{{ lucide_icon("x", size="sm") }}
+		</button>
+
+		<div id="detalhe-carregando" class="organograma-estado">
+			{{ spinner() }}
+			<span>Carregando...</span>
+		</div>
+
+		<div id="detalhe-erro" class="organograma-detalhe__erro" hidden>
+			{{ alert(
+				title="Não foi possível carregar os detalhes",
+				description="Feche e abra de novo. Se continuar, avise a equipe de sistemas.",
+				variant="destructive"
+			) }}
+		</div>
+
+		<div id="detalhe-conteudo" class="organograma-detalhe__conteudo" hidden></div>
+	</aside>
+	</div>
+
+	<p class="organograma-dica text-muted-foreground" id="organograma-dica" hidden>
+		Arraste para mover. Use a roda do mouse (ou a pinça no celular) para dar zoom.
+	</p>
+</div>
+{% endblock %}

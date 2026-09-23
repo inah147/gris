@@ -78,6 +78,8 @@ class TestAtualizarAssociado(TestCase):
 		self.assertEqual(ctx.exception.detalhes["opcoes"], ["Ativo", "Inativo"])
 
 	def test_valida_existencia_de_link(self):
+		# O campo é fingido como Link pelo mock do meta; o que importa aqui é que
+		# ele esteja em CAMPOS_EDITAVEIS, senão a validação para antes.
 		meta = MagicMock()
 		meta.get_field.return_value = _campo("Link", "Unidade Organizacional")
 		with (
@@ -86,7 +88,7 @@ class TestAtualizarAssociado(TestCase):
 			patch.object(associados.frappe, "get_meta", return_value=meta),
 		):
 			with self.assertRaises(ErroDeFerramenta) as ctx:
-				associados.atualizar_associado("123", {"area": "Alcateia Fantasma"})
+				associados.atualizar_associado("123", {"secao": "Alcateia Fantasma"})
 
 		self.assertEqual(ctx.exception.codigo, "NAO_ENCONTRADO")
 

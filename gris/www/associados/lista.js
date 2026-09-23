@@ -22,7 +22,6 @@ frappe.ready(() => {
 		{ key: "ramo", label: "Ramo", field: "ramo" },
 		{ key: "secao", label: "Seção", field: "secao" },
 		{ key: "funcao", label: "Função", field: "funcao" },
-		{ key: "area", label: "Área", field: "area" },
 		{ key: "validade_registro", label: "Validade do Registro", field: "validade_registro" },
 		{ key: "dias_restantes", label: "Dias Restantes", field: null },
 	];
@@ -166,7 +165,6 @@ frappe.ready(() => {
           ${v.ramo ? `<td>${badge(ramo, "secondary")}</td>` : ""}
           ${v.secao ? `<td>${badge(row.secao, "outline")}</td>` : ""}
           ${v.funcao ? `<td>${badge(row.funcao, "outline")}</td>` : ""}
-          ${v.area ? `<td>${badge(row.area, "outline")}</td>` : ""}
           ${
 				v.validade_registro
 					? `<td><span class="text-muted-foreground">${
@@ -189,7 +187,6 @@ frappe.ready(() => {
 			ramo: get("ramo"),
 			secao: get("secao"),
 			funcao: get("funcao"),
-			area: get("area"),
 			status: get("status"),
 			status_no_grupo: get("status_no_grupo"),
 		};
@@ -204,7 +201,6 @@ frappe.ready(() => {
 		if (f.nome) filters.push(["Associado", "nome_completo", "like", `%${f.nome}%`]);
 		if (f.categoria) filters.push(["Associado", "categoria", "=", f.categoria]);
 		if (f.funcao) filters.push(["Associado", "funcao", "=", f.funcao]);
-		if (f.area) filters.push(["Associado", "area", "=", f.area]);
 		if (f.secao) filters.push(["Associado", "secao", "=", f.secao]);
 		if (f.ramo) filters.push(["Associado", "ramo", "=", f.ramo]);
 		if (f.status) filters.push(["Associado", "status", "=", f.status]);
@@ -222,7 +218,6 @@ frappe.ready(() => {
 						"ramo",
 						"categoria",
 						"funcao",
-						"area",
 						"secao",
 						"validade_registro",
 					],

@@ -1,6 +1,6 @@
 {% extends "frappe/templates/base.html" %}
 
-{% set design_system_asset_version = "20260902-sugestoes-e-problemas" %}
+{% set design_system_asset_version = "20260922-avatar-e-badge-ramo" %}
 {% set current_page_path = pathname if pathname is defined and pathname else (path if path is defined else "") %}
 {# Frappe entrega `pathname` sem a barra inicial (ex.: "inicio", "projetos/abc"). Normalizamos para comparar com segurança independentemente do contexto. #}
 {% set normalized_page_path = current_page_path.lstrip("/") %}
@@ -93,6 +93,8 @@
 <link rel="stylesheet" href="/assets/gris/design_system/css/column-toggle.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/select.css?v={{ design_system_asset_version }}">
 <link rel="stylesheet" href="/assets/gris/design_system/css/kanban-tarefas.css?v={{ design_system_asset_version }}">
+<link rel="stylesheet" href="/assets/gris/design_system/css/avatar.css?v={{ design_system_asset_version }}">
+<link rel="stylesheet" href="/assets/gris/design_system/css/badge-ramo.css?v={{ design_system_asset_version }}">
 
 <!-- Basecoat JS (local files, without build tool) -->
 <script src="/assets/gris/design_system/js/basecoat/basecoat.min.js?v={{ design_system_asset_version }}" defer></script>

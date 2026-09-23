@@ -34,7 +34,6 @@ GESTOR_ALLOWED_UPDATE_FIELDS = COMMON_ALLOWED_UPDATE_FIELDS | {
 	"anos_afastamento",
 	"eleito",
 	"tipo_guarda",
-	"area",
 	"pais_divorciados",
 }
 

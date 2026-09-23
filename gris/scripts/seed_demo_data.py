@@ -37,13 +37,14 @@ def run():
 			_("Seed de dados só deve ser executado em ambiente de desenvolvimento (developer_mode).")
 		)
 
-	unidades = _seed_unidades_organizacionais()
+	# As áreas precisam existir antes das funções, que são quem aponta para elas.
+	_seed_unidades_organizacionais()
 	_seed_habilidades()
 	_seed_funcoes_voluntario()
 	_seed_feriados()
 	_seed_calendario()
 
-	associados = _seed_associados(unidades)
+	associados = _seed_associados()
 	responsaveis = _seed_responsaveis()
 	_seed_responsavel_vinculo(responsaveis, associados)
 
@@ -94,11 +95,21 @@ def _seed_habilidades():
 
 def _seed_funcoes_voluntario():
 	funcoes = [
-		{"categoria": "Escotista", "area": "Seção Lobinho Demo"},
-		{"categoria": "Dirigente", "area": "Grupo Escoteiro Demo"},
+		{
+			"titulo": "Chefe de Seção Demo",
+			"categoria": "Escotista",
+			"area": "Seção Lobinho Demo",
+			"responsabilidades": [{"responsabilidade": "Conduzir a seção"}],
+		},
+		{
+			"titulo": "Diretor(a) Presidente Demo",
+			"categoria": "Dirigente",
+			"area": "Grupo Escoteiro Demo",
+			"responsabilidades": [{"responsabilidade": "Representar o grupo"}],
+		},
 	]
 	for funcao in funcoes:
-		if frappe.db.exists("Funcao Voluntario", funcao):
+		if frappe.db.exists("Funcao Voluntario", funcao["titulo"]):
 			continue
 		frappe.get_doc({"doctype": "Funcao Voluntario", **funcao}).insert(ignore_permissions=True)
 
@@ -151,7 +162,7 @@ def _seed_calendario():
 		frappe.get_doc({"doctype": "Calendario", **evento}).insert(ignore_permissions=True)
 
 
-def _seed_associados(unidades):
+def _seed_associados():
 	associados = [
 		{
 			"nome_completo": "Ana Beatriz Souza",
@@ -160,7 +171,6 @@ def _seed_associados(unidades):
 			"sexo": "Feminino",
 			"categoria": "Beneficiário",
 			"ramo": "Lobinho",
-			"area": unidades[1],
 			"ingresso": add_years(nowdate(), -1),
 			"email": "ana.souza@example.com",
 			"telefone": "11999990101",
@@ -172,7 +182,6 @@ def _seed_associados(unidades):
 			"sexo": "Masculino",
 			"categoria": "Beneficiário",
 			"ramo": "Escoteiro",
-			"area": unidades[2],
 			"ingresso": add_years(nowdate(), -2),
 			"email": "bruno.lima@example.com",
 			"telefone": "11999990102",
@@ -184,7 +193,6 @@ def _seed_associados(unidades):
 			"sexo": "Feminino",
 			"categoria": "Escotista",
 			"ramo": "Não se aplica",
-			"area": unidades[0],
 			"ingresso": add_years(nowdate(), -3),
 			# Coordenadora do projeto demo: Envolvido no Projeto exige email e telefone.
 			"email": "carla.pereira@example.com",

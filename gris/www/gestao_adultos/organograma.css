@@ -1,0 +1,770 @@
+/* Organograma da Gestão de Adultos.
+   Conectores em CSS puro sobre <ul>/<li> aninhados; o pan/zoom vem de um
+   transform no canvas, então nada aqui pode depender de posição absoluta na
+   página. Cores só por tokens Basecoat, para o tema claro/escuro seguir junto. */
+
+.organograma-page {
+	--org-conector: 1.75rem;
+	--org-espaco-x: 0.75rem;
+	--org-linha: 2px;
+	/* Todo card tem exatamente este tamanho, tenha liderados ou não. A altura
+	   comporta o pior caso: área, nome em duas linhas, função, a fileira de
+	   badges, a badge de seção e a faixa de liderança. */
+	--org-card-largura: 15.5rem;
+	--org-card-altura: 12.25rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	min-width: 0;
+}
+
+/* -- Cabeçalho ---------------------------------------------------------- */
+
+.organograma-header {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	min-width: 0;
+}
+
+/* -- Filtro (acima do painel) -------------------------------------------- */
+
+.organograma-filtro {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+	min-width: 0;
+}
+
+.organograma-filtro__rotulo {
+	margin: 0;
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+	white-space: nowrap;
+}
+
+.organograma-filtro .select {
+	min-width: 12rem;
+	max-width: 18rem;
+}
+
+/* -- Controles (flutuam dentro do painel) -------------------------------- */
+
+.organograma-controles {
+	position: absolute;
+	top: 0.75rem;
+	right: 0.75rem;
+	z-index: 2;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 0.375rem;
+	padding: 0.375rem;
+	/* Opaco de propósito: os cards passam por baixo ao arrastar. */
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	box-shadow: 0 1px 3px rgb(0 0 0 / 10%);
+	cursor: default;
+}
+
+.organograma-zoom-nivel {
+	min-width: 3.5rem;
+	text-align: center;
+	font-size: 0.8125rem;
+	font-variant-numeric: tabular-nums;
+	color: var(--muted-foreground);
+}
+
+/* -- Estados ------------------------------------------------------------ */
+
+.organograma-estado {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	padding: 3rem 1rem;
+	color: var(--muted-foreground);
+}
+
+.organograma-erro .alert,
+.organograma-avisos .alert {
+	width: 100%;
+}
+
+.organograma-dica {
+	margin: 0;
+	font-size: 0.8125rem;
+}
+
+/* -- Palco: árvore + painel de detalhes ---------------------------------- */
+
+.organograma-palco {
+	position: relative;
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 0.75rem;
+	min-width: 0;
+}
+
+.organograma-palco.tem-detalhe {
+	grid-template-columns: 1fr var(--org-detalhe-largura, 22rem);
+}
+
+/* -- Viewport ----------------------------------------------------------- */
+
+.organograma-viewport {
+	position: relative;
+	overflow: hidden;
+	min-height: 28rem;
+	height: clamp(28rem, calc(100dvh - 18rem), 60rem);
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	cursor: grab;
+	touch-action: none;
+	overscroll-behavior: contain;
+	/* O viewport é superfície de arrasto: sem isto, puxar a tela varre os cards
+	   e deixa meio organograma selecionado em azul. */
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+/* O avatar é imagem: sem isto o arrasto vira "arrastar figura" no Firefox. */
+.organograma-viewport img {
+	-webkit-user-drag: none;
+}
+
+/* O anel de foco existe para quem chega no painel pelo teclado. Ao arrastar com o
+   mouse o JS também precisa focar (senão as setas param de panejar), e aí o
+   Chromium acende o anel: `data-foco="ponteiro"` marca essa origem e o apaga. */
+.organograma-viewport:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 2px;
+}
+
+.organograma-viewport[data-foco="ponteiro"]:focus-visible {
+	outline: none;
+}
+
+.organograma-viewport.is-dragging {
+	cursor: grabbing;
+}
+
+/* Ocupa o painel inteiro, abaixo do filtro e dos controles (z-index 2). */
+.organograma-sobreposicao {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	padding: 1rem;
+	color: var(--muted-foreground);
+}
+
+.organograma-sobreposicao--veu {
+	background: rgb(255 255 255 / 60%);
+	backdrop-filter: blur(1px);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) .organograma-sobreposicao--veu {
+		background: rgb(0 0 0 / 45%);
+	}
+}
+
+:root[data-theme="dark"] .organograma-sobreposicao--veu {
+	background: rgb(0 0 0 / 45%);
+}
+
+.organograma-canvas {
+	position: absolute;
+	top: 0;
+	left: 0;
+	transform-origin: 0 0;
+	/* O canvas encolhe até o tamanho do desenho para o "ajustar à tela" medir certo. */
+	width: max-content;
+	padding: 1.5rem;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2rem;
+	transition: transform 120ms ease-out;
+}
+
+.organograma-viewport.is-dragging .organograma-canvas {
+	transition: none;
+}
+
+.organograma-bloco-solto {
+	border-top: 1px dashed var(--border);
+	padding-top: 1.5rem;
+}
+
+/* -- Árvore ------------------------------------------------------------- */
+
+.org-tree {
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	position: relative;
+}
+
+.org-node {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: var(--org-conector) var(--org-espaco-x) 0;
+	list-style: none;
+}
+
+/* Trechos horizontais que ligam os irmãos à barra do pai. */
+.org-node::before,
+.org-node::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	width: 50%;
+	height: var(--org-conector);
+	border-top: var(--org-linha) solid var(--border);
+}
+
+.org-node::before {
+	right: 50%;
+}
+
+.org-node::after {
+	left: 50%;
+	border-left: var(--org-linha) solid var(--border);
+}
+
+/* Filho único: só a descida vertical, sem barra horizontal. */
+.org-node:only-child::before {
+	display: none;
+}
+
+.org-node:only-child::after {
+	left: 50%;
+	right: auto;
+	width: 0;
+	border-top: 0;
+}
+
+.org-node:first-child::before {
+	border-top-color: transparent;
+}
+
+.org-node:last-child::after {
+	border-top-color: transparent;
+	border-left-color: transparent;
+}
+
+.org-node:last-child::before {
+	border-right: var(--org-linha) solid var(--border);
+}
+
+/* Descida do card para a ninhada. */
+.org-node > .org-tree {
+	padding-top: var(--org-conector);
+}
+
+.org-node > .org-tree::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 50%;
+	width: 0;
+	height: var(--org-conector);
+	border-left: var(--org-linha) solid var(--border);
+}
+
+/* As raízes ficam lado a lado, sem barra ligando uma à outra. */
+.organograma-canvas > .org-tree > .org-node,
+.organograma-bloco-solto > .org-tree > .org-node {
+	padding-top: 0;
+}
+
+.organograma-canvas > .org-tree > .org-node::before,
+.organograma-canvas > .org-tree > .org-node::after,
+.organograma-bloco-solto > .org-tree > .org-node::before,
+.organograma-bloco-solto > .org-tree > .org-node::after {
+	display: none;
+}
+
+.org-node.is-collapsed > .org-tree {
+	display: none;
+}
+
+/* -- Painel de detalhes -------------------------------------------------- */
+
+.organograma-detalhe {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	height: clamp(28rem, calc(100dvh - 18rem), 60rem);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: 1.25rem 1rem 1.5rem;
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+}
+
+.organograma-detalhe__fechar {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	z-index: 1;
+}
+
+.organograma-detalhe__conteudo {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.organograma-detalhe__identidade {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.375rem;
+	text-align: center;
+}
+
+.organograma-detalhe__avatar {
+	width: 6.5rem;
+	height: 6.5rem;
+	font-size: 1.75rem;
+}
+
+.organograma-detalhe__nome {
+	margin: 0;
+	font-size: 1.25rem;
+	font-weight: 600;
+	line-height: 1.25;
+	overflow-wrap: anywhere;
+}
+
+.organograma-detalhe__funcao {
+	margin: 0;
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+	overflow-wrap: anywhere;
+}
+
+.organograma-detalhe__badges {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0.25rem;
+	margin-top: 0.25rem;
+}
+
+.organograma-detalhe__acoes {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.organograma-detalhe__acoes .btn-outline,
+.organograma-detalhe__acoes .btn-whatsapp {
+	justify-content: center;
+	width: 100%;
+}
+
+/* Verde da marca do WhatsApp, e não o primary do tema: o botão imita o app. */
+.organograma-detalhe__acoes .btn-whatsapp {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	border: 1px solid color-mix(in srgb, #25d366 45%, transparent);
+	border-radius: var(--radius);
+	background: color-mix(in srgb, #25d366 14%, transparent);
+	color: color-mix(in srgb, #25d366 55%, #000);
+	font-size: 0.875rem;
+	font-weight: 500;
+	cursor: pointer;
+}
+
+.dark .organograma-detalhe__acoes .btn-whatsapp {
+	color: color-mix(in srgb, #25d366 55%, #fff);
+}
+
+.organograma-detalhe__acoes .btn-whatsapp[disabled] {
+	cursor: not-allowed;
+	opacity: 0.6;
+}
+
+.organograma-detalhe__aviso {
+	margin: 0;
+	font-size: 0.75rem;
+	color: var(--muted-foreground);
+	text-align: center;
+}
+
+.organograma-detalhe__dados {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 0.5rem 0.75rem;
+	margin: 0;
+	padding-top: 0.75rem;
+	border-top: 1px solid var(--border);
+	font-size: 0.8125rem;
+}
+
+.organograma-detalhe__dados dt {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	color: var(--muted-foreground);
+	white-space: nowrap;
+}
+
+.organograma-detalhe__dados dd {
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+
+.organograma-detalhe__titulo-secao {
+	margin: 0;
+	padding-top: 0.75rem;
+	border-top: 1px solid var(--border);
+	font-size: 0.9375rem;
+	font-weight: 600;
+}
+
+.organograma-detalhe__funcoes {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+}
+
+.organograma-detalhe__funcoes details {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--background);
+}
+
+.organograma-detalhe__funcoes summary {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.625rem 0.75rem;
+	cursor: pointer;
+	list-style: none;
+}
+
+.organograma-detalhe__funcoes summary::-webkit-details-marker {
+	display: none;
+}
+
+.organograma-detalhe__funcoes summary:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: -2px;
+	border-radius: var(--radius);
+}
+
+.organograma-detalhe__funcao-texto {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	min-width: 0;
+	flex: 1;
+}
+
+.organograma-detalhe__funcao-titulo {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.organograma-detalhe__funcao-periodo {
+	font-size: 0.75rem;
+	color: var(--muted-foreground);
+}
+
+.organograma-detalhe__seta {
+	flex: 0 0 auto;
+	color: var(--muted-foreground);
+	transition: transform 120ms ease-out;
+}
+
+.organograma-detalhe__funcoes details[open] .organograma-detalhe__seta {
+	transform: rotate(90deg);
+}
+
+.organograma-detalhe__atribuicoes {
+	margin: 0;
+	padding: 0 0.75rem 0.75rem 1.75rem;
+	font-size: 0.8125rem;
+	/* O reset do portal zera a lista; aqui o marcador ajuda a ler as atribuições. */
+	list-style: disc outside;
+}
+
+.organograma-detalhe__atribuicoes li + li {
+	margin-top: 0.25rem;
+}
+
+.organograma-detalhe__atribuicao-detalhe {
+	display: block;
+	color: var(--muted-foreground);
+	font-size: 0.75rem;
+}
+
+.organograma-detalhe__descricao,
+.organograma-detalhe__sem-atribuicao {
+	margin: 0;
+	padding: 0 0.75rem 0.75rem;
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+}
+
+/* -- Card --------------------------------------------------------------- */
+
+.org-card {
+	position: relative;
+	box-sizing: border-box;
+	width: var(--org-card-largura);
+	height: var(--org-card-altura);
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	padding: 0.75rem 2rem 0.75rem 0.75rem;
+	background: var(--card);
+	color: var(--card-foreground);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
+	/* Rede de proteção: com altura fixa, um conteúdo inesperado vazaria por cima
+	   dos conectores em vez de esticar o card. Não há popover nem dropdown aqui,
+	   então recortar é seguro. */
+	overflow: hidden;
+}
+
+.org-card:not(.org-card--grupo) {
+	cursor: pointer;
+}
+
+.org-card:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 2px;
+}
+
+/* Card cujo painel está aberto: precisa se achar na árvore inteira. */
+.org-card[aria-current="true"] {
+	border-color: var(--ring);
+	box-shadow: 0 0 0 2px var(--ring);
+}
+
+.org-card--lider {
+	border-color: var(--primary);
+}
+
+.org-card--grupo {
+	background: var(--muted);
+	border-style: dashed;
+}
+
+.org-card__topo {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	min-width: 0;
+}
+
+/* O tamanho, o círculo e o recorte da imagem vêm do `.avatar` do design system.
+   Aqui só o nó de grupo, que precisa se destacar do fundo `muted` do card. */
+.org-card__avatar--grupo {
+	background: var(--background);
+}
+
+.org-card__identidade {
+	min-width: 0;
+}
+
+/* Com altura fixa, cada região tem um teto de linhas: um nome muito longo passa
+   a cortar com reticências em vez de empurrar o resto do card para fora. */
+.org-card__nome {
+	margin: 0;
+	font-weight: 600;
+	font-size: 0.875rem;
+	line-height: 1.3;
+	overflow-wrap: anywhere;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	overflow: hidden;
+}
+
+.org-card__funcao {
+	margin: 0;
+	font-size: 0.75rem;
+	line-height: 1.35;
+	color: var(--muted-foreground);
+	overflow-wrap: anywhere;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	overflow: hidden;
+}
+
+.org-card__meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.25rem;
+	max-height: 1.5rem;
+	overflow: hidden;
+}
+
+/* Sobrescrita da área, agora uma linha própria acima do nome. */
+.org-card__area {
+	margin: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-size: 0.6875rem;
+	font-weight: 500;
+	color: var(--muted-foreground);
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+}
+
+.org-card__badge {
+	font-size: 0.6875rem;
+	/* Badge do Basecoat é `nowrap`; uma seção de nome longo seria cortada no meio
+	   da letra pelo overflow do card. Com isto ela encurta com reticências. */
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.org-card__outras-areas {
+	margin: 0;
+	font-size: 0.6875rem;
+	font-style: italic;
+	color: var(--muted-foreground);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.org-card__lideranca {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem 0.5rem;
+	/* `auto` gruda a faixa no rodapé: como todo card tem a mesma altura, quem não
+	   lidera ninguém simplesmente deixa esse espaço vazio. */
+	margin: auto 0 0;
+	padding-top: 0.375rem;
+	border-top: 1px dashed var(--border);
+	font-size: 0.6875rem;
+	color: var(--muted-foreground);
+}
+
+.org-card__area-liderada {
+	font-weight: 600;
+	color: var(--foreground);
+}
+
+.org-card__toggle {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.375rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	padding: 0;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--background);
+	color: var(--muted-foreground);
+	cursor: pointer;
+}
+
+.org-card__toggle:hover {
+	color: var(--foreground);
+	border-color: var(--ring);
+}
+
+.org-card__toggle:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 2px;
+}
+
+/* -- Mobile ------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+	.organograma-page {
+		--org-conector: 1.25rem;
+		--org-espaco-x: 0.375rem;
+		/* Card mais estreito faz o nome quebrar mais, então a altura sobe junto
+		   para o tamanho continuar igual entre todos. */
+		--org-card-largura: 12.5rem;
+		--org-card-altura: 13rem;
+	}
+
+	.organograma-viewport {
+		min-height: 24rem;
+		height: clamp(24rem, calc(100dvh - 14rem), 48rem);
+	}
+
+	.organograma-acao-texto {
+		display: none;
+	}
+
+	.organograma-filtro .select {
+		flex: 1;
+		min-width: 0;
+		max-width: none;
+	}
+
+	.organograma-controles {
+		top: 0.5rem;
+		right: 0.5rem;
+		gap: 0.25rem;
+		padding: 0.25rem;
+	}
+
+	/* Em 390px não cabem duas colunas: o painel cobre o palco. */
+	.organograma-palco.tem-detalhe {
+		grid-template-columns: 1fr;
+	}
+
+	.organograma-detalhe {
+		position: absolute;
+		inset: 0;
+		z-index: 3;
+		height: auto;
+	}
+
+	.org-card {
+		padding-right: 1.75rem;
+	}
+
+	.org-card .avatar {
+		width: 2rem;
+		height: 2rem;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.organograma-canvas {
+		transition: none;
+	}
+}

@@ -34,3 +34,7 @@ gris.patches.backfill_boleto_definitivo_gerado
 gris.patches.unificar_colunas_de_sugestoes_em_refinamento
 gris.patches.backfill_boleto_provisorio_gerado
 gris.patches.normalizar_cpf_hash_associado
+gris.patches.renomear_descricao_unidade_organizacional
+gris.patches.reestruturar_funcao_voluntario
+gris.patches.semear_unidades_organizacionais
+gris.patches.remover_area_do_associado

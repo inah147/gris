@@ -6,7 +6,8 @@
  "engine": "InnoDB",
  "field_order": [
   "responsavel_atualizacao",
-  "criar_usuarios"
+  "criar_usuarios",
+  "area_mae_das_secoes"
  ],
  "fields": [
   {
@@ -14,6 +15,13 @@
    "fieldtype": "Link",
    "label": "Respons\u00e1vel pela Atualiza\u00e7\u00e3o",
    "options": "Associado"
+  },
+  {
+   "description": "\u00c1rea sob a qual as se\u00e7\u00f5es s\u00e3o criadas automaticamente na importa\u00e7\u00e3o do Paxtu. Em branco, as se\u00e7\u00f5es nascem no topo do organograma.",
+   "fieldname": "area_mae_das_secoes",
+   "fieldtype": "Link",
+   "label": "\u00c1rea-m\u00e3e das se\u00e7\u00f5es",
+   "options": "Unidade Organizacional"
   },
   {
    "default": "0",

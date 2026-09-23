@@ -62,6 +62,7 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 		"label": "Gestão de Adultos",
 		"path": "/gestao_adultos",
 		"children": [
+			{"label": "Organograma", "path": "/gestao_adultos/organograma"},
 			{"label": "Minha Entrevista", "path": "/gestao_adultos/minha_entrevista"},
 			{"label": "Entrevistas", "path": "/gestao_adultos/entrevista_competencias"},
 		],
@@ -159,6 +160,7 @@ SIDEBAR_ICON_MAP: dict[str, str] = {
 	"/financeiro/relatorios": "clipboard-list",
 	"/financeiro/pareceres": "file-search",
 	"/calendario/visualizar": "calendar-days",
+	"/gestao_adultos/organograma": "network",
 	"/gestao_adultos/minha_entrevista": "clipboard-list",
 	"/gestao_adultos/entrevista_competencias": "list-check",
 	"/insignias/solicitar": "file-plus",
@@ -205,7 +207,11 @@ PAGE_ROLES: dict[str, list[str]] = {
 		"Visualizador de Métricas de Associados",
 	],
 	"/associados/lista": ["Gestor de Associados", "Visualizador Associados"],
-	"/associados/detalhe": ["Gestor de Associados", "Visualizador Associados"],
+	"/associados/detalhe": [
+		"Gestor de Associados",
+		"Visualizador Associados",
+		"Gestor de Adultos",
+	],
 	"/associados/importar": ["Gestor de Associados"],
 	"/recepcao": ["Recepcao"],
 	"/recepcao/visao_geral": ["Recepcao"],
@@ -230,7 +236,11 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/calendario/visualizar": ["Visualizador Calendario", "Gestor Calendario"],
 	"/calendario/importar": ["Gestor Calendario"],
 	"/calendario/simulacao_calendario": ["Gestor Calendario"],
-	"/gestao_adultos": ["Gestor de Adultos"],
+	# O organograma é a estrutura do grupo, aberta a qualquer pessoa logada. O índice
+	# do módulo acompanha porque o breadcrumb da página aponta para ele — e filtra os
+	# próprios cards por acesso (ver www/gestao_adultos/index.py).
+	"/gestao_adultos": ["All"],
+	"/gestao_adultos/organograma": ["All"],
 	"/gestao_adultos/entrevista_competencias": ["Gestor de Adultos"],
 	"/gestao_adultos/respostas_entrevista": ["Gestor de Adultos"],
 	"/gestao_adultos/minha_entrevista": ["All"],

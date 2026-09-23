@@ -61,16 +61,6 @@
           ) }}
         </div>
         <div class="field">
-          <label class="label" for="f-area">Área</label>
-          {{ select(
-            id="f-area",
-            name="area",
-            items=filter_items_area,
-            is_combobox=true,
-            search_placeholder="Buscar área…"
-          ) }}
-        </div>
-        <div class="field">
           <label class="label" for="f-status">Status</label>
           {{ select(id="f-status", name="status", items=filter_items_status) }}
         </div>
@@ -96,7 +86,6 @@
               <label class="col-toggle-item"><input type="checkbox" data-col-toggle="ramo" /> Ramo</label>
               <label class="col-toggle-item"><input type="checkbox" data-col-toggle="secao" /> Seção</label>
               <label class="col-toggle-item"><input type="checkbox" data-col-toggle="funcao" /> Função</label>
-              <label class="col-toggle-item"><input type="checkbox" data-col-toggle="area" /> Área</label>
               <label class="col-toggle-item"><input type="checkbox" data-col-toggle="validade_registro" /> Validade do Registro</label>
               <label class="col-toggle-item"><input type="checkbox" data-col-toggle="dias_restantes" /> Dias Restantes</label>
             </div>
@@ -119,7 +108,6 @@
           'Ramo',
           'Seção',
           'Função',
-          'Área',
           'Validade do Registro',
           'Dias Restantes'
         ],

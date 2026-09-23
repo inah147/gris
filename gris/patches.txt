@@ -38,3 +38,7 @@ gris.patches.renomear_descricao_unidade_organizacional
 gris.patches.reestruturar_funcao_voluntario
 gris.patches.semear_unidades_organizacionais
 gris.patches.remover_area_do_associado
+gris.patches.popular_funcoes_das_unidades_organizacionais
+gris.patches.backfill_area_da_funcao_do_associado
+gris.patches.unificar_funcoes_de_secao
+gris.patches.remover_area_da_funcao_voluntario

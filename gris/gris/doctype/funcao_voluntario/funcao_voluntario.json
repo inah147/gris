@@ -9,7 +9,6 @@
   "titulo",
   "categoria",
   "column_break_vwin",
-  "area",
   "ativa",
   "origem_automatica",
   "section_break_descricao",
@@ -19,7 +18,7 @@
  ],
  "fields": [
   {
-   "description": "Nome da função como ela é chamada no grupo. Ex.: Diretora de Programa.",
+   "description": "Nome da função como ela é chamada no grupo. Ex.: Diretora de Programa. A mesma função pode valer em várias áreas — o vínculo é feito na Unidade Organizacional.",
    "fieldname": "titulo",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -38,16 +37,6 @@
   {
    "fieldname": "column_break_vwin",
    "fieldtype": "Column Break"
-  },
-  {
-   "description": "É daqui que o organograma tira a posição de quem tem esta função.",
-   "fieldname": "area",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Área",
-   "options": "Unidade Organizacional",
-   "reqd": 1
   },
   {
    "default": "1",
@@ -118,6 +107,22 @@
    "role": "Gestor de Adultos",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor da UEL",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Gestor de Associados"
   }
  ],
  "row_format": "Dynamic",

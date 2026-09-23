@@ -86,42 +86,81 @@ def seed_unidades_organizacionais():
 	print(f"  → {created} Unidade Organizacional")
 
 
-# (título, linha, área, responsabilidades)
+# (título, linha, áreas, responsabilidades). A função vale em todas as áreas da
+# lista: "Membro de Equipe" e "Coordenador(a) de Adultos" existem com mais de uma
+# justamente para o seed exercitar o vínculo M:N.
 FUNCOES_VOLUNTARIO = [
-	("Diretor(a) Presidente", "Dirigente", "Presidência", ["Representar o grupo", "Presidir reuniões"]),
-	("Diretor(a) de Programa", "Dirigente", "Programa", ["Coordenar as seções", "Acompanhar escotistas"]),
+	("Diretor(a) Presidente", "Dirigente", ["Presidência"], ["Representar o grupo", "Presidir reuniões"]),
+	(
+		"Diretor(a) de Programa",
+		"Dirigente",
+		["Programa"],
+		["Coordenar as seções", "Acompanhar escotistas"],
+	),
 	(
 		"Diretor(a) Administrativo",
 		"Dirigente",
-		"Administrativo",
+		["Administrativo"],
 		["Cuidar da sede", "Organizar documentos"],
 	),
-	("Diretor(a) Financeiro", "Dirigente", "Financeiro", ["Prestar contas", "Controlar o caixa"]),
-	("Coordenador(a) de Adultos", "Dirigente", "Administrativo", ["Acompanhar a linha de formação"]),
-	("Coordenador(a) de Eventos", "Colaborador", "Eventos", ["Organizar festas e campanhas"]),
-	("Membro de Equipe", "Colaborador", "Manutenção", ["Executar os mutirões de manutenção"]),
+	("Diretor(a) Financeiro", "Dirigente", ["Financeiro"], ["Prestar contas", "Controlar o caixa"]),
+	(
+		"Coordenador(a) de Adultos",
+		"Dirigente",
+		["Administrativo", "Programa"],
+		["Acompanhar a linha de formação"],
+	),
+	("Coordenador(a) de Eventos", "Colaborador", ["Eventos"], ["Organizar festas e campanhas"]),
+	(
+		"Membro de Equipe",
+		"Colaborador",
+		["Manutenção", "Eventos"],
+		["Executar os mutirões de manutenção"],
+	),
 ]
 
 
 def seed_funcoes_voluntario(n: int):
-	"""Funções internas do grupo, com suas responsabilidades."""
+	"""Funções internas do grupo, com suas responsabilidades e áreas."""
 	created = 0
-	for titulo, categoria, area, responsabilidades in FUNCOES_VOLUNTARIO[:n]:
-		if frappe.db.exists("Funcao Voluntario", titulo):
+	vinculos = 0
+	for titulo, categoria, areas, responsabilidades in FUNCOES_VOLUNTARIO[:n]:
+		if not frappe.db.exists("Funcao Voluntario", titulo):
+			safe_insert(
+				{
+					"doctype": "Funcao Voluntario",
+					"titulo": titulo,
+					"categoria": categoria,
+					"ativa": 1,
+					"descricao": f"{titulo} — função interna do grupo.",
+					"responsabilidades": [{"responsabilidade": r} for r in responsabilidades],
+				}
+			)
+			created += 1
+		vinculos += _vincular_funcao_as_areas(titulo, areas)
+	print(f"  → {created} Funcao Voluntario ({vinculos} vínculo(s) de área)")
+
+
+def _vincular_funcao_as_areas(titulo: str, areas: list[str]) -> int:
+	"""Liga a função às áreas onde ela pode ser exercida.
+
+	Roda antes de `seed_responsaveis_de_area`: as áreas ainda estão sem responsável,
+	então o `save()` não esbarra na validação de responsável.
+	"""
+	criados = 0
+	for area in areas:
+		if not frappe.db.exists("Unidade Organizacional", area):
 			continue
-		safe_insert(
-			{
-				"doctype": "Funcao Voluntario",
-				"titulo": titulo,
-				"categoria": categoria,
-				"area": area if frappe.db.exists("Unidade Organizacional", area) else None,
-				"ativa": 1,
-				"descricao": f"{titulo} — função interna da área {area}.",
-				"responsabilidades": [{"responsabilidade": r} for r in responsabilidades],
-			}
-		)
-		created += 1
-	print(f"  → {created} Funcao Voluntario")
+		if frappe.db.exists(
+			"Funcao da Area",
+			{"parent": area, "parenttype": "Unidade Organizacional", "funcao": titulo},
+		):
+			continue
+		doc = frappe.get_doc("Unidade Organizacional", area)
+		doc.append("funcoes", {"funcao": titulo})
+		doc.save(ignore_permissions=True)
+		criados += 1
+	return criados
 
 
 def seed_responsaveis_de_area(associado_names: list[str]):
@@ -380,7 +419,7 @@ def _area_para(categoria: str, ramo: str, areas_existentes: set[str]) -> str | N
 def _funcoes_internas_para(
 	area: str | None,
 	funcoes_por_area: dict[str, list[str]],
-	todas_as_funcoes: list[str] | None = None,
+	todos_os_pares: list[tuple[str, str]] | None = None,
 ) -> list[dict]:
 	funcoes = funcoes_por_area.get(area or "") or []
 	if not funcoes:
@@ -388,16 +427,21 @@ def _funcoes_internas_para(
 
 	hoje = date.today()
 	inicio_atual = hoje - timedelta(days=random.randint(90, 900))
-	linhas = [{"funcao": random.choice(funcoes), "principal": 1, "data_inicio": inicio_atual}]
+	escolhida = random.choice(funcoes)
+	# A área vai na linha: a mesma função pode valer em várias, então só a linha
+	# sabe onde a pessoa exerce.
+	linhas = [{"funcao": escolhida, "area": area, "principal": 1, "data_inicio": inicio_atual}]
 
 	# Parte das pessoas carrega uma função antiga: é o que dá histórico para o
 	# painel de detalhes mostrar mais de uma linha e um período já encerrado.
-	anteriores = [f for f in (todas_as_funcoes or []) if f != linhas[0]["funcao"]]
+	anteriores = [par for par in (todos_os_pares or []) if par != (escolhida, area)]
 	if anteriores and random.random() < 0.4:
+		funcao_anterior, area_anterior = random.choice(anteriores)
 		fim_anterior = inicio_atual - timedelta(days=random.randint(1, 60))
 		linhas.append(
 			{
-				"funcao": random.choice(anteriores),
+				"funcao": funcao_anterior,
+				"area": area_anterior,
 				"principal": 0,
 				"data_inicio": fim_anterior - timedelta(days=random.randint(365, 1095)),
 				"data_fim": fim_anterior,
@@ -419,12 +463,19 @@ def seed_associados(por_combinacao: int, extras: int) -> list[str]:
 	areas_existentes = set(all_names("Unidade Organizacional"))
 
 	# Funções internas disponíveis por área, para o organograma não nascer sem cargo.
+	# A fonte é o vínculo M:N da área, não mais um campo na função.
+	ativas = set(frappe.get_all("Funcao Voluntario", filters={"ativa": 1}, pluck="name"))
 	funcoes_por_area: dict[str, list[str]] = {}
-	todas_as_funcoes: list[str] = []
-	for linha in frappe.get_all("Funcao Voluntario", fields=["name", "area"], filters={"ativa": 1}):
-		todas_as_funcoes.append(linha.name)
-		if linha.area:
-			funcoes_por_area.setdefault(linha.area, []).append(linha.name)
+	todos_os_pares: list[tuple[str, str]] = []
+	for linha in frappe.get_all(
+		"Funcao da Area",
+		filters={"parenttype": "Unidade Organizacional"},
+		fields=["parent", "funcao"],
+	):
+		if linha.funcao not in ativas:
+			continue
+		funcoes_por_area.setdefault(linha.parent, []).append(linha.funcao)
+		todos_os_pares.append((linha.funcao, linha.parent))
 
 	created = 0
 	names = []
@@ -462,7 +513,7 @@ def seed_associados(por_combinacao: int, extras: int) -> list[str]:
 			ramo_efetivo = "Não se aplica"
 
 		area_efetiva = _area_para(categoria, ramo_efetivo, areas_existentes)
-		funcoes_internas = _funcoes_internas_para(area_efetiva, funcoes_por_area, todas_as_funcoes)
+		funcoes_internas = _funcoes_internas_para(area_efetiva, funcoes_por_area, todos_os_pares)
 		doc = frappe.get_doc(
 			{
 				"doctype": "Associado",

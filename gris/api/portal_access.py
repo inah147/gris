@@ -114,6 +114,14 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 		],
 	},
 	{
+		"label": "Administração",
+		"path": "/administracao",
+		"children": [
+			{"label": "Unidades Organizacionais", "path": "/administracao/unidades_organizacionais"},
+			{"label": "Funções", "path": "/administracao/funcoes"},
+		],
+	},
+	{
 		"label": "Sugestões e Problemas",
 		"path": "/sugestoes",
 		"children": [
@@ -125,6 +133,7 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 ]
 
 PORTAL_MODULE_ICON_MAP: dict[str, str] = {
+	"/administracao": "building-2",
 	"/associados": "users",
 	"/calendario": "calendar-days",
 	"/financeiro": "banknote",
@@ -160,6 +169,8 @@ SIDEBAR_ICON_MAP: dict[str, str] = {
 	"/financeiro/relatorios": "clipboard-list",
 	"/financeiro/pareceres": "file-search",
 	"/calendario/visualizar": "calendar-days",
+	"/administracao/unidades_organizacionais": "network",
+	"/administracao/funcoes": "briefcase",
 	"/gestao_adultos/organograma": "network",
 	"/gestao_adultos/minha_entrevista": "clipboard-list",
 	"/gestao_adultos/entrevista_competencias": "list-check",
@@ -189,6 +200,11 @@ SIDEBAR_ICON_MAP: dict[str, str] = {
 PAGE_ROLES: dict[str, list[str]] = {
 	"/inicio": ["All"],
 	"/403": ["All"],
+	# Administração é aberta para leitura: a estrutura da UEL é informação de todo
+	# mundo. Só editar é restrito, e isso é checado nos endpoints ("Gestor da UEL").
+	"/administracao": ["All"],
+	"/administracao/unidades_organizacionais": ["All"],
+	"/administracao/funcoes": ["All"],
 	"/gestao_tarefas": ["All"],
 	"/gestao_tarefas/tarefas": ["All"],
 	"/responsavel": ["Responsavel"],

@@ -134,6 +134,55 @@
     {% endcall %}
     {% endif %}
 
+    {% if pode_gerenciar_funcoes %}
+    <!-- Funções no organograma -->
+    {% call card(attrs={"class": "mb-4"}) %}
+      <div class="detalhe-card-header">
+        <div>
+          <h3 class="font-semibold">Funções no organograma</h3>
+          <p class="text-muted-foreground text-sm">Onde esta pessoa atua e o que ela faz em cada área</p>
+        </div>
+      </div>
+
+      {# A cascata área → função sai daqui: uma carga só, sem ida e volta por área.
+         `forceescape` é obrigatório — sem ele o JSON trunca no atributo. #}
+      <div class="funcoes-organograma"
+           data-associado="{{ associado.name }}"
+           data-areas="{{ areas_com_funcoes | tojson | forceescape }}"
+           data-linhas="{{ funcoes_internas_rows | tojson | forceescape }}">
+
+        <div class="funcoes-organograma__tabela-wrap">
+          <table class="table funcoes-organograma__tabela">
+            <thead>
+              <tr>
+                <th scope="col">Área</th>
+                <th scope="col">Função</th>
+                <th scope="col">Período</th>
+                <th scope="col"><span class="sr-only">Ações</span></th>
+              </tr>
+            </thead>
+            <tbody id="funcoes-organograma-corpo"></tbody>
+          </table>
+        </div>
+
+        <div class="funcoes-organograma__novo">
+          <div class="field">
+            <label class="label" for="funcao-area">Área</label>
+            {{ select(id="funcao-area", name="funcao_area", items=[], placeholder="Selecione a área…") }}
+          </div>
+          <div class="field">
+            <label class="label" for="funcao-funcao">Função</label>
+            {{ select(id="funcao-funcao", name="funcao_funcao", items=[], placeholder="Escolha a área primeiro") }}
+          </div>
+          <button type="button" class="btn-primary" id="btn-adicionar-funcao">
+            {{ lucide_icon("plus", size="sm") }}
+            <span>Adicionar</span>
+          </button>
+        </div>
+      </div>
+    {% endcall %}
+    {% endif %}
+
     <!-- Histórico no Grupo -->
     {% call card(attrs={"class": "mb-4"}) %}
       <div class="detalhe-card-header">

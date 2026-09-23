@@ -157,9 +157,9 @@ frappe.ready(() => {
 			partes.push(
 				`${avisos.funcoes_sem_area} ${
 					avisos.funcoes_sem_area === 1
-						? "função atribuída não tem"
-						: "funções atribuídas não têm"
-				} área mapeada.`
+						? "função de pessoa está"
+						: "funções de pessoas estão"
+				} sem área preenchida.`
 			);
 		}
 		if ((avisos.ciclos || []).length) {

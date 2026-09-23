@@ -208,6 +208,23 @@ def get_context(context):
 		has_desk_access and is_valid_registration and has_valid_id_escoteiros and not user_already_exists
 	)
 
+	# Funções no organograma: permissão própria, separada da edição da ficha. O
+	# `Gestor de Adultos` abre a página mas não edita nada nela — as funções internas
+	# são justamente o que ele administra.
+	from gris.api.gestao_adultos.atribuicoes import (
+		listar_areas_com_funcoes,
+		listar_funcoes_do_associado,
+		pode_gerenciar_funcoes,
+	)
+
+	context.pode_gerenciar_funcoes = pode_gerenciar_funcoes()
+	if context.pode_gerenciar_funcoes:
+		context.funcoes_internas_rows = listar_funcoes_do_associado(doc.name)
+		context.areas_com_funcoes = listar_areas_com_funcoes()
+	else:
+		context.funcoes_internas_rows = []
+		context.areas_com_funcoes = []
+
 	context.associado = doc
 	return context
 

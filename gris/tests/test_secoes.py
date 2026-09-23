@@ -3,17 +3,20 @@
 
 """Testes do planejamento da sincronização de seções.
 
-`planejar_secoes` é pura: recebe os associados já lidos e decide quais seções
-viram área, quem chefia cada uma e que função cada escotista recebe.
+`planejar_secoes` e `planejar_linhas` são puras: a primeira recebe os associados
+já lidos e decide quais seções viram área, quem chefia cada uma e que função cada
+escotista recebe; a segunda decide o que fazer com as linhas de função interna de
+uma pessoa.
 """
 
 from frappe.tests.utils import FrappeTestCase
+from frappe.utils import getdate
 
 from gris.api.gestao_adultos.secoes import (
 	PAPEL_ASSISTENTE,
 	PAPEL_CHEFE,
+	planejar_linhas,
 	planejar_secoes,
-	titulo_da_funcao,
 )
 
 
@@ -120,10 +123,103 @@ class TestPlanejarSecoes(FrappeTestCase):
 			{"Alcateia": PAPEL_CHEFE, "Tropa Escoteira": PAPEL_ASSISTENTE},
 		)
 
-	def test_titulo_da_funcao_amarra_papel_e_secao(self):
-		"""`Funcao Voluntario.area` é Link único: não existe chefe de seção genérico."""
-		titulo = titulo_da_funcao(PAPEL_CHEFE, "Alcateia")
+	def test_papel_e_generico_e_a_secao_vem_do_plano(self):
+		"""A seção saiu do título da função: quem diz onde é o par (papel, seção)."""
+		plano = planejar_secoes(
+			[
+				_pessoa("Ana", "Alcateia", funcao="Chefe de Seção"),
+				_pessoa("Bia", "Tropa Escoteira", funcao="Chefe de Seção"),
+			]
+		)
 
-		self.assertIn("Chefe de Seção", titulo)
-		self.assertIn("Alcateia", titulo)
-		self.assertNotEqual(titulo, titulo_da_funcao(PAPEL_CHEFE, "Tropa Escoteira"))
+		# O mesmo papel serve as duas seções — é isso que o vínculo M:N permitiu.
+		self.assertEqual(plano["atribuicoes"]["Ana"], {"Alcateia": PAPEL_CHEFE})
+		self.assertEqual(plano["atribuicoes"]["Bia"], {"Tropa Escoteira": PAPEL_CHEFE})
+		self.assertNotIn("Alcateia", PAPEL_CHEFE)
+		self.assertNotIn("Tropa", PAPEL_CHEFE)
+
+
+HOJE = getdate("2026-09-23")
+AUTOMATICAS = {PAPEL_CHEFE, PAPEL_ASSISTENTE}
+AREAS_AUTOMATICAS = {"Alcateia", "Tropa Escoteira"}
+
+
+def _linha(funcao, area, data_fim=None):
+	return {"funcao": funcao, "area": area, "data_fim": data_fim}
+
+
+class TestPlanejarLinhas(FrappeTestCase):
+	"""O que a sincronização pode mexer nas funções internas de uma pessoa."""
+
+	def _planejar(self, linhas, desejados):
+		return planejar_linhas(linhas, desejados, AUTOMATICAS, AREAS_AUTOMATICAS, HOJE)
+
+	def test_abre_o_par_que_falta(self):
+		plano = self._planejar([], {(PAPEL_CHEFE, "Alcateia")})
+
+		self.assertEqual(plano["abrir"], [(PAPEL_CHEFE, "Alcateia")])
+		self.assertEqual(plano["encerrar"], [])
+
+	def test_promocao_encerra_o_antigo_e_abre_o_novo(self):
+		linhas = [_linha(PAPEL_ASSISTENTE, "Alcateia")]
+
+		plano = self._planejar(linhas, {(PAPEL_CHEFE, "Alcateia")})
+
+		self.assertEqual(plano["encerrar"], [0])
+		self.assertEqual(plano["abrir"], [(PAPEL_CHEFE, "Alcateia")])
+
+	def test_saiu_da_secao_encerra(self):
+		plano = self._planejar([_linha(PAPEL_CHEFE, "Alcateia")], set())
+
+		self.assertEqual(plano["encerrar"], [0])
+
+	def test_voltou_para_a_secao_reabre_em_vez_de_duplicar(self):
+		linhas = [_linha(PAPEL_CHEFE, "Alcateia", data_fim=getdate("2026-01-10"))]
+
+		plano = self._planejar(linhas, {(PAPEL_CHEFE, "Alcateia")})
+
+		self.assertEqual(plano["reabrir"], [0])
+		self.assertEqual(plano["abrir"], [])
+
+	def test_funcao_generica_em_area_feita_a_mao_fica_intocada(self):
+		"""O caso que a função genérica criou: o título sozinho não diz mais de quem é a linha.
+
+		"Chefe de Seção" é sempre automática agora. Sem cruzar com a área, a rotina
+		encerraria uma lotação que um humano criou numa área que ela nunca tocou.
+		"""
+		linhas = [_linha(PAPEL_CHEFE, "Equipe de Apoio")]
+
+		plano = self._planejar(linhas, set())
+
+		self.assertEqual(plano["encerrar"], [])
+		self.assertEqual(plano["reabrir"], [])
+
+	def test_funcao_nao_automatica_em_area_automatica_fica_intocada(self):
+		plano = self._planejar([_linha("Diretor(a) Presidente", "Alcateia")], set())
+
+		self.assertEqual(plano["encerrar"], [])
+
+	def test_linha_sem_area_nunca_e_encerrada(self):
+		"""Linha legada, de função que nunca teve área: ambígua demais para mexer."""
+		plano = self._planejar([_linha(PAPEL_CHEFE, None)], set())
+
+		self.assertEqual(plano["encerrar"], [])
+
+	def test_pessoa_em_duas_secoes_gera_dois_pares(self):
+		desejados = {(PAPEL_CHEFE, "Alcateia"), (PAPEL_ASSISTENTE, "Tropa Escoteira")}
+
+		plano = self._planejar([], desejados)
+
+		self.assertEqual(
+			plano["abrir"],
+			[(PAPEL_ASSISTENTE, "Tropa Escoteira"), (PAPEL_CHEFE, "Alcateia")],
+		)
+
+	def test_mesma_funcao_em_duas_areas_nao_se_confunde(self):
+		"""Só a área distingue as duas linhas; encerrar uma não pode encerrar a outra."""
+		linhas = [_linha(PAPEL_CHEFE, "Alcateia"), _linha(PAPEL_CHEFE, "Tropa Escoteira")]
+
+		plano = self._planejar(linhas, {(PAPEL_CHEFE, "Alcateia")})
+
+		self.assertEqual(plano["encerrar"], [1])
+		self.assertEqual(plano["abrir"], [])

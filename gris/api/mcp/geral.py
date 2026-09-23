@@ -47,8 +47,8 @@ def quem_sou_eu() -> dict:
 	nome="listar_unidades_organizacionais",
 	titulo="Listar unidades organizacionais",
 	descricao=(
-		"Lista as unidades organizacionais (campo 'area' do associado) com sua hierarquia. "
-		"Use para descobrir valores válidos ao filtrar ou atualizar a área de um associado."
+		"Lista as áreas do organograma (Unidade Organizacional) com sua hierarquia. "
+		"Use para descobrir valores válidos ao escolher a área de uma função interna do associado."
 	),
 	parametros={},
 	roles=("Gestor de Associados", "Visualizador Associados", "Gestor da UEL"),

@@ -1,11 +1,16 @@
 """Organograma da Gestão de Adultos.
 
 Monta a árvore de voluntários a partir de duas coisas: a hierarquia de áreas
-(`Unidade Organizacional.responde_para`) e a lotação de cada pessoa, que é
-derivada das funções internas — cada `Funcao Voluntario` aponta para uma área.
-Quem lidera uma área responde ao líder da área-mãe; quem tem função numa área
-responde ao líder dela. Funções em áreas diferentes colocam a mesma pessoa em
-mais de um ponto do desenho.
+(`Unidade Organizacional.responde_para`) e a lotação de cada pessoa, que sai da
+área escolhida em cada linha de `Associado.funcoes_internas`. Quem lidera uma
+área responde ao líder da área-mãe; quem tem função numa área responde ao líder
+dela. Funções em áreas diferentes colocam a mesma pessoa em mais de um ponto do
+desenho.
+
+A mesma função pode valer em várias áreas — o vínculo mora na child table
+`Unidade Organizacional.funcoes`. Esse vínculo é catálogo de validação, e não
+fonte do desenho: o organograma lê a área direto da linha da pessoa e nunca
+precisa consultar a tabela de vínculos.
 """
 
 from __future__ import annotations
@@ -104,9 +109,10 @@ def obter_organograma(area: str | None = None) -> dict:
 def lotacoes_atuais(nomes: list[str]) -> tuple[list[dict], int]:
 	"""Onde cada pessoa está, derivado das funções internas em vigor.
 
-	A área não é mais escolhida no Associado: cada `Funcao Voluntario` aponta para
-	uma área, e é daí que sai a posição. Quem tem funções em áreas diferentes gera
-	uma lotação para cada uma — e aparece em mais de um lugar no organograma.
+	A área é escolhida na própria linha de função interna — a mesma função pode
+	valer em várias áreas, então só a linha sabe onde a pessoa exerce. Quem tem
+	linhas em áreas diferentes gera uma lotação para cada uma, e aparece em mais de
+	um lugar no organograma.
 	"""
 	if not nomes:
 		return [], 0
@@ -117,13 +123,6 @@ def lotacoes_atuais(nomes: list[str]) -> tuple[list[dict], int]:
 		fields=["parent", "funcao", "area", "principal", "idx", "data_fim"],
 		order_by="parent asc, principal desc, idx asc",
 	)
-	titulos = sorted({linha["funcao"] for linha in linhas if linha.get("funcao")})
-	area_da_funcao = {
-		f["name"]: f["area"]
-		for f in frappe.get_all(
-			"Funcao Voluntario", filters={"name": ["in", titulos]}, fields=["name", "area"]
-		)
-	}
 
 	hoje = getdate()
 	por_chave: dict[tuple[str, str], str] = {}
@@ -131,9 +130,7 @@ def lotacoes_atuais(nomes: list[str]) -> tuple[list[dict], int]:
 	for linha in linhas:
 		if linha.get("data_fim") and getdate(linha["data_fim"]) < hoje:
 			continue
-		# A definição da função manda; a coluna da linha é só cache do `fetch_from`
-		# e fica velha se a função mudar de área depois.
-		area = area_da_funcao.get(linha.get("funcao")) or linha.get("area")
+		area = linha.get("area")
 		if not area:
 			sem_area += 1
 			continue
@@ -194,7 +191,7 @@ def obter_detalhe_do_adulto(associado: str) -> dict:
 		for linha in frappe.get_all(
 			"Funcao Voluntario",
 			filters={"name": ["in", titulos]},
-			fields=["name", "descricao", "area"],
+			fields=["name", "descricao"],
 		)
 	}
 
@@ -271,9 +268,9 @@ def _funcao_do_painel(
 	definicao = definicoes.get(titulo) or {}
 	return {
 		"titulo": titulo,
-		# A definição manda: a coluna da linha é cache do `fetch_from` e envelhece
-		# se a função for remapeada para outra área.
-		"area": definicao.get("area") or linha.get("area"),
+		# A área é da linha, não da definição: a mesma função pode valer em
+		# várias áreas.
+		"area": linha.get("area"),
 		"principal": bool(linha.get("principal")),
 		"atual": not linha.get("data_fim"),
 		"periodo": _periodo(linha.get("data_inicio"), linha.get("data_fim")),

@@ -65,6 +65,7 @@ MODULOS: tuple[str, ...] = (
 	"Painel do Responsável",
 	"Transparência",
 	"Sugestões e Problemas",
+	"Administração",
 	"Acesso e login",
 	"Aparência / PWA",
 	MODULO_OUTRO,

@@ -407,10 +407,11 @@ class TestFiltroPorArea(FrappeTestCase):
 		self.assertEqual({a["name"] for a in recortadas}, {"A", "B"})
 
 
-def _linha_de_funcao(funcao, principal=0, inicio=None, fim=None):
+def _linha_de_funcao(funcao, area=None, principal=0, inicio=None, fim=None):
 	return {
 		"funcao": funcao,
-		"area": None,
+		# A área é escolhida na linha: a mesma função pode valer em várias.
+		"area": area,
 		"principal": principal,
 		"data_inicio": inicio,
 		"data_fim": fim,
@@ -505,12 +506,23 @@ class TestMontarDetalhe(FrappeTestCase):
 			[{"responsabilidade": "Votar no conselho", "detalhe": None}],
 		)
 
-	def test_descricao_vem_da_definicao_da_funcao(self):
-		definicoes = {"Diretora": {"descricao": "Cuida do programa.", "area": "Programa"}}
-		detalhe = montar_detalhe(self._pessoa(), [_linha_de_funcao("Diretora")], definicoes, {}, None)
+	def test_descricao_vem_da_definicao_e_area_vem_da_linha(self):
+		definicoes = {"Diretora": {"descricao": "Cuida do programa."}}
+		linha = _linha_de_funcao("Diretora", area="Programa")
+		detalhe = montar_detalhe(self._pessoa(), [linha], definicoes, {}, None)
 
 		self.assertEqual(detalhe["funcoes"][0]["descricao"], "Cuida do programa.")
 		self.assertEqual(detalhe["funcoes"][0]["area"], "Programa")
+
+	def test_mesma_funcao_em_duas_areas_aparece_duas_vezes(self):
+		"""O que o vínculo M:N permitiu: um título, duas lotações."""
+		funcoes = [
+			_linha_de_funcao("Membro de Equipe", area="Manutenção", principal=1),
+			_linha_de_funcao("Membro de Equipe", area="Eventos"),
+		]
+		detalhe = montar_detalhe(self._pessoa(), funcoes, {}, {}, None)
+
+		self.assertEqual(detalhe["areas"], ["Eventos", "Manutenção"])
 
 	def test_sem_funcao_nao_quebra(self):
 		detalhe = montar_detalhe(self._pessoa(), [], {}, {}, None)
@@ -535,17 +547,12 @@ class TestMontarDetalhe(FrappeTestCase):
 
 	def test_areas_saem_das_funcoes_em_vigor(self):
 		funcoes = [
-			_linha_de_funcao("Diretora", principal=1, inicio="2024-01-01"),
-			_linha_de_funcao("Eventos", inicio="2023-01-01"),
+			_linha_de_funcao("Diretora", area="Programa", principal=1, inicio="2024-01-01"),
+			_linha_de_funcao("Eventos", area="Eventos", inicio="2023-01-01"),
 			# Encerrada: a área dela não conta como lotação atual.
-			_linha_de_funcao("Antiga", inicio="2020-01-01", fim="2021-01-01"),
+			_linha_de_funcao("Antiga", area="Financeiro", inicio="2020-01-01", fim="2021-01-01"),
 		]
-		definicoes = {
-			"Diretora": {"area": "Programa"},
-			"Eventos": {"area": "Eventos"},
-			"Antiga": {"area": "Financeiro"},
-		}
-		detalhe = montar_detalhe(self._pessoa(), funcoes, definicoes, {}, None)
+		detalhe = montar_detalhe(self._pessoa(), funcoes, {}, {}, None)
 
 		self.assertEqual(detalhe["areas"], ["Eventos", "Programa"])
 

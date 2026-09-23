@@ -1,0 +1,357 @@
+/* Gestão das unidades organizacionais: tabela e árvore interativa. */
+
+/* --- Header com ação à direita --- */
+.page-header-row {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 4);
+	flex-wrap: wrap;
+}
+
+.page-header-actions {
+	display: flex;
+	gap: calc(var(--spacing) * 2);
+	margin-left: auto;
+}
+
+/* Respiro entre o botão do cabeçalho e o quadro. */
+.admin-unidades {
+	margin-top: calc(var(--spacing) * 6);
+}
+
+/* A barra de abas vive fora do card, encostada à esquerda. */
+.admin-unidades .tabs > [role="tablist"] {
+	justify-content: flex-start;
+	margin-bottom: calc(var(--spacing) * 3);
+}
+
+.admin-unidades__tabela {
+	width: 100%;
+}
+
+.admin-unidades__acoes {
+	text-align: right;
+	white-space: nowrap;
+}
+
+.admin-unidades__auto {
+	margin-left: 0.375rem;
+}
+
+/* ---------------------------------------------------------------- */
+/* Árvore interativa                                                  */
+/* ---------------------------------------------------------------- */
+
+.admin-arvore {
+	position: relative;
+	padding: 0.75rem;
+}
+
+.admin-arvore__controles {
+	position: absolute;
+	top: 1.25rem;
+	right: 1.25rem;
+	z-index: 2;
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 0.25rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius, 0.625rem);
+	background: var(--background);
+}
+
+.admin-arvore__nivel {
+	min-width: 3rem;
+	text-align: center;
+	font-size: 0.75rem;
+	font-variant-numeric: tabular-nums;
+	color: var(--muted-foreground);
+}
+
+/* O palco recorta; quem se move é o canvas, por transform. */
+.admin-arvore__palco {
+	position: relative;
+	overflow: hidden;
+	height: 60vh;
+	min-height: 22rem;
+	border-radius: var(--radius, 0.625rem);
+	background: var(--muted);
+	cursor: grab;
+	touch-action: none;
+	user-select: none;
+}
+
+.admin-arvore__palco.is-movendo {
+	cursor: grabbing;
+}
+
+.admin-arvore__canvas {
+	position: absolute;
+	top: 0;
+	left: 0;
+	transform-origin: 0 0;
+}
+
+.admin-arvore__linhas {
+	position: absolute;
+	inset: 0;
+	overflow: visible;
+	/* Sem `pointer-events: none` aqui: no elemento `<svg>` isso desliga o hit-test
+	   da subárvore inteira, e os filhos não conseguem reativar. Quem não deve
+	   receber ponteiro se declara abaixo, um a um. Área vazia do SVG não captura
+	   nada, porque nada é pintado ali. */
+}
+
+.admin-arvore__linha {
+	fill: none;
+	stroke: var(--border);
+	stroke-width: 2;
+	pointer-events: none;
+	transition: stroke 0.12s ease, stroke-width 0.12s ease;
+}
+
+/* Faixa larga e invisível: dá área de acerto para o hover da linha fina. */
+.admin-arvore__hit {
+	fill: none;
+	stroke: transparent;
+	stroke-width: 16;
+	pointer-events: stroke;
+	cursor: pointer;
+}
+
+.admin-arvore__ponta {
+	fill: var(--background);
+	stroke: var(--border);
+	stroke-width: 2;
+	opacity: 0;
+	/* Decorativa por padrão; só a ponta do pai volta a receber ponteiro. */
+	pointer-events: none;
+	transition: opacity 0.12s ease, fill 0.12s ease, r 0.12s ease;
+}
+
+/* `is-sob` no lugar de `:hover`: o `:hover` do CSS não chega ao `<g>` do SVG de
+   forma confiável, e classe ainda funciona no toque, onde hover não existe.
+   Passar o ponteiro só acende a linha — nada de bolinhas. */
+.admin-arvore__aresta.is-sob .admin-arvore__linha,
+.admin-arvore__aresta.is-selecionada .admin-arvore__linha,
+.admin-arvore__aresta.is-arrastando .admin-arvore__linha {
+	stroke: var(--primary);
+	stroke-width: 3;
+}
+
+/* As bolinhas só aparecem depois do clique na linha: religar uma área é decisão,
+   não gesto de passagem. */
+.admin-arvore__aresta.is-selecionada .admin-arvore__ponta,
+.admin-arvore__aresta.is-arrastando .admin-arvore__ponta {
+	opacity: 1;
+	stroke: var(--primary);
+}
+
+/* A ponta do pai é a que se arrasta. Todas as arestas de um mesmo pai saem do
+   mesmo ponto, então as alças ficam empilhadas: só a da linha selecionada recebe
+   eventos, senão seria sorteio qual delas o clique pegaria. */
+.admin-arvore__aresta.is-selecionada .admin-arvore__ponta--pai,
+.admin-arvore__aresta.is-arrastando .admin-arvore__ponta--pai {
+	pointer-events: auto;
+	cursor: grab;
+	/* Encostada no card, metade dela fica por baixo: o raio maior garante alvo. */
+	r: 8;
+}
+
+.admin-arvore__aresta.is-ponta-sob .admin-arvore__ponta--pai,
+.admin-arvore__aresta.is-arrastando .admin-arvore__ponta--pai {
+	fill: var(--primary);
+	r: 9;
+}
+
+.admin-arvore.is-arrastando .admin-arvore__ponta--pai {
+	cursor: grabbing;
+}
+
+.admin-arvore__cards {
+	position: relative;
+}
+
+.admin-arvore__card {
+	position: absolute;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 0.125rem;
+	box-sizing: border-box;
+	padding: 0.75rem 0.875rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius, 0.625rem);
+	background: var(--card, var(--background));
+	color: var(--card-foreground, var(--foreground));
+	cursor: pointer;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-arvore__card:hover {
+	border-color: var(--primary);
+	box-shadow: 0 1px 10px rgb(0 0 0 / 8%);
+}
+
+.admin-arvore__card.is-inativa {
+	opacity: 0.55;
+	border-style: dashed;
+}
+
+/* Candidata a receber a ligação enquanto a ponta está sendo arrastada. */
+.admin-arvore__card.is-alvo {
+	border-color: var(--primary);
+	border-width: 2px;
+	box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 22%, transparent);
+}
+
+.admin-arvore__titulo {
+	margin: 0;
+	font-size: 0.9375rem;
+	font-weight: 600;
+	line-height: 1.2;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.admin-arvore__sub,
+.admin-arvore__meta {
+	margin: 0;
+	font-size: 0.75rem;
+	color: var(--muted-foreground);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Botão de nova área: metade dentro, metade fora da borda de baixo do card. */
+.admin-arvore__add {
+	position: absolute;
+	bottom: -14px;
+	left: 50%;
+	transform: translateX(-50%);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: none;
+	border-radius: 999px;
+	background: var(--primary);
+	color: var(--primary-foreground);
+	cursor: pointer;
+	opacity: 0;
+	/* Invisível não pode capturar ponteiro: ele fica sobre a saída da linha. */
+	pointer-events: none;
+	transition: opacity 0.15s ease;
+}
+
+.admin-arvore__card:hover .admin-arvore__add,
+.admin-arvore__add:focus-visible {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+/* Card pai da linha selecionada: o "+" nasce no mesmo ponto da alça e cobriria
+   o arraste, então some enquanto a linha está selecionada. */
+.admin-arvore__card.is-sem-add .admin-arvore__add {
+	display: none;
+}
+
+/* Retrair/expandir os filhos, no canto de baixo à direita. */
+.admin-arvore__toggle {
+	position: absolute;
+	right: 0.375rem;
+	bottom: 0.25rem;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.125rem;
+	padding: 0.125rem 0.25rem;
+	border: none;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--muted-foreground);
+	font-size: 0.6875rem;
+	font-variant-numeric: tabular-nums;
+	cursor: pointer;
+}
+
+.admin-arvore__toggle:hover {
+	background: var(--muted);
+	color: var(--foreground);
+}
+
+@media (max-width: 640px) {
+	.admin-arvore__acao-texto {
+		display: none;
+	}
+}
+
+/* ---------------------------------------------------------------- */
+/* Dialog                                                             */
+/* ---------------------------------------------------------------- */
+
+.admin-dialog__form {
+	display: flex;
+	flex-direction: column;
+	gap: 0.875rem;
+}
+
+.admin-dialog__aviso {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+	padding: 0.625rem 0.75rem;
+	border-radius: var(--radius, 0.625rem);
+	background: var(--muted);
+	color: var(--muted-foreground);
+	font-size: 0.8125rem;
+}
+
+.admin-dialog__secao {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	padding-top: 0.875rem;
+	border-top: 1px solid var(--border);
+}
+
+.admin-dialog__secao-titulo {
+	margin: 0;
+	font-size: 0.9375rem;
+	font-weight: 600;
+}
+
+.admin-dialog__tabela {
+	width: 100%;
+}
+
+.admin-dialog__acoes {
+	text-align: right;
+}
+
+.admin-dialog__adicionar {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.admin-dialog__adicionar .select {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+@media (max-width: 640px) {
+	.admin-dialog__adicionar {
+		flex-wrap: wrap;
+	}
+
+	.admin-dialog__adicionar .select,
+	.admin-dialog__adicionar button {
+		flex: 1 1 100%;
+	}
+}

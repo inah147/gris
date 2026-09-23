@@ -1,0 +1,250 @@
+"""Atribuição de funções internas a um associado, pela ficha do portal.
+
+A grade `Associado.funcoes_internas` vive em permlevel 2 e, até aqui, só existia no
+Desk. Estes endpoints são o caminho do portal para ela.
+
+Cada linha é um par função + área: a área é o que posiciona a pessoa no
+organograma, e o par precisa estar vinculado em `Unidade Organizacional.funcoes`
+(o `Associado` valida isso na gravação).
+
+Tirar alguém de uma função é **encerrar** (`data_fim = hoje`), nunca apagar a
+linha — é o mesmo que a sincronização de seções faz, e é o que mantém o histórico
+do painel de detalhes de pé.
+"""
+
+from __future__ import annotations
+
+import json
+
+import frappe
+from frappe import _
+from frappe.utils import getdate, nowdate
+
+#: Quem pode mexer nas funções internas pela ficha. `Gestor de Adultos` é o dono
+#: histórico da grade; os outros dois ganharam write no permlevel 2 junto com esta
+#: tela.
+ROLES_GESTOR_FUNCOES = ("Gestor de Adultos", "Gestor da UEL", "Gestor de Associados")
+ROLE_ADMIN = "System Manager"
+
+
+def _roles(user: str | None = None) -> set[str]:
+	return set(frappe.get_roles(user or frappe.session.user))
+
+
+def pode_gerenciar_funcoes(user: str | None = None) -> bool:
+	roles = _roles(user)
+	return bool(roles & set(ROLES_GESTOR_FUNCOES)) or ROLE_ADMIN in roles
+
+
+def garantir_gestor_funcoes(user: str | None = None) -> None:
+	if not pode_gerenciar_funcoes(user):
+		frappe.throw(
+			_("Você não tem permissão para alterar as funções internas de um associado."),
+			frappe.PermissionError,
+		)
+
+
+@frappe.whitelist()
+def listar_areas_com_funcoes() -> list[dict]:
+	"""Áreas ativas com as funções ativas de cada uma, para o seletor em cascata.
+
+	Duas consultas no total, e não uma por área: a página monta a cascata inteira
+	sem ida e volta ao servidor a cada troca de área.
+	"""
+	garantir_gestor_funcoes()
+
+	areas = frappe.get_all(
+		"Unidade Organizacional",
+		filters={"ativa": 1},
+		fields=["name", "area"],
+		order_by="ordem asc, area asc",
+	)
+	if not areas:
+		return []
+
+	ativas = set(frappe.get_all("Funcao Voluntario", filters={"ativa": 1}, pluck="name"))
+	funcoes_por_area: dict[str, list[str]] = {}
+	for vinculo in frappe.get_all(
+		"Funcao da Area",
+		filters={"parenttype": "Unidade Organizacional", "parent": ["in", [a["name"] for a in areas]]},
+		fields=["parent", "funcao"],
+		order_by="parent asc, idx asc",
+	):
+		if vinculo.funcao in ativas:
+			funcoes_por_area.setdefault(vinculo.parent, []).append(vinculo.funcao)
+
+	return [
+		{
+			"value": area["name"],
+			"label": area["area"],
+			"funcoes": [{"value": f, "label": f} for f in funcoes_por_area.get(area["name"], [])],
+		}
+		for area in areas
+	]
+
+
+@frappe.whitelist()
+def listar_funcoes_do_associado(associado: str) -> list[dict]:
+	"""As linhas de função da pessoa, em ordem de leitura: principal, depois em vigor."""
+	garantir_gestor_funcoes()
+	_garantir_associado(associado)
+
+	hoje = getdate()
+	linhas = frappe.get_all(
+		"Funcao do Associado",
+		filters={"parent": associado, "parenttype": "Associado"},
+		fields=["name", "funcao", "area", "principal", "data_inicio", "data_fim", "idx"],
+		order_by="principal desc, idx asc",
+	)
+	return [
+		{
+			"linha": linha.name,
+			"funcao": linha.funcao,
+			"area": linha.area,
+			"principal": bool(linha.principal),
+			# Texto ISO, não `date`: o contexto da página passa por `tojson` do Jinja,
+			# que não serializa data, e o front espera "aaaa-mm-dd".
+			"data_inicio": _iso(linha.data_inicio),
+			"data_fim": _iso(linha.data_fim),
+			"atual": not linha.data_fim or getdate(linha.data_fim) >= hoje,
+		}
+		for linha in linhas
+	]
+
+
+@frappe.whitelist(methods=["POST"])
+def atribuir_funcao(payload: str) -> dict:
+	"""Abre uma função para a pessoa numa área.
+
+	Recusa par repetido em vigor: duas linhas iguais abertas disputariam a mesma
+	vaga no organograma, que fica com uma e descarta a outra em silêncio.
+	"""
+	garantir_gestor_funcoes()
+	dados = _carregar(payload)
+
+	associado = _texto(dados.get("associado"))
+	funcao = _texto(dados.get("funcao"))
+	area = _texto(dados.get("area"))
+	if not funcao or not area:
+		frappe.throw(_("Escolha a área e a função."))
+
+	doc = _documento(associado)
+	hoje = getdate(nowdate())
+	for linha in doc.funcoes_internas:
+		if linha.funcao != funcao or linha.area != area:
+			continue
+		if not linha.data_fim or getdate(linha.data_fim) >= hoje:
+			frappe.throw(
+				_("{0} já exerce {1} em {2}.").format(
+					frappe.bold(doc.nome_completo or associado), frappe.bold(funcao), frappe.bold(area)
+				)
+			)
+
+	principal = bool(dados.get("principal"))
+	if principal:
+		for linha in doc.funcoes_internas:
+			linha.principal = 0
+
+	doc.append(
+		"funcoes_internas",
+		{
+			"funcao": funcao,
+			"area": area,
+			"principal": 1 if principal else 0,
+			"data_inicio": _data(dados.get("data_inicio")) or hoje,
+		},
+	)
+	doc.save()
+	return {"ok": True, "funcoes": listar_funcoes_do_associado(associado)}
+
+
+@frappe.whitelist(methods=["POST"])
+def encerrar_funcao(payload: str) -> dict:
+	"""Encerra a linha em `data_fim`, mantendo o histórico.
+
+	Apagar a linha tiraria a pessoa do organograma e também do histórico do painel
+	— e não é isso que "tirar a função de alguém" quer dizer.
+	"""
+	garantir_gestor_funcoes()
+	dados = _carregar(payload)
+
+	associado = _texto(dados.get("associado"))
+	doc = _documento(associado)
+	linha = _localizar_linha(doc, _texto(dados.get("linha")))
+
+	hoje = getdate(nowdate())
+	if linha.data_fim and getdate(linha.data_fim) < hoje:
+		frappe.throw(_("Esta função já está encerrada."))
+
+	# A data de início pode ser posterior a hoje em cadastro planejado; nesse caso
+	# encerrar em "hoje" criaria um período invertido, que o Associado recusa.
+	linha.data_fim = max(hoje, getdate(linha.data_inicio)) if linha.data_inicio else hoje
+	linha.principal = 0
+	doc.save()
+	return {"ok": True, "funcoes": listar_funcoes_do_associado(associado)}
+
+
+@frappe.whitelist(methods=["POST"])
+def definir_principal(payload: str) -> dict:
+	"""Marca qual função aparece no card do organograma. Só uma por pessoa."""
+	garantir_gestor_funcoes()
+	dados = _carregar(payload)
+
+	associado = _texto(dados.get("associado"))
+	doc = _documento(associado)
+	alvo = _localizar_linha(doc, _texto(dados.get("linha")))
+
+	hoje = getdate(nowdate())
+	if alvo.data_fim and getdate(alvo.data_fim) < hoje:
+		frappe.throw(_("Uma função encerrada não pode ser a principal."))
+
+	for linha in doc.funcoes_internas:
+		linha.principal = 1 if linha.name == alvo.name else 0
+	doc.save()
+	return {"ok": True, "funcoes": listar_funcoes_do_associado(associado)}
+
+
+# ---------------------------------------------------------------------------
+# Apoio
+# ---------------------------------------------------------------------------
+
+
+def _carregar(payload: str) -> dict:
+	try:
+		dados = json.loads(payload or "{}")
+	except ValueError:
+		frappe.throw(_("Não foi possível ler os dados enviados."))
+	if not isinstance(dados, dict):
+		frappe.throw(_("Não foi possível ler os dados enviados."))
+	return dados
+
+
+def _texto(valor) -> str:
+	return (valor or "").strip() if isinstance(valor, str) else ""
+
+
+def _data(valor):
+	return getdate(valor) if valor else None
+
+
+def _iso(valor) -> str | None:
+	return getdate(valor).isoformat() if valor else None
+
+
+def _garantir_associado(associado: str) -> None:
+	if not associado or not frappe.db.exists("Associado", associado):
+		frappe.throw(_("Associado não encontrado."), frappe.DoesNotExistError)
+
+
+def _documento(associado: str):
+	_garantir_associado(associado)
+	# Sem `ignore_permissions`: a grade é permlevel 2 e quem pode escrever nela está
+	# declarado no DocType, não aqui.
+	return frappe.get_doc("Associado", associado)
+
+
+def _localizar_linha(doc, nome_da_linha: str):
+	for linha in doc.funcoes_internas:
+		if linha.name == nome_da_linha:
+			return linha
+	frappe.throw(_("Função não encontrada na ficha desta pessoa."), frappe.DoesNotExistError)

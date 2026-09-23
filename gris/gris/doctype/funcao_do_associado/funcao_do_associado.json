@@ -25,13 +25,13 @@
   },
   {
    "columns": 2,
-   "fetch_from": "funcao.area",
+   "description": "Onde a pessoa exerce esta função. A função precisa estar vinculada à área.",
    "fieldname": "area",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Área",
    "options": "Unidade Organizacional",
-   "read_only": 1
+   "search_index": 1
   },
   {
    "columns": 1,

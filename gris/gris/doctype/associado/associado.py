@@ -3,7 +3,7 @@ import re
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import cint
+from frappe.utils import cint, getdate
 
 from gris.utils.documento import e_hash_de_cpf, id_por_cpf, localizar_novo_associado
 
@@ -108,6 +108,7 @@ class Associado(Document):
 	def validate(self):
 		self._set_status()
 		self._validar_funcoes_internas()
+		self._validar_vinculo_funcao_area()
 
 	def _validar_funcoes_internas(self):
 		"""Só uma função pode ser a principal, e o período tem que fazer sentido.
@@ -129,6 +130,69 @@ class Associado(Document):
 					frappe._("Função interna na linha {0}: a data de fim é anterior à de início.").format(
 						linha.idx
 					)
+				)
+
+	def _validar_vinculo_funcao_area(self):
+		"""Toda função interna nova precisa de área, e o par tem que estar vinculado.
+
+		A área é o que posiciona a pessoa no organograma, e o vínculo válido mora em
+		`Unidade Organizacional.funcoes`.
+
+		Os recortes abaixo não são zelo, e é por eles que a área não é `reqd` no
+		schema: existem linhas antigas de funções que nunca tiveram área, e existem
+		linhas cujo vínculo pode ser desfeito depois. Validar tudo tornaria esses
+		associados insalváveis para sempre — e o Associado é gravado em lote pela
+		importação do Paxtu, pela cobrança e pela recepção, que quebrariam semanas
+		depois por uma edição sem relação aparente. Então só entram as linhas que
+		entraram ou mudaram agora, e que ainda estão em vigor.
+		"""
+		if frappe.flags.in_migrate or frappe.flags.in_patch or frappe.flags.in_install:
+			return
+
+		anterior = self.get_doc_before_save()
+		antes = (
+			{(linha.funcao, linha.area) for linha in (anterior.funcoes_internas or [])} if anterior else set()
+		)
+
+		hoje = getdate()
+		suspeitas = [
+			linha
+			for linha in (self.funcoes_internas or [])
+			if linha.funcao
+			# Linha que já existia assim não é problema novo: só o que entrou ou mudou.
+			and (linha.funcao, linha.area) not in antes
+			# Histórico é imutável e não precisa obedecer ao catálogo de hoje.
+			and (not linha.data_fim or getdate(linha.data_fim) >= hoje)
+		]
+		if not suspeitas:
+			return
+
+		for linha in suspeitas:
+			if not linha.area:
+				frappe.throw(
+					frappe._("Função interna na linha {0}: escolha a área onde {1} é exercida.").format(
+						linha.idx, frappe.bold(linha.funcao)
+					)
+				)
+
+		permitidos = {
+			(vinculo["funcao"], vinculo["parent"])
+			for vinculo in frappe.get_all(
+				"Funcao da Area",
+				filters={
+					"parenttype": "Unidade Organizacional",
+					"parent": ["in", sorted({linha.area for linha in suspeitas})],
+				},
+				fields=["parent", "funcao"],
+			)
+		}
+		for linha in suspeitas:
+			if (linha.funcao, linha.area) not in permitidos:
+				frappe.throw(
+					frappe._(
+						"Função interna na linha {0}: {1} não está vinculada à área {2}. "
+						"Vincule a função na unidade organizacional ou escolha outra área."
+					).format(linha.idx, frappe.bold(linha.funcao), frappe.bold(linha.area))
 				)
 
 	def _handle_novo_associado_pre(self):

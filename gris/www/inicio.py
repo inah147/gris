@@ -35,4 +35,5 @@ def get_context(context):
 	context.can_projetos = user_has_access("/projetos")
 	context.can_festas = user_has_access("/festas")
 	context.can_gestao_tarefas = user_has_access("/gestao_tarefas")
+	context.can_administracao = user_has_access("/administracao")
 	return context

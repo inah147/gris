@@ -1,0 +1,115 @@
+/* Catálogo de funções da UEL. */
+
+/* --- Header com ação à direita --- */
+.page-header-row {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 4);
+	flex-wrap: wrap;
+}
+
+.page-header-actions {
+	display: flex;
+	gap: calc(var(--spacing) * 2);
+	margin-left: auto;
+}
+
+/* Respiro entre o botão do cabeçalho e a tabela. */
+.admin-funcoes {
+	margin-top: calc(var(--spacing) * 6);
+}
+
+.admin-funcoes__tabela {
+	width: 100%;
+}
+
+.admin-funcoes__acoes {
+	text-align: right;
+	white-space: nowrap;
+}
+
+.admin-funcoes__numero {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.admin-funcoes__auto {
+	margin-left: 0.375rem;
+}
+
+/* ---------------------------------------------------------------- */
+/* Dialog                                                             */
+/*                                                                    */
+/* Repetido de unidades_organizacionais.css de propósito: o CSS       */
+/* co-localizado só é injetado na página homônima, então esta folha    */
+/* precisa se bastar.                                                 */
+/* ---------------------------------------------------------------- */
+
+.admin-dialog__form {
+	display: flex;
+	flex-direction: column;
+	gap: 0.875rem;
+}
+
+.admin-dialog__aviso {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+	padding: 0.625rem 0.75rem;
+	border-radius: var(--radius, 0.625rem);
+	background: var(--muted);
+	color: var(--muted-foreground);
+	font-size: 0.8125rem;
+}
+
+.admin-dialog__switch {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 0.875rem;
+}
+
+.admin-dialog__secao {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	padding-top: 0.875rem;
+	border-top: 1px solid var(--border);
+}
+
+.admin-dialog__secao-titulo {
+	margin: 0;
+	font-size: 0.9375rem;
+	font-weight: 600;
+}
+
+.admin-dialog__tabela {
+	width: 100%;
+}
+
+.admin-dialog__acoes {
+	text-align: right;
+}
+
+.admin-dialog__adicionar {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.admin-dialog__adicionar .input {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+@media (max-width: 640px) {
+	.admin-dialog__adicionar {
+		flex-wrap: wrap;
+	}
+
+	.admin-dialog__adicionar .input,
+	.admin-dialog__adicionar button {
+		flex: 1 1 100%;
+	}
+}

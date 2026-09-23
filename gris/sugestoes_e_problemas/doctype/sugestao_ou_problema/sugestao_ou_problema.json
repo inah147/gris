@@ -58,7 +58,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Modulo",
-   "options": "\nInício\nAssociados\nNovos Associados\nFinanceiro\nCalendário\nGestão de Adultos\nInsígnias e Distintivos\nProjetos\nGestão de Tarefas\nFestas\nPainel do Responsável\nTransparência\nSugestões e Problemas\nAcesso e login\nAparência / PWA\nOutro / não sei\nNovo módulo",
+   "options": "\nInício\nAssociados\nNovos Associados\nFinanceiro\nCalendário\nGestão de Adultos\nInsígnias e Distintivos\nProjetos\nGestão de Tarefas\nFestas\nPainel do Responsável\nTransparência\nSugestões e Problemas\nAdministração\nAcesso e login\nAparência / PWA\nOutro / não sei\nNovo módulo",
    "reqd": 1
   },
   {

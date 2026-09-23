@@ -94,24 +94,38 @@ def _seed_habilidades():
 
 
 def _seed_funcoes_voluntario():
+	# A área não mora mais na função: "Chefe de Seção Demo" vale nas duas seções, que
+	# é justamente o caso que o vínculo M:N passou a permitir.
 	funcoes = [
 		{
 			"titulo": "Chefe de Seção Demo",
 			"categoria": "Escotista",
-			"area": "Seção Lobinho Demo",
+			"areas": ["Seção Lobinho Demo", "Seção Escoteiro Demo"],
 			"responsabilidades": [{"responsabilidade": "Conduzir a seção"}],
 		},
 		{
 			"titulo": "Diretor(a) Presidente Demo",
 			"categoria": "Dirigente",
-			"area": "Grupo Escoteiro Demo",
+			"areas": ["Grupo Escoteiro Demo"],
 			"responsabilidades": [{"responsabilidade": "Representar o grupo"}],
 		},
 	]
 	for funcao in funcoes:
-		if frappe.db.exists("Funcao Voluntario", funcao["titulo"]):
-			continue
-		frappe.get_doc({"doctype": "Funcao Voluntario", **funcao}).insert(ignore_permissions=True)
+		areas = funcao.pop("areas")
+		if not frappe.db.exists("Funcao Voluntario", funcao["titulo"]):
+			frappe.get_doc({"doctype": "Funcao Voluntario", **funcao}).insert(ignore_permissions=True)
+
+		for area in areas:
+			if not frappe.db.exists("Unidade Organizacional", area):
+				continue
+			if frappe.db.exists(
+				"Funcao da Area",
+				{"parent": area, "parenttype": "Unidade Organizacional", "funcao": funcao["titulo"]},
+			):
+				continue
+			doc = frappe.get_doc("Unidade Organizacional", area)
+			doc.append("funcoes", {"funcao": funcao["titulo"]})
+			doc.save(ignore_permissions=True)
 
 
 def _seed_feriados():

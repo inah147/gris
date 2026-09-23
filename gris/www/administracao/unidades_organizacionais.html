@@ -1,0 +1,165 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, card, empty, field, input, switch, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/dropdown-menu.html.jinja" import dropdown_menu %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/tabs.html.jinja" import tabs %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Unidades Organizacionais{% endblock %}
+
+{% set active_link = "/administracao/unidades_organizacionais" %}
+
+{# unidades_organizacionais.css/.js são injetados automaticamente pelo Frappe
+   (colocated). Não referenciar manualmente: duplica o carregamento. #}
+
+{% block page_header %}
+<div class="page-header-row">
+	<div class="flex flex-col gap-2 max-w-3xl">
+		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">Unidades Organizacionais</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">
+			As áreas da UEL, a quem cada uma responde e quem a lidera.
+		</p>
+	</div>
+	{% if pode_editar %}
+	<div class="page-header-actions">
+		<button type="button" class="btn-primary" id="btn-nova-area">
+			{{ lucide_icon("plus", size="sm") }}
+			<span>Nova Área</span>
+		</button>
+	</div>
+	{% endif %}
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="admin-unidades"
+     data-unidades="{{ unidades | tojson | forceescape }}"
+     data-opcoes-funcao="{{ opcoes_funcao | tojson | forceescape }}"
+     data-pode-editar="{{ 1 if pode_editar else 0 }}">
+
+	{% if not unidades %}
+		{{ empty(
+			title="Nenhuma área cadastrada",
+			description="Comece criando a primeira área da UEL.",
+			icon="network"
+		) }}
+	{% else %}
+		{# Cada aba carrega o seu próprio quadro: assim a barra de abas fica fora do
+		   card, encostada à esquerda e acima dele. #}
+		{% set painel_tabela %}
+			{% call card(attrs={"class": "admin-unidades__card"}) %}
+			<section class="p-0 min-w-0">
+				<div id="admin-unidades-tabela" class="overflow-x-auto"></div>
+			</section>
+			{% endcall %}
+		{% endset %}
+
+		{% set painel_arvore %}
+			{% call card(attrs={"class": "admin-unidades__card"}) %}
+			<section class="p-0 min-w-0">
+				<div id="admin-unidades-arvore" class="admin-arvore">
+					<div class="admin-arvore__controles" role="group" aria-label="Controles de visualização">
+						<button type="button" class="btn-sm-outline" data-zoom="menos" aria-label="Diminuir zoom">
+							{{ lucide_icon("minus", size="sm") }}
+						</button>
+						<output class="admin-arvore__nivel" id="admin-arvore-nivel" aria-live="polite">100%</output>
+						<button type="button" class="btn-sm-outline" data-zoom="mais" aria-label="Aumentar zoom">
+							{{ lucide_icon("plus", size="sm") }}
+						</button>
+						<button type="button" class="btn-sm-outline" data-zoom="ajustar" aria-label="Ajustar à tela">
+							{{ lucide_icon("maximize", size="sm") }}
+							<span class="admin-arvore__acao-texto">Ajustar</span>
+						</button>
+						<button type="button" class="btn-sm-outline" data-zoom="retrair" aria-label="Retrair tudo">
+							{{ lucide_icon("chevrons-down-up", size="sm") }}
+							<span class="admin-arvore__acao-texto">Retrair tudo</span>
+						</button>
+					</div>
+					<div class="admin-arvore__palco" tabindex="0">
+						<div class="admin-arvore__canvas">
+							<svg class="admin-arvore__linhas"></svg>
+							<div class="admin-arvore__cards"></div>
+						</div>
+					</div>
+				</div>
+			</section>
+			{% endcall %}
+		{% endset %}
+
+		{# A aba padrão é Árvore; no celular o JS troca para Tabela logo ao carregar. #}
+		{{ tabs(id="admin-unidades-tabs", default_tab_index=2, tabsets=[
+			{"tab": "Tabela", "panel": painel_tabela},
+			{"tab": "Árvore", "panel": painel_arvore}
+		]) }}
+	{% endif %}
+</div>
+
+{% if pode_editar %}
+{% call dialog(
+	id="dialog-area",
+	title="Área",
+	dialog_attrs={"class": "admin-dialog"},
+	footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-area">Cancelar</button><button type="button" class="btn-primary" id="btn-salvar-area">Salvar</button>'
+) %}
+<div class="admin-dialog__form">
+	<input type="hidden" id="area-name">
+
+	<div id="area-aviso-automatica" class="admin-dialog__aviso" hidden>
+		{{ lucide_icon("info", size="sm") }}
+		<span>Área criada pela sincronização de seções: o nome e o status são mantidos pela rotina.</span>
+	</div>
+
+	{% call field(label="Nome da área") %}
+		{{ input(name="area", attrs={"id": "area-nome", "maxlength": "140", "placeholder": "Ex.: Programa"}) }}
+	{% endcall %}
+
+	{% call field(label="Responde para") %}
+		{{ select(id="area-responde-para", name="responde_para", items=[], placeholder="Nenhuma (área de topo)") }}
+	{% endcall %}
+
+	{% call field(label="Responsável") %}
+		{{ select(id="area-responsavel", name="responsavel", items=opcoes_responsavel, placeholder="Sem responsável", is_combobox=true, search_placeholder="Buscar pessoa…") }}
+	{% endcall %}
+
+	{% call field(label="Ordem", hint="Menor aparece primeiro entre as áreas irmãs.") %}
+		{{ input(name="ordem", type="number", attrs={"id": "area-ordem", "min": "0"}) }}
+	{% endcall %}
+
+	{% call field(label="Descrição") %}
+		{{ textarea(name="descricao", attrs={"id": "area-descricao", "rows": "2"}) }}
+	{% endcall %}
+
+	{# O switch do design system não expõe id no input: o id vai no rótulo e o JS
+	   chega ao checkbox por `#area-ativa input`. #}
+	{{ switch(name="ativa", checked=true, label="Área ativa", attrs={"id": "area-ativa"}) }}
+
+	<div class="admin-dialog__secao">
+		<h4 class="admin-dialog__secao-titulo">Funções desta área</h4>
+		<p class="text-muted-foreground text-sm m-0">
+			Uma mesma função pode valer em várias áreas.
+		</p>
+		<table class="table admin-dialog__tabela">
+			<thead>
+				<tr>
+					<th scope="col">Função</th>
+					<th scope="col" class="admin-dialog__acoes"></th>
+				</tr>
+			</thead>
+			<tbody id="area-funcoes-corpo"></tbody>
+		</table>
+		<div class="admin-dialog__adicionar">
+			{{ select(id="area-nova-funcao", name="nova_funcao", items=[], placeholder="Escolha a função…") }}
+			<button type="button" class="btn-sm-outline" id="btn-add-funcao-area">
+				{{ lucide_icon("plus", size="sm") }}
+				<span>Adicionar</span>
+			</button>
+		</div>
+	</div>
+</div>
+{% endcall %}
+{% endif %}
+
+{{ toaster() }}
+{% endblock %}

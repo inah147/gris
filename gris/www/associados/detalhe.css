@@ -207,3 +207,45 @@
 .mb-2 {
   margin-bottom: 0.5rem;
 }
+
+/* Funções no organograma */
+.funcoes-organograma__tabela-wrap {
+	overflow-x: auto;
+	min-width: 0;
+}
+
+.funcoes-organograma__tabela {
+	width: 100%;
+}
+
+.funcoes-organograma__acoes {
+	text-align: right;
+	white-space: nowrap;
+}
+
+/* Linha encerrada continua visível — é histórico —, só recua no contraste. */
+.funcoes-organograma__encerrada td {
+	color: var(--muted-foreground);
+}
+
+.funcoes-organograma__novo {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 0.75rem;
+	margin-top: 1rem;
+	padding-top: 1rem;
+	border-top: 1px solid var(--border);
+}
+
+.funcoes-organograma__novo .field {
+	flex: 1 1 14rem;
+	min-width: 0;
+}
+
+@media (max-width: 640px) {
+	.funcoes-organograma__novo .field,
+	.funcoes-organograma__novo .btn-primary {
+		flex: 1 1 100%;
+	}
+}

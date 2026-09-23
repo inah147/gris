@@ -1,0 +1,17 @@
+{% extends "templates/web_module_index_base.html" %}
+
+{% set active_link = "/administracao" %}
+{% set module_title = "Administração" %}
+{% set module_subtitle = "A estrutura da UEL: quais áreas existem, a quem cada uma responde e que funções cabem em cada uma." %}
+{% set module_items = [
+	{
+		"href": "/administracao/unidades_organizacionais",
+		"title": "Unidades Organizacionais",
+		"description": "Crie e organize as áreas do grupo, em tabela ou no desenho da árvore",
+	},
+	{
+		"href": "/administracao/funcoes",
+		"title": "Funções",
+		"description": "Mantenha o catálogo de funções, com linha e responsabilidades",
+	},
+] %}

@@ -1,6 +1,6 @@
 {% extends "frappe/templates/base.html" %}
 
-{% set design_system_asset_version = "20260922-avatar-e-badge-ramo" %}
+{% set design_system_asset_version = "20260923-administracao-arvore" %}
 {% set current_page_path = pathname if pathname is defined and pathname else (path if path is defined else "") %}
 {# Frappe entrega `pathname` sem a barra inicial (ex.: "inicio", "projetos/abc"). Normalizamos para comparar com segurança independentemente do contexto. #}
 {% set normalized_page_path = current_page_path.lstrip("/") %}
@@ -14,6 +14,7 @@
 #}
 {% set gris_route_prefixes = [
     "inicio", "portal_transparencia", "403",
+    "administracao",
     "associados", "calendario", "festas", "financeiro",
     "gestao_adultos", "gestao_tarefas", "insignias",
     "manifestacao_interesse",

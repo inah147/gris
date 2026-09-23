@@ -1,0 +1,111 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty, field, input, switch, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Funções{% endblock %}
+
+{% set active_link = "/administracao/funcoes" %}
+
+{# funcoes.css/.js são injetados automaticamente pelo Frappe (colocated).
+   Não referenciar manualmente: duplica o carregamento. #}
+
+{% block page_header %}
+<div class="page-header-row">
+	<div class="flex flex-col gap-2 max-w-3xl">
+		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">Funções</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">
+			O catálogo de funções da UEL. A mesma função pode valer em várias áreas.
+		</p>
+	</div>
+	{% if pode_editar %}
+	<div class="page-header-actions">
+		<button type="button" class="btn-primary" id="btn-nova-funcao">
+			{{ lucide_icon("plus", size="sm") }}
+			<span>Nova Função</span>
+		</button>
+	</div>
+	{% endif %}
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="admin-funcoes"
+     data-funcoes="{{ funcoes | tojson | forceescape }}"
+     data-pode-editar="{{ 1 if pode_editar else 0 }}">
+
+	{% if not funcoes %}
+		{{ empty(
+			title="Nenhuma função cadastrada",
+			description="Crie a primeira função do catálogo.",
+			icon="briefcase"
+		) }}
+	{% else %}
+		{% call card(attrs={"class": "admin-funcoes__card"}) %}
+		<section class="p-0 min-w-0">
+			<div class="overflow-x-auto" id="admin-funcoes-tabela"></div>
+		</section>
+		{% endcall %}
+	{% endif %}
+</div>
+
+{% if pode_editar %}
+{% call dialog(
+	id="dialog-funcao",
+	title="Função",
+	dialog_attrs={"class": "admin-dialog"},
+	footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-funcao">Cancelar</button><button type="button" class="btn-primary" id="btn-salvar-funcao">Salvar</button>'
+) %}
+<div class="admin-dialog__form">
+	<input type="hidden" id="funcao-name">
+
+	<div id="funcao-aviso-automatica" class="admin-dialog__aviso" hidden>
+		{{ lucide_icon("info", size="sm") }}
+		<span>Função criada pela sincronização de seções: o título é mantido pela rotina.</span>
+	</div>
+
+	{% call field(label="Título") %}
+		{{ input(name="titulo", attrs={"id": "funcao-titulo", "maxlength": "140", "placeholder": "Ex.: Chefe de Seção"}) }}
+	{% endcall %}
+
+	{% call field(label="Linha") %}
+		{{ select(id="funcao-linha", name="categoria", items=linha_items, placeholder="Sem linha definida") }}
+	{% endcall %}
+
+	{% call field(label="Descrição") %}
+		{{ textarea(name="descricao", attrs={"id": "funcao-descricao", "rows": "2"}) }}
+	{% endcall %}
+
+	{# O switch do design system não expõe id no input: o id vai no rótulo e o JS
+	   chega ao checkbox por `#funcao-ativa input`. #}
+	{{ switch(name="ativa", checked=true, label="Função ativa", attrs={"id": "funcao-ativa"}) }}
+
+	<div class="admin-dialog__secao">
+		<h4 class="admin-dialog__secao-titulo">Responsabilidades</h4>
+		<table class="table admin-dialog__tabela">
+			<thead>
+				<tr>
+					<th scope="col">Responsabilidade</th>
+					<th scope="col">Detalhe</th>
+					<th scope="col" class="admin-dialog__acoes"></th>
+				</tr>
+			</thead>
+			<tbody id="funcao-responsabilidades-corpo"></tbody>
+		</table>
+		<div class="admin-dialog__adicionar">
+			{{ input(name="nova_responsabilidade", attrs={"id": "funcao-nova-responsabilidade", "placeholder": "O que esta função faz"}) }}
+			{{ input(name="novo_detalhe", attrs={"id": "funcao-novo-detalhe", "placeholder": "Detalhe (opcional)"}) }}
+			<button type="button" class="btn-sm-outline" id="btn-add-responsabilidade">
+				{{ lucide_icon("plus", size="sm") }}
+				<span>Adicionar</span>
+			</button>
+		</div>
+	</div>
+</div>
+{% endcall %}
+{% endif %}
+
+{{ toaster() }}
+{% endblock %}

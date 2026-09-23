@@ -2,6 +2,7 @@
 {% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 {% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
 
 {% block title %}Contribuições{% endblock %}
 
@@ -139,6 +140,34 @@
 		</p>
 		{% endif %}
 
+		{% set destino = beneficiario.destino_cobranca %}
+		<div class="resp-contrib-destino">
+			<p class="m-0 text-sm text-muted-foreground">A cobrança deste beneficiário vai para</p>
+			<p class="m-0 mt-1 font-medium text-foreground">{{ destino.destinatario.nome }}</p>
+			<p class="m-0 text-sm text-muted-foreground">
+				{{ destino.destinatario.telefone or 'sem telefone de cobrança cadastrado' }}
+			</p>
+			{% set alternativos = destino.responsaveis | rejectattr('recebe') | list %}
+			{% if alternativos %}
+			<div class="resp-contrib-destino__acoes">
+				{% for responsavel in alternativos %}
+					{% if responsavel.email or responsavel.telefone %}
+					<button type="button" class="btn-sm-outline"
+						data-acao="definir-destinatario"
+						data-associado="{{ beneficiario.id }}"
+						data-destinatario="{{ responsavel.id }}"
+						data-nome="{{ responsavel.nome }}">
+						Receber no lugar: {{ responsavel.nome }}
+					</button>
+					{% endif %}
+				{% endfor %}
+			</div>
+			<p class="m-0 mt-2 text-xs text-muted-foreground">
+				A troca vale para as próximas cobranças. As já enviadas continuam como estão.
+			</p>
+			{% endif %}
+		</div>
+
 		<div class="overflow-x-auto">
 			<table class="table resp-contrib-tabela">
 				<caption class="sr-only">Contribuição mês a mês de {{ beneficiario.nome }}</caption>
@@ -197,5 +226,10 @@
 	A situação de cada mês vem dos pagamentos identificados no extrato do grupo. Se você pagou e o mês
 	continua em aberto, fale com a tesouraria — pode ser um pagamento ainda sem identificação.
 </p>
+{{ toaster() }}
 {% endif %}
+{% endblock %}
+
+{% block script %}
+<script src="/responsavel/contribuicoes.js"></script>
 {% endblock %}

@@ -104,6 +104,45 @@
   }
 }
 
+/* Responsáveis: um card por pessoa, como na tela de registro, com a guarda —
+   que é da família — numa faixa própria acima dos dois. */
+.detalhe-subsection {
+  margin-bottom: calc(var(--spacing) * 5);
+}
+
+.detalhe-subsection__title {
+  margin: 0 0 calc(var(--spacing) * 3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+}
+
+.detalhe-responsaveis {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 4);
+}
+
+.detalhe-responsavel-card {
+  background: var(--muted);
+}
+
+.detalhe-responsavel-card__header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: calc(var(--spacing) * 2);
+  margin-bottom: calc(var(--spacing) * 4);
+}
+
+.detalhe-responsavel-card__title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
 /* Item do histórico dentro do dialog */
 .historico-item {
   border: 1px solid hsl(var(--border));

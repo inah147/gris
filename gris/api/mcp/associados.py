@@ -231,7 +231,9 @@ def listar_associados(
 	titulo="Detalhar associado",
 	descricao=(
 		"Retorna a ficha completa de um associado a partir do CPF (que é o identificador "
-		"do registro), incluindo responsáveis, dados de contribuição e histórico no grupo."
+		"do registro), incluindo responsáveis, dados de contribuição e histórico no grupo. "
+		"A lista 'responsaveis' sai no mesmo formato de 'obter_novo_associado', para "
+		"comparar os dois cadastros e corrigir o que divergir."
 	),
 	parametros={
 		"cpf": {"type": "string", "description": "CPF do associado (identificador do registro)."},
@@ -258,7 +260,36 @@ def obter_associado(cpf: str) -> dict:
 		}
 		for linha in (doc.get("historico_no_grupo") or [])
 	]
-	return {"associado": dados, "campos_editaveis": sorted(CAMPOS_EDITAVEIS)}
+	return {
+		"associado": dados,
+		"responsaveis": _responsaveis_do_associado(doc),
+		"campos_editaveis": sorted(CAMPOS_EDITAVEIS),
+	}
+
+
+def _responsaveis_do_associado(doc) -> list[dict]:
+	"""Responsáveis do associado no mesmo formato de `obter_novo_associado`.
+
+	Os dois lados falando a mesma língua é o que torna possível comparar o que
+	está no cadastro do associado com o que foi preenchido no registro e corrigir
+	o que divergir.
+
+	O CPF fica de fora: `cpf_responsavel_1` e `cpf_responsavel_2` guardam um md5
+	que o `before_save` do `Associado` re-hasheia a cada gravação, então não casa
+	com o CPF do `Responsavel` nem consigo mesmo. A comparação é por nome e
+	contato até esse campo ser corrigido.
+	"""
+	return [
+		{
+			"ordem": i,
+			"nome_completo": (doc.get(f"nome_responsavel_{i}") or "").strip(),
+			"email": (doc.get(f"email_responsavel_{i}") or "").strip(),
+			"celular": (doc.get(f"telefone_responsavel_{i}") or "").strip(),
+			"guardiao_legal": bool(doc.get(f"guardiao_legal_responsavel_{i}")),
+		}
+		for i in (1, 2)
+		if (doc.get(f"nome_responsavel_{i}") or "").strip()
+	]
 
 
 @ferramenta(

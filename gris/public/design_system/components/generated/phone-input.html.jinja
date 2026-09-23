@@ -52,13 +52,16 @@
   {% endif %}
 {% endif %}
 
-{% set initial_dial = "" %}
+{# `set` dentro de `for` não escapa do laço em Jinja: sem o namespace o dial
+   voltava vazio e o hidden nascia sem valor, obrigando o JS a preenchê-lo. #}
+{% set dial_ns = namespace(value="") %}
 {% set initial_number = "" %}
 {% for c in countries %}
   {% if c.iso == selection.iso %}
-    {% set initial_dial = c.dial %}
+    {% set dial_ns.value = c.dial %}
   {% endif %}
 {% endfor %}
+{% set initial_dial = dial_ns.value %}
 {% if value and selection.dial %}
   {% set digits_only = value | replace("+", "") | replace(" ", "") | replace("-", "") | replace("(", "") | replace(")", "") %}
   {% set initial_number = digits_only[selection.dial | length:] %}
@@ -83,7 +86,7 @@
 
 <div
   id="{{ id }}"
-  class="phone-input {{ attrs.class }}"
+  class="phone-input {{ attrs.get('class', '') }}"
   data-phone-input
   data-default-country="{{ selection.iso }}"
   {% for key, val in attrs.items() %}
@@ -105,7 +108,7 @@
 
     <input
       type="tel"
-      class="input phone-input__number {{ input_attrs.class }}"
+      class="input phone-input__number {{ input_attrs.get('class', '') }}"
       data-phone-input-number
       placeholder="{{ placeholder }}"
       value="{{ initial_number }}"

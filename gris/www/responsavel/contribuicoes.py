@@ -9,7 +9,10 @@ que não seja de um beneficiário vinculado entra nesta página.
 import frappe
 from frappe import _
 
-from gris.api.financeiro.cobranca_contribuicao import FINALIDADE_CONTRIBUICAO
+from gris.api.financeiro.cobranca_contribuicao import (
+	FINALIDADE_CONTRIBUICAO,
+	get_destino_da_cobranca,
+)
 from gris.api.financeiro.contribuicoes import (
 	MESES_PADRAO_TELA,
 	STATUS_ATRASADO,
@@ -70,6 +73,10 @@ def get_context(context):
 		# O mês a mês fica do mais recente para o mais antigo: o que interessa a
 		# quem paga é o mês corrente, não o começo da janela apurada.
 		apuracao["linhas_recentes"] = list(reversed(apuracao["linhas"]))
+		# Quem recebe a cobrança deste beneficiário e quais responsáveis podem
+		# receber no lugar. São os contatos da mesma família, e só chegam aqui os
+		# beneficiários vinculados a quem está logado.
+		apuracao["destino_cobranca"] = get_destino_da_cobranca(apuracao["id"])
 
 	context.beneficiarios = apuracoes
 	context.tem_vinculo = bool(beneficiarios)

@@ -1,8 +1,14 @@
 import frappe
 
 from gris.api.portal_access import _responsavel_has_associado_access, enrich_context
+from gris.utils.contato import format_phone
 
 no_cache = 1
+
+# Telefones ganham o mesmo controle com máscara da tela de registro. O valor vai
+# normalizado para `+55DDNÚMERO` porque é assim que o componente reconhece o país
+# e remonta a máscara — e é assim que o `Associado` grava.
+CAMPOS_TELEFONE = {"telefone", "telefone_responsavel_1", "telefone_responsavel_2"}
 
 
 def get_context(context):
@@ -70,20 +76,9 @@ def get_context(context):
 	# Listas de campos por agrupamento
 	personal_fields = ["etnia", "sexo", "data_de_nascimento", "religiao", "estado_civil"]
 	contact_fields = ["email", "telefone", "cep_residencia", "numero_residencia", "id_escoteiros"]
-	responsaveis_fields = [
-		"nome_responsavel_1",
-		"telefone_responsavel_1",
-		"email_responsavel_1",
-		"estado_civil_responsavel_1",
-		"nome_responsavel_2",
-		"telefone_responsavel_2",
-		"email_responsavel_2",
-		"estado_civil_responsavel_2",
-		"pais_divorciados",
-		"tipo_guarda",
-		"guardiao_legal_responsavel_1",
-		"guardiao_legal_responsavel_2",
-	]
+	# Guarda é da família, não de um responsável: fica numa faixa própria, acima
+	# dos dois cards, como na tela de registro.
+	guarda_fields = ["pais_divorciados", "tipo_guarda"]
 	registro_fields = [
 		"categoria",
 		"ramo",
@@ -166,6 +161,10 @@ def get_context(context):
 		# Pre-format options for Basecoat select macro
 		options_items = [{"value": opt, "label": opt} for opt in opts] if opts else []
 
+		is_phone = fieldname in CAMPOS_TELEFONE
+		if is_phone:
+			value = format_phone(value) or ""
+
 		return {
 			"fieldname": fieldname,
 			"label": df.label or fieldname,
@@ -175,6 +174,7 @@ def get_context(context):
 			"options": opts,
 			"options_items": options_items,
 			"editable": fieldname in editable,
+			"is_phone": is_phone,
 		}
 
 	def build_group(fnames):
@@ -185,9 +185,31 @@ def get_context(context):
 				out.append(item)
 		return out
 
+	def build_responsavel(indice):
+		"""Um card por responsável, como na tela de registro de novo associado.
+
+		O segundo card é sempre montado, mesmo sem nada preenchido: é por ele que
+		se cadastra o segundo responsável de quem só tem um.
+		"""
+		return {
+			"indice": indice,
+			"titulo": f"{indice}º Responsável",
+			"nome": (doc.get(f"nome_responsavel_{indice}") or "").strip(),
+			"campos": build_group(
+				[
+					f"nome_responsavel_{indice}",
+					f"telefone_responsavel_{indice}",
+					f"email_responsavel_{indice}",
+					f"estado_civil_responsavel_{indice}",
+					f"guardiao_legal_responsavel_{indice}",
+				]
+			),
+		}
+
 	context.group_personal = build_group(personal_fields)
 	context.group_contact = build_group(contact_fields)
-	context.group_responsaveis = build_group(responsaveis_fields) if is_beneficiario else []
+	context.group_guarda = build_group(guarda_fields) if is_beneficiario else []
+	context.grupos_responsaveis = [build_responsavel(1), build_responsavel(2)] if is_beneficiario else []
 	context.group_registro = build_group(registro_fields)
 
 	# Lógica de guarda / exibição dos toggles de guardião

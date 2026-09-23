@@ -241,7 +241,8 @@ def listar_novos_associados(
 	titulo="Detalhar novo associado",
 	descricao=(
 		"Ficha completa de quem está no funil: dados de contato, etapas com data estimada "
-		"e atraso, visita agendada e responsáveis legais vinculados."
+		"e atraso, visita agendada e responsáveis legais vinculados — no mesmo formato da "
+		"lista 'responsaveis' de 'obter_associado', para comparar os dois cadastros."
 	),
 	parametros={"name": {"type": "string", "description": "Identificador do Novo Associado."}},
 	obrigatorios=("name",),

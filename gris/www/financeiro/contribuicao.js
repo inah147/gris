@@ -518,6 +518,23 @@
 			.catch(() => showToast("Erro ao reenviar a cobrança.", "red"));
 	}
 
+	// ─────────────────────────── destinatário da cobrança ───────────────────────────
+
+	// O contato não viaja daqui: só o id do responsável escolhido. Quem resolve
+	// e-mail e telefone é o servidor, na mesma fonte que montou a lista da tela.
+	function definirDestinatario(elemento) {
+		if (semPermissao()) return;
+		const destinatario = elemento.getAttribute("data-destinatario");
+		if (!destinatario) return;
+
+		const nome = elemento.getAttribute("data-nome") || "o responsável escolhido";
+		chamarApi(
+			"gris.api.financeiro.cobranca_contribuicao.definir_destinatario_da_cobranca",
+			{ associado: associado, destinatario: destinatario },
+			`As próximas cobranças vão para ${nome}.`
+		);
+	}
+
 	// ─────────────────────────── ligações ───────────────────────────
 
 	const ACOES = {
@@ -528,6 +545,7 @@
 		"salvar-mes": salvarMes,
 		"cancelar-mes": cancelarEdicaoMes,
 		"alternar-cobranca": alternarCobranca,
+		"definir-destinatario": definirDestinatario,
 		"cobrar-whatsapp": () => gerarCobranca(true),
 		"cobrar-link": () => gerarCobranca(false),
 		"reenviar-cobranca": reenviarCobranca,

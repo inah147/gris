@@ -20,8 +20,11 @@ from gris.api.financeiro.cobranca_contribuicao import (
 	PREFIXO_ID_TRANSACAO,
 	_normalizar_competencias,
 	conciliar_baixas_de_cobranca,
+	definir_destinatario_da_cobranca,
 	emitir_cobranca,
 	enviar_cobranca,
+	get_destino_da_cobranca,
+	get_responsaveis_vinculados,
 	lancar_baixa,
 	montar_cobranca,
 	montar_mensagem,
@@ -697,3 +700,156 @@ class TestRecorteDoResponsavel(FrappeTestCase):
 			self.assertEqual(apurados, [])
 		finally:
 			frappe.db.set_value("Associado", self.filho, "categoria", "Beneficiário")
+
+
+class TestDestinatarioDaCobranca(FrappeTestCase):
+	"""Quem recebe a cobrança de um beneficiário, e quem pode trocar isso.
+
+	A troca vale para as próximas cobranças: a `Cobranca Infinitepay` já emitida
+	guarda o próprio `customer_phone` e não é tocada aqui.
+	"""
+
+	CPF_MAE = "99000000020"
+	CPF_PAI = "99000000021"
+	CPF_FILHO = "99000000022"
+	CPF_SEM_VINCULO = "99000000023"
+
+	TELEFONE_MAE = "+5511900000020"
+	TELEFONE_PAI = "+5511900000021"
+
+	def setUp(self):
+		self.mae = self._criar_responsavel(self.CPF_MAE, "Mãe do Teste", self.TELEFONE_MAE)
+		self.pai = self._criar_responsavel(self.CPF_PAI, "Pai do Teste", self.TELEFONE_PAI)
+		self.filho = self._criar_beneficiario(self.CPF_FILHO, "Filho do Teste")
+		self._criar_vinculo(self.mae, self.filho, primeiro=True)
+		self._criar_vinculo(self.pai, self.filho, primeiro=False)
+		# Os cadastros sobrevivem entre os testes desta classe, então o contato de
+		# cada responsável volta ao estado conhecido antes de cada um deles.
+		for responsavel, cpf, celular in (
+			(self.mae, self.CPF_MAE, self.TELEFONE_MAE),
+			(self.pai, self.CPF_PAI, self.TELEFONE_PAI),
+		):
+			frappe.db.set_value(
+				"Responsavel", responsavel, {"celular": celular, "email": f"{cpf}@exemplo.org"}
+			)
+		# Hoje a cobrança vai para a mãe.
+		frappe.db.set_value(
+			"Associado",
+			self.filho,
+			{"telefone_cobranca": self.TELEFONE_MAE, "email_cobranca": f"{self.CPF_MAE}@exemplo.org"},
+		)
+
+	def _criar_responsavel(self, cpf: str, nome: str, celular: str) -> str:
+		registro = _nome_por_cpf(cpf)
+		if frappe.db.exists("Responsavel", registro):
+			return registro
+		doc = frappe.get_doc(
+			{
+				"doctype": "Responsavel",
+				"cpf": cpf,
+				"nome_completo": nome,
+				"email": f"{cpf}@exemplo.org",
+				"celular": celular,
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		return doc.name
+
+	def _criar_beneficiario(self, cpf: str, nome: str) -> str:
+		registro = _nome_por_cpf(cpf)
+		if frappe.db.exists("Associado", registro):
+			return registro
+		doc = frappe.get_doc(
+			{
+				"doctype": "Associado",
+				"cpf": cpf,
+				"nome_completo": nome,
+				"data_de_nascimento": "2015-01-01",
+				"categoria": "Beneficiário",
+				"status_no_grupo": "Ativo",
+				"status_cobranca": "Ativo",
+				"valor_contribuicao": VALOR,
+				"inicio_do_pagamento": "2026-01-01",
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		return doc.name
+
+	def _criar_vinculo(self, responsavel: str, associado: str, primeiro: bool) -> None:
+		if frappe.db.exists(
+			"Responsavel Vinculo", {"responsavel": responsavel, "beneficiario_associado": associado}
+		):
+			return
+		frappe.get_doc(
+			{
+				"doctype": "Responsavel Vinculo",
+				"responsavel": responsavel,
+				"beneficiario_associado": associado,
+				"primeiro_responsavel": 1 if primeiro else 0,
+			}
+		).insert(ignore_permissions=True)
+
+	def _como_responsavel(self, responsavel: str):
+		"""Sessão sem papel de gestor, reconhecida como um responsável do cadastro."""
+		return mock.patch.multiple(
+			"gris.api.financeiro.cobranca_contribuicao",
+			get_responsavel_do_usuario=mock.Mock(return_value=responsavel),
+		), mock.patch("frappe.get_roles", return_value=[])
+
+	def test_vinculo_da_id_estavel_a_cada_responsavel(self):
+		ids = {r["id"] for r in get_responsaveis_vinculados(self.filho)}
+		self.assertEqual(ids, {self.mae, self.pai})
+
+	def test_sem_vinculo_o_id_vem_da_ordem_no_cadastro(self):
+		avulso = self._criar_beneficiario(self.CPF_SEM_VINCULO, "Filho Sem Vínculo")
+		frappe.db.set_value(
+			"Associado",
+			avulso,
+			{
+				"nome_responsavel_1": "Responsável Um",
+				"telefone_responsavel_1": "+5511900000030",
+				"nome_responsavel_2": "Responsável Dois",
+				"telefone_responsavel_2": "+5511900000031",
+			},
+		)
+		ids = [r["id"] for r in get_responsaveis_vinculados(avulso)]
+		self.assertEqual(ids, ["cadastro-1", "cadastro-2"])
+
+	def test_destino_aponta_quem_recebe_hoje(self):
+		destino = get_destino_da_cobranca(self.filho)
+		self.assertEqual(destino["destinatario"]["id"], self.mae)
+		self.assertTrue(destino["destinatario"]["e_responsavel"])
+
+	def test_gestor_troca_o_contato_de_cobranca_para_o_outro_responsavel(self):
+		definir_destinatario_da_cobranca(self.filho, self.pai)
+
+		gravado = frappe.db.get_value(
+			"Associado", self.filho, ["email_cobranca", "telefone_cobranca"], as_dict=True
+		)
+		self.assertEqual(gravado.telefone_cobranca, self.TELEFONE_PAI)
+		self.assertEqual(gravado.email_cobranca, f"{self.CPF_PAI}@exemplo.org")
+		self.assertEqual(get_destino_da_cobranca(self.filho)["destinatario"]["id"], self.pai)
+
+	def test_responsavel_vinculado_pode_trocar_sem_ser_gestor(self):
+		patch_modulo, patch_roles = self._como_responsavel(self.pai)
+		with patch_modulo, patch_roles:
+			definir_destinatario_da_cobranca(self.filho, self.pai)
+
+		self.assertEqual(frappe.db.get_value("Associado", self.filho, "telefone_cobranca"), self.TELEFONE_PAI)
+
+	def test_quem_nao_e_gestor_nem_responsavel_nao_troca(self):
+		patch_modulo, patch_roles = self._como_responsavel(None)
+		with patch_modulo, patch_roles, self.assertRaises(frappe.PermissionError):
+			definir_destinatario_da_cobranca(self.filho, self.pai)
+
+		self.assertEqual(frappe.db.get_value("Associado", self.filho, "telefone_cobranca"), self.TELEFONE_MAE)
+
+	def test_responsavel_de_outra_familia_nao_entra_como_destinatario(self):
+		outro = self._criar_responsavel("99000000024", "Alheio", "+5511900000024")
+		with self.assertRaises(frappe.DoesNotExistError):
+			definir_destinatario_da_cobranca(self.filho, outro)
+
+	def test_responsavel_sem_contato_nao_pode_receber_a_cobranca(self):
+		frappe.db.set_value("Responsavel", self.pai, {"celular": "", "email": ""})
+		with self.assertRaises(frappe.ValidationError):
+			definir_destinatario_da_cobranca(self.filho, self.pai)

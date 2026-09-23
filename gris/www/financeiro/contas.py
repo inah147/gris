@@ -107,7 +107,7 @@ def reconciliar_e_inserir_infinitepay(extrato_path: str, vendas_path: str, receb
 			"vendas": {"total": len(df_vendas), "inserted": 0, "skipped_exist": 0, "failed": 0},
 			"recebimentos": {"total": len(df_recebimentos), "inserted": 0, "skipped_exist": 0, "failed": 0},
 			# total de geral será incrementado conforme tentativas (debitos do extrato + df_geral)
-			"geral": {"total": 0, "inserted": 0, "skipped_exist": 0, "failed": 0},
+			"geral": {"total": 0, "inserted": 0, "skipped_exist": 0, "updated": 0, "failed": 0},
 		}
 
 		# Coleta de erros por doctype para diagnóstico
@@ -243,8 +243,20 @@ def reconciliar_e_inserir_infinitepay(extrato_path: str, vendas_path: str, receb
 				filters = {}
 				if row.get("infinite_id"):
 					filters = {"id": row.get("infinite_id")}
-				if filters and frappe.db.exists("Transacao Extrato Geral", filters):
+				existente = filters and frappe.db.get_value(
+					"Transacao Extrato Geral", filters, ["name", "origem_venda"], as_dict=True
+				)
+				if existente:
 					stats["geral"]["skipped_exist"] += 1
+					# Reimportar o mesmo período completa a origem da venda nas
+					# transações que já estavam no extrato (inclusive as importadas
+					# antes de o campo existir) sem mexer no restante da linha.
+					origem_venda = s(row.get("origem_venda"))
+					if origem_venda and origem_venda != existente.origem_venda:
+						frappe.db.set_value(
+							"Transacao Extrato Geral", existente.name, "origem_venda", origem_venda
+						)
+						stats["geral"]["updated"] += 1
 				else:
 					criar_transacao_de_sistema(
 						{
@@ -267,6 +279,7 @@ def reconciliar_e_inserir_infinitepay(extrato_path: str, vendas_path: str, receb
 							if mpd["categoria"]
 							else f"Pagamento em {s(row.get('meio_meio'))}",
 							"metodo": _get_method_infinitepay(s(row.get("meio_meio"))),
+							"origem_venda": s(row.get("origem_venda")) or None,
 							"destino": "GRUPO ESCOTEIRO PROFESSORA INAH DE MELO N 147. - INFINITEPAY",
 							"carteira": "Infinitepay",
 							"id": s(row.get("infinite_id")),
@@ -300,7 +313,8 @@ def reconciliar_e_inserir_infinitepay(extrato_path: str, vendas_path: str, receb
 
 		# Monta resumo
 		def line(title, s):
-			return f"- {title}: total {s['total']}, inseridas {s['inserted']}, já existiam {s['skipped_exist']}, erro {s['failed']}"
+			atualizadas = f" (origem da venda atualizada em {s['updated']})" if s.get("updated") else ""
+			return f"- {title}: total {s['total']}, inseridas {s['inserted']}, já existiam {s['skipped_exist']}{atualizadas}, erro {s['failed']}"
 
 		def _error_section_lines(section_title: str, items: list[str]):
 			if not items:

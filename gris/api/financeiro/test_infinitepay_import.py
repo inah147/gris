@@ -9,7 +9,10 @@ comprovante de transferência XML) e garantem que os formatos antigos
 
 import os
 import tempfile
+from datetime import datetime
 
+import frappe
+import pandas as pd
 from frappe.tests.utils import FrappeTestCase
 
 from gris.api.financeiro.infinitepay import (
@@ -22,6 +25,7 @@ from gris.api.financeiro.infinitepay import (
 	TIPO_VENDAS,
 	_detect_format,
 	_get_transaction_type,
+	_origem_venda_dos_pix,
 	bank_reconcilliation,
 	get_infinitepay_bank_statement_df,
 	get_infinitepay_receipts_df,
@@ -393,6 +397,39 @@ class TestInfinitepayImport(FrappeTestCase):
 			enviado["origem_nome"], "GRUPO ESCOTEIRO PROFESSORA INAH DE MELO N 147. - INFINITEPAY"
 		)
 
+		# A origem da venda acompanha o cartão; os Pix do extrato não têm venda
+		# correspondente no relatório e o débito nunca tem.
+		self.assertEqual(cartao["origem_venda"], "Maquininha")
+		self.assertTrue(df[df["meio_meio"] == "PIX"]["origem_venda"].isna().all())
+
+	def test_origem_venda_do_pix_vem_da_venda_correspondente(self):
+		extrato = pd.DataFrame(
+			[
+				# O extrato registra o Pix segundos depois; a venda vem no minuto.
+				{"date": datetime(2026, 6, 29, 20, 47, 59), "value": 70.0, "name": "Pix TÁCILA MUNIZ"},
+				# Mesmo minuto e valor para duas pessoas: desempata pelo nome.
+				{"date": datetime(2026, 6, 30, 9, 43, 10), "value": 60.0, "name": "Pix Hana Daher"},
+				{"date": datetime(2026, 6, 30, 9, 43, 20), "value": 60.0, "name": "Pix Karen Fernandes"},
+				# Sem venda do mesmo valor perto do horário.
+				{"date": datetime(2026, 6, 30, 12, 0, 0), "value": 35.0, "name": "Pix Sem Venda"},
+			]
+		)
+		vendas = pd.DataFrame(
+			[
+				("2026-06-29 20:48", "Pix", 70.0, "Tacila Muniz", "Link Integrado"),
+				("2026-06-30 09:43", "Pix", 60.0, "KAREN FERNANDES", "Maquininha"),
+				("2026-06-30 09:43", "Pix", 60.0, "HANA DAHER", "Gestão de Cobrança"),
+				("2026-06-30 12:10", "Pix", 35.0, "Sem Venda", "Maquininha"),
+				("2026-06-30 12:00", "Crédito", 35.0, "Sem Venda", "Maquininha"),
+			],
+			columns=["data_hora", "meio_meio", "valor", "origem_nome", "tipo_origem"],
+		)
+
+		origens = _origem_venda_dos_pix(extrato, vendas)
+
+		self.assertEqual(origens.iloc[:3].tolist(), ["Link Integrado", "Gestão de Cobrança", "Maquininha"])
+		self.assertTrue(pd.isna(origens.iloc[3]))
+
 	# ------------------------------------------------------------------
 	# Identificação do tipo de anexo (usada pela importação via e-mail, que não
 	# pode confiar no nome do arquivo)
@@ -437,6 +474,22 @@ class TestReconciliarEInserirInfinitepay(FrappeTestCase):
 
 	def setUp(self):
 		self._temporarios = []
+		# O extrato geral aponta para a instituição e a carteira Infinitepay; sem
+		# elas toda linha do geral falha no Link e só conta como erro.
+		if not frappe.db.exists("Instituicao Financeira", "Infinitepay"):
+			frappe.get_doc({"doctype": "Instituicao Financeira", "nome": "Infinitepay", "ativa": 1}).insert(
+				ignore_permissions=True
+			)
+		if not frappe.db.exists("Carteira", "Infinitepay"):
+			frappe.get_doc(
+				{
+					"doctype": "Carteira",
+					"nome": "Infinitepay",
+					"instituicao_financeira": "Infinitepay",
+					"ativa": 1,
+					"saldo_inicial": 0,
+				}
+			).insert(ignore_permissions=True)
 
 	def tearDown(self):
 		for caminho in self._temporarios:
@@ -478,6 +531,28 @@ class TestReconciliarEInserirInfinitepay(FrappeTestCase):
 		self.assertEqual(segundo["stats"]["extrato"]["inserted"], 0)
 		self.assertEqual(segundo["stats"]["vendas"]["inserted"], 0)
 		self.assertEqual(segundo["stats"]["recebimentos"]["inserted"], 0)
+
+	def test_reimportar_preenche_a_origem_da_venda_das_transacoes_existentes(self):
+		extrato = self.arquivo(EXTRATO_HTML, ".ofx")
+		vendas = self.arquivo(VENDAS_XML, ".xml")
+		recebimentos = self.arquivo(RECEBIMENTOS_XML, ".xml")
+		id_cartao = "SPB1F252H7722521900320260530170009"
+
+		reconciliar_e_inserir_infinitepay(extrato, vendas, recebimentos)
+		self.assertEqual(
+			frappe.db.get_value("Transacao Extrato Geral", {"id": id_cartao}, "origem_venda"), "Maquininha"
+		)
+
+		# Simula uma transação importada antes de o campo existir.
+		frappe.db.set_value("Transacao Extrato Geral", {"id": id_cartao}, "origem_venda", None)
+
+		resultado = reconciliar_e_inserir_infinitepay(extrato, vendas, recebimentos)
+
+		self.assertEqual(resultado["stats"]["geral"]["inserted"], 0)
+		self.assertEqual(resultado["stats"]["geral"]["updated"], 1)
+		self.assertEqual(
+			frappe.db.get_value("Transacao Extrato Geral", {"id": id_cartao}, "origem_venda"), "Maquininha"
+		)
 
 	def test_formato_invalido_devolve_erro_sem_lancar_excecao(self):
 		resultado = reconciliar_e_inserir_infinitepay(

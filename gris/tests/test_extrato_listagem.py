@@ -174,6 +174,11 @@ class TestExtratoLinhas(FrappeTestCase):
 		# As demais existem, mas entram escondidas até o usuário ligar.
 		self.assertIn("observacoes", {c["key"] for c in EXTRATO_COLUNAS if not c.get("padrao")})
 
+	def test_origem_da_venda_vem_visivel_por_padrao(self):
+		# Diz se o recebimento Infinitepay veio do site (Link Integrado), da
+		# maquininha etc.; oculta, a informação importada não aparecia na lista.
+		self.assertIn("origem_venda", {c["key"] for c in EXTRATO_COLUNAS if c.get("padrao")})
+
 	def test_coluna_restrita_so_aparece_para_gestor_financeiro(self):
 		chaves_livres = {c["key"] for c in get_extrato_colunas(False)}
 		chaves_gestor = {c["key"] for c in get_extrato_colunas(True)}

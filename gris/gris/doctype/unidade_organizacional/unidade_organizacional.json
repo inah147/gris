@@ -8,33 +8,79 @@
  "field_order": [
   "area",
   "responde_para",
-  "descri\u00e7\u00e3o"
+  "responsavel",
+  "column_break_organograma",
+  "ativa",
+  "ordem",
+  "origem_automatica",
+  "section_break_descricao",
+  "descricao"
  ],
  "fields": [
   {
    "fieldname": "area",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "\u00c1rea",
+   "label": "Área",
    "reqd": 1,
    "unique": 1
   },
   {
-   "fieldname": "descri\u00e7\u00e3o",
-   "fieldtype": "Small Text",
-   "label": "Descri\u00e7\u00e3o"
-  },
-  {
+   "description": "Área-mãe na hierarquia. Em branco significa que esta é uma área de topo.",
    "fieldname": "responde_para",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Responde para",
    "options": "Unidade Organizacional"
+  },
+  {
+   "description": "Adulto que lidera a área. Todo mundo lotado nesta área responde a ele no organograma.",
+   "fieldname": "responsavel",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Responsável",
+   "options": "Associado"
+  },
+  {
+   "fieldname": "column_break_organograma",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "description": "Áreas inativas não aparecem no organograma.",
+   "fieldname": "ativa",
+   "fieldtype": "Check",
+   "label": "Ativa"
+  },
+  {
+   "default": "0",
+   "description": "Ordena áreas irmãs no organograma. Menor primeiro.",
+   "fieldname": "ordem",
+   "fieldtype": "Int",
+   "label": "Ordem"
+  },
+  {
+   "default": "0",
+   "description": "Criada pela sincronização de seções do Paxtu. A rotina só mexe no que ela mesma criou.",
+   "fieldname": "origem_automatica",
+   "fieldtype": "Check",
+   "label": "Criada automaticamente",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_descricao",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "descricao",
+   "fieldtype": "Small Text",
+   "label": "Descrição"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-08 13:33:32.661010",
+ "modified": "2026-09-22 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Unidade Organizacional",
@@ -50,6 +96,18 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de Adultos",
    "share": 1,
    "write": 1
   },

@@ -424,9 +424,9 @@ fixtures = [
 	{
 		"dt": "Categoria de Transacao",
 	},
-	{
-		"dt": "Unidade Organizacional",
-	},
+	# "Unidade Organizacional" saiu das fixtures: a Gestão de Adultos edita as áreas
+	# pela interface e o import de fixtures sobrescrevia essas edições a cada
+	# migrate. As sementes iniciais vivem em gris.patches.semear_unidades_organizacionais.
 	{
 		"dt": "Email Template",
 	},

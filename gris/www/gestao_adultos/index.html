@@ -5,8 +5,14 @@
 {% set module_subtitle = "Informações sobre os adultos da UEL e seu desenvolvimento." %}
 {% set module_items = [
 	{
+		"href": "/gestao_adultos/organograma",
+		"title": "Organograma",
+		"description": "Veja a estrutura de adultos do grupo, área por área",
+	},
+	{
 		"href": "/gestao_adultos/entrevista_competencias",
 		"title": "Entrevistas",
 		"description": "Gerencie entrevistas por competências dos adultos",
+		"visible": pode_entrevistas,
 	},
 ] %}

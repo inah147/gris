@@ -693,9 +693,24 @@ def parse_associates_report(path_pdf: str) -> dict:
 			)
 			results["error_details"].append(f"Linha {idx + 1} - {error_msg}")
 
+	# A importação é o único momento em que `secao` e `funcao` mudam em lote; é
+	# aqui que as seções viram áreas do organograma.
+	results["secoes"] = _sincronizar_secoes_do_organograma()
+
 	_registrar_log_importacao(path_pdf, results)
 
 	return results
+
+
+def _sincronizar_secoes_do_organograma() -> dict:
+	"""Reconcilia seções e áreas; uma falha aqui não invalida a importação."""
+	from gris.api.gestao_adultos.secoes import sincronizar_secoes
+
+	try:
+		return sincronizar_secoes()
+	except Exception as e:  # pragma: no cover - depende do estado do cadastro
+		frappe.log_error("Erro ao sincronizar seções do organograma", str(e))
+		return {"erro": str(e)}
 
 
 def _parse_date(date_str: str) -> str:

@@ -1,0 +1,78 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-09-22 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "funcao",
+  "area",
+  "principal",
+  "column_break_periodo",
+  "data_inicio",
+  "data_fim"
+ ],
+ "fields": [
+  {
+   "columns": 3,
+   "fieldname": "funcao",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Função",
+   "options": "Funcao Voluntario",
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "fetch_from": "funcao.area",
+   "fieldname": "area",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Área",
+   "options": "Unidade Organizacional",
+   "read_only": 1
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "description": "Função exibida no card do organograma. Apenas uma por pessoa.",
+   "fieldname": "principal",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Principal"
+  },
+  {
+   "fieldname": "column_break_periodo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 2,
+   "fieldname": "data_inicio",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Início"
+  },
+  {
+   "columns": 2,
+   "description": "Em branco significa função atual.",
+   "fieldname": "data_fim",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Fim"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-22 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Funcao do Associado",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

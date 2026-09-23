@@ -107,6 +107,29 @@ class Associado(Document):
 
 	def validate(self):
 		self._set_status()
+		self._validar_funcoes_internas()
+
+	def _validar_funcoes_internas(self):
+		"""Só uma função pode ser a principal, e o período tem que fazer sentido.
+
+		A principal é a que o organograma mostra no card; com duas marcadas a
+		escolha viraria sorteio pela ordem das linhas.
+		"""
+		principais = [linha for linha in (self.funcoes_internas or []) if linha.principal]
+		if len(principais) > 1:
+			frappe.throw(
+				frappe._("Marque apenas uma função interna como principal (há {0} marcadas).").format(
+					len(principais)
+				)
+			)
+
+		for linha in self.funcoes_internas or []:
+			if linha.data_inicio and linha.data_fim and linha.data_fim < linha.data_inicio:
+				frappe.throw(
+					frappe._("Função interna na linha {0}: a data de fim é anterior à de início.").format(
+						linha.idx
+					)
+				)
 
 	def _handle_novo_associado_pre(self):
 		if not self.cpf:

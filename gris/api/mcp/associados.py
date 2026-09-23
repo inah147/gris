@@ -25,7 +25,6 @@ CAMPOS_LISTA = [
 	"secao",
 	"categoria",
 	"funcao",
-	"area",
 	"status",
 	"status_no_grupo",
 	"validade_registro",
@@ -76,7 +75,6 @@ CAMPOS_EDITAVEIS = {
 	"numero_residencia",
 	"ramo",
 	"secao",
-	"area",
 	"funcao",
 	"categoria",
 	"status",
@@ -143,7 +141,6 @@ def _validar_campo(meta, campo: str, valor: Any) -> Any:
 		},
 		"secao": {"type": "string", "description": "Seção (ex.: Alcateia, Tropa)."},
 		"categoria": {"type": "string", "description": "Categoria do registro (ex.: Beneficiário)."},
-		"area": {"type": "string", "description": "Unidade Organizacional (campo 'area')."},
 		"status": {
 			"type": "string",
 			"enum": ["Válido", "Vencido", "Desconhecido"],
@@ -176,7 +173,6 @@ def listar_associados(
 	ramo: str | None = None,
 	secao: str | None = None,
 	categoria: str | None = None,
-	area: str | None = None,
 	status: str | None = None,
 	status_no_grupo: str = "Ativo",
 	limite: int = 25,
@@ -189,7 +185,6 @@ def listar_associados(
 		("ramo", ramo),
 		("secao", secao),
 		("categoria", categoria),
-		("area", area),
 		("status", status),
 	):
 		if valor:

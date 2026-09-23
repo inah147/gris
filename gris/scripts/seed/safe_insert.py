@@ -11,7 +11,8 @@ FIXTURE_DOCTYPES = {
 	"Instituicao Financeira",
 	"Centro de Custo",
 	"Categoria de Transacao",
-	"Unidade Organizacional",
+	# "Unidade Organizacional" saiu das fixtures — agora é dado operacional,
+	# editável pela Gestão de Adultos, e o seed precisa montar a hierarquia.
 	"Email Template",
 	"Mapeamento de perguntas e respostas da entrevista",
 	"ODS Projeto",

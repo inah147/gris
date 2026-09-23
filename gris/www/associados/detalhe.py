@@ -89,7 +89,6 @@ def get_context(context):
 		"ramo",
 		"secao",
 		"funcao",
-		"area",
 		"registro",
 		"validade_registro",
 		"registro_isento",
@@ -126,7 +125,6 @@ def get_context(context):
 	gestor_editable = shared_editable | {
 		"anos_afastamento",
 		"eleito",
-		"area",
 	}
 	responsavel_editable = shared_editable
 	if can_manage_member_admin:
@@ -135,13 +133,6 @@ def get_context(context):
 		editable = responsavel_editable
 	else:
 		editable = set()
-
-	area_options = frappe.get_all(
-		"Unidade Organizacional",
-		fields=["area"],
-		pluck="area",
-		order_by="area asc",
-	)
 
 	def build_field(fieldname):
 		df = df_map.get(fieldname)
@@ -154,14 +145,8 @@ def get_context(context):
 		value = doc.get(fieldname)
 		# Mostrar mesmo nulo
 		disp = frappe.format_value(value, df.as_dict()) if value not in (None, "") else ""
-		if fieldname == "area":
-			opts = area_options[:]
-			if value and value not in opts:
-				opts.append(value)
-			fieldtype = "Select"
-		else:
-			opts = (df.options or "").split("\n") if df.fieldtype == "Select" and df.options else []
-			fieldtype = df.fieldtype
+		opts = (df.options or "").split("\n") if df.fieldtype == "Select" and df.options else []
+		fieldtype = df.fieldtype
 
 		# Pre-format options for Basecoat select macro
 		options_items = [{"value": opt, "label": opt} for opt in opts] if opts else []

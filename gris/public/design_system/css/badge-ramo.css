@@ -1,0 +1,53 @@
+/* Badges de ramo — componente do design system.
+
+   As cores oficiais dos ramos já existiam como tokens em `theme-shadcn.css`
+   (`--ramo-filhotes` … `--ramo-pioneiro`), mas nenhum componente as consumia:
+   cada página que precisava de um selo de ramo escrevia a própria paleta em
+   hex. Estas classes são a forma padrão, derivadas dos tokens.
+
+   O hex puro é forte demais para fundo de badge (o amarelo do Lobinho não
+   passa em contraste com texto claro), então o fundo é uma diluição do token e
+   o texto é o mesmo token escurecido — a cor do ramo se mantém reconhecível e
+   o par fica legível nos dois temas. */
+
+.badge.badge-ramo-filhotes {
+	--ramo-badge: var(--ramo-filhotes);
+}
+
+.badge.badge-ramo-lobinho {
+	--ramo-badge: var(--ramo-lobinho);
+}
+
+.badge.badge-ramo-escoteiro {
+	--ramo-badge: var(--ramo-escoteiro);
+}
+
+.badge.badge-ramo-senior {
+	--ramo-badge: var(--ramo-senior);
+}
+
+.badge.badge-ramo-pioneiro {
+	--ramo-badge: var(--ramo-pioneiro);
+}
+
+.badge.badge-ramo-filhotes,
+.badge.badge-ramo-lobinho,
+.badge.badge-ramo-escoteiro,
+.badge.badge-ramo-senior,
+.badge.badge-ramo-pioneiro {
+	background-color: color-mix(in srgb, var(--ramo-badge) 16%, transparent);
+	border-color: color-mix(in srgb, var(--ramo-badge) 40%, transparent);
+	/* 55% é o ponto em que o amarelo do Lobinho — o ramo mais claro — ainda
+	   alcança 4.5:1 sobre o próprio fundo diluído. */
+	color: color-mix(in srgb, var(--ramo-badge) 55%, #000);
+}
+
+.dark .badge.badge-ramo-filhotes,
+.dark .badge.badge-ramo-lobinho,
+.dark .badge.badge-ramo-escoteiro,
+.dark .badge.badge-ramo-senior,
+.dark .badge.badge-ramo-pioneiro {
+	background-color: color-mix(in srgb, var(--ramo-badge) 22%, transparent);
+	border-color: color-mix(in srgb, var(--ramo-badge) 38%, transparent);
+	color: color-mix(in srgb, var(--ramo-badge) 45%, #fff);
+}

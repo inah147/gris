@@ -1,0 +1,48 @@
+/* Avatar — componente do design system.
+
+   A macro `avatar` do Basecoat existe desde sempre, mas o bundle não traz
+   nenhuma regra para `.avatar`: quem usava ficava com um span cru e precisava
+   reestilizar por página (foi o que o shell da sidebar fez em
+   `public/css/web_sidebar_base.css`). Estas regras dão a aparência padrão.
+
+   O shell da sidebar carrega o CSS dele depois deste arquivo, então continua
+   mandando na própria aparência e nada muda lá. */
+
+.avatar {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: 2.25rem;
+	height: 2.25rem;
+	border-radius: 999px;
+	/* `--accent`, e não `--muted`: neste tema o `--muted` claro é branco puro, e
+	   o círculo sumiria sobre um card. É também o par que a sidebar já usa. */
+	background: var(--accent);
+	color: var(--accent-foreground);
+	font-size: 0.8125rem;
+	font-weight: 700;
+	line-height: 1;
+	text-transform: uppercase;
+	overflow: hidden;
+	user-select: none;
+}
+
+.avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.avatar-sm {
+	width: 1.75rem;
+	height: 1.75rem;
+	font-size: 0.6875rem;
+}
+
+.avatar-lg {
+	width: 3rem;
+	height: 3rem;
+	font-size: 1rem;
+}

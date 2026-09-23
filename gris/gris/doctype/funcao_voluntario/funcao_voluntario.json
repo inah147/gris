@@ -1,38 +1,98 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "field:titulo",
  "creation": "2025-09-04 19:24:35.644318",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "titulo",
   "categoria",
   "column_break_vwin",
-  "area"
+  "area",
+  "ativa",
+  "origem_automatica",
+  "section_break_descricao",
+  "descricao",
+  "section_break_responsabilidades",
+  "responsabilidades"
  ],
  "fields": [
   {
+   "description": "Nome da função como ela é chamada no grupo. Ex.: Diretora de Programa.",
+   "fieldname": "titulo",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Título",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
    "fieldname": "categoria",
    "fieldtype": "Select",
-   "label": "Categoria",
-   "options": "Dirigente\nEscotista\nColaborador"
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Linha",
+   "options": "\nDirigente\nEscotista\nColaborador"
   },
   {
    "fieldname": "column_break_vwin",
    "fieldtype": "Column Break"
   },
   {
+   "description": "É daqui que o organograma tira a posição de quem tem esta função.",
    "fieldname": "area",
-   "fieldtype": "Select",
-   "label": "\u00c1rea"
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Área",
+   "options": "Unidade Organizacional",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "description": "Funções inativas continuam no histórico, mas não devem ser atribuídas.",
+   "fieldname": "ativa",
+   "fieldtype": "Check",
+   "label": "Ativa"
+  },
+  {
+   "default": "0",
+   "description": "Criada pela sincronização de seções do Paxtu. A rotina só mexe no que ela mesma criou.",
+   "fieldname": "origem_automatica",
+   "fieldtype": "Check",
+   "label": "Criada automaticamente",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_descricao",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "descricao",
+   "fieldtype": "Small Text",
+   "label": "Descrição"
+  },
+  {
+   "fieldname": "section_break_responsabilidades",
+   "fieldtype": "Section Break",
+   "label": "Responsabilidades"
+  },
+  {
+   "fieldname": "responsabilidades",
+   "fieldtype": "Table",
+   "label": "Responsabilidades",
+   "options": "Responsabilidade da Funcao"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-04 19:30:58.540066",
+ "modified": "2026-09-22 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Funcao Voluntario",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -46,10 +106,27 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de Adultos",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "All"
   }
  ],
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "titulo"
 }

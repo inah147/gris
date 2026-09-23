@@ -54,31 +54,120 @@ def seed_habilidades(n: int):
 	print(f"  → {created} Habilidade")
 
 
-def seed_funcoes_voluntario(n: int):
-	"""Funcao Voluntario não tem autoname; nome gerado por hash. Idempotência via filtro."""
-	combos = [
-		{"categoria": "Dirigente", "area": "Administrativo Financeiro"},
-		{"categoria": "Dirigente", "area": "Gestão Institucional"},
-		{"categoria": "Dirigente", "area": "Métodos Educativos"},
-		{"categoria": "Escotista", "area": "Lobinho"},
-		{"categoria": "Escotista", "area": "Escoteiro"},
-		{"categoria": "Escotista", "area": "Sênior"},
-		{"categoria": "Escotista", "area": "Pioneiro"},
-		{"categoria": "Colaborador", "area": "Apoio"},
-	]
+# Áreas estruturais do grupo: (área, área-mãe, ordem). As áreas de seção não
+# entram aqui — elas nascem de `sincronizar_secoes()`, a partir do campo `secao`.
+UNIDADES_ORGANIZACIONAIS = [
+	("Presidência", None, 0),
+	("Programa", "Presidência", 1),
+	("Administrativo", "Presidência", 2),
+	("Financeiro", "Presidência", 3),
+	("Manutenção", "Administrativo", 1),
+	("Eventos", "Administrativo", 2),
+]
+
+
+def seed_unidades_organizacionais():
+	"""Monta a árvore de áreas. Sem ela o organograma nasce vazio em dev."""
 	created = 0
-	for combo in combos[:n]:
-		# Verifica se o campo "area" tem opção válida — se não, usa categoria como fallback
-		if frappe.db.exists("Funcao Voluntario", combo):
+	for area, mae, ordem in UNIDADES_ORGANIZACIONAIS:
+		if frappe.db.exists("Unidade Organizacional", area):
 			continue
-		try:
-			doc = frappe.get_doc({"doctype": "Funcao Voluntario", **combo})
-			doc.insert(ignore_permissions=True)
-			created += 1
-		except Exception as e:
-			# campo "area" pode ter options dinâmico no JSON — relaxar e seguir
-			print(f"  ⚠️  Funcao Voluntario {combo}: {e}")
+		safe_insert(
+			{
+				"doctype": "Unidade Organizacional",
+				"area": area,
+				"responde_para": mae,
+				"ordem": ordem,
+				"ativa": 1,
+				"descricao": f"Área de {area} do grupo.",
+			}
+		)
+		created += 1
+	print(f"  → {created} Unidade Organizacional")
+
+
+# (título, linha, área, responsabilidades)
+FUNCOES_VOLUNTARIO = [
+	("Diretor(a) Presidente", "Dirigente", "Presidência", ["Representar o grupo", "Presidir reuniões"]),
+	("Diretor(a) de Programa", "Dirigente", "Programa", ["Coordenar as seções", "Acompanhar escotistas"]),
+	(
+		"Diretor(a) Administrativo",
+		"Dirigente",
+		"Administrativo",
+		["Cuidar da sede", "Organizar documentos"],
+	),
+	("Diretor(a) Financeiro", "Dirigente", "Financeiro", ["Prestar contas", "Controlar o caixa"]),
+	("Coordenador(a) de Adultos", "Dirigente", "Administrativo", ["Acompanhar a linha de formação"]),
+	("Coordenador(a) de Eventos", "Colaborador", "Eventos", ["Organizar festas e campanhas"]),
+	("Membro de Equipe", "Colaborador", "Manutenção", ["Executar os mutirões de manutenção"]),
+]
+
+
+def seed_funcoes_voluntario(n: int):
+	"""Funções internas do grupo, com suas responsabilidades."""
+	created = 0
+	for titulo, categoria, area, responsabilidades in FUNCOES_VOLUNTARIO[:n]:
+		if frappe.db.exists("Funcao Voluntario", titulo):
+			continue
+		safe_insert(
+			{
+				"doctype": "Funcao Voluntario",
+				"titulo": titulo,
+				"categoria": categoria,
+				"area": area if frappe.db.exists("Unidade Organizacional", area) else None,
+				"ativa": 1,
+				"descricao": f"{titulo} — função interna da área {area}.",
+				"responsabilidades": [{"responsabilidade": r} for r in responsabilidades],
+			}
+		)
+		created += 1
 	print(f"  → {created} Funcao Voluntario")
+
+
+def seed_responsaveis_de_area(associado_names: list[str]):
+	"""Elege um responsável para cada área, respeitando a hierarquia.
+
+	Roda depois de `seed_associados` porque `Unidade Organizacional.responsavel`
+	é Link para Associado.
+	"""
+	if not associado_names:
+		return
+
+	elegiveis = frappe.get_all(
+		"Associado",
+		filters={
+			"name": ["in", associado_names],
+			"categoria": ["!=", "Beneficiário"],
+			"status_no_grupo": "Ativo",
+		},
+		pluck="name",
+	)
+	if not elegiveis:
+		return
+
+	# A área vem da função interna: é o mesmo caminho que o organograma percorre.
+	from gris.api.gestao_adultos.organograma import lotacoes_atuais
+
+	lotacoes, _sem_area = lotacoes_atuais(elegiveis)
+	por_area: dict[str, list[str]] = {}
+	for linha in sorted(lotacoes, key=lambda x: x["associado"]):
+		por_area.setdefault(linha["area"], []).append(linha["associado"])
+
+	definidos = 0
+	ja_lidera: set[str] = set()
+	for area, _mae, _ordem in UNIDADES_ORGANIZACIONAIS:
+		if not frappe.db.exists("Unidade Organizacional", area):
+			continue
+		if frappe.db.get_value("Unidade Organizacional", area, "responsavel"):
+			continue
+		candidatos = [c for c in por_area.get(area, []) if c not in ja_lidera]
+		if not candidatos:
+			continue
+		escolhido = candidatos[0]
+		ja_lidera.add(escolhido)
+		frappe.db.set_value("Unidade Organizacional", area, "responsavel", escolhido)
+		definidos += 1
+	print(f"  → {definidos} responsáveis de área")
 
 
 def seed_feriados(n: int):
@@ -258,6 +347,65 @@ def _historico_para(status_no_grupo: str, anos_atras: int = 3) -> list[dict]:
 	return [{"data_de_ingresso": ingresso}]
 
 
+RAMOS_DE_SECAO = ("Lobinho", "Escoteiro", "Sênior", "Pioneiro")
+
+#: Nome da seção de cada ramo, como o Paxtu preenche o campo `secao`.
+SECAO_POR_RAMO = {
+	"Filhotes": "Ninho",
+	"Lobinho": "Alcateia",
+	"Escoteiro": "Tropa Escoteira",
+	"Sênior": "Tropa Sênior",
+	"Pioneiro": "Clã Pioneiro",
+}
+AREAS_DIRIGENTE = ("Presidência", "Programa", "Administrativo", "Financeiro")
+AREAS_APOIO = ("Manutenção", "Eventos")
+
+
+def _area_para(categoria: str, ramo: str, areas_existentes: set[str]) -> str | None:
+	"""Espalha os adultos pela árvore para o organograma ter profundidade.
+
+	Escotista fica de fora: a área dele sai da seção, via `sincronizar_secoes()`.
+	"""
+	if categoria == "Escotista":
+		return None
+	if categoria == "Dirigente":
+		candidatas = AREAS_DIRIGENTE
+	else:
+		candidatas = AREAS_APOIO
+
+	disponiveis = [a for a in candidatas if a in areas_existentes]
+	return random.choice(disponiveis) if disponiveis else None
+
+
+def _funcoes_internas_para(
+	area: str | None,
+	funcoes_por_area: dict[str, list[str]],
+	todas_as_funcoes: list[str] | None = None,
+) -> list[dict]:
+	funcoes = funcoes_por_area.get(area or "") or []
+	if not funcoes:
+		return []
+
+	hoje = date.today()
+	inicio_atual = hoje - timedelta(days=random.randint(90, 900))
+	linhas = [{"funcao": random.choice(funcoes), "principal": 1, "data_inicio": inicio_atual}]
+
+	# Parte das pessoas carrega uma função antiga: é o que dá histórico para o
+	# painel de detalhes mostrar mais de uma linha e um período já encerrado.
+	anteriores = [f for f in (todas_as_funcoes or []) if f != linhas[0]["funcao"]]
+	if anteriores and random.random() < 0.4:
+		fim_anterior = inicio_atual - timedelta(days=random.randint(1, 60))
+		linhas.append(
+			{
+				"funcao": random.choice(anteriores),
+				"principal": 0,
+				"data_inicio": fim_anterior - timedelta(days=random.randint(365, 1095)),
+				"data_fim": fim_anterior,
+			}
+		)
+	return linhas
+
+
 def seed_associados(por_combinacao: int, extras: int) -> list[str]:
 	"""
 	Cria a matriz {status x status_no_grupo x categoria} + extras.
@@ -268,8 +416,15 @@ def seed_associados(por_combinacao: int, extras: int) -> list[str]:
 	statuses_grupo = ["Ativo", "Inativo"]
 	categorias = ["Beneficiário", "Dirigente", "Escotista", "Contribuinte", "Pais/Responsáveis"]
 	# autoname = field:cpf — usa CPF como name diretamente
-	areas = all_names("Unidade Organizacional", limit=5)
-	area_default = areas[0] if areas else None
+	areas_existentes = set(all_names("Unidade Organizacional"))
+
+	# Funções internas disponíveis por área, para o organograma não nascer sem cargo.
+	funcoes_por_area: dict[str, list[str]] = {}
+	todas_as_funcoes: list[str] = []
+	for linha in frappe.get_all("Funcao Voluntario", fields=["name", "area"], filters={"ativa": 1}):
+		todas_as_funcoes.append(linha.name)
+		if linha.area:
+			funcoes_por_area.setdefault(linha.area, []).append(linha.name)
 
 	created = 0
 	names = []
@@ -296,13 +451,18 @@ def seed_associados(por_combinacao: int, extras: int) -> list[str]:
 		hoje = date.today()
 		validade = hoje + timedelta(days=180) if status == "Válido" else hoje - timedelta(days=60)
 		idade = random.randint(7, 21) if categoria == "Beneficiário" else random.randint(25, 60)
-		ramo_efetivo = (
-			ramo
-			if ramo
-			else (
-				random.choice([r[0] for r in RAMO_FAIXAS]) if categoria == "Beneficiário" else "Não se aplica"
-			)
-		)
+		if ramo:
+			ramo_efetivo = ramo
+		elif categoria == "Beneficiário":
+			ramo_efetivo = random.choice([r[0] for r in RAMO_FAIXAS])
+		elif categoria == "Escotista":
+			# Escotista sem ramo não renderiza o badge de ramo no organograma.
+			ramo_efetivo = random.choice(RAMOS_DE_SECAO)
+		else:
+			ramo_efetivo = "Não se aplica"
+
+		area_efetiva = _area_para(categoria, ramo_efetivo, areas_existentes)
+		funcoes_internas = _funcoes_internas_para(area_efetiva, funcoes_por_area, todas_as_funcoes)
 		doc = frappe.get_doc(
 			{
 				"doctype": "Associado",
@@ -335,9 +495,9 @@ def seed_associados(por_combinacao: int, extras: int) -> list[str]:
 				"guardiao_legal_responsavel_1": 1 if categoria == "Beneficiário" else 0,
 				"categoria": categoria,
 				"ramo": ramo_efetivo,
-				"area": area_default,
+				"funcoes_internas": funcoes_internas,
 				"funcao": "Beneficiário" if categoria == "Beneficiário" else fake.job()[:30],
-				"secao": "Alcateia" if ramo_efetivo == "Lobinho" else "",
+				"secao": SECAO_POR_RAMO.get(ramo_efetivo, ""),
 				"eleito": "Não",
 				"valor_contribuicao": 60.0 if categoria == "Beneficiário" else 0,
 				"status_cobranca": "Ativo"
@@ -850,6 +1010,7 @@ def seed_gris_core(creds: dict, n: dict) -> dict:
 	"""
 	print("[gris_core]")
 	seed_habilidades(n["habilidade"])
+	seed_unidades_organizacionais()
 	seed_funcoes_voluntario(n["funcao_voluntario"])
 	seed_feriados(n["feriados"])
 
@@ -857,6 +1018,11 @@ def seed_gris_core(creds: dict, n: dict) -> dict:
 	novo_associado_names = seed_novos_associados(n["novo_associado_por_ramo"])
 	associado_names = seed_associados(n["associado_por_combinacao"], n["associado_extras"])
 
+	# Mesmo caminho da importação do Paxtu: as seções viram áreas aqui.
+	from gris.api.gestao_adultos.secoes import sincronizar_secoes
+
+	sincronizar_secoes()
+	seed_responsaveis_de_area(associado_names)
 	seed_responsavel_vinculo(responsavel_names, associado_names, novo_associado_names)
 	seed_calendarios(n["calendario"])
 	seed_calendarios_simulados(n["calendario_simulado"])

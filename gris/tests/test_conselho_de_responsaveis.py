@@ -4,12 +4,25 @@
 """Testes do Conselho de Responsáveis no organograma.
 
 `montar_no_conselho` é pura e é testada direto. O resto cobre a estrutura fixa (área
-raiz + função) e a trava que impede a área de virar filha de outra.
+raiz + função), a trava que impede a área de virar filha de outra e as duas regras da
+função de Responsável Legal: ela fica enquanto houver beneficiário, e não exige Acordo
+de Trabalho Voluntário.
 """
+
+import json
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
+from gris.api.gestao_adultos.atribuicoes import (
+	apagar_funcao,
+	atribuir_funcao,
+	encerrar_funcao,
+	listar_funcoes_da_pessoa,
+)
+from gris.api.gestao_adultos.atvs import listar_atvs, salvar_atv
+from gris.api.gestao_adultos.identidade import chave_do_associado
+from gris.api.gestao_adultos.organograma import obter_detalhe_do_adulto
 from gris.api.gestao_adultos.responsaveis import (
 	AREA_CONSELHO,
 	FUNCAO_RESPONSAVEL_LEGAL,
@@ -255,3 +268,190 @@ class TestConselhoNoOrganograma(FrappeTestCase):
 		)
 		doc.insert(ignore_permissions=True)
 		return doc.name
+
+
+class TestFuncaoObrigatoriaDoConselho(FrappeTestCase):
+	"""A função de Responsável Legal não é alocação: ela acompanha o vínculo.
+
+	Quem responde por um beneficiário tem de aparecer no Conselho, então nem a tela nem a
+	grade do Desk podem tirar a linha de lá. O que a encerra é perder o último vínculo, e
+	isso quem faz é `gris.api.pessoas`.
+	"""
+
+	def setUp(self):
+		garantir_estrutura_do_conselho()
+		self.associado = _criar_associado_com_vinculo("Obrigatoria")
+		self.linha = _linha_do_conselho(self.associado)
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+		frappe.db.rollback()
+
+	def _payload(self, **kwargs):
+		kwargs.setdefault("pessoa", chave_do_associado(self.associado))
+		return json.dumps(kwargs)
+
+	# ------------------------------------------------------------------
+	# Não pode ser excluída
+	# ------------------------------------------------------------------
+
+	def test_a_linha_nasce_com_o_vinculo(self):
+		self.assertIsNotNone(self.linha)
+		self.assertEqual(self.linha["area"], AREA_CONSELHO)
+		self.assertEqual(self.linha["funcao"], FUNCAO_RESPONSAVEL_LEGAL)
+
+	def test_apagar_e_recusado_enquanto_houver_beneficiario(self):
+		with self.assertRaises(frappe.ValidationError):
+			apagar_funcao(self._payload(linha=self.linha["linha"]))
+
+		self.assertIsNotNone(_linha_do_conselho(self.associado))
+
+	def test_encerrar_e_recusado_enquanto_houver_beneficiario(self):
+		with self.assertRaises(frappe.ValidationError):
+			encerrar_funcao(self._payload(linha=self.linha["linha"]))
+
+		self.assertIsNone(_linha_do_conselho(self.associado)["data_fim"])
+
+	def test_tirar_a_linha_na_grade_do_desk_tambem_e_recusado(self):
+		"""A regra mora no controller, não só nos endpoints do portal."""
+		doc = frappe.get_doc("Associado", self.associado)
+		doc.funcoes_internas = [linha for linha in doc.funcoes_internas if linha.area != AREA_CONSELHO]
+
+		with self.assertRaises(frappe.ValidationError):
+			doc.save(ignore_permissions=True)
+
+	def test_encerrar_pela_grade_do_desk_tambem_e_recusado(self):
+		from frappe.utils import getdate, nowdate
+
+		doc = frappe.get_doc("Associado", self.associado)
+		for linha in doc.funcoes_internas:
+			if linha.area == AREA_CONSELHO:
+				linha.data_fim = getdate(nowdate())
+
+		with self.assertRaises(frappe.ValidationError):
+			doc.save(ignore_permissions=True)
+
+	def test_sem_beneficiario_a_funcao_e_encerrada_sozinha_e_liberada(self):
+		"""Perder o último vínculo é o caminho legítimo — e ele encerra, não apaga."""
+		frappe.delete_doc(
+			"Responsavel Vinculo",
+			frappe.db.get_value("Responsavel Vinculo", {"responsavel": self.associado}, "name"),
+			ignore_permissions=True,
+		)
+
+		encerrada = _linha_do_conselho(self.associado)
+		self.assertIsNotNone(encerrada["data_fim"], "o vínculo saiu: a função tem de fechar")
+
+		# E, encerrada, a linha volta a ser histórico comum — dá para apagar o lançamento.
+		apagar_funcao(self._payload(linha=encerrada["linha"]))
+		self.assertIsNone(_linha_do_conselho(self.associado))
+
+	# ------------------------------------------------------------------
+	# Não exige ATV
+	# ------------------------------------------------------------------
+
+	def test_a_funcao_do_conselho_nao_cobra_acordo(self):
+		self.assertIsNone(self.linha["atv"], "responsável legal não assina ATV")
+		self.assertTrue(self.linha["automatica"])
+
+	def test_as_outras_funcoes_continuam_cobrando(self):
+		"""O recorte é do par função+área, não da pessoa."""
+		area, funcao = _area_com_funcao("Quadro")
+		atribuir_funcao(self._payload(area=area, funcao=funcao))
+
+		alocada = next(
+			linha
+			for linha in listar_funcoes_da_pessoa(chave_do_associado(self.associado))
+			if linha["area"] == area
+		)
+		self.assertEqual(alocada["atv"]["situacao"], "sem_atv")
+		self.assertFalse(alocada["automatica"])
+
+	def test_a_funcao_do_conselho_fica_fora_da_tela_de_cobranca(self):
+		linhas = [item for item in listar_atvs() if item["associado"] == self.associado]
+
+		self.assertEqual([item["area"] for item in linhas if item["area"] == AREA_CONSELHO], [])
+
+	def test_cadastrar_acordo_para_a_funcao_do_conselho_e_recusado(self):
+		with self.assertRaises(frappe.ValidationError):
+			salvar_atv(
+				json.dumps(
+					{
+						"associado": self.associado,
+						"linha": self.linha["linha"],
+						"data_inicio": "2026-01-01",
+						"data_fim": "2026-12-31",
+					}
+				)
+			)
+
+	def test_o_painel_do_organograma_nao_mostra_pendencia(self):
+		detalhe = obter_detalhe_do_adulto(self.associado)
+
+		conselho = next(f for f in detalhe["funcoes"] if f["area"] == AREA_CONSELHO)
+		self.assertIsNone(conselho["atv"])
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _criar_associado_com_vinculo(sufixo: str) -> str:
+	"""Pessoa com os dois cadastros e um beneficiário: entra no conselho pela linha gravada."""
+	from gris.api.pessoas import vincular_responsavel_ao_associado
+
+	cpf = frappe.generate_hash(length=11)
+	associado = frappe.get_doc(
+		{
+			"doctype": "Associado",
+			"nome_completo": f"{PREFIXO} {sufixo}",
+			"cpf": cpf,
+			"data_de_nascimento": "1985-01-01",
+			"categoria": "Dirigente",
+			"status_no_grupo": "Ativo",
+			"historico_no_grupo": [{"data_de_ingresso": "2020-01-01"}],
+		}
+	)
+	associado.insert(ignore_permissions=True)
+
+	responsavel = frappe.get_doc(
+		{"doctype": "Responsavel", "nome_completo": f"{PREFIXO} {sufixo}", "cpf": cpf}
+	)
+	responsavel.insert(ignore_permissions=True)
+
+	frappe.get_doc(
+		{
+			"doctype": "Responsavel Vinculo",
+			"responsavel": responsavel.name,
+			"beneficiario_associado": associado.name,
+		}
+	).insert(ignore_permissions=True)
+
+	vincular_responsavel_ao_associado(responsavel.name)
+	return associado.name
+
+
+def _linha_do_conselho(associado: str) -> dict | None:
+	return next(
+		(
+			linha
+			for linha in listar_funcoes_da_pessoa(chave_do_associado(associado))
+			if linha["area"] == AREA_CONSELHO
+		),
+		None,
+	)
+
+
+def _area_com_funcao(sufixo: str) -> tuple[str, str]:
+	area = f"{PREFIXO} Area {sufixo}"
+	funcao = f"{PREFIXO} Funcao {sufixo}"
+	if not frappe.db.exists("Funcao Voluntario", funcao):
+		frappe.get_doc(
+			{"doctype": "Funcao Voluntario", "titulo": funcao, "categoria": "Colaborador", "ativa": 1}
+		).insert(ignore_permissions=True)
+	if not frappe.db.exists("Unidade Organizacional", area):
+		frappe.get_doc(
+			{"doctype": "Unidade Organizacional", "area": area, "funcoes": [{"funcao": funcao}]}
+		).insert(ignore_permissions=True)
+	return area, funcao

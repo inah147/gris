@@ -79,3 +79,26 @@ def carregar(pessoa: str):
 def nome_de_exibicao(pessoa: str) -> str:
 	doctype, name = separar(pessoa)
 	return frappe.db.get_value(doctype, name, "nome_completo") or name
+
+
+def chave_do_lider(unidade) -> str | None:
+	"""Chave da pessoa que lidera uma `Unidade Organizacional`, ou `None` se não há líder.
+
+	O líder pode ser `Associado` ou `Responsavel`, e os dois têm `name` no mesmo formato:
+	quem diz de qual cadastro é o `tipo_responsavel` da área. Linha antiga, gravada antes
+	de o campo existir, é associado — o mesmo fallback de `separar`.
+	"""
+	nome = (unidade.get("responsavel") or "").strip()
+	if not nome:
+		return None
+	return chave(unidade.get("tipo_responsavel") or DOCTYPE_ASSOCIADO, nome)
+
+
+def filtros_do_lider(pessoa: str) -> dict:
+	"""Filtros de `Unidade Organizacional` para achar as áreas que a pessoa lidera.
+
+	O par (tipo, nome) inteiro, nunca só o nome: com o homônimo do outro cadastro, filtrar
+	pelo `name` cru devolveria as áreas da outra pessoa.
+	"""
+	doctype, name = separar(pessoa)
+	return {"responsavel": name, "tipo_responsavel": doctype}

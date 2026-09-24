@@ -17,6 +17,7 @@ from frappe import _
 from frappe.utils import getdate, nowdate
 
 from .atribuicoes import garantir_gestor_funcoes
+from .responsaveis import e_funcao_do_conselho
 
 #: Categoria que define o público assistido — não entra no organograma, logo não tem ATV.
 CATEGORIA_EXCLUIDA = "Beneficiário"
@@ -111,7 +112,10 @@ def listar_atvs() -> list[dict]:
 			fields=["name", "parent", "funcao", "area", "principal", "data_inicio", "data_fim"],
 			order_by="parent asc, principal desc, idx asc",
 		)
-		if em_vigor(linha, hoje)
+		# A função do Conselho não é alocação do quadro: ela sai do vínculo com um
+		# beneficiário e não tem acordo a assinar. Listá-la encheria a tela de cobrança
+		# com uma pendência por responsável legal que ninguém consegue resolver.
+		if em_vigor(linha, hoje) and not e_funcao_do_conselho(linha["funcao"], linha["area"])
 	]
 	if not linhas:
 		return []
@@ -177,7 +181,7 @@ def salvar_atv(payload: str) -> dict:
 
 	associado = _texto(dados.get("associado"))
 	linha = _texto(dados.get("linha"))
-	_garantir_linha(associado, linha)
+	_garantir_linha(associado, linha, para_escrita=True)
 
 	inicio = _texto(dados.get("data_inicio"))
 	fim = _texto(dados.get("data_fim"))
@@ -292,14 +296,24 @@ def _chave_de_urgencia(item: dict) -> tuple:
 	)
 
 
-def _garantir_linha(associado: str, linha: str) -> None:
+def _garantir_linha(associado: str, linha: str, para_escrita: bool = False) -> None:
 	if not associado or not linha:
 		frappe.throw(_("Escolha a função do acordo."))
-	dono = frappe.db.get_value("Funcao do Associado", linha, ["parent", "parenttype"], as_dict=True)
+	dono = frappe.db.get_value(
+		"Funcao do Associado", linha, ["parent", "parenttype", "funcao", "area"], as_dict=True
+	)
 	if not dono or dono.parenttype != "Associado":
 		frappe.throw(_("Função interna não encontrada."), frappe.DoesNotExistError)
 	if dono.parent != associado:
 		frappe.throw(_("Esta função não é da pessoa informada."), frappe.DoesNotExistError)
+	# Ler o histórico de uma linha do Conselho continua valendo (dados antigos existem);
+	# o que não pode é cadastrar acordo novo para uma função que não exige nenhum.
+	if para_escrita and e_funcao_do_conselho(dono.funcao, dono.area):
+		frappe.throw(
+			_("{0} é mantida pelo vínculo com o beneficiário e não exige acordo de trabalho.").format(
+				frappe.bold(dono.funcao)
+			)
+		)
 
 
 def _carregar(payload: str) -> dict:

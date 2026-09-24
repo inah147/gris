@@ -12,6 +12,10 @@ quadro de associados.
 O cenário decisivo é o do homônimo: `Responsavel.name` e `Associado.name` são os dois md5
 de CPF, então uma alocação endereçada pelo nome cru gravaria na grade da pessoa errada
 sem erro nenhum.
+
+A segunda parte cobre a liderança de área: `Unidade Organizacional.responsavel` virou
+Dynamic Link e aceita os dois cadastros, então o par (tipo, nome) passou a ser o que
+identifica o líder.
 """
 
 import json
@@ -20,6 +24,8 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import getdate, nowdate
 
+from gris.api.administracao.consultas import listar_unidades, opcoes_de_responsavel
+from gris.api.administracao.endpoints import salvar_unidade
 from gris.api.gestao_adultos.atribuicoes import (
 	apagar_funcao,
 	atribuir_funcao,
@@ -40,6 +46,9 @@ PREFIXO = "ZZ Teste Funcao Resp"
 
 #: CPF fictício do par homônimo: o mesmo número gera o mesmo `name` nos dois DocTypes.
 CPF_HOMONIMO = "37000000001"
+
+#: Outro par homônimo, para os testes de liderança de área.
+CPF_DO_LIDER = "37000000002"
 
 
 class TestFuncoesDoResponsavel(FrappeTestCase):
@@ -184,6 +193,134 @@ class TestFuncoesDoResponsavel(FrappeTestCase):
 		self.assertIn(self.funcao, titulos)
 		# A principal do painel é o que a pessoa faz no quadro, não o pano de fundo.
 		self.assertEqual(detalhe["funcao_principal"], self.funcao)
+		self.assertIn(self.area, detalhe["areas"])
+
+
+class TestResponsavelLiderDeArea(FrappeTestCase):
+	"""O responsável legal também pode liderar uma área, não só o associado."""
+
+	def setUp(self):
+		self.area = _criar_area("Area Liderada")
+		self.funcao = _criar_funcao("Apoio")
+		_vincular(self.area, self.funcao)
+		self.responsavel = _criar_responsavel("Lider", CPF_DO_LIDER)
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+		frappe.db.rollback()
+
+	def _definir_lider(self, pessoa: str) -> None:
+		# O endpoint substitui o registro inteiro, então as funções da área viajam junto.
+		salvar_unidade(
+			json.dumps(
+				{
+					"name": self.area,
+					"area": self.area,
+					"responsavel": pessoa,
+					"funcoes": [{"funcao": self.funcao}],
+				}
+			)
+		)
+
+	# ------------------------------------------------------------------
+	# Gravação
+	# ------------------------------------------------------------------
+
+	def test_a_area_grava_o_par_tipo_e_nome(self):
+		self._definir_lider(chave_do_responsavel(self.responsavel))
+
+		area = frappe.db.get_value(
+			"Unidade Organizacional", self.area, ["responsavel", "tipo_responsavel"], as_dict=True
+		)
+		self.assertEqual(area.responsavel, self.responsavel)
+		self.assertEqual(area.tipo_responsavel, "Responsavel")
+
+	def test_a_leitura_devolve_o_lider_como_chave(self):
+		"""É o mesmo valor das opções do seletor — sem o prefixo, o homônimo entraria."""
+		self._definir_lider(chave_do_responsavel(self.responsavel))
+
+		unidade = next(u for u in listar_unidades() if u["name"] == self.area)
+		self.assertEqual(unidade["responsavel"], chave_do_responsavel(self.responsavel))
+		self.assertEqual(unidade["responsavel_nome"], f"{PREFIXO} Lider")
+
+	def test_o_seletor_lista_os_dois_tipos_de_pessoa(self):
+		associado = _criar_associado("Do Quadro")
+
+		valores = {opcao["value"] for opcao in opcoes_de_responsavel()}
+
+		self.assertIn(chave_do_associado(associado), valores)
+		self.assertIn(chave_do_responsavel(self.responsavel), valores)
+
+	def test_payload_sem_prefixo_continua_sendo_associado(self):
+		"""Formulário antigo mandava o `name` cru de um `Associado`."""
+		associado = _criar_associado("Antigo Lider")
+
+		self._definir_lider(associado)
+
+		area = frappe.db.get_value(
+			"Unidade Organizacional", self.area, ["responsavel", "tipo_responsavel"], as_dict=True
+		)
+		self.assertEqual(area.responsavel, associado)
+		self.assertEqual(area.tipo_responsavel, "Associado")
+
+	def test_quem_tem_os_dois_cadastros_lidera_como_associado(self):
+		"""Senão a chave `responsavel:` não casaria com o card `associado:` do desenho."""
+		associado = _criar_associado("Homonimo Lider", CPF_DO_LIDER)
+		self.assertEqual(associado, self.responsavel, "o par precisa mesmo ser homônimo")
+
+		self._definir_lider(chave_do_responsavel(self.responsavel))
+
+		area = frappe.db.get_value(
+			"Unidade Organizacional", self.area, ["responsavel", "tipo_responsavel"], as_dict=True
+		)
+		self.assertEqual(area.tipo_responsavel, "Associado")
+
+	# ------------------------------------------------------------------
+	# Organograma
+	# ------------------------------------------------------------------
+
+	def test_o_responsavel_lidera_a_area_no_desenho(self):
+		self._definir_lider(chave_do_responsavel(self.responsavel))
+
+		arvore = obter_organograma()
+
+		cards = _cards_da_area(arvore, self.area)
+		lider = next(card for card in cards if card["pessoa"] == chave_do_responsavel(self.responsavel))
+		self.assertEqual(lider["lidera_area"], self.area)
+		self.assertEqual(lider["tipo_pessoa"], "responsavel")
+
+	def test_liderar_basta_para_entrar_no_desenho(self):
+		"""Sem função alocada, a área ficaria sem cabeça se o líder não fosse carregado."""
+		self._definir_lider(chave_do_responsavel(self.responsavel))
+
+		arvore = obter_organograma()
+
+		self.assertIn(
+			chave_do_responsavel(self.responsavel),
+			[card["pessoa"] for card in _cards_da_area(arvore, self.area)],
+		)
+
+	def test_quem_tem_funcao_na_area_responde_ao_lider(self):
+		self._definir_lider(chave_do_responsavel(self.responsavel))
+		liderado = _criar_associado("Liderado")
+		atribuir_funcao(
+			json.dumps({"pessoa": chave_do_associado(liderado), "area": self.area, "funcao": self.funcao})
+		)
+
+		arvore = obter_organograma()
+
+		cards = _cards_da_area(arvore, self.area)
+		lider = next(card for card in cards if card["pessoa"] == chave_do_responsavel(self.responsavel))
+		self.assertIn(chave_do_associado(liderado), [filho["pessoa"] for filho in lider["children"]])
+		self.assertEqual(lider["diretos"], 1)
+
+	def test_o_detalhe_do_responsavel_lista_as_areas_lideradas(self):
+		garantir_estrutura_do_conselho()
+		self._definir_lider(chave_do_responsavel(self.responsavel))
+
+		detalhe = obter_detalhe_do_responsavel(self.responsavel)
+
+		self.assertEqual(detalhe["areas_lideradas"], [self.area])
 		self.assertIn(self.area, detalhe["areas"])
 
 

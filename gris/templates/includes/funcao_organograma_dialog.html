@@ -18,7 +18,7 @@
   Quem só quer a grade inteira (tabela + formulário) não precisa chamar nada: basta a
   marcação `.funcoes-organograma` com os `data-*` que o funcoes_organograma_grade.js lê.
 #}
-{% set funcao_organograma_asset_version = "20260924-funcao-organograma-2" %}
+{% set funcao_organograma_asset_version = "20260924-funcao-organograma-3" %}
 <link
   rel="stylesheet"
   href="/assets/gris/css/funcao_organograma.css?v={{ funcao_organograma_asset_version }}"
@@ -41,6 +41,13 @@
   <p class="funcao-dialog__identidade">
     <span class="font-medium" id="funcao-dialog-nome"></span>
     <span class="text-muted-foreground text-sm" id="funcao-dialog-contexto"></span>
+  </p>
+
+  {# Função mantida pelo cadastro (hoje, o Responsável Legal no Conselho): sem alocação
+     para editar, sem acordo a cobrar e sem como sair enquanto houver beneficiário. #}
+  <p class="funcao-dialog__aviso" id="funcao-dialog-aviso-automatica" hidden>
+    Esta função é mantida automaticamente enquanto a pessoa responder por um beneficiário.
+    Ela não é alocada nem encerrada à mão, e não exige Acordo de Trabalho Voluntário.
   </p>
 
   <section class="funcao-dialog__bloco">
@@ -68,7 +75,7 @@
       </div>
     </div>
     <p class="funcao-dialog__ajuda">Término em branco significa função atual.</p>
-    <div class="funcao-dialog__acoes">
+    <div class="funcao-dialog__acoes" id="funcao-dialog-acoes-periodo">
       <button type="button" class="btn-sm-primary" data-acao="salvar-funcao">Salvar período</button>
       <button type="button" class="btn-sm-outline" data-acao="principal">Tornar principal</button>
       <button type="button" class="btn-sm-outline" data-acao="encerrar">Encerrar hoje</button>
@@ -123,7 +130,7 @@
     </div>
   </section>
 
-  <section class="funcao-dialog__bloco funcao-dialog__perigo">
+  <section class="funcao-dialog__bloco funcao-dialog__perigo" id="funcao-dialog-bloco-perigo">
     <h3 class="funcao-dialog__titulo">Apagar a função</h3>
     <p class="funcao-dialog__ajuda">
       Apaga a linha e os acordos dela, sem deixar histórico. Para tirar alguém de uma

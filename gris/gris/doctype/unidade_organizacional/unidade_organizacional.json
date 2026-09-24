@@ -8,6 +8,7 @@
  "field_order": [
   "area",
   "responde_para",
+  "tipo_responsavel",
   "responsavel",
   "column_break_organograma",
   "ativa",
@@ -36,12 +37,20 @@
    "options": "Unidade Organizacional"
   },
   {
-   "description": "Adulto que lidera a área. Todo mundo lotado nesta área responde a ele no organograma.",
+   "default": "Associado",
+   "description": "De qual cadastro é o líder. \"Responsavel\" é o responsável legal sem cadastro de associado.",
+   "fieldname": "tipo_responsavel",
+   "fieldtype": "Select",
+   "label": "Tipo do responsável",
+   "options": "Associado\nResponsavel"
+  },
+  {
+   "description": "Quem lidera a área: um adulto do quadro ou um responsável legal. Todo mundo lotado nesta área responde a ele no organograma.",
    "fieldname": "responsavel",
-   "fieldtype": "Link",
+   "fieldtype": "Dynamic Link",
    "in_list_view": 1,
    "label": "Responsável",
-   "options": "Associado"
+   "options": "tipo_responsavel"
   },
   {
    "fieldname": "column_break_organograma",
@@ -94,7 +103,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-22 10:00:00.000000",
+ "modified": "2026-09-24 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Unidade Organizacional",

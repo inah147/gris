@@ -30,6 +30,7 @@ from .endpoints import _require_authenticated_user
 from .responsaveis import (
 	AREA_CONSELHO,
 	LINHA_RESPONSAVEL,
+	e_funcao_do_conselho,
 	listar_membros_do_conselho,
 	montar_no_conselho,
 )
@@ -93,13 +94,20 @@ def obter_organograma(area: str | None = None) -> dict:
 	todas_areas = frappe.get_all(
 		"Unidade Organizacional",
 		filters={"ativa": 1},
-		fields=["name", "area", "responde_para", "responsavel", "descricao", "ordem"],
+		fields=[
+			"name",
+			"area",
+			"responde_para",
+			"responsavel",
+			"tipo_responsavel",
+			"descricao",
+			"ordem",
+		],
 		order_by="ordem asc, area asc",
 	)
-	# O líder da área é um `Associado`; daqui para baixo tudo compara por chave.
+	# O líder pode ser associado ou responsável; daqui para baixo tudo compara por chave.
 	for unidade in todas_areas:
-		if unidade.get("responsavel"):
-			unidade["responsavel"] = identidade.chave_do_associado(unidade["responsavel"])
+		unidade["responsavel"] = identidade.chave_do_lider(unidade)
 
 	todas_pessoas = pessoas_do_organograma()
 	lotacoes, funcoes_sem_area = lotacoes_atuais([p["name"] for p in todas_pessoas])
@@ -168,9 +176,9 @@ def pessoas_do_organograma() -> list[dict]:
 	"""Quem pode aparecer no desenho, já com a chave que identifica cada um.
 
 	São dois tipos: o quadro de associados ativos, e os responsáveis **que têm função
-	alocada**. O recorte do segundo grupo é o que impede o organograma de encher com a
-	centena de responsáveis do cadastro — quem não exerce função aparece só no Conselho,
-	por derivação (ver `gris.api.gestao_adultos.responsaveis`).
+	alocada ou lideram uma área**. O recorte do segundo grupo é o que impede o organograma
+	de encher com a centena de responsáveis do cadastro — quem não exerce função nem lidera
+	nada aparece só no Conselho, por derivação (ver `gris.api.gestao_adultos.responsaveis`).
 	"""
 	pessoas = [
 		dict(
@@ -187,12 +195,25 @@ def pessoas_do_organograma() -> list[dict]:
 		)
 	]
 
-	alocados = frappe.get_all(
-		"Funcao do Associado",
-		filters={"parenttype": "Responsavel"},
-		pluck="parent",
-		distinct=True,
+	alocados = set(
+		frappe.get_all(
+			"Funcao do Associado",
+			filters={"parenttype": "Responsavel"},
+			pluck="parent",
+			distinct=True,
+		)
 	)
+	# Liderar uma área basta para entrar no desenho: sem isto a área ficaria sem cabeça
+	# só porque o líder não tem função alocada — o mesmo que `montar_arvore` já faz com o
+	# associado que só lidera.
+	alocados |= set(
+		frappe.get_all(
+			"Unidade Organizacional",
+			filters={"ativa": 1, "tipo_responsavel": identidade.DOCTYPE_RESPONSAVEL},
+			pluck="responsavel",
+		)
+	)
+	alocados = {nome for nome in alocados if nome}
 	if alocados:
 		pessoas += [
 			dict(
@@ -206,7 +227,7 @@ def pessoas_do_organograma() -> list[dict]:
 			)
 			for pessoa in frappe.get_all(
 				"Responsavel",
-				filters={"name": ["in", alocados]},
+				filters={"name": ["in", sorted(alocados)]},
 				fields=["name", "nome_completo"],
 				order_by="nome_completo asc",
 			)
@@ -328,11 +349,7 @@ def obter_detalhe_do_adulto(associado: str) -> dict:
 		):
 			responsabilidades.setdefault(linha["parent"], []).append(linha)
 
-	lideradas = frappe.get_all(
-		"Unidade Organizacional",
-		filters={"responsavel": associado, "ativa": 1},
-		pluck="name",
-	)
+	lideradas = areas_lideradas(identidade.chave_do_associado(associado))
 	avatares = _avatar_por_pessoa([pessoa])
 	# Uma consulta de acordos para todas as funções da pessoa, antes do loop: o painel
 	# abre por clique, e uma consulta por função seria N+1 a cada abertura.
@@ -421,8 +438,12 @@ def _funcao_do_painel(
 		"atual": em_vigor(linha, hoje),
 		"periodo": _periodo(linha.get("data_inicio"), linha.get("data_fim")),
 		"descricao": (definicao.get("descricao") or "").strip() or None,
-		# O acordo de trabalho é por alocação, não por pessoa: cada linha tem o seu.
-		"atv": classificar_validade(acordos.get(linha.get("name")) or [], hoje),
+		# O acordo de trabalho é por alocação, não por pessoa: cada linha tem o seu. A
+		# função do Conselho é a exceção: ela não é alocação do quadro, e cobrar um acordo
+		# dela criaria uma pendência que ninguém pode resolver.
+		"atv": None
+		if e_funcao_do_conselho(linha.get("funcao"), linha.get("area"))
+		else classificar_validade(acordos.get(linha.get("name")) or [], hoje),
 		"responsabilidades": [
 			{
 				"responsabilidade": item.get("responsabilidade"),
@@ -585,14 +606,28 @@ def existe_associado_sem_area() -> bool:
 	areas_ativas = set(frappe.get_all("Unidade Organizacional", filters={"ativa": 1}, pluck="name"))
 	lotados = {linha["pessoa"] for linha in lotacoes if linha["area"] in areas_ativas}
 	lotados |= {
-		identidade.chave_do_associado(r["responsavel"])
+		identidade.chave_do_lider(r)
 		for r in frappe.get_all(
 			"Unidade Organizacional",
 			filters={"ativa": 1, "responsavel": ["is", "set"]},
-			fields=["responsavel"],
+			fields=["responsavel", "tipo_responsavel"],
 		)
 	}
 	return any(chave not in lotados for chave in chaves)
+
+
+def areas_lideradas(pessoa: str) -> list[str]:
+	"""Áreas ativas que a pessoa lidera, seja ela associado ou responsável.
+
+	Pelo par (tipo, nome), nunca só pelo nome: o homônimo do outro cadastro devolveria
+	as áreas de outra pessoa.
+	"""
+	return frappe.get_all(
+		"Unidade Organizacional",
+		filters={**identidade.filtros_do_lider(pessoa), "ativa": 1},
+		pluck="name",
+		order_by="ordem asc, area asc",
+	)
 
 
 def _avatar_por_pessoa(pessoas: list[dict]) -> dict[str, str]:

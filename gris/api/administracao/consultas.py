@@ -9,6 +9,8 @@ from __future__ import annotations
 import frappe
 from frappe.utils import getdate
 
+from gris.api.gestao_adultos import identidade
+
 
 def listar_unidades() -> list[dict]:
 	"""Todas as áreas, com hierarquia, responsável e as funções vinculadas."""
@@ -19,6 +21,7 @@ def listar_unidades() -> list[dict]:
 			"area",
 			"responde_para",
 			"responsavel",
+			"tipo_responsavel",
 			"ativa",
 			"ordem",
 			"origem_automatica",
@@ -30,15 +33,18 @@ def listar_unidades() -> list[dict]:
 		return []
 
 	funcoes_por_area = _funcoes_por_area([a["name"] for a in areas])
-	nomes = _nomes_dos_responsaveis({a["responsavel"] for a in areas if a["responsavel"]})
+	# O líder sai daqui como **chave** (`associado:` / `responsavel:`): é o mesmo valor das
+	# opções do seletor, e é o que distingue o par homônimo dos dois cadastros.
+	lideres = {a["name"]: identidade.chave_do_lider(a) for a in areas}
+	nomes = _nomes_dos_responsaveis({chave for chave in lideres.values() if chave})
 
 	return [
 		{
 			"name": area["name"],
 			"area": area["area"],
 			"responde_para": area["responde_para"],
-			"responsavel": area["responsavel"],
-			"responsavel_nome": nomes.get(area["responsavel"]),
+			"responsavel": lideres[area["name"]],
+			"responsavel_nome": nomes.get(lideres[area["name"]]),
 			"ativa": bool(area["ativa"]),
 			"ordem": area["ordem"] or 0,
 			"origem_automatica": bool(area["origem_automatica"]),
@@ -125,26 +131,61 @@ def contar_pessoas_por_funcao(titulos: list[str]) -> dict[str, int]:
 
 
 def opcoes_de_responsavel() -> list[dict]:
-	"""Adultos que podem liderar uma área — o mesmo recorte do controller.
+	"""Quem pode liderar uma área — o mesmo recorte do controller.
+
+	São os dois tipos de pessoa do organograma: o quadro de associados ativos e os
+	responsáveis legais **sem** cadastro de associado. Quem tem os dois cadastros entra uma
+	vez só, pelo lado do associado, que é o registro que vale para essa pessoa (ver
+	`gris.api.pessoas`) — listar os dois deixaria duas linhas iguais na busca e uma delas
+	desenharia a área sem líder.
+
+	O valor é a chave com espaço de nomes, não o `name`: os dois DocTypes derivam o `name`
+	do mesmo md5 de CPF, e sem o prefixo o homônimo do outro cadastro seria gravado no
+	lugar da pessoa escolhida.
 
 	A primeira opção é vazia e não é enfeite: ao inicializar, o select do design
 	system seleciona sozinho a primeira opção, e em silêncio. Sem ela, abrir uma
 	área sem responsável mostraria a primeira pessoa da lista como se fosse a
 	responsável — e o save gravaria isso.
 	"""
-	pessoas = frappe.get_all(
+	associados = frappe.get_all(
 		"Associado",
 		filters={"categoria": ["!=", "Beneficiário"], "status_no_grupo": "Ativo"},
 		fields=["name", "nome_completo"],
 		order_by="nome_completo asc",
 	)
+	responsaveis = frappe.get_all(
+		"Responsavel",
+		filters={"migrado_para_associado": 0},
+		fields=["name", "nome_completo"],
+		order_by="nome_completo asc",
+	)
+
+	opcoes = [
+		{
+			"value": identidade.chave_do_associado(p["name"]),
+			"label": p["nome_completo"],
+			"ordem": p["nome_completo"],
+		}
+		for p in associados
+		if p["nome_completo"]
+	]
+	opcoes += [
+		{
+			"value": identidade.chave_do_responsavel(p["name"]),
+			# O sufixo diz de onde a pessoa vem: sem ele, dois nomes parecidos na busca
+			# não teriam como ser distinguidos.
+			"label": f"{p['nome_completo']} · responsável legal",
+			"ordem": p["nome_completo"],
+		}
+		for p in responsaveis
+		if p["nome_completo"]
+	]
+	opcoes.sort(key=lambda opcao: opcao["ordem"])
+
 	return [
 		{"value": "", "label": "Sem responsável"},
-		*(
-			{"value": p["name"], "label": p["nome_completo"] or p["name"]}
-			for p in pessoas
-			if p["nome_completo"]
-		),
+		*({"value": o["value"], "label": o["label"]} for o in opcoes),
 	]
 
 
@@ -175,12 +216,23 @@ def _funcoes_por_area(nomes: list[str]) -> dict[str, list[dict]]:
 	return por_area
 
 
-def _nomes_dos_responsaveis(nomes: set[str]) -> dict[str, str]:
-	if not nomes:
+def _nomes_dos_responsaveis(chaves: set[str]) -> dict[str, str]:
+	"""Nome de exibição de cada líder, indexado pela chave com espaço de nomes.
+
+	Uma consulta por DocType, nunca uma por área: são duas no pior caso.
+	"""
+	if not chaves:
 		return {}
-	return {
-		p["name"]: p["nome_completo"] or p["name"]
+
+	por_doctype: dict[str, list[str]] = {}
+	for chave in chaves:
+		doctype, name = identidade.separar(chave)
+		por_doctype.setdefault(doctype, []).append(name)
+
+	nomes: dict[str, str] = {}
+	for doctype, lista in por_doctype.items():
 		for p in frappe.get_all(
-			"Associado", filters={"name": ["in", sorted(nomes)]}, fields=["name", "nome_completo"]
-		)
-	}
+			doctype, filters={"name": ["in", sorted(lista)]}, fields=["name", "nome_completo"]
+		):
+			nomes[identidade.chave(doctype, p["name"])] = p["nome_completo"] or p["name"]
+	return nomes

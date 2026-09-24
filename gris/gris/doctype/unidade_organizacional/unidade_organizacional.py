@@ -6,6 +6,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate
 
+from gris.api.gestao_adultos.identidade import DOCTYPE_ASSOCIADO, DOCTYPE_RESPONSAVEL
+
 # Categoria que nunca pode liderar uma área: beneficiário é assistido, não voluntário.
 CATEGORIA_NAO_VOLUNTARIA = "Beneficiário"
 
@@ -14,6 +16,7 @@ class UnidadeOrganizacional(Document):
 	def validate(self):
 		self._validar_raiz_fixa()
 		self._validar_ciclo()
+		self._normalizar_responsavel()
 		self._validar_responsavel()
 		self._validar_funcoes_duplicadas()
 		self._validar_desvinculo_de_funcao()
@@ -59,6 +62,35 @@ class UnidadeOrganizacional(Document):
 			visitados.add(atual)
 			atual = frappe.db.get_value("Unidade Organizacional", atual, "responde_para")
 
+	def _normalizar_responsavel(self):
+		"""Garante o par (tipo, nome) coerente antes de qualquer validação.
+
+		Duas coisas acontecem aqui. A primeira é o default, que vale mesmo sem líder: o
+		`_validate_links` do framework roda **antes** deste `validate()`, então uma área com
+		o tipo em branco no banco recusaria a gravação em que alguém fosse escolhido — antes
+		de qualquer código daqui rodar. Deixar o campo sempre preenchido é o que mantém a
+		área editável.
+
+		A segunda é a identidade única. Quem é responsável legal **e** associado tem um
+		cadastro só que vale — o de associado (ver `gris.api.pessoas`). Gravar essa pessoa
+		como `Responsavel` produziria a chave `responsavel:<id>`, que não casa com o card
+		`associado:<id>` que o organograma desenha, e a área apareceria sem líder. Então o
+		ponteiro é trazido para o lado certo em vez de recusado: para quem edita, escolher
+		a pessoa é o que importa, não de qual cadastro ela veio.
+		"""
+		if self.tipo_responsavel not in (DOCTYPE_ASSOCIADO, DOCTYPE_RESPONSAVEL):
+			self.tipo_responsavel = DOCTYPE_ASSOCIADO
+
+		if not self.responsavel or self.tipo_responsavel != DOCTYPE_RESPONSAVEL:
+			return
+
+		from gris.api.pessoas import associado_do_responsavel
+
+		associado = associado_do_responsavel(self.responsavel)
+		if associado:
+			self.responsavel = associado
+			self.tipo_responsavel = DOCTYPE_ASSOCIADO
+
 	def _validar_responsavel(self):
 		if not self.responsavel:
 			return
@@ -67,7 +99,15 @@ class UnidadeOrganizacional(Document):
 		# sincronização grava por `db.set_value`, que pula o `validate()`, então o
 		# banco pode já conter responsável que hoje seria recusado — e isso não pode
 		# impedir de editar o resto da área.
-		if not self.is_new() and not self.has_value_changed("responsavel"):
+		if not self.is_new() and not (
+			self.has_value_changed("responsavel") or self.has_value_changed("tipo_responsavel")
+		):
+			return
+
+		# O responsável legal sem cadastro de associado não tem categoria nem status no
+		# grupo: ele não é do quadro de voluntários, e o que o habilita a liderar é o
+		# próprio cadastro existir — o que o Dynamic Link já confere.
+		if self.tipo_responsavel == DOCTYPE_RESPONSAVEL:
 			return
 
 		categoria, status_no_grupo = frappe.db.get_value(

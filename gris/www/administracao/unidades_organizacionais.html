@@ -119,7 +119,7 @@
 		{{ select(id="area-responde-para", name="responde_para", items=[], placeholder="Nenhuma (área de topo)") }}
 	{% endcall %}
 
-	{% call field(label="Responsável") %}
+	{% call field(label="Responsável", hint="Um adulto do quadro ou um responsável legal — a lista traz os dois.") %}
 		{{ select(id="area-responsavel", name="responsavel", items=opcoes_responsavel, placeholder="Sem responsável", is_combobox=true, search_placeholder="Buscar pessoa…") }}
 	{% endcall %}
 

@@ -58,6 +58,16 @@
 	margin: 0.375rem 0 0;
 }
 
+/* Explica por que a função não tem botão nenhum: ela é mantida pelo cadastro. */
+.funcao-dialog__aviso {
+	padding: 0.625rem 0.75rem;
+	border-radius: var(--radius, 0.625rem);
+	background: var(--muted);
+	color: var(--muted-foreground);
+	font-size: 0.8125rem;
+	margin: 0 0 0.75rem;
+}
+
 /* Grid, e não flex: as duas colunas têm a mesma largura e os rótulos ficam na mesma
    linha mesmo quando um dos campos tem texto de apoio embaixo. */
 .funcao-dialog__datas {

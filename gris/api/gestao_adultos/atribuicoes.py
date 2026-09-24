@@ -115,13 +115,22 @@ def listar_funcoes_da_pessoa(pessoa: str) -> list[dict]:
 		order_by="principal desc, idx asc",
 	)
 
-	# Importação tardia: `atvs` depende de `garantir_gestor_funcoes` deste módulo.
+	# Importação tardia: `atvs` depende de `garantir_gestor_funcoes` deste módulo, e
+	# `responsaveis` depende deste módulo inteiro.
 	from .atvs import acordos_por_linha_do_associado, classificar_validade
+	from .responsaveis import e_funcao_do_conselho
 
 	# O acordo de trabalho voluntário é documento do quadro e só existe para associado.
 	# Cobrar um de responsável criaria uma pendência que ninguém consegue resolver.
 	tem_atv = doctype == identidade.DOCTYPE_ASSOCIADO
 	acordos = acordos_por_linha_do_associado(name) if tem_atv else {}
+
+	def _atv(linha):
+		# A função do Conselho é a segunda exceção: ela não é alocação do quadro, e
+		# ninguém assina acordo de trabalho para ser responsável legal do próprio filho.
+		if not tem_atv or e_funcao_do_conselho(linha.funcao, linha.area):
+			return None
+		return classificar_validade(acordos.get(linha.name) or [], hoje)
 
 	return [
 		{
@@ -134,9 +143,12 @@ def listar_funcoes_da_pessoa(pessoa: str) -> list[dict]:
 			"data_inicio": _iso(linha.data_inicio),
 			"data_fim": _iso(linha.data_fim),
 			"atual": not linha.data_fim or getdate(linha.data_fim) >= hoje,
+			# Mantida pelo vínculo com o beneficiário, não pela tela: é o que faz o dialog
+			# esconder "Encerrar hoje" e "Apagar função".
+			"automatica": e_funcao_do_conselho(linha.funcao, linha.area),
 			# O acordo de trabalho é por alocação: cada linha carrega o seu, e a tabela
 			# mostra a pendência sem uma segunda ida ao servidor.
-			"atv": classificar_validade(acordos.get(linha.name) or [], hoje) if tem_atv else None,
+			"atv": _atv(linha),
 		}
 		for linha in linhas
 	]
@@ -202,6 +214,8 @@ def encerrar_funcao(payload: str) -> dict:
 	doc = identidade.carregar(pessoa)
 	linha = _localizar_linha(doc, _texto(dados.get("linha")))
 
+	_garantir_que_a_linha_pode_sair(doc, linha)
+
 	hoje = getdate(nowdate())
 	if linha.data_fim and getdate(linha.data_fim) < hoje:
 		frappe.throw(_("Esta função já está encerrada."))
@@ -262,6 +276,8 @@ def apagar_funcao(payload: str) -> dict:
 	pessoa = _pessoa_do_payload(dados)
 	doc = identidade.carregar(pessoa)
 	linha = _localizar_linha(doc, _texto(dados.get("linha")))
+
+	_garantir_que_a_linha_pode_sair(doc, linha)
 
 	# Importação tardia: `atvs` depende de `garantir_gestor_funcoes` deste módulo.
 	from .atvs import apagar_atvs_da_linha
@@ -333,6 +349,19 @@ def _pessoa_do_payload(dados: dict) -> str:
 	if not associado:
 		frappe.throw(_("Pessoa não informada."), frappe.DoesNotExistError)
 	return identidade.chave_do_associado(associado)
+
+
+def _garantir_que_a_linha_pode_sair(doc, linha) -> None:
+	"""Barra encerrar ou apagar a função que o cadastro mantém sozinho.
+
+	A gravação do documento barraria de novo (`gris.utils.funcoes_internas`), mas só depois
+	de `apagar_funcao` já ter varrido os acordos da linha. Aqui a recusa chega antes de
+	qualquer efeito colateral.
+	"""
+	from .responsaveis import e_funcao_do_conselho, garantir_permanencia_no_conselho
+
+	if e_funcao_do_conselho(linha.funcao, linha.area):
+		garantir_permanencia_no_conselho(doc)
 
 
 def _localizar_linha(doc, nome_da_linha: str):

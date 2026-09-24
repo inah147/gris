@@ -23,7 +23,8 @@
 		// Os dois tipos de pessoa do organograma têm `name` no mesmo formato (md5 de CPF),
 		// então é o prefixo que diz em qual grade gravar.
 		const pessoa =
-			raiz.dataset.pessoa || (raiz.dataset.associado ? `associado:${raiz.dataset.associado}` : "");
+			raiz.dataset.pessoa ||
+			(raiz.dataset.associado ? `associado:${raiz.dataset.associado}` : "");
 		const nomeDaPessoa = raiz.dataset.nome || "";
 		// Acordo de trabalho voluntário é documento do quadro: a ficha do responsável
 		// desliga a coluna em vez de mostrar uma pendência que ninguém pode resolver.
@@ -156,8 +157,7 @@
 			if (!corpo) return;
 			linhasAtuais = linhas;
 			if (!linhas.length) {
-				corpo.innerHTML =
-					`<tr><td colspan="${colunas}" class="text-muted-foreground text-sm">Nenhuma função atribuída.</td></tr>`;
+				corpo.innerHTML = `<tr><td colspan="${colunas}" class="text-muted-foreground text-sm">Nenhuma função atribuída.</td></tr>`;
 				return;
 			}
 

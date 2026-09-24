@@ -63,6 +63,7 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 		"path": "/gestao_adultos",
 		"children": [
 			{"label": "Organograma", "path": "/gestao_adultos/organograma"},
+			{"label": "ATVs", "path": "/gestao_adultos/atvs"},
 			{"label": "Minha Entrevista", "path": "/gestao_adultos/minha_entrevista"},
 			{"label": "Entrevistas", "path": "/gestao_adultos/entrevista_competencias"},
 		],
@@ -172,6 +173,7 @@ SIDEBAR_ICON_MAP: dict[str, str] = {
 	"/administracao/unidades_organizacionais": "network",
 	"/administracao/funcoes": "briefcase",
 	"/gestao_adultos/organograma": "network",
+	"/gestao_adultos/atvs": "file-pen-line",
 	"/gestao_adultos/minha_entrevista": "clipboard-list",
 	"/gestao_adultos/entrevista_competencias": "list-check",
 	"/insignias/solicitar": "file-plus",
@@ -257,6 +259,9 @@ PAGE_ROLES: dict[str, list[str]] = {
 	# próprios cards por acesso (ver www/gestao_adultos/index.py).
 	"/gestao_adultos": ["All"],
 	"/gestao_adultos/organograma": ["All"],
+	# Diferente do organograma: a página inteira é de gestão, e mostra pendência de
+	# documento de cada voluntário.
+	"/gestao_adultos/atvs": ["Gestor de Adultos", "Gestor da UEL", "Gestor de Associados"],
 	"/gestao_adultos/entrevista_competencias": ["Gestor de Adultos"],
 	"/gestao_adultos/respostas_entrevista": ["Gestor de Adultos"],
 	"/gestao_adultos/minha_entrevista": ["All"],

@@ -494,6 +494,21 @@
 	color: var(--muted-foreground);
 }
 
+/* Acordo de Trabalho Voluntário da função. Fica no resumo, e não dentro do
+   accordion, porque é justamente o que se quer ver sem abrir cada função. */
+.organograma-detalhe__funcao-atv {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+	margin-top: 0.25rem;
+}
+
+.organograma-detalhe__funcao-atv .badge,
+.organograma-detalhe__funcao-atv .badge-outline,
+.organograma-detalhe__funcao-atv .badge-destructive {
+	font-size: 0.6875rem;
+}
+
 .organograma-detalhe__seta {
 	flex: 0 0 auto;
 	color: var(--muted-foreground);
@@ -573,6 +588,12 @@
 
 .org-card--grupo {
 	background: var(--muted);
+	border-style: dashed;
+}
+
+/* Responsável legal: nó automático, derivado do cadastro de responsáveis. A borda
+   tracejada é o mesmo sinal usado no card de grupo — nada ali é editável. */
+.org-card--responsavel {
 	border-style: dashed;
 }
 

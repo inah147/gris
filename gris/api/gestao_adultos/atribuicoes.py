@@ -9,7 +9,8 @@ organograma, e o par precisa estar vinculado em `Unidade Organizacional.funcoes`
 
 Tirar alguém de uma função é **encerrar** (`data_fim = hoje`), nunca apagar a
 linha — é o mesmo que a sincronização de seções faz, e é o que mantém o histórico
-do painel de detalhes de pé.
+do painel de detalhes de pé. `apagar_funcao` existe para o outro caso: desfazer um
+lançamento que nunca deveria ter acontecido.
 """
 
 from __future__ import annotations
@@ -96,6 +97,12 @@ def listar_funcoes_do_associado(associado: str) -> list[dict]:
 		fields=["name", "funcao", "area", "principal", "data_inicio", "data_fim", "idx"],
 		order_by="principal desc, idx asc",
 	)
+
+	# Importação tardia: `atvs` depende de `garantir_gestor_funcoes` deste módulo.
+	from .atvs import acordos_por_linha_do_associado, classificar_validade
+
+	acordos = acordos_por_linha_do_associado(associado)
+
 	return [
 		{
 			"linha": linha.name,
@@ -107,6 +114,9 @@ def listar_funcoes_do_associado(associado: str) -> list[dict]:
 			"data_inicio": _iso(linha.data_inicio),
 			"data_fim": _iso(linha.data_fim),
 			"atual": not linha.data_fim or getdate(linha.data_fim) >= hoje,
+			# O acordo de trabalho é por alocação: cada linha carrega o seu, e a tabela
+			# mostra a pendência sem uma segunda ida ao servidor.
+			"atv": classificar_validade(acordos.get(linha.name) or [], hoje),
 		}
 		for linha in linhas
 	]
@@ -180,6 +190,64 @@ def encerrar_funcao(payload: str) -> dict:
 	# encerrar em "hoje" criaria um período invertido, que o Associado recusa.
 	linha.data_fim = max(hoje, getdate(linha.data_inicio)) if linha.data_inicio else hoje
 	linha.principal = 0
+	doc.save()
+	return {"ok": True, "funcoes": listar_funcoes_do_associado(associado)}
+
+
+@frappe.whitelist(methods=["POST"])
+def editar_funcao(payload: str) -> dict:
+	"""Corrige as datas de uma linha já existente.
+
+	`data_fim` em branco devolve a linha para "atual". A coerência do período é do
+	`Associado` (`_validar_funcoes_internas`), não daqui: duplicar a regra faria as duas
+	divergirem no primeiro ajuste.
+
+	Mexer só nas datas não reabre a validação de vínculo função+área — ela compara o par
+	`(funcao, area)` com o do documento anterior —, e é assim que linha antiga sem área
+	continua editável.
+	"""
+	garantir_gestor_funcoes()
+	dados = _carregar(payload)
+
+	associado = _texto(dados.get("associado"))
+	doc = _documento(associado)
+	linha = _localizar_linha(doc, _texto(dados.get("linha")))
+
+	inicio = _data(dados.get("data_inicio"))
+	fim = _data(dados.get("data_fim"))
+	if not inicio:
+		frappe.throw(_("Informe a data de início da função."))
+
+	linha.data_inicio = inicio
+	linha.data_fim = fim
+	# Função encerrada no passado não pode seguir sendo a principal — é a mesma regra
+	# que `definir_principal` aplica na outra ponta.
+	if fim and fim < getdate(nowdate()):
+		linha.principal = 0
+
+	doc.save()
+	return {"ok": True, "funcoes": listar_funcoes_do_associado(associado)}
+
+
+@frappe.whitelist(methods=["POST"])
+def apagar_funcao(payload: str) -> dict:
+	"""Remove a linha de vez, com os acordos de trabalho que dependiam dela.
+
+	É para desfazer um lançamento errado. Para tirar alguém de uma função que ele de
+	fato exerceu, o caminho continua sendo `encerrar_funcao`, que preserva o histórico.
+	"""
+	garantir_gestor_funcoes()
+	dados = _carregar(payload)
+
+	associado = _texto(dados.get("associado"))
+	doc = _documento(associado)
+	linha = _localizar_linha(doc, _texto(dados.get("linha")))
+
+	# Importação tardia: `atvs` depende de `garantir_gestor_funcoes` deste módulo.
+	from .atvs import apagar_atvs_da_linha
+
+	apagar_atvs_da_linha(linha.name)
+	doc.funcoes_internas.remove(linha)
 	doc.save()
 	return {"ok": True, "funcoes": listar_funcoes_do_associado(associado)}
 

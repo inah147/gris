@@ -24,7 +24,15 @@ from frappe.utils import getdate
 
 from gris.utils.contato import format_phone
 
+from .atvs import acordos_por_linha_do_associado, classificar_validade, em_vigor
 from .endpoints import _require_authenticated_user
+from .responsaveis import (
+	AREA_CONSELHO,
+	PREFIXO_ASSOCIADO,
+	listar_membros_do_conselho,
+	montar_no_conselho,
+)
+from .secoes import escotistas_sem_secao
 
 #: Categoria que define o público assistido — não entra no organograma.
 CATEGORIA_EXCLUIDA = "Beneficiário"
@@ -103,7 +111,27 @@ def obter_organograma(area: str | None = None) -> dict:
 	arvore = montar_arvore(areas, pessoas, lotacoes, _avatar_por_pessoa(pessoas))
 	arvore["area_selecionada"] = area
 	arvore["avisos"]["funcoes_sem_area"] = funcoes_sem_area
+	arvore["avisos"]["escotistas_sem_secao"] = escotistas_sem_secao()
+	_acrescentar_conselho(arvore, area)
 	return arvore
+
+
+def _acrescentar_conselho(arvore: dict, area: str) -> None:
+	"""Pendura o Conselho de Responsáveis nas raízes, quando o filtro o alcança.
+
+	Entra por fora de `montar_arvore` de propósito: os responsáveis não têm lotação
+	gravada, e obrigar a montagem da árvore a conhecer um segundo tipo de pessoa
+	complicaria a parte que desenha o quadro de voluntários inteiro.
+	"""
+	if area and area != AREA_CONSELHO:
+		return
+
+	conselho = montar_no_conselho(listar_membros_do_conselho())
+	if not conselho:
+		return
+
+	arvore["raizes"].append(conselho)
+	arvore["total_pessoas"] += conselho["membros"]
 
 
 def lotacoes_atuais(nomes: list[str]) -> tuple[list[dict], int]:
@@ -181,7 +209,8 @@ def obter_detalhe_do_adulto(associado: str) -> dict:
 	funcoes = frappe.get_all(
 		"Funcao do Associado",
 		filters={"parent": associado, "parenttype": "Associado"},
-		fields=["funcao", "area", "principal", "data_inicio", "data_fim", "idx"],
+		# `name` é a identidade da alocação: é por ele que o acordo de trabalho é ligado.
+		fields=["name", "funcao", "area", "principal", "data_inicio", "data_fim", "idx"],
 		order_by="principal desc, idx asc",
 	)
 
@@ -211,7 +240,18 @@ def obter_detalhe_do_adulto(associado: str) -> dict:
 		pluck="name",
 	)
 	avatares = _avatar_por_pessoa([pessoa])
-	return montar_detalhe(pessoa, funcoes, definicoes, responsabilidades, avatares.get(associado), lideradas)
+	# Uma consulta de acordos para todas as funções da pessoa, antes do loop: o painel
+	# abre por clique, e uma consulta por função seria N+1 a cada abertura.
+	acordos = acordos_por_linha_do_associado(associado)
+	return montar_detalhe(
+		pessoa,
+		funcoes,
+		definicoes,
+		responsabilidades,
+		avatares.get(associado),
+		lideradas,
+		acordos,
+	)
 
 
 # ---------------------------------------------------------------------------
@@ -226,14 +266,18 @@ def montar_detalhe(
 	responsabilidades: dict[str, list[dict]],
 	avatar_url: str | None,
 	areas_lideradas: list[str] | None = None,
+	acordos: dict[str, list[dict]] | None = None,
 ) -> dict:
 	categoria = pessoa.get("categoria")
 	ramo = pessoa.get("ramo")
 	if categoria != CATEGORIA_COM_RAMO or ramo == RAMO_VAZIO:
 		ramo = None
 
+	hoje = getdate()
 	nome = pessoa.get("nome_completo") or pessoa.get("name")
-	lista = [_funcao_do_painel(linha, definicoes, responsabilidades) for linha in funcoes]
+	lista = [
+		_funcao_do_painel(linha, definicoes, responsabilidades, acordos or {}, hoje) for linha in funcoes
+	]
 
 	# A área não vem mais do cadastro da pessoa: sai das funções em vigor, mais as
 	# áreas que ela lidera.
@@ -255,6 +299,8 @@ def montar_detalhe(
 		"secao": (pessoa.get("secao") or "").strip() or None if ramo else None,
 		"whatsapp": _numero_do_whatsapp(pessoa.get("telefone")),
 		"ficha_url": "/associados/detalhe?name=" + quote(str(pessoa.get("name") or "")),
+		"permite_ficha": True,
+		"somente_leitura": False,
 		"funcoes": lista,
 	}
 
@@ -263,18 +309,26 @@ def _funcao_do_painel(
 	linha: dict,
 	definicoes: dict[str, dict],
 	responsabilidades: dict[str, list[dict]],
+	acordos: dict[str, list[dict]],
+	hoje,
 ) -> dict:
 	titulo = linha.get("funcao")
 	definicao = definicoes.get(titulo) or {}
 	return {
+		"linha": linha.get("name"),
 		"titulo": titulo,
 		# A área é da linha, não da definição: a mesma função pode valer em
 		# várias áreas.
 		"area": linha.get("area"),
 		"principal": bool(linha.get("principal")),
-		"atual": not linha.get("data_fim"),
+		# Mesmo corte de `lotacoes_atuais`: só está encerrada a linha cuja `data_fim` já
+		# passou. Com término marcado para o ano que vem a função continua em vigor — e
+		# é dela que o acordo de trabalho ainda é cobrado.
+		"atual": em_vigor(linha, hoje),
 		"periodo": _periodo(linha.get("data_inicio"), linha.get("data_fim")),
 		"descricao": (definicao.get("descricao") or "").strip() or None,
+		# O acordo de trabalho é por alocação, não por pessoa: cada linha tem o seu.
+		"atv": classificar_validade(acordos.get(linha.get("name")) or [], hoje),
 		"responsabilidades": [
 			{
 				"responsabilidade": item.get("responsabilidade"),
@@ -627,6 +681,11 @@ def _no_pessoa(
 		"tipo": "pessoa",
 		# A mesma pessoa pode ter vários nós; o id é do nó, `associado` é de quem.
 		"id": f"{nome}@@{nome_area or ''}",
+		# O organograma tem dois tipos de gente (associado e responsável) e os dois têm
+		# `name` no mesmo formato — md5 de CPF. `pessoa` é a chave com espaço de nomes,
+		# e é por ela que a interface marca o card e pede o painel.
+		"tipo_pessoa": "associado",
+		"pessoa": f"{PREFIXO_ASSOCIADO}{nome}",
 		"associado": nome,
 		"nome": pessoa.get("nome_completo") or nome,
 		"area": nome_area,

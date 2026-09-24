@@ -131,11 +131,19 @@ frappe.ready(() => {
 		if (el.vazio) {
 			el.vazio.hidden = Boolean(raizes.length || semArea);
 		}
-		tudoExpandido = true;
+		tudoExpandido = !recolherOsMarcados();
 		atualizarRotuloExpandir();
 
 		ligarInteracoes();
 		ajustarATela();
+	}
+
+	// Grupos grandes (o Conselho de Responsáveis passa de cem cards) nascem recolhidos:
+	// abertos de saída, empurrariam o resto do organograma para fora da tela.
+	function recolherOsMarcados() {
+		const marcados = el.canvas.querySelectorAll('.org-card__toggle[data-recolhido="1"]');
+		marcados.forEach((botao) => alternar(botao, true, false));
+		return marcados.length > 0;
 	}
 
 	function renderAvisos(avisos) {
@@ -162,6 +170,18 @@ frappe.ready(() => {
 				} sem área preenchida.`
 			);
 		}
+		if ((avisos.escotistas_sem_secao || []).length) {
+			// A seção é o que posiciona o escotista, e ela não é inferida do ramo: o
+			// dado tem que ser corrigido no Paxtu. Por isso o aviso nomeia quem falta,
+			// em vez de só contar.
+			partes.push(
+				`${avisos.escotistas_sem_secao.length} ${
+					avisos.escotistas_sem_secao.length === 1
+						? "escotista está"
+						: "escotistas estão"
+				} sem seção no Paxtu: ${listaCurta(avisos.escotistas_sem_secao)}.`
+			);
+		}
 		if ((avisos.ciclos || []).length) {
 			partes.push(`Hierarquia circular detectada em: ${avisos.ciclos.join(", ")}.`);
 		}
@@ -178,6 +198,14 @@ frappe.ready(() => {
 				<h2>Faltam dados para o organograma ficar completo</h2>
 				<section>${escapeHtml(partes.join(" "))}</section>
 			</div>`;
+	}
+
+	// Nomes demais viram parede de texto e o alerta deixa de ser lido.
+	function listaCurta(nomes, limite = 5) {
+		if (nomes.length <= limite) {
+			return nomes.join(", ");
+		}
+		return `${nomes.slice(0, limite).join(", ")} e mais ${nomes.length - limite}`;
 	}
 
 	// -- Painel de detalhes --------------------------------------------------
@@ -213,11 +241,29 @@ frappe.ready(() => {
 	}
 
 	function alternarDetalhe(id) {
+		if (!id) {
+			return;
+		}
 		if (detalheAberto === id) {
 			fecharDetalhe();
 		} else {
 			abrirDetalhe(id);
 		}
+	}
+
+	// O organograma tem dois tipos de gente, e os dois são identificados por um md5 de
+	// CPF. O prefixo do `pessoa` é o que diz de qual cadastro o painel deve vir.
+	function chamadaDoDetalhe(id) {
+		if (id.startsWith("responsavel:")) {
+			return {
+				method: "gris.api.gestao_adultos.obter_detalhe_do_responsavel",
+				args: { responsavel: id.slice("responsavel:".length) },
+			};
+		}
+		return {
+			method: "gris.api.gestao_adultos.obter_detalhe_do_adulto",
+			args: { associado: id.replace(/^associado:/, "") },
+		};
 	}
 
 	async function abrirDetalhe(id) {
@@ -233,10 +279,7 @@ frappe.ready(() => {
 		el.detalheConteudo.hidden = true;
 
 		try {
-			const resposta = await frappe.call({
-				method: "gris.api.gestao_adultos.obter_detalhe_do_adulto",
-				args: { associado: id },
-			});
+			const resposta = await frappe.call(chamadaDoDetalhe(id));
 			// Outro card pode ter sido aberto enquanto esta resposta vinha.
 			if (detalheAberto !== id) {
 				return;
@@ -272,7 +315,7 @@ frappe.ready(() => {
 			return;
 		}
 		el.canvas
-			.querySelectorAll(`.org-card[data-associado="${CSS.escape(id)}"]`)
+			.querySelectorAll(`.org-card[data-pessoa="${CSS.escape(id)}"]`)
 			.forEach((card) => card.setAttribute("aria-current", "true"));
 	}
 
@@ -327,7 +370,9 @@ frappe.ready(() => {
 				<p class="organograma-detalhe__aviso">Sem telefone cadastrado.</p>`);
 		}
 
-		if (el.detalhe.dataset.podeAbrirFicha === "1") {
+		// `permite_ficha` é do painel, não do usuário: responsável não tem ficha de
+		// associado para abrir, por mais permissão que quem olha tenha.
+		if (el.detalhe.dataset.podeAbrirFicha === "1" && dados.permite_ficha !== false) {
 			partes.push(`
 				<a class="btn-outline" href="${escapeHtml(dados.ficha_url)}">
 					<svg class="ds-lucide ds-lucide--sm" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
@@ -396,6 +441,7 @@ frappe.ready(() => {
 								<span class="organograma-detalhe__funcao-periodo">${escapeHtml(
 									[funcao.area, funcao.periodo].filter(Boolean).join(" · ")
 								)}</span>
+								${atvHtml(funcao)}
 							</span>
 							<svg class="ds-lucide ds-lucide--sm organograma-detalhe__seta" aria-hidden="true"
 								focusable="false" viewBox="0 0 24 24">
@@ -415,6 +461,51 @@ frappe.ready(() => {
 			.join("");
 
 		return `<div class="organograma-detalhe__funcoes accordion">${itens}</div>`;
+	}
+
+	// Acordo de Trabalho Voluntário da função. Vencido e não assinado são pendências
+	// independentes: um acordo dentro do prazo mas sem assinatura também precisa de
+	// destaque, e um vencido continua sendo o que vale até ser renovado.
+	function atvHtml(funcao) {
+		const atv = funcao.atv;
+		if (!atv) {
+			return "";
+		}
+
+		// Função que já acabou não tem acordo a cobrar: sem esta saída, todo histórico
+		// de cada pessoa viraria uma fileira de alertas vermelhos que ninguém pode
+		// resolver.
+		if (!funcao.atual) {
+			return atv.situacao === "sem_atv"
+				? ""
+				: `<span class="organograma-detalhe__funcao-atv"><span class="badge-outline">ATV até ${escapeHtml(
+						dataCurta(atv.data_fim)
+				  )}</span></span>`;
+		}
+
+		const selos = [];
+		if (atv.situacao === "sem_atv") {
+			selos.push(`<span class="badge-destructive">Sem ATV</span>`);
+		} else if (atv.situacao === "vencido") {
+			selos.push(
+				`<span class="badge-destructive">Vencido em ${escapeHtml(
+					dataCurta(atv.data_fim)
+				)}</span>`
+			);
+		} else {
+			selos.push(
+				`<span class="badge-outline">ATV até ${escapeHtml(dataCurta(atv.data_fim))}</span>`
+			);
+		}
+		if (atv.situacao !== "sem_atv" && !atv.assinado) {
+			selos.push(`<span class="badge-destructive">Não assinado</span>`);
+		}
+
+		return `<span class="organograma-detalhe__funcao-atv">${selos.join("")}</span>`;
+	}
+
+	function dataCurta(iso) {
+		return iso ? frappe.datetime.str_to_user(iso) : "—";
 	}
 
 	// -- Árvore ------------------------------------------------------------
@@ -445,12 +536,20 @@ frappe.ready(() => {
 		const card = document.createElement("article");
 		card.className = "org-card";
 		card.dataset.id = no.id;
-		card.dataset.associado = no.associado;
+		// `pessoa` já vem com o espaço de nomes do tipo; `associado` continua exposto
+		// para quem só lida com o quadro de voluntários.
+		card.dataset.pessoa = no.pessoa;
+		if (no.associado) {
+			card.dataset.associado = no.associado;
+		}
 		card.tabIndex = 0;
 		card.setAttribute("role", "button");
 		card.setAttribute("aria-label", `Ver detalhes de ${no.nome}`);
 		if (no.lidera_area) {
 			card.classList.add("org-card--lider");
+		}
+		if (no.tipo_pessoa === "responsavel") {
+			card.classList.add("org-card--responsavel");
 		}
 
 		const badges = [];
@@ -516,7 +615,13 @@ frappe.ready(() => {
 			</div>`;
 
 		if (filhos.length) {
-			card.appendChild(botaoToggle(filhos));
+			const toggle = botaoToggle(filhos);
+			if (no.recolhido) {
+				// Só a marca: `alternar` precisa do `<li>` já no DOM para achar o ramo,
+				// e aqui o card ainda nem foi anexado. Quem recolhe é `render`.
+				toggle.dataset.recolhido = "1";
+			}
+			card.appendChild(toggle);
 		}
 		return card;
 	}
@@ -767,7 +872,7 @@ frappe.ready(() => {
 				Math.hypot(evento.clientX - inicio.x, evento.clientY - inicio.y) >
 				TOLERANCIA_DO_TOQUE;
 			if (cardDoGesto && !andou && ponteiros.size === 1) {
-				alternarDetalhe(cardDoGesto.dataset.associado);
+				alternarDetalhe(cardDoGesto.dataset.pessoa);
 			}
 			cardDoGesto = null;
 		});
@@ -806,7 +911,7 @@ frappe.ready(() => {
 				const card = evento.target.closest?.(".org-card:not(.org-card--grupo)");
 				if (card) {
 					evento.preventDefault();
-					alternarDetalhe(card.dataset.associado);
+					alternarDetalhe(card.dataset.pessoa);
 					return;
 				}
 			}

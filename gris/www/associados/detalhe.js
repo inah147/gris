@@ -399,9 +399,13 @@
 		if (!raiz) return;
 
 		const associado = raiz.dataset.associado || "";
+		const nomeDoAssociado = raiz.dataset.nome || "";
 		const corpo = document.getElementById("funcoes-organograma-corpo");
 		const botaoAdicionar = document.getElementById("btn-adicionar-funcao");
 
+		// A tabela é a fonte de qual linha o dialog abre: guardar o último render evita
+		// reler o DOM para remontar o objeto da linha.
+		let linhasAtuais = [];
 		let areas = [];
 		try {
 			areas = JSON.parse(raiz.dataset.areas || "[]");
@@ -490,40 +494,66 @@
 			return inicio ? `${inicio} – ${fim}` : `Até ${fim}`;
 		}
 
+		// Selo do Acordo de Trabalho Voluntário da linha. Vencido e não assinado são
+		// pendências independentes — as duas precisam aparecer.
+		function atvDaLinha(atv, atual) {
+			if (!atv) return "—";
+			// Função que já acabou não tem acordo a cobrar.
+			if (!atual) {
+				return atv.situacao === "sem_atv"
+					? "—"
+					: `<span class="badge-outline">Até ${escapeHtml(
+							frappe.datetime.str_to_user(atv.data_fim)
+					  )}</span>`;
+			}
+			if (atv.situacao === "sem_atv") {
+				return '<span class="badge-destructive">Sem ATV</span>';
+			}
+			const validade =
+				atv.situacao === "vencido"
+					? `<span class="badge-destructive">Vencido em ${escapeHtml(
+							frappe.datetime.str_to_user(atv.data_fim)
+					  )}</span>`
+					: `<span class="badge-outline">Até ${escapeHtml(
+							frappe.datetime.str_to_user(atv.data_fim)
+					  )}</span>`;
+			const assinatura = atv.assinado
+				? ""
+				: ' <span class="badge-destructive">Não assinado</span>';
+			return validade + assinatura;
+		}
+
 		function renderizar(linhas) {
 			if (!corpo) return;
+			linhasAtuais = linhas;
 			if (!linhas.length) {
 				corpo.innerHTML =
-					'<tr><td colspan="4" class="text-muted-foreground text-sm">Nenhuma função atribuída.</td></tr>';
+					'<tr><td colspan="5" class="text-muted-foreground text-sm">Nenhuma função atribuída.</td></tr>';
 				return;
 			}
 
 			corpo.innerHTML = linhas
 				.map((linha) => {
-					// O que manda na ação é ter ou não data de fim, e não `atual`: uma
-					// função encerrada hoje ainda vale hoje, então continuaria "atual" e
-					// o botão Encerrar reapareceria como se o clique não tivesse surtido
-					// efeito.
-					const emAberto = !linha.data_fim;
+					// A linha só é apagada visualmente quando de fato acabou: `data_fim`
+					// no futuro é função em vigor com término já programado, e o período
+					// da coluna ao lado já diz até quando.
 					const principal = linha.principal
 						? '<span class="badge">Principal</span>'
-						: emAberto
-						? `<button type="button" class="btn-sm-ghost" data-acao="principal" data-linha="${escapeHtml(
-								linha.linha
-						  )}">Tornar principal</button>`
 						: "";
-					const acao = emAberto
-						? `<button type="button" class="btn-sm-outline" data-acao="encerrar" data-linha="${escapeHtml(
-								linha.linha
-						  )}">Encerrar</button>`
-						: `<span class="text-muted-foreground text-sm">Encerrada em ${escapeHtml(
-								frappe.datetime.str_to_user(linha.data_fim)
-						  )}</span>`;
-					return `<tr${emAberto ? "" : ' class="funcoes-organograma__encerrada"'}>
+					return `<tr${linha.atual ? "" : ' class="funcoes-organograma__encerrada"'}>
 						<td>${escapeHtml(linha.area || "—")}</td>
 						<td>${escapeHtml(linha.funcao)} ${principal}</td>
 						<td>${escapeHtml(periodoDaLinha(linha))}</td>
-						<td class="funcoes-organograma__acoes">${acao}</td>
+						<td>${atvDaLinha(linha.atv, linha.atual)}</td>
+						<td class="funcoes-organograma__acoes">
+							<button type="button" class="btn-sm-ghost" data-acao="detalhes"
+								data-linha="${escapeHtml(linha.linha)}"
+								aria-label="Detalhes de ${escapeHtml(linha.funcao)}">
+								<svg class="ds-lucide ds-lucide--sm" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+									<use href="/assets/gris/design_system/icons/lucide/sprite.svg#ellipsis" />
+								</svg>
+							</button>
+						</td>
 					</tr>`;
 				})
 				.join("");
@@ -617,27 +647,19 @@
 			});
 		}
 
+		// Encerrar, tornar principal, corrigir datas, apagar e cuidar dos ATVs vivem
+		// todos no dialog compartilhado com /gestao_adultos/atvs.
 		raiz.addEventListener("click", function (evento) {
-			const botao = evento.target.closest("[data-acao]");
-			if (!botao) return;
-			const argumentos = {
-				payload: JSON.stringify({ associado: associado, linha: botao.dataset.linha }),
-			};
-			if (botao.dataset.acao === "encerrar") {
-				executar(
-					botao,
-					"gris.api.gestao_adultos.encerrar_funcao",
-					argumentos,
-					"Função encerrada."
-				);
-			} else if (botao.dataset.acao === "principal") {
-				executar(
-					botao,
-					"gris.api.gestao_adultos.definir_principal",
-					argumentos,
-					"Função principal definida."
-				);
-			}
+			const botao = evento.target.closest('[data-acao="detalhes"]');
+			if (!botao || !window.grisFuncaoOrganograma) return;
+
+			const linha = linhasAtuais.find((item) => item.linha === botao.dataset.linha);
+			if (!linha) return;
+
+			window.grisFuncaoOrganograma.abrir(
+				Object.assign({ associado: associado, nome: nomeDoAssociado }, linha),
+				{ aoMudar: renderizar }
+			);
 		});
 
 		repopularSelect(

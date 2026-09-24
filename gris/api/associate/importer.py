@@ -471,7 +471,27 @@ def parse_associates_report(path_pdf: str) -> dict:
 		"usuario_skipped": 0,
 	}
 
-	# Processar cada registro
+	# A reconciliação por pessoa (`on_associado_atualizado`) fica desligada durante o
+	# laço: são centenas de gravações, e a rotina em lote no fim faz o mesmo trabalho
+	# enxergando o grupo inteiro — inclusive encerrando quem saiu da seção, que o
+	# caminho por pessoa não tem como saber.
+	frappe.flags.gris_sync_secoes = True
+	try:
+		_importar_linhas(df, results)
+	finally:
+		frappe.flags.gris_sync_secoes = False
+
+	# A importação é o único momento em que `secao` e `funcao` mudam em lote; é
+	# aqui que as seções viram áreas do organograma.
+	results["secoes"] = _sincronizar_secoes_do_organograma()
+
+	_registrar_log_importacao(path_pdf, results)
+
+	return results
+
+
+def _importar_linhas(df, results: dict) -> None:
+	"""Cria ou atualiza um `Associado` por linha do relatório."""
 	for idx, row in df.iterrows():
 		cpf = None
 		try:
@@ -692,14 +712,6 @@ def parse_associates_report(path_pdf: str) -> dict:
 				f"\n  Dados do registro: {_format_row_summary(row)}"
 			)
 			results["error_details"].append(f"Linha {idx + 1} - {error_msg}")
-
-	# A importação é o único momento em que `secao` e `funcao` mudam em lote; é
-	# aqui que as seções viram áreas do organograma.
-	results["secoes"] = _sincronizar_secoes_do_organograma()
-
-	_registrar_log_importacao(path_pdf, results)
-
-	return results
 
 
 def _sincronizar_secoes_do_organograma() -> dict:

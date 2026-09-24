@@ -1,0 +1,52 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}ATVs{% endblock %}
+
+{% set active_link = "/gestao_adultos/atvs" %}
+
+{# atvs.css/.js são injetados automaticamente pelo Frappe (colocated).
+   Não referenciar manualmente: duplica o carregamento. #}
+
+{% block page_header %}
+<div class="page-header-row">
+	<div class="flex flex-col gap-2 max-w-3xl">
+		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">ATVs</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">
+			Acordos de Trabalho Voluntário das funções em vigor. Uma linha por função —
+			quem exerce duas funções aparece duas vezes.
+		</p>
+	</div>
+</div>
+{% endblock %}
+
+{% block main %}
+{# `forceescape` é obrigatório no `tojson` dentro de atributo: sem ele o JSON trunca. #}
+<div class="atvs"
+     data-linhas="{{ linhas | tojson | forceescape }}"
+     data-pode-editar="{{ 1 if pode_editar else 0 }}">
+
+	{% if not linhas %}
+		{{ empty(
+			title="Nenhuma função em vigor",
+			description="Assim que alguém for alocado numa área, o acordo dela aparece aqui.",
+			icon="file-pen-line"
+		) }}
+	{% else %}
+		<div class="atvs-resumo" id="atvs-resumo"></div>
+
+		{% call card(attrs={"class": "atvs__card"}) %}
+		<section class="p-0 min-w-0">
+			<div class="overflow-x-auto" id="atvs-tabela"></div>
+		</section>
+		{% endcall %}
+	{% endif %}
+</div>
+
+{% if pode_editar %}
+	{% include "gris/templates/includes/funcao_organograma_dialog.html" %}
+{% endif %}
+
+{{ toaster() }}
+{% endblock %}

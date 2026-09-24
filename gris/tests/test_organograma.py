@@ -466,6 +466,42 @@ class TestMontarDetalhe(FrappeTestCase):
 		self.assertEqual(detalhe["funcoes"][0]["periodo"], "fev/2022 " + chr(0x2013) + " dez/2023")
 		self.assertFalse(detalhe["funcoes"][0]["atual"])
 
+	def test_funcao_com_termino_no_futuro_continua_atual(self):
+		"""Mesmo corte de `lotacoes_atuais`: só acabou o que já passou.
+
+		É dessa função que o acordo de trabalho ainda é cobrado — tratá-la como
+		encerrada esconderia a pendência de quem tem saída programada.
+		"""
+		funcoes = [_linha_de_funcao("Diretora", inicio="2024-01-15", fim="2999-12-31")]
+		detalhe = montar_detalhe(self._pessoa(), funcoes, {}, {}, None)
+
+		self.assertTrue(detalhe["funcoes"][0]["atual"])
+
+	def test_acordo_de_trabalho_entra_por_linha(self):
+		funcoes = [_linha_de_funcao("Diretora", principal=1, inicio="2024-01-15")]
+		funcoes[0]["name"] = "linha-1"
+		acordos = {
+			"linha-1": [
+				{
+					"name": "atv-1",
+					"data_inicio": "2025-01-01",
+					"data_fim": "2999-01-01",
+					"assinado": 1,
+					"creation": "2025-01-01 10:00:00",
+				}
+			]
+		}
+
+		detalhe = montar_detalhe(self._pessoa(), funcoes, {}, {}, None, None, acordos)
+
+		self.assertEqual(detalhe["funcoes"][0]["atv"]["situacao"], "vigente")
+		self.assertTrue(detalhe["funcoes"][0]["atv"]["assinado"])
+
+	def test_funcao_sem_acordo_fica_marcada_como_sem_atv(self):
+		detalhe = montar_detalhe(self._pessoa(), [_linha_de_funcao("Diretora")], {}, {}, None)
+
+		self.assertEqual(detalhe["funcoes"][0]["atv"]["situacao"], "sem_atv")
+
 	def test_periodo_sem_datas(self):
 		detalhe = montar_detalhe(self._pessoa(), [_linha_de_funcao("Sem data")], {}, {}, None)
 

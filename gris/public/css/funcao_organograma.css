@@ -1,0 +1,136 @@
+/*
+ * Dialog "Função no organograma" — compartilhado por /associados/detalhe e
+ * /gestao_adultos/atvs. Marcação em templates/includes/funcao_organograma_dialog.html.
+ */
+
+/* O Basecoat prende a caixa interna do dialog em 512px, e o formulário tem dois
+   campos de data lado a lado mais a tabela de acordos. A largura vai no `> div`
+   porque é ele que desenha a caixa; o `<dialog>` em si é só o posicionamento. */
+.funcao-dialog > div {
+	width: min(46rem, calc(100vw - 2rem));
+	max-width: none;
+}
+
+/* O popover do datepicker e o do select são `position: absolute` dentro do próprio
+   campo, então o `overflow` do corpo do dialog os recortaria pela metade. Quem passa a
+   rolar é a tabela de acordos (abaixo) — é a única parte que cresce sem limite, e
+   segurá-la ali mantém a altura do dialog previsível. */
+.funcao-dialog > div,
+.funcao-dialog > div > section {
+	overflow: visible;
+}
+
+.funcao-dialog__identidade {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	margin: 0 0 1rem;
+}
+
+.funcao-dialog__bloco {
+	border-top: 1px solid var(--border);
+	padding-top: 1rem;
+	margin-top: 1rem;
+}
+
+.funcao-dialog__bloco:first-of-type {
+	border-top: 0;
+	padding-top: 0;
+	margin-top: 0;
+}
+
+.funcao-dialog__titulo {
+	font-size: 0.875rem;
+	font-weight: 600;
+	margin: 0 0 0.75rem;
+}
+
+.funcao-dialog__subtitulo {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: var(--muted-foreground);
+	margin: 0 0 0.5rem;
+}
+
+.funcao-dialog__ajuda {
+	font-size: 0.75rem;
+	color: var(--muted-foreground);
+	margin: 0.375rem 0 0;
+}
+
+/* Grid, e não flex: as duas colunas têm a mesma largura e os rótulos ficam na mesma
+   linha mesmo quando um dos campos tem texto de apoio embaixo. */
+.funcao-dialog__datas {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.75rem;
+	align-items: start;
+}
+
+.funcao-dialog__datas .field,
+.funcao-dialog__assinatura {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+	min-width: 0;
+}
+
+/* Abaixo das datas, e com a mesma largura de uma coluna: é um campo do formulário,
+   não um adorno ao lado do botão. */
+.funcao-dialog__assinatura {
+	margin-top: 0.75rem;
+	max-width: calc(50% - 0.375rem);
+}
+
+.funcao-dialog__acoes {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-top: 0.75rem;
+}
+
+.funcao-dialog__acoes-celula {
+	white-space: nowrap;
+	text-align: right;
+	width: 1%;
+}
+
+.funcao-dialog__switch {
+	margin: 0;
+}
+
+.funcao-dialog__apagar-atv {
+	color: var(--destructive);
+}
+
+.funcao-dialog__tabela {
+	width: 100%;
+}
+
+/* A única parte que cresce sem limite. Presa aqui, o dialog inteiro continua cabendo
+   na tela por mais renovações que a função acumule. */
+.funcao-dialog__atvs {
+	overflow: auto;
+	max-height: 14rem;
+}
+
+/* Respiro antes do formulário de novo acordo: sem ele o rótulo "Início" cola na
+   última linha da tabela e os dois viram um bloco só. */
+.funcao-dialog__novo-atv {
+	margin-top: 1.5rem;
+}
+
+.funcao-dialog__perigo .funcao-dialog__titulo {
+	color: var(--destructive);
+}
+
+/* Em telas estreitas o dialog ocupa a largura toda e os campos empilham. */
+@media (max-width: 40rem) {
+	.funcao-dialog__datas {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.funcao-dialog__assinatura {
+		max-width: none;
+	}
+}

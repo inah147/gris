@@ -9,15 +9,20 @@ escotista recebe; a segunda decide o que fazer com as linhas de função interna
 uma pessoa.
 """
 
+import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import getdate
 
 from gris.api.gestao_adultos.secoes import (
 	PAPEL_ASSISTENTE,
 	PAPEL_CHEFE,
+	escotistas_sem_secao,
 	planejar_linhas,
 	planejar_secoes,
 )
+
+#: Prefixo dos documentos criados pelos testes que tocam o banco.
+PREFIXO_SYNC = "ZZ Teste Secao"
 
 
 def _pessoa(nome, secao, categoria="Escotista", funcao=""):
@@ -223,3 +228,99 @@ class TestPlanejarLinhas(FrappeTestCase):
 
 		self.assertEqual(plano["encerrar"], [1])
 		self.assertEqual(plano["abrir"], [])
+
+
+class TestSincronizacaoPontual(FrappeTestCase):
+	"""A regra valendo "sempre": o `on_update` do Associado, e não só a importação."""
+
+	def tearDown(self):
+		# Rollback do FrappeTestCase é por classe: sem isto os associados do teste
+		# anterior vazam e derrubam a inserção do seguinte.
+		frappe.db.rollback()
+
+	def test_escotista_com_secao_recebe_area_e_funcao_ao_salvar(self):
+		associado = self._criar_associado(secao=f"{PREFIXO_SYNC} Alcateia", funcao="Assistente")
+
+		linhas = self._funcoes(associado)
+
+		self.assertEqual(linhas, [(PAPEL_ASSISTENTE, f"{PREFIXO_SYNC} Alcateia")])
+
+	def test_a_primeira_funcao_do_paxtu_decide_chefe_ou_assistente(self):
+		associado = self._criar_associado(
+			secao=f"{PREFIXO_SYNC} Tropa", funcao="Chefe de Seção", sufixo="Chefe"
+		)
+
+		self.assertEqual(self._funcoes(associado), [(PAPEL_CHEFE, f"{PREFIXO_SYNC} Tropa")])
+
+	def test_escotista_sem_secao_nao_recebe_nada(self):
+		"""Decisão do projeto: a seção não é inferida do ramo — o dado vem do Paxtu."""
+		associado = self._criar_associado(secao="", funcao="Assistente", sufixo="Sem secao")
+
+		self.assertEqual(self._funcoes(associado), [])
+
+	def test_quem_nao_e_escotista_fica_de_fora(self):
+		associado = self._criar_associado(
+			secao=f"{PREFIXO_SYNC} Alcateia",
+			funcao="Assistente",
+			categoria="Dirigente",
+			sufixo="Dirigente",
+		)
+
+		self.assertEqual(self._funcoes(associado), [])
+
+	def test_salvar_de_novo_nao_duplica_a_linha(self):
+		"""O handler roda a cada gravação; sem idempotência viraria uma linha por save."""
+		associado = self._criar_associado(
+			secao=f"{PREFIXO_SYNC} Alcateia", funcao="Assistente", sufixo="Idempotente"
+		)
+
+		doc = frappe.get_doc("Associado", associado)
+		doc.telefone = "11999990000"
+		doc.save(ignore_permissions=True)
+
+		self.assertEqual(len(self._funcoes(associado)), 1)
+
+	def test_a_trava_de_flag_desliga_a_reconciliacao(self):
+		"""É por ela que a importação em lote não roda a rotina uma vez por pessoa."""
+		frappe.flags.gris_sync_secoes = True
+		try:
+			associado = self._criar_associado(
+				secao=f"{PREFIXO_SYNC} Alcateia", funcao="Assistente", sufixo="Em lote"
+			)
+		finally:
+			frappe.flags.gris_sync_secoes = False
+
+		self.assertEqual(self._funcoes(associado), [])
+
+	def test_escotistas_sem_secao_lista_quem_falta(self):
+		associado = self._criar_associado(secao="", funcao="Assistente", sufixo="Listado")
+		nome = frappe.db.get_value("Associado", associado, "nome_completo")
+
+		self.assertIn(nome, escotistas_sem_secao())
+
+	def _funcoes(self, associado):
+		return [
+			(linha.funcao, linha.area)
+			for linha in frappe.get_all(
+				"Funcao do Associado",
+				filters={"parent": associado, "parenttype": "Associado"},
+				fields=["funcao", "area"],
+			)
+		]
+
+	def _criar_associado(self, secao, funcao, categoria="Escotista", sufixo="Pessoa"):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Associado",
+				"nome_completo": f"{PREFIXO_SYNC} {sufixo}",
+				"cpf": frappe.generate_hash(length=32),
+				"data_de_nascimento": "1990-01-01",
+				"categoria": categoria,
+				"secao": secao,
+				"funcao": funcao,
+				"status_no_grupo": "Ativo",
+				"historico_no_grupo": [{"data_de_ingresso": "2020-01-01"}],
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		return doc.name

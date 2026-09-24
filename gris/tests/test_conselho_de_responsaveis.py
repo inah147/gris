@@ -21,6 +21,10 @@ from gris.api.gestao_adultos.responsaveis import (
 
 PREFIXO = "ZZ Teste Conselho"
 
+#: CPF fictício de quem tem os dois cadastros. Fixo para o `name` dos dois bater — é
+#: justamente o que põe a pessoa no conselho pelo regime gravado.
+CPF_DO_MISTO = "38000000001"
+
 
 class TestMontarNoConselho(FrappeTestCase):
 	"""Função pura: sem banco, sem fixture."""
@@ -154,23 +158,91 @@ class TestConselhoNoOrganograma(FrappeTestCase):
 
 		self.assertEqual([no for no in arvore["raizes"] if no.get("nome") == AREA_CONSELHO], [])
 
-	def test_detalhe_do_responsavel_e_somente_leitura(self):
+	def test_detalhe_do_responsavel_traz_a_funcao_automatica_do_conselho(self):
 		from gris.api.gestao_adultos.responsaveis import obter_detalhe_do_responsavel
 
 		nome = self._criar_responsavel("Detalhe")
 
 		detalhe = obter_detalhe_do_responsavel(nome)
 
-		self.assertTrue(detalhe["somente_leitura"])
-		self.assertFalse(detalhe["permite_ficha"])
 		self.assertEqual(detalhe["funcao_principal"], FUNCAO_RESPONSAVEL_LEGAL)
 		self.assertEqual(detalhe["areas"], [AREA_CONSELHO])
+		# A ficha do responsável existe desde que ele passou a poder receber função.
+		self.assertTrue(detalhe["permite_ficha"])
+		self.assertIn(nome, detalhe["ficha_url"])
+
+		conselho = detalhe["funcoes"][0]
+		self.assertTrue(conselho["automatica"])
+		# Sem `linha` não há registro por trás: é o que impede encerrar, editar ou apagar.
+		self.assertIsNone(conselho["linha"])
+		self.assertIsNone(conselho["atv"])
 
 	def test_detalhe_de_quem_nao_existe_e_recusado(self):
 		from gris.api.gestao_adultos.responsaveis import obter_detalhe_do_responsavel
 
 		with self.assertRaises(frappe.DoesNotExistError):
 			obter_detalhe_do_responsavel("nao-existe")
+
+	def test_os_dois_regimes_cabem_no_mesmo_no(self):
+		"""Quem é associado entra pela linha gravada; quem só é responsável, derivado.
+
+		Os dois no mesmo nó: dois grupos com o mesmo `id` fariam a interface marcar o card
+		errado e a área apareceria duas vezes na tela.
+		"""
+		from gris.api.gestao_adultos.organograma import obter_organograma
+
+		garantir_estrutura_do_conselho()
+		self._criar_responsavel("Puro")
+		associado = self._criar_associado_responsavel("Misto")
+
+		arvore = obter_organograma()
+
+		conselhos = [no for no in arvore["raizes"] if no.get("nome") == AREA_CONSELHO]
+		self.assertEqual(len(conselhos), 1)
+
+		filhos = conselhos[0]["children"]
+		self.assertTrue(conselhos[0]["recolhido"])
+		self.assertEqual(len(filhos), len({filho["id"] for filho in filhos}))
+		self.assertEqual(conselhos[0]["membros"], len(filhos))
+		self.assertEqual({filho["tipo_pessoa"] for filho in filhos}, {"responsavel", "associado"})
+		self.assertIn(associado, [filho["associado"] for filho in filhos if filho["associado"]])
+
+		# E a pessoa migrada entra uma vez só, pelo lado do associado.
+		derivados = [filho["responsavel"] for filho in filhos if filho["tipo_pessoa"] == "responsavel"]
+		self.assertNotIn(associado, derivados)
+
+	def _criar_associado_responsavel(self, sufixo, cpf=CPF_DO_MISTO):
+		"""Pessoa com os dois cadastros e um beneficiário — vai para o conselho gravada."""
+		from gris.api.pessoas import vincular_responsavel_ao_associado
+
+		associado = frappe.get_doc(
+			{
+				"doctype": "Associado",
+				"nome_completo": f"{PREFIXO} {sufixo}",
+				"cpf": cpf,
+				"data_de_nascimento": "1985-01-01",
+				"categoria": "Dirigente",
+				"status_no_grupo": "Ativo",
+				"historico_no_grupo": [{"data_de_ingresso": "2020-01-01"}],
+			}
+		)
+		associado.insert(ignore_permissions=True)
+
+		responsavel = frappe.get_doc(
+			{"doctype": "Responsavel", "nome_completo": f"{PREFIXO} {sufixo}", "cpf": cpf}
+		)
+		responsavel.insert(ignore_permissions=True)
+
+		frappe.get_doc(
+			{
+				"doctype": "Responsavel Vinculo",
+				"responsavel": responsavel.name,
+				"beneficiario_associado": associado.name,
+			}
+		).insert(ignore_permissions=True)
+
+		vincular_responsavel_ao_associado(responsavel.name)
+		return associado.name
 
 	def _criar_responsavel(self, sufixo="Pessoa"):
 		doc = frappe.get_doc(

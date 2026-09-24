@@ -1,5 +1,8 @@
+from urllib.parse import quote
+
 import frappe
 
+from gris.api.pessoas import associado_do_responsavel
 from gris.api.portal_access import _responsavel_has_associado_access, enrich_context
 
 no_cache = 1
@@ -175,6 +178,18 @@ def get_context(context):
 	context.group_responsaveis = build_group(responsaveis_fields) if is_beneficiario else []
 	context.group_registro = build_group(registro_fields)
 
+	# Hobbies e habilidades saem do laço genérico: `habilidades` é uma Table MultiSelect e
+	# `frappe.format_value` não tem o que fazer com ela.
+	context.hobbies_texto = (doc.o_que_gosta_de_fazer_no_dia_a_dia or "").strip()
+	context.habilidades_list = [linha.habilidade for linha in (doc.habilidades or [])]
+	context.e_responsavel_legal = bool(doc.e_responsavel_legal)
+
+	# Os cards de responsável vêm do vínculo, não dos campos achatados acima: é o vínculo
+	# que sabe quem é a pessoa de verdade e para qual ficha mandar.
+	context.responsaveis_vinculados = (
+		_responsaveis_vinculados(doc.name) if _pode_ver_responsaveis(user_roles) else []
+	)
+
 	# Lógica de guarda / exibição dos toggles de guardião
 	pais_div = (doc.pais_divorciados or "").strip() == "Sim"
 	tipo_guarda = (doc.tipo_guarda or "").strip()
@@ -227,6 +242,54 @@ def get_context(context):
 
 	context.associado = doc
 	return context
+
+
+#: Quem pode abrir a página de detalhes do responsável a partir da ficha do jovem. É a
+#: mesma lista de `/associados/responsavel` em `PAGE_ROLES` — a página confere de novo, mas
+#: mostrar um botão que leva a "acesso negado" seria pior que não mostrar.
+ROLES_QUE_VEEM_RESPONSAVEIS = ("Gestor de Associados", "Visualizador Associados", "Gestor de Adultos")
+
+
+def _pode_ver_responsaveis(user_roles: set) -> bool:
+	return bool(user_roles.intersection(ROLES_QUE_VEEM_RESPONSAVEIS)) or "System Manager" in user_roles
+
+
+def _responsaveis_vinculados(associado_name: str) -> list[dict]:
+	"""Responsáveis legais do jovem, com a rota da ficha de cada um.
+
+	Quem também é associado vai direto para a ficha completa; quem não é, para a página de
+	detalhes do responsável. O redirect de lá cobre o caso de a ponte ser criada depois.
+	"""
+	vinculos = frappe.get_all(
+		"Responsavel Vinculo",
+		filters={"beneficiario_associado": associado_name},
+		fields=["responsavel", "é_guardiao_legal", "primeiro_responsavel"],
+		order_by="primeiro_responsavel desc, creation asc",
+	)
+
+	pessoas = []
+	for vinculo in vinculos:
+		if not vinculo.responsavel:
+			continue
+
+		nome = frappe.db.get_value("Responsavel", vinculo.responsavel, "nome_completo")
+		associado = associado_do_responsavel(vinculo.responsavel)
+		destino = (
+			f"/associados/detalhe?name={quote(associado)}"
+			if associado
+			else f"/associados/responsavel?name={quote(vinculo.responsavel)}"
+		)
+		pessoas.append(
+			{
+				"nome": nome or vinculo.responsavel,
+				"url": destino,
+				"e_associado": bool(associado),
+				"guardiao_legal": bool(vinculo.get("é_guardiao_legal")),
+				"primeiro": bool(vinculo.get("primeiro_responsavel")),
+			}
+		)
+
+	return pessoas
 
 
 def _status_badge_variant(status):

@@ -24,11 +24,12 @@ from frappe.utils import getdate
 
 from gris.utils.contato import format_phone
 
+from . import identidade
 from .atvs import acordos_por_linha_do_associado, classificar_validade, em_vigor
 from .endpoints import _require_authenticated_user
 from .responsaveis import (
 	AREA_CONSELHO,
-	PREFIXO_ASSOCIADO,
+	LINHA_RESPONSAVEL,
 	listar_membros_do_conselho,
 	montar_no_conselho,
 )
@@ -95,14 +96,12 @@ def obter_organograma(area: str | None = None) -> dict:
 		fields=["name", "area", "responde_para", "responsavel", "descricao", "ordem"],
 		order_by="ordem asc, area asc",
 	)
+	# O líder da área é um `Associado`; daqui para baixo tudo compara por chave.
+	for unidade in todas_areas:
+		if unidade.get("responsavel"):
+			unidade["responsavel"] = identidade.chave_do_associado(unidade["responsavel"])
 
-	todas_pessoas = frappe.get_all(
-		"Associado",
-		filters={"categoria": ["!=", CATEGORIA_EXCLUIDA], "status_no_grupo": "Ativo"},
-		fields=["name", "nome_completo", "categoria", "ramo", "secao", "id_escoteiros"],
-		order_by="nome_completo asc",
-	)
-
+	todas_pessoas = pessoas_do_organograma()
 	lotacoes, funcoes_sem_area = lotacoes_atuais([p["name"] for p in todas_pessoas])
 
 	area = (area or "").strip()
@@ -117,40 +116,135 @@ def obter_organograma(area: str | None = None) -> dict:
 
 
 def _acrescentar_conselho(arvore: dict, area: str) -> None:
-	"""Pendura o Conselho de Responsáveis nas raízes, quando o filtro o alcança.
+	"""Pendura no Conselho de Responsáveis os membros que não têm lotação gravada.
 
-	Entra por fora de `montar_arvore` de propósito: os responsáveis não têm lotação
-	gravada, e obrigar a montagem da árvore a conhecer um segundo tipo de pessoa
-	complicaria a parte que desenha o quadro de voluntários inteiro.
+	Entra por fora de `montar_arvore` de propósito: quem só é `Responsavel` não tem linha
+	em `Funcao do Associado`, e obrigar a montagem da árvore a conhecer um segundo tipo de
+	pessoa complicaria a parte que desenha o quadro de voluntários inteiro.
+
+	Quem também é associado chega ao conselho pelo caminho normal, pela linha gravada — e
+	nesse caso `montar_arvore` já criou o nó de grupo da área. Os derivados então **entram
+	nesse mesmo nó**: dois nós com o mesmo `id` deixariam a interface marcando o card
+	errado, e a área apareceria duas vezes na tela.
 	"""
 	if area and area != AREA_CONSELHO:
 		return
 
-	conselho = montar_no_conselho(listar_membros_do_conselho())
-	if not conselho:
+	derivados = montar_no_conselho(listar_membros_do_conselho())
+	grupo = next(
+		(no for no in arvore["raizes"] if no.get("id") == f"area:{AREA_CONSELHO}"),
+		None,
+	)
+
+	if grupo is None:
+		if not derivados:
+			return
+		arvore["raizes"].append(derivados)
+		arvore["raizes"].sort(key=_chave_ordenacao)
+		arvore["total_pessoas"] += derivados["membros"]
 		return
 
-	arvore["raizes"].append(conselho)
-	arvore["total_pessoas"] += conselho["membros"]
+	# São mais de uma centena de cards: abrir todos de saída empurraria o resto do
+	# organograma para fora da tela.
+	grupo["recolhido"] = True
+	if not derivados:
+		return
+
+	# Um responsável alocado no próprio Conselho já tem nó gravado aqui; o derivado dele
+	# repetiria o mesmo `id` e a interface passaria a marcar dois cards de uma vez.
+	ja_no_grupo = {filho["id"] for filho in grupo["children"]}
+	novos = [filho for filho in derivados["children"] if filho["id"] not in ja_no_grupo]
+	if not novos:
+		return
+
+	grupo["children"].extend(novos)
+	grupo["children"].sort(key=_chave_ordenacao)
+	# Somado à mão porque `_contar` já rodou sobre a árvore, antes destes nós existirem.
+	grupo["membros"] = grupo.get("membros", 0) + len(novos)
+	arvore["total_pessoas"] += len(novos)
 
 
-def lotacoes_atuais(nomes: list[str]) -> tuple[list[dict], int]:
+def pessoas_do_organograma() -> list[dict]:
+	"""Quem pode aparecer no desenho, já com a chave que identifica cada um.
+
+	São dois tipos: o quadro de associados ativos, e os responsáveis **que têm função
+	alocada**. O recorte do segundo grupo é o que impede o organograma de encher com a
+	centena de responsáveis do cadastro — quem não exerce função aparece só no Conselho,
+	por derivação (ver `gris.api.gestao_adultos.responsaveis`).
+	"""
+	pessoas = [
+		dict(
+			pessoa,
+			name=identidade.chave_do_associado(pessoa["name"]),
+			pessoa_id=pessoa["name"],
+			tipo_pessoa="associado",
+		)
+		for pessoa in frappe.get_all(
+			"Associado",
+			filters={"categoria": ["!=", CATEGORIA_EXCLUIDA], "status_no_grupo": "Ativo"},
+			fields=["name", "nome_completo", "categoria", "ramo", "secao", "id_escoteiros"],
+			order_by="nome_completo asc",
+		)
+	]
+
+	alocados = frappe.get_all(
+		"Funcao do Associado",
+		filters={"parenttype": "Responsavel"},
+		pluck="parent",
+		distinct=True,
+	)
+	if alocados:
+		pessoas += [
+			dict(
+				pessoa,
+				name=identidade.chave_do_responsavel(pessoa["name"]),
+				pessoa_id=pessoa["name"],
+				tipo_pessoa="responsavel",
+				# O responsável não tem categoria, ramo nem seção: o selo do card dele é o
+				# mesmo do Conselho.
+				categoria=LINHA_RESPONSAVEL,
+			)
+			for pessoa in frappe.get_all(
+				"Responsavel",
+				filters={"name": ["in", alocados]},
+				fields=["name", "nome_completo"],
+				order_by="nome_completo asc",
+			)
+		]
+
+	return pessoas
+
+
+def lotacoes_atuais(chaves: list[str]) -> tuple[list[dict], int]:
 	"""Onde cada pessoa está, derivado das funções internas em vigor.
 
 	A área é escolhida na própria linha de função interna — a mesma função pode
 	valer em várias áreas, então só a linha sabe onde a pessoa exerce. Quem tem
 	linhas em áreas diferentes gera uma lotação para cada uma, e aparece em mais de
 	um lugar no organograma.
+
+	Recebe e devolve **chaves** (`associado:…` / `responsavel:…`), porque os dois tipos de
+	pessoa têm `name` no mesmo formato e a grade é a mesma tabela. Uma consulta por
+	`parenttype`, não uma por pessoa.
 	"""
-	if not nomes:
+	if not chaves:
 		return [], 0
 
-	linhas = frappe.get_all(
-		"Funcao do Associado",
-		filters={"parent": ["in", nomes], "parenttype": "Associado"},
-		fields=["parent", "funcao", "area", "principal", "idx", "data_fim"],
-		order_by="parent asc, principal desc, idx asc",
-	)
+	nomes_por_doctype: dict[str, list[str]] = {}
+	for chave in chaves:
+		doctype, name = identidade.separar(chave)
+		nomes_por_doctype.setdefault(doctype, []).append(name)
+
+	linhas = []
+	for doctype, nomes in nomes_por_doctype.items():
+		for linha in frappe.get_all(
+			"Funcao do Associado",
+			filters={"parent": ["in", nomes], "parenttype": doctype},
+			fields=["parent", "funcao", "area", "principal", "idx", "data_fim"],
+			order_by="parent asc, principal desc, idx asc",
+		):
+			linha["pessoa"] = identidade.chave(doctype, linha["parent"])
+			linhas.append(linha)
 
 	hoje = getdate()
 	por_chave: dict[tuple[str, str], str] = {}
@@ -163,10 +257,10 @@ def lotacoes_atuais(nomes: list[str]) -> tuple[list[dict], int]:
 			sem_area += 1
 			continue
 		# `order_by` já pôs a principal na frente: a primeira ganha a vaga da área.
-		por_chave.setdefault((linha["parent"], area), linha["funcao"])
+		por_chave.setdefault((linha["pessoa"], area), linha["funcao"])
 
 	lotacoes = [
-		{"associado": pessoa, "area": area, "funcao": funcao} for (pessoa, area), funcao in por_chave.items()
+		{"pessoa": pessoa, "area": area, "funcao": funcao} for (pessoa, area), funcao in por_chave.items()
 	]
 	return lotacoes, sem_area
 
@@ -391,7 +485,7 @@ def _recortar_por_area(
 
 	nomes_validos = {a["name"] for a in todas_areas}
 	if area == FILTRO_SEM_AREA:
-		lotados = {linha["associado"] for linha in lotacoes if linha["area"] in nomes_validos}
+		lotados = {linha["pessoa"] for linha in lotacoes if linha["area"] in nomes_validos}
 		return [], [p for p in pessoas if p["name"] not in lotados], []
 
 	selecionadas = _area_com_descendentes(area, todas_areas)
@@ -401,7 +495,7 @@ def _recortar_por_area(
 	areas = [a for a in todas_areas if a["name"] in selecionadas]
 	recortadas = [linha for linha in lotacoes if linha["area"] in selecionadas]
 	# Quem lidera uma área selecionada entra mesmo sem função mapeada para ela.
-	dentro = {linha["associado"] for linha in recortadas}
+	dentro = {linha["pessoa"] for linha in recortadas}
 	dentro |= {a["responsavel"] for a in areas if a.get("responsavel")}
 	return areas, [p for p in pessoas if p["name"] in dentro], recortadas
 
@@ -471,27 +565,34 @@ def listar_areas_para_filtro() -> list[dict]:
 
 
 def existe_associado_sem_area() -> bool:
-	"""Se ninguém está sem lotação, a opção "Sem área" não precisa existir."""
-	nomes = frappe.get_all(
-		"Associado",
-		filters={"categoria": ["!=", CATEGORIA_EXCLUIDA], "status_no_grupo": "Ativo"},
-		pluck="name",
-	)
-	if not nomes:
+	"""Se ninguém está sem lotação, a opção "Sem área" não precisa existir.
+
+	Só olha para associados: o responsável entra no desenho justamente por ter função
+	alocada, então nunca está sem área.
+	"""
+	chaves = [
+		identidade.chave_do_associado(nome)
+		for nome in frappe.get_all(
+			"Associado",
+			filters={"categoria": ["!=", CATEGORIA_EXCLUIDA], "status_no_grupo": "Ativo"},
+			pluck="name",
+		)
+	]
+	if not chaves:
 		return False
 
-	lotacoes, _sem_area = lotacoes_atuais(nomes)
+	lotacoes, _sem_area = lotacoes_atuais(chaves)
 	areas_ativas = set(frappe.get_all("Unidade Organizacional", filters={"ativa": 1}, pluck="name"))
-	lotados = {linha["associado"] for linha in lotacoes if linha["area"] in areas_ativas}
+	lotados = {linha["pessoa"] for linha in lotacoes if linha["area"] in areas_ativas}
 	lotados |= {
-		r["responsavel"]
+		identidade.chave_do_associado(r["responsavel"])
 		for r in frappe.get_all(
 			"Unidade Organizacional",
 			filters={"ativa": 1, "responsavel": ["is", "set"]},
 			fields=["responsavel"],
 		)
 	}
-	return any(nome not in lotados for nome in nomes)
+	return any(chave not in lotados for chave in chaves)
 
 
 def _avatar_por_pessoa(pessoas: list[dict]) -> dict[str, str]:
@@ -546,9 +647,9 @@ def montar_arvore(
 	}
 
 	funcao_por_chave = {
-		(linha["associado"], linha["area"]): linha.get("funcao")
+		(linha["pessoa"], linha["area"]): linha.get("funcao")
 		for linha in lotacoes
-		if linha["associado"] in pessoas_por_nome and linha["area"] in areas_por_nome
+		if linha["pessoa"] in pessoas_por_nome and linha["area"] in areas_por_nome
 	}
 	# Liderar a área também posiciona: sem isso, área com membros ficaria sem
 	# cabeça só porque faltou cadastrar a função do responsável.
@@ -651,7 +752,11 @@ def montar_arvore(
 			"children": sem_area_filhos,
 		}
 
-	areas_sem_responsavel = sorted(areas_por_nome[n]["area"] for n in nos_grupo if n in areas_por_nome)
+	# O conselho não tem líder por definição — cobrar um dele seria um aviso que ninguém
+	# pode resolver.
+	areas_sem_responsavel = sorted(
+		areas_por_nome[n]["area"] for n in nos_grupo if n in areas_por_nome and n != AREA_CONSELHO
+	)
 
 	return {
 		"raizes": raizes,
@@ -673,21 +778,31 @@ def _no_pessoa(
 	lidera: bool,
 	outras_areas: list[str],
 ) -> dict:
-	nome = pessoa["name"]
+	# `name` aqui é a **chave** pela qual a árvore indexa a pessoa. `pessoa_id` é o docname,
+	# e `tipo_pessoa` diz de qual DocType. Os dois têm default para o caso em que a chave já
+	# é o próprio docname de um associado.
+	chave = pessoa["name"]
+	tipo_pessoa = pessoa.get("tipo_pessoa") or "associado"
+	docname = pessoa.get("pessoa_id") or chave
+
 	ramo = pessoa.get("ramo")
 	if pessoa.get("categoria") != CATEGORIA_COM_RAMO or ramo == RAMO_VAZIO:
 		ramo = None
 	return {
 		"tipo": "pessoa",
-		# A mesma pessoa pode ter vários nós; o id é do nó, `associado` é de quem.
-		"id": f"{nome}@@{nome_area or ''}",
+		# A mesma pessoa pode ter vários nós; o id é do nó, `pessoa` é de quem.
+		"id": f"{chave}@@{nome_area or ''}",
 		# O organograma tem dois tipos de gente (associado e responsável) e os dois têm
 		# `name` no mesmo formato — md5 de CPF. `pessoa` é a chave com espaço de nomes,
 		# e é por ela que a interface marca o card e pede o painel.
-		"tipo_pessoa": "associado",
-		"pessoa": f"{PREFIXO_ASSOCIADO}{nome}",
-		"associado": nome,
-		"nome": pessoa.get("nome_completo") or nome,
+		"tipo_pessoa": tipo_pessoa,
+		"pessoa": identidade.chave(
+			identidade.DOCTYPE_RESPONSAVEL if tipo_pessoa == "responsavel" else identidade.DOCTYPE_ASSOCIADO,
+			docname,
+		),
+		"associado": docname if tipo_pessoa == "associado" else None,
+		"responsavel": docname if tipo_pessoa == "responsavel" else None,
+		"nome": pessoa.get("nome_completo") or docname,
 		"area": nome_area,
 		"outras_areas": outras_areas,
 		"funcao_interna": funcao,
@@ -696,7 +811,7 @@ def _no_pessoa(
 		"ramo_slug": SLUG_POR_RAMO.get(ramo or ""),
 		"secao": (pessoa.get("secao") or "").strip() or None,
 		"avatar_url": avatar_url,
-		"iniciais": _iniciais(pessoa.get("nome_completo") or nome),
+		"iniciais": _iniciais(pessoa.get("nome_completo") or docname),
 		"lidera_area": nome_area if lidera else None,
 		"diretos": 0,
 		"indiretos": 0,
@@ -744,7 +859,7 @@ def _pessoas_diretas(no: dict) -> set[str]:
 		if filho["tipo"] == "grupo":
 			diretas |= _pessoas_diretas(filho)
 		else:
-			diretas.add(filho["associado"])
+			diretas.add(filho["pessoa"])
 	return diretas
 
 
@@ -754,12 +869,12 @@ def _contar(no: dict) -> set[str]:
 	for filho in no["children"]:
 		abaixo |= _contar(filho)
 		if filho["tipo"] == "pessoa":
-			abaixo.add(filho["associado"])
+			abaixo.add(filho["pessoa"])
 
 	if no["tipo"] == "pessoa":
 		# Quem lidera uma área e tem função numa sub-área sem líder acaba dentro da
 		# própria subárvore; ninguém é liderado de si mesmo.
-		proprio = {no["associado"]}
+		proprio = {no["pessoa"]}
 		diretas = _pessoas_diretas(no) - proprio
 		abaixo = abaixo - proprio
 		no["diretos"] = len(diretas)

@@ -1,11 +1,18 @@
-"""Atribuição de funções internas a um associado, pela ficha do portal.
+"""Atribuição de funções internas a uma pessoa do organograma, pela ficha do portal.
 
-A grade `Associado.funcoes_internas` vive em permlevel 2 e, até aqui, só existia no
-Desk. Estes endpoints são o caminho do portal para ela.
+A grade `funcoes_internas` vive em permlevel 2 no `Associado` e, até aqui, só existia no
+Desk. Estes endpoints são o caminho do portal para ela — e valem para os dois tipos de
+pessoa do organograma, porque o `Responsavel` ganhou a mesma grade (mesmo child DocType,
+com `parenttype` diferente).
+
+Por isso o parâmetro é `pessoa`, e não `associado`: os dois DocTypes têm `name` no mesmo
+formato (md5 de CPF), então só a chave com espaço de nomes diz em qual grade gravar. Ver
+`gris.api.gestao_adultos.identidade`. `associado` continua aceito para não quebrar o que já
+chama estes métodos.
 
 Cada linha é um par função + área: a área é o que posiciona a pessoa no
 organograma, e o par precisa estar vinculado em `Unidade Organizacional.funcoes`
-(o `Associado` valida isso na gravação).
+(o controller valida isso na gravação).
 
 Tirar alguém de uma função é **encerrar** (`data_fim = hoje`), nunca apagar a
 linha — é o mesmo que a sincronização de seções faz, e é o que mantém o histórico
@@ -20,6 +27,8 @@ import json
 import frappe
 from frappe import _
 from frappe.utils import getdate, nowdate
+
+from . import identidade
 
 #: Quem pode mexer nas funções internas pela ficha. `Gestor de Adultos` é o dono
 #: histórico da grade; os outros dois ganharam write no permlevel 2 junto com esta
@@ -40,7 +49,7 @@ def pode_gerenciar_funcoes(user: str | None = None) -> bool:
 def garantir_gestor_funcoes(user: str | None = None) -> None:
 	if not pode_gerenciar_funcoes(user):
 		frappe.throw(
-			_("Você não tem permissão para alterar as funções internas de um associado."),
+			_("Você não tem permissão para alterar as funções internas desta pessoa."),
 			frappe.PermissionError,
 		)
 
@@ -86,14 +95,22 @@ def listar_areas_com_funcoes() -> list[dict]:
 
 @frappe.whitelist()
 def listar_funcoes_do_associado(associado: str) -> list[dict]:
+	"""Atalho para quem já tem em mãos o `name` de um `Associado`."""
+	return listar_funcoes_da_pessoa(identidade.chave_do_associado(associado))
+
+
+@frappe.whitelist()
+def listar_funcoes_da_pessoa(pessoa: str) -> list[dict]:
 	"""As linhas de função da pessoa, em ordem de leitura: principal, depois em vigor."""
 	garantir_gestor_funcoes()
-	_garantir_associado(associado)
+	doctype, name = identidade.separar(pessoa)
+	if not frappe.db.exists(doctype, name):
+		frappe.throw(_("Pessoa não encontrada no organograma."), frappe.DoesNotExistError)
 
 	hoje = getdate()
 	linhas = frappe.get_all(
 		"Funcao do Associado",
-		filters={"parent": associado, "parenttype": "Associado"},
+		filters={"parent": name, "parenttype": doctype},
 		fields=["name", "funcao", "area", "principal", "data_inicio", "data_fim", "idx"],
 		order_by="principal desc, idx asc",
 	)
@@ -101,7 +118,10 @@ def listar_funcoes_do_associado(associado: str) -> list[dict]:
 	# Importação tardia: `atvs` depende de `garantir_gestor_funcoes` deste módulo.
 	from .atvs import acordos_por_linha_do_associado, classificar_validade
 
-	acordos = acordos_por_linha_do_associado(associado)
+	# O acordo de trabalho voluntário é documento do quadro e só existe para associado.
+	# Cobrar um de responsável criaria uma pendência que ninguém consegue resolver.
+	tem_atv = doctype == identidade.DOCTYPE_ASSOCIADO
+	acordos = acordos_por_linha_do_associado(name) if tem_atv else {}
 
 	return [
 		{
@@ -116,7 +136,7 @@ def listar_funcoes_do_associado(associado: str) -> list[dict]:
 			"atual": not linha.data_fim or getdate(linha.data_fim) >= hoje,
 			# O acordo de trabalho é por alocação: cada linha carrega o seu, e a tabela
 			# mostra a pendência sem uma segunda ida ao servidor.
-			"atv": classificar_validade(acordos.get(linha.name) or [], hoje),
+			"atv": classificar_validade(acordos.get(linha.name) or [], hoje) if tem_atv else None,
 		}
 		for linha in linhas
 	]
@@ -132,13 +152,13 @@ def atribuir_funcao(payload: str) -> dict:
 	garantir_gestor_funcoes()
 	dados = _carregar(payload)
 
-	associado = _texto(dados.get("associado"))
+	pessoa = _pessoa_do_payload(dados)
 	funcao = _texto(dados.get("funcao"))
 	area = _texto(dados.get("area"))
 	if not funcao or not area:
 		frappe.throw(_("Escolha a área e a função."))
 
-	doc = _documento(associado)
+	doc = identidade.carregar(pessoa)
 	hoje = getdate(nowdate())
 	for linha in doc.funcoes_internas:
 		if linha.funcao != funcao or linha.area != area:
@@ -146,7 +166,7 @@ def atribuir_funcao(payload: str) -> dict:
 		if not linha.data_fim or getdate(linha.data_fim) >= hoje:
 			frappe.throw(
 				_("{0} já exerce {1} em {2}.").format(
-					frappe.bold(doc.nome_completo or associado), frappe.bold(funcao), frappe.bold(area)
+					frappe.bold(doc.nome_completo or doc.name), frappe.bold(funcao), frappe.bold(area)
 				)
 			)
 
@@ -165,7 +185,7 @@ def atribuir_funcao(payload: str) -> dict:
 		},
 	)
 	doc.save()
-	return {"ok": True, "funcoes": listar_funcoes_do_associado(associado)}
+	return {"ok": True, "funcoes": listar_funcoes_da_pessoa(pessoa)}
 
 
 @frappe.whitelist(methods=["POST"])
@@ -178,8 +198,8 @@ def encerrar_funcao(payload: str) -> dict:
 	garantir_gestor_funcoes()
 	dados = _carregar(payload)
 
-	associado = _texto(dados.get("associado"))
-	doc = _documento(associado)
+	pessoa = _pessoa_do_payload(dados)
+	doc = identidade.carregar(pessoa)
 	linha = _localizar_linha(doc, _texto(dados.get("linha")))
 
 	hoje = getdate(nowdate())
@@ -191,7 +211,7 @@ def encerrar_funcao(payload: str) -> dict:
 	linha.data_fim = max(hoje, getdate(linha.data_inicio)) if linha.data_inicio else hoje
 	linha.principal = 0
 	doc.save()
-	return {"ok": True, "funcoes": listar_funcoes_do_associado(associado)}
+	return {"ok": True, "funcoes": listar_funcoes_da_pessoa(pessoa)}
 
 
 @frappe.whitelist(methods=["POST"])
@@ -209,8 +229,8 @@ def editar_funcao(payload: str) -> dict:
 	garantir_gestor_funcoes()
 	dados = _carregar(payload)
 
-	associado = _texto(dados.get("associado"))
-	doc = _documento(associado)
+	pessoa = _pessoa_do_payload(dados)
+	doc = identidade.carregar(pessoa)
 	linha = _localizar_linha(doc, _texto(dados.get("linha")))
 
 	inicio = _data(dados.get("data_inicio"))
@@ -226,7 +246,7 @@ def editar_funcao(payload: str) -> dict:
 		linha.principal = 0
 
 	doc.save()
-	return {"ok": True, "funcoes": listar_funcoes_do_associado(associado)}
+	return {"ok": True, "funcoes": listar_funcoes_da_pessoa(pessoa)}
 
 
 @frappe.whitelist(methods=["POST"])
@@ -239,8 +259,8 @@ def apagar_funcao(payload: str) -> dict:
 	garantir_gestor_funcoes()
 	dados = _carregar(payload)
 
-	associado = _texto(dados.get("associado"))
-	doc = _documento(associado)
+	pessoa = _pessoa_do_payload(dados)
+	doc = identidade.carregar(pessoa)
 	linha = _localizar_linha(doc, _texto(dados.get("linha")))
 
 	# Importação tardia: `atvs` depende de `garantir_gestor_funcoes` deste módulo.
@@ -249,7 +269,7 @@ def apagar_funcao(payload: str) -> dict:
 	apagar_atvs_da_linha(linha.name)
 	doc.funcoes_internas.remove(linha)
 	doc.save()
-	return {"ok": True, "funcoes": listar_funcoes_do_associado(associado)}
+	return {"ok": True, "funcoes": listar_funcoes_da_pessoa(pessoa)}
 
 
 @frappe.whitelist(methods=["POST"])
@@ -258,8 +278,8 @@ def definir_principal(payload: str) -> dict:
 	garantir_gestor_funcoes()
 	dados = _carregar(payload)
 
-	associado = _texto(dados.get("associado"))
-	doc = _documento(associado)
+	pessoa = _pessoa_do_payload(dados)
+	doc = identidade.carregar(pessoa)
 	alvo = _localizar_linha(doc, _texto(dados.get("linha")))
 
 	hoje = getdate(nowdate())
@@ -269,7 +289,7 @@ def definir_principal(payload: str) -> dict:
 	for linha in doc.funcoes_internas:
 		linha.principal = 1 if linha.name == alvo.name else 0
 	doc.save()
-	return {"ok": True, "funcoes": listar_funcoes_do_associado(associado)}
+	return {"ok": True, "funcoes": listar_funcoes_da_pessoa(pessoa)}
 
 
 # ---------------------------------------------------------------------------
@@ -299,16 +319,20 @@ def _iso(valor) -> str | None:
 	return getdate(valor).isoformat() if valor else None
 
 
-def _garantir_associado(associado: str) -> None:
-	if not associado or not frappe.db.exists("Associado", associado):
-		frappe.throw(_("Associado não encontrado."), frappe.DoesNotExistError)
+def _pessoa_do_payload(dados: dict) -> str:
+	"""Chave da pessoa a alterar, aceitando o formato antigo.
 
+	`pessoa` é o caminho novo, com espaço de nomes. `associado` continua aceito porque é o
+	que a ficha do associado manda, e lá o tipo nunca foi ambíguo.
+	"""
+	pessoa = _texto(dados.get("pessoa"))
+	if pessoa:
+		return pessoa
 
-def _documento(associado: str):
-	_garantir_associado(associado)
-	# Sem `ignore_permissions`: a grade é permlevel 2 e quem pode escrever nela está
-	# declarado no DocType, não aqui.
-	return frappe.get_doc("Associado", associado)
+	associado = _texto(dados.get("associado"))
+	if not associado:
+		frappe.throw(_("Pessoa não informada."), frappe.DoesNotExistError)
+	return identidade.chave_do_associado(associado)
 
 
 def _localizar_linha(doc, nome_da_linha: str):

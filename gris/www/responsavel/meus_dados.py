@@ -3,6 +3,7 @@ import json
 import frappe
 from frappe import _
 
+from gris.api.pessoas import documento_de_perfil
 from gris.api.portal_access import enrich_context, user_has_access
 
 no_cache = 1
@@ -46,8 +47,11 @@ def get_context(context):
 	else:
 		context.nome_completo = responsavel.nome_completo
 		context.email = responsavel.email
-		context.o_que_gosta = responsavel.o_que_gosta_de_fazer_no_dia_a_dia
-		context.habilidades_list = [h.habilidade for h in responsavel.habilidades]
+		# O perfil pode já ter migrado para o cadastro de associado da mesma pessoa; ler do
+		# `Responsavel` nesse caso mostraria a cópia congelada.
+		perfil = documento_de_perfil(responsavel_name)
+		context.o_que_gosta = perfil.o_que_gosta_de_fazer_no_dia_a_dia
+		context.habilidades_list = [h.habilidade for h in perfil.habilidades]
 
 	# Fetch all existing Habilidades for autocomplete
 	context.all_habilidades = frappe.get_all("Habilidade", pluck="name", order_by="name asc")
@@ -69,7 +73,8 @@ def update_meus_dados(o_que_gosta_de_fazer_no_dia_a_dia: str, habilidades: str):
 	if not responsavel_name:
 		frappe.throw(_("Responsável não encontrado."))
 
-	doc = frappe.get_doc("Responsavel", responsavel_name)
+	# Grava no lado canônico: quem também é associado tem o perfil no cadastro de associado.
+	doc = documento_de_perfil(responsavel_name)
 	doc.o_que_gosta_de_fazer_no_dia_a_dia = o_que_gosta_de_fazer_no_dia_a_dia
 
 	if isinstance(habilidades, str):

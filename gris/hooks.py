@@ -196,6 +196,26 @@ doc_events = {
 			"gris.api.gestao_adultos.secoes.on_associado_atualizado",
 		],
 	},
+	# Responsável que também é associado é uma pessoa só: o perfil migra para o cadastro de
+	# associado e ela acumula a função no Conselho de Responsáveis. Os dois handlers se
+	# protegem por `frappe.flags.gris_sync_pessoas` — eles gravam nos dois cadastros.
+	"Responsavel": {
+		"on_update": [
+			"gris.api.pessoas.on_responsavel_atualizado",
+		],
+	},
+	# Ser responsável é ter beneficiário, então é o vínculo que liga e desliga a função.
+	"Responsavel Vinculo": {
+		"after_insert": [
+			"gris.api.pessoas.on_vinculo_atualizado",
+		],
+		"on_update": [
+			"gris.api.pessoas.on_vinculo_atualizado",
+		],
+		"on_trash": [
+			"gris.api.pessoas.on_vinculo_removido",
+		],
+	},
 	"Festa": {
 		"after_insert": [
 			"gris.api.festas.avaliacao.criar_avaliacao_festa_automatica",

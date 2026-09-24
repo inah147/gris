@@ -1,24 +1,37 @@
 """Conselho de Responsáveis no organograma.
 
-Todo `Responsavel` do cadastro aparece no organograma, numa área própria que não responde
-para nenhuma outra, com a função fixa de Responsável Legal.
+Todo responsável legal aparece no organograma, numa área própria que não responde para
+nenhuma outra, com a função fixa de Responsável Legal. A área existe de verdade
+(`garantir_estrutura_do_conselho`), porque precisa aparecer no catálogo das telas de
+administração e no filtro da página.
 
-Os nós são **derivados**, não gravados: nenhuma linha de `Funcao do Associado` é criada
-para responsável, e o `Responsavel` não ganha tabela de funções. Um responsável não é
-alocado nem encerrado — ele é responsável enquanto estiver no cadastro —, então gravar
-1 linha por pessoa só criaria 114 registros para manter em sincronia com um fato que já
-está no banco. O que existe de verdade é a estrutura (a área e a função), porque ela
-precisa aparecer no catálogo das telas de administração e no filtro da página.
+**Os membros entram por dois regimes**, conforme a pessoa tenha ou não cadastro de
+associado:
 
-A árvore dos associados (`montar_arvore`) não é tocada: este módulo devolve um nó pronto
-que `obter_organograma` pendura nas raízes.
+- Quem só é `Responsavel` rende um nó **derivado**: nada é gravado. Um responsável não é
+  alocado nem encerrado — ele é responsável enquanto estiver no cadastro —, então gravar
+  uma linha por pessoa só criaria registros para manter em sincronia com um fato que já
+  está no banco. E o `Responsavel` não tem tabela de funções para receber a linha.
+- Quem também é `Associado` recebe uma linha **gravada** em `funcoes_internas`
+  (`garantir_funcao_do_conselho`), porque aí a função acumula com as outras da pessoa: ela
+  aparece na ficha, nas telas de alocação e no organograma pelo caminho normal de
+  `montar_arvore`. Quem grava é `gris.api.pessoas`, que é quem sabe que as duas pessoas são
+  uma só.
+
+Daí a mescla em `obter_organograma`: os derivados são pendurados no mesmo nó de grupo que a
+árvore já montou para a área, e `listar_membros_do_conselho` exclui quem migrou — senão a
+mesma pessoa apareceria duas vezes, uma de cada regime.
 """
 
 from __future__ import annotations
 
+from urllib.parse import quote
+
 import frappe
 from frappe import _
+from frappe.utils import getdate, nowdate
 
+from . import identidade
 from .atribuicoes import pode_gerenciar_funcoes
 from .endpoints import _require_authenticated_user
 
@@ -31,11 +44,10 @@ FUNCAO_RESPONSAVEL_LEGAL = "Responsável Legal"
 #: Categoria mostrada no selo do card, no lugar da `Associado.categoria`.
 LINHA_RESPONSAVEL = "Responsável"
 
-#: Prefixo que separa o espaço de nomes dos dois tipos de pessoa. `Responsavel.name` e
-#: `Associado.name` são os dois md5 de CPF: sem prefixo, um clique num responsável
-#: marcaria o card do associado homônimo.
-PREFIXO_RESPONSAVEL = "responsavel:"
-PREFIXO_ASSOCIADO = "associado:"
+#: Reexportados de `identidade`, que é onde a chave com espaço de nomes mora agora que ela
+#: também identifica a pessoa por dentro da montagem da árvore.
+PREFIXO_RESPONSAVEL = identidade.PREFIXO_RESPONSAVEL
+PREFIXO_ASSOCIADO = identidade.PREFIXO_ASSOCIADO
 
 DESCRICAO_DA_AREA = (
 	"Responsáveis legais dos beneficiários. Área mantida automaticamente: todo "
@@ -104,6 +116,72 @@ def garantir_estrutura_do_conselho() -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Função gravada, para quem também é associado
+# ---------------------------------------------------------------------------
+
+
+def _linhas_do_conselho(doc) -> list:
+	return [
+		linha
+		for linha in (doc.funcoes_internas or [])
+		if linha.funcao == FUNCAO_RESPONSAVEL_LEGAL and linha.area == AREA_CONSELHO
+	]
+
+
+def _em_vigor(linha) -> bool:
+	"""Mesmo corte do resto do organograma: só está encerrada a linha cuja data já passou."""
+	return not linha.data_fim or getdate(linha.data_fim) >= getdate()
+
+
+def garantir_funcao_do_conselho(doc) -> bool:
+	"""Acrescenta ao `Associado` a função de Responsável Legal no conselho, se faltar.
+
+	Recebe o **documento** e só o altera, sem gravar: quem chama junta esta mudança com a
+	cópia do perfil e salva uma vez só. Devolve se mexeu em alguma linha.
+
+	Nunca marca `principal` — a função do quadro de voluntários continua sendo a que o card
+	do organograma mostra. E a duplicata é conferida aqui porque a gravação é direta: a
+	trava de `atribuir_funcao` só vale para quem passa pelo endpoint.
+	"""
+	if any(_em_vigor(linha) for linha in _linhas_do_conselho(doc)):
+		return False
+
+	# Só depois de saber que a linha vai nascer: sem o vínculo `Funcao da Area` entre os
+	# dois, o `validate` do Associado recusaria a gravação. Conferir antes custaria três
+	# consultas por pessoa no backfill, para nada.
+	garantir_estrutura_do_conselho()
+
+	doc.append(
+		"funcoes_internas",
+		{
+			"funcao": FUNCAO_RESPONSAVEL_LEGAL,
+			"area": AREA_CONSELHO,
+			"data_inicio": getdate(nowdate()),
+		},
+	)
+	return True
+
+
+def encerrar_funcao_do_conselho(doc) -> bool:
+	"""Fecha a função do conselho quando a pessoa deixa de ter beneficiário.
+
+	Encerra com `data_fim`, não apaga: o histórico de quem já foi responsável legal fica.
+	"""
+	hoje = getdate(nowdate())
+	mudou = False
+	for linha in _linhas_do_conselho(doc):
+		if _em_vigor(linha):
+			# `date`, não string: o `validate` do Associado compara as duas datas direto, e
+			# uma string contra o `date` que veio do banco estoura com TypeError. E nunca
+			# antes do início, que o mesmo `validate` recusa como período invertido.
+			linha.data_fim = max(hoje, getdate(linha.data_inicio)) if linha.data_inicio else hoje
+			linha.principal = 0
+			mudou = True
+
+	return mudou
+
+
+# ---------------------------------------------------------------------------
 # Montagem do nó (função pura — sem banco, para poder testar direto)
 # ---------------------------------------------------------------------------
 
@@ -164,17 +242,91 @@ def _no_responsavel(pessoa: dict) -> dict:
 
 
 def listar_membros_do_conselho() -> list[dict]:
-	"""Todo mundo do cadastro de `Responsavel`, em ordem de nome."""
+	"""Quem entra no conselho pelo regime derivado, em ordem de nome.
+
+	Quem migrou para o cadastro de associado fica de fora: essa pessoa já chega ao conselho
+	pela linha gravada em `funcoes_internas`, e contá-la aqui também a faria aparecer duas
+	vezes na mesma área, uma como card `responsavel:` e outra como card `associado:`.
+	"""
 	return frappe.get_all(
 		"Responsavel",
+		filters={"migrado_para_associado": 0},
 		fields=["name", "nome_completo"],
 		order_by="nome_completo asc",
 	)
 
 
+def funcao_derivada_do_conselho() -> dict:
+	"""A linha fixa do Conselho, no formato que o painel e a ficha esperam.
+
+	Sem `linha`: não existe registro por trás dela, e é justamente isso que faz as telas
+	tratarem-na como automática — nada de encerrar, editar ou apagar.
+	"""
+	return {
+		"linha": None,
+		"titulo": FUNCAO_RESPONSAVEL_LEGAL,
+		"area": AREA_CONSELHO,
+		"principal": False,
+		"atual": True,
+		"automatica": True,
+		"periodo": PERIODO_DO_RESPONSAVEL,
+		"descricao": DESCRICAO_DA_FUNCAO,
+		"responsabilidades": [],
+		# Acordo de trabalho é por alocação do quadro; o Conselho não é alocação.
+		"atv": None,
+	}
+
+
+def funcoes_do_responsavel(responsavel: str, incluir_conselho: bool = True) -> list[dict]:
+	"""Funções da pessoa: a derivada do Conselho mais as que foram alocadas a ela.
+
+	As alocadas vêm da mesma grade do associado (`Funcao do Associado`, com
+	`parenttype = "Responsavel"`), então a montagem do painel é a mesma — só o acordo de
+	trabalho fica de fora, que é documento do quadro de voluntários.
+	"""
+	from .organograma import _funcao_do_painel
+
+	linhas = frappe.get_all(
+		"Funcao do Associado",
+		filters={"parent": responsavel, "parenttype": "Responsavel"},
+		fields=["name", "funcao", "area", "principal", "data_inicio", "data_fim", "idx"],
+		order_by="principal desc, idx asc",
+	)
+
+	titulos = [linha["funcao"] for linha in linhas if linha.get("funcao")]
+	definicoes = {
+		linha["name"]: linha
+		for linha in frappe.get_all(
+			"Funcao Voluntario", filters={"name": ["in", titulos]}, fields=["name", "descricao"]
+		)
+	}
+	responsabilidades: dict[str, list[dict]] = {}
+	if titulos:
+		for linha in frappe.get_all(
+			"Responsabilidade da Funcao",
+			filters={"parent": ["in", titulos], "parenttype": "Funcao Voluntario"},
+			fields=["parent", "responsabilidade", "detalhe"],
+			order_by="parent asc, idx asc",
+		):
+			responsabilidades.setdefault(linha["parent"], []).append(linha)
+
+	hoje = getdate()
+	alocadas = []
+	for linha in linhas:
+		funcao = _funcao_do_painel(linha, definicoes, responsabilidades, {}, hoje)
+		funcao["automatica"] = False
+		# Sem acordo de trabalho para responsável: `atvHtml` não desenha nada com `null`,
+		# e uma pendência que ninguém pode resolver seria pior que nenhuma informação.
+		funcao["atv"] = None
+		alocadas.append(funcao)
+
+	conselho = [funcao_derivada_do_conselho()] if incluir_conselho else []
+	return conselho + alocadas
+
+
 @frappe.whitelist()
 def obter_detalhe_do_responsavel(responsavel: str) -> dict:
-	"""Painel lateral de um responsável. Só leitura — o nó é automático.
+	"""Painel lateral de um responsável.
 
 	O contato sai apenas para quem tem papel de gestão. A página é aberta a qualquer
 	pessoa logada, e o telefone das famílias não é informação do mesmo nível que a dos
@@ -191,34 +343,29 @@ def obter_detalhe_do_responsavel(responsavel: str) -> dict:
 	from .organograma import _iniciais, _numero_do_whatsapp
 
 	nome = pessoa.get("nome_completo") or pessoa["name"]
-	mostra_contato = pode_gerenciar_funcoes()
+	pode_gerenciar = pode_gerenciar_funcoes()
+
+	funcoes = funcoes_do_responsavel(pessoa["name"])
+	areas = sorted({funcao["area"] for funcao in funcoes if funcao["area"] and funcao["atual"]})
+	# A principal é a primeira alocada de verdade; o Conselho é pano de fundo de todo
+	# responsável e não descreve o que a pessoa faz no quadro.
+	alocadas = [funcao for funcao in funcoes if not funcao["automatica"]]
 
 	return {
-		"id": f"{PREFIXO_RESPONSAVEL}{pessoa['name']}",
+		"id": identidade.chave_do_responsavel(pessoa["name"]),
 		"nome": nome,
 		"avatar_url": None,
 		"iniciais": _iniciais(nome),
-		"funcao_principal": FUNCAO_RESPONSAVEL_LEGAL,
-		"areas": [AREA_CONSELHO],
+		"funcao_principal": alocadas[0]["titulo"] if alocadas else FUNCAO_RESPONSAVEL_LEGAL,
+		"areas": areas,
 		"areas_lideradas": [],
 		"linha": LINHA_RESPONSAVEL,
 		"ramo": None,
 		"ramo_slug": None,
 		"secao": None,
-		"whatsapp": _numero_do_whatsapp(pessoa.get("celular")) if mostra_contato else None,
-		# O nó é automático: não há ficha do organograma para abrir, nem ação de escrita.
-		"permite_ficha": False,
-		"somente_leitura": True,
-		"funcoes": [
-			{
-				"titulo": FUNCAO_RESPONSAVEL_LEGAL,
-				"area": AREA_CONSELHO,
-				"principal": True,
-				"atual": True,
-				"periodo": PERIODO_DO_RESPONSAVEL,
-				"descricao": DESCRICAO_DA_FUNCAO,
-				"responsabilidades": [],
-				"atv": None,
-			}
-		],
+		"whatsapp": _numero_do_whatsapp(pessoa.get("celular")) if pode_gerenciar else None,
+		"ficha_url": "/associados/responsavel?name=" + quote(str(pessoa["name"])),
+		"permite_ficha": True,
+		"somente_leitura": not pode_gerenciar,
+		"funcoes": funcoes,
 	}

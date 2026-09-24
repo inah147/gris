@@ -560,12 +560,19 @@ def finalizar_processo_recepcao(novo_associado_name: str):
 # família fora de ``/responsavel`` no mesmo instante em que o filho vira associado; o
 # celular é o canal de WhatsApp com ela. Documento, endereço e dados profissionais, que
 # só serviam para montar o registro, saem.
+#
+# ``associado`` e ``migrado_para_associado`` ficam porque esta rotina apaga o ``cpf``, e o
+# CPF é a única chave que reencontra o cadastro de associado de quem foi nomeado pela
+# convenção antiga de hash. Limpá-los aqui desfaria a identidade no exato momento em que o
+# filho vira associado (ver ``gris.api.pessoas``).
 CAMPOS_PRESERVADOS_DO_RESPONSAVEL = (
 	"o_que_gosta_de_fazer_no_dia_a_dia",
 	"habilidades",
 	"nome_completo",
 	"email",
 	"celular",
+	"associado",
+	"migrado_para_associado",
 	"informacoes_pessoais_section",  # Keep section breaks to avoid UI issues
 	"hobbies_e_interesses_section",
 	"informacoes_profissionais_e_academicas_section",

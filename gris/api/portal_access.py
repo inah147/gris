@@ -230,6 +230,11 @@ PAGE_ROLES: dict[str, list[str]] = {
 		"Visualizador Associados",
 		"Gestor de Adultos",
 	],
+	"/associados/responsavel": [
+		"Gestor de Associados",
+		"Visualizador Associados",
+		"Gestor de Adultos",
+	],
 	"/associados/importar": ["Gestor de Associados"],
 	"/recepcao": ["Recepcao"],
 	"/recepcao/visao_geral": ["Recepcao"],
@@ -383,6 +388,12 @@ def user_has_access(path: str, user: str | None = None, roles: Iterable[str] | N
 		form_dict = getattr(frappe.local, "form_dict", {}) or {}
 		associado_name = form_dict.get("name")
 		if _responsavel_has_associado_access(associado_name, user):
+			return True
+	# O responsável abre a própria página de detalhes, e só a própria: o telefone e os
+	# hobbies das outras famílias não são dado que uma família veja da outra.
+	if path == "/associados/responsavel" and "Responsavel" in roles:
+		form_dict = getattr(frappe.local, "form_dict", {}) or {}
+		if form_dict.get("name") and form_dict.get("name") == _get_responsavel_name(user):
 			return True
 	if "System Manager" in roles and (path not in STRICT_PORTAL_PAGES):
 		return True

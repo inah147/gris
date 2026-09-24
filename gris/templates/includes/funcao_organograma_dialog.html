@@ -12,15 +12,21 @@
 
   A página inclui este arquivo uma vez e chama:
       window.grisFuncaoOrganograma.abrir(linha, { aoMudar, aoMudarValidade })
-  onde `linha` tem `{ associado, nome, linha, funcao, area, principal, data_inicio,
+  onde `linha` tem `{ pessoa, nome, linha, funcao, area, principal, data_inicio,
   data_fim }` e `aoMudar(funcoes)` recebe a lista nova de funções da pessoa.
+
+  Quem só quer a grade inteira (tabela + formulário) não precisa chamar nada: basta a
+  marcação `.funcoes-organograma` com os `data-*` que o funcoes_organograma_grade.js lê.
 #}
-{% set funcao_organograma_asset_version = "20260924-funcao-organograma" %}
+{% set funcao_organograma_asset_version = "20260924-funcao-organograma-2" %}
 <link
   rel="stylesheet"
   href="/assets/gris/css/funcao_organograma.css?v={{ funcao_organograma_asset_version }}"
 />
 <script src="/assets/gris/js/funcao_organograma.js?v={{ funcao_organograma_asset_version }}"></script>
+{# A grade (tabela + formulário de nova função) viaja junto com o dialog: quem abre um
+   abre o outro. Em página sem `.funcoes-organograma` o script sai pela porta da frente. #}
+<script src="/assets/gris/js/funcoes_organograma_grade.js?v={{ funcao_organograma_asset_version }}"></script>
 
 {% from "public/design_system/components/generated/dialog.html.jinja" import dialog as _dialog_funcao %}
 {% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker as _data_funcao %}
@@ -69,7 +75,8 @@
     </div>
   </section>
 
-  <section class="funcao-dialog__bloco">
+  {# Escondido para quem não tem acordo a assinar — hoje, o responsável legal. #}
+  <section class="funcao-dialog__bloco" id="funcao-dialog-bloco-atv">
     <h3 class="funcao-dialog__titulo">Acordos de Trabalho Voluntário</h3>
     <div id="funcao-dialog-atvs" class="funcao-dialog__atvs"></div>
 

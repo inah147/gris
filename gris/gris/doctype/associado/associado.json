@@ -40,6 +40,9 @@
   "numero_residencia",
   "section_break_emvb",
   "historico_no_grupo",
+  "hobbies_e_interesses_section",
+  "o_que_gosta_de_fazer_no_dia_a_dia",
+  "habilidades",
   "responsaveis_tab",
   "informacoes_sobre_responsaveis_legais_section",
   "pais_divorciados",
@@ -68,6 +71,7 @@
   "funcao",
   "secao",
   "eleito",
+  "e_responsavel_legal",
   "section_break_funcoes_internas",
   "funcoes_internas",
   "contribui\u00e7\u00e3o_mensal_tab",
@@ -386,12 +390,37 @@
    "options": "Historico no Grupo"
   },
   {
+   "fieldname": "hobbies_e_interesses_section",
+   "fieldtype": "Section Break",
+   "label": "Hobbies e interesses"
+  },
+  {
+   "fieldname": "o_que_gosta_de_fazer_no_dia_a_dia",
+   "fieldtype": "Small Text",
+   "label": "O que gosta de fazer no dia a dia"
+  },
+  {
+   "description": "Mesmo child do `Responsavel`: a tabela tem um campo s\u00f3 e guarda `parenttype` por linha, ent\u00e3o um g\u00eameo s\u00f3 obrigaria todo leitor de habilidades a conhecer os dois.",
+   "fieldname": "habilidades",
+   "fieldtype": "Table MultiSelect",
+   "label": "Habilidades",
+   "options": "Responsavel Habilidade"
+  },
+  {
    "default": "N\u00e3o",
    "fieldname": "eleito",
    "fieldtype": "Select",
    "label": "Eleito",
    "options": "Sim\nN\u00e3o",
    "permlevel": 2
+  },
+  {
+   "default": "0",
+   "description": "Ligado automaticamente quando esta pessoa tem v\u00ednculo de respons\u00e1vel legal com algum benefici\u00e1rio. \u00c9 o que a coloca no Conselho de Respons\u00e1veis.",
+   "fieldname": "e_responsavel_legal",
+   "fieldtype": "Check",
+   "label": "\u00c9 respons\u00e1vel legal",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_funcoes_internas",

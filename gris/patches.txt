@@ -43,3 +43,4 @@ gris.patches.backfill_area_da_funcao_do_associado
 gris.patches.unificar_funcoes_de_secao
 gris.patches.remover_area_da_funcao_voluntario
 gris.patches.criar_conselho_de_responsaveis
+gris.patches.vincular_responsaveis_que_sao_associados

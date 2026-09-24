@@ -1,0 +1,172 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, badge, alert %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{% block title %}Responsável - Detalhes{% endblock %}
+{% set active_link = '/associados' %}
+
+{% block page_header %}
+  <div class="page-header-row mb-6">
+    <div>
+      <h1 class="text-3xl font-bold tracking-tight">Detalhes do Responsável</h1>
+      <p class="text-muted-foreground">Perfil, beneficiários e lugar no organograma.</p>
+    </div>
+    <div class="page-header-actions">
+      <a href="/associados/lista" class="btn-sm-ghost">{{ lucide_icon("arrow-left", size="sm") }} Voltar</a>
+    </div>
+  </div>
+{% endblock %}
+
+{% block main %}
+  {% if not_found %}
+    {{ alert(
+      icon=lucide_icon("circle-alert", size="sm"),
+      description=missing_reason or 'Registro não encontrado.',
+      variant="warning"
+    ) }}
+  {% else %}
+    <!-- Cabeçalho -->
+    {% call card(attrs={"class": "mb-4"}) %}
+      <div class="resp-header">
+        <span class="resp-header__avatar" aria-hidden="true">{{ iniciais }}</span>
+        <div class="resp-header__info">
+          <h2 class="text-xl font-semibold">{{ head_nome }}</h2>
+          <div class="resp-header__selos">
+            {{ badge("Responsável legal", variant="secondary") }}
+          </div>
+        </div>
+        {% if whatsapp %}
+        <a href="https://wa.me/{{ whatsapp }}" class="btn-sm-outline" target="_blank" rel="noopener">
+          {{ lucide_icon("message-circle", size="sm") }} WhatsApp
+        </a>
+        {% endif %}
+      </div>
+    {% endcall %}
+
+    <!-- Hobbies e interesses -->
+    {% call card(title="Hobbies e interesses", description="O que esta pessoa gosta de fazer e em que pode ajudar", attrs={"class": "mb-4"}) %}
+      {% if hobbies_texto or habilidades_list %}
+        {% if hobbies_texto %}
+        <p class="resp-hobbies__texto">{{ hobbies_texto }}</p>
+        {% endif %}
+        {% if habilidades_list %}
+        <div class="resp-hobbies__habilidades">
+          {% for habilidade in habilidades_list %}{{ badge(habilidade, variant="secondary") }}{% endfor %}
+        </div>
+        {% endif %}
+      {% else %}
+        <p class="text-muted-foreground text-sm">
+          Nada preenchido ainda. A família preenche este bloco em <span class="font-medium">Painel do Responsável → Meus dados</span>.
+        </p>
+      {% endif %}
+    {% endcall %}
+
+    <!-- Beneficiários -->
+    {% call card(title="Beneficiários", description="Jovens pelos quais esta pessoa responde", attrs={"class": "mb-4"}) %}
+      {% if beneficiarios %}
+      <ul class="resp-beneficiarios">
+        {% for b in beneficiarios %}
+        <li class="resp-beneficiarios__item">
+          <div class="resp-beneficiarios__pessoa">
+            <span class="resp-beneficiarios__nome">{{ b.nome }}</span>
+            <span class="resp-beneficiarios__selos">
+              {{ badge(b.situacao, variant="secondary") }}
+              {% if b.primeiro %}{{ badge("1º responsável", variant="secondary") }}{% endif %}
+              {% if b.guardiao_legal %}{{ badge("Guardião legal", variant="secondary") }}{% endif %}
+              {% if b.tipo_guarda %}{{ badge("Guarda " ~ b.tipo_guarda|lower, variant="secondary") }}{% endif %}
+              {% if b.sera_registrado %}{{ badge("Será registrado", variant="secondary") }}{% endif %}
+            </span>
+          </div>
+          {% if b.url %}
+          <a href="{{ b.url }}" class="btn-sm-outline">
+            Ver cadastro {{ lucide_icon("arrow-right", size="sm") }}
+          </a>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-muted-foreground text-sm">Nenhum beneficiário vinculado.</p>
+      {% endif %}
+    {% endcall %}
+
+    <!-- Áreas e funções -->
+    {% call card(title="Áreas e funções", description="Onde esta pessoa aparece no organograma", attrs={"class": "mb-4"}) %}
+      <p class="text-muted-foreground text-sm resp-funcoes__nota">
+        <span class="font-medium">Conselho de Responsáveis · Responsável Legal</span> é mantido
+        automaticamente: vale enquanto houver vínculo com a UEL e não é alocado nem encerrado à mão.
+        {% if pode_gerenciar_funcoes %}As funções abaixo são as que o responsável exerce no quadro.{% endif %}
+      </p>
+
+      {% if pode_gerenciar_funcoes %}
+      {# Mesma grade da ficha do associado, sem a coluna de ATV: acordo de trabalho é
+         documento do quadro de voluntários e não existe para responsável. #}
+      <div class="funcoes-organograma"
+           data-pessoa="responsavel:{{ responsavel.name }}"
+           data-nome="{{ head_nome }}"
+           data-atv="0"
+           data-areas="{{ areas_com_funcoes | tojson | forceescape }}"
+           data-linhas="{{ funcoes_internas_rows | tojson | forceescape }}">
+
+        <div class="funcoes-organograma__tabela-wrap">
+          <table class="table funcoes-organograma__tabela">
+            <thead>
+              <tr>
+                <th scope="col">Área</th>
+                <th scope="col">Função</th>
+                <th scope="col">Período</th>
+                <th scope="col"><span class="sr-only">Ações</span></th>
+              </tr>
+            </thead>
+            <tbody id="funcoes-organograma-corpo"></tbody>
+          </table>
+        </div>
+
+        <div class="funcoes-organograma__novo">
+          <div class="field">
+            <label class="label" for="funcao-area">Área</label>
+            {{ select(id="funcao-area", name="funcao_area", items=[], placeholder="Selecione a área…") }}
+          </div>
+          <div class="field">
+            <label class="label" for="funcao-funcao">Função</label>
+            {{ select(id="funcao-funcao", name="funcao_funcao", items=[], placeholder="Escolha a área primeiro") }}
+          </div>
+          <button type="button" class="btn-primary" id="btn-adicionar-funcao">
+            {{ lucide_icon("plus", size="sm") }}
+            <span>Adicionar</span>
+          </button>
+        </div>
+      </div>
+      {% else %}
+      <table class="table resp-funcoes">
+        <thead>
+          <tr>
+            <th>Área</th>
+            <th>Função</th>
+            <th>Período</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in funcoes %}
+          <tr>
+            <td>{{ f.area }}</td>
+            <td>
+              <span class="font-medium">{{ f.titulo }}</span>
+              {% if f.descricao %}<p class="text-muted-foreground text-sm">{{ f.descricao }}</p>{% endif %}
+            </td>
+            <td>{{ f.periodo }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    {% endcall %}
+    {% if pode_gerenciar_funcoes %}
+    {% include "gris/templates/includes/funcao_organograma_dialog.html" %}
+    {% endif %}
+  {% endif %}
+{% endblock %}
+
+{# CSS co-localizado (`responsavel.css`) é carregado pelo Frappe; não declarar <link> aqui. #}
+{% block extra_style %}{% endblock %}

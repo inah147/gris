@@ -9,6 +9,10 @@
  * Marcação e assets vêm de templates/includes/funcao_organograma_dialog.html; a página
  * só chama `window.grisFuncaoOrganograma.abrir(linha, { aoMudar, aoMudarValidade })`.
  *
+ * `linha.pessoa` é a chave com espaço de nomes (`associado:<id>` / `responsavel:<id>`);
+ * `linha.associado` continua aceito. `linha.comAtv === false` esconde o bloco de
+ * acordos, que é documento do quadro e não existe para responsável.
+ *
  * `aoMudar(funcoes)` recebe a lista nova de funções da pessoa e `aoMudarValidade(linha,
  * validade)` o veredito novo do acordo daquela alocação — é assim que a tabela de quem
  * chamou se atualiza sem recarregar a página.
@@ -115,6 +119,23 @@
 		if (cancelar) cancelar.hidden = !mostrar;
 	}
 
+	/** Chave com espaço de nomes da pessoa da linha aberta. */
+	function chaveDaLinha() {
+		if (!linhaAtual) return "";
+		return (
+			linhaAtual.pessoa || (linhaAtual.associado ? `associado:${linhaAtual.associado}` : "")
+		);
+	}
+
+	/** Tipo e docname separados, para o endpoint de ATV, que só fala de associado. */
+	function pessoaDaLinha() {
+		const chave = chaveDaLinha();
+		if (chave.startsWith("responsavel:")) {
+			return { tipo: "responsavel", name: chave.slice("responsavel:".length) };
+		}
+		return { tipo: "associado", name: chave.replace(/^associado:/, "") };
+	}
+
 	function preencher(linha) {
 		linhaAtual = linha;
 		campo("funcao-dialog-nome").textContent = linha.nome || "";
@@ -129,6 +150,9 @@
 		definirData("atv-dialog-fim", null);
 		definirAssinatura(false);
 		mostrarConfirmacaoDeExclusao(false);
+
+		const bloco = document.getElementById("funcao-dialog-bloco-atv");
+		if (bloco) bloco.hidden = linha.comAtv === false;
 		renderAtvs(null);
 	}
 
@@ -219,7 +243,7 @@
 	async function carregarAtvs() {
 		try {
 			const atvs = await chamar("gris.api.gestao_adultos.listar_atvs_da_funcao", {
-				associado: linhaAtual.associado,
+				associado: pessoaDaLinha().name,
 				linha: linhaAtual.linha,
 			});
 			renderAtvs(atvs || []);
@@ -263,10 +287,7 @@
 	function payloadDaLinha(extra) {
 		return {
 			payload: JSON.stringify(
-				Object.assign(
-					{ associado: linhaAtual.associado, linha: linhaAtual.linha },
-					extra || {}
-				)
+				Object.assign({ pessoa: chaveDaLinha(), linha: linhaAtual.linha }, extra || {})
 			),
 		};
 	}
@@ -466,7 +487,7 @@
 			aoMudarValidade = (opcoes || {}).aoMudarValidade || null;
 			preencher(linha);
 			dlg.showModal();
-			carregarAtvs();
+			if (linha.comAtv !== false) carregarAtvs();
 		},
 	};
 })();

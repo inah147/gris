@@ -165,3 +165,25 @@ class TestPortalAccessSidebarAdapter(FrappeTestCase):
 		):
 			frappe.local.form_dict = {"name": "ASSOC-1"}
 			self.assertFalse(user_has_access("/associados/detalhe", user="resp@example.com"))
+
+	def test_detalhe_do_responsavel_liberado_para_o_gestor(self):
+		with patch("gris.api.portal_access._get_user_roles", return_value=["Gestor de Adultos"]):
+			frappe.local.form_dict = {"name": "RESP-1"}
+			self.assertTrue(user_has_access("/associados/responsavel", user="gestor@example.com"))
+
+	def test_responsavel_abre_a_propria_pagina(self):
+		with (
+			patch("gris.api.portal_access._get_user_roles", return_value=["Responsavel"]),
+			patch("gris.api.portal_access._get_responsavel_name", return_value="RESP-1"),
+		):
+			frappe.local.form_dict = {"name": "RESP-1"}
+			self.assertTrue(user_has_access("/associados/responsavel", user="resp@example.com"))
+
+	def test_responsavel_nao_abre_a_pagina_de_outra_familia(self):
+		"""Hobbies e telefone de uma família não são dado que a outra veja."""
+		with (
+			patch("gris.api.portal_access._get_user_roles", return_value=["Responsavel"]),
+			patch("gris.api.portal_access._get_responsavel_name", return_value="RESP-1"),
+		):
+			frappe.local.form_dict = {"name": "RESP-2"}
+			self.assertFalse(user_has_access("/associados/responsavel", user="resp@example.com"))

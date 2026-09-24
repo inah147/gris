@@ -12,10 +12,28 @@ CATEGORIA_NAO_VOLUNTARIA = "Beneficiário"
 
 class UnidadeOrganizacional(Document):
 	def validate(self):
+		self._validar_raiz_fixa()
 		self._validar_ciclo()
 		self._validar_responsavel()
 		self._validar_funcoes_duplicadas()
 		self._validar_desvinculo_de_funcao()
+
+	def _validar_raiz_fixa(self):
+		"""O Conselho de Responsáveis não responde para nenhuma outra área.
+
+		A tela de administração permite arrastar uma área para dentro de outra
+		(`mover_unidade`), e a proteção de área automática que existe lá cobre só o nome
+		e o `ativa`. Sem esta guarda, um arraste acidental penduraria o conselho na
+		diretoria e mudaria em silêncio o que o organograma afirma sobre ele.
+		"""
+		from gris.api.gestao_adultos.responsaveis import AREA_CONSELHO
+
+		if self.name == AREA_CONSELHO and self.responde_para:
+			frappe.throw(
+				_("{0} é uma área de topo e não responde para nenhuma outra.").format(
+					frappe.bold(AREA_CONSELHO)
+				)
+			)
 
 	def _validar_ciclo(self):
 		"""Impede que a cadeia de `responde_para` volte para esta mesma área.

@@ -1,0 +1,135 @@
+{#
+  Dialog "Função no organograma", compartilhado pela ficha do associado
+  (/associados/detalhe) e pela página de ATVs (/gestao_adultos/atvs).
+
+  Mora aqui, e não colado em cada página, porque as duas abrem exatamente o mesmo
+  dialog: corrigir o período da função, encerrá-la, apagá-la e cuidar dos Acordos de
+  Trabalho Voluntário daquela alocação. Duplicar a marcação deixaria duas cópias para
+  manter em sincronia.
+
+  Assets vêm de `public/` de propósito: asset co-localizado de `www/` o Frappe injeta
+  sozinho, e referenciar um deles aqui faria o script rodar duas vezes.
+
+  A página inclui este arquivo uma vez e chama:
+      window.grisFuncaoOrganograma.abrir(linha, { aoMudar, aoMudarValidade })
+  onde `linha` tem `{ associado, nome, linha, funcao, area, principal, data_inicio,
+  data_fim }` e `aoMudar(funcoes)` recebe a lista nova de funções da pessoa.
+#}
+{% set funcao_organograma_asset_version = "20260924-funcao-organograma" %}
+<link
+  rel="stylesheet"
+  href="/assets/gris/css/funcao_organograma.css?v={{ funcao_organograma_asset_version }}"
+/>
+<script src="/assets/gris/js/funcao_organograma.js?v={{ funcao_organograma_asset_version }}"></script>
+
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog as _dialog_funcao %}
+{% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker as _data_funcao %}
+{% from "public/design_system/components/generated/select.html.jinja" import select as _select_funcao %}
+{% call _dialog_funcao(
+  id="dialog-funcao-organograma",
+  title="Função no organograma",
+  close_button=true,
+  dialog_attrs={"class": "funcao-dialog"},
+  footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-funcao-organograma">Fechar</button>'
+) %}
+  <p class="funcao-dialog__identidade">
+    <span class="font-medium" id="funcao-dialog-nome"></span>
+    <span class="text-muted-foreground text-sm" id="funcao-dialog-contexto"></span>
+  </p>
+
+  <section class="funcao-dialog__bloco">
+    <h3 class="funcao-dialog__titulo">Período da função</h3>
+    {# Grid de duas colunas, e não flex: os rótulos precisam ficar na mesma linha de
+       base mesmo quando um dos campos tem texto de apoio embaixo. #}
+    <div class="funcao-dialog__datas">
+      <div class="field">
+        <span class="label" id="funcao-dialog-inicio-rotulo">Início</span>
+        {{ _data_funcao(
+          id="funcao-dialog-inicio",
+          name="funcao_data_inicio",
+          placeholder="Escolha a data",
+          main_attrs={"aria-labelledby": "funcao-dialog-inicio-rotulo"}
+        ) }}
+      </div>
+      <div class="field">
+        <span class="label" id="funcao-dialog-fim-rotulo">Término</span>
+        {{ _data_funcao(
+          id="funcao-dialog-fim",
+          name="funcao_data_fim",
+          placeholder="Escolha a data",
+          main_attrs={"aria-labelledby": "funcao-dialog-fim-rotulo"}
+        ) }}
+      </div>
+    </div>
+    <p class="funcao-dialog__ajuda">Término em branco significa função atual.</p>
+    <div class="funcao-dialog__acoes">
+      <button type="button" class="btn-sm-primary" data-acao="salvar-funcao">Salvar período</button>
+      <button type="button" class="btn-sm-outline" data-acao="principal">Tornar principal</button>
+      <button type="button" class="btn-sm-outline" data-acao="encerrar">Encerrar hoje</button>
+    </div>
+  </section>
+
+  <section class="funcao-dialog__bloco">
+    <h3 class="funcao-dialog__titulo">Acordos de Trabalho Voluntário</h3>
+    <div id="funcao-dialog-atvs" class="funcao-dialog__atvs"></div>
+
+    <div class="funcao-dialog__novo-atv">
+      <h4 class="funcao-dialog__subtitulo">Novo acordo</h4>
+      <div class="funcao-dialog__datas">
+        <div class="field">
+          <span class="label" id="atv-dialog-inicio-rotulo">Início</span>
+          {{ _data_funcao(
+            id="atv-dialog-inicio",
+            name="atv_data_inicio",
+            placeholder="Escolha a data",
+            main_attrs={"aria-labelledby": "atv-dialog-inicio-rotulo"}
+          ) }}
+        </div>
+        <div class="field">
+          <span class="label" id="atv-dialog-fim-rotulo">Término</span>
+          {{ _data_funcao(
+            id="atv-dialog-fim",
+            name="atv_data_fim",
+            placeholder="Escolha a data",
+            main_attrs={"aria-labelledby": "atv-dialog-fim-rotulo"}
+          ) }}
+        </div>
+      </div>
+      {# "Não assinado" é a primeira opção de propósito: o select do design system
+         seleciona sozinho o primeiro item, e o acordo nasce mesmo sem assinatura. #}
+      <div class="field funcao-dialog__assinatura">
+        <span class="label" id="atv-dialog-assinado-rotulo">Assinatura</span>
+        {{ _select_funcao(
+          id="atv-dialog-assinado",
+          name="atv_assinado",
+          selected="0",
+          items=[
+            {"value": "0", "label": "Não assinado"},
+            {"value": "1", "label": "Assinado"}
+          ],
+          main_attrs={"aria-labelledby": "atv-dialog-assinado-rotulo"}
+        ) }}
+      </div>
+      <div class="funcao-dialog__acoes">
+        <button type="button" class="btn-sm-primary" data-acao="adicionar-atv">Adicionar ATV</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="funcao-dialog__bloco funcao-dialog__perigo">
+    <h3 class="funcao-dialog__titulo">Apagar a função</h3>
+    <p class="funcao-dialog__ajuda">
+      Apaga a linha e os acordos dela, sem deixar histórico. Para tirar alguém de uma
+      função que ele de fato exerceu, use "Encerrar hoje".
+    </p>
+    {# A confirmação fica aqui dentro: `showModal()` põe o dialog na top layer e torna o
+       resto inerte, então um `frappe.confirm` sumiria sem erro nenhum. #}
+    <div class="funcao-dialog__acoes">
+      <button type="button" class="btn-sm-destructive" data-acao="apagar-funcao">Apagar função</button>
+      <button type="button" class="btn-sm-destructive" data-acao="apagar-funcao-confirmar" hidden>
+        Confirmar exclusão
+      </button>
+      <button type="button" class="btn-sm-ghost" data-acao="apagar-funcao-cancelar" hidden>Cancelar</button>
+    </div>
+  </section>
+{% endcall %}

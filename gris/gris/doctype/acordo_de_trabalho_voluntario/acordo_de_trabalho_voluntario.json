@@ -1,0 +1,162 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-09-23 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "associado",
+  "linha_funcao",
+  "column_break_funcao",
+  "funcao",
+  "area",
+  "section_break_vigencia",
+  "data_inicio",
+  "column_break_vigencia",
+  "data_fim",
+  "section_break_assinatura",
+  "assinado"
+ ],
+ "fields": [
+  {
+   "fieldname": "associado",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Associado",
+   "options": "Associado",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "description": "Identificador da linha de Funcao do Associado que este acordo cobre. Cada alocação pode ter vários acordos ao longo do tempo.",
+   "fieldname": "linha_funcao",
+   "fieldtype": "Data",
+   "label": "Linha da função",
+   "read_only": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_funcao",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Cópia da função da linha, para listar os acordos sem abrir o Associado.",
+   "fieldname": "funcao",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Função",
+   "options": "Funcao Voluntario",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "description": "Cópia da área da linha.",
+   "fieldname": "area",
+   "fieldtype": "Link",
+   "label": "Área",
+   "options": "Unidade Organizacional",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_vigencia",
+   "fieldtype": "Section Break",
+   "label": "Vigência"
+  },
+  {
+   "fieldname": "data_inicio",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Início",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_vigencia",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "data_fim",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Término",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_assinatura",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "description": "Acordo assinado pelo voluntário e pela UEL.",
+   "fieldname": "assinado",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Assinado"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-23 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Acordo de Trabalho Voluntario",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de Adultos",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor da UEL",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de Associados",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "data_fim",
+ "sort_order": "DESC",
+ "states": []
+}

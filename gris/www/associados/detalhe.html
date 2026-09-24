@@ -148,6 +148,7 @@
          `forceescape` é obrigatório — sem ele o JSON trunca no atributo. #}
       <div class="funcoes-organograma"
            data-associado="{{ associado.name }}"
+           data-nome="{{ associado.nome_completo or associado.name }}"
            data-areas="{{ areas_com_funcoes | tojson | forceescape }}"
            data-linhas="{{ funcoes_internas_rows | tojson | forceescape }}">
 
@@ -158,6 +159,7 @@
                 <th scope="col">Área</th>
                 <th scope="col">Função</th>
                 <th scope="col">Período</th>
+                <th scope="col">ATV</th>
                 <th scope="col"><span class="sr-only">Ações</span></th>
               </tr>
             </thead>
@@ -181,6 +183,7 @@
         </div>
       </div>
     {% endcall %}
+    {% include "gris/templates/includes/funcao_organograma_dialog.html" %}
     {% endif %}
 
     <!-- Histórico no Grupo -->

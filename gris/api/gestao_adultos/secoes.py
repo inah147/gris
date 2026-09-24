@@ -14,6 +14,15 @@ A rotina só mexe no que ela mesma criou (`origem_automatica`) — área feita �
 nunca é tocada, e função genérica numa área feita à mão também não. E nada é
 apagado: área sai por `ativa = 0` e função de pessoa sai por `data_fim`, para o
 histórico continuar de pé.
+
+Dois caminhos de entrada, a mesma regra: `sincronizar_secoes()` reconcilia o grupo
+inteiro (é o que a importação do Paxtu chama) e `sincronizar_secao_do_associado()`
+reconcilia uma pessoa só, no `on_update` do `Associado` — é o que faz a regra valer
+sempre, e não só no dia da importação.
+
+Quem não tem `secao` preenchida fica de fora, por definição: sem seção não há área
+para posicionar a pessoa. `escotistas_sem_secao()` é o que dá visibilidade a esse
+buraco de cadastro, que é do Paxtu e não se resolve por inferência.
 """
 
 from __future__ import annotations
@@ -97,6 +106,103 @@ def sincronizar_secoes() -> dict:
 	# Sem commit aqui: quem chama (a importação, num request; o seed, no fim do
 	# script) é que fecha a transação.
 	return resumo
+
+
+def sincronizar_secao_do_associado(associado: str) -> bool:
+	"""Reconcilia a área e a função automáticas de **uma** pessoa.
+
+	Mesmas peças de `sincronizar_secoes`, com o plano montado a partir de um cadastro
+	só. Devolve `True` quando alguma linha foi aberta, reaberta ou encerrada.
+	"""
+	pessoa = frappe.db.get_value(
+		"Associado",
+		associado,
+		["name", "nome_completo", "secao", "categoria", "funcao", "status_no_grupo"],
+		as_dict=True,
+	)
+	if not pessoa or pessoa.status_no_grupo != "Ativo":
+		return False
+
+	plano = planejar_secoes([pessoa])
+	papel_por_secao = plano["atribuicoes"].get(associado)
+	if not papel_por_secao:
+		# Sem seção, sem categoria de escotista, ou seção sem chefe: nada a posicionar.
+		# As linhas automáticas que a pessoa já tinha continuam onde estão — quem as
+		# encerra é a reconciliação em lote, que enxerga o grupo inteiro.
+		return False
+
+	area_mae = frappe.db.get_single_value("Configuracoes de Associados", "area_mae_das_secoes")
+	if area_mae and not frappe.db.exists("Unidade Organizacional", area_mae):
+		area_mae = None
+
+	for secao in plano["secoes"]:
+		_garantir_area(secao, area_mae)
+		for papel in (PAPEL_CHEFE, PAPEL_ASSISTENTE):
+			_garantir_funcao(papel)
+			_garantir_vinculo(secao, papel)
+
+	automaticas = set(frappe.get_all("Funcao Voluntario", filters={"origem_automatica": 1}, pluck="name"))
+	areas_automaticas = set(
+		frappe.get_all("Unidade Organizacional", filters={"origem_automatica": 1}, pluck="name")
+	)
+	criadas, encerradas = _aplicar_atribuicoes(associado, papel_por_secao, automaticas, areas_automaticas)
+
+	for secao, chefe in plano["responsaveis"].items():
+		_definir_responsavel(secao, chefe)
+
+	return bool(criadas or encerradas)
+
+
+def on_associado_atualizado(doc, method=None) -> None:
+	"""`doc_events` do Associado: mantém a lotação automática em dia a cada gravação.
+
+	A sincronização grava no próprio `Associado`, então a reentrância é certa sem a
+	trava de `frappe.flags` — mesmo padrão de `gris_sync_sugestao_tarefa`. E o savepoint
+	existe porque um cadastro torto não pode derrubar o save de quem o editou: o erro
+	vira log, não uma tela de erro no meio de outra tarefa.
+	"""
+	if frappe.flags.in_migrate or frappe.flags.in_patch or frappe.flags.in_install:
+		return
+	if frappe.flags.gris_sync_secoes:
+		return
+	if not any(doc.has_value_changed(campo) for campo in ("secao", "categoria", "funcao", "status_no_grupo")):
+		return
+
+	ponto = f"sync_secao_{frappe.generate_hash(length=8)}"
+	frappe.db.savepoint(ponto)
+	frappe.flags.gris_sync_secoes = True
+	try:
+		sincronizar_secao_do_associado(doc.name)
+	except Exception:
+		frappe.db.rollback(save_point=ponto)
+		frappe.log_error(
+			title="Sincronização de seção do associado",
+			message=f"{doc.name}\n\n{frappe.get_traceback()}",
+		)
+	finally:
+		frappe.flags.gris_sync_secoes = False
+
+
+def escotistas_sem_secao() -> list[str]:
+	"""Escotistas ativos sem `secao` no cadastro — os que ficam fora do organograma.
+
+	A seção é o que posiciona o escotista; sem ela não há área, e a pessoa some do
+	desenho sem nenhum sinal. Por decisão, a seção **não** é inferida do ramo: o dado
+	tem que ser corrigido no Paxtu, e esta lista é o que mostra para quem.
+	"""
+	return [
+		pessoa["nome_completo"] or pessoa["name"]
+		for pessoa in frappe.get_all(
+			"Associado",
+			filters={
+				"categoria": CATEGORIA_ESCOTISTA,
+				"status_no_grupo": "Ativo",
+				"secao": ["in", ["", None]],
+			},
+			fields=["name", "nome_completo"],
+			order_by="nome_completo asc",
+		)
+	]
 
 
 # ---------------------------------------------------------------------------

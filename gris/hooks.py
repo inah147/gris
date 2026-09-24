@@ -188,6 +188,14 @@ doc_events = {
 			"gris.api.recepcao_mensagens.on_novo_associado_atualizado",
 		],
 	},
+	# A lotação automática do escotista (área da seção + Chefe/Assistente de Seção)
+	# nascia só na importação do Paxtu. O handler se protege por
+	# `frappe.flags.gris_sync_secoes` — ele grava no próprio Associado.
+	"Associado": {
+		"on_update": [
+			"gris.api.gestao_adultos.secoes.on_associado_atualizado",
+		],
+	},
 	"Festa": {
 		"after_insert": [
 			"gris.api.festas.avaliacao.criar_avaliacao_festa_automatica",

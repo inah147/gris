@@ -10,12 +10,15 @@ from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_days, getdate, nowdate
 
 from gris.api.gestao_adultos.atribuicoes import (
+	apagar_funcao,
 	atribuir_funcao,
 	definir_principal,
+	editar_funcao,
 	encerrar_funcao,
 	listar_areas_com_funcoes,
 	listar_funcoes_do_associado,
 )
+from gris.api.gestao_adultos.atvs import salvar_atv
 
 PREFIXO = "ZZ Teste Atribuicao"
 
@@ -127,6 +130,69 @@ class TestAtribuicoesDeFuncao(FrappeTestCase):
 
 		with self.assertRaises(frappe.DoesNotExistError):
 			encerrar_funcao(json.dumps({"associado": outro, "linha": linha}))
+
+	def test_editar_corrige_as_datas_da_linha(self):
+		atribuir_funcao(self._payload(area=self.area, funcao=self.funcao))
+		linha = listar_funcoes_do_associado(self.associado)[0]["linha"]
+
+		editar_funcao(self._payload(linha=linha, data_inicio="2024-03-01", data_fim="2025-06-30"))
+
+		atualizada = listar_funcoes_do_associado(self.associado)[0]
+		self.assertEqual(atualizada["data_inicio"], "2024-03-01")
+		self.assertEqual(atualizada["data_fim"], "2025-06-30")
+		self.assertFalse(atualizada["atual"])
+
+	def test_editar_sem_data_fim_devolve_a_linha_para_atual(self):
+		atribuir_funcao(self._payload(area=self.area, funcao=self.funcao))
+		linha = listar_funcoes_do_associado(self.associado)[0]["linha"]
+		encerrar_funcao(self._payload(linha=linha))
+
+		editar_funcao(self._payload(linha=linha, data_inicio="2024-03-01", data_fim=""))
+
+		atualizada = listar_funcoes_do_associado(self.associado)[0]
+		self.assertIsNone(atualizada["data_fim"])
+		self.assertTrue(atualizada["atual"])
+
+	def test_editar_com_fim_antes_do_inicio_e_barrado(self):
+		atribuir_funcao(self._payload(area=self.area, funcao=self.funcao))
+		linha = listar_funcoes_do_associado(self.associado)[0]["linha"]
+
+		with self.assertRaises(frappe.ValidationError):
+			editar_funcao(self._payload(linha=linha, data_inicio="2025-06-30", data_fim="2024-03-01"))
+
+	def test_editar_sem_data_inicio_e_barrado(self):
+		atribuir_funcao(self._payload(area=self.area, funcao=self.funcao))
+		linha = listar_funcoes_do_associado(self.associado)[0]["linha"]
+
+		with self.assertRaises(frappe.ValidationError):
+			editar_funcao(self._payload(linha=linha, data_inicio="", data_fim=""))
+
+	def test_editar_para_o_passado_tira_a_marca_de_principal(self):
+		atribuir_funcao(self._payload(area=self.area, funcao=self.funcao, principal=True))
+		linha = listar_funcoes_do_associado(self.associado)[0]["linha"]
+
+		editar_funcao(self._payload(linha=linha, data_inicio="2024-03-01", data_fim=add_days(nowdate(), -1)))
+
+		self.assertFalse(listar_funcoes_do_associado(self.associado)[0]["principal"])
+
+	def test_apagar_remove_a_linha_e_os_acordos(self):
+		"""Acordo órfão apontaria para uma child row que não existe mais."""
+		atribuir_funcao(self._payload(area=self.area, funcao=self.funcao))
+		linha = listar_funcoes_do_associado(self.associado)[0]["linha"]
+		salvar_atv(self._payload(linha=linha, data_inicio="2026-01-01", data_fim="2027-01-01"))
+
+		apagar_funcao(self._payload(linha=linha))
+
+		self.assertEqual(listar_funcoes_do_associado(self.associado), [])
+		self.assertEqual(frappe.db.count("Acordo de Trabalho Voluntario", {"linha_funcao": linha}), 0)
+
+	def test_apagar_linha_de_outra_pessoa_e_barrado(self):
+		atribuir_funcao(self._payload(area=self.area, funcao=self.funcao))
+		linha = listar_funcoes_do_associado(self.associado)[0]["linha"]
+		outro = self._criar_associado("Outro apagar")
+
+		with self.assertRaises(frappe.DoesNotExistError):
+			apagar_funcao(json.dumps({"associado": outro, "linha": linha}))
 
 	def test_cascata_traz_so_funcoes_ativas_da_area(self):
 		areas = {item["value"]: item for item in listar_areas_com_funcoes()}

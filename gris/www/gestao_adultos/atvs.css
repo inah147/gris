@@ -1,0 +1,70 @@
+/* ATVs: acordos de trabalho voluntário por função em vigor.
+   O dialog tem folha própria em public/css/funcao_organograma.css. */
+
+.page-header-row {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 4);
+	flex-wrap: wrap;
+}
+
+.atvs {
+	margin-top: calc(var(--spacing) * 6);
+}
+
+.atvs-resumo {
+	margin-bottom: calc(var(--spacing) * 4);
+}
+
+.atvs__tabela {
+	width: 100%;
+}
+
+.atvs__acoes {
+	text-align: right;
+	white-space: nowrap;
+}
+
+.atvs__numero {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+/* A área fica sob a função, em tom secundário: a mesma função vale em várias áreas, e
+   sem ela a coluna repetiria "Assistente de Seção" sem dizer de qual seção. Em linha
+   separada porque, lado a lado, a coluna ficava larga o bastante para empurrar "Dias
+   até o vencimento" para fora da tabela. */
+.atvs__area {
+	display: block;
+	color: var(--muted-foreground);
+	font-size: 0.8125rem;
+}
+
+/* Bolinha de situação na primeira coluna, mesmo padrão de /associados/lista: com a
+   maioria das linhas pendente, pintar o fundo delas cansaria a leitura. */
+.atvs__status {
+	text-align: center;
+	width: 1%;
+}
+
+.atvs-status-dot {
+	display: inline-block;
+	width: 0.625rem;
+	height: 0.625rem;
+	border-radius: 9999px;
+	background: var(--muted-foreground);
+}
+
+.atvs-status-dot--ok {
+	background: var(--success);
+}
+
+.atvs-status-dot--warn {
+	background: var(--warning);
+}
+
+.atvs-status-dot--danger {
+	background: var(--destructive);
+}

@@ -51,7 +51,7 @@ def _montar(areas, pessoas, lotacoes=None, avatares=None):
 	"""
 	if lotacoes is None:
 		lotacoes = [
-			{"associado": p["name"], "area": p["area"], "funcao": p.get("funcao")}
+			{"pessoa": p["name"], "area": p["area"], "funcao": p.get("funcao")}
 			for p in pessoas
 			if p.get("area")
 		]
@@ -59,7 +59,7 @@ def _montar(areas, pessoas, lotacoes=None, avatares=None):
 
 
 def _lotacoes(pessoas):
-	return [{"associado": p["name"], "area": p["area"], "funcao": None} for p in pessoas if p.get("area")]
+	return [{"pessoa": p["name"], "area": p["area"], "funcao": None} for p in pessoas if p.get("area")]
 
 
 def _por_id(nos):
@@ -271,7 +271,7 @@ class TestMontarArvore(FrappeTestCase):
 		arvore = _montar(
 			areas,
 			pessoas,
-			lotacoes=[{"associado": "Mariana", "area": "Programa", "funcao": "Diretora de Programa"}],
+			lotacoes=[{"pessoa": "Mariana", "area": "Programa", "funcao": "Diretora de Programa"}],
 		)
 
 		self.assertEqual(arvore["raizes"][0]["funcao_interna"], "Diretora de Programa")

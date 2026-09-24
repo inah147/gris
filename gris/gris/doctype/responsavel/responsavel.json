@@ -40,7 +40,13 @@
   "column_break_documentos",
   "link_declaracao_idoneidade",
   "link_declaracao_idoneidade_assinada",
-  "declaracao_idoneidade_assinada_em"
+  "declaracao_idoneidade_assinada_em",
+  "vinculo_com_associado_section",
+  "associado",
+  "column_break_vinculo_associado",
+  "migrado_para_associado",
+  "section_break_funcoes_internas",
+  "funcoes_internas"
  ],
  "fields": [
   {
@@ -236,6 +242,44 @@
    "fieldtype": "Datetime",
    "label": "Declaração assinada enviada em",
    "read_only": 1
+  },
+  {
+   "description": "Preenchido pela sincronização quando o responsável também tem cadastro de associado. Sobrevive à anonimização do funil, que apaga o CPF.",
+   "fieldname": "vinculo_com_associado_section",
+   "fieldtype": "Section Break",
+   "label": "Vínculo com o cadastro de associado"
+  },
+  {
+   "description": "Cadastro de associado da mesma pessoa. Normalmente tem o mesmo `name` deste registro (os dois derivam do md5 do CPF); o campo existe para os cadastros legados, em que os hashes não batem.",
+   "fieldname": "associado",
+   "fieldtype": "Link",
+   "label": "Associado correspondente",
+   "options": "Associado",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_vinculo_associado",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Hobbies, interesses e habilidades desta pessoa passaram a viver no cadastro de associado.",
+   "fieldname": "migrado_para_associado",
+   "fieldtype": "Check",
+   "label": "Migrado para o associado",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_funcoes_internas",
+   "fieldtype": "Section Break",
+   "label": "Funções internas"
+  },
+  {
+   "description": "Além do Conselho de Responsáveis, que é automático: funções que esta pessoa exerce no organograma. Mesmo child do `Associado`.",
+   "fieldname": "funcoes_internas",
+   "fieldtype": "Table",
+   "label": "Funções internas",
+   "options": "Funcao do Associado"
   }
  ],
  "grid_page_length": 50,

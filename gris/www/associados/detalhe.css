@@ -208,44 +208,61 @@
   margin-bottom: 0.5rem;
 }
 
-/* Funções no organograma */
-.funcoes-organograma__tabela-wrap {
-	overflow-x: auto;
-	min-width: 0;
+/* A grade "Funções no organograma" mora em public/css/funcao_organograma.css, junto do
+   dialog: a ficha do responsável monta a mesma grade. */
+
+/* Responsáveis vinculados: lista acima da grade de campos achatados do cadastro. */
+.responsaveis-vinculados {
+	list-style: none;
+	margin: 0 0 1.25rem;
+	padding: 0 0 1.25rem;
+	border-bottom: 1px solid var(--border);
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
 }
 
-.funcoes-organograma__tabela {
-	width: 100%;
-}
-
-.funcoes-organograma__acoes {
-	text-align: right;
-	white-space: nowrap;
-}
-
-/* Linha encerrada continua visível — é histórico —, só recua no contraste. */
-.funcoes-organograma__encerrada td {
-	color: var(--muted-foreground);
-}
-
-.funcoes-organograma__novo {
+.responsaveis-vinculados__item {
 	display: flex;
 	flex-wrap: wrap;
-	align-items: flex-end;
+	align-items: center;
+	justify-content: space-between;
 	gap: 0.75rem;
-	margin-top: 1rem;
-	padding-top: 1rem;
-	border-top: 1px solid var(--border);
 }
 
-.funcoes-organograma__novo .field {
-	flex: 1 1 14rem;
+.responsaveis-vinculados__pessoa {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
 	min-width: 0;
+}
+
+.responsaveis-vinculados__nome {
+	font-weight: 600;
+}
+
+.responsaveis-vinculados__selos {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
 }
 
 @media (max-width: 640px) {
-	.funcoes-organograma__novo .field,
-	.funcoes-organograma__novo .btn-primary {
+	.responsaveis-vinculados__item > .btn-sm-outline {
 		flex: 1 1 100%;
+		justify-content: center;
 	}
+}
+
+.detalhe-hobbies__texto {
+	margin: 0;
+	white-space: pre-line;
+}
+
+.detalhe-hobbies__habilidades {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375rem;
+	margin-top: 0.75rem;
 }

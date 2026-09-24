@@ -1,0 +1,97 @@
+/* Detalhes do responsável legal (`/associados/responsavel`).
+   Mesma linguagem visual da ficha do associado — cards Basecoat e a grade de selos. */
+
+.resp-header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 1rem;
+}
+
+.resp-header__avatar {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 3rem;
+	height: 3rem;
+	border-radius: 9999px;
+	background: var(--muted);
+	color: var(--muted-foreground);
+	font-weight: 600;
+	flex: 0 0 auto;
+}
+
+.resp-header__info {
+	flex: 1 1 12rem;
+	min-width: 0;
+}
+
+.resp-header__selos {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+	margin-top: 0.25rem;
+}
+
+.resp-hobbies__texto {
+	margin: 0;
+	white-space: pre-line;
+}
+
+.resp-hobbies__habilidades {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375rem;
+	margin-top: 0.75rem;
+}
+
+.resp-beneficiarios {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.resp-beneficiarios__item {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+}
+
+.resp-beneficiarios__pessoa {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+	min-width: 0;
+}
+
+.resp-beneficiarios__nome {
+	font-weight: 600;
+}
+
+.resp-beneficiarios__selos {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+}
+
+.resp-funcoes td,
+.resp-funcoes th {
+	vertical-align: top;
+}
+
+.resp-funcoes__nota {
+	margin: 0.75rem 0 0;
+}
+
+@media (max-width: 640px) {
+	.resp-beneficiarios__item > .btn-sm-outline {
+		flex: 1 1 100%;
+		justify-content: center;
+	}
+}

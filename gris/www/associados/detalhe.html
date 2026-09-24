@@ -98,9 +98,28 @@
       </div>
     {% endcall %}
 
-    {% if is_beneficiario %}
+    {% if is_beneficiario or responsaveis_vinculados %}
     <!-- Responsáveis -->
     {% call card(title="Responsáveis", description="Informações dos responsáveis pelo beneficiário", attrs={"class": "mb-4"}) %}
+      {% if responsaveis_vinculados %}
+      <ul class="responsaveis-vinculados">
+        {% for r in responsaveis_vinculados %}
+        <li class="responsaveis-vinculados__item">
+          <div class="responsaveis-vinculados__pessoa">
+            <span class="responsaveis-vinculados__nome">{{ r.nome }}</span>
+            <span class="responsaveis-vinculados__selos">
+              {% if r.primeiro %}{{ badge("1º responsável", variant="secondary") }}{% endif %}
+              {% if r.guardiao_legal %}{{ badge("Guardião legal", variant="secondary") }}{% endif %}
+              {% if r.e_associado %}{{ badge("Também é associado", variant="default") }}{% endif %}
+            </span>
+          </div>
+          <a href="{{ r.url }}" class="btn-sm-outline">
+            Ver detalhes do responsável {{ lucide_icon("arrow-right", size="sm") }}
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
       <div class="detalhe-fields-grid">
         {% for f in group_responsaveis %}
           {% set is_guardian_flag = f.fieldname in ['guardiao_legal_responsavel_1','guardiao_legal_responsavel_2'] %}
@@ -134,6 +153,20 @@
     {% endcall %}
     {% endif %}
 
+    {% if hobbies_texto or habilidades_list %}
+    <!-- Hobbies e interesses -->
+    {% call card(title="Hobbies e interesses", description="O que esta pessoa gosta de fazer e em que pode ajudar", attrs={"class": "mb-4"}) %}
+      {% if hobbies_texto %}
+      <p class="detalhe-hobbies__texto">{{ hobbies_texto }}</p>
+      {% endif %}
+      {% if habilidades_list %}
+      <div class="detalhe-hobbies__habilidades">
+        {% for habilidade in habilidades_list %}{{ badge(habilidade, variant="secondary") }}{% endfor %}
+      </div>
+      {% endif %}
+    {% endcall %}
+    {% endif %}
+
     {% if pode_gerenciar_funcoes %}
     <!-- Funções no organograma -->
     {% call card(attrs={"class": "mb-4"}) %}
@@ -147,7 +180,7 @@
       {# A cascata área → função sai daqui: uma carga só, sem ida e volta por área.
          `forceescape` é obrigatório — sem ele o JSON trunca no atributo. #}
       <div class="funcoes-organograma"
-           data-associado="{{ associado.name }}"
+           data-pessoa="associado:{{ associado.name }}"
            data-nome="{{ associado.nome_completo or associado.name }}"
            data-areas="{{ areas_com_funcoes | tojson | forceescape }}"
            data-linhas="{{ funcoes_internas_rows | tojson | forceescape }}">

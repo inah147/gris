@@ -41,6 +41,47 @@ def validar_funcoes_internas(doc) -> None:
 			)
 
 
+def validar_funcao_do_conselho(doc) -> None:
+	"""A função de Responsável Legal fica enquanto a pessoa responder por um beneficiário.
+
+	Ela não é alocação — nasce de `Responsavel Vinculo` e é mantida por
+	`gris.api.pessoas` —, então tirá-la à mão faria a ficha contradizer o cadastro até a
+	próxima gravação do vínculo. A regra mora aqui, e não só nos endpoints do portal, para
+	valer também na grade do Desk e em qualquer outro caminho que grave o documento.
+
+	Só o que estava **aberto** (sem `data_fim`) é protegido: linha já encerrada é
+	histórico, e apagar ou reabrir histórico não é tirar ninguém do Conselho.
+	"""
+	if frappe.flags.in_migrate or frappe.flags.in_patch or frappe.flags.in_install:
+		return
+	# O encerramento automático roda enquanto o último vínculo ainda está no banco: o
+	# `on_trash` dele chega antes do DELETE. Sem esta saída, a regra barraria quem a aplica.
+	if doc.flags.get("encerrando_funcao_do_conselho"):
+		return
+
+	anterior = doc.get_doc_before_save()
+	if not anterior:
+		return
+
+	from gris.api.gestao_adultos.responsaveis import (
+		e_funcao_do_conselho,
+		garantir_permanencia_no_conselho,
+	)
+
+	def _aberta(documento) -> bool:
+		return any(
+			e_funcao_do_conselho(linha.funcao, linha.area) and not linha.data_fim
+			for linha in (documento.funcoes_internas or [])
+		)
+
+	# Comparar estados, e não linha a linha: apagar e recriar a linha no mesmo save é uma
+	# correção legítima, e não a saída do Conselho que esta regra existe para barrar.
+	if not _aberta(anterior) or _aberta(doc):
+		return
+
+	garantir_permanencia_no_conselho(doc)
+
+
 def validar_vinculo_funcao_area(doc) -> None:
 	"""Toda função interna nova precisa de área, e o par tem que estar vinculado.
 

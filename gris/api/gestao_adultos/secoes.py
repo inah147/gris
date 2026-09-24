@@ -32,6 +32,8 @@ from frappe.utils import getdate, nowdate
 
 from gris.utils.chefes import eh_funcao_chefe_de_secao, normalizar_texto
 
+from . import identidade
+
 CATEGORIA_ESCOTISTA = "Escotista"
 PAPEL_CHEFE = "Chefe de Seção"
 PAPEL_ASSISTENTE = "Assistente de Seção"
@@ -405,4 +407,10 @@ def _definir_responsavel(secao: str, chefe: str) -> None:
 		return
 	if area.get("responsavel") == chefe:
 		return
-	frappe.db.set_value("Unidade Organizacional", secao, "responsavel", chefe)
+	# O par (tipo, nome) vai junto: `responsavel` é Dynamic Link, e a área ficaria
+	# insalvável se o tipo não acompanhasse. Chefe de seção é sempre associado.
+	frappe.db.set_value(
+		"Unidade Organizacional",
+		secao,
+		{"responsavel": chefe, "tipo_responsavel": identidade.DOCTYPE_ASSOCIADO},
+	)

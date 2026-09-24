@@ -11,7 +11,9 @@
  *
  * `linha.pessoa` é a chave com espaço de nomes (`associado:<id>` / `responsavel:<id>`);
  * `linha.associado` continua aceito. `linha.comAtv === false` esconde o bloco de
- * acordos, que é documento do quadro e não existe para responsável.
+ * acordos, que é documento do quadro e não existe para responsável. `linha.automatica`
+ * marca a função mantida pelo cadastro (o Responsável Legal no Conselho): ela não é
+ * alocada nem encerrada à mão e não tem acordo a cobrar, então o dialog vira leitura.
  *
  * `aoMudar(funcoes)` recebe a lista nova de funções da pessoa e `aoMudarValidade(linha,
  * validade)` o veredito novo do acordo daquela alocação — é assim que a tabela de quem
@@ -136,6 +138,16 @@
 		return { tipo: "associado", name: chave.replace(/^associado:/, "") };
 	}
 
+	/** A função mantida pelo cadastro não tem acordo a cobrar nem ação a oferecer. */
+	function automatica(linha) {
+		return Boolean((linha || linhaAtual || {}).automatica);
+	}
+
+	function mostrarBloco(id, mostrar) {
+		const bloco = document.getElementById(id);
+		if (bloco) bloco.hidden = !mostrar;
+	}
+
 	function preencher(linha) {
 		linhaAtual = linha;
 		campo("funcao-dialog-nome").textContent = linha.nome || "";
@@ -151,8 +163,12 @@
 		definirAssinatura(false);
 		mostrarConfirmacaoDeExclusao(false);
 
-		const bloco = document.getElementById("funcao-dialog-bloco-atv");
-		if (bloco) bloco.hidden = linha.comAtv === false;
+		const fixa = automatica(linha);
+		mostrarBloco("funcao-dialog-aviso-automatica", fixa);
+		// Sem alocação para mexer: o período sai do vínculo, não desta tela.
+		mostrarBloco("funcao-dialog-acoes-periodo", !fixa);
+		mostrarBloco("funcao-dialog-bloco-perigo", !fixa);
+		mostrarBloco("funcao-dialog-bloco-atv", linha.comAtv !== false && !fixa);
 		renderAtvs(null);
 	}
 
@@ -324,12 +340,14 @@
 
 	/** Encerrada não pode ser principal, e já-principal não precisa do botão. */
 	function preencherEstadoDosBotoes() {
+		const fixa = automatica();
 		const principal = acao("principal");
 		if (principal) {
-			principal.hidden = Boolean(linhaAtual.principal) || Boolean(linhaAtual.data_fim);
+			principal.hidden =
+				fixa || Boolean(linhaAtual.principal) || Boolean(linhaAtual.data_fim);
 		}
 		const encerrar = acao("encerrar");
-		if (encerrar) encerrar.hidden = Boolean(linhaAtual.data_fim);
+		if (encerrar) encerrar.hidden = fixa || Boolean(linhaAtual.data_fim);
 	}
 
 	function adicionarAtv(botao) {
@@ -487,7 +505,7 @@
 			aoMudarValidade = (opcoes || {}).aoMudarValidade || null;
 			preencher(linha);
 			dlg.showModal();
-			if (linha.comAtv !== false) carregarAtvs();
+			if (linha.comAtv !== false && !linha.automatica) carregarAtvs();
 		},
 	};
 })();

@@ -51,7 +51,7 @@ def salvar_unidade(payload: str) -> dict:
 		doc.area = area
 
 	doc.responde_para = _texto(dados.get("responde_para")) or None
-	doc.responsavel = _texto(dados.get("responsavel")) or None
+	_definir_responsavel(doc, _texto(dados.get("responsavel")))
 	doc.descricao = _texto(dados.get("descricao")) or None
 	doc.ordem = _inteiro(dados.get("ordem"))
 	if not doc.origem_automatica:
@@ -142,6 +142,25 @@ def salvar_funcao(payload: str) -> dict:
 # ---------------------------------------------------------------------------
 # Apoio
 # ---------------------------------------------------------------------------
+
+
+def _definir_responsavel(doc, escolhido: str) -> None:
+	"""Grava o líder da área a partir da chave que o seletor manda.
+
+	A área aceita os dois tipos de pessoa do organograma, e os dois DocTypes têm `name` no
+	mesmo formato: é o prefixo da chave que diz em qual cadastro gravar. Valor sem prefixo
+	é lido como associado, que é o que os formulários mandavam antes.
+	"""
+	from gris.api.gestao_adultos import identidade
+
+	if not escolhido:
+		doc.responsavel = None
+		# O tipo continua preenchido de propósito: Dynamic Link sem tipo recusa a próxima
+		# gravação que escolher alguém, e essa checagem roda antes do `validate()`.
+		doc.tipo_responsavel = identidade.DOCTYPE_ASSOCIADO
+		return
+
+	doc.tipo_responsavel, doc.responsavel = identidade.separar(escolhido)
 
 
 def _carregar(payload: str) -> dict:

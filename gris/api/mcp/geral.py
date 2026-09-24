@@ -56,7 +56,15 @@ def quem_sou_eu() -> dict:
 def listar_unidades_organizacionais() -> dict:
 	unidades = frappe.get_all(
 		"Unidade Organizacional",
-		fields=["name", "area", "responde_para", "responsavel", "descricao", "ativa"],
+		fields=[
+			"name",
+			"area",
+			"responde_para",
+			"responsavel",
+			"tipo_responsavel",
+			"descricao",
+			"ativa",
+		],
 		order_by="area asc",
 	)
 	return {"unidades": unidades, "total": len(unidades)}

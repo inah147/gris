@@ -169,9 +169,14 @@
 					const principal = linha.principal
 						? '<span class="badge">Principal</span>'
 						: "";
+					// Mantida pelo vínculo com o beneficiário: o selo avisa antes de a
+					// pessoa abrir o dialog e achar que faltou botão.
+					const fixa = linha.automatica
+						? '<span class="badge-secondary">Automática</span>'
+						: "";
 					return `<tr${linha.atual ? "" : ' class="funcoes-organograma__encerrada"'}>
 						<td>${escapeHtml(linha.area || "—")}</td>
-						<td>${escapeHtml(linha.funcao)} ${principal}</td>
+						<td>${escapeHtml(linha.funcao)} ${principal} ${fixa}</td>
 						<td>${escapeHtml(periodoDaLinha(linha))}</td>
 						${mostraAtv ? `<td>${atvDaLinha(linha.atv, linha.atual)}</td>` : ""}
 						<td class="funcoes-organograma__acoes">

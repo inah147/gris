@@ -120,12 +120,55 @@ def garantir_estrutura_do_conselho() -> dict:
 # ---------------------------------------------------------------------------
 
 
+def e_funcao_do_conselho(funcao: str | None, area: str | None) -> bool:
+	"""Diz se o par é a função fixa de Responsável Legal no Conselho.
+
+	O par inteiro, e não só o título: a mesma função poderia um dia ser vinculada a outra
+	área, e só no Conselho ela é automática.
+	"""
+	return funcao == FUNCAO_RESPONSAVEL_LEGAL and area == AREA_CONSELHO
+
+
+def responde_por_beneficiario(doctype: str, name: str) -> bool:
+	"""Se a pessoa ainda é responsável legal de algum beneficiário.
+
+	O vínculo mora em `Responsavel Vinculo` e aponta sempre para o cadastro de
+	`Responsavel`. Para um associado, o cadastro da mesma pessoa é resolvido por
+	`gris.api.pessoas` — os dois derivam a chave do mesmo CPF, mas o legado tem mais de uma
+	convenção de hash e a ponte gravada é o que cobre todas.
+	"""
+	from gris.api.pessoas import responsavel_do_associado, tem_vinculo_de_responsavel
+
+	if doctype == identidade.DOCTYPE_RESPONSAVEL:
+		return tem_vinculo_de_responsavel(name)
+	return tem_vinculo_de_responsavel(responsavel_do_associado(name))
+
+
+def garantir_permanencia_no_conselho(doc) -> None:
+	"""Recusa tirar do Conselho quem ainda responde por um beneficiário.
+
+	A função não é alocação: é o retrato de um fato que está no cadastro. Enquanto o
+	vínculo existir, apagar ou encerrar a linha faria o organograma afirmar o contrário do
+	que o banco diz — e a próxima gravação do vínculo a recriaria de qualquer jeito. Quando
+	o vínculo acaba, `encerrar_funcao_do_conselho` fecha a linha sozinho.
+	"""
+	if not responde_por_beneficiario(doc.doctype, doc.name):
+		return
+
+	frappe.throw(
+		_(
+			"{0} responde por um beneficiário: {1} em {2} é obrigatória enquanto esse vínculo "
+			"existir. A função é encerrada sozinha quando o último vínculo sair."
+		).format(
+			frappe.bold(doc.get("nome_completo") or doc.name),
+			frappe.bold(FUNCAO_RESPONSAVEL_LEGAL),
+			frappe.bold(AREA_CONSELHO),
+		)
+	)
+
+
 def _linhas_do_conselho(doc) -> list:
-	return [
-		linha
-		for linha in (doc.funcoes_internas or [])
-		if linha.funcao == FUNCAO_RESPONSAVEL_LEGAL and linha.area == AREA_CONSELHO
-	]
+	return [linha for linha in (doc.funcoes_internas or []) if e_funcao_do_conselho(linha.funcao, linha.area)]
 
 
 def _em_vigor(linha) -> bool:
@@ -169,6 +212,10 @@ def encerrar_funcao_do_conselho(doc) -> bool:
 	"""
 	hoje = getdate(nowdate())
 	mudou = False
+	# A validação da grade barra encerrar esta linha à mão; este caminho é o legítimo, e
+	# roda justamente enquanto o último vínculo ainda está no banco (o `on_trash` dele
+	# chega antes do DELETE). Sem a marca, a regra barraria quem a aplica.
+	doc.flags.encerrando_funcao_do_conselho = True
 	for linha in _linhas_do_conselho(doc):
 		if _em_vigor(linha):
 			# `date`, não string: o `validate` do Associado compara as duas datas direto, e
@@ -345,8 +392,13 @@ def obter_detalhe_do_responsavel(responsavel: str) -> dict:
 	nome = pessoa.get("nome_completo") or pessoa["name"]
 	pode_gerenciar = pode_gerenciar_funcoes()
 
+	from .organograma import areas_lideradas
+
 	funcoes = funcoes_do_responsavel(pessoa["name"])
-	areas = sorted({funcao["area"] for funcao in funcoes if funcao["area"] and funcao["atual"]})
+	lideradas = areas_lideradas(identidade.chave_do_responsavel(pessoa["name"]))
+	areas = sorted(
+		{funcao["area"] for funcao in funcoes if funcao["area"] and funcao["atual"]} | set(lideradas)
+	)
 	# A principal é a primeira alocada de verdade; o Conselho é pano de fundo de todo
 	# responsável e não descreve o que a pessoa faz no quadro.
 	alocadas = [funcao for funcao in funcoes if not funcao["automatica"]]
@@ -358,7 +410,7 @@ def obter_detalhe_do_responsavel(responsavel: str) -> dict:
 		"iniciais": _iniciais(nome),
 		"funcao_principal": alocadas[0]["titulo"] if alocadas else FUNCAO_RESPONSAVEL_LEGAL,
 		"areas": areas,
-		"areas_lideradas": [],
+		"areas_lideradas": sorted(lideradas),
 		"linha": LINHA_RESPONSAVEL,
 		"ramo": None,
 		"ramo_slug": None,

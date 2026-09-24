@@ -6,7 +6,11 @@ from frappe.model.document import Document
 from frappe.utils import cint, getdate
 
 from gris.utils.documento import e_hash_de_cpf, id_por_cpf, localizar_novo_associado
-from gris.utils.funcoes_internas import validar_funcoes_internas, validar_vinculo_funcao_area
+from gris.utils.funcoes_internas import (
+	validar_funcao_do_conselho,
+	validar_funcoes_internas,
+	validar_vinculo_funcao_area,
+)
 
 
 def _assoc_logger():
@@ -115,6 +119,7 @@ class Associado(Document):
 		# Regras compartilhadas com o `Responsavel`, que também recebe função no
 		# organograma. Ver `gris.utils.funcoes_internas`.
 		validar_funcoes_internas(self)
+		validar_funcao_do_conselho(self)
 
 	def _validar_vinculo_funcao_area(self):
 		validar_vinculo_funcao_area(self)

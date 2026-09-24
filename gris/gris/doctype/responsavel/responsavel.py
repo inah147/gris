@@ -6,7 +6,11 @@ import re
 
 from frappe.model.document import Document
 
-from gris.utils.funcoes_internas import validar_funcoes_internas, validar_vinculo_funcao_area
+from gris.utils.funcoes_internas import (
+	validar_funcao_do_conselho,
+	validar_funcoes_internas,
+	validar_vinculo_funcao_area,
+)
 
 
 class Responsavel(Document):
@@ -19,4 +23,5 @@ class Responsavel(Document):
 		# Mesmas regras da grade do `Associado`: o responsável também recebe função no
 		# organograma. Ver `gris.utils.funcoes_internas`.
 		validar_funcoes_internas(self)
+		validar_funcao_do_conselho(self)
 		validar_vinculo_funcao_area(self)

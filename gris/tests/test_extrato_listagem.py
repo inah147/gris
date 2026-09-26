@@ -9,13 +9,20 @@ from frappe.tests.utils import FrappeTestCase
 
 from gris.api.financeiro.transactions import (
 	EXTRATO_COLUNAS,
+	EXTRATO_FILTRO_VAZIO,
+	EXTRATO_LARGURA_MAX,
+	EXTRATO_LARGURA_MIN,
 	EXTRATO_MAX_PAGE_SIZE,
 	EXTRATO_ORDER_BY,
 	EXTRATO_PAGE_SIZE,
+	aplicar_preferencias_extrato,
 	build_extrato_filters,
 	get_extrato_colunas,
 	get_extrato_rows,
+	get_preferencias_extrato,
+	normalizar_preferencias_extrato,
 	render_extrato_rows,
+	salvar_preferencias_extrato,
 )
 
 DOCTYPE = "Transacao Extrato Geral"
@@ -67,6 +74,14 @@ class TestExtratoFiltros(FrappeTestCase):
 			{"instituicao": "", "carteira": "null", "categoria": None, "page": "3"}
 		)
 		self.assertEqual(filtros, {"excluir_do_total": 0})
+
+	def test_sem_categoria_filtra_categoria_vazia(self):
+		filtros = build_extrato_filters({"categoria": EXTRATO_FILTRO_VAZIO})
+		self.assertEqual(filtros["categoria"], ["is", "not set"])
+
+	def test_valor_vazio_especial_so_vale_para_campos_previstos(self):
+		filtros = build_extrato_filters({"instituicao": EXTRATO_FILTRO_VAZIO})
+		self.assertEqual(filtros["instituicao"], EXTRATO_FILTRO_VAZIO)
 
 	def test_busca_por_descricao_gera_like_case_insensitive_na_descricao_reduzida(self):
 		filtros = build_extrato_filters({"descricao": "Pix"})
@@ -249,3 +264,91 @@ class TestExtratoRowsEndpoint(FrappeTestCase):
 
 	def test_page_size_padrao_e_maior_que_a_paginacao_antiga(self):
 		self.assertGreaterEqual(EXTRATO_PAGE_SIZE, 100)
+
+
+class TestExtratoPreferenciasColunas(FrappeTestCase):
+	def setUp(self):
+		frappe.set_user("Administrator")
+		self.chaves = [coluna["key"] for coluna in EXTRATO_COLUNAS]
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+		salvar_preferencias_extrato(None)
+
+	def test_normalizacao_descarta_colunas_desconhecidas_e_duplicadas(self):
+		preferencias = normalizar_preferencias_extrato(
+			{
+				"ordem": ["valor", "nao_existe", "valor", 3, "categoria"],
+				"larguras": {"valor": 5, "categoria": 10_000, "nao_existe": 100, "carteira": "abc"},
+				"visiveis": {"valor": False, "nao_existe": True, "categoria": "sim"},
+				"extra": "ignorado",
+			}
+		)
+		self.assertEqual(preferencias["ordem"], ["valor", "categoria"])
+		self.assertEqual(
+			preferencias["larguras"], {"valor": EXTRATO_LARGURA_MIN, "categoria": EXTRATO_LARGURA_MAX}
+		)
+		self.assertEqual(preferencias["visiveis"], {"valor": False})
+		self.assertNotIn("extra", preferencias)
+
+	def test_normalizacao_de_valor_invalido_vira_padrao(self):
+		self.assertEqual(normalizar_preferencias_extrato(None), {})
+		self.assertEqual(normalizar_preferencias_extrato("texto"), {})
+
+	def test_sem_preferencia_mantem_ordem_e_visibilidade_padrao(self):
+		colunas = aplicar_preferencias_extrato(list(EXTRATO_COLUNAS), None)
+		self.assertEqual([coluna["key"] for coluna in colunas], self.chaves)
+		for coluna in colunas:
+			self.assertEqual(coluna["visivel"], bool(coluna.get("padrao")))
+			self.assertIsNone(coluna["largura_px"])
+
+	def test_ordem_salva_vem_primeiro_e_colunas_novas_vao_para_o_fim(self):
+		colunas = aplicar_preferencias_extrato(
+			list(EXTRATO_COLUNAS),
+			{"ordem": ["valor", "categoria"], "larguras": {"valor": 150}, "visiveis": {"id": True}},
+		)
+		chaves = [coluna["key"] for coluna in colunas]
+		self.assertEqual(chaves[:2], ["valor", "categoria"])
+		# As demais seguem na ordem do sistema.
+		self.assertEqual(chaves[2:], [c for c in self.chaves if c not in ("valor", "categoria")])
+		por_chave = {coluna["key"]: coluna for coluna in colunas}
+		self.assertEqual(por_chave["valor"]["largura_px"], 150)
+		self.assertTrue(por_chave["id"]["visivel"])
+		# A ordem padrão fica disponível para o "Restaurar padrão" da tela.
+		self.assertEqual(por_chave["valor"]["ordem_padrao"], self.chaves.index("valor"))
+
+	def test_nao_altera_o_registro_global_de_colunas(self):
+		aplicar_preferencias_extrato(list(EXTRATO_COLUNAS), {"larguras": {"valor": 150}})
+		self.assertNotIn("largura_px", EXTRATO_COLUNAS[0])
+
+	def test_salvar_e_ler_preferencias_do_usuario(self):
+		salvar_preferencias_extrato('{"ordem": ["valor"], "larguras": {"valor": 200}}')
+		self.assertEqual(get_preferencias_extrato(), {"ordem": ["valor"], "larguras": {"valor": 200}})
+		gravado = frappe.db.sql(
+			"select data from `__UserSettings` where user=%s and doctype=%s",
+			("Administrator", DOCTYPE),
+		)
+		self.assertIn("gris_extrato_portal", gravado[0][0])
+
+	def test_preferencias_sao_por_usuario(self):
+		salvar_preferencias_extrato({"ordem": ["valor"]})
+		frappe.set_user("Guest")
+		self.assertIsNone(get_preferencias_extrato())
+
+	def test_restaurar_padrao_limpa_a_preferencia(self):
+		salvar_preferencias_extrato({"ordem": ["valor"]})
+		salvar_preferencias_extrato(None)
+		self.assertEqual(get_preferencias_extrato(), {})
+
+	def test_guest_nao_salva(self):
+		frappe.set_user("Guest")
+		with self.assertRaises(frappe.PermissionError):
+			salvar_preferencias_extrato({"ordem": ["valor"]})
+
+	def test_linhas_do_scroll_seguem_a_ordem_salva(self):
+		salvar_preferencias_extrato({"ordem": ["valor", "transacao_revisada"]})
+		html = render_extrato_rows(
+			[{"name": "T-1", "valor": 10, "transacao_revisada": 0}],
+			aplicar_preferencias_extrato(get_extrato_colunas(), get_preferencias_extrato()),
+		)
+		self.assertLess(html.index('data-col="valor"'), html.index('data-col="transacao_revisada"'))

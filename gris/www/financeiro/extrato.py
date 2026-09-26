@@ -3,11 +3,14 @@ no_cache = 1
 import frappe
 
 from gris.api.financeiro.transactions import (
+	EXTRATO_FILTRO_VAZIO,
 	EXTRATO_PAGE_SIZE,
+	aplicar_preferencias_extrato,
 	build_extrato_filters,
 	get_extrato_colunas,
 	get_extrato_opcoes_editaveis,
 	get_extrato_transacoes,
+	get_preferencias_extrato,
 )
 from gris.api.portal_access import enrich_context
 from gris.api.portal_cache_utils import get_uel_cached
@@ -63,7 +66,14 @@ def get_context(context):
 	total_transacoes = frappe.db.count("Transacao Extrato Geral", filters=filters)
 
 	# Todas as colunas são renderizadas; o seletor da tela apenas mostra/esconde.
-	context.colunas = get_extrato_colunas(context.can_view_full_description)
+	# Ordem, largura e visibilidade seguem a preferência salva pelo usuário.
+	preferencias = get_preferencias_extrato()
+	context.colunas = aplicar_preferencias_extrato(
+		get_extrato_colunas(context.can_view_full_description), preferencias
+	)
+	# Sem preferência no servidor, o JS migra a antiga (localStorage), se houver.
+	context.tem_preferencias_colunas = preferencias is not None
+	context.filtro_vazio = EXTRATO_FILTRO_VAZIO
 
 	# Opções dos campos editáveis direto na célula (edição em lote no grid).
 	context.opcoes_editaveis = get_extrato_opcoes_editaveis()

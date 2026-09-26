@@ -22,7 +22,7 @@
 {% set ns = namespace(
 	instituicao=[{"label": "Todas", "value": ""}],
 	carteira=[{"label": "Todas", "value": ""}],
-	categoria=[{"label": "Todas", "value": ""}],
+	categoria=[{"label": "Todas", "value": ""}, {"label": "Sem categoria", "value": filtro_vazio}],
 	centro=[{"label": "Todos", "value": ""}],
 	conta_fixa=[{"label": "Todas", "value": ""}]
 ) %}
@@ -156,12 +156,22 @@
 			trigger_attrs={"class": "btn-sm-outline"},
 			popover_attrs={"class": "col-toggle-panel"}
 		) %}
+			{#
+				Lista na ordem atual das colunas. As setas trocam a posição (a
+				alternativa acessível e de toque ao arrastar o cabeçalho);
+				`data-padrao` e `data-ordem-padrao` guardam o padrão do sistema
+				para o "Restaurar padrão".
+			#}
 			<div class="col-toggle-list col-toggle-list--scroll" id="extratoColunasLista">
 				{% for coluna in colunas %}
-					<label class="col-toggle-item">
-						<input type="checkbox" data-col-toggle="{{ coluna.key }}" {{ 'checked' if coluna.padrao else '' }} />
-						{{ coluna.label }}
-					</label>
+					<div class="extrato-col-item" data-col-item="{{ coluna.key }}" data-ordem-padrao="{{ coluna.ordem_padrao }}">
+						<label class="col-toggle-item extrato-col-item__label">
+							<input type="checkbox" data-col-toggle="{{ coluna.key }}" data-padrao="{{ 1 if coluna.padrao else 0 }}" {{ 'checked' if coluna.visivel else '' }} />
+							{{ coluna.label }}
+						</label>
+						<button type="button" class="btn-sm-icon-ghost extrato-col-item__mover" data-col-mover="-1" aria-label="Mover {{ coluna.label }} para a esquerda" title="Mover para a esquerda">{{ lucide_icon("chevron-up", size="sm") }}</button>
+						<button type="button" class="btn-sm-icon-ghost extrato-col-item__mover" data-col-mover="1" aria-label="Mover {{ coluna.label }} para a direita" title="Mover para a direita">{{ lucide_icon("chevron-down", size="sm") }}</button>
+					</div>
 				{% endfor %}
 			</div>
 			<div class="col-toggle-footer">
@@ -181,19 +191,28 @@
 		#}
 		<script type="application/json" id="extratoOpcoesEditaveis">{{ opcoes_editaveis | tojson }}</script>
 		<style id="extratoColunasStyle">
-			{%- for coluna in colunas if not coluna.padrao -%}
+			{%- for coluna in colunas if not coluna.visivel -%}
 			[data-col="{{ coluna.key }}"]{display:none}
 			{%- endfor -%}
 		</style>
-		<div class="extrato-tabela__scroll" id="extratoScroll">
+		{# Larguras escolhidas pelo usuário (arrastando a borda do cabeçalho). #}
+		<style id="extratoLargurasStyle">
+			{%- for coluna in colunas if coluna.largura_px -%}
+			{%- set px = (coluna.largura_px | int) ~ 'px' -%}
+			.extrato-tabela [data-col="{{ coluna.key }}"]{width:{{ px }};min-width:{{ px }};max-width:{{ px }}}.extrato-tabela [data-col="{{ coluna.key }}"] .extrato-truncate{max-width:100%}
+			{%- endfor -%}
+		</style>
+		<div class="extrato-tabela__scroll" id="extratoScroll" data-tem-preferencias="{{ 1 if tem_preferencias_colunas else 0 }}">
 			<table class="table extrato-tabela extrato-tabela--compacta">
 				<thead>
 					<tr>
 						<th class="extrato-col-select"><input type="checkbox" id="selectAll" aria-label="Selecionar todas as transações carregadas" /></th>
 						{% for coluna in colunas %}
 							<th data-col="{{ coluna.key }}"
-								class="{{ 'text-right' if coluna.tipo == 'moeda' else '' }}{{ ' extrato-th--editavel' if coluna.editavel else '' }}"
-								{%- if coluna.editavel %} title="Editável direto no grid"{% endif %}>{{ coluna.label }}{% if coluna.editavel %} {{ lucide_icon("pencil", size="sm", class_name="extrato-th__pencil") }}{% endif %}</th>
+								draggable="true"
+								{%- if coluna.largura_px %} data-largura="{{ coluna.largura_px | int }}"{% endif %}
+								class="extrato-th{{ ' text-right' if coluna.tipo == 'moeda' else '' }}{{ ' extrato-th--editavel' if coluna.editavel else '' }}"
+								title="{{ 'Editável direto no grid. ' if coluna.editavel else '' }}Arraste para mudar a ordem">{{ coluna.label }}{% if coluna.editavel %} {{ lucide_icon("pencil", size="sm", class_name="extrato-th__pencil") }}{% endif %}<span class="extrato-th__resize" data-col-resize="{{ coluna.key }}" aria-hidden="true" title="Arraste para ajustar a largura; clique duas vezes para voltar ao automático"></span></th>
 						{% endfor %}
 					</tr>
 				</thead>

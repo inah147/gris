@@ -159,11 +159,13 @@
 }
 
 /* Em telas grandes o grid rola dentro do card, mantendo filtros e cabeçalho
-   sempre visíveis. No mobile a rolagem continua sendo a da página. */
+   sempre visíveis, e ocupa toda a altura restante da janela (o extrato.js
+   calcula o valor exato; este é só o ponto de partida antes do script).
+   No mobile a rolagem continua sendo a da página. */
 @media (min-width: 48rem) {
 	.extrato-tabela__scroll {
-		max-height: calc(100vh - 16rem);
-		min-height: 24rem;
+		height: calc(100vh - 16rem);
+		min-height: 20rem;
 	}
 }
 

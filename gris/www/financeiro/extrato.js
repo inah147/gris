@@ -27,6 +27,9 @@
 		"mostrar_excluidas",
 	];
 
+	/** Folga entre o card da tabela e o pé da janela, em pixels. */
+	const MARGEM_INFERIOR = 16;
+
 	const COLUNAS_STORAGE_KEY = "gris_extrato_colunas_v1";
 	const FILTROS_STORAGE_KEY = "gris_extrato_filtros_abertos_v1";
 
@@ -170,24 +173,32 @@
 	}
 
 	/**
-	 * Encaixa a área rolável do grid no que sobra da viewport.
+	 * Faz o grid ocupar toda a altura que sobra da viewport.
 	 *
-	 * O cabeçalho é `position: sticky`, e como `overflow-x: auto` já torna o
-	 * contêiner um scrollport vertical, ele só gruda se o contêiner couber na
-	 * tela — caso contrário quem rola é a página e o cabeçalho sai junto. A
-	 * altura depende de onde o grid começa (o card de filtros varia com a
-	 * largura), então só o cliente sabe calcular.
+	 * O card da tabela vai até o pé da tela mesmo com poucas linhas (com os
+	 * filtros recolhidos, a lista fica com a página inteira), e o que passar
+	 * disso rola dentro do grid. Isso também mantém o cabeçalho `sticky`
+	 * grudado: como `overflow-x: auto` já torna o contêiner um scrollport
+	 * vertical, ele só gruda se o contêiner couber na tela. A altura depende
+	 * de onde o grid começa (o card de filtros varia com a largura e com o
+	 * painel aberto ou fechado), então só o cliente sabe calcular.
 	 */
 	function ajustarAlturaDoGrid() {
 		if (!scrollEl) return;
 		// Abaixo de 48rem a rolagem é a da página, como define o CSS da rota.
 		if (window.innerWidth < 768) {
-			scrollEl.style.maxHeight = "";
+			scrollEl.style.height = "";
 			return;
 		}
-		const topo = scrollEl.getBoundingClientRect().top;
-		const disponivel = window.innerHeight - topo - 24;
-		scrollEl.style.maxHeight = Math.max(disponivel, 320) + "px";
+		const rectScroll = scrollEl.getBoundingClientRect();
+		const card = scrollEl.closest(".extrato-tabela__card");
+		// Espaço do card abaixo do grid (padding/borda), para o card inteiro caber.
+		const rodapeDoCard = card ? card.getBoundingClientRect().bottom - rectScroll.bottom : 0;
+		// Posição relativa ao topo da página, não à janela: ao recolher os
+		// filtros a página ainda pode estar rolada quando este cálculo roda.
+		const topoNaPagina = rectScroll.top + window.scrollY;
+		const disponivel = window.innerHeight - topoNaPagina - rodapeDoCard - MARGEM_INFERIOR;
+		scrollEl.style.height = Math.max(disponivel, 320) + "px";
 	}
 
 	/**
@@ -213,9 +224,18 @@
 			} catch (_erro) {
 				// Preferência é conveniência; ignorar falha de storage.
 			}
-			// Abrir/fechar move o grid na página, então a altura é recalculada.
-			ajustarAlturaDoGrid();
 		});
+
+		// Abrir/fechar move o grid na página. O painel anima, então o `toggle`
+		// chega antes da altura final; observar o card pega cada mudança.
+		const card = painel.closest(".extrato-filtros-card") || painel;
+		if (typeof ResizeObserver !== "undefined") {
+			new ResizeObserver(ajustarAlturaDoGrid).observe(card);
+		} else {
+			painel.addEventListener("toggle", function () {
+				window.setTimeout(ajustarAlturaDoGrid, 300);
+			});
+		}
 	}
 
 	/**
@@ -667,6 +687,8 @@
 		const contador = document.getElementById("selectedCount");
 		if (contador) contador.textContent = quantidade;
 		if (barra) barra.classList.toggle("hidden", quantidade === 0);
+		// A barra pode quebrar a toolbar em outra linha e empurrar o grid.
+		ajustarAlturaDoGrid();
 	}
 
 	function toggleSelectAll(marcado) {

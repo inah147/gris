@@ -46,6 +46,35 @@ def _candidatos_a_chefe() -> list[dict]:
 	return [row for row in candidates if row.get("name") and eh_funcao_chefe_de_secao(row.get("funcao"))]
 
 
+def chefes_entre_candidatos(section_chiefs: list[dict], secao: str, ramo: str = "") -> list[str]:
+	"""A regra de ``buscar_chefes_de_secao`` sobre uma lista de chefes já carregada.
+
+	Serve a quem resolve a chefia de muitas seções de uma vez (ex.: o recorte da
+	contribuição mensal por chefe) sem repetir a consulta por jovem.
+	"""
+	normalized_secao = normalizar_texto(secao)
+	if normalized_secao:
+		matched_by_secao = [
+			row.get("name")
+			for row in section_chiefs
+			if row.get("name") and normalizar_texto(row.get("secao")) == normalized_secao
+		]
+		if matched_by_secao:
+			return list(dict.fromkeys(matched_by_secao))
+
+	normalized_ramo = normalizar_texto(ramo)
+	if normalized_ramo:
+		matched_by_ramo = [
+			row.get("name")
+			for row in section_chiefs
+			if row.get("name") and normalizar_texto(row.get("ramo")) == normalized_ramo
+		]
+		if matched_by_ramo:
+			return list(dict.fromkeys(matched_by_ramo))
+
+	return []
+
+
 def buscar_chefes_de_secao(secao: str, ramo: str = "") -> list[str]:
 	"""Nomes dos ``Associado`` que chefiam a seção informada.
 
@@ -55,28 +84,25 @@ def buscar_chefes_de_secao(secao: str, ramo: str = "") -> list[str]:
 	section_chiefs = _candidatos_a_chefe()
 	if not section_chiefs:
 		return []
+	return chefes_entre_candidatos(section_chiefs, secao, ramo)
 
-	normalized_secao = normalizar_texto(secao)
-	if normalized_secao:
-		matched_by_secao = [
-			row.get("name")
-			for row in section_chiefs
-			if normalizar_texto(row.get("secao")) == normalized_secao
-		]
-		matched_by_secao = [name for name in matched_by_secao if name]
-		if matched_by_secao:
-			return list(dict.fromkeys(matched_by_secao))
 
-	normalized_ramo = normalizar_texto(ramo)
-	if normalized_ramo:
-		matched_by_ramo = [
-			row.get("name") for row in section_chiefs if normalizar_texto(row.get("ramo")) == normalized_ramo
-		]
-		matched_by_ramo = [name for name in matched_by_ramo if name]
-		if matched_by_ramo:
-			return list(dict.fromkeys(matched_by_ramo))
+def associados_chefiados_por(chefe: str, associados: list[dict]) -> set[str]:
+	"""Quais dos ``associados`` (com ``name``, ``secao`` e ``ramo``) têm ``chefe`` como chefe de seção.
 
-	return []
+	É a regra de ``buscar_chefes_de_secao`` lida no sentido inverso: o jovem pertence
+	ao chefe quando o chefe aparece entre os chefes resolvidos para a seção/ramo dele.
+	"""
+	if not chefe or not associados:
+		return set()
+	section_chiefs = _candidatos_a_chefe()
+	if not any(row.get("name") == chefe for row in section_chiefs):
+		return set()
+	return {
+		associado["name"]
+		for associado in associados
+		if chefe in chefes_entre_candidatos(section_chiefs, associado.get("secao"), associado.get("ramo"))
+	}
 
 
 def buscar_contatos_chefes_por_ramo(ramos: list[str] | tuple[str, ...]) -> dict[str, list[frappe._dict]]:

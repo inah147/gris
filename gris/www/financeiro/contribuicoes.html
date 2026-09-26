@@ -22,6 +22,11 @@
 			Apurado a partir dos registros de cobrança (Pagamento Contribuicao Mensal): o status e
 			o valor de cada mês são o que está gravado no registro, editável na tela do contribuinte.
 		</p>
+		{% if recorte_secao %}
+		<p class="m-0 text-sm leading-relaxed text-muted-foreground">
+			Você vê só os beneficiários da sua seção.
+		</p>
+		{% endif %}
 	</div>
 </section>
 {% endblock %}
@@ -50,7 +55,11 @@
 			<p class="m-0 text-sm text-muted-foreground">Recebido no período</p>
 			<p class="m-0 mt-1 text-2xl font-semibold text-foreground contrib-num">{{ brl(totais.recebido_total) }}</p>
 			<p class="m-0 mt-2 text-xs text-muted-foreground">
+				{% if recorte_secao %}
+				Pagamentos dos beneficiários da sua seção
+				{% else %}
 				{{ brl(totais.recebido_vinculado) }} identificado &middot; {{ brl(totais.recebido_nao_vinculado) }} a identificar
+				{% endif %}
 			</p>
 		</section>
 	</article>
@@ -347,13 +356,14 @@
 {% endif %}
 {% endset %}
 
-{{ tabs(
-	id="contrib-tabs",
-	tabsets=[
-		{"id": "visao-geral", "tab": "Visão geral", "panel": painel_geral},
-		{"id": "por-associado", "tab": "Por associado", "panel": painel_associados},
-		{"id": "a-identificar", "tab": "A identificar (" ~ totais.transacoes_nao_vinculadas ~ ")", "panel": painel_identificar},
-		{"id": "cobrancas-mes", "tab": "Cobranças do mês (" ~ cobrancas_mes.totais.pendentes ~ ")", "panel": painel_cobrancas}
-	]
-) }}
+{# Transação sem associado não é de nenhuma seção: a aba some no recorte do chefe. #}
+{% set abas = [
+	{"id": "visao-geral", "tab": "Visão geral", "panel": painel_geral},
+	{"id": "por-associado", "tab": "Por associado", "panel": painel_associados}
+] %}
+{% if not recorte_secao %}
+	{% set abas = abas + [{"id": "a-identificar", "tab": "A identificar (" ~ totais.transacoes_nao_vinculadas ~ ")", "panel": painel_identificar}] %}
+{% endif %}
+{% set abas = abas + [{"id": "cobrancas-mes", "tab": "Cobranças do mês (" ~ cobrancas_mes.totais.pendentes ~ ")", "panel": painel_cobrancas}] %}
+{{ tabs(id="contrib-tabs", tabsets=abas) }}
 {% endblock %}

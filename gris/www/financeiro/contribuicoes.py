@@ -13,6 +13,7 @@ from gris.api.financeiro.pagamentos_contribuicao import (
 	STATUS_NAO_GERADO,
 	STATUS_PAGO,
 	apurar,
+	associados_visiveis,
 	normalizar_meses,
 )
 from gris.api.portal_access import enrich_context
@@ -65,7 +66,11 @@ def get_context(context):
 	meses = normalizar_meses(frappe.form_dict.get("meses"), MESES_PADRAO_TELA)
 	# Sem dados de cobrança: e-mail e telefone são do detalhe do contribuinte
 	# (/financeiro/contribuicao), que só os entrega a quem pode geri-los.
-	apuracao = apurar(meses)
+	# Chefe de seção só com a role da seção: a apuração vem recortada nos
+	# beneficiários dele. `None` é a visão do grupo inteiro.
+	visiveis = associados_visiveis()
+	context.recorte_secao = visiveis is not None
+	apuracao = apurar(meses, associados=visiveis)
 
 	context.meses_selecionado = str(meses)
 	context.opcoes_periodo = OPCOES_PERIODO
@@ -74,7 +79,7 @@ def get_context(context):
 	context.nao_vinculadas = apuracao["nao_vinculadas"]
 	context.associados_por_situacao = _agrupar_por_situacao(apuracao["associados"])
 	context.ordem_situacao = ORDEM_EXIBICAO
-	context.cobrancas_mes = resumo_cobrancas_do_mes()
+	context.cobrancas_mes = resumo_cobrancas_do_mes(associados=visiveis)
 	# Reenviar a cobrança é ação de gestor; o visualizador só acompanha.
 	context.pode_cobrar = ROLE_GESTOR in frappe.get_roles()
 	# Payload consumido pelos gráficos ECharts em contribuicoes.js. O escape de "<"

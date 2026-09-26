@@ -245,8 +245,16 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/recepcao/pesquisa_novos_respostas": ["Recepcao"],
 	"/financeiro": ["Visualizador Financeiro", "Gestor Financeiro"],
 	"/financeiro/dashboard": ["Visualizador Financeiro", "Gestor Financeiro"],
-	"/financeiro/contribuicoes": ["Gestor Contribuição Mensal", "Visualizador Contribuição Mensal"],
-	"/financeiro/contribuicao": ["Gestor Contribuição Mensal", "Visualizador Contribuição Mensal"],
+	"/financeiro/contribuicoes": [
+		"Gestor Contribuição Mensal",
+		"Visualizador Contribuição Mensal",
+		"Visualizador Contribuição Mensal da Seção",
+	],
+	"/financeiro/contribuicao": [
+		"Gestor Contribuição Mensal",
+		"Visualizador Contribuição Mensal",
+		"Visualizador Contribuição Mensal da Seção",
+	],
 	"/financeiro/contas": ["Visualizador Financeiro", "Gestor Financeiro"],
 	"/financeiro/extrato": ["Visualizador Financeiro", "Gestor Financeiro"],
 	"/financeiro/conciliacao": ["Gestor Financeiro"],

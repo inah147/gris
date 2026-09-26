@@ -1349,6 +1349,9 @@ def competencias_pendentes(apuracao: dict) -> list[dict]:
 # Role que pode ver e editar dados de cobrança na página de contribuições.
 ROLE_GESTOR = "Gestor Contribuição Mensal"
 
+# Roles que enxergam todos os contribuintes, sem recorte por seção.
+ROLES_VISAO_COMPLETA = (ROLE_GESTOR, "Visualizador Contribuição Mensal")
+
 # Rota do portal cujas roles governam esta apuração.
 ROTA_CONTRIBUICOES = "/financeiro/contribuicoes"
 
@@ -1361,6 +1364,13 @@ def _assert_acesso_leitura() -> None:
 	entra sem uma das roles de contribuição.
 	"""
 	if frappe.session.user == "Guest" or not user_has_access(ROTA_CONTRIBUICOES):
+		frappe.throw(
+			_("Sem permissão para consultar a apuração de contribuições mensais."),
+			frappe.PermissionError,
+		)
+	# Esta apuração não sabe recortar por seção: o chefe de seção, que só vê os
+	# próprios beneficiários, usa a de `pagamentos_contribuicao`.
+	if not set(ROLES_VISAO_COMPLETA) & set(frappe.get_roles()):
 		frappe.throw(
 			_("Sem permissão para consultar a apuração de contribuições mensais."),
 			frappe.PermissionError,

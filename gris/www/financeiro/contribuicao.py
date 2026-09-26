@@ -20,6 +20,7 @@ from gris.api.financeiro.pagamentos_contribuicao import (
 	MESES_PADRAO_TELA,
 	ROLE_GESTOR,
 	apurar_associados,
+	associados_visiveis,
 	get_extrato_do_associado,
 	normalizar_meses,
 )
@@ -79,6 +80,14 @@ def get_context(context):
 	if not associado:
 		context.not_found = True
 		context.missing_reason = "Parâmetro 'associado' não informado."
+		return context
+
+	# O chefe de seção só abre o detalhe dos beneficiários da própria seção. A
+	# mensagem é a mesma de "não encontrado": não confirma quem existe fora dela.
+	visiveis = associados_visiveis()
+	if visiveis is not None and associado not in visiveis:
+		context.not_found = True
+		context.missing_reason = "Associado não encontrado entre os contribuintes da sua seção."
 		return context
 
 	# Dados de cobrança e pendência de cadastro só entram para quem pode geri-los.

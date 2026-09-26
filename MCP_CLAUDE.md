@@ -80,6 +80,11 @@ um Pagamento Contribuicao Mensal é criado/atualizado por mês declarado,
 vinculado a ela. `competencias_transacao`/`definir_competencias_transacao`
 leem e escrevem esse detalhamento.
 
+O chefe de seção acompanha a contribuição dos beneficiários da própria seção
+pelo portal (`/financeiro/contribuicoes`, role "Visualizador Contribuição Mensal
+da Seção"); as ferramentas abaixo são da visão do grupo inteiro e não aceitam
+essa role.
+
 | Ferramenta | O que faz | Papéis |
 |---|---|---|
 | `resumo_contribuicoes` | Recebido, esperado, adimplência e pendências de cadastro no período, a partir dos registros de cobrança | Gestor/Visualizador Contribuição Mensal |

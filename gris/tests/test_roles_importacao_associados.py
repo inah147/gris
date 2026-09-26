@@ -171,3 +171,42 @@ class TestPapeisImportacaoAssociados(FrappeTestCase):
 		self.assertEqual(frappe.db.get_value("User", EMAIL_TESTE, "role_profile_name"), "Chefe de Seção")
 		self.assertIn("Gestor de Associados", papeis)
 		self.assertIn(PAPEL_EXTRA, papeis, "papel manual deve sobreviver à troca de perfil")
+
+
+class TestCriacaoUsuarioAssociadoSemPermissao(FrappeTestCase):
+	"""O job de criação roda com a sessão de quem gravou o Associado."""
+
+	EMAIL = "teste.criacao.associado@escoteiros.org.br"
+
+	def setUp(self):
+		self._cleanup()
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+		self._cleanup()
+
+	def _cleanup(self):
+		if frappe.db.exists("User", self.EMAIL):
+			frappe.delete_doc("User", self.EMAIL, ignore_permissions=True, force=True)
+		frappe.db.commit()
+
+	def test_cria_usuario_mesmo_sem_permissao_de_criar_user(self):
+		from gris.api.users.user_manager import create_associate_user
+
+		associado = frappe._dict(
+			name="TESTE-CRIACAO",
+			registro="999999-1",
+			id_escoteiros=self.EMAIL,
+			nome_completo="Teste Criacao Associado",
+			categoria="Beneficiário",
+			funcao=None,
+			status="Válido",
+			status_no_grupo="Ativo",
+		)
+
+		frappe.set_user("Guest")
+		self.assertFalse(frappe.has_permission("User", "create"))
+		create_associate_user(associate=associado, force=True)
+		frappe.set_user("Administrator")
+
+		self.assertTrue(frappe.db.exists("User", self.EMAIL))

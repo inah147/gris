@@ -184,7 +184,10 @@ def create_associate_user(associate=None, associate_name=None, force=False):
 				"enabled": enabled,
 			}
 		)
-		user.insert()
+		# O job roda com a sessão de quem gravou o Associado (ex.: equipe da
+		# recepção), que não tem permissão de criar User. A criação é uma
+		# automação do sistema; a porta manual já checa acesso antes de chegar aqui.
+		user.insert(ignore_permissions=True)
 		# Todo associado acompanha o quadro de sugestões. Concedido de forma
 		# aditiva (e não pelo Role Profile) porque gravar `role_profile_name`
 		# repopula a lista de papéis e apagaria concessões manuais.

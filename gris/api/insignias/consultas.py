@@ -110,6 +110,63 @@ def listar_solicitacoes(filtros: dict | None = None, limite: int = 200) -> list[
 	return linhas
 
 
+def lista_de_compras(nomes: list[str]) -> list[dict]:
+	"""Consolida os itens de várias solicitações em uma lista única para a compra.
+
+	Soma as quantidades de uma mesma insígnia pedida em pedidos diferentes, para
+	quem vai à loja comprar tudo de uma vez. Ordena por tipo e nome, na mesma
+	ordem do catálogo, o que facilita achar os itens na vitrine.
+	"""
+	if not nomes:
+		return []
+
+	itens = frappe.get_all(
+		"Item de Solicitacao de Insignias",
+		filters={"parent": ["in", nomes], "parenttype": DOCTYPE},
+		fields=["parent", "insignia", "tipo", "ramo", "quantidade", "valor_unitario"],
+		order_by="parent asc, idx asc",
+	)
+	if not itens:
+		return []
+
+	catalogo = {
+		registro["name"]: registro
+		for registro in frappe.get_all(
+			"Insignia ou Distintivo",
+			filters={"name": ["in", list({item["insignia"] for item in itens if item["insignia"]})]},
+			fields=["name", "nome", "tipo", "ramo", "codigo", "valor_unitario"],
+		)
+	}
+
+	consolidado: dict[str, dict] = {}
+	for item in itens:
+		chave = item["insignia"] or ""
+		registro = catalogo.get(chave, {})
+		linha = consolidado.get(chave)
+		if linha is None:
+			linha = consolidado[chave] = {
+				"insignia": chave,
+				"nome": registro.get("nome") or chave or "—",
+				"tipo": registro.get("tipo") or item.get("tipo") or "—",
+				"ramo": registro.get("ramo") or item.get("ramo") or "—",
+				"codigo": registro.get("codigo") or "",
+				# Preço de referência atual do catálogo; o do item é o que valia no pedido.
+				"valor_unitario": flt(registro.get("valor_unitario") or item.get("valor_unitario")),
+				"quantidade": 0,
+				"pedidos": [],
+			}
+		linha["quantidade"] += int(item.get("quantidade") or 0)
+		if item["parent"] not in linha["pedidos"]:
+			linha["pedidos"].append(item["parent"])
+
+	linhas = sorted(consolidado.values(), key=lambda linha: (linha["tipo"], linha["nome"].lower()))
+	for linha in linhas:
+		linha["valor_total"] = linha["valor_unitario"] * linha["quantidade"]
+		linha["valor_unitario_fmt"] = formatar_moeda(linha["valor_unitario"])
+		linha["valor_total_fmt"] = formatar_moeda(linha["valor_total"])
+	return linhas
+
+
 def minhas_solicitacoes(user: str | None = None) -> list[dict]:
 	return listar_solicitacoes({"solicitante": user or frappe.session.user})
 

@@ -240,3 +240,86 @@ class TestTimelineEResumo(FrappeTestCase):
 		self.assertEqual(resumo[STATUS_SOLICITADA], 2)
 		self.assertEqual(resumo[STATUS_ENTREGUE], 1)
 		self.assertEqual(resumo[STATUS_COMPRADA], 0)
+
+
+class TestListaDeCompras(FrappeTestCase):
+	"""Consolidação dos itens dos pedidos aguardando compra em uma lista única."""
+
+	ITENS: ClassVar[list[dict]] = [
+		{
+			"parent": "SI-001",
+			"insignia": "Acampamento",
+			"tipo": "Especialidade",
+			"ramo": "Todos",
+			"quantidade": 2,
+			"valor_unitario": 5,
+		},
+		{
+			"parent": "SI-001",
+			"insignia": "Lis de Ouro",
+			"tipo": "Distintivo de Progressão",
+			"ramo": "Escoteiro",
+			"quantidade": 1,
+			"valor_unitario": 8,
+		},
+		{
+			"parent": "SI-002",
+			"insignia": "Acampamento",
+			"tipo": "Especialidade",
+			"ramo": "Todos",
+			"quantidade": 3,
+			"valor_unitario": 5,
+		},
+	]
+	CATALOGO: ClassVar[list[dict]] = [
+		{
+			"name": "Acampamento",
+			"nome": "Acampamento",
+			"tipo": "Especialidade",
+			"ramo": "Todos",
+			"codigo": "ESP-01",
+			"valor_unitario": 6,
+		},
+		{
+			"name": "Lis de Ouro",
+			"nome": "Lis de Ouro",
+			"tipo": "Distintivo de Progressão",
+			"ramo": "Escoteiro",
+			"codigo": "",
+			"valor_unitario": 8,
+		},
+	]
+
+	def setUp(self):
+		original = consultas.frappe.get_all
+
+		def fake_get_all(doctype, *args, **kwargs):
+			if doctype == "Item de Solicitacao de Insignias":
+				pedidos = kwargs["filters"]["parent"][1]
+				return [dict(item) for item in self.ITENS if item["parent"] in pedidos]
+			if doctype == "Insignia ou Distintivo":
+				return [dict(registro) for registro in self.CATALOGO]
+			return original(doctype, *args, **kwargs)
+
+		consultas.frappe.get_all = fake_get_all
+		self.addCleanup(lambda: setattr(consultas.frappe, "get_all", original))
+
+	def test_soma_a_mesma_insignia_de_pedidos_diferentes(self):
+		linhas = {linha["insignia"]: linha for linha in consultas.lista_de_compras(["SI-001", "SI-002"])}
+		self.assertEqual(linhas["Acampamento"]["quantidade"], 5)
+		self.assertEqual(linhas["Acampamento"]["pedidos"], ["SI-001", "SI-002"])
+		self.assertEqual(linhas["Lis de Ouro"]["quantidade"], 1)
+		self.assertEqual(linhas["Lis de Ouro"]["pedidos"], ["SI-001"])
+
+	def test_usa_preco_e_codigo_atuais_do_catalogo(self):
+		linhas = {linha["insignia"]: linha for linha in consultas.lista_de_compras(["SI-001", "SI-002"])}
+		self.assertEqual(linhas["Acampamento"]["codigo"], "ESP-01")
+		self.assertEqual(linhas["Acampamento"]["valor_unitario"], 6)
+		self.assertEqual(linhas["Acampamento"]["valor_total"], 30)
+
+	def test_ordena_por_tipo_e_nome(self):
+		linhas = consultas.lista_de_compras(["SI-001", "SI-002"])
+		self.assertEqual([linha["insignia"] for linha in linhas], ["Lis de Ouro", "Acampamento"])
+
+	def test_sem_pedidos_devolve_lista_vazia(self):
+		self.assertEqual(consultas.lista_de_compras([]), [])

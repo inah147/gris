@@ -38,6 +38,7 @@ from gris.api.financeiro.contribuicoes import (
 	rotulo_mes,
 )
 from gris.api.portal_access import user_has_access
+from gris.utils.chefes import associados_chefiados_por, eh_funcao_chefe_de_secao
 
 STATUS_PAGO = "Pago"
 STATUS_EM_ABERTO = "Em Aberto"
@@ -57,7 +58,37 @@ ORDEM_SITUACAO = [STATUS_ATRASADO, STATUS_EM_ABERTO, STATUS_NAO_GERADO, STATUS_P
 STATUS_VALIDOS = (STATUS_PAGO, STATUS_EM_ABERTO, STATUS_ATRASADO)
 
 ROLE_GESTOR = "Gestor Contribuição Mensal"
+ROLE_VISUALIZADOR = "Visualizador Contribuição Mensal"
+# Chefe de seção: vê só os beneficiários da própria seção (ver `associados_visiveis`).
+ROLE_VISUALIZADOR_SECAO = "Visualizador Contribuição Mensal da Seção"
 ROTA_CONTRIBUICOES = "/financeiro/contribuicoes"
+
+
+def associados_visiveis(user: str | None = None) -> set[str] | None:
+	"""Recorte da contribuição mensal que o usuário pode ver.
+
+	`None` é a visão completa (gestor ou visualizador do grupo). Quem só tem a role
+	da seção vê os beneficiários que tem como chefe de seção — a mesma regra de
+	`gris.utils.chefes`, casando a `secao` (e, na falta, o `ramo`) do jovem com o
+	cadastro do chefe. Sem Associado vinculado ao usuário, ou sem função de chefe
+	de seção, o recorte é vazio: a role sozinha não abre a lista de ninguém.
+	"""
+	user = user or frappe.session.user
+	roles = frappe.get_roles(user)
+	if ROLE_GESTOR in roles or ROLE_VISUALIZADOR in roles:
+		return None
+
+	chefe = frappe.db.get_value("Associado", {"id_escoteiros": user}, ["name", "funcao"], as_dict=True)
+	if not chefe or not eh_funcao_chefe_de_secao(chefe.funcao):
+		return set()
+
+	jovens = frappe.get_all(
+		"Associado",
+		filters={"categoria": ["in", list(CATEGORIAS_CONTRIBUINTES)]},
+		fields=["name", "secao", "ramo"],
+		limit_page_length=0,
+	)
+	return associados_chefiados_por(chefe.name, jovens)
 
 
 def get_dia_vencimento() -> int:
@@ -196,9 +227,16 @@ def _acao_de_cadastro(contribuinte: dict) -> str | None:
 
 
 def apurar(
-	meses=MESES_PADRAO, hoje: datetime.date | None = None, incluir_dados_cobranca: bool = False
+	meses=MESES_PADRAO,
+	hoje: datetime.date | None = None,
+	incluir_dados_cobranca: bool = False,
+	associados: set[str] | None = None,
 ) -> dict:
-	"""Apuração completa do período, lida do Pagamento Contribuicao Mensal."""
+	"""Apuração completa do período, lida do Pagamento Contribuicao Mensal.
+
+	`associados` recorta a apuração (ver `associados_visiveis`). Recortada, ela
+	deixa de fora as transações sem associado: não são de nenhuma seção.
+	"""
 	quantidade_meses = normalizar_meses(meses)
 	hoje = hoje or getdate()
 	sequencia = construir_meses(quantidade_meses, hoje)
@@ -207,8 +245,15 @@ def apurar(
 	proximo_mes = getdate(add_months(sequencia[-1], 1))
 
 	contribuintes = get_contribuintes()
-	pagamentos = get_pagamentos_por_associado(primeiro_dia, ultimo_dia)
-	nao_vinculadas = get_transacoes_nao_vinculadas(primeiro_dia, proximo_mes)
+	if associados is None:
+		pagamentos = get_pagamentos_por_associado(primeiro_dia, ultimo_dia)
+		nao_vinculadas = get_transacoes_nao_vinculadas(primeiro_dia, proximo_mes)
+	else:
+		contribuintes = [c for c in contribuintes if c["name"] in associados]
+		pagamentos = get_pagamentos_por_associado(
+			primeiro_dia, ultimo_dia, [c["name"] for c in contribuintes]
+		)
+		nao_vinculadas = []
 
 	chaves = [chave_mes(mes) for mes in sequencia]
 	esperado_mes = dict.fromkeys(chaves, 0.0)
@@ -379,12 +424,25 @@ def _assert_acesso_leitura() -> None:
 		)
 
 
+def assert_associado_visivel(associado: str) -> None:
+	"""Barra o contribuinte fora do recorte do usuário (ex.: de outra seção)."""
+	visiveis = associados_visiveis()
+	if visiveis is not None and associado not in visiveis:
+		frappe.throw(
+			_("Sem permissão para consultar a contribuição mensal deste associado."),
+			frappe.PermissionError,
+		)
+
+
 @frappe.whitelist()
 def get_apuracao(meses: str | int = MESES_PADRAO):
-	"""Apuração completa do período, para consumo do portal."""
+	"""Apuração do período, para consumo do portal — recortada pela seção do chefe."""
 	_assert_acesso_leitura()
 	pode_ver_cobranca = ROLE_GESTOR in frappe.get_roles()
-	return {"success": True, "dados": apurar(meses, incluir_dados_cobranca=pode_ver_cobranca)}
+	return {
+		"success": True,
+		"dados": apurar(meses, incluir_dados_cobranca=pode_ver_cobranca, associados=associados_visiveis()),
+	}
 
 
 @frappe.whitelist()
@@ -398,6 +456,7 @@ def get_extrato_do_associado(associado: str, meses: str | int = MESES_PADRAO):
 	_assert_acesso_leitura()
 	if not associado:
 		frappe.throw(_("Parâmetro 'associado' é obrigatório."), frappe.ValidationError)
+	assert_associado_visivel(associado)
 
 	quantidade_meses = normalizar_meses(meses)
 	sequencia = construir_meses(quantidade_meses)
@@ -411,6 +470,8 @@ __all__ = [
 	"MESES_PADRAO_TELA",
 	"ORDEM_SITUACAO",
 	"ROLE_GESTOR",
+	"ROLE_VISUALIZADOR",
+	"ROLE_VISUALIZADOR_SECAO",
 	"ROTA_CONTRIBUICOES",
 	"SLUG_SITUACAO",
 	"STATUS_ATRASADO",
@@ -419,6 +480,8 @@ __all__ = [
 	"STATUS_PAGO",
 	"apurar",
 	"apurar_associados",
+	"assert_associado_visivel",
+	"associados_visiveis",
 	"competencias_pendentes",
 	"competencias_quitadas",
 	"get_apuracao",

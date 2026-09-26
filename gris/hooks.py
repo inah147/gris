@@ -429,6 +429,7 @@ fixtures = [
 					"Visualizador Associados",
 					"Visualizador de projetos",
 					"Visualizador Contribuição Mensal",
+					"Visualizador Contribuição Mensal da Seção",
 					"Visualizador Financeiro",
 					"Gestor da UEL",
 					"Acesso ao Desk",

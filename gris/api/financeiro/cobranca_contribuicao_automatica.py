@@ -314,19 +314,24 @@ def enviar_lembretes(
 SLUG_STATUS_COBRANCA = {"Pago": "pago", "Pendente": "aberto", "Erro": "atrasado", "Substituída": "na"}
 
 
-def resumo_cobrancas_do_mes(hoje: datetime.date | None = None) -> dict:
+def resumo_cobrancas_do_mes(hoje: datetime.date | None = None, associados: set[str] | None = None) -> dict:
 	"""Acompanhamento das cobranças emitidas no mês, para a tela do financeiro.
 
 	Junta as automáticas e as manuais do mês: o que interessa ao gestor é quem já
-	recebeu o link, quem pagou e quem ficou sem mensagem.
+	recebeu o link, quem pagou e quem ficou sem mensagem. `associados` recorta as
+	cobranças (o chefe de seção só vê as dos próprios beneficiários).
 	"""
 	hoje = hoje or getdate()
 	mes = hoje.replace(day=1)
 	config = get_config()
 
+	filtros: dict = {"finalidade": FINALIDADE_CONTRIBUICAO, "mes_emissao": mes}
+	if associados is not None:
+		filtros["associado"] = ["in", list(associados) or [""]]
+
 	cobrancas = frappe.get_all(
 		"Cobranca Infinitepay",
-		filters={"finalidade": FINALIDADE_CONTRIBUICAO, "mes_emissao": mes},
+		filters=filtros,
 		fields=[
 			"name",
 			"associado",

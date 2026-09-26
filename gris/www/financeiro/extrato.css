@@ -209,6 +209,97 @@
 	width: 34px;
 }
 
+/* ---------------------------------------------------------------------------
+   Ordem e largura das colunas (preferência salva por usuário).
+
+   O cabeçalho arrasta para trocar de lugar; a borda direita (alça) ajusta a
+   largura. Uma coluna com largura fixa corta o conteúdo com reticências.
+   --------------------------------------------------------------------------- */
+.extrato-th {
+	cursor: grab;
+}
+
+.extrato-th--arrastando {
+	opacity: 0.5;
+}
+
+.extrato-th--alvo-antes {
+	box-shadow: inset 2px 0 0 var(--primary), inset 0 -1px 0 var(--border);
+}
+
+.extrato-th--alvo-depois {
+	box-shadow: inset -2px 0 0 var(--primary), inset 0 -1px 0 var(--border);
+}
+
+.extrato-tabela [data-col] {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* O editor inline não pode ser cortado por uma coluna estreita. */
+.extrato-tabela .extrato-cell--editando {
+	overflow: visible;
+}
+
+.extrato-th__resize {
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 0.5rem;
+	height: 100%;
+	cursor: col-resize;
+	touch-action: none;
+}
+
+.extrato-th__resize::after {
+	content: "";
+	position: absolute;
+	top: 20%;
+	right: 0.1875rem;
+	width: 2px;
+	height: 60%;
+	border-radius: 1px;
+	background-color: transparent;
+}
+
+.extrato-th:hover .extrato-th__resize::after {
+	background-color: var(--border);
+}
+
+.extrato-th__resize:hover::after,
+.extrato-redimensionando .extrato-th__resize::after {
+	background-color: var(--primary);
+}
+
+/* Durante o arraste da largura o cursor não pisca nem seleciona texto. */
+.extrato-redimensionando,
+.extrato-redimensionando * {
+	cursor: col-resize !important;
+	user-select: none;
+}
+
+/* Lista do seletor: marcar/desmarcar à esquerda, setas de posição à direita. */
+.extrato-col-item {
+	display: flex;
+	align-items: center;
+	gap: 0.125rem;
+}
+
+.extrato-col-item__label {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.extrato-col-item__mover {
+	flex-shrink: 0;
+	color: var(--muted-foreground);
+}
+
+.extrato-col-item:first-child .extrato-col-item__mover[data-col-mover="-1"],
+.extrato-col-item:last-child .extrato-col-item__mover[data-col-mover="1"] {
+	visibility: hidden;
+}
+
 /* `.table th` do Basecoat força `text-align: left`; a coluna de valor precisa
    vencer essa especificidade. */
 .extrato-tabela th.text-right,

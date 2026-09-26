@@ -6,6 +6,7 @@ import json
 
 import frappe
 from frappe import _
+from frappe.model.utils.user_settings import get_user_settings, update_user_settings
 from frappe.utils import cint, getdate
 
 from gris.api.portal_access import user_has_access
@@ -93,6 +94,13 @@ EXTRATO_FILTER_FIELDS = (
 	"fonte",
 	"excluir_do_total",
 )
+
+#: Valor especial dos filtros de Link que pede as transações com o campo vazio
+#: (ex.: "Sem categoria"), já que o vazio da query string significa "Todas".
+EXTRATO_FILTRO_VAZIO = "__vazio__"
+
+#: Campos que aceitam `EXTRATO_FILTRO_VAZIO` no filtro.
+EXTRATO_FILTER_CAMPOS_VAZIO = ("categoria",)
 
 #: Campo usado na busca textual por descrição; é o mesmo exibido por padrão
 #: no grid (`descricao_reduzida`), então a busca não vaza o conteúdo da
@@ -266,7 +274,11 @@ def build_extrato_filters(request_args: dict | None, pode_buscar_descricao_compl
 
 	for campo in EXTRATO_FILTER_FIELDS:
 		valor = request_args.get(campo)
-		if valor not in (None, "", "null"):
+		if valor in (None, "", "null"):
+			continue
+		if valor == EXTRATO_FILTRO_VAZIO and campo in EXTRATO_FILTER_CAMPOS_VAZIO:
+			filters[campo] = ["is", "not set"]
+		else:
 			filters[campo] = valor
 
 	busca_descricao = request_args.get("descricao")
@@ -294,6 +306,135 @@ def build_extrato_filters(request_args: dict | None, pode_buscar_descricao_compl
 def get_extrato_colunas(can_view_full_description: bool = False) -> list[dict]:
 	"""Colunas disponíveis no grid para o usuário atual."""
 	return [coluna for coluna in EXTRATO_COLUNAS if can_view_full_description or not coluna.get("restrita")]
+
+
+# ---------------------------------------------------------------------------
+# Preferências do grid por usuário (ordem, largura e visibilidade das colunas)
+# ---------------------------------------------------------------------------
+
+#: Chave das preferências do grid em `__UserSettings` (o mesmo mecanismo que o
+#: Desk usa para as configurações de listagem, uma linha por usuário e doctype).
+EXTRATO_PREFERENCIAS_DOCTYPE = "Transacao Extrato Geral"
+EXTRATO_PREFERENCIAS_CHAVE = "gris_extrato_portal"
+
+#: Limites da largura de coluna escolhida pelo usuário, em pixels.
+EXTRATO_LARGURA_MIN = 48
+EXTRATO_LARGURA_MAX = 1200
+
+
+def normalizar_preferencias_extrato(preferencias) -> dict:
+	"""Filtra as preferências recebidas para o formato e as colunas conhecidas.
+
+	Chaves desconhecidas são descartadas e larguras ficam dentro dos limites,
+	então o que é gravado nunca vira CSS ou campo arbitrário.
+	"""
+	if not isinstance(preferencias, dict):
+		return {}
+	chaves_validas = {coluna["key"] for coluna in EXTRATO_COLUNAS}
+	normalizadas: dict = {}
+
+	ordem = preferencias.get("ordem")
+	if isinstance(ordem, list):
+		normalizadas["ordem"] = []
+		for chave in ordem:
+			if isinstance(chave, str) and chave in chaves_validas and chave not in normalizadas["ordem"]:
+				normalizadas["ordem"].append(chave)
+
+	larguras = preferencias.get("larguras")
+	if isinstance(larguras, dict):
+		normalizadas["larguras"] = {
+			chave: max(EXTRATO_LARGURA_MIN, min(cint(largura), EXTRATO_LARGURA_MAX))
+			for chave, largura in larguras.items()
+			if chave in chaves_validas and cint(largura) > 0
+		}
+
+	visiveis = preferencias.get("visiveis")
+	if isinstance(visiveis, dict):
+		normalizadas["visiveis"] = {
+			chave: bool(visivel)
+			for chave, visivel in visiveis.items()
+			if chave in chaves_validas and isinstance(visivel, bool | int)
+		}
+
+	return normalizadas
+
+
+def get_preferencias_extrato() -> dict | None:
+	"""Preferências do grid do usuário atual, ou `None` se ele nunca salvou."""
+	try:
+		dados = json.loads(get_user_settings(EXTRATO_PREFERENCIAS_DOCTYPE) or "{}")
+	except ValueError:
+		return None
+	if not isinstance(dados, dict) or EXTRATO_PREFERENCIAS_CHAVE not in dados:
+		return None
+	return normalizar_preferencias_extrato(dados.get(EXTRATO_PREFERENCIAS_CHAVE))
+
+
+def aplicar_preferencias_extrato(colunas: list[dict], preferencias: dict | None) -> list[dict]:
+	"""Devolve cópias das colunas na ordem do usuário, com `visivel` e `largura_px`.
+
+	Colunas que a preferência não conhece (novas no sistema) mantêm a
+	visibilidade padrão e entram no fim, sem sumir da tela.
+	"""
+	preferencias = preferencias or {}
+	visiveis = preferencias.get("visiveis") or {}
+	larguras = preferencias.get("larguras") or {}
+	posicao = {chave: indice for indice, chave in enumerate(preferencias.get("ordem") or [])}
+
+	resultado = []
+	for indice_padrao, coluna in enumerate(colunas):
+		copia = dict(coluna)
+		copia["ordem_padrao"] = indice_padrao
+		copia["visivel"] = visiveis.get(coluna["key"], bool(coluna.get("padrao")))
+		copia["largura_px"] = larguras.get(coluna["key"])
+		resultado.append(copia)
+
+	resultado.sort(key=lambda coluna: (posicao.get(coluna["key"], len(posicao)), coluna["ordem_padrao"]))
+	return resultado
+
+
+def get_extrato_colunas_do_usuario(can_view_full_description: bool = False) -> list[dict]:
+	"""Colunas permitidas ao usuário, já na ordem e com as larguras que ele salvou."""
+	return aplicar_preferencias_extrato(
+		get_extrato_colunas(can_view_full_description), get_preferencias_extrato()
+	)
+
+
+@frappe.whitelist(methods=["POST"])
+def salvar_preferencias_extrato(preferencias: str | dict | None = None):
+	"""Grava a ordem, a largura e a visibilidade das colunas do extrato do usuário.
+
+	Args:
+		preferencias: `{"ordem": [...], "larguras": {...}, "visiveis": {...}}`
+			(JSON string ou dict). Vazio/`null` volta ao padrão do sistema.
+	"""
+	if frappe.session.user == "Guest" or not user_has_access("/financeiro/extrato"):
+		frappe.throw(_("Sem permissão para configurar o extrato"), frappe.PermissionError)
+
+	if isinstance(preferencias, str):
+		try:
+			preferencias = json.loads(preferencias or "null")
+		except ValueError:
+			frappe.throw(_("Preferências inválidas"))
+
+	# Preferência vazia ("Restaurar padrão") faz o grid voltar a seguir `EXTRATO_COLUNAS`.
+	normalizadas = normalizar_preferencias_extrato(preferencias)
+	update_user_settings(EXTRATO_PREFERENCIAS_DOCTYPE, {EXTRATO_PREFERENCIAS_CHAVE: normalizadas})
+
+	# O Frappe só leva o cache para o banco de hora em hora; gravar já garante
+	# que a preferência sobreviva a um flush do Redis e siga o usuário.
+	_gravar_user_settings_extrato()
+	return normalizadas
+
+
+def _gravar_user_settings_extrato():
+	dados = get_user_settings(EXTRATO_PREFERENCIAS_DOCTYPE)
+	frappe.db.sql(
+		"""INSERT INTO `__UserSettings` (`user`, `doctype`, `data`)
+		VALUES (%s, %s, %s)
+		ON DUPLICATE KEY UPDATE `data` = %s""",
+		(frappe.session.user, EXTRATO_PREFERENCIAS_DOCTYPE, dados, dados),
+	)
 
 
 def get_extrato_transacoes(
@@ -353,7 +494,7 @@ def get_extrato_rows(filtros: str | dict | None = None, start: int = 0, page_len
 	page_length = max(1, min(page_length, EXTRATO_MAX_PAGE_SIZE))
 
 	pode_ver_descricao_completa = "Gestor Financeiro" in frappe.get_roles()
-	colunas = get_extrato_colunas(pode_ver_descricao_completa)
+	colunas = get_extrato_colunas_do_usuario(pode_ver_descricao_completa)
 
 	# Busca uma linha extra para saber se ainda há próximo lote sem novo count().
 	transacoes = get_extrato_transacoes(
@@ -468,7 +609,7 @@ def update_extrato_celulas(transaction_ids: str | list, campo: str, valor: str |
 			falhas += 1
 			frappe.log_error(f"Erro ao editar transação {transaction_id}: {erro!s}")
 
-	colunas = get_extrato_colunas("Gestor Financeiro" in frappe.get_roles())
+	colunas = get_extrato_colunas_do_usuario("Gestor Financeiro" in frappe.get_roles())
 	linhas = (
 		get_extrato_transacoes(
 			{"name": ["in", atualizadas]},

@@ -83,6 +83,8 @@
 		Array.from(parser.querySelectorAll("tr[data-transaction-id]")).forEach(function (tr) {
 			const id = tr.getAttribute("data-transaction-id");
 			if (tbody.querySelector('tr[data-transaction-id="' + CSS.escape(id) + '"]')) return;
+			// O servidor já usa a ordem salva; isto cobre uma troca ainda não gravada.
+			ordenarCelulas(tr);
 			fragmento.appendChild(tr);
 			inseridas += 1;
 		});
@@ -235,18 +237,43 @@
 	}
 
 	// -----------------------------------------------------------------------
-	// Seletor de colunas
+	// Colunas: visibilidade, ordem e largura
 	//
-	// Todas as colunas vêm renderizadas do servidor; mostrar/esconder é só CSS
-	// sobre `data-col`, então a troca é imediata e vale também para as linhas
-	// que o scroll infinito ainda vai carregar.
+	// Todas as colunas vêm renderizadas do servidor já na ordem e com as
+	// larguras que o usuário salvou. Mostrar/esconder e largura são CSS sobre
+	// `data-col` (valem também para as linhas que o scroll infinito ainda vai
+	// carregar); a ordem reposiciona as células de cada linha. A preferência é
+	// gravada por usuário no servidor, então acompanha a pessoa em qualquer
+	// navegador.
 	// -----------------------------------------------------------------------
+
+	const LARGURA_MIN = 48;
+	const LARGURA_MAX = 1200;
+
+	const colunasState = {
+		ordem: [],
+		larguras: {},
+		salvarTimer: null,
+	};
 
 	function getColunaCheckboxes() {
 		return Array.from(document.querySelectorAll("[data-col-toggle]"));
 	}
 
-	function lerPreferenciaColunas() {
+	function getItensDaLista() {
+		return Array.from(document.querySelectorAll("#extratoColunasLista [data-col-item]"));
+	}
+
+	function visibilidadeAtual() {
+		return Object.fromEntries(
+			getColunaCheckboxes().map(function (cb) {
+				return [cb.dataset.colToggle, cb.checked];
+			})
+		);
+	}
+
+	/** Preferência antiga (só visibilidade, por navegador), migrada uma única vez. */
+	function lerPreferenciaLegada() {
 		try {
 			const salvo = JSON.parse(window.localStorage.getItem(COLUNAS_STORAGE_KEY) || "null");
 			return salvo && typeof salvo === "object" ? salvo : null;
@@ -255,67 +282,341 @@
 		}
 	}
 
-	function salvarPreferenciaColunas(visiveis) {
+	function descartarPreferenciaLegada() {
 		try {
-			window.localStorage.setItem(COLUNAS_STORAGE_KEY, JSON.stringify(visiveis));
+			window.localStorage.removeItem(COLUNAS_STORAGE_KEY);
 		} catch (_erro) {
-			// Preferência é conveniência; sem storage a tela segue no padrão.
+			// Sem storage não há preferência antiga para remover.
 		}
 	}
 
-	function aplicarColunas() {
+	function enviarPreferencias(preferencias) {
+		frappe.call({
+			method: "gris.api.financeiro.transactions.salvar_preferencias_extrato",
+			type: "POST",
+			args: { preferencias: JSON.stringify(preferencias) },
+			// Salvar layout não deve travar nem piscar a tela.
+			freeze: false,
+			error: function () {
+				frappe.show_alert({
+					message: __("Não foi possível salvar a configuração das colunas"),
+					indicator: "orange",
+				});
+			},
+		});
+	}
+
+	/** Agrupa mudanças seguidas (arrastar, várias setas) numa só gravação. */
+	function agendarSalvarPreferencias() {
+		window.clearTimeout(colunasState.salvarTimer);
+		colunasState.salvarTimer = window.setTimeout(function () {
+			enviarPreferencias({
+				ordem: colunasState.ordem.slice(),
+				larguras: Object.assign({}, colunasState.larguras),
+				visiveis: visibilidadeAtual(),
+			});
+		}, 400);
+	}
+
+	function aplicarVisibilidade() {
 		const style = document.getElementById("extratoColunasStyle");
 		if (!style) return;
-		const ocultas = getColunaCheckboxes()
+		style.textContent = getColunaCheckboxes()
 			.filter(function (cb) {
 				return !cb.checked;
 			})
 			.map(function (cb) {
-				return '[data-col="' + cb.dataset.colToggle + '"]{display:none}';
-			});
-		style.textContent = ocultas.join("");
+				return '[data-col="' + CSS.escape(cb.dataset.colToggle) + '"]{display:none}';
+			})
+			.join("");
 	}
 
-	function iniciarSeletorDeColunas() {
+	function aplicarLarguras() {
+		const style = document.getElementById("extratoLargurasStyle");
+		if (!style) return;
+		style.textContent = Object.keys(colunasState.larguras)
+			.map(function (chave) {
+				// Mesmas regras que o extrato.html escreve na carga da página.
+				const px = colunasState.larguras[chave] + "px";
+				const seletor = '.extrato-tabela [data-col="' + CSS.escape(chave) + '"]';
+				return (
+					seletor +
+					"{width:" +
+					px +
+					";min-width:" +
+					px +
+					";max-width:" +
+					px +
+					"}" +
+					seletor +
+					" .extrato-truncate{max-width:100%}"
+				);
+			})
+			.join("");
+	}
+
+	/** Reposiciona as células de uma linha (cabeçalho ou corpo) na ordem atual. */
+	function ordenarCelulas(tr) {
+		if (!tr || !colunasState.ordem.length) return;
+		const celulas = {};
+		Array.from(tr.children).forEach(function (cel) {
+			if (cel.dataset.col) celulas[cel.dataset.col] = cel;
+		});
+		// Só reescreve a linha se ela estiver fora de ordem.
+		const atuais = Array.from(tr.children)
+			.filter(function (cel) {
+				return cel.dataset.col;
+			})
+			.map(function (cel) {
+				return cel.dataset.col;
+			});
+		const desejada = colunasState.ordem.filter(function (chave) {
+			return celulas[chave];
+		});
+		if (atuais.join("|") === desejada.join("|")) return;
+		desejada.forEach(function (chave) {
+			tr.appendChild(celulas[chave]);
+		});
+	}
+
+	function aplicarOrdem() {
+		const cabecalho = document.querySelector(".extrato-tabela thead tr");
+		ordenarCelulas(cabecalho);
+		if (tbody) {
+			tbody.querySelectorAll("tr[data-transaction-id]").forEach(ordenarCelulas);
+		}
+		// A lista do seletor acompanha a ordem da tabela.
+		const lista = document.getElementById("extratoColunasLista");
+		if (lista) {
+			const itens = {};
+			getItensDaLista().forEach(function (item) {
+				itens[item.dataset.colItem] = item;
+			});
+			colunasState.ordem.forEach(function (chave) {
+				if (itens[chave]) lista.appendChild(itens[chave]);
+			});
+		}
+	}
+
+	function moverColuna(chave, destino) {
+		const ordem = colunasState.ordem;
+		const origem = ordem.indexOf(chave);
+		if (origem === -1 || destino < 0 || destino >= ordem.length || destino === origem) return;
+		ordem.splice(origem, 1);
+		ordem.splice(destino, 0, chave);
+		aplicarOrdem();
+		agendarSalvarPreferencias();
+	}
+
+	function lerLargurasRenderizadas() {
+		// O servidor marca no cabeçalho a largura salva de cada coluna.
+		const larguras = {};
+		document.querySelectorAll(".extrato-tabela thead th[data-largura]").forEach(function (th) {
+			const largura = parseInt(th.dataset.largura, 10);
+			if (largura > 0) larguras[th.dataset.col] = largura;
+		});
+		return larguras;
+	}
+
+	/** Arrastar o cabeçalho troca a coluna de lugar (desktop). */
+	function iniciarArrasteDeColunas(cabecalho) {
+		let arrastando = null;
+
+		cabecalho.addEventListener("dragstart", function (event) {
+			const th = event.target.closest && event.target.closest("th[data-col]");
+			if (!th || redimensionando) {
+				event.preventDefault();
+				return;
+			}
+			arrastando = th.dataset.col;
+			th.classList.add("extrato-th--arrastando");
+			event.dataTransfer.effectAllowed = "move";
+			// Firefox só inicia o arraste com algum dado no dataTransfer.
+			event.dataTransfer.setData("text/plain", arrastando);
+		});
+
+		cabecalho.addEventListener("dragover", function (event) {
+			const th = event.target.closest("th[data-col]");
+			if (!arrastando || !th || th.dataset.col === arrastando) return;
+			event.preventDefault();
+			event.dataTransfer.dropEffect = "move";
+			const rect = th.getBoundingClientRect();
+			const depois = event.clientX > rect.left + rect.width / 2;
+			cabecalho
+				.querySelectorAll(".extrato-th--alvo-antes, .extrato-th--alvo-depois")
+				.forEach(function (el) {
+					el.classList.remove("extrato-th--alvo-antes", "extrato-th--alvo-depois");
+				});
+			th.classList.add(depois ? "extrato-th--alvo-depois" : "extrato-th--alvo-antes");
+		});
+
+		cabecalho.addEventListener("drop", function (event) {
+			const th = event.target.closest("th[data-col]");
+			if (!arrastando || !th) return;
+			event.preventDefault();
+			const rect = th.getBoundingClientRect();
+			const depois = event.clientX > rect.left + rect.width / 2;
+			const ordem = colunasState.ordem;
+			const semOrigem = ordem.filter(function (chave) {
+				return chave !== arrastando;
+			});
+			// `moverColuna` retira a coluna antes de inserir, então o destino é
+			// a posição na lista já sem ela.
+			moverColuna(arrastando, semOrigem.indexOf(th.dataset.col) + (depois ? 1 : 0));
+		});
+
+		cabecalho.addEventListener("dragend", function () {
+			arrastando = null;
+			cabecalho
+				.querySelectorAll(
+					".extrato-th--arrastando, .extrato-th--alvo-antes, .extrato-th--alvo-depois"
+				)
+				.forEach(function (el) {
+					el.classList.remove(
+						"extrato-th--arrastando",
+						"extrato-th--alvo-antes",
+						"extrato-th--alvo-depois"
+					);
+				});
+		});
+	}
+
+	let redimensionando = null;
+
+	/** Arrastar a borda direita do cabeçalho ajusta a largura da coluna. */
+	function iniciarRedimensionamento(cabecalho) {
+		cabecalho.addEventListener("pointerdown", function (event) {
+			const alca = event.target.closest("[data-col-resize]");
+			if (!alca || event.button !== 0) return;
+			event.preventDefault();
+			event.stopPropagation();
+			const th = alca.closest("th[data-col]");
+			redimensionando = {
+				chave: alca.dataset.colResize,
+				inicioX: event.clientX,
+				larguraInicial: th.getBoundingClientRect().width,
+				alca: alca,
+				pointerId: event.pointerId,
+				moveu: false,
+			};
+			// Enquanto redimensiona, o cabeçalho não pode virar arraste de coluna.
+			th.setAttribute("draggable", "false");
+			alca.setPointerCapture(event.pointerId);
+			document.body.classList.add("extrato-redimensionando");
+		});
+
+		cabecalho.addEventListener("pointermove", function (event) {
+			if (!redimensionando || event.pointerId !== redimensionando.pointerId) return;
+			redimensionando.moveu = true;
+			const largura = Math.round(
+				redimensionando.larguraInicial + (event.clientX - redimensionando.inicioX)
+			);
+			colunasState.larguras[redimensionando.chave] = Math.max(
+				LARGURA_MIN,
+				Math.min(largura, LARGURA_MAX)
+			);
+			aplicarLarguras();
+		});
+
+		function terminar(event) {
+			if (!redimensionando || event.pointerId !== redimensionando.pointerId) return;
+			const th = redimensionando.alca.closest("th[data-col]");
+			if (th) th.setAttribute("draggable", "true");
+			const mudou = redimensionando.moveu;
+			redimensionando = null;
+			document.body.classList.remove("extrato-redimensionando");
+			if (mudou) agendarSalvarPreferencias();
+		}
+		cabecalho.addEventListener("pointerup", terminar);
+		cabecalho.addEventListener("pointercancel", terminar);
+
+		// Duplo clique na borda devolve a coluna à largura automática.
+		cabecalho.addEventListener("dblclick", function (event) {
+			const alca = event.target.closest("[data-col-resize]");
+			if (!alca) return;
+			event.preventDefault();
+			if (!(alca.dataset.colResize in colunasState.larguras)) return;
+			delete colunasState.larguras[alca.dataset.colResize];
+			aplicarLarguras();
+			agendarSalvarPreferencias();
+		});
+	}
+
+	function iniciarColunas() {
 		const checkboxes = getColunaCheckboxes();
 		if (!checkboxes.length) return;
 
-		const preferencia = lerPreferenciaColunas();
-		if (preferencia) {
+		// A ordem renderizada pelo servidor já é a do usuário.
+		colunasState.ordem = getItensDaLista().map(function (item) {
+			return item.dataset.colItem;
+		});
+		colunasState.larguras = lerLargurasRenderizadas();
+
+		// Quem ainda não tem preferência no servidor traz a do navegador, uma vez.
+		const scroll = document.getElementById("extratoScroll");
+		const legada = lerPreferenciaLegada();
+		if (scroll && scroll.dataset.temPreferencias !== "1" && legada) {
 			checkboxes.forEach(function (cb) {
-				const escolha = preferencia[cb.dataset.colToggle];
-				// Coluna nova (ainda não conhecida pela preferência) entra no padrão.
+				const escolha = legada[cb.dataset.colToggle];
 				if (typeof escolha === "boolean") cb.checked = escolha;
 			});
+			aplicarVisibilidade();
+			agendarSalvarPreferencias();
 		}
-		aplicarColunas();
+		descartarPreferenciaLegada();
 
 		checkboxes.forEach(function (cb) {
 			cb.addEventListener("change", function () {
-				aplicarColunas();
-				salvarPreferenciaColunas(
-					Object.fromEntries(
-						getColunaCheckboxes().map(function (item) {
-							return [item.dataset.colToggle, item.checked];
-						})
-					)
-				);
+				aplicarVisibilidade();
+				agendarSalvarPreferencias();
 			});
 		});
+
+		const lista = document.getElementById("extratoColunasLista");
+		if (lista) {
+			lista.addEventListener("click", function (event) {
+				const botao = event.target.closest("[data-col-mover]");
+				if (!botao) return;
+				const item = botao.closest("[data-col-item]");
+				const chave = item.dataset.colItem;
+				moverColuna(
+					chave,
+					colunasState.ordem.indexOf(chave) + parseInt(botao.dataset.colMover, 10)
+				);
+				// Mantém o foco no botão para mover várias posições pelo teclado.
+				botao.focus();
+			});
+		}
+
+		const cabecalho = document.querySelector(".extrato-tabela thead tr");
+		if (cabecalho) {
+			iniciarArrasteDeColunas(cabecalho);
+			iniciarRedimensionamento(cabecalho);
+		}
 
 		const restaurar = document.getElementById("extratoColunasPadrao");
 		if (restaurar) {
 			restaurar.addEventListener("click", function () {
 				checkboxes.forEach(function (cb) {
-					// `defaultChecked` guarda o padrão renderizado pelo servidor.
-					cb.checked = cb.defaultChecked;
+					cb.checked = cb.dataset.padrao === "1";
 				});
-				aplicarColunas();
-				try {
-					window.localStorage.removeItem(COLUNAS_STORAGE_KEY);
-				} catch (_erro) {
-					// Sem storage não há preferência para remover.
-				}
+				colunasState.ordem = getItensDaLista()
+					.sort(function (a, b) {
+						return (
+							parseInt(a.dataset.ordemPadrao, 10) -
+							parseInt(b.dataset.ordemPadrao, 10)
+						);
+					})
+					.map(function (item) {
+						return item.dataset.colItem;
+					});
+				colunasState.larguras = {};
+				aplicarVisibilidade();
+				aplicarLarguras();
+				aplicarOrdem();
+				window.clearTimeout(colunasState.salvarTimer);
+				// Preferência vazia devolve o usuário ao padrão do sistema.
+				enviarPreferencias({});
 			});
 		}
 	}
@@ -415,6 +716,7 @@
 			const marcada = atual.querySelector(".transaction-checkbox");
 			const novaCheckbox = nova.querySelector(".transaction-checkbox");
 			if (marcada && novaCheckbox) novaCheckbox.checked = marcada.checked;
+			ordenarCelulas(nova);
 			atual.replaceWith(nova);
 		});
 		sincronizarSelectAll();
@@ -634,7 +936,7 @@
 		opcoesEditaveis = lerOpcoesEditaveis();
 		iniciarPainelDeFiltros();
 		iniciarMostrarExcluidas();
-		iniciarSeletorDeColunas();
+		iniciarColunas();
 		ajustarAlturaDoGrid();
 		window.addEventListener("resize", ajustarAlturaDoGrid);
 		ligarEventosDoGrid();

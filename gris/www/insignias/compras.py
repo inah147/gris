@@ -43,6 +43,14 @@ def get_context(context):
 	context.solicitacoes_encerradas = encerradas
 	context.aguardando_compra = [linha for linha in abertas if linha["status"] == "Solicitada"]
 
+	context.lista_de_compras = consultas.lista_de_compras(
+		[linha["name"] for linha in context.aguardando_compra]
+	)
+	context.lista_total_pecas = sum(linha["quantidade"] for linha in context.lista_de_compras)
+	context.lista_valor_total = consultas.formatar_moeda(
+		sum(linha["valor_total"] for linha in context.lista_de_compras)
+	)
+
 	context.total_aguardando = len(context.aguardando_compra)
 	context.valor_aguardando = consultas.formatar_moeda(
 		sum(flt(linha["valor_estimado"]) for linha in context.aguardando_compra)

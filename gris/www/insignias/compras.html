@@ -39,6 +39,77 @@
 		</div>
 	</section>
 
+	{% if lista_de_compras %}
+	<section class="insignias-lista" aria-labelledby="lista-titulo" data-pedidos="{{ aguardando_compra | map(attribute='name') | join(',') }}">
+		<header class="insignias-secao__header insignias-lista__header">
+			<div>
+				<h2 id="lista-titulo" class="insignias-secao__titulo">Lista de compras</h2>
+				<p class="insignias-secao__descricao">Tudo o que os {{ total_aguardando }} pedidos aguardando compra precisam, somado por item. Marque o que já separou; as marcações ficam salvas neste navegador.</p>
+			</div>
+			<div class="insignias-lista__acoes">
+				<button type="button" class="btn-sm-outline" id="btn-copiar-lista">
+					{{ lucide_icon("clipboard-copy", size="sm") }}
+					<span>Copiar lista</span>
+				</button>
+				<button type="button" class="btn-sm-outline" id="btn-imprimir-lista">
+					{{ lucide_icon("printer", size="sm") }}
+					<span>Imprimir</span>
+				</button>
+			</div>
+		</header>
+
+		{% call card(attrs={"class": "insignias-tabela-card"}) %}
+		<section class="p-0 min-w-0">
+			<div class="overflow-x-auto">
+				<table class="table insignias-tabela insignias-lista__tabela">
+					<thead>
+						<tr>
+							<th class="insignias-lista__check"><span class="insignias-lista__oculto">Já separado</span></th>
+							<th>Item</th>
+							<th>Tipo</th>
+							<th>Ramo</th>
+							<th>Código</th>
+							<th class="insignias-tabela__num">Qtd.</th>
+							<th class="insignias-tabela__num">Preço ref.</th>
+							<th class="insignias-tabela__num">Subtotal</th>
+							<th>Pedidos</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for item in lista_de_compras %}
+						<tr class="insignias-lista__linha" data-item="{{ item.insignia }}" data-nome="{{ item.nome }}" data-ramo="{{ item.ramo }}" data-codigo="{{ item.codigo }}" data-quantidade="{{ item.quantidade }}">
+							<td class="insignias-lista__check">
+								<input type="checkbox" id="lista-item-{{ loop.index }}" aria-label="Marcar {{ item.nome }} como separado">
+							</td>
+							<td><label for="lista-item-{{ loop.index }}" class="insignias-lista__nome">{{ item.nome }}</label></td>
+							<td>{{ item.tipo }}</td>
+							<td>{{ item.ramo }}</td>
+							<td>{{ item.codigo or "—" }}</td>
+							<td class="insignias-tabela__num"><strong>{{ item.quantidade }}</strong></td>
+							<td class="insignias-tabela__num">{{ item.valor_unitario_fmt }}</td>
+							<td class="insignias-tabela__num">{{ item.valor_total_fmt }}</td>
+							<td class="insignias-lista__pedidos">
+								{% for pedido in item.pedidos %}<a class="insignias-tabela__link" href="/insignias/solicitacao?name={{ pedido }}">{{ pedido }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+							</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+					<tfoot>
+						<tr>
+							<th colspan="5">Total</th>
+							<th class="insignias-tabela__num">{{ lista_total_pecas }}</th>
+							<th></th>
+							<th class="insignias-tabela__num">{{ lista_valor_total }}</th>
+							<th class="insignias-lista__progresso" aria-live="polite"></th>
+						</tr>
+					</tfoot>
+				</table>
+			</div>
+		</section>
+		{% endcall %}
+	</section>
+	{% endif %}
+
 	<section aria-labelledby="fila-titulo">
 		<header class="insignias-secao__header">
 			<h2 id="fila-titulo" class="insignias-secao__titulo">Pedidos em aberto</h2>

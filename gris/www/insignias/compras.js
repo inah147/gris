@@ -45,6 +45,103 @@
 		return Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 	}
 
+	// --- Lista de compras -------------------------------------------------------
+
+	const lista = raiz.querySelector(".insignias-lista");
+	const CHAVE_LISTA = "gris-insignias-lista-compras";
+
+	// As marcações valem para o conjunto atual de pedidos: se entrou ou saiu um
+	// pedido, as quantidades mudaram e as marcações antigas deixam de valer.
+	function lerMarcados() {
+		try {
+			const salvo = JSON.parse(window.localStorage.getItem(CHAVE_LISTA) || "null");
+			if (salvo && salvo.pedidos === lista.dataset.pedidos)
+				return new Set(salvo.marcados || []);
+		} catch (e) {
+			// Armazenamento indisponível (aba anônima, bloqueado): segue sem persistir.
+		}
+		return new Set();
+	}
+
+	function salvarMarcados(marcados) {
+		try {
+			window.localStorage.setItem(
+				CHAVE_LISTA,
+				JSON.stringify({ pedidos: lista.dataset.pedidos, marcados: Array.from(marcados) })
+			);
+		} catch (e) {
+			// Sem persistência: a marcação vale só até recarregar a página.
+		}
+	}
+
+	function atualizarProgresso() {
+		const linhas = lista.querySelectorAll(".insignias-lista__linha");
+		const separados = lista.querySelectorAll(".insignias-lista__linha.is-separado").length;
+		const progresso = lista.querySelector(".insignias-lista__progresso");
+		if (progresso) progresso.textContent = `${separados} de ${linhas.length} itens separados`;
+	}
+
+	function textoDaLista() {
+		const linhas = Array.from(lista.querySelectorAll(".insignias-lista__linha"));
+		const corpo = linhas.map(function (linha) {
+			const detalhes = [linha.dataset.ramo, linha.dataset.codigo]
+				.filter(function (valor) {
+					return valor && valor !== "—" && valor !== "Todos";
+				})
+				.join(" · ");
+			return `${
+				linha.dataset.quantidade
+			}x ${linha.dataset.nome}${detalhes ? ` (${detalhes})` : ""}`;
+		});
+		return ["Lista de compras de insígnias", "", ...corpo].join("\n");
+	}
+
+	if (lista) {
+		const marcados = lerMarcados();
+		lista.querySelectorAll(".insignias-lista__linha").forEach(function (linha) {
+			const caixa = linha.querySelector('input[type="checkbox"]');
+			const marcado = marcados.has(linha.dataset.item);
+			caixa.checked = marcado;
+			linha.classList.toggle("is-separado", marcado);
+
+			caixa.addEventListener("change", function () {
+				linha.classList.toggle("is-separado", caixa.checked);
+				if (caixa.checked) marcados.add(linha.dataset.item);
+				else marcados.delete(linha.dataset.item);
+				salvarMarcados(marcados);
+				atualizarProgresso();
+			});
+		});
+		atualizarProgresso();
+
+		document.getElementById("btn-copiar-lista")?.addEventListener("click", function () {
+			const texto = textoDaLista();
+			if (!navigator.clipboard) {
+				showToast("error", "Não foi possível copiar neste navegador.");
+				return;
+			}
+			navigator.clipboard.writeText(texto).then(
+				function () {
+					showToast("success", "Lista copiada. Cole no WhatsApp ou no e-mail da loja.");
+				},
+				function () {
+					showToast("error", "Não foi possível copiar a lista.");
+				}
+			);
+		});
+
+		document.getElementById("btn-imprimir-lista")?.addEventListener("click", function () {
+			document.body.classList.add("insignias-imprimindo-lista");
+			window.print();
+		});
+
+		window.addEventListener("afterprint", function () {
+			document.body.classList.remove("insignias-imprimindo-lista");
+		});
+	}
+
+	// --- Fila de pedidos ---------------------------------------------------------
+
 	raiz.addEventListener("click", function (event) {
 		const cancelar = event.target.closest("[data-dialog-cancel]");
 		if (cancelar) {

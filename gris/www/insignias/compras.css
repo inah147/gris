@@ -88,3 +88,90 @@
 		min-width: 32rem;
 	}
 }
+
+.insignias-secao__descricao {
+	margin: calc(var(--spacing) * 1) 0 0;
+	font-size: var(--text-sm);
+	color: var(--color-muted-foreground);
+}
+
+.insignias-lista__header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 3);
+}
+
+.insignias-lista__acoes {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 2);
+}
+
+.insignias-lista__oculto {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+
+.insignias-lista__check {
+	width: 2.5rem;
+}
+
+.insignias-lista__nome {
+	font-weight: var(--font-weight-medium);
+	cursor: pointer;
+}
+
+.insignias-lista__linha.is-separado td:not(.insignias-lista__check) {
+	color: var(--color-muted-foreground);
+}
+
+.insignias-lista__linha.is-separado .insignias-lista__nome {
+	text-decoration: line-through;
+}
+
+.insignias-lista__pedidos {
+	font-size: var(--text-xs);
+}
+
+.insignias-lista__progresso {
+	font-size: var(--text-xs);
+	font-weight: var(--font-weight-normal);
+	color: var(--color-muted-foreground);
+	white-space: nowrap;
+}
+
+.insignias-lista__tabela tfoot th {
+	border-top: 1px solid var(--color-border);
+}
+
+/* Impressão: só a lista de compras, para levar à loja. Visibilidade (e não
+   display) porque a sidebar e a topbar vêm do shell do portal, fora desta página. */
+@media print {
+	body.insignias-imprimindo-lista * {
+		visibility: hidden;
+	}
+
+	body.insignias-imprimindo-lista .insignias-lista,
+	body.insignias-imprimindo-lista .insignias-lista * {
+		visibility: visible;
+	}
+
+	body.insignias-imprimindo-lista .insignias-lista {
+		position: absolute;
+		inset: 0 0 auto 0;
+	}
+
+	body.insignias-imprimindo-lista .insignias-lista__acoes {
+		display: none;
+	}
+
+	body.insignias-imprimindo-lista .insignias-lista .overflow-x-auto {
+		overflow: visible;
+	}
+}

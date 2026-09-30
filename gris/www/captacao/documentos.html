@@ -1,0 +1,82 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, card %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{% block title %}Documentos para captação{% endblock %}
+
+{% set active_link = "/captacao/documentos" %}
+
+{% set variante = {"em_dia": "badge", "vencido": "badge-destructive", "desatualizado": "badge-destructive", "ausente": "badge-outline"} %}
+
+{% block page_header %}
+<div class="flex flex-col gap-2 max-w-3xl">
+	<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">Documentos para captação</h1>
+	<p class="m-0 text-base leading-relaxed text-muted-foreground">
+		Consulta dos documentos que os editais pedem. Quem envia as versões novas é o
+		Gestor da UEL, em
+		{% if pode_gerir_documentos %}<a href="/administracao/transparencia">Administração › Documentos</a>{% else %}Administração › Documentos{% endif %}.
+	</p>
+</div>
+{% endblock %}
+
+{% block main %}
+{% include "gris/templates/includes/captacao_comum.html" %}
+<div class="captacao-pagina">
+	{% if pendentes %}
+		{{ alert(
+			title=(pendentes ~ " documento" ~ ("s" if pendentes != 1 else "") ~ " precisa" ~ ("m" if pendentes != 1 else "") ~ " de atenção"),
+			description="Documento ausente, vencido ou desatualizado pode tirar o grupo de um edital.",
+			icon=lucide_icon("triangle-alert", size="sm"),
+			variant="warning"
+		) }}
+	{% endif %}
+
+	{% call card(attrs={"class": "captacao-documentos"}) %}
+	<section class="p-0 min-w-0">
+		<div class="overflow-x-auto">
+			<table class="table">
+				<thead>
+					<tr>
+						<th scope="col">Documento</th>
+						<th scope="col">Situação</th>
+						<th scope="col">Versão atual</th>
+						<th scope="col" class="captacao-documentos__acao"></th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for doc in documentos %}
+					{% set atual = doc.atual %}
+					<tr>
+						<td>
+							<strong>{{ doc.tipo }}</strong>
+							<p class="m-0 text-sm text-muted-foreground">{{ doc.descricao }}</p>
+						</td>
+						<td><span class="{{ variante.get(doc.situacao, 'badge-outline') }}">{{ doc.situacao_rotulo }}</span></td>
+						<td class="text-sm">
+							{% if atual %}
+								Ano {{ atual.ano_referencia }}
+								{% if atual.data_emissao %}· emitido em {{ frappe.utils.formatdate(atual.data_emissao, "dd/MM/yyyy") }}{% endif %}
+								{% if atual.data_validade %}· válido até {{ frappe.utils.formatdate(atual.data_validade, "dd/MM/yyyy") }}{% endif %}
+								{% if atual.registrado_em_cartorio %}· registrado em cartório{% endif %}
+							{% else %}
+								<span class="text-muted-foreground">Nenhuma versão enviada</span>
+							{% endif %}
+						</td>
+						<td class="captacao-documentos__acao">
+							{% if atual and atual.arquivo %}
+								<a class="btn-sm-outline" href="{{ atual.arquivo | e }}" target="_blank" rel="noopener">
+									{{ lucide_icon("external-link", size="xs") }}<span>Abrir</span>
+								</a>
+							{% elif atual %}
+								<span class="text-sm text-muted-foreground">{{ lucide_icon("lock", size="xs") }} Restrito</span>
+							{% endif %}
+						</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</section>
+	{% endcall %}
+</div>
+{% endblock %}

@@ -45,3 +45,6 @@ gris.patches.remover_area_da_funcao_voluntario
 gris.patches.criar_conselho_de_responsaveis
 gris.patches.vincular_responsaveis_que_sao_associados
 gris.patches.backfill_tipo_do_responsavel_da_area
+gris.patches.marcar_funcoes_diretoria_eleita
+gris.patches.semear_tipos_de_projeto_de_captacao
+gris.patches.converter_cronograma_de_captacao_para_dias

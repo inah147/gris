@@ -1,0 +1,279 @@
+{
+ "actions": [],
+ "autoname": "format:CAPT-{#####}",
+ "creation": "2026-09-29 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "tab_ideia",
+  "titulo",
+  "status",
+  "tipo_projeto",
+  "column_break_proponente",
+  "proponente_tipo",
+  "proponente_associado",
+  "proponente_responsavel",
+  "proponente_user",
+  "proponente_nome",
+  "section_resumo",
+  "resumo",
+  "objetivos",
+  "tab_detalhamento",
+  "equipe",
+  "descricao",
+  "publico_alvo",
+  "justificativa",
+  "metodologia",
+  "atividades",
+  "impacto_social",
+  "recursos",
+  "valor_total",
+  "tab_acompanhamento",
+  "link_pasta_google_drive",
+  "aprovado_inicialmente_em",
+  "aprovado_final_em",
+  "column_break_encerramento",
+  "categoria_encerramento",
+  "motivo_encerramento",
+  "section_decisoes",
+  "decisoes"
+ ],
+ "fields": [
+  {
+   "fieldname": "tab_ideia",
+   "fieldtype": "Tab Break",
+   "label": "Ideia"
+  },
+  {
+   "fieldname": "titulo",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "label": "Título",
+   "reqd": 1
+  },
+  {
+   "default": "Preliminar",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Preliminar\nAprovado inicialmente\nEm detalhamento\nRevisão técnica\nAprovação final\nPronto para captação\nCaptação em andamento\nCaptação finalizada\nCancelado"
+  },
+  {
+   "fieldname": "tipo_projeto",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Tipo de projeto",
+   "options": "Tipo de Projeto de Captacao",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_proponente",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "proponente_tipo",
+   "fieldtype": "Select",
+   "label": "Proponente é",
+   "options": "\nAssociado\nResponsavel",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.proponente_tipo=='Associado'",
+   "fieldname": "proponente_associado",
+   "fieldtype": "Link",
+   "label": "Proponente (associado)",
+   "options": "Associado",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.proponente_tipo=='Responsavel'",
+   "fieldname": "proponente_responsavel",
+   "fieldtype": "Link",
+   "label": "Proponente (responsável)",
+   "options": "Responsavel",
+   "read_only": 1
+  },
+  {
+   "description": "Quem enviou a ideia. Preenchido automaticamente e não muda.",
+   "fieldname": "proponente_user",
+   "fieldtype": "Link",
+   "label": "Usuário do proponente",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "proponente_nome",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome do proponente",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_resumo",
+   "fieldtype": "Section Break",
+   "label": "Proposta"
+  },
+  {
+   "description": "A que o projeto se refere e o que pretendemos realizar.",
+   "fieldname": "resumo",
+   "fieldtype": "Text",
+   "label": "Resumo",
+   "reqd": 1
+  },
+  {
+   "fieldname": "objetivos",
+   "fieldtype": "Table",
+   "label": "Objetivos",
+   "options": "Objetivo de Projeto",
+   "reqd": 1
+  },
+  {
+   "fieldname": "tab_detalhamento",
+   "fieldtype": "Tab Break",
+   "label": "Detalhamento"
+  },
+  {
+   "fieldname": "equipe",
+   "fieldtype": "Table",
+   "label": "Apresentação dos responsáveis",
+   "options": "Equipe de Projeto de Captacao"
+  },
+  {
+   "description": "Detalhes do projeto e dos benefícios pretendidos.",
+   "fieldname": "descricao",
+   "fieldtype": "Text",
+   "label": "Descrição do projeto"
+  },
+  {
+   "description": "Quem serão os beneficiados.",
+   "fieldname": "publico_alvo",
+   "fieldtype": "Text",
+   "label": "Público-alvo"
+  },
+  {
+   "description": "Por que o projeto é importante.",
+   "fieldname": "justificativa",
+   "fieldtype": "Text",
+   "label": "Justificativa"
+  },
+  {
+   "description": "Processos e ferramentas usados para viabilizar os benefícios.",
+   "fieldname": "metodologia",
+   "fieldtype": "Text",
+   "label": "Metodologia"
+  },
+  {
+   "fieldname": "atividades",
+   "fieldtype": "Table",
+   "label": "Atividades e cronograma",
+   "options": "Atividade de Projeto de Captacao"
+  },
+  {
+   "description": "Benefícios do projeto para a sociedade.",
+   "fieldname": "impacto_social",
+   "fieldtype": "Text",
+   "label": "Impacto social"
+  },
+  {
+   "fieldname": "recursos",
+   "fieldtype": "Table",
+   "label": "Recursos",
+   "options": "Recurso de Projeto de Captacao"
+  },
+  {
+   "fieldname": "valor_total",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Valor total a captar",
+   "options": "BRL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tab_acompanhamento",
+   "fieldtype": "Tab Break",
+   "label": "Acompanhamento"
+  },
+  {
+   "fieldname": "link_pasta_google_drive",
+   "fieldtype": "Data",
+   "label": "Pasta no Google Drive",
+   "options": "URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "aprovado_inicialmente_em",
+   "fieldtype": "Datetime",
+   "label": "Ideia aprovada em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "aprovado_final_em",
+   "fieldtype": "Datetime",
+   "label": "Aprovação final em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_encerramento",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "categoria_encerramento",
+   "fieldtype": "Select",
+   "label": "Motivo do encerramento",
+   "options": "\nNão cabe em projetos de captação\nRealizado de outra maneira\nCancelado",
+   "read_only": 1
+  },
+  {
+   "fieldname": "motivo_encerramento",
+   "fieldtype": "Small Text",
+   "label": "Justificativa do encerramento",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_decisoes",
+   "fieldtype": "Section Break",
+   "label": "Histórico de decisões"
+  },
+  {
+   "fieldname": "decisoes",
+   "fieldtype": "Table",
+   "label": "Decisões",
+   "options": "Decisao de Projeto de Captacao",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-29 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Captacao de Recursos",
+ "name": "Projeto de Captacao",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "titulo,proponente_nome",
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "titulo",
+ "track_changes": 1
+}

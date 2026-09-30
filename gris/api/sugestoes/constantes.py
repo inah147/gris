@@ -60,6 +60,7 @@ MODULOS: tuple[str, ...] = (
 	"Gestão de Adultos",
 	"Insígnias e Distintivos",
 	"Projetos",
+	"Captação de Recursos",
 	"Gestão de Tarefas",
 	"Festas",
 	"Painel do Responsável",

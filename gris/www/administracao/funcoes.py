@@ -10,6 +10,10 @@ no_cache = 1
 #: Mesmo conjunto do Select `Funcao Voluntario.categoria`, cujo rótulo é "Linha".
 LINHAS = ("Dirigente", "Escotista", "Colaborador")
 
+#: Mesmo conjunto do Select `Funcao Voluntario.diretoria`. Quem ocupa uma função
+#: marcada aqui decide pela Diretoria na Captação de Recursos.
+TIPOS_DE_DIRETORIA = ("Eleita", "Nomeada")
+
 
 def get_context(context):
 	if frappe.session.user == "Guest":
@@ -33,5 +37,9 @@ def get_context(context):
 	context.linha_items = [
 		{"label": "Sem linha definida", "value": ""},
 		*({"label": linha, "value": linha} for linha in LINHAS),
+	]
+	context.diretoria_items = [
+		{"label": "Não faz parte da Diretoria", "value": ""},
+		*({"label": tipo, "value": tipo} for tipo in TIPOS_DE_DIRETORIA),
 	]
 	return context

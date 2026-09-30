@@ -1,0 +1,104 @@
+{
+ "actions": [],
+ "creation": "2026-09-29 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_aprovacao",
+  "somente_presidente_aprova",
+  "funcao_presidente",
+  "column_break_aprovacao",
+  "area_relacoes_institucionais",
+  "section_drive",
+  "habilitar_pastas_drive",
+  "drive_compartilhado",
+  "pasta_captacao"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_aprovacao",
+   "fieldtype": "Section Break",
+   "label": "Aprovação"
+  },
+  {
+   "default": "0",
+   "description": "Desligado: qualquer membro da Diretoria (função eleita ou nomeada) aprova a ideia e dá a aprovação final. Ligado: só quem ocupa a função de presidente.",
+   "fieldname": "somente_presidente_aprova",
+   "fieldtype": "Check",
+   "label": "Somente o Diretor(a) Presidente aprova"
+  },
+  {
+   "default": "Diretor(a) Presidente",
+   "fieldname": "funcao_presidente",
+   "fieldtype": "Link",
+   "label": "Função do presidente",
+   "options": "Funcao Voluntario"
+  },
+  {
+   "fieldname": "column_break_aprovacao",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Quem está lotado nesta área faz a revisão técnica dos projetos e move os cards de captação.",
+   "fieldname": "area_relacoes_institucionais",
+   "fieldtype": "Link",
+   "label": "Área de Relações Institucionais",
+   "options": "Unidade Organizacional"
+  },
+  {
+   "fieldname": "section_drive",
+   "fieldtype": "Section Break",
+   "label": "Google Drive"
+  },
+  {
+   "default": "0",
+   "fieldname": "habilitar_pastas_drive",
+   "fieldtype": "Check",
+   "label": "Criar pasta no Drive quando a ideia for aprovada"
+  },
+  {
+   "description": "Drive ativo em Configuracoes Google Workspace.",
+   "fieldname": "drive_compartilhado",
+   "fieldtype": "Select",
+   "label": "Drive compartilhado"
+  },
+  {
+   "description": "Cole o link da pasta do Drive onde as pastas dos projetos serão criadas. O ID é extraído ao salvar.",
+   "fieldname": "pasta_captacao",
+   "fieldtype": "Data",
+   "label": "Pasta dos projetos de captação"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-09-29 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Captacao de Recursos",
+ "name": "Configuracoes de Captacao",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Gestor da UEL",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

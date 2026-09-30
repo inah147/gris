@@ -1,0 +1,65 @@
+{
+ "actions": [],
+ "creation": "2026-09-29 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "categoria",
+  "descricao",
+  "quantidade",
+  "valor_unitario",
+  "valor_total"
+ ],
+ "fields": [
+  {
+   "fieldname": "categoria",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Categoria",
+   "options": "\nHumano\nMaterial\nFinanceiro"
+  },
+  {
+   "fieldname": "descricao",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Descrição"
+  },
+  {
+   "default": "1",
+   "fieldname": "quantidade",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Quantidade"
+  },
+  {
+   "fieldname": "valor_unitario",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Valor unitário",
+   "options": "BRL"
+  },
+  {
+   "fieldname": "valor_total",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Valor total",
+   "options": "BRL",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-29 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Captacao de Recursos",
+ "name": "Recurso de Projeto de Captacao",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

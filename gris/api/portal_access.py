@@ -88,6 +88,15 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 		],
 	},
 	{
+		"label": "Captação de Recursos",
+		"path": "/captacao",
+		"children": [
+			{"label": "Acompanhamento", "path": "/captacao/acompanhamento"},
+			{"label": "Nova ideia", "path": "/captacao/nova_ideia"},
+			{"label": "Documentos", "path": "/captacao/documentos"},
+		],
+	},
+	{
 		"label": "Gestão de Tarefas",
 		"path": "/gestao_tarefas",
 		"children": [
@@ -136,6 +145,7 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 
 PORTAL_MODULE_ICON_MAP: dict[str, str] = {
 	"/administracao": "building-2",
+	"/captacao": "hand-coins",
 	"/associados": "users",
 	"/calendario": "calendar-days",
 	"/financeiro": "banknote",
@@ -174,6 +184,9 @@ SIDEBAR_ICON_MAP: dict[str, str] = {
 	"/administracao/unidades_organizacionais": "network",
 	"/administracao/funcoes": "briefcase",
 	"/administracao/transparencia": "folder-open",
+	"/captacao/acompanhamento": "square-kanban",
+	"/captacao/nova_ideia": "lightbulb",
+	"/captacao/documentos": "file-check",
 	"/gestao_adultos/organograma": "network",
 	"/gestao_adultos/atvs": "file-pen-line",
 	"/gestao_adultos/minha_entrevista": "clipboard-list",
@@ -211,6 +224,14 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/administracao/funcoes": ["All"],
 	# Esta não: mostra o que ainda não foi publicado e só serve para editar.
 	"/administracao/transparencia": ["Gestor da UEL"],
+	# Captação é aberta a quem está logado: qualquer associado ou responsável propõe
+	# uma ideia. O que cada um vê e decide sai da lotação, nos endpoints.
+	"/captacao": ["All"],
+	"/captacao/acompanhamento": ["All"],
+	"/captacao/nova_ideia": ["All"],
+	"/captacao/projeto": ["All"],
+	"/captacao/detalhamento": ["All"],
+	"/captacao/documentos": ["All"],
 	"/gestao_tarefas": ["All"],
 	"/gestao_tarefas/tarefas": ["All"],
 	"/responsavel": ["Responsavel"],

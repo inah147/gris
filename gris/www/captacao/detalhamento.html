@@ -1,0 +1,83 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import field, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Detalhamento — {{ titulo_da_pagina | e }}{% endblock %}
+
+{% set active_link = "/captacao/acompanhamento" %}
+
+{# detalhamento.js é injetado automaticamente pelo Frappe (co-location). Os campos
+   são desenhados pelo JS a partir de `data-projeto`. #}
+
+{% block page_header %}
+<div class="captacao-cabecalho">
+	<div class="flex flex-col gap-2 min-w-0">
+		<a class="captacao-voltar" href="/captacao/projeto?name={{ projeto.name | urlencode }}">{{ lucide_icon("arrow-left", size="xs") }}<span>Voltar ao projeto</span></a>
+		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">
+			{{ "Alteração manual" if modo == "revisao" else "Detalhamento do projeto" }}
+		</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">
+			{% if modo == "revisao" %}
+				Edite o que for preciso. O motivo da alteração é obrigatório e fica no histórico do projeto.
+			{% else %}
+				A ideia foi aprovada. Detalhe o projeto por inteiro: quem são os responsáveis, o que será feito,
+				quando e com quais recursos. Salve quantas vezes quiser; envie para a revisão técnica quando
+				tudo estiver preenchido.
+			{% endif %}
+		</p>
+	</div>
+</div>
+{% endblock %}
+
+{% block main %}
+{% include "gris/templates/includes/captacao_comum.html" %}
+{{ toaster() }}
+<div class="captacao-pagina captacao-detalhamento"
+     data-projeto="{{ projeto | tojson | forceescape }}"
+     data-modo="{{ modo }}">
+
+	{% if projeto.link_pasta_google_drive %}
+	<div class="alert" role="status">
+		{{ lucide_icon("folder-open", size="sm") }}
+		<h2>Arquivos de apoio</h2>
+		<section>
+			Orçamentos, fotos e outros documentos do projeto vão na
+			<a href="{{ projeto.link_pasta_google_drive | e }}" target="_blank" rel="noopener">pasta do projeto no Drive</a>.
+		</section>
+	</div>
+	{% endif %}
+
+	<div id="detalhamento-secoes" class="captacao-secoes"></div>
+
+	{% if modo == "revisao" %}
+	<article class="card captacao-bloco">
+		<section class="captacao-bloco__corpo">
+			{% call field(label="Motivo da alteração *", hint="Por que o projeto foi alterado pela revisão técnica.") %}
+				{{ textarea(name="motivo", attrs={"id": "motivo-alteracao", "rows": "3"}) }}
+			{% endcall %}
+		</section>
+	</article>
+	{% endif %}
+
+	<div class="captacao-barra-acoes">
+		<a class="btn-outline" href="/captacao/projeto?name={{ projeto.name | urlencode }}">Voltar</a>
+		{% if modo == "revisao" %}
+			<button type="button" class="btn-primary" id="btn-salvar-alteracao">{{ lucide_icon("check", size="sm") }}<span>Salvar alteração</span></button>
+		{% else %}
+			<button type="button" class="btn-outline" id="btn-salvar-rascunho">{{ lucide_icon("check", size="sm") }}<span>Salvar</span></button>
+			<button type="button" class="btn-primary" id="btn-enviar-revisao">{{ lucide_icon("send", size="sm") }}<span>Enviar para revisão técnica</span></button>
+		{% endif %}
+	</div>
+</div>
+
+{% call dialog(
+	id="dialog-confirmar-envio",
+	title="Enviar para revisão técnica?",
+	description="O projeto é salvo e enviado para a equipe de Relações Institucionais. Depois disso, ele só volta para edição se a revisão pedir alterações.",
+	dialog_attrs={"class": "captacao-dialog"},
+	footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-confirmar-envio">Voltar</button><button type="button" class="btn-primary" id="btn-confirmar-envio">Enviar</button>'
+) %}
+{% endcall %}
+{% endblock %}

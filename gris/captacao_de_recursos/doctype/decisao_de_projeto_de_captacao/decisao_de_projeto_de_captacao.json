@@ -1,0 +1,99 @@
+{
+ "actions": [],
+ "creation": "2026-09-29 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "data",
+  "etapa",
+  "decisao",
+  "secao",
+  "status_anterior",
+  "status_novo",
+  "comentario",
+  "resumo_alteracoes",
+  "autor_user",
+  "autor_nome",
+  "resolvido"
+ ],
+ "fields": [
+  {
+   "fieldname": "data",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Data"
+  },
+  {
+   "fieldname": "etapa",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Etapa",
+   "options": "\nIdeia\nAprovação inicial\nDetalhamento\nRevisão técnica\nAprovação final\nCaptação"
+  },
+  {
+   "fieldname": "decisao",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Decisão",
+   "options": "\nIdeia enviada\nIdeia reenviada\nEnviar para detalhamento\nSolicitar alteração\nNão cabe em projetos de captação\nRealizado de outra maneira\nDetalhamento enviado\nPendência resolvida\nAlteração manual\nAprovar\nMudança de status"
+  },
+  {
+   "description": "Campo do projeto ao qual a solicitação se refere.",
+   "fieldname": "secao",
+   "fieldtype": "Data",
+   "label": "Parte do projeto"
+  },
+  {
+   "fieldname": "status_anterior",
+   "fieldtype": "Data",
+   "label": "Status anterior"
+  },
+  {
+   "fieldname": "status_novo",
+   "fieldtype": "Data",
+   "label": "Status novo"
+  },
+  {
+   "fieldname": "comentario",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Motivo / comentário"
+  },
+  {
+   "fieldname": "resumo_alteracoes",
+   "fieldtype": "Small Text",
+   "label": "Alterações feitas"
+  },
+  {
+   "fieldname": "autor_user",
+   "fieldtype": "Link",
+   "label": "Usuário",
+   "options": "User"
+  },
+  {
+   "fieldname": "autor_nome",
+   "fieldtype": "Data",
+   "label": "Autor"
+  },
+  {
+   "default": "0",
+   "fieldname": "resolvido",
+   "fieldtype": "Check",
+   "label": "Resolvido"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-29 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Captacao de Recursos",
+ "name": "Decisao de Projeto de Captacao",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

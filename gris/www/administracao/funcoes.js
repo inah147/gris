@@ -114,6 +114,11 @@
 				return `<tr>
 					<td data-sort-value="${escapeHtml(f.titulo)}">${escapeHtml(f.titulo)}${automatica}</td>
 					<td>${escapeHtml(f.categoria || "—")}</td>
+					<td data-sort-value="${escapeHtml(f.diretoria || "")}">${
+					f.diretoria
+						? `<span class="badge-secondary">${escapeHtml(f.diretoria)}</span>`
+						: "—"
+				}</td>
 					<td data-sort-value="${f.ativa ? 1 : 0}">${status}</td>
 					<td class="admin-funcoes__numero">${f.pessoas}</td>
 					<td class="admin-funcoes__acoes">${acoes}</td>
@@ -126,6 +131,7 @@
 				<tr>
 					${cabecalhoOrdenavel("Título")}
 					${cabecalhoOrdenavel("Linha")}
+					${cabecalhoOrdenavel("Diretoria")}
 					${cabecalhoOrdenavel("Status")}
 					${cabecalhoOrdenavel("Pessoas", "admin-funcoes__numero")}
 					<th class="admin-funcoes__acoes"></th>
@@ -184,6 +190,7 @@
 		const ativa = switchDe("funcao-ativa");
 		if (ativa) ativa.checked = nova ? true : funcao.ativa;
 		definirComponente("funcao-linha", nova ? "" : funcao.categoria || "");
+		definirComponente("funcao-diretoria", nova ? "" : funcao.diretoria || "");
 
 		const aviso = document.getElementById("funcao-aviso-automatica");
 		if (aviso) aviso.hidden = !automatica;
@@ -202,6 +209,7 @@
 			name: document.getElementById("funcao-name").value,
 			titulo: document.getElementById("funcao-titulo").value.trim(),
 			categoria: valorDoSelect("funcao-linha"),
+			diretoria: valorDoSelect("funcao-diretoria"),
 			descricao: document.getElementById("funcao-descricao").value.trim(),
 			ativa: ativa ? ativa.checked : true,
 			responsabilidades: responsabilidades,

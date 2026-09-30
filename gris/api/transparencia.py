@@ -16,7 +16,8 @@ def build_areas_por_ano(ano_referencia):
 	)
 	areas = {}
 	for arq in arquivos:
-		area = arq.area or "Sem área"
+		# Estatuto, CNPJ e certidões costumam ser cadastrados sem área.
+		area = arq.area or "Documentos institucionais"
 		if area not in areas:
 			areas[area] = []
 

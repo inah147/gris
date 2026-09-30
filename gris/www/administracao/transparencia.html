@@ -1,0 +1,155 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import empty, field, input, switch %}
+{% from "public/design_system/components/composed/file-upload.html.jinja" import file_upload %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Documentos{% endblock %}
+
+{% set active_link = "/administracao/transparencia" %}
+
+{# transparencia.css/.js são injetados automaticamente pelo Frappe (colocated).
+   Não referenciar manualmente: duplica o carregamento. #}
+
+{% block page_header %}
+<div class="page-header-row">
+	<div class="flex flex-col gap-2 max-w-3xl">
+		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">Documentos</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">
+			Certidões, certificados, estatuto e os demais documentos do portal de transparência.
+			Só o que estiver publicado aparece para o público.
+		</p>
+		<p class="m-0 text-sm leading-relaxed text-muted-foreground">
+			Os pareceres da comissão fiscal são geridos em
+			{% if pode_pareceres %}<a class="adm-transparencia__link" href="/financeiro/pareceres">Financeiro › Pareceres</a>{% else %}Financeiro › Pareceres{% endif %}.
+		</p>
+	</div>
+	<div class="page-header-actions">
+		<a class="btn-outline" href="/portal_transparencia" target="_blank" rel="noopener">
+			{{ lucide_icon("external-link", size="sm") }}
+			<span>Ver portal</span>
+		</a>
+		<button type="button" class="btn-primary" data-acao="novo">
+			{{ lucide_icon("plus", size="sm") }}
+			<span>Novo documento</span>
+		</button>
+	</div>
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="adm-transparencia"
+     data-documentos="{{ documentos | tojson | forceescape }}"
+     data-regras="{{ regras | tojson | forceescape }}">
+
+	<div id="transparencia-vazio" hidden>
+		{{ empty(
+			title="Nenhum documento cadastrado",
+			description="Cadastre a primeira certidão, certificado ou estatuto do grupo.",
+			image="/assets/gris/images/gris-character/gris-sad.png",
+			image_alt="Personagem Gris triste",
+			image_size="md"
+		) }}
+	</div>
+
+	<div id="transparencia-conteudo" hidden>
+		<div class="adm-transparencia__barra">
+			{{ input(type="search", attrs={"id": "transparencia-busca", "class": "adm-transparencia__busca", "placeholder": "Buscar por tipo, área ou ano", "autocomplete": "off", "aria-label": "Buscar documentos"}) }}
+			<div class="adm-transparencia__filtro" role="group" aria-label="Situação no portal">
+				<button type="button" class="btn-sm-secondary" data-filtro="todos" aria-pressed="true">Todos</button>
+				<button type="button" class="btn-sm-ghost" data-filtro="publicados" aria-pressed="false">Publicados</button>
+				<button type="button" class="btn-sm-ghost" data-filtro="nao_publicados" aria-pressed="false">Não publicados</button>
+			</div>
+			<p class="adm-transparencia__contagem" id="transparencia-contagem" aria-live="polite"></p>
+		</div>
+
+		<div id="transparencia-lista" class="adm-transparencia__lista"></div>
+
+		<div id="transparencia-sem-resultado" hidden>
+			{{ empty(
+				title="Nenhum documento encontrado",
+				description="Ajuste a busca ou o filtro de situação.",
+				image="/assets/gris/images/gris-character/gris-search.png",
+				image_alt="Personagem Gris procurando",
+				image_size="sm"
+			) }}
+		</div>
+	</div>
+</div>
+
+{% set rodape_documento %}
+<button type="button" class="btn-ghost adm-transparencia-dialog__excluir" id="btn-excluir-transparencia" hidden>
+	{{ lucide_icon("trash-2", size="sm") }}
+	<span>Excluir</span>
+</button>
+<button type="button" class="btn-outline" data-dialog-cancel="dialog-transparencia">Cancelar</button>
+<button type="button" class="btn-primary" id="btn-salvar-transparencia">Salvar</button>
+{% endset %}
+{% call dialog(
+	id="dialog-transparencia",
+	title="Documento de transparência",
+	dialog_attrs={"class": "admin-dialog adm-transparencia-dialog"},
+	footer=rodape_documento
+) %}
+<div class="admin-dialog__form">
+	<input type="hidden" id="transparencia-name">
+
+	{% call field(label="Tipo *") %}
+		{{ select(id="transparencia-tipo", name="tipo_arquivo", items=tipo_items, placeholder="Selecione o tipo") }}
+	{% endcall %}
+
+	{% call field(label="Área", hint="Agrupa o documento no portal. Sem área, ele aparece em Documentos institucionais.") %}
+		{{ select(id="transparencia-area", name="area", items=area_items, placeholder="Sem área", is_combobox=true, search_placeholder="Buscar área…") }}
+	{% endcall %}
+
+	{# Sem `value`: as datas começam vazias e podem continuar vazias. O calendário abre
+	   por cima do dialog (ver transparencia.js). #}
+	<div class="adm-transparencia__duas-colunas">
+		{% call field(label="Data de emissão", hint="Define em que ano o documento aparece no portal. Sem data, fica no ano do cadastro.") %}
+			{{ datepicker(id="transparencia-emissao", name="data_emissao", placeholder="Sem data", trigger_attrs={"class": "w-full"}) }}
+		{% endcall %}
+		{% call field(label="Válido até", hint="Deixe vazio se o documento não vence.") %}
+			{{ datepicker(id="transparencia-validade", name="data_validade", placeholder="Sem data", trigger_attrs={"class": "w-full"}) }}
+		{% endcall %}
+	</div>
+
+	<p class="adm-transparencia__arquivo-atual" id="transparencia-arquivo-atual" hidden></p>
+	{{ file_upload(
+		id="transparencia-arquivo-upload",
+		label="Arquivo *",
+		description="PDF ou imagem do documento.",
+		trigger_label="Selecionar arquivo",
+		dialog_title="Enviar documento",
+		dialog_description="Escolha o arquivo do documento.",
+		allowed_extensions=["pdf", "png", "jpg", "jpeg", "doc", "docx"],
+		accept=".pdf,.png,.jpg,.jpeg,.doc,.docx",
+		folder="Home",
+		is_private=false
+	) }}
+	<p class="m-0 text-sm" id="transparencia-arquivo-novo" hidden></p>
+
+	{# O switch do design system não expõe id no input: o id vai no rótulo e o JS
+	   chega ao checkbox por `#<id> input`. #}
+	{{ switch(name="registrado_em_cartorio", label="Registrado em cartório", attrs={"id": "transparencia-cartorio", "hidden": "hidden"}) }}
+	{{ switch(name="publicado", label="Publicar no portal de transparência", attrs={"id": "transparencia-publicado"}) }}
+</div>
+{% endcall %}
+
+{% set rodape_exclusao %}
+<button type="button" class="btn-outline" data-dialog-cancel="dialog-excluir-transparencia">Cancelar</button>
+<button type="button" class="btn-destructive" id="btn-confirmar-exclusao">Excluir</button>
+{% endset %}
+{% call dialog(
+	id="dialog-excluir-transparencia",
+	title="Excluir documento?",
+	dialog_attrs={"class": "admin-dialog"},
+	footer=rodape_exclusao
+) %}
+<p class="m-0 text-sm" id="transparencia-exclusao-texto"></p>
+{% endcall %}
+
+{{ toaster() }}
+{% endblock %}

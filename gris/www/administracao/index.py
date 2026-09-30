@@ -1,6 +1,6 @@
 import frappe
 
-from gris.api.portal_access import enrich_context
+from gris.api.portal_access import enrich_context, user_has_access
 from gris.api.portal_cache_utils import get_uel_cached
 
 no_cache = 1
@@ -19,4 +19,6 @@ def get_context(context):
 	uel_data = get_uel_cached()
 	context.portal_logo = uel_data.get("logo") if uel_data else None
 	context.active_link = "/administracao"
+	# O índice é aberto a todos; o card da transparência só aparece para quem abre a página.
+	context.pode_transparencia = user_has_access("/administracao/transparencia")
 	return context

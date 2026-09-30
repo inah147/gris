@@ -616,6 +616,20 @@
 	margin: 0.5rem 0;
 }
 
+/* A badge do Basecoat é nowrap e não encolhe: um tipo longo ("Equipamentos e
+   materiais de campo") passava da largura do card e era cortado no meio. No card ela
+   quebra a linha. O raio de 0.75rem é meia altura de uma linha: a badge curta segue
+   pílula, e a de duas linhas vira um retângulo arredondado em vez de uma cápsula. */
+.captacao-card__badges .badge-outline {
+	max-width: 100%;
+	flex-shrink: 1;
+	justify-content: flex-start;
+	white-space: normal;
+	overflow-wrap: anywhere;
+	text-align: left;
+	border-radius: 0.75rem;
+}
+
 .captacao-card__meta {
 	font-size: 0.8125rem;
 	color: var(--muted-foreground);

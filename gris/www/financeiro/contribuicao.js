@@ -165,7 +165,9 @@
 		editor.innerHTML = `
 			<div class="field">
 				<label class="label" for="inputEmailCobranca">E-mail de cobrança</label>
-				<input type="email" id="inputEmailCobranca" class="input" value="${escapeHtml(botao.getAttribute("data-email") || "")}" />
+				<input type="email" id="inputEmailCobranca" class="input" value="${escapeHtml(
+					botao.getAttribute("data-email") || ""
+				)}" />
 			</div>
 			<div class="field mt-2">
 				<label class="label" for="inputTelefoneCobranca">WhatsApp de cobrança</label>

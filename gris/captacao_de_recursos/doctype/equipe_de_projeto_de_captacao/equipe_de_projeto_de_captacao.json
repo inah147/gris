@@ -1,0 +1,47 @@
+{
+ "actions": [],
+ "creation": "2026-09-29 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "nome",
+  "papel",
+  "apresentacao"
+ ],
+ "fields": [
+  {
+   "fieldname": "nome",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome"
+  },
+  {
+   "fieldname": "papel",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Papel no projeto"
+  },
+  {
+   "description": "Quem é a pessoa e o que traz de experiência para o projeto.",
+   "fieldname": "apresentacao",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Apresentação"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-29 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Captacao de Recursos",
+ "name": "Equipe de Projeto de Captacao",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

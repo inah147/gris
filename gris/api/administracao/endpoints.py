@@ -95,7 +95,7 @@ def mover_unidade(payload: str) -> dict:
 
 @frappe.whitelist(methods=["POST"])
 def salvar_funcao(payload: str) -> dict:
-	"""Cria ou atualiza uma função, com linha, status e responsabilidades.
+	"""Cria ou atualiza uma função, com linha, diretoria, status e responsabilidades.
 
 	Como `salvar_unidade`, substitui o registro inteiro a partir do formulário.
 	"""
@@ -120,6 +120,7 @@ def salvar_funcao(payload: str) -> dict:
 		doc.titulo = titulo
 
 	doc.categoria = _texto(dados.get("categoria")) or None
+	doc.diretoria = _texto(dados.get("diretoria")) or None
 	doc.descricao = _texto(dados.get("descricao")) or None
 	doc.ativa = 1 if _booleano(dados.get("ativa"), padrao=True) else 0
 

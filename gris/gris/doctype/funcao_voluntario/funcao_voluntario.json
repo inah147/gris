@@ -8,6 +8,7 @@
  "field_order": [
   "titulo",
   "categoria",
+  "diretoria",
   "column_break_vwin",
   "ativa",
   "origem_automatica",
@@ -33,6 +34,15 @@
    "in_standard_filter": 1,
    "label": "Linha",
    "options": "\nDirigente\nEscotista\nColaborador"
+  },
+  {
+   "description": "Marque quando a função compõe a Diretoria do grupo. Quem ocupa uma função eleita ou nomeada decide pela Diretoria na Captação de Recursos.",
+   "fieldname": "diretoria",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Diretoria",
+   "options": "\nEleita\nNomeada"
   },
   {
    "fieldname": "column_break_vwin",
@@ -77,7 +87,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-22 10:00:00.000000",
+ "modified": "2026-09-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Funcao Voluntario",

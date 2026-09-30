@@ -1,0 +1,689 @@
+/* Captação de Recursos — estilos comuns às páginas de /captacao.
+ * Carregado por templates/includes/captacao_comum.html. */
+
+/* ── Página ─────────────────────────────────────────────────── */
+.captacao-pagina {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 4);
+	margin-top: calc(var(--spacing) * 6);
+	min-width: 0;
+}
+
+.captacao-cabecalho {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 4);
+	flex-wrap: wrap;
+}
+
+.captacao-cabecalho__meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 0.875rem;
+}
+
+.captacao-cabecalho__meta > span {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+.captacao-cabecalho__acoes {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-left: auto;
+}
+
+.captacao-voltar {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+	text-decoration: none;
+}
+
+.captacao-voltar:hover {
+	color: var(--foreground);
+}
+
+.captacao-avisos {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.captacao-avisos:empty {
+	display: none;
+}
+
+.captacao-vazio {
+	margin: 0;
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+	font-style: italic;
+}
+
+/* ── Blocos de conteúdo ─────────────────────────────────────── */
+.captacao-secoes {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 4);
+}
+
+.captacao-abas [role="tabpanel"] {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 4);
+	padding-top: calc(var(--spacing) * 4);
+}
+
+.captacao-abas [role="tabpanel"][hidden] {
+	display: none;
+}
+
+.captacao-bloco {
+	padding: 1.125rem 1.25rem;
+}
+
+.captacao-bloco--pendente {
+	border-color: color-mix(in oklab, var(--destructive) 55%, var(--border));
+}
+
+.captacao-bloco__corpo {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	min-width: 0;
+}
+
+/* Botões de "Adicionar…" não esticam na coluna flex. */
+.captacao-bloco__corpo > .btn-sm-outline {
+	align-self: flex-start;
+}
+
+.captacao-bloco__titulo {
+	margin: 0;
+	font-size: 1rem;
+	font-weight: 600;
+}
+
+.captacao-conteudo p {
+	margin: 0 0 0.5rem;
+	line-height: 1.6;
+}
+
+.captacao-conteudo p:last-child {
+	margin-bottom: 0;
+}
+
+.captacao-tabela {
+	width: 100%;
+}
+
+.captacao-total {
+	margin: 0;
+	text-align: right;
+	font-size: 0.9375rem;
+}
+
+.captacao-equipe {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.captacao-equipe p {
+	margin: 0.25rem 0 0;
+}
+
+/* ── Pedidos de alteração ───────────────────────────────────── */
+.captacao-pendencias {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.captacao-pendencias:empty {
+	display: none;
+}
+
+/* ── Gantt do cronograma ──────────────────────────────────────
+ * Mesmo desenho do cronograma de Projetos (barra em pílula na cor primária), com
+ * duas diferenças: a régua se adapta à largura e, no celular, o nome da atividade
+ * vai acima da faixa em vez de ao lado — lado a lado não cabe em 390px. */
+.captacao-gantt-host {
+	min-width: 0;
+}
+
+.captacao-gantt {
+	display: grid;
+	gap: 0.625rem;
+	--gantt-coluna: minmax(9rem, 13rem);
+}
+
+.captacao-gantt__vazio {
+	padding: 1.5rem;
+	text-align: center;
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+	border: 1px dashed var(--border);
+	border-radius: calc(var(--radius, 0.625rem) + 4px);
+}
+
+.captacao-gantt__cabecalho,
+.captacao-gantt__linha {
+	display: grid;
+	grid-template-columns: var(--gantt-coluna) minmax(0, 1fr);
+	gap: 0.75rem;
+	align-items: center;
+}
+
+.captacao-gantt__coluna {
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--muted-foreground);
+}
+
+.captacao-gantt__regua {
+	position: relative;
+	height: 1.75rem;
+	border-bottom: 1px solid var(--border);
+}
+
+.captacao-gantt__marca {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 1px;
+	background: var(--border);
+}
+
+.captacao-gantt__marca > span {
+	position: absolute;
+	top: 0.2rem;
+	left: 0.25rem;
+	white-space: nowrap;
+	font-size: 0.72rem;
+	color: var(--muted-foreground);
+}
+
+.captacao-gantt__linhas {
+	display: grid;
+	gap: 0.5rem;
+}
+
+.captacao-gantt__rotulo {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.captacao-gantt__titulo {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 0.875rem;
+	font-weight: 600;
+}
+
+.captacao-gantt__periodo {
+	font-size: 0.75rem;
+	color: var(--muted-foreground);
+	white-space: nowrap;
+}
+
+.captacao-gantt__faixa {
+	position: relative;
+	height: 2.5rem;
+	border: 1px dashed color-mix(in oklab, var(--border) 82%, transparent);
+	border-radius: calc(var(--radius, 0.625rem) + 4px);
+	background: color-mix(in oklab, var(--muted) 35%, transparent);
+	overflow: hidden;
+}
+
+.captacao-gantt__barra {
+	position: absolute;
+	top: 50%;
+	display: flex;
+	align-items: center;
+	min-width: 0.75rem;
+	height: 1.75rem;
+	padding: 0 0.625rem;
+	border-radius: 999px;
+	background: linear-gradient(
+		135deg,
+		color-mix(in oklab, var(--primary) 94%, white 6%),
+		color-mix(in oklab, var(--primary) 78%, black 22%)
+	);
+	color: var(--primary-foreground);
+	transform: translateY(-50%);
+	box-shadow: 0 1px 2px color-mix(in oklab, var(--primary) 30%, transparent);
+}
+
+.captacao-gantt__barra-texto {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 0.78rem;
+	font-weight: 600;
+}
+
+/* Edição: a barra anda, as pontas esticam. `touch-action: none` deixa o dedo
+   arrastar a barra em vez de rolar a página. */
+.captacao-gantt--editavel .captacao-gantt__barra {
+	cursor: grab;
+	touch-action: none;
+	padding: 0 1rem;
+}
+
+.captacao-gantt--editavel .captacao-gantt__barra.is-arrastando {
+	cursor: grabbing;
+	box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 35%, transparent);
+}
+
+.captacao-gantt--editavel .captacao-gantt__barra:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 2px;
+}
+
+.captacao-gantt__alca {
+	position: absolute;
+	top: 0.25rem;
+	bottom: 0.25rem;
+	width: 0.5rem;
+	border-radius: 999px;
+	background: color-mix(in oklab, white 45%, transparent);
+	cursor: ew-resize;
+}
+
+.captacao-gantt__alca--inicio {
+	left: 0.25rem;
+}
+
+.captacao-gantt__alca--fim {
+	right: 0.25rem;
+}
+
+.captacao-gantt__dica {
+	margin: 0;
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+}
+
+.captacao-atividades-descricoes {
+	margin: 0.25rem 0 0;
+	padding: 0;
+	list-style: none;
+	display: grid;
+	gap: 0.5rem;
+	font-size: 0.875rem;
+}
+
+.captacao-pendencia {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.375rem;
+	padding: 0.625rem 0.75rem;
+	border-radius: var(--radius, 0.625rem);
+	border-left: 3px solid var(--destructive);
+	background: color-mix(in oklab, var(--destructive) 6%, var(--card));
+	font-size: 0.875rem;
+}
+
+.captacao-lista-pedidos {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+/* ── Linha do tempo ─────────────────────────────────────────── */
+.captacao-timeline {
+	margin: 0;
+	padding: 0 0 0 1rem;
+	list-style: none;
+	border-left: 2px solid var(--border);
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.captacao-timeline__item {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.captacao-timeline__item::before {
+	content: "";
+	position: absolute;
+	left: calc(-1rem - 6px);
+	top: 0.4rem;
+	width: 10px;
+	height: 10px;
+	border-radius: 999px;
+	background: var(--primary);
+	box-shadow: 0 0 0 3px var(--card);
+}
+
+.captacao-timeline__texto {
+	margin: 0.25rem 0 0;
+	padding: 0.5rem 0.75rem;
+	border-radius: var(--radius, 0.625rem);
+	background: var(--muted);
+	font-size: 0.875rem;
+	white-space: pre-line;
+}
+
+.captacao-timeline--compacta {
+	gap: 0.625rem;
+}
+
+/* ── Comentários ────────────────────────────────────────────── */
+.captacao-comentario__texto {
+	white-space: pre-line;
+}
+
+.captacao-comentar {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 0.5rem;
+}
+
+.captacao-comentar .textarea {
+	width: 100%;
+}
+
+/* ── Dialogs ────────────────────────────────────────────────── */
+/* A caixa é o `> div` do <dialog>, travada em 512px pelo Basecoat. */
+.captacao-dialog > div {
+	max-width: min(36rem, calc(100vw - 2rem));
+}
+
+.captacao-dialog--largo > div {
+	max-width: min(46rem, calc(100vw - 2rem));
+}
+
+.captacao-dialog__form {
+	display: flex;
+	flex-direction: column;
+	gap: 0.875rem;
+}
+
+.captacao-opcoes {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+.captacao-opcao {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.625rem;
+	padding: 0.625rem 0.75rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius, 0.625rem);
+	cursor: pointer;
+}
+
+.captacao-opcao:has(input:checked) {
+	border-color: var(--primary);
+	background: color-mix(in oklab, var(--primary) 6%, var(--card));
+}
+
+.captacao-opcao input {
+	margin-top: 0.2rem;
+}
+
+.captacao-opcao span {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+}
+
+.captacao-opcao small {
+	color: var(--muted-foreground);
+	font-size: 0.8125rem;
+}
+
+/* ── Formulários ────────────────────────────────────────────── */
+.captacao-proponente {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.75rem;
+	padding: 0.75rem 0.875rem;
+	border-radius: var(--radius, 0.625rem);
+	background: var(--muted);
+}
+
+.captacao-proponente__icone {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	flex-shrink: 0;
+	border-radius: 999px;
+	background: var(--background);
+}
+
+.captacao-proponente__texto {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	min-width: 0;
+}
+
+.captacao-form__corpo {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	min-width: 0;
+}
+
+.captacao-form__rodape,
+.captacao-barra-acoes {
+	display: flex;
+	justify-content: flex-end;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.captacao-form__bloco {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.625rem;
+}
+
+.captacao-form__bloco-titulo {
+	margin: 0;
+	font-size: 0.9375rem;
+	font-weight: 600;
+}
+
+.captacao-linhas {
+	display: flex;
+	flex-direction: column;
+	gap: 0.625rem;
+	width: 100%;
+}
+
+.captacao-linha {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+	padding-bottom: 0.625rem;
+	border-bottom: 1px dashed var(--border);
+}
+
+.captacao-linha:last-child {
+	border-bottom: 0;
+	padding-bottom: 0;
+}
+
+.captacao-linha__campos {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.captacao-linha__campos--duplo {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.5rem;
+}
+
+.captacao-linha__campos--atividade {
+	display: grid;
+	grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+	gap: 0.5rem;
+}
+
+.captacao-linha__campos--recurso {
+	display: grid;
+	grid-template-columns: minmax(0, 3fr) minmax(0, 1fr) minmax(0, 1.5fr);
+	gap: 0.5rem;
+}
+
+.captacao-categorias {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375rem;
+}
+
+.captacao-categoria {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 0.25rem 0.625rem;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	font-size: 0.8125rem;
+	cursor: pointer;
+}
+
+.captacao-categoria:has(input:checked) {
+	border-color: var(--primary);
+	background: color-mix(in oklab, var(--primary) 8%, var(--card));
+}
+
+/* ── Kanban ─────────────────────────────────────────────────── */
+.captacao-kanban__card {
+	padding: 1rem;
+}
+
+.captacao-kanban {
+	grid-auto-columns: minmax(15.5rem, 1fr);
+}
+
+.captacao-card {
+	display: block;
+	color: inherit;
+	text-decoration: none;
+}
+
+.captacao-card[draggable="true"] {
+	cursor: grab;
+}
+
+.captacao-card__badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375rem;
+	margin: 0.5rem 0;
+}
+
+.captacao-card__meta {
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.captacao-card__valor {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.captacao-coluna-vazia {
+	margin: 0;
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+	text-align: center;
+	padding: 1rem 0;
+}
+
+.captacao-coluna__trava {
+	display: inline-flex;
+	vertical-align: middle;
+	opacity: 0.6;
+}
+
+/* ── Documentos ─────────────────────────────────────────────── */
+.captacao-documentos__acao {
+	text-align: right;
+	white-space: nowrap;
+}
+
+/* ── Mobile ─────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+	.captacao-cabecalho__acoes {
+		margin-left: 0;
+		width: 100%;
+	}
+
+	.captacao-cabecalho__acoes > * {
+		flex: 1 1 auto;
+	}
+
+	.captacao-linha__campos--duplo,
+	.captacao-linha__campos--atividade,
+	.captacao-linha__campos--recurso {
+		grid-template-columns: 1fr;
+	}
+
+	.captacao-bloco {
+		padding: 1rem;
+	}
+
+	/* Gantt: nome acima da faixa, faixa na largura toda. */
+	.captacao-gantt__cabecalho,
+	.captacao-gantt__linha {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0.25rem;
+	}
+
+	.captacao-gantt__coluna {
+		display: none;
+	}
+
+	.captacao-gantt__linhas {
+		gap: 0.75rem;
+	}
+}

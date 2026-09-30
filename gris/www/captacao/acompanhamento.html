@@ -1,0 +1,41 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Acompanhamento da captação{% endblock %}
+
+{% set active_link = "/captacao/acompanhamento" %}
+
+{# acompanhamento.js é injetado automaticamente pelo Frappe (co-location). #}
+
+{% block page_header %}
+<div class="captacao-cabecalho">
+	<div class="flex flex-col gap-2 max-w-3xl">
+		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">Banco de projetos</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">
+			{% if kanban.ve_o_banco %}
+				Todos os projetos de captação, da ideia ao edital.
+			{% else %}
+				Os projetos que você propôs e em que pé estão.
+			{% endif %}
+			{% if kanban.pode_mover %}
+				Arraste os cards entre as colunas de captação; as etapas anteriores andam pelas decisões no projeto.
+			{% endif %}
+		</p>
+	</div>
+	<a class="btn-primary" href="/captacao/nova_ideia">
+		{{ lucide_icon("lightbulb", size="sm") }}<span>Nova ideia</span>
+	</a>
+</div>
+{% endblock %}
+
+{% block main %}
+{% include "gris/templates/includes/captacao_comum.html" %}
+{{ toaster() }}
+<div class="captacao-kanban-raiz" data-kanban-inicial="{{ kanban | tojson | forceescape }}">
+	{% call card(attrs={"class": "captacao-kanban__card"}) %}
+		<div id="captacao-kanban" class="task-kanban captacao-kanban" aria-live="polite"></div>
+	{% endcall %}
+</div>
+{% endblock %}

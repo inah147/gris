@@ -59,7 +59,7 @@ def listar_funcoes() -> list[dict]:
 	"""Todas as funções, com responsabilidades, áreas e quantas pessoas as exercem."""
 	funcoes = frappe.get_all(
 		"Funcao Voluntario",
-		fields=["name", "titulo", "categoria", "ativa", "origem_automatica", "descricao"],
+		fields=["name", "titulo", "categoria", "diretoria", "ativa", "origem_automatica", "descricao"],
 		order_by="titulo asc",
 	)
 	if not funcoes:
@@ -93,6 +93,7 @@ def listar_funcoes() -> list[dict]:
 			"name": funcao["name"],
 			"titulo": funcao["titulo"],
 			"categoria": funcao["categoria"] or "",
+			"diretoria": funcao["diretoria"] or "",
 			"ativa": bool(funcao["ativa"]),
 			"origem_automatica": bool(funcao["origem_automatica"]),
 			"descricao": funcao["descricao"] or "",

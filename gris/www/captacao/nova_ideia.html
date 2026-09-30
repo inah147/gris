@@ -1,0 +1,89 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, card, field, input, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}{{ "Editar ideia" if projeto else "Nova ideia" }}{% endblock %}
+
+{% set active_link = "/captacao/nova_ideia" %}
+
+{# nova_ideia.js é injetado automaticamente pelo Frappe (co-location). #}
+
+{% block page_header %}
+<div class="flex flex-col gap-2 max-w-3xl">
+	<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">
+		{{ "Editar ideia" if projeto else "Nova ideia de projeto" }}
+	</h1>
+	<p class="m-0 text-base leading-relaxed text-muted-foreground">
+		Conte em poucas palavras o que é o projeto e o que ele quer alcançar. A Diretoria avalia se a
+		ideia cabe em captação de recursos; se couber, você detalha o projeto depois.
+	</p>
+</div>
+{% endblock %}
+
+{% block main %}
+{% include "gris/templates/includes/captacao_comum.html" %}
+<div class="captacao-pagina captacao-ideia"
+     data-projeto="{{ (projeto or {}) | tojson | forceescape }}">
+
+	{% if projeto and projeto.pendencias %}
+		{% call alert(title="A Diretoria pediu alterações", icon=lucide_icon("message-square", size="sm"), variant="warning") %}
+		<section>
+			<ul class="captacao-lista-pedidos">
+				{% for pendencia in projeto.pendencias %}
+				<li><strong>{{ pendencia.autor | e }}:</strong> {{ pendencia.comentario | e }}</li>
+				{% endfor %}
+			</ul>
+		</section>
+		{% endcall %}
+	{% endif %}
+
+	{% call card(attrs={"class": "captacao-form"}) %}
+	<section class="captacao-form__corpo">
+		<div class="captacao-proponente" aria-label="Proponente">
+			<span class="captacao-proponente__icone" aria-hidden="true">{{ lucide_icon("user", size="sm") }}</span>
+			<div class="captacao-proponente__texto">
+				<p class="m-0 text-sm text-muted-foreground">Proponente</p>
+				<p class="m-0 font-medium">
+					{{ proponente_nome | e }}{% if proponente_tipo %} <span class="badge-outline">{{ proponente_tipo }}</span>{% endif %}
+				</p>
+				<p class="m-0 text-sm text-muted-foreground">
+					{% if projeto %}Quem enviou a ideia; o proponente não muda.{% else %}Você, que está enviando a ideia. Fica registrado no projeto e não muda.{% endif %}
+				</p>
+			</div>
+		</div>
+
+		{% call field(label="Título do projeto *") %}
+			{{ input(name="titulo", value=((projeto.titulo if projeto else "") | e), attrs={"id": "ideia-titulo", "maxlength": "140", "placeholder": "Ex.: Reforma da cozinha da sede"}) }}
+		{% endcall %}
+
+		{% call field(label="Tipo de projeto *", hint="Escolha o que mais se aproxima; a Diretoria pode reclassificar.") %}
+			{{ select(id="ideia-tipo", name="tipo_projeto", items=tipo_items, selected=(projeto.tipo_projeto if projeto else ""), placeholder="Escolha o tipo", trigger_attrs={"class": "w-full"}) }}
+		{% endcall %}
+
+		{% call field(label="Resumo *", hint="A que o projeto se refere e o que pretendemos realizar.") %}
+			{{ textarea(name="resumo", value=((projeto.resumo if projeto else "") | e), attrs={"id": "ideia-resumo", "rows": "6"}) }}
+		{% endcall %}
+
+		<div class="captacao-form__bloco">
+			<div class="captacao-form__bloco-cabecalho">
+				<h2 class="captacao-form__bloco-titulo">Objetivos *</h2>
+				<p class="m-0 text-sm text-muted-foreground">O que o projeto quer alcançar. A métrica é opcional.</p>
+			</div>
+			<div id="ideia-objetivos" class="captacao-linhas"></div>
+			<button type="button" class="btn-sm-outline" id="btn-add-objetivo">
+				{{ lucide_icon("plus", size="sm") }}<span>Adicionar objetivo</span>
+			</button>
+		</div>
+	</section>
+	<footer class="captacao-form__rodape">
+		<a class="btn-outline" href="{{ ('/captacao/projeto?name=' ~ (projeto.name | urlencode)) if projeto else '/captacao/acompanhamento' }}">Cancelar</a>
+		<button type="button" class="btn-primary" id="btn-enviar-ideia">
+			{{ lucide_icon("send", size="sm") }}<span>{{ "Reenviar para a Diretoria" if projeto else "Enviar ideia" }}</span>
+		</button>
+	</footer>
+	{% endcall %}
+</div>
+{{ toaster() }}
+{% endblock %}

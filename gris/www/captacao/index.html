@@ -1,0 +1,22 @@
+{% extends "templates/web_module_index_base.html" %}
+
+{% set active_link = "/captacao" %}
+{% set module_title = "Captação de Recursos" %}
+{% set module_subtitle = "O banco de projetos do grupo: da ideia ao projeto pronto para um edital." %}
+{% set module_items = [
+	{
+		"href": "/captacao/acompanhamento",
+		"title": "Acompanhamento",
+		"description": "Todos os projetos em kanban, da ideia preliminar à captação finalizada",
+	},
+	{
+		"href": "/captacao/nova_ideia",
+		"title": "Nova ideia",
+		"description": "Proponha um projeto para captar recursos",
+	},
+	{
+		"href": "/captacao/documentos",
+		"title": "Documentos",
+		"description": "Os documentos do grupo que todo edital pede, e se estão em dia",
+	},
+] %}

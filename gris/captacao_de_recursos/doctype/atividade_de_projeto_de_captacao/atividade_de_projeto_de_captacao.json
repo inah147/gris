@@ -1,0 +1,56 @@
+{
+ "actions": [],
+ "creation": "2026-09-29 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "atividade",
+  "dia_inicio",
+  "dia_termino",
+  "descricao"
+ ],
+ "fields": [
+  {
+   "fieldname": "atividade",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Atividade"
+  },
+  {
+   "default": "0",
+   "description": "Dias contados a partir do início do projeto (dia 0).",
+   "fieldname": "dia_inicio",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Dia de início"
+  },
+  {
+   "default": "0",
+   "description": "A duração da atividade é término menos início.",
+   "fieldname": "dia_termino",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Dia de término"
+  },
+  {
+   "fieldname": "descricao",
+   "fieldtype": "Small Text",
+   "label": "Descrição"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-29 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Captacao de Recursos",
+ "name": "Atividade de Projeto de Captacao",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

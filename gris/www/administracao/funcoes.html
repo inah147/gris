@@ -74,6 +74,10 @@
 		{{ select(id="funcao-linha", name="categoria", items=linha_items, placeholder="Sem linha definida") }}
 	{% endcall %}
 
+	{% call field(label="Diretoria", hint="Quem ocupa uma função eleita ou nomeada aprova projetos de captação.") %}
+		{{ select(id="funcao-diretoria", name="diretoria", items=diretoria_items, placeholder="Não faz parte da Diretoria") }}
+	{% endcall %}
+
 	{% call field(label="Descrição") %}
 		{{ textarea(name="descricao", attrs={"id": "funcao-descricao", "rows": "2"}) }}
 	{% endcall %}

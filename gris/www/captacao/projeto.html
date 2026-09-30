@@ -1,0 +1,164 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}{{ titulo_da_pagina | e }}{% endblock %}
+
+{% set active_link = "/captacao/acompanhamento" %}
+
+{# projeto.js é injetado automaticamente pelo Frappe (co-location). Todo o conteúdo
+   do projeto é desenhado pelo JS a partir de `data-projeto`, e redesenhado com a
+   resposta de cada ação. #}
+
+{% block page_header %}
+<div class="captacao-cabecalho">
+	<div class="flex flex-col gap-2 min-w-0">
+		<a class="captacao-voltar" href="/captacao/acompanhamento">{{ lucide_icon("arrow-left", size="xs") }}<span>Banco de projetos</span></a>
+		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground" id="projeto-titulo">{{ titulo_da_pagina | e }}</h1>
+		<div class="captacao-cabecalho__meta" id="projeto-meta"></div>
+	</div>
+	<div class="captacao-cabecalho__acoes" id="projeto-acoes"></div>
+</div>
+{% endblock %}
+
+{% block main %}
+{% include "gris/templates/includes/captacao_comum.html" %}
+{{ toaster() }}
+<div class="captacao-pagina captacao-projeto"
+     data-projeto="{{ projeto | tojson | forceescape }}"
+     data-versoes="{{ versoes | tojson | forceescape }}"
+     data-comentarios="{{ comentarios | tojson | forceescape }}">
+
+	<div id="projeto-avisos" class="captacao-avisos"></div>
+
+	<div class="tabs captacao-abas" id="projeto-abas">
+		<nav role="tablist" aria-orientation="horizontal">
+			<button type="button" role="tab" id="aba-projeto" aria-controls="painel-projeto" aria-selected="true" tabindex="0">Projeto</button>
+			<button type="button" role="tab" id="aba-historico" aria-controls="painel-historico" aria-selected="false" tabindex="0">Histórico</button>
+			<button type="button" role="tab" id="aba-comentarios" aria-controls="painel-comentarios" aria-selected="false" tabindex="0">
+				Comentários <span class="badge-secondary" id="contador-comentarios">{{ comentarios | length }}</span>
+			</button>
+		</nav>
+		<div role="tabpanel" id="painel-projeto" aria-labelledby="aba-projeto" tabindex="-1" aria-selected="true">
+			<div id="projeto-secoes" class="captacao-secoes"></div>
+		</div>
+		<div role="tabpanel" id="painel-historico" aria-labelledby="aba-historico" tabindex="-1" aria-selected="false" hidden>
+			{% call card(attrs={"class": "captacao-bloco"}) %}
+			<section class="captacao-bloco__corpo">
+				<h2 class="captacao-bloco__titulo">Decisões</h2>
+				<ol id="projeto-decisoes" class="captacao-timeline"></ol>
+			</section>
+			{% endcall %}
+			{% call card(attrs={"class": "captacao-bloco"}) %}
+			<section class="captacao-bloco__corpo">
+				<h2 class="captacao-bloco__titulo">Alterações no conteúdo</h2>
+				<p class="m-0 text-sm text-muted-foreground">Cada vez que alguém salvou o projeto e o que mudou.</p>
+				<ol id="projeto-versoes" class="captacao-timeline captacao-timeline--compacta"></ol>
+			</section>
+			{% endcall %}
+		</div>
+		<div role="tabpanel" id="painel-comentarios" aria-labelledby="aba-comentarios" tabindex="-1" aria-selected="false" hidden>
+			{% call card(attrs={"class": "captacao-bloco"}) %}
+			<section class="captacao-bloco__corpo">
+				<div id="projeto-comentarios" class="task-comments-list captacao-comentarios"></div>
+				<div class="captacao-comentar">
+					{{ textarea(name="comentario", attrs={"id": "novo-comentario", "rows": "3", "placeholder": "Escreva um comentário", "maxlength": "5000"}) }}
+					<button type="button" class="btn-primary" id="btn-comentar">{{ lucide_icon("send", size="sm") }}<span>Comentar</span></button>
+				</div>
+			</section>
+			{% endcall %}
+		</div>
+	</div>
+</div>
+
+{# ─────────────── Dialogs ─────────────── #}
+
+{% call dialog(
+	id="dialog-decisao-preliminar",
+	title="Decisão da Diretoria",
+	description="Avalie se a ideia cabe em um projeto de captação.",
+	dialog_attrs={"class": "captacao-dialog"},
+	footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-decisao-preliminar">Cancelar</button><button type="button" class="btn-primary" data-confirmar="decidir_preliminar">Registrar decisão</button>'
+) %}
+<div class="captacao-dialog__form">
+	<fieldset class="captacao-opcoes" id="opcoes-preliminar">
+		<legend class="sr-only">Decisão</legend>
+		<label class="captacao-opcao"><input type="radio" name="decisao_preliminar" value="Enviar para detalhamento" checked><span><strong>Enviar para detalhamento</strong><small>A ideia cabe em captação. Cria a pasta no Drive e libera o detalhamento.</small></span></label>
+		<label class="captacao-opcao"><input type="radio" name="decisao_preliminar" value="Solicitar alteração"><span><strong>Solicitar alteração</strong><small>Devolve ao proponente com o que precisa mudar.</small></span></label>
+		<label class="captacao-opcao"><input type="radio" name="decisao_preliminar" value="Não cabe em projetos de captação"><span><strong>Não cabe em projetos de captação</strong><small>Deve ir para outra frente do grupo. Encerra a ideia.</small></span></label>
+		<label class="captacao-opcao"><input type="radio" name="decisao_preliminar" value="Realizado de outra maneira"><span><strong>Realizado de outra maneira</strong><small>O objetivo será atingido por outro caminho. Encerra a ideia.</small></span></label>
+	</fieldset>
+	{% call field(label="Motivo", hint="Obrigatório, exceto para enviar ao detalhamento.") %}
+		{{ textarea(name="comentario", attrs={"id": "comentario-preliminar", "rows": "4"}) }}
+	{% endcall %}
+</div>
+{% endcall %}
+
+{% call dialog(
+	id="dialog-pedidos",
+	title="Pedir alterações",
+	description="Escreva o pedido só nas partes que precisam mudar, com a justificativa. O projeto volta para o proponente.",
+	dialog_attrs={"class": "captacao-dialog captacao-dialog--largo"},
+	footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-pedidos">Cancelar</button><button type="button" class="btn-primary" data-confirmar="solicitar_alteracoes">Enviar pedidos</button>'
+) %}
+<div class="captacao-dialog__form" id="pedidos-secoes"></div>
+{% endcall %}
+
+{% call dialog(
+	id="dialog-aprovar-revisao",
+	title="Aprovar revisão técnica",
+	description="O projeto segue para a aprovação final da Diretoria.",
+	dialog_attrs={"class": "captacao-dialog"},
+	footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-aprovar-revisao">Cancelar</button><button type="button" class="btn-primary" data-confirmar="aprovar_revisao">Aprovar</button>'
+) %}
+<div class="captacao-dialog__form">
+	{% call field(label="Comentário (opcional)") %}
+		{{ textarea(name="comentario", attrs={"id": "comentario-revisao", "rows": "3"}) }}
+	{% endcall %}
+</div>
+{% endcall %}
+
+{% call dialog(
+	id="dialog-aprovacao-final",
+	title="Aprovação final da Diretoria",
+	description="Ciência da Diretoria para que o projeto entre no banco e possa ir a editais.",
+	dialog_attrs={"class": "captacao-dialog"},
+	footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-aprovacao-final">Cancelar</button><button type="button" class="btn-primary" data-confirmar="decidir_aprovacao_final">Registrar decisão</button>'
+) %}
+<div class="captacao-dialog__form">
+	<fieldset class="captacao-opcoes">
+		<legend class="sr-only">Decisão</legend>
+		<label class="captacao-opcao"><input type="radio" name="decisao_final" value="Aprovar" checked><span><strong>Aprovar</strong><small>O projeto fica pronto para captação.</small></span></label>
+		<label class="captacao-opcao"><input type="radio" name="decisao_final" value="Solicitar alteração"><span><strong>Solicitar alterações</strong><small>Volta ao proponente e passa de novo pela revisão técnica.</small></span></label>
+	</fieldset>
+	{% call field(label="Comentário", hint="Obrigatório ao pedir alterações.") %}
+		{{ textarea(name="comentario", attrs={"id": "comentario-final", "rows": "4"}) }}
+	{% endcall %}
+</div>
+{% endcall %}
+
+{% call dialog(
+	id="dialog-cancelar",
+	title="Cancelar projeto",
+	description="O projeto sai do fluxo. Um projeto cancelado antes da aprovação final não volta ao banco.",
+	dialog_attrs={"class": "captacao-dialog"},
+	footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-cancelar">Voltar</button><button type="button" class="btn-destructive" data-confirmar="cancelar">Cancelar projeto</button>'
+) %}
+<div class="captacao-dialog__form">
+	{% call field(label="Motivo *") %}
+		{{ textarea(name="motivo", attrs={"id": "motivo-cancelamento", "rows": "4"}) }}
+	{% endcall %}
+</div>
+{% endcall %}
+
+{% call dialog(
+	id="dialog-confirmar",
+	title="Confirmar",
+	dialog_attrs={"class": "captacao-dialog"},
+	footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-confirmar">Voltar</button><button type="button" class="btn-primary" id="btn-confirmar-generico">Confirmar</button>'
+) %}
+<p class="m-0" id="texto-confirmar"></p>
+{% endcall %}
+{% endblock %}

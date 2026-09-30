@@ -153,6 +153,54 @@
 		);
 	}
 
+	// ─────────────────────────── contato de cobrança ───────────────────────────
+
+	function editarContato(botao) {
+		if (semPermissao()) return;
+		const editor = document.getElementById("contatoCobrancaEditor");
+		const acoes = document.getElementById("acoesContatoCobranca");
+		if (!editor || !acoes || editor.querySelector("input")) return;
+
+		editor.classList.remove("hidden");
+		editor.innerHTML = `
+			<div class="field">
+				<label class="label" for="inputEmailCobranca">E-mail de cobrança</label>
+				<input type="email" id="inputEmailCobranca" class="input" value="${escapeHtml(botao.getAttribute("data-email") || "")}" />
+			</div>
+			<div class="field mt-2">
+				<label class="label" for="inputTelefoneCobranca">WhatsApp de cobrança</label>
+				<input type="tel" id="inputTelefoneCobranca" class="input" placeholder="+5511999999999"
+					value="${escapeHtml(botao.getAttribute("data-telefone") || "")}" />
+			</div>
+		`;
+		acoes.innerHTML = `
+			<button type="button" class="btn-sm-primary" data-acao="salvar-contato">Salvar</button>
+			<button type="button" class="btn-sm-outline" data-acao="cancelar-contato">Cancelar</button>
+		`;
+	}
+
+	function cancelarContato() {
+		const editor = document.getElementById("contatoCobrancaEditor");
+		const acoes = document.getElementById("acoesContatoCobranca");
+		if (editor) {
+			editor.innerHTML = "";
+			editor.classList.add("hidden");
+		}
+		if (acoes) window.location.reload();
+	}
+
+	function salvarContato() {
+		if (semPermissao()) return;
+		const email = document.getElementById("inputEmailCobranca");
+		const telefone = document.getElementById("inputTelefoneCobranca");
+		if (!email || !telefone) return;
+		chamarApi(
+			"gris.api.financeiro.monthly_payments.update_billing_contacts",
+			{ associate_id: associado, email: email.value.trim(), phone: telefone.value.trim() },
+			"Contato de cobrança atualizado"
+		);
+	}
+
 	// ─────────────────────────── mês a mês (status e transação vinculada) ───────────────────────────
 
 	const STATUS_OPCOES = ["Em Aberto", "Atrasado", "Pago"];
@@ -528,6 +576,9 @@
 		"salvar-mes": salvarMes,
 		"cancelar-mes": cancelarEdicaoMes,
 		"alternar-cobranca": alternarCobranca,
+		"editar-contato": editarContato,
+		"salvar-contato": salvarContato,
+		"cancelar-contato": cancelarContato,
 		"cobrar-whatsapp": () => gerarCobranca(true),
 		"cobrar-link": () => gerarCobranca(false),
 		"reenviar-cobranca": reenviarCobranca,

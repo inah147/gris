@@ -263,7 +263,7 @@
 							</div>
 							<div class="captacao-gantt__faixa">
 								<div class="captacao-gantt__barra" data-indice="${escapeHtml(item.indice)}"
-									data-inicio="${item.inicio}" data-termino="${item.termino}"
+									data-inicio="${escapeHtml(item.inicio)}" data-termino="${escapeHtml(item.termino)}"
 									style="left:${pct(item.inicio)};width:${pct(item.termino - item.inicio)}"
 									title="${escapeHtml(`${item.titulo}: ${periodo}`)}"
 									${

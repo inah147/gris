@@ -18,9 +18,14 @@
 	}
 
 	function escapeHtml(valor) {
-		const div = document.createElement("div");
-		div.textContent = valor == null ? "" : String(valor);
-		return div.innerHTML;
+		// Por substituição, e não pelo truque textContent -> innerHTML: aquele não escapa
+		// aspas, e o texto também vai para atributos (title, aria-label, href).
+		return String(valor == null ? "" : valor)
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/"/g, "&quot;")
+			.replace(/'/g, "&#39;");
 	}
 
 	function icone(nome, tamanho) {

@@ -1,0 +1,206 @@
+/* Documentos de transparência. */
+
+/* --- Header com ações à direita --- */
+.page-header-row {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 4);
+	flex-wrap: wrap;
+}
+
+.page-header-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 2);
+	margin-left: auto;
+}
+
+.adm-transparencia {
+	margin-top: calc(var(--spacing) * 6);
+}
+
+/* --- Barra de busca e filtro --- */
+.adm-transparencia__barra {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.75rem;
+	margin-bottom: calc(var(--spacing) * 6);
+}
+
+.adm-transparencia__busca {
+	flex: 1 1 18rem;
+	max-width: 28rem;
+}
+
+.adm-transparencia__filtro {
+	display: inline-flex;
+	gap: 0.25rem;
+	padding: 0.25rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius, 0.625rem);
+}
+
+.adm-transparencia__contagem {
+	margin: 0 0 0 auto;
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+	font-variant-numeric: tabular-nums;
+}
+
+/* --- Grupos por ano --- */
+.adm-transparencia__lista {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 8);
+}
+
+.adm-transparencia__ano-cabecalho {
+	display: flex;
+	align-items: baseline;
+	gap: 0.75rem;
+	margin-bottom: 0.75rem;
+}
+
+.adm-transparencia__ano-titulo {
+	margin: 0;
+	font-size: 1.25rem;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+.adm-transparencia__ano-contagem {
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+}
+
+.adm-transparencia__card {
+	padding: 0;
+	gap: 0;
+}
+
+.adm-transparencia__linhas {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.adm-transparencia__linha {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto auto;
+	align-items: center;
+	gap: 0.75rem 1rem;
+	padding: 0.875rem 1.125rem;
+}
+
+.adm-transparencia__linha + .adm-transparencia__linha {
+	border-top: 1px solid var(--border);
+}
+
+.adm-transparencia__info {
+	min-width: 0;
+}
+
+.adm-transparencia__tipo {
+	margin: 0;
+	font-size: 0.9375rem;
+	font-weight: 600;
+	line-height: 1.35;
+}
+
+.adm-transparencia__meta {
+	margin: 0.125rem 0 0;
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+}
+
+.adm-transparencia__selos,
+.adm-transparencia__acoes {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.375rem;
+}
+
+.adm-transparencia__acoes {
+	justify-content: flex-end;
+}
+
+/* ---------------------------------------------------------------- */
+/* Dialog                                                             */
+/*                                                                    */
+/* Repetido de funcoes.css de propósito: o CSS co-localizado só é     */
+/* injetado na página homônima.                                       */
+/* ---------------------------------------------------------------- */
+
+/* Quem desenha a caixa é o `> div`, travado em 512px pelo Basecoat. */
+.adm-transparencia-dialog > div {
+	width: min(36rem, calc(100vw - 2rem));
+	max-width: none;
+}
+
+.admin-dialog__form {
+	display: flex;
+	flex-direction: column;
+	gap: 0.875rem;
+}
+
+.adm-transparencia__duas-colunas {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.75rem;
+}
+
+/* Calendário por cima do dialog: o JS põe o popover do datepicker na top layer
+   (Popover API) e escreve top/left junto do campo. Aqui só se desfaz o que atrapalha:
+   o `inset: 0` + `margin: auto` que o navegador dá a todo [popover] (centralizaria o
+   calendário na tela) e o translateX(-50%) que o datepicker.css usa no celular. */
+.adm-transparencia-dialog .datepicker-popover[popover] {
+	position: fixed;
+	inset: auto;
+	margin: 0;
+	transform: none;
+}
+
+.adm-transparencia__arquivo-atual {
+	margin: 0;
+	font-size: 0.875rem;
+	overflow-wrap: anywhere;
+}
+
+.adm-transparencia__link,
+.adm-transparencia__arquivo-atual a {
+	color: var(--primary);
+	text-decoration: underline;
+}
+
+.adm-transparencia-dialog__excluir {
+	margin-right: auto;
+	color: var(--destructive);
+}
+
+@media (max-width: 640px) {
+	.adm-transparencia__busca {
+		max-width: none;
+	}
+
+	.adm-transparencia__contagem {
+		margin-left: 0;
+		width: 100%;
+	}
+
+	/* No celular a linha empilha: título, selos e ações um embaixo do outro. */
+	.adm-transparencia__linha {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0.5rem;
+	}
+
+	.adm-transparencia__acoes {
+		justify-content: flex-start;
+	}
+
+	.adm-transparencia__duas-colunas {
+		grid-template-columns: 1fr;
+	}
+}

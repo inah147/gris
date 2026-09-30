@@ -120,6 +120,7 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 		"children": [
 			{"label": "Unidades Organizacionais", "path": "/administracao/unidades_organizacionais"},
 			{"label": "Funções", "path": "/administracao/funcoes"},
+			{"label": "Documentos", "path": "/administracao/transparencia"},
 		],
 	},
 	{
@@ -172,6 +173,7 @@ SIDEBAR_ICON_MAP: dict[str, str] = {
 	"/calendario/visualizar": "calendar-days",
 	"/administracao/unidades_organizacionais": "network",
 	"/administracao/funcoes": "briefcase",
+	"/administracao/transparencia": "folder-open",
 	"/gestao_adultos/organograma": "network",
 	"/gestao_adultos/atvs": "file-pen-line",
 	"/gestao_adultos/minha_entrevista": "clipboard-list",
@@ -207,6 +209,8 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/administracao": ["All"],
 	"/administracao/unidades_organizacionais": ["All"],
 	"/administracao/funcoes": ["All"],
+	# Esta não: mostra o que ainda não foi publicado e só serve para editar.
+	"/administracao/transparencia": ["Gestor da UEL"],
 	"/gestao_tarefas": ["All"],
 	"/gestao_tarefas/tarefas": ["All"],
 	"/responsavel": ["Responsavel"],
@@ -312,6 +316,8 @@ STRICT_PORTAL_PAGES = {
 	"/responsavel/meus_dados",
 	"/responsavel/beneficiarios",
 	"/responsavel/pesquisa_novos",
+	# Só o Gestor da UEL mexe na transparência, e o System Manager não é exceção.
+	"/administracao/transparencia",
 }
 
 

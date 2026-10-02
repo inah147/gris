@@ -245,7 +245,7 @@ services:
   # Reference: https://www.getoutline.com/
 
   outline:
-    image: docker.getoutline.com/outlinewiki/outline:0.82.0
+    image: docker.getoutline.com/outlinewiki/outline:1.10.1
     restart: unless-stopped
     depends_on:
       outline-postgres:

@@ -662,6 +662,11 @@ def enrich_context(context, current_path: str):
 		roles = _get_user_roles(user)
 		context.is_system_manager = "System Manager" in roles
 		context.is_guest_user = False
+
+		# Import local: busca_global importa deste módulo.
+		from gris.api.busca_global import paginas_da_busca
+
+		context.busca_paginas = paginas_da_busca(sidebar_items, roles)
 	else:
 		context.user_display_name = None
 		context.user_email = None
@@ -669,6 +674,7 @@ def enrich_context(context, current_path: str):
 		context.user_initial = None
 		context.is_system_manager = False
 		context.is_guest_user = True
+		context.busca_paginas = []
 
 	return context
 

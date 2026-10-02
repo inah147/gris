@@ -4,9 +4,10 @@
 {% set body_class = ((body_class ~ " ") if body_class else "") ~ "gris-portal-sidebar-page" %}
 {% endif %}
 
-{% set sidebar_shell_asset_version = "20260529-sidebar-shell-26" %}
+{% set sidebar_shell_asset_version = "20261002-sidebar-shell-27" %}
 {% set sidebar_breakpoint = 768 %}
 {% set sidebar_desktop_state_storage_key = "gris-portal-sidebar-desktop-state" %}
+{% set is_portal_user = frappe.session.user and frappe.session.user != "Guest" %}
 
 {% block head_include %}
 {{ super() }}
@@ -28,6 +29,9 @@
 	})();
 </script>
 <link rel="stylesheet" href="/assets/gris/css/web_sidebar_base.css?v={{ sidebar_shell_asset_version }}" />
+{% if is_portal_user %}
+<link rel="stylesheet" href="/assets/gris/css/portal_busca.css?v={{ sidebar_shell_asset_version }}" />
+{% endif %}
 {% endblock %}
 
 {% from "public/design_system/components/generated/sidebar.html.jinja" import sidebar %}
@@ -157,23 +161,40 @@ menu=sidebar_menu
 
 <main>
 	<header class="portal-topbar">
-		<div class="portal-topbar__inner">
-			<button
-				type="button"
-				class="portal-topbar__toggle"
-				data-sidebar-toggle
-				aria-controls="portal-sidebar"
-				aria-expanded="true"
-				aria-label="Alternar navegação lateral"
-			>
-				{{ topbar_toggle_icon | safe }}
-			</button>
-			{% if portal_breadcrumbs %}
-			<nav class="portal-topbar__breadcrumbs" aria-label="Breadcrumb">
-				{{ breadcrumb(portal_breadcrumbs, attrs={"class": "portal-topbar__breadcrumb-list"}) }}
-			</nav>
-			{% endif %}
-			{% if frappe.session.user and frappe.session.user != "Guest" %}
+		<div class="portal-topbar__inner{% if is_portal_user %} portal-topbar__inner--com-busca{% endif %}">
+			<div class="portal-topbar__start">
+				<button
+					type="button"
+					class="portal-topbar__toggle"
+					data-sidebar-toggle
+					aria-controls="portal-sidebar"
+					aria-expanded="true"
+					aria-label="Alternar navegação lateral"
+				>
+					{{ topbar_toggle_icon | safe }}
+				</button>
+				{% if portal_breadcrumbs %}
+				<nav class="portal-topbar__breadcrumbs" aria-label="Breadcrumb">
+					{{ breadcrumb(portal_breadcrumbs, attrs={"class": "portal-topbar__breadcrumb-list"}) }}
+				</nav>
+				{% endif %}
+			</div>
+			{% if is_portal_user %}
+			<div class="portal-topbar__search">
+				<button
+					type="button"
+					class="portal-busca-gatilho"
+					data-portal-busca-abrir
+					aria-haspopup="dialog"
+					aria-controls="portal-busca"
+					aria-keyshortcuts="Control+K Meta+K"
+					aria-label="Buscar no portal"
+				>
+					{{ lucide_icon("search", size="sm") }}
+					<span class="portal-busca-gatilho__texto">Buscar no portal…</span>
+					<kbd class="kbd portal-busca-gatilho__atalho" data-portal-busca-atalho>Ctrl K</kbd>
+				</button>
+			</div>
 			<div class="portal-topbar__actions">
 				{% set tarefas_trigger %}
 				<span class="portal-tarefas-trigger__icon">{{ lucide_icon("list-todo", size="sm") }}</span>
@@ -231,6 +252,9 @@ menu=sidebar_menu
 </main>
 
 {% include "gris/templates/includes/bottom_bar.html" %}
+{% if is_portal_user %}
+{% include "gris/templates/includes/portal_busca.html" %}
+{% endif %}
 {% endblock %}
 
 {% block style %}
@@ -733,5 +757,8 @@ menu=sidebar_menu
 		});
 	})();
 </script>
+{% if is_portal_user %}
+<script src="/assets/gris/js/portal_busca.js?v={{ sidebar_shell_asset_version }}" defer></script>
+{% endif %}
 {% block extra_script %}{% endblock %}
 {% endblock %}

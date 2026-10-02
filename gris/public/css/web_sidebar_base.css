@@ -36,6 +36,14 @@ main {
 	box-shadow: none;
 }
 
+.portal-topbar__start {
+	display: flex;
+	flex: 1 1 auto;
+	align-items: center;
+	gap: 0.75rem;
+	min-width: 0;
+}
+
 .portal-topbar__toggle {
 	display: inline-flex;
 	align-items: center;

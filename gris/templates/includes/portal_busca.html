@@ -1,0 +1,75 @@
+{#
+	Busca global do Portal (spec: docs/specs/busca-global/spec.md).
+
+	Paleta no visual do `command-dialog` do Basecoat, mas com controlador próprio
+	(`/assets/gris/js/portal_busca.js`): o `command.js` só filtra itens que já estão no DOM e
+	não suporta resultado vindo do servidor. O `data-command-initialized` impede que ele
+	assuma este painel.
+
+	Incluído pelo `web_sidebar_base.html` apenas com sessão autenticada.
+#}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import empty %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+<dialog id="portal-busca" class="command-dialog portal-busca" aria-label="Buscar no portal">
+	<div class="command portal-busca__painel" data-command-initialized="true">
+		<header>
+			{{ lucide_icon("search", size="sm") }}
+			<input
+				type="text"
+				id="portal-busca-input"
+				placeholder="Buscar páginas, pessoas, projetos, documentos…"
+				autocomplete="off"
+				autocorrect="off"
+				autocapitalize="off"
+				spellcheck="false"
+				maxlength="80"
+				role="combobox"
+				aria-autocomplete="list"
+				aria-expanded="true"
+				aria-controls="portal-busca-resultados"
+			/>
+			<span class="portal-busca__carregando" data-portal-busca-carregando hidden aria-hidden="true">
+				{{ lucide_icon("loader-circle", size="sm") }}
+			</span>
+		</header>
+
+		<div
+			role="menu"
+			id="portal-busca-resultados"
+			class="scrollbar portal-busca__resultados"
+			aria-label="Resultados da busca"
+		></div>
+
+		<div class="portal-busca__vazio" data-portal-busca-vazio hidden>
+			{{ empty(
+				title="Nada encontrado",
+				description="Confira a grafia ou tente uma palavra mais curta.",
+				image="/assets/gris/images/gris-character/gris-search.png",
+				image_alt="Personagem Gris procurando",
+				image_size="sm"
+			) }}
+		</div>
+
+		<p class="portal-busca__erro" data-portal-busca-erro role="alert" hidden>
+			Não foi possível buscar pessoas e registros agora. As páginas continuam disponíveis.
+		</p>
+
+		<footer class="portal-busca__rodape" aria-hidden="true">
+			<span><kbd class="kbd">{{ lucide_icon("corner-down-left", size="sm") }}</kbd> Abrir</span>
+			<span>
+				<kbd class="kbd">{{ lucide_icon("arrow-up", size="sm") }}</kbd>
+				<kbd class="kbd">{{ lucide_icon("arrow-down", size="sm") }}</kbd>
+				Navegar
+			</span>
+			<span><kbd class="kbd">Esc</kbd> Fechar</span>
+		</footer>
+
+		<button type="button" class="portal-busca__fechar" aria-label="Fechar busca" data-portal-busca-fechar>
+			{{ lucide_icon("x", size="sm") }}
+		</button>
+	</div>
+</dialog>
+
+{# `tojson` do Jinja escapa <, > e &: seguro dentro de <script>. #}
+<script type="application/json" id="portal-busca-paginas">{{ (busca_paginas or []) | tojson }}</script>

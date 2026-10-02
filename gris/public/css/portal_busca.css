@@ -1,0 +1,253 @@
+/*
+ * Busca global do Portal (spec: docs/specs/busca-global/spec.md).
+ *
+ * O painel herda o visual do `.command-dialog` do Basecoat; aqui fica só o que ele não
+ * cobre: o gatilho na topbar, o item em duas linhas, o rodapé com a legenda e a ancoragem
+ * do painel no topo.
+ */
+
+/* Topbar em três colunas: a busca fica no centro exato, qualquer que seja a largura do
+   breadcrumb à esquerda e das ações à direita. */
+.portal-topbar__inner--com-busca {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(14rem, 30rem) minmax(0, 1fr);
+	align-items: center;
+}
+
+.portal-topbar__inner--com-busca .portal-topbar__actions {
+	justify-self: end;
+	margin-left: 0;
+}
+
+.portal-topbar__search {
+	display: flex;
+	justify-content: center;
+	min-width: 0;
+}
+
+.portal-busca-gatilho {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	width: 100%;
+	height: 2.25rem;
+	padding: 0 0.375rem 0 0.75rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md, 0.5rem);
+	background: var(--background);
+	color: var(--muted-foreground);
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+	cursor: pointer;
+	box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+	transition:
+		background-color 160ms ease,
+		border-color 160ms ease,
+		color 160ms ease;
+}
+
+.portal-busca-gatilho:hover {
+	background: var(--accent);
+	color: var(--accent-foreground);
+}
+
+.portal-busca-gatilho:focus-visible {
+	outline: none;
+	border-color: var(--ring);
+	box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent);
+}
+
+.portal-busca-gatilho > svg {
+	flex-shrink: 0;
+}
+
+.portal-busca-gatilho__texto {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-align: left;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.portal-busca-gatilho__atalho {
+	flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Painel                                                              */
+/* ------------------------------------------------------------------ */
+
+/* Ancorado perto do topo, e não no centro: a lista muda de altura a cada tecla e o
+   painel centralizado pularia para cima e para baixo. */
+.portal-busca > .portal-busca__painel {
+	--tw-translate-y: 0;
+	top: min(12vh, 6rem);
+	max-width: 36rem;
+	max-height: calc(100dvh - min(12vh, 6rem) - 1rem);
+}
+
+.portal-busca .portal-busca__painel > header {
+	padding-right: 3rem;
+}
+
+.portal-busca__carregando {
+	display: inline-flex;
+	flex-shrink: 0;
+	color: var(--muted-foreground);
+}
+
+.portal-busca__carregando[hidden] {
+	display: none;
+}
+
+.portal-busca__carregando svg {
+	animation: portal-busca-girar 0.9s linear infinite;
+}
+
+@keyframes portal-busca-girar {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.portal-busca .portal-busca__resultados {
+	flex: 1 1 auto;
+	min-height: 0;
+	max-height: min(26rem, 60dvh);
+	padding-block: 0.25rem;
+}
+
+.portal-busca .portal-busca__resultados[hidden] {
+	display: none;
+}
+
+/* Enquanto a resposta nova não chega, os registros anteriores ficam, esmaecidos, para a
+   lista não pular. */
+.portal-busca__resultados[aria-busy="true"] [data-tipo="registro"] {
+	opacity: 0.55;
+}
+
+/* O Basecoat dá `py-3` aos itens do command-dialog; a lista mistura uma e duas linhas e
+   fica mais legível compacta, como na paleta de referência. */
+.portal-busca.command-dialog .command [role="menu"] [role="menuitem"] {
+	padding-block: 0.5rem;
+	cursor: pointer;
+	text-decoration: none;
+	color: inherit;
+}
+
+.portal-busca__item-texto {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.portal-busca__item-titulo,
+.portal-busca__item-meta {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.portal-busca__item-meta {
+	color: var(--muted-foreground);
+	font-size: 0.75rem;
+	line-height: 1rem;
+}
+
+.portal-busca__vazio[hidden] {
+	display: none;
+}
+
+.portal-busca__vazio section.empty {
+	gap: 0.25rem;
+	padding: 1.25rem 1rem 1.5rem;
+}
+
+.portal-busca__vazio section.empty > h2 {
+	font-size: 1rem;
+}
+
+.portal-busca__vazio section.empty > p {
+	font-size: 0.875rem;
+}
+
+.portal-busca__erro {
+	margin: 0;
+	padding: 0.5rem 0.75rem;
+	border-top: 1px solid var(--border);
+	color: var(--destructive);
+	font-size: 0.8125rem;
+}
+
+.portal-busca__erro[hidden] {
+	display: none;
+}
+
+.portal-busca__rodape {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	gap: 1rem;
+	padding: 0.5rem 0.75rem;
+	border-top: 1px solid var(--border);
+	background: color-mix(in oklab, var(--muted) 50%, transparent);
+	color: var(--muted-foreground);
+	font-size: 0.75rem;
+}
+
+.portal-busca__rodape > span {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+/* Sobre o fundo `muted` do rodapé o `.kbd` some; com borda ele volta a parecer tecla. */
+.portal-busca__rodape .kbd {
+	border: 1px solid var(--border);
+	background: var(--background);
+}
+
+/* ------------------------------------------------------------------ */
+/* Mobile                                                              */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 767px) {
+	.portal-topbar__inner--com-busca {
+		display: flex;
+	}
+
+	.portal-topbar__search {
+		flex: 0 0 auto;
+	}
+
+	.portal-busca-gatilho {
+		justify-content: center;
+		width: 2.5rem;
+		height: 2.5rem;
+		padding: 0;
+		border-color: transparent;
+		background: transparent;
+		box-shadow: none;
+		color: var(--foreground);
+	}
+
+	.portal-busca-gatilho__texto,
+	.portal-busca-gatilho__atalho {
+		display: none;
+	}
+
+	/* No topo da tela, para o teclado virtual não cobrir os resultados. */
+	.portal-busca > .portal-busca__painel {
+		top: 0.75rem;
+		max-width: calc(100% - 1.5rem);
+		max-height: calc(100dvh - 1.5rem);
+	}
+
+	/* Sem teclado físico a legenda dos atalhos não ajuda. */
+	.portal-busca__rodape {
+		display: none;
+	}
+}

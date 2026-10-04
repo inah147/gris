@@ -806,7 +806,50 @@ def on_cobranca_atualizada(doc, method=None):
 		)
 		return
 
-	lancar_baixa(doc)
+	if lancar_baixa(doc):
+		_enfileirar_confirmacao(doc.name)
+
+
+def _enfileirar_confirmacao(nome: str) -> None:
+	"""Agenda o WhatsApp de confirmação para depois do commit da baixa.
+
+	O envio sai da transação do webhook: se o WhatsApp falhar, a baixa já está
+	gravada e o webhook responde normalmente.
+	"""
+	try:
+		frappe.enqueue(
+			"gris.api.financeiro.cobranca_contribuicao.enviar_confirmacao",
+			queue="default",
+			enqueue_after_commit=True,
+			cobranca=nome,
+		)
+	except Exception:
+		frappe.log_error(
+			title="Falha ao agendar a confirmação de pagamento da contribuição",
+			message=f"cobranca={nome}\n{frappe.get_traceback()}",
+		)
+
+
+def enviar_confirmacao(cobranca: str) -> dict:
+	"""Manda ao responsável a confirmação de pagamento, uma vez só.
+
+	`comprovante_enviado_em` é o carimbo: só é gravado quando a mensagem sai, e com
+	ele preenchido nada é reenviado. Pagamento por PIX direto ou baixa manual não
+	passa por aqui — só quem pagou pelo link tem confirmação.
+	"""
+	doc = frappe.get_doc("Cobranca Infinitepay", cobranca)
+	if doc.finalidade != FINALIDADE_CONTRIBUICAO or doc.status != STATUS_COBRANCA_PAGA:
+		return {"enviado": False, "motivo": _("A cobrança não está paga.")}
+	if doc.comprovante_enviado_em:
+		return {"enviado": False, "motivo": _("A confirmação já foi enviada.")}
+
+	nome = frappe.db.get_value("Associado", doc.associado, "nome_completo") or doc.associado
+	dados = _dados_da_cobranca(doc)
+	mensagem = montar_mensagem(dados, nome, tipo=MENSAGEM_CONFIRMACAO)
+	resultado = _enviar_whatsapp(dados, doc.associado, mensagem)
+	if resultado["enviado"]:
+		frappe.db.set_value("Cobranca Infinitepay", doc.name, "comprovante_enviado_em", now_datetime())
+	return resultado
 
 
 def _valor_dos_itens(doc) -> float:

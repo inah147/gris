@@ -17,19 +17,15 @@ from __future__ import annotations
 import hashlib
 import hmac
 import re
-from urllib.parse import urlparse
 
 import frappe
 from frappe.rate_limiter import rate_limit
 from frappe.utils import get_url
 from frappe.utils.verified_command import get_secret
 
+from gris.utils.infinitepay import is_safe_receipt_url
+
 CONVITE_NAME_RE = re.compile(r"^CF-\d{4}-\d+$")
-RECEIPT_URL_ALLOWED_HOSTS = {
-	"api.infinitepay.io",
-	"checkout.infinitepay.io",
-	"recibo.infinitepay.io",
-}
 TOKEN_PURPOSE = "convite_confirmado.v1"
 PAGE_PATH = "/festas/convite_confirmado"
 
@@ -111,18 +107,8 @@ def _mask_email(email: str | None) -> str:
 	return f"{mascara_local}@{domain}"
 
 
-def _is_safe_receipt_url(url: str | None) -> bool:
-	"""True quando a URL é HTTPS e aponta para domínio conhecido da Infinitepay."""
-	if not url:
-		return False
-	try:
-		parsed = urlparse(url)
-	except ValueError:
-		return False
-	if parsed.scheme != "https":
-		return False
-	host = (parsed.hostname or "").lower()
-	return host in RECEIPT_URL_ALLOWED_HOSTS
+# Mantido com este nome porque a página e os testes de festas já o importam daqui.
+_is_safe_receipt_url = is_safe_receipt_url
 
 
 # ─── Endpoint AJAX para polling ───────────────────────────────────────────────

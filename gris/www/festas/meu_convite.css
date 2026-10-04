@@ -1,0 +1,183 @@
+.mc-page {
+	min-height: 100vh;
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: clamp(1.5rem, 4vw, 3rem) 1rem 2rem;
+	gap: clamp(1.25rem, 3vw, 2rem);
+	background: var(--background);
+	color: var(--foreground);
+}
+
+.mc-hero {
+	display: flex;
+	justify-content: center;
+	width: 100%;
+}
+
+.mc-hero__logo {
+	max-height: 72px;
+	max-width: 200px;
+	object-fit: contain;
+}
+
+.mc-main {
+	width: 100%;
+	max-width: 480px;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.mc-card section {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+}
+
+.mc-festa {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+	text-align: center;
+}
+
+.mc-festa__rotulo {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.375rem;
+	margin: 0;
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--primary);
+}
+
+.mc-festa__nome {
+	margin: 0;
+	font-size: clamp(1.375rem, 5vw, 1.75rem);
+	font-weight: 700;
+	line-height: 1.2;
+}
+
+.mc-festa__quando {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0.25rem 1rem;
+	margin: 0;
+	color: var(--muted-foreground);
+}
+
+.mc-festa__quando span {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+}
+
+.mc-verificacao {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+/* Quatro dígitos grandes e espaçados, fáceis de digitar no celular. */
+.mc-digitos {
+	font-size: 1.5rem;
+	letter-spacing: 0.5em;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+	height: 3.25rem;
+}
+
+.mc-abrir,
+.mc-baixar {
+	width: 100%;
+	justify-content: center;
+}
+
+.mc-convite {
+	align-items: center;
+	text-align: center;
+}
+
+/* Fundo branco fixo: o leitor da portaria precisa de contraste também no tema escuro. */
+.mc-convite__qr {
+	width: min(100%, 320px);
+	aspect-ratio: 1;
+	padding: 0.75rem;
+	background: #fff;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	image-rendering: pixelated;
+}
+
+.mc-convite__nome {
+	margin: 0;
+	font-size: 1.25rem;
+	font-weight: 700;
+}
+
+.mc-convite__tipo {
+	margin: -0.75rem 0 0;
+	color: var(--muted-foreground);
+}
+
+.mc-convite .alert {
+	text-align: left;
+}
+
+.mc-status {
+	display: flex;
+	align-items: flex-start;
+	gap: 1rem;
+}
+
+.mc-status__icone {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 3rem;
+	height: 3rem;
+	flex-shrink: 0;
+	border-radius: 999px;
+	background: var(--muted);
+	color: var(--muted-foreground);
+}
+
+.mc-status__titulo {
+	margin: 0;
+	font-size: 1.125rem;
+	font-weight: 600;
+}
+
+.mc-status__subtitulo {
+	margin: 0.25rem 0 0;
+	color: var(--muted-foreground);
+}
+
+.mc-footer {
+	text-align: center;
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+}
+
+.mc-footer p {
+	margin: 0;
+}
+
+.mc-footer__sub {
+	font-size: 0.75rem;
+}
+
+@media (min-width: 640px) {
+	.mc-abrir,
+	.mc-baixar {
+		width: auto;
+		align-self: center;
+		min-width: 14rem;
+	}
+}

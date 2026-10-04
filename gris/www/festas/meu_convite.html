@@ -1,0 +1,95 @@
+{% extends "gris/templates/portal_clean.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, alert %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{% block title %}Seu convite{% endblock %}
+
+{# meu_convite.css/.js são injetados automaticamente pelo Frappe (colocated). Não referenciar manualmente: duplica o carregamento. #}
+
+{% block page_content %}
+<div class="mc-page" data-token="{{ token | e }}" data-estado="{{ estado | e }}">
+
+	<section class="mc-hero">
+		{% if portal_logo %}
+		<img class="mc-hero__logo" src="{{ portal_logo | e }}" alt="Logo da Unidade Escoteira Local" />
+		{% else %}
+		<img class="mc-hero__logo" src="/assets/gris/images/gris-character/gris-logo.png" alt="GRIS" onerror="this.style.display='none'" />
+		{% endif %}
+	</section>
+
+	<main class="mc-main">
+		{% call card(attrs={"class": "mc-card"}) %}
+			<header class="mc-festa">
+				<p class="mc-festa__rotulo">{{ lucide_icon("ticket", "sm") }} Convite</p>
+				<h1 class="mc-festa__nome">{{ festa.nome | e }}</h1>
+				{% if festa.data or festa.horario_inicio %}
+				<p class="mc-festa__quando">
+					{% if festa.data %}<span>{{ lucide_icon("calendar-check", "sm") }} {{ festa.data | e }}</span>{% endif %}
+					{% if festa.horario_inicio %}
+					<span>
+						{{ lucide_icon("clock", "sm") }} {{ festa.horario_inicio | e }}{% if festa.horario_termino %} às {{ festa.horario_termino | e }}{% endif %}
+					</span>
+					{% endif %}
+				</p>
+				{% endif %}
+			</header>
+
+			{% if estado == "expirado" %}
+			<div class="mc-status">
+				<span class="mc-status__icone">{{ lucide_icon("calendar-x", "lg") }}</span>
+				<div>
+					<h2 class="mc-status__titulo">Este convite expirou</h2>
+					<p class="mc-status__subtitulo">A festa já aconteceu. Obrigado pela presença!</p>
+				</div>
+			</div>
+			{% else %}
+			<form class="form mc-verificacao" id="mc-verificacao" novalidate>
+				<div class="field">
+					<label for="mc-digitos">Últimos 4 dígitos do WhatsApp</label>
+					<input class="input mc-digitos" id="mc-digitos" name="digitos" type="text"
+						inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off"
+						placeholder="0000" required aria-describedby="mc-digitos-ajuda">
+					<p class="text-sm text-muted-foreground" id="mc-digitos-ajuda">
+						Digite os 4 últimos números do celular que recebeu este link no WhatsApp.
+					</p>
+				</div>
+				<div id="mc-erro" hidden>
+					{{ alert(
+						description='<span id="mc-erro-texto"></span>',
+						icon=lucide_icon("triangle-alert", "md"),
+						variant="error"
+					) }}
+				</div>
+				<button type="submit" class="btn-primary mc-abrir" id="mc-abrir">
+					{{ lucide_icon("lock-keyhole", "sm") }} Abrir convite
+				</button>
+			</form>
+
+			<section class="mc-convite" id="mc-convite" hidden aria-live="polite">
+				<img class="mc-convite__qr" id="mc-qr" alt="QR code do convite" />
+				<p class="mc-convite__nome" id="mc-nome"></p>
+				<p class="mc-convite__tipo" id="mc-tipo"></p>
+				{{ alert(
+					description="Mostre este QR code na entrada da festa. Aumente o brilho da tela para facilitar a leitura.",
+					icon=lucide_icon("sun", "md"),
+					variant="info"
+				) }}
+				<button type="button" class="btn-outline mc-baixar" id="mc-baixar">
+					{{ lucide_icon("download", "sm") }} Baixar PDF
+				</button>
+			</section>
+			{% endif %}
+		{% endcall %}
+	</main>
+
+	{% if uel.nome_da_uel %}
+	<footer class="mc-footer">
+		<p>
+			{% if uel.tipo_uel %}{{ uel.tipo_uel | e }} {% endif %}{{ uel.nome_da_uel | e }}{% if uel.numeral %} {{ uel.numeral | e }}{% endif %}
+		</p>
+		{% if uel.regiao %}<p class="mc-footer__sub">{{ uel.regiao | e }}</p>{% endif %}
+	</footer>
+	{% endif %}
+
+</div>
+{% endblock %}

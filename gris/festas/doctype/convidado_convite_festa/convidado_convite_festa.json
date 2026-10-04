@@ -11,7 +11,10 @@
   "qr_code",
   "status_envio",
   "descricao_erro_envio",
-  "whatsapp_notificado_em"
+  "status_envio_whatsapp",
+  "descricao_erro_whatsapp",
+  "whatsapp_notificado_em",
+  "token_link"
  ],
  "fields": [
   {
@@ -62,18 +65,42 @@
    "read_only": 1
   },
   {
-   "fieldname": "whatsapp_notificado_em",
-   "fieldtype": "Datetime",
-   "hidden": 1,
-   "label": "WhatsApp Notificado em",
+   "fieldname": "status_envio_whatsapp",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status do WhatsApp",
+   "no_copy": 1,
+   "options": "\nPendente\nEnviado\nErro\nSem telefone",
+   "read_only": 1
+  },
+  {
+   "fieldname": "descricao_erro_whatsapp",
+   "fieldtype": "Small Text",
+   "label": "Descrição do Erro do WhatsApp",
    "no_copy": 1,
    "read_only": 1
+  },
+  {
+   "fieldname": "whatsapp_notificado_em",
+   "fieldtype": "Datetime",
+   "label": "WhatsApp Enviado em",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "token_link",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Código do Link do Convite",
+   "no_copy": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-05-20 09:00:00.000000",
+ "modified": "2026-10-04 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Festas",
  "name": "Convidado Convite Festa",

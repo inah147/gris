@@ -92,9 +92,11 @@ website_redirects = [
 	},
 ]
 
-# Página pública da contribuição mensal: /contribuicao/<código do beneficiário>.
+# Páginas públicas por código: /contribuicao/<código do beneficiário> e
+# /convite/<código do convidado> (link do convite da festa enviado pelo WhatsApp).
 website_route_rules = [
 	{"from_route": "/contribuicao/<token>", "to_route": "contribuicao"},
+	{"from_route": "/convite/<token>", "to_route": "festas/meu_convite"},
 ]
 
 # Generators
@@ -376,6 +378,7 @@ before_request = ["gris.api.auth.enforce_no_desk_redirect"]
 after_request = [
 	"gris.api.mcp.oauth.anunciar_recurso_protegido",
 	"gris.api.financeiro.contribuicao_publica.proteger_resposta",
+	"gris.api.festas.convite_publico.proteger_resposta",
 ]
 
 # Job Events

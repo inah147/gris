@@ -73,6 +73,11 @@ class TestConviteEnvio(FrappeTestCase):
 		self.mock_whatsapp = whatsapp_patcher.start()
 		self.addCleanup(whatsapp_patcher.stop)
 
+		# O job comita no fim; no teste isso gravaria os dados de verdade no site.
+		commit_patcher = patch.object(frappe.db, "commit")
+		commit_patcher.start()
+		self.addCleanup(commit_patcher.stop)
+
 	def test_pagador_recebe_todos_um_email_com_n_anexos(self):
 		festa = _nova_festa()
 		opcao = _opcao(festa.name)
@@ -218,3 +223,59 @@ class TestConviteEnvio(FrappeTestCase):
 		# Segunda chamada não deve enviar nada
 		enviar_qr_codes(convite.name)
 		self.assertEqual(self.mock_sendmail.call_count, primeira)
+
+	def test_nao_desfaz_o_que_o_job_do_whatsapp_gravou(self):
+		"""Os jobs de e-mail e de WhatsApp rodam ao mesmo tempo. O do e-mail não pode
+		regravar as linhas com a cópia que carregou no início: perderia o status do
+		WhatsApp e o código do link gerado no meio do caminho."""
+		festa = _nova_festa()
+		opcao = _opcao(festa.name)
+		convite = _convite(
+			festa.name,
+			opcao.name,
+			pagador_recebe=False,
+			convidados=[{"nome": "Alice", "email": "alice@example.com", "telefone": "11911111111"}],
+		)
+		_marcar_cobranca_paga(convite.cobranca_infinitepay)
+		row = convite.convidados[0].name
+		token = "a" * 32
+
+		def job_do_whatsapp_no_meio(**kwargs):
+			frappe.db.set_value(
+				"Convidado Convite Festa",
+				row,
+				{"status_envio_whatsapp": "Enviado", "token_link": token},
+			)
+
+		self.mock_sendmail.side_effect = job_do_whatsapp_no_meio
+
+		enviar_qr_codes(convite.name)
+
+		estado = frappe.db.get_value(
+			"Convidado Convite Festa",
+			row,
+			["status_envio", "status_envio_whatsapp", "token_link"],
+			as_dict=True,
+		)
+		self.assertEqual(estado.status_envio, "Enviado")
+		self.assertEqual(estado.status_envio_whatsapp, "Enviado")
+		self.assertEqual(estado.token_link, token)
+
+	def test_opcao_inativa_nao_impede_de_gravar_o_envio(self):
+		"""Salvar o pedido revalidaria os itens contra a Opção atual; com a Opção
+		inativa (lotes vencidos) o envio saía mas o status nunca era gravado."""
+		festa = _nova_festa()
+		opcao = _opcao(festa.name)
+		convite = _convite(
+			festa.name,
+			opcao.name,
+			pagador_recebe=False,
+			convidados=[{"nome": "Alice", "email": "alice@example.com"}],
+		)
+		_marcar_cobranca_paga(convite.cobranca_infinitepay)
+		frappe.db.set_value("Opcao Convite Festa", opcao.name, "ativo", 0)
+
+		enviar_qr_codes(convite.name)
+
+		convite.reload()
+		self.assertEqual(convite.convidados[0].status_envio, "Enviado")

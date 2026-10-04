@@ -11,7 +11,9 @@
   "column_break_ybpx",
   "mes_de_referencia",
   "valor",
-  "transacao_extrato"
+  "transacao_extrato",
+  "acrescimo_atraso",
+  "diferenca_nao_cobrada"
  ],
  "fields": [
   {
@@ -59,6 +61,22 @@
    "fieldtype": "Link",
    "label": "Transa\u00e7\u00e3o do Extrato",
    "options": "Transacao Extrato Geral"
+  },
+  {
+   "description": "Parte do valor que veio do acr\u00e9scimo autom\u00e1tico de atraso.",
+   "fieldname": "acrescimo_atraso",
+   "fieldtype": "Currency",
+   "label": "Acr\u00e9scimo de atraso",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "description": "Quanto faltou quando o m\u00eas foi quitado por um link emitido com valor menor.",
+   "fieldname": "diferenca_nao_cobrada",
+   "fieldtype": "Currency",
+   "label": "Diferen\u00e7a n\u00e3o cobrada",
+   "non_negative": 1,
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

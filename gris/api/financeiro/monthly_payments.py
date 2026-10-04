@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 
 from gris.api.financeiro.contribuicoes import (
+	calcular_vencimento,
 	get_datas_de_ingresso,
 	get_parametros,
 	resolver_inicio_do_pagamento,
@@ -271,108 +272,67 @@ def update_billing_contacts(associate_id: str, email: str | None = None, phone: 
 	return {"ok": True, "email": assoc.email_cobranca, "phone": assoc.telefone_cobranca}
 
 
-def _is_holiday(date_obj: datetime.date) -> bool:
-	fixed_holidays = {
-		"01-01",  # New Year
-		"21-04",  # Tiradentes
-		"01-05",  # Labour Day
-		"07-09",  # Independence
-		"12-10",  # Aparecida
-		"02-11",  # All Souls
-		"15-11",  # Republic Proclamation
-		"25-12",  # Christmas
-	}
-
-	return date_obj.strftime("%d-%m") in fixed_holidays
-
-
 @frappe.whitelist()
 def update_status_monthly_payment() -> None:
+	atualizar_status_pagamentos()
+
+
+def atualizar_status_pagamentos(hoje: datetime.date | None = None) -> int:
+	"""Marca como "Atrasado" todo mês "Em Aberto" cujo vencimento já passou.
+
+	Alcança qualquer mês de referência, não só o corrente. Na transição soma o
+	acréscimo de atraso ao valor (e o guarda em `acrescimo_atraso`) quando o mês
+	está dentro de `acrescimo_automatico_desde`. Como só age em "Em Aberto", rodar
+	de novo não soma duas vezes.
+	"""
 	logger = obter_logger("pagamento_contribuicao_mensal")
+	hoje = hoje or datetime.date.today()
+	parametros = get_parametros()
+	desde = frappe.db.get_single_value(
+		"Configuracoes Contribuicao Mensal", "acrescimo_automatico_desde", cache=False
+	)
+	desde = frappe.utils.getdate(desde) if desde else None
+	# Singles guarda a data apagada como "", que o Frappe lê como 0001-01-01.
+	if desde and desde.year < 2000:
+		desde = None
+	acrescimo = parametros.acrescimo_atraso
 
-	# 1. Fetch configured due day (default 10 if missing / invalid)
-	try:
-		config = frappe.get_single("Configuracoes Contribuicao Mensal")
-		due_day = int(getattr(config, "dia_vencimento", 10) or 10)
-	except Exception:
-		logger.warning("Nao foi possivel ler o dia de vencimento configurado; usando o padrao (10).")
-		due_day = 10
-	if due_day < 1 or due_day > 28:  # keep inside safe month window
-		due_day = 10
-
-	# 2. Build base due date for current month
-	today = datetime.date.today()
-	base_due_date = datetime.date(today.year, today.month, due_day)
-
-	# 4. Adjust to next business day if weekend / holiday
-	adjusted_due = base_due_date
-	while adjusted_due.weekday() >= 5 or _is_holiday(adjusted_due):  # 5=Sat 6=Sun
-		adjusted_due += datetime.timedelta(days=1)
-
-	logger.info(f"Vencimento considerado para o mes: {adjusted_due.isoformat()}.")
-
-	# 5. If still before or on adjusted due date, exit
-	if today <= adjusted_due:
-		logger.info("Ainda dentro do prazo — nenhum pagamento marcado como atrasado.")
-		definir_resumo(f"Nada a fazer: o vencimento ({adjusted_due.isoformat()}) ainda não passou.")
-		return
-
-	# 6. Query open payments possibly in current month window
-	first_month_day = base_due_date.replace(day=1)
-	next_month = (first_month_day.replace(day=28) + datetime.timedelta(days=4)).replace(day=1)
-	open_payments = frappe.get_all(
+	em_aberto = frappe.get_all(
 		"Pagamento Contribuicao Mensal",
-		filters={
-			"status": "Em Aberto",
-			"mes_de_referencia": ["<", next_month.strftime("%Y-%m-%d")],
-		},
+		filters={"status": "Em Aberto", "mes_de_referencia": ["<=", hoje]},
 		fields=["name", "associado", "mes_de_referencia", "valor"],
+		limit_page_length=0,
 	)
 
-	# Filter strictly to current month
-	current_month_open = []
-	for row in open_payments:
+	atualizados = 0
+	for row in em_aberto:
 		try:
-			ref_raw = row.get("mes_de_referencia")
-			if isinstance(ref_raw, str):
-				ref_date = datetime.datetime.strptime(ref_raw, "%Y-%m-%d").date()
-			else:
-				ref_date = ref_raw
-			if ref_date and ref_date.year == today.year and ref_date.month == today.month:
-				current_month_open.append(row)
+			mes = frappe.utils.getdate(row["mes_de_referencia"])
 		except Exception:
 			logger.warning(f"Mes de referencia invalido no pagamento {row.get('name')}; ignorado.")
 			metrica("referencias_invalidas")
 			continue
-
-	if not current_month_open:
-		logger.info("Nenhuma contribuicao em aberto do mes corrente apos o vencimento.")
-		definir_resumo("Nenhuma contribuição em aberto para marcar como atrasada.")
-		return
-
-	logger.info(f"{len(current_month_open)} contribuicao(oes) em aberto a avaliar.")
-
-	# 7. Update each payment (status). O valor não é mais escalonado automaticamente
-	#    — quem cobra ajusta o valor pela tela ou pelo MCP quando fizer sentido.
-	updated = 0
-	for row in current_month_open:
+		vencimento = calcular_vencimento(mes, parametros.dia_vencimento)
+		if hoje <= vencimento:
+			continue
 		try:
 			pay_doc = frappe.get_doc("Pagamento Contribuicao Mensal", row["name"])
-			# Skip if already Atrasado (avoid redundant save if function reruns)
-			if pay_doc.status == "Atrasado":
+			if pay_doc.status != "Em Aberto":
 				continue
 			pay_doc.status = "Atrasado"
 			pay_doc.atrasou = 1
+			if desde and acrescimo > 0 and mes >= desde:
+				pay_doc.acrescimo_atraso = acrescimo
+				pay_doc.valor = round(float(pay_doc.valor or 0) + acrescimo, 2)
 			pay_doc.save(ignore_permissions=True)  # triggers on_update
-			updated += 1
+			atualizados += 1
 			logger.info(f"Contribuicao {row['name']} ({row.get('associado')}) marcada como atrasada.")
 		except Exception:
 			logger.exception(f"Falha ao marcar como atrasada a contribuicao {row.get('name')}.")
 			metrica("falhas")
 			continue
 
-	metrica("marcados_como_atrasado", updated, incrementar=False)
-	metrica("avaliados", len(current_month_open), incrementar=False)
-	definir_resumo(
-		f"{updated} contribuição(ões) marcada(s) como atrasada(s) (vencimento em {adjusted_due.isoformat()})."
-	)
+	metrica("marcados_como_atrasado", atualizados, incrementar=False)
+	metrica("avaliados", len(em_aberto), incrementar=False)
+	definir_resumo(f"{atualizados} contribuição(ões) marcada(s) como atrasada(s) em {hoje.isoformat()}.")
+	return atualizados

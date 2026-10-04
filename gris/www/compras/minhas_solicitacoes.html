@@ -1,0 +1,104 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, card, empty %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{% block title %}Minhas solicitações de compra{% endblock %}
+
+{# minhas_solicitacoes.css é injetado automaticamente pelo Frappe (colocated). Não referenciar manualmente: duplica o carregamento. #}
+
+{% block page_header %}
+<div class="page-header-row">
+	<div class="flex flex-col gap-2 max-w-3xl">
+		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">Minhas solicitações</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">Acompanhe seus pedidos de compra, da solicitação até a entrega. Por padrão aparecem só os que aguardam compra.</p>
+	</div>
+	<div class="page-header-actions">
+		{% for area in areas %}
+		<a class="{{ 'btn-primary' if loop.first else 'btn-outline' }}" href="{{ area.href }}" aria-label="Nova solicitação de {{ area.label }}" title="Nova solicitação de {{ area.label }}">
+			{{ lucide_icon("plus", size="sm") }}
+			<span>{{ area.label }}</span>
+		</a>
+		{% endfor %}
+	</div>
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="compras-lista">
+	{% if total_solicitacoes %}
+	<section class="compras-resumo" aria-label="Resumo por status (clique para filtrar)">
+		{% for item in resumo %}
+		<a class="compras-resumo__item{% if item.ativo %} is-ativo{% endif %}" href="{{ item.href }}"{% if item.ativo %} aria-current="true"{% endif %}>
+			<span class="compras-resumo__valor">{{ item.valor }}</span>
+			<span class="compras-resumo__rotulo">{{ item.rotulo }}</span>
+		</a>
+		{% endfor %}
+	</section>
+
+	<p class="compras-filtro-status">
+		{% if mostrando_todas %}
+		Mostrando todas as suas solicitações. <a href="{{ url_padrao }}">Mostrar só as aguardando compra</a>
+		{% elif filtro_padrao %}
+		Mostrando só as solicitações aguardando compra. <a href="{{ url_todas }}">Ver todas</a>
+		{% else %}
+		Filtrando por “{{ status_filtrado }}”. <a href="{{ url_padrao }}">Voltar às aguardando compra</a> · <a href="{{ url_todas }}">Ver todas</a>
+		{% endif %}
+	</p>
+	{% endif %}
+
+	{% if solicitacoes %}
+
+	{% call card(attrs={"class": "compras-tabela-card"}) %}
+	<section class="p-0 min-w-0">
+		<div class="overflow-x-auto">
+			<table class="table compras-tabela">
+				<thead>
+					<tr>
+						<th>Pedido</th>
+						<th>Área</th>
+						<th>Ramo</th>
+						<th class="compras-tabela__num">Peças</th>
+						<th class="compras-tabela__num">Estimado</th>
+						<th>Solicitado em</th>
+						<th>Status</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for solicitacao in solicitacoes %}
+					<tr>
+						<td>
+							<a class="compras-tabela__link" href="/compras/solicitacao?name={{ solicitacao.name }}">{{ solicitacao.name }}</a>
+						</td>
+						<td>{{ solicitacao.area or "—" }}</td>
+						<td>{{ solicitacao.ramo or "—" }}</td>
+						<td class="compras-tabela__num">{{ solicitacao.total_pecas }}</td>
+						<td class="compras-tabela__num">{{ solicitacao.valor_estimado_fmt }}</td>
+						<td>{{ solicitacao.data_solicitacao_fmt }}</td>
+						<td>{{ badge(solicitacao.status, variant=solicitacao.status_variant) }}</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</section>
+	{% endcall %}
+	{% elif total_solicitacoes %}
+	{{ empty(
+		title=("Nada aguardando compra" if filtro_padrao else "Nenhuma solicitação neste filtro"),
+		description="Os pedidos já comprados ou encerrados aparecem quando você clica no status acima ou em “Ver todas”.",
+		image="/assets/gris/images/gris-character/gris-idle.png",
+		image_alt="Personagem Gris parado",
+		image_size="sm"
+	) }}
+	{% else %}
+	{{ empty(
+		title="Você ainda não fez nenhuma solicitação",
+		description="Monte seu primeiro pedido escolhendo a área e os itens do catálogo.",
+		image="/assets/gris/images/gris-character/gris-sad.png",
+		image_alt="Personagem Gris triste",
+		image_size="sm",
+		primary_action={"label": "Nova solicitação", "href": "/compras"}
+	) }}
+	{% endif %}
+</div>
+{% endblock %}

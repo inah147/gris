@@ -1,0 +1,267 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import badge, card, empty, field, input, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/currency-input.html.jinja" import currency_input %}
+{% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Fila de compras{% if area %} · {{ area }}{% endif %}{% endblock %}
+
+{# fila.css/.js são injetados automaticamente pelo Frappe (colocated). Não referenciar manualmente: duplica o carregamento. #}
+
+{% block page_header %}
+<section class="flex flex-col gap-2 max-w-3xl" aria-labelledby="compras-titulo">
+	<h1 id="compras-titulo" class="m-0 text-3xl font-semibold leading-tight text-foreground">Fila de compras{% if area %} · {{ area }}{% endif %}</h1>
+	<p class="m-0 text-base leading-relaxed text-muted-foreground">{% if pode_agir %}Registre quando comprou e quando o material chegou ao grupo.{% else %}Acompanhe os pedidos de compra das áreas. A compra e o recebimento são registrados pelo gestor de cada área.{% endif %} Por padrão aparecem só os pedidos aguardando compra; use os indicadores para ver os demais.</p>
+</section>
+{% endblock %}
+
+{% block main %}
+<div class="compras-fila" data-area-slug="{{ area_slug }}" data-titulo-lista="{{ titulo_lista }}">
+	{{ toaster() }}
+
+	{% if filtros_area %}
+	<nav class="compras-filtros" aria-label="Filtrar por área">
+		{% for filtro in filtros_area %}
+		<a href="{{ filtro.href }}" class="{{ 'btn-sm-primary' if filtro.ativo else 'btn-sm-outline' }}"{% if filtro.ativo %} aria-current="page"{% endif %}>{{ filtro.label }}</a>
+		{% endfor %}
+	</nav>
+	{% endif %}
+
+	<section class="compras-kpis" aria-label="Indicadores da fila (clique para filtrar)">
+		{% for indicador in indicadores %}
+		<a class="compras-kpi{% if indicador.ativo %} is-ativo{% endif %}" href="{{ indicador.href }}"{% if indicador.ativo %} aria-current="true"{% endif %}>
+			<span class="compras-kpi__valor">{{ indicador.valor }}</span>
+			<span class="compras-kpi__rotulo">{{ indicador.rotulo }}</span>
+		</a>
+		{% endfor %}
+	</section>
+
+	<p class="compras-filtro-status">
+		{% if mostrando_todas %}
+		Mostrando todos os pedidos, inclusive os já comprados e encerrados. <a href="{{ url_padrao }}">Mostrar só os aguardando compra</a>
+		{% elif filtro_padrao %}
+		Mostrando só os pedidos aguardando compra. <a href="{{ url_todas }}">Ver todos, inclusive comprados e encerrados</a>
+		{% else %}
+		Filtrando por “{{ status_filtrado }}”. <a href="{{ url_padrao }}">Voltar aos aguardando compra</a> · <a href="{{ url_todas }}">Ver todos</a>
+		{% endif %}
+	</p>
+
+	{% if lista_de_compras %}
+	<section class="compras-lista" aria-labelledby="lista-titulo" data-pedidos="{{ aguardando_compra | map(attribute='name') | join(',') }}">
+		<header class="compras-secao__header compras-lista__header">
+			<div>
+				<h2 id="lista-titulo" class="compras-secao__titulo">Lista de compras</h2>
+				<p class="compras-secao__descricao">Tudo o que os {{ total_aguardando }} pedidos aguardando compra precisam, somado por item. Marque o que já separou; as marcações ficam salvas neste navegador.</p>
+			</div>
+			<div class="compras-lista__acoes">
+				<button type="button" class="btn-sm-outline" id="btn-copiar-lista">
+					{{ lucide_icon("clipboard-copy", size="sm") }}
+					<span>Copiar lista</span>
+				</button>
+				<button type="button" class="btn-sm-outline" id="btn-imprimir-lista">
+					{{ lucide_icon("printer", size="sm") }}
+					<span>Imprimir</span>
+				</button>
+			</div>
+		</header>
+
+		{% call card(attrs={"class": "compras-tabela-card"}) %}
+		<section class="p-0 min-w-0">
+			<div class="overflow-x-auto">
+				<table class="table compras-tabela compras-lista__tabela">
+					<thead>
+						<tr>
+							<th class="compras-lista__check"><span class="compras-lista__oculto">Já separado</span></th>
+							<th>Item</th>
+							<th>Tipo</th>
+							<th>Ramo</th>
+							<th>Código</th>
+							<th class="compras-tabela__num">Qtd.</th>
+							<th class="compras-tabela__num">Preço ref.</th>
+							<th class="compras-tabela__num">Subtotal</th>
+							<th>Pedidos</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for item in lista_de_compras %}
+						<tr class="compras-lista__linha" data-item="{{ item.item_catalogo }}" data-nome="{{ item.nome }}" data-ramo="{{ item.ramo }}" data-codigo="{{ item.codigo }}" data-quantidade="{{ item.quantidade }}">
+							<td class="compras-lista__check">
+								<input type="checkbox" id="lista-item-{{ loop.index }}" aria-label="Marcar {{ item.nome }} como separado">
+							</td>
+							<td><label for="lista-item-{{ loop.index }}" class="compras-lista__nome">{{ item.nome }}</label></td>
+							<td>{{ item.tipo }}</td>
+							<td>{{ item.ramo }}</td>
+							<td>{{ item.codigo or "—" }}</td>
+							<td class="compras-tabela__num"><strong>{{ item.quantidade }}</strong></td>
+							<td class="compras-tabela__num">{{ item.valor_unitario_fmt }}</td>
+							<td class="compras-tabela__num">{{ item.valor_total_fmt }}</td>
+							<td class="compras-lista__pedidos">
+								{% for pedido in item.pedidos %}<a class="compras-tabela__link" href="/compras/solicitacao?name={{ pedido }}">{{ pedido }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+							</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+					<tfoot>
+						<tr>
+							<th colspan="5">Total</th>
+							<th class="compras-tabela__num">{{ lista_total_pecas }}</th>
+							<th></th>
+							<th class="compras-tabela__num">{{ lista_valor_total }}</th>
+							<th class="compras-lista__progresso" aria-live="polite"></th>
+						</tr>
+					</tfoot>
+				</table>
+			</div>
+		</section>
+		{% endcall %}
+	</section>
+	{% endif %}
+
+	<section aria-labelledby="fila-titulo">
+		<header class="compras-secao__header">
+			<h2 id="fila-titulo" class="compras-secao__titulo">{{ titulo_pedidos }}</h2>
+		</header>
+
+		{% if solicitacoes_abertas %}
+		{% call card(attrs={"class": "compras-tabela-card"}) %}
+		<section class="p-0 min-w-0">
+			<div class="overflow-x-auto">
+				<table class="table compras-tabela">
+					<thead>
+						<tr>
+							<th>Pedido</th>
+							<th>Solicitante</th>
+							{% if not area %}<th>Área</th>{% endif %}
+							<th>Ramo</th>
+							<th class="compras-tabela__num">Peças</th>
+							<th class="compras-tabela__num">Estimado</th>
+							<th>Solicitado em</th>
+							<th>Status</th>
+							<th class="compras-tabela__acoes">Ação</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for solicitacao in solicitacoes_abertas %}
+						<tr>
+							<td><a class="compras-tabela__link" href="/compras/solicitacao?name={{ solicitacao.name }}">{{ solicitacao.name }}</a></td>
+							<td>{{ solicitacao.solicitante_nome or solicitacao.solicitante }}</td>
+							{% if not area %}<td>{{ solicitacao.area or "—" }}</td>{% endif %}
+							<td>{{ solicitacao.ramo or "—" }}</td>
+							<td class="compras-tabela__num">{{ solicitacao.total_pecas }}</td>
+							<td class="compras-tabela__num">{{ solicitacao.valor_estimado_fmt }}</td>
+							<td>{{ solicitacao.data_solicitacao_fmt }}</td>
+							<td>{{ badge(solicitacao.status, variant=solicitacao.status_variant) }}</td>
+							<td class="compras-tabela__acoes">
+								{% if not solicitacao.pode_agir and solicitacao.status in ["Solicitada", "Comprada"] %}
+								<span class="compras-tabela__aguardando">Com o gestor da área</span>
+								{% elif solicitacao.status == "Solicitada" %}
+								<button type="button" class="btn-sm-primary" data-acao="comprar" data-nome="{{ solicitacao.name }}" data-estimado="{{ solicitacao.valor_estimado or 0 }}">Registrar compra</button>
+								{% elif solicitacao.status == "Comprada" %}
+								<button type="button" class="btn-sm-outline" data-acao="receber" data-nome="{{ solicitacao.name }}">Marcar recebido</button>
+								{% elif solicitacao.status == "Recebida" %}
+								<span class="compras-tabela__aguardando">Com o solicitante</span>
+								{% else %}
+								<span class="compras-tabela__aguardando">—</span>
+								{% endif %}
+							</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</section>
+		{% endcall %}
+		{% else %}
+		{{ empty(
+			title=("Nenhum pedido aguardando compra" if filtro_padrao else "Nenhum pedido neste filtro"),
+			description="Quando alguém do grupo fizer uma solicitação, o pedido aparece aqui para compra.",
+			image="/assets/gris/images/gris-character/gris-idle.png",
+			image_alt="Personagem Gris parado",
+			image_size="sm"
+		) }}
+		{% endif %}
+	</section>
+
+	{% if solicitacoes_encerradas %}
+	<section aria-labelledby="historico-titulo">
+		<header class="compras-secao__header">
+			<h2 id="historico-titulo" class="compras-secao__titulo">Histórico</h2>
+		</header>
+		{% call card(attrs={"class": "compras-tabela-card"}) %}
+		<section class="p-0 min-w-0">
+			<div class="overflow-x-auto">
+				<table class="table compras-tabela">
+					<thead>
+						<tr>
+							<th>Pedido</th>
+							<th>Solicitante</th>
+							<th class="compras-tabela__num">Pago</th>
+							<th>Compra</th>
+							<th>Entrega</th>
+							<th>Status</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for solicitacao in solicitacoes_encerradas %}
+						<tr>
+							<td><a class="compras-tabela__link" href="/compras/solicitacao?name={{ solicitacao.name }}">{{ solicitacao.name }}</a></td>
+							<td>{{ solicitacao.solicitante_nome or solicitacao.solicitante }}</td>
+							<td class="compras-tabela__num">{{ solicitacao.valor_pago_fmt }}</td>
+							<td>{{ solicitacao.data_compra_fmt }}</td>
+							<td>{{ solicitacao.data_entrega_fmt }}</td>
+							<td>{{ badge(solicitacao.status, variant=solicitacao.status_variant) }}</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</section>
+		{% endcall %}
+	</section>
+	{% endif %}
+
+	{% call dialog(
+		id="dialog-compra",
+		title="Registrar compra",
+		description="Informe os dados da compra realizada. O pedido sai da lista de aguardando compra.",
+		dialog_attrs={"class": "compras-dialog"},
+		footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-compra">Cancelar</button><button type="button" class="btn-primary" id="btn-confirmar-compra">Confirmar compra</button>'
+	) %}
+	<div class="compras-dialog__form">
+		<p class="compras-dialog__pedido">Pedido <strong id="compra-pedido"></strong> · estimado <span id="compra-estimado"></span></p>
+		{% call field(label="Data da compra") %}
+			{{ datepicker(id="compra-data", name="data_compra", placeholder="Selecione a data", trigger_attrs={"class": "w-full"}) }}
+		{% endcall %}
+		{% call field(label="Valor pago") %}
+			{{ currency_input(id="compra-valor", name="valor_pago") }}
+		{% endcall %}
+		{% call field(label="Fornecedor (opcional)") %}
+			{{ input(name="fornecedor", attrs={"id": "compra-fornecedor", "maxlength": "140", "placeholder": "Ex.: Loja Escoteira, loja de material de construção"}) }}
+		{% endcall %}
+		{% call field(label="Nota fiscal / pedido (opcional)") %}
+			{{ input(name="numero_documento", attrs={"id": "compra-documento", "maxlength": "140"}) }}
+		{% endcall %}
+		{% call field(label="Observações (opcional)") %}
+			{{ textarea(name="observacoes_compra", attrs={"id": "compra-observacoes", "rows": "2", "maxlength": "1000"}) }}
+		{% endcall %}
+	</div>
+	{% endcall %}
+
+	{% call dialog(
+		id="dialog-recebimento",
+		title="Marcar como recebido",
+		description="Confirme que o material chegou ao grupo. Depois disso o solicitante confirma a entrega.",
+		dialog_attrs={"class": "compras-dialog"},
+		footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-recebimento">Cancelar</button><button type="button" class="btn-primary" id="btn-confirmar-recebimento">Confirmar recebimento</button>'
+	) %}
+	<div class="compras-dialog__form">
+		<p class="compras-dialog__pedido">Pedido <strong id="recebimento-pedido"></strong></p>
+		{% call field(label="Data de recebimento") %}
+			{{ datepicker(id="recebimento-data", name="data_recebimento", placeholder="Selecione a data", trigger_attrs={"class": "w-full"}) }}
+		{% endcall %}
+	</div>
+	{% endcall %}
+</div>
+{% endblock %}

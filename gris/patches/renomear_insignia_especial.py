@@ -2,7 +2,9 @@ import frappe
 
 VALOR_ANTIGO = "Insígnia Especial"
 VALOR_NOVO = "Insígnia de Interesse Especial"
-DOCTYPE = "Insignia ou Distintivo"
+# O DocType foi renomeado de "Insignia ou Distintivo" em renomear_insignias_para_compras,
+# que roda antes (pre_model_sync).
+DOCTYPE = "Item de Catalogo de Compras"
 
 
 def execute():

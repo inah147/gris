@@ -1,0 +1,219 @@
+.compras-detalhe {
+	margin-top: calc(var(--spacing) * 6);
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 5);
+}
+
+.compras-detalhe__header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 4);
+	flex-wrap: wrap;
+}
+
+.compras-detalhe__identidade {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	min-width: 0;
+}
+
+.compras-detalhe__voltar {
+	display: inline-flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 1);
+	font-size: var(--text-sm);
+	color: var(--color-muted-foreground);
+	width: fit-content;
+}
+
+.compras-detalhe__titulo {
+	margin: 0;
+	font-size: var(--text-3xl);
+	font-weight: var(--font-weight-semibold);
+	line-height: 1.15;
+	color: var(--color-foreground);
+}
+
+.compras-detalhe__subtitulo {
+	margin: 0;
+	font-size: var(--text-sm);
+	color: var(--color-muted-foreground);
+}
+
+.compras-detalhe__status {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: calc(var(--spacing) * 2);
+	max-width: 20rem;
+}
+
+.compras-detalhe__status-descricao {
+	margin: 0;
+	font-size: var(--text-xs);
+	color: var(--color-muted-foreground);
+}
+
+/* --- Linha do tempo do pedido --- */
+.compras-timeline {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+	gap: calc(var(--spacing) * 2);
+	padding: calc(var(--spacing) * 4);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	background-color: var(--color-card);
+}
+
+.compras-timeline__etapa {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 1);
+	padding-top: calc(var(--spacing) * 3);
+	border-top: 2px solid var(--color-border);
+	position: relative;
+}
+
+.compras-timeline__marcador {
+	position: absolute;
+	top: calc(var(--spacing) * -1.25);
+	left: 0;
+	width: calc(var(--spacing) * 2.5);
+	height: calc(var(--spacing) * 2.5);
+	border-radius: 9999px;
+	background-color: var(--color-border);
+}
+
+.compras-timeline__label {
+	font-size: var(--text-sm);
+	font-weight: var(--font-weight-medium);
+	color: var(--color-muted-foreground);
+}
+
+.compras-timeline__data {
+	font-size: var(--text-xs);
+	color: var(--color-muted-foreground);
+	font-variant-numeric: tabular-nums;
+}
+
+.compras-timeline__etapa--concluida {
+	border-top-color: var(--color-primary);
+}
+
+.compras-timeline__etapa--concluida .compras-timeline__marcador {
+	background-color: var(--color-primary);
+}
+
+.compras-timeline__etapa--concluida .compras-timeline__label {
+	color: var(--color-foreground);
+}
+
+.compras-timeline__etapa--atual {
+	border-top-color: var(--color-primary);
+}
+
+.compras-timeline__etapa--atual .compras-timeline__marcador {
+	background-color: var(--color-primary);
+	box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 25%, transparent);
+}
+
+.compras-timeline__etapa--atual .compras-timeline__label {
+	color: var(--color-foreground);
+	font-weight: var(--font-weight-semibold);
+}
+
+.compras-timeline__etapa--cancelada {
+	border-top-color: var(--color-destructive);
+}
+
+.compras-timeline__etapa--cancelada .compras-timeline__marcador {
+	background-color: var(--color-destructive);
+}
+
+.compras-timeline__etapa--cancelada .compras-timeline__label {
+	color: var(--color-destructive);
+	font-weight: var(--font-weight-semibold);
+}
+
+/* --- Ações e cards --- */
+.compras-detalhe__acoes {
+	display: flex;
+	gap: calc(var(--spacing) * 3);
+	flex-wrap: wrap;
+}
+
+.compras-detalhe__card-header {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 3);
+	flex-wrap: wrap;
+	margin-bottom: calc(var(--spacing) * 4);
+}
+
+.compras-detalhe__card-titulo {
+	margin: 0;
+	font-size: var(--text-lg);
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-foreground);
+}
+
+.compras-detalhe__card-meta {
+	font-size: var(--text-sm);
+	color: var(--color-muted-foreground);
+}
+
+.compras-detalhe__num {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.compras-detalhe__obs {
+	display: block;
+	font-size: var(--text-xs);
+	color: var(--color-muted-foreground);
+}
+
+.compras-detalhe__texto {
+	margin: 0;
+	font-size: var(--text-sm);
+	line-height: 1.6;
+	color: var(--color-foreground);
+	white-space: pre-line;
+}
+
+.compras-detalhe__dados {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+	gap: calc(var(--spacing) * 4);
+	margin: 0 0 calc(var(--spacing) * 4) 0;
+}
+
+.compras-detalhe__dados dt {
+	font-size: var(--text-xs);
+	color: var(--color-muted-foreground);
+	margin-bottom: calc(var(--spacing) * 1);
+}
+
+.compras-detalhe__dados dd {
+	margin: 0;
+	font-size: var(--text-sm);
+	color: var(--color-foreground);
+	font-variant-numeric: tabular-nums;
+}
+
+.compras-dialog__form {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 4);
+}
+
+@media (min-width: 48rem) {
+	.compras-dialog {
+		min-width: 30rem;
+	}
+}

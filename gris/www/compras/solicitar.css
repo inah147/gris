@@ -1,0 +1,168 @@
+.compras-solicitar {
+	margin-top: calc(var(--spacing) * 6);
+}
+
+.compras-form {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 5);
+	width: 100%;
+}
+
+.compras-card__header {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 1);
+	margin-bottom: calc(var(--spacing) * 4);
+}
+
+.compras-card__title {
+	margin: 0;
+	font-size: var(--text-lg);
+	line-height: 1.25;
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-foreground);
+}
+
+.compras-card__subtitle {
+	margin: 0;
+	font-size: var(--text-sm);
+	color: var(--color-muted-foreground);
+}
+
+.compras-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: calc(var(--spacing) * 4);
+	margin-bottom: calc(var(--spacing) * 4);
+}
+
+@media (min-width: 40rem) {
+	.compras-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+.compras-itens {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 4);
+}
+
+.compras-item {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 3);
+	padding: calc(var(--spacing) * 4);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	background-color: var(--color-muted);
+}
+
+.compras-item__grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: calc(var(--spacing) * 3);
+	min-width: 0;
+}
+
+.compras-item__aside {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 3);
+}
+
+.compras-item__subtotal {
+	font-size: var(--text-sm);
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-foreground);
+	font-variant-numeric: tabular-nums;
+}
+
+.compras-item__remove:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.compras-itens__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+	margin-top: calc(var(--spacing) * 4);
+}
+
+.compras-itens__dica {
+	margin: 0;
+	font-size: var(--text-sm);
+	color: var(--color-muted-foreground);
+}
+
+.compras-dialog__form {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 4);
+}
+
+@media (min-width: 48rem) {
+	.compras-dialog {
+		min-width: 32rem;
+	}
+}
+
+.compras-total {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	align-items: baseline;
+	gap: calc(var(--spacing) * 2);
+	margin-top: calc(var(--spacing) * 5);
+	padding-top: calc(var(--spacing) * 4);
+	border-top: 1px solid var(--color-border);
+}
+
+.compras-total__label {
+	font-size: var(--text-sm);
+	color: var(--color-muted-foreground);
+}
+
+.compras-total__value {
+	font-size: var(--text-xl);
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-foreground);
+	font-variant-numeric: tabular-nums;
+}
+
+.compras-total__hint {
+	grid-column: 1 / -1;
+	margin: 0;
+	font-size: var(--text-xs);
+	color: var(--color-muted-foreground);
+}
+
+.compras-actions {
+	display: flex;
+	gap: calc(var(--spacing) * 3);
+	justify-content: flex-end;
+	flex-wrap: wrap;
+}
+
+/* Desktop: linha de item mais densa, com os três campos lado a lado. */
+@media (min-width: 60rem) {
+	.compras-item {
+		flex-direction: row;
+		align-items: flex-start;
+	}
+
+	.compras-item__grid {
+		flex: 1;
+		grid-template-columns: minmax(0, 2.5fr) minmax(0, 0.8fr) minmax(0, 2.5fr);
+		gap: calc(var(--spacing) * 3);
+	}
+
+	.compras-item__aside {
+		flex-direction: column;
+		align-items: flex-end;
+		padding-top: calc(var(--spacing) * 6);
+	}
+}

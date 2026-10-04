@@ -21,7 +21,7 @@
 			{% call card(attrs={"class": "h-full"}) %}
 			<div class="flex flex-row items-start gap-3">
 				<div class="inline-flex items-center justify-center flex-shrink-0 w-11 h-11 rounded-xl bg-muted text-primary module-index-card-icon" aria-hidden="true">
-					{{ lucide_icon(sidebar_icons.get(item.href, "circle"), size="md") }}
+					{{ lucide_icon(item.icon or sidebar_icons.get(item.href, "circle"), size="md") }}
 				</div>
 				<div class="flex flex-col flex-1 min-w-0 gap-2">
 					<div class="flex items-start justify-between gap-2">

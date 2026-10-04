@@ -3,6 +3,11 @@ import datetime
 import frappe
 from frappe import _
 
+from gris.api.financeiro.contribuicoes import (
+	get_datas_de_ingresso,
+	get_parametros,
+	resolver_inicio_do_pagamento,
+)
 from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 
 REQUIRED_MANAGER_ROLE = "Gestor Contribuição Mensal"
@@ -39,7 +44,7 @@ def generate_monthly_payments():
 	associates = frappe.get_all(
 		"Associado",
 		filters={"status_no_grupo": "Ativo", "categoria": "Beneficiário"},
-		fields=["name", "valor_contribuicao"],
+		fields=["name", "valor_contribuicao", "tipo_registro", "inicio_do_pagamento"],
 	)
 	if not associates:
 		logger.warning("Nenhum associado ativo beneficiario encontrado — nada a gerar.")
@@ -55,9 +60,25 @@ def generate_monthly_payments():
 	)
 	existing_set = set(existing)
 
+	# Carência: quem ainda não chegou ao início do pagamento não ganha registro do mês.
+	parametros = get_parametros()
+	ingressos = get_datas_de_ingresso([a.name for a in associates])
+
 	created = 0
+	em_carencia = 0
 	for a in associates:
 		if a.name in existing_set:
+			continue
+		inicio = resolver_inicio_do_pagamento(
+			{
+				"inicio_do_pagamento": a.inicio_do_pagamento,
+				"tipo_registro": a.tipo_registro,
+				"data_de_ingresso": ingressos.get(a.name),
+			},
+			parametros,
+		)
+		if inicio and inicio > month_ref:
+			em_carencia += 1
 			continue
 		doc = frappe.get_doc(
 			{
@@ -74,6 +95,7 @@ def generate_monthly_payments():
 
 	metrica("criados", created, incrementar=False)
 	metrica("ja_existentes", len(existing_set), incrementar=False)
+	metrica("em_carencia", em_carencia, incrementar=False)
 	logger.info(
 		f"Geracao mensal concluida para {month_ref_str}: {created} criada(s), "
 		f"{len(existing_set)} ja existiam."

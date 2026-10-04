@@ -3,6 +3,13 @@
 > Origem: os slides "Fluxo" e "Envio de link" do fluxo de contribuição mensal, comparados com o
 > que o código faz hoje (04/10/2026). Este plano fecha as diferenças.
 
+> **Status (04/10/2026):** etapas 1 a 6 implementadas na branch `contribuivso`, uma por
+> commit. Evidências (prints da página e textos das mensagens) em
+> `docs/evidencias/cobranca-contribuicao-link-gris/`. Pendências fora do código: confirmar
+> com a InfinitePay a validade do link e o segundo pagamento (seção 3), conferir o endereço
+> da API de checkout (seção 3) e definir `acrescimo_automatico_desde` quando as famílias
+> forem avisadas (seção 5).
+
 ## 1. Visão geral
 
 O WhatsApp deixa de levar o link da InfinitePay e passa a levar sempre o mesmo link do GRIS,

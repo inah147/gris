@@ -328,7 +328,12 @@
 						</td>
 						<td>{{ situacao_badge(cobranca.status, cobranca.status_slug) }}</td>
 						<td class="whitespace-nowrap text-muted-foreground">{{ cobranca.competencias }}</td>
-						<td class="text-right whitespace-nowrap contrib-num">{{ brl(cobranca.valor) }}</td>
+						<td class="text-right whitespace-nowrap contrib-num">
+							{{ brl(cobranca.valor) }}
+							{% if cobranca.diferenca_nao_cobrada > 0 %}
+								<span class="block text-xs text-muted-foreground">pago {{ brl(cobranca.diferenca_nao_cobrada) }} a menos pelo link antigo</span>
+							{% endif %}
+						</td>
 						<td class="text-sm">
 							{{ cobranca.resultado_ultimo_envio or '—' }}
 							{% if cobranca.lembretes_enviados or cobranca.lembrete_vencimento_enviado %}

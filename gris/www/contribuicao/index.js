@@ -20,16 +20,19 @@
 	}
 
 	async function chamar(metodo, corpo) {
-		const resposta = await fetch("/api/method/gris.api.financeiro.contribuicao_publica." + metodo, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				"X-Frappe-CSRF-Token": csrf(),
-				"X-Requested-With": "XMLHttpRequest",
-			},
-			credentials: "same-origin",
-			body: JSON.stringify(corpo),
-		});
+		const resposta = await fetch(
+			"/api/method/gris.api.financeiro.contribuicao_publica." + metodo,
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"X-Frappe-CSRF-Token": csrf(),
+					"X-Requested-With": "XMLHttpRequest",
+				},
+				credentials: "same-origin",
+				body: JSON.stringify(corpo),
+			}
+		);
 		return resposta;
 	}
 
@@ -46,12 +49,16 @@
 			const dados = await resposta.json();
 			const link = dados && dados.message && dados.message.link_pagamento;
 			if (!resposta.ok || !link) {
-				mostrarErro("Não foi possível gerar o link de pagamento agora. Tente novamente em instantes.");
+				mostrarErro(
+					"Não foi possível gerar o link de pagamento agora. Tente novamente em instantes."
+				);
 				return;
 			}
 			window.location.assign(link);
 		} catch (erro) {
-			mostrarErro("Não foi possível gerar o link de pagamento agora. Tente novamente em instantes.");
+			mostrarErro(
+				"Não foi possível gerar o link de pagamento agora. Tente novamente em instantes."
+			);
 		} finally {
 			botao.disabled = false;
 		}
@@ -62,8 +69,8 @@
 
 	// Ao voltar da InfinitePay a página confere o status até a baixa chegar.
 	const params = new URLSearchParams(window.location.search);
-	const voltouDoPagamento = ["order_nsu", "transaction_nsu", "slug", "capture_method"].some((chave) =>
-		params.has(chave),
+	const voltouDoPagamento = ["order_nsu", "transaction_nsu", "slug", "capture_method"].some(
+		(chave) => params.has(chave)
 	);
 	if (!voltouDoPagamento || root.dataset.estado === "pago") return;
 
@@ -94,7 +101,8 @@
 		if (tentativas < MAX_ATTEMPTS) {
 			setTimeout(conferir, POLL_INTERVAL_MS);
 		} else if (aviso) {
-			aviso.textContent = "O pagamento ainda não foi confirmado. Pode fechar a página: avisaremos assim que chegar.";
+			aviso.textContent =
+				"O pagamento ainda não foi confirmado. Pode fechar a página: avisaremos assim que chegar.";
 		}
 	}
 	conferir();

@@ -404,6 +404,21 @@ def resumo_cobrancas_do_mes(hoje: datetime.date | None = None, associados: set[s
 				item.preco or 0
 			)
 
+	# Meses quitados por um link emitido com valor menor que o devido no dia do pagamento.
+	diferencas: dict[tuple[str, str], float] = {}
+	pagas = [c for c in cobrancas if c.status == "Pago" and c.associado]
+	if pagas:
+		for pagamento in frappe.get_all(
+			"Pagamento Contribuicao Mensal",
+			filters={
+				"associado": ["in", list({c.associado for c in pagas})],
+				"diferenca_nao_cobrada": [">", 0],
+			},
+			fields=["associado", "mes_de_referencia", "diferenca_nao_cobrada"],
+		):
+			chave = (pagamento.associado, f"{getdate(pagamento.mes_de_referencia):%Y-%m}")
+			diferencas[chave] = float(pagamento.diferenca_nao_cobrada or 0)
+
 	linhas = []
 	totais = {
 		"emitidas": 0,
@@ -415,6 +430,13 @@ def resumo_cobrancas_do_mes(hoje: datetime.date | None = None, associados: set[s
 	}
 	for cobranca in cobrancas:
 		valor = round(valores.get(cobranca.name, 0.0), 2)
+		diferenca = round(
+			sum(
+				diferencas.get((cobranca.associado, ym), 0.0)
+				for ym in _normalizar_competencias(cobranca.competencias)
+			),
+			2,
+		)
 		sem_envio = cobranca.status == STATUS_COBRANCA_PENDENTE and not cobranca.ultimo_envio_whatsapp
 		if cobranca.status != "Substituída":
 			totais["emitidas"] += 1
@@ -437,6 +459,7 @@ def resumo_cobrancas_do_mes(hoje: datetime.date | None = None, associados: set[s
 					f"{ym[5:]}/{ym[:4]}" for ym in _normalizar_competencias(cobranca.competencias)
 				),
 				"valor": valor,
+				"diferenca_nao_cobrada": diferenca,
 				"ultimo_envio_whatsapp": cobranca.ultimo_envio_whatsapp,
 				"resultado_ultimo_envio": cobranca.resultado_ultimo_envio,
 				"lembretes_enviados": cobranca.lembretes_enviados or 0,

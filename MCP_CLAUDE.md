@@ -97,9 +97,9 @@ essa role.
 | `listar_pagamentos_contribuicao_mensal` | Registros de cobrança (`Pagamento Contribuicao Mensal`), com a transação que quitou cada um | Gestor/Visualizador Contribuição Mensal |
 | `atualizar_pagamento_contribuicao_mensal` ✎ | Ajusta status, valor, atraso e vínculo com a transação de um registro existente (por `name`) | Gestor Contribuição Mensal |
 | `definir_pagamento_mensal` ✎ | Cria ou atualiza o pagamento de um mês por associado + mês (AAAA-MM) — não precisa do `name`, serve para meses "Não gerado" | Gestor Contribuição Mensal |
-| `listar_cobrancas_contribuicao` | Cobranças por link InfinitePay (manuais e automáticas): situação, meses, valor, link, resultado do envio pelo WhatsApp e baixa no extrato; filtra por mês de emissão, status, origem e `sem_envio` | Gestor/Visualizador Contribuição Mensal |
-| `gerar_cobranca_contribuicao` ✎ | Emite o link dos meses em aberto de um associado e envia pelo WhatsApp; a cobrança pendente anterior vira "Substituída" | Gestor Contribuição Mensal |
-| `reenviar_cobranca_contribuicao` ✎ | Reenvia pelo WhatsApp o link de uma cobrança pendente (depois de corrigir o telefone, por exemplo) | Gestor Contribuição Mensal |
+| `listar_cobrancas_contribuicao` | Cobranças por link InfinitePay (manuais e automáticas): situação, meses, valor, `link_gris` (a página `/contribuicao/<código>` que o WhatsApp envia), link da InfinitePay (só conferência), resultado do envio pelo WhatsApp e baixa no extrato; filtra por mês de emissão, status, origem e `sem_envio` | Gestor/Visualizador Contribuição Mensal |
+| `gerar_cobranca_contribuicao` ✎ | Emite a cobrança dos meses em aberto de um associado e envia pelo WhatsApp a mensagem com o link do GRIS (a página entrega o link de pagamento com o valor do dia); a cobrança pendente anterior vira "Substituída" | Gestor Contribuição Mensal |
+| `reenviar_cobranca_contribuicao` ✎ | Reenvia pelo WhatsApp a mensagem com o link do GRIS de uma cobrança pendente (depois de corrigir o telefone, por exemplo) | Gestor Contribuição Mensal |
 
 ### Contas fixas
 

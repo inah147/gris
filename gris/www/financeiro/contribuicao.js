@@ -451,7 +451,7 @@
 		atualizarTotalCobranca();
 	}
 
-	function renderCobrancasEmitidas(cobrancas) {
+	function renderCobrancasEmitidas(cobrancas, linkFamilia) {
 		const { emitidas } = elementosCobranca();
 		if (!emitidas) return;
 
@@ -469,7 +469,9 @@
 				.map(
 					(cobranca) => `
 				<div class="contrib-cobranca__emitida">
-					<a href="${escapeHtml(cobranca.link_pagamento)}" target="_blank" rel="noopener noreferrer">
+					<a href="${escapeHtml(
+						linkFamilia || cobranca.link_pagamento
+					)}" target="_blank" rel="noopener noreferrer">
 						${escapeHtml(cobranca.name)}
 					</a>
 					<span class="text-xs text-muted-foreground">${escapeHtml(cobranca.competencias || "")}</span>
@@ -498,7 +500,7 @@
 			.then((resposta) => {
 				const dados = (resposta && resposta.message) || {};
 				renderPendentes(dados.pendentes);
-				renderCobrancasEmitidas(dados.cobrancas);
+				renderCobrancasEmitidas(dados.cobrancas, dados.link_familia);
 			})
 			.catch(() => {
 				if (pendentes) {
@@ -511,10 +513,10 @@
 	function relatarEnvio(whatsapp) {
 		if (!whatsapp) return;
 		if (whatsapp.enviado) {
-			showToast(`Link enviado no WhatsApp para ${whatsapp.telefone}.`, "green");
+			showToast(`Link da família enviado no WhatsApp para ${whatsapp.telefone}.`, "green");
 			return;
 		}
-		// A cobrança foi criada mesmo assim: o gestor ainda pode copiar o link da lista.
+		// A cobrança foi criada mesmo assim: o gestor ainda pode copiar o link da família.
 		showToast(`Cobrança criada, mas o WhatsApp falhou: ${whatsapp.motivo}`, "orange");
 	}
 

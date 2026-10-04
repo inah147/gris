@@ -533,7 +533,9 @@ MENSAGEM_CONFIRMACAO = "confirmacao"
 
 
 def _moeda(valor: float) -> str:
-	return frappe.utils.fmt_money(valor, currency="BRL")
+	"""Valor em reais no formato brasileiro, qualquer que seja o idioma do site."""
+	texto = f"{float(valor or 0):,.2f}"
+	return "R$ " + texto.replace(",", "#").replace(".", ",").replace("#", ".")
 
 
 def _data_br(data: datetime.date) -> str:
@@ -637,7 +639,12 @@ def get_cobranca_do_associado(associado: str, meses: str | int = MESES_COBRANCA)
 	_assert_gestor()
 	if not associado:
 		frappe.throw(_("Parâmetro 'associado' é obrigatório."), frappe.ValidationError)
-	return {"success": True, **get_situacao_para_cobranca(associado, meses)}
+	# O gestor copia e confere o link do GRIS; o da InfinitePay só circula pela página.
+	return {
+		"success": True,
+		**get_situacao_para_cobranca(associado, meses),
+		"link_familia": url_publica(associado),
+	}
 
 
 @frappe.whitelist()

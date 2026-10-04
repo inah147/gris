@@ -66,8 +66,8 @@
 		<div>
 			<p class="m-0 font-medium text-foreground">Há {{ brl(total_pendente) }} em aberto no período.</p>
 			<p class="m-0 mt-1 text-sm text-muted-foreground">
-				O detalhe por beneficiário está abaixo. Quando o grupo emitir uma cobrança, o botão de
-				pagamento aparece no cartão correspondente.
+				O detalhe por beneficiário está abaixo. Use o botão de pagamento do cartão correspondente:
+				ele abre a página da contribuição, com o valor de hoje.
 			</p>
 		</div>
 	</section>
@@ -99,11 +99,6 @@
 			<div>
 				<dt>Valor mensal</dt>
 				<dd class="resp-contrib-num">{{ brl(beneficiario.esperado_mensal) }}</dd>
-				{% if beneficiario.valor_em_atraso > beneficiario.esperado_mensal %}
-				<dd class="text-xs text-muted-foreground">
-					{{ brl(beneficiario.valor_em_atraso) }} depois do vencimento
-				</dd>
-				{% endif %}
 			</div>
 			<div>
 				<dt>Pago no período</dt>
@@ -111,7 +106,7 @@
 			</div>
 			<div>
 				<dt>Meses quitados</dt>
-				<dd class="resp-contrib-num">{{ beneficiario.meses_quitados }}/{{ beneficiario.meses_devidos }}</dd>
+				<dd class="resp-contrib-num">{{ beneficiario.meses_quitados }}/{{ beneficiario.meses_gerados }}</dd>
 			</div>
 			<div>
 				<dt>Em aberto</dt>
@@ -121,21 +116,11 @@
 			</div>
 		</dl>
 
-		{% if beneficiario.credito > 0 %}
-		<p class="m-0 mb-3 text-sm text-muted-foreground">
-			Há {{ brl(beneficiario.credito) }} de crédito a favor deste beneficiário, que abate os próximos meses.
-		</p>
-		{% endif %}
-
 		{% if beneficiario.link_pagamento %}
 		<p class="m-0 mb-4">
 			<a class="btn-sm-primary" href="{{ beneficiario.link_pagamento }}" target="_blank" rel="noopener noreferrer">
 				Pagar contribuição em aberto
 			</a>
-		</p>
-		{% elif beneficiario.total_pendente > 0 %}
-		<p class="m-0 mb-4 text-sm text-muted-foreground">
-			Ainda não há link de pagamento emitido. Fale com a tesouraria do grupo para receber a cobrança.
 		</p>
 		{% endif %}
 
@@ -146,7 +131,7 @@
 					<tr>
 						<th scope="col">Mês</th>
 						<th scope="col">Situação</th>
-						<th scope="col" class="text-right">Esperado</th>
+						<th scope="col" class="text-right">Valor</th>
 						<th scope="col" class="text-right">Pago</th>
 						<th scope="col" class="text-right">Falta</th>
 					</tr>
@@ -155,29 +140,15 @@
 					{% for linha in beneficiario.linhas_recentes %}
 					<tr>
 						<th scope="row" class="font-medium whitespace-nowrap">{{ linha.rotulo }}</th>
-						<td>
-							{{ situacao_badge(linha.status, linha.status_slug) }}
-							{% if linha.motivo %}
-								<span class="text-xs text-muted-foreground block">{{ linha.motivo }}</span>
-							{% endif %}
-						</td>
+						<td>{{ situacao_badge(linha.status, linha.status_slug) }}</td>
 						<td class="text-right whitespace-nowrap resp-contrib-num">
-							{% if linha.esperado > 0 %}{{ brl(linha.esperado) }}{% else %}—{% endif %}
-							{% if linha.em_atraso %}
-								<span class="text-xs text-muted-foreground block">valor em atraso</span>
+							{% if linha.valor > 0 %}{{ brl(linha.valor) }}{% else %}—{% endif %}
+							{% if linha.acrescimo_atraso > 0 %}
+								<span class="text-xs text-muted-foreground block">inclui {{ brl(linha.acrescimo_atraso) }} de atraso</span>
 							{% endif %}
 						</td>
 						<td class="text-right whitespace-nowrap resp-contrib-num">
 							{% if linha.recebido > 0 %}{{ brl(linha.recebido) }}{% else %}—{% endif %}
-							{% if linha.usou_credito or linha.quitacao_retroativa %}
-								<span class="text-xs text-muted-foreground block">
-									quitado por pagamento posterior
-								</span>
-							{% elif linha.quitado_sem_acrescimo %}
-								<span class="text-xs text-muted-foreground block">
-									quitado sem o acréscimo
-								</span>
-							{% endif %}
 						</td>
 						<td class="text-right whitespace-nowrap resp-contrib-num">
 							{% if linha.falta > 0 %}

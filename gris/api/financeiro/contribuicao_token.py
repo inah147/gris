@@ -44,6 +44,9 @@ def _gravar_token(associado: str) -> str:
 	token = _gerar_token()
 	# Sem passar pelo documento: o campo é só de sistema (permlevel 3, somente leitura).
 	frappe.db.set_value("Associado", associado, CAMPO_TOKEN, token, update_modified=False)
+	# O código pode nascer durante a renderização de uma página (GET), que o Frappe
+	# desfaria no fim da requisição; sem isto o link mostrado mudaria a cada visita.
+	frappe.local.flags.commit = True
 	return token
 
 
@@ -66,10 +69,20 @@ def associado_do_token(token: str | None) -> str | None:
 	return frappe.db.get_value("Associado", {CAMPO_TOKEN: token}, "name")
 
 
-def url_publica(associado: str) -> str:
-	"""Link público absoluto do beneficiário."""
+def url_publica(associado: str, *, criar: bool = True) -> str | None:
+	"""Link público absoluto do beneficiário.
+
+	Com `criar=False` só devolve o link de quem já tem código, sem gravar nada —
+	para as leituras (MCP) que não podem ter efeito colateral.
+	"""
+	if criar:
+		token = obter_token(associado)
+	else:
+		token = frappe.db.get_value("Associado", associado, CAMPO_TOKEN)
+		if not token:
+			return None
 	try:
 		base = frappe.utils.get_url()
 	except Exception:
 		base = f"https://{frappe.local.site}"
-	return f"{base.rstrip('/')}{ROTA_PUBLICA}/{obter_token(associado)}"
+	return f"{base.rstrip('/')}{ROTA_PUBLICA}/{token}"

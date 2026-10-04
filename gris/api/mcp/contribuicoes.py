@@ -24,6 +24,7 @@ from frappe.utils import flt
 
 from gris.api.financeiro import contribuicoes as transacoes_servico
 from gris.api.financeiro import pagamentos_contribuicao as servico
+from gris.api.financeiro.contribuicao_token import url_publica
 from gris.api.mcp.registry import ErroDeFerramenta, ferramenta, normalizar_limite
 
 PADRAO_COMPETENCIA_MES = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
@@ -677,6 +678,7 @@ def _resumo_cobranca(cobranca: dict, nomes: dict[str, str], valores: dict[str, f
 		"competencias": [ym for ym in (cobranca["competencias"] or "").split(",") if ym],
 		"valor_total": round(valores.get(cobranca["name"], 0.0), 2),
 		"link_pagamento": cobranca["link_pagamento"],
+		"link_gris": url_publica(cobranca["associado"], criar=False),
 		"mes_emissao": cobranca["mes_emissao"],
 		"ultimo_envio_whatsapp": cobranca["ultimo_envio_whatsapp"],
 		"resultado_ultimo_envio": cobranca["resultado_ultimo_envio"],
@@ -691,8 +693,9 @@ def _resumo_cobranca(cobranca: dict, nomes: dict[str, str], valores: dict[str, f
 	titulo="Listar cobranças da contribuição por link",
 	descricao=(
 		"Lista as cobranças de contribuição mensal emitidas por link InfinitePay (manuais e "
-		"automáticas), com situação, meses cobrados, valor, link, resultado do envio pelo WhatsApp "
-		"e a baixa lançada no extrato. Use mes='AAAA-MM' para o acompanhamento do mês e "
+		"automáticas), com situação, meses cobrados, valor, o link da página do GRIS que o WhatsApp "
+		"envia ('link_gris'), o link de pagamento da InfinitePay (só para conferência: nunca circula "
+		"fora da página), resultado do envio pelo WhatsApp e a baixa lançada no extrato. Use mes='AAAA-MM' para o acompanhamento do mês e "
 		"sem_envio=true para quem ainda não recebeu a mensagem."
 	),
 	parametros={
@@ -804,10 +807,12 @@ def listar_cobrancas_contribuicao(
 	nome="gerar_cobranca_contribuicao",
 	titulo="Gerar cobrança da contribuição por link",
 	descricao=(
-		"Emite um link de pagamento InfinitePay para os meses em aberto de um associado e, se "
-		"pedido, envia pelo WhatsApp ao telefone de cobrança. Sem 'competencias', cobra todos os "
-		"meses em aberto dos últimos 12. A cobrança pendente anterior do associado passa a "
-		"'Substituída'. Quando a InfinitePay confirma o pagamento, a baixa entra sozinha no extrato."
+		"Emite uma cobrança InfinitePay para os meses em aberto de um associado e, se pedido, "
+		"envia pelo WhatsApp ao telefone de cobrança a mensagem com o link da página do GRIS "
+		"(sempre o mesmo por beneficiário; é a página que entrega o link de pagamento com o valor "
+		"do dia). Sem 'competencias', cobra todos os meses em aberto dos últimos 12. A cobrança "
+		"pendente anterior do associado passa a 'Substituída'. Quando a InfinitePay confirma o "
+		"pagamento, a baixa entra sozinha no extrato e o responsável recebe a confirmação."
 	),
 	parametros={
 		"cpf": {"type": "string", "description": "CPF do associado."},
@@ -870,7 +875,7 @@ def gerar_cobranca_contribuicao(
 	nome="reenviar_cobranca_contribuicao",
 	titulo="Reenviar cobrança da contribuição pelo WhatsApp",
 	descricao=(
-		"Reenvia pelo WhatsApp o link de uma cobrança de contribuição mensal pendente, para o "
+		"Reenvia pelo WhatsApp a mensagem com o link do GRIS de uma cobrança de contribuição mensal pendente, para o "
 		"telefone de cobrança atual do associado. Use depois de corrigir o telefone com "
 		"'atualizar_cobranca_associado'."
 	),

@@ -36,6 +36,13 @@
 					<p class="cp-status__subtitulo">Não há contribuição em aberto. Obrigado!</p>
 				</div>
 			</div>
+			{% if pagina.comprovante %}
+			<div class="cp-actions">
+				<a class="btn-outline cp-comprovante" href="{{ pagina.comprovante }}" target="_blank" rel="noopener noreferrer">
+					{{ lucide_icon("receipt", "sm") }} Acessar comprovante
+				</a>
+			</div>
+			{% endif %}
 			{% elif pagina.estado == "vencido" %}
 			<div class="cp-status">
 				<span class="cp-status__icone cp-status__icone--alerta">{{ lucide_icon("triangle-alert", "lg") }}</span>
@@ -80,6 +87,7 @@
 					<span class="cp-mes__valor">
 						{{ brl(mes.valor) }}
 						{% if mes.acrescimo > 0 %}<small>inclui {{ brl(mes.acrescimo) }} de atraso</small>{% endif %}
+						{% if mes.comprovante %}<small><a href="{{ mes.comprovante }}" target="_blank" rel="noopener noreferrer">Acessar comprovante</a></small>{% endif %}
 					</span>
 				</li>
 				{% endfor %}

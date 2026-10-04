@@ -20,7 +20,12 @@ from frappe import _
 from frappe.rate_limiter import rate_limit
 from frappe.utils import getdate
 
-from gris.api.financeiro.cobranca_contribuicao import cobranca_vigente
+from gris.api.financeiro.cobranca_contribuicao import (
+	FINALIDADE_CONTRIBUICAO,
+	STATUS_COBRANCA_PAGA,
+	_normalizar_competencias,
+	cobranca_vigente,
+)
 from gris.api.financeiro.contribuicao_token import (
 	ROTA_PUBLICA,
 	associado_do_token,
@@ -32,15 +37,43 @@ from gris.api.financeiro.pagamentos_contribuicao import (
 	STATUS_ATRASADO,
 	STATUS_EM_ABERTO,
 	STATUS_NAO_GERADO,
+	STATUS_PAGO,
 	apurar_associados,
 	competencias_pendentes,
 )
+from gris.utils.infinitepay import is_safe_receipt_url
 
 MESES_EXIBIDOS = 12
 
 ESTADO_EM_ABERTO = "em_aberto"
 ESTADO_VENCIDO = "vencido"
 ESTADO_PAGO = "pago"
+
+
+def comprovantes_do_associado(associado: str) -> dict[str, str]:
+	"""Comprovante de cada mês pago pelo link, por AAAA-MM.
+
+	Só vale o `receipt_url` que passa na validação de domínio: um endereço
+	inesperado vindo do webhook nunca vira link na página.
+	"""
+	cobrancas = frappe.get_all(
+		"Cobranca Infinitepay",
+		filters={
+			"associado": associado,
+			"finalidade": FINALIDADE_CONTRIBUICAO,
+			"status": STATUS_COBRANCA_PAGA,
+			"transacao_extrato": ["is", "set"],
+		},
+		fields=["competencias", "receipt_url"],
+		order_by="creation asc",
+	)
+	comprovantes: dict[str, str] = {}
+	for cobranca in cobrancas:
+		if not is_safe_receipt_url(cobranca.receipt_url):
+			continue
+		for ym in _normalizar_competencias(cobranca.competencias):
+			comprovantes[ym] = cobranca.receipt_url
+	return comprovantes
 
 
 def montar_pagina(token: str | None, hoje: datetime.date | None = None) -> dict | None:
@@ -56,6 +89,7 @@ def montar_pagina(token: str | None, hoje: datetime.date | None = None) -> dict 
 	apuracao = apuracoes[0]
 	parametros = get_parametros()
 
+	comprovantes = comprovantes_do_associado(associado)
 	pendentes = competencias_pendentes(apuracao)
 	ym_pendentes = {p["ym"] for p in pendentes}
 	vencidos = [p for p in pendentes if p["status"] == STATUS_ATRASADO]
@@ -69,6 +103,7 @@ def montar_pagina(token: str | None, hoje: datetime.date | None = None) -> dict 
 			"valor": linha["valor"],
 			"acrescimo": linha.get("acrescimo_atraso", 0.0),
 			"pendente": linha["ym"] in ym_pendentes,
+			"comprovante": comprovantes.get(linha["ym"]) if linha["status"] == STATUS_PAGO else None,
 		}
 		for linha in reversed(apuracao["linhas"])
 		if linha["status"] != STATUS_NAO_GERADO
@@ -96,6 +131,7 @@ def montar_pagina(token: str | None, hoje: datetime.date | None = None) -> dict 
 			2,
 		),
 		"meses_em_atraso": len(vencidos),
+		"comprovante": next((m["comprovante"] for m in meses if m["comprovante"]), None),
 		"vencimento": min(vencimentos) if vencimentos else None,
 	}
 

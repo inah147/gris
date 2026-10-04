@@ -21,7 +21,9 @@ def _apagar(doctype: str, filtros: dict) -> None:
 		frappe.delete_doc(doctype, nome, force=True, ignore_permissions=True)
 
 
-class TestContribuicaoPublica(FrappeTestCase):
+class _BaseContribuicaoPublica(FrappeTestCase):
+	"""Associado, pagamentos e InfinitePay simulada, sem testes próprios."""
+
 	def setUp(self):
 		nome = hashlib.md5(CPF.encode("utf-8")).hexdigest()
 		if not frappe.db.exists("Associado", nome):
@@ -67,6 +69,8 @@ class TestContribuicaoPublica(FrappeTestCase):
 		resposta.raise_for_status.return_value = None
 		return mock.patch.object(cobranca_doctype.requests, "post", return_value=resposta)
 
+
+class TestContribuicaoPublica(_BaseContribuicaoPublica):
 	# ── código ──────────────────────────────────────────────────────────────
 
 	def test_token_e_fixo_e_so_muda_ao_regenerar(self):
@@ -196,3 +200,90 @@ class TestContribuicaoPublica(FrappeTestCase):
 		outra = mock.Mock(headers={})
 		publica.proteger_resposta(outra, mock.Mock(path="/inicio"))
 		self.assertEqual(outra.headers, {})
+
+
+class TestComprovante(_BaseContribuicaoPublica):
+	"""Confirmação por WhatsApp e comprovante na página, para quem pagou pelo link."""
+
+	def _cobranca_paga(self, receipt_url: str = "https://recibo.infinitepay.io/abc") -> str:
+		self._pagamento("2026-10", "Em Aberto")
+		with self._sem_rede():
+			emitida = cobranca.cobranca_vigente(self.associado, HOJE)
+		doc = frappe.get_doc("Cobranca Infinitepay", emitida["name"])
+		doc.status = "Pago"
+		doc.paid_amount = 6000
+		doc.receipt_url = receipt_url
+		with self._sem_rede():
+			doc.save(ignore_permissions=True)
+		return doc.name
+
+	def test_baixa_agenda_a_confirmacao_depois_do_commit(self):
+		self._pagamento("2026-10", "Em Aberto")
+		with self._sem_rede():
+			emitida = cobranca.cobranca_vigente(self.associado, HOJE)
+		doc = frappe.get_doc("Cobranca Infinitepay", emitida["name"])
+		doc.status = "Pago"
+		doc.paid_amount = 6000
+		with mock.patch.object(cobranca.frappe, "enqueue") as enfileirar, self._sem_rede():
+			doc.save(ignore_permissions=True)
+		enfileirar.assert_called_once()
+		self.assertTrue(enfileirar.call_args.kwargs["enqueue_after_commit"])
+		self.assertEqual(enfileirar.call_args.kwargs["cobranca"], doc.name)
+
+	def test_falha_ao_agendar_nao_derruba_a_baixa(self):
+		self._pagamento("2026-10", "Em Aberto")
+		with self._sem_rede():
+			emitida = cobranca.cobranca_vigente(self.associado, HOJE)
+		doc = frappe.get_doc("Cobranca Infinitepay", emitida["name"])
+		doc.status = "Pago"
+		doc.paid_amount = 6000
+		with (
+			mock.patch.object(cobranca.frappe, "enqueue", side_effect=RuntimeError("fila fora")),
+			mock.patch.object(cobranca.frappe, "log_error"),
+			self._sem_rede(),
+		):
+			doc.save(ignore_permissions=True)
+		self.assertTrue(frappe.db.get_value("Cobranca Infinitepay", doc.name, "transacao_extrato"))
+
+	def test_confirmacao_sai_uma_vez_so(self):
+		nome = self._cobranca_paga()
+		with mock.patch("gris.utils.whatsapp.enviar_texto") as enviar:
+			primeira = cobranca.enviar_confirmacao(nome)
+			segunda = cobranca.enviar_confirmacao(nome)
+		self.assertTrue(primeira["enviado"])
+		self.assertFalse(segunda["enviado"])
+		enviar.assert_called_once()
+		texto = enviar.call_args.args[1]
+		self.assertIn(f"/contribuicao/{self.token}", texto)
+		self.assertNotIn("infinitepay", texto.lower())
+		self.assertTrue(frappe.db.get_value("Cobranca Infinitepay", nome, "comprovante_enviado_em"))
+
+	def test_whatsapp_que_falha_nao_marca_como_enviada(self):
+		from gris.utils.whatsapp_errors import WhatsAppRequestError
+
+		nome = self._cobranca_paga()
+		with (
+			mock.patch("gris.utils.whatsapp.enviar_texto", side_effect=WhatsAppRequestError("fora")),
+			mock.patch.object(cobranca.frappe, "log_error"),
+		):
+			resultado = cobranca.enviar_confirmacao(nome)
+		self.assertFalse(resultado["enviado"])
+		self.assertFalse(frappe.db.get_value("Cobranca Infinitepay", nome, "comprovante_enviado_em"))
+
+	def test_pagina_mostra_comprovante_do_mes_pago_por_link(self):
+		self._cobranca_paga("https://recibo.infinitepay.io/abc")
+		pagina = publica.montar_pagina(self.token, HOJE)
+		self.assertEqual(pagina["estado"], "pago")
+		self.assertEqual(pagina["comprovante"], "https://recibo.infinitepay.io/abc")
+		self.assertEqual(pagina["meses"][0]["comprovante"], "https://recibo.infinitepay.io/abc")
+
+	def test_receipt_url_inseguro_nao_vira_link(self):
+		self._cobranca_paga("https://evil.example/recibo")
+		pagina = publica.montar_pagina(self.token, HOJE)
+		self.assertIsNone(pagina["comprovante"])
+		self.assertIsNone(pagina["meses"][0]["comprovante"])
+
+	def test_mes_pago_por_outro_meio_nao_tem_comprovante(self):
+		self._pagamento("2026-10", "Pago")
+		pagina = publica.montar_pagina(self.token, HOJE)
+		self.assertIsNone(pagina["meses"][0]["comprovante"])

@@ -37,7 +37,7 @@ MODULOS_DE_FERRAMENTAS = (
 	"gris.api.mcp.orcamento",
 	"gris.api.mcp.recepcao",
 	"gris.api.mcp.visitas",
-	"gris.api.mcp.insignias",
+	"gris.api.mcp.compras",
 	"gris.api.mcp.sugestoes",
 )
 

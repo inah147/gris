@@ -77,6 +77,19 @@ website_redirects = [
 		"source": "/.well-known/oauth-authorization-server",
 		"target": "/api/method/gris.api.mcp.oauth.oauth_authorization_server",
 	},
+	# O módulo de insígnias virou Compras (insígnias ficam no Programa Educativo).
+	# Links antigos salvos em favoritos e mensagens continuam funcionando.
+	{"source": "/insignias", "target": "/compras/programa_educativo"},
+	{"source": "/insignias/compras", "target": "/compras/fila?area=programa_educativo"},
+	{"source": "/insignias/solicitar", "target": "/compras/solicitar?area=programa_educativo"},
+	{"source": "/insignias/catalogo", "target": "/compras/catalogo?area=programa_educativo"},
+	{"source": "/insignias/minhas_solicitacoes", "target": "/compras/minhas_solicitacoes"},
+	# Com a query string no padrão: sem ela o Frappe descartaria o `?name=` do pedido.
+	{
+		"source": r"/insignias/solicitacao\?name=([^&]+)",
+		"target": r"/compras/solicitacao?name=\1",
+		"match_with_query_string": True,
+	},
 ]
 
 # Generators
@@ -426,6 +439,8 @@ fixtures = [
 					"Gestor de Associados",
 					"Gestor Financeiro",
 					"Gestor de Metodos",
+					"Gestor de Manutencao",
+					"Gestor Administrativo",
 					"Visualizador Associados",
 					"Visualizador de projetos",
 					"Visualizador Contribuição Mensal",

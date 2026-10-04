@@ -4,6 +4,7 @@
 gris.patches.rename_envolvido_no_projeto_flag_fields
 gris.patches.rename_produto_area_to_barraca
 gris.patches.migrate_gestao_de_tarefas_to_gris
+gris.patches.renomear_insignias_para_compras
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated

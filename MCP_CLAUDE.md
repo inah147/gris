@@ -147,24 +147,30 @@ essa role.
 | `agendar_visita` ✎ | Agenda a primeira visita em data disponível | Recepcao |
 | `atualizar_visita` ✎ | Confirmar, desconfirmar, remarcar, cancelar ou sinalizar reagendamento | Recepcao |
 
-### Insígnias e distintivos
+### Compras (Manutenção, Programa Educativo e Administrativo)
 
 Fluxo: Solicitada -> Comprada -> Recebida -> Entregue (com Cancelada como saída
-até o recebimento). Quem só solicita enxerga apenas os próprios pedidos; gestão
-de métodos e financeiro enxergam a fila completa.
+até o recebimento). Cada solicitação é de uma área, e cada área tem o seu gestor:
+Gestor de Metodos (Programa Educativo — insígnias e distintivos), Gestor de
+Manutencao e Gestor Administrativo. Qualquer pessoa logada solicita em qualquer
+área e cadastra itens de Manutenção e Administrativo; insígnias e distintivos só
+o Gestor de Metodos cadastra. Comprar, receber e editar/inativar itens é do gestor
+da área; o Gestor Financeiro acompanha a fila de todas as áreas, sem agir.
+`listar_solicitacoes_compra` traz por padrão só o que aguarda compra; o que já foi
+comprado ou encerrado só vem com `status` ou `incluir_todas=true`.
 
 | Ferramenta | O que faz | Papéis |
 |---|---|---|
-| `listar_catalogo_insignias` | Catálogo de distintivos/insígnias com tipo, ramo e valor unitário de referência | Equipe/Gestor de Metodos, Gestor Financeiro |
-| `salvar_item_catalogo_insignias` ✎ | Cria ou edita um item do catálogo | Gestor de Metodos |
-| `alternar_item_catalogo_insignias` ✎ | Ativa ou inativa um item (não há exclusão) | Gestor de Metodos |
-| `listar_solicitacoes_insignias` | Lista solicitações com resumo por status; filtra por status, ramo e solicitante | Equipe/Gestor de Metodos, Gestor Financeiro |
-| `obter_solicitacao_insignias` | Ficha completa: itens, beneficiários, linha do tempo e o que o usuário pode fazer | Equipe/Gestor de Metodos, Gestor Financeiro |
-| `criar_solicitacao_insignias` ✎ | Abre uma solicitação com uma lista de itens; o valor unitário sempre vem do catálogo | Equipe/Gestor de Metodos |
-| `registrar_compra_insignias` ✎ | Financeiro registra a compra de uma solicitação 'Solicitada' | Gestor Financeiro |
-| `registrar_recebimento_insignias` ✎ | Financeiro confirma que o material chegou ao grupo | Gestor Financeiro |
-| `registrar_entrega_insignias` ✎ | Confirma a entrega ao solicitante (pelo próprio ou pela gestão) | Equipe/Gestor de Metodos, Gestor Financeiro |
-| `cancelar_solicitacao_insignias` ✎ | Cancela um pedido ainda não recebido | Equipe/Gestor de Metodos, Gestor Financeiro |
+| `listar_catalogo_compras` | Catálogo por área, com valor de referência e (no Programa Educativo) tipo e ramo | Qualquer usuário logado |
+| `salvar_item_catalogo_compras` ✎ | Cria ou edita um item do catálogo | Qualquer usuário logado (Manutenção/Administrativo); Gestor de Metodos (Programa Educativo); editar: gestor da área ou quem cadastrou |
+| `alternar_item_catalogo_compras` ✎ | Ativa ou inativa um item (não há exclusão) | Gestor da área (ou quem cadastrou, fora do Programa Educativo) |
+| `listar_solicitacoes_compra` | Lista solicitações com resumo por status; filtra por área, status, ramo e solicitante | Qualquer usuário logado (os próprios pedidos; a fila inteira nas áreas que acompanha) |
+| `obter_solicitacao_compra` | Ficha completa: área, itens, linha do tempo e o que o usuário pode fazer | Solicitante, gestor da área, Gestor Financeiro |
+| `criar_solicitacao_compra` ✎ | Abre uma solicitação numa área; o valor unitário sempre vem do catálogo | Qualquer usuário logado |
+| `registrar_compra` ✎ | Registra a compra de uma solicitação 'Solicitada' | Gestor da área |
+| `registrar_recebimento_compra` ✎ | Confirma que o material chegou ao grupo | Gestor da área |
+| `registrar_entrega_compra` ✎ | Confirma a entrega ao solicitante | Solicitante ou gestor da área |
+| `cancelar_solicitacao_compra` ✎ | Cancela um pedido ainda não recebido | Solicitante (antes da compra) ou gestor da área |
 
 ### Sugestões e Problemas
 
@@ -442,13 +448,14 @@ Exemplos de pedidos que funcionam bem:
 - *"Como está a execução do orçamento deste ano?"* → `comparar_previsto_realizado`
 - *"Cria o orçamento de 2027 com as mesmas linhas de 2026 e 8% a mais em manutenção"* → `obter_previsao_orcamentaria` + `criar_previsao_orcamentaria`
 
-**Insígnias e distintivos**
-- *"Quais distintivos de progressão do Lobinho existem no catálogo?"* → `listar_catalogo_insignias` com `tipo` e `ramo`
-- *"Abre uma solicitação para o Lobinho com 2 Distintivos de Progressão II para a Ana"* → `listar_catalogo_insignias` + `criar_solicitacao_insignias`
-- *"O que está parado esperando compra?"* → `listar_solicitacoes_insignias` com `status='Solicitada'`
-- *"Registra a compra da SOL-INS-2026-0001, paguei R$ 45 na Loja Escoteira"* → `obter_solicitacao_insignias` + `registrar_compra_insignias`
-- *"Chegou o material da SOL-INS-2026-0001, marca como recebido"* → `registrar_recebimento_insignias`
-- *"Já entreguei os distintivos para a Ana"* → `registrar_entrega_insignias`
+**Compras**
+- *"Quais distintivos de progressão do Lobinho existem no catálogo?"* → `listar_catalogo_compras` com `area='Programa Educativo'`, `tipo` e `ramo`
+- *"Abre uma solicitação para o Lobinho com 2 Distintivos de Progressão II"* → `listar_catalogo_compras` + `criar_solicitacao_compra` com `area='Programa Educativo'`
+- *"Preciso de 4 lâmpadas LED para o galpão"* → `listar_catalogo_compras` com `area='Manutenção'` (+ `salvar_item_catalogo_compras` se o item não existir) + `criar_solicitacao_compra`
+- *"O que está parado esperando compra?"* → `listar_solicitacoes_compra` (o padrão já é `status='Solicitada'`)
+- *"Registra a compra da SOL-COMP-2026-0001, paguei R$ 45 na Loja Escoteira"* → `obter_solicitacao_compra` + `registrar_compra`
+- *"Chegou o material da SOL-COMP-2026-0001, marca como recebido"* → `registrar_recebimento_compra`
+- *"Já entreguei os distintivos para a Ana"* → `registrar_entrega_compra`
 
 **Sugestões e Problemas**
 - *"O que está selecionado para desenvolvimento?"* → `listar_sugestoes` com `status='Selecionado para desenvolvimento'`
@@ -591,7 +598,7 @@ passar. Simulações não entram no log de auditoria (não alteram nada).
 ## Adicionar uma ferramenta nova
 
 1. Escolha o módulo em `gris/api/mcp/` (`associados`, `financeiro`, `conciliacao`,
-   `contribuicoes`, `contas_fixas`, `orcamento`, `recepcao`, `visitas`, `insignias`, `geral`)
+   `contribuicoes`, `contas_fixas`, `orcamento`, `recepcao`, `visitas`, `compras`, `geral`)
    ou crie um novo e registre-o em `MODULOS_DE_FERRAMENTAS`.
 2. Decore a função com `@ferramenta(...)`, declarando `parametros`
    (JSON Schema simplificado), `roles` e `somente_leitura`.
@@ -624,7 +631,7 @@ cd mcp_server && python3 -m unittest discover -s tests
 
 # camada do app (dentro do bench; nas sessões web use `bench-gris`, montado pelo
 # hook .claude/hooks/session-start.sh)
-for modulo in registry ferramentas http oauth contribuicoes conciliacao orcamento recepcao visitas insignias geral sugestoes; do
+for modulo in registry ferramentas http oauth contribuicoes conciliacao orcamento recepcao visitas compras geral sugestoes; do
   bench --site <seu-site> run-tests --module gris.tests.test_mcp_$modulo
 done
 

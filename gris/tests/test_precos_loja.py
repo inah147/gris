@@ -6,7 +6,7 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from gris.api.insignias import precos_loja
+from gris.api.compras import precos_loja
 
 URL_CATEGORIA = "https://loja.exemplo.test/educativo"
 
@@ -251,6 +251,7 @@ class TestImportacao(FrappeTestCase):
 			{
 				"doctype": precos_loja.DOCTYPE,
 				"nome": "Teste Importação Acampamento",
+				"area": precos_loja.AREA,
 				"tipo": "Especialidade",
 				"ramo": "Todos",
 				"valor_unitario": 1,
@@ -294,6 +295,8 @@ class TestImportacao(FrappeTestCase):
 		self.assertEqual(criado.valor_unitario, 13.50)
 		self.assertEqual(criado.codigo, "TI-2")
 		self.assertEqual(criado.tipo, "Especialidade")
+		# A loja só vende o que é do Programa Educativo.
+		self.assertEqual(criado.area, "Programa Educativo")
 
 	def test_nao_cria_o_que_nao_e_distintivo(self):
 		relatorio = precos_loja.importar_precos_loja(url=URL_CATEGORIA, baixar=self._paginas().get, pausa=0)

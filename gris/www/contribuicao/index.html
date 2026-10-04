@@ -1,0 +1,100 @@
+{% extends "gris/templates/portal_clean.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, alert %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{% block title %}Contribuição mensal{% endblock %}
+
+{# index.css/.js são injetados automaticamente pelo Frappe (colocated). #}
+
+{# Valor em reais no formato brasileiro (a página pública não depende do idioma do visitante). #}
+{% macro brl(valor) %}R$ {{ ("{:,.2f}".format(valor or 0)).replace(",", "#").replace(".", ",").replace("#", ".") }}{% endmacro %}
+
+{% block page_content %}
+<div class="cp-page" data-token="{{ token }}" data-estado="{{ pagina.estado }}">
+
+	<section class="cp-hero">
+		{% if portal_logo %}
+		<img class="cp-hero__logo" src="{{ portal_logo }}" alt="Logo da Unidade Escoteira Local" />
+		{% else %}
+		<img class="cp-hero__logo" src="/assets/gris/images/gris-character/gris-logo.png" alt="GRIS" onerror="this.style.display='none'" />
+		{% endif %}
+	</section>
+
+	<main class="cp-main">
+		<p class="cp-beneficiario">Contribuição mensal de <strong>{{ pagina.nome }}</strong></p>
+
+		<div id="cp-confirmando" class="cp-confirmando" hidden role="status">
+			{{ lucide_icon("loader", "sm") }} Confirmando o seu pagamento…
+		</div>
+
+		{% call card(attrs={"class": "cp-card cp-card--" ~ pagina.estado}) %}
+			{% if pagina.estado == "pago" %}
+			<div class="cp-status">
+				<span class="cp-status__icone cp-status__icone--sucesso">{{ lucide_icon("circle-check", "lg") }}</span>
+				<div>
+					<h1 class="cp-status__titulo">Tudo em dia</h1>
+					<p class="cp-status__subtitulo">Não há contribuição em aberto. Obrigado!</p>
+				</div>
+			</div>
+			{% elif pagina.estado == "vencido" %}
+			<div class="cp-status">
+				<span class="cp-status__icone cp-status__icone--alerta">{{ lucide_icon("triangle-alert", "lg") }}</span>
+				<div>
+					<h1 class="cp-status__titulo">{{ brl(pagina.total_pendente) }} em atraso</h1>
+					<p class="cp-status__subtitulo">
+						{% if pagina.meses_em_atraso > 1 %}{{ pagina.meses_em_atraso }} meses estão vencidos.{% else %}Há um mês vencido.{% endif %}
+						{% if pagina.acrescimo_pendente > 0 %}O valor inclui {{ brl(pagina.acrescimo_pendente) }} de acréscimo por atraso.{% endif %}
+					</p>
+				</div>
+			</div>
+			{% else %}
+			<div class="cp-status">
+				<span class="cp-status__icone cp-status__icone--info">{{ lucide_icon("calendar-clock", "lg") }}</span>
+				<div>
+					<h1 class="cp-status__titulo">{{ brl(pagina.total_pendente) }} em aberto</h1>
+					<p class="cp-status__subtitulo">
+						{% if pagina.vencimento %}Vence em {{ pagina.vencimento.strftime("%d/%m/%Y") }}. Depois do vencimento o valor sobe.{% endif %}
+					</p>
+				</div>
+			</div>
+			{% endif %}
+
+			{% if pagina.estado != "pago" %}
+			<div class="cp-actions">
+				<button type="button" class="btn-primary cp-pagar" id="cp-pagar">
+					{{ lucide_icon("credit-card", "sm") }} Realizar pagamento
+				</button>
+			</div>
+			<p class="cp-erro" id="cp-erro" role="alert" hidden></p>
+			{% endif %}
+		{% endcall %}
+
+		<section aria-labelledby="cp-meses-titulo" class="cp-meses">
+			<h2 id="cp-meses-titulo" class="cp-meses__titulo">Mês a mês</h2>
+			{% if pagina.meses %}
+			<ul class="cp-meses__lista">
+				{% for mes in pagina.meses %}
+				<li class="cp-mes cp-mes--{{ mes.status_slug }}">
+					<span class="cp-mes__rotulo">{{ mes.rotulo }}</span>
+					<span class="badge cp-badge cp-badge--{{ mes.status_slug }}">{{ mes.status }}</span>
+					<span class="cp-mes__valor">
+						{{ brl(mes.valor) }}
+						{% if mes.acrescimo > 0 %}<small>inclui {{ brl(mes.acrescimo) }} de atraso</small>{% endif %}
+					</span>
+				</li>
+				{% endfor %}
+			</ul>
+			{% else %}
+			<p class="cp-vazio">Ainda não há meses registrados.</p>
+			{% endif %}
+		</section>
+	</main>
+
+	{% if uel.nome_da_uel %}
+	<footer class="cp-footer">
+		<p>{% if uel.tipo_uel %}{{ uel.tipo_uel }} {% endif %}{{ uel.nome_da_uel }}{% if uel.numeral %} {{ uel.numeral }}{% endif %}</p>
+		{% if uel.regiao %}<p class="cp-footer__sub">{{ uel.regiao }}</p>{% endif %}
+	</footer>
+	{% endif %}
+</div>
+{% endblock %}

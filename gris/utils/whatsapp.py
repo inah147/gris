@@ -261,7 +261,16 @@ def _enviar_texto_sync(numero: str, mensagem: str, contexto: dict | None = None)
 	return result
 
 
-def _enviar_midia_sync(numero: str, tipo: str, url_ou_base64: str, caption: str = "") -> dict:
+def _enviar_midia_sync(
+	numero: str,
+	tipo: str,
+	url_ou_base64: str,
+	caption: str = "",
+	*,
+	nome_arquivo: str = "",
+	mimetype: str = "",
+	contexto: dict | None = None,
+) -> dict:
 	_TIPOS_VALIDOS = {"image", "document", "audio", "video"}
 	if tipo not in _TIPOS_VALIDOS:
 		raise WhatsAppRequestError(
@@ -276,13 +285,22 @@ def _enviar_midia_sync(numero: str, tipo: str, url_ou_base64: str, caption: str 
 	}
 	if caption:
 		payload["caption"] = caption
+	# Sem nome e tipo, o documento chega sem extensão e o celular não sabe abri-lo.
+	if nome_arquivo:
+		payload["fileName"] = nome_arquivo
+	if mimetype:
+		payload["mimetype"] = mimetype
 
+	# O log guarda a legenda e o nome do arquivo, nunca o conteúdo em base64.
+	conteudo_log = "\n".join(parte for parte in (caption, f"[anexo: {nome_arquivo or tipo}]") if parte)
 	try:
 		result = _post(f"/message/sendMedia/{config['nome_instancia']}", payload, config=config)
-	except Exception:
+	except Exception as erro:
+		_registrar_log(contexto, numero=numero, conteudo=conteudo_log, status="Falhou", erro=str(erro))
 		_registrar_erro(f"enviar_midia:{numero}:{tipo}")
 		raise
 
+	_registrar_log(contexto, numero=numero, conteudo=conteudo_log, status="Enviada")
 	_registrar_sucesso()
 	_logger().info(f"Mídia ({tipo}) enviada para {numero}.")
 	return result
@@ -484,7 +502,10 @@ def enviar_midia(
 	url_ou_base64: str,
 	*,
 	caption: str = "",
+	nome_arquivo: str = "",
+	mimetype: str = "",
 	enqueue: bool = True,
+	contexto: dict | None = None,
 ) -> dict | None:
 	"""Envia mídia (imagem, documento, áudio ou vídeo) para um número WhatsApp.
 
@@ -493,7 +514,12 @@ def enviar_midia(
 		tipo: Tipo de mídia. Um de: "image", "document", "audio", "video".
 		url_ou_base64: URL pública da mídia ou string base64 do arquivo.
 		caption: Legenda opcional (suportada para imagem, documento e vídeo).
-		enqueue: Se True (padrão), processa em background.
+		nome_arquivo: Nome com que o documento aparece na conversa (ex.: "convite.pdf").
+		mimetype: Tipo do arquivo (ex.: "application/pdf"). Junto com ``nome_arquivo``,
+			é o que faz o celular reconhecer e abrir o documento.
+		enqueue: Se True (padrão), processa em background. Para arquivos em base64, prefira
+			False dentro de um job, para não levar o arquivo inteiro para a fila.
+		contexto: Mesmo papel que em ``enviar_texto``. Ver ``_registrar_log``.
 
 	Returns:
 		Resposta da Evolution API (dict) no modo síncrono, ou None quando enfileirado.
@@ -511,9 +537,20 @@ def enviar_midia(
 			tipo=tipo,
 			url_ou_base64=url_ou_base64,
 			caption=caption,
+			nome_arquivo=nome_arquivo,
+			mimetype=mimetype,
+			contexto=contexto,
 		)
 		return None
-	return _enviar_midia_sync(numero, tipo, url_ou_base64, caption)
+	return _enviar_midia_sync(
+		numero,
+		tipo,
+		url_ou_base64,
+		caption,
+		nome_arquivo=nome_arquivo,
+		mimetype=mimetype,
+		contexto=contexto,
+	)
 
 
 def enviar_para_grupo(

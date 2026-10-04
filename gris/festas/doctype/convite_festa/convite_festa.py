@@ -1,6 +1,7 @@
 # Copyright (c) 2026, Grupo Escoteiro Professora Inah de Mello - 47/SP and contributors
 # For license information, please see license.txt
 
+import base64
 import re
 import uuid
 
@@ -205,9 +206,13 @@ class ConviteFesta(Document):
 	# ---------- Lifecycle helpers ----------
 
 	def _gerar_payloads_qr_code(self):
+		from gris.api.festas.convite_publico import gerar_token
+
 		for convidado in self.convidados or []:
 			if not convidado.qr_code_payload:
 				convidado.qr_code_payload = uuid.uuid4().hex
+			if not convidado.token_link:
+				convidado.token_link = gerar_token()
 			if not convidado.status_envio:
 				convidado.status_envio = STATUS_ENVIO_PENDENTE
 
@@ -498,7 +503,20 @@ def enviar_qr_codes(
 				_marcar_erro(convidado, str(exc))
 				falhas.append((convidado.nome, convidado.email, str(exc)))
 
-	doc.save(ignore_permissions=True)
+	# Grava só os campos do e-mail, linha a linha. Salvar o pedido regravaria as linhas
+	# com a cópia carregada no início — desfazendo o que o job do WhatsApp, que roda ao
+	# mesmo tempo, marcou — e revalidaria os itens contra a Opção atual (que pode estar
+	# inativa ou com outro preço).
+	for convidado in pendentes:
+		frappe.db.set_value(
+			"Convidado Convite Festa",
+			convidado.name,
+			{
+				"status_envio": convidado.status_envio,
+				"descricao_erro_envio": convidado.descricao_erro_envio,
+			},
+			update_modified=False,
+		)
 	# Commit explícito: os e-mails com os QR codes já saíram. As marcações de
 	# enviado/erro precisam sobreviver a uma falha no aviso ao coordenador logo
 	# abaixo, senão a próxima execução reenvia convites já entregues.
@@ -576,14 +594,15 @@ def _mensagem_whatsapp_erro(convite_name: str, festa_nome: str, falhas: list[tup
 
 
 def enviar_whatsapp_confirmacao_convite(convite_name: str) -> None:
-	"""Job de background: notifica via WhatsApp que o pagamento foi confirmado.
+	"""Job de background: avisa o pagador pelo WhatsApp e enfileira os convites em PDF.
 
-	- Idempotente: usa `whatsapp_notificado_em` no Convite Festa (e por linha em
-	  Convidado Convite Festa) para evitar reenvios quando o webhook é reentrante.
+	- Idempotente: usa `whatsapp_notificado_em` no Convite Festa para não repetir o
+	  texto ao pagador quando o webhook é reentrante. O job dos PDFs
+	  (`enviar_convites_whatsapp`) é idempotente por convidado.
 	- Disparada apenas pelo handler `on_cobranca_atualizada` (sistema), nunca por
 	  ações do usuário/visita de página.
-	- Falhas em mensagens individuais não interrompem o fluxo: são logadas e
-	  marcadas no respectivo registro.
+	- Os PDFs são enfileirados depois do texto, para o pagador entender o que chega
+	  em seguida.
 	"""
 	from frappe.utils import now
 
@@ -603,13 +622,14 @@ def enviar_whatsapp_confirmacao_convite(convite_name: str) -> None:
 	link_assinado = _build_redirect_url(doc.name)
 	pagador_recebe_tudo = bool(doc.pagador_recebe_qr_codes)
 
-	# 1) Mensagem para o pagador (uma única vez)
+	# Mensagem para o pagador (uma única vez)
 	if not doc.whatsapp_notificado_em and doc.telefone_pagador:
 		if pagador_recebe_tudo:
 			mensagem_pagador = (
 				f"Olá, {primeiro_nome_pagador}!\n\n"
 				f"Recebemos o pagamento da sua compra de {qtd_convites} convite(s) para {festa_nome}.\n\n"
-				f"Em breve você receberá os convites no e-mail {_mask_email(doc.email_pagador)}.\n\n"
+				"Em seguida você vai receber aqui no WhatsApp os convites em PDF, um para cada convidado. "
+				f"Eles também vão para o e-mail {_mask_email(doc.email_pagador)}.\n\n"
 				"Para entrar na festa você precisará apresentar os convites. Não se esqueça de salvá-los em um lugar de fácil acesso para não ter problemas na entrada, combinado?!\n\n"
 				f"Aqui está a confirmação de sua compra: {link_assinado}"
 				"\n\nNos vemos na festa! 🎉"
@@ -618,13 +638,23 @@ def enviar_whatsapp_confirmacao_convite(convite_name: str) -> None:
 			mensagem_pagador = (
 				f"Olá, {primeiro_nome_pagador}!\n\n"
 				f"Recebemos o pagamento da sua compra de {qtd_convites} convite(s) para {festa_nome}.\n\n"
-				"Cada convidado receberá seu convite no e-mail informado.\n\n"
+				"Cada convidado vai receber o próprio convite em PDF no WhatsApp e no e-mail informados na compra.\n\n"
 				"Para entrar na festa cada convidado precisará apresentar os convites, lembre-se de deixar seu convite em um lugar de fácil acesso para não ter problemas na entrada, combinado?!\n\n"
 				f"Aqui está a confirmação de sua compra: {link_assinado}"
 				"\n\nNos vemos na festa! 🎉"
 			)
 		try:
-			enviar_texto(doc.telefone_pagador, mensagem_pagador)
+			# Síncrono (já estamos num job): numa fila à parte, o texto poderia chegar
+			# depois dos PDFs enfileirados logo abaixo.
+			enviar_texto(
+				doc.telefone_pagador,
+				mensagem_pagador,
+				enqueue=False,
+				contexto={
+					"assunto": f"Compra de convites confirmada ({festa_nome})",
+					"destinatario_nome": doc.nome_pagador,
+				},
+			)
 		except Exception:
 			frappe.log_error(
 				message=frappe.get_traceback(),
@@ -639,40 +669,184 @@ def enviar_whatsapp_confirmacao_convite(convite_name: str) -> None:
 		update_modified=False,
 	)
 
-	# 2) Mensagens individuais por convidado (apenas se cada um recebe o próprio)
-	if pagador_recebe_tudo:
+	frappe.enqueue(
+		"gris.festas.doctype.convite_festa.convite_festa.enviar_convites_whatsapp",
+		queue="long",
+		enqueue_after_commit=True,
+		convite_name=doc.name,
+	)
+
+
+# ---------- WhatsApp: convite em PDF ----------
+
+
+STATUS_WHATSAPP_ENVIADO = "Enviado"
+STATUS_WHATSAPP_ERRO = "Erro"
+STATUS_WHATSAPP_SEM_TELEFONE = "Sem telefone"
+DESTINATARIO_CONVIDADO = "Convidado de festa"
+
+
+def enviar_convites_whatsapp(
+	convite_name: str,
+	convidado_row_name: str | None = None,
+	forcar: bool = False,
+) -> None:
+	"""Job de background: manda o PDF de cada convite pelo WhatsApp do convidado.
+
+	- No modo "pagador recebe todos" os convidados herdam o telefone do pagador
+	  (`_aplicar_pagador_aos_convidados`), então é ele quem recebe um PDF por convidado.
+	- A legenda leva o link `/convite/<código>`: se o arquivo não abrir, o convidado
+	  mostra o QR na tela depois de conferir os 4 últimos dígitos do telefone.
+	- Se o PDF não sair (geração ou envio), manda só o texto com o link.
+	- Idempotente por convidado (`status_envio_whatsapp`); `forcar` e
+	  `convidado_row_name` reenviam mesmo para quem já recebeu.
+	- Grava o status direto em cada linha e não salva o Convite Festa: o save
+	  reescreveria os valores dos itens a partir da Opção atual e disputaria o
+	  documento com o job do e-mail, que roda ao mesmo tempo.
+	"""
+	from gris.api.festas.convite_publico import url_convite
+	from gris.festas.utils import convite_qr
+	from gris.utils.whatsapp import enviar_midia, enviar_texto
+	from gris.utils.whatsapp_errors import WhatsAppConfigurationError, WhatsAppNumberNotFoundError
+
+	doc = frappe.get_doc("Convite Festa", convite_name)
+	if doc.presencial or doc.status_pagamento != STATUS_PAGAMENTO_PAGO:
 		return
 
-	for convidado in doc.convidados or []:
-		if convidado.whatsapp_notificado_em:
-			continue
-		telefone = (convidado.telefone or "").strip()
+	if convidado_row_name:
+		alvos = [c for c in (doc.convidados or []) if c.name == convidado_row_name]
+	elif forcar:
+		alvos = list(doc.convidados or [])
+	else:
+		alvos = [c for c in (doc.convidados or []) if c.status_envio_whatsapp != STATUS_WHATSAPP_ENVIADO]
+	if not alvos:
+		return
+
+	festa = frappe.db.get_value(
+		"Festa",
+		doc.festa,
+		["name", "nome_festa", "data", "horario_inicio", "horario_termino"],
+		as_dict=True,
+	)
+	tipo_convite = convite_qr._descobrir_tipo_convite(doc)
+
+	for posicao, convidado in enumerate(alvos):
+		telefone = re.sub(r"\D", "", convidado.telefone or "")
 		if not telefone:
+			_marcar_whatsapp(convidado.name, STATUS_WHATSAPP_SEM_TELEFONE)
 			continue
-		# O link assinado abre a confirmação da compra do pagador (status do
-		# pedido e recibo da Infinitepay); ele fica restrito ao pagador.
-		mensagem_convidado = (
-			f"Olá, {_primeiro_nome(convidado.nome)}!\n\n"
-			f"Um convite para {festa_nome} foi comprado em seu nome. "
-			f"Em breve você receberá o convite no e-mail {_mask_email(convidado.email)}.\n\n"
-			"Para entrar na festa você precisará apresentar seu convite. Não se esqueça de salvá-lo em um lugar de fácil acesso para não ter problemas na entrada, combinado?!"
-			"\n\nNos vemos na festa! 🎉"
-		)
+
+		link = url_convite(convidado.name)
+		contexto = {
+			"assunto": f"Convite da festa {festa.nome_festa or festa.name}",
+			"destinatario_tipo": DESTINATARIO_CONVIDADO,
+			"destinatario_nome": convidado.nome,
+		}
 		try:
-			enviar_texto(telefone, mensagem_convidado)
-		except Exception:
+			pdf = convite_qr.gerar_pdf_convite(doc, convidado)
+			enviar_midia(
+				telefone,
+				"document",
+				base64.b64encode(pdf).decode(),
+				caption=_mensagem_convite_whatsapp(doc, festa, convidado, tipo_convite, link),
+				nome_arquivo=_safe_filename(festa.nome_festa, convidado.nome),
+				mimetype="application/pdf",
+				enqueue=False,
+				contexto=contexto,
+			)
+			_marcar_whatsapp(convidado.name, STATUS_WHATSAPP_ENVIADO)
+		except WhatsAppConfigurationError as exc:
+			# Integração desligada ou incompleta: nenhum envio vai passar. Para aqui em vez
+			# de gerar os PDFs dos demais à toa.
+			for restante in alvos[posicao:]:
+				if re.sub(r"\D", "", restante.telefone or ""):
+					_marcar_whatsapp(restante.name, STATUS_WHATSAPP_ERRO, erro=str(exc))
 			frappe.log_error(
 				message=frappe.get_traceback(),
-				title=f"Falha ao notificar convidado via WhatsApp ({doc.name}/{convidado.name})",
+				title=f"WhatsApp indisponível para os convites ({doc.name})",
 			)
-			continue
-		frappe.db.set_value(
-			"Convidado Convite Festa",
-			convidado.name,
-			"whatsapp_notificado_em",
-			now(),
-			update_modified=False,
-		)
+			break
+		except WhatsAppNumberNotFoundError as exc:
+			# O número não tem WhatsApp: o texto com o link também não chegaria.
+			_marcar_whatsapp(convidado.name, STATUS_WHATSAPP_ERRO, erro=str(exc))
+		except Exception as exc_pdf:
+			try:
+				enviar_texto(
+					telefone,
+					_mensagem_convite_whatsapp(doc, festa, convidado, tipo_convite, link, com_pdf=False),
+					enqueue=False,
+					contexto=contexto,
+				)
+				_marcar_whatsapp(
+					convidado.name,
+					STATUS_WHATSAPP_ENVIADO,
+					erro=f"PDF não enviado ({exc_pdf}); enviado só o link.",
+				)
+			except Exception as exc_texto:
+				_marcar_whatsapp(convidado.name, STATUS_WHATSAPP_ERRO, erro=str(exc_texto))
+				frappe.log_error(
+					message=frappe.get_traceback(),
+					title=f"Falha ao enviar convite via WhatsApp ({doc.name}/{convidado.name})",
+				)
+		# Commit por convidado: as mensagens já saíram. Se o job morrer no meio, a
+		# próxima execução não reenvia o que já foi entregue.
+		frappe.db.commit()  # nosemgrep
+
+
+def _mensagem_convite_whatsapp(
+	doc, festa, convidado, tipo_convite: str, link: str, *, com_pdf: bool = True
+) -> str:
+	"""Legenda do PDF (ou, sem ele, o texto com o link).
+
+	Quem recebe tudo é o pagador: a mensagem destaca de quem é cada convite. No modo
+	individual ela se apresenta ao convidado, que pode nem saber que ganhou o convite.
+	"""
+	from gris.api.festas.convite_publico import horario_da_festa
+	from gris.www.festas.convite_confirmado import _formatar_data
+
+	festa_nome = festa.nome_festa or festa.name
+	quando = " · ".join(parte for parte in (_formatar_data(festa.data), horario_da_festa(festa)) if parte)
+
+	if doc.pagador_recebe_qr_codes:
+		linhas = [f"🎟️ *Convite de {convidado.nome}*", festa_nome]
+		if quando:
+			linhas.append(f"📅 {quando}")
+		if tipo_convite:
+			linhas.append(tipo_convite)
+	else:
+		linhas = [
+			f"Olá, {_primeiro_nome(convidado.nome)}! 🎉",
+			f"Um convite para *{festa_nome}* foi comprado em seu nome.",
+			"",
+		]
+		if quando:
+			linhas.append(f"📅 {quando}")
+		if tipo_convite:
+			linhas.append(f"🎟️ {tipo_convite}")
+
+	linhas.append("")
+	if com_pdf:
+		linhas += [
+			"Apresente o QR code deste PDF na entrada da festa.",
+			"",
+			"Se o arquivo não abrir, veja o QR code em:",
+		]
+	else:
+		linhas.append("Para ver o QR code e apresentar na entrada da festa, acesse:")
+	linhas += [link, "(confirme com os 4 últimos dígitos deste WhatsApp)"]
+	return "\n".join(linhas)
+
+
+def _marcar_whatsapp(convidado_row: str, status: str, *, erro: str | None = None) -> None:
+	from frappe.utils import now
+
+	valores = {
+		"status_envio_whatsapp": status,
+		"descricao_erro_whatsapp": (erro or "")[:500] or None,
+	}
+	if status == STATUS_WHATSAPP_ENVIADO:
+		valores["whatsapp_notificado_em"] = now()
+	frappe.db.set_value("Convidado Convite Festa", convidado_row, valores, update_modified=False)
 
 
 def _primeiro_nome(nome: str | None) -> str:
@@ -681,12 +855,74 @@ def _primeiro_nome(nome: str | None) -> str:
 	return (nome.strip().split(" ", 1)[0] or "").strip()
 
 
+# ---------- Reenvio (Desk, painel da festa e portaria) ----------
+
+
+def enfileirar_envio_convite(
+	convite_name: str,
+	*,
+	convidado_row_name: str | None = None,
+	forcar_todos: bool = False,
+) -> dict:
+	"""Enfileira o (re)envio do convite por e-mail e pelo WhatsApp.
+
+	Cada canal só sai se houver para onde mandar: e-mail do convidado (ou o do pagador,
+	no reenvio do pedido inteiro em "pagador recebe todos") e telefone do convidado.
+	Sem nenhum dos dois, recusa. Quem chama já checou permissão e pagamento.
+
+	Returns: `{"email": bool, "whatsapp": bool}` — os canais acionados.
+	"""
+	filtros = {"parent": convite_name, "parenttype": "Convite Festa"}
+	if convidado_row_name:
+		filtros["name"] = convidado_row_name
+	convidados = frappe.get_all("Convidado Convite Festa", filters=filtros, fields=["email", "telefone"])
+
+	por_email = any(c.email for c in convidados)
+	if not convidado_row_name and not por_email:
+		pagador = frappe.db.get_value(
+			"Convite Festa", convite_name, ["email_pagador", "pagador_recebe_qr_codes"], as_dict=True
+		)
+		por_email = bool(pagador and pagador.pagador_recebe_qr_codes and pagador.email_pagador)
+	por_whatsapp = any(re.sub(r"\D", "", c.telefone or "") for c in convidados)
+	if not (por_email or por_whatsapp):
+		frappe.throw(_("Convidado não possui e-mail nem telefone cadastrado."))
+
+	if por_email:
+		frappe.enqueue(
+			"gris.festas.doctype.convite_festa.convite_festa.enviar_qr_codes",
+			queue="long",
+			enqueue_after_commit=True,
+			convite_name=convite_name,
+			convidado_row_name=convidado_row_name,
+			forcar_todos=forcar_todos,
+		)
+	if por_whatsapp:
+		frappe.enqueue(
+			"gris.festas.doctype.convite_festa.convite_festa.enviar_convites_whatsapp",
+			queue="long",
+			enqueue_after_commit=True,
+			convite_name=convite_name,
+			convidado_row_name=convidado_row_name,
+			forcar=forcar_todos,
+		)
+	return {"email": por_email, "whatsapp": por_whatsapp}
+
+
+def mensagem_de_reenvio(canais: dict) -> str:
+	"""Texto do aviso de sucesso, dizendo por onde o convite vai sair."""
+	if canais.get("email") and canais.get("whatsapp"):
+		return _("Convite reenviado por e-mail e WhatsApp.")
+	if canais.get("whatsapp"):
+		return _("Convite reenviado pelo WhatsApp.")
+	return _("Convite reenviado por e-mail.")
+
+
 @frappe.whitelist()
 def reenviar_qr_codes(convite_name: str, forcar_todos: int | bool = 0) -> dict:
-	"""Endpoint para botão 'Reenviar QR codes' no Desk.
+	"""Endpoint para o botão 'Reenviar convites' no Desk (e-mail e WhatsApp).
 
 	`forcar_todos` (default False): quando True, reenvia inclusive para
-	convidados com status Enviado.
+	convidados que já receberam.
 	Validação canônica no backend: permissão e status Pago são checados aqui.
 	"""
 	doc = frappe.get_doc("Convite Festa", convite_name)
@@ -694,10 +930,8 @@ def reenviar_qr_codes(convite_name: str, forcar_todos: int | bool = 0) -> dict:
 	if doc.status_pagamento != STATUS_PAGAMENTO_PAGO:
 		frappe.throw(_("A cobrança ainda não foi paga; envio não está liberado."))
 
-	frappe.enqueue(
-		"gris.festas.doctype.convite_festa.convite_festa.enviar_qr_codes",
-		queue="long",
-		convite_name=convite_name,
+	canais = enfileirar_envio_convite(
+		convite_name,
 		forcar_todos=bool(int(forcar_todos)) if forcar_todos else False,
 	)
-	return {"ok": True}
+	return {"ok": True, **canais, "mensagem": mensagem_de_reenvio(canais)}

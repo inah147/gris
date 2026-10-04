@@ -4532,16 +4532,21 @@
 	function reenviarConviteConvidado(convRow, btn) {
 		if (!convRow) return;
 		confirmDialog({
-			title: "Reenviar QR code?",
-			message: "O convidado receberá um novo e-mail com o QR code do convite.",
+			title: "Reenviar convite?",
+			message:
+				"O convidado receberá o convite de novo, por e-mail e pelo WhatsApp (quando tiver telefone).",
 			confirmLabel: "Reenviar",
 			variant: "primary",
 		}).then(function (ok) {
 			if (!ok) return;
 			if (btn) btn.disabled = true;
 			api("gris.api.festas.convites.reenviar_convite_convidado", { convidado_row: convRow })
-				.then(function () {
-					toast("Reenvio enfileirado. O e-mail será enviado em instantes.", "success");
+				.then(function (resposta) {
+					toast(
+						(resposta && resposta.mensagem) ||
+							"Reenvio enfileirado. O convite sai em instantes.",
+						"success"
+					);
 				})
 				.catch(function (err) {
 					toast((err && err.message) || "Falha ao reenviar o convite.", "error");

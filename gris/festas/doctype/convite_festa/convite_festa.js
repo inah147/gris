@@ -15,13 +15,13 @@ frappe.ui.form.on("Convite Festa", {
 
 		const convidados = frm.doc.convidados || [];
 		const algumEnviado = convidados.some((c) => c.status_envio === "Enviado");
-		const label = algumEnviado ? __("Reenviar QR codes") : __("Enviar QR codes");
+		const label = algumEnviado ? __("Reenviar convites") : __("Enviar convites");
 
 		frm.add_custom_button(
 			label,
 			() => {
 				const dialog = new frappe.ui.Dialog({
-					title: __("Enviar QR codes"),
+					title: __("Enviar convites por e-mail e WhatsApp"),
 					fields: [
 						{
 							label: __("Quais convidados?"),
@@ -55,9 +55,9 @@ frappe.ui.form.on("Convite Festa", {
 							callback: (r) => {
 								if (!r.message || !r.message.ok) return;
 								frappe.show_alert({
-									message: __(
-										"Envio enfileirado. Os e-mails saem em background."
-									),
+									message:
+										r.message.mensagem ||
+										__("Envio enfileirado. Os convites saem em background."),
 									indicator: "green",
 								});
 							},

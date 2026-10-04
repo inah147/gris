@@ -816,7 +816,9 @@
 	function confirmarReenvio(entrada) {
 		if (
 			!window.confirm(
-				"Reenviar QR code para " + (entrada.email || entrada.nome_convidado) + "?"
+				"Reenviar o convite de " +
+					(entrada.nome_convidado || "este convidado") +
+					" por e-mail e WhatsApp?"
 			)
 		) {
 			return;
@@ -824,8 +826,12 @@
 		api("gris.api.festas.portaria.reenviar_convite", {
 			lista_entrada_name: entrada.name,
 		})
-			.then(function () {
-				toast("Reenvio enfileirado. O e-mail será enviado em instantes.", "success");
+			.then(function (resposta) {
+				toast(
+					(resposta && resposta.mensagem) ||
+						"Reenvio enfileirado. O convite sai em instantes.",
+					"success"
+				);
 			})
 			.catch(function (err) {
 				toast(err.message || "Falha no reenvio.", "error");

@@ -367,8 +367,9 @@ def editar_dados_convidado(
 @frappe.whitelist()
 @rate_limit(key="portaria-reenvio", limit=10, seconds=60)
 def reenviar_convite(lista_entrada_name: str) -> dict:
-	"""Reenvia o QR code do convidado específico para o e-mail dele.
+	"""Reenvia o convite do convidado específico por e-mail e/ou WhatsApp.
 
+	Sai por cada canal que o convidado tiver (ver `enfileirar_envio_convite`).
 	Rate-limited para evitar abuso. O envio é assíncrono via fila.
 	"""
 	lista_entrada_name = (lista_entrada_name or "").strip()
@@ -381,11 +382,10 @@ def reenviar_convite(lista_entrada_name: str) -> dict:
 
 	ensure_user_pode_operar_portaria(row.festa)
 
-	if not row.email:
-		frappe.throw(_("Convidado não possui e-mail cadastrado."))
-
 	from gris.festas.doctype.convite_festa.convite_festa import (
 		STATUS_PAGAMENTO_PAGO,
+		enfileirar_envio_convite,
+		mensagem_de_reenvio,
 	)
 
 	status = frappe.db.get_value(
@@ -396,15 +396,8 @@ def reenviar_convite(lista_entrada_name: str) -> dict:
 	if status != STATUS_PAGAMENTO_PAGO:
 		frappe.throw(_("O pagamento deste convite ainda não foi confirmado."))
 
-	frappe.enqueue(
-		"gris.festas.doctype.convite_festa.convite_festa.enviar_qr_codes",
-		queue="long",
-		enqueue_after_commit=True,
-		convite_name=row.convite,
-		convidado_row_name=row.convidado_row,
-		forcar_todos=True,
-	)
-	return {"ok": True}
+	canais = enfileirar_envio_convite(row.convite, convidado_row_name=row.convidado_row, forcar_todos=True)
+	return {"ok": True, **canais, "mensagem": mensagem_de_reenvio(canais)}
 
 
 @frappe.whitelist()

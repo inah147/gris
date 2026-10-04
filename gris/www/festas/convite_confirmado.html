@@ -53,7 +53,8 @@
 			<div class="cc-orientacoes">
 				{% if pagador_recebe_qr_codes %}
 				{% set descricao_html %}
-					Todos os convites foram enviados para <strong>{{ email_pagador_mascarado }}</strong>
+					Os convites estão chegando no seu WhatsApp, um PDF por convidado, e também em
+					<strong>{{ email_pagador_mascarado }}</strong>.
 					Apresente-os impressos ou no celular na entrada da festa.
 				{% endset %}
 				{{ alert(
@@ -64,8 +65,8 @@
 				) }}
 				{% else %}
 				{% set descricao_html %}
-					Cada convidado receberá seu convite no e-mail informado durante a compra.
-					Cada um deverá apresentar o próprio convite na entrada da festa.
+					Cada convidado receberá o próprio convite no WhatsApp e no e-mail informados
+					durante a compra. Cada um deverá apresentar o próprio convite na entrada da festa.
 				{% endset %}
 				{{ alert(
 					title="Convites enviados individualmente",
@@ -102,8 +103,8 @@
 			</div>
 			<p class="cc-pendente__ajuda" id="cc-pendente-ajuda">
 				Se demorar mais que alguns minutos, você pode fechar esta página com segurança:
-				assim que o pagamento for confirmado, enviaremos os convites para o e-mail informado
-				durante a compra.
+				assim que o pagamento for confirmado, enviaremos os convites para o WhatsApp e o
+				e-mail informados durante a compra.
 			</p>
 		{% endcall %}
 

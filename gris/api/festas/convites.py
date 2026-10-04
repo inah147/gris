@@ -1035,14 +1035,16 @@ def editar_dados_convidado_pedido(
 @frappe.whitelist()
 @rate_limit(key="convites-reenvio", limit=10, seconds=60)
 def reenviar_convite_convidado(convidado_row: str) -> dict:
-	"""Reenvia o QR code de um convidado específico do pedido.
+	"""Reenvia o convite de um convidado específico do pedido (e-mail e/ou WhatsApp).
 
 	Identifica o convidado por `convidado_row` (linha de `Convidado Convite Festa`)
-	e dispara `enviar_qr_codes` em fila. Exige pagamento Pago — o envio só faz
-	sentido quando o QR já foi gerado.
+	e enfileira o envio por cada canal que ele tiver (ver `enfileirar_envio_convite`).
+	Exige pagamento Pago — o envio só faz sentido quando o QR já foi gerado.
 	"""
 	from gris.festas.doctype.convite_festa.convite_festa import (
 		STATUS_PAGAMENTO_PAGO,
+		enfileirar_envio_convite,
+		mensagem_de_reenvio,
 	)
 
 	convidado_row = (convidado_row or "").strip()
@@ -1061,9 +1063,6 @@ def reenviar_convite_convidado(convidado_row: str) -> dict:
 		frappe.throw(_("Pedido não encontrado."), frappe.DoesNotExistError)
 	_ensure_festa_acessivel(convite.festa)
 
-	if not row.email:
-		frappe.throw(_("Convidado não possui e-mail cadastrado."))
-
 	status = (
 		frappe.db.get_value("Cobranca Infinitepay", convite.cobranca_infinitepay, "status")
 		if convite.cobranca_infinitepay
@@ -1072,12 +1071,5 @@ def reenviar_convite_convidado(convidado_row: str) -> dict:
 	if status != STATUS_PAGAMENTO_PAGO:
 		frappe.throw(_("O pagamento deste convite ainda não foi confirmado."))
 
-	frappe.enqueue(
-		"gris.festas.doctype.convite_festa.convite_festa.enviar_qr_codes",
-		queue="long",
-		enqueue_after_commit=True,
-		convite_name=convite_name,
-		convidado_row_name=convidado_row,
-		forcar_todos=True,
-	)
-	return {"ok": True}
+	canais = enfileirar_envio_convite(convite_name, convidado_row_name=convidado_row, forcar_todos=True)
+	return {"ok": True, **canais, "mensagem": mensagem_de_reenvio(canais)}

@@ -331,8 +331,8 @@
 						<td class="text-right whitespace-nowrap contrib-num">{{ brl(cobranca.valor) }}</td>
 						<td class="text-sm">
 							{{ cobranca.resultado_ultimo_envio or '—' }}
-							{% if cobranca.lembretes_enviados %}
-								<span class="text-muted-foreground">({{ cobranca.lembretes_enviados }} lembrete(s))</span>
+							{% if cobranca.lembretes_enviados or cobranca.lembrete_vencimento_enviado %}
+								<span class="text-muted-foreground">({{ cobranca.lembretes_enviados + (1 if cobranca.lembrete_vencimento_enviado else 0) }} lembrete(s){% if cobranca.lembrete_vencimento_enviado %}, inclui o do vencimento{% endif %})</span>
 							{% endif %}
 						</td>
 						<td class="text-right">

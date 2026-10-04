@@ -44,6 +44,7 @@ class TestCobrancaAutomatica(FrappeTestCase):
 				"dia_emissao_cobranca": 1,
 				"dias_lembrete_apos_vencimento": 3,
 				"max_lembretes": 2,
+				"lembrete_no_vencimento": 1,
 			},
 		)
 		self._gerar_pagamentos()
@@ -123,6 +124,7 @@ class TestCobrancaAutomatica(FrappeTestCase):
 				"mes_emissao",
 				"ultimo_envio_whatsapp",
 				"lembretes_enviados",
+				"lembrete_vencimento_enviado",
 			],
 		)
 
@@ -149,7 +151,9 @@ class TestCobrancaAutomatica(FrappeTestCase):
 		self.assertEqual(resultado["emissao"]["emitidas"], 1)
 		self.assertEqual(resultado["emissao"]["enviadas"], 1)
 		enviar.assert_called_once()
-		self.assertIn("https://pag.exemplo/automatica", enviar.call_args.args[1])
+		# A mensagem leva o link do GRIS, nunca o da InfinitePay.
+		self.assertIn("/contribuicao/", enviar.call_args.args[1])
+		self.assertNotIn("pag.exemplo", enviar.call_args.args[1])
 
 		[cobranca] = self._cobrancas()
 		self.assertEqual(cobranca.origem, ORIGEM_AUTOMATICA)
@@ -197,18 +201,41 @@ class TestCobrancaAutomatica(FrappeTestCase):
 		[cobranca] = self._cobrancas()
 		self.assertTrue(cobranca.ultimo_envio_whatsapp)
 
-	def test_lembretes_depois_do_vencimento_ate_o_maximo(self):
+	def test_lembretes_seguem_o_calendario_do_vencimento(self):
 		self._rodar("2026-08-05")
 
-		# Vencimento em 10/08 (segunda-feira); lembrete a cada 3 dias, no máximo 2.
-		for dia, esperado in (("2026-08-12", 0), ("2026-08-13", 1), ("2026-08-15", 0), ("2026-08-16", 1)):
-			resultado, _ = self._rodar(dia)
+		# Vencimento em 10/08 (segunda-feira); intervalo de 3 dias, no máximo 2 lembretes
+		# depois do vencimento, além do aviso do próprio dia.
+		calendario = (
+			("2026-08-09", 0, None),
+			("2026-08-10", 1, "vence hoje"),
+			("2026-08-10", 0, None),  # rodar de novo no mesmo dia não repete
+			("2026-08-11", 1, "venceu"),  # vencimento + 1: aviso de atraso
+			("2026-08-12", 0, None),
+			("2026-08-14", 1, "segue em aberto"),  # + 1 + 3
+			("2026-08-17", 0, None),  # máximo de 2 lembretes atingido
+		)
+		for dia, esperado, trecho in calendario:
+			resultado, enviar = self._rodar(dia)
 			self.assertEqual(resultado["lembretes"]["enviados"], esperado, dia)
+			if trecho:
+				self.assertIn(trecho, enviar.call_args.args[1], dia)
+				self.assertIn("/contribuicao/", enviar.call_args.args[1], dia)
+				self.assertNotIn("pag.exemplo", enviar.call_args.args[1], dia)
 
 		resultado, enviar = self._rodar("2026-08-25")
 		self.assertEqual(resultado["lembretes"]["enviados"], 0)
 		enviar.assert_not_called()
-		self.assertEqual(self._cobrancas()[0].lembretes_enviados, 2)
+		cobranca = self._cobrancas()[0]
+		self.assertEqual(cobranca.lembretes_enviados, 2)
+		self.assertEqual(cobranca.lembrete_vencimento_enviado, 1)
+
+	def test_lembrete_do_vencimento_pode_ser_desligado(self):
+		frappe.db.set_single_value("Configuracoes Contribuicao Mensal", "lembrete_no_vencimento", 0)
+		self._rodar("2026-08-05")
+		resultado, enviar = self._rodar("2026-08-10")
+		self.assertEqual(resultado["lembretes"]["enviados"], 0)
+		enviar.assert_not_called()
 
 	def test_resumo_do_mes_poe_quem_ficou_sem_mensagem_primeiro(self):
 		self._rodar("2026-08-05", whatsapp_falha=True)

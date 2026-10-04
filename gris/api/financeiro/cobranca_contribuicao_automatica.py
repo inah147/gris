@@ -12,9 +12,9 @@ contribuinte (`cobranca_contribuicao`):
    cobraria à mão, nem um mês a mais. É uma cobrança automática por associado por
    mês (`mes_emissao`); rodar de novo no mesmo mês só completa quem ficou para
    trás — link que falhou, WhatsApp que não saiu.
-2. **Lembrete.** Depois do vencimento, a cada `dias_lembrete_apos_vencimento`
-   dias, quem ainda não pagou o link do mês recebe o mesmo link de novo, até
-   `max_lembretes` vezes.
+2. **Lembretes.** Quem ainda não pagou recebe, pelo link do GRIS, o lembrete do dia
+   do vencimento, o aviso de atraso no dia seguinte e depois um lembrete a cada
+   `dias_lembrete_apos_vencimento` dias, até `max_lembretes` (ver `tipo_do_lembrete`).
 
 Nada acontece antes de `cobranca_automatica_desde`: é a data do corte das
 assinaturas da InfinitePay, que convivem com o link até lá.
@@ -35,6 +35,10 @@ from frappe.utils.background_jobs import enqueue
 
 from gris.api.financeiro.cobranca_contribuicao import (
 	FINALIDADE_CONTRIBUICAO,
+	MENSAGEM_ATRASO,
+	MENSAGEM_MES,
+	MENSAGEM_SEMANAL,
+	MENSAGEM_VENCIMENTO,
 	MESES_COBRANCA,
 	ORIGEM_AUTOMATICA,
 	STATUS_COBRANCA_PENDENTE,
@@ -64,8 +68,9 @@ class ConfigCobrancaAutomatica:
 	ativa: bool = False
 	desde: datetime.date | None = None
 	dia_emissao: int = 1
-	dias_lembrete: int = 3
-	max_lembretes: int = 2
+	dias_lembrete: int = 7
+	max_lembretes: int = 3
+	lembrete_vencimento: bool = True
 
 
 def get_config() -> ConfigCobrancaAutomatica:
@@ -77,6 +82,7 @@ def get_config() -> ConfigCobrancaAutomatica:
 		dia_emissao=min(max(dia_emissao, 1), 28),
 		dias_lembrete=max(int(config.get("dias_lembrete_apos_vencimento") or 0), 0),
 		max_lembretes=max(int(config.get("max_lembretes") or 0), 0),
+		lembrete_vencimento=bool(config.get("lembrete_no_vencimento")),
 	)
 
 
@@ -185,7 +191,7 @@ def emitir_cobrancas_do_mes(
 		if cobranca.status != STATUS_COBRANCA_PENDENTE or cobranca.ultimo_envio_whatsapp:
 			continue
 		resultado["reenvios"] += 1
-		if _enviar(cobranca.name, lembrete=False):
+		if _enviar(cobranca.name, hoje=hoje):
 			resultado["enviadas"] += 1
 		else:
 			resultado["nao_enviadas"] += 1
@@ -225,7 +231,7 @@ def emitir_cobrancas_do_mes(
 			frappe.log_error(frappe.get_traceback(), f"Cobrança automática: {associado}")
 			continue
 
-		if _enviar(cobranca["name"], lembrete=False):
+		if _enviar(cobranca["name"], hoje=hoje):
 			resultado["enviadas"] += 1
 		else:
 			resultado["nao_enviadas"] += 1
@@ -234,10 +240,10 @@ def emitir_cobrancas_do_mes(
 	return resultado
 
 
-def _enviar(nome_cobranca: str, *, lembrete: bool) -> bool:
+def _enviar(nome_cobranca: str, *, tipo: str = MENSAGEM_MES, hoje: datetime.date | None = None) -> bool:
 	logger = obter_logger(NOME_LOGGER)
 	try:
-		envio = enviar_cobranca(nome_cobranca, lembrete=lembrete)
+		envio = enviar_cobranca(nome_cobranca, tipo=tipo, hoje=hoje)
 	except Exception:
 		logger.exception(f"Falha ao enviar a cobrança {nome_cobranca} pelo WhatsApp.")
 		frappe.log_error(frappe.get_traceback(), f"Cobrança automática (envio): {nome_cobranca}")
@@ -247,25 +253,50 @@ def _enviar(nome_cobranca: str, *, lembrete: bool) -> bool:
 	return bool(envio["enviado"])
 
 
+def tipo_do_lembrete(config: ConfigCobrancaAutomatica, cobranca, dias_apos_vencimento: int) -> str | None:
+	"""Qual lembrete a cobrança do mês deve receber hoje, ou `None`.
+
+	O calendário, contado a partir do vencimento:
+
+	| Quando                       | Mensagem                                  |
+	|------------------------------|-------------------------------------------|
+	| dia do vencimento            | "vence hoje" (uma vez)                    |
+	| vencimento + 1               | aviso de atraso, com o valor novo         |
+	| vencimento + 1 + intervalo·n | lembrete semanal, até `max_lembretes`     |
+	"""
+	if dias_apos_vencimento == 0:
+		if config.lembrete_vencimento and not cobranca.lembrete_vencimento_enviado:
+			return MENSAGEM_VENCIMENTO
+		return None
+
+	enviados = int(cobranca.lembretes_enviados or 0)
+	if enviados >= config.max_lembretes:
+		return None
+	intervalo = max(config.dias_lembrete, 1)
+	if dias_apos_vencimento < 1 + intervalo * enviados:
+		return None
+	return MENSAGEM_ATRASO if enviados == 0 else MENSAGEM_SEMANAL
+
+
 def enviar_lembretes(
 	config: ConfigCobrancaAutomatica, hoje: datetime.date, associados: list[str] | None = None
 ) -> dict:
-	"""Reenvia o link do mês a quem ainda não pagou, depois do vencimento.
+	"""Lembra, pelo link do GRIS, quem ainda não pagou a cobrança do mês.
 
-	O n-ésimo lembrete sai `n * dias_lembrete` dias depois do vencimento. Antes de
-	lembrar, a apuração é refeita: se algum mês da cobrança já foi quitado por outro
-	caminho (PIX direto, pagamento manual), o link está com o valor errado e o
-	lembrete não sai — a emissão do mês seguinte refaz a cobrança com o que faltar.
+	O calendário está em `tipo_do_lembrete`. Os lembretes valem só para a cobrança
+	do mês corrente: na virada do mês o ciclo recomeça com a mensagem do dia 1.
+	Antes de lembrar, a apuração é refeita: se algum mês da cobrança já foi quitado
+	por outro caminho (PIX direto, pagamento manual), o lembrete não sai.
 	"""
 	logger = obter_logger(NOME_LOGGER)
 	resultado = {"elegiveis": 0, "enviados": 0, "quitadas_por_outro_meio": 0}
-	if config.max_lembretes <= 0 or config.dias_lembrete <= 0:
+	if config.max_lembretes <= 0 and not config.lembrete_vencimento:
 		return resultado
 
 	mes = hoje.replace(day=1)
 	vencimento = calcular_vencimento(mes, get_parametros().dia_vencimento)
 	dias_apos_vencimento = (hoje - vencimento).days
-	if dias_apos_vencimento < config.dias_lembrete:
+	if dias_apos_vencimento < 0:
 		return resultado
 
 	filtros = {
@@ -273,7 +304,6 @@ def enviar_lembretes(
 		"origem": ORIGEM_AUTOMATICA,
 		"status": STATUS_COBRANCA_PENDENTE,
 		"mes_emissao": mes,
-		"lembretes_enviados": ["<", config.max_lembretes],
 		"link_pagamento": ["is", "set"],
 	}
 	if associados is not None:
@@ -281,29 +311,37 @@ def enviar_lembretes(
 	cobrancas = frappe.get_all(
 		"Cobranca Infinitepay",
 		filters=filtros,
-		fields=["name", "associado", "competencias", "lembretes_enviados", "ultimo_envio_whatsapp"],
+		fields=[
+			"name",
+			"associado",
+			"competencias",
+			"lembretes_enviados",
+			"lembrete_vencimento_enviado",
+			"ultimo_envio_whatsapp",
+		],
 	)
-	elegiveis = [
-		c
-		for c in cobrancas
-		if dias_apos_vencimento >= config.dias_lembrete * (int(c.lembretes_enviados or 0) + 1)
-		and not (c.ultimo_envio_whatsapp and getdate(c.ultimo_envio_whatsapp) == hoje)
-	]
+	elegiveis = []
+	for cobranca in cobrancas:
+		if cobranca.ultimo_envio_whatsapp and getdate(cobranca.ultimo_envio_whatsapp) == hoje:
+			continue
+		tipo = tipo_do_lembrete(config, cobranca, dias_apos_vencimento)
+		if tipo:
+			elegiveis.append((cobranca, tipo))
 	resultado["elegiveis"] = len(elegiveis)
 	if not elegiveis:
 		return resultado
 
 	em_aberto = {
 		apuracao["id"]: {p["ym"] for p in competencias_pendentes(apuracao)}
-		for apuracao in apurar_associados([c.associado for c in elegiveis], MESES_COBRANCA, hoje)
+		for apuracao in apurar_associados([c.associado for c, _ in elegiveis], MESES_COBRANCA, hoje)
 	}
-	for cobranca in elegiveis:
+	for cobranca, tipo in elegiveis:
 		competencias = _normalizar_competencias(cobranca.competencias)
 		if not set(competencias) <= em_aberto.get(cobranca.associado, set()):
 			resultado["quitadas_por_outro_meio"] += 1
 			logger.info(f"Lembrete da cobrança {cobranca.name} não enviado: mês já quitado por outro meio.")
 			continue
-		if _enviar(cobranca.name, lembrete=True):
+		if _enviar(cobranca.name, tipo=tipo, hoje=hoje):
 			resultado["enviados"] += 1
 		_commit()
 
@@ -341,6 +379,7 @@ def resumo_cobrancas_do_mes(hoje: datetime.date | None = None, associados: set[s
 			"ultimo_envio_whatsapp",
 			"resultado_ultimo_envio",
 			"lembretes_enviados",
+			"lembrete_vencimento_enviado",
 		],
 		order_by="creation desc",
 		limit_page_length=0,
@@ -401,6 +440,7 @@ def resumo_cobrancas_do_mes(hoje: datetime.date | None = None, associados: set[s
 				"ultimo_envio_whatsapp": cobranca.ultimo_envio_whatsapp,
 				"resultado_ultimo_envio": cobranca.resultado_ultimo_envio,
 				"lembretes_enviados": cobranca.lembretes_enviados or 0,
+				"lembrete_vencimento_enviado": bool(cobranca.lembrete_vencimento_enviado),
 				"sem_envio": sem_envio,
 			}
 		)

@@ -43,7 +43,9 @@ from gris.api.financeiro.contribuicoes import (
 	CATEGORIA_CONTRIBUICAO,
 	MESES_MAXIMO,
 	ROLE_GESTOR,
+	calcular_vencimento,
 	chave_mes,
+	get_parametros,
 	normalizar_meses,
 )
 from gris.api.financeiro.pagamentos_contribuicao import (
@@ -351,7 +353,7 @@ def emitir_cobranca(
 
 	`herdar_de` é a cobrança que esta reemite com outro valor (a página pública
 	emite um link novo quando o valor do dia mudou): origem, mês de emissão,
-	último envio e lembretes são copiados dela, para o job não reenviar a
+	último envio, lembretes e o lembrete do vencimento são copiados dela, para o job não reenviar a
 	mensagem do mês nem reiniciar os lembretes.
 	"""
 	hoje = hoje or getdate()
@@ -403,12 +405,19 @@ def emitir_cobranca(
 		"mes_emissao": hoje.replace(day=1),
 		"ultimo_envio_whatsapp": None,
 		"lembretes_enviados": 0,
+		"lembrete_vencimento_enviado": 0,
 	}
 	if herdar_de:
 		herdada = frappe.db.get_value(
 			"Cobranca Infinitepay",
 			herdar_de,
-			["origem", "mes_emissao", "ultimo_envio_whatsapp", "lembretes_enviados"],
+			[
+				"origem",
+				"mes_emissao",
+				"ultimo_envio_whatsapp",
+				"lembretes_enviados",
+				"lembrete_vencimento_enviado",
+			],
 			as_dict=True,
 		)
 		if herdada:
@@ -513,32 +522,112 @@ def _proximo_order_nsu(associado: str) -> str:
 	return f"CM-{associado}-{carimbo}-{frappe.generate_hash(length=4)}"
 
 
-def montar_mensagem(cobranca: dict, nome_associado: str) -> str:
-	"""Texto enviado ao responsável, com as competências e o link."""
+# Tipos de mensagem da cobrança. Todas levam o link do GRIS, nunca o da InfinitePay:
+# o link do GRIS é fixo, e é a página dele que entrega o link de pagamento com o
+# valor do dia.
+MENSAGEM_MES = "mes"
+MENSAGEM_VENCIMENTO = "vencimento"
+MENSAGEM_ATRASO = "atraso"
+MENSAGEM_SEMANAL = "semanal"
+MENSAGEM_CONFIRMACAO = "confirmacao"
+
+
+def _moeda(valor: float) -> str:
+	return frappe.utils.fmt_money(valor, currency="BRL")
+
+
+def _data_br(data: datetime.date) -> str:
+	return data.strftime("%d/%m/%Y")
+
+
+def contexto_da_mensagem(associado: str, hoje: datetime.date | None = None, pendentes=None) -> dict:
+	"""O que a mensagem diz sobre o que está em aberto, lido da apuração de hoje."""
+	hoje = hoje or getdate()
+	if pendentes is None:
+		pendentes = get_situacao_para_cobranca(associado)["pendentes"]
+	parametros = get_parametros()
+	atrasados = [p for p in pendentes if p["status"] == STATUS_ATRASADO]
+	return {
+		"total": round(sum(p["valor"] for p in pendentes), 2),
+		"meses_em_atraso": len(atrasados),
+		"total_em_atraso": round(sum(p["valor"] for p in atrasados), 2),
+		"vencimento": calcular_vencimento(hoje.replace(day=1), parametros.dia_vencimento),
+		"acrescimo": parametros.acrescimo_atraso,
+	}
+
+
+def montar_mensagem(
+	cobranca: dict,
+	nome_associado: str,
+	*,
+	tipo: str = MENSAGEM_MES,
+	contexto: dict | None = None,
+) -> str:
+	"""Texto enviado ao responsável, com o link do GRIS.
+
+	`cobranca` traz `competencias`, `valor_total` e `link_pagina`. Sem `contexto`
+	a mensagem usa o que a própria cobrança cobra; com ele, o que está em aberto
+	hoje (valor com acréscimo, meses em atraso, data real do vencimento).
+	"""
+	contexto = contexto or {}
+	link = cobranca["link_pagina"]
+	total = contexto.get("total", cobranca["valor_total"])
+	valor = _moeda(total)
 	rotulos = ", ".join(_rotulo(ym) for ym in cobranca["competencias"])
-	valor = frappe.utils.fmt_money(cobranca["valor_total"], currency="BRL")
-	plural = "às contribuições" if len(cobranca["competencias"]) > 1 else "à contribuição"
-	return (
-		f"Olá! Segue o link para pagamento referente {plural} de {nome_associado}.\n\n"
-		f"Competência: {rotulos}\n"
-		f"Valor: {valor}\n\n"
-		f"{cobranca['link_pagamento']}\n\n"
-		"O pagamento é confirmado automaticamente e a contribuição fica quitada no sistema. "
-		"Se já tiver pago, pode ignorar esta mensagem."
+	acrescimo = float(contexto.get("acrescimo") or 0)
+	aviso_acrescimo = (
+		f"Depois do vencimento o valor sobe {_moeda(acrescimo)} por mês em atraso.\n\n"
+		if acrescimo > 0
+		else ""
 	)
 
+	if tipo == MENSAGEM_CONFIRMACAO:
+		return (
+			f"Olá! Recebemos o pagamento da contribuição mensal de {nome_associado}. Obrigado!\n\n"
+			f"Competência: {rotulos}\n"
+			f"Valor: {_moeda(cobranca['valor_total'])}\n\n"
+			f"Veja o mês a mês e o comprovante: {link}"
+		)
 
-def montar_mensagem_lembrete(cobranca: dict, nome_associado: str) -> str:
-	"""Lembrete para quem ainda não pagou o link do mês."""
-	rotulos = ", ".join(_rotulo(ym) for ym in cobranca["competencias"])
-	valor = frappe.utils.fmt_money(cobranca["valor_total"], currency="BRL")
+	if tipo == MENSAGEM_VENCIMENTO:
+		return (
+			f"Olá! A contribuição mensal de {nome_associado} vence hoje.\n\n"
+			f"Valor em aberto: {valor}\n\n"
+			f"Pague pelo link: {link}\n\n"
+			f"{aviso_acrescimo}"
+			"Se já tiver pago, pode ignorar esta mensagem."
+		)
+
+	if tipo == MENSAGEM_ATRASO:
+		return (
+			f"Olá! A contribuição mensal de {nome_associado} venceu e agora o valor em aberto "
+			f"é {valor}, já com o acréscimo por atraso.\n\n"
+			f"Pague pelo link: {link}\n\n"
+			"Se já tiver pago, pode ignorar esta mensagem."
+		)
+
+	if tipo == MENSAGEM_SEMANAL:
+		return (
+			f"Olá! Lembrete: a contribuição mensal de {nome_associado} segue em aberto.\n\n"
+			f"Valor em aberto: {valor}\n\n"
+			f"Pague pelo link: {link}\n\n"
+			"Se já tiver pago, pode ignorar esta mensagem."
+		)
+
+	vencimento = contexto.get("vencimento")
+	linhas = [f"Olá! A contribuição mensal de {nome_associado} está disponível."]
+	if vencimento:
+		linhas.append(f"Vencimento: {_data_br(vencimento)}")
+	linhas.append(f"Valor em aberto: {valor}")
+	atrasados = int(contexto.get("meses_em_atraso") or 0)
+	if atrasados:
+		plural = "meses em atraso" if atrasados > 1 else "mês em atraso"
+		linhas.append(f"Inclui {atrasados} {plural}, somando {_moeda(contexto.get('total_em_atraso') or 0)}.")
 	return (
-		f"Olá! Lembrete: a contribuição mensal de {nome_associado} ainda está em aberto.\n\n"
-		f"Competência: {rotulos}\n"
-		f"Valor: {valor}\n\n"
-		f"{cobranca['link_pagamento']}\n\n"
-		"O pagamento pelo link é confirmado automaticamente. "
-		"Se já tiver pago, pode ignorar esta mensagem."
+		"\n".join(linhas)
+		+ f"\n\nPague e acompanhe o mês a mês pelo link: {link}\n\n"
+		+ aviso_acrescimo
+		+ "O pagamento é confirmado automaticamente. Se já tiver pago, pode ignorar esta mensagem."
 	)
 
 
@@ -594,6 +683,7 @@ def _dados_da_cobranca(cobranca) -> dict:
 	return {
 		"name": cobranca.name,
 		"link_pagamento": cobranca.link_pagamento,
+		"link_pagina": url_publica(cobranca.associado),
 		"competencias": _normalizar_competencias(cobranca.competencias),
 		"valor_total": round(
 			sum(float(item.quantidade or 0) * float(item.preco or 0) for item in cobranca.itens), 2
@@ -602,12 +692,15 @@ def _dados_da_cobranca(cobranca) -> dict:
 	}
 
 
-def enviar_cobranca(name: str, *, lembrete: bool = False) -> dict:
-	"""Manda o link de uma cobrança pelo WhatsApp e registra o resultado na cobrança.
+def enviar_cobranca(
+	name: str, *, lembrete: bool = False, tipo: str | None = None, hoje: datetime.date | None = None
+) -> dict:
+	"""Manda o link do GRIS de uma cobrança pelo WhatsApp e registra o resultado.
 
 	Serve ao gestor (envio e reenvio) e ao job (envio do mês e lembretes). O
 	carimbo `ultimo_envio_whatsapp` só é gravado quando a mensagem sai — é por ele
-	que o job sabe quem ainda precisa receber.
+	que o job sabe quem ainda precisa receber. `tipo` escolhe o texto (mês, vencimento,
+	atraso, semanal); sem ele, `lembrete` pede o semanal e o padrão é a mensagem do mês.
 	"""
 	cobranca = frappe.get_doc("Cobranca Infinitepay", name)
 	if cobranca.finalidade != FINALIDADE_CONTRIBUICAO:
@@ -615,9 +708,13 @@ def enviar_cobranca(name: str, *, lembrete: bool = False) -> dict:
 	if not cobranca.link_pagamento:
 		frappe.throw(_("A cobrança {0} ainda não tem link de pagamento.").format(name))
 
+	tipo = tipo or (MENSAGEM_SEMANAL if lembrete else MENSAGEM_MES)
+	e_lembrete = tipo in (MENSAGEM_VENCIMENTO, MENSAGEM_ATRASO, MENSAGEM_SEMANAL)
 	dados = _dados_da_cobranca(cobranca)
 	nome = frappe.db.get_value("Associado", cobranca.associado, "nome_completo") or cobranca.associado
-	mensagem = montar_mensagem_lembrete(dados, nome) if lembrete else montar_mensagem(dados, nome)
+	mensagem = montar_mensagem(
+		dados, nome, tipo=tipo, contexto=contexto_da_mensagem(cobranca.associado, hoje)
+	)
 	resultado = _enviar_whatsapp(dados, cobranca.associado, mensagem)
 
 	if resultado["enviado"]:
@@ -625,11 +722,14 @@ def enviar_cobranca(name: str, *, lembrete: bool = False) -> dict:
 			"ultimo_envio_whatsapp": now_datetime(),
 			"resultado_ultimo_envio": _("Enviado para {0}.").format(resultado.get("telefone")),
 		}
-		if lembrete:
-			valores["lembretes_enviados"] = int(cobranca.lembretes_enviados or 0) + 1
+		if e_lembrete:
 			valores["resultado_ultimo_envio"] = _("Lembrete enviado para {0}.").format(
 				resultado.get("telefone")
 			)
+			if tipo == MENSAGEM_VENCIMENTO:
+				valores["lembrete_vencimento_enviado"] = 1
+			else:
+				valores["lembretes_enviados"] = int(cobranca.lembretes_enviados or 0) + 1
 	else:
 		valores = {"resultado_ultimo_envio": _("Não enviado: {0}").format(resultado.get("motivo") or "")}
 	frappe.db.set_value("Cobranca Infinitepay", name, valores)

@@ -33,9 +33,7 @@ def _criar_associado(cpf: str, ingresso: str | None, **campos) -> str:
 
 def _gerado(associado: str) -> bool:
 	return bool(
-		frappe.db.exists(
-			"Pagamento Contribuicao Mensal", {"associado": associado, "mes_de_referencia": MES}
-		)
+		frappe.db.exists("Pagamento Contribuicao Mensal", {"associado": associado, "mes_de_referencia": MES})
 	)
 
 

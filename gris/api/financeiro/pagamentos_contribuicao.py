@@ -113,7 +113,17 @@ def get_pagamentos_por_associado(
 	linhas = frappe.get_all(
 		"Pagamento Contribuicao Mensal",
 		filters=filtros,
-		fields=["name", "associado", "status", "valor", "atrasou", "mes_de_referencia", "transacao_extrato"],
+		fields=[
+			"name",
+			"associado",
+			"status",
+			"valor",
+			"atrasou",
+			"acrescimo_atraso",
+			"diferenca_nao_cobrada",
+			"mes_de_referencia",
+			"transacao_extrato",
+		],
 	)
 
 	agrupado: dict[str, dict[str, dict]] = {}
@@ -164,6 +174,10 @@ def montar_grade_pagamentos(meses: list[datetime.date], pagamentos_do_associado:
 				"recebido": round(recebido, 2),
 				"falta": round(valor, 2) if status != STATUS_PAGO and registro else 0.0,
 				"atrasou": bool(registro.atrasou) if registro else False,
+				"acrescimo_atraso": round(float(registro.acrescimo_atraso or 0), 2) if registro else 0.0,
+				"diferenca_nao_cobrada": (
+					round(float(registro.diferenca_nao_cobrada or 0), 2) if registro else 0.0
+				),
 				"transacao_extrato": registro.transacao_extrato if registro else None,
 			}
 		)

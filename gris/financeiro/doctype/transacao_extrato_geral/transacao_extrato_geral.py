@@ -91,13 +91,31 @@ class TransacaoExtratoGeral(Document):
 			pagamento.status == "Pago"
 			and pagamento.transacao_extrato == self.name
 			and float(pagamento.valor or 0) == float(valor or 0)
-			and bool(pagamento.atrasou) == bool(atrasou)
+			and (bool(pagamento.atrasou) or not atrasou)
 		):
 			return
 
+		# Link emitido antes do vencimento e pago depois, pelo valor antigo: o mês fica
+		# quitado, e o que faltou é registrado para o gestor.
+		devido = float(pagamento.valor or 0) if pagamento.status != "Pago" and not pagamento.is_new() else 0
+		diferenca = round(devido - float(valor or 0), 2)
+		if diferenca > 0.005:
+			pagamento.diferenca_nao_cobrada = diferenca
+			frappe.log_error(
+				title="Contribuição quitada por valor menor que o devido",
+				message=(
+					f"transacao={self.name} associado={self.beneficiario} "
+					f"mês={getdate(mes_referencia).strftime('%m/%Y')}: pago {valor}, devido {devido}, "
+					f"diferença {diferenca}."
+				),
+			)
+		else:
+			pagamento.diferenca_nao_cobrada = 0
+
 		pagamento.status = "Pago"
 		pagamento.valor = valor
-		pagamento.atrasou = 1 if atrasou else 0
+		# Quem atrasou não deixa de ter atrasado por ter pago.
+		pagamento.atrasou = 1 if (atrasou or pagamento.atrasou) else 0
 		pagamento.transacao_extrato = self.name
 		pagamento.save(ignore_permissions=True)
 		frappe.msgprint(

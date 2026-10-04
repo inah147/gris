@@ -16,6 +16,11 @@ from frappe.utils import add_days, add_months, getdate
 
 from gris.api.financeiro.cobranca_contribuicao import (
 	FINALIDADE_CONTRIBUICAO,
+	MENSAGEM_ATRASO,
+	MENSAGEM_CONFIRMACAO,
+	MENSAGEM_MES,
+	MENSAGEM_SEMANAL,
+	MENSAGEM_VENCIMENTO,
 	ORIGEM_AUTOMATICA,
 	PREFIXO_ID_TRANSACAO,
 	_normalizar_competencias,
@@ -141,20 +146,62 @@ class TestCompetenciasDaCobranca(FrappeTestCase):
 		grade = self._grade({"2026-07": (STATUS_PAGO, VALOR)})
 		self.assertNotIn("2026-07", [p["ym"] for p in competencias_pendentes(grade)])
 
-	def test_mensagem_traz_competencias_valor_e_link(self):
+	def test_mensagem_traz_competencias_valor_e_link_do_gris(self):
 		texto = montar_mensagem(
 			{
 				"name": "CM-teste",
 				"competencias": ["2026-06", "2026-07"],
 				"valor_total": 120.0,
-				"link_pagamento": "https://pag.exemplo/abc",
+				"link_pagina": "https://gris.exemplo/contribuicao/abc",
 			},
 			"Fulano de Tal",
+			contexto={
+				"total": 140.0,
+				"meses_em_atraso": 1,
+				"total_em_atraso": 70.0,
+				"vencimento": datetime.date(2026, 8, 10),
+				"acrescimo": 10.0,
+			},
 		)
-		self.assertIn("06/2026, 07/2026", texto)
-		self.assertIn("https://pag.exemplo/abc", texto)
+		self.assertIn("https://gris.exemplo/contribuicao/abc", texto)
 		self.assertIn("Fulano de Tal", texto)
-		self.assertIn("às contribuições", texto)
+		self.assertIn("10/08/2026", texto)
+		self.assertIn("1 mês em atraso", texto)
+		self.assertIn("o valor sobe", texto)
+
+	def test_nenhuma_mensagem_leva_o_dominio_da_infinitepay(self):
+		dados = {
+			"name": "CM-teste",
+			"competencias": ["2026-07"],
+			"valor_total": 60.0,
+			"link_pagamento": "https://checkout.infinitepay.io/x",
+			"link_pagina": "https://gris.exemplo/contribuicao/abc",
+		}
+		contexto = {"total": 60.0, "vencimento": datetime.date(2026, 8, 10), "acrescimo": 10.0}
+		for tipo in (
+			MENSAGEM_MES,
+			MENSAGEM_VENCIMENTO,
+			MENSAGEM_ATRASO,
+			MENSAGEM_SEMANAL,
+			MENSAGEM_CONFIRMACAO,
+		):
+			texto = montar_mensagem(dados, "Fulano", tipo=tipo, contexto=contexto)
+			self.assertNotIn("infinitepay", texto.lower(), tipo)
+			self.assertIn("https://gris.exemplo/contribuicao/abc", texto, tipo)
+
+	def test_mensagens_por_tipo(self):
+		dados = {
+			"name": "CM-teste",
+			"competencias": ["2026-07"],
+			"valor_total": 60.0,
+			"link_pagina": "https://gris.exemplo/contribuicao/abc",
+		}
+		contexto = {"total": 70.0, "acrescimo": 10.0}
+		self.assertIn("vence hoje", montar_mensagem(dados, "F", tipo=MENSAGEM_VENCIMENTO, contexto=contexto))
+		self.assertIn("acréscimo", montar_mensagem(dados, "F", tipo=MENSAGEM_ATRASO, contexto=contexto))
+		self.assertIn(
+			"segue em aberto", montar_mensagem(dados, "F", tipo=MENSAGEM_SEMANAL, contexto=contexto)
+		)
 
 
 class TestBaixaDaCobranca(FrappeTestCase):

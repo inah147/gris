@@ -40,6 +40,9 @@ from gris.api.financeiro.pagamentos_contribuicao import (
 	competencias_pendentes,
 	montar_grade_pagamentos,
 )
+from gris.api.financeiro.pagamentos_contribuicao import (
+	apurar_associados as apurar_pagamentos,
+)
 from gris.api.responsavel_acesso import get_beneficiarios_associados
 from gris.financeiro.doctype.cobranca_infinitepay import cobranca_infinitepay as cobranca_doctype
 
@@ -276,6 +279,48 @@ class TestBaixaDaCobranca(FrappeTestCase):
 		self.assertEqual(primeira, segunda)
 		self.assertEqual(primeira, f"{PREFIXO_ID_TRANSACAO}{cobranca.name}")
 		self.assertEqual(frappe.db.count("Transacao Extrato Geral", {"beneficiario": self.associado}), 1)
+
+	def test_link_do_dia_1_pago_depois_do_vencimento_fica_pago_em_atraso(self):
+		# Julho já está Atrasado na hora do pagamento; o item da cobrança nasceu em dia.
+		cobranca = self._criar_cobranca("2026-07", status="Pago", paid_amount=6000)
+		lancar_baixa(cobranca)
+		pagamento = frappe.db.get_value(
+			"Pagamento Contribuicao Mensal",
+			{"associado": self.associado, "mes_de_referencia": "2026-07-01"},
+			["status", "atrasou"],
+			as_dict=True,
+		)
+		self.assertEqual(pagamento.status, "Pago")
+		self.assertEqual(pagamento.atrasou, 1)
+
+	def test_link_antigo_pago_por_valor_menor_quita_e_registra_a_diferenca(self):
+		# Junho vale 70 na hora do pagamento, mas o link foi emitido por 60.
+		cobranca = self._criar_cobranca("2026-06", status="Pago", paid_amount=6000, preco=VALOR)
+		lancar_baixa(cobranca)
+		pagamento = frappe.db.get_value(
+			"Pagamento Contribuicao Mensal",
+			{"associado": self.associado, "mes_de_referencia": "2026-06-01"},
+			["status", "atrasou", "diferenca_nao_cobrada"],
+			as_dict=True,
+		)
+		self.assertEqual(pagamento.status, "Pago")
+		self.assertEqual(pagamento.atrasou, 1)
+		self.assertEqual(pagamento.diferenca_nao_cobrada, 10)
+		grade = apurar_pagamentos([self.associado], 6, HOJE)[0]
+		linha = next(item for item in grade["linhas"] if item["ym"] == "2026-06")
+		self.assertEqual(linha["diferenca_nao_cobrada"], 10)
+
+	def test_pagamento_pelo_valor_devido_nao_registra_diferenca(self):
+		cobranca = self._criar_cobranca("2026-06", status="Pago", paid_amount=7000, preco=VALOR_ATRASO)
+		lancar_baixa(cobranca)
+		self.assertEqual(
+			frappe.db.get_value(
+				"Pagamento Contribuicao Mensal",
+				{"associado": self.associado, "mes_de_referencia": "2026-06-01"},
+				"diferenca_nao_cobrada",
+			),
+			0,
+		)
 
 	def test_handler_ignora_cobranca_que_nao_foi_paga(self):
 		cobranca = self._criar_cobranca("2026-06", status="Pendente")

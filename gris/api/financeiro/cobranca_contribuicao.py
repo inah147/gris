@@ -684,6 +684,14 @@ def _competencias_da_baixa(doc, competencias: list[str], hoje: datetime.date) ->
 		)
 		return []
 
+	# O atraso vale pela situação do mês na hora do pagamento, não pelo que o item
+	# guardou na emissão: o link do dia 1 pago depois do vencimento é pago em atraso.
+	linhas_por_ym = {linha["ym"]: linha for linha in apuracoes[0].get("linhas", [])} if apuracoes else {}
+	for ym in competencias:
+		linha = linhas_por_ym.get(ym) or {}
+		if linha.get("status") == STATUS_ATRASADO or linha.get("atrasou"):
+			por_ym[ym]["em_atraso"] = True
+
 	return [por_ym[ym] for ym in competencias]
 
 

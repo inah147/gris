@@ -241,6 +241,8 @@
 						<td class="contrib-mes__situacao">{{ situacao_badge(linha.status, linha.status_slug) }}</td>
 						<td class="text-right whitespace-nowrap contrib-num contrib-mes__valor">
 							{% if linha.valor > 0 %}{{ brl(linha.valor) }}{% else %}—{% endif %}
+							{% if linha.acrescimo_atraso > 0 %}<span class="block text-xs text-muted-foreground">inclui {{ brl(linha.acrescimo_atraso) }} de atraso</span>{% endif %}
+							{% if linha.diferenca_nao_cobrada > 0 %}<span class="block text-xs text-muted-foreground">pago {{ brl(linha.diferenca_nao_cobrada) }} a menos pelo link antigo</span>{% endif %}
 						</td>
 						<td class="contrib-mes__transacao">
 							{% if linha.transacao_extrato %}

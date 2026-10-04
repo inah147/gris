@@ -92,6 +92,11 @@ website_redirects = [
 	},
 ]
 
+# Página pública da contribuição mensal: /contribuicao/<código do beneficiário>.
+website_route_rules = [
+	{"from_route": "/contribuicao/<token>", "to_route": "contribuicao"},
+]
+
 # Generators
 # ----------
 
@@ -368,7 +373,10 @@ override_whitelisted_methods = {
 # Request Events
 # ----------------
 before_request = ["gris.api.auth.enforce_no_desk_redirect"]
-after_request = ["gris.api.mcp.oauth.anunciar_recurso_protegido"]
+after_request = [
+	"gris.api.mcp.oauth.anunciar_recurso_protegido",
+	"gris.api.financeiro.contribuicao_publica.proteger_resposta",
+]
 
 # Job Events
 # ----------

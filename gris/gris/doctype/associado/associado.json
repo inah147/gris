@@ -76,6 +76,7 @@
   "funcoes_internas",
   "contribui\u00e7\u00e3o_mensal_tab",
   "valor_contribuicao",
+  "token_contribuicao",
   "qt_contribuicoes_pagas",
   "status_cobranca",
   "column_break_brde",
@@ -497,6 +498,17 @@
    "options": "60",
    "permlevel": 3,
    "precision": "2"
+  },
+  {
+   "description": "C\u00f3digo do link p\u00fablico da fam\u00edlia (/contribuicao/<c\u00f3digo>). Regenerar invalida o link anterior.",
+   "fieldname": "token_contribuicao",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "C\u00f3digo do link de contribui\u00e7\u00e3o",
+   "no_copy": 1,
+   "permlevel": 3,
+   "read_only": 1,
+   "unique": 1
   },
   {
    "fieldname": "column_break_brde",

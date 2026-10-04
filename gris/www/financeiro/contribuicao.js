@@ -568,6 +568,53 @@
 			.catch(() => showToast("Erro ao reenviar a cobrança.", "red"));
 	}
 
+	// ─────────────────────────── link da família ───────────────────────────
+
+	function copiarTexto(texto) {
+		if (navigator.clipboard && navigator.clipboard.writeText) {
+			return navigator.clipboard.writeText(texto);
+		}
+		return Promise.reject(new Error("sem área de transferência"));
+	}
+
+	function chamarLinkDaFamilia(metodo, mensagemSucesso) {
+		frappe
+			.call({
+				method: `gris.api.financeiro.contribuicao_publica.${metodo}`,
+				args: { associado: associado },
+				freeze: true,
+			})
+			.then((resposta) => {
+				const link = resposta && resposta.message && resposta.message.link;
+				if (!link) {
+					showToast("Não foi possível obter o link.", "red");
+					return;
+				}
+				copiarTexto(link).then(
+					() => showToast(mensagemSucesso, "green"),
+					() => window.prompt("Copie o link da família:", link)
+				);
+			})
+			.catch(() => showToast("Erro ao obter o link da família.", "red"));
+	}
+
+	function copiarLink() {
+		if (semPermissao()) return;
+		chamarLinkDaFamilia("get_link_da_familia", "Link da família copiado.");
+	}
+
+	function regenerarLink() {
+		if (semPermissao()) return;
+		if (
+			!window.confirm(
+				"Regenerar o link invalida o anterior: quem o guardou deixa de conseguir abri-lo. Continuar?"
+			)
+		) {
+			return;
+		}
+		chamarLinkDaFamilia("regenerar_link_da_familia", "Novo link gerado e copiado.");
+	}
+
 	// ─────────────────────────── ligações ───────────────────────────
 
 	const ACOES = {
@@ -584,6 +631,8 @@
 		"cobrar-whatsapp": () => gerarCobranca(true),
 		"cobrar-link": () => gerarCobranca(false),
 		"reenviar-cobranca": reenviarCobranca,
+		"copiar-link": copiarLink,
+		"regenerar-link": regenerarLink,
 	};
 
 	function init() {

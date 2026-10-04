@@ -270,6 +270,8 @@ gris.tests.test_cobranca_contribuicao_automatica
 gris.tests.test_contribuicao_detalhe
 gris.tests.test_dashboard_contribuicoes
 gris.tests.test_mcp_contribuicoes
+gris.tests.test_contribuicao_publica
+gris.tests.test_geracao_mensal_carencia
 "
 
 if [ "$#" -eq 0 ]; then

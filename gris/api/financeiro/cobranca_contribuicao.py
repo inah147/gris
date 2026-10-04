@@ -38,6 +38,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, getdate, now_datetime
 
+from gris.api.financeiro.contribuicao_token import url_publica
 from gris.api.financeiro.contribuicoes import (
 	CATEGORIA_CONTRIBUICAO,
 	MESES_MAXIMO,
@@ -332,6 +333,7 @@ def emitir_cobranca(
 	origem: str = ORIGEM_MANUAL,
 	pendentes: list[dict] | None = None,
 	hoje: datetime.date | None = None,
+	herdar_de: str | None = None,
 ) -> dict:
 	"""Cria a `Cobranca Infinitepay` das competências pedidas e devolve o link.
 
@@ -346,6 +348,11 @@ def emitir_cobranca(
 	A cobrança pendente anterior do associado vira "Substituída" depois que a nova
 	ganha link: o responsável fica com um só link valendo, e o portal mostra só
 	esse. Se o link antigo for pago mesmo assim, o webhook aceita o pagamento.
+
+	`herdar_de` é a cobrança que esta reemite com outro valor (a página pública
+	emite um link novo quando o valor do dia mudou): origem, mês de emissão,
+	último envio e lembretes são copiados dela, para o job não reenviar a
+	mensagem do mês nem reiniciar os lembretes.
 	"""
 	hoje = hoje or getdate()
 	pedidas = _normalizar_competencias(competencias)
@@ -391,6 +398,22 @@ def emitir_cobranca(
 		pluck="name",
 	)
 
+	valores = {
+		"origem": origem,
+		"mes_emissao": hoje.replace(day=1),
+		"ultimo_envio_whatsapp": None,
+		"lembretes_enviados": 0,
+	}
+	if herdar_de:
+		herdada = frappe.db.get_value(
+			"Cobranca Infinitepay",
+			herdar_de,
+			["origem", "mes_emissao", "ultimo_envio_whatsapp", "lembretes_enviados"],
+			as_dict=True,
+		)
+		if herdada:
+			valores.update({chave: herdada[chave] for chave in valores})
+
 	cobranca = frappe.get_doc(
 		{
 			"doctype": "Cobranca Infinitepay",
@@ -399,11 +422,12 @@ def emitir_cobranca(
 			"finalidade": FINALIDADE_CONTRIBUICAO,
 			"associado": associado,
 			"competencias": ",".join(pedidas),
-			"origem": origem,
-			"mes_emissao": hoje.replace(day=1),
+			**valores,
 			"customer_name": nome,
 			"customer_email": destino["email"],
 			"customer_phone": destino["telefone"],
+			# Ao voltar da InfinitePay o responsável cai na página do GRIS.
+			"redirect_url": url_publica(associado),
 			"itens": itens,
 		}
 	)
@@ -426,10 +450,67 @@ def emitir_cobranca(
 	}
 
 
+def _itens_da_cobranca(nome: str) -> dict[str, float]:
+	"""Valor de cada competência que a cobrança cobra, por AAAA-MM."""
+	itens = frappe.get_all(
+		"Item Cobranca Infinitepay",
+		filters={"parent": nome, "parenttype": "Cobranca Infinitepay"},
+		fields=["competencia", "quantidade", "preco"],
+	)
+	return {
+		chave_mes(getdate(item.competencia)): round(float(item.quantidade or 0) * float(item.preco or 0), 2)
+		for item in itens
+		if item.competencia
+	}
+
+
+def cobranca_vigente(associado: str, hoje: datetime.date | None = None) -> dict | None:
+	"""Link da InfinitePay que vale agora para o que o associado tem em aberto.
+
+	Se a cobrança pendente tem as mesmas competências e os mesmos valores do que
+	está em aberto hoje, devolve o link dela. Senão emite uma nova (o valor subiu
+	com o atraso, ou um mês entrou ou saiu) e a anterior vira "Substituída". Sem
+	nada em aberto, devolve `None`. Não checa papel: quem chama é a página pública,
+	que só chega aqui com um código válido.
+	"""
+	pendentes = get_situacao_para_cobranca(associado)["pendentes"]
+	if not pendentes:
+		return None
+	em_aberto = {p["ym"]: round(float(p["valor"]), 2) for p in pendentes}
+
+	anteriores = frappe.get_all(
+		"Cobranca Infinitepay",
+		filters={
+			"associado": associado,
+			"finalidade": FINALIDADE_CONTRIBUICAO,
+			"status": STATUS_COBRANCA_PENDENTE,
+			"link_pagamento": ["is", "set"],
+		},
+		fields=["name", "link_pagamento", "competencias"],
+		order_by="creation desc",
+		limit_page_length=1,
+	)
+	anterior = anteriores[0] if anteriores else None
+	if anterior and _itens_da_cobranca(anterior.name) == em_aberto:
+		return {"name": anterior.name, "link_pagamento": anterior.link_pagamento, "reaproveitada": True}
+
+	nova = emitir_cobranca(
+		associado,
+		sorted(em_aberto),
+		pendentes=pendentes,
+		hoje=hoje,
+		herdar_de=anterior.name if anterior else None,
+	)
+	if not nova["link_pagamento"]:
+		return None
+	return {"name": nova["name"], "link_pagamento": nova["link_pagamento"], "reaproveitada": False}
+
+
 def _proximo_order_nsu(associado: str) -> str:
 	"""Identificador único da cobrança, legível no painel da InfinitePay."""
 	carimbo = now_datetime().strftime("%Y%m%d%H%M%S")
-	return f"CM-{associado}-{carimbo}"
+	# O sufixo evita colisão quando a página pública reemite no mesmo segundo.
+	return f"CM-{associado}-{carimbo}-{frappe.generate_hash(length=4)}"
 
 
 def montar_mensagem(cobranca: dict, nome_associado: str) -> str:

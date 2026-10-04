@@ -190,6 +190,17 @@
 {% endcall %}
 
 {% call card(
+	title="Link da família",
+	description="É o endereço que o WhatsApp leva: a página mostra o mês a mês e entrega o link de pagamento com o valor do dia. Quem tem o link vê o nome do beneficiário e a situação dos pagamentos. Regenerar invalida o link anterior.",
+	attrs={"class": "mb-4"}
+) %}
+	<div class="flex gap-2 flex-wrap items-center" data-manage-only="1">
+		<button type="button" id="btnCopiarLink" class="btn-sm-outline" data-acao="copiar-link">Copiar link da família</button>
+		<button type="button" id="btnRegenerarLink" class="btn-sm-outline" data-acao="regenerar-link">Regenerar link</button>
+	</div>
+{% endcall %}
+
+{% call card(
 	title="Cobrar pela InfinitePay",
 	description="Só entram aqui os meses que a apuração mês a mês mostra em aberto no período apurado. Marque os que quer cobrar: o link é gerado na InfinitePay e o pagamento confirmado quita automaticamente os meses cobrados.",
 	attrs={"class": "mb-4"}

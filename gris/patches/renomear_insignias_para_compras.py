@@ -60,7 +60,9 @@ def execute():
 		).run()
 
 	# O módulo também aparece como opção nas Sugestões e Problemas.
-	if frappe.db.table_exists("Sugestao ou Problema") and frappe.db.has_column("Sugestao ou Problema", "modulo"):
+	if frappe.db.table_exists("Sugestao ou Problema") and frappe.db.has_column(
+		"Sugestao ou Problema", "modulo"
+	):
 		sugestao = frappe.qb.DocType("Sugestao ou Problema")
 		(
 			frappe.qb.update(sugestao)

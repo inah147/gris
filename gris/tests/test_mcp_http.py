@@ -137,3 +137,26 @@ class TestExecutarFerramenta(TestCase):
 		self.assertTrue(resposta["ok"])
 		self.assertEqual(resposta["data"]["versao"], endpoints.VERSAO_API)
 		self.assertEqual(resposta["data"]["usuario"], "ana@example.com")
+
+
+class TestCorpoDaRespostaHTTP(TestCase):
+	def setUp(self):
+		self._message_log = getattr(frappe.local, "message_log", None)
+		self._response = getattr(frappe.local, "response", None)
+		frappe.local.response = frappe._dict()
+
+	def tearDown(self):
+		frappe.local.message_log = self._message_log
+		frappe.local.response = self._response
+
+	def test_msgprint_da_ferramenta_nao_vaza_para_o_json_rpc(self):
+		"""O SDK do MCP rejeita chaves extras: `_server_messages` travava o cliente até o timeout."""
+		from frappe.utils.response import _make_logs_v1
+
+		frappe.local.message_log = [{"message": "Pagamento marcado como Pago", "alert": 1}]
+
+		http._escrever({"jsonrpc": "2.0", "id": 7, "result": {"content": []}}, 200)
+		_make_logs_v1()
+
+		self.assertNotIn("_server_messages", frappe.local.response)
+		self.assertEqual(set(frappe.local.response) - {"http_status_code"}, {"jsonrpc", "id", "result"})

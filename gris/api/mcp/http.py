@@ -144,6 +144,11 @@ def mcp(**kwargs) -> None:
 
 
 def _escrever(payload: dict, http_status_code: int) -> None:
+	# Um `frappe.msgprint` no caminho da ferramenta (ex.: o save da transação que quita a
+	# contribuição) viraria `_server_messages` no corpo. O SDK do MCP valida a resposta
+	# JSON-RPC com schema estrito: a chave extra faz o cliente descartá-la e esperar até
+	# o timeout, mesmo com a gravação concluída.
+	frappe.local.message_log = []
 	frappe.local.response.clear()
 	frappe.local.response.update(payload)
 	frappe.local.response["http_status_code"] = http_status_code

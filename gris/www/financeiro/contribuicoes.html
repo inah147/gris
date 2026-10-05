@@ -158,6 +158,7 @@
 					<tr>
 						<th>Contribuinte</th>
 						<th>Categoria</th>
+						<th>Seção</th>
 						<th>Situação</th>
 						<th class="text-right">Esperado/mês</th>
 						<th class="text-right">Recebido no período</th>
@@ -179,6 +180,7 @@
 								{% endif %}
 							</td>
 							<td class="text-muted-foreground">{{ assoc.categoria or '—' }}</td>
+							<td class="text-muted-foreground">{{ assoc.secao or '—' }}</td>
 							<td>{{ situacao_badge(assoc.situacao, assoc.situacao_slug) }}</td>
 							<td class="text-right whitespace-nowrap contrib-num">{{ brl(assoc.esperado_mensal) }}</td>
 							<td class="text-right whitespace-nowrap contrib-num">{{ brl(assoc.total_recebido) }}</td>

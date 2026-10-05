@@ -213,6 +213,8 @@ class TestBaixaDaCobranca(FrappeTestCase):
 		self.associado = self._criar_associado()
 		_apagar("Cobranca Infinitepay", {"associado": self.associado})
 		_apagar("Transacao Extrato Geral", {"beneficiario": self.associado})
+		# Vendas importadas não têm dono: a que sobra de um teste vira candidata no seguinte.
+		_apagar("Transacao Extrato Geral", {"id": ["like", "pix-teste-%"]})
 		frappe.db.set_single_value("Configuracao infinitepay", "handle", "grupo-teste")
 		# A apuração cobra o valor de atraso do mês vencido: o teste fixa os dois
 		# valores para não depender do que estiver configurado no site.
@@ -612,6 +614,28 @@ class TestBaixaDaCobranca(FrappeTestCase):
 		self.assertEqual(self._situacao(baixa), ("Não conciliada", 0))
 		self.assertEqual(self._situacao(primeira), ("Não conciliada", 0))
 		self.assertEqual(self._situacao(segunda), ("Não conciliada", 0))
+
+	def test_sem_nsu_prefere_a_venda_de_valor_exato(self):
+		"""Outra venda do dia dentro da margem da taxa não pode travar o PIX de valor exato."""
+		baixa = self._baixa_paga("2026-06", "-exato")
+		venda = self._venda_importada("pix-teste-0004", 60.0)
+		# Venda da lojinha no mesmo dia, dentro da margem de 6% sobre R$ 60.
+		outra = self._venda_importada("pix-teste-0005", 57.5)
+
+		conciliar_baixas_de_cobranca()
+
+		self.assertEqual(self._situacao(baixa), ("Conciliada", 0))
+		self.assertEqual(self._situacao(venda), ("Conciliada", 1))
+		self.assertEqual(self._situacao(outra), ("Não conciliada", 0))
+
+	def test_conciliacao_roda_todo_dia(self):
+		"""A baixa que chega depois da importação não pode esperar a próxima importação."""
+		from gris import hooks
+
+		self.assertIn(
+			"gris.api.financeiro.cobranca_contribuicao.conciliar_baixas_de_cobranca",
+			hooks.scheduler_events["daily"],
+		)
 
 	def test_montar_cobranca_cria_um_item_por_competencia(self):
 		with self._sem_rede():

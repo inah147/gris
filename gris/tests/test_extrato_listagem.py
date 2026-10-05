@@ -48,6 +48,11 @@ class TestExtratoFiltros(FrappeTestCase):
 		filtros = build_extrato_filters({"mostrar_excluidas": "1", "excluir_do_total": "1"})
 		self.assertEqual(filtros, {"excluir_do_total": "1"})
 
+	def test_filtro_por_origem_da_venda(self):
+		filtros = build_extrato_filters({"origem_venda": "Maquininha"})
+		self.assertEqual(filtros["origem_venda"], "Maquininha")
+		self.assertNotIn("origem_venda", build_extrato_filters({"origem_venda": ""}))
+
 	def test_intervalo_de_datas_completo(self):
 		filtros = build_extrato_filters({"data_inicio": "2026-01-01", "data_fim": "2026-01-31"})
 		self.assertEqual(filtros["data_deposito"], ["between", ["2026-01-01", "2026-01-31"]])

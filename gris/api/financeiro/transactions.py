@@ -92,6 +92,7 @@ EXTRATO_FILTER_FIELDS = (
 	"repasse_entre_contas",
 	"transacao_revisada",
 	"fonte",
+	"origem_venda",
 	"excluir_do_total",
 )
 

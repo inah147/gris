@@ -25,6 +25,44 @@
 		document.body.appendChild(toaster);
 	}
 
+	const ALERT_CATEGORIES = Object.freeze({
+		green: "success",
+		red: "error",
+		orange: "warning",
+		yellow: "warning",
+	});
+
+	function escapeHtml(value) {
+		const div = document.createElement("div");
+		div.textContent = String(value ?? "");
+		return div.innerHTML;
+	}
+
+	// No portal, frappe.show_alert (Desk) renderiza sem estilo (ícone gigante no rodapé).
+	// Redireciona para o toast do design system, preservando a assinatura original.
+	function showAlertAsToast(message, seconds) {
+		const options = message && typeof message === "object" ? message : { message };
+		const duration = Number(seconds || options.seconds || 0) * 1000;
+		ensureToasterContainer();
+		document.dispatchEvent(
+			new CustomEvent("basecoat:toast", {
+				detail: {
+					config: {
+						category: ALERT_CATEGORIES[options.indicator] || "info",
+						description: escapeHtml(options.message),
+						...(duration > 0 ? { duration } : {}),
+					},
+				},
+			})
+		);
+	}
+
+	function overrideFrappeAlert() {
+		if (window.frappe) {
+			window.frappe.show_alert = showAlertAsToast;
+		}
+	}
+
 	function getThemeRoot() {
 		return document.documentElement;
 	}
@@ -141,6 +179,7 @@
 		initializeTheme();
 		ensureToasterContainer();
 		ensureBasecoatObserver();
+		overrideFrappeAlert();
 	}
 
 	// Basecoat already auto-initializes on DOMContentLoaded and watches future DOM insertions.

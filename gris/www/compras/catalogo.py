@@ -18,7 +18,7 @@ def get_context(context):
 
 	context.area = area
 	context.area_slug = slug if area else ""
-	context.active_link = f"/compras/{slug}" if area else "/compras/catalogo"
+	context.active_link = "/compras/catalogo"
 	context.filtros_area = [
 		{"label": "Todas", "href": "/compras/catalogo", "ativo": not area},
 		*[

@@ -6,18 +6,35 @@
 {% from "public/design_system/components/generated/select.html.jinja" import select %}
 {% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
 
-{% block title %}Nova solicitação · {{ area }}{% endblock %}
+{% block title %}{% if escolher_area %}Comprar{% else %}Nova solicitação · {{ area }}{% endif %}{% endblock %}
 
 {# solicitar.css/.js são injetados automaticamente pelo Frappe (colocated). Não referenciar manualmente: duplica o carregamento. #}
 
 {% block page_header %}
+{% if escolher_area %}
+<section class="flex flex-col gap-2 max-w-3xl" aria-labelledby="solicitar-titulo">
+	<h1 id="solicitar-titulo" class="m-0 text-3xl font-semibold leading-tight text-foreground">Comprar</h1>
+	<p class="m-0 text-base leading-relaxed text-muted-foreground">Escolha a área do que o grupo precisa comprar. Depois de enviado, o gestor da área registra a compra e você confirma a entrega.</p>
+</section>
+{% else %}
 <section class="flex flex-col gap-2 max-w-3xl" aria-labelledby="solicitar-titulo">
 	<h1 id="solicitar-titulo" class="m-0 text-3xl font-semibold leading-tight text-foreground">Nova solicitação · {{ area }}</h1>
 	<p class="m-0 text-base leading-relaxed text-muted-foreground">{% if programa_educativo %}Monte o pedido de insígnias e distintivos do Plano Educativo.{% else %}Monte o pedido com os itens de {{ area | lower }} que o grupo precisa.{% endif %} Depois de enviado, o gestor da área registra a compra e você confirma a entrega.</p>
 </section>
+{% endif %}
 {% endblock %}
 
 {% block main %}
+{% if escolher_area %}
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+	{% for item in areas_compra %}
+	<a class="card p-5 flex flex-col gap-2 no-underline" href="{{ item.href }}">
+		<h2 class="m-0 text-lg font-semibold text-foreground">{{ item.title }}</h2>
+		<p class="m-0 text-sm text-muted-foreground">{{ item.description }}</p>
+	</a>
+	{% endfor %}
+</div>
+{% else %}
 <div class="compras-solicitar" data-area="{{ area }}" data-area-slug="{{ area_slug }}" data-programa-educativo="{{ 1 if programa_educativo else 0 }}" data-item-novo="{{ item_novo }}">
 	{{ toaster() }}
 
@@ -28,7 +45,7 @@
 		image="/assets/gris/images/gris-character/gris-sad.png",
 		image_alt="Personagem Gris triste",
 		image_size="sm",
-		primary_action={"label": "Voltar", "href": "/compras/" ~ area_slug}
+		primary_action={"label": "Voltar", "href": "/compras/solicitar"}
 	) }}
 	{% else %}
 
@@ -89,7 +106,7 @@
 		{% endcall %}
 
 		<div class="compras-actions">
-			<a class="btn-outline" href="/compras/{{ area_slug }}">Cancelar</a>
+			<a class="btn-outline" href="/compras/solicitar">Cancelar</a>
 			<button type="submit" class="btn-primary" id="compras-submit">Enviar solicitação</button>
 		</div>
 	{% endcall %}
@@ -159,4 +176,5 @@
 	{% endif %}
 	{% endif %}
 </div>
+{% endif %}
 {% endblock %}

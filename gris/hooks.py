@@ -79,11 +79,15 @@ website_redirects = [
 	},
 	# O módulo de insígnias virou Compras (insígnias ficam no Programa Educativo).
 	# Links antigos salvos em favoritos e mensagens continuam funcionando.
-	{"source": "/insignias", "target": "/compras/programa_educativo"},
+	{"source": "/insignias", "target": "/compras/solicitar?area=programa_educativo"},
 	{"source": "/insignias/compras", "target": "/compras/fila?area=programa_educativo"},
 	{"source": "/insignias/solicitar", "target": "/compras/solicitar?area=programa_educativo"},
 	{"source": "/insignias/catalogo", "target": "/compras/catalogo?area=programa_educativo"},
 	{"source": "/insignias/minhas_solicitacoes", "target": "/compras/minhas_solicitacoes"},
+	# As áreas deixaram de ter página própria: viraram filtros dentro de cada submódulo.
+	{"source": "/compras/programa_educativo", "target": "/compras/solicitar?area=programa_educativo"},
+	{"source": "/compras/manutencao", "target": "/compras/solicitar?area=manutencao"},
+	{"source": "/compras/administrativo", "target": "/compras/solicitar?area=administrativo"},
 	# Com a query string no padrão: sem ela o Frappe descartaria o `?name=` do pedido.
 	{
 		"source": r"/insignias/solicitacao\?name=([^&]+)",

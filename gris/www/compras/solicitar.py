@@ -6,6 +6,12 @@ from gris.api.portal_access import enrich_context
 
 no_cache = 1
 
+DESCRICOES_AREA = {
+	permissoes.AREA_PROGRAMA_EDUCATIVO: "Insígnias e distintivos do Plano Educativo.",
+	permissoes.AREA_MANUTENCAO: "Material e serviços para a sede e os equipamentos do grupo.",
+	permissoes.AREA_ADMINISTRATIVO: "Material de escritório, impressões e demais itens da administração.",
+}
+
 RAMOS = [
 	"Filhotes",
 	"Lobinho",
@@ -25,9 +31,21 @@ def get_context(context):
 		raise frappe.Redirect
 
 	if not slug:
-		# Sem área não há catálogo para mostrar: a escolha começa no índice do módulo.
-		frappe.local.flags.redirect_location = "/compras"
-		raise frappe.Redirect
+		# Sem área, a página oferece a escolha da área; o formulário vem depois.
+		permissoes.garantir_autenticado()
+		context.area = None
+		context.escolher_area = True
+		context.active_link = "/compras/solicitar"
+		context.areas_compra = [
+			{
+				"href": f"/compras/solicitar?area={meta['slug']}",
+				"title": nome,
+				"description": DESCRICOES_AREA[nome],
+			}
+			for nome, meta in permissoes.AREAS.items()
+		]
+		enrich_context(context, "/compras/solicitar")
+		return context
 
 	area = consultas.area_da_requisicao(slug)
 	permissoes.garantir_autenticado()
@@ -35,7 +53,7 @@ def get_context(context):
 	context.area = area
 	context.area_slug = slug
 	context.programa_educativo = area == permissoes.AREA_PROGRAMA_EDUCATIVO
-	context.active_link = f"/compras/{slug}"
+	context.active_link = "/compras/solicitar"
 
 	catalogo = consultas.itens_catalogo(area)
 	context.catalogo_vazio = not catalogo

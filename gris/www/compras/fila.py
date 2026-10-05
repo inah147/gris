@@ -47,7 +47,7 @@ def get_context(context):
 
 	context.area = area
 	context.area_slug = slug or ""
-	context.active_link = f"/compras/{slug}" if area else "/compras/fila"
+	context.active_link = "/compras/fila"
 	context.titulo_lista = f"Lista de compras · {area}" if area else "Lista de compras"
 	context.pode_agir = any(permissoes.pode_comprar(a) for a in areas)
 	context.filtros_area = (

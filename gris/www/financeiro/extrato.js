@@ -699,6 +699,28 @@
 		sincronizarSelectAll();
 	}
 
+	let ancoraSelecao = null;
+	let cursorSelecao = null;
+
+	function linhasDoGrid() {
+		return Array.from(tbody.querySelectorAll("tr[data-transaction-id]"));
+	}
+
+	/** Marca só as linhas entre `a` e `b` (inclusive), substituindo a seleção anterior. */
+	function selecionarIntervalo(a, b) {
+		const linhas = linhasDoGrid();
+		const i = linhas.indexOf(a);
+		const j = linhas.indexOf(b);
+		if (i === -1 || j === -1) return;
+		const inicio = Math.min(i, j);
+		const fim = Math.max(i, j);
+		linhas.forEach(function (linha, idx) {
+			const cb = linha.querySelector(".transaction-checkbox");
+			if (cb) cb.checked = idx >= inicio && idx <= fim;
+		});
+		sincronizarSelectAll();
+	}
+
 	function limparSelecao() {
 		document.querySelectorAll(".transaction-checkbox").forEach(function (cb) {
 			cb.checked = false;
@@ -899,7 +921,31 @@
 	function ligarEventosDoGrid() {
 		if (!tbody) return;
 
+		// Shift+clique / Shift+setas selecionam um intervalo de linhas, como no Excel.
+		tbody.addEventListener("mousedown", function (event) {
+			// Evita a seleção de texto do navegador ao clicar com Shift.
+			if (event.shiftKey && !event.target.closest("input:not(.transaction-checkbox), select")) {
+				event.preventDefault();
+			}
+		});
+
 		tbody.addEventListener("click", function (event) {
+			const linhaClicada = event.target.closest("tr[data-transaction-id]");
+			const emEditor = event.target.closest(".extrato-editor");
+			if (linhaClicada && !emEditor) {
+				if (event.shiftKey && ancoraSelecao && ancoraSelecao.isConnected) {
+					// preventDefault num checkbox desfaria o intervalo marcado abaixo.
+					if (!event.target.classList.contains("transaction-checkbox")) {
+						event.preventDefault();
+					}
+					selecionarIntervalo(ancoraSelecao, linhaClicada);
+					cursorSelecao = linhaClicada;
+					return;
+				}
+				// Clique simples define o ponto de partida do próximo intervalo.
+				ancoraSelecao = linhaClicada;
+				cursorSelecao = linhaClicada;
+			}
 			const celula = event.target.closest("td[data-editavel]");
 			if (celula) {
 				// Célula editável abre o editor no lugar de navegar.
@@ -917,6 +963,26 @@
 		});
 
 		tbody.addEventListener("keydown", function (event) {
+			if (
+				event.shiftKey &&
+				(event.key === "ArrowDown" || event.key === "ArrowUp") &&
+				!event.target.closest(".extrato-editor")
+			) {
+				const atual = event.target.closest("tr[data-transaction-id]");
+				if (!atual) return;
+				event.preventDefault();
+				if (!ancoraSelecao || !ancoraSelecao.isConnected) ancoraSelecao = atual;
+				let base = cursorSelecao && cursorSelecao.isConnected ? cursorSelecao : atual;
+				const linhas = linhasDoGrid();
+				const destino = linhas[linhas.indexOf(base) + (event.key === "ArrowDown" ? 1 : -1)];
+				if (!destino) return;
+				cursorSelecao = destino;
+				selecionarIntervalo(ancoraSelecao, destino);
+				const foco = destino.querySelector(".transaction-checkbox") || destino;
+				foco.focus({ preventScroll: true });
+				destino.scrollIntoView({ block: "nearest" });
+				return;
+			}
 			const celula = event.target.closest("td[data-editavel]");
 			// Só a própria célula responde ao teclado; dentro do editor os
 			// atalhos são do controle (Enter salva, Esc cancela).

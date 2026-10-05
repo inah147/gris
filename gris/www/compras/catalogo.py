@@ -38,7 +38,7 @@ def get_context(context):
 
 	# Áreas em que a pessoa pode cadastrar: PE só para a gestão de métodos.
 	areas_cadastro = permissoes.areas_para(permissoes.pode_cadastrar_item)
-	context.pode_cadastrar = bool(areas_cadastro)
+	context.pode_cadastrar = (area in areas_cadastro) if area else bool(areas_cadastro)
 	context.area_items = consultas.opcoes_select(areas_cadastro)
 	context.area_padrao = area if area in areas_cadastro else (areas_cadastro[0] if areas_cadastro else "")
 	context.tipo_items = consultas.opcoes_select(consultas.TIPOS_CATALOGO)

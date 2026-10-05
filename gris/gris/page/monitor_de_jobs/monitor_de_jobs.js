@@ -138,7 +138,8 @@ class MonitorDeJobs {
 		// intervalo cai para 5 s, para o usuário ver o término (ou a parada) logo.
 		const ciclo = () => {
 			const visivel =
-				frappe.get_route()[0] === "monitor-de-jobs" && document.visibilityState === "visible";
+				frappe.get_route()[0] === "monitor-de-jobs" &&
+				document.visibilityState === "visible";
 			if (visivel) {
 				this.carregar({ silencioso: true });
 			}
@@ -153,7 +154,10 @@ class MonitorDeJobs {
 	atualizar_decorrido() {
 		this.corpo.find(".gris-monitor-decorrido").each((_indice, elemento) => {
 			const inicio = $(elemento).data("inicio");
-			const segundos = moment().diff(frappe.datetime.convert_to_user_tz(inicio, false), "seconds");
+			const segundos = moment().diff(
+				frappe.datetime.convert_to_user_tz(inicio, false),
+				"seconds"
+			);
 			$(elemento).text(gris.job_logs.formatar_duracao(Math.max(segundos, 0)));
 		});
 	}
@@ -184,6 +188,10 @@ class MonitorDeJobs {
 				}
 				this.em_execucao = dados.execucoes || [];
 				this.renderizar_rodando();
+				// O card "Rodando agora" usa esta lista; as chamadas chegam em ordem indefinida.
+				if (this.resumo) {
+					this.renderizar_cards(this.resumo);
+				}
 				// A tabela de jobs depende de quem está rodando (botão Parar/Executar).
 				if (this.jobs) {
 					this.renderizar_jobs();
@@ -202,6 +210,7 @@ class MonitorDeJobs {
 				if (!resumo || !resumo.success) {
 					return;
 				}
+				this.resumo = resumo;
 				this.renderizar_cards(resumo);
 				this.renderizar_grafico(resumo);
 			});
@@ -264,7 +273,7 @@ class MonitorDeJobs {
 				valor: resumo.falhas,
 				cor: resumo.falhas ? "red" : "gray",
 				alvo: "erros",
-				},
+			},
 			{
 				rotulo: __("Duração média"),
 				valor: gris.job_logs.formatar_duracao(resumo.duracao_media),
@@ -274,7 +283,7 @@ class MonitorDeJobs {
 				valor: this.em_execucao.length,
 				cor: this.em_execucao.length ? "blue" : "gray",
 				alvo: "rodando",
-				},
+			},
 		];
 
 		this.area_cards.html(
@@ -290,41 +299,41 @@ class MonitorDeJobs {
 					</div>`
 				)
 				.join("")
-				);
+		);
 
-				this.area_cards.find(".gris-monitor-card-clicavel").on("click keydown", (evento) => {
-					if (evento.type === "keydown" && !["Enter", " "].includes(evento.key)) {
-						return;
-					}
-					this.usar_card_como_filtro($(evento.currentTarget).data("alvo"));
-				});
-				}
+		this.area_cards.find(".gris-monitor-card-clicavel").on("click keydown", (evento) => {
+			if (evento.type === "keydown" && !["Enter", " "].includes(evento.key)) {
+				return;
+			}
+			this.usar_card_como_filtro($(evento.currentTarget).data("alvo"));
+		});
+	}
 
-				usar_card_como_filtro(alvo) {
-					if (alvo === "rodando") {
-						if (this.em_execucao.length) {
-							frappe.utils.scroll_to(this.area_rodando, true, 20);
-						}
-						return;
-					}
+	usar_card_como_filtro(alvo) {
+		if (alvo === "rodando") {
+			if (this.em_execucao.length) {
+				frappe.utils.scroll_to(this.area_rodando, true, 20);
+			}
+			return;
+		}
 
-					this.filtros.somente_com_erro = this.filtros.somente_com_erro ? 0 : 1;
-					this.area_cards
-						.find('[data-alvo="erros"]')
-						.toggleClass("gris-monitor-card-ativo", !!this.filtros.somente_com_erro);
-					this.carregar_execucoes();
-					frappe.utils.scroll_to(this.titulo_execucoes, true, 20);
-				}
+		this.filtros.somente_com_erro = this.filtros.somente_com_erro ? 0 : 1;
+		this.area_cards
+			.find('[data-alvo="erros"]')
+			.toggleClass("gris-monitor-card-ativo", !!this.filtros.somente_com_erro);
+		this.carregar_execucoes();
+		frappe.utils.scroll_to(this.titulo_execucoes, true, 20);
+	}
 
-				renderizar_rodando() {
-					if (!this.em_execucao.length) {
-						this.area_rodando.empty();
-						return;
-					}
+	renderizar_rodando() {
+		if (!this.em_execucao.length) {
+			this.area_rodando.empty();
+			return;
+		}
 
-					const linhas = this.em_execucao
-						.map(
-							(execucao) => `
+		const linhas = this.em_execucao
+			.map(
+				(execucao) => `
 							<div class="gris-monitor-rodando-item">
 								<div class="gris-monitor-rodando-info">
 									<div class="gris-monitor-job-nome">${gris.job_logs.escapar(execucao.job)}</div>
@@ -335,7 +344,9 @@ class MonitorDeJobs {
 									</div>
 									${
 										execucao.resumo
-											? `<div class="text-muted small">${gris.job_logs.escapar(execucao.resumo)}</div>`
+											? `<div class="text-muted small">${gris.job_logs.escapar(
+													execucao.resumo
+											  )}</div>`
 											: ""
 									}
 								</div>
@@ -347,10 +358,10 @@ class MonitorDeJobs {
 										data-job="${gris.job_logs.escapar(execucao.job)}">${__("Parar")}</button>
 								</div>
 							</div>`
-						)
-						.join("");
+			)
+			.join("");
 
-					this.area_rodando.html(`
+		this.area_rodando.html(`
 						<div class="gris-monitor-rodando-caixa">
 							<div class="gris-monitor-rodando-titulo">
 								<span class="indicator-pill blue">${__("Rodando agora")}</span>
@@ -360,56 +371,56 @@ class MonitorDeJobs {
 						</div>
 					`);
 
-					this.ligar_acoes_de_execucao(this.area_rodando);
-					this.atualizar_decorrido();
-				}
+		this.ligar_acoes_de_execucao(this.area_rodando);
+		this.atualizar_decorrido();
+	}
 
-				// Botões "Parar"/"Ver andamento" são os mesmos no painel, nas tabelas e no detalhe.
-				ligar_acoes_de_execucao(area) {
-					area.find(".gris-monitor-parar")
-						.off("click")
-						.on("click", (evento) => {
-							evento.stopPropagation();
-							const botao = $(evento.currentTarget);
-							this.parar_execucao(botao.data("name"), botao.data("job"));
-						});
-					area.find(".gris-monitor-ver")
-						.off("click")
-						.on("click", (evento) => {
-							evento.stopPropagation();
-							this.abrir_detalhe($(evento.currentTarget).data("name"));
-						});
-				}
+	// Botões "Parar"/"Ver andamento" são os mesmos no painel, nas tabelas e no detalhe.
+	ligar_acoes_de_execucao(area) {
+		area.find(".gris-monitor-parar")
+			.off("click")
+			.on("click", (evento) => {
+				evento.stopPropagation();
+				const botao = $(evento.currentTarget);
+				this.parar_execucao(botao.data("name"), botao.data("job"));
+			});
+		area.find(".gris-monitor-ver")
+			.off("click")
+			.on("click", (evento) => {
+				evento.stopPropagation();
+				this.abrir_detalhe($(evento.currentTarget).data("name"));
+			});
+	}
 
-				parar_execucao(name, job) {
-					frappe.confirm(
-						__("Parar a execução de <b>{0}</b>? O que já foi processado não é desfeito.", [
-							frappe.utils.escape_html(job || name),
-						]),
-						() => {
-							frappe
-								.call({
-									method: "gris.api.monitoramento_jobs.parar_execucao",
-									args: { name },
-									freeze: true,
-									freeze_message: __("Parando…"),
-								})
-								.then((resposta) => {
-									const dados = resposta.message || {};
-									frappe.show_alert({
-										message: dados.mensagem || __("Execução interrompida."),
-										indicator: dados.success ? "green" : "orange",
-									});
-									if (this.execucao_aberta === name) {
-										this.abrir_detalhe(name);
-									}
-									this.carregar({ silencioso: true });
-								});
+	parar_execucao(name, job) {
+		frappe.confirm(
+			__("Parar a execução de <b>{0}</b>? O que já foi processado não é desfeito.", [
+				frappe.utils.escape_html(job || name),
+			]),
+			() => {
+				frappe
+					.call({
+						method: "gris.api.monitoramento_jobs.parar_execucao",
+						args: { name },
+						freeze: true,
+						freeze_message: __("Parando…"),
+					})
+					.then((resposta) => {
+						const dados = resposta.message || {};
+						frappe.show_alert({
+							message: dados.mensagem || __("Execução interrompida."),
+							indicator: dados.success ? "green" : "orange",
+						});
+						if (this.execucao_aberta === name) {
+							this.abrir_detalhe(name);
 						}
-					);
-				}
+						this.carregar({ silencioso: true });
+					});
+			}
+		);
+	}
 
-				renderizar_grafico(resumo) {
+	renderizar_grafico(resumo) {
 		const dias = (resumo.serie || []).map((linha) => linha.dia);
 		if (!dias.length) {
 			this.corpo.find(".gris-monitor-grafico-wrapper").hide();
@@ -611,8 +622,14 @@ class MonitorDeJobs {
 					<td title="${gris.job_logs.escapar(execucao.inicio)}">
 						${frappe.datetime.str_to_user(execucao.inicio, true)}
 					</td>
-					<td class="text-right">${gris.job_logs.formatar_duracao(execucao.duracao)}</td>
-					<td>${gris.job_logs.escapar(execucao.resumo || "")} ${alertas.join(" ")}</td>
+					<td class="text-right">${
+						execucao.status === "Em Execucao"
+							? `<span class="gris-monitor-decorrido" data-inicio="${gris.job_logs.escapar(
+									execucao.inicio
+							  )}"></span>`
+							: gris.job_logs.formatar_duracao(execucao.duracao)
+					}</td>
+						<td>${gris.job_logs.escapar(execucao.resumo || "")} ${alertas.join(" ")}</td>
 						<td class="text-right">
 							${
 								execucao.status === "Em Execucao"
@@ -649,6 +666,7 @@ class MonitorDeJobs {
 			this.abrir_detalhe($(evento.currentTarget).data("name"));
 		});
 
+		this.atualizar_decorrido();
 		if (this.execucao_aberta) {
 			this.marcar_execucao_aberta();
 		}

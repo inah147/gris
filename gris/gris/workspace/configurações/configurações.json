@@ -208,7 +208,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Monitoramento",
-   "link_count": 2,
+   "link_count": 3,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -219,6 +219,16 @@
    "label": "Monitor de Jobs",
    "link_count": 0,
    "link_to": "monitor-de-jobs",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Execu\u00e7\u00f5es de Jobs",
+   "link_count": 0,
+   "link_to": "execucoes-de-jobs",
    "link_type": "Page",
    "onboard": 0,
    "type": "Link"

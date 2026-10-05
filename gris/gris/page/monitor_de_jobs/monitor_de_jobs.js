@@ -1,9 +1,9 @@
 // Copyright (c) 2026, Grupo Escoteiro Professora Inah de Mello - 47/SP and contributors
 // For license information, please see license.txt
 
-// Monitor de Jobs: mostra o que cada execução de job fez e onde falhou.
-// Os dados vêm de gris.api.monitoramento_jobs, sobre o DocType
-// "Log de Execucao de Job" alimentado por gris/utils/job_logger.py.
+// Monitor de Jobs: visão geral — quem está rodando agora (com botão Parar), a
+// situação de cada job e o gráfico do período. O histórico de execuções fica
+// na página "Execuções de Jobs". Dados vêm de gris.api.monitoramento_jobs.
 
 frappe.pages["monitor-de-jobs"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
@@ -13,7 +13,11 @@ frappe.pages["monitor-de-jobs"].on_page_load = function (wrapper) {
 	});
 
 	frappe.require(
-		["/assets/gris/js/job_log_timeline.js", "/assets/gris/vendor/echarts/echarts.min.js"],
+		[
+			"/assets/gris/js/job_log_timeline.js",
+			"/assets/gris/js/monitor_de_jobs_comum.js",
+			"/assets/gris/vendor/echarts/echarts.min.js",
+		],
 		() => {
 			wrapper.monitor_de_jobs = new MonitorDeJobs(page);
 		}
@@ -46,8 +50,8 @@ const ORDEM_DOS_STATUS = [
 class MonitorDeJobs {
 	constructor(page) {
 		this.page = page;
-		this.filtros = { dias: 7, metodo: "", status: "", somente_com_erro: 0 };
-		this.execucao_aberta = null;
+		this.filtros = { dias: 7 };
+		this.paginacao = { inicio: 0, limite: 10, total: 0 };
 		this.em_execucao = [];
 		this.montar_estrutura();
 		this.montar_filtros();
@@ -60,7 +64,7 @@ class MonitorDeJobs {
 
 	montar_estrutura() {
 		gris.job_logs.garantir_estilos();
-		this.garantir_estilos_da_pagina();
+		gris.job_monitor.garantir_estilos();
 
 		this.corpo = $(`
 			<div class="gris-monitor">
@@ -68,9 +72,7 @@ class MonitorDeJobs {
 				<div class="gris-monitor-rodando"></div>
 				<div class="gris-monitor-secao-titulo">${__("Jobs")}</div>
 				<div class="gris-monitor-jobs"></div>
-				<div class="gris-monitor-secao-titulo gris-monitor-titulo-execucoes">${__("Execuções")}</div>
-				<div class="gris-monitor-execucoes"></div>
-				<div class="gris-monitor-detalhe"></div>
+				<div class="gris-monitor-paginador"></div>
 				<div class="gris-monitor-grafico-wrapper">
 					<div class="gris-monitor-secao-titulo">${__("Execuções por dia")}</div>
 					<div class="gris-monitor-grafico"></div>
@@ -82,9 +84,7 @@ class MonitorDeJobs {
 		this.area_rodando = this.corpo.find(".gris-monitor-rodando");
 		this.area_grafico = this.corpo.find(".gris-monitor-grafico");
 		this.area_jobs = this.corpo.find(".gris-monitor-jobs");
-		this.area_execucoes = this.corpo.find(".gris-monitor-execucoes");
-		this.area_detalhe = this.corpo.find(".gris-monitor-detalhe");
-		this.titulo_execucoes = this.corpo.find(".gris-monitor-titulo-execucoes");
+		this.area_paginador = this.corpo.find(".gris-monitor-paginador");
 	}
 
 	montar_filtros() {
@@ -100,28 +100,15 @@ class MonitorDeJobs {
 		);
 		this.campo_periodo.val("7").on("change", () => {
 			this.filtros.dias = cint(this.campo_periodo.val()) || 7;
+			this.paginacao.inicio = 0;
 			this.carregar();
-		});
-
-		this.campo_status = this.page.add_select(
-			__("Status"),
-			[{ label: __("Todos os status"), value: "" }].concat(
-				ORDEM_DOS_STATUS.map((status) => ({
-					label: gris.job_logs.rotulo_status(status),
-					value: status,
-				}))
-			),
-			""
-		);
-		this.campo_status.on("change", () => {
-			this.filtros.status = this.campo_status.val();
-			this.carregar_execucoes();
 		});
 	}
 
 	montar_acoes() {
 		this.page.set_primary_action(__("Atualizar"), () => this.carregar(), "refresh");
 
+		this.page.add_menu_item(__("Ver todas as execuções"), () => this.ir_para_execucoes());
 		this.page.add_menu_item(__("Ver registros brutos"), () => {
 			frappe.set_route("List", "Log de Execucao de Job");
 		});
@@ -131,6 +118,12 @@ class MonitorDeJobs {
 		this.page.add_menu_item(__("Retenção dos logs"), () => {
 			frappe.set_route("Form", "Log Settings");
 		});
+	}
+
+	// A página de execuções lê estas opções ao abrir (e as descarta).
+	ir_para_execucoes(opcoes = {}) {
+		frappe.route_options = { dias: this.filtros.dias, ...opcoes };
+		frappe.set_route("execucoes-de-jobs");
 	}
 
 	agendar_atualizacao() {
@@ -148,18 +141,7 @@ class MonitorDeJobs {
 		setTimeout(ciclo, 60000);
 
 		// Cronômetro das execuções em andamento, sem novas chamadas ao servidor.
-		setInterval(() => this.atualizar_decorrido(), 1000);
-	}
-
-	atualizar_decorrido() {
-		this.corpo.find(".gris-monitor-decorrido").each((_indice, elemento) => {
-			const inicio = $(elemento).data("inicio");
-			const segundos = moment().diff(
-				frappe.datetime.convert_to_user_tz(inicio, false),
-				"seconds"
-			);
-			$(elemento).text(gris.job_logs.formatar_duracao(Math.max(segundos, 0)));
-		});
+		setInterval(() => gris.job_monitor.atualizar_decorrido(this.corpo), 1000);
 	}
 
 	// ------------------------------------------------------------------- dados
@@ -167,14 +149,12 @@ class MonitorDeJobs {
 	carregar(opcoes = {}) {
 		if (!opcoes.silencioso) {
 			this.area_jobs.html(this.html_carregando());
-			this.area_execucoes.html(this.html_carregando());
 		}
 
 		return Promise.all([
 			this.carregar_em_execucao(),
 			this.carregar_resumo(),
 			this.carregar_jobs(),
-			this.carregar_execucoes(),
 		]);
 	}
 
@@ -220,28 +200,10 @@ class MonitorDeJobs {
 		return frappe
 			.call({
 				method: "gris.api.monitoramento_jobs.listar_jobs",
-				args: { dias: this.filtros.dias },
-			})
-			.then((resposta) => {
-				const dados = resposta.message;
-				if (!dados || !dados.success) {
-					return;
-				}
-				this.jobs = dados.jobs || [];
-				this.renderizar_jobs();
-			});
-	}
-
-	carregar_execucoes() {
-		return frappe
-			.call({
-				method: "gris.api.monitoramento_jobs.listar_execucoes",
 				args: {
 					dias: this.filtros.dias,
-					metodo: this.filtros.metodo || undefined,
-					status: this.filtros.status || undefined,
-					somente_com_erro: this.filtros.somente_com_erro,
-					limite: 50,
+					limite: this.paginacao.limite,
+					inicio_em: this.paginacao.inicio,
 				},
 			})
 			.then((resposta) => {
@@ -249,8 +211,9 @@ class MonitorDeJobs {
 				if (!dados || !dados.success) {
 					return;
 				}
-				this.execucoes = dados.execucoes || [];
-				this.renderizar_execucoes();
+				this.jobs = dados.jobs || [];
+				this.paginacao.total = dados.total || 0;
+				this.renderizar_jobs();
 			});
 	}
 
@@ -305,24 +268,18 @@ class MonitorDeJobs {
 			if (evento.type === "keydown" && !["Enter", " "].includes(evento.key)) {
 				return;
 			}
-			this.usar_card_como_filtro($(evento.currentTarget).data("alvo"));
+			this.usar_card_como_atalho($(evento.currentTarget).data("alvo"));
 		});
 	}
 
-	usar_card_como_filtro(alvo) {
+	usar_card_como_atalho(alvo) {
 		if (alvo === "rodando") {
 			if (this.em_execucao.length) {
 				frappe.utils.scroll_to(this.area_rodando, true, 20);
 			}
 			return;
 		}
-
-		this.filtros.somente_com_erro = this.filtros.somente_com_erro ? 0 : 1;
-		this.area_cards
-			.find('[data-alvo="erros"]')
-			.toggleClass("gris-monitor-card-ativo", !!this.filtros.somente_com_erro);
-		this.carregar_execucoes();
-		frappe.utils.scroll_to(this.titulo_execucoes, true, 20);
+		this.ir_para_execucoes({ status: "erros" });
 	}
 
 	renderizar_rodando() {
@@ -334,90 +291,49 @@ class MonitorDeJobs {
 		const linhas = this.em_execucao
 			.map(
 				(execucao) => `
-							<div class="gris-monitor-rodando-item">
-								<div class="gris-monitor-rodando-info">
-									<div class="gris-monitor-job-nome">${gris.job_logs.escapar(execucao.job)}</div>
-									<div class="gris-monitor-job-metodo">
-										${gris.job_logs.escapar(execucao.origem)} ·
-										${__("há")} <span class="gris-monitor-decorrido"
-											data-inicio="${gris.job_logs.escapar(execucao.inicio)}"></span>
-									</div>
-									${
+				<div class="gris-monitor-rodando-item">
+					<div class="gris-monitor-rodando-info">
+						<div class="gris-monitor-job-nome">${gris.job_logs.escapar(execucao.job)}</div>
+						<div class="gris-monitor-job-metodo">
+							${gris.job_logs.escapar(execucao.origem)} ·
+							${__("há")} ${gris.job_monitor.html_decorrido(execucao.inicio)}
+						</div>
+						${
+							execucao.resumo
+								? `<div class="text-muted small">${gris.job_logs.escapar(
 										execucao.resumo
-											? `<div class="text-muted small">${gris.job_logs.escapar(
-													execucao.resumo
-											  )}</div>`
-											: ""
-									}
-								</div>
-								<div class="gris-monitor-rodando-acoes">
-									<button class="btn btn-xs btn-default gris-monitor-ver"
-										data-name="${gris.job_logs.escapar(execucao.name)}">${__("Ver andamento")}</button>
-									<button class="btn btn-xs btn-danger gris-monitor-parar"
-										data-name="${gris.job_logs.escapar(execucao.name)}"
-										data-job="${gris.job_logs.escapar(execucao.job)}">${__("Parar")}</button>
-								</div>
-							</div>`
+								  )}</div>`
+								: ""
+						}
+					</div>
+					<div class="gris-monitor-rodando-acoes">
+						<button class="btn btn-xs btn-default gris-monitor-ver"
+							data-name="${gris.job_logs.escapar(execucao.name)}">${__("Ver andamento")}</button>
+						${gris.job_monitor.html_botao_parar(execucao)}
+					</div>
+				</div>`
 			)
 			.join("");
 
 		this.area_rodando.html(`
-						<div class="gris-monitor-rodando-caixa">
-							<div class="gris-monitor-rodando-titulo">
-								<span class="indicator-pill blue">${__("Rodando agora")}</span>
-								<span class="text-muted small">${__("Atualiza a cada 5 segundos")}</span>
-							</div>
-							${linhas}
-						</div>
-					`);
+			<div class="gris-monitor-rodando-caixa">
+				<div class="gris-monitor-rodando-titulo">
+					<span class="indicator-pill blue">${__("Rodando agora")}</span>
+					<span class="text-muted small">${__("Atualiza a cada 5 segundos")}</span>
+				</div>
+				${linhas}
+			</div>
+		`);
 
-		this.ligar_acoes_de_execucao(this.area_rodando);
-		this.atualizar_decorrido();
+		this.ligar_parar(this.area_rodando);
+		this.area_rodando.find(".gris-monitor-ver").on("click", (evento) => {
+			this.ir_para_execucoes({ execucao: $(evento.currentTarget).data("name") });
+		});
+		gris.job_monitor.atualizar_decorrido(this.area_rodando);
 	}
 
-	// Botões "Parar"/"Ver andamento" são os mesmos no painel, nas tabelas e no detalhe.
-	ligar_acoes_de_execucao(area) {
-		area.find(".gris-monitor-parar")
-			.off("click")
-			.on("click", (evento) => {
-				evento.stopPropagation();
-				const botao = $(evento.currentTarget);
-				this.parar_execucao(botao.data("name"), botao.data("job"));
-			});
-		area.find(".gris-monitor-ver")
-			.off("click")
-			.on("click", (evento) => {
-				evento.stopPropagation();
-				this.abrir_detalhe($(evento.currentTarget).data("name"));
-			});
-	}
-
-	parar_execucao(name, job) {
-		frappe.confirm(
-			__("Parar a execução de <b>{0}</b>? O que já foi processado não é desfeito.", [
-				frappe.utils.escape_html(job || name),
-			]),
-			() => {
-				frappe
-					.call({
-						method: "gris.api.monitoramento_jobs.parar_execucao",
-						args: { name },
-						freeze: true,
-						freeze_message: __("Parando…"),
-					})
-					.then((resposta) => {
-						const dados = resposta.message || {};
-						frappe.show_alert({
-							message: dados.mensagem || __("Execução interrompida."),
-							indicator: dados.success ? "green" : "orange",
-						});
-						if (this.execucao_aberta === name) {
-							this.abrir_detalhe(name);
-						}
-						this.carregar({ silencioso: true });
-					});
-			}
-		);
+	ligar_parar(area) {
+		gris.job_monitor.ligar_botoes_parar(area, () => this.carregar({ silencioso: true }));
 	}
 
 	renderizar_grafico(resumo) {
@@ -469,6 +385,7 @@ class MonitorDeJobs {
 					${__("Nenhum job foi executado ainda. Assim que o scheduler rodar, as execuções aparecem aqui.")}
 				</div>`
 			);
+			this.area_paginador.empty();
 			return;
 		}
 
@@ -502,9 +419,7 @@ class MonitorDeJobs {
 					<td class="text-right">${job.execucoes}</td>
 					<td class="text-right">${falhas}</td>
 					<td class="text-right">${gris.job_logs.formatar_duracao(job.duracao_media)}</td>
-					<td class="text-right">
-						${this.html_acao_do_job(job)}
-					</td>
+					<td class="text-right">${this.html_acao_do_job(job)}</td>
 				</tr>`;
 			})
 			.join("");
@@ -529,14 +444,19 @@ class MonitorDeJobs {
 			</div>
 		`);
 
+		gris.job_monitor.montar_paginador(this.area_paginador, this.paginacao, (nova) => {
+			Object.assign(this.paginacao, nova);
+			this.carregar_jobs();
+		});
+
 		this.area_jobs.find(".gris-monitor-linha").on("click", (evento) => {
 			if ($(evento.target).closest("button").length) {
 				return;
 			}
-			this.filtrar_por_job($(evento.currentTarget).data("metodo"));
+			this.ir_para_execucoes({ metodo: $(evento.currentTarget).data("metodo") });
 		});
 
-		this.ligar_acoes_de_execucao(this.area_jobs);
+		this.ligar_parar(this.area_jobs);
 		this.area_jobs.find(".gris-monitor-executar").on("click", (evento) => {
 			evento.stopPropagation();
 			this.executar_agora($(evento.currentTarget).data("metodo"));
@@ -546,9 +466,7 @@ class MonitorDeJobs {
 	html_acao_do_job(job) {
 		const rodando = this.em_execucao.find((execucao) => execucao.metodo === job.metodo);
 		if (rodando) {
-			return `<button class="btn btn-xs btn-danger gris-monitor-parar"
-				data-name="${gris.job_logs.escapar(rodando.name)}"
-				data-job="${gris.job_logs.escapar(rodando.job)}">${__("Parar")}</button>`;
+			return gris.job_monitor.html_botao_parar(rodando);
 		}
 		if (job.agendado && !job.parado) {
 			return `<button class="btn btn-xs btn-default gris-monitor-executar"
@@ -567,184 +485,6 @@ class MonitorDeJobs {
 		return job.frequencia || __("Agendado");
 	}
 
-	filtrar_por_job(metodo) {
-		this.filtros.metodo = this.filtros.metodo === metodo ? "" : metodo;
-		this.area_jobs.find(".gris-monitor-linha").removeClass("gris-monitor-linha-ativa");
-		if (this.filtros.metodo) {
-			this.area_jobs
-				.find(`.gris-monitor-linha[data-metodo="${this.filtros.metodo}"]`)
-				.addClass("gris-monitor-linha-ativa");
-		}
-
-		const job = (this.jobs || []).find((item) => item.metodo === this.filtros.metodo);
-		this.titulo_execucoes.text(job ? `${__("Execuções")} — ${job.rotulo}` : __("Execuções"));
-		this.fechar_detalhe();
-		this.carregar_execucoes();
-	}
-
-	renderizar_execucoes() {
-		if (!this.execucoes || !this.execucoes.length) {
-			this.area_execucoes.html(
-				`<div class="gris-monitor-vazio text-muted">${__(
-					"Nenhuma execução encontrada com os filtros atuais."
-				)}</div>`
-			);
-			return;
-		}
-
-		const linhas = this.execucoes
-			.map((execucao) => {
-				const alertas = [];
-				if (execucao.total_erros) {
-					alertas.push(
-						`<span class="indicator-pill red">${execucao.total_erros} ${__(
-							"erro(s)"
-						)}</span>`
-					);
-				}
-				if (execucao.total_avisos) {
-					alertas.push(
-						`<span class="indicator-pill orange">${execucao.total_avisos} ${__(
-							"aviso(s)"
-						)}</span>`
-					);
-				}
-
-				// Escapado uma vez: `name` global do browser nao entra aqui.
-				const nome_do_log = gris.job_logs.escapar(execucao.name);
-
-				return `<tr class="gris-monitor-execucao" data-name="${nome_do_log}">
-					<td>
-						<div>${gris.job_logs.escapar(execucao.job)}</div>
-						<div class="gris-monitor-job-metodo">${gris.job_logs.escapar(execucao.origem)}</div>
-					</td>
-					<td>${gris.job_logs.badge_status(execucao.status)}</td>
-					<td title="${gris.job_logs.escapar(execucao.inicio)}">
-						${frappe.datetime.str_to_user(execucao.inicio, true)}
-					</td>
-					<td class="text-right">${
-						execucao.status === "Em Execucao"
-							? `<span class="gris-monitor-decorrido" data-inicio="${gris.job_logs.escapar(
-									execucao.inicio
-							  )}"></span>`
-							: gris.job_logs.formatar_duracao(execucao.duracao)
-					}</td>
-						<td>${gris.job_logs.escapar(execucao.resumo || "")} ${alertas.join(" ")}</td>
-						<td class="text-right">
-							${
-								execucao.status === "Em Execucao"
-									? `<button class="btn btn-xs btn-danger gris-monitor-parar"
-											data-name="${nome_do_log}"
-											data-job="${gris.job_logs.escapar(execucao.job)}">${__("Parar")}</button>`
-									: ""
-							}
-						</td>
-					</tr>`;
-			})
-			.join("");
-
-		this.area_execucoes.html(`
-			<div class="gris-monitor-tabela-wrapper">
-				<table class="table table-sm gris-monitor-tabela">
-					<thead>
-						<tr>
-							<th>${__("Job")}</th>
-							<th>${__("Status")}</th>
-							<th>${__("Início")}</th>
-							<th class="text-right">${__("Duração")}</th>
-							<th>${__("Resumo")}</th>
-								<th></th>
-							</tr>
-					</thead>
-					<tbody>${linhas}</tbody>
-				</table>
-			</div>
-		`);
-
-		this.ligar_acoes_de_execucao(this.area_execucoes);
-		this.area_execucoes.find(".gris-monitor-execucao").on("click", (evento) => {
-			this.abrir_detalhe($(evento.currentTarget).data("name"));
-		});
-
-		this.atualizar_decorrido();
-		if (this.execucao_aberta) {
-			this.marcar_execucao_aberta();
-		}
-	}
-
-	marcar_execucao_aberta() {
-		this.area_execucoes.find(".gris-monitor-execucao").removeClass("gris-monitor-linha-ativa");
-		this.area_execucoes
-			.find(`.gris-monitor-execucao[data-name="${this.execucao_aberta}"]`)
-			.addClass("gris-monitor-linha-ativa");
-	}
-
-	abrir_detalhe(name) {
-		this.execucao_aberta = name;
-		this.marcar_execucao_aberta();
-		this.area_detalhe.html(this.html_carregando());
-
-		frappe
-			.call({ method: "gris.api.monitoramento_jobs.obter_execucao", args: { name } })
-			.then((resposta) => {
-				const dados = resposta.message;
-				if (!dados || !dados.success) {
-					return;
-				}
-				this.renderizar_detalhe(dados.execucao);
-			});
-	}
-
-	fechar_detalhe() {
-		this.execucao_aberta = null;
-		this.area_detalhe.empty();
-	}
-
-	renderizar_detalhe(execucao) {
-		this.area_detalhe.html(`
-			<div class="gris-monitor-detalhe-caixa">
-				<div class="gris-monitor-detalhe-topo">
-					<div>
-						<div class="gris-monitor-detalhe-titulo">${gris.job_logs.escapar(execucao.job)}</div>
-						<div class="gris-monitor-job-metodo">
-							${gris.job_logs.escapar(execucao.metodo)} ·
-							${gris.job_logs.escapar(execucao.inicio)} ·
-							${gris.job_logs.formatar_duracao(execucao.duracao)}
-						</div>
-					</div>
-					<div class="gris-monitor-detalhe-acoes">
-						${gris.job_logs.badge_status(execucao.status)}
-						${
-							execucao.status === "Em Execucao"
-								? `<button class="btn btn-xs btn-danger gris-monitor-parar"
-										data-name="${gris.job_logs.escapar(execucao.name)}"
-										data-job="${gris.job_logs.escapar(execucao.job)}">${__("Parar")}</button>`
-								: ""
-						}
-						<button class="btn btn-xs btn-default gris-monitor-abrir-registro">
-							${__("Abrir registro")}
-						</button>
-						<button class="btn btn-xs btn-default gris-monitor-fechar">${__("Fechar")}</button>
-					</div>
-				</div>
-				<div class="gris-monitor-detalhe-conteudo"></div>
-			</div>
-		`);
-
-		gris.job_logs.render_detalhe(
-			this.area_detalhe.find(".gris-monitor-detalhe-conteudo"),
-			execucao
-		);
-
-		this.ligar_acoes_de_execucao(this.area_detalhe);
-		this.area_detalhe.find(".gris-monitor-fechar").on("click", () => this.fechar_detalhe());
-		this.area_detalhe.find(".gris-monitor-abrir-registro").on("click", () => {
-			frappe.set_route("Form", "Log de Execucao de Job", execucao.name);
-		});
-
-		frappe.utils.scroll_to(this.area_detalhe, true, 20);
-	}
-
 	executar_agora(metodo) {
 		frappe.confirm(__("Executar este job agora?"), () => {
 			frappe
@@ -761,57 +501,5 @@ class MonitorDeJobs {
 					setTimeout(() => this.carregar({ silencioso: true }), 3000);
 				});
 		});
-	}
-
-	garantir_estilos_da_pagina() {
-		if (document.getElementById("gris-monitor-estilos")) {
-			return;
-		}
-
-		const estilos = document.createElement("style");
-		estilos.id = "gris-monitor-estilos";
-		estilos.textContent = `
-			.gris-monitor { padding-bottom: 40px; }
-			.gris-monitor-cards { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
-			.gris-monitor-card { flex: 1 1 150px; border: 1px solid var(--border-color);
-				border-radius: var(--border-radius-md); padding: 12px 14px; background: var(--card-bg); }
-			.gris-monitor-card-valor { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
-			.gris-monitor-card-rotulo { font-size: 11px; color: var(--text-muted); text-transform: uppercase;
-				letter-spacing: 0.4px; margin-top: 2px; }
-			.gris-monitor-card-clicavel { cursor: pointer; }
-			.gris-monitor-card-clicavel:hover, .gris-monitor-card-ativo { border-color: var(--primary); }
-			.gris-monitor-rodando-caixa { border: 1px solid var(--border-color); border-left: 4px solid var(--blue-500);
-				border-radius: var(--border-radius-md); padding: 12px 14px; background: var(--bg-blue); }
-			.gris-monitor-rodando-titulo { display: flex; justify-content: space-between; align-items: center;
-				gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
-			.gris-monitor-rodando-item { display: flex; justify-content: space-between; align-items: center;
-				gap: 12px; padding: 8px 0; border-top: 1px solid var(--border-color); flex-wrap: wrap; }
-			.gris-monitor-rodando-acoes { display: flex; gap: 6px; }
-			.gris-monitor-grafico-wrapper { margin-top: 24px; }
-			.gris-monitor-secao-titulo { font-size: 13px; font-weight: 600; margin: 20px 0 8px; }
-			.gris-monitor-grafico { height: 240px; }
-			.gris-monitor-grafico-wrapper { border: 1px solid var(--border-color);
-				border-radius: var(--border-radius-md); padding: 12px; background: var(--card-bg); }
-			.gris-monitor-tabela-wrapper { border: 1px solid var(--border-color);
-				border-radius: var(--border-radius-md); overflow-x: auto; background: var(--card-bg); }
-			.gris-monitor-tabela { margin-bottom: 0; font-size: 12px; }
-			.gris-monitor-tabela th { font-size: 11px; color: var(--text-muted); text-transform: uppercase;
-				letter-spacing: 0.4px; white-space: nowrap; }
-			.gris-monitor-tabela tbody tr { cursor: pointer; }
-			.gris-monitor-tabela tbody tr:hover { background: var(--fg-hover-color); }
-			.gris-monitor-linha-ativa, .gris-monitor-linha-ativa:hover { background: var(--bg-blue); }
-			.gris-monitor-job-nome { font-weight: 500; }
-			.gris-monitor-job-metodo { font-size: 11px; color: var(--text-muted); font-family: var(--font-stack-mono);
-				word-break: break-all; }
-			.gris-monitor-vazio { padding: 20px; border: 1px dashed var(--border-color);
-				border-radius: var(--border-radius-md); text-align: center; }
-			.gris-monitor-detalhe-caixa { margin-top: 16px; border: 1px solid var(--border-color);
-				border-radius: var(--border-radius-md); padding: 14px; background: var(--card-bg); }
-			.gris-monitor-detalhe-topo { display: flex; justify-content: space-between; align-items: flex-start;
-				gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
-			.gris-monitor-detalhe-titulo { font-weight: 600; }
-			.gris-monitor-detalhe-acoes { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-		`;
-		document.head.appendChild(estilos);
 	}
 }

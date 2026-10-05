@@ -56,7 +56,7 @@ Skills disponíveis em: `.claude/skills/<skill-name>/SKILL.md`.
 - Evitar N+1: não executar consultas em loop quando houver alternativa agregada.
 - Processos pesados devem ir para fila (`frappe.enqueue`) quando apropriado.
 - Jobs devem registrar o que fizeram via `gris.utils.job_logger` (`obter_logger`,
-  `metrica`, `definir_resumo`); o resultado aparece em `/app/monitor-de-jobs`.
+  `metrica`, `definir_resumo`); o resultado aparece em `/app/monitor-de-jobs` (visão geral) e `/app/execucoes-de-jobs` (histórico paginado).
 
 ## 🖥️ Convenções de frontend (Desk + Portal)
 

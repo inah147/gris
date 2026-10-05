@@ -79,7 +79,7 @@ Ao trabalhar em tarefas específicas, consulte a skill correspondente em `.claud
 - **Jobs** (agendados ou enfileirados) devem narrar o que fizeram com
   `gris.utils.job_logger`: use `obter_logger(...)` no lugar de `frappe.logger(...)`,
   `metrica(...)` para contadores e `definir_resumo(...)` para a frase final. Cada
-  execução vira um "Log de Execucao de Job", visível em `/app/monitor-de-jobs`
+  execução vira um "Log de Execucao de Job", visível em `/app/monitor-de-jobs` (visão geral, com botão Parar) e `/app/execucoes-de-jobs` (histórico paginado)
 - **Não usar `frappe.cache`** neste projeto
 - Respostas de API retornam dicts com chave `"success"`
 - Validar permissões com `frappe.get_roles()` antes de mutações

@@ -209,8 +209,12 @@ def lista_de_compras(nomes: list[str]) -> list[dict]:
 	return linhas
 
 
-def minhas_solicitacoes(user: str | None = None, status: list[str] | None = None) -> list[dict]:
+def minhas_solicitacoes(
+	user: str | None = None, status: list[str] | None = None, area: str | None = None
+) -> list[dict]:
 	filtros: dict = {"solicitante": user or frappe.session.user}
+	if area:
+		filtros["area"] = area
 	if status:
 		filtros["status"] = ["in", status]
 	return listar_solicitacoes(filtros)

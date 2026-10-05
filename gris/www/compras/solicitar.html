@@ -26,9 +26,9 @@
 
 {% block main %}
 {% if escolher_area %}
-<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" style="margin-top: 1.5rem;">
 	{% for item in areas_compra %}
-	<a class="card p-5 flex flex-col gap-2 no-underline" href="{{ item.href }}">
+	<a class="card flex flex-col gap-2 no-underline" style="padding: 1.25rem;" href="{{ item.href }}">
 		<h2 class="m-0 text-lg font-semibold text-foreground">{{ item.title }}</h2>
 		<p class="m-0 text-sm text-muted-foreground">{{ item.description }}</p>
 	</a>
@@ -37,6 +37,12 @@
 {% else %}
 <div class="compras-solicitar" data-area="{{ area }}" data-area-slug="{{ area_slug }}" data-programa-educativo="{{ 1 if programa_educativo else 0 }}" data-item-novo="{{ item_novo }}">
 	{{ toaster() }}
+
+	<nav class="flex flex-wrap gap-2" style="margin-bottom: 1rem;" aria-label="Trocar de área">
+		{% for filtro in filtros_area %}
+		<a href="{{ filtro.href }}" class="{{ 'btn-sm-primary' if filtro.ativo else 'btn-sm-outline' }}"{% if filtro.ativo %} aria-current="page"{% endif %}>{{ filtro.label }}</a>
+		{% endfor %}
+	</nav>
 
 	{% if catalogo_vazio and not pode_cadastrar_item %}
 	{{ empty(

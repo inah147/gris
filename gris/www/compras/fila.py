@@ -35,11 +35,11 @@ def get_context(context):
 
 	areas_visiveis = permissoes.areas_para(permissoes.pode_ver_fila)
 	if not areas_visiveis:
-		frappe.throw(_("Você não acompanha a fila de compras de nenhuma área."), frappe.PermissionError)
+		frappe.throw(_("Você não acompanha a lista de compras de nenhuma área."), frappe.PermissionError)
 
 	area = consultas.area_da_requisicao(slug) if slug else None
 	if area and area not in areas_visiveis:
-		frappe.throw(f"Você não acompanha a fila de compras de {area}.", frappe.PermissionError)
+		frappe.throw(f"Você não acompanha a lista de compras de {area}.", frappe.PermissionError)
 
 	areas = [area] if area else areas_visiveis
 	slug = slug if area else None

@@ -185,3 +185,56 @@ class TestMonitoramentoJobs(FrappeTestCase):
 
 		self.assertTrue(resposta["success"])
 		self.assertEqual(chamadas, [True])
+
+
+class TestPararExecucao(FrappeTestCase):
+	def setUp(self):
+		frappe.set_user("Administrator")
+		frappe.db.delete(job_logger.DOCTYPE, {"metodo": METODO_AGENDADO})
+
+	def test_listar_em_execucao_traz_so_o_que_esta_rodando(self):
+		rodando = _criar_log(METODO_AGENDADO, "Em Execucao", inicio=add_to_date(now_datetime(), days=-30))
+		_criar_log(METODO_AGENDADO, "Sucesso")
+
+		resposta = monitoramento_jobs.listar_em_execucao()
+
+		nomes = [execucao.name for execucao in resposta["execucoes"]]
+		self.assertIn(rodando.name, nomes)
+		self.assertEqual(
+			{execucao.status for execucao in resposta["execucoes"]},
+			{"Em Execucao"},
+		)
+
+	def test_parar_execucao_sem_job_na_fila_encerra_o_log_preso(self):
+		log = _criar_log(METODO_AGENDADO, "Em Execucao", job_id=None)
+
+		resposta = monitoramento_jobs.parar_execucao(log.name)
+
+		self.assertTrue(resposta["success"])
+		self.assertEqual(resposta["resultado"], "ausente")
+		log.reload()
+		self.assertEqual(log.status, "Erro")
+		self.assertTrue(log.fim)
+		self.assertIn("Administrator", log.erro)
+
+	def test_parar_execucao_recusa_execucao_ja_finalizada(self):
+		log = _criar_log(METODO_AGENDADO, "Sucesso")
+
+		with self.assertRaises(frappe.ValidationError):
+			monitoramento_jobs.parar_execucao(log.name)
+
+	def test_parar_execucao_recusa_metodo_fora_do_gris(self):
+		log = _criar_log("frappe.utils.qualquer", "Em Execucao")
+		try:
+			with self.assertRaises(frappe.ValidationError):
+				monitoramento_jobs.parar_execucao(log.name)
+		finally:
+			frappe.delete_doc(job_logger.DOCTYPE, log.name, force=True)
+
+	def test_parar_execucao_exige_system_manager(self):
+		log = _criar_log(METODO_AGENDADO, "Em Execucao")
+
+		with _sem_bypass_de_teste():
+			frappe.set_user("Guest")
+			with self.assertRaises(frappe.PermissionError):
+				monitoramento_jobs.parar_execucao(log.name)

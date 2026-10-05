@@ -161,4 +161,7 @@
 
 .contrib-badge--acao {
 	margin-left: calc(var(--spacing) * 2);
+	background-color: var(--success);
+	border-color: transparent;
+	color: oklch(0.2 0.02 150);
 }

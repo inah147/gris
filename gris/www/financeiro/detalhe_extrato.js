@@ -97,6 +97,14 @@ document.addEventListener("DOMContentLoaded", () => {
 		setHidden(banner, Boolean(revisada && revisada.checked));
 	};
 
+	const toast = (category, title) => {
+		document.dispatchEvent(
+			new CustomEvent("basecoat:toast", {
+				detail: { config: { category, title, duration: category === "error" ? 6000 : 3500 } },
+			})
+		);
+	};
+
 	const normalizeDocname = (value) => {
 		if (!value) {
 			return "";
@@ -159,14 +167,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		);
 
 		if (!docname) {
-			if (window.frappe && typeof frappe.show_alert === "function") {
-				frappe.show_alert({
-					message: "ID do documento não encontrado.",
-					indicator: "red",
-				});
-			} else {
-				alert("ID do documento não encontrado.");
-			}
+			toast("error", "ID do documento não encontrado.");
 			btnSalvar.disabled = false;
 			btnSalvar.textContent = "Salvar";
 			return;
@@ -180,7 +181,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			},
 			callback: (response) => {
 				if (!response.message) {
-					frappe.show_alert({ message: "Erro ao buscar documento.", indicator: "red" });
+					toast("error", "Erro ao buscar documento.");
 					btnSalvar.disabled = false;
 					btnSalvar.textContent = "Salvar";
 					return;
@@ -196,13 +197,15 @@ document.addEventListener("DOMContentLoaded", () => {
 						if (!saveResponse.exc) {
 							initialData = getFormData();
 							setHidden(footerSalvar, true);
-							frappe.show_alert(__("Alterações salvas com sucesso!"));
+							toast("success", "Alterações salvas com sucesso!");
 						} else {
-							frappe.show_alert({
-								message: `Erro ao salvar: ${saveResponse.exc}`,
-								indicator: "red",
-							});
+							toast("error", "Não foi possível salvar a transação.");
 						}
+						btnSalvar.disabled = false;
+						btnSalvar.textContent = "Salvar";
+					},
+					error: () => {
+						toast("error", "Não foi possível salvar a transação.");
 						btnSalvar.disabled = false;
 						btnSalvar.textContent = "Salvar";
 					},

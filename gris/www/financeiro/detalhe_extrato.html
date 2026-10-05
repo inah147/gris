@@ -2,6 +2,7 @@
 {% from "public/design_system/components/composed/basecoat-composed.html.jinja" import alert, card, checkbox, empty, field, input, textarea %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 {% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
 
 {% block title %}Detalhe da Transação{% endblock %}
 
@@ -153,4 +154,5 @@
 			{% endcall %}
 		</div>
 	{% endif %}
+	{{ toaster() }}
 {% endblock %}

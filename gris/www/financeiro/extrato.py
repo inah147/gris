@@ -35,6 +35,7 @@ def get_context(context):
 	context.opcoes_categoria = get_master_options("Categoria de Transacao")
 	context.opcoes_centro_de_custo = get_master_options("Centro de Custo")
 	context.opcoes_conta_fixa = get_distinct("conta_fixa")
+	context.opcoes_origem_venda = get_distinct("origem_venda")
 
 	# Bloqueio para usuários não autenticados
 	if frappe.session.user == "Guest":

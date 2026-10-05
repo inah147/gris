@@ -24,6 +24,7 @@
 		"repasse_entre_contas",
 		"transacao_revisada",
 		"fonte",
+		"origem_venda",
 		"mostrar_excluidas",
 	];
 

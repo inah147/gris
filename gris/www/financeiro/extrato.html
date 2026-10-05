@@ -24,13 +24,15 @@
 	carteira=[{"label": "Todas", "value": ""}],
 	categoria=[{"label": "Todas", "value": ""}, {"label": "Sem categoria", "value": filtro_vazio}],
 	centro=[{"label": "Todos", "value": ""}],
-	conta_fixa=[{"label": "Todas", "value": ""}]
+	conta_fixa=[{"label": "Todas", "value": ""}],
+	origem_venda=[{"label": "Todas", "value": ""}]
 ) %}
 {% for v in opcoes_instituicao %}{% set ns.instituicao = ns.instituicao + [{"label": v, "value": v}] %}{% endfor %}
 {% for v in opcoes_carteira %}{% set ns.carteira = ns.carteira + [{"label": v, "value": v}] %}{% endfor %}
 {% for v in opcoes_categoria %}{% set ns.categoria = ns.categoria + [{"label": v, "value": v}] %}{% endfor %}
 {% for v in opcoes_centro_de_custo %}{% set ns.centro = ns.centro + [{"label": v, "value": v}] %}{% endfor %}
 {% for v in opcoes_conta_fixa %}{% set ns.conta_fixa = ns.conta_fixa + [{"label": v, "value": v}] %}{% endfor %}
+{% for v in opcoes_origem_venda %}{% set ns.origem_venda = ns.origem_venda + [{"label": v, "value": v}] %}{% endfor %}
 
 {% set fixo_variavel_items = [
 	{"label": "Todos", "value": ""},
@@ -124,7 +126,11 @@
 					<label class="label" for="extrato-filter-fonte">Fonte</label>
 					{{ select(id="extrato-filter-fonte", name="fonte", items=fonte_items, selected=filtros_ativos.fonte or '') }}
 				</div>
-				<div class="extrato-filtros__actions">
+				<div class="field">
+						<label class="label" for="extrato-filter-origem-venda">Origem da venda</label>
+						{{ select(id="extrato-filter-origem-venda", name="origem_venda", items=ns.origem_venda, selected=filtros_ativos.origem_venda or '') }}
+					</div>
+					<div class="extrato-filtros__actions">
 					<button type="submit" class="btn-sm-primary">Filtrar</button>
 					<a class="btn-sm-outline" href="/financeiro/extrato">Limpar</a>
 				</div>

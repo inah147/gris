@@ -10,12 +10,13 @@ cada execucao, quanto tempo levou e quais erros apareceram.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import frappe
 from frappe import _
 from frappe.query_builder.functions import Count, Date, Max, Sum
-from frappe.utils import add_days, cint, flt, now_datetime, today
+from frappe.utils import add_days, cint, flt, now_datetime, time_diff_in_seconds, today
 
 from gris.utils.job_logger import DOCTYPE as DOCTYPE_LOG
 from gris.utils.job_logger import rotulo_do_metodo
@@ -41,6 +42,7 @@ CAMPOS_DA_LISTA = (
 )
 
 STATUS_DE_FALHA = ("Erro", "Concluido com Erros")
+STATUS_EM_EXECUCAO = "Em Execucao"
 
 
 def _garantir_acesso() -> None:
@@ -381,3 +383,127 @@ def executar_job_agora(metodo: str) -> dict:
 		"success": True,
 		"mensagem": _("Job enviado para a fila. O resultado aparece aqui assim que a execução terminar."),
 	}
+
+
+@frappe.whitelist()
+def listar_em_execucao() -> dict:
+	"""Execucoes ainda em andamento, de qualquer data.
+
+	Nao respeita o periodo do monitor: um job que travou ha dias continua
+	precisando aparecer (e poder ser parado) mesmo com o filtro em 24 horas.
+	"""
+	_garantir_acesso()
+
+	execucoes = frappe.get_all(
+		DOCTYPE_LOG,
+		filters={"status": STATUS_EM_EXECUCAO},
+		fields=[*CAMPOS_DA_LISTA, "job_id", "fila"],
+		order_by="inicio asc",
+		limit_page_length=LIMITE_MAXIMO,
+	)
+
+	return {"success": True, "execucoes": execucoes, "atualizado_em": now_datetime()}
+
+
+def _encerrar_job_no_rq(job_id: str | None) -> str:
+	"""Para o job na fila do RQ. Devolve o que foi feito, para a mensagem ao usuario.
+
+	- ``parado``: estava rodando e recebeu o comando de parada;
+	- ``cancelado``: ainda estava na fila e foi removido;
+	- ``ausente``: o RQ nao conhece mais o job (worker caiu, job expirou ou ja
+	  terminou) — o log ficou preso em "Em Execucao" sem processo por tras.
+	"""
+	if not job_id:
+		return "ausente"
+
+	from frappe.utils.background_jobs import get_redis_conn
+	from rq.command import send_stop_job_command
+	from rq.exceptions import InvalidJobOperation, NoSuchJobError
+	from rq.job import Job, JobStatus
+
+	conexao = get_redis_conn()
+	try:
+		job = Job.fetch(job_id, connection=conexao)
+	except NoSuchJobError:
+		return "ausente"
+
+	# A fila do RQ e compartilhada entre os sites do bench: nunca mexer no job de outro site.
+	if (job.kwargs or {}).get("site") != frappe.local.site:
+		frappe.throw(_("Este job pertence a outro site e não pode ser parado daqui."))
+
+	situacao = job.get_status(refresh=True)
+	try:
+		if situacao == JobStatus.STARTED:
+			send_stop_job_command(conexao, job.id)
+			return "parado"
+		if situacao in (JobStatus.QUEUED, JobStatus.DEFERRED, JobStatus.SCHEDULED):
+			job.cancel()
+			return "cancelado"
+	except InvalidJobOperation:
+		return "ausente"
+
+	return "ausente"
+
+
+@frappe.whitelist(methods=["POST"])
+def parar_execucao(name: str) -> dict:
+	"""Interrompe uma execucao em andamento e fecha o log dela como "Erro".
+
+	Vale para jobs rodando no worker e para jobs ainda na fila. Se o RQ ja nao
+	conhece o job (log "preso" apos queda do worker), apenas encerra o registro.
+	"""
+	_garantir_acesso()
+
+	if not name or not frappe.db.exists(DOCTYPE_LOG, name):
+		frappe.throw(_("Execução não encontrada."), frappe.DoesNotExistError)
+
+	log = frappe.db.get_value(
+		DOCTYPE_LOG, name, ["status", "metodo", "job_id", "inicio", "eventos"], as_dict=True
+	)
+
+	if log.status != STATUS_EM_EXECUCAO:
+		frappe.throw(_("Esta execução já terminou e não pode ser parada."))
+
+	if not str(log.metodo or "").startswith(PREFIXO_DO_APP):
+		frappe.throw(_("Só é possível parar jobs do próprio GRIS por esta página."))
+
+	resultado = _encerrar_job_no_rq(log.job_id)
+
+	motivo = {
+		"parado": _("Execução interrompida manualmente por {0}.").format(frappe.session.user),
+		"cancelado": _("Execução cancelada por {0} antes de começar.").format(frappe.session.user),
+		"ausente": _(
+			"Execução encerrada manualmente por {0}: o job já não estava ativo na fila (o worker pode ter sido reiniciado)."
+		).format(frappe.session.user),
+	}[resultado]
+
+	try:
+		eventos = json.loads(log.eventos or "[]")
+	except ValueError:
+		eventos = []
+	eventos.append(
+		{
+			"horario": now_datetime().strftime("%Y-%m-%d %H:%M:%S"),
+			"nivel": "AVISO",
+			"mensagem": motivo,
+			"contexto": {},
+		}
+	)
+
+	agora = now_datetime()
+	frappe.db.set_value(
+		DOCTYPE_LOG,
+		name,
+		{
+			"status": "Erro",
+			"fim": agora,
+			"duracao": round(max(time_diff_in_seconds(agora, log.inicio), 0), 3),
+			"erro": motivo,
+			"eventos": json.dumps(eventos, ensure_ascii=False),
+			"total_eventos": len(eventos),
+			"total_avisos": cint(frappe.db.get_value(DOCTYPE_LOG, name, "total_avisos")) + 1,
+		},
+		update_modified=False,
+	)
+
+	return {"success": True, "resultado": resultado, "mensagem": motivo}

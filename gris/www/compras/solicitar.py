@@ -51,6 +51,14 @@ def get_context(context):
 	permissoes.garantir_autenticado()
 
 	context.area = area
+	context.filtros_area = [
+		{
+			"label": nome,
+			"href": f"/compras/solicitar?area={meta['slug']}",
+			"ativo": nome == area,
+		}
+		for nome, meta in permissoes.AREAS.items()
+	]
 	context.area_slug = slug
 	context.programa_educativo = area == permissoes.AREA_PROGRAMA_EDUCATIVO
 	context.active_link = "/compras/solicitar"

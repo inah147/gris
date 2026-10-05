@@ -6,13 +6,13 @@
 {% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
 {% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
 
-{% block title %}Fila de compras{% if area %} · {{ area }}{% endif %}{% endblock %}
+{% block title %}Lista de compras{% if area %} · {{ area }}{% endif %}{% endblock %}
 
 {# fila.css/.js são injetados automaticamente pelo Frappe (colocated). Não referenciar manualmente: duplica o carregamento. #}
 
 {% block page_header %}
 <section class="flex flex-col gap-2 max-w-3xl" aria-labelledby="compras-titulo">
-	<h1 id="compras-titulo" class="m-0 text-3xl font-semibold leading-tight text-foreground">Fila de compras{% if area %} · {{ area }}{% endif %}</h1>
+	<h1 id="compras-titulo" class="m-0 text-3xl font-semibold leading-tight text-foreground">Lista de compras{% if area %} · {{ area }}{% endif %}</h1>
 	<p class="m-0 text-base leading-relaxed text-muted-foreground">{% if pode_agir %}Registre quando comprou e quando o material chegou ao grupo.{% else %}Acompanhe os pedidos de compra das áreas. A compra e o recebimento são registrados pelo gestor de cada área.{% endif %} Por padrão aparecem só os pedidos aguardando compra; use os indicadores para ver os demais.</p>
 </section>
 {% endblock %}

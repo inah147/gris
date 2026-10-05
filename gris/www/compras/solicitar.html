@@ -19,7 +19,7 @@
 {% else %}
 <section class="flex flex-col gap-2 max-w-3xl" aria-labelledby="solicitar-titulo">
 	<h1 id="solicitar-titulo" class="m-0 text-3xl font-semibold leading-tight text-foreground">Nova solicitação · {{ area }}</h1>
-	<p class="m-0 text-base leading-relaxed text-muted-foreground">{% if programa_educativo %}Monte o pedido de insígnias e distintivos do Plano Educativo.{% else %}Monte o pedido com os itens de {{ area | lower }} que o grupo precisa.{% endif %} Depois de enviado, o gestor da área registra a compra e você confirma a entrega.</p>
+	<p class="m-0 text-base leading-relaxed text-muted-foreground">{% if programa_educativo %}Monte o pedido de insígnias e distintivos do Programa Educativo.{% else %}Monte o pedido com os itens de {{ area | lower }} que o grupo precisa.{% endif %} Depois de enviado, o gestor da área registra a compra e você confirma a entrega.</p>
 </section>
 {% endif %}
 {% endblock %}

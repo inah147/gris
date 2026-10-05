@@ -324,6 +324,9 @@ scheduler_events = {
 	# ],
 	"daily": [
 		"gris.api.financeiro.infinitepay_email_import.enqueue_infinitepay_email_import",
+		# A baixa do webhook pode chegar depois da importação que trouxe a mesma venda;
+		# sem uma nova passada, as duas ficam contando até a próxima importação.
+		"gris.api.financeiro.cobranca_contribuicao.conciliar_baixas_de_cobranca",
 		"gris.api.financeiro.monthly_payments.update_status_monthly_payment",
 		"gris.gris.doctype.novo_associado.novo_associado.atualizar_ramos_por_idade",
 		"gris.api.calendario.sync_feriados.sync_feriados",

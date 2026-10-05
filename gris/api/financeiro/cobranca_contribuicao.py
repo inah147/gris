@@ -20,7 +20,8 @@ O ciclo completo mora aqui:
    competências cobradas, mês a mês.
 4. Quando o fechamento mensal da InfinitePay é importado, a mesma venda chega de
    novo como transação de Sistema. `conciliar_baixas_de_cobranca` casa as duas e
-   deixa só a baixa contando nos totais.
+   deixa só a baixa contando nos totais. Roda ao fim de cada importação e uma vez
+   por dia, para a baixa que chega depois da venda importada.
 
 A baixa é um lançamento em `Transacao Extrato Geral` porque é dali que a apuração
 lê: marcar o pagamento em qualquer outro lugar não mudaria a situação do mês na
@@ -1067,11 +1068,16 @@ def conciliar_baixas_de_cobranca(hoje: datetime.date | None = None) -> dict:
 
 	sem_par = 0
 	for (valor, data), nomes in sem_nsu.items():
-		candidatas = [c for c in _vendas_candidatas(valor, data) if c not in usadas]
+		candidatas = [c for c in _vendas_candidatas(valor, data) if c.name not in usadas]
+		if len(candidatas) != len(nomes):
+			# A margem da taxa do cartão deixa entrar outra venda do dia (ex.: R$ 174,67
+			# da lojinha junto de uma baixa de R$ 180). PIX não tem taxa: se as vendas de
+			# valor exato fecham a conta, são elas.
+			candidatas = [c for c in candidatas if abs(float(c.valor or 0) - valor) < 0.005]
 		if len(candidatas) != len(nomes):
 			sem_par += len(nomes)
 			continue
-		for venda, baixa in zip(candidatas, sorted(nomes), strict=True):
+		for venda, baixa in zip((c.name for c in candidatas), sorted(nomes), strict=True):
 			vincular_par(venda, baixa, manter="planilha", ignore_permissions=True)
 			usadas.add(venda)
 			conciliadas += 1
@@ -1108,7 +1114,7 @@ def _venda_pelo_nsu(transaction_nsu: str | None) -> str | None:
 	return encontradas[0] if encontradas else None
 
 
-def _vendas_candidatas(valor: float, data: datetime.date) -> list[str]:
+def _vendas_candidatas(valor: float, data: datetime.date) -> list[frappe._dict]:
 	"""Vendas importadas que podem ser o mesmo pagamento da baixa, sem o NSU."""
 	return frappe.get_all(
 		"Transacao Extrato Geral",
@@ -1120,5 +1126,5 @@ def _vendas_candidatas(valor: float, data: datetime.date) -> list[str]:
 			["data_transacao", "<=", add_days(data, JANELA_DIAS_CONCILIACAO)],
 		],
 		order_by="timestamp_transacao asc, name asc",
-		pluck="name",
+		fields=["name", "valor"],
 	)

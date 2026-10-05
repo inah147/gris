@@ -24,6 +24,8 @@ from gris.utils.job_logger import rotulo_do_metodo
 PAPEL_EXIGIDO = "System Manager"
 PREFIXO_DO_APP = "gris."
 LIMITE_MAXIMO = 200
+LIMITE_PADRAO_DE_JOBS = 10
+LIMITE_PADRAO_DE_EXECUCOES = 25
 DIAS_MAXIMOS = 365
 
 CAMPOS_DA_LISTA = (
@@ -89,6 +91,15 @@ def _jobs_agendados() -> list[dict]:
 		)
 
 	return agendados
+
+
+def _jobs_agendados_sem_proxima() -> list[dict]:
+	"""Versao barata de ``_jobs_agendados``: sem calcular a proxima execucao."""
+	return frappe.get_all(
+		"Scheduled Job Type",
+		filters={"method": ["like", f"{PREFIXO_DO_APP}%"]},
+		fields=["method as metodo"],
+	)
 
 
 def _estatisticas_por_metodo(desde: str) -> dict[str, dict]:
@@ -167,8 +178,8 @@ def _ultima_execucao_por_metodo() -> dict[str, dict]:
 
 
 @frappe.whitelist()
-def listar_jobs(dias: Any = 7) -> dict:
-	"""Lista os jobs conhecidos com a situacao da ultima execucao.
+def listar_jobs(dias: Any = 7, limite: Any = LIMITE_PADRAO_DE_JOBS, inicio_em: Any = 0) -> dict:
+	"""Lista os jobs conhecidos com a situacao da ultima execucao, paginados.
 
 	Reune o que esta agendado no scheduler e o que ja apareceu no log — jobs
 	apenas enfileirados (``frappe.enqueue``) tambem entram na lista.
@@ -177,6 +188,8 @@ def listar_jobs(dias: Any = 7) -> dict:
 
 	dias = _normalizar_dias(dias)
 	desde = _data_de_corte(dias)
+	limite = max(1, min(cint(limite) or LIMITE_PADRAO_DE_JOBS, LIMITE_MAXIMO))
+	inicio_em = max(0, cint(inicio_em))
 
 	estatisticas = _estatisticas_por_metodo(desde)
 	ultimas = _ultima_execucao_por_metodo()
@@ -229,7 +242,35 @@ def listar_jobs(dias: Any = 7) -> dict:
 		)
 	)
 
-	return {"success": True, "dias": dias, "jobs": resultado}
+	return {
+		"success": True,
+		"dias": dias,
+		"jobs": resultado[inicio_em : inicio_em + limite],
+		"total": len(resultado),
+		"limite": limite,
+		"inicio_em": inicio_em,
+	}
+
+
+@frappe.whitelist()
+def listar_metodos_dos_jobs() -> dict:
+	"""Todos os jobs conhecidos (agendados ou ja vistos no log), so nome e metodo.
+
+	Alimenta o filtro "Job" da tela de execucoes sem carregar estatisticas.
+	"""
+	_garantir_acesso()
+
+	log = frappe.qb.DocType(DOCTYPE_LOG)
+	vistos = (frappe.qb.from_(log).select(log.metodo).distinct()).run(pluck="metodo")
+	metodos = {agendado["metodo"] for agendado in _jobs_agendados_sem_proxima()} | set(vistos)
+
+	return {
+		"success": True,
+		"jobs": sorted(
+			({"metodo": metodo, "rotulo": rotulo_do_metodo(metodo)} for metodo in metodos if metodo),
+			key=lambda job: job["rotulo"],
+		),
+	}
 
 
 @frappe.whitelist()
@@ -238,14 +279,14 @@ def listar_execucoes(
 	status: str | None = None,
 	somente_com_erro: Any = 0,
 	dias: Any = 7,
-	limite: Any = 50,
+	limite: Any = LIMITE_PADRAO_DE_EXECUCOES,
 	inicio_em: Any = 0,
 ) -> dict:
-	"""Lista execucoes do periodo, da mais recente para a mais antiga."""
+	"""Lista execucoes do periodo, da mais recente para a mais antiga, paginadas."""
 	_garantir_acesso()
 
 	dias = _normalizar_dias(dias)
-	limite = max(1, min(cint(limite) or 50, LIMITE_MAXIMO))
+	limite = max(1, min(cint(limite) or LIMITE_PADRAO_DE_EXECUCOES, LIMITE_MAXIMO))
 	inicio_em = max(0, cint(inicio_em))
 
 	filtros: dict[str, Any] = {"inicio": [">=", _data_de_corte(dias)]}
@@ -269,6 +310,9 @@ def listar_execucoes(
 	return {
 		"success": True,
 		"execucoes": execucoes[:limite],
+		"total": frappe.db.count(DOCTYPE_LOG, filtros),
+		"limite": limite,
+		"inicio_em": inicio_em,
 		"tem_mais": tem_mais,
 		"proximo_inicio": inicio_em + limite if tem_mais else None,
 	}

@@ -72,7 +72,7 @@ class TestMonitoramentoJobs(FrappeTestCase):
 	def test_listar_jobs_traz_agendados_e_sob_demanda(self):
 		_criar_log(METODO_SOB_DEMANDA, job_logger.STATUS_SUCESSO)
 
-		jobs = monitoramento_jobs.listar_jobs(dias=7)["jobs"]
+		jobs = monitoramento_jobs.listar_jobs(dias=7, limite=monitoramento_jobs.LIMITE_MAXIMO)["jobs"]
 		por_metodo = {job["metodo"]: job for job in jobs}
 
 		self.assertIn(METODO_SOB_DEMANDA, por_metodo)
@@ -87,7 +87,7 @@ class TestMonitoramentoJobs(FrappeTestCase):
 		_criar_log(METODO_SOB_DEMANDA, job_logger.STATUS_ERRO, erro="boom")
 		_criar_log(METODO_AGENDADO, job_logger.STATUS_SUCESSO)
 
-		jobs = monitoramento_jobs.listar_jobs(dias=7)["jobs"]
+		jobs = monitoramento_jobs.listar_jobs(dias=7, limite=monitoramento_jobs.LIMITE_MAXIMO)["jobs"]
 
 		self.assertEqual(jobs[0]["metodo"], METODO_SOB_DEMANDA)
 
@@ -124,6 +124,34 @@ class TestMonitoramentoJobs(FrappeTestCase):
 		self.assertEqual(len(pagina["execucoes"]), 2)
 		self.assertTrue(pagina["tem_mais"])
 		self.assertEqual(pagina["proximo_inicio"], 2)
+		self.assertEqual(pagina["total"], 3)
+
+		segunda = monitoramento_jobs.listar_execucoes(
+			metodo=METODO_SOB_DEMANDA, dias=7, limite=2, inicio_em=2
+		)
+		self.assertEqual(len(segunda["execucoes"]), 1)
+		self.assertFalse(segunda["tem_mais"])
+
+	def test_listar_jobs_pagina(self):
+		completo = monitoramento_jobs.listar_jobs(dias=7, limite=monitoramento_jobs.LIMITE_MAXIMO)
+		self.assertEqual(completo["total"], len(completo["jobs"]))
+		if completo["total"] < 2:
+			return
+
+		primeira = monitoramento_jobs.listar_jobs(dias=7, limite=1)
+		segunda = monitoramento_jobs.listar_jobs(dias=7, limite=1, inicio_em=1)
+
+		self.assertEqual(primeira["total"], completo["total"])
+		self.assertEqual(primeira["jobs"][0]["metodo"], completo["jobs"][0]["metodo"])
+		self.assertEqual(segunda["jobs"][0]["metodo"], completo["jobs"][1]["metodo"])
+
+	def test_listar_metodos_dos_jobs_inclui_agendados_e_ja_vistos(self):
+		_criar_log(METODO_SOB_DEMANDA, job_logger.STATUS_SUCESSO)
+
+		metodos = {job["metodo"] for job in monitoramento_jobs.listar_metodos_dos_jobs()["jobs"]}
+
+		self.assertIn(METODO_AGENDADO, metodos)
+		self.assertIn(METODO_SOB_DEMANDA, metodos)
 
 	def test_obter_execucao_devolve_linha_do_tempo_e_metricas(self):
 		log = _criar_log(METODO_SOB_DEMANDA, job_logger.STATUS_SUCESSO)

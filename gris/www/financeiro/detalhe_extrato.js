@@ -100,7 +100,9 @@ document.addEventListener("DOMContentLoaded", () => {
 	const toast = (category, title) => {
 		document.dispatchEvent(
 			new CustomEvent("basecoat:toast", {
-				detail: { config: { category, title, duration: category === "error" ? 6000 : 3500 } },
+				detail: {
+					config: { category, title, duration: category === "error" ? 6000 : 3500 },
+				},
 			})
 		);
 	};

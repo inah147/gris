@@ -13,18 +13,22 @@
 		<p class="m-0 text-base leading-relaxed text-muted-foreground">Acompanhe seus pedidos de compra, da solicitação até a entrega. Por padrão aparecem só os que aguardam compra.</p>
 	</div>
 	<div class="page-header-actions">
-		{% for area in areas %}
-		<a class="{{ 'btn-primary' if loop.first else 'btn-outline' }}" href="{{ area.href }}" aria-label="Nova solicitação de {{ area.label }}" title="Nova solicitação de {{ area.label }}">
+		<a class="btn-primary" href="{{ href_nova }}">
 			{{ lucide_icon("plus", size="sm") }}
-			<span>{{ area.label }}</span>
+			<span>Nova solicitação</span>
 		</a>
-		{% endfor %}
 	</div>
 </div>
 {% endblock %}
 
 {% block main %}
 <div class="compras-lista">
+	<nav class="flex flex-wrap gap-2" aria-label="Filtrar por área">
+		{% for filtro in filtros_area %}
+		<a href="{{ filtro.href }}" class="{{ 'btn-sm-primary' if filtro.ativo else 'btn-sm-outline' }}"{% if filtro.ativo %} aria-current="page"{% endif %}>{{ filtro.label }}</a>
+		{% endfor %}
+	</nav>
+
 	{% if total_solicitacoes %}
 	<section class="compras-resumo" aria-label="Resumo por status (clique para filtrar)">
 		{% for item in resumo %}
@@ -97,7 +101,7 @@
 		image="/assets/gris/images/gris-character/gris-sad.png",
 		image_alt="Personagem Gris triste",
 		image_size="sm",
-		primary_action={"label": "Nova solicitação", "href": "/compras"}
+		primary_action={"label": "Nova solicitação", "href": href_nova}
 	) }}
 	{% endif %}
 </div>

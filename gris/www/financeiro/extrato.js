@@ -924,7 +924,10 @@
 		// Shift+clique / Shift+setas selecionam um intervalo de linhas, como no Excel.
 		tbody.addEventListener("mousedown", function (event) {
 			// Evita a seleção de texto do navegador ao clicar com Shift.
-			if (event.shiftKey && !event.target.closest("input:not(.transaction-checkbox), select")) {
+			if (
+				event.shiftKey &&
+				!event.target.closest("input:not(.transaction-checkbox), select")
+			) {
 				event.preventDefault();
 			}
 		});
@@ -972,9 +975,10 @@
 				if (!atual) return;
 				event.preventDefault();
 				if (!ancoraSelecao || !ancoraSelecao.isConnected) ancoraSelecao = atual;
-				let base = cursorSelecao && cursorSelecao.isConnected ? cursorSelecao : atual;
+				const base = cursorSelecao && cursorSelecao.isConnected ? cursorSelecao : atual;
 				const linhas = linhasDoGrid();
-				const destino = linhas[linhas.indexOf(base) + (event.key === "ArrowDown" ? 1 : -1)];
+				const destino =
+					linhas[linhas.indexOf(base) + (event.key === "ArrowDown" ? 1 : -1)];
 				if (!destino) return;
 				cursorSelecao = destino;
 				selecionarIntervalo(ancoraSelecao, destino);

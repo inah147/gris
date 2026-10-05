@@ -7,7 +7,7 @@ from gris.api.portal_access import enrich_context
 no_cache = 1
 
 DESCRICOES_AREA = {
-	permissoes.AREA_PROGRAMA_EDUCATIVO: "Insígnias e distintivos do Plano Educativo.",
+	permissoes.AREA_PROGRAMA_EDUCATIVO: "Insígnias e distintivos do Programa Educativo.",
 	permissoes.AREA_MANUTENCAO: "Material e serviços para a sede e os equipamentos do grupo.",
 	permissoes.AREA_ADMINISTRATIVO: "Material de escritório, impressões e demais itens da administração.",
 }

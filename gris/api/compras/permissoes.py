@@ -108,7 +108,7 @@ def pode_ver_alguma_fila(user: str | None = None) -> bool:
 def pode_cadastrar_item(area: str | None, user: str | None = None) -> bool:
 	"""Item novo no catálogo: aberto a todos em Manutenção/Administrativo.
 
-	Insígnias e distintivos seguem o Plano Educativo, e só a gestão de métodos sabe
+	Insígnias e distintivos seguem o Programa Educativo, e só a gestão de métodos sabe
 	quais existem e como se chamam: lá o cadastro é dela.
 	"""
 	meta = AREAS.get(area or "")

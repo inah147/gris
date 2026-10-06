@@ -934,3 +934,48 @@ class TestSoFaltaAcolhida(TestCase):
 		for status in recepcao_funil.STATUS_FORA_DO_FUNIL:
 			with self.subTest(status=status):
 				self.assertFalse(self._sinal(status=status))
+
+
+class TestProntoParaFinalizar(TestCase):
+	"""Só falta clicar em "Finalizar Recepção": nada obrigatório pendente."""
+
+	HOJE = date(2026, 10, 6)
+
+	def _sinal(self, nascimento=date(2010, 1, 1), tipo="Definitivo", **campos):
+		etapas_do_tipo = (
+			recepcao_funil.ORDEM_DEFINITIVO if tipo == "Definitivo" else recepcao_funil.CAMPOS_DE_ETAPA
+		)
+		dados = {
+			"tipo_de_registro": tipo,
+			"status": "Acompanhamento",
+			"data_de_nascimento": nascimento,
+			**dict.fromkeys(etapas_do_tipo, 1),
+		}
+		dados.update(campos)
+		etapas = recepcao_funil.calcular_etapas(dados, {}, None, hoje=self.HOJE)
+		return recepcao_funil.pronto_para_finalizar(dados, etapas)
+
+	def test_tudo_concluido(self):
+		self.assertTrue(self._sinal())
+
+	def test_vale_tambem_para_o_registro_provisorio(self):
+		self.assertTrue(self._sinal(tipo="Provisório"))
+
+	def test_qualquer_etapa_obrigatoria_pendente_apaga_o_sinal(self):
+		for campo in recepcao_funil.ORDEM_DEFINITIVO:
+			with self.subTest(campo=campo):
+				self.assertFalse(self._sinal(**{campo: 0}))
+
+	def test_id_escoteiros_pendente_nao_segura_quem_tem_menos_de_15(self):
+		self.assertTrue(self._sinal(nascimento=date(2016, 1, 1), id_escoteiros_criado=0))
+
+	def test_id_escoteiros_pendente_segura_quem_tem_15_ou_mais(self):
+		self.assertFalse(self._sinal(id_escoteiros_criado=0))
+
+	def test_quem_saiu_do_funil_nao_e_sinalizado(self):
+		for status in recepcao_funil.STATUS_FORA_DO_FUNIL:
+			with self.subTest(status=status):
+				self.assertFalse(self._sinal(status=status))
+
+	def test_sem_etapas_nao_e_sinalizado(self):
+		self.assertFalse(recepcao_funil.pronto_para_finalizar({"status": "Acompanhamento"}, []))

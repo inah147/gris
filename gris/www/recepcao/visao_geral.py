@@ -20,6 +20,7 @@ from gris.api.recepcao_funil import (
 	carregar_configuracao,
 	coluna_de_acompanhamento,
 	dias_para_registro_definitivo,
+	pronto_para_finalizar,
 	sinal_registro_definitivo,
 	so_falta_acolhida,
 	status_por_etapas_concluidas,
@@ -400,6 +401,10 @@ def get_context(context):
 
 			# Sinal "só falta a acolhida": todas as etapas obrigatórias concluídas menos ela.
 			associado.so_falta_acolhida = so_falta_acolhida(associado, associado.steps)
+
+			# Sinal "recepção finalizada": nada obrigatório pendente, só falta clicar em
+			# "Finalizar Recepção". Pinta o card e libera o botão no dialog.
+			associado.pronto_para_finalizar = pronto_para_finalizar(associado, associado.steps)
 
 			# Selo "Seção sem vagas": só marca o card, não trava nada no funil.
 			associado.sem_vagas = ramo_sem_vagas(vagas_por_ramo, associado.ramo, associado.status)

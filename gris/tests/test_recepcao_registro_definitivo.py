@@ -298,3 +298,29 @@ class TestSinaisNovosDoCard(_ContextoDaVisaoGeral, TestCase):
 		context = self._contexto([self._jovem_completo(ficha_medica_preenchida=0)])
 
 		self.assertFalse(self._card(context, "NA-OK").so_falta_acolhida)
+
+	def test_tudo_concluido_sinaliza_recepcao_finalizada(self):
+		context = self._contexto([self._jovem_completo(reuniao_de_acolhida_realizada=1)])
+
+		card = self._card(context, "NA-OK")
+		self.assertTrue(card.pronto_para_finalizar)
+		self.assertFalse(card.so_falta_acolhida)
+
+	def test_so_o_id_escoteiros_opcional_pendente_sinaliza_recepcao_finalizada(self):
+		"""Abaixo dos 15 o id@escoteiros é opcional: não segura o botão de finalizar."""
+		context = self._contexto(
+			[
+				self._jovem_completo(
+					data_de_nascimento=date(2016, 1, 1),
+					id_escoteiros_criado=0,
+					reuniao_de_acolhida_realizada=1,
+				)
+			]
+		)
+
+		self.assertTrue(self._card(context, "NA-OK").pronto_para_finalizar)
+
+	def test_acolhida_pendente_nao_sinaliza_recepcao_finalizada(self):
+		context = self._contexto([self._jovem_completo()])
+
+		self.assertFalse(self._card(context, "NA-OK").pronto_para_finalizar)

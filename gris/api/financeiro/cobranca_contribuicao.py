@@ -474,9 +474,7 @@ def _itens_da_cobranca(nome: str) -> dict[str, float]:
 	}
 
 
-def cobranca_vigente(
-	associado: str, hoje: datetime.date | None = None, competencias=None
-) -> dict | None:
+def cobranca_vigente(associado: str, hoje: datetime.date | None = None, competencias=None) -> dict | None:
 	"""Link da InfinitePay que vale agora para o que o associado tem em aberto.
 
 	Se a cobrança pendente tem as mesmas competências e os mesmos valores do que

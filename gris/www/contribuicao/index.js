@@ -67,7 +67,10 @@
 		}
 		botao.disabled = true;
 		try {
-			const resposta = await chamar("iniciar_pagamento", { token: token, competencias: competencias });
+			const resposta = await chamar("iniciar_pagamento", {
+				token: token,
+				competencias: competencias,
+			});
 			if (resposta.status === 429) {
 				mostrarErro("Muitas tentativas. Aguarde um minuto e tente de novo.");
 				return;

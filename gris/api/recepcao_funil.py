@@ -448,10 +448,25 @@ def so_falta_acolhida(dados, etapas: list[dict]) -> bool:
 	if dados.get("status") in STATUS_FORA_DO_FUNIL:
 		return False
 
-	pendentes = {
-		etapa["field"] for etapa in etapas if not etapa.get("completed") and not etapa.get("opcional")
-	}
-	return pendentes == {CAMPO_ACOLHIDA}
+	return _pendencias_obrigatorias(etapas) == {CAMPO_ACOLHIDA}
+
+
+def pronto_para_finalizar(dados, etapas: list[dict]) -> bool:
+	"""Se só falta clicar em "Finalizar Recepção": nenhuma etapa obrigatória pendente.
+
+	A etapa opcional (id@escoteiros abaixo dos 15 anos) não segura a finalização. É o mesmo
+	sinal que libera o botão no dialog do card e que pinta o card na visão geral. Quem saiu do
+	funil não é sinalizado.
+	"""
+	if dados.get("status") in STATUS_FORA_DO_FUNIL:
+		return False
+
+	return bool(etapas) and not _pendencias_obrigatorias(etapas)
+
+
+def _pendencias_obrigatorias(etapas: list[dict]) -> set[str]:
+	"""Campos das etapas ainda pendentes, sem contar as opcionais."""
+	return {etapa["field"] for etapa in etapas if not etapa.get("completed") and not etapa.get("opcional")}
 
 
 def resumo_etapas(etapas: list[dict]) -> dict:

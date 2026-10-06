@@ -516,8 +516,12 @@ function openAcompanhamentoModal(id, responsavel, nome, responsavelAssociado, st
 		? currentCardElement.dataset.cadastroAssociado || ""
 		: "";
 
-	const allCompleted = parsedSteps.length > 0 && parsedSteps.every((s) => s.completed);
-	if (allCompleted && actions) {
+	// O sinal vem pronto do servidor (`pronto_para_finalizar`), o mesmo que pinta o card: a
+	// etapa opcional — id@escoteiros abaixo dos 15 anos — não segura a finalização.
+	const prontoParaFinalizar = currentCardElement
+		? currentCardElement.dataset.prontoParaFinalizar === "1"
+		: false;
+	if (prontoParaFinalizar && actions) {
 		if (cadastroAssociado) {
 			const finishBtn = document.createElement("button");
 			finishBtn.type = "button";

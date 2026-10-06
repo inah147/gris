@@ -366,6 +366,39 @@
 	box-shadow: inset 3px 0 0 0 #0d9488;
 }
 
+/* Selo "recepção finalizada" ---------------------------------------
+   Todas as etapas obrigatórias concluídas: só falta clicar em "Finalizar
+   Recepção". Verde sólido, a cor de "feito", afastado do verde-azulado do
+   "só falta a acolhida" e do verde-claro do ramo Escoteiro. É o único card
+   com o fundo inteiro tingido, para a fila de finalização saltar aos olhos
+   mesmo entre as outras molduras. */
+.badge.badge-recepcao-finalizada {
+	display: inline-flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 1);
+	background-color: #15803d;
+	color: #ffffff;
+	border-color: #166534;
+	font-weight: 600;
+}
+/* Mesmo motivo do magenta: o verde mais vivo não passa de 4.5:1 com texto claro. */
+.dark .badge.badge-recepcao-finalizada {
+	background-color: #15803d;
+	color: #f0fdf4;
+	border-color: #86efac;
+}
+
+.kanban-card--recepcao-finalizada {
+	background-color: color-mix(in srgb, #22c55e 9%, var(--color-card));
+	border-color: #86efac;
+	box-shadow: inset 3px 0 0 0 #15803d;
+}
+.dark .kanban-card--recepcao-finalizada {
+	background-color: color-mix(in srgb, #22c55e 12%, var(--color-card));
+	border-color: color-mix(in srgb, #86efac 45%, transparent);
+	box-shadow: inset 3px 0 0 0 #16a34a;
+}
+
 /* Timeline (etapas da recepção) ----------------------------------*/
 .timeline-container {
 	position: relative;

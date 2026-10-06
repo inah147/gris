@@ -754,20 +754,27 @@ CONFIG_ACOLHIDA = {"registro_definitivo_efetivado": 0, "reuniao_de_acolhida_real
 class TestAcolhidaDosFilhotes(TestCase):
 	"""Os Filhotes têm prazo próprio entre o registro definitivo e a acolhida."""
 
-	def _data_da_acolhida(self, ramo, config=None):
+	def _dias_ate_a_acolhida(self, ramo, config=None):
+		"""Dias entre o registro definitivo e a acolhida.
+
+		Medido a partir do definitivo, e não da visita, porque nos Filhotes o envio dos dados
+		também tem prazo próprio e empurra tudo o que vem depois.
+		"""
 		dados = {"tipo_de_registro": "Definitivo", "ramo": ramo}
 		etapas = recepcao_funil.calcular_etapas(dados, config or CONFIG_ACOLHIDA, BASE, hoje=BASE)
-		return date.fromisoformat(_etapa(etapas, "reuniao_de_acolhida_realizada")["data_estimada"])
+		definitivo = _etapa(etapas, "registro_definitivo_efetivado")["data_estimada"]
+		acolhida = _etapa(etapas, "reuniao_de_acolhida_realizada")["data_estimada"]
+		return (date.fromisoformat(acolhida) - date.fromisoformat(definitivo)).days
 
 	def test_filhotes_usam_o_padrao_de_30_dias(self):
-		self.assertEqual((self._data_da_acolhida("Filhotes") - BASE).days, 30)
+		self.assertEqual(self._dias_ate_a_acolhida("Filhotes"), 30)
 
 	def test_demais_ramos_seguem_o_intervalo_geral(self):
-		self.assertEqual((self._data_da_acolhida("Lobinho") - BASE).days, 7)
+		self.assertEqual(self._dias_ate_a_acolhida("Lobinho"), 7)
 
 	def test_prazo_configurado_dos_filhotes_vale(self):
 		config = {**CONFIG_ACOLHIDA, "reuniao_de_acolhida_realizada_filhotes": 45}
-		self.assertEqual((self._data_da_acolhida("Filhotes", config) - BASE).days, 45)
+		self.assertEqual(self._dias_ate_a_acolhida("Filhotes", config), 45)
 
 	def test_valor_invalido_cai_no_padrao(self):
 		for valor in (None, 0, -1, "trinta"):
@@ -778,6 +785,114 @@ class TestAcolhidaDosFilhotes(TestCase):
 					),
 					recepcao_funil.DIAS_PADRAO_ACOLHIDA_FILHOTES,
 				)
+
+
+CONFIG_DADOS = {"dados_para_registro_enviados": 7}
+
+
+class TestDadosDosFilhotes(TestCase):
+	"""Os Filhotes têm prazo próprio entre a visita e o envio dos dados para registro."""
+
+	def _data_dos_dados(self, ramo, config=None):
+		dados = {"tipo_de_registro": "Provisório", "ramo": ramo}
+		etapas = recepcao_funil.calcular_etapas(dados, config or CONFIG_DADOS, BASE, hoje=BASE)
+		return date.fromisoformat(_etapa(etapas, "dados_para_registro_enviados")["data_estimada"])
+
+	def test_filhotes_usam_o_padrao_de_30_dias(self):
+		self.assertEqual((self._data_dos_dados("Filhotes") - BASE).days, 30)
+
+	def test_demais_ramos_seguem_o_intervalo_geral(self):
+		self.assertEqual((self._data_dos_dados("Lobinho") - BASE).days, 7)
+
+	def test_prazo_configurado_dos_filhotes_vale(self):
+		config = {**CONFIG_DADOS, "dados_para_registro_enviados_filhotes": 45}
+		self.assertEqual((self._data_dos_dados("Filhotes", config) - BASE).days, 45)
+
+	def test_prazo_dos_filhotes_empurra_as_etapas_seguintes(self):
+		config = {**CONFIG_DADOS, "registro_criado_no_paxtu": 2}
+		dados = {"tipo_de_registro": "Provisório", "ramo": "Filhotes"}
+		etapas = recepcao_funil.calcular_etapas(dados, config, BASE, hoje=BASE)
+		paxtu = date.fromisoformat(_etapa(etapas, "registro_criado_no_paxtu")["data_estimada"])
+
+		self.assertEqual((paxtu - BASE).days, 32)
+
+	def test_valor_invalido_cai_no_padrao(self):
+		for valor in (None, 0, -1, "trinta"):
+			with self.subTest(valor=valor):
+				self.assertEqual(
+					recepcao_funil.dias_de_dados_filhotes({"dados_para_registro_enviados_filhotes": valor}),
+					recepcao_funil.DIAS_PADRAO_DADOS_FILHOTES,
+				)
+
+
+class TestEstruturaDosPrazos(TestCase):
+	"""Esqueleto da árvore de prazos de Configurações de Recepção."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.estrutura = recepcao_funil.estrutura_dos_prazos()
+
+	def _tipo(self, ramo, tipo):
+		ramo = next(item for item in self.estrutura["ramos"] if item["ramo"] == ramo)
+		return next(item for item in ramo["tipos"] if item["tipo"] == tipo)
+
+	def _prazo(self, ramo, tipo, campo):
+		return _etapa(self._tipo(ramo, tipo)["etapas"], campo)
+
+	def test_divide_primeiro_por_ramo_e_depois_por_tipo(self):
+		self.assertEqual([ramo["ramo"] for ramo in self.estrutura["ramos"]], [None, "Filhotes"])
+		self.assertEqual(self.estrutura["ramos"][0]["rotulo"], "Lobinho, Escoteiro, Sênior e Pioneiro")
+		for ramo in self.estrutura["ramos"]:
+			self.assertEqual([tipo["tipo"] for tipo in ramo["tipos"]], ["Provisório", "Definitivo"])
+
+	def test_etapas_seguem_a_ordem_do_funil_sem_as_da_visita(self):
+		for tipo in ("Provisório", "Definitivo"):
+			esperado = [
+				campo
+				for campo in _campos(recepcao_funil.etapas_do_fluxo(tipo))
+				if campo not in ("visita_agendada", "primeira_visita_realizada")
+			]
+			for ramo in (None, "Filhotes"):
+				with self.subTest(tipo=tipo, ramo=ramo):
+					self.assertEqual(_campos(self._tipo(ramo, tipo)["etapas"]), esperado)
+
+	def test_direto_no_definitivo_nao_tem_as_etapas_do_provisorio(self):
+		campos = _campos(self._tipo(None, "Definitivo")["etapas"])
+		for campo in recepcao_funil.ETAPAS_DO_PROVISORIO:
+			self.assertNotIn(campo, campos)
+
+	def test_filhotes_leem_os_proprios_campos(self):
+		for campo, (campo_filhotes, padrao) in recepcao_funil.PRAZOS_PROPRIOS_DOS_FILHOTES.items():
+			with self.subTest(campo=campo):
+				filhotes = self._prazo("Filhotes", "Definitivo", campo)
+				demais = self._prazo(None, "Definitivo", campo)
+
+				self.assertEqual(filhotes["campo"], campo_filhotes)
+				self.assertEqual(filhotes["padrao"], padrao)
+				self.assertTrue(filhotes["proprio_do_ramo"])
+				self.assertEqual(demais["campo"], campo)
+				self.assertIsNone(demais["padrao"])
+				self.assertFalse(demais["proprio_do_ramo"])
+
+	def test_aviso_do_registro_definitivo_usa_o_prazo_do_ramo(self):
+		filhotes = self._prazo("Filhotes", "Provisório", "registro_provisorio_efetivado")["notas"][0]
+		demais = self._prazo(None, "Provisório", "registro_provisorio_efetivado")["notas"][0]
+
+		self.assertEqual(filhotes["campo"], recepcao_funil.CAMPO_DIAS_REGISTRO_DEFINITIVO_FILHOTES)
+		self.assertEqual(demais["campo"], recepcao_funil.CAMPO_DIAS_REGISTRO_DEFINITIVO)
+		self.assertIn("{dias}", demais["texto"])
+
+	def test_campos_lista_tudo_que_a_arvore_le(self):
+		lidos = set()
+		for ramo in self.estrutura["ramos"]:
+			for tipo in ramo["tipos"]:
+				for etapa in tipo["etapas"]:
+					lidos.add(etapa["campo"])
+					lidos.update(nota["campo"] for nota in etapa["notas"] if nota.get("campo"))
+
+		self.assertEqual(set(self.estrutura["campos"]), lidos)
+		self.assertEqual(len(self.estrutura["campos"]), len(lidos))
 
 
 class TestSoFaltaAcolhida(TestCase):

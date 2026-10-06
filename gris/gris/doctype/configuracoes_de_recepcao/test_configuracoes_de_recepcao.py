@@ -4,6 +4,8 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
+from gris.api.recepcao_funil import estrutura_dos_prazos
+
 
 class TestConfiguracoesdeRecepcao(FrappeTestCase):
 	def tearDown(self):
@@ -48,3 +50,13 @@ class TestConfiguracoesdeRecepcao(FrappeTestCase):
 
 		with self.assertRaises(frappe.ValidationError):
 			doc.save(ignore_permissions=True)
+
+	def test_mapa_dos_prazos_so_le_prazos_do_doctype(self):
+		"""A árvore lê os campos pelo nome: um erro de digitação no Python sumiria calado na tela."""
+		meta = frappe.get_meta("Configuracoes de Recepcao")
+
+		for campo in estrutura_dos_prazos()["campos"]:
+			with self.subTest(campo=campo):
+				field = meta.get_field(campo)
+				self.assertIsNotNone(field)
+				self.assertEqual(field.fieldtype, "Int")

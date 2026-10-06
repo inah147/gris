@@ -140,12 +140,15 @@ ETAPAS_QUE_MOVEM_O_FUNIL: tuple[tuple[str, str], ...] = (
 CAMPO_DIAS_REGISTRO_DEFINITIVO = "dias_aviso_seguimento_provisorio"
 DIAS_PADRAO_REGISTRO_DEFINITIVO = 20
 
-# O ramo Filhotes anda em outro ritmo: o definitivo e a acolhida demoram mais. Cada um tem
-# o seu campo em ``Configuracoes de Recepcao``, lido no lugar do geral quando o jovem é
-# Filhote — ver ``dias_para_registro_definitivo`` e ``dias_de_acolhida_filhotes``.
+# O ramo Filhotes anda em outro ritmo: o envio dos dados, o definitivo e a acolhida demoram
+# mais. Cada um tem o seu campo em ``Configuracoes de Recepcao``, lido no lugar do geral
+# quando o jovem é Filhote — ver ``dias_para_registro_definitivo``, ``dias_de_dados_filhotes``
+# e ``dias_de_acolhida_filhotes``.
 RAMO_FILHOTES = "Filhotes"
 CAMPO_DIAS_REGISTRO_DEFINITIVO_FILHOTES = "dias_aviso_seguimento_provisorio_filhotes"
 DIAS_PADRAO_REGISTRO_DEFINITIVO_FILHOTES = 25
+CAMPO_DIAS_DADOS_FILHOTES = "dados_para_registro_enviados_filhotes"
+DIAS_PADRAO_DADOS_FILHOTES = 30
 CAMPO_DIAS_ACOLHIDA_FILHOTES = "reuniao_de_acolhida_realizada_filhotes"
 DIAS_PADRAO_ACOLHIDA_FILHOTES = 30
 
@@ -156,7 +159,16 @@ CAMPO_ID_ESCOTEIROS = "id_escoteiros_criado"
 IDADE_ID_ESCOTEIROS_OBRIGATORIO = 15
 SUFIXO_ETAPA_OPCIONAL = " (opcional)"
 
+CAMPO_DADOS_ENVIADOS = "dados_para_registro_enviados"
 CAMPO_ACOLHIDA = "reuniao_de_acolhida_realizada"
+
+# Etapas em que o ramo Filhotes troca o intervalo geral por um prazo próprio:
+# etapa -> (campo em ``Configuracoes de Recepcao``, padrão). Ao contrário do intervalo geral,
+# onde zero quer dizer "mesmo dia", aqui zero ou vazio cai no padrão (``_dias_configurados``).
+PRAZOS_PROPRIOS_DOS_FILHOTES: dict[str, tuple[str, int]] = {
+	CAMPO_DADOS_ENVIADOS: (CAMPO_DIAS_DADOS_FILHOTES, DIAS_PADRAO_DADOS_FILHOTES),
+	CAMPO_ACOLHIDA: (CAMPO_DIAS_ACOLHIDA_FILHOTES, DIAS_PADRAO_ACOLHIDA_FILHOTES),
+}
 
 # Status que não pertencem à esteira do funil: quem está neles saiu do fluxo por decisão da
 # recepção, e desmarcar uma etapa não pode arrastar o card de volta para uma coluna do kanban.
@@ -241,6 +253,15 @@ def dias_para_registro_definitivo(config: dict | None = None, ramo: str | None =
 			config, CAMPO_DIAS_REGISTRO_DEFINITIVO_FILHOTES, DIAS_PADRAO_REGISTRO_DEFINITIVO_FILHOTES
 		)
 	return _dias_configurados(config, CAMPO_DIAS_REGISTRO_DEFINITIVO, DIAS_PADRAO_REGISTRO_DEFINITIVO)
+
+
+def dias_de_dados_filhotes(config: dict | None = None) -> int:
+	"""Dias entre a visita e o envio dos dados para registro no ramo Filhotes (padrão 30).
+
+	Vale para a data prevista da etapa na timeline e para segurar o primeiro lembrete de
+	dados à família (``gris.api.recepcao_mensagens.enviar_lembretes_dados_registro``).
+	"""
+	return _dias_configurados(config, CAMPO_DIAS_DADOS_FILHOTES, DIAS_PADRAO_DADOS_FILHOTES)
 
 
 def dias_de_acolhida_filhotes(config: dict | None = None) -> int:
@@ -335,21 +356,39 @@ def carregar_configuracao() -> dict:
 		return {}
 
 
-def _intervalo_da_etapa(campo: str, config: dict, dados) -> int | None:
-	"""Dias entre a etapa anterior e ``campo``; None quando a etapa não tem intervalo.
+def _prazo_da_etapa(campo: str, ramo: str | None) -> dict | None:
+	"""De onde sai o intervalo de ``campo`` no ``ramo``; None quando a etapa não tem intervalo.
 
-	A acolhida dos Filhotes tem prazo próprio. As demais etapas, e a acolhida dos outros
-	ramos, usam o campo homônimo de ``FIELD_INTERVAL_MAP``.
+	Nos Filhotes, o envio dos dados e a acolhida têm prazo próprio
+	(``PRAZOS_PROPRIOS_DOS_FILHOTES``). As demais etapas, e essas duas nos outros ramos, usam
+	o campo homônimo de ``FIELD_INTERVAL_MAP``.
+
+	``padrao`` diz como ler o campo: ``None`` é o intervalo geral, em que zero vale "mesmo
+	dia"; um número é o padrão que entra no lugar de zero ou vazio. É a regra que o funil
+	aplica (``_intervalo_da_etapa``) e que a árvore de prazos mostra (``estrutura_dos_prazos``).
 	"""
-	if campo == CAMPO_ACOLHIDA and dados.get("ramo") == RAMO_FILHOTES:
-		return dias_de_acolhida_filhotes(config)
+	if ramo == RAMO_FILHOTES and campo in PRAZOS_PROPRIOS_DOS_FILHOTES:
+		campo_filhotes, padrao = PRAZOS_PROPRIOS_DOS_FILHOTES[campo]
+		return {"campo": campo_filhotes, "padrao": padrao, "proprio_do_ramo": True}
 
 	campo_config = FIELD_INTERVAL_MAP.get(campo)
 	if not campo_config:
 		return None
 
+	return {"campo": campo_config, "padrao": None, "proprio_do_ramo": False}
+
+
+def _intervalo_da_etapa(campo: str, config: dict, dados) -> int | None:
+	"""Dias entre a etapa anterior e ``campo``; None quando a etapa não tem intervalo."""
+	prazo = _prazo_da_etapa(campo, dados.get("ramo"))
+	if not prazo:
+		return None
+
+	if prazo["padrao"] is not None:
+		return _dias_configurados(config, prazo["campo"], prazo["padrao"])
+
 	try:
-		return int(config.get(campo_config) or 0)
+		return int(config.get(prazo["campo"]) or 0)
 	except (ValueError, TypeError):
 		return None
 
@@ -360,7 +399,7 @@ def calcular_etapas(dados, config: dict | None = None, data_base=None, hoje=None
 	``dados`` precisa conter ``tipo_de_registro`` e os campos de etapa; a ordem das
 	etapas, e portanto a das datas estimadas, é a de ``etapas_do_fluxo``.
 	``data_de_nascimento`` decide se o id@escoteiros é opcional e ``ramo`` decide o
-	prazo da acolhida. ``data_base`` é a data da visita mais recente (None desliga as
+	prazo do envio dos dados e o da acolhida. ``data_base`` é a data da visita mais recente (None desliga as
 	estimativas).
 
 	As chaves ``label``/``completed``/``field``/``estimated_date``/``is_overdue``
@@ -452,3 +491,89 @@ def data_da_ultima_visita(nomes: list[str]) -> dict[str, Any]:
 	for visita in visitas:
 		mapa.setdefault(visita.jovem, visita)
 	return mapa
+
+
+# Árvore de prazos de ``Configuracoes de Recepcao``: primeiro o ramo, porque os Filhotes têm
+# prazos próprios, depois o tipo de registro, porque cada um tem a sua ordem de etapas.
+_DEMAIS_RAMOS: tuple[str, ...] = tuple(ramo for ramo in RAMOS if ramo != RAMO_FILHOTES)
+RAMOS_DA_ARVORE: tuple[tuple[str | None, str], ...] = (
+	(None, f"{', '.join(_DEMAIS_RAMOS[:-1])} e {_DEMAIS_RAMOS[-1]}"),
+	(RAMO_FILHOTES, RAMO_FILHOTES),
+)
+TIPOS_DA_ARVORE: tuple[tuple[str, str], ...] = (
+	("Provisório", "Registro provisório"),
+	("Definitivo", "Direto no definitivo"),
+)
+
+
+def _notas_da_etapa(campo: str, ramo: str | None) -> list[dict]:
+	"""O que acontece além da data prevista, para a árvore contar o passo a passo inteiro.
+
+	Uma nota com ``campo`` traz ``{dias}`` no texto, trocado na tela pelo valor do campo — ou
+	pelo ``padrao``, quando ele está zerado ou vazio.
+	"""
+	e_filhote = ramo == RAMO_FILHOTES
+	notas: list[dict] = []
+
+	if campo == "registro_provisorio_efetivado":
+		notas.append(
+			{
+				"texto": 'Selo "Hora do registro definitivo!" e aviso ao administrativo {dias} depois.',
+				"campo": CAMPO_DIAS_REGISTRO_DEFINITIVO_FILHOTES
+				if e_filhote
+				else CAMPO_DIAS_REGISTRO_DEFINITIVO,
+				"padrao": (
+					DIAS_PADRAO_REGISTRO_DEFINITIVO_FILHOTES if e_filhote else DIAS_PADRAO_REGISTRO_DEFINITIVO
+				),
+			}
+		)
+	elif campo == CAMPO_ID_ESCOTEIROS:
+		notas.append(
+			{
+				"texto": (
+					f"Opcional abaixo de {IDADE_ID_ESCOTEIROS_OBRIGATORIO} anos: sem data prevista nem "
+					"lembrete, mas o intervalo continua contando para as etapas seguintes."
+				)
+			}
+		)
+	elif e_filhote and campo == CAMPO_DADOS_ENVIADOS:
+		notas.append({"texto": "Os lembretes de dados à família só começam quando este prazo vence."})
+	elif e_filhote and campo == CAMPO_ACOLHIDA:
+		notas.append({"texto": "O primeiro aviso de acolhida aos chefes só sai quando este prazo vence."})
+
+	return notas
+
+
+def estrutura_dos_prazos() -> dict:
+	"""Esqueleto da árvore de prazos de ``Configuracoes de Recepcao``.
+
+	Sai das mesmas regras de ``calcular_etapas`` — ``etapas_do_fluxo`` e ``_prazo_da_etapa`` —,
+	então a árvore não tem como mostrar uma ordem ou um campo que o funil não segue. As etapas
+	sem intervalo (as da visita) ficam de fora: a visita é a raiz, o dia zero.
+
+	Os números também ficam de fora: a tela lê os valores do próprio formulário, para a árvore
+	acompanhar a edição antes de salvar. ``campos`` lista todos os campos lidos, na ordem em
+	que aparecem, para a tela saber quais edições redesenham a árvore.
+	"""
+	campos: list[str] = []
+	ramos: list[dict] = []
+
+	for ramo, rotulo_do_ramo in RAMOS_DA_ARVORE:
+		tipos: list[dict] = []
+		for tipo, rotulo_do_tipo in TIPOS_DA_ARVORE:
+			etapas: list[dict] = []
+			for step in etapas_do_fluxo(tipo):
+				prazo = _prazo_da_etapa(step["field"], ramo)
+				if not prazo:
+					continue
+
+				notas = _notas_da_etapa(step["field"], ramo)
+				etapas.append({"field": step["field"], "label": step["label"], **prazo, "notas": notas})
+				for item in (prazo, *notas):
+					if item.get("campo") and item["campo"] not in campos:
+						campos.append(item["campo"])
+
+			tipos.append({"tipo": tipo, "rotulo": rotulo_do_tipo, "etapas": etapas})
+		ramos.append({"ramo": ramo, "rotulo": rotulo_do_ramo, "tipos": tipos})
+
+	return {"ramos": ramos, "campos": campos}

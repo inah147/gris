@@ -5,7 +5,8 @@
 
 Regra de negócio: quando um Novo Associado está com o registro provisório ativado
 (``tipo_de_registro`` "Provisório" + ``registro_provisorio_efetivado``) há mais de N dias
-(padrão 20, configurável em Configurações de Recepção), o responsável administrativo recebe
+(padrão 20, ou 25 no ramo Filhotes, configuráveis em Configurações de Recepção), o
+responsável administrativo recebe
 um aviso por WhatsApp para entrar em contato com o responsável do novo associado e questionar
 se o registro efetivo (definitivo) vai seguir.
 
@@ -18,7 +19,7 @@ from __future__ import annotations
 import frappe
 from frappe.utils import add_days, date_diff, format_date, get_url, getdate, today
 
-from gris.api.recepcao_funil import STATUS_FORA_DO_FUNIL, dias_para_registro_definitivo
+from gris.api.recepcao_funil import RAMO_FILHOTES, STATUS_FORA_DO_FUNIL, dias_para_registro_definitivo
 from gris.api.recepcao_mensagens import (
 	MENSAGEM_DESATIVADA,
 	_buscar_contatos_responsaveis,
@@ -75,10 +76,14 @@ def enviar_avisos_seguimento_registro_provisorio() -> None:
 		return
 
 	data_hoje = getdate(today())
+	# O ramo Filhotes espera mais pelo definitivo. O SQL corta pelo prazo mais curto e o
+	# prazo de cada jovem é conferido depois, pelo ramo dele.
 	dias_limite = dias_para_registro_definitivo()
-	data_limite = add_days(data_hoje, -dias_limite)
+	dias_limite_filhotes = dias_para_registro_definitivo(ramo=RAMO_FILHOTES)
+	data_limite = add_days(data_hoje, -min(dias_limite, dias_limite_filhotes))
+	espera = f"{dias_limite} dia(s); Filhotes, {dias_limite_filhotes}"
 
-	novos_associados = frappe.get_all(
+	candidatos = frappe.get_all(
 		"Novo Associado",
 		filters={
 			"tipo_de_registro": "Provisório",
@@ -88,15 +93,21 @@ def enviar_avisos_seguimento_registro_provisorio() -> None:
 			"data_registro_provisorio_efetivado": ["<=", data_limite],
 			"data_aviso_seguimento_provisorio": ["is", "not set"],
 		},
-		fields=["name", "nome_completo", "data_registro_provisorio_efetivado"],
+		fields=["name", "nome_completo", "ramo", "data_registro_provisorio_efetivado"],
 	)
+	novos_associados = [
+		na
+		for na in candidatos
+		if date_diff(data_hoje, getdate(na.data_registro_provisorio_efetivado))
+		>= (dias_limite_filhotes if na.get("ramo") == RAMO_FILHOTES else dias_limite)
+	]
 
 	if not novos_associados:
 		logger.info(
 			"Aviso de seguimento do registro provisório: nenhum novo associado elegível "
-			f"({dias_limite} dia(s) de espera)."
+			f"(espera de {espera})."
 		)
-		definir_resumo(f"Nenhum registro provisório parado há mais de {dias_limite} dia(s) — nada a avisar.")
+		definir_resumo(f"Nenhum registro provisório parado além da espera ({espera}) — nada a avisar.")
 		return
 
 	logger.info(f"{len(novos_associados)} registro(s) provisório(s) elegíveis para aviso.")
@@ -167,9 +178,8 @@ def enviar_avisos_seguimento_registro_provisorio() -> None:
 	metrica("enviados", enviados, incrementar=False)
 	logger.info(
 		"Avisos de seguimento do registro provisório processados: "
-		f"elegiveis={len(novos_associados)}, enviados={enviados}, espera={dias_limite} dia(s)."
+		f"elegiveis={len(novos_associados)}, enviados={enviados}, espera={espera}."
 	)
 	definir_resumo(
-		f"{enviados} de {len(novos_associados)} aviso(s) de seguimento enviado(s) "
-		f"(espera de {dias_limite} dia(s))."
+		f"{enviados} de {len(novos_associados)} aviso(s) de seguimento enviado(s) (espera de {espera})."
 	)

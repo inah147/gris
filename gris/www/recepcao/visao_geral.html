@@ -132,8 +132,14 @@
 		<div class="kanban-column__body">
 			<p class="kanban-column__vazio hidden">Nenhum associado neste ramo.</p>
 			{% for card in kanban_data[status] %}
+			{# Uma moldura só por card, pela prioridade: sem número trava a efetivação, então vem
+			   antes da hora do definitivo; só falta acolhida é o fim da linha. Os selos saem todos. #}
+			{%- if card.numero_registro_pendente %}{% set moldura = ' kanban-card--sem-numero' %}
+			{%- elif card.registro_definitivo_pendente %}{% set moldura = ' kanban-card--registro-definitivo' %}
+			{%- elif card.so_falta_acolhida %}{% set moldura = ' kanban-card--so-falta-acolhida' %}
+			{%- else %}{% set moldura = '' %}{% endif %}
 			<article
-				class="card kanban-card{{ ' kanban-card--registro-definitivo' if card.registro_definitivo_pendente else '' }}"
+				class="card kanban-card{{ moldura }}"
 				data-id="{{ card.name }}"
 				data-status="{{ status }}"
 				data-responsavel="{{ card.responsavel_recepcao or '' }}"
@@ -151,6 +157,8 @@
 				data-observacoes="{{ card.observacoes_count }}"
 				data-cadastro-associado="{{ card.cadastro_associado or '' }}"
 				data-registro-definitivo-pendente="{{ 1 if card.registro_definitivo_pendente else 0 }}"
+				data-numero-registro-pendente="{{ 1 if card.numero_registro_pendente else 0 }}"
+				data-so-falta-acolhida="{{ 1 if card.so_falta_acolhida else 0 }}"
 			>
 				<div class="kanban-card__top">
 					{% if card.ramo %}
@@ -188,6 +196,24 @@
 								"title": "Registro provisório efetivado"
 									~ (" em " ~ card.registro_definitivo_desde if card.registro_definitivo_desde else "")
 									~ " — já são " ~ card.registro_definitivo_dias ~ " dia(s). Está na hora de gerar o registro definitivo."
+							}
+						) }}
+					{% endif %}
+					{% if card.numero_registro_pendente %}
+						{{ badge(
+							lucide_icon("hash", size="sm") ~ "<span>Sem número de registro</span>",
+							attrs={
+								"class": "badge-sem-numero",
+								"title": "Falta o número de registro de: " ~ (card.numero_registro_pendente_texto | e)
+							}
+						) }}
+					{% endif %}
+					{% if card.so_falta_acolhida %}
+						{{ badge(
+							lucide_icon("tent", size="sm") ~ "<span>Só falta a acolhida</span>",
+							attrs={
+								"class": "badge-so-falta-acolhida",
+								"title": "Todas as outras etapas estão concluídas. Falta só a reunião de acolhida."
 							}
 						) }}
 					{% endif %}

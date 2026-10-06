@@ -140,6 +140,24 @@ ETAPAS_QUE_MOVEM_O_FUNIL: tuple[tuple[str, str], ...] = (
 CAMPO_DIAS_REGISTRO_DEFINITIVO = "dias_aviso_seguimento_provisorio"
 DIAS_PADRAO_REGISTRO_DEFINITIVO = 20
 
+# O ramo Filhotes anda em outro ritmo: o definitivo e a acolhida demoram mais. Cada um tem
+# o seu campo em ``Configuracoes de Recepcao``, lido no lugar do geral quando o jovem é
+# Filhote — ver ``dias_para_registro_definitivo`` e ``dias_de_acolhida_filhotes``.
+RAMO_FILHOTES = "Filhotes"
+CAMPO_DIAS_REGISTRO_DEFINITIVO_FILHOTES = "dias_aviso_seguimento_provisorio_filhotes"
+DIAS_PADRAO_REGISTRO_DEFINITIVO_FILHOTES = 25
+CAMPO_DIAS_ACOLHIDA_FILHOTES = "reuniao_de_acolhida_realizada_filhotes"
+DIAS_PADRAO_ACOLHIDA_FILHOTES = 30
+
+# O id@escoteiros só é exigido de quem já tem esta idade. Abaixo dela a etapa continua no
+# fluxo, marcada como opcional, e a família não recebe cobrança (ver
+# ``gris.api.recepcao_mensagens.enviar_lembretes_id_escoteiros``).
+CAMPO_ID_ESCOTEIROS = "id_escoteiros_criado"
+IDADE_ID_ESCOTEIROS_OBRIGATORIO = 15
+SUFIXO_ETAPA_OPCIONAL = " (opcional)"
+
+CAMPO_ACOLHIDA = "reuniao_de_acolhida_realizada"
+
 # Status que não pertencem à esteira do funil: quem está neles saiu do fluxo por decisão da
 # recepção, e desmarcar uma etapa não pode arrastar o card de volta para uma coluna do kanban.
 STATUS_FORA_DO_FUNIL: tuple[str, ...] = ("Fila de espera", "Concluído")
@@ -196,24 +214,62 @@ def etapas_do_fluxo(tipo_de_registro) -> list[dict[str, Any]]:
 	return [_ETAPA_POR_CAMPO[campo] for campo in ORDEM_DEFINITIVO]
 
 
-def dias_para_registro_definitivo(config: dict | None = None) -> int:
-	"""Dias corridos entre efetivar o provisório e cobrar o registro definitivo.
+def _dias_configurados(config: dict | None, campo: str, padrao: int) -> int:
+	"""Prazo em dias de ``Configuracoes de Recepcao``; ausente, inválido ou ≤ 0 vira ``padrao``.
 
-	Sai de ``Configuracoes de Recepcao``; valor ausente, inválido ou não positivo
-	cai para ``DIAS_PADRAO_REGISTRO_DEFINITIVO`` (20). ``config`` evita reabrir o
-	Single quando quem chama já carregou a configuração do funil.
+	``config`` evita reabrir o Single quando quem chama já carregou a configuração do funil.
 	"""
-	if config is None:
-		valor = frappe.db.get_single_value(DOCTYPE_CONFIGURACOES, CAMPO_DIAS_REGISTRO_DEFINITIVO)
-	else:
-		valor = config.get(CAMPO_DIAS_REGISTRO_DEFINITIVO)
+	valor = frappe.db.get_single_value(DOCTYPE_CONFIGURACOES, campo) if config is None else config.get(campo)
 
 	try:
 		dias = int(valor)
 	except (TypeError, ValueError):
-		return DIAS_PADRAO_REGISTRO_DEFINITIVO
+		return padrao
 
-	return dias if dias > 0 else DIAS_PADRAO_REGISTRO_DEFINITIVO
+	return dias if dias > 0 else padrao
+
+
+def dias_para_registro_definitivo(config: dict | None = None, ramo: str | None = None) -> int:
+	"""Dias corridos entre efetivar o provisório e cobrar o registro definitivo.
+
+	Sai de ``Configuracoes de Recepcao``: o ramo Filhotes tem campo próprio (padrão 25),
+	os demais usam o geral (padrão 20). Valor ausente, inválido ou não positivo cai no
+	padrão do ramo.
+	"""
+	if ramo == RAMO_FILHOTES:
+		return _dias_configurados(
+			config, CAMPO_DIAS_REGISTRO_DEFINITIVO_FILHOTES, DIAS_PADRAO_REGISTRO_DEFINITIVO_FILHOTES
+		)
+	return _dias_configurados(config, CAMPO_DIAS_REGISTRO_DEFINITIVO, DIAS_PADRAO_REGISTRO_DEFINITIVO)
+
+
+def dias_de_acolhida_filhotes(config: dict | None = None) -> int:
+	"""Dias entre o registro definitivo e a acolhida no ramo Filhotes (padrão 30).
+
+	Vale para a data prevista da etapa na timeline e para segurar o primeiro aviso de
+	acolhida aos chefes (``gris.api.recepcao_mensagens.enviar_lembretes_acolhida_lenco``).
+	"""
+	return _dias_configurados(config, CAMPO_DIAS_ACOLHIDA_FILHOTES, DIAS_PADRAO_ACOLHIDA_FILHOTES)
+
+
+def id_escoteiros_obrigatorio(dados, hoje=None) -> bool:
+	"""Se o id@escoteiros é exigido deste jovem: 15 anos completos ou mais.
+
+	A idade é a de hoje, então quem faz 15 anos no meio do fluxo passa a ter a etapa
+	obrigatória. Sem data de nascimento a etapa continua obrigatória, como sempre foi —
+	afrouxar a regra por falta de dado esconderia uma pendência real.
+
+	A conta é feita aqui, e não com ``idade_decimal`` do controller de ``Novo Associado``,
+	porque o controller importa este módulo.
+	"""
+	nascimento = dados.get("data_de_nascimento")
+	if not nascimento:
+		return True
+
+	nascimento = getdate(nascimento)
+	hoje = getdate(hoje) if hoje else getdate()
+	anos = hoje.year - nascimento.year - ((hoje.month, hoje.day) < (nascimento.month, nascimento.day))
+	return anos >= IDADE_ID_ESCOTEIROS_OBRIGATORIO
 
 
 def sinal_registro_definitivo(dados, dias_limite: int | None = None, hoje=None) -> dict:
@@ -221,7 +277,8 @@ def sinal_registro_definitivo(dados, dias_limite: int | None = None, hoje=None) 
 
 	Mesma condição do aviso por WhatsApp: registro provisório efetivado, definitivo
 	ainda não, fora dos status que saíram do funil e ``dias_limite`` dias corridos
-	desde ``data_registro_provisorio_efetivado``.
+	desde ``data_registro_provisorio_efetivado``. Sem ``dias_limite``, o prazo é o do
+	ramo do jovem (ver ``dias_para_registro_definitivo``).
 
 	Devolve ``{"pendente", "dias", "desde"}`` — ``dias`` e ``desde`` só preenchidos
 	quando pendente, para a interface poder dizer desde quando o relógio corre.
@@ -243,7 +300,7 @@ def sinal_registro_definitivo(dados, dias_limite: int | None = None, hoje=None) 
 
 	desde = getdate(efetivado_em)
 	dias = date_diff(getdate(hoje) if hoje else getdate(), desde)
-	limite = dias_limite if dias_limite is not None else dias_para_registro_definitivo()
+	limite = dias_limite if dias_limite is not None else dias_para_registro_definitivo(ramo=dados.get("ramo"))
 
 	if dias < limite:
 		return ausente
@@ -278,19 +335,43 @@ def carregar_configuracao() -> dict:
 		return {}
 
 
+def _intervalo_da_etapa(campo: str, config: dict, dados) -> int | None:
+	"""Dias entre a etapa anterior e ``campo``; None quando a etapa não tem intervalo.
+
+	A acolhida dos Filhotes tem prazo próprio. As demais etapas, e a acolhida dos outros
+	ramos, usam o campo homônimo de ``FIELD_INTERVAL_MAP``.
+	"""
+	if campo == CAMPO_ACOLHIDA and dados.get("ramo") == RAMO_FILHOTES:
+		return dias_de_acolhida_filhotes(config)
+
+	campo_config = FIELD_INTERVAL_MAP.get(campo)
+	if not campo_config:
+		return None
+
+	try:
+		return int(config.get(campo_config) or 0)
+	except (ValueError, TypeError):
+		return None
+
+
 def calcular_etapas(dados, config: dict | None = None, data_base=None, hoje=None) -> list[dict]:
 	"""Etapas de uma pessoa, com data estimada e marcação de atraso.
 
 	``dados`` precisa conter ``tipo_de_registro`` e os campos de etapa; a ordem das
 	etapas, e portanto a das datas estimadas, é a de ``etapas_do_fluxo``.
-	``data_base`` é a data da visita mais recente (None desliga as estimativas).
+	``data_de_nascimento`` decide se o id@escoteiros é opcional e ``ramo`` decide o
+	prazo da acolhida. ``data_base`` é a data da visita mais recente (None desliga as
+	estimativas).
 
 	As chaves ``label``/``completed``/``field``/``estimated_date``/``is_overdue``
 	são consumidas pelo JavaScript do kanban da recepção; ``data_estimada``
-	(ISO) existe para consumo programático.
+	(ISO) existe para consumo programático. Etapa opcional leva ``opcional: True`` e,
+	pendente, não tem data prevista nem atraso — mas o intervalo dela continua contando,
+	para não puxar para trás a previsão das etapas seguintes.
 	"""
 	config = config if config is not None else carregar_configuracao()
 	hoje = getdate(hoje) if hoje else getdate()
+	id_escoteiros_opcional = not id_escoteiros_obrigatorio(dados, hoje)
 
 	etapas: list[dict] = []
 	data_corrente = getdate(data_base) if data_base else None
@@ -299,30 +380,48 @@ def calcular_etapas(dados, config: dict | None = None, data_base=None, hoje=None
 		concluida = bool(dados.get(step["field"]))
 		etapa = {"label": step["label"], "completed": concluida, "field": step["field"]}
 
+		opcional = id_escoteiros_opcional and step["field"] == CAMPO_ID_ESCOTEIROS
+		if opcional:
+			etapa["label"] += SUFIXO_ETAPA_OPCIONAL
+			etapa["opcional"] = True
+
 		if data_corrente:
-			campo_config = FIELD_INTERVAL_MAP.get(step["field"])
-			if campo_config:
-				try:
-					dias = int(config.get(campo_config) or 0)
-				except (ValueError, TypeError):
-					dias = None
-				if dias is not None:
-					data_corrente = getdate(add_days(data_corrente, dias))
-					if not concluida:
-						etapa["estimated_date"] = format_date(data_corrente)
-						etapa["data_estimada"] = data_corrente.isoformat()
-						if data_corrente < hoje:
-							etapa["is_overdue"] = True
+			dias = _intervalo_da_etapa(step["field"], config, dados)
+			if dias is not None:
+				data_corrente = getdate(add_days(data_corrente, dias))
+				if not concluida and not opcional:
+					etapa["estimated_date"] = format_date(data_corrente)
+					etapa["data_estimada"] = data_corrente.isoformat()
+					if data_corrente < hoje:
+						etapa["is_overdue"] = True
 
 		etapas.append(etapa)
 
 	return etapas
 
 
+def so_falta_acolhida(dados, etapas: list[dict]) -> bool:
+	"""Se a acolhida é a única etapa obrigatória ainda pendente.
+
+	``etapas`` é a saída de ``calcular_etapas`` para o mesmo jovem — é ela que sabe quais
+	etapas o tipo de registro tem e qual é opcional. Quem saiu do funil não é sinalizado.
+	"""
+	if dados.get("status") in STATUS_FORA_DO_FUNIL:
+		return False
+
+	pendentes = {
+		etapa["field"] for etapa in etapas if not etapa.get("completed") and not etapa.get("opcional")
+	}
+	return pendentes == {CAMPO_ACOLHIDA}
+
+
 def resumo_etapas(etapas: list[dict]) -> dict:
-	"""Consolida o progresso: concluídas, pendentes, atrasadas e a próxima etapa."""
+	"""Consolida o progresso: concluídas, pendentes, atrasadas e a próxima etapa.
+
+	Etapa opcional ainda pendente não conta como pendência nem vira a próxima etapa.
+	"""
 	concluidas = [etapa for etapa in etapas if etapa.get("completed")]
-	pendentes = [etapa for etapa in etapas if not etapa.get("completed")]
+	pendentes = [etapa for etapa in etapas if not etapa.get("completed") and not etapa.get("opcional")]
 	atrasadas = [etapa for etapa in pendentes if etapa.get("is_overdue")]
 	proxima = pendentes[0] if pendentes else None
 

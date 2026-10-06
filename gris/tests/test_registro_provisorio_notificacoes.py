@@ -21,6 +21,7 @@ class TestRegistroProvisorioNotificacoes(FrappeTestCase):
 		responsaveis=None,
 		responsavel_administrativo=None,
 		dias_configurados=20,
+		dias_filhotes_configurados=None,
 		data_hoje="2026-05-11",
 		sender=None,
 	):
@@ -57,6 +58,8 @@ class TestRegistroProvisorioNotificacoes(FrappeTestCase):
 		def _fake_get_single_value(_doctype, fieldname):
 			if fieldname == "dias_aviso_seguimento_provisorio":
 				return dias_configurados
+			if fieldname == "dias_aviso_seguimento_provisorio_filhotes":
+				return dias_filhotes_configurados
 			if fieldname == "responsavel_administrativo":
 				return responsavel_administrativo.get("name") if responsavel_administrativo else None
 			return None
@@ -179,6 +182,8 @@ class TestRegistroProvisorioNotificacoes(FrappeTestCase):
 		_, _, filtros_usados = self._executar_rotina(
 			[],
 			dias_configurados=30,
+			# Acima do geral, para o corte do SQL continuar sendo o prazo geral.
+			dias_filhotes_configurados=35,
 			responsavel_administrativo={
 				"name": "ASSOC-ADM",
 				"nome_completo": "Carla Souza",
@@ -342,3 +347,50 @@ class TestRegistroProvisorioNotificacoes(FrappeTestCase):
 
 		self.assertEqual(chamadas["total"], 2)
 		self.assertEqual([u["docname"] for u in atualizacoes], ["NA-002"])
+
+	def test_sql_corta_pelo_prazo_mais_curto_entre_geral_e_filhotes(self):
+		"""Com o geral maior que o dos Filhotes, o SQL não pode esconder os filhotes já vencidos."""
+		_, _, filtros_usados = self._executar_rotina(
+			[],
+			dias_configurados=30,
+			responsavel_administrativo={
+				"name": "ASSOC-ADM",
+				"nome_completo": "Carla Souza",
+				"telefone": "+5511988882222",
+			},
+		)
+
+		# Filhotes sem configuração caem no padrão de 25 dias.
+		self.assertEqual(str(filtros_usados[0]["data_registro_provisorio_efetivado"][1]), "2026-04-16")
+
+	def test_filhote_so_e_avisado_no_prazo_do_proprio_ramo(self):
+		enviadas, atualizacoes, _ = self._executar_rotina(
+			[
+				{
+					"name": "NA-FILHOTE-22",
+					"nome_completo": "Filhote no prazo",
+					"ramo": "Filhotes",
+					"data_registro_provisorio_efetivado": "2026-04-19",  # 22 dias
+				},
+				{
+					"name": "NA-LOBINHO-22",
+					"nome_completo": "Lobinho vencido",
+					"ramo": "Lobinho",
+					"data_registro_provisorio_efetivado": "2026-04-19",  # 22 dias
+				},
+				{
+					"name": "NA-FILHOTE-25",
+					"nome_completo": "Filhote vencido",
+					"ramo": "Filhotes",
+					"data_registro_provisorio_efetivado": "2026-04-16",  # 25 dias
+				},
+			],
+			responsavel_administrativo={
+				"name": "ASSOC-ADM",
+				"nome_completo": "Carla Souza",
+				"telefone": "+5511988882222",
+			},
+		)
+
+		self.assertEqual(len(enviadas), 2)
+		self.assertEqual(sorted(u["docname"] for u in atualizacoes), ["NA-FILHOTE-25", "NA-LOBINHO-22"])

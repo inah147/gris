@@ -988,10 +988,12 @@ def seed_singles_gris(creds: dict):
 			"intervalo_provisorio_definitivo": 60,
 			"registro_provisorio_efetivado": 7,
 			"reuniao_de_acolhida_realizada": 14,
+			"reuniao_de_acolhida_realizada_filhotes": 30,
 			"valor_registro_provisorio": 50.0,
 			"valor_registro_definitivo": 150.0,
 			"valor_carteirinha": 25.0,
 			"dias_aviso_seguimento_provisorio": 20,
+			"dias_aviso_seguimento_provisorio_filhotes": 25,
 		},
 	)
 	print("  → Configuracoes de Recepcao atualizado")

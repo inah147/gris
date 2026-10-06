@@ -2,7 +2,7 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import add_days, cint, getdate, now, today
+from frappe.utils import cint, getdate, now, today
 
 from gris.api.portal_access import enrich_context
 from gris.api.recepcao import limpar_sinal_de_reagendamento
@@ -10,7 +10,7 @@ from gris.api.recepcao_disponibilidade import (
 	data_disponivel_para_ramo,
 	datas_disponiveis_para_ramos,
 )
-from gris.api.recepcao_funil import FIELD_INTERVAL_MAP, etapas_do_fluxo
+from gris.api.recepcao_funil import FIELD_INTERVAL_MAP, calcular_etapas
 from gris.api.recepcao_notificacoes import notificar_nova_manifestacao_no_grupo_recepcao
 from gris.api.recepcao_visitas import agendar_ou_remarcar_visita
 from gris.api.responsavel_acesso import get_responsavel_do_usuario
@@ -131,6 +131,7 @@ def get_context(context):
 			"ramo",
 			"status",
 			"tipo_de_registro",
+			"data_de_nascimento",
 			"visita_agendada",
 			"primeira_visita_realizada",
 			*field_interval_map.keys(),
@@ -156,39 +157,14 @@ def get_context(context):
 			if not b.visita_agendada:
 				show_schedule_button = True
 
+			# Mesmo cálculo do kanban da recepção: ordem do tipo de registro, datas previstas,
+			# id@escoteiros opcional abaixo dos 15 anos e o prazo de acolhida dos Filhotes.
 			b.steps = []
-			stop_adding = False
-
-			current_calc_date = visits_map.get(b.name)
-
-			# Mesma ordem do kanban da recepção, que muda com o tipo de registro
-			for step in etapas_do_fluxo(b.tipo_de_registro):
-				if stop_adding:
+			for etapa in calcular_etapas(b, config, visits_map.get(b.name)):
+				b.steps.append(etapa)
+				# Antes do envio dos dados, a família só enxerga até essa etapa.
+				if etapa["field"] == "dados_para_registro_enviados" and not etapa["completed"]:
 					break
-
-				is_completed = bool(b.get(step["field"]))
-				step_data = {"label": step["label"], "completed": is_completed, "field": step["field"]}
-
-				# Calculate dates for pending steps
-				if current_calc_date:
-					config_field_name = field_interval_map.get(step["field"])
-					if config_field_name:
-						days_val = config.get(config_field_name) or 0
-						try:
-							days_int = int(days_val)
-							current_calc_date = add_days(current_calc_date, days_int)
-							# If not completed, show the estimated date
-							if not is_completed:
-								step_data["estimated_date"] = frappe.utils.format_date(current_calc_date)
-								if current_calc_date < getdate():
-									step_data["is_overdue"] = True
-						except (ValueError, TypeError):
-							pass
-
-				b.steps.append(step_data)
-
-				if step["field"] == "dados_para_registro_enviados" and not is_completed:
-					stop_adding = True
 
 	# Check for existing scheduled visit
 	visit_info = None

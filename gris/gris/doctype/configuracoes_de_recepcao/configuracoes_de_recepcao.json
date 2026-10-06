@@ -18,6 +18,7 @@
   "registro_provisorio_efetivado",
   "ficha_medica_preenchida",
   "reuniao_de_acolhida_realizada",
+  "reuniao_de_acolhida_realizada_filhotes",
   "valores_de_registro_section",
   "valor_registro_provisorio",
   "column_break_qwxy",
@@ -58,6 +59,7 @@
   "responsavel_administrativo",
   "column_break_acomp_prov",
   "dias_aviso_seguimento_provisorio",
+  "dias_aviso_seguimento_provisorio_filhotes",
   "documentos_drive_section",
   "habilitar_documentos_drive",
   "drive_compartilhado_acesso_restrito",
@@ -136,6 +138,13 @@
    "fieldname": "reuniao_de_acolhida_realizada",
    "fieldtype": "Int",
    "label": "Reuni\u00e3o de acolhida realizada"
+  },
+  {
+   "default": "30",
+   "description": "Dias entre o registro definitivo e a acolhida no ramo Filhotes. Também segura o primeiro aviso de acolhida no grupo de chefes de seção até o prazo vencer.",
+   "fieldname": "reuniao_de_acolhida_realizada_filhotes",
+   "fieldtype": "Int",
+   "label": "Reunião de acolhida realizada (Filhotes)"
   },
   {
    "fieldname": "fluxo_de_registro_section",
@@ -392,6 +401,13 @@
    "label": "Dias para aviso de seguimento do registro provisório"
   },
   {
+   "default": "25",
+   "description": "Mesmo aviso, para o ramo Filhotes. Também é o prazo do selo \"Hora do registro definitivo!\" na visão geral.",
+   "fieldname": "dias_aviso_seguimento_provisorio_filhotes",
+   "fieldtype": "Int",
+   "label": "Dias para aviso de seguimento do registro provisório (Filhotes)"
+  },
+  {
    "description": "Documentos enviados pelos responsáveis no portal vão direto para o Google Drive, sem gravar arquivo no GRIS.",
    "fieldname": "documentos_drive_section",
    "fieldtype": "Section Break",
@@ -458,7 +474,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-14 12:00:00.000000",
+ "modified": "2026-10-06 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Configuracoes de Recepcao",

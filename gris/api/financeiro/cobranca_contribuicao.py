@@ -474,7 +474,9 @@ def _itens_da_cobranca(nome: str) -> dict[str, float]:
 	}
 
 
-def cobranca_vigente(associado: str, hoje: datetime.date | None = None) -> dict | None:
+def cobranca_vigente(
+	associado: str, hoje: datetime.date | None = None, competencias=None
+) -> dict | None:
 	"""Link da InfinitePay que vale agora para o que o associado tem em aberto.
 
 	Se a cobrança pendente tem as mesmas competências e os mesmos valores do que
@@ -482,10 +484,24 @@ def cobranca_vigente(associado: str, hoje: datetime.date | None = None) -> dict 
 	com o atraso, ou um mês entrou ou saiu) e a anterior vira "Substituída". Sem
 	nada em aberto, devolve `None`. Não checa papel: quem chama é a página pública,
 	que só chega aqui com um código válido.
+
+	`competencias` restringe a cobrança aos meses que o responsável escolheu pagar;
+	sem ela vale tudo o que está em aberto. Mês que não está em aberto é recusado.
 	"""
 	pendentes = get_situacao_para_cobranca(associado)["pendentes"]
 	if not pendentes:
 		return None
+	escolhidas = _normalizar_competencias(competencias)
+	if escolhidas:
+		fora = [ym for ym in escolhidas if ym not in {p["ym"] for p in pendentes}]
+		if fora:
+			frappe.throw(
+				_("Estas competências não estão em aberto para o associado: {0}.").format(
+					", ".join(_rotulo(ym) for ym in fora)
+				),
+				frappe.ValidationError,
+			)
+		pendentes = [p for p in pendentes if p["ym"] in escolhidas]
 	em_aberto = {p["ym"]: round(float(p["valor"]), 2) for p in pendentes}
 
 	anteriores = frappe.get_all(

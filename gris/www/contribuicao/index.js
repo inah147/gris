@@ -36,12 +36,38 @@
 		return resposta;
 	}
 
+	const checks = Array.from(document.querySelectorAll(".cp-mes__check"));
+	const botaoPagar = document.getElementById("cp-pagar");
+	const totalEl = document.getElementById("cp-total");
+
+	function brl(valor) {
+		return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+	}
+
+	function selecionadas() {
+		return checks.filter((c) => c.checked);
+	}
+
+	function atualizarTotal() {
+		const marcadas = selecionadas();
+		const total = marcadas.reduce((soma, c) => soma + Number(c.dataset.valor || 0), 0);
+		if (totalEl) totalEl.textContent = brl(total);
+		if (botaoPagar) botaoPagar.disabled = marcadas.length === 0;
+	}
+
+	checks.forEach((c) => c.addEventListener("change", atualizarTotal));
+
 	async function pagar(evento) {
 		const botao = evento.currentTarget;
 		mostrarErro("");
+		const competencias = selecionadas().map((c) => c.value);
+		if (!competencias.length) {
+			mostrarErro("Selecione ao menos um mês para pagar.");
+			return;
+		}
 		botao.disabled = true;
 		try {
-			const resposta = await chamar("iniciar_pagamento", { token: token });
+			const resposta = await chamar("iniciar_pagamento", { token: token, competencias: competencias });
 			if (resposta.status === 429) {
 				mostrarErro("Muitas tentativas. Aguarde um minuto e tente de novo.");
 				return;
@@ -60,11 +86,10 @@
 				"Não foi possível gerar o link de pagamento agora. Tente novamente em instantes."
 			);
 		} finally {
-			botao.disabled = false;
+			atualizarTotal();
 		}
 	}
 
-	const botaoPagar = document.getElementById("cp-pagar");
 	if (botaoPagar) botaoPagar.addEventListener("click", pagar);
 
 	// Ao voltar da InfinitePay a página confere o status até a baixa chegar.

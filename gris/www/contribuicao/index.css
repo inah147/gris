@@ -29,6 +29,8 @@
 .cp-status__titulo { margin: 0 0 0.25rem; font-size: 1.25rem; font-weight: 600; line-height: 1.25; }
 .cp-status__subtitulo { margin: 0; color: var(--muted-foreground); font-size: 0.95rem; }
 
+.cp-meses .cp-actions { margin-top: 1rem; }
+.cp-pagar[disabled] { opacity: 0.5; cursor: not-allowed; }
 .cp-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
 .cp-pagar, .cp-comprovante { display: inline-flex; align-items: center; gap: 0.5rem; }
 .cp-erro { margin: 0; color: var(--destructive); font-size: 0.9rem; }
@@ -43,9 +45,11 @@
 .cp-meses__titulo { margin: 0 0 0.5rem; font-size: 1rem; font-weight: 600; }
 .cp-meses__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .cp-mes {
-	display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 0.75rem;
+	display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 0.75rem;
 	padding: 0.75rem 1rem; border-radius: var(--radius); background: var(--muted);
 }
+.cp-mes { cursor: pointer; }
+.cp-mes__check { width: 1.1rem; height: 1.1rem; }
 .cp-mes__rotulo { font-weight: 600; }
 .cp-mes__valor { text-align: right; font-variant-numeric: tabular-nums; }
 .cp-mes__valor small { display: block; color: var(--muted-foreground); font-size: 0.75rem; }
@@ -54,14 +58,10 @@
 .cp-badge--atrasado { background: color-mix(in oklab, var(--destructive) 14%, transparent); color: var(--destructive); }
 .cp-vazio { color: var(--muted-foreground); margin: 0; }
 
-.cp-footer {
-	margin-top: auto; width: 100%; max-width: 640px; padding: 1.5rem 0 0.5rem;
-	border-top: 1px solid var(--border); text-align: center; color: var(--muted-foreground);
-}
-.cp-footer p { margin: 0; font-size: 0.9rem; }
-.cp-footer__sub { margin-top: 0.25rem !important; font-size: 0.8rem; }
+.assinatura { margin-top: auto; text-align: center; color: var(--muted-foreground); font-size: 0.8rem; }
+.assinatura .coracao { color: #d6336c; }
 
 @media (max-width: 480px) {
-	.cp-mes { grid-template-columns: 1fr auto; }
-	.cp-mes__valor { grid-column: 1 / -1; text-align: left; }
+	.cp-mes { grid-template-columns: auto 1fr auto; }
+	.cp-mes__valor { grid-column: 2 / -1; text-align: left; }
 }

@@ -138,16 +138,17 @@ def montar_pagina(token: str | None, hoje: datetime.date | None = None) -> dict 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])  # nosemgrep
 @rate_limit(key="contribuicao-publica-pagar", limit=10, seconds=60)
-def iniciar_pagamento(token: str | None = None) -> dict:
-	"""Devolve o link da InfinitePay com o valor de hoje do que está em aberto.
+def iniciar_pagamento(token: str | None = None, competencias: str | list | None = None) -> dict:
+	"""Devolve o link da InfinitePay com o valor de hoje dos meses escolhidos.
 
-	Só aceita o código: competências e valores vêm da apuração, nunca do cliente.
+	`competencias` (AAAA-MM) diz quais meses em aberto pagar; sem ela, todos. Só
+	o recorte vem do cliente: valores saem da apuração e mês fora do aberto é recusado.
 	"""
 	associado = associado_do_token(token)
 	if not associado:
 		frappe.throw(_("Página indisponível"), frappe.PageDoesNotExistError)
 
-	cobranca = cobranca_vigente(associado)
+	cobranca = cobranca_vigente(associado, competencias=competencias)
 	if not cobranca:
 		frappe.throw(_("Não há contribuição em aberto para pagar."), frappe.ValidationError)
 	return {"link_pagamento": cobranca["link_pagamento"]}

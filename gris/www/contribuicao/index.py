@@ -36,6 +36,8 @@ def get_context(context):
 		"numeral": uel_data.get("numeral") or "",
 		"regiao": uel_data.get("regiao") or "",
 	}
+	context.uel_tipo = context.uel["tipo_uel"]
+	context.uel_nome = context.uel["nome_da_uel"]
 	# `noindex` e `no-referrer` também no HTML; os cabeçalhos saem do after_request.
 	context.head_html = (
 		'<meta name="robots" content="noindex, nofollow"><meta name="referrer" content="no-referrer">'

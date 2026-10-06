@@ -19,7 +19,8 @@ import json
 
 import frappe
 from frappe import _
-from frappe.utils import add_days, cint, now_datetime
+from frappe.query_builder.functions import Max
+from frappe.utils import add_days, cint, now, now_datetime
 
 # Perfil sem nenhum papel associado. Usado como "sem mapeamento" na criação de
 # usuários; nunca deve ser aplicado automaticamente sobre um usuário existente,
@@ -110,6 +111,128 @@ def add_user_roles(user: str, roles) -> list[str]:
 		frappe.clear_cache(user=user)
 
 	return adicionados
+
+
+def remove_user_roles(user: str, roles) -> list[str]:
+	"""Retira papéis do usuário sem disparar `User.save()`.
+
+	Contraparte de `add_user_roles`. Atenção: um papel que vem do Role Profile do
+	usuário volta no próximo `User.save()` — quem chama deve checar isso antes
+	(`get_role_profile_roles`).
+
+	Retorna a lista de papéis efetivamente removidos.
+	"""
+	if not user or not roles:
+		return []
+
+	removidos = sorted(get_user_roles(user) & {role for role in roles if role})
+	if not removidos:
+		return []
+
+	frappe.db.delete("Has Role", {"parenttype": "User", "parent": user, "role": ["in", removidos]})
+	frappe.clear_cache(user=user)
+	return removidos
+
+
+def add_role_to_users(role: str, users) -> list[str]:
+	"""Concede um papel a vários usuários de uma vez, sem `User.save()`.
+
+	Mesma gravação direta de `add_user_roles`, em lote: uma consulta para saber quem
+	já tem o papel, uma para o próximo `idx` de cada usuário e um único insert.
+
+	Retorna os usuários que receberam o papel.
+	"""
+	usuarios = [usuario for usuario in dict.fromkeys(users or []) if usuario]
+	if not role or not usuarios or not frappe.db.exists("Role", role):
+		return []
+
+	ja_tem = set(
+		frappe.get_all(
+			"Has Role",
+			filters={"parenttype": "User", "parent": ["in", usuarios], "role": role},
+			pluck="parent",
+			limit_page_length=0,
+		)
+	)
+	existentes = set(
+		frappe.get_all("User", filters={"name": ["in", usuarios]}, pluck="name", limit_page_length=0)
+	)
+	alvos = [usuario for usuario in usuarios if usuario in existentes and usuario not in ja_tem]
+	if not alvos:
+		return []
+
+	has_role = frappe.qb.DocType("Has Role")
+	ultimos = (
+		frappe.qb.from_(has_role)
+		.select(has_role.parent, Max(has_role.idx))
+		.where(has_role.parenttype == "User")
+		.where(has_role.parent.isin(alvos))
+		.groupby(has_role.parent)
+	).run()
+	ultimo_idx = {parent: idx or 0 for parent, idx in ultimos}
+
+	agora = now()
+	quem = frappe.session.user
+	campos = [
+		"name",
+		"creation",
+		"modified",
+		"owner",
+		"modified_by",
+		"parent",
+		"parenttype",
+		"parentfield",
+		"idx",
+		"role",
+	]
+	valores = [
+		(
+			frappe.generate_hash(length=10),
+			agora,
+			agora,
+			quem,
+			quem,
+			usuario,
+			"User",
+			"roles",
+			ultimo_idx.get(usuario, 0) + 1,
+			role,
+		)
+		for usuario in alvos
+	]
+	frappe.db.bulk_insert("Has Role", campos, valores)
+
+	for usuario in alvos:
+		frappe.clear_cache(user=usuario)
+	return alvos
+
+
+def remove_role_from_users(role: str, users) -> list[str]:
+	"""Retira um papel de vários usuários de uma vez, sem `User.save()`.
+
+	Retorna os usuários que perderam o papel.
+	"""
+	usuarios = [usuario for usuario in dict.fromkeys(users or []) if usuario]
+	if not role or not usuarios:
+		return []
+
+	alvos = sorted(
+		set(
+			frappe.get_all(
+				"Has Role",
+				filters={"parenttype": "User", "parent": ["in", usuarios], "role": role},
+				pluck="parent",
+				limit_page_length=0,
+			)
+		)
+	)
+	if not alvos:
+		return []
+
+	frappe.db.delete("Has Role", {"parenttype": "User", "parent": ["in", alvos], "role": role})
+	for usuario in alvos:
+		frappe.clear_cache(user=usuario)
+	return alvos
 
 
 def save_user_preserving_roles(user_doc, ignore_permissions: bool = True) -> list[str]:

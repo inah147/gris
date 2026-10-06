@@ -1,0 +1,283 @@
+/* Gestão de acessos: o que é só desta página. Cards, selos, etapas e dialogs vêm de
+   public/css/portal_acessos.css. */
+
+.acessos-gestao__secao {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 3);
+	margin-bottom: calc(var(--spacing) * 8);
+	min-width: 0;
+}
+
+.acessos-gestao__secao-topo {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 3);
+	flex-wrap: wrap;
+}
+
+.acessos-gestao__secao-titulo {
+	margin: 0;
+	font-size: 1.125rem;
+	font-weight: 600;
+}
+
+.acessos-gestao__filtro {
+	min-width: 12rem;
+}
+
+.acessos-gestao__card > section {
+	min-width: 0;
+}
+
+.acessos-gestao__tabela {
+	width: 100%;
+}
+
+.acessos-gestao__tabela td {
+	vertical-align: middle;
+}
+
+.acessos-gestao__pessoa {
+	display: block;
+	font-weight: 500;
+}
+
+.acessos-gestao__email {
+	display: block;
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+	overflow-wrap: anywhere;
+}
+
+.acessos-gestao__nowrap {
+	white-space: nowrap;
+}
+
+.acessos-gestao__acoes {
+	text-align: right;
+	white-space: nowrap;
+}
+
+.acessos-gestao__acoes > * + * {
+	margin-left: calc(var(--spacing) * 1.5);
+}
+
+.acessos-gestao__paginacao {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: calc(var(--spacing) * 3);
+}
+
+.acessos-gestao__paginacao:empty {
+	display: none;
+}
+
+/* ─── cards de gestão ────────────────────────────────────────────── */
+
+.acessos-gestao-card--inativo {
+	opacity: 0.75;
+	border-style: dashed;
+}
+
+.acessos-gestao-card__papel {
+	font-size: 0.75rem;
+	color: var(--muted-foreground);
+}
+
+.acessos-gestao-card__fluxo {
+	margin: 0;
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+	overflow-wrap: anywhere;
+}
+
+.acessos-gestao-card__barra {
+	height: 0.5rem;
+	border-radius: 999px;
+	background: var(--muted);
+	overflow: hidden;
+}
+
+.acessos-gestao-card__barra > span {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	background: var(--primary);
+}
+
+/* ─── ação em massa ──────────────────────────────────────────────── */
+
+.acessos-massa__corpo {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 4);
+	min-width: 0;
+}
+
+.acessos-massa__intro {
+	margin: 0;
+	font-size: 0.875rem;
+	line-height: 1.5;
+	color: var(--muted-foreground);
+}
+
+.acessos-massa__linha {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: calc(var(--spacing) * 4);
+	align-items: start;
+}
+
+.acessos-massa__alvo {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+}
+
+.acessos-massa__pessoas[hidden] {
+	display: none;
+}
+
+.acessos-massa__busca {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 3);
+	flex-wrap: wrap;
+	margin-bottom: calc(var(--spacing) * 2);
+}
+
+.acessos-massa__busca .input {
+	flex: 1 1 16rem;
+}
+
+.acessos-massa__contagem {
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+}
+
+.acessos-massa__lista {
+	display: flex;
+	flex-direction: column;
+	max-height: 22rem;
+	overflow-y: auto;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md, 0.5rem);
+}
+
+.acessos-massa__lista > p {
+	padding: calc(var(--spacing) * 3);
+}
+
+.acessos-massa__pessoa {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 3);
+	padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+	border-bottom: 1px solid var(--border);
+	cursor: pointer;
+}
+
+.acessos-massa__pessoa:last-child {
+	border-bottom: 0;
+}
+
+.acessos-massa__pessoa:hover {
+	background: var(--muted);
+}
+
+.acessos-massa__pessoa--todos {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	background: var(--card);
+	font-weight: 500;
+}
+
+.acessos-massa__nome {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-width: 0;
+}
+
+/* ─── edição do catálogo ─────────────────────────────────────────── */
+
+.acessos-dialog--largo > div {
+	width: min(44rem, calc(100vw - 2rem));
+	max-width: min(44rem, calc(100vw - 2rem));
+}
+
+.acessos-dialog [hidden] {
+	display: none;
+}
+
+.acessos-editar__switches {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 6);
+}
+
+.acessos-editar__etapas {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+}
+
+.acessos-editar__lista {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.acessos-editar__etapa {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 3);
+	padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md, 0.5rem);
+}
+
+.acessos-editar__ordem {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: none;
+	width: 1.5rem;
+	height: 1.5rem;
+	border-radius: 999px;
+	background: var(--muted);
+	font-size: 0.75rem;
+	font-weight: 600;
+}
+
+.acessos-editar__texto {
+	flex: 1;
+	min-width: 0;
+	font-size: 0.875rem;
+	overflow-wrap: anywhere;
+}
+
+.acessos-editar__nova-etapa {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+	gap: calc(var(--spacing) * 2);
+	align-items: center;
+}
+
+@media (max-width: 768px) {
+	.acessos-massa__linha,
+	.acessos-editar__nova-etapa {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.acessos-gestao__acoes {
+		white-space: normal;
+	}
+}

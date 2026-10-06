@@ -218,6 +218,8 @@ doc_events = {
 	"Associado": {
 		"on_update": [
 			"gris.api.gestao_adultos.secoes.on_associado_atualizado",
+			# Ficar inativo deixa as licenças de Canva/Microsoft 365 pendentes de revogação.
+			"gris.api.acessos.inatividade.ao_atualizar_associado",
 		],
 	},
 	# Responsável que também é associado é uma pessoa só: o perfil migra para o cadastro de
@@ -315,6 +317,10 @@ scheduler_events = {
 			"gris.api.recepcao_mensagens.enviar_lembretes_acolhida_lenco",
 			# Às 9h e não no "daily" (meia-noite): o link vai para o WhatsApp das famílias.
 			"gris.api.financeiro.cobranca_contribuicao_automatica.enqueue_cobrancas_automaticas",
+			# Depois das rodadas do Workspace (meia-noite): fecha os pedidos de drive que elas
+			# concederam e avisa o grupo de tecnologia das licenças de inativos.
+			"gris.api.acessos.provisionamento.reconciliar_concessoes_drive",
+			"gris.api.acessos.inatividade.processar_inativos",
 		],
 		# Sábado de manhã, antes da reunião: as visitas do dia no grupo de chefes de seção.
 		"0 10 * * 6": ["gris.api.recepcao_mensagens.notificar_visitas_do_dia"],
@@ -476,6 +482,7 @@ fixtures = [
 					"Portaria",
 					"Desenvolvedor",
 					"Acompanhamento de Sugestoes",
+					"Gestor de Acessos",
 				],
 			]
 		],

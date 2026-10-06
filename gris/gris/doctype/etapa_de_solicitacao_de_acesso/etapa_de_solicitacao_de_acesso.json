@@ -1,0 +1,82 @@
+{
+ "actions": [],
+ "creation": "2026-10-06 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "ordem",
+  "papel_aprovador",
+  "descricao",
+  "decisao",
+  "decidido_por",
+  "decidido_em",
+  "observacao"
+ ],
+ "fields": [
+  {
+   "fieldname": "ordem",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Ordem",
+   "read_only": 1
+  },
+  {
+   "fieldname": "papel_aprovador",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Papel que aprova",
+   "options": "Role",
+   "read_only": 1
+  },
+  {
+   "fieldname": "descricao",
+   "fieldtype": "Data",
+   "label": "Descrição da etapa",
+   "read_only": 1
+  },
+  {
+   "default": "Pendente",
+   "fieldname": "decisao",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Decisão",
+   "options": "Pendente\nAprovada\nRecusada",
+   "read_only": 1
+  },
+  {
+   "fieldname": "decidido_por",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Decidido por",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "decidido_em",
+   "fieldtype": "Datetime",
+   "label": "Decidido em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "observacao",
+   "fieldtype": "Small Text",
+   "label": "Observação",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-06 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Etapa de Solicitacao de Acesso",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

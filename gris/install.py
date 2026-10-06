@@ -7,6 +7,25 @@ def after_install():
 	_garantir_role_portaria()
 	_garantir_role_desenvolvedor()
 	_garantir_role_acompanhamento_sugestoes()
+	garantir_role_gestor_de_acessos()
+
+
+def garantir_role_gestor_de_acessos():
+	"""Cria a role Gestor de Acessos (quem administra /acessos/gestao).
+
+	Pública porque o patch que semeia o catálogo de acessos também precisa dela, e
+	patches post_model_sync rodam antes da sincronização das fixtures.
+	"""
+	if frappe.db.exists("Role", "Gestor de Acessos"):
+		return
+	role = frappe.get_doc(
+		{
+			"doctype": "Role",
+			"role_name": "Gestor de Acessos",
+			"desk_access": 0,
+		}
+	)
+	role.insert(ignore_permissions=True)
 
 
 def _garantir_role_portaria():

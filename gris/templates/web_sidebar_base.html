@@ -52,6 +52,14 @@
 {{ lucide_icon("shield-check", size="sm") }}
 {% endset %}
 
+{% set acessos_icon %}
+{{ lucide_icon("key-round", size="sm") }}
+{% endset %}
+
+{% set gestao_acessos_icon %}
+{{ lucide_icon("user-check", size="sm") }}
+{% endset %}
+
 {% set theme_dark_icon %}
 {{ lucide_icon("moon", size="sm") }}
 {% endset %}
@@ -120,6 +128,21 @@
 		<span>Entrar</span>
 	</a>
 	{% else %}
+	{% if pode_ver_acessos %}
+	<a role="menuitem" href="/acessos" class="portal-user-menu__item">
+		{{ acessos_icon | safe }}
+		<span>Meus acessos</span>
+	</a>
+	{% endif %}
+	{% if pode_gerir_acessos %}
+	<a role="menuitem" href="/acessos/gestao" class="portal-user-menu__item">
+		{{ gestao_acessos_icon | safe }}
+		<span>Gestão de acessos</span>
+	</a>
+	{% endif %}
+	{% if pode_ver_acessos or pode_gerir_acessos %}
+	<hr role="separator" />
+	{% endif %}
 	{% if is_system_manager %}
 	<a role="menuitem" href="/app" class="portal-user-menu__item">
 		{{ admin_icon | safe }}

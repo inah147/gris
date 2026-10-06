@@ -1,0 +1,200 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "LIC-.#####",
+ "creation": "2026-10-06 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "acesso",
+  "status",
+  "column_break_titular",
+  "associado",
+  "nome",
+  "email",
+  "usuario",
+  "section_break_concessao",
+  "concedida_em",
+  "concedida_por",
+  "column_break_concessao",
+  "solicitacao",
+  "section_break_revogacao",
+  "motivo_revogacao",
+  "revogacao_pendente_desde",
+  "aviso_tecnologia_enviado_em",
+  "column_break_revogacao",
+  "revogada_em",
+  "revogada_por",
+  "observacao"
+ ],
+ "fields": [
+  {
+   "fieldname": "acesso",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Ferramenta",
+   "options": "Acesso",
+   "reqd": 1
+  },
+  {
+   "default": "Ativa",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Ativa\nRevogação pendente\nRevogada",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_titular",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "associado",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Associado",
+   "options": "Associado",
+   "reqd": 1
+  },
+  {
+   "fieldname": "nome",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome",
+   "read_only": 1
+  },
+  {
+   "description": "A conta na ferramenta é sempre o id@escoteiros do associado.",
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "E-mail (id@escoteiros)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "usuario",
+   "fieldtype": "Link",
+   "label": "Usuário",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_concessao",
+   "fieldtype": "Section Break",
+   "label": "Concessão"
+  },
+  {
+   "fieldname": "concedida_em",
+   "fieldtype": "Datetime",
+   "label": "Concedida em"
+  },
+  {
+   "fieldname": "concedida_por",
+   "fieldtype": "Link",
+   "label": "Concedida por",
+   "options": "User"
+  },
+  {
+   "fieldname": "column_break_concessao",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "solicitacao",
+   "fieldtype": "Link",
+   "label": "Solicitação",
+   "options": "Solicitacao de Acesso",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_revogacao",
+   "fieldtype": "Section Break",
+   "label": "Revogação"
+  },
+  {
+   "fieldname": "motivo_revogacao",
+   "fieldtype": "Select",
+   "label": "Motivo da revogação",
+   "options": "\nInativação\nGestor\nOutro"
+  },
+  {
+   "fieldname": "revogacao_pendente_desde",
+   "fieldtype": "Datetime",
+   "label": "Revogação pendente desde",
+   "read_only": 1
+  },
+  {
+   "fieldname": "aviso_tecnologia_enviado_em",
+   "fieldtype": "Datetime",
+   "label": "Aviso ao grupo de tecnologia em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_revogacao",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "revogada_em",
+   "fieldtype": "Datetime",
+   "label": "Revogada em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "revogada_por",
+   "fieldtype": "Link",
+   "label": "Revogada por",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "observacao",
+   "fieldtype": "Small Text",
+   "label": "Observação"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-06 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Licenca de Ferramenta",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de Acessos",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "nome",
+ "track_changes": 1
+}

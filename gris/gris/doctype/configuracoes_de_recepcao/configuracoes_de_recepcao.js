@@ -20,12 +20,16 @@ const CAMPOS_DE_GRUPO = [
 	},
 ];
 
+// Esqueleto do "Mapa dos prazos", buscado uma vez por carregamento da página.
+let estrutura_dos_prazos = null;
+
 frappe.ui.form.on("Configuracoes de Recepcao", {
 	async refresh(frm) {
 		atualizar_campos_obrigatorios(frm);
 		await Promise.all([
 			carregar_opcoes_dos_grupos(frm),
 			carregar_opcoes_drive_compartilhado(frm),
+			desenhar_mapa_de_prazos(frm),
 		]);
 	},
 	habilitar_documentos_drive(frm) {
@@ -42,6 +46,54 @@ function atualizar_campos_obrigatorios(frm) {
 		"pasta_declaracoes_nao_assinadas_id",
 		"pasta_declaracoes_assinadas_id",
 	].forEach((fieldname) => frm.toggle_reqd(fieldname, habilitado));
+}
+
+async function desenhar_mapa_de_prazos(frm) {
+	const wrapper = frm.get_field("mapa_de_prazos").$wrapper;
+
+	if (!estrutura_dos_prazos) {
+		try {
+			const [response] = await Promise.all([
+				frappe.call({
+					method: "gris.gris.doctype.configuracoes_de_recepcao.configuracoes_de_recepcao.get_estrutura_dos_prazos",
+				}),
+				new Promise((resolve) =>
+					frappe.require("/assets/gris/js/recepcao_mapa_de_prazos.js", resolve)
+				),
+			]);
+			estrutura_dos_prazos = response.message;
+		} catch (error) {
+			console.warn("Não foi possível carregar o mapa dos prazos.", error);
+			wrapper.html(
+				`<div class="text-muted small">${__(
+					"Não foi possível carregar o mapa dos prazos."
+				)}</div>`
+			);
+			return;
+		}
+
+		// Os handlers são procurados na hora do disparo, então registrar aqui já vale para este
+		// formulário: editar qualquer prazo redesenha a árvore antes de salvar. Uma vez só, porque
+		// `frappe.ui.form.on` acumula handlers a cada chamada.
+		const handlers = {};
+		estrutura_dos_prazos.campos.forEach((campo) => {
+			handlers[campo] = renderizar_mapa_de_prazos;
+		});
+		frappe.ui.form.on("Configuracoes de Recepcao", handlers);
+	}
+
+	renderizar_mapa_de_prazos(frm);
+}
+
+function renderizar_mapa_de_prazos(frm) {
+	gris.recepcao_prazos.render(
+		frm.get_field("mapa_de_prazos").$wrapper,
+		estrutura_dos_prazos,
+		frm.doc,
+		{
+			ao_clicar: (campo) => frm.scroll_to_field(campo),
+		}
+	);
 }
 
 // O Select não tem `options` no JSON: a lista vem dos drives ativos de

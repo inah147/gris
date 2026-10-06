@@ -34,6 +34,7 @@ from gris.api.recepcao_funil import (
 	RAMO_FILHOTES,
 	RAMOS,
 	dias_de_acolhida_filhotes,
+	dias_de_dados_filhotes,
 	id_escoteiros_obrigatorio,
 )
 from gris.utils import genero
@@ -333,12 +334,17 @@ def _dias_iniciais_lembrete_dados() -> tuple[int, ...]:
 	return tuple(sorted(set(dias))) if dias else DIAS_INICIAIS_PADRAO
 
 
-def _degraus_do_lembrete_de_dados(dias_decorridos: int) -> list[int]:
-	"""Dias de envio já vencidos: os iniciais e, depois deles, um a cada N dias."""
+def _degraus_do_lembrete_de_dados(dias_decorridos: int, ramo: str | None = None) -> list[int]:
+	"""Dias de envio já vencidos: os iniciais e, depois deles, um a cada N dias.
+
+	Nos Filhotes os dados têm prazo próprio (``dias_de_dados_filhotes``, padrão 30): ele toma
+	o lugar dos dias iniciais, então o primeiro lembrete só sai quando o prazo vence e os
+	seguintes mantêm o intervalo configurado.
+	"""
 	if dias_decorridos < 0:
 		return []
 
-	iniciais = _dias_iniciais_lembrete_dados()
+	iniciais = (dias_de_dados_filhotes(),) if ramo == RAMO_FILHOTES else _dias_iniciais_lembrete_dados()
 	intervalo = _intervalo("lembrete_dados_intervalo_dias", INTERVALO_DADOS_PADRAO)
 
 	degraus = [dia for dia in iniciais if dia <= dias_decorridos]
@@ -1174,6 +1180,9 @@ def enviar_lembretes_dados_registro() -> None:
 	Os primeiros lembretes seguem os dias configurados (padrão 4, 6 e 8 dias após o status
 	virar "Aguardar Dados") e depois se repetem a cada N dias. O degrau vencido é recalculado
 	a cada execução a partir da data do status, então uma execução perdida não desloca a série.
+
+	Nos Filhotes o primeiro lembrete espera o prazo de envio dos dados do ramo — ver
+	``_degraus_do_lembrete_de_dados``.
 	"""
 	logger = obter_logger("recepcao_mensagens")
 	data_hoje = getdate(today())
@@ -1193,6 +1202,7 @@ def enviar_lembretes_dados_registro() -> None:
 			"name",
 			"nome_completo",
 			"sexo",
+			"ramo",
 			"responsavel_recepcao",
 			"data_status_aguardar_dados",
 			"data_lembrete_dados",
@@ -1211,7 +1221,7 @@ def enviar_lembretes_dados_registro() -> None:
 	for jovem in pendentes:
 		try:
 			inicio = getdate(jovem.data_status_aguardar_dados)
-			degraus = _degraus_do_lembrete_de_dados(date_diff(data_hoje, inicio))
+			degraus = _degraus_do_lembrete_de_dados(date_diff(data_hoje, inicio), jovem.get("ramo"))
 			if not degraus:
 				continue
 

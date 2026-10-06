@@ -5,8 +5,11 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "mapa_de_prazos_section",
+  "mapa_de_prazos",
   "fluxo_de_registro_section",
   "dados_para_registro_enviados",
+  "dados_para_registro_enviados_filhotes",
   "pesquisa_de_novos_associados_respondida",
   "id_escoteiros_criado",
   "boleto_definitivo_gerado",
@@ -80,6 +83,13 @@
    "label": "Dados para registro enviados"
   },
   {
+   "default": "30",
+   "description": "Dias entre a visita e o envio dos dados no ramo Filhotes. Também segura o primeiro lembrete de dados à família até o prazo vencer.",
+   "fieldname": "dados_para_registro_enviados_filhotes",
+   "fieldtype": "Int",
+   "label": "Dados para registro enviados (Filhotes)"
+  },
+  {
    "default": "1",
    "fieldname": "registro_criado_no_paxtu",
    "fieldtype": "Int",
@@ -145,6 +155,17 @@
    "fieldname": "reuniao_de_acolhida_realizada_filhotes",
    "fieldtype": "Int",
    "label": "Reunião de acolhida realizada (Filhotes)"
+  },
+  {
+   "description": "Cada etapa conta a partir da anterior; o dia acumulado conta a partir da visita. Clique num prazo para editar o campo dele.",
+   "fieldname": "mapa_de_prazos_section",
+   "fieldtype": "Section Break",
+   "label": "Mapa dos prazos"
+  },
+  {
+   "fieldname": "mapa_de_prazos",
+   "fieldtype": "HTML",
+   "label": "Mapa dos prazos"
   },
   {
    "fieldname": "fluxo_de_registro_section",
@@ -474,7 +495,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-06 12:00:00.000000",
+ "modified": "2026-10-06 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Configuracoes de Recepcao",

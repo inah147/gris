@@ -155,9 +155,9 @@ RESPONSAVEL_PADRAO = [
 
 
 class TestCadenciaDoLembreteDeDados(FrappeTestCase):
-	def _degraus(self, dias, configuracoes=None):
+	def _degraus(self, dias, configuracoes=None, ramo=None):
 		with _AmbienteDeTeste(configuracoes=configuracoes or {}):
-			return recepcao_mensagens._degraus_do_lembrete_de_dados(dias)
+			return recepcao_mensagens._degraus_do_lembrete_de_dados(dias, ramo)
 
 	def test_escada_padrao_de_quatro_seis_oito_e_depois_de_cinco_em_cinco(self):
 		self.assertEqual(self._degraus(3), [])
@@ -180,6 +180,23 @@ class TestCadenciaDoLembreteDeDados(FrappeTestCase):
 	def test_configuracao_invalida_cai_no_padrao(self):
 		configuracoes = {"lembrete_dados_dias_iniciais": "abc, -1, "}
 		self.assertEqual(self._degraus(8, configuracoes), [4, 6, 8])
+
+	def test_filhotes_esperam_o_prazo_dos_dados_e_depois_seguem_o_intervalo(self):
+		self.assertEqual(self._degraus(8, ramo="Filhotes"), [])
+		self.assertEqual(self._degraus(29, ramo="Filhotes"), [])
+		self.assertEqual(self._degraus(30, ramo="Filhotes"), [30])
+		self.assertEqual(self._degraus(34, ramo="Filhotes"), [30])
+		self.assertEqual(self._degraus(35, ramo="Filhotes"), [30, 35])
+
+	def test_prazo_configurado_dos_filhotes_vale(self):
+		configuracoes = {
+			"dados_para_registro_enviados_filhotes": 20,
+			"lembrete_dados_intervalo_dias": 10,
+			# Os dias iniciais dos outros ramos não valem para os Filhotes.
+			"lembrete_dados_dias_iniciais": "2, 3",
+		}
+		self.assertEqual(self._degraus(19, configuracoes, "Filhotes"), [])
+		self.assertEqual(self._degraus(30, configuracoes, "Filhotes"), [20, 30])
 
 
 class TestLembretesDeDadosDeRegistro(FrappeTestCase):
@@ -230,6 +247,30 @@ class TestLembretesDeDadosDeRegistro(FrappeTestCase):
 
 		self.assertEqual(ambiente.textos, [])
 		self.assertEqual(ambiente.atualizacoes, [])
+
+	def _filhote(self, aguardando_desde, ultimo_lembrete=None):
+		return {
+			"name": "NA-1",
+			"nome_completo": "Joãozinho Feliz",
+			"sexo": "Masculino",
+			"ramo": "Filhotes",
+			"responsavel_recepcao": None,
+			"data_status_aguardar_dados": aguardando_desde,
+			"data_lembrete_dados": ultimo_lembrete,
+		}
+
+	def test_filhote_nao_recebe_lembrete_antes_do_prazo_dos_dados(self):
+		ambiente = self._rodar([self._filhote("2026-05-03")])  # 8 dias antes de 11/05
+
+		self.assertEqual(ambiente.textos, [])
+		self.assertEqual(ambiente.atualizacoes, [])
+
+	def test_filhote_recebe_o_primeiro_lembrete_quando_o_prazo_vence(self):
+		# 30 dias antes de 11/05; o lembrete do dia 8, de antes da mudança, não segura o novo.
+		ambiente = self._rodar([self._filhote("2026-04-11", ultimo_lembrete="2026-04-19")])
+
+		self.assertEqual(len(ambiente.textos), 1)
+		self.assertEqual(ambiente.atualizacoes[0]["valor"], "2026-05-11")
 
 	def test_nao_envia_antes_do_primeiro_degrau(self):
 		ambiente = self._rodar(

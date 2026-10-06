@@ -978,6 +978,7 @@ def seed_singles_gris(creds: dict):
 		"Configuracoes de Recepcao",
 		{
 			"dados_para_registro_enviados": 7,
+			"dados_para_registro_enviados_filhotes": 30,
 			"registro_criado_no_paxtu": 14,
 			"pesquisa_de_novos_associados_respondida": 30,
 			"registro_definitivo_efetivado": 14,

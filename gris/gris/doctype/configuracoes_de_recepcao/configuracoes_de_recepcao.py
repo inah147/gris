@@ -8,6 +8,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint
 
+from gris.api.recepcao_funil import estrutura_dos_prazos
+
 GOOGLE_SETTINGS_DOCTYPE = "Configuracoes Google Workspace"
 
 # Pastas do Drive exigidas quando o envio de documentos está habilitado.
@@ -93,6 +95,15 @@ def get_opcoes_drives_compartilhados_recepcao() -> list[dict[str, str]]:
 	return [
 		{"label": label, "value": drive_id} for drive_id, label in _get_active_reception_drive_map().items()
 	]
+
+
+@frappe.whitelist()
+def get_estrutura_dos_prazos() -> dict:
+	"""Esqueleto do "Mapa dos prazos" do formulário — ver ``estrutura_dos_prazos``."""
+	if not frappe.has_permission("Configuracoes de Recepcao", "read"):
+		frappe.throw(_("Sem permissão para consultar configurações de recepção."), frappe.PermissionError)
+
+	return estrutura_dos_prazos()
 
 
 def _get_active_reception_drive_map() -> dict[str, str]:

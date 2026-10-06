@@ -37,20 +37,22 @@
   },
   {
     "default": "reader",
+    "description": "reader = Leitor; writer = Colaborador; fileOrganizer = Administrador de conteúdo; organizer = Administrador.",
     "fieldname": "permissao_padrao_beneficiario",
    "fieldtype": "Select",
    "in_list_view": 1,
     "label": "Permissão padrão beneficiário",
-    "options": "reader\nwriter",
+    "options": "reader\nwriter\nfileOrganizer\norganizer",
     "reqd": 1
   },
   {
-    "default": "writer",
+    "default": "fileOrganizer",
+    "description": "reader = Leitor; writer = Colaborador; fileOrganizer = Administrador de conteúdo; organizer = Administrador.",
     "fieldname": "permissao_padrao_adulto_voluntario",
     "fieldtype": "Select",
     "in_list_view": 1,
     "label": "Permissão padrão adulto voluntário",
-   "options": "reader\nwriter",
+   "options": "reader\nwriter\nfileOrganizer\norganizer",
    "reqd": 1
   },
   {
@@ -65,7 +67,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-18 10:00:00.000000",
+ "modified": "2026-10-06 12:30:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Drives Compartilhados Workspace",

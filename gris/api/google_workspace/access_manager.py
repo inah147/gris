@@ -26,6 +26,11 @@ PERMANENT_403_REASONS = {
 MAX_RETRIES = 5
 VOLUNTEER_CATEGORIES = {"Dirigente", "Escotista", "Colaboradores", "Profissional Escoteiro"}
 ADMIN_ROLES = {"System Manager", "Administrator"}
+# Papéis que o GRIS concede, indexados em minúsculas e com a grafia que a API exige.
+# No drive compartilhado, "fileOrganizer" é o "Administrador de conteúdo" e "organizer" o
+# "Administrador": a API recusa "fileorganizer", e a leitura das permissões compara tudo
+# em minúsculas.
+DRIVE_ROLES = {role.lower(): role for role in ("reader", "writer", "fileOrganizer", "organizer")}
 
 
 def _logger():
@@ -191,30 +196,33 @@ def _find_permissions_for_email(drive, drive_id: str, email: str) -> list[dict]:
 	return [p for p in permissions_for_email if p.get("id")]
 
 
+def _normalize_role(value: str | None) -> str | None:
+	return DRIVE_ROLES.get((value or "").strip().lower())
+
+
 def _resolve_drive_default_role(drive_row, associate) -> str | None:
 	if _is_beneficiary_associate(associate):
-		return (drive_row.permissao_padrao_beneficiario or "").strip().lower()
+		return _normalize_role(drive_row.permissao_padrao_beneficiario)
 
 	if _is_volunteer_associate(associate):
-		return (drive_row.permissao_padrao_adulto_voluntario or "").strip().lower()
+		return _normalize_role(drive_row.permissao_padrao_adulto_voluntario)
 
 	return None
 
 
 def grant_drive_access_if_missing(drive, email: str, drive_id: str, role: str = "reader"):
 	email = _normalize_email(email)
-	role = (role or "reader").strip().lower()
-	if role not in {"reader", "writer"}:
-		role = "reader"
+	role = _normalize_role(role) or "reader"
+	role_key = role.lower()
 
 	permissions = _find_permissions_for_email(drive, drive_id, email)
 	if permissions:
-		if all(permission.get("role") == role for permission in permissions):
+		if all(permission.get("role") == role_key for permission in permissions):
 			return "unchanged"
 
 		for permission in permissions:
 			permission_id = permission.get("id")
-			if not permission_id or permission.get("role") == role:
+			if not permission_id or permission.get("role") == role_key:
 				continue
 
 			_execute_with_retry(
@@ -292,7 +300,7 @@ def _sync_global_access_for_associate(associate_name: str):
 
 	for drive_row in global_drives:
 		role = _resolve_drive_default_role(drive_row, associate)
-		if role not in {"reader", "writer"}:
+		if not role:
 			continue
 
 		grant_drive_access_if_missing(drive, email, drive_row.drive_id, role)

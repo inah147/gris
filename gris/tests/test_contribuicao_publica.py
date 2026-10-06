@@ -193,6 +193,20 @@ class TestContribuicaoPublica(_BaseContribuicaoPublica):
 		with self.assertRaises(frappe.PageDoesNotExistError):
 			publica.iniciar_pagamento("0" * 32)
 
+	def test_cobra_so_os_meses_escolhidos(self):
+		self._pagamento("2026-09", "Atrasado", valor=70, acrescimo_atraso=10)
+		self._pagamento("2026-10", "Em Aberto")
+		with self._sem_rede():
+			emitida = cobranca.cobranca_vigente(self.associado, HOJE, competencias=["2026-10"])
+		doc = frappe.get_doc("Cobranca Infinitepay", emitida["name"])
+		self.assertEqual(doc.competencias, "2026-10")
+
+	def test_recusa_mes_que_nao_esta_em_aberto(self):
+		self._pagamento("2026-09", "Pago")
+		self._pagamento("2026-10", "Em Aberto")
+		with self._sem_rede(), self.assertRaises(frappe.ValidationError):
+			cobranca.cobranca_vigente(self.associado, HOJE, competencias=["2026-09"])
+
 	def test_headers_de_protecao_so_na_rota_publica(self):
 		resposta = mock.Mock(headers={})
 		publica.proteger_resposta(resposta, mock.Mock(path=f"/contribuicao/{self.token}"))

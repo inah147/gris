@@ -67,42 +67,40 @@
 			{% endif %}
 
 			{% if pagina.estado != "pago" %}
-			<div class="cp-actions">
-				<button type="button" class="btn-primary cp-pagar" id="cp-pagar">
-					{{ lucide_icon("credit-card", "sm") }} Realizar pagamento
-				</button>
-			</div>
 			<p class="cp-erro" id="cp-erro" role="alert" hidden></p>
 			{% endif %}
 		{% endcall %}
 
+		{% if pagina.estado != "pago" %}
 		<section aria-labelledby="cp-meses-titulo" class="cp-meses">
-			<h2 id="cp-meses-titulo" class="cp-meses__titulo">Mês a mês</h2>
-			{% if pagina.meses %}
+			<h2 id="cp-meses-titulo" class="cp-meses__titulo">Escolha os meses para pagar</h2>
 			<ul class="cp-meses__lista">
-				{% for mes in pagina.meses %}
-				<li class="cp-mes cp-mes--{{ mes.status_slug }}">
-					<span class="cp-mes__rotulo">{{ mes.rotulo }}</span>
-					<span class="badge cp-badge cp-badge--{{ mes.status_slug }}">{{ mes.status }}</span>
-					<span class="cp-mes__valor">
-						{{ brl(mes.valor) }}
-						{% if mes.acrescimo > 0 %}<small>inclui {{ brl(mes.acrescimo) }} de atraso</small>{% endif %}
-						{% if mes.comprovante %}<small><a href="{{ mes.comprovante }}" target="_blank" rel="noopener noreferrer">Acessar comprovante</a></small>{% endif %}
-					</span>
+				{% for mes in pagina.meses|sort(attribute="ym") if mes.pendente %}
+				<li class="cp-mes-item">
+					<label class="cp-mes cp-mes--{{ mes.status_slug }}">
+						<input type="checkbox" class="cp-mes__check" value="{{ mes.ym }}" data-valor="{{ mes.valor }}" checked />
+						<span class="cp-mes__rotulo">{{ mes.rotulo }}</span>
+						<span class="badge cp-badge cp-badge--{{ mes.status_slug }}">{{ mes.status }}</span>
+						<span class="cp-mes__valor">
+							{{ brl(mes.valor) }}
+							{% if mes.acrescimo > 0 %}<small>inclui {{ brl(mes.acrescimo) }} de atraso</small>{% endif %}
+						</span>
+					</label>
 				</li>
 				{% endfor %}
 			</ul>
-			{% else %}
-			<p class="cp-vazio">Ainda não há meses registrados.</p>
-			{% endif %}
+			<div class="cp-actions">
+				<button type="button" class="btn-primary cp-pagar" id="cp-pagar">
+					{{ lucide_icon("credit-card", "sm") }} Pagar <span id="cp-total">{{ brl(pagina.total_pendente) }}</span>
+				</button>
+			</div>
 		</section>
+		{% endif %}
 	</main>
 
-	{% if uel.nome_da_uel %}
-	<footer class="cp-footer">
-		<p>{% if uel.tipo_uel %}{{ uel.tipo_uel }} {% endif %}{{ uel.nome_da_uel }}{% if uel.numeral %} {{ uel.numeral }}{% endif %}</p>
-		{% if uel.regiao %}<p class="cp-footer__sub">{{ uel.regiao }}</p>{% endif %}
-	</footer>
-	{% endif %}
+	<div class="assinatura">
+		Feito com <span class="coracao">&#10084;</span> por
+		{% if uel_tipo %}{{ uel_tipo }} {% endif %}{{ uel_nome }}
+	</div>
 </div>
 {% endblock %}

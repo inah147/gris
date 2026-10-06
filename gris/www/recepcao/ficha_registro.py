@@ -4,7 +4,7 @@ from frappe.rate_limiter import rate_limit
 from frappe.utils import cint, format_date, format_datetime, get_fullname, getdate, strip_html
 
 from gris.api.portal_access import enrich_context
-from gris.api.recepcao_funil import anexar_historico, calcular_etapas
+from gris.api.recepcao_funil import SUFIXO_ETAPA_OPCIONAL, anexar_historico, calcular_etapas
 from gris.www.recepcao.ficha_campos import BLOCOS_DO_ASSOCIADO, BLOCOS_DO_RESPONSAVEL, montar_blocos
 
 no_cache = 1
@@ -147,8 +147,12 @@ def get_context(context):
 
 	steps_data = []
 	for etapa in final_etapas:
+		rotulo = ROTULOS_CURTOS_DAS_ETAPAS.get(etapa["field"], etapa["label"])
+		# O rótulo curto substitui o do funil, então o "(opcional)" tem de ser reposto aqui.
+		if etapa.get("opcional"):
+			rotulo += SUFIXO_ETAPA_OPCIONAL
 		step_info = {
-			"label": ROTULOS_CURTOS_DAS_ETAPAS.get(etapa["field"], etapa["label"]),
+			"label": rotulo,
 			"done": etapa["completed"],
 			"field": etapa["field"],
 		}

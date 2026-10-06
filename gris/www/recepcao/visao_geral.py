@@ -21,6 +21,7 @@ from gris.api.recepcao_funil import (
 	coluna_de_acompanhamento,
 	dias_para_registro_definitivo,
 	sinal_registro_definitivo,
+	so_falta_acolhida,
 	status_por_etapas_concluidas,
 )
 from gris.api.recepcao_vagas import calcular_vagas_por_ramo, dados_do_dialog, ramo_sem_vagas
@@ -158,11 +159,21 @@ def get_context(context):
 	# Fetch Responsavel Vinculo + contatos WhatsApp
 	responsavel_map = {}
 	whatsapp_contatos_map = {}
+	# Responsáveis que serão registrados e ainda estão sem número, por jovem — metade do
+	# sinal "sem número de registro" (a outra metade é o número do próprio jovem). Sai das
+	# mesmas consultas dos contatos, para o sinal não custar uma consulta por card.
+	responsaveis_sem_numero_map = {}
 	if names:
 		links = frappe.get_all(
 			"Responsavel Vinculo",
 			filters={"beneficiario_novo_associado": ["in", names]},
-			fields=["beneficiario_novo_associado", "responsavel", "é_guardiao_legal", "primeiro_responsavel"],
+			fields=[
+				"beneficiario_novo_associado",
+				"responsavel",
+				"é_guardiao_legal",
+				"primeiro_responsavel",
+				"sera_registrado",
+			],
 		)
 
 		resp_ids = {l.get("responsavel") for l in links if l.get("responsavel")}
@@ -171,7 +182,7 @@ def get_context(context):
 			resps = frappe.get_all(
 				"Responsavel",
 				filters={"name": ["in", list(resp_ids)]},
-				fields=["name", "nome_completo", "celular", "telefone_secundario"],
+				fields=["name", "nome_completo", "celular", "telefone_secundario", "numero_de_registro"],
 			)
 			resp_info_map = {r.name: r for r in resps}
 
@@ -206,6 +217,13 @@ def get_context(context):
 
 				if associado_name not in responsavel_map:
 					responsavel_map[associado_name] = resp_info.get("nome_completo")
+
+				# Mesma regra da trava de efetivação (``numeros_de_registro_pendentes``): só
+				# quem será registrado precisa de número próprio.
+				if link.get("sera_registrado") and not (resp_info.get("numero_de_registro") or "").strip():
+					responsaveis_sem_numero_map.setdefault(associado_name, []).append(
+						resp_info.get("nome_completo") or responsavel_id
+					)
 
 				phone = resp_info.get("celular") or resp_info.get("telefone_secundario")
 				normalized_phone = _normalize_whatsapp_phone(phone)
@@ -295,8 +313,6 @@ def get_context(context):
 	kanban_data = {coluna: [] for coluna in colunas}
 
 	today = getdate()
-	# Espera do registro definitivo lida uma vez, não por card.
-	dias_registro_definitivo = dias_para_registro_definitivo(config)
 
 	for associado in novos_associados:
 		coluna = (
@@ -361,13 +377,29 @@ def get_context(context):
 
 			# Sinal "hora do registro definitivo": quem efetivou o provisório há mais
 			# tempo que o configurado ganha o selo no card, para a recepção ver a
-			# pendência na visão geral sem abrir perfil por perfil.
-			sinal_definitivo = sinal_registro_definitivo(associado, dias_registro_definitivo, today)
+			# pendência na visão geral sem abrir perfil por perfil. O prazo é o do ramo
+			# (Filhotes têm o seu), lido do config já carregado.
+			sinal_definitivo = sinal_registro_definitivo(
+				associado, dias_para_registro_definitivo(config, associado.ramo), today
+			)
 			associado.registro_definitivo_pendente = sinal_definitivo["pendente"]
 			associado.registro_definitivo_dias = sinal_definitivo["dias"]
 			associado.registro_definitivo_desde = (
 				format_date(sinal_definitivo["desde"]) if sinal_definitivo["desde"] else None
 			)
+
+			# Sinal "sem número de registro": só a partir do Acompanhamento, quando o
+			# registro já foi criado no Paxtu — antes disso nenhum card tem número.
+			sem_numero = []
+			if associado.status == STATUS_ACOMPANHAMENTO:
+				if not (associado.numero_de_registro or "").strip():
+					sem_numero.append(_("o jovem"))
+				sem_numero += responsaveis_sem_numero_map.get(associado.name, [])
+			associado.numero_registro_pendente = bool(sem_numero)
+			associado.numero_registro_pendente_texto = ", ".join(sem_numero)
+
+			# Sinal "só falta a acolhida": todas as etapas obrigatórias concluídas menos ela.
+			associado.so_falta_acolhida = so_falta_acolhida(associado, associado.steps)
 
 			# Selo "Seção sem vagas": só marca o card, não trava nada no funil.
 			associado.sem_vagas = ramo_sem_vagas(vagas_por_ramo, associado.ramo, associado.status)

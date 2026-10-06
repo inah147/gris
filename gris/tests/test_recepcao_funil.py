@@ -688,3 +688,134 @@ class TestTravaDeEfetivacao(TestCase):
 
 		pendentes.assert_not_called()
 		self.assertEqual(doc.campos["registro_definitivo_efetivado"], 0)
+
+
+class TestIdEscoteirosOpcionalAbaixoDos15(TestCase):
+	"""O id@escoteiros só é exigido a partir dos 15 anos; abaixo disso a etapa é opcional."""
+
+	HOJE = date(2026, 10, 6)
+
+	def _obrigatorio(self, nascimento):
+		return recepcao_funil.id_escoteiros_obrigatorio({"data_de_nascimento": nascimento}, self.HOJE)
+
+	def test_quinze_anos_completos_hoje_ja_e_obrigatorio(self):
+		self.assertTrue(self._obrigatorio(date(2011, 10, 6)))
+
+	def test_vespera_dos_quinze_ainda_e_opcional(self):
+		self.assertFalse(self._obrigatorio(date(2011, 10, 7)))
+
+	def test_sem_data_de_nascimento_continua_obrigatorio(self):
+		self.assertTrue(self._obrigatorio(None))
+
+	def _etapas(self, nascimento, **campos):
+		dados = {
+			"tipo_de_registro": "Definitivo",
+			"data_de_nascimento": nascimento,
+			**campos,
+		}
+		config = {**CONFIG, "id_escoteiros_criado": 2}
+		return recepcao_funil.calcular_etapas(dados, config, BASE, hoje=self.HOJE)
+
+	def test_menor_de_15_ve_a_etapa_como_opcional_e_sem_atraso(self):
+		etapa = _etapa(self._etapas(date(2016, 1, 1)), "id_escoteiros_criado")
+
+		self.assertEqual(etapa["label"], "ID Escoteiros Criado (opcional)")
+		self.assertTrue(etapa["opcional"])
+		self.assertNotIn("estimated_date", etapa)
+		self.assertNotIn("is_overdue", etapa)
+
+	def test_quem_tem_15_ou_mais_ve_a_etapa_obrigatoria(self):
+		etapa = _etapa(self._etapas(date(2010, 1, 1)), "id_escoteiros_criado")
+
+		self.assertEqual(etapa["label"], "ID Escoteiros Criado")
+		self.assertNotIn("opcional", etapa)
+		self.assertTrue(etapa["is_overdue"])
+
+	def test_etapa_opcional_nao_desloca_as_previsoes_seguintes(self):
+		"""O intervalo da etapa opcional continua contando para a acolhida."""
+		menor = _etapa(self._etapas(date(2016, 1, 1)), "reuniao_de_acolhida_realizada")
+		maior = _etapa(self._etapas(date(2010, 1, 1)), "reuniao_de_acolhida_realizada")
+
+		self.assertEqual(menor["data_estimada"], maior["data_estimada"])
+
+	def test_resumo_ignora_a_etapa_opcional_pendente(self):
+		concluidas = {
+			campo: 1 for campo in recepcao_funil.ORDEM_DEFINITIVO if campo != "id_escoteiros_criado"
+		}
+		resumo = recepcao_funil.resumo_etapas(self._etapas(date(2016, 1, 1), **concluidas))
+
+		self.assertEqual(resumo["pendentes"], 0)
+		self.assertIsNone(resumo["proxima_etapa"])
+
+
+CONFIG_ACOLHIDA = {"registro_definitivo_efetivado": 0, "reuniao_de_acolhida_realizada": 7}
+
+
+class TestAcolhidaDosFilhotes(TestCase):
+	"""Os Filhotes têm prazo próprio entre o registro definitivo e a acolhida."""
+
+	def _data_da_acolhida(self, ramo, config=None):
+		dados = {"tipo_de_registro": "Definitivo", "ramo": ramo}
+		etapas = recepcao_funil.calcular_etapas(dados, config or CONFIG_ACOLHIDA, BASE, hoje=BASE)
+		return date.fromisoformat(_etapa(etapas, "reuniao_de_acolhida_realizada")["data_estimada"])
+
+	def test_filhotes_usam_o_padrao_de_30_dias(self):
+		self.assertEqual((self._data_da_acolhida("Filhotes") - BASE).days, 30)
+
+	def test_demais_ramos_seguem_o_intervalo_geral(self):
+		self.assertEqual((self._data_da_acolhida("Lobinho") - BASE).days, 7)
+
+	def test_prazo_configurado_dos_filhotes_vale(self):
+		config = {**CONFIG_ACOLHIDA, "reuniao_de_acolhida_realizada_filhotes": 45}
+		self.assertEqual((self._data_da_acolhida("Filhotes", config) - BASE).days, 45)
+
+	def test_valor_invalido_cai_no_padrao(self):
+		for valor in (None, 0, -1, "trinta"):
+			with self.subTest(valor=valor):
+				self.assertEqual(
+					recepcao_funil.dias_de_acolhida_filhotes(
+						{"reuniao_de_acolhida_realizada_filhotes": valor}
+					),
+					recepcao_funil.DIAS_PADRAO_ACOLHIDA_FILHOTES,
+				)
+
+
+class TestSoFaltaAcolhida(TestCase):
+	HOJE = date(2026, 10, 6)
+
+	def _sinal(self, nascimento=date(2010, 1, 1), tipo="Definitivo", **campos):
+		etapas_do_tipo = (
+			recepcao_funil.ORDEM_DEFINITIVO if tipo == "Definitivo" else recepcao_funil.CAMPOS_DE_ETAPA
+		)
+		dados = {
+			"tipo_de_registro": tipo,
+			"status": "Acompanhamento",
+			"data_de_nascimento": nascimento,
+			**{campo: 1 for campo in etapas_do_tipo if campo != "reuniao_de_acolhida_realizada"},
+		}
+		dados.update(campos)
+		etapas = recepcao_funil.calcular_etapas(dados, {}, None, hoje=self.HOJE)
+		return recepcao_funil.so_falta_acolhida(dados, etapas)
+
+	def test_tudo_concluido_menos_a_acolhida(self):
+		self.assertTrue(self._sinal())
+
+	def test_vale_tambem_para_o_registro_provisorio(self):
+		self.assertTrue(self._sinal(tipo="Provisório"))
+
+	def test_outra_etapa_pendente_apaga_o_sinal(self):
+		self.assertFalse(self._sinal(ficha_medica_preenchida=0))
+
+	def test_acolhida_feita_nao_sinaliza(self):
+		self.assertFalse(self._sinal(reuniao_de_acolhida_realizada=1))
+
+	def test_id_escoteiros_pendente_nao_segura_quem_tem_menos_de_15(self):
+		self.assertTrue(self._sinal(nascimento=date(2016, 1, 1), id_escoteiros_criado=0))
+
+	def test_id_escoteiros_pendente_segura_quem_tem_15_ou_mais(self):
+		self.assertFalse(self._sinal(id_escoteiros_criado=0))
+
+	def test_quem_saiu_do_funil_nao_e_sinalizado(self):
+		for status in recepcao_funil.STATUS_FORA_DO_FUNIL:
+			with self.subTest(status=status):
+				self.assertFalse(self._sinal(status=status))

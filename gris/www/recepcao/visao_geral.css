@@ -305,6 +305,67 @@
 	box-shadow: inset 3px 0 0 0 #7c3aed;
 }
 
+/* Selo "sem número de registro" ------------------------------------
+   O registro já foi criado no Paxtu, mas falta o número do jovem ou de
+   um responsável que será registrado — e sem ele a efetivação trava.
+   Magenta sólido: mesmo peso do violeta do definitivo, mas fácil de
+   separar dele. Azul ficaria parecido com "Visita Confirmada" e com o
+   selo do Pioneiro, que já são azulados nesta tela. */
+.badge.badge-sem-numero {
+	display: inline-flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 1);
+	background-color: #be185d;
+	color: #ffffff;
+	border-color: #9d174d;
+	font-weight: 600;
+}
+/* O fundo fica igual ao do tema claro: o magenta mais vivo não passa de
+   4.5:1 com texto claro. */
+.dark .badge.badge-sem-numero {
+	background-color: #be185d;
+	color: #fdf2f8;
+	border-color: #f9a8d4;
+}
+
+.kanban-card--sem-numero {
+	border-color: #f9a8d4;
+	box-shadow: inset 3px 0 0 0 #be185d;
+}
+.dark .kanban-card--sem-numero {
+	border-color: color-mix(in srgb, #f9a8d4 45%, transparent);
+	box-shadow: inset 3px 0 0 0 #db2777;
+}
+
+/* Selo "só falta a acolhida" ---------------------------------------
+   Tudo concluído menos a reunião de acolhida: o jovem está na reta
+   final. Verde-azulado, para não se confundir com o verde do selo
+   "Visita Confirmada" nem com o do ramo Escoteiro. */
+.badge.badge-so-falta-acolhida {
+	display: inline-flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 1);
+	background-color: #0f766e;
+	color: #ffffff;
+	border-color: #115e59;
+	font-weight: 600;
+}
+/* Mesmo motivo do magenta: o verde-azulado mais claro não passa de 4.5:1. */
+.dark .badge.badge-so-falta-acolhida {
+	background-color: #0f766e;
+	color: #f0fdfa;
+	border-color: #5eead4;
+}
+
+.kanban-card--so-falta-acolhida {
+	border-color: #5eead4;
+	box-shadow: inset 3px 0 0 0 #0f766e;
+}
+.dark .kanban-card--so-falta-acolhida {
+	border-color: color-mix(in srgb, #5eead4 45%, transparent);
+	box-shadow: inset 3px 0 0 0 #0d9488;
+}
+
 /* Timeline (etapas da recepção) ----------------------------------*/
 .timeline-container {
 	position: relative;

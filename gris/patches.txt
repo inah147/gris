@@ -50,3 +50,4 @@ gris.patches.marcar_funcoes_diretoria_eleita
 gris.patches.semear_tipos_de_projeto_de_captacao
 gris.patches.converter_cronograma_de_captacao_para_dias
 gris.patches.ajustar_lembretes_da_contribuicao
+gris.patches.preencher_prazos_do_ramo_filhotes

@@ -78,6 +78,18 @@ class TestSinalRegistroDefinitivo(TestCase):
 
 		self.assertFalse(sinal["pendente"])
 
+	def test_sem_prazo_em_maos_usa_o_do_ramo(self):
+		"""22 dias: já venceu para o Lobinho (20), ainda não para o Filhote (25)."""
+		efetivado = {"data_registro_provisorio_efetivado": date(2026, 3, 8)}
+		with patch.object(recepcao_funil.frappe.db, "get_single_value", return_value=None):
+			lobinho = recepcao_funil.sinal_registro_definitivo(_jovem(ramo="Lobinho", **efetivado), hoje=HOJE)
+			filhote = recepcao_funil.sinal_registro_definitivo(
+				_jovem(ramo="Filhotes", **efetivado), hoje=HOJE
+			)
+
+		self.assertTrue(lobinho["pendente"])
+		self.assertFalse(filhote["pendente"])
+
 
 class TestDiasParaRegistroDefinitivo(TestCase):
 	"""A espera sai das Configurações de Recepção, com 20 dias como piso seguro."""
@@ -103,6 +115,23 @@ class TestDiasParaRegistroDefinitivo(TestCase):
 			recepcao_funil.DOCTYPE_CONFIGURACOES, recepcao_funil.CAMPO_DIAS_REGISTRO_DEFINITIVO
 		)
 
+	def test_filhotes_tem_prazo_proprio_com_padrao_de_25(self):
+		for valor in (None, "", 0, -5, "vinte"):
+			with self.subTest(valor=valor):
+				self.assertEqual(
+					recepcao_funil.dias_para_registro_definitivo(
+						{"dias_aviso_seguimento_provisorio_filhotes": valor}, "Filhotes"
+					),
+					recepcao_funil.DIAS_PADRAO_REGISTRO_DEFINITIVO_FILHOTES,
+				)
+
+	def test_filhotes_usam_o_valor_configurado_e_os_demais_ignoram(self):
+		config = {"dias_aviso_seguimento_provisorio": 20, "dias_aviso_seguimento_provisorio_filhotes": 40}
+
+		self.assertEqual(recepcao_funil.dias_para_registro_definitivo(config, "Filhotes"), 40)
+		self.assertEqual(recepcao_funil.dias_para_registro_definitivo(config, "Lobinho"), 20)
+		self.assertEqual(recepcao_funil.dias_para_registro_definitivo(config), 20)
+
 	def test_aviso_por_whatsapp_conta_o_mesmo_prazo(self):
 		self.assertIs(
 			registro_provisorio_notificacoes.dias_para_registro_definitivo,
@@ -110,14 +139,18 @@ class TestDiasParaRegistroDefinitivo(TestCase):
 		)
 
 
-class TestSeloNaVisaoGeral(TestCase):
-	"""O kanban precisa entregar o sinal pronto ao template, card a card."""
+class _ContextoDaVisaoGeral:
+	"""Monta o contexto do kanban com o banco trocado por listas em memória."""
 
-	def _contexto(self, jovens):
+	def _contexto(self, jovens, vinculos=(), responsaveis=()):
+		respostas = {
+			"Novo Associado": jovens,
+			"Responsavel Vinculo": vinculos,
+			"Responsavel": responsaveis,
+		}
+
 		def _get_all(doctype, *args, **kwargs):
-			if doctype == "Novo Associado":
-				return [frappe._dict(j) for j in jovens]
-			return []
+			return [frappe._dict(linha) for linha in respostas.get(doctype, ())]
 
 		context = frappe._dict()
 		with (
@@ -135,6 +168,10 @@ class TestSeloNaVisaoGeral(TestCase):
 				if card.name == nome:
 					return card
 		self.fail(f"card {nome} não foi renderizado")
+
+
+class TestSeloNaVisaoGeral(_ContextoDaVisaoGeral, TestCase):
+	"""O kanban precisa entregar o sinal pronto ao template, card a card."""
 
 	def test_card_atrasado_leva_o_selo_com_a_data_de_efetivacao(self):
 		context = self._contexto([_jovem(name="NA-1", nome_completo="Ana")])
@@ -176,3 +213,88 @@ class TestSeloNaVisaoGeral(TestCase):
 			visao_geral.get_context(frappe._dict())
 
 		self.assertIn("data_registro_provisorio_efetivado", capturados["fields"])
+
+	def test_filhote_dentro_do_prazo_do_ramo_nao_leva_o_selo(self):
+		"""22 dias desde o provisório: abaixo dos 25 dos Filhotes."""
+		context = self._contexto(
+			[
+				_jovem(
+					name="NA-F",
+					nome_completo="Filó",
+					ramo="Filhotes",
+					data_registro_provisorio_efetivado=date(2026, 3, 8),
+				)
+			]
+		)
+
+		self.assertFalse(self._card(context, "NA-F").registro_definitivo_pendente)
+
+
+class TestSinaisNovosDoCard(_ContextoDaVisaoGeral, TestCase):
+	"""Selos "sem número de registro" e "só falta a acolhida" no kanban."""
+
+	def _jovem_completo(self, **campos):
+		"""Definitivo com todas as etapas feitas menos a acolhida, e com número."""
+		base = {
+			"name": "NA-OK",
+			"nome_completo": "Ana",
+			"tipo_de_registro": "Definitivo",
+			"status": "Acompanhamento",
+			"numero_de_registro": "123456-7",
+			"data_de_nascimento": date(2010, 1, 1),
+			**{campo: 1 for campo in recepcao_funil.ORDEM_DEFINITIVO},
+			"reuniao_de_acolhida_realizada": 0,
+		}
+		base.update(campos)
+		return frappe._dict(base)
+
+	def test_jovem_sem_numero_em_acompanhamento_e_sinalizado(self):
+		context = self._contexto([self._jovem_completo(numero_de_registro="")])
+
+		card = self._card(context, "NA-OK")
+		self.assertTrue(card.numero_registro_pendente)
+		self.assertEqual(card.numero_registro_pendente_texto, "o jovem")
+
+	def test_responsavel_que_sera_registrado_sem_numero_e_sinalizado(self):
+		context = self._contexto(
+			[self._jovem_completo()],
+			vinculos=[
+				{"beneficiario_novo_associado": "NA-OK", "responsavel": "R-1", "sera_registrado": 1},
+				{"beneficiario_novo_associado": "NA-OK", "responsavel": "R-2", "sera_registrado": 0},
+			],
+			responsaveis=[
+				{"name": "R-1", "nome_completo": "Bia Mãe", "numero_de_registro": ""},
+				{"name": "R-2", "nome_completo": "Caio Pai", "numero_de_registro": ""},
+			],
+		)
+
+		card = self._card(context, "NA-OK")
+		self.assertTrue(card.numero_registro_pendente)
+		# Quem não será registrado não precisa de número próprio.
+		self.assertEqual(card.numero_registro_pendente_texto, "Bia Mãe")
+
+	def test_todos_com_numero_nao_sinaliza(self):
+		context = self._contexto(
+			[self._jovem_completo()],
+			vinculos=[{"beneficiario_novo_associado": "NA-OK", "responsavel": "R-1", "sera_registrado": 1}],
+			responsaveis=[{"name": "R-1", "nome_completo": "Bia Mãe", "numero_de_registro": "999"}],
+		)
+
+		self.assertFalse(self._card(context, "NA-OK").numero_registro_pendente)
+
+	def test_antes_do_acompanhamento_falta_de_numero_nao_e_sinal(self):
+		context = self._contexto(
+			[self._jovem_completo(status="Fazer Registro", numero_de_registro="", registro_criado_no_paxtu=0)]
+		)
+
+		self.assertFalse(self._card(context, "NA-OK").numero_registro_pendente)
+
+	def test_so_falta_a_acolhida_e_sinalizado(self):
+		context = self._contexto([self._jovem_completo()])
+
+		self.assertTrue(self._card(context, "NA-OK").so_falta_acolhida)
+
+	def test_etapa_pendente_alem_da_acolhida_nao_sinaliza(self):
+		context = self._contexto([self._jovem_completo(ficha_medica_preenchida=0)])
+
+		self.assertFalse(self._card(context, "NA-OK").so_falta_acolhida)

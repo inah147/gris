@@ -24,12 +24,18 @@ na integração de WhatsApp como um todo.
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Callable
 
 import frappe
 from frappe.utils import add_days, cint, date_diff, get_url, getdate, today
 
 from gris.api.recepcao import formatar_idade
-from gris.api.recepcao_funil import RAMOS
+from gris.api.recepcao_funil import (
+	RAMO_FILHOTES,
+	RAMOS,
+	dias_de_acolhida_filhotes,
+	id_escoteiros_obrigatorio,
+)
 from gris.utils import genero
 from gris.utils.chefes import buscar_contatos_chefes_por_ramo
 from gris.utils.job_logger import definir_resumo, metrica, obter_logger
@@ -1259,11 +1265,14 @@ def _enviar_lembretes_para_responsavel(
 	montar_mensagem,
 	campos_extras: list[str] | None = None,
 	resumir: bool = True,
+	elegivel: Callable[[frappe._dict], bool] | None = None,
 ) -> tuple[int, int]:
 	"""Motor comum dos lembretes recorrentes dirigidos ao responsável.
 
 	``montar_mensagem(jovem, contato)`` devolve o texto; ``filtros`` define quem ainda está
 	pendente. O carimbo em ``campo_carimbo`` segura o próximo envio por ``intervalo`` dias.
+	``elegivel(jovem)`` descarta quem o SQL não consegue filtrar sozinho (os campos que ele lê
+	vão em ``campos_extras``).
 
 	Devolve ``(enviados, elegíveis)``. Quem roda o motor mais de uma vez no mesmo job passa
 	``resumir=False`` e consolida os números, senão a última passada apaga a anterior.
@@ -1279,7 +1288,10 @@ def _enviar_lembretes_para_responsavel(
 	)
 
 	elegiveis = [
-		jovem for jovem in pendentes if _passou_o_intervalo(jovem.get(campo_carimbo), data_hoje, intervalo)
+		jovem
+		for jovem in pendentes
+		if (elegivel is None or elegivel(jovem))
+		and _passou_o_intervalo(jovem.get(campo_carimbo), data_hoje, intervalo)
 	]
 
 	if not elegiveis:
@@ -1395,6 +1407,9 @@ def enviar_lembretes_id_escoteiros() -> None:
 
 	Também espera o aviso do número de registro: a ficha médica pode ter sido marcada à mão
 	pela recepção, sem o responsável ter recebido nada. Ver ``_filtro_registro_ja_comunicado``.
+
+	Só cobra quem tem 15 anos ou mais: abaixo disso o id@escoteiros é opcional e a família não
+	recebe mensagem nenhuma (ver ``id_escoteiros_obrigatorio``).
 	"""
 	if not _mensagem_habilitada("msg_lembrete_id_escoteiros"):
 		definir_resumo(MENSAGEM_DESATIVADA)
@@ -1412,7 +1427,47 @@ def enviar_lembretes_id_escoteiros() -> None:
 		montar_mensagem=lambda jovem, contato: _montar_lembrete_id_escoteiros(
 			_extrair_primeiro_nome(contato.get("nome"))
 		),
+		campos_extras=["data_de_nascimento"],
+		elegivel=lambda jovem: id_escoteiros_obrigatorio(jovem, today()),
 	)
+
+
+def _acolhida_dos_filhotes_ainda_no_prazo(jovens: list, data_hoje) -> set[str]:
+	"""Filhotes cujo primeiro aviso de acolhida ainda não venceu.
+
+	O prazo (``dias_de_acolhida_filhotes``) conta da efetivação do registro definitivo, lida
+	do histórico de etapas numa consulta só. Quem já recebeu um aviso segue a cadência normal,
+	e quem não tem a data no histórico (etapa marcada antes de o histórico existir) não é
+	segurado — sem data, segurar seria silenciar o aviso para sempre.
+	"""
+	candidatos = [
+		str(jovem.name)
+		for jovem in jovens
+		if jovem.get("ramo") == RAMO_FILHOTES and not jovem.get("data_lembrete_acolhida")
+	]
+	if not candidatos:
+		return set()
+
+	efetivados_em = {
+		linha.parent: linha.concluida_em
+		for linha in frappe.get_all(
+			"Etapa do Fluxo Concluida",
+			filters={
+				"parenttype": "Novo Associado",
+				"parent": ["in", candidatos],
+				"etapa": "registro_definitivo_efetivado",
+			},
+			fields=["parent", "concluida_em"],
+		)
+		if linha.concluida_em
+	}
+
+	prazo = dias_de_acolhida_filhotes()
+	return {
+		nome
+		for nome, efetivado_em in efetivados_em.items()
+		if date_diff(data_hoje, getdate(efetivado_em)) < prazo
+	}
 
 
 def enviar_lembretes_acolhida_lenco() -> None:
@@ -1420,6 +1475,9 @@ def enviar_lembretes_acolhida_lenco() -> None:
 
 	Diferente dos outros lembretes, o destinatário é o grupo — o carimbo continua no jovem
 	porque a cadência é por jovem, não por grupo.
+
+	Nos Filhotes a acolhida acontece mais tarde: o primeiro aviso espera o prazo de acolhida
+	do ramo, contado da efetivação do definitivo. Ver ``_acolhida_dos_filhotes_ainda_no_prazo``.
 	"""
 	logger = obter_logger("recepcao_mensagens")
 	data_hoje = getdate(today())
@@ -1449,6 +1507,8 @@ def enviar_lembretes_acolhida_lenco() -> None:
 		for jovem in pendentes
 		if _passou_o_intervalo(jovem.get("data_lembrete_acolhida"), data_hoje, intervalo)
 	]
+	no_prazo = _acolhida_dos_filhotes_ainda_no_prazo(elegiveis, data_hoje)
+	elegiveis = [jovem for jovem in elegiveis if str(jovem.name) not in no_prazo]
 
 	if not elegiveis:
 		logger.info("Nenhum aviso de acolhida a enviar hoje.")

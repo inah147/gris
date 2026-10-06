@@ -43,9 +43,12 @@ class _AmbienteDeTeste:
 		responsaveis=None,
 		configuracoes=None,
 		chefes=None,
+		historico=None,
 		data_hoje="2026-05-11",
 	):
 		self.novos_associados = novos_associados or []
+		# Linhas de ``Etapa do Fluxo Concluida`` (``parent``, ``etapa``, ``concluida_em``).
+		self.historico = historico or []
 		self.visitas = visitas or []
 		self.links = links or []
 		self.responsaveis = responsaveis or []
@@ -86,6 +89,9 @@ class _AmbienteDeTeste:
 				return _to_dicts(self.links)
 			if doctype == "Responsavel":
 				return _to_dicts(self.responsaveis)
+			if doctype == "Etapa do Fluxo Concluida":
+				etapa = (kwargs.get("filters") or {}).get("etapa")
+				return _to_dicts(linha for linha in self.historico if linha.get("etapa") == etapa)
 			return []
 
 		modulo.frappe.get_all = _fake_get_all
@@ -464,6 +470,41 @@ class TestLembretesRecorrentes(FrappeTestCase):
 				for filtros in ambiente.filtros_usados:
 					self.assertNotIn("data_mensagem_registro_criado", filtros)
 
+	def test_id_escoteiros_nao_cobra_quem_tem_menos_de_15(self):
+		"""Abaixo dos 15 o id@escoteiros é opcional: a família não recebe mensagem nenhuma."""
+		ambiente = self._rodar(
+			recepcao_mensagens.enviar_lembretes_id_escoteiros,
+			[
+				{
+					"name": "NA-1",
+					"nome_completo": "Joãozinho",
+					"sexo": "Masculino",
+					"data_de_nascimento": "2011-05-12",  # faz 15 amanhã
+				}
+			],
+		)
+
+		self.assertEqual(ambiente.textos, [])
+		self.assertEqual(ambiente.atualizacoes, [])
+
+	def test_id_escoteiros_cobra_quem_tem_15_ou_mais_ou_nao_tem_data(self):
+		for nascimento in ("2011-05-11", None):
+			with self.subTest(nascimento=nascimento):
+				ambiente = self._rodar(
+					recepcao_mensagens.enviar_lembretes_id_escoteiros,
+					[
+						{
+							"name": "NA-1",
+							"nome_completo": "Joãozinho",
+							"sexo": "Masculino",
+							"data_de_nascimento": nascimento,
+						}
+					],
+				)
+
+				self.assertEqual(len(ambiente.textos), 1)
+				self.assertIn("id.escoteiros.org.br", ambiente.textos[0]["mensagem"])
+
 	def test_consultas_ignoram_fila_de_espera_e_concluidos(self):
 		ambiente = self._rodar(
 			recepcao_mensagens.enviar_lembretes_id_escoteiros,
@@ -530,6 +571,70 @@ class TestAvisoDeAcolhida(FrappeTestCase):
 
 		self.assertIsNone(ambiente.grupos[0]["mencionar"])
 		self.assertNotIn("@55", ambiente.grupos[0]["mensagem"])
+
+
+class TestAcolhidaDosFilhotes(FrappeTestCase):
+	"""Nos Filhotes o primeiro aviso espera o prazo de acolhida do ramo (padrão 30 dias)."""
+
+	def _rodar(self, ramo="Filhotes", efetivado_em=None, data_lembrete_acolhida=None, configuracoes=None):
+		historico = (
+			[{"parent": "NA-1", "etapa": "registro_definitivo_efetivado", "concluida_em": efetivado_em}]
+			if efetivado_em
+			else []
+		)
+		with _AmbienteDeTeste(
+			novos_associados=[
+				{
+					"name": "NA-1",
+					"nome_completo": "Pedrinho",
+					"sexo": "Masculino",
+					"data_de_nascimento": "2020-01-01",
+					"ramo": ramo,
+					"data_lembrete_acolhida": data_lembrete_acolhida,
+				}
+			],
+			links=VINCULO_PADRAO,
+			responsaveis=RESPONSAVEL_PADRAO,
+			configuracoes={"grupo_chefes_secao_whatsapp": "120@g.us", **(configuracoes or {})},
+			historico=historico,
+		) as ambiente:
+			recepcao_mensagens.enviar_lembretes_acolhida_lenco()
+		return ambiente
+
+	def test_filhote_dentro_do_prazo_nao_e_anunciado(self):
+		ambiente = self._rodar(efetivado_em="2026-05-01 10:00:00")  # 10 dias
+
+		self.assertEqual(ambiente.grupos, [])
+		self.assertEqual(ambiente.atualizacoes, [])
+
+	def test_filhote_no_fim_do_prazo_e_anunciado(self):
+		ambiente = self._rodar(efetivado_em="2026-04-11 10:00:00")  # 30 dias
+
+		self.assertEqual(len(ambiente.grupos), 1)
+
+	def test_prazo_configurado_vale(self):
+		ambiente = self._rodar(
+			efetivado_em="2026-05-01 10:00:00",  # 10 dias
+			configuracoes={"reuniao_de_acolhida_realizada_filhotes": 10},
+		)
+
+		self.assertEqual(len(ambiente.grupos), 1)
+
+	def test_filhote_sem_data_no_historico_nao_e_segurado(self):
+		"""Etapa marcada antes do histórico existir: segurar seria silenciar o aviso para sempre."""
+		ambiente = self._rodar(efetivado_em=None)
+
+		self.assertEqual(len(ambiente.grupos), 1)
+
+	def test_depois_do_primeiro_aviso_segue_a_cadencia_normal(self):
+		ambiente = self._rodar(efetivado_em="2026-05-01 10:00:00", data_lembrete_acolhida="2026-05-01")
+
+		self.assertEqual(len(ambiente.grupos), 1)
+
+	def test_outros_ramos_nao_esperam(self):
+		ambiente = self._rodar(ramo="Lobinho", efetivado_em="2026-05-10 10:00:00")  # 1 dia
+
+		self.assertEqual(len(ambiente.grupos), 1)
 
 
 class TestMensagens(FrappeTestCase):
@@ -1117,12 +1222,14 @@ class TestOrientacaoPosVisita(FrappeTestCase):
 class TestInterruptoresDeMensagem(FrappeTestCase):
 	"""Cada mensagem tem um Check próprio em Configurações de Recepção."""
 
+	# 15 anos ou mais: abaixo disso o lembrete de id@escoteiros nem é elegível, e o teste
+	# mediria a idade em vez do interruptor.
 	JOVEM_ACOLHIDA: ClassVar[dict] = {
 		"name": "NA-1",
 		"nome_completo": "Joãozinho Feliz",
 		"sexo": "Masculino",
-		"data_de_nascimento": "2014-09-01",
-		"ramo": "Escoteiro",
+		"data_de_nascimento": "2010-09-01",
+		"ramo": "Sênior",
 		"data_lembrete_acolhida": None,
 		"data_lembrete_pesquisa": None,
 		"data_lembrete_ficha_medica": None,

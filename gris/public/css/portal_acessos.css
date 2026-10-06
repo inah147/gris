@@ -1,0 +1,371 @@
+/* Portal de acessos (/acessos e /acessos/gestao): cards, selos, solicitações, etapas e dialogs.
+   Compartilhado pelas duas páginas; cada uma inclui este arquivo no bloco `extra_style`. */
+
+.acessos-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 4);
+	flex-wrap: wrap;
+}
+
+.acessos-header__acoes {
+	display: flex;
+	gap: calc(var(--spacing) * 2);
+	margin-left: auto;
+}
+
+.acessos {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 6);
+	margin-top: calc(var(--spacing) * 6);
+}
+
+/* A barra de abas fica fora dos cards, encostada à esquerda; rola no celular. */
+.acessos .tabs > [role="tablist"] {
+	justify-content: flex-start;
+	max-width: 100%;
+	overflow-x: auto;
+	margin-bottom: calc(var(--spacing) * 3);
+}
+
+.acessos-busca {
+	max-width: 24rem;
+}
+
+.acessos-aba__intro {
+	margin: 0 0 calc(var(--spacing) * 4);
+	color: var(--muted-foreground);
+	font-size: 0.875rem;
+	line-height: 1.5;
+}
+
+/* ─── grade de cards ─────────────────────────────────────────────── */
+
+.acessos-grade {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+	gap: calc(var(--spacing) * 4);
+}
+
+.acessos-grade > .empty {
+	grid-column: 1 / -1;
+}
+
+.acessos-card {
+	gap: calc(var(--spacing) * 3);
+	padding: calc(var(--spacing) * 5);
+	min-width: 0;
+}
+
+.acessos-card[data-situacao="tem"],
+.acessos-card[data-situacao="via_perfil"] {
+	border-color: color-mix(in oklab, var(--success) 45%, var(--border));
+}
+
+/* O card do Basecoat dá padding lateral ao header/footer; aqui o padding é do card. */
+.acessos-card > header,
+.acessos-card > footer {
+	padding-inline: 0;
+}
+
+.acessos-card__topo {
+	display: flex;
+	align-items: flex-start;
+	gap: calc(var(--spacing) * 3);
+}
+
+.acessos-card__icone {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: none;
+	width: 2.5rem;
+	height: 2.5rem;
+	border-radius: var(--radius-md, 0.5rem);
+	background: var(--muted);
+	color: var(--foreground);
+}
+
+.acessos-card__titulos {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: calc(var(--spacing) * 1.5);
+	min-width: 0;
+}
+
+.acessos-card__titulo {
+	margin: 0;
+	font-size: 1rem;
+	font-weight: 600;
+	line-height: 1.3;
+	overflow-wrap: anywhere;
+}
+
+.acessos-card__descricao {
+	margin: 0;
+	font-size: 0.875rem;
+	line-height: 1.5;
+	color: var(--foreground);
+}
+
+.acessos-card__detalhes {
+	font-size: 0.875rem;
+}
+
+.acessos-card__detalhes summary {
+	cursor: pointer;
+	color: var(--primary);
+	font-weight: 500;
+	width: fit-content;
+}
+
+.acessos-card__detalhes summary:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 2px;
+	border-radius: var(--radius-sm, 0.25rem);
+}
+
+.acessos-card__detalhes p {
+	margin: calc(var(--spacing) * 2) 0 0;
+	line-height: 1.5;
+	color: var(--muted-foreground);
+}
+
+.acessos-card__meta {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 1);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+	overflow-wrap: anywhere;
+}
+
+.acessos-card__acoes {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 2);
+	margin-top: auto;
+	padding-top: calc(var(--spacing) * 1);
+}
+
+/* ─── selos de situação ──────────────────────────────────────────── */
+
+.acessos-selo {
+	white-space: normal;
+	text-align: left;
+	border: 1px solid transparent;
+}
+
+.acessos-selo--tem {
+	background-color: color-mix(in oklab, var(--success) 16%, var(--background));
+	border-color: color-mix(in oklab, var(--success) 45%, var(--background));
+	color: color-mix(in oklab, var(--success) 70%, var(--foreground));
+}
+
+.acessos-selo--andamento {
+	background-color: color-mix(in oklab, var(--warning) 22%, var(--background));
+	border-color: color-mix(in oklab, var(--warning) 55%, var(--background));
+	color: color-mix(in oklab, var(--warning-foreground) 85%, var(--foreground));
+}
+
+.acessos-selo--alerta {
+	background-color: color-mix(in oklab, var(--destructive) 14%, var(--background));
+	border-color: color-mix(in oklab, var(--destructive) 45%, var(--background));
+	color: color-mix(in oklab, var(--destructive) 80%, var(--foreground));
+}
+
+.acessos-selo--neutro {
+	background-color: var(--muted);
+	border-color: var(--border);
+	color: var(--muted-foreground);
+}
+
+/* ─── solicitações ───────────────────────────────────────────────── */
+
+.acessos-lista {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 3);
+}
+
+.acessos-lista > .empty {
+	padding-block: calc(var(--spacing) * 8);
+}
+
+.acessos-pendentes__card > section {
+	min-width: 0;
+}
+
+.acessos-solicitacao {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	padding: calc(var(--spacing) * 4);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg, 0.75rem);
+	background: var(--card);
+	min-width: 0;
+}
+
+.acessos-solicitacao__topo {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 3);
+	flex-wrap: wrap;
+}
+
+.acessos-solicitacao__titulo {
+	margin: 0;
+	font-size: 1rem;
+	font-weight: 600;
+}
+
+.acessos-solicitacao__data {
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+}
+
+.acessos-solicitacao__quem {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 1.5);
+	margin: 0;
+	font-weight: 500;
+}
+
+.acessos-solicitacao__texto {
+	margin: 0;
+	font-size: 0.875rem;
+	line-height: 1.5;
+	overflow-wrap: anywhere;
+}
+
+/* ─── linha do tempo das etapas ──────────────────────────────────── */
+
+.acessos-etapas {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	margin: calc(var(--spacing) * 1) 0 0;
+	padding: 0;
+	list-style: none;
+	font-size: 0.8125rem;
+}
+
+.acessos-etapas__item {
+	display: flex;
+	align-items: flex-start;
+	gap: calc(var(--spacing) * 2);
+	color: var(--muted-foreground);
+	line-height: 1.4;
+}
+
+.acessos-etapas__item > svg {
+	flex: none;
+	margin-top: 0.0625rem;
+}
+
+.acessos-etapas__item--aprovada > svg {
+	color: var(--success);
+}
+
+.acessos-etapas__item--recusada > svg {
+	color: var(--destructive);
+}
+
+.acessos-etapas__item--atual {
+	color: var(--foreground);
+}
+
+.acessos-etapas__item--atual > svg {
+	color: color-mix(in oklab, var(--warning) 80%, var(--foreground));
+}
+
+.acessos-etapas__obs {
+	display: block;
+	margin-top: calc(var(--spacing) * 0.5);
+	font-style: italic;
+}
+
+/* ─── dialogs ────────────────────────────────────────────────────── */
+
+/* A largura vai no filho: a caixa do dialog Basecoat é o `> div`. */
+.acessos-dialog > div {
+	width: min(36rem, calc(100vw - 2rem));
+	max-width: min(36rem, calc(100vw - 2rem));
+}
+
+.acessos-dialog--estreito > div {
+	width: min(26rem, calc(100vw - 2rem));
+	max-width: min(26rem, calc(100vw - 2rem));
+}
+
+.acessos-dialog__corpo {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 4);
+}
+
+.acessos-dialog__descricao {
+	margin: 0;
+	line-height: 1.5;
+}
+
+.acessos-dialog__subtitulo {
+	margin: 0 0 calc(var(--spacing) * 1);
+	font-size: 0.875rem;
+	font-weight: 600;
+}
+
+.acessos-dialog__bloco p {
+	margin: 0;
+	font-size: 0.875rem;
+	line-height: 1.5;
+	color: var(--muted-foreground);
+}
+
+.acessos-dialog__aviso {
+	display: flex;
+	align-items: flex-start;
+	gap: calc(var(--spacing) * 2);
+	padding: calc(var(--spacing) * 3);
+	border-radius: var(--radius-md, 0.5rem);
+	background: var(--muted);
+	font-size: 0.875rem;
+	line-height: 1.4;
+	overflow-wrap: anywhere;
+}
+
+.acessos-dialog__aviso[hidden] {
+	display: none;
+}
+
+.acessos-dialog__aviso--alerta {
+	background: color-mix(in oklab, var(--warning) 18%, var(--background));
+}
+
+.acessos-dialog footer {
+	flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+	.acessos {
+		gap: calc(var(--spacing) * 4);
+		margin-top: calc(var(--spacing) * 4);
+	}
+
+	.acessos-card {
+		padding: calc(var(--spacing) * 4);
+	}
+
+	.acessos-header__acoes {
+		margin-left: 0;
+	}
+}

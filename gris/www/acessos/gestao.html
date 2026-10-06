@@ -1,0 +1,277 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty, field, input, radio_group, switch, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/tabs.html.jinja" import tabs %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Gestão de acessos{% endblock %}
+
+{# gestao.css/.js são injetados automaticamente pelo Frappe (colocated): não
+   referenciar manualmente, duplica o carregamento. #}
+
+{# Estilos compartilhados com a outra página do portal de acessos; bumpe o `v` ao mudar. #}
+{% block extra_style %}
+<link rel="stylesheet" href="/assets/gris/css/portal_acessos.css?v=20261006-2">
+{% endblock %}
+
+{% block page_header %}
+<div class="acessos-header">
+	<div class="flex flex-col gap-2 max-w-3xl">
+		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">Gestão de acessos</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">
+			Solicitações, licenças, quem tem cada acesso e concessões em massa.
+		</p>
+	</div>
+	<div class="acessos-header__acoes">
+		<a class="btn-outline" href="/acessos">
+			{{ lucide_icon("key-round", size="sm") }}
+			<span>Meus acessos</span>
+		</a>
+		{% if tem_desk %}
+		<a class="btn-outline" href="/app/configuracoes-de-acessos">
+			{{ lucide_icon("settings", size="sm") }}
+			<span>Configurações</span>
+		</a>
+		{% endif %}
+	</div>
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="acessos acessos-gestao"
+     data-cards="{{ cards | tojson | forceescape }}"
+     data-papel-padrao="{{ resumo.papel_padrao | e }}">
+
+	{% set filtros_de_status = [
+		{"value": "abertas", "label": "Em andamento"},
+		{"value": "todas", "label": "Todas"},
+		{"value": "Concedida", "label": "Concedidas"},
+		{"value": "Recusada", "label": "Recusadas"},
+		{"value": "Cancelada", "label": "Canceladas"}
+	] %}
+
+	{% macro secao_solicitacoes(aba, filtros) %}
+	<section class="acessos-gestao__secao">
+		<div class="acessos-gestao__secao-topo">
+			<h2 class="acessos-gestao__secao-titulo">Solicitações</h2>
+			<div class="acessos-gestao__filtro">
+				{{ select(id="gestao-filtro-" ~ aba, name="status", items=filtros, main_attrs={"data-filtro-aba": aba}) }}
+			</div>
+		</div>
+		{% call card(attrs={"class": "acessos-gestao__card"}) %}
+		<section class="p-0 min-w-0">
+			<div class="overflow-x-auto" id="gestao-solicitacoes-{{ aba }}" aria-live="polite"></div>
+		</section>
+		{% endcall %}
+		<div class="acessos-gestao__paginacao" id="gestao-paginacao-{{ aba }}"></div>
+	</section>
+	{% endmacro %}
+
+	{% set painel_gris %}
+	{{ secao_solicitacoes("gris", filtros_de_status) }}
+
+	<section class="acessos-gestao__secao">
+		<h2 class="acessos-gestao__secao-titulo">Papéis do Gris</h2>
+		<div class="acessos-grade" id="gestao-cards-gris"></div>
+	</section>
+
+	<section class="acessos-gestao__secao">
+		<h2 class="acessos-gestao__secao-titulo">Ações em massa</h2>
+		{% call card(attrs={"class": "acessos-gestao__card acessos-massa"}) %}
+		<section class="acessos-massa__corpo">
+			<p class="acessos-massa__intro">
+				Conceda ou revogue um papel do Gris para todos os associados ativos ou para quem você escolher.
+				Papéis que vêm do perfil da pessoa não são revogados aqui: mudam com o perfil.
+			</p>
+			<div class="acessos-massa__linha">
+				{% call field(label="Papel") %}
+					{{ select(id="massa-acesso", name="acesso", items=[{"value": "", "label": "Escolha o papel…"}] + opcoes_papeis_em_massa, is_combobox=true, search_placeholder="Buscar papel…") }}
+				{% endcall %}
+				{% call field(label="Para quem") %}
+					{{ radio_group("massa-alvo", options=[
+						{"value": "selecionados", "label": "Pessoas selecionadas"},
+						{"value": "todos", "label": "Todos os associados ativos"}
+					], value="selecionados", attrs={"class": "acessos-massa__alvo"}) }}
+				{% endcall %}
+			</div>
+			<div class="acessos-massa__pessoas" id="massa-pessoas">
+				<div class="acessos-massa__busca">
+					{{ input(name="busca", type="search", attrs={"id": "massa-busca", "placeholder": "Buscar pelo nome ou e-mail…", "aria-label": "Buscar pessoas"}) }}
+					<span class="acessos-massa__contagem" id="massa-contagem" aria-live="polite"></span>
+				</div>
+				<div class="acessos-massa__lista" id="massa-lista">
+					<p class="text-muted-foreground text-sm m-0">Escolha um papel para ver as pessoas.</p>
+				</div>
+			</div>
+			<div class="acessos-card__acoes">
+				<button type="button" class="btn-primary" id="btn-massa-conceder">
+					{{ lucide_icon("circle-plus", size="sm") }}
+					<span>Conceder</span>
+				</button>
+				<button type="button" class="btn-outline" id="btn-massa-revogar">
+					{{ lucide_icon("circle-minus", size="sm") }}
+					<span>Revogar</span>
+				</button>
+			</div>
+		</section>
+		{% endcall %}
+	</section>
+	{% endset %}
+
+	{% set painel_ferramentas %}
+	{{ secao_solicitacoes("ferramentas", filtros_de_status) }}
+
+	<section class="acessos-gestao__secao">
+		<div class="acessos-gestao__secao-topo">
+			<h2 class="acessos-gestao__secao-titulo">Ferramentas e drives</h2>
+			{% if opcoes_ferramentas %}
+			<button type="button" class="btn-sm-outline" id="btn-registrar-licenca">
+				{{ lucide_icon("plus", size="sm") }}
+				<span>Registrar licença existente</span>
+			</button>
+			{% endif %}
+		</div>
+		<div class="acessos-grade" id="gestao-cards-ferramentas"></div>
+	</section>
+	{% endset %}
+
+	{{ tabs(id="gestao-abas", tabsets=[
+		{"tab": "Acessos do Gris", "panel": painel_gris},
+		{"tab": "Ferramentas", "panel": painel_ferramentas}
+	]) }}
+
+	<template id="gestao-vazio-solicitacoes">
+		{{ empty(
+			title="Nenhuma solicitação aqui",
+			description="Mude o filtro para ver as solicitações encerradas.",
+			image="/assets/gris/images/gris-character/gris-idle.png",
+			image_size="sm"
+		) }}
+	</template>
+</div>
+
+{% call dialog(
+	id="dialog-solicitacao",
+	title="Solicitação",
+	dialog_attrs={"class": "acessos-dialog"},
+	footer='<button type="button" class="btn-outline" data-fechar-dialog>Fechar</button><button type="button" class="btn-destructive" id="btn-gestao-recusar" hidden>Recusar</button><button type="button" class="btn-outline" id="btn-gestao-cancelar" hidden>Cancelar pedido</button><button type="button" class="btn-primary" id="btn-gestao-aprovar" hidden>Aprovar</button><button type="button" class="btn-primary" id="btn-gestao-confirmar-concessao" hidden>Confirmar concessão</button>'
+) %}
+<div class="acessos-dialog__corpo">
+	<div id="solicitacao-detalhe"></div>
+	<div class="acessos-dialog__aviso" id="solicitacao-instrucoes" hidden>
+		{{ lucide_icon("info", size="sm") }}
+		<span></span>
+	</div>
+	<div id="solicitacao-observacao-campo">
+		{% call field(label="Observação", hint="Obrigatória para recusar: ela vai para quem pediu.") %}
+			{{ textarea(name="observacao", attrs={"id": "solicitacao-observacao", "rows": "3", "maxlength": "1000"}) }}
+		{% endcall %}
+	</div>
+</div>
+{% endcall %}
+
+{% call dialog(
+	id="dialog-titulares",
+	title="Quem tem este acesso",
+	dialog_attrs={"class": "acessos-dialog acessos-dialog--largo"}
+) %}
+<div class="acessos-dialog__corpo">
+	{{ input(name="busca_titulares", type="search", attrs={"id": "titulares-busca", "placeholder": "Buscar pelo nome ou e-mail…", "aria-label": "Buscar titulares"}) }}
+	<div class="overflow-x-auto" id="titulares-lista" aria-live="polite"></div>
+</div>
+{% endcall %}
+
+{% call dialog(
+	id="dialog-editar",
+	title="Editar acesso",
+	dialog_attrs={"class": "acessos-dialog acessos-dialog--largo"},
+	footer='<button type="button" class="btn-outline" data-fechar-dialog>Cancelar</button><button type="button" class="btn-primary" id="btn-salvar-acesso">Salvar</button>'
+) %}
+<div class="acessos-dialog__corpo">
+	{% call field(label="Descrição", hint="O que é o acesso e para que serve. Aparece para todos.") %}
+		{{ textarea(name="descricao", attrs={"id": "editar-descricao", "rows": "2"}) }}
+	{% endcall %}
+	{% call field(label="O que muda nas permissões") %}
+		{{ textarea(name="o_que_muda", attrs={"id": "editar-o-que-muda", "rows": "3"}) }}
+	{% endcall %}
+	<div id="editar-bloco-ferramenta" class="acessos-dialog__corpo">
+		{% call field(label="Limite de licenças", hint="0 = sem limite.") %}
+			{{ input(name="limite_licencas", type="number", attrs={"id": "editar-limite", "min": "0"}) }}
+		{% endcall %}
+		{% call field(label="Link de acesso") %}
+			{{ input(name="link_externo", type="url", attrs={"id": "editar-link", "placeholder": "https://"}) }}
+		{% endcall %}
+		{% call field(label="Instruções para conceder", hint="Aparece só para a gestão.") %}
+			{{ textarea(name="instrucoes_concessao", attrs={"id": "editar-instrucoes", "rows": "3"}) }}
+		{% endcall %}
+	</div>
+	<div id="editar-bloco-drive">
+		{% call field(label="Permissão concedida no drive") %}
+			{{ select(id="editar-permissao-drive", name="permissao_drive", items=[
+				{"value": "reader", "label": "Leitor"},
+				{"value": "writer", "label": "Editor"},
+				{"value": "fileOrganizer", "label": "Administrador de conteúdo"}
+			]) }}
+		{% endcall %}
+	</div>
+	{% call field(label="Ordem", hint="Menor aparece primeiro.") %}
+		{{ input(name="ordem", type="number", attrs={"id": "editar-ordem"}) }}
+	{% endcall %}
+	<div class="acessos-editar__switches">
+		{{ switch(name="solicitavel", label="Pode ser solicitado", attrs={"id": "editar-solicitavel"}) }}
+		{{ switch(name="ativo", label="Aparece no portal", attrs={"id": "editar-ativo"}) }}
+	</div>
+
+	<div class="acessos-editar__etapas">
+		<h3 class="acessos-dialog__subtitulo">Fluxo de aprovação</h3>
+		<p class="text-muted-foreground text-sm m-0">
+			Etapas em ordem; cada uma é decidida por quem tem o papel. O padrão é uma etapa da Gestão de Acessos, e apagar todas as etapas volta a esse padrão.
+		</p>
+		<ol class="acessos-editar__lista" id="editar-etapas"></ol>
+		<div class="acessos-editar__nova-etapa">
+			{{ select(id="editar-nova-etapa-papel", name="nova_etapa_papel", items=[{"value": "", "label": "Papel que aprova…"}] + opcoes_papel_aprovador, is_combobox=true, search_placeholder="Buscar papel…") }}
+			{{ input(name="nova_etapa_descricao", attrs={"id": "editar-nova-etapa-descricao", "placeholder": "Descrição (ex.: Diretoria)", "maxlength": "140"}) }}
+			<button type="button" class="btn-sm-outline" id="btn-adicionar-etapa">
+				{{ lucide_icon("plus", size="sm") }}
+				<span>Adicionar etapa</span>
+			</button>
+		</div>
+	</div>
+</div>
+{% endcall %}
+
+{% if opcoes_ferramentas %}
+{% call dialog(
+	id="dialog-licenca",
+	title="Registrar licença existente",
+	description="Para quem já usa a ferramenta antes do portal: a licença passa a contar no limite.",
+	dialog_attrs={"class": "acessos-dialog"},
+	footer='<button type="button" class="btn-outline" data-fechar-dialog>Cancelar</button><button type="button" class="btn-primary" id="btn-salvar-licenca">Registrar</button>'
+) %}
+<div class="acessos-dialog__corpo">
+	{% call field(label="Ferramenta") %}
+		{{ select(id="licenca-acesso", name="acesso", items=[{"value": "", "label": "Escolha a ferramenta…"}] + opcoes_ferramentas) }}
+	{% endcall %}
+	{% call field(label="Associado", hint="A conta é sempre o id@escoteiros.") %}
+		{{ select(id="licenca-associado", name="associado", items=[{"value": "", "label": "Escolha o associado…"}] + opcoes_associados, is_combobox=true, search_placeholder="Buscar associado…") }}
+	{% endcall %}
+	{% call field(label="Observação") %}
+		{{ textarea(name="observacao", attrs={"id": "licenca-observacao", "rows": "2"}) }}
+	{% endcall %}
+</div>
+{% endcall %}
+{% endif %}
+
+{% call dialog(
+	id="dialog-confirmar",
+	title="Confirmar",
+	dialog_attrs={"class": "acessos-dialog acessos-dialog--estreito"},
+	footer='<button type="button" class="btn-outline" data-fechar-dialog>Voltar</button><button type="button" class="btn-primary" id="btn-confirmar">Confirmar</button>'
+) %}
+<p class="acessos-dialog__descricao" id="confirmar-texto"></p>
+{% endcall %}
+
+{{ toaster() }}
+{% endblock %}

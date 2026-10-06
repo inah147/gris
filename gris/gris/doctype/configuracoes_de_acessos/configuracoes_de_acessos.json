@@ -1,0 +1,80 @@
+{
+ "actions": [],
+ "creation": "2026-10-06 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "whatsapp_section",
+  "habilitar_avisos_whatsapp",
+  "grupo_tecnologia_whatsapp",
+  "aprovacao_section",
+  "papel_aprovador_padrao"
+ ],
+ "fields": [
+  {
+   "fieldname": "whatsapp_section",
+   "fieldtype": "Section Break",
+   "label": "Avisos por WhatsApp"
+  },
+  {
+   "default": "1",
+   "description": "Desligue para suspender os avisos do portal de acessos: para quem aprova, para quem solicitou e para o grupo de tecnologia.",
+   "fieldname": "habilitar_avisos_whatsapp",
+   "fieldtype": "Check",
+   "label": "Habilitar avisos automáticos por WhatsApp"
+  },
+  {
+   "description": "Grupo avisado quando um associado fica inativo com licenças de ferramentas que precisam ser revogadas à mão. A lista vem da instância conectada na Evolution API.",
+   "fieldname": "grupo_tecnologia_whatsapp",
+   "fieldtype": "Select",
+   "label": "Grupo de tecnologia (WhatsApp)"
+  },
+  {
+   "fieldname": "aprovacao_section",
+   "fieldtype": "Section Break",
+   "label": "Aprovação"
+  },
+  {
+   "default": "Gestor de Acessos",
+   "description": "Papel da etapa de aprovação que todo acesso recebe ao ser criado, e a que ele volta quando todas as etapas são apagadas.",
+   "fieldname": "papel_aprovador_padrao",
+   "fieldtype": "Link",
+   "label": "Papel aprovador padrão",
+   "options": "Role"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-06 00:00:01.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Configuracoes de Acessos",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Gestor de Acessos",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

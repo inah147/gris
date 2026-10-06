@@ -335,6 +335,9 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/sugestoes": ["Acompanhamento de Sugestoes", "Desenvolvedor"],
 	"/sugestoes/nova": ["All"],
 	"/sugestoes/acompanhamento": ["Acompanhamento de Sugestoes", "Desenvolvedor"],
+	# Todo usuário logado vê os próprios acessos e pede novos, responsáveis inclusive.
+	"/acessos": ["All"],
+	"/acessos/gestao": ["Gestor de Acessos"],
 }
 
 # Páginas marcadas como "estritas": mesmo System Manager deve ter uma das roles listadas.
@@ -671,6 +674,13 @@ def enrich_context(context, current_path: str):
 		context.is_system_manager = "System Manager" in roles
 		context.is_guest_user = False
 
+		# Itens do portal de acessos no menu do usuário. Import local: o módulo de
+		# permissões do portal não deve depender deste.
+		from gris.api.acessos.permissoes import eh_gestor, pode_usar_portal
+
+		context.pode_ver_acessos = pode_usar_portal(user)
+		context.pode_gerir_acessos = eh_gestor(user)
+
 		# Import local: busca_global importa deste módulo.
 		from gris.api.busca_global import paginas_da_busca
 
@@ -682,6 +692,8 @@ def enrich_context(context, current_path: str):
 		context.user_initial = None
 		context.is_system_manager = False
 		context.is_guest_user = True
+		context.pode_ver_acessos = False
+		context.pode_gerir_acessos = False
 		context.busca_paginas = []
 
 	return context

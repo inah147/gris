@@ -1,0 +1,154 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty, field, input, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/tabs.html.jinja" import tabs %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Meus acessos{% endblock %}
+
+{# index.js é injetado automaticamente pelo Frappe (colocated): não referenciar
+   manualmente, duplica o carregamento. #}
+
+{# Estilos compartilhados com a outra página do portal de acessos; bumpe o `v` ao mudar. #}
+{% block extra_style %}
+<link rel="stylesheet" href="/assets/gris/css/portal_acessos.css?v=20261006-2">
+{% endblock %}
+
+{% block page_header %}
+<div class="acessos-header">
+	<div class="flex flex-col gap-2 max-w-3xl">
+		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">Meus acessos</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">
+			O que você já tem no Gris e nas ferramentas do grupo, e o que pode pedir.
+		</p>
+	</div>
+	{% if payload.eh_gestor %}
+	<div class="acessos-header__acoes">
+		<a class="btn-outline" href="/acessos/gestao">
+			{{ lucide_icon("user-check", size="sm") }}
+			<span>Gestão de acessos</span>
+		</a>
+	</div>
+	{% endif %}
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="acessos" data-payload="{{ payload | tojson | forceescape }}">
+
+	<section class="acessos-pendentes" id="acessos-pendentes" hidden>
+		{% call card(title="Aprovações pendentes", description="Pedidos de outras pessoas que esperam a sua decisão.", attrs={"class": "acessos-pendentes__card"}) %}
+		<div id="acessos-pendentes-lista" class="acessos-lista"></div>
+		{% endcall %}
+	</section>
+
+	{% set painel_gris %}
+	<p class="acessos-aba__intro">
+		Papéis do Gris liberam páginas e ações do portal. Cada um diz o que muda quando você o recebe.
+	</p>
+	<div id="acessos-grade-gris" class="acessos-grade" aria-live="polite"></div>
+	{% endset %}
+
+	{% set painel_ferramentas %}
+	<p class="acessos-aba__intro">
+		{% if payload.email_institucional %}
+		Contas nas ferramentas do grupo. Elas usam sempre o seu id@escoteiros (<strong>{{ payload.email_institucional | e }}</strong>).
+		{% else %}
+		Contas nas ferramentas do grupo, sempre criadas no id@escoteiros. Você ainda não tem um id@escoteiros no Gris: por enquanto, dá para pedir só os acessos do Gris.
+		{% endif %}
+	</p>
+	<div id="acessos-grade-ferramentas" class="acessos-grade" aria-live="polite"></div>
+	{% endset %}
+
+	{% set painel_solicitacoes %}
+	<div id="acessos-solicitacoes" class="acessos-lista" aria-live="polite"></div>
+	{% endset %}
+
+	<div class="acessos-busca">
+		{{ input(name="busca", type="search", attrs={"id": "acessos-busca", "placeholder": "Buscar acesso…", "aria-label": "Buscar acesso"}) }}
+	</div>
+
+	{{ tabs(id="acessos-abas", tabsets=[
+		{"tab": "Acessos do Gris", "panel": painel_gris},
+		{"tab": "Ferramentas", "panel": painel_ferramentas},
+		{"tab": "Minhas solicitações", "panel": painel_solicitacoes}
+	]) }}
+
+	<template id="acessos-vazio-solicitacoes">
+		{{ empty(
+			title="Nenhuma solicitação ainda",
+			description="Quando você pedir um acesso, o andamento aparece aqui.",
+			image="/assets/gris/images/gris-character/gris-idle.png",
+			image_size="sm"
+		) }}
+	</template>
+	<template id="acessos-vazio-busca">
+		{{ empty(
+			title="Nenhum acesso encontrado",
+			description="Tente outro termo ou confira a outra aba.",
+			image="/assets/gris/images/gris-character/gris-search.png",
+			image_size="sm"
+		) }}
+	</template>
+	<template id="acessos-vazio-catalogo">
+		{{ empty(
+			title="Nenhum acesso nesta aba",
+			description="A gestão de acessos ainda não cadastrou itens aqui.",
+			image="/assets/gris/images/gris-character/gris-sad.png",
+			image_size="sm"
+		) }}
+	</template>
+</div>
+
+{% call dialog(
+	id="dialog-solicitar",
+	title="Solicitar acesso",
+	dialog_attrs={"class": "acessos-dialog"},
+	footer='<button type="button" class="btn-outline" data-fechar-dialog>Cancelar</button><button type="button" class="btn-primary" id="btn-enviar-solicitacao">Enviar solicitação</button>'
+) %}
+<div class="acessos-dialog__corpo">
+	<p class="acessos-dialog__descricao" id="solicitar-descricao"></p>
+	<div class="acessos-dialog__bloco" id="solicitar-o-que-muda-bloco">
+		<h3 class="acessos-dialog__subtitulo">O que muda</h3>
+		<p id="solicitar-o-que-muda"></p>
+	</div>
+	<div class="acessos-dialog__aviso" id="solicitar-conta" hidden>
+		{{ lucide_icon("info", size="sm") }}
+		<span></span>
+	</div>
+	<div class="acessos-dialog__aviso acessos-dialog__aviso--alerta" id="solicitar-vagas" hidden>
+		{{ lucide_icon("hourglass", size="sm") }}
+		<span></span>
+	</div>
+	{% call field(label="Por que você precisa deste acesso?", hint="Opcional. Ajuda quem vai aprovar.") %}
+		{{ textarea(name="justificativa", attrs={"id": "solicitar-justificativa", "rows": "3", "maxlength": "1000"}) }}
+	{% endcall %}
+</div>
+{% endcall %}
+
+{% call dialog(
+	id="dialog-decidir",
+	title="Decidir solicitação",
+	dialog_attrs={"class": "acessos-dialog"},
+	footer='<button type="button" class="btn-outline" data-fechar-dialog>Fechar</button><button type="button" class="btn-destructive" id="btn-recusar">Recusar</button><button type="button" class="btn-primary" id="btn-aprovar">Aprovar</button>'
+) %}
+<div class="acessos-dialog__corpo">
+	<div id="decidir-resumo"></div>
+	{% call field(label="Observação", hint="Obrigatória para recusar: ela vai para quem pediu.") %}
+		{{ textarea(name="observacao", attrs={"id": "decidir-observacao", "rows": "3", "maxlength": "1000"}) }}
+	{% endcall %}
+</div>
+{% endcall %}
+
+{% call dialog(
+	id="dialog-confirmar",
+	title="Confirmar",
+	dialog_attrs={"class": "acessos-dialog acessos-dialog--estreito"},
+	footer='<button type="button" class="btn-outline" data-fechar-dialog>Voltar</button><button type="button" class="btn-destructive" id="btn-confirmar">Confirmar</button>'
+) %}
+<p class="acessos-dialog__descricao" id="confirmar-texto"></p>
+{% endcall %}
+
+{{ toaster() }}
+{% endblock %}

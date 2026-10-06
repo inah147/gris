@@ -15,7 +15,7 @@ SETTINGS_DOCTYPE = "Configuracoes WhatsApp"
 # Telas de configuração que têm um Select de grupo alimentado pela Evolution API.
 # `listar_grupos_whatsapp_para_select` só aceita permissão vinda de uma delas.
 DOCTYPES_COM_SELECT_DE_GRUPO: frozenset[str] = frozenset(
-	{"Configuracoes de Recepcao", "Configuracoes de Desenvolvimento"}
+	{"Configuracoes de Recepcao", "Configuracoes de Desenvolvimento", "Configuracoes de Acessos"}
 )
 
 DEFAULT_TIMEOUT = 30

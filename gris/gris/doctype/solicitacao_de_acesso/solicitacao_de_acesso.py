@@ -55,8 +55,15 @@ class SolicitacaodeAcesso(Document):
 		if not self.status:
 			self.status = STATUS_EM_APROVACAO
 		self.solicitante_nome = get_fullname(self.solicitante) or self.solicitante
-		self.tipo = frappe.db.get_value(ACESSO_DOCTYPE, self.acesso, "tipo")
+		item = frappe.db.get_value(ACESSO_DOCTYPE, self.acesso, ["tipo", "por_secao"], as_dict=True)
+		self.tipo = item.tipo if item else None
+		por_secao = bool(item and item.por_secao)
 		self.justificativa = (self.justificativa or "").strip() or None
+		self.secao = " ".join((self.secao or "").split()) or None
+		if not por_secao:
+			self.secao = None
+		elif self.is_new() and not self.secao:
+			frappe.throw(_("Escolha a seção que você quer ver."))
 
 		if not self.associado:
 			self.associado = frappe.db.get_value("Associado", {"id_escoteiros": self.solicitante}, "name")
@@ -128,6 +135,9 @@ class SolicitacaodeAcesso(Document):
 			"acesso": self.acesso,
 			"status": ["in", STATUS_ABERTOS],
 		}
+		if self.secao:
+			# Acesso por seção: um pedido aberto por seção, não um por acesso.
+			filtros["secao"] = self.secao
 		if not self.is_new():
 			filtros["name"] = ["!=", self.name]
 		if frappe.db.exists(SOLICITACAO_DOCTYPE, filtros):

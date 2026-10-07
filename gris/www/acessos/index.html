@@ -12,7 +12,7 @@
 
 {# Estilos compartilhados com a outra página do portal de acessos; bumpe o `v` ao mudar. #}
 {% block extra_style %}
-<link rel="stylesheet" href="/assets/gris/css/portal_acessos.css?v=20261006-2">
+<link rel="stylesheet" href="/assets/gris/css/portal_acessos.css?v=20261007-1">
 {% endblock %}
 
 {% block page_header %}
@@ -120,6 +120,11 @@
 	<div class="acessos-dialog__aviso acessos-dialog__aviso--alerta" id="solicitar-vagas" hidden>
 		{{ lucide_icon("hourglass", size="sm") }}
 		<span></span>
+	</div>
+	<div id="solicitar-secao-bloco" hidden>
+		{% call field(label="Seção", hint="O acesso vale só para a seção escolhida. Para ver outra, faça outro pedido.") %}
+			<select class="select w-full" id="solicitar-secao" name="secao"></select>
+		{% endcall %}
 	</div>
 	{% call field(label="Por que você precisa deste acesso?", hint="Opcional. Ajuda quem vai aprovar.") %}
 		{{ textarea(name="justificativa", attrs={"id": "solicitar-justificativa", "rows": "3", "maxlength": "1000"}) }}

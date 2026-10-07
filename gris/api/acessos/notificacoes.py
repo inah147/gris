@@ -83,6 +83,13 @@ def _link(caminho: str) -> str:
 	return get_url(caminho)
 
 
+def _rotulo_do_pedido(solicitacao) -> str:
+	"""O acesso pedido, com a seção quando o acesso é concedido por seção."""
+	if solicitacao.get("secao"):
+		return f"{solicitacao.acesso} — {solicitacao.secao}"
+	return solicitacao.acesso
+
+
 def _mensagem_aprovador(user: str, solicitacao) -> str:
 	etapa = solicitacao.etapa_corrente()
 	total = solicitacao.total_de_etapas()
@@ -90,7 +97,7 @@ def _mensagem_aprovador(user: str, solicitacao) -> str:
 	linhas = [
 		f"Olá, {_primeiro_nome(user)}!",
 		"",
-		f"*{solicitacao.solicitante_nome}* pediu acesso a *{solicitacao.acesso}*.",
+		f"*{solicitacao.solicitante_nome}* pediu acesso a *{_rotulo_do_pedido(solicitacao)}*.",
 	]
 	if total > 1 and etapa:
 		linhas.append(f"Etapa {etapa.ordem} de {total}: {etapa.descricao}")
@@ -107,7 +114,7 @@ def _mensagem_aprovador(user: str, solicitacao) -> str:
 
 def _mensagem_solicitante(solicitacao, evento: str) -> str:
 	ola = f"Olá, {_primeiro_nome(solicitacao.solicitante)}!"
-	acesso = f"*{solicitacao.acesso}*"
+	acesso = f"*{_rotulo_do_pedido(solicitacao)}*"
 	email = solicitacao.email_concessao or ""
 
 	if evento == EVENTO_RECUSADA:

@@ -6,7 +6,7 @@ import frappe
 from frappe import _
 from frappe.utils import now_datetime
 
-from gris.api.acessos import notificacoes
+from gris.api.acessos import notificacoes, secoes
 from gris.api.acessos.catalogo import SITUACAO_NAO_TEM, estado_do_item
 from gris.api.acessos.constantes import (
 	ACESSO_DOCTYPE,
@@ -43,6 +43,7 @@ def resumo(solicitacao, user: str | None = None) -> dict:
 	return {
 		"name": solicitacao.name,
 		"acesso": solicitacao.acesso,
+		"secao": solicitacao.secao,
 		"tipo": solicitacao.tipo,
 		"status": solicitacao.status,
 		"solicitante": solicitacao.solicitante,
@@ -104,7 +105,8 @@ def pendentes_para(user: str) -> list[dict]:
 
 
 @frappe.whitelist(methods=["POST"])
-def solicitar(acesso: str, justificativa: str | None = None) -> dict:
+def solicitar(acesso: str, justificativa: str | None = None, secao: str | None = None) -> dict:
+	"""Abre um pedido. Nos acessos concedidos por seção, ``secao`` diz qual seção se quer ver."""
 	garantir_portal()
 	user = frappe.session.user
 
@@ -117,13 +119,20 @@ def solicitar(acesso: str, justificativa: str | None = None) -> dict:
 		frappe.throw(_("Acesso não encontrado."))
 	if not estado["pode_solicitar"]:
 		frappe.throw(estado["motivo_bloqueio"] or _("Este acesso não pode ser solicitado agora."))
-	if estado["estado"]["situacao"] != SITUACAO_NAO_TEM:
+
+	secao_escolhida = None
+	if estado["por_secao"]:
+		secao_escolhida = secoes.secao_entre(secao, estado["recorte"]["disponiveis"])
+		if not secao_escolhida:
+			frappe.throw(_("Escolha uma das seções que você ainda não tem nem pediu."))
+	elif estado["estado"]["situacao"] != SITUACAO_NAO_TEM:
 		frappe.throw(_("Você já tem este acesso."))
 
 	solicitacao = frappe.get_doc(
 		{
 			"doctype": SOLICITACAO_DOCTYPE,
 			"acesso": acesso,
+			"secao": secao_escolhida,
 			"solicitante": user,
 			"associado": associado.name if associado else None,
 			"email_concessao": estado.get("email_concessao"),

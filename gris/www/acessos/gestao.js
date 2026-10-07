@@ -16,6 +16,8 @@
 		revogar: `${API}.gestao.revogar_papel_em_massa`,
 		revogarPapel: `${API}.gestao.revogar_papel_de_usuario`,
 		revogarDrive: `${API}.gestao.revogar_concessao_drive`,
+		concederSecao: `${API}.gestao.conceder_secao`,
+		revogarSecao: `${API}.gestao.revogar_secao`,
 		salvarAcesso: `${API}.gestao.salvar_acesso`,
 		registrarLicenca: `${API}.gestao.registrar_licenca`,
 		marcarRevogacao: `${API}.gestao.marcar_revogacao`,
@@ -41,7 +43,14 @@
 		ferramentas: { status: "abertas", pagina: 1, lista: [], total: 0, porPagina: 50 },
 	};
 	let solicitacaoEmFoco = null;
-	let titulares = { acesso: null, tipo: null, global: false, lista: [] };
+	let titulares = {
+		acesso: null,
+		tipo: null,
+		global: false,
+		porSecao: false,
+		secoes: [],
+		lista: [],
+	};
 	let edicao = { acesso: null, etapas: [] };
 	const massa = { acesso: "", pessoas: [], selecionados: new Set() };
 	let aoConfirmar = null;
@@ -195,6 +204,11 @@
 		return rotulo ? rotulo.querySelector('input[type="checkbox"]') : null;
 	}
 
+	// O acesso por seção vira "Contribuições da seção — Alcateia" nas listas.
+	function rotuloDoPedido(s) {
+		return s.secao ? `${s.acesso} — ${s.secao}` : s.acesso;
+	}
+
 	function card(nome) {
 		return cards.find((c) => c.name === nome) || null;
 	}
@@ -207,6 +221,13 @@
 			linhas.push(
 				`${c.titulares} ${c.titulares === 1 ? "pessoa tem" : "pessoas têm"} este papel`
 			);
+			if (c.por_secao) {
+				linhas.push(
+					`Concedido por seção · ${c.secoes_concedidas} ${
+						c.secoes_concedidas === 1 ? "seção concedida" : "seções concedidas"
+					}`
+				);
+			}
 		} else if (c.tipo === "Drive compartilhado") {
 			linhas.push(
 				c.global
@@ -307,7 +328,7 @@
 				)}</span><span class="acessos-gestao__email">${escapeHtml(
 			s.email_concessao || s.solicitante
 		)}</span></td>
-				<td>${escapeHtml(s.acesso)}</td>
+				<td>${escapeHtml(rotuloDoPedido(s))}</td>
 				<td>${selo(s.status, STATUS_SOLICITACAO[s.status] || "neutro")}</td>
 				<td>${etapa}</td>
 				<td class="acessos-gestao__nowrap">${escapeHtml(formatarData(s.criada_em))}</td>
@@ -424,7 +445,7 @@
 		solicitacaoEmFoco = s;
 
 		const dialog = document.getElementById("dialog-solicitacao");
-		dialog.querySelector("h2").textContent = `${s.solicitante_nome} → ${s.acesso}`;
+		dialog.querySelector("h2").textContent = `${s.solicitante_nome} → ${rotuloDoPedido(s)}`;
 
 		const partes = [
 			`<div class="acessos-solicitacao__topo"><span class="acessos-solicitacao__data">${escapeHtml(
@@ -511,6 +532,13 @@
 	function acoesDoTitular(t) {
 		const dados = `data-acesso="${escapeHtml(titulares.acesso)}"`;
 		if (titulares.tipo === "Papel do Gris") {
+			if (titulares.porSecao && !t.via_perfil) {
+				return `<button type="button" class="btn-sm-outline" data-acao="revogar-papel" data-secoes="${
+					(t.secoes || []).length
+				}" ${dados} data-usuario="${escapeHtml(t.usuario)}" data-nome="${escapeHtml(
+					t.nome
+				)}">Revogar tudo</button>`;
+			}
 			return t.via_perfil
 				? '<span class="text-muted-foreground text-sm">Muda com o perfil</span>'
 				: `<button type="button" class="btn-sm-outline" data-acao="revogar-papel" ${dados} data-usuario="${escapeHtml(
@@ -548,6 +576,27 @@
 			if (t.expira_em) partes.push(`até ${escapeHtml(formatarData(t.expira_em))}`);
 			if (t.em_provisionamento) partes.push("liberando");
 			return partes.join(" · ");
+		}
+		if (titulares.porSecao) {
+			const secoes = (t.secoes || []).length
+				? `<span class="acessos-secoes">${t.secoes
+						.map(
+							(s) =>
+								`<span class="badge acessos-selo acessos-selo--tem acessos-secoes__item">${escapeHtml(
+									s.secao
+								)}<button type="button" class="acessos-secoes__remover" data-acao="revogar-secao" data-concessao="${escapeHtml(
+									s.concessao
+								)}" data-secao="${escapeHtml(s.secao)}" data-nome="${escapeHtml(
+									t.nome
+								)}" aria-label="Revogar ${escapeHtml(s.secao)}">${icone(
+									"x"
+								)}</button></span>`
+						)
+						.join("")}</span>`
+				: `<span class="text-muted-foreground text-sm">${
+						t.via_perfil ? "Seção que chefia" : "Nenhuma seção"
+				  }</span>`;
+			return `${escapeHtml(t.origem)}<br>${secoes}`;
 		}
 		return escapeHtml(t.origem);
 	}
@@ -599,6 +648,8 @@
 			acesso: nome,
 			tipo: resultado.tipo,
 			global: !!resultado.global,
+			porSecao: !!resultado.por_secao,
+			secoes: resultado.secoes || [],
 			lista: resultado.titulares || [],
 		};
 		const dialog = document.getElementById("dialog-titulares");
@@ -606,6 +657,57 @@
 			titulares.lista.length
 		})`;
 		renderizarTitulares();
+		await prepararConcessaoDeSecao();
+	}
+
+	function opcoes(rotuloVazio, itens) {
+		return [
+			`<option value="">${escapeHtml(rotuloVazio)}</option>`,
+			...itens.map(
+				(i) => `<option value="${escapeHtml(i.value)}">${escapeHtml(i.label)}</option>`
+			),
+		].join("");
+	}
+
+	// Conceder seção direto (sem pedido), para quem já via antes do portal.
+	async function prepararConcessaoDeSecao() {
+		const form = document.getElementById("titulares-conceder-secao");
+		form.hidden = !titulares.porSecao;
+		if (!titulares.porSecao) return;
+		document.getElementById("conceder-secao-secao").innerHTML = opcoes(
+			"Escolha a seção…",
+			titulares.secoes.map((s) => ({ value: s, label: s }))
+		);
+		const resultado = await chamar(
+			METODOS.elegiveis,
+			{ acesso: titulares.acesso },
+			{ get: true }
+		);
+		document.getElementById("conceder-secao-usuario").innerHTML = opcoes(
+			"Escolha a pessoa…",
+			(resultado.usuarios || []).map((p) => ({
+				value: p.usuario,
+				label: `${p.nome} (${p.usuario})`,
+			}))
+		);
+	}
+
+	async function concederSecao(botao) {
+		const usuario = document.getElementById("conceder-secao-usuario").value;
+		const secao = document.getElementById("conceder-secao-secao").value;
+		if (!usuario || !secao) {
+			toast("error", "Escolha a pessoa e a seção.");
+			return;
+		}
+		await comBotaoOcupado(botao, async () => {
+			try {
+				await chamar(METODOS.concederSecao, { acesso: titulares.acesso, usuario, secao });
+				toast("success", `Seção ${secao} concedida.`);
+				await Promise.all([carregarTitulares(titulares.acesso), recarregarResumo()]);
+			} catch (erro) {
+				toast("error", erro.message);
+			}
+		});
 	}
 
 	async function abrirTitulares(nome) {
@@ -628,8 +730,26 @@
 			await Promise.all([carregarTitulares(titulares.acesso), recarregarResumo()]);
 		};
 
-		if (acao === "revogar-papel") {
-			pedirConfirmacao(`Revogar o papel de ${nome}?`, "Revogar", async () => {
+		if (acao === "revogar-secao") {
+			pedirConfirmacao(
+				`Revogar a seção ${alvo.dataset.secao} de ${nome}?`,
+				"Revogar",
+				async () => {
+					const resultado = await chamar(METODOS.revogarSecao, {
+						concessao: alvo.dataset.concessao,
+					});
+					await recarregar(
+						resultado.papel_revogado
+							? "Seção revogada. Era a última, e o papel saiu junto."
+							: "Seção revogada."
+					);
+				}
+			);
+		} else if (acao === "revogar-papel") {
+			const texto = Number(alvo.dataset.secoes)
+				? `Revogar o papel de ${nome}? As seções concedidas saem junto.`
+				: `Revogar o papel de ${nome}?`;
+			pedirConfirmacao(texto, "Revogar", async () => {
 				await chamar(METODOS.revogarPapel, {
 					acesso: alvo.dataset.acesso,
 					usuario: alvo.dataset.usuario,
@@ -952,6 +1072,10 @@
 	});
 
 	document.getElementById("titulares-busca").addEventListener("input", renderizarTitulares);
+	document.getElementById("titulares-conceder-secao").addEventListener("submit", (evento) => {
+		evento.preventDefault();
+		concederSecao(document.getElementById("btn-conceder-secao"));
+	});
 
 	document.getElementById("btn-adicionar-etapa").addEventListener("click", () => {
 		const papel = valorDoSelect("editar-nova-etapa-papel");

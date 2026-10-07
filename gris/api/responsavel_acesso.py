@@ -14,13 +14,20 @@ from __future__ import annotations
 import frappe
 
 
-def get_responsavel_do_usuario(user: str | None = None) -> str | None:
+def get_responsavel_do_usuario(
+	user: str | None = None, incluir_vinculo_do_beneficiario: bool = True
+) -> str | None:
 	"""Nome do `Responsavel` correspondente ao usuário da sessão.
 
 	A conta pode chegar por três caminhos, do mais direto ao mais indireto:
 	o e-mail do próprio `Responsavel`, um login `id@escoteiros` cujo CPF nomeia
 	um `Responsavel`, ou um vínculo já existente apontando para o associado
 	daquele login.
+
+	O terceiro caminho não identifica o responsável: identifica alguém que é
+	*beneficiário* dele e, por tabela, entrega os irmãos. Telas que mostram dado
+	de família para família (as contribuições) passam
+	``incluir_vinculo_do_beneficiario=False`` e só aceitam os dois primeiros.
 	"""
 	user = user or frappe.session.user
 	if not user or user == "Guest":
@@ -38,6 +45,9 @@ def get_responsavel_do_usuario(user: str | None = None) -> str | None:
 	associado_cpf_hash = frappe.db.get_value("Associado", associado_name, "cpf")
 	if associado_cpf_hash and frappe.db.exists("Responsavel", associado_cpf_hash):
 		return associado_cpf_hash
+
+	if not incluir_vinculo_do_beneficiario:
+		return None
 
 	# Último fallback: tentar via vínculo já existente do associado
 	return frappe.db.get_value(

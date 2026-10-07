@@ -78,6 +78,13 @@
 		return dia && mes && ano ? `${dia}/${mes}/${ano}` : String(valor);
 	}
 
+	// O acesso por seção vira "Contribuições da seção — Alcateia" nos títulos.
+	function rotuloDoPedido(solicitacao) {
+		return solicitacao.secao
+			? `${solicitacao.acesso} — ${solicitacao.secao}`
+			: solicitacao.acesso;
+	}
+
 	function toast(categoria, titulo) {
 		document.dispatchEvent(
 			new CustomEvent("basecoat:toast", {
@@ -182,6 +189,24 @@
 		if (item.tipo === "Ferramenta externa" && estado.detalhe) {
 			linhas.push(`Conta: ${escapeHtml(estado.detalhe)}`);
 		}
+		if (item.recorte) {
+			const r = item.recorte;
+			if (r.concedidas.length) {
+				linhas.push(
+					`Seções liberadas: <strong>${r.concedidas.map(escapeHtml).join(", ")}</strong>`
+				);
+			} else if (["tem", "via_perfil"].includes(estado.situacao)) {
+				linhas.push("Nenhuma seção pedida: você vê só a seção que chefia, se for o caso.");
+			}
+			if (r.pedidas.length) {
+				linhas.push(
+					`Em aprovação: ${r.pedidas.map((p) => escapeHtml(p.secao)).join(", ")}`
+				);
+			}
+			if (!item.pode_solicitar && item.motivo_bloqueio) {
+				linhas.push(escapeHtml(item.motivo_bloqueio));
+			}
+		}
 		if (estado.situacao === "revogacao_pendente") {
 			linhas.push("A equipe de tecnologia vai remover esta conta.");
 		}
@@ -193,7 +218,12 @@
 					: `Sem licenças livres no momento (${item.vagas.limite} no total)`
 			);
 		}
-		if (estado.situacao === "nao_tem" && !item.pode_solicitar && item.motivo_bloqueio) {
+		if (
+			!item.recorte &&
+			estado.situacao === "nao_tem" &&
+			!item.pode_solicitar &&
+			item.motivo_bloqueio
+		) {
 			linhas.push(escapeHtml(item.motivo_bloqueio));
 		}
 		if (!linhas.length) return "";
@@ -207,12 +237,25 @@
 		const situacao = item.estado.situacao;
 
 		if (item.pode_solicitar) {
+			const outra =
+				item.recorte && (item.recorte.concedidas.length || item.recorte.pedidas.length);
 			botoes.push(
 				`<button type="button" class="btn-sm-primary" data-acao="solicitar" data-acesso="${escapeHtml(
 					item.name
-				)}">${icone("send")}<span>Solicitar</span></button>`
+				)}">${icone("send")}<span>${
+					outra ? "Pedir outra seção" : "Solicitar"
+				}</span></button>`
 			);
-		} else if (item.solicitacao) {
+		}
+		if (item.recorte) {
+			item.recorte.pedidas.forEach((pedido) => {
+				botoes.push(
+					`<button type="button" class="btn-sm-outline" data-acao="cancelar" data-solicitacao="${escapeHtml(
+						pedido.solicitacao
+					)}">Cancelar pedido de ${escapeHtml(pedido.secao)}</button>`
+				);
+			});
+		} else if (!item.pode_solicitar && item.solicitacao) {
 			botoes.push(
 				`<button type="button" class="btn-sm-outline" data-acao="cancelar" data-solicitacao="${escapeHtml(
 					item.solicitacao.name
@@ -365,7 +408,7 @@
 			<article class="acessos-solicitacao">
 				<header class="acessos-solicitacao__topo">
 					<div>
-						<h3 class="acessos-solicitacao__titulo">${escapeHtml(solicitacao.acesso)}</h3>
+						<h3 class="acessos-solicitacao__titulo">${escapeHtml(rotuloDoPedido(solicitacao))}</h3>
 						<span class="acessos-solicitacao__data">Pedido em ${escapeHtml(
 							formatarData(solicitacao.criada_em)
 						)}</span>
@@ -445,16 +488,37 @@
 			? "Todas as licenças estão em uso. O pedido fica na fila até uma vaga ser liberada."
 			: "";
 
+		const blocoSecao = document.getElementById("solicitar-secao-bloco");
+		const seletor = document.getElementById("solicitar-secao");
+		blocoSecao.hidden = !item.recorte;
+		seletor.innerHTML = item.recorte
+			? [
+					'<option value="">Escolha a seção…</option>',
+					...item.recorte.disponiveis.map(
+						(secao) =>
+							`<option value="${escapeHtml(secao)}">${escapeHtml(secao)}</option>`
+					),
+			  ].join("")
+			: "";
+
 		document.getElementById("solicitar-justificativa").value = "";
 		abrirDialog("dialog-solicitar");
 	}
 
 	async function enviarSolicitacao(botao) {
 		if (!acessoEmFoco) return;
+		const seletor = document.getElementById("solicitar-secao");
+		const secao = acessoEmFoco.recorte ? seletor.value : "";
+		if (acessoEmFoco.recorte && !secao) {
+			toast("error", "Escolha a seção.");
+			seletor.focus();
+			return;
+		}
 		await comBotaoOcupado(botao, async () => {
 			try {
 				await chamar(METODOS.solicitar, {
 					acesso: acessoEmFoco.name,
+					secao,
 					justificativa: document.getElementById("solicitar-justificativa").value,
 				});
 				fecharDialog("dialog-solicitar");
@@ -478,7 +542,7 @@
 
 	function cancelarSolicitacao(nome) {
 		const solicitacao = solicitacaoPorNome(nome);
-		const titulo = solicitacao ? solicitacao.acesso : "este acesso";
+		const titulo = solicitacao ? rotuloDoPedido(solicitacao) : "este acesso";
 		pedirConfirmacao(`Cancelar o pedido de ${titulo}?`, "Cancelar pedido", async () => {
 			await chamar(METODOS.cancelar, { solicitacao: nome });
 			toast("success", "Pedido cancelado.");
@@ -491,9 +555,9 @@
 		if (!solicitacao) return;
 		solicitacaoEmFoco = solicitacao;
 		const dialog = document.getElementById("dialog-decidir");
-		dialog.querySelector(
-			"h2"
-		).textContent = `${solicitacao.solicitante_nome} → ${solicitacao.acesso}`;
+		dialog.querySelector("h2").textContent = `${
+			solicitacao.solicitante_nome
+		} → ${rotuloDoPedido(solicitacao)}`;
 		document.getElementById("decidir-resumo").innerHTML = itemDeSolicitacao(
 			solicitacao,
 			"resumo"

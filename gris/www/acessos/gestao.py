@@ -34,7 +34,8 @@ def get_context(context):
 	context.opcoes_papeis_em_massa = [
 		{"value": card["name"], "label": card["titulo"]}
 		for card in context.cards
-		if card["tipo"] == "Papel do Gris" and card["ativo"]
+		# O acesso por seção fica de fora: o papel sem seção não mostra nada.
+		if card["tipo"] == "Papel do Gris" and card["ativo"] and not card["por_secao"]
 	]
 	context.opcoes_ferramentas = [
 		{"value": card["name"], "label": card["titulo"]}

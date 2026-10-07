@@ -24,6 +24,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_months, getdate
 
+from gris.api.acessos.constantes import SECAO_DOCTYPE
 from gris.api.financeiro.contribuicoes import (
 	CATEGORIAS_CONTRIBUINTES,
 	MESES_MAXIMO,
@@ -38,7 +39,7 @@ from gris.api.financeiro.contribuicoes import (
 	rotulo_mes,
 )
 from gris.api.portal_access import user_has_access
-from gris.utils.chefes import associados_chefiados_por, eh_funcao_chefe_de_secao
+from gris.utils.chefes import associados_chefiados_por, eh_funcao_chefe_de_secao, normalizar_texto
 
 STATUS_PAGO = "Pago"
 STATUS_EM_ABERTO = "Em Aberto"
@@ -59,27 +60,57 @@ STATUS_VALIDOS = (STATUS_PAGO, STATUS_EM_ABERTO, STATUS_ATRASADO)
 
 ROLE_GESTOR = "Gestor Contribuição Mensal"
 ROLE_VISUALIZADOR = "Visualizador Contribuição Mensal"
-# Chefe de seção: vê só os beneficiários da própria seção (ver `associados_visiveis`).
+# Vê só as seções concedidas no portal de acessos e a que chefia (ver `recorte_do_usuario`).
 ROLE_VISUALIZADOR_SECAO = "Visualizador Contribuição Mensal da Seção"
 ROTA_CONTRIBUICOES = "/financeiro/contribuicoes"
 
 
-def associados_visiveis(user: str | None = None) -> set[str] | None:
-	"""Recorte da contribuição mensal que o usuário pode ver.
+def _chefe_de_secao(user: str) -> frappe._dict | None:
+	chefe = frappe.db.get_value(
+		"Associado", {"id_escoteiros": user}, ["name", "funcao", "secao", "ramo"], as_dict=True
+	)
+	return chefe if chefe and eh_funcao_chefe_de_secao(chefe.funcao) else None
 
-	`None` é a visão completa (gestor ou visualizador do grupo). Quem só tem a role
-	da seção vê os beneficiários que tem como chefe de seção — a mesma regra de
-	`gris.utils.chefes`, casando a `secao` (e, na falta, o `ramo`) do jovem com o
-	cadastro do chefe. Sem Associado vinculado ao usuário, ou sem função de chefe
-	de seção, o recorte é vazio: a role sozinha não abre a lista de ninguém.
+
+def recorte_do_usuario(user: str | None = None) -> dict | None:
+	"""De onde vem o recorte da contribuição mensal que o usuário vê.
+
+	`None` é a visão completa: o gestor (diretoria financeira) e o visualizador do grupo,
+	ambos pedidos e concedidos pelo portal de acessos. Quem só tem a role da seção vê:
+
+	* as seções concedidas a ele no portal de acessos (`Acesso por Secao`), que qualquer
+	  associado pode pedir em /acessos escolhendo a seção;
+	* a seção que chefia, quando a função no cadastro é de chefe de seção — a mesma regra
+	  de `gris.utils.chefes`, casando a `secao` (e, na falta, o `ramo`) do jovem.
+
+	Sem a role, nada: a seção concedida só vale enquanto o papel que abre a página existe.
 	"""
 	user = user or frappe.session.user
 	roles = frappe.get_roles(user)
 	if ROLE_GESTOR in roles or ROLE_VISUALIZADOR in roles:
 		return None
+	if ROLE_VISUALIZADOR_SECAO not in roles:
+		return {"secoes": [], "chefe": None}
 
-	chefe = frappe.db.get_value("Associado", {"id_escoteiros": user}, ["name", "funcao"], as_dict=True)
-	if not chefe or not eh_funcao_chefe_de_secao(chefe.funcao):
+	concedidas = frappe.get_all(
+		SECAO_DOCTYPE,
+		filters={"usuario": user, "papel": ROLE_VISUALIZADOR_SECAO},
+		pluck="secao",
+		limit_page_length=0,
+	)
+	return {"secoes": sorted(concedidas, key=normalizar_texto), "chefe": _chefe_de_secao(user)}
+
+
+def associados_visiveis(user: str | None = None) -> set[str] | None:
+	"""Recorte da contribuição mensal que o usuário pode ver (ver `recorte_do_usuario`).
+
+	`None` é a visão completa. Um conjunto vazio quer dizer que a role, sozinha, não abre
+	a lista de ninguém.
+	"""
+	recorte = recorte_do_usuario(user)
+	if recorte is None:
+		return None
+	if not recorte["secoes"] and not recorte["chefe"]:
 		return set()
 
 	jovens = frappe.get_all(
@@ -88,7 +119,11 @@ def associados_visiveis(user: str | None = None) -> set[str] | None:
 		fields=["name", "secao", "ramo"],
 		limit_page_length=0,
 	)
-	return associados_chefiados_por(chefe.name, jovens)
+	secoes = {normalizar_texto(secao) for secao in recorte["secoes"]} - {""}
+	visiveis = {jovem.name for jovem in jovens if normalizar_texto(jovem.secao) in secoes}
+	if recorte["chefe"]:
+		visiveis |= associados_chefiados_por(recorte["chefe"].name, jovens)
+	return visiveis
 
 
 def get_dia_vencimento() -> int:
@@ -503,4 +538,5 @@ __all__ = [
 	"get_pagamentos_por_associado",
 	"montar_grade_pagamentos",
 	"normalizar_meses",
+	"recorte_do_usuario",
 ]

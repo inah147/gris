@@ -2,8 +2,9 @@
 
 Só insere: cada item é procurado pelo papel, pelo drive ou pelo título, e um item que já
 existe nunca é sobrescrito — descrições, limites e etapas passam a ser da gestão de
-acessos. Nenhum item traz etapas próprias: o controller grava a etapa padrão, aprovada
-pelo Gestor de Acessos, que a gestão pode trocar depois.
+acessos. Só as contribuições trazem etapas próprias (diretoria financeira); os demais
+ficam com a etapa padrão que o controller grava, aprovada pelo Gestor de Acessos, que a
+gestão pode trocar depois.
 
 Ficam de fora o papel "Responsavel" (é do portal das famílias, não de associados) e os
 papéis citados no código que nunca foram criados.
@@ -13,6 +14,10 @@ import frappe
 
 from gris.api.acessos.constantes import ACESSO_DOCTYPE, TIPO_DRIVE, TIPO_FERRAMENTA, TIPO_PAPEL
 from gris.install import garantir_role_gestor_de_acessos
+
+# Contribuições são aprovadas pela diretoria financeira. A marcação "por seção" e "só para
+# associados" vem em `ajustar_acessos_de_contribuicoes`, que roda logo depois.
+ETAPAS_CONTRIBUICAO = [("Gestor Contribuição Mensal", "Diretoria financeira")]
 
 PAPEIS = [
 	# (papel, título no portal, ícone, ordem, solicitável, descrição, o que muda, etapas)
@@ -72,9 +77,9 @@ PAPEIS = [
 		"coins",
 		30,
 		1,
-		"Consulta às contribuições mensais de todos os associados.",
-		"Libera /financeiro/contribuicoes para ver quem está em dia, em aberto ou em atraso, sem cobrar.",
-		None,
+		"Consulta às contribuições mensais de todas as seções do grupo.",
+		"Libera /financeiro/contribuicoes com todas as seções, para ver quem está em dia, em aberto ou em atraso, sem cobrar.",
+		ETAPAS_CONTRIBUICAO,
 	),
 	(
 		"Visualizador Contribuição Mensal da Seção",
@@ -82,9 +87,9 @@ PAPEIS = [
 		"coins",
 		31,
 		1,
-		"Consulta às contribuições dos associados da sua seção.",
-		"Libera /financeiro/contribuicoes mostrando só a seção que você chefia. Sem uma função de chefe de seção no cadastro, a lista fica vazia.",
-		None,
+		"Consulta às contribuições mensais dos beneficiários de uma seção.",
+		"Você escolhe a seção ao pedir e passa a ver em /financeiro/contribuicoes só os beneficiários dela, sem cobrar. Para ver outra seção, faça outro pedido. Quem é chefe de seção já vê a própria seção pelo perfil.",
+		ETAPAS_CONTRIBUICAO,
 	),
 	(
 		"Gestor Contribuição Mensal",
@@ -94,7 +99,7 @@ PAPEIS = [
 		1,
 		"Gestão das contribuições mensais.",
 		"Libera /financeiro/contribuicoes por completo: gera as mensalidades, envia cobranças e links de pagamento e registra os pagamentos.",
-		None,
+		ETAPAS_CONTRIBUICAO,
 	),
 	(
 		"Visualizador Calendario",

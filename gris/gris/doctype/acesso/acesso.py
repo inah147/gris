@@ -32,6 +32,10 @@ class Acesso(Document):
 			for campo in CAMPOS_DE_DRIVE:
 				self.set(campo, None)
 
+		if self.tipo != TIPO_PAPEL:
+			# Drive e ferramenta são contas no id@escoteiros: não há seção a recortar.
+			self.por_secao = 0
+
 		if self.tipo != TIPO_FERRAMENTA:
 			self.limite_licencas = 0
 			self.instrucoes_concessao = None

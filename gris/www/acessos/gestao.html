@@ -13,7 +13,7 @@
 
 {# Estilos compartilhados com a outra página do portal de acessos; bumpe o `v` ao mudar. #}
 {% block extra_style %}
-<link rel="stylesheet" href="/assets/gris/css/portal_acessos.css?v=20261006-2">
+<link rel="stylesheet" href="/assets/gris/css/portal_acessos.css?v=20261007-1">
 {% endblock %}
 
 {% block page_header %}
@@ -178,6 +178,20 @@
 	dialog_attrs={"class": "acessos-dialog acessos-dialog--largo"}
 ) %}
 <div class="acessos-dialog__corpo">
+	<form class="acessos-secao-form" id="titulares-conceder-secao" hidden>
+		<p class="text-muted-foreground text-sm m-0">
+			Concedido por seção: cada pessoa vê só as seções da lista. A última seção revogada leva junto o papel, a não ser que ele venha do perfil.
+		</p>
+		<div class="acessos-secao-form__campos">
+			<label class="label">Pessoa
+				<select class="select w-full" id="conceder-secao-usuario" name="usuario"></select>
+			</label>
+			<label class="label">Seção
+				<select class="select w-full" id="conceder-secao-secao" name="secao"></select>
+			</label>
+			<button type="submit" class="btn-sm-primary" id="btn-conceder-secao">Conceder seção</button>
+		</div>
+	</form>
 	{{ input(name="busca_titulares", type="search", attrs={"id": "titulares-busca", "placeholder": "Buscar pelo nome ou e-mail…", "aria-label": "Buscar titulares"}) }}
 	<div class="overflow-x-auto" id="titulares-lista" aria-live="polite"></div>
 </div>

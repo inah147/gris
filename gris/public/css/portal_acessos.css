@@ -383,15 +383,22 @@
 
 .acessos-secao-form__campos {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
 	gap: calc(var(--spacing) * 2);
 	align-items: end;
 }
 
-.acessos-secao-form__campos .label {
+.acessos-secao-form__campo {
 	display: flex;
 	flex-direction: column;
-	gap: calc(var(--spacing) * 1);
+	gap: calc(var(--spacing) * 1.5);
+	min-width: 0;
+}
+
+@media (max-width: 640px) {
+	.acessos-secao-form__campos {
+		grid-template-columns: minmax(0, 1fr);
+	}
 }
 
 .acessos-secoes {
@@ -420,4 +427,14 @@
 .acessos-secoes__remover:focus-visible {
 	outline: 2px solid var(--ring);
 	outline-offset: 1px;
+}
+
+/* O nome da seção pode ser longo: o botão quebra a linha em vez de vazar do card. */
+.acessos-card__cancelar-secao {
+	height: auto;
+	min-height: 2rem;
+	max-width: 100%;
+	white-space: normal;
+	text-align: left;
+	overflow-wrap: anywhere;
 }

@@ -13,7 +13,7 @@
 
 {# Estilos compartilhados com a outra página do portal de acessos; bumpe o `v` ao mudar. #}
 {% block extra_style %}
-<link rel="stylesheet" href="/assets/gris/css/portal_acessos.css?v=20261007-1">
+<link rel="stylesheet" href="/assets/gris/css/portal_acessos.css?v=20261007-3">
 {% endblock %}
 
 {% block page_header %}
@@ -183,12 +183,14 @@
 			Concedido por seção: cada pessoa vê só as seções da lista. A última seção revogada leva junto o papel, a não ser que ele venha do perfil.
 		</p>
 		<div class="acessos-secao-form__campos">
-			<label class="label">Pessoa
+			<div class="acessos-secao-form__campo">
+				<label class="label" for="conceder-secao-usuario">Pessoa</label>
 				<select class="select w-full" id="conceder-secao-usuario" name="usuario"></select>
-			</label>
-			<label class="label">Seção
+			</div>
+			<div class="acessos-secao-form__campo">
+				<label class="label" for="conceder-secao-secao">Seção</label>
 				<select class="select w-full" id="conceder-secao-secao" name="secao"></select>
-			</label>
+			</div>
 			<button type="submit" class="btn-sm-primary" id="btn-conceder-secao">Conceder seção</button>
 		</div>
 	</form>

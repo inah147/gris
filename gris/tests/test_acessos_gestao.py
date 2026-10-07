@@ -265,11 +265,54 @@ class TestSementeDoCatalogo(FrappeTestCase):
 		self.assertEqual(frappe.db.count("Acesso"), total)
 		self.assertEqual(frappe.db.get_value("Acesso", "Canva", "limite_licencas"), 42)
 		self.assertFalse(frappe.db.exists("Acesso", {"papel": "Responsavel"}))
-		# Todo item nasce com uma etapa da gestão de acessos, inclusive o do próprio gestor.
+		# Todo item nasce com uma etapa da gestão de acessos, inclusive o do próprio gestor —
+		# menos as contribuições, que a diretoria financeira aprova.
 		etapas = frappe.get_all(
 			"Etapa de Aprovacao de Acesso",
 			filters={"parenttype": "Acesso"},
 			fields=["parent", "papel_aprovador"],
 		)
 		self.assertEqual({e.parent for e in etapas}, set(frappe.get_all("Acesso", pluck="name")))
-		self.assertEqual({e.papel_aprovador for e in etapas}, {ROLE_GESTOR})
+		contribuicoes = set(
+			frappe.get_all("Acesso", filters={"papel": ["like", "%Contribuição Mensal%"]}, pluck="name")
+		)
+		self.assertEqual({e.papel_aprovador for e in etapas if e.parent not in contribuicoes}, {ROLE_GESTOR})
+		self.assertEqual(
+			{e.papel_aprovador for e in etapas if e.parent in contribuicoes}, {"Gestor Contribuição Mensal"}
+		)
+
+
+class TestAjusteDasContribuicoes(FrappeTestCase):
+	def tearDown(self):
+		frappe.db.rollback()
+
+	def test_patch_marca_por_secao_e_preserva_edicoes(self):
+		from gris.patches import ajustar_acessos_de_contribuicoes as patch_
+		from gris.patches import semear_catalogo_de_acessos
+
+		frappe.db.delete("Etapa de Aprovacao de Acesso", {"parenttype": "Acesso"})
+		frappe.db.delete("Acesso")
+		semear_catalogo_de_acessos.execute()
+
+		secao = frappe.db.get_value("Acesso", {"papel": patch_.ROLE_VISUALIZADOR_SECAO}, "name")
+		total = frappe.db.get_value("Acesso", {"papel": patch_.ROLE_VISUALIZADOR}, "name")
+		# Como num site semeado antes: etapa padrão e texto antigo, mais uma edição da gestão.
+		for nome in (secao, total):
+			doc = frappe.get_doc("Acesso", nome)
+			doc.set("etapas_aprovacao", [{"papel_aprovador": ROLE_GESTOR, "descricao": "Gestão de acessos"}])
+			doc.save(ignore_permissions=True)
+		antigo = patch_.TEXTOS[patch_.ROLE_VISUALIZADOR_SECAO]["o_que_muda"][0]
+		frappe.db.set_value("Acesso", secao, "o_que_muda", antigo)
+		frappe.db.set_value("Acesso", total, "descricao", "Texto escrito pela gestão.")
+
+		patch_.execute()
+
+		item = frappe.get_doc("Acesso", secao)
+		self.assertTrue(item.por_secao)
+		self.assertTrue(item.exige_associado)
+		self.assertEqual(item.o_que_muda, patch_.TEXTOS[patch_.ROLE_VISUALIZADOR_SECAO]["o_que_muda"][1])
+		self.assertEqual(
+			[e.papel_aprovador for e in item.etapas_aprovacao], [patch_.ROLE_GESTOR_CONTRIBUICAO]
+		)
+		self.assertEqual(frappe.db.get_value("Acesso", total, "descricao"), "Texto escrito pela gestão.")
+		self.assertFalse(frappe.db.get_value("Acesso", total, "por_secao"))

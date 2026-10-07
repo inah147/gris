@@ -1,6 +1,6 @@
 """Contribuições mensais dos beneficiários, na visão do responsável.
 
-O responsável vê aqui exatamente os beneficiários vinculados a ele, com o mês a
+O responsável vê aqui exatamente os beneficiários vinculados a ele (os filhos), com o mês a
 mês do que está pago e do que está em atraso. A apuração é a mesma da tela do
 financeiro e da página pública (`gris.api.financeiro.pagamentos_contribuicao`, lida
 do Pagamento Contribuicao Mensal) — o que muda é o recorte: nada que não seja de um
@@ -56,7 +56,9 @@ def get_context(context):
 	context.meses_selecionado = str(meses)
 	context.opcoes_periodo = OPCOES_PERIODO
 
-	responsavel = get_responsavel_do_usuario(frappe.session.user)
+	# Só o próprio responsável: um beneficiário logado não pode chegar, pelo vínculo
+	# dele, às contribuições dos irmãos.
+	responsavel = get_responsavel_do_usuario(frappe.session.user, incluir_vinculo_do_beneficiario=False)
 	beneficiarios = get_beneficiarios_associados(responsavel)
 
 	apuracoes = apurar_associados(beneficiarios, meses) if beneficiarios else []

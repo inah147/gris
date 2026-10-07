@@ -15,6 +15,7 @@ from gris.api.financeiro.pagamentos_contribuicao import (
 	apurar,
 	associados_visiveis,
 	normalizar_meses,
+	recorte_do_usuario,
 )
 from gris.api.portal_access import enrich_context
 from gris.api.portal_cache_utils import get_uel_cached
@@ -66,10 +67,13 @@ def get_context(context):
 	meses = normalizar_meses(frappe.form_dict.get("meses"), MESES_PADRAO_TELA)
 	# Sem dados de cobrança: e-mail e telefone são do detalhe do contribuinte
 	# (/financeiro/contribuicao), que só os entrega a quem pode geri-los.
-	# Chefe de seção só com a role da seção: a apuração vem recortada nos
-	# beneficiários dele. `None` é a visão do grupo inteiro.
+	# Só com a role da seção, a apuração vem recortada nas seções concedidas pelo
+	# portal de acessos e na que a pessoa chefia. `None` é a visão do grupo inteiro.
+	recorte = recorte_do_usuario()
 	visiveis = associados_visiveis()
 	context.recorte_secao = visiveis is not None
+	context.secoes_do_recorte = recorte["secoes"] if recorte else []
+	context.chefia_secao = bool(recorte and recorte["chefe"])
 	apuracao = apurar(meses, associados=visiveis)
 
 	context.meses_selecionado = str(meses)

@@ -9,7 +9,7 @@ from __future__ import annotations
 import frappe
 from frappe.query_builder.functions import Count
 
-from gris.api.acessos import drives
+from gris.api.acessos import drives, secoes
 from gris.api.acessos.constantes import (
 	ABA_POR_TIPO,
 	ACESSO_DOCTYPE,
@@ -26,6 +26,7 @@ from gris.api.acessos.constantes import (
 from gris.api.acessos.permissoes import associado_do_usuario, eh_gestor, garantir_portal
 from gris.api.google_workspace import access_manager as workspace
 from gris.api.users.roles import get_role_profile_roles, get_user_roles
+from gris.utils.chefes import normalizar_texto
 
 CAMPOS_DO_CATALOGO = [
 	"name",
@@ -40,6 +41,8 @@ CAMPOS_DO_CATALOGO = [
 	"icone",
 	"link_externo",
 	"solicitavel",
+	"exige_associado",
+	"por_secao",
 	"limite_licencas",
 	"ordem",
 ]
@@ -112,11 +115,16 @@ def _resumo_de_vagas(item, vagas: dict) -> dict | None:
 	}
 
 
-def _solicitacoes_abertas(user: str) -> dict[str, dict]:
+def _solicitacoes_abertas(user: str) -> dict[str, list[dict]]:
+	"""Pedidos em andamento de ``user`` por acesso.
+
+	É uma lista porque um acesso concedido por seção aceita um pedido aberto por seção.
+	"""
 	abertas = frappe.get_all(
 		SOLICITACAO_DOCTYPE,
 		filters={"solicitante": user, "status": ["in", STATUS_ABERTOS]},
-		fields=["name", "acesso", "status", "etapa_atual", "creation"],
+		fields=["name", "acesso", "secao", "status", "etapa_atual", "creation"],
+		order_by="creation asc",
 	)
 	if not abertas:
 		return {}
@@ -134,13 +142,16 @@ def _solicitacoes_abertas(user: str) -> dict[str, dict]:
 	for solicitacao in abertas:
 		lista = etapas.get(solicitacao.name, [])
 		atual = next((e for e in lista if e.ordem == solicitacao.etapa_atual), None)
-		resultado[solicitacao.acesso] = {
-			"name": solicitacao.name,
-			"status": solicitacao.status,
-			"etapa_atual": solicitacao.etapa_atual,
-			"total_etapas": len(lista),
-			"etapa_descricao": atual.descricao if atual else None,
-		}
+		resultado.setdefault(solicitacao.acesso, []).append(
+			{
+				"name": solicitacao.name,
+				"secao": solicitacao.secao,
+				"status": solicitacao.status,
+				"etapa_atual": solicitacao.etapa_atual,
+				"total_etapas": len(lista),
+				"etapa_descricao": atual.descricao if atual else None,
+			}
+		)
 	return resultado
 
 
@@ -181,6 +192,10 @@ def estados_do_catalogo(user: str, associado=None) -> list[dict]:
 	abertas = _solicitacoes_abertas(user)
 	email = _email_institucional(associado)
 
+	por_secao = any(item.por_secao for item in itens)
+	secoes_do_usuario = secoes.concessoes_do_usuario(user) if por_secao else {}
+	todas_as_secoes = secoes.secoes_existentes() if por_secao else []
+
 	resultado = []
 	for item in itens:
 		estado = {"situacao": SITUACAO_NAO_TEM, "detalhe": None}
@@ -214,7 +229,8 @@ def estados_do_catalogo(user: str, associado=None) -> list[dict]:
 				)
 				estado = {"situacao": situacao, "detalhe": licenca.email}
 
-		solicitacao = abertas.get(item.name)
+		pedidos = abertas.get(item.name) or []
+		solicitacao = pedidos[0] if pedidos else None
 		if solicitacao and estado["situacao"] == SITUACAO_NAO_TEM:
 			estado = {
 				"situacao": SITUACAO_AGUARDANDO
@@ -223,7 +239,13 @@ def estados_do_catalogo(user: str, associado=None) -> list[dict]:
 				"detalhe": None,
 			}
 
-		motivo_bloqueio = _motivo_para_nao_solicitar(item, estado, solicitacao, email, estado_drives)
+		recorte = None
+		if item.por_secao:
+			recorte = _recorte_por_secao(item, papeis_do_usuario, secoes_do_usuario, pedidos, todas_as_secoes)
+
+		motivo_bloqueio = _motivo_para_nao_solicitar(
+			item, estado, solicitacao, email, estado_drives, associado, recorte
+		)
 		resultado.append(
 			{
 				"name": item.name,
@@ -237,6 +259,8 @@ def estados_do_catalogo(user: str, associado=None) -> list[dict]:
 				"papel": item.papel,
 				"nome_drive": item.nome_drive,
 				"solicitavel": bool(item.solicitavel),
+				"por_secao": bool(item.por_secao),
+				"recorte": recorte,
 				"estado": estado,
 				"solicitacao": solicitacao,
 				"vagas": _resumo_de_vagas(item, vagas),
@@ -248,9 +272,38 @@ def estados_do_catalogo(user: str, associado=None) -> list[dict]:
 	return resultado
 
 
-def _motivo_para_nao_solicitar(item, estado, solicitacao, email, estado_drives) -> str | None:
+def _recorte_por_secao(item, papeis_do_usuario, secoes_do_usuario, pedidos, todas_as_secoes) -> dict:
+	"""Seções que a pessoa já vê, as que pediu e as que ainda pode pedir.
+
+	Só valem as seções de quem tem o papel: é ele que abre a página.
+	"""
+	concedidas = secoes_do_usuario.get(item.papel, []) if item.papel in papeis_do_usuario else []
+	ocupadas = {normalizar_texto(linha.secao) for linha in concedidas}
+	ocupadas |= {normalizar_texto(pedido["secao"]) for pedido in pedidos if pedido.get("secao")}
+	return {
+		"concedidas": [linha.secao for linha in concedidas],
+		"pedidas": [
+			{"secao": pedido["secao"], "solicitacao": pedido["name"], "status": pedido["status"]}
+			for pedido in pedidos
+		],
+		"disponiveis": [s for s in todas_as_secoes if normalizar_texto(s) not in ocupadas],
+	}
+
+
+def _motivo_para_nao_solicitar(
+	item, estado, solicitacao, email, estado_drives, associado=None, recorte=None
+) -> str | None:
 	if not item.solicitavel:
 		return "Este acesso não é concedido por solicitação."
+	if item.exige_associado and not associado:
+		return "Só associados com cadastro no Gris podem pedir este acesso."
+	if recorte is not None:
+		# Por seção, ter o papel ou um pedido aberto não impede pedir outra seção.
+		if not recorte["disponiveis"]:
+			if recorte["concedidas"] or recorte["pedidas"]:
+				return "Você já tem ou já pediu todas as seções."
+			return "Nenhuma seção cadastrada nos associados."
+		return None
 	if estado["situacao"] != SITUACAO_NAO_TEM:
 		return "Você já tem este acesso ou já pediu."
 	if solicitacao:

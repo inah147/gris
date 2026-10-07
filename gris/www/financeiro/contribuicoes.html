@@ -24,7 +24,14 @@
 		</p>
 		{% if recorte_secao %}
 		<p class="m-0 text-sm leading-relaxed text-muted-foreground">
-			Você vê só os beneficiários da sua seção.
+			{% if secoes_do_recorte %}
+			Você vê só os beneficiários de {{ secoes_do_recorte | join(", ") | e }}{% if chefia_secao %} e da seção que você chefia{% endif %}.
+			{% elif chefia_secao %}
+			Você vê só os beneficiários da seção que você chefia.
+			{% else %}
+			Nenhuma seção liberada para você ainda.
+			{% endif %}
+			<a class="underline" href="/acessos">Pedir outra seção</a>
 		</p>
 		{% endif %}
 	</div>
@@ -56,7 +63,7 @@
 			<p class="m-0 mt-1 text-2xl font-semibold text-foreground contrib-num">{{ brl(totais.recebido_total) }}</p>
 			<p class="m-0 mt-2 text-xs text-muted-foreground">
 				{% if recorte_secao %}
-				Pagamentos dos beneficiários da sua seção
+				Pagamentos dos beneficiários das suas seções
 				{% else %}
 				{{ brl(totais.recebido_vinculado) }} identificado &middot; {{ brl(totais.recebido_nao_vinculado) }} a identificar
 				{% endif %}

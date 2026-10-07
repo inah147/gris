@@ -1,7 +1,8 @@
 """O que acontece quando a última etapa aprova um pedido.
 
 * **Papel do Gris** — concedido na hora, sem passar por ``User.save()`` (que repopula os
-  papéis a partir do Role Profile e apagaria concessões manuais).
+  papéis a partir do Role Profile e apagaria concessões manuais). No acesso concedido por
+  seção, a seção pedida vem junto (`gris.api.acessos.secoes`).
 * **Drive** — vira uma concessão manual no Single do Workspace; um job concede no Google
   em seguida, e a rodada diária do mecanismo existente é a garantia.
 * **Ferramenta** — fica "Aguardando concessão" até a equipe criar a conta com o
@@ -110,7 +111,14 @@ def finalizar_aprovacao(solicitacao) -> None:
 	item = frappe.get_doc(ACESSO_DOCTYPE, solicitacao.acesso)
 
 	if item.tipo == TIPO_PAPEL:
-		conceder_papel(solicitacao.solicitante, item.papel, solicitacao.name)
+		if item.por_secao:
+			from gris.api.acessos.secoes import conceder_secao
+
+			conceder_secao(
+				solicitacao.solicitante, item.papel, solicitacao.secao, solicitacao.name, solicitacao.name
+			)
+		else:
+			conceder_papel(solicitacao.solicitante, item.papel, solicitacao.name)
 		solicitacao.status = STATUS_CONCEDIDA
 		solicitacao.concedido_em = now_datetime()
 		solicitacao.concedido_por = frappe.session.user

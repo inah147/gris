@@ -8,7 +8,7 @@ import frappe
 from frappe import _
 from frappe.query_builder.functions import Count
 
-from gris.api.acessos import drives
+from gris.api.acessos import drives, secoes
 from gris.api.acessos.catalogo import ICONE_PADRAO, itens_do_catalogo, vagas_por_ferramenta
 from gris.api.acessos.constantes import (
 	ABA_POR_TIPO,
@@ -21,6 +21,7 @@ from gris.api.acessos.constantes import (
 	LIMITE_MASSA_SINCRONA,
 	MOTIVO_GESTOR,
 	ROLE_GESTOR,
+	SECAO_DOCTYPE,
 	SOLICITACAO_DOCTYPE,
 	STATUS_ABERTOS,
 	TIPO_DRIVE,
@@ -62,7 +63,7 @@ def _item(acesso: str, tipo: str | None = None) -> frappe._dict:
 	item = frappe.db.get_value(
 		ACESSO_DOCTYPE,
 		acesso,
-		["name", "titulo", "tipo", "papel", "drive_id", "limite_licencas"],
+		["name", "titulo", "tipo", "papel", "drive_id", "limite_licencas", "por_secao"],
 		as_dict=True,
 	)
 	if not item:
@@ -207,6 +208,9 @@ def resumo() -> dict:
 			"nome_drive": item.nome_drive,
 			"ativo": bool(item.ativo),
 			"solicitavel": bool(item.solicitavel),
+			"por_secao": bool(item.por_secao),
+			"exige_associado": bool(item.exige_associado),
+			"secoes_concedidas": 0,
 			"descricao": item.descricao,
 			"o_que_muda": item.o_que_muda,
 			"instrucoes_concessao": item.instrucoes_concessao,
@@ -222,6 +226,8 @@ def resumo() -> dict:
 		}
 		if item.tipo == TIPO_PAPEL:
 			card["titulares"] = int(por_papel.get(item.papel) or 0)
+			if item.por_secao:
+				card["secoes_concedidas"] = frappe.db.count(SECAO_DOCTYPE, {"papel": item.papel})
 		elif item.tipo == TIPO_DRIVE:
 			titulares = drives.titulares_do_drive(item.drive_id)
 			card["titulares"] = len(titulares["titulares"])
@@ -281,7 +287,18 @@ def listar_titulares(acesso: str) -> dict:
 	item = _item(acesso)
 
 	if item.tipo == TIPO_PAPEL:
-		return {"tipo": item.tipo, "titulares": _titulares_de_papel(item.papel)}
+		titulares = _titulares_de_papel(item.papel)
+		if not item.por_secao:
+			return {"tipo": item.tipo, "titulares": titulares}
+		por_usuario = secoes.titulares_por_secao(item.papel)
+		for titular in titulares:
+			titular["secoes"] = por_usuario.get(titular["usuario"], [])
+		return {
+			"tipo": item.tipo,
+			"por_secao": True,
+			"titulares": titulares,
+			"secoes": secoes.secoes_existentes(),
+		}
 
 	if item.tipo == TIPO_DRIVE:
 		resultado = drives.titulares_do_drive(item.drive_id)
@@ -391,10 +408,15 @@ def salvar_acesso(acesso: str, dados: str | dict) -> dict:
 # ───────────────────────────── papéis em massa ─────────────────────────────
 
 
-def _papel_do_acesso(acesso: str) -> str:
+def _papel_do_acesso(acesso: str, em_massa: bool = False) -> str:
 	item = _item(acesso, TIPO_PAPEL)
 	if item.papel == ROLE_GESTOR and not eh_system_manager():
 		frappe.throw(_("Só um System Manager concede ou revoga o papel {0}.").format(ROLE_GESTOR))
+	if em_massa and item.por_secao:
+		# O papel sem seção não mostra nada, e revogar em massa deixaria seções órfãs.
+		frappe.throw(
+			_("{0} é concedido por seção: conceda e revogue pela lista de quem tem.").format(item.titulo)
+		)
 	return item.papel
 
 
@@ -431,7 +453,7 @@ def aplicar_papel_em_massa(acao: str, papel: str, usuarios: list[str], origem: s
 
 def _papel_em_massa(acao: str, acesso: str, usuarios, todos) -> dict:
 	garantir_gestor()
-	papel = _papel_do_acesso(acesso)
+	papel = _papel_do_acesso(acesso, em_massa=True)
 	alvos = _alvos(usuarios, todos)
 
 	ignorados = []
@@ -527,7 +549,39 @@ def revogar_papel_de_usuario(acesso: str, usuario: str) -> dict:
 		)
 	if not revogar_papel(usuario, papel, _("gestão de acessos")):
 		frappe.throw(_("Esta pessoa já não tem o papel."))
+	if frappe.db.get_value(ACESSO_DOCTYPE, acesso, "por_secao"):
+		secoes.apagar_secoes(usuario, papel)
 	return {"ok": True}
+
+
+# ───────────────────────────── seções ─────────────────────────────
+
+
+@frappe.whitelist(methods=["POST"])
+def conceder_secao(acesso: str, usuario: str, secao: str) -> dict:
+	"""Dá uma seção a alguém sem pedido — por exemplo, a quem já via antes do portal."""
+	garantir_gestor()
+	item = _item(acesso, TIPO_PAPEL)
+	if not item.por_secao:
+		frappe.throw(_("{0} não é concedido por seção.").format(item.titulo))
+	papel = _papel_do_acesso(acesso)
+	if usuario not in {linha.usuario for linha in usuarios_elegiveis()}:
+		frappe.throw(_("Só associados ativos com usuário no Gris recebem acessos."))
+	secoes.conceder_secao(usuario, papel, secao, _("gestão de acessos"))
+	return {"ok": True}
+
+
+@frappe.whitelist(methods=["POST"])
+def revogar_secao(concessao: str) -> dict:
+	"""Tira uma seção; a última leva junto o papel, a não ser que ele venha do perfil."""
+	garantir_gestor()
+	papel = frappe.db.get_value(SECAO_DOCTYPE, concessao, "papel")
+	if not papel:
+		frappe.throw(_("Concessão de seção não encontrada."))
+	if papel == ROLE_GESTOR and not eh_system_manager():
+		frappe.throw(_("Só um System Manager concede ou revoga o papel {0}.").format(ROLE_GESTOR))
+	resultado = secoes.revogar_secao(concessao, _("gestão de acessos"))
+	return {"ok": True, "papel_revogado": resultado["papel_revogado"]}
 
 
 # ───────────────────────────── drives ─────────────────────────────

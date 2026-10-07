@@ -1,0 +1,115 @@
+{
+ "actions": [],
+ "autoname": "ASEC-.#####",
+ "creation": "2026-10-07 00:00:00.000000",
+ "description": "Seção concedida a um usuário junto com um papel do portal de acessos marcado como \"Concedido por seção\". O papel abre a página; a seção diz o que ela mostra.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "usuario",
+  "nome",
+  "papel",
+  "secao",
+  "column_break_concessao",
+  "solicitacao",
+  "concedido_em",
+  "concedido_por"
+ ],
+ "fields": [
+  {
+   "fieldname": "usuario",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Usuário",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "usuario.full_name",
+   "fieldname": "nome",
+   "fieldtype": "Data",
+   "label": "Nome",
+   "read_only": 1
+  },
+  {
+   "fieldname": "papel",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Papel",
+   "options": "Role",
+   "reqd": 1
+  },
+  {
+   "description": "Igual ao campo Seção do cadastro dos associados (a comparação ignora acentos e maiúsculas).",
+   "fieldname": "secao",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Seção",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_concessao",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "solicitacao",
+   "fieldtype": "Link",
+   "label": "Solicitação",
+   "options": "Solicitacao de Acesso",
+   "read_only": 1
+  },
+  {
+   "fieldname": "concedido_em",
+   "fieldtype": "Datetime",
+   "label": "Concedido em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "concedido_por",
+   "fieldtype": "Link",
+   "label": "Concedido por",
+   "options": "User",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-07 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Acesso por Secao",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de Acessos",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "nome"
+}

@@ -7,6 +7,7 @@ ACESSO_DOCTYPE = "Acesso"
 SOLICITACAO_DOCTYPE = "Solicitacao de Acesso"
 LICENCA_DOCTYPE = "Licenca de Ferramenta"
 SETTINGS_DOCTYPE = "Configuracoes de Acessos"
+SECAO_DOCTYPE = "Acesso por Secao"
 
 TIPO_PAPEL = "Papel do Gris"
 TIPO_DRIVE = "Drive compartilhado"

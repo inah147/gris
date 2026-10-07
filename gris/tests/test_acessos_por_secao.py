@@ -154,7 +154,7 @@ class TestPedidoPorSecao(_Base):
 		self.assertTrue(self._pedir(SECAO_B))
 		item = self._item()
 		self.assertEqual({p["secao"] for p in item["recorte"]["pedidas"]}, {SECAO_A, SECAO_B})
-		self.assertFalse(item["pode_solicitar"])
+		self.assertFalse({SECAO_A, SECAO_B} & set(item["recorte"]["disponiveis"]))
 
 	def test_aprovado_ve_so_a_secao_pedida(self):
 		self._aprovar_tudo(self._pedir(SECAO_A))
@@ -180,7 +180,9 @@ class TestPedidoPorSecao(_Base):
 		frappe.set_user(self.pessoa)
 		self.assertTrue({self.jovem_a, self.jovem_b} <= servico.associados_visiveis())
 		self.assertEqual(
-			frappe.db.get_value(SOLICITACAO_DOCTYPE, {"solicitante": self.pessoa, "secao": SECAO_B}, "status"),
+			frappe.db.get_value(
+				SOLICITACAO_DOCTYPE, {"solicitante": self.pessoa, "secao": SECAO_B}, "status"
+			),
 			STATUS_CONCEDIDA,
 		)
 
@@ -269,6 +271,8 @@ class TestAcessoTotalEResponsavel(_Base):
 		self.assertEqual(get_responsavel_do_usuario(email), responsavel.name)
 		self.assertIsNone(get_responsavel_do_usuario(email, incluir_vinculo_do_beneficiario=False))
 		self.assertEqual(
-			get_responsavel_do_usuario("teste.porsecao.mae@exemplo.com", incluir_vinculo_do_beneficiario=False),
+			get_responsavel_do_usuario(
+				"teste.porsecao.mae@exemplo.com", incluir_vinculo_do_beneficiario=False
+			),
 			responsavel.name,
 		)

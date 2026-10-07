@@ -250,7 +250,7 @@
 		if (item.recorte) {
 			item.recorte.pedidas.forEach((pedido) => {
 				botoes.push(
-					`<button type="button" class="btn-sm-outline" data-acao="cancelar" data-solicitacao="${escapeHtml(
+					`<button type="button" class="btn-sm-outline acessos-card__cancelar-secao" data-acao="cancelar" data-solicitacao="${escapeHtml(
 						pedido.solicitacao
 					)}">Cancelar pedido de ${escapeHtml(pedido.secao)}</button>`
 				);

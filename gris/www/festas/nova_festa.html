@@ -96,6 +96,23 @@
 			</div>
 		{% endcall %}
 
+		{% call card(attrs={"class": "nova-festa-card"}) %}
+			<header class="nova-festa-card__header">
+				<h2 class="nova-festa-card__title">Copiar dados de uma festa anterior</h2>
+				<p class="nova-festa-card__subtitle">Opcional. Copia áreas, barracas, produtos vendidos, compras, contratações e convites (com valores) de uma festa já cadastrada como ponto de partida — tudo pode ser editado depois.</p>
+			</header>
+			{% call field(label="Festa de referência") %}
+				{{ select(
+					id="nova-festa-combo-origem",
+					name="festa_origem",
+					items=festas_anteriores_items or [],
+					is_combobox=true,
+					search_placeholder="Buscar festa…",
+					trigger_attrs={"class": "w-full"}
+				) }}
+			{% endcall %}
+		{% endcall %}
+
 		<div class="nova-festa-actions">
 			<a class="btn-outline" href="/festas">Cancelar</a>
 			<button type="submit" class="btn-primary" id="nova-festa-submit">Criar festa</button>

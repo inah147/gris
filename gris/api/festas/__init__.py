@@ -1323,3 +1323,234 @@ def salvar_fechamento_barraca(festa_name: str, barraca_name: str, dados_json: st
 	frappe.db.set_value("Barraca da Festa", barraca_name, "valor_arrecadado_realizado_real", valor_real)
 
 	return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Copiar dados de festa anterior
+# ---------------------------------------------------------------------------
+
+
+def _copiar_membro_equipe(membro) -> dict:
+	return {
+		"tipo_pessoa": membro.tipo_pessoa,
+		"associado": membro.associado,
+		"responsavel": membro.responsavel,
+		"nome": membro.nome,
+		"email": membro.email,
+		"telefone": membro.telefone,
+		"funcao": membro.funcao,
+	}
+
+
+def _copiar_areas_festa(festa_destino: str, festa_origem: str) -> dict[str, str]:
+	"""Copia as áreas de `festa_origem`, retornando o mapa nome-origem -> nome-destino.
+
+	A área Portaria já existe em `festa_destino` (criada pelo `after_insert` da
+	Festa), então aqui ela só é atualizada com o coordenador/equipe da origem
+	em vez de recriada.
+	"""
+	mapa: dict[str, str] = {}
+	nomes = frappe.get_all("Area da Festa", filters={"festa": festa_origem}, pluck="name")
+	for nome in nomes:
+		origem = frappe.get_doc("Area da Festa", nome)
+
+		if origem.nome_area == AREA_PORTARIA_NOME:
+			destino_nome = f"{festa_destino} - {AREA_PORTARIA_NOME}"
+			destino = frappe.get_doc("Area da Festa", destino_nome)
+		else:
+			destino = frappe.new_doc("Area da Festa")
+			destino.festa = festa_destino
+			destino.nome_area = origem.nome_area
+
+		destino.descricao = origem.descricao
+		destino.tipo_coord = origem.tipo_coord
+		destino.responsavel_coord = origem.responsavel_coord
+		destino.associado_coord = origem.associado_coord
+		destino.nome_coord = origem.nome_coord
+		destino.email_coord = origem.email_coord
+		destino.telefone_coord = origem.telefone_coord
+		destino.equipe = []
+		for membro in origem.equipe or []:
+			destino.append("equipe", _copiar_membro_equipe(membro))
+
+		if destino.is_new():
+			destino.insert()
+		else:
+			destino.save()
+
+		mapa[nome] = destino.name
+	return mapa
+
+
+def _copiar_barracas_festa(
+	festa_destino: str, festa_origem: str, mapa_areas: dict[str, str]
+) -> dict[str, str]:
+	mapa: dict[str, str] = {}
+	nomes = frappe.get_all("Barraca da Festa", filters={"festa": festa_origem}, pluck="name")
+	for nome in nomes:
+		origem = frappe.get_doc("Barraca da Festa", nome)
+		area_destino = mapa_areas.get(origem.area)
+		if not area_destino:
+			continue
+
+		destino = frappe.new_doc("Barraca da Festa")
+		destino.festa = festa_destino
+		destino.area = area_destino
+		destino.nome_barraca = origem.nome_barraca
+		destino.descricao = origem.descricao
+		destino.tipo_coord = origem.tipo_coord
+		destino.responsavel_coord = origem.responsavel_coord
+		destino.associado_coord = origem.associado_coord
+		destino.nome_coord = origem.nome_coord
+		destino.email_coord = origem.email_coord
+		destino.telefone_coord = origem.telefone_coord
+		for membro in origem.equipe or []:
+			destino.append("equipe", _copiar_membro_equipe(membro))
+		destino.insert()
+
+		mapa[nome] = destino.name
+	return mapa
+
+
+def _copiar_produtos_festa(
+	festa_destino: str, festa_origem: str, mapa_barracas: dict[str, str]
+) -> dict[str, str]:
+	mapa: dict[str, str] = {}
+	nomes = frappe.get_all("Produto de Venda Festa", filters={"festa": festa_origem}, pluck="name")
+	for nome in nomes:
+		origem = frappe.get_doc("Produto de Venda Festa", nome)
+
+		destino = frappe.new_doc("Produto de Venda Festa")
+		destino.festa = festa_destino
+		destino.nome_produto = origem.nome_produto
+		destino.barraca = mapa_barracas.get(origem.barraca) if origem.barraca else None
+		destino.faz_parte_convite = origem.faz_parte_convite
+		destino.qtd_no_convite = origem.qtd_no_convite
+		destino.tipo_aquisicao = origem.tipo_aquisicao
+		destino.preco_venda = origem.preco_venda
+		destino.expectativa_venda_por_pessoa = origem.expectativa_venda_por_pessoa
+		destino.insert()
+
+		mapa[nome] = destino.name
+	return mapa
+
+
+def _copiar_compras_festa(
+	festa_destino: str,
+	festa_origem: str,
+	mapa_areas: dict[str, str],
+	mapa_produtos: dict[str, str],
+) -> None:
+	nomes = frappe.get_all("Compra Festa", filters={"festa": festa_origem}, pluck="name")
+	for nome in nomes:
+		origem = frappe.get_doc("Compra Festa", nome)
+
+		destino = frappe.new_doc("Compra Festa")
+		destino.festa = festa_destino
+		destino.nome_item = origem.nome_item
+		destino.area = mapa_areas.get(origem.area) if origem.area else None
+		destino.previsto = origem.previsto
+		destino.varia_com_publico = origem.varia_com_publico
+		destino.usado_em_produtos = origem.usado_em_produtos
+		destino.unidade_compra = origem.unidade_compra
+		destino.quantidade_compra_final = origem.quantidade_compra_final
+
+		for cotacao in origem.cotacoes or []:
+			destino.append(
+				"cotacoes",
+				{
+					"fornecedor": cotacao.fornecedor,
+					"valor": cotacao.valor,
+					"quantidade": cotacao.quantidade,
+					"unidade_medida": cotacao.unidade_medida,
+					"escolhida": cotacao.escolhida,
+					"doacao": cotacao.doacao,
+				},
+			)
+
+		for uso in origem.usos_em_produto or []:
+			produto_destino = mapa_produtos.get(uso.produto)
+			if not produto_destino:
+				continue
+			destino.append(
+				"usos_em_produto",
+				{
+					"produto": produto_destino,
+					"quantidade_usada": uso.quantidade_usada,
+					"unidade_medida_uso": uso.unidade_medida_uso,
+				},
+			)
+
+		destino.insert()
+
+
+def _copiar_contratacoes_festa(festa_destino: str, festa_origem: str, mapa_areas: dict[str, str]) -> None:
+	nomes = frappe.get_all("Contratacao Festa", filters={"festa": festa_origem}, pluck="name")
+	for nome in nomes:
+		origem = frappe.get_doc("Contratacao Festa", nome)
+
+		destino = frappe.new_doc("Contratacao Festa")
+		destino.festa = festa_destino
+		destino.nome_item = origem.nome_item
+		destino.area = mapa_areas.get(origem.area) if origem.area else None
+		destino.previsto = origem.previsto
+
+		for cotacao in origem.cotacoes or []:
+			destino.append(
+				"cotacoes",
+				{
+					"fornecedor": cotacao.fornecedor,
+					"valor": cotacao.valor,
+					"escolhida": cotacao.escolhida,
+				},
+			)
+
+		destino.insert()
+
+
+def _copiar_convites_festa(festa_destino: str, festa_origem: str) -> None:
+	"""Copia as opções de convite (nome, ramo, valor) da festa de origem.
+
+	O convite do tipo Portaria fica de fora: ele é criado à parte quando o
+	modo "Venda na portaria" é ativado para a nova festa, e as vendas e lotes
+	(datas específicas da festa de origem) não fazem sentido para a nova.
+	"""
+	nomes = frappe.get_all(
+		"Opcao Convite Festa",
+		filters={"festa": festa_origem, "portaria": 0},
+		pluck="name",
+	)
+	for nome in nomes:
+		origem = frappe.get_doc("Opcao Convite Festa", nome)
+
+		destino = frappe.new_doc("Opcao Convite Festa")
+		destino.festa = festa_destino
+		destino.nome_convite = origem.nome_convite
+		destino.ramo = origem.ramo
+		destino.ativo = origem.ativo
+		destino.valor = origem.valor
+		destino.valor_consumacao = origem.valor_consumacao
+		destino.quantidade_esperada = origem.quantidade_esperada
+		destino.insert()
+
+
+def copiar_dados_festa_anterior(festa_destino: str, festa_origem: str) -> None:
+	"""Copia o planejamento de `festa_origem` para `festa_destino`, recém-criada.
+
+	Copia áreas, barracas, produtos vendidos, compras, contratações e opções de
+	convite (com o respectivo valor) como ponto de partida editável. Não copia
+	dados de resultado (vendas realizadas, valores arrecadados, fechamento de
+	caixa, lotes de convite com datas da festa anterior): esses são específicos
+	de cada edição e ficam zerados para a nova festa.
+	"""
+	if festa_destino == festa_origem:
+		frappe.throw(_("A festa de referência para cópia não pode ser a própria festa criada."))
+	if not frappe.db.exists("Festa", festa_origem):
+		frappe.throw(_("Festa de referência para cópia não encontrada."))
+
+	mapa_areas = _copiar_areas_festa(festa_destino, festa_origem)
+	mapa_barracas = _copiar_barracas_festa(festa_destino, festa_origem, mapa_areas)
+	mapa_produtos = _copiar_produtos_festa(festa_destino, festa_origem, mapa_barracas)
+	_copiar_compras_festa(festa_destino, festa_origem, mapa_areas, mapa_produtos)
+	_copiar_contratacoes_festa(festa_destino, festa_origem, mapa_areas)
+	_copiar_convites_festa(festa_destino, festa_origem)

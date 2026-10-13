@@ -81,6 +81,16 @@ class TestGeracaoMensalCarencia(FrappeTestCase):
 		self._gerar()
 		self.assertTrue(_gerado(associado))
 
+	def test_mes_novo_sai_com_o_valor_do_cadastro(self):
+		# Valor reduzido no cadastro (ex.: pioneiros a 30) vale mais que o valor base.
+		frappe.db.set_single_value("Configuracoes Contribuicao Mensal", "valor_base", 60)
+		associado = _criar_associado("99000000408", None, tipo_registro="Definitivo", valor_contribuicao=30)
+		self._gerar()
+		valor = frappe.db.get_value(
+			"Pagamento Contribuicao Mensal", {"associado": associado, "mes_de_referencia": MES}, "valor"
+		)
+		self.assertEqual(valor, 30)
+
 
 class TestAcrescimoAutomatico(FrappeTestCase):
 	def setUp(self):

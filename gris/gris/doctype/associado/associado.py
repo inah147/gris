@@ -169,20 +169,18 @@ class Associado(Document):
 			dirty = True
 
 		# O número de registro vem junto: é ele que a visão geral cobra antes de deixar
-		# marcar a etapa de efetivação, e por este caminho ela é marcada sem passar
-		# pelo diálogo.
+		# marcar a etapa de efetivação, e assim ele já está lá quando a recepção marcar.
 		if self.registro and not na_doc.numero_de_registro:
 			na_doc.numero_de_registro = self.registro
 			dirty = True
 
-		if self.tipo_registro == "Provisório":
-			if not na_doc.registro_provisorio_efetivado:
-				na_doc.registro_provisorio_efetivado = 1
-				dirty = True
-		elif self.tipo_registro == "Definitivo":
-			if not na_doc.registro_definitivo_efetivado:
-				na_doc.registro_definitivo_efetivado = 1
-				dirty = True
+		# O definitivo não é efetivado aqui: só a recepção marca essa etapa, à mão. O
+		# Associado nasce da importação do relatório do Paxtu, que não traz o tipo do
+		# registro — o Select grava "Definitivo" por ser a primeira opção — e o jovem entra
+		# no relatório antes de o registro definitivo estar efetivado.
+		if self.tipo_registro == "Provisório" and not na_doc.registro_provisorio_efetivado:
+			na_doc.registro_provisorio_efetivado = 1
+			dirty = True
 
 		if dirty:
 			na_doc.save(ignore_permissions=True)

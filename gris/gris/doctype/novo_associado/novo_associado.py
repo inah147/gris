@@ -69,7 +69,8 @@ class NovoAssociado(Document):
 
 		O boleto é a etapa imediatamente anterior à efetivação, no provisório e no
 		definitivo: não existe registro efetivado sem boleto emitido e pago. Quem marca a
-		efetivação direto — a bolinha da timeline, o Desk, o MCP ou a criação do Associado —
+		efetivação direto — a bolinha da timeline, o Desk, o MCP ou, no provisório, a criação
+		do Associado —
 		deixaria a etapa do boleto aberta, e o funil cobraria um boleto de quem já está
 		registrado. Justamente a lista que a etapa existe para mostrar (boletos emitidos
 		esperando pagamento) é a que ficaria errada.

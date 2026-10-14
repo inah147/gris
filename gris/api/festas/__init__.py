@@ -6,6 +6,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from gris.festas.doctype.compra_festa.compra_festa import _CENARIO_FIELD_MAP
 from gris.festas.doctype.festa.festa import AREA_PORTARIA_NOME
 from gris.festas.utils.unidades import UNIDADES
 
@@ -137,6 +138,10 @@ def totais_payload(doc) -> dict:
 	A receita de produtos considera apenas o excedente sobre a consumação (ou a
 	própria consumação, o que for maior), evitando contá-la duas vezes — mesma
 	lógica de resultado aplicada no fechamento.
+
+	A chave `previsto` traz o que está planejado de fato: despesas pela
+	quantidade final das compras (+ contratações e margem) e receitas do
+	cenário ativo da festa.
 	"""
 	consumacao_media = doc._consumacao_media_convite_por_lotes() if doc.convite_por_lotes else 0.0
 	payload = {}
@@ -160,7 +165,26 @@ def totais_payload(doc) -> dict:
 			"margem": margem,
 			"saldo": receita - despesa,
 		}
+	payload["previsto"] = _previsto_payload(doc, payload)
 	return payload
+
+
+def _previsto_payload(doc, cenarios: dict) -> dict:
+	cenario = doc.cenario_simulacao or "Intermediário"
+	ativo = cenarios[_CENARIO_FIELD_MAP.get(cenario, "intermediario")]
+	despesa_area = sum(doc.despesas_previstas_por_area().values())
+	margem = despesa_area * flt(doc.margem_seguranca) / 100.0
+	despesa = despesa_area + margem
+	return {
+		"cenario": cenario,
+		"receita_entrada": ativo["receita_entrada"],
+		"receita_consumacao": ativo["receita_consumacao"],
+		"receita_produtos": ativo["receita_produtos"],
+		"receita": ativo["receita"],
+		"despesa": despesa,
+		"margem": margem,
+		"saldo": ativo["receita"] - despesa,
+	}
 
 
 @frappe.whitelist()
@@ -848,7 +872,6 @@ def _hydrate_compra(doc) -> dict:
 		"nome_area": nome_area,
 		"nome_item": doc.nome_item or "",
 		"previsto": bool(doc.previsto),
-		"varia_com_publico": bool(doc.varia_com_publico),
 		"usado_em_produtos": bool(doc.usado_em_produtos),
 		"unidade_compra": doc.unidade_compra or "unidade",
 		"quantidade_compra": flt(doc.quantidade_compra),
@@ -888,7 +911,6 @@ def _apply_compra_dados(doc, dados: dict, festa_name: str) -> set[str]:
 	doc.nome_item = nome_item
 	doc.area = _validate_area_festa(dados.get("area"), festa_name)
 	doc.unidade_compra = _validate_unidade(dados.get("unidade_compra") or "unidade")
-	doc.varia_com_publico = _as_bool(dados.get("varia_com_publico"))
 	doc.usado_em_produtos = _as_bool(dados.get("usado_em_produtos"))
 	doc.quantidade_compra_final = _as_non_negative_float(
 		dados.get("quantidade_compra_final", 0),

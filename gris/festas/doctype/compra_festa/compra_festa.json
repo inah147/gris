@@ -78,8 +78,10 @@
   },
   {
    "default": "0",
+   "description": "Legado: sem efeito no c\u00e1lculo. A quantidade passa a variar com o p\u00fablico pelos produtos vinculados (Usado em produtos).",
    "fieldname": "varia_com_publico",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Quantidade varia com publico"
   },
   {
@@ -292,7 +294,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-10 12:00:00.000000",
+ "modified": "2026-10-14 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Festas",
  "name": "Compra Festa",

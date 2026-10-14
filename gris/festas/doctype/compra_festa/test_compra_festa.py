@@ -70,7 +70,99 @@ class TestCompraFesta(FrappeTestCase):
 			}
 		).insert(ignore_permissions=True)
 
-		self.assertEqual(flt(compra.valor_total_compra), 80)
+		# Quantidade final = nº de cotações: 8 cotações de 2 kg a R$ 20.
+		self.assertEqual(flt(compra.valor_total_compra), 160)
+
+	def test_valor_total_com_cotacao_em_outra_unidade(self):
+		# Água com gás comprada em ml, cotada a R$ 2,19 a garrafa de 0,5 litro:
+		# 6 cotações custam 6 x 2,19, não ⌈6 ml ÷ 500 ml⌉ x 2,19.
+		festa = _nova_festa()
+		compra = frappe.get_doc(
+			{
+				"doctype": "Compra Festa",
+				"festa": festa.name,
+				"nome_item": "Agua com gas",
+				"unidade_compra": "ml",
+				"quantidade_compra_final": 6,
+				"cotacoes": [
+					{
+						"fornecedor": "Atacadao",
+						"valor": 2.19,
+						"quantidade": 0.5,
+						"unidade_medida": "litro",
+						"escolhida": 1,
+					}
+				],
+			}
+		).insert(ignore_permissions=True)
+
+		self.assertAlmostEqual(flt(compra.valor_total_compra), 13.14, places=2)
+		# Item constante: os três cenários compram a própria quantidade final.
+		for chave in ("min", "intermediario", "max"):
+			self.assertEqual(flt(compra.get(f"qtd_sugerida_{chave}")), 6)
+			self.assertAlmostEqual(flt(compra.get(f"valor_total_{chave}")), 13.14, places=2)
+
+	def test_cenario_arredonda_sem_erro_de_ponto_flutuante(self):
+		# 70 g x 100 produtos convertidos para kg dá 7,000000000000001 em float:
+		# são 7 pacotes de 1 kg, não 8.
+		festa = _nova_festa(publico_intermediario=100)
+		produto = _novo_produto(festa, expectativa_venda_por_pessoa=1)
+		compra = frappe.get_doc(
+			{
+				"doctype": "Compra Festa",
+				"festa": festa.name,
+				"nome_item": "Farinha",
+				"usado_em_produtos": 1,
+				"unidade_compra": "kg",
+				"quantidade_compra_final": 7,
+				"cotacoes": [
+					{
+						"fornecedor": "Fornecedor A",
+						"valor": 10,
+						"quantidade": 1,
+						"unidade_medida": "kg",
+						"escolhida": 1,
+					}
+				],
+				"usos_em_produto": [
+					{"produto": produto.name, "quantidade_usada": 70, "unidade_medida_uso": "g"}
+				],
+			}
+		).insert(ignore_permissions=True)
+
+		self.assertEqual(flt(compra.qtd_sugerida_intermediario), 7)
+
+	def test_sobra_desconta_o_consumo_do_cenario(self):
+		# 0,5 kg x 30 produtos = 15 kg; 2 pacotes de 10 kg = 20 kg -> sobram 5 kg,
+		# que valem metade de um pacote de R$ 100.
+		festa = _nova_festa(publico_intermediario=30)
+		produto = _novo_produto(festa, expectativa_venda_por_pessoa=1)
+		compra = frappe.get_doc(
+			{
+				"doctype": "Compra Festa",
+				"festa": festa.name,
+				"nome_item": "Queijo ralado",
+				"usado_em_produtos": 1,
+				"unidade_compra": "kg",
+				"quantidade_compra_final": 2,
+				"cotacoes": [
+					{
+						"fornecedor": "Fornecedor A",
+						"valor": 100,
+						"quantidade": 10,
+						"unidade_medida": "kg",
+						"escolhida": 1,
+					}
+				],
+				"usos_em_produto": [
+					{"produto": produto.name, "quantidade_usada": 0.5, "unidade_medida_uso": "kg"}
+				],
+			}
+		).insert(ignore_permissions=True)
+
+		self.assertEqual(flt(compra.qtd_sugerida_intermediario), 2)
+		self.assertEqual(flt(compra.qtd_sobra_individual_intermediario), 5)
+		self.assertEqual(flt(compra.valor_sobra_intermediario), 50)
 
 	def test_quantidade_final_rateia_uso_em_produto(self):
 		# Publico intermediario=1 e expectativa=1 -> qtd do produto no cenario = 1,
@@ -217,3 +309,60 @@ class TestCompraFesta(FrappeTestCase):
 		)
 
 		self.assertRaises(frappe.ValidationError, compra.insert, ignore_permissions=True)
+
+	def test_patch_recalcula_compras_gravadas(self):
+		from gris.patches.recalcular_valor_total_compra_festa import execute
+
+		festa = _nova_festa()
+		cotacao = {"fornecedor": "Atacadao", "unidade_medida": "litro", "escolhida": 1}
+		agua = frappe.get_doc(
+			{
+				"doctype": "Compra Festa",
+				"festa": festa.name,
+				"nome_item": "Agua com gas",
+				"unidade_compra": "ml",
+				"quantidade_compra_final": 6,
+				"cotacoes": [{**cotacao, "valor": 2.19, "quantidade": 0.5}],
+			}
+		).insert(ignore_permissions=True)
+		refri = frappe.get_doc(
+			{
+				"doctype": "Compra Festa",
+				"festa": festa.name,
+				"nome_item": "Refrigerante",
+				"unidade_compra": "litro",
+				"quantidade_compra_final": 0.2,
+				"cotacoes": [{**cotacao, "valor": 5, "quantidade": 0.5}],
+			}
+		).insert(ignore_permissions=True)
+		# O que a regra antiga gravou: ⌈6 ml ÷ 500 ml⌉ x 2,19 e 1 cotação no cenário;
+		# no item "varia com o público", 0,2 litro por pessoa virou 40 garrafas.
+		frappe.db.set_value(
+			"Compra Festa",
+			agua.name,
+			{"valor_total_compra": 2.19, "qtd_sugerida_intermediario": 1},
+			update_modified=False,
+		)
+		frappe.db.set_value(
+			"Compra Festa",
+			refri.name,
+			{"varia_com_publico": 1, "quantidade_compra": 40, "valor_total_compra": 5},
+			update_modified=False,
+		)
+		modified = frappe.db.get_value("Compra Festa", agua.name, "modified")
+		# Festa antiga que reprova a validação: o patch refaz o orçamento sem save().
+		frappe.db.set_value("Festa", festa.name, "data_limite_vendas", add_days(festa.data, 1))
+		frappe.db.sql("update `tabLista de Compras Festa` set valor_total = 0 where parent = %s", festa.name)
+
+		execute()
+
+		agua.reload()
+		self.assertAlmostEqual(flt(agua.valor_total_compra), 13.14, places=2)
+		self.assertEqual(flt(agua.qtd_sugerida_intermediario), 6)
+		self.assertEqual(agua.modified, modified)
+		refri.reload()
+		self.assertEqual(flt(refri.quantidade_compra_final), 40)
+		self.assertEqual(flt(refri.valor_total_compra), 200)
+		festa.reload()
+		totais_lista = {linha.item: flt(linha.valor_total) for linha in festa.lista_compras}
+		self.assertAlmostEqual(totais_lista["Agua com gas"], 13.14, places=2)

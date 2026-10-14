@@ -1,7 +1,6 @@
 # Copyright (c) 2026, Grupo Escoteiro Professora Inah de Mello - 47/SP and contributors
 # For license information, please see license.txt
 
-import math
 from datetime import date
 
 import frappe
@@ -433,6 +432,33 @@ class Festa(Document):
 			self.set(f"receita_total_{chave}", receita_total)
 			self.set(f"despesa_total_{chave}", despesa_area + margem_valor)
 
+	# ---------- Despesa prevista (independente de cenário) ----------
+
+	def despesas_previstas_por_area(self) -> dict[str, float]:
+		"""Despesa planejada de fato por área: valor total de compra (quantidade
+		final x valor da cotação) dos itens previstos + contratações previstas.
+
+		Complementa `despesas_por_area`, que simula pelos cenários de público.
+		Usa as mesmas áreas dos cenários: compras sem área ficam de fora.
+		"""
+		if self.is_new():
+			return {}
+		despesas = {row.area: 0.0 for row in self.despesas_por_area or [] if row.area}
+		for doctype, campo in (
+			("Compra Festa", "valor_total_compra"),
+			("Contratacao Festa", "valor_total_contratacao"),
+		):
+			linhas = frappe.get_all(
+				doctype,
+				filters={"festa": self.name, "previsto": 1},
+				fields=["area", f"sum({campo}) as total"],
+				group_by="area",
+			)
+			for linha in linhas:
+				if linha.area in despesas:
+					despesas[linha.area] += flt(linha.total)
+		return despesas
+
 	# ---------- Lista de compras ----------
 
 	def _gerar_lista_de_compras(self):
@@ -468,8 +494,10 @@ class Festa(Document):
 			if qtd_cot_em_compra <= 0:
 				continue
 
-			valor_unit = flt(cot.valor) / qtd_cot_em_compra
-			qtd_arredondada = math.ceil(flt(compra.quantidade_compra_final) or 0)
+			# A quantidade final é o nº de cotações; a lista mostra o total na
+			# unidade de compra (cotações x tamanho da cotação) e o valor é
+			# cotações x valor da cotação, igual ao valor total de compra.
+			cotacoes_a_comprar = flt(compra.quantidade_compra_final)
 
 			key = (compra.nome_item or "", cot.fornecedor or "", compra.unidade_compra or "")
 			if key not in agregadas:
@@ -477,14 +505,14 @@ class Festa(Document):
 					"item": compra.nome_item,
 					"fornecedor": cot.fornecedor,
 					"unidade": compra.unidade_compra,
-					"quantidade": 0,
-					"valor_unitario": valor_unit,
+					"quantidade": 0.0,
+					"valor_unitario": flt(cot.valor) / qtd_cot_em_compra,
 					"valor_total": 0.0,
 				}
-			agregadas[key]["quantidade"] += qtd_arredondada
+			agregadas[key]["quantidade"] += cotacoes_a_comprar * qtd_cot_em_compra
+			agregadas[key]["valor_total"] += cotacoes_a_comprar * flt(cot.valor)
 
 		for entry in agregadas.values():
-			entry["valor_total"] = entry["quantidade"] * entry["valor_unitario"]
 			self.append("lista_compras", entry)
 
 

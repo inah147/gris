@@ -27,16 +27,17 @@
 </td>
 {% endmacro %}
 
-{# Tabela "esperado por cenário" (receitas/despesas por área ou barraca). #}
-{% macro tabela_cenarios(dados, rotulo) %}
+{# Tabela "esperado por cenário" (receitas/despesas por área ou barraca);
+   `colunas=cenarios_e_previsto` acrescenta a coluna Previsto. #}
+{% macro tabela_cenarios(dados, rotulo, colunas=cenarios) %}
 {% if dados.linhas %}
 <table class="tbl">
-	<thead><tr><th>{{ rotulo }}</th>{% for chave, nome in cenarios %}<th class="num">{{ nome }}</th>{% endfor %}</tr></thead>
+	<thead><tr><th>{{ rotulo }}</th>{% for chave, nome in colunas %}<th class="num">{{ nome }}</th>{% endfor %}</tr></thead>
 	<tbody>
 		{% for l in dados.linhas %}
-		<tr><td>{{ l.label }}</td>{% for chave, nome in cenarios %}<td class="num">{{ brl(l["esperado_" ~ chave]) }}</td>{% endfor %}</tr>
+		<tr><td>{{ l.label }}</td>{% for chave, nome in colunas %}<td class="num">{{ brl(l.previsto if chave == "previsto" else l["esperado_" ~ chave]) }}</td>{% endfor %}</tr>
 		{% endfor %}
-		<tr class="total"><td>Total</td>{% for chave, nome in cenarios %}<td class="num">{{ brl(dados.total[chave]) }}</td>{% endfor %}</tr>
+		<tr class="total"><td>Total</td>{% for chave, nome in colunas %}<td class="num">{{ brl(dados.total[chave]) }}</td>{% endfor %}</tr>
 	</tbody>
 </table>
 {% else %}<p class="empty">Nenhum registro.</p>{% endif %}
@@ -354,7 +355,7 @@
 		<thead><tr>
 			<th style="width:18%">Item</th><th style="width:12%">Área</th><th class="num">Qtd de compra</th>
 			<th class="num">Valor da cotação escolhida</th><th class="num">Valor total</th><th style="width:15%">Fornecedor escolhido</th>
-			<th class="center">Varia com o público</th><th style="width:18%">Usado nos produtos</th>
+			<th style="width:22%">Usado nos produtos</th>
 		</tr></thead>
 		<tbody>
 			{% for c in compras %}
@@ -365,18 +366,19 @@
 				<td class="num">{{ brl(c.cotacao_escolhida_valor) }}</td>
 				<td class="num">{{ brl(c.valor_total_compra) }}</td>
 				<td>{{ ou_traco(c.fornecedor_escolhido) }}</td>
-				<td class="center">{{ simnao(c.varia_com_publico) }}</td>
 				<td>{{ c.produtos_uso | join(", ") if c.produtos_uso else "—" }}</td>
 			</tr>
 			{% endfor %}
-			<tr class="total"><td colspan="4">Total previsto</td><td class="num">{{ brl(compras | sum(attribute="valor_total_compra")) }}</td><td colspan="3"></td></tr>
+			<tr class="total"><td colspan="4">Total previsto</td><td class="num">{{ brl(compras | sum(attribute="valor_total_compra")) }}</td><td colspan="2"></td></tr>
 		</tbody>
 	</table>
 
-	{% set compras_cenario = compras | selectattr("varia_com_publico") | list %}
+	<p class="note">Qtd de compra é o nº de cotações a comprar; o valor total é essa quantidade × o valor da cotação escolhida.</p>
+
+	{% set compras_cenario = compras | selectattr("usado_em_produtos") | list %}
 	{% if compras_cenario %}
 	<h3 class="sub">Quantidades por cenário</h3>
-	<p class="note">Itens que variam com o público: quantidade sugerida, valor e sobra estimada em cada cenário.</p>
+	<p class="note">Itens usados em produtos variam com o público: cotações sugeridas, valor e sobra estimada em cada cenário.</p>
 	<table class="tbl">
 		<thead>
 			<tr>
@@ -481,21 +483,22 @@
 
 	<h3 class="sub">Resultado por cenário</h3>
 	<table class="tbl">
-		<thead><tr><th style="width:34%"></th>{% for chave, nome in cenarios %}<th class="num">{{ nome }}</th>{% endfor %}</tr></thead>
+		<thead><tr><th style="width:30%"></th>{% for chave, nome in cenarios_e_previsto %}<th class="num">{{ nome }}</th>{% endfor %}</tr></thead>
 		<tbody>
-			<tr><td>Convites (entrada)</td>{% for chave, nome in cenarios %}<td class="num">{{ brl(t[chave].receita_entrada) }}</td>{% endfor %}</tr>
-			<tr><td>Convites (consumação)</td>{% for chave, nome in cenarios %}<td class="num">{{ brl(t[chave].receita_consumacao) }}</td>{% endfor %}</tr>
-			<tr><td>Receita de produtos</td>{% for chave, nome in cenarios %}<td class="num">{{ brl(t[chave].receita_produtos) }}</td>{% endfor %}</tr>
-			<tr><td><strong>Receita total</strong></td>{% for chave, nome in cenarios %}<td class="num pos"><strong>{{ brl(t[chave].receita) }}</strong></td>{% endfor %}</tr>
-			<tr><td><strong>Despesa total</strong></td>{% for chave, nome in cenarios %}<td class="num neg"><strong>{{ brl(t[chave].despesa) }}</strong></td>{% endfor %}</tr>
-			<tr class="total"><td>Saldo</td>{% for chave, nome in cenarios %}<td class="num {{ 'neg' if t[chave].saldo < 0 else 'pos' }}">{{ brl(t[chave].saldo) }}</td>{% endfor %}</tr>
+			<tr><td>Convites (entrada)</td>{% for chave, nome in cenarios_e_previsto %}<td class="num">{{ brl(t[chave].receita_entrada) }}</td>{% endfor %}</tr>
+			<tr><td>Convites (consumação)</td>{% for chave, nome in cenarios_e_previsto %}<td class="num">{{ brl(t[chave].receita_consumacao) }}</td>{% endfor %}</tr>
+			<tr><td>Receita de produtos</td>{% for chave, nome in cenarios_e_previsto %}<td class="num">{{ brl(t[chave].receita_produtos) }}</td>{% endfor %}</tr>
+			<tr><td><strong>Receita total</strong></td>{% for chave, nome in cenarios_e_previsto %}<td class="num pos"><strong>{{ brl(t[chave].receita) }}</strong></td>{% endfor %}</tr>
+			<tr><td><strong>Despesa total</strong></td>{% for chave, nome in cenarios_e_previsto %}<td class="num neg"><strong>{{ brl(t[chave].despesa) }}</strong></td>{% endfor %}</tr>
+			<tr class="total"><td>Saldo</td>{% for chave, nome in cenarios_e_previsto %}<td class="num {{ 'neg' if t[chave].saldo < 0 else 'pos' }}">{{ brl(t[chave].saldo) }}</td>{% endfor %}</tr>
 		</tbody>
 	</table>
+	<p class="note">Previsto: despesas pela quantidade final das compras, mais contratações e margem; receitas do cenário {{ (t.previsto.cenario or "Intermediário") | lower }}.</p>
 
 	<h3 class="sub">Margem de segurança ({{ pct(f.margem_seguranca) }})</h3>
 	<table class="tbl">
-		<thead><tr><th style="width:34%"></th>{% for chave, nome in cenarios %}<th class="num">{{ nome }}</th>{% endfor %}</tr></thead>
-		<tbody><tr><td>Margem de segurança</td>{% for chave, nome in cenarios %}<td class="num">{{ brl(t[chave].margem) }}</td>{% endfor %}</tr></tbody>
+		<thead><tr><th style="width:30%"></th>{% for chave, nome in cenarios_e_previsto %}<th class="num">{{ nome }}</th>{% endfor %}</tr></thead>
+		<tbody><tr><td>Margem de segurança</td>{% for chave, nome in cenarios_e_previsto %}<td class="num">{{ brl(t[chave].margem) }}</td>{% endfor %}</tr></tbody>
 	</table>
 
 	<table class="cols"><tr>
@@ -505,7 +508,7 @@
 		</td>
 		<td>
 			<h3 class="sub">Despesas por área</h3>
-			{{ tabela_cenarios(despesas_area, "Área") }}
+			{{ tabela_cenarios(despesas_area, "Área", cenarios_e_previsto) }}
 		</td>
 	</tr><tr>
 		<td>

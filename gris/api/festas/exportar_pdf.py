@@ -34,6 +34,8 @@ _CENARIOS = (
 	("intermediario", "Intermediário"),
 	("max", "Máximo"),
 )
+# Cenários + a coluna "Previsto" da aba Orçamento (quantidade final das compras).
+_CENARIOS_E_PREVISTO = (*_CENARIOS, ("previsto", "Previsto"))
 
 # Status da Gestão de Tarefas (valores do Select sem acento) -> rótulo e ordem.
 _STATUS_TAREFA = {
@@ -79,11 +81,15 @@ def _logo_data_uri() -> str:
 
 
 def _linhas_cenario(itens: list[dict]) -> dict:
-	"""Linhas de uma tabela "esperado por cenário" (áreas/barracas) com o total."""
-	total = {chave: 0.0 for chave, _rotulo in _CENARIOS}
+	"""Linhas de uma tabela "esperado por cenário" (áreas/barracas) com o total.
+
+	Linhas com `previsto` (despesas por área) também somam a coluna Previsto.
+	"""
+	total = {chave: 0.0 for chave, _rotulo in _CENARIOS_E_PREVISTO}
 	for item in itens:
 		for chave, _rotulo in _CENARIOS:
 			total[chave] += flt(item.get(f"esperado_{chave}"))
+		total["previsto"] += flt(item.get("previsto"))
 	return {"linhas": itens, "total": total}
 
 
@@ -255,6 +261,7 @@ def build_exportacao_context(festa_name: str) -> dict:
 	return {
 		"festa": payload,
 		"cenarios": _CENARIOS,
+		"cenarios_e_previsto": _CENARIOS_E_PREVISTO,
 		"produtos": produtos,
 		"compras": _montar_compras(payload["compras"]),
 		"contratacoes": _montar_contratacoes(payload["contratacoes"]),

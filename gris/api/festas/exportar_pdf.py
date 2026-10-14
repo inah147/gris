@@ -207,7 +207,9 @@ def _montar_convites(dashboard: dict, payload: dict) -> dict:
 		{
 			"ramo": ramo,
 			**dados,
-			"pct": (dados["qtd_vendida"] / dados["qtd_esperada"] * 100) if dados.get("qtd_esperada") else None,
+			"pct": (dados["qtd_vendida"] / dados["qtd_esperada"] * 100)
+			if dados.get("qtd_esperada")
+			else None,
 			"faltam": max(cint(dados.get("qtd_esperada")) - cint(dados.get("qtd_vendida")), 0),
 		}
 		for ramo, dados in (dashboard.get("por_ramo") or {}).items()
@@ -246,7 +248,8 @@ def build_exportacao_context(festa_name: str) -> dict:
 	uel = frappe.get_cached_doc("Definicao da UEL")
 
 	produtos = sorted(
-		payload["produtos"], key=lambda p: ((p["nome_barraca"] or "").casefold(), p["nome_produto"].casefold())
+		payload["produtos"],
+		key=lambda p: ((p["nome_barraca"] or "").casefold(), p["nome_produto"].casefold()),
 	)
 
 	return {

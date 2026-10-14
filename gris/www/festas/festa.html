@@ -46,8 +46,17 @@
 		</p>
 		{% endif %}
 	</div>
-	{% if link_drive or relatorio_disponivel %}
 	<div class="festa-page-header__actions">
+		<a
+			href="/api/method/gris.api.festas.exportar_pdf.download_festa_pdf?festa_name={{ festa_name | urlencode }}"
+			target="_blank"
+			rel="noopener"
+			class="btn-sm-outline"
+			aria-label="Exportar todos os dados da festa em PDF"
+		>
+			{{ lucide_icon("file-down", size="sm") }}
+			<span>Exportar PDF</span>
+		</a>
 		{% if relatorio_disponivel %}
 		<a
 			href="/festas/relatorio?name={{ festa_name }}"
@@ -71,7 +80,6 @@
 		</a>
 		{% endif %}
 	</div>
-	{% endif %}
 </div>
 {% endif %}
 {% endblock %}

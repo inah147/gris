@@ -1,0 +1,828 @@
+{% autoescape true %}
+{#- Exportação completa da festa em PDF (WeasyPrint, A4 paisagem).
+   Uma seção por aba da página /festas/festa, cada uma começando em página nova.
+   Contexto montado em gris/api/festas/exportar_pdf.py:build_exportacao_context.
+   As tabelas paginam sozinhas no WeasyPrint e repetem o <thead> em cada folha. -#}
+{% macro brl(v) %}{{ moeda(v) }}{% endmacro %}
+{% macro qty(v) %}{{ num(v) }}{% endmacro %}
+{% macro pct(v) %}{% if v is none %}—{% else %}{{ num(v) }}%{% endif %}{% endmacro %}
+{% macro simnao(v) %}{{ "Sim" if v else "Não" }}{% endmacro %}
+{% macro ou_traco(v) %}{{ v if v else "—" }}{% endmacro %}
+
+{% macro sec_head(num, titulo, dica="") %}
+<header class="sec-head">
+	<span class="sec-head__num">{{ "%02d"|format(num) }}</span>
+	<div class="sec-head__txt">
+		<div class="sec-head__title">{{ titulo }}</div>
+		{% if dica %}<div class="sec-head__hint">{{ dica }}</div>{% endif %}
+	</div>
+</header>
+{% endmacro %}
+
+{% macro stat(label, valor, mod="", hint="") %}
+<td class="stat">
+	<div class="stat__label">{{ label }}</div>
+	<div class="stat__value {{ mod }}">{{ valor }}</div>
+	{% if hint %}<div class="stat__hint">{{ hint }}</div>{% endif %}
+</td>
+{% endmacro %}
+
+{# Tabela "esperado por cenário" (receitas/despesas por área ou barraca). #}
+{% macro tabela_cenarios(dados, rotulo) %}
+{% if dados.linhas %}
+<table class="tbl">
+	<thead><tr><th>{{ rotulo }}</th>{% for chave, nome in cenarios %}<th class="num">{{ nome }}</th>{% endfor %}</tr></thead>
+	<tbody>
+		{% for l in dados.linhas %}
+		<tr><td>{{ l.label }}</td>{% for chave, nome in cenarios %}<td class="num">{{ brl(l["esperado_" ~ chave]) }}</td>{% endfor %}</tr>
+		{% endfor %}
+		<tr class="total"><td>Total</td>{% for chave, nome in cenarios %}<td class="num">{{ brl(dados.total[chave]) }}</td>{% endfor %}</tr>
+	</tbody>
+</table>
+{% else %}<p class="empty">Nenhum registro.</p>{% endif %}
+{% endmacro %}
+
+{# Equipe de uma área/barraca: coordenação + integrantes, com contatos. #}
+{% macro bloco_estrutura(item, titulo, extra="") %}
+<div class="block">
+	<div class="block__head">
+		<span class="block__name">{{ titulo }}</span>
+		{% if extra %}<span class="block__meta">{{ extra }}</span>{% endif %}
+	</div>
+	{% if item.descricao %}<p class="block__desc">{{ item.descricao }}</p>{% endif %}
+	<table class="tbl tbl--compact">
+		<thead><tr><th style="width:32%">Nome</th><th style="width:22%">Função</th><th style="width:28%">E-mail</th><th style="width:18%">Telefone</th></tr></thead>
+		<tbody>
+			<tr class="coord-row">
+				<td>{{ ou_traco(item.nome_coord) }} <span class="pill">Coordenação</span></td>
+				<td>Coordenador(a)</td>
+				<td>{{ ou_traco(item.email_coord) }}</td>
+				<td>{{ ou_traco(item.telefone_coord) }}</td>
+			</tr>
+			{% for m in item.equipe %}
+			<tr><td>{{ ou_traco(m.nome) }}</td><td>{{ ou_traco(m.funcao) }}</td><td>{{ ou_traco(m.email) }}</td><td>{{ ou_traco(m.telefone) }}</td></tr>
+			{% endfor %}
+		</tbody>
+	</table>
+	{% if not item.equipe %}<p class="empty">Sem integrantes na equipe além da coordenação.</p>{% endif %}
+</div>
+{% endmacro %}
+
+{% set f = festa %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+	<meta charset="utf-8" />
+	<title>{{ f.nome_festa }} — dados da festa</title>
+	<style>
+		@font-face {
+			font-family: "Figtree"; font-style: normal; font-weight: 300 900;
+			src: url("design_system/fonts/figtree/figtree-latin-wght-normal.woff2") format("woff2");
+		}
+
+		/* Tokens do tema do Portal (hex literais: o WeasyPrint não resolve var() em gradientes). */
+		:root {
+			--brand: #1231E4;
+			--ink: #1E1B4B;
+			--fg: #14161C;
+			--muted: #5F6B7A;
+			--border: #CFD6DF;
+			--soft: #F6F8FC;
+			--pos: #00791A;
+			--neg: #CF0213;
+		}
+
+		@page {
+			size: A4 landscape;
+			margin: 16mm 14mm 16mm 14mm;
+			@top-left { content: string(festaname); font-family: "Figtree", sans-serif; font-size: 8pt;
+				color: #8a90a2; vertical-align: bottom; padding-bottom: 3mm; }
+			@top-right { content: string(sectitle); font-family: "Figtree", sans-serif; font-size: 8pt;
+				font-weight: 700; color: #8a90a2; vertical-align: bottom; padding-bottom: 3mm; }
+			@bottom-left { content: string(rodape); font-family: "Figtree", sans-serif;
+				font-size: 8pt; color: #8a90a2; vertical-align: top; padding-top: 3mm; }
+			@bottom-right { content: "Página " counter(page) " de " counter(pages); font-family: "Figtree", sans-serif;
+				font-size: 8pt; font-weight: 700; color: #8a90a2; vertical-align: top; padding-top: 3mm; }
+		}
+		@page capa { @top-left { content: none; } @top-right { content: none; } }
+
+		html, body { margin: 0; padding: 0; }
+		body { font-family: "Figtree", "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--fg);
+			font-size: 9.5pt; line-height: 1.4; }
+
+		/* Elementos sem altura cujo texto alimenta as margin boxes do @page. */
+		.festa-str { display: block; height: 0; overflow: hidden; font-size: 0; string-set: festaname content(); }
+		.rodape-str { display: block; height: 0; overflow: hidden; font-size: 0; string-set: rodape content(); }
+		.muted { color: var(--muted); }
+		.empty { color: var(--muted); font-style: italic; margin: 1.5mm 0; }
+		.note { color: var(--muted); font-size: 8.5pt; margin: 0 0 1.5mm; }
+		h3.sub { color: var(--ink); font-size: 12pt; font-weight: 800; margin: 7mm 0 2.5mm; break-after: avoid; }
+		h4.subsub { color: var(--ink); font-size: 10pt; font-weight: 700; margin: 4mm 0 1.5mm; break-after: avoid; }
+
+		/* ── Capa + índice ── */
+		.capa { page: capa; }
+		.capa__head { width: 100%; border-collapse: collapse; margin-bottom: 8mm; }
+		.capa__logo { width: 34mm; vertical-align: middle; padding-right: 6mm; }
+		.capa__logo img { max-width: 34mm; max-height: 34mm; }
+		.capa__eyebrow { font-size: 9.5pt; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--brand); }
+		.capa__title { font-size: 26pt; font-weight: 800; color: var(--ink); margin: 1mm 0; letter-spacing: -.5px; }
+		.capa__sub { font-size: 11pt; color: var(--muted); margin: 0; }
+		.toc { columns: 2; column-gap: 12mm; margin-top: 4mm; }
+		.toc-item { display: block; border-bottom: 1px solid #EDEFF4; padding: 3mm 0; text-decoration: none; color: inherit;
+			break-inside: avoid; }
+		.toc-num { display: inline-block; width: 8mm; height: 8mm; line-height: 8mm; text-align: center; border-radius: 50%;
+			background: var(--brand); color: #fff; font-weight: 800; font-size: 9pt; margin-right: 3mm; }
+		.toc-label { font-size: 11.5pt; font-weight: 600; }
+		.toc-item::after { content: leader('. ') target-counter(attr(href), page); color: var(--muted); font-weight: 700; }
+
+		/* ── Seções: cada aba começa em página nova ── */
+		.sec { break-before: page; }
+		.sec-head { margin: 0 0 5mm; padding-bottom: 3mm; border-bottom: 2px solid var(--border); }
+		.sec-head__num { display: inline-block; width: 12mm; height: 12mm; line-height: 12mm; border-radius: 10px;
+			background: var(--brand); color: #fff; font-size: 14pt; font-weight: 800; text-align: center;
+			vertical-align: middle; margin-right: 4mm; }
+		.sec-head__txt { display: inline-block; vertical-align: middle; }
+		.sec-head__title { font-size: 17pt; font-weight: 800; color: var(--ink); string-set: sectitle content(); }
+		.sec-head__hint { font-size: 9pt; color: var(--muted); }
+
+		/* ── Indicadores (tabela: layout estável no WeasyPrint) ── */
+		table.stats { width: 100%; border-collapse: separate; border-spacing: 3mm 0; margin: 1mm -3mm 2mm; table-layout: fixed; }
+		td.stat { border: 1px solid var(--border); border-radius: 8px; background: var(--soft); padding: 3mm 4mm; vertical-align: top; }
+		.stat__label { font-size: 7.5pt; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); font-weight: 700; }
+		.stat__value { font-size: 15pt; font-weight: 800; color: var(--ink); margin-top: 1mm; }
+		.stat__value.pos { color: var(--pos); }
+		.stat__value.neg { color: var(--neg); }
+		.stat__hint { font-size: 8pt; color: var(--muted); margin-top: .5mm; }
+
+		/* ── Campos rótulo/valor ── */
+		table.fields { width: 100%; border-collapse: collapse; margin: 1mm 0 2mm; table-layout: fixed; }
+		table.fields td { vertical-align: top; padding: 1.5mm 4mm 1.5mm 3mm; border-left: 3px solid var(--brand); }
+		table.fields .lbl { display: block; font-size: 7.5pt; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); font-weight: 700; }
+		table.fields .val { display: block; font-size: 11pt; font-weight: 700; color: var(--ink); overflow-wrap: break-word; }
+
+		/* ── Tabelas ── */
+		table.tbl { width: 100%; border-collapse: collapse; margin: 1mm 0 2mm; font-size: 8.8pt; }
+		table.tbl thead { display: table-header-group; }
+		table.tbl tr { break-inside: avoid; }
+		table.tbl th { text-align: left; color: var(--muted); text-transform: uppercase; font-size: 7pt; letter-spacing: .4px;
+			font-weight: 700; padding: 2mm 2.2mm; border-bottom: 1.5px solid var(--border); vertical-align: bottom; }
+		table.tbl td { padding: 1.8mm 2.2mm; border-bottom: 1px solid #ECEEF3; vertical-align: top; overflow-wrap: break-word; }
+		table.tbl tbody tr:nth-child(even) td { background: var(--soft); }
+		table.tbl .num { text-align: right; white-space: nowrap; }
+		table.tbl th.num { white-space: normal; }
+		table.tbl .center { text-align: center; }
+		table.tbl tr.total td { font-weight: 800; color: var(--ink); border-top: 1.5px solid var(--brand); background: #fff; }
+		table.tbl tr.grouphead td { font-weight: 800; color: var(--ink); background: #fff; padding-top: 3mm; }
+		table.tbl tr.coord-row td { background: #EEF1FF; }
+		table.tbl td.indent { padding-left: 6mm; }
+		table.tbl td.pos { color: var(--pos); }
+		table.tbl td.neg { color: var(--neg); }
+		table.tbl--compact { font-size: 8.5pt; }
+		table.tbl--compact td { padding: 1.3mm 2.2mm; }
+		.small { font-size: 7.8pt; color: var(--muted); }
+		.pill { display: inline-block; white-space: nowrap; border-radius: 999px; padding: .2mm 2mm; font-size: 6.8pt; font-weight: 700;
+			text-transform: uppercase; letter-spacing: .3px; background: var(--brand); color: #fff; vertical-align: middle; }
+		.pill--danger { background: var(--neg); }
+		.pill--muted { background: #8a90a2; }
+		.pill--ok { background: var(--pos); }
+
+		/* ── Blocos de área/barraca ── */
+		.block { border: 1px solid var(--border); border-radius: 8px; padding: 3mm 3.5mm; margin-bottom: 3mm; break-inside: avoid; }
+		.block__head { border-bottom: 1px solid #ECEEF3; padding-bottom: 1.5mm; margin-bottom: 1.5mm; }
+		.block__name { font-weight: 800; color: var(--ink); font-size: 10.5pt; }
+		.block__meta { font-size: 8.5pt; color: var(--muted); margin-left: 3mm; }
+		.block__desc { margin: 0 0 1.5mm; color: var(--muted); font-size: 8.8pt; white-space: pre-line; }
+
+		/* ── Barras horizontais e gráficos SVG ── */
+		.bars { width: 100%; border-collapse: separate; border-spacing: 0 1.2mm; margin: 1mm 0 2mm; }
+		.bars td { vertical-align: middle; }
+		.bar__label { width: 55mm; font-size: 8.8pt; padding-right: 3mm; }
+		.bar__val { width: 32mm; text-align: right; font-size: 8.8pt; font-weight: 700; color: var(--ink); white-space: nowrap; padding-left: 3mm; }
+		.bar__track { height: 4.5mm; background: #EEF0F4; border-radius: 4px; overflow: hidden; }
+		.bar__fill { height: 4.5mm; border-radius: 4px; background: var(--brand); }
+		.chart-card { border: 1px solid var(--border); border-radius: 8px; padding: 3mm; margin: 2mm 0; break-inside: avoid; }
+		.svgchart { display: block; width: 100%; max-height: 80mm; }
+
+		.vhisto { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 1mm 0 2mm; break-inside: avoid; }
+		.vhisto td { text-align: center; }
+		.vhisto__plot td { height: 30mm; vertical-align: bottom; padding: 0 1mm; }
+		.vhisto__bar { width: 7mm; margin: 0 auto; border-radius: 2px 2px 0 0; background: var(--brand); }
+		.vhisto__val { font-size: 7.5pt; font-weight: 700; color: var(--ink); }
+		.vhisto__axis td { font-size: 8.5pt; font-weight: 700; color: var(--muted); padding-top: 1mm; border-top: 1px solid var(--border); }
+
+		.textbox { border: 1px solid var(--border); border-radius: 8px; padding: 3mm 3.5mm; margin-bottom: 2.5mm; break-inside: avoid; }
+		.textbox__title { font-weight: 700; color: var(--ink); margin-bottom: 1mm; }
+		.textbox__body { white-space: pre-line; }
+		.ia { border: 1px solid #D7DCFB; background: #F4F6FF; border-radius: 8px; padding: 3mm 3.5mm; margin: 2mm 0 3mm; }
+		.ia__label { font-weight: 800; color: var(--brand); font-size: 8pt; text-transform: uppercase; letter-spacing: .6px; }
+		.ia p { margin: 1.2mm 0; }
+
+		.cols { width: 100%; border-collapse: collapse; table-layout: fixed; }
+		.cols > tbody > tr > td { vertical-align: top; padding: 0; }
+		.cols > tbody > tr > td + td { padding-left: 8mm; }
+	</style>
+</head>
+<body>
+
+{# ───────── Capa + índice ───────── #}
+<section class="capa">
+	{# Dentro da capa: um elemento antes dela, na página padrão, abriria uma folha em branco. #}
+	<span class="festa-str">{{ f.nome_festa }}</span>
+	<span class="rodape-str">{% if uel_nome %}{{ uel_nome }} · {% endif %}Gerado em {{ gerado_em }}</span>
+	<table class="capa__head">
+		<tr>
+			{% if uel_logo %}<td class="capa__logo"><img src="{{ uel_logo }}" alt="Logo" /></td>{% endif %}
+			<td>
+				<div class="capa__eyebrow">Dados da festa{% if uel_nome %} · {{ uel_nome }}{% endif %}</div>
+				<div class="capa__title">{{ f.nome_festa }}</div>
+				<p class="capa__sub">
+					{{ f.data_formatada or "Data não definida" }}{% if f.horario_inicio %} · {{ f.horario_inicio }}{% if f.horario_termino %} – {{ f.horario_termino }}{% endif %}{% endif %}
+					· {{ "Realizada" if f.status == "Realizada" else "Em andamento" }}
+					· Gerado em {{ gerado_em }}
+				</p>
+			</td>
+		</tr>
+	</table>
+
+	<h3 class="sub">Conteúdo</h3>
+	<nav class="toc">
+		<a class="toc-item" href="#sec-1"><span class="toc-num">1</span><span class="toc-label">Dados gerais</span></a>
+		<a class="toc-item" href="#sec-2"><span class="toc-num">2</span><span class="toc-label">Produtos vendidos</span></a>
+		<a class="toc-item" href="#sec-3"><span class="toc-num">3</span><span class="toc-label">Compras</span></a>
+		<a class="toc-item" href="#sec-4"><span class="toc-num">4</span><span class="toc-label">Contratações</span></a>
+		<a class="toc-item" href="#sec-5"><span class="toc-num">5</span><span class="toc-label">Orçamento</span></a>
+		<a class="toc-item" href="#sec-6"><span class="toc-num">6</span><span class="toc-label">Fechamento</span></a>
+		<a class="toc-item" href="#sec-7"><span class="toc-num">7</span><span class="toc-label">Gestão de tarefas</span></a>
+		<a class="toc-item" href="#sec-8"><span class="toc-num">8</span><span class="toc-label">Convites</span></a>
+		<a class="toc-item" href="#sec-9"><span class="toc-num">9</span><span class="toc-label">Avaliações</span></a>
+	</nav>
+</section>
+
+{# ───────── 1. Dados gerais ───────── #}
+<section class="sec" id="sec-1">
+	{{ sec_head(1, "Dados gerais", "Coordenação, estimativa de público, áreas e barracas com suas equipes.") }}
+	<table class="fields">
+		<tr>
+			<td><span class="lbl">Coordenador(a) geral</span><span class="val">{{ ou_traco(f.nome_coord_geral) }}</span></td>
+			<td><span class="lbl">Data</span><span class="val">{{ ou_traco(f.data_formatada) }}</span></td>
+			<td><span class="lbl">Horário</span><span class="val">{{ ou_traco(f.horario_inicio) }}{% if f.horario_termino %} – {{ f.horario_termino }}{% endif %}</span></td>
+			<td><span class="lbl">Status</span><span class="val">{{ "Realizada" if f.status == "Realizada" else "Em andamento" }}</span></td>
+		</tr>
+	</table>
+	{% if f.link_drive %}<p class="note">Pasta no Drive: {{ f.link_drive }}</p>{% endif %}
+
+	<h3 class="sub">Estimativa de participantes</h3>
+	<table class="stats"><tr>
+		{{ stat("Mínima", qty(f.expectativa_min) ~ " pessoas") }}
+		{{ stat("Intermediária", qty(f.expectativa_intermediario) ~ " pessoas") }}
+		{{ stat("Máxima", qty(f.expectativa_max) ~ " pessoas") }}
+		{{ stat("Cenário para simulação", f.cenario_simulacao) }}
+	</tr></table>
+
+	<h3 class="sub">Áreas ({{ f.areas | length }})</h3>
+	{% for a in f.areas %}
+		{{ bloco_estrutura(a, a.nome_area) }}
+	{% else %}<p class="empty">Nenhuma área cadastrada.</p>{% endfor %}
+
+	<h3 class="sub">Barracas ({{ f.barracas | length }})</h3>
+	{% for b in f.barracas %}
+		{{ bloco_estrutura(b, b.nome_barraca, "Área: " ~ (b.nome_area or "—")) }}
+	{% else %}<p class="empty">Nenhuma barraca cadastrada.</p>{% endfor %}
+</section>
+
+{# ───────── 2. Produtos vendidos ───────── #}
+<section class="sec" id="sec-2">
+	{{ sec_head(2, "Produtos vendidos", "Preços, margens e projeção de vendas por cenário.") }}
+	{% if produtos %}
+	<h3 class="sub" style="margin-top:0">Preços e margens</h3>
+	<table class="tbl">
+		<thead><tr>
+			<th style="width:24%">Produto</th><th style="width:18%">Barraca</th><th class="center">Faz parte do convite</th>
+			<th class="num">Preço de custo</th><th class="num">Preço de venda</th><th class="num">Margem</th>
+			<th class="num">Expectativa por pessoa</th><th class="num">Qtd vendida</th><th class="num">Valor arrecadado</th>
+		</tr></thead>
+		<tbody>
+			{% for p in produtos %}
+			<tr>
+				<td>{{ p.nome_produto }}</td><td>{{ ou_traco(p.nome_barraca) }}</td><td class="center">{{ simnao(p.faz_parte_convite) }}</td>
+				<td class="num">{{ brl(p.preco_custo) }}</td><td class="num">{{ brl(p.preco_venda) }}</td><td class="num">{{ pct(p.margem_lucro) }}</td>
+				<td class="num">{{ qty(p.expectativa_venda_por_pessoa) }}</td><td class="num">{{ qty(p.qtd_realizada_vendas) }}</td><td class="num">{{ brl(p.valor_total_arrecadado) }}</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+
+	<h3 class="sub">Projeção por cenário</h3>
+	<p class="note">Quantidade, receita e superávit esperados para cada cenário de público.</p>
+	<table class="tbl">
+		<thead>
+			<tr>
+				<th rowspan="2" style="width:22%">Produto</th>
+				{% for chave, nome in cenarios %}<th colspan="3" class="center" style="border-bottom:1px solid #ECEEF3">{{ nome }}</th>{% endfor %}
+			</tr>
+			<tr>{% for chave, nome in cenarios %}<th class="num">Qtd</th><th class="num">Receita</th><th class="num">Superávit</th>{% endfor %}</tr>
+		</thead>
+		<tbody>
+			{% for p in produtos %}
+			<tr>
+				<td>{{ p.nome_produto }}</td>
+				{% for chave, nome in cenarios %}
+				<td class="num">{{ qty(p["qtd_" ~ chave]) }}</td>
+				<td class="num">{{ brl(p["receita_total_" ~ chave]) }}</td>
+				<td class="num {{ 'neg' if p['superavit_' ~ chave] < 0 }}">{{ brl(p["superavit_" ~ chave]) }}</td>
+				{% endfor %}
+			</tr>
+			{% endfor %}
+			<tr class="total">
+				<td>Total</td>
+				{% for chave, nome in cenarios %}
+				<td class="num">{{ qty(produtos | sum(attribute="qtd_" ~ chave)) }}</td>
+				<td class="num">{{ brl(produtos | sum(attribute="receita_total_" ~ chave)) }}</td>
+				<td class="num">{{ brl(produtos | sum(attribute="superavit_" ~ chave)) }}</td>
+				{% endfor %}
+			</tr>
+		</tbody>
+	</table>
+	{% else %}<p class="empty">Nenhum produto cadastrado.</p>{% endif %}
+</section>
+
+{# ───────── 3. Compras ───────── #}
+<section class="sec" id="sec-3">
+	{{ sec_head(3, "Compras", "Itens previstos, cotações e quantidades por cenário.") }}
+	{% if compras %}
+	<table class="tbl">
+		<thead><tr>
+			<th style="width:18%">Item</th><th style="width:12%">Área</th><th class="num">Qtd de compra</th>
+			<th class="num">Valor da cotação escolhida</th><th class="num">Valor total</th><th style="width:15%">Fornecedor escolhido</th>
+			<th class="center">Varia com o público</th><th style="width:18%">Usado nos produtos</th>
+		</tr></thead>
+		<tbody>
+			{% for c in compras %}
+			<tr>
+				<td>{{ c.nome_item }}</td>
+				<td>{{ ou_traco(c.nome_area) }}</td>
+				<td class="num">{{ qty(c.quantidade_compra_final) }}{% if c.cotacao_escolhida %} <span class="small">× {{ qty(c.cotacao_escolhida.quantidade) }} {{ c.cotacao_escolhida.unidade_medida }}</span>{% endif %}</td>
+				<td class="num">{{ brl(c.cotacao_escolhida_valor) }}</td>
+				<td class="num">{{ brl(c.valor_total_compra) }}</td>
+				<td>{{ ou_traco(c.fornecedor_escolhido) }}</td>
+				<td class="center">{{ simnao(c.varia_com_publico) }}</td>
+				<td>{{ c.produtos_uso | join(", ") if c.produtos_uso else "—" }}</td>
+			</tr>
+			{% endfor %}
+			<tr class="total"><td colspan="4">Total previsto</td><td class="num">{{ brl(compras | sum(attribute="valor_total_compra")) }}</td><td colspan="3"></td></tr>
+		</tbody>
+	</table>
+
+	{% set compras_cenario = compras | selectattr("varia_com_publico") | list %}
+	{% if compras_cenario %}
+	<h3 class="sub">Quantidades por cenário</h3>
+	<p class="note">Itens que variam com o público: quantidade sugerida, valor e sobra estimada em cada cenário.</p>
+	<table class="tbl">
+		<thead>
+			<tr>
+				<th rowspan="2" style="width:20%">Item</th>
+				{% for chave, nome in cenarios %}<th colspan="3" class="center" style="border-bottom:1px solid #ECEEF3">{{ nome }}</th>{% endfor %}
+			</tr>
+			<tr>{% for chave, nome in cenarios %}<th class="num">Qtd sugerida</th><th class="num">Valor</th><th class="num">Sobra</th>{% endfor %}</tr>
+		</thead>
+		<tbody>
+			{% for c in compras_cenario %}
+			<tr>
+				<td>{{ c.nome_item }}</td>
+				{% for chave, nome in cenarios %}
+				<td class="num">{{ qty(c["qtd_sugerida_" ~ chave]) }}</td>
+				<td class="num">{{ brl(c["valor_total_" ~ chave]) }}</td>
+				<td class="num">{{ brl(c["valor_sobra_" ~ chave]) }}</td>
+				{% endfor %}
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+	{% endif %}
+
+	<h3 class="sub">Cotações</h3>
+	<table class="tbl tbl--compact">
+		<thead><tr><th style="width:24%">Item</th><th style="width:28%">Fornecedor</th><th class="num">Valor</th><th class="num">Quantidade</th><th>Unidade</th><th class="num">Valor unitário</th><th class="center">Situação</th></tr></thead>
+		<tbody>
+			{% for c in compras %}
+				{% for cot in c.cotacoes %}
+				<tr>
+					<td>{{ c.nome_item if loop.first else "" }}</td>
+					<td>{{ ou_traco(cot.fornecedor) }}</td>
+					<td class="num">{{ brl(cot.valor) }}</td>
+					<td class="num">{{ qty(cot.quantidade) }}</td>
+					<td>{{ cot.unidade_medida }}</td>
+					<td class="num">{{ brl(cot.valor / cot.quantidade) if cot.quantidade else "—" }}</td>
+					<td class="center">{% if cot.escolhida %}<span class="pill pill--ok">Escolhida</span>{% endif %}{% if cot.doacao %} <span class="pill pill--muted">Doação</span>{% endif %}</td>
+				</tr>
+				{% else %}
+				<tr><td>{{ c.nome_item }}</td><td colspan="6" class="muted">Sem cotações.</td></tr>
+				{% endfor %}
+			{% endfor %}
+		</tbody>
+	</table>
+	{% else %}<p class="empty">Nenhuma compra prevista.</p>{% endif %}
+</section>
+
+{# ───────── 4. Contratações ───────── #}
+<section class="sec" id="sec-4">
+	{{ sec_head(4, "Contratações", "Serviços previstos e cotações.") }}
+	{% if contratacoes %}
+	<table class="tbl">
+		<thead><tr><th style="width:34%">Item</th><th style="width:20%">Área</th><th class="num">Valor da contratação</th><th style="width:26%">Fornecedor escolhido</th></tr></thead>
+		<tbody>
+			{% for c in contratacoes %}
+			<tr><td>{{ c.nome_item }}</td><td>{{ ou_traco(c.nome_area) }}</td><td class="num">{{ brl(c.valor_total_contratacao) }}</td><td>{{ ou_traco(c.fornecedor_escolhido) }}</td></tr>
+			{% endfor %}
+			<tr class="total"><td colspan="2">Total previsto</td><td class="num">{{ brl(contratacoes | sum(attribute="valor_total_contratacao")) }}</td><td></td></tr>
+		</tbody>
+	</table>
+
+	<h3 class="sub">Cotações</h3>
+	<table class="tbl tbl--compact">
+		<thead><tr><th style="width:34%">Item</th><th style="width:36%">Fornecedor</th><th class="num">Valor</th><th class="center">Situação</th></tr></thead>
+		<tbody>
+			{% for c in contratacoes %}
+				{% for cot in c.cotacoes %}
+				<tr>
+					<td>{{ c.nome_item if loop.first else "" }}</td><td>{{ ou_traco(cot.fornecedor) }}</td><td class="num">{{ brl(cot.valor) }}</td>
+					<td class="center">{% if cot.escolhida %}<span class="pill pill--ok">Escolhida</span>{% endif %}</td>
+				</tr>
+				{% else %}
+				<tr><td>{{ c.nome_item }}</td><td colspan="3" class="muted">Sem cotações.</td></tr>
+				{% endfor %}
+			{% endfor %}
+		</tbody>
+	</table>
+	{% else %}<p class="empty">Nenhuma contratação prevista.</p>{% endif %}
+</section>
+
+{# ───────── 5. Orçamento ───────── #}
+{% set t = f.totais %}
+<section class="sec" id="sec-5">
+	{{ sec_head(5, "Orçamento", "Preço do convite, resultado esperado e detalhamento por área e barraca.") }}
+	<h3 class="sub" style="margin-top:0">Convites</h3>
+	<table class="stats"><tr>
+		{{ stat("Preço mínimo", brl(f.preco_min_convite)) }}
+		{{ stat("Preço sugerido", brl(f.preco_sugerido_convite)) }}
+		{{ stat("Preço do convite", brl(f.preco_convite)) }}
+		{{ stat("Convite por lotes", simnao(f.convite_por_lotes)) }}
+	</tr></table>
+	{% if f.convite_por_lotes %}
+	<table class="tbl">
+		<thead><tr><th>Lote</th><th class="num">Valor do convite</th><th class="num">Consumação</th><th class="num">Expectativa de vendas</th></tr></thead>
+		<tbody>
+			{% for l in f.lotes_convite %}
+			<tr><td>{{ ou_traco(l.nome_lote) }}</td><td class="num">{{ brl(l.valor_convite) }}</td><td class="num">{{ brl(l.valor_consumacao) }}</td><td class="num">{{ pct(l.expectativa_percentual) }}</td></tr>
+			{% else %}<tr><td colspan="4" class="muted">Nenhum lote cadastrado.</td></tr>{% endfor %}
+		</tbody>
+	</table>
+	{% endif %}
+
+	<h3 class="sub">Resultado por cenário</h3>
+	<table class="tbl">
+		<thead><tr><th style="width:34%"></th>{% for chave, nome in cenarios %}<th class="num">{{ nome }}</th>{% endfor %}</tr></thead>
+		<tbody>
+			<tr><td>Convites (entrada)</td>{% for chave, nome in cenarios %}<td class="num">{{ brl(t[chave].receita_entrada) }}</td>{% endfor %}</tr>
+			<tr><td>Convites (consumação)</td>{% for chave, nome in cenarios %}<td class="num">{{ brl(t[chave].receita_consumacao) }}</td>{% endfor %}</tr>
+			<tr><td>Receita de produtos</td>{% for chave, nome in cenarios %}<td class="num">{{ brl(t[chave].receita_produtos) }}</td>{% endfor %}</tr>
+			<tr><td><strong>Receita total</strong></td>{% for chave, nome in cenarios %}<td class="num pos"><strong>{{ brl(t[chave].receita) }}</strong></td>{% endfor %}</tr>
+			<tr><td><strong>Despesa total</strong></td>{% for chave, nome in cenarios %}<td class="num neg"><strong>{{ brl(t[chave].despesa) }}</strong></td>{% endfor %}</tr>
+			<tr class="total"><td>Saldo</td>{% for chave, nome in cenarios %}<td class="num {{ 'neg' if t[chave].saldo < 0 else 'pos' }}">{{ brl(t[chave].saldo) }}</td>{% endfor %}</tr>
+		</tbody>
+	</table>
+
+	<h3 class="sub">Margem de segurança ({{ pct(f.margem_seguranca) }})</h3>
+	<table class="tbl">
+		<thead><tr><th style="width:34%"></th>{% for chave, nome in cenarios %}<th class="num">{{ nome }}</th>{% endfor %}</tr></thead>
+		<tbody><tr><td>Margem de segurança</td>{% for chave, nome in cenarios %}<td class="num">{{ brl(t[chave].margem) }}</td>{% endfor %}</tr></tbody>
+	</table>
+
+	<table class="cols"><tr>
+		<td>
+			<h3 class="sub">Receitas por área</h3>
+			{{ tabela_cenarios(receitas_area, "Área") }}
+		</td>
+		<td>
+			<h3 class="sub">Despesas por área</h3>
+			{{ tabela_cenarios(despesas_area, "Área") }}
+		</td>
+	</tr><tr>
+		<td>
+			<h3 class="sub">Receitas por barraca</h3>
+			{{ tabela_cenarios(receitas_barraca, "Barraca") }}
+		</td>
+		<td>
+			<h3 class="sub">Despesas por barraca</h3>
+			{{ tabela_cenarios(despesas_barraca, "Barraca") }}
+		</td>
+	</tr></table>
+</section>
+
+{# ───────── 6. Fechamento ───────── #}
+{% set fe = fechamento %}
+<section class="sec" id="sec-6">
+	{{ sec_head(6, "Fechamento", "Valores realizados: arrecadação, despesas e resultado.") }}
+	<table class="stats"><tr>
+		{{ stat("Arrecadação", brl(fe.arrecadacao), "pos") }}
+		{{ stat("Despesas", brl(fe.despesas), "neg") }}
+		{{ stat("Resultado", brl(fe.resultado), "pos" if fe.resultado >= 0 else "neg") }}
+		{{ stat("Fichas não gastas", brl(fe.fichas_nao_gastas), "", "Consumação + caixa − barracas") }}
+	</tr></table>
+
+	<table class="cols"><tr>
+		<td>
+			<h3 class="sub">Previsto x realizado</h3>
+			<p class="note">Previsão do cenário <strong>{{ fe.cenario_simulacao }}</strong>.</p>
+			<table class="tbl">
+				<thead><tr><th>Indicador</th><th class="num">Previsto</th><th class="num">Realizado</th></tr></thead>
+				<tbody>
+					<tr><td>Arrecadação</td><td class="num">{{ brl(fe.previsto.arrecadacao) }}</td><td class="num">{{ brl(fe.arrecadacao) }}</td></tr>
+					<tr><td>Despesas</td><td class="num">{{ brl(fe.previsto.despesas) }}</td><td class="num">{{ brl(fe.despesas) }}</td></tr>
+					<tr class="total"><td>Resultado</td>
+						<td class="num {{ 'pos' if fe.previsto.resultado >= 0 else 'neg' }}">{{ brl(fe.previsto.resultado) }}</td>
+						<td class="num {{ 'pos' if fe.resultado >= 0 else 'neg' }}">{{ brl(fe.resultado) }}</td></tr>
+				</tbody>
+			</table>
+		</td>
+		<td>
+			<h3 class="sub">Receitas</h3>
+			<p class="note">Valor arrecadado no caixa da festa: {{ brl(fe.valor_arrecadado_festa) }}.</p>
+			<table class="tbl">
+				<thead><tr><th>Origem</th><th class="num">Valor</th></tr></thead>
+				<tbody>
+					<tr><td>Convites (consumação)</td><td class="num">{{ brl(fe.consumacao_convites) }}</td></tr>
+					<tr><td>Convites (entrada)</td><td class="num">{{ brl(fe.entrada_convites) }}</td></tr>
+					<tr><td>Fechamento de caixa</td><td class="num">{{ brl(fe.fechamento_caixa) }}</td></tr>
+					{% if fe.receita_doacoes %}<tr><td>Doações</td><td class="num">{{ brl(fe.receita_doacoes) }}</td></tr>{% endif %}
+					<tr class="total"><td>Total de receitas</td><td class="num">{{ brl(fe.arrecadacao) }}</td></tr>
+				</tbody>
+			</table>
+		</td>
+	</tr></table>
+
+	{% if waterfall and (fe.arrecadacao or fe.despesas) %}
+	{% set w = waterfall %}
+	<h3 class="sub">Composição do resultado</h3>
+	<div class="chart-card">
+		<svg class="svgchart" viewBox="0 0 {{ w.width }} {{ w.height }}" preserveAspectRatio="xMidYMid meet">
+			<line x1="0" y1="{{ w.zero_y }}" x2="{{ w.width }}" y2="{{ w.zero_y }}" stroke="#d1d5db" stroke-width="1"></line>
+			{% for b in w.barras %}
+			<rect x="{{ b.x }}" y="{{ b.y }}" width="{{ b.w }}" height="{{ b.h }}" rx="3" fill="{{ b.cor }}"></rect>
+			<text x="{{ b.cx }}" y="{{ b.valor_y }}" text-anchor="middle" font-size="8" font-weight="bold" fill="#1E1B4B">{{ brl(b.valor) }}</text>
+			<text x="{{ b.cx }}" y="{{ w.label_y }}" text-anchor="middle" font-size="8" fill="#5F6B7A">{{ b.label }}</text>
+			{% endfor %}
+		</svg>
+	</div>
+	{% endif %}
+
+	<h3 class="sub">Barracas</h3>
+	{% if fe.barracas %}
+	<table class="tbl">
+		<thead><tr><th style="width:30%">Barraca</th><th style="width:30%">Coordenação</th><th class="num">Arrecadação esperada</th><th class="num">Arrecadação realizada</th></tr></thead>
+		<tbody>
+			{% for b in fe.barracas %}
+			<tr><td>{{ b.nome_barraca }}</td><td>{{ ou_traco(b.nome_coord) }}</td><td class="num">{{ brl(b.esperado) }}</td><td class="num">{{ brl(b.realizado) }}</td></tr>
+			{% endfor %}
+			<tr class="total"><td colspan="2">Total</td><td class="num">{{ brl(fe.barracas | sum(attribute="esperado")) }}</td><td class="num">{{ brl(fe.arrecadacao_barracas) }}</td></tr>
+		</tbody>
+	</table>
+	{% for b in fe.barracas if b.itens %}
+	<h4 class="subsub">{{ b.nome_barraca }} — itens vendidos</h4>
+	<table class="tbl tbl--compact">
+		<thead><tr><th style="width:46%">Item</th><th class="num">Qtd esperada</th><th class="num">Qtd vendida</th><th class="num">Valor vendido</th></tr></thead>
+		<tbody>
+			{% for it in b.itens %}<tr><td>{{ it.nome_produto }}</td><td class="num">{{ qty(it.qtd_esperada) }}</td><td class="num">{{ qty(it.qtd_vendida) }}</td><td class="num">{{ brl(it.valor_vendido) }}</td></tr>{% endfor %}
+		</tbody>
+	</table>
+	{% endfor %}
+	{% else %}<p class="empty">Nenhuma barraca cadastrada.</p>{% endif %}
+
+	<h3 class="sub">Compras: orçado x realizado</h3>
+	{% if fe.compras %}
+	<table class="tbl tbl--compact">
+		<thead><tr>
+			<th style="width:15%">Item</th><th class="num">Qtd orçada</th><th class="num">Total orçado</th><th style="width:12%">Fornecedor orçado</th>
+			<th class="num">Valor unit. realizado</th><th class="num">Qtd realizada</th><th class="num">Total realizado</th><th style="width:12%">Fornecedor realizado</th><th style="width:20%">Observações</th>
+		</tr></thead>
+		<tbody>
+			{% for c in fe.compras %}
+			<tr>
+				<td>{{ c.nome_item }}{% if c.cancelado %} <span class="pill pill--danger">Cancelado</span>{% endif %}</td>
+				<td class="num">{{ qty(c.qtd_orcada) }}</td><td class="num">{{ brl(c.valor_total_orcado) }}</td><td>{{ ou_traco(c.fornecedor_orcado) }}</td>
+				<td class="num">{{ brl(c.valor_individual_realizado) }}</td><td class="num">{{ qty(c.qtd_realizada) }}</td><td class="num">{{ brl(c.valor_total_realizado) }}</td>
+				<td>{{ ou_traco(c.fornecedor_realizado) }}</td><td class="muted">{{ c.observacoes }}</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+	{% else %}<p class="empty">Nenhuma compra cadastrada.</p>{% endif %}
+
+	<h3 class="sub">Contratações: orçado x realizado</h3>
+	{% if fe.contratacoes %}
+	<table class="tbl tbl--compact">
+		<thead><tr><th style="width:22%">Item</th><th class="num">Valor orçado</th><th style="width:16%">Fornecedor orçado</th><th class="num">Valor realizado</th><th style="width:16%">Fornecedor realizado</th><th style="width:26%">Observações</th></tr></thead>
+		<tbody>
+			{% for c in fe.contratacoes %}
+			<tr>
+				<td>{{ c.nome_item }}{% if c.cancelado %} <span class="pill pill--danger">Cancelado</span>{% endif %}</td>
+				<td class="num">{{ brl(c.valor_orcado) }}</td><td>{{ ou_traco(c.fornecedor_orcado) }}</td>
+				<td class="num">{{ brl(c.valor_realizado) }}</td><td>{{ ou_traco(c.fornecedor_realizado) }}</td><td class="muted">{{ c.observacoes }}</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+	{% else %}<p class="empty">Nenhuma contratação cadastrada.</p>{% endif %}
+
+	<table class="cols"><tr>
+		<td>
+			<h3 class="sub">Despesas por área</h3>
+			<table class="tbl">
+				<thead><tr><th>Área</th><th class="num">Valor</th></tr></thead>
+				<tbody>
+					{% for d in fe.despesas_por_area %}<tr><td>{{ d.label }}</td><td class="num">{{ brl(d.valor) }}</td></tr>
+					{% else %}<tr><td colspan="2" class="muted">Sem despesas realizadas.</td></tr>{% endfor %}
+					<tr class="total"><td>Total</td><td class="num">{{ brl(fe.despesas) }}</td></tr>
+				</tbody>
+			</table>
+		</td>
+		<td>
+			<h3 class="sub">Resultado por área</h3>
+			<table class="tbl">
+				<thead><tr><th>Área</th><th class="num">Receitas</th><th class="num">Despesas</th><th class="num">Resultado</th></tr></thead>
+				<tbody>
+					{% for r in fe.resultado_por_area %}
+					<tr><td>{{ r.label }}</td><td class="num">{{ brl(r.receitas) }}</td><td class="num">{{ brl(r.despesas) }}</td>
+						<td class="num {{ 'pos' if r.resultado >= 0 else 'neg' }}">{{ brl(r.resultado) }}</td></tr>
+					{% else %}<tr><td colspan="4" class="muted">Sem dados por área.</td></tr>{% endfor %}
+				</tbody>
+			</table>
+			<p class="note">Receitas das barracas menos despesas de cada área; convites e doações não pertencem a uma área.</p>
+		</td>
+	</tr></table>
+</section>
+
+{# ───────── 7. Gestão de tarefas ───────── #}
+<section class="sec" id="sec-7">
+	{{ sec_head(7, "Gestão de tarefas", "Tarefas do quadro da festa, por status e prazo.") }}
+	{% if tarefas.linhas %}
+	<table class="stats"><tr>
+		{{ stat("Total de tarefas", tarefas.linhas | length) }}
+		{% for c in tarefas.contagem %}{{ stat(c.status, c.qtd) }}{% endfor %}
+	</tr></table>
+	<table class="tbl">
+		<thead><tr><th style="width:32%">Tarefa</th><th style="width:16%">Responsável</th><th>Status</th><th>Início</th><th>Prazo</th><th>Entrega</th><th style="width:20%">Observações</th></tr></thead>
+		<tbody>
+			{% for tr in tarefas.linhas %}
+			<tr>
+				<td>{{ ou_traco(tr.descricao) }}</td><td>{{ ou_traco(tr.responsavel) }}</td>
+				<td><span class="pill {{ 'pill--ok' if tr.status == 'Concluído' else ('pill--danger' if tr.status == 'Atrasado' else ('pill--muted' if tr.status in ('Cancelado', 'Não iniciado') else '')) }}">{{ tr.status }}</span></td>
+				<td>{{ ou_traco(tr.data_inicio) }}</td><td>{{ ou_traco(tr.prazo) }}</td><td>{{ ou_traco(tr.data_entrega) }}</td>
+				<td class="muted">{{ tr.observacoes }}</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+	{% else %}<p class="empty">Nenhuma tarefa cadastrada.</p>{% endif %}
+</section>
+
+{# ───────── 8. Convites ───────── #}
+{% set cv = convites %}
+<section class="sec" id="sec-8">
+	{{ sec_head(8, "Convites", "Configuração da venda, desempenho, tipos de convite e pedidos.") }}
+	<table class="fields">
+		<tr>
+			<td><span class="lbl">Tipos cadastrados</span><span class="val">{{ cv.config.tipos_ativos }} ativos / {{ cv.config.tipos_total }} no total</span></td>
+			<td><span class="lbl">Aceita doações</span><span class="val">{{ simnao(cv.config.aceitar_doacoes) }}</span></td>
+			<td><span class="lbl">Venda na portaria</span><span class="val">{{ simnao(cv.config.venda_na_portaria) }}</span></td>
+			<td><span class="lbl">Limite de vendas</span><span class="val">{{ ou_traco(cv.config.data_limite_vendas) }}</span></td>
+		</tr>
+	</table>
+
+	<h3 class="sub">Desempenho de vendas</h3>
+	<table class="stats"><tr>
+		{{ stat("Convites vendidos", qty(cv.kpis.vendidos)) }}
+		{{ stat("Receita arrecadada", brl(cv.kpis.receita)) }}
+		{{ stat("Taxa vs. expectativa", pct(cv.kpis.taxa), "", (qty(cv.kpis.vendidos) ~ " de " ~ qty(cv.kpis.esperado) ~ " esperados (cenário " ~ cv.kpis.cenario ~ ")") if cv.kpis.esperado else "Expectativa de público não definida") }}
+	</tr></table>
+
+	<h3 class="sub">Tipos de convite</h3>
+	{% if cv.tipos %}
+	<table class="tbl">
+		<thead><tr><th style="width:24%">Tipo</th><th>Ramo</th><th class="center">Ativo</th><th class="center">Portaria</th><th class="num">Valor</th><th class="num">Consumação</th><th class="num">Qtd esperada</th><th class="num">Vendidos (pagos)</th><th class="num">Arrecadado</th></tr></thead>
+		<tbody>
+			{% for op in cv.tipos %}
+			<tr>
+				<td>{{ op.nome_convite }}</td><td>{{ ou_traco(op.ramo) }}</td><td class="center">{{ simnao(op.ativo) }}</td><td class="center">{{ simnao(op.portaria) }}</td>
+				<td class="num">{{ brl(op.valor) }}</td><td class="num">{{ brl(op.valor_consumacao) }}</td><td class="num">{{ qty(op.quantidade_esperada) }}</td>
+				<td class="num">{{ qty(op.qtd_paga) }}</td><td class="num">{{ brl(op.valor_pago) }}</td>
+			</tr>
+			{% endfor %}
+			{% if cv.config.aceitar_doacoes %}<tr><td colspan="8">Doações</td><td class="num">{{ brl(cv.doacoes) }}</td></tr>{% endif %}
+			<tr class="total"><td colspan="7">Total</td><td class="num">{{ qty(cv.kpis.vendidos) }}</td><td class="num">{{ brl(cv.kpis.receita) }}</td></tr>
+		</tbody>
+	</table>
+	{% else %}<p class="empty">Nenhum tipo de convite cadastrado.</p>{% endif %}
+
+	{% if cv.por_ramo %}
+	<h3 class="sub">Convites por beneficiário do ramo</h3>
+	<table class="tbl">
+		<thead><tr><th>Ramo</th><th class="num">Beneficiários ativos</th><th class="num">Vendidos</th><th class="num">Meta</th><th class="num">% da meta</th><th class="num">Faltam</th></tr></thead>
+		<tbody>
+			{% for r in cv.por_ramo %}
+			<tr><td>{{ r.ramo }}</td><td class="num">{{ qty(r.beneficiarios_ativos) }}</td><td class="num">{{ qty(r.qtd_vendida) }}</td><td class="num">{{ qty(r.qtd_esperada) }}</td><td class="num">{{ pct(r.pct) }}</td><td class="num">{{ qty(r.faltam) }}</td></tr>
+			{% endfor %}
+		</tbody>
+	</table>
+	{% endif %}
+
+	{% if cv.vendas_dia %}
+	<h3 class="sub">Convites vendidos por dia</h3>
+	<table class="tbl tbl--compact" style="width:60%">
+		<thead><tr><th>Dia</th><th class="num">Convites (pagos)</th><th class="num">Valor</th></tr></thead>
+		<tbody>
+			{% for d in cv.vendas_dia %}<tr><td>{{ d.dia }}</td><td class="num">{{ qty(d.quantidade) }}</td><td class="num">{{ brl(d.valor) }}</td></tr>{% endfor %}
+		</tbody>
+	</table>
+	{% endif %}
+
+	<h3 class="sub">Pedidos de convite ({{ cv.pedidos | length }})</h3>
+	{% if cv.pedidos %}
+	<table class="tbl tbl--compact">
+		<thead><tr><th style="width:22%">Pagador</th><th style="width:24%">E-mail</th><th style="width:22%">Tipo de convite</th><th class="num">Qtd</th><th class="num">Valor</th><th>Status</th><th>Data</th></tr></thead>
+		<tbody>
+			{% for p in cv.pedidos %}
+			<tr>
+				<td>{{ ou_traco(p.nome_pagador) }}</td><td>{{ ou_traco(p.email_pagador) }}</td><td>{{ ou_traco(p.tipo_convite) }}</td>
+				<td class="num">{{ qty(p.quantidade) }}</td><td class="num">{{ brl(p.valor) }}</td>
+				<td><span class="pill {{ 'pill--ok' if p.status_pagamento == 'Pago' else 'pill--muted' }}">{{ p.status_pagamento }}</span></td>
+				<td>{{ p.data }}</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+	{% else %}<p class="empty">Nenhum pedido de convite.</p>{% endif %}
+</section>
+
+{# ───────── 9. Avaliações ───────── #}
+{% macro histograma(dist) %}
+{% set dmax = (dist | max) or 1 %}
+<table class="vhisto">
+	<tr class="vhisto__plot">{% for v in dist %}<td><div class="vhisto__val">{{ v }}</div><div class="vhisto__bar" style="height:{{ (v / dmax * 26) | round(1) }}mm{% if v %};min-height:0.8mm{% endif %}"></div></td>{% endfor %}</tr>
+	<tr class="vhisto__axis">{% for v in dist %}<td>{{ loop.index0 }}</td>{% endfor %}</tr>
+</table>
+{% endmacro %}
+<section class="sec" id="sec-9">
+	{{ sec_head(9, "Avaliações", "Avaliação geral, dos convidados e da equipe.") }}
+	{% set av = avaliacoes %}
+	{% if av %}
+	<table class="cols"><tr>
+		<td>
+			<h3 class="sub" style="margin-top:0">Convidados</h3>
+			<table class="stats"><tr>
+				{{ stat("NPS", ("%.2f" | format(av.convidados.nps)).replace(".", ",")) }}
+				{{ stat("Respostas", av.convidados.total) }}
+			</tr></table>
+			{% if av.convidados.distribuicao and (av.convidados.distribuicao | sum) > 0 %}
+			<p class="note">Notas de recomendação (0–10).</p>
+			{{ histograma(av.convidados.distribuicao) }}
+			{% else %}<p class="empty">Sem respostas dos convidados.</p>{% endif %}
+		</td>
+		<td>
+			{% set eq = av.equipe %}
+			<h3 class="sub" style="margin-top:0">Equipe</h3>
+			{% if avaliacao_equipe_iniciada %}
+			<table class="stats"><tr>
+				{{ stat("NPS", ("%.2f" | format(eq.nps)).replace(".", ",")) }}
+				{{ stat("Avaliação geral", ("%.1f" | format(eq.avaliacao_geral)).replace(".", ",") ~ " / 10") }}
+				{{ stat("Respostas", eq.concluidas ~ " de " ~ eq.total) }}
+			</tr></table>
+			{% if eq.dist_geral and (eq.dist_geral | sum) > 0 %}
+			<p class="note">Avaliação do resultado da festa (0–10).</p>
+			{{ histograma(eq.dist_geral) }}
+			{% endif %}
+			{% else %}<p class="empty">A avaliação da equipe ainda não foi iniciada.</p>{% endif %}
+		</td>
+	</tr></table>
+	{% if av.convidados.resumo_ia %}<div class="ia"><div class="ia__label">Resumo dos convidados por IA</div>{{ frappe.utils.markdown(av.convidados.resumo_ia) | safe }}</div>{% endif %}
+
+	{% if avaliacao_equipe_iniciada %}
+	{% if av.equipe.resumo_ia %}<div class="ia"><div class="ia__label">Resumo da equipe por IA</div>{{ frappe.utils.markdown(av.equipe.resumo_ia) | safe }}</div>{% endif %}
+	<h3 class="sub">Avaliação geral da festa</h3>
+	<table class="cols"><tr>
+		<td>
+			<div class="textbox"><div class="textbox__title">O que funcionou bem na dinâmica da equipe</div><div class="textbox__body">{{ av.geral.funcionou_bem or "—" }}</div></div>
+			<div class="textbox"><div class="textbox__title">Pontos positivos adicionais</div><div class="textbox__body">{{ av.geral.pontos_positivos or "—" }}</div></div>
+		</td>
+		<td>
+			<div class="textbox"><div class="textbox__title">O que não funcionou na dinâmica da equipe</div><div class="textbox__body">{{ av.geral.nao_funcionou or "—" }}</div></div>
+			<div class="textbox"><div class="textbox__title">Pontos de melhoria adicionais</div><div class="textbox__body">{{ av.geral.pontos_melhoria or "—" }}</div></div>
+		</td>
+	</tr></table>
+	{% if av.geral.resumo_ia %}<div class="ia"><div class="ia__label">Avaliação completa por IA</div>{{ frappe.utils.markdown(av.geral.resumo_ia) | safe }}</div>{% endif %}
+	{% endif %}
+	{% else %}<p class="empty">A avaliação da festa ainda não foi iniciada.</p>{% endif %}
+</section>
+</body>
+</html>
+{% endautoescape %}

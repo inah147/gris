@@ -84,7 +84,13 @@ def _festa_com_dados():
 			"quantidade_compra": 1,
 			"quantidade_compra_final": 3,
 			"cotacoes": [
-				{"fornecedor": "Mercado A", "valor": 10, "quantidade": 1, "unidade_medida": "kg", "escolhida": 1},
+				{
+					"fornecedor": "Mercado A",
+					"valor": 10,
+					"quantidade": 1,
+					"unidade_medida": "kg",
+					"escolhida": 1,
+				},
 				{"fornecedor": "Mercado B", "valor": 12, "quantidade": 1, "unidade_medida": "kg"},
 			],
 		}

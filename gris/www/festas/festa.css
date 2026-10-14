@@ -657,6 +657,16 @@
 	color: var(--destructive);
 }
 
+/* Coluna "Previsto" do orçamento: o que está planejado de fato, separado dos
+   cenários simulados por uma borda à esquerda. */
+.festa-cenarios-table .festa-cenarios-col--previsto {
+	border-left: 1px solid var(--border);
+}
+
+.festa-cenarios-nota {
+	margin: 0 0 0.5rem;
+}
+
 @media (max-width: 640px) {
 	.festa-compra-form-grid {
 		grid-template-columns: 1fr;

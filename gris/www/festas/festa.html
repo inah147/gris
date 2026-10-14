@@ -1702,14 +1702,16 @@ window._festaData = {
 			{% call field(label="Quantidade sugerida") %}
 				{{ input(attrs={"id": "compra-quantidade-sugerida", "readonly": "readonly", "tabindex": "-1", "placeholder": "0"}) }}
 			{% endcall %}
-			{% call field(label="Quantidade final *") %}
+			{% call field(label="Quantidade final * " ~ tooltip(
+				lucide_icon("info", size="sm", class_name="festa-field-info-icon"),
+				"Quantidade de cotações a comprar (ex.: 6 pacotes), não a quantidade na unidade de medida. O valor total de compra é essa quantidade × o valor da cotação escolhida.",
+				side="top",
+				attrs={"class": "festa-info-tooltip"}
+			)) %}
 				{{ input(attrs={"id": "compra-quantidade-final", "inputmode": "decimal", "data-numeric-input": "1", "placeholder": "0"}) }}
 			{% endcall %}
 			{% call field(label="Valor total de compra") %}
 				{{ input(attrs={"id": "compra-valor-total", "readonly": "readonly", "tabindex": "-1", "placeholder": "R$ 0,00"}) }}
-			{% endcall %}
-			{% call field(label="Varia com o público") %}
-				{{ switch(name="compra-varia-publico", attrs={"id": "compra-varia-publico"}) }}
 			{% endcall %}
 			{% call field(label="Usado em produtos") %}
 				{{ switch(name="compra-usado-produtos", attrs={"id": "compra-usado-produtos"}) }}

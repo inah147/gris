@@ -24,7 +24,6 @@ class CompraFesta(Document):
 		self._validar_usos_em_produto()
 		self._validar_cotacoes()
 		self._validar_unidades()
-		self._calcular_quantidade_compra_base()
 		self._calcular_cenarios()
 		self._calcular_quantidade_compra()
 		self._calcular_valor_total()
@@ -79,22 +78,9 @@ class CompraFesta(Document):
 				return c
 		return None
 
-	def _calcular_quantidade_compra_base(self):
-		"""Calcula a soma total de uso em unidade de compra (para itens usados em produtos)."""
-		if not self.usado_em_produtos:
-			return
-		total = 0.0
-		for uso in self.usos_em_produto or []:
-			if not uso.unidade_medida_uso or not uso.quantidade_usada:
-				continue
-			total += converter(flt(uso.quantidade_usada), uso.unidade_medida_uso, self.unidade_compra)
-		# Armazena internamente para uso em _calcular_cenarios
-		self._soma_uso_total = total
-
 	def _calcular_cenarios(self):
 		"""Calcula qtd sugerida, valor total, sobra e valor de sobra para cada cenário."""
 		escolhida = self._cotacao_escolhida()
-		soma_uso = getattr(self, "_soma_uso_total", 0.0)
 
 		# Dados da cotação escolhida.
 		# Em doações, a quantidade do pacote continua valendo (para manter as
@@ -105,19 +91,18 @@ class CompraFesta(Document):
 			qtd_pacote = converter(flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra)
 			valor_pacote = 0.0 if escolhida.doacao else flt(escolhida.valor)
 
-		# Busca público por cenário da festa
-		publicos = _carregar_publicos_festa(self.festa)
-
 		# Busca qtd_cenario dos produtos vinculados (query única, evita N+1)
 		produtos_qtd = _carregar_qtd_cenarios_produtos(
 			[uso.produto for uso in (self.usos_em_produto or []) if uso.produto]
 		)
 
 		for chave in CENARIOS:
-			# ---------- quantidade sugerida ----------
+			# ---------- quantidade sugerida (nº de cotações) ----------
+			soma_cenario = 0.0
 			if self.usado_em_produtos:
-				# soma: para cada uso, converter qtd para unidade_compra x qtd do produto no cenário
-				soma_cenario = 0.0
+				# Varia com o público pelos produtos: para cada uso, qtd usada (na
+				# unidade de compra) x qtd do produto no cenário (expectativa de venda
+				# por pessoa x público), arredondado para cima em cotações inteiras.
 				for uso in self.usos_em_produto or []:
 					if not uso.produto or not uso.quantidade_usada or not uso.unidade_medida_uso:
 						continue
@@ -127,19 +112,17 @@ class CompraFesta(Document):
 					qtd_produto_cenario = produtos_qtd.get(uso.produto, {}).get(chave, 0.0)
 					soma_cenario += qtd_uso_em_compra * qtd_produto_cenario
 				qtd_sugerida = _ceil_pacotes(soma_cenario, qtd_pacote)
-			elif self.varia_com_publico:
-				# qtd_compra_final é "por pessoa" x expectativa do cenário
-				qtd_sugerida = _ceil_pacotes(flt(self.quantidade_compra_final) * publicos[chave], qtd_pacote)
 			else:
-				# constante: mesmo valor para todos os cenários
-				qtd_sugerida = _ceil_pacotes(flt(self.quantidade_compra_final), qtd_pacote)
+				# Constante: a quantidade final já é o nº de cotações a comprar.
+				qtd_sugerida = flt(self.quantidade_compra_final)
 
 			# ---------- valor total ----------
 			valor_total_cen = qtd_sugerida * valor_pacote if qtd_pacote > 0 else 0.0
 
 			# ---------- sobra individual ----------
+			# O que sobra das cotações compradas depois do consumo do cenário.
 			if self.usado_em_produtos and qtd_pacote > 0:
-				qtd_sobra = max(0.0, qtd_sugerida * qtd_pacote - soma_uso)
+				qtd_sobra = max(0.0, qtd_sugerida * qtd_pacote - soma_cenario)
 			else:
 				qtd_sobra = 0.0
 
@@ -167,17 +150,10 @@ class CompraFesta(Document):
 
 		self.cotacao_escolhida_valor = flt(escolhida.valor)
 
-		# O valor da cotacao e o preco do pacote (ex.: R$ 20 por 2 kg). O custo da
-		# compra e o numero de pacotes inteiros necessarios para a quantidade final.
-		quantidade_final = flt(self.quantidade_compra_final)
-		qtd_pacote = 0.0
-		if flt(escolhida.quantidade) > 0:
-			qtd_pacote = converter(flt(escolhida.quantidade), escolhida.unidade_medida, self.unidade_compra)
-		if quantidade_final <= 0 or qtd_pacote <= 0:
-			self.valor_total_compra = 0
-			return
-
-		self.valor_total_compra = _ceil_pacotes(quantidade_final, qtd_pacote) * flt(escolhida.valor)
+		# A quantidade final é o nº de cotações a comprar (ex.: 6 garrafas de
+		# 500 ml), não a quantidade na unidade de compra. O custo é essa contagem
+		# x o valor da cotação — mesmo cálculo do diálogo do portal.
+		self.valor_total_compra = flt(self.quantidade_compra_final) * flt(escolhida.valor)
 
 	def _calcular_usos_em_produto(self):
 		escolhida = self._cotacao_escolhida()
@@ -222,30 +198,9 @@ def _ceil_pacotes(qtd_total: float, qtd_pacote: float) -> float:
 	"""Arredonda qtd_total para cima em múltiplos de pacotes. Retorna nº de pacotes."""
 	if qtd_pacote <= 0:
 		return 0.0
-	return float(math.ceil(qtd_total / qtd_pacote))
-
-
-def _carregar_publicos_festa(festa: str | None) -> dict[str, float]:
-	if not festa:
-		return {"min": 0.0, "intermediario": 0.0, "max": 0.0}
-	row = (
-		frappe.db.get_value(
-			"Festa",
-			festa,
-			[
-				"expectativa_publico_min",
-				"expectativa_publico_intermediario",
-				"expectativa_publico_max",
-			],
-			as_dict=True,
-		)
-		or {}
-	)
-	return {
-		"min": flt(row.get("expectativa_publico_min")),
-		"intermediario": flt(row.get("expectativa_publico_intermediario")),
-		"max": flt(row.get("expectativa_publico_max")),
-	}
+	# Arredonda antes do ceil para absorver o erro de ponto flutuante das
+	# conversões (70 g x 100 = 7,000000000000001 kg não pode virar 8 pacotes).
+	return float(math.ceil(round(qtd_total / qtd_pacote, 9)))
 
 
 def _carregar_qtd_cenarios_produtos(nomes: list[str]) -> dict[str, dict[str, float]]:

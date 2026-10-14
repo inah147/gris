@@ -21,22 +21,25 @@ def _format_time(value) -> str:
 	return text[:5] if len(text) >= 5 else text
 
 
-def _serializar_orcamento_linhas(rows, chave: str, labels: dict[str, str]) -> list[dict]:
+def _serializar_orcamento_linhas(
+	rows, chave: str, labels: dict[str, str], previstos: dict[str, float] | None = None
+) -> list[dict]:
 	resultado = []
 	for row in rows or []:
 		ref = row.get(chave) or ""
-		resultado.append(
-			{
-				"name": ref,
-				"label": labels.get(ref, ref) or "—",
-				"esperado_min": flt(row.esperado_min),
-				"esperado_intermediario": flt(row.esperado_intermediario),
-				"esperado_max": flt(row.esperado_max),
-				"realizado_min": flt(row.realizado_min),
-				"realizado_intermediario": flt(row.realizado_intermediario),
-				"realizado_max": flt(row.realizado_max),
-			}
-		)
+		linha = {
+			"name": ref,
+			"label": labels.get(ref, ref) or "—",
+			"esperado_min": flt(row.esperado_min),
+			"esperado_intermediario": flt(row.esperado_intermediario),
+			"esperado_max": flt(row.esperado_max),
+			"realizado_min": flt(row.realizado_min),
+			"realizado_intermediario": flt(row.realizado_intermediario),
+			"realizado_max": flt(row.realizado_max),
+		}
+		if previstos is not None:
+			linha["previsto"] = flt(previstos.get(ref))
+		resultado.append(linha)
 	return resultado
 
 
@@ -153,7 +156,6 @@ def _hydrate_compra(doc, produto_labels: dict[str, str]) -> dict:
 		"nome_area": nome_area,
 		"nome_item": doc.nome_item or "",
 		"previsto": bool(doc.previsto),
-		"varia_com_publico": bool(doc.varia_com_publico),
 		"usado_em_produtos": bool(doc.usado_em_produtos),
 		"unidade_compra": doc.unidade_compra or "unidade",
 		"quantidade_compra": flt(doc.quantidade_compra),
@@ -337,7 +339,9 @@ def build_festa_payload(festa_name: str) -> dict:
 	areas_labels = {a["name"]: a["nome_area"] for a in areas}
 	barracas_labels = {b["name"]: b["nome_barraca"] for b in barracas}
 	payload["receitas_por_area"] = _serializar_orcamento_linhas(doc.receitas_por_area, "area", areas_labels)
-	payload["despesas_por_area"] = _serializar_orcamento_linhas(doc.despesas_por_area, "area", areas_labels)
+	payload["despesas_por_area"] = _serializar_orcamento_linhas(
+		doc.despesas_por_area, "area", areas_labels, doc.despesas_previstas_por_area()
+	)
 	payload["receitas_por_barraca"] = _serializar_orcamento_linhas(
 		doc.receitas_por_barraca, "barraca", barracas_labels
 	)

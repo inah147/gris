@@ -2206,12 +2206,14 @@
 
 	function ceilPacotes(qtdTotal, qtdPacote) {
 		if (qtdPacote <= 0) return 0;
-		return Math.ceil(qtdTotal / qtdPacote);
+		// Arredonda antes do ceil para absorver o erro de ponto flutuante das
+		// conversões (70 g × 100 = 7,000000000000001 kg não pode virar 8 pacotes).
+		// Mesmo cálculo de `_ceil_pacotes` no backend.
+		return Math.ceil(Number((qtdTotal / qtdPacote).toFixed(9)));
 	}
 
 	function calcCompraCenarios() {
 		var unidadeCompra = getSelectValue("compra-unidade") || "unidade";
-		var variaComPublico = getSwitchChecked("compra-varia-publico");
 		var usadoEmProdutos = getSwitchChecked("compra-usado-produtos");
 		var finalQty =
 			parseFloat((document.getElementById("compra-quantidade-final") || {}).value || "0") ||
@@ -2246,16 +2248,13 @@
 			};
 		});
 
-		var publicos = {
-			min: window._festaData.publicoMin || 0,
-			intermediario: window._festaData.publicoIntermediario || 0,
-			max: window._festaData.publicoMax || 0,
-		};
-
 		var result = {};
 		["min", "intermediario", "max"].forEach(function (chave) {
+			// Quantidade sugerida = nº de cotações a comprar no cenário.
 			var qtdSugerida;
 			if (usadoEmProdutos) {
+				// Varia com o público pelos produtos: Σ qtd usada × qtd do produto no
+				// cenário (expectativa de venda por pessoa × público).
 				var somaCenario = 0;
 				compraDraftUsos.forEach(function (uso) {
 					if (!uso.produto || !uso.quantidade_usada || !uso.unidade_medida_uso) return;
@@ -2269,10 +2268,9 @@
 					somaCenario += qtdUso * qtdProdCenario;
 				});
 				qtdSugerida = ceilPacotes(somaCenario, qtdPacote);
-			} else if (variaComPublico) {
-				qtdSugerida = ceilPacotes(finalQty * publicos[chave], qtdPacote);
 			} else {
-				qtdSugerida = ceilPacotes(finalQty, qtdPacote);
+				// Constante: a quantidade final já é o nº de cotações a comprar.
+				qtdSugerida = finalQty;
 			}
 
 			var valorTotal = qtdPacote > 0 ? qtdSugerida * valorPacote : 0;
@@ -2290,7 +2288,8 @@
 				unidade_compra: unidadeCompra,
 				valor_total: valorTotal,
 				qtd_sobra_individual: qtdSobra,
-				valor_sobra: qtdSobra * valorPacote,
+				// A sobra está na unidade de medida: vale a fração do pacote que sobra.
+				valor_sobra: qtdPacote > 0 ? (qtdSobra * valorPacote) / qtdPacote : 0,
 			};
 		});
 		return result;
@@ -2404,7 +2403,6 @@
 			area: "",
 			nome_area: "",
 			nome_item: "",
-			varia_com_publico: false,
 			usado_em_produtos: false,
 			unidade_compra: "unidade",
 			quantidade_compra: 0,
@@ -2443,7 +2441,6 @@
 		document.getElementById("compra-valor-total").value = fmtCurrency(
 			compra.valor_total_compra
 		);
-		setSwitchChecked("compra-varia-publico", compra.varia_com_publico);
 		setSwitchChecked("compra-usado-produtos", compra.usado_em_produtos);
 
 		compraDraftCotacoes = (compra.cotacoes || []).map(function (c) {
@@ -2790,7 +2787,6 @@
 			area: getSelectValue("compra-area"),
 			unidade_compra: getSelectValue("compra-unidade") || "unidade",
 			quantidade_compra_final: finalQty,
-			varia_com_publico: getSwitchChecked("compra-varia-publico"),
 			usado_em_produtos: getSwitchChecked("compra-usado-produtos"),
 			cotacoes: compraDraftCotacoes,
 			usos_em_produto: getSwitchChecked("compra-usado-produtos") ? compraDraftUsos : [],
@@ -2850,8 +2846,6 @@
 				updateCompraUsosVisibility();
 				syncCompraCalculatedFields();
 			});
-		var variaEl = document.querySelector("#compra-varia-publico input[type='checkbox']");
-		if (variaEl) variaEl.addEventListener("change", syncCompraCalculatedFields);
 		var unidadeEl = document.getElementById("compra-unidade");
 		if (unidadeEl)
 			unidadeEl.addEventListener("change", function () {
@@ -3248,24 +3242,35 @@
 
 	// ─── Orçamento ───────────────────────────────────────────────────────────────
 
+	// opts.previsto acrescenta a coluna "Previsto" (o que está planejado de fato,
+	// fora dos cenários); linhas sem `previsto` mostram "—".
 	function buildCenarioTable(rows, opts) {
 		opts = opts || {};
 		const headerLabel = opts.headerLabel || "";
+		const keys = ["min", "intermediario", "max"];
+		if (opts.previsto) keys.push("previsto");
 		let html = '<table class="festa-cenarios-table"><thead><tr>';
 		html += "<th>" + escapeHtml(headerLabel) + "</th>";
 		html += "<th>Mínimo</th><th>Intermediário</th><th>Máximo</th>";
+		if (opts.previsto) html += '<th class="festa-cenarios-col--previsto">Previsto</th>';
 		html += "</tr></thead><tbody>";
 		rows.forEach(function (r) {
 			const cls = r.total ? ' class="festa-cenarios-row--total"' : "";
 			html += "<tr" + cls + ">";
 			html += '<td class="festa-cenarios-label">' + escapeHtml(r.label) + "</td>";
-			["min", "intermediario", "max"].forEach(function (key) {
+			keys.forEach(function (key) {
 				const value = r[key];
+				const colCls = key === "previsto" ? "festa-cenarios-col--previsto" : "";
+				if (value == null) {
+					html += '<td class="' + colCls + '">—</td>';
+					return;
+				}
 				let cellCls = r.cellClass || "";
 				if (r.negativeIsDanger && Number(value) < 0) {
 					cellCls = "festa-cenarios-cell--danger";
 				}
-				const attr = cellCls ? ' class="' + cellCls + '"' : "";
+				const classes = [cellCls, colCls].filter(Boolean).join(" ");
+				const attr = classes ? ' class="' + classes + '"' : "";
 				html += "<td" + attr + ">" + fmtCurrency(value) + "</td>";
 			});
 			html += "</tr>";
@@ -3284,7 +3289,8 @@
 		const totais = window._festaData.totais || {};
 		const min = totais.min || {},
 			inter = totais.intermediario || {},
-			max = totais.max || {};
+			max = totais.max || {},
+			prev = totais.previsto || {};
 
 		const resultado = [
 			{
@@ -3292,24 +3298,28 @@
 				min: min.receita_entrada,
 				intermediario: inter.receita_entrada,
 				max: max.receita_entrada,
+				previsto: prev.receita_entrada,
 			},
 			{
 				label: "Convites (consumação)",
 				min: min.receita_consumacao,
 				intermediario: inter.receita_consumacao,
 				max: max.receita_consumacao,
+				previsto: prev.receita_consumacao,
 			},
 			{
 				label: "Receita de produtos",
 				min: min.receita_produtos,
 				intermediario: inter.receita_produtos,
 				max: max.receita_produtos,
+				previsto: prev.receita_produtos,
 			},
 			{
 				label: "Receita total",
 				min: min.receita,
 				intermediario: inter.receita,
 				max: max.receita,
+				previsto: prev.receita,
 				cellClass: "festa-cenarios-cell--success",
 			},
 			{
@@ -3317,6 +3327,7 @@
 				min: min.despesa,
 				intermediario: inter.despesa,
 				max: max.despesa,
+				previsto: prev.despesa,
 				cellClass: "festa-cenarios-cell--danger",
 			},
 			{
@@ -3324,13 +3335,16 @@
 				min: min.saldo,
 				intermediario: inter.saldo,
 				max: max.saldo,
+				previsto: prev.saldo,
 				total: true,
 				negativeIsDanger: true,
 			},
 		];
-		document.getElementById("orc-resultado-table").innerHTML = buildCenarioTable(resultado, {
-			headerLabel: "",
-		});
+		document.getElementById("orc-resultado-table").innerHTML =
+			buildCenarioTable(resultado, { headerLabel: "", previsto: true }) +
+			'<p class="festa-cenarios-nota text-xs text-muted-foreground">Previsto: despesas pela quantidade final das compras, mais contratações e margem; receitas do cenário ' +
+			escapeHtml((prev.cenario || "Intermediário").toLowerCase()) +
+			".</p>";
 
 		const margem = [
 			{
@@ -3338,32 +3352,39 @@
 				min: min.margem,
 				intermediario: inter.margem,
 				max: max.margem,
+				previsto: prev.margem,
 			},
 		];
 		document.getElementById("orc-margem-table").innerHTML = buildCenarioTable(margem, {
 			headerLabel: "",
+			previsto: true,
 		});
 	}
 
-	function renderBreakdownTable(selector, items, headerLabel) {
+	// Com opts.previsto, cada item traz `previsto` (despesa planejada de fato).
+	function renderBreakdownTable(selector, items, headerLabel, opts) {
+		opts = opts || {};
 		const rows = [];
-		const totals = { min: 0, intermediario: 0, max: 0 };
+		const totals = { min: 0, intermediario: 0, max: 0, previsto: 0 };
 		(items || []).forEach(function (it) {
 			rows.push({
 				label: it.label,
 				min: it.esperado_min,
 				intermediario: it.esperado_intermediario,
 				max: it.esperado_max,
+				previsto: opts.previsto ? it.previsto || 0 : undefined,
 			});
 			totals.min += it.esperado_min || 0;
 			totals.intermediario += it.esperado_intermediario || 0;
 			totals.max += it.esperado_max || 0;
+			totals.previsto += it.previsto || 0;
 		});
 		rows.push({
 			label: "Total",
 			min: totals.min,
 			intermediario: totals.intermediario,
 			max: totals.max,
+			previsto: opts.previsto ? totals.previsto : undefined,
 			total: true,
 		});
 		const target = document.querySelector(selector);
@@ -3373,7 +3394,10 @@
 				'<p class="text-sm text-muted-foreground festa-equipe-empty">Nenhum registro.</p>';
 			return;
 		}
-		target.innerHTML = buildCenarioTable(rows, { headerLabel: headerLabel || "" });
+		target.innerHTML = buildCenarioTable(rows, {
+			headerLabel: headerLabel || "",
+			previsto: !!opts.previsto,
+		});
 	}
 
 	function renderOrcamentoBreakdowns() {
@@ -3385,7 +3409,8 @@
 		renderBreakdownTable(
 			"#orc-despesas-area-table",
 			window._festaData.despesasPorArea,
-			"Área"
+			"Área",
+			{ previsto: true }
 		);
 		renderBreakdownTable(
 			"#orc-receitas-barraca-table",

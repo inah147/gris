@@ -45,6 +45,9 @@
 
 .festa-page-header__actions {
 	flex-shrink: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
 }
 
 .festa-drive-btn {

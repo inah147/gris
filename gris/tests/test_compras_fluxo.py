@@ -421,6 +421,47 @@ class TestListaDeCompras(FrappeTestCase):
 	def test_sem_pedidos_devolve_lista_vazia(self):
 		self.assertEqual(consultas.lista_de_compras([]), [])
 
+	def test_guarda_quanto_cada_pedido_levou_do_item(self):
+		# É o que permite à lista dizer para quem é cada peça, e não só o total.
+		linhas = {linha["item_catalogo"]: linha for linha in consultas.lista_de_compras(["SC-001", "SC-002"])}
+		self.assertEqual(linhas["Acampamento"]["quantidade_por_pedido"], {"SC-001": 2, "SC-002": 3})
+		self.assertEqual(linhas["Lis de Ouro"]["quantidade_por_pedido"], {"SC-001": 1})
+
+
+class TestEtapaDaLinha(FrappeTestCase):
+	"""Como cada pedido aparece na lista: etapa, seção e há quanto tempo está parado."""
+
+	def test_etapa_tem_rotulo_tom_e_icone_proprios(self):
+		linha = consultas._hidratar_linha(
+			{"status": STATUS_COMPRADA, "data_solicitacao": "2026-01-01", "data_compra": "2026-01-05"}
+		)
+		self.assertEqual(linha["status_etapa"], "Comprado, a caminho")
+		self.assertEqual(linha["status_tom"], "caminho")
+		self.assertEqual(linha["status_icone"], "truck")
+		# A data que conta é a de entrada na etapa atual, não a do pedido.
+		self.assertEqual(linha["data_etapa_fmt"], "05/01/2026")
+
+	def test_toda_etapa_do_fluxo_tem_rotulo_e_data(self):
+		for status in [*consultas.STATUS_ORDEM, STATUS_CANCELADA]:
+			self.assertTrue(consultas.STATUS_META[status]["etapa"])
+			self.assertIn(status, consultas.CAMPO_DATA_DA_ETAPA)
+
+	def test_secao_vem_do_ramo_com_a_cor_do_ramo(self):
+		linha = consultas._hidratar_linha({"status": STATUS_SOLICITADA, "ramo": "Sênior"})
+		self.assertEqual(linha["secao"], "Sênior")
+		self.assertEqual(linha["ramo_slug"], "senior")
+
+	def test_pedido_sem_ramo_e_do_grupo_todo(self):
+		linha = consultas._hidratar_linha({"status": STATUS_SOLICITADA, "ramo": None})
+		self.assertEqual(linha["secao"], consultas.SECAO_DO_GRUPO)
+		self.assertIsNone(linha["ramo_slug"])
+
+	def test_descreve_os_dias_em_palavras(self):
+		self.assertEqual(consultas.descrever_dias(0), "hoje")
+		self.assertEqual(consultas.descrever_dias(1), "ontem")
+		self.assertEqual(consultas.descrever_dias(12), "há 12 dias")
+		self.assertEqual(consultas.descrever_dias(None), "")
+
 
 class TestFluxoComUsuarioSemPapel(FrappeTestCase):
 	"""Ponta a ponta no banco: quem não tem papel nenhum solicita e cadastra item."""
@@ -514,3 +555,127 @@ class TestFluxoComUsuarioSemPapel(FrappeTestCase):
 		frappe.set_user(self.MEMBRO)
 		with self.assertRaises(frappe.ValidationError):
 			endpoints.criar_solicitacao({"area": "Cozinha", "itens": []})
+
+
+class TestPaginaDaListaDeCompras(FrappeTestCase):
+	"""A página `/compras/fila` no banco: quem pediu, seção, etapa e próximo passo."""
+
+	GESTOR = "gestor.fila.compras@exemplo.com"
+	SOLICITANTE = "solicitante.fila.compras@exemplo.com"
+	FINANCEIRO = "financeiro.fila.compras@exemplo.com"
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		for email, nome, papeis in (
+			(cls.GESTOR, "Gestora", ["Gestor de Metodos"]),
+			(cls.SOLICITANTE, "Akelá Teste", []),
+			(cls.FINANCEIRO, "Tesoureira", ["Gestor Financeiro"]),
+		):
+			if not frappe.db.exists("User", email):
+				frappe.get_doc(
+					{
+						"doctype": "User",
+						"email": email,
+						"first_name": nome,
+						"send_welcome_email": 0,
+						"roles": [{"role": papel} for papel in papeis],
+					}
+				).insert(ignore_permissions=True)
+
+		if not frappe.db.exists(consultas.CATALOGO_DOCTYPE, "Lis de Ouro teste fila"):
+			frappe.get_doc(
+				{
+					"doctype": consultas.CATALOGO_DOCTYPE,
+					"nome": "Lis de Ouro teste fila",
+					"area": PE,
+					"tipo": "Distintivo de Progressão",
+					"ramo": "Lobinho",
+					"valor_unitario": 8,
+					"ativo": 1,
+				}
+			).insert(ignore_permissions=True)
+
+	def setUp(self):
+		self.form_dict_original = getattr(frappe.local, "form_dict", None)
+		frappe.set_user(self.SOLICITANTE)
+		self.pedido = endpoints.criar_solicitacao(
+			{
+				"area": PE,
+				"ramo": "Lobinho",
+				"itens": [{"item_catalogo": "Lis de Ouro teste fila", "quantidade": 4}],
+			}
+		)["name"]
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+		frappe.local.form_dict = self.form_dict_original
+		super().tearDown()
+
+	def _contexto(self, user, **params):
+		from gris.www.compras import fila
+
+		frappe.set_user(user)
+		# Os parâmetros da URL entram pelo `form_dict`, como no request real.
+		frappe.local.form_dict = frappe._dict(area="programa_educativo", **params)
+		return fila.get_context(frappe._dict())
+
+	def _linha(self, contexto):
+		return next(linha for linha in contexto.solicitacoes if linha["name"] == self.pedido)
+
+	def test_mostra_quem_pediu_a_secao_e_o_que_pediu(self):
+		linha = self._linha(self._contexto(self.GESTOR))
+		self.assertEqual(linha["solicitante_nome"], "Akelá Teste")
+		self.assertEqual(linha["secao"], "Lobinho")
+		self.assertEqual(linha["status_etapa"], "Aguardando compra")
+		self.assertEqual(
+			linha["resumo_itens"]["visiveis"], [{"nome": "Lis de Ouro teste fila", "quantidade": 4}]
+		)
+
+	def test_gestor_ve_o_botao_da_proxima_etapa(self):
+		contexto = self._contexto(self.GESTOR)
+		self.assertEqual(self._linha(contexto)["proximo_passo"]["acao"], "comprar")
+		self.assertEqual(contexto.etapas[0]["status"], STATUS_SOLICITADA)
+		self.assertTrue(contexto.etapas[0]["ativo"])
+
+	def test_roteiro_diz_para_quem_e_cada_item(self):
+		contexto = self._contexto(self.GESTOR)
+		self.assertTrue(contexto.mostrar_roteiro)
+		item = next(
+			item
+			for grupo in contexto.roteiro
+			for item in grupo["itens"]
+			if item["item_catalogo"] == "Lis de Ouro teste fila"
+		)
+		destino = next(destino for destino in item["destinos"] if destino["pedido"] == self.pedido)
+		self.assertEqual(destino["nome"], "Akelá Teste")
+		self.assertEqual(destino["secao"], "Lobinho")
+		self.assertEqual(destino["quantidade"], 4)
+
+	def test_quem_so_acompanha_ve_com_quem_esta_o_pedido(self):
+		contexto = self._contexto(self.FINANCEIRO)
+		self.assertFalse(contexto.pode_agir)
+		self.assertFalse(contexto.mostrar_roteiro)
+		passo = self._linha(contexto)["proximo_passo"]
+		self.assertNotIn("acao", passo)
+		self.assertIn("gestor", passo["texto"])
+
+	def test_pedido_na_sede_oferece_registrar_entrega_ao_gestor(self):
+		frappe.set_user(self.GESTOR)
+		endpoints.registrar_compra({"name": self.pedido, "data_compra": today(), "valor_pago": 32})
+		endpoints.registrar_recebimento({"name": self.pedido, "data_recebimento": today()})
+
+		linha = self._linha(self._contexto(self.GESTOR, status=STATUS_RECEBIDA))
+		self.assertEqual(linha["status_etapa"], "Na sede, a entregar")
+		self.assertEqual(linha["proximo_passo"]["acao"], "entregar")
+		self.assertEqual(linha["dias_na_etapa_fmt"], "hoje")
+
+	def test_todos_inclui_os_encerrados_depois_dos_abertos(self):
+		frappe.set_user(self.GESTOR)
+		endpoints.cancelar_solicitacao({"name": self.pedido, "motivo": "Teste da lista"})
+
+		contexto = self._contexto(self.GESTOR, mostrar="todas")
+		status = [linha["status"] for linha in contexto.solicitacoes]
+		self.assertIn(STATUS_CANCELADA, status)
+		abertos = [s for s in status if s not in (STATUS_ENTREGUE, STATUS_CANCELADA)]
+		self.assertEqual(status[: len(abertos)], abertos)

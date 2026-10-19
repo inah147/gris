@@ -2,77 +2,285 @@
 	margin-top: calc(var(--spacing) * 6);
 	display: flex;
 	flex-direction: column;
-	gap: calc(var(--spacing) * 6);
+	gap: calc(var(--spacing) * 8);
 }
 
-.compras-kpis {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-	gap: calc(var(--spacing) * 3);
-}
+/* Cabeçalho ---------------------------------------------------------------- */
 
-.compras-kpi {
+.compras-cabecalho {
 	display: flex;
 	flex-direction: column;
-	gap: calc(var(--spacing) * 1);
-	padding: calc(var(--spacing) * 4);
-	border: 1px solid var(--color-border);
-	border-radius: var(--radius);
-	background-color: var(--color-card);
-	color: inherit;
-	text-decoration: none;
-	transition: border-color 0.15s ease-in-out;
+	gap: calc(var(--spacing) * 2);
+	max-width: 48rem;
 }
 
-.compras-kpi:hover,
-.compras-kpi:focus-visible {
-	border-color: var(--color-primary);
-}
-
-.compras-kpi.is-ativo {
-	border-color: var(--color-primary);
-	box-shadow: inset 0 0 0 1px var(--color-primary);
-}
-
-.compras-kpi__valor {
+.compras-cabecalho__titulo {
+	margin: 0;
 	font-size: var(--text-3xl);
 	font-weight: var(--font-weight-semibold);
-	line-height: 1.1;
+	line-height: 1.2;
 	color: var(--color-foreground);
-	font-variant-numeric: tabular-nums;
 }
 
-.compras-kpi__rotulo {
-	font-size: var(--text-sm);
+.compras-cabecalho__descricao {
+	margin: 0;
+	font-size: var(--text-base);
+	line-height: 1.6;
 	color: var(--color-muted-foreground);
 }
+
+/* Filtro de área ----------------------------------------------------------- */
 
 .compras-filtros {
 	display: flex;
 	flex-wrap: wrap;
+	align-items: center;
 	gap: calc(var(--spacing) * 2);
 }
 
-.compras-filtro-status {
+.compras-filtros__rotulo {
+	margin-right: calc(var(--spacing) * 1);
+	font-size: var(--text-sm);
+	font-weight: var(--font-weight-medium);
+	color: var(--color-muted-foreground);
+}
+
+/* Etapas do pedido: explicam o fluxo e servem de filtro -------------------- */
+
+/* Tom de cada etapa, derivado dos tokens semânticos do tema. */
+.compras-etapa--aguardando,
+.compras-status--aguardando {
+	--etapa-cor: var(--warning);
+}
+
+.compras-etapa--caminho,
+.compras-status--caminho {
+	--etapa-cor: var(--info);
+}
+
+.compras-etapa--sede,
+.compras-status--sede {
+	--etapa-cor: var(--color-primary);
+}
+
+.compras-etapa--entregue,
+.compras-status--entregue {
+	--etapa-cor: var(--success);
+}
+
+.compras-status--cancelado {
+	--etapa-cor: var(--color-destructive);
+}
+
+.compras-etapas {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 3);
+}
+
+.compras-etapas__legenda {
 	margin: 0;
 	font-size: var(--text-sm);
 	color: var(--color-muted-foreground);
 }
 
-.compras-filtro-status a {
+.compras-etapas__lista {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: calc(var(--spacing) * 3);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	counter-reset: etapa;
+}
+
+.compras-etapas__item {
+	position: relative;
+	display: flex;
+}
+
+/* Seta entre as etapas: deixa claro que é uma sequência, não quatro filtros soltos. */
+.compras-etapas__item:not(:last-child)::after {
+	content: "";
+	position: absolute;
+	top: 50%;
+	right: calc(var(--spacing) * -2.25);
+	width: calc(var(--spacing) * 1.5);
+	height: calc(var(--spacing) * 1.5);
+	border-top: 2px solid var(--color-border);
+	border-right: 2px solid var(--color-border);
+	transform: translateY(-50%) rotate(45deg);
+	z-index: 1;
+}
+
+.compras-etapa {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 1);
+	min-height: 44px;
+	padding: calc(var(--spacing) * 4);
+	border: 1px solid var(--color-border);
+	border-top: 4px solid var(--etapa-cor);
+	border-radius: var(--radius);
+	background-color: var(--color-card);
+	color: inherit;
+	text-decoration: none;
+	transition:
+		border-color 0.15s ease-in-out,
+		box-shadow 0.15s ease-in-out;
+}
+
+.compras-etapa:hover {
+	border-color: var(--etapa-cor);
+}
+
+.compras-etapa:focus-visible {
+	outline: 2px solid var(--color-ring);
+	outline-offset: 2px;
+}
+
+.compras-etapa.is-ativa {
+	border-color: var(--etapa-cor);
+	box-shadow: 0 0 0 1px var(--etapa-cor);
+	background-color: color-mix(in srgb, var(--etapa-cor) 7%, var(--color-card));
+}
+
+.compras-etapa__topo {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+}
+
+.compras-etapa__numero {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	border-radius: 999px;
+	background-color: var(--color-muted);
+	font-size: var(--text-xs);
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-muted-foreground);
+}
+
+.compras-etapa.is-ativa .compras-etapa__numero {
+	background-color: var(--color-foreground);
+	color: var(--color-background);
+}
+
+.compras-etapa__icone {
+	display: inline-flex;
+	color: color-mix(in srgb, var(--etapa-cor) 70%, var(--color-foreground));
+}
+
+.compras-etapa__valor {
+	margin-left: auto;
+	font-size: var(--text-2xl);
+	font-weight: var(--font-weight-semibold);
+	line-height: 1;
+	color: var(--color-foreground);
+	font-variant-numeric: tabular-nums;
+}
+
+.compras-etapa__rotulo {
+	margin-top: calc(var(--spacing) * 1);
+	font-size: var(--text-base);
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-foreground);
+}
+
+.compras-etapa__dica {
+	font-size: var(--text-sm);
+	color: var(--color-muted-foreground);
+}
+
+.compras-etapas__todos {
+	display: inline-flex;
+	align-items: center;
+	align-self: flex-start;
+	gap: calc(var(--spacing) * 2);
+	min-height: 44px;
+	font-size: var(--text-sm);
+	font-weight: var(--font-weight-medium);
 	color: var(--color-primary);
 	text-decoration: underline;
+	text-underline-offset: 3px;
 }
+
+.compras-etapas__todos.is-ativa {
+	color: var(--color-foreground);
+	text-decoration: none;
+}
+
+/* Selo de etapa: cor + ícone + texto, nunca só a cor ------------------------ */
+
+.compras-status {
+	display: inline-flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 1.5);
+	padding: calc(var(--spacing) * 0.5) calc(var(--spacing) * 2.5);
+	border: 1px solid color-mix(in srgb, var(--etapa-cor) 45%, transparent);
+	border-radius: 999px;
+	background-color: color-mix(in srgb, var(--etapa-cor) 14%, transparent);
+	/* Texto escurecido a partir da própria cor: o amarelo do "aguardando" sozinho
+	   não passa em contraste sobre o fundo diluído. */
+	color: color-mix(in srgb, var(--etapa-cor) 45%, #000);
+	font-size: var(--text-xs);
+	font-weight: var(--font-weight-semibold);
+	white-space: nowrap;
+}
+
+.dark .compras-status {
+	color: color-mix(in srgb, var(--etapa-cor) 55%, #fff);
+}
+
+/* Seções da página ---------------------------------------------------------- */
 
 .compras-secao__header {
 	margin-bottom: calc(var(--spacing) * 3);
 }
 
 .compras-secao__titulo {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
 	margin: 0;
 	font-size: var(--text-xl);
 	font-weight: var(--font-weight-semibold);
 	color: var(--color-foreground);
+}
+
+.compras-secao__contagem {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 1.75rem;
+	padding: 0 calc(var(--spacing) * 2);
+	border-radius: 999px;
+	background-color: var(--color-muted);
+	font-size: var(--text-sm);
+	color: var(--color-muted-foreground);
+	font-variant-numeric: tabular-nums;
+}
+
+.compras-secao__descricao {
+	margin: calc(var(--spacing) * 1) 0 0;
+	max-width: 52rem;
+	font-size: var(--text-sm);
+	line-height: 1.6;
+	color: var(--color-muted-foreground);
+}
+
+/* Tabelas ------------------------------------------------------------------- */
+
+.compras-tabela__rolagem {
+	overflow-x: auto;
+}
+
+.compras-tabela td {
+	vertical-align: top;
 }
 
 .compras-tabela__num {
@@ -92,9 +300,96 @@
 }
 
 .compras-tabela__aguardando {
+	display: inline-block;
+	max-width: 14rem;
+	font-size: var(--text-sm);
+	color: var(--color-muted-foreground);
+	white-space: normal;
+	text-align: right;
+}
+
+/* Pedidos ------------------------------------------------------------------- */
+
+.compras-pedido__quem {
+	min-width: 10rem;
+}
+
+.compras-pedido__nome {
+	display: block;
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-foreground);
+}
+
+.compras-pedido__meta {
+	display: block;
+	margin-top: calc(var(--spacing) * 0.5);
 	font-size: var(--text-xs);
 	color: var(--color-muted-foreground);
 }
+
+a.compras-pedido__meta {
+	font-weight: var(--font-weight-normal);
+	color: var(--color-muted-foreground);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.compras-secao {
+	white-space: nowrap;
+}
+
+.compras-pedido__secao {
+	white-space: nowrap;
+}
+
+.compras-pedido__area {
+	display: block;
+	margin-top: calc(var(--spacing) * 1.5);
+	font-size: var(--text-xs);
+	color: var(--color-muted-foreground);
+}
+
+.compras-pedido__lista-itens {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	font-size: var(--text-sm);
+	line-height: 1.5;
+}
+
+.compras-pedido__mais {
+	color: var(--color-muted-foreground);
+}
+
+.compras-pedido__valor-tipo {
+	display: block;
+	font-size: var(--text-xs);
+	color: var(--color-muted-foreground);
+}
+
+.compras-pedido__etapa {
+	white-space: nowrap;
+}
+
+.compras-pedido__desde {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 1);
+	margin-top: calc(var(--spacing) * 1.5);
+	font-size: var(--text-xs);
+	color: var(--color-muted-foreground);
+}
+
+.compras-pedido__desde.is-parado {
+	font-weight: var(--font-weight-semibold);
+	color: color-mix(in srgb, var(--warning) 45%, #000);
+}
+
+.dark .compras-pedido__desde.is-parado {
+	color: var(--warning);
+}
+
+/* Diálogos ------------------------------------------------------------------ */
 
 .compras-dialog__form {
 	display: flex;
@@ -104,8 +399,11 @@
 
 .compras-dialog__pedido {
 	margin: 0;
+	padding: calc(var(--spacing) * 3);
+	border-radius: var(--radius);
+	background-color: var(--color-muted);
 	font-size: var(--text-sm);
-	color: var(--color-muted-foreground);
+	color: var(--color-foreground);
 }
 
 @media (min-width: 48rem) {
@@ -114,11 +412,7 @@
 	}
 }
 
-.compras-secao__descricao {
-	margin: calc(var(--spacing) * 1) 0 0;
-	font-size: var(--text-sm);
-	color: var(--color-muted-foreground);
-}
+/* Roteiro para a loja ------------------------------------------------------- */
 
 .compras-lista__header {
 	display: flex;
@@ -147,9 +441,47 @@
 	width: 2.5rem;
 }
 
+.compras-lista__check input {
+	width: 1.125rem;
+	height: 1.125rem;
+	cursor: pointer;
+}
+
 .compras-lista__nome {
+	display: block;
 	font-weight: var(--font-weight-medium);
 	cursor: pointer;
+}
+
+.compras-lista__detalhe {
+	display: block;
+	font-size: var(--text-xs);
+	color: var(--color-muted-foreground);
+}
+
+.compras-lista__destinos ul {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 1);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	font-size: var(--text-sm);
+}
+
+.compras-lista__destinos li {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: calc(var(--spacing) * 1.5);
+}
+
+.compras-lista__grupo-titulo th,
+.compras-lista__grupo-titulo td {
+	background-color: var(--color-muted);
+	font-size: var(--text-sm);
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-foreground);
 }
 
 .compras-lista__linha.is-separado td:not(.compras-lista__check) {
@@ -160,23 +492,200 @@
 	text-decoration: line-through;
 }
 
-.compras-lista__pedidos {
-	font-size: var(--text-xs);
-}
-
 .compras-lista__progresso {
 	font-size: var(--text-xs);
 	font-weight: var(--font-weight-normal);
 	color: var(--color-muted-foreground);
-	white-space: nowrap;
 }
 
 .compras-lista__tabela tfoot th {
 	border-top: 1px solid var(--color-border);
 }
 
-/* Impressão: só a lista de compras, para levar à loja. Visibilidade (e não
-   display) porque a sidebar e a topbar vêm do shell do portal, fora desta página. */
+/* Celular: as tabelas viram cartões, um por pedido/item, com o rótulo de cada
+   campo ao lado do valor. Assim etapa e próximo passo nunca ficam fora da tela. */
+@media (max-width: 47.99rem) {
+	.compras-etapas__lista {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.compras-etapas__item::after {
+		display: none;
+	}
+
+	.compras-tabela-card,
+	.compras-tabela-card > section {
+		padding: 0;
+		background: transparent;
+		border: 0;
+		box-shadow: none;
+	}
+
+	.compras-tabela thead {
+		display: none;
+	}
+
+	.compras-tabela,
+	.compras-tabela tbody,
+	.compras-tabela tfoot,
+	.compras-tabela tr,
+	.compras-tabela td,
+	.compras-tabela th {
+		display: block;
+		width: 100%;
+	}
+
+	.compras-tabela tbody tr {
+		margin-bottom: calc(var(--spacing) * 3);
+		padding: calc(var(--spacing) * 3) calc(var(--spacing) * 4);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		background-color: var(--color-card);
+	}
+
+	.compras-pedido.is-parado {
+		border-left: 4px solid var(--warning);
+	}
+
+	.compras-tabela td {
+		display: flex;
+		justify-content: space-between;
+		gap: calc(var(--spacing) * 3);
+		padding: calc(var(--spacing) * 1.5) 0;
+		border: 0;
+		text-align: right;
+		white-space: normal;
+	}
+
+	.compras-tabela td::before {
+		content: attr(data-rotulo);
+		flex-shrink: 0;
+		font-size: var(--text-xs);
+		font-weight: var(--font-weight-medium);
+		color: var(--color-muted-foreground);
+		text-align: left;
+	}
+
+	/* Quem pediu é o título do cartão: dispensa o rótulo e alinha à esquerda. */
+	.compras-tabela td.compras-pedido__quem {
+		display: block;
+		padding-bottom: calc(var(--spacing) * 2);
+		text-align: left;
+		border-bottom: 1px solid var(--color-border);
+	}
+
+	.compras-tabela td.compras-pedido__quem::before {
+		content: none;
+	}
+
+	.compras-pedido__lista-itens,
+	.compras-lista__destinos ul {
+		align-items: flex-end;
+	}
+
+	.compras-pedido__desde {
+		justify-content: flex-end;
+	}
+
+	.compras-tabela td.compras-tabela__acoes {
+		display: block;
+		padding-top: calc(var(--spacing) * 3);
+	}
+
+	.compras-tabela td.compras-tabela__acoes::before {
+		content: none;
+	}
+
+	.compras-tabela__acoes button {
+		width: 100%;
+		min-height: 44px;
+	}
+
+	.compras-tabela__aguardando {
+		max-width: none;
+		text-align: left;
+	}
+
+	.compras-lista__destinos li {
+		justify-content: flex-end;
+	}
+
+	.compras-tabela tbody tr.compras-lista__grupo-titulo {
+		display: flex;
+		align-items: center;
+		gap: calc(var(--spacing) * 3);
+		margin: calc(var(--spacing) * 4) 0 calc(var(--spacing) * 2);
+		padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+		border: 0;
+		background-color: var(--color-muted);
+	}
+
+	.compras-lista__grupo-titulo th {
+		flex: 1;
+	}
+
+	.compras-lista__grupo-titulo th,
+	.compras-lista__grupo-titulo td {
+		display: inline;
+		width: auto;
+		padding: 0;
+		background: transparent;
+	}
+
+	.compras-lista__grupo-titulo td::before,
+	.compras-lista__grupo-titulo td:empty {
+		display: none;
+	}
+
+	/* No roteiro, a caixa de marcar e o nome do item formam o título do cartão. */
+	.compras-lista__tabela tbody tr.compras-lista__linha {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		column-gap: calc(var(--spacing) * 3);
+	}
+
+	.compras-lista__linha td {
+		grid-column: 1 / -1;
+	}
+
+	.compras-lista__tabela td.compras-lista__check,
+	.compras-lista__tabela td.compras-lista__item {
+		display: block;
+		grid-column: auto;
+		width: auto;
+		text-align: left;
+	}
+
+	.compras-lista__tabela td.compras-lista__check::before,
+	.compras-lista__tabela td.compras-lista__item::before,
+	.compras-lista__tabela td.compras-lista__preco {
+		display: none;
+	}
+
+	.compras-lista__tabela td.compras-lista__item {
+		padding-bottom: calc(var(--spacing) * 2);
+	}
+
+	.compras-lista__tabela tfoot tr {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		padding: calc(var(--spacing) * 3) calc(var(--spacing) * 4);
+	}
+
+	.compras-lista__tabela tfoot th {
+		display: inline;
+		width: auto;
+		border: 0;
+	}
+
+	.compras-lista__tabela tfoot th:empty {
+		display: none;
+	}
+}
+
+/* Impressão: só o roteiro, para levar à loja. Visibilidade (e não display)
+   porque a sidebar e a topbar vêm do shell do portal, fora desta página. */
 @media print {
 	body.compras-imprimindo-lista * {
 		visibility: hidden;
@@ -196,7 +705,7 @@
 		display: none;
 	}
 
-	body.compras-imprimindo-lista .compras-lista .overflow-x-auto {
+	body.compras-imprimindo-lista .compras-lista .compras-tabela__rolagem {
 		overflow: visible;
 	}
 }

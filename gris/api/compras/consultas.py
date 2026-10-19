@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import frappe
 from frappe import _
-from frappe.utils import flt, fmt_money, format_date
+from frappe.utils import date_diff, flt, fmt_money, format_date, getdate, today
 
 from gris.api.compras import permissoes
 
@@ -15,28 +15,68 @@ CATALOGO_DOCTYPE = "Item de Catalogo de Compras"
 # Ordem do fluxo, usada para a linha do tempo e para ordenar a fila de compras.
 STATUS_ORDEM = ["Solicitada", "Comprada", "Recebida", "Entregue"]
 
+# `etapa` é como a etapa aparece para quem usa a lista: o nome do status diz o que
+# aconteceu ("Comprada"), a etapa diz onde o material está ("Comprado, a caminho").
+# `tom` e `icone` desenham o selo — cor e ícone juntos, para não depender só da cor.
 STATUS_META: dict[str, dict[str, str]] = {
 	"Solicitada": {
 		"variant": "outline",
 		"descricao": "Aguardando a compra pelo gestor da área.",
+		"etapa": "Aguardando compra",
+		"tom": "aguardando",
+		"icone": "clock",
 	},
 	"Comprada": {
 		"variant": "secondary",
 		"descricao": "Compra realizada. Aguardando o material chegar ao grupo.",
+		"etapa": "Comprado, a caminho",
+		"tom": "caminho",
+		"icone": "truck",
 	},
 	"Recebida": {
 		"variant": "primary",
 		"descricao": "Material recebido no grupo. Aguardando entrega ao solicitante.",
+		"etapa": "Na sede, a entregar",
+		"tom": "sede",
+		"icone": "package",
 	},
 	"Entregue": {
 		"variant": "default",
 		"descricao": "Entregue ao solicitante. Pedido concluído.",
+		"etapa": "Entregue",
+		"tom": "entregue",
+		"icone": "circle-check",
 	},
 	"Cancelada": {
 		"variant": "destructive",
 		"descricao": "Solicitação cancelada.",
+		"etapa": "Cancelado",
+		"tom": "cancelado",
+		"icone": "circle-x",
 	},
 }
+
+# Data em que o pedido entrou em cada etapa: é dela que se conta "há quantos dias".
+CAMPO_DATA_DA_ETAPA = {
+	"Solicitada": "data_solicitacao",
+	"Comprada": "data_compra",
+	"Recebida": "data_recebimento",
+	"Entregue": "data_entrega",
+	"Cancelada": "data_cancelamento",
+}
+
+# Sufixo da classe `badge-ramo-*` do design system, que pinta a seção com a cor
+# oficial do ramo. Sem acento nem maiúscula, como as classes CSS.
+SLUG_POR_RAMO = {
+	"Filhotes": "filhotes",
+	"Lobinho": "lobinho",
+	"Escoteiro": "escoteiro",
+	"Sênior": "senior",
+	"Pioneiro": "pioneiro",
+}
+
+# Fora do Programa Educativo o pedido não é de uma seção: a compra é do grupo.
+SECAO_DO_GRUPO = "Grupo todo"
 
 # Opções do catálogo do Programa Educativo, na ordem em que aparecem nos formulários.
 TIPOS_CATALOGO = [
@@ -80,11 +120,23 @@ CAMPOS_LISTA = [
 	"data_compra",
 	"data_recebimento",
 	"data_entrega",
+	"data_cancelamento",
 ]
 
 
 def formatar_moeda(valor) -> str:
 	return fmt_money(flt(valor), currency="BRL")
+
+
+def descrever_dias(dias: int | None) -> str:
+	"""Há quanto tempo, em palavras: "hoje", "ontem", "há 12 dias"."""
+	if dias is None:
+		return ""
+	if dias <= 0:
+		return "hoje"
+	if dias == 1:
+		return "ontem"
+	return f"há {dias} dias"
 
 
 def _hidratar_linha(linha: dict) -> dict:
@@ -105,6 +157,17 @@ def _hidratar_linha(linha: dict) -> dict:
 	linha["data_entrega_fmt"] = (
 		format_date(linha["data_entrega"], "dd/MM/yyyy") if linha.get("data_entrega") else "—"
 	)
+	linha["status_etapa"] = meta.get("etapa", linha.get("status") or "")
+	linha["status_tom"] = meta.get("tom", "")
+	linha["status_icone"] = meta.get("icone", "")
+	linha["secao"] = linha.get("ramo") or SECAO_DO_GRUPO
+	linha["ramo_slug"] = SLUG_POR_RAMO.get(linha.get("ramo") or "")
+	data_etapa = linha.get(CAMPO_DATA_DA_ETAPA.get(linha.get("status") or "", "")) or linha.get(
+		"data_solicitacao"
+	)
+	linha["data_etapa_fmt"] = format_date(data_etapa, "dd/MM/yyyy") if data_etapa else "—"
+	linha["dias_na_etapa"] = date_diff(today(), getdate(data_etapa)) if data_etapa else None
+	linha["dias_na_etapa_fmt"] = descrever_dias(linha["dias_na_etapa"])
 	linha["valor_estimado_fmt"] = formatar_moeda(linha.get("valor_estimado"))
 	linha["valor_pago_fmt"] = formatar_moeda(linha.get("valor_pago")) if linha.get("valor_pago") else "—"
 	return linha
@@ -124,8 +187,29 @@ def _contar_itens(nomes: list[str]) -> dict[str, int]:
 	return {linha["parent"]: int(linha["total"] or 0) for linha in linhas}
 
 
+def _itens_por_solicitacao(nomes: list[str]) -> dict[str, list[dict]]:
+	"""Itens de cada solicitação (nome e quantidade), em uma única query."""
+	if not nomes:
+		return {}
+
+	itens: dict[str, list[dict]] = {}
+	for linha in frappe.get_all(
+		ITEM_DOCTYPE,
+		filters={"parent": ["in", nomes], "parenttype": DOCTYPE},
+		fields=["parent", "item_catalogo", "quantidade"],
+		order_by="parent asc, idx asc",
+	):
+		itens.setdefault(linha["parent"], []).append(
+			{"nome": linha["item_catalogo"] or "—", "quantidade": int(linha["quantidade"] or 0)}
+		)
+	return itens
+
+
 def listar_solicitacoes(
-	filtros: dict | None = None, limite: int = 200, or_filtros: dict | None = None
+	filtros: dict | None = None,
+	limite: int = 200,
+	or_filtros: dict | None = None,
+	com_itens: bool = False,
 ) -> list[dict]:
 	# O recorte de acesso é responsabilidade de quem chama: as páginas de portal já
 	# validam o papel do usuário e passam os filtros correspondentes (ex.: solicitante).
@@ -138,11 +222,20 @@ def listar_solicitacoes(
 		limit_page_length=limite,
 	)
 
-	totais = _contar_itens([r["name"] for r in registros])
+	nomes = [r["name"] for r in registros]
+	# Com os itens em mãos, o total de peças sai deles: continua sendo uma query só.
+	itens = _itens_por_solicitacao(nomes) if com_itens else {}
+	totais = (
+		{nome: sum(item["quantidade"] for item in lista) for nome, lista in itens.items()}
+		if com_itens
+		else _contar_itens(nomes)
+	)
 	linhas = []
 	for registro in registros:
 		linha = _hidratar_linha(registro)
 		linha["total_pecas"] = totais.get(registro["name"], 0)
+		if com_itens:
+			linha["itens"] = itens.get(registro["name"], [])
 		linhas.append(linha)
 	return linhas
 
@@ -173,7 +266,7 @@ def lista_de_compras(nomes: list[str]) -> list[dict]:
 			filters={
 				"name": ["in", list({item["item_catalogo"] for item in itens if item["item_catalogo"]})]
 			},
-			fields=["name", "nome", "tipo", "ramo", "codigo", "valor_unitario"],
+			fields=["name", "nome", "area", "tipo", "ramo", "codigo", "valor_unitario"],
 		)
 	}
 
@@ -186,6 +279,7 @@ def lista_de_compras(nomes: list[str]) -> list[dict]:
 			linha = consolidado[chave] = {
 				"item_catalogo": chave,
 				"nome": registro.get("nome") or chave or "—",
+				"area": registro.get("area") or "",
 				"tipo": registro.get("tipo") or item.get("tipo") or "—",
 				"ramo": registro.get("ramo") or item.get("ramo") or "—",
 				"codigo": registro.get("codigo") or "",
@@ -193,10 +287,15 @@ def lista_de_compras(nomes: list[str]) -> list[dict]:
 				"valor_unitario": flt(registro.get("valor_unitario") or item.get("valor_unitario")),
 				"quantidade": 0,
 				"pedidos": [],
+				# Quanto deste item cada pedido levou: é o que diz para quem é cada peça.
+				"quantidade_por_pedido": {},
 			}
-		linha["quantidade"] += int(item.get("quantidade") or 0)
+		quantidade = int(item.get("quantidade") or 0)
+		linha["quantidade"] += quantidade
 		if item["parent"] not in linha["pedidos"]:
 			linha["pedidos"].append(item["parent"])
+		por_pedido = linha["quantidade_por_pedido"]
+		por_pedido[item["parent"]] = por_pedido.get(item["parent"], 0) + quantidade
 
 	linhas = sorted(
 		consolidado.values(),

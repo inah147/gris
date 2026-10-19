@@ -20,12 +20,13 @@ from .credentials import load_credentials
 from .faker_helpers import reset_seed
 from .frappe_setup import seed_frappe_setup
 from .modules.adultos import seed_adultos
+from .modules.compras import seed_compras
 from .modules.financeiro import seed_financeiro
 from .modules.gris_core import seed_gris_core
 from .modules.projetos import seed_projetos_modulo
 from .volume import get_preset
 
-VALID_MODULES = {"frappe", "gris", "financeiro", "projetos", "adultos"}
+VALID_MODULES = {"frappe", "gris", "financeiro", "projetos", "adultos", "compras"}
 
 
 def seed_test_data(
@@ -39,7 +40,7 @@ def seed_test_data(
 	Args:
 	    volume: small | medium | large
 	    only: lista de módulos a rodar; None = todos.
-	          Valores válidos: 'frappe', 'gris', 'financeiro', 'projetos', 'adultos'
+	          Valores válidos: 'frappe', 'gris', 'financeiro', 'projetos', 'adultos', 'compras'
 	    dry_run: se True, faz rollback no final (útil para validar sem persistir)
 	"""
 	if only:
@@ -75,6 +76,10 @@ def seed_test_data(
 
 	if not only or "adultos" in only:
 		seed_adultos(creds, n)
+		print()
+
+	if not only or "compras" in only:
+		seed_compras(creds, n)
 		print()
 
 	if dry_run:

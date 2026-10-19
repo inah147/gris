@@ -4,6 +4,7 @@
 
 	const dialogCompra = document.getElementById("dialog-compra");
 	const dialogRecebimento = document.getElementById("dialog-recebimento");
+	const dialogEntrega = document.getElementById("dialog-entrega");
 
 	let pedidoSelecionado = null;
 
@@ -153,11 +154,12 @@
 		if (!botao) return;
 
 		pedidoSelecionado = botao.dataset.nome;
+		const resumo = `Pedido ${botao.dataset.nome} · ${botao.dataset.solicitante} · ${botao.dataset.secao}`;
 
 		if (botao.dataset.acao === "comprar") {
-			document.getElementById("compra-pedido").textContent = pedidoSelecionado;
-			document.getElementById("compra-estimado").textContent = formatarMoeda(
-				botao.dataset.estimado
+			preencherResumo(
+				dialogCompra,
+				`${resumo} · estimado ${formatarMoeda(botao.dataset.estimado)}`
 			);
 			limparCampos(dialogCompra, ["fornecedor", "numero_documento", "observacoes_compra"]);
 			definirValorComponente("compra-data", hoje());
@@ -168,11 +170,26 @@
 		}
 
 		if (botao.dataset.acao === "receber") {
-			document.getElementById("recebimento-pedido").textContent = pedidoSelecionado;
+			preencherResumo(dialogRecebimento, resumo);
 			definirValorComponente("recebimento-data", hoje());
 			dialogRecebimento.showModal();
+			return;
+		}
+
+		if (botao.dataset.acao === "entregar") {
+			preencherResumo(dialogEntrega, resumo);
+			limparCampos(dialogEntrega, ["observacoes_entrega"]);
+			definirValorComponente("entrega-data", hoje());
+			dialogEntrega.showModal();
 		}
 	});
+
+	// O diálogo repete quem pediu e para qual seção: é o que confirma que o
+	// registro vai para o pedido certo, sem precisar decorar o código.
+	function preencherResumo(dialog, texto) {
+		const alvo = dialog.querySelector("[data-dialog-resumo]");
+		if (alvo) alvo.textContent = texto;
+	}
 
 	function enviar(metodo, payload, botao, mensagem) {
 		botao.disabled = true;
@@ -236,6 +253,27 @@
 			{ name: pedidoSelecionado, data_recebimento: dataRecebimento },
 			this,
 			"Recebimento registrado."
+		);
+	});
+
+	document.getElementById("btn-confirmar-entrega")?.addEventListener("click", function () {
+		if (!pedidoSelecionado) return;
+
+		const dataEntrega = lerValor(dialogEntrega, "data_entrega");
+		if (!dataEntrega) {
+			showToast("warning", "Informe a data da entrega.");
+			return;
+		}
+
+		enviar(
+			"gris.api.compras.endpoints.registrar_entrega",
+			{
+				name: pedidoSelecionado,
+				data_entrega: dataEntrega,
+				observacoes_entrega: lerValor(dialogEntrega, "observacoes_entrega"),
+			},
+			this,
+			"Entrega registrada. Pedido concluído."
 		);
 	});
 })();

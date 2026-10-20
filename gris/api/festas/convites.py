@@ -1073,3 +1073,94 @@ def reenviar_convite_convidado(convidado_row: str) -> dict:
 
 	canais = enfileirar_envio_convite(convite_name, convidado_row_name=convidado_row, forcar_todos=True)
 	return {"ok": True, **canais, "mensagem": mensagem_de_reenvio(canais)}
+
+
+# ---------------------------------------------------------------------------
+# Lembrete da festa pelo WhatsApp (botão na aba Convites)
+# ---------------------------------------------------------------------------
+
+
+JOB_LEMBRETE = "gris.festas.utils.lembrete_festa.enviar_lembrete_festa"
+
+
+def _festa_do_lembrete(festa_name: str) -> frappe._dict:
+	_ensure_gestor()
+	_validate_festa(festa_name)
+	return frappe.db.get_value(
+		"Festa",
+		festa_name,
+		["name", "nome_festa", "data", "horario_inicio", "lembrete_enviado_em", "lembrete_enviado_por"],
+		as_dict=True,
+	)
+
+
+@frappe.whitelist()
+def previa_lembrete(festa_name: str) -> dict:
+	"""Quantas mensagens o lembrete vai mandar, para a confirmação antes do envio."""
+	from frappe.utils import format_datetime, get_fullname
+
+	from gris.festas.utils.lembrete_festa import TIPO_COMPRADOR, montar_lembretes, quando_e_a_festa
+
+	festa = _festa_do_lembrete(festa_name)
+	lembretes = montar_lembretes(festa_name)
+	destinatarios = lembretes["destinatarios"]
+	compradores = sum(1 for d in destinatarios if d.tipo == TIPO_COMPRADOR)
+	return {
+		"convidados": len(destinatarios) - compradores,
+		"compradores": compradores,
+		"sem_telefone": lembretes["sem_telefone"],
+		"quando": quando_e_a_festa(festa),
+		"festa_passou": getdate(festa.data) < getdate(today()),
+		"ja_enviado_em": (
+			format_datetime(festa.lembrete_enviado_em, "dd/MM/yyyy 'às' HH:mm")
+			if festa.lembrete_enviado_em
+			else ""
+		),
+		"ja_enviado_por": get_fullname(festa.lembrete_enviado_por) if festa.lembrete_enviado_por else "",
+	}
+
+
+@frappe.whitelist(methods=["POST"])
+@rate_limit(key="festa_name", limit=3, seconds=60)
+def enviar_lembrete(festa_name: str) -> dict:
+	"""Enfileira o lembrete da festa no WhatsApp para convidados e compradores.
+
+	Pode ser enviado de novo (a prévia avisa quando já foi): grava quando e por quem foi o
+	último envio. O `job_id` impede dois jobs da mesma festa rodando ao mesmo tempo.
+	"""
+	from frappe.utils import now
+	from frappe.utils.background_jobs import is_job_enqueued
+
+	from gris.festas.utils.lembrete_festa import montar_lembretes
+
+	festa = _festa_do_lembrete(festa_name)
+	if getdate(festa.data) < getdate(today()):
+		frappe.throw(_("A festa já aconteceu; o lembrete não pode mais ser enviado."))
+	job_id = f"lembrete-festa-{festa_name}"
+	if is_job_enqueued(job_id):
+		frappe.throw(_("O lembrete desta festa ainda está sendo enviado. Aguarde terminar."))
+	destinatarios = montar_lembretes(festa_name)["destinatarios"]
+	if not destinatarios:
+		frappe.throw(_("Nenhum convidado com telefone para receber o lembrete."))
+
+	frappe.db.set_value(
+		"Festa",
+		festa_name,
+		{"lembrete_enviado_em": now(), "lembrete_enviado_por": frappe.session.user},
+		update_modified=False,
+	)
+	frappe.enqueue(
+		JOB_LEMBRETE,
+		queue="long",
+		timeout=3600,
+		job_id=job_id,
+		deduplicate=True,
+		enqueue_after_commit=True,
+		festa_name=festa_name,
+	)
+	return {
+		"ok": True,
+		"mensagem": _("Lembrete enfileirado para {0} número(s). As mensagens saem aos poucos.").format(
+			len(destinatarios)
+		),
+	}

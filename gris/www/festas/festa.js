@@ -4582,6 +4582,111 @@
 		});
 	}
 
+	// O frappe.call do portal não avisa quando a chamada falha (nem chama `error`):
+	// o lembrete usa fetch para mostrar o motivo do servidor no toast.
+	function postApi(method, args) {
+		return fetch("/api/method/" + method, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+				"X-Frappe-CSRF-Token": frappe.csrf_token || "",
+			},
+			credentials: "same-origin",
+			body: JSON.stringify(args || {}),
+		}).then(function (resposta) {
+			return resposta
+				.json()
+				.catch(function () {
+					return {};
+				})
+				.then(function (dados) {
+					if (resposta.ok) return dados.message;
+					throw new Error(mensagemDoServidor(dados) || "Falha ao falar com o servidor.");
+				});
+		});
+	}
+
+	function mensagemDoServidor(dados) {
+		try {
+			const mensagens = JSON.parse((dados && dados._server_messages) || "[]");
+			const primeira = mensagens.length ? JSON.parse(mensagens[0]).message : "";
+			return String(primeira || "")
+				.replace(/<[^>]*>/g, " ")
+				.replace(/\s+/g, " ")
+				.trim();
+		} catch (e) {
+			return "";
+		}
+	}
+
+	function plural(n, singular, varios) {
+		return n + " " + (n === 1 ? singular : varios);
+	}
+
+	function enviarLembreteFesta(btn) {
+		btn.disabled = true;
+		postApi("gris.api.festas.convites.previa_lembrete", { festa_name: festaName })
+			.then(function (previa) {
+				if (previa.festa_passou) {
+					toast("A festa já aconteceu; o lembrete não pode mais ser enviado.", "error");
+					return false;
+				}
+				const total = previa.convidados + previa.compradores;
+				if (!total) {
+					toast("Nenhum convidado com telefone para receber o lembrete.", "error");
+					return false;
+				}
+				let mensagem =
+					"A festa " +
+					previa.quando +
+					". Vamos mandar o lembrete com o convite pelo WhatsApp para " +
+					plural(previa.convidados, "convidado", "convidados") +
+					" e " +
+					plural(previa.compradores, "comprador", "compradores") +
+					" (que recebem a lista dos convidados).";
+				if (previa.sem_telefone) {
+					mensagem +=
+						" " +
+						plural(previa.sem_telefone, "convidado está", "convidados estão") +
+						" sem telefone e fica" +
+						(previa.sem_telefone === 1 ? "" : "m") +
+						" de fora.";
+				}
+				if (previa.ja_enviado_em) {
+					mensagem +=
+						" Atenção: o lembrete já foi enviado em " +
+						previa.ja_enviado_em +
+						(previa.ja_enviado_por ? " por " + previa.ja_enviado_por : "") +
+						"; todos vão recebê-lo de novo.";
+				}
+				btn.disabled = false;
+				return confirmDialog({
+					title: previa.ja_enviado_em
+						? "Enviar o lembrete de novo?"
+						: "Enviar lembrete da festa?",
+					message: mensagem,
+					confirmLabel: "Enviar lembrete",
+					variant: "primary",
+				});
+			})
+			.then(function (ok) {
+				if (!ok) return;
+				btn.disabled = true;
+				return postApi("gris.api.festas.convites.enviar_lembrete", {
+					festa_name: festaName,
+				}).then(function (resposta) {
+					toast((resposta && resposta.mensagem) || "Lembrete enfileirado.", "success");
+				});
+			})
+			.catch(function (err) {
+				toast((err && err.message) || "Falha ao enviar o lembrete.", "error");
+			})
+			.finally(function () {
+				btn.disabled = false;
+			});
+	}
+
 	function renderOpcoesTable() {
 		const container = document.getElementById("opcoes-convite-table-container");
 		if (!container) {
@@ -4929,6 +5034,13 @@
 				renderConvitesLinha();
 			});
 		});
+
+		const lembreteBtn = document.getElementById("btn-lembrete-festa");
+		if (lembreteBtn) {
+			lembreteBtn.addEventListener("click", function () {
+				enviarLembreteFesta(lembreteBtn);
+			});
+		}
 
 		const copyBtn = document.getElementById("btn-copy-link-vendas");
 		if (copyBtn) {

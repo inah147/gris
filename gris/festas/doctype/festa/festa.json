@@ -68,6 +68,10 @@
   "venda_na_portaria",
   "convite_por_lotes",
   "lotes_convite",
+  "lembrete_section",
+  "lembrete_enviado_em",
+  "lembrete_col",
+  "lembrete_enviado_por",
   "fechamento_caixa_section",
   "valor_arrecadado_festa",
   "produtos_tab",
@@ -444,6 +448,32 @@
    "reqd": 1
   },
   {
+   "collapsible": 1,
+   "fieldname": "lembrete_section",
+   "fieldtype": "Section Break",
+   "label": "Lembrete aos Convidados"
+  },
+  {
+   "description": "Quando o \u00faltimo lembrete da festa foi disparado pelo WhatsApp (aba Convites).",
+   "fieldname": "lembrete_enviado_em",
+   "fieldtype": "Datetime",
+   "label": "Lembrete enviado em",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "lembrete_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "lembrete_enviado_por",
+   "fieldtype": "Link",
+   "label": "Lembrete enviado por",
+   "no_copy": 1,
+   "options": "User",
+   "read_only": 1
+  },
+  {
    "fieldname": "fechamento_caixa_section",
    "fieldtype": "Section Break",
    "label": "Fechamento de Caixa"
@@ -554,7 +584,7 @@
    "link_fieldname": "festa"
   }
  ],
- "modified": "2026-06-09 09:39:40.576079",
+ "modified": "2026-10-20 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Festas",
  "name": "Festa",

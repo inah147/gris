@@ -15,6 +15,7 @@ from frappe import _
 from frappe.utils import add_days, getdate, nowdate, strip_html
 
 from gris.gestao_de_tarefas.user_board import ensure_user_board
+from gris.gris.doctype.board.board_permissions import pode_acessar_board
 from gris.gris.doctype.gestao_de_tarefas.gestao_de_tarefas import (
 	TASK_FIELDS,
 	TASK_STATUS_DONE,
@@ -414,14 +415,15 @@ def _gravar_status(tarefa_name: str, status: str, previous_status: str, data_ini
 	tarefa.save(ignore_permissions=True)
 
 
-def _can_user_access_tarefa(tarefa, user: str) -> bool:
+def _can_user_access_tarefa(tarefa, user: str, *, editar: bool = False) -> bool:
 	if (tarefa.responsavel or "") == user:
 		return True
 	if not tarefa.board:
 		return False
-	# Delega ao sistema de permissao de Board (board_has_permission), que cobre
-	# uniformemente quadros de Projeto, Festa e soltos via `usuarios_autorizados`.
-	return bool(frappe.has_permission("Board", doc=tarefa.board, ptype="read", user=user))
+	# Delega a regra de Board (`pode_acessar_board`), que cobre quadros de
+	# Projeto e soltos via `usuarios_autorizados` e o quadro de festa (leitura
+	# aberta, edicao so para a equipe).
+	return pode_acessar_board(tarefa.board, user, editar=editar)
 
 
 def _serialize_comentarios(tarefa_name: str) -> list[dict[str, Any]]:
@@ -483,7 +485,7 @@ def adicionar_comentario(tarefa_name: str, texto: str) -> dict[str, Any]:
 	if not frappe.db.exists("Gestao de Tarefas", tarefa_name):
 		frappe.throw(_("Tarefa nao encontrada."))
 	tarefa = frappe.get_doc("Gestao de Tarefas", tarefa_name)
-	if not _can_user_access_tarefa(tarefa, user):
+	if not _can_user_access_tarefa(tarefa, user, editar=True):
 		frappe.throw(
 			_("Voce nao tem permissao para comentar nesta tarefa."),
 			frappe.PermissionError,

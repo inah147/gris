@@ -6,6 +6,7 @@ from frappe import _
 from gris.api.gestao_de_tarefas.minhas_tarefas import _ensure_board_pessoal
 from gris.api.portal_access import enrich_context
 from gris.api.portal_cache_utils import get_uel_cached
+from gris.gris.doctype.board.board_permissions import pode_acessar_board
 
 no_cache = 1
 
@@ -60,7 +61,7 @@ def get_context(context):
 		if not frappe.db.exists("Board", board_param):
 			frappe.local.flags.redirect_location = "/gestao_tarefas"
 			raise frappe.Redirect
-		if not frappe.has_permission("Board", doc=board_param, ptype="read"):
+		if not pode_acessar_board(board_param):
 			frappe.throw(_("Sem permissao para acessar este quadro."), frappe.PermissionError)
 		board_meta = (
 			frappe.db.get_value(

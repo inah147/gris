@@ -387,15 +387,20 @@
 			mode: modo,
 			currentUser: $("currentUser")?.value || "",
 			currentUserFullName: $("currentUserFullName")?.value || "",
-			canEdit: true,
+			// Em modo projeto a edicao so e liberada depois que o servidor confirma
+			// (`pode_editar`): quadro de festa e legivel por todos, mas so a equipe
+			// da festa edita.
+			canEdit: modo !== "projeto",
 			onLoad: async (opts) => {
 				const args = modo === "projeto" ? { board_name: boardName } : {};
 				args.ocultar_concluidos = opts?.ocultarConcluidos ? 1 : 0;
 				const data = await callApi(methods.bootstrap, args);
-				return {
+				const result = {
 					tarefas: data.tarefas || [],
 					responsavelOptions: data.responsavel_options || [],
 				};
+				if (modo === "projeto") result.canEdit = Boolean(data.pode_editar);
+				return result;
 			},
 			onSaveTask: async (payload, opts) => {
 				const taskPayload =
@@ -447,16 +452,17 @@
 			},
 		});
 
-		// Em modo projeto o hint inicial e um placeholder ("Carregando
-		// permissoes...") que depende do JS para ser substituido. Aqui a edicao
-		// e sempre liberada (canEdit: true), entao definimos o hint final.
-		if (modo === "projeto") {
-			kanban.setHint(
-				"Arraste cards entre colunas, clique para editar ou crie novas tarefas."
-			);
-		}
-
 		kanban.refresh().then(() => {
+			// Em modo projeto o hint inicial e um placeholder ("Carregando
+			// permissoes...") que depende do JS para ser substituido.
+			if (modo === "projeto") {
+				kanban.setHint(
+					kanban.canEdit
+						? "Arraste cards entre colunas, clique para editar ou crie novas tarefas."
+						: "Somente leitura: apenas a equipe deste quadro pode editar as tarefas."
+				);
+			}
+
 			// Abre o dialog da tarefa quando a URL traz ?tarefa=<name> (ex.: vindo
 			// do popover de tarefas da topbar).
 			const tarefaParam = (

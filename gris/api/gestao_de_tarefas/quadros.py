@@ -21,6 +21,7 @@ from gris.api.gestao_de_tarefas.minhas_tarefas import (
 	_parse_payload,
 	_require_logged_user,
 )
+from gris.gris.doctype.board.board_permissions import pode_acessar_board
 from gris.gris.doctype.gestao_de_tarefas.gestao_de_tarefas import TASK_STATUS_DONE, TASK_STATUS_OPTIONS
 
 
@@ -127,13 +128,15 @@ def criar_quadro(titulo: str) -> dict[str, Any]:
 	return {"ok": True, "name": board.name, "titulo": board.titulo}
 
 
-def _assert_board_acessivel(board_name: str) -> str:
+def _assert_board_acessivel(board_name: str, *, editar: bool = False) -> str:
 	board_name = (board_name or "").strip()
 	if not board_name:
 		frappe.throw(_("Quadro nao informado."))
 	if not frappe.db.exists("Board", board_name):
 		frappe.throw(_("Quadro nao encontrado."))
-	if not frappe.has_permission("Board", doc=board_name, ptype="read"):
+	if not pode_acessar_board(board_name, editar=editar):
+		if editar:
+			frappe.throw(_("Voce pode ver este quadro, mas nao edita-lo."), frappe.PermissionError)
 		frappe.throw(_("Sem permissao para acessar este quadro."), frappe.PermissionError)
 	return board_name
 
@@ -200,6 +203,7 @@ def bootstrap_quadro(board_name: str, ocultar_concluidos: str | int | bool = 0) 
 		"user_full_name": frappe.db.get_value("User", user, "full_name") or user,
 		"user_board_name": board_name,
 		"board": board,
+		"pode_editar": pode_acessar_board(board_name, user, editar=True),
 		"tarefas": _listar_tarefas_do_quadro(
 			board_name, ocultar_concluidos=bool(frappe.utils.cint(ocultar_concluidos))
 		),
@@ -223,7 +227,7 @@ def salvar_tarefa_quadro(
 ) -> dict[str, Any]:
 	_require_logged_user()
 	payload = _parse_payload(tarefa)
-	board_name = _assert_board_acessivel((payload.get("board") or "").strip())
+	board_name = _assert_board_acessivel((payload.get("board") or "").strip(), editar=True)
 
 	tarefa_name = (payload.get("name") or "").strip()
 	existing = None
@@ -285,7 +289,7 @@ def atualizar_status_quadro(
 	)
 	if not current:
 		frappe.throw(_("Tarefa nao encontrada."))
-	board_name = _assert_board_acessivel(current.get("board") or "")
+	board_name = _assert_board_acessivel(current.get("board") or "", editar=True)
 
 	previous_status = (current.get("status") or "").strip()
 	# Grava pelo documento (e nao com `frappe.db.set_value`) para os hooks de
@@ -300,22 +304,29 @@ def atualizar_status_quadro(
 
 
 def _assert_pode_editar_tarefa(board_name: str) -> tuple[str, str]:
-	"""Exige nivel Editar/Gerenciar (ou System Manager) no quadro.
+	"""Exige nivel Editar/Gerenciar (ou System Manager) no quadro; no quadro de
+	festa, o papel "Gestor de festas" tambem passa.
 
-	Mais restritivo que `_assert_board_acessivel` (usado por salvar/mover, que
-	so exige leitura): exclusao e destrutiva e irreversivel, entao aqui vale a
-	pena divergir da lassidao pre-existente das demais mutacoes do quadro.
+	Mais restritivo que `_assert_board_acessivel` (que, fora dos quadros de
+	festa, libera salvar/mover a quem so le): exclusao e destrutiva e
+	irreversivel, entao aqui vale a pena divergir da lassidao pre-existente das
+	demais mutacoes do quadro.
 	"""
 	user = _require_logged_user()
 	board_name = _assert_board_acessivel(board_name)
 	if "System Manager" in frappe.get_roles(user):
 		return user, board_name
-	if _nivel_do_usuario(board_name, user) not in {"Editar", "Gerenciar"}:
-		frappe.throw(
-			_("Apenas membros com nivel Editar ou Gerenciar podem excluir tarefas."),
-			frappe.PermissionError,
-		)
-	return user, board_name
+	if _nivel_do_usuario(board_name, user) in {"Editar", "Gerenciar"}:
+		return user, board_name
+	# No quadro de festa o papel "Gestor de festas" tambem edita sem ser membro.
+	if frappe.db.get_value("Board", board_name, "referencia_doctype") == "Festa" and pode_acessar_board(
+		board_name, user, editar=True
+	):
+		return user, board_name
+	frappe.throw(
+		_("Apenas membros com nivel Editar ou Gerenciar podem excluir tarefas."),
+		frappe.PermissionError,
+	)
 
 
 @frappe.whitelist()
@@ -481,7 +492,8 @@ def remover_membro(board_name: str, user: str) -> dict[str, Any]:
 def buscar_usuarios(board_name: str, query: str = "") -> dict[str, Any]:
 	"""Autocomplete de Users (excluindo quem ja participa do board)."""
 	_require_logged_user()
-	board_name = _assert_board_acessivel(board_name)
+	# Exige edicao: quem so le um quadro de festa nao deve listar os usuarios.
+	board_name = _assert_board_acessivel(board_name, editar=True)
 	query = (query or "").strip()
 
 	ja_membros = frappe.get_all(

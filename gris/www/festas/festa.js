@@ -6515,8 +6515,10 @@
 
 // ─── Kanban de tarefas da festa ─────────────────────────────────────────────
 // Reutiliza a API genérica de quadros (gris.api.gestao_de_tarefas.*), que é
-// keyed por Board e impõe a permissão de Board no backend: qualquer integrante
-// da festa presente em `usuarios_autorizados` pode editar o quadro.
+// keyed por Board e impõe a permissão de Board no backend: qualquer usuário
+// logado lê o quadro da festa, mas só a equipe da festa (Editar/Gerenciar em
+// `usuarios_autorizados`) e o papel "Gestor de festas" editam. O kanban começa
+// travado e só libera a edição quando o bootstrap devolve `pode_editar`.
 (function () {
 	"use strict";
 
@@ -6557,12 +6559,13 @@
 			mode: "projeto",
 			currentUser: $("currentUser")?.value || "",
 			currentUserFullName: $("currentUserFullName")?.value || "",
-			canEdit: true,
+			canEdit: false,
 			onLoad: async () => {
 				const data = await callApi(METHODS.bootstrap, { board_name: board });
 				return {
 					tarefas: data.tarefas || [],
 					responsavelOptions: data.responsavel_options || [],
+					canEdit: Boolean(data.pode_editar),
 				};
 			},
 			onSaveTask: async (payload) => {
@@ -6599,7 +6602,13 @@
 			},
 		});
 
-		kanban.refresh();
+		kanban.refresh().then(() => {
+			if (!kanban.canEdit) {
+				kanban.setHint(
+					"Somente leitura: apenas a equipe desta festa pode editar as tarefas."
+				);
+			}
+		});
 	}
 
 	if (document.readyState === "loading") {

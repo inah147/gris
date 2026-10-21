@@ -71,9 +71,9 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Pendente\nPago\nErro\nSubstitu\u00edda",
+   "options": "Pendente\nPago\nErro\nSubstitu\u00edda\nCancelada",
    "read_only": 1,
-   "description": "Substitu\u00edda: uma cobran\u00e7a mais nova do mesmo associado passou a valer. Se o link antigo for pago mesmo assim, o pagamento \u00e9 aceito."
+   "description": "Substitu\u00edda: uma cobran\u00e7a mais nova do mesmo associado passou a valer. Cancelada: o gestor desistiu da cobran\u00e7a pendente (ex.: os meses foram pagos por outro meio). Nos dois casos, se o link antigo for pago mesmo assim, o pagamento \u00e9 aceito."
   },
   {
    "fieldname": "column_break_pedido",
@@ -335,7 +335,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-13 10:00:00.000000",
+ "modified": "2026-10-21 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Financeiro",
  "name": "Cobranca Infinitepay",

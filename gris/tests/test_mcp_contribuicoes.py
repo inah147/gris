@@ -428,6 +428,51 @@ class TestPagamentosContribuicaoMensal(TestCase):
 		self.assertTrue(resultado["atualizado"])
 
 
+class TestCancelarCobranca(TestCase):
+	def _cobranca(self, status="Pendente", finalidade="Contribuição Mensal"):
+		from frappe import _dict
+
+		return _dict(name="CM-1", status=status, finalidade=finalidade, competencias="2026-09,2026-10")
+
+	def test_exige_cobranca_de_contribuicao(self):
+		with patch.object(
+			contribuicoes.frappe.db, "get_value", return_value=self._cobranca(finalidade="Avulsa")
+		):
+			with self.assertRaises(ErroDeFerramenta) as ctx:
+				contribuicoes.cancelar_cobranca_contribuicao("CM-1")
+		self.assertEqual(ctx.exception.codigo, "NAO_ENCONTRADO")
+
+	def test_so_cancela_pendente(self):
+		with patch.object(contribuicoes.frappe.db, "get_value", return_value=self._cobranca(status="Pago")):
+			with self.assertRaises(ErroDeFerramenta) as ctx:
+				contribuicoes.cancelar_cobranca_contribuicao("CM-1")
+		self.assertEqual(ctx.exception.codigo, "ARGUMENTO_INVALIDO")
+
+	def test_simulacao_nao_grava(self):
+		with (
+			patch.object(contribuicoes.frappe.db, "get_value", return_value=self._cobranca()),
+			patch("gris.api.financeiro.cobranca_contribuicao.cancelar_cobranca") as cancelar,
+		):
+			resultado = contribuicoes.cancelar_cobranca_contribuicao("CM-1", simular=True)
+
+		cancelar.assert_not_called()
+		self.assertEqual(resultado["competencias"], ["2026-09", "2026-10"])
+		self.assertEqual(resultado["status"], {"de": "Pendente", "para": "Cancelada"})
+
+	def test_cancela_pelo_servico(self):
+		with (
+			patch.object(contribuicoes.frappe.db, "get_value", return_value=self._cobranca()),
+			patch(
+				"gris.api.financeiro.cobranca_contribuicao.cancelar_cobranca",
+				return_value={"name": "CM-1", "status": "Cancelada"},
+			) as cancelar,
+		):
+			resultado = contribuicoes.cancelar_cobranca_contribuicao("CM-1")
+
+		cancelar.assert_called_once_with("CM-1")
+		self.assertEqual(resultado["status"], "Cancelada")
+
+
 class TestRegistroDeFerramentas(TestCase):
 	def test_catalogo_reflete_a_apuracao_por_transacoes(self):
 		from gris.api.mcp import registry
@@ -444,6 +489,7 @@ class TestRegistroDeFerramentas(TestCase):
 			"listar_pagamentos_contribuicao_mensal",
 			"atualizar_pagamento_contribuicao_mensal",
 			"definir_pagamento_mensal",
+			"cancelar_cobranca_contribuicao",
 		}
 		self.assertTrue(esperadas.issubset(nomes), esperadas - nomes)
 

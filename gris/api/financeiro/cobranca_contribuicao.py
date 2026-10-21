@@ -63,6 +63,7 @@ FINALIDADE_CONTRIBUICAO = "Contribuição Mensal"
 STATUS_COBRANCA_PENDENTE = "Pendente"
 STATUS_COBRANCA_PAGA = "Pago"
 STATUS_COBRANCA_SUBSTITUIDA = "Substituída"
+STATUS_COBRANCA_CANCELADA = "Cancelada"
 
 # Quem emitiu a cobrança.
 ORIGEM_MANUAL = "Manual"
@@ -458,6 +459,34 @@ def emitir_cobranca(
 		"telefone": cobranca.customer_phone or "",
 		"substituidas": anteriores if cobranca.link_pagamento else [],
 	}
+
+
+def cancelar_cobranca(name: str) -> dict:
+	"""Cancela uma cobrança de contribuição pendente e devolve o que mudou.
+
+	Serve ao gestor que desistiu de cobrar aquele link — os meses foram pagos por
+	outro meio, ou a cobrança saiu errada. Só a cobrança pendente pode ser
+	cancelada: a paga já tem baixa no extrato e a substituída já saiu de cena.
+
+	Não checa papel: quem chama é a ferramenta do MCP, que já exige o gestor. Como
+	na "Substituída", se o link for pago mesmo assim o webhook aceita o pagamento:
+	o dinheiro entrou e a baixa precisa existir.
+	"""
+	cobranca = frappe.db.get_value(
+		"Cobranca Infinitepay", name, ["name", "status", "finalidade"], as_dict=True
+	)
+	if not cobranca or cobranca.finalidade != FINALIDADE_CONTRIBUICAO:
+		frappe.throw(
+			_("Nenhuma cobrança de contribuição com o nome {0}.").format(name), frappe.DoesNotExistError
+		)
+	if cobranca.status != STATUS_COBRANCA_PENDENTE:
+		frappe.throw(
+			_("A cobrança {0} está {1} e só a pendente pode ser cancelada.").format(name, cobranca.status),
+			frappe.ValidationError,
+		)
+
+	frappe.db.set_value("Cobranca Infinitepay", name, "status", STATUS_COBRANCA_CANCELADA)
+	return {"name": name, "status_anterior": cobranca.status, "status": STATUS_COBRANCA_CANCELADA}
 
 
 def _itens_da_cobranca(nome: str) -> dict[str, float]:

@@ -349,7 +349,13 @@ def enviar_lembretes(
 
 
 # Classe visual (badge da tela de contribuições) de cada situação da cobrança.
-SLUG_STATUS_COBRANCA = {"Pago": "pago", "Pendente": "aberto", "Erro": "atrasado", "Substituída": "na"}
+SLUG_STATUS_COBRANCA = {
+	"Pago": "pago",
+	"Pendente": "aberto",
+	"Erro": "atrasado",
+	"Substituída": "na",
+	"Cancelada": "na",
+}
 
 
 def resumo_cobrancas_do_mes(hoje: datetime.date | None = None, associados: set[str] | None = None) -> dict:
@@ -438,7 +444,7 @@ def resumo_cobrancas_do_mes(hoje: datetime.date | None = None, associados: set[s
 			2,
 		)
 		sem_envio = cobranca.status == STATUS_COBRANCA_PENDENTE and not cobranca.ultimo_envio_whatsapp
-		if cobranca.status != "Substituída":
+		if cobranca.status not in ("Substituída", "Cancelada"):
 			totais["emitidas"] += 1
 		if cobranca.status == "Pago":
 			totais["pagas"] += 1

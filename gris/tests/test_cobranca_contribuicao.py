@@ -24,6 +24,7 @@ from gris.api.financeiro.cobranca_contribuicao import (
 	ORIGEM_AUTOMATICA,
 	PREFIXO_ID_TRANSACAO,
 	_normalizar_competencias,
+	cancelar_cobranca,
 	conciliar_baixas_de_cobranca,
 	emitir_cobranca,
 	enviar_cobranca,
@@ -513,6 +514,20 @@ class TestBaixaDaCobranca(FrappeTestCase):
 			[(getdate(i.competencia), i.em_atraso) for i in emitida.itens],
 			[(datetime.date(2026, 6, 1), 1), (datetime.date(2026, 7, 1), 1)],
 		)
+
+	def test_cancelar_so_vale_para_a_pendente(self):
+		with self._sem_rede():
+			cobranca = emitir_cobranca(self.associado, "2026-06", meses=12)
+
+		resultado = cancelar_cobranca(cobranca["name"])
+
+		self.assertEqual(resultado["status_anterior"], "Pendente")
+		self.assertEqual(frappe.db.get_value("Cobranca Infinitepay", cobranca["name"], "status"), "Cancelada")
+		# Só a pendente pode ser cancelada; a que não existe é recusada.
+		with self.assertRaises(frappe.ValidationError):
+			cancelar_cobranca(cobranca["name"])
+		with self.assertRaises(frappe.DoesNotExistError):
+			cancelar_cobranca("CM-nao-existe")
 
 	def test_envio_registra_o_resultado_na_cobranca(self):
 		cobranca = self._criar_cobranca("2026-06")

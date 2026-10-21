@@ -664,7 +664,7 @@ def atualizar_pagamento_contribuicao_mensal(
 
 # ─────────────────────────── cobrança por link InfinitePay ───────────────────────────
 
-STATUS_COBRANCA = ("Pendente", "Pago", "Erro", "Substituída")
+STATUS_COBRANCA = ("Pendente", "Pago", "Erro", "Substituída", "Cancelada")
 ORIGENS_COBRANCA = ("Manual", "Automática")
 
 
@@ -907,3 +907,47 @@ def reenviar_cobranca_contribuicao(name: str, simular: bool = False) -> dict:
 		return {"simulacao": True, "name": name, "telefone_cobranca": telefone}
 
 	return {"name": name, "whatsapp": cobranca_servico.enviar_cobranca(name)}
+
+
+@ferramenta(
+	nome="cancelar_cobranca_contribuicao",
+	titulo="Cancelar cobrança da contribuição",
+	descricao=(
+		"Cancela uma cobrança de contribuição mensal pendente — por exemplo, quando os meses dela "
+		"já foram pagos por outro meio. A cobrança passa a 'Cancelada' e sai dos lembretes e dos "
+		"totais do acompanhamento do mês; os meses em si não mudam (ajuste-os com "
+		"'atualizar_pagamento_contribuicao_mensal'). Se o link for pago mesmo assim, o pagamento é "
+		"aceito e baixado no extrato."
+	),
+	parametros={
+		"name": {
+			"type": "string",
+			"description": "Identificador da cobrança (retornado por 'listar_cobrancas_contribuicao').",
+		},
+	},
+	obrigatorios=("name",),
+	roles=ROLES_ESCRITA,
+	somente_leitura=False,
+)
+def cancelar_cobranca_contribuicao(name: str, simular: bool = False) -> dict:
+	from gris.api.financeiro import cobranca_contribuicao as cobranca_servico
+
+	cobranca = frappe.db.get_value(
+		"Cobranca Infinitepay", name, ["name", "status", "finalidade", "competencias"], as_dict=True
+	)
+	if not cobranca or cobranca.finalidade != cobranca_servico.FINALIDADE_CONTRIBUICAO:
+		raise ErroDeFerramenta("NAO_ENCONTRADO", f"Nenhuma cobrança de contribuição com o nome '{name}'.")
+	if cobranca.status != cobranca_servico.STATUS_COBRANCA_PENDENTE:
+		raise ErroDeFerramenta(
+			"ARGUMENTO_INVALIDO", f"A cobrança {name} está '{cobranca.status}' e não pode ser cancelada."
+		)
+
+	if simular:
+		return {
+			"simulacao": True,
+			"name": name,
+			"competencias": [ym for ym in (cobranca.competencias or "").split(",") if ym],
+			"status": {"de": cobranca.status, "para": cobranca_servico.STATUS_COBRANCA_CANCELADA},
+		}
+
+	return cobranca_servico.cancelar_cobranca(name)

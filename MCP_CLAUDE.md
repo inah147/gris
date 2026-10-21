@@ -100,6 +100,7 @@ essa role.
 | `listar_cobrancas_contribuicao` | Cobranças por link InfinitePay (manuais e automáticas): situação, meses, valor, `link_gris` (a página `/contribuicao/<código>` que o WhatsApp envia), link da InfinitePay (só conferência), resultado do envio pelo WhatsApp e baixa no extrato; filtra por mês de emissão, status, origem e `sem_envio` | Gestor/Visualizador Contribuição Mensal |
 | `gerar_cobranca_contribuicao` ✎ | Emite a cobrança dos meses em aberto de um associado e envia pelo WhatsApp a mensagem com o link do GRIS (a página entrega o link de pagamento com o valor do dia); a cobrança pendente anterior vira "Substituída" | Gestor Contribuição Mensal |
 | `reenviar_cobranca_contribuicao` ✎ | Reenvia pelo WhatsApp a mensagem com o link do GRIS de uma cobrança pendente (depois de corrigir o telefone, por exemplo) | Gestor Contribuição Mensal |
+| `cancelar_cobranca_contribuicao` ✎ | Cancela uma cobrança pendente (ex.: os meses foram pagos por outro meio): ela vira "Cancelada" e sai dos lembretes; se o link for pago mesmo assim, o pagamento é aceito | Gestor Contribuição Mensal |
 
 ### Contas fixas
 

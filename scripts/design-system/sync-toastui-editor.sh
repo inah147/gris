@@ -17,10 +17,10 @@ fi
 
 mkdir -p "$TARGET_DIR" "$TARGET_I18N_DIR"
 
-"$ESBUILD" --bundle --minify --legal-comments=none \
-  --platform=browser --format=iife \
-  "$ENTRY_JS" \
-  --outfile="$TARGET_DIR/toastui-editor-all.min.js"
+# O JS passa por um script (e não pela CLI) para trocar o DOMPurify embutido no
+# editor pelo atual — ver build-toastui-editor.mjs.
+node "$ROOT_DIR/scripts/design-system/build-toastui-editor.mjs" \
+  "$ENTRY_JS" "$TARGET_DIR/toastui-editor-all.min.js"
 
 "$ESBUILD" --minify --legal-comments=none \
   "$SRC_DIR/toastui-editor.css" \

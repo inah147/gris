@@ -94,7 +94,10 @@ def _filtros_de_periodo(campo_data: str, data_inicio: str | None, data_fim: str 
 	descricao=(
 		"Lista transações do extrato geral com filtros de período, categoria, centro de custo, "
 		"carteira e situação de revisão. Use sem_categoria=true para achar o que ainda precisa "
-		"ser categorizado — esse é o ponto de partida do fluxo de categorização."
+		"ser categorizado — esse é o ponto de partida do fluxo de categorização. O período é "
+		"filtrado por data_transacao por padrão: vendas da maquininha InfinitePay (cartão 'SPB…' "
+		"e dinheiro 'infinitepay-dinheiro-…') ficam com data_deposito vazia até a liquidação, "
+		"então campo_data='data_deposito' as omite."
 	),
 	parametros={
 		"data_inicio": {"type": "string", "description": "Data inicial no formato AAAA-MM-DD."},
@@ -102,8 +105,11 @@ def _filtros_de_periodo(campo_data: str, data_inicio: str | None, data_fim: str 
 		"campo_data": {
 			"type": "string",
 			"enum": list(CAMPOS_DATA),
-			"default": "data_deposito",
-			"description": "Campo de data usado no filtro de período.",
+			"default": "data_transacao",
+			"description": (
+				"Campo de data usado no filtro de período. 'data_deposito' deixa de fora as "
+				"transações ainda não liquidadas (data_deposito vazia)."
+			),
 		},
 		"busca": {"type": "string", "description": "Texto contido na descrição da transação."},
 		"categoria": {"type": "string", "description": "Categoria de Transacao exata."},
@@ -137,7 +143,7 @@ def _filtros_de_periodo(campo_data: str, data_inicio: str | None, data_fim: str 
 def listar_transacoes(
 	data_inicio: str | None = None,
 	data_fim: str | None = None,
-	campo_data: str = "data_deposito",
+	campo_data: str = "data_transacao",
 	busca: str | None = None,
 	categoria: str | None = None,
 	centro_de_custo: str | None = None,
@@ -163,7 +169,9 @@ def listar_transacoes(
 			filtros[campo] = valor
 
 	if sem_categoria:
-		filtros["categoria"] = ["in", [None, ""]]
+		# "is not set" cobre NULL e "" tanto no get_all quanto no db.count; o
+		# ["in", [None, ""]] só casava NULL no get_all e zerava a contagem.
+		filtros["categoria"] = ["is", "not set"]
 	if revisada is not None:
 		filtros["transacao_revisada"] = 1 if revisada else 0
 	if busca:

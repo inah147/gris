@@ -133,15 +133,17 @@ class TestListarTransacoes(TestCase):
 		with (
 			patch.object(financeiro, "_pode_ver_descricao_completa", return_value=False),
 			patch.object(financeiro.frappe, "get_all", return_value=[]) as get_all,
-			patch.object(financeiro.frappe.db, "count", return_value=0),
+			patch.object(financeiro.frappe.db, "count", return_value=0) as count,
 		):
 			financeiro.listar_transacoes(sem_categoria=True, revisada=False)
 
 		filtros = get_all.call_args.kwargs["filters"]
-		self.assertEqual(filtros["categoria"], ["in", [None, ""]])
+		self.assertEqual(filtros["categoria"], ["is", "not set"])
 		self.assertEqual(filtros["transacao_revisada"], 0)
+		# A contagem usa o mesmo filtro da listagem.
+		self.assertEqual(count.call_args.args[1], filtros)
 
-	def test_periodo_usa_between(self):
+	def test_periodo_usa_data_transacao_por_padrao(self):
 		with (
 			patch.object(financeiro, "_pode_ver_descricao_completa", return_value=True),
 			patch.object(financeiro.frappe, "get_all", return_value=[]) as get_all,
@@ -150,9 +152,10 @@ class TestListarTransacoes(TestCase):
 			financeiro.listar_transacoes(data_inicio="2026-01-01", data_fim="2026-01-31")
 
 		self.assertEqual(
-			get_all.call_args.kwargs["filters"]["data_deposito"],
+			get_all.call_args.kwargs["filters"]["data_transacao"],
 			["between", ["2026-01-01", "2026-01-31"]],
 		)
+		self.assertNotIn("data_deposito", get_all.call_args.kwargs["filters"])
 		self.assertIn("descricao", get_all.call_args.kwargs["fields"])
 
 	def test_descricao_completa_apenas_para_gestor(self):

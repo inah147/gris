@@ -417,7 +417,7 @@ Exemplos de pedidos que funcionam bem:
 - *"Atualiza o telefone da associada do CPF 123.456.789-00 para (11) 98888-7777"* → `obter_associado` + `atualizar_associado`
 
 **Extrato**
-- *"Mostra as transações de janeiro que ainda estão sem categoria"* → `listar_transacoes` com `sem_categoria=true`
+- *"Mostra as transações de janeiro que ainda estão sem categoria"* → `listar_transacoes` com `sem_categoria=true` (o período filtra por `data_transacao` por padrão; com `campo_data="data_deposito"` as vendas da maquininha ainda não liquidadas ficam de fora)
 - *"Categoriza essas cinco como Doações, centro de custo Sede, e marca como revisadas"* → `listar_opcoes_financeiras` + `categorizar_transacoes`
 - *"Compara os gastos deste ano com o anterior por centro de custo"* → `serie_financeira` / `resumo_financeiro`
 

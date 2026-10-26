@@ -46,7 +46,7 @@ atualizado — sem mexer na máquina de quem usa.
 |---|---|---|
 | `listar_transacoes` | Extrato com filtros de período, categoria, carteira, revisão e `sem_categoria` | Gestor Financeiro, Visualizador Financeiro |
 | `listar_opcoes_financeiras` | Valores válidos: categorias, centros de custo, carteiras, instituições, contas fixas | Gestor Financeiro, Visualizador Financeiro |
-| `categorizar_transacoes` ✎ | Categoriza até 200 transações por chamada; define o `beneficiario` que liga a contribuição mensal ao associado | Gestor Financeiro |
+| `categorizar_transacoes` ✎ | Categoriza até 200 transações por chamada; define o `beneficiario` que liga a contribuição mensal ao associado e marca `excluir_do_total` em lançamentos duplicados (a resposta lista os IDs excluídos, que somem de `listar_transacoes`) | Gestor Financeiro |
 | `resumo_financeiro` | Totais de crédito/débito por período, agrupados por categoria, centro de custo ou carteira | Gestor Financeiro, Visualizador Financeiro |
 | `serie_financeira` | Séries dos últimos 12 meses do painel (entradas x saídas, por categoria/centro/tipo, contribuições, inadimplência) | Gestor Financeiro, Visualizador Financeiro |
 
@@ -419,6 +419,7 @@ Exemplos de pedidos que funcionam bem:
 **Extrato**
 - *"Mostra as transações de janeiro que ainda estão sem categoria"* → `listar_transacoes` com `sem_categoria=true`
 - *"Categoriza essas cinco como Doações, centro de custo Sede, e marca como revisadas"* → `listar_opcoes_financeiras` + `categorizar_transacoes`
+- *"Esses vales em dinheiro da festa também passaram na maquininha, tira do total"* → `categorizar_transacoes` com `excluir_do_total=true` (e `simular=true` antes)
 - *"Compara os gastos deste ano com o anterior por centro de custo"* → `serie_financeira` / `resumo_financeiro`
 
 **Conciliação** — o fluxo em que o modelo mais agrega:

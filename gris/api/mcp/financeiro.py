@@ -57,6 +57,7 @@ CAMPOS_CATEGORIZACAO = {
 	"ordinaria_extraordinaria": None,
 	"descricao_reduzida": None,
 	"transacao_revisada": None,
+	"excluir_do_total": None,
 }
 
 # O beneficiário só faz sentido na contribuição mensal: é ele que liga a
@@ -269,16 +270,62 @@ def _validar_beneficiario(ids: list[str], beneficiario: str, categoria: str | No
 		)
 
 
+def _bloqueio_reinclusao(atuais, atualizacoes: dict) -> str | None:
+	"""Impede devolver ao total o lado excluído de uma conciliação.
+
+	A conciliação marca uma das duas transações do par como excluída; desmarcar
+	só ela faria o mesmo valor contar duas vezes. Quem desfaz é a conciliação.
+	"""
+	if (
+		atualizacoes.get("excluir_do_total") == 0
+		and atuais.get("excluir_do_total")
+		and atuais.get("transacao_conciliada")
+	):
+		return (
+			f"Transação excluída por conciliação com '{atuais.get('transacao_conciliada')}'. "
+			"Use 'desfazer_conciliacao' para devolvê-la ao total."
+		)
+	return None
+
+
+def _resumo_exclusao(atualizacoes: dict, ids: list[str]) -> dict:
+	"""Confirma quais IDs saíram (ou voltaram) dos totais.
+
+	'listar_transacoes' esconde as excluídas, então a resposta precisa dizer
+	explicitamente quais IDs mudaram para que dê para conferir ou reverter.
+	"""
+	if "excluir_do_total" not in atualizacoes:
+		return {}
+	if atualizacoes["excluir_do_total"]:
+		return {
+			"ids_excluidos_do_total": ids,
+			"aviso_exclusao": (
+				"Estas transações não contam mais em totais, relatórios e saldos e deixam de "
+				"aparecer em 'listar_transacoes'. Para reverter, chame de novo com "
+				"excluir_do_total=false e estes IDs."
+			),
+		}
+	return {"ids_devolvidos_ao_total": ids}
+
+
 def _simular_categorizacao(ids: list[str], atualizacoes: dict) -> dict:
 	"""Monta o antes/depois da categorização sem tocar em nenhum documento."""
 	if not frappe.has_permission(DOCTYPE, ptype="write"):
 		raise ErroDeFerramenta("PERMISSAO_NEGADA", "Sem permissão de escrita no extrato geral.")
 
+	campos = list(atualizacoes)
+	if "excluir_do_total" in atualizacoes:
+		campos.append("transacao_conciliada")
+
 	previa, falhas = [], []
 	for transacao_id in ids:
-		atuais = frappe.db.get_value(DOCTYPE, transacao_id, list(atualizacoes), as_dict=True)
+		atuais = frappe.db.get_value(DOCTYPE, transacao_id, campos, as_dict=True)
 		if atuais is None:
 			falhas.append({"id": transacao_id, "erro": "Transação não encontrada."})
+			continue
+		bloqueio = _bloqueio_reinclusao(atuais, atualizacoes)
+		if bloqueio:
+			falhas.append({"id": transacao_id, "erro": bloqueio})
 			continue
 		mudancas = {
 			campo: {"de": atuais.get(campo), "para": valor}
@@ -294,6 +341,7 @@ def _simular_categorizacao(ids: list[str], atualizacoes: dict) -> dict:
 		"campos_aplicados": atualizacoes,
 		"previa": previa,
 		"falhas": falhas,
+		**_resumo_exclusao(atualizacoes, [item["id"] for item in previa]),
 	}
 
 
@@ -302,10 +350,13 @@ def _simular_categorizacao(ids: list[str], atualizacoes: dict) -> dict:
 	titulo="Categorizar transações em lote",
 	descricao=(
 		"Aplica categoria, centro de custo, classificação ordinária/extraordinária, descrição "
-		"reduzida, beneficiário e/ou marcação de revisada a uma lista de transações "
-		"(máx. 200 por chamada). Informe ao menos um campo além dos IDs. O beneficiário é o "
-		"que faz a contribuição mensal contar para o associado na apuração — use junto com "
-		"categoria='Contribuição Mensal'. Use simular=true para conferir o antes/depois."
+		"reduzida, beneficiário, marcação de revisada e/ou 'excluir do total' a uma lista de "
+		"transações (máx. 200 por chamada). Informe ao menos um campo além dos IDs. O "
+		"beneficiário é o que faz a contribuição mensal contar para o associado na apuração — "
+		"use junto com categoria='Contribuição Mensal'. excluir_do_total=true tira a transação "
+		"de totais, relatórios e saldos (ex.: venda em dinheiro também lançada na maquininha) "
+		"e a esconde de 'listar_transacoes' — a resposta lista os IDs excluídos. Use "
+		"simular=true para conferir o antes/depois."
 	),
 	parametros={
 		"ids": {
@@ -332,6 +383,14 @@ def _simular_categorizacao(ids: list[str], atualizacoes: dict) -> dict:
 			"type": "boolean",
 			"description": "Marca (true) ou desmarca (false) a transação como revisada.",
 		},
+		"excluir_do_total": {
+			"type": "boolean",
+			"description": (
+				"true tira a transação de totais, relatórios e saldos (lançamento em duplicidade, "
+				"ex.: vale em dinheiro também registrado na maquininha); false a devolve. Não "
+				"desfaz conciliação — para isso use 'desfazer_conciliacao'."
+			),
+		},
 	},
 	obrigatorios=("ids",),
 	roles=ROLES_ESCRITA,
@@ -345,6 +404,7 @@ def categorizar_transacoes(
 	descricao_reduzida: str | None = None,
 	beneficiario: str | None = None,
 	marcar_revisada: bool | None = None,
+	excluir_do_total: bool | None = None,
 	simular: bool = False,
 ) -> dict:
 	ids = [str(item).strip() for item in ids if str(item).strip()]
@@ -364,6 +424,8 @@ def categorizar_transacoes(
 		atualizacoes["beneficiario"] = beneficiario
 	if marcar_revisada is not None:
 		atualizacoes["transacao_revisada"] = 1 if marcar_revisada else 0
+	if excluir_do_total is not None:
+		atualizacoes["excluir_do_total"] = 1 if excluir_do_total else 0
 
 	if not atualizacoes:
 		raise ErroDeFerramenta(
@@ -395,6 +457,10 @@ def categorizar_transacoes(
 		try:
 			doc = frappe.get_doc(DOCTYPE, transacao_id)
 			doc.check_permission("write")
+			bloqueio = _bloqueio_reinclusao(doc, atualizacoes)
+			if bloqueio:
+				falhas.append({"id": transacao_id, "erro": bloqueio})
+				continue
 			for campo, valor in atualizacoes.items():
 				doc.set(campo, valor)
 			doc.save()
@@ -410,6 +476,7 @@ def categorizar_transacoes(
 		"campos_aplicados": atualizacoes,
 		"ids_atualizados": atualizadas,
 		"falhas": falhas,
+		**_resumo_exclusao(atualizacoes, atualizadas),
 	}
 
 
@@ -418,7 +485,8 @@ def categorizar_transacoes(
 	titulo="Resumo financeiro por período",
 	descricao=(
 		"Totaliza créditos e débitos de um período e agrupa por categoria, centro de custo ou "
-		"carteira. Ignora transações marcadas como 'excluir do total' (duplicatas conciliadas)."
+		"carteira. Ignora transações marcadas como 'excluir do total' (duplicatas conciliadas ou "
+		"marcadas à mão)."
 	),
 	parametros={
 		"data_inicio": {"type": "string", "description": "Data inicial (AAAA-MM-DD)."},

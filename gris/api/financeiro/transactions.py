@@ -210,7 +210,15 @@ EXTRATO_COLUNAS = (
 	{"key": "conta_fixa", "label": "Conta fixa", "tipo": "badge", "variante": "secondary", "outline": True},
 	{"key": "beneficiario", "label": "Beneficiário", "tipo": "texto"},
 	{"key": "repasse_entre_contas", "label": "Repasse entre contas", "tipo": "sim_nao"},
-	{"key": "excluir_do_total", "label": "Excluir do total", "tipo": "sim_nao"},
+	{
+		# Fora de totais, relatórios e saldos: a conciliação marca a duplicata
+		# sozinha, mas há lançamentos em dobro que só se resolvem à mão (ex.: vale
+		# vendido em dinheiro e também passado na maquininha).
+		"key": "excluir_do_total",
+		"label": "Excluir do total",
+		"tipo": "sim_nao",
+		"editavel": {"tipo": "booleano"},
+	},
 	{"key": "numero_liquidacao", "label": "Número de liquidação", "tipo": "texto"},
 	{"key": "nome_atividade", "label": "Nome da atividade", "tipo": "texto"},
 	{"key": "observacoes", "label": "Observações", "tipo": "texto", "largura": "lg"},
@@ -293,7 +301,7 @@ def build_extrato_filters(request_args: dict | None, pode_buscar_descricao_compl
 			f"%{_termo_like(busca_descricao_completa)}%",
 		]
 
-	# Transações marcadas como duplicata conciliada não devem entrar no extrato
+	# Transações marcadas para excluir do total não devem entrar no extrato
 	# nem no total, a não ser que o filtro `excluir_do_total` seja pedido
 	# explicitamente (ex.: para auditar as próprias duplicatas excluídas) ou
 	# que a flag `mostrar_excluidas` da tela peça para ver as duas juntas.

@@ -476,6 +476,13 @@
 	white-space: nowrap;
 }
 
+/* Colunas e Exportar ficam juntos no fim da barra. */
+.extrato-tabela__acoes {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
 /* Barra de seleção: fica na mesma linha do contador, sem roubar altura útil. */
 .extrato-selecao {
 	display: flex;

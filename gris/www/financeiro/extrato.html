@@ -157,6 +157,7 @@
 			<input type="checkbox" id="extratoMostrarExcluidas" {{ 'checked' if mostrar_excluidas else '' }} />
 			Mostrar excluídas
 		</label>
+		<div class="extrato-tabela__acoes">
 		{% call popover(
 			trigger=(lucide_icon("columns-3", size="sm") ~ " Colunas"),
 			id="extrato-colunas",
@@ -204,6 +205,7 @@
 				CSV (.csv)
 			</a>
 		{% endcall %}
+		</div>
 	</header>
 	<section class="p-0 extrato-tabela__section">
 		{#

@@ -19,6 +19,11 @@
 # Lint, antes de commitar (roda o mesmo que o job "Frappe Linter" do CI):
 #   gris-lint
 #
+# Ver uma tela do portal de verdade, com CSS, JS e ícones (login Administrator/admin):
+#   gris-serve                  sobe/reinicia o servidor em http://127.0.0.1:8000
+#   gris-print /financeiro/extrato extrato.png
+#                               print da rota, já logado; lista erros de console e 404
+#
 # Checagem rápida durante a edição (não substitui o gris-lint):
 #   ruff check gris/ && ruff format --check gris/
 set -euo pipefail
@@ -115,10 +120,11 @@ fi
 echo 'export PATH=/home/frappe/venv/bin:$PATH' > /etc/profile.d/01-frappe-venv.sh
 chmod 0644 /etc/profile.d/01-frappe-venv.sh
 
-# ── 6. Bench sem frontend ───────────────────────────────────────────────────
-# O `yarn install` do Frappe busca um tarball em codeload.github.com, bloqueado
-# pela política de egresso do ambiente. Teste de backend não usa asset nenhum,
-# então o passo é neutralizado — este bench serve para testar, não para servir a UI.
+# ── 6. Bench (o frontend vem depois, no passo 8b) ───────────────────────────
+# O `yarn install` que o `bench init` dispara busca um tarball em
+# codeload.github.com, bloqueado pela política de egresso do ambiente. Aqui ele
+# é neutralizado pelo shim; o passo 8b instala as dependências contornando o
+# bloqueio e monta os assets.
 mkdir -p /opt/nofrontend
 cat > /opt/nofrontend/yarn <<'SHIMEOF'
 #!/bin/sh
@@ -141,7 +147,7 @@ if [ ! -d "$BENCH/apps/frappe" ]; then
       && bench set-config -g redis_socketio 'redis://127.0.0.1:12000'"
 fi
 
-# ── 6b. Manifesto de assets vazio ───────────────────────────────────────────
+# ── 6b. Manifesto de assets vazio (rede de segurança) ───────────────────────
 # `bench run-tests --app gris` cria usuários de teste, e o Frappe monta o e-mail
 # de boas-vindas de cada um. Montar esse e-mail passa por `bundled_asset()`, que
 # lê `sites/assets/assets.json` — arquivo que o `bench build` geraria e que este
@@ -150,7 +156,8 @@ fi
 # attribute 'get'`, antes do primeiro teste.
 #
 # Um objeto vazio basta: nenhum teste de backend resolve caminho de asset, e o
-# `bundled_asset` cai no fallback de devolver o caminho original.
+# `bundled_asset` cai no fallback de devolver o caminho original. Quando o
+# passo 8b consegue montar o frontend, o `bench build` grava o manifesto real.
 mkdir -p "$BENCH/sites/assets"
 [ -f "$BENCH/sites/assets/assets.json" ] || printf '{}' > "$BENCH/sites/assets/assets.json"
 chown -R frappe:frappe "$BENCH/sites/assets"
@@ -181,6 +188,54 @@ else
   su - frappe -c "export PATH=/opt/nofrontend:\$PATH; cd $BENCH && bench --site $SITE migrate" >/dev/null 2>&1 || \
     log "aviso: migrate falhou; rode 'bench-gris migrate' para ver o erro"
 fi
+
+# ── 8b. Frontend: CSS, JS e ícones do portal ────────────────────────────────
+# Sem isto o site responde, mas as telas do portal vêm cruas: `/assets/<app>/`
+# dá 404 (quem liga `sites/assets/<app>` ao `public/` de cada app é o
+# `bench build`) e falta o `frappe-web.bundle.js`, de onde vem o `frappe.call`
+# que o scroll infinito, os filtros e a edição das telas usam.
+#
+# O `yarn install` do Frappe trava numa única dependência, `air-datepicker`,
+# que vem do GitHub como tarball de codeload.github.com (bloqueado). O `git
+# clone` do mesmo repositório passa, então o tarball é montado localmente no
+# commit que o yarn.lock fixa e o lock passa a apontar para ele. O resto vem
+# do registry do npm, liberado.
+frontend_frappe() {
+  local lock="$BENCH/apps/frappe/yarn.lock" deps=/opt/frappe-node-deps sha tgz tmp
+  sha="$(grep -oE 'codeload\.github\.com/frappe/air-datepicker/tar\.gz/[0-9a-f]+' "$lock" | head -1 | sed 's#.*/##' || true)"
+  if [ -n "$sha" ]; then
+    tgz="$deps/air-datepicker-$sha.tgz"
+    if [ ! -f "$tgz" ]; then
+      mkdir -p "$deps"
+      tmp="$(mktemp -d)"
+      if ! git clone -q https://github.com/frappe/air-datepicker "$tmp" \
+          || ! git -C "$tmp" archive --prefix=package/ -o "$tgz" "$sha"; then
+        rm -rf "$tmp" "$tgz"
+        return 1
+      fi
+      rm -rf "$tmp"
+      chmod -R a+rX "$deps"
+    fi
+    sed -i "s#\"https://codeload.github.com/frappe/air-datepicker/tar.gz/$sha\"#\"file:$tgz\"#" "$lock"
+  fi
+  su - frappe -c "cd $BENCH/apps/frappe && yarn install --frozen-lockfile --check-files" \
+    >/tmp/gris-frontend.log 2>&1 || return 1
+  # Sem o shim no PATH: aqui o yarn de verdade precisa rodar o esbuild.
+  su - frappe -c "cd $BENCH && bench build --app frappe" >>/tmp/gris-frontend.log 2>&1 || return 1
+  # O manifesto de assets fica em cache no Redis; sem limpar, o site segue
+  # servindo os caminhos do manifesto vazio do passo 6b.
+  su - frappe -c "cd $BENCH && bench --site $SITE clear-cache" >/dev/null 2>&1 || true
+}
+
+if ! ls "$BENCH"/apps/frappe/frappe/public/dist/js/frappe-web.bundle.*.js >/dev/null 2>&1; then
+  log "montando os assets do frontend (uma vez só, ~1 min)"
+  frontend_frappe || log "aviso: assets do Frappe não montados (ver /tmp/gris-frontend.log); os testes rodam, mas o portal fica sem frappe.call"
+fi
+# Os assets do GRIS são arquivos versionados em `gris/public`: basta o link,
+# e o que for editado no repositório vale na hora.
+ln -sfn "$BENCH/apps/frappe/frappe/public" "$BENCH/sites/assets/frappe"
+ln -sfn "$REPO/gris/public" "$BENCH/sites/assets/gris"
+chown -h frappe:frappe "$BENCH/sites/assets/frappe" "$BENCH/sites/assets/gris"
 
 # Nunca deixar o scheduler acordar: os jobs diários deste app mandam WhatsApp
 # para famílias reais, sincronizam Google Workspace e sobem backup para o Drive.
@@ -352,6 +407,98 @@ LINTEOF
 sed -i "s|@REPO@|$REPO|g; s|@RULES@|$SEMGREP_RULES|g" /usr/local/bin/gris-lint
 chmod +x /usr/local/bin/gris-lint
 
+cat > /usr/local/bin/gris-serve <<SERVEEOF
+#!/bin/bash
+# Sobe (ou reinicia) o servidor de desenvolvimento do site de testes, com o CSS,
+# o JS e os ícones do portal. Login: Administrator / admin.
+#
+#   gris-serve          porta 8000
+#   gris-serve 8011     outra porta
+#   gris-serve --parar  derruba o servidor
+PORTA="\${1:-8000}"
+# Só processos do usuário frappe: este script roda como root e não se mata.
+pkill -u frappe -f "bench.*--site $SITE serve" 2>/dev/null
+pkill -u frappe -f "frappe.utils.bench_helper frappe --site $SITE serve" 2>/dev/null
+[ "\$PORTA" = "--parar" ] && exit 0
+sleep 1
+su - frappe -c "cd $BENCH && nohup bench --site $SITE serve --port \$PORTA >/tmp/gris-serve.log 2>&1 &"
+for _ in \$(seq 1 60); do
+  if curl -s --noproxy '*' -o /dev/null "http://127.0.0.1:\$PORTA/login"; then
+    echo "GRIS em http://127.0.0.1:\$PORTA (Administrator / admin) — log em /tmp/gris-serve.log"
+    exit 0
+  fi
+  sleep 1
+done
+echo "o servidor não respondeu; veja /tmp/gris-serve.log" >&2
+exit 1
+SERVEEOF
+chmod +x /usr/local/bin/gris-serve
+
+mkdir -p /usr/local/lib/gris
+cat > /usr/local/lib/gris/print.js <<'PRINTEOF'
+// Print de uma rota do portal, logado como Administrator. Usado pelo gris-print.
+const { chromium } = require("playwright");
+
+const [base, rota, saida, largura, paginaInteira] = process.argv.slice(2);
+
+(async () => {
+	const browser = await chromium.launch();
+	const page = await browser.newPage({ viewport: { width: Number(largura), height: 900 }, locale: "pt-BR" });
+	const problemas = [];
+	page.on("console", (m) => m.type() === "error" && problemas.push("console: " + m.text()));
+	page.on("pageerror", (e) => problemas.push("erro de JS: " + e.message));
+	page.on("response", (r) => r.status() >= 400 && problemas.push(r.status() + " " + r.url()));
+
+	await page.goto(base + "/login");
+	const login = await page.evaluate(async () => {
+		const r = await fetch("/api/method/login", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ usr: "Administrator", pwd: "admin" }),
+		});
+		return r.status;
+	});
+	if (login !== 200) throw new Error("login falhou: HTTP " + login);
+	problemas.length = 0;
+
+	await page.goto(base + rota, { waitUntil: "networkidle" });
+	await page.screenshot({ path: saida, fullPage: paginaInteira === "1" });
+	await browser.close();
+
+	console.log("print salvo em " + saida);
+	if (problemas.length) {
+		console.log("problemas na página:\n  " + problemas.join("\n  "));
+		process.exit(2);
+	}
+})().catch((e) => {
+	console.error(e.message || e);
+	process.exit(1);
+});
+PRINTEOF
+
+cat > /usr/local/bin/gris-print <<'PRINTSHEOF'
+#!/bin/bash
+# Tira o print de uma rota do portal, já logado, com o servidor do gris-serve.
+#
+#   gris-print /financeiro/extrato                 salva em /tmp/gris-print.png
+#   gris-print /financeiro/extrato extrato.png
+#   GRIS_PRINT_LARGURA=390 gris-print /financeiro/extrato celular.png
+#   GRIS_PRINT_INTEIRA=1 gris-print /financeiro/extrato   página inteira
+#
+# Sai com 2 quando a página teve erro de JS, erro de console ou resposta >= 400
+# (asset faltando aparece aqui como 404).
+set -uo pipefail
+ROTA="${1:?uso: gris-print <rota> [arquivo.png]}"
+SAIDA="$(realpath -m "${2:-/tmp/gris-print.png}")"
+PORTA="${GRIS_PORTA:-8000}"
+if ! curl -s --noproxy '*' -o /dev/null "http://127.0.0.1:$PORTA/login"; then
+  gris-serve "$PORTA" || exit 1
+fi
+exec node /usr/local/lib/gris/print.js "http://127.0.0.1:$PORTA" "$ROTA" "$SAIDA" \
+  "${GRIS_PRINT_LARGURA:-1440}" "${GRIS_PRINT_INTEIRA:-0}"
+PRINTSHEOF
+chmod +x /usr/local/bin/gris-print
+
 # Caminhos do bench ficam disponíveis para o resto da sessão, para quem precisar
 # chamar o bench direto em vez de pelos atalhos.
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
@@ -361,4 +508,4 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   } >> "$CLAUDE_ENV_FILE"
 fi
 
-log "pronto — testes: gris-test (tudo) ou gris-test contribuicao | lint: gris-lint"
+log "pronto — testes: gris-test (tudo) ou gris-test contribuicao | lint: gris-lint | portal: gris-serve e gris-print <rota>"

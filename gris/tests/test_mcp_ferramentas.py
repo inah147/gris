@@ -230,6 +230,108 @@ class TestCategorizarTransacoes(TestCase):
 		doc_ok.save.assert_called_once_with()
 
 
+class TestExcluirDoTotalNaCategorizacao(TestCase):
+	"""Excluir do total some com a transação de 'listar_transacoes', então a
+	resposta precisa dizer quais IDs saíram para dar para conferir ou reverter."""
+
+	def _doc(self, excluir_do_total=0, transacao_conciliada=None):
+		doc = MagicMock()
+		valores = {"excluir_do_total": excluir_do_total, "transacao_conciliada": transacao_conciliada}
+		doc.get.side_effect = valores.get
+		return doc
+
+	def test_exclui_e_confirma_os_ids(self):
+		doc = self._doc()
+
+		def get_doc(_doctype, name):
+			if name == "T2":
+				raise financeiro.frappe.DoesNotExistError("sumiu")
+			return doc
+
+		with patch.object(financeiro.frappe, "get_doc", side_effect=get_doc):
+			resultado = financeiro.categorizar_transacoes(["T1", "T2"], excluir_do_total=True)
+
+		doc.set.assert_called_once_with("excluir_do_total", 1)
+		doc.save.assert_called_once_with()
+		self.assertEqual(resultado["campos_aplicados"], {"excluir_do_total": 1})
+		self.assertEqual(resultado["ids_excluidos_do_total"], ["T1"])
+		self.assertIn("listar_transacoes", resultado["aviso_exclusao"])
+		self.assertEqual(resultado["falhas"][0]["id"], "T2")
+
+	def test_false_devolve_ao_total(self):
+		doc = self._doc(excluir_do_total=1)
+		with patch.object(financeiro.frappe, "get_doc", return_value=doc):
+			resultado = financeiro.categorizar_transacoes(["T1"], excluir_do_total=False)
+
+		doc.set.assert_called_once_with("excluir_do_total", 0)
+		self.assertEqual(resultado["ids_devolvidos_ao_total"], ["T1"])
+		self.assertNotIn("ids_excluidos_do_total", resultado)
+
+	def test_nao_devolve_ao_total_duplicata_conciliada(self):
+		# Desmarcar só o lado excluído do par faria o valor contar duas vezes.
+		doc = self._doc(excluir_do_total=1, transacao_conciliada="T9")
+		with patch.object(financeiro.frappe, "get_doc", return_value=doc):
+			resultado = financeiro.categorizar_transacoes(["T1"], excluir_do_total=False)
+
+		doc.save.assert_not_called()
+		self.assertEqual(resultado["atualizadas"], 0)
+		self.assertIn("desfazer_conciliacao", resultado["falhas"][0]["erro"])
+		self.assertEqual(resultado["ids_devolvidos_ao_total"], [])
+
+	def test_sem_permissao_de_escrita_vira_falha(self):
+		doc = self._doc()
+		doc.check_permission.side_effect = financeiro.frappe.PermissionError
+		with patch.object(financeiro.frappe, "get_doc", return_value=doc):
+			resultado = financeiro.categorizar_transacoes(["T1"], excluir_do_total=True)
+
+		doc.save.assert_not_called()
+		self.assertEqual(resultado["ids_excluidos_do_total"], [])
+		self.assertEqual(resultado["falhas"][0]["erro"], "Sem permissão de escrita.")
+
+	def test_simulacao_mostra_exclusao_sem_gravar(self):
+		def get_value(_doctype, name, campos, as_dict=True):
+			self.assertIn("transacao_conciliada", campos)
+			if name == "T2":
+				return {"excluir_do_total": 1, "transacao_conciliada": None}
+			return {"excluir_do_total": 0, "transacao_conciliada": None}
+
+		with (
+			patch.object(financeiro.frappe, "has_permission", return_value=True),
+			patch.object(financeiro.frappe.db, "get_value", side_effect=get_value),
+			patch.object(financeiro.frappe, "get_doc") as get_doc,
+		):
+			resultado = financeiro.categorizar_transacoes(["T1", "T2"], excluir_do_total=True, simular=True)
+
+		get_doc.assert_not_called()
+		self.assertTrue(resultado["simulacao"])
+		self.assertEqual(resultado["previa"][0]["alteracoes"]["excluir_do_total"], {"de": 0, "para": 1})
+		self.assertTrue(resultado["previa"][1]["sem_mudanca"])
+		self.assertEqual(resultado["ids_excluidos_do_total"], ["T1", "T2"])
+
+	def test_simulacao_aponta_duplicata_conciliada(self):
+		with (
+			patch.object(financeiro.frappe, "has_permission", return_value=True),
+			patch.object(
+				financeiro.frappe.db,
+				"get_value",
+				return_value={"excluir_do_total": 1, "transacao_conciliada": "T9"},
+			),
+		):
+			resultado = financeiro.categorizar_transacoes(["T1"], excluir_do_total=False, simular=True)
+
+		self.assertEqual(resultado["previa"], [])
+		self.assertIn("desfazer_conciliacao", resultado["falhas"][0]["erro"])
+
+	def test_esquema_expoe_o_campo_e_aceita_false(self):
+		from gris.api.mcp.registry import carregar_ferramentas, validar_argumentos
+
+		ferramenta = carregar_ferramentas()["categorizar_transacoes"]
+		self.assertEqual(ferramenta.input_schema()["properties"]["excluir_do_total"]["type"], "boolean")
+		# false é um valor real (devolve ao total), não pode ser descartado como vazio.
+		validados = validar_argumentos(ferramenta, {"ids": ["T1"], "excluir_do_total": False})
+		self.assertIs(validados["excluir_do_total"], False)
+
+
 class TestResumoFinanceiro(TestCase):
 	def test_agrupa_creditos_e_debitos(self):
 		linhas = [

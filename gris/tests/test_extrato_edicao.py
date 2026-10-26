@@ -31,6 +31,7 @@ class TestExtratoCamposEditaveis(FrappeTestCase):
 				"centro_de_custo",
 				"ordinaria_extraordinaria",
 				"transacao_revisada",
+				"excluir_do_total",
 			},
 		)
 
@@ -149,3 +150,28 @@ class TestUpdateExtratoCelulas(FrappeTestCase):
 		update_extrato_celulas(json.dumps([nome]), "descricao_reduzida", "Preenchido")
 		update_extrato_celulas(json.dumps([nome]), "descricao_reduzida", "")
 		self.assertIn(frappe.db.get_value(DOCTYPE, nome, "descricao_reduzida"), (None, ""))
+
+	def test_excluir_do_total_marca_a_linha_como_excluida(self):
+		# Caso real: vale vendido em dinheiro e também passado na maquininha.
+		nome = (
+			frappe.get_doc(
+				{
+					"doctype": DOCTYPE,
+					"id": f"test-excluir-{frappe.generate_hash(length=10)}",
+					"descricao": "Vale da festa",
+					"valor": 25,
+					"metodo": "Dinheiro",
+				}
+			)
+			.insert(ignore_permissions=True)
+			.name
+		)
+
+		resposta = update_extrato_celulas(json.dumps([nome]), "excluir_do_total", "1")
+		self.assertEqual(frappe.db.get_value(DOCTYPE, nome, "excluir_do_total"), 1)
+		# A linha volta do servidor mesmo fora do filtro padrão, já sinalizada.
+		self.assertIn("extrato-row--excluida", resposta["html"])
+
+		resposta = update_extrato_celulas(json.dumps([nome]), "excluir_do_total", "0")
+		self.assertEqual(frappe.db.get_value(DOCTYPE, nome, "excluir_do_total"), 0)
+		self.assertNotIn("extrato-row--excluida", resposta["html"])

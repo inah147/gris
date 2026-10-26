@@ -73,6 +73,10 @@ class TestDrivesDoPortal(FrappeTestCase):
 		garantir_role_gestor_de_acessos()
 		settings = frappe.get_doc(WORKSPACE)
 		settings.habilitar_integracao = 0
+		# Obrigatório no Single; num site sem a integração configurada (o de teste) o
+		# save do setUp parava aqui. Com a integração desligada o valor não é lido.
+		if not settings.get_password("service_account_json", raise_exception=False):
+			settings.service_account_json = "{}"
 		settings.dominio_institucional = DOMINIO
 		settings.dias_expiracao_acesso_restrito = 90
 		settings.set(

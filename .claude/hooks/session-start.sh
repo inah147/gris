@@ -171,7 +171,6 @@ if [ ! -f "$BENCH/sites/$SITE/site_config.json" ]; then
   rm -rf "${BENCH:?}/sites/$SITE"
   su - frappe -c "cd $BENCH && bench new-site $SITE --db-root-password root --admin-password admin --mariadb-user-host-login-scope='%'"
   su - frappe -c "export PATH=/opt/nofrontend:\$PATH; cd $BENCH && bench --site $SITE install-app gris"
-  su - frappe -c "cd $BENCH && bench --site $SITE set-config allow_tests true"
 else
   # Site já existe (container em cache): alinhar o schema com o código atual.
   # Alguns DocTypes (ex.: Role Profile) enfileiram jobs no on_update. Este bench
@@ -185,7 +184,9 @@ fi
 
 # Nunca deixar o scheduler acordar: os jobs diários deste app mandam WhatsApp
 # para famílias reais, sincronizam Google Workspace e sobem backup para o Drive.
-su - frappe -c "cd $BENCH && bench --site $SITE set-config pause_scheduler 1 && bench --site $SITE set-config mute_emails 1" >/dev/null 2>&1 || true
+# `allow_tests` também fica aqui fora: um site em cache que perdeu a chave deixa o
+# gris-test recusando rodar ("Testing is disabled for the site!").
+su - frappe -c "cd $BENCH && bench --site $SITE set-config pause_scheduler 1 && bench --site $SITE set-config mute_emails 1 && bench --site $SITE set-config allow_tests true" >/dev/null 2>&1 || true
 
 # ── 9. Linters ──────────────────────────────────────────────────────────────
 # O job "Frappe Linter" do CI roda duas coisas, nesta ordem:
@@ -224,11 +225,16 @@ if command -v pre-commit >/dev/null 2>&1 && [ ! -d "$HOME/.cache/pre-commit" ]; 
     log "aviso: falha ao preparar os hooks; o gris-lint vai montá-los na primeira execução"
 fi
 
-# --ignore-installed PyJWT: a imagem traz o PyJWT do apt, sem RECORD, e o pip
-# aborta a instalação inteira ao tentar desinstalá-lo.
-if ! command -v semgrep >/dev/null 2>&1; then
+# Venv próprio: no Python do sistema o semgrep divide o pacote `mcp` com o
+# claude-agent-sdk da imagem e quebra já no import (ImportError em mcp.types).
+# O `semgrep` chama o `pysemgrep` pelo PATH, então os dois vão para /usr/local/bin.
+# O teste é `semgrep --version`, não `command -v`: pega também a instalação quebrada.
+SEMGREP_VENV=/opt/semgrep-venv
+if ! semgrep --version >/dev/null 2>&1; then
   log "instalando semgrep"
-  pip install -q --ignore-installed PyJWT semgrep >/dev/null 2>&1 || log "aviso: semgrep não instalado"
+  { python3.11 -m venv "$SEMGREP_VENV" && "$SEMGREP_VENV/bin/pip" install -q semgrep &&
+    ln -sf "$SEMGREP_VENV/bin/semgrep" "$SEMGREP_VENV/bin/pysemgrep" /usr/local/bin/; } >/dev/null 2>&1 ||
+    log "aviso: semgrep não instalado"
 fi
 
 if [ ! -d "$SEMGREP_RULES/rules" ]; then
@@ -320,7 +326,7 @@ fi
 echo
 echo "== semgrep: regras do Frappe (SQL cru, permissões, correção) =="
 if ! command -v semgrep >/dev/null 2>&1; then
-  echo "semgrep não instalado — rode: pip install --ignore-installed PyJWT semgrep"
+  echo "semgrep não instalado — rode de novo o .claude/hooks/session-start.sh"
   falhou=1
 elif [ ! -d "@RULES@/rules" ]; then
   echo "regras ausentes — rode: git clone --depth 1 https://github.com/frappe/semgrep-rules.git @RULES@"

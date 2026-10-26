@@ -55,15 +55,15 @@ class TestExtratoFiltros(FrappeTestCase):
 
 	def test_intervalo_de_datas_completo(self):
 		filtros = build_extrato_filters({"data_inicio": "2026-01-01", "data_fim": "2026-01-31"})
-		self.assertEqual(filtros["data_deposito"], ["between", ["2026-01-01", "2026-01-31"]])
+		self.assertEqual(filtros["data_transacao"], ["between", ["2026-01-01", "2026-01-31"]])
 
 	def test_apenas_data_inicio_ou_data_fim(self):
 		self.assertEqual(
-			build_extrato_filters({"data_inicio": "2026-01-01"})["data_deposito"],
+			build_extrato_filters({"data_inicio": "2026-01-01"})["data_transacao"],
 			[">=", "2026-01-01"],
 		)
 		self.assertEqual(
-			build_extrato_filters({"data_fim": "2026-01-31"})["data_deposito"],
+			build_extrato_filters({"data_fim": "2026-01-31"})["data_transacao"],
 			["<=", "2026-01-31"],
 		)
 

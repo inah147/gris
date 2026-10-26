@@ -278,11 +278,11 @@ def build_extrato_filters(request_args: dict | None, pode_buscar_descricao_compl
 	data_inicio = _parse_data_extrato(request_args.get("data_inicio"))
 	data_fim = _parse_data_extrato(request_args.get("data_fim"))
 	if data_inicio and data_fim:
-		filters["data_deposito"] = ["between", [data_inicio, data_fim]]
+		filters["data_transacao"] = ["between", [data_inicio, data_fim]]
 	elif data_inicio:
-		filters["data_deposito"] = [">=", data_inicio]
+		filters["data_transacao"] = [">=", data_inicio]
 	elif data_fim:
-		filters["data_deposito"] = ["<=", data_fim]
+		filters["data_transacao"] = ["<=", data_fim]
 
 	for campo in EXTRATO_FILTER_FIELDS:
 		valor = request_args.get(campo)

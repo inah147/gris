@@ -31,6 +31,8 @@
 	/** Folga entre o card da tabela e o pé da janela, em pixels. */
 	const MARGEM_INFERIOR = 16;
 
+	const EXPORTAR_URL = "/api/method/gris.api.financeiro.transactions.exportar_extrato";
+
 	const COLUNAS_STORAGE_KEY = "gris_extrato_colunas_v1";
 	const FILTROS_STORAGE_KEY = "gris_extrato_filtros_abertos_v1";
 
@@ -254,6 +256,21 @@
 			else params.delete("mostrar_excluidas");
 			const query = params.toString();
 			window.location.href = window.location.pathname + (query ? "?" + query : "");
+		});
+	}
+
+	/**
+	 * Aponta os links de exportação para os filtros da URL, os mesmos que
+	 * montaram a tela; o servidor devolve todas as linhas, não só as carregadas.
+	 */
+	function iniciarExportacao() {
+		const filtros = JSON.stringify(getFiltrosAtivos());
+		document.querySelectorAll("[data-extrato-exportar]").forEach(function (link) {
+			const params = new URLSearchParams({
+				formato: link.getAttribute("data-extrato-exportar"),
+				filtros: filtros,
+			});
+			link.href = EXPORTAR_URL + "?" + params.toString();
 		});
 	}
 
@@ -1029,6 +1046,7 @@
 		opcoesEditaveis = lerOpcoesEditaveis();
 		iniciarPainelDeFiltros();
 		iniciarMostrarExcluidas();
+		iniciarExportacao();
 		iniciarColunas();
 		ajustarAlturaDoGrid();
 		window.addEventListener("resize", ajustarAlturaDoGrid);

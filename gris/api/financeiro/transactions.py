@@ -2,12 +2,15 @@
 API para gerenciamento de transações financeiras em lote
 """
 
+import csv
+import io
 import json
+from datetime import date, datetime
 
 import frappe
 from frappe import _
 from frappe.model.utils.user_settings import get_user_settings, update_user_settings
-from frappe.utils import cint, getdate
+from frappe.utils import cint, flt, get_datetime, getdate, nowdate
 
 from gris.api.portal_access import user_has_access
 
@@ -474,6 +477,16 @@ def render_extrato_rows(transacoes: list[dict], colunas: list[dict]) -> str:
 	)
 
 
+def _ler_filtros_extrato(filtros: str | dict | None) -> dict:
+	"""Filtros da tela recebidos como JSON string ou dict; inválidos viram `{}`."""
+	if isinstance(filtros, str):
+		try:
+			filtros = json.loads(filtros)
+		except ValueError:
+			filtros = {}
+	return filtros if isinstance(filtros, dict) else {}
+
+
 @frappe.whitelist()
 def get_extrato_rows(filtros: str | dict | None = None, start: int = 0, page_length: int | None = None):
 	"""Devolve o próximo lote de linhas do extrato para o scroll infinito.
@@ -490,14 +503,7 @@ def get_extrato_rows(filtros: str | dict | None = None, start: int = 0, page_len
 	if frappe.session.user == "Guest" or not user_has_access("/financeiro/extrato"):
 		frappe.throw(_("Sem permissão para consultar o extrato"), frappe.PermissionError)
 
-	if isinstance(filtros, str):
-		try:
-			filtros = json.loads(filtros)
-		except ValueError:
-			filtros = {}
-	if not isinstance(filtros, dict):
-		filtros = {}
-
+	filtros = _ler_filtros_extrato(filtros)
 	start = max(cint(start), 0)
 	page_length = cint(page_length) or EXTRATO_PAGE_SIZE
 	page_length = max(1, min(page_length, EXTRATO_MAX_PAGE_SIZE))
@@ -520,6 +526,152 @@ def get_extrato_rows(filtros: str | dict | None = None, start: int = 0, page_len
 		"count": len(transacoes),
 		"has_more": has_more,
 	}
+
+
+# ---------------------------------------------------------------------------
+# Exportação do extrato (CSV e XLSX)
+# ---------------------------------------------------------------------------
+
+#: Formatos aceitos na exportação do extrato.
+EXTRATO_FORMATOS_EXPORTACAO = ("csv", "xlsx")
+
+#: Início de texto que o Excel/Sheets interpreta como fórmula. Descrições vêm de
+#: extratos bancários e de planilhas, então não são confiáveis.
+_EXTRATO_INICIO_DE_FORMULA = ("=", "+", "-", "@", "\t", "\r")
+
+#: Larguras (em caracteres) das colunas da planilha, por tipo de coluna.
+_EXTRATO_LARGURA_XLSX = {"moeda": 14, "data": 12, "datahora": 19, "revisao": 10, "sim_nao": 10}
+
+
+def _valor_exportacao_extrato(coluna: dict, valor):
+	"""Converte o valor do banco no tipo nativo da célula exportada."""
+	tipo = coluna["tipo"]
+	if tipo in ("revisao", "sim_nao"):
+		return "Sim" if cint(valor) else "Não"
+	if valor in (None, ""):
+		return None
+	if tipo == "moeda":
+		return flt(valor, 2)
+	if tipo == "datahora":
+		return get_datetime(valor)
+	if tipo == "data":
+		return getdate(valor)
+	return str(valor)
+
+
+def _linhas_exportacao_extrato(colunas: list[dict], transacoes: list[dict]):
+	"""Cabeçalho e linhas da exportação, com o código da transação na frente."""
+	yield ["Código"] + [coluna["label"] for coluna in colunas]
+	for transacao in transacoes:
+		yield [transacao.get("name")] + [
+			_valor_exportacao_extrato(coluna, transacao.get(coluna["key"])) for coluna in colunas
+		]
+
+
+def _celula_csv_extrato(valor) -> str:
+	"""Formata a célula no padrão pt-BR, que o Excel em português abre direto."""
+	if valor is None:
+		return ""
+	if isinstance(valor, float):
+		return f"{valor:.2f}".replace(".", ",")
+	# `datetime` é subclasse de `date`, então vem antes.
+	if isinstance(valor, datetime):
+		return valor.strftime("%d/%m/%Y %H:%M:%S")
+	if isinstance(valor, date):
+		return valor.strftime("%d/%m/%Y")
+	valor = str(valor)
+	# O apóstrofo faz a planilha tratar o texto como literal, não como fórmula.
+	return "'" + valor if valor.startswith(_EXTRATO_INICIO_DE_FORMULA) else valor
+
+
+def gerar_csv_extrato(colunas: list[dict], transacoes: list[dict]) -> bytes:
+	"""CSV com `;` e BOM UTF-8, o formato que o Excel em português abre sem assistente."""
+	saida = io.StringIO()
+	escritor = csv.writer(saida, delimiter=";", lineterminator="\r\n")
+	for linha in _linhas_exportacao_extrato(colunas, transacoes):
+		escritor.writerow([_celula_csv_extrato(valor) for valor in linha])
+	return ("\ufeff" + saida.getvalue()).encode("utf-8")
+
+
+def gerar_xlsx_extrato(colunas: list[dict], transacoes: list[dict]) -> bytes:
+	"""Planilha com valores numéricos e datas de verdade, filtro e cabeçalho fixo."""
+	from openpyxl import Workbook
+	from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
+	from openpyxl.styles import Font
+	from openpyxl.utils import get_column_letter
+
+	formatos = {"moeda": "#,##0.00", "data": "DD/MM/YYYY", "datahora": "DD/MM/YYYY HH:MM:SS"}
+	tipos = [None] + [coluna["tipo"] for coluna in colunas]
+
+	wb = Workbook()
+	ws = wb.active
+	ws.title = "Extrato"
+
+	for indice_linha, linha in enumerate(_linhas_exportacao_extrato(colunas, transacoes), start=1):
+		for indice_coluna, valor in enumerate(linha, start=1):
+			if isinstance(valor, str):
+				valor = ILLEGAL_CHARACTERS_RE.sub("", valor)
+			cell = ws.cell(row=indice_linha, column=indice_coluna, value=valor)
+			if isinstance(valor, str):
+				# Texto começando com "=" viraria fórmula no openpyxl; grava como texto.
+				cell.data_type = "s"
+			elif indice_linha > 1 and tipos[indice_coluna - 1] in formatos:
+				cell.number_format = formatos[tipos[indice_coluna - 1]]
+		if indice_linha == 1:
+			for cell in ws[1]:
+				cell.font = Font(bold=True)
+
+	ws.column_dimensions["A"].width = 14
+	for indice_coluna, coluna in enumerate(colunas, start=2):
+		largura = _EXTRATO_LARGURA_XLSX.get(coluna["tipo"])
+		if largura is None:
+			largura = 50 if coluna.get("largura") == "lg" else max(len(coluna["label"]) + 2, 18)
+		ws.column_dimensions[get_column_letter(indice_coluna)].width = largura
+
+	ws.freeze_panes = "A2"
+	ws.auto_filter.ref = ws.dimensions
+
+	saida = io.BytesIO()
+	wb.save(saida)
+	return saida.getvalue()
+
+
+@frappe.whitelist(methods=["GET"])
+def exportar_extrato(formato: str = "xlsx", filtros: str | dict | None = None):
+	"""Baixa todas as transações do extrato que atendem aos filtros da tela.
+
+	Diferente do grid, não pagina: vêm todas as linhas do filtro, na mesma
+	ordem da tela, com todas as colunas que o usuário pode ver (inclusive as
+	ocultas no seletor), na ordem que ele escolheu.
+
+	Args:
+		formato: `csv` ou `xlsx`.
+		filtros: filtros ativos da tela (JSON string ou dict), com as mesmas
+			chaves aceitas pela query string de `/financeiro/extrato`.
+	"""
+	if frappe.session.user == "Guest" or not user_has_access("/financeiro/extrato"):
+		frappe.throw(_("Sem permissão para exportar o extrato"), frappe.PermissionError)
+
+	formato = str(formato or "").strip().lower()
+	if formato not in EXTRATO_FORMATOS_EXPORTACAO:
+		frappe.throw(_("Formato de exportação inválido. Use CSV ou XLSX."))
+
+	pode_ver_descricao_completa = "Gestor Financeiro" in frappe.get_roles()
+	colunas = get_extrato_colunas_do_usuario(pode_ver_descricao_completa)
+	filters = build_extrato_filters(
+		_ler_filtros_extrato(filtros), pode_buscar_descricao_completa=pode_ver_descricao_completa
+	)
+	transacoes = frappe.get_all(
+		"Transacao Extrato Geral",
+		fields=["name"] + [coluna["key"] for coluna in colunas],
+		filters=filters,
+		order_by=EXTRATO_ORDER_BY,
+	)
+
+	gerar = gerar_csv_extrato if formato == "csv" else gerar_xlsx_extrato
+	frappe.local.response.filename = f"extrato-{nowdate()}.{formato}"
+	frappe.local.response.filecontent = gerar(colunas, transacoes)
+	frappe.local.response.type = "download"
 
 
 # ---------------------------------------------------------------------------

@@ -3,6 +3,7 @@
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 {% from "public/design_system/components/generated/select.html.jinja" import select %}
 {% from "public/design_system/components/generated/popover.html.jinja" import popover %}
+{% from "public/design_system/components/generated/dropdown-menu.html.jinja" import dropdown_menu %}
 {% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
 
 {% block title %}Extrato{% endblock %}
@@ -183,6 +184,25 @@
 			<div class="col-toggle-footer">
 				<button type="button" class="btn-sm-ghost" id="extratoColunasPadrao">Restaurar padrão</button>
 			</div>
+		{% endcall %}
+		{#
+			Exporta todas as transações do filtro atual (não só as carregadas).
+			O extrato.js completa o `href` com os filtros da URL.
+		#}
+		{% call dropdown_menu(
+			trigger=(lucide_icon("download", size="sm") ~ " Exportar"),
+			id="extrato-exportar",
+			trigger_attrs={"class": "btn-sm-outline", "title": "Baixar todas as transações do filtro atual"},
+			popover_attrs={"data-align": "end"}
+		) %}
+			<a role="menuitem" href="/api/method/gris.api.financeiro.transactions.exportar_extrato?formato=xlsx" data-extrato-exportar="xlsx">
+				{{ lucide_icon("file-spreadsheet", size="sm") }}
+				Excel (.xlsx)
+			</a>
+			<a role="menuitem" href="/api/method/gris.api.financeiro.transactions.exportar_extrato?formato=csv" data-extrato-exportar="csv">
+				{{ lucide_icon("file-text", size="sm") }}
+				CSV (.csv)
+			</a>
 		{% endcall %}
 	</header>
 	<section class="p-0 extrato-tabela__section">

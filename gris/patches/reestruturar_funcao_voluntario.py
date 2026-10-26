@@ -14,10 +14,15 @@ def execute():
 	if not frappe.db.table_exists("Funcao Voluntario"):
 		return
 
-	linhas = frappe.db.get_all(
-		"Funcao Voluntario",
-		fields=["name", "titulo", "categoria", "area"],
-	)
+	# `area` saiu do DocType depois deste patch e o Frappe não remove a coluna no
+	# migrate: só existe nos sites que já a tinham. Num site criado sem ela, pedir o
+	# campo derrubaria o migrate inteiro.
+	tem_area = frappe.db.has_column("Funcao Voluntario", "area")
+	campos = ["name", "titulo", "categoria"]
+	if tem_area:
+		campos.append("area")
+
+	linhas = frappe.db.get_all("Funcao Voluntario", fields=campos)
 	if not linhas:
 		return
 
@@ -25,18 +30,16 @@ def execute():
 	titulos_usados = {(linha.titulo or "").strip() for linha in linhas if (linha.titulo or "").strip()}
 
 	for linha in linhas:
-		area = (linha.area or "").strip()
+		area = (linha.get("area") or "").strip()
 		area_valida = area if area in unidades else None
 
 		titulo = (linha.titulo or "").strip() or _montar_titulo(linha.categoria, area, titulos_usados)
 		titulos_usados.add(titulo)
 
-		frappe.db.set_value(
-			"Funcao Voluntario",
-			linha.name,
-			{"titulo": titulo, "area": area_valida},
-			update_modified=False,
-		)
+		valores = {"titulo": titulo}
+		if tem_area:
+			valores["area"] = area_valida
+		frappe.db.set_value("Funcao Voluntario", linha.name, valores, update_modified=False)
 
 		# O nome antigo é um hash ilegível; com autoname `field:titulo` o esperado
 		# passa a ser o próprio título.

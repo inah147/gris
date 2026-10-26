@@ -172,7 +172,7 @@ def get_member_history(name: str):
 	return {"success": True, "history": history}
 
 
-@frappe.whitelist()  # type: ignore[misc]
+@frappe.whitelist(methods=["POST"])  # type: ignore[misc]
 def update_member_history(name: str, history: str):
 	"""Update history records for a member."""
 	_ensure_logged_in()

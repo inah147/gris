@@ -24,7 +24,7 @@ def get_context(context):
 
 # Público por intenção: é o formulário de interesse de novas famílias, que por
 # definição é preenchido por quem ainda não tem conta.
-@frappe.whitelist(allow_guest=True)  # nosemgrep
+@frappe.whitelist(allow_guest=True, methods=["POST"])  # nosemgrep
 def submit_interest(
 	nome_responsavel,
 	email_responsavel,

@@ -4,7 +4,7 @@ authors = [
     { name = "Grupo Escoteiro Professora Inah de Mello - 47/SP", email = "tecnologia@gepim.com.br"}
 ]
 description = "App base para gestão complementar de Grupos Escoteiros"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 readme = "README.md"
 dynamic = ["version"]
 dependencies = [
@@ -16,6 +16,14 @@ dependencies = [
     # "module 'lib' has no attribute 'GEN_EMAIL'", derrubando o bench inteiro.
     # Ao atualizar, conferir a faixa em apps/frappe/pyproject.toml do bench.
     "cryptography~=50.0.0",
+    # Sobrepõe o pin do Frappe v15 (Pillow~=12.3.0): o 12.3.0 tem dezenas de CVEs
+    # (estouro de buffer nos decoders de JPEG/TIFF, bombas de descompressão etc.)
+    # corrigidas só no 13.0.0, e o Frappe abre com o Pillow toda imagem enviada.
+    # Nenhuma das quebras do 13.0 atinge o que o Frappe ou este app usam. Como o
+    # gris é instalado depois do Frappe, este pin é o que vale no bench; o pip só
+    # avisa do conflito. O 13 exige Python >= 3.11 — daí o requires-python acima.
+    # Quando o Frappe subir o próprio pin, este pode sair.
+    "Pillow~=13.0",
     "pandas",
     "dateparser",
     "ofxparse",

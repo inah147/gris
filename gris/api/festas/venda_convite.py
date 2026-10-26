@@ -292,7 +292,7 @@ def get_resumo_carrinho(festa_name: str, itens, doacao_valor=0) -> dict:
 
 # Público por necessidade: é a compra de convite pelo visitante. Tem rate limit e
 # revalida no servidor festa, itens, valores e dados do pagador.
-@frappe.whitelist(allow_guest=True)  # nosemgrep
+@frappe.whitelist(allow_guest=True, methods=["POST"])  # nosemgrep
 @rate_limit(key="venda-convite", limit=10, seconds=60)
 def criar_convite(
 	festa_name: str,

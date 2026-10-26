@@ -78,6 +78,17 @@ repos:
                 gris/public/js/lib/.*
             )$
 
+  - repo: local
+    hooks:
+      # O portal não carrega o CSS do Desk: frappe.ui.Dialog, frappe.prompt etc. aparecem
+      # sem estilo (X gigante, mensagem no rodapé). Ver o docstring do script.
+      - id: portal-sem-dialogo-desk
+        name: "Portal sem diálogos do Desk"
+        entry: python scripts/checks/portal_sem_dialogo_desk.py
+        language: python
+        pass_filenames: false
+        files: ^(gris/(www|templates|public)/.*\.(js|html)|scripts/checks/portal_sem_dialogo_desk\.py)$
+
 ci:
     autoupdate_schedule: weekly
     skip: []

@@ -275,3 +275,33 @@
 	.xl\:flex-row { flex-direction: row; }
 	.xl\:flex-col { flex-direction: column; }
 }
+
+/* --- Toaster acima de <dialog> modal ---
+   Com um <dialog> aberto, design-system-init.js põe o toaster na top layer como popover.
+   Aqui anulamos os estilos do UA para [popover] (inset: 0; margin: auto; borda; padding;
+   fundo) que o transformariam numa caixa centralizada, mantendo o posicionamento do .toaster. */
+.toaster[popover] {
+	top: auto;
+	left: auto;
+	height: auto;
+	margin: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	overflow: visible;
+}
+
+.toaster[popover][data-align="start"] {
+	left: 0;
+}
+
+.toaster[popover][data-align="center"] {
+	left: 50%;
+}
+
+/* O Basecoat quebra o texto do toast em qualquer letra (word-break: break-all), o que
+   parte palavras ao meio ("ediçã/o") nas mensagens longas vindas de frappe.msgprint. */
+.toaster .toast .toast-content section p {
+	word-break: normal;
+	overflow-wrap: anywhere;
+}

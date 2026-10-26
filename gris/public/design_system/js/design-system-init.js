@@ -38,29 +38,192 @@
 		return div.innerHTML;
 	}
 
-	// No portal, frappe.show_alert (Desk) renderiza sem estilo (ícone gigante no rodapé).
-	// Redireciona para o toast do design system, preservando a assinatura original.
+	// Mensagem de erro vinda do servidor costuma explicar o que fazer: fica mais tempo na tela.
+	const MSGPRINT_ERROR_DURATION = 8000;
+
+	// Converte o HTML de uma mensagem em texto. O DOMParser monta um documento inerte
+	// (nada de <img onerror> executando); quebras de linha e itens de lista são mantidos.
+	function htmlToText(html) {
+		const doc = new DOMParser().parseFromString(String(html ?? ""), "text/html");
+		doc.querySelectorAll("br").forEach((br) => br.replaceWith("\n"));
+		doc.querySelectorAll("li").forEach((li) => {
+			li.prepend("• ");
+			li.append("\n");
+		});
+		doc.querySelectorAll("p, div, tr").forEach((element) => element.append("\n"));
+		return (doc.body.textContent || "").replace(/\n{2,}/g, "\n").trim();
+	}
+
+	function textToHtml(text) {
+		return escapeHtml(text).replace(/\n/g, "<br>");
+	}
+
+	// Um <dialog> aberto com showModal() fica na top layer e cobriria o toast. Enquanto
+	// houver um aberto, o toaster entra na top layer como popover; reabri-lo a cada toast
+	// o põe acima do diálogo mais recente. Os estilos de [popover] são anulados em layout.css.
+	function keepToasterAboveModal(toaster) {
+		if (typeof toaster.showPopover !== "function") {
+			return;
+		}
+
+		try {
+			if (!document.querySelector("dialog:modal")) {
+				toaster.removeAttribute("popover");
+				return;
+			}
+			if (!toaster.hasAttribute("popover")) {
+				toaster.setAttribute("popover", "manual");
+			}
+			if (toaster.matches(":popover-open")) {
+				toaster.hidePopover();
+			}
+			toaster.showPopover();
+		} catch (error) {
+			// Navegador sem :modal ou Popover API: o toast aparece, só que atrás do diálogo.
+		}
+	}
+
+	function showToast(config) {
+		ensureToasterContainer();
+		const toaster = document.getElementById("toaster");
+		if (toaster) {
+			keepToasterAboveModal(toaster);
+		}
+		document.dispatchEvent(new CustomEvent("basecoat:toast", { detail: { config } }));
+	}
+
+	/*
+	 * APIs de diálogo do Desk no portal.
+	 *
+	 * frappe.show_alert, frappe.msgprint e frappe.confirm montam um modal Bootstrap, mas o
+	 * portal não carrega o CSS do Desk: o botão de fechar vira um X gigante e a mensagem fica
+	 * largada no rodapé da página. Cada uma é redirecionada para o componente equivalente do
+	 * design system, preservando a assinatura original — inclusive o `frappe.call` do portal,
+	 * que exibe o `frappe.throw` do servidor via frappe.msgprint.
+	 *
+	 * Ao usar outra API de diálogo do Desk numa página do portal, crie o shim aqui e registre-o
+	 * em `PORTAL_SHIMS` de scripts/checks/portal_sem_dialogo_desk.py (pre-commit e testes).
+	 */
+
 	function showAlertAsToast(message, seconds) {
 		const options = message && typeof message === "object" ? message : { message };
 		const duration = Number(seconds || options.seconds || 0) * 1000;
-		ensureToasterContainer();
-		document.dispatchEvent(
-			new CustomEvent("basecoat:toast", {
-				detail: {
-					config: {
-						category: ALERT_CATEGORIES[options.indicator] || "info",
-						description: escapeHtml(options.message),
-						...(duration > 0 ? { duration } : {}),
-					},
-				},
-			})
-		);
+		showToast({
+			category: ALERT_CATEGORIES[options.indicator] || "info",
+			description: escapeHtml(options.message),
+			...(duration > 0 ? { duration } : {}),
+		});
 	}
 
-	function overrideFrappeAlert() {
-		if (window.frappe) {
-			window.frappe.show_alert = showAlertAsToast;
+	function parseMsgprintArgs(msg, title) {
+		if (msg && typeof msg === "object" && !Array.isArray(msg)) {
+			return { ...msg };
 		}
+		if (typeof msg === "string" && msg.trim().startsWith("{")) {
+			try {
+				return JSON.parse(msg);
+			} catch (error) {
+				// Não era JSON: segue como texto.
+			}
+		}
+		return { message: msg, title };
+	}
+
+	function showMsgprintAsToast(msg, title) {
+		if (!msg) {
+			return;
+		}
+
+		// O servidor manda uma lista (`_server_messages`); havendo exceção, só ela importa.
+		if (Array.isArray(msg)) {
+			const messages = msg.map((item) => parseMsgprintArgs(item));
+			const exceptions = messages.filter((item) => item.raise_exception);
+			(exceptions.length ? exceptions : messages).forEach((item) =>
+				showMsgprintAsToast(item)
+			);
+			return;
+		}
+
+		const data = parseMsgprintArgs(msg, title);
+		if (Array.isArray(data.message)) {
+			if (data.as_list) {
+				data.message = data.message.map((item) => `<li>${item}</li>`).join("");
+			} else if (data.as_table) {
+				data.message = data.message.map((row) => [].concat(row).join(" · ")).join("<br>");
+			} else {
+				showMsgprintAsToast(data.message);
+				return;
+			}
+		}
+
+		if (data.alert || data.toast) {
+			window.frappe.show_alert(data);
+			return;
+		}
+
+		const text = htmlToText(data.message);
+		if (!text) {
+			return;
+		}
+
+		const category = ALERT_CATEGORIES[data.indicator] || "info";
+		showToast({
+			category,
+			description: textToHtml(text),
+			...(category === "error" ? { duration: MSGPRINT_ERROR_DURATION } : {}),
+		});
+	}
+
+	function confirmAsDialog(message, ifYes, ifNo) {
+		const dialog = document.createElement("dialog");
+		dialog.className = "dialog";
+		dialog.setAttribute("aria-labelledby", "grisConfirmTitulo");
+		dialog.innerHTML = `
+			<div>
+				<header><h2 id="grisConfirmTitulo">Confirmar</h2></header>
+				<section><p class="text-sm"></p></section>
+				<footer>
+					<button type="button" class="btn-outline" data-confirm="nao">Cancelar</button>
+					<button type="button" class="btn" data-confirm="sim">Confirmar</button>
+				</footer>
+			</div>
+		`;
+		dialog.querySelector("p").innerHTML = textToHtml(htmlToText(message));
+
+		let confirmed = false;
+		dialog.addEventListener("click", (event) => {
+			const button = event.target.closest("[data-confirm]");
+			if (button) {
+				confirmed = button.dataset.confirm === "sim";
+				dialog.close();
+			} else if (event.target === dialog) {
+				dialog.close();
+			}
+		});
+		// `close` também cobre o Esc: sem clicar em Confirmar, conta como "não".
+		dialog.addEventListener("close", () => {
+			dialog.remove();
+			const callback = confirmed ? ifYes : ifNo;
+			if (typeof callback === "function") {
+				callback();
+			}
+		});
+
+		document.body.appendChild(dialog);
+		dialog.showModal();
+		dialog.querySelector('[data-confirm="sim"]').focus();
+		return dialog;
+	}
+
+	function overrideFrappeDialogs() {
+		if (!window.frappe) {
+			return;
+		}
+
+		window.frappe.show_alert = showAlertAsToast;
+		window.frappe.msgprint = showMsgprintAsToast;
+		window.msgprint = showMsgprintAsToast;
+		window.frappe.confirm = confirmAsDialog;
 	}
 
 	function getThemeRoot() {
@@ -179,7 +342,7 @@
 		initializeTheme();
 		ensureToasterContainer();
 		ensureBasecoatObserver();
-		overrideFrappeAlert();
+		overrideFrappeDialogs();
 	}
 
 	// Basecoat already auto-initializes on DOMContentLoaded and watches future DOM insertions.

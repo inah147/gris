@@ -63,7 +63,7 @@ Skills disponíveis em: `.claude/skills/<skill-name>/SKILL.md`.
 > Regra principal de UI: **Portal usa Basecoat; Desk usa componentes nativos do Frappe**.
 
 - **Desk**: usar `frappe.ui.form.on(...)`, `frappe.ui.Dialog`, `frappe.msgprint`, `frappe.show_alert` e padrões nativos do Desk.
-- **Portal (`www`)**: usar o design system Basecoat em `gris/public/design_system`, macros Jinja e assets carregados por `gris/templates/base.html`.
+- **Portal (`www`)**: usar o design system Basecoat em `gris/public/design_system`, macros Jinja e assets carregados por `gris/templates/base.html`. Diálogos do Desk (`frappe.ui.Dialog`, `frappe.prompt`, `frappe.warn`) aparecem sem estilo no portal e são barrados por `scripts/checks/portal_sem_dialogo_desk.py`; `frappe.msgprint`, `frappe.show_alert` e `frappe.confirm` têm shim em `design-system-init.js`.
 - Não carregar Basecoat, macros de portal ou `/assets/gris/design_system/*` em telas Desk.
 - Em páginas de portal com shell autenticado, preferir `templates/web_sidebar_base.html`.
 - Evitar duplicar validações críticas no JS sem equivalente no backend.

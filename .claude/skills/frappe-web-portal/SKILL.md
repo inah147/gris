@@ -116,6 +116,7 @@ Para redefinir o componente visualmente após `form.reset()`, iterar sobre `form
 - Componentes Basecoat são inicializados por `basecoat.min.js`, scripts em `design_system/js/components/` e `design-system-init.js`.
 - Para HTML inserido dinamicamente, o observer do Basecoat cobre novos nós; se necessário, dispare `document.dispatchEvent(new CustomEvent("gris:design-system:init"))`.
 - Para toasts, renderize o `toaster()` na página quando houver feedback dinâmico e dispare `basecoat:toast` no client.
+- O portal não carrega o CSS do Desk: modais Bootstrap do Frappe aparecem sem estilo (X gigante, mensagem largada no rodapé). Por isso `design-system-init.js` redireciona `frappe.show_alert` e `frappe.msgprint` (inclusive o `frappe.throw` do servidor exibido pelo `frappe.call`) para o toast e `frappe.confirm` para um `<dialog>` Basecoat. `frappe.ui.Dialog`, `frappe.prompt`, `frappe.warn` e demais `frappe.ui.*` **não** têm equivalente: use `<dialog>` com a macro `dialog`. A trava `scripts/checks/portal_sem_dialogo_desk.py` (pre-commit e `gris/tests/test_portal_sem_dialogo_desk.py`) reprova o uso; para cobrir uma API nova, crie o shim em `design-system-init.js` e registre-o em `PORTAL_SHIMS`.
 
 ### CSS local da rota
 - Use CSS co-localizado (`www/rota.css`) apenas para layout específico da página.

@@ -92,6 +92,9 @@ class TestUpdateExtratoCelulas(FrappeTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			update_extrato_celulas("isto não é json", "categoria", "Qualquer")
 
+	def test_teto_do_lote_e_500_transacoes(self):
+		self.assertEqual(EXTRATO_MAX_EDICAO_LOTE, 500)
+
 	def test_lote_acima_do_teto_e_recusado(self):
 		ids = [f"TX-{i:04d}" for i in range(EXTRATO_MAX_EDICAO_LOTE + 1)]
 		with self.assertRaises(frappe.ValidationError):

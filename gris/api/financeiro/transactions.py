@@ -229,7 +229,7 @@ EXTRATO_CAMPOS_EDITAVEIS = {
 }
 
 #: Teto de transações alteradas numa única edição em lote.
-EXTRATO_MAX_EDICAO_LOTE = 200
+EXTRATO_MAX_EDICAO_LOTE = 500
 
 
 def _parse_data_extrato(valor) -> str | None:

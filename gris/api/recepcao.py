@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 from frappe.utils import format_datetime, get_fullname, getdate, strip_html, today
 
+from gris.api.recepcao_fila import DOCTYPE_FILA, STATUS_FILA, motivo_para_nao_entrar_na_fila, proxima_posicao
 from gris.api.recepcao_funil import STATUS_ANTES_DA_VISITA
 
 
@@ -275,22 +276,29 @@ def processar_desistencia(novo_associado_name: str, motivo: str | None = None):
 
 @frappe.whitelist()
 def enviar_para_fila_espera(novo_associado_name: str):
+	"""Põe o jovem no fim da fila de espera do ramo dele.
+
+	O status de onde ele veio fica gravado na passagem aberta pelo controller do Novo
+	Associado — é para esse status que ele volta quando for chamado.
+	"""
 	if not frappe.db.exists("Novo Associado", novo_associado_name):
 		frappe.throw(_("Novo Associado não encontrado"))
 
 	doc = frappe.get_doc("Novo Associado", novo_associado_name)
+	motivo = motivo_para_nao_entrar_na_fila(doc)
+	if motivo:
+		frappe.throw(motivo)
 
-	# Update status
-	doc.status = "Fila de espera"
+	doc.status = STATUS_FILA
 	doc.save()
 
-	# Create Fila de Espera entry
 	fila = frappe.get_doc(
 		{
-			"doctype": "Fila de Espera",
+			"doctype": DOCTYPE_FILA,
 			"associado": novo_associado_name,
 			"ramo": doc.ramo,
 			"dt_inclusao_fila": frappe.utils.now(),
+			"posicao": proxima_posicao(doc.ramo),
 		}
 	)
 	fila.insert()

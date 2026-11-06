@@ -19,6 +19,11 @@ from frappe.utils import getdate
 
 from gris.api import recepcao as servico
 from gris.api.mcp.registry import ErroDeFerramenta, ferramenta, normalizar_limite
+from gris.api.recepcao_fila import (
+	CAMPOS_PARA_ENTRAR_NA_FILA,
+	ORDEM_DA_FILA,
+	motivo_para_nao_entrar_na_fila,
+)
 from gris.api.recepcao_funil import (
 	CAMPOS_DE_ETAPA,
 	STEPS_DEF,
@@ -545,8 +550,9 @@ def comentar_novo_associado(name: str, texto: str, simular: bool = False) -> dic
 	nome="enviar_para_fila_espera",
 	titulo="Enviar para a fila de espera",
 	descricao=(
-		"Move a pessoa para a fila de espera do ramo: o status vira 'Fila de espera' e "
-		"uma entrada é criada na fila com a data de inclusão."
+		"Move a pessoa para o fim da fila de espera do ramo: o status vira 'Fila de espera' "
+		"e o status anterior fica guardado para a volta. Vale para qualquer etapa do funil, "
+		"menos 'Acompanhamento Definitivo', 'Acompanhamento Final' e 'Concluído'."
 	),
 	parametros={"name": {"type": "string", "description": "Identificador do Novo Associado."}},
 	obrigatorios=("name",),
@@ -556,9 +562,12 @@ def comentar_novo_associado(name: str, texto: str, simular: bool = False) -> dic
 def enviar_para_fila_espera(name: str, simular: bool = False) -> dict:
 	_garantir_registro(name)
 
-	dados = frappe.db.get_value(DOCTYPE, name, ["status", "ramo", "nome_completo"], as_dict=True)
-	if dados.get("status") == "Fila de espera":
-		return {"enviado": False, "motivo": "Esta pessoa já está na fila de espera."}
+	dados = frappe.db.get_value(
+		DOCTYPE, name, ["ramo", "nome_completo", *CAMPOS_PARA_ENTRAR_NA_FILA], as_dict=True
+	)
+	motivo = motivo_para_nao_entrar_na_fila(dados)
+	if motivo:
+		return {"enviado": False, "motivo": motivo}
 
 	if simular:
 		return {
@@ -577,7 +586,8 @@ def enviar_para_fila_espera(name: str, simular: bool = False) -> dict:
 	nome="listar_fila_espera",
 	titulo="Listar fila de espera",
 	descricao=(
-		"Lista a fila de espera por ramo, na ordem de entrada, com o nome de cada pessoa e a posição na fila."
+		"Lista a fila de espera por ramo, na ordem da fila (que a recepção pode reordenar), "
+		"com o nome de cada pessoa e a posição na fila."
 	),
 	parametros={
 		"ramo": {"type": "string", "enum": list(RAMOS), "description": "Filtra por ramo."},
@@ -590,7 +600,7 @@ def listar_fila_espera(ramo: str | None = None) -> dict:
 		DOCTYPE_FILA,
 		filters=filtros,
 		fields=["name", "associado", "ramo", "dt_inclusao_fila"],
-		order_by="dt_inclusao_fila asc",
+		order_by=ORDEM_DA_FILA,
 	)
 
 	nomes = [linha["associado"] for linha in fila if linha.get("associado")]
@@ -619,8 +629,9 @@ def listar_fila_espera(ramo: str | None = None) -> dict:
 	nome="chamar_da_fila_espera",
 	titulo="Chamar alguém da fila de espera",
 	descricao=(
-		"Tira a pessoa da fila de espera e devolve o registro ao início do funil "
-		"(status 'Novo Contato'), como quando abre uma vaga no ramo."
+		"Tira a pessoa da fila de espera e devolve o registro ao status em que ela estava "
+		"ao entrar na fila, com as etapas já concluídas preservadas, como quando abre uma "
+		"vaga no ramo."
 	),
 	parametros={
 		"fila_id": {"type": "string", "description": "Identificador da entrada na fila."},
@@ -641,8 +652,13 @@ def chamar_da_fila_espera(fila_id: str, simular: bool = False) -> dict:
 
 	from gris.www.recepcao import fila_espera
 
-	fila_espera.chamar_associado(fila_id)
-	return {"chamado": True, "novo_associado": dados.get("associado"), "ramo": dados.get("ramo")}
+	resultado = fila_espera.chamar_associado(fila_id)
+	return {
+		"chamado": True,
+		"novo_associado": dados.get("associado"),
+		"ramo": dados.get("ramo"),
+		"status": (resultado or {}).get("status"),
+	}
 
 
 @ferramenta(

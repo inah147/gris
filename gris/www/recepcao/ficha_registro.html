@@ -168,6 +168,44 @@
       </div>
     {% endcall %}
 
+    <!-- Histórico da Fila de Espera -->
+    {% if historico_fila %}
+      {% call card(
+        title="Histórico da Fila de Espera",
+        description="Ao sair da fila, o jovem volta ao status em que estava ao entrar, com as etapas já concluídas.",
+        attrs={"class": "mb-4"}
+      ) %}
+        <div class="fila-historico">
+          <table class="table fila-historico__tabela">
+            <thead>
+              <tr>
+                <th scope="col">Entrou em</th>
+                <th scope="col">Status anterior</th>
+                <th scope="col">Saiu em</th>
+                <th scope="col">Voltou para</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for passagem in historico_fila %}
+                <tr>
+                  <td>{{ passagem.entrada_em | e }}</td>
+                  <td>{{ passagem.status_anterior | e }}</td>
+                  <td>
+                    {% if passagem.aberta %}
+                      {{ badge(passagem.saida_em, variant="secondary") }}
+                    {% else %}
+                      {{ passagem.saida_em | e }}
+                    {% endif %}
+                  </td>
+                  <td>{{ (passagem.status_posterior or "—") | e }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endcall %}
+    {% endif %}
+
     <!-- Números de Registro -->
     {% set registro_footer %}
       <div class="registro-numeros__acoes">

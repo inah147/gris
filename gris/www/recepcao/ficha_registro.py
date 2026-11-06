@@ -4,6 +4,7 @@ from frappe.rate_limiter import rate_limit
 from frappe.utils import cint, format_date, format_datetime, get_fullname, getdate, strip_html
 
 from gris.api.portal_access import enrich_context
+from gris.api.recepcao_fila import CAMPO_HISTORICO, historico_formatado
 from gris.api.recepcao_funil import SUFIXO_ETAPA_OPCIONAL, anexar_historico, calcular_etapas
 from gris.www.recepcao.ficha_campos import BLOCOS_DO_ASSOCIADO, BLOCOS_DO_RESPONSAVEL, montar_blocos
 
@@ -166,6 +167,8 @@ def get_context(context):
 		steps_data.append(step_info)
 
 	context.flow_steps = steps_data
+	# Passagens pela fila de espera, da mais recente para a mais antiga.
+	context.historico_fila = historico_formatado(doc.get(CAMPO_HISTORICO))
 
 	# Comentários internos (usando Comment)
 	comments = frappe.get_all(

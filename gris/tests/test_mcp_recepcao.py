@@ -306,6 +306,27 @@ class TestFilaDeEspera(TestCase):
 
 		self.assertFalse(resultado["enviado"])
 
+	def test_envio_para_fila_recusa_acompanhamento_definitivo_e_final(self):
+		casos = (
+			{"status": "Acompanhamento", "tipo_de_registro": "Definitivo"},
+			{
+				"status": "Acompanhamento",
+				"tipo_de_registro": "Provisório",
+				"registro_definitivo_efetivado": 1,
+			},
+		)
+		for dados in casos:
+			with (
+				self.subTest(dados=dados),
+				patch.object(recepcao.frappe.db, "exists", return_value=True),
+				patch.object(recepcao.frappe.db, "get_value", return_value={**dados, "ramo": "Lobinho"}),
+				patch.object(recepcao.servico, "enviar_para_fila_espera") as servico,
+			):
+				resultado = recepcao.enviar_para_fila_espera("NA-1")
+
+			self.assertFalse(resultado["enviado"])
+			servico.assert_not_called()
+
 	def test_envio_para_fila_delega(self):
 		with (
 			patch.object(recepcao.frappe.db, "exists", return_value=True),
@@ -349,7 +370,9 @@ class TestFilaDeEspera(TestCase):
 		dados = {"name": "F1", "associado": "NA-1", "ramo": "Lobinho"}
 		with (
 			patch.object(recepcao.frappe.db, "get_value", return_value=dados),
-			patch.object(fila_espera, "chamar_associado") as servico,
+			patch.object(
+				fila_espera, "chamar_associado", return_value={"status": "Aguardar Dados"}
+			) as servico,
 		):
 			simulado = recepcao.chamar_da_fila_espera("F1", simular=True)
 			real = recepcao.chamar_da_fila_espera("F1")
@@ -357,6 +380,8 @@ class TestFilaDeEspera(TestCase):
 		servico.assert_called_once_with("F1")
 		self.assertTrue(simulado["simulacao"])
 		self.assertEqual(real["novo_associado"], "NA-1")
+		# Volta ao status de antes da fila, e não mais a "Novo Contato".
+		self.assertEqual(real["status"], "Aguardar Dados")
 
 
 class TestComentario(TestCase):

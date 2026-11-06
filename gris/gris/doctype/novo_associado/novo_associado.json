@@ -67,6 +67,7 @@
   "registro_definitivo_efetivado",
   "reuniao_de_acolhida_realizada",
   "historico_de_etapas",
+  "historico_fila_de_espera",
   "ramo_filhotes_section",
   "ciente_registro_responsavel_filhotes",
   "ciente_acompanhamento_filhotes",
@@ -373,10 +374,10 @@
   },
   {
    "default": "0",
-   "description": "Boleto do registro provisório emitido; o registro só é efetivado depois do pagamento.",
+   "description": "Boleto do registro provis\u00f3rio emitido; o registro s\u00f3 \u00e9 efetivado depois do pagamento.",
    "fieldname": "boleto_provisorio_gerado",
    "fieldtype": "Check",
-   "label": "Boleto provisório gerado"
+   "label": "Boleto provis\u00f3rio gerado"
   },
   {
    "default": "0",
@@ -412,7 +413,7 @@
   },
   {
    "default": "0",
-   "description": "Boleto do registro definitivo emitido; o registro só é efetivado depois do pagamento.",
+   "description": "Boleto do registro definitivo emitido; o registro s\u00f3 \u00e9 efetivado depois do pagamento.",
    "fieldname": "boleto_definitivo_gerado",
    "fieldtype": "Check",
    "label": "Boleto definitivo gerado"
@@ -429,6 +430,14 @@
    "fieldtype": "Table",
    "label": "Hist\u00f3rico das etapas",
    "options": "Etapa do Fluxo Concluida",
+   "read_only": 1
+  },
+  {
+   "description": "Preenchido pelo controller sempre que o status entra ou sai de \"Fila de espera\": guarda o status de origem, para onde o jovem volta quando \u00e9 chamado.",
+   "fieldname": "historico_fila_de_espera",
+   "fieldtype": "Table",
+   "label": "Hist\u00f3rico da fila de espera",
+   "options": "Passagem pela Fila de Espera",
    "read_only": 1
   },
   {
@@ -541,7 +550,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-09-14 12:00:00.000000",
+ "modified": "2026-11-06 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Novo Associado",

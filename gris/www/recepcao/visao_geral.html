@@ -102,9 +102,12 @@
 {% endmacro %}
 
 {# ---- Footers reutilizáveis ---- #}
-{% set footer_desistencia %}
-<button type="button" class="btn-destructive" onclick="registrarDesistencia()">
-	{{ lucide_icon("door-open", size="sm") }} Desistência
+{# A fila de espera vale para todas as etapas, menos "Acompanhamento Definitivo" e
+   "Acompanhamento Final" (regra em gris.api.recepcao_fila.motivo_para_nao_entrar_na_fila).
+   O dialog de acompanhamento é um só para as três listas: o JS esconde o botão nas duas. #}
+{% set botao_fila %}
+<button type="button" class="btn-outline js-enviar-fila" onclick="enviarFilaEspera()">
+	{{ lucide_icon("hourglass", size="sm") }} Fila de Espera
 </button>
 {% endset %}
 
@@ -112,9 +115,7 @@
 <button type="button" class="btn-destructive" onclick="registrarDesistencia()">
 	{{ lucide_icon("door-open", size="sm") }} Desistência
 </button>
-<button type="button" class="btn-outline" onclick="enviarFilaEspera()">
-	{{ lucide_icon("hourglass", size="sm") }} Fila de Espera
-</button>
+{{ botao_fila }}
 {% endset %}
 
 {% block main %}
@@ -288,6 +289,7 @@
 {% call dialog(
 	id="modalNovoContato",
 	title="Novo Contato",
+	footer=botao_fila,
 	close_button=true
 ) %}
 	{{ people_header("modalAssociadoNome", "modalResponsavelNome") }}
@@ -406,7 +408,7 @@
 {{ dialog(
 	id="modalConfirmarFilaEspera",
 	title="Confirmar Fila de Espera",
-	description="Deseja enviar este associado para a Fila de Espera?",
+	description="Deseja enviar este associado para a Fila de Espera? Quando for chamado, ele volta para a etapa em que está agora, com as etapas já concluídas.",
 	footer='<button type="button" class="btn-ghost" onclick="closeConfirmarFilaEspera()">Cancelar</button><button type="button" class="btn-primary" onclick="confirmarFilaEspera()">Confirmar</button>',
 	close_button=false,
 	close_on_overlay_click=false
@@ -523,7 +525,7 @@
 {% call dialog(
 	id="modalAguardarDados",
 	title="Aguardando Dados",
-	footer=footer_desistencia,
+	footer=footer_desistencia_fila,
 	close_button=true
 ) %}
 	{{ people_header("ad_associado_nome", "ad_responsavel_nome") }}
@@ -545,7 +547,7 @@
 {% call dialog(
 	id="modalFazerRegistro",
 	title="Fazer Registro",
-	footer=footer_desistencia,
+	footer=footer_desistencia_fila,
 	close_button=true
 ) %}
 	{{ people_header("fr_associado_nome", "fr_responsavel_nome") }}
@@ -609,7 +611,7 @@
 {% call dialog(
 	id="modalAcompanhamento",
 	title="Acompanhamento",
-	footer=footer_desistencia,
+	footer=footer_desistencia_fila,
 	close_button=true
 ) %}
 	{{ people_header("ac_associado_nome", "ac_responsavel_nome") }}

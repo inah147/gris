@@ -333,8 +333,22 @@
   word-break: break-word;
 }
 
-.comment-item__edit {
+.comment-item__acoes {
+  display: inline-flex;
+  gap: 0.25rem;
   margin-left: auto;
+}
+
+/* Confirmação de apagar, dentro do próprio item. */
+.comment-item__confirmar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.comment-item__confirmar > span:first-child {
+  flex-basis: 100%;
 }
 
 /* Documentos do responsável (ramo Filhotes) — links para arquivos no Google Drive */

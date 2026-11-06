@@ -56,7 +56,6 @@
 		const commentForm = document.getElementById("comment-form");
 		const commentTextarea = document.getElementById("comment-text");
 		const commentList = document.getElementById("comment-list");
-		const emptyState = document.getElementById("comment-empty");
 		const errorBox = document.getElementById("comment-error");
 		const submitBtn = document.getElementById("comment-submit");
 		const dialogEl = document.getElementById("comment-modal");
@@ -65,6 +64,10 @@
 		const PENCIL_ICON_HTML =
 			'<svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true">' +
 			'<use href="/assets/gris/design_system/icons/lucide/sprite.svg#pencil" />' +
+			"</svg>";
+		const TRASH_ICON_HTML =
+			'<svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true">' +
+			'<use href="/assets/gris/design_system/icons/lucide/sprite.svg#trash-2" />' +
 			"</svg>";
 		let editingCommentName = null;
 
@@ -200,14 +203,23 @@
 											comment.creation || ""
 										)}</span>
                                     </div>
-                                    <button
-                                        type="button"
-                                        class="btn-sm-ghost comment-item__edit"
-                                        data-comment-name="${escapeHtml(comment.name)}"
-                                        data-comment-content="${escapeHtml(contentText)}"
-                                    >
-                                        ${PENCIL_ICON_HTML} Editar
-                                    </button>
+                                    <div class="comment-item__acoes">
+                                        <button
+                                            type="button"
+                                            class="btn-sm-ghost comment-item__edit"
+                                            data-comment-name="${escapeHtml(comment.name)}"
+                                            data-comment-content="${escapeHtml(contentText)}"
+                                        >
+                                            ${PENCIL_ICON_HTML} Editar
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="btn-sm-ghost comment-item__apagar"
+                                            data-comment-name="${escapeHtml(comment.name)}"
+                                        >
+                                            ${TRASH_ICON_HTML} Apagar
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="comment-item__content">${escapeHtml(
 									contentText
@@ -215,7 +227,9 @@
                             </div>
                         `;
 						commentList.prepend(item);
-						if (emptyState) emptyState.hidden = true;
+						// Pode ter sido recriado ao apagar o último comentário.
+						const vazio = document.getElementById("comment-empty");
+						if (vazio) vazio.hidden = true;
 						incrementCommentCount();
 					}
 
@@ -243,12 +257,124 @@
 
 		if (commentList) {
 			commentList.addEventListener("click", function (ev) {
+				const apagar = ev.target.closest(".comment-item__apagar");
+				if (apagar) {
+					ev.preventDefault();
+					confirmarExclusao(apagar.closest(".comment-item"));
+					return;
+				}
 				const target = ev.target.closest(".comment-item__edit");
 				if (!target) return;
 				ev.preventDefault();
 				const name = target.dataset.commentName;
 				const content = target.dataset.commentContent || "";
 				startEditing(name, content);
+			});
+		}
+
+		function definirTotalDeComentarios(total) {
+			const badge = document.getElementById("comment-count");
+			const badgeModal = document.getElementById("comment-count-modal");
+			if (badge) badge.textContent = total;
+			if (badgeModal) badgeModal.textContent = total;
+		}
+
+		function mensagemDoServidor(dados) {
+			try {
+				const mensagens = JSON.parse((dados && dados._server_messages) || "[]");
+				const primeira = mensagens.length ? JSON.parse(mensagens[0]) : null;
+				const tmp = document.createElement("div");
+				tmp.innerHTML = (primeira && primeira.message) || "";
+				return tmp.textContent || "";
+			} catch (err) {
+				return "";
+			}
+		}
+
+		// Confirmação dentro do próprio item: um segundo <dialog> (ou o frappe.confirm) por
+		// cima do dialog de comentários brigaria com a top layer.
+		function confirmarExclusao(item) {
+			if (!item || item.querySelector(".comment-item__confirmar")) return;
+			const acoes = item.querySelector(".comment-item__acoes");
+			if (acoes) acoes.hidden = true;
+
+			const painel = document.createElement("div");
+			painel.className = "comment-item__confirmar";
+			const pergunta = document.createElement("span");
+			pergunta.className = "text-sm";
+			pergunta.textContent = "Apagar este comentário? Não dá para desfazer.";
+			const apagar = document.createElement("button");
+			apagar.type = "button";
+			apagar.className = "btn-sm-destructive";
+			apagar.textContent = "Apagar";
+			const cancelar = document.createElement("button");
+			cancelar.type = "button";
+			cancelar.className = "btn-sm-ghost";
+			cancelar.textContent = "Cancelar";
+			const erro = document.createElement("span");
+			erro.className = "text-destructive text-sm";
+			erro.hidden = true;
+			painel.append(pergunta, apagar, cancelar, erro);
+			item.querySelector(".comment-item__body").appendChild(painel);
+			cancelar.focus();
+
+			cancelar.addEventListener("click", function () {
+				painel.remove();
+				if (acoes) acoes.hidden = false;
+			});
+
+			apagar.addEventListener("click", async function () {
+				apagar.disabled = true;
+				apagar.textContent = "Apagando...";
+				erro.hidden = true;
+				try {
+					const resp = await fetch("/api/method/gris.api.recepcao.excluir_comentario", {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							"X-Frappe-CSRF-Token":
+								(window.frappe && window.frappe.csrf_token) || "",
+						},
+						credentials: "same-origin",
+						body: JSON.stringify({ comment_name: item.dataset.commentName }),
+					});
+					let dados = null;
+					try {
+						dados = await resp.json();
+					} catch (e) {
+						dados = null;
+					}
+					if (!resp.ok) {
+						throw new Error(
+							mensagemDoServidor(dados) || "Não foi possível apagar o comentário."
+						);
+					}
+
+					// Apagar o comentário em edição não pode deixar o formulário editando-o.
+					if (editingCommentName === item.dataset.commentName) clearEditingState();
+					item.remove();
+					const total = dados && dados.message ? dados.message.total : null;
+					if (typeof total === "number") definirTotalDeComentarios(total);
+					if (commentList && !commentList.querySelector(".comment-item")) {
+						let vazio = document.getElementById("comment-empty");
+						if (!vazio) {
+							vazio = document.createElement("p");
+							vazio.id = "comment-empty";
+							vazio.className = "text-muted-foreground";
+							vazio.textContent = "Nenhum comentário ainda.";
+							commentList.appendChild(vazio);
+						}
+						vazio.hidden = false;
+					}
+					if (window.frappe && frappe.show_alert) {
+						frappe.show_alert({ message: "Comentário apagado", indicator: "green" });
+					}
+				} catch (err) {
+					apagar.disabled = false;
+					apagar.textContent = "Apagar";
+					erro.textContent = err.message;
+					erro.hidden = false;
+				}
 			});
 		}
 

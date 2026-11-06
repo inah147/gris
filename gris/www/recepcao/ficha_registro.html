@@ -381,19 +381,29 @@
               <div class="comment-item__body">
                 <div class="comment-item__meta">
                   <div class="comment-item__meta-left">
-                    <span class="comment-item__author">{{ c.owner_fullname }}</span>
+                    <span class="comment-item__author">{{ c.owner_fullname | e }}</span>
                     <span class="comment-item__dot">•</span>
                     <span class="comment-item__date">{{ c.creation }}</span>
                   </div>
+                  {# Só quem escreveu edita e apaga (regra em gris.api.recepcao._comentario_do_autor). #}
                   {% if can_add_comments and c.owner == current_user %}
-                  <button
-                    type="button"
-                    class="btn-sm-ghost comment-item__edit"
-                    data-comment-name="{{ c.name }}"
-                    data-comment-content="{{ c.content_text | escape }}"
-                  >
-                    {{ lucide_icon("pencil", size="sm") }} Editar
-                  </button>
+                  <div class="comment-item__acoes">
+                    <button
+                      type="button"
+                      class="btn-sm-ghost comment-item__edit"
+                      data-comment-name="{{ c.name }}"
+                      data-comment-content="{{ c.content_text | escape }}"
+                    >
+                      {{ lucide_icon("pencil", size="sm") }} Editar
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-sm-ghost comment-item__apagar"
+                      data-comment-name="{{ c.name }}"
+                    >
+                      {{ lucide_icon("trash-2", size="sm") }} Apagar
+                    </button>
+                  </div>
                   {% endif %}
                 </div>
                 <div class="comment-item__content">{{ c.content_text | escape | replace('\n', '<br>') | safe }}</div>

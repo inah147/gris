@@ -2,6 +2,7 @@ import frappe
 from frappe import _
 from frappe.utils import getdate, today
 
+from gris.api import recepcao_fila
 from gris.api.portal_access import enrich_context
 from gris.api.recepcao import formatar_idade, processar_desistencia
 from gris.api.recepcao_vagas import calcular_vagas_por_ramo, dados_do_dialog
@@ -39,7 +40,7 @@ def get_context(context):
 	fila_items = frappe.get_all(
 		"Fila de Espera",
 		fields=["name", "associado", "ramo", "dt_inclusao_fila"],
-		order_by="dt_inclusao_fila asc",
+		order_by=recepcao_fila.ORDEM_DA_FILA,
 	)
 
 	# Group fila items by ramo for prediction calculation
@@ -136,6 +137,15 @@ def get_context(context):
 
 					kanban_data[ramo].append(item)
 
+	# Para onde cada um volta ao ser chamado e as passagens anteriores pela fila: o dialog
+	# mostra os dois. Uma consulta para todos os cards, não uma por card.
+	nomes_na_fila = [card.associado for cards in kanban_data.values() for card in cards]
+	retorno_por_associado = recepcao_fila.status_de_retorno_por_associado(nomes_na_fila)
+	for cards in kanban_data.values():
+		for card in cards:
+			card.status_retorno = retorno_por_associado.get(card.associado, "")
+	context.historico_fila_por_associado = recepcao_fila.historico_por_associado(nomes_na_fila)
+
 	context.kanban_columns = ramos
 	context.kanban_data = kanban_data
 	# Números do cabeçalho de cada coluna e do dialog "Cálculo de Vagas" (include compartilhado).
@@ -145,22 +155,16 @@ def get_context(context):
 	return context
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def chamar_associado(fila_id: str):
-	if not fila_id:
-		frappe.throw(_("ID da fila não fornecido"))
+	"""Tira o jovem da fila e o devolve ao status em que estava ao entrar, etapas intactas."""
+	return {"status": recepcao_fila.chamar(fila_id)}
 
-	fila_item = frappe.get_doc("Fila de Espera", fila_id)
-	if not fila_item.associado:
-		frappe.throw(_("Associado não encontrado na fila"))
 
-	# Update Novo Associado status to 'Novo Contato' (restarting the flow)
-	frappe.db.set_value("Novo Associado", fila_item.associado, "status", "Novo Contato")
-
-	# Remove from Fila de Espera
-	frappe.delete_doc("Fila de Espera", fila_id)
-
-	return "Ok"
+@frappe.whitelist(methods=["POST"])
+def reordenar_fila(ramo: str, ordem: str | list):
+	"""Grava a ordem que a recepção montou arrastando os cards da coluna do ramo."""
+	return {"ordem": recepcao_fila.reordenar(ramo, frappe.parse_json(ordem))}
 
 
 @frappe.whitelist()

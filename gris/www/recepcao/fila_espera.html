@@ -5,16 +5,15 @@
 
 {% block title %}Fila de Espera - Recepção{% endblock %}
 
-{% block head_include %}
-	{{ super() }}
-	<link rel="stylesheet" href="/recepcao/fila_espera.css" />
-{% endblock %}
-
 {% block page_header %}
 	<div class="page-header-row mb-6">
 		<div>
 			<h1 class="text-3xl font-bold tracking-tight">Fila de Espera</h1>
 			<p class="text-muted-foreground">Acompanhe a fila de espera por ramo.</p>
+			<p class="fila-dica text-muted-foreground text-sm" id="filaDicaOrdem">
+				{{ lucide_icon("grip-vertical", size="sm") }}
+				Arraste um card dentro da coluna para mudar a ordem da fila. No teclado, use Alt + ↑ ou Alt + ↓.
+			</p>
 		</div>
 	</div>
 {% endblock %}
@@ -38,28 +37,31 @@
 			</div>
 			{{ badge(kanban_data[ramo]|length|string, variant="secondary") }}
 		</div>
-		<div class="kanban-column__body">
+		<div class="kanban-column__body" data-ramo="{{ ramo }}">
 			{% for card in kanban_data[ramo] %}
 			<article
 				class="card kanban-card"
+				tabindex="0"
+				aria-describedby="filaDicaOrdem"
 				data-id="{{ card.name }}"
 				data-associado="{{ card.associado }}"
-				data-nome="{{ card.nome_completo }}"
-				data-responsavel="{{ card.responsavel_nome }}"
+				data-nome="{{ card.nome_completo | e }}"
+				data-responsavel="{{ card.responsavel_nome | e }}"
 				data-ramo="{{ ramo }}"
 				data-posicao="{{ card.posicao }}"
 				data-previsao="{{ card.previsao }}"
-				data-data-inclusao="{{ card.dt_inclusao_fila.strftime('%d/%m/%Y') }}"
+				data-data-inclusao="{{ card.dt_inclusao_fila.strftime('%d/%m/%Y') if card.dt_inclusao_fila else '' }}"
+				data-status-retorno="{{ card.status_retorno | e }}"
 			>
 				<div class="kanban-card__top">
-					{{ badge("#" ~ card.posicao, variant=ramo_variant_map.get(ramo, "secondary")) }}
+					{{ badge("#" ~ card.posicao, variant=ramo_variant_map.get(ramo, "secondary"), attrs={"data-posicao-badge": ""}) }}
 					{% if card.idade %}
 						{{ badge(card.idade, outline=true, attrs={"title": "Idade do beneficiário"}) }}
 					{% endif %}
 				</div>
 				<div class="kanban-card__main">
-					<h4 class="kanban-card__title">{{ card.nome_completo }}</h4>
-					<p class="kanban-card__subtitle">{{ card.responsavel_nome }}</p>
+					<h4 class="kanban-card__title">{{ card.nome_completo | e }}</h4>
+					<p class="kanban-card__subtitle">{{ card.responsavel_nome | e }}</p>
 				</div>
 			</article>
 			{% endfor %}
@@ -67,6 +69,12 @@
 	</div>
 	{% endfor %}
 </div>
+
+{# Anúncio para leitor de tela quando a ordem muda. #}
+<div class="fila-sr-only" aria-live="polite" id="filaAnuncio"></div>
+
+{# Passagens pela fila de cada jovem, lidas pelo dialog de detalhes. #}
+<script type="application/json" id="historicoFilaData">{{ historico_fila_por_associado | tojson }}</script>
 
 {# ----------- Modal Detalhes da Fila de Espera ----------- #}
 {% set fila_footer %}
@@ -97,11 +105,35 @@
 			<span class="dialog-field__label">Previsão de Chamada</span>
 			<span class="dialog-field__value" id="modalPrevisao"></span>
 		</div>
-		<div class="dialog-field dialog-info-grid__full">
+		<div class="dialog-field">
 			<span class="dialog-field__label">Data de Inclusão</span>
 			<span class="dialog-field__value" id="modalDataInclusao"></span>
 		</div>
+		<div class="dialog-field">
+			<span class="dialog-field__label">Volta para</span>
+			<span class="dialog-field__value" id="modalStatusRetorno"></span>
+		</div>
 	</div>
+
+	<section class="fila-historico" aria-labelledby="filaHistoricoTitulo">
+		<h4 class="fila-historico__titulo" id="filaHistoricoTitulo">Histórico da fila de espera</h4>
+		<div class="fila-historico__rolagem">
+			<table class="table fila-historico__tabela">
+				<thead>
+					<tr>
+						<th scope="col">Entrou em</th>
+						<th scope="col">Status anterior</th>
+						<th scope="col">Saiu em</th>
+						<th scope="col">Voltou para</th>
+					</tr>
+				</thead>
+				<tbody id="filaHistoricoLinhas"></tbody>
+			</table>
+		</div>
+		<p class="text-muted-foreground text-sm" id="filaHistoricoVazio" hidden>
+			Nenhuma passagem pela fila registrada.
+		</p>
+	</section>
 
 	<div class="dialog-actions dialog-actions--vertical">
 		<button type="button" class="btn-primary" id="btnChamarAssociado">
@@ -131,7 +163,7 @@
 ) %}
 	{{ alert(
 		icon=lucide_icon("phone-call", size="sm"),
-		description="Ao confirmar, o associado sai da fila de espera e volta para o fluxo de atendimento com status <strong>Novo Contato</strong>.",
+		description="Ao confirmar, o associado sai da fila de espera e volta para <strong id=\"modalChamadaDestino\">o status em que estava ao entrar</strong>. As etapas já concluídas continuam marcadas.",
 		variant="info",
 		attrs={"class": "mb-4"}
 	) }}
@@ -167,9 +199,4 @@
 
 {# ----------- Modal Detalhes de Vagas (compartilhado com a visão geral) ----------- #}
 {% include "gris/templates/includes/vagas_do_ramo_dialog.html" %}
-{% endblock %}
-
-{% block script %}
-	{{ super() }}
-	<script src="/recepcao/fila_espera.js"></script>
 {% endblock %}

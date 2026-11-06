@@ -272,6 +272,94 @@ dialog.dialog.fila-dialog > div > section {
 	justify-content: center;
 }
 
+/* Reordenação por arrasto ----------------------------------------- */
+.fila-dica {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 1.5);
+	margin-top: calc(var(--spacing) * 1);
+}
+
+/* No toque, o arrasto começa com um toque longo (ver fila_espera.js): o deslizar
+   normal continua rolando a página. O callout do iOS atrapalharia o toque longo. */
+.kanban-card {
+	user-select: none;
+	-webkit-user-select: none;
+	-webkit-touch-callout: none;
+}
+
+.kanban-card:focus-visible {
+	outline: 2px solid var(--color-ring);
+	outline-offset: 2px;
+}
+
+.kanban-card.is-dragging {
+	position: fixed;
+	z-index: 50;
+	pointer-events: none;
+	cursor: grabbing;
+	transform: rotate(1.5deg);
+	box-shadow: 0 12px 24px -8px color-mix(in srgb, var(--color-foreground) 30%, transparent);
+	transition: none;
+}
+
+.kanban-card.is-saving {
+	opacity: 0.6;
+}
+
+.kanban-card__placeholder {
+	flex-shrink: 0;
+	border: 2px dashed var(--color-border);
+	border-radius: var(--radius-lg);
+	background-color: color-mix(in srgb, var(--color-primary) 6%, transparent);
+}
+
+body.fila-arrastando,
+body.fila-arrastando * {
+	cursor: grabbing !important;
+}
+
+.fila-sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* Histórico da fila no dialog de detalhes ------------------------- */
+.fila-historico {
+	margin-top: calc(var(--spacing) * 2);
+	min-width: 0;
+}
+
+.fila-historico__titulo {
+	font-size: 0.7rem;
+	color: var(--color-muted-foreground);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	font-weight: 500;
+	margin: 0 0 calc(var(--spacing) * 2);
+}
+
+.fila-historico__rolagem {
+	min-width: 0;
+	overflow-x: auto;
+}
+
+.fila-historico__tabela {
+	min-width: 30rem;
+	font-size: 0.85rem;
+}
+
+.fila-historico__tabela td {
+	white-space: nowrap;
+}
+
 /* O dialog "Cálculo de Vagas" é compartilhado com a visão geral: seus estilos
    moram em public/css/vagas_do_ramo.css. */
 

@@ -8,6 +8,13 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import getdate, now_datetime, today
 
+from gris.api.recepcao_fila import (
+	CAMPO_HISTORICO,
+	DOCTYPE_FILA,
+	STATUS_FILA,
+	passagem_aberta,
+	proxima_posicao,
+)
 from gris.api.recepcao_funil import CAMPOS_DE_ETAPA
 from gris.utils.job_logger import definir_resumo, metrica, obter_logger
 
@@ -63,6 +70,47 @@ class NovoAssociado(Document):
 		self._implicar_boleto_da_efetivacao()
 		self._sincronizar_historico_de_etapas()
 		self._limpar_carimbos_de_etapa_desmarcada()
+		self._sincronizar_passagem_pela_fila()
+
+	def on_update(self):
+		self._remover_da_fila_ao_sair()
+
+	def _status_antes_do_save(self):
+		anterior = self.get_doc_before_save()
+		return anterior.status if anterior else None
+
+	def _sincronizar_passagem_pela_fila(self):
+		"""Abre e fecha a passagem pela fila de espera junto com o ``status``.
+
+		Entrar na fila grava o status de onde o jovem veio: é para ele que o jovem volta
+		quando é chamado (ver ``gris.api.recepcao_fila.status_de_retorno``). Sair grava
+		quando e para onde. Mora no ``validate`` pelo mesmo motivo do histórico de etapas:
+		portal, MCP e Desk passam todos por aqui. Etapas não são tocadas.
+		"""
+		antes = self._status_antes_do_save()
+		if self.status == antes:
+			return
+
+		if self.status == STATUS_FILA:
+			if not passagem_aberta(self):
+				self.append(
+					CAMPO_HISTORICO,
+					{"entrada_em": now_datetime(), "status_anterior": antes or ""},
+				)
+		elif antes == STATUS_FILA:
+			linha = passagem_aberta(self)
+			if linha:
+				linha.saida_em = now_datetime()
+				linha.status_posterior = self.status
+
+	def _remover_da_fila_ao_sair(self):
+		"""Quem deixou o status "Fila de espera" não ocupa mais lugar na fila.
+
+		Cobre a saída por qualquer caminho — inclusive trocar o status pelo Desk —, para a
+		entrada não ficar órfã na página da fila.
+		"""
+		if self._status_antes_do_save() == STATUS_FILA and self.status != STATUS_FILA:
+			frappe.db.delete(DOCTYPE_FILA, {"associado": self.name})
 
 	def _implicar_boleto_da_efetivacao(self):
 		"""Registro efetivado implica o boleto daquele registro gerado.
@@ -277,7 +325,10 @@ def atualizar_ramos_por_idade():
 			)
 
 		for linha in linhas_desatualizadas:
-			frappe.db.set_value("Fila de Espera", linha.name, "ramo", ramo)
+			# Mudou de ramo, entra no fim da fila do ramo novo.
+			frappe.db.set_value(
+				"Fila de Espera", linha.name, {"ramo": ramo, "posicao": proxima_posicao(ramo)}
+			)
 			fila_sincronizada += 1
 
 		# Commit por registro: a promoção de ramo de cada jovem é independente.

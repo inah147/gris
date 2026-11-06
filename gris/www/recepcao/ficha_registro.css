@@ -431,3 +431,17 @@
 .ficha-guarda-alerta {
 	margin-top: 1rem;
 }
+
+/* Histórico da fila de espera: rola na horizontal no celular em vez de estourar o card. */
+.fila-historico {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.fila-historico__tabela {
+  min-width: 32rem;
+}
+
+.fila-historico__tabela td {
+  white-space: nowrap;
+}

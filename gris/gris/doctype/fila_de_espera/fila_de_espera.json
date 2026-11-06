@@ -7,7 +7,8 @@
  "field_order": [
   "associado",
   "ramo",
-  "dt_inclusao_fila"
+  "dt_inclusao_fila",
+  "posicao"
  ],
  "fields": [
   {
@@ -26,12 +27,19 @@
    "fieldname": "dt_inclusao_fila",
    "fieldtype": "Datetime",
    "label": "Data de inclus\u00e3o na fila de espera"
+  },
+  {
+   "description": "Ordem dentro do ramo. Come\u00e7a no fim da fila e pode ser alterada arrastando o card em /recepcao/fila_espera.",
+   "fieldname": "posicao",
+   "fieldtype": "Int",
+   "label": "Posi\u00e7\u00e3o no ramo",
+   "non_negative": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-14 22:18:58.849979",
+ "modified": "2026-11-06 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Fila de Espera",

@@ -11,8 +11,9 @@ let whatsappSourceModalId = null;
 // separado por gris.api.recepcao_funil.coluna_de_acompanhamento. Aqui elas só
 // precisam abrir o mesmo dialog. Mantenha em sincronia com
 // COLUNAS_DE_ACOMPANHAMENTO no Python.
+const COLUNA_ACOMPANHAMENTO_PROVISORIO = "Acompanhamento Provisório";
 const COLUNAS_DE_ACOMPANHAMENTO = [
-	"Acompanhamento Provisório",
+	COLUNA_ACOMPANHAMENTO_PROVISORIO,
 	"Acompanhamento Definitivo",
 	"Acompanhamento Final",
 ];
@@ -501,6 +502,13 @@ function openAcompanhamentoModal(id, responsavel, nome, responsavelAssociado, st
 
 	const parsedSteps = parseSteps(steps);
 	renderTimeline("ac_timeline", parsedSteps);
+
+	// Só a lista provisória ainda pode ir para a fila de espera: depois da efetivação o
+	// jovem já ocupa a vaga. A regra que vale é a do servidor
+	// (``motivo_para_nao_entrar_na_fila``); aqui só não oferecemos o botão.
+	document
+		.querySelectorAll("#modalAcompanhamento .js-enviar-fila")
+		.forEach((botao) => (botao.hidden = coluna !== COLUNA_ACOMPANHAMENTO_PROVISORIO));
 
 	const actions = document.getElementById("ac_actions");
 	const existingFinish = document.getElementById("btnFinalizarRecepcao");

@@ -149,6 +149,7 @@ class TestAtualizarRamosPorIdade(TestCase):
 		orig_commit = modulo.frappe.db.commit
 		orig_today = modulo.today
 		orig_obter_logger = modulo.obter_logger
+		orig_proxima_posicao = modulo.proxima_posicao
 
 		por_doctype = {"Novo Associado": registros, "Fila de Espera": fila}
 		transicoes = dict(FAIXAS)
@@ -159,8 +160,10 @@ class TestAtualizarRamosPorIdade(TestCase):
 		def _fake_get_single(_doctype):
 			return frappe._dict({campo: transicoes[ramo] for ramo, campo in modulo.CAMPOS_DE_TRANSICAO})
 
-		def _fake_set_value(doctype, docname, fieldname, value, **_kwargs):
-			escritas.append((doctype, docname, fieldname, value))
+		def _fake_set_value(doctype, docname, fieldname, value=None, **_kwargs):
+			campos = fieldname if isinstance(fieldname, dict) else {fieldname: value}
+			for campo, valor in campos.items():
+				escritas.append((doctype, docname, campo, valor))
 
 		modulo.frappe.get_all = _fake_get_all
 		modulo.frappe.get_single = _fake_get_single
@@ -168,6 +171,7 @@ class TestAtualizarRamosPorIdade(TestCase):
 		modulo.frappe.db.commit = lambda: None
 		modulo.today = lambda: hoje
 		modulo.obter_logger = lambda *_a, **_k: _FakeLogger()
+		modulo.proxima_posicao = lambda _ramo: 7
 		try:
 			modulo.atualizar_ramos_por_idade()
 		finally:
@@ -177,6 +181,7 @@ class TestAtualizarRamosPorIdade(TestCase):
 			modulo.frappe.db.commit = orig_commit
 			modulo.today = orig_today
 			modulo.obter_logger = orig_obter_logger
+			modulo.proxima_posicao = orig_proxima_posicao
 
 		return escritas
 
@@ -195,13 +200,18 @@ class TestAtualizarRamosPorIdade(TestCase):
 		)
 		self.assertIn(("Novo Associado", "abc", "ramo", "Escoteiro"), escritas)
 		self.assertIn(("Fila de Espera", "FILA-1", "ramo", "Escoteiro"), escritas)
+		# Mudou de ramo, entra no fim da fila do ramo novo.
+		self.assertIn(("Fila de Espera", "FILA-1", "posicao", 7), escritas)
 
 	def test_corrige_a_fila_divergente_mesmo_sem_mudanca_no_novo_associado(self):
 		escritas = self._executar(
 			[_registro("2018-01-01", "Lobinho")],
 			fila=[{"name": "FILA-1", "associado": "abc", "ramo": "Filhotes"}],
 		)
-		self.assertEqual(escritas, [("Fila de Espera", "FILA-1", "ramo", "Lobinho")])
+		self.assertEqual(
+			escritas,
+			[("Fila de Espera", "FILA-1", "ramo", "Lobinho"), ("Fila de Espera", "FILA-1", "posicao", 7)],
+		)
 
 	def test_registro_sem_data_de_nascimento_e_ignorado(self):
 		escritas = self._executar(

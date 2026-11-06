@@ -654,43 +654,70 @@ def adicionar_comentario(novo_associado_name: str, content: str):
 	}
 
 
-@frappe.whitelist()
-def editar_comentario(comment_name: str, content: str):
-	"""Edita um comentário existente se o usuário for dono ou tiver permissão de escrita no registro."""
+def _comentario_do_autor(comment_name: str):
+	"""Observação de Novo Associado que o usuário atual pode editar ou apagar.
+
+	Só quem escreveu a observação mexe nela — e só enquanto ainda trabalha no registro
+	(permissão de escrita no Novo Associado): quem saiu da recepção não edita mais.
+	"""
 	if frappe.session.user == "Guest":
 		frappe.throw(_("Você precisa estar autenticado."), frappe.PermissionError)
-
-	content = (content or "").strip()
-	if not content:
-		frappe.throw(_("O comentário não pode estar vazio."))
 
 	if not comment_name:
 		frappe.throw(_("Comentário inválido."))
 
 	comment = frappe.get_doc("Comment", comment_name)
-	if comment.reference_doctype != "Novo Associado":
+	if comment.reference_doctype != "Novo Associado" or comment.comment_type != "Comment":
 		frappe.throw(_("Edição não permitida."), frappe.PermissionError)
 
 	ref_name = comment.reference_name
 	if not ref_name or not frappe.db.exists("Novo Associado", ref_name):
 		frappe.throw(_("Registro relacionado não encontrado."))
 
-	ref_doc = frappe.get_doc("Novo Associado", ref_name)
+	if comment.owner != frappe.session.user:
+		frappe.throw(_("Só quem escreveu a observação pode editá-la ou apagá-la."), frappe.PermissionError)
 
-	# Pode editar se for dono ou tiver permissão de escrita no Doc
-	if comment.owner != frappe.session.user and not ref_doc.has_permission("write"):
-		frappe.throw(_("Você não tem permissão para editar este comentário."), frappe.PermissionError)
+	if not frappe.has_permission("Novo Associado", "write", ref_name):
+		frappe.throw(
+			_("Você não tem permissão para alterar observações deste registro."), frappe.PermissionError
+		)
 
+	return comment
+
+
+@frappe.whitelist(methods=["POST"])
+def editar_comentario(comment_name: str, content: str):
+	"""Edita uma observação. Só o autor pode (ver ``_comentario_do_autor``)."""
+	content = (content or "").strip()
+	if not content:
+		frappe.throw(_("O comentário não pode estar vazio."))
+
+	comment = _comentario_do_autor(comment_name)
 	comment.content = content
 	comment.save(ignore_permissions=True)
-
-	clean_text = _texto_do_comentario(content)
 
 	return {
 		"name": comment.name,
 		"content": comment.content,
-		"content_text": clean_text,
+		"content_text": _texto_do_comentario(content),
 		"owner": comment.owner,
 		"owner_fullname": get_fullname(comment.owner),
 		"creation": format_datetime(comment.creation, "dd/MM/yyyy HH:mm"),
 	}
+
+
+@frappe.whitelist(methods=["POST"])
+def excluir_comentario(comment_name: str):
+	"""Apaga uma observação. Só o autor pode (ver ``_comentario_do_autor``).
+
+	Devolve o total que sobrou, para o balão do card e da ficha acompanharem.
+	"""
+	comment = _comentario_do_autor(comment_name)
+	ref_name = comment.reference_name
+	frappe.delete_doc("Comment", comment.name, ignore_permissions=True)
+
+	total = frappe.db.count(
+		"Comment",
+		{"reference_doctype": "Novo Associado", "reference_name": ref_name, "comment_type": "Comment"},
+	)
+	return {"name": comment_name, "total": total}

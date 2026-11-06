@@ -1472,6 +1472,8 @@ function abrirObservacoes() {
 
 			const dados = r.message || {};
 			const comentarios = dados.comentarios || [];
+			observacoesPodeComentar = Boolean(dados.pode_comentar);
+			observacoesUsuarioAtual = dados.usuario_atual || "";
 			if (form) form.classList.toggle("hidden", !dados.pode_comentar);
 			renderObservacoes(comentarios);
 			// `total` é a contagem real; a lista pode vir truncada pelo limite do backend.
@@ -1505,23 +1507,234 @@ function renderObservacoes(comentarios) {
 	comentarios.forEach((c) => lista.appendChild(montarItemDeObservacao(c)));
 }
 
+// Quem pode editar e apagar uma observação: só quem a escreveu, e enquanto ainda pode comentar
+// no registro. A regra que vale é a do servidor (``_comentario_do_autor``); aqui só não
+// oferecemos os botões a quem não pode.
+let observacoesPodeComentar = false;
+let observacoesUsuarioAtual = "";
+
+function podeAlterarObservacao(comentario) {
+	return observacoesPodeComentar && comentario.owner === observacoesUsuarioAtual;
+}
+
+function botaoDeObservacao(rotulo, icone, classe) {
+	const botao = document.createElement("button");
+	botao.type = "button";
+	botao.className = `btn-sm-ghost ${classe}`;
+	botao.innerHTML = `<svg class="ds-lucide ds-lucide--sm" viewBox="0 0 24 24" aria-hidden="true"><use href="/assets/gris/design_system/icons/lucide/sprite.svg#${icone}" /></svg>`;
+	botao.append(" " + rotulo);
+	return botao;
+}
+
+function preencherConteudoDaObservacao(item, texto) {
+	const conteudo = item.querySelector(".comment-item__content");
+	conteudo.replaceChildren();
+	String(texto || "")
+		.split("\n")
+		.forEach((linha, indice) => {
+			if (indice) conteudo.appendChild(document.createElement("br"));
+			conteudo.append(linha);
+		});
+	item.dataset.texto = texto || "";
+}
+
 function montarItemDeObservacao(comentario) {
 	const item = document.createElement("div");
 	item.className = "comment-item";
 	item.dataset.commentName = comentario.name;
-	item.innerHTML = `
-		<div class="comment-item__meta">
-			<span class="comment-item__author">${escapeHtml(comentario.owner_fullname)}</span>
-			<span>•</span>
-			<span>${escapeHtml(comentario.creation)}</span>
-		</div>
-		<div class="comment-item__content">${escapeHtml(comentario.content_text).replace(
-			/\n/g,
-			"<br>"
-		)}</div>
-	`;
+
+	const meta = document.createElement("div");
+	meta.className = "comment-item__meta";
+	const autor = document.createElement("span");
+	autor.className = "comment-item__author";
+	autor.textContent = comentario.owner_fullname || "";
+	const ponto = document.createElement("span");
+	ponto.textContent = "•";
+	const data = document.createElement("span");
+	data.textContent = comentario.creation || "";
+	meta.append(autor, ponto, data);
+
+	if (podeAlterarObservacao(comentario)) {
+		const acoes = document.createElement("span");
+		acoes.className = "comment-item__acoes";
+		acoes.append(
+			botaoDeObservacao("Editar", "pencil", "js-editar-observacao"),
+			botaoDeObservacao("Apagar", "trash-2", "js-apagar-observacao")
+		);
+		meta.appendChild(acoes);
+	}
+
+	const conteudo = document.createElement("div");
+	conteudo.className = "comment-item__content";
+	item.append(meta, conteudo);
+	preencherConteudoDaObservacao(item, comentario.content_text);
 	return item;
 }
+
+// `frappe.call` do portal nunca chama `error`: com fetch a falha volta para a tela.
+async function chamarObservacoes(metodo, corpo) {
+	const resposta = await fetch(`/api/method/gris.api.recepcao.${metodo}`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			"X-Frappe-CSRF-Token": (window.frappe && frappe.csrf_token) || "",
+			"X-Requested-With": "XMLHttpRequest",
+		},
+		credentials: "same-origin",
+		body: JSON.stringify(corpo),
+	});
+	let dados = null;
+	try {
+		dados = await resposta.json();
+	} catch (err) {
+		dados = null;
+	}
+	if (!resposta.ok) {
+		let mensagem = "";
+		try {
+			const mensagens = JSON.parse((dados && dados._server_messages) || "[]");
+			const primeira = mensagens.length ? JSON.parse(mensagens[0]) : null;
+			const tmp = document.createElement("div");
+			tmp.innerHTML = (primeira && primeira.message) || "";
+			mensagem = tmp.textContent || "";
+		} catch (err) {
+			mensagem = "";
+		}
+		throw new Error(mensagem || "Não foi possível salvar a alteração.");
+	}
+	return dados && dados.message;
+}
+
+function mostrarErroNaObservacao(item, mensagem) {
+	let erro = item.querySelector(".comment-item__erro");
+	if (!erro) {
+		erro = document.createElement("p");
+		erro.className = "comment-item__erro text-destructive text-sm";
+		item.appendChild(erro);
+	}
+	erro.textContent = mensagem || "";
+	erro.hidden = !mensagem;
+}
+
+function fecharPainelDaObservacao(item) {
+	const painel = item.querySelector(".comment-item__painel");
+	if (painel) painel.remove();
+	item.querySelector(".comment-item__content").hidden = false;
+	item.querySelector(".comment-item__acoes")?.removeAttribute("hidden");
+	mostrarErroNaObservacao(item, "");
+}
+
+function abrirEdicaoDaObservacao(item) {
+	fecharPainelDaObservacao(item);
+	const conteudo = item.querySelector(".comment-item__content");
+	conteudo.hidden = true;
+	item.querySelector(".comment-item__acoes")?.setAttribute("hidden", "");
+
+	const painel = document.createElement("div");
+	painel.className = "comment-item__painel";
+	const campo = document.createElement("textarea");
+	campo.className = "textarea";
+	campo.rows = 3;
+	campo.value = item.dataset.texto || "";
+	campo.setAttribute("aria-label", "Editar observação");
+	const botoes = document.createElement("div");
+	botoes.className = "comment-form__actions";
+	const salvar = document.createElement("button");
+	salvar.type = "button";
+	salvar.className = "btn-sm-primary";
+	salvar.textContent = "Salvar";
+	const cancelar = document.createElement("button");
+	cancelar.type = "button";
+	cancelar.className = "btn-sm-ghost";
+	cancelar.textContent = "Cancelar";
+	botoes.append(salvar, cancelar);
+	painel.append(campo, botoes);
+	conteudo.after(painel);
+	campo.focus();
+
+	cancelar.addEventListener("click", () => fecharPainelDaObservacao(item));
+	salvar.addEventListener("click", async () => {
+		const texto = campo.value.trim();
+		if (!texto) {
+			mostrarErroNaObservacao(item, "A observação não pode ficar vazia.");
+			return;
+		}
+		salvar.disabled = true;
+		salvar.textContent = "Salvando…";
+		try {
+			const comentario = await chamarObservacoes("editar_comentario", {
+				comment_name: item.dataset.commentName,
+				content: texto,
+			});
+			preencherConteudoDaObservacao(item, comentario.content_text);
+			fecharPainelDaObservacao(item);
+			frappe.show_alert({ message: "Observação atualizada", indicator: "green" });
+		} catch (err) {
+			salvar.disabled = false;
+			salvar.textContent = "Salvar";
+			mostrarErroNaObservacao(item, err.message);
+		}
+	});
+}
+
+// Confirmação dentro do próprio item: um segundo <dialog> por cima deste, ou o
+// `frappe.confirm`, brigaria com a top layer do dialog de observações.
+function abrirExclusaoDaObservacao(item) {
+	fecharPainelDaObservacao(item);
+	item.querySelector(".comment-item__acoes")?.setAttribute("hidden", "");
+
+	const painel = document.createElement("div");
+	painel.className = "comment-item__painel comment-item__painel--apagar";
+	const pergunta = document.createElement("span");
+	pergunta.className = "text-sm";
+	pergunta.textContent = "Apagar esta observação? Não dá para desfazer.";
+	const apagar = document.createElement("button");
+	apagar.type = "button";
+	apagar.className = "btn-sm-destructive";
+	apagar.textContent = "Apagar";
+	const cancelar = document.createElement("button");
+	cancelar.type = "button";
+	cancelar.className = "btn-sm-ghost";
+	cancelar.textContent = "Cancelar";
+	painel.append(pergunta, apagar, cancelar);
+	item.appendChild(painel);
+	cancelar.focus();
+
+	cancelar.addEventListener("click", () => fecharPainelDaObservacao(item));
+	apagar.addEventListener("click", async () => {
+		apagar.disabled = true;
+		apagar.textContent = "Apagando…";
+		try {
+			const resultado = await chamarObservacoes("excluir_comentario", {
+				comment_name: item.dataset.commentName,
+			});
+			const lista = item.parentElement;
+			item.remove();
+			if (lista && !lista.querySelector(".comment-item")) {
+				renderObservacoes([]);
+			}
+			definirTotalDeObservacoes(
+				resultado && typeof resultado.total === "number"
+					? resultado.total
+					: Math.max(contarObservacoesDoCardAtual() - 1, 0)
+			);
+			frappe.show_alert({ message: "Observação apagada", indicator: "green" });
+		} catch (err) {
+			apagar.disabled = false;
+			apagar.textContent = "Apagar";
+			mostrarErroNaObservacao(item, err.message);
+		}
+	});
+}
+
+document.addEventListener("click", (event) => {
+	const botao = event.target.closest(".js-editar-observacao, .js-apagar-observacao");
+	if (!botao) return;
+	const item = botao.closest(".comment-item");
+	if (!item) return;
+	if (botao.classList.contains("js-editar-observacao")) abrirEdicaoDaObservacao(item);
+	else abrirExclusaoDaObservacao(item);
+});
 
 function enviarObservacao(event) {
 	event.preventDefault();

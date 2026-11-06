@@ -783,6 +783,29 @@ dialog.dialog > div > section {
 	word-break: break-word;
 }
 
+/* Editar e apagar a própria observação. */
+.comment-item__acoes {
+	display: inline-flex;
+	gap: calc(var(--spacing) * 1);
+	margin-left: auto;
+}
+
+.comment-item__painel {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+}
+
+.comment-item__painel--apagar {
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.comment-item__painel--apagar > span {
+	flex-basis: 100%;
+}
+
 /* Estado de processamento (modal de Desistência) ------------------*/
 @keyframes ds-spin {
 	to {

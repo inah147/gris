@@ -301,3 +301,10 @@ a.manutencao-resumo__item:hover {
 .manutencao-dialog__corrigir[open] summary {
 	margin-bottom: 0.75rem;
 }
+
+/* No resumo o cartão é estreito no celular: o selo quebra a linha em vez de
+   vazar pela borda ("Aguardando material" não cabe em meia tela). */
+.manutencao-resumo .manutencao-selo {
+	max-width: 100%;
+	white-space: normal;
+}

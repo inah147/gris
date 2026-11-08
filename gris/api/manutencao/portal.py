@@ -464,15 +464,30 @@ def _normalizar_valor(campo: str, valor: Any) -> Any:
 	if campo == "custo_estimado":
 		if valor in (None, ""):
 			return None
+		# `flt` engoliria "abc" como 0 sem avisar; o custo some sem ninguém perceber.
 		try:
-			return flt(str(valor).replace(",", "."), 2)
-		except Exception:
+			return round(float(str(valor).replace(",", ".")), 2)
+		except ValueError:
 			frappe.throw(_("Custo estimado inválido."))
 	if valor is None:
 		return ""
 	if not isinstance(valor, str):
 		frappe.throw(_("Valor inválido para o campo {0}.").format(campo))
 	return valor.strip()
+
+
+def _mesmo_valor(campo: str, atual: Any, novo: Any) -> bool:
+	"""Compara pelo significado, não pelo tipo.
+
+	O banco devolve `None` onde o formulário manda "", `0.0` onde o custo está
+	vazio e `date` onde o payload traz texto. Comparar cru marcava todo save do
+	dialog como alteração, mesmo sem a pessoa ter mexido em nada.
+	"""
+	if campo == "data_prevista":
+		return _como_data(atual) == _como_data(novo)
+	if campo == "custo_estimado":
+		return flt(atual, 2) == flt(novo, 2)
+	return (atual or "") == (novo or "")
 
 
 @frappe.whitelist(methods=["POST"])
@@ -491,7 +506,7 @@ def atualizar(name: str, payload: Any) -> dict[str, Any]:
 		if campo not in dados:
 			continue
 		novo = _normalizar_valor(campo, dados.get(campo))
-		if doc.get(campo) != novo:
+		if not _mesmo_valor(campo, doc.get(campo), novo):
 			doc.set(campo, novo)
 			alterou = True
 

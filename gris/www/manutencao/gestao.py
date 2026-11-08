@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 import frappe
 
 from gris.api.manutencao import constantes as c
@@ -29,7 +31,7 @@ def get_context(context):
 		{
 			"rotulo": status,
 			"valor": dados["contagem"][status],
-			"href": f"/manutencao/gestao?status={status}",
+			"href": "/manutencao/gestao?" + urlencode({"status": status}),
 			"ativo": dados["filtros"]["status"] == status,
 		}
 		for status in c.STATUS_ABERTOS

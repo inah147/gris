@@ -329,6 +329,36 @@ class TestManutencao(FrappeTestCase):
 		# Campo ausente no payload não é tocado.
 		self.assertEqual(doc.urgencia_informada, c.URGENCIA_ATRAPALHA)
 
+	def test_salvar_o_dialog_sem_mudar_nada_nao_grava(self):
+		"""O dialog manda todos os campos; vazio no banco é None, no form é ""."""
+		doc = self._nova(status=c.STATUS_PLANEJADA, data_prevista=add_days(nowdate(), 5))
+		modificado = frappe.db.get_value(c.DOCTYPE, doc.name, "modified")
+		self._como(self.gestor)
+		resposta = atualizar(
+			doc.name,
+			{
+				"status": c.STATUS_PLANEJADA,
+				"prioridade": doc.prioridade,
+				"data_prevista": str(doc.data_prevista),
+				"responsavel_execucao": "",
+				"custo_estimado": "",
+				"observacoes_internas": "",
+				"resumo_execucao": "",
+				"titulo": doc.titulo,
+				"local": doc.local,
+				"categoria": doc.categoria,
+				"descricao": doc.descricao,
+			},
+		)
+		self.assertFalse(resposta["alterou"])
+		self.assertEqual(frappe.db.get_value(c.DOCTYPE, doc.name, "modified"), modificado)
+
+	def test_custo_que_nao_e_numero_e_recusado(self):
+		doc = self._nova()
+		self._como(self.gestor)
+		with self.assertRaises(frappe.ValidationError):
+			atualizar(doc.name, {"custo_estimado": "barato"})
+
 	def test_gestor_limpa_a_data_prevista(self):
 		doc = self._nova(status=c.STATUS_PLANEJADA, data_prevista=add_days(nowdate(), 5))
 		self._como(self.gestor)

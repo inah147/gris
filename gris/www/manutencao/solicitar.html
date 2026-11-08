@@ -1,0 +1,118 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, form, input, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Solicitar manutenção{% endblock %}
+
+{% set active_link = "/manutencao/solicitar" %}
+
+{# solicitar.css/.js são injetados automaticamente pelo Frappe (co-location).
+   Não referenciar manualmente: duplica o carregamento e roda o script 2x. #}
+
+{% block page_header %}
+<section class="manutencao-solicitar__header" aria-labelledby="manutencao-solicitar-titulo">
+	<h1 id="manutencao-solicitar-titulo" class="m-0 text-3xl font-semibold leading-tight text-foreground">Solicitar manutenção</h1>
+	<p class="m-0 text-base leading-relaxed text-muted-foreground">Viu alguma coisa quebrada, estragada ou precisando de reparo na sede? Conte aqui. A equipe de manutenção organiza a fila e você acompanha quando vai ser feito.</p>
+</section>
+{% endblock %}
+
+{% block main %}
+<div class="manutencao-solicitar">
+	{{ toaster() }}
+
+	{% call form(attrs={"id": "manutencao-form", "novalidate": "novalidate", "class": "manutencao-form"}) %}
+
+		{% call card(attrs={"class": "manutencao-card"}) %}
+			<header class="manutencao-card__header">
+				<h2 class="manutencao-card__title">O que precisa de manutenção</h2>
+				<p class="manutencao-card__subtitle">Um título curto e o lugar exato ajudam quem vai consertar a achar o problema.</p>
+			</header>
+
+			{% call field(
+				label="O que precisa ser feito",
+				hint="Ex.: “Trocar lâmpada queimada”, “Torneira pingando”, “Porta não fecha”."
+			) %}
+				{{ input(name="titulo", attrs={
+					"id": "manutencao-titulo",
+					"maxlength": titulo_max,
+					"placeholder": "Resuma em uma frase",
+					"autocomplete": "off",
+					"class": "w-full"
+				}) }}
+			{% endcall %}
+
+			<div class="manutencao-grid">
+				{% call field(
+					label="Local",
+					hint="Onde fica? Ex.: banheiro masculino, sala da alcateia, portão da rua."
+				) %}
+					{{ input(name="local", attrs={
+						"id": "manutencao-local",
+						"maxlength": local_max,
+						"placeholder": "Onde está o problema",
+						"class": "w-full"
+					}) }}
+				{% endcall %}
+
+				{% call field(label="Categoria", hint="Se não souber, escolha “Outro”.") %}
+					{{ select(
+						id="manutencao-categoria",
+						name="categoria",
+						items=categoria_items,
+						trigger_attrs={"class": "w-full"}
+					) }}
+				{% endcall %}
+			</div>
+		{% endcall %}
+
+		{% call card(attrs={"class": "manutencao-card"}) %}
+			<header class="manutencao-card__header">
+				<h2 class="manutencao-card__title" id="manutencao-urgencia-titulo">Urgência</h2>
+				<p class="manutencao-card__subtitle">Como isso afeta o grupo hoje? A equipe usa isso para definir a prioridade.</p>
+			</header>
+
+			{# O título do card já nomeia o grupo; uma <legend> repetiria o texto na tela. #}
+			<div class="manutencao-urgencias" id="manutencao-urgencia" role="radiogroup" aria-labelledby="manutencao-urgencia-titulo">
+				{% for urgencia in urgencias %}
+				<label class="manutencao-urgencia">
+					<input type="radio" class="input" name="urgencia_informada" value="{{ urgencia.valor }}">
+					<span class="manutencao-urgencia__icone">{{ lucide_icon(urgencia.icone, size="sm") }}</span>
+					<span class="manutencao-urgencia__texto">
+						<span class="manutencao-urgencia__rotulo">{{ urgencia.valor }}</span>
+						<span class="manutencao-urgencia__dica">{{ urgencia.dica }}</span>
+					</span>
+				</label>
+				{% endfor %}
+			</div>
+		{% endcall %}
+
+		{% call card(attrs={"class": "manutencao-card"}) %}
+			<header class="manutencao-card__header">
+				<h2 class="manutencao-card__title">Descrição</h2>
+				<p class="manutencao-card__subtitle">Conte o que está acontecendo, desde quando, e se já tentaram resolver.</p>
+			</header>
+
+			{% call field(label="Detalhes") %}
+				{{ textarea(name="descricao", attrs={
+					"id": "manutencao-descricao",
+					"rows": "6",
+					"maxlength": descricao_max,
+					"placeholder": "Ex.: a lâmpada do fundo da sala está piscando há duas semanas e hoje apagou de vez.",
+					"class": "w-full"
+				}) }}
+			{% endcall %}
+		{% endcall %}
+
+		<div class="manutencao-actions">
+			<a class="btn-outline" href="/manutencao/acompanhamento">Ver próximas manutenções</a>
+			<button type="submit" class="btn-primary" id="manutencao-submit">
+				{{ lucide_icon("send", size="sm") }}
+				<span>Enviar solicitação</span>
+			</button>
+		</div>
+
+	{% endcall %}
+</div>
+{% endblock %}

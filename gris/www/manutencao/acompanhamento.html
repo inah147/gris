@@ -1,0 +1,106 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import empty %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{% block title %}Próximas manutenções{% endblock %}
+
+{% set active_link = "/manutencao/acompanhamento" %}
+
+{# acompanhamento.css é injetado automaticamente pelo Frappe (co-location). #}
+
+{% macro selo(texto, config, classe_extra="") %}
+<span class="manutencao-selo manutencao-selo--{{ config.tom if config else 'neutro' }} {{ classe_extra }}">
+	{% if config %}{{ lucide_icon(config.icone, size="sm") }}{% endif %}
+	<span>{{ texto | e }}</span>
+</span>
+{% endmacro %}
+
+{% block page_header %}
+<section class="manutencao-acomp__header" aria-labelledby="manutencao-acomp-titulo">
+	<div class="manutencao-acomp__header-texto">
+		<h1 id="manutencao-acomp-titulo" class="m-0 text-3xl font-semibold leading-tight text-foreground">Próximas manutenções</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">O que a equipe de manutenção está fazendo, o que vem a seguir e o que ainda vai ser avaliado.</p>
+	</div>
+	<div class="manutencao-acomp__header-acoes">
+		<a class="btn-primary" href="/manutencao/solicitar">
+			{{ lucide_icon("wrench", size="sm") }}
+			<span>Solicitar manutenção</span>
+		</a>
+	</div>
+</section>
+{% endblock %}
+
+{% block main %}
+<div class="manutencao-acomp">
+	<nav class="manutencao-acomp__filtro" aria-label="Filtrar solicitações">
+		<a href="/manutencao/acompanhamento" class="{{ 'btn-sm-outline' if somente_minhas else 'btn-sm-primary' }}"{% if not somente_minhas %} aria-current="page"{% endif %}>Todas</a>
+		<a href="/manutencao/acompanhamento?minhas=1" class="{{ 'btn-sm-primary' if somente_minhas else 'btn-sm-outline' }}"{% if somente_minhas %} aria-current="page"{% endif %}>Só as que eu pedi</a>
+	</nav>
+
+	{% if not total %}
+		{{ empty(
+			title="Nenhuma manutenção por aqui" if not somente_minhas else "Você ainda não pediu nenhuma manutenção",
+			description="Quando alguém pedir uma manutenção, ela aparece nesta lista com o andamento." if not somente_minhas else "Viu algo precisando de reparo? Faça uma solicitação e acompanhe por aqui.",
+			image="/assets/gris/images/gris-character/gris-idle.png",
+			image_alt="Gris tranquilo, sem nada para consertar",
+			primary_action={"label": "Solicitar manutenção", "href": "/manutencao/solicitar"}
+		) }}
+	{% else %}
+		{% for secao in secoes if secao.itens %}
+		<section class="manutencao-secao" id="{{ secao.id }}" aria-labelledby="{{ secao.id }}-titulo">
+			<header class="manutencao-secao__header">
+				<h2 id="{{ secao.id }}-titulo" class="manutencao-secao__titulo">
+					{{ lucide_icon(secao.icone, size="sm") }}
+					<span>{{ secao.titulo }}</span>
+					<span class="manutencao-secao__contagem">{{ secao.itens | length }}</span>
+				</h2>
+				<p class="manutencao-secao__descricao">{{ secao.descricao }}</p>
+			</header>
+
+			<ul class="manutencao-lista">
+				{% for item in secao.itens %}
+				<li class="card manutencao-item{% if item.atrasada %} is-atrasada{% endif %}">
+					<div class="manutencao-item__topo">
+						<h3 class="manutencao-item__titulo">{{ item.titulo | e }}</h3>
+						<div class="manutencao-item__selos">
+							{{ selo(item.status, selo_status.get(item.status)) }}
+							{% if item.status not in ["Concluída", "Não será feita"] %}
+							{{ selo("Prioridade " ~ item.prioridade | lower, selo_prioridade.get(item.prioridade)) }}
+							{% endif %}
+							{% if item.eh_minha %}<span class="badge-outline">Você pediu</span>{% endif %}
+						</div>
+					</div>
+
+					<p class="manutencao-item__meta">
+						<span>{{ lucide_icon("map-pin", size="sm") }} {{ item.local | e }}</span>
+						<span>{{ lucide_icon("tag", size="sm") }} {{ item.categoria | e }}</span>
+						{% if item.data_conclusao_fmt %}
+						<span>{{ lucide_icon("circle-check", size="sm") }} Concluída em {{ item.data_conclusao_fmt }}</span>
+						{% elif item.data_prevista_fmt %}
+						<span class="manutencao-item__data{% if item.atrasada %} is-atrasada{% endif %}">
+							{{ lucide_icon("calendar-days", size="sm") }}
+							Prevista para {{ item.data_prevista_fmt }}{% if item.atrasada %} · atrasada{% endif %}
+						</span>
+						{% endif %}
+						<span class="manutencao-item__pedido">{{ item.name | e }} · pedida em {{ item.data_solicitacao_fmt }}</span>
+					</p>
+
+					<details class="manutencao-item__detalhes">
+						<summary>Ver descrição</summary>
+						<p class="manutencao-item__descricao">{{ item.descricao | e }}</p>
+					</details>
+
+					{% if item.resumo_execucao %}
+					{# Texto numa linha só: o parágrafo usa `white-space: pre-line` para
+					   respeitar as quebras do que a gestão escreveu, e a indentação do
+					   template viraria linhas em branco. #}
+					<p class="manutencao-item__resumo"><strong>{{ "O que foi feito" if item.status == "Concluída" else "Motivo" }}:</strong> {{ item.resumo_execucao | e }}</p>
+					{% endif %}
+				</li>
+				{% endfor %}
+			</ul>
+		</section>
+		{% endfor %}
+	{% endif %}
+</div>
+{% endblock %}

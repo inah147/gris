@@ -1,0 +1,303 @@
+/* /manutencao/gestao — fila de organização das manutenções. */
+
+.manutencao-gestao__header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
+.manutencao-gestao__header-texto {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	max-width: 48rem;
+}
+
+.manutencao-gestao__header-acoes {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.manutencao-gestao {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+	margin-top: 1.5rem;
+}
+
+/* Resumo por status: cartões que também servem de atalho de filtro. */
+.manutencao-resumo {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+	.manutencao-resumo {
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+	}
+}
+
+.manutencao-resumo__item {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+	padding: 0.75rem 1rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--card);
+	color: inherit;
+	text-decoration: none;
+	transition: border-color 0.15s ease;
+}
+
+a.manutencao-resumo__item:hover {
+	border-color: var(--ring);
+}
+
+.manutencao-resumo__item.is-ativo {
+	border-color: var(--primary);
+	box-shadow: 0 0 0 1px var(--primary);
+}
+
+.manutencao-resumo__item--alerta:not(.is-zerado) {
+	border-left: 4px solid var(--warning);
+}
+
+.manutencao-resumo__valor {
+	font-size: 1.5rem;
+	font-weight: 600;
+	line-height: 1;
+	color: var(--foreground);
+}
+
+/* Filtros ------------------------------------------------------------------ */
+
+.manutencao-filtros {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 0.75rem;
+	align-items: end;
+	margin-bottom: 1rem;
+}
+
+@media (min-width: 768px) {
+	.manutencao-filtros {
+		grid-template-columns: 2fr 1fr 1fr 1fr auto;
+	}
+}
+
+.manutencao-filtros__acoes {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.manutencao-gestao__legenda {
+	margin: 0 0 0.5rem;
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+}
+
+/* Tabela ------------------------------------------------------------------- */
+
+.manutencao-tabela__rolagem {
+	overflow-x: auto;
+}
+
+.manutencao-tabela td {
+	vertical-align: top;
+}
+
+.manutencao-linha.is-atrasada td:first-child {
+	box-shadow: inset 4px 0 0 var(--warning);
+}
+
+.manutencao-linha__titulo,
+.manutencao-linha__local {
+	display: block;
+	font-weight: 600;
+	color: var(--foreground);
+	overflow-wrap: anywhere;
+}
+
+.manutencao-linha__local {
+	font-weight: 500;
+}
+
+.manutencao-linha__meta {
+	display: block;
+	font-size: 0.75rem;
+	color: var(--muted-foreground);
+}
+
+.manutencao-linha__data {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	white-space: nowrap;
+}
+
+.manutencao-linha__data.is-atrasada {
+	font-weight: 600;
+	color: color-mix(in srgb, var(--warning) 45%, #000);
+}
+
+.dark .manutencao-linha__data.is-atrasada {
+	color: color-mix(in srgb, var(--warning) 60%, #fff);
+}
+
+.manutencao-linha__vazio {
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+}
+
+.manutencao-tabela__acoes {
+	text-align: right;
+	white-space: nowrap;
+}
+
+/* No celular a tabela vira lista de cartões: cada célula ganha o rótulo da
+   coluna (data-rotulo), e nada precisa de rolagem horizontal. */
+@media (max-width: 767px) {
+	.manutencao-tabela thead {
+		display: none;
+	}
+
+	.manutencao-tabela,
+	.manutencao-tabela tbody,
+	.manutencao-tabela tr,
+	.manutencao-tabela td {
+		display: block;
+		width: 100%;
+	}
+
+	.manutencao-tabela tr {
+		padding: 0.75rem 0;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.manutencao-tabela td {
+		padding: 0.25rem 0;
+		border: 0;
+	}
+
+	.manutencao-tabela td[data-rotulo]::before {
+		content: attr(data-rotulo);
+		display: block;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.02em;
+		color: var(--muted-foreground);
+	}
+
+	.manutencao-linha.is-atrasada td:first-child {
+		box-shadow: none;
+	}
+
+	.manutencao-linha.is-atrasada {
+		border-left: 4px solid var(--warning);
+		padding-left: 0.75rem;
+	}
+
+	.manutencao-tabela__acoes {
+		text-align: left;
+	}
+}
+
+/* Selo de status/prioridade: cor + ícone + texto, nunca só a cor. */
+.manutencao-selo {
+	--selo-cor: var(--muted-foreground);
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 0.125rem 0.625rem;
+	border: 1px solid color-mix(in srgb, var(--selo-cor) 45%, transparent);
+	border-radius: 999px;
+	background-color: color-mix(in srgb, var(--selo-cor) 14%, transparent);
+	color: color-mix(in srgb, var(--selo-cor) 45%, #000);
+	font-size: 0.75rem;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.dark .manutencao-selo {
+	color: color-mix(in srgb, var(--selo-cor) 55%, #fff);
+}
+
+.manutencao-selo--info {
+	--selo-cor: var(--info);
+}
+
+.manutencao-selo--primario {
+	--selo-cor: var(--primary);
+}
+
+.manutencao-selo--alerta {
+	--selo-cor: var(--warning);
+}
+
+.manutencao-selo--sucesso {
+	--selo-cor: var(--success);
+}
+
+.manutencao-selo--perigo {
+	--selo-cor: var(--destructive);
+}
+
+/* Dialog ------------------------------------------------------------------- */
+
+.manutencao-dialog > div {
+	width: min(44rem, calc(100vw - 2rem));
+	max-width: none;
+}
+
+.manutencao-dialog__form {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.manutencao-dialog__subtitulo {
+	margin: 0;
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+}
+
+.manutencao-dialog__bloco {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.manutencao-dialog__bloco-titulo {
+	margin: 0;
+	font-size: 0.9375rem;
+	font-weight: 600;
+}
+
+.manutencao-dialog__grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+	.manutencao-dialog__grid {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+.manutencao-dialog__corrigir summary {
+	cursor: pointer;
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: var(--primary);
+}
+
+.manutencao-dialog__corrigir[open] summary {
+	margin-bottom: 0.75rem;
+}

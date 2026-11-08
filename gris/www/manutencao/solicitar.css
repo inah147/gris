@@ -1,0 +1,141 @@
+/* /manutencao/solicitar — formulário de nova solicitação de manutenção. */
+
+/* Coluna estreita centralizada: `.page-container` ocupa a largura toda, e o
+   cabeçalho usa a mesma largura para as bordas coincidirem. */
+.manutencao-solicitar__header,
+.manutencao-solicitar {
+	width: 100%;
+	max-width: 48rem;
+	margin-inline: auto;
+}
+
+.manutencao-solicitar__header {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.manutencao-form {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+}
+
+.manutencao-card__header {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	margin-bottom: 1rem;
+}
+
+.manutencao-card__title {
+	margin: 0;
+	font-size: 1.125rem;
+	font-weight: 600;
+	line-height: 1.3;
+	color: var(--foreground);
+}
+
+.manutencao-card__subtitle {
+	margin: 0;
+	font-size: 0.875rem;
+	line-height: 1.5;
+	color: var(--muted-foreground);
+}
+
+.manutencao-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 1rem;
+	margin-top: 1rem;
+}
+
+@media (min-width: 640px) {
+	.manutencao-grid {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+/* Urgência: três cartões clicáveis, com o rádio visível — o cartão inteiro é
+   alvo de toque, o que importa no celular. */
+.manutencao-urgencias {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+	.manutencao-urgencias {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+.manutencao-urgencia {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.625rem;
+	padding: 0.75rem 0.875rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	cursor: pointer;
+	transition:
+		border-color 0.15s ease,
+		background-color 0.15s ease;
+}
+
+.manutencao-urgencia:hover {
+	background: var(--muted);
+}
+
+.manutencao-urgencia:has(input:checked) {
+	border-color: var(--primary);
+	background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.manutencao-urgencia input {
+	flex-shrink: 0;
+	margin-top: 0.125rem;
+}
+
+.manutencao-urgencia__icone {
+	flex-shrink: 0;
+	margin-top: 0.0625rem;
+	color: var(--muted-foreground);
+}
+
+.manutencao-urgencia__texto {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+}
+
+.manutencao-urgencia__rotulo {
+	font-size: 0.875rem;
+	font-weight: 600;
+	color: var(--foreground);
+}
+
+.manutencao-urgencia__dica {
+	font-size: 0.8125rem;
+	line-height: 1.4;
+	color: var(--muted-foreground);
+}
+
+.manutencao-actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 0.75rem;
+}
+
+/* No celular os botões ocupam a largura toda: alvo de toque maior. */
+@media (max-width: 480px) {
+	.manutencao-actions {
+		flex-direction: column-reverse;
+	}
+
+	.manutencao-actions > * {
+		width: 100%;
+		justify-content: center;
+	}
+}

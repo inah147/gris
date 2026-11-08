@@ -1,0 +1,238 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "MAN-.#####",
+ "creation": "2026-11-08 00:00:00",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "titulo",
+  "local",
+  "categoria",
+  "column_break_status",
+  "status",
+  "prioridade",
+  "urgencia_informada",
+  "descricao_section",
+  "descricao",
+  "planejamento_section",
+  "data_prevista",
+  "responsavel_execucao",
+  "column_break_planejamento",
+  "custo_estimado",
+  "observacoes_internas",
+  "execucao_section",
+  "data_inicio",
+  "data_conclusao",
+  "column_break_execucao",
+  "resumo_execucao",
+  "solicitacao_section",
+  "solicitante",
+  "solicitante_nome",
+  "data_solicitacao"
+ ],
+ "fields": [
+  {
+   "fieldname": "titulo",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "O que precisa ser feito",
+   "length": 140,
+   "reqd": 1
+  },
+  {
+   "description": "Onde fica o problema. Ex.: banheiro masculino, sala da alcateia, portão da rua.",
+   "fieldname": "local",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Local",
+   "length": 140,
+   "reqd": 1
+  },
+  {
+   "fieldname": "categoria",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Categoria",
+   "options": "\nElétrica e iluminação\nHidráulica e banheiros\nPortas, janelas e fechaduras\nTelhado e estrutura\nPintura\nMóveis e marcenaria\nEquipamentos\nLimpeza e jardinagem\nOutro",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Recebida",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Recebida\nPlanejada\nEm andamento\nAguardando material\nConcluída\nNão será feita",
+   "reqd": 1
+  },
+  {
+   "description": "Definida pela gestão. Na abertura, vem sugerida a partir da urgência informada.",
+   "fieldname": "prioridade",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Prioridade",
+   "options": "\nBaixa\nMédia\nAlta\nUrgente",
+   "reqd": 1
+  },
+  {
+   "description": "Como quem pediu percebe o problema. Não muda depois da abertura.",
+   "fieldname": "urgencia_informada",
+   "fieldtype": "Select",
+   "label": "Urgência informada",
+   "options": "\nPode esperar\nAtrapalha as atividades\nRisco à segurança",
+   "reqd": 1
+  },
+  {
+   "fieldname": "descricao_section",
+   "fieldtype": "Section Break",
+   "label": "Descrição"
+  },
+  {
+   "fieldname": "descricao",
+   "fieldtype": "Small Text",
+   "label": "Descrição",
+   "reqd": 1
+  },
+  {
+   "fieldname": "planejamento_section",
+   "fieldtype": "Section Break",
+   "label": "Planejamento"
+  },
+  {
+   "description": "Quando a manutenção deve ser feita. Ordena a lista de próximas manutenções.",
+   "fieldname": "data_prevista",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Data prevista"
+  },
+  {
+   "description": "Texto livre: pode ser um voluntário, um prestador ou um mutirão.",
+   "fieldname": "responsavel_execucao",
+   "fieldtype": "Data",
+   "label": "Quem vai executar",
+   "length": 140
+  },
+  {
+   "fieldname": "column_break_planejamento",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "custo_estimado",
+   "fieldtype": "Currency",
+   "label": "Custo estimado",
+   "options": "BRL"
+  },
+  {
+   "description": "Visível apenas para a gestão de manutenção.",
+   "fieldname": "observacoes_internas",
+   "fieldtype": "Small Text",
+   "label": "Observações internas"
+  },
+  {
+   "fieldname": "execucao_section",
+   "fieldtype": "Section Break",
+   "label": "Execução"
+  },
+  {
+   "description": "Preenchida automaticamente quando entra em Em andamento.",
+   "fieldname": "data_inicio",
+   "fieldtype": "Datetime",
+   "label": "Início da execução",
+   "read_only": 1
+  },
+  {
+   "description": "Preenchida automaticamente quando entra em Concluída.",
+   "fieldname": "data_conclusao",
+   "fieldtype": "Datetime",
+   "label": "Data de conclusão",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_execucao",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Aparece para todos no acompanhamento depois de concluída ou recusada.",
+   "fieldname": "resumo_execucao",
+   "fieldtype": "Small Text",
+   "label": "O que foi feito"
+  },
+  {
+   "fieldname": "solicitacao_section",
+   "fieldtype": "Section Break",
+   "label": "Solicitação"
+  },
+  {
+   "fieldname": "solicitante",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Solicitante",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "solicitante_nome",
+   "fieldtype": "Data",
+   "label": "Nome do solicitante",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_solicitacao",
+   "fieldtype": "Datetime",
+   "label": "Data da solicitação",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 20,
+ "links": [],
+ "modified": "2026-11-08 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Manutencao",
+ "name": "Solicitacao de Manutencao",
+ "naming_rule": "Expression (Old Style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de Manutencao",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "local,categoria",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "titulo",
+ "track_changes": 1
+}

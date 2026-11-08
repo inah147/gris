@@ -6,7 +6,7 @@
 
 {% set active_link = "/inicio" %}
 {% set first_name = (user_display_name or "usuário").split(" ")[0] %}
-{% set has_available_modules = can_associados or can_calendario or can_financeiro or can_projetos or can_captacao or can_recepcao or can_gestao_adultos or can_responsavel or can_transparencia or can_festas or can_gestao_tarefas or can_administracao %}
+{% set has_available_modules = can_associados or can_calendario or can_financeiro or can_projetos or can_captacao or can_recepcao or can_gestao_adultos or can_responsavel or can_transparencia or can_festas or can_manutencao or can_gestao_tarefas or can_administracao %}
 {% set home_modules = [
 	{
 		"visible": can_associados,
@@ -56,6 +56,13 @@
 		"title": "Festas",
 		"description": "Organize e acompanhe as festas da UEL.",
 		"icon": module_icons["/festas"]
+	},
+	{
+		"visible": can_manutencao,
+		"href": "/manutencao/acompanhamento",
+		"title": "Manutenção",
+		"description": "Peça um reparo na sede e veja as próximas manutenções.",
+		"icon": module_icons["/manutencao"]
 	},
 	{
 		"visible": can_recepcao,

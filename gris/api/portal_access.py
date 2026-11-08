@@ -79,6 +79,15 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 		],
 	},
 	{
+		"label": "Manutenção",
+		"path": "/manutencao",
+		"children": [
+			{"label": "Solicitar manutenção", "path": "/manutencao/solicitar"},
+			{"label": "Próximas manutenções", "path": "/manutencao/acompanhamento"},
+			{"label": "Gestão", "path": "/manutencao/gestao"},
+		],
+	},
+	{
 		"label": "Projetos",
 		"path": "/projetos",
 		"children": [
@@ -153,6 +162,7 @@ PORTAL_MODULE_ICON_MAP: dict[str, str] = {
 	"/recepcao": "user-plus",
 	"/gestao_adultos": "graduation-cap",
 	"/compras": "shopping-cart",
+	"/manutencao": "wrench",
 	"/responsavel": "user",
 	"/portal_transparencia": "file-text",
 	"/festas": "party-popper",
@@ -195,6 +205,9 @@ SIDEBAR_ICON_MAP: dict[str, str] = {
 	"/compras/minhas_solicitacoes": "list",
 	"/compras/fila": "shopping-cart",
 	"/compras/catalogo": "book-open",
+	"/manutencao/solicitar": "hammer",
+	"/manutencao/acompanhamento": "calendar-clock",
+	"/manutencao/gestao": "list-todo",
 	"/projetos/visao_geral": "layout-dashboard",
 	"/projetos/meus_projetos": "folder-search",
 	"/projetos/cadastrar_novo_projeto": "upload",
@@ -317,6 +330,13 @@ PAGE_ROLES: dict[str, list[str]] = {
 		"Gestor Administrativo",
 		"Gestor Financeiro",
 	],
+	# Pedir e acompanhar manutenção é aberto a qualquer pessoa logada, responsáveis
+	# inclusive: quem frequenta a sede vê o que quebrou. Organizar a fila é da equipe
+	# de manutenção — e os endpoints checam o papel de novo.
+	"/manutencao": ["All"],
+	"/manutencao/solicitar": ["All"],
+	"/manutencao/acompanhamento": ["All"],
+	"/manutencao/gestao": ["Gestor de Manutencao"],
 	"/projetos": ["Visualizador de projetos", "Editor de projetos"],
 	"/projetos/visao_geral": ["Visualizador de projetos", "Editor de projetos"],
 	"/projetos/meus_projetos": ["Visualizador de projetos", "Editor de projetos"],

@@ -1,0 +1,230 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty, field, input, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/currency-input.html.jinja" import currency_input %}
+{% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Gestão de manutenções{% endblock %}
+
+{% set active_link = "/manutencao/gestao" %}
+
+{# gestao.css/.js são injetados automaticamente pelo Frappe (co-location). #}
+
+{% macro selo(texto, config) %}
+<span class="manutencao-selo manutencao-selo--{{ config.tom if config else 'neutro' }}">
+	{% if config %}{{ lucide_icon(config.icone, size="sm") }}{% endif %}
+	<span>{{ texto | e }}</span>
+</span>
+{% endmacro %}
+
+{% block page_header %}
+<section class="manutencao-gestao__header" aria-labelledby="manutencao-gestao-titulo">
+	<div class="manutencao-gestao__header-texto">
+		<h1 id="manutencao-gestao-titulo" class="m-0 text-3xl font-semibold leading-tight text-foreground">Gestão de manutenções</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">Organize a fila: defina prioridade, data prevista e quem vai executar, e mova cada solicitação pelo andamento. O que você planeja aqui aparece para todos em “Próximas manutenções”.</p>
+	</div>
+	<div class="manutencao-gestao__header-acoes">
+		<a class="btn-outline" href="/manutencao/acompanhamento">
+			{{ lucide_icon("calendar-clock", size="sm") }}
+			<span>Ver como todos veem</span>
+		</a>
+		<a class="btn-primary" href="/manutencao/solicitar">
+			{{ lucide_icon("wrench", size="sm") }}
+			<span>Nova solicitação</span>
+		</a>
+	</div>
+</section>
+{% endblock %}
+
+{% block main %}
+{{ toaster() }}
+
+<div class="manutencao-gestao">
+	<nav class="manutencao-resumo" aria-label="Resumo por status">
+		{% for card_resumo in resumo %}
+		<a class="manutencao-resumo__item{% if card_resumo.ativo %} is-ativo{% endif %}" href="{{ card_resumo.href | e }}"{% if card_resumo.ativo %} aria-current="page"{% endif %}>
+			<span class="manutencao-resumo__valor">{{ card_resumo.valor }}</span>
+			<span class="manutencao-resumo__rotulo">{{ selo(card_resumo.rotulo, selo_status.get(card_resumo.rotulo)) }}</span>
+		</a>
+		{% endfor %}
+		<div class="manutencao-resumo__item manutencao-resumo__item--alerta{% if not atrasadas %} is-zerado{% endif %}">
+			<span class="manutencao-resumo__valor">{{ atrasadas }}</span>
+			<span class="manutencao-resumo__rotulo">
+				<span class="manutencao-selo manutencao-selo--{{ 'alerta' if atrasadas else 'neutro' }}">{{ lucide_icon("hourglass", size="sm") }}<span>Atrasadas</span></span>
+			</span>
+		</div>
+	</nav>
+
+	{% call card(attrs={"class": "manutencao-gestao__card"}) %}
+		<form class="manutencao-filtros" method="get" action="/manutencao/gestao" id="manutencao-filtros">
+			<div class="manutencao-filtros__campo manutencao-filtros__campo--busca">
+				{% call field(label="Buscar") %}
+					{{ input(name="busca", value=(filtros.busca | e), attrs={
+						"id": "filtro-busca",
+						"placeholder": "Título, local, código ou executor",
+						"class": "w-full",
+						"maxlength": "100"
+					}) }}
+				{% endcall %}
+			</div>
+			<div class="manutencao-filtros__campo">
+				{% call field(label="Status") %}
+					{{ select(id="filtro-status", name="status", items=filtro_status_items, selected=filtros.status, trigger_attrs={"class": "w-full"}) }}
+				{% endcall %}
+			</div>
+			<div class="manutencao-filtros__campo">
+				{% call field(label="Prioridade") %}
+					{{ select(id="filtro-prioridade", name="prioridade", items=filtro_prioridade_items, selected=filtros.prioridade, trigger_attrs={"class": "w-full"}) }}
+				{% endcall %}
+			</div>
+			<div class="manutencao-filtros__campo">
+				{% call field(label="Categoria") %}
+					{{ select(id="filtro-categoria", name="categoria", items=filtro_categoria_items, selected=filtros.categoria, trigger_attrs={"class": "w-full"}) }}
+				{% endcall %}
+			</div>
+			<div class="manutencao-filtros__acoes">
+				<button type="submit" class="btn-sm-primary">
+					{{ lucide_icon("search", size="sm") }}
+					<span>Filtrar</span>
+				</button>
+				<a class="btn-sm-ghost" href="/manutencao/gestao">Limpar</a>
+			</div>
+		</form>
+
+		{% if itens %}
+		<section class="p-0 min-w-0">
+			<p class="manutencao-gestao__legenda">{{ itens | length }} {{ "solicitação" if itens | length == 1 else "solicitações" }}, da maior para a menor prioridade e, dentro dela, pela data prevista.</p>
+			<div class="manutencao-tabela__rolagem">
+				<table class="table manutencao-tabela">
+					<thead>
+						<tr>
+							<th scope="col">Solicitação</th>
+							<th scope="col">Local e categoria</th>
+							<th scope="col">Prioridade</th>
+							<th scope="col">Status</th>
+							<th scope="col">Data prevista</th>
+							<th scope="col">Quem executa</th>
+							<th scope="col" class="manutencao-tabela__acoes">Ações</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for item in itens %}
+						<tr class="manutencao-linha{% if item.atrasada %} is-atrasada{% endif %}">
+							<td data-rotulo="Solicitação">
+								<span class="manutencao-linha__titulo">{{ item.titulo | e }}</span>
+								<span class="manutencao-linha__meta">{{ item.name | e }} · {{ item.solicitante_nome | e }} · {{ item.data_solicitacao_fmt }}</span>
+								{% if item.urgencia_informada %}
+								<span class="manutencao-linha__meta">Urgência informada: {{ item.urgencia_informada | e }}</span>
+								{% endif %}
+							</td>
+							<td data-rotulo="Local e categoria">
+								<span class="manutencao-linha__local">{{ item.local | e }}</span>
+								<span class="manutencao-linha__meta">{{ item.categoria | e }}</span>
+							</td>
+							<td data-rotulo="Prioridade">{{ selo(item.prioridade, selo_prioridade.get(item.prioridade)) }}</td>
+							<td data-rotulo="Status">{{ selo(item.status, selo_status.get(item.status)) }}</td>
+							<td data-rotulo="Data prevista">
+								{% if item.data_prevista_fmt %}
+								<span class="manutencao-linha__data{% if item.atrasada %} is-atrasada{% endif %}">
+									{% if item.atrasada %}{{ lucide_icon("hourglass", size="sm") }}{% endif %}
+									{{ item.data_prevista_fmt }}
+								</span>
+								{% else %}
+								<span class="manutencao-linha__vazio">Sem data</span>
+								{% endif %}
+							</td>
+							<td data-rotulo="Quem executa">
+								{% if item.responsavel_execucao %}{{ item.responsavel_execucao | e }}{% else %}<span class="manutencao-linha__vazio">A definir</span>{% endif %}
+							</td>
+							<td class="manutencao-tabela__acoes">
+								<button type="button" class="btn-sm-outline" data-editar="{{ item.name | e }}">
+									{{ lucide_icon("pencil", size="sm") }}
+									<span>Organizar</span>
+								</button>
+							</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</section>
+		{% else %}
+			{{ empty(
+				title="Nenhuma solicitação neste filtro",
+				description="Ajuste os filtros ou limpe a busca para ver outras solicitações.",
+				image="/assets/gris/images/gris-character/gris-search.png",
+				image_alt="Gris procurando com uma lupa",
+				secondary_action={"label": "Limpar filtros", "href": "/manutencao/gestao"}
+			) }}
+		{% endif %}
+	{% endcall %}
+</div>
+
+{# Dados de cada linha para o dialog. `tojson` escapa <, > e &, então o bloco
+   não fecha a tag script mesmo que um título contenha "</script>". #}
+<script type="application/json" id="manutencao-itens">{{ itens | tojson }}</script>
+
+{% set editar_footer %}
+<button type="button" class="btn-sm-outline" data-dialog-close>Cancelar</button>
+<button type="button" class="btn-sm-primary" id="btn-salvar">Salvar</button>
+{% endset %}
+
+{% call dialog(
+	id="dialog-manutencao",
+	title="Organizar manutenção",
+	dialog_attrs={"class": "manutencao-dialog"},
+	footer=editar_footer
+) %}
+<form id="form-manutencao" class="manutencao-dialog__form" novalidate>
+	<p class="manutencao-dialog__subtitulo" data-campo-meta></p>
+
+	<section class="manutencao-dialog__bloco">
+		<h3 class="manutencao-dialog__bloco-titulo">Planejamento</h3>
+		<div class="manutencao-dialog__grid">
+			{% call field(label="Status") %}
+				{{ select(id="editar-status", name="status", items=status_items, trigger_attrs={"class": "w-full"}) }}
+			{% endcall %}
+			{% call field(label="Prioridade") %}
+				{{ select(id="editar-prioridade", name="prioridade", items=prioridade_items, trigger_attrs={"class": "w-full"}) }}
+			{% endcall %}
+			{% call field(label="Data prevista", hint="Ordena a lista de próximas manutenções.") %}
+				{{ datepicker(id="editar-data-prevista", name="data_prevista", trigger_attrs={"class": "w-full"}) }}
+			{% endcall %}
+			{% call field(label="Quem vai executar", hint="Voluntário, prestador ou mutirão.") %}
+				{{ input(name="responsavel_execucao", attrs={"id": "editar-responsavel", "maxlength": "140", "class": "w-full"}) }}
+			{% endcall %}
+			{% call field(label="Custo estimado") %}
+				{{ currency_input(id="editar-custo", name="custo_estimado") }}
+			{% endcall %}
+		</div>
+		{% call field(label="Observações internas", hint="Só a gestão de manutenção vê.") %}
+			{{ textarea(name="observacoes_internas", attrs={"id": "editar-observacoes", "rows": "3", "maxlength": "3000", "class": "w-full"}) }}
+		{% endcall %}
+		{% call field(label="O que foi feito", hint="Aparece para todos quando a manutenção for concluída ou recusada.") %}
+			{{ textarea(name="resumo_execucao", attrs={"id": "editar-resumo", "rows": "3", "maxlength": "3000", "class": "w-full"}) }}
+		{% endcall %}
+	</section>
+
+	<details class="manutencao-dialog__bloco manutencao-dialog__corrigir">
+		<summary>Corrigir os dados da solicitação</summary>
+		<div class="manutencao-dialog__grid">
+			{% call field(label="O que precisa ser feito") %}
+				{{ input(name="titulo", attrs={"id": "editar-titulo", "maxlength": "140", "class": "w-full"}) }}
+			{% endcall %}
+			{% call field(label="Local") %}
+				{{ input(name="local", attrs={"id": "editar-local", "maxlength": "140", "class": "w-full"}) }}
+			{% endcall %}
+			{% call field(label="Categoria") %}
+				{{ select(id="editar-categoria", name="categoria", items=categoria_items, trigger_attrs={"class": "w-full"}) }}
+			{% endcall %}
+		</div>
+		{% call field(label="Descrição") %}
+			{{ textarea(name="descricao", attrs={"id": "editar-descricao", "rows": "4", "maxlength": "3000", "class": "w-full"}) }}
+		{% endcall %}
+	</details>
+</form>
+{% endcall %}
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "templates/web_sidebar_base.html" %}
+
+{% block title %}Manutenção{% endblock %}
+
+{% set active_link = "/manutencao" %}
+
+{# index.py redireciona para /manutencao/acompanhamento antes de renderizar.
+   Este template existe porque o Frappe só resolve a rota quando há um template
+   com o mesmo basename — sem ele, /manutencao devolve 404. #}
+
+{% block main %}
+<p class="text-muted-foreground">
+	Redirecionando para as <a href="/manutencao/acompanhamento">próximas manutenções</a>...
+</p>
+{% endblock %}

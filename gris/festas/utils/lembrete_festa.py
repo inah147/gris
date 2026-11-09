@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import base64
 import re
-import time
 from collections import defaultdict
 
 import frappe
@@ -27,9 +26,6 @@ from frappe.utils import add_days, getdate, today
 TIPO_CONVIDADO = "convidado"
 TIPO_COMPRADOR = "comprador"
 STATUS_ENTROU = "Entrou"
-# Pausa entre um número e o seguinte: o lembrete vai para a festa inteira de uma vez, e uma
-# rajada de centenas de mensagens pela Evolution arrisca o bloqueio do número do grupo.
-INTERVALO_ENVIO = 1.5
 DIAS_DA_SEMANA = ("segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo")
 
 
@@ -219,7 +215,7 @@ def enviar_lembrete_festa(festa_name: str) -> None:
 	Não grava nada no Convite Festa nem nas linhas de convidado (o job do e-mail e o do
 	WhatsApp gravam nelas por linha); o histórico fica no Log de Mensagem.
 	"""
-	from gris.utils.whatsapp_errors import WhatsAppConfigurationError
+	from gris.utils.whatsapp_errors import WhatsAppConfigurationError, WhatsAppDesconectadoError
 
 	festa = frappe.db.get_value(
 		"Festa", festa_name, ["name", "nome_festa", "data", "horario_inicio"], as_dict=True
@@ -230,13 +226,14 @@ def enviar_lembrete_festa(festa_name: str) -> None:
 	destinatarios = montar_lembretes(festa_name)["destinatarios"]
 	convites: dict = {}
 	falhas: list[str] = []
-	for posicao, destinatario in enumerate(destinatarios):
-		if posicao:
-			time.sleep(INTERVALO_ENVIO)
+	# Sem pausa aqui: o transporte põe todo envio do GRIS numa fila única, com intervalo entre
+	# uma mensagem e outra (`gris.utils.whatsapp._vez_de_enviar`). Foi uma rajada deste lembrete
+	# (~150 PDFs em dois minutos, 24/10/2026) que antecedeu a queda do número do grupo.
+	for destinatario in destinatarios:
 		try:
 			_enviar_lembrete(festa, destinatario, convites)
-		except WhatsAppConfigurationError:
-			# Integração desligada ou incompleta: nenhum envio vai passar.
+		except (WhatsAppConfigurationError, WhatsAppDesconectadoError):
+			# Integração desligada, incompleta ou sem sessão: nenhum envio vai passar.
 			frappe.log_error(
 				message=frappe.get_traceback(),
 				title=f"WhatsApp indisponível para o lembrete da festa ({festa_name})",
@@ -260,7 +257,11 @@ def _enviar_lembrete(festa, destinatario, convites: dict) -> None:
 	from gris.festas.doctype.convite_festa.convite_festa import DESTINATARIO_CONVIDADO, _safe_filename
 	from gris.festas.utils import convite_qr
 	from gris.utils.whatsapp import enviar_midia, enviar_texto
-	from gris.utils.whatsapp_errors import WhatsAppConfigurationError, WhatsAppNumberNotFoundError
+	from gris.utils.whatsapp_errors import (
+		WhatsAppConfigurationError,
+		WhatsAppDesconectadoError,
+		WhatsAppNumberNotFoundError,
+	)
 
 	festa_nome = festa.nome_festa or festa.name
 	texto = texto_do_lembrete(festa, destinatario)
@@ -291,7 +292,7 @@ def _enviar_lembrete(festa, destinatario, convites: dict) -> None:
 				enqueue=False,
 				contexto=contexto,
 			)
-		except (WhatsAppConfigurationError, WhatsAppNumberNotFoundError):
+		except (WhatsAppConfigurationError, WhatsAppDesconectadoError, WhatsAppNumberNotFoundError):
 			raise
 		except Exception:
 			# Sem o PDF, vai o texto com o link do convite (como no envio do convite).

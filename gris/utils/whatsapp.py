@@ -1,14 +1,22 @@
 from __future__ import annotations
 
+import random
 import re
 import time
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 
 import frappe
 import requests
 from frappe import _
-from frappe.utils import now_datetime
+from frappe.utils import get_datetime, now_datetime
 
-from .whatsapp_errors import WhatsAppConfigurationError, WhatsAppNumberNotFoundError, WhatsAppRequestError
+from .whatsapp_errors import (
+	WhatsAppConfigurationError,
+	WhatsAppDesconectadoError,
+	WhatsAppNumberNotFoundError,
+	WhatsAppRequestError,
+)
 
 SETTINGS_DOCTYPE = "Configuracoes WhatsApp"
 
@@ -20,7 +28,26 @@ DOCTYPES_COM_SELECT_DE_GRUPO: frozenset[str] = frozenset(
 
 DEFAULT_TIMEOUT = 30
 MAX_RETRIES = 3
-RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+# 500 fica de fora: a Evolution responde 500 também depois de a mensagem ter saído, e
+# repetir o POST mandaria a mesma mensagem duas vezes.
+RETRYABLE_STATUS_CODES = {429, 502, 503, 504}
+
+# ─── Cadência ─────────────────────────────────────────────────────────────────
+# Todo envio do GRIS sai pelo mesmo número. Em 24/10/2026 uma rajada de ~150 PDFs em dois
+# minutos (lembrete da festa) foi seguida da remoção do aparelho pelo WhatsApp, e nada mais
+# saiu por 16 dias. Daí a fila única: um envio por vez, com um intervalo aleatório desde o
+# último, valendo para os dois workers e para os envios síncronos.
+INTERVALO_MIN = 4.0
+INTERVALO_MAX = 6.0
+LOCK_ENVIO = "gris_whatsapp_envio"
+# Num job, esperar a vez é melhor do que falhar. Numa requisição web, quem clicou não pode
+# ficar minutos parado: depois deste tempo a mensagem volta como falha.
+LOCK_TIMEOUT_JOB = 240
+LOCK_TIMEOUT_REQUISICAO = 25
+# Os jobs de envio esperam a vez na fila antes do POST.
+TIMEOUT_JOB_ENVIO = 300
+
+ESTADO_CONECTADO = "open"
 
 
 # ─── Infraestrutura interna ───────────────────────────────────────────────────
@@ -83,6 +110,10 @@ def _normalize_phone(number: str) -> str:
 	return f"55{digits}"
 
 
+def _e_grupo(numero: str) -> bool:
+	return (numero or "").endswith("@g.us")
+
+
 def _post(
 	endpoint: str,
 	payload: dict,
@@ -103,11 +134,20 @@ def _post(
 			response = requests.post(
 				url, headers=headers, params=params, json=payload, timeout=DEFAULT_TIMEOUT
 			)
+		except requests.ReadTimeout as exc:
+			# O pedido chegou e a resposta não veio: repetir pode duplicar a mensagem.
+			raise WhatsAppRequestError(
+				f"A Evolution API não respondeu em {DEFAULT_TIMEOUT}s; a mensagem pode ter sido entregue."
+			) from exc
 		except requests.RequestException as exc:
 			raise WhatsAppRequestError(f"Falha de conexão ao chamar Evolution API: {exc}") from exc
 
 		if response.status_code < 400:
-			return response.json()
+			try:
+				return response.json()
+			except ValueError:
+				# A Evolution aceitou; um corpo ilegível não desfaz o envio.
+				return {}
 
 		if response.status_code not in RETRYABLE_STATUS_CODES or attempt == MAX_RETRIES:
 			try:
@@ -116,14 +156,16 @@ def _post(
 				detail = response.text or "Sem detalhes."
 			# Evolution API returns 400 with exists:False when number is not on WhatsApp
 			if response.status_code == 400 and isinstance(detail, dict):
-				messages = detail.get("response", {}).get("message", [])
+				messages = (detail.get("response") or {}).get("message", [])
 				if isinstance(messages, list) and any(
 					isinstance(m, dict) and m.get("exists") is False for m in messages
 				):
 					number = messages[0].get("number", "") if messages else ""
 					raise WhatsAppNumberNotFoundError(f"Número {number} não está registrado no WhatsApp.")
-				raise WhatsAppRequestError(f"Evolution API retornou HTTP {response.status_code}: {detail}")
-			raise WhatsAppRequestError(f"Evolution API retornou HTTP {response.status_code}: {detail}")
+			raise WhatsAppRequestError(
+				f"Evolution API retornou HTTP {response.status_code}: {detail}",
+				status_code=response.status_code,
+			)
 
 		logger.warning(
 			f"Evolution API HTTP {response.status_code} na tentativa {attempt}/{MAX_RETRIES}. Retentando..."
@@ -157,16 +199,17 @@ def _get(
 			try:
 				return response.json()
 			except ValueError as exc:
-				raise WhatsAppRequestError(
-					"Evolution API retornou resposta inválida ao buscar grupos."
-				) from exc
+				raise WhatsAppRequestError("Evolution API retornou resposta inválida.") from exc
 
 		if response.status_code not in RETRYABLE_STATUS_CODES or attempt == MAX_RETRIES:
 			try:
 				detail = response.json()
 			except ValueError:
 				detail = response.text or "Sem detalhes."
-			raise WhatsAppRequestError(f"Evolution API retornou HTTP {response.status_code}: {detail}")
+			raise WhatsAppRequestError(
+				f"Evolution API retornou HTTP {response.status_code}: {detail}",
+				status_code=response.status_code,
+			)
 
 		logger.warning(
 			f"Evolution API HTTP {response.status_code} na tentativa {attempt}/{MAX_RETRIES}. Retentando..."
@@ -176,11 +219,129 @@ def _get(
 	raise WhatsAppRequestError("Número máximo de tentativas atingido.")  # pragma: no cover
 
 
+# ─── Estado da conexão ────────────────────────────────────────────────────────
+
+
+def estado_da_conexao(config: dict | None = None) -> str:
+	"""Estado da sessão da instância com o WhatsApp, como a Evolution informa.
+
+	``open`` é a única situação em que algo sai. ``close`` quer dizer que o aparelho foi
+	desvinculado e alguém precisa ler o QR code de novo; ``connecting`` é a Evolution
+	tentando reabrir a sessão.
+	"""
+	config = config or _get_config()
+	resposta = _get(f"/instance/connectionState/{config['nome_instancia']}", config=config)
+	instancia = resposta.get("instance") if isinstance(resposta, dict) else None
+	return str((instancia or {}).get("state") or "desconhecido")
+
+
+def _explicar_falha(erro: Exception, config: dict | None, numero: str) -> Exception:
+	"""Troca o erro cru da Evolution por um que diga o que fazer.
+
+	Só olha as respostas HTTP de erro: são elas que a Evolution devolve quando a sessão caiu,
+	e de um jeito que não diz isso. Com a instância desconectada, o envio a um número falha
+	com 500 ``Cannot read properties of undefined (reading 'onWhatsApp')`` e o envio a um
+	grupo com 400 ``['[object Object]']`` (o "grupo não encontrado" dela, serializado errado).
+	"""
+	if not isinstance(erro, WhatsAppRequestError) or erro.status_code is None or not config:
+		return erro
+
+	try:
+		estado = estado_da_conexao(config)
+	except Exception:
+		estado = None
+
+	if estado and estado != ESTADO_CONECTADO:
+		return WhatsAppDesconectadoError(
+			f"WhatsApp desconectado (estado na Evolution: {estado}). Nenhuma mensagem sai até "
+			f"alguém reconectar a instância {config['nome_instancia']} no Evolution Manager, lendo o "
+			f"QR code com o celular do grupo. Resposta da Evolution: {erro}",
+			status_code=erro.status_code,
+		)
+
+	detalhe = str(erro)
+	if "onWhatsApp" in detalhe:
+		explicacao = "A Evolution não conseguiu consultar o número: a sessão com o WhatsApp não está ativa."
+	elif "[object Object]" in detalhe and _e_grupo(numero):
+		explicacao = (
+			"A Evolution não encontrou o grupo: o número do GRIS saiu do grupo ou a sessão com o "
+			"WhatsApp não está ativa."
+		)
+	else:
+		return erro
+
+	return WhatsAppRequestError(
+		f"{explicacao} Resposta da Evolution: {detalhe}", status_code=erro.status_code
+	)
+
+
+# ─── Fila única de envio ──────────────────────────────────────────────────────
+
+
+def _lock_timeout() -> int:
+	return LOCK_TIMEOUT_REQUISICAO if getattr(frappe.local, "request", None) else LOCK_TIMEOUT_JOB
+
+
+def _ultimo_envio_em():
+	"""Quando saiu o último envio bem-sucedido, por qualquer worker.
+
+	O commit antes da leitura é o que a faz enxergar o envio que o outro worker acabou de
+	gravar: sem ele, a leitura devolveria o snapshot do início da transação, tirado antes de
+	esperar a vez. Ele não muda nada para quem chamou, porque todo envio já termina em commit
+	(``_registrar_sucesso`` ou ``_registrar_erro``). Um ``FOR UPDATE`` resolveria o mesmo
+	problema, mas ficaria preso atrás de qualquer transação longa que tocasse a configuração.
+	"""
+	frappe.db.commit()  # nosemgrep
+	linha = frappe.db.sql(
+		"SELECT `value` FROM `tabSingles` WHERE `doctype` = %s AND `field` = 'ultimo_envio_em'",
+		(SETTINGS_DOCTYPE,),
+	)
+	return get_datetime(linha[0][0]) if linha and linha[0][0] else None
+
+
+def _aguardar_intervalo() -> None:
+	"""Dorme o que falta para o intervalo mínimo desde o último envio bem-sucedido."""
+	ultimo = _ultimo_envio_em()
+	if not ultimo:
+		return
+
+	decorrido = (now_datetime() - ultimo).total_seconds()
+	espera = random.uniform(INTERVALO_MIN, INTERVALO_MAX) - decorrido
+	if espera > 0:
+		time.sleep(espera)
+
+
+@contextmanager
+def _vez_de_enviar() -> Iterator[None]:
+	"""Um envio por vez em todo o site, e nunca dois colados.
+
+	O lock nomeado do MariaDB é da conexão, não da transação: vale entre os workers, não
+	some com o commit que o envio faz e é solto no ``finally`` mesmo quando o POST falha.
+	"""
+	timeout = _lock_timeout()
+	obtido = frappe.db.sql("SELECT GET_LOCK(%s, %s)", (LOCK_ENVIO, timeout))
+	if not obtido or obtido[0][0] != 1:
+		raise WhatsAppRequestError(
+			f"A fila de envio do WhatsApp ficou ocupada por mais de {timeout}s; a mensagem não foi enviada."
+		)
+	try:
+		_aguardar_intervalo()
+		yield
+	finally:
+		frappe.db.sql("SELECT RELEASE_LOCK(%s)", (LOCK_ENVIO,))
+
+
 # ─── Log de mensagens ─────────────────────────────────────────────────────────
 
 LOG_DOCTYPE = "Log de Mensagem"
 
 TIPO_NAO_IDENTIFICADO = "Não identificado"
+
+STATUS_ENVIADA = "Enviada"
+STATUS_FALHOU = "Falhou"
+
+ENTREGA_AGUARDANDO = "Aguardando confirmação"
+ENTREGA_GRUPO = "Não rastreável (grupo)"
 
 
 def _registrar_log(
@@ -190,12 +351,19 @@ def _registrar_log(
 	conteudo: str,
 	status: str,
 	erro: str = "",
+	id_mensagem: str | None = None,
+	jid_destino: str | None = None,
+	entrega: str | None = None,
 ) -> None:
 	"""Grava a linha do ``Log de Mensagem``.
 
 	``contexto`` é o que o chamador sabe e o transporte não: de qual jovem a mensagem fala,
 	que mensagem é essa e quem é o destinatário. Vem opcional porque nem todo envio do GRIS
 	nasce no funil de recepção — sem ele a linha ainda registra número, texto e status.
+
+	``id_mensagem`` e ``jid_destino`` são o ``key`` que a Evolution devolve. "Enviada" quer
+	dizer só que a Evolution aceitou; é por esse id que
+	``gris.utils.whatsapp_entrega.conciliar_entregas`` descobre depois se a mensagem chegou.
 
 	Grupos ficam sem nome aqui de propósito: só a Evolution API sabe o assunto do grupo, e
 	buscá-lo no envio poria uma chamada de rede no caminho de cada mensagem. Quem resolve o
@@ -219,6 +387,9 @@ def _registrar_log(
 				"destinatario_numero": numero,
 				"conteudo": conteudo,
 				"erro": erro[:2000] if erro else "",
+				"id_mensagem": id_mensagem or "",
+				"jid_destino": jid_destino or "",
+				"entrega": entrega or "",
 			}
 		).insert(ignore_permissions=True)
 	except Exception:
@@ -244,21 +415,78 @@ def _registrar_erro(contexto: str) -> None:
 # ─── Funções síncronas (chamadas diretamente ou via enqueue) ──────────────────
 
 
-def _enviar_texto_sync(numero: str, mensagem: str, contexto: dict | None = None) -> dict:
-	config = _get_config()
-	payload = {"number": _normalize_phone(numero), "text": mensagem}
+def _enviar(
+	rota: str,
+	montar_payload: Callable[[], dict],
+	*,
+	numero: str,
+	conteudo: str,
+	contexto: dict | None,
+	rotulo: str,
+) -> dict:
+	"""Caminho único de toda mensagem: monta, espera a vez, envia e registra.
 
+	Tudo o que pode falhar fica dentro do ``try`` — configuração, montagem do payload, a fila
+	e o POST —, para que nenhuma mensagem se perca sem deixar a linha "Falhou" no log.
+	"""
+	config: dict | None = None
+	enviado = False
 	try:
-		result = _post(f"/message/sendText/{config['nome_instancia']}", payload, config=config)
+		config = _get_config()
+		payload = montar_payload()
+		with _vez_de_enviar():
+			result = _post(f"{rota}/{config['nome_instancia']}", payload, config=config)
+			enviado = True
+			# Ainda com a vez: o próximo da fila lê `ultimo_envio_em` para saber quanto esperar,
+			# e só enxerga este envio depois do commit de `_registrar_sucesso`.
+			_registrar_enviada(result, numero=numero, conteudo=conteudo, contexto=contexto)
+			_registrar_sucesso()
 	except Exception as erro:
-		_registrar_log(contexto, numero=numero, conteudo=mensagem, status="Falhou", erro=str(erro))
-		_registrar_erro(f"enviar_texto:{numero}")
-		raise
+		if enviado:
+			# A mensagem saiu; o que falhou foi só o registro. Não é um "Falhou".
+			raise
+		explicado = _explicar_falha(erro, config, numero)
+		_registrar_log(contexto, numero=numero, conteudo=conteudo, status=STATUS_FALHOU, erro=str(explicado))
+		_registrar_erro(rotulo)
+		if explicado is erro:
+			raise
+		raise explicado from erro
 
-	_registrar_log(contexto, numero=numero, conteudo=mensagem, status="Enviada")
-	_registrar_sucesso()
+	return result
+
+
+def _registrar_enviada(result, *, numero: str, conteudo: str, contexto: dict | None) -> None:
+	chave = (result.get("key") if isinstance(result, dict) else None) or {}
+	id_mensagem = chave.get("id")
+	if _e_grupo(numero):
+		entrega = ENTREGA_GRUPO
+	else:
+		entrega = ENTREGA_AGUARDANDO if id_mensagem else ""
+	_registrar_log(
+		contexto,
+		numero=numero,
+		conteudo=conteudo,
+		status=STATUS_ENVIADA,
+		id_mensagem=id_mensagem,
+		jid_destino=chave.get("remoteJid"),
+		entrega=entrega,
+	)
+
+
+def _enviar_texto_sync(numero: str, mensagem: str, contexto: dict | None = None) -> dict:
+	result = _enviar(
+		"/message/sendText",
+		lambda: {"number": _normalize_phone(numero), "text": mensagem},
+		numero=numero,
+		conteudo=mensagem,
+		contexto=contexto,
+		rotulo=f"enviar_texto:{numero}",
+	)
 	_logger().info(f"Mensagem de texto enviada para {numero}.")
 	return result
+
+
+_TIPOS_DE_MIDIA = {"image", "document", "audio", "video"}
 
 
 def _enviar_midia_sync(
@@ -271,37 +499,35 @@ def _enviar_midia_sync(
 	mimetype: str = "",
 	contexto: dict | None = None,
 ) -> dict:
-	_TIPOS_VALIDOS = {"image", "document", "audio", "video"}
-	if tipo not in _TIPOS_VALIDOS:
-		raise WhatsAppRequestError(
-			f"Tipo de mídia inválido: '{tipo}'. Use: {', '.join(sorted(_TIPOS_VALIDOS))}."
-		)
-
-	config = _get_config()
-	payload: dict = {
-		"number": _normalize_phone(numero),
-		"mediatype": tipo,
-		"media": url_ou_base64,
-	}
-	if caption:
-		payload["caption"] = caption
-	# Sem nome e tipo, o documento chega sem extensão e o celular não sabe abri-lo.
-	if nome_arquivo:
-		payload["fileName"] = nome_arquivo
-	if mimetype:
-		payload["mimetype"] = mimetype
+	def montar() -> dict:
+		if tipo not in _TIPOS_DE_MIDIA:
+			raise WhatsAppRequestError(
+				f"Tipo de mídia inválido: '{tipo}'. Use: {', '.join(sorted(_TIPOS_DE_MIDIA))}."
+			)
+		payload: dict = {
+			"number": _normalize_phone(numero),
+			"mediatype": tipo,
+			"media": url_ou_base64,
+		}
+		if caption:
+			payload["caption"] = caption
+		# Sem nome e tipo, o documento chega sem extensão e o celular não sabe abri-lo.
+		if nome_arquivo:
+			payload["fileName"] = nome_arquivo
+		if mimetype:
+			payload["mimetype"] = mimetype
+		return payload
 
 	# O log guarda a legenda e o nome do arquivo, nunca o conteúdo em base64.
 	conteudo_log = "\n".join(parte for parte in (caption, f"[anexo: {nome_arquivo or tipo}]") if parte)
-	try:
-		result = _post(f"/message/sendMedia/{config['nome_instancia']}", payload, config=config)
-	except Exception as erro:
-		_registrar_log(contexto, numero=numero, conteudo=conteudo_log, status="Falhou", erro=str(erro))
-		_registrar_erro(f"enviar_midia:{numero}:{tipo}")
-		raise
-
-	_registrar_log(contexto, numero=numero, conteudo=conteudo_log, status="Enviada")
-	_registrar_sucesso()
+	result = _enviar(
+		"/message/sendMedia",
+		montar,
+		numero=numero,
+		conteudo=conteudo_log,
+		contexto=contexto,
+		rotulo=f"enviar_midia:{numero}:{tipo}",
+	)
 	_logger().info(f"Mídia ({tipo}) enviada para {numero}.")
 	return result
 
@@ -314,26 +540,26 @@ def _enviar_para_grupo_sync(
 	mencionar: list[str] | None = None,
 	contexto: dict | None = None,
 ) -> dict:
-	config = _get_config()
-	payload = {"number": grupo_jid, "text": mensagem}
-	# `mentionsEveryOne` só entra no payload quando verdadeiro: a Evolution menciona todo
-	# mundo mesmo quando a chave chega com `false`.
-	if mencionar_todos:
-		payload["mentionsEveryOne"] = True
-	if mencionar:
-		numeros = [_normalize_phone(numero) for numero in mencionar if (numero or "").strip()]
-		if numeros:
-			payload["mentioned"] = list(dict.fromkeys(numeros))
+	def montar() -> dict:
+		payload: dict = {"number": grupo_jid, "text": mensagem}
+		# `mentionsEveryOne` só entra no payload quando verdadeiro: a Evolution menciona todo
+		# mundo mesmo quando a chave chega com `false`.
+		if mencionar_todos:
+			payload["mentionsEveryOne"] = True
+		if mencionar:
+			numeros = [_normalize_phone(numero) for numero in mencionar if (numero or "").strip()]
+			if numeros:
+				payload["mentioned"] = list(dict.fromkeys(numeros))
+		return payload
 
-	try:
-		result = _post(f"/message/sendText/{config['nome_instancia']}", payload, config=config)
-	except Exception as erro:
-		_registrar_log(contexto, numero=grupo_jid, conteudo=mensagem, status="Falhou", erro=str(erro))
-		_registrar_erro(f"enviar_para_grupo:{grupo_jid}")
-		raise
-
-	_registrar_log(contexto, numero=grupo_jid, conteudo=mensagem, status="Enviada")
-	_registrar_sucesso()
+	result = _enviar(
+		"/message/sendText",
+		montar,
+		numero=grupo_jid,
+		conteudo=mensagem,
+		contexto=contexto,
+		rotulo=f"enviar_para_grupo:{grupo_jid}",
+	)
 	_logger().info(f"Mensagem enviada para grupo {grupo_jid}.")
 	return result
 
@@ -345,18 +571,22 @@ def _adicionar_participantes_no_grupo_sync(grupo_jid: str, numeros: list[str]) -
 	if not participantes:
 		raise WhatsAppRequestError("Nenhum número válido para adicionar ao grupo.")
 
+	enviado = False
 	try:
-		result = _post(
-			f"/group/updateParticipant/{config['nome_instancia']}",
-			{"action": "add", "participants": participantes},
-			params={"groupJid": grupo_jid},
-			config=config,
-		)
+		with _vez_de_enviar():
+			result = _post(
+				f"/group/updateParticipant/{config['nome_instancia']}",
+				{"action": "add", "participants": participantes},
+				params={"groupJid": grupo_jid},
+				config=config,
+			)
+			enviado = True
+			_registrar_sucesso()
 	except Exception:
-		_registrar_erro(f"adicionar_participantes_no_grupo:{grupo_jid}")
+		if not enviado:
+			_registrar_erro(f"adicionar_participantes_no_grupo:{grupo_jid}")
 		raise
 
-	_registrar_sucesso()
 	_logger().info(f"{len(participantes)} participante(s) adicionado(s) ao grupo {grupo_jid}.")
 	return result
 
@@ -368,25 +598,25 @@ def _enviar_mensagem_formatada_sync(
 	botoes: list[dict] | None = None,
 	contexto: dict | None = None,
 ) -> dict:
-	config = _get_config()
-	payload: dict = {
-		"number": _normalize_phone(numero),
-		"title": titulo,
-		"description": descricao,
-	}
-	if botoes:
-		payload["buttons"] = botoes
+	def montar() -> dict:
+		payload: dict = {
+			"number": _normalize_phone(numero),
+			"title": titulo,
+			"description": descricao,
+		}
+		if botoes:
+			payload["buttons"] = botoes
+		return payload
 
 	conteudo = f"*{titulo}*\n{descricao}" if titulo else descricao
-	try:
-		result = _post(f"/message/sendButtons/{config['nome_instancia']}", payload, config=config)
-	except Exception as erro:
-		_registrar_log(contexto, numero=numero, conteudo=conteudo, status="Falhou", erro=str(erro))
-		_registrar_erro(f"enviar_mensagem_formatada:{numero}")
-		raise
-
-	_registrar_log(contexto, numero=numero, conteudo=conteudo, status="Enviada")
-	_registrar_sucesso()
+	result = _enviar(
+		"/message/sendButtons",
+		montar,
+		numero=numero,
+		conteudo=conteudo,
+		contexto=contexto,
+		rotulo=f"enviar_mensagem_formatada:{numero}",
+	)
 	_logger().info(f"Mensagem formatada enviada para {numero}.")
 	return result
 
@@ -487,7 +717,8 @@ def enviar_texto(
 		frappe.enqueue(
 			"gris.utils.whatsapp._enviar_texto_sync",
 			queue="short",
-			timeout=60,
+			timeout=TIMEOUT_JOB_ENVIO,
+			enqueue_after_commit=True,
 			numero=numero,
 			mensagem=mensagem,
 			contexto=contexto,
@@ -532,7 +763,8 @@ def enviar_midia(
 		frappe.enqueue(
 			"gris.utils.whatsapp._enviar_midia_sync",
 			queue="short",
-			timeout=120,
+			timeout=TIMEOUT_JOB_ENVIO,
+			enqueue_after_commit=True,
 			numero=numero,
 			tipo=tipo,
 			url_ou_base64=url_ou_base64,
@@ -586,7 +818,8 @@ def enviar_para_grupo(
 		frappe.enqueue(
 			"gris.utils.whatsapp._enviar_para_grupo_sync",
 			queue="short",
-			timeout=60,
+			timeout=TIMEOUT_JOB_ENVIO,
+			enqueue_after_commit=True,
 			grupo_jid=grupo_jid,
 			mensagem=mensagem,
 			mencionar_todos=mencionar_todos,
@@ -631,7 +864,8 @@ def adicionar_participantes_no_grupo(
 		frappe.enqueue(
 			"gris.utils.whatsapp._adicionar_participantes_no_grupo_sync",
 			queue="short",
-			timeout=60,
+			timeout=TIMEOUT_JOB_ENVIO,
+			enqueue_after_commit=True,
 			grupo_jid=grupo_jid,
 			numeros=numeros,
 		)
@@ -649,6 +883,10 @@ def enviar_mensagem_formatada(
 	contexto: dict | None = None,
 ) -> dict | None:
 	"""Envia mensagem com título, descrição e botões interativos.
+
+	Evite: fora da API oficial do WhatsApp os botões não aparecem de forma confiável. No
+	histórico da Evolution, um terço dos lembretes de visita enviados assim nunca teve
+	confirmação de entrega. Prefira ``enviar_texto``.
 
 	Args:
 		numero: Número no formato internacional.
@@ -672,7 +910,8 @@ def enviar_mensagem_formatada(
 		frappe.enqueue(
 			"gris.utils.whatsapp._enviar_mensagem_formatada_sync",
 			queue="short",
-			timeout=60,
+			timeout=TIMEOUT_JOB_ENVIO,
+			enqueue_after_commit=True,
 			numero=numero,
 			titulo=titulo,
 			descricao=descricao,

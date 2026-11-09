@@ -20,6 +20,24 @@
 		Falhou: { icone: "circle-alert", classe: "is-falhou" },
 	};
 
+	// "Enviada" é só o aceite da Evolution; a entrega vem depois, pela conciliação de hora em
+	// hora (gris.utils.whatsapp_entrega). Grupos não recebem confirmação e ficam sem selo.
+	const SELO_POR_ENTREGA = {
+		"Aguardando confirmação": {
+			icone: "clock",
+			classe: "is-neutro",
+			rotulo: "Aguardando confirmação",
+		},
+		Entregue: { icone: "check-check", classe: "is-ok", rotulo: "Entregue" },
+		Lida: { icone: "check-check", classe: "is-ok", rotulo: "Lida" },
+		"Sem confirmação": {
+			icone: "triangle-alert",
+			classe: "is-alerta",
+			rotulo: "Sem confirmação de entrega",
+		},
+		"Erro na entrega": { icone: "circle-x", classe: "is-erro", rotulo: "Erro na entrega" },
+	};
+
 	let aoFecharPendente = null;
 
 	function escaparHtml(valor) {
@@ -40,6 +58,19 @@
 		);
 	}
 
+	function seloDeEntrega(msg) {
+		const selo = msg.status === "Enviada" ? SELO_POR_ENTREGA[msg.entrega] : null;
+		if (!selo) return "";
+		return (
+			'<span class="badge ficha-mensagem__entrega ' +
+			selo.classe +
+			'">' +
+			iconeSvg(selo.icone) +
+			escaparHtml(selo.rotulo) +
+			"</span>"
+		);
+	}
+
 	function linhaDeMensagem(msg) {
 		const estado = ESTADO_POR_STATUS[msg.status] || ESTADO_POR_STATUS.Falhou;
 		const partes = [];
@@ -48,9 +79,12 @@
 			'<li class="ficha-mensagem ' +
 				estado.classe +
 				'"><div class="ficha-mensagem__topo">' +
+				'<span class="ficha-mensagem__situacao">' +
 				'<span class="ficha-mensagem__status">' +
 				iconeSvg(estado.icone) +
 				escaparHtml(msg.status) +
+				"</span>" +
+				seloDeEntrega(msg) +
 				"</span>" +
 				'<span class="ficha-mensagem__quando">' +
 				escaparHtml(msg.data) +

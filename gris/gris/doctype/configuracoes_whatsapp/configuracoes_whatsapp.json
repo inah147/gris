@@ -12,6 +12,8 @@
   "url_api",
   "api_key",
   "nome_instancia",
+  "section_break_alerta",
+  "emails_alerta_desconexao",
   "section_break_observabilidade",
   "ultimo_envio_em",
   "ultimo_erro"
@@ -62,6 +64,17 @@
    "reqd": 1
   },
   {
+   "fieldname": "section_break_alerta",
+   "fieldtype": "Section Break",
+   "label": "Alerta de desconexão"
+  },
+  {
+   "description": "Um e-mail por linha. A cada 12 horas o GRIS confere a conexão com o WhatsApp e, se estiver caída, avisa estes endereços. Vazio: avisa os usuários com o papel System Manager.",
+   "fieldname": "emails_alerta_desconexao",
+   "fieldtype": "Small Text",
+   "label": "E-mails para avisar quando o WhatsApp cair"
+  },
+  {
    "fieldname": "section_break_observabilidade",
    "fieldtype": "Section Break",
    "label": "Observabilidade"
@@ -83,7 +96,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-03-20 00:00:00.000000",
+ "modified": "2026-11-09 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Configuracoes WhatsApp",

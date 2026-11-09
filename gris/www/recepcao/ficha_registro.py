@@ -234,6 +234,7 @@ def listar_mensagens_enviadas(novo_associado_name: str) -> list[dict]:
 			"destinatario_numero",
 			"conteudo",
 			"erro",
+			"entrega",
 		],
 		order_by="enviada_em desc",
 		limit_page_length=200,

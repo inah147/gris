@@ -21,7 +21,7 @@ from gris.api.recepcao_mensagens import (
 	_mensagem_habilitada,
 )
 from gris.utils.job_logger import definir_resumo, metrica, obter_logger
-from gris.utils.whatsapp import enviar_mensagem_formatada, enviar_para_grupo, enviar_texto
+from gris.utils.whatsapp import enviar_para_grupo, enviar_texto
 
 
 def _buscar_telefone_responsavel(novo_associado_name: str) -> str | None:
@@ -214,10 +214,19 @@ def notificar_visita_agendada(novo_associado_name: str, data_visita: str, remarc
 		frappe.log_error(frappe.get_traceback(), f"Notificação de agendamento: {novo_associado_name}")
 
 
+def montar_mensagem_lembrete_visita(nome: str, data_formatada: str) -> str:
+	return (
+		"*Lembrete de visita*\n\n"
+		f"A visita de {nome} ao Grupo Escoteiro está marcada para {data_formatada}.\n\n"
+		"Você confirma a presença? Responda esta mensagem com *sim* ou *não*."
+	)
+
+
 def enviar_lembretes_visita() -> None:
 	"""Scheduler diário: notifica responsáveis com visitas marcadas para daqui a 2 dias.
 
-	Envia mensagem formatada com botões de confirmação para visitas ainda não confirmadas.
+	Vai em texto simples, pedindo a confirmação como resposta: com botões (``sendButtons``),
+	um terço dos lembretes nunca teve confirmação de entrega na Evolution. Roda às 9h.
 	Em caso de erro por visita, registra e continua as demais.
 	"""
 	logger = obter_logger("recepcao_notificacoes")
@@ -241,11 +250,6 @@ def enviar_lembretes_visita() -> None:
 	logger.info(f"Enviando {len(visitas)} lembrete(s) de visita para {data_alvo}.")
 	metrica("visitas_avaliadas", len(visitas), incrementar=False)
 
-	botoes = [
-		{"buttonId": "confirmar", "buttonText": {"displayText": "Sim, irei! ✅"}, "type": "reply"},
-		{"buttonId": "cancelar", "buttonText": {"displayText": "Não poderei ir ❌"}, "type": "reply"},
-	]
-
 	enviados = 0
 	for visita in visitas:
 		try:
@@ -262,14 +266,9 @@ def enviar_lembretes_visita() -> None:
 			except Exception:
 				data_formatada = str(visita.data_da_visita)
 
-			enviar_mensagem_formatada(
+			enviar_texto(
 				telefone,
-				titulo="Lembrete de Visita",
-				descricao=(
-					f"A visita de {nome} ao Grupo Escoteiro está marcada para {data_formatada}. "
-					f"Você confirma a presença?"
-				),
-				botoes=botoes,
+				montar_mensagem_lembrete_visita(nome, data_formatada),
 				contexto=_contexto_de_log(
 					assunto="Lembrete de visita",
 					tipo=DESTINATARIO_RESPONSAVEL,

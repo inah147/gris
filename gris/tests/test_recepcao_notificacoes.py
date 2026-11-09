@@ -122,3 +122,37 @@ class TestRecepcaoNotificacoes(FrappeTestCase):
 		finally:
 			recepcao_notificacoes.frappe.db.get_single_value = original_get_single_value
 			recepcao_notificacoes.enviar_para_grupo = original_enviar_para_grupo
+
+
+class TestLembreteDeVisita(FrappeTestCase):
+	"""O lembrete vai em texto: com botões (`sendButtons`) um terço nunca teve confirmação de entrega."""
+
+	def test_vai_em_texto_e_pede_resposta(self):
+		from unittest.mock import patch
+
+		visita = frappe._dict(name="AV-1", jovem="NA-1", data_da_visita="2026-11-11")
+		get_value = frappe.db.get_value
+
+		def nome_do_jovem(doctype, *args, **kwargs):
+			# `today()` também lê o fuso por get_value: só o nome do jovem é dublado.
+			if doctype == "Novo Associado":
+				return "Jovem Teste"
+			return get_value(doctype, *args, **kwargs)
+
+		with (
+			patch.object(recepcao_notificacoes, "_mensagem_habilitada", return_value=True),
+			patch.object(recepcao_notificacoes.frappe, "get_all", return_value=[visita]),
+			patch.object(recepcao_notificacoes, "_buscar_telefone_responsavel", return_value="11999998888"),
+			patch.object(recepcao_notificacoes.frappe.db, "get_value", side_effect=nome_do_jovem),
+			patch.object(recepcao_notificacoes, "enviar_texto") as enviar_texto,
+		):
+			recepcao_notificacoes.enviar_lembretes_visita()
+
+		enviar_texto.assert_called_once()
+		numero, mensagem = enviar_texto.call_args[0]
+		self.assertEqual(numero, "11999998888")
+		self.assertIn("Jovem Teste", mensagem)
+		self.assertIn("11/11", mensagem)
+		self.assertIn("Responda esta mensagem", mensagem)
+		self.assertEqual(enviar_texto.call_args.kwargs["contexto"]["assunto"], "Lembrete de visita")
+		self.assertFalse(hasattr(recepcao_notificacoes, "enviar_mensagem_formatada"))

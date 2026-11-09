@@ -310,6 +310,11 @@ class TestRegistroProvisorioNotificacoes(FrappeTestCase):
 		self.assertIn("+5511977773333", enviadas[0]["mensagem"])
 
 	def test_falha_de_envio_nao_marca_aviso_e_nao_interrompe_os_demais(self):
+		"""Cobre só a falha síncrona de `enviar_texto` (montar ou enfileirar o envio).
+
+		Uma recusa da Evolution não chega aqui: o envio roda num job depois do commit, o
+		aviso já está marcado e a falha aparece como "Falhou" no Log de Mensagem da ficha.
+		"""
 		modulo = registro_provisorio_notificacoes
 		orig_log_error = modulo.frappe.log_error
 		modulo.frappe.log_error = lambda *args, **kwargs: None

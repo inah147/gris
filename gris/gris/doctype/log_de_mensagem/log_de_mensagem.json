@@ -13,6 +13,12 @@
   "column_break_envio",
   "novo_associado",
   "assunto",
+  "secao_entrega",
+  "entrega",
+  "entrega_atualizada_em",
+  "column_break_entrega",
+  "id_mensagem",
+  "jid_destino",
   "secao_destinatario",
   "destinatario_tipo",
   "destinatario_nome",
@@ -66,6 +72,45 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Assunto",
+   "read_only": 1
+  },
+  {
+   "fieldname": "secao_entrega",
+   "fieldtype": "Section Break",
+   "label": "Entrega"
+  },
+  {
+   "description": "O que o WhatsApp confirmou depois que a Evolution aceitou a mensagem. Conferido a cada 15 minutos nas primeiras 72 horas. Grupos não recebem confirmação.",
+   "fieldname": "entrega",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Entrega",
+   "options": "\nAguardando confirmação\nEntregue\nLida\nSem confirmação\nErro na entrega\nNão rastreável (grupo)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "entrega_atualizada_em",
+   "fieldtype": "Datetime",
+   "label": "Entrega conferida em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_entrega",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Id que a Evolution devolveu no envio (key.id).",
+   "fieldname": "id_mensagem",
+   "fieldtype": "Data",
+   "label": "Id da mensagem",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "description": "Destino que o WhatsApp resolveu para o número (key.remoteJid).",
+   "fieldname": "jid_destino",
+   "fieldtype": "Data",
+   "label": "JID de destino",
    "read_only": 1
   },
   {
@@ -123,7 +168,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-04 10:00:00.000000",
+ "modified": "2026-11-09 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Log de Mensagem",

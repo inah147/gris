@@ -18,6 +18,7 @@ class TestEnviarMidia(TestCase):
 			patch.object(whatsapp, "_get_config", return_value=CONFIG_FALSA),
 			patch.object(whatsapp, "_post", **(post or {"return_value": {"key": {"id": "X"}}})) as post_,
 			patch.object(whatsapp, "_registrar_sucesso"),
+			patch.object(whatsapp, "_ultimo_envio_em", return_value=None),
 			patch.object(whatsapp, "_registrar_erro"),
 			patch.object(whatsapp, "_logger"),
 			patch.object(whatsapp, "_registrar_log") as registrar,

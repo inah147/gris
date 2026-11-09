@@ -52,7 +52,6 @@ class TestLembreteFesta(FrappeTestCase):
 			("gris.utils.whatsapp.enviar_texto", {}),
 			("gris.utils.whatsapp.enviar_midia", {}),
 			("gris.festas.utils.convite_qr.gerar_pdf_convite", {"return_value": PDF_FALSO}),
-			("gris.festas.utils.lembrete_festa.time.sleep", {}),
 			("frappe.utils.background_jobs.is_job_enqueued", {"return_value": False}),
 			("frappe.enqueue", {}),
 		):

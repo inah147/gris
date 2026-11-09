@@ -13,6 +13,7 @@ class TestConfiguracoesWhatsApp(FrappeTestCase):
 		original_post = whatsapp_utils._post
 		original_registrar_sucesso = whatsapp_utils._registrar_sucesso
 		original_logger = whatsapp_utils._logger
+		original_ultimo_envio_em = whatsapp_utils._ultimo_envio_em
 
 		capturado = {}
 
@@ -35,6 +36,8 @@ class TestConfiguracoesWhatsApp(FrappeTestCase):
 			whatsapp_utils._post = _fake_post
 			whatsapp_utils._registrar_sucesso = lambda: None
 			whatsapp_utils._logger = lambda: _DummyLogger()
+			# A leitura real comita, e isso gravaria o Log de Mensagem do teste no banco.
+			whatsapp_utils._ultimo_envio_em = lambda: None
 
 			resposta = whatsapp_utils.enviar_para_grupo(
 				"120363408543428156@g.us",
@@ -53,6 +56,7 @@ class TestConfiguracoesWhatsApp(FrappeTestCase):
 			whatsapp_utils._post = original_post
 			whatsapp_utils._registrar_sucesso = original_registrar_sucesso
 			whatsapp_utils._logger = original_logger
+			whatsapp_utils._ultimo_envio_em = original_ultimo_envio_em
 
 	def test_enviar_para_grupo_com_mencao_individual_no_payload(self):
 		capturado, restaurar = self._interceptar_post()
@@ -98,6 +102,7 @@ class TestConfiguracoesWhatsApp(FrappeTestCase):
 			"_post": whatsapp_utils._post,
 			"_registrar_sucesso": whatsapp_utils._registrar_sucesso,
 			"_logger": whatsapp_utils._logger,
+			"_ultimo_envio_em": whatsapp_utils._ultimo_envio_em,
 		}
 		capturado = {}
 
@@ -119,6 +124,8 @@ class TestConfiguracoesWhatsApp(FrappeTestCase):
 		whatsapp_utils._post = _fake_post
 		whatsapp_utils._registrar_sucesso = lambda: None
 		whatsapp_utils._logger = lambda: _DummyLogger()
+		# A leitura real comita, e isso gravaria o Log de Mensagem do teste no banco.
+		whatsapp_utils._ultimo_envio_em = lambda: None
 
 		def _restaurar():
 			for nome, valor in originais.items():

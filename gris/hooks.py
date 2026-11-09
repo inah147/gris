@@ -315,6 +315,8 @@ scheduler_events = {
 			"gris.api.recepcao_mensagens.enviar_lembretes_ficha_medica",
 			"gris.api.recepcao_mensagens.enviar_lembretes_id_escoteiros",
 			"gris.api.recepcao_mensagens.enviar_lembretes_acolhida_lenco",
+			# Era "daily" (meia-noite): o lembrete chegava às famílias de madrugada.
+			"gris.api.recepcao_notificacoes.enviar_lembretes_visita",
 			# Às 9h e não no "daily" (meia-noite): o link vai para o WhatsApp das famílias.
 			"gris.api.financeiro.cobranca_contribuicao_automatica.enqueue_cobrancas_automaticas",
 			# Depois das rodadas do Workspace (meia-noite): fecha os pedidos de drive que elas
@@ -322,6 +324,10 @@ scheduler_events = {
 			"gris.api.acessos.provisionamento.reconciliar_concessoes_drive",
 			"gris.api.acessos.inatividade.processar_inativos",
 		],
+		# O que o WhatsApp confirmou das mensagens que a Evolution aceitou (Log de Mensagem.entrega).
+		"20 * * * *": ["gris.utils.whatsapp_entrega.conciliar_entregas"],
+		# Alerta por e-mail quando o WhatsApp cai; com a conexão aberta não faz nada.
+		"0 8,20 * * *": ["gris.utils.whatsapp_monitor.verificar_conexao_whatsapp"],
 		# Sábado de manhã, antes da reunião: as visitas do dia no grupo de chefes de seção.
 		"0 10 * * 6": ["gris.api.recepcao_mensagens.notificar_visitas_do_dia"],
 	},
@@ -340,7 +346,6 @@ scheduler_events = {
 		"gris.api.google_workspace.access_manager.enqueue_daily_global_access_sync",
 		"gris.api.google_workspace.access_manager.enqueue_daily_restricted_access_cleanup",
 		"gris.api.google_workspace.access_manager.enqueue_daily_inactive_access_cleanup",
-		"gris.api.recepcao_notificacoes.enviar_lembretes_visita",
 		"gris.festas.doctype.festa.festa.marcar_festas_realizadas",
 		"gris.festas.doctype.opcao_convite_festa.opcao_convite_festa.atualizar_lotes_opcoes_convite",
 	],

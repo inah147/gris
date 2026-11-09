@@ -38,7 +38,7 @@ from gris.utils.contato import (
 )
 from gris.utils.contato import get_contato_pessoa as _shared_get_contato_pessoa
 from gris.utils.job_logger import definir_resumo, metrica, obter_logger
-from gris.utils.whatsapp import enviar_mensagem_formatada, enviar_texto
+from gris.utils.whatsapp import enviar_texto
 
 __all__ = ["_get_section_chief_associados", "_is_section_chief_function", "_normalize_text"]
 
@@ -1468,38 +1468,12 @@ def _send_whatsapp_project_button_notification(
 	if not telefone or not titulo or not descricao or not link:
 		return False
 
+	# Ia com botão de link (`sendButtons`), mas a chamada passava um `footer` que o transporte
+	# não aceita e sempre caía no texto. Botões também não aparecem de forma confiável fora da
+	# API oficial do WhatsApp: o texto com o link é o que de fato chega.
 	button_label = "Clique para abrir projeto"
-	botoes = [
-		{
-			"type": "url",
-			"displayText": button_label,
-			"url": link,
-		}
-	]
-
-	try:
-		enviar_mensagem_formatada(
-			telefone,
-			titulo=titulo,
-			descricao=descricao,
-			footer="GRIS",
-			botoes=botoes,
-			enqueue=False,
-		)
-		return True
-	except Exception:
-		frappe.log_error(
-			message=frappe.get_traceback(),
-			title=f"Falha ao enviar WhatsApp com botão ({contexto})",
-		)
-
-	fallback_message = f"{titulo}\n\n{descricao}\n\n{button_label}: {link}"
-	return _send_whatsapp_notification(
-		telefone,
-		fallback_message,
-		contexto=f"{contexto}:fallback",
-		enqueue=False,
-	)
+	mensagem = f"{titulo}\n\n{descricao}\n\n{button_label}: {link}"
+	return _send_whatsapp_notification(telefone, mensagem, contexto=contexto, enqueue=False)
 
 
 def _enqueue_project_whatsapp_job(method: str, **kwargs) -> None:

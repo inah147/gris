@@ -198,10 +198,11 @@ def _validar_extracao(text: str, scouts: list[dict]) -> list[str]:
 	if not (text or "").strip():
 		return ["O PDF não tem texto selecionável (parece imagem ou documento escaneado)."]
 	if not scouts:
-		return [
+		sem_registros = (
 			"Nenhum associado encontrado: o layout do relatório não foi reconhecido. "
 			"Confira se o arquivo é o Relatório Customizável do SIGUE."
-		]
+		)
+		return [sem_registros]
 
 	problemas = []
 	for posicao, scout in enumerate(scouts, start=1):

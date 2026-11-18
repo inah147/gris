@@ -9,6 +9,25 @@
   flex-wrap: wrap;
 }
 
+/* --- Carimbo da última importação (tooltip com o autor) --- */
+.assoc-ultima-atualizacao {
+  margin-top: calc(var(--spacing) * 2);
+  gap: calc(var(--spacing) * 1.5);
+  /* O .badge do Basecoat corta o que transborda, e o tooltip ([data-tooltip]::before) mora fora da caixa. */
+  overflow: visible;
+  cursor: default;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+/* O Basecoat esconde o tooltip no foco; aqui o autor só aparece nele, então o teclado também precisa vê-lo. */
+.assoc-ultima-atualizacao[data-tooltip]:focus-visible::before {
+  display: block;
+  visibility: visible;
+  opacity: 1;
+  scale: 1;
+}
+
 .page-header-actions {
   display: flex;
   gap: calc(var(--spacing) * 2);

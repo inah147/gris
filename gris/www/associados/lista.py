@@ -1,5 +1,6 @@
 import frappe
 
+from gris.api.associate.importer import ultima_importacao_associados
 from gris.api.portal_access import enrich_context
 from gris.api.portal_cache_utils import get_uel_cached
 
@@ -24,6 +25,8 @@ def get_context(context):
 	context.can_create_associate_users = "Acesso ao Desk" in frappe.get_roles(frappe.session.user)
 	# Link ativo
 	context.active_link = "/associados/lista"
+	# Carimbo "Última atualização em …" — a última importação do relatório do SIGUE.
+	context.ultima_atualizacao = ultima_importacao_associados()
 
 	rows = frappe.db.sql(
 		"""

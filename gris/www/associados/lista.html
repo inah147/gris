@@ -3,6 +3,7 @@
 {% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
 {% from "public/design_system/components/generated/popover.html.jinja" import popover %}
 {% from "public/design_system/components/composed/basecoat-composed.html.jinja" import table %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
 {% block title %}Lista de Associados{% endblock %}
 
@@ -15,6 +16,20 @@
     <div>
       <h1 class="text-3xl font-bold tracking-tight">Lista de Associados</h1>
       <p class="text-muted-foreground">Consulte e gerencie todos os associados cadastrados.</p>
+      {% if ultima_atualizacao %}
+        {% set autor_atualizacao = ultima_atualizacao.por or "Autor desconhecido" %}
+        <span
+          class="badge-outline assoc-ultima-atualizacao"
+          tabindex="0"
+          data-tooltip="Por {{ autor_atualizacao | e }}"
+          data-side="bottom"
+          data-align="start"
+          aria-label="Última atualização em {{ ultima_atualizacao.quando | e }}, por {{ autor_atualizacao | e }}"
+        >
+          {{ lucide_icon("clock", size="sm") }}
+          Última atualização em {{ ultima_atualizacao.quando | e }}
+        </span>
+      {% endif %}
     </div>
     {% if can_create_associate_users %}
       <div class="page-header-actions">

@@ -7,6 +7,7 @@ import uuid
 import frappe
 import pandas as pd
 import pdfplumber
+from frappe.utils import get_datetime, get_fullname
 
 from gris.api.users.roles import add_user_roles
 from gris.utils.documento import id_por_cpf, ids_possiveis_por_cpf, localizar_associado_por_cpf
@@ -23,8 +24,81 @@ def _extract_text_from_pdf(pdf_path: str) -> str:
 	return text
 
 
+# Valores que o relatório usa para campo vazio.
+_VALORES_VAZIOS = {"não se aplica", "não informado", ""}
+
+# Rótulos dos dados pessoais. Cada um casa só no início da linha: o valor de um campo nunca
+# vira rótulo de outro. Onde o SIGUE já alternou entre a grafia com e sem acento, o padrão
+# aceita as duas — "Secao:" sem acento nunca existiu no PDF e por isso a seção não entrava.
+_ROTULOS_PESSOAIS = {
+	"Nome": r"Nome",
+	"Registro": r"Registro",
+	"Endereco_completo": r"Endereço completo",
+	"Unidade_escoteira_local": r"Unidade escoteira local",
+	"Categoria_1_Funcao": r"Categoria - 1º Função",
+	"Funcao_1_Funcao": r"Função - 1º Função",
+	"Ramo_1_Funcao": r"Ramo - 1º Função",
+	"Nivel_1_Funcao": r"Nível - 1º Função",
+	"Fone_Residencial": r"Fone Residencial",
+	"Celular": r"Celular",
+	"Email": r"E-mail",
+	"RG": r"RG",
+	"CPF": r"CPF",
+	"Data_Nascimento": r"Data Nascimento",
+	"Cidade": r"Cidade",
+	"Numero_da_UEL": r"N[úu]mero da UEL",
+	"Sexo": r"Sexo",
+	"Raca_ou_Cor": r"Ra[çc]a ou Cor",
+	"Validade_Registro": r"Validade Registro",
+	"Secao": r"Se[çc][ãa]o",
+}
+
+_ROTULOS_RESPONSAVEL = {
+	"Nome_responsavel": r"Nome",
+	"Profissao_responsavel": r"Profiss[ãa]o",
+	"Escolaridade_responsavel": r"Escolaridade",
+	"Telefone_Residencial_responsavel": r"Telefone Residencial",
+	"Celular_responsavel": r"Celular",
+	"Email_responsavel": r"E-mail",
+	"CPF_responsavel": r"CPF",
+}
+
+_ID_ESCOTEIROS = re.compile(
+	r"^(?:id\s*@\s*escoteiros?|id\s+escoteiros?)\s*:\s*(\S+@escoteiros\.org\.br)",
+	re.IGNORECASE | re.MULTILINE,
+)
+_INICIO_RESPONSAVEL = re.compile(r"^Dados respons[áa]vel\s*$", re.IGNORECASE | re.MULTILINE)
+_INICIO_REGISTRO = re.compile(r"^Dados pessoais\s*$", re.IGNORECASE | re.MULTILINE)
+_LINHA_COM_ROTULO = re.compile(r"^[^:]{1,40}:")
+
+
+def _valor_do_rotulo(bloco: str, rotulo: str) -> str:
+	"""Valor do primeiro `Rótulo: valor` do bloco, ou "" quando ausente ou vazio."""
+	match = re.search(rf"^{rotulo}:[ \t]*([^\n\t]*)", bloco, re.IGNORECASE | re.MULTILINE)
+	if not match:
+		return ""
+	valor = match.group(1).strip()
+	return "" if valor.lower() in _VALORES_VAZIOS else valor
+
+
+def _nome_sem_rotulo(bloco_pessoal: str) -> str:
+	"""Nome no layout novo: a primeira linha depois de "Dados pessoais", sem rótulo."""
+	for linha in bloco_pessoal.splitlines():
+		linha = linha.strip()
+		if not linha or _INICIO_REGISTRO.match(linha):
+			continue
+		return "" if _LINHA_COM_ROTULO.match(linha) else linha
+	return ""
+
+
 def _extract_scout_info(record: str) -> dict | None:
-	"""Extrai informações de um registro do PDF"""
+	"""Extrai os dados de um registro ("Dados pessoais" até o próximo) do relatório.
+
+	O registro tem dois blocos com rótulos repetidos (`Nome:`, `CPF:`, `Celular:`, `E-mail:`):
+	o do associado e o do responsável. Cada padrão roda só no seu bloco — no layout novo o
+	nome do associado vem sem rótulo, e procurar `Nome:` no registro inteiro devolvia o nome
+	do responsável.
+	"""
 	try:
 		data = {
 			"Nome": "",
@@ -57,75 +131,102 @@ def _extract_scout_info(record: str) -> dict | None:
 			"Secao": "",
 		}
 
-		patterns = {
-			"Nome": r"Nome:\s*([^\n\t]+)",
-			"Registro": r"Registro:\s*([^\n\t]+)",
-			"Endereco_completo": r"Endereço completo:\s*([^\n\t]+)",
-			"Unidade_escoteira_local": r"Unidade escoteira local:\s*([^\n\t]+)",
-			"Categoria_1_Funcao": r"Categoria - 1º Função:\s*([^\n\t]+)",
-			"Funcao_1_Funcao": r"Função - 1º Função:\s*([^\n\t]+)",
-			"Ramo_1_Funcao": r"Ramo - 1º Função:\s*([^\n\t]+)",
-			"Nivel_1_Funcao": r"Nível - 1º Função:\s*([^\n\t]+)",
-			"Fone_Residencial": r"Fone Residencial:\s*([^\n\t]+)",
-			"Celular": r"Celular:\s*([^\n\t]+)",
-			"Email": r"E-mail:\s*([^\n\t]+)",
-			"RG": r"RG:\s*([^\n\t]+)",
-			"CPF": r"CPF:\s*([^\n\t]+)",
-			"Data_Nascimento": r"Data Nascimento:\s*([^\n\t]+)",
-			"Cidade": r"Cidade:\s*([^\n\t]+)",
-			"Numero_da_UEL": r"Numero da UEL:\s*([^\n\t]+)",
-			"Sexo": r"Sexo:\s*([^\n\t]+)",
-			"Raca_ou_Cor": r"Raça ou Cor:\s*([^\n\t]+)",
-			"Validade_Registro": r"Validade Registro:\s*([^\n\t]+)",
-			"id_escoteiro": r"(?:id\s*@\s*escoteiros?|id\s+escoteiros?)\s*:\s*([^\s\n\t]+@escoteiros\.org\.br)",
-			"Secao": r"Secao:\s*([^\n\t]+)",
-		}
+		divisao = _INICIO_RESPONSAVEL.search(record)
+		bloco_pessoal = record[: divisao.start()] if divisao else record
+		bloco_responsavel = record[divisao.end() :] if divisao else ""
 
-		for field, pattern in patterns.items():
-			match = re.search(pattern, record, re.IGNORECASE)
-			if match:
-				value = match.group(1).strip()
-				if value not in ["Não se aplica", "Não informado", ""]:
-					data[field] = value
+		for field, rotulo in _ROTULOS_PESSOAIS.items():
+			data[field] = _valor_do_rotulo(bloco_pessoal, rotulo)
 
-		responsible_section = re.search(r"Dados responsável\n(.*?)(?=\n\n|\nRetirado|$)", record, re.DOTALL)
-		if responsible_section:
-			responsible_text = responsible_section.group(1)
-			responsible_patterns = {
-				"Nome_responsavel": r"Nome:\s*([^\n\t]+)",
-				"Profissao_responsavel": r"Profissão:\s*([^\n\t]+)",
-				"Escolaridade_responsavel": r"Escolaridade:\s*([^\n\t]+)",
-				"Telefone_Residencial_responsavel": r"Telefone Residencial:\s*([^\n\t]+)",
-				"Celular_responsavel": r"Celular:\s*([^\n\t]+)",
-				"Email_responsavel": r"E-mail:\s*([^\n\t]+)",
-				"CPF_responsavel": r"CPF:\s*([^\n\t]+)",
-			}
-			for field, pattern in responsible_patterns.items():
-				match = re.search(pattern, responsible_text, re.IGNORECASE)
-				if match:
-					value = match.group(1).strip()
-					if value not in ["Não informado", ""]:
-						data[field] = value
+		# Layout antigo: "Nome: FULANO". Layout novo: o nome sozinho na linha seguinte.
+		if not data["Nome"]:
+			data["Nome"] = _nome_sem_rotulo(bloco_pessoal)
 
-		if data["Nome"]:
+		id_escoteiro = _ID_ESCOTEIROS.search(bloco_pessoal)
+		if id_escoteiro:
+			data["id_escoteiro"] = id_escoteiro.group(1).strip()
+
+		# O bloco do responsável vai até o fim do registro, mesmo atravessando a quebra de página.
+		for field, rotulo in _ROTULOS_RESPONSAVEL.items():
+			data[field] = _valor_do_rotulo(bloco_responsavel, rotulo)
+
+		if data["Nome"] or data["Registro"]:
 			return data
 		return None
 
-	except Exception as e:
-		print(f"Erro no processamento do registro: {e}")
+	except Exception:
+		frappe.log_error("Erro ao extrair registro do relatório de associados", frappe.get_traceback())
 		return None
 
 
 def _parse_scout_data(text: str) -> list[dict]:
-	"""Processa texto completo do PDF dividindo por registros e extraindo dados"""
-	records = re.split(r"(?=Dados pessoais\nNome:)", text)
-	records = [r.strip() for r in records if r.strip() and "Nome:" in r]
+	"""Divide o texto do relatório em registros ("Dados pessoais") e extrai cada um.
+
+	Pedaços sem `Registro:` são o cabeçalho da primeira página ("Retirado por…") e ficam fora.
+	"""
 	scouts = []
-	for rec in records:
+	for rec in re.split(r"(?=^Dados pessoais\s*$)", text, flags=re.IGNORECASE | re.MULTILINE):
+		if not _INICIO_REGISTRO.match(rec) or not re.search(r"^Registro:", rec, re.MULTILINE):
+			continue
 		info = _extract_scout_info(rec)
 		if info:
 			scouts.append(info)
 	return scouts
+
+
+_CAMPOS_OBRIGATORIOS = {
+	"Nome": "nome",
+	"Registro": "registro",
+	"Categoria_1_Funcao": "categoria da 1ª função",
+}
+
+
+def _identificar_registro(posicao: int, scout: dict) -> str:
+	partes = [f"Registro {scout.get('Registro')}" if scout.get("Registro") else f"Associado nº {posicao}"]
+	if scout.get("Nome"):
+		partes.append(f"({scout['Nome']})")
+	return " ".join(partes)
+
+
+def _validar_extracao(text: str, scouts: list[dict]) -> list[str]:
+	"""Problemas que impedem a importação; lista vazia quando o relatório foi lido por inteiro.
+
+	A importação é tudo ou nada: se algum registro sair incompleto, o mais provável é que o
+	layout do relatório tenha mudado, e gravar o que deu para ler apagaria dados bons com
+	dados errados (já aconteceu de o nome do responsável entrar como nome do associado).
+	"""
+	if not (text or "").strip():
+		return ["O PDF não tem texto selecionável (parece imagem ou documento escaneado)."]
+	if not scouts:
+		return [
+			"Nenhum associado encontrado: o layout do relatório não foi reconhecido. "
+			"Confira se o arquivo é o Relatório Customizável do SIGUE."
+		]
+
+	problemas = []
+	for posicao, scout in enumerate(scouts, start=1):
+		faltando = [rotulo for campo, rotulo in _CAMPOS_OBRIGATORIOS.items() if not scout.get(campo)]
+		cpf = _clean_digits(scout.get("CPF", ""))
+		if not cpf:
+			faltando.append("CPF")
+		elif len(cpf) != 11:
+			faltando.append(f"CPF válido (veio “{scout.get('CPF')}”)")
+
+		identificacao = _identificar_registro(posicao, scout)
+		if faltando:
+			problemas.append(f"{identificacao}: falta {', '.join(faltando)}.")
+
+		nome_responsavel = scout.get("Nome_responsavel")
+		if (
+			scout.get("Nome")
+			and nome_responsavel
+			and _normalize_text(scout["Nome"]) == _normalize_text(nome_responsavel)
+		):
+			problemas.append(
+				f"{identificacao}: o nome do associado saiu igual ao do responsável — "
+				"o layout do relatório não foi reconhecido."
+			)
+	return problemas
 
 
 _FIELD_LABELS = {
@@ -423,6 +524,29 @@ def _registrar_log_importacao(path_pdf: str, results: dict) -> None:
 	log_doc.insert()
 
 
+def ultima_importacao_associados() -> dict | None:
+	"""Quando e por quem os associados foram atualizados pela última vez (importação do PDF).
+
+	Lê pelo `frappe.db` de propósito: quem consulta a lista não tem permissão no Log, e o que
+	sai daqui é só a data e o nome de quem importou.
+	"""
+	log = frappe.db.get_value(
+		"Log Importacao de Associados",
+		{},
+		["data_importacao", "owner"],
+		order_by="data_importacao desc",
+		as_dict=True,
+	)
+	if not log or not log.data_importacao:
+		return None
+
+	quando = get_datetime(log.data_importacao)
+	return {
+		"quando": quando.strftime("%d/%m/%Y às %H:%M"),
+		"por": get_fullname(log.owner) if log.owner else "",
+	}
+
+
 @frappe.whitelist()
 def parse_associates_report(path_pdf: str) -> dict:
 	"""
@@ -446,6 +570,13 @@ def parse_associates_report(path_pdf: str) -> dict:
 
 	text = _extract_text_from_pdf(file_path)
 	scouts = _parse_scout_data(text)
+
+	# Tudo ou nada: com qualquer problema de leitura nada é gravado — nem o Log, que marca a
+	# data da última atualização (carimbo da lista e lembrete de WhatsApp).
+	problemas = _validar_extracao(text, scouts)
+	if problemas:
+		return {"status": "invalido", "total": len(scouts), "validation_errors": problemas}
+
 	df = pd.DataFrame(scouts)
 
 	# CPF pode conter zeros à esquerda, manter string
@@ -455,6 +586,7 @@ def parse_associates_report(path_pdf: str) -> dict:
 
 	# Estatísticas da importação
 	results = {
+		"status": "ok",
 		"total": len(df),
 		"created": 0,
 		"updated": 0,

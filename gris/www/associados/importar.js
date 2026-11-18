@@ -77,19 +77,94 @@
 		});
 	}
 
-	function renderResults(data) {
+	// Cabeçalho e alerta de erros mudam de texto conforme o desfecho: importação parcial
+	// (linhas com erro, o resto gravado) ou relatório ilegível (nada gravado).
+	function prepareResults(title, subtitle) {
 		const resultsDiv = document.getElementById("import-results");
 		const resultsGrid = document.getElementById("results-grid");
 		const errorsContainer = document.getElementById("errors-container");
 		const errorsList = document.getElementById("errors-list");
+		const resultsTitle = document.getElementById("results-title");
+		const resultsSubtitle = document.getElementById("results-subtitle");
 
-		if (!resultsDiv || !resultsGrid) return;
+		if (!resultsDiv || !resultsGrid) return false;
 
 		resultsGrid.innerHTML = "";
+		resultsGrid.classList.remove("hidden");
 		if (errorsContainer) errorsContainer.classList.add("hidden");
 		if (errorsList) errorsList.innerHTML = "";
+		if (resultsTitle) resultsTitle.textContent = title;
+		if (resultsSubtitle) resultsSubtitle.textContent = subtitle;
 
 		resultsDiv.classList.remove("hidden");
+		return true;
+	}
+
+	function showErrors(title, description, items) {
+		const errorsContainer = document.getElementById("errors-container");
+		const errorsList = document.getElementById("errors-list");
+		if (!errorsContainer || !errorsList || !items || !items.length) return;
+
+		const errorItems = items
+			.slice(0, 50)
+			.map((err) => {
+				const [mainLine, ...extraLines] = String(err || "").split("\n");
+				const extra = extraLines
+					.map((l) => l.replace(/^\s+/, ""))
+					.filter(Boolean)
+					.map((l) => `<span class="import-error-detail">${escapeHtml(l)}</span>`)
+					.join("");
+				return `<li>${escapeHtml(mainLine)}${extra ? `<br>${extra}` : ""}</li>`;
+			})
+			.join("");
+
+		const moreText =
+			items.length > 50
+				? `<p class="import-errors__more">+${escapeHtml(
+						items.length - 50
+				  )} erros adicionais. Consulte o Error Log para ver a lista completa.</p>`
+				: "";
+
+		errorsList.innerHTML = `<ul>${errorItems}</ul>${moreText}`;
+
+		const alertTitle = errorsContainer.querySelector(".alert h2");
+		if (alertTitle) alertTitle.textContent = title;
+		const alertSection = errorsContainer.querySelector(".alert section");
+		if (alertSection) alertSection.textContent = description;
+
+		errorsContainer.classList.remove("hidden");
+	}
+
+	function renderInvalid(data) {
+		if (
+			!prepareResults(
+				"Relatório não importado",
+				"O arquivo foi lido, mas os dados não puderam ser extraídos por completo."
+			)
+		)
+			return;
+		document.getElementById("results-grid").classList.add("hidden");
+
+		const lidos = data.total || 0;
+		showErrors(
+			"Não foi possível ler o relatório",
+			`Nada foi importado (${lidos} ${
+				lidos === 1 ? "registro lido" : "registros lidos"
+			}). ` +
+				"Confira se o PDF é o Relatório Customizável do SIGUE e corrija os itens abaixo antes de importar de novo.",
+			data.validation_errors || []
+		);
+	}
+
+	function renderResults(data) {
+		if (
+			!prepareResults(
+				"Resultados da importação",
+				"Resumo dos dados processados no relatório."
+			)
+		)
+			return;
+		const resultsGrid = document.getElementById("results-grid");
 
 		const stats = [
 			{ label: "Total de registros", value: data.total || 0, tone: "primary" },
@@ -125,45 +200,53 @@
 		});
 
 		if (data.error_details && data.error_details.length > 0) {
-			if (errorsContainer && errorsList) {
-				const errorItems = data.error_details
-					.slice(0, 50)
-					.map((err) => {
-						const [mainLine, ...extraLines] = (err || "").split("\n");
-						const extra = extraLines
-							.map((l) => l.replace(/^\s+/, ""))
-							.filter(Boolean)
-							.map(
-								(l) => `<span class="import-error-detail">${escapeHtml(l)}</span>`
-							)
-							.join("");
-						return `<li>${escapeHtml(mainLine)}${extra ? `<br>${extra}` : ""}</li>`;
-					})
-					.join("");
-
-				const moreText =
-					data.error_details.length > 50
-						? `<p class="import-errors__more">+${escapeHtml(
-								data.error_details.length - 50
-						  )} erros adicionais. Consulte o Error Log para ver a lista completa.</p>`
-						: "";
-
-				errorsList.innerHTML = `<ul>${errorItems}</ul>${moreText}`;
-
-				const alertSection = errorsContainer.querySelector(".alert section");
-				if (alertSection) {
-					alertSection.innerHTML =
-						"As linhas sem erros foram atualizadas com sucesso. Revise os itens abaixo e tente importar novamente após corrigir o relatório.";
-				}
-
-				errorsContainer.classList.remove("hidden");
-			}
+			showErrors(
+				"Erros encontrados",
+				"As linhas sem erros foram atualizadas com sucesso. Revise os itens abaixo e tente importar novamente após corrigir o relatório.",
+				data.error_details
+			);
 		}
 	}
 
-	function importAssociates() {
+	function plainText(html) {
+		const div = document.createElement("div");
+		div.innerHTML = String(html ?? "");
+		return (div.textContent || "").trim();
+	}
+
+	// `fetch` direto em vez de `frappe.call`: no portal o `frappe.call` nunca chama `error`,
+	// e uma falha no servidor deixava o indicador de carregamento girando para sempre.
+	async function callImporter(fileUrl) {
+		const response = await fetch(
+			"/api/method/gris.api.associate.importer.parse_associates_report",
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Accept: "application/json",
+					"X-Frappe-CSRF-Token": (window.frappe && frappe.csrf_token) || "",
+				},
+				credentials: "same-origin",
+				body: JSON.stringify({ path_pdf: fileUrl }),
+			}
+		);
+		const json = await response.json().catch(() => ({}));
+		if (!response.ok) {
+			let message = "Ocorreu um erro ao processar o arquivo.";
+			try {
+				const list = JSON.parse(json._server_messages || "[]");
+				if (list.length) message = JSON.parse(list[0]).message || message;
+			} catch (_) {
+				/* fica a mensagem genérica */
+			}
+			throw new Error(plainText(message));
+		}
+		return json.message || {};
+	}
+
+	async function importAssociates() {
 		if (!window._uploadedFileUrl) {
-			frappe.msgprint(__("Selecione um arquivo antes de importar."));
+			showToast("error", "Nenhum arquivo", "Selecione um arquivo antes de importar.");
 			return;
 		}
 
@@ -173,38 +256,50 @@
 		if (loadingIndicator) loadingIndicator.classList.remove("hidden");
 		if (btnImportar) btnImportar.disabled = true;
 
-		frappe.call({
-			method: "gris.api.associate.importer.parse_associates_report",
-			args: {
-				path_pdf: window._uploadedFileUrl,
-			},
-			callback: function (r) {
-				if (loadingIndicator) loadingIndicator.classList.add("hidden");
-				if (btnImportar) btnImportar.disabled = false;
+		try {
+			const data = await callImporter(window._uploadedFileUrl);
 
-				if (r.message) {
-					renderResults(r.message);
-					window.scrollTo({ top: 0, behavior: "smooth" });
-					showToast(
-						"success",
-						"Importação concluída",
-						"Os dados dos associados foram processados com sucesso."
-					);
-				}
-			},
-			error: function (err) {
-				if (loadingIndicator) loadingIndicator.classList.add("hidden");
-				if (btnImportar) btnImportar.disabled = false;
-
-				frappe.msgprint({
-					title: "Erro na Importação",
-					message:
-						"Ocorreu um erro ao processar o arquivo. Verifique o console ou os logs do sistema.",
-					indicator: "red",
-				});
-				console.error("Erro ao importar associados:", err);
-			},
-		});
+			if (data.status === "invalido") {
+				renderInvalid(data);
+				showToast(
+					"error",
+					"Relatório não importado",
+					"Os dados do PDF não puderam ser extraídos. Nada foi alterado."
+				);
+			} else {
+				renderResults(data);
+				const comErros = (data.errors || 0) > 0;
+				showToast(
+					comErros ? "warning" : "success",
+					comErros ? "Importação concluída com erros" : "Importação concluída",
+					comErros
+						? "Algumas linhas não foram importadas. Veja os detalhes abaixo."
+						: "Os dados dos associados foram processados com sucesso."
+				);
+			}
+		} catch (err) {
+			if (
+				prepareResults(
+					"Relatório não importado",
+					"O servidor não conseguiu processar o arquivo."
+				)
+			) {
+				document.getElementById("results-grid").classList.add("hidden");
+				showErrors(
+					"Erro na importação",
+					"Nada foi confirmado como importado. Tente novamente; se o erro continuar, consulte o Error Log.",
+					[err.message || "Erro desconhecido."]
+				);
+			}
+			showToast("error", "Erro na importação", err.message || "Erro desconhecido.");
+		} finally {
+			if (loadingIndicator) loadingIndicator.classList.add("hidden");
+			if (btnImportar) btnImportar.disabled = false;
+			const resultsDiv = document.getElementById("import-results");
+			if (resultsDiv && !resultsDiv.classList.contains("hidden")) {
+				resultsDiv.scrollIntoView({ behavior: "smooth", block: "start" });
+			}
+		}
 	}
 
 	setupUploader();

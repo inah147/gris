@@ -19,7 +19,8 @@ from frappe.tests.utils import FrappeTestCase
 from gris.api.associate import importer
 from gris.api.associate.importer import (
 	_parse_scout_data,
-	_validar_extracao,
+	_validar_documento,
+	_validar_registro,
 	parse_associates_report,
 	ultima_importacao_associados,
 )
@@ -179,14 +180,20 @@ class TestExtracaoLayoutNovo(FrappeTestCase):
 		self.assertEqual(pedro["Nome_responsavel"], "PAULA EXEMPLO ANTIGO")
 
 
+def _problemas_dos_registros(texto: str) -> list[str]:
+	scouts = _parse_scout_data(texto)
+	return [m for m in (_validar_registro(i, s) for i, s in enumerate(scouts, start=1)) if m]
+
+
 class TestValidacaoDaExtracao(FrappeTestCase):
 	def test_relatorio_completo_nao_tem_problemas(self):
 		texto = _relatorio(JOVEM, ESCOTISTA)
 
-		self.assertEqual(_validar_extracao(texto, _parse_scout_data(texto)), [])
+		self.assertEqual(_validar_documento(texto, _parse_scout_data(texto)), [])
+		self.assertEqual(_problemas_dos_registros(texto), [])
 
 	def test_pdf_sem_texto(self):
-		problemas = _validar_extracao("  \n", [])
+		problemas = _validar_documento("  \n", [])
 
 		self.assertEqual(len(problemas), 1)
 		self.assertIn("texto selecionável", problemas[0])
@@ -194,7 +201,7 @@ class TestValidacaoDaExtracao(FrappeTestCase):
 	def test_layout_nao_reconhecido(self):
 		texto = "Relatório de outra coisa\nTotal: 10\n"
 
-		problemas = _validar_extracao(texto, _parse_scout_data(texto))
+		problemas = _validar_documento(texto, _parse_scout_data(texto))
 
 		self.assertEqual(len(problemas), 1)
 		self.assertIn("layout do relatório não foi reconhecido", problemas[0])
@@ -203,9 +210,8 @@ class TestValidacaoDaExtracao(FrappeTestCase):
 		incompleto = ESCOTISTA.replace("CPF: 39053344705\n", "").replace(
 			"Categoria - 1º Função: Escotista\n", ""
 		)
-		texto = _relatorio(JOVEM, incompleto)
 
-		problemas = _validar_extracao(texto, _parse_scout_data(texto))
+		problemas = _problemas_dos_registros(_relatorio(JOVEM, incompleto))
 
 		self.assertEqual(len(problemas), 1)
 		self.assertIn("Registro 1000002-2", problemas[0])
@@ -213,24 +219,19 @@ class TestValidacaoDaExtracao(FrappeTestCase):
 		self.assertIn("CPF", problemas[0])
 
 	def test_cpf_com_tamanho_errado(self):
-		texto = _relatorio(ESCOTISTA.replace("CPF: 39053344705", "CPF: 123"))
-
-		problemas = _validar_extracao(texto, _parse_scout_data(texto))
+		problemas = _problemas_dos_registros(_relatorio(ESCOTISTA.replace("CPF: 39053344705", "CPF: 123")))
 
 		self.assertEqual(len(problemas), 1)
 		self.assertIn("CPF válido", problemas[0])
 
 	def test_nome_igual_ao_do_responsavel_e_rejeitado(self):
-		scouts = _parse_scout_data(_relatorio(JOVEM))
-		scouts[0]["Nome"] = scouts[0]["Nome_responsavel"]
+		scout = _parse_scout_data(_relatorio(JOVEM))[0]
+		scout["Nome"] = scout["Nome_responsavel"]
 
-		problemas = _validar_extracao("texto", scouts)
-
-		self.assertEqual(len(problemas), 1)
-		self.assertIn("igual ao do responsável", problemas[0])
+		self.assertIn("igual ao do responsável", _validar_registro(1, scout))
 
 
-class TestImportacaoTudoOuNada(FrappeTestCase):
+class TestImportacaoPorRegistro(FrappeTestCase):
 	def setUp(self):
 		arquivo = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
 		arquivo.close()
@@ -240,19 +241,51 @@ class TestImportacaoTudoOuNada(FrappeTestCase):
 		frappe.db.rollback()
 		os.unlink(self.caminho)
 
-	def test_relatorio_invalido_nao_grava_nada(self):
+	def _importar(self, texto):
+		with (
+			patch.object(importer, "_extract_text_from_pdf", return_value=texto),
+			patch.object(importer, "_importar_linhas") as importar_linhas,
+			patch.object(importer, "_sincronizar_secoes_do_organograma", return_value={}),
+		):
+			resultado = parse_associates_report(self.caminho)
+		return resultado, importar_linhas
+
+	def test_registro_com_problema_fica_de_fora_e_os_demais_sao_importados(self):
 		incompleto = ESCOTISTA.replace("CPF: 39053344705\n", "")
 		logs_antes = frappe.db.count("Log Importacao de Associados")
 
-		with (
-			patch.object(importer, "_extract_text_from_pdf", return_value=_relatorio(JOVEM, incompleto)),
-			patch.object(importer, "_importar_linhas") as importar_linhas,
-		):
-			resultado = parse_associates_report(self.caminho)
+		resultado, importar_linhas = self._importar(_relatorio(incompleto, JOVEM))
+
+		self.assertEqual(resultado["status"], "ok")
+		self.assertEqual(resultado["total"], 2)
+		self.assertEqual(resultado["errors"], 1)
+		self.assertIn("Registro 1000002-2", resultado["error_details"][0])
+		self.assertIn("não importado", resultado["error_details"][0])
+
+		df = importar_linhas.call_args.args[0]
+		self.assertEqual(list(df["Registro"]), ["1000001-1"])
+		# O índice mantém a posição no relatório: o jovem é o 2º registro do PDF.
+		self.assertEqual(list(df.index), [1])
+		self.assertEqual(frappe.db.count("Log Importacao de Associados"), logs_antes + 1)
+
+	def test_sem_nenhum_registro_aproveitavel_nada_e_gravado(self):
+		incompleto = ESCOTISTA.replace("CPF: 39053344705\n", "")
+		logs_antes = frappe.db.count("Log Importacao de Associados")
+
+		resultado, importar_linhas = self._importar(_relatorio(incompleto))
 
 		self.assertEqual(resultado["status"], "invalido")
-		self.assertEqual(resultado["total"], 2)
+		self.assertEqual(resultado["total"], 1)
 		self.assertEqual(len(resultado["validation_errors"]), 1)
+		importar_linhas.assert_not_called()
+		self.assertEqual(frappe.db.count("Log Importacao de Associados"), logs_antes)
+
+	def test_layout_nao_reconhecido_nao_grava_nada(self):
+		logs_antes = frappe.db.count("Log Importacao de Associados")
+
+		resultado, importar_linhas = self._importar("Relatório de outra coisa\n")
+
+		self.assertEqual(resultado["status"], "invalido")
 		importar_linhas.assert_not_called()
 		self.assertEqual(frappe.db.count("Log Importacao de Associados"), logs_antes)
 

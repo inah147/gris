@@ -139,7 +139,7 @@
 		if (
 			!prepareResults(
 				"Relatório não importado",
-				"O arquivo foi lido, mas os dados não puderam ser extraídos por completo."
+				"O arquivo foi lido, mas nenhum registro pôde ser aproveitado."
 			)
 		)
 			return;
@@ -202,7 +202,7 @@
 		if (data.error_details && data.error_details.length > 0) {
 			showErrors(
 				"Erros encontrados",
-				"As linhas sem erros foram atualizadas com sucesso. Revise os itens abaixo e tente importar novamente após corrigir o relatório.",
+				"Os demais registros foram importados normalmente. Corrija os itens abaixo no SIGUE e importe o relatório de novo para incluí-los.",
 				data.error_details
 			);
 		}
@@ -264,7 +264,7 @@
 				showToast(
 					"error",
 					"Relatório não importado",
-					"Os dados do PDF não puderam ser extraídos. Nada foi alterado."
+					"Nenhum registro do PDF pôde ser aproveitado. Nada foi alterado."
 				);
 			} else {
 				renderResults(data);
@@ -273,7 +273,7 @@
 					comErros ? "warning" : "success",
 					comErros ? "Importação concluída com erros" : "Importação concluída",
 					comErros
-						? "Algumas linhas não foram importadas. Veja os detalhes abaixo."
+						? "Alguns registros ficaram de fora. Veja os detalhes abaixo."
 						: "Os dados dos associados foram processados com sucesso."
 				);
 			}

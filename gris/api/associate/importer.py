@@ -188,13 +188,8 @@ def _identificar_registro(posicao: int, scout: dict) -> str:
 	return " ".join(partes)
 
 
-def _validar_extracao(text: str, scouts: list[dict]) -> list[str]:
-	"""Problemas que impedem a importação; lista vazia quando o relatório foi lido por inteiro.
-
-	A importação é tudo ou nada: se algum registro sair incompleto, o mais provável é que o
-	layout do relatório tenha mudado, e gravar o que deu para ler apagaria dados bons com
-	dados errados (já aconteceu de o nome do responsável entrar como nome do associado).
-	"""
+def _validar_documento(text: str, scouts: list[dict]) -> list[str]:
+	"""Problemas do arquivo inteiro: sem eles não há registro nenhum para importar."""
 	if not (text or "").strip():
 		return ["O PDF não tem texto selecionável (parece imagem ou documento escaneado)."]
 	if not scouts:
@@ -203,31 +198,34 @@ def _validar_extracao(text: str, scouts: list[dict]) -> list[str]:
 			"Confira se o arquivo é o Relatório Customizável do SIGUE."
 		)
 		return [sem_registros]
+	return []
 
-	problemas = []
-	for posicao, scout in enumerate(scouts, start=1):
-		faltando = [rotulo for campo, rotulo in _CAMPOS_OBRIGATORIOS.items() if not scout.get(campo)]
-		cpf = _clean_digits(scout.get("CPF", ""))
-		if not cpf:
-			faltando.append("CPF")
-		elif len(cpf) != 11:
-			faltando.append(f"CPF válido (veio “{scout.get('CPF')}”)")
 
-		identificacao = _identificar_registro(posicao, scout)
-		if faltando:
-			problemas.append(f"{identificacao}: falta {', '.join(faltando)}.")
+def _validar_registro(posicao: int, scout: dict) -> str | None:
+	"""Motivo para deixar o registro fora da importação; ``None`` quando ele foi lido por inteiro.
 
-		nome_responsavel = scout.get("Nome_responsavel")
-		if (
-			scout.get("Nome")
-			and nome_responsavel
-			and _normalize_text(scout["Nome"]) == _normalize_text(nome_responsavel)
-		):
-			problemas.append(
-				f"{identificacao}: o nome do associado saiu igual ao do responsável — "
-				"o layout do relatório não foi reconhecido."
-			)
-	return problemas
+	Registro incompleto não é gravado: a atualização por CPF regravaria um cadastro bom com
+	dado errado (já aconteceu de o nome do responsável entrar como nome do associado).
+	"""
+	faltando = [rotulo for campo, rotulo in _CAMPOS_OBRIGATORIOS.items() if not scout.get(campo)]
+	cpf = _clean_digits(scout.get("CPF", ""))
+	if not cpf:
+		faltando.append("CPF")
+	elif len(cpf) != 11:
+		faltando.append(f"CPF válido (veio “{scout.get('CPF')}”)")
+
+	identificacao = _identificar_registro(posicao, scout)
+	if faltando:
+		return f"{identificacao}: não importado, falta {', '.join(faltando)}."
+
+	nome_responsavel = scout.get("Nome_responsavel")
+	if (
+		scout.get("Nome")
+		and nome_responsavel
+		and _normalize_text(scout["Nome"]) == _normalize_text(nome_responsavel)
+	):
+		return f"{identificacao}: não importado, o nome do associado saiu igual ao do responsável."
+	return None
 
 
 _FIELD_LABELS = {
@@ -572,13 +570,27 @@ def parse_associates_report(path_pdf: str) -> dict:
 	text = _extract_text_from_pdf(file_path)
 	scouts = _parse_scout_data(text)
 
-	# Tudo ou nada: com qualquer problema de leitura nada é gravado — nem o Log, que marca a
-	# data da última atualização (carimbo da lista e lembrete de WhatsApp).
-	problemas = _validar_extracao(text, scouts)
+	# Arquivo ilegível ou sem nenhum registro aproveitável: nada é gravado — nem o Log, que
+	# marca a data da última atualização (carimbo da lista e lembrete de WhatsApp).
+	problemas = _validar_documento(text, scouts)
 	if problemas:
 		return {"status": "invalido", "total": len(scouts), "validation_errors": problemas}
 
-	df = pd.DataFrame(scouts)
+	# Registro com problema fica de fora; os demais seguem.
+	validos, posicoes, rejeitados = [], [], []
+	for posicao, scout in enumerate(scouts, start=1):
+		motivo = _validar_registro(posicao, scout)
+		if motivo:
+			rejeitados.append(motivo)
+		else:
+			validos.append(scout)
+			posicoes.append(posicao - 1)
+
+	if not validos:
+		return {"status": "invalido", "total": len(scouts), "validation_errors": rejeitados}
+
+	# O índice guarda a posição no relatório, para "Linha N" das mensagens de erro bater com o PDF.
+	df = pd.DataFrame(validos, index=posicoes)
 
 	# CPF pode conter zeros à esquerda, manter string
 	for cpf_col in ["CPF", "CPF_responsavel"]:
@@ -588,12 +600,12 @@ def parse_associates_report(path_pdf: str) -> dict:
 	# Estatísticas da importação
 	results = {
 		"status": "ok",
-		"total": len(df),
+		"total": len(scouts),
 		"created": 0,
 		"updated": 0,
 		"skipped": 0,
-		"errors": 0,
-		"error_details": [],
+		"errors": len(rejeitados),
+		"error_details": list(rejeitados),
 		"responsavel_created": 0,
 		"responsavel_updated": 0,
 		"responsavel_skipped": 0,

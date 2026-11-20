@@ -7,7 +7,40 @@
  "field_order": [
   "responsavel_atualizacao",
   "criar_usuarios",
-  "area_mae_das_secoes"
+  "area_mae_das_secoes",
+  "regua_vencimento_tab",
+  "regua_geral_section",
+  "regua_vencimento_ativa",
+  "cobrar_vencidos_desde",
+  "intervalo_recorrente_dias",
+  "column_break_regua_geral",
+  "grupo_chefes_whatsapp",
+  "resumo_mensal_enviado_em",
+  "regua_textos_section",
+  "instrucoes_renovacao",
+  "column_break_regua_textos",
+  "texto_ja_renovado",
+  "regua_associado_section",
+  "msg_venc_30",
+  "modelo_venc_30",
+  "msg_venc_7",
+  "modelo_venc_7",
+  "msg_venc_1",
+  "modelo_venc_1",
+  "msg_venc_0",
+  "modelo_venc_0",
+  "msg_venc_recorrente",
+  "modelo_venc_recorrente",
+  "regua_grupo_section",
+  "msg_venc_grupo_mensal",
+  "modelo_venc_grupo_mensal",
+  "regua_chefe_section",
+  "msg_venc_chefe_30",
+  "modelo_venc_chefe_30",
+  "msg_venc_chefe_7",
+  "modelo_venc_chefe_7",
+  "msg_venc_chefe_pos",
+  "modelo_venc_chefe_pos"
  ],
  "fields": [
   {
@@ -28,13 +61,226 @@
    "fieldname": "criar_usuarios",
    "fieldtype": "Check",
    "label": "Criar usu\u00e1rios ao importar associados"
+  },
+  {
+   "fieldname": "regua_vencimento_tab",
+   "fieldtype": "Tab Break",
+   "label": "R\u00e9gua de vencimento do registro"
+  },
+  {
+   "description": "Mensagens de WhatsApp sobre o vencimento do registro escoteiro. O texto de cada mensagem \u00e9 edit\u00e1vel abaixo; toda mensagem termina com o aviso de \"j\u00e1 renovado\" e com a linha fixa de mensagem autom\u00e1tica.",
+   "fieldname": "regua_geral_section",
+   "fieldtype": "Section Break",
+   "label": "Geral"
+  },
+  {
+   "default": "0",
+   "description": "Liga e desliga a r\u00e9gua inteira. Desligado, nenhuma das mensagens abaixo \u00e9 enviada.",
+   "fieldname": "regua_vencimento_ativa",
+   "fieldtype": "Check",
+   "label": "Enviar mensagens sobre o vencimento do registro"
+  },
+  {
+   "description": "S\u00f3 quem tem validade nesta data ou depois recebe as mensagens do dia do vencimento, a cobran\u00e7a recorrente e o aviso de vencido ao chefe. Evita cobrar quem j\u00e1 estava vencido antes de a r\u00e9gua existir.",
+   "fieldname": "cobrar_vencidos_desde",
+   "fieldtype": "Date",
+   "label": "Cobrar vencidos a partir de",
+   "mandatory_depends_on": "eval:doc.regua_vencimento_ativa"
+  },
+  {
+   "default": "3",
+   "description": "Depois do vencimento, a mensagem se repete a cada tantos dias at\u00e9 o associado renovar ou ficar inativo.",
+   "fieldname": "intervalo_recorrente_dias",
+   "fieldtype": "Int",
+   "label": "Intervalo da cobran\u00e7a recorrente (dias)"
+  },
+  {
+   "fieldname": "column_break_regua_geral",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Grupo que recebe, no in\u00edcio do m\u00eas, a lista dos benefici\u00e1rios que vencem no m\u00eas, por se\u00e7\u00e3o.",
+   "fieldname": "grupo_chefes_whatsapp",
+   "fieldtype": "Select",
+   "label": "Grupo dos chefes de se\u00e7\u00e3o"
+  },
+  {
+   "description": "M\u00eas (AAAA-MM) do \u00faltimo resumo enviado ao grupo. Apague para reenviar o resumo do m\u00eas na pr\u00f3xima rodada.",
+   "fieldname": "resumo_mensal_enviado_em",
+   "fieldtype": "Data",
+   "label": "\u00daltimo resumo mensal enviado",
+   "read_only": 1
+  },
+  {
+   "fieldname": "regua_textos_section",
+   "fieldtype": "Section Break",
+   "label": "Textos comuns"
+  },
+  {
+   "description": "Entra no lugar de {como_renovar}.",
+   "fieldname": "instrucoes_renovacao",
+   "fieldtype": "Small Text",
+   "label": "Como renovar"
+  },
+  {
+   "fieldname": "column_break_regua_textos",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Vai no fim de todas as mensagens, antes da linha fixa \"Esta \u00e9 uma mensagem autom\u00e1tica do GRIS\".",
+   "fieldname": "texto_ja_renovado",
+   "fieldtype": "Small Text",
+   "label": "Aviso de registro j\u00e1 renovado"
+  },
+  {
+   "description": "Associado adulto recebe no pr\u00f3prio telefone; menor de 18 anos, pelo respons\u00e1vel.",
+   "fieldname": "regua_associado_section",
+   "fieldtype": "Section Break",
+   "label": "Associado ou respons\u00e1vel"
+  },
+  {
+   "default": "1",
+   "description": "Lembrete ao associado ou respons\u00e1vel 30 dias antes do vencimento.",
+   "fieldname": "msg_venc_30",
+   "fieldtype": "Check",
+   "label": "30 dias antes"
+  },
+  {
+   "depends_on": "eval:doc.msg_venc_30",
+   "description": "Vazio usa o texto padr\u00e3o. Vari\u00e1veis: {primeiro_nome_destinatario}, {nome_associado}, {primeiro_nome_associado}, {registro_de}, {data_vencimento}, {dias_restantes}, {dias_vencido}, {numero_registro}, {como_renovar}, {contato_duvidas}.",
+   "fieldname": "modelo_venc_30",
+   "fieldtype": "Long Text",
+   "label": "Modelo \u2014 30 dias antes"
+  },
+  {
+   "default": "1",
+   "description": "Lembrete ao associado ou respons\u00e1vel 7 dias antes do vencimento.",
+   "fieldname": "msg_venc_7",
+   "fieldtype": "Check",
+   "label": "7 dias antes"
+  },
+  {
+   "depends_on": "eval:doc.msg_venc_7",
+   "description": "Vazio usa o texto padr\u00e3o. Vari\u00e1veis: {primeiro_nome_destinatario}, {nome_associado}, {primeiro_nome_associado}, {registro_de}, {data_vencimento}, {dias_restantes}, {dias_vencido}, {numero_registro}, {como_renovar}, {contato_duvidas}.",
+   "fieldname": "modelo_venc_7",
+   "fieldtype": "Long Text",
+   "label": "Modelo \u2014 7 dias antes"
+  },
+  {
+   "default": "1",
+   "description": "Lembrete ao associado ou respons\u00e1vel na v\u00e9spera do vencimento.",
+   "fieldname": "msg_venc_1",
+   "fieldtype": "Check",
+   "label": "1 dia antes"
+  },
+  {
+   "depends_on": "eval:doc.msg_venc_1",
+   "description": "Vazio usa o texto padr\u00e3o. Vari\u00e1veis: {primeiro_nome_destinatario}, {nome_associado}, {primeiro_nome_associado}, {registro_de}, {data_vencimento}, {dias_restantes}, {dias_vencido}, {numero_registro}, {como_renovar}, {contato_duvidas}.",
+   "fieldname": "modelo_venc_1",
+   "fieldtype": "Long Text",
+   "label": "Modelo \u2014 1 dia antes"
+  },
+  {
+   "default": "1",
+   "description": "Aviso ao associado ou respons\u00e1vel no dia do vencimento.",
+   "fieldname": "msg_venc_0",
+   "fieldtype": "Check",
+   "label": "No dia do vencimento"
+  },
+  {
+   "depends_on": "eval:doc.msg_venc_0",
+   "description": "Vazio usa o texto padr\u00e3o. Vari\u00e1veis: {primeiro_nome_destinatario}, {nome_associado}, {primeiro_nome_associado}, {registro_de}, {data_vencimento}, {dias_restantes}, {dias_vencido}, {numero_registro}, {como_renovar}, {contato_duvidas}.",
+   "fieldname": "modelo_venc_0",
+   "fieldtype": "Long Text",
+   "label": "Modelo \u2014 no dia"
+  },
+  {
+   "default": "1",
+   "description": "Cobran\u00e7a recorrente at\u00e9 renovar ou ficar inativo no grupo.",
+   "fieldname": "msg_venc_recorrente",
+   "fieldtype": "Check",
+   "label": "Depois do vencimento, a cada intervalo"
+  },
+  {
+   "depends_on": "eval:doc.msg_venc_recorrente",
+   "description": "Vazio usa o texto padr\u00e3o. Vari\u00e1veis: {primeiro_nome_destinatario}, {nome_associado}, {primeiro_nome_associado}, {registro_de}, {data_vencimento}, {dias_restantes}, {dias_vencido}, {numero_registro}, {como_renovar}, {contato_duvidas}.",
+   "fieldname": "modelo_venc_recorrente",
+   "fieldtype": "Long Text",
+   "label": "Modelo \u2014 cobran\u00e7a recorrente"
+  },
+  {
+   "fieldname": "regua_grupo_section",
+   "fieldtype": "Section Break",
+   "label": "Grupo de chefes de se\u00e7\u00e3o"
+  },
+  {
+   "default": "1",
+   "description": "No in\u00edcio do m\u00eas, a lista dos benefici\u00e1rios que vencem no m\u00eas, por se\u00e7\u00e3o, mencionando os chefes.",
+   "fieldname": "msg_venc_grupo_mensal",
+   "fieldtype": "Check",
+   "label": "Resumo do m\u00eas"
+  },
+  {
+   "depends_on": "eval:doc.msg_venc_grupo_mensal",
+   "description": "Vazio usa o texto padr\u00e3o. Vari\u00e1veis: {mes}, {quantidade}, {lista_por_secao}.",
+   "fieldname": "modelo_venc_grupo_mensal",
+   "fieldtype": "Long Text",
+   "label": "Modelo \u2014 resumo do m\u00eas"
+  },
+  {
+   "description": "Mensagem direta ao chefe da se\u00e7\u00e3o do benefici\u00e1rio. Cada chefe recebe no m\u00e1ximo uma mensagem por dia, com um bloco por aviso.",
+   "fieldname": "regua_chefe_section",
+   "fieldtype": "Section Break",
+   "label": "Chefe de se\u00e7\u00e3o"
+  },
+  {
+   "default": "1",
+   "description": "Benefici\u00e1rios da se\u00e7\u00e3o que vencem em 30 dias.",
+   "fieldname": "msg_venc_chefe_30",
+   "fieldtype": "Check",
+   "label": "30 dias antes"
+  },
+  {
+   "depends_on": "eval:doc.msg_venc_chefe_30",
+   "description": "Vazio usa o texto padr\u00e3o. Vari\u00e1veis: {secao}, {quantidade}, {lista_beneficiarios} (a sauda\u00e7\u00e3o \"Ol\u00e1, nome!\" \u00e9 fixa).",
+   "fieldname": "modelo_venc_chefe_30",
+   "fieldtype": "Long Text",
+   "label": "Bloco \u2014 30 dias antes"
+  },
+  {
+   "default": "1",
+   "description": "Benefici\u00e1rios da se\u00e7\u00e3o que vencem em 7 dias.",
+   "fieldname": "msg_venc_chefe_7",
+   "fieldtype": "Check",
+   "label": "7 dias antes"
+  },
+  {
+   "depends_on": "eval:doc.msg_venc_chefe_7",
+   "description": "Vazio usa o texto padr\u00e3o. Vari\u00e1veis: {secao}, {quantidade}, {lista_beneficiarios} (a sauda\u00e7\u00e3o \"Ol\u00e1, nome!\" \u00e9 fixa).",
+   "fieldname": "modelo_venc_chefe_7",
+   "fieldtype": "Long Text",
+   "label": "Bloco \u2014 7 dias antes"
+  },
+  {
+   "default": "1",
+   "description": "Benefici\u00e1rios da se\u00e7\u00e3o que venceram: n\u00e3o podem participar das atividades at\u00e9 regularizar.",
+   "fieldname": "msg_venc_chefe_pos",
+   "fieldtype": "Check",
+   "label": "1 dia depois do vencimento"
+  },
+  {
+   "depends_on": "eval:doc.msg_venc_chefe_pos",
+   "description": "Vazio usa o texto padr\u00e3o. Vari\u00e1veis: {secao}, {quantidade}, {lista_beneficiarios} (a sauda\u00e7\u00e3o \"Ol\u00e1, nome!\" \u00e9 fixa).",
+   "fieldname": "modelo_venc_chefe_pos",
+   "fieldtype": "Long Text",
+   "label": "Bloco \u2014 vencidos"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-04-07 22:50:53.150322",
+ "modified": "2026-11-20 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Configuracoes de Associados",

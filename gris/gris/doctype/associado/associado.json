@@ -20,9 +20,10 @@
   "informacoes_de_registro_section",
   "status",
   "validade_registro",
-    "data_notificacao_vencimento_30_dias",
-    "data_notificacao_vencimento_7_dias",
-    "data_notificacao_vencimento",
+  "regua_validade_referencia",
+  "regua_ultimo_marco",
+  "regua_ultimo_envio",
+  "regua_chefe_ultimo_marco",
   "tipo_registro",
   "column_break_fjby",
   "status_no_grupo",
@@ -223,27 +224,35 @@
    "fieldtype": "Date",
    "label": "Validade"
   },
-    {
-     "fieldname": "data_notificacao_vencimento_30_dias",
-     "fieldtype": "Date",
-     "hidden": 1,
-     "label": "Data notificacao vencimento 30 dias",
-     "read_only": 1
-    },
-    {
-     "fieldname": "data_notificacao_vencimento_7_dias",
-     "fieldtype": "Date",
-     "hidden": 1,
-     "label": "Data notificacao vencimento 7 dias",
-     "read_only": 1
-    },
-    {
-     "fieldname": "data_notificacao_vencimento",
-     "fieldtype": "Date",
-     "hidden": 1,
-     "label": "Data notificacao vencimento",
-     "read_only": 1
-    },
+  {
+   "description": "Validade a que os carimbos da r\u00e9gua se referem. Se a validade mudar, a r\u00e9gua recome\u00e7a.",
+   "fieldname": "regua_validade_referencia",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "R\u00e9gua: validade de refer\u00eancia",
+   "read_only": 1
+  },
+  {
+   "fieldname": "regua_ultimo_marco",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "R\u00e9gua: \u00faltimo aviso enviado",
+   "read_only": 1
+  },
+  {
+   "fieldname": "regua_ultimo_envio",
+   "fieldtype": "Date",
+   "hidden": 1,
+   "label": "R\u00e9gua: data do \u00faltimo aviso",
+   "read_only": 1
+  },
+  {
+   "fieldname": "regua_chefe_ultimo_marco",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "R\u00e9gua: \u00faltimo aviso ao chefe",
+   "read_only": 1
+  },
   {
    "fieldname": "ramo",
    "fieldtype": "Select",
@@ -563,7 +572,7 @@
  ],
  "grid_page_length": 50,
  "links": [],
- "modified": "2026-03-02 10:58:31.864943",
+ "modified": "2026-11-20 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Associado",

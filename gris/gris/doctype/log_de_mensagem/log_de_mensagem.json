@@ -12,6 +12,7 @@
   "status",
   "column_break_envio",
   "novo_associado",
+  "associado",
   "assunto",
   "secao_entrega",
   "entrega",
@@ -64,6 +65,14 @@
    "label": "Novo Associado",
    "options": "Novo Associado",
    "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "description": "Associado de quem a mensagem fala (régua de vencimento do registro).",
+   "fieldname": "associado",
+   "fieldtype": "Link",
+   "label": "Associado",
+   "options": "Associado",
    "search_index": 1
   },
   {
@@ -123,7 +132,7 @@
    "fieldtype": "Select",
    "in_standard_filter": 1,
    "label": "Tipo do destinatário",
-   "options": "Responsável\nResponsável administrativo\nGrupo de chefes de seção\nGrupo da recepção\nGrupo de recados gerais\nConvidado de festa\nAprovador de acesso\nSolicitante de acesso\nGrupo de tecnologia\nNão identificado",
+   "options": "Responsável\nResponsável administrativo\nGrupo de chefes de seção\nGrupo da recepção\nGrupo de recados gerais\nConvidado de festa\nAprovador de acesso\nSolicitante de acesso\nGrupo de tecnologia\nAssociado\nResponsável do associado\nChefe de seção\nNão identificado",
    "read_only": 1
   },
   {
@@ -168,7 +177,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-09 10:00:00.000000",
+ "modified": "2026-11-20 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Log de Mensagem",

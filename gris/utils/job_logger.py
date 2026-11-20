@@ -99,8 +99,9 @@ ROTULOS_DE_JOBS = {
 		"Lembrete de atualização dos associados"
 	),
 	"gris.api.associados_vencimento_notificacoes.enviar_lembretes_vencimento_registro_associados": (
-		"Lembretes de vencimento de registro"
+		"Régua de vencimento do registro (agendamento)"
 	),
+	"gris.api.associados_vencimento_notificacoes.executar_regua": "Régua de vencimento do registro",
 	"gris.api.backup.google_shared_drive.enqueue_daily_backup": "Backup diário (agendamento)",
 	"gris.api.backup.google_shared_drive.run_daily_backup": "Backup diário no Google Drive",
 	"gris.api.calendario.sync_feriados.sync_feriados": "Sincronização de feriados",

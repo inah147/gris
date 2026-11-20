@@ -148,7 +148,7 @@ frappe.ui.form.on("Associado", {
 				__("Avisar Vencimento"),
 				() => {
 					frappe.confirm(
-						"Enviar aviso de vencimento de registro via WhatsApp para o responsável (ou o próprio associado)?",
+						"Enviar agora o aviso de vencimento do registro pelo WhatsApp, com o texto da régua de Configurações de Associados? Menor de 18 anos recebe pelo responsável.",
 						() => {
 							frappe.call({
 								method: "gris.api.associados_vencimento_notificacoes.notificar_vencimento_manual",

@@ -1,6 +1,7 @@
 {% extends "templates/web_sidebar_base.html" %}
 {% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty, field %}
 {% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 
 {% block title %}Demonstrativo Financeiro{% endblock %}
 
@@ -17,6 +18,16 @@
 		<div class="flex flex-col gap-2 max-w-2xl">
 			<h1 id="financeiro-demonstrativo-title" class="m-0 text-3xl font-semibold leading-tight text-foreground">Demonstrativo Financeiro</h1>
 			<p class="m-0 text-base leading-relaxed text-muted-foreground">Relatórios financeiros consolidados por período.</p>
+		</div>
+		<div class="financeiro-page-header__actions">
+			<a
+				href="/api/method/gris.api.financeiro.demonstrativo.exportar_demonstrativo_excel?ano={{ demonstrativo.year | urlencode }}"
+				class="btn-sm-outline"
+				aria-label="Exportar o demonstrativo de {{ demonstrativo.year }} em Excel"
+			>
+				{{ lucide_icon("file-spreadsheet", size="sm") }}
+				<span>Exportar Excel</span>
+			</a>
 		</div>
 	</section>
 {% endblock %}

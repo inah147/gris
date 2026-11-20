@@ -1,3 +1,17 @@
+.financeiro-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.financeiro-page-header__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .demonstrativo-page {
   display: grid;
   gap: 1rem;

@@ -63,8 +63,8 @@ class TestDemonstrativoFinanceiro(FrappeTestCase):
 	def _saldo_antes_do_ano(self):
 		return (
 			frappe.db.sql(
-				f"""
-				SELECT SUM(valor) FROM `tab{DOCTYPE}`
+				"""
+				SELECT SUM(valor) FROM `tabTransacao Extrato Geral`
 				WHERE data_deposito < %s AND metodo != 'Dinheiro'
 				AND repasse_entre_contas = 0 AND excluir_do_total = 0
 				""",

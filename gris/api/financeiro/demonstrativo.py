@@ -118,9 +118,9 @@ def listar_anos_disponiveis(ano_atual: int) -> list[int]:
 	"""Anos com transação no extrato, do mais recente ao mais antigo, sempre incluindo `ano_atual`."""
 	try:
 		rows = frappe.db.sql(
-			f"""
+			"""
 			SELECT DISTINCT YEAR(data_deposito) AS y
-			FROM `tab{DOCTYPE}`
+			FROM `tabTransacao Extrato Geral`
 			WHERE data_deposito IS NOT NULL
 			ORDER BY y DESC
 			""",

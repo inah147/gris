@@ -87,6 +87,8 @@ class TestModelos(FrappeTestCase):
 			texto = modelos.pre_visualizar_modelo("modelo_venc_chefe_pos", "")
 			self.assertTrue(texto.startswith("Olá, Rafael!"))
 			self.assertIn("Alcateia Exemplo", texto)
+			self.assertIn("venceu em", texto)
+			self.assertNotIn("vence em", texto)
 			self.assertTrue(texto.endswith(modelos.ASSINATURA_AUTOMATICA))
 			with self.assertRaises(frappe.ValidationError):
 				modelos.pre_visualizar_modelo("modelo_venc_7", "{nao_existe}")

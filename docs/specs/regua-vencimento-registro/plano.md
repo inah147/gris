@@ -16,7 +16,7 @@
 
 | Tema | Decisão |
 |---|---|
-| Quando cada marco sai | Função pura `marco_devido`. O marco é calculado a partir de `d` e do último marco enviado, não pela igualdade exata de dias. Assim, um dia perdido é recuperado sem acumular atraso. |
+| Quando cada marco sai | Função pura `marco_devido`. Cada marco tem uma janela de dias: 30 = 8 a 30, 7 = 2 a 7, 1 = 1, 0 = 0, recorrente = −N ou menos. O marco sai se `d` está na janela e ele vem depois do último enviado. Um dia perdido é recuperado sem acumular atraso, e "vence hoje" nunca sai depois do dia. |
 | Carimbos | Ficam no próprio `Associado`, com `update_modified=False`, e são gravados só depois do envio síncrono confirmado (`enviar_texto(..., enqueue=False)`), com um commit por associado. É o padrão de `enviar_cobranca`. |
 | Fila | O cron das 9h só enfileira `executar_regua` na fila `long`, com timeout de 3600 s. A fila única do WhatsApp espaça os envios em 4 a 6 s. |
 | Interruptores | Leitura crua do `tabSingles`, como em `_mensagem_habilitada`: o campo ausente conta como ligado. O geral é a exceção e lê 0 quando ausente, para a régua não ser ligada sem querer. |
@@ -48,8 +48,9 @@ Este diretório.
   - Três seções de mensagens, uma para cada público: "Associado ou responsável", "Grupo de chefes" e
     "Chefe de seção". Cada mensagem tem um Check `msg_venc_*` (padrão 1) e um Long Text `modelo_venc_*`
     com `depends_on` no Check.
-- **`associado.json`**: seção recolhida "Régua de vencimento" logo depois de `validade_registro`, com os
-  quatro campos read-only. Os três `data_notificacao_*` saem do JSON.
+- **`associado.json`**: os quatro campos ficam ocultos e read-only, logo depois de `validade_registro`,
+  no lugar dos três `data_notificacao_*`, que saem do JSON. `on_trash` apaga o Log de Mensagem do
+  associado: o Link travaria a exclusão, e o log guarda texto com nome e telefone.
 - **`log_de_mensagem.json`**: Link `associado`; novas opções em `destinatario_tipo`: "Associado",
   "Responsável do associado" e "Chefe de seção".
 - **Patch** `gris.patches.preparar_regua_de_vencimento`:
@@ -71,6 +72,9 @@ Novo arquivo `gris/api/associados_vencimento_modelos.py`.
 - **`com_rodape(corpo) -> str`**: anexa `texto_ja_renovado` e a assinatura.
 - **Endpoints whitelisted** (System Manager): `pre_visualizar_modelo(campo, texto)` e
   `modelo_padrao(campo)`.
+- **`grupos_para_select()`**: embrulha `listar_grupos_whatsapp_para_select` e devolve o erro como dado.
+  Com o WhatsApp desligado ou fora do ar, o Desk não abre o modal "Erro de Servidor" a cada visita à
+  tela.
 
 ### 3.4 Régua do associado e do chefe
 
@@ -97,10 +101,10 @@ Arquivo `gris/api/associados_vencimento_notificacoes.py`.
 ### 3.5 Desk
 
 - **`configuracoes_de_associados.js`**:
-  - carrega as opções de `grupo_chefes_whatsapp` com
-    `listar_grupos_whatsapp_para_select({doctype: "Configuracoes de Associados"})`;
-  - botão "Modelos" com o diálogo "Pré-visualizar / Restaurar padrão" por modelo;
-  - lista as variáveis aceitas na descrição de cada modelo.
+  - carrega as opções de `grupo_chefes_whatsapp` com `grupos_para_select`;
+  - botão "Pré-visualizar mensagem" abre um diálogo para escolher o modelo, com "Restaurar texto
+    padrão";
+  - a descrição de cada modelo lista as variáveis aceitas.
 - **`associado.js`**: a confirmação do botão "Avisar Vencimento" passa a citar o modelo.
 
 ### 3.6 Testes, lint e evidências
@@ -135,6 +139,7 @@ Arquivo `gris/api/associados_vencimento_notificacoes.py`.
 | 05.2–05.6 | `TestAvisoAosChefes` |
 | 06.1–06.6 | `TestResumoMensal` |
 | 07.1–07.6 | `TestModelos` |
+| 07.7 | Validação manual no Desk com Playwright (ver `docs/evidencias/regua-vencimento-registro/`) |
 | 08.1 | `TestReguaDoAssociado.test_contexto_do_log`, `TestRegistroDoLog.test_grava_associado` |
 | 08.2 | `TestReguaDoAssociado.test_metricas` |
 | 09.1–09.2 | `TestAvisoManual` |

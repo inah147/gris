@@ -1,6 +1,6 @@
 # Spec — Régua de comunicação do vencimento do registro
 
-> Status: em implementação · Branch: `feat/regua-vencimento-registro` · Plano técnico:
+> Status: implementada, com testes de unidade e rodada simulada no dev.gris · Branch: `feat/regua-vencimento-registro` · Plano técnico:
 > [plano.md](plano.md) · Textos: [mensagens.md](mensagens.md)
 
 ## 1. Problema
@@ -92,11 +92,15 @@ Cada critério de aceite (CA) tem um teste correspondente na
 
 ### RF-02 — Régua do associado
 
-- **CA-02.1** Os marcos têm a ordem `30 → 7 → 1 → 0 → recorrente`. Um marco está devido quando:
-  30 com d ≤ 30, 7 com d ≤ 7, 1 com d ≤ 1, 0 com d ≤ 0, e recorrente com d ≤ −N.
-- **CA-02.2** Em cada rodada sai no máximo uma mensagem por associado: a do marco devido mais
-  adiantado, e só se ele vier depois do último já enviado. Exemplo: com validade importada já a
-  5 dias do vencimento, sai só a de 7 dias, que mostra a data real. A de 30 dias não sai.
+- **CA-02.1** Os marcos têm a ordem `30 → 7 → 1 → 0 → recorrente`. Cada marco tem uma
+  **janela** de dias: 30 com d entre 8 e 30, 7 com d entre 2 e 7, 1 com d = 1, 0 com d = 0, e
+  recorrente com d ≤ −N. Com d entre −1 e −(N−1) não sai nada. A janela existe para que, quando o
+  job não rodou num dia, a mensagem seja recuperada no dia seguinte sem o texto ficar errado:
+  "vence hoje" nunca sai depois do dia.
+- **CA-02.2** Em cada rodada sai no máximo uma mensagem por associado: a do marco cuja janela
+  contém d, e só se esse marco vier depois do último já enviado. Exemplo: com uma validade
+  importada já a 5 dias do vencimento, sai só a de 7 dias, mostrando a data e os dias reais. A de
+  30 dias não sai.
 - **CA-02.3** Cada um dos marcos 30, 7, 1 e 0 sai no máximo uma vez para cada validade de
   referência.
 - **CA-02.4** O recorrente sai com d ≤ −N e, além disso, pelo menos N dias depois do último
@@ -128,9 +132,9 @@ Cada critério de aceite (CA) tem um teste correspondente na
 
 ### RF-05 — Aviso direto ao chefe de seção
 
-- **CA-05.1** Entram só os Beneficiários ativos. Os marcos são 30 (d ≤ 30), 7 (d ≤ 7) e vencido
-  (d ≤ −1, com validade a partir do corte), cada um no máximo uma vez para cada validade de
-  referência, e sai só o mais adiantado que estiver devido.
+- **CA-05.1** Entram só os Beneficiários ativos. As janelas são: 30 com d entre 8 e 30, 7 com d
+  entre 1 e 7, e vencido com d ≤ −1 e validade a partir do corte. Cada marco sai no máximo uma vez
+  para cada validade de referência.
 - **CA-05.2** Os chefes de uma seção são encontrados pela regra de `gris/utils/chefes.py`: a
   seção é comparada sem acento nem maiúsculas, e quando a seção não tem chefe, vale o ramo.
   Chefe sem telefone é descartado.
@@ -170,6 +174,8 @@ Cada critério de aceite (CA) tem um teste correspondente na
   editável e nenhum modelo consegue tirá-la.
 - **CA-07.6** A tela tem "Pré-visualizar", que renderiza o modelo com dados fictícios e com o
   rodapé, e "Restaurar padrão".
+- **CA-07.7** Se a integração WhatsApp estiver desligada ou fora do ar, a tela abre normalmente,
+  sem o modal "Erro de Servidor", e o aviso aparece na descrição do campo de grupo.
 
 ### RF-08 — Rastreabilidade
 

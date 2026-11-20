@@ -33,12 +33,13 @@ async function carregar_opcoes_do_grupo(frm) {
 	}
 
 	let grupos = null;
+	let erro = null;
 	try {
 		const response = await frappe.call({
-			method: "gris.utils.whatsapp.listar_grupos_whatsapp_para_select",
-			args: { doctype: "Configuracoes de Associados" },
+			method: "gris.api.associados_vencimento_modelos.grupos_para_select",
 		});
-		grupos = Array.isArray(response.message) ? response.message : [];
+		grupos = response.message?.grupos ?? null;
+		erro = response.message?.erro ?? null;
 	} catch (error) {
 		console.warn("Não foi possível carregar os grupos do WhatsApp.", error);
 	}
@@ -62,7 +63,9 @@ async function carregar_opcoes_do_grupo(frm) {
 	field.df.options = options;
 	field.df.description =
 		grupos === null
-			? "Não foi possível carregar os grupos da instância WhatsApp. Verifique as configurações."
+			? `Não foi possível carregar os grupos do WhatsApp${
+					erro ? `: ${frappe.utils.escape_html(erro)}` : "."
+			  }`
 			: DESCRICAO_GRUPO_CHEFES;
 	frm.refresh_field(CAMPO_GRUPO_CHEFES);
 }

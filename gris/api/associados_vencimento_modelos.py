@@ -160,6 +160,15 @@ EXEMPLO_POR_GRUPO_DE_VARIAVEIS: dict[frozenset[str], dict[str, str]] = {
 	},
 }
 
+# Prazo coerente com cada mensagem na pré-visualização ("30 dias antes" diz "daqui a 30 dias").
+_EXEMPLO_DE_PRAZO: dict[str, dict[str, str]] = {
+	MODELO_30: {"data_vencimento": "20/12/2026", "dias_restantes": "30", "dias_vencido": "0"},
+	MODELO_7: {"data_vencimento": "27/11/2026", "dias_restantes": "7", "dias_vencido": "0"},
+	MODELO_1: {"data_vencimento": "21/11/2026", "dias_restantes": "1", "dias_vencido": "0"},
+	MODELO_0: {"data_vencimento": "20/11/2026", "dias_restantes": "0", "dias_vencido": "0"},
+	MODELO_RECORRENTE: {"data_vencimento": "14/11/2026", "dias_restantes": "0", "dias_vencido": "6"},
+}
+
 _VARIAVEL = re.compile(r"\{(\w+)\}")
 _CODIGO_DE_TEMPLATE = re.compile(r"\{\{|\}\}|\{%|%\}")
 _LINHAS_EM_BRANCO_SOBRANDO = re.compile(r"\n{3,}")
@@ -359,6 +368,13 @@ def pre_visualizar_modelo(campo: str, texto: str | None = None) -> str:
 		)
 
 	valores = dict(EXEMPLO_POR_GRUPO_DE_VARIAVEIS[VARIAVEIS_POR_MODELO[campo]])
+	valores.update(_EXEMPLO_DE_PRAZO.get(campo, {}))
+	if campo == MODELO_CHEFE_POS:
+		valores["lista_beneficiarios"] = (
+			valores["lista_beneficiarios"]
+			.replace("vence em 19/12/2026", "venceu em 19/11/2026")
+			.replace("vence em 20/12/2026", "venceu em 18/11/2026")
+		)
 	valores.setdefault("como_renovar", instrucoes_renovacao())
 	corpo = substituir(texto, valores)
 	if VARIAVEIS_POR_MODELO[campo] is VARIAVEIS_DO_CHEFE:
@@ -372,3 +388,21 @@ def modelo_padrao(campo: str) -> str:
 	frappe.only_for("System Manager")
 	_assert_campo_de_modelo(campo)
 	return MODELOS_PADRAO[campo]
+
+
+@frappe.whitelist()
+def grupos_para_select() -> dict:
+	"""Grupos do WhatsApp para o Select de ``grupo_chefes_whatsapp``, sem modal de erro.
+
+	Com a integração desligada ou a instância fora do ar, a listagem levanta exceção e o Desk
+	abre um "Erro de Servidor" toda vez que alguém entra na tela. Aqui o problema volta como
+	dado e a tela avisa na descrição do campo. A permissão continua sendo checada em
+	``listar_grupos_whatsapp_para_select``.
+	"""
+	from gris.utils.whatsapp import listar_grupos_whatsapp_para_select
+	from gris.utils.whatsapp_errors import WhatsAppConfigurationError, WhatsAppRequestError
+
+	try:
+		return {"grupos": listar_grupos_whatsapp_para_select(doctype=SETTINGS_DOCTYPE), "erro": None}
+	except (WhatsAppConfigurationError, WhatsAppRequestError) as erro:
+		return {"grupos": None, "erro": str(erro)}

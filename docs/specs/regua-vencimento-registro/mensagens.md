@@ -37,12 +37,13 @@ Seguido sempre da linha fixa:
 
 ### Instruções de renovação
 
-`instrucoes_renovacao` vira a variável `{como_renovar}`. Texto padrão, **a confirmar com o
-administrativo**:
+`{como_renovar}` muda conforme a situação do registro. A regra é a mesma do status do registro no
+GRIS: no próprio dia do vencimento o registro já conta como vencido.
 
-```
-A renovação é feita pelo Paxtu (paxtu.escoteiros.org.br).
-```
+| Quando | Campo | Texto padrão |
+|---|---|---|
+| Antes de vencer (30, 7 e 1 dia antes) | `instrucoes_renovacao` | A renovação é feita direto pelo Paxtu, em *Registro individual*, no menu de navegação. |
+| No dia e depois de vencido | `instrucoes_renovacao_vencido` | Como o registro já venceu, a renovação não é mais feita direto pelo Paxtu: entre em contato com a diretoria do grupo. |
 
 ## 1. Associado ou responsável
 
@@ -58,7 +59,7 @@ A renovação é feita pelo Paxtu (paxtu.escoteiros.org.br).
 | `{dias_restantes}` | 30 | 30 |
 | `{dias_vencido}` | 0 | 0 |
 | `{numero_registro}` | 1234567-8 | 1234567-8 |
-| `{como_renovar}` | (instruções de renovação) | (idem) |
+| `{como_renovar}` | (instruções de renovação, conforme a situação do registro) | (idem) |
 | `{contato_duvidas}` | Dúvidas sobre a renovação? Fale com a Joana, do administrativo, pelo telefone +55 11 91234-5678. | (idem) |
 
 `{contato_duvidas}` usa o responsável administrativo de Configurações de Recepção. Sem ele, ou sem
@@ -125,7 +126,7 @@ Olá, Mariana!
 
 Falta uma semana: o registro escoteiro de Ana vence em *09/11/2027*.
 
-Para não ficar de fora das atividades, faça a renovação nos próximos dias. A renovação é feita pelo Paxtu (paxtu.escoteiros.org.br).
+Para não ficar de fora das atividades, faça a renovação nos próximos dias. A renovação é feita direto pelo Paxtu, em *Registro individual*, no menu de navegação.
 
 Dúvidas sobre a renovação? Fale com a Joana, do administrativo, pelo telefone +55 11 91234-5678.
 

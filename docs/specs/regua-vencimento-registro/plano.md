@@ -42,7 +42,8 @@ Este diretório.
     - `cobrar_vencidos_desde` (Date)
     - `intervalo_recorrente_dias` (Int, padrão 3)
     - `grupo_chefes_whatsapp` (Select)
-    - `instrucoes_renovacao` (Small Text)
+    - `instrucoes_renovacao` e `instrucoes_renovacao_vencido` (Small Text): `{como_renovar}` antes
+      e depois de vencer
     - `texto_ja_renovado` (Small Text)
     - `resumo_mensal_enviado_em` (Data, read-only)
   - Três seções de mensagens, uma para cada público: "Associado ou responsável", "Grupo de chefes" e
@@ -54,9 +55,10 @@ Este diretório.
 - **`log_de_mensagem.json`**: Link `associado`; novas opções em `destinatario_tipo`: "Associado",
   "Responsável do associado" e "Chefe de seção".
 - **Patch** `gris.patches.preparar_regua_de_vencimento`:
-  - grava os textos padrão nos modelos vazios, em `texto_ja_renovado` e em `instrucoes_renovacao`;
-  - liga os 9 `msg_venc_*` e põe o intervalo em 3;
-  - não toca no geral nem no corte.
+  - grava os textos padrão nos modelos vazios, em `texto_ja_renovado` e nos dois textos de "como
+    renovar" (e troca o texto antigo de `instrucoes_renovacao` se ninguém o editou);
+  - liga os 9 `msg_venc_*`, põe o intervalo em 3 e o corte em 01/11/2026 se estiverem vazios;
+  - não toca no geral.
 
 ### 3.3 Modelos
 
@@ -114,9 +116,9 @@ Arquivo `gris/api/associados_vencimento_notificacoes.py`.
 ## 4. Implantação
 
 1. Merge e deploy. O patch prepara os textos, e a régua continua desligada.
-2. O administrativo confirma `instrucoes_renovacao` e revisa os textos usando a pré-visualização.
-3. Escolhem o grupo de chefes e a data de corte. Sugestão: o primeiro dia do mês da implantação, para
-   não disparar a mensagem recorrente para os 169 que já estavam vencidos.
+2. O administrativo revisa os textos usando a pré-visualização.
+3. Escolhem o grupo de chefes. O corte já vem em 01/11/2026, por decisão do usuário: a primeira
+   rodada cobra quem venceu desde então (no dev.gris, 76 pessoas do lote de 02/11).
 4. Ligam a régua. A primeira rodada das 9h já manda os marcos devidos e o resumo do mês.
 
 ## 5. Matriz de validação
@@ -135,6 +137,7 @@ Arquivo `gris/api/associados_vencimento_notificacoes.py`.
 | 03.2 | `TestMarcoDevido.test_validade_nova_recomeca` |
 | 03.3 | `TestMarcoDevido.test_corte`, `TestMarcoDoChefe.test_corte` |
 | 04.1–04.4 | `TestDestinatario` |
+| 04.5 | `TestReguaDoAssociado.test_como_renovar_muda_depois_de_vencido`, `TestModelos.test_como_renovar_padrao_por_situacao` |
 | 05.1 | `TestMarcoDoChefe` |
 | 05.2–05.6 | `TestAvisoAosChefes` |
 | 06.1–06.6 | `TestResumoMensal` |

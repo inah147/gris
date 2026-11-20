@@ -119,7 +119,39 @@ class TestModelos(FrappeTestCase):
 		for campo, texto in modelos.MODELOS_PADRAO.items():
 			self.assertEqual(gravado[campo], texto)
 		self.assertNotIn("regua_vencimento_ativa", gravado)
-		self.assertNotIn("cobrar_vencidos_desde", gravado)
+		self.assertEqual(gravado["cobrar_vencidos_desde"], "2026-11-01")
+		self.assertEqual(gravado["instrucoes_renovacao"], modelos.INSTRUCOES_RENOVACAO_PADRAO)
+		self.assertEqual(gravado["instrucoes_renovacao_vencido"], modelos.INSTRUCOES_RENOVACAO_VENCIDO_PADRAO)
+
+	def test_patch_troca_o_texto_antigo_de_como_renovar(self):
+		from gris.patches import preparar_regua_de_vencimento
+
+		existentes = {"instrucoes_renovacao": preparar_regua_de_vencimento.INSTRUCOES_RENOVACAO_ANTIGA}
+		gravado = {}
+		with (
+			patch.object(
+				preparar_regua_de_vencimento, "valor_bruto", side_effect=lambda c: existentes.get(c, "0")
+			),
+			patch.object(
+				preparar_regua_de_vencimento.frappe.db,
+				"set_single_value",
+				side_effect=lambda _d, valores: gravado.update(valores),
+			),
+			patch.object(preparar_regua_de_vencimento.frappe.db, "commit"),
+		):
+			preparar_regua_de_vencimento.execute()
+		self.assertEqual(gravado, {"instrucoes_renovacao": modelos.INSTRUCOES_RENOVACAO_PADRAO})
+
+	def test_como_renovar_padrao_por_situacao(self):
+		with patch.object(modelos, "_valor_do_single", return_value=""):
+			self.assertIn("Registro individual", modelos.instrucoes_renovacao())
+			self.assertIn("diretoria", modelos.instrucoes_renovacao(vencido=True))
+		with (
+			patch.object(modelos.frappe, "only_for"),
+			patch.object(modelos, "_valor_do_single", return_value=""),
+		):
+			self.assertIn("diretoria", modelos.pre_visualizar_modelo("modelo_venc_recorrente", ""))
+			self.assertIn("Registro individual", modelos.pre_visualizar_modelo("modelo_venc_7", ""))
 
 	def test_patch_nao_sobrescreve_o_que_existe(self):
 		from gris.patches import preparar_regua_de_vencimento

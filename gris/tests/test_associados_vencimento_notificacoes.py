@@ -154,7 +154,14 @@ class _Ambiente:
 			)
 			pilha.enter_context(patch(f"{alvo}.contatos_chefes_dos_beneficiarios", side_effect=self._chefes))
 			pilha.enter_context(patch(f"{alvo}.contato_duvidas", return_value=""))
-			pilha.enter_context(patch(f"{alvo}.instrucoes_renovacao", return_value="Renove pelo Paxtu."))
+			pilha.enter_context(
+				patch(
+					f"{alvo}.instrucoes_renovacao",
+					side_effect=lambda vencido=False: (
+						"Fale com a diretoria." if vencido else "Renove pelo Paxtu."
+					),
+				)
+			)
 			pilha.enter_context(patch.object(modelos, "_valor_do_single", return_value=""))
 			return regua.executar_regua(hoje)
 
@@ -322,7 +329,7 @@ class TestDestinatario(FrappeTestCase):
 		self.assertEqual(regua._primeiro_nome(""), "")
 
 	def test_registro_de_conforme_destinatario(self):
-		comum = {"como_renovar": "", "contato_duvidas": ""}
+		comum = {"como_renovar": "", "como_renovar_vencido": "", "contato_duvidas": ""}
 		adulto = regua.valores_do_associado(
 			_associado(), frappe._dict(tipo=regua.DESTINATARIO_ASSOCIADO, nome="x"), dias=7, comum=comum
 		)
@@ -451,6 +458,18 @@ class TestReguaDoAssociado(FrappeTestCase):
 			mensagem = texto["mensagem"]
 			self.assertIn(modelos.TEXTO_JA_RENOVADO_PADRAO, mensagem)
 			self.assertTrue(mensagem.endswith(modelos.ASSINATURA_AUTOMATICA))
+
+	def test_como_renovar_muda_depois_de_vencido(self):
+		ambiente = _Ambiente([_associado(f"A{i}", dias=d) for i, d in enumerate((30, 7, 1, 0, -3), 1)])
+		ambiente.rodar()
+		por_numero = {t["numero"][-1]: t["mensagem"] for t in ambiente.textos}
+		for antes in ("1", "2", "3"):
+			self.assertIn("Renove pelo Paxtu.", por_numero[antes])
+			self.assertNotIn("diretoria", por_numero[antes])
+		# No dia já conta como vencido, como no status do registro.
+		for depois in ("4", "5"):
+			self.assertIn("Fale com a diretoria.", por_numero[depois])
+			self.assertNotIn("Paxtu.", por_numero[depois].split("_Se o registro")[0])
 
 	def test_resumo_do_job(self):
 		ambiente = _Ambiente([_associado(dias=30)])

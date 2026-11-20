@@ -68,8 +68,11 @@ Além da tabela:
 - **Ativo:** `Associado.status_no_grupo = "Ativo"`.
 - **Menor:** quem ainda não fez 18 anos, contados pela `data_de_nascimento`. Beneficiário sem
   data de nascimento conta como menor; qualquer outra categoria sem a data conta como adulto.
-- **Corte:** `cobrar_vencidos_desde`. Validades anteriores a esta data não recebem nada a partir
-  do dia do vencimento.
+- **Corte:** `cobrar_vencidos_desde`, que vem preenchido com 01/11/2026 e pode ser alterado na
+  tela. Validades anteriores a esta data não recebem nada a partir do dia do vencimento.
+- **Como renovar:** antes de vencer, a própria família renova pelo Paxtu, em *Registro
+  individual*. Depois de vencido, inclusive no próprio dia, é preciso falar com a diretoria. Os dois
+  textos são editáveis.
 - **Validade de referência:** a validade a que os carimbos de envio se referem. Se a
   `validade_registro` mudar, a régua recomeça do zero.
 
@@ -85,8 +88,8 @@ Cada critério de aceite (CA) tem um teste correspondente na
 - **CA-01.2** Cada um dos nove `msg_venc_*` desmarcado suspende só o seu envio; os outros seguem
   saindo.
 - **CA-01.3** Um `msg_venc_*` que nunca foi gravado no `tabSingles` conta como ligado.
-- **CA-01.4** Num site novo, ou logo depois do patch, o interruptor geral fica desligado e os
-  nove individuais ficam ligados.
+- **CA-01.4** Num site novo, ou logo depois do patch, o interruptor geral fica desligado, os nove
+  individuais ficam ligados e a data de corte fica em 01/11/2026.
 - **CA-01.5** Salvar as configurações com o geral ligado e sem data de corte é recusado, com a
   mensagem pedindo a data.
 
@@ -129,6 +132,8 @@ Cada critério de aceite (CA) tem um teste correspondente na
   é carimbado.
 - **CA-04.4** Na mensagem, `{registro_de}` vira "seu registro escoteiro" quando quem recebe é o
   próprio associado, e "o registro escoteiro de Ana" quando é o responsável.
+- **CA-04.5** `{como_renovar}` usa `instrucoes_renovacao` quando d > 0 e
+  `instrucoes_renovacao_vencido` quando d ≤ 0.
 
 ### RF-05 — Aviso direto ao chefe de seção
 

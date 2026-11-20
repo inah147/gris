@@ -18,6 +18,7 @@
   "resumo_mensal_enviado_em",
   "regua_textos_section",
   "instrucoes_renovacao",
+  "instrucoes_renovacao_vencido",
   "column_break_regua_textos",
   "texto_ja_renovado",
   "regua_associado_section",
@@ -85,7 +86,8 @@
    "fieldname": "cobrar_vencidos_desde",
    "fieldtype": "Date",
    "label": "Cobrar vencidos a partir de",
-   "mandatory_depends_on": "eval:doc.regua_vencimento_ativa"
+   "mandatory_depends_on": "eval:doc.regua_vencimento_ativa",
+   "default": "2026-11-01"
   },
   {
    "default": "3",
@@ -117,10 +119,16 @@
    "label": "Textos comuns"
   },
   {
-   "description": "Entra no lugar de {como_renovar}.",
+   "description": "Entra no lugar de {como_renovar} nas mensagens de 30, 7 e 1 dia antes.",
    "fieldname": "instrucoes_renovacao",
    "fieldtype": "Small Text",
-   "label": "Como renovar"
+   "label": "Como renovar \u2014 antes de vencer"
+  },
+  {
+   "description": "Entra no lugar de {como_renovar} nas mensagens do dia do vencimento e na cobran\u00e7a recorrente (o GRIS j\u00e1 considera vencido no pr\u00f3prio dia).",
+   "fieldname": "instrucoes_renovacao_vencido",
+   "fieldtype": "Small Text",
+   "label": "Como renovar \u2014 depois de vencido"
   },
   {
    "fieldname": "column_break_regua_textos",
@@ -280,7 +288,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-20 10:00:00.000000",
+ "modified": "2026-11-20 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Configuracoes de Associados",

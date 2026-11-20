@@ -372,3 +372,8 @@ class Associado(Document):
 					sexo=self.sexo,
 					ramo=self.ramo,
 				)
+
+	def on_trash(self):
+		# O log guarda o texto das mensagens da régua de vencimento, com nome e telefone de
+		# quem recebeu; e o Link ``associado`` travaria a exclusão com LinkExistsError.
+		frappe.db.delete("Log de Mensagem", {"associado": self.name})

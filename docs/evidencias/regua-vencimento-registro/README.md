@@ -27,5 +27,5 @@ agregados; nenhum nome é reproduzido aqui.
 A rodada encontrou um problema, já corrigido: um nome cadastrado com tratamento ("Dr. Fulano") gerava a
 saudação "Olá, Dr.!". `_primeiro_nome` agora pula Dr., Dra., Sr., Sra., Srta., Prof. e Profa.
 
-**Para a implantação:** com o corte em 01/11, a primeira rodada manda 76 cobranças recorrentes de uma
-vez. Se a ideia é começar só com os próximos vencimentos, use a data da implantação como corte.
+**Para a implantação:** o corte vem preenchido com 01/11/2026, por decisão do usuário. A primeira rodada
+já manda as 76 cobranças recorrentes do lote que venceu em 02/11.

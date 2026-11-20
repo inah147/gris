@@ -382,6 +382,15 @@ def contato_duvidas() -> str:
 	)
 
 
+def _textos_comuns() -> dict[str, str]:
+	"""Lidos uma vez por rodada: valem para todas as mensagens ao associado."""
+	return {
+		"como_renovar": instrucoes_renovacao(),
+		"como_renovar_vencido": instrucoes_renovacao(vencido=True),
+		"contato_duvidas": contato_duvidas(),
+	}
+
+
 def valores_do_associado(associado, destinatario, *, dias: int, comum: dict) -> dict[str, object]:
 	nome_associado = (associado.get("nome_completo") or "").strip()
 	primeiro_nome_associado = _primeiro_nome(nome_associado)
@@ -400,7 +409,8 @@ def valores_do_associado(associado, destinatario, *, dias: int, comum: dict) -> 
 		"dias_restantes": max(dias, 0),
 		"dias_vencido": max(-dias, 0),
 		"numero_registro": (associado.get("registro") or "").strip(),
-		"como_renovar": comum.get("como_renovar", ""),
+		# Mesma regra do status do registro (``Associado._set_status``): no dia já conta como vencido.
+		"como_renovar": comum.get("como_renovar_vencido" if dias <= 0 else "como_renovar", ""),
 		"contato_duvidas": comum.get("contato_duvidas", ""),
 	}
 
@@ -624,7 +634,7 @@ def _avisar_associados(associados, estados, hoje, corte, intervalo, logger) -> d
 	nomes = [a.name for a, _marco, _dias in devidos]
 	links = _buscar_links_responsavel(nomes)
 	contatos = _buscar_contatos_responsavel(links)
-	comum = {"como_renovar": instrucoes_renovacao(), "contato_duvidas": contato_duvidas()}
+	comum = _textos_comuns()
 
 	for associado, marco, dias in devidos:
 		destinatario = resolver_destinatario(associado, links, contatos, hoje)
@@ -845,7 +855,7 @@ def notificar_vencimento_manual(associado_name: str) -> dict:
 		frappe.throw(_("Não foi possível encontrar um número de telefone elegível para o aviso."))
 
 	marco = marco_natural(dias)
-	comum = {"como_renovar": instrucoes_renovacao(), "contato_duvidas": contato_duvidas()}
+	comum = _textos_comuns()
 	enviar_texto(
 		destinatario.telefone,
 		mensagem_do_associado(marco, associado, destinatario, dias=dias, comum=comum),

@@ -32,7 +32,15 @@ TEXTO_JA_RENOVADO_PADRAO = (
 	"no GRIS na próxima atualização do Paxtu._"
 )
 
-INSTRUCOES_RENOVACAO_PADRAO = "A renovação é feita pelo Paxtu (paxtu.escoteiros.org.br)."
+# ``{como_renovar}`` muda com a situação do registro: antes de vencer a própria família renova
+# pelo Paxtu; depois de vencido o Paxtu não deixa mais, e é preciso falar com a diretoria.
+INSTRUCOES_RENOVACAO_PADRAO = (
+	"A renovação é feita direto pelo Paxtu, em *Registro individual*, no menu de navegação."
+)
+INSTRUCOES_RENOVACAO_VENCIDO_PADRAO = (
+	"Como o registro já venceu, a renovação não é mais feita direto pelo Paxtu: "
+	"entre em contato com a diretoria do grupo."
+)
 
 # Modelos para o associado (ou o responsável, quando menor) ───────────────────
 
@@ -271,7 +279,10 @@ def _texto_ja_renovado() -> str:
 	return _valor_do_single("texto_ja_renovado") or TEXTO_JA_RENOVADO_PADRAO
 
 
-def instrucoes_renovacao() -> str:
+def instrucoes_renovacao(vencido: bool = False) -> str:
+	"""Texto de ``{como_renovar}``: Paxtu antes de vencer, diretoria depois."""
+	if vencido:
+		return _valor_do_single("instrucoes_renovacao_vencido") or INSTRUCOES_RENOVACAO_VENCIDO_PADRAO
 	return _valor_do_single("instrucoes_renovacao") or INSTRUCOES_RENOVACAO_PADRAO
 
 
@@ -375,7 +386,7 @@ def pre_visualizar_modelo(campo: str, texto: str | None = None) -> str:
 			.replace("vence em 19/12/2026", "venceu em 19/11/2026")
 			.replace("vence em 20/12/2026", "venceu em 18/11/2026")
 		)
-	valores.setdefault("como_renovar", instrucoes_renovacao())
+	valores.setdefault("como_renovar", instrucoes_renovacao(vencido=campo in (MODELO_0, MODELO_RECORRENTE)))
 	corpo = substituir(texto, valores)
 	if VARIAVEIS_POR_MODELO[campo] is VARIAVEIS_DO_CHEFE:
 		corpo = f"Olá, {valores['primeiro_nome_chefe']}!\n\n{corpo}"

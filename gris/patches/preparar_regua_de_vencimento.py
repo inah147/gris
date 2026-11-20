@@ -3,11 +3,19 @@ import frappe
 from gris.api.associados_vencimento_modelos import (
 	CAMPOS_DE_INTERRUPTOR,
 	INSTRUCOES_RENOVACAO_PADRAO,
+	INSTRUCOES_RENOVACAO_VENCIDO_PADRAO,
 	MODELOS_PADRAO,
 	SETTINGS_DOCTYPE,
 	TEXTO_JA_RENOVADO_PADRAO,
 	valor_bruto,
 )
+
+# Data de corte decidida com o usuário (20/11/2026): quem venceu a partir de 01/11/2026 entra na
+# cobrança recorrente e no aviso de vencido ao chefe. Só é gravada se o campo estiver vazio.
+CORTE_INICIAL = "2026-11-01"
+
+# Texto padrão da primeira versão do patch, trocado quando ninguém o editou.
+INSTRUCOES_RENOVACAO_ANTIGA = "A renovação é feita pelo Paxtu (paxtu.escoteiros.org.br)."
 
 
 def execute():
@@ -17,8 +25,8 @@ def execute():
 	abriria com os modelos em branco e os interruptores desmarcados, enquanto o código trata
 	ausência como "ligado" e "texto padrão": a tela diria uma coisa e o robô faria outra.
 
-	Só preenche o que falta. O interruptor geral e a data de corte não são tocados: a régua
-	nasce desligada e quem liga escolhe o corte.
+	Só preenche o que falta. A data de corte nasce em 01/11/2026 (decisão do usuário) e pode ser
+	trocada na tela; o interruptor geral não é tocado: a régua nasce desligada.
 	"""
 	if not frappe.db.exists("DocType", SETTINGS_DOCTYPE):
 		return
@@ -32,8 +40,13 @@ def execute():
 			valores[campo] = texto
 	if not (valor_bruto("texto_ja_renovado") or "").strip():
 		valores["texto_ja_renovado"] = TEXTO_JA_RENOVADO_PADRAO
-	if not (valor_bruto("instrucoes_renovacao") or "").strip():
+	instrucoes = (valor_bruto("instrucoes_renovacao") or "").strip()
+	if not instrucoes or instrucoes == INSTRUCOES_RENOVACAO_ANTIGA:
 		valores["instrucoes_renovacao"] = INSTRUCOES_RENOVACAO_PADRAO
+	if not (valor_bruto("instrucoes_renovacao_vencido") or "").strip():
+		valores["instrucoes_renovacao_vencido"] = INSTRUCOES_RENOVACAO_VENCIDO_PADRAO
+	if not valor_bruto("cobrar_vencidos_desde"):
+		valores["cobrar_vencidos_desde"] = CORTE_INICIAL
 	if valor_bruto("intervalo_recorrente_dias") is None:
 		valores["intervalo_recorrente_dias"] = 3
 

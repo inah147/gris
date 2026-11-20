@@ -35,10 +35,13 @@ def eh_funcao_chefe_de_secao(value: str | None) -> bool:
 	return "chefe" in normalized and "secao" in normalized
 
 
-def _candidatos_a_chefe() -> list[dict]:
+def _candidatos_a_chefe(apenas_ativos: bool = False) -> list[dict]:
+	filtros: dict = {"funcao": ["like", "%Chefe%"]}
+	if apenas_ativos:
+		filtros["status_no_grupo"] = "Ativo"
 	candidates = frappe.get_all(
 		"Associado",
-		filters={"funcao": ["like", "%Chefe%"]},
+		filters=filtros,
 		fields=["name", "nome_completo", "funcao", "secao", "ramo", "telefone"],
 		order_by="modified desc",
 		limit_page_length=LIMITE_DE_CANDIDATOS,
@@ -139,3 +142,41 @@ def buscar_contatos_chefes_por_ramo(ramos: list[str] | tuple[str, ...]) -> dict[
 			por_ramo[ramo] = encontrados
 
 	return por_ramo
+
+
+def contatos_chefes_dos_beneficiarios(beneficiarios: list[dict]) -> dict[str, list[frappe._dict]]:
+	"""Mapa ``name`` do beneficiário -> chefes **ativos e com telefone** da seção dele.
+
+	Mesma regra de ``buscar_chefes_de_secao`` (seção primeiro, ramo como reserva), com uma
+	consulta só para a lista inteira: a régua de vencimento resolve dezenas de jovens por
+	rodada. Quem fica sem chefe recebe lista vazia — o chamador decide o que fazer.
+	"""
+	if not beneficiarios:
+		return {}
+
+	section_chiefs = _candidatos_a_chefe(apenas_ativos=True)
+	por_nome = {row.get("name"): row for row in section_chiefs}
+	por_chave: dict[tuple[str, str], list[frappe._dict]] = {}
+	resultado: dict[str, list[frappe._dict]] = {}
+
+	for beneficiario in beneficiarios:
+		secao = beneficiario.get("secao") or ""
+		ramo = beneficiario.get("ramo") or ""
+		chave = (normalizar_texto(secao), normalizar_texto(ramo))
+		if chave not in por_chave:
+			contatos = []
+			for nome in chefes_entre_candidatos(section_chiefs, secao, ramo):
+				row = por_nome.get(nome) or {}
+				telefone = (row.get("telefone") or "").strip()
+				if telefone:
+					contatos.append(
+						frappe._dict(
+							name=nome,
+							nome_completo=(row.get("nome_completo") or "").strip(),
+							telefone=telefone,
+						)
+					)
+			por_chave[chave] = contatos
+		resultado[beneficiario.get("name")] = por_chave[chave]
+
+	return resultado

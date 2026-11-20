@@ -23,7 +23,12 @@ SETTINGS_DOCTYPE = "Configuracoes WhatsApp"
 # Telas de configuração que têm um Select de grupo alimentado pela Evolution API.
 # `listar_grupos_whatsapp_para_select` só aceita permissão vinda de uma delas.
 DOCTYPES_COM_SELECT_DE_GRUPO: frozenset[str] = frozenset(
-	{"Configuracoes de Recepcao", "Configuracoes de Desenvolvimento", "Configuracoes de Acessos"}
+	{
+		"Configuracoes de Recepcao",
+		"Configuracoes de Desenvolvimento",
+		"Configuracoes de Acessos",
+		"Configuracoes de Associados",
+	}
 )
 
 DEFAULT_TIMEOUT = 30
@@ -357,7 +362,8 @@ def _registrar_log(
 ) -> None:
 	"""Grava a linha do ``Log de Mensagem``.
 
-	``contexto`` é o que o chamador sabe e o transporte não: de qual jovem a mensagem fala,
+	``contexto`` é o que o chamador sabe e o transporte não: de qual jovem (``novo_associado``)
+	ou associado (``associado``) a mensagem fala,
 	que mensagem é essa e quem é o destinatário. Vem opcional porque nem todo envio do GRIS
 	nasce no funil de recepção — sem ele a linha ainda registra número, texto e status.
 
@@ -381,6 +387,7 @@ def _registrar_log(
 				"enviada_em": now_datetime(),
 				"status": status,
 				"novo_associado": contexto.get("novo_associado"),
+				"associado": contexto.get("associado"),
 				"assunto": contexto.get("assunto"),
 				"destinatario_tipo": contexto.get("destinatario_tipo") or TIPO_NAO_IDENTIFICADO,
 				"destinatario_nome": contexto.get("destinatario_nome") or "",

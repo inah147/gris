@@ -139,8 +139,7 @@ EXEMPLO_POR_GRUPO_DE_VARIAVEIS: dict[frozenset[str], dict[str, str]] = {
 		"dias_vencido": "3",
 		"numero_registro": "1234567-8",
 		"contato_duvidas": (
-			"Dúvidas sobre a renovação? Fale com a Joana, do administrativo, pelo telefone "
-			"+55 11 91234-5678."
+			"Dúvidas sobre a renovação? Fale com a Joana, do administrativo, pelo telefone +55 11 91234-5678."
 		),
 	},
 	VARIAVEIS_DO_GRUPO: {
@@ -373,10 +372,3 @@ def modelo_padrao(campo: str) -> str:
 	frappe.only_for("System Manager")
 	_assert_campo_de_modelo(campo)
 	return MODELOS_PADRAO[campo]
-
-
-@frappe.whitelist()
-def variaveis_dos_modelos() -> dict[str, list[str]]:
-	"""Variáveis aceitas por modelo, para a tela mostrar ao lado de cada campo."""
-	frappe.only_for("System Manager")
-	return {campo: sorted(variaveis) for campo, variaveis in VARIAVEIS_POR_MODELO.items()}

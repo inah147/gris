@@ -157,18 +157,63 @@ class TestCompetenciasDaCobranca(FrappeTestCase):
 			},
 			"Fulano de Tal",
 			contexto={
-				"total": 140.0,
-				"meses_em_atraso": 1,
-				"total_em_atraso": 70.0,
+				"total": 130.0,
+				"meses_anteriores": ["2026-06"],
+				"total_anteriores": 70.0,
+				"meses_no_prazo": 1,
 				"vencimento": datetime.date(2026, 8, 10),
 				"acrescimo": 10.0,
 			},
 		)
-		self.assertIn("https://gris.exemplo/contribuicao/abc", texto)
 		self.assertIn("Fulano de Tal", texto)
-		self.assertIn("10/08/2026", texto)
-		self.assertIn("1 mês em atraso", texto)
-		self.assertIn("o valor sobe", texto)
+		self.assertIn("Pagando até 10/08/2026: R$ 130,00 (desconto de R$ 10,00)", texto)
+		self.assertIn("Depois do vencimento: R$ 140,00", texto)
+		self.assertIn("1 mês anterior em aberto (06/2026), somando R$ 70,00", texto)
+		# O link fica sozinho na linha, para o WhatsApp reconhecê-lo inteiro.
+		self.assertIn("\nhttps://gris.exemplo/contribuicao/abc\n", texto)
+		self.assertNotIn("atraso", texto.lower())
+
+	def test_mensagem_do_mes_com_tres_meses_em_aberto(self):
+		texto = montar_mensagem(
+			{
+				"name": "CM-teste",
+				"competencias": ["2026-10", "2026-11", "2026-12"],
+				"valor_total": 200.0,
+				"link_pagina": "https://gris.exemplo/contribuicao/abc",
+			},
+			"Fulano",
+			contexto={
+				"total": 200.0,
+				"meses_anteriores": ["2026-10", "2026-11"],
+				"total_anteriores": 140.0,
+				"meses_no_prazo": 1,
+				"vencimento": datetime.date(2026, 12, 10),
+				"acrescimo": 10.0,
+			},
+		)
+		self.assertIn("2 meses anteriores em aberto (10/2026 e 11/2026), somando R$ 140,00", texto)
+		self.assertIn("Depois do vencimento: R$ 210,00", texto)
+
+	def test_mensagem_do_mes_sem_mes_no_prazo_nao_fala_de_desconto(self):
+		texto = montar_mensagem(
+			{
+				"name": "CM-teste",
+				"competencias": ["2026-06"],
+				"valor_total": 70.0,
+				"link_pagina": "https://gris.exemplo/contribuicao/abc",
+			},
+			"Fulano",
+			contexto={
+				"total": 70.0,
+				"meses_anteriores": ["2026-06"],
+				"total_anteriores": 70.0,
+				"meses_no_prazo": 0,
+				"vencimento": datetime.date(2026, 8, 10),
+				"acrescimo": 10.0,
+			},
+		)
+		self.assertIn("Valor em aberto: R$ 70,00", texto)
+		self.assertNotIn("desconto", texto)
 
 	def test_nenhuma_mensagem_leva_o_dominio_da_infinitepay(self):
 		dados = {
@@ -197,12 +242,18 @@ class TestCompetenciasDaCobranca(FrappeTestCase):
 			"valor_total": 60.0,
 			"link_pagina": "https://gris.exemplo/contribuicao/abc",
 		}
-		contexto = {"total": 70.0, "acrescimo": 10.0}
-		self.assertIn("vence hoje", montar_mensagem(dados, "F", tipo=MENSAGEM_VENCIMENTO, contexto=contexto))
-		self.assertIn("acréscimo", montar_mensagem(dados, "F", tipo=MENSAGEM_ATRASO, contexto=contexto))
-		self.assertIn(
-			"segue em aberto", montar_mensagem(dados, "F", tipo=MENSAGEM_SEMANAL, contexto=contexto)
-		)
+		no_prazo = {"total": 60.0, "acrescimo": 10.0, "meses_no_prazo": 1}
+		vencido = {"total": 70.0, "acrescimo": 10.0, "meses_no_prazo": 0}
+		vencimento = montar_mensagem(dados, "F", tipo=MENSAGEM_VENCIMENTO, contexto=no_prazo)
+		self.assertIn("vence hoje", vencimento)
+		self.assertIn("R$ 10,00 de desconto", vencimento)
+		self.assertIn("venceu ontem", montar_mensagem(dados, "F", tipo=MENSAGEM_ATRASO, contexto=vencido))
+		self.assertIn("segue em aberto", montar_mensagem(dados, "F", tipo=MENSAGEM_SEMANAL, contexto=vencido))
+		for tipo in (MENSAGEM_MES, MENSAGEM_VENCIMENTO, MENSAGEM_ATRASO, MENSAGEM_SEMANAL):
+			for contexto in (no_prazo, vencido):
+				texto = montar_mensagem(dados, "F", tipo=tipo, contexto=contexto)
+				self.assertNotIn("atraso", texto.lower(), tipo)
+				self.assertNotIn("acréscimo", texto.lower(), tipo)
 
 
 class TestBaixaDaCobranca(FrappeTestCase):

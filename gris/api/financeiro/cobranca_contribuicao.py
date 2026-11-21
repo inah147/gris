@@ -592,14 +592,24 @@ def contexto_da_mensagem(associado: str, hoje: datetime.date | None = None, pend
 	if pendentes is None:
 		pendentes = get_situacao_para_cobranca(associado)["pendentes"]
 	parametros = get_parametros()
-	atrasados = [p for p in pendentes if p["status"] == STATUS_ATRASADO]
+	# Meses que já venceram (o valor deles já está sem desconto) e meses ainda no
+	# prazo — só estes têm o desconto de quem paga até o vencimento.
+	anteriores = [p for p in pendentes if p["status"] == STATUS_ATRASADO]
 	return {
 		"total": round(sum(p["valor"] for p in pendentes), 2),
-		"meses_em_atraso": len(atrasados),
-		"total_em_atraso": round(sum(p["valor"] for p in atrasados), 2),
+		"meses_anteriores": [p["ym"] for p in anteriores],
+		"total_anteriores": round(sum(p["valor"] for p in anteriores), 2),
+		"meses_no_prazo": len(pendentes) - len(anteriores),
 		"vencimento": calcular_vencimento(hoje.replace(day=1), parametros.dia_vencimento),
 		"acrescimo": parametros.acrescimo_atraso,
 	}
+
+
+def _juntar(itens: list[str]) -> str:
+	"""'a', 'a e b', 'a, b e c'."""
+	if len(itens) <= 1:
+		return "".join(itens)
+	return ", ".join(itens[:-1]) + " e " + itens[-1]
 
 
 def montar_mensagem(
@@ -613,68 +623,82 @@ def montar_mensagem(
 
 	`cobranca` traz `competencias`, `valor_total` e `link_pagina`. Sem `contexto`
 	a mensagem usa o que a própria cobrança cobra; com ele, o que está em aberto
-	hoje (valor com acréscimo, meses em atraso, data real do vencimento).
+	hoje (valor do dia, meses anteriores, data real do vencimento).
+
+	A diferença entre o valor no prazo e depois dele é apresentada como desconto
+	para quem paga até o vencimento — as mensagens não falam em atraso. O link vai
+	sozinho na linha, sem pontuação colada, para o WhatsApp reconhecê-lo inteiro.
 	"""
 	contexto = contexto or {}
 	link = cobranca["link_pagina"]
-	total = contexto.get("total", cobranca["valor_total"])
+	total = float(contexto.get("total", cobranca["valor_total"]) or 0)
 	valor = _moeda(total)
 	rotulos = ", ".join(_rotulo(ym) for ym in cobranca["competencias"])
-	acrescimo = float(contexto.get("acrescimo") or 0)
-	aviso_acrescimo = (
-		f"Depois do vencimento o valor sobe {_moeda(acrescimo)} por mês em atraso.\n\n"
-		if acrescimo > 0
-		else ""
-	)
+	# Desconto só existe para os meses que ainda estão no prazo.
+	desconto = float(contexto.get("acrescimo") or 0) * int(contexto.get("meses_no_prazo") or 0)
+	ignorar = "Se já tiver pago, pode ignorar esta mensagem."
 
 	if tipo == MENSAGEM_CONFIRMACAO:
 		return (
 			f"Olá! Recebemos o pagamento da contribuição mensal de {nome_associado}. Obrigado!\n\n"
 			f"Competência: {rotulos}\n"
 			f"Valor: {_moeda(cobranca['valor_total'])}\n\n"
-			f"Veja o mês a mês e o comprovante: {link}"
+			f"Veja o mês a mês e o comprovante:\n{link}"
 		)
 
 	if tipo == MENSAGEM_VENCIMENTO:
-		return (
-			f"Olá! A contribuição mensal de {nome_associado} vence hoje.\n\n"
-			f"Valor em aberto: {valor}\n\n"
-			f"Pague pelo link: {link}\n\n"
-			f"{aviso_acrescimo}"
-			"Se já tiver pago, pode ignorar esta mensagem."
-		)
+		if desconto > 0:
+			cabecalho = (
+				f"Olá! A contribuição mensal de {nome_associado} vence hoje. "
+				f"Pagando hoje, você ainda tem {_moeda(desconto)} de desconto.\n\n"
+				f"Valor com desconto: {valor}"
+			)
+		else:
+			cabecalho = f"Olá! A contribuição mensal de {nome_associado} vence hoje.\n\nValor: {valor}"
+		return f"{cabecalho}\n\nPague pelo link:\n{link}\n\n{ignorar}"
 
 	if tipo == MENSAGEM_ATRASO:
 		return (
-			f"Olá! A contribuição mensal de {nome_associado} venceu e agora o valor em aberto "
-			f"é {valor}, já com o acréscimo por atraso.\n\n"
-			f"Pague pelo link: {link}\n\n"
-			"Se já tiver pago, pode ignorar esta mensagem."
+			f"Olá! A contribuição mensal de {nome_associado} venceu ontem e segue em aberto.\n\n"
+			f"Valor: {valor}\n\n"
+			f"Pague pelo link:\n{link}\n\n{ignorar}"
 		)
 
 	if tipo == MENSAGEM_SEMANAL:
 		return (
 			f"Olá! Lembrete: a contribuição mensal de {nome_associado} segue em aberto.\n\n"
-			f"Valor em aberto: {valor}\n\n"
-			f"Pague pelo link: {link}\n\n"
-			"Se já tiver pago, pode ignorar esta mensagem."
+			f"Valor: {valor}\n\n"
+			f"Pague pelo link:\n{link}\n\n{ignorar}"
 		)
 
 	vencimento = contexto.get("vencimento")
-	linhas = [f"Olá! A contribuição mensal de {nome_associado} está disponível."]
-	if vencimento:
+	linhas = [f"Olá! A contribuição mensal de {nome_associado} está disponível.", ""]
+	if vencimento and desconto > 0:
+		linhas.append(f"Pagando até {_data_br(vencimento)}: {valor} (desconto de {_moeda(desconto)})")
+		linhas.append(f"Depois do vencimento: {_moeda(total + desconto)}")
+	elif vencimento and int(contexto.get("meses_no_prazo") or 0):
 		linhas.append(f"Vencimento: {_data_br(vencimento)}")
-	linhas.append(f"Valor em aberto: {valor}")
-	atrasados = int(contexto.get("meses_em_atraso") or 0)
-	if atrasados:
-		plural = "meses em atraso" if atrasados > 1 else "mês em atraso"
-		linhas.append(f"Inclui {atrasados} {plural}, somando {_moeda(contexto.get('total_em_atraso') or 0)}.")
-	return (
-		"\n".join(linhas)
-		+ f"\n\nPague e acompanhe o mês a mês pelo link: {link}\n\n"
-		+ aviso_acrescimo
-		+ "O pagamento é confirmado automaticamente. Se já tiver pago, pode ignorar esta mensagem."
-	)
+		linhas.append(f"Valor: {valor}")
+	else:
+		linhas.append(f"Valor em aberto: {valor}")
+
+	anteriores = contexto.get("meses_anteriores") or []
+	if anteriores:
+		descricao = "mês anterior em aberto" if len(anteriores) == 1 else "meses anteriores em aberto"
+		linhas += [
+			"",
+			f"O valor inclui {len(anteriores)} {descricao} ({_juntar([_rotulo(ym) for ym in anteriores])}), "
+			f"somando {_moeda(contexto.get('total_anteriores') or 0)}.",
+		]
+
+	linhas += [
+		"",
+		"Pague e acompanhe o mês a mês pelo link:",
+		link,
+		"",
+		f"O pagamento é confirmado automaticamente. {ignorar}",
+	]
+	return "\n".join(linhas)
 
 
 @frappe.whitelist()

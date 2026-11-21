@@ -685,11 +685,9 @@ def montar_mensagem(
 	anteriores = contexto.get("meses_anteriores") or []
 	if anteriores:
 		descricao = "mês anterior em aberto" if len(anteriores) == 1 else "meses anteriores em aberto"
-		linhas += [
-			"",
-			f"O valor inclui {len(anteriores)} {descricao} ({_juntar([_rotulo(ym) for ym in anteriores])}), "
-			f"somando {_moeda(contexto.get('total_anteriores') or 0)}.",
-		]
+		meses = _juntar([_rotulo(ym) for ym in anteriores])
+		soma = _moeda(contexto.get("total_anteriores") or 0)
+		linhas += ["", f"O valor inclui {len(anteriores)} {descricao} ({meses}), somando {soma}."]
 
 	linhas += [
 		"",

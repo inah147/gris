@@ -1,0 +1,53 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}{{ assembleia.titulo | e }}{% endblock %}
+
+{% set active_link = "/administracao/assembleias" %}
+
+{% block page_header %}
+<div class="asm-cabecalho">
+	<div class="flex flex-col gap-2 max-w-3xl">
+		<a class="text-sm text-muted-foreground" href="/administracao/assembleias">{{ lucide_icon("arrow-left", size="xs") }} Assembleias</a>
+		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">{{ assembleia.titulo | e }}</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">
+			{{ assembleia.local | e }} · primeira convocação às {{ (assembleia.hora_primeira_convocacao | string)[:5] }}
+		</p>
+	</div>
+	<div class="asm-cabecalho__acoes">
+		{% if not assembleia.edital_publicado %}
+		<button type="button" class="btn-outline" data-excluir-assembleia>
+			{{ lucide_icon("trash-2", size="sm") }}
+			<span>Excluir assembleia</span>
+		</button>
+		{% endif %}
+	</div>
+</div>
+{% endblock %}
+
+{% block main %}
+{% include "gris/templates/includes/assembleias_comum.html" %}
+<div class="asm-pagina asm-assembleia" data-name="{{ assembleia.name | e }}"></div>
+
+{% if not assembleia.edital_publicado %}
+{% call dialog(
+	id="dialog-excluir-assembleia",
+	title="Excluir assembleia?",
+	description="A exclusão não pode ser desfeita. A pasta no Drive, se existir, continua lá.",
+	footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-excluir-assembleia">Cancelar</button><button type="button" class="btn-destructive" id="btn-confirmar-exclusao">Excluir</button>'
+) %}
+<div class="asm-form">
+	<p class="m-0">Junto com a assembleia serão apagados:</p>
+	<ul class="m-0">
+		<li>{{ inscricoes.candidaturas }} candidatura{{ "s" if inscricoes.candidaturas != 1 else "" }}</li>
+		<li>{{ inscricoes.chapas }} chapa{{ "s" if inscricoes.chapas != 1 else "" }} da diretoria</li>
+		<li>{{ inscricoes.assuntos }} assunto{{ "s" if inscricoes.assuntos != 1 else "" }} gera{{ "is" if inscricoes.assuntos != 1 else "l" }}</li>
+	</ul>
+</div>
+{% endcall %}
+{% endif %}
+
+{{ toaster() }}
+{% endblock %}

@@ -1,0 +1,186 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, input, switch, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Configurações de assembleias{% endblock %}
+
+{% set active_link = "/administracao/assembleias" %}
+
+{% macro numero(id, valor, minimo=0, passo=1) %}
+{{ input(type="number", value=valor, attrs={"id": id, "min": minimo|string, "step": passo|string, "inputmode": "numeric"}) }}
+{% endmacro %}
+
+{% block page_header %}
+<div class="asm-cabecalho">
+	<div class="flex flex-col gap-2 max-w-3xl">
+		<a class="text-sm text-muted-foreground" href="/administracao/assembleias">{{ lucide_icon("arrow-left", size="xs") }} Assembleias</a>
+		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">Configurações de assembleias</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">
+			Os padrões que cada assembleia nova copia. Mudar aqui não altera as assembleias já criadas.
+		</p>
+	</div>
+</div>
+{% endblock %}
+
+{% block main %}
+{% include "gris/templates/includes/assembleias_comum.html" %}
+<div class="asm-pagina asm-config" data-config="{{ config_json | tojson | forceescape }}">
+
+	{% call card(attrs={"class": "asm-bloco"}) %}
+	<section>
+		<h2 class="asm-bloco__titulo">Edital de convocação</h2>
+		<div class="asm-campos">
+			{% call field(label="Antecedência mínima (dias)", hint="O estatuto exige 30 dias. Os lembretes à Diretoria contam até esta data.") %}
+				{{ numero("cfg-dias-limite", config.dias_limite_edital, 1) }}
+			{% endcall %}
+			{% call field(label="Local padrão", hint="Sugerido ao criar uma assembleia.") %}
+				{{ input(value=(config.local_padrao | e), attrs={"id": "cfg-local", "maxlength": "140"}) }}
+			{% endcall %}
+			{% call field(label="Cidade", hint="Usada no fecho do edital e na ata.") %}
+				{{ input(value=(config.cidade | e), attrs={"id": "cfg-cidade", "maxlength": "80"}) }}
+			{% endcall %}
+			{% call field(label="Grupo da Diretoria no WhatsApp", hint=(grupo_erro or "Recebe os lembretes do prazo do edital.")) %}
+				{{ select(id="cfg-grupo", items=grupo_items, selected=config.grupo_diretoria_whatsapp or "") }}
+			{% endcall %}
+		</div>
+		{% call field(label="Texto antes da pauta") %}
+			{{ textarea(value=(config.texto_topo_edital | e), attrs={"id": "cfg-topo", "rows": "7", "class": "asm-textarea-alta"}) }}
+		{% endcall %}
+		{% call field(label="Texto depois da pauta") %}
+			{{ textarea(value=(config.texto_rodape_edital | e), attrs={"id": "cfg-rodape", "rows": "7", "class": "asm-textarea-alta"}) }}
+		{% endcall %}
+		<p class="asm-bloco__descricao">
+			Variáveis aceitas nos textos, nos títulos da pauta e no modelo de ata:
+			{% for v in variaveis %}<code>{{ "{" ~ v ~ "}" }}</code>{{ ", " if not loop.last else "." }}{% endfor %}
+			Use <code>**negrito**</code> e linhas começando com <code>- </code> para listas.
+		</p>
+	</section>
+	{% endcall %}
+
+	{% for chave, titulo in [("pauta_ordinaria", "Pauta padrão — reunião ordinária"), ("pauta_extraordinaria", "Pauta padrão — reunião extraordinária")] %}
+	{% call card(attrs={"class": "asm-bloco"}) %}
+	<section>
+		<h2 class="asm-bloco__titulo">{{ titulo }}</h2>
+		<p class="asm-bloco__descricao">
+			A finalidade liga o item aos formulários de candidatura, ao checklist e às orientações de condução.
+			Sem o item de eleição da diretoria, a assembleia não abre chapas nem os passos de cartório e banco.
+		</p>
+		<div data-pauta="{{ chave }}"></div>
+		<div>
+			<button type="button" class="btn-sm-outline" data-adicionar-item="{{ chave }}">
+				{{ lucide_icon("plus", size="sm") }}<span>Adicionar item</span>
+			</button>
+		</div>
+	</section>
+	{% endcall %}
+	{% endfor %}
+
+	{% call card(attrs={"class": "asm-bloco"}) %}
+	<section>
+		<h2 class="asm-bloco__titulo">Orientações gerais de condução</h2>
+		<p class="asm-bloco__descricao">Aparecem no topo da aba Auxílio para condução de toda assembleia.</p>
+		{{ textarea(value=(config.orientacoes_gerais | e), attrs={"id": "cfg-orientacoes", "rows": "10", "class": "asm-textarea-alta", "aria-label": "Orientações gerais"}) }}
+	</section>
+	{% endcall %}
+
+	{% call card(attrs={"class": "asm-bloco"}) %}
+	<section>
+		<h2 class="asm-bloco__titulo">Quem vota</h2>
+		<p class="asm-bloco__descricao">
+			O padrão segue o art. 9º do estatuto: beneficiários a partir de 16 anos; de 6,5 a 15 anos,
+			representados por um responsável legal; demais associados com registro ativo.
+		</p>
+		<div class="asm-campos">
+			<div class="flex flex-col gap-3">
+				{{ switch(checked=config.voto_escotistas, label="Escotistas", attrs={"id": "cfg-voto-escotistas"}) }}
+				{{ switch(checked=config.voto_dirigentes, label="Dirigentes", attrs={"id": "cfg-voto-dirigentes"}) }}
+				{{ switch(checked=config.voto_demais_associados, label="Demais associados (contribuintes, colaboradores e outras categorias adultas)", attrs={"id": "cfg-voto-demais"}) }}
+				{{ switch(checked=config.exigir_registro_ativo, label="Exigir registro ativo na data da assembleia", attrs={"id": "cfg-registro-ativo"}) }}
+			</div>
+			<div class="flex flex-col gap-3">
+				{{ switch(checked=config.voto_jovens, label="Jovens votam", attrs={"id": "cfg-voto-jovens"}) }}
+				{% call field(label="A partir de (anos)") %}
+					{{ numero("cfg-idade-voto", config.idade_minima_voto_jovem, 1) }}
+				{% endcall %}
+				{{ switch(checked=config.voto_representado_por_responsavel, label="Responsável legal representa o jovem mais novo", attrs={"id": "cfg-representacao"}) }}
+				{% call field(label="Representação a partir de (anos)", hint="Aceita meio ano: 6,5 é seis anos e meio. Abaixo disso o jovem não tem voto nem representação.") %}
+					{{ input(type="number", value=idade_representacao_anos, attrs={"id": "cfg-idade-representacao", "min": "0", "step": "0.5"}) }}
+				{% endcall %}
+			</div>
+			<div class="flex flex-col gap-3">
+				<p class="asm-bloco__descricao">
+					Voto por equipe: cada matilha ou patrulha ganha uma linha de representante, além das linhas dos jovens.
+					O estatuto não prevê esse voto.
+				</p>
+				{{ switch(checked=config.voto_por_matilha, label="Uma linha por matilha (Lobinho)", attrs={"id": "cfg-matilha"}) }}
+				{{ switch(checked=config.voto_por_patrulha_escoteiro, label="Uma linha por patrulha (Escoteiro)", attrs={"id": "cfg-patrulha-escoteiro"}) }}
+				{{ switch(checked=config.voto_por_patrulha_senior, label="Uma linha por patrulha (Sênior)", attrs={"id": "cfg-patrulha-senior"}) }}
+			</div>
+		</div>
+	</section>
+	{% endcall %}
+
+	{% call card(attrs={"class": "asm-bloco"}) %}
+	<section>
+		<h2 class="asm-bloco__titulo">Prazos de inscrição</h2>
+		<p class="asm-bloco__descricao">
+			Contados até a primeira convocação. O estatuto fixa 8 dias para diretoria e comissão fiscal,
+			1 hora para delegados e 2 horas para assuntos gerais.
+		</p>
+		<div class="asm-campos">
+			{% for chave, rotulo in prazos %}
+			{% call field(label=rotulo) %}
+				<div class="asm-prazo">
+					{{ select(id="cfg-prazo-" ~ chave ~ "-unidade", items=unidade_items, selected=config["prazo_" ~ chave ~ "_unidade"] or "Sem limite") }}
+					{{ numero("cfg-prazo-" ~ chave ~ "-valor", config["prazo_" ~ chave ~ "_valor"] or 0) }}
+				</div>
+			{% endcall %}
+			{% endfor %}
+		</div>
+		{{ switch(checked=config.manter_aberto_sem_candidatos, label="Manter o formulário aberto até a assembleia quando faltar candidato (art. 9, § 5º)", attrs={"id": "cfg-manter-aberto"}) }}
+	</section>
+	{% endcall %}
+
+	{% call card(attrs={"class": "asm-bloco"}) %}
+	<section>
+		<h2 class="asm-bloco__titulo">Vagas</h2>
+		<div class="asm-campos">
+			{% call field(label="Titulares da comissão fiscal") %}{{ numero("cfg-vagas-cf", config.vagas_comissao_fiscal) }}{% endcall %}
+			{% call field(label="Suplentes da comissão fiscal") %}{{ numero("cfg-suplentes-cf", config.suplentes_comissao_fiscal) }}{% endcall %}
+			{% call field(label="Associados por vaga de delegado", hint="Uma vaga para cada fração deste número de associados com registro ativo.") %}{{ numero("cfg-por-delegado", config.associados_por_delegado, 1) }}{% endcall %}
+		</div>
+	</section>
+	{% endcall %}
+
+	{% call card(attrs={"class": "asm-bloco"}) %}
+	<section>
+		<h2 class="asm-bloco__titulo">Materiais do dia</h2>
+		<ul class="asm-materiais" id="cfg-materiais"></ul>
+		<div class="asm-adicionar">
+			{{ input(attrs={"id": "cfg-novo-material", "placeholder": "Novo material", "maxlength": "140"}) }}
+			<button type="button" class="btn-sm-outline" id="cfg-adicionar-material">{{ lucide_icon("plus", size="sm") }}<span>Adicionar</span></button>
+		</div>
+	</section>
+	{% endcall %}
+
+	{% call card(attrs={"class": "asm-bloco"}) %}
+	<section>
+		<h2 class="asm-bloco__titulo">Modelo de ata</h2>
+		<p class="asm-bloco__descricao">
+			Base da geração da ata por IA. Os marcadores <code>[ENTRE COLCHETES]</code> são preenchidos com os dados
+			da assembleia e as anotações do secretário; o que faltar fica como <code>[A CONFIRMAR: …]</code>.
+		</p>
+		{{ textarea(value=(config.modelo_ata | e), attrs={"id": "cfg-modelo-ata", "rows": "16", "class": "asm-textarea-alta", "aria-label": "Modelo de ata"}) }}
+	</section>
+	{% endcall %}
+
+	<div class="asm-barra-salvar">
+		<a class="btn-outline" href="/administracao/assembleias">Voltar</a>
+		<button type="button" class="btn-primary" id="cfg-salvar">{{ lucide_icon("save", size="sm") }}<span>Salvar configurações</span></button>
+	</div>
+</div>
+
+{{ toaster() }}
+{% endblock %}

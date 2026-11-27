@@ -139,6 +139,7 @@ SIDEBAR_STRUCTURE: list[dict[str, object]] = [
 			{"label": "Unidades Organizacionais", "path": "/administracao/unidades_organizacionais"},
 			{"label": "Funções", "path": "/administracao/funcoes"},
 			{"label": "Documentos", "path": "/administracao/transparencia"},
+			{"label": "Assembleias", "path": "/administracao/assembleias"},
 		],
 	},
 	{
@@ -194,6 +195,7 @@ SIDEBAR_ICON_MAP: dict[str, str] = {
 	"/administracao/unidades_organizacionais": "network",
 	"/administracao/funcoes": "briefcase",
 	"/administracao/transparencia": "folder-open",
+	"/administracao/assembleias": "landmark",
 	"/captacao/acompanhamento": "square-kanban",
 	"/captacao/nova_ideia": "lightbulb",
 	"/captacao/documentos": "file-check",
@@ -237,6 +239,10 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/administracao/funcoes": ["All"],
 	# Esta não: mostra o que ainda não foi publicado e só serve para editar.
 	"/administracao/transparencia": ["Gestor da UEL"],
+	# Assembleias: o papel próprio e a gestão da UEL. Os endpoints conferem de novo.
+	"/administracao/assembleias": ["Gestor de Assembleias", "Gestor da UEL"],
+	"/administracao/assembleias/configuracoes": ["Gestor de Assembleias", "Gestor da UEL"],
+	"/administracao/assembleias/assembleia": ["Gestor de Assembleias", "Gestor da UEL"],
 	# Captação é aberta a quem está logado: qualquer associado ou responsável propõe
 	# uma ideia. O que cada um vê e decide sai da lotação, nos endpoints.
 	"/captacao": ["All"],

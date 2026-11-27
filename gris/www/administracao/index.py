@@ -1,5 +1,6 @@
 import frappe
 
+from gris.api.assembleias.permissoes import pode_gerenciar_assembleias
 from gris.api.portal_access import enrich_context, user_has_access
 from gris.api.portal_cache_utils import get_uel_cached
 
@@ -21,4 +22,5 @@ def get_context(context):
 	context.active_link = "/administracao"
 	# O índice é aberto a todos; o card da transparência só aparece para quem abre a página.
 	context.pode_transparencia = user_has_access("/administracao/transparencia")
+	context.pode_assembleias = pode_gerenciar_assembleias()
 	return context

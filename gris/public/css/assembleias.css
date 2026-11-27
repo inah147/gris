@@ -1,0 +1,317 @@
+/* Páginas de assembleias: lista, configurações, assembleia e formulários. */
+
+/* --- Cabeçalho com ações à direita --- */
+.asm-cabecalho {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 4);
+	flex-wrap: wrap;
+}
+
+.asm-cabecalho > :first-child {
+	flex: 1 1 24rem;
+	min-width: 0;
+}
+
+.asm-cabecalho__acoes {
+	display: flex;
+	gap: calc(var(--spacing) * 2);
+	margin-left: auto;
+	flex-wrap: wrap;
+}
+
+/* --- Lista --- */
+.asm-lista {
+	margin-top: calc(var(--spacing) * 6);
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 8);
+}
+
+.asm-secao__titulo {
+	margin: 0 0 calc(var(--spacing) * 3);
+	font-size: 1.125rem;
+	font-weight: 600;
+}
+
+.asm-secao__vazio {
+	margin: 0;
+	color: var(--muted-foreground);
+}
+
+.asm-grade {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+	gap: calc(var(--spacing) * 4);
+}
+
+.asm-card {
+	gap: calc(var(--spacing) * 3);
+	padding: calc(var(--spacing) * 5);
+	color: inherit;
+	text-decoration: none;
+	transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+/* O .card do Basecoat dá recuo lateral aos filhos; aqui o padding é do próprio card. */
+.asm-card > * {
+	padding-inline: 0;
+}
+
+.asm-card:hover,
+.asm-card:focus-visible {
+	border-color: var(--primary);
+	box-shadow: 0 0 0 1px var(--primary);
+}
+
+.asm-card__topo {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: calc(var(--spacing) * 2);
+}
+
+.asm-card__data {
+	display: flex;
+	flex-direction: column;
+}
+
+.asm-card__dia {
+	font-size: 1.125rem;
+	font-weight: 600;
+}
+
+.asm-card__tipo,
+.asm-card__linha,
+.asm-card__rodape {
+	color: var(--muted-foreground);
+	font-size: 0.875rem;
+}
+
+.asm-card__linha {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.375rem;
+	margin: 0;
+}
+
+.asm-card__corpo {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.asm-card__rodape {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 3);
+	padding-top: calc(var(--spacing) * 3);
+	border-top: 1px solid var(--border);
+}
+
+.asm-card__rodape > span {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+}
+
+/* --- Dialogs --- */
+.asm-form {
+	display: flex;
+	flex-direction: column;
+	gap: 0.875rem;
+}
+
+/* Calendário na top layer, acima do dialog (assembleias_comum.js). O navegador dá
+   `inset: 0; margin: auto` a todo [popover], o que o centralizaria na tela. */
+.asm-dialog .datepicker-popover[popover] {
+	position: fixed;
+	inset: auto;
+	margin: 0;
+	transform: none;
+}
+
+/* --- Configurações e abas --- */
+.asm-pagina {
+	margin-top: calc(var(--spacing) * 6);
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 6);
+}
+
+.asm-bloco > section {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 4);
+}
+
+.asm-bloco__titulo {
+	margin: 0;
+	font-size: 1.0625rem;
+	font-weight: 600;
+}
+
+.asm-bloco__descricao {
+	margin: 0;
+	color: var(--muted-foreground);
+	font-size: 0.875rem;
+}
+
+.asm-campos {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+	gap: calc(var(--spacing) * 4);
+}
+
+.asm-prazo {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 6rem;
+	gap: calc(var(--spacing) * 2);
+	align-items: end;
+}
+
+.asm-prazo .select,
+.asm-prazo .select > button {
+	width: 100%;
+}
+
+.asm-pauta__linha .textarea {
+	min-height: 2.5rem;
+	field-sizing: content;
+}
+
+.asm-textarea-alta {
+	min-height: 9rem;
+}
+
+.asm-pauta {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 3);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.asm-pauta__item {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	padding: calc(var(--spacing) * 3);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+}
+
+.asm-pauta__linha {
+	display: grid;
+	grid-template-columns: 2rem minmax(0, 1fr) auto;
+	gap: calc(var(--spacing) * 2);
+	align-items: start;
+}
+
+.asm-pauta__numero {
+	padding-top: 0.5rem;
+	font-weight: 600;
+	color: var(--muted-foreground);
+	font-variant-numeric: tabular-nums;
+}
+
+.asm-pauta__acoes {
+	display: flex;
+	gap: 0.25rem;
+}
+
+.asm-pauta__opcoes {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: calc(var(--spacing) * 4);
+	padding-left: 2.5rem;
+}
+
+.asm-pauta__opcoes .select {
+	min-width: 14rem;
+}
+
+.asm-pauta__orientacao {
+	padding-left: 2.5rem;
+}
+
+.asm-pauta__orientacao summary {
+	cursor: pointer;
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+}
+
+.asm-materiais {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 2);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.asm-materiais li {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+.asm-adicionar {
+	display: flex;
+	gap: calc(var(--spacing) * 2);
+	flex-wrap: wrap;
+}
+
+.asm-adicionar .input {
+	flex: 1 1 14rem;
+}
+
+.asm-barra-salvar {
+	position: sticky;
+	bottom: 0;
+	display: flex;
+	justify-content: flex-end;
+	gap: calc(var(--spacing) * 2);
+	padding: calc(var(--spacing) * 3) 0;
+	background: var(--background);
+	border-top: 1px solid var(--border);
+	z-index: 5;
+}
+
+@media (max-width: 1023px) {
+	/* Acima da barra inferior do portal (templates/includes/bottom_bar.html). */
+	.asm-barra-salvar {
+		bottom: calc(var(--bottom-bar-height, 68px) + 24px);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		padding-inline: calc(var(--spacing) * 3);
+		box-shadow: 0 4px 12px color-mix(in oklch, var(--foreground) 8%, transparent);
+	}
+}
+
+@media (max-width: 640px) {
+	.asm-cabecalho__acoes {
+		margin-left: 0;
+		width: 100%;
+	}
+
+	.asm-cabecalho__acoes > * {
+		flex: 1 1 auto;
+	}
+
+	.asm-pauta__opcoes,
+	.asm-pauta__orientacao {
+		padding-left: 0;
+	}
+
+	.asm-pauta__linha {
+		grid-template-columns: 1.5rem minmax(0, 1fr);
+	}
+
+	.asm-pauta__acoes {
+		grid-column: 2;
+	}
+}

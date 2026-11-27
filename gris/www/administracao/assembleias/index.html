@@ -1,0 +1,120 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import empty, field, input %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Assembleias{% endblock %}
+
+{% set active_link = "/administracao/assembleias" %}
+
+{# index.css/.js são injetados automaticamente pelo Frappe (co-localizados). #}
+
+{% macro card_da_assembleia(a) %}
+<a class="card asm-card" href="/administracao/assembleias/assembleia?name={{ a.name | urlencode }}">
+	<header class="asm-card__topo">
+		<div class="asm-card__data">
+			<span class="asm-card__dia" data-data="{{ a.data | e }}"></span>
+			<span class="asm-card__tipo">Reunião {{ a.tipo | lower | e }}</span>
+		</div>
+		{% if a.edital == "publicado" %}
+			<span class="badge-secondary">{{ lucide_icon("circle-check", size="xs") }} Edital publicado</span>
+		{% elif a.edital == "vencido" %}
+			<span class="badge-destructive">{{ lucide_icon("triangle-alert", size="xs") }} Prazo do edital vencido</span>
+		{% else %}
+			<span class="badge-outline" data-prazo="{{ a.prazo_edital | e }}">Edital em rascunho</span>
+		{% endif %}
+	</header>
+	<section class="asm-card__corpo">
+		<p class="asm-card__linha">{{ lucide_icon("clock", size="sm") }} <span>{{ a.hora | e }} em primeira convocação</span></p>
+		<p class="asm-card__linha">{{ lucide_icon("map-pin", size="sm") }} <span>{{ a.local | e }}</span></p>
+	</section>
+	<footer class="asm-card__rodape">
+		<span>{{ lucide_icon("users", size="sm") }} {{ a.candidaturas }} candidatura{{ "s" if a.candidaturas != 1 else "" }}</span>
+		<span>{{ lucide_icon("message-square", size="sm") }} {{ a.assuntos }} assunto{{ "s" if a.assuntos != 1 else "" }} gera{{ "is" if a.assuntos != 1 else "l" }}</span>
+	</footer>
+</a>
+{% endmacro %}
+
+{% block page_header %}
+<div class="asm-cabecalho">
+	<div class="flex flex-col gap-2 max-w-3xl">
+		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">Assembleias</h1>
+		<p class="m-0 text-base leading-relaxed text-muted-foreground">
+			As reuniões da Assembleia de Grupo: edital, lista de presença, ata, candidaturas e o roteiro para conduzir cada uma.
+		</p>
+	</div>
+	<div class="asm-cabecalho__acoes">
+		<a class="btn-outline" href="/administracao/assembleias/configuracoes">
+			{{ lucide_icon("settings", size="sm") }}
+			<span>Configurações</span>
+		</a>
+		<button type="button" class="btn-primary" data-nova-assembleia>
+			{{ lucide_icon("plus", size="sm") }}
+			<span>Nova assembleia</span>
+		</button>
+	</div>
+</div>
+{% endblock %}
+
+{% block main %}
+{% include "gris/templates/includes/assembleias_comum.html" %}
+<div class="asm-lista">
+	{% if not proximas and not realizadas %}
+		{{ empty(
+			title="Nenhuma assembleia cadastrada",
+			description="Crie a próxima reunião da Assembleia de Grupo. Ela já nasce com a pauta, os textos do edital e o checklist das configurações.",
+			image="/assets/gris/images/gris-character/gris-sad.png",
+			image_alt="Gris, o mascote, triste",
+			primary_action={"label": "Nova assembleia", "attrs": {"data-nova-assembleia": "1"}}
+		) }}
+	{% else %}
+		<section class="asm-secao" aria-labelledby="asm-proximas-titulo">
+			<h2 class="asm-secao__titulo" id="asm-proximas-titulo">Próximas</h2>
+			{% if proximas %}
+				<div class="asm-grade">
+					{% for a in proximas %}{{ card_da_assembleia(a) }}{% endfor %}
+				</div>
+			{% else %}
+				<p class="asm-secao__vazio">Nenhuma assembleia marcada.</p>
+			{% endif %}
+		</section>
+
+		{% if realizadas %}
+		<section class="asm-secao" aria-labelledby="asm-realizadas-titulo">
+			<h2 class="asm-secao__titulo" id="asm-realizadas-titulo">Já realizadas</h2>
+			<div class="asm-grade">
+				{% for a in realizadas %}{{ card_da_assembleia(a) }}{% endfor %}
+			</div>
+		</section>
+		{% endif %}
+	{% endif %}
+</div>
+
+{% call dialog(
+	id="dialog-nova-assembleia",
+	title="Nova assembleia",
+	description="A pauta, os textos do edital e o checklist vêm das configurações e podem ser ajustados depois.",
+	dialog_attrs={"class": "asm-dialog"},
+	footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-nova-assembleia">Cancelar</button><button type="button" class="btn-primary" id="btn-criar-assembleia">Criar</button>'
+) %}
+<div class="asm-form">
+	{% call field(label="Data") %}
+		{{ datepicker(id="nova-data", name="data", min=hoje, placeholder="Escolha a data", trigger_attrs={"class": "w-full"}) }}
+	{% endcall %}
+	{% call field(label="Tipo") %}
+		{{ select(id="nova-tipo", name="tipo", items=tipo_items, placeholder="Ordinária") }}
+	{% endcall %}
+	{% call field(label="Primeira convocação", hint="A segunda convocação fica meia hora depois, como manda o estatuto.") %}
+		{{ input(name="hora", type="time", value="14:30", attrs={"id": "nova-hora"}) }}
+	{% endcall %}
+	{% call field(label="Local") %}
+		{{ input(name="local", value=(local_padrao | e), attrs={"id": "nova-local", "maxlength": "140"}) }}
+	{% endcall %}
+</div>
+{% endcall %}
+
+{{ toaster() }}
+{% endblock %}

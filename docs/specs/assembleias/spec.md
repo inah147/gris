@@ -45,7 +45,7 @@ Gerenciar as assembleias pelo módulo **Administração** do portal:
 |---|---|
 | Lista | `/administracao/assembleias`: cards separados em próximas e já realizadas, com os botões "Nova assembleia" e "Configurações" |
 | Configurações | `/administracao/assembleias/configuracoes`: prazos, pautas padrão, orientações, materiais, regra de voto e textos. No Desk: o drive e a pasta raiz |
-| Assembleia | `/administracao/assembleias/assembleia?name=…` com 6 abas: Visão Geral, Edital de convocação, Lista de presença, Ata, Candidaturas e assuntos gerais, Auxílio para condução. Na Visão Geral, o botão de excluir |
+| Assembleia | `/administracao/assembleias/assembleia?name=…` em 4 etapas, na ordem em que a assembleia acontece: Edital, Inscrições, Sessão (preparar e conduzir) e Ata. O cabeçalho mostra o estado de cada etapa e o próximo passo; excluir, pasta no Drive e página pública ficam no menu ⋯ |
 | Formulários | Candidatura para mesa, delegado, diretoria (chapa) e comissão fiscal, e envio de assunto geral, só com login |
 | Página pública | `/assembleias/candidaturas?assembleia=…`: candidatos por cargo |
 | Documentos | Edital, lista de presença e ata gerados no Google Docs a partir do papel timbrado e exportados em PDF, na pasta da assembleia no Drive |
@@ -150,7 +150,7 @@ Cada critério de aceite (CA) tem um teste correspondente na
 
   Em seguida, a criação da pasta no Drive é enfileirada (RF-11), e a página da assembleia abre.
 - **CA-02.4** Já existir outra assembleia no mesmo dia é recusado, com mensagem.
-- **CA-02.5** "Excluir assembleia" fica na Visão Geral e pede confirmação. A confirmação lista o
+- **CA-02.5** "Excluir assembleia" fica no menu ⋯ do cabeçalho e pede confirmação. A confirmação lista o
   que será apagado: as candidaturas, as chapas e os assuntos gerais. A pasta do Drive não é
   apagada.
 - **CA-02.6** Com o edital publicado, a exclusão é recusada com "O edital já foi publicado. Para
@@ -227,25 +227,35 @@ Cada critério de aceite (CA) tem um teste correspondente na
 - **CA-04.7** O drive compartilhado, a pasta raiz e o interruptor das pastas ficam no Desk, em
   "Configurações de Assembleias". Pasta inválida ou fora do drive escolhido é recusada no save.
 
-### RF-05 — Visão Geral
+### RF-05 — Etapas e dados da assembleia
 
-- **CA-05.1** Os campos editáveis são:
-  - data, tipo e local;
-  - hora da primeira e da segunda convocação;
+- **CA-05.0** A página tem quatro etapas: **Edital**, **Inscrições**, **Sessão** e **Ata**. Cada
+  uma mostra uma linha de estado (ex.: "Prazo venceu em 05/11/2026", "5 abertas · 2 inscrições",
+  "Em 8 dias", "1 de 5 tarefas"). A página abre na etapa atual: Edital até a publicação,
+  Inscrições até a véspera, Sessão no dia e Ata depois. A etapa vai na URL (`#edital`,
+  `#inscricoes`, `#sessao`, `#ata`).
+- **CA-05.0a** Acima das etapas, o próximo passo aparece quando há algo a fazer (publicar o edital,
+  faltam candidatos, gerar a lista na última semana, a assembleia é hoje, finalizar a ata,
+  tarefas de depois), com um botão que leva ao lugar certo. Prazo vencido usa o tom de alerta.
+- **CA-05.0b** Tudo na página é salvo sozinho, numa fila só, com um indicador no cabeçalho. Mudar
+  data, tipo ou primeira convocação recarrega a página depois de salvar.
+- **CA-05.1** Os campos editáveis, cada um na sua etapa, são:
+  - data, tipo, local e hora da primeira e da segunda convocação (Edital);
+  - vagas de delegado (Inscrições);
   - responsável pelo credenciamento, num combobox de associados ativos com 18 anos ou mais e de
-    responsáveis;
-  - vagas de delegado.
+    responsáveis (Sessão, preparar).
 
-  Data e tipo ficam travados depois de o edital ser publicado.
+  Data, tipo e horários ficam travados depois de o edital ser publicado.
 - **CA-05.2** Trocar o tipo, enquanto o edital não for publicado, pergunta se a pauta deve ser
   trocada pela padrão do novo tipo.
-- **CA-05.3** O presidente e o secretário da mesa aparecem só para leitura. Eles são gravados na
-  aba Ata.
-- **CA-05.4** Cada formulário aparece com o link copiável, o estado (aberto, fechado ou "não
-  previsto na pauta") e o prazo calculado. Cada formulário só existe quando a pauta tem a
-  finalidade dele.
-- **CA-05.5** O botão "Página de candidaturas" abre a página pública.
-- **CA-05.6** O checklist é dividido em três fases:
+- **CA-05.3** O presidente e o secretário da mesa são gravados na Sessão (conduzir).
+- **CA-05.4** Na etapa Inscrições, cada formulário aparece com o link copiável, o estado (aberto,
+  fechado ou "não previsto na pauta") e o prazo calculado. Cada formulário só existe quando a
+  pauta tem a finalidade dele.
+- **CA-05.5** O menu ⋯ e a etapa Inscrições abrem a página pública.
+- **CA-05.6** O checklist é dividido em três fases, e cada tarefa aparece na etapa em que o
+  trabalho acontece: elaborar e divulgar no Edital; imprimir a lista, materiais e credenciamento
+  na Sessão (preparar); as de depois na Ata.
   - **Antes:**
     1. Elaborar e aprovar o edital.
     2. Divulgar o edital até o prazo, com a data limite exibida.
@@ -260,7 +270,8 @@ Cada critério de aceite (CA) tem um teste correspondente na
        alterar os dados na Receita Federal.
 - **CA-05.7** "Divulgar o edital" é marcado sozinho quando o edital é publicado e não pode ser
   desmarcado à mão. Os demais itens são marcados à mão e guardam quem marcou e quando.
-- **CA-05.8** A Visão Geral mostra o link da pasta no Drive, ou o motivo de ela não existir.
+- **CA-05.8** O menu ⋯ tem o link da pasta no Drive ou, sem ela, "Criar pasta no Drive", com o
+  motivo de ela não existir.
 
 ### RF-06 — Edital de convocação
 
@@ -268,7 +279,7 @@ Cada critério de aceite (CA) tem um teste correspondente na
   item tem votação e escolher a finalidade. A numeração acompanha a ordem.
 - **CA-06.2** Os textos de antes e de depois da pauta são editáveis e aceitam as variáveis de
   [textos.md](textos.md#1-variáveis). Uma pré-visualização mostra o texto resolvido.
-- **CA-06.3** Ficam também na aba a data de publicação e a opção "incluir links dos formulários".
+- **CA-06.3** Ficam também na etapa a data de publicação e a opção "incluir links dos formulários".
   Com a opção marcada, o documento ganha, entre a pauta e o texto final, uma frase de abertura e
   uma lista com um link clicável para cada formulário previsto (ver
   [textos.md](textos.md#lista-de-formulários-gerada)).
@@ -325,13 +336,13 @@ Cada critério de aceite (CA) tem um teste correspondente na
 
 ### RF-08 — Ata
 
-- **CA-08.1** Os campos da aba são:
+- **CA-08.1** Os campos da ata são (horários, presentes, mesa e anotações ficam na Sessão, em conduzir; o texto, na Ata):
   - hora de início e de término;
   - quantidade de presentes, pela lista assinada;
   - presidente e secretário da mesa, num combobox de associados ativos com 16 anos ou mais e de
     responsáveis;
   - anotações do secretário.
-- **CA-08.2** Todo campo da aba é salvo sozinho cerca de 1 s depois da última alteração. Um
+- **CA-08.2** Todo campo é salvo sozinho cerca de 1 s depois da última alteração. Um
   indicador mostra "Salvando…", "Salvo às HH:MM" ou "Não foi possível salvar — tentar de novo".
   Sair da página com alteração pendente pede confirmação.
 - **CA-08.3** Se outra aba ou outra pessoa salvou a ata depois do carregamento, o salvamento é
@@ -361,9 +372,9 @@ Cada critério de aceite (CA) tem um teste correspondente na
   com as linhas de assinatura do presidente da assembleia, do secretário e do diretor presidente.
   Com o texto vazio, ou com marcador `[A CONFIRMAR` restante, o botão avisa e pede confirmação.
 
-### RF-09 — Candidaturas e assuntos gerais (aba)
+### RF-09 — Candidaturas e assuntos gerais (etapa Inscrições)
 
-- **CA-09.1** A aba lista as candidaturas ativas de cada cargo (presidente da mesa, secretário da
+- **CA-09.1** A etapa lista as candidaturas ativas de cada cargo (presidente da mesa, secretário da
   mesa, delegado, comissão fiscal), com nome, registro escoteiro, motivação e biografia.
   Candidatos sem registro ativo aparecem com o aviso "registro a regularizar até a posse".
 - **CA-09.2** Cada chapa da diretoria aparece com quem a inscreveu e, para cada função eleita, o
@@ -374,7 +385,7 @@ Cada critério de aceite (CA) tem um teste correspondente na
   (impugnação, desistência). Ela some da página pública e continua no histórico.
 - **CA-09.5** O botão "Página de candidaturas" abre a página pública.
 
-### RF-10 — Auxílio para condução
+### RF-10 — Roteiro de condução (etapa Sessão, conduzir)
 
 - **CA-10.1** O topo mostra as orientações gerais (tipos de votação e lembretes do estatuto).
 - **CA-10.2** Em seguida vêm os itens da pauta, em ordem, cada um com:

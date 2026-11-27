@@ -355,3 +355,127 @@ class TestFormularios(_Base):
 		self.assertEqual([f["chave"] for f in lista], list(formularios.ORDEM_DOS_FORMULARIOS))
 		self.assertTrue(all(f["previsto"] for f in lista))
 		self.assertTrue(lista[0]["aberto"])
+
+
+class TestSalvamentoAutomaticoDaPagina(_Base):
+	"""A página grava tudo por `salvar_campos`: dados da convocação e edital inteiro."""
+
+	def _salvar(self, doc, campos):
+		return pagina.salvar_campos(doc.name, json.dumps(campos), str(doc.modified))
+
+	def test_dados_parciais_mudam_so_o_que_veio(self):
+		doc = self._doc()
+		data, tipo = str(doc.data), doc.tipo
+		resposta = self._salvar(doc, {"dados": {"local": "Sede nova", "vagas_delegados": 5}})
+		self.assertFalse(resposta["recarregar"])
+		self.assertEqual(resposta["pagina"]["local"], "Sede nova")
+		self.assertEqual(resposta["pagina"]["vagas_delegados"], 5)
+		doc.reload()
+		self.assertEqual((str(doc.data), doc.tipo), (data, tipo))
+
+	def test_data_tipo_e_primeira_convocacao_pedem_recarregar(self):
+		doc = self._doc()
+		resposta = self._salvar(doc, {"dados": {"data": str(add_days(doc.data, 1))}})
+		self.assertTrue(resposta["recarregar"])
+		doc.reload()
+		resposta = self._salvar(doc, {"dados": {"hora_primeira": "09:00"}})
+		self.assertTrue(resposta["recarregar"])
+		doc.reload()
+		resposta = self._salvar(doc, {"dados": {"hora_segunda": "09:40"}})
+		self.assertFalse(resposta["recarregar"])
+
+	def test_trocar_tipo_com_pauta_padrao(self):
+		doc = self._doc()
+		resposta = self._salvar(doc, {"dados": {"tipo": c.TIPO_EXTRAORDINARIA, "trocar_pauta": 1}})
+		self.assertTrue(resposta["recarregar"])
+		self.assertEqual(len(resposta["pagina"]["pauta"]), len(configuracoes().pauta_extraordinaria))
+
+	def test_local_vazio_e_recusado(self):
+		doc = self._doc()
+		with self.assertRaisesRegex(frappe.ValidationError, "local"):
+			self._salvar(doc, {"dados": {"local": "  "}})
+
+	def test_edital_mantem_as_linhas_da_pauta(self):
+		"""Reordenar e editar não troca o `name` das linhas nem perde o concluído."""
+		doc = self._doc()
+		primeiro = doc.pauta[0].name
+		self._salvar(doc, {"pauta": {primeiro: {"concluido": 1}}})
+		doc.reload()
+		nomes = [i.name for i in doc.pauta]
+		pauta = [
+			{"name": i.name, "titulo": i.titulo, "tem_votacao": i.tem_votacao, "finalidade": i.finalidade}
+			for i in reversed(doc.pauta)
+		]
+		pauta[0]["titulo"] = "Título editado"
+		resposta = self._salvar(doc, {"edital": json.loads(self._payload_do_edital(doc, pauta=pauta))})
+		nomes_depois = [i["name"] for i in resposta["pagina"]["pauta"]]
+		self.assertEqual(nomes_depois, list(reversed(nomes)))
+		self.assertEqual(resposta["pagina"]["pauta"][0]["titulo"], "Título editado")
+		self.assertEqual(resposta["pagina"]["pauta"][-1]["concluido"], 1)
+		doc.reload()
+		self.assertEqual([i.idx for i in doc.pauta], list(range(1, len(nomes) + 1)))
+
+	def test_item_novo_ganha_nome_e_nao_duplica(self):
+		doc = self._doc()
+		antes = len(doc.pauta)
+		pauta = [{"name": i.name, "titulo": i.titulo, "finalidade": i.finalidade} for i in doc.pauta]
+		pauta.append({"titulo": "Prestação de contas da festa"})
+		resposta = self._salvar(doc, {"edital": json.loads(self._payload_do_edital(doc, pauta=pauta))})
+		novo = resposta["pagina"]["pauta"][-1]
+		self.assertTrue(novo["name"])
+		doc.reload()
+		pauta[-1]["name"] = novo["name"]
+		resposta = self._salvar(doc, {"edital": json.loads(self._payload_do_edital(doc, pauta=pauta))})
+		self.assertEqual(len(resposta["pagina"]["pauta"]), antes + 1)
+		self.assertEqual(resposta["pagina"]["pauta"][-1]["name"], novo["name"])
+
+	def test_edital_publicado_recusa_o_salvamento_automatico(self):
+		doc = self._doc()
+		pagina.marcar_edital_publicado(doc.name)
+		doc.reload()
+		with self.assertRaisesRegex(frappe.ValidationError, "já foi publicado"):
+			self._salvar(doc, {"edital": json.loads(self._payload_do_edital(doc))})
+
+
+class TestEtapas(_Base):
+	def _etapas(self, doc, hoje):
+		dados = pagina.dados_da_pagina(doc)
+		return pagina.etapas_da_assembleia(
+			doc, configuracoes(), dados["formularios"], dados["checklist"], hoje=hoje
+		)
+
+	def _estado(self, etapas, chave):
+		return next(i for i in etapas["itens"] if i["chave"] == chave)
+
+	def test_rascunho_no_prazo_fica_no_edital(self):
+		doc = self._doc(dias=90)
+		etapas = self._etapas(doc, getdate())
+		self.assertEqual(etapas["atual"], "edital")
+		self.assertEqual(self._estado(etapas, "edital")["estado"], "pendente")
+		self.assertEqual(etapas["proximo"]["etapa"], "edital")
+		self.assertEqual(etapas["proximo"]["tom"], "info")
+
+	def test_prazo_vencido_vira_alerta(self):
+		doc = self._doc(dias=90)
+		etapas = self._etapas(doc, add_days(doc.data, -20))
+		self.assertEqual(self._estado(etapas, "edital")["estado"], "alerta")
+		self.assertEqual(etapas["proximo"]["tom"], "alerta")
+
+	def test_publicado_passa_para_inscricoes_e_depois_sessao_e_ata(self):
+		doc = self._doc(dias=90)
+		pagina.marcar_edital_publicado(doc.name)
+		doc.reload()
+		self.assertEqual(self._etapas(doc, getdate())["atual"], "inscricoes")
+		self.assertEqual(self._estado(self._etapas(doc, getdate()), "edital")["estado"], "feito")
+
+		no_dia = self._etapas(doc, doc.data)
+		self.assertEqual(no_dia["atual"], "sessao")
+		self.assertEqual(no_dia["proximo"]["etapa"], "sessao")
+
+		depois = self._etapas(doc, add_days(doc.data, 3))
+		self.assertEqual(depois["atual"], "ata")
+		self.assertEqual(depois["proximo"]["titulo"], "Finalize a ata")
+		self.assertEqual(self._estado(depois, "sessao")["estado"], "feito")
+
+	def test_data_por_extenso(self):
+		self.assertEqual(pagina.data_por_extenso("2026-12-05"), "sábado, 5 de dezembro de 2026")

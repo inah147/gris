@@ -271,8 +271,10 @@
 	 * `opcoes.finalidades`: [{label, value}] com a opção vazia primeiro.
 	 * `opcoes.somenteLeitura`: mostra a pauta sem controles (edital publicado).
 	 * `opcoes.orientacaoPadrao(finalidade)`: texto sugerido para um item novo.
-	 * `opcoes.semOrientacao`: esconde a orientação (na assembleia ela é editada na Condução).
-	 * Devolve `{ itens() }`, que lê o estado atual do DOM.
+	 * `opcoes.semOrientacao`: esconde a orientação (na assembleia ela é editada na Sessão).
+	 * `opcoes.aoMudar()`: chamado a cada mudança (texto, votação, finalidade, ordem, inclusão
+	 * e exclusão), para o salvamento automático.
+	 * Devolve `{ itens(), adicionar(), sincronizarNomes(pauta) }`; `itens()` lê o DOM.
 	 */
 	function criarEditorDePauta(container, itensIniciais, opcoes) {
 		const config = opcoes || {};
@@ -347,6 +349,10 @@
 
 		(itensIniciais || []).forEach(adicionar);
 
+		const avisar = () => {
+			if (config.aoMudar) config.aoMudar();
+		};
+
 		if (!config.somenteLeitura) {
 			lista.addEventListener("click", (evento) => {
 				const botao = evento.target.closest("[data-acao]");
@@ -360,7 +366,9 @@
 					lista.insertBefore(item.nextElementSibling, item);
 				}
 				renumerar();
+				avisar();
 			});
+			lista.addEventListener("input", avisar);
 			// Escolher a finalidade num item sem orientação sugere a orientação dela.
 			lista.addEventListener("change", (evento) => {
 				const select = evento.target.closest(".select");
@@ -372,6 +380,8 @@
 					orientacao.value = config.orientacaoPadrao(valor) || "";
 				}
 			});
+			// Votação (switch) e finalidade (select) avisam pelo `change`.
+			lista.addEventListener("change", avisar);
 		}
 
 		function itens() {
@@ -389,12 +399,32 @@
 			});
 		}
 
+		/**
+		 * Dá às linhas novas o `name` que o servidor criou, para a próxima gravação
+		 * reconhecê-las. Linhas que já têm nome ficam como estão; as novas recebem, na
+		 * ordem, os nomes da resposta que a tela ainda não conhece. O servidor ignora
+		 * itens sem título, então eles também ficam de fora aqui.
+		 */
+		function sincronizarNomes(pauta) {
+			const linhas = Array.from(lista.querySelectorAll("[data-item]")).filter((li) =>
+				(li.querySelector('[data-campo="titulo"]')?.value || "").trim()
+			);
+			const conhecidos = new Set(linhas.map((li) => li.dataset.name).filter(Boolean));
+			const novos = (pauta || []).map((item) => item.name).filter((n) => !conhecidos.has(n));
+			linhas.forEach((li) => {
+				if (!li.dataset.name && novos.length) li.dataset.name = novos.shift();
+			});
+		}
+
 		return {
 			itens,
-			adicionar: (item) =>
+			sincronizarNomes,
+			adicionar: (item) => {
 				adicionar(
 					item || { titulo: "", tem_votacao: 0, finalidade: "", orientacao_conducao: "" }
-				),
+				);
+				avisar();
+			},
 		};
 	}
 
@@ -426,6 +456,7 @@
 		const indicadores = new Set();
 		let timer = null;
 		let gravando = false;
+		let emAndamento = Promise.resolve();
 		let conflito = false;
 
 		function indicar(texto, classe) {
@@ -435,12 +466,18 @@
 			});
 		}
 
-		async function gravar() {
+		function gravar() {
 			timer = null;
-			if (gravando || conflito || !Object.keys(pendente).length) return;
+			if (gravando || conflito || !Object.keys(pendente).length) return emAndamento;
+			emAndamento = gravarPendente();
+			return emAndamento;
+		}
+
+		async function gravarPendente() {
 			const campos = pendente;
 			pendente = {};
 			gravando = true;
+			let falhou = false;
 			indicar("Salvando…", "salvando");
 			try {
 				const resposta = await chamar(opcoes.metodo, {
@@ -461,13 +498,17 @@
 				indicar(`Salvo às ${resposta.salvo_em}`, "salvo");
 				if (opcoes.aoSalvar) opcoes.aoSalvar(resposta);
 			} catch (erro) {
-				// Devolve à fila para tentar de novo na próxima mudança ou no clique.
+				// Devolve à fila para tentar de novo na próxima mudança ou no clique no
+				// indicador. Sem nova tentativa sozinha: um texto inválido falharia sempre.
+				falhou = true;
 				pendente = mesclar(campos, pendente);
 				indicar("Não foi possível salvar — tentar de novo", "erro");
 				toast("error", erro.message);
 			} finally {
 				gravando = false;
-				if (Object.keys(pendente).length && !conflito) timer = setTimeout(gravar, 800);
+				if (Object.keys(pendente).length && !conflito && !falhou) {
+					timer = setTimeout(gravar, 800);
+				}
 			}
 		}
 
@@ -497,7 +538,25 @@
 			}
 		});
 
-		return { agendar, gravarAgora: gravar };
+		/** Grava o que estiver pendente e espera terminar, inclusive uma gravação já em
+		 * andamento. Antes de publicar, gerar PDF ou pedir a ata à IA. */
+		async function gravarAgora() {
+			clearTimeout(timer);
+			await emAndamento;
+			if (Object.keys(pendente).length) await gravar();
+			if (conflito) {
+				throw new Error(
+					"A assembleia foi alterada em outra janela. Recarregue a página para continuar."
+				);
+			}
+			if (Object.keys(pendente).length) {
+				throw new Error(
+					"Há alterações que não foram salvas. Corrija o que falta e tente de novo."
+				);
+			}
+		}
+
+		return { agendar, gravarAgora, temPendencia: () => !!Object.keys(pendente).length };
 	}
 
 	// Botões "Cancelar" dos dialogs: `data-dialog-cancel="<id do dialog>"`.

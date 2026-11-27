@@ -1,8 +1,9 @@
 {% extends "templates/web_sidebar_base.html" %}
-{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty, field, input, switch, textarea %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, field, input, switch, textarea %}
 {% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
 {% from "public/design_system/components/generated/datepicker.html.jinja" import datepicker %}
 {% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/dropdown-menu.html.jinja" import dropdown_menu %}
 {% from "public/design_system/components/generated/select.html.jinja" import select %}
 {% from "public/design_system/components/generated/tabs.html.jinja" import tabs %}
 {% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
@@ -11,23 +12,67 @@
 
 {% set active_link = "/administracao/assembleias" %}
 {% set publicado = dados.edital.publicado %}
+{% set etapas = dados.etapas %}
+{# No dia e depois, a Sessão abre na condução; antes, na preparação. #}
+{% set sessao_conduzir = etapas.atual in ("sessao", "ata") %}
+
+{# Botão de uma etapa no seletor: número (ou check), nome e o estado em uma linha. #}
+{% macro rotulo_etapa(item, numero) -%}
+<span class="asm-etapa__marca" aria-hidden="true">{% if item.estado == "feito" %}{{ lucide_icon("check", size="xs") }}{% else %}{{ numero }}{% endif %}</span>
+<span class="asm-etapa__texto">
+	<span class="asm-etapa__nome">{{ item.rotulo }}</span>
+	<span class="asm-etapa__estado" data-estado-etapa>{{ item.descricao | e }}</span>
+</span>
+{%- endmacro %}
+
+{# Tarefas do checklist que pertencem a uma etapa. A lista é desenhada no JS. #}
+{% macro tarefas(titulo, chaves, id=None) -%}
+<section class="asm-tarefas"{% if id %} id="{{ id }}"{% endif %} aria-label="{{ titulo }}">
+	<div class="asm-tarefas__topo">
+		<h2 class="asm-tarefas__titulo">{{ titulo }}</h2>
+		<span class="asm-tarefas__progresso" data-progresso></span>
+	</div>
+	<ul class="asm-tarefas__lista" data-tarefas="{{ chaves | join(',') }}"></ul>
+</section>
+{%- endmacro %}
 
 {% block page_header %}
 <div class="asm-cabecalho">
 	<div class="flex flex-col gap-2 max-w-3xl">
 		<a class="text-sm text-muted-foreground" href="/administracao/assembleias">{{ lucide_icon("arrow-left", size="xs") }} Assembleias</a>
-		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">{{ assembleia.titulo | e }}</h1>
-		<p class="m-0 text-base leading-relaxed text-muted-foreground">
-			{{ assembleia.local | e }} · primeira convocação às {{ dados.hora_primeira }}
+		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">Assembleia {{ assembleia.tipo | e }}</h1>
+		<p class="asm-cabecalho__sub">
+			<span>{{ lucide_icon("calendar", size="xs") }} {{ dados.data_extenso }}, às {{ dados.hora_primeira }}</span>
+			<span>{{ lucide_icon("map-pin", size="xs") }} {{ assembleia.local | e }}</span>
 		</p>
 	</div>
 	<div class="asm-cabecalho__acoes">
-		{% if not publicado %}
-		<button type="button" class="btn-outline" data-excluir-assembleia>
-			{{ lucide_icon("trash-2", size="sm") }}
-			<span>Excluir assembleia</span>
-		</button>
-		{% endif %}
+		<span class="asm-salvamento" data-salvamento="pagina" aria-live="polite"></span>
+		{% call dropdown_menu(
+			trigger=lucide_icon("ellipsis", size="sm"),
+			id="asm-mais",
+			trigger_attrs={"class": "btn-icon-outline", "aria-label": "Mais ações da assembleia"},
+			popover_attrs={"data-align": "end"}
+		) %}
+			<a role="menuitem" href="/assembleias/candidaturas?assembleia={{ assembleia.name | urlencode }}" target="_blank" rel="noopener">
+				{{ lucide_icon("external-link", size="sm") }} Página pública de candidaturas
+			</a>
+			{% if dados.pasta_drive_link %}
+			<a role="menuitem" href="{{ dados.pasta_drive_link | e }}" target="_blank" rel="noopener">
+				{{ lucide_icon("folder-open", size="sm") }} Pasta no Drive
+			</a>
+			{% else %}
+			<button type="button" role="menuitem" id="vg-criar-pasta" title="{{ (dados.pasta_drive_erro or 'A pasta ainda não foi criada.') | e }}">
+				{{ lucide_icon("folder-plus", size="sm") }} Criar pasta no Drive
+			</button>
+			{% endif %}
+			{% if not publicado %}
+			<hr role="separator">
+			<button type="button" role="menuitem" class="asm-menu__perigo" data-excluir-assembleia>
+				{{ lucide_icon("trash-2", size="sm") }} Excluir assembleia
+			</button>
+			{% endif %}
+		{% endcall %}
 	</div>
 </div>
 {% endblock %}
@@ -36,112 +81,46 @@
 {% include "gris/templates/includes/assembleias_comum.html" %}
 <script src="/assets/gris/design_system/js/components/toastui-editor.js?v={{ design_system_asset_version }}" defer></script>
 
-{# ───────────────────────────── Visão Geral ───────────────────────────── #}
-{% set painel_visao %}
+{# ───────────────────────────── 1. Edital ───────────────────────────── #}
+{% set painel_edital %}
 <div class="asm-aba">
+	{{ tarefas("Tarefas desta etapa", ["elaborar_edital", "divulgar_edital"]) }}
+
+	{% if publicado %}
+	<div class="alert">
+		{{ lucide_icon("lock", size="sm") }}
+		<h3>Edital publicado em <span data-data-br="{{ dados.edital.data_publicacao }}"></span></h3>
+		<section><p class="m-0">Data, tipo, horários, pauta e textos ficaram travados. O PDF final está disponível abaixo.</p></section>
+	</div>
+	{% endif %}
+
 	{% call card(attrs={"class": "asm-bloco"}) %}
 	<section>
-		<h2 class="asm-bloco__titulo">Dados da assembleia</h2>
-		{% if publicado %}
-		<p class="asm-bloco__descricao">{{ lucide_icon("lock", size="xs") }} O edital foi publicado: data, tipo e horários ficaram travados.</p>
-		{% endif %}
-		<div class="asm-campos">
+		<div class="asm-bloco__topo">
+			<h2 class="asm-bloco__titulo">Convocação</h2>
+			{% if not publicado %}<span class="badge-outline">{{ lucide_icon("lock", size="xs") }} Trava ao publicar</span>{% endif %}
+		</div>
+		<div class="asm-convocacao">
 			{% call field(label="Data") %}
 				{{ datepicker(id="vg-data", name="data", value=dados.data, placeholder="Escolha a data", trigger_attrs={"class": "w-full"} if not publicado else {"class": "w-full", "disabled": "disabled"}) }}
 			{% endcall %}
 			{% call field(label="Tipo") %}
-				{{ select(id="vg-tipo", items=tipo_items, selected=dados.tipo, trigger_attrs={"disabled": "disabled"} if publicado else {}) }}
+				{{ select(id="vg-tipo", items=tipo_items, selected=dados.tipo, trigger_attrs={"class": "w-full", "disabled": "disabled"} if publicado else {"class": "w-full"}) }}
 			{% endcall %}
 			{% call field(label="Primeira convocação") %}
 				{{ input(type="time", value=dados.hora_primeira, attrs={"id": "vg-hora-primeira"} if not publicado else {"id": "vg-hora-primeira", "disabled": "disabled"}) }}
 			{% endcall %}
-			{% call field(label="Segunda convocação", hint="O estatuto marca meia hora depois da primeira.") %}
+			{% call field(label="Segunda convocação", hint="Meia hora depois da primeira, pelo estatuto.") %}
 				{{ input(type="time", value=dados.hora_segunda, attrs={"id": "vg-hora-segunda"} if not publicado else {"id": "vg-hora-segunda", "disabled": "disabled"}) }}
 			{% endcall %}
-		</div>
-		<div class="asm-campos">
-			{% call field(label="Local") %}
-				{{ input(value=(dados.local | e), attrs={"id": "vg-local", "maxlength": "140"}) }}
-			{% endcall %}
-			{% call field(label="Responsável pelo credenciamento", hint="Associados com 18 anos ou mais e responsáveis.") %}
-				{{ select(id="vg-credenciamento", items=pessoas_18, selected=dados.credenciamento, is_combobox=true, search_placeholder="Buscar pelo nome") }}
-			{% endcall %}
-			{% call field(label="Vagas de delegado", hint="Uma vaga para cada fração de associados com registro ativo, calculada na criação.") %}
-				{{ input(type="number", value=dados.vagas_delegados, attrs={"id": "vg-vagas-delegados", "min": "0"}) }}
-			{% endcall %}
-		</div>
-		<div class="asm-campos">
-			<div class="asm-leitura">
-				<span class="asm-leitura__rotulo">Presidente da mesa</span>
-				<span>{{ (dados.presidente or "Ainda não eleito — registre na aba Ata") | e }}</span>
+			<div class="asm-convocacao__largo">
+				{% call field(label="Local", hint="Endereço ou link, se for remota ou híbrida.") %}
+					{{ input(type="text", value=(dados.local | e), attrs={"id": "vg-local", "maxlength": "140"}) }}
+				{% endcall %}
 			</div>
-			<div class="asm-leitura">
-				<span class="asm-leitura__rotulo">Secretário da mesa</span>
-				<span>{{ (dados.secretario or "Ainda não eleito — registre na aba Ata") | e }}</span>
-			</div>
-			<div class="asm-leitura">
-				<span class="asm-leitura__rotulo">Pasta no Drive</span>
-				{% if dados.pasta_drive_link %}
-					<a href="{{ dados.pasta_drive_link | e }}" target="_blank" rel="noopener">{{ lucide_icon("folder-open", size="xs") }} Abrir pasta</a>
-				{% else %}
-					<span class="text-muted-foreground" id="vg-pasta-erro">{{ (dados.pasta_drive_erro or "Ainda não criada.") | e }}</span>
-					<button type="button" class="btn-sm-outline" id="vg-criar-pasta">{{ lucide_icon("folder-plus", size="sm") }}<span>Criar pasta no Drive</span></button>
-				{% endif %}
-			</div>
-		</div>
-		<div>
-			<button type="button" class="btn-primary" id="vg-salvar">{{ lucide_icon("save", size="sm") }}<span>Salvar dados</span></button>
 		</div>
 	</section>
 	{% endcall %}
-
-	{% call card(attrs={"class": "asm-bloco"}) %}
-	<section>
-		<div class="asm-bloco__topo">
-			<h2 class="asm-bloco__titulo">Formulários</h2>
-			<a class="btn-sm-outline" href="/assembleias/candidaturas?assembleia={{ assembleia.name | urlencode }}" target="_blank" rel="noopener">
-				{{ lucide_icon("external-link", size="sm") }}<span>Página de candidaturas</span>
-			</a>
-		</div>
-		<p class="asm-bloco__descricao">Só entra quem tem login no GRIS. Cada formulário existe quando a pauta tem a finalidade dele.</p>
-		<ul class="asm-formularios" id="vg-formularios"></ul>
-	</section>
-	{% endcall %}
-
-	{% call card(attrs={"class": "asm-bloco"}) %}
-	<section>
-		<div class="asm-bloco__topo">
-			<h2 class="asm-bloco__titulo">Checklist</h2>
-			<span class="asm-salvamento" data-salvamento="checklist" aria-live="polite"></span>
-		</div>
-		<div class="asm-checklist" id="vg-checklist"></div>
-	</section>
-	{% endcall %}
-</div>
-{% endset %}
-
-{# ───────────────────────────── Edital ───────────────────────────── #}
-{% set painel_edital %}
-<div class="asm-aba">
-	{% if publicado %}
-	<div class="alert">
-		{{ lucide_icon("circle-check", size="sm") }}
-		<h3>Edital publicado</h3>
-		<section><p class="m-0">Publicado em <span data-data-br="{{ dados.edital.data_publicacao }}"></span>. A pauta e os textos não podem mais mudar.</p></section>
-	</div>
-	{% elif dados.prazo_vencido %}
-	<div class="alert-destructive">
-		{{ lucide_icon("triangle-alert", size="sm") }}
-		<h3>Prazo do edital vencido</h3>
-		<section><p class="m-0">O estatuto exige o edital publicado até <span data-data-br="{{ dados.prazo_edital }}"></span>.</p></section>
-	</div>
-	{% else %}
-	<div class="alert">
-		{{ lucide_icon("calendar-clock", size="sm") }}
-		<h3>Publique até <span data-data-br="{{ dados.prazo_edital }}"></span></h3>
-		<section>É a data limite para cumprir a antecedência mínima do estatuto.</section>
-	</div>
-	{% endif %}
 
 	{% call card(attrs={"class": "asm-bloco"}) %}
 	<section>
@@ -169,7 +148,7 @@
 	{% call card(attrs={"class": "asm-bloco"}) %}
 	<section>
 		<div class="asm-bloco__topo">
-			<h2 class="asm-bloco__titulo">Textos e publicação</h2>
+			<h2 class="asm-bloco__titulo">Textos do edital</h2>
 			{% if not publicado %}
 			<button type="button" class="btn-sm-ghost" id="ed-restaurar-textos">{{ lucide_icon("rotate-ccw", size="sm") }}<span>Restaurar textos padrão</span></button>
 			{% endif %}
@@ -181,130 +160,187 @@
 			{{ textarea(value=(dados.edital.texto_rodape | e), attrs={"id": "ed-rodape", "rows": "7", "class": "asm-textarea-alta"} if not publicado else {"id": "ed-rodape", "rows": "7", "class": "asm-textarea-alta", "readonly": "readonly"}) }}
 		{% endcall %}
 		<div class="asm-campos">
-			{% call field(label="Data de publicação", hint="Em branco, vale o dia em que for marcado como publicado.") %}
+			{% call field(label="Data de publicação", hint="Em branco, vale o dia em que o edital for publicado.") %}
 				{{ datepicker(id="ed-data-publicacao", name="data_publicacao", value=dados.edital.data_publicacao or None, placeholder="Sem data", trigger_attrs={"class": "w-full"} if not publicado else {"class": "w-full", "disabled": "disabled"}) }}
 			{% endcall %}
 			<div class="flex items-end">
 				{{ switch(checked=dados.edital.incluir_links, label="Incluir os links dos formulários no edital", attrs={"id": "ed-links"}) }}
 			</div>
 		</div>
+	</section>
+	{% endcall %}
+
+	<div class="asm-barra-etapa" id="ed-acoes">
+		<p class="asm-barra-etapa__nota">
+			{% if publicado %}
+			{{ lucide_icon("lock", size="xs") }} O edital publicado não muda mais.
+			{% else %}
+			{{ lucide_icon("check", size="xs") }} Tudo salva sozinho. Publicar trava data, horários, pauta e textos.
+			{% endif %}
+		</p>
 		<div class="asm-acoes">
 			{% if dados.edital.doc_link %}
 			<a class="btn-ghost" href="{{ dados.edital.doc_link | e }}" target="_blank" rel="noopener">{{ lucide_icon("external-link", size="sm") }}<span>Abrir no Google Docs</span></a>
 			{% endif %}
 			<button type="button" class="btn-outline" id="ed-previa">{{ lucide_icon("eye", size="sm") }}<span>Pré-visualizar</span></button>
-			<button type="button" class="btn-outline" data-baixar-pdf="edital">{{ lucide_icon("file-down", size="sm") }}<span>{{ "Baixar PDF final" if publicado else "Gerar PDF" }}</span></button>
+			<button type="button" class="{{ 'btn-primary' if publicado else 'btn-outline' }}" data-baixar-pdf="edital">{{ lucide_icon("file-down", size="sm") }}<span>{{ "Baixar PDF publicado" if publicado else "Baixar rascunho em PDF" }}</span></button>
 			{% if not publicado %}
-			<button type="button" class="btn-outline" id="ed-salvar">{{ lucide_icon("save", size="sm") }}<span>Salvar edital</span></button>
-			<button type="button" class="btn-primary" id="ed-publicar">{{ lucide_icon("send", size="sm") }}<span>Marcar como publicado</span></button>
+			<button type="button" class="btn-primary" id="ed-publicar">{{ lucide_icon("send", size="sm") }}<span>Publicar edital…</span></button>
 			{% endif %}
 		</div>
-	</section>
-	{% endcall %}
+	</div>
 </div>
 {% endset %}
 
-{# ───────────────────── Abas que chegam nas próximas etapas ───────────────────── #}
-{% set painel_presenca %}
+{# ───────────────────────────── 2. Inscrições ───────────────────────────── #}
+{% set painel_inscricoes %}
 <div class="asm-aba">
-	{% call card(attrs={"class": "asm-bloco"}) %}
+	{% call card(attrs={"class": "asm-bloco", "id": "in-formularios"}) %}
 	<section>
 		<div class="asm-bloco__topo">
-			<div class="flex flex-col gap-1">
-				<h2 class="asm-bloco__titulo">Lista de presença</h2>
-				<p class="asm-bloco__descricao" id="lp-gerada"></p>
-			</div>
-			<div class="asm-acoes">
-				<button type="button" class="btn-outline" data-baixar-pdf="lista">{{ lucide_icon("file-down", size="sm") }}<span>Exportar PDF</span></button>
-				{% if lista.editavel %}
-				<button type="button" class="btn-primary" id="lp-gerar">{{ lucide_icon("refresh-cw", size="sm") }}<span>Gerar lista</span></button>
-				{% endif %}
-			</div>
+			<h2 class="asm-bloco__titulo">Formulários</h2>
+			<a class="btn-sm-outline" href="/assembleias/candidaturas?assembleia={{ assembleia.name | urlencode }}" target="_blank" rel="noopener">
+				{{ lucide_icon("external-link", size="sm") }}<span>Página pública</span>
+			</a>
 		</div>
-		<p class="asm-bloco__descricao">
-			Pela regra de "quem vota" das configurações. Gerar de novo mantém as inclusões manuais
-			e não traz de volta quem foi removido.
-		</p>
-		<div id="lp-avisos" class="flex flex-col gap-2"></div>
-		<div class="asm-totais" id="lp-totais"></div>
-		<div class="overflow-x-auto min-w-0">
-			<table class="table asm-tabela-votantes">
-				<thead>
-					<tr>
-						<th scope="col">Nome</th>
-						<th scope="col">Voto</th>
-						<th scope="col">Ramo / equipe</th>
-						<th scope="col" class="asm-tabela__acoes" aria-label="Ações"></th>
-					</tr>
-				</thead>
-				<tbody id="lp-corpo"></tbody>
-			</table>
-		</div>
-		<details class="asm-removidos" id="lp-removidos-bloco" hidden>
-			<summary></summary>
-			<ul id="lp-removidos"></ul>
-		</details>
-	</section>
-	{% endcall %}
-
-	{% if lista.editavel %}
-	{% call card(attrs={"class": "asm-bloco"}) %}
-	<section>
-		<h2 class="asm-bloco__titulo">Incluir na lista</h2>
-		<div class="asm-campos">
-			{% call field(label="Pessoa do cadastro") %}
-				{{ select(id="lp-pessoa", items=pessoas_todas, is_combobox=true, search_placeholder="Buscar pelo nome") }}
-			{% endcall %}
-			{% call field(label="Ou um nome livre", hint="Para quem não tem cadastro no GRIS.") %}
-				{{ input(attrs={"id": "lp-nome-livre", "maxlength": "140"}) }}
+		<p class="asm-bloco__descricao">Só entra quem tem login no GRIS. Cada formulário existe quando a pauta tem a finalidade dele.</p>
+		<ul class="asm-formularios" id="vg-formularios"></ul>
+		<div class="asm-vagas">
+			{% call field(label="Vagas de delegado", hint="Uma vaga para cada fração de associados com registro ativo, calculada na criação.") %}
+				{{ input(type="number", value=dados.vagas_delegados, attrs={"id": "vg-vagas-delegados", "min": "0"}) }}
 			{% endcall %}
 		</div>
-		<div><button type="button" class="btn-outline" id="lp-incluir">{{ lucide_icon("user-plus", size="sm") }}<span>Incluir</span></button></div>
 	</section>
 	{% endcall %}
-	{% endif %}
+	<div id="cd-inscricoes" class="asm-aba asm-aba--sem-topo"></div>
 </div>
 {% endset %}
+
+{# ───────────────────────────── 3. Sessão ───────────────────────────── #}
+{% set painel_sessao %}
+<div class="asm-aba">
+	<div class="asm-momentos" role="group" aria-label="Momento da sessão">
+		<button type="button" class="asm-momento" data-momento="preparar" aria-pressed="{{ 'false' if sessao_conduzir else 'true' }}">{{ lucide_icon("clipboard-list", size="sm") }}<span>Preparar</span></button>
+		<button type="button" class="asm-momento" data-momento="conduzir" aria-pressed="{{ 'true' if sessao_conduzir else 'false' }}">{{ lucide_icon("compass", size="sm") }}<span>Conduzir</span></button>
+	</div>
+
+	<div class="asm-aba asm-aba--sem-topo" data-momento-painel="preparar"{% if sessao_conduzir %} hidden{% endif %}>
+		<div class="asm-preparo">
+			{{ tarefas("Antes de começar", ["imprimir_lista", "separar_materiais", "preparar_credenciamento"]) }}
+			{% call card(attrs={"class": "asm-bloco"}) %}
+			<section>
+				<h2 class="asm-bloco__titulo">Credenciamento</h2>
+				{% call field(label="Responsável pelo credenciamento", hint="Associados com 18 anos ou mais e responsáveis.") %}
+					{{ select(id="vg-credenciamento", items=pessoas_18, selected=dados.credenciamento, is_combobox=true, search_placeholder="Buscar pelo nome", trigger_attrs={"class": "w-full"}) }}
+				{% endcall %}
+			</section>
+			{% endcall %}
+		</div>
+
+		{% call card(attrs={"class": "asm-bloco", "id": "lp-bloco"}) %}
+		<section>
+			<div class="asm-bloco__topo">
+				<div class="flex flex-col gap-1">
+					<h2 class="asm-bloco__titulo">Lista de presença</h2>
+					<p class="asm-bloco__descricao" id="lp-gerada"></p>
+				</div>
+				<div class="asm-acoes">
+					<button type="button" class="btn-outline" data-baixar-pdf="lista">{{ lucide_icon("printer", size="sm") }}<span>PDF para imprimir</span></button>
+					{% if lista.editavel %}
+					<button type="button" class="btn-primary" id="lp-gerar">{{ lucide_icon("refresh-cw", size="sm") }}<span>Gerar lista</span></button>
+					{% endif %}
+				</div>
+			</div>
+			<p class="asm-bloco__descricao">
+				Pela regra de "quem vota" das configurações. Gerar de novo mantém as inclusões manuais
+				e não traz de volta quem foi removido.
+			</p>
+			<div id="lp-avisos" class="flex flex-col gap-2"></div>
+			<div class="asm-totais" id="lp-totais"></div>
+			{% if lista.editavel %}
+			<div class="asm-incluir">
+				{% call field(label="Incluir pessoa do cadastro") %}
+					{{ select(id="lp-pessoa", items=pessoas_todas, is_combobox=true, search_placeholder="Buscar pelo nome", trigger_attrs={"class": "w-full"}) }}
+				{% endcall %}
+				{% call field(label="Ou um nome livre", hint="Para quem não tem cadastro no GRIS.") %}
+					{{ input(type="text", attrs={"id": "lp-nome-livre", "maxlength": "140"}) }}
+				{% endcall %}
+				<button type="button" class="btn-outline" id="lp-incluir">{{ lucide_icon("user-plus", size="sm") }}<span>Incluir</span></button>
+			</div>
+			{% endif %}
+			<div class="overflow-x-auto min-w-0">
+				<table class="table asm-tabela-votantes">
+					<thead>
+						<tr>
+							<th scope="col">Nome</th>
+							<th scope="col">Voto</th>
+							<th scope="col">Ramo / equipe</th>
+							<th scope="col" class="asm-tabela__acoes" aria-label="Ações"></th>
+						</tr>
+					</thead>
+					<tbody id="lp-corpo"></tbody>
+				</table>
+			</div>
+			<details class="asm-removidos" id="lp-removidos-bloco" hidden>
+				<summary></summary>
+				<ul id="lp-removidos"></ul>
+			</details>
+		</section>
+		{% endcall %}
+	</div>
+
+	<div class="asm-aba asm-aba--sem-topo" data-momento-painel="conduzir"{% if not sessao_conduzir %} hidden{% endif %}>
+		{% call card(attrs={"class": "asm-bloco", "id": "se-mesa"}) %}
+		<section>
+			<h2 class="asm-bloco__titulo">Mesa e horários</h2>
+			<div class="asm-campos">
+				{% call field(label="Início") %}
+					{{ input(type="time", value=(ata.hora_inicio or ""), attrs={"id": "at-inicio", "data-campo-ata": "ata_hora_inicio"}) }}
+				{% endcall %}
+				{% call field(label="Término") %}
+					{{ input(type="time", value=(ata.hora_termino or ""), attrs={"id": "at-termino", "data-campo-ata": "ata_hora_termino"}) }}
+				{% endcall %}
+				{% call field(label="Presentes", hint="Pela lista de presença assinada.") %}
+					{{ input(type="number", value=(ata.presentes or ""), attrs={"id": "at-presentes", "min": "0", "data-campo-ata": "ata_presentes"}) }}
+				{% endcall %}
+			</div>
+			<div class="asm-campos">
+				{% call field(label="Presidente da mesa", hint="Associados com 16 anos ou mais e responsáveis.") %}
+					{{ select(id="at-presidente", items=pessoas_16, selected=ata.presidente, is_combobox=true, search_placeholder="Buscar pelo nome", trigger_attrs={"class": "w-full"}) }}
+				{% endcall %}
+				{% call field(label="Secretário da mesa") %}
+					{{ select(id="at-secretario", items=pessoas_16, selected=ata.secretario, is_combobox=true, search_placeholder="Buscar pelo nome", trigger_attrs={"class": "w-full"}) }}
+				{% endcall %}
+			</div>
+		</section>
+		{% endcall %}
+
+		{% call card(attrs={"class": "asm-bloco"}) %}
+		<section>
+			<h2 class="asm-bloco__titulo">Roteiro da pauta</h2>
+			<details class="asm-orientacoes-gerais">
+				<summary>Tipos de votação e lembretes do estatuto</summary>
+				<div class="asm-markdown" id="cd-gerais"></div>
+			</details>
+			<ol class="asm-roteiro" id="cd-roteiro"></ol>
+		</section>
+		{% endcall %}
+
+		{% call card(attrs={"class": "asm-bloco"}) %}
+		<section>
+			<h2 class="asm-bloco__titulo">Anotações do secretário</h2>
+			<p class="asm-bloco__descricao">O que aconteceu em cada item: quem apresentou, questionamentos, como foi a votação e o resultado.</p>
+			<div id="at-anotacoes-editor" class="asm-editor" aria-label="Anotações do secretário"></div>
+		</section>
+		{% endcall %}
+	</div>
+</div>
+{% endset %}
+
+{# ───────────────────────────── 4. Ata ───────────────────────────── #}
 {% set painel_ata %}
 <div class="asm-aba">
-	{% call card(attrs={"class": "asm-bloco"}) %}
-	<section>
-		<div class="asm-bloco__topo">
-			<h2 class="asm-bloco__titulo">Mesa e horários</h2>
-			<span class="asm-salvamento" data-salvamento="ata" aria-live="polite"></span>
-		</div>
-		<p class="asm-bloco__descricao">Tudo nesta aba é salvo sozinho.</p>
-		<div class="asm-campos">
-			{% call field(label="Início") %}
-				{{ input(type="time", value=(ata.hora_inicio or ""), attrs={"id": "at-inicio", "data-campo-ata": "ata_hora_inicio"}) }}
-			{% endcall %}
-			{% call field(label="Término") %}
-				{{ input(type="time", value=(ata.hora_termino or ""), attrs={"id": "at-termino", "data-campo-ata": "ata_hora_termino"}) }}
-			{% endcall %}
-			{% call field(label="Presentes", hint="Pela lista de presença assinada.") %}
-				{{ input(type="number", value=(ata.presentes or ""), attrs={"id": "at-presentes", "min": "0", "data-campo-ata": "ata_presentes"}) }}
-			{% endcall %}
-		</div>
-		<div class="asm-campos">
-			{% call field(label="Presidente da mesa", hint="Associados com 16 anos ou mais e responsáveis.") %}
-				{{ select(id="at-presidente", items=pessoas_16, selected=ata.presidente, is_combobox=true, search_placeholder="Buscar pelo nome") }}
-			{% endcall %}
-			{% call field(label="Secretário da mesa") %}
-				{{ select(id="at-secretario", items=pessoas_16, selected=ata.secretario, is_combobox=true, search_placeholder="Buscar pelo nome") }}
-			{% endcall %}
-		</div>
-	</section>
-	{% endcall %}
-
-	{% call card(attrs={"class": "asm-bloco"}) %}
-	<section>
-		<h2 class="asm-bloco__titulo">Anotações do secretário</h2>
-		<p class="asm-bloco__descricao">O que aconteceu em cada item: quem apresentou, questionamentos, como foi a votação e o resultado.</p>
-		<div id="at-anotacoes-editor" class="asm-editor" aria-label="Anotações do secretário"></div>
-	</section>
-	{% endcall %}
-
-	{% call card(attrs={"class": "asm-bloco"}) %}
+	{% call card(attrs={"class": "asm-bloco", "id": "at-texto-bloco"}) %}
 	<section>
 		<div class="asm-bloco__topo">
 			<h2 class="asm-bloco__titulo">Texto da ata</h2>
@@ -314,48 +350,20 @@
 			</div>
 		</div>
 		<p class="asm-bloco__descricao">
-			A IA preenche o modelo de ata com os dados da assembleia e as anotações. O que ela não souber fica como
-			<code>[A CONFIRMAR: …]</code>: revise tudo antes de gerar o PDF.
+			A IA preenche o modelo de ata com os dados da assembleia e as anotações da sessão. O que ela não
+			souber fica como <code>[A CONFIRMAR: …]</code>: revise tudo antes de gerar o PDF.
 		</p>
 		<div id="at-status" aria-live="polite"></div>
 		<div id="at-editor" class="asm-editor"></div>
 	</section>
 	{% endcall %}
-</div>
-{% endset %}
-{% set painel_candidaturas %}
-<div class="asm-aba">
-	<div class="asm-acoes asm-acoes--inicio">
-		<a class="btn-outline" href="/assembleias/candidaturas?assembleia={{ assembleia.name | urlencode }}" target="_blank" rel="noopener">
-			{{ lucide_icon("external-link", size="sm") }}<span>Página de candidaturas</span>
-		</a>
-	</div>
-	<div id="cd-inscricoes" class="asm-aba"></div>
+
+	{{ tarefas("Depois da assembleia", ["finalizar_ata", "assinar_ata", "registrar_cartorio", "alterar_banco", "alterar_receita"], id="at-tarefas") }}
 </div>
 {% endset %}
 
-{# ───────────────────────────── Auxílio para condução ───────────────────────────── #}
-{% set painel_conducao %}
-<div class="asm-aba">
-	{% call card(attrs={"class": "asm-bloco"}) %}
-	<section>
-		<details class="asm-orientacoes-gerais">
-			<summary class="asm-bloco__titulo">Tipos de votação e lembretes do estatuto</summary>
-			<div class="asm-markdown" id="cd-gerais"></div>
-		</details>
-	</section>
-	{% endcall %}
-	{% call card(attrs={"class": "asm-bloco"}) %}
-	<section>
-		<div class="asm-bloco__topo">
-			<h2 class="asm-bloco__titulo">Roteiro da pauta</h2>
-			<span class="asm-salvamento" data-salvamento="conducao" aria-live="polite"></span>
-		</div>
-		<ol class="asm-roteiro" id="cd-roteiro"></ol>
-	</section>
-	{% endcall %}
-</div>
-{% endset %}
+{% set item_edital, item_inscricoes, item_sessao, item_ata = etapas.itens %}
+{% set ordem_etapas = ["edital", "inscricoes", "sessao", "ata"] %}
 
 <div class="asm-pagina asm-assembleia"
      data-dados="{{ dados | tojson | forceescape }}"
@@ -364,17 +372,18 @@
      data-lista="{{ lista | tojson | forceescape }}"
      data-ata="{{ ata | tojson | forceescape }}"
      data-inscricoes="{{ inscricoes_dados | tojson | forceescape }}">
+	<div id="asm-proximo"></div>
 	{{ tabs(
-		id="asm-abas",
+		id="asm-etapas",
 		tabsets=[
-			{"id": "visao", "tab": lucide_icon("layout-dashboard", size="sm") ~ "<span>Visão Geral</span>", "panel": painel_visao},
-			{"id": "edital", "tab": lucide_icon("scroll-text", size="sm") ~ "<span>Edital</span>", "panel": painel_edital},
-			{"id": "presenca", "tab": lucide_icon("list-checks", size="sm") ~ "<span>Lista de presença</span>", "panel": painel_presenca},
-			{"id": "ata", "tab": lucide_icon("file-text", size="sm") ~ "<span>Ata</span>", "panel": painel_ata},
-			{"id": "candidaturas", "tab": lucide_icon("users", size="sm") ~ "<span>Candidaturas e assuntos gerais</span>", "panel": painel_candidaturas},
-			{"id": "conducao", "tab": lucide_icon("compass", size="sm") ~ "<span>Auxílio para condução</span>", "panel": painel_conducao},
+			{"id": "edital", "tab": rotulo_etapa(item_edital, 1), "panel": painel_edital, "tab_attrs": {"data-etapa": "edital", "data-estado": item_edital.estado}},
+			{"id": "inscricoes", "tab": rotulo_etapa(item_inscricoes, 2), "panel": painel_inscricoes, "tab_attrs": {"data-etapa": "inscricoes", "data-estado": item_inscricoes.estado}},
+			{"id": "sessao", "tab": rotulo_etapa(item_sessao, 3), "panel": painel_sessao, "tab_attrs": {"data-etapa": "sessao", "data-estado": item_sessao.estado}},
+			{"id": "ata", "tab": rotulo_etapa(item_ata, 4), "panel": painel_ata, "tab_attrs": {"data-etapa": "ata", "data-estado": item_ata.estado}},
 		],
-		main_attrs={"class": "asm-abas"}
+		main_attrs={"class": "asm-etapas"},
+		tablist_attrs={"aria-label": "Etapas da assembleia"},
+		default_tab_index=ordem_etapas.index(etapas.atual) + 1
 	) }}
 </div>
 
@@ -411,11 +420,12 @@
 
 {% call dialog(
 	id="dialog-publicar",
-	title="Marcar o edital como publicado?",
-	description="Depois disso, a pauta, os textos, a data, o tipo e os horários da assembleia ficam travados.",
+	title="Publicar o edital?",
+	description="Depois disso, a data, o tipo, os horários, a pauta e os textos ficam travados.",
 	footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-publicar">Cancelar</button><button type="button" class="btn-primary" id="btn-confirmar-publicacao">Publicar</button>'
 ) %}
-<p class="m-0" id="publicar-aviso-prazo" hidden></p>
+<ul class="asm-resumo-publicacao" id="publicar-resumo"></ul>
+<p class="m-0 asm-aviso-prazo" id="publicar-aviso-prazo" hidden></p>
 {% endcall %}
 
 {% if not publicado %}

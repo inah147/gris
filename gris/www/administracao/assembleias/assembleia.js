@@ -120,6 +120,10 @@
 	const salvamento = A.criarSalvamentoAutomatico(estado, {
 		metodo: "pagina.salvar_campos",
 		aoSalvar(resposta) {
+			if (typeof ata !== "undefined" && ata && "marcadores" in resposta) {
+				ata.marcadores = resposta.marcadores;
+				desenharStatusDaAta();
+			}
 			Object.entries(resposta.pauta || {}).forEach(([nome, html]) => {
 				const alvo = document.querySelector(
 					`[data-orientacao-html="${CSS.escape(nome)}"]`
@@ -513,6 +517,141 @@
 				restaurar
 			);
 	});
+
+	// ─────────────────────────── Ata ───────────────────────────
+
+	let ata = A.lerJson(raiz.dataset.ata, {});
+	const indicadorAta = document.querySelector('[data-salvamento="ata"]');
+	let editorAta = null;
+	let acompanhamento = null;
+
+	function desenharStatusDaAta() {
+		const alvo = document.getElementById("at-status");
+		if (!alvo) return;
+		const botao = document.getElementById("at-gerar-ia");
+		const gerando = ata.status_geracao === "Gerando";
+		botao.disabled = gerando;
+		botao.querySelector("span").textContent = gerando ? "Gerando…" : "Gerar ata com IA";
+		const partes = [];
+		if (gerando) {
+			partes.push(
+				`<div class="alert">${A.icone(
+					"loader-circle"
+				)}<section><p class="m-0">Gerando a ata. Pode continuar escrevendo as anotações: o texto aparece aqui quando ficar pronto.</p></section></div>`
+			);
+		} else if (ata.status_geracao === "Falhou" && ata.erro_geracao) {
+			partes.push(
+				`<div class="alert-destructive">${A.icone(
+					"triangle-alert"
+				)}<section><p class="m-0">${A.escapeHtml(ata.erro_geracao)}</p></section></div>`
+			);
+		}
+		if (ata.marcadores) {
+			partes.push(
+				`<p class="asm-marcadores">${A.icone("circle-alert")} ${ata.marcadores} trecho${
+					ata.marcadores === 1 ? "" : "s"
+				} [A CONFIRMAR] para revisar.</p>`
+			);
+		}
+		alvo.innerHTML = partes.join("");
+		if (editorAta) {
+			const host = document.getElementById("at-editor");
+			host.classList.toggle("is-readonly", gerando);
+			host.querySelectorAll("[contenteditable]").forEach((el) =>
+				el.setAttribute("contenteditable", gerando ? "false" : "true")
+			);
+		}
+	}
+
+	function agendarAta(campos) {
+		salvamento.agendar({ ata: campos }, indicadorAta);
+	}
+
+	document.querySelectorAll("[data-campo-ata]").forEach((campo) => {
+		campo.addEventListener("input", () => {
+			agendarAta({ [campo.dataset.campoAta]: campo.value });
+		});
+	});
+	["presidente", "secretario"].forEach((chave) => {
+		document.getElementById(`at-${chave}`)?.addEventListener("change", (evento) => {
+			const valor = (evento.detail && evento.detail.value) ?? A.valorDoSelect(`at-${chave}`);
+			agendarAta({ [chave]: valor });
+		});
+	});
+
+	async function iniciarEditorDaAta() {
+		const host = document.getElementById("at-editor");
+		if (!host || !window.gris?.editor?.create) return;
+		try {
+			editorAta = await window.gris.editor.create(host, {
+				initialValue: ata.texto || "",
+				height: "560px",
+				toolbarItems: [["bold", "italic"], ["ul", "ol"], ["hr"]],
+			});
+			editorAta.on("change", () => {
+				const texto = String(editorAta.getMarkdown() || "");
+				ata.marcadores = (texto.match(/\[A CONFIRMAR/g) || []).length;
+				agendarAta({ ata_texto: texto });
+			});
+			desenharStatusDaAta();
+		} catch (erro) {
+			host.innerHTML =
+				'<p class="text-muted-foreground">Não foi possível abrir o editor.</p>';
+		}
+	}
+
+	function acompanharGeracao() {
+		clearInterval(acompanhamento);
+		acompanhamento = setInterval(async () => {
+			try {
+				const resposta = await A.chamar("ata_ia.status_ata_ia", { name: dados.name });
+				if (resposta.status_geracao === "Gerando") return;
+				clearInterval(acompanhamento);
+				ata = resposta;
+				if (editorAta && resposta.status_geracao === "Concluída") {
+					editorAta.setMarkdown(resposta.texto || "", false);
+					A.toast("success", "Ata gerada. Revise o texto.");
+				}
+				desenharStatusDaAta();
+			} catch (erro) {
+				clearInterval(acompanhamento);
+				A.toast("error", erro.message);
+			}
+		}, 4000);
+	}
+
+	async function pedirAta(substituir) {
+		try {
+			// Grava as anotações pendentes antes: a IA lê o que está no banco.
+			await salvamento.gravarAgora();
+			const resposta = await A.chamar("ata_ia.solicitar_ata_ia", {
+				name: dados.name,
+				substituir_texto: substituir ? 1 : 0,
+			});
+			if (resposta.precisa_confirmar) {
+				frappe.confirm(
+					"Já existe um texto da ata. Gerar de novo substitui esse texto. Continuar?",
+					() => pedirAta(true)
+				);
+				return;
+			}
+			ata = resposta;
+			desenharStatusDaAta();
+			acompanharGeracao();
+		} catch (erro) {
+			A.toast("error", erro.message);
+		}
+	}
+
+	document.getElementById("at-gerar-ia")?.addEventListener("click", () => pedirAta(false));
+	desenharStatusDaAta();
+	if (ata.status_geracao === "Gerando") acompanharGeracao();
+	// O wrapper do editor é carregado com `defer`: só existe depois do parse.
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", iniciarEditorDaAta);
+	} else {
+		iniciarEditorDaAta();
+	}
 
 	// ─────────────────────────── Auxílio para condução ───────────────────────────
 

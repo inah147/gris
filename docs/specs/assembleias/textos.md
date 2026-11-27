@@ -247,10 +247,10 @@ da assembleia e as anotações do secretário. O que não puder ser preenchido c
 > 📣 *Edital da Assembleia de Grupo*
 >
 > A reunião {tipo_minusculo} da Assembleia de Grupo está marcada para *{data}*. Pelo estatuto, o
-> edital de convocação precisa ser publicado até *{prazo_edital}*: faltam *{dias}* dia(s).
+> edital de convocação precisa ser publicado até *{prazo_edital}*: {faltam}.
 >
 > Prepare e publique o edital no GRIS: {link}
 >
 > 🤖 _Esta é uma mensagem automática do GRIS._
 
-No dia do prazo (`{dias}` = 0), a frase vira "o prazo para publicar o edital termina *hoje*".
+`{faltam}` é "faltam *N* dias" (ou "falta *1* dia") e, no dia do prazo, "o prazo termina *hoje*".

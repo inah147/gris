@@ -94,6 +94,8 @@
 	</div>
 	{% endif %}
 
+	<div class="asm-edital">
+	<div class="asm-edital__edicao">
 	{% call card(attrs={"class": "asm-bloco"}) %}
 	<section>
 		<div class="asm-bloco__topo">
@@ -125,23 +127,18 @@
 	{% call card(attrs={"class": "asm-bloco"}) %}
 	<section>
 		<div class="asm-bloco__topo">
-			<h2 class="asm-bloco__titulo">Pauta</h2>
+			<h2 class="asm-bloco__titulo">Pauta <span class="asm-bloco__contagem" id="ed-contagem"></span></h2>
 			{% if not publicado %}
-			<button type="button" class="btn-sm-ghost" id="ed-restaurar">{{ lucide_icon("rotate-ccw", size="sm") }}<span>Restaurar pauta padrão</span></button>
+			<div class="asm-acoes">
+				<button type="button" class="btn-sm-ghost" id="ed-restaurar">{{ lucide_icon("rotate-ccw", size="sm") }}<span>Restaurar padrão</span></button>
+				<button type="button" class="btn-sm-outline" id="ed-adicionar">{{ lucide_icon("plus", size="sm") }}<span>Item</span></button>
+			</div>
 			{% endif %}
 		</div>
 		{% if not publicado %}
-		<p class="asm-bloco__descricao">
-			A <strong>finalidade</strong> diz para que o item serve: ela abre os formulários de candidatura
-			(mesa, delegados, comissão fiscal, diretoria e assuntos gerais), mostra no checklist os passos de
-			cartório e banco quando há eleição de diretoria e escolhe a orientação de condução.
-			Itens de aprovação, como balanço e relatórios, ficam "Sem finalidade".
-		</p>
+		<p class="asm-bloco__descricao">Clique no item para editar. O tipo do item diz o que ele abre: formulários de candidatura, passos do checklist e o roteiro da sessão.</p>
 		{% endif %}
 		<div id="ed-pauta"></div>
-		{% if not publicado %}
-		<div class="asm-pauta-adicionar"><button type="button" class="btn-sm-outline" id="ed-adicionar">{{ lucide_icon("plus", size="sm") }}<span>Adicionar item</span></button></div>
-		{% endif %}
 	</section>
 	{% endcall %}
 
@@ -169,6 +166,18 @@
 		</div>
 	</section>
 	{% endcall %}
+	</div>
+
+	<aside class="asm-edital__previa" aria-label="Prévia do edital">
+		<div class="asm-folha">
+			<div class="asm-folha__topo">
+				<span>Prévia</span>
+				<span class="asm-folha__estado" id="ed-previa-estado">papel timbrado só no documento gerado</span>
+			</div>
+			<article class="asm-markdown asm-folha__texto" id="ed-previa-viva" aria-live="polite"></article>
+		</div>
+	</aside>
+	</div>
 
 	<div class="asm-barra-etapa" id="ed-acoes">
 		<p class="asm-barra-etapa__nota">
@@ -182,7 +191,7 @@
 			{% if dados.edital.doc_link %}
 			<a class="btn-ghost" href="{{ dados.edital.doc_link | e }}" target="_blank" rel="noopener">{{ lucide_icon("external-link", size="sm") }}<span>Abrir no Google Docs</span></a>
 			{% endif %}
-			<button type="button" class="btn-outline" id="ed-previa">{{ lucide_icon("eye", size="sm") }}<span>Pré-visualizar</span></button>
+			<button type="button" class="btn-outline asm-so-sem-previa" id="ed-previa">{{ lucide_icon("eye", size="sm") }}<span>Pré-visualizar</span></button>
 			<button type="button" class="{{ 'btn-primary' if publicado else 'btn-outline' }}" data-baixar-pdf="edital">{{ lucide_icon("file-down", size="sm") }}<span>{{ "Baixar PDF publicado" if publicado else "Baixar rascunho em PDF" }}</span></button>
 			{% if not publicado %}
 			<button type="button" class="btn-primary" id="ed-publicar">{{ lucide_icon("send", size="sm") }}<span>Publicar edital…</span></button>
@@ -368,7 +377,6 @@
 <div class="asm-pagina asm-assembleia"
      data-dados="{{ dados | tojson | forceescape }}"
      data-finalidades="{{ finalidades | tojson | forceescape }}"
-     data-orientacoes="{{ orientacoes | tojson | forceescape }}"
      data-lista="{{ lista | tojson | forceescape }}"
      data-ata="{{ ata | tojson | forceescape }}"
      data-inscricoes="{{ inscricoes_dados | tojson | forceescape }}">

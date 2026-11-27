@@ -274,7 +274,24 @@ def marcar_edital_publicado(name: str, fora_do_prazo: int | str = 0) -> dict:
 	if not doc.data_publicacao_edital:
 		doc.data_publicacao_edital = getdate()
 	doc.save()
-	return dados_da_pagina(doc)
+
+	# O PDF final no timbrado. Se o Drive falhar, o edital continua publicado e o PDF
+	# final é gerado no primeiro "Baixar PDF".
+	aviso = ""
+	try:
+		from gris.api.assembleias.documentos import gerar_edital_final
+
+		gerar_edital_final(doc)
+	except Exception as erro:
+		frappe.clear_messages()
+		if not isinstance(erro, frappe.ValidationError):
+			frappe.log_error(frappe.get_traceback(), f"Edital final da assembleia {doc.name}")
+		aviso = _(
+			"O edital foi publicado, mas o PDF final não pôde ser gerado agora ({0}). "
+			'Use "Baixar PDF" para tentar de novo.'
+		).format(str(erro) or _("erro no Drive"))
+	doc.reload()
+	return {**dados_da_pagina(doc), "aviso": aviso}
 
 
 # --------------------------------------------------------------------------------------

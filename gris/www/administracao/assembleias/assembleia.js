@@ -12,6 +12,13 @@
 	// Estado compartilhado pelas gravações: cada uma devolve o `modified` novo.
 	const estado = { name: dados.name, modified: dados.modified };
 
+	// Aviso guardado antes de recarregar (ex.: edital publicado sem o PDF final).
+	const avisoPendente = sessionStorage.getItem("asm-aviso");
+	if (avisoPendente) {
+		sessionStorage.removeItem("asm-aviso");
+		setTimeout(() => A.toast("warning", avisoPendente), 300);
+	}
+
 	document.querySelectorAll("[data-data-br]").forEach((el) => {
 		el.textContent = A.dataBR(el.dataset.dataBr);
 	});
@@ -327,6 +334,7 @@
 					botao.textContent = "Publicar mesmo assim";
 					return;
 				}
+				if (resposta.aviso) sessionStorage.setItem("asm-aviso", resposta.aviso);
 				window.location.reload();
 			} catch (erro) {
 				A.toast("error", erro.message);
@@ -926,6 +934,73 @@
 			);
 		});
 	}
+
+	// ─────────────────────────── Documentos no timbrado ───────────────────────────
+
+	const NOMES_DE_ARQUIVO = { edital: "edital", lista: "lista-de-presenca", ata: "ata" };
+
+	async function baixar(tipo, botao) {
+		const rotulo = botao.querySelector("span");
+		const original = rotulo.textContent;
+		botao.disabled = true;
+		rotulo.textContent = "Gerando no Drive…";
+		try {
+			await salvamento.gravarAgora();
+			await A.baixarPdf(
+				"documentos.baixar_pdf",
+				{ name: dados.name, tipo },
+				`${NOMES_DE_ARQUIVO[tipo]}-${dados.name}.pdf`
+			);
+			A.toast("success", "PDF gerado. O documento editável ficou na pasta da assembleia.");
+		} catch (erro) {
+			A.toast("error", erro.message);
+		} finally {
+			botao.disabled = false;
+			rotulo.textContent = original;
+		}
+	}
+
+	raiz.addEventListener("click", (evento) => {
+		const botao = evento.target.closest("[data-baixar-pdf]");
+		if (!botao) return;
+		const tipo = botao.dataset.baixarPdf;
+		if (tipo === "ata") {
+			const texto = editorAta ? String(editorAta.getMarkdown() || "") : ata.texto || "";
+			const pendentes = (texto.match(/\[A CONFIRMAR/g) || []).length;
+			if (!texto.trim()) {
+				A.toast("error", "Escreva ou gere o texto da ata antes de gerar o PDF.");
+				return;
+			}
+			if (pendentes) {
+				frappe.confirm(
+					`A ata ainda tem ${pendentes} trecho${
+						pendentes === 1 ? "" : "s"
+					} [A CONFIRMAR]. Gerar o PDF mesmo assim?`,
+					() => baixar(tipo, botao)
+				);
+				return;
+			}
+		}
+		baixar(tipo, botao);
+	});
+
+	document.getElementById("vg-criar-pasta")?.addEventListener("click", async (evento) => {
+		const botao = evento.currentTarget;
+		botao.disabled = true;
+		try {
+			const resposta = await A.chamar("documentos.criar_pasta", { name: dados.name });
+			if (resposta.link) {
+				window.location.reload();
+				return;
+			}
+			document.getElementById("vg-pasta-erro").textContent = resposta.erro;
+			A.toast("error", resposta.erro);
+		} catch (erro) {
+			A.toast("error", erro.message);
+		} finally {
+			botao.disabled = false;
+		}
+	});
 
 	// ─────────────────────────── Exclusão ───────────────────────────
 

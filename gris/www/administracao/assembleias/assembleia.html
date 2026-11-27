@@ -84,7 +84,8 @@
 				{% if dados.pasta_drive_link %}
 					<a href="{{ dados.pasta_drive_link | e }}" target="_blank" rel="noopener">{{ lucide_icon("folder-open", size="xs") }} Abrir pasta</a>
 				{% else %}
-					<span class="text-muted-foreground">{{ (dados.pasta_drive_erro or "Ainda não criada.") | e }}</span>
+					<span class="text-muted-foreground" id="vg-pasta-erro">{{ (dados.pasta_drive_erro or "Ainda não criada.") | e }}</span>
+					<button type="button" class="btn-sm-outline" id="vg-criar-pasta">{{ lucide_icon("folder-plus", size="sm") }}<span>Criar pasta no Drive</span></button>
 				{% endif %}
 			</div>
 		</div>
@@ -175,7 +176,11 @@
 			</div>
 		</div>
 		<div class="asm-acoes">
+			{% if dados.edital.doc_link %}
+			<a class="btn-ghost" href="{{ dados.edital.doc_link | e }}" target="_blank" rel="noopener">{{ lucide_icon("external-link", size="sm") }}<span>Abrir no Google Docs</span></a>
+			{% endif %}
 			<button type="button" class="btn-outline" id="ed-previa">{{ lucide_icon("eye", size="sm") }}<span>Pré-visualizar</span></button>
+			<button type="button" class="btn-outline" data-baixar-pdf="edital">{{ lucide_icon("file-down", size="sm") }}<span>{{ "Baixar PDF final" if publicado else "Gerar PDF" }}</span></button>
 			{% if not publicado %}
 			<button type="button" class="btn-outline" id="ed-salvar">{{ lucide_icon("save", size="sm") }}<span>Salvar edital</span></button>
 			<button type="button" class="btn-primary" id="ed-publicar">{{ lucide_icon("send", size="sm") }}<span>Marcar como publicado</span></button>
@@ -197,6 +202,7 @@
 				<p class="asm-bloco__descricao" id="lp-gerada"></p>
 			</div>
 			<div class="asm-acoes">
+				<button type="button" class="btn-outline" data-baixar-pdf="lista">{{ lucide_icon("file-down", size="sm") }}<span>Exportar PDF</span></button>
 				{% if lista.editavel %}
 				<button type="button" class="btn-primary" id="lp-gerar">{{ lucide_icon("refresh-cw", size="sm") }}<span>Gerar lista</span></button>
 				{% endif %}
@@ -291,6 +297,7 @@
 			<h2 class="asm-bloco__titulo">Texto da ata</h2>
 			<div class="asm-acoes">
 				<button type="button" class="btn-outline" id="at-gerar-ia">{{ lucide_icon("sparkles", size="sm") }}<span>Gerar ata com IA</span></button>
+				<button type="button" class="btn-primary" data-baixar-pdf="ata">{{ lucide_icon("file-down", size="sm") }}<span>Gerar PDF da versão final</span></button>
 			</div>
 		</div>
 		<p class="asm-bloco__descricao">

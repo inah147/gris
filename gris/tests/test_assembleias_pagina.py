@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
+from unittest.mock import patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
@@ -23,8 +24,12 @@ class _Base(FrappeTestCase):
 		frappe.set_user("Administrator")
 		for name in frappe.get_all(c.DOCTYPE_ASSEMBLEIA, pluck="name"):
 			frappe.delete_doc(c.DOCTYPE_ASSEMBLEIA, name, force=True)
+		# Publicar gera o edital final no Drive (e faz commit): aqui, nunca o Google real.
+		self._sem_drive = patch("gris.api.assembleias.documentos.gerar_edital_final", return_value=b"")
+		self._sem_drive.start()
 
 	def tearDown(self):
+		self._sem_drive.stop()
 		frappe.set_user("Administrator")
 		frappe.db.rollback()
 

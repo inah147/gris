@@ -1,0 +1,119 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import empty, field, input, switch, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/dialog.html.jinja" import dialog %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Sessão{% if encontrada %} · {{ assembleia.titulo | e }}{% endif %}{% endblock %}
+
+{% set pode_editar = papel and sessao.pode_editar %}
+
+{% block page_header %}
+<div class="asm-cabecalho">
+	<div class="flex flex-col gap-2 max-w-3xl">
+		{% if e_gestor %}
+		<a class="text-sm text-muted-foreground" href="/administracao/assembleias/assembleia?name={{ assembleia.name | urlencode }}#sessao">{{ lucide_icon("arrow-left", size="xs") }} Assembleia</a>
+		{% endif %}
+		<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">
+			Sessão{% if encontrada %} da assembleia {{ assembleia.tipo | lower | e }}{% endif %}
+		</h1>
+		{% if encontrada and papel %}
+		<p class="asm-cabecalho__sub">
+			<span>{{ lucide_icon("calendar", size="xs") }} {{ sessao.data_extenso }}</span>
+			<span>{{ lucide_icon("map-pin", size="xs") }} {{ assembleia.local | e }}</span>
+		</p>
+		{% endif %}
+	</div>
+	{% if encontrada and papel %}
+	<div class="asm-cabecalho__acoes">
+		{% if pode_editar %}
+		<span class="asm-salvamento" data-salvamento="sessao" aria-live="polite"></span>
+		{% else %}
+		<span class="badge-outline">{{ lucide_icon("eye", size="xs") }} Só leitura · atualiza sozinho</span>
+		{% endif %}
+	</div>
+	{% endif %}
+</div>
+{% endblock %}
+
+{% block main %}
+{% include "gris/templates/includes/assembleias_comum.html" %}
+
+{% if not encontrada %}
+	{{ empty(
+		title="Assembleia não encontrada",
+		description="O link pode estar incompleto. Peça o link da sessão para quem organiza a assembleia.",
+		image="/assets/gris/images/gris-character/gris-confused.png",
+		image_alt="Gris, o mascote, confuso"
+	) }}
+{% elif not papel %}
+	{{ empty(
+		title="Esta sessão é só para a mesa",
+		description="Entram aqui o presidente e o secretário da mesa desta assembleia, depois de registrados, e quem gerencia as assembleias.",
+		image="/assets/gris/images/gris-character/gris-police.png",
+		image_alt="Gris, o mascote, de guarda"
+	) }}
+{% else %}
+<div class="asm-sessao" data-sessao="{{ sessao | tojson | forceescape }}">
+	<div class="asm-sessao__barra">
+		<div class="asm-sessao__dados">
+			<span class="asm-sessao__estado" id="se-estado"></span>
+			<div class="asm-sessao__dado"><span>Início</span><strong id="se-inicio">—</strong></div>
+			<div class="asm-sessao__dado">
+				<span>Presentes</span>
+				{% if pode_editar %}
+				<input type="number" class="input asm-sessao__presentes" id="se-presentes" min="0" value="{{ sessao.presentes or '' }}" aria-label="Presentes, pela lista assinada">
+				{% else %}
+				<strong id="se-presentes-texto">—</strong>
+				{% endif %}
+			</div>
+			<div class="asm-sessao__dado"><span>Quórum da 1ª convocação</span><strong id="se-quorum">—</strong></div>
+			{% if sessao.pode_trocar_mesa %}
+			<div class="asm-sessao__mesa">
+				{% call field(label="Presidente da mesa") %}
+					{{ select(id="se-presidente", items=pessoas_16, selected=sessao.presidente, is_combobox=true, search_placeholder="Buscar pelo nome", trigger_attrs={"class": "w-full"}) }}
+				{% endcall %}
+				{% call field(label="Secretário da mesa") %}
+					{{ select(id="se-secretario", items=pessoas_16, selected=sessao.secretario, is_combobox=true, search_placeholder="Buscar pelo nome", trigger_attrs={"class": "w-full"}) }}
+				{% endcall %}
+			</div>
+			{% else %}
+			<div class="asm-sessao__dado"><span>Presidente da mesa</span><strong id="se-presidente-nome">—</strong></div>
+			<div class="asm-sessao__dado"><span>Secretário</span><strong id="se-secretario-nome">—</strong></div>
+			{% endif %}
+		</div>
+		<div class="asm-acoes">
+			{% if pode_editar %}
+			<button type="button" class="btn-outline" id="se-anotar" aria-keyshortcuts="Control+.">{{ lucide_icon("notebook-pen", size="sm") }}<span>Anotação geral</span></button>
+			<button type="button" class="btn-primary" id="se-abrir" hidden>{{ lucide_icon("play", size="sm") }}<span>Abrir sessão</span></button>
+			<button type="button" class="btn-outline" id="se-encerrar" hidden>{{ lucide_icon("square", size="sm") }}<span>Encerrar sessão</span></button>
+			{% else %}
+			{{ switch(checked=true, label="Seguir o secretário", attrs={"id": "se-seguir"}) }}
+			{% endif %}
+		</div>
+	</div>
+
+	<div class="asm-sessao__corpo">
+		<nav class="asm-sessao__pauta" aria-label="Pauta da sessão">
+			<p class="asm-sessao__pauta-titulo" id="se-progresso"></p>
+			<ol class="asm-sessao__itens" id="se-itens"></ol>
+		</nav>
+		<section class="asm-sessao__palco" id="se-palco" tabindex="-1"></section>
+	</div>
+</div>
+
+{% if pode_editar %}
+{% call dialog(
+	id="dialog-anotacao-geral",
+	title="Anotação geral",
+	description="Fora de um item da pauta: chegada de pessoas, questão de ordem, intervalo. Vai com o horário e o item em andamento.",
+	footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-anotacao-geral">Cancelar</button><button type="button" class="btn-primary" id="btn-anotar">Anotar</button>'
+) %}
+{{ textarea(attrs={"id": "anotacao-geral-texto", "rows": "4", "maxlength": "2000", "aria-label": "Anotação geral"}) }}
+{% endcall %}
+{% endif %}
+
+{{ toaster() }}
+{% endif %}
+{% endblock %}

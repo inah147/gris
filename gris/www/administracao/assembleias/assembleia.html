@@ -304,47 +304,20 @@
 	</div>
 
 	<div class="asm-aba asm-aba--sem-topo" data-momento-painel="conduzir"{% if not sessao_conduzir %} hidden{% endif %}>
-		{% call card(attrs={"class": "asm-bloco", "id": "se-mesa"}) %}
+		{% call card(attrs={"class": "asm-bloco asm-modo-sessao", "id": "se-modo"}) %}
 		<section>
-			<h2 class="asm-bloco__titulo">Mesa e horários</h2>
-			<div class="asm-campos">
-				{% call field(label="Início") %}
-					{{ input(type="time", value=(ata.hora_inicio or ""), attrs={"id": "at-inicio", "data-campo-ata": "ata_hora_inicio"}) }}
-				{% endcall %}
-				{% call field(label="Término") %}
-					{{ input(type="time", value=(ata.hora_termino or ""), attrs={"id": "at-termino", "data-campo-ata": "ata_hora_termino"}) }}
-				{% endcall %}
-				{% call field(label="Presentes", hint="Pela lista de presença assinada.") %}
-					{{ input(type="number", value=(ata.presentes or ""), attrs={"id": "at-presentes", "min": "0", "data-campo-ata": "ata_presentes"}) }}
-				{% endcall %}
+			<div class="asm-bloco__topo">
+				<div class="flex flex-col gap-1">
+					<h2 class="asm-bloco__titulo">Modo sessão</h2>
+					<p class="asm-bloco__descricao">Tela própria para o notebook do secretário: a pauta como navegação, o roteiro de cada item ao lado e o registro de resultado, votos, eleitos e anotações, que alimenta a ata.</p>
+				</div>
+				<a class="btn-primary" href="/assembleias/sessao?assembleia={{ assembleia.name | urlencode }}">{{ lucide_icon("play", size="sm") }}<span>Abrir modo sessão</span></a>
 			</div>
-			<div class="asm-campos">
-				{% call field(label="Presidente da mesa", hint="Associados com 16 anos ou mais e responsáveis.") %}
-					{{ select(id="at-presidente", items=pessoas_16, selected=ata.presidente, is_combobox=true, search_placeholder="Buscar pelo nome", trigger_attrs={"class": "w-full"}) }}
-				{% endcall %}
-				{% call field(label="Secretário da mesa") %}
-					{{ select(id="at-secretario", items=pessoas_16, selected=ata.secretario, is_combobox=true, search_placeholder="Buscar pelo nome", trigger_attrs={"class": "w-full"}) }}
-				{% endcall %}
+			<dl class="asm-resumo-sessao" id="se-resumo"></dl>
+			<div class="asm-modo-sessao__mesa">
+				<p class="m-0">O presidente e o secretário da mesa entram pelo mesmo link, com o próprio login, depois de registrados no item 1: o secretário edita, o presidente acompanha só para leitura.</p>
+				<button type="button" class="btn-sm-outline" data-copiar="{{ link_sessao | e }}">{{ lucide_icon("copy", size="sm") }}<span>Copiar link da sessão</span></button>
 			</div>
-		</section>
-		{% endcall %}
-
-		{% call card(attrs={"class": "asm-bloco"}) %}
-		<section>
-			<h2 class="asm-bloco__titulo">Roteiro da pauta</h2>
-			<details class="asm-orientacoes-gerais">
-				<summary>Tipos de votação e lembretes do estatuto</summary>
-				<div class="asm-markdown" id="cd-gerais"></div>
-			</details>
-			<ol class="asm-roteiro" id="cd-roteiro"></ol>
-		</section>
-		{% endcall %}
-
-		{% call card(attrs={"class": "asm-bloco"}) %}
-		<section>
-			<h2 class="asm-bloco__titulo">Anotações do secretário</h2>
-			<p class="asm-bloco__descricao">O que aconteceu em cada item: quem apresentou, questionamentos, como foi a votação e o resultado.</p>
-			<div id="at-anotacoes-editor" class="asm-editor" aria-label="Anotações do secretário"></div>
 		</section>
 		{% endcall %}
 	</div>

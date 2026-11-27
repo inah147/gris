@@ -1,4 +1,7 @@
+from urllib.parse import quote
+
 import frappe
+from frappe.utils import get_url
 
 from gris.api.assembleias import constantes as c
 from gris.api.assembleias.ata import dados_da_ata
@@ -38,6 +41,7 @@ def get_context(context):
 
 	doc = frappe.get_doc(c.DOCTYPE_ASSEMBLEIA, name)
 	context.assembleia = doc
+	context.link_sessao = get_url(f"/assembleias/sessao?assembleia={quote(name)}")
 	context.dados = dados_da_pagina(doc)
 	context.inscricoes = contagem_de_inscricoes(name)
 	context.tipo_items = [{"label": t, "value": t} for t in (c.TIPO_ORDINARIA, c.TIPO_EXTRAORDINARIA)]

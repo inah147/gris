@@ -44,6 +44,7 @@
   "ata_hora_inicio",
   "ata_hora_termino",
   "ata_presentes",
+  "sessao_aberta_em",
   "ata_col",
   "presidente_tipo",
   "presidente",
@@ -294,6 +295,12 @@
    "label": "Presentes (lista assinada)"
   },
   {
+   "fieldname": "sessao_aberta_em",
+   "fieldtype": "Datetime",
+   "label": "Sessão aberta em",
+   "read_only": 1
+  },
+  {
    "fieldname": "ata_col",
    "fieldtype": "Column Break"
   },
@@ -383,7 +390,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-27 12:00:00.000000",
+ "modified": "2026-11-27 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Assembleia",

@@ -9,6 +9,7 @@
   "titulo",
   "status",
   "motivo_retirada",
+  "eleita",
   "chapa_col",
   "responsavel_usuario",
   "responsavel_pessoa_tipo",
@@ -49,6 +50,13 @@
    "label": "Motivo da retirada"
   },
   {
+   "default": "0",
+   "description": "Marcada no modo sessão.",
+   "fieldname": "eleita",
+   "fieldtype": "Check",
+   "label": "Eleita"
+  },
+  {
    "fieldname": "chapa_col",
    "fieldtype": "Column Break"
   },
@@ -86,7 +94,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-27 12:00:00.000000",
+ "modified": "2026-11-27 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Chapa de Assembleia",

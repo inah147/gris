@@ -15,6 +15,7 @@
   "candidatura_col",
   "status",
   "motivo_retirada",
+  "resultado",
   "usuario",
   "textos_section",
   "biografia",
@@ -92,6 +93,13 @@
    "label": "Motivo da retirada"
   },
   {
+   "description": "Marcado no modo sessão.",
+   "fieldname": "resultado",
+   "fieldtype": "Select",
+   "label": "Resultado na eleição",
+   "options": "\nEleito\nSuplente\nNão eleito"
+  },
+  {
    "fieldname": "usuario",
    "fieldtype": "Link",
    "label": "Enviada por",
@@ -116,7 +124,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-27 12:00:00.000000",
+ "modified": "2026-11-27 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Candidatura de Assembleia",

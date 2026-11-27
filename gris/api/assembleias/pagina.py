@@ -244,7 +244,7 @@ def etapas_da_assembleia(doc, config, formularios: list[dict], checklist: list[d
 			"titulo": f"A assembleia é hoje, às {hora_inicio}",
 			"texto": "Registre a mesa, os horários e as anotações na etapa Sessão.",
 			"etapa": "sessao",
-			"alvo": "se-mesa",
+			"alvo": "se-modo",
 			"acao": "Ir para a sessão",
 		}
 	elif not doc.ata_pdf_link:
@@ -307,6 +307,9 @@ def dados_da_pagina(doc, config=None) -> dict:
 		"hora_segunda": hora(doc.hora_segunda_convocacao),
 		"credenciamento": juntar_pessoa(doc.credenciamento_tipo, doc.credenciamento),
 		"vagas_delegados": cint(doc.vagas_delegados),
+		"sessao_aberta_em": str(doc.sessao_aberta_em or ""),
+		"hora_inicio_sessao": hora(doc.ata_hora_inicio),
+		"hora_termino_sessao": hora(doc.ata_hora_termino),
 		"presidente": nome_da_pessoa(doc.presidente_tipo, doc.presidente),
 		"secretario": nome_da_pessoa(doc.secretario_tipo, doc.secretario),
 		"pasta_drive_link": doc.pasta_drive_link or "",

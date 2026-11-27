@@ -532,6 +532,33 @@ Cada critério de aceite (CA) tem um teste correspondente na
 - **CA-15.3** As equipes são comparadas sem acento e sem diferença de maiúsculas. "Patrulha Lobo"
   e "patrulha lobo" são a mesma equipe.
 
+### RF-16 — Modo sessão
+
+- **CA-16.1** `/assembleias/sessao?assembleia=…` abre o modo sessão. Entram quem gerencia as
+  assembleias e a mesa daquela assembleia: o secretário edita e o presidente só lê. A mesa entra
+  pelo próprio login, depois de gravada, e perde o acesso quando "Finalizar a ata" é marcado.
+  Quem não é da mesa vê "Esta sessão é só para a mesa", e os endpoints recusam com
+  `PermissionError`.
+- **CA-16.2** A barra da sessão tem o estado (não iniciada, em sessão, encerrada), o início, os
+  presentes, o quórum da primeira convocação (maioria absoluta da lista) e a mesa. Só quem
+  gerencia troca a mesa. "Abrir sessão" grava o início e "Encerrar sessão", o término.
+- **CA-16.3** A pauta é a navegação. Cada item mostra o roteiro da mesa (orientação de condução e
+  dados ao vivo) e o registro: resultado (aprovado por aclamação, aprovado, reprovado, retirado de
+  pauta), votos a favor, contra e abstenções, opcionais, e as anotações do item. Nos itens de
+  eleição, o secretário marca cada candidato como eleito, suplente ou não eleito, e a chapa eleita
+  da diretoria (uma só).
+- **CA-16.4** "Concluir e ir para o próximo" (ou Ctrl+Enter) conclui o item e começa o seguinte,
+  com os horários. Um item concluído pode ser reaberto.
+- **CA-16.5** "Anotação geral" (ou Ctrl+.) grava, nas anotações do secretário, uma linha com o
+  horário e o item em andamento, para o que não é de um item da pauta.
+- **CA-16.6** Tudo grava sozinho, com conflito de `modified` como na ata (CA-08.3). O presidente
+  vê as mudanças sem recarregar: a tela consulta a cada 5 s só se algo mudou, e o servidor avisa
+  pelo socket do Frappe quando ele estiver disponível. Por padrão a tela dele segue o item em
+  andamento; ele pode navegar e voltar.
+- **CA-16.7** Campos novos: no item da pauta, `resultado`, `votos_favor`, `votos_contra`,
+  `votos_abstencao`, `anotacoes`, `iniciado_em` e `concluido_em`; na candidatura, `resultado`; na
+  chapa, `eleita`; na assembleia, `sessao_aberta_em`.
+
 ## 7. Requisitos não funcionais
 
 - **Segurança:**

@@ -1,7 +1,8 @@
 # Spec — Assembleias de Grupo
 
-> Status: revisada com o estatuto de 2026, o edital de 2026, o modelo de ata e as orientações de
-> condução · Branch: `feat/assembleias` · Plano técnico: [plano.md](plano.md) · Textos:
+> Status: implementada (etapas 4.1 a 4.8), com testes de unidade e validação no dev.gris; a
+> geração no Google Docs e a ata por IA foram testadas com os serviços simulados e ainda precisam
+> de uma rodada real · Branch: `feat/assembleias` · Plano técnico: [plano.md](plano.md) · Textos:
 > [textos.md](textos.md)
 
 ## 1. Problema

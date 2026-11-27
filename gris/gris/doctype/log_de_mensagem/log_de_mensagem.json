@@ -132,7 +132,7 @@
    "fieldtype": "Select",
    "in_standard_filter": 1,
    "label": "Tipo do destinatário",
-   "options": "Responsável\nResponsável administrativo\nGrupo de chefes de seção\nGrupo da recepção\nGrupo de recados gerais\nConvidado de festa\nAprovador de acesso\nSolicitante de acesso\nGrupo de tecnologia\nAssociado\nResponsável do associado\nChefe de seção\nNão identificado",
+   "options": "Responsável\nResponsável administrativo\nGrupo de chefes de seção\nGrupo da recepção\nGrupo de recados gerais\nConvidado de festa\nAprovador de acesso\nSolicitante de acesso\nGrupo de tecnologia\nAssociado\nResponsável do associado\nChefe de seção\nGrupo da diretoria\nNão identificado",
    "read_only": 1
   },
   {

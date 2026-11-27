@@ -1,0 +1,90 @@
+{
+ "actions": [],
+ "creation": "2026-11-27 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "nome",
+  "tipo_linha",
+  "pessoa_tipo",
+  "pessoa",
+  "ramo",
+  "equipe",
+  "origem",
+  "removido"
+ ],
+ "fields": [
+  {
+   "columns": 3,
+   "fieldname": "nome",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome",
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "tipo_linha",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Tipo",
+   "options": "\nEscotista\nDirigente\nAssociado\nJovem\nJovem representado\nRepresentante de equipe\nIncluído manualmente"
+  },
+  {
+   "fieldname": "pessoa_tipo",
+   "fieldtype": "Select",
+   "label": "Tipo — pessoa",
+   "options": "\nAssociado\nResponsavel"
+  },
+  {
+   "fieldname": "pessoa",
+   "fieldtype": "Dynamic Link",
+   "label": "Pessoa",
+   "options": "pessoa_tipo"
+  },
+  {
+   "columns": 1,
+   "fieldname": "ramo",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Ramo"
+  },
+  {
+   "columns": 2,
+   "fieldname": "equipe",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Equipe"
+  },
+  {
+   "default": "Automática",
+   "fieldname": "origem",
+   "fieldtype": "Select",
+   "label": "Origem",
+   "options": "Automática\nManual"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "description": "Linha tirada da lista à mão. Continua aqui para não voltar quando a lista for gerada de novo.",
+   "fieldname": "removido",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Removido"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-27 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Votante da Assembleia",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

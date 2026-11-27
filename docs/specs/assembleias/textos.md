@@ -218,7 +218,7 @@ da assembleia e as anotações do secretário. O que não puder ser preenchido c
 `[A CONFIRMAR: …]`.
 
 > No dia [DIA] de [MÊS] de [ANO], às [HORA INÍCIO], reuniram-se os membros devidamente registrados
-> do {nome_uel} – {numeral}, CNPJ {cnpj}, na sede do Grupo Escoteiro, sito a {endereco_sede} –
+> do {nome_uel} - {numeral}, CNPJ {cnpj}, na sede do Grupo Escoteiro, sito a {endereco_sede} -
 > {cidade}, para deliberar sobre os assuntos apontados na ordem do dia do edital de convocação da
 > reunião [ORDINÁRIA / EXTRAORDINÁRIA] da Assembleia de Grupo, publicado no dia [DATA DO EDITAL].
 > O quórum presente na reunião é de [QUANTIDADE DE PRESENTES PELA LISTA DE PRESENÇA]. O diretor

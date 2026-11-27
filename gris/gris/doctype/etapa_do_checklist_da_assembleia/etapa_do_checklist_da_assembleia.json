@@ -1,0 +1,80 @@
+{
+ "actions": [],
+ "creation": "2026-11-27 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "chave",
+  "fase",
+  "titulo",
+  "somente_eletiva",
+  "concluido",
+  "concluido_em",
+  "concluido_por"
+ ],
+ "fields": [
+  {
+   "fieldname": "chave",
+   "fieldtype": "Data",
+   "label": "Chave",
+   "read_only": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "fase",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Fase",
+   "options": "Antes\nNo dia\nDepois"
+  },
+  {
+   "columns": 5,
+   "fieldname": "titulo",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Etapa",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "somente_eletiva",
+   "fieldtype": "Check",
+   "label": "Só em assembleia eletiva"
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "concluido",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Concluído"
+  },
+  {
+   "fieldname": "concluido_em",
+   "fieldtype": "Datetime",
+   "label": "Concluído em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "concluido_por",
+   "fieldtype": "Link",
+   "label": "Concluído por",
+   "options": "User",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-27 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Etapa do Checklist da Assembleia",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

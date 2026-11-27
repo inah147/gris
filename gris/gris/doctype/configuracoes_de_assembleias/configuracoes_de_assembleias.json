@@ -1,0 +1,480 @@
+{
+ "actions": [],
+ "creation": "2026-11-27 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "edital_tab",
+  "edital_section",
+  "dias_limite_edital",
+  "local_padrao",
+  "cidade",
+  "edital_col",
+  "grupo_diretoria_whatsapp",
+  "textos_edital_section",
+  "texto_topo_edital",
+  "texto_rodape_edital",
+  "pautas_tab",
+  "pauta_ordinaria_section",
+  "pauta_ordinaria",
+  "pauta_extraordinaria_section",
+  "pauta_extraordinaria",
+  "orientacoes_section",
+  "orientacoes_gerais",
+  "materiais_section",
+  "materiais",
+  "votacao_tab",
+  "votacao_section",
+  "voto_escotistas",
+  "voto_dirigentes",
+  "voto_demais_associados",
+  "exigir_registro_ativo",
+  "votacao_col",
+  "voto_jovens",
+  "idade_minima_voto_jovem",
+  "voto_representado_por_responsavel",
+  "idade_minima_representacao_meses",
+  "equipes_section",
+  "voto_por_matilha",
+  "voto_por_patrulha_escoteiro",
+  "voto_por_patrulha_senior",
+  "candidaturas_tab",
+  "prazos_section",
+  "prazo_mesa_unidade",
+  "prazo_mesa_valor",
+  "prazo_diretoria_unidade",
+  "prazo_diretoria_valor",
+  "prazo_comissao_fiscal_unidade",
+  "prazo_comissao_fiscal_valor",
+  "prazos_col",
+  "prazo_delegado_unidade",
+  "prazo_delegado_valor",
+  "prazo_assuntos_gerais_unidade",
+  "prazo_assuntos_gerais_valor",
+  "manter_aberto_sem_candidatos",
+  "vagas_section",
+  "vagas_comissao_fiscal",
+  "suplentes_comissao_fiscal",
+  "vagas_col",
+  "associados_por_delegado",
+  "ata_tab",
+  "ata_section",
+  "modelo_ata",
+  "drive_tab",
+  "drive_section",
+  "habilitar_pastas_drive",
+  "drive_compartilhado_assembleias",
+  "pasta_assembleias_id"
+ ],
+ "fields": [
+  {
+   "fieldname": "edital_tab",
+   "fieldtype": "Tab Break",
+   "label": "Edital"
+  },
+  {
+   "fieldname": "edital_section",
+   "fieldtype": "Section Break",
+   "label": "Edital de convocação"
+  },
+  {
+   "default": "30",
+   "description": "O estatuto exige o edital publicado com no mínimo 30 dias de antecedência. Os lembretes à Diretoria contam até esta data.",
+   "fieldname": "dias_limite_edital",
+   "fieldtype": "Int",
+   "label": "Antecedência mínima do edital (dias)"
+  },
+  {
+   "description": "Sugerido ao criar uma assembleia.",
+   "fieldname": "local_padrao",
+   "fieldtype": "Data",
+   "label": "Local padrão"
+  },
+  {
+   "description": "Usada no fecho do edital e na ata ({cidade}).",
+   "fieldname": "cidade",
+   "fieldtype": "Data",
+   "label": "Cidade"
+  },
+  {
+   "fieldname": "edital_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Recebe os lembretes do prazo do edital.",
+   "fieldname": "grupo_diretoria_whatsapp",
+   "fieldtype": "Select",
+   "label": "Grupo da Diretoria no WhatsApp"
+  },
+  {
+   "description": "Aceitam as variáveis listadas em docs/specs/assembleias/textos.md, como {data}, {hora_primeira} e {nome_uel}.",
+   "fieldname": "textos_edital_section",
+   "fieldtype": "Section Break",
+   "label": "Textos do edital"
+  },
+  {
+   "fieldname": "texto_topo_edital",
+   "fieldtype": "Long Text",
+   "label": "Texto antes da pauta"
+  },
+  {
+   "fieldname": "texto_rodape_edital",
+   "fieldtype": "Long Text",
+   "label": "Texto depois da pauta"
+  },
+  {
+   "fieldname": "pautas_tab",
+   "fieldtype": "Tab Break",
+   "label": "Pautas e condução"
+  },
+  {
+   "fieldname": "pauta_ordinaria_section",
+   "fieldtype": "Section Break",
+   "label": "Pauta padrão — ordinária"
+  },
+  {
+   "fieldname": "pauta_ordinaria",
+   "fieldtype": "Table",
+   "label": "Itens",
+   "options": "Item Padrao de Pauta"
+  },
+  {
+   "fieldname": "pauta_extraordinaria_section",
+   "fieldtype": "Section Break",
+   "label": "Pauta padrão — extraordinária"
+  },
+  {
+   "fieldname": "pauta_extraordinaria",
+   "fieldtype": "Table",
+   "label": "Itens",
+   "options": "Item Padrao de Pauta"
+  },
+  {
+   "fieldname": "orientacoes_section",
+   "fieldtype": "Section Break",
+   "label": "Orientações gerais de condução"
+  },
+  {
+   "description": "Aparecem no topo da aba Auxílio para condução.",
+   "fieldname": "orientacoes_gerais",
+   "fieldtype": "Long Text",
+   "label": "Orientações gerais"
+  },
+  {
+   "fieldname": "materiais_section",
+   "fieldtype": "Section Break",
+   "label": "Materiais do dia"
+  },
+  {
+   "fieldname": "materiais",
+   "fieldtype": "Table",
+   "label": "Materiais",
+   "options": "Material de Assembleia"
+  },
+  {
+   "fieldname": "votacao_tab",
+   "fieldtype": "Tab Break",
+   "label": "Quem vota"
+  },
+  {
+   "description": "Os padrões seguem o art. 9º do estatuto: beneficiários a partir de 16 anos; de 6,5 a 15 anos, representados por um responsável legal; demais associados com registro ativo.",
+   "fieldname": "votacao_section",
+   "fieldtype": "Section Break",
+   "label": "Direito a voto"
+  },
+  {
+   "default": "1",
+   "fieldname": "voto_escotistas",
+   "fieldtype": "Check",
+   "label": "Escotistas"
+  },
+  {
+   "default": "1",
+   "fieldname": "voto_dirigentes",
+   "fieldtype": "Check",
+   "label": "Dirigentes"
+  },
+  {
+   "default": "1",
+   "fieldname": "voto_demais_associados",
+   "fieldtype": "Check",
+   "label": "Demais associados (contribuintes, colaboradores e outras categorias adultas)"
+  },
+  {
+   "default": "1",
+   "description": "Só entra na lista quem tem o registro válido na data da assembleia.",
+   "fieldname": "exigir_registro_ativo",
+   "fieldtype": "Check",
+   "label": "Exigir registro ativo"
+  },
+  {
+   "fieldname": "votacao_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "voto_jovens",
+   "fieldtype": "Check",
+   "label": "Jovens votam"
+  },
+  {
+   "default": "16",
+   "depends_on": "voto_jovens",
+   "fieldname": "idade_minima_voto_jovem",
+   "fieldtype": "Int",
+   "label": "A partir de (anos)"
+  },
+  {
+   "default": "1",
+   "fieldname": "voto_representado_por_responsavel",
+   "fieldtype": "Check",
+   "label": "Responsável legal representa o jovem mais novo"
+  },
+  {
+   "default": "78",
+   "depends_on": "voto_representado_por_responsavel",
+   "description": "78 meses = 6 anos e meio. Abaixo disso o jovem não tem voto nem representação.",
+   "fieldname": "idade_minima_representacao_meses",
+   "fieldtype": "Int",
+   "label": "Representação a partir de (meses de idade)"
+  },
+  {
+   "description": "Cada equipe do ramo ganha uma linha de representante, além das linhas dos jovens. O estatuto não prevê esse voto; deixe desligado salvo decisão da assembleia.",
+   "fieldname": "equipes_section",
+   "fieldtype": "Section Break",
+   "label": "Voto por equipe"
+  },
+  {
+   "default": "0",
+   "fieldname": "voto_por_matilha",
+   "fieldtype": "Check",
+   "label": "Uma linha por matilha (Lobinho)"
+  },
+  {
+   "default": "0",
+   "fieldname": "voto_por_patrulha_escoteiro",
+   "fieldtype": "Check",
+   "label": "Uma linha por patrulha (Escoteiro)"
+  },
+  {
+   "default": "0",
+   "fieldname": "voto_por_patrulha_senior",
+   "fieldtype": "Check",
+   "label": "Uma linha por patrulha (Sênior)"
+  },
+  {
+   "fieldname": "candidaturas_tab",
+   "fieldtype": "Tab Break",
+   "label": "Candidaturas"
+  },
+  {
+   "description": "Contados até a primeira convocação. O estatuto fixa 8 dias para diretoria e comissão fiscal, 1 hora para delegados e 2 horas para assuntos gerais.",
+   "fieldname": "prazos_section",
+   "fieldtype": "Section Break",
+   "label": "Prazos de inscrição"
+  },
+  {
+   "default": "Sem limite",
+   "fieldname": "prazo_mesa_unidade",
+   "fieldtype": "Select",
+   "label": "Prazo — mesa",
+   "options": "Sem limite\nDias\nHoras"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.prazo_mesa_unidade != 'Sem limite'",
+   "fieldname": "prazo_mesa_valor",
+   "fieldtype": "Int",
+   "label": "Antecedência — mesa"
+  },
+  {
+   "default": "Dias",
+   "fieldname": "prazo_diretoria_unidade",
+   "fieldtype": "Select",
+   "label": "Prazo — diretoria",
+   "options": "Sem limite\nDias\nHoras"
+  },
+  {
+   "default": "8",
+   "depends_on": "eval:doc.prazo_diretoria_unidade != 'Sem limite'",
+   "fieldname": "prazo_diretoria_valor",
+   "fieldtype": "Int",
+   "label": "Antecedência — diretoria"
+  },
+  {
+   "default": "Dias",
+   "fieldname": "prazo_comissao_fiscal_unidade",
+   "fieldtype": "Select",
+   "label": "Prazo — comissão fiscal",
+   "options": "Sem limite\nDias\nHoras"
+  },
+  {
+   "default": "8",
+   "depends_on": "eval:doc.prazo_comissao_fiscal_unidade != 'Sem limite'",
+   "fieldname": "prazo_comissao_fiscal_valor",
+   "fieldtype": "Int",
+   "label": "Antecedência — comissão fiscal"
+  },
+  {
+   "fieldname": "prazos_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Horas",
+   "fieldname": "prazo_delegado_unidade",
+   "fieldtype": "Select",
+   "label": "Prazo — delegado",
+   "options": "Sem limite\nDias\nHoras"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval:doc.prazo_delegado_unidade != 'Sem limite'",
+   "fieldname": "prazo_delegado_valor",
+   "fieldtype": "Int",
+   "label": "Antecedência — delegado"
+  },
+  {
+   "default": "Horas",
+   "fieldname": "prazo_assuntos_gerais_unidade",
+   "fieldtype": "Select",
+   "label": "Prazo — assuntos gerais",
+   "options": "Sem limite\nDias\nHoras"
+  },
+  {
+   "default": "2",
+   "depends_on": "eval:doc.prazo_assuntos_gerais_unidade != 'Sem limite'",
+   "fieldname": "prazo_assuntos_gerais_valor",
+   "fieldtype": "Int",
+   "label": "Antecedência — assuntos gerais"
+  },
+  {
+   "default": "1",
+   "description": "Art. 9, § 5º: sem inscrições suficientes, novas inscrições são aceitas até a eleição.",
+   "fieldname": "manter_aberto_sem_candidatos",
+   "fieldtype": "Check",
+   "label": "Manter aberto sem candidatos suficientes"
+  },
+  {
+   "fieldname": "vagas_section",
+   "fieldtype": "Section Break",
+   "label": "Vagas"
+  },
+  {
+   "default": "3",
+   "fieldname": "vagas_comissao_fiscal",
+   "fieldtype": "Int",
+   "label": "Titulares da comissão fiscal"
+  },
+  {
+   "default": "3",
+   "fieldname": "suplentes_comissao_fiscal",
+   "fieldtype": "Int",
+   "label": "Suplentes da comissão fiscal"
+  },
+  {
+   "fieldname": "vagas_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "50",
+   "description": "Uma vaga para cada fração deste número de associados ativos com registro ativo.",
+   "fieldname": "associados_por_delegado",
+   "fieldtype": "Int",
+   "label": "Associados por vaga de delegado"
+  },
+  {
+   "fieldname": "ata_tab",
+   "fieldtype": "Tab Break",
+   "label": "Ata"
+  },
+  {
+   "description": "Base da geração da ata por IA.",
+   "fieldname": "ata_section",
+   "fieldtype": "Section Break",
+   "label": "Modelo de ata"
+  },
+  {
+   "fieldname": "modelo_ata",
+   "fieldtype": "Long Text",
+   "label": "Modelo de ata"
+  },
+  {
+   "fieldname": "drive_tab",
+   "fieldtype": "Tab Break",
+   "label": "Drive"
+  },
+  {
+   "description": "Cada assembleia ganha uma pasta dentro da pasta raiz. Os documentos usam o papel timbrado de Configurações de Comunicação.",
+   "fieldname": "drive_section",
+   "fieldtype": "Section Break",
+   "label": "Pastas no Drive"
+  },
+  {
+   "default": "0",
+   "fieldname": "habilitar_pastas_drive",
+   "fieldtype": "Check",
+   "label": "Criar uma pasta para cada assembleia"
+  },
+  {
+   "description": "Drive ativo em Configurações Google Workspace.",
+   "fieldname": "drive_compartilhado_assembleias",
+   "fieldtype": "Select",
+   "label": "Drive compartilhado"
+  },
+  {
+   "fieldname": "pasta_assembleias_id",
+   "fieldtype": "Data",
+   "label": "Pasta raiz (ID ou link)"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-11-27 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Configuracoes de Assembleias",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de Assembleias",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor da UEL",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

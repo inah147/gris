@@ -488,6 +488,7 @@ fixtures = [
 					"Desenvolvedor",
 					"Acompanhamento de Sugestoes",
 					"Gestor de Acessos",
+					"Gestor de Assembleias",
 				],
 			]
 		],

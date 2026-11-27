@@ -1,0 +1,59 @@
+{
+ "actions": [],
+ "creation": "2026-11-27 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "titulo",
+  "tem_votacao",
+  "finalidade",
+  "orientacao_conducao"
+ ],
+ "fields": [
+  {
+   "columns": 5,
+   "fieldname": "titulo",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Título",
+   "reqd": 1
+  },
+  {
+   "columns": 1,
+   "default": "0",
+   "fieldname": "tem_votacao",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Tem votação"
+  },
+  {
+   "columns": 2,
+   "description": "Liga o item aos formulários, ao checklist e às orientações. O título pode ser reescrito à vontade.",
+   "fieldname": "finalidade",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Finalidade",
+   "options": "\nEleição da mesa\nLeitura do edital\nAta anterior\nEleição de delegados\nEleição da comissão fiscal\nEleição da diretoria\nAssuntos gerais\nEncerramento"
+  },
+  {
+   "description": "Como conduzir o item. Aparece na aba Auxílio para condução.",
+   "fieldname": "orientacao_conducao",
+   "fieldtype": "Long Text",
+   "label": "Orientação de condução"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-27 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Item Padrao de Pauta",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

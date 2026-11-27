@@ -35,9 +35,6 @@
 	let editorPauta = null;
 	let ata = A.lerJson(raiz.dataset.ata, {});
 
-	const assinaturaDaPauta = (pauta) =>
-		JSON.stringify((pauta || []).map((i) => [i.name, i.titulo, i.tem_votacao, i.finalidade]));
-
 	const salvamento = A.criarSalvamentoAutomatico(estado, {
 		metodo: "pagina.salvar_campos",
 		aoSalvar(resposta) {
@@ -45,27 +42,19 @@
 				ata.marcadores = resposta.marcadores;
 				desenharStatusDaAta();
 			}
-			Object.entries(resposta.pauta || {}).forEach(([nome, html]) => {
-				const alvo = document.querySelector(
-					`[data-orientacao-html="${CSS.escape(nome)}"]`
-				);
-				if (alvo) alvo.innerHTML = html; // sanitizado no servidor
-			});
 			if (!resposta.pagina) return;
-			// Data, tipo, primeira convocação ou pauta trocada mudam título, prazos e roteiro.
+			// Data, tipo, primeira convocação ou pauta trocada mudam título e prazos.
 			if (resposta.recarregar) {
 				sessionStorage.setItem("asm-aviso", "success|Dados salvos.");
 				window.location.reload();
 				return;
 			}
-			const pautaMudou =
-				assinaturaDaPauta(resposta.pagina.pauta) !== assinaturaDaPauta(dados.pauta);
 			dados = resposta.pagina;
 			if (editorPauta) editorPauta.sincronizarNomes(dados.pauta);
 			desenharInscricoes();
 			desenharTarefas();
 			desenharEtapas();
-			if (pautaMudou) desenharRoteiro();
+			desenharResumoDaSessao();
 		},
 	});
 
@@ -766,7 +755,6 @@
 				: "A pauta não tem este item. Inclua na etapa Edital para abrir o formulário.";
 			document.getElementById("cd-inscricoes").innerHTML = detalheDoCargo(cargo);
 		}
-		preencherAoVivo();
 	}
 
 	document.getElementById("in-cargos")?.addEventListener("click", (evento) => {
@@ -836,71 +824,6 @@
 			bloco.insertAdjacentHTML("beforeend", medidor(r.n, r.m));
 		}
 	});
-
-	function nomesAtivos(cargo) {
-		const grupo = (inscricoes.cargos || []).find((g) => g.cargo === cargo);
-		return ((grupo && grupo.candidaturas) || [])
-			.filter((cand) => cand.status !== "Retirada")
-			.map((cand) => A.escapeHtml(cand.nome));
-	}
-
-	function listaOuNenhum(nomes) {
-		return nomes.length ? nomes.join(", ") : "nenhum";
-	}
-
-	/** Dados ao vivo junto da orientação de cada eleição (CA-10.4). */
-	function preencherAoVivo() {
-		const assuntos = inscricoes.assuntos || [];
-		const chapasAtivas = (inscricoes.chapas || []).filter((ch) => ch.status !== "Retirada");
-		const conteudo = {
-			"Eleição da mesa": `<p><strong>Candidatos a presidente:</strong> ${listaOuNenhum(
-				nomesAtivos("Presidente da mesa")
-			)}</p><p><strong>Candidatos a secretário:</strong> ${listaOuNenhum(
-				nomesAtivos("Secretário da mesa")
-			)}</p><p><strong>Assuntos gerais enviados:</strong> ${assuntos.length}</p>`,
-			"Eleição de delegados": `<p><strong>Vagas:</strong> ${
-				inscricoes.vagas_delegados
-			}</p><p><strong>Candidatos:</strong> ${listaOuNenhum(nomesAtivos("Delegado"))}</p>`,
-			"Eleição da comissão fiscal": `<p><strong>Titulares:</strong> ${
-				inscricoes.titulares_cf
-			} · <strong>Suplentes:</strong> ${
-				inscricoes.suplentes_cf
-			}</p><p><strong>Candidatos:</strong> ${listaOuNenhum(
-				nomesAtivos("Comissão Fiscal")
-			)}</p>`,
-			"Eleição da diretoria": chapasAtivas.length
-				? chapasAtivas
-						.map(
-							(ch) =>
-								`<p><strong>${A.escapeHtml(ch.titulo)}:</strong> ${(
-									ch.membros || []
-								)
-									.map(
-										(m) => `${A.escapeHtml(m.funcao)}: ${A.escapeHtml(m.nome)}`
-									)
-									.join("; ")}</p>`
-						)
-						.join("")
-				: "<p><strong>Chapas inscritas:</strong> nenhuma</p>",
-			"Assuntos gerais": assuntos.length
-				? `<ol>${assuntos
-						.map(
-							(a) =>
-								`<li>${A.escapeHtml(
-									a.conteudo
-								)} <span class="text-muted-foreground">— ${A.escapeHtml(
-									a.nome || ""
-								)}</span></li>`
-						)
-						.join("")}</ol>`
-				: "<p><strong>Assuntos enviados:</strong> nenhum</p>",
-		};
-		document.querySelectorAll("[data-ao-vivo]").forEach((el) => {
-			const html = conteudo[el.dataset.aoVivo];
-			el.innerHTML = html ? `<div class="asm-markdown">${html}</div>` : "";
-			el.hidden = !html;
-		});
-	}
 
 	const dialogRetirar = document.getElementById("dialog-retirar");
 	let retirando = null;
@@ -1131,68 +1054,32 @@
 
 	// ─────────────────────────── 3. Sessão: conduzir ───────────────────────────
 
-	const agendarAta = (campos) => salvar({ ata: campos });
-
-	document.querySelectorAll("[data-campo-ata]").forEach((campo) => {
-		campo.addEventListener("input", () => {
-			agendarAta({ [campo.dataset.campoAta]: campo.value });
-		});
-	});
-	["presidente", "secretario"].forEach((chave) => {
-		document.getElementById(`at-${chave}`)?.addEventListener("change", (evento) => {
-			const valor = (evento.detail && evento.detail.value) ?? A.valorDoSelect(`at-${chave}`);
-			agendarAta({ [chave]: valor });
-		});
-	});
-
-	const gerais = document.getElementById("cd-gerais");
-	if (gerais) gerais.innerHTML = dados.orientacoes_gerais_html || ""; // sanitizado no servidor
-
-	const roteiro = document.getElementById("cd-roteiro");
-
-	function desenharRoteiro() {
-		if (!roteiro) return;
-		roteiro.innerHTML = (dados.pauta || [])
+	/** Resumo da sessão na entrada do modo sessão. */
+	function desenharResumoDaSessao() {
+		const alvo = document.getElementById("se-resumo");
+		if (!alvo) return;
+		const pauta = dados.pauta || [];
+		const feitos = pauta.filter((i) => i.concluido).length;
+		let situacao = "Não iniciada";
+		if (dados.hora_termino_sessao) situacao = `Encerrada às ${dados.hora_termino_sessao}`;
+		else if (dados.sessao_aberta_em)
+			situacao = `Em andamento desde ${dados.hora_inicio_sessao}`;
+		const linhas = [
+			["Sessão", situacao],
+			["Pauta", `${feitos} de ${pauta.length} itens concluídos`],
+			["Presidente da mesa", dados.presidente || "a eleger no item 1"],
+			["Secretário da mesa", dados.secretario || "a eleger no item 1"],
+		];
+		alvo.innerHTML = linhas
 			.map(
-				(item, i) => `<li class="asm-roteiro__item" data-item-pauta="${A.escapeHtml(
-					item.name
-				)}">
-				<label class="asm-roteiro__titulo">
-					<input type="checkbox" class="input" data-concluido${item.concluido ? " checked" : ""}>
-					<span><strong>${i + 1}.</strong> ${A.escapeHtml(item.titulo)}</span>
-					${item.tem_votacao ? '<span class="badge-outline">Votação</span>' : ""}
-				</label>
-				<div class="asm-markdown" data-orientacao-html="${A.escapeHtml(item.name)}">${
-					item.orientacao_html || ""
-				}</div>
-				<div class="asm-ao-vivo" data-ao-vivo="${A.escapeHtml(item.finalidade || "")}"></div>
-				<details class="asm-roteiro__editar">
-					<summary>Editar orientação</summary>
-					<textarea class="textarea asm-textarea-alta" data-orientacao aria-label="Orientação do item ${
-						i + 1
-					}">${A.escapeHtml(item.orientacao_conducao)}</textarea>
-				</details>
-			</li>`
+				([rotulo, valor]) => `<div><dt>${rotulo}</dt><dd>${A.escapeHtml(valor)}</dd></div>`
 			)
 			.join("");
-		preencherAoVivo();
 	}
 
-	roteiro?.addEventListener("change", (evento) => {
-		const caixa = evento.target.closest("[data-concluido]");
-		if (!caixa) return;
-		const nome = caixa.closest("[data-item-pauta]").dataset.itemPauta;
-		salvar({ pauta: { [nome]: { concluido: caixa.checked ? 1 : 0 } } });
-	});
-	roteiro?.addEventListener("input", (evento) => {
-		const texto = evento.target.closest("[data-orientacao]");
-		if (!texto) return;
-		const nome = texto.closest("[data-item-pauta]").dataset.itemPauta;
-		salvar({ pauta: { [nome]: { orientacao_conducao: texto.value } } });
-	});
+	desenharResumoDaSessao();
 
-	desenharRoteiro();
-	desenharInscricoes();
+	const agendarAta = (campos) => salvar({ ata: campos });
 
 	// ─────────────────────────── 4. Ata ───────────────────────────
 
@@ -1237,26 +1124,7 @@
 		}
 	}
 
-	async function iniciarEditorDasAnotacoes() {
-		const host = document.getElementById("at-anotacoes-editor");
-		if (!host || !window.gris?.editor?.create) return;
-		try {
-			const editor = await window.gris.editor.create(host, {
-				initialValue: ata.anotacoes || "",
-				height: "380px",
-				toolbarItems: [["heading", "bold", "italic"], ["ul", "ol", "task"], ["hr"]],
-			});
-			editor.on("change", () => {
-				agendarAta({ anotacoes_secretario: String(editor.getMarkdown() || "") });
-			});
-		} catch (erro) {
-			host.innerHTML =
-				'<p class="text-muted-foreground">Não foi possível abrir o editor.</p>';
-		}
-	}
-
 	async function iniciarEditorDaAta() {
-		iniciarEditorDasAnotacoes();
 		const host = document.getElementById("at-editor");
 		if (!host || !window.gris?.editor?.create) return;
 		try {

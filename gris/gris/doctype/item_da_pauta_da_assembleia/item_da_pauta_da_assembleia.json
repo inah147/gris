@@ -9,7 +9,16 @@
   "tem_votacao",
   "finalidade",
   "concluido",
-  "orientacao_conducao"
+  "orientacao_conducao",
+  "registro_section",
+  "resultado",
+  "votos_favor",
+  "votos_contra",
+  "votos_abstencao",
+  "registro_col",
+  "iniciado_em",
+  "concluido_em",
+  "anotacoes"
  ],
  "fields": [
   {
@@ -48,12 +57,59 @@
    "fieldname": "orientacao_conducao",
    "fieldtype": "Long Text",
    "label": "Orientação de condução"
+  },
+  {
+   "fieldname": "registro_section",
+   "fieldtype": "Section Break",
+   "label": "Registro na sessão"
+  },
+  {
+   "fieldname": "resultado",
+   "fieldtype": "Select",
+   "label": "Resultado",
+   "options": "\nAprovado por aclamação\nAprovado\nReprovado\nRetirado de pauta"
+  },
+  {
+   "fieldname": "votos_favor",
+   "fieldtype": "Int",
+   "label": "Votos a favor"
+  },
+  {
+   "fieldname": "votos_contra",
+   "fieldtype": "Int",
+   "label": "Votos contra"
+  },
+  {
+   "fieldname": "votos_abstencao",
+   "fieldtype": "Int",
+   "label": "Abstenções"
+  },
+  {
+   "fieldname": "registro_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "iniciado_em",
+   "fieldtype": "Datetime",
+   "label": "Iniciado em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "concluido_em",
+   "fieldtype": "Datetime",
+   "label": "Concluído em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "anotacoes",
+   "fieldtype": "Long Text",
+   "label": "Anotações do item"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-11-27 12:00:00.000000",
+ "modified": "2026-11-27 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Gris",
  "name": "Item da Pauta da Assembleia",

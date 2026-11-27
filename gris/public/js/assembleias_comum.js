@@ -228,6 +228,7 @@
 	 * `opcoes.finalidades`: [{label, value}] com a opção vazia primeiro.
 	 * `opcoes.somenteLeitura`: mostra a pauta sem controles (edital publicado).
 	 * `opcoes.orientacaoPadrao(finalidade)`: texto sugerido para um item novo.
+	 * `opcoes.semOrientacao`: esconde a orientação (na assembleia ela é editada na Condução).
 	 * Devolve `{ itens() }`, que lê o estado atual do DOM.
 	 */
 	function criarEditorDePauta(container, itensIniciais, opcoes) {
@@ -241,7 +242,7 @@
 		function linhaHtml(item) {
 			const id = novoId("pauta-finalidade");
 			if (config.somenteLeitura) {
-				return `<li class="asm-pauta__item" data-item>
+				return `<li class="asm-pauta__item asm-pauta__item--leitura" data-item>
 					<div class="asm-pauta__linha">
 						<span class="asm-pauta__numero" data-numero></span>
 						<p class="m-0">${escapeHtml(item.titulo)}${
@@ -250,7 +251,9 @@
 					</div>
 				</li>`;
 			}
-			return `<li class="asm-pauta__item" data-item>
+			return `<li class="asm-pauta__item" data-item data-name="${escapeHtml(
+				item.name || ""
+			)}">
 				<div class="asm-pauta__linha">
 					<span class="asm-pauta__numero" data-numero></span>
 					<textarea class="textarea" rows="1" data-campo="titulo" aria-label="Título do item">${escapeHtml(
@@ -272,12 +275,16 @@
 					${switchHtml("Tem votação", !!item.tem_votacao, { data: 'data-campo="tem_votacao"' })}
 					${selectHtml(id, finalidades, item.finalidade || "", { label: "Finalidade" })}
 				</div>
-				<details class="asm-pauta__orientacao">
+				${
+					config.semOrientacao
+						? ""
+						: `<details class="asm-pauta__orientacao">
 					<summary>Orientação de condução</summary>
 					<textarea class="textarea asm-textarea-alta" data-campo="orientacao_conducao" aria-label="Orientação de condução">${escapeHtml(
 						item.orientacao_conducao || ""
 					)}</textarea>
-				</details>
+				</details>`
+				}
 			</li>`;
 		}
 
@@ -322,14 +329,18 @@
 		}
 
 		function itens() {
-			return Array.from(lista.querySelectorAll("[data-item]")).map((li) => ({
-				titulo: (li.querySelector('[data-campo="titulo"]')?.value || "").trim(),
-				tem_votacao: li.querySelector('[data-campo="tem_votacao"]')?.checked ? 1 : 0,
-				finalidade: li.querySelector('.select input[type="hidden"]')?.value || "",
-				orientacao_conducao: (
-					li.querySelector('[data-campo="orientacao_conducao"]')?.value || ""
-				).trim(),
-			}));
+			return Array.from(lista.querySelectorAll("[data-item]")).map((li) => {
+				const item = {
+					name: li.dataset.name || "",
+					titulo: (li.querySelector('[data-campo="titulo"]')?.value || "").trim(),
+					tem_votacao: li.querySelector('[data-campo="tem_votacao"]')?.checked ? 1 : 0,
+					finalidade: li.querySelector('.select input[type="hidden"]')?.value || "",
+				};
+				// Sem o campo na tela, a orientação não vai: o servidor mantém a gravada.
+				const orientacao = li.querySelector('[data-campo="orientacao_conducao"]');
+				if (orientacao) item.orientacao_conducao = orientacao.value.trim();
+				return item;
+			});
 		}
 
 		return {
@@ -339,6 +350,108 @@
 					item || { titulo: "", tem_votacao: 0, finalidade: "", orientacao_conducao: "" }
 				),
 		};
+	}
+
+	// ───────────────────────── Salvamento automático ─────────────────────────
+
+	function mesclar(destino, origem) {
+		Object.keys(origem).forEach((chave) => {
+			const valor = origem[chave];
+			if (valor && typeof valor === "object" && !Array.isArray(valor)) {
+				destino[chave] = mesclar(destino[chave] || {}, valor);
+			} else {
+				destino[chave] = valor;
+			}
+		});
+		return destino;
+	}
+
+	/**
+	 * Fila de salvamento automático de uma assembleia (CA-08.2, CA-08.3).
+	 *
+	 * `agendar(campos, indicador)` junta as mudanças e grava ~800 ms depois da última.
+	 * Uma gravação de cada vez: o `modified` devolvido vira o da próxima, e se outra
+	 * janela gravou no meio o servidor responde `conflito` e nada é sobrescrito.
+	 * `opcoes.metodo` é o endpoint (`pagina.salvar_campos` ou `ata.salvar_campos`);
+	 * `opcoes.aoSalvar(resposta)` recebe o retorno.
+	 */
+	function criarSalvamentoAutomatico(estado, opcoes) {
+		let pendente = {};
+		const indicadores = new Set();
+		let timer = null;
+		let gravando = false;
+		let conflito = false;
+
+		function indicar(texto, classe) {
+			indicadores.forEach((el) => {
+				el.textContent = texto;
+				el.dataset.estado = classe;
+			});
+		}
+
+		async function gravar() {
+			timer = null;
+			if (gravando || conflito || !Object.keys(pendente).length) return;
+			const campos = pendente;
+			pendente = {};
+			gravando = true;
+			indicar("Salvando…", "salvando");
+			try {
+				const resposta = await chamar(opcoes.metodo, {
+					name: estado.name,
+					campos: JSON.stringify(campos),
+					modified: estado.modified,
+				});
+				if (resposta && resposta.conflito) {
+					conflito = true;
+					indicar("Alterada em outra janela — recarregue a página", "erro");
+					toast(
+						"error",
+						"A assembleia foi alterada em outra janela. Recarregue a página para continuar."
+					);
+					return;
+				}
+				estado.modified = resposta.modified;
+				indicar(`Salvo às ${resposta.salvo_em}`, "salvo");
+				if (opcoes.aoSalvar) opcoes.aoSalvar(resposta);
+			} catch (erro) {
+				// Devolve à fila para tentar de novo na próxima mudança ou no clique.
+				pendente = mesclar(campos, pendente);
+				indicar("Não foi possível salvar — tentar de novo", "erro");
+				toast("error", erro.message);
+			} finally {
+				gravando = false;
+				if (Object.keys(pendente).length && !conflito) timer = setTimeout(gravar, 800);
+			}
+		}
+
+		function agendar(campos, indicador) {
+			if (conflito) return;
+			mesclar(pendente, campos);
+			if (indicador) indicadores.add(indicador);
+			indicar("Alterações não salvas", "pendente");
+			clearTimeout(timer);
+			timer = setTimeout(gravar, 800);
+		}
+
+		// Sair com alteração pendente pede confirmação.
+		window.addEventListener("beforeunload", (evento) => {
+			if (Object.keys(pendente).length || gravando) {
+				evento.preventDefault();
+				evento.returnValue = "";
+			}
+		});
+
+		// "tentar de novo": clicar no indicador de erro grava já.
+		document.addEventListener("click", (evento) => {
+			const el = evento.target.closest("[data-salvamento]");
+			if (el && el.dataset.estado === "erro" && !conflito) {
+				clearTimeout(timer);
+				gravar();
+			}
+		});
+
+		return { agendar, gravarAgora: gravar };
 	}
 
 	// Botões "Cancelar" dos dialogs: `data-dialog-cancel="<id do dialog>"`.
@@ -364,5 +477,6 @@
 		selectHtml,
 		switchHtml,
 		criarEditorDePauta,
+		criarSalvamentoAutomatico,
 	};
 })();

@@ -34,6 +34,7 @@ VARIAVEIS = frozenset(
 		"ano",
 		"ano_anterior",
 		"gestao",
+		"exercicio",
 		"data_assembleia_anterior",
 	}
 )

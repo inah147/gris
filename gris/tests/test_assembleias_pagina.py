@@ -140,6 +140,8 @@ class TestEdital(_Base):
 		self.assertIn("/assembleias/assunto_geral?assembleia=", texto)
 		self.assertIn("\n\n" + c.INTRO_LINKS_EDITAL + "\n\n- Mesa diretora: [link para candidatura](", texto)
 		self.assertIn("\n- Assuntos gerais: [link para submissão](", texto)
+		self.assertIn(") (até duas horas antes da primeira convocação)", texto)
+		self.assertIn(") (até o início da assembleia)", texto)
 
 		# Sem formulário previsto na pauta, o bloco inteiro some.
 		doc.set(

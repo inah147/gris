@@ -305,7 +305,12 @@
 {% endset %}
 {% set painel_candidaturas %}
 <div class="asm-aba">
-	{{ empty(title="Candidaturas e assuntos gerais", description="O que chegar pelos formulários aparece aqui.", icon=lucide_icon("users", size="lg")) }}
+	<div class="asm-acoes asm-acoes--inicio">
+		<a class="btn-outline" href="/assembleias/candidaturas?assembleia={{ assembleia.name | urlencode }}" target="_blank" rel="noopener">
+			{{ lucide_icon("external-link", size="sm") }}<span>Página de candidaturas</span>
+		</a>
+	</div>
+	<div id="cd-inscricoes" class="asm-aba"></div>
 </div>
 {% endset %}
 
@@ -337,7 +342,8 @@
      data-finalidades="{{ finalidades | tojson | forceescape }}"
      data-orientacoes="{{ orientacoes | tojson | forceescape }}"
      data-lista="{{ lista | tojson | forceescape }}"
-     data-ata="{{ ata | tojson | forceescape }}">
+     data-ata="{{ ata | tojson | forceescape }}"
+     data-inscricoes="{{ inscricoes_dados | tojson | forceescape }}">
 	{{ tabs(
 		id="asm-abas",
 		tabsets=[
@@ -368,6 +374,20 @@
 	description="O tipo da assembleia mudou. A pauta pode ser trocada pela padrão do novo tipo ou mantida como está.",
 	footer='<button type="button" class="btn-outline" id="btn-manter-pauta">Manter a pauta</button><button type="button" class="btn-primary" id="btn-trocar-pauta">Trocar pela padrão</button>'
 ) %}{% endcall %}
+
+{% call dialog(
+	id="dialog-retirar",
+	title="Retirar inscrição?",
+	description="A inscrição sai da página pública e fica no histórico com o motivo.",
+	footer='<button type="button" class="btn-outline" data-dialog-cancel="dialog-retirar">Cancelar</button><button type="button" class="btn-destructive" id="btn-confirmar-retirada">Retirar</button>'
+) %}
+<div class="asm-form">
+	<p class="m-0" id="retirar-nome"></p>
+	{% call field(label="Motivo", hint="Ex.: impugnação aceita pela assembleia, desistência.") %}
+		{{ textarea(attrs={"id": "retirar-motivo", "rows": "3", "maxlength": "2000"}) }}
+	{% endcall %}
+</div>
+{% endcall %}
 
 {% call dialog(
 	id="dialog-publicar",

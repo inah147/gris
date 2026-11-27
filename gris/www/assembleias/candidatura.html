@@ -1,0 +1,128 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty, field, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/select.html.jinja" import select %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Candidatura{% endblock %}
+
+{% macro textos_de_apresentacao(prefixo) %}
+	{% call field(label="Biografia (opcional)", hint="Quem é você no grupo: há quanto tempo, em que funções.") %}
+		{{ textarea(attrs={"id": prefixo ~ "-biografia", "rows": "3", "maxlength": "2000"}) }}
+	{% endcall %}
+	{% call field(label="Motivação (opcional)", hint="Por que quer assumir o cargo.") %}
+		{{ textarea(attrs={"id": prefixo ~ "-motivacao", "rows": "3", "maxlength": "2000"}) }}
+	{% endcall %}
+{% endmacro %}
+
+{% block page_header %}
+<div class="flex flex-col gap-2 max-w-3xl">
+	<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">
+		{{ ("Candidatura — " ~ rotulo) if encontrada else "Candidatura" }}
+	</h1>
+	{% if encontrada %}
+	<p class="m-0 text-base leading-relaxed text-muted-foreground">
+		{{ assembleia.titulo | e }} · {{ assembleia.local | e }}
+	</p>
+	{% endif %}
+</div>
+{% endblock %}
+
+{% block main %}
+{% include "gris/templates/includes/assembleias_comum.html" %}
+<div class="asm-pagina asm-formulario-publico"
+     data-assembleia="{{ (assembleia.name if encontrada else '') | e }}"
+     data-chave="{{ (chave if encontrada else '') | e }}">
+
+{% if not encontrada %}
+	{{ empty(
+		title="Formulário não encontrado",
+		description="O link pode estar incompleto. Peça o link certo para quem organiza a assembleia.",
+		image="/assets/gris/images/gris-character/gris-confused.png",
+		image_alt="Gris, o mascote, confuso"
+	) }}
+{% elif not situacao.previsto %}
+	{{ empty(
+		title="Não há eleição para este cargo",
+		description="A pauta desta assembleia não prevê esta eleição.",
+		image="/assets/gris/images/gris-character/gris-confused.png",
+		image_alt="Gris, o mascote, confuso"
+	) }}
+{% elif not situacao.aberto %}
+	{{ empty(
+		title="Inscrições encerradas",
+		description="As inscrições terminaram em " ~ fecha_em.strftime("%d/%m") ~ " às " ~ fecha_em.strftime("%H:%M") ~ ". Se faltarem candidatos, o estatuto permite inscrição junto à presidência da assembleia até a eleição.",
+		image="/assets/gris/images/gris-character/gris-sad.png",
+		image_alt="Gris, o mascote, triste"
+	) }}
+{% elif not regra.ok %}
+	{{ empty(
+		title="Você não pode se candidatar por aqui",
+		description=(regra.erro | e) ~ " Em caso de dúvida, fale com a diretoria.",
+		image="/assets/gris/images/gris-character/gris-confused.png",
+		image_alt="Gris, o mascote, confuso"
+	) }}
+{% else %}
+	{% call card(attrs={"class": "asm-bloco", "id": "form-candidatura"}) %}
+	<section>
+		<p class="asm-bloco__descricao">
+			Inscrições até {{ fecha_em.strftime("%d/%m") }} às {{ fecha_em.strftime("%H:%M") }}.
+			{% if situacao.reaberto %}<strong>Reabertas por falta de candidatos.</strong>{% endif %}
+		</p>
+
+		{% if chave == "diretoria" %}
+			<p class="m-0">Você está inscrevendo uma chapa e fica registrado como responsável por ela. Uma mesma pessoa não pode estar em duas chapas.</p>
+			{% for funcao in funcoes %}
+			<fieldset class="asm-membro" data-funcao="{{ funcao | e }}">
+				<legend class="asm-bloco__titulo">{{ funcao | e }}</legend>
+				{% call field(label="Candidato(a)", hint="Associados com 18 anos ou mais e responsáveis.") %}
+					{{ select(id="membro-" ~ loop.index, items=pessoas_18, is_combobox=true, search_placeholder="Buscar pelo nome") }}
+				{% endcall %}
+				{{ textos_de_apresentacao("membro-" ~ loop.index) }}
+			</fieldset>
+			{% endfor %}
+		{% else %}
+			<p class="m-0">Candidato(a): <strong>{{ pessoa.nome | e }}</strong>{% if pessoa.registro %} · registro {{ pessoa.registro | e }}{% endif %}</p>
+			{% if chave == "mesa" %}
+			<fieldset class="asm-opcoes">
+				<legend class="text-sm font-medium">Cargo</legend>
+				{% for item in cargos_mesa %}
+				<label class="asm-opcao">
+					<input type="radio" class="input" name="cargo-mesa" value="{{ item.cargo | e }}" {% if item.inscrito %}disabled{% elif loop.first or cargos_mesa[0].inscrito %}checked{% endif %}>
+					<span>{{ item.cargo }}{% if item.inscrito %} <span class="badge-outline">já inscrito</span>{% endif %}</span>
+				</label>
+				{% endfor %}
+			</fieldset>
+			{% elif cargo_unico in ja_inscrito %}
+			<div class="alert"><section><p class="m-0">Você já se candidatou a este cargo nesta assembleia.</p></section></div>
+			{% endif %}
+			{{ textos_de_apresentacao("cand") }}
+		{% endif %}
+
+		{% if regra.aviso %}
+		<div class="alert">{{ lucide_icon("info", size="sm") }}<section><p class="m-0">{{ regra.aviso | e }}</p></section></div>
+		{% endif %}
+
+		<label class="asm-opcao">
+			<input type="checkbox" class="input" id="cand-confirmacao">
+			<span>Confirmo a candidatura. Sei que nome, registro escoteiro, biografia e motivação ficam visíveis na página pública de candidaturas.</span>
+		</label>
+		<div>
+			<button type="button" class="btn-primary" id="cand-enviar" data-cargo-unico="{{ cargo_unico | e }}">{{ lucide_icon("send", size="sm") }}<span>Enviar candidatura</span></button>
+		</div>
+	</section>
+	{% endcall %}
+
+	{% call card(attrs={"class": "asm-bloco", "id": "cand-sucesso", "hidden": "hidden"}) %}
+	<section>
+		<h2 class="asm-bloco__titulo">{{ lucide_icon("circle-check", size="sm") }} Candidatura enviada</h2>
+		<div id="cand-resumo"></div>
+		<div class="asm-acoes asm-acoes--inicio">
+			<a class="btn-outline" href="/assembleias/candidaturas?assembleia={{ assembleia.name | urlencode }}">Ver a página de candidaturas</a>
+		</div>
+	</section>
+	{% endcall %}
+{% endif %}
+</div>
+{{ toaster() }}
+{% endblock %}

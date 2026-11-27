@@ -22,8 +22,6 @@ from gris.tests.test_assembleias_criacao import _criar
 class _Base(FrappeTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
-		for name in frappe.get_all(c.DOCTYPE_ASSEMBLEIA, pluck="name"):
-			frappe.delete_doc(c.DOCTYPE_ASSEMBLEIA, name, force=True)
 		# Publicar gera o edital final no Drive (e faz commit): aqui, nunca o Google real.
 		self._sem_drive = patch("gris.api.assembleias.documentos.gerar_edital_final", return_value=b"")
 		self._sem_drive.start()

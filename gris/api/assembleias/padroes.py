@@ -11,7 +11,7 @@ import frappe
 from frappe.utils import cint, get_time, getdate
 
 from gris.api.assembleias import constantes as c
-from gris.api.assembleias.pessoas import contar_associados_com_registro_ativo, ocupantes_da_funcao
+from gris.api.assembleias.pessoas import contar_associados_com_registro_ativo, ocupante_atual
 from gris.api.assembleias.textos import substituir
 from gris.utils.diretoria import funcao_do_presidente
 
@@ -112,7 +112,7 @@ def valores_da_assembleia(doc, config=None) -> dict[str, str]:
 	"""Valor de cada variável de `textos.VARIAVEIS` para esta assembleia."""
 	config = config or configuracoes()
 	data = getdate(doc.data) if doc.data else getdate()
-	presidentes = ocupantes_da_funcao(funcao_do_presidente(), data)
+	presidente = ocupante_atual(funcao_do_presidente(), data)
 	return {
 		**_dados_da_uel(),
 		"tipo": (doc.tipo or "").upper(),
@@ -124,7 +124,7 @@ def valores_da_assembleia(doc, config=None) -> dict[str, str]:
 		"local": doc.local or "",
 		"cidade": config.cidade or "",
 		"data_publicacao": data_por_extenso(doc.data_publicacao_edital) or "[data de publicação]",
-		"diretor_presidente": " e ".join(presidentes) or "[diretor presidente]",
+		"diretor_presidente": presidente or "[diretor presidente]",
 		"ano": str(data.year),
 		"ano_anterior": str(data.year - 1),
 		"gestao": gestao_eleita(data),

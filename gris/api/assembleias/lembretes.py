@@ -63,7 +63,8 @@ def enfileirar_lembretes() -> None:
 	frappe.enqueue("gris.api.assembleias.lembretes.lembrar_publicacao_edital", queue="long", timeout=900)
 
 
-def lembrar_publicacao_edital(hoje=None) -> dict:
+def lembrar_publicacao_edital(hoje=None, nomes: list[str] | None = None) -> dict:
+	"""Rodada diária. `nomes` restringe a assembleias específicas (teste ou rodada manual)."""
 	from gris.utils.whatsapp import enviar_para_grupo
 
 	logger = obter_logger(NOME_LOGGER)
@@ -82,11 +83,10 @@ def lembrar_publicacao_edital(hoje=None) -> dict:
 		return {"enviados": 0, "motivo": motivo}
 
 	dias_limite = cint(config.dias_limite_edital) or 30
-	assembleias = frappe.get_all(
-		c.DOCTYPE_ASSEMBLEIA,
-		filters={"data": [">=", hoje], "edital_publicado": 0},
-		fields=["name"],
-	)
+	filtros = {"data": [">=", hoje], "edital_publicado": 0}
+	if nomes is not None:
+		filtros["name"] = ["in", nomes or [""]]
+	assembleias = frappe.get_all(c.DOCTYPE_ASSEMBLEIA, filters=filtros, fields=["name"])
 	metrica("assembleias_avaliadas", len(assembleias), incrementar=False)
 	enviados = 0
 	for linha in assembleias:

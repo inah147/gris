@@ -194,8 +194,15 @@ def escrever_conteudo(docs, documento_id: str, markdown: str) -> None:
 				)
 			)
 			atual = _execute_with_retry(lambda: docs.documents().get(documentId=documento_id).execute())
-			tabela = docs_conteudo.ultima_tabela(atual) or {}
-			requests = docs_conteudo.requests_de_preenchimento(tabela, bloco["linhas"])
+			elemento = docs_conteudo.ultima_tabela(atual)
+			if not elemento:
+				continue
+			linhas = bloco["linhas"]
+			colunas = max(len(linha) for linha in linhas)
+			# Estilo antes do texto: os índices da tabela não mudam com ele.
+			requests = docs_conteudo.requests_de_estilo_da_tabela(
+				elemento, len(linhas), colunas, docs_conteudo.largura_util(atual)
+			) + docs_conteudo.requests_de_preenchimento(elemento["table"], linhas)
 		if requests:
 			_execute_with_retry(
 				lambda r=requests: (

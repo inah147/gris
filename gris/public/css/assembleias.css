@@ -238,6 +238,22 @@
 	min-width: 14rem;
 }
 
+.asm-pauta__finalidade {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+}
+
+.asm-pauta__rotulo {
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+	cursor: help;
+}
+
+.asm-pauta-adicionar {
+	margin-top: calc(var(--spacing) * 3);
+}
+
 .asm-pauta__orientacao {
 	padding-left: 2.5rem;
 }
@@ -378,6 +394,11 @@
 	align-items: center;
 	gap: calc(var(--spacing) * 2);
 	min-width: 0;
+}
+
+.asm-formulario__link .btn-sm-ghost,
+.asm-formulario__link .btn-sm-outline {
+	gap: 0.375rem;
 }
 
 .asm-formulario__link code {

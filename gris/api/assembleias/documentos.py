@@ -53,14 +53,15 @@ def conteudo_do_edital(doc, config=None) -> str:
 		"\n".join(f"{i}. {item.titulo}" for i, item in enumerate(doc.pauta, start=1)),
 	]
 	if doc.edital_incluir_links:
-		partes.extend(linhas_de_link(doc, config))
+		# Uma lista só: um item com marcador para cada formulário.
+		partes.append("\n".join(linhas_de_link(doc, config)))
 	partes.append(substituir(doc.edital_texto_rodape or "", valores))
 	return "\n\n".join(parte.strip() for parte in partes if parte and parte.strip())
 
 
 ROTULO_DA_COLUNA_REPRESENTANTE = {
-	c.LINHA_JOVEM_REPRESENTADO: "Responsável: ______________________",
-	c.LINHA_EQUIPE: "Representante: ____________________",
+	c.LINHA_JOVEM_REPRESENTADO: "Responsável:<br>____________________________",
+	c.LINHA_EQUIPE: "Representante:<br>____________________________",
 }
 
 
@@ -86,15 +87,19 @@ def conteudo_da_lista(doc, config=None) -> str:
 	for linha in linhas:
 		nome = _celula(linha["nome"])
 		if linha["tipo_linha"] == c.LINHA_JOVEM_REPRESENTADO:
-			nome = f"{nome} (representado por seu responsável legal)"
+			nome = f"{nome}<br>_representado por seu responsável legal_"
 		tabela.append(f"| {nome} | {ROTULO_DA_COLUNA_REPRESENTANTE.get(linha['tipo_linha'], '')} |  |")
+	uel = " - ".join(parte for parte in (valores["nome_uel"], valores["numeral"]) if parte)
 	return "\n\n".join(
-		[
+		parte
+		for parte in [
 			"# LISTA DE PRESENÇA",
+			f"## {uel}" if uel else "",
 			f"## REUNIÃO {valores['tipo']} DA ASSEMBLEIA DE GRUPO — {valores['data_curta']}",
 			f"{t['total']} com direito a voto. Maioria absoluta para a primeira convocação: {t['maioria_absoluta']}.",
 			"\n".join(tabela),
 		]
+		if parte
 	)
 
 

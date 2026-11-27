@@ -258,6 +258,19 @@ def restaurar_pauta_padrao(name: str) -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
+def restaurar_textos_padrao(name: str) -> dict:
+	"""Textos antes e depois da pauta voltam aos das configurações."""
+	doc = _assembleia(name)
+	if cint(doc.edital_publicado):
+		frappe.throw(_("O edital já foi publicado e não pode mais ser alterado."))
+	config = configuracoes()
+	doc.edital_texto_topo = config.texto_topo_edital or c.TEXTO_TOPO_EDITAL
+	doc.edital_texto_rodape = config.texto_rodape_edital or c.TEXTO_RODAPE_EDITAL
+	doc.save()
+	return dados_da_pagina(doc)
+
+
+@frappe.whitelist(methods=["POST"])
 def marcar_edital_publicado(name: str, fora_do_prazo: int | str = 0) -> dict:
 	"""Publica e trava o edital (CA-06.5). Depois do prazo, pede uma segunda confirmação."""
 	doc = _assembleia(name)

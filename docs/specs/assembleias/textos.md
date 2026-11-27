@@ -65,19 +65,31 @@ opção está marcada (ver RF-06 da spec).
 >
 > {cidade}, {data_publicacao}.
 >
+> \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
 > {diretor_presidente}
 > Diretor Presidente
 
-### Linha de cada formulário (gerada)
+A linha de sublinhados abre a assinatura: no documento, ela ganha espaço acima para assinar, e o
+nome e o cargo ficam logo abaixo. `{diretor_presidente}` é uma pessoa só: a lotação em vigor mais
+recente da função de presidente.
 
-> Candidaturas para {cargo} devem ser encaminhadas pelo formulário eletrônico disponível em
-> {link} até {prazo}.
+### Lista de formulários (gerada)
 
-> Propostas de assuntos gerais deverão ser encaminhadas pelo formulário eletrônico disponível em
-> {link} até {prazo}.
+Um item com marcador para cada formulário previsto na pauta; "formulário eletrônico" é o link,
+sublinhado e clicável.
 
-`{prazo}` é por extenso: "28 de novembro de 2026" para prazo em dias; "uma hora antes da
+> - Candidaturas para {cargo} devem ser encaminhadas pelo [formulário eletrônico]({link}) até {prazo}.
+> - Propostas de assuntos gerais devem ser encaminhadas pelo [formulário eletrônico]({link}) até {prazo}.
+
+`{prazo}` é por extenso: "27 de novembro de 2026" para prazo em dias; "uma hora antes da
 primeira convocação" ou "duas horas antes da primeira convocação" para prazo em horas.
+
+### Formatação no papel timbrado
+
+Calibri 11 no corpo, justificado e sem recuo; títulos centralizados em negrito (14 e 12). Na lista
+de presença, a tabela ocupa a largura útil da página (Nome 42%, Representado por 30%, Assinatura
+28%), só com linhas horizontais, cabeçalho sombreado e repetido a cada página, linhas pares
+sombreadas e nenhuma linha partida entre páginas.
 
 ## 3. Pautas padrão
 

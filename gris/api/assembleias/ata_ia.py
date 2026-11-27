@@ -17,7 +17,7 @@ from gris.api.assembleias import constantes as c
 from gris.api.assembleias.ata import contar_marcadores, dados_da_ata
 from gris.api.assembleias.padroes import configuracoes, data_por_extenso, hora, valores_da_assembleia
 from gris.api.assembleias.pagina import _assembleia
-from gris.api.assembleias.pessoas import nome_da_pessoa, ocupantes_da_funcao
+from gris.api.assembleias.pessoas import nome_da_pessoa, ocupante_atual
 from gris.api.assembleias.textos import substituir
 
 STATUS_GERANDO = "Gerando"
@@ -84,9 +84,9 @@ def montar_prompt(doc, config=None) -> str:
 	for funcao in frappe.get_all(
 		"Funcao Voluntario", filters={"diretoria": "Eleita", "ativa": 1}, pluck="name", order_by="name asc"
 	):
-		ocupantes = ocupantes_da_funcao(funcao, doc.data)
-		if ocupantes:
-			diretoria.append(f"- {funcao}: {', '.join(ocupantes)}")
+		ocupante = ocupante_atual(funcao, doc.data)
+		if ocupante:
+			diretoria.append(f"- {funcao}: {ocupante}")
 
 	pauta = "\n".join(
 		f"{i}. {item.titulo}{' (concluído)' if cint(item.concluido) else ''}"

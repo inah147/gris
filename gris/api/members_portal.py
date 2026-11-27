@@ -33,6 +33,8 @@ GESTOR_ALLOWED_UPDATE_FIELDS = COMMON_ALLOWED_UPDATE_FIELDS | {
 	"guardiao_legal_responsavel_2",
 	"anos_afastamento",
 	"eleito",
+	# Matilha ou patrulha: vem do Paxtu, mas a gestão corrige quando falta.
+	"equipe",
 	"tipo_guarda",
 	"pais_divorciados",
 }

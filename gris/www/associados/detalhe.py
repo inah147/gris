@@ -91,6 +91,7 @@ def get_context(context):
 		"categoria",
 		"ramo",
 		"secao",
+		"equipe",
 		"funcao",
 		"registro",
 		"validade_registro",
@@ -128,6 +129,7 @@ def get_context(context):
 	gestor_editable = shared_editable | {
 		"anos_afastamento",
 		"eleito",
+		"equipe",
 	}
 	responsavel_editable = shared_editable
 	if can_manage_member_admin:

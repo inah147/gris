@@ -5,6 +5,7 @@ from gris.api.assembleias.endpoints import contagem_de_inscricoes
 from gris.api.assembleias.pagina import dados_da_pagina
 from gris.api.assembleias.permissoes import pode_gerenciar_assembleias
 from gris.api.assembleias.pessoas import opcoes_de_pessoas
+from gris.api.assembleias.votantes import dados_da_lista
 from gris.api.portal_access import enrich_context
 from gris.api.portal_cache_utils import get_uel_cached
 
@@ -38,6 +39,8 @@ def get_context(context):
 	context.inscricoes = contagem_de_inscricoes(name)
 	context.tipo_items = [{"label": t, "value": t} for t in (c.TIPO_ORDINARIA, c.TIPO_EXTRAORDINARIA)]
 	context.pessoas_18 = opcoes_de_pessoas(18, doc.data)
+	context.pessoas_todas = opcoes_de_pessoas(0, doc.data)
+	context.lista = dados_da_lista(doc)
 	context.finalidades = [
 		{"label": "Sem finalidade", "value": ""},
 		*({"label": f, "value": f} for f in c.FINALIDADES),

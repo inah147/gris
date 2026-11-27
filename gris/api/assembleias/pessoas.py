@@ -96,7 +96,11 @@ def opcoes_de_pessoas(idade_minima: int, referencia: date | str | None = None) -
 	nomes_de_associado = set()
 	for a in associados:
 		idade = idade_em_anos(a.data_de_nascimento, referencia)
-		if idade is None or idade < idade_minima or not a.nome_completo:
+		# Sem data de nascimento só entra quando não há idade mínima (inclusão manual).
+		sem_idade_suficiente = (idade is None and idade_minima > 0) or (
+			idade is not None and idade < idade_minima
+		)
+		if sem_idade_suficiente or not a.nome_completo:
 			continue
 		nomes_de_associado.add(a.name)
 		opcoes.append({"label": a.nome_completo, "value": f"{DOCTYPE_ASSOCIADO}::{a.name}"})

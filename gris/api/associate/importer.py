@@ -51,6 +51,8 @@ _ROTULOS_PESSOAIS = {
 	"Raca_ou_Cor": r"Ra[çc]a ou Cor",
 	"Validade_Registro": r"Validade Registro",
 	"Secao": r"Se[çc][ãa]o",
+	# Matilha ou patrulha. Entra no voto por equipe das assembleias.
+	"Equipe": r"Equipe",
 }
 
 _ROTULOS_RESPONSAVEL = {
@@ -129,6 +131,7 @@ def _extract_scout_info(record: str) -> dict | None:
 			"CPF_responsavel": "",
 			"id_escoteiro": "",
 			"Secao": "",
+			"Equipe": "",
 		}
 
 		divisao = _INICIO_RESPONSAVEL.search(record)
@@ -678,6 +681,8 @@ def _importar_linhas(df, results: dict) -> None:
 				"categoria": row.get("Categoria_1_Funcao", "").strip(),
 				"funcao": row.get("Funcao_1_Funcao", "").strip(),
 				"secao": row.get("Secao", "").strip(),
+				# Vazio no PDF não apaga a equipe preenchida à mão: o update só grava valor.
+				"equipe": row.get("Equipe", "").strip(),
 				"ramo": _parse_ramo(row.get("Ramo_1_Funcao", "")),
 				"id_escoteiros": row.get("id_escoteiro", "").strip(),
 			}

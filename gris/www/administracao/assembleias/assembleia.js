@@ -1143,13 +1143,6 @@
 				)}<section><p class="m-0">${A.escapeHtml(ata.erro_geracao)}</p></section></div>`
 			);
 		}
-		if (ata.marcadores) {
-			partes.push(
-				`<p class="asm-marcadores">${A.icone("circle-alert")} ${ata.marcadores} trecho${
-					ata.marcadores === 1 ? "" : "s"
-				} [A CONFIRMAR] para revisar.</p>`
-			);
-		}
 		alvo.innerHTML = partes.join("");
 		if (editorAta) {
 			const host = document.getElementById("at-editor");
@@ -1159,6 +1152,143 @@
 			);
 		}
 	}
+
+	// ─── Revisão: cada [A CONFIRMAR] vira uma linha que leva ao trecho ───
+
+	// Aceita também a forma curta "[A CONFIRM: …]" que o modelo às vezes devolve.
+	const MARCADOR = /\[A CONFIRM(?:AR)?:?\s*([^\]]*)\]/g;
+	const textoDaAta = () => (editorAta ? String(editorAta.getMarkdown() || "") : ata.texto || "");
+
+	function desenharPendencias() {
+		const lista = document.getElementById("at-pendencias");
+		if (!lista) return;
+		const texto = textoDaAta();
+		const pendencias = [];
+		for (const achado of texto.matchAll(MARCADOR)) {
+			const antes = texto
+				.slice(Math.max(0, achado.index - 60), achado.index)
+				.replace(/[*_#>]/g, "")
+				.replace(/\s+/g, " ")
+				.trim();
+			pendencias.push({ oque: achado[1].trim(), antes });
+		}
+		document.getElementById("at-pendencias-total").textContent = pendencias.length
+			? String(pendencias.length)
+			: "";
+		if (!texto.trim()) {
+			lista.innerHTML =
+				'<li class="asm-pendencias__vazio">Gere a ata ou escreva o texto para revisar aqui.</li>';
+			return;
+		}
+		lista.innerHTML = pendencias.length
+			? pendencias
+					.map(
+						(p, i) => `<li><button type="button" data-pendencia="${i}">
+							<span>${A.escapeHtml(p.oque || "trecho a confirmar")}</span>
+							${p.antes ? `<small>…${A.escapeHtml(p.antes.slice(-48))}</small>` : ""}
+						</button></li>`
+					)
+					.join("")
+			: `<li class="asm-pendencias__vazio">${A.icone(
+					"check",
+					"xs"
+			  )} Nada a confirmar no texto.</li>`;
+	}
+
+	/** Seleciona o n-ésimo marcador dentro do editor e rola até ele. */
+	function irParaPendencia(n) {
+		// O Toast UI tem dois ProseMirror: o do markdown (escondido) e o do WYSIWYG.
+		const raizDoTexto = document.querySelector(
+			"#at-editor .toastui-editor-ww-container .ProseMirror"
+		);
+		if (!raizDoTexto) return;
+		const caminho = document.createTreeWalker(raizDoTexto, NodeFilter.SHOW_TEXT);
+		let visto = -1;
+		while (caminho.nextNode()) {
+			const no = caminho.currentNode;
+			let inicio = no.textContent.indexOf("[A CONFIRM");
+			while (inicio !== -1) {
+				visto += 1;
+				if (visto === n) {
+					const fim = no.textContent.indexOf("]", inicio);
+					const intervalo = document.createRange();
+					intervalo.setStart(no, inicio);
+					intervalo.setEnd(no, fim === -1 ? no.textContent.length : fim + 1);
+					raizDoTexto.focus();
+					const selecao = window.getSelection();
+					selecao.removeAllRanges();
+					selecao.addRange(intervalo);
+					no.parentElement.scrollIntoView({ behavior: "smooth", block: "center" });
+					return;
+				}
+				inicio = no.textContent.indexOf("[A CONFIRM", inicio + 1);
+			}
+		}
+	}
+
+	document.getElementById("at-pendencias")?.addEventListener("click", (evento) => {
+		const botao = evento.target.closest("[data-pendencia]");
+		if (botao) irParaPendencia(Number(botao.dataset.pendencia));
+	});
+
+	/** O que vai para a IA, para quem revisa saber de onde vem cada lacuna. */
+	function desenharFontes() {
+		const alvo = document.getElementById("at-fontes");
+		if (!alvo) return;
+		const pauta = dados.pauta || [];
+		const comRegistro = pauta.filter((i) => i.tem_registro).length;
+		const eleicoes = pauta.some((i) =>
+			[
+				"Eleição da mesa",
+				"Eleição de delegados",
+				"Eleição da comissão fiscal",
+				"Eleição da diretoria",
+			].includes(i.finalidade)
+		);
+		const eleitos =
+			((inscricoes.cargos || [])
+				.flatMap((g) => g.candidaturas || [])
+				.filter((c) => c.resultado === "Eleito").length || 0) +
+			((inscricoes.chapas || []).some((ch) => ch.eleita) ? 1 : 0);
+		const linhas = [
+			[
+				!!(dados.hora_inicio_sessao && dados.hora_termino_sessao),
+				dados.hora_inicio_sessao && dados.hora_termino_sessao
+					? `Início às ${dados.hora_inicio_sessao} e término às ${dados.hora_termino_sessao}`
+					: "Início ou término da sessão sem registro",
+			],
+			[
+				!!ata.presentes,
+				ata.presentes ? `${ata.presentes} presentes` : "Presentes sem registro",
+			],
+			[
+				!!(dados.presidente && dados.secretario),
+				dados.presidente && dados.secretario ? "Mesa registrada" : "Mesa sem registro",
+			],
+			[
+				comRegistro === pauta.length && pauta.length > 0,
+				`${comRegistro} de ${pauta.length} itens com registro na sessão`,
+			],
+		];
+		if (eleicoes) {
+			linhas.push([
+				eleitos > 0,
+				eleitos ? "Eleitos marcados na sessão" : "Nenhum eleito marcado",
+			]);
+		}
+		linhas.push([!!(ata.anotacoes || "").trim(), "Anotações gerais da sessão"]);
+		alvo.innerHTML = linhas
+			.map(
+				([ok, texto]) =>
+					`<li class="${ok ? "is-ok" : "is-falta"}">${A.icone(
+						ok ? "check" : "circle-alert",
+						"xs"
+					)}<span>${A.escapeHtml(texto)}</span></li>`
+			)
+			.join("");
+	}
+
+	let timerDasPendencias = null;
 
 	async function iniciarEditorDaAta() {
 		const host = document.getElementById("at-editor");
@@ -1171,10 +1301,13 @@
 			});
 			editorAta.on("change", () => {
 				const texto = String(editorAta.getMarkdown() || "");
-				ata.marcadores = (texto.match(/\[A CONFIRMAR/g) || []).length;
+				ata.marcadores = (texto.match(/\[A CONFIRM/g) || []).length;
 				agendarAta({ ata_texto: texto });
+				clearTimeout(timerDasPendencias);
+				timerDasPendencias = setTimeout(desenharPendencias, 300);
 			});
 			desenharStatusDaAta();
+			desenharPendencias();
 		} catch (erro) {
 			host.innerHTML =
 				'<p class="text-muted-foreground">Não foi possível abrir o editor.</p>';
@@ -1191,7 +1324,8 @@
 				ata = resposta;
 				if (editorAta && resposta.status_geracao === "Concluída") {
 					editorAta.setMarkdown(resposta.texto || "", false);
-					A.toast("success", "Ata gerada. Revise o texto.");
+					desenharPendencias();
+					A.toast("success", "Ata gerada. Revise o que ficou marcado ao lado.");
 				}
 				desenharStatusDaAta();
 			} catch (erro) {
@@ -1226,6 +1360,8 @@
 
 	document.getElementById("at-gerar-ia")?.addEventListener("click", () => pedirAta(false));
 	desenharStatusDaAta();
+	desenharPendencias();
+	desenharFontes();
 	if (ata.status_geracao === "Gerando") acompanharGeracao();
 	// O wrapper do editor é carregado com `defer`: só existe depois do parse.
 	if (document.readyState === "loading") {
@@ -1265,7 +1401,7 @@
 		const tipo = botao.dataset.baixarPdf;
 		if (tipo === "ata") {
 			const texto = editorAta ? String(editorAta.getMarkdown() || "") : ata.texto || "";
-			const pendentes = (texto.match(/\[A CONFIRMAR/g) || []).length;
+			const pendentes = (texto.match(/\[A CONFIRM/g) || []).length;
 			if (!texto.trim()) {
 				A.toast("error", "Escreva ou gere o texto da ata antes de gerar o PDF.");
 				return;

@@ -361,9 +361,14 @@ Cada critério de aceite (CA) tem um teste correspondente na
 
   O texto gerado vai para um campo novo, "Texto da ata", já formatado em títulos e negritos e
   editável. Esse campo também é salvo sozinho.
+- **CA-08.4a** O pedido à IA leva o registro do modo sessão (RF-16): para cada item, horários,
+  resultado, votos e anotações; os candidatos com o resultado marcado; a chapa eleita; e as
+  anotações gerais com horário, para entrarem no ponto da ata em que aconteceram.
 - **CA-08.5** A IA não inventa resultados. Votos, nomes e decisões que não estão nas anotações nem
   nos dados continuam como `[A CONFIRMAR: …]` no texto, e a tela mostra quantos marcadores
-  restaram.
+  restaram. Ao lado do texto, "Revisar antes do PDF" lista cada marcador com o trecho que vem
+  antes, e escolher um seleciona o marcador no editor. "O que a IA recebe" mostra o que está
+  registrado e o que falta (horários, presentes, mesa, itens com registro, eleitos e anotações).
 - **CA-08.6** A geração roda em segundo plano. O botão fica em "Gerando…" e a tela acompanha até
   terminar. Uma falha mostra uma mensagem amigável e não apaga o texto que já existia. Gerar de
   novo com o "Texto da ata" já preenchido pede confirmação antes de substituir.

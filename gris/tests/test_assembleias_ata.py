@@ -109,6 +109,48 @@ class TestAtaIA(_Base):
 			self.assertNotIn(sensivel, prompt)
 		self.assertNotIn("{nome_uel}", prompt)
 
+	def test_prompt_leva_o_registro_da_sessao(self):
+		doc = self._doc()
+		item = doc.pauta[3]
+		item.update(
+			{
+				"resultado": "Aprovado",
+				"votos_favor": 41,
+				"votos_contra": 6,
+				"votos_abstencao": 5,
+				"anotacoes": "Balanço apresentado pelo diretor financeiro.",
+				"concluido": 1,
+				"iniciado_em": "2026-12-05 15:02:00",
+				"concluido_em": "2026-12-05 15:20:00",
+			}
+		)
+		doc.save()
+		prompt = ata_ia.montar_prompt(self._doc())
+		self.assertIn("Resultado: Aprovado (41 a favor, 6 contra, 5 abstenções)", prompt)
+		self.assertIn("Anotações do item: Balanço apresentado pelo diretor financeiro.", prompt)
+		self.assertIn("iniciado às 15:02, concluído às 15:20", prompt)
+		self.assertIn("ANOTAÇÕES GERAIS DO SECRETÁRIO", prompt)
+
+	def test_prompt_leva_os_eleitos(self):
+		frappe.get_doc(
+			{
+				"doctype": c.DOCTYPE_CANDIDATURA,
+				"assembleia": self.name,
+				"cargo": c.CARGO_DELEGADO,
+				"candidato_tipo": "Associado",
+				"candidato": self._associado(),
+				"nome": "Fulana de Tal",
+				"status": "Ativa",
+				"resultado": "Eleito",
+			}
+		).insert(ignore_permissions=True)
+		self.assertIn("Fulana de Tal (eleito(a))", ata_ia.montar_prompt(self._doc()))
+
+	def test_marcador_na_forma_curta_tambem_conta(self):
+		from gris.api.assembleias.ata import contar_marcadores
+
+		self.assertEqual(contar_marcadores("[A CONFIRMAR: horário] e [A CONFIRM: o que falta]"), 2)
+
 	def test_exige_anotacoes(self):
 		with self.assertRaisesRegex(frappe.ValidationError, "anotações"):
 			ata_ia.solicitar_ata_ia(self.name)

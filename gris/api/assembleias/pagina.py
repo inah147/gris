@@ -336,6 +336,8 @@ def dados_da_pagina(doc, config=None) -> dict:
 				"concluido": cint(item.concluido),
 				"orientacao_conducao": item.orientacao_conducao or "",
 				"orientacao_html": markdown_em_html(item.orientacao_conducao),
+				"resultado": item.resultado or "",
+				"tem_registro": bool((item.anotacoes or "").strip() or item.resultado),
 			}
 			for item in doc.pauta
 		],

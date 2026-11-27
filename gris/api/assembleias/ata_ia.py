@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import frappe
 from frappe import _
-from frappe.utils import cint
+from frappe.utils import cint, get_datetime
 
 from gris.api.assembleias import constantes as c
 from gris.api.assembleias.ata import contar_marcadores, dados_da_ata
@@ -38,10 +38,16 @@ Regras:
 3. Para cada item da pauta escreva um parágrafo que começa com "**Em atendimento ao item N do edital de convocação (TÍTULO DO ITEM)**", na ordem da pauta.
 4. NUNCA invente votos, nomes, números, decisões ou horários. Se a informação não estiver nos dados nem nas anotações, escreva [A CONFIRMAR: o que falta].
 5. Escreva horários e datas por extenso quando o modelo pedir.
-6. Responda apenas com o texto da ata, em português, em markdown simples: parágrafos e **negrito**. Sem títulos, sem comentários, sem explicações antes ou depois."""
+6. Responda apenas com o texto da ata, em português, em markdown simples: parágrafos e **negrito**. Sem títulos, sem comentários, sem explicações antes ou depois.
+7. O REGISTRO DA SESSÃO de cada item (resultado, votos, eleitos, horários e anotações do item) é a fonte principal do parágrafo daquele item. Use os números de votos exatamente como registrados.
+8. As ANOTAÇÕES GERAIS trazem fatos fora da pauta, com o horário: inclua cada um no ponto da ata em que aconteceu."""
+
+
+RESULTADO_POR_EXTENSO = {"Eleito": "eleito(a)", "Suplente": "suplente", "Não eleito": "não eleito(a)"}
 
 
 def _linhas_de_candidatos(name: str) -> list[str]:
+	"""Candidaturas e chapas, com o resultado marcado no modo sessão quando houver."""
 	linhas = []
 	for cargo in (
 		c.CARGO_PRESIDENTE_MESA,
@@ -49,29 +55,58 @@ def _linhas_de_candidatos(name: str) -> list[str]:
 		c.CARGO_DELEGADO,
 		c.CARGO_COMISSAO_FISCAL,
 	):
-		nomes = frappe.get_all(
+		candidaturas = frappe.get_all(
 			c.DOCTYPE_CANDIDATURA,
 			filters={"assembleia": name, "cargo": cargo, "status": "Ativa"},
-			pluck="nome",
+			fields=["nome", "resultado"],
 			order_by="creation asc",
 		)
-		if nomes:
-			linhas.append(f"- Candidaturas prévias para {cargo}: {', '.join(nomes)}")
+		if candidaturas:
+			nomes = ", ".join(
+				f"{cand.nome} ({RESULTADO_POR_EXTENSO[cand.resultado]})"
+				if cand.resultado in RESULTADO_POR_EXTENSO
+				else cand.nome
+				for cand in candidaturas
+			)
+			linhas.append(f"- Candidaturas prévias para {cargo}: {nomes}")
 	for i, chapa in enumerate(
 		frappe.get_all(
 			c.DOCTYPE_CHAPA,
 			filters={"assembleia": name, "status": "Ativa"},
-			pluck="name",
+			fields=["name", "eleita"],
 			order_by="creation asc",
 		),
 		start=1,
 	):
 		membros = frappe.get_all(
-			"Membro da Chapa", filters={"parent": chapa}, fields=["funcao", "nome"], order_by="idx asc"
+			"Membro da Chapa", filters={"parent": chapa.name}, fields=["funcao", "nome"], order_by="idx asc"
 		)
 		descricao = "; ".join(f"{m.funcao}: {m.nome}" for m in membros)
-		linhas.append(f"- Chapa {i} para a diretoria: {descricao}")
+		linhas.append(f"- Chapa {i} para a diretoria{' (ELEITA)' if cint(chapa.eleita) else ''}: {descricao}")
 	return linhas
+
+
+def registro_do_item(numero: int, item) -> str:
+	"""Um item da pauta com o que foi registrado na sessão."""
+	partes = [f"{numero}. {item.titulo}"]
+	horarios = []
+	if item.iniciado_em:
+		horarios.append(f"iniciado às {get_datetime(item.iniciado_em).strftime('%H:%M')}")
+	if cint(item.concluido):
+		horarios.append(
+			f"concluído às {get_datetime(item.concluido_em).strftime('%H:%M')}"
+			if item.concluido_em
+			else "concluído"
+		)
+	if horarios:
+		partes.append(f"   Andamento: {', '.join(horarios)}")
+	if item.resultado:
+		votos = (cint(item.votos_favor), cint(item.votos_contra), cint(item.votos_abstencao))
+		texto_votos = f" ({votos[0]} a favor, {votos[1]} contra, {votos[2]} abstenções)" if any(votos) else ""
+		partes.append(f"   Resultado: {item.resultado}{texto_votos}")
+	if (item.anotacoes or "").strip():
+		partes.append("   Anotações do item: " + " ".join(item.anotacoes.split()))
+	return "\n".join(partes)
 
 
 def montar_prompt(doc, config=None) -> str:
@@ -88,10 +123,7 @@ def montar_prompt(doc, config=None) -> str:
 		if ocupante:
 			diretoria.append(f"- {funcao}: {ocupante}")
 
-	pauta = "\n".join(
-		f"{i}. {item.titulo}{' (concluído)' if cint(item.concluido) else ''}"
-		for i, item in enumerate(doc.pauta, start=1)
-	)
+	pauta = "\n".join(registro_do_item(i, item) for i, item in enumerate(doc.pauta, start=1))
 	assuntos = frappe.get_all(
 		c.DOCTYPE_ASSUNTO, filters={"assembleia": doc.name}, pluck="conteudo", order_by="creation asc"
 	)
@@ -118,8 +150,9 @@ def montar_prompt(doc, config=None) -> str:
 		[
 			"MODELO DE ATA:\n" + modelo,
 			"DADOS DA ASSEMBLEIA:\n" + "\n".join(dados),
-			"PAUTA DO EDITAL:\n" + pauta,
-			"ANOTAÇÕES DO SECRETÁRIO:\n" + ((doc.anotacoes_secretario or "").strip() or "[sem anotações]"),
+			"PAUTA DO EDITAL, COM O REGISTRO DA SESSÃO:\n" + pauta,
+			"ANOTAÇÕES GERAIS DO SECRETÁRIO:\n"
+			+ ((doc.anotacoes_secretario or "").strip() or "[sem anotações]"),
 		]
 	)
 

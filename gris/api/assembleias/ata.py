@@ -15,7 +15,8 @@ from frappe.utils import cint, get_time
 from gris.api.assembleias.padroes import hora
 from gris.api.assembleias.pessoas import juntar_pessoa, separar_pessoa
 
-MARCADOR_A_CONFIRMAR = "[A CONFIRMAR"
+# Prefixo comum de "[A CONFIRMAR: …]" e da forma curta "[A CONFIRM: …]" que o modelo às vezes usa.
+MARCADOR_A_CONFIRMAR = "[A CONFIRM"
 CAMPOS_DE_TEXTO = ("anotacoes_secretario", "ata_texto")
 CAMPOS_DE_HORA = ("ata_hora_inicio", "ata_hora_termino")
 CAMPOS_DE_PESSOA = ("presidente", "secretario")

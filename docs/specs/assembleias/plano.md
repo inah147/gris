@@ -207,36 +207,36 @@ Este diretório.
 
 ## 6. Matriz de validação
 
+Os arquivos ficam em `gris/tests/`. Os testes de banco seguem `test_pessoas_responsavel_associado.py`:
+prefixo "ZZ Teste" e `frappe.db.rollback()` no `tearDown`. Código que faz commit (Drive e
+lembretes) roda com `patch("frappe.db.commit")`, e o Google e o WhatsApp são simulados.
+
 | CA | Teste |
 |---|---|
-| 01.1 | `TestPapel.test_patch_cria_papel` |
-| 01.2–01.4 | `TestPermissoes` (páginas, endpoints sem o papel, card) |
-| 02.1–02.4 | `TestCriacao` (validações, segunda convocação + 30, padrões copiados, títulos resolvidos, vagas de delegado, pasta enfileirada, dia repetido) |
-| 02.5–02.7 | `TestExclusao` (cascata, edital publicado, `on_trash` pelo Desk) |
-| 03.1–03.3 | `TestListaDeAssembleias` |
-| 04.2 | `TestConfiguracoes.test_patch_preenche_padroes_sem_sobrescrever` |
-| 04.3–04.5 | `TestConfiguracoes.test_validacoes` |
-| 04.6 | `TestCriacao.test_mudar_configuracao_nao_altera_assembleia`, `TestEdital.test_restaurar_pauta` |
-| 04.7 | `TestConfiguracoes.test_pasta_raiz_invalida` (Drive simulado) |
-| 05.4 | `TestFormularios` (estado na Visão Geral) |
-| 05.6–05.7 | `TestChecklist` |
-| 06.1–06.8 | `TestEdital` (trava, `concluido` livre, publicação fora do prazo, publicação idempotente, linhas de link) |
-| 07.1–07.5 | `TestVotantes` (cada categoria, 16 anos, 6 anos e meio, Filhotes fora, registro vencido, equipes somadas, sem equipe, sem nascimento, deduplicação, manuais e removidos, maioria absoluta) |
-| 07.6 | `TestConteudoDocumentos.test_lista_de_presenca` |
-| 08.2–08.3 | `TestAta.test_autosave_whitelist`, `test_conflito_de_modified` |
-| 08.4–08.7 | `TestAtaIA` (prompt sem dados sensíveis, marcadores preservados, status, falha preserva texto; LLM simulado) |
-| 09.1–09.4 | `TestInscricoes.test_listagem`, `test_retirar` |
-| 10.3–10.4 | `TestConducao` (orientação por finalidade, dados ao vivo) |
-| 11.1–11.5 | `TestAssembleiaDrive` (Drive e Docs simulados), `TestDocsConteudo` (requests geradas) |
-| 12.1–12.11 | `TestFormularios` (sem login, sem vínculo, elegibilidade por cargo, prazos em dias e horas, sem limite, reabertura, duplicidade, chapa incompleta, pessoa em duas chapas, envio fora do prazo) |
-| 13.1–13.5 | `TestPaginaPublica` (sem login, campos fixos, escape) |
-| 14.1–14.7 | `TestLembretes` (janelas, dia perdido, carimbo depois do envio, falha, publicado, sem grupo, log, criada dentro da janela) |
-| 15.1–15.3 | `TestImportacaoEquipe`, `TestVotantes.test_equipe_normalizada` |
-| 05.1–05.3, 08.1, 08.8, 10.1–10.2 | Validação manual e Playwright no dev.gris (`docs/evidencias/assembleias/`) |
+| 01.1, 04.2–04.5, 04.7 | `test_assembleias_configuracoes.TestConfiguracoes` |
+| 01.2–01.4 | `test_assembleias_criacao.TestPermissoes` |
+| 02.1–02.4, 04.6 | `test_assembleias_criacao.TestCriacao` |
+| 02.5–02.7 | `test_assembleias_criacao.TestExclusao` |
+| 03.1–03.2 | `test_assembleias_criacao.TestListaDeAssembleias` |
+| 05.1–05.2 | `test_assembleias_pagina.TestVisaoGeral` |
+| 05.4, 12.4–12.5 | `test_assembleias_pagina.TestFormularios` |
+| 05.6–05.7 | `test_assembleias_pagina.TestChecklist` |
+| 06.1–06.8 | `test_assembleias_pagina.TestEdital` |
+| 07.1–07.5 | `test_assembleias_votantes.TestRegraDeVoto`, `TestAplicarLista`, `TestEndpointsDaLista` |
+| 07.6, 08.8 (conteúdo) | `test_assembleias_documentos.TestConteudoDocumentos` |
+| 08.1–08.3 | `test_assembleias_ata.TestAta` |
+| 08.4–08.7 | `test_assembleias_ata.TestAtaIA` (LLM simulado) |
+| 09.1–09.4, 13.1–13.5 | `test_assembleias_formularios.TestInscricoesEPublica` |
+| 10.1–10.3 | `test_assembleias_pagina.TestConducao` |
+| 11.1–11.5 | `test_assembleias_documentos.TestAssembleiaDrive`, `TestDocsConteudo` (Drive e Docs simulados) |
+| 12.1–12.3, 12.6–12.11 | `test_assembleias_formularios.TestPessoaEElegibilidade`, `TestEnvios`, `TestChapa` |
+| 14.1–14.7 | `test_assembleias_lembretes.TestMarcoDoEdital`, `TestRodada` |
+| 15.1–15.3 | `test_importacao_associados_extracao`, `test_assembleias_votantes.TestRegraDeVoto.test_equipe_soma_as_linhas_dos_jovens` |
+| 03.3, 05.3, 05.8, 08.2 (indicador), 10.4, telas | Validação no dev.gris com Playwright, desktop e 390 px |
 
-Arquivos: `gris/tests/test_assembleias_*.py`. Os testes de banco seguem
-`test_pessoas_responsavel_associado.py`: prefixo "ZZ Teste" e `frappe.db.rollback()` no `tearDown`.
-O `enqueue` do Drive e do WhatsApp é bloqueado em todos eles.
+**Pendente:** uma rodada real de geração no Google Docs (edital, lista e ata) com um timbrado de
+teste, para conferir a tabela e as quebras de linha, e uma geração de ata pelo provedor de IA
+configurado.
 
 ## 7. Riscos
 

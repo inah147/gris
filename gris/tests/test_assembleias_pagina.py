@@ -138,6 +138,19 @@ class TestEdital(_Base):
 		self.assertIn("1. Eleição da mesa diretora", texto)
 		self.assertIn("/assembleias/candidatura?assembleia=", texto)
 		self.assertIn("/assembleias/assunto_geral?assembleia=", texto)
+		self.assertIn("\n\n" + c.INTRO_LINKS_EDITAL + "\n\n- Mesa diretora: [link para candidatura](", texto)
+		self.assertIn("\n- Assuntos gerais: [link para submissão](", texto)
+
+		# Sem formulário previsto na pauta, o bloco inteiro some.
+		doc.set(
+			"pauta",
+			[
+				i
+				for i in doc.pauta
+				if not i.finalidade or i.finalidade not in c.FINALIDADE_DO_FORMULARIO.values()
+			],
+		)
+		self.assertNotIn(c.INTRO_LINKS_EDITAL, documentos.conteudo_do_edital(doc))
 		self.assertNotIn("{", texto)
 
 		doc.edital_incluir_links = 0

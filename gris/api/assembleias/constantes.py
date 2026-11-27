@@ -164,13 +164,13 @@ TEXTO_RODAPE_EDITAL_ANTIGO = (
 	"Diretor Presidente"
 )
 
-# Um item de lista por formulário, com o link clicável (markdown) e o prazo.
-LINHA_LINK_CANDIDATURA = (
-	"- Candidaturas para {cargo} devem ser encaminhadas pelo [formulário eletrônico]({link}) até {prazo}."
+# Bloco dos formulários no edital: uma frase de abertura e um item por formulário
+# previsto na pauta, com o texto do link clicável.
+INTRO_LINKS_EDITAL = (
+	"As candidaturas e submissões para assuntos gerais devem ser realizadas de maneira digital, "
+	"através dos links abaixo:"
 )
-LINHA_LINK_ASSUNTOS = (
-	"- Propostas de assuntos gerais devem ser encaminhadas pelo [formulário eletrônico]({link}) até {prazo}."
-)
+LINHA_LINK_EDITAL = "- {rotulo}: [{texto}]({link})"
 
 # --------------------------------------------------------------------------------------
 # Orientações de condução

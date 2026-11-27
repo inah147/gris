@@ -269,9 +269,9 @@ Cada critério de aceite (CA) tem um teste correspondente na
 - **CA-06.2** Os textos de antes e de depois da pauta são editáveis e aceitam as variáveis de
   [textos.md](textos.md#1-variáveis). Uma pré-visualização mostra o texto resolvido.
 - **CA-06.3** Ficam também na aba a data de publicação e a opção "incluir links dos formulários".
-  Com a opção marcada, o documento ganha, entre a pauta e o texto final, uma linha para cada
-  formulário previsto, com o link e o prazo por extenso (ver
-  [textos.md](textos.md#linha-de-cada-formulário-gerada)).
+  Com a opção marcada, o documento ganha, entre a pauta e o texto final, uma frase de abertura e
+  uma lista com um link clicável para cada formulário previsto (ver
+  [textos.md](textos.md#lista-de-formulários-gerada)).
 - **CA-06.4** "Gerar PDF" gera o rascunho no timbrado (RF-11), sem publicar.
 - **CA-06.5** "Marcar como publicado":
   1. pede confirmação;

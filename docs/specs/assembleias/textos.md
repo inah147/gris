@@ -75,14 +75,20 @@ recente da função de presidente.
 
 ### Lista de formulários (gerada)
 
-Um item com marcador para cada formulário previsto na pauta; "formulário eletrônico" é o link,
-sublinhado e clicável.
+Uma frase de abertura e um item com marcador para cada formulário previsto na pauta. O texto
+depois dos dois-pontos é o link, sublinhado e clicável.
 
-> - Candidaturas para {cargo} devem ser encaminhadas pelo [formulário eletrônico]({link}) até {prazo}.
-> - Propostas de assuntos gerais devem ser encaminhadas pelo [formulário eletrônico]({link}) até {prazo}.
+> As candidaturas e submissões para assuntos gerais devem ser realizadas de maneira digital,
+> através dos links abaixo:
+>
+> - Mesa diretora: [link para candidatura]()
+> - Delegados para a Assembleia Regional: [link para candidatura]()
+> - Comissão Fiscal: [link para candidatura]()
+> - Chapas para a diretoria: [link para candidatura]()
+> - Assuntos gerais: [link para submissão]()
 
-`{prazo}` é por extenso: "27 de novembro de 2026" para prazo em dias; "uma hora antes da
-primeira convocação" ou "duas horas antes da primeira convocação" para prazo em horas.
+Os prazos de cada formulário não entram nesta lista; eles aparecem no próprio formulário e na
+Visão Geral.
 
 ### Formatação no papel timbrado
 

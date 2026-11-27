@@ -14,33 +14,25 @@ from frappe import _
 from frappe.utils import cint
 
 from gris.api.assembleias import constantes as c
-from gris.api.assembleias.formularios import CARGO_NO_EDITAL, formularios_da_assembleia
+from gris.api.assembleias.formularios import LINK_NO_EDITAL, formularios_da_assembleia
 from gris.api.assembleias.padroes import configuracoes, valores_da_assembleia
 from gris.api.assembleias.textos import substituir
 
 
 def linhas_de_link(doc, config) -> list[str]:
-	"""Uma frase por formulário previsto na pauta, com link e prazo (CA-06.3)."""
-	linhas = []
+	"""Frase de abertura e um item por formulário previsto na pauta (CA-06.3).
+
+	Sem nenhum formulário previsto, o bloco não aparece.
+	"""
+	itens = []
 	for formulario in formularios_da_assembleia(doc, config):
 		if not formulario["previsto"]:
 			continue
-		modelo = (
-			c.LINHA_LINK_ASSUNTOS
-			if formulario["chave"] == c.FORMULARIO_ASSUNTOS_GERAIS
-			else c.LINHA_LINK_CANDIDATURA
+		rotulo, texto = LINK_NO_EDITAL[formulario["chave"]]
+		itens.append(
+			substituir(c.LINHA_LINK_EDITAL, {"rotulo": rotulo, "texto": texto, "link": formulario["link"]})
 		)
-		linhas.append(
-			substituir(
-				modelo,
-				{
-					"cargo": CARGO_NO_EDITAL.get(formulario["chave"], ""),
-					"link": formulario["link"],
-					"prazo": formulario["prazo"],
-				},
-			)
-		)
-	return linhas
+	return [c.INTRO_LINKS_EDITAL, *itens] if itens else []
 
 
 def conteudo_do_edital(doc, config=None) -> str:
@@ -53,8 +45,11 @@ def conteudo_do_edital(doc, config=None) -> str:
 		"\n".join(f"{i}. {item.titulo}" for i, item in enumerate(doc.pauta, start=1)),
 	]
 	if doc.edital_incluir_links:
-		# Uma lista só: um item com marcador para cada formulário.
-		partes.append("\n".join(linhas_de_link(doc, config)))
+		linhas = linhas_de_link(doc, config)
+		if linhas:
+			# A abertura é um parágrafo; os itens, uma lista só com marcador.
+			partes.append(linhas[0])
+			partes.append("\n".join(linhas[1:]))
 	partes.append(substituir(doc.edital_texto_rodape or "", valores))
 	return "\n\n".join(parte.strip() for parte in partes if parte and parte.strip())
 

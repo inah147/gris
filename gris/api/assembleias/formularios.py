@@ -32,12 +32,13 @@ ROTULO_DO_FORMULARIO = {
 	c.FORMULARIO_ASSUNTOS_GERAIS: "Assuntos gerais",
 }
 
-# Como o cargo aparece na frase do edital: "Candidaturas para ... devem ser encaminhadas".
-CARGO_NO_EDITAL = {
-	c.FORMULARIO_MESA: "a mesa diretora (presidente e secretário)",
-	c.FORMULARIO_DELEGADO: "delegados para a Assembleia Regional",
-	c.FORMULARIO_COMISSAO_FISCAL: "a Comissão Fiscal",
-	c.FORMULARIO_DIRETORIA: "as chapas da diretoria",
+# Como cada formulário aparece na lista de links do edital: (rótulo, texto do link).
+LINK_NO_EDITAL = {
+	c.FORMULARIO_MESA: ("Mesa diretora", "link para candidatura"),
+	c.FORMULARIO_DELEGADO: ("Delegados para a Assembleia Regional", "link para candidatura"),
+	c.FORMULARIO_COMISSAO_FISCAL: ("Comissão Fiscal", "link para candidatura"),
+	c.FORMULARIO_DIRETORIA: ("Chapas para a diretoria", "link para candidatura"),
+	c.FORMULARIO_ASSUNTOS_GERAIS: ("Assuntos gerais", "link para submissão"),
 }
 
 NUMEROS_POR_EXTENSO = {1: "uma", 2: "duas", 3: "três", 4: "quatro", 5: "cinco", 6: "seis"}

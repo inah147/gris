@@ -246,7 +246,7 @@ PAUTA_ORDINARIA = (
 	_ITEM_LEITURA,
 	_ITEM_ATA,
 	(
-		"Apreciação e deliberação do balanço financeiro do exercício de {ano} juntamente com parecer da Comissão Fiscal",
+		"Apreciação e deliberação do balanço financeiro do exercício de {exercicio} juntamente com parecer da Comissão Fiscal",
 		1,
 		"",
 	),

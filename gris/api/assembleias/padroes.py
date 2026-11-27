@@ -79,6 +79,21 @@ def data_da_assembleia_anterior(data, ignorar: str | None = None) -> str:
 	return data_curta(anterior[0].data) if anterior else "[data]"
 
 
+def exercicio_do_balanco(data) -> int:
+	"""Ano do balanço apreciado. O ano fiscal fecha em 31/12 e o balanço sai em até 60 dias
+	(art. 40): assembleia do primeiro semestre aprecia o ano anterior; a do segundo, o
+	próprio ano, como a de dezembro de 2026."""
+	data = getdate(data)
+	return data.year if data.month >= 7 else data.year - 1
+
+
+def gestao_eleita(data) -> str:
+	"""Biênio da diretoria eleita: o seguinte ao ano da assembleia, se ela for no segundo
+	semestre (dezembro de 2026 elege 2027-2028); o próprio ano, se for no primeiro."""
+	inicio = getdate(data).year + (1 if getdate(data).month >= 7 else 0)
+	return f"{inicio}-{inicio + 1}"
+
+
 def _dados_da_uel() -> dict:
 	uel = frappe.get_single("Definicao da UEL")
 	numeral = f"{uel.numeral}/{uel.regiao}" if uel.numeral and uel.regiao else str(uel.numeral or "")
@@ -112,7 +127,8 @@ def valores_da_assembleia(doc, config=None) -> dict[str, str]:
 		"diretor_presidente": " e ".join(presidentes) or "[diretor presidente]",
 		"ano": str(data.year),
 		"ano_anterior": str(data.year - 1),
-		"gestao": f"{data.year + 1}-{data.year + 2}",
+		"gestao": gestao_eleita(data),
+		"exercicio": str(exercicio_do_balanco(data)),
 		"data_assembleia_anterior": data_da_assembleia_anterior(data, ignorar=doc.name),
 	}
 

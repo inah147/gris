@@ -33,7 +33,8 @@ vencimento. Uma variável desconhecida é recusada ao salvar.
 | `{data_publicacao}` | Data de publicação do edital por extenso | 05 de novembro de 2026 |
 | `{diretor_presidente}` | Quem ocupa hoje a função de presidente (`utils/diretoria.py`) | |
 | `{ano}` / `{ano_anterior}` | Ano da assembleia e o anterior | 2026 / 2025 |
-| `{gestao}` | Biênio da próxima gestão | 2027-2028 |
+| `{gestao}` | Biênio da diretoria eleita: o seguinte ao ano da assembleia no segundo semestre, o próprio ano no primeiro | 2027-2028 |
+| `{exercicio}` | Ano do balanço apreciado: o próprio ano no segundo semestre, o anterior no primeiro (art. 40) | 2026 |
 | `{data_assembleia_anterior}` | Data da última assembleia cadastrada antes desta, ou "[data]" | 06/12/2025 |
 
 Os títulos da pauta são resolvidos quando a assembleia é criada, porque viram texto da própria
@@ -89,7 +90,7 @@ Coluna "Vot." = `tem_votacao`.
 | 1 | Eleição da mesa diretora: Presidente e Secretário(a) | sim | Eleição da mesa |
 | 2 | Leitura do Edital de Convocação | não | Leitura do edital |
 | 3 | Apreciação e deliberação da ata da Assembleia anterior (realizada em {data_assembleia_anterior}) | sim | Ata anterior |
-| 4 | Apreciação e deliberação do balanço financeiro do exercício de {ano} juntamente com parecer da Comissão Fiscal | sim | — |
+| 4 | Apreciação e deliberação do balanço financeiro do exercício de {exercicio} juntamente com parecer da Comissão Fiscal | sim | — |
 | 5 | Apreciação e deliberação do relatório da Diretoria da UEL | sim | — |
 | 6 | Apreciação e deliberação do relatório das Seções | sim | — |
 | 7 | Eleição de Delegados para a Assembleia Regional | sim | Eleição de delegados |

@@ -160,7 +160,7 @@
 
 .asm-campos {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
 	gap: calc(var(--spacing) * 4);
 }
 
@@ -215,6 +215,10 @@
 	font-weight: 600;
 	color: var(--muted-foreground);
 	font-variant-numeric: tabular-nums;
+}
+
+.asm-pauta__item--leitura .asm-pauta__numero {
+	padding-top: 0;
 }
 
 .asm-pauta__acoes {
@@ -279,6 +283,258 @@
 	background: var(--background);
 	border-top: 1px solid var(--border);
 	z-index: 5;
+}
+
+/* --- Página da assembleia --- */
+/* Seis abas não cabem no celular: a lista rola na horizontal. Alinhada à esquerda,
+   porque centralizada ela transborda para os dois lados e o começo fica inalcançável. */
+.asm-abas > [role="tablist"] {
+	justify-content: flex-start;
+	overflow-x: auto;
+	max-width: 100%;
+	scrollbar-width: thin;
+}
+
+.asm-abas [role="tab"] {
+	white-space: nowrap;
+}
+
+.asm-aba {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 5);
+	padding-top: calc(var(--spacing) * 4);
+}
+
+.asm-bloco__topo {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 3);
+	flex-wrap: wrap;
+}
+
+.asm-leitura {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	font-size: 0.875rem;
+}
+
+.asm-leitura__rotulo {
+	font-weight: 500;
+	color: var(--muted-foreground);
+}
+
+.asm-acoes {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 2);
+	justify-content: flex-end;
+}
+
+.asm-salvamento {
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+}
+
+.asm-salvamento[data-estado="erro"] {
+	color: var(--destructive);
+	cursor: pointer;
+	text-decoration: underline;
+}
+
+.asm-formularios {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 3);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.asm-formulario {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	padding-bottom: calc(var(--spacing) * 3);
+	border-bottom: 1px solid var(--border);
+}
+
+.asm-formulario:last-child {
+	border-bottom: 0;
+	padding-bottom: 0;
+}
+
+.asm-formulario__topo {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+}
+
+.asm-formulario__link {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+	min-width: 0;
+}
+
+.asm-formulario__link code {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 0.8125rem;
+	padding: 0.25rem 0.5rem;
+	border-radius: calc(var(--radius) - 2px);
+	background: var(--muted);
+}
+
+.asm-checklist {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+	gap: calc(var(--spacing) * 5);
+}
+
+.asm-checklist__fase h3 {
+	margin: 0 0 calc(var(--spacing) * 2);
+	font-size: 0.875rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--muted-foreground);
+}
+
+.asm-checklist__fase ul {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 3);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.asm-checklist__item {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.625rem;
+	cursor: pointer;
+}
+
+.asm-checklist__item input {
+	margin-top: 0.2rem;
+}
+
+.asm-checklist__item > span {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+}
+
+.asm-checklist__detalhe {
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+}
+
+.asm-roteiro {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 4);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.asm-roteiro__item {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	padding: calc(var(--spacing) * 4);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+}
+
+.asm-roteiro__item:has([data-concluido]:checked) {
+	background: var(--muted);
+}
+
+.asm-roteiro__titulo {
+	display: flex;
+	align-items: flex-start;
+	flex-wrap: wrap;
+	gap: 0.625rem;
+	font-size: 1rem;
+	cursor: pointer;
+}
+
+.asm-roteiro__titulo input {
+	margin-top: 0.25rem;
+}
+
+.asm-roteiro__titulo > span:first-of-type {
+	flex: 1 1 16rem;
+}
+
+.asm-roteiro__editar summary {
+	cursor: pointer;
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+}
+
+.asm-orientacoes-gerais summary {
+	cursor: pointer;
+}
+
+.asm-markdown {
+	font-size: 0.9375rem;
+	line-height: 1.6;
+}
+
+.asm-markdown p,
+.asm-markdown ul,
+.asm-markdown ol {
+	margin: 0 0 0.75rem;
+}
+
+.asm-markdown ul,
+.asm-markdown ol {
+	padding-left: 1.75rem;
+}
+
+.asm-markdown ul {
+	list-style: disc;
+}
+
+.asm-markdown ol {
+	list-style: decimal;
+}
+
+.asm-markdown ul ul {
+	list-style: circle;
+	margin-bottom: 0;
+}
+
+.asm-markdown h1,
+.asm-markdown h2 {
+	text-align: center;
+	font-size: 1.125rem;
+	font-weight: 700;
+	margin: 0 0 0.75rem;
+}
+
+.asm-markdown > :last-child {
+	margin-bottom: 0;
+}
+
+.asm-dialog--largo > div {
+	max-width: min(48rem, calc(100vw - 2rem));
+}
+
+.asm-previa {
+	max-height: 70vh;
+	overflow-y: auto;
+	text-align: justify;
 }
 
 @media (max-width: 1023px) {

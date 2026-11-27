@@ -114,6 +114,14 @@ class TestCriacao(_Base):
 		self.assertEqual(padroes.segunda_convocacao("23:45:00"), "00:15:00")
 		self.assertEqual(padroes.segunda_convocacao(""), "")
 
+	def test_exercicio_e_gestao_pelo_semestre(self):
+		# Dezembro de 2026: aprecia 2026 e elege 2027-2028, como o edital de 2026.
+		self.assertEqual(padroes.exercicio_do_balanco("2026-12-05"), 2026)
+		self.assertEqual(padroes.gestao_eleita("2026-12-05"), "2027-2028")
+		# Fevereiro de 2027: o balanço é o de 2026 (art. 40) e a gestão começa no ano.
+		self.assertEqual(padroes.exercicio_do_balanco("2027-02-20"), 2026)
+		self.assertEqual(padroes.gestao_eleita("2027-02-20"), "2027-2028")
+
 	def test_data_por_extenso(self):
 		self.assertEqual(padroes.data_por_extenso("2026-12-05"), "05 de dezembro de 2026")
 

@@ -164,7 +164,8 @@ Cada critério de aceite (CA) tem um teste correspondente na
 - **CA-03.1** Cada card mostra:
   - data, tipo e local;
   - situação do edital: rascunho, publicado ou "prazo vencido" (vermelho);
-  - quantidade de candidaturas e de assuntos gerais.
+  - quantidade de candidaturas e de assuntos gerais;
+  - a etapa atual (Edital, Inscrições, Sessão hoje ou Ata).
 - **CA-03.2** Os cards ficam em duas seções: "Próximas", com data maior ou igual a hoje e em ordem
   crescente, e "Já realizadas", em ordem decrescente.
 - **CA-03.3** Sem assembleia nenhuma, aparece o estado vazio com o mascote e o botão "Nova
@@ -374,6 +375,11 @@ Cada critério de aceite (CA) tem um teste correspondente na
 
 ### RF-09 — Candidaturas e assuntos gerais (etapa Inscrições)
 
+- **CA-09.0** A etapa tem um bloco por cargo (presidente e secretário da mesa, delegados, comissão
+  fiscal, diretoria e assuntos gerais) com o estado do formulário, quantos se inscreveram e quantos
+  são precisos. Escolher um bloco mostra os inscritos dele, o prazo e o link do formulário. As vagas
+  de delegado se editam no bloco de delegados. "Copiar convite com os links" copia uma mensagem
+  com data, local, os formulários e a página pública.
 - **CA-09.1** A etapa lista as candidaturas ativas de cada cargo (presidente da mesa, secretário da
   mesa, delegado, comissão fiscal), com nome, registro escoteiro, motivação e biografia.
   Candidatos sem registro ativo aparecem com o aviso "registro a regularizar até a posse".
@@ -445,9 +451,11 @@ Cada critério de aceite (CA) tem um teste correspondente na
 
   Na comissão fiscal e na diretoria, o associado com registro vencido é aceito com o mesmo aviso.
 - **CA-12.4** Um formulário está aberto quando:
-  1. a data da assembleia não passou;
-  2. a pauta tem a finalidade correspondente;
-  3. agora é antes de (primeira convocação − prazo do cargo). "Sem limite" fecha no início da
+  1. o edital foi publicado (antes disso, o formulário mostra "As inscrições ainda não abriram" e o
+     servidor recusa o envio);
+  2. a data da assembleia não passou;
+  3. a pauta tem a finalidade correspondente;
+  4. agora é antes de (primeira convocação − prazo do cargo). "Sem limite" fecha no início da
      primeira convocação.
 - **CA-12.5** Com `manter_aberto_sem_candidatos` ligado, o formulário fica aberto depois do prazo,
   até a primeira convocação, enquanto faltar candidato:

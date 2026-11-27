@@ -70,6 +70,8 @@ class _Base(FrappeTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
 		self.name = _criar(add_days(getdate(), 30))["name"]
+		# As inscrições abrem com o edital publicado.
+		frappe.db.set_value(c.DOCTYPE_ASSEMBLEIA, self.name, "edital_publicado", 1)
 
 	def tearDown(self):
 		frappe.set_user("Administrator")
@@ -124,6 +126,19 @@ class TestEnvios(_Base):
 		frappe.set_user("Administrator")
 		self.assertEqual(f.contar_inscricoes(self.name)[c.CARGO_SECRETARIO_MESA], 1)
 
+	def test_inscricao_so_abre_com_o_edital_publicado(self):
+		frappe.db.set_value(c.DOCTYPE_ASSEMBLEIA, self.name, "edital_publicado", 0)
+		doc = frappe.get_doc(c.DOCTYPE_ASSEMBLEIA, self.name)
+		situacao = f.situacao_agora(doc, c.FORMULARIO_MESA)
+		self.assertTrue(situacao["aguardando_edital"])
+		self.assertFalse(situacao["aberto"])
+		_associado("AE", usuario="zz-asm-ae@example.com")
+		self._como("zz-asm-ae@example.com")
+		with self.assertRaisesRegex(frappe.ValidationError, "publicação do edital"):
+			f.enviar_candidatura(self.name, c.CARGO_PRESIDENTE_MESA, 1)
+		with self.assertRaisesRegex(frappe.ValidationError, "publicação do edital"):
+			f.enviar_assunto_geral(self.name, "Assunto", 1)
+
 	def test_sem_confirmacao(self):
 		_associado("SC", usuario="zz-asm-sc@example.com")
 		self._como("zz-asm-sc@example.com")
@@ -156,9 +171,12 @@ class TestEnvios(_Base):
 		f.enviar_candidatura(self.name, c.CARGO_COMISSAO_FISCAL, 1)
 
 	def test_fora_da_pauta(self):
+		# A pauta muda antes da publicação; depois, trava.
+		frappe.db.set_value(c.DOCTYPE_ASSEMBLEIA, self.name, "edital_publicado", 0)
 		doc = frappe.get_doc(c.DOCTYPE_ASSEMBLEIA, self.name)
 		doc.set("pauta", [i for i in doc.pauta if i.finalidade != c.FINALIDADE_DELEGADOS])
 		doc.save()
+		frappe.db.set_value(c.DOCTYPE_ASSEMBLEIA, self.name, "edital_publicado", 1)
 		_associado("FP", usuario="zz-asm-fp@example.com")
 		self._como("zz-asm-fp@example.com")
 		with self.assertRaisesRegex(frappe.ValidationError, "não tem eleição"):

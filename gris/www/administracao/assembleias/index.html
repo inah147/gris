@@ -30,6 +30,7 @@
 	<section class="asm-card__corpo">
 		<p class="asm-card__linha">{{ lucide_icon("clock", size="sm") }} <span>{{ a.hora | e }} em primeira convocação</span></p>
 		<p class="asm-card__linha">{{ lucide_icon("map-pin", size="sm") }} <span>{{ a.local | e }}</span></p>
+		<p class="asm-card__linha">{{ lucide_icon("list-checks", size="sm") }} <span>Etapa atual: <strong class="text-foreground font-medium">{{ a.etapa }}</strong></span></p>
 	</section>
 	<footer class="asm-card__rodape">
 		<span>{{ lucide_icon("users", size="sm") }} {{ a.candidaturas }} candidatura{{ "s" if a.candidaturas != 1 else "" }}</span>

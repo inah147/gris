@@ -31,6 +31,13 @@
 		image="/assets/gris/images/gris-character/gris-confused.png",
 		image_alt="Gris, o mascote, confuso"
 	) }}
+{% elif situacao.aguardando_edital %}
+	{{ empty(
+		title="O envio ainda não abriu",
+		description="Ele abre quando o edital de convocação for publicado. Volte por este mesmo link depois.",
+		image="/assets/gris/images/gris-character/gris-idle.png",
+		image_alt="Gris, o mascote, esperando"
+	) }}
 {% elif not situacao.aberto %}
 	{{ empty(
 		title="Prazo encerrado",

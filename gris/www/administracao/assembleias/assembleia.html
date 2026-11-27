@@ -203,25 +203,30 @@
 
 {# ───────────────────────────── 2. Inscrições ───────────────────────────── #}
 {% set painel_inscricoes %}
-<div class="asm-aba">
-	{% call card(attrs={"class": "asm-bloco", "id": "in-formularios"}) %}
-	<section>
-		<div class="asm-bloco__topo">
-			<h2 class="asm-bloco__titulo">Formulários</h2>
-			<a class="btn-sm-outline" href="/assembleias/candidaturas?assembleia={{ assembleia.name | urlencode }}" target="_blank" rel="noopener">
+<div class="asm-aba" id="in-formularios">
+	<div class="asm-inscricoes__topo">
+		<p class="asm-bloco__descricao">Só quem tem login no GRIS consegue se inscrever. Os inscritos aparecem na página pública.</p>
+		<div class="asm-acoes">
+			<a class="btn-outline" href="/assembleias/candidaturas?assembleia={{ assembleia.name | urlencode }}" target="_blank" rel="noopener">
 				{{ lucide_icon("external-link", size="sm") }}<span>Página pública</span>
 			</a>
+			<button type="button" class="btn-primary" id="in-convite">{{ lucide_icon("message-square", size="sm") }}<span>Copiar convite com os links</span></button>
 		</div>
-		<p class="asm-bloco__descricao">Só entra quem tem login no GRIS. Cada formulário existe quando a pauta tem a finalidade dele.</p>
-		<ul class="asm-formularios" id="vg-formularios"></ul>
-		<div class="asm-vagas">
-			{% call field(label="Vagas de delegado", hint="Uma vaga para cada fração de associados com registro ativo, calculada na criação.") %}
-				{{ input(type="number", value=dados.vagas_delegados, attrs={"id": "vg-vagas-delegados", "min": "0"}) }}
-			{% endcall %}
+	</div>
+	<div class="asm-cargos" id="in-cargos" role="list"></div>
+	{% call card(attrs={"class": "asm-bloco asm-inscritos", "id": "in-detalhe"}) %}
+	<section>
+		<div class="asm-bloco__topo">
+			<h2 class="asm-bloco__titulo" id="in-detalhe-titulo"></h2>
+			<div class="asm-vagas" id="in-vagas" hidden>
+				<label for="vg-vagas-delegados">Vagas</label>
+				{{ input(type="number", value=dados.vagas_delegados, attrs={"id": "vg-vagas-delegados", "min": "0", "class": "asm-vagas__campo"}) }}
+			</div>
 		</div>
+		<p class="asm-bloco__descricao" id="in-detalhe-descricao"></p>
+		<div id="cd-inscricoes"></div>
 	</section>
 	{% endcall %}
-	<div id="cd-inscricoes" class="asm-aba asm-aba--sem-topo"></div>
 </div>
 {% endset %}
 

@@ -302,17 +302,332 @@
 }
 
 /* --- Página da assembleia --- */
-/* Seis abas não cabem no celular: a lista rola na horizontal. Alinhada à esquerda,
-   porque centralizada ela transborda para os dois lados e o começo fica inalcançável. */
-.asm-abas > [role="tablist"] {
-	justify-content: flex-start;
-	overflow-x: auto;
-	max-width: 100%;
-	scrollbar-width: thin;
+.asm-cabecalho__sub {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem 1rem;
+	margin: 0;
+	font-size: 1rem;
+	line-height: 1.5;
+	color: var(--muted-foreground);
 }
 
-.asm-abas [role="tab"] {
+.asm-cabecalho__sub > span {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	min-width: 0;
+}
+
+.asm-cabecalho .asm-cabecalho__acoes {
+	align-items: center;
+}
+
+.asm-menu__perigo,
+.dropdown-menu [data-popover] [role="menuitem"].asm-menu__perigo {
+	color: var(--destructive);
+}
+
+/* Próximo passo: o que fazer agora, com prazo e um botão. */
+.asm-proximo {
+	--asm-tom: var(--primary);
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 3);
+	padding: calc(var(--spacing) * 3) calc(var(--spacing) * 4);
+	border: 1px solid color-mix(in srgb, var(--asm-tom) 28%, transparent);
+	border-radius: var(--radius-lg, var(--radius));
+	background: color-mix(in srgb, var(--asm-tom) 7%, var(--card));
+}
+
+.asm-proximo[data-tom="alerta"] {
+	--asm-tom: var(--destructive);
+}
+
+.asm-proximo[data-tom="aviso"] {
+	--asm-tom: var(--warning);
+}
+
+.asm-proximo > svg {
+	flex: none;
+	align-self: flex-start;
+	margin-top: 0.125rem;
+	color: var(--asm-tom);
+}
+
+.asm-proximo__texto {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+}
+
+.asm-proximo__titulo {
+	margin: 0;
+	font-weight: 600;
+	color: var(--foreground);
+}
+
+.asm-proximo__descricao {
+	margin: 0;
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+}
+
+.asm-proximo > button {
+	flex: none;
+}
+
+/* Seletor de etapas: as abas viram quatro passos com o estado de cada um. */
+.tabs.asm-etapas {
+	gap: calc(var(--spacing) * 4);
+}
+
+.tabs.asm-etapas > [role="tablist"] {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: calc(var(--spacing) * 2);
+	width: 100%;
+	height: auto;
+	padding: 0;
+	background: transparent;
+}
+
+.tabs.asm-etapas > [role="tablist"] [role="tab"] {
+	justify-content: flex-start;
+	align-items: center;
+	gap: calc(var(--spacing) * 2.5);
+	height: auto;
+	min-width: 0;
+	padding: calc(var(--spacing) * 2.5) calc(var(--spacing) * 3);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg, var(--radius));
+	background: var(--card);
+	color: var(--foreground);
+	text-align: left;
+	white-space: normal;
+	font-weight: 400;
+	box-shadow: none;
+	transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.tabs.asm-etapas > [role="tablist"] [role="tab"]:hover {
+	border-color: color-mix(in oklch, var(--foreground) 22%, var(--border));
+}
+
+.tabs.asm-etapas > [role="tablist"] [role="tab"][aria-selected="true"] {
+	border-color: color-mix(in oklch, var(--primary) 55%, transparent);
+	background: color-mix(in srgb, var(--primary) 4%, var(--card));
+	box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 55%, transparent);
+	color: var(--foreground);
+}
+
+.asm-etapa__marca {
+	flex: none;
+	display: inline-grid;
+	place-items: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	border-radius: 999px;
+	border: 1px solid var(--border);
+	font-size: 0.75rem;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	color: var(--muted-foreground);
+}
+
+[aria-selected="true"] > .asm-etapa__marca {
+	border-color: var(--primary);
+	background: var(--primary);
+	color: var(--primary-foreground);
+}
+
+[data-estado="feito"] > .asm-etapa__marca {
+	border-color: var(--success);
+	background: var(--success);
+	color: var(--success-foreground);
+}
+
+.asm-etapa__texto {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	line-height: 1.3;
+}
+
+.asm-etapa__nome {
+	font-weight: 600;
+	font-size: 0.9375rem;
+}
+
+.asm-etapa__estado {
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+	overflow: hidden;
+	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+[data-estado="alerta"] .asm-etapa__estado {
+	color: var(--destructive);
+	font-weight: 500;
+}
+
+/* Tarefas do checklist dentro de cada etapa. */
+.asm-tarefas {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 3);
+	padding: calc(var(--spacing) * 4);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg, var(--radius));
+	background: var(--card);
+}
+
+.asm-tarefas__topo {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: calc(var(--spacing) * 3);
+}
+
+.asm-tarefas__titulo {
+	margin: 0;
+	font-size: 0.9375rem;
+	font-weight: 600;
+}
+
+.asm-tarefas__progresso {
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+	font-variant-numeric: tabular-nums;
+}
+
+.asm-tarefas__lista {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+	gap: calc(var(--spacing) * 3) calc(var(--spacing) * 6);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.asm-convocacao {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: calc(var(--spacing) * 4);
+}
+
+.asm-convocacao__largo {
+	grid-column: 1 / -1;
+}
+
+.asm-vagas {
+	padding-top: calc(var(--spacing) * 4);
+	border-top: 1px solid var(--border);
+}
+
+.asm-vagas > * {
+	max-width: 22rem;
+}
+
+/* Barra de ações da etapa: fica à vista enquanto se rola o conteúdo. */
+.asm-barra-etapa {
+	position: sticky;
+	bottom: 0;
+	z-index: 5;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 3);
+	padding: calc(var(--spacing) * 3) 0;
+	background: var(--background);
+	border-top: 1px solid var(--border);
+}
+
+.asm-barra-etapa__nota {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	margin: 0;
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+}
+
+/* Sessão: preparar antes, conduzir no dia. */
+.asm-momentos {
+	display: inline-flex;
+	align-self: flex-start;
+	padding: 3px;
+	gap: 3px;
+	border-radius: var(--radius-lg, var(--radius));
+	background: var(--muted);
+}
+
+.asm-momento {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 0.375rem 0.875rem;
+	border: 1px solid transparent;
+	border-radius: var(--radius-md, var(--radius));
+	background: transparent;
+	font: inherit;
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: var(--muted-foreground);
+	cursor: pointer;
+}
+
+.asm-momento[aria-pressed="true"] {
+	background: var(--background);
+	color: var(--foreground);
+	box-shadow: 0 1px 2px color-mix(in oklch, var(--foreground) 10%, transparent);
+}
+
+.asm-momento:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 1px;
+}
+
+.asm-preparo {
+	display: grid;
+	grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+	gap: calc(var(--spacing) * 5);
+	align-items: start;
+}
+
+.asm-incluir {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+	gap: calc(var(--spacing) * 3);
+	align-items: start;
+	padding: calc(var(--spacing) * 3);
+	border-radius: var(--radius);
+	background: var(--muted);
+}
+
+.asm-incluir > button {
+	margin-top: 1.5rem;
+}
+
+.asm-resumo-publicacao {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+	margin: 0;
+	padding-left: 1.125rem;
+}
+
+.asm-aviso-prazo {
+	color: var(--destructive);
+	font-weight: 500;
+}
+
+.asm-aba--sem-topo {
+	padding-top: 0;
 }
 
 .asm-aba {
@@ -328,18 +643,6 @@
 	justify-content: space-between;
 	gap: calc(var(--spacing) * 3);
 	flex-wrap: wrap;
-}
-
-.asm-leitura {
-	display: flex;
-	flex-direction: column;
-	gap: 0.25rem;
-	font-size: 0.875rem;
-}
-
-.asm-leitura__rotulo {
-	font-weight: 500;
-	color: var(--muted-foreground);
 }
 
 .asm-acoes {
@@ -410,30 +713,6 @@
 	padding: 0.25rem 0.5rem;
 	border-radius: calc(var(--radius) - 2px);
 	background: var(--muted);
-}
-
-.asm-checklist {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-	gap: calc(var(--spacing) * 5);
-}
-
-.asm-checklist__fase h3 {
-	margin: 0 0 calc(var(--spacing) * 2);
-	font-size: 0.875rem;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.04em;
-	color: var(--muted-foreground);
-}
-
-.asm-checklist__fase ul {
-	display: flex;
-	flex-direction: column;
-	gap: calc(var(--spacing) * 3);
-	margin: 0;
-	padding: 0;
-	list-style: none;
 }
 
 .asm-checklist__item {
@@ -762,7 +1041,23 @@
 }
 
 @media (max-width: 1023px) {
+	.asm-preparo {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.asm-convocacao {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
 	/* Acima da barra inferior do portal (templates/includes/bottom_bar.html). */
+	.asm-barra-etapa {
+		bottom: calc(var(--bottom-bar-height, 68px) + 24px);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		padding-inline: calc(var(--spacing) * 3);
+		box-shadow: 0 4px 12px color-mix(in oklch, var(--foreground) 8%, transparent);
+	}
+
 	.asm-barra-salvar {
 		bottom: calc(var(--bottom-bar-height, 68px) + 24px);
 		border: 1px solid var(--border);
@@ -780,6 +1075,61 @@
 
 	.asm-cabecalho__acoes > * {
 		flex: 1 1 auto;
+	}
+
+	/* Na página da assembleia, o menu ⋯ fica pequeno ao lado do indicador. */
+	.asm-cabecalho .asm-cabecalho__acoes {
+		justify-content: space-between;
+	}
+
+	.asm-cabecalho .asm-cabecalho__acoes > * {
+		flex: 0 0 auto;
+	}
+
+	.tabs.asm-etapas > [role="tablist"] {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.asm-proximo {
+		flex-wrap: wrap;
+	}
+
+	.asm-proximo__texto {
+		flex: 1 1 0;
+	}
+
+	.asm-proximo > button {
+		flex: 1 0 100%;
+		justify-content: center;
+	}
+
+	.asm-etapa__estado {
+		white-space: normal;
+	}
+
+	.asm-convocacao,
+	.asm-incluir {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.asm-incluir > button {
+		margin-top: 0;
+	}
+
+	/* Com os botões empilhados, a barra fixa cobriria metade da tela. */
+	.asm-barra-etapa {
+		position: static;
+		box-shadow: none;
+	}
+
+	.asm-barra-etapa .asm-acoes {
+		width: 100%;
+		justify-content: stretch;
+	}
+
+	.asm-barra-etapa .asm-acoes > * {
+		flex: 1 1 auto;
+		justify-content: center;
 	}
 
 	.asm-pauta__opcoes,

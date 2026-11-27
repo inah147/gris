@@ -108,12 +108,23 @@ def listar_assembleias() -> dict:
 			"hora": str(a.hora_primeira_convocacao or "")[:5],
 			"prazo_edital": str(prazo),
 			"edital": situacao_do_edital(a.edital_publicado, prazo, hoje),
+			"etapa": etapa_pela_data(a.edital_publicado, a.data, hoje),
 			"candidaturas": candidaturas.get(a.name, 0) + chapas.get(a.name, 0),
 			"assuntos": assuntos.get(a.name, 0),
 		}
 		(proximas if getdate(a.data) >= hoje else realizadas).append(card)
 	realizadas.reverse()
 	return {"proximas": proximas, "realizadas": realizadas}
+
+
+def etapa_pela_data(publicado, data, hoje) -> str:
+	"""A etapa em que a assembleia está, a mesma regra da página (sem consultas)."""
+	if not cint(publicado):
+		return "Edital"
+	dias = (getdate(data) - getdate(hoje)).days
+	if dias > 0:
+		return "Inscrições"
+	return "Sessão hoje" if dias == 0 else "Ata"
 
 
 def _contar_por_assembleia(doctype: str, nomes: list[str], so_ativas: bool = True) -> dict[str, int]:

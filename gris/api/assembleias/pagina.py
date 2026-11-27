@@ -149,6 +149,8 @@ def etapas_da_assembleia(doc, config, formularios: list[dict], checklist: list[d
 	reabertos = [f for f in formularios if f.get("reaberto")]
 	if dias < 0:
 		inscricoes_estado = ("feito", f"Encerradas · {rotulo_inscricoes}")
+	elif not publicado:
+		inscricoes_estado = ("pendente", "Abrem com o edital")
 	elif reabertos:
 		inscricoes_estado = ("alerta", f"Faltam candidatos · {rotulo_inscricoes}")
 	elif abertos:

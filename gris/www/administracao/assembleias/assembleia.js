@@ -62,7 +62,7 @@
 				assinaturaDaPauta(resposta.pagina.pauta) !== assinaturaDaPauta(dados.pauta);
 			dados = resposta.pagina;
 			if (editorPauta) editorPauta.sincronizarNomes(dados.pauta);
-			desenharFormularios();
+			desenharInscricoes();
 			desenharTarefas();
 			desenharEtapas();
 			if (pautaMudou) desenharRoteiro();
@@ -484,47 +484,298 @@
 
 	// ─────────────────────────── 2. Inscrições ───────────────────────────
 
-	function desenharFormularios() {
-		const lista = document.getElementById("vg-formularios");
-		if (!lista) return;
-		lista.innerHTML = (dados.formularios || [])
-			.map((f) => {
-				let estadoHtml;
-				if (!f.previsto) {
-					estadoHtml = '<span class="badge-outline">Não previsto na pauta</span>';
-				} else if (f.reaberto) {
-					estadoHtml =
-						'<span class="badge-secondary">Reaberto por falta de candidatos</span>';
-				} else if (f.aberto) {
-					estadoHtml = '<span class="badge">Aberto</span>';
-				} else {
-					estadoHtml = '<span class="badge-destructive">Fechado</span>';
-				}
-				const prazo = f.previsto
-					? `<span class="text-sm text-muted-foreground">Até ${A.escapeHtml(
-							f.prazo
-					  )}</span>`
-					: "";
-				const link = f.previsto
-					? `<div class="asm-formulario__link">
-							<a class="btn-sm-outline" href="${A.escapeHtml(f.link)}" target="_blank" rel="noopener">${A.icone(
-							"external-link"
-					  )}<span>Abrir formulário</span></a>
-							<button type="button" class="btn-sm-ghost" data-copiar="${A.escapeHtml(f.link)}">${A.icone(
-							"copy"
-					  )}<span>Copiar link</span></button>
-						</div>`
-					: "";
-				return `<li class="asm-formulario">
-					<div class="asm-formulario__topo"><strong>${A.escapeHtml(
-						f.rotulo
-					)}</strong>${estadoHtml}${prazo}</div>${link}
-				</li>`;
-			})
-			.join("");
+	let inscricoes = A.lerJson(raiz.dataset.inscricoes, {});
+
+	// Um bloco por cargo, ligado ao formulário que recebe a inscrição.
+	const CARGOS = [
+		{
+			chave: "presidente",
+			nome: "Presidente da mesa",
+			formulario: "mesa",
+			cargo: "Presidente da mesa",
+			precisa: () => 1,
+		},
+		{
+			chave: "secretario",
+			nome: "Secretário da mesa",
+			formulario: "mesa",
+			cargo: "Secretário da mesa",
+			precisa: () => 1,
+		},
+		{
+			chave: "delegados",
+			nome: "Delegados",
+			formulario: "delegado",
+			cargo: "Delegado",
+			precisa: () => Number(inscricoes.vagas_delegados) || 0,
+			vagas: true,
+		},
+		{
+			chave: "comissao",
+			nome: "Comissão fiscal",
+			formulario: "comissao_fiscal",
+			cargo: "Comissão Fiscal",
+			precisa: () =>
+				(Number(inscricoes.titulares_cf) || 0) + (Number(inscricoes.suplentes_cf) || 0),
+		},
+		{
+			chave: "diretoria",
+			nome: "Diretoria",
+			formulario: "diretoria",
+			chapas: true,
+			precisa: () => 1,
+		},
+		{
+			chave: "assuntos",
+			nome: "Assuntos gerais",
+			formulario: "assuntos_gerais",
+			assuntos: true,
+		},
+	];
+	let cargoSelecionado = null;
+
+	const formularioDe = (chave) => (dados.formularios || []).find((f) => f.chave === chave) || {};
+	const ativos = (lista) => lista.filter((i) => i.status !== "Retirada");
+	const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+
+	function inscritosDe(cargo) {
+		if (cargo.assuntos) return inscricoes.assuntos || [];
+		if (cargo.chapas) return inscricoes.chapas || [];
+		const grupo = (inscricoes.cargos || []).find((g) => g.cargo === cargo.cargo);
+		return (grupo && grupo.candidaturas) || [];
 	}
 
-	desenharFormularios();
+	function dataHoraBR(valor) {
+		const texto = String(valor || "");
+		const hora = texto.slice(11, 16);
+		return hora ? `${A.dataBR(texto)} às ${hora}` : A.dataBR(texto);
+	}
+
+	function seloDoFormulario(f) {
+		if (!f.previsto) return '<span class="badge-outline">Fora da pauta</span>';
+		if (f.aguardando_edital) return '<span class="badge-outline">Abre com o edital</span>';
+		if (f.reaberto) return '<span class="badge-secondary asm-selo--aviso">Reaberto</span>';
+		if (f.aberto) {
+			return `<span class="badge-secondary asm-selo--aberto">Até ${A.escapeHtml(
+				A.dataBR(f.fecha_em)
+			)}</span>`;
+		}
+		return `<span class="badge-outline">Encerrado ${A.escapeHtml(
+			A.dataBR(f.fecha_em)
+		)}</span>`;
+	}
+
+	function resumoDoCargo(cargo) {
+		const n = ativos(inscritosDe(cargo)).length;
+		const m = cargo.precisa ? cargo.precisa() : 0;
+		if (cargo.assuntos)
+			return { n, rotulo: n === 1 ? "enviado" : "enviados", direita: "", m: 0 };
+		if (cargo.chapas) {
+			return {
+				n,
+				rotulo: n === 1 ? "chapa" : "chapas",
+				direita: "precisa de 1 completa",
+				m,
+			};
+		}
+		if (cargo.chave === "comissao") {
+			return {
+				n,
+				rotulo: n === 1 ? "inscrito" : "inscritos",
+				direita: `${inscricoes.titulares_cf} titulares + ${inscricoes.suplentes_cf} suplentes`,
+				m,
+			};
+		}
+		if (cargo.vagas) {
+			return {
+				n,
+				rotulo: n === 1 ? "inscrito" : "inscritos",
+				direita: plural(m, "vaga", "vagas"),
+				m,
+			};
+		}
+		return { n, rotulo: n === 1 ? "inscrito" : "inscritos", direita: "precisa de 1", m };
+	}
+
+	function medidor(n, m) {
+		if (!m) return "";
+		const total = Math.min(m, 12);
+		const cheios = m <= 12 ? Math.min(n, m) : Math.round((Math.min(n, m) / m) * 12);
+		return `<span class="asm-medidor" aria-hidden="true">${Array.from(
+			{ length: total },
+			(_, i) => `<i${i < cheios ? ' class="is-cheio"' : ""}></i>`
+		).join("")}</span>`;
+	}
+
+	function iniciais(nome) {
+		const partes = String(nome || "?")
+			.trim()
+			.split(/\s+/);
+		return A.escapeHtml(
+			(
+				(partes[0] || "?")[0] + (partes.length > 1 ? partes[partes.length - 1][0] : "")
+			).toUpperCase()
+		);
+	}
+
+	function textoLongo(rotulo, valor) {
+		return valor
+			? `<p class="asm-candidato__rotulo">${rotulo}</p><p class="asm-candidato__texto">${A.escapeHtml(
+					valor
+			  )}</p>`
+			: "";
+	}
+
+	function linhaDeInscrito(cand, { retirar, funcao } = {}) {
+		const retirada = cand.status === "Retirada";
+		const meta = [
+			cand.registro ? `Registro ${A.escapeHtml(cand.registro)}` : "Sem registro informado",
+			cand.creation ? `enviada em ${dataHoraBR(cand.creation)}` : "",
+			cand.registro_ativo ? "" : "registro a regularizar até a posse",
+		]
+			.filter(Boolean)
+			.join(" · ");
+		const textos =
+			textoLongo("Motivação", cand.motivacao) + textoLongo("Biografia", cand.biografia);
+		return `<li class="asm-inscrito${retirada ? " is-retirada" : ""}">
+			<span class="asm-inscrito__avatar" aria-hidden="true">${iniciais(cand.nome)}</span>
+			<div class="asm-inscrito__texto">
+				${funcao ? `<p class="asm-candidato__funcao">${A.escapeHtml(funcao)}</p>` : ""}
+				<p class="asm-inscrito__nome">${A.escapeHtml(cand.nome)}</p>
+				<p class="asm-inscrito__meta">${meta}${
+			retirada ? ` · retirada: ${A.escapeHtml(cand.motivo_retirada || "")}` : ""
+		}</p>
+				${
+					textos
+						? `<details class="asm-inscrito__mais"><summary>Motivação e biografia</summary>${textos}</details>`
+						: ""
+				}
+			</div>
+			<div class="asm-inscrito__acoes">${
+				retirada
+					? '<span class="badge-outline">Retirada</span>'
+					: retirar
+					? `<button type="button" class="btn-sm-ghost" data-retirar="${retirar}" data-retirar-name="${A.escapeHtml(
+							cand.name
+					  )}" data-retirar-nome="${A.escapeHtml(cand.nome)}">${A.icone(
+							"user-x"
+					  )}<span>Retirar</span></button>`
+					: ""
+			}</div>
+		</li>`;
+	}
+
+	function detalheDoCargo(cargo) {
+		const lista = inscritosDe(cargo);
+		if (!lista.length) {
+			return `<p class="asm-secao__vazio">${
+				cargo.assuntos ? "Nenhum assunto enviado." : "Nenhuma inscrição ainda."
+			}</p>`;
+		}
+		if (cargo.assuntos) {
+			return `<ol class="asm-assuntos">${lista
+				.map(
+					(a) =>
+						`<li><p class="asm-inscrito__meta">${A.escapeHtml(
+							a.nome || "—"
+						)} · ${dataHoraBR(
+							a.creation
+						)}</p><p class="asm-candidato__texto">${A.escapeHtml(a.conteudo)}</p></li>`
+				)
+				.join("")}</ol>`;
+		}
+		if (cargo.chapas) {
+			return lista
+				.map((chapa) => {
+					const retirada = chapa.status === "Retirada";
+					return `<section class="asm-chapa${retirada ? " is-retirada" : ""}">
+						<div class="asm-bloco__topo">
+							<h3 class="asm-chapa__titulo">${A.escapeHtml(chapa.titulo)}${
+						retirada ? ' <span class="badge-outline">Retirada</span>' : ""
+					}</h3>
+							${
+								retirada
+									? ""
+									: `<button type="button" class="btn-sm-ghost" data-retirar="chapa" data-retirar-name="${A.escapeHtml(
+											chapa.name
+									  )}" data-retirar-nome="${A.escapeHtml(
+											chapa.titulo
+									  )}">${A.icone("user-x")}<span>Retirar chapa</span></button>`
+							}
+						</div>
+						<p class="asm-inscrito__meta">Inscrita por ${A.escapeHtml(
+							chapa.responsavel_nome || "—"
+						)} em ${dataHoraBR(chapa.creation)}.${
+						retirada ? ` Motivo: ${A.escapeHtml(chapa.motivo_retirada || "")}` : ""
+					}</p>
+						<ul class="asm-inscritos__lista">${(chapa.membros || [])
+							.map((m) =>
+								linhaDeInscrito(
+									{ ...m, status: chapa.status },
+									{ funcao: m.funcao }
+								)
+							)
+							.join("")}</ul>
+					</section>`;
+				})
+				.join("");
+		}
+		return `<ul class="asm-inscritos__lista">${lista
+			.map((cand) => linhaDeInscrito(cand, { retirar: "candidatura" }))
+			.join("")}</ul>`;
+	}
+
+	function desenharInscricoes() {
+		const grade = document.getElementById("in-cargos");
+		if (grade) {
+			if (!cargoSelecionado) {
+				const primeiro =
+					CARGOS.find((c) => formularioDe(c.formulario).previsto) || CARGOS[0];
+				cargoSelecionado = primeiro.chave;
+			}
+			grade.innerHTML = CARGOS.map((cargo) => {
+				const f = formularioDe(cargo.formulario);
+				const r = resumoDoCargo(cargo);
+				return `<button type="button" class="asm-cargo" role="listitem" data-cargo="${
+					cargo.chave
+				}" aria-pressed="${cargo.chave === cargoSelecionado}"${
+					f.previsto ? "" : " data-fora"
+				}>
+					<span class="asm-cargo__topo"><span class="asm-cargo__nome">${A.escapeHtml(
+						cargo.nome
+					)}</span>${seloDoFormulario(f)}</span>
+					<span class="asm-cargo__contagem"><span><strong>${r.n}</strong> ${
+					r.rotulo
+				}</span><span>${A.escapeHtml(r.direita)}</span></span>
+					${medidor(r.n, r.m)}
+				</button>`;
+			}).join("");
+
+			const cargo = CARGOS.find((c) => c.chave === cargoSelecionado);
+			const f = formularioDe(cargo.formulario);
+			document.getElementById("in-detalhe-titulo").textContent = cargo.nome;
+			document.getElementById("in-vagas").hidden = !cargo.vagas;
+			document.getElementById("in-detalhe-descricao").innerHTML = f.previsto
+				? `<span>Inscrições até ${A.escapeHtml(f.prazo)}.</span>
+					<a class="btn-sm-ghost" href="${A.escapeHtml(f.link)}" target="_blank" rel="noopener">${A.icone(
+						"external-link"
+				  )}<span>Abrir formulário</span></a>
+					<button type="button" class="btn-sm-ghost" data-copiar="${A.escapeHtml(f.link)}">${A.icone(
+						"copy"
+				  )}<span>Copiar link</span></button>`
+				: "A pauta não tem este item. Inclua na etapa Edital para abrir o formulário.";
+			document.getElementById("cd-inscricoes").innerHTML = detalheDoCargo(cargo);
+		}
+		preencherAoVivo();
+	}
+
+	document.getElementById("in-cargos")?.addEventListener("click", (evento) => {
+		const bloco = evento.target.closest("[data-cargo]");
+		if (!bloco) return;
+		cargoSelecionado = bloco.dataset.cargo;
+		desenharInscricoes();
+		document.querySelector(`[data-cargo="${cargoSelecionado}"]`)?.focus();
+	});
 
 	document.addEventListener("click", async (evento) => {
 		const copiar = evento.target.closest("[data-copiar]");
@@ -537,130 +788,54 @@
 		}
 	});
 
-	document.getElementById("vg-vagas-delegados")?.addEventListener("input", (evento) => {
-		if (evento.target.value === "") return;
-		salvar({
-			dados: { vagas_delegados: Math.max(parseInt(evento.target.value, 10) || 0, 0) },
-		});
+	// Convite pronto para colar no grupo: data, local e os formulários que vão abrir.
+	function textoDoConvite() {
+		const linhas = [
+			`Assembleia ${dados.tipo} — ${dados.data_extenso}, às ${dados.hora_primeira}`,
+			`Local: ${dados.local}`,
+			"",
+			"Inscrições (entre com o seu login do GRIS):",
+		];
+		(dados.formularios || [])
+			.filter((f) => f.previsto && (f.aberto || f.aguardando_edital))
+			.forEach((f) => linhas.push(`• ${f.rotulo}, até ${f.prazo}: ${f.link}`));
+		linhas.push(
+			"",
+			`Candidatos inscritos: ${
+				window.location.origin
+			}/assembleias/candidaturas?assembleia=${encodeURIComponent(dados.name)}`
+		);
+		return linhas.join("\n");
+	}
+
+	document.getElementById("in-convite")?.addEventListener("click", async () => {
+		if (!dados.edital.publicado) {
+			A.toast(
+				"warning",
+				"Os formulários só abrem com o edital publicado. O convite já vai com os links."
+			);
+		}
+		try {
+			await navigator.clipboard.writeText(textoDoConvite());
+			A.toast("success", "Convite copiado. Cole no grupo.");
+		} catch (e) {
+			A.toast("error", "Não foi possível copiar o convite.");
+		}
 	});
 
-	let inscricoes = A.lerJson(raiz.dataset.inscricoes, {});
-
-	function textoLongo(rotulo, valor) {
-		return valor
-			? `<p class="asm-candidato__rotulo">${rotulo}</p><p class="asm-candidato__texto">${A.escapeHtml(
-					valor
-			  )}</p>`
-			: "";
-	}
-
-	function cartaoDeCandidato(cand, { funcao, tipo, retiravel } = {}) {
-		const retirada = cand.status === "Retirada";
-		return `<article class="asm-candidato${retirada ? " asm-candidato--retirada" : ""}">
-			${funcao ? `<p class="asm-candidato__funcao">${A.escapeHtml(funcao)}</p>` : ""}
-			<h3 class="asm-candidato__nome">${A.escapeHtml(cand.nome)}</h3>
-			<p class="asm-candidato__registro">${
-				cand.registro
-					? `Registro ${A.escapeHtml(cand.registro)}`
-					: "Sem registro informado"
-			}${cand.registro_ativo ? "" : " · registro a regularizar até a posse"}</p>
-			${textoLongo("Motivação", cand.motivacao)}
-			${textoLongo("Biografia", cand.biografia)}
-			${
-				retirada
-					? `<p class="asm-candidato__retirada">Retirada: ${A.escapeHtml(
-							cand.motivo_retirada || ""
-					  )}</p>`
-					: retiravel
-					? `<div><button type="button" class="btn-sm-ghost" data-retirar="${tipo}" data-retirar-name="${A.escapeHtml(
-							cand.name
-					  )}" data-retirar-nome="${A.escapeHtml(cand.nome || cand.titulo)}">${A.icone(
-							"user-x"
-					  )}<span>Retirar</span></button></div>`
-					: ""
-			}
-		</article>`;
-	}
-
-	function desenharInscricoes() {
-		const alvo = document.getElementById("cd-inscricoes");
-		if (!alvo) return;
-		const blocos = [];
-		(inscricoes.chapas || []).forEach((chapa) => {
-			const retirada = chapa.status === "Retirada";
-			blocos.push(`<article class="card asm-bloco"><section>
-				<div class="asm-bloco__topo">
-					<h2 class="asm-bloco__titulo">Diretoria — ${A.escapeHtml(chapa.titulo)}${
-				retirada ? ' <span class="badge-destructive">Retirada</span>' : ""
-			}</h2>
-					${
-						retirada
-							? ""
-							: `<button type="button" class="btn-sm-ghost" data-retirar="chapa" data-retirar-name="${A.escapeHtml(
-									chapa.name
-							  )}" data-retirar-nome="${A.escapeHtml(chapa.titulo)}">${A.icone(
-									"user-x"
-							  )}<span>Retirar chapa</span></button>`
-					}
-				</div>
-				<p class="asm-bloco__descricao">Inscrita por ${A.escapeHtml(
-					chapa.responsavel_nome || "—"
-				)} em ${A.dataBR(chapa.creation)}.${
-				retirada ? ` Motivo: ${A.escapeHtml(chapa.motivo_retirada || "")}` : ""
-			}</p>
-				<div class="asm-candidatos">${(chapa.membros || [])
-					.map((m) =>
-						cartaoDeCandidato({ ...m, status: chapa.status }, { funcao: m.funcao })
-					)
-					.join("")}</div>
-			</section></article>`);
-		});
-		(inscricoes.cargos || []).forEach((grupo) => {
-			const lista = grupo.candidaturas || [];
-			blocos.push(`<article class="card asm-bloco"><section>
-				<h2 class="asm-bloco__titulo">${A.escapeHtml(grupo.cargo)} <span class="badge-outline">${
-				lista.filter((cand) => cand.status !== "Retirada").length
-			}</span></h2>
-				${
-					lista.length
-						? `<div class="asm-candidatos">${lista
-								.map((cand) =>
-									cartaoDeCandidato(cand, {
-										tipo: "candidatura",
-										retiravel: true,
-									})
-								)
-								.join("")}</div>`
-						: '<p class="asm-secao__vazio">Nenhuma candidatura.</p>'
-				}
-			</section></article>`);
-		});
-		const assuntos = inscricoes.assuntos || [];
-		blocos.push(`<article class="card asm-bloco"><section>
-			<h2 class="asm-bloco__titulo">Assuntos gerais <span class="badge-outline">${
-				assuntos.length
-			}</span></h2>
-			${
-				assuntos.length
-					? `<ol class="asm-assuntos">${assuntos
-							.map(
-								(a) =>
-									`<li><p class="asm-candidato__registro">${A.escapeHtml(
-										a.nome || "—"
-									)} · ${A.dataBR(a.creation)} às ${String(a.creation).slice(
-										11,
-										16
-									)}</p><p class="asm-candidato__texto">${A.escapeHtml(
-										a.conteudo
-									)}</p></li>`
-							)
-							.join("")}</ol>`
-					: '<p class="asm-secao__vazio">Nenhum assunto enviado.</p>'
-			}
-		</section></article>`);
-		alvo.innerHTML = blocos.join("");
-		preencherAoVivo();
-	}
+	document.getElementById("vg-vagas-delegados")?.addEventListener("input", (evento) => {
+		if (evento.target.value === "") return;
+		const vagas = Math.max(parseInt(evento.target.value, 10) || 0, 0);
+		inscricoes.vagas_delegados = vagas;
+		salvar({ dados: { vagas_delegados: vagas } });
+		const bloco = document.querySelector('[data-cargo="delegados"]');
+		if (bloco) {
+			const r = resumoDoCargo(CARGOS.find((c) => c.chave === "delegados"));
+			bloco.querySelector(".asm-cargo__contagem").lastElementChild.textContent = r.direita;
+			bloco.querySelector(".asm-medidor")?.remove();
+			bloco.insertAdjacentHTML("beforeend", medidor(r.n, r.m));
+		}
+	});
 
 	function nomesAtivos(cargo) {
 		const grupo = (inscricoes.cargos || []).find((g) => g.cargo === cargo);

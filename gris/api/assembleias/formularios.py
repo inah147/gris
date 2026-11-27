@@ -94,12 +94,27 @@ def situacao_do_formulario(
 	agora: datetime,
 	contagens: dict,
 	vagas_delegados: int = 0,
+	publicado: bool = True,
 ) -> dict:
-	"""Estado de um formulário: previsto, aberto, até quando e se foi reaberto."""
+	"""Estado de um formulário: previsto, aberto, até quando e se foi reaberto.
+
+	As inscrições abrem com a publicação do edital: antes disso o formulário fica
+	`aguardando_edital`, para ninguém se inscrever numa pauta que ainda pode mudar.
+	"""
 	limite = limite_de_inscricao(chave, inicio, regras)
 	previsto = c.FINALIDADE_DO_FORMULARIO[chave] in finalidades
-	estado = {"chave": chave, "previsto": previsto, "aberto": False, "reaberto": False, "fecha_em": limite}
+	estado = {
+		"chave": chave,
+		"previsto": previsto,
+		"aberto": False,
+		"reaberto": False,
+		"aguardando_edital": False,
+		"fecha_em": limite,
+	}
 	if not previsto or agora >= inicio:
+		return estado
+	if not publicado:
+		estado["aguardando_edital"] = True
 		return estado
 	if agora < limite:
 		estado["aberto"] = True
@@ -160,6 +175,7 @@ def formularios_da_assembleia(doc, config, agora=None) -> list[dict]:
 			agora=agora,
 			contagens=contagens,
 			vagas_delegados=cint(doc.vagas_delegados),
+			publicado=bool(cint(doc.edital_publicado)),
 		)
 		formularios.append(
 			{
@@ -331,6 +347,8 @@ def _garantir_aberto(doc, chave: str) -> None:
 	situacao = situacao_agora(doc, chave)
 	if not situacao["previsto"]:
 		frappe.throw(_("Esta assembleia não tem eleição para este cargo na pauta."))
+	if situacao["aguardando_edital"]:
+		frappe.throw(_("As inscrições abrem com a publicação do edital de convocação."))
 	if not situacao["aberto"]:
 		fecha = get_datetime(situacao["fecha_em"])
 		frappe.throw(

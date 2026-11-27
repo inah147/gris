@@ -523,15 +523,6 @@
 	grid-column: 1 / -1;
 }
 
-.asm-vagas {
-	padding-top: calc(var(--spacing) * 4);
-	border-top: 1px solid var(--border);
-}
-
-.asm-vagas > * {
-	max-width: 22rem;
-}
-
 /* Barra de ações da etapa: fica à vista enquanto se rola o conteúdo. */
 .asm-barra-etapa {
 	position: sticky;
@@ -717,6 +708,219 @@
 .asm-bloco__contagem {
 	font-weight: 400;
 	color: var(--muted-foreground);
+}
+
+/* --- Inscrições: um bloco por cargo e os inscritos do escolhido --- */
+.asm-inscricoes__topo {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 3);
+}
+
+.asm-cargos {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: calc(var(--spacing) * 3);
+}
+
+.asm-cargo {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	padding: calc(var(--spacing) * 3) calc(var(--spacing) * 4);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg, var(--radius));
+	background: var(--card);
+	font: inherit;
+	text-align: left;
+	color: var(--foreground);
+	cursor: pointer;
+	transition: border-color 150ms ease;
+}
+
+.asm-cargo:hover {
+	border-color: color-mix(in oklch, var(--foreground) 22%, var(--border));
+}
+
+.asm-cargo[aria-pressed="true"] {
+	border-color: var(--primary);
+	box-shadow: 0 0 0 1px var(--primary);
+}
+
+.asm-cargo:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 2px;
+}
+
+.asm-cargo[data-fora] {
+	color: var(--muted-foreground);
+	background: transparent;
+}
+
+.asm-cargo__topo {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+}
+
+.asm-cargo__nome {
+	font-weight: 600;
+	font-size: 0.9375rem;
+}
+
+.asm-cargo__contagem {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: calc(var(--spacing) * 2);
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+}
+
+.asm-cargo__contagem strong {
+	font-size: 1.375rem;
+	font-weight: 600;
+	color: var(--foreground);
+	font-variant-numeric: tabular-nums;
+}
+
+.asm-medidor {
+	display: flex;
+	gap: 3px;
+}
+
+.asm-medidor i {
+	flex: 1;
+	height: 5px;
+	border-radius: 3px;
+	background: var(--border);
+}
+
+.asm-medidor i.is-cheio {
+	background: var(--primary);
+}
+
+.asm-selo--aberto {
+	background: color-mix(in srgb, var(--primary) 12%, var(--card));
+	color: var(--primary);
+}
+
+.asm-selo--aviso {
+	background: color-mix(in srgb, var(--warning) 18%, var(--card));
+	color: var(--foreground);
+}
+
+.asm-inscritos #in-detalhe-descricao {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+}
+
+.asm-inscritos .asm-vagas {
+	display: flex;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
+	padding: 0;
+	border: 0;
+	font-size: 0.875rem;
+	font-weight: 500;
+}
+
+.asm-vagas__campo {
+	width: 5rem;
+}
+
+.asm-inscritos__lista {
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.asm-inscrito {
+	display: grid;
+	grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+	gap: calc(var(--spacing) * 3);
+	align-items: start;
+	padding: calc(var(--spacing) * 3) 0;
+	border-bottom: 1px solid var(--border);
+}
+
+.asm-inscrito:last-child {
+	border-bottom: 0;
+}
+
+.asm-inscrito.is-retirada {
+	opacity: 0.6;
+}
+
+.asm-inscrito__avatar {
+	display: grid;
+	place-items: center;
+	width: 2.25rem;
+	height: 2.25rem;
+	border-radius: 999px;
+	background: var(--muted);
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--muted-foreground);
+}
+
+.asm-inscrito__texto {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	min-width: 0;
+}
+
+.asm-inscrito__nome {
+	margin: 0;
+	font-weight: 600;
+}
+
+.asm-inscrito__meta {
+	margin: 0;
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+}
+
+.asm-inscrito__mais summary {
+	font-size: 0.8125rem;
+	color: var(--primary);
+	cursor: pointer;
+	margin-top: calc(var(--spacing) * 1);
+}
+
+.asm-chapa {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	padding: calc(var(--spacing) * 4) 0;
+	border-bottom: 1px solid var(--border);
+}
+
+.asm-chapa:first-child {
+	padding-top: 0;
+}
+
+.asm-chapa:last-child {
+	border-bottom: 0;
+}
+
+.asm-chapa.is-retirada {
+	opacity: 0.6;
+}
+
+.asm-chapa__titulo {
+	margin: 0;
+	font-size: 1rem;
+	font-weight: 600;
 }
 
 /* --- Pauta compacta --- */
@@ -1279,7 +1483,8 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 
-	.asm-convocacao {
+	.asm-convocacao,
+	.asm-cargos {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 

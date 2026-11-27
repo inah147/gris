@@ -349,8 +349,10 @@ class TestFormularios(_Base):
 			formularios.prazo_por_extenso(c.FORMULARIO_DIRETORIA, regras, inicio), "27 de novembro de 2026"
 		)
 
-	def test_estado_na_visao_geral(self):
+	def test_estado_na_etapa_inscricoes(self):
 		doc = self._doc()
+		self.assertTrue(pagina.dados_da_pagina(doc)["formularios"][0]["aguardando_edital"])
+		doc.db_set("edital_publicado", 1)
 		lista = pagina.dados_da_pagina(doc)["formularios"]
 		self.assertEqual([f["chave"] for f in lista], list(formularios.ORDEM_DOS_FORMULARIOS))
 		self.assertTrue(all(f["previsto"] for f in lista))

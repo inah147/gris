@@ -244,3 +244,12 @@ class TestPermissoes(_Base):
 			"/administracao/assembleias/assembleia",
 		):
 			self.assertIn(c.ROLE_GESTOR_ASSEMBLEIAS, PAGE_ROLES[rota])
+
+
+class TestEtapaNaLista(FrappeTestCase):
+	def test_etapa_pela_data(self):
+		hoje = getdate()
+		self.assertEqual(endpoints.etapa_pela_data(0, add_days(hoje, 10), hoje), "Edital")
+		self.assertEqual(endpoints.etapa_pela_data(1, add_days(hoje, 10), hoje), "Inscrições")
+		self.assertEqual(endpoints.etapa_pela_data(1, hoje, hoje), "Sessão hoje")
+		self.assertEqual(endpoints.etapa_pela_data(1, add_days(hoje, -2), hoje), "Ata")

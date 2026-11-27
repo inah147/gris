@@ -880,6 +880,26 @@
 		return "";
 	}
 
+	let filtroTipo = "";
+	let buscaNaLista = "";
+	const semAcento = (texto) =>
+		String(texto || "")
+			.normalize("NFD")
+			.replace(/[\u0300-\u036f]/g, "")
+			.toLowerCase()
+			.trim();
+
+	document.getElementById("lp-busca")?.addEventListener("input", (evento) => {
+		buscaNaLista = evento.target.value;
+		desenharLista();
+	});
+	document.getElementById("lp-filtros")?.addEventListener("click", (evento) => {
+		const botao = evento.target.closest("[data-filtro-tipo]");
+		if (!botao) return;
+		filtroTipo = botao.dataset.filtroTipo;
+		desenharLista();
+	});
+
 	function desenharLista() {
 		const corpo = document.getElementById("lp-corpo");
 		if (!corpo) return;
@@ -934,20 +954,34 @@
 		const t = lista.totais || {};
 		document.getElementById("lp-totais").innerHTML = t.total
 			? `<span class="asm-total"><strong>${t.total}</strong> com direito a voto</span>
-			   <span class="asm-total"><strong>${
-					t.maioria_absoluta
-				}</strong> para a maioria absoluta (primeira convocação)</span>
-			   ${(t.por_tipo || [])
-					.map(
-						(p) =>
-							`<span class="badge-outline">${A.escapeHtml(p.tipo)}: ${
-								p.total
-							}</span>`
-					)
-					.join("")}`
+			   <span class="asm-total"><strong>${t.maioria_absoluta}</strong> para a maioria absoluta (primeira convocação)</span>`
 			: "";
 
-		const linhas = lista.linhas || [];
+		// Os totais por tipo viram filtros; com a busca, filtram a tabela sem ir ao servidor.
+		const filtros = document.getElementById("lp-filtros");
+		if (filtros) {
+			const opcoes = [{ tipo: "", total: t.total || 0 }, ...(t.por_tipo || [])];
+			filtros.innerHTML = t.total
+				? opcoes
+						.map(
+							(p) =>
+								`<button type="button" class="asm-filtro" data-filtro-tipo="${A.escapeHtml(
+									p.tipo
+								)}" aria-pressed="${p.tipo === filtroTipo}">${A.escapeHtml(
+									p.tipo || "Todos"
+								)} <strong>${p.total}</strong></button>`
+						)
+						.join("")
+				: "";
+		}
+		document.querySelector(".asm-lista-busca")?.toggleAttribute("hidden", !t.total);
+
+		const termo = semAcento(buscaNaLista);
+		const linhas = (lista.linhas || []).filter(
+			(l) =>
+				(!filtroTipo || l.tipo_linha === filtroTipo) &&
+				(!termo || semAcento(l.nome).includes(termo))
+		);
 		corpo.innerHTML = linhas.length
 			? linhas
 					.map(
@@ -972,7 +1006,9 @@
 					)
 					.join("")
 			: `<tr><td colspan="4" class="text-muted-foreground">${
-					lista.gerada_em
+					(lista.linhas || []).length
+						? "Ninguém com esse nome ou tipo de voto."
+						: lista.gerada_em
 						? "Ninguém na lista."
 						: "Gere a lista para ver quem vota nesta assembleia."
 			  }</td></tr>`;

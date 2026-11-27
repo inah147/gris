@@ -149,6 +149,7 @@ class TestExtracaoLayoutNovo(FrappeTestCase):
 		jovem = _parse_scout_data(_relatorio(JOVEM))[0]
 
 		self.assertEqual(jovem["Secao"], "Tropa Exemplo")
+		self.assertEqual(jovem["Equipe"], "Patrulha Lobo")
 		self.assertEqual(jovem["Numero_da_UEL"], "147")
 		self.assertEqual(jovem["id_escoteiro"], "joao.exemplo@escoteiros.org.br")
 		self.assertEqual(jovem["Categoria_1_Funcao"], "Beneficiário")
@@ -159,6 +160,7 @@ class TestExtracaoLayoutNovo(FrappeTestCase):
 
 		self.assertEqual(escotista["Nome"], "ANA EXEMPLO ESCOTISTA")
 		self.assertEqual(escotista["Secao"], "")
+		self.assertEqual(escotista["Equipe"], "")
 		self.assertEqual(escotista["Nome_responsavel"], "")
 		self.assertEqual(escotista["CPF_responsavel"], "")
 		self.assertEqual(escotista["CPF"], "39053344705")

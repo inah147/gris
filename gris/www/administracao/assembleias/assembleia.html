@@ -188,7 +188,61 @@
 {# ───────────────────── Abas que chegam nas próximas etapas ───────────────────── #}
 {% set painel_presenca %}
 <div class="asm-aba">
-	{{ empty(title="Lista de presença", description="A lista gerada pela regra de voto do estatuto aparece aqui.", icon=lucide_icon("list-checks", size="lg")) }}
+	{% call card(attrs={"class": "asm-bloco"}) %}
+	<section>
+		<div class="asm-bloco__topo">
+			<div class="flex flex-col gap-1">
+				<h2 class="asm-bloco__titulo">Lista de presença</h2>
+				<p class="asm-bloco__descricao" id="lp-gerada"></p>
+			</div>
+			<div class="asm-acoes">
+				{% if lista.editavel %}
+				<button type="button" class="btn-primary" id="lp-gerar">{{ lucide_icon("refresh-cw", size="sm") }}<span>Gerar lista</span></button>
+				{% endif %}
+			</div>
+		</div>
+		<p class="asm-bloco__descricao">
+			Pela regra de "quem vota" das configurações. Gerar de novo mantém as inclusões manuais
+			e não traz de volta quem foi removido.
+		</p>
+		<div id="lp-avisos" class="flex flex-col gap-2"></div>
+		<div class="asm-totais" id="lp-totais"></div>
+		<div class="overflow-x-auto min-w-0">
+			<table class="table asm-tabela-votantes">
+				<thead>
+					<tr>
+						<th scope="col">Nome</th>
+						<th scope="col">Voto</th>
+						<th scope="col">Ramo / equipe</th>
+						<th scope="col" class="asm-tabela__acoes" aria-label="Ações"></th>
+					</tr>
+				</thead>
+				<tbody id="lp-corpo"></tbody>
+			</table>
+		</div>
+		<details class="asm-removidos" id="lp-removidos-bloco" hidden>
+			<summary></summary>
+			<ul id="lp-removidos"></ul>
+		</details>
+	</section>
+	{% endcall %}
+
+	{% if lista.editavel %}
+	{% call card(attrs={"class": "asm-bloco"}) %}
+	<section>
+		<h2 class="asm-bloco__titulo">Incluir na lista</h2>
+		<div class="asm-campos">
+			{% call field(label="Pessoa do cadastro") %}
+				{{ select(id="lp-pessoa", items=pessoas_todas, is_combobox=true, search_placeholder="Buscar pelo nome") }}
+			{% endcall %}
+			{% call field(label="Ou um nome livre", hint="Para quem não tem cadastro no GRIS.") %}
+				{{ input(attrs={"id": "lp-nome-livre", "maxlength": "140"}) }}
+			{% endcall %}
+		</div>
+		<div><button type="button" class="btn-outline" id="lp-incluir">{{ lucide_icon("user-plus", size="sm") }}<span>Incluir</span></button></div>
+	</section>
+	{% endcall %}
+	{% endif %}
 </div>
 {% endset %}
 {% set painel_ata %}
@@ -228,7 +282,8 @@
 <div class="asm-pagina asm-assembleia"
      data-dados="{{ dados | tojson | forceescape }}"
      data-finalidades="{{ finalidades | tojson | forceescape }}"
-     data-orientacoes="{{ orientacoes | tojson | forceescape }}">
+     data-orientacoes="{{ orientacoes | tojson | forceescape }}"
+     data-lista="{{ lista | tojson | forceescape }}">
 	{{ tabs(
 		id="asm-abas",
 		tabsets=[

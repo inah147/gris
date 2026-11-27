@@ -331,6 +331,189 @@
 			}
 		});
 
+	// ─────────────────────────── Lista de presença ───────────────────────────
+
+	let lista = A.lerJson(raiz.dataset.lista, {});
+	const RAMOS_AVISO = { Lobinho: "Lobinho", Escoteiro: "Escoteiro", Sênior: "Sênior" };
+
+	function detalheDaLinha(linha) {
+		if (linha.tipo_linha === "Jovem representado")
+			return "representado por seu responsável legal";
+		if (linha.tipo_linha === "Representante de equipe")
+			return "nome do representante na assinatura";
+		return "";
+	}
+
+	function desenharLista() {
+		const corpo = document.getElementById("lp-corpo");
+		if (!corpo) return;
+		const editavel = !!lista.editavel;
+		const gerada = document.getElementById("lp-gerada");
+		gerada.textContent = lista.gerada_em
+			? `Gerada em ${A.dataBR(lista.gerada_em)} às ${String(lista.gerada_em).slice(11, 16)}.`
+			: "Ainda não gerada.";
+		const botaoGerar = document.getElementById("lp-gerar");
+		if (botaoGerar) {
+			botaoGerar.querySelector("span").textContent = lista.gerada_em
+				? "Gerar de novo"
+				: "Gerar lista";
+		}
+
+		// Avisos: quem ficou de fora e por quê (CA-07.2).
+		const avisos = lista.avisos || {};
+		const blocos = [];
+		if (avisos.registro_vencido) {
+			const n = avisos.registro_vencido;
+			blocos.push(
+				n === 1
+					? "1 associado ativo ficou de fora por registro vencido."
+					: `${n} associados ativos ficaram de fora por registro vencido.`
+			);
+		}
+		if (avisos.sem_nascimento) {
+			blocos.push(
+				`${avisos.sem_nascimento} beneficiário${
+					avisos.sem_nascimento === 1 ? "" : "s"
+				} sem data de nascimento: fica${
+					avisos.sem_nascimento === 1 ? "" : "m"
+				} de fora até a data ser preenchida.`
+			);
+		}
+		Object.entries(avisos.sem_equipe || {}).forEach(([ramo, n]) => {
+			blocos.push(
+				`${n} jove${n === 1 ? "m" : "ns"} do ramo ${A.escapeHtml(
+					RAMOS_AVISO[ramo] || ramo
+				)} sem equipe cadastrada.`
+			);
+		});
+		document.getElementById("lp-avisos").innerHTML = blocos
+			.map(
+				(texto) =>
+					`<div class="alert">${A.icone(
+						"triangle-alert"
+					)}<section><p class="m-0">${texto} <a href="/associados">Ver associados</a></p></section></div>`
+			)
+			.join("");
+
+		const t = lista.totais || {};
+		document.getElementById("lp-totais").innerHTML = t.total
+			? `<span class="asm-total"><strong>${t.total}</strong> com direito a voto</span>
+			   <span class="asm-total"><strong>${
+					t.maioria_absoluta
+				}</strong> para a maioria absoluta (primeira convocação)</span>
+			   ${(t.por_tipo || [])
+					.map(
+						(p) =>
+							`<span class="badge-outline">${A.escapeHtml(p.tipo)}: ${
+								p.total
+							}</span>`
+					)
+					.join("")}`
+			: "";
+
+		const linhas = lista.linhas || [];
+		corpo.innerHTML = linhas.length
+			? linhas
+					.map(
+						(l) => `<tr>
+				<td><span class="font-medium">${A.escapeHtml(l.nome)}</span>${
+							detalheDaLinha(l)
+								? `<span class="asm-tabela__detalhe">${detalheDaLinha(l)}</span>`
+								: ""
+						}</td>
+				<td>${A.escapeHtml(l.tipo_linha)}</td>
+				<td>${A.escapeHtml([l.ramo, l.equipe].filter(Boolean).join(" · "))}</td>
+				<td class="asm-tabela__acoes">${
+					editavel
+						? `<button type="button" class="btn-sm-ghost" data-remover-linha="${A.escapeHtml(
+								l.name
+						  )}" aria-label="Remover ${A.escapeHtml(l.nome)}">${A.icone(
+								"x"
+						  )}</button>`
+						: ""
+				}</td>
+			</tr>`
+					)
+					.join("")
+			: `<tr><td colspan="4" class="text-muted-foreground">${
+					lista.gerada_em
+						? "Ninguém na lista."
+						: "Gere a lista para ver quem vota nesta assembleia."
+			  }</td></tr>`;
+
+		const removidas = lista.removidas || [];
+		const blocoRemovidos = document.getElementById("lp-removidos-bloco");
+		blocoRemovidos.hidden = !removidas.length;
+		blocoRemovidos.querySelector("summary").textContent = `${removidas.length} removido${
+			removidas.length === 1 ? "" : "s"
+		} da lista`;
+		document.getElementById("lp-removidos").innerHTML = removidas
+			.map(
+				(l) =>
+					`<li>${A.escapeHtml(
+						l.nome
+					)} <span class="text-muted-foreground">· ${A.escapeHtml(l.tipo_linha)}</span>${
+						editavel
+							? ` <button type="button" class="btn-sm-ghost" data-restaurar-linha="${A.escapeHtml(
+									l.name
+							  )}">${A.icone("undo-2")}<span>Desfazer</span></button>`
+							: ""
+					}</li>`
+			)
+			.join("");
+	}
+
+	async function acaoDaLista(metodo, args, botao) {
+		if (botao) botao.disabled = true;
+		try {
+			lista = await A.chamar(`votantes.${metodo}`, { name: dados.name, ...args });
+			estado.modified = lista.modified;
+			desenharLista();
+			return true;
+		} catch (erro) {
+			A.toast("error", erro.message);
+			return false;
+		} finally {
+			if (botao) botao.disabled = false;
+		}
+	}
+
+	desenharLista();
+
+	document.getElementById("lp-gerar")?.addEventListener("click", async (evento) => {
+		if (await acaoDaLista("gerar_lista", {}, evento.currentTarget)) {
+			A.toast("success", "Lista gerada.");
+		}
+	});
+	document.getElementById("lp-incluir")?.addEventListener("click", async (evento) => {
+		const pessoa = A.valorDoSelect("lp-pessoa");
+		const campoNome = document.getElementById("lp-nome-livre");
+		const ok = await acaoDaLista(
+			"incluir_votante",
+			{ pessoa, nome_livre: pessoa ? "" : campoNome.value.trim() },
+			evento.currentTarget
+		);
+		if (ok) {
+			campoNome.value = "";
+			A.definirComponente("lp-pessoa", "");
+			A.toast("success", "Incluído na lista.");
+		}
+	});
+	raiz.addEventListener("click", (evento) => {
+		const remover = evento.target.closest("[data-remover-linha]");
+		if (remover) {
+			acaoDaLista("remover_votante", { linha: remover.dataset.removerLinha }, remover);
+			return;
+		}
+		const restaurar = evento.target.closest("[data-restaurar-linha]");
+		if (restaurar)
+			acaoDaLista(
+				"restaurar_votante",
+				{ linha: restaurar.dataset.restaurarLinha },
+				restaurar
+			);
+	});
+
 	// ─────────────────────────── Auxílio para condução ───────────────────────────
 
 	const gerais = document.getElementById("cd-gerais");

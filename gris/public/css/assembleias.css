@@ -537,6 +537,45 @@
 	text-align: justify;
 }
 
+/* --- Lista de presença --- */
+.asm-totais {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: calc(var(--spacing) * 2) calc(var(--spacing) * 4);
+}
+
+.asm-total {
+	font-size: 0.9375rem;
+}
+
+.asm-tabela__detalhe {
+	display: block;
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+}
+
+.asm-tabela__acoes {
+	width: 1%;
+	text-align: right;
+	white-space: nowrap;
+}
+
+.asm-removidos summary {
+	cursor: pointer;
+	font-size: 0.875rem;
+	color: var(--muted-foreground);
+}
+
+.asm-removidos ul {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	margin: calc(var(--spacing) * 2) 0 0;
+	padding: 0;
+	list-style: none;
+}
+
 @media (max-width: 1023px) {
 	/* Acima da barra inferior do portal (templates/includes/bottom_bar.html). */
 	.asm-barra-salvar {

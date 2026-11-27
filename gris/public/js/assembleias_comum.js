@@ -428,6 +428,243 @@
 		};
 	}
 
+	/**
+	 * Pauta compacta da assembleia: uma linha por item, que abre para edição no lugar.
+	 * A linha mostra o número, o título e os selos (votação e o que o item aciona); a
+	 * edição tem título, tipo do item (com a explicação do que ele aciona), votação e
+	 * excluir. Reordena arrastando pela alça ou pelas setas (teclado e celular).
+	 *
+	 * Mesma interface do `criarEditorDePauta`: `{ itens(), adicionar(), sincronizarNomes() }`.
+	 * `opcoes.finalidades`: [{label, value, descricao, abre_formulario}], vazia primeiro.
+	 */
+	function criarPautaCompacta(container, itensIniciais, opcoes) {
+		const config = opcoes || {};
+		const finalidades = config.finalidades || [{ label: "Sem finalidade", value: "" }];
+		const porValor = Object.fromEntries(finalidades.map((f) => [f.value, f]));
+		const lista = document.createElement("ol");
+		lista.className = "asm-pauta asm-pauta--compacta";
+		container.innerHTML = "";
+		container.appendChild(lista);
+
+		const avisar = () => {
+			if (config.aoMudar) config.aoMudar();
+		};
+
+		function selosHtml(votacao, finalidade) {
+			const tipo = porValor[finalidade || ""];
+			const selos = [];
+			if (votacao) selos.push('<span class="badge-outline">Votação</span>');
+			if (finalidade && tipo) {
+				selos.push(
+					`<span class="${
+						tipo.abre_formulario
+							? "badge-secondary asm-selo-formulario"
+							: "badge-outline"
+					}" title="${escapeHtml(tipo.descricao || "")}">${escapeHtml(
+						tipo.label
+					)}</span>`
+				);
+			}
+			return selos.join("");
+		}
+
+		function linhaHtml(item) {
+			if (config.somenteLeitura) {
+				return `<li class="asm-pauta__linha-compacta" data-item>
+					<div class="asm-pauta__resumo">
+						<span class="asm-pauta__numero" data-numero></span>
+						<span class="asm-pauta__titulo-texto">${escapeHtml(item.titulo)}</span>
+						<span class="asm-pauta__selos">${selosHtml(item.tem_votacao, item.finalidade)}</span>
+					</div>
+				</li>`;
+			}
+			const id = novoId("pauta-tipo");
+			const tipo = porValor[item.finalidade || ""] || finalidades[0];
+			return `<li class="asm-pauta__linha-compacta" data-item data-name="${escapeHtml(
+				item.name || ""
+			)}">
+				<div class="asm-pauta__resumo">
+					<span class="asm-pauta__alca" data-alca title="Arraste para reordenar" aria-hidden="true">${icone(
+						"grip-vertical"
+					)}</span>
+					<span class="asm-pauta__numero" data-numero></span>
+					<button type="button" class="asm-pauta__abrir" data-acao="abrir" aria-expanded="false">
+						<span class="asm-pauta__titulo-texto" data-titulo-resumo>${
+							escapeHtml(item.titulo) ||
+							'<em class="text-muted-foreground">Item sem título</em>'
+						}</span>
+					</button>
+					<span class="asm-pauta__selos" data-selos>${selosHtml(item.tem_votacao, item.finalidade)}</span>
+					<span class="asm-pauta__setas">
+						<button type="button" class="btn-sm-ghost" data-acao="subir" aria-label="Subir item">${icone(
+							"arrow-up"
+						)}</button>
+						<button type="button" class="btn-sm-ghost" data-acao="descer" aria-label="Descer item">${icone(
+							"arrow-down"
+						)}</button>
+					</span>
+				</div>
+				<div class="asm-pauta__detalhe" data-detalhe hidden>
+					<label class="asm-pauta__campo">
+						<span>Título</span>
+						<textarea class="textarea" rows="2" data-campo="titulo">${escapeHtml(item.titulo)}</textarea>
+					</label>
+					<div class="asm-pauta__campos">
+						<div class="asm-pauta__campo">
+							<span id="${id}-rotulo">Tipo do item</span>
+							${selectHtml(id, finalidades, item.finalidade || "", { class: "w-full", label: "Tipo do item" })}
+							<p class="asm-pauta__explica" data-explica>${escapeHtml(tipo.descricao || "")}</p>
+						</div>
+						<div class="asm-pauta__campo asm-pauta__campo--votacao">
+							<span>Votação</span>
+							${switchHtml("Tem votação", !!item.tem_votacao, { data: 'data-campo="tem_votacao"' })}
+						</div>
+					</div>
+					<div class="asm-pauta__rodape">
+						<button type="button" class="btn-sm-ghost asm-pauta__excluir" data-acao="remover">${icone(
+							"trash-2"
+						)}<span>Excluir item</span></button>
+						<button type="button" class="btn-sm-outline" data-acao="abrir">Concluir edição</button>
+					</div>
+				</div>
+			</li>`;
+		}
+
+		function renumerar() {
+			lista.querySelectorAll("[data-numero]").forEach((el, i) => {
+				el.textContent = `${i + 1}.`;
+			});
+		}
+
+		function atualizarResumo(li) {
+			const titulo = li.querySelector('[data-campo="titulo"]').value.trim();
+			li.querySelector("[data-titulo-resumo]").innerHTML = titulo
+				? escapeHtml(titulo)
+				: '<em class="text-muted-foreground">Item sem título</em>';
+			const finalidade = li.querySelector('.select input[type="hidden"]')?.value || "";
+			const votacao = li.querySelector('[data-campo="tem_votacao"]')?.checked;
+			li.querySelector("[data-selos]").innerHTML = selosHtml(votacao, finalidade);
+			li.querySelector("[data-explica]").textContent =
+				(porValor[finalidade] || finalidades[0]).descricao || "";
+		}
+
+		function abrir(li, aberto) {
+			const detalhe = li.querySelector("[data-detalhe]");
+			detalhe.hidden = !aberto;
+			li.classList.toggle("is-aberto", aberto);
+			li.querySelector(".asm-pauta__abrir").setAttribute("aria-expanded", String(aberto));
+			if (aberto) li.querySelector('[data-campo="titulo"]').focus();
+		}
+
+		function adicionar(item, aberto) {
+			lista.insertAdjacentHTML("beforeend", linhaHtml(item));
+			renumerar();
+			if (aberto && !config.somenteLeitura) abrir(lista.lastElementChild, true);
+		}
+
+		(itensIniciais || []).forEach((item) => adicionar(item, false));
+
+		if (!config.somenteLeitura) {
+			lista.addEventListener("click", (evento) => {
+				const botao = evento.target.closest("[data-acao]");
+				if (!botao) return;
+				const li = botao.closest("[data-item]");
+				const acao = botao.dataset.acao;
+				if (acao === "abrir") {
+					abrir(li, li.querySelector("[data-detalhe]").hidden);
+					return;
+				}
+				if (acao === "remover") li.remove();
+				if (acao === "subir" && li.previousElementSibling) {
+					lista.insertBefore(li, li.previousElementSibling);
+				}
+				if (acao === "descer" && li.nextElementSibling) {
+					lista.insertBefore(li.nextElementSibling, li);
+				}
+				renumerar();
+				avisar();
+				if (acao !== "remover") botao.focus();
+			});
+			lista.addEventListener("input", (evento) => {
+				const li = evento.target.closest("[data-item]");
+				if (li) atualizarResumo(li);
+				avisar();
+			});
+			lista.addEventListener("change", (evento) => {
+				const li = evento.target.closest("[data-item]");
+				if (li) atualizarResumo(li);
+				avisar();
+			});
+
+			// Arrastar pela alça. O item só fica arrastável enquanto a alça está presa, para
+			// não atrapalhar a seleção de texto nos campos.
+			let arrastando = null;
+			lista.addEventListener("pointerdown", (evento) => {
+				const alca = evento.target.closest("[data-alca]");
+				if (alca) alca.closest("[data-item]").draggable = true;
+			});
+			lista.addEventListener("pointerup", () => {
+				if (arrastando) return;
+				lista.querySelectorAll("[data-item][draggable=true]").forEach((li) => {
+					li.draggable = false;
+				});
+			});
+			lista.addEventListener("dragstart", (evento) => {
+				arrastando = evento.target.closest("[data-item]");
+				if (!arrastando) return;
+				arrastando.classList.add("is-arrastando");
+				evento.dataTransfer.effectAllowed = "move";
+				evento.dataTransfer.setData("text/plain", "");
+			});
+			lista.addEventListener("dragover", (evento) => {
+				if (!arrastando) return;
+				evento.preventDefault();
+				const alvo = evento.target.closest("[data-item]");
+				if (!alvo || alvo === arrastando) return;
+				const caixa = alvo.getBoundingClientRect();
+				const depois = evento.clientY > caixa.top + caixa.height / 2;
+				lista.insertBefore(arrastando, depois ? alvo.nextElementSibling : alvo);
+			});
+			lista.addEventListener("dragend", () => {
+				if (!arrastando) return;
+				arrastando.classList.remove("is-arrastando");
+				arrastando.draggable = false;
+				arrastando = null;
+				renumerar();
+				avisar();
+			});
+		}
+
+		function itens() {
+			return Array.from(lista.querySelectorAll("[data-item]")).map((li) => ({
+				name: li.dataset.name || "",
+				titulo: (li.querySelector('[data-campo="titulo"]')?.value || "").trim(),
+				tem_votacao: li.querySelector('[data-campo="tem_votacao"]')?.checked ? 1 : 0,
+				finalidade: li.querySelector('.select input[type="hidden"]')?.value || "",
+			}));
+		}
+
+		function sincronizarNomes(pauta) {
+			const linhas = Array.from(lista.querySelectorAll("[data-item]")).filter((li) =>
+				(li.querySelector('[data-campo="titulo"]')?.value || "").trim()
+			);
+			const conhecidos = new Set(linhas.map((li) => li.dataset.name).filter(Boolean));
+			const novos = (pauta || []).map((item) => item.name).filter((n) => !conhecidos.has(n));
+			linhas.forEach((li) => {
+				if (!li.dataset.name && novos.length) li.dataset.name = novos.shift();
+			});
+		}
+
+		return {
+			itens,
+			sincronizarNomes,
+			adicionar: (item) => {
+				adicionar(item || { titulo: "", tem_votacao: 0, finalidade: "" }, true);
+				avisar();
+			},
+		};
+	}
+
 	// ───────────────────────── Salvamento automático ─────────────────────────
 
 	function mesclar(destino, origem) {
@@ -583,6 +820,7 @@
 		selectHtml,
 		switchHtml,
 		criarEditorDePauta,
+		criarPautaCompacta,
 		criarSalvamentoAutomatico,
 	};
 })();

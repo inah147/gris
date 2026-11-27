@@ -7,7 +7,6 @@
 
 	let dados = A.lerJson(raiz.dataset.dados, {});
 	const finalidades = A.lerJson(raiz.dataset.finalidades, []);
-	const orientacoes = A.lerJson(raiz.dataset.orientacoes, {});
 	const publicado = !!(dados.edital && dados.edital.publicado);
 
 	// Estado compartilhado pelas gravações: cada uma devolve o `modified` novo.
@@ -279,6 +278,11 @@
 	document.getElementById("vg-local")?.addEventListener("input", (evento) => {
 		const local = evento.target.value.trim();
 		if (local) salvar({ dados: { local } });
+		// A prévia lê o local gravado: espera o salvamento.
+		setTimeout(() => {
+			ultimaPrevia = "";
+			agendarPrevia();
+		}, 1500);
 	});
 
 	// ─────────────────────────── 1. Edital: pauta e textos ───────────────────────────
@@ -293,19 +297,57 @@
 		};
 	}
 
+	// Prévia ao vivo, ao lado da edição em telas largas. Vem do servidor (as variáveis
+	// são resolvidas lá) a partir do que está na tela, sem gravar.
+	const previaViva = document.getElementById("ed-previa-viva");
+	const telaLarga = window.matchMedia("(min-width: 1280px)");
+	let timerDaPrevia = null;
+	let ultimaPrevia = "";
+
+	async function atualizarPrevia() {
+		if (!previaViva || !telaLarga.matches) return;
+		const payload = publicado ? null : JSON.stringify(payloadDoEdital());
+		if (payload && payload === ultimaPrevia) return;
+		ultimaPrevia = payload;
+		const estadoPrevia = document.getElementById("ed-previa-estado");
+		previaViva.classList.add("is-atualizando");
+		try {
+			const resposta = await A.chamar("pagina.previa_edital", { name: dados.name, payload });
+			previaViva.innerHTML = resposta.html; // sanitizado no servidor
+			estadoPrevia.textContent = "papel timbrado só no documento gerado";
+		} catch (erro) {
+			ultimaPrevia = "";
+			estadoPrevia.textContent = erro.message;
+		} finally {
+			previaViva.classList.remove("is-atualizando");
+		}
+	}
+
+	const agendarPrevia = () => {
+		clearTimeout(timerDaPrevia);
+		timerDaPrevia = setTimeout(atualizarPrevia, 500);
+	};
+
+	function contarPauta() {
+		const contagem = document.getElementById("ed-contagem");
+		const n = editorPauta.itens().filter((i) => i.titulo).length;
+		if (contagem) contagem.textContent = `· ${n} ${n === 1 ? "item" : "itens"}`;
+	}
+
 	const agendarEdital = () => {
+		contarPauta();
+		agendarPrevia();
 		if (!publicado) salvar({ edital: payloadDoEdital() });
 	};
 
-	const orientacaoPadrao = (finalidade) =>
-		(orientacoes.por_finalidade || {})[finalidade] || orientacoes.simples || "";
-	editorPauta = A.criarEditorDePauta(document.getElementById("ed-pauta"), dados.pauta, {
+	editorPauta = A.criarPautaCompacta(document.getElementById("ed-pauta"), dados.pauta, {
 		finalidades,
-		orientacaoPadrao,
 		somenteLeitura: publicado,
-		semOrientacao: true,
 		aoMudar: agendarEdital,
 	});
+	contarPauta();
+	atualizarPrevia();
+	telaLarga.addEventListener("change", atualizarPrevia);
 	document
 		.getElementById("ed-adicionar")
 		?.addEventListener("click", () => editorPauta.adicionar());

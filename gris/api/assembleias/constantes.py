@@ -44,6 +44,19 @@ FINALIDADES = (
 	FINALIDADE_ENCERRAMENTO,
 )
 
+# O que cada finalidade aciona, para quem escolhe o tipo do item na pauta.
+DESCRICAO_DA_FINALIDADE = {
+	"": "Aprovação simples, como balanço e relatórios. Não abre formulário.",
+	FINALIDADE_MESA: "Abre a candidatura à mesa (presidente e secretário) e mostra os candidatos na sessão.",
+	FINALIDADE_LEITURA: "Leitura do edital no início da sessão.",
+	FINALIDADE_ATA_ANTERIOR: "Apreciação da ata da assembleia anterior.",
+	FINALIDADE_DELEGADOS: "Abre a candidatura a delegado e mostra as vagas e os candidatos na sessão.",
+	FINALIDADE_COMISSAO_FISCAL: "Abre a candidatura à comissão fiscal e mostra titulares, suplentes e candidatos na sessão.",
+	FINALIDADE_DIRETORIA: "Abre a inscrição de chapas e torna a assembleia eletiva: cartório, banco e Receita entram no checklist.",
+	FINALIDADE_ASSUNTOS_GERAIS: "Abre o envio de assuntos gerais e lista os enviados na sessão.",
+	FINALIDADE_ENCERRAMENTO: "Encerramento, com o horário que vai para a ata.",
+}
+
 # --------------------------------------------------------------------------------------
 # Formulários. A chave é a da URL (`?cargo=`) e do prefixo dos prazos nas configurações.
 # --------------------------------------------------------------------------------------

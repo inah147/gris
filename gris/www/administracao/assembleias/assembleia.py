@@ -53,12 +53,17 @@ def get_context(context):
 		"titulares_cf": config.vagas_comissao_fiscal or 0,
 		"suplentes_cf": config.suplentes_comissao_fiscal or 0,
 	}
+	abrem_formulario = set(c.FINALIDADE_DO_FORMULARIO.values())
 	context.finalidades = [
-		{"label": "Sem finalidade", "value": ""},
-		*({"label": f, "value": f} for f in c.FINALIDADES),
+		{"label": "Sem finalidade", "value": "", "descricao": c.DESCRICAO_DA_FINALIDADE[""]},
+		*(
+			{
+				"label": f,
+				"value": f,
+				"descricao": c.DESCRICAO_DA_FINALIDADE.get(f, ""),
+				"abre_formulario": f in abrem_formulario,
+			}
+			for f in c.FINALIDADES
+		),
 	]
-	context.orientacoes = {
-		"por_finalidade": c.ORIENTACAO_POR_FINALIDADE,
-		"simples": c.ORIENTACAO_APROVACAO_SIMPLES,
-	}
 	return context

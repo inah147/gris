@@ -1,0 +1,77 @@
+{% extends "templates/web_sidebar_base.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty, field, textarea %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+{% from "public/design_system/components/generated/toast.html.jinja" import toaster %}
+
+{% block title %}Assunto geral{% endblock %}
+
+{% block page_header %}
+<div class="flex flex-col gap-2 max-w-3xl">
+	<h1 class="m-0 text-3xl font-semibold leading-tight text-foreground">Assunto geral</h1>
+	{% if encontrada %}
+	<p class="m-0 text-base leading-relaxed text-muted-foreground">{{ assembleia.titulo | e }} · {{ assembleia.local | e }}</p>
+	{% endif %}
+</div>
+{% endblock %}
+
+{% block main %}
+{% include "gris/templates/includes/assembleias_comum.html" %}
+<div class="asm-pagina asm-formulario-publico" data-assembleia="{{ (assembleia.name if encontrada else '') | e }}">
+{% if not encontrada %}
+	{{ empty(
+		title="Formulário não encontrado",
+		description="O link pode estar incompleto. Peça o link certo para quem organiza a assembleia.",
+		image="/assets/gris/images/gris-character/gris-confused.png",
+		image_alt="Gris, o mascote, confuso"
+	) }}
+{% elif not situacao.previsto %}
+	{{ empty(
+		title="Esta assembleia não tem assuntos gerais",
+		description="A pauta não prevê assuntos gerais.",
+		image="/assets/gris/images/gris-character/gris-confused.png",
+		image_alt="Gris, o mascote, confuso"
+	) }}
+{% elif not situacao.aberto %}
+	{{ empty(
+		title="Prazo encerrado",
+		description="O envio de assuntos gerais terminou em " ~ fecha_em.strftime("%d/%m") ~ " às " ~ fecha_em.strftime("%H:%M") ~ ".",
+		image="/assets/gris/images/gris-character/gris-sad.png",
+		image_alt="Gris, o mascote, triste"
+	) }}
+{% elif not pessoa %}
+	{{ empty(
+		title="Seu usuário não está ligado a um cadastro do grupo",
+		description="Só associados e responsáveis cadastrados enviam assuntos gerais. Fale com a diretoria.",
+		image="/assets/gris/images/gris-character/gris-confused.png",
+		image_alt="Gris, o mascote, confuso"
+	) }}
+{% else %}
+	{% call card(attrs={"class": "asm-bloco", "id": "form-assunto"}) %}
+	<section>
+		<p class="asm-bloco__descricao">
+			Matéria fora da ordem do dia entra na assembleia se enviada por escrito até
+			{{ fecha_em.strftime("%d/%m") }} às {{ fecha_em.strftime("%H:%M") }}, e a inclusão passa pela comissão de
+			assuntos gerais ou pelo presidente da assembleia.
+		</p>
+		<p class="m-0">Enviado por: <strong>{{ pessoa.nome | e }}</strong></p>
+		{% call field(label="Assunto", hint="Até 2.000 caracteres.") %}
+			{{ textarea(attrs={"id": "ag-conteudo", "rows": "6", "maxlength": "2000"}) }}
+		{% endcall %}
+		<label class="asm-opcao">
+			<input type="checkbox" class="input" id="ag-confirmacao">
+			<span>Confirmo o envio deste assunto para a assembleia.</span>
+		</label>
+		<div><button type="button" class="btn-primary" id="ag-enviar">{{ lucide_icon("send", size="sm") }}<span>Enviar assunto</span></button></div>
+	</section>
+	{% endcall %}
+	{% call card(attrs={"class": "asm-bloco", "id": "ag-sucesso", "hidden": "hidden"}) %}
+	<section>
+		<h2 class="asm-bloco__titulo">{{ lucide_icon("circle-check", size="sm") }} Assunto enviado</h2>
+		<p class="m-0 asm-preservar-quebras" id="ag-resumo"></p>
+		<div class="asm-acoes asm-acoes--inicio"><button type="button" class="btn-outline" id="ag-outro">Enviar outro assunto</button></div>
+	</section>
+	{% endcall %}
+{% endif %}
+</div>
+{{ toaster() }}
+{% endblock %}

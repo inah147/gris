@@ -653,6 +653,227 @@
 		iniciarEditorDaAta();
 	}
 
+	// ─────────────────────────── Candidaturas e assuntos gerais ───────────────────────────
+
+	let inscricoes = A.lerJson(raiz.dataset.inscricoes, {});
+
+	function textoLongo(rotulo, valor) {
+		return valor
+			? `<p class="asm-candidato__rotulo">${rotulo}</p><p class="asm-candidato__texto">${A.escapeHtml(
+					valor
+			  )}</p>`
+			: "";
+	}
+
+	function cartaoDeCandidato(cand, { funcao, tipo, retiravel } = {}) {
+		const retirada = cand.status === "Retirada";
+		return `<article class="asm-candidato${retirada ? " asm-candidato--retirada" : ""}">
+			${funcao ? `<p class="asm-candidato__funcao">${A.escapeHtml(funcao)}</p>` : ""}
+			<h3 class="asm-candidato__nome">${A.escapeHtml(cand.nome)}</h3>
+			<p class="asm-candidato__registro">${
+				cand.registro
+					? `Registro ${A.escapeHtml(cand.registro)}`
+					: "Sem registro informado"
+			}${cand.registro_ativo ? "" : " · registro a regularizar até a posse"}</p>
+			${textoLongo("Motivação", cand.motivacao)}
+			${textoLongo("Biografia", cand.biografia)}
+			${
+				retirada
+					? `<p class="asm-candidato__retirada">Retirada: ${A.escapeHtml(
+							cand.motivo_retirada || ""
+					  )}</p>`
+					: retiravel
+					? `<div><button type="button" class="btn-sm-ghost" data-retirar="${tipo}" data-retirar-name="${A.escapeHtml(
+							cand.name
+					  )}" data-retirar-nome="${A.escapeHtml(cand.nome || cand.titulo)}">${A.icone(
+							"user-x"
+					  )}<span>Retirar</span></button></div>`
+					: ""
+			}
+		</article>`;
+	}
+
+	function desenharInscricoes() {
+		const alvo = document.getElementById("cd-inscricoes");
+		if (!alvo) return;
+		const blocos = [];
+		(inscricoes.chapas || []).forEach((chapa) => {
+			const retirada = chapa.status === "Retirada";
+			blocos.push(`<article class="card asm-bloco"><section>
+				<div class="asm-bloco__topo">
+					<h2 class="asm-bloco__titulo">Diretoria — ${A.escapeHtml(chapa.titulo)}${
+				retirada ? ' <span class="badge-destructive">Retirada</span>' : ""
+			}</h2>
+					${
+						retirada
+							? ""
+							: `<button type="button" class="btn-sm-ghost" data-retirar="chapa" data-retirar-name="${A.escapeHtml(
+									chapa.name
+							  )}" data-retirar-nome="${A.escapeHtml(chapa.titulo)}">${A.icone(
+									"user-x"
+							  )}<span>Retirar chapa</span></button>`
+					}
+				</div>
+				<p class="asm-bloco__descricao">Inscrita por ${A.escapeHtml(
+					chapa.responsavel_nome || "—"
+				)} em ${A.dataBR(chapa.creation)}.${
+				retirada ? ` Motivo: ${A.escapeHtml(chapa.motivo_retirada || "")}` : ""
+			}</p>
+				<div class="asm-candidatos">${(chapa.membros || [])
+					.map((m) =>
+						cartaoDeCandidato({ ...m, status: chapa.status }, { funcao: m.funcao })
+					)
+					.join("")}</div>
+			</section></article>`);
+		});
+		(inscricoes.cargos || []).forEach((grupo) => {
+			const lista = grupo.candidaturas || [];
+			blocos.push(`<article class="card asm-bloco"><section>
+				<h2 class="asm-bloco__titulo">${A.escapeHtml(grupo.cargo)} <span class="badge-outline">${
+				lista.filter((cand) => cand.status !== "Retirada").length
+			}</span></h2>
+				${
+					lista.length
+						? `<div class="asm-candidatos">${lista
+								.map((cand) =>
+									cartaoDeCandidato(cand, {
+										tipo: "candidatura",
+										retiravel: true,
+									})
+								)
+								.join("")}</div>`
+						: '<p class="asm-secao__vazio">Nenhuma candidatura.</p>'
+				}
+			</section></article>`);
+		});
+		const assuntos = inscricoes.assuntos || [];
+		blocos.push(`<article class="card asm-bloco"><section>
+			<h2 class="asm-bloco__titulo">Assuntos gerais <span class="badge-outline">${
+				assuntos.length
+			}</span></h2>
+			${
+				assuntos.length
+					? `<ol class="asm-assuntos">${assuntos
+							.map(
+								(a) =>
+									`<li><p class="asm-candidato__registro">${A.escapeHtml(
+										a.nome || "—"
+									)} · ${A.dataBR(a.creation)} às ${String(a.creation).slice(
+										11,
+										16
+									)}</p><p class="asm-candidato__texto">${A.escapeHtml(
+										a.conteudo
+									)}</p></li>`
+							)
+							.join("")}</ol>`
+					: '<p class="asm-secao__vazio">Nenhum assunto enviado.</p>'
+			}
+		</section></article>`);
+		alvo.innerHTML = blocos.join("");
+		preencherAoVivo();
+	}
+
+	function nomesAtivos(cargo) {
+		const grupo = (inscricoes.cargos || []).find((g) => g.cargo === cargo);
+		return ((grupo && grupo.candidaturas) || [])
+			.filter((cand) => cand.status !== "Retirada")
+			.map((cand) => A.escapeHtml(cand.nome));
+	}
+
+	function listaOuNenhum(nomes) {
+		return nomes.length ? nomes.join(", ") : "nenhum";
+	}
+
+	/** Dados ao vivo junto da orientação de cada eleição (CA-10.4). */
+	function preencherAoVivo() {
+		const assuntos = inscricoes.assuntos || [];
+		const chapasAtivas = (inscricoes.chapas || []).filter((ch) => ch.status !== "Retirada");
+		const conteudo = {
+			"Eleição da mesa": `<p><strong>Candidatos a presidente:</strong> ${listaOuNenhum(
+				nomesAtivos("Presidente da mesa")
+			)}</p><p><strong>Candidatos a secretário:</strong> ${listaOuNenhum(
+				nomesAtivos("Secretário da mesa")
+			)}</p><p><strong>Assuntos gerais enviados:</strong> ${assuntos.length}</p>`,
+			"Eleição de delegados": `<p><strong>Vagas:</strong> ${
+				inscricoes.vagas_delegados
+			}</p><p><strong>Candidatos:</strong> ${listaOuNenhum(nomesAtivos("Delegado"))}</p>`,
+			"Eleição da comissão fiscal": `<p><strong>Titulares:</strong> ${
+				inscricoes.titulares_cf
+			} · <strong>Suplentes:</strong> ${
+				inscricoes.suplentes_cf
+			}</p><p><strong>Candidatos:</strong> ${listaOuNenhum(
+				nomesAtivos("Comissão Fiscal")
+			)}</p>`,
+			"Eleição da diretoria": chapasAtivas.length
+				? chapasAtivas
+						.map(
+							(ch) =>
+								`<p><strong>${A.escapeHtml(ch.titulo)}:</strong> ${(
+									ch.membros || []
+								)
+									.map(
+										(m) => `${A.escapeHtml(m.funcao)}: ${A.escapeHtml(m.nome)}`
+									)
+									.join("; ")}</p>`
+						)
+						.join("")
+				: "<p><strong>Chapas inscritas:</strong> nenhuma</p>",
+			"Assuntos gerais": assuntos.length
+				? `<ol>${assuntos
+						.map(
+							(a) =>
+								`<li>${A.escapeHtml(
+									a.conteudo
+								)} <span class="text-muted-foreground">— ${A.escapeHtml(
+									a.nome || ""
+								)}</span></li>`
+						)
+						.join("")}</ol>`
+				: "<p><strong>Assuntos enviados:</strong> nenhum</p>",
+		};
+		document.querySelectorAll("[data-ao-vivo]").forEach((el) => {
+			const html = conteudo[el.dataset.aoVivo];
+			el.innerHTML = html ? `<div class="asm-markdown">${html}</div>` : "";
+			el.hidden = !html;
+		});
+	}
+
+	const dialogRetirar = document.getElementById("dialog-retirar");
+	let retirando = null;
+	raiz.addEventListener("click", (evento) => {
+		const botao = evento.target.closest("[data-retirar]");
+		if (!botao) return;
+		retirando = { tipo: botao.dataset.retirar, name: botao.dataset.retirarName };
+		document.getElementById("retirar-nome").textContent = botao.dataset.retirarNome;
+		document.getElementById("retirar-motivo").value = "";
+		dialogRetirar.showModal();
+	});
+	document
+		.getElementById("btn-confirmar-retirada")
+		?.addEventListener("click", async (evento) => {
+			const motivo = document.getElementById("retirar-motivo").value.trim();
+			if (!motivo) {
+				A.toast("error", "Informe o motivo.");
+				return;
+			}
+			const botao = evento.currentTarget;
+			botao.disabled = true;
+			try {
+				const resposta = await A.chamar("formularios.retirar_inscricao", {
+					...retirando,
+					motivo,
+				});
+				inscricoes = { ...inscricoes, ...resposta };
+				desenharInscricoes();
+				dialogRetirar.close();
+				A.toast("success", "Inscrição retirada.");
+			} catch (erro) {
+				A.toast("error", erro.message);
+			} finally {
+				botao.disabled = false;
+			}
+		});
+
 	// ─────────────────────────── Auxílio para condução ───────────────────────────
 
 	const gerais = document.getElementById("cd-gerais");
@@ -673,6 +894,7 @@
 				<div class="asm-markdown" data-orientacao-html="${A.escapeHtml(item.name)}">${
 					item.orientacao_html || ""
 				}</div>
+				<div class="asm-ao-vivo" data-ao-vivo="${A.escapeHtml(item.finalidade || "")}"></div>
 				<details class="asm-roteiro__editar">
 					<summary>Editar orientação</summary>
 					<textarea class="textarea asm-textarea-alta" data-orientacao aria-label="Orientação do item ${
@@ -683,6 +905,7 @@
 			)
 			.join("");
 
+		desenharInscricoes();
 		const indicadorConducao = document.querySelector('[data-salvamento="conducao"]');
 		roteiro.addEventListener("change", (evento) => {
 			const caixa = evento.target.closest("[data-concluido]");

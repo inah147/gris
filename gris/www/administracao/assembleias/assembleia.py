@@ -3,6 +3,8 @@ import frappe
 from gris.api.assembleias import constantes as c
 from gris.api.assembleias.ata import dados_da_ata
 from gris.api.assembleias.endpoints import contagem_de_inscricoes
+from gris.api.assembleias.formularios import listar_inscricoes
+from gris.api.assembleias.padroes import configuracoes
 from gris.api.assembleias.pagina import dados_da_pagina
 from gris.api.assembleias.permissoes import pode_gerenciar_assembleias
 from gris.api.assembleias.pessoas import opcoes_de_pessoas
@@ -44,6 +46,13 @@ def get_context(context):
 	context.lista = dados_da_lista(doc)
 	context.pessoas_16 = opcoes_de_pessoas(16, doc.data)
 	context.ata = dados_da_ata(doc)
+	config = configuracoes()
+	context.inscricoes_dados = {
+		**listar_inscricoes(name),
+		"vagas_delegados": doc.vagas_delegados or 0,
+		"titulares_cf": config.vagas_comissao_fiscal or 0,
+		"suplentes_cf": config.suplentes_comissao_fiscal or 0,
+	}
 	context.finalidades = [
 		{"label": "Sem finalidade", "value": ""},
 		*({"label": f, "value": f} for f in c.FINALIDADES),

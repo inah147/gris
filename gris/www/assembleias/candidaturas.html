@@ -1,0 +1,67 @@
+{% extends "templates/portal_clean.html" %}
+{% from "public/design_system/components/composed/basecoat-composed.html.jinja" import card, empty %}
+{% from "public/design_system/components/composed/lucide.html.jinja" import lucide_icon %}
+
+{% block title %}Candidaturas{% endblock %}
+
+{% macro candidato(c, rotulo=None) %}
+<article class="asm-candidato">
+	{% if rotulo %}<p class="asm-candidato__funcao">{{ rotulo | e }}</p>{% endif %}
+	<h3 class="asm-candidato__nome">{{ c.nome | e }}</h3>
+	{% if c.registro %}<p class="asm-candidato__registro">Registro escoteiro {{ c.registro | e }}</p>{% endif %}
+	{% if c.motivacao %}<p class="asm-candidato__rotulo">Motivação</p><p class="asm-candidato__texto">{{ c.motivacao | e }}</p>{% endif %}
+	{% if c.biografia %}<p class="asm-candidato__rotulo">Biografia</p><p class="asm-candidato__texto">{{ c.biografia | e }}</p>{% endif %}
+</article>
+{% endmacro %}
+
+{% block page_content %}
+{% include "gris/templates/includes/assembleias_comum.html" %}
+<main class="asm-publica">
+	<header class="asm-publica__cabecalho">
+		{% if logo %}<img src="{{ logo | e }}" alt="Logo da UEL" class="asm-publica__logo">{% endif %}
+		<div>
+			<p class="asm-publica__uel">{{ nome_uel | e }}</p>
+			<h1 class="asm-publica__titulo">Candidaturas</h1>
+			{% if encontrada %}<p class="asm-publica__sub">{{ titulo | e }} · {{ local | e }}</p>{% endif %}
+		</div>
+	</header>
+
+	{% if not encontrada %}
+		{{ empty(
+			title="Assembleia não encontrada",
+			description="O link pode estar incompleto.",
+			image="/assets/gris/images/gris-character/gris-confused.png",
+			image_alt="Gris, o mascote, confuso"
+		) }}
+	{% elif vazio %}
+		{{ empty(
+			title="Nenhuma candidatura até agora",
+			description="As candidaturas aparecem aqui assim que forem enviadas.",
+			image="/assets/gris/images/gris-character/gris-search.png",
+			image_alt="Gris, o mascote, procurando"
+		) }}
+	{% else %}
+		{% for chapa in dados.chapas %}
+		{% call card(attrs={"class": "asm-bloco"}) %}
+		<section>
+			<h2 class="asm-bloco__titulo">Diretoria — {{ chapa.titulo | e }}</h2>
+			<div class="asm-candidatos">
+				{% for m in chapa.membros %}{{ candidato(m, m.funcao) }}{% endfor %}
+			</div>
+		</section>
+		{% endcall %}
+		{% endfor %}
+
+		{% for grupo in dados.cargos %}{% if grupo.candidaturas %}
+		{% call card(attrs={"class": "asm-bloco"}) %}
+		<section>
+			<h2 class="asm-bloco__titulo">{{ grupo.cargo | e }}</h2>
+			<div class="asm-candidatos">
+				{% for cand in grupo.candidaturas %}{{ candidato(cand) }}{% endfor %}
+			</div>
+		</section>
+		{% endcall %}
+		{% endif %}{% endfor %}
+	{% endif %}
+</main>
+{% endblock %}

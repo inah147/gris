@@ -243,6 +243,10 @@ PAGE_ROLES: dict[str, list[str]] = {
 	"/administracao/assembleias": ["Gestor de Assembleias", "Gestor da UEL"],
 	"/administracao/assembleias/configuracoes": ["Gestor de Assembleias", "Gestor da UEL"],
 	"/administracao/assembleias/assembleia": ["Gestor de Assembleias", "Gestor da UEL"],
+	# Formulários: qualquer pessoa logada; o vínculo e a elegibilidade são checados no envio.
+	"/assembleias/candidatura": ["All"],
+	"/assembleias/assunto_geral": ["All"],
+	"/assembleias/candidaturas": ["Public"],  # página pública de candidatos
 	# Captação é aberta a quem está logado: qualquer associado ou responsável propõe
 	# uma ideia. O que cada um vê e decide sai da lotação, nos endpoints.
 	"/captacao": ["All"],

@@ -8,6 +8,7 @@ def after_install():
 	_garantir_role_desenvolvedor()
 	_garantir_role_acompanhamento_sugestoes()
 	garantir_role_gestor_de_acessos()
+	_garantir_role_gestor_de_assembleias()
 
 
 def garantir_role_gestor_de_acessos():
@@ -80,3 +81,12 @@ def _garantir_role_acompanhamento_sugestoes():
 		}
 	)
 	role.insert(ignore_permissions=True)
+
+
+def _garantir_role_gestor_de_assembleias():
+	"""Cria a role Gestor de Assembleias (quem cuida de /administracao/assembleias)."""
+	if frappe.db.exists("Role", "Gestor de Assembleias"):
+		return
+	frappe.get_doc({"doctype": "Role", "role_name": "Gestor de Assembleias", "desk_access": 0}).insert(
+		ignore_permissions=True
+	)

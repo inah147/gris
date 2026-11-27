@@ -71,6 +71,7 @@
   "column_break_xleh",
   "funcao",
   "secao",
+  "equipe",
   "eleito",
   "e_responsavel_legal",
   "section_break_funcoes_internas",
@@ -484,6 +485,12 @@
    "fieldname": "secao",
    "fieldtype": "Data",
    "label": "Se\u00e7\u00e3o"
+  },
+  {
+   "description": "Matilha ou patrulha. Vem da importa\u00e7\u00e3o do Paxtu (linha \"Equipe:\") e pode ser editada.",
+   "fieldname": "equipe",
+   "fieldtype": "Data",
+   "label": "Equipe"
   },
   {
    "fieldname": "config_tab",

@@ -1,0 +1,87 @@
+{
+ "actions": [],
+ "creation": "2026-11-27 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "funcao",
+  "pessoa_tipo",
+  "pessoa",
+  "nome",
+  "registro",
+  "registro_ativo",
+  "biografia",
+  "motivacao"
+ ],
+ "fields": [
+  {
+   "columns": 3,
+   "fieldname": "funcao",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Função",
+   "options": "Funcao Voluntario",
+   "reqd": 1
+  },
+  {
+   "fieldname": "pessoa_tipo",
+   "fieldtype": "Select",
+   "label": "Tipo — candidato",
+   "options": "\nAssociado\nResponsavel"
+  },
+  {
+   "fieldname": "pessoa",
+   "fieldtype": "Dynamic Link",
+   "label": "Candidato",
+   "options": "pessoa_tipo",
+   "reqd": 1
+  },
+  {
+   "columns": 3,
+   "fieldname": "nome",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome",
+   "read_only": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "registro",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Registro escoteiro",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "registro_ativo",
+   "fieldtype": "Check",
+   "label": "Registro ativo",
+   "read_only": 1
+  },
+  {
+   "fieldname": "biografia",
+   "fieldtype": "Small Text",
+   "label": "Biografia"
+  },
+  {
+   "fieldname": "motivacao",
+   "fieldtype": "Small Text",
+   "label": "Motivação"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-27 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Membro da Chapa",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

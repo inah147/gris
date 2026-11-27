@@ -28,6 +28,7 @@ DOCTYPES_COM_SELECT_DE_GRUPO: frozenset[str] = frozenset(
 		"Configuracoes de Desenvolvimento",
 		"Configuracoes de Acessos",
 		"Configuracoes de Associados",
+		"Configuracoes de Assembleias",
 	}
 )
 

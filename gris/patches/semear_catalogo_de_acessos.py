@@ -252,6 +252,16 @@ PAPEIS = [
 		None,
 	),
 	(
+		"Gestor de Assembleias",
+		"Gestão de assembleias",
+		"landmark",
+		92,
+		1,
+		"Organização das assembleias de grupo.",
+		"Libera /administracao/assembleias: cria assembleias, monta edital, lista de presença e ata, e acompanha as candidaturas.",
+		None,
+	),
+	(
 		"Acompanhamento de Sugestoes",
 		"Acompanhamento de sugestões",
 		"message-square",

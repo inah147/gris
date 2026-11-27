@@ -1,0 +1,426 @@
+{
+ "actions": [],
+ "autoname": "ASM-.YYYY.-.##",
+ "creation": "2026-11-27 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "visao_geral_tab",
+  "titulo",
+  "data",
+  "tipo",
+  "local",
+  "visao_geral_col",
+  "hora_primeira_convocacao",
+  "hora_segunda_convocacao",
+  "credenciamento_tipo",
+  "credenciamento",
+  "vagas_delegados",
+  "drive_section",
+  "pasta_drive_link",
+  "pasta_drive_erro",
+  "checklist_section",
+  "checklist",
+  "edital_tab",
+  "edital_publicado",
+  "edital_publicado_em",
+  "data_publicacao_edital",
+  "edital_incluir_links",
+  "edital_col",
+  "edital_doc_link",
+  "edital_pdf_link",
+  "edital_textos_section",
+  "edital_texto_topo",
+  "edital_texto_rodape",
+  "pauta_section",
+  "pauta",
+  "presenca_tab",
+  "lista_gerada_em",
+  "lista_presenca_doc_link",
+  "lista_presenca_pdf_link",
+  "votantes",
+  "ata_tab",
+  "ata_hora_inicio",
+  "ata_hora_termino",
+  "ata_presentes",
+  "ata_col",
+  "presidente_tipo",
+  "presidente",
+  "secretario_tipo",
+  "secretario",
+  "ata_texto_section",
+  "anotacoes_secretario",
+  "ata_texto",
+  "ata_status_geracao",
+  "ata_erro_geracao",
+  "ata_doc_link",
+  "ata_pdf_link",
+  "controle_tab",
+  "lembrete_edital_marco",
+  "lembrete_edital_em"
+ ],
+ "fields": [
+  {
+   "fieldname": "visao_geral_tab",
+   "fieldtype": "Tab Break",
+   "label": "Visão Geral"
+  },
+  {
+   "fieldname": "titulo",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Título",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Data",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "Ordinária",
+   "fieldname": "tipo",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Tipo",
+   "options": "Ordinária\nExtraordinária",
+   "reqd": 1
+  },
+  {
+   "fieldname": "local",
+   "fieldtype": "Data",
+   "label": "Local",
+   "reqd": 1
+  },
+  {
+   "fieldname": "visao_geral_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "hora_primeira_convocacao",
+   "fieldtype": "Time",
+   "label": "Primeira convocação",
+   "reqd": 1
+  },
+  {
+   "description": "O estatuto marca a segunda convocação meia hora depois da primeira.",
+   "fieldname": "hora_segunda_convocacao",
+   "fieldtype": "Time",
+   "label": "Segunda convocação"
+  },
+  {
+   "fieldname": "credenciamento_tipo",
+   "fieldtype": "Select",
+   "label": "Tipo — responsável pelo credenciamento",
+   "options": "\nAssociado\nResponsavel"
+  },
+  {
+   "fieldname": "credenciamento",
+   "fieldtype": "Dynamic Link",
+   "label": "Responsável pelo credenciamento",
+   "options": "credenciamento_tipo"
+  },
+  {
+   "fieldname": "vagas_delegados",
+   "fieldtype": "Int",
+   "label": "Vagas de delegado"
+  },
+  {
+   "fieldname": "drive_section",
+   "fieldtype": "Section Break",
+   "label": "Drive"
+  },
+  {
+   "fieldname": "pasta_drive_link",
+   "fieldtype": "Data",
+   "label": "Pasta no Drive",
+   "options": "URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pasta_drive_erro",
+   "fieldtype": "Small Text",
+   "label": "Motivo de não haver pasta",
+   "read_only": 1
+  },
+  {
+   "fieldname": "checklist_section",
+   "fieldtype": "Section Break",
+   "label": "Checklist"
+  },
+  {
+   "fieldname": "checklist",
+   "fieldtype": "Table",
+   "label": "Checklist",
+   "options": "Etapa do Checklist da Assembleia"
+  },
+  {
+   "fieldname": "edital_tab",
+   "fieldtype": "Tab Break",
+   "label": "Edital"
+  },
+  {
+   "default": "0",
+   "fieldname": "edital_publicado",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Edital publicado",
+   "read_only": 1
+  },
+  {
+   "fieldname": "edital_publicado_em",
+   "fieldtype": "Datetime",
+   "label": "Publicado em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_publicacao_edital",
+   "fieldtype": "Date",
+   "label": "Data de publicação"
+  },
+  {
+   "default": "1",
+   "fieldname": "edital_incluir_links",
+   "fieldtype": "Check",
+   "label": "Incluir links dos formulários"
+  },
+  {
+   "fieldname": "edital_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "edital_doc_link",
+   "fieldtype": "Data",
+   "label": "Documento do edital",
+   "options": "URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "edital_pdf_link",
+   "fieldtype": "Data",
+   "label": "PDF do edital",
+   "options": "URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "edital_textos_section",
+   "fieldtype": "Section Break",
+   "label": "Textos"
+  },
+  {
+   "fieldname": "edital_texto_topo",
+   "fieldtype": "Long Text",
+   "label": "Texto antes da pauta"
+  },
+  {
+   "fieldname": "edital_texto_rodape",
+   "fieldtype": "Long Text",
+   "label": "Texto depois da pauta"
+  },
+  {
+   "fieldname": "pauta_section",
+   "fieldtype": "Section Break",
+   "label": "Pauta"
+  },
+  {
+   "fieldname": "pauta",
+   "fieldtype": "Table",
+   "label": "Pauta",
+   "options": "Item da Pauta da Assembleia"
+  },
+  {
+   "fieldname": "presenca_tab",
+   "fieldtype": "Tab Break",
+   "label": "Lista de presença"
+  },
+  {
+   "fieldname": "lista_gerada_em",
+   "fieldtype": "Datetime",
+   "label": "Lista gerada em",
+   "read_only": 1
+  },
+  {
+   "fieldname": "lista_presenca_doc_link",
+   "fieldtype": "Data",
+   "label": "Documento da lista",
+   "options": "URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "lista_presenca_pdf_link",
+   "fieldtype": "Data",
+   "label": "PDF da lista",
+   "options": "URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "votantes",
+   "fieldtype": "Table",
+   "label": "Votantes",
+   "options": "Votante da Assembleia"
+  },
+  {
+   "fieldname": "ata_tab",
+   "fieldtype": "Tab Break",
+   "label": "Ata"
+  },
+  {
+   "fieldname": "ata_hora_inicio",
+   "fieldtype": "Time",
+   "label": "Início"
+  },
+  {
+   "fieldname": "ata_hora_termino",
+   "fieldtype": "Time",
+   "label": "Término"
+  },
+  {
+   "fieldname": "ata_presentes",
+   "fieldtype": "Int",
+   "label": "Presentes (lista assinada)"
+  },
+  {
+   "fieldname": "ata_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "presidente_tipo",
+   "fieldtype": "Select",
+   "label": "Tipo — presidente da mesa",
+   "options": "\nAssociado\nResponsavel"
+  },
+  {
+   "fieldname": "presidente",
+   "fieldtype": "Dynamic Link",
+   "label": "Presidente da mesa",
+   "options": "presidente_tipo"
+  },
+  {
+   "fieldname": "secretario_tipo",
+   "fieldtype": "Select",
+   "label": "Tipo — secretário da mesa",
+   "options": "\nAssociado\nResponsavel"
+  },
+  {
+   "fieldname": "secretario",
+   "fieldtype": "Dynamic Link",
+   "label": "Secretário da mesa",
+   "options": "secretario_tipo"
+  },
+  {
+   "fieldname": "ata_texto_section",
+   "fieldtype": "Section Break",
+   "label": "Texto"
+  },
+  {
+   "fieldname": "anotacoes_secretario",
+   "fieldtype": "Long Text",
+   "label": "Anotações do secretário"
+  },
+  {
+   "fieldname": "ata_texto",
+   "fieldtype": "Long Text",
+   "label": "Texto da ata"
+  },
+  {
+   "fieldname": "ata_status_geracao",
+   "fieldtype": "Select",
+   "label": "Geração por IA",
+   "options": "\nGerando\nConcluída\nFalhou",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ata_erro_geracao",
+   "fieldtype": "Small Text",
+   "label": "Erro da geração",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ata_doc_link",
+   "fieldtype": "Data",
+   "label": "Documento da ata",
+   "options": "URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ata_pdf_link",
+   "fieldtype": "Data",
+   "label": "PDF da ata",
+   "options": "URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "controle_tab",
+   "fieldtype": "Tab Break",
+   "label": "Controle"
+  },
+  {
+   "fieldname": "lembrete_edital_marco",
+   "fieldtype": "Int",
+   "label": "Último lembrete do edital (marco)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "lembrete_edital_em",
+   "fieldtype": "Date",
+   "label": "Último lembrete do edital (data)",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-27 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Gris",
+ "name": "Assembleia",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor de Assembleias",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Gestor da UEL",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "data",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "titulo"
+}

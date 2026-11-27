@@ -2179,3 +2179,120 @@
 	outline: 2px solid var(--ring);
 	outline-offset: 2px;
 }
+
+/* --- Ata: texto à esquerda, revisão e fechamento à direita --- */
+.asm-ata {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(17rem, 21rem);
+	gap: calc(var(--spacing) * 5);
+	align-items: start;
+}
+
+.asm-ata__lado {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 4);
+	position: sticky;
+	top: calc(var(--spacing) * 20);
+}
+
+.asm-ata__pdf {
+	justify-content: center;
+}
+
+.asm-pendencias,
+.asm-fontes {
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.asm-pendencias button {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	width: 100%;
+	padding: calc(var(--spacing) * 2) calc(var(--spacing) * 2);
+	border: 0;
+	border-radius: var(--radius-md, var(--radius));
+	background: transparent;
+	font: inherit;
+	font-size: 0.8125rem;
+	text-align: left;
+	color: var(--foreground);
+	cursor: pointer;
+}
+
+.asm-pendencias button:hover {
+	background: color-mix(in srgb, var(--warning) 14%, var(--card));
+}
+
+.asm-pendencias button:focus-visible {
+	outline: 2px solid var(--ring);
+	outline-offset: 1px;
+}
+
+.asm-pendencias li + li {
+	border-top: 1px solid var(--border);
+}
+
+.asm-pendencias small {
+	color: var(--muted-foreground);
+	font-size: 0.75rem;
+}
+
+.asm-pendencias__vazio {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	font-size: 0.8125rem;
+	color: var(--muted-foreground);
+}
+
+#at-pendencias-total:not(:empty) {
+	padding: 0 0.5rem;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--warning) 22%, var(--card));
+	color: var(--foreground);
+	font-weight: 600;
+}
+
+.asm-fontes {
+	gap: calc(var(--spacing) * 2);
+	font-size: 0.8125rem;
+}
+
+.asm-fontes li {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+}
+
+.asm-fontes li > svg {
+	flex: none;
+	margin-top: 0.15rem;
+}
+
+.asm-fontes .is-ok > svg {
+	color: var(--success);
+}
+
+.asm-fontes .is-falta {
+	color: var(--muted-foreground);
+}
+
+.asm-fontes .is-falta > svg {
+	color: var(--warning);
+}
+
+@media (max-width: 1279px) {
+	.asm-ata {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.asm-ata__lado {
+		position: static;
+	}
+}

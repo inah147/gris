@@ -331,25 +331,40 @@
 {# ───────────────────────────── 4. Ata ───────────────────────────── #}
 {% set painel_ata %}
 <div class="asm-aba">
-	{% call card(attrs={"class": "asm-bloco", "id": "at-texto-bloco"}) %}
-	<section>
-		<div class="asm-bloco__topo">
-			<h2 class="asm-bloco__titulo">Texto da ata</h2>
-			<div class="asm-acoes">
+	<div class="asm-ata">
+		{% call card(attrs={"class": "asm-bloco", "id": "at-texto-bloco"}) %}
+		<section>
+			<div class="asm-bloco__topo">
+				<h2 class="asm-bloco__titulo">Texto da ata</h2>
 				<button type="button" class="btn-outline" id="at-gerar-ia">{{ lucide_icon("sparkles", size="sm") }}<span>Gerar ata com IA</span></button>
-				<button type="button" class="btn-primary" data-baixar-pdf="ata">{{ lucide_icon("file-down", size="sm") }}<span>Gerar PDF da versão final</span></button>
 			</div>
-		</div>
-		<p class="asm-bloco__descricao">
-			A IA preenche o modelo de ata com os dados da assembleia e as anotações da sessão. O que ela não
-			souber fica como <code>[A CONFIRMAR: …]</code>: revise tudo antes de gerar o PDF.
-		</p>
-		<div id="at-status" aria-live="polite"></div>
-		<div id="at-editor" class="asm-editor"></div>
-	</section>
-	{% endcall %}
+			<p class="asm-bloco__descricao">
+				A IA preenche o modelo de ata com o registro da sessão: resultado, votos, eleitos e anotações de
+				cada item. O que faltar fica como <code>[A CONFIRMAR: …]</code>, listado ao lado.
+			</p>
+			<div id="at-status" aria-live="polite"></div>
+			<div id="at-editor" class="asm-editor"></div>
+		</section>
+		{% endcall %}
 
-	{{ tarefas("Depois da assembleia", ["finalizar_ata", "assinar_ata", "registrar_cartorio", "alterar_banco", "alterar_receita"], id="at-tarefas") }}
+		<aside class="asm-ata__lado" aria-label="Revisão e fechamento da ata">
+			<section class="asm-tarefas" aria-labelledby="at-pendencias-titulo">
+				<div class="asm-tarefas__topo">
+					<h2 class="asm-tarefas__titulo" id="at-pendencias-titulo">Revisar antes do PDF</h2>
+					<span class="asm-tarefas__progresso" id="at-pendencias-total"></span>
+				</div>
+				<ol class="asm-pendencias" id="at-pendencias"></ol>
+			</section>
+			<section class="asm-tarefas" aria-labelledby="at-fontes-titulo">
+				<div class="asm-tarefas__topo">
+					<h2 class="asm-tarefas__titulo" id="at-fontes-titulo">O que a IA recebe</h2>
+				</div>
+				<ul class="asm-fontes" id="at-fontes"></ul>
+			</section>
+			<button type="button" class="btn-primary asm-ata__pdf" data-baixar-pdf="ata">{{ lucide_icon("file-down", size="sm") }}<span>Gerar PDF da versão final</span></button>
+			{{ tarefas("Depois da assembleia", ["finalizar_ata", "assinar_ata", "registrar_cartorio", "alterar_banco", "alterar_receita"], id="at-tarefas") }}
+		</aside>
+	</div>
 </div>
 {% endset %}
 

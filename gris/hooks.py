@@ -309,6 +309,8 @@ scheduler_events = {
 			"gris.gestao_de_projetos.doctype.projeto.projeto.enviar_lembretes_whatsapp_aprovacao_projetos",
 			"gris.api.associados_notificacoes.enviar_lembrete_atualizacao_associados",
 			"gris.api.associados_vencimento_notificacoes.enviar_lembretes_vencimento_registro_associados",
+			# Prazo do edital das assembleias, no grupo da Diretoria.
+			"gris.api.assembleias.lembretes.enfileirar_lembretes",
 			"gris.api.registro_provisorio_notificacoes.enviar_avisos_seguimento_registro_provisorio",
 			"gris.api.recepcao_mensagens.enviar_lembretes_dados_registro",
 			"gris.api.recepcao_mensagens.enviar_lembretes_pesquisa_novos_associados",

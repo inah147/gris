@@ -76,6 +76,42 @@
 		return json.message;
 	}
 
+	/**
+	 * Baixa um PDF de `gris.api.assembleias.<metodo>`. Por POST e `fetch`, e não por
+	 * `window.open`: um erro do servidor vira toast em vez de uma aba com traceback.
+	 */
+	async function baixarPdf(metodo, args, nomeDoArquivo) {
+		const resposta = await fetch(`/api/method/${API}${metodo}`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"X-Frappe-CSRF-Token": (window.frappe && frappe.csrf_token) || "",
+			},
+			credentials: "same-origin",
+			body: JSON.stringify(args || {}),
+		});
+		const tipo = resposta.headers.get("Content-Type") || "";
+		if (!resposta.ok || !tipo.includes("pdf")) {
+			const json = await resposta.json().catch(() => ({}));
+			let mensagem = "Não foi possível gerar o PDF.";
+			try {
+				const lista = JSON.parse(json._server_messages || "[]");
+				if (lista.length) mensagem = JSON.parse(lista[lista.length - 1]).message;
+			} catch (e) {
+				/* fica a mensagem genérica */
+			}
+			throw new Error(textoSimples(mensagem));
+		}
+		const url = URL.createObjectURL(await resposta.blob());
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = nomeDoArquivo;
+		document.body.appendChild(link);
+		link.click();
+		link.remove();
+		setTimeout(() => URL.revokeObjectURL(url), 10000);
+	}
+
 	function lerJson(texto, padrao) {
 		try {
 			return JSON.parse(texto || "");
@@ -466,6 +502,7 @@
 		textoSimples,
 		toast,
 		chamar,
+		baixarPdf,
 		lerJson,
 		dataBR,
 		diaDaSemana,

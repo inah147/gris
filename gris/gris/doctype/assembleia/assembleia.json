@@ -29,6 +29,7 @@
   "edital_col",
   "edital_doc_link",
   "edital_pdf_link",
+  "edital_final_gerado",
   "edital_textos_section",
   "edital_texto_topo",
   "edital_texto_rodape",
@@ -205,6 +206,14 @@
    "fieldtype": "Data",
    "label": "PDF do edital",
    "options": "URL",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "edital_final_gerado",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "PDF final gerado",
    "read_only": 1
   },
   {

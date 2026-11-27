@@ -162,7 +162,22 @@ def criar_assembleia(payload: str) -> dict:
 	doc.update({"data": data, "tipo": tipo, "hora_primeira_convocacao": hora, "local": local})
 	preencher_padroes(doc)
 	doc.insert()
+	_pedir_pasta(doc)
 	return {"name": doc.name, "url": f"/administracao/assembleias/assembleia?name={doc.name}"}
+
+
+def _pedir_pasta(doc) -> None:
+	"""Pasta no Drive em segundo plano (CA-02.3); desligada, só registra o motivo."""
+	from gris.api.google_workspace.assembleia_drive import enfileirar_pasta
+
+	if cint(configuracoes().habilitar_pastas_drive):
+		enfileirar_pasta(doc.name)
+	else:
+		doc.db_set(
+			"pasta_drive_erro",
+			_("As pastas no Drive estão desligadas em Configurações de Assembleias."),
+			update_modified=False,
+		)
 
 
 @frappe.whitelist(methods=["POST"])

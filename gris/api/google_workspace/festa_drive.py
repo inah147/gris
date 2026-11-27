@@ -169,25 +169,30 @@ def _schedule_create_retry_if_needed(festa_name: str, attempt: int) -> None:
 
 
 def _create_festa_folder(drive, parent_folder_id: str, folder_name: str, festa_name: str) -> dict:
+	return criar_pasta(drive, parent_folder_id, folder_name, f"Pasta da festa {festa_name}")
+
+
+def criar_pasta(drive, parent_folder_id: str, folder_name: str, descricao: str = "") -> dict:
+	"""Cria uma pasta dentro de `parent_folder_id` (drive compartilhado)."""
+	body = {"name": folder_name, "mimeType": FOLDER_MIMETYPE, "parents": [parent_folder_id]}
+	if descricao:
+		body["description"] = descricao
 	return _execute_with_retry(
 		lambda: (
-			drive.files()
-			.create(
-				body={
-					"name": folder_name,
-					"mimeType": FOLDER_MIMETYPE,
-					"parents": [parent_folder_id],
-					"description": f"Pasta da festa {festa_name}",
-				},
-				fields="id,name,createdTime",
-				supportsAllDrives=True,
-			)
-			.execute()
+			drive.files().create(body=body, fields="id,name,createdTime", supportsAllDrives=True).execute()
 		)
 	)
 
 
 def _validate_parent_folder_configuration(drive, parent_folder_id: str, drive_id: str) -> None:
+	validar_pasta_raiz(drive, parent_folder_id, drive_id, rotulo="festas")
+
+
+def validar_pasta_raiz(drive, parent_folder_id: str, drive_id: str, rotulo: str = "festas") -> None:
+	"""Confere se a pasta raiz existe, é pasta, não está na lixeira e é do drive escolhido.
+
+	Usada pelas festas e pelas assembleias; `rotulo` só muda o texto das mensagens.
+	"""
 	try:
 		metadata = _execute_with_retry(
 			lambda: (
@@ -203,24 +208,31 @@ def _validate_parent_folder_configuration(drive, parent_folder_id: str, drive_id
 	except HttpError as exc:
 		if _get_http_status_code(exc) == 404:
 			raise frappe.ValidationError(
-				"Pasta de festas nao encontrada no Google Drive. Revise o campo ID da pasta de festas."
+				f"Pasta de {rotulo} nao encontrada no Google Drive. Revise o campo ID da pasta de {rotulo}."
 			) from exc
 		raise
 
 	if metadata.get("mimeType") != FOLDER_MIMETYPE:
-		raise frappe.ValidationError("ID da pasta de festas invalido: o item informado nao e uma pasta.")
+		raise frappe.ValidationError(f"ID da pasta de {rotulo} invalido: o item informado nao e uma pasta.")
 
 	if metadata.get("trashed"):
-		raise frappe.ValidationError("ID da pasta de festas invalido: a pasta configurada esta na lixeira.")
+		raise frappe.ValidationError(
+			f"ID da pasta de {rotulo} invalido: a pasta configurada esta na lixeira."
+		)
 
 	folder_drive_id = (metadata.get("driveId") or "").strip()
 	if drive_id and folder_drive_id and folder_drive_id != drive_id:
 		raise frappe.ValidationError(
-			"A pasta configurada nao pertence ao drive compartilhado das festas selecionado."
+			f"A pasta configurada nao pertence ao drive compartilhado das {rotulo} selecionado."
 		)
 
 
 def _find_existing_festa_folder(drive, settings, parent_folder_id: str, folder_name: str) -> dict | None:
+	return buscar_pasta(drive, parent_folder_id, folder_name, _get_drive_scope_params(settings))
+
+
+def buscar_pasta(drive, parent_folder_id: str, folder_name: str, escopo: dict | None = None) -> dict | None:
+	"""Pasta com esse nome dentro de `parent_folder_id`, para não criar duplicada."""
 	escaped_name = _escape_drive_query_value(folder_name)
 	query = (
 		f"'{parent_folder_id}' in parents and trashed = false and "
@@ -233,7 +245,7 @@ def _find_existing_festa_folder(drive, settings, parent_folder_id: str, folder_n
 		"supportsAllDrives": True,
 		"includeItemsFromAllDrives": True,
 	}
-	params.update(_get_drive_scope_params(settings))
+	params.update(escopo or {})
 
 	response = _execute_with_retry(lambda: drive.files().list(**params).execute())
 	files = response.get("files") or []

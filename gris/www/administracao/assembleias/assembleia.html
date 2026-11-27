@@ -282,6 +282,10 @@
 				<button type="button" class="btn-outline" id="lp-incluir">{{ lucide_icon("user-plus", size="sm") }}<span>Incluir</span></button>
 			</div>
 			{% endif %}
+			<div class="asm-lista-busca">
+				<input type="search" class="input" id="lp-busca" placeholder="Buscar pelo nome" autocomplete="off" aria-label="Buscar na lista pelo nome">
+				<div class="asm-filtros" id="lp-filtros" role="group" aria-label="Filtrar por tipo de voto"></div>
+			</div>
 			<div class="overflow-x-auto min-w-0">
 				<table class="table asm-tabela-votantes">
 					<thead>

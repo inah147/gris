@@ -51,10 +51,12 @@
 					: "";
 				const link = f.previsto
 					? `<div class="asm-formulario__link">
-							<code title="${A.escapeHtml(f.link)}">${A.escapeHtml(f.link)}</code>
-							<button type="button" class="btn-sm-ghost" data-copiar="${A.escapeHtml(
-								f.link
-							)}" aria-label="Copiar o link">${A.icone("copy")}</button>
+							<a class="btn-sm-outline" href="${A.escapeHtml(f.link)}" target="_blank" rel="noopener">${A.icone(
+							"external-link"
+					  )}<span>Abrir formulário</span></a>
+							<button type="button" class="btn-sm-ghost" data-copiar="${A.escapeHtml(f.link)}">${A.icone(
+							"copy"
+					  )}<span>Copiar link</span></button>
 						</div>`
 					: "";
 				return `<li class="asm-formulario">
@@ -287,6 +289,20 @@
 		} finally {
 			botao.disabled = false;
 		}
+	});
+
+	document.getElementById("ed-restaurar-textos")?.addEventListener("click", () => {
+		frappe.confirm(
+			"Trocar os textos antes e depois da pauta pelos textos padrão das configurações?",
+			async () => {
+				try {
+					await A.chamar("pagina.restaurar_textos_padrao", { name: dados.name });
+					window.location.reload();
+				} catch (erro) {
+					A.toast("error", erro.message);
+				}
+			}
+		);
 	});
 
 	document.getElementById("ed-restaurar")?.addEventListener("click", () => {
@@ -587,7 +603,26 @@
 		});
 	});
 
+	async function iniciarEditorDasAnotacoes() {
+		const host = document.getElementById("at-anotacoes-editor");
+		if (!host || !window.gris?.editor?.create) return;
+		try {
+			const editor = await window.gris.editor.create(host, {
+				initialValue: ata.anotacoes || "",
+				height: "380px",
+				toolbarItems: [["heading", "bold", "italic"], ["ul", "ol", "task"], ["hr"]],
+			});
+			editor.on("change", () => {
+				agendarAta({ anotacoes_secretario: String(editor.getMarkdown() || "") });
+			});
+		} catch (erro) {
+			host.innerHTML =
+				'<p class="text-muted-foreground">Não foi possível abrir o editor.</p>';
+		}
+	}
+
 	async function iniciarEditorDaAta() {
+		iniciarEditorDasAnotacoes();
 		const host = document.getElementById("at-editor");
 		if (!host || !window.gris?.editor?.create) return;
 		try {

@@ -149,17 +149,27 @@ TEXTO_RODAPE_EDITAL = (
 	"Lembramos que, para ter direito a voz e voto, é necessário que o associado cumpra as exigências "
 	"estabelecidas no Estatuto do Grupo e esteja regularizado conforme o estatuto da UEB.\n\n"
 	"{cidade}, {data_publicacao}.\n\n"
+	"____________________________________\n"
 	"{diretor_presidente}\n"
 	"Diretor Presidente"
 )
 
+# Versão anterior do texto padrão, para o patch trocar só onde ninguém editou.
+TEXTO_RODAPE_EDITAL_ANTIGO = (
+	"A ASSEMBLEIA é o órgão máximo do Grupo, sendo de suma importância a participação de todos. "
+	"Lembramos que, para ter direito a voz e voto, é necessário que o associado cumpra as exigências "
+	"estabelecidas no Estatuto do Grupo e esteja regularizado conforme o estatuto da UEB.\n\n"
+	"{cidade}, {data_publicacao}.\n\n"
+	"{diretor_presidente}\n"
+	"Diretor Presidente"
+)
+
+# Um item de lista por formulário, com o link clicável (markdown) e o prazo.
 LINHA_LINK_CANDIDATURA = (
-	"Candidaturas para {cargo} devem ser encaminhadas pelo formulário eletrônico disponível em "
-	"{link} até {prazo}."
+	"- Candidaturas para {cargo} devem ser encaminhadas pelo [formulário eletrônico]({link}) até {prazo}."
 )
 LINHA_LINK_ASSUNTOS = (
-	"Propostas de assuntos gerais deverão ser encaminhadas pelo formulário eletrônico disponível em "
-	"{link} até {prazo}."
+	"- Propostas de assuntos gerais devem ser encaminhadas pelo [formulário eletrônico]({link}) até {prazo}."
 )
 
 # --------------------------------------------------------------------------------------

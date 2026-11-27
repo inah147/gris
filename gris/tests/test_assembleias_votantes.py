@@ -170,8 +170,6 @@ class TestAplicarLista(FrappeTestCase):
 class TestEndpointsDaLista(FrappeTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
-		for name in frappe.get_all(c.DOCTYPE_ASSEMBLEIA, pluck="name"):
-			frappe.delete_doc(c.DOCTYPE_ASSEMBLEIA, name, force=True)
 		self.name = _criar(add_days(getdate(), 30))["name"]
 
 	def tearDown(self):

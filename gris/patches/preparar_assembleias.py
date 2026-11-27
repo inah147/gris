@@ -91,6 +91,9 @@ def preencher_configuracoes() -> None:
 	for campo, valor in TEXTOS_PADRAO.items():
 		if not (doc.get(campo) or "").strip():
 			doc.set(campo, valor)
+	# O rodapé padrão ganhou a linha de assinatura; troca só se ninguém editou.
+	if (doc.texto_rodape_edital or "").strip() == c.TEXTO_RODAPE_EDITAL_ANTIGO:
+		doc.texto_rodape_edital = c.TEXTO_RODAPE_EDITAL
 	for campo, valor in NUMEROS_PADRAO.items():
 		if not cint(doc.get(campo)):
 			doc.set(campo, valor)

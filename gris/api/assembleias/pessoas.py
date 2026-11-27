@@ -55,29 +55,38 @@ def contar_associados_com_registro_ativo(referencia) -> int:
 	)
 
 
-def ocupantes_da_funcao(funcao: str, referencia=None) -> list[str]:
-	"""Nomes de quem exerce a função na data (lotação sem `data_fim`, ou ainda por vir)."""
-	referencia = getdate(referencia) if referencia else getdate()
-	linhas = frappe.get_all(
-		"Funcao do Associado",
-		filters={"funcao": funcao, "parentfield": "funcoes_internas"},
-		fields=["parent", "parenttype", "data_inicio", "data_fim"],
-	)
-	por_doctype: dict[str, list[str]] = {}
-	for linha in linhas:
-		if linha.data_inicio and getdate(linha.data_inicio) > referencia:
-			continue
-		if linha.data_fim and getdate(linha.data_fim) < referencia:
-			continue
-		por_doctype.setdefault(linha.parenttype, []).append(linha.parent)
+def ocupante_atual(funcao: str, referencia=None) -> str:
+	"""Quem exerce a função na data: a lotação em vigor mais recente.
 
-	nomes: list[str] = []
-	for doctype, parents in por_doctype.items():
-		filtros = {"name": ["in", parents]}
-		if doctype == DOCTYPE_ASSOCIADO:
-			filtros["status_no_grupo"] = "Ativo"
-		nomes.extend(frappe.get_all(doctype, filters=filtros, pluck="nome_completo"))
-	return sorted(dict.fromkeys(nome for nome in nomes if nome))
+	Para documento que pede uma pessoa só (a assinatura do diretor presidente). Lotação
+	antiga esquecida sem `data_fim` não pode virar uma lista de nomes no edital.
+	"""
+	referencia = getdate(referencia) if referencia else getdate()
+	linhas = [
+		linha
+		for linha in frappe.get_all(
+			"Funcao do Associado",
+			filters={"funcao": funcao, "parentfield": "funcoes_internas"},
+			fields=["parent", "parenttype", "data_inicio", "data_fim"],
+		)
+		if not (linha.data_inicio and getdate(linha.data_inicio) > referencia)
+		and not (linha.data_fim and getdate(linha.data_fim) < referencia)
+	]
+	associados = [linha.parent for linha in linhas if linha.parenttype == DOCTYPE_ASSOCIADO]
+	ativos = set(
+		frappe.get_all(
+			DOCTYPE_ASSOCIADO,
+			filters={"name": ["in", associados or [""]], "status_no_grupo": "Ativo"},
+			pluck="name",
+		)
+	)
+	em_vigor = [linha for linha in linhas if linha.parenttype != DOCTYPE_ASSOCIADO or linha.parent in ativos]
+	if not em_vigor:
+		return ""
+	mais_recente = max(
+		em_vigor, key=lambda linha: getdate(linha.data_inicio) if linha.data_inicio else getdate("1900-01-01")
+	)
+	return frappe.db.get_value(mais_recente.parenttype, mais_recente.parent, "nome_completo") or ""
 
 
 def opcoes_de_pessoas(idade_minima: int, referencia: date | str | None = None) -> list[dict]:

@@ -42,8 +42,6 @@ class _Base(FrappeTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
 		# Assembleias que já existam no site atrapalham "um por dia" e a data anterior.
-		for name in frappe.get_all(c.DOCTYPE_ASSEMBLEIA, pluck="name"):
-			frappe.delete_doc(c.DOCTYPE_ASSEMBLEIA, name, force=True)
 
 	def tearDown(self):
 		frappe.set_user("Administrator")
@@ -69,7 +67,8 @@ class TestCriacao(_Base):
 			self.assertTrue(item.orientacao_conducao)
 
 	def test_titulos_resolvidos(self):
-		data = getdate(f"{getdate().year + 1}-12-05")
+		# Longe das assembleias reais do site, para a "anterior" ser a do próprio teste.
+		data = getdate(f"{getdate().year + 60}-12-05")
 		anterior = frappe.get_doc(
 			{
 				"doctype": c.DOCTYPE_ASSEMBLEIA,
@@ -177,8 +176,13 @@ class TestListaDeAssembleias(_Base):
 			}
 		).insert()
 		lista = endpoints.listar_assembleias()
-		self.assertEqual([a["name"] for a in lista["proximas"]], [futura])
-		self.assertEqual([a["name"] for a in lista["realizadas"]], [passada.name])
+		proximas = [a["name"] for a in lista["proximas"]]
+		realizadas = [a["name"] for a in lista["realizadas"]]
+		self.assertIn(futura, proximas)
+		self.assertNotIn(futura, realizadas)
+		self.assertIn(passada.name, realizadas)
+		datas = [a["data"] for a in lista["proximas"]]
+		self.assertEqual(datas, sorted(datas))
 
 	def test_situacao_do_edital(self):
 		hoje = getdate()
@@ -191,7 +195,7 @@ class TestListaDeAssembleias(_Base):
 		frappe.get_doc({"doctype": c.DOCTYPE_ASSUNTO, "assembleia": name, "conteudo": "A"}).insert(
 			ignore_permissions=True
 		)
-		card = endpoints.listar_assembleias()["proximas"][0]
+		card = next(a for a in endpoints.listar_assembleias()["proximas"] if a["name"] == name)
 		self.assertEqual(card["assuntos"], 1)
 		self.assertEqual(card["candidaturas"], 0)
 

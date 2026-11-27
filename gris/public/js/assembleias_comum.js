@@ -10,6 +10,11 @@
 	"use strict";
 
 	const API = "gris.api.assembleias.";
+	// O Frappe recusa o token CSRF quando a sessão muda depois que a página abriu (login
+	// em outra aba, no Desk ou em outra porta do mesmo host) e responde só "Requisição
+	// Inválida", que não diz o que fazer.
+	const MENSAGEM_DE_SESSAO =
+		"Sua sessão mudou depois que esta página foi aberta (por exemplo, um login em outra aba). Recarregue a página para continuar.";
 	const DISTANCIA_DO_CAMPO = 6;
 	const MARGEM_DA_TELA = 8;
 
@@ -64,6 +69,7 @@
 		});
 		const json = await resposta.json().catch(() => ({}));
 		if (!resposta.ok) {
+			if (json.exc_type === "CSRFTokenError") throw new Error(MENSAGEM_DE_SESSAO);
 			let mensagem = "Não foi possível concluir a ação.";
 			try {
 				const lista = JSON.parse(json._server_messages || "[]");
@@ -93,6 +99,7 @@
 		const tipo = resposta.headers.get("Content-Type") || "";
 		if (!resposta.ok || !tipo.includes("pdf")) {
 			const json = await resposta.json().catch(() => ({}));
+			if (json.exc_type === "CSRFTokenError") throw new Error(MENSAGEM_DE_SESSAO);
 			let mensagem = "Não foi possível gerar o PDF.";
 			try {
 				const lista = JSON.parse(json._server_messages || "[]");
@@ -309,7 +316,10 @@
 				</div>
 				<div class="asm-pauta__opcoes">
 					${switchHtml("Tem votação", !!item.tem_votacao, { data: 'data-campo="tem_votacao"' })}
-					${selectHtml(id, finalidades, item.finalidade || "", { label: "Finalidade" })}
+					<div class="asm-pauta__finalidade">
+						<span class="asm-pauta__rotulo" title="Liga o item aos formulários de candidatura, ao checklist e às orientações de condução.">Finalidade</span>
+						${selectHtml(id, finalidades, item.finalidade || "", { label: "Finalidade" })}
+					</div>
 				</div>
 				${
 					config.semOrientacao

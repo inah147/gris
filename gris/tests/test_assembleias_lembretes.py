@@ -44,8 +44,6 @@ class TestMarcoDoEdital(FrappeTestCase):
 class TestRodada(FrappeTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
-		for name in frappe.get_all(c.DOCTYPE_ASSEMBLEIA, pluck="name"):
-			frappe.delete_doc(c.DOCTYPE_ASSEMBLEIA, name, force=True)
 		self._grupo = frappe.db.get_single_value(c.DOCTYPE_CONFIGURACOES, "grupo_diretoria_whatsapp")
 		self._whatsapp = frappe.db.get_single_value("Configuracoes WhatsApp", "habilitar_integracao")
 		frappe.db.set_single_value(c.DOCTYPE_CONFIGURACOES, "grupo_diretoria_whatsapp", GRUPO)
@@ -53,6 +51,7 @@ class TestRodada(FrappeTestCase):
 		# A rodada faz commit por envio; no teste, nada pode ficar gravado de vez.
 		self._commit = patch("frappe.db.commit")
 		self._commit.start()
+		self.nomes = []
 
 	def tearDown(self):
 		self._commit.stop()
@@ -62,13 +61,19 @@ class TestRodada(FrappeTestCase):
 
 	def _assembleia(self, dias_ate_o_prazo: int) -> str:
 		# O prazo é a data menos 30 dias.
-		return _criar(add_days(getdate(), dias_ate_o_prazo + 30))["name"]
+		name = _criar(add_days(getdate(), dias_ate_o_prazo + 30))["name"]
+		self.nomes.append(name)
+		return name
+
+	def _rodar(self):
+		# Só as assembleias do teste: o site pode ter assembleias reais.
+		return lembretes.lembrar_publicacao_edital(nomes=self.nomes)
 
 	def test_envia_e_carimba_uma_vez(self):
 		name = self._assembleia(7)
 		with patch(ENVIO) as envio:
-			self.assertEqual(lembretes.lembrar_publicacao_edital()["enviados"], 1)
-			lembretes.lembrar_publicacao_edital()
+			self.assertEqual(self._rodar()["enviados"], 1)
+			self._rodar()
 		self.assertEqual(envio.call_count, 1)
 		args, kwargs = envio.call_args
 		self.assertEqual(args[0], GRUPO)
@@ -79,7 +84,7 @@ class TestRodada(FrappeTestCase):
 	def test_criada_dentro_da_janela_recebe_so_o_marco_atual(self):
 		self._assembleia(20)
 		with patch(ENVIO) as envio:
-			lembretes.lembrar_publicacao_edital()
+			self._rodar()
 		self.assertEqual(envio.call_count, 1)
 		self.assertIn("faltam *20* dias", envio.call_args.args[1])
 
@@ -89,27 +94,27 @@ class TestRodada(FrappeTestCase):
 			patch(ENVIO, side_effect=RuntimeError("fora do ar")),
 			patch("gris.api.assembleias.lembretes.frappe.log_error"),
 		):
-			self.assertEqual(lembretes.lembrar_publicacao_edital()["enviados"], 0)
+			self.assertEqual(self._rodar()["enviados"], 0)
 		self.assertFalse(frappe.db.get_value(c.DOCTYPE_ASSEMBLEIA, name, "lembrete_edital_marco"))
 
 	def test_edital_publicado_nao_recebe(self):
 		name = self._assembleia(7)
 		frappe.db.set_value(c.DOCTYPE_ASSEMBLEIA, name, "edital_publicado", 1)
 		with patch(ENVIO) as envio:
-			lembretes.lembrar_publicacao_edital()
+			self._rodar()
 		envio.assert_not_called()
 
 	def test_longe_do_prazo_nao_recebe(self):
 		self._assembleia(90)
 		with patch(ENVIO) as envio:
-			lembretes.lembrar_publicacao_edital()
+			self._rodar()
 		envio.assert_not_called()
 
 	def test_sem_grupo(self):
 		frappe.db.set_single_value(c.DOCTYPE_CONFIGURACOES, "grupo_diretoria_whatsapp", "")
 		self._assembleia(7)
 		with patch(ENVIO) as envio:
-			resultado = lembretes.lembrar_publicacao_edital()
+			resultado = self._rodar()
 		envio.assert_not_called()
 		self.assertIn("Sem grupo", resultado["motivo"])
 
@@ -117,6 +122,6 @@ class TestRodada(FrappeTestCase):
 		frappe.db.set_single_value("Configuracoes WhatsApp", "habilitar_integracao", 0)
 		self._assembleia(7)
 		with patch(ENVIO) as envio:
-			resultado = lembretes.lembrar_publicacao_edital()
+			resultado = self._rodar()
 		envio.assert_not_called()
 		self.assertIn("desabilitada", resultado["motivo"])

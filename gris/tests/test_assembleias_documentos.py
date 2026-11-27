@@ -79,15 +79,126 @@ class TestDocsConteudo(FrappeTestCase):
 		)
 
 
+class TestFormatacao(FrappeTestCase):
+	def test_link_vira_hiperlink_sublinhado(self):
+		texto, trechos = dc.inline("Envie pelo [formulário eletrônico](https://x.org/f?a=1&b=2) até hoje.")
+		self.assertEqual(texto, "Envie pelo formulário eletrônico até hoje.")
+		inicio, fim, estilo = trechos[0]
+		self.assertEqual(texto[inicio:fim], "formulário eletrônico")
+		self.assertEqual(estilo["link"], {"url": "https://x.org/f?a=1&b=2"})
+		self.assertTrue(estilo["underline"])
+
+	def test_italico_nao_confunde_linha_de_assinatura(self):
+		texto, trechos = dc.inline("_____________ e _itálico_")
+		self.assertTrue(texto.startswith("_____________"))
+		self.assertEqual([e for _a, _b, e in trechos], [{"italic": True}])
+
+	def test_br_vira_quebra_suave(self):
+		self.assertEqual(dc.inline("Ana<br>_representada_")[0], "Ana\vrepresentada")
+
+	def test_corpo_em_calibri_11_sem_recuo(self):
+		requests, _comprimento = dc.requests_de_texto(
+			[{"texto": "Texto", "estilo": "normal", "lista": None}], 1
+		)
+		fonte = requests[1]["updateTextStyle"]["textStyle"]
+		self.assertEqual(fonte["weightedFontFamily"], {"fontFamily": "Calibri"})
+		self.assertEqual(fonte["fontSize"]["magnitude"], 11)
+		paragrafo = next(
+			r["updateParagraphStyle"]["paragraphStyle"] for r in requests if "updateParagraphStyle" in r
+		)
+		self.assertEqual(paragrafo["indentFirstLine"]["magnitude"], 0)
+		self.assertEqual(paragrafo["alignment"], "JUSTIFIED")
+
+	def test_assinatura_tem_espaco_acima(self):
+		blocos = dc.blocos("Santo André, 05 de novembro.\n\n________________\nFulano\nDiretor Presidente")
+		assinatura = blocos[0]["paragrafos"][-1]
+		self.assertEqual(assinatura["estilo"], "assinatura")
+		requests, _comprimento = dc.requests_de_texto([assinatura], 1)
+		estilo = next(
+			r["updateParagraphStyle"]["paragraphStyle"] for r in requests if "updateParagraphStyle" in r
+		)
+		self.assertGreaterEqual(estilo["spaceAbove"]["magnitude"], 30)
+		self.assertIn("\vFulano\vDiretor Presidente", requests[0]["insertText"]["text"])
+
+	def test_estilo_da_tabela(self):
+		requests = dc.requests_de_estilo_da_tabela({"startIndex": 40}, linhas=5, colunas=3, largura=450)
+		larguras = [
+			r["updateTableColumnProperties"]["tableColumnProperties"]["width"]["magnitude"]
+			for r in requests
+			if "updateTableColumnProperties" in r
+		]
+		self.assertAlmostEqual(sum(larguras), 450, delta=1)
+		linhas = next(
+			r["updateTableRowStyle"]["tableRowStyle"]
+			for r in requests
+			if "preventOverflow" in r.get("updateTableRowStyle", {}).get("tableRowStyle", {})
+		)
+		self.assertTrue(linhas["preventOverflow"])
+		self.assertTrue(
+			any(r.get("pinTableHeaderRows", {}).get("pinnedHeaderRowsCount") == 1 for r in requests)
+		)
+		sombreadas = [
+			r["updateTableCellStyle"]["tableRange"]["tableCellLocation"]["rowIndex"]
+			for r in requests
+			if "tableRange" in r.get("updateTableCellStyle", {})
+		]
+		self.assertEqual(sombreadas, [0, 2, 4])
+
+	def test_largura_util(self):
+		documento = {
+			"documentStyle": {
+				"pageSize": {"width": {"magnitude": 595}},
+				"marginLeft": {"magnitude": 50},
+				"marginRight": {"magnitude": 45},
+			}
+		}
+		self.assertEqual(dc.largura_util(documento), 500)
+
+
+class TestOcupanteAtual(FrappeTestCase):
+	def tearDown(self):
+		frappe.db.rollback()
+
+	def test_uma_pessoa_so_a_mais_recente(self):
+		from gris.api.assembleias.pessoas import ocupante_atual
+		from gris.tests.test_assembleias_formularios import _associado
+
+		frappe.set_user("Administrator")
+		if not frappe.db.exists("Funcao Voluntario", "ZZ Teste Presidente"):
+			frappe.get_doc(
+				{"doctype": "Funcao Voluntario", "titulo": "ZZ Teste Presidente", "ativa": 1}
+			).insert(ignore_permissions=True)
+		for sufixo, inicio in (("Antigo", "2020-01-01"), ("Atual", "2025-01-01")):
+			doc = frappe.get_doc("Associado", _associado(f"Pres {sufixo}"))
+			doc.append("funcoes_internas", {"funcao": "ZZ Teste Presidente", "data_inicio": inicio})
+			doc.flags.ignore_validate = True
+			doc.save(ignore_permissions=True)
+		self.assertEqual(ocupante_atual("ZZ Teste Presidente"), "Zz Teste Assembleia Pres Atual")
+
+
+def _google_proibido(*_args, **_kwargs):
+	raise AssertionError("Teste tentou usar o Google de verdade.")
+
+
 class _Base(FrappeTestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
-		for name in frappe.get_all(c.DOCTYPE_ASSEMBLEIA, pluck="name"):
-			frappe.delete_doc(c.DOCTYPE_ASSEMBLEIA, name, force=True)
+		# Nunca o Google real: o dev.gris pode estar com as pastas ligadas e um drive de
+		# verdade configurado. Cada teste que precisa do Google liga os simulados.
+		self._bloqueios = [
+			patch.object(assembleia_drive, "_get_google_drive_service", side_effect=_google_proibido),
+			patch.object(assembleia_drive, "_get_docs_service", side_effect=_google_proibido),
+			patch("frappe.db.commit"),
+		]
+		for bloqueio in self._bloqueios:
+			bloqueio.start()
 		self.name = _criar(add_days(getdate(), 60))["name"]
 		frappe.db.set_single_value("Configuracoes de Comunicacao", "link_papel_timbrado", TIMBRADO)
+		frappe.db.set_single_value(c.DOCTYPE_CONFIGURACOES, "habilitar_pastas_drive", 0)
 
 	def tearDown(self):
+		for bloqueio in self._bloqueios:
+			bloqueio.stop()
 		frappe.db.rollback()
 
 	def _google(self):
@@ -221,7 +332,7 @@ class TestConteudoDocumentos(_Base):
 		self.assertIn("2 com direito a voto", texto)
 		self.assertNotIn("Removida", texto)
 		self.assertLess(texto.index("| Ana |"), texto.index("Bia / Souza"))
-		self.assertIn("Bia / Souza (representado por seu responsável legal) | Responsável:", texto)
+		self.assertIn("Bia / Souza<br>_representado por seu responsável legal_ | Responsável:", texto)
 		tabela = next(b for b in dc.blocos(texto) if b["tipo"] == "tabela")
 		self.assertEqual(len(tabela["linhas"]), 3)
 

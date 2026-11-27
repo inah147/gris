@@ -76,19 +76,19 @@ recente da função de presidente.
 ### Lista de formulários (gerada)
 
 Uma frase de abertura e um item com marcador para cada formulário previsto na pauta. O texto
-depois dos dois-pontos é o link, sublinhado e clicável.
+depois dos dois-pontos é o link, sublinhado e clicável, seguido do prazo.
 
 > As candidaturas e submissões para assuntos gerais devem ser realizadas de maneira digital,
 > através dos links abaixo:
 >
-> - Mesa diretora: [link para candidatura]()
-> - Delegados para a Assembleia Regional: [link para candidatura]()
-> - Comissão Fiscal: [link para candidatura]()
-> - Chapas para a diretoria: [link para candidatura]()
-> - Assuntos gerais: [link para submissão]()
+> - Mesa diretora: [link para candidatura]() (até o início da assembleia)
+> - Delegados para a Assembleia Regional: [link para candidatura]() (até uma hora antes da primeira convocação)
+> - Comissão Fiscal: [link para candidatura]() (até 27 de novembro de 2026)
+> - Chapas para a diretoria: [link para candidatura]() (até 27 de novembro de 2026)
+> - Assuntos gerais: [link para submissão]() (até duas horas antes da primeira convocação)
 
-Os prazos de cada formulário não entram nesta lista; eles aparecem no próprio formulário e na
-Visão Geral.
+O prazo vem das configurações: por extenso para prazo em dias, "N horas antes da primeira
+convocação" para prazo em horas e "o início da assembleia" quando não há limite.
 
 ### Formatação no papel timbrado
 

@@ -165,12 +165,12 @@ TEXTO_RODAPE_EDITAL_ANTIGO = (
 )
 
 # Bloco dos formulários no edital: uma frase de abertura e um item por formulário
-# previsto na pauta, com o texto do link clicável.
+# previsto na pauta, com o texto do link clicável e o prazo por extenso.
 INTRO_LINKS_EDITAL = (
 	"As candidaturas e submissões para assuntos gerais devem ser realizadas de maneira digital, "
 	"através dos links abaixo:"
 )
-LINHA_LINK_EDITAL = "- {rotulo}: [{texto}]({link})"
+LINHA_LINK_EDITAL = "- {rotulo}: [{texto}]({link}) (até {prazo})"
 
 # --------------------------------------------------------------------------------------
 # Orientações de condução

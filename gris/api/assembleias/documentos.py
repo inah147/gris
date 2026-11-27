@@ -30,7 +30,10 @@ def linhas_de_link(doc, config) -> list[str]:
 			continue
 		rotulo, texto = LINK_NO_EDITAL[formulario["chave"]]
 		itens.append(
-			substituir(c.LINHA_LINK_EDITAL, {"rotulo": rotulo, "texto": texto, "link": formulario["link"]})
+			substituir(
+				c.LINHA_LINK_EDITAL,
+				{"rotulo": rotulo, "texto": texto, "link": formulario["link"], "prazo": formulario["prazo"]},
+			)
 		)
 	return [c.INTRO_LINKS_EDITAL, *itens] if itens else []
 

@@ -56,6 +56,9 @@ class TestCriacao(_Base):
 		doc = frappe.get_doc(c.DOCTYPE_ASSEMBLEIA, _criar(data)["name"])
 
 		self.assertEqual(str(doc.hora_segunda_convocacao), "15:00:00")
+		# Campos Time vazios não podem nascer com a hora da criação.
+		self.assertIsNone(doc.ata_hora_inicio)
+		self.assertIsNone(doc.ata_hora_termino)
 		self.assertEqual(len(doc.pauta), len(padroes.configuracoes().pauta_ordinaria))
 		self.assertEqual(len(doc.checklist), len(c.CHECKLIST_PADRAO))
 		self.assertTrue(doc.edital_texto_topo)

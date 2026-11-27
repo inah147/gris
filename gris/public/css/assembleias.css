@@ -537,6 +537,21 @@
 	text-align: justify;
 }
 
+/* --- Ata --- */
+.asm-marcadores {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	margin: 0;
+	font-size: 0.875rem;
+	color: var(--destructive);
+}
+
+.asm-editor.is-readonly {
+	opacity: 0.6;
+	pointer-events: none;
+}
+
 /* --- Lista de presença --- */
 .asm-totais {
 	display: flex;

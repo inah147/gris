@@ -161,10 +161,8 @@ def preencher_padroes(doc, config=None) -> None:
 	"""Tudo o que a assembleia copia das configurações ao ser criada."""
 	config = config or configuracoes()
 	# O Frappe põe a hora atual em todo campo Time de um doc novo: a segunda convocação
-	# é sempre recalculada, e os horários da ata começam vazios.
+	# é sempre recalculada (os horários da ata são limpos no validate do doc novo).
 	doc.hora_segunda_convocacao = segunda_convocacao(doc.hora_primeira_convocacao)
-	doc.ata_hora_inicio = None
-	doc.ata_hora_termino = None
 	doc.edital_texto_topo = config.texto_topo_edital or c.TEXTO_TOPO_EDITAL
 	doc.edital_texto_rodape = config.texto_rodape_edital or c.TEXTO_RODAPE_EDITAL
 	doc.edital_incluir_links = 1

@@ -30,6 +30,11 @@ CAMPOS_TRAVADOS_DA_PAUTA = ("titulo", "tem_votacao", "finalidade")
 
 class Assembleia(Document):
 	def validate(self):
+		if self.is_new():
+			# O Frappe põe a hora atual em todo campo Time vazio de um doc novo, inclusive
+			# no insert: os horários da ata só existem depois da reunião.
+			self.ata_hora_inicio = None
+			self.ata_hora_termino = None
 		self.titulo = f"Assembleia {self.tipo} — {formatdate(self.data, 'dd/MM/yyyy')}" if self.data else ""
 		if self.hora_primeira_convocacao and not self.hora_segunda_convocacao:
 			self.hora_segunda_convocacao = segunda_convocacao(self.hora_primeira_convocacao)

@@ -308,7 +308,7 @@ def aplicar_conducao(doc, itens: dict) -> None:
 
 @frappe.whitelist(methods=["POST"])
 def salvar_campos(name: str, campos: str, modified: str) -> dict:
-	"""Gravação automática da Visão Geral (checklist) e da Condução (pauta)."""
+	"""Gravação automática da página: checklist, condução (pauta) e ata."""
 	doc = _assembleia(name)
 	if str(doc.modified) != str(modified):
 		return {"conflito": True}
@@ -317,9 +317,19 @@ def salvar_campos(name: str, campos: str, modified: str) -> dict:
 		aplicar_checklist(doc, dados["checklist"] or {})
 	if "pauta" in dados:
 		aplicar_conducao(doc, dados["pauta"] or {})
+	if "ata" in dados:
+		from gris.api.assembleias.ata import aplicar_campos
+
+		aplicar_campos(doc, dados["ata"] or {})
 	doc.save()
+
+	from gris.api.assembleias.ata import contar_marcadores
+
 	return {
 		"modified": str(doc.modified),
 		"salvo_em": now_datetime().strftime("%H:%M"),
 		"pauta": {item.name: markdown_em_html(item.orientacao_conducao) for item in doc.pauta},
+		"marcadores": contar_marcadores(doc.ata_texto),
+		"presidente_nome": nome_da_pessoa(doc.presidente_tipo, doc.presidente),
+		"secretario_nome": nome_da_pessoa(doc.secretario_tipo, doc.secretario),
 	}

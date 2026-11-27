@@ -34,6 +34,7 @@
 
 {% block main %}
 {% include "gris/templates/includes/assembleias_comum.html" %}
+<script src="/assets/gris/design_system/js/components/toastui-editor.js?v={{ design_system_asset_version }}" defer></script>
 
 {# ───────────────────────────── Visão Geral ───────────────────────────── #}
 {% set painel_visao %}
@@ -247,7 +248,59 @@
 {% endset %}
 {% set painel_ata %}
 <div class="asm-aba">
-	{{ empty(title="Ata", description="As anotações do secretário e o texto da ata aparecem aqui.", icon=lucide_icon("file-text", size="lg")) }}
+	{% call card(attrs={"class": "asm-bloco"}) %}
+	<section>
+		<div class="asm-bloco__topo">
+			<h2 class="asm-bloco__titulo">Mesa e horários</h2>
+			<span class="asm-salvamento" data-salvamento="ata" aria-live="polite"></span>
+		</div>
+		<p class="asm-bloco__descricao">Tudo nesta aba é salvo sozinho.</p>
+		<div class="asm-campos">
+			{% call field(label="Início") %}
+				{{ input(type="time", value=(ata.hora_inicio or ""), attrs={"id": "at-inicio", "data-campo-ata": "ata_hora_inicio"}) }}
+			{% endcall %}
+			{% call field(label="Término") %}
+				{{ input(type="time", value=(ata.hora_termino or ""), attrs={"id": "at-termino", "data-campo-ata": "ata_hora_termino"}) }}
+			{% endcall %}
+			{% call field(label="Presentes", hint="Pela lista de presença assinada.") %}
+				{{ input(type="number", value=(ata.presentes or ""), attrs={"id": "at-presentes", "min": "0", "data-campo-ata": "ata_presentes"}) }}
+			{% endcall %}
+		</div>
+		<div class="asm-campos">
+			{% call field(label="Presidente da mesa", hint="Associados com 16 anos ou mais e responsáveis.") %}
+				{{ select(id="at-presidente", items=pessoas_16, selected=ata.presidente, is_combobox=true, search_placeholder="Buscar pelo nome") }}
+			{% endcall %}
+			{% call field(label="Secretário da mesa") %}
+				{{ select(id="at-secretario", items=pessoas_16, selected=ata.secretario, is_combobox=true, search_placeholder="Buscar pelo nome") }}
+			{% endcall %}
+		</div>
+	</section>
+	{% endcall %}
+
+	{% call card(attrs={"class": "asm-bloco"}) %}
+	<section>
+		<h2 class="asm-bloco__titulo">Anotações do secretário</h2>
+		<p class="asm-bloco__descricao">O que aconteceu em cada item: quem apresentou, questionamentos, como foi a votação e o resultado.</p>
+		{{ textarea(value=(ata.anotacoes | e), attrs={"id": "at-anotacoes", "rows": "14", "class": "asm-textarea-alta", "data-campo-ata": "anotacoes_secretario", "aria-label": "Anotações do secretário"}) }}
+	</section>
+	{% endcall %}
+
+	{% call card(attrs={"class": "asm-bloco"}) %}
+	<section>
+		<div class="asm-bloco__topo">
+			<h2 class="asm-bloco__titulo">Texto da ata</h2>
+			<div class="asm-acoes">
+				<button type="button" class="btn-outline" id="at-gerar-ia">{{ lucide_icon("sparkles", size="sm") }}<span>Gerar ata com IA</span></button>
+			</div>
+		</div>
+		<p class="asm-bloco__descricao">
+			A IA preenche o modelo de ata com os dados da assembleia e as anotações. O que ela não souber fica como
+			<code>[A CONFIRMAR: …]</code>: revise tudo antes de gerar o PDF.
+		</p>
+		<div id="at-status" aria-live="polite"></div>
+		<div id="at-editor" class="asm-editor"></div>
+	</section>
+	{% endcall %}
 </div>
 {% endset %}
 {% set painel_candidaturas %}
@@ -283,7 +336,8 @@
      data-dados="{{ dados | tojson | forceescape }}"
      data-finalidades="{{ finalidades | tojson | forceescape }}"
      data-orientacoes="{{ orientacoes | tojson | forceescape }}"
-     data-lista="{{ lista | tojson | forceescape }}">
+     data-lista="{{ lista | tojson | forceescape }}"
+     data-ata="{{ ata | tojson | forceescape }}">
 	{{ tabs(
 		id="asm-abas",
 		tabsets=[

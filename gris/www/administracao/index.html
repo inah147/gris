@@ -2,7 +2,7 @@
 
 {% set active_link = "/administracao" %}
 {% set module_title = "Administração" %}
-{% set module_subtitle = "A estrutura da UEL: quais áreas existem, a quem cada uma responde, que funções cabem em cada uma e os documentos do grupo." %}
+{% set module_subtitle = "A estrutura da UEL: quais áreas existem, a quem cada uma responde, que funções cabem em cada uma, os documentos e as assembleias do grupo." %}
 {% set module_items = [
 	{
 		"href": "/administracao/unidades_organizacionais",
@@ -19,5 +19,11 @@
 		"title": "Documentos",
 		"description": "Cadastre e publique certidões, certificados e os demais documentos do portal de transparência",
 		"visible": pode_transparencia,
+	},
+	{
+		"href": "/administracao/assembleias",
+		"title": "Assembleias",
+		"description": "Prepare as reuniões da Assembleia de Grupo: edital, lista de presença, ata e candidaturas",
+		"visible": pode_assembleias,
 	},
 ] %}
